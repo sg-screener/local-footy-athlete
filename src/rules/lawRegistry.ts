@@ -366,6 +366,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-week-list-one-card-shape',
+    law: 'The week list uses her one card shape for all seven days; today is the same card highlighted, and opening a day changes only the details below its head.',
+    ruledAt: 'docs/UI_PROTOTYPE_DIVERGENCE_2026-08-11.md "RESOLVED AND BUILT — 2026-08-11"',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline + .maestro/golden/standard-program-week.yaml',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: slice 5 was reported as taking her weekly structure, but the selected/today coordinate still switched into the old hero card and carried Start Session plus the change door. WHAT THE CELLS HOLD: all seven rows call one WeekDayCardHeader selected by SCREEN SHAPE rather than selection state; that head contains the date numeral, today marker, category chip, count and chevron; every week expansion is details-only while session, game and add/change controls are scoped to the day screen. WHAT THE TAPE HOLDS: on the simulator, the already-selected TODAY coordinate renders that uniform head and count with no day-screen controls; opening Wednesday preserves its head, reveals the shared timeline and still exposes no day-screen controls; the flow then reaches the remaining days. FIRST-RUN FINDINGS WERE NOT FIXED QUIETLY: the first tape asked for Monday after scrolling it off-screen, and the first screenshot exposed TODAY wrapping in a narrow column; the measurement order and the layout were both corrected, then the complete flow reran. WHAT IT DOES NOT HOLD: prior/next-week Completed treatment, the deferred team-training badge, Sam\'s physical iPhone.',
+    },
+  },
+  {
     id: 'LAW-one-name-two-meanings',
     law: 'A name that covers more than one thing is measured apart BEFORE it is worked on — per strand, never per label.',
     ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat: "four sightings in one day is not a coincidence — give the class a name and a row… a name that covers more than one thing is measured apart BEFORE it is worked on, and the measurement is per strand, not per label"',

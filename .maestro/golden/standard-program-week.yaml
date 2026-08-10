@@ -47,6 +47,42 @@ tags:
     id: "day-row-thu"
 - assertVisible:
     id: "day-row-fri"
+
+# ── RULING 7: ALL SEVEN USE HER CARD, INCLUDING TODAY ───────────────────────
+# Sam answered the one remaining fork on 2026-08-11: her card design for all
+# seven days. Monday is both TODAY and the row selected by the existing state,
+# so these ids prove those two coordinates cannot turn it into the old hero row.
+- assertVisible:
+    id: "day-row-mon-card-header"
+- assertVisible:
+    id: "day-week-today-pill"
+- assertVisible:
+    id: "day-row-mon-count"
+- assertNotVisible:
+    id: "view-workout-button"
+- assertNotVisible:
+    id: "make-change-link"
+
+# A different card opens onto the SAME details while its card head stays put.
+- assertVisible:
+    id: "day-row-wed-count"
+- tapOn:
+    id: "day-row-wed"
+- extendedWaitUntil:
+    visible:
+      id: "day-timeline"
+    timeout: 10000
+- assertVisible:
+    id: "day-row-wed-card-header"
+- assertNotVisible:
+    id: "view-workout-button"
+- assertNotVisible:
+    id: "make-change-link"
+- takeScreenshot: artifacts/ui-walk/week-row-open
+
+# The taller card structure still reaches the bottom of the same seven-day
+# list. These checks come last so the scroll cannot make the card-head checks
+# above answer a viewport question instead of a structure question.
 - scrollUntilVisible:
     element:
       id: "day-row-sat"
@@ -59,24 +95,3 @@ tags:
     direction: DOWN
 - assertVisible:
     id: "day-row-sun"
-
-# ── RULING 7: THE WEEK'S ROWS CARRY A COUNT AND OPEN IN PLACE ───────────────
-# Sam's question — "does tapping Thursday open in place or take me to a day
-# screen?" — was answered by reading her signed prototype: IN PLACE. The app
-# already expanded; what the rows lacked was anything worth opening. These four
-# lines are the only thing that proves the week got the drop-downs, because a
-# source cell cannot tell a timeline that renders from one that is reachable.
-# A NON-SELECTED ROW, DELIBERATELY. The selected row renders the day CARD head
-# (eyebrow, tier chip, wrapping title) and its counts live on the drop-downs
-# inside it; the count line belongs to the six collapsed rows. Asserting on
-# Monday failed for exactly that reason and the selector is the fix, not the
-# feature.
-- assertVisible:
-    id: "day-row-wed-count"
-- tapOn:
-    id: "day-row-wed"
-- extendedWaitUntil:
-    visible:
-      id: "day-timeline"
-    timeout: 10000
-- takeScreenshot: artifacts/ui-walk/week-row-open

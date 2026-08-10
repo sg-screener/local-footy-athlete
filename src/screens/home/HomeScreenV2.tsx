@@ -75,16 +75,13 @@ import {
 } from './homeScreenConstants';
 
 /**
- * HomeScreenV2 — one week, one list.
+ * HomeScreenV2 — one visible week, two deliberate screen shapes.
  *
  * ## Hierarchy
- * All seven days render as a single scannable list. The SELECTED day is
- * the emphasis carrier: slightly bigger type, roomier padding, accent
- * surface, and the expanded CTA block (Start Session / change door).
- * Selection defaults to today (useHomeScreen), so on open the athlete
- * sees today gently lifted out of the week; tapping any other day moves
- * the emphasis there. No hero card — "what do I do now" and "how does my
- * week look" are the same view.
+ * Today renders as the one actionable day card. Week renders seven instances
+ * of one dated card head; today is that same card highlighted, and selection
+ * reveals component details without changing the head or importing the day
+ * screen's Start/change controls. Both shapes read the same VisibleDay.
  *
  * ## Logic parity
  * All state and handler orchestration lives in `useHomeScreen`, which
@@ -93,9 +90,9 @@ import {
  * outcomes — only the rendering differs.
  *
  * ## Visual language
- * Premium, focused, high-end. The selected row earns its dominance
- * through scale and surface — not borders or glow. Non-selected rows
- * recede into a structured timeline, not a grid of outlined buttons.
+ * Premium, focused, high-end. The week reads as seven instances of the same
+ * card, with today highlighted inside that system rather than promoted into a
+ * different hero. The day screen keeps the larger actionable treatment.
  * Glow is reserved for completion / success moments elsewhere in the
  * app; the home screen is a "ready to start" posture.
  *
@@ -388,12 +385,12 @@ export default function HomeScreenV2() {
   );
 
   /**
-   * ONE FULL-SIZE DAY ROW, WHICHEVER SHAPE THE SCREEN IS IN.
+   * ONE DAY OWNER, WHICHEVER SHAPE THE SCREEN IS IN.
    *
    * The week view calls this seven times, the day-first view once. Everything a
-   * row is — its doors, its badges, its receipts, its testIDs — is decided here
-   * and only here, so the two shapes cannot drift into offering different things
-   * on the same day.
+   * row is — its visible-day read, receipts and testIDs — is decided here and
+   * only here. The presentation boundary is explicit: day owns actions; week
+   * owns the uniform dated head and opens details only.
    *
    * The one difference is the tap, and it is the honest one: in the week view
    * tapping the open row COLLAPSES it (selection is expansion, and the list is
@@ -1448,27 +1445,6 @@ function getDayRowAccentColor({
   return DAY_ROW_ACCENT.core;
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-  const clean = hex.replace('#', '');
-  if (clean.length !== 6) return `rgba(200, 255, 0, ${alpha})`;
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function selectedDayRowStyle(accentColor: string) {
-  return {
-    backgroundColor: hexToRgba(accentColor, 0.08),
-    borderColor: accentColor,
-    shadowColor: accentColor,
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  };
-}
-
 function GameBadge() {
   return (
     <View style={styles.gameBadge}>
@@ -1854,14 +1830,132 @@ function DayStateLeaves({
   );
 }
 
+interface WeekDayCardHeaderProps {
+  day: any;
+  title: string | null;
+  titleIcon: RowIconKind;
+  accentColor: string;
+  hasWorkout: boolean;
+  isGame: boolean;
+  isCompleted: boolean;
+  isMoveSource: boolean;
+  isMoveTarget: boolean;
+  pickerMode: 'normal' | 'moveGame' | 'addGame';
+  rowCount: number;
+  canExpand: boolean;
+  isExpanded: boolean;
+  dayToken: string;
+}
+
 /**
- * Day row — one of seven identical rows in the week list.
+ * HER WEEK CARD, HIS LIVE DAY.
  *
- * The SELECTED row (default: today, via useHomeScreen) is the screen's
- * emphasis carrier: slightly bigger weekday + title type, roomier
- * padding, accent surface, and the expanded CTA block (Start Session /
- * change door). Tapping another day moves the emphasis there —
- * selection IS the hierarchy, so no separate hero card exists.
+ * Sam chose the prototype's card structure for ALL SEVEN days on 2026-08-11:
+ * the date column, program-category chip, session title, exercise total and
+ * open chevron. Today is this same component with its marker inside the date
+ * column; opening a card changes only the details below it, never its head.
+ *
+ * This component deliberately owns HEAD STRUCTURE only. `DayRow` still owns the
+ * card, state leaves and the one shared `DayTimeline`, so this layout cannot
+ * grow a second account of what the day contains.
+ */
+function WeekDayCardHeader({
+  day,
+  title,
+  titleIcon,
+  accentColor,
+  hasWorkout,
+  isGame,
+  isCompleted,
+  isMoveSource,
+  isMoveTarget,
+  pickerMode,
+  rowCount,
+  canExpand,
+  isExpanded,
+  dayToken,
+}: WeekDayCardHeaderProps) {
+  return (
+    <View style={styles.weekCardHeader} testID={`day-row-${dayToken}-card-header`}>
+      <View style={styles.weekCardDateColumn}>
+        <Text style={[styles.dayLabel, styles.weekCardWeekday,
+          day.isToday && styles.weekStripDayToday]}>
+          {day.short}
+        </Text>
+        <Text style={[styles.workoutTitleSelected, styles.weekCardDateNumeral]}>
+          {dayOfMonthLabel(day.date)}
+        </Text>
+        {day.isToday ? (
+          <Badge label="Today" tone="accent" testID="day-week-today-pill" />
+        ) : null}
+      </View>
+
+      <View style={styles.weekCardDivider} />
+
+      <View style={styles.weekCardMain}>
+        <View style={styles.weekCardCategoryRow}>
+          {isMoveSource ? (
+            <Badge label="Moving" tone="outline" />
+          ) : isGame ? (
+            <GameBadge />
+          ) : hasWorkout && day.workout.sessionTier ? (
+            <SessionTierBadge tier={day.workout.sessionTier} />
+          ) : null}
+          {isCompleted ? <Badge label="Done" tone="success" /> : null}
+        </View>
+
+        <View style={styles.weekCardTitleLine}>
+          <RowIcon kind={titleIcon} size={15} color={accentColor} />
+          <Text
+            style={[hasWorkout ? styles.workoutTitle : styles.restLabel,
+              styles.selectedWorkoutTitle,
+              isMoveSource && { opacity: 0.4 }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {title}
+          </Text>
+        </View>
+
+        {isMoveTarget ? (
+          <Text style={[styles.moveTargetLabel, styles.weekCardPickerLabel]}>
+            {pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
+          </Text>
+        ) : rowCount > 0 ? (
+          <Text style={styles.timelinePartMeta} testID={`day-row-${dayToken}-count`}>
+            {signedCopy(
+              rowCount === 1 ? 'day.part.exercise_count_one' : 'day.part.exercise_count',
+              { count: rowCount },
+            )}
+          </Text>
+        ) : null}
+      </View>
+
+      {canExpand ? (
+        <Svg
+          width={18}
+          height={18}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#8A8A8A"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={[styles.weekCardChevron, isExpanded && styles.weekCardChevronOpen]}
+        >
+          <Path d="M7 10l5 5 5-5" />
+        </Svg>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * One day, rendered through the day card or the week card boundary.
+ *
+ * The week head is invariant under selection: tapping changes only whether the
+ * shared details render below it. Today is highlighted by date identity, not by
+ * being swapped into the day screen's hero/action layout.
  */
 function DayRow({
   day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
@@ -1871,7 +1965,7 @@ function DayRow({
 }: DayRowProps) {
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
-  const rowTone = emphasized ? 'accent' : 'default';
+  const rowTone = dayShape && emphasized ? 'accent' : 'default';
   // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout, and now
   // exactly ONE word. `cardLeadHeadline` gives the day's BUCKET (Strength,
   // Conditioning, Mobility, Gunshow, Accessories, Speed) for a training day,
@@ -1965,49 +2059,96 @@ function DayRow({
     (total, part) => total + part.rows.length, 0);
   const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
   const stateToken = dayStateToken({ day, isSelected, isMoveSource, isMoveTarget });
-  const exposesExpandedActions = isSelected && normal;
+  const canExpand = normal && hasWorkout && !isGame && rowCount > 0;
+  const exposesNestedControls = isSelected && normal && (dayShape || canExpand);
+  const cardCanPress = dayShape || pickerMode !== 'normal' || canExpand;
+
+  const dayCardHeader = (
+    <View style={styles.selectedHeader}>
+      <View style={styles.selectedMetaRow}>
+        {showTodayEyebrow ? (
+          /* THE EYEBROW — ruling 5's replacement for the badge. */
+          <Text style={styles.dayEyebrow} testID="day-card-eyebrow">
+            {signedCopy('day.card.eyebrow.today')}
+            {signedCopy('day.card.eyebrow.date_separator')}
+            {day.short} {shortDayMonthLabel(day.date)}
+          </Text>
+        ) : (
+          <View style={styles.selectedDateCluster}>
+            <Text
+              style={[
+                styles.dayLabel,
+                styles.dayLabelSelected,
+                { color: '#C8FF00' },
+              ]}
+            >
+              {day.short}
+            </Text>
+            <Text style={[styles.dayDate, styles.dayDateSelected]}>
+              {shortDayMonthLabel(day.date)}
+            </Text>
+          </View>
+        )}
+        <View style={styles.selectedBadgeCluster}>{rowBadges}</View>
+      </View>
+
+      <View style={styles.selectedTitleBlock}>
+        <View style={styles.selectedTitleLine}>
+          <RowIcon kind={titleIcon} size={16} color={accentColor} />
+          <Text
+            style={[
+              hasWorkout ? styles.workoutTitle : styles.restLabel,
+              hasWorkout ? styles.workoutTitleSelected : styles.restLabelSelected,
+              styles.selectedWorkoutTitle,
+              isMoveSource && { opacity: 0.4 },
+            ]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {selectedTitle}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const weekCardHeader = (
+    <WeekDayCardHeader
+      day={day}
+      title={title}
+      titleIcon={titleIcon}
+      accentColor={accentColor}
+      hasWorkout={hasWorkout}
+      isGame={isGame}
+      isCompleted={isCompleted}
+      isMoveSource={isMoveSource}
+      isMoveTarget={isMoveTarget}
+      pickerMode={pickerMode}
+      rowCount={rowCount}
+      canExpand={canExpand}
+      isExpanded={isSelected && normal}
+      dayToken={dayToken}
+    />
+  );
 
   return (
     <Card
       tone={rowTone}
-      selected={isSelected && normal}
+      selected={normal && (dayShape ? isSelected : day.isToday)}
       padding="none"
       radius="lg"
-      onPress={onPress}
+      onPress={cardCanPress ? onPress : undefined}
       testID={isMoveTarget
         ? explorerTestId.fixtureTarget(day.date)
         : `day-row-${dayToken}`}
       accessibilityLabel={`Day ${day.short ?? ''}${title ? ` ${title}` : ''}`}
-      accessible={!exposesExpandedActions}
+      accessible={!exposesNestedControls}
       style={[
         styles.dayRow,
-        // Rest-of-week rows sit on a darker, borderless surface — a
-        // structured timeline, not a grid of outlined buttons. The selected
-        // and move tones retain their full card treatment for clarity.
-        !isSelected && !isMoveSource && !isMoveTarget && styles.dayRowResting,
+        !dayShape && styles.weekDayCard,
         isMoveSource && styles.dayRowMoveSource,
         isMoveTarget && styles.dayRowMoveTarget,
-        day.isToday && !isSelected && normal && styles.dayRowToday,
-        /* ── RULING 2: THE DAY CARD IS CALMER ──
-           Sam, 2026-08-10, comparing the two: *"theres less highlight here as
-           well whihc is good"*. Hers is a dark card on black — no lime border,
-           no glow; his carried a full accent border AND a lit interior AND a
-           coloured shadow, and the accent strip down the left, and the lime
-           weekday, all at once.
-
-           **THE ACCENT IS NOT DELETED, IT IS SPENT ONCE.** The strip stays and
-           Start Session stays lime; what goes is the border, the tinted fill and
-           the glow around the whole card. Lime that outlines everything cannot
-           point at anything, which is the same argument as the badge: a screen
-           that emphasises every part of itself has no emphasis.
-
-           **DAY SHAPE ONLY.** The week list's selected row is still one of seven
-           and needs the border to say which one is open — there is no eyebrow
-           and no single-card context there to carry it. Ruling 2 is about the
-           day screen, so the change is too. */
-        emphasized && (dayShape
-          ? styles.dayRowCalm
-          : selectedDayRowStyle(accentColor)),
+        dayShape && emphasized && styles.dayRowCalm,
       ]}
     >
       <DayStateLeaves
@@ -2016,195 +2157,81 @@ function DayRow({
         progressionReceipts={progressionReceipts}
         stateToken={stateToken}
       />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.dayAccentStrip,
-          emphasized && styles.dayAccentStripSelected,
-          { backgroundColor: accentColor },
-        ]}
-      />
-      <View style={[styles.dayRowInner, emphasized && styles.dayRowInnerSelected]}>
-        {emphasized ? (
-          <View style={styles.selectedHeader}>
-            <View style={styles.selectedMetaRow}>
-              {showTodayEyebrow ? (
-                /* THE EYEBROW — ruling 5's replacement for the badge, and it
-                   REPLACES the `MON 13/7` cluster rather than sitting beside it.
-                   Sam's own line: two things saying "today" is what the ruling
-                   removed.
+      {dayShape ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.dayAccentStrip,
+            emphasized && styles.dayAccentStripSelected,
+            { backgroundColor: accentColor },
+          ]}
+        />
+      ) : null}
+      <View style={[
+        styles.dayRowInner,
+        dayShape && emphasized && styles.dayRowInnerSelected,
+        !dayShape && styles.weekDayCardInner,
+      ]}>
+        {dayShape ? dayCardHeader : weekCardHeader}
 
-                   THE ONLY NEW CHARACTERS ARE SIGNED. "TODAY'S SESSION" and the
-                   " - " are sheet entries (batch 32, signed on sight). `MON` and
-                   `10/8` are the SAME two values this cluster rendered before
-                   this slice — `day.short` and `shortDayMonthLabel` — moved, not
-                   re-formatted. Registering a date template here would give the
-                   app a second way to say what day it is. */
-                <Text style={styles.dayEyebrow} testID="day-card-eyebrow">
-                  {signedCopy('day.card.eyebrow.today')}
-                  {signedCopy('day.card.eyebrow.date_separator')}
-                  {day.short} {shortDayMonthLabel(day.date)}
-                </Text>
-              ) : (
-                <View style={styles.selectedDateCluster}>
-                  <Text
-                    style={[
-                      styles.dayLabel,
-                      styles.dayLabelSelected,
-                      { color: '#C8FF00' },
-                    ]}
-                  >
-                    {day.short}
-                  </Text>
-                  <Text style={[styles.dayDate, styles.dayDateSelected]}>
-                    {shortDayMonthLabel(day.date)}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.selectedBadgeCluster}>{rowBadges}</View>
-            </View>
-
-            <View style={styles.selectedTitleBlock}>
-              <View style={styles.selectedTitleLine}>
-                <RowIcon kind={titleIcon} size={16} color={accentColor} />
-                {/* THE TITLE WRAPS ON THE DAY SCREEN. Sam's read of her card:
-                    *"Then the title on its own line, wrapping — Strength + /
-                    Conditioning"*. A compound name is exactly the case the
-                    single-line ellipsis was eating, and the compound name is
-                    his own 2026-08-08 ruling — so truncating it here was one
-                    ruling quietly undoing another. The week list keeps one line:
-                    seven rows of wrapping titles is a different screen. */}
-                <Text
-                  style={[
-                    hasWorkout ? styles.workoutTitle : styles.restLabel,
-                    hasWorkout ? styles.workoutTitleSelected : styles.restLabelSelected,
-                    styles.selectedWorkoutTitle,
-                    isMoveSource && { opacity: 0.4 },
-                  ]}
-                  numberOfLines={dayShape ? 2 : 1}
-                  ellipsizeMode="tail"
-                >
-                  {selectedTitle}
-                </Text>
-              </View>
-            </View>
+        {/* The WEEK card opens details only. Its head does not change shape and
+            its session/change controls stay on the day screen, exactly as Sam
+            chose from the signed prototype on 2026-08-11. */}
+        {!dayShape && isSelected && hasWorkout && !isGame && normal && (
+          <View style={styles.weekExpanded}>
+            {staleWarning ? <StaleOverrideBanner warning={staleWarning} /> : null}
+            {timeline}
           </View>
-        ) : (
-          <View style={styles.dayHeader}>
-            <View style={styles.leftCluster}>
-              <Text
-                style={[
-                  styles.dayLabel,
-                  day.isToday || isMoveTarget ? { color: '#C8FF00' } : null,
-                ]}
-              >
-                {day.short}
-              </Text>
-              {/* Actual calendar date — quiet, one step dimmer than the
-                  weekday so "MON" stays the anchor and "3/7" is the detail. */}
-              <Text style={styles.dayDate}>
-                {shortDayMonthLabel(day.date)}
-              </Text>
-              {rowBadges}
-            </View>
+        )}
 
-          {isMoveTarget ? (
-            <Text style={styles.moveTargetLabel}>
-              {pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
-            </Text>
-          ) : hasWorkout ? (
-            <View style={styles.titleBlock}>
-              <View style={styles.rowTitleLine}>
-                <RowIcon kind={titleIcon} size={15} color={accentColor} />
-                <Text
-                  style={[
-                    styles.workoutTitle,
-                    isMoveSource && { opacity: 0.4 },
-                  ]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {title}
-                </Text>
-              </View>
-              {/* ── RULING 7: THE EXERCISE COUNT ON THE WEEK ROW ──
-                  Her card head carries day, date, title and a count. The count
-                  is the SAME sheet template the day card's drop-downs use — one
-                  authored shape for "N exercises", filled from the day's own
-                  rows, so the week row and the opened part cannot phrase it
-                  differently.
-
-                  IT IS THE DAY'S TOTAL, not a part's: `rowCount` sums the
-                  timeline's parts, which is what the athlete sees when the row
-                  opens. Zero renders nothing rather than "0 exercises" — a rest
-                  day already says Rest. */}
-              {rowCount > 0 ? (
-                <Text style={styles.dayRowCount} testID={`day-row-${dayToken}-count`}>
-                  {signedCopy(
-                    rowCount === 1 ? 'day.part.exercise_count_one' : 'day.part.exercise_count',
-                    { count: rowCount },
-                  )}
-                </Text>
-              ) : null}
-            </View>
-          ) : (
-            <View style={styles.restLine}>
-              <RowIcon kind="recovery" size={15} color={accentColor} />
-              <Text style={styles.restLabel}>
-                {title}
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Expanded selected content */}
-      {isSelected && hasWorkout && !isGame && normal && (
-        <View style={styles.expanded}>
-          {staleWarning && (
-            <StaleOverrideBanner
-              warning={staleWarning}
-            />
-          )}
-          {timeline}
-          {isCompleted ? (
-            <>
-              <View style={styles.sessionCompleteLine} testID={`day-complete-${dayToken}`}>
-                <RowIcon kind="pulse" size={15} color="#5BD98A" />
-                <Text style={styles.sessionCompleteText}>Session complete</Text>
-              </View>
-              <Button label="View summary" size="lg" glow={false} onPress={onViewWorkout} testID="view-completed-session-button" />
-            </>
-          ) : isTeamOnly ? (
-            <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
-          ) : isOptionalSession ? (
-            <>
-              <Text style={styles.expandedMeta}>Optional this week — only if you're up to it. Nothing's required.</Text>
-              <Button label="Start optional session" variant="secondary" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
-            </>
-          ) : (
-            <>
-              {isRecoverySession ? (
-                <Text style={styles.expandedMeta}>Move easy. Feel better.</Text>
-              ) : null}
-              <Button label="Start Session" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
-            </>
-          )}
-          <Pressable
-            onPress={onMakeChange}
-            style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
-            testID="make-change-link"
-          >
-            <Text style={styles.makeChangeText}>Want to change something?</Text>
-          </Pressable>
-        </View>
-      )}
+        {/* The DAY card keeps every live action the week cards deliberately do
+            not carry. Same doors, same handlers, new structural boundary. */}
+        {dayShape && isSelected && hasWorkout && !isGame && normal && (
+          <View style={styles.expanded}>
+            {staleWarning && (
+              <StaleOverrideBanner
+                warning={staleWarning}
+              />
+            )}
+            {timeline}
+            {isCompleted ? (
+              <>
+                <View style={styles.sessionCompleteLine} testID={`day-complete-${dayToken}`}>
+                  <RowIcon kind="pulse" size={15} color="#5BD98A" />
+                  <Text style={styles.sessionCompleteText}>Session complete</Text>
+                </View>
+                <Button label="View summary" size="lg" glow={false} onPress={onViewWorkout} testID="view-completed-session-button" />
+              </>
+            ) : isTeamOnly ? (
+              <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
+            ) : isOptionalSession ? (
+              <>
+                <Text style={styles.expandedMeta}>Optional this week — only if you're up to it. Nothing's required.</Text>
+                <Button label="Start optional session" variant="secondary" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
+              </>
+            ) : (
+              <>
+                {isRecoverySession ? (
+                  <Text style={styles.expandedMeta}>Move easy. Feel better.</Text>
+                ) : null}
+                <Button label="Start Session" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
+              </>
+            )}
+            <Pressable
+              onPress={onMakeChange}
+              style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
+              testID="make-change-link"
+            >
+              <Text style={styles.makeChangeText}>Want to change something?</Text>
+            </Pressable>
+          </View>
+        )}
 
       {!isSelected && staleWarning && normal && (
         <StaleOverrideBanner warning={staleWarning} compact />
       )}
 
-      {isSelected && isGame && normal && (
+      {dayShape && isSelected && isGame && normal && (
         <View style={styles.expanded}>
           <Text style={styles.expandedMeta}>Good luck!</Text>
           <Button
@@ -2225,7 +2252,7 @@ function DayRow({
           </Pressable>
         </View>
       )}
-      {isSelected && !hasWorkout && normal && (
+      {dayShape && isSelected && !hasWorkout && normal && (
         <View style={styles.expanded}>
           <Text style={styles.expandedMeta}>Freshen up. Adapt. Go again.</Text>
           <Pressable
@@ -3856,12 +3883,60 @@ const styles = StyleSheet.create({
 
   // ─── Week list ───
   //
-  // A structured weekly timeline, not a grid of outlined buttons. Rows
-  // are flat, borderless, tighter vertically. Non-selected rows recede
-  // into a deeper grey; the SELECTED row is the screen's emphasis
-  // carrier — slightly bigger type + roomier padding on top of the
-  // Card's accent surface. Selection IS the hierarchy (no hero card).
-  dayList: { gap: 6, marginTop: spacing.sm },
+  // Seven instances of one card structure. Selection opens details inside the
+  // card; it does not replace the head or import the day screen's actions.
+  dayList: { gap: spacing.sm, marginTop: spacing.sm },
+
+  // THE WEEK'S ONE CARD SHAPE (Sam, 2026-08-11). Every day uses these layout
+  // pieces; today differs only through Card's existing selected treatment and
+  // the existing Today badge. No colour, typeface or icon system is introduced.
+  weekDayCard: { minHeight: 86 },
+  weekDayCardInner: { paddingHorizontal: spacing.md, paddingVertical: 10 },
+  weekCardHeader: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  weekCardDateColumn: {
+    width: 64,
+    minHeight: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  weekCardWeekday: { minWidth: 0, textAlign: 'center' },
+  weekCardDateNumeral: { textAlign: 'center', lineHeight: 21 },
+  weekCardDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: 3,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  weekCardMain: { flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 4 },
+  weekCardCategoryRow: {
+    minHeight: 17,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  weekCardTitleLine: {
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  weekCardPickerLabel: { textAlign: 'left' },
+  weekCardChevron: { flexShrink: 0 },
+  weekCardChevronOpen: { transform: [{ rotate: '180deg' }] },
+  weekExpanded: {
+    marginTop: 10,
+    paddingTop: 10,
+    gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#2F2F2F',
+  },
 
   // ── Day-first view ──
   dayFirst: { gap: spacing.sm, marginTop: spacing.sm },
@@ -3934,8 +4009,6 @@ const styles = StyleSheet.create({
     width: 1.5,
     backgroundColor: 'rgba(255,255,255,0.10)',
   },
-  // Ruling 7's count on a week row — the day card's meta grey and size.
-  dayRowCount: { color: '#8A8A8A', fontSize: 12, lineHeight: 16, paddingLeft: 21 },
   timelineHeadline: {
     color: '#E8EAED',
     fontSize: 14,
@@ -3998,19 +4071,11 @@ const styles = StyleSheet.create({
   dayRowInnerSelected: {
     paddingVertical: spacing.md,
   },
-  // Resting state — darker, borderless, quietly set back from the page.
-  dayRowResting: { backgroundColor: '#0F0F0F', borderColor: 'transparent' },
-  // Today row when NOT selected (the athlete moved the emphasis to
-  // another day). A half-step brighter than resting with a faint edge so
-  // "now" stays findable without competing with the selected row.
-  dayRowToday: { backgroundColor: '#141414', borderColor: '#1F1F1F' },
   dayRowMoveSource: { opacity: 0.5, borderColor: 'rgba(200, 255, 0, 0.30)' },
   dayRowMoveTarget: {
     borderColor: 'rgba(200, 255, 0, 0.40)', backgroundColor: '#141814',
   },
 
-  dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  leftCluster: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   selectedHeader: {
     gap: 10,
   },
@@ -4080,14 +4145,6 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     flexShrink: 1,
   },
-  titleBlock: { flex: 1, alignItems: 'flex-end', minWidth: 0 },
-  rowTitleLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 6,
-    maxWidth: '100%',
-  },
   rowIcon: {
     opacity: 0.95,
   },
@@ -4104,13 +4161,6 @@ const styles = StyleSheet.create({
   // row, not a hero. White + heavier weight carry the emphasis.
   workoutTitleSelected: {
     color: '#FFFFFF', fontSize: 18, fontWeight: '700',
-  },
-  restLine: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 6,
   },
   restLabel: {
     color: '#3E3E3E', fontSize: 13, fontWeight: '600', textAlign: 'right',

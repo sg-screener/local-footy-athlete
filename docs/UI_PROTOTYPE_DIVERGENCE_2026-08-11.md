@@ -64,3 +64,48 @@ second is what shipped, minus the thin rows.
 **NOT COVERED:** no component was read; whether the week rows are a separate
 component from the prototype's card or the same one styled down is unmeasured.
 Nothing here was seen on Sam's phone — simulator shots only.
+
+---
+
+## RESOLVED AND BUILT — 2026-08-11
+
+**Sam answered:** *"Use her card design for all 7 days."* Today is the same week
+card as the other six — date column, category chip, title, exercise count and
+chevron — with the existing lime treatment and a TODAY pill. Opening a card
+reveals its component details underneath without changing the card head. The
+week list carries no Start Session or change controls; those live on the day
+screen.
+
+**THE TWO OPTIONS COMPARED BEFORE CODING:** (1) keep the selected/unselected
+branches and restyle both to look alike, or (2) give the week screen one named
+card-head owner independent of selection. Option 2 landed. It removes the branch
+that turned today into a different component instead of asking two branches to
+remain visually equal forever.
+
+**RECEIPTS:**
+
+- `test:day-first-timeline`: 30 named cells run, 30 passed. The two new cells
+  guard the single card-head owner and the week/day control boundary.
+- `.maestro/golden/standard-program-week.yaml`: completed on the booted iOS
+  simulator through the Metro-aware runner. It reached all seven day rows,
+  proved today's uniform card head and count, opened Wednesday in place, proved
+  the head remained, and proved the day-screen controls were absent.
+- `artifacts/ui-walk/week-row-open.png`: looked at after the run. Its first run
+  exposed TODAY wrapping inside a narrow date column; the column was widened and
+  the complete flow was rerun before this receipt was written.
+- `test:compile`: passed its baseline-regression gate.
+
+**WHAT CATCHES THE NEXT DEFECT OF THIS CLASS:** the source cell fails if a
+selected/today branch can choose another week-card head; the simulator tape
+executes both coordinates that caused the miss — today/selected and another day
+opened — and checks the day-only controls did not follow them into the week.
+
+**NORTH STAR:** toward it. No state or second program read was added. Every card
+head and every opened detail still reads the same visible-day projection; only
+the screen structure changed.
+
+**NOT COVERED:** Sam's physical iPhone; the already-open active-modifier strip;
+the already-held season-phase removal; the prior/next-week "Completed" treatment;
+the separately deferred team-training badge. The last two are not claimed fixed
+by this current-week screen tape, so this is gates-green simulator evidence, not
+Sam device acceptance.

@@ -656,6 +656,55 @@ run('the week rows open in place, onto the same drop-downs the day card has', ()
     + 'card must be one component, or they can disagree about a day');
 });
 
+run('all seven week days use her one card head, including today', () => {
+  const home = homeScreenSource();
+  const componentAt = home.indexOf('function WeekDayCardHeader(');
+  const dayRowAt = home.indexOf('function DayRow(');
+  assert(componentAt > 0 && dayRowAt > componentAt,
+    'the week card head is not a named component before DayRow — the seven days '
+    + 'have no single structural owner');
+  const component = home.slice(componentAt, dayRowAt);
+  assert(component.length > 500,
+    'the week card head region is too small to be the dated card Sam chose');
+  assert(/dayOfMonthLabel\(day\.date\)/.test(component),
+    'the week card no longer carries her large date numeral');
+  assert(/day\.isToday[\s\S]{0,220}testID="day-week-today-pill"/.test(component),
+    'today is not marked inside the same week-card date column as every other day');
+  assert(/<SessionTierBadge[\s\S]{0,160}tier=\{day\.workout\.sessionTier\}/.test(component),
+    'the week card no longer carries the program category chip');
+  assert(/rowCount > 0[\s\S]{0,500}day\.part\.exercise_count/.test(component),
+    'the week card no longer carries the exercise total from its own details');
+  assert(/canExpand[\s\S]{0,600}weekCardChevron/.test(component),
+    'a card with details no longer shows that it opens');
+
+  const dayRow = home.slice(dayRowAt, home.indexOf('interface LifeFactChipProps', dayRowAt));
+  assert(dayRow.length > 2000,
+    'the DayRow region could not be found — this cell would otherwise pass on '
+    + 'a detached WeekDayCardHeader that no day renders');
+  assert((dayRow.match(/<WeekDayCardHeader\b/g) ?? []).length === 1,
+    'DayRow must have exactly one week-card head call site for all seven days');
+  assert(/const weekCardHeader = \([\s\S]{0,120}<WeekDayCardHeader\b/.test(dayRow)
+    && /\{dayShape \? dayCardHeader : weekCardHeader\}/.test(dayRow),
+    'the week-card head is not selected by the SCREEN shape. Today or an opened '
+    + 'day can still fall into a different head, recreating the divergence Sam caught.');
+});
+
+run('the week cards expand details only — session and change controls stay on the day screen', () => {
+  const home = homeScreenSource();
+  const dayRowAt = home.indexOf('function DayRow(');
+  const dayRow = home.slice(dayRowAt, home.indexOf('interface LifeFactChipProps', dayRowAt));
+  assert(dayRowAt > 0 && dayRow.length > 2000,
+    'the DayRow region could not be found');
+  assert(/!dayShape && isSelected && hasWorkout && !isGame && normal[\s\S]{0,180}\{timeline\}/.test(dayRow),
+    'the week card does not own a details-only expanded region');
+  assert(/dayShape && isSelected && hasWorkout && !isGame && normal/.test(dayRow),
+    'the Start Session block is no longer explicitly scoped to the day screen');
+  assert(/dayShape && isSelected && isGame && normal/.test(dayRow),
+    'game actions are no longer explicitly scoped to the day screen');
+  assert(/dayShape && isSelected && !hasWorkout && normal/.test(dayRow),
+    'the add-optional control is no longer explicitly scoped to the day screen');
+});
+
 run('a week row carries the day\'s exercise count, and zero shows nothing', () => {
   const home = homeScreenSource();
   const at = home.indexOf('rowCount = ');
