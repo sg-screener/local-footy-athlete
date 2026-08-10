@@ -1,11 +1,20 @@
 appId: com.localfootyathlete.app
 name: Deterministic dev E2E seed reset
 ---
+# THE LAUNCH PURPOSE IS NOT OPTIONAL, AND OMITTING IT IS A HARD CRASH.
+# `DevE2ELaunchDiagnostic.captureAndConfigureIfRequested` reads `e2eMetroUrl`
+# first; the moment that key is present it REQUIRES `e2eLaunchPurpose` to be one
+# of its six allowed values and `fatalError`s otherwise
+# (ios/LocalFootyAthlete/DevE2ELaunchDiagnostic.swift:55-60). The native receipt
+# landed 2026-07-18 (552dfe4a); this file was last touched 2026-07-16 and was
+# never updated, so every flow routing through it crashed the app on its first
+# command from that day until 2026-08-10.
 - launchApp:
     clearState: true
     stopApp: true
     arguments:
       e2eMetroUrl: "${E2E_METRO_URL}"
+      e2eLaunchPurpose: "initial-cold-launch"
 - extendedWaitUntil:
     visible:
       id: "e2e-entry-ready"
