@@ -2,6 +2,158 @@
 
 ## Unprocessed (newest first)
 
+1. **SAM RAN THE MOVE BACK THROUGH THE COACH AND THE DEVICE LOG NAMES
+   THE DEFECT. THIS SUPERSEDES EVERY EARLIER THEORY.** He typed *"move
+   wednesday to monday"* in the COACH TAB, it worked, **and the
+   conditioning reappeared on Monday.** Evidence in the repo:
+   `device-export-2026-08-10-sam-coach-wed-to-mon-KEYEVENTS.json`
+   (seat-distilled, JSON-validated) beside the earlier
+   `device-export-2026-08-10-sam-monday-wednesday.json`. **Two exports,
+   revisions 6 and 7, the same move in both directions.**
+
+   **THE LEAD, AND IT IS ONE FIELD:**
+   `planEntryId: "w2:monday:none:strength"` on a day whose
+   `workoutType` is **`Mixed`**. **The unit the door moved is
+   identified as a STRENGTH plan entry, on a day the app itself calls
+   Mixed.** The coach sent no scope, the door treated it as whole-day —
+   and the thing that actually travelled was the entry whose identity
+   ends in `:strength`. **That is why only the strength moved, and it
+   has nothing to do with team anchors, absorb, or `stackTemplate`.**
+   Start at how `planEntryId` is minted and what a whole-day move
+   resolves to when a Mixed day has more than one entry. **Answer this
+   before writing any fix: on a Mixed day, is there ONE plan entry or
+   more than one, and does a whole-day move carry the entry or the
+   DAY?**
+
+   **THE SECOND FACT, AND IT EXPLAINS "IT POPPED BACK UP":**
+   `accepted_week_gateway_result` came back **`gatewayStatus:
+   "repaired"` FOUR TIMES** in the one transaction — never `accepted`
+   — with `rejectionCodes: []`, `gatewayViolations: []`,
+   `typedReductionCreated: false`, and a repair candidate whose
+   `preservationCost` shows `changedDays: 1` and
+   `releasedFixtureDayPenalty: 1`. **A §18 repair ran on every publish
+   of a move the gateway also reported as violating nothing.** If the
+   repair is what re-lands conditioning on Monday, then the conditioning
+   is not being MOVED and is not being LOST — it is being RE-DERIVED by
+   the repair. **Measure that, do not assume it.** `visible_projection_
+   result` says `visibleEqualsAcceptedState: true`, so whatever the
+   athlete sees IS the accepted state — the divergence is upstream of
+   the projection, not in it.
+
+   **AND CORRECT THE SEAT'S OWN ERROR FROM LAST BATCH, IN THE BOUNDARY:
+   `source: "tap"` DOES NOT MEAN THE PROGRAM TAB.** Every event in this
+   coach-initiated transaction carries `source: "tap"` with
+   `route: "program_control:coach_tab:coach_change_card"`. The seat read
+   `lastTransaction: "tap:move_session:..."` and told Sam his move had
+   come through the Program tab rather than the coach. **Wrong: the
+   prefix is the SOURCE field, and `tap` covers any athlete-confirmed
+   action including the coach's own card. `route` is the only field
+   that names the door.** Both of his exports are coach-routed. This is
+   `LAW-count-names-instrument` a third time — a field read without
+   knowing its unit.
+
+   **WHAT IS NOW CLOSED, AND SAY SO:** the ledger recorded it
+   (`entryCountBefore: 13 → 14`, `decisionKind: move_session`), the
+   publish verified, and the projection matched accepted state. **The
+   door, the ledger and undo are all working on his real device.** The
+   defect is entry identity plus repair, and nothing else.
+
+1. **SAM'S REAL WORLD IS NOW IN THE REPO, AND IT KILLS THE CURRENT
+   THEORY.** File: `device-export-2026-08-10-sam-monday-wednesday.json`
+   at repo root (seat wrote it from his upload, 2026-08-10, JSON
+   validated). **Read it before writing another probe.**
+
+   **THE FACT THAT CHANGES EVERYTHING: HIS TEAM NIGHTS ARE TUESDAY AND
+   THURSDAY.** `teamTrainingDays: ["Tuesday","Thursday"]`. **Monday and
+   Wednesday carry NO team anchor.** The destination-axis finding —
+   *"Sam moved onto a Wednesday; every Wednesday is a team night"* —
+   **is false for Sam's world.** `stackSessionOntoTeamAnchor` is not on
+   his path at all. That finding stays a real defect on its own
+   anchored-day shape, but **it is NOT his defect and must stop being
+   reported as adjacent to it.**
+
+   **AND THE LAST TRANSACTION IS A TAP, NOT THE COACH:**
+   `lastTransaction: "tap:move_session:2026-08-10:2026-08-12"` —
+   Monday 10 Aug → Wednesday 12 Aug, through the PROGRAM TAB door.
+   Sam told the seat he used the coach chat. Both may be true (he may
+   have retried by tap before exporting). **Reproduce the TAP arm
+   first, because that is the one the world actually records**, then
+   the coach arm on the same world.
+
+   **THE REST OF THE WORLD, USE ALL OF IT:** In-season · game day
+   Saturday with marks on 08-08/15/22/29 · 5 training days Mon-Fri ·
+   TT intensity Hard · no injuries · conditioning Elite · sprint 2+/wk
+   · `acceptedRevision: 6` · **`userRemovalConstraintCount: 5`** (he has
+   removed five things — hand-built fixtures have none of these) ·
+   `weekScopedOverlayWeeks` includes **2026-08-10, his own week** ·
+   `dateOverrideDates: []`.
+
+   **STATE THE INSTRUMENT'S LIMIT BEFORE USING IT:** this export is a
+   SUMMARY — profile, marks, counts and a 13-entry action log. **It
+   carries NO week or workout content**, so it cannot be replayed
+   directly. Use it to REGENERATE his world from the accepted profile
+   snapshot + marks, then apply the recorded move and compare against
+   what he describes (gym + conditioning on Monday; only the strength
+   arrived on Wednesday). **If a regenerated world still will not
+   reproduce it, the finding is that the export must carry week content
+   — say that plainly and propose the smallest field set that would
+   settle it.** Do not conclude "not reproducible" from a summary.
+
+   **ALSO CORRECT THE SEAT'S OWN STALE READING:** the export button is
+   on the **PROFILE tab**, per your own instructions to Sam. The seat
+   earlier told him it existed only on two onboarding screens, from a
+   grep of `StoredStateExportButton` alone. Wrong, and it is
+   `LAW-count-names-instrument` again — a grep of one symbol name is
+   not a census of a capability.
+
+1. **SAM ANSWERED, 2026-08-10. FOUR RULINGS AND ONE UNBLOCK.**
+
+   **(a) ACCOUNTS: LOCAL-ONLY FOR v1.** No auth is built and none gets
+   built. Everything stays on the phone. Record it in
+   `PUBLISH_ROADMAP_2026-08-05.md` Phase 4 as DECIDED, and **delete the
+   "v1 accounts decision" open item** — it is no longer open. The
+   two docs that wrongly claim auth exists were already ordered
+   deleted; if they are not gone, that is now urgent, because a
+   local-only ruling plus a doc saying "auth is built but unwired" is
+   exactly the contradiction that costs a day later.
+
+   **(b) v1 IS iPHONE-ONLY.** Android is out of scope for v1 — not
+   deferred vaguely, OUT. Record it as decided. Any Android item in
+   any doc gets marked out-of-scope-v1 rather than open.
+
+   **(c) THE CLEAN-RESET BLOCK IS LIFTED — THE SEAT'S RULE CAUSED IT,
+   NOT SAM'S.** You are right that the order contradicted itself:
+   "delete the migration, replace with the clean-reset path" requires
+   building a path that does not exist, while the same batch forbade
+   building. **Sam's actual instruction was "kill it". The
+   no-building-while-red rule is the seat's and it yields here.**
+   Build the clean-reset door and the athlete-facing sentence, then
+   delete the migration. Scope it minimally: an unreadable stored world
+   resets and the athlete is told once, in plain words. No migration,
+   no fallback, no second attempt to salvage.
+
+   **(d) THE POWER-ROW FINDING WAS WRONG AND THE SEAT REPEATED IT TO
+   SAM — CORRECT IT WHERE HE READS IT.** Five probes, all zero: nothing
+   deletes the row; "8 rows in, 7 out" counted what the SCREEN DRAWS,
+   not what is stored. **Fix `docs/NOW.md`'s Sam block and any boundary
+   prose carrying the deletion claim**, and note in the correction that
+   the false claim came from a count whose unit was never stated —
+   which is `LAW-count-names-instrument`, already a registry row, now
+   with a founding case. **Sam's conditioning case remains OPEN and
+   unreproduced; it is the only live half of that report.**
+
+   **(e) THE COUNT GOING 20 → 42 OF 62 IS THE RIGHT ANSWER AND IS NOT A
+   REGRESSION. Say so plainly wherever it is reported**, so no future
+   reader treats it as work going backwards. The map was wrong; it is
+   now less wrong. **Sam's rule stands: from here it may only fall.**
+
+   **(f) STILL OWED TO SAM, UNCHANGED:** the six laws no script can
+   check — **put them to him one per line, in plain English, with the
+   proposed re-wording that WOULD make each checkable**, per his own
+   ruling that an uncheckable law is a finding and never a quiet
+   UNENFORCED row. He has not seen them yet. Do this at the next stop
+   rather than holding it behind the sweep.
+
 1. **[TERMINAL, 2026-08-10 — BOTH CORRECTIONS DONE AS GIVEN, PLUS ITEMS
    2 AND 3.** (1a) `docs/V1_LAUNCH_DEFINITION.md` and
    `docs/MASTER_PLAN_2026-07-23.md` are **DELETED** — `git rm`, not

@@ -110,22 +110,26 @@ nowhere else.
       currently has no female-specific lines and there is no sex field in
       onboarding, so his changes are additions rather than edits.)
 
-### Between 4 and 5 — four open items, each with its receipt
+### Between 4 and 5 — two open items and two DECIDED, each with its receipt
 
-- [ ] **THE ACCOUNTS DECISION IS UNMADE AND UNBUILT — SAM'S CALL, NOT THE
-      SEAT'S.** Phase 4 below lists "local-only vs sign-in". **There is NO auth
-      in the repo:** `src/screens/auth/`, `src/store/authStore.ts`,
-      `src/services/auth/` and `src/navigation/AuthNavigator.tsx` do not exist
-      (checked 2026-08-10), and two docs claimed otherwise until corrected the
-      same day. **Local-only costs nothing; sign-in is real work. This is the
-      largest unpriced item before the store.**
+- [x] **ACCOUNTS: LOCAL-ONLY FOR v1. DECIDED BY SAM 2026-08-10.** No auth is
+      built and none gets built. Everything stays on the phone. **This is no
+      longer an open item and no doc may re-open it as one.** Matching state:
+      there is NO auth in the repo — `src/screens/auth/`,
+      `src/store/authStore.ts`, `src/services/auth/` and
+      `src/navigation/AuthNavigator.tsx` do not exist (checked 2026-08-10), so
+      the ruling costs nothing to honour. The two docs that wrongly claimed auth
+      existed are **DELETED** (`docs/V1_LAUNCH_DEFINITION.md`,
+      `docs/MASTER_PLAN_2026-07-23.md`) — a local-only ruling standing beside a
+      doc saying "auth is built but unwired" is exactly the contradiction that
+      costs a day later.
+- [x] **v1 IS iPHONE-ONLY. DECIDED BY SAM 2026-08-10.** Android is **OUT of
+      scope for v1** — not deferred vaguely, OUT. iPhone device passes exist
+      (`test:device-pass-2026-08-05`, exports at repo root). **Any Android item
+      in any doc is marked out-of-scope-v1, never open.**
 - [ ] **BETA HAS NOT HAPPENED** — Renee plus 2-3 trusted athletes on TestFlight,
       and **Sam training off the app for a real week**. Findings size unknowable
       until it runs.
-- [ ] **ANDROID HAS NEVER BEEN RUN.** iPhone device passes exist
-      (`test:device-pass-2026-08-05`, exports at repo root); **Android is
-      OPEN-UNKNOWN. Whether v1 is iPhone-only is a DECISION, not an oversight**
-      — it goes to Sam as one.
 - [ ] **STORE ADMIN, AND ITS ORDER MATTERS.** Screenshots come AFTER the UI work
       in step 1, so the drafts in `docs/appstore/` (`APP_STORE_LISTING_DRAFT.md`,
       `PRIVACY_POLICY_DRAFT.md`, `SCREENSHOT_STORYBOARD.md`) are re-shot then,
@@ -199,8 +203,12 @@ Order RULED by Sam 2026-08-07, now superseded by the list above:
 - [ ] Beta findings fixed (size unknowable until it happens)
 
 ## Phase 4 — App Store
-- [ ] v1 accounts decision: local-only vs sign-in (old roadmap: local-only
-      AU/NZ v1)
+- [x] **ACCOUNTS: LOCAL-ONLY. DECIDED, SAM 2026-08-10.** No auth is built and
+      none gets built; everything stays on the phone. The old "local-only vs
+      sign-in" open item is **deleted, not deferred** — it is not a question any
+      more.
+- [x] **PLATFORM: iPHONE-ONLY FOR v1. DECIDED, SAM 2026-08-10.** Android is
+      out-of-scope-v1.
 - [ ] Listing: screenshots (SCREENSHOT_STORYBOARD), description, privacy
       labels + policy page
 - [ ] Submit for review (1-3 days, allow a rejection round)

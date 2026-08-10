@@ -486,7 +486,9 @@ and four unticked items are BUILT. Each line below now carries its receipt.
 
 - [ ] **Non-injury constraint live path** — producers exist; prove fatigue / soreness / busy week / missed session reach `activeConstraints[]` from real coach turns
 - [ ] **App Store metadata** (icon, screenshots, name, description, privacy policy)
-- [ ] **Real-device shake-out** (iPhone + Android, real onboarding → full week)
+- [ ] **Real-device shake-out** (**iPhone only** — real onboarding → full week).
+      **Android is OUT-OF-SCOPE-v1, decided by Sam 2026-08-10**, not open and not
+      deferred vaguely. It rides `docs/POST_V1_ROADMAP.md`.
 
 ---
 

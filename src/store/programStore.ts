@@ -49,13 +49,10 @@ import {
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
 import {
-  migrateStoredPowerBlock,
-  migrateStoredPowerBlocks,
-} from '../rules/legacyPowerBlockMigration';
-import {
   isGeneratorPlacedRecovery,
   liftGeneratorRecoveryToRest,
 } from '../rules/generatorRecoveryRestLift';
+import { readStoredWorldOrResetClean } from './unreadableWorldResetDoor';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import {
   finaliseSection18SafetyWeek,
@@ -393,7 +390,20 @@ const programStateStorage = {
   getItem: async (name: string): Promise<string | null> => {
     const trace = programHydrationTrace();
     try {
-      const value = await programStorageGetItem(name);
+      // THE CLEAN-RESET DOOR (Sam, 2026-08-10: "kill it" → a stored world the
+      // current code cannot read is RESET CLEAN and the athlete is told).
+      //
+      // HERE, and not deeper, for the same reason the power migration ran at
+      // read ingress: this is the last point before an unreadable payload can
+      // reach anything that might write it back half-understood. The difference
+      // is the exit — the migration THREW (six sites), taking the app down at
+      // boot rather than letting the athlete in. This returns null, so boot
+      // proceeds exactly as a first run, and the telling is owed as a fact.
+      const value = await readStoredWorldOrResetClean(
+        name,
+        await programStorageGetItem(name),
+        new Date().toISOString(),
+      );
       emitAthleteActionEvent(trace, 'persistence_result', {
         persistenceOperation: 'read',
         persistenceStore: name,
@@ -974,16 +984,11 @@ export function canonicaliseHydratedProgram(
   surfaces: AcceptedEffectiveWeekSurfaces,
   profile?: OnboardingData | null,
 ): TrainingProgram {
-  // Defence in depth: this is exported and reachable without going through
-  // `canonicaliseHydratedState`. The migration is idempotent, so running it
-  // twice is free and missing it once is an athlete's lost power work.
-  const clockedProgram = ensureProgramSeasonPhaseClock({
-    ...program,
-    microcycles: (program.microcycles ?? []).map((microcycle) => ({
-      ...microcycle,
-      workouts: migrateStoredPowerBlocks(microcycle.workouts ?? []),
-    })),
-  });
+  // The legacy power-block lift used to run here as defence in depth. DELETED
+  // 2026-08-10 on Sam's "kill it": a stored world the current code cannot read
+  // is reset clean at the read door (`unreadableWorldResetDoor`), never
+  // migrated. Nothing lifts a stored shape into a current one any more.
+  const clockedProgram = ensureProgramSeasonPhaseClock(program);
   return {
     ...clockedProgram,
     microcycles: (clockedProgram.microcycles ?? []).map((microcycle) =>
@@ -1554,39 +1559,41 @@ export interface HydratedStateCanonicalisationOptions {
  * legacy envelopes additionally receive the structural migration pipeline.
  */
 /**
- * Lift every stored `powerBlock` on every hydration surface into power rows.
+ * THE LEGACY POWER-BLOCK MIGRATION LIVED HERE AND IS DELETED (2026-08-10).
  *
- * Runs ABOVE the `ingressKind` branch below, deliberately. An
- * `accepted_canonical` program takes an early return that skips the whole
- * boundary canonicalisation — and accepted-canonical is exactly what a program
- * written by a Stage 2 build IS, so putting the migration inside that
- * canonicalisation would leave the athletes who most need it unmigrated. Sam's
- * requirement is "unconditionally, before any write path can persist"; this is
- * the only point that satisfies both words.
+ * Sam: ***"kill it"***. What went: `migrateHydratedStatePowerBlocks` (the
+ * hydration-surface lift) and `assertNoUnmigratedPowerBlock` (the write-side
+ * refusal), plus `rules/legacyPowerBlockMigration.ts` and its six throw sites.
  *
- * Idempotent by construction — `migrateStoredPowerBlock` returns the same object
- * when there is no block — so running it on every read forever costs nothing and
- * cannot drift.
+ * **Why the whole shape went and not just the throws.** Every one of those
+ * sites existed to keep faith with programs saved before the 2026-07-28
+ * rebuild. The app has no real users (memory `lfa-not-live-no-reminders`), so
+ * that compatibility was worth nothing and cost a boot-time crash: a stored
+ * world the migration could not map took the app down rather than letting the
+ * athlete in. **The rule that replaces it: a stored world the current code
+ * cannot read is RESET CLEAN and the athlete is told once — never migrated,
+ * never silently served by an older set of rules.** The door is
+ * `store/unreadableWorldResetDoor.ts`; the reset is honest where a fallback
+ * that quietly undercounts a week is not.
+ *
+ * **WHAT DID NOT GO WITH IT, and this was the censused risk.** The deleted
+ * function also carried `liftGeneratorRecoveryToRest` — a second, unrelated
+ * ruling that would have died silently inside a deletion that read as "remove
+ * the power migration". It is preserved below, on the same surfaces, in
+ * `liftGeneratorRecoveryAtHydration`.
  */
-/**
- * Refuse to publish a program that still carries a legacy stored block.
- *
- * Loud on purpose. The alternative — persisting it — loses real prescribed work
- * with no record, which is the one outcome this whole stage exists to prevent.
- */
-function assertNoUnmigratedPowerBlock(program: TrainingProgram | null): void {
-  if (!program) return;
-  const offenders = (program.microcycles ?? []).flatMap((microcycle) =>
-    (microcycle.workouts ?? []).filter((workout) => !!workout.powerBlock));
-  if (offenders.length === 0) return;
-  throw new Error(
-    '[programStore] refusing to publish a program carrying a legacy powerBlock; ' +
-    'it has not been through the read-path migration and persisting it would ' +
-    `drop the athlete's power work (workouts: ${offenders.map((w) => w.id).join(', ')})`,
-  );
-}
 
-function migrateHydratedStatePowerBlocks(
+/**
+ * The generator-recovery lift, ALONE — the ruling that used to ride inside the
+ * deleted power migration and would have died silently with it.
+ *
+ * It runs on the PLAN only. `dateOverrides` and `weekScopedOverlays` are
+ * athlete-owned surfaces and are deliberately not visited — the power migration
+ * did visit them, and those two branches went with it, because touching an
+ * athlete's own decision to lift a GENERATOR artefact was never this ruling's
+ * business. See `rules/generatorRecoveryRestLift.ts`.
+ */
+function liftGeneratorRecoveryAtHydration(
   state: Partial<ProgramState>,
 ): Partial<ProgramState> {
   const next: Partial<ProgramState> = { ...state };
@@ -1596,54 +1603,18 @@ function migrateHydratedStatePowerBlocks(
       ...next.currentProgram,
       microcycles: (next.currentProgram.microcycles ?? []).map((microcycle) => ({
         ...microcycle,
-        // TWO LIFTS, ONE INGRESS. The recovery lift runs on the PLAN only —
-        // `dateOverrides` and `weekScopedOverlays` below are athlete-owned
-        // surfaces and are deliberately not visited. See
-        // `rules/generatorRecoveryRestLift.ts`.
-        workouts: liftGeneratorRecoveryToRest(
-          migrateStoredPowerBlocks(microcycle.workouts ?? []),
-        ),
+        workouts: liftGeneratorRecoveryToRest(microcycle.workouts ?? []),
       })),
     };
   }
   if (next.currentMicrocycle) {
     next.currentMicrocycle = {
       ...next.currentMicrocycle,
-      workouts: liftGeneratorRecoveryToRest(
-        migrateStoredPowerBlocks(next.currentMicrocycle.workouts ?? []),
-      ),
+      workouts: liftGeneratorRecoveryToRest(next.currentMicrocycle.workouts ?? []),
     };
   }
-  if (next.todayWorkout) {
-    next.todayWorkout = isGeneratorPlacedRecovery(next.todayWorkout)
-      ? null
-      : migrateStoredPowerBlock(next.todayWorkout);
-  }
-  if (next.dateOverrides) {
-    next.dateOverrides = Object.fromEntries(
-      Object.entries(next.dateOverrides).map(([date, workout]) => [
-        date,
-        workout ? migrateStoredPowerBlock(workout) : workout,
-      ]),
-    );
-  }
-  if (next.weekScopedOverlays) {
-    next.weekScopedOverlays = Object.fromEntries(
-      Object.entries(next.weekScopedOverlays).map(([weekStart, overlay]) => [
-        weekStart,
-        overlay
-          ? {
-              ...overlay,
-              workoutsByDate: Object.fromEntries(
-                Object.entries(overlay.workoutsByDate ?? {}).map(([date, workout]) => [
-                  date,
-                  workout ? migrateStoredPowerBlock(workout) : workout,
-                ]),
-              ),
-            }
-          : overlay,
-      ]),
-    );
+  if (next.todayWorkout && isGeneratorPlacedRecovery(next.todayWorkout)) {
+    next.todayWorkout = null;
   }
   return next;
 }
@@ -1652,8 +1623,10 @@ export function canonicaliseHydratedState(
   rawPersistedState: Partial<ProgramState>,
   options: HydratedStateCanonicalisationOptions,
 ): Partial<ProgramState> {
-  // FIRST, and above every branch below. See `migrateHydratedStatePowerBlocks`.
-  const persistedState = migrateHydratedStatePowerBlocks(rawPersistedState);
+  // FIRST, and above every branch below — an `accepted_canonical` program takes
+  // an early return that skips the whole boundary canonicalisation, so a lift
+  // placed inside it would miss exactly the worlds that need it.
+  const persistedState = liftGeneratorRecoveryAtHydration(rawPersistedState);
   // ALSO above every branch below. See `dropRetiredWeekOverlaysAtHydration`
   // (L15, HOME_SCREEN_REDESIGN ruling 1) — runs unconditionally, regardless of
   // ingress classification.
@@ -1937,14 +1910,12 @@ export const useProgramStore = create<ProgramState>()(
       // clearManualOverrides() where a true fresh slate is intended
       // (onboarding completion, program create, profile reset).
       setCurrentProgram: (program, options) => {
-        // THE SECOND LOCK. Nothing writes `powerBlock` any more, so a program
-        // reaching this boundary still carrying one has not been through the
-        // read-path migration — and persisting it would drop the athlete's
-        // power on the next round trip. That is precisely the silent loss Sam
-        // ruled out, so the path is made impossible rather than unlikely.
-        // Ingress migrates unconditionally; this refuses the case where it
-        // somehow did not.
-        assertNoUnmigratedPowerBlock(program);
+        // THE SECOND LOCK IS GONE (2026-08-10, Sam: "kill it"). It threw when a
+        // program reached this boundary still carrying a legacy `powerBlock`,
+        // and it was the write-side half of a migration that no longer exists.
+        // There is nothing to be unmigrated with respect to any more: a world
+        // the current code cannot read is reset at the read door, so a
+        // legacy-shaped program never reaches a writer to be refused.
         const effectiveTodayISO = options?.todayISO ?? todayISOLocal();
         const candidateProgram = program
           ? postValidateProgram(ensureProgramSeasonPhaseClock(program), effectiveTodayISO)

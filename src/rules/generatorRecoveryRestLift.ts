@@ -20,10 +20,16 @@
  *
  * "New saves are always written in the current canonical format; superseded
  * formats are never written again, by anything, ever. Old formats exist only as
- * read-ingress lifts at the boundary." It runs where
- * `migrateStoredPowerBlocks` runs, for the same reason and with the same
- * property: idempotent by construction, so running it on every read forever
- * costs nothing and cannot drift.
+ * read-ingress lifts at the boundary." It is idempotent by construction, so
+ * running it on every read forever costs nothing and cannot drift.
+ *
+ * **IT IS NOW THE ONLY LIFT AT THIS INGRESS (2026-08-10).** It used to run
+ * inside `migrateHydratedStatePowerBlocks`, which was deleted on Sam's "kill
+ * it" — and that deletion would have taken this ruling with it silently, which
+ * is why the census refused to make the cut blind. It survives as
+ * `liftGeneratorRecoveryAtHydration` in `store/programStore.ts`. Note the
+ * difference in kind: a GENERATOR artefact is not an unreadable world, so this
+ * lift is not what the clean-reset door replaced.
  *
  * ## Rest is an ABSENCE here, and that is deliberate
  *

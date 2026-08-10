@@ -60,12 +60,23 @@ Sam moved onto a Wednesday; every Wednesday in this world is a team night.
 
 ```
 source Tuesday   power+strength          rows[power:1 -:6]
-→ team night     strength+team_training  rows[-:6]           ✗ power ROW deleted
+→ team night     strength+team_training  rows[-:6]           ✗ power row NOT DRAWN
 → empty day (control, same run)          rows[power:1 -:6]   ✓ intact
 ```
 
 Destination-dependent, with the control in the same run. **Rows are printed
 beside parts** so content loss is never confused with naming loss.
+
+**CORRECTED 2026-08-10 — that row used to read `✗ power ROW deleted`, and the
+word "deleted" was never measured.** `roleCensusFor`, the instrument producing
+these counts, reads the **PROJECTION**; it has never read storage, and this
+table never said which unit it was counting. Five probes over every producer
+that can remove power work counted **ZERO** on this exact run
+(docs/POWER_REMOVAL_REASON_XS_2026-08-10.md). **The destination-dependent LOSS
+stands and is the finding. The DELETION does not, and is OPEN-UNKNOWN** — either
+the move never carried the row, or it is stored and not drawn.
+`LAW-count-names-instrument`, founding case: a number names the instrument's
+unit, not the domain noun.
 
 **ATTRIBUTION IS OPEN AND IS NOT GUESSED AT:** either `stackTemplate` carries an
 allow-list of surviving fields and power is not on it, or the §18 finaliser's

@@ -18,17 +18,27 @@
   `test:section18-gateway`, `test:exposure-contract-equality`,
   `test:bible-anchors`, `test:stage-b-generation-differential`.
 
-- **🔴 THE CHAIN IS RED ON PURPOSE. UNENFORCED COUNT: 46 of 60.** `915c58fe`
-  flipped the law registry's default on Sam's stop-the-line ruling
-  (*"WHY CAN'T YOU JUST MAKE SURE EVERY FUCKING RULE IS FOLLOWED FROM RIGHT
-  NOW"*): `test:law-registry` is the last link of the chain and **FAILS while any
-  registry row reads `UNENFORCED`.** **The red does NOT mean the app broke — it
-  means the app has never been checked against 19 of its own rules, and from now
-  that counts as failing.** Placed LAST so the red costs no coverage: every other
-  suite still runs and reports first. **Nothing but guards, guard-caught fixes and
-  measurement lands while it is red.** Expect some of the 19 guards to go red on
-  their FIRST run — that is the point, and each one is then a real bug with a
-  name, reported the moment it appears.
+- **🔴 THE CHAIN IS RED ON PURPOSE. UNENFORCED COUNT: 42 of 62** (verified by
+  running `test:law-registry`, not recalled). `915c58fe` flipped the law
+  registry's default on Sam's stop-the-line ruling (*"WHY CAN'T YOU JUST MAKE
+  SURE EVERY FUCKING RULE IS FOLLOWED FROM RIGHT NOW"*): `test:law-registry` is
+  the last link of the chain and **FAILS while any registry row reads
+  `UNENFORCED`.** **The red does NOT mean the app broke — it means the app has
+  never been checked against 42 of its own rules, and from now that counts as
+  failing.** Placed LAST so the red costs no coverage: every other suite still
+  runs and reports first. **Nothing but guards, guard-caught fixes and
+  measurement lands while it is red.** Expect some guards to go red on their
+  FIRST run — that is the point, and each one is then a real bug with a name,
+  reported the moment it appears.
+
+- **✅ THE COUNT GOING 20 → 42 OF 62 IS THE RIGHT ANSWER AND IS NOT A
+  REGRESSION — SAM RULED THIS PLAINLY, 2026-08-10. Nobody may read it as work
+  going backwards.** No law was added and nothing broke. **The map was wrong: a
+  sweep found laws that had never had a row at all** — the whole of Process Law
+  L1–L10, the north star itself, every seat law in the handoffs — so the
+  denominator grew from 28 to 62 and the honest unguarded count grew with it.
+  **A number that gets worse because you finally measured it is the measurement
+  working.** **Sam's rule from here: it may only fall.**
 
 - **⛔ STOP — 42 OF 62 LAWS STILL UNGUARDED, AND THE NEXT MOVES NEED SAM.**
   docs/LAW_SWEEP_STOP_2026-08-10.md. **Two things only he can give:** the
@@ -52,19 +62,9 @@
   that would settle your conditioning case, because every seed I can generate
   disagrees with your phone.**
 
-- **⚠ SAM: THE POWER-ROW DISAPPEARANCE — I FOUND OUT WHAT DELETES IT, AND THE
-  ANSWER IS *NOTHING DOES*.** I put probes on all five places in the app that
-  can remove power work, including one wrapper covering every one of the 73
-  places a session is rewritten. On the run where the row vanishes, **all five
-  counted zero.** So the row is not being deleted by any rule — and worse, **the
-  instrument that told us "8 rows in, 7 out" was counting what the screen DRAWS,
-  not what is stored.** Until I read the stored day directly, *"your power work
-  was deleted"* is not established. **Two possibilities, neither checked yet:**
-  the move never carried it, or it is still there and the screen isn't drawing
-  it. Next probe is one line. **NO CELL HOLDS ANY OF THIS — it is a measurement,
-  and whether the row was deleted at all is OPEN-UNKNOWN.**
-  `npm run tape:coach-move-durability` · `3f0295f9` ·
-  docs/POWER_REMOVAL_REASON_XS_2026-08-10.md
+*(The power-row correction that used to sit here is now one block, further down —
+"I TOLD YOU YOUR POWER WORK WAS BEING DELETED. THAT WAS WRONG." Two blocks said
+the same thing in different words; the fuller one survives.)*
 
 - **🔴 THE COURIER TOLL IS PAID (`f168b48b`).** The stop hook detected an order by
   matching `^1\.` only, so **every order the seat wrote as `00.`/`0.`/`000.` was
@@ -129,20 +129,30 @@
   that measured it broken. Gate `test:coach-tab-slice3`, **137 cells**.
   **NOT ON GLASS YET** — the chooser is a shape nobody has tapped.
 
-- **⚠ SAM: YOUR "IT ONLY MOVED THE STRENGTH" — I REPRODUCED A PART GOING MISSING,
-  AND IT WAS THE DAY YOU MOVED IT *TO* THAT MATTERED.** Not your Monday: your
-  **Wednesday**. Every arm of every tape had been landing sessions on EMPTY days,
-  so the code that runs when a session lands on a **team night** had never once
-  been tested. Yours did. Driving it: a day carrying power + gym work, moved onto
-  a team night, arrives with **the power work deleted — 8 rows in, 7 out** — and
-  the coach says *"Done. Session moved."* The same day moved to an empty day
-  keeps everything. **I have not proven this is what bit you** — yours was
-  conditioning, and conditioning survives this path in every seed I can generate.
-  Same defect shape, different part. **I am not saying your case is closed — it is
-  OPEN-UNKNOWN.** Measured in `npm run tape:coach-move-durability`.
-  Two suspects, both named, neither proven: the landing code carries a
-  hand-maintained list of what survives, or the §18 power budget re-decides the
-  day once it becomes a team night.
+- **⚠ SAM: I TOLD YOU YOUR POWER WORK WAS BEING DELETED. THAT WAS WRONG, AND I
+  AM CORRECTING IT WHERE YOU READ IT.** ~~*"a day carrying power + gym work,
+  moved onto a team night, arrives with the power work deleted — 8 rows in, 7
+  out"*~~ — **WITHDRAWN 2026-08-10.** I put probes on all five places in the app
+  that can remove power work, including one wrapper covering every one of the 73
+  places a session gets rewritten. On the run where the row vanishes, **all five
+  counted zero. Nothing deletes it.**
+  **Why I got it wrong, plainly: I counted rows on the SCREEN and called it rows
+  in the app.** *"8 rows in, 7 out"* was reading what the screen DRAWS, never
+  what is stored, and I never said which of the two I was counting — so a
+  drawing problem read as a deletion. That is `LAW-count-names-instrument`,
+  already a written rule here, and this is now its founding case: **a number
+  names the instrument's unit, not the thing you care about.**
+  **What is still true and still open:** the day that lands on a **team night**
+  had never once been exercised by any tape — every arm had been landing on
+  EMPTY days — so that path is genuinely untested, and I found it. But *"your
+  power work was deleted"* is **not established**, and the two live
+  possibilities are that the move never carried the row, or that it is still
+  stored and the screen isn't drawing it. Next probe is one line: stored rows
+  beside drawn rows, same tape.
+  **AND YOUR OWN CASE IS UNTOUCHED BY ALL OF THIS — it is conditioning, not
+  power, and it is OPEN and unreproduced.** That is the only live half of the
+  report. `npm run tape:coach-move-durability` ·
+  docs/POWER_REMOVAL_REASON_XS_2026-08-10.md
 
 - **⚠ SAM: I TOLD YOU THE COACH COULD MOVE A SESSION. IT COULDN'T — AND NOW IT
   CAN.** The seat ordered a tape that actually runs the door instead of reading

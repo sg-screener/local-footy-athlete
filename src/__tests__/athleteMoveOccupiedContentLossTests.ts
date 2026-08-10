@@ -30,9 +30,21 @@
  * ## AND THE INVARIANT ABOVE IS BROKEN AGAIN, ON A PATH WITH NO CELL
  *
  * 2026-08-10: a `power+strength` day moved onto a TEAM NIGHT lands as
- * `strength+team_training` with the power ROW deleted (8 rows in, 7 out), while
- * the same day to an EMPTY day keeps all 8 — and the coach reports *"Done.
- * Session moved."* over it. Same law as the July case, same shape of false
+ * `strength+team_training` and the power row is **NOT DRAWN** (8 rows in, 7
+ * out), while the same day to an EMPTY day keeps all 8 — and the coach reports
+ * *"Done. Session moved."* over it.
+ *
+ * **CORRECTED 2026-08-10 — this header said "the power ROW deleted" and that
+ * was not established.** `roleCensusFor`, the instrument behind "8 rows in, 7
+ * out", reads a PROJECTION; it never read storage, and the header never said
+ * which. Five probes over every producer that can remove power work — the §18
+ * weekly budget, both canonicalisation pushes, both safety-finaliser pushes,
+ * the stack path, and a wrapper over `finaliseWorkoutAfterMutation` covering
+ * all 73 call sites — **counted ZERO on that run.** So the destination-dependent
+ * LOSS is real and is what this suite is about; **DELETION is OPEN-UNKNOWN**,
+ * and the two live candidates are that the move never carried the row, or that
+ * it is stored and not drawn. `LAW-count-names-instrument`: a number names the
+ * instrument's unit, not the domain noun. Same law as the July case, same shape of false
  * success, **different path**: `stackSessionOntoTeamAnchor`, which no cell in
  * this repo reaches. Measured by `npm run tape:coach-move-durability` (the
  * DESTINATION AXIS section), control in the same run.

@@ -412,8 +412,10 @@ console.log('\n[6] STRUCTURAL — no second strip path survives');
   //
   // A destructuring BINDING PATTERN — `const { powerBlock: _lifted, ...rest } =
   // workout` — is the exact opposite: it lifts the field OFF the object, and is
-  // how the one sanctioned remover (`legacyPowerBlockMigration`) retires stored
-  // blocks. What distinguishes it is position: a binding pattern sits to the
+  // how the one sanctioned remover (`legacyPowerBlockMigration`, DELETED
+  // 2026-08-10 on Sam's "kill it") retired stored blocks. The distinction is
+  // kept rather than simplified away: it is what stops this cell reading any
+  // future lift's removal as the write it exists to forbid. What distinguishes it is position: a binding pattern sits to the
   // LEFT of `=`, an object literal never does. So binding patterns are removed
   // before the write test runs. Detecting on `powerBlock:` alone cannot tell the
   // two apart, and read the migration that DELETES the field as the write it

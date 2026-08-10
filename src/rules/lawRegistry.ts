@@ -16,8 +16,16 @@
  *
  * The July 2026 content-conservation invariant lived in a test header and an
  * audit doc and was **rediscovered twice**, most recently on 2026-08-10 when a
- * move onto a team night was caught deleting a row while reporting *"Done.
- * Session moved."* That is a missing mechanism, not a memory failure.
+ * move onto a team night was caught **losing a row between the source day and
+ * the drawn day** while reporting *"Done. Session moved."* That is a missing
+ * mechanism, not a memory failure.
+ *
+ * **CORRECTED 2026-08-10:** this used to say the move was *"caught DELETING a
+ * row"*. Not established. Five probes over every producer that can remove power
+ * work counted ZERO on that run, and *"8 rows in, 7 out"* was counting the
+ * PROJECTION, not storage — a count whose unit was never stated, which is
+ * `LAW-count-names-instrument`'s founding case. The loss is real and
+ * destination-dependent; the deletion is OPEN-UNKNOWN.
  *
  * ## WHAT A ROW MEANS, AND WHY THERE ARE ONLY TWO STATES
  *
@@ -277,6 +285,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       state: 'UNENFORCED',
       wouldTake: 'A gate enumerating writers per stored shape and failing on a second live one.',
       receipt: 'L15 appears in 26 files as commentary only; no test:* script is named for it.',
+    },
+  },
+  {
+    id: 'LAW-unreadable-world-resets-clean',
+    law: 'A stored world the current code cannot read is RESET CLEAN and the athlete is told once, in plain words — never migrated, never silently served by an older set of rules.',
+    ruledAt: 'docs/SEAT_INBOX.md item 1(c) 2026-08-10 (Sam: "kill it"), scoped verbatim: "an unreadable stored world resets and the athlete is told once, in plain words. No migration, no fallback, no second attempt to salvage."',
+    guard: {
+      state: 'guarded',
+      by: 'test:unreadable-world-reset',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED, in the same commit as the law — no UNENFORCED window. 73 cells: readable passes through; seven unreadable shapes reset with a reason; ABSENT is a first run and tells nobody (the trap: an empty device must not be told its training was destroyed); the telling is derived from the fact, never counted; the door contains no migration/fallback/salvage word; the sentence is in the signed sheet and carries no jargon; and the deleted migration is structurally proven gone WITH the unrelated generator-recovery ruling that rode inside it proven surviving.',
     },
   },
   {

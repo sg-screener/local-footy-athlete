@@ -273,11 +273,19 @@ function chooseMove(visibleWeek: VisibleWeek): { from: string; to: string } {
 //
 // Measured over that destination (2026-08-10, probe preserved off-tree):
 //   - a two-part gym+conditioning day → team night: BOTH parts arrived;
-//   - a three-part day carrying POWER → team night: **the power ROW is gone**
-//     (8 rows in, 7 out), while the SAME day → an empty day keeps all 8.
+//   - a three-part day carrying POWER → team night: **the power ROW is NOT
+//     DRAWN** (8 rows in, 7 out), while the SAME day → an empty day keeps all 8.
 // The loss is destination-dependent, with the empty-day arm as its control.
-// Attribution is OPEN between `stackTemplate`'s field allow-list and the §18
-// safety finaliser's `power_removed` budget path — measured, not attributed.
+//
+// **CORRECTED 2026-08-10 — this said "the power ROW is gone" and that unit was
+// never stated.** `roleCensusFor` reads the PROJECTION, never storage. Five
+// probes over every producer that can remove power work — including a wrapper
+// over `finaliseWorkoutAfterMutation` covering all 73 rewrite sites — counted
+// ZERO on this run. So the LOSS is real; **DELETION is OPEN-UNKNOWN**, between
+// "the move never carried it" and "it is stored and not drawn". The old
+// attribution fork (`stackTemplate`'s allow-list vs the §18 finaliser's
+// `power_removed` budget path) is **REFUTED on the finaliser half by those
+// probes** and stays open on the other. `LAW-count-names-instrument`.
 //
 // The arms above move a day chosen through `canMoveWholeDay` and say nothing
 // about a day carrying TWO parts, which is the shape Sam actually moved. The

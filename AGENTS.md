@@ -16,8 +16,20 @@ Counted 2026-08-10: **375 docs, 131 named ruling/law/boundary/reassessment docs,
 NO MAPPING from any law to the thing that holds it.** The July 2026 content-
 conservation invariant sat in a test header and an audit doc and was
 **rediscovered twice**, most recently on 2026-08-10 when a move onto a team night
-was found deleting a row while reporting *"Done. Session moved."* That is not
-forgetfulness. It is a missing mechanism.
+was found **losing a row between the source day and the drawn day** while
+reporting *"Done. Session moved."* That is not forgetfulness. It is a missing
+mechanism.
+
+**CORRECTED 2026-08-10 — this sentence used to read *"was found DELETING a
+row"*, and that was not established.** Five probes over every producer that can
+remove power work — including a wrapper covering all 73 rewrite sites — counted
+ZERO on the run that loses the row, and the instrument reporting *"8 rows in, 7
+out"* was reading the PROJECTION, not storage. The loss is real and
+destination-dependent; **whether anything deleted anything is OPEN-UNKNOWN.**
+The false claim came from a count whose unit was never stated, which is
+`LAW-count-names-instrument` — **this is that law's founding case**, and it does
+not weaken LAW ZERO's own case, because the rule that would have caught it is
+exactly the missing mechanism this section is about.
 
 **THE MECHANISM ALREADY EXISTS HERE — FOR WORDS, NOT FOR RULES.** `signedCopy.ts`
 has a `REGISTRY` with gates (`test:signed-copy-extraction`,

@@ -37,8 +37,15 @@ failure mode, committed by the author of the mechanism meant to catch it.**
 | **`UNENFORCED`** | **42** |
 | rules a chain suite enforces with no registry row | **21 of 34** |
 
-The denominator grew from 28 to 62 because the map was wrong, not because laws were
-added. **That growth was the single most useful measurement of the day.**
+**20 → 42 OF 62 IS THE RIGHT ANSWER AND IS NOT A REGRESSION. SAM RULED THIS
+PLAINLY, 2026-08-10, and it is written here so no future reader treats it as work
+going backwards.** No law was added and nothing broke. The denominator grew from
+28 to 62 because **the map was wrong** — a sweep found laws with no row at all
+(the whole of Process Law L1–L10, the north star itself, every seat law in the
+handoffs), so the honest unguarded count grew with it. A number that gets worse
+because you finally measured it is the measurement working. **That growth was the
+single most useful measurement of the day. Sam's rule from here: it may only
+fall.**
 
 ## WHAT IS BLOCKED ON SAM, AND NOTHING SUBSTITUTES FOR IT
 
@@ -49,11 +56,15 @@ added. **That growth was the single most useful measurement of the day.**
    repo.**
 2. **ONE LINE FOR `eas.json`** — Apple ID / App Store Connect app id.
    `submit.production.ios` is `{}`, verified.
-3. **THE ACCOUNTS DECISION.** Local-only or sign-in. **There is no auth code in the
-   repo at all** — all four paths absent, checked. Local-only costs nothing; sign-in
-   is real work. **The largest unpriced item before the store.**
-4. **WHETHER v1 IS iPHONE-ONLY.** Android has never been run. That is a decision,
-   not an oversight.
+3. **~~THE ACCOUNTS DECISION.~~ ANSWERED BY SAM 2026-08-10: LOCAL-ONLY FOR v1.**
+   No auth is built and none gets built; everything stays on the phone. Costs
+   nothing to honour — there is no auth code in the repo at all, all four paths
+   absent, checked. **Recorded DECIDED in `PUBLISH_ROADMAP_2026-08-05.md` (Phase 4
+   and the between-4-and-5 list); the open item is deleted, not deferred.**
+4. **~~WHETHER v1 IS iPHONE-ONLY.~~ ANSWERED BY SAM 2026-08-10: YES.** Android is
+   **OUT of scope for v1**, not deferred vaguely. Recorded DECIDED in the roadmap;
+   the one live Android open item (`LFA_PRODUCT_ARCHITECTURE.md`, real-device
+   shake-out) is marked out-of-scope-v1.
 5. **SIX LAWS THAT NO SCRIPT CAN CHECK**, each with a proposed re-wording in its
    row: `LAW-L4-device-is-arbiter`, `LAW-L10-phone-is-done`, `LAW-rule-dont-ask`,
    `LAW-plain-coach-english`, `LAW-sam-chat-simplicity`,
@@ -62,19 +73,20 @@ added. **That growth was the single most useful measurement of the day.**
    Sam either accepts it is held by discipline alone, or re-words it onto a surface
    that is in the repo.
 
-## WHAT IS BLOCKED ON A CONTRADICTION IN THE ORDERS
+## ~~WHAT IS BLOCKED ON A CONTRADICTION IN THE ORDERS~~ — UNBLOCKED 2026-08-10
 
-**Cut (a), the throwing power-block migration, is a STOP and stays one.** The order
-says *"replace with the clean-reset path"*. **That path does not exist** — zero
-product files clear storage. So (a) is a deletion PLUS a new door PLUS an
-athlete-facing telling, which is a BUILD, and the same order's last line says
-*"nothing new is BUILT while the chain is red."* Doing it as written means either
-building while red, or removing a loud failure and leaving an unreadable world to
-fail quietly later, which is worse.
+**Cut (a), the throwing power-block migration, ~~is a STOP and stays one~~ IS
+CLEARED TO PROCEED.** The contradiction was real and it was the SEAT'S, not
+Sam's: the order said *"replace with the clean-reset path"*, **that path does not
+exist** — zero product files clear storage — so (a) was a deletion PLUS a new
+door PLUS an athlete-facing telling, i.e. a BUILD, while the same batch forbade
+building. **Sam's actual instruction was "kill it". The no-building-while-red
+rule is the seat's own, and the seat yielded it here.**
 
-**Recommended:** the clean-reset door and its telling are the ONE sanctioned build
-during the red, because they ARE the guard for *"a stored world the code cannot
-read"*. Then the deletion, as a second commit.
+**The order now:** build the clean-reset door and the athlete-facing sentence,
+**then** delete the migration. Scoped minimally — an unreadable stored world
+resets and the athlete is told once, in plain words. **No migration, no fallback,
+no second attempt to salvage.**
 
 ## WHAT IS BLOCKED ON GLASS
 

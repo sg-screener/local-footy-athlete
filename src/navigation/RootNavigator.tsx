@@ -8,6 +8,7 @@ import OnboardingNavigator from './OnboardingNavigator';
 import { useInitializeApp } from '../hooks/useInitializeApp';
 import { useProfileStore } from '../store/profileStore';
 import { Loading } from '../components/common/Loading';
+import { WorldResetNotice } from '../components/WorldResetNotice';
 import { logger } from '../utils/logger';
 import { navigationRef } from './navigationRef';
 
@@ -72,6 +73,15 @@ export default function RootNavigator() {
       onReady={() => logger.info('[navigation-container] onReady')}
     >
       {isOnboardingComplete ? <AppNavigator /> : <OnboardingNavigator />}
+      {/*
+        THE CLEAN-RESET TELLING. Outside the navigator's screens on purpose: the
+        reset happens at storage ingress, so the athlete may land in EITHER tree
+        — onboarding if the reset took their profile with it, the app if it did
+        not — and a notice mounted inside one of them would be missed on the
+        other. It is `position: 'absolute'` and renders nothing when no telling
+        is owed, so it costs the layout nothing on every other boot.
+      */}
+      <WorldResetNotice />
     </NavigationContainer>
   );
 }
