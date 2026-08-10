@@ -1,5 +1,11 @@
 # Claude Instructions
 
+> **NEW AGENT / NEW SEAT? START AT `docs/CODEX_HANDOFF_2026-08-11.md`.** It is
+> the shortest true path into this repo: who is who, the five files worth
+> reading, the laws that bite first, how to talk to Sam, and where things
+> actually stand. That file names this one in its reading list. (Written for Codex on
+> 2026-08-11; it is agent-neutral and applies to whoever holds the terminal.)
+
 ## HOW TO WRITE TO SAM — THIS GOVERNS EVERY REPORT
 
 Instructions now come from Sam directly, in his words, with no seat in between.

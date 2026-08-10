@@ -1,5 +1,11 @@
 # Agent Working Agreement
 
+> **NEW AGENT / NEW SEAT? START AT `docs/CODEX_HANDOFF_2026-08-11.md`.** It is
+> the shortest true path into this repo: who is who, the five files worth
+> reading, the laws that bite first, how to talk to Sam, and where things
+> actually stand. That file names this one in its reading list. (Written for Codex on
+> 2026-08-11; it is agent-neutral and applies to whoever holds the terminal.)
+
 This repo's most important product surface is the coach chat. Treat it as an
 intelligent program-editing system, not a collection of phrase handlers.
 
