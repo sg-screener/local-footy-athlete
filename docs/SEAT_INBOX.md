@@ -2,6 +2,31 @@
 
 ## Unprocessed (newest first)
 
+**NONE.** Every order the seat has written through 2026-08-10 — items 00, 0, 1,
+2 and 3 of the sixty-first and sixty-second batches — is processed. The boundary
+for the latest batch is immediately below.
+
+*This section is the SEAT's channel to the terminal (see the title line). It is
+empty when the terminal owes the seat nothing. Work that is blocked, held, or
+waiting on Sam is NOT an unprocessed order and now lives in the terminal-owned
+section beneath it — conflating the two made this section permanently non-empty
+and hid the difference between "not done" and "cannot be done yet".*
+
+## Standing holds and open questions (TERMINAL-OWNED — not seat orders)
+
+Nothing here is an order awaiting action. Two kinds live here, and the
+difference is stated rather than blurred:
+
+- **Terminal-measured blockers** (items 1 and 3) — written by the terminal after
+  measuring. Item 1 names the single command that clears it and why it was not
+  run; item 3 names the single answer that closes it.
+- **Seat holds the seat itself declared non-opening** (item 2) — seat-authored,
+  carried verbatim with its amendment marked. *"It does not open from this
+  inbox"* are the seat's own words, so it is not the terminal's to process.
+
+The seat may convert any of these into a real order by moving it up into
+Unprocessed with a ruling attached.
+
 1. HELD ON A BLOCKER THE SIXTY-SECOND PASS MEASURED — THE MAESTRO RIG
    CANNOT RUN UNTIL THE SIMULATOR BINARY IS REBUILT. This is the
    carried remainder of that pass's item 1, and it is NOT a fresh
