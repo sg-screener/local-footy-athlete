@@ -273,9 +273,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Hand-built state fixtures are deprecated for athlete-facing suites; reach the world by acting or by a device-exact seed.',
     ruledAt: 'AGENTS.md "Hand-built state fixtures are deprecated for athlete-facing suites"',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A gate listing athlete-facing suites that construct Workout/program literals directly instead of using buildDevE2ESeed or a generator.',
-      receipt: '14 files use buildDevE2ESeed; 27 files still mention hand-built state. Nothing distinguishes a permitted hand-build from a banned one.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'GUARDED 2026-08-10 ON SAM\'S SECOND ASKING, and it should not have taken two: this row sat UNENFORCED and that is EXACTLY HOW THE ELEVEN SEEDS ROTTED — correct when written, drifted with nobody watching. His words: "I don\'t want to get 2 weeks down the line and realise that a fucking weekly template optimised for that and that alone - its happened before and if it happens again i\'ll fucking kill myself". TWO OF THE THREE CONDITIONS ARE HELD: no test world is built from a literal (measured — devE2ESeedRegistry.ts goes through generateProgramLocally and holds ZERO workout literals), and the world set RATCHETS — coverage may rise, never fall, so a world cannot be dropped to make a suite green. THE THIRD IS NOT HELD AND THIS ROW SAYS SO: the DRIFT check (does a world still match what the generator produces for that profile TODAY?) is the condition that would have caught the eleven the day they went stale. It needs a generator run per profile and ships with the first run-through, per the order\'s own sequencing — one flow is not green yet.',
     },
   },
   {

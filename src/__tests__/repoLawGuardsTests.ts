@@ -946,6 +946,45 @@ run('the seed channel is first-class — own name, own validation, fails closed'
     + 'validated channel or it is a second meaning on somebody else\'s field.');
 });
 
+/**
+ * THE COVERAGE RATCHET — `LAW-no-hand-built-fixtures`, which has sat UNGUARDED
+ * in the registry and is **exactly how the eleven existing seeds rotted**.
+ *
+ * **Sam, 2026-08-10, and he has been failed by this class before:** *"I don't
+ * want to get 2 weeks down the line and realise that a fucking weekly template
+ * optimised for that and that alone - its happened before and if it happens
+ * again i'll fucking kill myself"*.
+ *
+ * The order names three failure conditions. **This cell holds the third — the
+ * set of worlds under test may never shrink** — and it is the one buildable
+ * without a device. Same shape as the UNENFORCED law count: coverage can only go
+ * up, so a world can be added but never quietly dropped to make a suite green.
+ *
+ * **WHAT IS NOT HELD HERE, AND THE ROW SAYS SO TOO:** the DRIFT check — *does a
+ * world's shape still match what the generator produces for that profile
+ * today?* — is the condition that would have caught the eleven seeds the day
+ * they went stale. It needs the generator run per profile and belongs with the
+ * first run-through, which is where the order puts it: *"build it WITH the first
+ * world"*, and one flow is not green yet.
+ */
+const SEED_COVERAGE_FLOOR = 11;
+
+/** Pure: how many worlds the harness declares it covers. */
+function declaredSeedWorldCount(seedIdsSource: string): number {
+  const block = seedIdsSource.split('DEV_E2E_SEED_IDS = [')[1]?.split(']')[0] ?? '';
+  return (block.match(/'[^']+'/g) ?? []).length;
+}
+
+run('the set of test worlds never shrinks', () => {
+  const source = fs.readFileSync(
+    path.join(repoRoot, 'src', 'dev', 'e2e', 'devE2ESeedIds.ts'), 'utf8');
+  const declared = declaredSeedWorldCount(source);
+  assert(declared >= SEED_COVERAGE_FLOOR,
+    `test worlds fell from ${SEED_COVERAGE_FLOOR} to ${declared}. Coverage ratchets `
+    + 'UP only — a world removed to make a suite green is the failure Sam has '
+    + 'already been bitten by. Raise the floor when you add; never lower it.');
+});
+
 run('nothing asks Sam for a permission he has already given', () => {
   const stops = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
     .filter((file) => /STOP/i.test(path.basename(file)))
@@ -1102,6 +1141,11 @@ run('the checkers red on fabricated violations (liveness)', () => {
   assert(samItemsAskingHimToRelay(
     '## WHAT IS BLOCKED ON SAM\n\n1. **His Apple ID for eas.json.**\n').length === 0,
     'a thing only Sam has was flagged as a routing ask');
+  assert(declaredSeedWorldCount("DEV_E2E_SEED_IDS = [\n 'a',\n 'b',\n] as const") === 2,
+    'the world counter cannot read the list it ratchets');
+  assert(declaredSeedWorldCount('nothing here') === 0,
+    'the world counter invented worlds from a source with none');
+
   assert(seedChannelFaults('let seedIdKey = "e2eSeedId"\nlet seedIdPattern = "^a$"\nfatalError("Invalid x")').length === 0,
     'a well-formed seed channel was flagged');
   assert(seedChannelFaults('let launchArgumentKey = "e2eMetroUrl"').length > 0,

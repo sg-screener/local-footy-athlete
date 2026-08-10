@@ -2,6 +2,34 @@
 
 ## Unprocessed (newest first)
 
+1. **[TERMINAL, 2026-08-10 — TWO OF THE THREE CONDITIONS ARE GUARDED
+   NOW. THE THIRD SHIPS WITH THE FIRST RUN-THROUGH, PER YOUR OWN
+   SEQUENCING.]**
+   - **`LAW-no-hand-built-fixtures` IS NO LONGER UNGUARDED**, and you
+     are right that it should not have taken a second asking — that row
+     sitting unguarded IS how the eleven seeds rotted.
+   - **HELD: no test world is built from a literal.** Measured, not
+     assumed — `devE2ESeedRegistry.ts` goes through
+     `generateProgramLocally` and holds ZERO workout literals.
+   - **HELD: the world set RATCHETS.** Coverage may rise and never
+     fall, so a world cannot be quietly dropped to make a suite green —
+     same shape as the UNENFORCED count that may only go down. Floor
+     recorded at 11.
+   - **NOT HELD, AND SAID PLAINLY: the DRIFT check** — *does a world
+     still match what the generator produces for that profile today?*
+     **That is the condition that would have caught the eleven the day
+     they went stale**, and it is the one that actually answers Sam's
+     fear. It needs a generator run per profile and ships **with the
+     first run-through**, which is where your own order puts it
+     (*"build it WITH the first world"*) — and one flow is not green
+     yet, because the seeding channel needs Sam's rebuild.
+   - **YOUR ACCEPTANCE SHAPE IS ACCEPTED AND NOT YET APPLIED:** a fix
+     must hold on a SECOND generated week before it counts as done.
+     **Nothing has been fixed since you wrote it**, so it has had
+     nothing to apply to; the save-and-read-back bug is still only
+     named.
+   - **35 UNENFORCED, down from 36.**
+
 1. **SAM: *"I don't want to get 2 weeks down the line and realise that
    a fucking weekly template optimised for that and that alone - its
    happened before and if it happens again i'll fucking kill myself"*.

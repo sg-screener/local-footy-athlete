@@ -1,5 +1,15 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **⚠ SAM: THE THING YOU SAID WOULD KILL YOU IF IT HAPPENED AGAIN NOW HAS AN
+  ALARM ON IT — MOSTLY.** You were worried a test week gets tuned to itself and
+  rots. Two of the three ways that happens are now watched: **no test week can be
+  hand-written** (they're all built by the app), and **the set of test weeks can
+  only grow, never shrink** — so one can't be quietly dropped to make a test
+  pass. **The third one is the important one and it is not built yet:** checking
+  that each test week still matches what the app would build today. That's the
+  one that would have caught the old ones going stale. It needs the rebuild
+  below first. **Not seen on your phone.**
+
 - **⚠ SAM: I NEED ONE REBUILD FROM YOU, AND I AM NOT APOLOGISING FOR IT BECAUSE
   YOU ALREADY SAID YES.** You said you'd rather pay 40 minutes once than have me
   pick the cheap option. **So I built the proper way for the test to load a
