@@ -247,6 +247,52 @@ run('the NOT-COVERED exception list only shrinks', () => {
     `these docs gained their NOT-COVERED section — delete them from NOT_COVERED_EXCEPTIONS: ${paid.join(', ')}`);
 });
 
+// ── LAW-one-plan ───────────────────────────────────────────────────────────
+//
+// Sam, 2026-08-10, was told three different things were the plan. Two of the
+// three carried NO supersession marker — grep for "supersed" over
+// V1_LAUNCH_DEFINITION returned nothing — while a release gate still pointed
+// readers at one of them. A retired plan that does not say it is retired is
+// indistinguishable from the live one.
+
+/** The one governing plan. Everything else claiming to be a plan must yield. */
+const GOVERNING_PLAN = 'PUBLISH_ROADMAP_2026-08-05.md';
+
+/** Pure: rival plan docs with no supersession marker in their first lines. */
+function unmarkedRivalPlans(
+  docs: readonly { readonly file: string; readonly text: string }[],
+): string[] {
+  return docs
+    .filter((doc) => path.basename(doc.file) !== GOVERNING_PLAN)
+    .filter((doc) => !/SUPERSEDED/i.test(doc.text.split('\n').slice(0, 12).join('\n')))
+    .map((doc) => path.basename(doc.file));
+}
+
+run('exactly one document presents itself as the plan', () => {
+  const plans = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .filter((file) => /^(V1_LAUNCH_DEFINITION|MASTER_PLAN|PUBLISH_ROADMAP)/.test(path.basename(file)));
+  assert(plans.some((file) => path.basename(file) === GOVERNING_PLAN),
+    `the governing plan ${GOVERNING_PLAN} is gone — nothing would be in charge`);
+  const unmarked = unmarkedRivalPlans(plans.map((file) => ({
+    file, text: fs.readFileSync(file, 'utf8'),
+  })));
+  assert(unmarked.length === 0,
+    `plan document(s) with no SUPERSEDED marker in their opening lines: ${unmarked.join(', ')}. `
+    + `A retired plan that does not say so is indistinguishable from ${GOVERNING_PLAN}.`);
+});
+
+run('no release gate points readers at a superseded plan', () => {
+  const gate = fs.readFileSync(path.join(repoRoot, 'docs', 'FINAL_QA_CHECKLIST.md'), 'utf8');
+  // The checklist may DISCUSS a retired plan; it may not send the reader to it
+  // as the thing to check off. The `[ ]` box is what makes it an instruction.
+  const sendsReaderAway = gate.split('\n')
+    .filter((line) => /^\s*- \[[ x]\]/.test(line))
+    .filter((line) => /V1_LAUNCH_DEFINITION|MASTER_PLAN_2026-07-23/.test(line));
+  assert(sendsReaderAway.length === 0,
+    `FINAL_QA_CHECKLIST has checkbox line(s) pointing at a superseded plan: `
+    + `${sendsReaderAway.map((l) => l.trim().slice(0, 70)).join(' | ')}`);
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
   // A GREEN GATE IS A CLAIM. Each checker is fed something it must catch; if the
   // reads above were reduced to no-ops, every cell would still pass.
@@ -279,6 +325,19 @@ run('the checkers red on fabricated violations (liveness)', () => {
     'a boundary doc with no NOT-COVERED section passed');
   assert(docsMissingNotCovered([{ file: 'a/B_BOUNDARY.md', text: '## NOT COVERED\nnothing' }]).length === 0,
     'a doc WITH the section was reported missing');
+
+  assert(unmarkedRivalPlans([{ file: 'd/MASTER_PLAN_x.md', text: '# Plan\n\nthe road to done' }]).length === 1,
+    'a rival plan with no SUPERSEDED marker passed — the 2026-08-10 case exactly');
+  assert(unmarkedRivalPlans([{ file: 'd/MASTER_PLAN_x.md', text: '# Plan\n\n> **SUPERSEDED**\n' }]).length === 0,
+    'a properly marked retired plan was flagged');
+  assert(unmarkedRivalPlans([{ file: `d/${GOVERNING_PLAN}`, text: '# Roadmap\n' }]).length === 0,
+    'the GOVERNING plan was required to mark itself superseded');
+  // The marker must be near the TOP: a supersession buried on line 400 is one
+  // nobody reads before planning from the file.
+  assert(unmarkedRivalPlans([{
+    file: 'd/MASTER_PLAN_x.md',
+    text: '# Plan\n' + 'filler\n'.repeat(40) + '> **SUPERSEDED**\n',
+  }]).length === 1, 'a supersession marker buried below the opening lines was accepted');
 });
 
 console.log(`\nrepo law guards totals: ${passed} passed, ${failures.length} failed`);

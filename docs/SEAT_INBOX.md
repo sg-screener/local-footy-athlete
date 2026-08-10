@@ -2,7 +2,136 @@
 
 ## Unprocessed (newest first)
 
-1. **THE PLAN EXISTS AND SAM WAS RIGHT — THERE ARE THREE OF THEM AND
+1. **SAM'S ORDER OF WORK AFTER THIS QUEUE — RECORD IT IN
+   `PUBLISH_ROADMAP_2026-08-05.md` AS PHASE 2, VERBATIM, BEFORE
+   ANYTHING ELSE IN THIS BATCH.** He gave it in chat 2026-08-10 and an
+   unrecorded plan is the exact defect this week is about.
+
+   1. **UI simplification of the DAY, WEEK and PROFILE screens.**
+      **His partner has produced the templates — photos AND HTML.**
+      That is the mock, and MOCK-FIRST is a proven law here (2-for-2):
+      the templates are the direction doc, not an inspiration. **Ask
+      Sam for the files before this phase opens** and treat them as
+      signed design.
+   2. **Button parity + dead-weight removal** — every button does what
+      it should, and nothing is in the app that need not be. This is
+      the parity census widened from the coach to the whole app, plus
+      the cuts in item 2 below.
+   3. **Coach optimised** — the parity census's remaining 25 of 26.
+   4. **Journal** — Sam decides then whether it comes back. Stays built
+      and hidden until he says.
+   5. **Beta, then App Store.**
+
+   **THE FOUR THINGS THE SEAT TOLD HIM STAND BETWEEN 4 AND 5 — put
+   each in the roadmap as an open item with its receipt:**
+   - **THE ACCOUNTS DECISION IS UNMADE AND UNBUILT.** `PUBLISH_ROADMAP`
+     Phase 4 lists "v1 accounts decision: local-only vs sign-in". There
+     is NO auth in the repo — `src/screens/auth/`, `authStore.ts`,
+     `services/auth/`, `AuthNavigator.tsx` do not exist, and two docs
+     wrongly claim otherwise (see the doc sweep). **Local-only costs
+     nothing; sign-in is real work. This is the largest unpriced item
+     before the store and it is Sam's call, not the seat's.**
+   - **BETA IS IN HIS OWN ROADMAP AND HAS NOT HAPPENED** — Renee plus
+     2-3 trusted athletes on TestFlight, and **Sam training off the app
+     for a real week**. Findings size unknowable until it runs.
+   - **ANDROID HAS NEVER BEEN RUN.** iPhone device passes exist
+     (`test:device-pass-2026-08-05`, exports at repo root); Android is
+     OPEN-UNKNOWN. **Whether v1 is iPhone-only is a decision, not an
+     oversight** — put it to him as one.
+   - **STORE ADMIN, AND ITS ORDER MATTERS:** screenshots come AFTER the
+     UI work, so drafts in `docs/appstore/`
+     (`APP_STORE_LISTING_DRAFT.md`, `PRIVACY_POLICY_DRAFT.md`,
+     `SCREENSHOT_STORYBOARD.md`) are re-shot then, not now. The
+     `submit.production.ios` block in `eas.json` is EMPTY and needs
+     Sam's Apple ID / App Store Connect app id — one line from him.
+
+1b. **SAM RULED ALL FIVE, 2026-08-10, AND THE SEAT'S ANSWER IS THAT
+   FOUR OF THEM ARE ONE UNIT.** His words: *"1. kill it · 2. what are
+   the 2 answers to how hard can this week be? · 3. well fucking delete
+   the old shit here? how hard is that · 4. delete all the old coach
+   shit then? obviously!!! · 5. yeah the journal should be built but
+   not shown anywhere - we are coming back to that"*. He also said the
+   seat gave findings with no recommendation — correct, and this item
+   is the recommendation.
+
+   **THE ANSWER TO HIS QUESTION 2, MEASURED:** `weeklyExposureContract`
+   (V1) **cannot represent two credits stacked on one day** — its own
+   comment at `generateProgram.ts:780-783` says so — while
+   `weeklyExposureContractV2` can (team training PLUS an app core block
+   on the same day). V1 runs only `if (exposureContract &&
+   !exposureContractV2)`. **So the two answers differ exactly on
+   combined days, and V1 UNDERCOUNTS the week's hardness there** — and
+   the only worlds that reach V1 are ones with no V2, i.e. pre-rebuild
+   saved programs. Same population as the throwing migration.
+
+   **THEREFORE ONE UNIT, NOT FOUR — `LAW-elegant-two-options` applied,
+   which is rule 8 on his own list: RETIRE PRE-REBUILD WORLD SUPPORT.**
+   Everything in items 3a-3d of the previous batch exists to keep
+   compatibility with saved programs made before the rebuild. **Memory
+   `lfa-not-live-no-reminders-2026-07-28`: the app has NO real users —
+   legacy-data risk is Sam's own test devices only.** That compatibility
+   is worth nothing, and it is the single root under all four.
+   **The rule: a stored world the current code cannot read is RESET
+   CLEAN and the athlete is told, never migrated and never silently
+   served by an older set of rules.** A reset is honest; a fallback that
+   undercounts a week is not.
+
+   **THE CUTS, AND THE ORDER TO DO THEM IN:**
+   - **(a) `migrateHydratedStatePowerBlocks` and
+     `legacyPowerBlockMigration.ts` — DELETE, and delete the throw
+     sites with them** (`programStore.ts:1656,1582`;
+     `legacyPowerBlockMigration.ts:130,137,143,150,157,164`). Replace
+     with the clean-reset path. **Do this first: it is the only one
+     with a live consequence.**
+   - **(b) `weeklyExposureContract` (V1) — RETIRE.** Delete the
+     fallback arm at `generateProgram.ts:780-790` and the V1 import at
+     `:57`; a week with no V2 contract regenerates rather than falling
+     back. **This closes `LAW-L15-one-write-format` on a real
+     instance** — give it the registry row and let its guard sweep for
+     siblings.
+   - **(c) The V1 home screen — DELETE.** Collapse
+     `HomeScreen.tsx` (1,493 lines, ~1,430 of them the retired UI
+     behind `DESIGN_VERSION` at `:52`), register `HomeScreenV2`
+     directly at `AppNavigator.tsx:88`, and **census `useHomeScreen`
+     (2,113 lines) for anything only the dead branch needed** — that
+     hook is where the saving actually is.
+   - **(d) The frozen coach tree — DELETE.** `AppNavigator.tsx:10` +
+     `:94-100`, and the 13 modules / 6,081 lines it roots.
+     **`App.tsx:7` imports `coachBuildInfo` from that set at module
+     scope — move or drop that import FIRST**, then cut. This also
+     kills `legacyCoachActionFilter.ts` and the out-of-ledger writer at
+     `coachTurnController.ts:3467-3469` for free.
+   - **(e) The journal — SAM RULED: STAYS BUILT, STAYS HIDDEN, he is
+     coming back to it.** Do NOT delete journal code. The only journal
+     work is the doc banners from the previous batch. **Add this as a
+     registry row so no future sweep deletes it as dead weight** —
+     "built and deliberately unreachable" is a THIRD state and nothing
+     currently records it.
+
+   **METHOD, because deletion is where this repo has been burned:**
+   census before removal (an existing law), one cut per commit with the
+   orphan count printed, and the full chain between cuts. If any cut
+   reds something, STOP and report rather than chasing it.
+   **This is cleanup of a live risk plus Sam's explicit order, so it
+   runs alongside the law sweep rather than behind it — but (a) and (b)
+   before (c) and (d), and nothing new is BUILT while the chain is
+   red.**
+
+1b. **[TERMINAL, 2026-08-10 — DONE, AND MADE PERMANENT RATHER THAN
+   EDITED ONCE.** Both ancestors now carry a SUPERSEDED banner in their
+   opening lines (MASTER_PLAN's says **PART 1 / Process Law L1–L10 IS
+   STILL BINDING** — only the SEQUENCE is retired, and those ten laws
+   are now registry rows). FINAL_QA_CHECKLIST repointed. **AND IT IS
+   NOW GATED:** new law `LAW-one-plan`, guarded by
+   `test:repo-law-guards` — arriving WITH its guard, as LAW ZERO
+   requires. **THE GATE IMMEDIATELY FOUND A SECOND LIVE POINTER THE
+   AUDIT MISSED** — FINAL_QA_CHECKLIST.md:278, another checkbox line
+   sending the reader to the superseded definition, beyond the :20 the
+   order named. Mutation: softening one banner reds the cell.
+   **STILL OPEN from this item: refreshing PUBLISH_ROADMAP's Phase 2
+   against measured state.**]**
+
+   **THE PLAN EXISTS AND SAM WAS RIGHT — THERE ARE THREE OF THEM AND
    ONLY ONE IS TRUE.** (seat, 2026-08-10, two audits run from the seat;
    every claim below carries a receipt from those audits.)
    `docs/PUBLISH_ROADMAP_2026-08-05.md` is the governing sequence and

@@ -1,5 +1,11 @@
 # MASTER PLAN — the whole road to done (2026-07-23)
 
+> **SUPERSEDED AS A PLAN — DO NOT PLAN FROM THIS FILE.** Governing sequence is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`. **PART 1 (Process Law L1–L10) IS STILL
+> BINDING** and is now carried as registry rows `LAW-L1-*` … `LAW-L10-*`; it is
+> the SEQUENCE below that is retired. This file carried no supersession marker
+> until 2026-08-10.
+
 This document supersedes V1_LAUNCH_DEFINITION.md as the governing sequence.
 "Done" means: everything Sam and Claude have designed and agreed — built,
 verified under the corrected process, and shipped. Launch is a milestone on

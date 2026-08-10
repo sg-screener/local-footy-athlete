@@ -1,5 +1,12 @@
 # V1 Launch Definition — drafted 2026-07-22
 
+> **SUPERSEDED — DO NOT PLAN FROM THIS FILE.** Governing sequence is
+> `docs/PUBLISH_ROADMAP_2026-08-05.md`. This file was superseded first by
+> `MASTER_PLAN_2026-07-23.md` (which said so, in its own second line) and then by
+> the roadmap, and it carried no marker at all until 2026-08-10 — which is how
+> three plans came to exist with only one true. Kept for its blocker list's
+> history; **its boxes are not a status of anything.**
+
 Owner: Sam. This is the checklist that turns "is it ready?" into a yes/no.
 Edit ruthlessly — anything not listed under IN is OUT by default.
 

@@ -17,7 +17,9 @@ audit, group failures after).
 
 - [ ] Release-candidate commit is tagged/identified and this checklist is
       run against that exact commit, not a moving branch tip.
-- [ ] `docs/V1_LAUNCH_DEFINITION.md` blockers 1-8 are checked off (readiness
+- [ ] `docs/PUBLISH_ROADMAP_2026-08-05.md` Phase 2 is checked off. (This line
+      pointed at `docs/V1_LAUNCH_DEFINITION.md`, SUPERSEDED 2026-08-10 — its
+      blockers 1-8 are listed below for their content only: readiness
       fix, Group C, Group D, stack-primitive stage, anchor-day swap
       regression verified, `SUPPORTED_ATHLETE_ACTIONS.md` game-day contract
       text, ship logistics). This checklist is blocker #9 — the last one.
@@ -273,10 +275,11 @@ existing doc specifies a matrix to copy from:
       broken landscape layout (there should be no landscape layout at all;
       confirm the app simply doesn't rotate, per `app.json`'s
       `orientation: portrait` / `Info.plist`).
-- [ ] A real physical device, not only simulators — `V1_LAUNCH_DEFINITION.md`'s
-      own "Definition of done" requires "a TestFlight build on a phone that
-      isn't Sam's," which by definition can't be satisfied by simulator
-      testing alone.
+- [ ] A real physical device, not only simulators. The requirement is "a
+      TestFlight build on a phone that isn't Sam's", which by definition
+      cannot be satisfied by simulator testing alone. (Wording inherited from
+      the SUPERSEDED V1 launch definition; the live owner is
+      `docs/PUBLISH_ROADMAP_2026-08-05.md`.)
 
 ---
 
@@ -388,7 +391,9 @@ item 12 assumed mailto links, which D1 replaces):
 
 ## 7. Sign-off
 
-Per `docs/V1_LAUNCH_DEFINITION.md`'s "Definition of done for v1":
+Definition of done for v1 — carried forward from the SUPERSEDED
+`docs/V1_LAUNCH_DEFINITION.md`; the governing sequence is
+`docs/PUBLISH_ROADMAP_2026-08-05.md`:
 
 - [ ] Every v1 blocker (1-9) is checked off.
 - [ ] `test:bible` green on the release candidate (section 1 above).
