@@ -62,6 +62,12 @@ and this file gets one line pointing at it.**
 
 ## OPEN, ON US
 
+- **THE WHITE SCREEN IS FIXED AND ITS CAUSE IS NOT.** `61ab9e46`. A refused dev
+  launch used to render nothing at all; it now names the reason and offers a
+  one-tap clear (`.maestro/golden/dev-launch-refusal-speaks.yaml`, green).
+  **Why a harness clock receipt outlives its checkpoint is NOT fixed** — Sam will
+  meet the screen again after any Maestro run, he will just know what it is.
+  `docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`.
 - **A REFUSAL HAS NEVER FIRED.** `DevE2ELaunchDiagnostic.swift` went from TEN
   hard `fatalError`s on the launch path to ZERO, and each one is now a typed code
   surfacing as `e2e-explorer-launch-error-<code>`. **Native — inert until the
