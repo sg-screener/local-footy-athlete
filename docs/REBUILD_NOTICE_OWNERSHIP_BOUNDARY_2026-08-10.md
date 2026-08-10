@@ -1,7 +1,7 @@
 # `useRebuildNotice()` IS BUILT — ONE OWNER, EVERYONE READS
 
 **LOOP CHECK: `LAW-one-name-two-meanings` — sighting 7, and the FIRST one
-applied BEFORE the code moved rather than found after.** Disposition: the row
+applied BEFORE the code moved rather than found after.** Disposition: **iterate** — the row
 is updated and the ratchet raised from 5 to 7 in the same pass, so the sighting
 cannot be absorbed silently. The measurement paid: the two paths driving the
 notice drive **the same four pieces of state**, which is why one move closed
