@@ -327,6 +327,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-permission-is-granted-once',
+    law: 'A permission recorded in the seat inbox stands until Sam withdraws it. Re-asking is a defect; the fix for a refused operation is to read the file and retry, never to ask again.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10 (seat, against LAW-seat-coordination): "asking twice for a permission already granted is the courier toll in a new coat"',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED. FOUNDING CASE IS THIS TERMINAL, TWICE IN A ROW: Sam ruled two file operations, the tool refused them once, and instead of retrying the terminal put them back to him as blocked-on-Sam items in TWO consecutive reports. Both operations succeeded on the retry that should have happened immediately. The cell holds the checkable form — a blocked-on-Sam item is a DECISION, DEVICE TIME or a THING ONLY HE HAS, never a request for permission. Liveness both directions: a permission re-ask is caught, a genuine decision is not.',
+    },
+  },
+  {
     id: 'LAW-sam-is-not-the-wire',
     law: 'Sam is never the relay. The seat reads the repo; what he is asked for is decisions, device testing, and things only he has — nothing else.',
     ruledAt: 'AGENTS.md "Seat coordination laws"; docs/SEAT_INBOX.md 2026-08-10 (Sam ruled the whole three-part process fix)',

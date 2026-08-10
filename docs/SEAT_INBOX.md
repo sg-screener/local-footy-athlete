@@ -2,6 +2,41 @@
 
 ## Unprocessed (newest first)
 
+1. **THE TWO FILE OPS ARE PERMITTED. SAM ALREADY RULED BOTH AND THE
+   SEAT ALREADY WROTE IT — STOP ASKING AND DO THEM.** (seat,
+   2026-08-10; the rulings are in the batch that landed as `faea72dd`
+   / `a88361fc`, item 1a and 1b, and are repeated here so the ask
+   cannot survive a third time.)
+   - **COMMIT BOTH DEVICE EXPORTS.** `device-export-2026-08-10-sam-
+     monday-wednesday.json` and `device-export-2026-08-10-sam-coach-
+     wed-to-mon-KEYEVENTS.json`. Sam said yes. They are his own data,
+     from his own device, in his own private repo, and they are the
+     only real world this project has.
+   - **DELETE `_to_delete/CORRUPT-partial-transfer-do-not-read.json`
+     AND THE `_to_delete/` DIRECTORY.** Sam said bin it, do not
+     salvage. Provenance is the seat's: a failed base64 transfer that
+     lost 96 characters mid-pipe. Nothing recoverable, nothing owed.
+   **Asking twice for a permission already granted is the courier toll
+   in a new coat.** Registry row against `LAW-seat-coordination`: a
+   permission recorded in this file is granted until Sam withdraws it;
+   re-asking is a defect, and the fix is to read the file rather than
+   to ask.
+
+2. **SEQUENCE CONFIRMED FOR THE REMAINING FOUR — AND SAM HAS ASKED
+   DIRECTLY WHERE THE SIMULATOR WORK SITS.** He wants to know when the
+   run-through lands, because he remembers the old rig eating his
+   laptop for forty minutes at a time. **Answer him with a measured
+   number, not a reassurance.** The seat has told him the realistic
+   shape: **the expensive part is the BUILD, not the run** — a rebuild
+   is only needed when native code changes, and a run over an
+   already-installed binary should be minutes. **When the first
+   run-through executes, report (a) wall-clock for the run alone, on
+   an already-built simulator, and (b) whether it takes over his
+   screen.** If it is as slow as he remembers, that is a finding and
+   the answer becomes "before a device build and overnight, never on
+   every change" — which is item (2) of his process ruling anyway.
+   **Do not defend the tool; measure it.**
+
 1. **SAM'S STANDING RULING, 2026-08-10 — WIDEN THE ELEGANCE LAW AND
    IMPLEMENT ALL THREE PROCESS FIXES. VERBATIM:** *"I want to do this
    in the most elegant way. EVERYTHING SHOULD BE DONE IN THE MOST

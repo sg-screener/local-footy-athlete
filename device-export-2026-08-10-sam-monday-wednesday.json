@@ -1,0 +1,295 @@
+{
+  "capturedAt": "2026-08-10T04:18:29.012Z",
+  "profileStore": {
+    "isOnboardingComplete": true,
+    "onboardingData": {
+      "firstName": "Sam",
+      "heightCm": 180,
+      "weightKg": 90,
+      "position": "inside_mid",
+      "goals": [
+        "dominate_level"
+      ],
+      "seasonPhase": "In-season",
+      "gameDay": "Saturday",
+      "teamTrainingDaysPerWeek": 2,
+      "teamTrainingDays": [
+        "Tuesday",
+        "Thursday"
+      ],
+      "teamTrainingIntensity": "Hard",
+      "trainingDaysPerWeek": 5,
+      "trainingDaysUnsure": false,
+      "preferredTrainingDays": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ],
+      "equipmentAnswer": {
+        "tags": {
+          "dumbbells": "have",
+          "barbell": "have",
+          "cables": "have",
+          "bands": "have",
+          "bench": "have",
+          "machine": "have",
+          "pullup_bar": "have",
+          "foam_roller": "have",
+          "kettlebell": "have",
+          "plyo_box": "have"
+        },
+        "modalities": {
+          "bike_erg": "have",
+          "row": "have",
+          "air_bike": "have",
+          "ski": "have",
+          "treadmill": "have"
+        },
+        "answeredOn": "2026-08-09"
+      },
+      "trainingLocation": "Commercial gym",
+      "experienceLevel": "5+ years",
+      "squatStrength": "1.5x bodyweight",
+      "benchStrength": "1.5x bodyweight+",
+      "twoKmTimeTrial": {
+        "seconds": 420,
+        "recordedOn": "2026-08-09",
+        "source": "onboarding"
+      },
+      "conditioningLevel": "Elite",
+      "sprintExposure": "2+ times per week",
+      "recentTrainingLoad": "Very consistent",
+      "injuries": []
+    },
+    "onboardingAnswerCount": 23
+  },
+  "programStore": {
+    "hasProgram": true,
+    "programId": "prog-ai-1",
+    "microcycleCount": 4,
+    "acceptedRevision": 6,
+    "lastTransaction": "tap:move_session:2026-08-10:2026-08-12",
+    "acceptedProfileSnapshot": {
+      "protocolVersion": 1,
+      "capturedAt": "2026-08-10T04:18:25.850Z",
+      "updatedAt": "2026-08-10T04:18:25.850Z",
+      "sourceRevision": 1,
+      "onboardingData": {
+        "firstName": "Sam",
+        "heightCm": 180,
+        "weightKg": 90,
+        "position": "inside_mid",
+        "goals": [
+          "dominate_level"
+        ],
+        "seasonPhase": "In-season",
+        "gameDay": "Saturday",
+        "teamTrainingDaysPerWeek": 2,
+        "teamTrainingDays": [
+          "Tuesday",
+          "Thursday"
+        ],
+        "teamTrainingIntensity": "Hard",
+        "trainingDaysPerWeek": 5,
+        "trainingDaysUnsure": false,
+        "preferredTrainingDays": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "equipmentAnswer": {
+          "tags": {
+            "dumbbells": "have",
+            "barbell": "have",
+            "cables": "have",
+            "bands": "have",
+            "bench": "have",
+            "machine": "have",
+            "pullup_bar": "have",
+            "foam_roller": "have",
+            "kettlebell": "have",
+            "plyo_box": "have"
+          },
+          "modalities": {
+            "bike_erg": "have",
+            "row": "have",
+            "air_bike": "have",
+            "ski": "have",
+            "treadmill": "have"
+          },
+          "answeredOn": "2026-08-09"
+        },
+        "trainingLocation": "Commercial gym",
+        "experienceLevel": "5+ years",
+        "squatStrength": "1.5x bodyweight",
+        "benchStrength": "1.5x bodyweight+",
+        "twoKmTimeTrial": {
+          "seconds": 420,
+          "recordedOn": "2026-08-09",
+          "source": "onboarding"
+        },
+        "conditioningLevel": "Elite",
+        "sprintExposure": "2+ times per week",
+        "recentTrainingLoad": "Very consistent",
+        "injuries": []
+      }
+    },
+    "acceptedProfileSnapshotAnswerCount": 23,
+    "markedDays": {
+      "2026-08-08": "game",
+      "2026-08-15": "game",
+      "2026-08-22": "game",
+      "2026-08-29": "game"
+    },
+    "userRemovalConstraintCount": 5,
+    "dateOverrideDates": [],
+    "weekScopedOverlayWeeks": [
+      "2026-08-03",
+      "2026-08-10",
+      "2026-08-17"
+    ]
+  },
+  "profileMirrorRefusals": [],
+  "athleteActionLog": [
+    {
+      "at": "2026-08-10T04:18:25.784Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-9c9b102513eb1336d9ea2e86",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-08-10T04:18:25.784Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-9c9b102513eb1336d9ea2e86",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-08-10T04:18:25.798Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-eeb84be034ebf02eca2b4ed5",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "profile_store_rehydrate",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-08-10T04:18:25.798Z",
+      "event": "profile_rehydrated",
+      "traceId": "aa-v2-eeb84be034ebf02eca2b4ed5",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "profile_store_rehydrate",
+      "persistedAnswerCount": 23,
+      "liveAnswerCount": 0,
+      "mergedAnswerCount": 23,
+      "persistedOnboardingComplete": true
+    },
+    {
+      "at": "2026-08-10T04:18:25.799Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-e3bf48f5301017a216feb545",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyCalendarMarkedDaysWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-08-10T04:18:25.799Z",
+      "event": "calendar_write",
+      "traceId": "aa-v2-e3bf48f5301017a216feb545",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyCalendarMarkedDaysWrite",
+      "writer": "accepted_transaction",
+      "outcome": "applied",
+      "markCountBefore": 4,
+      "markCountAfter": 4,
+      "erasureActId": "calendar-reset:accepted_state_publish:1"
+    },
+    {
+      "at": "2026-08-10T04:18:25.799Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-b18f2512157ab2e377f76939",
+      "source": "system",
+      "actionType": "readiness_change",
+      "route": "applyReadinessSignalsWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-08-10T04:18:25.799Z",
+      "event": "readiness_write",
+      "traceId": "aa-v2-b18f2512157ab2e377f76939",
+      "source": "system",
+      "actionType": "readiness_change",
+      "route": "applyReadinessSignalsWrite",
+      "writer": "accepted_transaction",
+      "outcome": "applied",
+      "signalCountBefore": 0,
+      "signalCountAfter": 0
+    },
+    {
+      "at": "2026-08-10T04:18:25.799Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-ad5739cb36c2b8f311aeddc1",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-08-10T04:18:25.799Z",
+      "event": "profile_write",
+      "traceId": "aa-v2-ad5739cb36c2b8f311aeddc1",
+      "source": "system",
+      "actionType": "program_change",
+      "route": "applyProfileOnboardingWrite",
+      "writer": "accepted_transaction",
+      "outcome": "applied",
+      "answerCountBefore": 22,
+      "answerCountAfter": 22
+    },
+    {
+      "at": "2026-08-10T04:18:25.800Z",
+      "event": "athlete_action_requested",
+      "traceId": "aa-v2-4d16afea305f0b852cd30108",
+      "source": "system",
+      "actionType": "readiness_change",
+      "route": "applyReadinessSignalsWrite",
+      "internalResultCode": "requested"
+    },
+    {
+      "at": "2026-08-10T04:18:25.800Z",
+      "event": "readiness_write",
+      "traceId": "aa-v2-4d16afea305f0b852cd30108",
+      "source": "system",
+      "actionType": "readiness_change",
+      "route": "applyReadinessSignalsWrite",
+      "writer": "compatibility_projection",
+      "outcome": "applied",
+      "signalCountBefore": 0,
+      "signalCountAfter": 0
+    },
+    {
+      "at": "2026-08-10T04:18:25.800Z",
+      "event": "persistence_result",
+      "traceId": "aa-v2-9c9b102513eb1336d9ea2e86",
+      "source": "system",
+      "actionType": "hydration",
+      "route": "program_store_hydration",
+      "persistenceOperation": "read",
+      "persistenceStore": "program-store",
+      "persistenceSucceeded": true,
+      "persistedPayloadHash": "diagnostics-disabled"
+    }
+  ]
+}

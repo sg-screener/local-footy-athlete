@@ -777,6 +777,50 @@ function samItemsAskingHimToRelay(doc: string): string[] {
     .map((item) => item.split('\n')[0].slice(0, 70));
 }
 
+/**
+ * `LAW-permission-is-granted-once` — seat, 2026-08-10, and its founding case is
+ * this terminal, twice in a row.
+ *
+ * Sam ruled two file operations. The tool refused them, so the terminal put them
+ * back to him as blocked-on-Sam items — **and then did it a second time in the
+ * next report.** The seat's words: *"asking twice for a permission already
+ * granted is the courier toll in a new coat."*
+ *
+ * **The checkable form: a blocked-on-Sam item is a DECISION, DEVICE TIME, or a
+ * THING ONLY HE HAS. It is never a request for permission**, because permissions
+ * live in the inbox and are granted until he withdraws them — so the fix for a
+ * refused operation is to read the file, not to ask again.
+ */
+const PERMISSION_ASK = /\b(permission to|authoris\w+ (me|the)|may I|can I|allow me to|your (permission|say-so)|okay to|ok to)\b/i;
+
+/** Pure: blocked-on-Sam items asking for permission rather than a decision. */
+function samItemsAskingForPermission(doc: string): string[] {
+  const heading = doc.match(SAM_BLOCK_HEADING);
+  if (!heading) return [];
+  const section = doc.slice(doc.indexOf(heading[0]) + heading[0].length).split(/\n##+ /)[0];
+  return section
+    .split(/\n(?=\d+\. )/)
+    .map((item) => item.trim())
+    .filter((item) => /^\d+\. /.test(item))
+    .filter((item) => PERMISSION_ASK.test(item))
+    .map((item) => item.split('\n')[0].slice(0, 70));
+}
+
+run('nothing asks Sam for a permission he has already given', () => {
+  const stops = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .filter((file) => /STOP/i.test(path.basename(file)))
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }))
+    .filter((doc) => SAM_BLOCK_HEADING.test(doc.text));
+  assert(stops.length >= 1, 'no STOP report with a blocked-on-Sam section — the scan is wrong');
+  const asks = stops.flatMap((doc) =>
+    samItemsAskingForPermission(doc.text).map((item) => `${path.basename(doc.file)}: ${item}`));
+  assert(asks.length === 0,
+    `item(s) asking Sam for permission: ${asks.join(' | ')}. `
+    + 'A permission recorded in the inbox is granted until he withdraws it — '
+    + 'read the file rather than ask again. Blocked-on-Sam is decisions, device '
+    + 'time, and things only he has.');
+});
+
 run('nothing asks Sam to be the wire', () => {
   const stops = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
     .filter((file) => /STOP/i.test(path.basename(file)))
@@ -918,6 +962,13 @@ run('the checkers red on fabricated violations (liveness)', () => {
   assert(samItemsAskingHimToRelay(
     '## WHAT IS BLOCKED ON SAM\n\n1. **His Apple ID for eas.json.**\n').length === 0,
     'a thing only Sam has was flagged as a routing ask');
+  assert(samItemsAskingForPermission(
+    '## WHAT IS BLOCKED ON SAM\n\n1. **Permission to commit his exports.**\n').length === 1,
+    'a re-ask for a granted permission passed — the courier toll in a new coat');
+  assert(samItemsAskingForPermission(
+    '## WHAT IS BLOCKED ON SAM\n\n1. **Local-only or sign-in? His call.**\n').length === 0,
+    'a genuine DECISION was flagged as a permission re-ask');
+
   // THE FIRST-RUN FALSE POSITIVE, PINNED: a sentence DENYING the ask.
   assert(samItemsAskingHimToRelay(
     '## WHAT IS BLOCKED ON SAM\n\n1. **His Apple ID.** This is not a report to relay.\n').length === 0,

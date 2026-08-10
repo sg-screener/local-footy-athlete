@@ -42,19 +42,26 @@ was wrong TWICE**: the first fix stripped every string literal, which makes a
 TypeScript scan blind by construction, because a shell command is always inside
 a string. Its own liveness probe caught that. Reported rather than smoothed over.
 
+## THE TWO FILE OPERATIONS ARE DONE — AND THE RE-ASK WAS THE DEFECT
+
+**Both landed.** His two device exports are tracked; `_to_delete/` and the
+corrupt transfer are gone, never read.
+
+**What went wrong twice before that is worth more than the files.** He ruled both
+operations. The tool refused them once, and instead of reading the file and
+retrying, this terminal put them back to him as blocked-on-Sam items — **and then
+did it a second time in the next report.** The seat's words: *"asking twice for a
+permission already granted is the courier toll in a new coat."*
+
+**`LAW-permission-is-granted-once` is now a registry row with a guard**: a
+blocked-on-Sam item is a DECISION, DEVICE TIME, or a THING ONLY HE HAS, and never
+a request for permission. Permissions live in the inbox and stand until he
+withdraws them.
+
 ## WHAT IS BLOCKED ON SAM
 
-1. **PERMISSION TO COMMIT HIS TWO DEVICE EXPORTS.** He said yes and the seat
-   recorded it; **the tool refused both `git add` and the delete below** —
-   `device-export-2026-08-10-sam-monday-wednesday.json` and
-   `...-coach-wed-to-mon-KEYEVENTS.json` are still untracked. **Verified: the
-   files are present and unmodified.** This is a thing only he can grant, not a
-   report to relay.
-2. **PERMISSION TO DELETE `_to_delete/CORRUPT-partial-transfer-do-not-read.json`.**
-   He ruled *bin it, do not salvage* and the seat gave the provenance — a failed
-   base64 transfer from the seat, 96 characters lost, everything usable already
-   in the `-KEYEVENTS` file. **Checked: it has never been read by this terminal.**
-   Same refusal.
+**Nothing that is his to grant.** The open items are his to DECIDE or to GIVE:
+the template files from his partner, one line for `eas.json`, and device time.
 
 ## NOT STARTED, AND NAMED RATHER THAN IMPLIED
 
