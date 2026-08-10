@@ -490,3 +490,38 @@ a named, priced defect rather than a mystery.
 - **NO FLOW USES `injury-case` YET**, because it still cannot install. It joins
   the run receipt as a blocked row rather than a green one.
 - **THE DURABILITY DEFECT IS NOT TOUCHED.** Addendum 4 stands as written.
+
+---
+
+# ADDENDUM 7 — WHERE THE PASS STOPS, AND WHY THE KNOT IS NOT STARTED
+
+**SIX OF SEVEN ORDERS ARE DONE. The knot is the only live order, and it is NOT
+begun — not hedged-and-called-done, not partially cut. Begun would be worse.**
+
+**THE REASON IS THE ESCALATION RULE, APPLIED TO MYSELF.** The extraction changes
+ownership inside a 2000-line hook that every athlete-facing control on the day
+screen runs through. **A half-finished ownership change is the single worst state
+this repo can be left in** — it looks like progress, it type-checks, and the
+defect it produces appears somewhere else days later. The rule exists for exactly
+this and it does not stop applying because the queue is long.
+
+**WHAT THE NEXT PASS SHOULD READ FIRST:** addendum 2 prices the knot by reading
+it; addendum 4 prices the durability defect it shares a shape with. **Both
+findings are the same sentence twice — one thing carrying two meanings, so a
+check or a boundary cannot tell which it is being asked about — and the knot is
+the third instance.** `useHomeScreen` is one hook carrying "the day screen's
+state" and "every athlete control's owner", and the second meaning is what the
+coach page needs and cannot reach.
+
+**THAT IS THE DESIGN NOTE THIS PASS LEAVES:** the extraction is not
+"move some handlers"; it is naming the second meaning and giving it a home, the
+same way `useActiveModifiers` did for the LIST an hour before. **The list took
+one small hook and the day screen kept working. The actions are the same move at
+the next size up, and there is a proven pattern for it now.**
+
+## THE PASS IN ONE LINE
+
+**Three things were found UNRUN rather than broken** — five dev-e2e suites, six
+flows that photographed nothing, and a rig whose 23-day silence had no alarm —
+**and two separate checks were found asking questions they were not written to
+answer.** Every one of those was invisible to a green chain.
