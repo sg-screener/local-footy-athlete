@@ -1855,6 +1855,7 @@ interface WeekDayCardHeaderProps {
   rowCount: number;
   canExpand: boolean;
   isExpanded: boolean;
+  compactStatus: boolean;
   dayToken: string;
 }
 
@@ -1884,11 +1885,25 @@ function WeekDayCardHeader({
   rowCount,
   canExpand,
   isExpanded,
+  compactStatus,
   dayToken,
 }: WeekDayCardHeaderProps) {
+  // Rest and fixtures are status rows, not empty training rows. Only reserve
+  // the category tier when the row can actually render one; otherwise that
+  // invisible line makes these two cards look needlessly tall.
+  const showsCategory = isMoveSource
+    || (!isGame && hasWorkout && Boolean(day.workout?.sessionTier))
+    || isCompleted;
+
   return (
-    <View style={styles.weekCardHeader} testID={`day-row-${dayToken}-card-header`}>
-      <View style={styles.weekCardDateColumn}>
+    <View
+      style={[styles.weekCardHeader, compactStatus && styles.weekCardHeaderCompact]}
+      testID={`day-row-${dayToken}-card-header`}
+    >
+      <View style={[
+        styles.weekCardDateColumn,
+        compactStatus && styles.weekCardDateColumnCompact,
+      ]}>
         <Text style={[styles.dayLabel, styles.weekCardWeekday,
           day.isToday && styles.weekStripDayToday]}>
           {day.short}
@@ -1903,17 +1918,19 @@ function WeekDayCardHeader({
 
       <View style={styles.weekCardDivider} />
 
-      <View style={styles.weekCardMain}>
-        <View style={styles.weekCardCategoryRow}>
-          {isMoveSource ? (
-            <Badge label="Moving" tone="outline" size="xxs" />
-          ) : isGame ? (
-            null
-          ) : hasWorkout && day.workout.sessionTier ? (
-            <SessionTierBadge compact tier={day.workout.sessionTier} />
-          ) : null}
-          {isCompleted ? <Badge label="Done" tone="success" size="xxs" /> : null}
-        </View>
+      <View style={[styles.weekCardMain, compactStatus && styles.weekCardMainCompact]}>
+        {showsCategory ? (
+          <View style={styles.weekCardCategoryRow}>
+            {isMoveSource ? (
+              <Badge label="Moving" tone="outline" size="xxs" />
+            ) : isGame ? (
+              null
+            ) : hasWorkout && day.workout.sessionTier ? (
+              <SessionTierBadge compact tier={day.workout.sessionTier} />
+            ) : null}
+            {isCompleted ? <Badge label="Done" tone="success" size="xxs" /> : null}
+          </View>
+        ) : null}
 
         <View style={styles.weekCardTitleLine}>
           <RowIcon kind={titleIcon} size={15} color={accentColor} />
@@ -2071,6 +2088,7 @@ function DayRow({
   const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
   const stateToken = dayStateToken({ day, isSelected, isMoveSource, isMoveTarget });
   const canExpand = normal && hasWorkout && !isGame && rowCount > 0;
+  const compactWeekStatus = !dayShape && normal && (isGame || !hasWorkout) && !isMoveTarget;
   const exposesNestedControls = isSelected && normal && (dayShape || canExpand);
   const cardCanPress = dayShape || pickerMode !== 'normal' || canExpand;
 
@@ -2138,6 +2156,7 @@ function DayRow({
       rowCount={rowCount}
       canExpand={canExpand}
       isExpanded={isSelected && normal}
+      compactStatus={compactWeekStatus}
       dayToken={dayToken}
     />
   );
@@ -2157,6 +2176,7 @@ function DayRow({
       style={[
         styles.dayRow,
         !dayShape && styles.weekDayCard,
+        !dayShape && compactWeekStatus && styles.weekDayCardCompact,
         isMoveSource && styles.dayRowMoveSource,
         isMoveTarget && styles.dayRowMoveTarget,
         dayShape && emphasized && styles.dayRowCalm,
@@ -2182,6 +2202,7 @@ function DayRow({
         styles.dayRowInner,
         dayShape && emphasized && styles.dayRowInnerSelected,
         !dayShape && styles.weekDayCardInner,
+        !dayShape && compactWeekStatus && styles.weekDayCardInnerCompact,
       ]}>
         {dayShape ? dayCardHeader : weekCardHeader}
 
@@ -3938,13 +3959,16 @@ const styles = StyleSheet.create({
   // pieces; today differs only through Card's existing selected treatment and
   // the existing Today badge. No colour, typeface or icon system is introduced.
   weekDayCard: { minHeight: 86 },
+  weekDayCardCompact: { minHeight: 58 },
   weekDayCardInner: { paddingHorizontal: 12, paddingVertical: 10 },
+  weekDayCardInnerCompact: { paddingVertical: 5 },
   weekCardHeader: {
     minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
+  weekCardHeaderCompact: { minHeight: 46 },
   weekCardDateColumn: {
     width: 48,
     minHeight: 58,
@@ -3952,6 +3976,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 2,
   },
+  weekCardDateColumnCompact: { minHeight: 44 },
   weekCardWeekday: { minWidth: 0, textAlign: 'center', fontSize: 9, letterSpacing: 0.7 },
   weekCardDateNumeral: { textAlign: 'center', fontSize: 27, fontWeight: '700', lineHeight: 29 },
   weekCardDivider: {
@@ -3961,6 +3986,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.10)',
   },
   weekCardMain: { flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 4 },
+  weekCardMainCompact: { alignSelf: 'stretch', justifyContent: 'center', gap: 0 },
   weekCardTitle: {
     color: '#F2F2F2', fontSize: 15, fontWeight: '700', lineHeight: 18,
     textAlign: 'left', flexShrink: 1,

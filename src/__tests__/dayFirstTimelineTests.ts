@@ -759,6 +759,31 @@ run('the week card keeps her proportions — large date, compact badges', () => 
   'the tiny Today badge shrank its font but kept the normal 24pt text line-height');
 });
 
+run('week Game Day and Rest are shorter status cards with centred titles', () => {
+  const home = homeScreenSource();
+  const componentAt = home.indexOf('function WeekDayCardHeader(');
+  const dayRowAt = home.indexOf('function DayRow(');
+  const lifeFactAt = home.indexOf('interface LifeFactChipProps', dayRowAt);
+  assert(componentAt > 0 && dayRowAt > componentAt && lifeFactAt > dayRowAt,
+    'the week header and DayRow regions could not be found');
+  const component = home.slice(componentAt, dayRowAt);
+  const dayRow = home.slice(dayRowAt, lifeFactAt);
+
+  assert(/const compactWeekStatus = !dayShape && normal && \(isGame \|\| !hasWorkout\) && !isMoveTarget/.test(dayRow),
+    'Game Day and Rest do not share one explicit compact week-state decision');
+  assert(/!dayShape && compactWeekStatus && styles\.weekDayCardCompact/.test(dayRow)
+    && /!dayShape && compactWeekStatus && styles\.weekDayCardInnerCompact/.test(dayRow),
+    'the compact status decision does not shorten both the card and its inner padding');
+  assert(/compactStatus && styles\.weekCardHeaderCompact/.test(component)
+    && /compactStatus && styles\.weekCardDateColumnCompact/.test(component)
+    && /compactStatus && styles\.weekCardMainCompact/.test(component),
+    'the compact status decision does not reach the whole header layout');
+  assert(/weekCardMainCompact:\s*\{[^}]*alignSelf:\s*'stretch'[^}]*justifyContent:\s*'center'/.test(home),
+    'the Rest/Game title block is not vertically centred in the shorter card');
+  assert(/const showsCategory =/.test(component) && /\{showsCategory \? \(/.test(component),
+    'an empty category row still reserves training-card space on Rest or Game Day');
+});
+
 run('an acted active modifier appears above the week as her compact lime line', () => {
   const strip = fs.readFileSync(path.join(__dirname, '..', 'components', 'ModifiersStrip.tsx'), 'utf8');
   assert(/const weekSurface = surface === 'week'/.test(strip),

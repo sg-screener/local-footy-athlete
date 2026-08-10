@@ -280,3 +280,48 @@ at the screen-shape boundary.
 Today → Week again (the same transition handler is source-held); prior/next-week
 Completed treatment; the deferred team-training badge; the held season-phase
 removal. This is simulator acceptance, not phone acceptance.
+
+---
+
+## SAM EYE PASS 5 — REST AND GAME DAY ARE STATUS CARDS
+
+**Sam, on the collapsed seven-card week:** *"the game day and rest cards now
+look a bit silly - can you please make the boxes a bit smaller like renee's and
+centre the text on those days?"* Correct. The one-card-shape pass gave Rest and
+Game Day the training card's minimum height and, more importantly, always
+mounted the category row. On those two states that row had no content, but it
+still reserved 17 points above the title.
+
+**THE TWO OPTIONS COMPARED:** (1) make separate Rest and Game card components,
+or (2) keep the one week-card head and give its two status states one compact
+layout input. Option 2 landed. The status input removes the empty category
+reservation, shortens the outer card and inner padding, and vertically centres
+the existing title block. Training, selected-today, expanded-session and picker
+states keep their existing layout.
+
+**RECEIPTS:**
+
+- `test:day-first-timeline`: 35 named cells run, 35 passed. The new cell pins
+  the one Rest/Game compact decision, its use by both outer and inner card
+  spacing, the centred main block, and the absence of an empty category row.
+- `.maestro/golden/standard-program-week.yaml`: completed on the iOS simulator.
+  It still reaches the acted modifier world, collapsed entry, flat session and
+  all seven cards, and now captures the two bottom status cards together.
+- `artifacts/ui-walk/week-status-cards.png`: looked at. Saturday Game Day and
+  Sunday Rest Day are both materially shorter than Thursday/Friday training
+  cards, with their labels centred vertically beside the unchanged date column.
+- `test:compile` and `test:maestro-element-contract`: green.
+
+**FIRST-RUN FINDING:** the new cell failed on the old build because there was no
+shared compact status decision at all. It went green after that decision owned
+the card, inner padding, header, date column and title block together.
+
+**NORTH STAR:** toward it. This is one presentation input on the existing card,
+derived from the day's already-projected state. No new component, stored flag or
+second account of the day was added.
+
+**NOT COVERED:** Sam's physical iPhone; today itself being a Rest or Game Day
+(the same status layout is source-held, but the device coordinate has Monday as
+a session); prior/next-week Completed treatment; the deferred team-training
+badge; the held season-phase removal. This is simulator acceptance, not phone
+acceptance.

@@ -130,3 +130,4 @@ tags:
     direction: DOWN
 - assertVisible:
     id: "day-row-sun"
+- takeScreenshot: artifacts/ui-walk/week-status-cards
