@@ -287,10 +287,61 @@ export function installDevE2EEntry(args: {
       : routeQueue.enqueue(url, route);
   };
 
+  /**
+   * SEED FROM A LAUNCH ARGUMENT — the second way in, and the one with no dialog.
+   *
+   * ## Why this exists, measured rather than argued
+   *
+   * Seeding went through a DEEP LINK (`openLink: "localfootyathlete://e2e/reset/…"`).
+   * On iOS that routes via the system, which raises **"Open in 'Local Footy
+   * Athlete'?"** — and a `maestro hierarchy` dump on 2026-08-10 showed that while
+   * that alert is up **the accessibility tree contains the alert, Safari's chrome
+   * and the status bar, and ZERO app content.** It does not overlay the app; it
+   * REPLACES what the runner can see, so every id a flow waits for is genuinely
+   * absent. That is what "the rig has been dead since 18 July" actually was.
+   *
+   * Answering the dialog was tried and priced: **flaky, one run in three**, and a
+   * workaround repeated at six call sites. This removes the mechanism instead —
+   * `LAW-elegant-two-options`, and here the elegant option is also the reliable
+   * one.
+   *
+   * ## Why it needs no native change
+   *
+   * `NativeModules.SettingsManager.settings` already exposes launch arguments to
+   * JS — it is how `e2eMetroUrl` and `e2eLaunchPurpose` are read a few lines
+   * above. So `e2eSeedId` arrives the same way, and lands on **the same
+   * `coordinator.reset(seedId)` the URL route calls**. One owner, two doors into
+   * it; no second seeding path, no compatibility branch.
+   *
+   * It runs AFTER the URL listener is installed and only when no initial URL is
+   * pending, so a flow that still uses the deep link is untouched.
+   */
+  const launchArgumentSeedId = (): string | null => {
+    const settings = (NativeModules.SettingsManager as {
+      settings?: Record<string, unknown>;
+    } | undefined)?.settings;
+    const seedId = settings?.e2eSeedId;
+    return typeof seedId === 'string' && seedId.trim().length > 0 ? seedId : null;
+  };
+
   const subscription = linking.addEventListener('url', (event) => {
     void handleUrl(event.url);
   });
-  void linking.getInitialURL().then(handleUrl).catch(publishDevE2EEntryError);
+  void linking.getInitialURL()
+    .then(async (initialUrl) => {
+      const handled = await handleUrl(initialUrl);
+      if (handled) return handled;
+      const seedId = launchArgumentSeedId();
+      if (!seedId) return handled;
+      // Routed through the queue, exactly as a URL is, so ordering and the
+      // coordinator-ready barrier are the queue's job here too rather than a
+      // second set of rules that could drift from it.
+      return routeQueue.enqueue(`launch-argument:e2eSeedId:${seedId}`, {
+        kind: 'reset',
+        seedId,
+      } as never);
+    })
+    .catch(publishDevE2EEntryError);
 
   activeInstallation = {
     installed: true,

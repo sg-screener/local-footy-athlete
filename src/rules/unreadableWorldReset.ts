@@ -184,7 +184,7 @@ export function parseWorldResetFact(raw: string | null | undefined): WorldResetF
     return null;
   }
   if (toldAtISO !== null && typeof toldAtISO !== 'string') return null;
-  return { resetAtISO, reason, toldAtISO };
+  return { resetAtISO, reason, toldAtISO: toldAtISO as string | null };
 }
 
 /**

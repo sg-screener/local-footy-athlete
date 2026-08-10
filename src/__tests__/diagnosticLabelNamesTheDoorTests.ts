@@ -89,7 +89,7 @@ function stripComments(source: string): string {
   // THE CONTROL, IN THE SAME RUN. Without it, a deriver that returned 'coach'
   // for everything would pass the cell above.
   const programTab = {
-    screen: 'home' as const,
+    screen: 'program_tab' as const,
     surface: 'plan_change_sheet',
     initiatedBy: 'tap' as const,
   };
@@ -129,7 +129,7 @@ function stripComments(source: string): string {
 
 {
   const coachCard = { screen: 'coach_tab' as const, initiatedBy: 'tap' as const };
-  const programTab = { screen: 'home' as const, initiatedBy: 'tap' as const };
+  const programTab = { screen: 'program_tab' as const, initiatedBy: 'tap' as const };
 
   ok(
     '[2] the producer label agrees with the event label for the coach',

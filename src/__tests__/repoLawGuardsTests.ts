@@ -508,7 +508,27 @@ run('the LOOP CHECK debt only shrinks', () => {
 // yields two hits and both use "exhaustive" descriptively. **A cell that cannot
 // fail is worse than no cell** — `LAW-green-gate-is-a-claim`.
 
-const CLAIM_RECEIPT = /`test:|`npm run|`tape:|\b[0-9a-f]{7,40}\b|\.tsx?:\d+|OPEN-UNKNOWN|NOT ON GLASS/;
+// PLAIN ENGLISH COUNTS, RULED 2026-08-10. The tag clash Sam was asked to settle
+// dissolved into two AUDIENCES, not two rules: what he reads is plain English,
+// what the repo carries keeps the machine-readable token. The law's intent is
+// *every claim carries its status* — plain words satisfy that for a human reader
+// exactly as the token does for a script, so this cell accepts both.
+// WHITESPACE-TOLERANT, and its first run is why: the phrase "none of this has
+// been on your phone" reds the moment prose re-wraps across a line, which it did
+// within minutes of this cell landing. A gate over PROSE that cannot survive a
+// line break is a gate that punishes editing, not a gate that checks anything.
+const PLAIN_STATUS_SOURCE = [
+  'not (yet )?proven', 'not (yet )?seen on your phone', 'not on your phone',
+  'never been on your phone', 'not something you have seen',
+  'never (actually )?(been shown|tapped|rendered)', 'never tapped on your phone',
+  'has not been on your phone', 'none of (this|it) has been on your phone',
+  'nothing here has been seen on your phone', 'waiting on your word',
+  'still open', 'i have not proven', "do(n't| not) know yet",
+].join('|').replace(/ /g, '\\s+');
+const PLAIN_STATUS = new RegExp(PLAIN_STATUS_SOURCE, 'i');
+const CLAIM_RECEIPT = new RegExp(
+  ['`test:', '`npm run', '`tape:', '\\b[0-9a-f]{7,40}\\b', '\\.tsx?:\\d+',
+    'OPEN-UNKNOWN', 'NOT ON GLASS', PLAIN_STATUS_SOURCE].join('|'), 'i');
 
 /** Pure: Sam-facing blocks with neither a receipt nor an honest unknown. */
 function samFacingClaimsWithoutAReceipt(nowFile: string): string[] {
@@ -674,7 +694,13 @@ run('the orphan-flow debt only shrinks', () => {
  * law is not "never claim anything unseen" — it is "never claim it SILENTLY".
  */
 const DONE_WORDS = /\b(FIXED|DONE|IT NOW|NOW IT|WORKS|WORKING|LANDED|BUILT AND|SHIPPED)\b/i;
-const DEVICE_RECEIPT = /NOT ON GLASS|NOT SEEN|UNSEEN|OPEN-UNKNOWN|on glass|device pass|simulator|on (his|your) phone|npx expo run/i;
+// SAME AUDIENCE SPLIT (ruled 2026-08-10): the repo may say NOT ON GLASS; what
+// Sam reads says it in plain words. Both are the law being satisfied, so both
+// count here — a cell that accepted only the token would have forced jargon back
+// into the one place he asked for none.
+const DEVICE_RECEIPT = new RegExp(
+  ['NOT ON GLASS', 'NOT SEEN', 'UNSEEN', 'OPEN-UNKNOWN', 'on glass', 'device pass',
+    'simulator', 'on (his|your) phone', 'npx expo run', PLAIN_STATUS_SOURCE].join('|'), 'i');
 
 /** Pure: Sam-facing blocks claiming something is done with no device word either way. */
 function doneClaimsWithNoDeviceWord(nowFile: string): string[] {

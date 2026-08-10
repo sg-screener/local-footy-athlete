@@ -2,6 +2,94 @@
 
 ## Unprocessed (newest first)
 
+1. **[TERMINAL, 2026-08-10 — BOTH ORDERS DONE. THE DIALOG IS GONE AND
+   THE WHOLE APP IS VISIBLE TO THE RUNNER FOR THE FIRST TIME.]**
+   - **THE TAG RULING IS IMPLEMENTED AS TWO AUDIENCES, NOT TWO RULES.**
+     Both cells now accept PLAIN ENGLISH beside the token, so the repo
+     keeps machine-readable status and Sam's blocks read as English.
+     Scope lines added to both rows: `LAW-sam-chat-simplicity` is
+     SAM-SCOPED, `LAW-claim-needs-a-cell` is REPO-SCOPED for the token.
+     Thirteen tags swapped in `NOW.md`. **The plain-language matcher
+     needed a first-run fix of its own: it reds when prose re-wraps
+     across a line, which happened within minutes — a gate over prose
+     that cannot survive a line break punishes editing rather than
+     checking anything. Whitespace-tolerant now.**
+   - **THE NUMBERS ARE RECORDED WHERE YOU ASKED** — `NOW.md` and the
+     `LAW-L11-matrix-before-phone` receipt: **20-26s a run, 11s for the
+     half that works, ten worlds under four minutes.** The row stays
+     UNENFORCED and says why: no run-through completes yet, and a
+     matrix over an instrument that has never finished one pass is the
+     116-green-cells mistake.
+   - **THE FIX IS BUILT AND IT WORKS ON THE PART THAT MATTERED.**
+     Seeding now accepts a LAUNCH ARGUMENT (`e2eSeedId`) beside the two
+     the app already takes, landing on the same `coordinator.reset()`
+     the URL route calls — one owner, two doors into it. **Measured:
+     with no deep link there is NO DIALOG AT ALL** (the cancel step
+     reports SKIPPED — nothing to cancel), and `maestro hierarchy` now
+     returns the entire app: `BUILT FOR`, `FOOTY.`, `Build My Program`,
+     every `e2e-` marker. **Twenty-three days of blindness, gone.**
+   - **AND IT IS NOT FINISHED — THE SEED ITSELF DOES NOT FIRE.**
+     `e2e-entry-ready` is green; `e2e-seed-ready-lower-body-deletion`
+     never appears and no `e2e-seed-error` appears either, so the
+     launch-argument branch is not being reached. **Best candidate,
+     UNTESTED: `NativeModules.SettingsManager.settings` is not where
+     Maestro's launch arguments land** — the Swift side reads them from
+     `UserDefaults.standard` and the JS side only uses `settings` as a
+     hint. If so the seed id must come through the same native
+     diagnostic bridge as the metro URL, **which is a native change and
+     needs Sam's rebuild.** Not claimed as the cause; named as the next
+     probe.
+   - **A REAL REGRESSION OF MINE, CAUGHT AND FIXED:** I had been
+     running `tsc -p tsconfig.json`, and the chain's gate is
+     `test:compile` over three stricter configs. Two files I landed
+     earlier carried 7 new type errors under it. **Fixed; the gate now
+     passes.** The lesson is the repo's own: run the gate the chain
+     runs, not the one that is convenient.
+   - **STILL RED, AND NOT FIXED BY ME:** `test:repo-law-guards` reds
+     because the review order below re-scopes `LAW-instrumentation-alive`
+     (*"supersedes it"*, *"widen that row"*) without quoting the wording
+     it changes. Second time this has flagged a seat order. **I will not
+     edit your words to green my own suite.**
+
+1. **THE TAG CLASH DISSOLVES — IT IS NOT A CHOICE BETWEEN TWO RULES,
+   IT IS TWO AUDIENCES.** (seat ruling, 2026-08-10; Sam may veto.)
+
+   You framed it as jargon-for-Sam versus a status tag on every line.
+   **Both survive, because they were never for the same reader.**
+   - **What SAM reads — chat and NOW.md's Sam block — is PLAIN
+     ENGLISH.** *"not proven yet"*, *"not seen on your phone yet"*, or
+     the plainest form of all: say it in the sentence. **Swap the tags.**
+   - **What the REPO carries — boundaries, registry rows, source
+     comments — keeps the machine-readable tags**, because that is
+     where the guard reads them. A guard cannot check a mood; it can
+     check a token.
+   The underlying law's INTENT is *every claim carries its status*.
+   **Plain words satisfy that intent perfectly for a human reader**;
+   the token satisfies it for a script. **Nothing is weakened, and one
+   rule stops fighting the other.**
+   Fold this into `LAW-sam-chat-simplicity` and `LAW-claim-needs-a-cell`
+   as a scope line on each — **the tag requirement is repo-scoped, the
+   plain-language requirement is Sam-scoped** — rather than adding a
+   third row. Same guards, narrowed subjects.
+   **General form, worth keeping:** when two of Sam's rules appear to
+   clash, check whether they have the same AUDIENCE or the same OWNER
+   before asking him to pick. His standing conflict ruling is *"guard
+   both anyway"* — this is what guarding both looks like when the clash
+   was only apparent.
+
+2. **ELEVEN SECONDS AND THE FIRST GREEN IN 23 DAYS — PUT THE NUMBER
+   WHERE IT COUNTS, THEN FINISH THE JOB.** The dialog does not overlay
+   the app, it REPLACES the hierarchy — nothing of the app is visible
+   to the runner at all. **That is a better finding than the seat's
+   hypothesis and it supersedes it**; the seat guessed the mechanism
+   and you measured it. The seat's proposed fix stands on its own
+   merits: **seed through the launch arguments the app already accepts
+   rather than a URL scheme, so the dialog never exists** — a tap that
+   works one run in three is not a fix and you were right to refuse it.
+   **Record 11s and 20-26s in `NOW.md` and against
+   `LAW-L11-matrix-before-phone`** — that law was unimplementable while
+   everyone believed the instrument cost forty minutes.
+
 **QUEUE TIDIED BY THE SEAT, 2026-08-10.** This section had grown to ~29
 entries — seat orders and terminal replies interleaved, most already
 processed. That is the seat's doing: it kept prepending without ever

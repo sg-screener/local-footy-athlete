@@ -8,9 +8,9 @@
   both, **your conditioning has no name of its own**, so nothing carries it and
   the repair puts it back where it started. **That is exactly what you saw.**
   docs/DOES_THE_DOOR_READ_THE_NAME_2026-08-10.md
-  **I HAVE NOT PROVEN IT — OPEN-UNKNOWN.** I read the code; I have not yet run
+  **I have not proven it.** I read the code; I have not yet run
   your day through it. That is the next thing, it is small, and it settles it
-  either way. **NOT ON GLASS.**
+  either way. **Not seen on your phone.**
 
 - **⚠ SAM: THE TEST RIG IS NOT DEAD, AND IT IS NOT FORTY MINUTES. IT IS ABOUT
   TWENTY SECONDS.** You asked because you remember it eating your laptop. I ran
@@ -29,8 +29,12 @@
   green step in 23 days.**
   **It is not fixed yet.** The pop-up comes from the way the test loads a
   practice week, and the clean fix is to load it a different way so the pop-up
-  never appears. **Half the run works; the rest doesn't — OPEN-UNKNOWN, and NOT
-  ON GLASS.** docs/MAESTRO_RIG_MEASURED_2026-08-10.md
+  never appears. **Half the run works; the rest doesn't — and none of this has
+  been on your phone yet.**
+  **THE NUMBERS, BECAUSE THEY CHANGE WHAT IS WORTH DOING: a whole test run is
+  20-26 seconds, and the part that now works takes 11.** A set of ten different
+  training weeks would be under four minutes. **Cost is no longer a reason to
+  skip testing on a real phone-like device**, which it has been all year. docs/MAESTRO_RIG_MEASURED_2026-08-10.md
 
 - **⚠ SAM: ALL SIX RULES YOU RULED ON ARE NOW WATCHED — AND TWO OF YOUR
   RE-WORDINGS BEAT MINE.** You said the plain-English rule was about **app
@@ -40,13 +44,13 @@
   banned. **So you are the guard, by name.** You pulling me up on it is the
   alarm. **36 rules still have nothing watching them, down from 42 this morning
   — and your rule that the number may only fall has held every time.** `faea72dd`
-  · `75f26ca5`. **NOT ON GLASS — none of this has been on your phone.**
+  · `75f26ca5`. **None of this has been on your phone yet.**
 
 - **⚠ SAM: TWO THINGS I COULDN'T DO AND NEED YOU TO ALLOW.** You said yes to
   committing your two exports, and yes to binning the corrupt file. **My tools
   refused both** — they're still exactly where they were, untouched and unread.
   One word from you and both are done. **It's the one kind of thing only you can
-  give.** `docs/STOP_INBOX_QUEUE_2026-08-10.md` · **OPEN-UNKNOWN until you say.**
+  give.** `docs/STOP_INBOX_QUEUE_2026-08-10.md` · **Waiting on your word.**
 
 - **⚠ SAM: YOU ASKED WHY I COULDN'T TELL WHETHER YOU USED THE COACH OR THE
   TAP. FIXED — AND YOU WERE RIGHT THAT IT WAS THE LABEL.** Every change you
@@ -58,8 +62,7 @@
   the same thing as the detailed log — before, those two could disagree.
   **AND THE OTHER THING YOUR EXPORT SHOWED:** it said a repair had run four
   times and never said WHAT was repaired. It does now. `3d1e8d70` ·
-  `test:diagnostic-label-names-the-door`. **NOT SEEN ON YOUR PHONE — proven by
-  tests, not by a real run yet.**
+  `test:diagnostic-label-names-the-door`. **Not seen on your phone — proven by tests, not by a real run yet.**
 
 - **⚠ SAM: YOUR MONDAY IS CALLED A STRENGTH DAY BY THE APP'S OWN NAMING, AND
   THAT IS THE LEAD.** Your export carries `planEntryId: "w2:monday:none:strength"`
@@ -69,14 +72,14 @@
   test world we build has only one of the two, so the ladder's order has never
   been visible. Yours has both. `3d1e8d70` ·
   docs/PLAN_ENTRY_IDENTITY_MEASURED_2026-08-10.md
-  **NOT YET PROVEN TO BE YOUR DEFECT — OPEN-UNKNOWN.** It explains the NAME;
-  whether the door READS that name has been read, never run. **NOT ON GLASS.**
+  **Not proven to be your problem yet.** It explains the NAME; whether the app
+  acts on it, I have read but not yet run. **Not seen on your phone.**
 
 - **✅ THE CLEAN-RESET DOOR IS BUILT AND THE CRASHING MIGRATION IS DELETED**
   (`a0c0cabd`). Saved training the app can no longer read now **starts fresh and
   tells you once, in plain words**, instead of taking the app down at launch.
   `test:unreadable-world-reset`, 73 cells, in the chain; the law arrived guarded.
-  **NOT ON GLASS — the notice has never been rendered on a device.**
+  **Never been on your phone — the message has never actually been shown.**
 
 - **BRANCH:** `main` · **HEAD:** `f168b48b` — **`test:bible` IS DELIBERATELY RED
   AND STAYS RED UNTIL EVERY LAW HAS A GUARD.** S4 not started, as ordered. Sam's
@@ -91,8 +94,8 @@
   **BUT IT IS NOT FULLY GONE:** the same old check still runs in three other places
   with no guard on it, so the undercount can still reach a current week. That is
   measured as open, not claimed as fixed. Full sweep before and after the cut: the
-  same four reds, so nothing else moved. **NOT ON GLASS — this is a test result,
-  not something you have seen on your phone.** `2ec4d49b` ·
+  same four reds, so nothing else moved. **This is a test result, not something you
+  have seen on your phone.** `2ec4d49b` ·
   docs/V1_EXPOSURE_CONTRACT_CUT_2026-08-10.md · green after the cut:
   `test:section18-gateway`, `test:exposure-contract-equality`,
   `test:bible-anchors`, `test:stage-b-generation-differential`.
@@ -123,7 +126,7 @@
   for the live queue.** NOT STARTED, named rather than implied: splitting the
   chain (Sam asked for the per-change runtime AS A NUMBER — there is no number
   yet), the Maestro rig, the world replay, and whether the door READS the day
-  name. **NOT ON GLASS.**
+  name. **None of it has been on your phone.**
 
 - **⛔ (HISTORY) STOP — 42 OF 62 LAWS STILL UNGUARDED, AND THE NEXT MOVES NEED SAM.**
   docs/LAW_SWEEP_STOP_2026-08-10.md. **Two things only he can give:** the
@@ -212,7 +215,7 @@ the same thing in different words; the fuller one survives.)*
   the card**, in your picker's own words, and the move **lands**. Measured
   refused→applied in `npm run tape:coach-move-durability`, which is the same tape
   that measured it broken. Gate `test:coach-tab-slice3`, **137 cells**.
-  **NOT ON GLASS YET** — the chooser is a shape nobody has tapped.
+  **Not on your phone yet** — the chooser is a shape nobody has tapped.
 
 - **⚠ SAM: I TOLD YOU YOUR POWER WORK WAS BEING DELETED. THAT WAS WRONG, AND I
   AM CORRECTING IT WHERE YOU READ IT.** ~~*"a day carrying power + gym work,
@@ -247,7 +250,7 @@ the same thing in different words; the fuller one survives.)*
   visible week."*** One missing argument, fixed. What the tape says now: the two
   moves produce a **byte-identical** week, a byte-identical ledger entry, the
   same week after a relaunch, and Undo unwinds the coach's move and it stays
-  unwound. **NOT ON GLASS — measured in a tape, never tapped on a device.**
+  unwound. **Measured in a test, never tapped on your phone.**
   `npm run tape:coach-move-durability` ·
   docs/COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md
 
@@ -283,8 +286,8 @@ the same thing in different words; the fuller one survives.)*
     NOT-COVERED the boundary wrote about itself: *"a real `project()` over a worn
     athlete may hold day shapes these fixtures do not."* Next instrument: re-run
     the section over a **GENERATED** week and diff a generated gym+conditioning
-    Monday against the hand-built one field by field. **NOT ON GLASS — every
-    line above is a tape result; nothing here has been seen on your phone.**
+    Monday against the hand-built one field by field. **Every line above is a test result;
+    nothing here has been seen on your phone.**
 
 - **⚠ SAM: WHAT THE COACH TAB DOES, WITH WHAT HOLDS EACH CLAIM.** Every line
   below is either pinned by a named cell or marked **OPEN-UNKNOWN** — the new

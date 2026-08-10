@@ -235,7 +235,11 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-claim-needs-a-cell',
-    law: 'A sentence saying the app does or does not do X, anywhere Sam reads it, is pinned by a named cell or written OPEN-UNKNOWN.',
+    // SCOPE LINE ADDED 2026-08-10 — the other half of the apparent clash with
+    // LAW-sam-chat-simplicity. The INTENT is "every claim carries its status".
+    // A token satisfies that for a script; plain words satisfy it for Sam. The
+    // TOKEN requirement is repo-scoped; the plain-language requirement is his.
+    law: 'A sentence saying the app does or does not do X is pinned by a named cell, or its status is stated — as the token OPEN-UNKNOWN / NOT ON GLASS in the REPO, and in PLAIN WORDS wherever Sam reads it.',
     ruledAt: 'AGENTS.md "A behaviour claim the owner can read is held by a CELL"; seat-ruled 2026-08-10',
     guard: {
       state: 'guarded',
@@ -280,8 +284,8 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'AGENTS.md "L11 — The matrix before the phone"',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'PROCESS law; a seat checklist is its realistic guard.',
-      receipt: 'Process law; no script observes ordering of work.',
+      wouldTake: 'A run-through over a MATRIX of worlds, gated per athlete-visible slice. NOT AFFORDABILITY-BLOCKED ANY MORE — see the receipt.',
+      receipt: 'MEASURED 2026-08-10, and the measurement changes this row from unimplementable to merely unbuilt: a Maestro run costs 20-26s wall clock on an already-built simulator (3 runs), and the launch+marker half now completes in 11s. A matrix of ten worlds is under four minutes. THIS LAW WAS UNIMPLEMENTABLE FOR AS LONG AS EVERYONE BELIEVED THE INSTRUMENT COST FORTY MINUTES — the belief was never measured, and the rig had been carried as dead since 18 July without being re-run after its cause was fixed. Still UNENFORCED because no run-through completes yet: everything past the deep-link seed fails, and a matrix over an instrument that has never finished one pass is the 116-green-cells mistake. docs/MAESTRO_RIG_MEASURED_2026-08-10.md',
     },
   },
   {
@@ -782,7 +786,11 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     // RE-SCOPED 2026-08-10. It governed the SEAT's replies; Sam's process ruling
     // removed the seat from the relay, so the terminal now writes straight to
     // him. The row widens to ANYTHING anyone writes for Sam to read.
-    law: 'Anything written for Sam to read is three parts at most — WHAT HAPPENED / WHAT\'S NEXT / WHAT TO SEND — with no jargon, file names, commit ids or test names. The depth moves to the repo docs; it does not disappear.',
+    // SCOPE LINE ADDED 2026-08-10, resolving an apparent clash with
+    // LAW-claim-needs-a-cell. They were never for the same reader: this row is
+    // SAM-SCOPED, that one is REPO-SCOPED. Plain words carry a claim's status
+    // for a human exactly as a token does for a script, so neither weakens.
+    law: 'SAM-SCOPED. Anything written for Sam to read is three parts at most — WHAT HAPPENED / WHAT\'S NEXT / WHAT TO SEND — with no jargon, file names, commit ids or test names, and status said in PLAIN WORDS ("not proven yet", "not seen on your phone") rather than in tags. The depth moves to the repo docs; it does not disappear.',
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-09_COACH_BUILD_ERA.md §0 "SAM CHAT RULE" (Sam-forced); CLAUDE.md "HOW TO WRITE TO SAM"; re-scoped 2026-08-10',
     guard: {
       state: 'guarded',
