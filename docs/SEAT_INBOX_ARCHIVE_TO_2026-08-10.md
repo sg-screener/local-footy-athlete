@@ -5937,3 +5937,32 @@ Design: `docs/REBUILD_NOTICE_OWNERSHIP_2026-08-10.md`.
    **`dismiss_note` is already live.** Nothing has left the day screen.
    Priced in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addenda 2
    and 8; the pattern to copy is `useActiveModifiers`.
+
+## Processed 2026-08-10 (sixty-seventh pass) — `useRebuildNotice()` IS BUILT, ONE OWNER, EVERYONE READS
+
+**Full report: `docs/REBUILD_NOTICE_OWNERSHIP_BOUNDARY_2026-08-10.md`. Commit `3459aa4f`.**
+
+The order was: BUILD `useRebuildNotice()`, route (a), and **check whether
+`runRebuild` closes over day-screen state before scoping**.
+
+- **THE FIRST QUESTION WAS ANSWERED FIRST, AND THE ANSWER IS NO.** `runRebuild`
+  closes over `onboardingData` only — a `useProfileStore` selection any screen
+  can make. Everything else it touches is a module import or a local `Alert`
+  helper. **The design's assumption held and route (a) priced as written.**
+- **BUILT:** `src/store/rebuildNoticeStore.ts` owns `isRebuilding`, `msgIdx`,
+  `error`, `errorCanRetry`; `src/hooks/useRebuildNotice.ts` is the reader and
+  holds the module-scoped fade and the one ticker. The day screen's rendering is
+  unchanged and that is its own gate section.
+- **A CORRECTION MID-BUILD:** the first cut put the `Animated.Value` in the
+  store. **No store in this repo imports `react-native`** and the node harness
+  cannot parse it, so that store would have been the only one its own suite could
+  not call. Fade and ticker moved one layer up; the store stayed node-callable.
+- **THE GATE CAUGHT ITS OWN VACUOUS CELL.** Nine mutations, eight red first pass.
+  The survivor: five "the hook still returns `<field>`" cells were matching the
+  hook's own destructure, not its return. All five green and empty. Scoped and
+  re-mutated; they red now.
+- **NOT DONE, AND IT IS THE NEXT ORDER WHEN THE SEAT WRITES IT:** step 4 — mount
+  the modifier actions and the phase control on the coach status screen, then
+  ruling 4's section and ruling 6's card ship out in the same commit. Until then
+  the both-surfaces tape cannot exist and the gate says so rather than claiming
+  it. **Nothing in this unit has been seen on a device.**
