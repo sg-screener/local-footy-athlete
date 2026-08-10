@@ -48,12 +48,22 @@
  * There is no high-water mark, no grandfathering and no dated debt. The only
  * way a row clears is a real guard, in the chain, named here.
  *
- * ## SCOPE — BATCH 1 ONLY, AND THE REST IS NAMED RATHER THAN IMPLIED
+ * ## SCOPE — BATCH 1 + THE BATCH 2 AUDIT AND SWEEP
  *
- * This is (a) the AGENTS.md laws, (b) L-C1..L-C4, (c) the laws central to the
- * 2026-08-10 passes. **131 named ruling docs are NOT harvested here** and none
- * of them should be read as covered. Batching was the order; pretending
- * otherwise would be the same failure one level up.
+ * Batch 1 was (a) the AGENTS.md laws, (b) L-C1..L-C4, (c) the laws central to
+ * the 2026-08-10 passes.
+ *
+ * **BATCH 2 (2026-08-10, item 000(A)) AUDITED EVERY BATCH-1 ROW AGAINST ITS
+ * CITED SOURCE AND FOUND THE REGISTRY WRONG ON DAY ONE.** One row carried a
+ * DIFFERENT LAW than its id named (`LAW-liveness`), and **four rows cited
+ * sources that do not say what the row claims** — including one on a GUARDED
+ * row. Then it swept for laws with no row at all and found **thirty**: the
+ * whole of Process Law L1–L10, the north star itself, and every seat law in
+ * the handoffs.
+ *
+ * **131 named ruling docs are still NOT harvested** and none of them should be
+ * read as covered. The sweep started from the seat's list and did not stop at
+ * it, but it is not exhaustive and does not claim to be.
  */
 
 /** What holds a law, or the honest absence of it. Exactly two shapes. */
@@ -93,8 +103,11 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   // ── (a) THE AGENTS.md LAWS ────────────────────────────────────────────────
   {
     id: 'LAW-0-registry',
-    law: 'No law is recorded anywhere without a registry row and a guard, or an explicit UNENFORCED row with a reason.',
-    ruledAt: 'AGENTS.md "LAW ZERO"; Sam 2026-08-10',
+    // AUDITED 2026-08-10 (batch 2). The text used to end "...or an explicit
+    // UNENFORCED row with a reason." Sam withdrew that clause the same day —
+    // no new law may enter as UNENFORCED — and AGENTS.md no longer says it.
+    law: 'No law is recorded anywhere without a registry row and a guard.',
+    ruledAt: 'AGENTS.md "LAW ZERO" + "UNENFORCED IS RED"; Sam 2026-08-10',
     guard: {
       state: 'guarded',
       by: 'test:law-registry',
@@ -145,7 +158,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-count-names-instrument',
     law: 'A number names the instrument\'s unit, not the domain noun — emit occurrences AND distinct.',
-    ruledAt: 'AGENTS.md "A count names the instrument\'s unit"; sighting 14',
+    // AUDITED 2026-08-10: ruledAt claimed "sighting 14". The cited section says
+    // "Seat-endorsed 2026-08-07 at the THIRD sighting"; 14 is this terminal's
+    // running tally, not something the ruling site records. Cite the site.
+    ruledAt: 'AGENTS.md "A count names the instrument\'s unit, not the domain noun" (seat-endorsed 2026-08-07)',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'A lint over report-emitting suites requiring both counts wherever one is printed. The law is about how results are REPORTED, which no current gate inspects.',
@@ -153,13 +169,21 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
-    id: 'LAW-anchor-smallest-declaration',
-    law: 'Anchor a source-reading cell on the smallest declaration that carries the claim, never on the region that carries the work.',
-    ruledAt: 'AGENTS.md "The same law again — its subject is ANCHORING" (L12 family)',
+    // RENAMED FROM `LAW-anchor-smallest-declaration` BY THE 2026-08-10 AUDIT,
+    // and the old id is RETIRED, never to be reused. The row carried a law the
+    // cited section does not state: "smallest declaration" appears NOWHERE in
+    // AGENTS.md (grep: one hit, and it is about clarifying questions). What the
+    // section actually rules is below — prove the anchor was FOUND. The
+    // smallest-declaration phrasing came from a boundary report, not a ruling,
+    // and is now folded in as the practice the law implies rather than quoted
+    // as if Sam had ruled it.
+    id: 'LAW-anchor-must-be-found',
+    law: 'Any assertion locating something in source by POSITION must prove every anchor was FOUND before claiming anything about their relationship.',
+    ruledAt: 'AGENTS.md "The same law again — its subject is ANCHORING, not counting" (sighting 6, 2026-08-09)',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'A gate over source-reading cells forbidding character-window regexes ({0,N}) around JSX/function bodies.',
-      receipt: 'Violated and repaired by hand this pass: coachTabSlice3Tests\' composer cell used a {0,200} window, was widened to 600, then re-anchored and the bound deleted. Nothing would have caught the widening.',
+      wouldTake: 'A gate over source-reading cells: every indexOf/slice/[\\s\\S]*? anchor must be asserted found (>= 0, non-empty) before any relational assertion — and forbid character-window regexes ({0,N}) around JSX/function bodies, which is the same law\'s practice half.',
+      receipt: 'The founding case returned green with the anchor MISSING (indexOf -1 compares less than everything). Violated and repaired by hand 2026-08-10: coachTabSlice3Tests\' composer cell used a {0,200} window, was widened to 600, then re-anchored. Nothing would have caught the widening.',
     },
   },
   {
@@ -267,12 +291,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-totals-or-red',
     law: 'A suite is born failing and only its own printed totals line clears it.',
-    ruledAt: 'AGENTS.md "Test Standard"; Sam 2026-08-03',
+    // AUDITED 2026-08-10: ruledAt cited `AGENTS.md "Test Standard"`. That
+    // section says nothing about totals-or-red — grep for "totals" over
+    // AGENTS.md returns ONE hit, in a different law's worked example. A row
+    // citing a section that does not carry its law is exactly the misfiling
+    // this audit exists to find, and it was on the registry's strongest row.
+    ruledAt: 'src/__tests__/support/totalsOrRed.ts header, quoting Sam 2026-08-03: "TOTALS-OR-RED IS LAW for every suite in test:bible — exit code armed red at module top, cleared only by the printed totals line."',
     guard: {
       state: 'guarded',
       by: 'test:totals-or-red-law',
       chainStatus: 'in_chain',
-      receipt: '174 suites call armTotalsOrRed()/totalsPrinted(); the law has its own chain script. THE STRONGEST ROW IN THIS REGISTRY and the shape the others should copy.',
+      receipt: '175 suites call armTotalsOrRed()/totalsPrinted(); the law has its own chain script which DERIVES the suite list from the test:bible chain string, so a suite cannot join the chain unenrolled. THE STRONGEST ROW IN THIS REGISTRY and the shape the others should copy.',
     },
   },
   {
@@ -289,11 +318,16 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-seat-coordination',
     law: 'The seat writes orders in ## Unprocessed; terminal-owned blockers and holds live below it, never mixed in.',
-    ruledAt: 'AGENTS.md "Seat coordination laws"; Sam 2026-08-07; amended 2026-08-10',
+    // AUDITED 2026-08-10: ruledAt cited AGENTS.md "Seat coordination laws" for
+    // BOTH halves. That section states the SEAT INBOX half; the
+    // "terminal-owned blockers and holds live below it" half appears only in
+    // SEAT_INBOX.md's own prose (lines 495, 630) and nowhere in AGENTS.md.
+    // Cited honestly rather than upgraded to a law it was never written as.
+    ruledAt: 'AGENTS.md "Seat coordination laws" (SEAT INBOX half, Sam 2026-08-07); the terminal-owned-section half is convention recorded in docs/SEAT_INBOX.md only and has never been ruled into AGENTS.md',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'A gate over docs/SEAT_INBOX.md section structure.',
-      receipt: 'Violated and repaired by hand on 2026-08-10 (commit 74070cf2) — exactly the class a structural gate would have caught.',
+      wouldTake: 'A gate over docs/SEAT_INBOX.md section structure: `## Unprocessed` exists, appears once, and is followed by the terminal-owned sections in a fixed order. Cheap — it is a headings read, the same shape as test:seat-inbox-hook.',
+      receipt: 'Violated and repaired by hand on 2026-08-10 (commit 74070cf2) — exactly the class a structural gate would have caught. NOT guarded by test:seat-inbox-hook, which reads the Unprocessed section\'s CONTENT and says nothing about the document\'s structure.',
     },
   },
 
@@ -368,7 +402,12 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-do-not-lose-the-session',
     law: 'The Bible\'s Move rules: a session the athlete owns is never silently destroyed by a plan change.',
-    ruledAt: 'Training Bible, Move rules',
+    // AUDITED 2026-08-10: ruledAt read "Training Bible, Move rules". THERE IS
+    // NO SUCH SECTION. docs/LFA_PROGRAMMING_BIBLE.md carries move guidance as
+    // prose bullets (moving game day, busy/away weeks) and no "Move rules"
+    // heading exists in it. Second ghost citation found by this audit, after
+    // LAW-totals-or-red's — and the first was on a GUARDED row.
+    ruledAt: 'docs/LFA_PROGRAMMING_BIBLE.md move guidance (prose bullets, no "Move rules" heading); enforced in practice by docs/audits/MOVE_OCCUPIED_CONTENT_LOSS_2026-07-23.md',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'Subsumed by LAW-attributed-content-change: the session survives (LAW-conservation guards that); what is unguarded is content leaving it unexplained and untold.',
@@ -378,7 +417,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-doc-truth',
     law: 'A "built" or "fixed" claim in any doc carries a code receipt, and a doc that outlives its subject is corrected.',
-    ruledAt: 'AGENTS.md doc-truth family; repeatedly cited in boundary reports',
+    // AUDITED 2026-08-10: ruledAt said "AGENTS.md doc-truth family", implying a
+    // section. AGENTS.md mentions DOC-TRUTH exactly ONCE (line 297) and in
+    // passing, inside another law. The ruling site is the seat handoff.
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-09_UNDO_COACH_ERA.md §2 "DOC-TRUTH LAW"; referenced once in AGENTS.md but never stated there',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'A gate that resolves doc claims to named receipts — the same shape as test:copy-rulings-binding, which already does this for copy.',
@@ -386,13 +428,354 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
-    id: 'LAW-liveness',
+    // ─────────────────────────────────────────────────────────────────────
+    // RENAMED FROM `LAW-liveness` BY THE 2026-08-10 AUDIT. THE OLD ID IS
+    // RETIRED AND MUST NEVER BE REUSED — it named one law and carried another.
+    //
+    // The seat caught this reading the twenty out to Sam: the row's text is the
+    // GATE law, and `LAW-liveness` is the id of a DIFFERENT law — the terminal
+    // one, now filed below as `LAW-terminal-is-stopped-after-a-report`, which
+    // had NO ROW AT ALL. A registry that misfiles a law is worse than no
+    // registry, because it reads as covered.
+    //
+    // AND THE CITATION WAS A GHOST TOO, which the seat did not catch and this
+    // audit did: ruledAt read `AGENTS.md; memory law "A green gate is a claim"`.
+    // **grep over AGENTS.md for "green gate is a claim" returns NOTHING.** The
+    // law lives in this terminal's private memory index and in boundary reports
+    // that cite it as ruled. Its nearest repo-side statement is L12, which is
+    // adjacent but not the same claim. THIRD ghost citation of this audit.
+    // ─────────────────────────────────────────────────────────────────────
+    id: 'LAW-green-gate-is-a-claim',
     law: 'A green gate is a claim: a gate must be shown to fail when its subject breaks.',
-    ruledAt: 'AGENTS.md; memory law "A green gate is a claim"',
+    ruledAt: 'NOT STATED IN THE REPO — carried only in the terminal\'s memory index and cited as ruled by boundary reports. AGENTS.md L12 ("Verification strategy is reviewed like code") is adjacent and does not say it. NEEDS A RULING SITE.',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'Standing mutation-testing in the chain, or a per-suite liveness assertion of the kind athleteActionWalkerTests already carries.',
-      receipt: 'One liveness check exists in the whole repo (athleteActionWalkerTests.ts:323). Mutation testing is a per-pass habit, done by hand this pass on four cells, and nothing requires it.',
+      wouldTake: 'Standing mutation-testing in the chain, or a per-suite liveness assertion of the kind athleteActionWalkerTests already carries. FIRST, THOUGH: write the law down somewhere Sam can read it — a law with no ruling site cannot be audited against one.',
+      receipt: 'One liveness check exists in the whole repo (athleteActionWalkerTests.ts:323). Mutation testing is a per-pass habit, done by hand and required by nothing. test:law-registry\'s own liveness cell is the second, added 2026-08-10.',
+    },
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // BATCH 2 — THE SWEEP FOR LAWS WITH NO ROW AT ALL (2026-08-10, item 000(A)).
+  //
+  // Sam: *"Report the new total and the new UNENFORCED count — the number
+  // moving UP here is correct and expected, and is the last time it may."*
+  //
+  // Every row below was ruled somewhere and had NOTHING in this file. They are
+  // grouped by where they were ruled, because that is what the audit read.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── THE LAW THE MISFILED ID WAS SUPPOSED TO NAME ──────────────────────────
+  {
+    id: 'LAW-terminal-is-stopped-after-a-report',
+    law: 'A terminal ENDS ITS TURN at every report and is STOPPED until someone types at it; nobody claims a terminal is "working" without a commit or mtime receipt checked at the moment of speaking.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-09_UNDO_COACH_ERA.md §2 "LIVENESS LAW" (Sam-forced: "why would you fucking assume any are working"); restated docs/COWORK_SEAT_HANDOFF_2026-08-09_COACH_BUILD_ERA.md §0',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'The turn-ending half is already mechanised by the stop hook (see LAW-inbox-order-is-content). The unguarded half is the RECEIPT: no "working/building" claim without a checked commit/mtime. Guardable as a repo check over boundary reports and NOW.md — a liveness claim must sit beside a commit sha or an mtime, the same shape test:copy-rulings-binding uses for copy.',
+      receipt: 'THE ROW THE SEAT CAUGHT MISSING. Born from the seat telling Sam "the terminal keeps building" twice while both windows had been idle for 20 minutes. Nothing in src/ or scripts/ reads a liveness receipt.',
+    },
+  },
+
+  // ── THE NORTH STAR. IT HAD NO ROW, WHICH IS THE WORST ABSENCE ON THE SHEET ─
+  {
+    id: 'LAW-north-star',
+    law: 'Store only decisions; derive everything else. New stored state that is not an input is presumed wrong.',
+    ruledAt: 'docs/NORTH_STAR.md:11; CLAUDE.md requires it read FIRST',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A ratchet over the persisted surface: enumerate every key reaching disk (the boot registry test:stored-state-writer-audit already enumerates the STORES) and red when a NEW persisted key appears without a declared input classification. The census exists; the ratchet does not.',
+      receipt: 'THE APP\'S OWN NORTH STAR AND IT HAD NO ROW. Every boundary report states whether the unit moved toward or away from it — by hand, in prose, judged by the author of the change. test:stored-state-writer-audit and test:persisted-inputs-schema are in the chain and guard WRITE BOUNDARIES and SHAPE, not whether a new stored thing should exist at all.',
+    },
+  },
+
+  // ── PROCESS LAW L1–L10 (docs/MASTER_PLAN_2026-07-23.md PART 1) ────────────
+  // Ten laws with the same force as L11–L16, and not one of them had a row.
+  // Batch 1 harvested L11–L16 from AGENTS.md and stopped where AGENTS.md
+  // stopped — AGENTS.md line 433 says L1–L10 live in the master plan, which
+  // nobody followed. The registry inherited its predecessor's horizon.
+  {
+    id: 'LAW-L1-whole-app-scope',
+    law: 'The test surface is the entire app as a new athlete meets it, not the unit under change.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L1',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Nothing mechanical scopes a sweep. Closest honest guard: require the walker (test:action-walker) to reach every athlete-facing door, which is the L13 shape one axis out.',
+      receipt: 'No test:* script names whole-app scope. L13 is guarded and is a different claim (accumulated state, not full surface).',
+    },
+  },
+  {
+    id: 'LAW-L2-not-covered-section',
+    law: 'Every report, sweep and audit carries a NOT-COVERED section; omitting it is itself a defect.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L2',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A repo check over docs/*BOUNDARY*.md and audits requiring a NOT-COVERED heading. CHEAP — it is a headings grep, and it is the same shape as the seat-inbox structure guard.',
+      receipt: 'Distinct from LAW-not-covered-real-data-blocks, which governs what a NOT-COVERED item MEANS. This one governs whether the section exists at all, and nothing reads for it.',
+    },
+  },
+  {
+    id: 'LAW-L3-cold-start',
+    law: 'Every device sweep and the final QA include a cold-start pass.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L3',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A Maestro flow that kills and relaunches, in the rig that runs per sweep. Blocked today by the same simulator-binary blocker as everything else needing glass.',
+      receipt: 'test:quiescent-boot and test:worn-world-boot are in the chain and cover BOOT logic in-process; neither is a cold start on a device.',
+    },
+  },
+  {
+    id: 'LAW-L4-device-is-arbiter',
+    law: 'The device is the arbiter — a claim about athlete-facing behaviour is settled on the phone, not in a suite.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L4',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Not mechanisable as a cell by construction — it says a cell is not the arbiter. Its honest guard is the OPEN-UNKNOWN discipline (LAW-claim-needs-a-cell) plus L10. PROPOSED RE-WORDING FOR SAM: "an athlete-facing claim not yet seen on the phone is written OPEN-UNKNOWN", which IS mechanisable.',
+      receipt: 'PROCESS law. Raised as a finding rather than left quiet, per Sam 2026-08-10.',
+    },
+  },
+  {
+    id: 'LAW-L5-no-dead-affordances',
+    law: 'Every visible control either works or does not ship.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L5',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A walker pass that taps every reachable control and asserts a state change or an explicit refusal — test:action-walker already walks actions; this is the SURFACE axis of the same instrument.',
+      receipt: 'test:no-rebuild-affordance is in the chain and guards ONE affordance\'s absence. Nothing enumerates controls.',
+    },
+  },
+  {
+    id: 'LAW-L6-honest-actions',
+    law: 'Any tap that reports or implies success must have actually succeeded.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L6',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'This is the general form of the 2026-08-10 defect ("Done. Session moved." beside a deleted row) and of LAW-attributed-content-change. ONE structural check could hold both: every success message is derived FROM the applied transaction rather than composed beside it.',
+      receipt: 'test:coach-failure-copy and the coach truth gate are in the chain and read a PHRASE list, which cannot see an omission. THE COLLAPSE CANDIDATE — see LAW-attributed-content-change and LAW-do-not-lose-the-session.',
+    },
+  },
+  {
+    id: 'LAW-L7-sam-gates',
+    law: 'Programming and coaching content and product semantics are Sam\'s to gate, never the terminal\'s.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L7',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'The signed-copy registry is this law\'s mechanism for WORDS and it is already gated. The unguarded half is content and semantics — guardable the same way: a locked list with provenance, which test:locked-list and test:exercise-name-lock already do for exercise names.',
+      receipt: 'PARTIAL by construction: test:signed-copy-extraction, test:copy-rulings-binding, test:locked-list and test:exercise-name-lock each gate one slice of Sam\'s authority. No row claimed the law itself.',
+    },
+  },
+  {
+    id: 'LAW-L8-reporting-calibration',
+    law: 'Estimates come with the previous item\'s actual, so a forecast is calibrated rather than hoped.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L8',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A repo check over boundary reports: an estimate must appear beside a measured prior. Related to Sam\'s 2026-08-10 velocity ask (NEW vs REDISCOVERY vs RE-WORK), which is the same law asking for a number.',
+      receipt: 'PROCESS law, mechanisable as a doc check. Nothing reads for it.',
+    },
+  },
+  {
+    id: 'LAW-L9-checkpoint-discipline',
+    law: 'Tests first; staged commits; a fresh session starts from the checkpoint file.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L9',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A repo check that docs/NOW.md moved in any commit range that touched src/ — the checkpoint half is the mechanisable one.',
+      receipt: 'AGENTS.md "Seat coordination laws" states the NOW FILE rule and nothing reads it. NOW.md has drifted behind HEAD before.',
+    },
+  },
+  {
+    id: 'LAW-L10-phone-is-done',
+    law: 'Sam\'s phone is the definition of done — no athlete-facing fix is finished until he has seen it.',
+    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L10',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'PROPOSED RE-WORDING FOR SAM, because the literal law is about an event outside the repo: "a boundary report may not call an athlete-facing change DONE while its device line is unseen — it says NOT ON GLASS YET." That form is a doc check and would have caught three claims this week.',
+      receipt: 'PROCESS law. Raised as a finding with a re-wording rather than left quiet. The current pass carries three NOT-ON-GLASS items and says so only by the author\'s care.',
+    },
+  },
+
+  // ── THE SEAT'S OWN LAWS (the handoffs). Every one had no row. ─────────────
+  {
+    id: 'LAW-bible-first',
+    law: 'No coaching question reaches Sam without grepping the Bible and the ruling docs first.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1 ("well der - thats the whole point of a fkn bible")',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'THE REGISTRY ITSELF IS THE ANSWER TO THIS LAW, one axis over: Bible-first told the reader to GO LOOK; a registry with a chain gate makes looking automatic. Guardable once every Bible-answerable rule has a row — which is what the sweep is for.',
+      receipt: 'AGENTS.md LAW ZERO names this law\'s failure as its own founding case (sighting 3 of law-rediscovered-instead-of-enforced). No script reads it.',
+    },
+  },
+  {
+    id: 'LAW-rule-dont-ask',
+    law: 'A question reaches Sam only when no recorded law, ruling, Bible line or ledger instinct answers it; if the laws answer even partially, rule it and cite the law.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1 (Sam 2026-08-06)',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Not mechanisable as written — it governs what a person sends. PROPOSED RE-WORDING FOR SAM: "a question put to Sam carries the registry rows it checked first", which makes it a doc check against this file.',
+      receipt: 'PROCESS law. Raised as a finding with a re-wording, per Sam 2026-08-10.',
+    },
+  },
+  {
+    id: 'LAW-batch-rule',
+    law: 'Signings are held and handed over as ONE batch; the chain toll runs once per batch, never once per sentence.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1 "BATCH RULE"',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A check over the signed-copy sheet: a batch number must carry more than one entry, or state why. The sheet is already machine-readable (signedCopy.ts REGISTRY), so this is cheap.',
+      receipt: 'test:signed-copy-extraction is in the chain and gates whether strings are signed, not whether signings were batched.',
+    },
+  },
+  {
+    id: 'LAW-visible-first',
+    law: 'Every unit ends athlete-visible on Sam\'s phone; a slice that ships nothing he can see is not a slice.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1 (standing direction Sam ruled); docs/SHELL_REBUILD_RULING_2026-08-05.md:25',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Pairs with L16 (vertical slice) and L10. One structural check could hold all three: a unit\'s boundary report must name the screen and the athlete-visible sentence, or say NOT-VISIBLE and why.',
+      receipt: 'COLLAPSE CANDIDATE with LAW-L16-vertical-slice and LAW-L10-phone-is-done. No script reads any of the three.',
+    },
+  },
+  {
+    id: 'LAW-plain-coach-english',
+    law: 'Everything said to Sam is plain coach English — a report that says "L-P6 invariant" says nothing he can act on.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Not mechanisable for chat, which never touches the repo. PROPOSED RE-WORDING FOR SAM: scope it to what IS in the repo — "every ⚠ SAM line in docs/NOW.md is jargon-free", which is a vocabulary check of the kind test:generation-vocabulary already runs.',
+      receipt: 'PROCESS law governing chat. Raised as a finding with a re-wording.',
+    },
+  },
+  {
+    id: 'LAW-sam-chat-simplicity',
+    law: 'Every reply to Sam is three parts at most — WHAT HAPPENED / WHAT\'S NEXT / WHAT TO SEND — with no file names or commit ids in chat.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-09_COACH_BUILD_ERA.md §0 "SAM CHAT RULE" (Sam-forced)',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Not mechanisable — chat output never reaches the repo, so no repo check can see it. THIS IS A FINDING, NOT A ROW TO LEAVE QUIET: either Sam accepts it is guarded only by the seat\'s discipline, or it is re-worded onto a surface that IS in the repo. HIS CALL.',
+      receipt: 'PROCESS law with no repo footprint at all — the only row in this registry of which that is true.',
+    },
+  },
+  {
+    id: 'LAW-judgment-ledger',
+    law: 'When Sam repeats a product instinct, his recorded call is the default path — stop and take it.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1 "JUDGMENT LEDGER"',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A repo check that the judgment-ledger doc exists, is appended to when a strategic call is recorded, and is cited by any boundary report that overrides one.',
+      receipt: 'PROCESS law. The ledger is a memory file, not a repo file — which is itself the finding: an instinct nobody can grep is an instinct that gets overruled by accident.',
+    },
+  },
+  {
+    id: 'LAW-mock-first',
+    law: 'Any new surface is mocked and shown to Sam before it is built.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-09_UNDO_COACH_ERA.md §2 "MOCK-FIRST IS LAW"',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A repo check: a commit adding a new screen/tab must be preceded by a mock artefact referenced in its unit doc. Mechanisable, and the founding case is expensive — the journal died after ten slices of surface outran design.',
+      receipt: 'No script reads it. The undo toast and the coach tab both honoured it by hand.',
+    },
+  },
+  {
+    id: 'LAW-loop-check-line',
+    law: 'Every seat order and boundary report OPENS with "LOOP CHECK: <shape> — sighting N — iterate or compress". No line, no valid order.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §6 "FORMAT LAW 2026-08-07" (Sam-forced)',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A repo check over docs/*BOUNDARY*.md and the inbox\'s order blocks requiring the LOOP CHECK line. CHEAPEST GUARD ON THE SHEET — it is a literal string match, and the law\'s own text says "no line, no valid order".',
+      receipt: 'Born because the seat wrote post-failure reminders and then failed the same way — "reminders don\'t execute", which is this whole registry\'s thesis stated three days earlier. Nothing executes it either.',
+    },
+  },
+  {
+    id: 'LAW-no-completeness-claims',
+    law: 'Never assert completeness about work not yet measured; status is MEASURED-DONE (cite the run), ATTRIBUTED-NOT-FIXED (cite the doc), or OPEN-UNKNOWN.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §7 (Sam-forced, third sighting)',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A vocabulary gate over reports and NOW.md forbidding "last", "final", "no more", "nothing left to find" unless beside a cited run. Same shape as the coach truth gate\'s forbidden-phrase list — and it inherits that list\'s known weakness (a phrase list cannot see an omission), so pair it with the three-bucket requirement.',
+      receipt: 'COLLAPSE CANDIDATE with LAW-claim-needs-a-cell and LAW-doc-truth: all three say a claim carries a receipt or is marked unknown. One structural check over reports could hold all three.',
+    },
+  },
+  {
+    id: 'LAW-second-wall',
+    law: 'When the same SHAPE of wall is hit twice, an elegant alternative goes on the table before a third attempt down the same path.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §8 "SECOND-WALL LAW" (Sam-ordered)',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Not mechanisable as "the same shape twice" — no script can classify a wall. PROPOSED RE-WORDING FOR SAM: the LOOP CHECK line already carries a sighting number, so the guard is "a report whose LOOP CHECK says sighting >= 2 must name an alternative". That IS mechanisable, and it makes LAW-loop-check-line load-bearing rather than ceremonial.',
+      receipt: 'The same law as AGENTS.md "Coach Architecture Escalation Rule" one level up (LAW-coach-escalation), which is also UNENFORCED. COLLAPSE CANDIDATE.',
+    },
+  },
+  {
+    id: 'LAW-loop-audit',
+    law: 'Third sighting of any repeated ruling-shape, round-trip, toll or rediscovery is a mandatory compression proposal, never a fourth silent run.',
+    ruledAt: 'docs/SEAT_LOOP_AUDIT_LAW_2026-08-07.md; AGENTS.md §1b reference; Sam 2026-08-07',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Same mechanism as LAW-second-wall: read the sighting number out of the LOOP CHECK line and require a compression at N>=3. The two laws differ only in what they count.',
+      receipt: 'COLLAPSE CANDIDATE with LAW-second-wall and LAW-loop-check-line — three laws, one structural check over the LOOP CHECK line.',
+    },
+  },
+  {
+    id: 'LAW-sweep-not-serial',
+    law: 'Probe a class by sweeping it, not by serialising one probe at a time.',
+    ruledAt: 'Referenced as "the sweep rule" in docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §6; the instrument is scripts/sweep.sh. NO RULING DOC FOUND — this law is cited by its violations and never stated.',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Write the law down first. A law whose only appearance in the repo is other laws referring to it cannot be guarded, and this audit could not find where it was ruled.',
+      receipt: 'FOURTH GHOST CITATION OF THIS AUDIT, and the worst kind: §6 cites "the sweep rule" as already existing and describes its own violation of it. grep finds no statement of the rule anywhere.',
+    },
+  },
+  {
+    id: 'LAW-census-before-retirement',
+    law: 'Nothing is retired until it has been censused — you count what a deletion takes with it before deleting.',
+    ruledAt: 'docs/COACH_REBUILD_KICKOFF_2026-08-09.md:101; practised in docs/LEGACY_RECKONING_* and the R5 deletion reckoning',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'test:legacy-census is in the chain and censuses ONE legacy surface. The law wants the shape generalised: a commit deleting a module family cites a census.',
+      receipt: 'The founding save: cutting CoachScreen.tsx would have made 40 modules / 41,220 lines unreachable — 46% more than the name-scan estimate, and 8 of them not named *coach*.',
+    },
+  },
+  {
+    id: 'LAW-standing-derivation',
+    law: 'When measurement finds a stored representation feeding a computation, the ruling is pre-given: derive it and retire the stored copy — no seat round-trip.',
+    ruledAt: 'docs/STANDING_DERIVATION_RULING_2026-08-07.md (Sam: "why can\'t we just tell it that if it\'s always the bug?")',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'This is LAW-north-star\'s operational half; the same persisted-key ratchet would hold both. Its three STOP conditions (classification uncertain, etc.) are what a guard must not flatten.',
+      receipt: 'COLLAPSE CANDIDATE with LAW-north-star. Ordered into existence after the same ruling took NINE stops to be made — the loop-audit law\'s founding case.',
+    },
+  },
+
+  // ── ENVIRONMENT LAWS (AGENTS.md), each learned from a real loss ───────────
+  {
+    id: 'LAW-verify-branch-before-commit',
+    law: 'Run `git branch --show-current` immediately before every commit — the working tree is shared and branch state is mutable by another session.',
+    ruledAt: 'AGENTS.md "Environment Facts / This working tree is SHARED with concurrent sessions"',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A pre-commit hook that prints the branch, or refuses when HEAD moved since the session\'s last check. MECHANISABLE AND CHEAP — this is the one process law in the file with an obvious hook shape.',
+      receipt: 'Founding case 2026-07-28: ten commits of a fifteen-commit unit went to main while the session reported "branch …, unmerged" every turn. Nothing enforces the check.',
+    },
+  },
+  {
+    id: 'LAW-commit-before-mutation-testing',
+    law: 'Commit before mutation-testing, and revert a mutation by copying the file back — never with `git checkout --` or `git stash`.',
+    ruledAt: 'AGENTS.md "Environment Facts"',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'Not mechanisable as a prohibition on a shell command the terminal chooses to run. PROPOSED RE-WORDING FOR SAM: nothing — this one is honestly a habit, and its guard is that the loss it causes is now loud.',
+      receipt: 'Happened twice in ONE session on 2026-07-28: a deliberate one-line mutation reverted along with an hour of unrelated wiring in the same file, invisible until a later grep.',
+    },
+  },
+  {
+    id: 'LAW-no-secrets-committed',
+    law: 'API keys and Supabase/OpenAI secrets are never exposed, repeated or committed — they belong in deployed secrets only.',
+    ruledAt: 'AGENTS.md "Working Style"',
+    guard: {
+      state: 'UNENFORCED',
+      wouldTake: 'A secret scan in the chain. CHEAPEST REAL GUARD ON THE SHEET and the highest cost if it ever fires — a committed key is unrecoverable from history.',
+      receipt: 'No test:* script scans for credentials. This law has the largest gap between the cost of a violation and the cost of its guard of any row here.',
     },
   },
 ];

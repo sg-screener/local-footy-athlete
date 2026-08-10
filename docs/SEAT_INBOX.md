@@ -75,6 +75,16 @@
      that the registry buys speed back is checkable only if that
      number is printed.**
 
+000. **[TERMINAL, 2026-08-10 — (A) AND (B) ARE DONE; (C) IS APPLIED; (D)
+     IS REPORTED.** (B) the courier toll: FIXED, `f168b48b` — the hook read
+     `^1\.` only and now reads CONTENT; `test:seat-inbox-hook`, 17 cells, in
+     the chain. (A) the audit: DONE, `docs/LAW_REGISTRY_BATCH2_AUDIT_2026-08-10.md`
+     — **the registry was wrong on day one in FIVE places, not one**, and the
+     sweep added THIRTY rows. **59 rows, 10 guarded, 49 UNENFORCED.** (C) four
+     collapses named in the doc before any guard is written. (D) velocity line
+     is in the boundary. **WHAT IS STILL OPEN HERE: the 131 unharvested ruling
+     docs, and the six rows needing SAM'S CALL rather than a guard.**]**
+
 0. **[TERMINAL, 2026-08-10 — READ THIS FIRST. THE STOP IS LANDED.**
    Item 00's order (flip the registry gate's default) is DONE in one
    commit: `test:law-registry` is the last link of `test:bible` and

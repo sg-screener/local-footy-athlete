@@ -1,5 +1,13 @@
 # LAW REGISTRY — BATCH 1, THE HONEST MAP (2026-08-10)
 
+> **SUPERSEDED IN PART BY `docs/LAW_REGISTRY_BATCH2_AUDIT_2026-08-10.md` (same
+> day).** That audit read every row below against its cited source and found the
+> registry **wrong on day one** — one row carrying a different law than its id
+> named, and **four rows citing sources that do not say what the row claims**,
+> one of them on a GUARDED row. It also swept for laws with no row and found
+> thirty more. **Live count: 59 rows, 10 guarded, 49 UNENFORCED.** Everything
+> below is kept as written; read the audit for what it got wrong.
+
 **Sam asked the root question and the answer is a number: of 28 laws in Batch 1,
 20 have NOTHING holding them — 19 after the gate below took `LAW-0-registry`.**
 
