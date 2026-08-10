@@ -339,7 +339,7 @@ Rules:
 
 ## 12. Coach Update card rules
 
-Source: `src/components/CoachUpdateCard.tsx`. Derived per render in `HomeScreenV2` from `buildWeeklyCoachUpdateFromConstraints({ weekStartISO, visibleWeek, baselineWeek, activeConstraints })`. The card MUST be derived live, not read from stale stored text.
+Source: `src/utils/weeklyCoachUpdate.ts`. **CORRECTED 2026-08-10 — the renderer `src/components/CoachUpdateCard.tsx` was DELETED in `2df51650` and this line pointed at it; the suite that read it crashed ENOENT inside two release checklists for twelve days.** Derived per render in `HomeScreenV2` from `buildWeeklyCoachUpdateFromConstraints({ weekStartISO, visibleWeek, baselineWeek, activeConstraints })`. The card MUST be derived live, not read from stale stored text.
 
 ### Format (concise, plan-driven)
 
@@ -443,17 +443,45 @@ Ship blockers — every item must be true:
 - [x] HomeScreenV2 + DayWorkoutScreenV2 both go through `projectVisibleDay`
 - [x] Universal exposure engine handles injury (sprint / heavy_hinge / pressing / etc.)
 - [x] Pending-injury two-turn handshake works
-- [x] Coach Update card derived live from `activeConstraints[]`
-- [x] Reply composer single source of truth
-- [x] ConstraintPlan layer shared by card / reply / validator
+**CORRECTED 2026-08-10. THE TICKS WERE WRONG IN BOTH DIRECTIONS, WHICH IS WHY
+THIS SECTION MISLED ITS READER TODAY.** Four ticked items describe the FROZEN coach
+surface that no tab routes to (`test:coach-entry-surface` proves it is not mounted),
+and four unticked items are BUILT. Each line below now carries its receipt.
+
+**TICKED, BUT ABOUT THE FROZEN SURFACE — read as "not shipping", not "done":**
+
+- [~] Coach Update card derived live from `activeConstraints[]` — the DERIVER lives
+      (`src/utils/weeklyCoachUpdate.ts:208`); **its renderer
+      `src/components/CoachUpdateCard.tsx` was DELETED in `2df51650`**
+- [~] Reply composer single source of truth — frozen coach pipeline (LR-6)
+- [~] ConstraintPlan layer shared by card / reply / validator — frozen coach pipeline
+- [~] Visible-diff invariant gates coach replies — frozen coach pipeline. The LIVE
+      coach tab's truth gate is `test:coach-truth-gate`, a different mechanism
+
+**TICKED AND STILL TRUE:**
+
+- [x] Onboarding produces a usable week
+- [x] HomeScreenV2 + DayWorkoutScreenV2 both go through `projectVisibleDay`
+- [x] Universal exposure engine handles injury (sprint / heavy_hinge / pressing / etc.)
+- [x] Pending-injury two-turn handshake works
 - [x] Reset controls (clear adjustments / clear chat / full reset) wired in Profile screen
-- [x] Visible-diff invariant gates coach replies
-- [ ] **Readiness MVP** — lightweight, optional signal that influences today's recommendation without blocking S&C flow
-- [ ] **`coachNotes` rendered on HomeScreenV2 + DayWorkoutScreenV2** (V1 renders them; V2 does not)
+
+**WAS UNTICKED, IS BUILT — receipts checked 2026-08-10:**
+
+- [x] **Readiness MVP** — `readinessStore` consumed by `screens/home/useHomeScreen.ts`,
+      `screens/home/DayWorkoutScreenV2.tsx` and `screens/profile/ProfileScreen.tsx`;
+      gated by `test:readiness-ownership`
+- [x] **`coachNotes` rendered on HomeScreenV2 + DayWorkoutScreenV2** — named 8× and
+      16× in those two screens respectively, and 6× in `useHomeScreen`
+- [x] **Onboarding edit / re-run from Profile** — `ProfileScreen` setup edit opens its
+      sheet; gated by `test:profile-reset-ui`
+- [x] **EAS build + submission pipeline** — `eas.json` carries `development`,
+      `preview` and `production` build profiles plus `submit.production`
+
+**GENUINELY OPEN:**
+
 - [ ] **Non-injury constraint live path** — producers exist; prove fatigue / soreness / busy week / missed session reach `activeConstraints[]` from real coach turns
-- [ ] **Onboarding edit / re-run from Profile** — phase shift exists; broader edit surface unverified
 - [ ] **App Store metadata** (icon, screenshots, name, description, privacy policy)
-- [ ] **EAS build + submission pipeline**
 - [ ] **Real-device shake-out** (iPhone + Android, real onboarding → full week)
 
 ---
@@ -495,7 +523,7 @@ When an exercise is added / removed / renamed: 6-surface propagation (tags, pool
 | Constraint plan layer            | `src/utils/constraintPlan.ts`                              |
 | Reply composer                   | `src/utils/coachReplyComposer.ts`                          |
 | Weekly coach update derivation   | `src/utils/weeklyCoachUpdate.ts`                           |
-| Coach Update card                | `src/components/CoachUpdateCard.tsx`                       |
+| Coach Update card                | `src/utils/weeklyCoachUpdate.ts` (deriver; the `CoachUpdateCard.tsx` renderer was DELETED in `2df51650`) |
 | Constraint store                 | `src/store/coachUpdatesStore.ts`                           |
 | Profile / onboarding store       | `src/store/profileStore.ts`                                |
 | Program store                    | `src/store/programStore.ts`                                |
