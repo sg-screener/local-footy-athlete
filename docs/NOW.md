@@ -1,5 +1,16 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **⚠ SAM: I NEED ONE REBUILD FROM YOU, AND I AM NOT APOLOGISING FOR IT BECAUSE
+  YOU ALREADY SAID YES.** You said you'd rather pay 40 minutes once than have me
+  pick the cheap option. **So I built the proper way for the test to load a
+  practice week** — its own named setting, checked properly, and it refuses
+  loudly if it's given something wrong instead of quietly doing nothing.
+  **THE COST, PLAINLY:** run `npx expo run:ios --configuration Debug`. It takes
+  roughly 40 minutes and **your machine is busy the whole time**, so pick when.
+  Nothing else needs you.
+  **Until you run it, the new way cannot work at all** — it's built and it's
+  never executed. **Not seen on your phone.**
+
 - **⚠ SAM: I THINK I HAVE FOUND WHY ONLY THE STRENGTH MOVED — AND IT IS NOT
   COSMETIC.** I said the app names your Monday a "strength day" even though it
   carries conditioning too. I have now checked whether anything ACTS on that

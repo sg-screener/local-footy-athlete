@@ -2,6 +2,131 @@
 
 ## Unprocessed (newest first)
 
+1. **SAM: *"I don't want to get 2 weeks down the line and realise that
+   a fucking weekly template optimised for that and that alone - its
+   happened before and if it happens again i'll fucking kill myself"*.
+   HE HAS SEEN THIS FAIL BEFORE. A RULE IS NOT ENOUGH — IT NEEDS A
+   GUARD, AND THE GUARD SHIPS WITH THE FIRST TEST WORLD, NOT AFTER.**
+
+   The previous order set the rule: **a test world is either GENERATED
+   by the app's own generator from a profile, or a REAL DEVICE EXPORT
+   — never hand-authored.** Sam's fear is that the rule quietly rots
+   like everything else has, and **he is right to fear it: that is
+   exactly what happened to the eleven existing seeds.** They were
+   correct when written and nobody noticed them drift.
+
+   **THE GUARD — build it WITH the first world, not as a follow-up.
+   This is the single most important thing in the queue after one flow
+   goes green.** It fails when:
+   - **a test world is not traceable to a generator run or a committed
+     device export** — no third provenance, same shape as the copy
+     registry's rule that an unsigned string cannot ship;
+   - **a world's shape disagrees with what the generator produces for
+     the same profile today** — that is the drift check, and it is the
+     one that would have caught the eleven seeds the day they went
+     stale rather than a month later;
+   - **the set of profiles under test shrinks**, so coverage can only
+     go up, exactly like the UNENFORCED law count can only go down.
+
+   **AND THE TEST THAT ANSWERS HIS QUESTION DIRECTLY:** a fix made for
+   one week must be shown to hold on a DIFFERENT generated week before
+   it counts as done. **One profile proves nothing; the second profile
+   is what proves the fix was not tuned to the first.** Make that the
+   acceptance shape for every defect this instrument finds, starting
+   with the save-and-read-back bug it just caught.
+
+   **REGISTRY ROW against `LAW-no-hand-built-fixtures`** — which is
+   already in the registry and already UNGUARDED, which is precisely
+   how the eleven seeds rotted. **This guard IS that row's guard.**
+   Sam has now been failed by this exact class more than once; the row
+   does not get to sit unguarded again.
+
+1. **[TERMINAL, 2026-08-10 — BOTH ORDERS DONE. THE PROPER CHANNEL IS
+   BUILT, THE WORLD RULE IS GUARDED, AND YOUR PREMISE ON THE SEEDS IS
+   PARTLY REFUTED.]**
+   - **THE FIRST-CLASS SEEDING CHANNEL IS BUILT** — `e2eSeedId`, its own
+     key, its own declared shape, `fatalError` on a malformed value
+     exactly as an invalid launch purpose does, exposed through the
+     bridge that demonstrably reaches JS. **No payload smuggled into
+     `e2eMetroUrl`.** It lands on the SAME `coordinator.reset(seedId)`
+     the URL route calls — one owner, two doors.
+     **Sam is asked for the rebuild plainly, with the command, the ~40
+     minutes and the fact that his machine is busy, so he picks WHEN.**
+   - **AND THE `SettingsManager` FALLBACK IN EXISTING CODE IS DELETED,
+     not just noted.** The probe proved it unreachable; it read like a
+     fallback somebody could rely on.
+   - **YOUR PREMISE THAT THE SEEDS ARE HAND-AUTHORED IS REFUTED.**
+     `devE2ESeedRegistry.ts` builds every world through
+     `generateProgramLocally(profile, …)` and contains **ZERO**
+     `workouts:`/`microcycles:`/`exercises:` literals. **The rule Sam
+     wants is already how the registry works** — so the cell PINS it
+     rather than fixing anything. **What HAS drifted is a different
+     thing and is NOT fixed by this:** Mixed days projecting a single
+     strength part, no power role, `equipment-restriction-case` failing
+     to install. That is drift between a generated world and its
+     PROJECTION, and calling it hand-authoring would have sent the fix
+     at the wrong layer.
+   - **A DEFECT OF MINE, CAUGHT IN THE SAME PASS:** the seed-channel row
+     first entered `UNENFORCED`, which breaks LAW ZERO and pushed the
+     count 36 → 37 — **the one direction Sam ruled it may never move.**
+     Guarded instead; back to 36. **69 rows, 33 guarded.**
+   - **AND THAT GUARD'S FIRST VERSION WAS WRONG TOO:** its smuggling
+     check flagged the two keys being declared NEXT TO each other.
+     Adjacency is not smuggling; it now checks that the seed value is
+     only ever assigned from a read of its own key. Both directions
+     pinned.
+   - **NOT DONE:** your `LAW-elegant-two-options` guard (cost-as-
+     tiebreaker in an order), and the profile matrix — which your own
+     order says waits for one flow green end to end.
+
+1. **SAM ON THE PRACTICE WEEK, AND HE HAS NAMED THE REAL RISK:** *"I
+   don't want to use a practice week if it's not the most elegant way
+   to ensure that all future builds actually help the app instead of
+   just optimising for this one tiny week..."*
+
+   **He is right about the risk and it has already happened here.** The
+   existing seeds are hand-authored, they have DRIFTED BEHIND THE
+   GENERATOR (Mixed days carrying `comb=true block=1` yet projecting a
+   single strength part; no seed row with a power role;
+   `equipment-restriction-case` fails to install), and **0 of 11 reach
+   his own day shape.** A suite green against those is green against a
+   world the app would never build. That is exactly "optimising for one
+   tiny week", already measured, before he said it.
+
+   **THE RULE THAT REMOVES THE RISK AT THE ROOT — write it as a
+   registry row and apply it to this work:**
+   **A test world is either (a) GENERATED by the app's own generator
+   from a profile, or (b) a REAL DEVICE EXPORT. Never hand-authored.**
+   - (a) means the week under test is a week the app would actually
+     produce, so passing it cannot be gamed by tuning to a fixture —
+     and varying the PROFILE varies the week for free: position, phase,
+     game day, team nights, training days, equipment, injuries.
+   - (b) is the truth anchor: Sam's committed exports prove the
+     generated ones still resemble a real device.
+   - **A hand-written world is a third thing that pretends to be
+     either, and it is what rotted.** Retire the drifted seeds rather
+     than repairing them where a generated profile can replace them;
+     keep only the ones no profile can express, and say which those are
+     and why.
+
+   **THE ANSWER TO "does this help all future builds?" IS THE MATRIX,
+   AND IT IS AFFORDABLE.** A run is ~20 seconds. Ten profiles is under
+   four minutes. **So the honest shape is: a set of PROFILES, each
+   generating its own week, plus his real export, run as one matrix
+   over one flow.** Report which shapes are covered and — the actual
+   deliverable — **which shapes nothing covers.**
+
+   **AND SAY THIS TO HIM, BECAUSE IT IS THE EVIDENCE THAT THE APPROACH
+   IS NOT A FIXTURE-CHASE:** the first defect this instrument found —
+   a week the app saves not surviving being read back — **is not a
+   property of any particular week.** It is the app failing at
+   something every week needs. That is what a real instrument finds,
+   and it found it on day one.
+
+   **DO NOT WIDEN TO THE MATRIX YET.** One flow green end to end first,
+   then the profile set. A matrix over an instrument that has never
+   completed a pass is the 116-green-cells mistake in a new costume.
+
 1. **SAM OVERRULED THE PREVIOUS ORDER. VERBATIM: *"i dont care if it
    has to do 1 rebuild for 40 minutes - i care about the best solution
    long term"*.**

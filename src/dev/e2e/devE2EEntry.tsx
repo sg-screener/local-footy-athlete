@@ -70,22 +70,41 @@ export interface InstalledDevE2EEntry {
 
 let activeInstallation: InstalledDevE2EEntry | null = null;
 
+function devE2ENativeBridge(): { receiptJson?: unknown; seedId?: unknown } | undefined {
+  return (NativeModules as Record<string, unknown>)
+    .DevE2ELaunchDiagnostic as { receiptJson?: unknown; seedId?: unknown } | undefined;
+}
+
 function nativeExplorerLaunchDiagnosticInput(): {
   receiptJson: unknown;
   explorerLaunchRequested: boolean;
 } {
-  const settings = (NativeModules.SettingsManager as {
-    settings?: Record<string, unknown>;
-  } | undefined)?.settings;
-  const bridge = (NativeModules as Record<string, unknown>)
-    .DevE2ELaunchDiagnostic as { receiptJson?: unknown } | undefined;
-  const receiptJson = bridge?.receiptJson;
-  return {
-    receiptJson,
-    explorerLaunchRequested: receiptJson !== undefined ||
-      typeof settings?.e2eMetroUrl === 'string' ||
-      typeof settings?.e2eLaunchPurpose === 'string',
-  };
+  // THE `SettingsManager` FALLBACK IS DELETED, AND IT WAS NEVER REACHABLE.
+  //
+  // It used to OR in `typeof settings?.e2eMetroUrl === 'string'`. A probe on
+  // 2026-08-10 printed `keys=NO_SETTINGS`: `NativeModules.SettingsManager` is
+  // `undefined` on this platform, so that arm could never be true. It was
+  // harmless — the bridge's `receiptJson` carries the real signal — but it read
+  // like a fallback somebody could rely on, which is the shape this repo keeps
+  // paying for. Removed rather than left as reassurance.
+  const receiptJson = devE2ENativeBridge()?.receiptJson;
+  return { receiptJson, explorerLaunchRequested: receiptJson !== undefined };
+}
+
+/**
+ * THE SEED REQUESTED AT LAUNCH, through the native channel that has its own
+ * name, its own validation and its own refusal (`DevE2ELaunchDiagnostic.swift`).
+ *
+ * Sam ruled the design over the cheaper one: *"i dont care if it has to do 1
+ * rebuild for 40 minutes - i care about the best solution long term"*.
+ *
+ * The native side has already validated the shape and `fatalError`ed on a
+ * malformed value, so a string arriving here is one the app agreed to seed. The
+ * type check is a boundary assertion, not a second opinion.
+ */
+function launchRequestedSeedId(): string | null {
+  const seedId = devE2ENativeBridge()?.seedId;
+  return typeof seedId === 'string' && seedId.length > 0 ? seedId : null;
 }
 
 function publishDevE2EEntryError(
@@ -320,7 +339,23 @@ export function installDevE2EEntry(args: {
   const subscription = linking.addEventListener('url', (event) => {
     void handleUrl(event.url);
   });
-  void linking.getInitialURL().then(handleUrl).catch(publishDevE2EEntryError);
+  void linking.getInitialURL()
+    .then(async (initialUrl) => {
+      // A URL wins when both are present: it is the more specific request, and
+      // a flow that opened one meant it.
+      if (await handleUrl(initialUrl)) return true;
+      const seedId = launchRequestedSeedId();
+      if (!seedId) return false;
+      // Through the SAME queue a URL uses, so ordering and the
+      // coordinator-ready barrier stay one mechanism rather than two that can
+      // drift. And onto the SAME `coordinator.reset(seedId)` the URL route
+      // calls — one owner, two doors into it, no second seeding path.
+      return routeQueue.enqueue(`launch:e2eSeedId:${seedId}`, {
+        kind: 'reset',
+        seedId,
+      } as never);
+    })
+    .catch(publishDevE2EEntryError);
 
   activeInstallation = {
     installed: true,

@@ -29,6 +29,23 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
   private static let buildIdentityResource = "DevE2EBuildIdentity"
   private static let launchArgumentKey = "e2eMetroUrl"
   private static let launchPurposeKey = "e2eLaunchPurpose"
+  /// THE SEEDING CHANNEL — a first-class launch argument with its own name,
+  /// its own validation and its own refusal, beside the two above.
+  ///
+  /// Sam, 2026-08-10, overruling a cheaper plan: *"i dont care if it has to do
+  /// 1 rebuild for 40 minutes - i care about the best solution long term"*.
+  ///
+  /// WHY IT IS ITS OWN KEY AND NOT A PAYLOAD ON AN EXISTING ONE. Seeding used
+  /// to arrive by DEEP LINK, and on iOS that routes through Safari, which
+  /// raises "Open in …?" — and a `maestro hierarchy` dump proved that while
+  /// that alert is up the accessibility tree holds the alert and ZERO app
+  /// content. It does not overlay the app; it replaces what a UI runner can
+  /// see. That is what "the rig has been dead since 18 July" actually was.
+  ///
+  /// Smuggling a seed id into `e2eMetroUrl` would have dodged this rebuild and
+  /// put a second meaning on one field — the exact defect class that cost a
+  /// pass on 2026-08-10 with the `source` label. Refused deliberately.
+  private static let seedIdKey = "e2eSeedId"
   private static let allowedLaunchPurposes = Set([
     "initial-cold-launch",
     "scenario-reset",
@@ -38,6 +55,12 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
     "diagnostic-relaunch",
   ])
 
+  /// Seed ids name authored worlds and are used as path segments, so the shape
+  /// is deliberately narrow. Anything else is a typo or an injection attempt,
+  /// and both should be loud rather than silently seeding nothing.
+  private static let seedIdPattern = "^[a-z0-9][a-z0-9-]{0,63}$"
+
+  private static var validatedSeedId: String?
   private static var pending: DevE2EPendingLaunchDiagnostic?
   private static var currentReceiptJSON: String?
   private static var currentResolvedMetroUrl: String?
@@ -46,7 +69,20 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
     pending = nil
     currentReceiptJSON = nil
     currentResolvedMetroUrl = nil
+    validatedSeedId = nil
     UserDefaults.standard.removeObject(forKey: receiptDefaultsKey)
+
+    // FAIL CLOSED, exactly like the launch purpose below. A seed id that is
+    // present but malformed must never degrade into "no seed" — that is how a
+    // run goes green having tested an empty world.
+    if let rawSeedId = UserDefaults.standard.string(forKey: seedIdKey) {
+      guard rawSeedId.range(of: seedIdPattern, options: .regularExpression) != nil
+      else {
+        fatalError("[DevE2E Seed] Invalid \(seedIdKey): \(rawSeedId)")
+      }
+      validatedSeedId = rawSeedId
+      NSLog("[DevE2E Seed] Requested seed: %@", rawSeedId)
+    }
 
     guard let rawURL = UserDefaults.standard.string(forKey: launchArgumentKey)
     else {
@@ -140,6 +176,10 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
   static func receiptJSON() -> String? {
     currentReceiptJSON ?? UserDefaults.standard.string(forKey: receiptDefaultsKey)
   }
+
+  /// The validated seed id, or nil when none was requested. Never the raw
+  /// argument — a caller that could read the raw value could skip the guard.
+  static func requestedSeedId() -> String? { validatedSeedId }
 
   private static func loadBuildIdentity() -> DevE2EBuildIdentity {
     guard
@@ -259,11 +299,19 @@ final class DevE2ELaunchDiagnostic: NSObject {
   @objc static func requiresMainQueueSetup() -> Bool { true }
 
   @objc func constantsToExport() -> [AnyHashable: Any] {
-    guard let receiptJSON = DevE2ELaunchDiagnosticReceiptOwner.receiptJSON()
-    else {
-      return [:]
+    var constants: [AnyHashable: Any] = [:]
+    if let receiptJSON = DevE2ELaunchDiagnosticReceiptOwner.receiptJSON() {
+      constants["receiptJson"] = receiptJSON
     }
-    return ["receiptJson": receiptJSON]
+    // THROUGH THIS BRIDGE AND NOT `SettingsManager`. A JS-side attempt to read
+    // launch arguments from `NativeModules.SettingsManager.settings` was built
+    // on 2026-08-10 and deleted the same day: a probe printed `NO_SETTINGS` —
+    // that module is undefined here, so the branch could never have fired.
+    // This bridge is the one that demonstrably reaches JS.
+    if let seedId = DevE2ELaunchDiagnosticReceiptOwner.requestedSeedId() {
+      constants["seedId"] = seedId
+    }
+    return constants
   }
 }
 #endif
