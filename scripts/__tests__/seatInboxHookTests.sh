@@ -78,5 +78,72 @@ run "a second real order still BLOCKS" block \
   "1. ORDER: write the boundary report, then STOP." "" \
   "2. (queue empty below this)"
 
+# ── REGRESSION (c), 2026-08-10: THE COURIER TOLL. ───────────────────────────
+# SIGHTING 4 of "the scan infers an order from a NUMBERING ARTEFACT", and the
+# first one that cost Sam something directly: the scan matched `^1\.` only, so
+# every order the seat wrote as `00.` or `0.` was INVISIBLE and the turn ended
+# silently. He had to type `check inbox` himself — twice on 2026-08-10. Each
+# case below is a real shape from that day's inbox and each one ALLOWED before
+# the content-based rewrite.
+
+run "an order numbered 00. BLOCKS" block \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "00. STOP THE LINE. Flip the registry gate's default now." "" \
+  "## Previously (now processed)"
+
+run "an order numbered 0. BLOCKS" block \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "0. SAM'S RULING: every law gets a guard." "" \
+  "## Previously (now processed)"
+
+run "an order numbered 000. BLOCKS" block \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "000. SAM: audit every row against its source." "" \
+  "## Previously (now processed)"
+
+run "a BULLET order BLOCKS" block \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "- Build the export affordance and report the price first." "" \
+  "## Previously (now processed)"
+
+run "BARE PROSE with no marker at all BLOCKS" block \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "Sam wants the conditioning case answered before anything else." "" \
+  "## Previously (now processed)"
+
+# The whole batch is 00./0. — the exact shape that ended a turn silently,
+# because no '1.' happened to exist further down to save it.
+run "a batch of ONLY 00. and 0. BLOCKS" block \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "00. STOP THE LINE." "" "0. SAM'S RULING." "" \
+  "## Previously (now processed)"
+
+# ── AND THE OTHER DIRECTION, so the fix cannot be "block on everything". ────
+
+run "an INDENTED continuation line is not its own order" allow \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "(none)" "   this indented line continues the marker above, and is not an order" "" \
+  "## Previously (now processed)"
+
+run "a 00.-numbered empty-queue marker ALLOWS" allow \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "00. (queue empty)" "" \
+  "## Previously (now processed)"
+
+run "a BOLD none marker ALLOWS" allow \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "**NONE.** Everything below is processed." "" \
+  "## Previously (now processed)"
+
+run "a 00.-numbered PARKED item ALLOWS" allow \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "00. PARKED until the build lands: the glass run." "" \
+  "## Previously (now processed)"
+
+run "an EMPTY Unprocessed section ALLOWS" allow \
+  "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+  "## Previously (now processed)" "" \
+  "1. AN ORDER FROM A PAST BATCH, long since processed."
+
 echo "Seat inbox hook totals: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

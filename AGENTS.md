@@ -630,3 +630,11 @@ Practical consequences:
 - **LOOP-AUDIT LAW:** docs/SEAT_LOOP_AUDIT_LAW_2026-08-07.md binds this
   seat — third sighting of any repeated ruling-shape, round-trip, toll
   or rediscovery = propose the compression, never a fourth silent run.
+- **AN ORDER IS CONTENT, NOT A NUMBER (2026-08-10).** `scripts/seat-inbox-hook.sh`
+  blocks the terminal from ending its turn while anything under `## Unprocessed`
+  is neither blank, an empty-queue marker, nor a parked item. **It used to match
+  `^1\.` only, so every order written as `00.`/`0.`/`000.` was invisible and the
+  turn ended silently — Sam became the courier and had to type "check inbox"
+  himself.** Guarded by `test:seat-inbox-hook` (registry row
+  `LAW-inbox-order-is-content`). **The seat's half: no invented urgency
+  numbering. Orders are 1, 2, 3, newest first; urgency belongs in the words.**
