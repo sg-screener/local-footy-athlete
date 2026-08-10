@@ -1258,6 +1258,87 @@ console.log('\n[8] L-C4 — the coach\'s ways through a day are the picker\'s ow
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// [9] UI MERGE SLICE 3 — "MY STATUS", AND THE ONE COMPONENT RULE
+//
+// Rulings 4 and 9 re-home the modifiers onto the coach page. The seat's binding
+// note on ruling 7 adds the third surface and its constraint in one sentence:
+// *"the '2 active modifiers' row appears at the top of the WEEK view too — same
+// component as the day screen's, not a second one."*
+//
+// SOURCE-SCAN LAW: read the REGION, prove it was found, and never trust a count
+// taken over a whole file.
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
+{
+  const read = (rel: string): string => fs.readFileSync(
+    path.join(__dirname, '..', ...rel.split('/')), 'utf8');
+  const strip = read('components/ModifiersStrip.tsx');
+  const home = read('screens/home/HomeScreenV2.tsx');
+  const coachTab = read('screens/coach/CoachTabScreen.tsx');
+  const status = read('screens/coach/CoachStatusScreen.tsx');
+
+  ok('the strip exists as ONE component, not one per surface',
+    /export function ModifiersStrip/.test(strip),
+    'three copies of this row is three places for the count to disagree with '
+      + 'the list it opens');
+
+  // EVERY SURFACE MOUNTS THE SAME IMPORT. A screen that built its own row would
+  // satisfy "there is a strip" and break the rule the seat actually wrote.
+  for (const [name, source] of [['day/week', home], ['coach', coachTab]] as const) {
+    ok(`the ${name} surface mounts the shared strip`,
+      /import \{ ModifiersStrip \}/.test(source) && /<ModifiersStrip/.test(source),
+      'the seat: "same component as the day screen\'s, not a second one"');
+  }
+
+  ok('the strip renders nothing when nothing is active',
+    /if \(count <= 0\) return null;/.test(strip),
+    'a normal week must pay no space for it — the property CoachNotesSection '
+      + 'already had and which ruling 4 must not lose');
+
+  // THE COUNT IS THE LIST'S OWN LENGTH. A separately-carried number is the
+  // `a count taken for a record` shape, sighting 14 in this repo.
+  ok('the strip is handed a length, never a separately-counted number',
+    /count=\{coachNotes\.length\}/.test(home) && /count: modifiers\.length/.test(
+      read('hooks/useActiveModifiers.ts')),
+    'the count and the list it opens cannot disagree if one is the other\'s length');
+
+  // ONE DERIVATION. The coach tab must not assemble its own snapshot.
+  ok('the coach tab reads the modifiers through the one shared selector',
+    /useActiveModifiers\(/.test(coachTab)
+      && !/selectActiveCoachNotes/.test(coachTab),
+    'a second screen assembling the snapshot by hand is a second reading of the '
+      + 'athlete\'s state, and it would drift the first time an input was added');
+
+  // THE STATUS SCREEN MOUNTS THE EXISTING LIST COMPONENT — the merge plan's
+  // binding rule, "my status MOUNTS the existing doors".
+  ok('the status screen mounts the extracted list rather than rebuilding it',
+    /import \{ ActiveModifiersSection \}/.test(status)
+      && /<ActiveModifiersSection/.test(status),
+    'a list re-implemented on a second screen is a second door by another name');
+
+  // AND THE DAY SCREEN STILL MOUNTS IT TOO — the removal has NOT shipped,
+  // because the actions are not wired yet. This cell is what stops the removal
+  // being taken early and quietly.
+  ok('nothing was removed from the day screen in this slice',
+    /<ActiveModifiersSection/.test(home) && /styles\.phaseCard/.test(home),
+    'LAW-removal-ships-with-its-replacement: the modifiers section and the '
+      + 'phase card both stay until the status screen can actually do their job');
+
+  // THE HONEST HALF, ASSERTED SO IT CANNOT BE FORGOTTEN. The status screen is
+  // READ-ONLY this pass and the file must say so.
+  ok('the status screen declares its actions unwired rather than looking finished',
+    /SLICE 3b/.test(coachTab) && /read-only|READ-ONLY/.test(coachTab),
+    'a surface whose buttons do nothing, with nothing saying so, is the '
+      + 'dead-affordance law broken in a new place');
+
+  ok('the strip is outside the conversation scroll',
+    coachTab.indexOf('<ModifiersStrip') < coachTab.indexOf('testID="coach-tab-conversation"'),
+    'CoachTabScreen pins to bottom on new content: a strip inside that scroll '
+      + 'is unreachable after three exchanges, and a door the athlete cannot '
+      + 'find is not a door');
+}
+
 const total = passed + failures.length;
 console.log(`\nCoach tab slice 3 totals: passed=${passed}/${total} failures=${failures.length}`);
 console.log(

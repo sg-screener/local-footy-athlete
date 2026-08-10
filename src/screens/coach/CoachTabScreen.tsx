@@ -21,6 +21,9 @@ import type { CoachChangeCard, CoachChangeCardChoice } from '../../rules/coachCh
 import { coachChangeDeclined, coachChangeOutcome } from '../../rules/coachChangeOutcome';
 import { COACH_CHANGE_COPY, COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
+import { useActiveModifiers } from '../../hooks/useActiveModifiers';
+import { ModifiersStrip } from '../../components/ModifiersStrip';
+import CoachStatusScreen from './CoachStatusScreen';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
 import { todayISOLocal } from '../../utils/appDate';
@@ -198,6 +201,15 @@ export default function CoachTabScreen() {
   // a door that re-derived would be free to act on a week nobody is reading.
   const { weekDays, visibleWeek } = useResolvedWeek();
   const todayISO = todayISOLocal();
+  // RULING 4's LIST, THROUGH THE ONE SELECTOR. `useActiveModifiers` is the same
+  // derivation `useHomeScreen` uses; the week it is handed is the week this
+  // screen is already looking at, for the reason the comment above gives about
+  // `executePlanChangeAction` — a surface that re-derived its own week would be
+  // free to describe a week nobody is reading.
+  const { modifiers, count: modifierCount } = useActiveModifiers({
+    visibleWeekDays: weekDays,
+  });
+  const [statusVisible, setStatusVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
   const [turns, setTurns] = useState<readonly CoachTurn[]>([]);
@@ -394,6 +406,24 @@ export default function CoachTabScreen() {
         <View style={styles.header}>
           <Text variant="h1">{COACH_TAB_COPY.title}</Text>
         </View>
+        {/* ── RULINGS 4 + 9: "MY STATUS" ──
+            OUTSIDE THE CONVERSATION SCROLL, AND THAT IS THE WHOLE DESIGN
+            DECISION. The ScrollView below pins to the bottom on new content, so
+            a status block placed inside it is unreachable after three exchanges
+            — a door the athlete cannot find is not a door. One fixed row costs a
+            strip and never scrolls away; the detail lives on the screen it
+            opens, which is her prototype's own shape.
+
+            IT RENDERS NOTHING WHEN THERE IS NOTHING, so a normal week does not
+            pay for it — the same property the day screen's section has always
+            had. */}
+        <View style={styles.statusStrip}>
+          <ModifiersStrip
+            surface="coach"
+            count={modifierCount}
+            onPress={() => setStatusVisible(true)}
+          />
+        </View>
         <ScrollView
           ref={scrollRef}
           style={styles.conversation}
@@ -440,9 +470,43 @@ export default function CoachTabScreen() {
           ))}
         </ScrollView>
       </KeyboardSafeArea>
+      {/* THE STATUS SCREEN, OVER THE TAB RATHER THAN BESIDE IT.
+          A full-screen overlay and not a navigator route, deliberately: ruling 8
+          protects the composer and the keyboard matrix is the one guard that
+          already works — adding a route to this stack moves the keyboard's
+          container, and disturbing it costs that guard for a screen that is a
+          detail view of a strip. The back journey is the same tab. */}
+      {statusVisible ? (
+        <View style={StyleSheet.absoluteFill}>
+          <CoachStatusScreen
+            modifiers={modifiers}
+            equipmentFactIds={EMPTY_EQUIPMENT_FACT_IDS}
+            onAction={() => { /* SLICE 3b — see below. */ }}
+            onClose={() => setStatusVisible(false)}
+          />
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
+
+/**
+ * EMPTY, AND SAID OUT LOUD RATHER THAN LEFT LOOKING FINISHED.
+ *
+ * `ActiveModifiersSection` uses this set to pick the equipment-specific testIDs
+ * for two of its actions. Those ids only matter once the ACTIONS are wired, and
+ * on this surface they are not: `onAction` is a no-op for now.
+ *
+ * **THE ACTIONS ARE SLICE 3b, AND THIS IS THE HONEST HALF OF SLICE 3.** Wiring
+ * them needs `handleCoachNoteAction` and its equipment-fact set lifted out of
+ * `useHomeScreen` into an owner both screens call — the same extraction the
+ * season-phase control needs. Re-implementing either here would be the second
+ * representation the merge plan's binding rule forbids, so this pass ships the
+ * surface READ-ONLY and the day screen keeps every control it has.
+ * **Nothing is removed from the day screen in this pass**, which is
+ * `LAW-removal-ships-with-its-replacement` holding.
+ */
+const EMPTY_EQUIPMENT_FACT_IDS: ReadonlySet<string> = new Set<string>();
 
 /**
  * THE CHANGE CARD — L-C2 ON THE GLASS.
@@ -561,6 +625,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
+  // The strip's own gutter. It matches the header's horizontal padding so the
+  // row lines up with the title above it and the conversation below.
+  statusStrip: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
   conversation: {
     flex: 1,
   },

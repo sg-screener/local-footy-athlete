@@ -257,6 +257,56 @@ export function registerProjectionCopy(): void {
       text: 'Update your status to modify your program.',
     },
 
+    // ── The active-modifiers strip, rulings 4, 7 and 9. ──
+    //
+    // PROPOSED, batch 34. Her prototype's two lines, read out of
+    // docs/design/LFA_UI_PROTOTYPE_2026-08-10.html. Sam excused the strip's
+    // ABSENCE on the day screen — *"that's not built yet so fair enough"* — he
+    // did not sign its words, and the governing rule is her structure, HIS
+    // style. They ship PROPOSED and join batch 33 in one signing.
+    {
+      id: 'modifiers.strip.count',
+      source: 'derived_number',
+      provenance: 'NEW — PROPOSED, batch 34, UI merge slice 3. Her prototype\'s '
+        + '`dayModifierNotification` reads "2 active modifiers"; the number is the '
+        + 'length of the list the strip opens, never a separately-counted value.',
+      text: '{count} active modifiers',
+    },
+    {
+      id: 'modifiers.strip.count_one',
+      source: 'derived_number',
+      provenance: 'NEW — PROPOSED, batch 34. The singular half. A strip that can '
+        + 'render "1 active modifiers" is a strip that lies, and exactly one active '
+        + 'modifier is the commonest non-zero case.',
+      text: '{count} active modifier',
+    },
+    {
+      id: 'modifiers.strip.subline',
+      source: 'sam_ruling',
+      provenance: 'NEW — PROPOSED, batch 34. The strip\'s second line in the signed '
+        + 'prototype. It states a FACT about the program, not a verdict on the '
+        + 'athlete — the same limit the Monday notification was held to.',
+      text: 'Currently impacting your program',
+    },
+
+    // ── The coach page's status screen, ruling 9. PROPOSED, batch 34. ──
+    {
+      id: 'coach.status.title',
+      source: 'sam_ruling',
+      provenance: 'NEW — PROPOSED, batch 34, UI merge slice 3. Ruling 9 names the '
+        + 'surface "my status"; Title Case here matches the Coach tab\'s own h1 rather '
+        + 'than her prototype\'s casing.',
+      text: 'My status',
+    },
+    {
+      id: 'coach.status.empty',
+      source: 'sam_ruling',
+      provenance: 'NEW — PROPOSED, batch 34. Shown when nothing is shaping the '
+        + 'program. It states a fact and makes no claim about whether that is good — '
+        + 'the same limit every observation surface in this app is held to.',
+      text: 'Nothing is changing your program right now.',
+    },
+
     // ── The one separator. ──
     {
       id: 'copy.joiner.plus',

@@ -494,7 +494,11 @@ run('the screen is in the order Sam ruled: toggle, card, change card, notes', ()
   const card = at('renderDayRow(dayFirstDay, dayFirstIdx)');
   const changeCard = at('testID="home-change-card"');
   const chips = at('testID="home-life-fact-chips"');
-  const notes = at('<CoachNotesSection');
+  // RENAMED 2026-08-10 BY SLICE 3, and the gate reported it in words rather than
+  // comparing -1: `CoachNotesSection` moved out of this file to
+  // `components/ActiveModifiersSection.tsx` because ruling 4 gives it a second
+  // mount on the coach page. Same component, same testIDs, new address.
+  const notes = at('<ActiveModifiersSection');
   assert(toggle < card && card < changeCard && changeCard < chips && chips < notes,
     'the Program screen is no longer in the order Sam ruled '
     + `(toggle ${toggle} → card ${card} → change card ${changeCard} → `

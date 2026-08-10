@@ -1,0 +1,104 @@
+appId: com.localfootyathlete.app
+name: Golden - my status, reached from the coach tab
+tags:
+  - e2e
+  - golden
+  - coach
+  - ui-merge
+---
+# UI MERGE SLICE 3, rulings 4 and 9.
+#
+# THE STRIP IS A DOORWAY AND THIS IS THE ONLY THING THAT PROVES IT OPENS. The
+# unit cells read source: they can say the component is mounted once and the
+# selector is shared, and they pass just as happily on a strip nothing can reach.
+# `test:maestro-element-contract` states the same limit in its own words —
+# existence, not reachability — and that limit is how eight flows sat broken for
+# 23 days.
+#
+# ── WHAT THIS FLOW COST TO WRITE, KEPT BECAUSE IT IS REUSABLE KNOWLEDGE ──────
+#
+# 1. TEXT SELECTORS DO NOT WORK ON THIS APP'S ACTION ROWS. Every chip and sheet
+#    row carries its EXPLORER COORDINATE as its `accessibilityLabel`, and an
+#    accessibility label REPLACES the visible text for a UI runner. The tree
+#    holds `readiness-bucket-flat` where the eye reads "Feeling flat". Three
+#    attempts died on that before `maestro hierarchy` was run instead of guessed
+#    at — the second-wall law, paid late. USE IDS. Text matches only where a
+#    control has no label of its own, which is why "Apply for this week" is fine.
+# 2. A MODIFIER HAS TO BE REAL. The readiness door looked like the short path and
+#    was not: it is FOUR steps, and DECLINING its lighter-day offer applies
+#    nothing at all, so no modifier becomes active and the strip correctly
+#    renders nothing. Even accepting, a fatigue fact alone produced no coach note
+#    in that world — the day screen's own section was empty beside the strip,
+#    which is the app agreeing with itself rather than the strip failing.
+# 3. `injury-case` CANNOT BE USED, AND THAT IS A REAL FINDING. It fails its own
+#    witness validation on install:
+#    "Seed witness validation failed: injury-case:program:dev-e2e-injury-case".
+#    A seed that cannot install is a world no flow can use. Recorded in the
+#    boundary, not worked around silently.
+#
+# So the modifier is made through the EQUIPMENT door: three taps, stable ids, and
+# it produces a real active constraint.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# ── NOTHING ACTIVE: THE STRIP IS ABSENT, AND THAT IS THE PROPERTY ────────────
+# A normal week pays no space for it. Asserted FIRST, so a strip that rendered
+# unconditionally could never pass this flow.
+- assertNotVisible:
+    id: "modifiers-strip-day"
+
+# ── THE ATHLETE MAKES ONE, THROUGH A DOOR THEY ALREADY HAD ──────────────────
+- scrollUntilVisible:
+    element:
+      id: "home-life-fact-chips"
+    direction: DOWN
+- tapOn:
+    id: "equipment-preset-open"
+- extendedWaitUntil:
+    visible:
+      id: "equipment-preset-barbell"
+    timeout: 10000
+- tapOn:
+    id: "equipment-preset-barbell"
+- tapOn: "Apply for this week"
+
+# ── THE STRIP APPEARS ON THE DAY SCREEN ─────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "modifiers-strip-day"
+    timeout: 15000
+- assertVisible:
+    id: "modifiers-strip-day-count"
+# THE SINGULAR FORM IS THE ONE ON SCREEN, AND IT EARNED ITS KEEP IMMEDIATELY:
+# exactly one active modifier is the commonest non-zero case, and a strip reading
+# "1 active modifiers" would have shipped without this line.
+- assertVisible: "1 active modifier"
+
+# ── AND ON THE COACH TAB, WHICH IS THE SAME COMPONENT ────────────────────────
+- tapOn:
+    id: "tab-coach"
+- assertVisible:
+    id: "coach-tab-conversation"
+- assertVisible:
+    id: "modifiers-strip-coach"
+
+# ── IT OPENS "MY STATUS", AND THE LIST IS THERE ─────────────────────────────
+- tapOn:
+    id: "modifiers-strip-coach"
+- extendedWaitUntil:
+    visible:
+      id: "coach-status-screen"
+    timeout: 10000
+- assertVisible:
+    id: "program-active-coach-notes"
+- takeScreenshot: artifacts/ui-walk/coach-my-status
+
+# ── AND IT CLOSES BACK TO THE CONVERSATION ──────────────────────────────────
+- tapOn:
+    id: "coach-status-close"
+- assertNotVisible:
+    id: "coach-status-screen"
+- assertVisible:
+    id: "coach-tab-conversation"

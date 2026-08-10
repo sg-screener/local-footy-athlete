@@ -26,6 +26,25 @@ import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visib
 import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
 import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
 import { signedCopy } from '../../rules/signedCopy';
+import { ActiveModifiersSection } from '../../components/ActiveModifiersSection';
+import { ModifiersStrip } from '../../components/ModifiersStrip';
+import { navigationRef } from '../../navigation/navigationRef';
+
+/**
+ * THE STRIP'S DESTINATION, AND IT IS THE COACH TAB — ruling 4.
+ *
+ * `navigationRef` and not a `navigation` prop: this screen is a tab root and the
+ * target is a SIBLING TAB, which is a container-level move. The ref is the same
+ * one `SmokeRouteEnforcer` already uses for exactly that reason.
+ *
+ * IT FAILS QUIETLY BY DESIGN AND THAT IS NOT A SILENT FAILURE: the guard is
+ * `isReady()`, which is false only before the container mounts — a window in
+ * which no athlete can have tapped anything.
+ */
+function navigateToCoachStatus(): void {
+  if (!navigationRef.isReady()) return;
+  navigationRef.navigate('CoachTab' as never);
+}
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -604,6 +623,32 @@ export default function HomeScreenV2() {
             in this same commit rather than deleted — the ruling moved, so the
             pin moves with it. */}
 
+        {/* ── RULING 4 (day) AND THE SEAT'S NOTE ON RULING 7 (week): THE
+            ACTIVE-MODIFIERS STRIP, ABOVE THE DAY'S CARD AND ABOVE THE WEEK LIST ──
+
+            ONE COMPONENT, THREE MOUNTS — the seat's own words: *"same component
+            as the day screen's, not a second one."* The third is the coach tab.
+            Three copies of this row is three places for the count to disagree
+            with the list it opens.
+
+            IT DOES NOT REPLACE THE SECTION BELOW YET. Ruling 4's full move —
+            the coach-notes block leaving this screen — waits on the status
+            screen's ACTIONS being wired, which needs `handleCoachNoteAction`
+            lifted to an owner both screens call. Until then the strip is an
+            additional door to the same list and **nothing is removed**, which is
+            `LAW-removal-ships-with-its-replacement` holding rather than being
+            worked around.
+
+            NOTHING WHEN THERE IS NOTHING: the strip renders null at zero, so a
+            normal week pays no space for it in either shape. */}
+        {isNormal && (
+          <ModifiersStrip
+            surface={dayFirst ? 'day' : 'week'}
+            count={coachNotes.length}
+            onPress={() => navigateToCoachStatus()}
+          />
+        )}
+
         {/* ── The week ──
             ONE ROW CALL SITE FOR BOTH SHAPES. `renderDayRow` below is the only
             place a day is drawn at full size; the day-first view calls it once
@@ -908,7 +953,7 @@ export default function HomeScreenV2() {
             clears route through handleCoachNoteAction — are untouched.
             CoachNotesSection still renders nothing when the list is empty, so a
             normal week loses no screen space. */}
-        <CoachNotesSection
+        <ActiveModifiersSection
           notes={coachNotes}
           equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
           onAction={handleCoachNoteAction}
@@ -2470,93 +2515,12 @@ function TimelineChevron({ open }: { open: boolean }) {
   );
 }
 
-interface CoachNotesSectionProps {
-  notes: ActiveCoachNote[];
-  equipmentFactIds: ReadonlySet<string>;
-  onAction: (note: ActiveCoachNote, action: ActiveCoachNoteAction) => void;
-}
-
-function CoachNotesSection({ notes, equipmentFactIds, onAction }: CoachNotesSectionProps) {
-  if (notes.length === 0) return null;
-
-  return (
-    <View style={styles.coachNotesSection} testID="program-active-coach-notes">
-      <Text style={styles.coachNotesTitle}>COACH NOTES</Text>
-      <View style={styles.coachNotesStack}>
-        {notes.map((note) => (
-          <Card
-            key={note.id}
-            tone="outline"
-            padding="none"
-            radius="lg"
-            style={styles.coachNoteCard}
-            testID={note.injuryEpisodeId
-              ? explorerTestId.injuryActive(note.injuryEpisodeId)
-              : note.reversibleAdjustmentId
-                ? explorerTestId.adjustmentActive(note.reversibleAdjustmentId)
-                : `program-active-coach-note-${note.constraintId}`}
-          >
-            <View style={styles.coachNoteContent}>
-              <View style={styles.coachNoteHeader}>
-                <View style={styles.coachNoteDot} />
-                <Text style={styles.coachNoteTitle} numberOfLines={2}>
-                  {note.title}
-                </Text>
-              </View>
-              <Text style={styles.coachNoteBody}>{note.body}</Text>
-              <View style={styles.coachNoteActions}>
-                {note.actions.map((action, index) => {
-                  const primary = index === 0;
-                  const sourceFactId = note.temporarySourceFactIds?.[0];
-                  const isEquipmentFact = sourceFactId
-                    ? equipmentFactIds.has(sourceFactId)
-                    : false;
-                  const actionTestID = action.kind === 'update_injury' && note.injuryEpisodeId
-                    ? explorerTestId.injuryIngress('update', note.injuryEpisodeId)
-                    : action.kind === 'clear_injury' && note.injuryEpisodeId
-                      ? explorerTestId.injuryResolveAction(note.injuryEpisodeId)
-                      : action.kind === 'restore_adjustment' && note.reversibleAdjustmentId
-                        ? explorerTestId.adjustmentRestore(note.reversibleAdjustmentId)
-                        : action.kind === 'update_status' && sourceFactId
-                          ? explorerTestId.readinessUpdate(sourceFactId)
-                          : action.kind === 'clear_adjustment' && sourceFactId && isEquipmentFact
-                            ? explorerTestId.equipmentClear(sourceFactId)
-                            : action.kind === 'update_adjustment' && sourceFactId && isEquipmentFact
-                              ? explorerTestId.equipmentUpdate(sourceFactId)
-                          : `program-active-coach-note-action-${note.constraintId}-${action.kind}`;
-                  return (
-                    <Pressable
-                      key={action.kind}
-                      onPress={() => onAction(note, action)}
-                      style={({ pressed }) => [
-                        styles.coachNoteAction,
-                        primary && styles.coachNotePrimaryAction,
-                        pressed && { opacity: 0.72 },
-                      ]}
-                      testID={actionTestID}
-                      accessibilityRole="button"
-                      accessibilityLabel={actionTestID}
-                    >
-                      <Text
-                        style={[
-                          styles.coachNoteActionText,
-                          primary && styles.coachNotePrimaryActionText,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {action.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          </Card>
-        ))}
-      </View>
-    </View>
-  );
-}
+/* `CoachNotesSection` MOVED OUT 2026-08-10 (UI merge slice 3) to
+ * `src/components/ActiveModifiersSection.tsx`, because ruling 4 gives it a
+ * SECOND mount on the coach page's status screen and the merge plan's binding
+ * rule is that "my status" MOUNTS the existing doors rather than building new
+ * ones. This screen now renders `<ActiveModifiersSection>`; every testID it
+ * carries is unchanged, byte for byte. */
 
 function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
   if (note.reversibleAdjustmentId) {
