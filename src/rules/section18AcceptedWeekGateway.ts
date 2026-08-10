@@ -1452,6 +1452,21 @@ export function runSection18AcceptedWeekGateway(
       })),
       typedReductionCreated: result.contract.authorisedReductions.some((reduction) =>
         reduction.reason === 'explicit_user_override'),
+      // WHICH REPAIR RAN. Added 2026-08-10 because the log could not say.
+      //
+      // Sam's coach export showed `gatewayStatus: "repaired"` FOUR times in one
+      // transaction with `rejectionCodes: []` and `gatewayViolations: []`, and
+      // the pair reads like a contradiction: a repair ran over a week the
+      // gateway also reported as violating nothing. It is not a contradiction —
+      // **the violations reported are the SELECTED candidate's, i.e. the state
+      // AFTER repair** — but nothing at the field said so, and with no repair
+      // kind there was no way to ask what had been changed or why.
+      //
+      // `LAW-count-names-instrument`: an empty list named the unit "what is
+      // still wrong", and it was read as "what was wrong". The kinds are typed
+      // and already on the result; the log was simply throwing them away.
+      repairKinds: result.repairs.map((repair) => repair.kind),
+      repairCount: result.repairs.length,
       outcome: result.status === 'impossible' ? 'rejected' : result.status,
       rejectingBoundary: result.status === 'impossible'
         ? 'section18AcceptedWeekGateway'

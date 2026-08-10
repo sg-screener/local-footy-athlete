@@ -288,6 +288,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-label-names-the-door',
+    law: 'A diagnostic label must distinguish the things a diagnosis needs to tell apart, and it is DERIVED from the one field that already knows — never passed in beside it as a second opinion.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, from Sam: "well shouldn\'t it be labelled differently to prevent this issue from happening again? so we can diagnose whether the issue happened via tap or coach?" — LAW-count-names-instrument widened from numbers to labels by his question.',
+    guard: {
+      state: 'guarded',
+      by: 'test:diagnostic-label-names-the-door',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED. 20 cells. FOUNDING CASE: `source: "tap"` was emitted by both the Program tab sheet and the coach change card because it was derived from `initiatedBy` (which answers "was a human involved?"), so the seat read Sam\'s `lastTransaction: "tap:move_session:..."` and told him his coach move came through the Program tab — wrong, and it cost a full pass. Cells hold the derivation, the CONTROL in the same run (the two doors must DIFFER, asserted as a difference), the summary/log agreement, and a regression cell banning the exact expression that caused it. NOT a general ban on reading `initiatedBy`: `sourceActor` is a different axis and correctly ignores the door.',
+    },
+  },
+  {
+    id: 'LAW-repair-names-its-kind',
+    law: 'An event reporting that a repair ran names WHICH repair, and a violation list reported after selection says that it is post-selection.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10 ("Measure that, do not assume it") — raised by Sam\'s coach export showing gatewayStatus "repaired" four times with rejectionCodes [].',
+    guard: {
+      state: 'guarded',
+      by: 'test:diagnostic-label-names-the-door',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED, in the same suite as its sibling because it is the same disease. MEASURED: none of the four `repair_candidate_selected` emitters recorded `repair.kind`, while the gateway result carries typed kinds — the log was throwing them away, which is where "measure it, do not assume it" ran out of road on Sam\'s export. `rejectionCodes: []` beside four repairs is not a contradiction: the list is the SELECTED candidate\'s evaluation, i.e. AFTER repair, and nothing at the field said so.',
+    },
+  },
+  {
     id: 'LAW-unreadable-world-resets-clean',
     law: 'A stored world the current code cannot read is RESET CLEAN and the athlete is told once, in plain words — never migrated, never silently served by an older set of rules.',
     ruledAt: 'docs/SEAT_INBOX.md item 1(c) 2026-08-10 (Sam: "kill it"), scoped verbatim: "an unreadable stored world resets and the athlete is told once, in plain words. No migration, no fallback, no second attempt to salvage."',

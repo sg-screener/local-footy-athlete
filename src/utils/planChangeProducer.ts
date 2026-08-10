@@ -2302,6 +2302,19 @@ export interface ApplyPlanChangeInput {
   change: PlanChange;
   visibleWeek: ResolvedDay[];
   todayISO: string;
+  /**
+   * WHICH DOOR. Minted by `rules/athleteActionSourceLabel` from the action's
+   * screen and handed in, because this producer cannot see the screen.
+   *
+   * It ends up as `lastTransaction`'s prefix, which is why it must be the same
+   * value the event log carries: a summary export that says `tap:move_session`
+   * while the log says `route: coach_tab` is two opinions about one action, and
+   * the seat read exactly that pair backwards on 2026-08-10.
+   *
+   * Defaults to `'tap'` — every pre-existing caller meant the athlete's own
+   * surfaces, and a default of `'coach'` would silently relabel them.
+   */
+  doorSource?: 'tap' | 'coach';
   applyOverride: (
     date: string,
     workout: Workout | null,
@@ -2351,7 +2364,9 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
     ? args.visibleWeek.find((day) => day.date === source)?.workout ?? null
     : null;
   const trace = beginAthleteActionTrace({
-    source: 'tap',
+    // Same value as `lastTransaction`'s prefix below, and that is the point:
+    // the log and the summary export must not hold two opinions about one door.
+    source: args.doorSource ?? 'tap',
     actionType: diagnosticActionType(args.change),
     route: args.route ?? 'plan_change_producer',
     currentWeekId: getMondayForDate(target ?? args.todayISO),
@@ -2630,7 +2645,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
     const resolution = resolveAthleteMutation({
       change: args.change,
       visibleWeek: args.visibleWeek,
-      source: 'tap',
+      source: args.doorSource ?? 'tap',
     });
     if (resolution.ok === false) {
       // Defence in depth for the ask. The sheet holds the change back until

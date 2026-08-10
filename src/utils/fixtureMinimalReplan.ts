@@ -1296,6 +1296,11 @@ export function buildFixtureMinimalReplan(
       preservationCost: winner.cost,
       candidateChanges: changedDaySets(args.sourceWorkouts, winner.gateway.canonicalWorkouts),
       affectedWeek: args.weekStart,
+      // WHICH REPAIR. See the same field on `accepted_week_gateway_result`:
+      // Sam's export said a repair had been selected and could not say what it
+      // was, which is where "measure it, do not assume it" ran out of road.
+      repairKinds: winner.gateway.repairs.map((repair) => repair.kind),
+      repairCount: winner.gateway.repairs.length,
       outcome: winner.gateway.status,
       boundary: 'buildFixtureMinimalReplan',
     });

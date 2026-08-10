@@ -1,3 +1,4 @@
+import { athleteActionSourceForDoor, planChangeSourceForDoor } from '../rules/athleteActionSourceLabel';
 import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { logger } from './logger';
 import {
@@ -390,6 +391,7 @@ function executePlanChangeAction(
     todayISO: context.todayISO,
     applyOverride: context.applyOverride ?? defaultApplyOverride,
     trace: risk.trace,
+    doorSource: planChangeSourceForDoor(action.source),
   });
   // THE WRAPPER ROUTES THE PRODUCER'S ANSWER. IT DOES NOT INTERPRET IT.
   //
@@ -579,6 +581,7 @@ function executeProgramControlActionWithinTrace(
               workout,
               withActiveProgramModifierContext(overrideContext, activeModifierId),
             ),
+          doorSource: planChangeSourceForDoor(action.source),
         });
         if (!planResult.ok) {
           return {
@@ -794,7 +797,11 @@ export function executeProgramControlAction(
   context: ProgramControlActionContext = {},
 ): ProgramControlActionResult {
   const date = diagnosticActionDate(action);
-  const source: AthleteActionSource = action.source.initiatedBy === 'system' ? 'system' : 'tap';
+  // ONE OWNER: the label is derived from the DOOR (see rules/athleteActionSourceLabel).
+  // It used to read `initiatedBy`, which answers "was this a human?" and cannot
+  // tell the coach card from the Program tab — the field that misdirected a
+  // whole pass of Sam's investigation on 2026-08-10.
+  const source: AthleteActionSource = athleteActionSourceForDoor(action.source);
   const visibleWorkout = date
     ? context.visibleWeek?.find((day) => day.date === date)?.workout ?? null
     : null;
@@ -976,7 +983,7 @@ export async function executeProgramControlActionDurably(
   }
   const date = diagnosticActionDate(action);
   const trace = beginAthleteActionTrace({
-    source: action.source.initiatedBy === 'system' ? 'system' : 'tap',
+    source: athleteActionSourceForDoor(action.source),
     actionType: diagnosticActionType(action),
     route: `program_control_durable:${action.source.surface ?? action.source.screen}`,
     sourceDate: action.type === 'move_session' ? action.payload.fromDate : date,
