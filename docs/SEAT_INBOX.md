@@ -2,6 +2,106 @@
 
 ## Unprocessed (newest first)
 
+1. **THE PLAN EXISTS AND SAM WAS RIGHT — THERE ARE THREE OF THEM AND
+   ONLY ONE IS TRUE.** (seat, 2026-08-10, two audits run from the seat;
+   every claim below carries a receipt from those audits.)
+   `docs/PUBLISH_ROADMAP_2026-08-05.md` is the governing sequence and
+   the ONLY checklist in the repo whose boxes carry commit refs and
+   honest STILL-OPEN / DEFERRED / PARTIAL labels. Its ancestors —
+   `V1_LAUNCH_DEFINITION.md` and `MASTER_PLAN_2026-07-23.md` — are
+   superseded and **carry no supersession marker at all** (grep for
+   "supersed" in V1_LAUNCH returns nothing), while
+   `FINAL_QA_CHECKLIST.md:20` still sends readers to V1_LAUNCH.
+   **ORDER: one plan. Mark both ancestors superseded at the top of
+   their own first line, and refresh PUBLISH_ROADMAP's Phase 2 against
+   measured state** (journal BUILT then HIDDEN, not "to be finished";
+   coach rebuild S1-S3 landed, parity census open). Nothing else may
+   present itself as a plan.
+
+2. **THE DOC SWEEP — THESE MISLED SAM TODAY, EACH WITH ITS RECEIPT.**
+   Fix in this order; this IS `LAW-doc-truth`'s guard work, so it is
+   law work, not feature work, and may land while the chain is red.
+   - `LFA_PRODUCT_ARCHITECTURE.md` §16: **four unticked blockers are
+     actually built** — Readiness (`readinessStore` consumed by
+     `useHomeScreen.ts:11,320`, `DayWorkoutScreenV2.tsx:38,606`,
+     `ProfileScreen.tsx:28,156`; `test:readiness-ownership` 22/0);
+     coachNotes on V2 (`HomeScreenV2.tsx:2246`,
+     `DayWorkoutScreenV2.tsx:1468`); Profile setup edit
+     (`ProfileScreen.tsx:744,731` → sheet at `:1586`); EAS pipeline
+     (`eas.json` has all three profiles + `submit.production.ios`).
+     **And four TICKED blockers describe the FROZEN coach surface no
+     tab routes to** (`test:coach-entry-surface` 39/39 proves it is not
+     mounted). CORRECT the section; do not delete it.
+   - §12 and §18 point at `src/components/CoachUpdateCard.tsx`, deleted
+     in `2df51650` — `npm run test:coach-update-card-ui` **crashes
+     ENOENT**, and that script is still a step in
+     `FINAL_QA_CHECKLIST.md`. Correct both, and either fix or retire
+     the script — a release gate naming a crashing command is the
+     purest form of this defect.
+   - §2 item 4 defines shippable as a coach handling injury/soreness/
+     fatigue/missed/busy/swap. `coachProposal.ts:78` says
+     `['move_session']`. Correct it to point at the parity census.
+   - `SUPPORTED_ATHLETE_ACTIONS.md` says Journal is "not built" (it is,
+     then hidden) and that Auth is "built but unwired" — **`src/screens/
+     auth/`, `authStore.ts`, `services/auth/`, `AuthNavigator.tsx` DO
+     NOT EXIST.** This doc calls itself the test surface, so it makes
+     wrong test plans. CORRECT.
+   - DELETE: `ONBOARDING_IMPLEMENTATION_CHECKLIST.md` ("100% COMPLETE",
+     names 4 screens that do not exist; live navigator mounts 22) and
+     `NAVIGATION_AUTH_SETUP.md` (documents auth + a 5-tab bar; there
+     are 3 tabs and no auth). These two are the source of the false
+     auth belief above.
+   - MARK-SUPERSEDED: the 23 journal docs with no hidden marker.
+     Worst is `JOURNAL_NOTIFICATION_BOUNDARY_2026-08-09.md` §1, which
+     tells Sam to rebuild the binary to see a reminder the navigator
+     now cancels unconditionally. One banner each, no rewrites.
+
+3. **OLD CODE STILL IN THE WAY — FIVE REAL ONES, RANKED BY HARM, AND
+   SAM ASKED FOR THIS BY NAME AFTER SPENDING LAST WEEK DELETING.**
+   - **A LEGACY MIGRATION RUNS AT EVERY LAUNCH AND CAN THROW.**
+     `programStore.ts:1656` runs `migrateHydratedStatePowerBlocks`
+     first thing on stored-state read; `legacyPowerBlockMigration.ts:
+     130,137,143,150,157,164` throw on shapes it cannot map, and
+     `programStore.ts:1582` throws again at the write boundary. A
+     pre-2026-07-28 saved program can hard-fail during load. **This is
+     the only one with a live athlete consequence — price a graceful
+     skip first.** (Memory says no real users yet, so it is Sam's own
+     devices at risk — say so rather than overstating it.)
+   - **TWO GENERATIONS OF THE WEEKLY-LIMITS CONTRACT ARE BOTH WIRED.**
+     V1 `programStore.ts:39` + `generateProgram.ts:57`; V2
+     `programStore.ts:48` + `:58`; generation reads BOTH
+     (`generateProgram.ts:622` vs `:780`). Two sources of truth for how
+     hard a week may be, winner decided by call site. **This is
+     `LAW-L15-one-write-format` broken in the open** — give it a
+     registry row and let the guard find the rest of its class.
+   - **THE OLD HOME SCREEN IS STILL INSIDE THE SHIPPED ONE.**
+     Navigation registers `HomeScreen` (`AppNavigator.tsx:88`), whose
+     `DESIGN_VERSION` constant (`HomeScreen.tsx:52`) picks V2 at
+     `:59` — ~1,430 of its 1,493 lines are the retired V1 UI, and both
+     branches consume the same 2,113-line hook. **One word ships the
+     old design.**
+   - **THE FROZEN COACH SCREEN COMPILES INTO EVERY BUILD.**
+     `AppNavigator.tsx:10` imports it and `:94-100` builds a stack no
+     `Tab.Screen` ever mounts. Measured: cutting it orphans **13
+     modules / 6,081 lines** (not the 41,220 the old doc claims — that
+     doc admits its own count was wrong at
+     `COACH_ARCHITECTURE_REASSESSMENT_2026-08-09.md:344`). `App.tsx:7`
+     imports `coachBuildInfo` from that same set at module scope, so
+     the cut touches startup — name that before cutting.
+   - **THE JOURNAL IS COMPILED WITH NO WAY IN.** `AppNavigator.tsx:12`
+     imports it; the tab block is gone. ~7 rule modules ride along.
+   **CLEARED, AND WORTH BANKING:** nothing writes program state behind
+   the ledger's back — every writer outside `acceptedStateTransaction`
+   is a transaction owner or a rollback inside one, and zero direct
+   store writes exist in `src/screens`, `src/components`, `src/hooks`.
+   `coachTurnController.ts:3467-3469` writes outside the ledger but is
+   reachable only from the frozen `CoachScreen.tsx:90`; it dies with
+   item 3d.
+   **SEQUENCE: the throwing migration and the dual contract are live
+   risks and may be priced now. The three dead-weight cuts wait behind
+   the law sweep** — they are size, not danger, and Sam has ruled
+   nothing else is built while the chain is red.
+
 000. **SAM, 2026-08-10: *"good have it checked - this should be fucking
      simple now - i'm sick of building shit to just go down a fucking
      rabbit hole - any change or fix now seems to take a whole day for
@@ -229,7 +329,29 @@
    Do NOT sweep the other 18 yet. The registry is the map; guards get
    built where a defect has already been measured, not alphabetically.
 
-3. **SAM'S CONDITIONING CASE — THE INSTRUMENT IS AN EXPORT FROM HIS
+3. **[TERMINAL, 2026-08-10 — ANSWERED, AND THE ITEM'S PREMISE IS
+   REFUTED. AN EXPORT *IS* REACHABLE IN RELEASE FROM A WORKING
+   PROGRAM.** It is on the **Profile** screen, near the top, above
+   Legal/Danger Zone: a lime counts line (`profile-stored-state-readout`)
+   and a button reading **"Export stored state"**
+   (`profile-export-stored-state`, ProfileScreen.tsx:688-700). It is
+   **deliberately NOT `__DEV__`-gated** — the only `__DEV__` guard in
+   that file is at line 826, well below it — and the claim is already
+   held by a chain cell: `test:profile-mirror-narrowing`, *"the
+   stored-state export is reachable on a Release build"*, which also
+   pins that it has not moved back inside the dev-tools section.
+   **SAM'S STEPS: open the app → Profile tab → scroll to the top →
+   tap "Export stored state" → the iOS share sheet opens with the whole
+   export as its message → send it to Mail/Notes/AirDrop.** Nothing to
+   build.
+   **WHY THE ITEM SAID OTHERWISE:** it grepped `StoredStateExportButton`,
+   the COMPONENT, which really is mounted only on the two onboarding
+   screens. **ProfileScreen imports the same `devStoredStateExport`
+   module and renders its own inline control without that component.**
+   `a count taken for a record` — the instrument counted a NAME, the
+   claim was about a CAPABILITY.]**
+
+   **SAM'S CONDITIONING CASE — THE INSTRUMENT IS AN EXPORT FROM HIS
    PHONE, AND THIS REPO HAS DONE IT FOUR TIMES.** Your finding stands
    and is bad news honestly delivered: **0 of 11 device-exact seeds
    reach his shape, and the seed registry is now POORER than the

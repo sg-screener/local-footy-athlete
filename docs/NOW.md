@@ -16,6 +16,27 @@
   their FIRST run — that is the point, and each one is then a real bug with a
   name, reported the moment it appears.
 
+- **⚠ SAM: YOU CAN SEND ME YOUR REAL DATA RIGHT NOW, FROM THE BUILD ON YOUR
+  PHONE — NOTHING NEEDS BUILDING.** Open the app → **Profile** tab → scroll to
+  the top → tap **"Export stored state"** → the share sheet opens with the whole
+  export → send it to yourself in Mail or Notes. The green line of counts just
+  above the button answers most of it without sharing anything. (We thought this
+  door didn't exist in a Release build; it does, on Profile, and a chain cell
+  already guards it — `test:profile-mirror-narrowing`.) **This is the instrument
+  that would settle your conditioning case, because every seed I can generate
+  disagrees with your phone.**
+
+- **⚠ SAM: THE POWER-ROW DISAPPEARANCE — I FOUND OUT WHAT DELETES IT, AND THE
+  ANSWER IS *NOTHING DOES*.** I put probes on all five places in the app that
+  can remove power work, including one wrapper covering every one of the 73
+  places a session is rewritten. On the run where the row vanishes, **all five
+  counted zero.** So the row is not being deleted by any rule — and worse, **the
+  instrument that told us "8 rows in, 7 out" was counting what the screen DRAWS,
+  not what is stored.** Until I read the stored day directly, *"your power work
+  was deleted"* is not established. **Two possibilities, neither checked yet:**
+  the move never carried it, or it is still there and the screen isn't drawing
+  it. Next probe is one line. docs/POWER_REMOVAL_REASON_XS_2026-08-10.md
+
 - **🔴 THE COURIER TOLL IS PAID (`f168b48b`).** The stop hook detected an order by
   matching `^1\.` only, so **every order the seat wrote as `00.`/`0.`/`000.` was
   invisible and the turn ended silently — Sam had to type "check inbox" himself,
