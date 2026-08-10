@@ -2,7 +2,80 @@
 
 ## Unprocessed (newest first)
 
-1. **SAM'S ORDER OF WORK AFTER THIS QUEUE — RECORD IT IN
+1. **SAM CORRECTED THE SEAT TWICE, 2026-08-10. BOTH CORRECTIONS BIND.**
+
+   **(a) DELETE THE OLD ROADMAPS. NOT BANNERS.** His words: *"i want
+   one fucking roadmap - delete the others so that you never fucking
+   bring those up again"*. `git rm docs/V1_LAUNCH_DEFINITION.md` and
+   `docs/MASTER_PLAN_2026-07-23.md`; git history keeps them if anyone
+   ever needs them. Fix `FINAL_QA_CHECKLIST.md:20`, which points at
+   V1_LAUNCH. `PUBLISH_ROADMAP_2026-08-05.md` is the only plan. The
+   guard still gets built (a second doc claiming governance reds), but
+   the banner half of the previous order is withdrawn — deletion is
+   the instruction.
+
+   **(b) THE FEMALE VERSION IS A TWEAK. THE SEAT INFLATED IT.** His
+   words: *"no it's a fucking tweak, its the exact same bible with some
+   very minor changes - don't fucking tell me how different it is"*.
+   The previous item's "BIBLE-AUTHORING job" framing is WITHDRAWN.
+   Shape it as: one onboarding step, plus the small set of changes Sam
+   will name when the phase opens. Same Bible. Do not scope it larger.
+
+2. **NEW SEAT LAW, FROM SAM'S QUESTION *"why can't we ever be on the
+   same page? seriously, tell me"* — REGISTRY ROW, GUARDED LIKE ANY
+   OTHER.**
+   **`LAW-do-as-instructed`: when Sam gives an instruction, do it as
+   given. Push back ONCE, in one line, only if it will actually break
+   something — then do as he said unless he changes it.**
+   The measured pattern it fixes, all on 2026-08-10: he said *"it's a
+   tweak"* and the seat replied with why it was bigger; he said
+   *"delete them"* and the seat offered a banner plus a check; he
+   ruled every law must be guarded and the seat returned a ranked
+   shortlist; he ruled parity and the seat had been slicing kind by
+   kind. **Four times in one day the seat answered a question he had
+   not asked, and each one cost him a message to drag it back.**
+   Root cause named honestly: the seat hedges to avoid being wrong
+   later, and hedging reads as disagreement.
+   **Guard (process law, repo check):** an order in this inbox that
+   RE-SCOPES a Sam instruction — proposing a smaller, larger or
+   different unit than the one he gave — must contain the words he
+   used and an explicit line saying what is being changed and why.
+   Silent re-scoping is the defect; disagreeing out loud is allowed.
+   LOOP CHECK: `seat-answers-a-question-Sam-did-not-ask` — sighting 4
+   in one day — **COMPRESS, this law is the compression.**
+
+3. **TWO ADDITIONS TO SAM'S ROADMAP, ONE OF THEM WITH A MEASURED
+   SURPRISE IN IT.**
+
+   **(a) FEMALE-FRIENDLY VERSION — SAM PLACED IT BEFORE ACCOUNTS.** His
+   framing: *"should just be adding an onboarding step and some minor
+   tweaks in programming"*. **The onboarding step is small. The
+   programming half is NOT a tweak, and he needs to know before he
+   plans around it: `docs/LFA_PROGRAMMING_BIBLE.md` contains ZERO
+   occurrences of "female", "women" or "womens"** (seat grepped
+   case-insensitively, 2026-08-10), and no sex/gender field exists in
+   the onboarding types or screens. **So there are no rules to
+   implement — they do not exist yet.** This is a BIBLE-AUTHORING job
+   in Sam's own coaching knowledge first, then a small build. Put it in
+   the roadmap in that shape, and **do not let a seat or terminal
+   invent female programming rules — L-C1 and BIBLE-FIRST both forbid
+   it.** Ask Sam for the rules when the phase opens; the app half is
+   genuinely small once they exist.
+
+   **(b) "AM I GOING TO GET GIVEN AN OLD ROADMAP AGAIN?" — ANSWER IT
+   WITH A GUARD, NOT A PROMISE.** Sam asked directly. The mechanism:
+   `PUBLISH_ROADMAP_2026-08-05.md` is the ONE governing plan; both
+   ancestors get a supersession banner (already ordered). **Add the
+   guard that makes a second plan impossible: a check that reds if MORE
+   THAN ONE doc presents itself as the governing plan or ships an
+   unmarked status checklist.** Register it against `LAW-doc-truth`.
+   Cheap shape that catches the real case: a doc claiming governance
+   (or carrying `- [ ]`/`- [x]` status boxes) must either BE the
+   governing plan or carry a supersession/parked banner in its first
+   lines. **This is the guard for the defect that cost Sam an hour
+   today — build it as part of the law sweep, not after it.**
+
+1b. **SAM'S ORDER OF WORK AFTER THIS QUEUE — RECORD IT IN
    `PUBLISH_ROADMAP_2026-08-05.md` AS PHASE 2, VERBATIM, BEFORE
    ANYTHING ELSE IN THIS BATCH.** He gave it in chat 2026-08-10 and an
    unrecorded plan is the exact defect this week is about.
@@ -75,6 +148,24 @@
    CLEAN and the athlete is told, never migrated and never silently
    served by an older set of rules.** A reset is honest; a fallback that
    undercounts a week is not.
+
+   **[TERMINAL, 2026-08-10 — (a) IS CENSUSED AND IT IS A STOP, NOT A
+   CUT. NO CODE REMOVED.** Three findings with receipts in
+   docs/LEGACY_POWER_CUT_CENSUS_2026-08-10.md: the module is in
+   `src/rules/` not `src/utils/` and `programStore.ts:1582` is a
+   DIFFERENT (write-side) throw; `migrateHydratedStatePowerBlocks`
+   also carries the generator-recovery lift, so deleting the function
+   would silently delete a second, unrelated ruling; and **THE
+   "CLEAN-RESET PATH" DOES NOT EXIST** — zero product files clear
+   storage. So (a) is a deletion PLUS a new door PLUS an
+   athlete-facing telling, which is a BUILD, which this same order
+   forbids while the chain is red. **RECOMMENDATION: do (b) first —
+   it needs no new door and it answers the question Sam actually
+   asked. Then (a) as two commits, the door before the deletion.**
+   **AND THE METHOD NEEDS AMENDING:** "the full chain between cuts"
+   cannot answer "did this cut red something?" while the chain is red
+   by design. Substitute a `scripts/sweep.sh` FAILURE SET; a baseline
+   at `4609b181` was started for exactly that.]**
 
    **THE CUTS, AND THE ORDER TO DO THEM IN:**
    - **(a) `migrateHydratedStatePowerBlocks` and

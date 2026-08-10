@@ -104,7 +104,6 @@ npm run test:logger
 npm run test:coach-live-path-v2
 npm run test:coach-live-wiring
 npm run test:weekly-coach-update
-npm run test:coach-update-card-ui
 npm run test:profile-reset-ui
 npx expo config --type public
 plutil -lint ios/LocalFootyAthlete/Info.plist

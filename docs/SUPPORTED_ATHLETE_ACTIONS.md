@@ -123,14 +123,25 @@ behaviour, not a bug.
 - Editing individual sets/reps/loads via chat phrases
 - Any free-text mutation path as primary interface
 - Anything requiring the athlete to know internal vocabulary
-- **Journal** (workout history, personal records, log-workout screens) —
-  built but unwired to any navigator by design; not reachable from any tab,
-  so not testable. See `docs/audits/JOURNAL_2026-07-22.md`. Backlog entry
-  below.
-- **Auth** (sign in / sign up / forgot password / sign out) — built but
-  unwired by design; no reachable entry point anywhere, including the
-  post-Full-reset onboarding landing screen. App is effectively local-only
-  today. See `docs/audits/AUTH_2026-07-22.md`. Backlog entry below.
+- **Journal** — **CORRECTED 2026-08-10.** This said "built but unwired by
+  design". What actually happened: the journal was **built COMPLETE (ten
+  slices, all gated) and then HIDDEN the same day** by Sam's eye pass
+  (`docs/JOURNAL_HIDDEN_RULING_2026-08-09.md`, `7f9e54ab`). The tab was
+  removed at the navigation owner; **the data layer and every journal suite
+  stay LIVE as coach fuel**, and the two data-creating taps ("How did that
+  go?", the post-game legs/energy rating) **are still athlete-visible and ARE
+  testable**. Sam, 2026-08-10: *"the journal should be built but not shown
+  anywhere - we are coming back to that."* **Built-and-deliberately-unreachable
+  is a real state and this doc must not read it as "not built" — a future
+  sweep would delete it as dead weight.**
+- **Auth** (sign in / sign up / forgot password / sign out) — **CORRECTED
+  2026-08-10: THIS IS NOT "BUILT BUT UNWIRED". IT DOES NOT EXIST.**
+  `src/screens/auth/`, `src/store/authStore.ts`, `src/services/auth/` and
+  `src/navigation/AuthNavigator.tsx` are all **absent from the tree** (checked
+  2026-08-10). The app is local-only because there is no auth code, not
+  because an entry point is missing. `docs/audits/AUTH_2026-07-22.md`
+  describes a tree that has since been removed. **This doc calls itself the
+  test surface, so this line was making wrong test plans.**
 
 ## Known pre-existing gaps (log once, don't rediscover)
 

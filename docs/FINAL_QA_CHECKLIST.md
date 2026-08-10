@@ -349,7 +349,7 @@ doc:
 - [ ] **Local preflight** (from `TESTFLIGHT_CHECKLIST.md`): `npm run
       typecheck`, `npm run test:env-config`, `npm run test:logger`, `npm run
       test:coach-live-path-v2`, `npm run test:coach-live-wiring`, `npm run
-      test:weekly-coach-update`, `npm run test:coach-update-card-ui`, `npm
+      test:weekly-coach-update`, `npm
       run test:profile-reset-ui`, `npx expo config --type public`, `plutil
       -lint ios/LocalFootyAthlete/Info.plist`, `plutil -lint
       ios/LocalFootyAthlete/PrivacyInfo.xcprivacy`. Run `npx expo-doctor` if

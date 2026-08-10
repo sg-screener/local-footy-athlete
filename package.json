@@ -133,7 +133,6 @@
     "test:coach-truth-gate": "sucrase-node src/__tests__/coachTruthGateTests.ts",
     "test:constraint-resolution": "sucrase-node src/__tests__/constraintResolutionTests.ts",
     "test:coach-note-display": "sucrase-node src/__tests__/coachNoteDisplayTests.ts",
-    "test:coach-update-card-ui": "sucrase-node src/__tests__/coachUpdateCardUITests.ts",
     "test:session-components": "sucrase-node src/__tests__/sessionComponentsTests.ts",
     "test:session-feedback-form": "sucrase-node src/__tests__/sessionFeedbackFormTests.ts",
     "test:session-outcome-parity": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionOutcomeParityTests.ts",

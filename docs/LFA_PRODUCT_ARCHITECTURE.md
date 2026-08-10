@@ -55,6 +55,15 @@ The MVP is shippable when:
    - missed session
    - busy week
    - exercise swap / preference
+
+   **STATUS, MEASURED 2026-08-10 — DO NOT READ THIS LIST AS DESCRIBING TODAY.**
+   `COACH_PROPOSABLE_ACTION_TYPES` (`src/rules/coachProposal.ts:82`) is
+   **`['move_session']`** — one kind, not six. The rebuilt coach answers
+   questions and proposes ONE change type. **The live gap list is
+   `docs/COACH_PARITY_CENSUS_2026-08-10.md`, which measures the coach against
+   the athlete's own 26 action types and currently reads 1 of 26** (registry
+   row `LAW-LC4-parity`). This item stays as the DEFINITION of shippable; the
+   census is the STATUS.
 5. Lightweight readiness can influence today's recommendation without taking over the app
 6. Program changes are visibly reflected
 7. Coach Update card explains active constraints concisely
