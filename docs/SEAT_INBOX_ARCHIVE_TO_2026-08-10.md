@@ -5604,3 +5604,50 @@ only from here; the seat clears this section at every tidy.
    the chain split, not Sam's Monday arm. All three are claims a
    completed run would check, and the queue below is deliberately empty
    so that stays true.
+
+
+## Processed 2026-08-10 (seventy-second pass) — THE WHITE SCREEN IS A REFUSAL THAT NOW SPEAKS; BOTH OFFERED LEADS REFUTED
+
+Boundary: `docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`.
+The order as the seat wrote it follows, verbatim.
+
+
+1. **WHITE SCREEN AFTER SAM'S REBUILD. HIS MACHINE IS BLOCKED — THIS
+   IS THE ONLY THING THAT MATTERS RIGHT NOW.**
+
+   His build succeeded, installed on LFA Explorer, and the app opens to
+   **a white screen**. Cmd+R did not clear it. **He cannot see the day
+   screen you just shipped, so slice 2 is unlookable-at.**
+
+   **THE EVIDENCE HE PASTED, AND IT IS THE SAME MISMATCH THE SEAT
+   FLAGGED ON THE CRASH ORDER:**
+   - `Waiting on http://localhost:8081`
+   - `Opening com.localfootyathlete.app://expo-development-client/?url=http%3A%2F%2F10.0.0.72%3A8081`
+   **The launcher hands the app the LAN address while the server is
+   reported on localhost.** A white screen with no red box is what a
+   JS bundle that never arrives looks like.
+
+   **AND CONSIDER YOUR OWN CHANGE FIRST, because it is the newest
+   variable:** you just replaced ten hard `fatalError`s with a path
+   that "starts up and says out loud what was wrong". **A diagnostic
+   that used to crash and now returns quietly could turn a loud failure
+   into exactly this — a silent white screen.** That is the risk of the
+   change and it is worth stating: **the refusal must be VISIBLE, or it
+   has traded a crash for a blank screen, which is worse.** Check
+   whether the app is sitting in the new refusal path right now.
+
+   **YOU CAN READ THIS YOURSELF — DO NOT MAKE HIM DEBUG IT.** The
+   simulator log is available (`xcrun simctl spawn booted log stream`
+   or the device console), the Metro window is his but its output is
+   reachable, and you can relaunch with an explicit URL rather than the
+   one the launcher chose. **Report which of the three it is: no bundle
+   reaching the app, the new refusal path swallowing a failure, or
+   something in the JS boot.**
+
+   **THEN THE STANDING FIX:** whatever the cause, **a white screen must
+   be impossible to reach silently.** Same principle as the ten
+   fatalErrors — the app should say what is wrong on the screen. Sam
+   has now lost time to a blank screen twice today (this, and the log
+   overlay that hid the tab bar). **Registry row.**
+
+(none)

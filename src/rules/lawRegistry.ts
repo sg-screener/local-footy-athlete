@@ -365,6 +365,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-no-silent-blank-screen',
+    law: 'A blank screen must be impossible to reach silently. Whatever refused says what it was and offers a way out.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, Sam via the seat after losing time to a blank screen twice in one day: "a white screen must be impossible to reach silently"',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE, REPRODUCED ON THE DEVICE AND FIXED THE SAME PASS: in __DEV__ the navigator mounts only after prepareDevE2EAppLaunch() resolves; it returned a bare `false` on any failure and App.tsx simply returned, so the app rendered a root with NOTHING in it — no error, no red box, no text, forever. A Maestro run leaves a dev clock receipt behind; the next PLAIN launch (the way Sam opens the app) reads a receipt with no matching checkpoint, restoreDevE2EClockBeforeHydration throws "clock receipt has no active checkpoint", and that is the white screen he hit at 19:22 after his rebuild. THE DIAGNOSIS WAS ISOLATED BY EXPERIMENT, NOT GUESSED: the SAME binary and the SAME world render fine under the harness launch and white under a plain one, which refuted both offered leads (a Metro URL mismatch — Metro answers on BOTH addresses — and the new native refusal path, which logs nothing on a plain launch). WHAT THE CELL HOLDS: App.tsx renders a named refusal surface, shows the REASON, and offers a one-tap clear; and the barrier is not read as a bare boolean again, which is the shape that made the reason unable to travel. Liveness probes all four directions including the exact pre-fix shape. WHAT THE CELL CANNOT DO, AND IT IS THE IMPORTANT HALF: every source-reading cell in this chain passed while the white screen was happening — there is nothing wrong with code that did not run. The real instrument is .maestro/golden/dev-launch-refusal-speaks.yaml, which seeds through the harness and then launches WITHOUT it, and is GREEN on the device.',
+    },
+  },
+  {
     id: 'LAW-diagnostic-refuses-never-crashes',
     law: 'A development diagnostic refuses loudly and lets the app boot. It may never kill the process.',
     ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, Sam via the seat after the third crash of one shape in a day: "A DEV DIAGNOSTIC MUST NOT BE ABLE TO KILL THE APP… A crash is the least debuggable possible signal: it destroys the process before anything can report why."',

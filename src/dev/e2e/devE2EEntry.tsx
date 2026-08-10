@@ -19,7 +19,12 @@ import {
   setDevE2ESeedError,
   subscribeDevE2EState,
 } from './devE2EState';
-import { restoreDevE2EClockBeforeHydration } from './devE2EClockPersistence';
+import {
+  DEV_E2E_CLOCK_STORAGE_KEY,
+  restoreDevE2EClockBeforeHydration,
+} from './devE2EClockPersistence';
+import { DEV_E2E_CHECKPOINT_STORAGE_KEY } from './devE2ECheckpoint';
+import { DEV_E2E_SCENARIO_SESSION_STORAGE_KEY } from './devE2EScenarioSession';
 import { DevE2EEntryRouteQueue } from './devE2EEntryRouteQueue';
 import { devE2EScenarioReasonCode } from './devE2EScenarioProtocol';
 import { ExplorerProductionRenderReceiptObserver } from './ExplorerProductionRenderReceiptObserver';
@@ -176,15 +181,59 @@ function publishDevE2EEntryError(
  * Must finish before RootNavigator or the coordinator imports persisted
  * stores. A mismatch fails closed and remains visible through the E2E marker.
  */
-export async function prepareDevE2EAppLaunch(): Promise<boolean> {
+/**
+ * THE OUTCOME OF THE LAUNCH BARRIER, AND IT IS NO LONGER A BARE BOOLEAN.
+ *
+ * `false` used to be the whole answer, and `App.tsx` responded by never mounting
+ * `RootNavigator` — **which renders as a white screen with nothing on it.** Sam
+ * hit it at 19:22 on 2026-08-10 and had no way to know what had happened.
+ *
+ * The reason has to travel with the refusal or the screen cannot name it, and a
+ * screen that cannot name it is the blank screen again with a border.
+ */
+export interface DevE2ELaunchPreparation {
+  readonly ready: boolean;
+  /** Present only when `ready` is false. The message shown to the developer. */
+  readonly reason: string | null;
+}
+
+export async function prepareDevE2EAppLaunch(): Promise<DevE2ELaunchPreparation> {
   try {
     await restoreDevE2EClockBeforeHydration();
     await activeInstallation?.coordinatorReady();
-    return true;
+    return { ready: true, reason: null };
   } catch (error) {
     publishDevE2EEntryError(error);
-    return false;
+    return {
+      ready: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
   }
+}
+
+/**
+ * CLEAR THE HARNESS'S OWN LEFTOVERS AND NOTHING ELSE.
+ *
+ * The founding case: a Maestro run seeds a world and leaves a dev clock receipt
+ * behind; the next PLAIN launch reads a receipt with no matching checkpoint,
+ * `restoreDevE2EClockBeforeHydration` throws *"clock receipt has no active
+ * checkpoint"*, and the app never mounts. **The athlete's own program is not
+ * involved and is not touched here** — only the three dev-E2E records that
+ * describe a harness session.
+ */
+export async function clearDevE2EHarnessState(): Promise<void> {
+  // Loaded here, inside the development entry path, exactly as every other
+  // dev-E2E storage reader in this tree does it.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const module = require('@react-native-async-storage/async-storage');
+  const storage = (module.default ?? module) as {
+    removeItem: (key: string) => Promise<void>;
+  };
+  await Promise.all([
+    storage.removeItem(DEV_E2E_CLOCK_STORAGE_KEY),
+    storage.removeItem(DEV_E2E_CHECKPOINT_STORAGE_KEY),
+    storage.removeItem(DEV_E2E_SCENARIO_SESSION_STORAGE_KEY),
+  ]);
 }
 
 export function installDevE2EEntry(args: {

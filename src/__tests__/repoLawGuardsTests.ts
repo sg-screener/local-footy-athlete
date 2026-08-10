@@ -1325,7 +1325,74 @@ run('no planned removal ships without naming where the behaviour went', () => {
     + 'replacement does, never before.');
 });
 
+// ── A WHITE SCREEN MUST BE IMPOSSIBLE TO REACH SILENTLY ──────────────────────
+//
+// `LAW-no-silent-blank-screen`. Sam's order, 2026-08-10, after losing time to a
+// blank screen TWICE in one day (the log overlay that hid the tab bar, then
+// this): *"a white screen must be impossible to reach silently."*
+//
+// FOUNDING CASE, MEASURED ON THE DEVICE. In `__DEV__` the navigator mounts only
+// after `prepareDevE2EAppLaunch()` resolves. It returned a bare `false` on any
+// failure and the effect returned — so the app rendered a root with NOTHING in
+// it, forever, no error and no text. A harness run leaves a dev clock receipt;
+// the next PLAIN launch reads a receipt with no checkpoint, the restore throws,
+// and that is the white screen. **Every source-reading cell in this chain passed
+// while it happened** — there is nothing wrong with code that did not run — which
+// is why the real instrument is `.maestro/golden/dev-launch-refusal-speaks.yaml`
+// and this cell only stops the SHAPE from coming back.
+const BOOT_GATE_FILE = 'App.tsx';
+
+/** Pure: the ways the dev boot gate can go dark without saying anything. */
+function silentBlankScreenFaults(app: string): string[] {
+  const faults: string[] = [];
+  // The refusal must have somewhere to land. A boolean that is only ever used to
+  // decide whether to mount cannot produce a message.
+  if (!/dev-launch-refused/.test(app)) {
+    faults.push('nothing renders when the development launch barrier refuses');
+  }
+  if (!/dev-launch-refused-reason/.test(app)) {
+    faults.push('the refusal does not show WHY — a reasonless refusal is the blank screen with a border');
+  }
+  if (!/dev-launch-refused-clear/.test(app)) {
+    faults.push('the refusal offers no way out — honest and still a dead end');
+  }
+  // AND THE REASON MUST COME FROM THE BARRIER, not be invented at the surface.
+  // `prepareDevE2EAppLaunch` returning a bare boolean is the exact regression.
+  if (/prepareDevE2EAppLaunch\(\)\.then\(\((?:ready|[a-z]+)\)/.test(app)) {
+    faults.push('the barrier is being read as a bare boolean again — the reason cannot travel with it');
+  }
+  return faults;
+}
+
+run('a refused development launch can never render as a blank screen', () => {
+  const full = path.join(repoRoot, BOOT_GATE_FILE);
+  assert(fs.existsSync(full), `${BOOT_GATE_FILE} is gone — this gate reads nothing`);
+  const app = fs.readFileSync(full, 'utf8');
+  // NON-VACUITY: the file must actually contain the gate this cell is about.
+  assert(/prepareDevE2EAppLaunch/.test(app),
+    'App.tsx no longer runs the development launch barrier — this cell is watching nothing');
+  const faults = silentBlankScreenFaults(app);
+  assert(faults.length === 0,
+    `${BOOT_GATE_FILE}: ${faults.join('; ')}. Sam lost time to a blank screen twice `
+    + 'in one day. A refusal says what refused and offers the way out.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the blank-screen ban, probed BOTH directions ──
+  const GOOD_BOOT = 'prepareDevE2EAppLaunch().then(({ ready, reason }) => {})\n'
+    + 'dev-launch-refused dev-launch-refused-reason dev-launch-refused-clear';
+  assert(silentBlankScreenFaults(GOOD_BOOT).length === 0,
+    'a boot gate that names its refusal, its reason and its way out was flagged');
+  assert(silentBlankScreenFaults('prepareDevE2EAppLaunch().then((ready) => {})')
+    .some((f) => /bare boolean/.test(f)),
+    'the exact pre-fix shape — a bare boolean whose reason cannot travel — passed');
+  assert(silentBlankScreenFaults('dev-launch-refused dev-launch-refused-clear')
+    .some((f) => /show WHY/.test(f)),
+    'a refusal with no reason passed — that is the blank screen with a border');
+  assert(silentBlankScreenFaults('dev-launch-refused dev-launch-refused-reason')
+    .some((f) => /way out/.test(f)),
+    'a refusal with no escape passed — honest and still a dead end');
+
   // ── the removal ledger, probed BOTH directions ──
   const LEDGER_HEAD = '## THE REMOVAL LEDGER\n\n| # | Removed | Where it is | Where it goes |\n'
     + '| --- | --- | --- | --- |\n';

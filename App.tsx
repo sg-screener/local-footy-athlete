@@ -9,7 +9,9 @@ import { logCoachBuildFingerprint } from './src/utils/coachBuildInfo';
 import { hydrateAthleteActionLog } from './src/utils/athleteActionLog';
 
 let DevE2EStatusMarkers: React.ComponentType | null = null;
-let prepareDevE2EAppLaunch: (() => Promise<boolean>) | null = null;
+let prepareDevE2EAppLaunch:
+  (() => Promise<{ ready: boolean; reason: string | null }>) | null = null;
+let clearDevE2EHarnessState: (() => Promise<void>) | null = null;
 let installDevE2EEntry: (() => unknown) | null = null;
 let ReleaseRootNavigator: React.ComponentType | null = null;
 if (__DEV__) {
@@ -52,6 +54,7 @@ if (__DEV__) {
   if (devEntry.devE2ELaunchRequested()) LogBox.ignoreAllLogs();
   DevE2EStatusMarkers = devEntry.DevE2EStatusMarkers;
   prepareDevE2EAppLaunch = devEntry.prepareDevE2EAppLaunch;
+  clearDevE2EHarnessState = devEntry.clearDevE2EHarnessState;
   installDevE2EEntry = () => devEntry.installDevE2EEntry({ isDev: true });
   // URL ingress must exist before the asynchronous clock/coordinator barrier.
   installDevE2EEntry();
@@ -83,21 +86,29 @@ void hydrateAthleteActionLog();
 export default function App() {
   const [DevRootNavigator, setDevRootNavigator] =
     React.useState<React.ComponentType | null>(null);
+  // WHY A REFUSAL NEEDS ITS OWN STATE: see `DevLaunchRefused` below. `null` is
+  // "the barrier has not answered yet"; a string is "it refused, and this is
+  // why". The two used to be the same thing — nothing rendered — and that is
+  // precisely the defect.
+  const [devLaunchRefusal, setDevLaunchRefusal] =
+    React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  const runDevLaunchBarrier = React.useCallback(() => {
     if (!__DEV__ || !prepareDevE2EAppLaunch || !installDevE2EEntry) return;
-    let mounted = true;
-    void prepareDevE2EAppLaunch().then((ready) => {
-      if (!ready || !mounted) return;
+    setDevLaunchRefusal(null);
+    void prepareDevE2EAppLaunch().then(({ ready, reason }) => {
+      if (!ready) {
+        setDevLaunchRefusal(reason ?? 'The development launch barrier refused.');
+        return;
+      }
       // Store hydration begins only after the dev clock restoration barrier.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const RootNavigator = require('./src/navigation/RootNavigator').default;
-      if (mounted) setDevRootNavigator(() => RootNavigator);
+      setDevRootNavigator(() => RootNavigator);
     });
-    return () => {
-      mounted = false;
-    };
   }, []);
+
+  React.useEffect(() => { runDevLaunchBarrier(); }, [runDevLaunchBarrier]);
 
   const RootNavigator = __DEV__ ? DevRootNavigator : ReleaseRootNavigator;
 
@@ -108,10 +119,93 @@ export default function App() {
           <QueryClientProvider client={queryClient}>
             {DevE2EStatusMarkers ? <DevE2EStatusMarkers /> : null}
             {RootNavigator ? <RootNavigator /> : null}
+            {__DEV__ && !RootNavigator && devLaunchRefusal ? (
+              <DevLaunchRefused
+                reason={devLaunchRefusal}
+                onClear={() => {
+                  void (clearDevE2EHarnessState?.() ?? Promise.resolve())
+                    .then(runDevLaunchBarrier);
+                }}
+              />
+            ) : null}
             <StatusBar style="light" />
           </QueryClientProvider>
         </SafeAreaProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * A REFUSED DEVELOPMENT LAUNCH MUST NOT LOOK LIKE A BROKEN APP.
+ *
+ * Sam's order, 2026-08-10, after losing time to a blank screen twice in one day:
+ * *"a white screen must be impossible to reach silently."*
+ *
+ * THE FOUNDING CASE, MEASURED RATHER THAN GUESSED. In `__DEV__` the navigator
+ * mounts only after `prepareDevE2EAppLaunch()` resolves. It returned a bare
+ * `false` on any failure and the effect simply returned — so **the app rendered
+ * a root with nothing in it, forever, with no error, no red box and no text.**
+ * A Maestro run leaves a dev clock receipt behind; the next PLAIN launch reads a
+ * receipt with no matching checkpoint, `restoreDevE2EClockBeforeHydration`
+ * throws *"clock receipt has no active checkpoint"*, and that is the white
+ * screen Sam saw at 19:22 after his rebuild.
+ *
+ * WHY IT DOES NOT JUST MOUNT THE APP ANYWAY. The barrier exists so store
+ * hydration cannot begin before the development clock is restored; mounting past
+ * a failed restore would hydrate the athlete's stores against the wrong clock,
+ * which is a worse fault than a blank screen and a silent one too. **So the app
+ * still refuses — it just says so, and offers the one-tap way out.**
+ *
+ * DEVELOPMENT ONLY. This whole component is inside `__DEV__`; a release build
+ * never reaches the barrier and never renders this.
+ */
+function DevLaunchRefused({ reason, onClear }: {
+  reason: string;
+  onClear: () => void;
+}) {
+  // Required, not imported at module scope: release must not pull these in.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { Pressable, Text, View } = require('react-native');
+  return (
+    <View
+      testID="dev-launch-refused"
+      style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: '#1A0A0A',
+        padding: 24,
+        justifyContent: 'center',
+        gap: 16,
+      }}
+    >
+      <Text style={{ color: '#FF7A85', fontSize: 20, fontWeight: '800' }}>
+        The app did not start
+      </Text>
+      <Text style={{ color: '#E8EAED', fontSize: 15, lineHeight: 22 }}>
+        A development check refused before the app could load. This is the test
+        harness, not your training data — nothing of yours has been lost.
+      </Text>
+      <Text
+        testID="dev-launch-refused-reason"
+        style={{ color: '#8A8A8A', fontSize: 13, lineHeight: 19 }}
+      >
+        {reason}
+      </Text>
+      <Pressable
+        testID="dev-launch-refused-clear"
+        onPress={onClear}
+        style={{
+          backgroundColor: '#C8FF00',
+          borderRadius: 12,
+          paddingVertical: 14,
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ color: '#0C0C0C', fontSize: 16, fontWeight: '800' }}>
+          Clear test-harness state and start
+        </Text>
+      </Pressable>
+    </View>
   );
 }
