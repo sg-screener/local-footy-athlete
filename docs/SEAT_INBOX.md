@@ -2,6 +2,153 @@
 
 ## Unprocessed (newest first)
 
+0. **SAM, 2026-08-10, VERBATIM — AND IT IS THE ROOT QUESTION UNDER
+   EVERY DEFECT THIS WEEK:** *"how do we make sure all the laws we have
+   written in the past are held up now? it feels like i constantly give
+   a fix and a law or whatever and then believe you will remmeber and
+   you never fucking do"*
+
+   **HE IS RIGHT, AND IT IS MEASURABLE, SO MEASURE IT RATHER THAN
+   PROMISE.** Seat counted, 2026-08-10: **375 docs, 131 named
+   ruling/law/boundary/reassessment docs, 15 audits, 692 RULING/LAW/
+   "Sam ruled"/"signed" markers across 193 source files, 16 laws in
+   AGENTS.md, 328 `test:*` scripts of which 176 are in the chain.**
+   **There is no mapping from any law to the thing that holds it.** The
+   July conservation law sat in a TEST HEADER and an audit doc and was
+   rediscovered twice. That is not forgetfulness, it is a missing
+   mechanism.
+
+   **THE MECHANISM ALREADY EXISTS IN THIS REPO — FOR WORDS, NOT RULES.**
+   `signedCopy.ts` has a `REGISTRY` (line 104) with gates
+   (`test:signed-copy-extraction`, `test:copy-rulings-binding`) that make
+   it impossible for an unsigned string to ship quietly. **Copy has
+   provenance. Rules do not.** The unit is: **do for LAWS exactly what
+   signedCopy did for COPY.**
+
+   **THE LAW REGISTRY — build it in this shape:**
+   - One machine-readable registry. Every law gets: a stable **id**; the
+     law in **one plain-English sentence** (Sam must be able to read the
+     list); **where it was ruled** (Bible line, ruling doc, chat date,
+     AGENTS.md section); and its **GUARD** — the NAMED cell, tape or
+     gate that fails if the law is broken.
+   - **Exactly two states, never a third:** `guarded: <script/cell name>`
+     or `UNENFORCED: <one line saying what would be needed>`. A law with
+     a confident sentence and nothing holding it is the state that
+     produced this week — make it unrepresentable.
+   - **A gate over the registry, in the chain**, that reds when: a law
+     has neither state, a named guard does not exist, or a guard names a
+     script that is **not in `test:bible`** (a guard outside the chain is
+     not a guard). Same trick as the copy gates.
+   - **The `UNENFORCED` list is the deliverable Sam steers**, exactly
+     like the parity census's NO column. He picks what gets a guard next.
+
+   **THE RULE THAT STOPS THE BLEEDING TAKES EFFECT IMMEDIATELY, BEFORE
+   THE BACKLOG IS TOUCHED — write it into AGENTS.md in this pass:**
+   ***No law enters a boundary, a ruling doc, a source comment or this
+   inbox without a registry row and a guard, or an explicit UNENFORCED
+   row with a reason.*** A law without one of those two is not recorded,
+   it is just written down — and this project has proven twice this week
+   what written-down alone is worth. This also retires, by subsumption,
+   the seat's own claim-in-prose-only rule: same disease, wider cure.
+
+   **THE BACKLOG IS A SWEEP AND IT IS NOT ONE PASS — BATCH IT AND SAY SO.**
+   Do NOT try to harvest 131 docs in one go. Batch 1, and stop:
+   (a) the 16 AGENTS.md laws, (b) L-C1..L-C4, (c) every law named in the
+   docs already central this week — the July conservation invariant, the
+   Bible's *"Do not lose the session"* Move rules, doc-truth, liveness,
+   the NOT-COVERED rule, L-C4 parity. For each: does a guard exist today?
+   **Answer per law with a receipt, and do not write a guard yet** —
+   the first output is the honest map, because a map with UNENFORCED
+   rows on it is worth more than a guard built in the dark.
+   Report Batch 1 and stop. Sam picks what gets guarded first.
+
+   LOOP CHECK: law-rediscovered-instead-of-enforced — **sighting 3**
+   (the off-season deload rule re-asked in July → spawned Bible-first;
+   the claim-in-prose-only failure two passes ago; the July conservation
+   law this pass) — **COMPRESS, and this registry IS the compression.**
+   Bible-first told the seat to GO LOOK; it did not make looking
+   automatic. A registry with a chain gate does.
+
+1. **THE ROW YOU WATCHED GET DELETED IS NOT A NEW DEFECT. IT IS A LAW
+   THIS REPO WROTE DOWN ON 2026-07-23 AND NEVER GAVE A DOOR.** (seat,
+   2026-08-10.) Read `src/__tests__/athleteMoveOccupiedContentLossTests.ts`
+   header before anything else. It states the invariant in the exact
+   words your finding needs: ***"a pure Move/Swap conserves the multiset
+   of athlete-owned session identities, and success implies
+   conservation."*** Its diagnosis lives in
+   `docs/audits/MOVE_OCCUPIED_CONTENT_LOSS_2026-07-23.md`.
+   Your `power+strength → team night` case is **that law, broken on a
+   path that has no cell**, with *"Done. Session moved."* over the top —
+   which is the same shape as the July case reporting *"...swapped
+   sessions."* over a destroyed session.
+
+   **SO DO NOT SHIP A THIRD PER-PATH CELL. CLAUDE.md: the systemic fix.**
+   `stackSessionOntoTeamAnchor` was uncovered because coverage here is
+   organised BY PATH, and every new destination shape is a new path. The
+   unit is: **content conservation becomes a DOOR-LEVEL post-condition.**
+   Every action that claims to MOVE or SWAP compares the multiset of
+   athlete-owned identities before and after, at the door, once — and
+   **an action that cannot conserve does not report success.** It
+   refuses, or it reports the loss in words the athlete can act on.
+   Then attribution (`stackTemplate`'s field allow-list at
+   `canonicalPlanChangeCandidateMaterializer.ts:156`, or the
+   `power_removed` path at `workoutCanonicalisation.ts:526,573`) is
+   a bug FOUND BY the law rather than the thing you had to guess right.
+   Price it before building; if a door-level post-condition is wrong for
+   a reason the price reveals, say which and stop.
+
+   **AND SAY IT PLAINLY IN THE BOUNDARY: THE TRUTH GATE CANNOT EVER
+   CATCH THIS.** `FORBIDDEN_WHEN_NO_APPLIED` is a list of PHRASES. *"Done.
+   Session moved."* is TRUE — a session did move. The lie is in what
+   went missing beside it, and **no phrase list can see a deletion.**
+   Your own S3 boundary predicted the phrase-list class would keep
+   leaking; this is its second form. Conservation is structural, so its
+   guard must be structural. That distinction belongs in AGENTS.md
+   beside the other three rules.
+
+2. **THE REASON SAM'S CASE WON'T REPRODUCE IS WRITTEN DOWN TOO, AND IT
+   NAMES THE INSTRUMENT.** Same file's FIDELITY note, load-bearing and
+   verbatim: *"the repro only reproduces on a REAL accepted composition
+   base (device-exact seed, R11 pattern) ... The R1-style hand-built seed
+   leaves the composition base null ... under which ... the loss does NOT
+   reproduce."* **Your generated week is still not a device world**, and
+   that suite already paid for the lesson.
+   `buildDevE2ESeed` (`src/dev/e2e/devE2ESeedRegistry.ts`) is the
+   instrument, it is already imported by that suite, and its registry
+   contains a case named for your exact shape: **`stacked-team-training-
+   upper-pull`**, plus `coach-production-replay` and
+   `standard-in-season-week`. **Re-run the coach tape's multi-part and
+   destination sections over device-exact seeds** and say which seeds
+   reached which shapes. Sam's conditioning case stays OPEN and named
+   until a device-exact world either reproduces it or shows what his
+   world has that none of these seeds do.
+
+3. **THE WIDENED REGEX — YOU WERE RIGHT TO FLAG IT, AND THE ANSWER IS
+   RE-ANCHOR, NOT RE-WIDEN.** Widening 200 → 600 is accepted THIS ONCE
+   because the property genuinely did not change. But a character-window
+   over JSX is the anti-pattern your own L12 named one pass ago: *"an
+   anchor on the thing every slice edits is an anchor every slice
+   breaks — anchor on the smallest declaration that carries the claim,
+   never on the region that carries the work."* A window that must grow
+   whenever a prop is added will be widened again by the next slice, and
+   one of those widenings will hide a real regression. **Re-anchor that
+   cell to the smallest declaration that carries "composer is mounted
+   while a card shows", and delete the character bound entirely.**
+   Doc-truth while you are in there: that content-loss suite's header
+   still says *"M2/M3/M4 are therefore expected to FAIL"* — it now runs
+   **2 cells, both PASS** (seat ran it, 2026-08-10). Correct the header.
+
+4. **GLASS, WHEN THE BUILD LANDS — ORDER OF OPERATIONS, BECAUSE ONE OF
+   THESE IS NEWER THAN THE OTHERS.** You named the scope chooser as the
+   most likely to be wrong on a real screen, and it is: it is the first
+   coach surface with a selectable row. Run it FIRST, then the L-C3
+   matrix, then the coach-tab undo toast. All three in one session if the
+   simulator holds. **The measured stop was the right call and is not
+   held against the pass** — an unrun instrument that exists is progress,
+   and you labelled it that way everywhere.
+
+## Previously (now processed)
+
 **NONE.** Every order the seat has written through 2026-08-10 — items 1, 2, 3 and
 4 of the sixty-third batch — is processed. **Item 3 is processed as a MEASURED
 STOP, not as done**: it rides with the L-C3 simulator run, and the rebuild Sam

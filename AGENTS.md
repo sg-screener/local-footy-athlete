@@ -3,6 +3,57 @@
 This repo's most important product surface is the coach chat. Treat it as an
 intelligent program-editing system, not a collection of phrase handlers.
 
+## LAW ZERO — A LAW WITHOUT A GUARD IS NOT RECORDED, IT IS ONLY WRITTEN DOWN
+
+**Sam, 2026-08-10, verbatim:** *"how do we make sure all the laws we have written
+in the past are held up now? it feels like i constantly give a fix and a law or
+whatever and then believe you will remember and you never fucking do"*
+
+**He is right, and it is measurable rather than a matter of promising harder.**
+Counted 2026-08-10: **375 docs, 131 named ruling/law/boundary/reassessment docs,
+15 audits, 692 RULING/LAW/"Sam ruled"/"signed" markers across 193 source files,
+16 laws in this file, 328 `test:*` scripts of which 176 are in the chain — and
+NO MAPPING from any law to the thing that holds it.** The July 2026 content-
+conservation invariant sat in a test header and an audit doc and was
+**rediscovered twice**, most recently on 2026-08-10 when a move onto a team night
+was found deleting a row while reporting *"Done. Session moved."* That is not
+forgetfulness. It is a missing mechanism.
+
+**THE MECHANISM ALREADY EXISTS HERE — FOR WORDS, NOT FOR RULES.** `signedCopy.ts`
+has a `REGISTRY` with gates (`test:signed-copy-extraction`,
+`test:copy-rulings-binding`) that make it impossible for an unsigned string to
+ship quietly. **Copy has provenance. Rules do not.** The law registry does for
+laws what that did for copy.
+
+### The rule, effective immediately
+
+> **No law enters a boundary report, a ruling doc, a source comment, or the seat
+> inbox without a registry row and a guard — or an explicit `UNENFORCED` row
+> giving the reason.**
+
+Two states, never a third:
+
+- `guarded: <named script / cell / tape>` — the thing that FAILS if the law breaks;
+- `UNENFORCED: <one line naming what a guard would take>`.
+
+A law with a confident sentence and nothing holding it is the state that produced
+this week, and it is **unrepresentable** from here. A guard naming a script that
+is not in `test:bible` is not a guard — a check outside the chain is a check
+nobody runs.
+
+**This SUBSUMES the claim-in-prose-only rule below** (*"A behaviour claim the
+owner can read is held by a CELL, or written OPEN-UNKNOWN"*). Same disease, wider
+cure: that rule governs sentences about behaviour, this one governs the laws
+those sentences appeal to. The older rule stays because its founding case is
+still the clearest statement of the failure.
+
+**LOOP CHECK: `law-rediscovered-instead-of-enforced` — sighting 3** (the
+off-season deload rule re-asked in July → spawned Bible-first; the
+claim-in-prose-only failure; the July conservation law). Bible-first told the
+reader to GO LOOK. **It did not make looking automatic. A registry with a chain
+gate does** — that is the compression, and a fourth sighting means the registry
+itself is the thing to fix, not the law that slipped.
+
 ## Coach Intelligence Rules
 
 - Always optimise for the most elegant general solution in this app. If the

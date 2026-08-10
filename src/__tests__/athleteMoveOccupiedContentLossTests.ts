@@ -11,10 +11,39 @@
  *
  * These invariants describe the CORRECT behaviour (a pure Move/Swap conserves the
  * multiset of athlete-owned session identities, and success implies conservation).
- * M2/M3/M4 are therefore expected to FAIL on the current architecture — that RED
- * failure is what proves each test pins the bug. M1 is a GREEN characterization
- * guard for the "single occupied-destination move is safely refused" boundary
- * (the chain is required to trigger the loss).
+ *
+ * ## STATUS, CORRECTED 2026-08-10 — THIS SUITE IS GREEN AND THE HEADER SAID IT
+ * ## WAS RED
+ *
+ * It said *"M2/M3/M4 are therefore expected to FAIL on the current architecture
+ * — that RED failure is what proves each test pins the bug."* **That has not
+ * been true for some time and the doc outlived it twice over:** M3 and M4 do not
+ * exist in this file, and M2 PASSES. What actually runs is **two** cells, both
+ * green — M1 (a single occupied-destination move onto G-1 is safely refused) and
+ * M2 (the chained double-move conserves content and reports honestly).
+ *
+ * A header that says a suite is expected to be red is a header that tells the
+ * next reader to ignore its own result. Left standing, it would have made this
+ * file's green unreadable at exactly the moment its invariant became load-bearing
+ * again — see below.
+ *
+ * ## AND THE INVARIANT ABOVE IS BROKEN AGAIN, ON A PATH WITH NO CELL
+ *
+ * 2026-08-10: a `power+strength` day moved onto a TEAM NIGHT lands as
+ * `strength+team_training` with the power ROW deleted (8 rows in, 7 out), while
+ * the same day to an EMPTY day keeps all 8 — and the coach reports *"Done.
+ * Session moved."* over it. Same law as the July case, same shape of false
+ * success, **different path**: `stackSessionOntoTeamAnchor`, which no cell in
+ * this repo reaches. Measured by `npm run tape:coach-move-durability` (the
+ * DESTINATION AXIS section), control in the same run.
+ *
+ * **THE LESSON THE SEAT DREW IS THAT THE COVERAGE SHAPE IS WRONG, NOT THAT A
+ * THIRD CELL IS MISSING.** Coverage here is organised BY PATH, and every new
+ * destination shape is a new path, so the invariant keeps being true and
+ * unenforced somewhere new. The unit under consideration is content conservation
+ * as a DOOR-LEVEL post-condition — checked once, where every move and swap
+ * passes — with this suite becoming a characterisation of two paths rather than
+ * the only place the law lives.
  *
  * FIDELITY (load-bearing): the repro only reproduces on a REAL accepted
  * composition base (device-exact seed, R11 pattern) WITH the explicit Saturday

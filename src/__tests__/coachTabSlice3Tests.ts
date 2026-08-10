@@ -826,14 +826,25 @@ console.log('\n[6] L-C3 — the confirm button, with the keyboard up');
   // athlete who wants to type instead of tapping is never trapped.
   ok(
     'the composer is still mounted while a card is showing',
-    // THE WINDOW IS THE INSTRUMENT, NOT THE CLAIM. The bound exists so the match
-    // cannot skip across an unrelated region to find the composer; it is not a
-    // budget on how many props `ChangeCard` may take. L-C4's scope chooser added
-    // two (`selectedChoiceId`, `onSelectChoice`) and pushed the JSX past 200
-    // characters, reddening a cell whose property — card THEN composer, both
-    // mounted — had not changed. Widened rather than relaxed: the adjacency this
-    // asserts is still exact, and `\s*` still forbids anything between them.
-    /\{pending \? \([\s\S]{0,600}?\) : null\}\s*<View style=\{styles\.composer\}>/.test(screenCode),
+    // RE-ANCHORED, AND THE CHARACTER BOUND IS GONE (seat, 2026-08-10).
+    //
+    // This cell used to read `{pending ? ([\s\S]{0,200}?) : null}` followed by
+    // the composer — a WINDOW over the JSX region. L-C4's chooser added two
+    // props, the region grew past 200, and the cell reddened over a property
+    // that had not changed. Widening it to 600 was accepted once and is the
+    // wrong shape: **an anchor on the thing every slice edits is an anchor
+    // every slice breaks** (L12), and a window that must grow whenever a prop
+    // is added will be widened again by a slice that is hiding a real
+    // regression.
+    //
+    // The claim is not "the card's JSX is under N characters". It is: the
+    // card's conditional CLOSES, and the composer is the next thing mounted.
+    // `\) : null\}` is the smallest declaration that carries "the card ends
+    // here", and `\s*<View style={styles.composer}>` is the smallest that
+    // carries "and the composer follows". Nothing between them, no bound on
+    // what came before, and adding a hundred props changes neither.
+    /\) : null\}\s*<View style=\{styles\.composer\}>/.test(screenCode)
+      && /\{pending \? \(/.test(screenCode),
     'a card that replaced the composer would be a modal without a dismiss',
   );
 
