@@ -236,3 +236,47 @@ showed two sections under the old presentation, but the final device coordinate
 is Wednesday's one-section session); prior/next-week Completed treatment; the
 deferred team-training badge; the held season-phase removal. This is simulator
 acceptance, not phone acceptance.
+
+---
+
+## SAM EYE PASS 4 — TODAY IS HIGHLIGHTED, NOT OPEN
+
+**Sam, comparing the initial week states:** *"the current day always starts open
+- i don't want that, it can be highlighted a bit more than the others but i dont
+want it to start with the box open".* Correct. `useHomeScreen` selects today so
+the Today screen has a subject; the Week screen was reading that same selection
+as expansion state. One value had acquired two meanings.
+
+**THE TWO OPTIONS COMPARED:** (1) add a second `weekExpandedIdx` beside the
+existing selected day, or (2) clear the transient selection when the athlete
+switches into Week and keep today's visual emphasis derived from `day.isToday`.
+Option 2 landed. It adds no new state or second identity. Other weeks already
+start with no selected day, and picker mode does not expose normal expansion, so
+the transition is the one boundary that needed to separate the meanings.
+
+**RECEIPTS:**
+
+- `test:day-first-timeline`: 34 named cells run, 34 passed. The new cell pins
+  both halves: Week selection clears at the toggle, while the card's highlight
+  continues to read date identity rather than open state.
+- `.maestro/golden/standard-program-week.yaml`: completed on the iOS simulator.
+  Immediately after switching to Week in an acted modifier world, it proves no
+  timeline is visible; only then does it compare the seven collapsed cards and
+  open Wednesday into the full flat session.
+- `artifacts/ui-walk/week-prototype-parity.png`: looked at. Today has the lime
+  border, lime date treatment and TODAY marker, its chevron points down, and no
+  session rows are open.
+- `test:compile` and `test:maestro-element-contract`: green.
+
+**FIRST-RUN FINDING:** the new cell failed on the old toggle because it only set
+the preferred view. The transition now clears the open coordinate and the full
+device tape passed without the manual collapse gesture the prior tape required.
+
+**NORTH STAR:** toward it. No second expansion store was added. Today identity
+is derived from the date; open state remains temporary screen state and is reset
+at the screen-shape boundary.
+
+**NOT COVERED:** Sam's physical iPhone; a device tape of Week → open a day →
+Today → Week again (the same transition handler is source-held); prior/next-week
+Completed treatment; the deferred team-training badge; the held season-phase
+removal. This is simulator acceptance, not phone acceptance.

@@ -587,7 +587,16 @@ export default function HomeScreenV2() {
                 return (
                   <Pressable
                     key={option}
-                    onPress={() => setPreferredProgramView(option)}
+                    onPress={() => {
+                      setPreferredProgramView(option);
+                      // TODAY IS AN IDENTITY; OPEN IS A TRANSIENT LIST STATE.
+                      // `useHomeScreen` initially selects today so the day shape
+                      // has a subject. Carrying that selection into Week made the
+                      // first card open automatically. Clear only the expansion
+                      // coordinate here; `DayRow` highlights today from
+                      // `day.isToday`, independently of `isSelected`.
+                      if (option === 'week') handleClearSelection();
+                    }}
                     testID={`program-view-${option}`}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isActive }}

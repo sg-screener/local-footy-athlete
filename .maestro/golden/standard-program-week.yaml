@@ -75,6 +75,8 @@ tags:
 - assertVisible:
     id: "modifiers-strip-week"
 - assertVisible: "1 active modifier impacting program"
+- assertNotVisible:
+    id: "day-timeline"
 
 # ── RULING 7: ALL SEVEN USE HER CARD, INCLUDING TODAY ───────────────────────
 # Sam answered the one remaining fork on 2026-08-11: her card design for all
@@ -90,12 +92,6 @@ tags:
     id: "view-workout-button"
 - assertNotVisible:
     id: "make-change-link"
-# The acted modifier can leave today selected while it rebuilds. Collapse it so
-# the screenshot compares seven card heads, not one deliberately opened card.
-- tapOn:
-    id: "day-row-mon-card-header"
-- assertNotVisible:
-    id: "day-timeline"
 - takeScreenshot: artifacts/ui-walk/week-prototype-parity
 
 # A different card opens onto the SAME details while its card head stays put.

@@ -682,6 +682,24 @@ run('the week chevron opens one flat full session, not nested drop-downs', () =>
     'the flat week session still contains an inner accordion, rail or icon layer');
 });
 
+run('the week starts collapsed while today keeps its highlight', () => {
+  const home = homeScreenSource();
+  const toggleAt = home.indexOf('testID="program-view-toggle"');
+  const modifiersAt = home.indexOf('<ModifiersStrip', toggleAt);
+  assert(toggleAt > 0 && modifiersAt > toggleAt,
+    'the Today/Week toggle region could not be found');
+  const toggle = home.slice(toggleAt, modifiersAt);
+  assert(/onPress=\{\(\) => \{[\s\S]{0,180}setPreferredProgramView\(option\)[\s\S]{0,180}option === 'week'[\s\S]{0,100}handleClearSelection\(\)/.test(toggle),
+    'switching to Week does not clear the day-selection expansion — today starts open');
+
+  const dayRowAt = home.indexOf('function DayRow(');
+  const dayRow = home.slice(dayRowAt, home.indexOf('interface LifeFactChipProps', dayRowAt));
+  assert(dayRowAt > 0 && dayRow.length > 2000,
+    'the DayRow region could not be found');
+  assert(/selected=\{normal && \(dayShape \? isSelected : day\.isToday\)\}/.test(dayRow),
+    'clearing Week expansion also removed today\'s independent highlight');
+});
+
 run('all seven week days use her one card head, including today', () => {
   const home = homeScreenSource();
   const componentAt = home.indexOf('function WeekDayCardHeader(');
