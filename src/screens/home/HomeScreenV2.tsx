@@ -444,7 +444,24 @@ export default function HomeScreenV2() {
            parts; nothing here writes. A tap opens the same day-detail door the
            row's own CTA opens (Sam's fork A: completion shown, not written). */
         dayShape={dayFirst}
-        timeline={dayFirst && visibleDay ? (
+        /* ── RULING 7: THE WEEK'S ROWS OPEN IN PLACE TOO ──
+           `dayFirst &&` is GONE from this line, and that is the whole of the
+           week view's structural change. Sam's question — "does tapping Thursday
+           open in place or take me to a day screen?" — was answered by reading
+           her signed prototype: **it expands IN PLACE**, and the app already did
+           that; what the week rows lacked was anything worth opening.
+
+           SO THE DROP-DOWNS ARE NOT REBUILT FOR THE WEEK. It is the same
+           `DayTimeline`, the same `dayTimeline()` read, the same collapsible
+           parts with their exercises and prescriptions. One component, both
+           shapes — which is why a week row cannot come to disagree with the day
+           card about what is on a day.
+
+           REST AND GAME DAYS STILL DO NOT EXPAND, and nothing here had to say
+           so: `DayTimeline` returns null on zero entries, and the expanded block
+           below is already branched so a fixture shows its own actions. Her
+           prototype's `noExpand` is a property this app gets by construction. */
+        timeline={visibleDay ? (
           <DayTimeline
             entries={dayTimeline(visibleDay, sessionFeedback[day.date])}
             onOpen={() => handleViewWorkout(day)}
@@ -1939,6 +1956,13 @@ function DayRow({
   // literal. A rest day's `title` is already "Rest Day" (via `day.headline`,
   // the zero-parts fallback above); a training day's is its first part.
   const selectedTitle = title;
+  // THE DAY'S EXERCISE TOTAL, DERIVED FROM THE SAME PROJECTION THE ROW OPENS
+  // ONTO. Not a stored number and not a second read: `visibleDay.parts` is what
+  // `dayTimeline` enumerates, so the head's count and the opened list are one
+  // fact. `0` for a rest day, a fixture, or a team-only night — all of which
+  // have nothing to open, which is why the count and the chevron agree.
+  const rowCount = (visibleDay?.parts ?? []).reduce(
+    (total, part) => total + part.rows.length, 0);
   const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
   const stateToken = dayStateToken({ day, isSelected, isMoveSource, isMoveTarget });
   const exposesExpandedActions = isSelected && normal;
@@ -2103,6 +2127,25 @@ function DayRow({
                   {title}
                 </Text>
               </View>
+              {/* ── RULING 7: THE EXERCISE COUNT ON THE WEEK ROW ──
+                  Her card head carries day, date, title and a count. The count
+                  is the SAME sheet template the day card's drop-downs use — one
+                  authored shape for "N exercises", filled from the day's own
+                  rows, so the week row and the opened part cannot phrase it
+                  differently.
+
+                  IT IS THE DAY'S TOTAL, not a part's: `rowCount` sums the
+                  timeline's parts, which is what the athlete sees when the row
+                  opens. Zero renders nothing rather than "0 exercises" — a rest
+                  day already says Rest. */}
+              {rowCount > 0 ? (
+                <Text style={styles.dayRowCount} testID={`day-row-${dayToken}-count`}>
+                  {signedCopy(
+                    rowCount === 1 ? 'day.part.exercise_count_one' : 'day.part.exercise_count',
+                    { count: rowCount },
+                  )}
+                </Text>
+              ) : null}
             </View>
           ) : (
             <View style={styles.restLine}>
@@ -3891,6 +3934,8 @@ const styles = StyleSheet.create({
     width: 1.5,
     backgroundColor: 'rgba(255,255,255,0.10)',
   },
+  // Ruling 7's count on a week row — the day card's meta grey and size.
+  dayRowCount: { color: '#8A8A8A', fontSize: 12, lineHeight: 16, paddingLeft: 21 },
   timelineHeadline: {
     color: '#E8EAED',
     fontSize: 14,

@@ -633,6 +633,53 @@ run('the five circles sit in a card with words above them', () => {
     + 'keep "Time".');
 });
 
+run('the week rows open in place, onto the same drop-downs the day card has', () => {
+  const home = homeScreenSource();
+  // RULING 7. Sam's question — open in place, or navigate? — was answered by
+  // reading her signed prototype: IN PLACE. The app already expanded; the rows
+  // simply had nothing worth opening.
+  //
+  // THE LOAD-BEARING ASSERTION IS THE ABSENCE OF `dayFirst &&`. If the timeline
+  // is gated on the shape again, the week rows silently go back to opening onto
+  // a CTA and nothing else — and every cell here would still pass, because the
+  // component and the read would both still exist.
+  assert(/timeline=\{visibleDay \? \(/.test(home),
+    'the timeline is gated on the shape again — the week rows have lost their '
+    + 'drop-downs, and ruling 7 with them');
+  assert(!/timeline=\{dayFirst && visibleDay/.test(home),
+    'the `dayFirst &&` gate is back on the timeline prop');
+  // ONE COMPONENT FOR BOTH SHAPES. A second timeline for the week is the defect
+  // this whole slice exists to avoid: the week row and the day card would be two
+  // accounts of one day.
+  assert((home.match(/<DayTimeline\b/g) ?? []).length === 1,
+    'there is more than one DayTimeline call site — the week row and the day '
+    + 'card must be one component, or they can disagree about a day');
+});
+
+run('a week row carries the day\'s exercise count, and zero shows nothing', () => {
+  const home = homeScreenSource();
+  const at = home.indexOf('rowCount = ');
+  assert(at > 0, 'the week row no longer derives a count — ruling 7\'s head is gone');
+  // DERIVED FROM THE PROJECTION THE ROW OPENS ONTO, never stored and never a
+  // second read: the head's number and the opened list are one fact.
+  assert(/rowCount = \(visibleDay\?\.parts \?\? \[\]\)\.reduce/.test(home),
+    'the count is no longer summed from the projection\'s own parts — a number '
+    + 'taken beside the list it counts is `a count taken for a record`, again');
+  assert(/rowCount > 0 \? \(/.test(home),
+    'a day with nothing in it now renders a count. A rest day already says Rest, '
+    + 'and "0 exercises" is a sentence about nothing.');
+  // AND IT IS THE SHEET'S TEMPLATE, the same one the drop-downs use, so the week
+  // row and the opened part cannot phrase the count differently.
+  // READ THE REGION THAT RENDERS IT, not the region that computes it — the two
+  // are 300 lines apart in this file and the first version of this line sliced
+  // from the wrong one, which is the source-scan law biting its own cell.
+  const renderAt = home.indexOf('-count`}');
+  assert(renderAt > 0, 'the count line is not rendered anywhere');
+  const region = home.slice(renderAt, renderAt + 400);
+  assert(/day\.part\.exercise_count_one/.test(region) && /day\.part\.exercise_count/.test(region),
+    'the week row composes its own count text instead of reading the sheet');
+});
+
 run('the chip row carries the five doors the five bars carried, unchanged', () => {
   const home = homeScreenSource();
   const rowStart = home.indexOf('testID="home-life-fact-chips"');

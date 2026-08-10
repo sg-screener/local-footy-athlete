@@ -113,3 +113,54 @@ Seven runs. **Every failure was true and none of them was the strip:**
 - **`test:bible` WAS NOT RUN END TO END** — red on purpose, stops at the first
   failing suite. Eight suites run by name plus the flow.
 - **THE WEEKLY VIEW (ruling 7) IS NOT STARTED.** It is the next slice.
+
+---
+
+# ADDENDUM — SLICE 5, THE WEEKLY VIEW (ruling 7), SAME PASS
+
+**STATUS: THE STRUCTURAL HALF IS BUILT AND GREEN ON THE DEVICE.**
+`.maestro/golden/standard-program-week.yaml` now asserts a row's count and opens
+one in place. `artifacts/ui-walk/week-row-open.png`.
+
+## THE CHANGE IS ONE DELETED CONDITION
+
+`timeline={dayFirst && visibleDay ? …}` became `timeline={visibleDay ? …}`.
+**That is the whole of the week's structural change**, and it is why the week
+cannot come to disagree with the day card: it is the same `DayTimeline`, the same
+`dayTimeline()` read, the same collapsible parts with their exercises and
+prescriptions. A cell asserts there is exactly ONE `<DayTimeline` call site.
+
+Sam's parked question — *"when you tap Thursday, does it open in place or take
+you to a day screen?"* — **never needed to be asked.** Her signed prototype
+expands in place, and the app already did; the rows simply had nothing worth
+opening.
+
+## THE COUNT
+
+Each collapsed row carries the day's exercise total, summed from
+`visibleDay.parts` — the same list the row opens onto, so the head and the
+opened drop-downs are one fact. **It uses the sheet template the day card's
+drop-downs already use**, so the two surfaces cannot phrase it differently, and
+the singular form is the same one that earned its keep on the strip.
+
+**ZERO RENDERS NOTHING.** A rest day already says Rest; a fixture says Game Day.
+Confirmed on the device: SAT (Game Day) and SUN (Rest Day) carry no count line,
+THU reads "3 exercises", FRI "6 exercises".
+
+**REST AND GAME DAYS DO NOT EXPAND, AND NOTHING HAD TO SAY SO.** `DayTimeline`
+returns null on zero entries. Her prototype's `noExpand` is a property this app
+gets by construction rather than a flag it has to carry.
+
+## NOT COVERED BY THE ADDENDUM
+
+- **"Completed" IN PLACE OF THE COUNT ON PAST WEEKS IS NOT BUILT.** The seat's
+  spec names it; this pass does the current week only.
+- **THE TEAM-TRAINING BADGE ON THE WEEK ROW IS NOT ADDED.** The row already shows
+  "Strength + Team Training" as its title, so the badge is duplication until
+  someone rules otherwise — **not skipped, deferred with a reason.**
+- **THE PREV/NEXT WEEK SETS ARE HELD**, as the seat instructed.
+- **THE SELECTED ROW SHOWS NO COUNT LINE.** It renders the day CARD head — eyebrow,
+  tier chip, wrapping title — and its counts live on the drop-downs inside it.
+  The count line belongs to the six collapsed rows. A flow assertion on Monday
+  failed for exactly this reason and the selector was the fix, not the feature.
+- **NOTHING IS ON SAM'S PHONE.**
