@@ -177,12 +177,19 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-elegant-two-options',
-    law: 'When asked for the most elegant solution, compare an incremental fix against an ownership redesign before coding.',
-    ruledAt: 'AGENTS.md "Elegant Solution Requirement"; CLAUDE.md',
+    // WIDENED 2026-08-10 ON SAM'S STANDING RULING. It read "WHEN ASKED for the
+    // most elegant solution..." — his words: *"EVERYTHING SHOULD BE DONE IN THE
+    // MOST ELEGANT WAY."* The trigger clause is deleted and the SUBJECT widens
+    // from code to the work. Founding case: the seat applied this law to code
+    // all week and never to the process, which is how a dead simulator rig sat
+    // unnoticed since 18 July and a 176-suite chain kept being paid in full for
+    // one-line changes.
+    law: 'Compare an incremental fix against an ownership redesign before coding — ALWAYS, not only when asked, and for PROCESS and instruments as well as code.',
+    ruledAt: 'AGENTS.md "Elegant Solution Requirement"; CLAUDE.md; widened by Sam 2026-08-10',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'PROCESS law. A boundary-report field ("options compared") plus a seat check is the realistic guard.',
-      receipt: 'Process law; no script observes deliberation.',
+      wouldTake: 'A boundary-report field ("options compared") checked by test:repo-law-guards, the same shape as the LOOP CHECK cell already in that suite. NOT BUILT IN THIS PASS AND NOT CLAIMED: widening a law is not guarding it, and a row that flipped to `guarded` on the strength of an edit to its sentence would be the exact "reads as covered" failure this registry exists to stop.',
+      receipt: 'Process law; no script observes deliberation. The widening changed the SUBJECT, not the guard — the row is still honestly red.',
     },
   },
   {

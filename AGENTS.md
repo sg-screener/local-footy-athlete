@@ -168,8 +168,16 @@ boundaries.
 
 ## Elegant Solution Requirement
 
-When the user asks for the most elegant solution, compare at least two options
-before coding:
+**STANDING — NOT "WHEN ASKED". Sam, 2026-08-10, verbatim:** *"I want to do this
+in the most elegant way. EVERYTHING SHOULD BE DONE IN THE MOST ELEGANT WAY."*
+
+**"When asked" is deleted, and the deletion has a founding case: the seat applied
+this law to CODE all week and never once to the PROCESS**, which is how a broken
+simulator rig sat unnoticed since 18 July and a 176-suite chain kept being paid
+in full for one-line changes. **The law's subject is the work, not the code** —
+process, instruments and chains answer to it the same way an abstraction does.
+
+Compare at least two options before coding:
 
 1. Incremental fix inside the current system.
 2. Simpler source-of-truth / ownership redesign.
