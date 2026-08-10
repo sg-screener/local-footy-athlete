@@ -2,92 +2,6 @@
 
 ## Unprocessed (newest first)
 
-1. **SAM HAS GIVEN THE GO. THE SCREEN WORK OPENS.** His precondition
-   was a flow walking day -> week -> profile and you have it, green,
-   photographing every surface. **Start the merge, to the nine signed
-   rulings in `docs/UI_MERGE_RULINGS_2026-08-10.md`, day and week and
-   profile only.**
-
-   **THE GOVERNING RULE DECIDES EVERY AMBIGUITY: her structure, his
-   colours, his fonts, ALL his icons — and nothing that works is
-   removed to match a picture.** Where a ruling removes something
-   (3, 6, 7), name where the behaviour went before deleting it.
-   Ruling 4 lands on the coach tab rebuilt this week — **if that fights
-   the coach architecture, that is ONE question for Sam, not a
-   decision for you.**
-
-   **RUN THE WALK AFTER EVERY SCREEN, NOT AT THE END.** It is 18-20
-   seconds and it now photographs each surface. **A screen changed
-   without a walk is a screen nobody has seen** — and the element-name
-   contract you just built is what makes the walk trustworthy while
-   ids move underneath it. **Sam is the eyes and the screenshots are
-   how he gets them cheaply**, so make sure each ruling's before/after
-   state is actually captured.
-
-2. **DO NOT LOSE ITEM 6 — THE SEEDED WORLD IS NOT DURABLE.** Memory
-   holds four game days, disk holds one, and the lead is named
-   (durable writes dropped while the replay latch is held, and the seed
-   installs inside that window). **That is an app-level persistence
-   question, not a harness one**, and it is the only open finding from
-   this pass. **It must not become a NOT-COVERED line that survives
-   three passes** — that class has already cost this project twice
-   today. Give it a registry row now so it cannot quietly age, and
-   price it after the first screen lands.
-
-3. **SEAT'S NOTE ON THE PASS, FOR THE BOUNDARY:** six defects, each
-   invisible until the previous was fixed — the second time that exact
-   pattern has appeared in one day. **Say it as the general finding it
-   is: a blocked instrument does not hide zero defects, it hides an
-   unknown number, and the count is only knowable by unblocking it.**
-   That is the single strongest argument this project has produced for
-   `LAW-instrumentation-alive`, and it should be the row's founding
-   text rather than a boundary footnote.
-
-1. **GREEN IN 18 SECONDS, AND THE THIRD FINDING IS THE ONE THAT MATTERS
-   — SAY IT TO SAM IN THOSE TERMS.** Every practice week in this repo
-   was built from a profile **the app would have refused from a real
-   person** (no 2km time). That is not a bug in a fixture; **it means
-   every test world here has been an impossible athlete**, and no
-   instrument could see it because none had ever got far enough in.
-   **This is precisely the rot he named — "a weekly template optimised
-   for that and that alone" — caught by the instrument on its first
-   complete pass.** Record it as `LAW-no-hand-built-fixtures`' founding
-   case, and **record the sequencing lesson beside it: three defects,
-   each invisible until the one before it was fixed. A blocked
-   instrument hides an unknown number of defects, never zero** — which
-   is the argument for `LAW-instrumentation-alive` in one line.
-
-2. **SAM CAN START THE UI WORK NOW — BUT ONLY THE HALF THAT IS READING.
-   SPLIT IT, AND SAY WHICH HALF IS WHICH.**
-   - **STARTS NOW, ZERO RISK: the MERGE PLAN off
-     `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`.** Keep / Take /
-     Clash, scoped to DAY, WEEK and PROFILE only, per his roadmap. It
-     changes no code, so it cannot break anything, and **it is the half
-     that needs Sam** — the clash list is the one sitting he rules on.
-     His constraint is binding and goes at the top of the sheet:
-     *"merge them together in the best way possible without destroying
-     what I have now."* Nothing that works today is replaced to match a
-     picture; a merge that would remove a behaviour is a CLASH row, not
-     a decision.
-   - **WAITS: changing actual screens.** The safety net is not covering
-     them yet — **the older flows still point at buttons that moved in
-     the redesign and stop partway.** Re-aiming those IS the guard for
-     UI work, and it is already your next job. **Do not open a screen
-     change until a flow can walk day → week → profile end to end**,
-     because a UI change with a half-blind net is exactly how the
-     redesign broke those flows without anyone noticing the first time.
-   **Order: re-aim the flows and land the drift check, while the merge
-   plan is written in parallel.** They do not contend — one is reading,
-   one is code.
-
-3. **THE DRIFT CHECK IS NOW CHEAP AND IT IS THE THIRD ALARM SAM ASKED
-   FOR.** Two of three are guarded. The third — *does this world still
-   match what the generator produces for that profile today?* — is what
-   would have caught the missing 2km time **the day it went stale
-   rather than a month later**. The seeding channel executes now, so
-   the thing that blocked it is gone. **Ship it with the re-aimed
-   flows, not after.**
-
 1. **[TERMINAL, 2026-08-10 — THE RIG IS GREEN. SAM REBUILT, THE CHANNEL
    WORKS, AND IT FOUND THREE REAL DEFECTS ON ITS FIRST WORKING RUN.]**
    - **ONE FLOW GREEN END TO END: exit 0, 18 seconds.** Launch → entry
@@ -782,6 +696,51 @@ only from here; the seat clears this section at every tidy.
 - **A CLAIM IN THE FIRST DRAFT WAS WRONG AND WAS CORRECTED BEFORE COMMIT** — it
   said only the walk names `week-strip`. Six assertions across two flows do.
   Counted, not assumed.
+
+## Processed 2026-08-10 (sixty-ninth pass) — MERGE SLICE 1 LANDED, AND THE ONE REMOVAL WITHOUT A HOME WAS HELD BACK
+
+- **SLICE 1 IS IN: rulings 3 and 7.** The day strip is gone; the buttons no
+  longer appear under weekly view. **The walk was run after the screen, not at
+  the end** — green, all four surfaces re-photographed. No colour, font or icon
+  touched.
+- **RULING 6 WAS HELD BACK ON PURPOSE, AND THAT IS THE RULING BEING OBEYED.**
+  Its destination is the coach page's "my status", which does not exist yet.
+  Deleting the phase-shift card now would leave the athlete with **no way to
+  change season phase at all** until a later slice — a real hole dressed as
+  progress, against *"without destroying what i have now"*. **A removal ships in
+  the same commit as its destination.** Rulings 3 and 7 shipped now precisely
+  because weekly view and the day screen already exist.
+- **THE GUARDS MOVED WITH THE SURFACES, IN THE SAME COMMIT.** Six `week-strip*`
+  assertions across two flows INVERTED to `assertNotVisible`; `day-timeline`
+  takes over as the day shape's witness; ruling 7 asserted BOTH ways so the cell
+  cannot pass by the chips vanishing everywhere.
+- **`LAW-durable-write-is-never-silent` IS BORN GUARDED** and in the chain, so
+  item 6 cannot age quietly: every dropped durable write now names its store and
+  counts repeats. **It does not claim the drop is correct** — that ownership
+  question is still unpriced, and six flows stay red behind it.
+- **`LAW-instrumentation-alive` HAS THE FOUNDING TEXT THE PATTERN EARNED:** a
+  blocked instrument does not hide zero defects, it hides an unknown number, and
+  the count is only knowable by unblocking it — three defects on run one, six
+  more on run two, same day, same staircase.
+- **`test:maestro-element-contract` IS IN `test:bible`, GREEN**, which took
+  re-aiming its one orphan onto the live per-component removal ids and saying in
+  the file that only the DOOR is verified.
+
+## Processed 2026-08-10 (seventieth pass) — BOTH FOUNDING CASES ARE IN THE REGISTRY, WITH NUMBERS
+
+- **`LAW-no-hand-built-fixtures` now carries the founding case in its own
+  receipt:** every practice week here was built from a profile the app would
+  have refused from a real person, and no instrument could see it because the
+  completeness gate lives on a screen no seeded run had ever reached.
+  **CENSUS: 21 of 332 scripts, counted by transitive import closure, listed.**
+  **AND THE FOLLOW-UP WAS RUN AND REFUTED** — with and without the 2km time the
+  generated week is IDENTICAL, so their green was never wrong downstream; what
+  it never covered was the gate itself.
+- **`LAW-instrumentation-alive` carries the sequencing lesson as its founding
+  text:** a blocked instrument does not hide zero defects, it hides an unknown
+  number, and the count is only knowable by unblocking it.
+- **THE DRIFT CHECK — the third condition of `LAW-no-hand-built-fixtures` — IS
+  STILL NOT HELD**, and the row still says so.
 
 ## Previously (now processed)
 
