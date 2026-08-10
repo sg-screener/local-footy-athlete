@@ -316,3 +316,68 @@ a made-up vocabulary look declared-and-correct.** `test:dev-e2e-seeds` went from
 - **THE FLOWS WERE NOT RE-RUN AFTER THE SEED FIX.** No golden flow uses
   `equipment-restriction-case`, so the receipt is not stale about them — but that
   is a reasoned claim, not a run.
+
+---
+
+# ADDENDUM 4 — ORDER 5, THE DURABILITY PRICE
+
+**The order: *"Price it; fix if small, write the price down if not."* IT IS NOT
+SMALL. Here is the price.**
+
+## THE MECHANISM, TRACED RATHER THAN ASSUMED
+
+| Step | Where |
+| --- | --- |
+| The latch is held during boot | `store/ledgerReplayLatch.ts` — `ledgerReplayActive()` |
+| Every durable write drops at ONE boundary while it is held | `store/asyncStorageCompat.ts:34` and `:50` — `setItem` and `removeItem` both `recordDroppedDurableWrite(name)` and return |
+| The rule it is enforcing | R1.3, in that file's own words: **"THE BOOT DOES NOT WRITE. While the replay latch is held, disk is already the truth of inputs and outputs are never persisted."** |
+| Five other sites honour the same latch | `decisionLedgerStore.ts:271`, `quiescentBoot.ts:281`, `athleteActionLog.ts:201`, `fixtureMutationTransaction.ts:634` |
+
+**THE SEED INSTALLS ITS GAME DAYS INSIDE THAT WINDOW.** So three of four marks are
+dropped — correctly, by a rule that is right about the case it was written for.
+
+## WHY IT IS NOT A SMALL FIX
+
+**R1.3 IS NOT WRONG. IT IS BEING ASKED A QUESTION IT WAS NOT WRITTEN TO ANSWER.**
+"The boot does not write" is true of a REPLAY — disk is already the truth, so
+re-emitting it is noise. **A dev-E2E seed install is the opposite: it is a fresh
+world being authored, and disk is NOT yet the truth of it.** The latch cannot
+tell those apart, because it is a global boolean and both happen at boot.
+
+**SO THE FIX IS AN OWNERSHIP DECISION, NOT A PATCH**, and there are three shapes:
+
+1. **Sequence the install outside the latch** — release before the seed writes.
+   Smallest diff, and the risk is real: anything else that legitimately runs
+   during replay would start writing too, and the latch exists because that
+   caused a defect once.
+2. **Give the latch a REASON rather than a boolean** — `replaying` vs
+   `installing` — so the storage boundary can drop replay writes and pass install
+   writes. Removes the ambiguity instead of routing around it, and touches six
+   call sites.
+3. **Make the install not a write-through-boot at all** — seed straight to disk
+   before the app's boot begins.
+
+**(2) IS THE ONE THAT REMOVES A REPRESENTATION** and is what the elegance law
+points at: today one boolean carries two meanings and the storage boundary has to
+guess. But it is a change to the boot path of the whole app, and the boot path is
+where three of today's defects lived.
+
+## THE PRICE, PLAINLY
+
+**A boot-path ownership change plus its guard, and it must be proven on the
+device** — `reload-standard-week.yaml` and the checkpoint flows are its evidence
+and they are RED behind this exact question. **That is not a one-pass job, and it
+is not something to start at the end of a long pass.**
+
+**WHAT IT UNBLOCKS, so the cost has something to weigh against: six red flows,
+the whole reload/durability half of the suite.**
+
+## NOT COVERED
+
+- **NOT FIXED. NOT STARTED.** Priced only, which is what the order asked for when
+  it is not small.
+- **WHETHER A REAL ONBOARDING INSTALL HITS THE SAME WINDOW IS NOT MEASURED.** The
+  earlier boundary flagged it as a worry — *"the same door an onboarding install
+  uses"* — and this pass did not check it. **If it does, this is an athlete-facing
+  data-loss bug and not a harness one**, and that is the single most important
+  open question in this addendum.
