@@ -30,6 +30,18 @@
   their FIRST run — that is the point, and each one is then a real bug with a
   name, reported the moment it appears.
 
+- **⛔ STOP — 42 OF 62 LAWS STILL UNGUARDED, AND THE NEXT MOVES NEED SAM.**
+  docs/LAW_SWEEP_STOP_2026-08-10.md. **Two things only he can give:** the
+  **template files from his partner** (photos + HTML — his own step 1 cannot open
+  without them, MOCK-FIRST), and **one line for `eas.json`** (Apple ID /
+  App Store Connect app id; `submit.production.ios` is `{}`, verified). **Two
+  decisions only he can make:** local-only vs sign-in (**there is no auth code in
+  the repo at all**), and whether v1 is iPhone-only (**Android has never been
+  run**). **Six laws no script can check** need his ruling on a re-wording.
+  **And cut (a) is a STOP on a contradiction:** the order says "replace with the
+  clean-reset path" and **that path does not exist**, so it is a BUILD, which the
+  same order forbids while the chain is red.
+
 - **⚠ SAM: YOU CAN SEND ME YOUR REAL DATA RIGHT NOW, FROM THE BUILD ON YOUR
   PHONE — NOTHING NEEDS BUILDING.** Open the app → **Profile** tab → scroll to
   the top → tap **"Export stored state"** → the share sheet opens with the whole
