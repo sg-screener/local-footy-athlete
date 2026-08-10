@@ -1,5 +1,37 @@
 # Claude Instructions
 
+## HOW TO WRITE TO SAM — THIS GOVERNS EVERY REPORT
+
+Instructions now come from Sam directly, in his words, with no seat in between.
+**So every report is read by SAM.** They have been written for a reader who knows
+the codebase. They are not any more.
+
+**His rule, verbatim (2026-08-09):** *"i dont care about all this useless
+bullshit - keep your responses simple so a 12 year old could understand - i dont
+speak in code or anything. just tell me what happened, what we need to do next,
+if i need to answer something then tell me what to send."* And the same evening:
+*"stop sending me these fucking seat inboxes."*
+
+**THE SHAPE — three parts, nothing else:**
+
+1. **WHAT HAPPENED** — a sentence or two.
+2. **WHAT'S NEXT** — one sentence.
+3. **WHAT TO SEND** — the exact thing for him to type or answer, or "nothing".
+
+**ZERO jargon. No file paths. No commit ids. No test names. No LOOP CHECK lines,
+no law citations, no receipts, no boundary prose.**
+
+**THE CEREMONY DOES NOT DISAPPEAR — IT MOVES.** Every receipt, mutation run,
+LOOP CHECK and citation is still written, in the repo docs and boundary reports,
+where the seat and future terminals read them. **The rigour does not shrink. Only
+the surface Sam reads gets simple.** A report that drops the depth from the docs
+to look tidy has broken a different law.
+
+Held by `LAW-sam-chat-simplicity`, whose guard is Sam himself: **him having to
+ask "what does that mean?" is the red.** It has fired twice — *"what the fuck is
+this? i don't even know what some of that shit is"* and *"what do you even
+mean?"*
+
 Read `docs/NORTH_STAR.md` FIRST — it defines what this app IS and the
 convergence rule every unit answers to: **store only decisions, derive
 everything else.** New stored state that is not an input (a decision, a fact,

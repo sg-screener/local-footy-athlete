@@ -20,11 +20,13 @@
   before a device build and overnight, not on every change.
   **AND THE THING EVERY REPORT SINCE 18 JULY HAS SAID IS WRONG:** the crash that
   killed it is gone — your rebuild fixed it. The app launches, loads, and draws
-  the welcome screen. **What actually blocks it is one iOS pop-up — *"Open in
-  Local Footy Athlete?"* — that no test answers.** Twenty-three days of "the rig
-  is dead" was a dialog nobody tapped. docs/MAESTRO_RIG_MEASURED_2026-08-10.md ·
-  **STILL FAILING — no run-through has completed yet, so this is a measurement,
-  not a working rig. OPEN-UNKNOWN.**
+  the welcome screen.
+  **BUT I TOLD YOU THE POP-UP WAS THE WHOLE BLOCKER AND THAT WAS WRONG.** I made
+  the test answer it. **The test still fails**, and the pop-up comes straight
+  back. I read a screenshot and called the thing on top of it the cause, which is
+  the second time in one day I have done that. **Why the test can't see the app
+  is OPEN-UNKNOWN**, and I stopped after three tries rather than keep guessing.
+  docs/MAESTRO_RIG_MEASURED_2026-08-10.md
 
 - **⚠ SAM: ALL SIX RULES YOU RULED ON ARE NOW WATCHED — AND TWO OF YOUR
   RE-WORDINGS BEAT MINE.** You said the plain-English rule was about **app

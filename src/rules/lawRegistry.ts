@@ -779,14 +779,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-sam-chat-simplicity',
-    law: 'Every reply to Sam is three parts at most — WHAT HAPPENED / WHAT\'S NEXT / WHAT TO SEND — with no file names or commit ids in chat.',
-    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-09_COACH_BUILD_ERA.md §0 "SAM CHAT RULE" (Sam-forced)',
+    // RE-SCOPED 2026-08-10. It governed the SEAT's replies; Sam's process ruling
+    // removed the seat from the relay, so the terminal now writes straight to
+    // him. The row widens to ANYTHING anyone writes for Sam to read.
+    law: 'Anything written for Sam to read is three parts at most — WHAT HAPPENED / WHAT\'S NEXT / WHAT TO SEND — with no jargon, file names, commit ids or test names. The depth moves to the repo docs; it does not disappear.',
+    ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-09_COACH_BUILD_ERA.md §0 "SAM CHAT RULE" (Sam-forced); CLAUDE.md "HOW TO WRITE TO SAM"; re-scoped 2026-08-10',
     guard: {
       state: 'guarded',
       by: 'Sam',
       chainStatus: 'human',
       humanGuard: 'Sam',
-      receipt: 'THE NAMED HUMAN INSTRUMENT — Sam ruled this shape into existence 2026-08-10 for this row and, he said, for this row ONLY. Chat never reaches the repo, so no script can ever see it; "held by discipline" was the honest description and it is also the loophole he banned the same morning, being UNENFORCED wearing a nicer word. So: HE is the guard, named, and him having to pull the seat up on it IS the red. Two states preserved — guarded, by a guard that is not a script. The gate refuses this shape for any id outside HUMAN_GUARDABLE_LAW_IDS, so it cannot spread.',
+      receipt: 'TWO FOUNDING CASES, RECORDED SO THE ROW IS NOT READ AS THEORETICAL — both Sam, 2026-08-10, both the red firing: "what the fuck is this? i don\'t even know what some of that shit is", and "what do you even mean?" over the law list. THE NAMED HUMAN INSTRUMENT — Sam ruled this shape into existence 2026-08-10 for this row and, he said, for this row ONLY. Chat never reaches the repo, so no script can ever see it; "held by discipline" was the honest description and it is also the loophole he banned the same morning, being UNENFORCED wearing a nicer word. So: HE is the guard, named, and him having to pull the seat up on it IS the red. Two states preserved — guarded, by a guard that is not a script. The gate refuses this shape for any id outside HUMAN_GUARDABLE_LAW_IDS, so it cannot spread.',
     },
   },
   {

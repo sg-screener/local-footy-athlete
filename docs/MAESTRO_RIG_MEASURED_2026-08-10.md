@@ -40,7 +40,41 @@ rebuild fixed it. Measured, not assumed:
   revision 0 · mirror refusals 0 · actions 5"* is on screen, which is
   `DevE2EStatusMarkers` doing its job.
 
-**WHAT ACTUALLY BLOCKS IT: one unhandled iOS system dialog.**
+## ⚠ CORRECTION, 2026-08-10 — THE DIALOG IS NOT THE BLOCKER, AND I TOLD SAM IT WAS
+
+**The claim below — that one unhandled dialog is "the whole distance" to a
+working run-through — is WITHDRAWN. It was tested and it is false.**
+
+A probe answered the dialog (`runFlow when: visible: "Open"` → `tapOn: "Open"`,
+which Maestro reported COMPLETED) and **`e2e-entry-ready` still did not appear.**
+The failure screenshot shows the dialog back on screen after the tap.
+
+**Two things I got wrong in one sentence:** I inferred causation from a
+screenshot — the dialog was ON TOP of the failure, so I called it the cause —
+and I put a work estimate on it ("minutes of work") that nothing supported.
+**Sighting 2 of `a theory that explains the screenshot is not a measured cause`**
+within one day; the first was the team-anchor absorb, which turned out not to be
+Sam's shape at all. **The seat had warned about exactly this in the same batch:
+*"a theory that explains everything is the kind this project has been wrong about
+twice this week."* It was wrong again inside the hour.**
+
+**WHAT IS ACTUALLY KNOWN, AND IT IS LESS THAN I SAID:**
+
+- the rig RUNS and the app renders — that part stands and is measured;
+- the number (20–26s) stands, and is now 30s for the dialog-answering probe;
+- **the dialog RE-APPEARS after being answered**, which is a new fact and
+  suggests something re-issues the deep link rather than a stale alert;
+- **why `e2e-entry-ready` is not visible is OPEN-UNKNOWN.** Two candidates,
+  neither tested: the system alert owns the accessibility hierarchy so Maestro
+  never sees the app's tree at all; or the markers — 1×1 views at `opacity: 0.01`
+  (`devE2EEntry.tsx:330`) — are below what Maestro counts as visible.
+
+**Attempts stopped here rather than continuing.** Three probes, no green run, and
+the next step is a hierarchy dump rather than a fourth guess.
+
+## THE ORIGINAL (WITHDRAWN) CLAIM, KEPT SO THE CORRECTION HAS ITS SUBJECT
+
+**~~WHAT ACTUALLY BLOCKS IT: one unhandled iOS system dialog.~~**
 
 > **Open in "Local Footy Athlete"?**  ·  Cancel  ·  Open
 

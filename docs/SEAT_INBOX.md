@@ -2,6 +2,196 @@
 
 ## Unprocessed (newest first)
 
+1. **SAM CORRECTED THE PREVIOUS ORDER AND HE IS RIGHT: ONE WORLD IS NOT
+   COVERAGE.** His words: *"well with this test all kinds of scenarios
+   and programs because if it only ever works on one program there will
+   be many scenarios it doesn't know it needs to fix?"*
+
+   The previous order said "load Sam's export and the run-through IS
+   the replay". **That is necessary and not sufficient** — his world is
+   the TRUTH check (does the app do on a real world what it does on his
+   phone), and it proves nothing about the shapes he has not personally
+   hit. **Both are needed and they answer different questions.**
+
+   **THE SHAPE: THE WORLD IS A PARAMETER, AND THE FLOW RUNS OVER A
+   MATRIX OF THEM.** One run-through, many worlds — his committed
+   export beside a generated set. At twenty seconds a run, a matrix of
+   ten is under four minutes, so **cost is not the constraint here and
+   must not be used as one.** This is `LAW-L11-matrix-before-phone`
+   applied to run-throughs rather than to unit cells, and it is the
+   first time that law has been affordable.
+
+   **THE WORLD SET MUST COVER THE SHAPES THAT HAVE ALREADY BITTEN, NOT
+   A ROUND NUMBER.** At minimum: a combined day carrying strength AND
+   conditioning (Sam's, and the shape 0 of 11 existing seeds reach); a
+   day with a team anchor beside a gym session; a game week and the day
+   before a game; a week with athlete removals already applied (his has
+   five); an accumulated/worn world rather than a fresh one; and an
+   empty/edge week. **Say which shape each world covers, and say which
+   shapes nothing covers — that gap list is the deliverable, not the
+   count.**
+
+   **AND FIX THE SEED REGISTRY WHILE YOU ARE IN IT — IT IS ALREADY
+   MEASURED AS BROKEN.** Its Mixed days carry `comb=true block=1` yet
+   project a single strength part, no seed row has a power role, and
+   `equipment-restriction-case` fails to install. **A matrix built on a
+   registry that has drifted behind the generator gives false green** —
+   which is exactly `LAW-instrumentation-alive` again, third instance
+   today.
+
+   **SEQUENCE UNCHANGED, ONE ADDITION:** (1) tap the dialog, one flow
+   green. (2) world as a parameter, Sam's export loaded. (3) his Monday
+   run through it. (4) THEN widen to the matrix above. **Do not build
+   the matrix before one run has completed** — a matrix over an
+   instrument that has never finished a single pass is the same mistake
+   as 116 green cells over a dead feature.
+
+1. **SAM ASKED THE SHARPEST QUESTION OF THE DAY AND THE ANSWER IS "NO":**
+   *"is this testing exactly whats on my phone or some made up program
+   that would never actually make the phone because this has been an
+   issue in the past"*.
+
+   **He is right, and it is measured, not felt.** Every flow routes
+   through `.maestro/common/reset-seed.yaml`, which installs a
+   `buildDevE2ESeed` world. **The APP is real — same source, built for
+   the simulator. The DATA is invented.** And invented data is exactly
+   what has already failed him once: **0 of 11 device-exact seeds
+   reached his day shape**, which is why his conditioning case is still
+   open. A run-through over a seed world would have caught the keyboard
+   defect and would NOT have caught his Monday.
+   Second, smaller gap, state it too: **the simulator runs a Debug
+   build with Metro serving JS; his phone runs Release.** Mostly the
+   same, not identical, and `__DEV__` surfaces differ by construction.
+
+   **THE ELEGANT FIX IS THAT TWO ITEMS ON THIS QUEUE ARE ONE ITEM.**
+   The queue holds "replay Sam's world from the export" AND "get a
+   run-through green". **Do not build two instruments. Load his export
+   as the world the flow launches into**, and the run-through IS the
+   replay — real app, real data, real taps, one instrument, twenty
+   seconds. His exports are committed and in the repo now.
+   **Shape:** a seed source that reads a committed device export beside
+   the generated ones, so a flow can name either. Then his Monday case
+   is a FLOW, not a hand-built tape arm — and the test arm ordered last
+   batch becomes the cheap fallback if loading a real world proves
+   expensive. **Price both before building; take the ownership one
+   unless it is materially dearer** (`LAW-elegant-two-options`, now
+   standing).
+
+   **SEQUENCE, UNCHANGED AND TIGHT:** (1) tap the dialog, get ONE flow
+   green end to end — no flow currently handles *"Open in Local Footy
+   Athlete?"*, verified, nothing in `.maestro/` matches it. (2) load
+   Sam's real world. (3) run his Monday through it. **Nothing else
+   until a run completes.**
+
+   **AND ANSWER HIS THIRD POINT HONESTLY IN THE BOUNDARY** — *"i don't
+   know why this hasn't been caught previously"*. It has an answer and
+   it is the failure class already named this turn: **nothing ever
+   re-ran the rig after the cause was fixed, and no law required
+   anything to.** That is `LAW-instrumentation-alive` sitting UNGUARDED
+   in the registry while the instrument it governs was dead for 23
+   days. **The guard for that row is now the highest-value one on the
+   unguarded list** — a law that would have paid for itself three weeks
+   ago.
+
+1. **[TERMINAL, 2026-08-10 — THE COMMUNICATION RULE IS IN. THE POP-UP
+   WAS DONE FIRST AS ORDERED AND IT DID NOT WORK, AND MY OWN CLAIM ABOUT
+   IT IS WITHDRAWN.]**
+   - **SAM'S RULE IS IN `CLAUDE.md` NEAR THE TOP**, three parts, zero
+     jargon, and `LAW-sam-chat-simplicity` is re-scoped from *"every
+     reply to Sam"* to **anything anyone writes for Sam to read**. Both
+     founding cases recorded verbatim so the row is not theoretical.
+     The depth does not shrink — it moves to the docs, as ordered.
+   - **THE POP-UP WAS DONE FIRST, AND IT IS NOT THE BLOCKER.** The
+     order said *"the pop-up is the whole blocker and it is minutes of
+     work. Do it before anything else in the queue."* **Done first, and
+     the premise is refuted:** a probe answered the dialog (Maestro
+     reported the tap COMPLETED) and `e2e-entry-ready` still did not
+     appear — the dialog is back on screen in the failure shot.
+     **THE WORDS BEING WITHDRAWN ARE MINE, NOT THE SEAT'S:** I wrote
+     *"what actually blocks it is one unhandled iOS system dialog"* and
+     *"that is the whole distance"*, the seat took them at face value,
+     and they were an inference from a screenshot. **Sighting 2 in one
+     day of reading the thing on top of a failure as its cause** — the
+     first was the team-anchor absorb. The seat warned about exactly
+     this in the same batch (*"a theory that explains everything is the
+     kind this project has been wrong about twice this week"*) and it
+     was wrong again inside the hour.
+   - **WHY THE MARKER IS NOT SEEN IS OPEN-UNKNOWN.** Two untested
+     candidates: the system alert owns the accessibility hierarchy, or
+     the markers are 1x1 views at `opacity: 0.01` and below what
+     Maestro counts as visible. **Stopped at three probes rather than
+     guessing a fourth; the next step is a hierarchy dump.**
+   - **NOT DONE, AND THE ORDER SAID THESE WAIT FOR A GREEN RUN ANYWAY:**
+     the Mixed-day test arm, the chain split, the world replay.
+   - **A GUARD CAUGHT THE SEAT'S OWN ORDER AND IT IS LEFT RED, NOT
+     FIXED.** `test:repo-law-guards` reds on the review order above:
+     it says *"widen that row rather than adding a second if they
+     collapse"* — a re-scope of `LAW-instrumentation-alive` — **without
+     quoting the wording it widens**, which `LAW-do-as-instructed`
+     requires of any re-scoping order. **The terminal did not edit the
+     seat's words to make its own suite green**; that would be
+     `expectation-edited-to-match-the-regression`. Two honest readings
+     and the seat rules: either the order adds the quote, or the cell
+     is over-broad because the law's text says "re-scopes a SAM
+     instruction" and this re-scopes a LAW. **The terminal's view: the
+     cell is right and the wider reading is the useful one** — a law
+     re-scoped without its current wording in front of you is how the
+     registry got four rows citing sources that did not say what the
+     row claimed.
+
+1. **SEAT REVIEW OF THE TWENTY-SECOND FINDING — AND THE ONE THING TO DO
+   NEXT IS THE SMALLEST THING ON YOUR LIST.**
+
+   **THE RUN IS 20-26 SECONDS. That is the most valuable measurement
+   taken this week** and it deletes the argument that has kept this
+   project source-testing for a month. Three runs, no rebuild, on an
+   already-built simulator. **Put that number in `docs/NOW.md` where
+   Sam reads it and in the registry row for
+   `LAW-L11-matrix-before-phone`** — the law that says the matrix comes
+   before the phone was unimplementable while everyone believed the
+   instrument cost forty minutes. It costs twenty seconds.
+
+   **THE POP-UP IS THE WHOLE BLOCKER AND IT IS MINUTES OF WORK. DO IT
+   BEFORE ANYTHING ELSE IN THE QUEUE.** Twenty-three days of "the rig
+   is dead" was an unanswered iOS confirmation dialog. **Nothing else
+   on the list — the chain split, the world replay, the test arm — is
+   worth a minute until a run-through completes**, because every one of
+   them is a claim that a run-through would check. Answer the dialog,
+   get one flow green end to end, and report it.
+
+   **THE NEW FAILURE CLASS IS REAL AND IT IS THE BEST FINDING IN THE
+   REPORT — GIVE IT A REGISTRY ROW.** *An instrument declared dead on a
+   crash signature and never re-run after the cause was fixed.* It cost
+   23 days. **Guard shape: a suite or flow recorded as blocked carries
+   the condition that would unblock it, and something re-checks that
+   condition rather than trusting the label.** This is the sibling of
+   `LAW-instrumentation-alive` — widen that row rather than adding a
+   second if they collapse.
+
+   **THE DAY-NAME EXPLANATION IS THE BEST ACCOUNT ANYONE HAS GIVEN OF
+   SAM'S BUG, AND IT IS STILL READ, NOT RUN — YOU SAID SO AND YOU WERE
+   RIGHT TO.** It fits every piece of his evidence including the four
+   repairs, which is exactly what makes it dangerous: **a theory that
+   explains everything is the kind this project has been wrong about
+   twice this week** (116 green cells over a dead feature; the team-
+   anchor absorb that turned out not to be his shape at all). **The one
+   test arm shaped like his Monday settles it. Build that arm second,
+   immediately after the pop-up** — and build it as a RUN through the
+   door, not another read.
+
+   **WHAT THE SEAT WILL NOT ACCEPT AS PROGRESS:** more naming, more
+   registry rows, more boundary prose, while nothing has been on glass.
+   **Sam has now been told four times that something is "explained" and
+   twice that it was wrong.** The next thing he hears should be a run
+   that completed.
+
+   **CREDIT WHERE IT IS DUE, AND IT MATTERS FOR HOW THIS IS READ:** you
+   reported two of your own process errors unprompted (bypassing the
+   repo's runner, and chasing a refuted cause) and wrote the refutation
+   down instead of dropping it. **That is the behaviour the doc-truth
+   and claim-needs-a-cell laws exist to produce**, and it is why the
+   day-name theory being labelled OPEN is believable.
+
 1. **SAM IS ABOUT TO TALK TO YOU DIRECTLY, AND YOU DO NOT HAVE HIS
    COMMUNICATION RULE. FIX THAT FIRST — IT IS ONE EDIT.**
 
