@@ -381,3 +381,51 @@ the whole reload/durability half of the suite.**
   uses"* — and this pass did not check it. **If it does, this is an athlete-facing
   data-loss bug and not a harness one**, and that is the single most important
   open question in this addendum.
+
+---
+
+# ADDENDUM 5 — ORDER 4, THE DRIFT CHECK: IT ALREADY EXISTED AND NOTHING RAN IT
+
+**The order asked whether each test world still matches what the generator
+produces for that profile today. THE INSTRUMENT THAT ANSWERS THAT WAS ALREADY
+BUILT.**
+
+`test:dev-e2e-seeds` rebuilds every seed **through the real generator** and
+validates it against its own declared witnesses. That IS the drift check: a seed
+is not a stored fixture here, it is generated on demand, so the only thing that
+can drift is the gap between what the generator now produces and what the seed
+DECLARES about it — which is exactly what those witnesses compare.
+
+**AND IT WAS NOT IN THE CHAIN. NEITHER WERE THE OTHER FOUR:**
+
+```
+test:dev-e2e-seeds            -> NOT IN CHAIN
+test:dev-e2e-witnesses        -> NOT IN CHAIN
+test:dev-e2e-entry            -> NOT IN CHAIN
+test:dev-e2e-reset-hydration  -> NOT IN CHAIN
+test:dev-e2e-scenario-session -> NOT IN CHAIN
+```
+
+**THAT IS WHY THE EQUIPMENT ROT SAT THERE.** The suite that would have caught a
+seed answering in a vocabulary the app refuses existed, passed nobody's eye, and
+was never run by the one command that counts. **`a green gate is a claim` — and
+an unrun gate is not even a claim.**
+
+**FIXED: all five are now in `test:bible`, placed immediately before
+`test:law-registry`** — the deliberate last link — **so their reds cost no
+coverage.** That is the same reasoning that put the registry last, applied rather
+than re-derived.
+
+## WHAT THIS DOES NOT DO
+
+- **IT DOES NOT MAKE THEM GREEN.** Four of the five are red as of this commit
+  (`dev-e2e-seeds` 2, `dev-e2e-entry` 2, `dev-e2e-reset-hydration` 2,
+  `dev-e2e-scenario-session` 1). **They are now VISIBLE reds instead of invisible
+  ones**, which is the whole of what this addendum claims.
+- **IT DOES NOT DIAGNOSE THEM.** Counted, named, not investigated.
+- **IT DOES NOT ANSWER THE DEEPER DRIFT QUESTION** Sam actually asked — *does the
+  world still match what the generator would build for that profile TODAY?* The
+  witnesses check declared PROPERTIES (this day has a squat, this week starts
+  here), not the whole shape. **A seed could satisfy every witness and still be a
+  week the generator would no longer produce.** That is a real gap and it is the
+  next thing this alarm needs.
