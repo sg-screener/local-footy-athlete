@@ -58,6 +58,14 @@ tags:
     id: "coach-status-screen"
 - assertVisible:
     id: "coach-status-empty"
+- assertVisible:
+    id: "coach-status-season-phase"
+- tapOn:
+    id: "coach-status-season-phase"
+- assertVisible: "Shift to Off-season mode?"
+- tapOn: "Cancel"
+- assertVisible:
+    id: "coach-status-screen"
 - tapOn:
     id: "coach-status-close"
 - tapOn:
@@ -99,12 +107,13 @@ tags:
     timeout: 10000
 - assertVisible:
     id: "program-active-coach-notes"
-# THE CONTROLS ARE VISIBLY NOT-YET, NOT SILENTLY DEAD. Asserted on the device
-# because "dimmed and captioned" is a rendering claim, and the two layout bugs
-# this slice found by eye are the reminder that a source cell cannot see one.
+- assertVisible:
+    id: "coach-status-season-phase"
+- takeScreenshot: artifacts/ui-walk/coach-my-status
+# THE COLLAPSED LIST IS RENEE'S SHAPE; ITS EXISTING CONTROLS ARE ONE TAP DEEP.
+- tapOn: "Equipment restriction active"
 - assertVisible:
     id: "coach-note-actions-not-yet"
-- takeScreenshot: artifacts/ui-walk/coach-my-status
 
 # ── AND IT CLOSES BACK TO THE CONVERSATION ──────────────────────────────────
 - tapOn:

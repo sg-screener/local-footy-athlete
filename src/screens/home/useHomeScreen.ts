@@ -23,7 +23,6 @@ import {
   decideSweepForCurrentStores,
 } from '../../utils/weekRebuild';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
-import { applyPhaseShift } from '../../utils/profileMutations';
 import { dismissActiveCoachNote, selectActiveCoachNotes } from '../../utils/activeCoachNotes';
 import {
   getActiveProgramModifiers,
@@ -65,10 +64,7 @@ import {
   type ReadinessAcknowledgment,
 } from '../../utils/readinessAcknowledgment';
 import {
-  WEEK_DAYS,
   DAY_NUM_TO_NAME,
-  NEXT_PHASE,
-  type PhaseShiftStep,
   type InteractionMode,
 } from './homeScreenConstants';
 import { logger } from '../../utils/logger';
@@ -87,6 +83,7 @@ import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
 import { canonicalFixtureKind } from '../../rules/fixtureConditionedAvailability';
 import { classifyProgramMutationRefusal } from '../../rules/programMutationRefusal';
 import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
+import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -267,32 +264,6 @@ export function useHomeScreen() {
   // derivation below can source the phase from its clock (single source of truth).
   const currentProgram = useProgramStore((s) => s.currentProgram);
 
-  // ── Phase-shift state ──
-  const [phaseShiftModalVisible, setPhaseShiftModalVisible] = useState(false);
-  const [phaseShiftStep, setPhaseShiftStep] = useState<PhaseShiftStep>('confirm');
-  // Availability pending buffer — seeded from profile on open, overwrites
-  // the stored `preferredTrainingDays` before rebuild. See the availability
-  // step in the modal + applyPhaseShift for why we re-ask rather than reuse.
-  const [pendingPreferredDays, setPendingPreferredDays] = useState<DayOfWeek[]>([]);
-  const [pendingTeamDays, setPendingTeamDays] = useState<DayOfWeek[]>([]);
-  const [pendingGameDay, setPendingGameDay] = useState<DayOfWeek | null>(null);
-  // The game anchor is an ANSWER, and `null` is one of its values. This flag
-  // separates "the athlete said they have no usual game day" from "nobody has
-  // asked yet" — the two used to be the same empty field, and the second one
-  // silently wiped a stored anchor.
-  const [pendingGameAnchorAnswered, setPendingGameAnchorAnswered] = useState(false);
-
-  /** Naming a day is an answer. */
-  const answerUsualGameDay = (day: DayOfWeek) => {
-    setPendingGameDay(day);
-    setPendingGameAnchorAnswered(true);
-  };
-
-  /** So is saying there is no usual day. */
-  const answerNoUsualGameDay = () => {
-    setPendingGameDay(null);
-    setPendingGameAnchorAnswered(true);
-  };
   // Season phase comes from THE owner (rules/seasonPhaseOwner). The comment
   // that used to sit here claimed the clock was "the single source of truth
   // the visible week is built from" — and it was not, because `useSchedule`
@@ -305,12 +276,10 @@ export function useHomeScreen() {
   const ownedPhase = ownSeasonPhase({ program: currentProgram, profile: onboardingData });
   const currentPhase = (ownedPhase.phase ?? 'Pre-season') as SeasonPhase;
   const seasonPhaseSkew = ownedPhase.skew;
-  // Latched target phase for the shift modal. Set explicitly by the caller
-  // of handleOpenPhaseShift so the modal renders from the user's actual
-  // selection, never from a derived "next phase". Seeded to NEXT_PHASE so
-  // first-paint of the outer CTA button has something sensible; only
-  // handleOpenPhaseShift is allowed to change it after that.
-  const [targetPhase, setTargetPhase] = useState<SeasonPhase>(NEXT_PHASE[currentPhase]);
+  // Classic remains in the source tree as an unreachable compatibility
+  // surface. It consumes the same controller My Status owns rather than
+  // keeping a second phase mutation implementation alive here.
+  const phaseControl = useSeasonPhaseControl();
 
   // Program store
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
@@ -734,87 +703,6 @@ export function useHomeScreen() {
     }
   };
 
-  // ───────── Phase-shift handlers ─────────
-
-  /**
-   * Open the phase-shift sheet. `target` is the phase the user explicitly
-   * chose; it must be passed in by the caller — never inferred here — so
-   * the modal can render strictly from the athlete's selection. Callers
-   * that want the default "next phase in the cycle" suggestion should pass
-   * NEXT_PHASE[currentPhase].
-   */
-  const handleOpenPhaseShift = (target: SeasonPhase) => {
-    clearRebuildError();
-    setTargetPhase(target);
-    setPhaseShiftStep('confirm');
-    // Seed the pending selections from the existing profile so the setup
-    // screens reflect the athlete's current anchors (easier to confirm/edit).
-    // `preferredTrainingDays` is seeded too but the availability step will
-    // let the athlete revise it before we commit — onboarding may be months
-    // old and real schedules drift (work, study, gym access).
-    setPendingPreferredDays(
-      (onboardingData.preferredTrainingDays as DayOfWeek[]) || [],
-    );
-    setPendingTeamDays((onboardingData.teamTrainingDays as DayOfWeek[]) || []);
-    const storedGameDay =
-      (onboardingData.usualGameDay as DayOfWeek | undefined) ||
-      (typeof onboardingData.gameDay === 'string' &&
-      WEEK_DAYS.includes(onboardingData.gameDay as DayOfWeek)
-        ? (onboardingData.gameDay as DayOfWeek)
-        : null);
-    setPendingGameDay(storedGameDay ?? null);
-    // A stored anchor IS a prior answer, so re-confirming it is one tap. An
-    // absent one is not an answer of any kind and must be asked for.
-    setPendingGameAnchorAnswered(Boolean(storedGameDay));
-    setPhaseShiftModalVisible(true);
-  };
-
-  const handleCancelPhaseShift = () => {
-    if (isRebuilding) return;
-    setPhaseShiftModalVisible(false);
-    setPhaseShiftStep('confirm');
-    clearRebuildError();
-  };
-
-  const togglePendingTeamDay = (day: DayOfWeek) => {
-    setPendingTeamDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
-    );
-  };
-
-  const togglePendingPreferredDay = (day: DayOfWeek) => {
-    setPendingPreferredDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
-    );
-  };
-
-  /**
-   * Back navigation for the phase-shift modal — moves one step back without
-   * resetting any pending selections. Deliberately narrow: we do NOT expose
-   * a "jump to step" API because the flow is short enough that cumulative
-   * back taps are fine and opens fewer surprising transitions.
-   *
-   * On `confirm` this is a no-op (same as tapping the back chevron when
-   * there's nowhere to go back to) — callers hide the chevron entirely in
-   * that case, so this is just a safety guard.
-   */
-  const handlePhaseShiftBack = () => {
-    if (isRebuilding) return;
-    setPhaseShiftStep((prev) => {
-      switch (prev) {
-        case 'availability':
-          return 'confirm';
-        case 'teamDays':
-          return 'availability';
-        case 'gameDay':
-          return 'teamDays';
-        // 'confirm' and 'building' have no meaningful back.
-        default:
-          return prev;
-      }
-    });
-  };
-
   /**
    * Commit a phase shift ATOMICALLY.
    *
@@ -881,118 +769,6 @@ export function useHomeScreen() {
       setSeasonPhaseRepairError(classifyProgramMutationRefusal({ error: err }).userMessage);
     } finally {
       setSeasonPhaseRepairBusy(false);
-    }
-  };
-
-  const executePhaseShift = async () => {
-    beginRebuildNotice();
-    setPhaseShiftStep('building');
-    // Fall back to the step the user was on so they can act on a refusal.
-    // Off-season's last interactive step is `availability`; Pre-season's is
-    // `teamDays`; In-season's is `gameDay`. Matches the forward-path terminal.
-    const interactiveStep: PhaseShiftStep = targetPhase === 'In-season'
-      ? 'gameDay'
-      : targetPhase === 'Pre-season'
-        ? 'teamDays'
-        : 'availability';
-    try {
-      // The pure mutation still owns the overlay rules, so the QA harness
-      // exercises the same logic. It REFUSES an In-season shift with no
-      // game-anchor answer rather than silently clearing the anchor.
-      const nextProfile = applyPhaseShift(onboardingData, {
-        targetPhase,
-        preferredTrainingDays: pendingPreferredDays,
-        teamTrainingDays: pendingTeamDays,
-        gameAnchor: targetPhase === 'In-season' && pendingGameAnchorAnswered
-          ? (pendingGameDay
-            ? { kind: 'usual_day', day: pendingGameDay }
-            : { kind: 'no_usual_day' })
-          : undefined,
-      });
-      const patch: Partial<typeof onboardingData> = {
-        seasonPhase: nextProfile.seasonPhase,
-        // The availability step re-asks every shift — onboarding data can be
-        // months stale — so the answer is carried into the same patch.
-        preferredTrainingDays: nextProfile.preferredTrainingDays,
-        trainingDaysPerWeek: nextProfile.trainingDaysPerWeek,
-        teamTrainingDays: nextProfile.teamTrainingDays,
-        teamTrainingDaysPerWeek: nextProfile.teamTrainingDaysPerWeek,
-        usualGameDay: nextProfile.usualGameDay,
-        gameDay: nextProfile.gameDay,
-      };
-      if (__DEV__) {
-        logger.debug('[PhaseShift] Committing:', patch);
-      }
-      const result = await commitProfileProgramTransaction({
-        change: { kind: 'profile_setup', patch },
-        todayISO: todayISOLocal(),
-        sourceSurface: 'phase_shift',
-      });
-      if (!result.ok) {
-        const refusal = classifyProgramMutationRefusal({ reason: result.reason });
-        logger.error('[PhaseShift] refused:', refusal.diagnostic ?? result.message);
-        setRebuildNoticeError(refusal.userMessage, refusal.canRetry);
-        setPhaseShiftStep(interactiveStep);
-        return;
-      }
-      if (!result.changedProgram) {
-        // A shift that changed nothing is an outcome the athlete is told
-        // about, not a silent close that looks like success.
-        const outcome = classifyProgramMutationRefusal({ reason: result.reason });
-        setRebuildNoticeError(outcome.userMessage, outcome.canRetry);
-        setPhaseShiftStep(interactiveStep);
-        return;
-      }
-      setPhaseShiftModalVisible(false);
-      setPhaseShiftStep('confirm');
-    } catch (err: any) {
-      logger.error('[PhaseShift] failed:', err?.diagnostic || err?.message || err);
-      const refusal = classifyProgramMutationRefusal({ error: err });
-      setRebuildNoticeError(refusal.userMessage, refusal.canRetry);
-      setPhaseShiftStep(interactiveStep);
-    } finally {
-      endRebuildNotice();
-    }
-  };
-
-  /**
-   * Drive the multi-step flow based on targetPhase.
-   *
-   * Order:
-   *   confirm → availability → [teamDays (non-Off-season)] → [gameDay (In-season)] → execute
-   *
-   * The `availability` step is always present — onboarding data can be
-   * months stale, so every phase shift re-confirms "what days can you
-   * train?" before teams or games layer on top.
-   */
-  const handleAdvancePhaseShift = async () => {
-    if (phaseShiftStep === 'confirm') {
-      setPhaseShiftStep('availability');
-      return;
-    }
-    if (phaseShiftStep === 'availability') {
-      // Off-season has no team / game anchors — availability is the last
-      // interactive step before rebuild.
-      if (targetPhase === 'Off-season') {
-        await executePhaseShift();
-      } else {
-        setPhaseShiftStep('teamDays');
-      }
-      return;
-    }
-    if (phaseShiftStep === 'teamDays') {
-      if (targetPhase === 'In-season') {
-        setPhaseShiftStep('gameDay');
-      } else {
-        await executePhaseShift();
-      }
-      return;
-    }
-    if (phaseShiftStep === 'gameDay') {
-      // Guarded by the button's disabled state; an unanswered anchor would
-      // be refused by `applyPhaseShift` anyway.
-      if (!pendingGameAnchorAnswered) return;
-      await executePhaseShift();
     }
   };
 
@@ -2068,21 +1844,22 @@ export function useHomeScreen() {
     handleCancelRebuild,
     handleConfirmRebuild,
 
-    // Phase-shift modal
-    phaseShiftModalVisible,
-    phaseShiftStep,
-    pendingPreferredDays,
-    pendingTeamDays,
-    pendingGameDay,
-    pendingGameAnchorAnswered,
-    targetPhase,
-    handleOpenPhaseShift,
-    handleCancelPhaseShift,
-    handlePhaseShiftBack,
-    togglePendingPreferredDay,
-    togglePendingTeamDay,
-    setPendingGameDay: answerUsualGameDay,
-    answerNoUsualGameDay,
-    handleAdvancePhaseShift,
+    // Compatibility names for the unreachable Classic screen. The decision
+    // flow itself has one owner: useSeasonPhaseControl.
+    phaseShiftModalVisible: phaseControl.visible,
+    phaseShiftStep: phaseControl.step,
+    pendingPreferredDays: phaseControl.pendingPreferredDays,
+    pendingTeamDays: phaseControl.pendingTeamDays,
+    pendingGameDay: phaseControl.pendingGameDay,
+    pendingGameAnchorAnswered: phaseControl.gameAnchorAnswered,
+    targetPhase: phaseControl.targetPhase,
+    handleOpenPhaseShift: phaseControl.open,
+    handleCancelPhaseShift: phaseControl.close,
+    handlePhaseShiftBack: phaseControl.back,
+    togglePendingPreferredDay: phaseControl.togglePreferredDay,
+    togglePendingTeamDay: phaseControl.toggleTeamDay,
+    setPendingGameDay: phaseControl.answerGameDay,
+    answerNoUsualGameDay: phaseControl.answerNoGameDay,
+    handleAdvancePhaseShift: phaseControl.advance,
   };
 }

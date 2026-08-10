@@ -68,7 +68,6 @@ import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedback
 import {
   WEEK_DAYS,
   DAY_SHORT,
-  NEXT_PHASE,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
   type PhaseShiftStep,
@@ -167,21 +166,6 @@ export default function HomeScreenV2() {
     rebuildMsgOpacity,
     handleCancelRebuild,
     handleConfirmRebuild,
-    phaseShiftModalVisible,
-    phaseShiftStep,
-    pendingPreferredDays,
-    pendingTeamDays,
-    pendingGameDay,
-    pendingGameAnchorAnswered,
-    targetPhase,
-    handleOpenPhaseShift,
-    handleCancelPhaseShift,
-    handlePhaseShiftBack,
-    togglePendingPreferredDay,
-    togglePendingTeamDay,
-    setPendingGameDay,
-    answerNoUsualGameDay,
-    handleAdvancePhaseShift,
   } = useHomeScreen();
 
   const isNormal = mode.type === 'normal';
@@ -1183,40 +1167,6 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
-        {/* ── RULING 6 IS NOT IN THIS SLICE, AND THAT IS THE RULING BEING
-            OBEYED, NOT DEFERRED ──
-            Sam: *"No more shift season phase at the bottom of the page on day
-            scren or week screen"* — and, binding over everything: *"the idea is
-            to merge them together… WITHOUT DESTROYING WHAT I HAVE NOW."*
-
-            Ruling 6's destination is the coach page's "my status" (ruling 4),
-            AND THAT SURFACE DOES NOT EXIST YET. Removing this card now would
-            leave the athlete with no way to change season phase at all until a
-            later slice — a real hole in a working app, dressed as progress.
-            **A removal ships in the same commit as its destination.** Rulings 3
-            and 7 are in this slice precisely because their destinations —
-            weekly view and the day screen — already exist and are untouched.
-
-            This card is deleted in the slice that mounts "my status", and the
-            removal ledger in docs/UI_MERGE_PLAN_2026-08-10.md carries the row.
-
-            ── Phase shift card ── */}
-        {isNormal && (
-          <View style={styles.section}>
-            <Card tone="outline" padding="lg" radius="xl" style={styles.phaseCard}>
-              <Text style={styles.phaseBadge}>You’re in {currentPhase} mode</Text>
-              <Text style={styles.phaseBody}>
-                Hit the button below when you’re ready to move to the next phase.
-              </Text>
-              <Button
-                label={`Shift to ${NEXT_PHASE[currentPhase]} mode`}
-                onPress={() => handleOpenPhaseShift(NEXT_PHASE[currentPhase])}
-                variant="outline"
-                size="md"
-              />
-            </Card>
-          </View>
-        )}
         </Pressable>
       </ScrollView>
 
@@ -1362,27 +1312,6 @@ export default function HomeScreenV2() {
         }}
       />
 
-      <PhaseShiftSheet
-        visible={phaseShiftModalVisible}
-        step={phaseShiftStep}
-        targetPhase={targetPhase}
-        isRebuilding={isRebuilding}
-        error={rebuildError}
-        canRetry={rebuildErrorCanRetry}
-        msgIdx={rebuildMsgIdx}
-        msgOpacity={rebuildMsgOpacity}
-        pendingPreferredDays={pendingPreferredDays}
-        pendingTeamDays={pendingTeamDays}
-        pendingGameDay={pendingGameDay}
-        gameAnchorAnswered={pendingGameAnchorAnswered}
-        onClose={handleCancelPhaseShift}
-        onBack={handlePhaseShiftBack}
-        onTogglePendingPreferredDay={togglePendingPreferredDay}
-        onTogglePendingTeamDay={togglePendingTeamDay}
-        onSetPendingGameDay={setPendingGameDay}
-        onAnswerNoUsualGameDay={answerNoUsualGameDay}
-        onAdvance={handleAdvancePhaseShift}
-      />
       {/*
         UNDO'S ONLY SCREEN-LEVEL AFFORDANCE (ruled 2026-08-09).
         Mounted ONCE, at the screen root, and wired to nothing: it reads the
@@ -3516,7 +3445,7 @@ function BackChevron({ onPress }: { onPress: () => void }) {
   );
 }
 
-function PhaseShiftSheet({
+export function SeasonPhaseShiftSheet({
   visible, step, targetPhase, isRebuilding, error, canRetry, msgIdx, msgOpacity,
   pendingPreferredDays, pendingTeamDays, pendingGameDay, gameAnchorAnswered,
   onClose, onBack,

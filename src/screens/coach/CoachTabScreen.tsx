@@ -23,6 +23,7 @@ import { coachChangeDeclined, coachChangeOutcome } from '../../rules/coachChange
 import { COACH_CHANGE_COPY, COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
+import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
 import { dismissActiveCoachNote } from '../../utils/activeCoachNotes';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
 import CoachStatusScreen from './CoachStatusScreen';
@@ -34,6 +35,7 @@ import { listPlanChangeOptionsForDay } from '../../utils/planChangeProducer';
 import type { ProgramControlAction } from '../../types/programControlAction';
 import type { VisibleWeek } from '../../rules/visibleProjection';
 import type { TabParamList } from '../../navigation/AppNavigator';
+import { SeasonPhaseShiftSheet } from '../../components/SeasonPhaseShiftSheet';
 
 type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
 
@@ -219,6 +221,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // while the other opens the detail. Closing clears the same state that opened
   // it, which also makes a second Program tap work after returning.
   const statusVisible = route.params?.status === 'open';
+  const phaseControl = useSeasonPhaseControl();
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
   const [turns, setTurns] = useState<readonly CoachTurn[]>([]);
@@ -413,8 +416,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <KeyboardSafeArea scrollable={false} footer={composer}>
         <View style={styles.header}>
-          <Text variant="h1">{COACH_TAB_COPY.title}</Text>
-        </View>
+          <Text style={styles.brand}>LFA</Text>
         {/* ── RULINGS 4 + 9: "MY STATUS" ──
             OUTSIDE THE CONVERSATION SCROLL, AND THAT IS THE WHOLE DESIGN
             DECISION. The ScrollView below pins to the bottom on new content, so
@@ -427,7 +429,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
             My Status a permanent Coach doorway; the zero state says plainly
             that no modifiers are currently impacting the program. Program's
             day/week notices still disappear at zero. */}
-        <View style={styles.statusStrip}>
           <ModifiersStrip
             surface="coach"
             count={modifierCount}
@@ -491,6 +492,8 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           <CoachStatusScreen
             modifiers={modifiers}
             equipmentFactIds={EMPTY_EQUIPMENT_FACT_IDS}
+            currentPhase={phaseControl.currentPhase}
+            onReviewPhase={() => phaseControl.open()}
             onAction={(note, action) => {
               // THE LIVE STRAND, THROUGH THE SAME MODULE-LEVEL DOOR THE DAY
               // SCREEN CALLS — `dismissActiveCoachNote`, not a copy of it. The
@@ -503,6 +506,27 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           />
         </View>
       ) : null}
+      <SeasonPhaseShiftSheet
+        visible={phaseControl.visible}
+        step={phaseControl.step}
+        targetPhase={phaseControl.targetPhase}
+        isRebuilding={phaseControl.isRebuilding}
+        error={phaseControl.error}
+        canRetry={phaseControl.canRetry}
+        msgIdx={phaseControl.msgIdx}
+        msgOpacity={phaseControl.msgOpacity}
+        pendingPreferredDays={phaseControl.pendingPreferredDays}
+        pendingTeamDays={phaseControl.pendingTeamDays}
+        pendingGameDay={phaseControl.pendingGameDay}
+        gameAnchorAnswered={phaseControl.gameAnchorAnswered}
+        onClose={phaseControl.close}
+        onBack={phaseControl.back}
+        onTogglePendingPreferredDay={phaseControl.togglePreferredDay}
+        onTogglePendingTeamDay={phaseControl.toggleTeamDay}
+        onSetPendingGameDay={phaseControl.answerGameDay}
+        onAnswerNoUsualGameDay={phaseControl.answerNoGameDay}
+        onAdvance={() => { void phaseControl.advance(); }}
+      />
     </SafeAreaView>
   );
 }
@@ -514,14 +538,11 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
  * for two of its actions. Those ids only matter once the ACTIONS are wired, and
  * on this surface they are not: `onAction` is a no-op for now.
  *
- * **THE ACTIONS ARE SLICE 3b, AND THIS IS THE HONEST HALF OF SLICE 3.** Wiring
- * them needs `handleCoachNoteAction` and its equipment-fact set lifted out of
- * `useHomeScreen` into an owner both screens call — the same extraction the
- * season-phase control needs. Re-implementing either here would be the second
- * representation the merge plan's binding rule forbids, so this pass ships the
- * surface READ-ONLY and the day screen keeps every control it has.
- * **Nothing is removed from the day screen in this pass**, which is
- * `LAW-removal-ships-with-its-replacement` holding.
+ * **THE MODIFIER ACTIONS ARE STILL SLICE 3b.** The season-phase machine has now
+ * been extracted and re-homed; these remaining actions need their own existing
+ * handlers lifted by the same rule. Re-implementing them here would create a
+ * second decision door, so they remain visibly unavailable while dismiss stays
+ * live.
  */
 const EMPTY_EQUIPMENT_FACT_IDS: ReadonlySet<string> = new Set<string>();
 
@@ -627,7 +648,7 @@ function Bubble({
       style={[styles.bubble, isCoach ? styles.bubbleCoach : styles.bubbleAthlete]}
       testID={testID}
     >
-      <Text variant="body">{text}</Text>
+      <Text style={styles.bubbleText}>{text}</Text>
     </View>
   );
 }
@@ -638,13 +659,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.primary,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  // The strip's own gutter. It matches the header's horizontal padding so the
-  // row lines up with the title above it and the conversation below.
-  statusStrip: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  brand: {
+    color: colors.text.primary,
+    fontSize: 28,
+    lineHeight: 32,
+    fontWeight: '900',
+    fontStyle: 'italic',
+    letterSpacing: -1.2,
+  },
   conversation: {
     flex: 1,
   },
@@ -654,11 +684,16 @@ const styles = StyleSheet.create({
     gap: spacingValues.smmd,
   },
   bubble: {
-    maxWidth: '86%',
+    maxWidth: '82%',
     borderRadius: borderRadius.xl,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacingValues.smmd,
+    paddingHorizontal: spacingValues.smmd,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
+  },
+  bubbleText: {
+    color: colors.text.primary,
+    fontSize: 14,
+    lineHeight: 20,
   },
   bubbleCoach: {
     alignSelf: 'flex-start',
@@ -748,23 +783,25 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+    gap: spacing.xs,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
     // Sam's run-5 ruling — the control keeps a small breathing gap above the
     // keypad rather than sitting flush against it. `spacing.sm` IS that 8px, so
     // the gap is the app's token and not a second magic number beside it.
-    paddingBottom: spacing.sm,
-    backgroundColor: colors.surface.primary,
+    marginBottom: spacing.sm,
+    padding: spacing.xs,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.surface.tertiary,
+    backgroundColor: colors.surface.secondary,
   },
   input: {
     flex: 1,
     minHeight: 44,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     backgroundColor: colors.surface.secondary,
-    borderWidth: 1,
-    borderColor: colors.surface.tertiary,
+    borderWidth: 0,
     color: colors.text.primary,
   },
   send: {
@@ -772,7 +809,7 @@ const styles = StyleSheet.create({
     // answer to L-C3's "no dead tap zones" for a glyph button.
     width: 44,
     height: 44,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

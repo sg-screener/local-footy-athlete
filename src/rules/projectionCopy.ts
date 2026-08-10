@@ -294,7 +294,7 @@ export function registerProjectionCopy(): void {
       provenance: 'SIGNED ON SIGHT, 2026-08-11. Sam ruled that My Status is '
         + 'always available from Coach, including the zero state, and supplied '
         + 'the meaning: "no modifiers currently impacting".',
-      text: 'No modifiers currently impacting',
+      text: 'No modifiers currently impacting your program.',
     },
     {
       id: 'modifiers.strip.week',

@@ -378,13 +378,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-coach-status-is-a-real-destination',
-    law: 'Program opens My Status itself, and Coach keeps that doorway available even when zero modifiers are active.',
-    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "it should open the status.... not just the coaches tab - and it should always be there - even if it says not modifers currently impacting". This guarded registry row is the durable ruling site.',
+    law: 'Program opens My Status itself; Coach keeps that Renee-shaped doorway at zero; My Status owns season-phase review and Program carries no phase card.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "it should open the status.... not just the coaches tab - and it should always be there"; then, with Renee references: "when you tap my status from hers you can see that the season phase is also there too... which will help us remove it from the day and weekly screens". This guarded registry row is the durable ruling site.',
     guard: {
       state: 'guarded',
       by: 'test:coach-tab-slice3 + .maestro/golden/coach-my-status.yaml',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: the status overlay existed, but Program only changed tabs and Coach deleted its only doorway when the modifier count reached zero. WHAT THE CHAIN CELL HOLDS: Program navigates with the one status-open coordinate; Coach reads and writes that same navigation-owned coordinate rather than a private boolean; only day/week hide the shared strip at zero; Coach renders the signed zero state. WHAT THE DEVICE FLOW HOLDS: from a clean generated week it proves Program has no empty notice while Coach still opens the empty status screen, then creates a real equipment modifier through the athlete door and proves the Program notice opens the populated status screen directly. WHAT IT DOES NOT HOLD: the still-unwired status actions, season phase on status, Sam\'s physical iPhone.',
+      receipt: 'BORN GUARDED (LAW ZERO), EXPANDED WITH THE NEXT EYE PASS. FOUNDING CASE: the status overlay existed, but Program only changed tabs, Coach deleted its doorway at zero, and the phase machine remained trapped in Program behind a status screen reported as built. WHAT THE CHAIN CELL HOLDS: Program and Coach address one navigation-owned status coordinate; Coach alone keeps the zero-state doorway; the compact Coach header and status hierarchy carry Renee\'s named structure; My Status mounts the extracted phase controller and its atomic transaction while reachable Home mounts neither phase card nor phase sheet. WHAT THE DEVICE FLOW HOLDS: zero-state Coach opens status and shows phase; a real equipment modifier is created through the athlete door; Program opens populated status directly; the collapsed modifier expands to the existing controls. WHAT IT DOES NOT HOLD: the still-unwired modifier actions, Sam\'s physical iPhone.',
     },
   },
   {
@@ -673,9 +673,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     // LAW-totals-or-red's — and the first was on a GUARDED row.
     ruledAt: 'docs/LFA_PROGRAMMING_BIBLE.md move guidance (prose bullets, no "Move rules" heading); enforced in practice by docs/audits/MOVE_OCCUPIED_CONTENT_LOSS_2026-07-23.md',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'Subsumed by LAW-attributed-content-change: the session survives (LAW-conservation guards that); what is unguarded is content leaving it unexplained and untold.',
-      receipt: 'Receipt CORRECTED 2026-08-10: this row first claimed the same missing door as LAW-conservation, which turned out to exist. The coach\'s truth gate still cannot catch the residue: FORBIDDEN_WHEN_NO_APPLIED is a list of PHRASES, and "Done. Session moved." is TRUE — a session did move. No phrase list can see a deletion.',
+      state: 'guarded',
+      by: 'test:athlete-move-occupied-content-loss',
+      chainStatus: 'in_chain',
+      receipt: 'BOUND TO LAW-conservation\'s EXISTING GUARD 2026-08-11 because this row\'s subject is the athlete-owned SESSION identity, not every exercise row inside its projection. The suite runs the real move transaction and asserts both safe refusal at an occupied G-1 destination and a chained double-move in which the moved session identity survives exactly once and success is reported honestly. FIRST BINDING RUN: 2/2 invariants green. DISTINCTION KEPT RED: LAW-attributed-content-change separately governs exercise content leaving a surviving session without a declared reason or athlete-visible explanation; this guard does not claim that property.',
     },
   },
   {

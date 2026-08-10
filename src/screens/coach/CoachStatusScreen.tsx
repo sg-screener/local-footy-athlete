@@ -22,18 +22,14 @@
  * strip stays fixed under the header and the detail lives here.
  * docs/UI_MERGE_SLICE3_PLAN_2026-08-10.md.
  *
- * THE SEASON-PHASE CONTROL IS NOT HERE YET, AND ITS ABSENCE IS DELIBERATE. It is
- * ruling 6's destination, and the phase-shift machine is fifteen pieces of
- * `useHomeScreen` state driving a multi-step sheet. Mounting it needs that state
- * extracted to an owner both screens can call; re-implementing it here would be
- * the exact defect the rule above forbids. **Until that lands, the phase card
- * stays on the day screen** — `LAW-removal-ships-with-its-replacement` — and this
- * screen says so rather than pretending the control is elsewhere.
+ * THE SEASON-PHASE CONTROL LIVES HERE. Its existing atomic flow was extracted
+ * intact from `useHomeScreen`; Program's old card leaves in the same checkpoint.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { ActiveModifiersSection } from '../../components/ActiveModifiersSection';
 import type {
@@ -41,40 +37,36 @@ import type {
   ActiveCoachNoteAction,
 } from '../../utils/activeCoachNotes';
 import { signedCopy } from '../../rules/signedCopy';
+import type { SeasonPhase } from '../../types/domain';
 
 export interface CoachStatusScreenProps {
   readonly modifiers: readonly ActiveCoachNote[];
   readonly equipmentFactIds: ReadonlySet<string>;
+  readonly currentPhase: SeasonPhase;
+  readonly onReviewPhase: () => void;
   readonly onAction: (note: ActiveCoachNote, action: ActiveCoachNoteAction) => void;
   readonly onClose: () => void;
 }
 
 export default function CoachStatusScreen({
-  modifiers, equipmentFactIds, onAction, onClose,
+  modifiers, equipmentFactIds, currentPhase, onReviewPhase, onAction, onClose,
 }: CoachStatusScreenProps) {
+  const [expandedModifierId, setExpandedModifierId] = useState<string | null>(null);
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']} testID="coach-status-screen">
-      {/* `h2`, NOT `h1`, AND THE DONE CONTROL LIVES IN THIS ROW.
-          Measured on the device, not chosen from a palette: at `h1` the title
-          rendered as a full-width "MY STATUS" that dwarfed the one card under
-          it, and the close control — positioned absolutely at `top: 14` —
-          landed ON the status bar, overlapping the battery. A detail screen
-          reached from a strip is not the app's front page. */}
       <View style={styles.header}>
-        <Text variant="h2">{signedCopy('coach.status.title')}</Text>
-        {/* THE CLOSE CONTROL BELONGS TO THIS SCREEN, INSIDE ITS SafeAreaView.
-            It was an absolutely-positioned sibling in `CoachTabScreen` and landed
-            on the status bar, over the battery — a control OUTSIDE the safe area
-            of the screen it closes. Owning it here means it cannot drift again. */}
         <Pressable
           onPress={onClose}
           testID="coach-status-close"
           accessibilityRole="button"
-          accessibilityLabel="Done"
+          accessibilityLabel="Back"
           hitSlop={12}
           style={({ pressed }) => [styles.close, pressed && { opacity: 0.6 }]}
         >
-          <Text variant="body">Done</Text>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
+            stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M15 18l-6-6 6-6" />
+          </Svg>
         </Pressable>
       </View>
       <ScrollView
@@ -82,34 +74,85 @@ export default function CoachStatusScreen({
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
       >
-        {modifiers.length === 0 ? (
-          // NOTHING SHAPING THE PROGRAM IS A FACT, NOT AN ERROR, and it gets a
-          // sentence rather than an empty screen. The day screen's section
-          // renders nothing when empty because it sits inside a busy screen;
-          // this screen IS the subject, so silence here reads as broken.
-          <Text style={styles.empty} testID="coach-status-empty">
-            {signedCopy('coach.status.empty')}
-          </Text>
-        ) : (
-          <ActiveModifiersSection
-            notes={modifiers as ActiveCoachNote[]}
-            equipmentFactIds={equipmentFactIds}
-            onAction={onAction}
-            /* SEE THE PROP'S OWN DOC. Until `handleCoachNoteAction` is lifted out
-               of `useHomeScreen`, these controls cannot run — so they render
-               dimmed, untappable and captioned with where the live one is,
-               rather than looking ready and lying. */
-            actionsNotYet
-            /* THE ONE STRAND THAT WAS NEVER TANGLED. `dismiss_note` runs
-               `dismissActiveCoachNote`, a module-level function with zero hook
-               dependencies — it needed no extraction, so it works here today.
-               Cut the knot where it is already loose rather than waiting for the
-               whole rope. */
-            liveActionKinds={LIVE_ACTION_KINDS}
-          />
-        )}
+        <Pressable
+          style={({ pressed }) => [styles.phaseRow, pressed && { opacity: 0.72 }]}
+          onPress={onReviewPhase}
+          testID="coach-status-season-phase"
+          accessibilityRole="button"
+          accessibilityLabel={`Season phase ${currentPhase}. Review`}
+        >
+          <View style={styles.phaseText}>
+            <Text style={styles.eyebrow}>SEASON PHASE</Text>
+            <Text style={styles.phaseValue}>{currentPhase}</Text>
+          </View>
+          <Text style={styles.review}>REVIEW</Text>
+          <Chevron />
+        </Pressable>
+
+        <View style={styles.modifierHeader}>
+          <Text style={styles.eyebrow}>ACTIVE MODIFIERS</Text>
+          <Text style={styles.modifierCount}>{`${modifiers.length} ACTIVE`}</Text>
+        </View>
+
+        <View testID="program-active-coach-notes">
+          {modifiers.length === 0 ? (
+            <Text style={styles.empty} testID="coach-status-empty">
+              {signedCopy('modifiers.strip.none')}
+            </Text>
+          ) : modifiers.map((note) => {
+            const expanded = expandedModifierId === note.id;
+            return (
+              <View key={note.id} style={styles.modifierBlock}>
+                <Pressable
+                  style={({ pressed }) => [styles.modifierRow, pressed && { opacity: 0.72 }]}
+                  onPress={() => setExpandedModifierId(expanded ? null : note.id)}
+                  testID={`coach-status-modifier-${note.constraintId}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded }}
+                  accessibilityLabel={note.title}
+                >
+                  <View style={styles.dot} />
+                  <View style={styles.modifierText}>
+                    <Text style={styles.modifierTitle}>{note.title}</Text>
+                    <Text style={styles.modifierBody} numberOfLines={expanded ? undefined : 1}>
+                      {note.body}
+                    </Text>
+                  </View>
+                  <Chevron open={expanded} />
+                </Pressable>
+                {expanded ? (
+                  <ActiveModifiersSection
+                    notes={[note] as ActiveCoachNote[]}
+                    equipmentFactIds={equipmentFactIds}
+                    onAction={onAction}
+                    actionsNotYet
+                    liveActionKinds={LIVE_ACTION_KINDS}
+                  />
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function Chevron({ open = false }: { open?: boolean }) {
+  return (
+    <Svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#A5A5A5"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={open ? styles.chevronOpen : undefined}
+    >
+      <Path d="M9 18l6-6-6-6" />
+    </Svg>
   );
 }
 
@@ -127,15 +170,40 @@ const LIVE_ACTION_KINDS: readonly string[] = ['dismiss_note'];
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0A0A0A' },
   header: {
+    minHeight: 54,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  body: { flex: 1 },
+  bodyContent: { paddingHorizontal: 20, paddingBottom: 32 },
+  phaseRow: {
+    minHeight: 84,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#303030',
+  },
+  phaseText: { flex: 1, gap: 5 },
+  eyebrow: { color: '#8D918D', fontSize: 11, lineHeight: 14, fontWeight: '800', letterSpacing: 1.2 },
+  phaseValue: { color: '#F4F4F4', fontSize: 22, lineHeight: 27, fontWeight: '700' },
+  review: { color: '#A5A5A5', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  modifierHeader: {
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#303030',
   },
-  close: { paddingHorizontal: 8, paddingVertical: 6 },
-  body: { flex: 1 },
-  bodyContent: { paddingHorizontal: 20, paddingBottom: 32 },
-  empty: { color: '#8A8A8A', fontSize: 14, lineHeight: 20, paddingTop: 12 },
+  modifierCount: { color: '#8D918D', fontSize: 11, fontWeight: '800', letterSpacing: 0.7 },
+  modifierBlock: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#303030' },
+  modifierRow: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#C8FF00' },
+  modifierText: { flex: 1, minWidth: 0, gap: 3 },
+  modifierTitle: { color: '#F2F2F2', fontSize: 15, lineHeight: 19, fontWeight: '700' },
+  modifierBody: { color: '#888C88', fontSize: 13, lineHeight: 17 },
+  chevronOpen: { transform: [{ rotate: '90deg' }] },
+  empty: { color: '#8A8A8A', fontSize: 14, lineHeight: 20, paddingVertical: 22 },
 });

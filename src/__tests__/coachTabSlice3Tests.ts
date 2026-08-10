@@ -1275,8 +1275,10 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
     path.join(__dirname, '..', ...rel.split('/')), 'utf8');
   const strip = read('components/ModifiersStrip.tsx');
   const home = read('screens/home/HomeScreenV2.tsx');
+  const homeHook = read('screens/home/useHomeScreen.ts');
   const coachTab = read('screens/coach/CoachTabScreen.tsx');
   const status = read('screens/coach/CoachStatusScreen.tsx');
+  const phaseControl = read('hooks/useSeasonPhaseControl.ts');
 
   ok('the strip exists as ONE component, not one per surface',
     /export function ModifiersStrip/.test(strip),
@@ -1331,13 +1333,32 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
       && /<ActiveModifiersSection/.test(status),
     'a list re-implemented on a second screen is a second door by another name');
 
-  // AND THE DAY SCREEN STILL MOUNTS IT TOO — the removal has NOT shipped,
-  // because the actions are not wired yet. This cell is what stops the removal
-  // being taken early and quietly.
-  ok('nothing was removed from the day screen in this slice',
-    /<ActiveModifiersSection/.test(home) && /styles\.phaseCard/.test(home),
-    'LAW-removal-ships-with-its-replacement: the modifiers section and the '
-      + 'phase card both stay until the status screen can actually do their job');
+  ok('phase review moved to My Status in the same slice Program removed it',
+    /testID="coach-status-season-phase"/.test(status)
+      && /onReviewPhase/.test(status)
+      && /useSeasonPhaseControl\(\)/.test(coachTab)
+      && /<SeasonPhaseShiftSheet/.test(coachTab)
+      && !/styles\.phaseCard/.test(home)
+      && !/<PhaseShiftSheet/.test(home),
+    'LAW-removal-ships-with-its-replacement: status must mount the working '
+      + 'replacement before day/week lose their phase card');
+
+  ok('the re-homed phase control keeps the atomic transaction door',
+    /commitProfileProgramTransaction\(\{/.test(phaseControl)
+      && /sourceSurface: 'phase_shift'/.test(phaseControl)
+      && /applyPhaseShift\(onboardingData/.test(phaseControl)
+      && /useSeasonPhaseControl\(\)/.test(homeHook)
+      && !/applyPhaseShift/.test(homeHook)
+      && !/sourceSurface: 'phase_shift'/.test(homeHook),
+    'moving the surface must not replace the established atomic phase decision');
+
+  ok('Renee hierarchy is explicit on both coach surfaces',
+    /styles\.brand/.test(coachTab)
+      && /surface="coach"/.test(coachTab)
+      && /SEASON PHASE/.test(status)
+      && /ACTIVE MODIFIERS/.test(status)
+      && /coach-status-modifier-/.test(status),
+    'the old full-width title/card stack has returned or the new hierarchy is incomplete');
 
   // THE HONEST HALF, ASSERTED SO IT CANNOT BE FORGOTTEN. The status screen is
   // READ-ONLY this pass and the file must say so.
