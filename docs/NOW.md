@@ -21,12 +21,16 @@
   **AND THE THING EVERY REPORT SINCE 18 JULY HAS SAID IS WRONG:** the crash that
   killed it is gone — your rebuild fixed it. The app launches, loads, and draws
   the welcome screen.
-  **BUT I TOLD YOU THE POP-UP WAS THE WHOLE BLOCKER AND THAT WAS WRONG.** I made
-  the test answer it. **The test still fails**, and the pop-up comes straight
-  back. I read a screenshot and called the thing on top of it the cause, which is
-  the second time in one day I have done that. **Why the test can't see the app
-  is OPEN-UNKNOWN**, and I stopped after three tries rather than keep guessing.
-  docs/MAESTRO_RIG_MEASURED_2026-08-10.md
+  **AND I NOW KNOW WHAT THE POP-UP ACTUALLY DOES — I HAD IT HALF RIGHT.** I asked
+  the test to list everything it can see while the pop-up is up. **It can see the
+  pop-up and nothing else — none of your app is there at all.** So the pop-up
+  doesn't just sit on top; **it hides the whole app from the test.** Clear it
+  first and the test finds what it's looking for in **11 seconds — the first
+  green step in 23 days.**
+  **It is not fixed yet.** The pop-up comes from the way the test loads a
+  practice week, and the clean fix is to load it a different way so the pop-up
+  never appears. **Half the run works; the rest doesn't — OPEN-UNKNOWN, and NOT
+  ON GLASS.** docs/MAESTRO_RIG_MEASURED_2026-08-10.md
 
 - **⚠ SAM: ALL SIX RULES YOU RULED ON ARE NOW WATCHED — AND TWO OF YOUR
   RE-WORDINGS BEAT MINE.** You said the plain-English rule was about **app

@@ -40,6 +40,76 @@ rebuild fixed it. Measured, not assumed:
   revision 0 · mirror refusals 0 · actions 5"* is on screen, which is
   `DevE2EStatusMarkers` doing its job.
 
+## ✅ RESOLVED ENOUGH TO ACT ON — THE SEAT'S HYPOTHESIS IS CONFIRMED, AND HALF THE FLOW IS GREEN
+
+**THE FIRST GREEN STEP IN TWENTY-THREE DAYS.** With the stale dialog cleared
+first, a cold launch finds `e2e-entry-ready`:
+
+```
+Run flow when "Cancel" is visible... → Tap on "Cancel"... COMPLETED
+Launch app with clear state... COMPLETED
+Assert that id: e2e-entry-ready is visible... COMPLETED      ← 11 seconds
+```
+
+**The app was never the problem and the markers were never the problem.**
+
+### THE MEASUREMENT THAT SETTLED IT — A HIERARCHY DUMP, NOT A SCREENSHOT
+
+`maestro hierarchy` with the dialog up returns **972 lines containing the dialog,
+Safari's chrome and the status bar — and ZERO app content.** Not "the markers are
+missing": *nothing* of the app is in the tree.
+
+| what Maestro can see | |
+|---|---|
+| `"Open in "Local Footy Athlete"?"`, `"Open"`, `"Cancel"` | the dialog |
+| `"Mobile"`, scroll bars, `"100% battery power"` | Safari chrome + status bar |
+| any `e2e-` marker | **0** |
+| any app text (`BUILT FOR FOOTY`, `Build My Program`) | **0** |
+
+**MY OWN SECOND CANDIDATE IS REFUTED BY THE SAME DUMP.** I proposed the markers
+might be below Maestro's visibility threshold — 1×1 views at `opacity: 0.01`
+(`devE2EEntry.tsx:325-334`). **False**: no app content of any kind is in the
+tree, so nothing about the markers' size explains it, and they are found the
+moment the dialog is gone. Written down rather than dropped.
+
+**AND THE DIALOG SURVIVES `simctl terminate` of the app** — it belongs to Safari,
+not to us, which is why answering it inside the app's flow never settled it.
+
+### THE SEAT'S HYPOTHESIS: CONFIRMED IN SUBSTANCE
+
+Its words: *"the dialog is a symptom of the mechanism, not a stray prompt"* —
+`openLink: "localfootyathlete://…"` routes through the system, which raises it.
+**Confirmed.** The dialog only ever appears after a flow uses `openLink`, it
+belongs to Safari, and it blanks the app from the tree while it is up.
+
+### THE TWO OPTIONS, PRICED — AND THE CHEAP ONE IS MEASURED, NOT ASSUMED
+
+`LAW-elegant-two-options` (standing) requires both before coding.
+
+**(A) Answer the dialog at each call site.** *Tested, three runs.* **Flaky:** one
+run got past the tap to the seed assert, one stalled in the `when: visible`
+block, one had `openLink` itself fail — exit 1 at 12s. It is also six call sites
+(`reset-seed`, `reset-scenario`, `checkpoint-and-reload`, `run-explorer-scenario`,
+and two scenario-checkpoint flows), i.e. a workaround repeated per flow.
+
+**(B) Seed through a LAUNCH ARGUMENT, beside the two that already work.** The app
+already reads `e2eMetroUrl` and `e2eLaunchPurpose` from `UserDefaults`
+(`DevE2ELaunchDiagnostic.swift:30-31`). Adding a seed id there and calling the
+same `coordinator.reset(seedId)` the URL route already calls
+(`devE2EEntry.tsx:215`) **removes the URL scheme, Safari and the dialog from the
+path together** — one owner, no per-flow workaround.
+
+**(B) WINS ON BOTH AXES**, which is unusual and worth stating: it is the more
+elegant shape *and* the more reliable one by measurement. (A) is not merely
+inelegant, it is flaky.
+
+### NOT COVERED — NO COMPLETE RUN-THROUGH YET
+
+**Half the flow is green, not the flow.** Launch + `e2e-entry-ready` completes
+reliably; everything past `openLink` does not. **No athlete run-through has
+finished**, so every claim waiting on one still waits: the world matrix, the
+chain split, Sam's Monday arm.
+
 ## ⚠ CORRECTION, 2026-08-10 — THE DIALOG IS NOT THE BLOCKER, AND I TOLD SAM IT WAS
 
 **The claim below — that one unhandled dialog is "the whole distance" to a
