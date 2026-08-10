@@ -388,6 +388,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-day-timeline-icon-is-marker',
+    law: 'On the accepted new Today card, each component icon is its one timeline marker: no separate dot or connector rail; the main headline does not repeat the icon; headings, counts, badge and session action use the compact hierarchy Sam accepted from Renee\'s card.',
+    ruledAt: 'docs/UI_PROTOTYPE_DIVERGENCE_2026-08-11.md "SAM EYE PASS 7 — THE SESSION ICON IS THE MARKER"',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline + .maestro/golden/day-card-dropdowns.yaml + .maestro/golden/standard-program-week.yaml',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: the interactive day timeline drew a hollow node and connector rail, then a typed component icon beside them, so one component had two markers and its oversized heading/count started a full column too far right. WHAT THE CELL HOLDS: the interactive branch contains no timelineRail, timelineNode or timelineConnector; one timelineIconMarker wraps RowIcon and receives saved completion colour; the day headline region contains no duplicate RowIcon; the category badge is compact; eyebrow, main title, component heading, count, divider and Start Session sizes are pinned. The flat Week branch remains separately guarded and contains no interactive furniture. WHAT THE TAPES HOLD: the standard route renders and captures the collapsed icon-led Today card before traversing Week; the dropdown route taps strength open, observes all exercise rows plus the same Program/Start door, captures it, and taps it closed. FIRST-RUN FINDING: the new cell failed immediately on timelineRail in the old branch and went green only after the marker layer was deleted. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone, spoken VoiceOver order, exceptionally long translated headings, the old/classic template.',
+    },
+  },
+  {
     id: 'LAW-one-name-two-meanings',
     law: 'A name that covers more than one thing is measured apart BEFORE it is worked on — per strand, never per label.',
     ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat: "four sightings in one day is not a coincidence — give the class a name and a row… a name that covers more than one thing is measured apart BEFORE it is worked on, and the measurement is per strand, not per label"',

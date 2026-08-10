@@ -2090,7 +2090,7 @@ function DayRow({
         : showRowBadges && hasWorkout && isGame
           ? <GameBadge />
           : showRowBadges && hasWorkout && day.workout.sessionTier
-            ? <SessionTierBadge tier={day.workout.sessionTier} />
+            ? <SessionTierBadge compact={dayShape} tier={day.workout.sessionTier} />
             : null}
     </>
   );
@@ -2143,7 +2143,6 @@ function DayRow({
 
       <View style={styles.selectedTitleBlock}>
         <View style={styles.selectedTitleLine}>
-          <RowIcon kind={titleIcon} size={16} color={accentColor} />
           <Text
             style={[
               hasWorkout ? styles.workoutTitle : styles.restLabel,
@@ -2266,7 +2265,7 @@ function DayRow({
                 {isRecoverySession ? (
                   <Text style={styles.expandedMeta}>Move easy. Feel better.</Text>
                 ) : null}
-                <Button label="Start Session" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
+                <Button label="Start Session" size="sm" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
               </>
             )}
             <Pressable
@@ -2469,8 +2468,10 @@ const PART_ICON_KIND: Readonly<Record<VisiblePartKind, RowIconKind>> = {
 /**
  * WHAT A SAVED OUTCOME LOOKS LIKE ON A TIMELINE ROW.
  *
- * `null` — nothing saved — draws a hollow ring, not a cross: "not answered yet"
- * and "skipped" are different facts and the athlete said one of them.
+ * The component's one icon carries the saved outcome colour. `null` keeps its
+ * ordinary kind colour: "not answered yet" and "skipped" are different facts
+ * and the athlete said one of them. There is no second completion dot beside
+ * the icon — Sam removed that duplicate marker on 2026-08-11.
  */
 const TIMELINE_COMPLETION_COLOR: Readonly<Record<string, string>> = {
   full: '#5BD98A',
@@ -2531,7 +2532,7 @@ function DayTimeline({ entries, onOpen, presentation }: DayTimelineProps) {
   };
   return (
     <View style={styles.timeline} testID="day-timeline">
-      {entries.map((entry, index) => {
+      {entries.map((entry) => {
         const iconKind = PART_ICON_KIND[entry.kind];
         const completionColor = entry.completion
           ? TIMELINE_COMPLETION_COLOR[entry.completion]
@@ -2597,18 +2598,13 @@ function DayTimeline({ entries, onOpen, presentation }: DayTimelineProps) {
                 entry.completion ? ` — ${entry.completion}` : ''}`}
               style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
             >
-              <View style={styles.timelineRail}>
-                <View
-                  style={[
-                    styles.timelineNode,
-                    completionColor
-                      ? { backgroundColor: completionColor, borderColor: completionColor }
-                      : null,
-                  ]}
+              <View style={styles.timelineIconMarker}>
+                <RowIcon
+                  kind={iconKind}
+                  size={13}
+                  color={completionColor ?? rowIconColor(iconKind)}
                 />
-                {index < entries.length - 1 ? <View style={styles.timelineConnector} /> : null}
               </View>
-              <RowIcon kind={iconKind} size={15} color={rowIconColor(iconKind)} />
               <View style={styles.timelinePartText}>
                 {/* THE CAPS ARE A STYLE, NOT THE STRING. `entry.headline` is
                     `SignedCopy` and the sheet keeps its own casing ("Upper
@@ -4100,31 +4096,25 @@ const styles = StyleSheet.create({
 
   // The component timeline inside the selected day's expanded block.
   timeline: { gap: 0 },
-  timelineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 7 },
-  timelineRail: { width: 12, alignItems: 'center', alignSelf: 'stretch', justifyContent: 'center' },
-  timelineNode: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: '#5E6268',
-    backgroundColor: 'transparent',
+  timelineRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 7,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  timelineConnector: {
-    position: 'absolute',
-    top: '50%',
-    bottom: -7,
-    width: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-  },
+  timelineIconMarker: { width: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   timelineHeadline: {
     color: '#E8EAED',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '800',
     // CAPS ARE A STYLE HERE, NOT THE STRING — see the render site. The sheet
     // keeps "Lower Body Strength"; her drop-down rows read them upper.
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.7,
   },
   // ── THE DROP-DOWNS (UI merge slice 2, Sam's eye pass 2026-08-10) ──
   // No new colour token, no new font size that is not already on this screen:
@@ -4132,11 +4122,11 @@ const styles = StyleSheet.create({
   // reuses the muted grey and 12pt the day date already uses, and the
   // prescription reuses the accent-free `#A7A7A7` the coach-note body uses.
   timelinePartText: { flex: 1, gap: 1 },
-  timelinePartMeta: { color: '#8A8A8A', fontSize: 12, lineHeight: 15 },
+  timelinePartMeta: { color: '#8A8A8A', fontSize: 9, lineHeight: 12 },
   timelineChevronOpen: { transform: [{ rotate: '180deg' }] },
   // Indented to the part's own text column, so an exercise reads as belonging
   // to the row above it rather than as another part.
-  timelineRows: { paddingLeft: 12 + spacing.sm + 15 + spacing.sm, paddingBottom: 6, gap: 4 },
+  timelineRows: { paddingLeft: 18 + spacing.sm, paddingBottom: 6, gap: 4 },
   timelineExerciseRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   timelineExerciseName: { flex: 1, color: '#C9CDD2', fontSize: 13, fontWeight: '500' },
   timelineExercisePrescription: { color: '#8A8A8A', fontSize: 13, fontVariant: ['tabular-nums'] },
@@ -4171,7 +4161,9 @@ const styles = StyleSheet.create({
   // ── THE DAY CARD'S EYEBROW (ruling 5) ──
   // Small, muted, letter-spaced — the same treatment `coachNotesTitle` gives an
   // eyebrow already, minus the lime, because ruling 2 spends the accent once.
-  dayEyebrow: { color: '#8A8A8A', fontSize: 11, fontWeight: '800', letterSpacing: 1.1 },
+  dayEyebrow: {
+    color: '#8A8A8A', fontSize: 8, lineHeight: 11, fontWeight: '800', letterSpacing: 1,
+  },
   // ── THE CALM DAY CARD (ruling 2) ──
   // What it does NOT set is the point: no `borderColor`, no `shadow*`, no
   // `elevation`. A dark card on black, exactly as hers is.
@@ -4296,7 +4288,7 @@ const styles = StyleSheet.create({
   // Selected session title — the biggest text in the list, but still a
   // row, not a hero. White + heavier weight carry the emphasis.
   workoutTitleSelected: {
-    color: '#FFFFFF', fontSize: 18, fontWeight: '700',
+    color: '#FFFFFF', fontSize: 16, lineHeight: 20, fontWeight: '700',
   },
   restLabel: {
     color: '#3E3E3E', fontSize: 13, fontWeight: '600', textAlign: 'right',

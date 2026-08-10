@@ -397,3 +397,64 @@ navigation handlers are unchanged, but this ruling is for the accepted new
 template); adjacent-week Completed styling; the deferred team-training badge;
 the held season-phase removal. This is simulator acceptance, not phone
 acceptance.
+
+---
+
+## SAM EYE PASS 7 — THE SESSION ICON IS THE MARKER
+
+**Sam, comparing the day cards:** *"the day screen also doesn't have the dot
+points it has the icon for the session as the dot point can you please change
+mine to be like renee's as well as trying to match the text up a bit better on
+hers vs mine".* Correct. The interactive day timeline drew a hollow node and
+connector rail, then drew the component icon beside them. One row had two
+markers, and that duplicate column pushed the already-larger heading and count
+further right than the accepted card.
+
+**THE TWO OPTIONS COMPARED:** (1) restyle the hollow node to resemble each icon,
+leaving the rail and separate icon layer in place, or (2) delete the marker
+layer and let the existing typed component icon own the one marker column.
+Option 2 landed. Saved completion colour now reaches that same icon, so removing
+the dot does not remove the fact it used to colour. The main day headline also
+stops repeating a session icon above those icon-led rows.
+
+**THE PROPORTION PASS:** the eyebrow moved to 8/11, the main session title to
+16/20, component headings to 10/13 bold caps, counts to 9/12, and the category
+badge uses the compact treatment. The component rows gain Renee's quiet
+hairline separators, their exercise rows align under the new single marker,
+and Start Session uses the small shared button rather than the hero height.
+Words, counts, prescriptions, chevrons and doors are unchanged.
+
+**RECEIPTS:**
+
+- `test:day-first-timeline`: 37 named cells run, 37 passed. The new cell forbids
+  the rail/node/connector in the interactive branch, requires one icon marker
+  carrying completion colour, forbids the duplicate headline icon, and pins
+  the accepted type, badge, divider and button proportions.
+- `.maestro/golden/standard-program-week.yaml`: completed on the iOS simulator;
+  its default-day screenshot was inspected with the single icon column and new
+  collapsed typography in place, before the same route reached the full Week.
+- `.maestro/golden/day-card-dropdowns.yaml`: completed on the iOS simulator. A
+  strength section opened in place, showed all names and prescriptions, kept
+  Start Session on the same screen, then closed again.
+- `artifacts/ui-walk/day-no-week-navigation.png` and
+  `artifacts/ui-walk/dropdown-2-expanded.png`: looked at. The hollow dots and
+  vertical rail are absent; strength and conditioning icons align the rows;
+  headings/counts sit on the same left edge; the tighter button and badge keep
+  the full card above the separate change card.
+- `test:compile` and `test:maestro-element-contract`: green.
+
+**FIRST-RUN FINDING:** the new cell failed on the old interactive branch at the
+first forbidden marker (`timelineRail`). After the marker layer was deleted and
+completion colour moved to the icon, the cell and both complete device routes
+passed. Nothing was fixed outside the finding.
+
+**NORTH STAR:** toward it. The component kind already derived the icon and the
+saved outcome already derived completion. One existing icon now presents both;
+no second component identity, stored display flag or rewritten session word was
+introduced.
+
+**NOT COVERED:** Sam's physical iPhone; VoiceOver reading order after the visual
+column removal (the row keeps its existing single accessibility label and
+button role, source-read but not device-spoken); exceptionally long translated
+headings; the old/classic template. This is simulator acceptance, not phone
+acceptance.

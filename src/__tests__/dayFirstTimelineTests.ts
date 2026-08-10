@@ -590,6 +590,45 @@ run('the day card lists each part\'s exercises, name and prescription', () => {
     + 'teaches the athlete the affordance is a lie.');
 });
 
+run('the day timeline uses each session icon as its only marker and matches her type scale', () => {
+  const home = homeScreenSource();
+  const timelineAt = home.indexOf('function DayTimeline(');
+  const chevronAt = home.indexOf('function TimelineChevron(', timelineAt);
+  assert(timelineAt > 0 && chevronAt > timelineAt,
+    'the interactive DayTimeline region could not be found');
+  const timeline = home.slice(timelineAt, chevronAt);
+  const interactiveAt = timeline.indexOf('<Pressable');
+  const interactive = timeline.slice(interactiveAt);
+  assert(interactiveAt > 0 && interactive.length > 900,
+    'the interactive day rows could not be isolated from the flat Week branch');
+  assert(!/timelineRail|timelineNode|timelineConnector/.test(interactive),
+    'the day timeline still draws a hollow dot or connector beside its session icon');
+  assert(/timelineIconMarker[\s\S]{0,180}<RowIcon[\s\S]{0,120}completionColor \?\? rowIconColor\(iconKind\)/.test(interactive),
+    'the session icon is not the row\'s one marker, including saved completion colour');
+
+  const dayHeaderAt = home.indexOf('const dayCardHeader =');
+  const weekHeaderAt = home.indexOf('const weekCardHeader =', dayHeaderAt);
+  assert(dayHeaderAt > 0 && weekHeaderAt > dayHeaderAt,
+    'the day card header region could not be found');
+  assert(!/<RowIcon\b/.test(home.slice(dayHeaderAt, weekHeaderAt)),
+    'the day headline still repeats a session icon above the icon-led component rows');
+  assert(/<SessionTierBadge\s+compact=\{dayShape\}/.test(home),
+    'the day header still uses the oversized category badge');
+
+  assert(/dayEyebrow:\s*\{[^}]*fontSize:\s*8[^}]*lineHeight:\s*11/.test(home),
+    'the eyebrow is still at the old oversized text scale');
+  assert(/workoutTitleSelected:\s*\{[^}]*fontSize:\s*16[^}]*lineHeight:\s*20/.test(home),
+    'the day session title does not use the tighter accepted scale');
+  assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*10[^}]*lineHeight:\s*13[^}]*fontWeight:\s*'800'/.test(home),
+    'the component headings remain too large or light');
+  assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*9[^}]*lineHeight:\s*12/.test(home),
+    'the exercise counts remain too large beside their headings');
+  assert(/timelineRow:\s*\{[^}]*borderTopWidth:\s*StyleSheet\.hairlineWidth/.test(home),
+    'the simplified icon-led rows lost her quiet section dividers');
+  assert(/label="Start Session"[\s\S]{0,100}size="sm"/.test(home),
+    'the primary day action still uses the oversized hero-button treatment');
+});
+
 run('Start Session sits inside the card, below the drop-downs', () => {
   const home = homeScreenSource();
   const timeline = home.indexOf('{timeline}');
