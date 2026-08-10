@@ -747,9 +747,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Store only decisions; derive everything else. New stored state that is not an input is presumed wrong.',
     ruledAt: 'docs/NORTH_STAR.md:11; CLAUDE.md requires it read FIRST',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A ratchet over the persisted surface: enumerate every key reaching disk (the boot registry test:stored-state-writer-audit already enumerates the STORES) and red when a NEW persisted key appears without a declared input classification. The census exists; the ratchet does not.',
-      receipt: 'THE APP\'S OWN NORTH STAR AND IT HAD NO ROW. Every boundary report states whether the unit moved toward or away from it — by hand, in prose, judged by the author of the change. test:stored-state-writer-audit and test:persisted-inputs-schema are in the chain and guard WRITE BOUNDARIES and SHAPE, not whether a new stored thing should exist at all.',
+      state: 'guarded',
+      by: 'test:persisted-inputs-schema',
+      chainStatus: 'in_chain',
+      receipt: 'BOUND TO THE EXISTING DISK-LEVEL GUARD 2026-08-11. The suite generates a fresh install, flushes real storage writes, enumerates every dotted key that actually reaches disk, and requires each one to be classified as profile / fact / decision / result or carried on a dated shrink-only debt list. It is two-directional: an undeclared stored key reds, and a declaration whose key no longer exists reds so it cannot pre-bless a later reintroduction. FIRST BINDING RUN: 12 storage envelopes, 27 persisted keys; 12 declared inputs and 16 carried debt entries (13 coach-era, 2 transient, 1 unregistered); 8/8 cells green. WHAT IT DOES NOT CLAIM: the 16 debts are not inputs and remain red distance to the north-star property; the guard prevents silent growth and does not itself decide that a newly proposed classification is legitimate.',
     },
   },
 
