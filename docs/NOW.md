@@ -1,8 +1,29 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
-- **BRANCH:** `main` · **HEAD:** the coach's move actually lands. S4 not started,
-  as ordered. Sam's boot fix below is still UNSEEN on his phone and is still the
-  first thing to look at.
+- **BRANCH:** `main` · **HEAD:** `f168b48b` — **`test:bible` IS DELIBERATELY RED
+  AND STAYS RED UNTIL EVERY LAW HAS A GUARD.** S4 not started, as ordered. Sam's
+  boot fix below is still UNSEEN on his phone.
+
+- **🔴 THE CHAIN IS RED ON PURPOSE. UNENFORCED COUNT: 19 of 29.** `915c58fe`
+  flipped the law registry's default on Sam's stop-the-line ruling
+  (*"WHY CAN'T YOU JUST MAKE SURE EVERY FUCKING RULE IS FOLLOWED FROM RIGHT
+  NOW"*): `test:law-registry` is the last link of the chain and **FAILS while any
+  registry row reads `UNENFORCED`.** **The red does NOT mean the app broke — it
+  means the app has never been checked against 19 of its own rules, and from now
+  that counts as failing.** Placed LAST so the red costs no coverage: every other
+  suite still runs and reports first. **Nothing but guards, guard-caught fixes and
+  measurement lands while it is red.** Expect some of the 19 guards to go red on
+  their FIRST run — that is the point, and each one is then a real bug with a
+  name, reported the moment it appears.
+
+- **🔴 THE COURIER TOLL IS PAID (`f168b48b`).** The stop hook detected an order by
+  matching `^1\.` only, so **every order the seat wrote as `00.`/`0.`/`000.` was
+  invisible and the turn ended silently — Sam had to type "check inbox" himself,
+  twice on 2026-08-10.** Sighting 4 of the numbering-artefact class the hook's own
+  comments already named twice. Now read by CONTENT: anything under
+  `## Unprocessed` that is not blank, not an empty-queue marker and not parked is
+  an order. `test:seat-inbox-hook`, 17 cells both directions, **enrolled in the
+  chain — the suite existed and was in NO chain at all.**
 
 - **⏳ THE BLOCKER IS CLEARING — SAM APPROVED THE REBUILD AND IT IS RUNNING.**
   `npx expo run:ios --configuration Debug` was started 2026-08-10 once Sam
@@ -544,8 +565,11 @@
 - **WATCH-FORS still open on Sam's device:** completed-day display at the next
   completed session; the three fallback sheets; stale-banner Review; the
   team-training affordance.
-- **INBOX CONVENTION:** an empty queue is written `(none)`, **unnumbered** — the
-  stop hook read a numbered empty marker as an order twice.
+- **INBOX CONVENTION:** an empty queue is written `(none)`. **Numbering no longer
+  matters in either direction** (`f168b48b`) — the hook reads content, and a
+  numbered empty marker is still recognised as empty. **The seat's half: orders
+  are 1, 2, 3, newest first; urgency belongs in the words, not in inventing
+  `00.`.**
 - **Standing:** `test:bible` is the ONLY official gate, unpiped, per commit — and
   it **stops at the first failing suite**, so anything after position 92 needs
   the sweep. `npm run test:bible:parallel` is a NON-OFFICIAL fast pre-check.
