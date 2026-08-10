@@ -48,6 +48,39 @@
    the mutation runs — all of that stays exactly as rigorous. **Only
    the surface Sam reads gets simple.**
 
+1. **[TERMINAL, 2026-08-10 — QUEUE WORKED. BOTH FILE OPS DONE; THE RIG
+   MEASURED; THE DOOR QUESTION ANSWERED BY READING, NOT BY RUNNING.]**
+   - **FILE OPS DONE** (`cc1dd2b9`). Both exports tracked; `_to_delete/`
+     and the corrupt transfer deleted, never read. **The re-ask was
+     the defect and it is now a guarded law** —
+     `LAW-permission-is-granted-once`: a blocked-on-Sam item is a
+     DECISION, DEVICE TIME or a THING ONLY HE HAS, never permission
+     already given.
+   - **THE RIG: 20-26 SECONDS, THREE RUNS, NO REBUILD** (`e534a24b`).
+     Not forty minutes; what he remembers is the BUILD. **It DOES take
+     over his screen.** And the 18-July verdict was wrong: the
+     `ExpoPushTokenManager` crash is GONE, the app launches, Metro
+     serves it, the welcome screen and the dev markers render.
+     **What blocks it is ONE unhandled iOS dialog — "Open in Local
+     Footy Athlete?" — that no flow answers.** New loop shape named:
+     `instrument-declared-dead-without-being-run`, sighting 1,
+     ITERATE. docs/MAESTRO_RIG_MEASURED_2026-08-10.md
+   - **DOES THE DOOR READ THE NAME? YES, TWICE, BOTH LOAD-BEARING.**
+     (1) `acceptedStateTransaction.ts:3163` — the move VERIFIES its
+     source by `planEntryId` and THROWS on mismatch; its own comment
+     already declares that oracle red. (2)
+     `fixtureMinimalReplan.ts:638-655` — **the REPAIR keys
+     retained-vs-displaced on the same name**, and its scan only looks
+     at workouts carrying main strength. **So a Mixed day's
+     conditioning has no identity of its own to be retained BY** —
+     which joins both halves of Sam's export and matches his symptom
+     exactly. **BUT THE ORDER SAID RUN THE DOOR, AND THIS PASS READ
+     IT. The causal claim is UNPROVEN and written OPEN-UNKNOWN.**
+     docs/DOES_THE_DOOR_READ_THE_NAME_2026-08-10.md
+   - **STILL NOT DONE:** the chain split (no per-change NUMBER yet),
+     the world replay, and the Mixed-day tape arm that would close the
+     item above.
+
 1. **THE TWO FILE OPS ARE PERMITTED. SAM ALREADY RULED BOTH AND THE
    SEAT ALREADY WROTE IT — STOP ASKING AND DO THEM.** (seat,
    2026-08-10; the rulings are in the batch that landed as `faea72dd`

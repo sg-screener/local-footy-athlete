@@ -1,5 +1,17 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **⚠ SAM: I THINK I HAVE FOUND WHY ONLY THE STRENGTH MOVED — AND IT IS NOT
+  COSMETIC.** I said the app names your Monday a "strength day" even though it
+  carries conditioning too. I have now checked whether anything ACTS on that
+  name. **It does, in two places.** The move checks it before it will run — and
+  **the repair uses it to decide what survived the move.** On a day carrying
+  both, **your conditioning has no name of its own**, so nothing carries it and
+  the repair puts it back where it started. **That is exactly what you saw.**
+  docs/DOES_THE_DOOR_READ_THE_NAME_2026-08-10.md
+  **I HAVE NOT PROVEN IT — OPEN-UNKNOWN.** I read the code; I have not yet run
+  your day through it. That is the next thing, it is small, and it settles it
+  either way. **NOT ON GLASS.**
+
 - **⚠ SAM: THE TEST RIG IS NOT DEAD, AND IT IS NOT FORTY MINUTES. IT IS ABOUT
   TWENTY SECONDS.** You asked because you remember it eating your laptop. I ran
   it three times on the simulator you already have built: **26s, 20s, 26s per
