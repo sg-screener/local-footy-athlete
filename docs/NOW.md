@@ -4,7 +4,18 @@
   AND STAYS RED UNTIL EVERY LAW HAS A GUARD.** S4 not started, as ordered. Sam's
   boot fix below is still UNSEEN on his phone.
 
-- **🔴 THE CHAIN IS RED ON PURPOSE. UNENFORCED COUNT: 19 of 29.** `915c58fe`
+- **⚠ SAM: I DELETED THE OLD "HOW HARD IS THIS WEEK" RULES FROM GENERATION, AND
+  HERE IS WHAT THEY WERE DOING.** The old set **cannot see two things stacked on
+  one day** — team training plus a gym block. So on exactly the days you combine
+  work, it said the week was EASIER than it is, and it was still the gate that
+  accepted your week whenever the new set was missing (any program saved before the
+  rebuild). Now a week the current code can't describe gets rebuilt instead.
+  **BUT IT IS NOT FULLY GONE:** the same old check still runs in three other places
+  with no guard on it, so the undercount can still reach a current week. That is
+  measured as open, not claimed as fixed. Full sweep before and after the cut: the
+  same four reds, so nothing else moved.
+
+- **🔴 THE CHAIN IS RED ON PURPOSE. UNENFORCED COUNT: 46 of 60.** `915c58fe`
   flipped the law registry's default on Sam's stop-the-line ruling
   (*"WHY CAN'T YOU JUST MAKE SURE EVERY FUCKING RULE IS FOLLOWED FROM RIGHT
   NOW"*): `test:law-registry` is the last link of the chain and **FAILS while any

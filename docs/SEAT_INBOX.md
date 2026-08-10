@@ -174,7 +174,18 @@
      `legacyPowerBlockMigration.ts:130,137,143,150,157,164`). Replace
      with the clean-reset path. **Do this first: it is the only one
      with a live consequence.**
-   - **(b) `weeklyExposureContract` (V1) — RETIRE.** Delete the
+   - **(b) DONE AS SPECIFIED, AND IT DOES NOT DO WHAT THE ITEM CLAIMS.**
+     `2ec4d49b` — the generation-time arm and its import are cut; a week
+     with no v2 regenerates. **BUT V1 IS NOT RETIRED:**
+     `evaluateEffectiveWeekExposureContract` has THREE other PRODUCT call
+     sites (`postGenerationConstraintValidation.ts:695,778,1889`) and
+     **NONE is guarded by `!v2`** — so the undercount can still reach a
+     CURRENT world, unmeasured. The module has 16 importers including
+     V2 itself; the contract is still PERSISTED. **`LAW-L15` stays
+     UNENFORCED — flipping it would be the "reads as covered" failure.**
+     Sweep before and after: **4 of 177, the same four by name.**
+     docs/V1_EXPOSURE_CONTRACT_CUT_2026-08-10.md
+   - **(b, as originally written) `weeklyExposureContract` (V1) — RETIRE.** Delete the
      fallback arm at `generateProgram.ts:780-790` and the V1 import at
      `:57`; a week with no V2 contract regenerates rather than falling
      back. **This closes `LAW-L15-one-write-format` on a real
