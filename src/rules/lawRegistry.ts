@@ -395,8 +395,8 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'Named 2026-08-10 by pricing the conservation order — docs/CONSERVATION_POSTCONDITION_PRICING_2026-08-10.md',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'Carry the canonicaliser\'s typed `actions` out of the mutation path (73 call sites of finaliseWorkoutAfterMutation), then red on loss no action explains — authorised transformations declare themselves and pass.',
-      receipt: 'THE ROW THE 2026-08-10 DEFECT ACTUALLY BELONGS TO. `power_removed` is already typed and reasoned (workoutCanonicalisation.ts:525,549,573) with reasons like game_proximity_power_blocked:G-2. Consumed ONLY by postGenerationConstraintValidation (generation-time) and three suites — NO athlete-facing surface reads a canonicalisation action. The reason exists and is thrown away.',
+      wouldTake: 'RE-PRICED 2026-08-10 BY THE XS, AND THE ORDERED M WORK IS WITHDRAWN. Threading the canonicaliser\'s typed `actions` out through 73 call sites would NOT have caught the measured defect. What a guard would actually take is not yet known — the next probe is one line: read the destination day\'s STORED rows beside the projected ones.',
+      receipt: 'THE ROW THE 2026-08-10 DEFECT ACTUALLY BELONGS TO. `power_removed` is typed and reasoned (workoutCanonicalisation.ts:526,573) with reasons like game_proximity_power_blocked:G-2, and NO athlete-facing surface reads it. BUT — MEASURED 2026-08-10, docs/POWER_REMOVAL_REASON_XS_2026-08-10.md — on the case that loses a row, NOT ONE PRODUCER FIRES: five probes (the §18 weekly budget, both canonicalisation pushes, both safety-finaliser pushes, the stack path, and a wrapper over the canonical entry itself) all counted ZERO. The row leaves WITHOUT PASSING THE CANONICAL OWNER. And the instrument that measured "8 rows in, 7 out" reads a PROJECTION, so whether the row was deleted at all is OPEN-UNKNOWN.',
     },
   },
   {

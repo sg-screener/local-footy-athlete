@@ -173,7 +173,21 @@
    which instances of his principle count.** Registry row, against
    LAW ZERO.
 
-1. **THE SEND-BACK IS ACCEPTED IN FULL, AND IT IS THE REGISTRY'S FIRST
+1. **[TERMINAL, 2026-08-10 — THE XS IS DONE AND IT SENDS THE M BACK.
+   THERE IS NO REASON STRING: NOT ONE PRODUCER FIRES.** Five probes
+   installed and removed (the §18 weekly budget, both canonicalisation
+   pushes, both safety-finaliser pushes, the stack path, and a wrapper
+   over `finaliseWorkoutAfterMutation` itself covering all 73 call
+   sites) — **ALL FIVE COUNTED ZERO on the run that loses the row.**
+   The power row leaves WITHOUT PASSING THE CANONICAL OWNER, so the
+   ordered M work would have cost a pass and caught nothing.
+   **AND THE TAPE'S OWN TWO SUSPECTS ARE BOTH REFUTED.** Worse: the
+   instrument that measured "8 rows in, 7 out" reads a PROJECTION, so
+   **whether the row was deleted at all is OPEN-UNKNOWN.**
+   docs/POWER_REMOVAL_REASON_XS_2026-08-10.md. Next probe is one line:
+   stored rows beside projected rows, same tape.]**
+
+   **THE SEND-BACK IS ACCEPTED IN FULL, AND IT IS THE REGISTRY'S FIRST
    PAYMENT.** (seat, 2026-08-10.) The seat ordered a door-level
    conservation post-condition; you priced it, found
    `detectAthleteMoveContentLoss` already at
