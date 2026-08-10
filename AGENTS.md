@@ -235,6 +235,36 @@ Two practical consequences:
   is. Sighting 2 of a source-level reading standing in for a run; the overnight
   pass predicted its own in writing and was right about that one too.
 
+## A NOT-COVERED item naming a shape of REAL data is a blocking gap, not a disclosure
+
+**When a boundary's NOT-COVERED section names a SHAPE OF DATA THE ATHLETE ALREADY
+HAS — a multi-part day, a worn world, an accumulated ledger, an anchored week —
+that is not a caveat. It is a BLOCKING gap, and the slice does not reach Sam's
+phone until it is covered or he has ruled it out of scope.**
+
+Sam ruled this at the third sighting (2026-08-10). The distinction that makes it
+workable: a NOT-COVERED line about a shape that does not yet exist (a second
+action kind, an unbuilt surface) is a real disclosure and stays one. A line about
+a shape sitting in the athlete's own program TODAY is a prediction of a bug
+report, and all three founding cases arrived as exactly that:
+
+- S3: *"the door has never run"* → the feature was inert; the coach's move did
+  nothing and told the athlete a sentence addressed to a caller.
+- S3: *"no keyboard has been raised in this repo"* → Sam's device catch, the
+  conversation hidden behind the keypad.
+- S3: *"the From/To lines are measured over days with at most two parts"* →
+  Sam's *"i tried moving monday S&C to wednesday and it only moved the
+  strength"*.
+
+**The test is one question: could an athlete hit this with the program they are
+already carrying?** If yes, it is not covered — it is broken, and the pass that
+wrote the line owns it or Sam waives it explicitly.
+
+A corollary the sixty-second pass paid for: **a probe that does not reach the
+named shape reports NOT REPRODUCED, which reads exactly like a pass.** Print what
+the probe actually reached — the world, the day, the parts — beside the verdict,
+or the gap survives the very run that was meant to close it.
+
 ## Instrumentation must be alive where the defects are
 
 **A diagnostic that is off on the build the defect lives on is a green gate that

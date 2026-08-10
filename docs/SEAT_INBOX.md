@@ -2,7 +2,353 @@
 
 ## Unprocessed (newest first)
 
-(none)
+1. HELD ON A BLOCKER THE SIXTY-SECOND PASS MEASURED — THE MAESTRO RIG
+   CANNOT RUN UNTIL THE SIMULATOR BINARY IS REBUILT. This is the
+   carried remainder of that pass's item 1, and it is NOT a fresh
+   order: the cold-rig check was run and reported in full, one of the
+   two breaks was fixed, and the second one costs a native build.
+   `expo-notifications` entered `package.json` 2026-08-09 (`8b12fcdd`)
+   and `ios/Podfile.lock` the same day (`77f5e415`); the installed
+   simulator binary is from 2026-08-08 and contains ZERO occurrences of
+   `ExpoPushTokenManager`, so every flow red-boxes on the unconditional
+   launch path (`journalReminderService.ts:33` → `AppNavigator.tsx:7` →
+   `RootNavigator.tsx:6` → `App.tsx:69`).
+   **THE ACT IS ONE COMMAND — `npx expo run:ios` (Debug, simulator) —
+   AND IT WAS DELIBERATELY NOT RUN**: Sam was mid `expo run:ios
+   --device --configuration Release` against the same workspace and
+   DerivedData, and a second concurrent xcodebuild would contend with
+   his device pass. Sam's call on when.
+   When it clears, the L-C3 keyboard matrix flow is unbuilt and the two
+   OPEN-UNKNOWNs — (a) the Undo toast over a coach-landed move,
+   (b) both card buttons reachable with the keyboard up — are still
+   open. Build it so a second surface is a parameter, not a copy.
+   NOTE FOR WHOEVER RUNS IT: `reset-seed.yaml` is fixed but the eight
+   flows behind it have not been green since 2026-07-18 and have never
+   been run against today's app — expect second-order rot.
+
+2. HELD, UNCHANGED: S4 (journal context) and the Bible "why" layer.
+   Both wait on Sam's device pass + the ONE batch-31 signing sitting.
+   The why layer is additionally a DESIGN moment — the era handoff
+   names it as one to call the design seat back for, so it does not
+   open from this inbox.
+   **AMENDED BY L-C4:** the "second kind" framing below is superseded.
+   The census (docs/COACH_PARITY_CENSUS_2026-08-10.md) is what the
+   build order now comes off, in batches, and it is Sam's to steer.
+   Do not open a kind because it is next; open it because the census
+   ranked it and Sam picked it.
+
+3. ONE QUESTION FOR SAM, AND IT DECIDES A DEFECT'S CLASS (sixty-second
+   pass). His multi-part catch did NOT reproduce: on a plain
+   strength+conditioning day every arm carried both parts. On an
+   ANCHORED day the coach is REFUSED where his own tap SUCCEEDS —
+   a real L-C4 break, measured, but not the partial move he described.
+   **The hypothesis, unheld by any cell:** if he tapped *"Just the gym
+   session"* on a Monday that also carried conditioning, only the
+   strength would move — exactly what he saw, and a COPY defect rather
+   than a door defect. Ask him what Monday actually carried and whether
+   he used the coach or the picker. One answer closes it.
+
+
+## Processed 2026-08-10 (sixty-second pass) — THE COACH CAN DO 1 OF 26, AND THE RIG THAT WOULD HAVE PROVED THE REST HAD BEEN DEAD FOR 23 DAYS
+
+- **ONE LINE: Sam's parity ruling became L-C4 and its census measured the coach at
+  ONE of the athlete's twenty-six typed actions — and the one action it has, it
+  performs without the question its own button asks; meanwhile the Maestro rig
+  ordered to close the two OPEN-UNKNOWNs turned out to have TWO independent
+  breaks, one fixed here and one that costs a native build.**
+  `dd192603` (rig fix) · `5e043e45` (L-C4 + census) · `10480c17` (the multi-part
+  tape). Sheet: docs/COACH_PARITY_CENSUS_2026-08-10.md
+- **ITEMS 00 AND 0 PROCESSED IN FULL. ITEM 1 IS A MEASURED STOP, NOT AN UNSTARTED
+  ONE. ITEM 2's HOLD OBSERVED. ITEM 3 NEEDED NO ACTION.**
+- **THE CENSUS NUMBER IS THE FINDING AND IT IS ONE CONSTANT.**
+  `COACH_PROPOSABLE_ACTION_TYPES = ['move_session']` (`coachProposal.ts:78`)
+  against 26 distinct literals in `ProgramControlActionType`. The partition was
+  **verified by script rather than by eye** — 1 PARTIAL + 16 athlete-only +
+  9 nobody-can = 26, exhaustive, disjoint, no duplicate literals.
+- **ROW ONE IS SAM'S OWN CASE, AND THE COACH'S ASSUMPTION HAS A CONTRADICTION IN
+  THE TYPE'S OWN DOCSTRING.** `coachProposal.ts:158-171` omits `payload.scope`
+  deliberately — *"An omitted scope is the door's whole-day move, which is what
+  was asked for"* — and **never reads the owner**: measured, no import of
+  `planChangeProducer`. But `PlanChangeMoveScopeId` says **`whole_day` is offered
+  only on days that carry no anchor**. So on a multi-part anchored day the athlete
+  MUST pick a component and the coach sends the whole-day shape regardless.
+- **ITEM 0: SAM'S SYMPTOM DID NOT REPRODUCE, AND SAYING SO IS THE RESULT.** On a
+  plain `conditioning+strength` day all arms carried BOTH parts. Reported as
+  NOT-REACHED, never as cleared.
+- **BUT A DIFFERENT DEFECT DID, AND IT IS MEASURED RATHER THAN ARGUED.** On an
+  anchored Monday (`strength+team_training` — Sam's own day shape) the picker
+  offers `strength="Just the gym session"` and `team="Team training"` and NO
+  whole_day row. There the coach is **REFUSED** (*"protected game/team anchor"*),
+  the athlete's scopeless tap is refused identically, the athlete's `whole_day`
+  tap is refused — and **the athlete's tap carrying the picker's own `strength`
+  row APPLIED.** *The coach is refused exactly where the athlete succeeds*, same
+  day, same destination, same door. **That is L-C4 with a measurement behind it.**
+- **THE PROBE UNDER-REACHED TWICE AND BOTH ARE WRITTEN INTO THE TAPE.** Choosing
+  "the last parted day" hit an UNANCHORED Saturday and printed NOT REPRODUCED — a
+  clean-looking result from a probe that never reached the case. And this world's
+  only anchored day is Monday 2026-08-03, two days in its own PAST, so the section
+  had to read the NEXT week. Every day of the week is now printed with its parts,
+  so *"which shape did this reach?"* is answerable from the output.
+- **AND MY VERDICT BLOCK HAD THE EXACT BUG ITS NEIGHBOUR IS DOCUMENTED AGAINST.**
+  The first version compared PARTS ONLY: three arms were REFUSED, nothing moved,
+  and it printed *"DOOR DEFECT — a scopeless whole-day move does not carry the
+  whole day."* **A refusal read as a partial move** — verbatim the hazard
+  `chooseMove`'s own docstring warns about, reintroduced one function away from
+  it. The door's outcome is now classified BEFORE any part is compared. Caught
+  before publishing, and only because the door printed its reason.
+- **THE CENSUS FRAME ITSELF IS INCOMPLETE, AND THAT IS A FINDING NOT A CAVEAT.**
+  `programControlActionForPlanChange` maps THREE PlanChange kinds and returns
+  `null` for the rest (`programControlActions.ts:304-355`); the producer emits
+  eight. **Swap-session and add-session — two of the Program tab's four menu
+  actions — never become a `ProgramControlAction` at all.** Parity work driven
+  only off the 26-member union would silently omit them.
+- **ALSO MEASURED:** `ProfileScreen.tsx` has **ZERO** `ProgramControlAction`
+  references, so the `profile` entry surface the type names is aspirational; and
+  rows 22-26 (`update_*`) return `ok: false` — *"belongs in Stage 2B"* — to
+  anyone who calls them, so they are UNBUILT rather than parity defects.
+- **ITEM 1's COLD-RIG CHECK WAS RUN AND IT PAID.** Maestro 2.5.1 installed,
+  eleven flows, simulator booted, app installed, Metro up, interpolation working,
+  native contract satisfiable — **proved by booting the app to `e2e-entry-ready`
+  with a hand-built probe.** Then two breaks:
+  **(1) FIXED (`dd192603`):** `reset-seed.yaml` omitted `e2eLaunchPurpose`, which
+  `DevE2ELaunchDiagnostic.swift:55-60` treats as `fatalError` — proved by a
+  SIGTRAP crash report naming `captureAndConfigureIfRequested()`. The native
+  receipt landed 2026-07-18 (`552dfe4a`); the flow file was last touched
+  2026-07-16 and never updated. **Eight of eleven flows crashed the app on their
+  first command for 23 days**, invisible because the only flow that could launch
+  was not the one anybody ran.
+  **(2) OPEN, AND IT IS THE STOP:** the simulator binary (2026-08-08) predates
+  `expo-notifications` (2026-08-09) — zero `ExpoPushTokenManager` in the Mach-O.
+  A native rebuild is the fix and **it was deliberately not started** while Sam
+  held the workspace with a Release device build. Carried as item 1 above.
+- **BOTH OPEN-UNKNOWNS REMAIN OPEN, AND ONE GAINED A HYPOTHESIS.** `UndoToast`
+  mounts only at `HomeScreenV2.tsx:1225` and **`CoachTabScreen` mounts nothing** —
+  its own docstring says *"This mounts once, on the Program screen."* Because tabs
+  stay mounted the toast likely **burns its own 6s timer** invisibly behind the
+  coach tab (`UndoToast.tsx:31,47`). `rules/undoToast.ts:17-19` predicted the gap
+  in writing. **HYPOTHESIS, NOT FINDING — no cell holds it**, and it is row-listed
+  in the census as a parity defect.
+- **GATE:** `test:compile` **PASSED**, totals byte-identical **35/51/373**. The
+  tape's original sections re-verified UNCHANGED — COACH-ACTED vs TAP-ACTED
+  IDENTICAL, decisions byte-identical, undo `undone` and still undone after a
+  relaunch. **No full sweep was run this pass** and no gate cell was added; the
+  census is a measurement and the tape asserts nothing.
+- **NOT COVERED, first line: NO BEHAVIOUR WAS RUN FOR THE CENSUS.** Every one of
+  its 26 rows is a SOURCE reading; the coach column is read off one exported
+  constant. **STILL NO REACT AND NO DEVICE** — the rig that would have changed
+  that is the blocker above. The 26×4 grid was NOT produced as a grid and **the
+  deviation is flagged in the sheet rather than taken silently**. Team-night route
+  labels were not located. Whether an omitted scope means whole-day at the door is
+  measured ONLY for the anchored case (refused) and the plain two-part case
+  (carried both) — **Sam's partial move is still unexplained.**
+- **PARKED FOR SAM:** the one question in item 3 above, which decides copy-defect
+  vs door-defect; when to rebuild the simulator; and the census's ranked NO list,
+  which is his to steer into batches. Carried unchanged: batch 31's signing, the
+  *"You asked me to."* why-line, the frozen coach tree, the three unbuilt ledger
+  fact destinations, the two chips, the journal/copy items.
+
+
+### The orders the sixty-second pass processed, as the seat wrote them
+
+
+00. **SAM'S RULING, 2026-08-10, AND IT SUPERSEDES THE KICKOFF'S
+    ONE-KIND-AT-A-TIME PLAN. VERBATIM:** *"no usually i am asked 'just
+    the strengt, just the conditioning, or both?' I CANT UNDERSTAND FOR
+    THE FUCKING LIFE OF ME WHY YOU WOULDN'T JUST FIND WHAT THE BUTTONS
+    ALL DO AND MAKE THE FUCKING COACH BE ABLE TO DO THE SAME SHIT AS
+    THEM? IS THAT NOT FUCKING OBVIOUS - DO I HAVE TO SPELL IT OUT FOR
+    YOU"*
+
+    **HE IS RIGHT AND THE SEAT WAS WRONG.** Item 0 below was written as
+    a fix to ONE kind, and the S3/S4 plan was a slice per kind with the
+    seat deciding each kind's vocabulary as it went. That is the seat
+    re-deriving, one kind at a time, an answer the app already holds in
+    full. His instinct is on the judgment ledger for the sixth time and
+    it is the default path, not an option.
+
+    **THE NEW LAW — L-C4, THE PARITY LAW.** *The coach can do exactly
+    what the athlete's own buttons can do, through the same doors, with
+    the same words, and it asks the same questions the buttons ask.*
+    Coach ability is not designed; it is DERIVED from the athlete's
+    action surface. A capability the buttons have and the coach lacks is
+    a DEFECT with a name, not a future slice. Add it to the kickoff doc
+    beside L-C1/L-C2/L-C3 and cite this ruling.
+
+    **FIRST UNIT IS A CENSUS, AND IT IS THE WHOLE UNIT. Nothing is built
+    on top of it until it is read.** Measure — do not sample, do not
+    estimate — and produce ONE sheet:
+    - Every athlete-reachable action. Start from
+      `ProgramControlActionType` (26 members, `src/types/
+      programControlAction.ts:58`) crossed with the four entry surfaces
+      the type itself names (`program_tab`, `session_detail`, `profile`,
+      `coach_notes`).
+    - For each: **which button/row reaches it**, the surface it lives
+      on, **the question it asks the athlete and the exact words of
+      every option** (Move already has `MOVE_SCOPE_COPY` — *"Move the
+      whole session" / "Just the gym session" / "Just the conditioning"
+      / "Just the recovery work"*; Bin has `PlanChangeBinScopeId` with
+      `team` as a fifth; the G-1 landing ask; the team-night permanence
+      ask), **the door it calls and the exact argument shape**, and
+      **whether the coach can do it today: YES / NO / PARTIAL — with
+      the receipt.**
+    - Sam's own case is row one, and it is the worked example: the
+      buttons ask *"just the strength, just the conditioning, or both?"*
+      and the coach silently assumed "both", then did not even do that.
+    - Rank the NOs by what an athlete would type at the coach first,
+      **not by what is cheap to build.**
+    - **NO NEW VOCABULARY ANYWHERE.** Every option the coach offers is
+      the owner's existing signed row, read from the owner. If the coach
+      needs a word the app does not have, that is a finding for the
+      sheet, not a string you write.
+
+    Then STOP and report the sheet. The build order comes off it, in
+    batches, and it is Sam's to steer — not a slice the seat invents.
+
+    LOOP CHECK: seat-re-derives-what-the-app-owns — **sighting 3**
+    (the coach's own week representation at S2, the coach's scope
+    assumption here, and the per-kind slice plan itself) — **COMPRESS:
+    L-C4 above IS the compression. From now on the question is never
+    "what should the coach be able to do?" but "which button does this,
+    and what does it already say?"**
+
+0. URGENT — SAM'S DEVICE, 2026-08-10, VERBATIM: *"i tried moving monday
+   S&C to wednesday and it only moved the strength - so multi session
+   days dont work yet"*. THIS OUTRANKS ITEM 1. Do not open the Maestro
+   work until this is measured.
+
+   **MEASURE BEFORE YOU DECIDE WHICH DEFECT IT IS. There are two very
+   different ones and they are told apart by ONE run.** Extend
+   `tape:coach-move-durability` with a MULTI-PART source day (a day
+   whose `VisibleDay.parts` has strength AND conditioning), run the
+   coach's move and THE ATHLETE'S OWN TAP as the control, exactly as
+   the existing arms do, and print what landed on each day in BOTH
+   arms.
+   - **If the athlete's own whole-day tap ALSO leaves the conditioning
+     behind:** this is a DOOR defect, not a coach defect, and it
+     breaks the Bible's own move law — *"Do not lose the session"*
+     (LFA_PROGRAMMING_BIBLE, Move session). It has been shipping under
+     every athlete tap, not just the coach's, and it is the whole
+     finding. Fix it at the door and say so plainly.
+   - **If the tap moves everything and only the coach's move splits:**
+     the defect is the coach's, and it is the ASSUMPTION recorded in
+     `src/rules/coachProposal.ts` §4 in its own comment — *"An omitted
+     scope is the door's whole-day move, which is what was asked
+     for"*. Measure whether that is true for a multi-part day before
+     touching anything else.
+
+   **THEN THE SYSTEMIC FIX, AND IT IS NOT A NEW VOCABULARY.** The app
+   ALREADY owns the answer to *"what parts of this day can move, and
+   where to?"*: `moveOptionsForDay` / `PlanChangeMoveOptions` in
+   `planChangeProducer.ts`, with signed rows the Program tab's own
+   picker renders — *"Move the whole session"*, *"Just the gym
+   session"*, *"Just the conditioning"*, *"Just the recovery work"* —
+   and `PlanChangeMoveScopeId` is the door's own scope type. **The
+   coach reads THAT owner and offers those scopes. It does not invent
+   a scope list, a second copy of those words, or its own idea of
+   which part the athlete meant** — a second answer to a question the
+   door already answers is exactly the count the architecture
+   reassessment ruled against. CLAUDE.md: build the systemic fix, not
+   the edge case.
+
+   **THE RULE ALREADY EXISTS — DO NOT PUT THIS TO SAM AS AN OPEN
+   QUESTION.** The Bible rules the parallel case explicitly for Bin:
+   *"If there are multiple sessions on the day, ask which one to
+   remove."* The Program tab already ASKS for Move, by rendering the
+   picker. So on a multi-part day the athlete CHOOSES the scope, and
+   silently picking one is the coach choosing on their behalf — the
+   thing L-C1 exists to forbid. A single-part day keeps today's
+   behaviour: nothing to choose, no ask.
+
+   **WHERE THE CHOICE GOES — PRICE BOTH, SEAT RECOMMENDS (b).**
+   (a) A follow-up ASK (*"which part?"*) — but S3 has NO follow-up
+   context by its own boundary, and a bare *"the gym session"* in
+   reply would fall off the reader. That makes this the expensive
+   route AND it drags S3's largest undone item forward.
+   (b) **THE CHOICE GOES ON THE CARD.** The card is already the
+   confirm surface and already renders FROM the action (L-C2); a
+   multi-part source day renders its scope rows there, the athlete
+   taps the one they mean, and the action is completed at confirm
+   time. No follow-up context, no second conversational turn, and the
+   card stays the single contract. If (b) is wrong for a reason the
+   price reveals, say which and stop before building (a).
+
+   **AND CHECK THE CARD ITSELF — IT MAY HAVE LIED, WHICH IS AN L-C2
+   FAILURE.** Sam saw a card and then saw something else happen. The
+   S3 boundary's own NOT-COVERED says the From/To lines *"are measured
+   over days with at most two parts."* If the card showed the whole
+   day travelling while one part stayed, then card and change DID
+   drift, which the design says is unrepresentable. **A card must name
+   every part that travels AND every part that stays.** Cell it both
+   ways.
+
+   LOOP CHECK: named-in-NOT-COVERED-then-bitten — **sighting 3**
+   (S3's "the door has never run" → inert feature; S3's "no keyboard
+   raised" → Sam's keypad catch; now S3's "days with at most two
+   parts" → this). **COMPRESS, and the compression is a rule, not
+   another cell:** an item in a boundary's NOT-COVERED that names a
+   SHAPE OF REAL DATA THE ATHLETE ALREADY HAS (a multi-part day, a
+   worn world, an accumulated ledger) is not a disclosure — it is a
+   BLOCKING gap, and the slice does not reach Sam's phone until it is
+   covered or he has ruled it out of scope. Write it into AGENTS.md
+   beside the two rules from the last pass, with these three sightings
+   as its founding cases.
+
+1. CLOSE THE TWO OPEN-UNKNOWNS WITH THE RIG THAT ALREADY EXISTS —
+   THE KEYBOARD IS A SIMULATOR QUESTION BEFORE IT IS SAM'S PHONE
+   (seat, 2026-08-10). NOW.md's Sam block now carries exactly two
+   OPEN-UNKNOWNs and BOTH are the same shape: *nothing is mounted.*
+   (a) the Undo toast over a coach-landed move, (b) both card buttons
+   reachable with the keyboard up. This pass just proved, at a cost,
+   what a source-level reading is worth — **do not send a third
+   unmounted claim to Sam's phone as the first instrument.**
+   THE INSTRUMENT IS ALREADY IN THE REPO: `.maestro/` (three flow
+   families, eleven yaml), `npm run e2e:maestro:ios` →
+   `scripts/dev-e2e/run-maestro-ios.sh` (needs `E2E_METRO_URL` and a
+   running Metro; it curl-checks `/status` before launching). The
+   memory record says this rig replaced Cowork sim-driving, so it has
+   run before. **FIRST STEP IS A COLD-RIG CHECK, and it is a legitimate
+   whole answer:** if `maestro` is not installed or the simulator path
+   is dead, report THAT with the exact failing line and stop — do not
+   burn a pass reviving it without a ruling.
+   If it is warm, the flow is the L-C3 matrix the kickoff asked for at
+   slice 1 and nobody built: open the coach tab, ask three things so
+   the conversation is longer than the screen, RAISE THE KEYBOARD, and
+   assert the four end-states of the original item 0 (list ends above
+   the keypad; new content pins to bottom when already at bottom;
+   keyboard appearing re-pins; nothing occludes composer or latest
+   bubble) — then propose a move, raise the keyboard WITH THE CARD UP,
+   and assert BOTH buttons are hittable. Tap **Make the change** and
+   assert the Undo toast appears — that closes (a) in the same flow.
+   Screenshots at each state, since a layout claim wants an eye.
+   THE COMPRESSION THIS PAYS (named after Sam's device catch, never
+   built): a keyboard flow becomes the STANDING PRE-DEVICE GATE for
+   every conversational surface — S4 inherits it rather than
+   rediscovering it. Build it so a second surface is a parameter, not
+   a copy.
+   LOOP CHECK: keyboard-cases-deferred-then-bitten — sighting 2 (Sam's
+   device caught it; the fix then shipped source-only and is STILL
+   unproven on glass) — **COMPRESS, this order is the compression.**
+
+2. HELD, UNCHANGED: S4 (journal context) and the Bible "why" layer.
+   Both wait on Sam's device pass + the ONE batch-31 signing sitting.
+   The why layer is additionally a DESIGN moment — the era handoff
+   names it as one to call the design seat back for, so it does not
+   open from this inbox.
+   Also carried: the second kind (`swap`/`add`/`remove`) is what pays
+   BOTH the card generalisation and the truth-gate generalisation over
+   `COACH_PROPOSABLE_ACTION_TYPES`. Do not pay either early, and do not
+   open a second kind before item 1 answers.
+
+3. SEAT'S RECEIPT ON THE SIXTY-FIRST PASS (no action): the tape was
+   re-run by the seat independently at 2026-08-10 09:54 local and
+   printed the same result — both arms IDENTICAL, decisions
+   byte-identical, undo `undone` and still undone after a relaunch.
+   The one hazard named for the record: **a tape asserts nothing**, so
+   the coach's move could go inert again in silence. The regression
+   guard is `test:coach-tab-slice3` [7] pinning the door's context
+   argument, which IS in the chain. That is the right split — the tape
+   measures, the cell holds — and it is written here so the next seat
+   does not mistake the tape for the guard.
 
 
 ## Processed 2026-08-10 (sixty-first pass) — THE DOOR HAD NEVER RUN, AND WHEN IT RAN THE COACH'S MOVE WAS INERT
