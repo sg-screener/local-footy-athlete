@@ -193,6 +193,55 @@ function unenforcedIds(rows: readonly LawRow[]): string[] {
   return rows.filter((row) => row.guard.state === 'UNENFORCED').map((row) => row.id);
 }
 
+// ── THE `ruledAt` RESOLVER ─────────────────────────────────────────────────
+//
+// SIGHTING 5 IN ONE DAY of `order-cites-a-mechanism-that-is-not-there`:
+// `test:athlete-action-walker` (a guard script that does not exist),
+// `AGENTS.md "Test Standard"` (a section that does not carry its law),
+// "Training Bible, Move rules" (no such section), "the sweep rule" (a law cited
+// by its violations and never stated), "the clean-reset path" (a door with zero
+// product callers). **A row's `by` was already resolved by this gate; its
+// `ruledAt` was not, and every one of those five is a citation that does not
+// resolve.** This is the compression.
+//
+// AND IT HAS A LIVE CONSEQUENCE, not a theoretical one: eleven rows cite
+// docs/MASTER_PLAN_2026-07-23.md because Process Law L1–L10 lives there, and a
+// concurrent session is moving that file to docs/_to_delete/. Without this
+// cell, ten laws would quietly start citing a file that is gone.
+
+/** A row whose law is knowingly NOT written down anywhere in the repo. */
+const NOT_IN_REPO_MARKER = 'NOT STATED IN THE REPO';
+
+/** Repo paths named in a citation, in the shapes citations actually use. */
+function citedPaths(ruledAt: string): string[] {
+  return [...ruledAt.matchAll(/(?:[A-Za-z0-9_.\-/]+\/)?[A-Za-z0-9_.\-]+\.(?:md|ts|tsx|json|sh)\b/g)]
+    .map((match) => match[0])
+    // A bare `X.md` with no directory is only a path if it sits at the root.
+    .filter((candidate) => candidate.includes('/') || fs.existsSync(path.join(repoRoot, candidate)));
+}
+
+/** Rows citing a path that does not exist. */
+function citationsThatDoNotResolve(rows: readonly LawRow[]): string[] {
+  const bad: string[] = [];
+  for (const row of rows) {
+    for (const cited of citedPaths(row.ruledAt)) {
+      const direct = path.join(repoRoot, cited);
+      // A citation may name a file by basename under docs/ or src/.
+      if (fs.existsSync(direct)) continue;
+      bad.push(`${row.id} cites ${cited}`);
+    }
+  }
+  return bad;
+}
+
+/** Rows whose citation names no resolvable file and no honest absence marker. */
+function citationsWithNoSource(rows: readonly LawRow[]): string[] {
+  return rows
+    .filter((row) => !row.ruledAt.includes(NOT_IN_REPO_MARKER))
+    .filter((row) => citedPaths(row.ruledAt).length === 0)
+    .map((row) => `${row.id}: "${row.ruledAt.slice(0, 60)}…"`);
+}
+
 // ── THE CELLS ──────────────────────────────────────────────────────────────
 
 const FACTS = readChainFacts();
@@ -220,6 +269,21 @@ run('no guard sits outside the bible chain', () => {
   assert(outside.length === 0,
     `guard(s) the chain never runs: ${outside.join('; ')}. `
     + 'Add the script to test:bible or the row is not guarded.');
+});
+
+run('every `ruledAt` names a file that EXISTS', () => {
+  const bad = citationsThatDoNotResolve(LAW_REGISTRY);
+  assert(bad.length === 0,
+    `citation(s) pointing at a file that is not there: ${bad.join('; ')}. `
+    + 'A law whose ruling site cannot be opened is a law nobody can check the row against.');
+});
+
+run('every `ruledAt` resolves to a repo file, or says plainly that it does not', () => {
+  const bad = citationsWithNoSource(LAW_REGISTRY);
+  assert(bad.length === 0,
+    `citation(s) naming no resolvable file: ${bad.join('; ')}. `
+    + `Either cite a path, or write "${NOT_IN_REPO_MARKER}" and say what a ruling site would take. `
+    + '"Training Bible, Move rules" was this cell\'s founding case — there is no such section.');
 });
 
 run('NO LAW IS UNENFORCED', () => {

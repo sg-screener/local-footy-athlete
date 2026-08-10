@@ -428,9 +428,64 @@ statement of the north star — store only decisions, derive everything else. A
 seed stores a derived output; a walker stores the decisions and derives the
 state, which is why only one of them can be wrong about what it represents.
 
+## PROCESS LAW — L1 to L10
+
+**LIFTED HERE 2026-08-10, VERBATIM, BECAUSE THEIR HOME IS BEING DELETED.**
+These ten laws lived in `docs/MASTER_PLAN_2026-07-23.md` PART 1. That file is
+SUPERSEDED AS A PLAN and a concurrent session is retiring it — but **the plan is
+what was superseded, not the laws.** They are registry rows `LAW-L1-*` …
+`LAW-L10-*`, and the registry gate now resolves every `ruledAt`, so ten laws
+citing a deleted file is a red rather than a silent rot. They live here, beside
+L11–L16, where the rest of Process Law already lives.
+
+**L1 — Whole-app scope.** The test surface is the entire app as a new
+athlete experiences it: cold install → onboarding → generation → weeks 1–4
+→ season transitions → every visible control. The week-editing contract is
+a SUBSET, not the surface.
+
+**L2 — Mandatory NOT-COVERED section.** Every report, sweep, audit, and
+checkpoint MUST end with an explicit "NOT COVERED" list naming the surfaces
+it did not touch. A green report with no NOT-COVERED section is an invalid
+report. "PASS" may never be said of the app — only of named surfaces.
+
+**L3 — Cold-start passes.** Every device sweep and the final QA include a
+NON-SEEDED pass: real onboarding, real generation, multiple weeks, at least
+one season-mode change. Seeded harnesses are necessary, never sufficient.
+
+**L4 — Device is arbiter.** Unchanged, now with L3 teeth.
+
+**L5 — No dead affordances.** Every visible control either works or does
+not exist. Enforced by a repo-wide sweep test where feasible; re-checked in
+every cold-start pass.
+
+**L6 — Honest actions.** Any tap that reports/implies success must
+demonstrably do the thing (the false-Done class is a release blocker
+wherever found). All program mutations route through the accepted-state
+transaction owner. Facts record; constraints derive; the visible week is a
+projection.
+
+**L7 — Sam gates.** Programming/coaching content and product semantics are
+Sam's sign-off. Terminals stop and ask; Claude (Cowork) frames decisions,
+never makes them.
+
+**L8 — Reporting calibration.** Estimates come with the previous item's
+estimate-vs-actual. Phone builds only from clean checkpoints, stated in the
+report.
+
+**L9 — Checkpoint discipline.** Tests-first; staged commits; fresh session
+for big units; escalation rule per CLAUDE.md. (Unchanged — these worked.)
+
+**L10 — Sam's phone is the definition of done.** No athlete-facing fix is
+"done" until Sam has verified it on his physical iPhone. Workflow: every
+merged checkpoint gets a clean Release rebuild to Sam's phone; the fix's
+report lists exactly what Sam should check and how; Sam's confirmation
+closes the item. Terminals report "gates green, awaiting Sam device
+acceptance" — never "done" — for athlete-facing work.
+
 ## PROCESS LAW — L11, L12 and L13
 
-Process Law L1–L10 lives in `docs/MASTER_PLAN_2026-07-23.md` PART 1 and is
+Process Law L1–L10 is stated ABOVE (lifted verbatim 2026-08-10 from
+`docs/MASTER_PLAN_2026-07-23.md` PART 1, which is being retired) and is
 unchanged. L11, L12 and L13 are recorded HERE because they bind every session that
 touches this repo, including the review and orchestration seat (Cowork) — which
 never touches git and would otherwise never read the master plan. **A reviewer is

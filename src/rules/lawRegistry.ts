@@ -498,7 +498,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L1-whole-app-scope',
     law: 'The test surface is the entire app as a new athlete meets it, not the unit under change.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L1',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L1',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'Nothing mechanical scopes a sweep. Closest honest guard: require the walker (test:action-walker) to reach every athlete-facing door, which is the L13 shape one axis out.',
@@ -508,7 +508,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L2-not-covered-section',
     law: 'Every report, sweep and audit carries a NOT-COVERED section; omitting it is itself a defect.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L2',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L2',
     guard: {
       state: 'guarded',
       by: 'test:repo-law-guards',
@@ -519,7 +519,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L3-cold-start',
     law: 'Every device sweep and the final QA include a cold-start pass.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L3',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L3',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'A Maestro flow that kills and relaunches, in the rig that runs per sweep. Blocked today by the same simulator-binary blocker as everything else needing glass.',
@@ -529,7 +529,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L4-device-is-arbiter',
     law: 'The device is the arbiter — a claim about athlete-facing behaviour is settled on the phone, not in a suite.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L4',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L4',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'Not mechanisable as a cell by construction — it says a cell is not the arbiter. Its honest guard is the OPEN-UNKNOWN discipline (LAW-claim-needs-a-cell) plus L10. PROPOSED RE-WORDING FOR SAM: "an athlete-facing claim not yet seen on the phone is written OPEN-UNKNOWN", which IS mechanisable.',
@@ -539,7 +539,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L5-no-dead-affordances',
     law: 'Every visible control either works or does not ship.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L5',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L5',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'A walker pass that taps every reachable control and asserts a state change or an explicit refusal — test:action-walker already walks actions; this is the SURFACE axis of the same instrument.',
@@ -549,7 +549,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L6-honest-actions',
     law: 'Any tap that reports or implies success must have actually succeeded.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L6',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L6',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'This is the general form of the 2026-08-10 defect ("Done. Session moved." beside a deleted row) and of LAW-attributed-content-change. ONE structural check could hold both: every success message is derived FROM the applied transaction rather than composed beside it.',
@@ -559,7 +559,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L7-sam-gates',
     law: 'Programming and coaching content and product semantics are Sam\'s to gate, never the terminal\'s.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L7',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L7',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'The signed-copy registry is this law\'s mechanism for WORDS and it is already gated. The unguarded half is content and semantics — guardable the same way: a locked list with provenance, which test:locked-list and test:exercise-name-lock already do for exercise names.',
@@ -569,7 +569,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L8-reporting-calibration',
     law: 'Estimates come with the previous item\'s actual, so a forecast is calibrated rather than hoped.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L8',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L8',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'A repo check over boundary reports: an estimate must appear beside a measured prior. Related to Sam\'s 2026-08-10 velocity ask (NEW vs REDISCOVERY vs RE-WORK), which is the same law asking for a number.',
@@ -579,7 +579,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L9-checkpoint-discipline',
     law: 'Tests first; staged commits; a fresh session starts from the checkpoint file.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L9',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L9',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'A repo check that docs/NOW.md moved in any commit range that touched src/ — the checkpoint half is the mechanisable one.',
@@ -589,7 +589,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-L10-phone-is-done',
     law: 'Sam\'s phone is the definition of done — no athlete-facing fix is finished until he has seen it.',
-    ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L10',
+    ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L10',
     guard: {
       state: 'UNENFORCED',
       wouldTake: 'PROPOSED RE-WORDING FOR SAM, because the literal law is about an event outside the repo: "a boundary report may not call an athlete-facing change DONE while its device line is unseen — it says NOT ON GLASS YET." That form is a doc check and would have caught three claims this week.',
