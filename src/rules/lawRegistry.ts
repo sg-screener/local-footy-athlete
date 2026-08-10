@@ -327,6 +327,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-sam-is-not-the-wire',
+    law: 'Sam is never the relay. The seat reads the repo; what he is asked for is decisions, device testing, and things only he has — nothing else.',
+    ruledAt: 'AGENTS.md "Seat coordination laws"; docs/SEAT_INBOX.md 2026-08-10 (Sam ruled the whole three-part process fix)',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED. FOUNDING CASE: Sam spent 2026-08-10 pasting the seat\'s orders to the terminal and the terminal\'s reports back to the seat — he typed "check inbox" five times in one session. Seat→terminal was fixed by the hook reading by content (f168b48b); terminal→seat is fixed by the seat READING the repo, which it already has mounted. The cell holds the checkable half: no item in a blocked-on-Sam section may ask him to relay, paste, forward or route anything. Written into AGENTS.md as well as here BECAUSE IT MAKES THE SEAT SMALLER and is therefore the law most likely to be quietly dropped.',
+    },
+  },
+  {
     id: 'LAW-label-names-the-door',
     law: 'A diagnostic label must distinguish the things a diagnosis needs to tell apart, and it is DERIVED from the one field that already knows — never passed in beside it as a second opinion.',
     ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, from Sam: "well shouldn\'t it be labelled differently to prevent this issue from happening again? so we can diagnose whether the issue happened via tap or coach?" — LAW-count-names-instrument widened from numbers to labels by his question.',

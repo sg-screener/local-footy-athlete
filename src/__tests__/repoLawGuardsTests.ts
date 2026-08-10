@@ -739,6 +739,47 @@ run('every question put to Sam shows what was searched first', () => {
 });
 
 /**
+ * `LAW-sam-is-not-the-wire` — Sam, 2026-08-10.
+ *
+ * He spent a day pasting the seat's orders to the terminal and the terminal's
+ * reports back to the seat. Both halves were removable and neither needed his
+ * hands. **What that leaves him is decisions, device testing, and things only he
+ * has** — his partner's templates, his Apple ID, his exports.
+ *
+ * **The checkable half: if a turn asks him for anything else, that is the
+ * defect.** So every item in a blocked-on-Sam section must be one of those three
+ * kinds. An item asking him to relay, paste, forward or confirm-a-report is the
+ * shape this cell exists to catch — it is the routing role coming back.
+ */
+const RELAY_ASK = /\b(relay|paste|forward|copy (this|it) (to|back)|send (this|it) to the seat|tell the seat|read (this|it) (to|back))\b/i;
+
+/** Pure: blocked-on-Sam items that ask him to be the wire again. */
+function samItemsAskingHimToRelay(doc: string): string[] {
+  const heading = doc.match(SAM_BLOCK_HEADING);
+  if (!heading) return [];
+  const section = doc.slice(doc.indexOf(heading[0]) + heading[0].length).split(/\n##+ /)[0];
+  return section
+    .split(/\n(?=\d+\. )/)
+    .map((item) => item.trim())
+    .filter((item) => /^\d+\. /.test(item))
+    .filter((item) => RELAY_ASK.test(item))
+    .map((item) => item.split('\n')[0].slice(0, 70));
+}
+
+run('nothing asks Sam to be the wire', () => {
+  const stops = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .filter((file) => /STOP/i.test(path.basename(file)))
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }))
+    .filter((doc) => SAM_BLOCK_HEADING.test(doc.text));
+  assert(stops.length >= 1, 'no STOP report with a blocked-on-Sam section — the scan is wrong');
+  const relays = stops.flatMap((doc) =>
+    samItemsAskingHimToRelay(doc.text).map((item) => `${path.basename(doc.file)}: ${item}`));
+  assert(relays.length === 0,
+    `item(s) asking Sam to route information: ${relays.join(' | ')}. `
+    + 'The seat reads the repo; he gives decisions, device time, and what only he has.');
+});
+
+/**
  * `LAW-plain-coach-english`, AND SAM'S RE-WORDING IS BETTER THAN THE SEAT'S.
  *
  * The seat proposed checking NOW.md's prose. He said: *"it is APP WORDING, and
@@ -859,6 +900,13 @@ run('the checkers red on fabricated violations (liveness)', () => {
   assert(samQuestionsWithNoSearchReceipt(
     '## WHAT IS BLOCKED ON SAM\n\n1. **Which colour?** docs/RULING.md says nothing\n').length === 0,
     'a question that cites what it searched was flagged');
+
+  assert(samItemsAskingHimToRelay(
+    '## WHAT IS BLOCKED ON SAM\n\n1. **Paste this report to the seat.**\n').length === 1,
+    'an item asking Sam to route information passed — the routing role came back');
+  assert(samItemsAskingHimToRelay(
+    '## WHAT IS BLOCKED ON SAM\n\n1. **His Apple ID for eas.json.**\n').length === 0,
+    'a thing only Sam has was flagged as a relay ask');
 
   assert(signedStringsWithJargon([{ id: 'x', text: 'Your microcycle is ready' }]).length === 1,
     'an athlete-facing string carrying engineering vocabulary passed');

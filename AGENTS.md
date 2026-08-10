@@ -705,6 +705,25 @@ Practical consequences:
 - **LOOP-AUDIT LAW:** docs/SEAT_LOOP_AUDIT_LAW_2026-08-07.md binds this
   seat — third sighting of any repeated ruling-shape, round-trip, toll
   or rediscovery = propose the compression, never a fourth silent run.
+- **SAM IS NOT THE WIRE (2026-08-10). BOTH DIRECTIONS OF THE RELAY ARE REMOVED,
+  AND THIS ONE COSTS THE SEAT ITS ROUTING ROLE — WHICH IS THE POINT.** For a
+  full day Sam pasted the seat's orders to the terminal and pasted the
+  terminal's reports back to the seat. **Neither half needed his hands.**
+  - **Seat → terminal is already fixed** by the stop hook reading by CONTENT
+    (`f168b48b`). Nothing more is needed; do not regress it.
+  - **Terminal → seat is fixed by the seat READING THE REPO instead of being
+    read to.** The seat has the repo mounted. `docs/NOW.md`, this inbox's
+    processed section, `git log` and the boundary docs already carry everything
+    he has been pasting. **Standing practice: the seat reads the repo at the
+    start of every turn and never asks Sam to relay a report.**
+  - **WHAT THAT LEAVES SAM, AND IT SHOULD BE ONLY THIS: decisions, device
+    testing, and things only he has** — his partner's templates, his Apple ID,
+    his exports. **If a turn asks him for anything else, that is the defect.**
+  Registry row `LAW-sam-is-not-the-wire`, guarded by `test:repo-law-guards`:
+  every item in a STOP report's blocked-on-Sam section must be one of those
+  three kinds. **This is written into the era handoff as well as the registry
+  because it is the law most likely to be quietly dropped — it makes the seat
+  smaller.**
 - **AN ORDER IS CONTENT, NOT A NUMBER (2026-08-10).** `scripts/seat-inbox-hook.sh`
   blocks the terminal from ending its turn while anything under `## Unprocessed`
   is neither blank, an empty-queue marker, nor a parked item. **It used to match
