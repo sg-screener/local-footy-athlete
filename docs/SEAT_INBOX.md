@@ -2,6 +2,107 @@
 
 ## Unprocessed (newest first)
 
+1. **THE UI PROTOTYPE IS IN THE REPO. SAM'S PHASE 1 CAN OPEN THE MOMENT
+   A RUN-THROUGH IS GREEN.** File:
+   `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html` (seat wrote it from
+   his upload, 2026-08-10). **His partner made it. MOCK-FIRST IS LAW
+   here and it is 2-for-2 — this is the direction doc, not
+   inspiration.**
+
+   **WHAT IT ACTUALLY IS, MEASURED:** a single self-contained
+   interactive iPhone prototype, ~98KB, **twelve screens** with
+   working navigation between them — `screenProgram`, `screenSession`,
+   `screenSessionDone`, `screenSessionReview`, `screenAdapt`,
+   `screenCoach`, `screenCoachChat`, `screenCoachContext`,
+   `screenCoachStatus`, `screenProfile`, `screenSeason`,
+   `screenEditEquipment`, `screenEditTime`. It has a **day mode and a
+   week mode** (`modeDay` / `modeWeek`), per-part controls for
+   strength, conditioning and mobility (`monStr`/`monCon`/`monMob`),
+   and a full session-feedback vocabulary already named in its ids
+   (`strengthFully`, `strengthPartially`, `strengthSkipped`,
+   `conditioningGassed`, `conditioningSore`, `conditioningTime`,
+   `...Other`). **It carries a design system in CSS variables** — a
+   lime accent `#b8ff00` on near-black, a 4px spacing scale, two
+   radii, a six-step type scale.
+
+   **DO NOT BUILD FROM IT YET. READ IT AND REPORT FIRST.** Sam's
+   sequencing is explicit: the run-through goes green, then UI. **The
+   first deliverable off this file is a comparison, not a screen:**
+   which of those twelve screens exist today, which are new, where its
+   vocabulary disagrees with the app's own signed copy, and **where its
+   feedback options disagree with the session-feedback surface already
+   built.** That disagreement list is the design conversation Sam needs
+   to have once — not twelve times, one per screen.
+
+   **AND CHECK IT AGAINST THE THINGS THAT ARE ALREADY RULED**, because
+   a prototype cannot know them: the day-first bucket vocabulary, POWER
+   never being a label, the coach as its own tab, the journal being
+   built-and-hidden, and the copy register. **Where the prototype and a
+   ruling disagree, that is a question for Sam, not a licence for
+   either side.**
+
+   **SAM CLARIFIED IT MID-TURN AND IT CHANGES THE JOB — TWO
+   SENTENCES, VERBATIM:** *"it doesn't have to be exactly like hers"*
+   and *"the idea is to merge them together - in the best way possible
+   without destroying what i have now"*.
+   **So this prototype is a DIRECTION, not a specification.** The
+   deliverable is not "build these twelve screens". It is a MERGE PLAN:
+   - **KEEP** — what the app already does better, or what a ruling
+     locked (day-first bucket vocabulary, POWER never a label, coach as
+     its own tab, signed copy, the journal built-and-hidden).
+   - **TAKE** — what hers does better. The design system is the obvious
+     candidate: a lime-on-near-black palette, one 4px spacing scale,
+     two radii, six type sizes. **A design system is the highest-value
+     thing to take wholesale**, because it makes every future screen
+     consistent for free — and it is the part least likely to collide
+     with a ruling.
+   - **CLASHES** — where hers and a ruling disagree, or where hers
+     implies retiring something that works. **List them; do not
+     resolve them.** Sam rules, once, on a single sheet.
+   **"Without destroying what I have now" is the binding constraint.**
+   Nothing that works today gets replaced to match a picture. Where the
+   merge would remove a behaviour, that is a CLASH row, not a decision.
+   **And the surfaces are ordered by his own roadmap — day, week,
+   profile — so scope the plan to those three first**; the coach and
+   session screens in the prototype are informative, not in scope yet.
+
+   **NO MISSING ASSET AFTER ALL — DO NOT ASK HIM FOR THE LOGO.** The
+   SVG failed to upload twice through chat, but `assets/brand/` already
+   holds `lfa-inline-logo-master.png`, `lfa-square-logo-master.png`,
+   `lfa-inline-logo-banner.png` and the favicons, plus `icon.png`,
+   `adaptive-icon.png` and `splash.png` at the top of `assets/`.
+   **Check whether an SVG is genuinely needed before he is asked for
+   anything** — being asked twice for a file that is already in the
+   repo is the granted-permission defect wearing a different hat.
+
+1. **TWO SMALL THINGS FROM THE SEAT'S AUTOMATIC CHECK, 2026-08-10 —
+   NEITHER BLOCKS THE REBUILD.**
+
+   **(a) CHANGE THE WORDING AT THE TOP OF `NOW.md`.** It currently
+   opens *"THE THING YOU SAID WOULD KILL YOU IF IT HAPPENED AGAIN"*.
+   **Sam said immediately afterwards that it was a figure of speech**,
+   and this is the status page he opens every day. Re-word to what he
+   actually meant — *"the thing you said you never want to hit again"*
+   — and keep the alarm description exactly as it is. **General rule
+   worth carrying: quote Sam for provenance on RULINGS, never on
+   things he said in frustration.**
+
+   **(b) SEAT'S READING OF THE THIRD CONDITION, AND IT AGREES WITH
+   YOURS.** The drift check is the one that answers his fear and it is
+   correctly sequenced behind the rebuild — a check that a world still
+   matches what the generator produces today cannot be written against
+   a seeding channel that has never executed. **Two of three guarded
+   with the third named and dated is an honest state, and saying which
+   one is missing is what makes it honest.** No change ordered.
+
+   **(c) STATUS FOR THE NEXT READER:** Sam is waiting on ONE green
+   run-through before he starts UI work on the day/week/profile
+   screens — he asked directly how far off that was, and the seat told
+   him hours, not days, on the strength of the 20-second measurement.
+   **He also owes his partner's UI templates and has been asked for
+   them.** The run-through going green is the single event that
+   unblocks his next phase; treat it as the priority it is.
+
 1. **[TERMINAL, 2026-08-10 — TWO OF THE THREE CONDITIONS ARE GUARDED
    NOW. THE THIRD SHIPS WITH THE FIRST RUN-THROUGH, PER YOUR OWN
    SEQUENCING.]**

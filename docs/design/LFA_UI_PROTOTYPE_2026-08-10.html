@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LFA Interactive iPhone Prototype — Today Only</title>
+<style>
+:root{
+  --bg:#000; --panel:#111311; --panel-2:#161816; --line:#2a2d2a; --soft:#242624;
+  --text:#f5f5f5; --muted:#989c98; --lime:#b8ff00;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
+  --radius-card:12px; --radius-control:9px;
+  --type-caption:8.5px; --type-meta:9.5px; --type-label:10.5px; --type-body:11.5px;
+  --type-subhead:14px; --type-title:20px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#e9ebe8;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif}
+body{display:flex;align-items:flex-start;justify-content:center;padding:28px 12px 60px}
+
+/* --- iPhone shell --- */
+.phone{
+  width:min(92vw,402px);
+  height:min(88vh,874px);
+  min-height:720px;
+  background:#1b1b1b;
+  border-radius:54px;
+  padding:10px;
+  box-shadow:0 24px 70px rgba(0,0,0,.26), inset 0 0 0 1px #555;
+  position:relative;
+}
+.phone:before{
+  content:""; position:absolute; left:-4px; top:145px; width:5px; height:78px;
+  background:#3c3c3c; border-radius:4px 0 0 4px;
+  box-shadow:0 92px 0 #3c3c3c;
+}
+.phone:after{
+  content:""; position:absolute; right:-4px; top:210px; width:5px; height:116px;
+  background:#3c3c3c; border-radius:0 4px 4px 0;
+}
+.screen{
+  width:100%; height:100%; background:#000; border-radius:45px; overflow:hidden; position:relative;
+}
+.island{
+  position:absolute; z-index:50; top:12px; left:50%; transform:translateX(-50%);
+  width:118px; height:32px; border-radius:18px; background:#111;
+}
+.app{
+  position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:none;
+  padding:18px 14px 94px; color:var(--text); background:#000;
+}
+.app::-webkit-scrollbar{display:none}
+.status{
+  height:26px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 8px; margin-bottom:19px; font-size:12px; font-weight:700;
+}
+.statusIcons{display:flex;align-items:center;gap:6px;color:#f5f5f5}
+.statusIcon{display:block;fill:currentColor}
+
+/* --- persistent header --- */
+.topbar{margin:0 4px 3px}
+.logo{
+  font-family:Impact,"Arial Narrow Bold","Helvetica Neue Condensed Black",sans-serif;
+  font-style:italic; transform:skew(-5deg); transform-origin:left center;
+  font-size:35px; letter-spacing:-1.5px; line-height:.92;
+}
+.headingStack{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.cornerBrand{display:block;width:52px;height:auto;opacity:1}
+.topbar.headingStack,.profileHeader.headingStack{min-height:40px;justify-content:center}
+.weeknav{display:flex;align-items:center;justify-content:center;gap:9px;margin:-2px auto 14px;width:max-content}
+#modeDay:checked ~ .phone .weeknav{display:none}
+#modeWeek:checked ~ .phone .weeknav{display:flex}
+.weekArrow{width:28px;height:28px;padding:0;border:0;background:transparent;color:#aeb2ae;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.weekArrow svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.weekArrow.disabled{color:#3f433f;cursor:default}
+.weekStep,.weekRange{display:none}
+#weekPrev:checked ~ .phone .fromPrev,
+#weekCurrent:checked ~ .phone .fromCurrent,
+#weekNext:checked ~ .phone .fromNext{display:grid}
+#weekPrev:checked ~ .phone .rangePrev,
+#weekCurrent:checked ~ .phone .rangeCurrent,
+#weekNext:checked ~ .phone .rangeNext{display:inline}
+.range{
+  min-width:91px;display:flex;align-items:center;justify-content:center;color:#d7d9d7;
+  font-size:11px;font-weight:750;letter-spacing:.45px;
+}
+.segment{
+  width:54%; height:34px; margin:0 auto 13px; border:1px solid #353835;
+  border-radius:999px; display:grid; grid-template-columns:1fr 1fr; overflow:hidden; position:relative;
+  background:#0f100f;
+}
+.state{position:absolute;opacity:0;pointer-events:none}
+.segment label{
+  position:relative;z-index:2;display:flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:800;letter-spacing:.35px;color:#aeb1ae;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.segment:before{
+  content:"";position:absolute;z-index:1;top:-1px;bottom:-1px;left:-1px;width:calc(50% + 1px);
+  border-radius:999px;background:var(--lime);transition:transform .14s ease;
+}
+#modeWeek:checked ~ .phone .segment:before{transform:translateX(100%)}
+#modeDay:checked ~ .phone .segment .dayLabel,
+#modeWeek:checked ~ .phone .segment .weekLabel{color:#111}
+#modeDay:checked ~ .phone .segment .weekLabel,
+#modeWeek:checked ~ .phone .segment .dayLabel{color:#bfc1bf}
+
+/* --- general cards --- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.dayPanel{display:block}
+
+.session{overflow:hidden;margin-bottom:10px}
+.sessionHead{padding:14px 15px 13px;border-bottom:1px solid var(--soft)}
+.eyebrow{color:var(--muted);font-size:10px;font-weight:750;letter-spacing:.75px;margin-bottom:8px}
+.sessionMetaRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.sessionMetaRow .eyebrow{margin-bottom:0}
+.sessionCategory,.weekCategory{display:inline-flex;align-items:center;width:max-content;padding:3px 6px;border-radius:5px;background:#252825;border:1px solid #343834;color:#bfc3bf;font-size:7.5px;font-weight:850;letter-spacing:.55px;text-transform:uppercase}
+.sessionCategory.core,.weekCategory.core{color:var(--lime);background:rgba(184,255,0,.055);border-color:rgba(184,255,0,.2)}
+.titleRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sessionTitle{font-size:19px;font-weight:750;letter-spacing:-.2px;line-height:1.2}
+.adapt{display:inline-flex;align-items:center;gap:6px;color:var(--lime);background:rgba(184,255,0,.08);border:1px solid rgba(184,255,0,.28);border-radius:7px;padding:7px 9px;font-size:10px;font-weight:750;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.infoIcon{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sessionBody{padding:0 12px 10px}
+
+/* --- day accordion --- */
+.accState{position:absolute;opacity:0;pointer-events:none}
+.acc{border-bottom:1px solid #232523}
+.acc:last-of-type{border-bottom:0}
+.accLabel{
+  min-height:58px;display:grid;grid-template-columns:24px 1fr 12px;gap:10px;align-items:center;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.accIcon{width:19px;height:19px;color:#858985;display:grid;place-items:center}
+.rowIcon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.accCopy{display:flex;flex-direction:column;gap:4px}
+.accTitle{font-size:10.5px;font-weight:780;letter-spacing:.55px;color:#e1e3e1}
+.accMeta{font-size:10.5px;font-weight:550;color:#929692}
+.chev{
+  width:6px;height:6px;border-right:1.4px solid #ddd;border-bottom:1.4px solid #ddd;
+  transform:rotate(45deg);transition:transform .15s ease;justify-self:end;
+}
+.details{display:none;padding:0 0 10px;counter-reset:dayExercise}
+.exercise{
+  counter-increment:dayExercise;display:grid;grid-template-columns:20px 1fr auto;gap:6px;padding:6px 0;border-top:1px solid #252725;
+  font-size:11.5px;color:#e9e9e9;
+}
+.exercise:before{content:counter(dayExercise);color:#8f938f}
+.exercise:first-child{border-top:0}
+.accState:checked + .accLabel .chev{transform:rotate(225deg)}
+.accState:checked + .accLabel + .details{display:block}
+.start{
+  width:100%;height:40px;border:0;border-radius:9px;background:var(--lime);color:#111;
+  font-size:12px;font-weight:850;letter-spacing:.4px;margin-top:8px;
+}
+.note{padding:14px 0 2px;color:#aeb0ae;font-size:12px}
+
+/* make-a-change */
+.changeCard{padding:13px 13px 11px;margin-bottom:8px}
+.changeCard h3{margin:0;font-size:14px;font-weight:750;letter-spacing:.15px}
+.changeCard p{margin:5px 0 0;color:#929692;font-size:9.5px;line-height:1.35}
+.modifierNotice{display:grid;grid-template-columns:7px 1fr 10px;gap:10px;align-items:center;min-height:42px;padding:9px 2px;margin-bottom:15px;background:rgba(184,255,0,.035);border-top:1px solid rgba(184,255,0,.18);border-bottom:1px solid rgba(184,255,0,.18);color:#d9dcd9;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.modifierNotice:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--lime)}
+.modifierCopy{color:var(--lime);font-size:9.5px;font-weight:650;line-height:1.25}
+.modifierCopy strong{color:var(--lime);font-weight:850}
+.modifierNotice .chev{transform:rotate(-45deg)}
+.sessionBody>.modifierNotice{margin-top:10px;margin-bottom:3px}
+.headerModifier{color:var(--lime);display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:850;letter-spacing:.35px;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.headerModifier .infoIcon{width:13px;height:13px;color:var(--lime)}
+.dayModifierNotification{display:grid;grid-template-columns:27px 1fr;gap:11px;align-items:center;min-height:54px;padding:11px 13px;margin:0 2px 10px;background:rgba(184,255,0,.04);border:1px solid var(--line);border-radius:9px;color:#edf0ed;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.notificationIcon{width:25px;height:25px;border-radius:7px;background:rgba(184,255,0,.09);display:grid;place-items:center;color:var(--lime)}
+.notificationIcon .infoIcon{width:14px;height:14px}
+.notificationCopy strong{display:block;color:var(--lime);font-size:10px;font-weight:800;margin-bottom:2px}
+.notificationCopy small{display:block;color:#a8aca8;font-size:8.5px;font-weight:600}
+.dayModifierNotification>.chev{transform:rotate(-45deg)}
+.changeGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;align-items:start;margin-top:11px}
+.change{text-align:center;font-size:9px;font-weight:600;line-height:1.25;color:#c5c8c5}
+.change:nth-child(4),.change:nth-child(5){grid-column:auto;transform:none}
+.change .circle{
+  width:36px;height:36px;background:#1c1f1c;border:1px solid #303330;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;margin:0 auto 6px;color:#c4c7c4;
+}
+.changeIcon{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.change:nth-child(1) .circle{color:#67d7ff;background:rgba(103,215,255,.07);border-color:rgba(103,215,255,.18)}
+.change:nth-child(2) .circle{color:#b9a7ff;background:rgba(185,167,255,.07);border-color:rgba(185,167,255,.18)}
+.change:nth-child(3) .circle{color:#ffca68;background:rgba(255,202,104,.07);border-color:rgba(255,202,104,.18)}
+.change:nth-child(4) .circle{color:#ff7f7f;background:rgba(255,127,127,.07);border-color:rgba(255,127,127,.18)}
+.change:nth-child(5) .circle{color:#72e1ad;background:rgba(114,225,173,.07);border-color:rgba(114,225,173,.18)}
+
+/* --- view switching --- */
+.dayView{display:none}
+.weekView{display:none}
+.weekSet{display:none}
+#weekPrev:checked ~ .phone .weekPrevSet,
+#weekCurrent:checked ~ .phone .weekCurrentSet,
+#weekNext:checked ~ .phone .weekNextSet{display:block}
+#modeDay:checked ~ .phone .dayView{display:block}
+#modeWeek:checked ~ .phone .weekView{display:block}
+
+/* --- app-level navigation --- */
+.programScreen,.coachScreen,.coachChatScreen,.coachStatusScreen,.profileScreen,.sessionFlowScreen,.sessionReviewScreen,.sessionDoneScreen{display:none}
+#screenProgram:checked ~ .phone .programScreen,
+#screenAdapt:checked ~ .phone .programScreen{display:block}
+#screenCoach:checked ~ .phone .coachChatScreen,
+#screenCoachChat:checked ~ .phone .coachChatScreen,
+#screenCoachContext:checked ~ .phone .coachChatScreen{display:flex}
+#screenCoachStatus:checked ~ .phone .coachStatusScreen,
+#screenSeason:checked ~ .phone .coachStatusScreen,
+#screenEditTime:checked ~ .phone .coachStatusScreen,
+#screenEditEquipment:checked ~ .phone .coachStatusScreen{display:block}
+#screenProfile:checked ~ .phone .profileScreen{display:block}
+#screenSession:checked ~ .phone .sessionFlowScreen,
+#screenSessionReview:checked ~ .phone .sessionReviewScreen,
+#screenSessionDone:checked ~ .phone .sessionDoneScreen{display:block}
+#screenSession:checked ~ .phone .bottom,
+#screenSessionReview:checked ~ .phone .bottom,
+#screenSessionDone:checked ~ .phone .bottom{display:none}
+#screenSession:checked ~ .phone .app,
+#screenSessionReview:checked ~ .phone .app,
+#screenSessionDone:checked ~ .phone .app{padding-bottom:28px}
+#screenProgram:checked ~ .phone .navProgram,
+#screenAdapt:checked ~ .phone .navProgram,
+#screenCoach:checked ~ .phone .navCoach,
+#screenCoachContext:checked ~ .phone .navCoach,
+#screenCoachStatus:checked ~ .phone .navCoach,
+#screenSeason:checked ~ .phone .navCoach,
+#screenEditTime:checked ~ .phone .navCoach,
+#screenEditEquipment:checked ~ .phone .navCoach,
+#screenCoachChat:checked ~ .phone .navCoach{color:var(--lime)}
+#screenProfile:checked ~ .phone .navProfile{color:var(--lime)}
+.coachSegment{width:58%;height:32px;margin:0 auto 17px;padding:3px;background:#111311;border:1px solid #292c29;border-radius:999px;display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.coachSegment label{display:flex;align-items:center;justify-content:center;border-radius:999px;color:#858985;font-size:9px;font-weight:800;letter-spacing:.4px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#screenCoachChat:checked ~ .phone .coachSegment .coachChatTab,
+#screenCoachStatus:checked ~ .phone .coachSegment .coachStatusTab,
+#screenCoachContext:checked ~ .phone .coachSegment .coachChatTab,
+#screenSeason:checked ~ .phone .coachSegment .coachStatusTab,
+#screenEditTime:checked ~ .phone .coachSegment .coachStatusTab,
+#screenEditEquipment:checked ~ .phone .coachSegment .coachStatusTab{background:#2a2d2a;color:#f1f3f1}
+.coachStatusScreen{padding:0 3px}
+.statusPageHeader{display:grid;grid-template-columns:32px 1fr 32px;align-items:center;margin:0 0 25px}
+.statusPageHeader .logo{font-size:30px;text-align:center;transform:skew(-5deg)}
+.statusBack{display:grid;place-items:center;width:32px;height:32px;color:#d9dbd9;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.statusBack svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.statusHeaderAction{display:grid;grid-template-columns:18px 1fr 7px;gap:8px;align-items:center;min-width:132px;min-height:40px;padding:7px 9px;background:rgba(184,255,0,.06);border:1px solid rgba(184,255,0,.3);border-radius:10px;color:#eef0ee;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.statusHeaderIcon{width:18px;height:18px;fill:none;stroke:var(--lime);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.statusHeaderCopy strong{display:block;font-size:9.5px;font-weight:850;letter-spacing:.35px}
+.statusHeaderCopy small{display:block;color:#aeb2ae;font-size:7.5px;font-weight:650;letter-spacing:.15px}
+.statusHeaderAction>.chev{transform:rotate(-45deg)}
+.coachScreen{padding:0 3px}
+.coachHeader{justify-content:space-between;margin:0 1px 17px}
+.coachOnline{display:flex;align-items:center;gap:6px;padding:6px 9px;background:#151715;border:1px solid #292c29;border-radius:999px;color:#bec2be;font-size:8.5px;font-weight:750;letter-spacing:.35px}
+.coachOnline:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 3px rgba(184,255,0,.08)}
+.coachCard{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.coachCard.statusCard{box-shadow:inset 0 1px 0 rgba(255,255,255,.018)}
+.coachCardHead{padding:15px 15px 13px;border-bottom:1px solid var(--soft)}
+.coachCardHead.flexHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.coachCardHead h3{font-size:14px;margin:0 0 5px}
+.coachCardHead p{color:var(--muted);font-size:10.5px;line-height:1.4;margin:0}
+.activeCount{flex:0 0 auto;padding:5px 7px;border-radius:6px;background:rgba(184,255,0,.08);color:var(--lime);font-size:8px;font-weight:800;letter-spacing:.35px}
+.statusItem{display:grid;grid-template-columns:8px 1fr 12px;gap:10px;align-items:center;padding:13px 15px;border-bottom:1px solid var(--soft);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.statusItem:last-of-type{border-bottom:0}
+.statusDot{width:7px;height:7px;border-radius:50%;background:var(--lime)}
+.statusName{font-size:12px;font-weight:700;margin-bottom:3px}
+.statusMeta{color:var(--muted);font-size:10px}
+.statusItem .chev{transform:rotate(-45deg)}
+.coachPrompt{padding:15px}
+.coachPrompt h3{font-size:14px;margin:0 0 6px}
+.coachPrompt p{color:var(--muted);font-size:10.5px;line-height:1.45;margin:0 0 13px}
+.coachButton{display:flex;align-items:center;justify-content:center;height:44px;border-radius:9px;background:var(--lime);color:#111;font-size:12px;font-weight:850;letter-spacing:.35px}
+.seasonState{position:absolute;opacity:0;pointer-events:none}
+.utilityCard{display:grid;grid-template-columns:38px 1fr 12px;gap:12px;align-items:center;min-height:72px;padding:12px 14px;background:linear-gradient(115deg,#151815,#101210);border:1px solid #303330;border-radius:14px;margin-bottom:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.025);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.utilityIcon{width:38px;height:38px;border-radius:10px;background:#202320;display:grid;place-items:center;color:#d6d9d6}
+.utilityIcon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.utilityTitle{display:block;font-size:12px;font-weight:750;margin-bottom:4px}
+.utilityMeta{display:block;color:var(--muted);font-size:10px}
+.phaseValue{display:none;color:var(--muted);font-size:10px}
+#seasonIn:checked ~ .phone .phaseValue.valueIn,
+#seasonPre:checked ~ .phone .phaseValue.valuePre,
+#seasonOff:checked ~ .phone .phaseValue.valueOff{display:block}
+.utilityCard>.chev{transform:rotate(-45deg)}
+.messageInvite{position:relative;overflow:hidden;padding:16px;background:radial-gradient(circle at 100% 0,rgba(184,255,0,.12),transparent 45%),linear-gradient(135deg,#181b18,#101210 72%);border:1px solid #343834;border-radius:15px;margin-bottom:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.035);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.inviteTop{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.coachAvatar{position:relative;width:38px;height:38px;border-radius:50%;background:#292d29;display:grid;place-items:center;color:#e9ebe9}
+.coachAvatar svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.coachAvatar:after{content:"";position:absolute;right:-1px;bottom:1px;width:7px;height:7px;border:2px solid #181b18;border-radius:50%;background:var(--lime)}
+.inviteIdentity strong{display:block;font-size:11.5px;margin-bottom:3px}
+.inviteIdentity span{color:#969a96;font-size:9px}
+.messageInvite h3{font-size:17px;line-height:1.15;margin:0 0 6px}
+.messageInvite p{max-width:270px;color:#b7bab7;font-size:10.5px;line-height:1.45;margin:0 0 14px}
+.inviteAction{display:flex;align-items:center;justify-content:space-between;height:42px;padding:0 8px 0 12px;background:#242724;border:1px solid #363a36;border-radius:9px;color:#f0f2f0;font-size:10.5px;font-weight:800;letter-spacing:.25px}
+.inviteArrow{width:27px;height:27px;border-radius:8px;background:var(--lime);display:grid;place-items:center;color:#111}
+.inviteArrow svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.phaseOverlay{display:none;position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.72);color:var(--text);align-items:flex-end;padding:16px 14px 91px}
+#screenSeason:checked ~ .phone .phaseOverlay{display:flex}
+.phaseSheet{width:100%;background:#171917;border:1px solid #343734;border-radius:18px;padding:19px 17px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.phaseSheet h2{font-size:21px;line-height:1.15;margin:0 0 8px}
+.phaseSheet>p{color:#d5d8d5;font-size:11.5px;line-height:1.5;margin:0 0 15px}
+.phaseOptions{display:grid;gap:7px;margin-bottom:13px}
+.phaseOptions label{display:flex;align-items:center;justify-content:space-between;min-height:45px;padding:0 12px;border:1px solid #303330;border-radius:9px;color:#c3c6c3;font-size:11px;font-weight:700;cursor:pointer}
+.phaseOptions label:after{content:"";width:14px;height:14px;border:1px solid #5a5e5a;border-radius:50%}
+#seasonIn:checked ~ .phone .phaseOptions label[for="seasonIn"],
+#seasonPre:checked ~ .phone .phaseOptions label[for="seasonPre"],
+#seasonOff:checked ~ .phone .phaseOptions label[for="seasonOff"]{border-color:rgba(184,255,0,.38);background:rgba(184,255,0,.06);color:#f3f5f3}
+#seasonIn:checked ~ .phone .phaseOptions label[for="seasonIn"]:after,
+#seasonPre:checked ~ .phone .phaseOptions label[for="seasonPre"]:after,
+#seasonOff:checked ~ .phone .phaseOptions label[for="seasonOff"]:after{border:4px solid var(--lime)}
+.phaseCopy{display:none;color:#bfc3bf;font-size:10px;line-height:1.45;margin:0 1px 15px}
+#seasonIn:checked ~ .phone .phaseInCopy,
+#seasonPre:checked ~ .phone .phasePreCopy,
+#seasonOff:checked ~ .phone .phaseOffCopy{display:block}
+.editOverlay{display:none;position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.72);color:var(--text);align-items:flex-end;padding:16px 14px 91px}
+#screenEditTime:checked ~ .phone .editOverlay,
+#screenEditEquipment:checked ~ .phone .editOverlay{display:flex}
+.editSheet{width:100%;background:#171917;border:1px solid #343734;border-radius:18px;padding:19px 17px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.editContent{display:none}
+#screenEditTime:checked ~ .phone .editTimeContent,
+#screenEditEquipment:checked ~ .phone .editEquipmentContent{display:block}
+.editSheet h2{font-size:21px;margin:0 0 7px}
+.editSheet>div>p{color:#c9ccc9;font-size:11px;line-height:1.45;margin:0 0 15px}
+.editField{padding:11px 12px;margin-bottom:8px;border:1px solid #303330;border-radius:9px}
+.editField span{display:block;color:#8f938f;font-size:8.5px;font-weight:750;letter-spacing:.45px;margin-bottom:5px}
+.editField strong{font-size:11.5px;font-weight:650}
+.removeAction{display:flex;align-items:center;justify-content:center;height:40px;color:#c5c8c5;font-size:10px;font-weight:750;cursor:pointer}
+
+/* --- unified coach hub --- */
+.coachHubHeader{margin:0 1px 23px}
+.contextLabel{color:#8f938f;font-size:9px;font-weight:800;letter-spacing:.9px;margin:0 3px 9px}
+.contextPanel{background:#121412;border:1px solid #2c2f2c;border-radius:15px;overflow:hidden;margin-bottom:15px}
+.contextRow{display:grid;grid-template-columns:36px 1fr auto 10px;gap:11px;align-items:center;min-height:70px;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.contextIcon{width:36px;height:36px;border-radius:10px;background:#1d201d;display:grid;place-items:center;color:#c9ccc9}
+.contextIcon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.contextTitle{display:block;font-size:12px;font-weight:750;margin-bottom:4px}
+.contextMeta{display:block;color:#8f938f;font-size:9.5px}
+.contextValue{color:#d9dbd9;font-size:10px;font-weight:700;white-space:nowrap}
+.contextValue .phaseValue{color:#d9dbd9;font-weight:700}
+.contextRow>.chev{transform:rotate(-45deg)}
+.contextDivider{height:1px;background:#252825;margin-left:61px}
+.adaptGroupHead{display:flex;align-items:center;justify-content:space-between;padding:13px 14px 9px}
+.adaptGroupHead span:first-child{color:#9da19d;font-size:9px;font-weight:800;letter-spacing:.65px}
+.adaptGroupHead span:last-child{color:#b9bdb9;font-size:9px;font-weight:700}
+.adaptContextRow{display:grid;grid-template-columns:8px 1fr 10px;gap:11px;align-items:center;min-height:58px;padding:10px 14px;border-top:1px solid #252825;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.adaptContextRow .chev{transform:rotate(-45deg)}
+.coachMessageDock{display:grid;grid-template-columns:39px 1fr 30px;gap:11px;align-items:center;min-height:72px;padding:12px 13px;background:#eef1ee;border-radius:14px;color:#111;box-shadow:0 10px 30px rgba(0,0,0,.22);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.messageDockIcon{width:39px;height:39px;border-radius:11px;background:#d9ddd9;display:grid;place-items:center}
+.messageDockIcon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.messageDockTitle{display:block;font-size:12.5px;font-weight:800;margin-bottom:4px}
+.messageDockMeta{display:block;color:#5e635e;font-size:9.5px}
+.messageDockArrow{width:29px;height:29px;border-radius:9px;background:#171917;display:grid;place-items:center;color:var(--lime)}
+.messageDockArrow svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* --- minimal coach landing --- */
+.minimalCoachHeader{margin:0 1px 26px}
+.minimalPhase{display:grid;grid-template-columns:1fr auto 10px;gap:10px;align-items:center;min-height:58px;padding:0 3px 13px;border-bottom:1px solid #252825;margin-bottom:25px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.minimalLabel{display:block;color:#8f938f;font-size:9px;font-weight:800;letter-spacing:.75px;margin-bottom:6px}
+.minimalPhase .phaseValue{font-size:15px;font-weight:750;color:#f0f2f0}
+.minimalPhaseMeta{color:#8f938f;font-size:9px}
+.minimalPhase>.chev{transform:rotate(-45deg)}
+.minimalSectionHead{display:flex;align-items:center;justify-content:space-between;margin:0 3px 10px}
+.minimalSectionHead h2{margin:0;color:#aeb2ae;font-size:9px;font-weight:800;letter-spacing:.8px}
+.minimalSectionHead span{color:#7f837f;font-size:9px;font-weight:700}
+.minimalAdaptList{border-top:1px solid #292c29;border-bottom:1px solid #292c29;margin-bottom:20px}
+.minimalAdapt{display:grid;grid-template-columns:8px 1fr 10px;gap:12px;align-items:center;min-height:64px;padding:10px 3px;border-bottom:1px solid #252825;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.minimalAdapt:last-child{border-bottom:0}
+.minimalAdapt .chev{transform:rotate(-45deg)}
+.statusAddGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:11px}
+.statusAddItem{text-align:center;color:#aeb2ae;font-size:8px;font-weight:650;line-height:1.2;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.statusAddIcon{width:34px;height:34px;margin:0 auto 6px;border-radius:9px;background:#191c19;border:1px solid #2d302d;display:grid;place-items:center;color:#9da19d}
+.statusAddIcon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.statusAddItem:nth-child(1) .statusAddIcon{color:#67d7ff}
+.statusAddItem:nth-child(2) .statusAddIcon{color:#b9a7ff}
+.statusAddItem:nth-child(3) .statusAddIcon{color:#ffca68}
+.statusAddItem:nth-child(4) .statusAddIcon{color:#ff7f7f}
+.statusAddItem:nth-child(5) .statusAddIcon{color:#72e1ad}
+.minimalMessage{display:grid;grid-template-columns:34px 1fr 28px;gap:11px;align-items:center;min-height:62px;padding:10px 12px;background:#171917;border:1px solid #303330;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.minimalMessageIcon{width:34px;height:34px;border-radius:9px;background:rgba(184,255,0,.1);display:grid;place-items:center;color:var(--lime)}
+.minimalMessageIcon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.minimalMessageTitle{display:block;color:#f0f2f0;font-size:12px;font-weight:750;margin-bottom:3px}
+.minimalMessageMeta{display:block;color:#858985;font-size:9px}
+.minimalMessageArrow{width:27px;height:27px;border-radius:8px;background:#242724;display:grid;place-items:center;color:#c5c8c5}
+.minimalMessageArrow svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* --- coach chat --- */
+.coachChatScreen{height:calc(100% - 46px);min-height:560px;flex-direction:column;padding:0 2px}
+.chatHeader{display:flex;align-items:center;justify-content:space-between;min-height:40px;margin:0 2px 14px}
+.chatBack{display:grid;place-items:center;width:32px;height:32px;color:#d9dbd9;cursor:pointer}
+.chatBack svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chatIdentity{text-align:left}
+.chatIdentity strong{display:block;font-size:14px}
+.chatIdentity span{display:block;color:var(--muted);font-size:8.5px;margin-top:3px}
+.onlineDot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--lime);margin-right:4px}
+.chatContext{display:grid;grid-template-columns:1fr auto 10px;gap:9px;align-items:center;min-height:48px;padding:8px 11px;margin-bottom:16px;background:#121412;border:1px solid #292c29;border-radius:11px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.chatContext strong{display:block;font-size:10.5px;margin-bottom:3px}
+.chatContext strong .phaseValue{color:#eef0ee;font-size:10.5px;font-weight:700}
+.chatContext span{color:#8f938f;font-size:8.5px}
+.chatContext .contextCount{color:#c8cbc8;font-size:9px;font-weight:700}
+.chatContext .chev{transform:rotate(-45deg)}
+.chatMessages{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;padding:0 3px 15px;scrollbar-width:none}
+.chatMessages::-webkit-scrollbar{display:none}
+.message{max-width:82%;padding:11px 12px;border-radius:14px;font-size:11.5px;line-height:1.45}
+.message.coach{align-self:flex-start;background:#181a18;border:1px solid #2b2e2b;border-bottom-left-radius:5px;color:#e8eae8}
+.message.user{align-self:flex-end;background:#303430;border-bottom-right-radius:5px;color:#f5f5f5}
+.messageTime{display:block;color:#777b77;font-size:8px;margin-top:6px}
+.chatModifierCard{width:100%;padding:12px;background:#121412;border:1px solid #2d302d;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.chatModifierHead{display:grid;grid-template-columns:1fr 10px;gap:10px;align-items:center;margin-bottom:9px}
+.chatModifierKicker{display:block;color:#8f938f;font-size:8px;font-weight:800;letter-spacing:.65px;margin-bottom:4px}
+.chatModifierTitle{display:block;color:var(--lime);font-size:11px;font-weight:800}
+.chatModifierHead .chev{transform:rotate(-45deg)}
+.chatModifierList{border-top:1px solid #292c29}
+.chatModifierItem{display:grid;grid-template-columns:7px 1fr auto;gap:9px;align-items:center;min-height:38px;border-bottom:1px solid #252825}
+.chatModifierItem:last-child{border-bottom:0}
+.chatModifierItem strong{font-size:10px;font-weight:700}
+.chatModifierItem span:last-child{color:#858985;font-size:8.5px}
+.inlineContextCard{align-self:flex-start;width:88%;padding:13px;background:#141614;border:1px solid #2c2f2c;border-radius:14px;border-bottom-left-radius:5px}
+.inlineContextKicker{color:#8f938f;font-size:8px;font-weight:800;letter-spacing:.65px;margin-bottom:7px}
+.inlineContextCard h3{font-size:13px;line-height:1.3;margin:0 0 6px}
+.inlineContextCard h3 .phaseValue{font-size:13px;font-weight:750;color:#f0f2f0}
+#seasonIn:checked ~ .phone .inlineContextCard .phaseValue.valueIn,
+#seasonPre:checked ~ .phone .inlineContextCard .phaseValue.valuePre,
+#seasonOff:checked ~ .phone .inlineContextCard .phaseValue.valueOff{display:inline}
+.inlineContextCard p{color:#aeb2ae;font-size:10px;line-height:1.45;margin:0 0 11px}
+.inlineContextAction{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid #292c29;color:#d9dcd9;font-size:9px;font-weight:750;letter-spacing:.25px;cursor:pointer}
+.inlineContextAction .chev{transform:rotate(-45deg);margin-right:2px}
+.quickPrompts{display:flex;gap:6px;overflow-x:auto;padding:0 1px 10px;scrollbar-width:none}
+.quickPrompts::-webkit-scrollbar{display:none}
+.quickPrompt{flex:0 0 auto;padding:7px 9px;border:1px solid #303330;border-radius:999px;color:#b8bbb8;font-size:8.5px;white-space:nowrap}
+.chatComposer{display:grid;grid-template-columns:1fr 40px;gap:8px;align-items:center;padding:10px;background:#111311;border:1px solid #2b2e2b;border-radius:14px}
+.chatPlaceholder{color:#7f837f;font-size:11px;padding-left:3px}
+.chatSend{width:38px;height:38px;border-radius:10px;background:var(--lime);display:grid;place-items:center;color:#111}
+.chatSend svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.coachContextOverlay{display:none;position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.72);color:var(--text);align-items:flex-end;padding:16px 14px 91px}
+#screenCoachContext:checked ~ .phone .coachContextOverlay{display:flex}
+.contextSheet{width:100%;background:#171917;border:1px solid #343734;border-radius:18px;padding:19px 17px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.contextSheet h2{font-size:21px;margin:0 0 6px}
+.contextSheet>p{color:#c9ccc9;font-size:11px;line-height:1.45;margin:0 0 15px}
+.contextSheetLabel{color:#8f938f;font-size:8.5px;font-weight:800;letter-spacing:.6px;margin:15px 0 6px}
+.contextSheetRow{display:grid;grid-template-columns:1fr auto 10px;gap:10px;align-items:center;min-height:49px;padding:9px 1px;border-top:1px solid #292c29;cursor:pointer}
+.contextSheetRow .chev{transform:rotate(-45deg)}
+
+/* --- modifiers explanation --- */
+.adaptOverlay{display:none;position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.72);color:var(--text);align-items:flex-end;padding:16px 14px 91px}
+#screenAdapt:checked ~ .phone .adaptOverlay{display:flex}
+.adaptSheet{width:100%;background:#171917;border:1px solid #343734;border-radius:18px;padding:19px 17px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.sheetHandle{width:36px;height:4px;border-radius:4px;background:#4a4d4a;margin:-7px auto 16px}
+.sheetStatus{display:flex;align-items:center;gap:8px;color:var(--lime);font-size:10px;font-weight:750;letter-spacing:.35px;margin-bottom:8px}
+.sheetStatus .weekDot{width:7px;height:7px}
+.adaptSheet h2{font-size:21px;line-height:1.15;margin:0 0 9px}
+.adaptSheet p{color:#d5d8d5;font-size:12px;line-height:1.5;margin:0 0 14px}
+.adaptSheet .sheetPrimary,.adaptSheet .sheetSecondary{height:38px;font-size:10px;border-radius:8px}
+.adaptSheet .sheetPrimary{margin-bottom:5px}
+.adaptList{margin:0 0 16px;padding:0;list-style:none;border-top:1px solid #292c29}
+.adaptList li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #292c29;color:#f2f3f2;font-size:11px;font-weight:650}
+.adaptList span:last-child{color:#bfc3bf;font-weight:500;text-align:right}
+.sheetPrimary,.sheetSecondary{display:flex;align-items:center;justify-content:center;height:44px;border-radius:9px;font-size:11px;font-weight:800;letter-spacing:.35px;cursor:pointer}
+.sheetPrimary{background:var(--lime);color:#111;margin-bottom:8px}
+.sheetSecondary{color:#d5d8d5}
+
+/* --- week view --- */
+.weekAdapt{display:inline-flex;align-items:center;gap:6px;color:var(--lime);font-size:9.5px;font-weight:760;letter-spacing:.25px;line-height:1.3;margin:0 3px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.weekAdapt .infoIcon{width:13px;height:13px;color:var(--lime);opacity:.9}
+.weekDot{width:7px;height:7px;background:var(--lime);border-radius:50%;flex:0 0 auto}
+.weekCard{border:1px solid #292c29;border-radius:14px;background:linear-gradient(135deg,#191b19 0%,#161816 100%);margin-bottom:10px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.weekHead{position:relative;min-height:88px;display:grid;grid-template-columns:46px 1px minmax(0,1fr) 16px;gap:11px;align-items:center;padding:10px 12px}
+.weekHead.hasTeam{grid-template-columns:46px 1px minmax(0,1fr) 16px;gap:11px}
+.weekHead.noExpand{grid-template-columns:46px 1px minmax(0,1fr)}
+.weekCurrentSet>.weekCard:first-of-type{border-color:rgba(184,255,0,.3);box-shadow:0 5px 16px rgba(0,0,0,.17)}
+.wDate{text-align:center}
+.wDate .wd{color:#929692;font-size:8.5px;font-weight:800;letter-spacing:.75px}
+.wDate .dn{font-size:27px;font-weight:680;line-height:1.08;margin-top:1px}
+.wDate .today{display:inline-block;margin-top:4px;background:var(--lime);color:#111;font-size:8px;font-weight:900;padding:2px 5px;border-radius:3px}
+.vline{display:block;height:52px;background:#303330}
+.wMain{min-width:0}
+.wMain h4{font-size:15px;font-weight:720;margin:0 0 8px;line-height:1.18;letter-spacing:-.08px}
+.wMeta{display:flex;align-items:center;gap:8px;color:#959995;font-size:9px;white-space:nowrap}
+.wMeta .sep{height:12px;width:1px;background:#3b3e3b;margin:0 1px}
+.teamContext{display:inline-flex;align-items:center;gap:5px;color:#c6cac6;font-size:8px;font-weight:700}
+.teamContext:before{content:"";width:5px;height:5px;border-radius:50%;background:#8c76ff;box-shadow:0 0 0 3px rgba(140,118,255,.1)}
+.teamBadge{display:none}
+.weekCard .wMain:before{display:none;margin-bottom:6px;padding:3px 6px;width:max-content;border-radius:5px;background:#232623;border:1px solid #323632;color:#aeb2ae;font-size:7px;font-weight:850;line-height:1;letter-spacing:.55px;text-transform:uppercase}
+.weekCurrentSet>.weekCard:nth-of-type(1) .wMain:before,.weekCurrentSet>.weekCard:nth-of-type(3) .wMain:before,
+.weekPrevSet>.weekCard:nth-of-type(1) .wMain:before,
+.weekNextSet>.weekCard:nth-of-type(1) .wMain:before,.weekNextSet>.weekCard:nth-of-type(3) .wMain:before{content:"Core";display:block;color:var(--lime);background:rgba(184,255,0,.055);border-color:rgba(184,255,0,.18)}
+.weekCurrentSet>.weekCard:nth-of-type(2) .wMain:before,
+.weekPrevSet>.weekCard:nth-of-type(2) .wMain:before,.weekPrevSet>.weekCard:nth-of-type(3) .wMain:before,
+.weekNextSet>.weekCard:nth-of-type(2) .wMain:before{content:"Optional";display:block}
+.weekCurrentSet>.weekCard:nth-of-type(4) .wMain:before,
+.weekPrevSet>.weekCard:nth-of-type(4) .wMain:before,.weekPrevSet>.weekCard:nth-of-type(7) .wMain:before,
+.weekNextSet>.weekCard:nth-of-type(4) .wMain:before{content:"Accessory";display:block;color:#67c7ff;background:rgba(103,199,255,.055);border-color:rgba(103,199,255,.2)}
+.weekHead.noExpand{min-height:52px;padding-top:6px;padding-bottom:6px}
+.weekHead.noExpand .wDate{min-height:38px;background:transparent;border-color:transparent}
+.weekHead.noExpand .wDate .dn{font-size:20px;color:#b8bbb8}
+.weekHead.noExpand .vline{height:30px;background:#222522}
+.weekCard:not(.gameCard):has(.weekHead.noExpand){background:#0b0d0b;border-color:#171a17;box-shadow:none;margin-bottom:8px}
+.weekCard:not(.gameCard) .weekHead.noExpand .wDate .wd{color:#626662}
+.weekCard:not(.gameCard) .weekHead.noExpand .wDate .dn{color:#858985}
+.weekCard:not(.gameCard) .weekHead.noExpand .wMain h4{color:#777b77;font-size:13px;font-weight:650}
+.gameCard{background:#151715;border-color:#2b2e2b;box-shadow:none}
+.wChevLabel{width:24px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.weekOpen{position:absolute;opacity:0;pointer-events:none}
+.weekDetails{display:none;margin:0;padding:2px 14px 14px;border-top:1px solid #292c29;background:#121412}
+.weekSection{padding:10px 0 6px;border-top:1px solid #2b2d2b}
+.weekSection:first-child{border-top:0}
+.weekSectionTitle{color:#aeb2ae;font-size:9px;font-weight:800;letter-spacing:.7px;margin-bottom:7px}
+.weekExercise{
+  display:grid;grid-template-columns:20px 1fr auto;gap:6px;padding:6px 0;border-top:1px solid #252725;
+  font-size:11.5px;color:#e9e9e9;
+}
+.weekExercise:first-of-type{border-top:0}
+.weekOpen:checked ~ .weekHead .chev{transform:rotate(225deg)}
+.weekOpen:checked ~ .weekDetails{display:block}
+
+/* --- active session flow --- */
+.start{display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.flowScreen{padding:0 2px}
+.flowHeader{display:grid;grid-template-columns:34px 1fr 34px;align-items:center;min-height:40px;margin:0 0 18px}
+.flowBack{width:34px;height:34px;display:grid;place-items:center;color:#d9dcd9;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.flowBack svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.flowBrand{display:block;width:52px;height:auto;justify-self:center}
+.flowIntro{margin:0 2px 18px}
+.flowKicker{color:var(--lime);font-size:8.5px;font-weight:850;letter-spacing:.7px;margin-bottom:7px}
+.flowIntro h1{font-size:22px;line-height:1.16;letter-spacing:-.3px;margin:0 0 6px}
+.flowIntro p{color:#8f938f;font-size:10px;line-height:1.4;margin:0}
+.flowSection{margin-bottom:17px}
+.flowSectionTitle{color:#8f938f;font-size:8.5px;font-weight:850;letter-spacing:.7px;margin:0 3px 7px}
+.flowExerciseList{background:#121412;border:1px solid #292c29;border-radius:12px;overflow:hidden}
+.flowExercise{display:grid;grid-template-columns:22px minmax(0,1fr);gap:9px;align-items:start;min-height:82px;padding:11px;border-bottom:1px solid #272a27}
+.flowExercise:last-child{border-bottom:0}
+.flowNumber{padding-top:2px;color:#737773;font-size:9px;text-align:center}
+.flowExerciseBody{min-width:0}
+.flowExerciseBody>strong{display:block;color:#edf0ed;font-size:11px;font-weight:700;line-height:1.3}
+.exerciseMetrics{display:grid;grid-template-columns:48px 58px 82px;gap:8px;align-items:end;margin-top:9px}
+.exerciseMetrics.twoMetrics{grid-template-columns:48px minmax(0,1fr)}
+.exerciseMetric{min-width:0}
+.exerciseMetric small{display:block;color:#777b77;font-size:7.5px;font-weight:800;letter-spacing:.55px;line-height:1;margin-bottom:5px}
+.exerciseMetric b{display:block;color:#d9dcd9;font-size:12px;font-weight:700;line-height:1.1}
+.exerciseMetric.muted b{color:#626662;font-size:9px;font-weight:650}
+.weightField{display:block}
+.weightEntry{display:flex;align-items:center;gap:5px}
+.weightField input{width:52px;height:32px;padding:0 7px;background:#090b09;border:1px solid #3a3e3a;border-radius:7px;color:#f4f5f4;font:700 11px/1 -apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;text-align:right;outline:none}
+.weightEntry span{color:#8f938f;font-size:8px;font-weight:750}
+.weightField input:focus{border-color:rgba(184,255,0,.55);box-shadow:0 0 0 2px rgba(184,255,0,.08)}
+.weightField input::placeholder{color:#555955;font-weight:600}
+.weightField input::-webkit-outer-spin-button,.weightField input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.weightField input[type=number]{appearance:textfield;-moz-appearance:textfield}
+.completeSession{display:flex;align-items:center;justify-content:center;width:100%;height:44px;margin:4px 0 8px;border-radius:9px;background:var(--lime);color:#111;font-size:11px;font-weight:850;letter-spacing:.4px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+
+/* --- session review --- */
+.reviewIntro{margin:0 2px 21px}
+.reviewIntro h1{font-size:22px;line-height:1.16;margin:0 0 7px}
+.reviewIntro p{color:#969a96;font-size:10.5px;line-height:1.45;margin:0}
+.questionState{position:absolute;opacity:0;pointer-events:none}
+.reviewQuestion{margin-bottom:22px}
+.reviewQuestion h2{font-size:13px;line-height:1.3;margin:0 2px 10px}
+.reviewQuestion p{color:#858985;font-size:9px;line-height:1.4;margin:-4px 2px 10px}
+.reviewChoices{display:grid;gap:7px}
+.reviewChoices.two{grid-template-columns:1fr 1fr}
+.reviewChoices.three{grid-template-columns:repeat(3,1fr)}
+.reviewChoices.four{grid-template-columns:1fr 1fr}
+.reviewChoice{display:flex;align-items:center;justify-content:center;min-height:44px;padding:8px 10px;background:#141614;border:1px solid #303330;border-radius:9px;color:#b9bdb9;font-size:10.5px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.reviewChoice.selected{color:#111;background:var(--lime);border-color:var(--lime)}
+.reviewBlock{padding:14px 12px 2px;margin-bottom:14px;background:#111311;border:1px solid #292c29;border-radius:12px}
+.reviewBlockTitle{display:flex;align-items:center;justify-content:space-between;margin:0 1px 13px}
+.reviewBlockTitle strong{font-size:12px}
+.reviewBlockTitle span{color:#777b77;font-size:8px;font-weight:800;letter-spacing:.6px}
+.reviewBlock .reviewQuestion{margin-bottom:16px}
+.conditionalFollowup{display:none;padding-top:2px}
+.conditionalFollowup.visible{display:block}
+.submitReview{display:flex;align-items:center;justify-content:center;width:100%;height:44px;margin-top:16px;border-radius:9px;background:var(--lime);color:#111;font-size:11px;font-weight:850;letter-spacing:.35px;cursor:pointer}
+
+/* --- session complete --- */
+.sessionDoneScreen{min-height:560px}
+.doneContent{min-height:510px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 20px}
+.doneMark{width:54px;height:54px;margin-bottom:18px;border-radius:50%;background:rgba(184,255,0,.12);border:1px solid rgba(184,255,0,.35);display:grid;place-items:center;color:var(--lime)}
+.doneMark svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.doneContent h1{font-size:23px;line-height:1.2;margin:0 0 8px}
+.doneContent p{max-width:260px;color:#969a96;font-size:11px;line-height:1.5;margin:0 0 24px}
+.backToProgram{display:flex;align-items:center;justify-content:center;width:100%;height:44px;border-radius:9px;background:var(--lime);color:#111;font-size:11px;font-weight:850;letter-spacing:.35px;cursor:pointer}
+
+/* --- profile --- */
+.profileScreen{padding:0 3px}
+.profileHeader{margin:0 1px 25px}
+.profileIntro{margin:0 2px 21px}
+.profileIntro h2{font-size:19px;line-height:1.2;margin:0 0 6px}
+.profileIntro p{color:#8f938f;font-size:10px;line-height:1.45;margin:0}
+.profileSectionLabel{color:#8f938f;font-size:9px;font-weight:800;letter-spacing:.8px;margin:0 3px 9px}
+.profilePanel{background:#151715;border:1px solid #2b2e2b;border-radius:13px;overflow:hidden;margin-bottom:20px}
+.profileRow{display:grid;grid-template-columns:31px 1fr auto 10px;gap:10px;align-items:center;min-height:61px;padding:9px 12px;border-bottom:1px solid #282b28}
+.profileRow:last-child{border-bottom:0}
+.profileRowIcon{width:31px;height:31px;border-radius:9px;background:#202320;display:grid;place-items:center;color:#bfc3bf}
+.profileRowIcon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.profileRow strong{display:block;font-size:10.5px;margin-bottom:3px}
+.profileRow small{display:block;color:#858985;font-size:8.5px}
+.profileValue{color:#d7dad7;font-size:9px;font-weight:700;text-align:right}
+.profileRow .chev{transform:rotate(-45deg)}
+.onboardingSummary{padding:13px 14px;background:#111311;border:1px solid #292c29;border-radius:12px}
+.onboardingSummary strong{display:block;font-size:11px;margin-bottom:5px}
+.onboardingSummary p{color:#8f938f;font-size:9px;line-height:1.45;margin:0 0 11px}
+.onboardingAction{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid #292c29;color:#cdd0cd;font-size:9px;font-weight:750}
+.onboardingAction .chev{transform:rotate(-45deg);margin-right:2px}
+
+/* --- bottom nav --- */
+.bottom{
+  position:absolute;left:0;right:0;bottom:0;height:78px;background:rgba(2,2,2,.98);
+  border-top:1px solid #232323;display:grid;grid-template-columns:repeat(3,1fr);z-index:30;
+}
+.nav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:9.5px;font-weight:600;color:#8f938f}
+.nav{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.navIcon{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.home{
+  position:absolute;z-index:40;bottom:7px;left:50%;transform:translateX(-50%);
+  width:125px;height:5px;border-radius:4px;background:white;
+}
+
+/* --- spacing and type system --- */
+.card,.weekCard,.profilePanel,.onboardingSummary,.chatModifierCard,.chatComposer,.chatContext,.minimalMessage{border-radius:var(--radius-card)}
+.segment,.start,.sheetPrimary,.sheetSecondary,.phaseOptions label,.editField{border-radius:var(--radius-control)}
+
+.eyebrow,.minimalLabel,.minimalSectionHead h2,.profileSectionLabel,.weekSectionTitle,.chatModifierKicker,.contextSheetLabel{
+  font-size:var(--type-caption);line-height:1.2;letter-spacing:.7px;
+}
+.accMeta,.wMeta,.contextMeta,.profileValue,.profileRow small,.onboardingSummary p,.notificationCopy small,.minimalPhaseMeta{
+  font-size:var(--type-meta);line-height:1.35;
+}
+.accTitle,.profileRow strong,.onboardingSummary strong,.contextTitle,.chatModifierTitle{
+  font-size:var(--type-label);line-height:1.3;
+}
+.exercise,.weekExercise,.message,.adaptSheet p,.phaseSheet>p,.editSheet>div>p{
+  font-size:var(--type-body);line-height:1.45;
+}
+.changeCard h3,.coachCardHead h3,.coachPrompt h3{font-size:var(--type-subhead);line-height:1.25}
+.sessionTitle,.profileIntro h2,.adaptSheet h2,.phaseSheet h2,.editSheet h2{font-size:var(--type-title);line-height:1.2}
+
+.session{margin-bottom:var(--space-3)}
+.sessionHead{padding:var(--space-4);padding-bottom:14px}
+.sessionMetaRow{gap:var(--space-3);margin-bottom:var(--space-2)}
+.sessionBody{padding:0 var(--space-3) var(--space-3)}
+.accLabel{min-height:58px;gap:10px}
+.accCopy{gap:var(--space-1)}
+.details{padding-bottom:var(--space-3)}
+.exercise,.weekExercise{padding:7px 0;gap:var(--space-2)}
+.start{height:40px;margin-top:var(--space-2)}
+
+.dayModifierNotification{min-height:54px;padding:11px 13px;gap:11px;margin:0 2px 10px}
+.dayModifierNotification .notificationCopy strong{font-size:11px;line-height:1.25;margin-bottom:2px}
+.dayModifierNotification .notificationCopy small{font-size:10px;line-height:1.3}
+.changeCard{padding:var(--space-3);margin-bottom:var(--space-2)}
+.changeCard p{font-size:var(--type-meta);line-height:1.4;margin-top:5px}
+.changeGrid{margin-top:var(--space-3);gap:var(--space-1)}
+
+.weekAdapt{font-size:var(--type-meta);margin-bottom:var(--space-3)}
+.weekCard{margin-bottom:10px}
+.weekHead{min-height:86px;padding:10px var(--space-3);gap:10px}
+.weekHead.hasTeam{gap:10px}
+.wMain h4{font-size:15px;line-height:1.2;margin-bottom:7px}
+.weekCard .wMain:before{font-size:7.5px;margin-bottom:6px}
+.weekDetails{padding:2px var(--space-3) var(--space-3)}
+.weekSection{padding:10px 0 6px}
+
+.statusPageHeader{margin-bottom:var(--space-5)}
+.minimalPhase{margin-bottom:var(--space-5);padding-bottom:var(--space-3)}
+.minimalSectionHead{margin-bottom:var(--space-2)}
+.minimalAdaptList{margin-bottom:var(--space-4)}
+.minimalAdapt{min-height:60px;padding:var(--space-2) 3px;gap:var(--space-3)}
+.statusAddGrid{margin-top:10px;gap:var(--space-1)}
+
+.profileHeader{margin-bottom:var(--space-5)}
+.profileIntro{margin-bottom:var(--space-5)}
+.profileIntro p{font-size:var(--type-meta);line-height:1.45}
+.profileSectionLabel{margin-bottom:var(--space-2)}
+.profilePanel{margin-bottom:var(--space-4)}
+.profileRow{min-height:60px;padding:10px var(--space-3);gap:10px}
+.onboardingSummary{padding:var(--space-3)}
+
+.chatHeader{margin-bottom:var(--space-3)}
+.chatMessages{gap:10px;padding-bottom:var(--space-3)}
+.message{padding:10px var(--space-3)}
+.chatModifierCard{padding:var(--space-3)}
+.chatComposer{padding:var(--space-2)}
+
+.adaptSheet,.phaseSheet,.editSheet,.contextSheet{padding:18px var(--space-4) var(--space-4);border-radius:16px}
+.adaptSheet h2,.phaseSheet h2,.editSheet h2{margin-bottom:var(--space-2)}
+.adaptSheet p,.phaseSheet>p,.editSheet>div>p{margin-bottom:var(--space-3)}
+.adaptList{margin-bottom:var(--space-3)}
+.adaptSheet .sheetPrimary,.adaptSheet .sheetSecondary{height:38px;font-size:10px}
+
+.nav{font-size:var(--type-meta);gap:5px}
+
+/* Fit small browser windows */
+@media(max-height:760px){
+  body{padding-top:10px}
+  .phone{height:740px}
+}
+</style>
+</head>
+<body>
+
+<!-- mode state -->
+<input class="state" type="radio" name="mode" id="modeDay" checked>
+<input class="state" type="radio" name="mode" id="modeWeek">
+
+<!-- week navigation state -->
+<input class="state" type="radio" name="weekRange" id="weekPrev">
+<input class="state" type="radio" name="weekRange" id="weekCurrent" checked>
+<input class="state" type="radio" name="weekRange" id="weekNext">
+
+<!-- app screen state -->
+<input class="state" type="radio" name="appScreen" id="screenProgram" checked>
+<input class="state" type="radio" name="appScreen" id="screenAdapt">
+<input class="state" type="radio" name="appScreen" id="screenCoach">
+<input class="state" type="radio" name="appScreen" id="screenCoachChat">
+<input class="state" type="radio" name="appScreen" id="screenCoachStatus">
+<input class="state" type="radio" name="appScreen" id="screenCoachContext">
+<input class="state" type="radio" name="appScreen" id="screenSeason">
+<input class="state" type="radio" name="appScreen" id="screenEditTime">
+<input class="state" type="radio" name="appScreen" id="screenEditEquipment">
+<input class="state" type="radio" name="appScreen" id="screenProfile">
+<input class="state" type="radio" name="appScreen" id="screenSession">
+<input class="state" type="radio" name="appScreen" id="screenSessionReview">
+<input class="state" type="radio" name="appScreen" id="screenSessionDone">
+
+<!-- season phase state -->
+<input class="seasonState" type="radio" name="seasonMode" id="seasonIn" checked>
+<input class="seasonState" type="radio" name="seasonMode" id="seasonPre">
+<input class="seasonState" type="radio" name="seasonMode" id="seasonOff">
+
+<div class="phone">
+  <div class="screen">
+    <div class="island"></div>
+    <main class="app">
+      <div class="status"><span>9:41</span><span class="statusIcons" aria-hidden="true"><svg class="statusIcon" width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="7" width="3" height="4" rx=".7"></rect><rect x="4.5" y="5" width="3" height="6" rx=".7"></rect><rect x="9" y="2.5" width="3" height="8.5" rx=".7"></rect><rect x="13.5" width="3" height="11" rx=".7"></rect></svg><svg class="statusIcon" width="15" height="11" viewBox="0 0 15 11"><path d="M1 3.5C4.7.2 10.3.2 14 3.5L12.4 5C9.7 2.7 5.3 2.7 2.6 5L1 3.5Zm3 3C6 4.8 9 4.8 11 6.5L7.5 10 4 6.5Z"></path></svg><svg class="statusIcon" width="22" height="10" viewBox="0 0 22 10"><rect x=".5" y=".5" width="18" height="9" rx="2" fill="none" stroke="currentColor"></rect><rect x="2.5" y="2.5" width="14" height="5" rx="1"></rect><path d="M20 3.2h1.5v3.6H20z"></path></svg></span></div>
+
+      <div class="programScreen">
+
+      <div class="topbar headingStack">
+        <img class="cornerBrand" src="lfa_logo.svg" alt="LFA">
+      </div>
+
+      <div class="segment">
+        <label class="dayLabel" for="modeDay">DAY</label>
+        <label class="weekLabel" for="modeWeek">WEEK</label>
+      </div>
+
+      <div class="weeknav">
+        <span class="weekArrow weekStep fromPrev disabled" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg></span>
+        <label class="weekArrow weekStep fromCurrent" for="weekPrev" aria-label="Previous week"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg></label>
+        <label class="weekArrow weekStep fromNext" for="weekCurrent" aria-label="Previous week"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg></label>
+        <div class="range"><span class="weekRange rangePrev">27 JUL–2 AUG</span><span class="weekRange rangeCurrent">3–9 AUG</span><span class="weekRange rangeNext">10–16 AUG</span></div>
+        <label class="weekArrow weekStep fromPrev" for="weekCurrent" aria-label="Next week"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg></label>
+        <label class="weekArrow weekStep fromCurrent" for="weekNext" aria-label="Next week"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg></label>
+        <span class="weekArrow weekStep fromNext disabled" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg></span>
+      </div>
+
+      <!-- DAY -->
+      <section class="dayView">
+        <!-- Today's session -->
+        <div class="dayPanel day-mon">
+          <label class="dayModifierNotification" for="screenAdapt"><span class="notificationIcon"><svg class="infoIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg></span><span class="notificationCopy"><strong>2 active modifiers</strong><small>Currently impacting your program</small></span></label>
+          <section class="card session">
+            <div class="sessionHead"><div class="sessionMetaRow"><div class="eyebrow">TODAY'S SESSION</div><span class="sessionCategory core">Core</span></div><div class="titleRow"><div class="sessionTitle">Strength +<br>Conditioning</div></div></div>
+            <div class="sessionBody">
+              <div class="acc"><input class="accState" type="checkbox" id="monMob"><label class="accLabel" for="monMob"><span class="accIcon"><svg class="rowIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5c-2 1.8-3 4.1-3 7s1 5.2 3 7M17 5c2 1.8 3 4.1 3 7s-1 5.2-3 7M9 8c-1 1-1.5 2.3-1.5 4S8 15 9 16M15 8c1 1 1.5 2.3 1.5 4S16 15 15 16"></path></svg></span><span class="accCopy"><span class="accTitle">MOBILITY / WARM-UP</span><span class="accMeta">4 exercises</span></span><span class="chev"></span></label><div class="details"><div class="exercise"><span>90/90 Hip Switch</span><span>2 × 6</span></div><div class="exercise"><span>World's Greatest Stretch</span><span>2 × 5</span></div><div class="exercise"><span>Ankle Rock</span><span>2 × 8</span></div><div class="exercise"><span>Adductor Rockback</span><span>2 × 8</span></div></div></div>
+              <div class="acc"><input class="accState" type="checkbox" id="monStr"><label class="accLabel" for="monStr"><span class="accIcon"><svg class="rowIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12"></path></svg></span><span class="accCopy"><span class="accTitle">STRENGTH</span><span class="accMeta">5 exercises</span></span><span class="chev"></span></label><div class="details"><div class="exercise"><span>Back Squat</span><span>3 × 2–4</span></div><div class="exercise"><span>Bench Press</span><span>3 × 2–4</span></div><div class="exercise"><span>Romanian Deadlift</span><span>3 × 5–6</span></div><div class="exercise"><span>Split Squat</span><span>2 × 6–8</span></div><div class="exercise"><span>Ab Wheel</span><span>2 × 6–8</span></div></div></div>
+              <div class="acc"><input class="accState" type="checkbox" id="monCon"><label class="accLabel" for="monCon"><span class="accIcon"><svg class="rowIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16 10 11l3 3 6-7M14 7h5v5"></path></svg></span><span class="accCopy"><span class="accTitle">CONDITIONING</span><span class="accMeta">Aerobic flush</span></span><span class="chev"></span></label><div class="details"><div class="exercise"><span>Easy aerobic flush</span><span>10–20 min</span></div></div></div>
+              <label class="start" for="screenSession">START SESSION</label>
+            </div>
+          </section>
+          <section class="card changeCard"><h3>Need to make a change?</h3><p>Update your status to modify your program.</p><div class="changeGrid">
+            <div class="change"><div class="circle"><svg class="changeIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l3 2"></path></svg></div>Time away</div>
+            <div class="change"><div class="circle"><svg class="changeIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2"></circle></svg></div>Away</div>
+            <div class="change"><div class="circle"><svg class="changeIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z"></path><path d="M12 10v6"></path></svg></div>Sick</div>
+            <div class="change"><div class="circle"><svg class="changeIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z"></path></svg></div>Injured</div>
+            <div class="change"><div class="circle"><svg class="changeIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"></path></svg></div>Equipment</div>
+          </div></section>
+        </div>
+
+      </section>
+
+      <!-- WEEK -->
+      <section class="weekView">
+        <div class="weekSet weekCurrentSet">
+        <label class="weekAdapt" for="screenAdapt"><svg class="infoIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg><span>2 active modifiers impacting program</span></label>
+
+        <div class="weekCard">
+          <input class="weekOpen" type="checkbox" id="wMon">
+          <div class="weekHead"><div class="wDate"><div class="wd">MON</div><div class="dn">3</div><div class="today">TODAY</div></div><div class="vline"></div><div class="wMain"><h4>Strength + Conditioning</h4><div class="wMeta"><span>4 exercises</span></div></div><label class="wChevLabel" for="wMon"><span class="chev"></span></label></div>
+          <div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">MOBILITY / WARM-UP</div><div class="weekExercise"><span>1</span><span>Hip Opener</span><span>2 × 6</span></div><div class="weekExercise"><span>2</span><span>Ankle Rock</span><span>2 × 8</span></div></div><div class="weekSection"><div class="weekSectionTitle">STRENGTH</div><div class="weekExercise"><span>1</span><span>Back Squat</span><span>3 × 4–6</span></div><div class="weekExercise"><span>2</span><span>Bench Press</span><span>3 × 4–6</span></div><div class="weekExercise"><span>3</span><span>Romanian Deadlift</span><span>3 × 6–8</span></div><div class="weekExercise"><span>4</span><span>Split Squat</span><span>2 × 8</span></div></div><div class="weekSection"><div class="weekSectionTitle">CONDITIONING</div><div class="weekExercise"><span></span><span>Easy aerobic flush</span><span>10–15 min</span></div></div></div>
+        </div>
+
+        <div class="weekCard">
+          <input class="weekOpen" type="checkbox" id="wTue">
+          <div class="weekHead hasTeam"><div class="wDate"><div class="wd">TUE</div><div class="dn">4</div></div><div class="vline"></div><div class="wMain"><h4>Upper Body Strength</h4><div class="wMeta"><span>5 exercises</span></div></div><span class="teamBadge">TEAM<br>TRAINING</span><label class="wChevLabel" for="wTue"><span class="chev"></span></label></div>
+          <div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">MOBILITY / WARM-UP</div><div class="weekExercise"><span>1</span><span>Band Shoulder Prep</span><span>2 × 10</span></div><div class="weekExercise"><span>2</span><span>Thoracic Rotation</span><span>2 × 6</span></div></div><div class="weekSection"><div class="weekSectionTitle">STRENGTH</div><div class="weekExercise"><span>1</span><span>Bench Press</span><span>4 × 6–8</span></div><div class="weekExercise"><span>2</span><span>Seated Overhead Press</span><span>3 × 8</span></div><div class="weekExercise"><span>3</span><span>Pull Up</span><span>3 × 6–8</span></div><div class="weekExercise"><span>4</span><span>Dumbbell Row</span><span>3 × 8–10</span></div><div class="weekExercise"><span>5</span><span>Dips</span><span>3 × 8–10</span></div></div></div>
+        </div>
+
+        <div class="weekCard">
+          <input class="weekOpen" type="checkbox" id="wWed">
+          <div class="weekHead"><div class="wDate"><div class="wd">WED</div><div class="dn">5</div></div><div class="vline"></div><div class="wMain"><h4>Lower Body Strength</h4><div class="wMeta"><span>4 exercises</span></div></div><label class="wChevLabel" for="wWed"><span class="chev"></span></label></div>
+          <div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">MOBILITY / WARM-UP</div><div class="weekExercise"><span>1</span><span>Hip Airplane</span><span>2 × 5</span></div><div class="weekExercise"><span>2</span><span>Ankle Rock</span><span>2 × 8</span></div></div><div class="weekSection"><div class="weekSectionTitle">STRENGTH</div><div class="weekExercise"><span>1</span><span>Trap Bar Deadlift</span><span>4 × 5</span></div><div class="weekExercise"><span>2</span><span>Split Squat</span><span>3 × 8</span></div><div class="weekExercise"><span>3</span><span>Hamstring Curl</span><span>3 × 10</span></div><div class="weekExercise"><span>4</span><span>Calf Raise</span><span>3 × 12</span></div></div></div>
+        </div>
+
+        <div class="weekCard">
+          <input class="weekOpen" type="checkbox" id="wThu">
+          <div class="weekHead hasTeam"><div class="wDate"><div class="wd">THU</div><div class="dn">6</div></div><div class="vline"></div><div class="wMain"><h4>Conditioning / Primer</h4><div class="wMeta"><span>3 exercises</span></div></div><span class="teamBadge">TEAM<br>TRAINING</span><label class="wChevLabel" for="wThu"><span class="chev"></span></label></div>
+          <div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">MOBILITY / WARM-UP</div><div class="weekExercise"><span>1</span><span>Dynamic Hip Flow</span><span>5 min</span></div><div class="weekExercise"><span>2</span><span>Calf / Ankle Prep</span><span>3 min</span></div></div><div class="weekSection"><div class="weekSectionTitle">CONDITIONING</div><div class="weekExercise"><span>1</span><span>Acceleration Sprints</span><span>4 × 20 m</span></div><div class="weekExercise"><span>2</span><span>Bike Flush</span><span>8 min</span></div></div></div>
+        </div>
+
+        <div class="weekCard"><div class="weekHead noExpand"><div class="wDate"><div class="wd">FRI</div><div class="dn">7</div></div><div class="vline"></div><div class="wMain"><h4 style="margin:0">Rest</h4></div></div></div>
+        <div class="weekCard gameCard"><div class="weekHead noExpand"><div class="wDate"><div class="wd">SAT</div><div class="dn">8</div></div><div class="vline"></div><div class="wMain"><h4 style="margin:0">Game Day</h4></div></div></div>
+        <div class="weekCard"><div class="weekHead noExpand"><div class="wDate"><div class="wd">SUN</div><div class="dn">9</div></div><div class="vline"></div><div class="wMain"><h4 style="margin:0">Rest</h4></div></div></div>
+        </div>
+
+        <div class="weekSet weekPrevSet">
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wpMon"><div class="weekHead"><div class="wDate"><div class="wd">MON</div><div class="dn">27</div></div><div class="vline"></div><div class="wMain"><h4>Lower Body Strength</h4><div class="wMeta"><span>Completed</span></div></div><label class="wChevLabel" for="wpMon"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">STRENGTH</div><div class="weekExercise"><span>1</span><span>Trap Bar Deadlift</span><span>4 × 5</span></div><div class="weekExercise"><span>2</span><span>Split Squat</span><span>3 × 8</span></div><div class="weekExercise"><span>3</span><span>Hamstring Curl</span><span>3 × 10</span></div><div class="weekExercise"><span>4</span><span>Calf Raise</span><span>3 × 12</span></div></div></div></div>
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wpTue"><div class="weekHead hasTeam"><div class="wDate"><div class="wd">TUE</div><div class="dn">28</div></div><div class="vline"></div><div class="wMain"><h4>Upper Body Strength</h4><div class="wMeta"><span>Completed</span></div></div><span class="teamBadge">TEAM TRAINING</span><label class="wChevLabel" for="wpTue"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">STRENGTH</div><div class="weekExercise"><span>1</span><span>Bench Press</span><span>4 × 6</span></div><div class="weekExercise"><span>2</span><span>Pull Up</span><span>3 × 8</span></div><div class="weekExercise"><span>3</span><span>Dumbbell Row</span><span>3 × 10</span></div></div></div></div>
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wpWed"><div class="weekHead"><div class="wDate"><div class="wd">WED</div><div class="dn">29</div></div><div class="vline"></div><div class="wMain"><h4>Conditioning</h4><div class="wMeta"><span>Completed</span></div></div><label class="wChevLabel" for="wpWed"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">CONDITIONING</div><div class="weekExercise"><span>1</span><span>Tempo Run</span><span>6 × 2 min</span></div><div class="weekExercise"><span>2</span><span>Bike Flush</span><span>10 min</span></div></div></div></div>
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wpThu"><div class="weekHead hasTeam"><div class="wDate"><div class="wd">THU</div><div class="dn">30</div></div><div class="vline"></div><div class="wMain"><h4>Strength / Primer</h4><div class="wMeta"><span>Completed</span></div></div><span class="teamBadge">TEAM TRAINING</span><label class="wChevLabel" for="wpThu"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">PRIMER</div><div class="weekExercise"><span>1</span><span>Jump Squat</span><span>3 × 4</span></div><div class="weekExercise"><span>2</span><span>Acceleration Sprint</span><span>4 × 15 m</span></div></div></div></div>
+          <div class="weekCard"><div class="weekHead noExpand"><div class="wDate"><div class="wd">FRI</div><div class="dn">31</div></div><div class="vline"></div><div class="wMain"><h4 style="margin:0">Rest</h4></div></div></div>
+          <div class="weekCard gameCard"><div class="weekHead noExpand"><div class="wDate"><div class="wd">SAT</div><div class="dn">1</div></div><div class="vline"></div><div class="wMain"><h4 style="margin:0">Game Day</h4></div></div></div>
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wpSun"><div class="weekHead"><div class="wDate"><div class="wd">SUN</div><div class="dn">2</div></div><div class="vline"></div><div class="wMain"><h4>Recovery</h4><div class="wMeta"><span>Completed</span></div></div><label class="wChevLabel" for="wpSun"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">RECOVERY</div><div class="weekExercise"><span>1</span><span>Easy Walk</span><span>20 min</span></div><div class="weekExercise"><span>2</span><span>Mobility Flow</span><span>10 min</span></div></div></div></div>
+        </div>
+
+        <div class="weekSet weekNextSet">
+          <label class="weekAdapt" for="screenAdapt"><svg class="infoIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg><span>2 active modifiers impacting program</span></label>
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wnMon"><div class="weekHead"><div class="wDate"><div class="wd">MON</div><div class="dn">10</div></div><div class="vline"></div><div class="wMain"><h4>Strength + Conditioning</h4><div class="wMeta"><span>5 exercises</span></div></div><label class="wChevLabel" for="wnMon"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">STRENGTH</div><div class="weekExercise"><span>1</span><span>Back Squat</span><span>3 × 4–6</span></div><div class="weekExercise"><span>2</span><span>Bench Press</span><span>3 × 4–6</span></div><div class="weekExercise"><span>3</span><span>Romanian Deadlift</span><span>3 × 6–8</span></div></div><div class="weekSection"><div class="weekSectionTitle">CONDITIONING</div><div class="weekExercise"><span>1</span><span>Aerobic Flush</span><span>12 min</span></div></div></div></div>
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wnTue"><div class="weekHead hasTeam"><div class="wDate"><div class="wd">TUE</div><div class="dn">11</div></div><div class="vline"></div><div class="wMain"><h4>Upper Body Strength</h4><div class="wMeta"><span>5 exercises</span></div></div><span class="teamBadge">TEAM TRAINING</span><label class="wChevLabel" for="wnTue"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">STRENGTH</div><div class="weekExercise"><span>1</span><span>Bench Press</span><span>4 × 6–8</span></div><div class="weekExercise"><span>2</span><span>Overhead Press</span><span>3 × 8</span></div><div class="weekExercise"><span>3</span><span>Pull Up</span><span>3 × 6–8</span></div><div class="weekExercise"><span>4</span><span>Dumbbell Row</span><span>3 × 10</span></div></div></div></div>
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wnWed"><div class="weekHead"><div class="wDate"><div class="wd">WED</div><div class="dn">12</div></div><div class="vline"></div><div class="wMain"><h4>Lower Body Strength</h4><div class="wMeta"><span>4 exercises</span></div></div><label class="wChevLabel" for="wnWed"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">STRENGTH</div><div class="weekExercise"><span>1</span><span>Trap Bar Deadlift</span><span>4 × 5</span></div><div class="weekExercise"><span>2</span><span>Split Squat</span><span>3 × 8</span></div><div class="weekExercise"><span>3</span><span>Hamstring Curl</span><span>3 × 10</span></div><div class="weekExercise"><span>4</span><span>Calf Raise</span><span>3 × 12</span></div></div></div></div>
+          <div class="weekCard"><input class="weekOpen" type="checkbox" id="wnThu"><div class="weekHead hasTeam"><div class="wDate"><div class="wd">THU</div><div class="dn">13</div></div><div class="vline"></div><div class="wMain"><h4>Conditioning / Primer</h4><div class="wMeta"><span>3 exercises</span></div></div><span class="teamBadge">TEAM TRAINING</span><label class="wChevLabel" for="wnThu"><span class="chev"></span></label></div><div class="weekDetails"><div class="weekSection"><div class="weekSectionTitle">CONDITIONING</div><div class="weekExercise"><span>1</span><span>Acceleration Sprint</span><span>4 × 20 m</span></div><div class="weekExercise"><span>2</span><span>Bike Flush</span><span>8 min</span></div><div class="weekExercise"><span>3</span><span>Mobility Reset</span><span>5 min</span></div></div></div></div>
+          <div class="weekCard"><div class="weekHead noExpand"><div class="wDate"><div class="wd">FRI</div><div class="dn">14</div></div><div class="vline"></div><div class="wMain"><h4 style="margin:0">Rest</h4></div></div></div>
+          <div class="weekCard gameCard"><div class="weekHead noExpand"><div class="wDate"><div class="wd">SAT</div><div class="dn">15</div></div><div class="vline"></div><div class="wMain"><h4 style="margin:0">Game Day</h4></div></div></div>
+          <div class="weekCard"><div class="weekHead noExpand"><div class="wDate"><div class="wd">SUN</div><div class="dn">16</div></div><div class="vline"></div><div class="wMain"><h4 style="margin:0">Rest</h4></div></div></div>
+        </div>
+      </section>
+      </div>
+
+      <section class="sessionFlowScreen flowScreen">
+        <header class="flowHeader"><label class="flowBack" for="screenProgram" aria-label="Exit session"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></label><img class="flowBrand" src="lfa_logo.svg" alt="LFA"><span></span></header>
+        <div class="flowIntro"><div class="flowKicker">CORE · TODAY</div><h1>Strength + Conditioning</h1><p>Enter the weight used for loaded exercises. Sets and reps are fixed for today’s session.</p></div>
+        <section class="flowSection"><div class="flowSectionTitle">MOBILITY / WARM-UP</div><div class="flowExerciseList">
+<div class="flowExercise"><span class="flowNumber">1</span><div class="flowExerciseBody"><strong>90/90 Hip Switch</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>2</b></span><span class="exerciseMetric"><small>REPS</small><b>6</b></span><span class="exerciseMetric muted"><small>WEIGHT</small><b>—</b></span></div></div></div>
+          <div class="flowExercise"><span class="flowNumber">2</span><div class="flowExerciseBody"><strong>World’s Greatest Stretch</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>2</b></span><span class="exerciseMetric"><small>REPS</small><b>5</b></span><span class="exerciseMetric muted"><small>WEIGHT</small><b>—</b></span></div></div></div>
+          <div class="flowExercise"><span class="flowNumber">3</span><div class="flowExerciseBody"><strong>Ankle Rock</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>2</b></span><span class="exerciseMetric"><small>REPS</small><b>8</b></span><span class="exerciseMetric muted"><small>WEIGHT</small><b>—</b></span></div></div></div>
+          <div class="flowExercise"><span class="flowNumber">4</span><div class="flowExerciseBody"><strong>Adductor Rockback</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>2</b></span><span class="exerciseMetric"><small>REPS</small><b>8</b></span><span class="exerciseMetric muted"><small>WEIGHT</small><b>—</b></span></div></div></div>
+        </div></section>
+
+        <section class="flowSection"><div class="flowSectionTitle">STRENGTH</div><div class="flowExerciseList">
+          <div class="flowExercise"><span class="flowNumber">1</span><div class="flowExerciseBody"><strong>Back Squat</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>3</b></span><span class="exerciseMetric"><small>REPS</small><b>2–4</b></span><label class="exerciseMetric weightField"><small>WEIGHT</small><span class="weightEntry"><input type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" aria-label="Back Squat weight"><span>KG</span></span></label></div></div></div>
+          <div class="flowExercise"><span class="flowNumber">2</span><div class="flowExerciseBody"><strong>Bench Press</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>3</b></span><span class="exerciseMetric"><small>REPS</small><b>2–4</b></span><label class="exerciseMetric weightField"><small>WEIGHT</small><span class="weightEntry"><input type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" aria-label="Bench Press weight"><span>KG</span></span></label></div></div></div>
+          <div class="flowExercise"><span class="flowNumber">3</span><div class="flowExerciseBody"><strong>Romanian Deadlift</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>3</b></span><span class="exerciseMetric"><small>REPS</small><b>5–6</b></span><label class="exerciseMetric weightField"><small>WEIGHT</small><span class="weightEntry"><input type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" aria-label="Romanian Deadlift weight"><span>KG</span></span></label></div></div></div>
+          <div class="flowExercise"><span class="flowNumber">4</span><div class="flowExerciseBody"><strong>Split Squat</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>2</b></span><span class="exerciseMetric"><small>REPS</small><b>6–8</b></span><label class="exerciseMetric weightField"><small>WEIGHT</small><span class="weightEntry"><input type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" aria-label="Split Squat weight"><span>KG</span></span></label></div></div></div>
+          <div class="flowExercise"><span class="flowNumber">5</span><div class="flowExerciseBody"><strong>Ab Wheel</strong><div class="exerciseMetrics"><span class="exerciseMetric"><small>SETS</small><b>2</b></span><span class="exerciseMetric"><small>REPS</small><b>6–8</b></span><span class="exerciseMetric muted"><small>WEIGHT</small><b>BODYWEIGHT</b></span></div></div></div>
+        </div></section>
+
+        <section class="flowSection"><div class="flowSectionTitle">CONDITIONING</div><div class="flowExerciseList">
+          <div class="flowExercise"><span class="flowNumber">1</span><div class="flowExerciseBody"><strong>Easy Aerobic Flush</strong><div class="exerciseMetrics twoMetrics"><span class="exerciseMetric"><small>SETS</small><b>1</b></span><span class="exerciseMetric"><small>TIME</small><b>10–20 min</b></span></div></div></div>
+        </div></section>
+        <label class="completeSession" for="screenSessionReview">COMPLETE SESSION</label>
+      </section>
+
+      <section class="sessionReviewScreen flowScreen">
+        <header class="flowHeader"><label class="flowBack" for="screenSession" aria-label="Back to session"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></label><img class="flowBrand" src="lfa_logo.svg" alt="LFA"><span></span></header>
+        <div class="reviewIntro"><h1>Session check-in</h1><p>Record how each part of today’s session went.</p></div>
+
+        <div class="reviewBlock" data-review-block>
+          <div class="reviewBlockTitle"><strong>Strength</strong><span>SESSION PART</span></div>
+          <section class="reviewQuestion">
+            <h2>Did you complete the strength?</h2>
+            <input class="questionState completionState" type="radio" name="strengthCompletion" id="strengthFully" value="fully" checked>
+            <input class="questionState completionState" type="radio" name="strengthCompletion" id="strengthPartially" value="partially">
+            <input class="questionState completionState" type="radio" name="strengthCompletion" id="strengthSkipped" value="skipped">
+            <div class="reviewChoices three"><label class="reviewChoice selected" for="strengthFully">Fully</label><label class="reviewChoice" for="strengthPartially">Partially</label><label class="reviewChoice" for="strengthSkipped">Skipped</label></div>
+          </section>
+          <section class="reviewQuestion conditionalFollowup reasonFollowup">
+            <h2>Why?</h2>
+            <input class="questionState" type="radio" name="strengthReason" id="strengthTime"><input class="questionState" type="radio" name="strengthReason" id="strengthSore"><input class="questionState" type="radio" name="strengthReason" id="strengthOther">
+            <div class="reviewChoices three"><label class="reviewChoice" for="strengthTime">Ran out of time</label><label class="reviewChoice" for="strengthSore">Tired / sore</label><label class="reviewChoice" for="strengthOther">Other</label></div>
+          </section>
+          <section class="reviewQuestion conditionalFollowup feelFollowup visible">
+            <h2>How did the strength feel?</h2>
+            <input class="questionState" type="radio" name="strengthFeeling" id="strengthStrong"><input class="questionState" type="radio" name="strengthFeeling" id="strengthGood" checked><input class="questionState" type="radio" name="strengthFeeling" id="strengthOkay"><input class="questionState" type="radio" name="strengthFeeling" id="strengthGassed">
+            <div class="reviewChoices four"><label class="reviewChoice" for="strengthStrong">Strong</label><label class="reviewChoice selected" for="strengthGood">Good</label><label class="reviewChoice" for="strengthOkay">Okay</label><label class="reviewChoice" for="strengthGassed">Gassed</label></div>
+          </section>
+        </div>
+
+        <div class="reviewBlock" data-review-block>
+          <div class="reviewBlockTitle"><strong>Conditioning</strong><span>SESSION PART</span></div>
+          <section class="reviewQuestion">
+            <h2>Did you complete the conditioning?</h2>
+            <input class="questionState completionState" type="radio" name="conditioningCompletion" id="conditioningFully" value="fully" checked>
+            <input class="questionState completionState" type="radio" name="conditioningCompletion" id="conditioningPartially" value="partially">
+            <input class="questionState completionState" type="radio" name="conditioningCompletion" id="conditioningSkipped" value="skipped">
+            <div class="reviewChoices three"><label class="reviewChoice selected" for="conditioningFully">Fully</label><label class="reviewChoice" for="conditioningPartially">Partially</label><label class="reviewChoice" for="conditioningSkipped">Skipped</label></div>
+          </section>
+          <section class="reviewQuestion conditionalFollowup reasonFollowup">
+            <h2>Why?</h2>
+            <input class="questionState" type="radio" name="conditioningReason" id="conditioningTime"><input class="questionState" type="radio" name="conditioningReason" id="conditioningSore"><input class="questionState" type="radio" name="conditioningReason" id="conditioningOther">
+            <div class="reviewChoices three"><label class="reviewChoice" for="conditioningTime">Ran out of time</label><label class="reviewChoice" for="conditioningSore">Tired / sore</label><label class="reviewChoice" for="conditioningOther">Other</label></div>
+          </section>
+          <section class="reviewQuestion conditionalFollowup feelFollowup visible">
+            <h2>How did the conditioning feel?</h2>
+            <input class="questionState" type="radio" name="conditioningFeeling" id="conditioningStrong"><input class="questionState" type="radio" name="conditioningFeeling" id="conditioningGood" checked><input class="questionState" type="radio" name="conditioningFeeling" id="conditioningOkay"><input class="questionState" type="radio" name="conditioningFeeling" id="conditioningGassed">
+            <div class="reviewChoices four"><label class="reviewChoice" for="conditioningStrong">Strong</label><label class="reviewChoice selected" for="conditioningGood">Good</label><label class="reviewChoice" for="conditioningOkay">Okay</label><label class="reviewChoice" for="conditioningGassed">Gassed</label></div>
+          </section>
+        </div>
+
+        <label class="submitReview" for="screenSessionDone">SAVE SESSION</label>
+      </section>
+
+      <section class="sessionDoneScreen flowScreen">
+        <div class="doneContent"><div class="doneMark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg></div><h1>Session complete</h1><p>Your training and session check-in have been recorded.</p><label class="backToProgram" for="screenProgram">BACK TO PROGRAM</label></div>
+      </section>
+
+      <section class="profileScreen">
+        <header class="profileHeader headingStack"><img class="cornerBrand" src="lfa_logo.svg" alt="LFA"></header>
+        <div class="profileIntro"><h2>Your football profile</h2><p>The information used to shape your program.</p></div>
+
+        <div class="profileSectionLabel">TRAINING CONTEXT</div>
+        <div class="profilePanel">
+          <div class="profileRow"><span class="profileRowIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3"></circle><path d="M6 20c.6-4 2.6-6 6-6s5.4 2 6 6"></path></svg></span><span><strong>Position</strong><small>Primary playing position</small></span><span class="profileValue">Midfielder</span><span></span></div>
+          <div class="profileRow"><span class="profileRowIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M4 10h16"></path></svg></span><span><strong>Team training</strong><small>Regular club sessions</small></span><span class="profileValue">Tue &amp; Thu</span><span></span></div>
+          <div class="profileRow"><span class="profileRowIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M6 5h11l-2 4 2 4H6"></path></svg></span><span><strong>Match day</strong><small>Typical weekly fixture</small></span><span class="profileValue">Saturday</span><span></span></div>
+        </div>
+
+        <div class="profileSectionLabel">PROGRAM SETUP</div>
+        <div class="onboardingSummary"><strong>Onboarding profile</strong><p>Your schedule, position, training history and available equipment inform how your program is built.</p><label class="onboardingAction" for="screenProfile"><span>Review onboarding answers</span><span class="chev"></span></label></div>
+      </section>
+
+      <section class="coachStatusScreen">
+        <div class="statusPageHeader"><label class="statusBack" for="screenCoachChat" aria-label="Back to Coach chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></label><span></span><span></span></div>
+
+        <label class="minimalPhase" for="screenSeason">
+          <span><span class="minimalLabel">SEASON PHASE</span><span class="phaseValue valueIn">In-season</span><span class="phaseValue valuePre">Pre-season</span><span class="phaseValue valueOff">Off-season</span></span>
+          <span class="minimalPhaseMeta">REVIEW</span><span class="chev"></span>
+        </label>
+
+        <div class="minimalSectionHead"><h2>ACTIVE MODIFIERS</h2><span>2 ACTIVE</span></div>
+        <div class="minimalAdaptList">
+          <label class="minimalAdapt" for="screenEditTime"><span class="statusDot"></span><span><span class="contextTitle">Time away</span><span class="contextMeta">Until 9 August</span></span><span class="chev"></span></label>
+          <label class="minimalAdapt" for="screenEditEquipment"><span class="statusDot"></span><span><span class="contextTitle">Equipment access</span><span class="contextMeta">Limited gym setup</span></span><span class="chev"></span></label>
+        </div>
+
+        <div class="minimalSectionHead"><h2>ADD A MODIFIER</h2></div>
+        <div class="statusAddGrid">
+          <label class="statusAddItem" for="screenEditTime"><span class="statusAddIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l3 2"></path></svg></span>Time away</label>
+          <label class="statusAddItem" for="screenCoachStatus"><span class="statusAddIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path><circle cx="12" cy="10" r="2"></circle></svg></span>Away</label>
+          <label class="statusAddItem" for="screenCoachStatus"><span class="statusAddIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z"></path><path d="M12 10v6"></path></svg></span>Sick</label>
+          <label class="statusAddItem" for="screenCoachStatus"><span class="statusAddIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z"></path></svg></span>Injured</label>
+          <label class="statusAddItem" for="screenEditEquipment"><span class="statusAddIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"></path></svg></span>Equipment</label>
+        </div>
+
+      </section>
+
+      <section class="coachChatScreen">
+        <header class="chatHeader">
+          <div class="headingStack"><img class="cornerBrand" src="lfa_logo.svg" alt="LFA"></div>
+          <label class="statusHeaderAction" for="screenCoachStatus"><svg class="statusHeaderIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle></svg><span class="statusHeaderCopy"><strong>MY STATUS</strong></span><span class="chev"></span></label>
+        </header>
+        <div class="chatMessages">
+          <div class="message coach">Morning Renee. How are you feeling heading into today’s session?<span class="messageTime">9:38 AM</span></div>
+          <label class="chatModifierCard" for="screenCoachStatus"><span class="chatModifierHead"><span><span class="chatModifierKicker">PROGRAM STATUS</span><span class="chatModifierTitle">2 active modifiers</span></span><span class="chev"></span></span><span class="chatModifierList"><span class="chatModifierItem"><span class="statusDot"></span><strong>Time away</strong><span>Until 9 Aug</span></span><span class="chatModifierItem"><span class="statusDot"></span><strong>Equipment access</strong><span>Limited setup</span></span></span></label>
+          <div class="message coach">If anything else has changed, tell me here and I’ll work it into your program.<span class="messageTime">9:40 AM</span></div>
+        </div>
+        <div class="chatComposer"><span class="chatPlaceholder">Message Coach…</span><span class="chatSend"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4 14-3-5-7-2Z"></path><path d="m12 14 3-3"></path></svg></span></div>
+      </section>
+    </main>
+
+    <div class="adaptOverlay">
+      <section class="adaptSheet" role="dialog" aria-modal="true" aria-labelledby="adaptTitle">
+        <div class="sheetHandle"></div>
+        <h2 id="adaptTitle">Your session has been modified</h2>
+        <p>The following modifiers are currently impacting your programming.</p>
+        <ul class="adaptList"><li><span>Time away</span><span>Training volume adjusted</span></li><li><span>Equipment access</span><span>Exercises substituted</span></li></ul>
+        <p>Visit Coach to make changes or update your status.</p>
+        <label class="sheetPrimary" for="screenCoachStatus">GO TO MY STATUS</label>
+        <label class="sheetSecondary" for="screenProgram">NOT NOW</label>
+      </section>
+    </div>
+
+    <div class="coachContextOverlay">
+      <section class="contextSheet" role="dialog" aria-modal="true" aria-labelledby="contextTitle">
+        <div class="sheetHandle"></div>
+        <h2 id="contextTitle">My status</h2>
+        <p>Review the season phase and updates currently shaping your program.</p>
+        <div class="contextSheetLabel">SEASON PHASE</div>
+        <label class="contextSheetRow" for="screenSeason"><span><span class="contextTitle">Current phase</span><span class="contextMeta"><span class="phaseValue valueIn">In-season</span><span class="phaseValue valuePre">Pre-season</span><span class="phaseValue valueOff">Off-season</span></span></span><span>REVIEW</span><span class="chev"></span></label>
+        <div class="contextSheetLabel">ACTIVE MODIFIERS</div>
+        <label class="contextSheetRow" for="screenEditTime"><span><span class="contextTitle">Time away</span><span class="contextMeta">Until 9 August</span></span><span></span><span class="chev"></span></label>
+        <label class="contextSheetRow" for="screenEditEquipment"><span><span class="contextTitle">Equipment access</span><span class="contextMeta">Limited gym setup</span></span><span></span><span class="chev"></span></label>
+        <label class="sheetSecondary" for="screenCoachChat">CLOSE</label>
+      </section>
+    </div>
+
+    <div class="phaseOverlay">
+      <section class="phaseSheet" role="dialog" aria-modal="true" aria-labelledby="phaseTitle">
+        <div class="sheetHandle"></div>
+        <h2 id="phaseTitle">Review season phase</h2>
+        <p>Your season phase changes the priorities, load and progression used across your program.</p>
+        <div class="phaseOptions"><label for="seasonIn">In-season</label><label for="seasonPre">Pre-season</label><label for="seasonOff">Off-season</label></div>
+        <p class="phaseCopy phaseInCopy">Balances performance, match load, recovery and team training.</p>
+        <p class="phaseCopy phasePreCopy">Builds match readiness through progressive strength and conditioning.</p>
+        <p class="phaseCopy phaseOffCopy">Prioritises recovery, physical development and rebuilding capacity.</p>
+        <label class="sheetPrimary" for="screenCoachStatus">CONFIRM PHASE</label>
+      </section>
+    </div>
+
+    <div class="editOverlay">
+      <section class="editSheet" role="dialog" aria-modal="true">
+        <div class="sheetHandle"></div>
+        <div class="editContent editTimeContent">
+          <h2>Update time away</h2>
+          <p>Review the information currently adapting your training schedule and volume.</p>
+          <div class="editField"><span>STATUS</span><strong>Active</strong></div>
+          <div class="editField"><span>RETURN DATE</span><strong>9 August</strong></div>
+          <label class="sheetPrimary" for="screenCoachStatus">SAVE UPDATE</label>
+          <label class="removeAction" for="screenCoachStatus">REMOVE MODIFIER</label>
+        </div>
+        <div class="editContent editEquipmentContent">
+          <h2>Update equipment access</h2>
+          <p>Review the equipment profile currently being used to substitute exercises.</p>
+          <div class="editField"><span>ACCESS</span><strong>Limited gym setup</strong></div>
+          <div class="editField"><span>AVAILABLE</span><strong>Dumbbells, bench and bands</strong></div>
+          <label class="sheetPrimary" for="screenCoachStatus">SAVE UPDATE</label>
+          <label class="removeAction" for="screenCoachStatus">REMOVE MODIFIER</label>
+        </div>
+      </section>
+    </div>
+
+    <nav class="bottom">
+      <label class="nav navProgram" for="screenProgram"><svg class="navIcon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg><span>Program</span></label>
+      <label class="nav navCoach" for="screenCoachChat"><svg class="navIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v11H9l-4 3V5Z"></path><path d="M9 9h6M9 12h4"></path></svg><span>Coach</span></label>
+      <label class="nav navProfile" for="screenProfile"><svg class="navIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5.5 20c.7-3.8 3-5.7 6.5-5.7s5.8 1.9 6.5 5.7"></path></svg><span>Profile</span></label>
+    </nav>
+    <div class="home"></div>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('input[name="appScreen"]').forEach(function(screenState){
+    screenState.addEventListener('change',function(){
+      if(screenState.checked){
+        var app=document.querySelector('.app');
+        if(app) app.scrollTo({top:0,behavior:'auto'});
+      }
+    });
+  });
+  document.querySelectorAll('.sessionReviewScreen .questionState').forEach(function(question){
+    question.addEventListener('change',function(){
+      document.querySelectorAll('.sessionReviewScreen input[name="'+question.name+'"]').forEach(function(groupInput){
+        var groupLabel=document.querySelector('.sessionReviewScreen label[for="'+groupInput.id+'"]');
+        if(groupLabel) groupLabel.classList.toggle('selected',groupInput.checked);
+      });
+      if(question.classList.contains('completionState')){
+        var block=question.closest('[data-review-block]');
+        var showFeeling=question.value==='fully' || question.value==='partially';
+        var showReason=question.value==='partially' || question.value==='skipped';
+        block.querySelector('.feelFollowup').classList.toggle('visible',showFeeling);
+        block.querySelector('.reasonFollowup').classList.toggle('visible',showReason);
+      }
+    });
+  });
+</script>
+</body>
+</html>

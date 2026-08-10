@@ -62,24 +62,60 @@ const semanticStores: SemanticStoreDescriptor[] = [
   {
     key: 'program-store',
     store: useProgramStore as unknown as PersistedStore,
-    select: (state) => ({
-      currentProgram: state.currentProgram,
-      currentMicrocycle: state.currentMicrocycle,
-      todayWorkout: state.todayWorkout,
-      isGenerating: state.isGenerating,
-      isLoading: state.isLoading,
-      error: state.error,
-      blockState: state.blockState,
-      acceptedMaterialContext: state.acceptedMaterialContext,
-      dateOverrides: state.dateOverrides,
-      overrideContexts: state.overrideContexts,
-      weekScopedOverlays: state.weekScopedOverlays,
-      userRemovalConstraints: state.userRemovalConstraints,
-      reversibleAdjustmentLedger: state.reversibleAdjustmentLedger,
-      exposureContractsByWeek: state.exposureContractsByWeek,
-      sessionFeedback: state.sessionFeedback,
-      weightOverrides: state.weightOverrides,
-    }),
+    /**
+     * THE INPUTS, AND ONLY THE INPUTS — corrected 2026-08-10, and the correction
+     * is the first defect the run-through instrument ever found.
+     *
+     * ## What it used to do, and why it could never pass
+     *
+     * It compared an in-memory fingerprint of `currentProgram`,
+     * `currentMicrocycle`, `todayWorkout`, `dateOverrides`, `weekScopedOverlays`,
+     * `acceptedMaterialContext` and the rest against **what is on disk** — and
+     * **R1.3 stopped storing every one of them.** The program store's
+     * `partialize` has been INPUTS ONLY since the shell rebuild; the program,
+     * the overlays, the overrides and the accepted context are DERIVED at boot
+     * and never persisted (`docs/SHELL_REBUILD_PLAN_2026-08-05.md`).
+     *
+     * So memory held objects, disk held nothing for those keys, and the
+     * convergence loop ran to its ten-second deadline and threw **"Persisted
+     * semantic state did not converge: program-store"** — on every seed, forever.
+     * **It was not an app defect. It was the harness holding a belief the
+     * architecture had retired**, and nothing re-checked it.
+     *
+     * `LAW-instrumentation-alive` again: an instrument written against a shape
+     * that changed underneath it. It is the reason the rig could not complete a
+     * pass even once the dialog was gone.
+     *
+     * ## Why THIS shape, and why it is the north star's own test
+     *
+     * `docs/NORTH_STAR.md`: **store only decisions, derive everything else.** A
+     * check that asserts stored state MIRRORS memory is asserting the opposite —
+     * it would fail the architecture on purpose. Fingerprinting the INPUTS asks
+     * the only question persistence still owes an answer to: *did the athlete's
+     * decisions, facts and results reach the disk?* Everything else is supposed
+     * to be absent, and its absence is correctness rather than loss.
+     *
+     * Mirrors `programStore`'s `partialize` field for field. If that list ever
+     * grows a key, this one grows with it — and a `partialize` that grew an
+     * OUTPUT would be the north-star violation, caught here as a mismatch.
+     */
+    select: (state) => {
+      // Reads BOTH shapes: a live store (fields at the top level) and a
+      // persisted envelope's `state` (already reduced to `inputs`). One
+      // projection, so the two sides cannot drift into different questions.
+      const inputs = (state.inputs ?? null) as Record<string, unknown> | null;
+      if (inputs) return inputs;
+      const accepted = (state.acceptedMaterialContext ?? {}) as Record<string, unknown>;
+      return {
+        generationAnchorISO: state.generationAnchorISO ?? null,
+        seasonPhaseClock: (state.currentProgram as { seasonPhaseClock?: unknown } | null)
+          ?.seasonPhaseClock ?? state.hydratedSeasonPhaseClock ?? null,
+        sessionFeedback: state.sessionFeedback ?? {},
+        weightOverrides: state.weightOverrides ?? {},
+        temporarySourceFacts: accepted.temporarySourceFacts ?? [],
+        injuryEpisodes: accepted.injuryEpisodes ?? [],
+      };
+    },
   },
   {
     key: 'calendar-storage',

@@ -1,25 +1,36 @@
 appId: com.localfootyathlete.app
 name: Deterministic dev E2E seed reset
 ---
+# THE SEED ARRIVES AS A LAUNCH ARGUMENT, NOT A DEEP LINK (Sam, 2026-08-10).
+#
+# This file used to seed with `openLink: "localfootyathlete://e2e/reset/…"`. On
+# iOS that routes through Safari, which raises "Open in 'Local Footy Athlete'?"
+# — and a `maestro hierarchy` dump proved that while that alert is up the
+# accessibility tree holds the alert and ZERO app content. It does not overlay
+# the app; it REPLACES what the runner can see, so every id below was genuinely
+# absent. That, and not the July crash, is what "the rig is dead" had been since
+# 18 July: nobody re-ran it after the crash was fixed.
+#
+# Answering the dialog was tried and priced: flaky, roughly one run in three.
+# `e2eSeedId` is a first-class launch argument beside the two below — its own
+# name, its own validation, fatal on a malformed value — and it lands on the
+# same `coordinator.reset(seedId)` the URL route calls. One owner, two doors.
+#
 # THE LAUNCH PURPOSE IS NOT OPTIONAL, AND OMITTING IT IS A HARD CRASH.
 # `DevE2ELaunchDiagnostic.captureAndConfigureIfRequested` reads `e2eMetroUrl`
 # first; the moment that key is present it REQUIRES `e2eLaunchPurpose` to be one
-# of its six allowed values and `fatalError`s otherwise
-# (ios/LocalFootyAthlete/DevE2ELaunchDiagnostic.swift:55-60). The native receipt
-# landed 2026-07-18 (552dfe4a); this file was last touched 2026-07-16 and was
-# never updated, so every flow routing through it crashed the app on its first
-# command from that day until 2026-08-10.
+# of its six allowed values and `fatalError`s otherwise.
 - launchApp:
     clearState: true
     stopApp: true
     arguments:
       e2eMetroUrl: "${E2E_METRO_URL}"
       e2eLaunchPurpose: "initial-cold-launch"
+      e2eSeedId: "${SEED_ID}"
 - extendedWaitUntil:
     visible:
       id: "e2e-entry-ready"
     timeout: 15000
-- openLink: "localfootyathlete://e2e/reset/${SEED_ID}"
 - extendedWaitUntil:
     visible:
       id: "e2e-seed-ready-${SEED_ID}"

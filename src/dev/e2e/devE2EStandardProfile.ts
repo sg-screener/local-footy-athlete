@@ -30,6 +30,31 @@ export const DEV_E2E_STANDARD_PROFILE: OnboardingData = {
   experienceLevel: '5+ years',
   squatStrength: '1.5x bodyweight',
   benchStrength: '1.5x bodyweight+',
+  /**
+   * ADDED 2026-08-10, AND ITS ABSENCE WAS A REAL DEFECT — the third thing the
+   * run-through instrument found, one step after the second was fixed.
+   *
+   * `TwoKmTimeTrial` is a REQUIRED onboarding step and it is `visible: always`.
+   * Without this field the profile **fails the app's own completeness gate**, so
+   * every seeded world this file has ever produced was built from a profile the
+   * product would have refused from a real athlete — and nothing noticed,
+   * because no seeded run ever reached the screen that would have shown it.
+   *
+   * That is exactly the rot Sam named: *"a fucking weekly template optimised for
+   * that and that alone"*. `LAW-test-worlds-are-generated-or-real` says a test
+   * world must be one the app would actually build; a profile the app would
+   * turn away cannot produce one.
+   *
+   * A real time rather than the "haven't tested" answer (`seconds: null`),
+   * because MAS and every running pace derive from it — a null would seed a
+   * world with estimated paces and quietly narrow what the seeds cover.
+   * 8:00 for 2km suits the Elite conditioning level below.
+   */
+  twoKmTimeTrial: {
+    seconds: 480,
+    recordedOn: '2026-07-01',
+    source: 'onboarding',
+  },
   conditioningLevel: 'Elite',
   sprintExposure: '2+ times per week',
   recentTrainingLoad: 'Very consistent',

@@ -132,6 +132,34 @@ function installAcceptedCalendarGame(date: string, fallbackProfile?: ReturnType<
   });
 }
 
+/**
+ * MARK ONBOARDING DONE — the seed installs a world the app will otherwise refuse
+ * to show. Corrected 2026-08-10; the second defect the run-through instrument
+ * found, and it found it one step after the first was fixed.
+ *
+ * `seedOnboardingProgram` installs the program. **It does not set
+ * `isOnboardingComplete`** — that has always been `CompleteScreen`'s job, and no
+ * seed goes through `CompleteScreen`. So a seeded app booted straight back into
+ * onboarding ("WHAT'S YOUR RECENT 2KM TIME?") and `program-screen` was never
+ * reachable, no matter how correct the week underneath was.
+ *
+ * **THROUGH THE STORE'S OWN DOOR, NOT A `set()`.** `completeOnboarding()` runs
+ * the real completeness and capacity guards and REFUSES an incomplete profile.
+ * Forcing the flag would let a seed install a profile the app would reject from
+ * a human — which is a world the app would never build, exactly what
+ * `LAW-test-worlds-are-generated-or-real` forbids. **A seed that cannot pass the
+ * athlete's own gate is a broken seed and should say so here**, not present a
+ * green screen built on a profile the product would have turned away.
+ */
+function markSeedOnboardingComplete(): void {
+  const outcome = useProfileStore.getState().completeOnboarding();
+  if (!outcome.ok) {
+    throw new Error(
+      `dev_e2e_seed_profile_incomplete: ${outcome.missingAnswers.join(', ')}`,
+    );
+  }
+}
+
 function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): void {
   const validateWeekStarts = seed.program.microcycles.map((microcycle) =>
     microcycle.startDate.slice(0, 10));
@@ -193,6 +221,10 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
       setGameDay: (date) => installAcceptedCalendarGame(date, seed.profile),
     },
   });
+  // LAST, and after the program is installed: the completeness guard reads the
+  // profile the install has just published, so running it earlier would judge a
+  // half-installed world.
+  markSeedOnboardingComplete();
 }
 
 async function applyAuxiliaryState(
