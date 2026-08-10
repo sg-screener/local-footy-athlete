@@ -1,0 +1,63 @@
+appId: com.localfootyathlete.app
+name: Golden - the day card's drop-downs, collapsed and expanded
+tags:
+  - e2e
+  - golden
+  - ui-merge
+---
+# UI MERGE SLICE 2 — Sam's eye pass, 2026-08-10.
+#
+# WHY THIS FLOW EXISTS AND WHY IT PHOTOGRAPHS TWICE. He is the eyes, and he is
+# comparing against a picture. His words were "there's no drop downs for the
+# session overview" and "hers has like mobility / warmup then drop down of the
+# exercise and the sets and reps" — so a shot of the COLLAPSED state alone
+# cannot answer the thing he asked about. Both states, in one run, in order.
+#
+# IT IS ALSO THE ONLY THING THAT PROVES THE DROP-DOWN OPENS AT ALL. The unit
+# tests read the source and assert the expanded body EXISTS and renders both
+# halves; existence is not reachability, which is the stated limit of
+# `test:maestro-element-contract` and exactly how the golden flows broke before.
+# A tap is the only instrument that answers it.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# ── COLLAPSED: the parts are listed, no exercise is showing ────────────────
+- assertVisible:
+    id: "day-timeline"
+- assertVisible:
+    id: "day-card-eyebrow"
+# RULING 5 LANDED: the eyebrow carries "today", so the badge does not.
+# BY ID, NOT BY TEXT. The first version of this line read `text: "Today"` and
+# failed on its own first run — the Today/Week TOGGLE says the word too, so the
+# assertion could never have passed and would have been "fixed" by deleting it.
+- assertNotVisible:
+    id: "day-today-badge"
+- assertNotVisible:
+    id: "day-timeline-rows-strength"
+- takeScreenshot: artifacts/ui-walk/dropdown-1-collapsed
+
+# ── EXPANDED: tapping a part opens it IN PLACE ─────────────────────────────
+# The tap must NOT navigate. Before this slice the centre of this row opened the
+# session screen — that is what made the older flows tap past their own target —
+# so the day screen still being here afterwards is half of what this asserts.
+- tapOn:
+    id: "day-timeline-part-strength"
+- extendedWaitUntil:
+    visible:
+      id: "day-timeline-rows-strength"
+    timeout: 10000
+- assertVisible:
+    id: "program-screen"
+- assertVisible:
+    id: "view-workout-button"
+- takeScreenshot: artifacts/ui-walk/dropdown-2-expanded
+
+# ── AND IT CLOSES AGAIN ────────────────────────────────────────────────────
+# An affordance that only opens is a one-way door. Asserted rather than assumed:
+# the open state is screen state and nothing persists it.
+- tapOn:
+    id: "day-timeline-part-strength"
+- assertNotVisible:
+    id: "day-timeline-rows-strength"

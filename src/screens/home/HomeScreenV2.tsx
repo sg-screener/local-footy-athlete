@@ -25,6 +25,7 @@ import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visibleProjection';
 import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
 import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
+import { signedCopy } from '../../rules/signedCopy';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -423,6 +424,7 @@ export default function HomeScreenV2() {
            `dayTimeline` folds the athlete's SAVED outcome onto the projection's
            parts; nothing here writes. A tap opens the same day-detail door the
            row's own CTA opens (Sam's fork A: completion shown, not written). */
+        dayShape={dayFirst}
         timeline={dayFirst && visibleDay ? (
           <DayTimeline
             entries={dayTimeline(visibleDay, sessionFeedback[day.date])}
@@ -726,7 +728,34 @@ export default function HomeScreenV2() {
             door, its testID and its place on the day screen — the day a change
             is made on. The week shape simply stops offering a per-day control at
             a week-level altitude. */}
+        {/* ── RULING 1: THE FIVE CIRCLES GET A CARD AND WORDS ABOVE THEM ──
+            Sam's FIRST bullet on his eye pass: *"there's no text above the little
+            buttons like rens said"*. His screen had the five circles floating with
+            no panel and nothing telling the athlete what they are for.
+
+            **HER STRUCTURE, HIS DOORS.** The panel, the heading and the sub-line
+            are hers; every chip inside keeps the `onPress`, the `testID` and the
+            accessibility label it already had — hers reach nothing, his reach real
+            doors. Nothing about what a tap does moved.
+
+            **"Time" STAYS "Time".** Hers labels the first circle "Time away"; Sam
+            ruled on sight to keep his own word, so hers is not adopted. Recorded
+            here because a later reader comparing the two screens will see the
+            difference and must not "fix" it.
+
+            **THE TWO SENTENCES ARE PROPOSED, NOT SIGNED** — batch 33, under the
+            transitional rule (a string may ship PROPOSED; it may never ship
+            unlisted). They are HER words, and the governing rule is her structure
+            and HIS style, so the wording is exactly the kind of thing that goes to
+            him rather than being adopted silently. */}
         {isNormal && dayFirst && (
+          <Card tone="default" padding="md" radius="lg" style={styles.changeCard} testID="home-change-card">
+            <Text style={styles.changeCardHeading}>
+              {signedCopy('day.change_card.heading')}
+            </Text>
+            <Text style={styles.changeCardSubline}>
+              {signedCopy('day.change_card.subline')}
+            </Text>
           <View style={styles.lifeFactChips} testID="home-life-fact-chips">
             <LifeFactChip
               onPress={async () => {
@@ -845,6 +874,7 @@ export default function HomeScreenV2() {
               }
             />
           </View>
+          </Card>
         )}
 
         {/* The answer to a chip tap, in the athlete's own words, directly under
@@ -1314,6 +1344,15 @@ interface DayRowProps {
    * WHICH shape of the screen shows a timeline is the screen's decision.
    */
   timeline?: React.ReactNode;
+  /**
+   * TRUE when this row is the day-first shape's single card.
+   *
+   * The row is one component drawn by two shapes, and rulings 2 and 5 are about
+   * the DAY SCREEN only — her week list keeps its own today marker and its own
+   * card treatment. Without this the eyebrow would appear on whichever row the
+   * athlete had selected in the week view, on a day that may not be today.
+   */
+  dayShape?: boolean;
 }
 
 const DAY_ROW_ACCENT = {
@@ -1766,7 +1805,7 @@ function DayRow({
   day, visibleDay, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
   onLogGame, onGameDayActions, onMakeChange, staleWarning,
-  feedbackReceipts, progressionReceipts, timeline,
+  feedbackReceipts, progressionReceipts, timeline, dayShape = false,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
@@ -1819,10 +1858,29 @@ function DayRow({
   // read-only completed CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
   // saved outcome was persisted but never surfaced back to the card).
   const isCompleted = hasWorkout && feedbackReceipts.length > 0;
+  // ── RULING 5: THE "TODAY" BADGE GOES FROM THE DAY SCREEN ──
+  //
+  // Sam, 2026-08-10, on his own screen next to hers: *"the today badge is still
+  // there but the 'todays session' part has not been changed yet"*. Hers has no
+  // badge because the eyebrow already says it, and two things saying "today" is
+  // what the ruling removed.
+  //
+  // **IT IS RE-HOMED, NOT DELETED, AND THE LEDGER ROW IS THE EYEBROW BELOW.**
+  // The same fact moves from a badge to words — "TODAY'S SESSION - MON 10/8" —
+  // in this same commit, which is Sam's binding line that a removal ships the
+  // same day its replacement does.
+  //
+  // **IT SURVIVES IN THE WEEK LIST, AND THAT IS NOT AN OVERSIGHT.** Her week
+  // view marks today's card too; the badge his ruling removed was the DAY
+  // screen's. `showTodayEyebrow` is the exact condition under which the eyebrow
+  // replaces it, so the badge is gone precisely where the words arrive and
+  // nowhere else — the surface never loses the fact.
+  const showTodayEyebrow = dayShape && emphasized && day.isToday;
   const rowBadges = (
     <>
       {isCompleted && <Badge label="Done" tone="success" />}
-      {showRowBadges && day.isToday && <Badge label="Today" tone="accent" />}
+      {showRowBadges && day.isToday && !showTodayEyebrow
+        && <Badge label="Today" tone="accent" testID="day-today-badge" />}
       {isMoveSource
         ? <Badge label="Moving" tone="outline" />
         : showRowBadges && hasWorkout && isGame
@@ -1861,7 +1919,26 @@ function DayRow({
         isMoveSource && styles.dayRowMoveSource,
         isMoveTarget && styles.dayRowMoveTarget,
         day.isToday && !isSelected && normal && styles.dayRowToday,
-        emphasized && selectedDayRowStyle(accentColor),
+        /* ── RULING 2: THE DAY CARD IS CALMER ──
+           Sam, 2026-08-10, comparing the two: *"theres less highlight here as
+           well whihc is good"*. Hers is a dark card on black — no lime border,
+           no glow; his carried a full accent border AND a lit interior AND a
+           coloured shadow, and the accent strip down the left, and the lime
+           weekday, all at once.
+
+           **THE ACCENT IS NOT DELETED, IT IS SPENT ONCE.** The strip stays and
+           Start Session stays lime; what goes is the border, the tinted fill and
+           the glow around the whole card. Lime that outlines everything cannot
+           point at anything, which is the same argument as the badge: a screen
+           that emphasises every part of itself has no emphasis.
+
+           **DAY SHAPE ONLY.** The week list's selected row is still one of seven
+           and needs the border to say which one is open — there is no eyebrow
+           and no single-card context there to carry it. Ruling 2 is about the
+           day screen, so the change is too. */
+        emphasized && (dayShape
+          ? styles.dayRowCalm
+          : selectedDayRowStyle(accentColor)),
       ]}
     >
       <DayStateLeaves
@@ -1882,26 +1959,52 @@ function DayRow({
         {emphasized ? (
           <View style={styles.selectedHeader}>
             <View style={styles.selectedMetaRow}>
-              <View style={styles.selectedDateCluster}>
-                <Text
-                  style={[
-                    styles.dayLabel,
-                    styles.dayLabelSelected,
-                    { color: '#C8FF00' },
-                  ]}
-                >
-                  {day.short}
+              {showTodayEyebrow ? (
+                /* THE EYEBROW — ruling 5's replacement for the badge, and it
+                   REPLACES the `MON 13/7` cluster rather than sitting beside it.
+                   Sam's own line: two things saying "today" is what the ruling
+                   removed.
+
+                   THE ONLY NEW CHARACTERS ARE SIGNED. "TODAY'S SESSION" and the
+                   " - " are sheet entries (batch 32, signed on sight). `MON` and
+                   `10/8` are the SAME two values this cluster rendered before
+                   this slice — `day.short` and `shortDayMonthLabel` — moved, not
+                   re-formatted. Registering a date template here would give the
+                   app a second way to say what day it is. */
+                <Text style={styles.dayEyebrow} testID="day-card-eyebrow">
+                  {signedCopy('day.card.eyebrow.today')}
+                  {signedCopy('day.card.eyebrow.date_separator')}
+                  {day.short} {shortDayMonthLabel(day.date)}
                 </Text>
-                <Text style={[styles.dayDate, styles.dayDateSelected]}>
-                  {shortDayMonthLabel(day.date)}
-                </Text>
-              </View>
+              ) : (
+                <View style={styles.selectedDateCluster}>
+                  <Text
+                    style={[
+                      styles.dayLabel,
+                      styles.dayLabelSelected,
+                      { color: '#C8FF00' },
+                    ]}
+                  >
+                    {day.short}
+                  </Text>
+                  <Text style={[styles.dayDate, styles.dayDateSelected]}>
+                    {shortDayMonthLabel(day.date)}
+                  </Text>
+                </View>
+              )}
               <View style={styles.selectedBadgeCluster}>{rowBadges}</View>
             </View>
 
             <View style={styles.selectedTitleBlock}>
               <View style={styles.selectedTitleLine}>
                 <RowIcon kind={titleIcon} size={16} color={accentColor} />
+                {/* THE TITLE WRAPS ON THE DAY SCREEN. Sam's read of her card:
+                    *"Then the title on its own line, wrapping — Strength + /
+                    Conditioning"*. A compound name is exactly the case the
+                    single-line ellipsis was eating, and the compound name is
+                    his own 2026-08-08 ruling — so truncating it here was one
+                    ruling quietly undoing another. The week list keeps one line:
+                    seven rows of wrapping titles is a different screen. */}
                 <Text
                   style={[
                     hasWorkout ? styles.workoutTitle : styles.restLabel,
@@ -1909,7 +2012,7 @@ function DayRow({
                     styles.selectedWorkoutTitle,
                     isMoveSource && { opacity: 0.4 },
                   ]}
-                  numberOfLines={1}
+                  numberOfLines={dayShape ? 2 : 1}
                   ellipsizeMode="tail"
                 >
                   {selectedTitle}
@@ -2235,7 +2338,28 @@ interface DayTimelineProps {
  * the athlete has to do, missing from the only screen that shows it.
  */
 function DayTimeline({ entries, onOpen }: DayTimelineProps) {
+  // WHICH PARTS ARE OPEN — SCREEN STATE, AND IT IS NEVER PERSISTED.
+  //
+  // The north star's rule is "store only decisions, derive everything else", and
+  // a drop-down being open is not a decision the athlete made about their
+  // training — it is where their thumb is. Writing it would be new stored state
+  // that is not an input, which the north star presumes wrong. It resets when
+  // the screen does, and that is correct rather than a limitation.
+  //
+  // A SET, NOT A SINGLE `openPartId`: her prototype's rows are independent
+  // checkboxes, and a day carrying strength AND conditioning is exactly the day
+  // an athlete wants both open on. Keyed on `partId` for the same reason
+  // `dayTimeline` is — `COMPONENT_TO_PART` is many-to-one, so two parts of one
+  // kind must be able to open separately.
+  const [openParts, setOpenParts] = useState<ReadonlySet<string>>(() => new Set<string>());
   if (entries.length === 0) return null;
+  const toggle = (partId: string) => {
+    setOpenParts((current) => {
+      const next = new Set(current);
+      if (next.has(partId)) next.delete(partId); else next.add(partId);
+      return next;
+    });
+  };
   return (
     <View style={styles.timeline} testID="day-timeline">
       {entries.map((entry, index) => {
@@ -2243,39 +2367,105 @@ function DayTimeline({ entries, onOpen }: DayTimelineProps) {
         const completionColor = entry.completion
           ? TIMELINE_COMPLETION_COLOR[entry.completion]
           : null;
+        const isOpen = openParts.has(entry.partId);
+        // A PART WITH NO ROWS HAS NOTHING TO OPEN, and it does not pretend to.
+        // Her own week view carries the same rule — rest and game days render as
+        // a single line with no chevron — and it is worth taking as a rule
+        // rather than as styling: an affordance that opens onto nothing teaches
+        // the athlete the affordance is a lie. Team-training and game parts are
+        // the real cases here; they carry no exercise rows by construction.
+        const canOpen = entry.rows.length > 0;
+        // `derived_number`: the template is the sheet's, the count is the part's
+        // own row count. Never composed here — see `day.part.exercise_count`.
+        const meta = canOpen
+          ? signedCopy(
+            entry.rows.length === 1 ? 'day.part.exercise_count_one' : 'day.part.exercise_count',
+            { count: entry.rows.length },
+          )
+          : null;
         return (
-          <Pressable
-            key={entry.partId}
-            onPress={onOpen}
-            testID={`day-timeline-part-${entry.componentId}`}
-            accessibilityRole="button"
-            accessibilityLabel={`${entry.headline}${
-              entry.completion ? ` — ${entry.completion}` : ''}`}
-            style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
-          >
-            <View style={styles.timelineRail}>
+          <View key={entry.partId}>
+            <Pressable
+              onPress={() => (canOpen ? toggle(entry.partId) : onOpen())}
+              testID={`day-timeline-part-${entry.componentId}`}
+              accessibilityRole="button"
+              accessibilityState={canOpen ? { expanded: isOpen } : undefined}
+              accessibilityLabel={`${entry.headline}${
+                entry.completion ? ` — ${entry.completion}` : ''}`}
+              style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
+            >
+              <View style={styles.timelineRail}>
+                <View
+                  style={[
+                    styles.timelineNode,
+                    completionColor
+                      ? { backgroundColor: completionColor, borderColor: completionColor }
+                      : null,
+                  ]}
+                />
+                {index < entries.length - 1 ? <View style={styles.timelineConnector} /> : null}
+              </View>
+              <RowIcon kind={iconKind} size={15} color={rowIconColor(iconKind)} />
+              <View style={styles.timelinePartText}>
+                {/* THE CAPS ARE A STYLE, NOT THE STRING. `entry.headline` is
+                    `SignedCopy` and the sheet keeps its own casing ("Upper
+                    Push"); `textTransform` is presentation, which is where her
+                    structure is allowed to reach. The eyebrow above is the
+                    opposite case and deliberately so — Sam signed THAT one in
+                    caps, so there the caps ARE the string. */}
+                <Text
+                  style={styles.timelineHeadline}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {entry.headline}
+                </Text>
+                {meta ? <Text style={styles.timelinePartMeta}>{meta}</Text> : null}
+              </View>
+              {canOpen ? <TimelineChevron open={isOpen} /> : null}
+              {entry.completion ? (
+                <ExplorerRenderWitness
+                  testID={`day-timeline-complete-${entry.componentId}-${entry.completion}`}
+                />
+              ) : null}
+            </Pressable>
+            {canOpen && isOpen ? (
               <View
-                style={[
-                  styles.timelineNode,
-                  completionColor
-                    ? { backgroundColor: completionColor, borderColor: completionColor }
-                    : null,
-                ]}
-              />
-              {index < entries.length - 1 ? <View style={styles.timelineConnector} /> : null}
-            </View>
-            <RowIcon kind={iconKind} size={15} color={rowIconColor(iconKind)} />
-            <Text style={styles.timelineHeadline} numberOfLines={1} ellipsizeMode="tail">
-              {entry.headline}
-            </Text>
-            {entry.completion ? (
-              <ExplorerRenderWitness
-                testID={`day-timeline-complete-${entry.componentId}-${entry.completion}`}
-              />
+                style={styles.timelineRows}
+                testID={`day-timeline-rows-${entry.componentId}`}
+              >
+                {entry.rows.map((row) => (
+                  <View key={row.id} style={styles.timelineExerciseRow}>
+                    <Text
+                      style={styles.timelineExerciseName}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {row.name}
+                    </Text>
+                    <Text style={styles.timelineExercisePrescription}>
+                      {row.prescription}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             ) : null}
-          </Pressable>
+          </View>
         );
       })}
+    </View>
+  );
+}
+
+/** The drop-down's affordance. Rotates rather than swapping glyph, so open and
+ *  closed are visibly the same control in two states. */
+function TimelineChevron({ open }: { open: boolean }) {
+  return (
+    <View style={open ? styles.timelineChevronOpen : undefined} pointerEvents="none">
+      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+        stroke="#8A8A8A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <Path d="M6 9l6 6 6-6" />
+      </Svg>
     </View>
   );
 }
@@ -3737,7 +3927,41 @@ const styles = StyleSheet.create({
     width: 1.5,
     backgroundColor: 'rgba(255,255,255,0.10)',
   },
-  timelineHeadline: { flex: 1, color: '#E8EAED', fontSize: 14, fontWeight: '600' },
+  timelineHeadline: {
+    color: '#E8EAED',
+    fontSize: 14,
+    fontWeight: '600',
+    // CAPS ARE A STYLE HERE, NOT THE STRING — see the render site. The sheet
+    // keeps "Lower Body Strength"; her drop-down rows read them upper.
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  // ── THE DROP-DOWNS (UI merge slice 2, Sam's eye pass 2026-08-10) ──
+  // No new colour token, no new font size that is not already on this screen:
+  // the part name keeps `timelineHeadline`'s size and colour, the meta line
+  // reuses the muted grey and 12pt the day date already uses, and the
+  // prescription reuses the accent-free `#A7A7A7` the coach-note body uses.
+  timelinePartText: { flex: 1, gap: 1 },
+  timelinePartMeta: { color: '#8A8A8A', fontSize: 12, lineHeight: 15 },
+  timelineChevronOpen: { transform: [{ rotate: '180deg' }] },
+  // Indented to the part's own text column, so an exercise reads as belonging
+  // to the row above it rather than as another part.
+  timelineRows: { paddingLeft: 12 + spacing.sm + 15 + spacing.sm, paddingBottom: 6, gap: 4 },
+  timelineExerciseRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  timelineExerciseName: { flex: 1, color: '#C9CDD2', fontSize: 13, fontWeight: '500' },
+  timelineExercisePrescription: { color: '#8A8A8A', fontSize: 13, fontVariant: ['tabular-nums'] },
+  // ── THE DAY CARD'S EYEBROW (ruling 5) ──
+  // Small, muted, letter-spaced — the same treatment `coachNotesTitle` gives an
+  // eyebrow already, minus the lime, because ruling 2 spends the accent once.
+  dayEyebrow: { color: '#8A8A8A', fontSize: 11, fontWeight: '800', letterSpacing: 1.1 },
+  // ── THE CALM DAY CARD (ruling 2) ──
+  // What it does NOT set is the point: no `borderColor`, no `shadow*`, no
+  // `elevation`. A dark card on black, exactly as hers is.
+  dayRowCalm: { backgroundColor: '#101010', borderColor: '#1F1F1F' },
+  // ── THE CHANGE CARD (ruling 1) ──
+  changeCard: { marginTop: spacing.md },
+  changeCardHeading: { color: '#F5F5F5', fontSize: 15, fontWeight: '700' },
+  changeCardSubline: { color: '#8A8A8A', fontSize: 13, lineHeight: 18, marginTop: 2 },
 
   dayRow: { position: 'relative' },
   dayAccentStrip: {

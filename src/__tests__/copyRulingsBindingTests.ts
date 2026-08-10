@@ -45,6 +45,12 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
 import * as fs from 'fs';
 import * as path from 'path';
+import { signedCopyEntries } from '../rules/signedCopy';
+import { registerProjectionCopy } from '../rules/projectionCopy';
+
+// The sheet registers at call, not at import — so the id-aware half of the
+// PROPOSED cell below has entries to read.
+registerProjectionCopy();
 
 let passed = 0; let failed = 0; const failures: string[] = [];
 function assert(c: unknown, d: string): asserts c { if (!c) throw new Error(d); }
@@ -425,9 +431,52 @@ run('the proposed batch is not empty', () => {
     + 'parse is broken, and a broken parse makes the two cells below vacuous');
 });
 
+/**
+ * A STRING CAN BE IN THE APP WITHOUT ITS LITERAL BEING IN A SURFACE, AND THIS
+ * GATE COULD NOT SEE THAT — FIXED 2026-08-10, AND IT IS THE SAME SCOPE HOLE THE
+ * `AUTHORING_MODULES` list above was built for, one layer deeper.
+ *
+ * The founding case is batch 32. Sam signed `TODAY'S SESSION` on sight; the day
+ * card renders it through `signedCopy('day.card.eyebrow.today')`, and the
+ * literal lives ONLY in the sheet — which is the correct architecture and is
+ * itself asserted by a cell in `test:day-first-timeline` ("the eyebrow's words
+ * are hardcoded in HomeScreenV2" reds if the literal appears). **So the two
+ * gates were in direct opposition: one demanded the literal in the screen, the
+ * other forbade it.** A gate that can only be satisfied by breaking another gate
+ * gets weakened by whoever next has to make it pass.
+ *
+ * THE FIX IS NOT TO ADD THE SHEET TO `AUTHORING_MODULES`. That would make every
+ * registered string "in the app" by virtue of being registered — which is the
+ * *shipped vs shipped-and-reachable* gap this repo already carries as open debt,
+ * and it would turn a real cell into a tautology.
+ *
+ * INSTEAD THE CHECK BECOMES ID-AWARE: a sheet-backed string counts as present
+ * only when a SURFACE reads its id. That is strictly stronger than the literal
+ * scan for these strings — it proves a screen reaches the words, not merely that
+ * the characters exist somewhere under `src/`.
+ */
+function sheetBackedTextsReadBySurfaces(): Set<string> {
+  const present = new Set<string>();
+  for (const entry of signedCopyEntries()) {
+    const read = SOURCES.some((source) => source.text.includes(`signedCopy('${entry.id}'`)
+      || source.text.includes(`signedCopy("${entry.id}"`)
+      || source.text.includes(`'${entry.id}'`)
+      || source.text.includes(`"${entry.id}"`));
+    if (read) present.add(entry.text);
+  }
+  return present;
+}
+
 run('every PROPOSED string is actually in the app', () => {
+  const viaSheet = sheetBackedTextsReadBySurfaces();
+  // NON-VACUITY: an empty set would silently turn this cell back into the
+  // literal-only scan it was, and the founding case would stop being caught.
+  assert(viaSheet.size > 0,
+    'no sheet entry is read by any surface — the id-aware half of this cell is '
+    + 'reading nothing, and a green here would mean only that the literal scan ran');
   const missing = PROPOSED
     .filter((entry) => !ABSENT_TEXT.has(entry.text))
+    .filter((entry) => !viaSheet.has(entry.text))
     .filter((entry) => !SOURCES.some((source) => source.text.includes(entry.text)))
     .map((entry) => `${entry.batch}: "${entry.text}"`);
   assert(missing.length === 0,

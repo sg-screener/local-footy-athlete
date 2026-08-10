@@ -2132,3 +2132,42 @@ app ONE chance to ask. Spending it on a feature that cannot fire yet would burn
 the prompt and leave the athlete having refused something they never got — and
 the OS does not hand it back. So the sentence check runs BEFORE the permission
 branch, and a cell asserts it refuses even when permission is already granted.
+
+## Batch 32 — the day card's eyebrow, UI merge slice 2 (2026-08-10): SIGNED (Sam, 2026-08-10)
+
+**STATUS: SIGNED BY SAM, 2026-08-10** — *"yes thats the better heading"*, answering
+the exact string quoted back to him: **`TODAY'S SESSION - MON 10/8`**.
+
+**IT WAS RAISED AS A LATER BATCH AND HE SIGNED IT ON SIGHT.** The report said the
+wording would come with the batch rather than alone; he ruled it immediately. The
+string is therefore SIGNED, not PROPOSED, and slice 2 may ship it.
+
+| Where | SIGNED string |
+| --- | --- |
+| The day card's eyebrow, fixed half | "TODAY'S SESSION" |
+| The eyebrow's separator before the date | " - " |
+
+**32-a. ONLY TWO THINGS HERE ARE NEW CHARACTERS, AND THE DATE IS NOT ONE OF THEM.**
+`MON` and `10/8` are the card's EXISTING values — `day.short` and
+`shortDayMonthLabel(day.date)`, already rendered side by side at the top-left of
+the same card today. The eyebrow MOVES them; it does not re-format them, and no
+new date vocabulary is authored. This matters because it is what keeps ruling 5
+honest: the badge and the date line are not replaced by a second way of saying
+today, they are folded into one.
+
+**32-b. THE SEPARATOR IS A HYPHEN BECAUSE SAM WROTE A HYPHEN.** The sheet's day-name
+joiner is an em dash family (`copy.joiner.plus` and friends), and the house style
+elsewhere in this file is `—`. **The string he read and signed used `-`, so `-` is
+what ships.** Recorded rather than silently normalised — a signature is over the
+characters he saw.
+
+**32-c. THE CAPS ARE THE STRING, NOT A STYLE TOKEN.** He was shown caps and signed
+caps. The eyebrow therefore renders the authored uppercase and does NOT reach for
+`textTransform`, because a style that up-cases a sentence-case entry would make the
+sheet and the screen disagree about what the athlete reads — which is the one thing
+this file is equality-bound to prevent. `MON` is already upper in `day.short`.
+
+**32-d. WHAT THIS BATCH DOES NOT SIGN.** The drop-down rows' meta line (hers reads
+*"4 exercises"*) is a COUNT joined to a noun and is therefore composed copy; it is
+not in this batch and does not ship on his signature here. It goes to the next
+batch on its own, with the change card's heading and sub-line.

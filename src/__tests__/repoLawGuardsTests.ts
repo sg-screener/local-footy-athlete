@@ -1121,7 +1121,72 @@ run('no committed tool reverts a file by a mechanism that eats its neighbours', 
     + 'unrelated edit in the file with them, twice in one session on 2026-07-28.');
 });
 
+// ── THE HOT FILES HAVE A BUDGET ──────────────────────────────────────────────
+//
+// `LAW-hot-file-budget`. **The founding case is a bill.** Sam ran `/usage` on
+// 2026-08-10: **126M tokens IN, 5k out, $68.95 for 1h43m** — and almost all of
+// the input was READING, not thinking. Two files were re-read at every stop:
+// `SEAT_INBOX.md` at **353KB** and `NOW.md` at **53KB**. Both had one line at the
+// top saying what they were for — *"the review seat writes here; terminal reads
+// at every stop"* and *"overwrite at every checkpoint (pointer, not history)"* —
+// and both had quietly become history instead.
+//
+// **THIS IS THE SAME SHAPE AS EVERY OTHER ROT IN THIS REPO: correct when
+// written, nobody watching it drift.** The registry's own pattern says the fix
+// is not the trim, it is the alarm. The trim happened once and would grow back
+// within a day; the alarm is what makes the trim hold.
+//
+// **WHY THESE NUMBERS.** They are not the current sizes — a budget set to what
+// you just achieved reds on the next honest sentence. They are roughly **2x**
+// the post-trim size, which is room for a week of normal appending and a hard
+// stop well below the point where the file is worth what it costs to read:
+//   - `NOW.md` — post-trim ~4KB, budget **24KB**. It is a POINTER; 24KB is
+//     already generous for a status surface whose job is links.
+//   - `SEAT_INBOX.md` — post-trim ~45KB, budget **96KB**. Orders are longer than
+//     pointers and several may be live at once, so the ceiling is higher — but
+//     it is a quarter of what the file reached.
+// **The number matters less than the alarm existing**, and when one reds the
+// answer is to ARCHIVE (verbatim, to a dated file), never to delete.
+const HOT_FILE_BUDGETS: readonly { readonly file: string; readonly maxBytes: number }[] = [
+  { file: 'docs/NOW.md', maxBytes: 24 * 1024 },
+  { file: 'docs/SEAT_INBOX.md', maxBytes: 96 * 1024 },
+];
+
+/** Pure: the budgeted files that are over, with the overage named. */
+function hotFilesOverBudget(
+  sizes: readonly { readonly file: string; readonly bytes: number; readonly maxBytes: number }[],
+): string[] {
+  return sizes
+    .filter((entry) => entry.bytes > entry.maxBytes)
+    .map((entry) => `${entry.file} is ${Math.round(entry.bytes / 1024)}KB, `
+      + `budget ${Math.round(entry.maxBytes / 1024)}KB`);
+}
+
+run('the files re-read at every stop stay inside their budget', () => {
+  const sizes = HOT_FILE_BUDGETS.map((budget) => {
+    const full = path.join(repoRoot, budget.file);
+    assert(fs.existsSync(full), `${budget.file} is budgeted but does not exist — the budget is stale`);
+    return { file: budget.file, bytes: fs.statSync(full).size, maxBytes: budget.maxBytes };
+  });
+  // NOT VACUOUS: a budget over a file that is never read is a green that means
+  // nothing. Both files must actually have content to be over-budget ABOUT.
+  assert(sizes.every((entry) => entry.bytes > 0), 'a budgeted hot file is empty');
+  const over = hotFilesOverBudget(sizes);
+  assert(over.length === 0,
+    `hot file(s) over budget: ${over.join(' | ')}. ARCHIVE the processed part `
+    + 'verbatim to a dated file and leave the pointer — do not delete it, and do '
+    + 'not raise the budget to match the file. Sam pays for this one in dollars.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the hot-file budget, probed BOTH directions ──
+  assert(hotFilesOverBudget([{ file: 'docs/NOW.md', bytes: 60_000, maxBytes: 24_576 }]).length === 1,
+    'a file well over its budget passed — the 53KB founding case exactly');
+  assert(hotFilesOverBudget([{ file: 'docs/NOW.md', bytes: 4_000, maxBytes: 24_576 }]).length === 0,
+    'a file inside its budget was flagged');
+  assert(hotFilesOverBudget([{ file: 'docs/NOW.md', bytes: 24_576, maxBytes: 24_576 }]).length === 0,
+    'a file exactly AT its budget was flagged — the boundary is inclusive');
+
   // ── the four Sam re-worded, probed BOTH directions ──
   assert(doneClaimsWithNoDeviceWord('- **⚠ SAM: IT WORKS NOW.** trust me\n').length === 1,
     'a done-claim with no device word passed');

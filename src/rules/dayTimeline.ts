@@ -39,7 +39,7 @@ import { completionByComponentId } from '../utils/sessionFeedbackForm';
 import { componentIdFromPartId } from './projectVisibleWeek';
 import { projectDayDetail } from './visibleDayDetail';
 import type { SignedCopy } from './signedCopy';
-import type { VisibleDay, VisiblePartKind } from './visibleProjection';
+import type { VisibleDay, VisiblePartKind, VisibleRow } from './visibleProjection';
 
 export interface DayTimelineEntry {
   /** The projected part this row IS — same id, so nothing has to be matched up. */
@@ -55,6 +55,22 @@ export interface DayTimelineEntry {
    * the two are different facts and an athlete who skipped a component said so.
    */
   readonly completion: FeedbackCompletion | null;
+  /**
+   * THE PART'S EXERCISES, FOR THE DROP-DOWN — name and prescription, both
+   * already `SignedCopy` before they reached here.
+   *
+   * SAM'S EYE PASS, 2026-08-10: *"hers has like mobility / warmup then drop down
+   * of the exercise and the sets and reps"* — the day card listed its parts as
+   * flat lines with no detail at all, and that was the gap he named.
+   *
+   * IT IS THE PROJECTION'S OWN `rows`, PASSED THROUGH UNTOUCHED. Not a second
+   * read, not a filter, not a re-order: `projectDayDetail` is already the
+   * day-detail SCREEN's reading of the same day, so the card's drop-down and the
+   * session screen cannot come to disagree about what is in a part — they are
+   * one list asked twice, which is this file's founding property and the reason
+   * `surfaceAgreementTests` can compare them at all.
+   */
+  readonly rows: readonly VisibleRow[];
 }
 
 /**
@@ -86,5 +102,6 @@ export function dayTimeline(
     kind: section.kind,
     headline: section.headline,
     completion: recorded[componentIds[index]] ?? null,
+    rows: section.rows,
   }));
 }

@@ -22,6 +22,16 @@ export interface V2BadgeProps {
   tone?: V2BadgeTone;
   size?: V2BadgeSize;
   style?: StyleProp<ViewStyle>;
+  /**
+   * A COORDINATE FOR A FLOW, ADDED 2026-08-10 BY UI MERGE SLICE 2.
+   *
+   * Ruling 5 removes the "Today" badge from the day screen and keeps it in the
+   * week list, and the only device-level way to state that is an id — asserting
+   * on the TEXT "Today" hits the Today/Week toggle, which is a different control
+   * that also says the word. That false positive was written and caught on this
+   * flow's first run; the id is the fix, not a looser assertion.
+   */
+  testID?: string;
 }
 
 export function Badge({
@@ -29,12 +39,14 @@ export function Badge({
   tone = 'muted',
   size = 'xs',
   style,
+  testID,
 }: V2BadgeProps) {
   const t = toneStyles(tone);
   const s = sizeStyles(size);
 
   return (
     <View
+      testID={testID}
       style={[
         styles.base,
         { backgroundColor: t.bg, borderColor: t.border, borderWidth: t.border === 'transparent' ? 0 : 1 },

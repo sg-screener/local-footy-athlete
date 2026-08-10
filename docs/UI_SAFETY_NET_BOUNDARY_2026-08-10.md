@@ -1,5 +1,14 @@
 # THE UI SAFETY NET — BOUNDARY REPORT, 2026-08-10 (sixty-sixth pass)
 
+**LOOP CHECK: an instrument that had never run is not coverage — sighting 3 —
+ITERATE.** The rig had been dead since 18 July and each fix revealed the next;
+the practice repeated because each layer could only be seen after the one above
+it was cleared, which is iteration paying, not a wall being hit twice.
+**ADDED 2026-08-10 by the next pass, and the omission is the finding:** this
+report shipped with no LOOP CHECK line and no NOT-COVERED section on the same day
+the cell that requires both went green. `LAW-loop-check-line`'s own words are
+"No line, no valid order" — and the law was broken by the pass that ran its guard.
+
 **The unit: make a flow walk day → week → profile end to end, so the screens
 Sam signed rulings over can start changing.** Sam's sequencing, agreed by him:
 *"DO NOT START CHANGING SCREENS until a flow walks day -> week -> profile end
@@ -198,3 +207,30 @@ un-investigated stale ids; one needs a ruling.** Naming them, not claiming them.
    from `buildDevE2ESeed` and were therefore testing an impossible athlete.
    Not counted. "Some" is not an answer and this pass does not give one.
 5. **RULING 4 vs THE COACH ARCHITECTURE.** Not yet checked.
+
+---
+
+## NOT COVERED
+
+**ADDED 2026-08-10 by the following pass. It was owed on the day and omitted;
+what follows is what this unit did not look at, written from its own artefacts
+rather than reconstructed from memory.**
+
+- **THE OTHER TEN FLOWS.** One flow was made to walk. `one-set-feedback.yaml`,
+  `fixture-move.yaml`, `reload-standard-week.yaml`, `lower-body-deletion.yaml`,
+  `standard-program-week.yaml` and the explorer flow were NOT run in this pass.
+  "The rig is green" means one flow is green.
+- **THE APP ON A REAL DEVICE.** Everything here is the simulator. Nothing in this
+  unit has been on Sam's phone.
+- **WHETHER THE WALK ASSERTS ANYTHING ABOUT CORRECTNESS.** It asserts each
+  surface MOUNTS. It does not assert that what the surface shows is right — the
+  screenshots are for a human eye, and no cell reads them.
+- **THE 21 SUITES BUILT ON THE IMPOSSIBLE ATHLETE.** Named in this report as item
+  4 and counted by the next pass; this one did not count them, and did not ask
+  whether they still pass on a legal profile.
+- **THE DRIFT CHECK.** Whether each seeded world still matches what the generator
+  produces for that profile today — Sam's third alarm — is not built and was not
+  designed here.
+- **THE SEED'S DURABILITY.** The seeded world's calendar is 4 game days in memory
+  and 1 on disk. This unit observed the flows that depend on it are red; it did
+  not investigate why.

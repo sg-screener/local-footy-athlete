@@ -470,7 +470,7 @@ const LIFE_FACT_DOORS: readonly { readonly label: string; readonly onPress: stri
   { label: 'Equipment', onPress: 'setEquipmentVisible(true)', testID: 'explorerTestId.equipmentUpdate(activeEquipmentFact.factId)' },
 ];
 
-run('the screen is in the order Sam ruled: toggle, strip, card, chips, notes', () => {
+run('the screen is in the order Sam ruled: toggle, card, change card, notes', () => {
   const home = homeScreenSource();
   const at = (needle: string): number => {
     const index = home.indexOf(needle);
@@ -479,31 +479,154 @@ run('the screen is in the order Sam ruled: toggle, strip, card, chips, notes', (
       + 'compare -1 against -1 and call that an order');
     return index;
   };
-  // Five landmarks, one per element Sam named, each the thing itself rather than
-  // a style name: the toggle's testID, the strip component, the one call that
-  // draws the day at full size, the chip row's testID, the notes component.
+  // RE-AIMED 2026-08-10 BY THE UI MERGE, AND IT WAS RED IN BETWEEN — which is
+  // the gate-must-watch-the-deleted-surface law behaving correctly rather than a
+  // gate being edited to match a regression. Slice 1 removed `<WeekStrip` from
+  // this spine (ruling 3, "No days at the top of the page"), so the landmark
+  // this cell navigated by stopped existing; it reported that in words instead
+  // of comparing -1 against -1, and stayed red until the surface settled.
+  //
+  // THE SPINE SAM RULED ON 2026-08-08 IS NOT REPEALED, IT IS SHORTER: the strip
+  // is gone and the chips gained a card around them (ruling 1). Everything else
+  // — toggle, then today's card, then the change controls, then Coach Notes —
+  // is his 2026-08-08 sequence unchanged.
   const toggle = at('testID="program-view-toggle"');
-  const strip = at('<WeekStrip');
   const card = at('renderDayRow(dayFirstDay, dayFirstIdx)');
+  const changeCard = at('testID="home-change-card"');
   const chips = at('testID="home-life-fact-chips"');
   const notes = at('<CoachNotesSection');
-  assert(toggle < strip && strip < card && card < chips && chips < notes,
-    'the Program screen is no longer in the order Sam ruled on 2026-08-08 '
-    + `(toggle ${toggle} → strip ${strip} → card ${card} → chips ${chips} → `
-    + 'notes ${notes}). He wrote the sequence out: Today/Week, the seven-day '
-    + 'strip directly under it, today\'s card, the chip row under the card, then '
+  assert(toggle < card && card < changeCard && changeCard < chips && chips < notes,
+    'the Program screen is no longer in the order Sam ruled '
+    + `(toggle ${toggle} → card ${card} → change card ${changeCard} → `
+    + `chips ${chips} → notes ${notes}). The sequence is Today/Week, today's `
+    + 'card directly under it, the change card holding the five circles, then '
     + 'Coach Notes below all of it.');
-  // NOTHING BETWEEN THE TOGGLE AND THE STRIP. "Directly under it" is the half of
-  // the ruling an ordering assertion alone cannot see: three cards used to queue
-  // up in that gap, and re-inserting any one of them would keep this order and
-  // still break what he asked for.
-  const gap = home.slice(toggle, strip);
+  // THE STRIP STAYS GONE. Ruling 3 removed it and the removal has a home (the
+  // week shape); a re-inserted strip would keep the order above and still be the
+  // thing he ruled out. Asserted on the SPINE, not the file — `WeekStrip` the
+  // component still exists and is still the week shape's, which is deliberate.
+  const spine = home.slice(toggle, notes);
+  assert(!spine.includes('<WeekStrip'),
+    'the seven-day strip is back at the top of the day screen. Sam, 2026-08-10: '
+    + '"No days at the top of the page - people only care about the day they are '
+    + 'on and if they need to view the other days they go to weekly view."');
+  // NOTHING BETWEEN THE TOGGLE AND TODAY'S CARD. "Directly under it" is the half
+  // of the ruling an ordering assertion alone cannot see: three cards used to
+  // queue up in that gap, and re-inserting any one of them would keep this order
+  // and still break what he asked for. The landmark moved from the strip to the
+  // card because the card is now what sits directly under the toggle.
+  const gap = home.slice(toggle, card);
   for (const intruder of ['<CoachNotesSection', '<MissedSessionPrompt', 'home-season-phase-skew']) {
     assert(!gap.includes(intruder),
-      `${intruder} is back between the Today/Week control and the week strip. `
-      + 'Sam ruled the strip sits DIRECTLY under the toggle; anything that opens '
-      + 'in that gap pushes the athlete\'s week below the fold again.');
+      `${intruder} is back between the Today/Week control and today's card. `
+      + 'Sam ruled the day sits DIRECTLY under the toggle; anything that opens '
+      + 'in that gap pushes his session below the fold again.');
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE UI MERGE, SLICE 2 — Sam's eye pass, 2026-08-10
+//
+// He put his screen next to the signed prototype and listed what was missing.
+// Each cell below holds one of the four things he named. **A negative
+// behavioural claim needs a cell in the same commit** — "the card now shows the
+// exercises" is exactly the kind of sentence that survived two reports and was
+// false once already.
+// ─────────────────────────────────────────────────────────────────────────────
+
+run('the day card leads with the eyebrow, and the Today badge is gone from it', () => {
+  const home = homeScreenSource();
+  // THE WORDS ARE THE SHEET'S. The literal must NOT be in the screen — that is
+  // the style law's shape applied to copy: forbid the literal, assert the id is
+  // read. `stripComments` above means a docblock quoting it cannot pass this.
+  assert(!/TODAY'S SESSION/.test(home),
+    'the eyebrow\'s words are hardcoded in HomeScreenV2. They are a sheet entry '
+    + '(`day.card.eyebrow.today`, batch 32) — a surface authoring them is the '
+    + 'class SignedCopy exists to make impossible.');
+  assert(/signedCopy\('day\.card\.eyebrow\.today'\)/.test(home)
+    && /signedCopy\('day\.card\.eyebrow\.date_separator'\)/.test(home),
+    'the day card no longer reads the signed eyebrow — ruling 5 put the "today" '
+    + 'fact into words, and this is where the words come from.');
+  // AND THE BADGE IS GONE PRECISELY WHERE THE WORDS ARRIVE. Not deleted
+  // outright: the week list keeps its own today marker, which is hers too.
+  assert(/showRowBadges && day\.isToday && !showTodayEyebrow/.test(home),
+    'the "Today" badge is no longer conditioned on the eyebrow\'s absence. '
+    + 'Ruling 5 removed it because the eyebrow says it; if the two can render '
+    + 'together the ruling is undone, and if the badge is deleted outright the '
+    + 'week list silently loses its today marker.');
+  assert(/showTodayEyebrow = dayShape && emphasized && day\.isToday/.test(home),
+    'the eyebrow is no longer scoped to the day shape and to today. It says '
+    + '"TODAY\'S SESSION": on any other day, or in the week list, it lies.');
+});
+
+run('the day card lists each part\'s exercises, name and prescription', () => {
+  const home = homeScreenSource();
+  const rowsStart = home.indexOf('day-timeline-rows-');
+  assert(rowsStart > 0,
+    'the drop-down\'s expanded body is gone from HomeScreenV2 — Sam\'s biggest '
+    + 'named gap ("there\'s no drop downs for the session overview") is unbuilt.');
+  const region = home.slice(rowsStart, rowsStart + 900);
+  assert(/row\.name/.test(region) && /row\.prescription/.test(region),
+    'the expanded drop-down no longer renders both halves. His words: "hers has '
+    + 'like mobility / warmup then drop down of the exercise AND the sets and '
+    + 'reps" — a name with no prescription is half the thing he asked for.');
+  // THE COUNT LINE COMES FROM THE SHEET, SINGULAR AND PLURAL BOTH.
+  assert(!/\bexercises['"`]/.test(home),
+    'the "N exercises" meta line is being composed in the screen. It is a '
+    + 'template in the sheet (`day.part.exercise_count`) precisely so a surface '
+    + 'never joins a number to a word.');
+  assert(/day\.part\.exercise_count_one/.test(home),
+    'the singular form is not read — a card can render "1 exercise" and a part '
+    + 'holding exactly one row is common.');
+  // A PART WITH NOTHING IN IT DOES NOT OFFER TO OPEN. Her own week rows carry
+  // the same rule for rest and game days.
+  assert(/canOpen = entry\.rows\.length > 0/.test(home),
+    'every part now offers a chevron, including the ones with no exercises '
+    + '(team training, a fixture). An affordance that opens onto nothing '
+    + 'teaches the athlete the affordance is a lie.');
+});
+
+run('Start Session sits inside the card, below the drop-downs', () => {
+  const home = homeScreenSource();
+  const timeline = home.indexOf('{timeline}');
+  const start = home.indexOf('testID="view-workout-button"');
+  assert(timeline > 0 && start > 0,
+    'the expanded block no longer holds both the timeline and the session CTA');
+  assert(timeline < start,
+    'Start Session now renders ABOVE the drop-downs. Sam\'s read of her card is '
+    + '"START SESSION sits INSIDE the card, full width, at the bottom — after '
+    + 'the drop-downs, not before them".');
+  // RULING 2 IS A PROTECTION: the button still reaches the session screen it
+  // always did, and that screen is out of scope for this merge.
+  assert(/onPress=\{onViewWorkout\}[\s\S]{0,120}testID="view-workout-button"/.test(home)
+    || /testID="view-workout-button"[\s\S]{0,120}onPress=\{onViewWorkout\}/.test(home)
+    || /label="Start Session"[\s\S]{0,200}onPress=\{onViewWorkout\}/.test(home),
+    'Start Session no longer calls onViewWorkout — ruling 2 protects that door '
+    + 'and the session screen behind it.');
+});
+
+run('the five circles sit in a card with words above them', () => {
+  const home = homeScreenSource();
+  const cardAt = home.indexOf('testID="home-change-card"');
+  const chipsAt = home.indexOf('testID="home-life-fact-chips"');
+  assert(cardAt > 0, 'the change card is gone — ruling 1, Sam\'s FIRST bullet '
+    + '("there\'s no text above the little buttons like rens said"), is unbuilt.');
+  assert(cardAt < chipsAt, 'the change card no longer wraps the chip row');
+  const region = home.slice(cardAt, chipsAt);
+  assert(/signedCopy\('day\.change_card\.heading'\)/.test(region)
+    && /signedCopy\('day\.change_card\.subline'\)/.test(region),
+    'the heading and sub-line above the circles are not read from the sheet.');
+  assert(!/Need to make a change\?/.test(home)
+    && !/Update your status to modify your program\./.test(home),
+    'the change card\'s sentences are hardcoded in the screen. They are PROPOSED '
+    + 'sheet entries (batch 33) awaiting Sam — a literal here is a word he can '
+    + 'never re-word.');
+  // HIS WORD, NOT HERS. She labels the first circle "Time away"; he ruled on
+  // sight to keep "Time". A later reader comparing the two screens must not
+  // "fix" the difference.
+  assert(/label="Time"/.test(home) && !/label="Time away"/.test(home),
+    'the first circle adopted her "Time away". Sam ruled immediately, 2026-08-10: '
+    + 'keep "Time".');
 });
 
 run('the chip row carries the five doors the five bars carried, unchanged', () => {
@@ -941,12 +1064,35 @@ run('no clock times, and the timeline entry shape is pinned', () => {
   world();
   const day = visibleDays(WEEK).find((candidate) => candidate.parts.length > 0);
   assert(day, 'no day with parts to read');
-  const keys = Object.keys(dayTimeline(day, null)[0]).sort();
+  const entry = dayTimeline(day, null)[0];
+  const keys = Object.keys(entry).sort();
+  // `rows` ADMITTED 2026-08-10, UI merge slice 2, and this is the gate doing its
+  // job rather than being loosened: it caught the new field on the first run.
+  //
+  // WHY IT IS ADMITTED. Sam's eye pass — *"hers has like mobility / warmup then
+  // drop down of the exercise and the sets and reps"* — needs each part's
+  // exercises on the card. `rows` is the PROJECTION's own list, passed through
+  // untouched (`section.rows`), so it adds no representation and no clock time:
+  // it is the same list the day-detail screen already renders, which is what
+  // `surfaceAgreementTests` exists to keep true. **A start time still cannot
+  // arrive through here** — that is what this pin is for, and it is unchanged.
   assert(JSON.stringify(keys) === JSON.stringify(
-    ['completion', 'componentId', 'headline', 'kind', 'partId']),
+    ['completion', 'componentId', 'headline', 'kind', 'partId', 'rows']),
     `the timeline entry carries ${JSON.stringify(keys)}. Sam's direction is ordered `
     + 'steps and no times of day; a new field — a start time above all — arrives '
     + 'through this gate or not at all.');
+  // NOT VACUOUS: a `rows` that arrived empty would satisfy the shape pin and
+  // render a drop-down onto nothing. The day picked above has parts, and a part
+  // the athlete has to do has exercises in it.
+  assert(entry.rows.length > 0,
+    'the timeline entry carries an EMPTY rows list — the drop-down would open '
+    + 'onto nothing, and the shape pin alone cannot see that.');
+  // AND IT IS THE PROJECTION'S OWN LIST, not a copy that could drift: same
+  // length and same first id as the part the entry names.
+  const part = day.parts.find((candidate) => candidate.id === entry.partId);
+  assert(part && part.rows.length === entry.rows.length && part.rows[0].id === entry.rows[0].id,
+    'the timeline\'s rows are not the projection\'s rows for that part — a second '
+    + 'reading of a day is exactly what this file exists to prevent.');
 });
 
 console.log(`\n  day-first timeline totals: ${passed} passed, ${failed} failed`);

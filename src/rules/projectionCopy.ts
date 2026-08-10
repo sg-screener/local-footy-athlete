@@ -179,6 +179,84 @@ export function registerProjectionCopy(): void {
       text: "There's nothing to change on this day.",
     },
 
+    // ── The day card's eyebrow, and the drop-downs' meta line. ──
+    //
+    // UI MERGE SLICE 2, rulings 2 + 5. Sam's ruling 5 removes the "Today" badge
+    // from the day screen and folds the same fact into the heading; his own
+    // wording for the heading, signed on sight 2026-08-10 (*"yes thats the better
+    // heading"*), is `TODAY'S SESSION - MON 10/8`.
+    //
+    // **THE DATE IS NOT REGISTERED HERE AND THAT IS DELIBERATE.** `MON` and
+    // `10/8` are the card's EXISTING values — `day.short` and
+    // `shortDayMonthLabel(day.date)`, rendered side by side at the top-left of
+    // this same card before this slice. The eyebrow MOVES them; it does not
+    // re-format them and it does not author a new date vocabulary. Registering
+    // a date template here would create a SECOND way the app says what day it
+    // is, which is the defect this module exists to stop.
+    {
+      id: 'day.card.eyebrow.today',
+      source: 'signed_sentence',
+      provenance: 'SIGNED — Sam, 2026-08-10, batch 32 of '
+        + 'docs/COPY_SHEET_RULINGS_2026-07-30.md: "yes thats the better heading", '
+        + 'answering the exact string quoted to him, "TODAY\'S SESSION - MON 10/8".',
+      text: "TODAY'S SESSION",
+    },
+    {
+      id: 'day.card.eyebrow.date_separator',
+      source: 'signed_sentence',
+      provenance: 'SIGNED — Sam, 2026-08-10, batch 32. The hyphen is HIS: the string '
+        + 'he read and signed used "-", not the em dash this sheet uses elsewhere, '
+        + 'and a signature is over the characters he saw.',
+      text: ' - ',
+      joiner: true,
+    },
+    // The drop-down row's meta line. `derived_number`: the SHAPE is authored,
+    // the count is data — the same treatment the prescription templates below
+    // get. PROPOSED, not signed: Sam signed the eyebrow, not this.
+    {
+      id: 'day.part.exercise_count',
+      source: 'derived_number',
+      provenance: 'NEW — PROPOSED, batch 33, UI merge slice 2. Her prototype\'s meta '
+        + 'line under each collapsed part reads "4 exercises"; the word "exercises" is '
+        + 'already this app\'s own (the day-detail screen says it), the number is the '
+        + 'part\'s own row count.',
+      text: '{count} exercises',
+    },
+    {
+      id: 'day.part.exercise_count_one',
+      source: 'derived_number',
+      provenance: 'NEW — PROPOSED, batch 33, UI merge slice 2. The singular half. A '
+        + 'template that can render "1 exercises" is a template that lies, and a part '
+        + 'holding exactly one row is common (a power component with one exercise is '
+        + 'the exhibit that made Sam rule on the day title).',
+      text: '{count} exercise',
+    },
+
+    // ── The change card, ruling 1. ──
+    //
+    // PROPOSED, batch 33. These two sentences are HER prototype's, and the
+    // governing rule of the merge is HER STRUCTURE, HIS STYLE — so the panel is
+    // adopted and the wording goes to Sam rather than being adopted with it.
+    // They ship PROPOSED under this file's transitional rule (a string may ship
+    // PROPOSED; it may never ship unlisted), because the alternative is his
+    // FIRST bullet staying unbuilt while one signature is waited on.
+    {
+      id: 'day.change_card.heading',
+      source: 'sam_ruling',
+      provenance: 'NEW — PROPOSED, batch 33, UI merge slice 2, ruling 1. Read out of '
+        + 'docs/design/LFA_UI_PROTOTYPE_2026-08-10.html, the prototype Sam signed the '
+        + 'direction of. His words for the gap: "there\'s no text above the little '
+        + 'buttons like rens said".',
+      text: 'Need to make a change?',
+    },
+    {
+      id: 'day.change_card.subline',
+      source: 'sam_ruling',
+      provenance: 'NEW — PROPOSED, batch 33, UI merge slice 2, ruling 1. The second '
+        + 'line of the same panel in the signed prototype.',
+      text: 'Update your status to modify your program.',
+    },
+
     // ── The one separator. ──
     {
       id: 'copy.joiner.plus',
