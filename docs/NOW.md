@@ -1,5 +1,21 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **⚠ SAM: ALL SIX RULES YOU RULED ON ARE NOW WATCHED — AND TWO OF YOUR
+  RE-WORDINGS BEAT MINE.** You said the plain-English rule was about **app
+  wording**, not my prose, and you were right — it now checks every word the app
+  says to you. And on the chat rule you refused the easy answer: *"held by
+  discipline"* is just **UNENFORCED with a nicer name**, which you'd already
+  banned. **So you are the guard, by name.** You pulling me up on it is the
+  alarm. **36 rules still have nothing watching them, down from 42 this morning
+  — and your rule that the number may only fall has held every time.** `faea72dd`
+  · `75f26ca5`. **NOT ON GLASS — none of this has been on your phone.**
+
+- **⚠ SAM: TWO THINGS I COULDN'T DO AND NEED YOU TO ALLOW.** You said yes to
+  committing your two exports, and yes to binning the corrupt file. **My tools
+  refused both** — they're still exactly where they were, untouched and unread.
+  One word from you and both are done. **It's the one kind of thing only you can
+  give.** `docs/STOP_INBOX_QUEUE_2026-08-10.md` · **OPEN-UNKNOWN until you say.**
+
 - **⚠ SAM: YOU ASKED WHY I COULDN'T TELL WHETHER YOU USED THE COACH OR THE
   TAP. FIXED — AND YOU WERE RIGHT THAT IT WAS THE LABEL.** Every change you
   made was stamped **"tap"**, whether you used the Program tab or the coach's
@@ -71,7 +87,13 @@
   **A number that gets worse because you finally measured it is the measurement
   working.** **Sam's rule from here: it may only fall.**
 
-- **⛔ STOP — 42 OF 62 LAWS STILL UNGUARDED, AND THE NEXT MOVES NEED SAM.**
+- **⛔ STOP — 36 OF 66 LAWS UNGUARDED; see docs/STOP_INBOX_QUEUE_2026-08-10.md
+  for the live queue.** NOT STARTED, named rather than implied: splitting the
+  chain (Sam asked for the per-change runtime AS A NUMBER — there is no number
+  yet), the Maestro rig, the world replay, and whether the door READS the day
+  name. **NOT ON GLASS.**
+
+- **⛔ (HISTORY) STOP — 42 OF 62 LAWS STILL UNGUARDED, AND THE NEXT MOVES NEED SAM.**
   docs/LAW_SWEEP_STOP_2026-08-10.md. **Two things only he can give:** the
   **template files from his partner** (photos + HTML — his own step 1 cannot open
   without them, MOCK-FIRST), and **one line for `eas.json`** (Apple ID /

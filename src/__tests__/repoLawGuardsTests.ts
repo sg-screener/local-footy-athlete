@@ -751,7 +751,18 @@ run('every question put to Sam shows what was searched first', () => {
  * kinds. An item asking him to relay, paste, forward or confirm-a-report is the
  * shape this cell exists to catch — it is the routing role coming back.
  */
-const RELAY_ASK = /\b(relay|paste|forward|copy (this|it) (to|back)|send (this|it) to the seat|tell the seat|read (this|it) (to|back))\b/i;
+/**
+ * **AN ASK, NOT A MENTION — and this cell's own first run proved it needs the
+ * distinction.** It flagged the STOP item that said *"this is a thing only he
+ * can grant, not a report to relay"* — a sentence DENYING the ask, caught by a
+ * scan that read the word and not the sentence.
+ *
+ * Sighting 2 of mention-vs-use inside one session; the first was the revert scan
+ * flagging the two files that define its law. **COMPRESSION: a repo check over
+ * PROSE matches an ASK — an imperative or a second-person request — never a bare
+ * keyword**, because prose about a rule necessarily contains the rule's words.
+ */
+const RELAY_ASK = /(^|[.:*]\s*)(please\s+)?(relay|paste|forward|send|copy|route|tell the seat|read (this|it) (to|back))\b(?![^.]*\bnot\b)/i;
 
 /** Pure: blocked-on-Sam items that ask him to be the wire again. */
 function samItemsAskingHimToRelay(doc: string): string[] {
@@ -906,7 +917,11 @@ run('the checkers red on fabricated violations (liveness)', () => {
     'an item asking Sam to route information passed — the routing role came back');
   assert(samItemsAskingHimToRelay(
     '## WHAT IS BLOCKED ON SAM\n\n1. **His Apple ID for eas.json.**\n').length === 0,
-    'a thing only Sam has was flagged as a relay ask');
+    'a thing only Sam has was flagged as a routing ask');
+  // THE FIRST-RUN FALSE POSITIVE, PINNED: a sentence DENYING the ask.
+  assert(samItemsAskingHimToRelay(
+    '## WHAT IS BLOCKED ON SAM\n\n1. **His Apple ID.** This is not a report to relay.\n').length === 0,
+    'a sentence denying the ask was read as making it — mention is not use');
 
   assert(signedStringsWithJargon([{ id: 'x', text: 'Your microcycle is ready' }]).length === 1,
     'an athlete-facing string carrying engineering vocabulary passed');
