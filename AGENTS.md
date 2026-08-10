@@ -691,5 +691,11 @@ Practical consequences:
   `^1\.` only, so every order written as `00.`/`0.`/`000.` was invisible and the
   turn ended silently — Sam became the courier and had to type "check inbox"
   himself.** Guarded by `test:seat-inbox-hook` (registry row
-  `LAW-inbox-order-is-content`). **The seat's half: no invented urgency
+  `LAW-inbox-order-is-content`). **AND THE HOOK'S STATED EXIT NOW EXISTS:** a turn
+  may end while the queue is unanswered only when HEAD is a committed STOP report
+  (subject beginning `docs(stop):`). **It had promised that in its block text from
+  the beginning and never implemented it** — a door described but not cut, which
+  reads as an option and behaves as a wall. **A stop report that is not true is a
+  lie in the git log with your name on it; DOC-TRUTH and `LAW-do-as-instructed`
+  both bind it.** **The seat's half: no invented urgency
   numbering. Orders are 1, 2, 3, newest first; urgency belongs in the words.**
