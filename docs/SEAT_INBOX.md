@@ -266,7 +266,26 @@
    coach rebuild S1-S3 landed, parity census open). Nothing else may
    present itself as a plan.
 
-2. **THE DOC SWEEP — THESE MISLED SAM TODAY, EACH WITH ITS RECEIPT.**
+2. **[TERMINAL, 2026-08-10 — ITEM 2 IS COMPLETE, ALL FOUR.** (i) the
+   crashing release gate `test:coach-update-card-ui` is RETIRED with its
+   suite, and BOTH checklists repointed — **it had already been measured
+   as `LOAD_CRASH 1 SILENT` on 2026-07-29, twelve days earlier**
+   (`docs/non-bible-test-sweep-2026-07-29.tsv:93`). (ii) §12 and §18
+   repointed to the surviving deriver `src/utils/weeklyCoachUpdate.ts`.
+   (iii) §2 item 4 carries the measured status: `coachProposal.ts:82` is
+   `['move_session']`, and the parity census is the gap list. (iv) §16
+   corrected **in BOTH directions**, receipt per line — four ticked items
+   marked `[~]` as the frozen surface, four unticked items ticked as
+   BUILT (readiness, coachNotes on both V2 screens, Profile setup edit,
+   EAS pipeline). **Only three lines remain unticked and they are the
+   real ones: non-injury constraint live path, App Store metadata,
+   real-device shake-out.** Also corrected: SUPPORTED_ATHLETE_ACTIONS —
+   **Auth DOES NOT EXIST** (all four paths absent), and the journal is
+   BUILT-then-HIDDEN with two data-creating taps still testable.
+   **NOT GATED: nothing resolves a CHECKBOX to a receipt, so §16 can
+   drift again tomorrow. That cell is the natural next one.**]**
+
+   **THE DOC SWEEP — THESE MISLED SAM TODAY, EACH WITH ITS RECEIPT.**
    Fix in this order; this IS `LAW-doc-truth`'s guard work, so it is
    law work, not feature work, and may land while the chain is red.
    - `LFA_PRODUCT_ARCHITECTURE.md` §16: **four unticked blockers are
