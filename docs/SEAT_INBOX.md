@@ -2,12 +2,18 @@
 
 ## Unprocessed (newest first)
 
-1. **THE KNOT — untangle it so the My status buttons work and the
-   off-season box can leave the day screen.** CARRIED FORWARD. The
-   hedge is taken (the status controls are dimmed, disabled and
-   captioned) and the extraction is priced by reading it in
-   `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 2.
-   **Nothing has left the day screen.** THE ONLY LIVE ORDER.
+1. **THE KNOT — the majority is still tied.** ONE STRAND IS CUT and
+   live: `dismiss_note`, which turned out never to have been tangled
+   (`useCallback(..., [])` over a module-level function). The not-yet
+   state is now PER-ACTION, so freeing each remaining strand lights it
+   up on its own.
+   **STILL TIED:** every action that opens a confirmation sheet —
+   `handleClearCoachNote` and `handleUpdateCoachNoteStatus` close over
+   five hook-level values and two `Alert` paths — and the whole
+   phase-shift machine. **Nothing has left the day screen.**
+   Priced in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addenda 2
+   and 8. **The pattern to copy is `useActiveModifiers`, which did the
+   same move for the LIST without the day screen flinching.**
 
 ## Previously (now processed)
 
