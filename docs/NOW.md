@@ -51,7 +51,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `226531b2` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `4189de2b` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -89,8 +89,18 @@ and this file gets one line pointing at it.**
   `docs/UI_MERGE_PLAN_2026-08-10.md` · rulings:
   `docs/UI_MERGE_RULINGS_2026-08-10.md` · her signed prototype:
   `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`.
-- **THE SEEDED WORLD IS NOT DURABLE** — 4 game days in memory, 1 on disk — and
-  six flows stay red behind it.
+- **THE SEEDED WORLD IS NOT DURABLE — PRICED, NOT FIXED.** One boolean (the
+  replay latch) carries two meanings, so the boot path cannot tell a REPLAY from
+  an INSTALL and drops the install's writes. Three fix shapes and the elegant one
+  named in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 4. **Unblocks
+  six red flows. And the open question that matters most: does a REAL ONBOARDING
+  install hit the same window? Not measured — if it does, this is athlete-facing
+  data loss, not a harness bug.**
+- **FIVE dev-e2e SUITES JOINED THE CHAIN** (`4189de2b`) — they existed and
+  nothing ran them, which is why a seed answering in a vocabulary the app refuses
+  sat undetected. **Four of the five are RED**: `dev-e2e-seeds` 2,
+  `dev-e2e-entry` 2, `dev-e2e-reset-hydration` 2, `dev-e2e-scenario-session` 1.
+  Visible now, not diagnosed.
 - **THE DAY NAME IS READ BY DOORS, NOT JUST SHOWN** — the move gate and the
   repair both read it, so a combined day's conditioning has no name to carry.
   Read, never run: `docs/DOES_THE_DOOR_READ_THE_NAME_2026-08-10.md`.
