@@ -1,0 +1,137 @@
+appId: com.localfootyathlete.app
+name: L-C3 keyboard matrix - ANY conversational surface (parameterised)
+tags:
+  - e2e
+  - keyboard
+  - l-c3
+---
+# ═══════════════════════════════════════════════════════════════════════════
+# THE STANDING PRE-DEVICE GATE FOR CONVERSATIONAL SURFACES (L-C3).
+#
+# The kickoff made keyboard cases GATE cases from slice 1 and three slices
+# shipped without them; Sam's device then caught exactly the predicted defect
+# ("the chat history is stuck - it gets hidden behind the keypad"). The fix
+# shipped SOURCE-ONLY. This flow is the compression the seat ordered: a
+# keyboard matrix that a SECOND surface joins by passing parameters, never by
+# copying the file. S4 inherits it rather than rediscovering it.
+#
+# PARAMETERS (all required):
+#   TAB_ID         the tab bar button that opens the surface
+#   LIST_ID        the scrollable conversation
+#   INPUT_ID       the composer text input
+#   SEND_ID        the send control
+#   FIRST_ID       an element known to be at the TOP of the conversation
+#   MSG_1 MSG_2 MSG_3   three things to ask, so the thread outgrows the screen
+#   SHOT           screenshot filename prefix, so two surfaces do not collide
+#
+# WHAT THESE ASSERTIONS ACTUALLY PROVE, STATED HONESTLY.
+# Maestro asserts an element is present and visible in the hierarchy. It does
+# NOT measure a frame against the keyboard's rect. So "the list ends above the
+# keypad" is proven here as its OBSERVABLE CONSEQUENCE: with the keyboard up,
+# the newest bubble and the composer are both still visible. That is the thing
+# Sam could not see, and it is what a regression would take away. The
+# screenshots at each state are deliberate — a layout claim wants an eye, and
+# these are the artefact a human checks when the assertion passes but the
+# screen still looks wrong.
+# ═══════════════════════════════════════════════════════════════════════════
+
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+- tapOn:
+    id: "${TAB_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "${LIST_ID}"
+    timeout: 15000
+- takeScreenshot:
+    path: "${SHOT}-01-opened-keyboard-down"
+
+# ── STATE 1: KEYBOARD DOWN, NOTHING TYPED ─────────────────────────────────
+- assertVisible:
+    id: "${FIRST_ID}"
+- assertVisible:
+    id: "${INPUT_ID}"
+- assertVisible:
+    id: "${SEND_ID}"
+
+# ── RAISE THE KEYBOARD ON AN EMPTY THREAD ─────────────────────────────────
+# The composer rides KeyboardStickyView and the body reserves the keypad's
+# height from the same shared value. If that ever regresses, the send control
+# is the first thing to go behind the keys.
+- tapOn:
+    id: "${INPUT_ID}"
+- takeScreenshot:
+    path: "${SHOT}-02-keyboard-up-empty"
+- assertVisible:
+    id: "${INPUT_ID}"
+- assertVisible:
+    id: "${SEND_ID}"
+
+# ── THREE ASKS, SO THE THREAD IS LONGER THAN THE SCREEN ───────────────────
+- inputText: "${MSG_1}"
+- tapOn:
+    id: "${SEND_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "${INPUT_ID}"
+    timeout: 10000
+
+- tapOn:
+    id: "${INPUT_ID}"
+- inputText: "${MSG_2}"
+- tapOn:
+    id: "${SEND_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "${INPUT_ID}"
+    timeout: 10000
+
+- tapOn:
+    id: "${INPUT_ID}"
+- inputText: "${MSG_3}"
+- tapOn:
+    id: "${SEND_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "${INPUT_ID}"
+    timeout: 10000
+- takeScreenshot:
+    path: "${SHOT}-03-three-turns-keyboard-up"
+
+# ── END-STATE (2): NEW CONTENT PINS TO BOTTOM WHEN ALREADY AT BOTTOM ──────
+# The thread now exceeds one screen. The FIRST bubble must have scrolled out
+# of view — if it is still visible the list never pinned, which is precisely
+# the "it doesn't scroll down" half of Sam's report.
+- assertNotVisible:
+    id: "${FIRST_ID}"
+
+# ── END-STATE (1) AND (4): NOTHING OCCLUDES COMPOSER OR LATEST BUBBLE ─────
+- assertVisible:
+    id: "${INPUT_ID}"
+- assertVisible:
+    id: "${SEND_ID}"
+
+# ── END-STATE (3): KEYBOARD APPEARING RE-PINS TO BOTTOM ───────────────────
+# Dismiss, confirm the composer survives the keyboard leaving, then raise it
+# again and confirm the newest turn is still the one on screen.
+- hideKeyboard
+- takeScreenshot:
+    path: "${SHOT}-04-keyboard-dismissed"
+- assertVisible:
+    id: "${INPUT_ID}"
+- assertNotVisible:
+    id: "${FIRST_ID}"
+
+- tapOn:
+    id: "${INPUT_ID}"
+- takeScreenshot:
+    path: "${SHOT}-05-keyboard-re-raised"
+- assertVisible:
+    id: "${INPUT_ID}"
+- assertVisible:
+    id: "${SEND_ID}"
+- assertNotVisible:
+    id: "${FIRST_ID}"

@@ -1,0 +1,115 @@
+appId: com.localfootyathlete.app
+name: L-C3 coach tab - keyboard matrix + the two OPEN-UNKNOWNs
+tags:
+  - e2e
+  - keyboard
+  - l-c3
+  - coach
+---
+# ═══════════════════════════════════════════════════════════════════════════
+# THE COACH TAB AS THE FIRST SURFACE THROUGH THE SHARED MATRIX, then the two
+# things NOW.md carries as OPEN-UNKNOWN:
+#   (b) both change-card buttons reachable with the keyboard up
+#   (a) the Undo toast over a coach-landed move
+#
+# ⚠ THIS FLOW HAS NEVER BEEN RUN. It is committed UNRUN and deliberately so:
+# the simulator binary predates `expo-notifications`, so the app red-boxes on
+# launch and NOTHING in `.maestro/` can execute until it is rebuilt (see
+# NOW.md's open blocker). Every testID below was verified to EXIST in product
+# source before it was written here, which is the only claim this file is
+# entitled to make. **Existence is not reachability** — the first real run
+# should be treated as authoring, not as a regression check, and the sections
+# most likely to need adjusting are named inline.
+# ═══════════════════════════════════════════════════════════════════════════
+
+- runFlow:
+    file: conversation-keyboard-matrix.yaml
+    env:
+      TAB_ID: "tab-coach"
+      LIST_ID: "coach-tab-conversation"
+      INPUT_ID: "coach-tab-input"
+      SEND_ID: "coach-tab-send"
+      # The greeting is the first bubble and never moves, so it is the honest
+      # witness for "did the list scroll".
+      FIRST_ID: "coach-tab-greeting"
+      SHOT: "coach"
+      # Three questions slice 2 answers, so the thread genuinely grows. They
+      # are QUESTIONS on purpose: a change request would raise the card early
+      # and change what the matrix is measuring.
+      MSG_1: "what am I doing on friday this week?"
+      MSG_2: "what am I doing on saturday?"
+      MSG_3: "am I training thursday?"
+
+# ── OPEN-UNKNOWN (b): BOTH CARD BUTTONS, KEYBOARD UP ──────────────────────
+#
+# The card renders INSIDE the footer that rides KeyboardStickyView, so the
+# source claim is that neither button can ever be behind the keypad
+# (CoachTabScreen.tsx, ChangeCard docstring). That is the claim under test —
+# it has never been seen.
+#
+# MOST LIKELY TO NEED ADJUSTMENT: whether this seed's Friday can actually move
+# to Sunday. If the coach refuses, `coach-tab-change-card` never appears and
+# this section fails on a REFUSAL rather than on a layout defect. The tape
+# already showed a refusal is easy to hit on an anchored day. On the first
+# real run, read the coach's reply before believing the failure.
+- tapOn:
+    id: "coach-tab-input"
+- inputText: "can you move friday to sunday?"
+- tapOn:
+    id: "coach-tab-send"
+- extendedWaitUntil:
+    visible:
+      id: "coach-tab-change-card"
+    timeout: 15000
+- takeScreenshot:
+    path: "coach-06-card-up"
+
+# Keyboard DOWN first: both controls present at all.
+- assertVisible:
+    id: "coach-tab-change-confirm"
+- assertVisible:
+    id: "coach-tab-change-cancel"
+
+# Now RAISE THE KEYBOARD WITH THE CARD UP — the exact Nike case the kickoff
+# named, and the one state nobody has ever looked at. The card ADDS HEIGHT to
+# the strip that rides the keypad, so this is where an overshoot shows.
+- tapOn:
+    id: "coach-tab-input"
+- takeScreenshot:
+    path: "coach-07-card-up-keyboard-up"
+- assertVisible:
+    id: "coach-tab-change-confirm"
+- assertVisible:
+    id: "coach-tab-change-cancel"
+- assertVisible:
+    id: "coach-tab-input"
+
+# ── OPEN-UNKNOWN (a): THE UNDO TOAST OVER A COACH-LANDED MOVE ─────────────
+#
+# ⚠ THIS ASSERTION IS EXPECTED TO FAIL, AND THE FAILURE IS THE FINDING.
+# `UndoToast` is mounted in exactly ONE place — HomeScreenV2.tsx:1225 — and
+# `CoachTabScreen` mounts nothing. Its own docstring: "This mounts once, on
+# the Program screen." So on the coach tab there is likely no toast at all,
+# and because bottom tabs stay mounted the toast may arm invisibly behind this
+# screen and burn its own 6s timer (UndoToast.tsx:31,47).
+#
+# It is written as an ASSERTION rather than omitted because the census carries
+# this as a HYPOTHESIS and this is the cell that would settle it. A red here
+# means the coach tab has no undo surface — an L-C4 parity defect, since the
+# Program tab has one.
+#
+# NOTE FOR WHOEVER RUNS IT: the toast has NO testID. It can only be matched by
+# its copy ("Undo", UNDO_TOAST_COPY.undoAction), which is the weakest anchor in
+# this file and is itself worth a finding — the one affordance the order asks
+# to prove is the one the app never made addressable.
+- hideKeyboard
+- tapOn:
+    id: "coach-tab-change-confirm"
+- takeScreenshot:
+    path: "coach-08-after-make-the-change"
+- extendedWaitUntil:
+    visible:
+      text: "Undo"
+    timeout: 6000
+- takeScreenshot:
+    path: "coach-09-undo-toast"

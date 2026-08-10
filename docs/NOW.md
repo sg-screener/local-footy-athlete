@@ -18,6 +18,19 @@
   free** — a second `xcodebuild` against the same workspace and DerivedData would
   contend with his in-flight device build. **Nothing that needs glass can be
   measured until this clears**, which includes both OPEN-UNKNOWNs below.
+  - **THE L-C3 FLOW IS NOW WRITTEN AND HAS NEVER BEEN RUN, WHICH IS SAID HERE
+    RATHER THAN LEFT TO BE DISCOVERED.** `.maestro/keyboard/` — a parameterised
+    matrix (`conversation-keyboard-matrix.yaml`, so S4 joins by passing
+    parameters, not by copying) plus the coach-tab caller
+    (`coach-tab-keyboard.yaml`) carrying both OPEN-UNKNOWNs. Every testID in it
+    was verified to EXIST in product source; **existence is not reachability**,
+    and its YAML parses — that is the whole of what it currently claims. Run it
+    with `E2E_METRO_URL=http://127.0.0.1:8081 npm run e2e:maestro:ios --
+    .maestro/keyboard/coach-tab-keyboard.yaml` once the binary is rebuilt, and
+    treat the first run as AUTHORING, not as a regression check.
+    **The Undo assertion in it is EXPECTED TO FAIL** — that red is the finding,
+    not a broken flow. And the toast has **no testID at all**, so it can only be
+    matched by its copy, which is the weakest anchor in the file.
   - Separately FIXED and committed this pass (`dd192603`): eight of the eleven
     flows had *also* been crashing the app since 2026-07-18 because
     `reset-seed.yaml` omitted `e2eLaunchPurpose`, which

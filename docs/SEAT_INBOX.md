@@ -18,10 +18,22 @@
    --device --configuration Release` against the same workspace and
    DerivedData, and a second concurrent xcodebuild would contend with
    his device pass. Sam's call on when.
-   When it clears, the L-C3 keyboard matrix flow is unbuilt and the two
-   OPEN-UNKNOWNs — (a) the Undo toast over a coach-landed move,
-   (b) both card buttons reachable with the keyboard up — are still
-   open. Build it so a second surface is a parameter, not a copy.
+   **THE FLOW ITSELF IS NO LONGER THE MISSING PIECE — IT IS WRITTEN AND
+   UNRUN.** `.maestro/keyboard/conversation-keyboard-matrix.yaml` is the
+   parameterised matrix (a second surface joins by passing parameters,
+   which is the compression the order asked for) and
+   `.maestro/keyboard/coach-tab-keyboard.yaml` is the coach-tab caller
+   carrying both OPEN-UNKNOWNs — (a) the Undo toast over a coach-landed
+   move, (b) both card buttons reachable with the keyboard up.
+   Every testID in it was verified to EXIST in product source and the
+   YAML parses. **That is the whole of its claim: existence is not
+   reachability, and it has never executed.** Treat the first real run
+   as AUTHORING, not as a regression check.
+   Two things whoever runs it should know before reading a red:
+   - **the Undo assertion is EXPECTED to fail** — no undo surface is
+     mounted on the coach tab, and that red IS the finding;
+   - **the card section can fail on a REFUSAL rather than on layout** if
+     this seed's Friday cannot move. Read the coach's reply first.
    NOTE FOR WHOEVER RUNS IT: `reset-seed.yaml` is fixed but the eight
    flows behind it have not been green since 2026-07-18 and have never
    been run against today's app — expect second-order rot.
