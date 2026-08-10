@@ -2,7 +2,42 @@
 
 ## Unprocessed (newest first)
 
-1. **SAM RULED IT, AND HE IS RIGHT: THE SOURCE LABEL MUST NAME THE
+1. **[TERMINAL, 2026-08-10 — DONE AS ORDERED, AND THE WIDENING SWEEP'S
+   OWN SUSPECT IS REFUTED.** (`3d1e8d70`) The label is derived from the
+   DOOR in one owner — `rules/athleteActionSourceLabel.ts`, reading the
+   SCREEN, which is already what `route` is built from, so there is
+   nothing to keep in sync. `lastTransaction`'s prefix is minted from
+   the same value, so the summary export and the event log cannot hold
+   two opinions about one action. **`initiatedBy: 'tap'` on the coach
+   card STAYS and its defending comment is right** — the athlete taps
+   Confirm, a human decided; that field was never the bug. The bug was
+   a diagnostic reading one axis and reporting it as another.
+   **THE SWEEP: `system` is emitted from 19 product sites across twelve
+   subsystems — and EVERY ONE sets a distinct `route`.** The
+   discriminator exists and is populated, so `system` is NOT the same
+   defect. **The real shape is sharper than the order guessed:
+   `lastTransaction` is the one place a label travels WITHOUT its
+   route, which is why only that field could be misread.** Fixed only
+   what the sweep proved, as instructed.
+   **THE REPAIR HALF TOO:** none of the four `repair_candidate_selected`
+   emitters recorded `repair.kind` while the gateway carries typed
+   kinds — the log was throwing them away, which is exactly where
+   "measure it, do not assume it" ran out of road. `repairKinds` +
+   `repairCount` added at both. **And the pair is not a contradiction:
+   `rejectionCodes` is the SELECTED candidate's evaluation, i.e. AFTER
+   repair. An empty list means "nothing is STILL wrong", never "nothing
+   was wrong."**
+   `test:diagnostic-label-names-the-door`, **20 cells, in the chain**;
+   three mutations bite both directions. Two laws arrive GUARDED —
+   `LAW-label-names-the-door`, `LAW-repair-names-its-kind`. **65 rows,
+   23 guarded, 42 UNENFORCED — unguarded count unmoved.**
+   **NOT COVERED, AND SAID PLAINLY: the label change is proven by unit
+   and structural cells, NOT by a runtime trace.** No arm of
+   `tape:coach-move-durability` prints the diagnostic source, so
+   "a real coach move now logs `coach`" is OPEN-UNKNOWN. The next
+   instrument is one line: have that tape print the trace's source.]**
+
+   **SAM RULED IT, AND HE IS RIGHT: THE SOURCE LABEL MUST NAME THE
    DOOR.** His words: *"well shouldn't it be labelled differently to
    prevent this issue from happening again? so we can diagnose whether
    the issue happened via tap or coach?"*
@@ -41,7 +76,39 @@
    wording to cover labels and enumerations, not just numbers**, and
    its guard covers both.
 
-1. **SAM RAN THE MOVE BACK THROUGH THE COACH AND THE DEVICE LOG NAMES
+1. **[TERMINAL, 2026-08-10 — THE ENTRY-IDENTITY HALF IS ANSWERED; THE
+   REPAIR HALF WAS UNMEASURABLE AND NOW IS NOT.**
+   **THE ANSWER TO THE ORDER'S OWN QUESTION — ONE, AND IT NAMES ONE
+   KIND.** `stablePlanEntryId` (`strengthPatternContributions.ts:398`)
+   returns `w{week}:{day}:none:{kind}` — Sam's field character for
+   character. Its only mint (`coachingEngine.ts:1421`) picks `kind` off
+   a ladder: `team` → `strength` → `conditioningCategory` → `tier`.
+   **On a day carrying BOTH, `strengthPattern` is truthy and the ladder
+   stops at `strength` — the conditioning is never named.** That is why
+   a day the app labels `Mixed` carries an identity ending `:strength`.
+   `LAW-first-match-wins-hides-its-ordering`: every world we build
+   matches ONE rung, so the ladder's order has never been observable.
+   Sam's day matches two. docs/PLAN_ENTRY_IDENTITY_MEASURED_2026-08-10.md
+   **AND A SECOND FACT THE ORDER DID NOT NAME: the id encodes the day of
+   ALLOCATION and is not re-minted on a move.** In rev 7 the source day
+   is Wednesday and the id still says `w2:monday` — because rev 6 moved
+   it there. Two stale claims in one field.
+   **WHAT IS NOT ANSWERED, AND THE LINE MATTERS:** this explains the
+   NAME. Whether the door selects ON that name is **OPEN-UNKNOWN** —
+   `planEntryId` is measured as PRESENT at the three move call sites,
+   not as load-bearing.
+   **THE REPAIR HALF COULD NOT BE MEASURED AND THAT WAS THE FINDING.**
+   None of the four `repair_candidate_selected` emitters recorded
+   `repair.kind`. Fixed (`3d1e8d70`) — `repairKinds` + `repairCount` at
+   the gateway and the minimal replan. **The "four repairs, zero
+   violations" pair is NOT a contradiction: `rejectionCodes` is the
+   SELECTED candidate's evaluation, i.e. post-repair.** So the next
+   export from Sam's phone will say which repair ran; this one cannot,
+   and no amount of re-reading it will change that.
+   **THE SEAT'S `source: "tap"` CORRECTION IS ACCEPTED AND FIXED AT THE
+   FIELD**, not just in prose — see the item above.]**
+
+   **SAM RAN THE MOVE BACK THROUGH THE COACH AND THE DEVICE LOG NAMES
    THE DEFECT. THIS SUPERSEDES EVERY EARLIER THEORY.** He typed *"move
    wednesday to monday"* in the COACH TAB, it worked, **and the
    conditioning reappeared on Monday.** Evidence in the repo:
@@ -97,7 +164,25 @@
    door, the ledger and undo are all working on his real device.** The
    defect is entry identity plus repair, and nothing else.
 
-1. **SAM'S REAL WORLD IS NOW IN THE REPO, AND IT KILLS THE CURRENT
+1. **[TERMINAL, 2026-08-10 — READ, AND THE ORDER'S CENTRAL CORRECTION
+   IS ACCEPTED AND ACTED ON.** Both exports read. **His team nights are
+   Tuesday and Thursday, so Monday and Wednesday carry NO anchor and
+   `stackSessionOntoTeamAnchor` is not on his path** — the whole
+   destination-axis/team-night theory is not his defect, and it has
+   been struck from every place it was reported as adjacent to it
+   (`a0c0cabd` corrected the power-row claim in all five).
+   **NOT DONE: the regeneration.** The order says regenerate his world
+   from the accepted profile snapshot + marks, apply the recorded move,
+   and compare — and to say plainly if a summary cannot settle it. **It
+   has not been attempted**, and saying so is better than a "not
+   reproducible" from a summary, which the order forbids by name.
+   **THE EXPORTS ARE STILL UNTRACKED.** This terminal did not commit
+   Sam's device data without his word. **And `_to_delete/CORRUPT-partial-
+   transfer-do-not-read.json` (159KB) has been left unread and
+   uncommitted** — its own filename says not to open it, and if it is a
+   failed transfer of his export, whether to salvage it is his call.]**
+
+   **SAM'S REAL WORLD IS NOW IN THE REPO, AND IT KILLS THE CURRENT
    THEORY.** File: `device-export-2026-08-10-sam-monday-wednesday.json`
    at repo root (seat wrote it from his upload, 2026-08-10, JSON
    validated). **Read it before writing another probe.**

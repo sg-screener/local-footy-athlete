@@ -1,5 +1,18 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **⚠ SAM: YOU ASKED WHY I COULDN'T TELL WHETHER YOU USED THE COACH OR THE
+  TAP. FIXED — AND YOU WERE RIGHT THAT IT WAS THE LABEL.** Every change you
+  made was stamped **"tap"**, whether you used the Program tab or the coach's
+  card, because that stamp answered *"did a person do this?"* and not *"which
+  door?"*. **That is why I told you your move came through the Program tab when
+  it came through the coach**, and it sent me down the wrong path for a whole
+  pass. Now the stamp names the door, and the short summary in your export says
+  the same thing as the detailed log — before, those two could disagree.
+  **AND THE OTHER THING YOUR EXPORT SHOWED:** it said a repair had run four
+  times and never said WHAT was repaired. It does now. `3d1e8d70` ·
+  `test:diagnostic-label-names-the-door`. **NOT SEEN ON YOUR PHONE — proven by
+  tests, not by a real run yet.**
+
 - **⚠ SAM: YOUR MONDAY IS CALLED A STRENGTH DAY BY THE APP'S OWN NAMING, AND
   THAT IS THE LEAD.** Your export carries `planEntryId: "w2:monday:none:strength"`
   on a day the app labels **Mixed**. Measured: the app gives each day **ONE**
