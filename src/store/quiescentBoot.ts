@@ -31,7 +31,11 @@
  * delete it.
  */
 
-import { useProgramStore, PROGRAM_STORE_PERSISTENCE_KEY } from './programStore';
+import {
+  useProgramStore,
+  PROGRAM_STORE_PERSISTENCE_KEY,
+  generationAnchorForProgram,
+} from './programStore';
 import { useProfileStore } from './profileStore';
 import { useCalendarStore } from './calendarStore';
 import {
@@ -387,7 +391,24 @@ export async function rebuildDerivedWorld(): Promise<void> {
   // decision) and refuses only a world that testifies to nothing. Same move as
   // `preRebuildEnvelopeMigration`: read the result the old world stored rather
   // than invent the intent it never recorded.
-  let generationISO = storeState.generationAnchorISO;
+  //
+  // AND THE READ ASKS THE ANCHOR'S OWN HOME, NOT ONLY ITS MIRROR (2026-08-10,
+  // found by the first working run-through since 18 July). "The anchor rides
+  // the program it anchors" is the ruling; `state.generationAnchorISO` is a
+  // MIRROR that the install door stamps off the program
+  // (`generationAnchorForProgram`, programStore.ts). Reading only the mirror
+  // meant any install path that did not stamp it — the dev-E2E seed installs
+  // through `commitAcceptedStateTransaction` directly — produced a world that
+  // boot classified as a LEGACY WORLD UNDER REPAIR and shouted about, on every
+  // single launch, while its anchor sat in the one place the ruling says it
+  // lives. `recoverGenerationAnchor` then answered with evidence
+  // `stored_anchor`, whose own doc comment reads "not a recovery at all".
+  //
+  // Asking the home before declaring a repair is why the shout below is now
+  // only ever a real repair. This is a read moving to where the value lives,
+  // not a guard added over a false alarm — the false alarm had no other cause.
+  let generationISO = storeState.generationAnchorISO
+    ?? generationAnchorForProgram(useProgramStore.getState().currentProgram);
   if (!generationISO) {
     const recovered = recoverGenerationAnchor({
       storedAnchorISO: storeState.generationAnchorISO,

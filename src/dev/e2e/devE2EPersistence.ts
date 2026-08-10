@@ -191,6 +191,20 @@ export function captureDevE2EMemoryFingerprints(): DevE2EFingerprintMap {
   ]));
 }
 
+/**
+ * One selection, printable. Long enough to see WHICH key differs, short enough
+ * that a program-store envelope does not bury the line it is explaining.
+ */
+function previewSelection(value: unknown): string {
+  let text: string;
+  try {
+    text = JSON.stringify(value) ?? String(value);
+  } catch {
+    return '<unserialisable>';
+  }
+  return text.length > 600 ? `${text.slice(0, 600)}… (${text.length} chars)` : text;
+}
+
 async function readPersistedState(key: string): Promise<any> {
   const raw = await AsyncStorage.getItem(key);
   if (!raw) return {};
@@ -230,7 +244,22 @@ export async function waitForDevE2EPersistence(
     if (Date.now() >= deadline) {
       const mismatches = Object.keys(expected)
         .filter((key) => expected[key] !== persisted[key]);
-      throw new Error(`Persisted semantic state did not converge: ${mismatches.join(', ')}`);
+      // THE MESSAGE CARRIES THE DISAGREEMENT, NOT JUST ITS ADDRESS
+      // (2026-08-10). This error has now been hit twice in two days —
+      // `program-store` on the rig's first working run, `calendar-storage` on
+      // its second — and BOTH TIMES it named a store and stopped, so both
+      // times someone had to reconstruct by hand what two hashes disagreed
+      // about. A fingerprint is a claim; the claim's evidence is the two
+      // values, and this is dev-only code that can afford to print them.
+      throw new Error(
+        `Persisted semantic state did not converge: ${mismatches.join(', ')}\n`
+        + (await Promise.all(mismatches.map(async (key) => {
+          const descriptor = semanticStores.find((entry) => entry.key === key)!;
+          return `  ${key}\n`
+            + `    memory: ${previewSelection(descriptor.select(descriptor.store.getState()))}\n`
+            + `    disk:   ${previewSelection(descriptor.select(await readPersistedState(key)))}`;
+        }))).join('\n'),
+      );
     }
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
     persisted = await readDevE2EPersistedFingerprints();

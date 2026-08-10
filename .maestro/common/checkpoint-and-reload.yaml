@@ -7,11 +7,19 @@ name: Persisted checkpoint and reload verification
       id: "e2e-checkpoint-ready-${SEED_ID}"
     timeout: 15000
 - stopApp
+# THE PURPOSE IS NOT OPTIONAL AND OMITTING IT IS A HARD CRASH (2026-08-10).
+# `DevE2ELaunchDiagnostic` requires `e2eLaunchPurpose` the moment `e2eMetroUrl`
+# is present and `fatalError`s otherwise — so this relaunch killed the app on
+# the launch pad, and the flow's next assertion failed against a home screen.
+# It was the SECOND fault in this file's path, stacked behind the first, and
+# invisible until that one was fixed: exactly the sequencing the rig keeps
+# demonstrating. `action-reload` is the declared purpose for a mid-flow reload.
 - launchApp:
     clearState: false
     stopApp: true
     arguments:
       e2eMetroUrl: "${E2E_METRO_URL}"
+      e2eLaunchPurpose: "action-reload"
 - extendedWaitUntil:
     visible:
       id: "e2e-reload-ready-${SEED_ID}"

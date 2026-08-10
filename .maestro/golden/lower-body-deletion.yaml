@@ -1,25 +1,60 @@
 appId: com.localfootyathlete.app
-name: Golden - delete lower-body session
+name: Golden - delete the strength part of today's session
 tags:
   - e2e
   - golden
   - plan-change
 ---
+# RE-AIMED, 2026-08-10, AND IT WAS STALE IN THREE SEPARATE WAYS. Worth listing,
+# because one flow held one instance of each thing that rots:
+#
+#   1. THE SHAPE. `tapOn: day-row-mon` opened Monday's card. Today's card is
+#      already open in the day-first shape, and the centre of it is now the
+#      component timeline — so the tap opened the SESSION SCREEN, and the flow
+#      then hunted for a link on the screen it had just left.
+#   2. THE PATH. `plan-change-edit-session` was an intermediate menu row. Design
+#      rulings 7-8 (2026-07-31) DELETED that menu: the four actions are the
+#      first step now, and removal is `session-delete-action-<session>`, scoped
+#      by part, with its own confirm. Three of this flow's four taps named
+#      controls that no longer exist.
+#   3. THE CLAIM. It asserted the day became REST. Monday in this seed holds a
+#      strength part AND a conditioning part, so deleting the strength part
+#      leaves a training day — the old assertion could only ever have passed on
+#      a world where Monday held one thing, and nobody re-ran it to find out it
+#      no longer did.
+#
+# THE ASSERTION NOW NAMES THE THING DELETED rather than a whole-day state
+# token. `day-row-mon-state-rest` was a proxy that stopped meaning what the
+# flow needed it to mean; the timeline part is the actual claim, and it fails
+# for exactly one reason.
+#
+# THE SESSION-SCOPED IDS ARE MATCHED BY PATTERN, NOT BY THE GENERATOR'S ID.
+# `session-delete-action-w-coach-1` would pin this flow to the id the generator
+# happens to mint for this seed's first week. The flow's claim is "the delete
+# door for today's session", and that is what it now says.
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: lower-body-deletion
-- tapOn:
-    id: "day-row-mon"
+- assertVisible:
+    id: "day-timeline-part-strength"
+- assertVisible:
+    id: "day-timeline-part-conditioning"
 - tapOn:
     id: "make-change-link"
 - tapOn:
-    id: "plan-change-edit-session"
+    id: "session-delete-action-.*"
 - tapOn:
-    id: "plan-change-delete-session"
+    id: "session-delete-scope-.*-strength"
 - tapOn:
-    id: "plan-change-delete-confirm"
+    id: "session-delete-scope-.*-confirm-strength"
+- assertVisible:
+    id: "session-delete-result-.*-strength"
 - tapOn:
     id: "plan-change-done"
-- assertVisible:
-    id: "day-row-mon-state-rest"
+- extendedWaitUntil:
+    visible:
+      id: "day-timeline-part-conditioning"
+    timeout: 15000
+- assertNotVisible:
+    id: "day-timeline-part-strength"

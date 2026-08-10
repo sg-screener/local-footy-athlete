@@ -1,0 +1,120 @@
+appId: com.localfootyathlete.app
+name: Golden - the athlete's walk - day, week, profile, coach
+tags:
+  - e2e
+  - golden
+  - navigation
+---
+# THE SAFETY NET FOR THE UI MERGE (Sam's rulings, docs/UI_MERGE_RULINGS_2026-08-10.md).
+#
+# Sam's sequencing, in his seat's words and agreed by him: "DO NOT START
+# CHANGING SCREENS until a flow walks day -> week -> profile end to end." This
+# is that flow. It is deliberately the WIDEST, SHALLOWEST flow in the folder —
+# every other golden flow drives one behaviour to its depth; this one proves
+# that the four surfaces the merge touches still MOUNT and still REACH each
+# other after a change.
+#
+# WHY WIDTH IS THE RIGHT SHAPE HERE AND DEPTH IS NOT. The rulings move things
+# BETWEEN screens: the day strip goes (ruling 3), season phase leaves day and
+# week (6, 7), coach notes become modifiers on the coach page (4, 9). The
+# failure that class of change produces is not a wrong number inside one
+# screen — it is a screen that no longer renders, or a door that no longer
+# opens. A deep flow through one screen cannot see that; a walk across all
+# four sees it in eighteen seconds.
+#
+# COACH IS IN SCOPE HERE THOUGH SAM'S SCOPE LINE SAYS "day, week, profile".
+# Rulings 4 and 9 put the modifiers and "my status" ON THE COACH PAGE — the
+# rulings doc names it in the same breath ("plus the coach page surfaces
+# rulings 4 and 9 create"). A net that did not mount the coach tab would be
+# blind to exactly the ruling that moves the most behaviour.
+#
+# THE SESSION SCREEN IS NOT IN THIS WALK, ON PURPOSE. Ruling 2 keeps Sam's
+# existing session screen and puts it explicitly out of scope, and
+# `one-set-feedback.yaml` already drives it to its depth.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# ── DAY: the shape the app opens in ────────────────────────────────────────
+# The week strip and ONE full day. `make-change-link` is asserted, not tapped:
+# it is the door rulings 3/4/6 are about to rearrange, and its presence at the
+# top level of the day shape is the thing a merge could quietly cost.
+- assertVisible:
+    id: "week-strip"
+- assertVisible:
+    id: "day-row-mon"
+- assertVisible:
+    id: "day-timeline"
+- assertVisible:
+    id: "view-workout-button"
+- assertVisible:
+    id: "make-change-link"
+- assertVisible:
+    id: "home-life-fact-chips"
+- takeScreenshot: "artifacts/ui-walk/walk-1-day"
+
+# ── WEEK: the zoom-out ─────────────────────────────────────────────────────
+- runFlow:
+    file: ../common/show-week-shape.yaml
+- assertVisible:
+    id: "day-row-mon"
+- assertVisible:
+    id: "day-row-wed"
+- assertVisible:
+    id: "day-row-fri"
+- scrollUntilVisible:
+    element:
+      id: "day-row-sun"
+    direction: DOWN
+- assertVisible:
+    id: "day-row-sun"
+- takeScreenshot: "artifacts/ui-walk/walk-2-week"
+
+# ── AND BACK TO THE DAY ────────────────────────────────────────────────────
+# The return trip is half the claim. A toggle that goes one way is a screen
+# the athlete can get lost on.
+- scrollUntilVisible:
+    element:
+      id: "program-view-today"
+    direction: UP
+- tapOn:
+    id: "program-view-today"
+- extendedWaitUntil:
+    visible:
+      id: "week-strip"
+    timeout: 10000
+
+# ── PROFILE ────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-page-header"
+    timeout: 10000
+- assertVisible:
+    id: "profile-program-setup-section"
+- takeScreenshot: "artifacts/ui-walk/walk-3-profile"
+
+# ── COACH ──────────────────────────────────────────────────────────────────
+# The rebuilt tab (slices 1-3). Its conversation surface is what rulings 4 and
+# 9 will sit above.
+- tapOn:
+    id: "tab-coach"
+- extendedWaitUntil:
+    visible:
+      id: "coach-tab-conversation"
+    timeout: 10000
+- assertVisible:
+    id: "coach-tab-input"
+- takeScreenshot: "artifacts/ui-walk/walk-4-coach"
+
+# ── HOME AGAIN ─────────────────────────────────────────────────────────────
+- tapOn:
+    id: "tab-program"
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 10000
+- assertVisible:
+    id: "week-strip"

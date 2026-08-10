@@ -5,6 +5,13 @@ tags:
   - golden
   - program
 ---
+# RE-AIMED AT THE DAY-FIRST SHAPE, 2026-08-10. This flow asserted seven full
+# day rows on a screen that draws ONE. It was not testing a broken app; it was
+# describing a screen that stopped existing on 2026-08-01, and it had not been
+# run since 18 July, so nothing said so.
+#
+# IT NOW ASSERTS BOTH SHAPES, which is more than it used to claim, not less:
+# the day the app opens on, and the seven the athlete zooms out to.
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
@@ -15,6 +22,20 @@ tags:
     id: "program-week-current"
 - assertVisible:
     id: "program-week-next"
+
+# ── THE DAY SHAPE: a week strip, and one day at full size ──
+- assertVisible:
+    id: "week-strip"
+- assertVisible:
+    id: "week-strip-mon"
+- assertVisible:
+    id: "week-strip-sun"
+- assertVisible:
+    id: "day-row-mon"
+
+# ── THE WEEK SHAPE: all seven ──
+- runFlow:
+    file: ../common/show-week-shape.yaml
 - assertVisible:
     id: "day-row-mon"
 - assertVisible:

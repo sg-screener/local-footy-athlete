@@ -2,6 +2,132 @@
 
 ## Unprocessed (newest first)
 
+1. **A LEAD THAT FALLS OUT OF THE THIRD DEFECT — CHECK IT WHILE THE
+   FLOWS ARE BEING RE-AIMED, IT IS CHEAP AND IT MAY CLOSE SAM'S CASE.**
+
+   The practice athlete was missing a **2km time**, an answer the app
+   requires. **The 2km time is a conditioning input.** Sam's open
+   defect is that **0 of 11 seed worlds reach his day shape — a day
+   carrying strength AND conditioning** — and his real profile has
+   `twoKmTimeTrial: { seconds: 420 }`, `conditioningLevel: "Elite"`
+   and `sprintExposure: "2+ times per week"`.
+
+   **THE QUESTION, AND IT IS ONE RUN:** does a profile with no 2km
+   time generate weeks with less conditioning, or conditioning that
+   never shares a day with strength? **If yes, then the reason no seed
+   ever looked like Sam's Monday is the same defect the rig just
+   caught** — the seeds were built from an athlete the app would
+   refuse, and that athlete's weeks are structurally different from a
+   real one's. That would tie the two open threads into one root and
+   would explain a month of not reproducing him.
+   **If no, say so plainly and the two stay separate.** Do not stretch
+   it to fit — this is offered as a lead, not a conclusion, and a
+   refuted lead is a good outcome.
+
+   **EITHER WAY, ONE THING IS OWED:** a census of **which suites
+   consumed those seed worlds**. Unit tests over hand-passed arguments
+   are unaffected, but **anything that built its inputs from
+   `buildDevE2ESeed` was testing an impossible athlete**, and its
+   green means less than it appeared to. **Name the count and the
+   list** — Sam is entitled to know how much of the existing 328 is
+   affected, and "some" is not an answer.
+
+1. **SAM HAS SIGNED THE MERGE. THE CLASH LIST DID NOT NEED WRITING —
+   HE RULED IT FIRST, AFTER TAPPING THROUGH BOTH PROTOTYPES.**
+   **READ `docs/UI_MERGE_RULINGS_2026-08-10.md` BEFORE ANYTHING ELSE
+   ON THE UI.** Nine rulings, his words verbatim, plus the governing
+   rule.
+
+   **THE GOVERNING RULE, AND IT DECIDES EVERY AMBIGUITY BELOW IT: HER
+   STRUCTURE, HIS STYLE.** *"keep her structure with my style - keep
+   all of my icons for now too and my colours please"*. **The
+   prototype's palette and type scale are NOT adopted.** Layout, flow
+   and simplification are taken; colour, type and icons stay his.
+   Second binding line, from earlier: *"without destroying what i have
+   now"* — **nothing working is removed to match a picture.**
+
+   **THE THREE THAT NEED A CHECK BEFORE A LINE IS WRITTEN, because
+   each one moves a behaviour rather than restyling one:**
+   - **Ruling 4** puts active modifiers on the day screen and moves
+     coach notes AND season-phase changing onto the coach page under
+     "my status". **That lands on the tab rebuilt this week.** Check it
+     against the coach architecture reassessment and L-C1/L-C2/L-C4 —
+     the coach tab is a conversation surface and this adds a status
+     surface above it. **If that is a real tension, it is a question
+     for Sam, not a decision for you.**
+   - **Rulings 3, 6 and 7 all REMOVE things** (the day strip, season
+     phase from day and week, the buttons under weekly view). **Each
+     removal must name where the behaviour went.** 4 and 9 catch most
+     of it. **Anything with nowhere to land goes on one sheet for
+     Sam** — asked once, not per screen.
+   - **Ruling 5 is new athlete-facing copy** — *"Today's session - Mon
+     10/8"*. Through the copy register and one signing sitting with
+     everything else pending.
+
+   **RULING 2 AND 8 ARE PROTECTIONS, NOT CHANGES — DO NOT TOUCH
+   EITHER.** "Start session" still goes to HIS EXISTING session
+   screen; the session screen is out of scope. His composer stays
+   exactly as it is — **and that is the surface the keyboard matrix
+   guards, so disturbing it costs the one guard that already works.**
+
+   **RULING 7 CARRIES A GENERAL PRINCIPLE, NOT JUST A LAYOUT** — take
+   it as one: *a change for one day is made on that day; a chronic
+   change is made once, not per day; nobody schedules being sick or
+   injured in advance.* **Apply it to anything else that turns up
+   wanting a home on weekly view.**
+
+   **SEQUENCING IS UNCHANGED AND IT IS THE POINT: DO NOT START
+   CHANGING SCREENS until a flow walks day -> week -> profile end to
+   end.** The older flows still point at buttons the redesign moved.
+   **Sam has been told this and agreed to it.** The merge PLAN — which
+   files, which order, what each ruling touches — is reading work and
+   starts now; the screens wait for the net.
+
+1. **GREEN IN 18 SECONDS, AND THE THIRD FINDING IS THE ONE THAT MATTERS
+   — SAY IT TO SAM IN THOSE TERMS.** Every practice week in this repo
+   was built from a profile **the app would have refused from a real
+   person** (no 2km time). That is not a bug in a fixture; **it means
+   every test world here has been an impossible athlete**, and no
+   instrument could see it because none had ever got far enough in.
+   **This is precisely the rot he named — "a weekly template optimised
+   for that and that alone" — caught by the instrument on its first
+   complete pass.** Record it as `LAW-no-hand-built-fixtures`' founding
+   case, and **record the sequencing lesson beside it: three defects,
+   each invisible until the one before it was fixed. A blocked
+   instrument hides an unknown number of defects, never zero** — which
+   is the argument for `LAW-instrumentation-alive` in one line.
+
+2. **SAM CAN START THE UI WORK NOW — BUT ONLY THE HALF THAT IS READING.
+   SPLIT IT, AND SAY WHICH HALF IS WHICH.**
+   - **STARTS NOW, ZERO RISK: the MERGE PLAN off
+     `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`.** Keep / Take /
+     Clash, scoped to DAY, WEEK and PROFILE only, per his roadmap. It
+     changes no code, so it cannot break anything, and **it is the half
+     that needs Sam** — the clash list is the one sitting he rules on.
+     His constraint is binding and goes at the top of the sheet:
+     *"merge them together in the best way possible without destroying
+     what I have now."* Nothing that works today is replaced to match a
+     picture; a merge that would remove a behaviour is a CLASH row, not
+     a decision.
+   - **WAITS: changing actual screens.** The safety net is not covering
+     them yet — **the older flows still point at buttons that moved in
+     the redesign and stop partway.** Re-aiming those IS the guard for
+     UI work, and it is already your next job. **Do not open a screen
+     change until a flow can walk day → week → profile end to end**,
+     because a UI change with a half-blind net is exactly how the
+     redesign broke those flows without anyone noticing the first time.
+   **Order: re-aim the flows and land the drift check, while the merge
+   plan is written in parallel.** They do not contend — one is reading,
+   one is code.
+
+3. **THE DRIFT CHECK IS NOW CHEAP AND IT IS THE THIRD ALARM SAM ASKED
+   FOR.** Two of three are guarded. The third — *does this world still
+   match what the generator produces for that profile today?* — is what
+   would have caught the missing 2km time **the day it went stale
+   rather than a month later**. The seeding channel executes now, so
+   the thing that blocked it is gone. **Ship it with the re-aimed
+   flows, not after.**
+
 1. **[TERMINAL, 2026-08-10 — THE RIG IS GREEN. SAM REBUILT, THE CHANNEL
    WORKS, AND IT FOUND THREE REAL DEFECTS ON ITS FIRST WORKING RUN.]**
    - **ONE FLOW GREEN END TO END: exit 0, 18 seconds.** Launch → entry
@@ -594,6 +720,46 @@ only from here; the seat clears this section at every tidy.
    completed run would check, and the queue below is deliberately empty
    so that stays true.
 
+
+## Processed 2026-08-10 (sixty-sixth pass) — THE WALK IS GREEN, THE CRASH IS THE HARNESS'S OWN TRAP, AND A DEV LOG BANNER HAD BLINDED THE TAB BAR
+
+**Full report: `docs/UI_SAFETY_NET_BOUNDARY_2026-08-10.md`.**
+
+- **THE NET IS GREEN.** `.maestro/golden/day-week-profile.yaml` walks seed → day
+  shape → week shape → back → profile → coach → program, exit 0, with a
+  screenshot at each surface into `artifacts/ui-walk/`. **Sam's precondition for
+  touching screens is met.**
+- **THE CRASH IS ATTRIBUTED, CATEGORY (b), WITH THE RECEIPT.** All three
+  `.ips` reports today fault in
+  `DevE2ELaunchDiagnosticReceiptOwner.captureAndConfigureIfRequested` /
+  `validatedMetroURL`, inside `didFinishLaunchingWithOptions`, **with no JS
+  frames at all** — a deliberate `fatalError` that only arms under `#if DEBUG`
+  when the runner supplies `e2eMetroUrl`. **A release athlete cannot reach it.**
+  Two of the three predate this session, so it is not from today's boot edits.
+  **Cause: `checkpoint-and-reload.yaml` relaunched with no `e2eLaunchPurpose`.
+  Fixed.**
+- **SIX DEFECTS, EACH BEHIND THE LAST.** The shape (one day drawn, not seven);
+  the tap (today's card centre is now the timeline, which navigates); **the
+  LogBox banner over the tab bar — the same wall §8 already recorded once, now
+  answered with one rule instead of a second remembered string**; a false
+  "legacy world" alarm on every healthy seeded boot (boot read the anchor's
+  MIRROR, not its home); the missing launch purpose; and **an OPEN one:
+  the seeded world keeps four game days in memory and one on disk.**
+- **THE ELEMENT-NAME CONTRACT IS BUILT AND MUTATION-PROVED.**
+  `npm run test:maestro-element-contract`. It reddens on the three ids design
+  rulings 7-8 deleted and greens when they are re-aimed. **Its two limits are
+  printed by the gate itself** — existence is not reachability, and a template
+  hole absorbs a word. **It lands RED on one declared orphan:**
+  `component-deletion-reload.yaml` taps a session-screen door the redesign
+  removed and nothing replaced — that one needs a ruling, not a patch.
+- **STILL RED, NAMED NOT CLAIMED:** `one-set-feedback` (un-investigated stale
+  id), `fixture-move` (dead `fixture-actions-open`), `reload-standard-week` and
+  the three `action-trace-v2` flows (blocked on the persistence question).
+- **NOT DONE:** the merge plan, the drift check, the 2km experiment, the
+  seed-consumer census, and ruling 4 against the coach architecture. **One
+  observation offered as a fact and not a conclusion: the standard seed now
+  photographs a Monday reading "Strength + Conditioning" — the day shape Sam
+  says 0 of 11 seeds reached — and that seed gained a real 2km time yesterday.**
 
 ## Previously (now processed)
 

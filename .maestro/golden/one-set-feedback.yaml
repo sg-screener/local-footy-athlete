@@ -10,8 +10,12 @@ tags:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: one-set-strength
-- tapOn:
-    id: "day-row-mon"
+# RE-AIMED, 2026-08-10. The `tapOn: day-row-mon` that used to open Monday's
+# card is gone: in the day-first shape the day the screen is about is ALREADY
+# open, so there is nothing to expand — and the tap is no longer harmless,
+# because the centre of that card is now the component timeline, whose tap
+# opens the session directly. The flow was tapping its way past the button it
+# then went looking for.
 - tapOn:
     id: "view-workout-button"
 - extendedWaitUntil:

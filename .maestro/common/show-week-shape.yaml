@@ -1,0 +1,32 @@
+appId: com.localfootyathlete.app
+name: Zoom the program screen out to the week shape
+---
+# WHY THIS FILE EXISTS, AND WHY IT IS NOT A `tapOn` PASTED INTO SIX FLOWS.
+#
+# The day-first redesign (Sam's direction 2026-08-01, built in HomeScreenV2)
+# gave the program screen TWO SHAPES of one week:
+#
+#   - `today`  — THE DEFAULT. A week strip at the top, and exactly ONE day
+#                drawn at full size: the day the screen is about.
+#   - `week`   — all seven days drawn at full size, the pre-redesign list.
+#
+# Every flow in this repo was written before that redesign, against the week
+# list. `day-row-tue` .. `day-row-sun` are not merely off-screen in the day
+# shape — the rows are NOT IN THE TREE, so no scroll and no timeout reaches
+# them. That is what "the golden flows are stale" means, concretely.
+#
+# THE SHAPE A FLOW NEEDS IS A PRECONDITION OF THE FLOW, so it is declared once
+# here and named at each call site. The alternative — six copies of the same
+# two commands — is six places for the next shape change to be half-applied,
+# and the copy that got missed would be the one nobody re-ran.
+#
+# THE WITNESS IS `day-row-tue`, NOT the toggle's own selected state. Tuesday's
+# full row exists in exactly ONE shape of this screen, so asserting it proves
+# the SCREEN changed. Asserting the toggle would only prove the tap landed —
+# a green cell for the instrument's own gesture, which is no evidence at all.
+- tapOn:
+    id: "program-view-week"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-tue"
+    timeout: 10000

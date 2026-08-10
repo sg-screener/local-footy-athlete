@@ -157,6 +157,7 @@
     "test:dev-e2e-default-installation": "sucrase-node src/__tests__/devE2EDefaultSeedInstallationTests.ts",
     "test:dev-e2e-scenario-session": "sucrase-node src/__tests__/devE2EScenarioSessionTests.ts",
     "test:dev-e2e-testids": "sucrase-node src/__tests__/devE2EStableTestIdTests.ts",
+    "test:maestro-element-contract": "sucrase-node src/__tests__/maestroElementContractTests.ts",
     "test:accessibility-contracts": "sucrase-node src/__tests__/accessibilityWrapperContractTests.ts",
     "test:explorer-ui-observation": "sucrase-node src/__tests__/explorerRenderedObservationUITests.ts",
     "test:explorer-lifecycle-ui": "sucrase-node src/__tests__/explorerLifecycleWitnessUITests.ts",

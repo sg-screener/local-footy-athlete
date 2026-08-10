@@ -8,8 +8,9 @@ tags:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: lower-body-deletion
-- tapOn:
-    id: "day-row-mon"
+# RE-AIMED, 2026-08-10 — see one-set-feedback.yaml. Today's card is already
+# open in the day-first shape, and tapping its centre now opens the session
+# instead of expanding the row.
 - tapOn:
     id: "view-workout-button"
 - tapOn:
@@ -31,8 +32,9 @@ tags:
     file: ../common/checkpoint-and-reload.yaml
     env:
       SEED_ID: lower-body-deletion
-- tapOn:
-    id: "day-row-mon"
+# RE-AIMED, 2026-08-10 — see one-set-feedback.yaml. Today's card is already
+# open in the day-first shape, and tapping its centre now opens the session
+# instead of expanding the row.
 - tapOn:
     id: "view-workout-button"
 - assertVisible:

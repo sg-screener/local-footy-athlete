@@ -9,6 +9,13 @@ tags:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: fixture-move
+# A GAME IS ON SATURDAY, AND SATURDAY IS NOT TODAY. The day-first shape draws
+# one day at full size; a flow that acts on any other day is a WEEK-shape flow
+# and now says so (2026-08-10). Moving a fixture is a week-level act anyway —
+# the athlete is choosing among all seven days — so this is the shape the
+# screen itself forces for the picker.
+- runFlow:
+    file: ../common/show-week-shape.yaml
 - scrollUntilVisible:
     element:
       id: "day-row-sat"

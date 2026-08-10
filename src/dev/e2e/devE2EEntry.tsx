@@ -92,6 +92,18 @@ function nativeExplorerLaunchDiagnosticInput(): {
 }
 
 /**
+ * WAS THIS APP LAUNCHED BY THE HARNESS? One question, one answer, one channel.
+ *
+ * The native bridge only carries a receipt when the launch supplied
+ * `e2eMetroUrl` — which only the runner does — so its presence IS the signal.
+ * Exported because App.tsx has to know at module scope, before a frame is
+ * drawn, whether a human or an instrument is holding the phone.
+ */
+export function devE2ELaunchRequested(): boolean {
+  return nativeExplorerLaunchDiagnosticInput().explorerLaunchRequested;
+}
+
+/**
  * THE SEED REQUESTED AT LAUNCH, through the native channel that has its own
  * name, its own validation and its own refusal (`DevE2ELaunchDiagnostic.swift`).
  *

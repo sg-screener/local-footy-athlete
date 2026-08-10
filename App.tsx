@@ -25,6 +25,31 @@ if (__DEV__) {
   // after the receipt is restored and checked against the active checkpoint.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const devEntry = require('./src/dev/e2e/devE2EEntry');
+  // ── THE SAME WALL, TWICE — SO THE STRING LIST STOPS HERE (§8, 2026-08-10) ──
+  //
+  // The line above suppresses ONE message by text, for one reason: a LogBox
+  // banner sits in the bottom strip, that strip is the tab bar, and Maestro
+  // taps element centres — so the banner eats every tab tap and the failure
+  // reads as "the Profile tab is broken".
+  //
+  // The first working run-through since 18 July hit that wall again, from a
+  // different message: a `logger.error` at boot raised the red LogBox badge
+  // over the tab bar, the walk's first `tapOn: tab-profile` opened the log
+  // viewer instead, and three surfaces went unvisited. The comment above even
+  // promised it — "Errors still surface" — and that promise is what blinded
+  // the instrument.
+  //
+  // Adding a second string would be attempt three at the same wall. The rule
+  // is one line instead: WHEN THE HARNESS IS HOLDING THE PHONE, NO LOG DRAWS
+  // ANYTHING. It covers every message this app has not written yet, which a
+  // list of remembered strings never can.
+  //
+  // NOTHING IS SILENCED, ONLY UNDRAWN. `ignoreAllLogs` suppresses the OVERLAY;
+  // every `console.error` and `logger.warn` still reaches Metro, still reaches
+  // the device log, and the seed's own failure surface (`e2e-seed-error`) is
+  // an app view, not a LogBox one, so the runner's error assertions are
+  // untouched. A human running this app in dev sees exactly what they saw.
+  if (devEntry.devE2ELaunchRequested()) LogBox.ignoreAllLogs();
   DevE2EStatusMarkers = devEntry.DevE2EStatusMarkers;
   prepareDevE2EAppLaunch = devEntry.prepareDevE2EAppLaunch;
   installDevE2EEntry = () => devEntry.installDevE2EEntry({ isDev: true });
