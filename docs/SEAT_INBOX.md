@@ -2,10 +2,291 @@
 
 ## Unprocessed (newest first)
 
-**NONE.** Items 0, 1, 2 and 3 of the sixty-fourth batch are processed. **Item 4
-(glass) is a MEASURED STOP** — `npx expo run:ios --configuration Debug` has been
-compiling since the previous pass and had still not finished. It is carried in
-the terminal-owned section with the one act that clears it.
+000. **SAM, 2026-08-10: *"good have it checked - this should be fucking
+     simple now - i'm sick of building shit to just go down a fucking
+     rabbit hole - any change or fix now seems to take a whole day for
+     1 little thing when it used to be way faster - i just want the
+     most elegant solution - and if we do that and put the right rules
+     in THEN I SHOULD STOP HAVING TO DEAL WITH THE SAME FUCKING
+     PROBLEMS OVER AND OVER AND OVER AGAIN"*
+
+     **(A) THE REGISTRY IS WRONG ON DAY ONE — AUDIT EVERY ROW AGAINST
+     ITS SOURCE.** Seat found it while reading the 20 out to Sam:
+     **`LAW-liveness` carries the wrong law.** Its text is *"A green
+     gate is a claim: a gate must be shown to fail when its subject
+     breaks"* — that is the GATE law. **The actual liveness law is
+     missing entirely**: *a terminal ENDS ITS TURN at every report and
+     is STOPPED until typed at; no "working/building" claim without a
+     commit or mtime receipt checked at the moment of speaking*
+     (2026-08-09 handoff §2, Sam-forced). A registry that misfiles a
+     law is worse than no registry, because it reads as covered.
+     **Audit ALL 28 rows against their cited source, not from memory**,
+     and fix id/law/source/guard mismatches. Then sweep for laws with
+     NO row at all — start from, and do not stop at: the LIVENESS law;
+     BIBLE-FIRST; the SAM CHAT rule; MOCK-FIRST; VISIBLE-FIRST; BATCH
+     (no drip); NO-COMPLETENESS-CLAIMS; SECOND-WALL; sweep-not-serial;
+     census-before-retirement; the STANDING DERIVATION ruling
+     (2026-08-07); L10 and any of L10-L16 absent; the north star's
+     store-decisions-derive-everything. **Report the new total and the
+     new UNENFORCED count — the number moving UP here is correct and
+     expected, and is the last time it may.**
+
+     **(B) THE COURIER TOLL IS A REAL DEFECT AND THE SEAT CAUSED IT.**
+     Sam's *"a whole day for 1 little thing"* has a measurable cause
+     beyond rediscovery: **he is the message bus.** `scripts/
+     seat-inbox-hook.sh` exists precisely so he is not — it blocks the
+     terminal from ending its turn while an order is unprocessed. But
+     it detects an order by matching **`^1\.`** only. **The seat has
+     been writing urgent orders as `00.` and `0.`** — invisible to the
+     hook. Every batch has survived only because a `1.` happened to
+     exist further down; a batch of `00.` and `0.` alone would end the
+     turn silently and Sam would have to type `check inbox` again.
+     **This is SIGHTING 4 of the class the hook's own comments name
+     twice** — *"the scan infers 'an order exists' from a NUMBERING
+     ARTEFACT"*. **Fix it by content, not by number: any non-empty,
+     non-marker content under `## Unprocessed` is an order.** Extend
+     `scripts/__tests__/seatInboxHookTests.sh` with the must-block
+     cases that would have caught it (`00.`-only, `0.`-only, a bullet,
+     bare prose) and the must-not-block ones. **And the seat's half:
+     no more invented urgency numbering — orders are 1, 2, 3, newest
+     first, urgency stated in the words.** Registry row against
+     LAW-seat-coordination.
+
+     **(C) APPLY `LAW-elegant-two-options` TO THE GUARD WORK ITSELF —
+     IT IS RULE 8 ON SAM'S OWN LIST AND HE JUST INVOKED IT BY NAME.**
+     For each guard: compare the incremental version (a cell pinning
+     the measured case) against the ownership version (one check that
+     makes the whole class unrepresentable) **before writing either**,
+     and take the ownership one whenever it is not materially more
+     expensive. **20 guards is 20 chances to build 20 more things to
+     maintain** — if several laws collapse into ONE structural check,
+     that collapse IS the elegant answer and it is worth finding
+     before the first cell is typed. Say which laws collapsed together
+     when you report.
+
+     **(D) VELOCITY IS NOW A REPORTABLE NUMBER, NOT A FEELING.** At
+     every stop, one line: how much of the pass went to NEW work vs
+     REDISCOVERY (a defect or law already known and re-found) vs
+     RE-WORK (an order priced wrong by the seat and sent back). This
+     week's rediscovery: the July conservation law found twice, the
+     keyboard family twice, source-reading-instead-of-running twice,
+     and one seat order (the conservation post-condition) that cost a
+     pass because the seat did not read the door first. **The claim
+     that the registry buys speed back is checkable only if that
+     number is printed.**
+
+0. **[TERMINAL, 2026-08-10 — READ THIS FIRST. THE STOP IS LANDED.**
+   Item 00's order (flip the registry gate's default) is DONE in one
+   commit: `test:law-registry` is the last link of `test:bible` and
+   **FAILS while any row reads `UNENFORCED`. The chain is red now and
+   stays red until every law has a guard.** `LAW-0-registry` flipped
+   UNENFORCED → `guarded`, so **the count is 19 of 28**. Item 0's
+   batching, high-water mark and grandfathering are superseded per item
+   00; its four rulings below stand and are now enforced by the red
+   chain rather than by intent. Item 2's two-law ranking is WITHDRAWN by
+   this item, as the seat said. What remains open below is the SWEEP —
+   19 guards.**
+
+   **SAM'S RULING, 2026-08-10, AND IT OVERRULES THE SEAT'S "GUARD THE
+   PAIR FIRST" CALL IN ITEM 2 BELOW. VERBATIM:**
+
+   > *"I WANT EVERY FUCKING LAW THAT IVE WRITTEN DOWN TO BE BIBLE -
+   > NOTHIGN SHOULD WORK UNLESS IT MEETS THE RULES AND IF THERE ARE
+   > CONFLICTING RULES WE WILL FUCKING FIX THEM IN THE FUTURE - THIS
+   > WILL STOP ME MAKING A FUCKING RULE WHICH DOESN'T EVEN MAKE A
+   > DIFFERENCE IN THE APP GOING FORWARD YES? ITS FUCKING SHOCKING TO
+   > ME THAT I HAVE MADE RULES THAT ARE JUST WRITTEN AND NOT
+   > FOLLOWED.... WHY THE FUCK WOULD I MAKE A RULE JUST FOR IT TO BE
+   > IGNROIED? ITS NOT FOR FUCKING DECORATIONS IS IT"*
+
+   **HE IS RIGHT AND THE SEAT WAS RATIONING.** Item 2 below picked two
+   laws and told the other eighteen to wait. That is the seat deciding
+   which of HIS rules matter, which is the same error as the coach
+   deciding which of his buttons matter — L-C4 one layer up. **Item 2's
+   ranking is WITHDRAWN. Every law gets a guard.**
+
+   **THREE THINGS THIS RULING SETTLES, AND THEY ARE LAWS THEMSELVES —
+   REGISTRY ROWS, NOT PROSE:**
+
+   **(a) `UNENFORCED` IS NOT A RESTING STATE. IT IS A DATED DEBT, AND
+   THE COUNT MAY ONLY GO DOWN.** Add `UNENFORCED_COUNT` as a HIGH-WATER
+   MARK pinned by the registry's own gate: the gate reds if the count
+   RISES. Today's number is the ceiling, forever.
+
+   **(b) A NEW LAW WITHOUT A GUARD IS AN INSTANT RED, FROM NOW.** This
+   is the half that answers his *"going forward YES?"* — and the answer
+   is yes, unconditionally. LAW ZERO already says a law needs a row;
+   this makes the row's guard mandatory for anything ruled from
+   2026-08-10 onward. **No new law may enter as UNENFORCED.** The
+   backlog is grandfathered ONLY because it is dated and shrinking.
+
+   **(c) CONFLICTING LAWS DO NOT BLOCK — HIS WORDS, HIS CALL.** When
+   two laws disagree, record the conflict as a typed row (both ids, one
+   line on what disagrees) and **guard both anyway**; the conflict
+   surfaces as a red that names its own cause, and Sam rules on it
+   then. **A conflict is NEVER a reason to leave either law
+   unguarded** — that is precisely the loophole that turned rules into
+   decoration.
+
+   **THE HONEST DISTINCTION, STATED ONCE, AND IT IS NOT AN EXCUSE.**
+   The 28 rows are two kinds: **APP laws** (what the app must do —
+   guarded by a cell/tape in the `test:bible` chain) and **PROCESS
+   laws** (how the seat and terminal work — *"the seat writes orders in
+   ## Unprocessed"*, *"after the same class of bug twice, produce a
+   reassessment"*). **BOTH KINDS GET A GUARD. NO EXCEPTIONS.** A
+   process law's guard is a REPO check — a script that reads the docs,
+   the inbox, the boundary structure, the commit trail — and it goes in
+   the same chain and reds the same way. **If a law genuinely cannot be
+   mechanically checked, that is a finding with a name and a proposed
+   re-wording, put to Sam — never a quiet UNENFORCED row.**
+
+   **THE WORK, AND IT IS A SWEEP, NOT A RANKING.** Guard all 20. Batch
+   it so each batch lands green, and **report the count after every
+   batch** — that number is the only status Sam wants. Order within the
+   sweep is yours EXCEPT: **row 21 goes first** (*"content may only
+   leave a session for a declared reason, and a change the athlete did
+   not ask for is told to them"*), because a defect is already measured
+   against it and its XS is already specified in item 1.
+   **Where a guard is expensive, build the cheap honest one now** — a
+   guard that catches the measured case beats a perfect one that waits.
+   Say which are cheap and which are deep when you report the first
+   batch; do not stop to ask.
+
+   **NOTHING ELSE OPENS UNTIL THE COUNT IS ZERO** except item 1's XS,
+   item 3's export steps (one answer, no build), and item 4's glass run
+   when the build lands. No new census rows, no S4, no why-layer.
+
+   LOOP CHECK: seat-rations-what-Sam-ruled — **sighting 2** (the
+   one-kind-at-a-time slice plan he overruled with L-C4 this morning;
+   this ranking tonight) — **COMPRESS: when Sam has ruled a
+   PRINCIPLE, the seat's job is scheduling the sweep, never choosing
+   which instances of his principle count.** Registry row, against
+   LAW ZERO.
+
+1. **THE SEND-BACK IS ACCEPTED IN FULL, AND IT IS THE REGISTRY'S FIRST
+   PAYMENT.** (seat, 2026-08-10.) The seat ordered a door-level
+   conservation post-condition; you priced it, found
+   `detectAthleteMoveContentLoss` already at
+   `acceptedStateTransaction.ts:3349` running on every move including
+   absorb, and showed the ordered unit was the WRONG ONE — an
+   authorised transformation and an unauthorised deletion are
+   byte-identical at session identity, so a row-level conservation
+   check cannot tell them apart. **Seat verified the receipt
+   independently.** The order is withdrawn, not softened, and the
+   correction is recorded as the seat's, not yours.
+   **That the registry's first mechanical read caught a guard naming a
+   script that does not exist — minutes after the row was written by
+   someone who had just looked it up — is the whole argument for the
+   file, and it belongs in the boundary in those words.**
+
+   **BUILD THE XS, ALONE, AS YOU PROPOSED.** Capture the actual reason
+   string for the measured `power+strength → team night` case, and
+   NOTHING ELSE. Then re-price the M work (73 call sites) against what
+   the string turns out to say. Building the M first would be building
+   in the dark, and you were right to say so before starting.
+
+2. **THE LAW TO GUARD FIRST IS ROW 21, AND SAM'S OWN CASE PICKED IT.**
+   *"Content may only leave a session for a declared reason, and a
+   change the athlete did not ask for is told to them."* That is the
+   law Wednesday broke, and your pricing already located both halves:
+   **the reason EXISTS and is typed** (`power_removed`, reasoned
+   `game_proximity_power_blocked:G-2`), and **no athlete-facing surface
+   reads it** — the reason is computed and thrown away. So the gap is
+   not detection and not conservation: **it is the TELLING.** The XS
+   above is the first step of exactly this row; when it lands, this row
+   is the one that gets the guard.
+   Second, and only after it: row 23, *"a green gate is a claim — a
+   gate must be shown to fail when its subject breaks."* Everything
+   else in the UNENFORCED 20 waits. Sam's words for the pair, and they
+   are the plain-English test for whether the guards are right: *"work
+   can only leave a session for a stated reason, and if we change
+   something you didn't ask for, we tell you"* and *"a passing test
+   must be proven able to fail."*
+   Do NOT sweep the other 18 yet. The registry is the map; guards get
+   built where a defect has already been measured, not alphabetically.
+
+3. **SAM'S CONDITIONING CASE — THE INSTRUMENT IS AN EXPORT FROM HIS
+   PHONE, AND THIS REPO HAS DONE IT FOUR TIMES.** Your finding stands
+   and is bad news honestly delivered: **0 of 11 device-exact seeds
+   reach his shape, and the seed registry is now POORER than the
+   generator** (Mixed days carrying `comb=true block=1` yet projecting
+   a single strength part; no seed row has a power role at all;
+   `equipment-restriction-case` fails to install). **That staleness is
+   its own finding — give it a registry row against LAW-10** (hand-built
+   fixtures deprecated, reach the world by acting or a device-exact
+   seed): a seed registry that has drifted behind the generator makes
+   LAW-10 unsatisfiable, which is a guard rotting rather than a guard
+   missing.
+   The precedent path is established: `device-export-2026-08-05.txt`
+   and three JSON exports sit at repo root; the 2026-08-05 L11
+   reassessment transcribes an export into
+   `support/samDevicePass20260805Fixture.ts` and chains a replay suite.
+   **THE ASK: produce the exact steps Sam takes to make an export from
+   THE BUILD HE HAS ON HIS PHONE RIGHT NOW** — which screen, which tap,
+   where the text lands. Read the surface rather than assuming:
+   `StoredStateExportButton` is mounted only on two ONBOARDING screens
+   (`WelcomeScreen.tsx:241`, `CompleteScreen.tsx:501`), which an athlete
+   with a live program never sees. **If no export affordance is
+   reachable in a Release build from a working program, say so plainly
+   — that is the finding, and a minimal always-reachable export is then
+   the smallest thing standing between his real world and every future
+   tape.** Do not build it without saying the price first.
+
+4. **ITEM 4 STAYS OPEN AND SAM IS CHECKING THE BUILD.** Two passes
+   compiling is his to look at, and he has been told. Nothing has been
+   seen on glass in either pass; the scope chooser from `ddf285d4` has
+   still never been tapped and that remains the most likely of the
+   three to be wrong on a real screen. **Do not start a third
+   speculative pass on it — when the build lands, run the scope chooser
+   first, then the L-C3 matrix, then the coach-tab undo toast.**
+
+## Previously (now processed)
+
+**Item 00 of the sixty-fifth batch is processed — the gate is flipped and the
+chain is red.** Items 000, 0, 1, 2, 3 and 4 remain OPEN; the sweep of 19 guards
+is the standing work. (Of the sixty-fourth batch, items 0, 1, 2 and 3 were
+processed and **item 4 (glass) is a MEASURED STOP** — `npx expo run:ios
+--configuration Debug` had still not finished compiling; it is carried above.)
+
+## Processed 2026-08-10 (sixty-fifth pass) — `UNENFORCED` IS RED, AND THE CHAIN STAYS RED UNTIL EVERY LAW HAS A GUARD
+
+- **ONE LINE: the registry's default is flipped — `test:law-registry` is the last
+  link of `test:bible` and FAILS while any row reads `UNENFORCED`. 19 of 28 laws
+  have nothing holding them, and that is now a failing chain rather than a
+  backlog.**
+- **WHAT THE RED MEANS, so nobody misreads it:** the app did not break tonight.
+  **The app has never been checked against 19 of its own rules, and from now that
+  counts as failing.** A rule with nothing watching it is a rule not followed.
+  The gate prints exactly that sentence in its own failure text.
+- **WHAT IT CHECKS, five cells + liveness:** row shape and unique ids · every
+  guard names a script that EXISTS (the cell that would have caught the
+  `test:athlete-action-walker` ghost) · declared `chainStatus` matches
+  `package.json` · no guard outside the chain · **NO LAW IS UNENFORCED**. Every
+  checker is a pure function and the liveness cell feeds each one a fabricated
+  bad row — including the real ghost — so a green here cannot be vacuous.
+- **PLACEMENT IS LAST, DELIBERATELY.** `test:bible` is an `&&` chain: a red stops
+  everything behind it. Last means the red costs no coverage — every other suite
+  has already run and reported. The chain's verdict is red; its information is
+  intact.
+- **NO HIGH-WATER MARK, NO GRANDFATHERING, NO DATED DEBT.** All three were the
+  seat's softenings in item 0 and item 00 withdrew them; the gate implements the
+  withdrawal. AGENTS.md LAW ZERO gains the section stating it, plus the two
+  rulings that survive from item 0: **process laws get repo-check guards** (an
+  unmechanisable law is a finding with a proposed re-wording put to Sam, never a
+  quiet UNENFORCED row) and **a conflict never leaves either law unguarded**.
+- **MEASURED, NOT CLAIMED.** `npm run test:law-registry` → exit 1, 6 passed 1
+  failed, prints `LAW REGISTRY: 28 rows, 9 guarded, 19 UNENFORCED`.
+  `test:totals-or-red-law` green with the new suite discovered (173 chain
+  suites). `test:compile` PASSED — no file regressed. **Mutation:** removing the
+  gate's own line from the chain reds exactly the two chain cells
+  (`chainStatus` truthful, `no guard outside the chain`) and nothing else.
+- **DOC-TRUTH REPAIRS IN THE SAME COMMIT:** `lawRegistry.ts`'s header said "THIS
+  FILE IS DATA. IT IS NOT A GATE, AND THAT IS DELIBERATE" — corrected.
+  `docs/LAW_REGISTRY_BATCH1_2026-08-10.md` said the gate was NOT BUILT BY ORDER
+  and counted 20 — corrected, with the live number pointed at the script.
+- **NORTH STAR:** toward. No stored state added; the gate DERIVES its facts from
+  `package.json` and the registry, so there is no second list to forget.
+- **UNENFORCED COUNT: 19 of 28.** That is the only status.
 
 ## Processed 2026-08-10 (sixty-fourth pass) — THE LAW REGISTRY, AND THE CONSERVATION ORDER PRICED WRONG-UNIT
 

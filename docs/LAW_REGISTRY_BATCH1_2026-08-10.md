@@ -1,11 +1,14 @@
 # LAW REGISTRY — BATCH 1, THE HONEST MAP (2026-08-10)
 
 **Sam asked the root question and the answer is a number: of 28 laws in Batch 1,
-20 have NOTHING holding them.**
+20 have NOTHING holding them — 19 after the gate below took `LAW-0-registry`.**
 
-*(Updated the same day: pricing the conservation order moved two rows from
-UNENFORCED to `guarded` and added one new correctly-aimed row. The registry
-corrected itself within hours of existing — see rows 1 and 2 below.)*
+*(Updated the same day, twice: pricing the conservation order moved two rows from
+UNENFORCED to `guarded` and added one new correctly-aimed row; then Sam's
+stop-the-line ruling built `test:law-registry`, which flipped `LAW-0-registry`
+and **made `UNENFORCED` a RED rather than a resting state**. The counts below are
+as-measured at first publication; the live number is whatever
+`npm run test:law-registry` prints.)*
 
 > *"how do we make sure all the laws we have written in the past are held up now?
 > it feels like i constantly give a fix and a law or whatever and then believe you
@@ -18,8 +21,8 @@ He is right. This is the measurement, not a promise.
 | | count |
 |---|---|
 | Batch 1 rows | **28** |
-| `guarded` (named check, in the chain) | **8** |
-| **`UNENFORCED`** | **20** |
+| `guarded` (named check, in the chain) | **8** → **9** with the gate |
+| **`UNENFORCED`** | **20** → **19** with the gate |
 | guards naming a script outside `test:bible` | 0 |
 | guards naming a script that does not exist | **1, caught and fixed** |
 
@@ -101,9 +104,18 @@ that takes effect immediately: *no law enters a boundary, ruling doc, source
 comment or the inbox without a registry row and a guard, or an explicit
 UNENFORCED row with a reason.* It subsumes the claim-in-prose-only rule.
 
-**NOT BUILT, BY ORDER:** the gate over the registry, and any guard for any
-UNENFORCED row. The seat: *"the first output is the honest map, because a map with
-UNENFORCED rows on it is worth more than a guard built in the dark."*
+**BUILT LATER THE SAME DAY, ON SAM'S STOP-THE-LINE RULING —** *"WHY CAN'T YOU
+JUST MAKE SURE EVERY FUCKING RULE IS FOLLOWED FROM RIGHT NOW"*: the gate over the
+registry, `test:law-registry`, last link in the `test:bible` chain. **It FAILS
+while any row reads `UNENFORCED`, so the chain is red and stays red until every
+law has a guard.** `LAW-0-registry` moved UNENFORCED → `guarded` accordingly, so
+the count on this page reads **19 of 28** from that commit onward. See
+`src/__tests__/lawRegistryGateTests.ts`.
+
+**STILL NOT BUILT:** a guard for any of the remaining 19. The seat's *"the first
+output is the honest map, because a map with UNENFORCED rows on it is worth more
+than a guard built in the dark"* held for the map; it does not survive as a
+reason to leave the map ungated.
 
 **NOT HARVESTED:** 131 named ruling docs, 15 audits, 692 markers across 193
 source files. **None of that is covered by this batch and none of it should be
@@ -118,7 +130,8 @@ real row is `LAW-attributed-content-change`. The revised ask, in order:
 
 1. **XS, and alone:** capture the actual `power_removed` reason for the measured
    case. It may re-aim everything below it.
-2. **`LAW-0-registry`'s own gate** — until the registry is enforced it is another
-   document that can rot, which is the disease it was built to cure.
+2. ~~**`LAW-0-registry`'s own gate**~~ — **DONE, and overtaken.** Sam ruled the
+   gate is not step 2 of a queue but a STOP: `UNENFORCED` is red from now, and
+   nothing but guards, guard-caught fixes and measurement lands while it is.
 3. Only then the M-sized work of threading canonicalisation actions out of the
    mutation path (73 call sites).

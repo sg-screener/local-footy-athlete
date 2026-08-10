@@ -28,8 +28,10 @@ laws what that did for copy.
 ### The rule, effective immediately
 
 > **No law enters a boundary report, a ruling doc, a source comment, or the seat
-> inbox without a registry row and a guard — or an explicit `UNENFORCED` row
-> giving the reason.**
+> inbox without a registry row and a guard.**
+
+(`UNENFORCED` remains a representable row state so the existing backlog can be
+*named*. It is not a way to enter — see the red below.)
 
 Two states, never a third:
 
@@ -40,6 +42,47 @@ A law with a confident sentence and nothing holding it is the state that produce
 this week, and it is **unrepresentable** from here. A guard naming a script that
 is not in `test:bible` is not a guard — a check outside the chain is a check
 nobody runs.
+
+### `UNENFORCED` IS RED. IT IS NOT A RESTING STATE, AND IT IS NOT A BACKLOG.
+
+**Sam, 2026-08-10, verbatim:** *"WHY CAN'T YOU JUST MAKE SURE EVERY FUCKING RULE
+IS FOLLOWED FROM RIGHT NOW"*.
+
+`test:law-registry` (`src/__tests__/lawRegistryGateTests.ts`) is the last link in
+the `test:bible` chain and **FAILS while any registry row reads `UNENFORCED`**.
+The chain is red and stays red until every law has a guard.
+
+**What the red means, and nobody may misread it:** it does NOT mean the app broke
+today. It means **the app has never been checked against those rules, and from
+now that counts as failing.** A rule with nothing watching it is a rule not
+followed.
+
+Three things this settles:
+
+- **No new law may enter as `UNENFORCED`.** A law ruled from 2026-08-10 onward
+  arrives with its guard or it does not arrive. There is no high-water mark, no
+  grandfathering and no dated debt — those were softenings and they are withdrawn.
+- **PROCESS laws get guards too.** A process law's guard is a REPO check — a
+  script reading the docs, the inbox, the commit trail — in the same chain,
+  redding the same way. If a law genuinely cannot be mechanically checked, that
+  is a **finding with a proposed re-wording put to Sam**, never a quiet
+  `UNENFORCED` row.
+- **A conflict between two laws never leaves either unguarded.** Record the
+  conflict as a typed row naming both ids and **guard both anyway**; the clash
+  then surfaces as a red that names its own cause, and Sam rules on it.
+
+**While the chain is red, the only work that may land is:** a guard for a law, a
+fix for a law a new guard proves the app is breaking, and measurement (glass
+runs, priced answers). Not features, not census rows, not a coach ability.
+**Every first-run guard failure is reported as a finding the moment it appears —
+never fixed quietly, never deferred into a list.** The remaining `UNENFORCED`
+count is the only status.
+
+**LOOP CHECK: `seat-rations-what-Sam-ruled` — sighting 3 in one day** (the
+per-kind coach slice plan he killed with L-C4; a two-law ranking; a countdown of
+batches). **COMPRESSION: when Sam rules a PRINCIPLE, the seat may schedule the
+WORK but may never schedule the PRINCIPLE. The default flips on the day he rules,
+and the backlog is what turns red, not what waits.**
 
 **This SUBSUMES the claim-in-prose-only rule below** (*"A behaviour claim the
 owner can read is held by a CELL, or written OPEN-UNKNOWN"*). Same disease, wider

@@ -30,17 +30,23 @@
  * **`chainStatus: 'outside_chain'`** and counts as unguarded for reporting: a
  * check nobody runs is not a check.
  *
- * ## THIS FILE IS DATA. IT IS NOT A GATE, AND THAT IS DELIBERATE.
+ * ## THIS FILE IS GATED, AND `UNENFORCED` IS RED.
  *
- * The seat's order for this pass: *"Answer per law with a receipt, and do not
- * write a guard yet — the first output is the honest map, because a map with
- * UNENFORCED rows on it is worth more than a guard built in the dark."*
+ * **CORRECTED 2026-08-10.** This header used to say the file was data only and
+ * that the gate over it was deliberately not built. That was true for one pass
+ * and is now false. `test:law-registry`
+ * (`src/__tests__/lawRegistryGateTests.ts`) is in the `test:bible` chain and
+ * **FAILS while any row below reads `UNENFORCED`**.
  *
- * **The gate over this registry is NOT built.** When it is, it reds when a law
- * has neither state, when a named guard does not exist, or when a guard names a
- * script outside `test:bible`. Until then this registry is a measurement, and
- * `UNENFORCED_COUNT` below is the number Sam steers by — the same way the parity
- * census's NO column is what he picks build order from.
+ * **Sam, 2026-08-10, verbatim:** *"WHY CAN'T YOU JUST MAKE SURE EVERY FUCKING
+ * RULE IS FOLLOWED FROM RIGHT NOW"*. The answer is that we can, and treating the
+ * UNENFORCED rows as a backlog with a shrinking count was the seat scheduling a
+ * principle he had already ruled. **The red does not mean the app broke: it
+ * means the app has never been checked against these rules, and from now that
+ * counts as failing.** A rule with nothing watching it is a rule not followed.
+ *
+ * There is no high-water mark, no grandfathering and no dated debt. The only
+ * way a row clears is a real guard, in the chain, named here.
  *
  * ## SCOPE — BATCH 1 ONLY, AND THE REST IS NAMED RATHER THAN IMPLIED
  *
@@ -90,9 +96,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'No law is recorded anywhere without a registry row and a guard, or an explicit UNENFORCED row with a reason.',
     ruledAt: 'AGENTS.md "LAW ZERO"; Sam 2026-08-10',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A chain gate over this file: red when a row has no state, when a named guard does not exist as a script, or when a guard is outside test:bible.',
-      receipt: 'This file is data only; no test:* script reads it (grep lawRegistry over src/__tests__ returns nothing).',
+      state: 'guarded',
+      by: 'test:law-registry',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-10 on Sam\'s stop-the-line ruling. src/__tests__/lawRegistryGateTests.ts reds when a row is malformed, when a named guard is not a real script, when a chainStatus disagrees with package.json, when a guard sits outside test:bible, and — the stop cell — when ANY row reads UNENFORCED. Its liveness cell feeds each checker a fabricated bad row, including the real test:athlete-action-walker ghost the registry caught on its first read.',
     },
   },
   {

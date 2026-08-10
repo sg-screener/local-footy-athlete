@@ -1,0 +1,296 @@
+/**
+ * THE LAW REGISTRY GATE — `UNENFORCED` IS RED, FROM NOW.
+ *
+ * ## WHAT THIS SUITE MEANS WHEN IT FAILS, AND NOBODY SHOULD MISREAD IT
+ *
+ * **Sam, 2026-08-10, verbatim:** *"WHY CAN'T YOU JUST MAKE SURE EVERY FUCKING
+ * RULE IS FOLLOWED FROM RIGHT NOW"*.
+ *
+ * A red here does **NOT** mean the app broke tonight. It means **the app has
+ * never been checked against N of its own rules, and from now that counts as
+ * failing.** A rule with nothing watching it is a rule not followed. That is
+ * the whole semantics of this gate, and it is Sam's ruling in one line.
+ *
+ * The registry (`src/rules/lawRegistry.ts`) shipped as DATA with 20 of 27 rows
+ * `UNENFORCED` and no gate over it. That made `UNENFORCED` a resting state — a
+ * backlog with a shrinking count, which is a schedule, and a schedule is the
+ * seat rationing a principle Sam had already ruled. **The default is flipped
+ * here: the chain is red and stays red until every law has a guard.** No
+ * high-water mark, no grandfathering, no dated debt; all three were the seat's
+ * softenings and all three are withdrawn.
+ *
+ * ## WHAT IT CHECKS
+ *
+ * 1. Every row is well-formed and its id is unique.
+ * 2. Every `guarded` row names a script that EXISTS in `package.json`. (The
+ *    registry's first mechanical read already caught a row naming
+ *    `test:athlete-action-walker`, which does not exist. That is this cell.)
+ * 3. Every `guarded` row's declared `chainStatus` matches `package.json`
+ *    reality — a row cannot claim `in_chain` for a script the chain never runs.
+ * 4. No guard sits outside `test:bible`. A check nobody runs is not a check.
+ * 5. **NO ROW IS `UNENFORCED`.** The stop cell.
+ *
+ * ## PLACEMENT — LAST IN THE CHAIN, DELIBERATELY
+ *
+ * `test:bible` is an `&&` chain: the first red stops everything behind it. This
+ * suite runs LAST so that a red here costs no coverage — every other suite has
+ * already run and reported. The chain's verdict is red; its information is
+ * intact.
+ *
+ * ## LIVENESS (`LAW-liveness`: a green gate is a claim)
+ *
+ * Every checker below is a pure function over rows, and the final cell feeds
+ * each one a FABRICATED bad row and asserts it is caught. Without that, this
+ * suite could go green by reading nothing at all.
+ *
+ * Run: npm run test:law-registry
+ */
+
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
+armTotalsOrRed();
+
+import fs from 'fs';
+import path from 'path';
+
+import { LAW_REGISTRY, type LawRow } from '../rules/lawRegistry';
+
+let passed = 0;
+const failures: string[] = [];
+
+function assert(condition: unknown, detail: string): asserts condition {
+  if (!condition) throw new Error(detail);
+}
+
+function run(name: string, body: () => void): void {
+  try {
+    body();
+    passed += 1;
+    console.log(`  PASS ${name}`);
+  } catch (error) {
+    failures.push(name);
+    console.error(`  FAIL ${name}\n      ${error instanceof Error ? error.message : error}`);
+  }
+}
+
+const repoRoot = path.resolve(__dirname, '..', '..');
+
+// ── THE FACTS THE GATE READS ───────────────────────────────────────────────
+// Derived from package.json, never transcribed. A second list is a second
+// thing to forget, which is the disease the registry exists to cure.
+
+interface ChainFacts {
+  /** Every `test:*` script that exists. */
+  readonly scripts: ReadonlySet<string>;
+  /** Every `test:*` script the `test:bible` chain actually invokes. */
+  readonly inChain: ReadonlySet<string>;
+}
+
+function readChainFacts(): ChainFacts {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'),
+  ) as { scripts: Record<string, string> };
+  const chain = pkg.scripts['test:bible'];
+  assert(chain, 'test:bible is gone from package.json — the chain this gate reports against');
+  const inChain = new Set<string>([...chain.matchAll(/npm run (test:[a-zA-Z0-9:-]+)/g)]
+    .map((match) => match[1]));
+  // `test:bible` names the chain itself; a guard that IS the chain is in it.
+  inChain.add('test:bible');
+  return { scripts: new Set(Object.keys(pkg.scripts)), inChain };
+}
+
+/**
+ * The script a guard names. A `by` may qualify itself — `test:coach-tab-slice3
+ * section [8]`, `test:bible (bibleConformance/…)` — and the leading token is
+ * the runnable thing.
+ */
+function guardScript(by: string): string {
+  const match = /^(test:[a-zA-Z0-9:-]+)/.exec(by.trim());
+  return match ? match[1] : '';
+}
+
+// ── THE CHECKERS. PURE, SO THE LIVENESS CELL CAN FEED THEM MUTANTS. ────────
+
+/** Rows missing an id, a law, a ruling site, or a complete guard. */
+function malformedRows(rows: readonly LawRow[]): string[] {
+  const seen = new Set<string>();
+  const bad: string[] = [];
+  for (const row of rows) {
+    const id = row.id || '(no id)';
+    if (!row.id) bad.push(`${id}: no id`);
+    else if (seen.has(row.id)) bad.push(`${id}: duplicate id — rows are retired, never reused`);
+    else seen.add(row.id);
+    if (!row.law) bad.push(`${id}: no law sentence`);
+    if (!row.ruledAt) bad.push(`${id}: no ruling site`);
+    // Read LOOSELY on purpose: the gate must be able to see a state that the
+    // type says cannot exist, because a hand-edited row is exactly how a third
+    // state would arrive.
+    const guard = row.guard as {
+      state?: string; by?: string; chainStatus?: string; receipt?: string; wouldTake?: string;
+    } | undefined;
+    if (!guard) {
+      bad.push(`${id}: no guard — there is no third state`);
+      continue;
+    }
+    if (guard.state === 'guarded') {
+      if (!guard.by) bad.push(`${id}: guarded by nothing named`);
+      if (guard.chainStatus !== 'in_chain' && guard.chainStatus !== 'outside_chain') {
+        bad.push(`${id}: guarded with no chainStatus`);
+      }
+      if (!guard.receipt) bad.push(`${id}: guarded with no receipt — a row without one is a belief`);
+    } else if (guard.state === 'UNENFORCED') {
+      if (!guard.wouldTake) bad.push(`${id}: UNENFORCED with no line on what a guard would take`);
+      if (!guard.receipt) bad.push(`${id}: UNENFORCED with no receipt for the absence`);
+    } else {
+      bad.push(`${id}: state ${String(guard.state)} is not one of the two`);
+    }
+  }
+  return bad;
+}
+
+/** Guards naming a script that does not exist. The row-that-caught-itself cell. */
+function guardsNamingMissingScripts(rows: readonly LawRow[], facts: ChainFacts): string[] {
+  return rows
+    .filter((row) => row.guard.state === 'guarded')
+    .filter((row) => {
+      const script = guardScript((row.guard as { by: string }).by);
+      return !script || !facts.scripts.has(script);
+    })
+    .map((row) => `${row.id} names ${(row.guard as { by: string }).by}`);
+}
+
+/** Guards whose declared `chainStatus` disagrees with package.json. */
+function misdeclaredChainStatus(rows: readonly LawRow[], facts: ChainFacts): string[] {
+  return rows
+    .filter((row) => row.guard.state === 'guarded')
+    .filter((row) => {
+      const guard = row.guard as { by: string; chainStatus: string };
+      const script = guardScript(guard.by);
+      if (!facts.scripts.has(script)) return false; // owned by the cell above
+      const actual = facts.inChain.has(script) ? 'in_chain' : 'outside_chain';
+      return guard.chainStatus !== actual;
+    })
+    .map((row) => {
+      const guard = row.guard as { by: string; chainStatus: string };
+      const actual = facts.inChain.has(guardScript(guard.by)) ? 'in_chain' : 'outside_chain';
+      return `${row.id} declares ${guard.chainStatus}, package.json says ${actual}`;
+    });
+}
+
+/** Guards the chain never runs. A check nobody runs is not a check. */
+function guardsOutsideTheChain(rows: readonly LawRow[], facts: ChainFacts): string[] {
+  return rows
+    .filter((row) => row.guard.state === 'guarded')
+    .filter((row) => {
+      const script = guardScript((row.guard as { by: string }).by);
+      return facts.scripts.has(script) && !facts.inChain.has(script);
+    })
+    .map((row) => `${row.id} → ${(row.guard as { by: string }).by}`);
+}
+
+/** The laws with nothing holding them. THE STOP. */
+function unenforcedIds(rows: readonly LawRow[]): string[] {
+  return rows.filter((row) => row.guard.state === 'UNENFORCED').map((row) => row.id);
+}
+
+// ── THE CELLS ──────────────────────────────────────────────────────────────
+
+const FACTS = readChainFacts();
+
+run('the registry is non-empty and every row is well-formed', () => {
+  assert(LAW_REGISTRY.length > 0, 'LAW_REGISTRY is empty — this gate would be vacuous');
+  const bad = malformedRows(LAW_REGISTRY);
+  assert(bad.length === 0, `malformed row(s):\n      ${bad.join('\n      ')}`);
+});
+
+run('every guard names a script that EXISTS', () => {
+  const missing = guardsNamingMissingScripts(LAW_REGISTRY, FACTS);
+  assert(missing.length === 0,
+    `guard(s) naming a script package.json does not have: ${missing.join('; ')}. `
+    + 'A law "guarded" by a nonexistent script is an UNENFORCED law wearing a receipt.');
+});
+
+run('every guard declares its chain membership truthfully', () => {
+  const wrong = misdeclaredChainStatus(LAW_REGISTRY, FACTS);
+  assert(wrong.length === 0, `chainStatus disagrees with the chain: ${wrong.join('; ')}`);
+});
+
+run('no guard sits outside the bible chain', () => {
+  const outside = guardsOutsideTheChain(LAW_REGISTRY, FACTS);
+  assert(outside.length === 0,
+    `guard(s) the chain never runs: ${outside.join('; ')}. `
+    + 'Add the script to test:bible or the row is not guarded.');
+});
+
+run('NO LAW IS UNENFORCED', () => {
+  const unenforced = unenforcedIds(LAW_REGISTRY);
+  assert(unenforced.length === 0,
+    `${unenforced.length} of ${LAW_REGISTRY.length} laws have NOTHING holding them.\n`
+    + '      THIS RED DOES NOT MEAN THE APP BROKE TONIGHT. It means the app has\n'
+    + `      never been checked against ${unenforced.length} of its own rules, and from now\n`
+    + '      that counts as failing. A rule with nothing watching it is a rule\n'
+    + '      not followed (Sam, 2026-08-10).\n'
+    + '      The only way to clear this is to build each guard, put it in\n'
+    + '      test:bible, and flip its row to `guarded`. There is no other state.\n'
+    + `      UNENFORCED: ${unenforced.join(', ')}`);
+});
+
+run('LAW ZERO is held by this suite, and says so', () => {
+  // Non-vacuity of the registry's own row: the gate exists, so the row that
+  // demanded it may no longer read UNENFORCED.
+  const zero = LAW_REGISTRY.find((row) => row.id === 'LAW-0-registry');
+  assert(zero, 'LAW-0-registry has left the registry — the row this gate holds');
+  assert(zero.guard.state === 'guarded',
+    'LAW-0-registry still reads UNENFORCED while its guard is running');
+  assert(guardScript(zero.guard.by) === 'test:law-registry',
+    `LAW-0-registry names ${zero.guard.by}, not the gate that holds it`);
+});
+
+run('the checkers red on fabricated bad rows (liveness)', () => {
+  // A GREEN GATE IS A CLAIM. Each checker is fed a row it must catch; if the
+  // reads above were reduced to no-ops, every cell would still pass and this
+  // one would not.
+  const receipt = 'fabricated by the liveness cell';
+  const guardedBy = (by: string, chainStatus: 'in_chain' | 'outside_chain'): LawRow => ({
+    id: 'LAW-mutant', law: 'x', ruledAt: 'x',
+    guard: { state: 'guarded', by, chainStatus, receipt },
+  });
+
+  const stateless = { id: 'LAW-mutant', law: 'x', ruledAt: 'x', guard: undefined } as unknown as LawRow;
+  assert(malformedRows([stateless]).length > 0, 'a row with no guard state passed the shape check');
+
+  const duplicated = guardedBy('test:bible', 'in_chain');
+  assert(malformedRows([duplicated, duplicated]).length > 0, 'a duplicate id passed the shape check');
+
+  const ghost = guardedBy('test:athlete-action-walker', 'in_chain');
+  assert(guardsNamingMissingScripts([ghost], FACTS).length > 0,
+    'the real 2026-08-10 bad row — a guard naming a script that does not exist — passed');
+
+  const lying = guardedBy('test:bible:extended', 'in_chain');
+  assert(FACTS.scripts.has('test:bible:extended') && !FACTS.inChain.has('test:bible:extended'),
+    'the mutant no longer picks a real out-of-chain script — pick another');
+  assert(misdeclaredChainStatus([lying], FACTS).length > 0, 'a false in_chain claim passed');
+  assert(guardsOutsideTheChain([lying], FACTS).length > 0, 'an out-of-chain guard passed');
+
+  const unheld: LawRow = {
+    id: 'LAW-mutant', law: 'x', ruledAt: 'x',
+    guard: { state: 'UNENFORCED', wouldTake: 'x', receipt },
+  };
+  assert(unenforcedIds([unheld]).length === 1, 'an UNENFORCED row was not counted');
+  assert(unenforcedIds([guardedBy('test:bible', 'in_chain')]).length === 0,
+    'a guarded row was counted as UNENFORCED — the count would never reach zero');
+});
+
+// ── THE ONLY STATUS SAM ASKED FOR ──────────────────────────────────────────
+
+const unenforcedNow = unenforcedIds(LAW_REGISTRY);
+console.log(
+  `\nLAW REGISTRY: ${LAW_REGISTRY.length} rows, `
+  + `${LAW_REGISTRY.length - unenforcedNow.length} guarded, `
+  + `${unenforcedNow.length} UNENFORCED`);
+console.log(`law registry gate totals: ${passed} passed, ${failures.length} failed`);
+totalsPrinted(failures.length);
+if (failures.length > 0) {
+  console.error(`Failing: ${failures.join(', ')}`);
+  process.exit(1);
+}
