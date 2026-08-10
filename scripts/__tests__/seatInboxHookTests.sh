@@ -145,5 +145,45 @@ run "an EMPTY Unprocessed section ALLOWS" allow \
   "## Previously (now processed)" "" \
   "1. AN ORDER FROM A PAST BATCH, long since processed."
 
+# ── REGRESSION (d), 2026-08-10: THE EXIT THE HOOK PROMISED AND NEVER HAD. ──
+# The block reason has always ended "...or a genuine STOP report is committed",
+# and nothing ever looked for one. These cases run in a REAL git repo, because
+# the exit is defined by HEAD's commit subject and a fixture cannot fake that
+# without making the claim vacuous.
+
+git_case() {
+  local name="$1" expected="$2" subject="$3"
+  local repo; repo="$(mktemp -d)"
+  mkdir -p "$repo/docs"
+  printf '%s\n' "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+    "1. A REAL ORDER, unprocessed." "" "## Previously (now processed)" \
+    > "$repo/docs/SEAT_INBOX.md"
+  ( cd "$repo" \
+    && git init -q \
+    && git config user.email t@t && git config user.name t \
+    && git add -A && git commit -q -m "$subject" ) >/dev/null 2>&1
+  local out; out="$(cd "$repo" && bash "$HOOK")"
+  local actual="allow"
+  echo "$out" | grep -q '"decision":"block"' && actual="block"
+  rm -rf "$repo"
+  if [ "$actual" = "$expected" ]; then
+    echo "  PASS $name (expected $expected)"; pass=$((pass + 1))
+  else
+    echo "  FAIL $name — expected $expected, got $actual"; fail=$((fail + 1))
+  fi
+}
+
+# NON-VACUITY FIRST: the same unprocessed order must still BLOCK when HEAD is an
+# ordinary commit. Without this, "allow" below would prove nothing.
+git_case "an unprocessed order BLOCKS when HEAD is an ordinary commit" block \
+  "feat(thing): did some work"
+git_case "a committed STOP report ALLOWS the turn to end" allow \
+  "docs(stop): STOP — the next move needs Sam"
+# The exit is HEAD-only on purpose: a stop report buried in history is not an exit.
+git_case "a commit that merely MENTIONS a stop still BLOCKS" block \
+  "docs(seat): item 3 is a measured stop and is carried forward"
+git_case "a docs commit that is not a stop report still BLOCKS" block \
+  "docs(now): pointer update"
+
 echo "Seat inbox hook totals: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

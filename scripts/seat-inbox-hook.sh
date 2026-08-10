@@ -55,7 +55,33 @@ done <<EOF
 $heads
 EOF
 
+# ─────────────────────────────────────────────────────────────────────────────
+# THE STOP-REPORT EXIT, WHICH THIS HOOK HAS BEEN PROMISING AND NEVER HAD.
+#
+# The block reason has always ended "...or a genuine STOP report is committed" —
+# and **nothing in this script ever looked for one**. A terminal that committed a
+# real STOP was blocked exactly as hard as one that had done nothing, so the only
+# way out was to keep working or to leave the queue unanswered. **Same defect
+# class as the `^1\.` numbering artefact: the reason text promised a mechanism
+# the logic did not implement.** 2026-08-10.
+#
+# WHAT COUNTS, and it is deliberately narrow: the CURRENT HEAD commit is a stop
+# report — subject beginning `docs(stop):`. Not "a stop report exists somewhere
+# in history"; not a marker a terminal can write into a file it also authors. It
+# must be the last thing committed, so the exit costs a real commit whose message
+# is the report and whose diff is on the record.
+#
+# THIS IS NOT A WAY TO SKIP WORK. A stop report that is not true is a lie in the
+# git log with the author's name on it, which is a worse position than an
+# unanswered queue. LAW-do-as-instructed and DOC-TRUTH both bind it.
+if [ -n "$order" ] && git rev-parse --git-dir >/dev/null 2>&1; then
+  head_subject=$(git log -1 --pretty=%s 2>/dev/null || echo "")
+  case "$head_subject" in
+    'docs(stop):'*) order="" ;;
+  esac
+fi
+
 if [ -n "$order" ]; then
-  echo '{"decision":"block","reason":"The seat inbox holds an unprocessed order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. End your turn only when the inbox is clear or a genuine STOP report is committed."}'
+  echo '{"decision":"block","reason":"The seat inbox holds an unprocessed order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. End your turn only when the inbox is clear, or when HEAD is a committed STOP report (a commit whose subject begins docs(stop):)."}'
 fi
 exit 0
