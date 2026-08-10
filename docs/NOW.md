@@ -51,7 +51,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `6ca49330` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `62385b62` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -87,12 +87,14 @@ and this file gets one line pointing at it.**
   check: whether `runRebuild` closes over day-screen state.**
 - **THE UI MERGE — SLICES 2, 3 AND 5 LANDED** (`25565430`, `2752c90a`,
   `226531b2`). **THE WEEK NOW USES HER CARD STRUCTURE AND PROPORTIONS FOR ALL
-  SEVEN DAYS** (`6ca49330`): large dates, compact badges, an acted active-
+  SEVEN DAYS** (`62385b62`): large dates, compact badges, an acted active-
   modifier line, collapsed entry with today independently highlighted, and
   one-chevron flat full-session expansion are green on the simulator. Rest and
   Game Day now use the same head as shorter, vertically-centred status cards;
   Today has no week-date navigation; Week carries a compact date row below the
-  toggle and stays collapsed through previous/next returns. Sam's iPhone
+  toggle and stays collapsed through previous/next returns. Today now uses each
+  component icon as its only marker — no dot/rail or duplicate headline icon —
+  with Renee's tighter type, badge and action proportions. Sam's iPhone
   acceptance is still owed.
   **STILL OPEN: slice 3b** — the status screen's buttons are a NO-OP and the day
   screen keeps every control, because wiring them needs
