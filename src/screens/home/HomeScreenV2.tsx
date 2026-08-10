@@ -18,7 +18,7 @@ import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
-import { Button, Card, Sheet, Badge, IconButton } from '../../components/ui';
+import { Button, Card, Sheet, Badge } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
@@ -106,7 +106,6 @@ export default function HomeScreenV2() {
     weekDays,
     visibleWeek,
     weekLabel,
-    weekOffset,
     isThisWeek,
     handlePrev,
     handleNext,
@@ -116,7 +115,6 @@ export default function HomeScreenV2() {
     mode,
     handleDayTap,
     handleSelectDayOnly,
-    handleSelectDay,
     handleClearSelection,
     handleCancelMove,
     handleAddGameMode,
@@ -225,10 +223,28 @@ export default function HomeScreenV2() {
   const [preferredProgramView, setPreferredProgramView] =
     useState<'today' | 'week'>('today');
   const dayFirst = preferredProgramView === 'today' && isThisWeek && isNormal;
-  // Selection is owned by `useHomeScreen`; this only says which day the
-  // day-first view is ABOUT when that owner is holding the sentinel.
-  const dayFirstIdx = selectedIdx >= 0 ? selectedIdx : todayIdx;
+  // TODAY IS AN IDENTITY, NOT A SELECTED WEEK ROW. The shared selection also
+  // serves picker/classic-screen behavior, so the new template owns expansion
+  // locally instead of giving that shared index a third meaning.
+  const dayFirstIdx = todayIdx;
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
+  const [expandedWeekIdx, setExpandedWeekIdx] = useState(-1);
+  const handleClearWeekPresentation = () => {
+    setExpandedWeekIdx(-1);
+    handleClearSelection();
+  };
+  const handleCompactPrev = () => {
+    setExpandedWeekIdx(-1);
+    handlePrev();
+  };
+  const handleCompactNext = () => {
+    setExpandedWeekIdx(-1);
+    handleNext();
+  };
+  const handleCompactThisWeek = () => {
+    setExpandedWeekIdx(-1);
+    handleThisWeek();
+  };
 
   // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
   const [changeSheetDate, setChangeSheetDate] = useState<string | null>(null);
@@ -399,7 +415,9 @@ export default function HomeScreenV2() {
    * keep their action sheet in both.
    */
   const renderDayRow = (day: typeof weekDays[0], idx: number) => {
-    const isSelected = dayFirst ? true : idx === selectedIdx;
+    const isSelected = dayFirst ? true : isNormal
+      ? idx === expandedWeekIdx
+      : idx === selectedIdx;
     const hasWorkout = !!day.workout;
     const isGame = day.workout?.workoutType === 'Game';
     const isMoveSource = mode.type === 'moveGame' && day.date === mode.fromDate;
@@ -424,7 +442,11 @@ export default function HomeScreenV2() {
         hasWorkout={hasWorkout}
         isGame={!!isGame}
         onPress={() => {
-          if (dayFirst && !isGame) return handleSelectDay(idx);
+          if (dayFirst && !isGame) return;
+          if (!dayFirst && isNormal && !isGame) {
+            setExpandedWeekIdx((current) => (current === idx ? -1 : idx));
+            return;
+          }
           return isGame && isNormal ? handleSelectDayOnly(idx) : handleDayTap(idx);
         }}
         onViewWorkout={() => handleViewWorkout(day)}
@@ -486,7 +508,7 @@ export default function HomeScreenV2() {
          *
          * Wraps the full scroll body in a transparent Pressable whose
          * onPress clears the row selection. Nested Pressables (Card,
-         * Button, IconButton, chips) claim the touch responder before
+         * Button and chips) claim the touch responder before
          * this outer layer ever fires, so taps *inside* a day card or any
          * interactive control behave exactly as before — only taps on
          * padding / whitespace between controls reach here.
@@ -505,67 +527,11 @@ export default function HomeScreenV2() {
              with nothing expanded. In the day-first shape the selection is WHICH
              DAY the screen is about, so a tap on whitespace would silently snap
              the athlete off the Thursday they picked and back to today. */
-          onPress={dayFirst ? undefined : handleClearSelection}
+          onPress={dayFirst ? undefined : handleClearWeekPresentation}
           accessible={false}
         >
-        {/* ── Week nav bar ── */}
+        {/* ── Program shape controls ── */}
         <View style={styles.topBar}>
-          <View style={styles.topBarRow}>
-            <IconButton
-              onPress={handlePrev}
-              accessibilityLabel="Previous week"
-              testID="program-week-previous"
-              icon={
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M15 18l-6-6 6-6" />
-                </Svg>
-              }
-            />
-            <Pressable
-              style={styles.topBarCenter}
-              onPress={isThisWeek ? undefined : handleThisWeek}
-              accessibilityLabel={isThisWeek ? 'This week' : 'Return to this week'}
-              testID="program-week-current"
-            >
-              <Text style={styles.topBarLabel} numberOfLines={1}>{weekLabel}</Text>
-              {(() => {
-                // Relative week badge beside the date range — "This week"
-                // keeps its existing treatment; the adjacent weeks get the
-                // same quiet outline so the athlete always knows where
-                // they are relative to now.
-                const badgeLabel = isThisWeek
-                  ? 'This week'
-                  : weekOffset === 1
-                  ? 'Next week'
-                  : weekOffset === -1
-                  ? 'Last week'
-                  : null;
-                return badgeLabel
-                  ? <Badge label={badgeLabel} tone="outline" style={styles.topBarBadge} />
-                  : null;
-              })()}
-            </Pressable>
-            <View style={styles.topBarRight}>
-              <IconButton
-                onPress={handleNext}
-                accessibilityLabel="Next week"
-                testID="program-week-next"
-                icon={
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M9 18l6-6-6-6" />
-                  </Svg>
-                }
-              />
-              {/* The week-rebuild button lived here and is GONE (Sam, device
-                  pass 2026-07-29). It was dev tooling from early testing that
-                  regenerated the whole week's content and discarded every custom
-                  swap, sitting one tap from the next-week chevron. Athletes must
-                  never have it. The rebuild machinery stays — clearing a coach
-                  note, a phase shift and a fixture change all still rebuild —
-                  but the athlete cannot ask for a rebuild as such. */}
-            </View>
-          </View>
-
           {/* ── Today / Week ──
               The zoom control Sam's direction asks for. Offered only where
               there is a choice to make: on another week there is no today, and
@@ -589,13 +555,10 @@ export default function HomeScreenV2() {
                     key={option}
                     onPress={() => {
                       setPreferredProgramView(option);
-                      // TODAY IS AN IDENTITY; OPEN IS A TRANSIENT LIST STATE.
-                      // `useHomeScreen` initially selects today so the day shape
-                      // has a subject. Carrying that selection into Week made the
-                      // first card open automatically. Clear only the expansion
-                      // coordinate here; `DayRow` highlights today from
-                      // `day.isToday`, independently of `isSelected`.
-                      if (option === 'week') handleClearSelection();
+                      // Both shape transitions close transient week detail. The
+                      // shared selection is also cleared so a picker/classic
+                      // coordinate cannot leak back into this presentation.
+                      handleClearWeekPresentation();
                     }}
                     testID={`program-view-${option}`}
                     accessibilityRole="button"
@@ -621,6 +584,63 @@ export default function HomeScreenV2() {
             </View>
           ) : null}
 
+          {/* WEEK NAVIGATION BELONGS TO THE WEEK SHAPE. The day screen is about
+              today and offers the Week toggle as its one route out; previous /
+              next week controls there compete with that promise and do not
+              exist in Renee's accepted day template. Once zoomed out, the same
+              three established doors sit directly below the toggle as a quiet
+              date row. Their handlers and stable ids are unchanged.
+
+              There is deliberately no relative-week badge. The range is the
+              subject, tapping an adjacent range still returns to this week, and
+              the large circular IconButtons have been replaced by plain glyphs
+              with expanded hitSlop so simpler does not mean harder to tap. */}
+          {!dayFirst ? (
+            <View style={styles.compactWeekNav} testID="program-week-navigation">
+              <Pressable
+                onPress={handleCompactPrev}
+                accessibilityRole="button"
+                accessibilityLabel="Previous week"
+                testID="program-week-previous"
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.compactWeekNavButton,
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M15 18l-6-6 6-6" />
+                </Svg>
+              </Pressable>
+              <Pressable
+                style={styles.compactWeekNavCurrent}
+                onPress={isThisWeek ? undefined : handleCompactThisWeek}
+                accessibilityRole="button"
+                accessibilityLabel={isThisWeek ? 'This week' : 'Return to this week'}
+                testID="program-week-current"
+              >
+                <Text style={styles.compactWeekNavLabel} numberOfLines={1}>
+                  {weekLabel}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleCompactNext}
+                accessibilityRole="button"
+                accessibilityLabel="Next week"
+                testID="program-week-next"
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.compactWeekNavButton,
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M9 18l6-6-6-6" />
+                </Svg>
+              </Pressable>
+            </View>
+          ) : null}
+
         </View>
 
         {/* ── Picker banners ── */}
@@ -634,9 +654,10 @@ export default function HomeScreenV2() {
           />
         )}
 
-        {/* NOTHING ELSE SITS BETWEEN THE TOGGLE AND THE WEEK.
-            Sam's layout ruling (2026-08-08): the seven-day strip sits DIRECTLY
-            under the Today/Week control. Everything that used to queue up here
+        {/* ONLY WEEK'S COMPACT DATE NAV SITS BETWEEN THE TOGGLE AND THE WEEK.
+            Today still puts its card directly under the control. On Week, Sam's
+            2026-08-11 eye pass explicitly placed the simplified date row here.
+            Everything else that used to queue up in this gap
             — the missed-session prompt, the season-phase skew disclosure and
             the Coach Notes section — now renders BELOW the day's card, in the
             order he named. The picker banners above are the one exception and
@@ -690,16 +711,15 @@ export default function HomeScreenV2() {
 
                 THE BEHAVIOUR IS NOT DELETED, IT IS RE-HOMED, and this comment is
                 the ledger row that says where: **weekly view**, one tap away on
-                the Today/Week toggle directly above, which is untouched. The
-                strip's only door was `onSelect={handleSelectDay}` — choosing
-                which day this screen is about — and the week shape's seven rows
-                are that same door, drawn at full size.
+                the Today/Week toggle directly above. The strip's old door chose
+                another subject for the day screen; Sam's accepted template has
+                now removed week browsing from Today entirely. The Week shape's
+                seven rows replace that route by opening their details in place.
 
-                SO THE DAY SCREEN IS NOW ALWAYS ABOUT TODAY. `dayFirstIdx` still
-                honours a selection made elsewhere rather than hard-coding
-                `todayIdx`: the week shape's own tap sets it, and a day-first
-                view that ignored the athlete's choice would be a second truth
-                about which day is open. Nothing here re-anchors anything.
+                SO THE DAY SCREEN IS ALWAYS ABOUT TODAY. `dayFirstIdx` reads
+                `todayIdx` directly, while Week expansion has its own local
+                coordinate. A tap in one shape can no longer reinterpret what
+                the other shape means by "selected".
 
                 `WeekStrip` STAYS IN THIS FILE, unreferenced by this shape.
                 Deleting the component in the same commit that removes its call
@@ -3738,28 +3758,37 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
 
-  // Top bar (week nav). TIGHTENED xl -> md (Sam, 2026-08-08): the week strip
-  // sits DIRECTLY under the Today/Week control now, and 32pt of air between a
-  // control and the thing it controls reads as two screens, not one.
-  topBar: { marginBottom: spacing.md },
-  topBarRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', gap: spacing.sm,
+  // Program shape controls. Today pays only for the toggle. Week adds this
+  // compact navigation row underneath it, matching the accepted hierarchy
+  // without shrinking the actual tap targets below a comfortable size.
+  topBar: { marginBottom: spacing.md, gap: 8 },
+  compactWeekNav: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
-  topBarCenter: {
-    flex: 1, alignItems: 'center', flexDirection: 'row',
-    justifyContent: 'center', gap: spacing.sm,
+  compactWeekNavButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  // Date label recedes one step — the "THIS WEEK" badge to its right is
-  // the primary accent of the bar; the date plays a supporting role. The
-  // opacity dial takes it another notch down without changing its colour
-  // role in the neutral palette.
-  topBarLabel: {
-    color: '#B5B5B5', fontSize: 17, fontWeight: '600',
-    letterSpacing: 0.2, opacity: 0.85,
+  compactWeekNavCurrent: {
+    minWidth: 78,
+    minHeight: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  topBarBadge: {},
-  topBarRight: { flexDirection: 'row', gap: spacing.sm },
+  compactWeekNavLabel: {
+    color: '#D2D2D2',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
 
   // Move banner
   moveBanner: {

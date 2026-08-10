@@ -325,3 +325,75 @@ second account of the day was added.
 a session); prior/next-week Completed treatment; the deferred team-training
 badge; the held season-phase removal. This is simulator acceptance, not phone
 acceptance.
+
+---
+
+## SAM EYE PASS 6 — WEEK NAVIGATION BELONGS TO WEEK
+
+**Sam, comparing the accepted day and week templates:** *"there is no weekly
+swiping anymore on the new template but there still is on the old template - we
+need to remove that for the day screen, and for the weekly screen it needs to be
+dropped to below the day week toggle and simplified a bit".* Correct. The large
+previous/range/next bar was mounted before the shape toggle, so Today and Week
+both inherited it. Its circular buttons and relative-week badge also carried
+more visual weight than the Week list needed.
+
+**THE TWO OPTIONS COMPARED:** (1) condition and reposition the existing large
+bar, or (2) make navigation a Week-shape-only compact row: plain small chevrons,
+one uppercase date range, no relative badge, directly below the Day/Week toggle.
+Option 2 landed. The three existing handlers, accessibility labels and stable
+doors remain; only their shape ownership and presentation changed.
+
+**THE LIVE ROUTE REOPENED THE OWNERSHIP QUESTION:** after previous → return and
+next → return, Monday opened itself. Pass 4's chosen fix had only cleared the
+shared selection at Week entry; `useHomeScreen` correctly repopulated that
+shared selection when the visible week returned to now, and Week still read it
+as expansion. Two further options were compared: add three more clears around
+navigation timing, or stop using the shared day/picker selection as the new
+template's expansion state. The second landed. `expandedWeekIdx` is local,
+transient presentation state; Today reads `todayIdx` directly; every shape and
+date transition clears expansion before it moves. This **supersedes Pass 4's
+claim that no separate expansion owner was needed** — the live adjacent-week
+coordinate proved that claim too narrow.
+
+**RECEIPTS:**
+
+- `test:day-first-timeline`: 36 named cells run, 36 passed. The new cells pin
+  toggle → compact navigator → content order; Week-only mounting; the absence
+  of large buttons/badge; all three preserved doors; compact proportions; a
+  template-local expansion owner; direct Today ownership; and collapse in all
+  three date-navigation handlers.
+- `.maestro/golden/standard-program-week.yaml`: completed on the iOS simulator.
+  It proves all four navigation ids absent on Today and present on Week, acts
+  through previous → this week and next → this week, proves the list is still
+  collapsed after both returns, then opens one flat session and reaches Sunday.
+- `artifacts/ui-walk/day-no-week-navigation.png` and
+  `artifacts/ui-walk/week-prototype-parity.png`: looked at. Today begins with the
+  toggle and card; Week adds only the small date-and-chevron row below the
+  toggle, before its active-modifier line and cards.
+- `test:compile` and `test:maestro-element-contract`: green.
+- `test:dev-e2e-testids` is RED on two pre-existing equipment selectors. Its
+  week-navigation cell is green; the two unrelated failures were reported and
+  not changed in this UI checkpoint.
+
+**FIRST-RUN FINDINGS, NOT FIXED QUIETLY:** the source cell failed on the old
+before-toggle shared bar. Its first region boundary used a source comment, which
+the suite deliberately strips; that made the scan run to end-of-file and see an
+unrelated badge. The cell now proves a live picker-expression anchor exists
+before slicing. One attempted wider script name did not exist; the correctly
+named script produced the pre-existing equipment red above. The first full
+rerun lost XCUITest's accessibility hierarchy before its first assertion and
+was rerun unchanged. The next run exercised both new doors and then caught the
+real selected/open collision by finding Monday's full timeline after return.
+The expansion owner was separated, and the complete route then passed.
+
+**NORTH STAR:** toward it. The date row changes only which already-derived
+visible week is read. Today, Week expansion and picker selection now each have
+one meaning instead of sharing a coordinate; no program fact or derived workout
+is stored by this presentation.
+
+**NOT COVERED:** Sam's physical iPhone; the old/classic template (the shared
+navigation handlers are unchanged, but this ruling is for the accepted new
+template); adjacent-week Completed styling; the deferred team-training badge;
+the held season-phase removal. This is simulator acceptance, not phone
+acceptance.

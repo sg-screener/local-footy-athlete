@@ -682,15 +682,38 @@ run('the week chevron opens one flat full session, not nested drop-downs', () =>
     'the flat week session still contains an inner accordion, rail or icon layer');
 });
 
-run('the week starts collapsed while today keeps its highlight', () => {
+run('the week starts and returns collapsed while Today owns today directly', () => {
   const home = homeScreenSource();
   const toggleAt = home.indexOf('testID="program-view-toggle"');
   const modifiersAt = home.indexOf('<ModifiersStrip', toggleAt);
   assert(toggleAt > 0 && modifiersAt > toggleAt,
     'the Today/Week toggle region could not be found');
   const toggle = home.slice(toggleAt, modifiersAt);
-  assert(/onPress=\{\(\) => \{[\s\S]{0,180}setPreferredProgramView\(option\)[\s\S]{0,180}option === 'week'[\s\S]{0,100}handleClearSelection\(\)/.test(toggle),
-    'switching to Week does not clear the day-selection expansion — today starts open');
+  assert(/onPress=\{\(\) => \{[\s\S]{0,180}setPreferredProgramView\(option\)[\s\S]{0,120}handleClearWeekPresentation\(\)/.test(toggle),
+    'the shape toggle does not clear the new template\'s Week expansion coordinate');
+
+  assert(/const \[expandedWeekIdx, setExpandedWeekIdx\] = useState\(-1\)/.test(home),
+    'the new template still borrows the shared day/picker selection as Week expansion');
+  const clearAt = home.indexOf('const handleClearWeekPresentation =');
+  const clear = home.slice(clearAt, clearAt + 180);
+  assert(clearAt > 0 && /setExpandedWeekIdx\(-1\)/.test(clear)
+    && /handleClearSelection\(\)/.test(clear)
+    && /onPress=\{dayFirst \? undefined : handleClearWeekPresentation\}/.test(home),
+  'the shared shape/whitespace clear no longer collapses the local Week details');
+  for (const pair of [
+    ['handleCompactPrev', 'handlePrev'],
+    ['handleCompactNext', 'handleNext'],
+    ['handleCompactThisWeek', 'handleThisWeek'],
+  ]) {
+    const handlerAt = home.indexOf(`const ${pair[0]} =`);
+    const handler = home.slice(handlerAt, handlerAt + 180);
+    assert(handlerAt > 0 && /setExpandedWeekIdx\(-1\)/.test(handler)
+      && handler.includes(`${pair[1]}()`),
+    `${pair[0]} does not collapse the Week before changing its date range`);
+  }
+  assert(/const dayFirstIdx = todayIdx;/.test(home)
+    && /const isSelected = dayFirst \? true : isNormal\s*\? idx === expandedWeekIdx\s*:\s*idx === selectedIdx/.test(home),
+    'Today still borrows the Week expansion index instead of owning today directly');
 
   const dayRowAt = home.indexOf('function DayRow(');
   const dayRow = home.slice(dayRowAt, home.indexOf('interface LifeFactChipProps', dayRowAt));
@@ -698,6 +721,32 @@ run('the week starts collapsed while today keeps its highlight', () => {
     'the DayRow region could not be found');
   assert(/selected=\{normal && \(dayShape \? isSelected : day\.isToday\)\}/.test(dayRow),
     'clearing Week expansion also removed today\'s independent highlight');
+});
+
+run('week navigation is absent from Today and compact below the toggle in Week', () => {
+  const home = homeScreenSource();
+  const toggleAt = home.indexOf('testID="program-view-toggle"');
+  const navAt = home.indexOf('testID="program-week-navigation"');
+  const modifiersAt = home.indexOf('<ModifiersStrip', toggleAt);
+  assert(toggleAt > 0 && navAt > toggleAt && modifiersAt > navAt,
+    'the compact week navigator is not ordered toggle → navigator → week content');
+
+  const betweenToggleAndContent = home.slice(toggleAt, modifiersAt);
+  assert(/\{!dayFirst \? \([\s\S]*testID="program-week-navigation"/.test(betweenToggleAndContent),
+    'the week navigator is not owned by the Week shape — Today can still render it');
+  const pickerAt = home.indexOf("mode.type === 'moveGame'", navAt);
+  assert(pickerAt > navAt,
+    'the live picker boundary after the navigator could not be found');
+  const nav = home.slice(navAt, pickerAt);
+  assert(nav.length > 500,
+    'the compact week navigator region could not be found');
+  assert(/program-week-previous[\s\S]*program-week-current[\s\S]*program-week-next/.test(nav),
+    'simplifying the navigator removed one of its three established doors');
+  assert(!/<IconButton\b/.test(nav) && !/<Badge\b/.test(nav),
+    'the Week shape still uses the large circular buttons or relative-week badge');
+  assert(/compactWeekNavLabel:\s*\{[^}]*fontSize:\s*11\b/.test(home)
+    && /compactWeekNavButton:\s*\{[^}]*width:\s*28[^}]*height:\s*28/.test(home),
+    'the replacement is not the small plain date-and-chevron row Sam chose');
 });
 
 run('all seven week days use her one card head, including today', () => {

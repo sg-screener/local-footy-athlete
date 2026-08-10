@@ -16,12 +16,18 @@ tags:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: standard-in-season-week
-- assertVisible:
+# TODAY HAS NO WEEK NAVIGATION. These are absence checks on the default screen,
+# not merely a screenshot comparison: the Week shape below proves the same
+# three doors still exist after the athlete deliberately zooms out.
+- assertNotVisible:
+    id: "program-week-navigation"
+- assertNotVisible:
     id: "program-week-previous"
-- assertVisible:
+- assertNotVisible:
     id: "program-week-current"
-- assertVisible:
+- assertNotVisible:
     id: "program-week-next"
+- takeScreenshot: artifacts/ui-walk/day-no-week-navigation
 
 # ── THE DAY SHAPE: one day at full size, and NO strip (ruling 3, 2026-08-10) ──
 # The three `week-strip*` assertions here are INVERTED to one, not deleted: a
@@ -62,6 +68,26 @@ tags:
 # ── THE WEEK SHAPE: all seven ──
 - runFlow:
     file: ../common/show-week-shape.yaml
+- assertVisible:
+    id: "program-week-navigation"
+- assertVisible:
+    id: "program-week-previous"
+- assertVisible:
+    id: "program-week-current"
+- assertVisible:
+    id: "program-week-next"
+# The simplified controls are still doors, not decoration. Exercise both
+# directions and use the current-range control to return before comparing cards.
+- tapOn:
+    id: "program-week-previous"
+- assertVisible: "Return to this week"
+- tapOn: "Return to this week"
+- assertVisible: "This week"
+- tapOn:
+    id: "program-week-next"
+- assertVisible: "Return to this week"
+- tapOn: "Return to this week"
+- assertVisible: "This week"
 - assertVisible:
     id: "day-row-mon"
 - assertVisible:
