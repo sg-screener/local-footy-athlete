@@ -289,6 +289,14 @@ export function registerProjectionCopy(): void {
       text: 'Currently impacting your program',
     },
     {
+      id: 'modifiers.strip.none',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT, 2026-08-11. Sam ruled that My Status is '
+        + 'always available from Coach, including the zero state, and supplied '
+        + 'the meaning: "no modifiers currently impacting".',
+      text: 'No modifiers currently impacting',
+    },
+    {
       id: 'modifiers.strip.week',
       source: 'sam_ruling',
       provenance: 'SIGNED ON SIGHT, 2026-08-11. Sam compared the built week '

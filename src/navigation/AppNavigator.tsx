@@ -31,9 +31,9 @@ type ProfileStackParamList = {
   Terms: undefined;
 };
 
-type TabParamList = {
+export type TabParamList = {
   ProgramTab: { screen: string; params?: Record<string, any> } | undefined;
-  CoachTab: { screen: string; params?: { prefill?: string } } | undefined;
+  CoachTab: { status?: 'open' } | undefined;
   JournalTab: undefined;
   ProfileTab: undefined;
 };

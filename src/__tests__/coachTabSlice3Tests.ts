@@ -1291,10 +1291,24 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
       'the seat: "same component as the day screen\'s, not a second one"');
   }
 
-  ok('the strip renders nothing when nothing is active',
-    /if \(count <= 0\) return null;/.test(strip),
-    'a normal week must pay no space for it — the property CoachNotesSection '
-      + 'already had and which ruling 4 must not lose');
+  ok('Program hides an empty notice while Coach keeps My Status reachable',
+    /if \(count <= 0 && surface !== 'coach'\) return null;/.test(strip)
+      && /signedCopy\('modifiers\.strip\.none'\)/.test(strip),
+    'LAW-coach-status-is-a-real-destination: zero modifiers must not delete the '
+      + 'only doorway to status, while day and week must not pay for an empty notice');
+
+  ok('Program opens My Status itself, not merely the Coach tab',
+    /navigate\('CoachTab', \{ status: 'open' \}\)/.test(home),
+    'LAW-coach-status-is-a-real-destination: switching tabs without opening '
+      + 'status is the founding failure');
+
+  ok('both entry surfaces address one navigation-owned open state',
+    /route\.params\?\.status === 'open'/.test(coachTab)
+      && /navigation\.setParams\(\{ status: 'open' \}\)/.test(coachTab)
+      && /navigation\.setParams\(\{ status: undefined \}\)/.test(coachTab)
+      && !/setStatusVisible/.test(coachTab),
+    'a private Coach boolean cannot be opened by Program; a second event owner '
+      + 'would recreate the disconnected handoff');
 
   // THE COUNT IS THE LIST'S OWN LENGTH. A separately-carried number is the
   // `a count taken for a record` shape, sighting 14 in this repo.

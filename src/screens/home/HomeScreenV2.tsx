@@ -31,10 +31,10 @@ import { ModifiersStrip } from '../../components/ModifiersStrip';
 import { navigationRef } from '../../navigation/navigationRef';
 
 /**
- * THE STRIP'S DESTINATION, AND IT IS THE COACH TAB — ruling 4.
+ * THE STRIP'S DESTINATION IS MY STATUS, NOT MERELY THE COACH TAB.
  *
  * `navigationRef` and not a `navigation` prop: this screen is a tab root and the
- * target is a SIBLING TAB, which is a container-level move. The ref is the same
+ * target lives on a SIBLING TAB, which is a container-level move. The ref is the same
  * one `SmokeRouteEnforcer` already uses for exactly that reason.
  *
  * IT FAILS QUIETLY BY DESIGN AND THAT IS NOT A SILENT FAILURE: the guard is
@@ -43,7 +43,7 @@ import { navigationRef } from '../../navigation/navigationRef';
  */
 function navigateToCoachStatus(): void {
   if (!navigationRef.isReady()) return;
-  navigationRef.navigate('CoachTab' as never);
+  navigationRef.navigate('CoachTab', { status: 'open' });
 }
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
@@ -685,8 +685,9 @@ export default function HomeScreenV2() {
             `LAW-removal-ships-with-its-replacement` holding rather than being
             worked around.
 
-            NOTHING WHEN THERE IS NOTHING: the strip renders null at zero, so a
-            normal week pays no space for it in either shape. */}
+            NOTHING WHEN THERE IS NOTHING ON PROGRAM: day and week render null
+            at zero. Coach keeps the permanent My Status doorway, which is not a
+            program notice and therefore does not share this hide. */}
         {isNormal && (
           <ModifiersStrip
             surface={dayFirst ? 'day' : 'week'}

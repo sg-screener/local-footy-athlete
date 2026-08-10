@@ -31,7 +31,7 @@
  * screens navigate to Coach with a `prefill` param (the day-menu 'Ask the
  * coach' doors)". **There are now ZERO such producers** — the beta coach cut
  * (§6, decision C(a), signed; Sam's "MAKE THE CUT" 2026-08-07) removed the
- * `CoachTab` tab and all three `navigate('CoachTab')` doors. The assertion
+ * `CoachTab` tab and all three prefill `navigate('CoachTab')` doors. The assertion
  * still stands, but on a DIFFERENT ground: LR-6 freezes CoachScreen and its
  * pipeline in the tree, so the param path must not be quietly deleted while
  * the screen is frozen. A passing gate whose stated reason has become false is
@@ -279,7 +279,7 @@ console.log('\n[4] The packet still feeds the frozen layers their exact shape');
   );
 }
 
-console.log('\n[4] R5.7 — THE BETA COACH CUT: the entry surface is GONE and stays gone');
+console.log('\n[4] R5.7 — the beta surface stays cut; the rebuilt status door is explicit');
 {
   // THE GATE MUST WATCH THE DELETED SURFACE. R5.7 removed the `CoachTab` tab
   // and every door that navigated to it (§6, decision C(a), signed; Sam's
@@ -292,14 +292,22 @@ console.log('\n[4] R5.7 — THE BETA COACH CUT: the entry surface is GONE and st
   // (LR-6). Test sources are excluded — a suite naming the route is evidence,
   // not a door.
   const productSources = readProductSources();
-  const navigateDoors = productSources.filter(([, body]) =>
-    /navigate\(\s*['"`]CoachTab['"`]/.test(body));
+  const statusDoor = /navigationRef\.navigate\('CoachTab', \{ status: 'open' \}\);/g;
+  const statusDoorOccurrences = productSources.reduce(
+    (count, [, body]) => count + (body.match(statusDoor) ?? []).length,
+    0,
+  );
+  const forbiddenDoors = productSources.filter(([, body]) => {
+    const withoutStatusDoor = body.replace(statusDoor, '');
+    return /navigate\(\s*['"`]CoachTab['"`]/.test(withoutStatusDoor);
+  });
   ok(
-    'no product source navigates to CoachTab',
-    navigateDoors.length === 0,
-    'R5.7 cut all three doors (useHomeScreen, useDayWorkout, ProfileScreen). '
-      + `A new one is the beta chat surface returning: ${
-        navigateDoors.map(([file]) => file).join(', ') || 'none'}`,
+    'one status-addressed door exists and no bare/prefill CoachTab door returned',
+    statusDoorOccurrences === 1 && forbiddenDoors.length === 0,
+    'The rebuilt My Status destination owns one explicit `{ status: open }` door. '
+      + 'R5.7 still forbids the old bare/prefill doors into the beta chat surface. '
+      + `status occurrences=${statusDoorOccurrences}; forbidden files=${
+        forbiddenDoors.map(([file]) => file).join(', ') || 'none'}`,
   );
   const navigatorSource = productSources
     .find(([file]) => file.endsWith('AppNavigator.tsx'))?.[1] ?? '';

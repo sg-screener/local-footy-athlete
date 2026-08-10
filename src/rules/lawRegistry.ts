@@ -377,6 +377,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-coach-status-is-a-real-destination',
+    law: 'Program opens My Status itself, and Coach keeps that doorway available even when zero modifiers are active.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "it should open the status.... not just the coaches tab - and it should always be there - even if it says not modifers currently impacting". This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:coach-tab-slice3 + .maestro/golden/coach-my-status.yaml',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: the status overlay existed, but Program only changed tabs and Coach deleted its only doorway when the modifier count reached zero. WHAT THE CHAIN CELL HOLDS: Program navigates with the one status-open coordinate; Coach reads and writes that same navigation-owned coordinate rather than a private boolean; only day/week hide the shared strip at zero; Coach renders the signed zero state. WHAT THE DEVICE FLOW HOLDS: from a clean generated week it proves Program has no empty notice while Coach still opens the empty status screen, then creates a real equipment modifier through the athlete door and proves the Program notice opens the populated status screen directly. WHAT IT DOES NOT HOLD: the still-unwired status actions, season phase on status, Sam\'s physical iPhone.',
+    },
+  },
+  {
     id: 'LAW-week-navigation-belongs-to-week',
     law: 'The accepted new Program template renders no week-date navigation on Today; Week renders one compact previous/range/next row directly below the Day/Week toggle, and changing or returning weeks leaves every session collapsed.',
     ruledAt: 'docs/UI_PROTOTYPE_DIVERGENCE_2026-08-11.md "SAM EYE PASS 6 — WEEK NAVIGATION BELONGS TO WEEK"',

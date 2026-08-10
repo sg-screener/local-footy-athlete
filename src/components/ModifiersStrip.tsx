@@ -18,9 +18,10 @@
  * lives on the screen it opens. Read out of the prototype, not invented —
  * docs/UI_MERGE_SLICE3_PLAN_2026-08-10.md.
  *
- * NOTHING WHEN THERE IS NOTHING. A day with no active modifiers renders no strip
- * and costs no space, which is the property `CoachNotesSection` already had and
- * which slice 4's guard must keep.
+ * NOTHING WHEN THERE IS NOTHING ON PROGRAM. Coach is different by explicit
+ * ruling: My Status remains a permanent doorway and states the zero condition.
+ * That keeps status reachable without making the day or week pay for an empty
+ * notice.
  */
 
 import React from 'react';
@@ -42,8 +43,11 @@ export interface ModifiersStripProps {
 }
 
 export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps) {
-  if (count <= 0) return null;
+  // Program only needs a notice when something is active. Coach owns the
+  // permanent My Status doorway, including the honest zero state.
+  if (count <= 0 && surface !== 'coach') return null;
   const weekSurface = surface === 'week';
+  const coachSurface = surface === 'coach';
   const countLabel = signedCopy(
     count === 1 ? 'modifiers.strip.count_one' : 'modifiers.strip.count',
     { count },
@@ -52,6 +56,10 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
     count === 1 ? 'modifiers.strip.week_one' : 'modifiers.strip.week',
     { count },
   );
+  const primaryLabel = coachSurface ? signedCopy('coach.status.title') : countLabel;
+  const secondaryLabel = coachSurface
+    ? (count <= 0 ? signedCopy('modifiers.strip.none') : countLabel)
+    : signedCopy('modifiers.strip.subline');
   return (
     <Pressable
       onPress={onPress}
@@ -59,7 +67,7 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
       accessibilityRole="button"
       accessibilityLabel={weekSurface
         ? weekLabel
-        : `${countLabel}. ${signedCopy('modifiers.strip.subline')}`}
+        : `${primaryLabel}. ${secondaryLabel}`}
       style={({ pressed }) => [weekSurface ? styles.weekStrip : styles.strip,
         pressed && { opacity: 0.7 }]}
     >
@@ -87,9 +95,9 @@ export function ModifiersStrip({ count, onPress, surface }: ModifiersStripProps)
           </View>
           <View style={styles.text}>
             <Text style={styles.count} testID={`modifiers-strip-${surface}-count`}>
-              {countLabel}
+              {primaryLabel}
             </Text>
-            <Text style={styles.subline}>{signedCopy('modifiers.strip.subline')}</Text>
+            <Text style={styles.subline}>{secondaryLabel}</Text>
           </View>
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
             stroke="#8A8A8A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

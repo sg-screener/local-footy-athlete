@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import {
   Keyboard,
   NativeScrollEvent,
@@ -32,6 +33,9 @@ import { executeProgramControlActionDurably } from '../../utils/programControlAc
 import { listPlanChangeOptionsForDay } from '../../utils/planChangeProducer';
 import type { ProgramControlAction } from '../../types/programControlAction';
 import type { VisibleWeek } from '../../rules/visibleProjection';
+import type { TabParamList } from '../../navigation/AppNavigator';
+
+type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
 
 /**
  * THE COACH TAB — SLICE 1. IT TALKS, AND IT CHANGES NOTHING.
@@ -183,7 +187,7 @@ interface SettlingChange {
   readonly door: { readonly ok: boolean; readonly outcome?: 'applied' | 'no_change' | 'refused'; readonly message?: string };
 }
 
-export default function CoachTabScreen() {
+export default function CoachTabScreen({ route, navigation }: CoachTabScreenProps) {
   // BOTH HALVES OF ONE PROJECTION, AND THE SECOND ONE IS NOT OPTIONAL.
   //
   // MEASURED, `npm run tape:coach-move-durability`, 2026-08-10: this destructured
@@ -210,7 +214,11 @@ export default function CoachTabScreen() {
   const { modifiers, count: modifierCount } = useActiveModifiers({
     visibleWeekDays: weekDays,
   });
-  const [statusVisible, setStatusVisible] = useState(false);
+  // MY STATUS IS NAVIGATION STATE, NOT PRIVATE SCREEN STATE. Program and Coach
+  // now address the same destination, so one surface cannot merely switch tabs
+  // while the other opens the detail. Closing clears the same state that opened
+  // it, which also makes a second Program tap work after returning.
+  const statusVisible = route.params?.status === 'open';
   const scrollRef = useRef<ScrollView>(null);
   const [draft, setDraft] = useState('');
   const [turns, setTurns] = useState<readonly CoachTurn[]>([]);
@@ -415,14 +423,15 @@ export default function CoachTabScreen() {
             strip and never scrolls away; the detail lives on the screen it
             opens, which is her prototype's own shape.
 
-            IT RENDERS NOTHING WHEN THERE IS NOTHING, so a normal week does not
-            pay for it — the same property the day screen's section has always
-            had. */}
+            IT STAYS WHEN THERE IS NOTHING. Sam's 2026-08-11 correction makes
+            My Status a permanent Coach doorway; the zero state says plainly
+            that no modifiers are currently impacting the program. Program's
+            day/week notices still disappear at zero. */}
         <View style={styles.statusStrip}>
           <ModifiersStrip
             surface="coach"
             count={modifierCount}
-            onPress={() => setStatusVisible(true)}
+            onPress={() => navigation.setParams({ status: 'open' })}
           />
         </View>
         <ScrollView
@@ -490,7 +499,7 @@ export default function CoachTabScreen() {
               // LIVE_ACTION_KINDS in CoachStatusScreen.
               if (action.kind === 'dismiss_note') dismissActiveCoachNote(note.id);
             }}
-            onClose={() => setStatusVisible(false)}
+            onClose={() => navigation.setParams({ status: undefined })}
           />
         </View>
       ) : null}
