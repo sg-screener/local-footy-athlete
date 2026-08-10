@@ -51,7 +51,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `4189de2b` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `31fc279f` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -96,6 +96,10 @@ and this file gets one line pointing at it.**
   six red flows. And the open question that matters most: does a REAL ONBOARDING
   install hit the same window? Not measured — if it does, this is athlete-facing
   data loss, not a harness bug.**
+- **`injury-case` INSTALLS AGAIN** (`31fc279f`) — the witness was right and the
+  ORDER was wrong: an install claim was being validated after a legitimate
+  mutation answered a different question. **It now fails on the DURABILITY defect
+  instead**, which is a different problem and is priced above.
 - **FIVE dev-e2e SUITES JOINED THE CHAIN** (`4189de2b`) — they existed and
   nothing ran them, which is why a seed answering in a vocabulary the app refuses
   sat undetected. **Four of the five are RED**: `dev-e2e-seeds` 2,

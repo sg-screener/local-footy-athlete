@@ -5832,3 +5832,22 @@ stop.**
    must photograph every state they touch. Registry row.
 
 (none)
+
+## Processed 2026-08-10 (seventy-fifth pass) — ORDER 2 FIXED: the witness was right and the ORDER was wrong
+
+Boundary: `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 6.
+ORDER 1 (the knot) remains open and is the only live order.
+
+
+1. **THE KNOT — untangle it so the My status buttons work and the
+   off-season box can leave the day screen.** CARRIED FORWARD, not
+   processed. The hedge is taken (the controls are visibly not-yet) and
+   the extraction is priced in
+   `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 2. **Nothing
+   has left the day screen.**
+
+2. **`injury-case` CANNOT INSTALL.** CARRIED FORWARD, diagnosed not
+   fixed: it BUILDS correctly, so the witness fails at INSTALL time,
+   after a severity-5 injury rebuilds the program the witness was
+   captured against. Lead and probe in addendum 2;
+   `scripts/probe-injury-seed.ts` is committed.
