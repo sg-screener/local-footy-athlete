@@ -33,6 +33,7 @@ string `${E2E_METRO_URL}`.
 | `standard-program-week.yaml` | 2026-08-10 | PASS — seven rows, a count, and a row opening in place |
 | `explorer-all-nine.yaml` | NOT RUN | Never run this pass. Carried as debt, not as a claim. |
 | `fixture-move.yaml` | NOT RUN | RED on the dead `fixture-actions-open` id (pre-existing). |
+| `injury-case` (seed, via `reset-seed`) | 2026-08-10 | **WITNESS FAILURE GONE.** Now blocked behind the calendar-storage durability defect — a DIFFERENT problem, priced in the slice 3 boundary addendum 4. |
 | `lower-body-deletion.yaml` | NOT RUN | Never run this pass. |
 | `one-set-feedback.yaml` | NOT RUN | Re-aimed 2026-08-10, never executed since. |
 | `reload-standard-week.yaml` | NOT RUN | Blocked behind the seeded world's durability (4 game days in memory, 1 on disk). |

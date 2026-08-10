@@ -1,4 +1,23 @@
 import { isDevE2ESeedId, type DevE2ESeedId } from './devE2ESeedIds';
+
+/**
+ * WITNESSES THAT DESCRIBE THE INSTALL ITSELF, checked before any auxiliary state
+ * runs — see the call site for the founding case.
+ *
+ * TWO KINDS, AND THE LINE IS NOT ARBITRARY: `program` and `profile_exact` are
+ * claims about what was WRITTEN by `installProgram`/`writeProfile`. Every other
+ * witness describes the world the athlete ends up in, which auxiliary state is
+ * entitled to change — an injury rebuilds the program, an equipment fact
+ * constrains it, a feedback receipt adds a result.
+ *
+ * **A WITNESS IN THE WRONG HALF IS A REAL FAULT IN BOTH DIRECTIONS**: an install
+ * witness checked late asks a question a legitimate mutation has already
+ * answered (that is the bug this fixes), and a world witness checked early would
+ * assert a state that has not been created yet.
+ */
+function isInstallWitness(witness: { readonly kind: string }): boolean {
+  return witness.kind === 'program' || witness.kind === 'profile_exact';
+}
 import type {
   DevE2EAuxiliaryState,
   DevE2ESeed,
@@ -174,11 +193,40 @@ export class DevE2ESeedCoordinator {
         }
         this.deps.writeProfile(seed);
         this.deps.installProgram(seed);
+        // ── THE INSTALL WITNESSES ARE CHECKED BEFORE THE MUTATIONS ──────────
+        //
+        // `injury-case` COULD NOT INSTALL, AND THIS ORDERING IS WHY. Measured
+        // 2026-08-10: the seed BUILDS correctly — `scripts/probe-injury-seed.ts`
+        // shows its program id and week start both matching their own witness —
+        // yet the device threw
+        // `Seed witness validation failed: injury-case:program:dev-e2e-injury-case:2026-07-13`.
+        //
+        // **THE PROGRAM WITNESS IS A CLAIM ABOUT THE INSTALL, AND IT WAS BEING
+        // ASKED AFTER A LATER, LEGITIMATE MUTATION HAD ANSWERED A DIFFERENT
+        // QUESTION.** This seed's auxiliary state is a severity-5 injury, and an
+        // injury that severe REBUILDS the program — so by the time the witness
+        // ran, the program it names had correctly been replaced.
+        //
+        // Same shape as the replay latch: one check being asked a question it
+        // was not written to answer. The fix is ORDER, not a looser witness —
+        // loosening it would blind the seed-rot alarm that caught the equipment
+        // defect the same day.
+        const installFailures = this.deps.validateWitnesses(
+          seedId,
+          seed.witnesses.filter(isInstallWitness),
+          this.deps.readWitnessState(),
+        );
+        if (installFailures.length > 0) {
+          throw new Error(`Seed witness validation failed: ${installFailures.join(', ')}`);
+        }
         await this.deps.applyAuxiliaryState(seed.auxiliaryState);
         this.deps.completeOnboarding();
+        // Everything the auxiliary state is ABOUT — the injury, the equipment
+        // fact, the feedback receipt — plus every witness that describes the
+        // world as it stands after them.
         const failures = this.deps.validateWitnesses(
           seedId,
-          seed.witnesses,
+          seed.witnesses.filter((witness) => !isInstallWitness(witness)),
           this.deps.readWitnessState(),
         );
         if (failures.length > 0) {

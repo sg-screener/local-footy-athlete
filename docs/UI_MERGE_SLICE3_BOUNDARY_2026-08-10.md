@@ -429,3 +429,64 @@ than re-derived.
   here), not the whole shape. **A seed could satisfy every witness and still be a
   week the generator would no longer produce.** That is a real gap and it is the
   next thing this alarm needs.
+
+---
+
+# ADDENDUM 6 — ORDER 2 IS FIXED, AND IT UNCOVERED THE ONE UNDERNEATH IT
+
+## THE FIX IS ORDER, NOT A LOOSER WITNESS
+
+`DevE2ESeedCoordinator` ran `installProgram` → `applyAuxiliaryState` →
+`validateWitnesses`. **So the `program` witness — a claim about what the INSTALL
+wrote — was being asked after a later, legitimate mutation had answered a
+different question.** This seed's auxiliary state is a severity-5 injury, and an
+injury that severe rebuilds the program, so by the time the witness ran, the
+program it names had correctly been replaced.
+
+**THE SPLIT: `program` and `profile_exact` are validated immediately after the
+install; every other witness after the auxiliary state.** The line is not
+arbitrary — those two are claims about what was WRITTEN, and everything else
+describes the world the athlete ends up in, which auxiliary state is entitled to
+change. **A witness in the wrong half is a real fault in both directions**, and
+the helper's doc says so.
+
+**LOOSENING THE WITNESS WAS AVAILABLE AND REFUSED.** It would have blinded the
+seed-rot alarm that caught the equipment defect the same day.
+
+## THE SAME SHAPE AS THE LATCH, AND THAT IS NOW TWICE IN ONE PASS
+
+Order 5's finding was *one boolean carrying two meanings, so the boot path cannot
+tell a replay from an install.* This is *one validation point carrying two
+meanings, so it cannot tell an install claim from a world claim.* **Both are a
+check being asked a question it was not written to answer, and in both the fix is
+to separate the two meanings rather than weaken the check.**
+
+## PROVEN ON THE DEVICE, AND IT REVEALED THE NEXT LAYER
+
+`injury-case` no longer fails witness validation. **It now fails on something
+else entirely**, read off the device:
+
+```
+Persisted semantic state did not converge: calendar-storage
+  memory: {"markedDays":{"2026-07-18":"game","2026-07-25":"game",
+                         "2026-08-01":"game","2026-08-08":"game"}}
+  disk:   {"markedDays":{"2026-07-18":"game"}}
+```
+
+**That is ORDER 5 — the durability defect priced in addendum 4 — and it is a
+DIFFERENT problem.** The staircase again: a blocked instrument hides an unknown
+number of defects, and clearing one shows the next.
+
+**SO THE ORDER'S QUESTION — "fix or retire it, and say which" — IS ANSWERED:
+FIXED, not retired.** The seed is legitimate and its witnesses were right; what
+was wrong was when they were asked. It cannot install yet, and the reason is now
+a named, priced defect rather than a mystery.
+
+## NOT COVERED
+
+- **`test:dev-e2e-reset-hydration` STILL HAS ITS SAME 2 FAILURES** — 54 passed, 2
+  failed both before and after this change. **No regression, and no fix either**;
+  they are counted, not diagnosed.
+- **NO FLOW USES `injury-case` YET**, because it still cannot install. It joins
+  the run receipt as a blocked row rather than a green one.
+- **THE DURABILITY DEFECT IS NOT TOUCHED.** Addendum 4 stands as written.
