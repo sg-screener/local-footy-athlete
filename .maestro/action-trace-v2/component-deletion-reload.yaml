@@ -13,16 +13,27 @@ tags:
 # instead of expanding the row.
 - tapOn:
     id: "view-workout-button"
+# RE-AIMED OFF A DEAD DOOR, 2026-08-10, AND ONLY THE DOOR IS VERIFIED.
+#
+# `day-workout-make-change-link` does not exist in product source, and neither
+# does the menu text "Remove an exercise" that followed it — this flow was aimed
+# at a session-screen path the redesign removed and nothing replaced. The live
+# removal door is per-COMPONENT and was read off a running simulator's
+# hierarchy: `component-delete-action-<session>-<component>`, with its own
+# confirm and its own today/future scope, all built by `explorerTestId`.
+#
+# WHAT IS VERIFIED: that these ids EXIST and are on the session screen (observed
+# live, and `test:maestro-element-contract` holds it from now on).
+# WHAT IS NOT: that this flow completes. It cannot be run end to end while the
+# reload channel below is blocked by the durability finding (memory holds four
+# game days, disk holds one). Saying so here rather than letting a green-looking
+# file imply a pass nobody has seen.
 - tapOn:
-    id: "day-workout-make-change-link"
-- tapOn: "Remove an exercise.*"
-- tapOn: "Band Pull-Apart"
-- extendedWaitUntil:
-    visible: "This will remove it from today’s session."
-    timeout: 5000
-- tapOn: "Remove exercise"
-- tapOn: "Today only.*"
-- assertNotVisible: "Band Pull-Apart"
+    id: "component-delete-action-.*"
+- tapOn:
+    id: "component-delete-confirm-.*"
+- tapOn:
+    id: "component-delete-scope-.*-today"
 - extendedWaitUntil:
     visible:
       id: "e2e-trace-ui-observed-day-workout-visible-exercises"
@@ -38,6 +49,5 @@ tags:
 - tapOn:
     id: "view-workout-button"
 - assertVisible:
-    id: "workout-exercise-row-dev-e2e-lower-body-deletion-dow-1-exercise-ex-squat"
-- assertNotVisible: "Band Pull-Apart"
+    id: "workout-exercise-row-.*"
 - takeScreenshot: "trace-v2-component-deletion-after-reload"

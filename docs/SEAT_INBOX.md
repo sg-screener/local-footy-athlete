@@ -2,56 +2,46 @@
 
 ## Unprocessed (newest first)
 
-1. **SAM HAS SIGNED THE MERGE. THE CLASH LIST DID NOT NEED WRITING —
-   HE RULED IT FIRST, AFTER TAPPING THROUGH BOTH PROTOTYPES.**
-   **READ `docs/UI_MERGE_RULINGS_2026-08-10.md` BEFORE ANYTHING ELSE
-   ON THE UI.** Nine rulings, his words verbatim, plus the governing
-   rule.
+1. **SAM HAS GIVEN THE GO. THE SCREEN WORK OPENS.** His precondition
+   was a flow walking day -> week -> profile and you have it, green,
+   photographing every surface. **Start the merge, to the nine signed
+   rulings in `docs/UI_MERGE_RULINGS_2026-08-10.md`, day and week and
+   profile only.**
 
-   **THE GOVERNING RULE, AND IT DECIDES EVERY AMBIGUITY BELOW IT: HER
-   STRUCTURE, HIS STYLE.** *"keep her structure with my style - keep
-   all of my icons for now too and my colours please"*. **The
-   prototype's palette and type scale are NOT adopted.** Layout, flow
-   and simplification are taken; colour, type and icons stay his.
-   Second binding line, from earlier: *"without destroying what i have
-   now"* — **nothing working is removed to match a picture.**
+   **THE GOVERNING RULE DECIDES EVERY AMBIGUITY: her structure, his
+   colours, his fonts, ALL his icons — and nothing that works is
+   removed to match a picture.** Where a ruling removes something
+   (3, 6, 7), name where the behaviour went before deleting it.
+   Ruling 4 lands on the coach tab rebuilt this week — **if that fights
+   the coach architecture, that is ONE question for Sam, not a
+   decision for you.**
 
-   **THE THREE THAT NEED A CHECK BEFORE A LINE IS WRITTEN, because
-   each one moves a behaviour rather than restyling one:**
-   - **Ruling 4** puts active modifiers on the day screen and moves
-     coach notes AND season-phase changing onto the coach page under
-     "my status". **That lands on the tab rebuilt this week.** Check it
-     against the coach architecture reassessment and L-C1/L-C2/L-C4 —
-     the coach tab is a conversation surface and this adds a status
-     surface above it. **If that is a real tension, it is a question
-     for Sam, not a decision for you.**
-   - **Rulings 3, 6 and 7 all REMOVE things** (the day strip, season
-     phase from day and week, the buttons under weekly view). **Each
-     removal must name where the behaviour went.** 4 and 9 catch most
-     of it. **Anything with nowhere to land goes on one sheet for
-     Sam** — asked once, not per screen.
-   - **Ruling 5 is new athlete-facing copy** — *"Today's session - Mon
-     10/8"*. Through the copy register and one signing sitting with
-     everything else pending.
+   **RUN THE WALK AFTER EVERY SCREEN, NOT AT THE END.** It is 18-20
+   seconds and it now photographs each surface. **A screen changed
+   without a walk is a screen nobody has seen** — and the element-name
+   contract you just built is what makes the walk trustworthy while
+   ids move underneath it. **Sam is the eyes and the screenshots are
+   how he gets them cheaply**, so make sure each ruling's before/after
+   state is actually captured.
 
-   **RULING 2 AND 8 ARE PROTECTIONS, NOT CHANGES — DO NOT TOUCH
-   EITHER.** "Start session" still goes to HIS EXISTING session
-   screen; the session screen is out of scope. His composer stays
-   exactly as it is — **and that is the surface the keyboard matrix
-   guards, so disturbing it costs the one guard that already works.**
+2. **DO NOT LOSE ITEM 6 — THE SEEDED WORLD IS NOT DURABLE.** Memory
+   holds four game days, disk holds one, and the lead is named
+   (durable writes dropped while the replay latch is held, and the seed
+   installs inside that window). **That is an app-level persistence
+   question, not a harness one**, and it is the only open finding from
+   this pass. **It must not become a NOT-COVERED line that survives
+   three passes** — that class has already cost this project twice
+   today. Give it a registry row now so it cannot quietly age, and
+   price it after the first screen lands.
 
-   **RULING 7 CARRIES A GENERAL PRINCIPLE, NOT JUST A LAYOUT** — take
-   it as one: *a change for one day is made on that day; a chronic
-   change is made once, not per day; nobody schedules being sick or
-   injured in advance.* **Apply it to anything else that turns up
-   wanting a home on weekly view.**
-
-   **SEQUENCING IS UNCHANGED AND IT IS THE POINT: DO NOT START
-   CHANGING SCREENS until a flow walks day -> week -> profile end to
-   end.** The older flows still point at buttons the redesign moved.
-   **Sam has been told this and agreed to it.** The merge PLAN — which
-   files, which order, what each ruling touches — is reading work and
-   starts now; the screens wait for the net.
+3. **SEAT'S NOTE ON THE PASS, FOR THE BOUNDARY:** six defects, each
+   invisible until the previous was fixed — the second time that exact
+   pattern has appeared in one day. **Say it as the general finding it
+   is: a blocked instrument does not hide zero defects, it hides an
+   unknown number, and the count is only knowable by unblocking it.**
+   That is the single strongest argument this project has produced for
+   `LAW-instrumentation-alive`, and it should be the row's founding
+   text rather than a boundary footnote.
 
 1. **GREEN IN 18 SECONDS, AND THE THIRD FINDING IS THE ONE THAT MATTERS
    — SAY IT TO SAM IN THOSE TERMS.** Every practice week in this repo
@@ -762,6 +752,36 @@ only from here; the seat clears this section at every tidy.
   wrong downstream** — Part A shows the field changed nothing about the
   generated week — **but it never covered the completeness gate**, which is
   precisely why the defect survived.
+
+## Processed 2026-08-10 (sixty-eighth pass) — THE MERGE PLAN IS WRITTEN, RULING 4 RESOLVED WITHOUT SAM, AND ONE QUESTION IS OWED
+
+**Full plan: `docs/UI_MERGE_PLAN_2026-08-10.md`.**
+
+- **RULING 4 CHECKED AGAINST L-C1/L-C2/L-C4 BEFORE A LINE WAS WRITTEN, AND IT IS
+  NOT A LAW TENSION** — so it does NOT go to Sam. L-C4 is about coach ability
+  derived from the athlete's buttons, and ruling 4 changes their ADDRESS, not
+  their existence; L-C2 governs coach-PROPOSED changes and "my status" is the
+  athlete tapping their own control; L-C1 governs the coach's mouth.
+  **The real hazard is two kinds of mutation on one tab**, and it is answered
+  with a binding rule instead of a question: **"my status" MOUNTS the existing
+  doors (`handleOpenPhaseShift`, `handleCoachNoteAction`…), it does not build
+  new ones — a new door there is a second representation of a decision that
+  already has one.**
+- **THE REMOVAL LEDGER IS COMPLETE: six removals, six destinations, nothing
+  orphaned.** Every row names the current call site and where the behaviour
+  goes. **No sheet of orphans is owed.**
+- **FIVE SLICES, EACH WITH ITS GUARD AND ITS SCREENSHOT SET.** Slice 1 is pure
+  removal and blocked by nothing. **Slice 2 is blocked: `one-set-feedback.yaml`
+  is its guard and is RED.**
+- **ONE QUESTION FOR SAM, ASKED ONCE** (in the plan's own sheet): with the day
+  strip gone, **tapping Thursday in weekly view — open in place as it does
+  today, or go to a day screen for Thursday?** Both fit his ruling; everything
+  else in the nine is decided.
+- **PROFILE IS IN HIS SCOPE AND NO RULING TOUCHES IT.** Stated rather than
+  dropped: there is no profile work in this plan.
+- **A CLAIM IN THE FIRST DRAFT WAS WRONG AND WAS CORRECTED BEFORE COMMIT** — it
+  said only the walk names `week-strip`. Six assertions across two flows do.
+  Counted, not assumed.
 
 ## Previously (now processed)
 
