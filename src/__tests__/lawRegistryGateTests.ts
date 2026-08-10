@@ -242,6 +242,77 @@ function citationsWithNoSource(rows: readonly LawRow[]): string[] {
     .map((row) => `${row.id}: "${row.ruledAt.slice(0, 60)}…"`);
 }
 
+// ── THE INVERSE SWEEP: GUARDS WITH NO LAW ──────────────────────────────────
+//
+// LAW ZERO's BLIND SPOT, found 2026-08-10 by the frozen-coach deletion census.
+// This registry finds a LAW WITH NO GUARD. Until now nothing found a GUARD WITH
+// NO LAW — and one was a step from vanishing: `LR-6` ("the coach pipeline stays
+// frozen") is named in FIFTEEN chain suites and had no row, so retiring its gate
+// would have erased a live standing rule with nothing noticing.
+//
+// So: every rule identifier a chain suite NAMES must resolve to a registry row.
+// Measured on the day this landed: **34 distinct identifiers across 175 chain
+// suites, 13 with a row and 21 without.** The 21 are carried as a NAMED, DATED
+// exception list with a ratchet — an id leaves by gaining a row, and **nothing
+// may join it**. Same shape the NOT-COVERED debt uses next door.
+
+/** Rule ids as this repo writes them: LR-29, L-C4, L-P2, L13. */
+const RULE_ID_PATTERN = /\b(LR-\d+|L-C\d+|L-[A-Z]\d+|L1[0-6])\b/g;
+
+/**
+ * The 21 identifiers chain suites named on 2026-08-10 with no registry row.
+ * **THIS LIST MAY ONLY SHRINK.** Each is a rule some suite believes it is
+ * enforcing, which nothing in the registry knows about.
+ */
+const RULE_IDS_WITHOUT_A_ROW: readonly string[] = [
+  'L-P0', 'L-P1', 'L-P2', 'L-P3', 'L-P4', 'L-P5', 'L-P7', 'L-P8',
+  'LR-1', 'LR-2', 'LR-3', 'LR-4', 'LR-8', 'LR-10', 'LR-13', 'LR-14',
+  'LR-18', 'LR-23', 'LR-26', 'LR-27', 'LR-29',
+];
+
+/** Every rule identifier named by a suite the chain actually runs. */
+function ruleIdsNamedByChainSuites(): Map<string, string[]> {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'),
+  ) as { scripts: Record<string, string> };
+  const chain = pkg.scripts['test:bible'];
+  const suiteFiles = new Set<string>(
+    [...chain.matchAll(/sucrase-node (src\/\S+\.ts)/g)].map((m) => m[1]));
+  for (const name of [...chain.matchAll(/npm run (test:[a-zA-Z0-9:-]+)/g)].map((m) => m[1])) {
+    const match = /(src\/\S+\.ts)/.exec(pkg.scripts[name] ?? '');
+    if (match) suiteFiles.add(match[1]);
+  }
+  // THIS SUITE EXCLUDES ITSELF, AND MUTATION TESTING IS WHAT FOUND OUT WHY.
+  // `test:law-registry` is a chain member, so this file was scanning its own
+  // source — and `RULE_IDS_WITHOUT_A_ROW` below IS a list of those ids. Every
+  // entry therefore named itself, landed in `missing`, and **the ratchet could
+  // never fire**: a phantom entry survived. Same shape as the totals-or-red
+  // suite reading its own comments. A gate that reads sources must not read the
+  // source that lists what it is looking for.
+  const found = new Map<string, string[]>();
+  for (const file of suiteFiles) {
+    const full = path.join(repoRoot, file);
+    if (!fs.existsSync(full) || full === __filename) continue;
+    for (const match of fs.readFileSync(full, 'utf8').matchAll(RULE_ID_PATTERN)) {
+      const list = found.get(match[1]) ?? [];
+      if (!list.includes(file)) list.push(file);
+      found.set(match[1], list);
+    }
+  }
+  return found;
+}
+
+/**
+ * Pure: which named ids the registry does not know about.
+ * `L-C4` and `LAW-LC4-parity` are the same rule written two ways, so the
+ * hyphen-stripped form counts as a resolution.
+ */
+function ruleIdsWithNoRow(named: Iterable<string>, registrySource: string): string[] {
+  return [...named]
+    .filter((id) => !registrySource.includes(id) && !registrySource.includes(id.replace(/-/g, '')))
+    .sort();
+}
+
 // ── THE CELLS ──────────────────────────────────────────────────────────────
 
 const FACTS = readChainFacts();
@@ -284,6 +355,32 @@ run('every `ruledAt` resolves to a repo file, or says plainly that it does not',
     `citation(s) naming no resolvable file: ${bad.join('; ')}. `
     + `Either cite a path, or write "${NOT_IN_REPO_MARKER}" and say what a ruling site would take. `
     + '"Training Bible, Move rules" was this cell\'s founding case — there is no such section.');
+});
+
+run('no chain suite names a rule the registry has never heard of', () => {
+  const named = ruleIdsNamedByChainSuites();
+  assert(named.size > 10, `only ${named.size} rule ids found across the chain — the scan is not reading the suites`);
+  const registrySource = fs.readFileSync(
+    path.join(repoRoot, 'src', 'rules', 'lawRegistry.ts'), 'utf8');
+  const missing = ruleIdsWithNoRow(named.keys(), registrySource);
+  const unexpected = missing.filter((id) => !RULE_IDS_WITHOUT_A_ROW.includes(id));
+  assert(unexpected.length === 0,
+    `chain suite(s) enforce rule(s) with NO registry row: `
+    + `${unexpected.map((id) => `${id} (${named.get(id)?.length} suites)`).join(', ')}. `
+    + 'A guard with no law is how a rule disappears when its gate is retired — LR-6 was one step from exactly that.');
+  console.log(`      (${named.size} rule ids named by chain suites; `
+    + `${named.size - missing.length} have a row, ${missing.length} carried as dated debt)`);
+});
+
+run('the guards-with-no-law debt only shrinks', () => {
+  // THE RATCHET. Without it the exception list becomes the place a new
+  // unregistered rule hides, and the law decays one entry at a time.
+  const registrySource = fs.readFileSync(
+    path.join(repoRoot, 'src', 'rules', 'lawRegistry.ts'), 'utf8');
+  const missing = new Set(ruleIdsWithNoRow(ruleIdsNamedByChainSuites().keys(), registrySource));
+  const paid = RULE_IDS_WITHOUT_A_ROW.filter((id) => !missing.has(id));
+  assert(paid.length === 0,
+    `these rules gained a registry row — delete them from RULE_IDS_WITHOUT_A_ROW: ${paid.join(', ')}`);
 });
 
 run('NO LAW IS UNENFORCED', () => {
