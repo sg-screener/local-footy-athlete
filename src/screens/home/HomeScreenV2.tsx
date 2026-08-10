@@ -448,11 +448,12 @@ export default function HomeScreenV2() {
            her signed prototype: **it expands IN PLACE**, and the app already did
            that; what the week rows lacked was anything worth opening.
 
-           SO THE DROP-DOWNS ARE NOT REBUILT FOR THE WEEK. It is the same
-           `DayTimeline`, the same `dayTimeline()` read, the same collapsible
-           parts with their exercises and prescriptions. One component, both
-           shapes — which is why a week row cannot come to disagree with the day
-           card about what is on a day.
+           SO THE SESSION IS NOT REBUILT FOR THE WEEK. It is the same
+           `DayTimeline` and the same `dayTimeline()` read, with one presentation
+           input: Today keeps the interactive component rows; Week shows every
+           section and exercise immediately, as the signed prototype does. One
+           component and one list of entries means the two shapes cannot disagree
+           about what is on a day while still being allowed to read differently.
 
            REST AND GAME DAYS STILL DO NOT EXPAND, and nothing here had to say
            so: `DayTimeline` returns null on zero entries, and the expanded block
@@ -462,6 +463,7 @@ export default function HomeScreenV2() {
           <DayTimeline
             entries={dayTimeline(visibleDay, sessionFeedback[day.date])}
             onOpen={() => handleViewWorkout(day)}
+            presentation={dayFirst ? 'interactive' : 'flat'}
           />
         ) : null}
       />
@@ -2429,6 +2431,8 @@ const TIMELINE_COMPLETION_COLOR: Readonly<Record<string, string>> = {
 interface DayTimelineProps {
   entries: readonly DayTimelineEntry[];
   onOpen: () => void;
+  /** Today is interactive; Week reveals the complete session in one simple drop. */
+  presentation: 'interactive' | 'flat';
 }
 
 /**
@@ -2452,7 +2456,7 @@ interface DayTimelineProps {
  * `conditioning`. A list keyed by kind would silently drop one of them — work
  * the athlete has to do, missing from the only screen that shows it.
  */
-function DayTimeline({ entries, onOpen }: DayTimelineProps) {
+function DayTimeline({ entries, onOpen, presentation }: DayTimelineProps) {
   // WHICH PARTS ARE OPEN — SCREEN STATE, AND IT IS NEVER PERSISTED.
   //
   // The north star's rule is "store only decisions, derive everything else", and
@@ -2498,6 +2502,40 @@ function DayTimeline({ entries, onOpen }: DayTimelineProps) {
             { count: entry.rows.length },
           )
           : null;
+        if (presentation === 'flat') {
+          if (!canOpen) return null;
+          return (
+            <View
+              key={entry.partId}
+              style={styles.weekSessionSection}
+              testID={`day-timeline-rows-${entry.componentId}`}
+            >
+              <Text style={styles.weekSessionSectionTitle}>{entry.headline}</Text>
+              <View style={styles.weekSessionRows}>
+                {entry.rows.map((row, rowIndex) => (
+                  <View key={row.id} style={styles.weekSessionExerciseRow}>
+                    <Text style={styles.weekSessionExerciseNumber}>{rowIndex + 1}</Text>
+                    <Text
+                      style={styles.weekSessionExerciseName}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {row.name}
+                    </Text>
+                    <Text style={styles.weekSessionExercisePrescription}>
+                      {row.prescription}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              {entry.completion ? (
+                <ExplorerRenderWitness
+                  testID={`day-timeline-complete-${entry.componentId}-${entry.completion}`}
+                />
+              ) : null}
+            </View>
+          );
+        }
         return (
           <View key={entry.partId}>
             <Pressable
@@ -4038,6 +4076,34 @@ const styles = StyleSheet.create({
   timelineExerciseRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   timelineExerciseName: { flex: 1, color: '#C9CDD2', fontSize: 13, fontWeight: '500' },
   timelineExercisePrescription: { color: '#8A8A8A', fontSize: 13, fontVariant: ['tabular-nums'] },
+  // THE WEEK'S ONE SIMPLE DROP (Sam, 2026-08-11). No inner toggles, rails or
+  // icons: section heading, then every numbered exercise and its prescription.
+  // `weekExpanded` already owns the top divider. This container deliberately
+  // adds none, or the first section starts behind two horizontal rules.
+  weekSessionSection: { minWidth: 0 },
+  weekSessionSectionTitle: {
+    color: '#9A9E9A', fontSize: 9, lineHeight: 12, fontWeight: '800',
+    letterSpacing: 0.7, textTransform: 'uppercase', paddingVertical: 8,
+  },
+  weekSessionRows: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#2F2F2F' },
+  weekSessionExerciseRow: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#2F2F2F',
+  },
+  weekSessionExerciseNumber: {
+    width: 16, color: '#A7AAA7', fontSize: 11, lineHeight: 14,
+    fontVariant: ['tabular-nums'],
+  },
+  weekSessionExerciseName: {
+    flex: 1, color: '#E1E3E1', fontSize: 12, lineHeight: 15, fontWeight: '500',
+  },
+  weekSessionExercisePrescription: {
+    color: '#E1E3E1', fontSize: 11, lineHeight: 14, fontVariant: ['tabular-nums'],
+  },
   // ── THE DAY CARD'S EYEBROW (ruling 5) ──
   // Small, muted, letter-spaced — the same treatment `coachNotesTitle` gives an
   // eyebrow already, minus the lime, because ruling 2 spends the accent once.

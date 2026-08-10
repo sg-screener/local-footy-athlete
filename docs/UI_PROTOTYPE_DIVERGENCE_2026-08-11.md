@@ -179,3 +179,60 @@ modifiers (the registered plural copy is source-held, the device tape reaches
 one); prior/next-week Completed treatment; the separately deferred team-training
 badge; the already-held season-phase removal. This is simulator acceptance, not
 phone acceptance.
+
+---
+
+## SAM EYE PASS 3 — ONE CHEVRON OPENS THE WHOLE SESSION
+
+**Sam, with both open states side by side:** *"when you tap the chevron on the
+template - the whole session pops down very basically - that's what i want ours
+to do instead of being like it currently is".* Correct. The built week card
+opened onto the day screen's second layer of component accordions; the template
+opens once, then shows section headings and every exercise row immediately.
+
+**THE TWO OPTIONS COMPARED:** (1) initialise every existing inner accordion as
+open in Week mode, leaving its rails, icons, counts and inner chevrons visible,
+or (2) keep one `DayTimeline` and its one projected entry list, with an explicit
+presentation input: interactive on Today, flat on Week. Option 2 landed. It
+removes the nested interaction rather than merely pre-opening it, without
+building a second session reader.
+
+**WHAT THE FLAT PRESENTATION IS:** one section heading followed by every row in
+projection order. Each row carries its derived number, exercise name and signed
+prescription. There are no inner buttons, chevrons, timeline rails or icons. The
+outer day card remains the only open/close control. Today mode is unchanged.
+
+**RECEIPTS:**
+
+- `test:day-first-timeline`: 33 named cells run, 33 passed. The new cell pins one
+  `DayTimeline` call site, the explicit Today/Week presentation choice, every row
+  rendered without an `openParts` gate, row numbers, and the absence of the
+  nested interaction furniture.
+- `.maestro/golden/standard-program-week.yaml`: completed on the iOS simulator.
+  After reaching the acted modifier world and the collapsed seven-card list, it
+  opens Wednesday once, proves the flat strength rows exist, proves the inner
+  strength button does not, keeps the card head, then reaches the bottom days.
+- `artifacts/ui-walk/week-row-open.png`: looked at. Wednesday opens as one plain
+  ACCESSORIES section with five numbered rows and prescriptions, matching the
+  template's interaction shape.
+- `test:compile` and `test:maestro-element-contract`: green.
+
+**FIRST-RUN FINDINGS, NOT FIXED QUIETLY:** the new source cell failed on the old
+nested build. The first device assertion guessed `accessory` from the visible
+headline; the actual projected component identity was `strength`, even though
+the signed headline reads Accessories. The screenshot already showed the flat
+session was correct, but the guessed selector stopped the tape. The hierarchy
+named the real id; the check was re-anchored and the complete flow passed. Visual
+inspection then found two top dividers — the week expansion and the first
+section both drew one — so the section stopped duplicating the owner's divider.
+
+**NORTH STAR:** toward it. There is still one projected session list and one
+timeline component. `presentation` changes only how that list is read; it stores
+nothing and derives no second version of the workout.
+
+**NOT COVERED:** Sam's physical iPhone; a multi-section flat week session on the
+device tape (the source cell holds every entry and the prior Monday screenshot
+showed two sections under the old presentation, but the final device coordinate
+is Wednesday's one-section session); prior/next-week Completed treatment; the
+deferred team-training badge; the held season-phase removal. This is simulator
+acceptance, not phone acceptance.

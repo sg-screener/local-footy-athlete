@@ -633,7 +633,7 @@ run('the five circles sit in a card with words above them', () => {
     + 'keep "Time".');
 });
 
-run('the week rows open in place, onto the same drop-downs the day card has', () => {
+run('the week rows open in place onto the same projected session', () => {
   const home = homeScreenSource();
   // RULING 7. Sam's question — open in place, or navigate? — was answered by
   // reading her signed prototype: IN PLACE. The app already expanded; the rows
@@ -641,7 +641,7 @@ run('the week rows open in place, onto the same drop-downs the day card has', ()
   //
   // THE LOAD-BEARING ASSERTION IS THE ABSENCE OF `dayFirst &&`. If the timeline
   // is gated on the shape again, the week rows silently go back to opening onto
-  // a CTA and nothing else — and every cell here would still pass, because the
+  // nothing — and every data-level cell here would still pass, because the
   // component and the read would both still exist.
   assert(/timeline=\{visibleDay \? \(/.test(home),
     'the timeline is gated on the shape again — the week rows have lost their '
@@ -654,6 +654,32 @@ run('the week rows open in place, onto the same drop-downs the day card has', ()
   assert((home.match(/<DayTimeline\b/g) ?? []).length === 1,
     'there is more than one DayTimeline call site — the week row and the day '
     + 'card must be one component, or they can disagree about a day');
+});
+
+run('the week chevron opens one flat full session, not nested drop-downs', () => {
+  const home = homeScreenSource();
+  assert(/presentation=\{dayFirst \? 'interactive' : 'flat'\}/.test(home),
+    'the one DayTimeline call site does not select the week\'s flat presentation');
+  const timelineAt = home.indexOf('function DayTimeline(');
+  const chevronAt = home.indexOf('function TimelineChevron(', timelineAt);
+  assert(timelineAt > 0 && chevronAt > timelineAt,
+    'the DayTimeline render region could not be found');
+  const timeline = home.slice(timelineAt, chevronAt);
+  const flatAt = timeline.indexOf("presentation === 'flat'");
+  const interactiveAt = timeline.indexOf('<Pressable', flatAt);
+  assert(flatAt > 0 && interactiveAt > flatAt,
+    'the flat week-session branch was not found before the interactive rows');
+  const flat = timeline.slice(flatAt, interactiveAt);
+  assert(/entry\.rows\.map\(\(row, rowIndex\)/.test(flat),
+    'the flat week session does not render every exercise row directly');
+  assert(/\{rowIndex \+ 1\}/.test(flat),
+    'the flat week session does not carry her simple row numbers');
+  assert(/weekSessionSectionTitle/.test(flat)
+    && /weekSessionExerciseRow/.test(flat)
+    && /weekSessionExercisePrescription/.test(flat),
+  'the flat week session has no section/row/prescription structure');
+  assert(!/openParts|TimelineChevron|timelineRail|RowIcon/.test(flat),
+    'the flat week session still contains an inner accordion, rail or icon layer');
 });
 
 run('all seven week days use her one card head, including today', () => {

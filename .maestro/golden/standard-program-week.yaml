@@ -108,6 +108,10 @@ tags:
       id: "day-timeline"
     timeout: 10000
 - assertVisible:
+    id: "day-timeline-rows-strength"
+- assertNotVisible:
+    id: "day-timeline-part-strength"
+- assertVisible:
     id: "day-row-wed-card-header"
 - assertNotVisible:
     id: "view-workout-button"
