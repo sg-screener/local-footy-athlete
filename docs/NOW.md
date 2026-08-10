@@ -1,5 +1,19 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **⚠ SAM: THE TEST RIG IS NOT DEAD, AND IT IS NOT FORTY MINUTES. IT IS ABOUT
+  TWENTY SECONDS.** You asked because you remember it eating your laptop. I ran
+  it three times on the simulator you already have built: **26s, 20s, 26s per
+  flow, no rebuild.** What you remember was the BUILD, not the run. **It DOES
+  take over your screen** — the simulator comes to the front — so it belongs
+  before a device build and overnight, not on every change.
+  **AND THE THING EVERY REPORT SINCE 18 JULY HAS SAID IS WRONG:** the crash that
+  killed it is gone — your rebuild fixed it. The app launches, loads, and draws
+  the welcome screen. **What actually blocks it is one iOS pop-up — *"Open in
+  Local Footy Athlete?"* — that no test answers.** Twenty-three days of "the rig
+  is dead" was a dialog nobody tapped. docs/MAESTRO_RIG_MEASURED_2026-08-10.md ·
+  **STILL FAILING — no run-through has completed yet, so this is a measurement,
+  not a working rig. OPEN-UNKNOWN.**
+
 - **⚠ SAM: ALL SIX RULES YOU RULED ON ARE NOW WATCHED — AND TWO OF YOUR
   RE-WORDINGS BEAT MINE.** You said the plain-English rule was about **app
   wording**, not my prose, and you were right — it now checks every word the app

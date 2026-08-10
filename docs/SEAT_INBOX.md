@@ -2,6 +2,52 @@
 
 ## Unprocessed (newest first)
 
+1. **SAM IS ABOUT TO TALK TO YOU DIRECTLY, AND YOU DO NOT HAVE HIS
+   COMMUNICATION RULE. FIX THAT FIRST — IT IS ONE EDIT.**
+
+   His process ruling (3) means **instructions now go straight from Sam
+   to the terminal, in his words, with no seat in between.** The seat
+   keeps review, verification and rulings only. **So every report you
+   write is now read by SAM, not by the seat**, and your reports are
+   currently written for a reader who knows the codebase.
+
+   **His rule, verbatim (2026-08-09):** *"i dont care about all this
+   useless bullshit - keep your responses simple so a 12 year old could
+   understand - i dont speak in code or anything. just tell me what
+   happened, what we need to do next, if i need to answer something
+   then tell me what to send."* And (same evening): *"stop sending me
+   these fucking seat inboxes."*
+
+   **THE SHAPE — three parts, nothing else:** WHAT HAPPENED (a sentence
+   or two), WHAT'S NEXT (one sentence), WHAT TO SEND (the exact thing
+   for him to type or answer, or "nothing"). **Zero jargon. No file
+   paths. No commit ids. No test names. No LOOP CHECK lines, no law
+   citations, no receipts, no boundary prose.** All of that ceremony
+   still gets written — it goes in the repo docs and boundaries where
+   the seat and future terminals read it. **It does not go in what Sam
+   reads.**
+
+   **WHERE IT GOES:** `CLAUDE.md` and `AGENTS.md` carry nothing about
+   how to write to Sam — checked, both empty on this. **Put it in
+   `CLAUDE.md` near the top**, because it now governs every report you
+   write.
+
+   **WIDEN THE REGISTRY ROW.** `LAW-sam-chat-simplicity` is currently
+   scoped to *the seat's replies*. **Re-scope it to anything ANYONE
+   writes for Sam to read** — terminal reports, NOW.md's Sam block,
+   card and toast copy already covered by the plain-coach-English law.
+   Its guard stays as ruled: **Sam is the named instrument, and him
+   having to ask "what does that mean?" is the red.** That has now
+   happened twice today on seat replies ("what the fuck is this? i
+   don't even know what some of that shit is", and "what do you even
+   mean?" over the law list) — **record both as the founding cases so
+   the row is not read as theoretical.**
+
+   **ONE THING THAT DOES NOT CHANGE:** technical depth in the repo is
+   not the problem and must not shrink. The boundaries, the receipts,
+   the mutation runs — all of that stays exactly as rigorous. **Only
+   the surface Sam reads gets simple.**
+
 1. **THE TWO FILE OPS ARE PERMITTED. SAM ALREADY RULED BOTH AND THE
    SEAT ALREADY WROTE IT — STOP ASKING AND DO THEM.** (seat,
    2026-08-10; the rulings are in the batch that landed as `faea72dd`
