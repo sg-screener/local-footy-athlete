@@ -2,6 +2,45 @@
 
 ## Unprocessed (newest first)
 
+1. **SAM RULED IT, AND HE IS RIGHT: THE SOURCE LABEL MUST NAME THE
+   DOOR.** His words: *"well shouldn't it be labelled differently to
+   prevent this issue from happening again? so we can diagnose whether
+   the issue happened via tap or coach?"*
+
+   **The defect, already paid for once today:** `source: "tap"` is
+   emitted for BOTH the Program tab's own sheet and the coach's change
+   card. The seat read `lastTransaction: "tap:move_session:..."` in his
+   export and told him his move came through the Program tab. It did
+   not — `route` said `program_control:coach_tab:coach_change_card`.
+   **A diagnostic field that cannot tell two doors apart is not a
+   diagnostic**, and this one sent the investigation down the wrong
+   path for a full pass.
+
+   **THE FIX, AND IT IS THE SMALL ONE — DO NOT REDESIGN THE LOG.** The
+   door is already known at every call site (`route` carries it). So:
+   **`source` gains distinct values per door** — the athlete's own
+   surfaces and the coach tab must not share one — **and
+   `lastTransaction`'s prefix is minted from the same value**, so a
+   summary export alone answers "which door did this?" without needing
+   the full log. Derive the label from the route rather than passing a
+   second opinion in beside it: **one owner, per the same rule that
+   settled the coach's scope rows.**
+
+   **AND WIDEN IT ONCE, THEN STOP:** run the same test over every other
+   value in `AthleteActionSource` and its siblings — **any label whose
+   values cannot distinguish two things a diagnosis needs to tell apart
+   is the same defect.** Report what that sweep finds; fix only what it
+   proves. `system` is the obvious next suspect (it currently covers
+   hydration, calendar writes and rollback restores alike).
+
+   **REGISTRY ROW, AGAINST `LAW-count-names-instrument`** — *"a number
+   names the instrument's unit, not the domain noun"* — this is that
+   law applied to a LABEL rather than a count, and it is the law's
+   third founding case today (the 41,220-line count, the
+   `StoredStateExportButton` grep, and now this). **Widen the law's
+   wording to cover labels and enumerations, not just numbers**, and
+   its guard covers both.
+
 1. **SAM RAN THE MOVE BACK THROUGH THE COACH AND THE DEVICE LOG NAMES
    THE DEFECT. THIS SUPERSEDES EVERY EARLIER THEORY.** He typed *"move
    wednesday to monday"* in the COACH TAB, it worked, **and the

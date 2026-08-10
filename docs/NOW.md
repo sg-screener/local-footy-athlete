@@ -1,5 +1,21 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **⚠ SAM: YOUR MONDAY IS CALLED A STRENGTH DAY BY THE APP'S OWN NAMING, AND
+  THAT IS THE LEAD.** Your export carries `planEntryId: "w2:monday:none:strength"`
+  on a day the app labels **Mixed**. Measured: the app gives each day **ONE**
+  name, picked off a ladder — team, then strength, then conditioning. **A day
+  with both stops at "strength" and the conditioning is never named.** Every
+  test world we build has only one of the two, so the ladder's order has never
+  been visible. Yours has both. docs/PLAN_ENTRY_IDENTITY_MEASURED_2026-08-10.md
+  **NOT YET PROVEN TO BE YOUR DEFECT** — it explains the NAME, and what the door
+  does with that name is the next read. Your case stays open.
+
+- **✅ THE CLEAN-RESET DOOR IS BUILT AND THE CRASHING MIGRATION IS DELETED**
+  (`a0c0cabd`). Saved training the app can no longer read now **starts fresh and
+  tells you once, in plain words**, instead of taking the app down at launch.
+  `test:unreadable-world-reset`, 73 cells, in the chain; the law arrived guarded.
+  **NOT ON GLASS — the notice has never been rendered on a device.**
+
 - **BRANCH:** `main` · **HEAD:** `f168b48b` — **`test:bible` IS DELIBERATELY RED
   AND STAYS RED UNTIL EVERY LAW HAS A GUARD.** S4 not started, as ordered. Sam's
   boot fix below is still UNSEEN on his phone.
