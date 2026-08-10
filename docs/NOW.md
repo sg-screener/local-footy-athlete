@@ -4,8 +4,15 @@
   as ordered. Sam's boot fix below is still UNSEEN on his phone and is still the
   first thing to look at.
 
-- **⛔ OPEN BLOCKER — THE MAESTRO RIG CANNOT RUN: THE SIMULATOR BINARY IS ONE DAY
-  TOO OLD. HELD, NOT BEING FIXED.** Every flow dies on the launch path with
+- **⏳ THE BLOCKER IS CLEARING — SAM APPROVED THE REBUILD AND IT IS RUNNING.**
+  `npx expo run:ios --configuration Debug` was started 2026-08-10 once Sam
+  confirmed his device build had finished. **It had not completed when this
+  checkpoint was written, so NOTHING BELOW HAS BEEN SEEN ON GLASS YET** — the
+  L-C3 matrix is still unrun and the coach-tab undo question is still
+  OPEN-UNKNOWN. The history that made it necessary is kept below.
+
+- **⛔ (HISTORY) THE MAESTRO RIG CANNOT RUN: THE SIMULATOR BINARY IS ONE DAY
+  TOO OLD.** Every flow dies on the launch path with
   `Cannot find native module 'ExpoPushTokenManager'` — `expo-notifications` →
   `journalReminderService.ts:33` → `AppNavigator.tsx:7` → `RootNavigator.tsx:6`
   → `App.tsx:69`, so no flow reaches any screen. **DATED RECEIPT:**
@@ -37,6 +44,33 @@
     `DevE2ELaunchDiagnostic.swift:55-60` treats as a `fatalError`. That half is
     verified green — the launch step and `e2e-entry-ready` now pass. **The rig
     had two independent breaks and only the first is paid.**
+
+- **⚠ SAM: THE COACH NOW OFFERS YOU THE SAME CHOICES YOUR OWN PROGRAM TAB DOES —
+  AND THAT FIXED THE THING WHERE IT SAID NO TO SOMETHING YOU CAN DO.** You asked
+  for the build order off the parity census and this is row 1. Before: on a
+  Monday that carries team training, tapping your own picker offers *"Just the
+  gym session"* and *"Team training"* — and the coach, which never asked what
+  the day offered, sent a whole-day move and got **refused** (*"protected
+  game/team anchor"*). Same day, same destination, same door, you succeed and it
+  fails. **Now the coach reads your picker's own list and puts those same rows on
+  the card**, in your picker's own words, and the move **lands**. Measured
+  refused→applied in `npm run tape:coach-move-durability`, which is the same tape
+  that measured it broken. Gate `test:coach-tab-slice3`, **137 cells**.
+  **NOT ON GLASS YET** — the chooser is a shape nobody has tapped.
+
+- **⚠ SAM: YOUR "IT ONLY MOVED THE STRENGTH" — I REPRODUCED A PART GOING MISSING,
+  AND IT WAS THE DAY YOU MOVED IT *TO* THAT MATTERED.** Not your Monday: your
+  **Wednesday**. Every arm of every tape had been landing sessions on EMPTY days,
+  so the code that runs when a session lands on a **team night** had never once
+  been tested. Yours did. Driving it: a day carrying power + gym work, moved onto
+  a team night, arrives with **the power work deleted — 8 rows in, 7 out** — and
+  the coach says *"Done. Session moved."* The same day moved to an empty day
+  keeps everything. **I have not proven this is what bit you** — yours was
+  conditioning, and conditioning survives this path in every seed I can generate.
+  Same defect shape, different part. **I am not saying your case is closed.**
+  Two suspects, both named, neither proven: the landing code carries a
+  hand-maintained list of what survives, or the §18 power budget re-decides the
+  day once it becomes a team night.
 
 - **⚠ SAM: I TOLD YOU THE COACH COULD MOVE A SESSION. IT COULDN'T — AND NOW IT
   CAN.** The seat ordered a tape that actually runs the door instead of reading

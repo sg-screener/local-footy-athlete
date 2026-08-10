@@ -2,6 +2,59 @@
 
 ## Unprocessed (newest first)
 
+**NONE.** Every order the seat has written through 2026-08-10 — items 1, 2, 3 and
+4 of the sixty-third batch — is processed. **Item 3 is processed as a MEASURED
+STOP, not as done**: it rides with the L-C3 simulator run, and the rebuild Sam
+approved had not finished compiling when the pass closed. It is carried in the
+terminal-owned section below with the one act that clears it. The boundary for
+this batch is docs/COACH_ROW1_L_C4_BOUNDARY_2026-08-10.md.
+
+## Processed 2026-08-10 (sixty-third pass) — ROW 1 BUILT, L-C4 CLOSED ON THE ANCHORED DAY, AND EVERY TAPE HAD BEEN LANDING ON EMPTY DAYS
+
+- **ONE LINE: census row 1 is built and the parity break is measured CLOSED in the
+  same tape that measured it broken — and hunting Sam's multi-part catch found
+  that no tape in this repo had ever landed a session on a TEAM NIGHT, which is
+  what Sam did; driving it DELETES A PART of the day while the coach says
+  "Done".** `ddf285d4` · `8be617c6`.
+  Boundary: docs/COACH_ROW1_L_C4_BOUNDARY_2026-08-10.md
+- **THE SEAT'S PREMISE WAS HALF WRONG AND THE CORRECTION IS THE FINDING.** The
+  order said *"every fixture in this tape is hand-built"* and asked for a
+  GENERATED week. The source was ALREADY generated — `reachWorldByActing` runs
+  the real generator over Sam's own device-pass profile. **The hand-built half is
+  the DESTINATION**: `chooseMove` and `choosePartedMove` both pick a target with
+  NO parts, so `stackSessionOntoTeamAnchor` had never been exercised by any arm.
+- **MEASURED, WITH THE CONTROL IN THE SAME RUN:** a `power+strength` day onto a
+  team night lands as `strength+team_training`, `rows[power:1 -:6]` →
+  `rows[-:6]` — the ROW is deleted, not merely unnamed — while the SAME day to an
+  empty day keeps all 8. **Attribution OPEN** between `stackTemplate`'s field
+  allow-list and the §18 finaliser's `power_removed` path; both named, neither
+  proven, no cell holds either.
+- **SAM'S OWN CASE IS STILL NOT REPRODUCED AND IS REPORTED AS THAT.** His symptom
+  was conditioning; conditioning survives this path in every generated seed
+  because every generated Mixed day carries a `conditioningBlock`. Same defect
+  CLASS, different part.
+- **A LATENT CONTRADICTION, DELIBERATELY NOT SHIPPED AS THE CAUSE:**
+  `hasConditioning()` omits `'Mixed'` while `hasStrength()` includes it, and the
+  same file's `combinedWorkoutType` DEFINES `'Mixed'` as strength AND
+  conditioning. Proved by probe; unreachable from generation today.
+- **ROW 1 IS AN OWNERSHIP MOVE, NOT A SCOPE GUESS.** `coachProposal` takes the
+  owner's `PlanChangeMoveOptions` and renders the owner's own rows; the rule
+  stays pure and the SCREEN makes the call. Anchored Monday: picker
+  `[strength, team]`, coach `[strength, team]`, door **refused → applied**.
+- **GATE:** `test:coach-tab-slice3` **137/137** (was 127), section [8].
+  **Mutation-tested** — blanking the owner read reds exactly the four parity
+  cells. **Two cells first passed VACUOUSLY** and now assert the list was
+  exercised. **One cell WIDENED and said plainly** (a 200-char regex window, not
+  the property). **Sweep 174 suites, 3 failures, all three byte-identical at
+  baseline — zero regressions.** `test:compile` PASSED, 35/51/373.
+- **NOT COVERED, first line: NO GLASS.** No React, no device, no keyboard. The
+  scope chooser is a SHAPE nobody has tapped, and it is the first coach surface
+  with a selectable row. A third destination shape — trade rather than absorb —
+  is unreached. The power-loss finding has NO CELL.
+
+## The seat's orders for this batch, as written
+
+
 1. **SAM ANSWERED ALL THREE OPEN QUESTIONS. ONE ANSWER TURNS THE
    MULTI-PART RESULT OVER.** (seat, 2026-08-10, put to him as a
    four-question card; answers verbatim below.)
@@ -97,9 +150,18 @@ and hid the difference between "not done" and "cannot be done yet".*
 Nothing here is an order awaiting action. Two kinds live here, and the
 difference is stated rather than blurred:
 
-- **Terminal-measured blockers** (items 1 and 3) — written by the terminal after
-  measuring. Item 1 names the single command that clears it and why it was not
-  run; item 3 names the single answer that closes it.
+- **Terminal-measured blockers** (item 1) — written by the terminal after
+  measuring, naming the single act that clears it.
+  **ITEM 3 IS CLOSED (2026-08-10): Sam answered it.** He used the COACH CHAT,
+  not the picker, and his Monday carried gym + conditioning with NO team
+  training. The hypothesis it carried is RETRACTED, not merely superseded — see
+  the processed batch above and the retraction in the tape's own comment. The
+  answer did not close the DEFECT: it turned the NOT-REPRODUCED verdict over,
+  because that verdict was recorded on his exact shape through his exact arm.
+  **ITEM 1 IS NO LONGER HELD — IT IS RUNNING.** Sam approved the rebuild and
+  `npx expo run:ios --configuration Debug` was started. It had NOT finished when
+  the sixty-third pass closed, so everything needing glass is still owed and is
+  restated below as a live blocker rather than a cleared one.
 - **Seat holds the seat itself declared non-opening** (item 2) — seat-authored,
   carried verbatim with its amendment marked. *"It does not open from this
   inbox"* are the seat's own words, so it is not the terminal's to process.
@@ -107,7 +169,21 @@ difference is stated rather than blurred:
 The seat may convert any of these into a real order by moving it up into
 Unprocessed with a ruling attached.
 
-1. HELD ON A BLOCKER THE SIXTY-SECOND PASS MEASURED — THE MAESTRO RIG
+1. **THE REBUILD IS RUNNING, AND UNTIL IT LANDS NOTHING ON GLASS HAS BEEN
+   SEEN — INCLUDING THE SCOPE CHOOSER BUILT THIS PASS (updated 2026-08-10).**
+   Sam's approval cleared the hold and `npx expo run:ios --configuration Debug`
+   was started immediately; it was still compiling at the end of the pass. Three
+   things are owed the moment it finishes, and the first run of the flow is
+   AUTHORING rather than a regression check:
+   (a) the L-C3 keyboard matrix, never executed;
+   (b) the coach-tab Undo toast — still OPEN-UNKNOWN, `UndoToast` mounts only at
+       `HomeScreenV2.tsx:1225` and `CoachTabScreen` mounts nothing (seat item 3
+       of this batch rides here);
+   (c) **the new scope chooser on the change card — the first coach surface with
+       a selectable row, and the one most likely to be wrong on a real screen.**
+   The original measurement that made the rebuild necessary is kept below.
+
+   (HISTORY) HELD ON A BLOCKER THE SIXTY-SECOND PASS MEASURED — THE MAESTRO RIG
    CANNOT RUN UNTIL THE SIMULATOR BINARY IS REBUILT. This is the
    carried remainder of that pass's item 1, and it is NOT a fresh
    order: the cold-rig check was run and reported in full, one of the
