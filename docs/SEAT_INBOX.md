@@ -2,6 +2,64 @@
 
 ## Unprocessed (newest first)
 
+**NONE.** Items 0, 1, 2 and 3 of the sixty-fourth batch are processed. **Item 4
+(glass) is a MEASURED STOP** — `npx expo run:ios --configuration Debug` has been
+compiling since the previous pass and had still not finished. It is carried in
+the terminal-owned section with the one act that clears it.
+
+## Processed 2026-08-10 (sixty-fourth pass) — THE LAW REGISTRY, AND THE CONSERVATION ORDER PRICED WRONG-UNIT
+
+- **ONE LINE: Sam's root question is answered with a number — 28 laws in Batch 1,
+  20 with NOTHING holding them — and the registry corrected two of its own rows
+  within hours, including one naming a guard script that does not exist.**
+  `7d3be742` (registry + item 3) · this commit (pricing).
+  Boundary: docs/LAW_REGISTRY_BATCH1_2026-08-10.md ·
+  docs/CONSERVATION_POSTCONDITION_PRICING_2026-08-10.md
+- **ITEM 0 — THE REGISTRY.** `src/rules/lawRegistry.ts`, machine-readable, two
+  states and no third. AGENTS.md gains **LAW ZERO**, effective immediately,
+  subsuming the claim-in-prose-only rule. Gate over the registry deliberately NOT
+  built, per the order. 131 ruling docs NOT harvested and not to be read as
+  covered.
+  **THE REGISTRY CAUGHT A BAD ROW OF MINE ON ITS FIRST MECHANICAL READ** — a law
+  "guarded" by `test:athlete-action-walker`, which does not exist. Resolving the
+  name beat trusting it, first try.
+- **ITEM 1 — PRICED, AND THE ORDERED UNIT IS WRONG. STOPPED AS INSTRUCTED.**
+  The door-level post-condition **already exists and already ran**:
+  `detectAthleteMoveContentLoss` runs on EVERY move including the absorb path,
+  rolls back in-memory and throws. It is guarded at SESSION IDENTITY and it
+  correctly PASSED — the surviving object was the combined day.
+  **The deletion is ALREADY ATTRIBUTED:** `power_removed` is typed and reasoned
+  in the canonicaliser, consumed only by generation-time validation and three
+  suites — **no athlete-facing surface reads it. The reason exists and is thrown
+  away.** A row-level conservation check is the wrong unit because a door cannot
+  tell an authorised transformation (G-1 routes, deload, §18 safety — all
+  documented as row-deleting) from an unauthorised one; they are byte-identical
+  at the door. **The unit is ATTRIBUTION, not conservation.** New registry row
+  `LAW-attributed-content-change`. Revised ask: **XS first and alone** — capture
+  the actual reason string for the measured case; it may re-aim everything.
+- **ITEM 2 — DEVICE-EXACT SEEDS: ZERO OF ELEVEN REACH SAM'S SHAPE, AND THE
+  INSTRUMENT IS POORER THAN THE GENERATOR.** Probed all 11 registry seeds via
+  `buildDevE2ESeed`. None carries a future unanchored multi-part day.
+  `equipment-restriction-case` FAILS TO INSTALL (`ProgramGenError`, missing
+  equipment answer). Seed Mixed days carry `comb=true block=1` yet project as a
+  SINGLE `strength` part, and **every seed row has role `-`** — no `power` role
+  anywhere — so the 2026-08-10 finding is not reachable on these seeds either.
+  **Sam's conditioning case stays OPEN and named.**
+- **ITEM 3 — RE-ANCHORED, NOT RE-WIDENED.** The `{0,200}` JSX window is gone; the
+  cell keys on `) : null}` + the composer's own View with NO character bound.
+  Mutation-tested three ways: red when the card replaces the composer, red when a
+  node is inserted between, **green through 900 characters of added props**. The
+  content-loss suite header, which claimed "M2/M3/M4 expected to FAIL", corrected
+  — it runs 2 cells, both PASS.
+- **GATE:** sweep 174 suites, 3 failures, all three byte-identical at baseline.
+  Zero regressions. Typecheck clean.
+- **NOT COVERED: NO GLASS, SECOND PASS RUNNING.** Nothing has been seen on a
+  device. The scope chooser built last pass is still untapped. The exact
+  `power_removed` reason string is NOT captured — that is the next act.
+
+## The seat's orders for this batch, as written
+
+
 0. **SAM, 2026-08-10, VERBATIM — AND IT IS THE ROOT QUESTION UNDER
    EVERY DEFECT THIS WEEK:** *"how do we make sure all the laws we have
    written in the past are held up now? it feels like i constantly give

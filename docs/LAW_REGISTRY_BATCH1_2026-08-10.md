@@ -1,7 +1,11 @@
 # LAW REGISTRY — BATCH 1, THE HONEST MAP (2026-08-10)
 
-**Sam asked the root question and the answer is a number: of 27 laws in Batch 1,
+**Sam asked the root question and the answer is a number: of 28 laws in Batch 1,
 20 have NOTHING holding them.**
+
+*(Updated the same day: pricing the conservation order moved two rows from
+UNENFORCED to `guarded` and added one new correctly-aimed row. The registry
+corrected itself within hours of existing — see rows 1 and 2 below.)*
 
 > *"how do we make sure all the laws we have written in the past are held up now?
 > it feels like i constantly give a fix and a law or whatever and then believe you
@@ -13,8 +17,8 @@ He is right. This is the measurement, not a promise.
 
 | | count |
 |---|---|
-| Batch 1 rows | **27** |
-| `guarded` (named check, in the chain) | **7** |
+| Batch 1 rows | **28** |
+| `guarded` (named check, in the chain) | **8** |
 | **`UNENFORCED`** | **20** |
 | guards naming a script outside `test:bible` | 0 |
 | guards naming a script that does not exist | **1, caught and fixed** |
@@ -26,7 +30,7 @@ nonexistent script is exactly the failure Sam described, and it survived being
 typed by the person who had just looked the guard up. **Resolving the name beat
 trusting it, on the first try.**
 
-## WHAT IS ACTUALLY GUARDED (7)
+## WHAT IS ACTUALLY GUARDED (8)
 
 | law | guard | note |
 |---|---|---|
@@ -37,21 +41,30 @@ trusting it, on the first try.**
 | `LAW-LC2-change-card` | `test:coach-tab-slice3` | strong: "executable without a card" is unrepresentable |
 | `LAW-LC3-nike-bar` | `test:coach-tab-slice3` [6] | **SOURCE ONLY, and the law is about GLASS — the keyboard matrix has never executed** |
 | `LAW-LC4-parity` | `test:coach-tab-slice3` [8] | new this pass; covers **1 of 26** action types |
+| `LAW-conservation` | `test:athlete-move-occupied-content-loss` | **moved here from UNENFORCED by the pricing** — guarded at SESSION IDENTITY, with rollback; correctly passed the 2026-08-10 case |
 
 ## THE UNENFORCED LIST — SAM PICKS WHAT GETS GUARDED FIRST (20)
 
 **Mechanisable, and these are the ones that bit us this week:**
 
-1. **`LAW-conservation`** — *a pure Move/Swap conserves athlete-owned session
-   identities; success implies conservation.* **Rediscovered TWICE.** The
-   existing suite is green and in the chain but guards **two paths, not the
-   law** — and on 2026-08-10 a move onto a team night deleted a power row (8 in,
-   7 out) while reporting *"Done. Session moved."*
-2. **`LAW-do-not-lose-the-session`** — the Bible's statement of the same rule.
-   **The coach's truth gate can NEVER catch it:** `FORBIDDEN_WHEN_NO_APPLIED` is
-   a list of PHRASES, and *"Done. Session moved."* is **true** — a session did
-   move. The lie is the deletion beside it, and **no phrase list can see an
-   omission.** Conservation is structural; its guard must be structural.
+1. **`LAW-attributed-content-change`** *(new row — the one the 2026-08-10 defect
+   actually belongs to)* — *content may only leave a session for a declared
+   reason, and a change the athlete did not ask for is told to them.*
+   `power_removed` is **already typed and reasoned** in the canonicaliser, and
+   consumed only by generation-time validation and three suites — **no
+   athlete-facing surface reads it.** The reason exists and is thrown away.
+   **The coach's truth gate can NEVER catch this:** `FORBIDDEN_WHEN_NO_APPLIED`
+   is a list of PHRASES, and *"Done. Session moved."* is **true** — a session did
+   move. The lie is the omission beside it, and **no phrase list can see a
+   deletion.** Attribution is structural, so its guard can be.
+2. ~~`LAW-conservation` / `LAW-do-not-lose-the-session`~~ — **CORRECTED
+   2026-08-10, and this correction is the registry earning its keep.** Both rows
+   first read UNENFORCED on the premise that the law had no door. **It has one:**
+   `detectAthleteMoveContentLoss` runs on every move including the absorb path,
+   rolls back and throws. It is guarded at **session identity**, and it correctly
+   PASSED the 2026-08-10 case — the surviving object was the combined day. The
+   gap was one level down, which is why row 1 above now exists. See
+   docs/CONSERVATION_POSTCONDITION_PRICING_2026-08-10.md.
 3. **`LAW-claim-needs-a-cell`** — grep for `DOC-TRUTH` and `OPEN-UNKNOWN` across
    `src/` returns **zero files**. The law this week leaned on hardest has no
    guard at all.
@@ -99,8 +112,13 @@ failure one level up.
 
 ## THE RECOMMENDATION SAM IS BEING ASKED TO RULE ON
 
-Guard `LAW-conservation` first, as a **door-level post-condition** — it is the
-only row on the sheet that has already cost real content twice, it subsumes
-`LAW-do-not-lose-the-session`, and it is the one the seat's item 1 priced. Then
-`LAW-0-registry`'s own gate, because until the registry is enforced it is another
-document that can rot — which is the disease.
+**SUPERSEDED BY THE PRICING, SAME DAY.** The recommendation was to guard
+`LAW-conservation` first; pricing found it is **already guarded** and that the
+real row is `LAW-attributed-content-change`. The revised ask, in order:
+
+1. **XS, and alone:** capture the actual `power_removed` reason for the measured
+   case. It may re-aim everything below it.
+2. **`LAW-0-registry`'s own gate** — until the registry is enforced it is another
+   document that can rot, which is the disease it was built to cure.
+3. Only then the M-sized work of threading canonicalisation actions out of the
+   mutation path (73 call sites).

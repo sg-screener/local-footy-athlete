@@ -331,9 +331,20 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'A pure Move or Swap conserves the multiset of athlete-owned session identities, and reporting success implies conservation.',
     ruledAt: 'src/__tests__/athleteMoveOccupiedContentLossTests.ts header; docs/audits/MOVE_OCCUPIED_CONTENT_LOSS_2026-07-23.md',
     guard: {
+      state: 'guarded',
+      by: 'test:athlete-move-occupied-content-loss',
+      chainStatus: 'in_chain',
+      receipt: 'CORRECTED 2026-08-10 BY PRICING, AND THE CORRECTION IS THE POINT OF THE REGISTRY. This row first read UNENFORCED, claiming the law had no door. It has one: `detectAthleteMoveContentLoss` (acceptedStateTransaction.ts:3338) runs on EVERY move including the absorb path, rolls back in-memory and throws `athlete_move_content_not_conserved`. The law is guarded AT SESSION IDENTITY and correctly passed the 2026-08-10 case — the surviving object was the combined day. See docs/CONSERVATION_POSTCONDITION_PRICING_2026-08-10.md. The row-level gap is NOT this law; it is LAW-attributed-content-change below.',
+    },
+  },
+  {
+    id: 'LAW-attributed-content-change',
+    law: 'Content may only leave a session for a declared reason, and a change the athlete did not ask for is told to them.',
+    ruledAt: 'Named 2026-08-10 by pricing the conservation order — docs/CONSERVATION_POSTCONDITION_PRICING_2026-08-10.md',
+    guard: {
       state: 'UNENFORCED',
-      wouldTake: 'A DOOR-LEVEL post-condition: every action claiming MOVE or SWAP compares the identity multiset before and after, once, where all of them pass — and an action that cannot conserve does not report success.',
-      receipt: 'THE ROW THAT PROVES THE REGISTRY IS NEEDED. test:athlete-move-occupied-content-loss IS in the chain and green — but it guards TWO PATHS, not the law. On 2026-08-10 a move onto a team night deleted a power row (8 rows in, 7 out) while reporting "Done. Session moved.", on a path no cell reaches. Rediscovered twice.',
+      wouldTake: 'Carry the canonicaliser\'s typed `actions` out of the mutation path (73 call sites of finaliseWorkoutAfterMutation), then red on loss no action explains — authorised transformations declare themselves and pass.',
+      receipt: 'THE ROW THE 2026-08-10 DEFECT ACTUALLY BELONGS TO. `power_removed` is already typed and reasoned (workoutCanonicalisation.ts:525,549,573) with reasons like game_proximity_power_blocked:G-2. Consumed ONLY by postGenerationConstraintValidation (generation-time) and three suites — NO athlete-facing surface reads a canonicalisation action. The reason exists and is thrown away.',
     },
   },
   {
@@ -342,8 +353,8 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'Training Bible, Move rules',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'The same door-level post-condition as LAW-conservation — these are the domain and the invariant statement of one rule.',
-      receipt: 'Same 2026-08-10 measurement. The coach\'s own truth gate CANNOT catch it: FORBIDDEN_WHEN_NO_APPLIED is a list of PHRASES, and "Done. Session moved." is TRUE — a session did move. No phrase list can see a deletion.',
+      wouldTake: 'Subsumed by LAW-attributed-content-change: the session survives (LAW-conservation guards that); what is unguarded is content leaving it unexplained and untold.',
+      receipt: 'Receipt CORRECTED 2026-08-10: this row first claimed the same missing door as LAW-conservation, which turned out to exist. The coach\'s truth gate still cannot catch the residue: FORBIDDEN_WHEN_NO_APPLIED is a list of PHRASES, and "Done. Session moved." is TRUE — a session did move. No phrase list can see a deletion.',
     },
   },
   {
