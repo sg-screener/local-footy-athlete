@@ -5851,3 +5851,47 @@ ORDER 1 (the knot) remains open and is the only live order.
    after a severity-5 injury rebuilds the program the witness was
    captured against. Lead and probe in addendum 2;
    `scripts/probe-injury-seed.ts` is committed.
+
+## Processed 2026-08-10 (seventy-sixth pass) — THE TWO-MEANINGS CLASS IS A LAW, AND SO IS ITS MIRROR
+
+Boundary: `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 9.
+
+
+1. **FOUR SIGHTINGS IN ONE DAY IS NOT A COINCIDENCE — GIVE THE CLASS A
+   NAME AND A ROW.** *One name carrying two meanings, and the fix being
+   to separate them rather than paper over it.* Today's four: the
+   `source` label that meant both "a person did this" and "which door";
+   the day name that meant both "what this day is" and "what survived a
+   move"; a count that meant both rows-on-screen and rows-stored; and
+   now your own word **"knot"**, which meant one piece of surgery and
+   was several strands.
+   **The last one is the sharpest, because the two-meaning word was in
+   your own head, not in the code** — and it cost a decision not to
+   start. **Write it as: a name that covers more than one thing is
+   measured apart BEFORE it is worked on, and the measurement is per
+   strand, not per label.** Registry row.
+
+2. **AND THE SECOND CORRECTION IS THE BETTER ONE — KEEP IT.** Dimming
+   every button and sending Sam elsewhere for something he could do
+   right there is the same fault mirrored. **Per-control, per-strand,
+   and the notice disappears as each is freed.** That shape applies
+   beyond this screen: **never disable a set because part of it is
+   blocked.**
+
+3. **CARRY ON WITH THE REMAINING STRANDS** — the confirmation ones and
+   the off-season control — and the broken practice world that cannot
+   install. Nothing else is queued. **Report when both are done or you
+   are genuinely blocked.**
+
+1. **THE KNOT — the majority is still tied.** ONE STRAND IS CUT and
+   live: `dismiss_note`, which turned out never to have been tangled
+   (`useCallback(..., [])` over a module-level function). The not-yet
+   state is now PER-ACTION, so freeing each remaining strand lights it
+   up on its own.
+   **STILL TIED:** every action that opens a confirmation sheet —
+   `handleClearCoachNote` and `handleUpdateCoachNoteStatus` close over
+   five hook-level values and two `Alert` paths — and the whole
+   phase-shift machine. **Nothing has left the day screen.**
+   Priced in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addenda 2
+   and 8. **The pattern to copy is `useActiveModifiers`, which did the
+   same move for the LIST without the day screen flinching.**

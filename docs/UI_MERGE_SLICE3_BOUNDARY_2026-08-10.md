@@ -579,3 +579,56 @@ held** and nothing has left the day screen.
   `presentationOnlyDismiss` or a reversible adjustment, so **the live strand has
   no world to exercise it in yet.** Named rather than left as an assumed pass.
 - **THE MAJORITY OF THE KNOT IS UNTOUCHED.** One strand of several.
+
+---
+
+# ADDENDUM 9 — THE CLASS HAS A NAME, AND SO DOES ITS MIRROR
+
+## `LAW-one-name-two-meanings`
+
+**A name that covers more than one thing is measured apart BEFORE it is worked
+on — per strand, never per label.** Six sightings, all in one day, which is what
+turned it from an anecdote into a class:
+
+1. the `source` label — "a person did this" **and** "which door";
+2. the day name — "what this day is" **and** "what survived a move";
+3. a count — rows-on-screen **and** rows-stored;
+4. the replay latch — "we are replaying, disk is truth" **and** "we are
+   installing, disk is not yet truth";
+5. the witness validation point — "did the install write this" **and** "is the
+   world like this now";
+6. **the word "knot"** — one piece of surgery **and** several strands.
+
+**THE SIXTH IS THE SHARPEST BECAUSE IT WAS NOT IN THE CODE.** It was a
+terminal's own shorthand, and it cost a decision NOT TO START. Measuring it
+strand by strand found one already loose.
+
+**WHAT THE GUARD CAN AND CANNOT DO, SAID PLAINLY:** no script can look at a NAME
+and know it covers two things. What is checkable is that the class keeps being
+COUNTED — the row must enumerate its sightings and the count may only grow, so a
+seventh cannot be absorbed silently. **The real enforcement is the LOOP CHECK
+line**, and `LAW-second-wall` already requires an alternative at sighting 2 — this
+class is what that alternative most often turns out to be.
+
+## `LAW-never-disable-a-set-for-part-of-it`
+
+**The dead-affordance law mirrored.** A control that looks live but is not, and a
+control that looks dead but works, are the same defect pointing opposite ways —
+and this terminal shipped the second one while correcting the first.
+
+**GUARDED CONCRETELY**, because this half IS mechanisable: the not-yet flag
+resolves per ACTION against a list of live kinds, the disabled prop reads that
+per-action value, and the caption renders only on notes that still hold an inert
+action. **So freeing a strand lights it up and retires its own notice with no
+further edit.**
+
+## NOT COVERED
+
+- **THE SET-DISABLE CELL IS SCOPED TO ITS FOUNDING SURFACE.** A new screen
+  inventing its own whole-set disable is not caught. Named rather than pretending
+  the cell is general.
+- **ORDER 3's "broken practice world" WAS ALREADY FIXED** in addendum 6 —
+  `injury-case` installs; it is now blocked behind the durability defect, which is
+  a different problem and is priced in addendum 4. **Not redone.**
+- **THE REMAINING STRANDS ARE NOT CUT.** The confirmation-sheet actions and the
+  phase-shift machine. Nothing has left the day screen.

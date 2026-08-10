@@ -366,6 +366,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-one-name-two-meanings',
+    law: 'A name that covers more than one thing is measured apart BEFORE it is worked on — per strand, never per label.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat: "four sightings in one day is not a coincidence — give the class a name and a row… a name that covers more than one thing is measured apart BEFORE it is worked on, and the measurement is per strand, not per label"',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUR SIGHTINGS IN ONE DAY, which is what made it a class rather than an anecdote: (1) the `source` label meaning both "a person did this" and "which door"; (2) the day name meaning both "what this day is" and "what survived a move"; (3) a count meaning both rows-on-screen and rows-stored; (4) the replay latch meaning both "we are replaying, disk is truth" and "we are installing, disk is not yet truth"; (5) the witness validation point meaning both "did the install write this" and "is the world like this now"; and (6) THE SHARPEST, WHICH WAS NOT IN THE CODE AT ALL: the word "knot" — one terminal\'s own shorthand — meant "one piece of surgery" and was several strands, and it cost a decision NOT TO START. Measuring it strand by strand found one already loose (`handleDismissCoachNote` is `useCallback(fn, [])` over a module-level function; it was never tangled, only behind the tangle). WHAT THE CELL HOLDS: this row must enumerate its sightings, and the count may only grow — the same ratchet every debt list here carries, so a fifth instance cannot be absorbed silently. WHAT IT CANNOT DO, STATED PLAINLY: no script can look at a NAME and know it covers two things. This is a process law and its real enforcement is the LOOP CHECK line — `LAW-second-wall` already requires an alternative on the table at sighting 2, and this class is what an alternative most often turns out to be. The row exists so the shape has somewhere to be counted.',
+    },
+  },
+  {
+    id: 'LAW-never-disable-a-set-for-part-of-it',
+    law: 'Never disable a whole set because part of it is blocked. Per control, per strand — and the notice retires itself as each is freed.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat: "dimming every button and sending Sam elsewhere for something he could do right there is the same fault mirrored… never disable a set because part of it is blocked"',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE, AND IT WAS THIS TERMINAL\'S OWN CORRECTION BEING CORRECTED: the coach status screen dimmed EVERY modifier control and captioned them "Change this on your program screen for now", because the actions needed an ownership extraction. That was right for most of them and WRONG for `dismiss_note`, which works — so the screen was telling the athlete to go elsewhere for something they could do right there. THE DEAD-AFFORDANCE LAW MIRRORED: a control that looks live but is not, and a control that looks dead but works, are the same defect pointing opposite ways. WHAT THE CELL HOLDS: `ActiveModifiersSection`\'s not-yet flag is resolved PER ACTION against a list of live kinds, not per screen; the caption renders only on notes that still hold an inert action; and the disabled prop reads the per-action value. So freeing a strand lights it up and retires its own notice with no further edit. WHAT IT DOES NOT HOLD: it is scoped to the founding surface. A new screen inventing its own whole-set disable is not caught, and naming that is honest rather than pretending the cell is general.',
+    },
+  },
+  {
     id: 'LAW-flows-photograph-what-they-touch',
     law: 'A flow proves presence, never layout. Every state a flow reaches is photographed, because only an eye catches a layout defect.',
     ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat: "the two layout bugs you found by eye are a finding, not a footnote… neither visible to any assertion… if the answer is \'only an eye\', then the screenshots are load-bearing and the flows must photograph every state they touch"',

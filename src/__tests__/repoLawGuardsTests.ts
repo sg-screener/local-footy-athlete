@@ -1499,7 +1499,78 @@ run('the golden flows have actually been run, and recently', () => {
     + 'days once the rig ran.');
 });
 
+// ── NEVER DISABLE A SET BECAUSE PART OF IT IS BLOCKED ───────────────────────
+//
+// `LAW-never-disable-a-set-for-part-of-it`. Founding case: the coach status
+// screen dimmed EVERY modifier control and captioned them "Change this on your
+// program screen for now" — right for most, WRONG for `dismiss_note`, which
+// works. **The dead-affordance law mirrored:** a control that looks live but is
+// not, and a control that looks dead but works, are the same defect pointing
+// opposite ways.
+const NOT_YET_SURFACE = 'src/components/ActiveModifiersSection.tsx';
+
+/** Pure: ways a not-yet surface can go back to disabling the whole set. */
+function wholeSetDisableFaults(source: string): string[] {
+  const faults: string[] = [];
+  if (!/liveActionKinds/.test(source)) {
+    faults.push('there is no per-action exception list — the flag is per SCREEN again');
+  }
+  if (!/disabled=\{notYet\}/.test(source)) {
+    faults.push('the disabled prop no longer reads the per-action value');
+  }
+  // The caption must be conditioned on THAT note still holding an inert action,
+  // or a note whose every control works still sends the athlete elsewhere.
+  if (!/note\.actions\.some\(/.test(source)) {
+    faults.push('the caption is not conditioned on the note actually holding an inert action');
+  }
+  return faults;
+}
+
+run('a partly-blocked set disables only the blocked part', () => {
+  const full = path.join(repoRoot, NOT_YET_SURFACE);
+  assert(fs.existsSync(full), `${NOT_YET_SURFACE} is gone — this gate reads nothing`);
+  const source = fs.readFileSync(full, 'utf8');
+  assert(/actionsNotYet/.test(source),
+    'the not-yet surface no longer exists — this cell is watching nothing');
+  const faults = wholeSetDisableFaults(source);
+  assert(faults.length === 0,
+    `${NOT_YET_SURFACE}: ${faults.join('; ')}. Telling the athlete to go `
+    + 'elsewhere for something they can do right here is the dead-affordance law '
+    + 'mirrored.');
+});
+
+// ── A NAME THAT COVERS TWO THINGS IS MEASURED APART FIRST ───────────────────
+//
+// `LAW-one-name-two-meanings`. No script can look at a NAME and know it covers
+// two things — so what IS checkable is that the class keeps being counted. Five
+// sightings in one day is what made it a law; a sixth must not be absorbed
+// silently.
+const TWO_MEANING_SIGHTINGS = 5;
+
+run('the two-meanings class keeps counting its sightings', () => {
+  const registry = fs.readFileSync(
+    path.join(repoRoot, 'src', 'rules', 'lawRegistry.ts'), 'utf8');
+  const rowAt = registry.indexOf("id: 'LAW-one-name-two-meanings'");
+  assert(rowAt > 0, 'the two-meanings row is gone from the registry');
+  const row = registry.slice(rowAt, rowAt + 3000);
+  const numbered = (row.match(/\(\d\)/g) ?? []).length;
+  assert(numbered >= TWO_MEANING_SIGHTINGS,
+    `the row enumerates ${numbered} sightings; it must not fall below `
+    + `${TWO_MEANING_SIGHTINGS}. The count is a ratchet — a new instance is `
+    + 'added, never absorbed, and the ones already found are what make it a class.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the whole-set disable, probed BOTH directions ──
+  assert(wholeSetDisableFaults('disabled={actionsNotYet}').length > 0,
+    'the exact pre-fix shape — one flag disabling the whole set — passed');
+  assert(wholeSetDisableFaults(
+    'liveActionKinds\ndisabled={notYet}\nnote.actions.some((a) => x)').length === 0,
+    'a correctly per-action surface was flagged');
+  assert(wholeSetDisableFaults('liveActionKinds\ndisabled={notYet}')
+    .some((f) => /caption/.test(f)),
+    'a surface captioning every note regardless passed');
+
   // ── the run receipt, probed BOTH directions ──
   const OK_RECEIPT = '| `a.yaml` | 2026-08-10 | PASS |';
   assert(runReceiptFaults(OK_RECEIPT, ['a.yaml'], '2026-08-11').length === 0,

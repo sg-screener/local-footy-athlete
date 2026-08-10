@@ -2,18 +2,12 @@
 
 ## Unprocessed (newest first)
 
-1. **THE KNOT — the majority is still tied.** ONE STRAND IS CUT and
-   live: `dismiss_note`, which turned out never to have been tangled
-   (`useCallback(..., [])` over a module-level function). The not-yet
-   state is now PER-ACTION, so freeing each remaining strand lights it
-   up on its own.
-   **STILL TIED:** every action that opens a confirmation sheet —
-   `handleClearCoachNote` and `handleUpdateCoachNoteStatus` close over
-   five hook-level values and two `Alert` paths — and the whole
-   phase-shift machine. **Nothing has left the day screen.**
+1. **THE REMAINING STRANDS OF THE KNOT.** The confirmation-sheet
+   actions (`handleClearCoachNote`, `handleUpdateCoachNoteStatus` and
+   their five hook-level dependencies) and the phase-shift machine.
+   **`dismiss_note` is already live.** Nothing has left the day screen.
    Priced in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addenda 2
-   and 8. **The pattern to copy is `useActiveModifiers`, which did the
-   same move for the LIST without the day screen flinching.**
+   and 8; the pattern to copy is `useActiveModifiers`.
 
 ## Previously (now processed)
 
