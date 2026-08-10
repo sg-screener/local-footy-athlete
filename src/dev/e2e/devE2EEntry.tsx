@@ -70,9 +70,42 @@ export interface InstalledDevE2EEntry {
 
 let activeInstallation: InstalledDevE2EEntry | null = null;
 
-function devE2ENativeBridge(): { receiptJson?: unknown; seedId?: unknown } | undefined {
+function devE2ENativeBridge(): {
+  receiptJson?: unknown;
+  seedId?: unknown;
+  launchRefusalCodes?: unknown;
+} | undefined {
   return (NativeModules as Record<string, unknown>)
-    .DevE2ELaunchDiagnostic as { receiptJson?: unknown; seedId?: unknown } | undefined;
+    .DevE2ELaunchDiagnostic as {
+      receiptJson?: unknown;
+      seedId?: unknown;
+      launchRefusalCodes?: unknown;
+    } | undefined;
+}
+
+/**
+ * THE NATIVE SIDE'S REFUSALS, WHICH USED TO BE CRASHES.
+ *
+ * Sam's order, 2026-08-10, after the third crash of one shape in a day: *"A DEV
+ * DIAGNOSTIC MUST NOT BE ABLE TO KILL THE APP… It should refuse loudly — a
+ * visible marker the flow can assert on, a log line, a red screen — and let the
+ * app boot."* `DevE2ELaunchDiagnostic.swift` held TEN `fatalError`s on the
+ * launch path and now holds none; each one is a typed code arriving here.
+ *
+ * IT IS PUBLISHED THROUGH THE EXISTING LAUNCH-ERROR CHANNEL rather than a new
+ * one. `e2e-explorer-launch-error-<code>` already means "the launch diagnostic
+ * refused, and here is why" — a second marker family for the same fact would be
+ * a second representation of one thing, which is the defect every law in this
+ * repo exists to kill.
+ */
+function publishNativeLaunchRefusals(): void {
+  const raw = devE2ENativeBridge()?.launchRefusalCodes;
+  if (!Array.isArray(raw)) return;
+  for (const code of raw) {
+    if (typeof code === 'string' && code.length > 0) {
+      setDevE2EExplorerLaunchError(code);
+    }
+  }
 }
 
 function nativeExplorerLaunchDiagnosticInput(): {
@@ -183,6 +216,12 @@ export function installDevE2EEntry(args: {
   >();
   let coordinator: DevE2ESeedCoordinator | null = null;
   setDevE2EEntryReady();
+
+  // BEFORE ANYTHING ELSE IS ATTEMPTED. A native refusal means the launch inputs
+  // were wrong, so every downstream step is about to fail for a reason that is
+  // not its own. Publishing first means the marker naming the REAL cause is up
+  // before any consequential one can be.
+  publishNativeLaunchRefusals();
 
   const nativeDiagnostic = nativeExplorerLaunchDiagnosticInput();
   const launchDiagnosticReady = nativeDiagnostic.explorerLaunchRequested

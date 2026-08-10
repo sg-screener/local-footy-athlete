@@ -920,7 +920,20 @@ function seedChannelFaults(swift: string): string[] {
     faults.push('the seed channel has no key of its own');
   }
   if (!/seedIdPattern/.test(code)) faults.push('the seed id is not validated against a declared shape');
-  if (!/fatalError\([^)]*Invalid/.test(code)) faults.push('a malformed seed id does not fail closed');
+  // FAIL CLOSED, RE-AIMED 2026-08-10 — AND THE PROPERTY IS UNCHANGED, ONLY ITS
+  // SPELLING IS. It used to look for `fatalError(…Invalid…)`, because a crash
+  // was how this channel refused. Sam then ruled that a dev diagnostic may not
+  // kill the app, so the ten `fatalError`s became typed refusals. **The thing
+  // being protected was never the crash — it was that a malformed seed id can
+  // never degrade into "no seed", which is how a run goes green having tested an
+  // empty world.** So the check is: the malformed branch RECORDS a refusal AND
+  // STOPS. A refusal without the stop would fall through and seed nothing
+  // quietly, which is the exact defect the crash was standing in for.
+  const refusesMalformedSeed = /refuse\(\s*"seed-id-[a-z-]+"/.test(code);
+  const stopsAfterRefusing = /refuse\(\s*"seed-id-[a-z-]+"[\s\S]{0,200}?\breturn\b/.test(code);
+  if (!refusesMalformedSeed || !stopsAfterRefusing) {
+    faults.push('a malformed seed id does not fail closed');
+  }
   // THE SMUGGLING CHECK, AND ITS FIRST VERSION WAS WRONG. It read the 200
   // characters after `launchArgumentKey` and flagged any mention of "seed" —
   // which fired on the seed key's own DECLARATION sitting two lines below it.
@@ -1178,7 +1191,163 @@ run('the files re-read at every stop stay inside their budget', () => {
     + 'not raise the budget to match the file. Sam pays for this one in dollars.');
 });
 
+// ── A DEV DIAGNOSTIC MUST NOT BE ABLE TO KILL THE APP ────────────────────────
+//
+// `LAW-diagnostic-refuses-never-crashes`. Sam's order, 2026-08-10, after the
+// THIRD crash of one shape in a single day: *"A DEV DIAGNOSTIC MUST NOT BE ABLE
+// TO KILL THE APP. It should refuse loudly — a visible marker the flow can
+// assert on, a log line, a red screen — and let the app boot… A crash is the
+// least debuggable possible signal: it destroys the process before anything can
+// report why."*
+//
+// THE CENSUS HE ASKED FOR, MEASURED: `DevE2ELaunchDiagnostic.swift` held **TEN**
+// hard `fatalError`s on the launch path, all reachable from
+// `didFinishLaunchingWithOptions` — before one line of JavaScript. Three of them
+// each cost a debugging cycle: the missing launch purpose (read as "the rig is
+// dead" for 23 days), the resolved-bundle trap behind the reload flows, and the
+// Metro URL — which fired because a runner was invoked without its `-e` binding
+// and the app was handed the LITERAL string `${E2E_METRO_URL}`.
+//
+// **EVERY ONE OF THE THREE WAS AN INPUT MISTAKE OUTSIDE THE APP**, and each time
+// the only evidence was an `.ips` file. The count is now zero.
+//
+// WHY A REPO CHECK AND NOT A CELL. Swift on the launch path cannot be exercised
+// by this chain at all — it needs a device and a native rebuild. What IS
+// checkable, cheaply and from here, is that the class does not come back, which
+// is the half that rots.
+const HARD_STOP = /\b(fatalError|assertionFailure|preconditionFailure)\s*\(|\bprecondition\s*\(/;
+const IOS_APP_SOURCES = 'ios/LocalFootyAthlete';
+
+/** Pure: launch-path sources that can still kill the process. */
+function nativeSourcesThatCanCrash(
+  files: readonly { readonly file: string; readonly text: string }[],
+): string[] {
+  return files
+    // A LINE COMMENT DESCRIBING THE BAN IS NOT THE BAN BEING BROKEN. Same
+    // `a comment is not a shipped string` shape that bit the copy gate — from
+    // the other side, where a comment produces a false RED.
+    .filter((entry) => HARD_STOP.test(entry.text.replace(/^\s*(\/\/|\*|\/\*).*$/gm, ' ')))
+    .map((entry) => entry.file);
+}
+
+run('no dev diagnostic on the launch path can kill the app', () => {
+  const dir = path.join(repoRoot, IOS_APP_SOURCES);
+  assert(fs.existsSync(dir), `${IOS_APP_SOURCES} is not there — this gate is reading nothing`);
+  const files = fs.readdirSync(dir)
+    .filter((name) => /\.(swift|m|mm)$/.test(name))
+    .map((name) => ({
+      file: `${IOS_APP_SOURCES}/${name}`,
+      text: fs.readFileSync(path.join(dir, name), 'utf8'),
+    }));
+  assert(files.length >= 2, `only ${files.length} native source(s) scanned — the walk is wrong`);
+  // NON-VACUITY: the file the order is about must be in the scan.
+  assert(files.some((entry) => entry.file.endsWith('DevE2ELaunchDiagnostic.swift')),
+    'the launch diagnostic is not in the scan — a green here would mean nothing');
+  const crashing = nativeSourcesThatCanCrash(files);
+  assert(crashing.length === 0,
+    `native launch-path source(s) that can kill the process: ${crashing.join(', ')}. `
+    + 'Refuse instead: NSLog the cause, record a typed code, let the app boot, and '
+    + 'let the flow assert on `e2e-explorer-launch-error-<code>`. A crash cannot '
+    + 'tell a bad URL from a bad seed id from a real boot defect.');
+});
+
+// AND THE REFUSAL HAS TO REACH A FLOW, OR IT IS JUST A QUIETER CRASH.
+run('a native launch refusal becomes a marker a flow can assert on', () => {
+  const swift = fs.readFileSync(
+    path.join(repoRoot, IOS_APP_SOURCES, 'DevE2ELaunchDiagnostic.swift'), 'utf8');
+  const entry = fs.readFileSync(
+    path.join(repoRoot, 'src', 'dev', 'e2e', 'devE2EEntry.tsx'), 'utf8');
+  assert(/launchRefusalCodes/.test(swift),
+    'the Swift side no longer exports its refusals — a refusal nothing can read '
+    + 'is a crash with better manners');
+  assert(/constants\["launchRefusalCodes"\]/.test(swift),
+    'the refusals are no longer put on the constants bridge, which is the one '
+    + 'channel measured to reach JS');
+  assert(/launchRefusalCodes/.test(entry) && /setDevE2EExplorerLaunchError/.test(entry),
+    'the JS side no longer publishes native refusals as launch-error markers');
+  // AND IT IS PUBLISHED BEFORE THE WORK THAT WILL FAIL BECAUSE OF IT, so the
+  // marker naming the real cause is up before any consequential one.
+  // THE CALL SITE, NOT THE IMPORT — and the first version of this line read the
+  // bare name and found the import statement at the top of the file, so it
+  // reported an ordering fault that did not exist. A scan that matches a name
+  // anywhere matches its declaration first.
+  const publishAt = entry.indexOf('  publishNativeLaunchRefusals();');
+  const hydrateAt = entry.indexOf('hydrateExplorerNativeLaunchDiagnostic({');
+  assert(publishAt > 0 && hydrateAt > 0 && publishAt < hydrateAt,
+    'native refusals are published after the launch diagnostic is hydrated — the '
+    + 'first marker up would be a consequence, not the cause');
+});
+
+// ── A REMOVAL SHIPS THE DAY ITS REPLACEMENT DOES ─────────────────────────────
+//
+// `LAW-removal-ships-with-its-replacement`. Sam's binding line on the UI merge is
+// *"without destroying what i have now"*, and the seat generalised the call that
+// honoured it: the season-phase box stayed on the day screen because its new home
+// on the coach page does not exist yet, and deleting it would have left him with
+// no way to change season phase at all.
+//
+// THE MECHANISABLE HALF is the merge plan's own REMOVAL LEDGER: a table whose
+// whole purpose is that no removal ships without a row naming where the behaviour
+// went. A row with an empty destination is a removal with nowhere to land, which
+// is the defect stated as data.
+const REMOVAL_LEDGER_DOC = 'UI_MERGE_PLAN_2026-08-10.md';
+
+/** Pure: removal-ledger rows whose "where the behaviour goes" cell is empty. */
+function removalsWithNoDestination(markdown: string): string[] {
+  const heading = /^##+ .*REMOVAL LEDGER.*$/im.exec(markdown);
+  if (!heading) return ['the removal ledger section is gone'];
+  const section = markdown.slice(markdown.indexOf(heading[0]) + heading[0].length)
+    .split(/\n##+ /)[0];
+  return section.split('\n')
+    .filter((line) => line.trimStart().startsWith('|'))
+    // Header and the `| --- |` separator are not rows.
+    .filter((line) => !/^\s*\|[\s|:-]*\|\s*$/.test(line) && !/\bRemoved\b/.test(line))
+    .map((line) => line.split('|').map((cell) => cell.trim()))
+    // `| a | b | c | d |` splits to ['', a, b, c, d, ''] — five cells of content.
+    .filter((cells) => cells.length >= 6)
+    .filter((cells) => cells[4].length === 0 || /^(TBD|\?|-+)$/i.test(cells[4]))
+    .map((cells) => cells[2] || '(unnamed removal)');
+}
+
+run('no planned removal ships without naming where the behaviour went', () => {
+  const full = path.join(repoRoot, 'docs', REMOVAL_LEDGER_DOC);
+  assert(fs.existsSync(full), `${REMOVAL_LEDGER_DOC} is gone — this gate reads nothing`);
+  const markdown = fs.readFileSync(full, 'utf8');
+  // NON-VACUITY: an empty ledger passes trivially, and an empty ledger is what a
+  // bad parse produces.
+  const rows = markdown.split(/^##+ .*REMOVAL LEDGER.*$/im)[1] ?? '';
+  assert((rows.split('\n').filter((l) => l.trimStart().startsWith('|')).length) >= 4,
+    'the removal ledger parsed to fewer than four lines — the scan is wrong');
+  const orphans = removalsWithNoDestination(markdown);
+  assert(orphans.length === 0,
+    `removal(s) with nowhere to land: ${orphans.join(', ')}. Sam's line is `
+    + '"without destroying what i have now" — a removal ships the same day its '
+    + 'replacement does, never before.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the removal ledger, probed BOTH directions ──
+  const LEDGER_HEAD = '## THE REMOVAL LEDGER\n\n| # | Removed | Where it is | Where it goes |\n'
+    + '| --- | --- | --- | --- |\n';
+  assert(removalsWithNoDestination(`${LEDGER_HEAD}| 3 | the strip | here | the week view |\n`).length === 0,
+    'a removal naming its destination was flagged');
+  assert(removalsWithNoDestination(`${LEDGER_HEAD}| 3 | the strip | here |  |\n`).length === 1,
+    'a removal with an EMPTY destination passed — that is the whole law');
+  assert(removalsWithNoDestination(`${LEDGER_HEAD}| 3 | the strip | here | TBD |\n`).length === 1,
+    'a removal whose destination is "TBD" passed — a placeholder is not a home');
+  assert(removalsWithNoDestination('# no ledger here').length === 1,
+    'a document with no removal ledger at all was read as having no orphans');
+
+  // ── the crash ban, probed BOTH directions ──
+  assert(nativeSourcesThatCanCrash([{ file: 'a.swift', text: 'fatalError("x")' }]).length === 1,
+    'a live fatalError passed — the founding case exactly');
+  assert(nativeSourcesThatCanCrash([{ file: 'a.swift', text: 'precondition(x > 0)' }]).length === 1,
+    'a precondition passed — it kills the process the same way');
+  assert(nativeSourcesThatCanCrash([{ file: 'a.swift', text: '// held TEN fatalError(s)' }]).length === 0,
+    'a COMMENT naming the banned call was read as the call — a comment is not code');
+  assert(nativeSourcesThatCanCrash([{ file: 'a.swift', text: 'refuse("code", "detail")' }]).length === 0,
+    'a refusal was flagged as a crash');
+
   // ── the hot-file budget, probed BOTH directions ──
   assert(hotFilesOverBudget([{ file: 'docs/NOW.md', bytes: 60_000, maxBytes: 24_576 }]).length === 1,
     'a file well over its budget passed — the 53KB founding case exactly');
@@ -1211,7 +1380,7 @@ run('the checkers red on fabricated violations (liveness)', () => {
   assert(declaredSeedWorldCount('nothing here') === 0,
     'the world counter invented worlds from a source with none');
 
-  assert(seedChannelFaults('let seedIdKey = "e2eSeedId"\nlet seedIdPattern = "^a$"\nfatalError("Invalid x")').length === 0,
+  assert(seedChannelFaults('let seedIdKey = "e2eSeedId"\nlet seedIdPattern = "^a$"\nrefuse("seed-id-malformed", "x")\n        return').length === 0,
     'a well-formed seed channel was flagged');
   assert(seedChannelFaults('let launchArgumentKey = "e2eMetroUrl"').length > 0,
     'a source with no seed channel at all passed');
@@ -1219,17 +1388,26 @@ run('the checkers red on fabricated violations (liveness)', () => {
   // each other is the CORRECT shape, not smuggling.
   assert(seedChannelFaults(
     'let launchArgumentKey = "e2eMetroUrl"\nlet seedIdKey = "e2eSeedId"\n'
-    + 'let seedIdPattern = "^a$"\nfatalError("Invalid x")\nvalidatedSeedId = rawSeedId')
+    + 'let seedIdPattern = "^a$"\nrefuse("seed-id-malformed", "x")\n        return\nvalidatedSeedId = rawSeedId')
     .length === 0,
     'two keys declared next to each other were read as one smuggling the other');
   assert(seedChannelFaults(
-    'let seedIdKey = "e2eSeedId"\nlet seedIdPattern = "^a$"\nfatalError("Invalid x")\n'
+    'let seedIdKey = "e2eSeedId"\nlet seedIdPattern = "^a$"\nrefuse("seed-id-malformed", "x")\n        return\n'
     + 'validatedSeedId = metroUrl.queryItem')
     .some((f) => /other than its own key/.test(f)),
     'a seed read out of the metro url passed — that is the smuggling this forbids');
   assert(seedChannelFaults('let seedIdKey = "e2eSeedId"\nlet seedIdPattern = "^a$"')
     .some((f) => /fail closed/.test(f)),
     'a seed channel that does not fail closed passed');
+  // THE NEW FAILURE MODE THE RE-AIM CREATED, PROBED. Turning a crash into a
+  // refusal introduces a way to refuse and then CARRY ON — which would seed
+  // nothing, quietly, and is precisely what the crash was standing in for.
+  assert(seedChannelFaults(
+    'let seedIdKey = "e2eSeedId"\nlet seedIdPattern = "^a$"\n'
+    + 'refuse("seed-id-malformed", "x")\nvalidatedSeedId = rawSeedId')
+    .some((f) => /fail closed/.test(f)),
+    'a seed channel that refuses and then keeps going passed — a refusal without '
+    + 'a stop degrades into "no seed", the exact defect the crash prevented');
 
   assert(handAuthoredSeedWorlds(
     [{ file: '/x/s.ts', text: 'const seed = {\n  workouts: [\n    {}\n  ],\n};' }]).length === 1,

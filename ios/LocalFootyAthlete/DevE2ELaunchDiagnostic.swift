@@ -65,20 +65,76 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
   private static var currentReceiptJSON: String?
   private static var currentResolvedMetroUrl: String?
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // A DEV DIAGNOSTIC MUST NOT BE ABLE TO KILL THE APP.
+  //
+  // Sam's order, 2026-08-10, after the THIRD crash of this shape in one day:
+  // *"A crash is the least debuggable possible signal: it destroys the process
+  // before anything can report why."*
+  //
+  // THE CENSUS THAT ORDER ASKED FOR: this file held TEN hard `fatalError`s on
+  // the launch path — lines 81, 95, 102, 120, 127, 164, 207, 234, 242, 257 of
+  // the version this replaces. Three of them each cost a debugging cycle:
+  //   1. the missing launch purpose — read as "the rig is dead" for 23 days;
+  //   2. the resolved-bundle trap behind the reload flows;
+  //   3. the Metro URL, which fired when this terminal invoked `maestro test`
+  //      without the runner and the app received the LITERAL `${E2E_METRO_URL}`.
+  // **Every one of the three was an input mistake outside the app**, and in
+  // every case the app died in `didFinishLaunchingWithOptions` — before a line
+  // of JavaScript, so nothing could report the reason. The reason had to be
+  // reconstructed from `~/Library/Logs/DiagnosticReports` each time.
+  //
+  // FAIL CLOSED IS KEPT; FAIL DEAD IS NOT. These are different properties and
+  // only the second one is being removed. A refusal still stops the diagnostic
+  // dead — no receipt is written, no seed id is handed to JS, no Metro override
+  // is installed — so a run CANNOT go green having tested an empty world, which
+  // is the property `e2eSeedId`'s own comment was protecting. What changes is
+  // that the app now BOOTS and SAYS SO: `NSLog` for the human, and a typed
+  // refusal over the constants bridge that JS turns into an
+  // `e2e-explorer-launch-error-<code>` marker a flow can assert on.
+  //
+  // **A REFUSAL A FLOW CAN SEE IS STRICTLY MORE THAN A CRASH COULD EVER BE.** A
+  // crash tells the runner "the app went away"; it cannot distinguish a bad URL
+  // from a bad seed id from a genuine boot defect. A marker names which.
+  private static var refusalCodes: [String] = []
+
+  /// Refuse, loudly, and let the app boot. Duplicate codes collapse — one cause
+  /// firing twice is one fault, and a flow asserting on the marker wants the
+  /// cause, not the count.
+  private static func refuse(_ code: String, _ detail: String) {
+    NSLog("[DevE2E Refusal] %@: %@", code, detail)
+    if !refusalCodes.contains(code) { refusalCodes.append(code) }
+  }
+
+  /// `refuse` in expression position, so a `guard … else { return refusing(…) }`
+  /// reads as one thought and cannot forget its `return`.
+  private static func refusing<T>(_ code: String, _ detail: String) -> T? {
+    refuse(code, detail)
+    return nil
+  }
+
+  /// The refusals raised on this launch, for the constants bridge. Empty is the
+  /// normal case and costs the bridge nothing.
+  static func launchRefusalCodes() -> [String] { refusalCodes }
+
   static func captureAndConfigureIfRequested() {
     pending = nil
     currentReceiptJSON = nil
     currentResolvedMetroUrl = nil
     validatedSeedId = nil
+    refusalCodes = []
     UserDefaults.standard.removeObject(forKey: receiptDefaultsKey)
 
     // FAIL CLOSED, exactly like the launch purpose below. A seed id that is
     // present but malformed must never degrade into "no seed" — that is how a
-    // run goes green having tested an empty world.
+    // run goes green having tested an empty world. `validatedSeedId` stays nil
+    // and the refusal is on the record, so JS is handed nothing to seed WITH and
+    // the flow's own `e2e-seed-ready-<id>` assertion cannot pass.
     if let rawSeedId = UserDefaults.standard.string(forKey: seedIdKey) {
       guard rawSeedId.range(of: seedIdPattern, options: .regularExpression) != nil
       else {
-        fatalError("[DevE2E Seed] Invalid \(seedIdKey): \(rawSeedId)")
+        refuse("seed-id-malformed", "\(seedIdKey)=\(rawSeedId)")
+        return
       }
       validatedSeedId = rawSeedId
       NSLog("[DevE2E Seed] Requested seed: %@", rawSeedId)
@@ -92,14 +148,18 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
       let launchPurpose = UserDefaults.standard.string(forKey: launchPurposeKey),
       allowedLaunchPurposes.contains(launchPurpose)
     else {
-      fatalError("[DevE2E Launch Diagnostic] Invalid or missing launch purpose")
+      return refuse(
+        "launch-purpose-invalid",
+        "\(launchPurposeKey)="
+          + (UserDefaults.standard.string(forKey: launchPurposeKey) ?? "<missing>")
+      )
     }
-    let metro = validatedMetroURL(rawURL)
-    let buildIdentity = loadBuildIdentity()
+    guard let metro = validatedMetroURL(rawURL) else { return }
+    guard let buildIdentity = loadBuildIdentity() else { return }
     guard let bundleIdentifier = Bundle.main.bundleIdentifier,
       !bundleIdentifier.isEmpty
     else {
-      fatalError("[DevE2E Launch Diagnostic] App bundle identifier is missing")
+      return refuse("bundle-identifier-missing", "Bundle.main.bundleIdentifier")
     }
 
     let provider = RCTBundleURLProvider.sharedSettings()
@@ -117,15 +177,17 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
   static func finalizeResolvedBundle(_ bundleURL: URL?) {
     guard let pending else { return }
     guard let bundleURL else {
-      fatalError(
-        "[DevE2E Metro] Selected server did not resolve a development bundle URL"
+      return refuse(
+        "bundle-url-unresolved",
+        "the selected server did not resolve a development bundle URL"
       )
     }
-    let resolved = validatedMetroURL(bundleURL)
+    guard let resolved = validatedMetroURL(bundleURL) else { return }
     if let currentResolvedMetroUrl {
       guard currentResolvedMetroUrl == resolved.normalized else {
-        fatalError(
-          "[DevE2E Launch Diagnostic] Conflicting resolved bundle URLs"
+        return refuse(
+          "resolved-bundle-conflict",
+          "\(currentResolvedMetroUrl) vs \(resolved.normalized)"
         )
       }
       return
@@ -161,7 +223,7 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
       ),
       let json = String(data: data, encoding: .utf8)
     else {
-      fatalError("[DevE2E Launch Diagnostic] Receipt serialization failed")
+      return refuse("receipt-serialization-failed", "JSONSerialization refused the receipt")
     }
 
     UserDefaults.standard.set(json, forKey: receiptDefaultsKey)
@@ -181,7 +243,7 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
   /// argument — a caller that could read the raw value could skip the guard.
   static func requestedSeedId() -> String? { validatedSeedId }
 
-  private static func loadBuildIdentity() -> DevE2EBuildIdentity {
+  private static func loadBuildIdentity() -> DevE2EBuildIdentity? {
     guard
       let url = Bundle.main.url(
         forResource: buildIdentityResource,
@@ -204,8 +266,10 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
         options: .regularExpression
       ) != nil
     else {
-      fatalError(
-        "[DevE2E Launch Diagnostic] Debug build identity is missing or invalid"
+      return refusing(
+        "build-identity-invalid",
+        "\(buildIdentityResource).plist is missing or does not match schema "
+          + "\(schemaVersion)/bridge \(nativeBridgeVersion)"
       )
     }
     return DevE2EBuildIdentity(
@@ -217,7 +281,7 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
 
   private static func validatedMetroURL(
     _ rawURL: String
-  ) -> (scheme: String, hostPort: String, normalized: String) {
+  ) -> (scheme: String, hostPort: String, normalized: String)? {
     guard
       let components = URLComponents(string: rawURL),
       let scheme = components.scheme?.lowercased(),
@@ -231,22 +295,31 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
       components.fragment == nil,
       components.path.isEmpty || components.path == "/"
     else {
-      fatalError(
-        "[DevE2E Metro] Invalid e2eMetroUrl. " +
-          "Expected a canonical local HTTP URL with host and port."
+      // THE DETAIL CARRIES THE VALUE, AND THAT IS THE WHOLE POINT OF THIS
+      // CHANGE. When this fired on 2026-08-10 the value was the LITERAL
+      // `${E2E_METRO_URL}` — a runner invoked without `-e`. A crash could not
+      // say that; this line says it in the device log and names the code in a
+      // marker, and the fix is then obvious rather than archaeological.
+      return refusing(
+        "metro-url-invalid",
+        "\(launchArgumentKey)=\(rawURL) — expected a canonical local HTTP URL "
+          + "with host and port, e.g. http://127.0.0.1:8081"
       )
     }
     let hostPort = host.contains(":") ? "[\(host)]:\(port)" : "\(host):\(port)"
     let normalized = "\(scheme)://\(hostPort)"
     guard rawURL == normalized else {
-      fatalError("[DevE2E Metro] e2eMetroUrl is not canonical")
+      return refusing(
+        "metro-url-not-canonical",
+        "\(launchArgumentKey)=\(rawURL), canonical form is \(normalized)"
+      )
     }
     return (scheme, hostPort, normalized)
   }
 
   private static func validatedMetroURL(
     _ bundleURL: URL
-  ) -> (scheme: String, hostPort: String, normalized: String) {
+  ) -> (scheme: String, hostPort: String, normalized: String)? {
     guard
       let scheme = bundleURL.scheme?.lowercased(),
       scheme == "http",
@@ -254,8 +327,10 @@ enum DevE2ELaunchDiagnosticReceiptOwner {
       host == "127.0.0.1" || host == "localhost",
       let port = bundleURL.port
     else {
-      fatalError(
-        "[DevE2E Metro] Resolved development bundle lacks an explicit server"
+      return refusing(
+        "resolved-bundle-server-missing",
+        "resolved bundle URL \(bundleURL.absoluteString) lacks an explicit "
+          + "local http host and port"
       )
     }
     let hostPort = host.contains(":") ? "[\(host)]:\(port)" : "\(host):\(port)"
@@ -310,6 +385,12 @@ final class DevE2ELaunchDiagnostic: NSObject {
     // This bridge is the one that demonstrably reaches JS.
     if let seedId = DevE2ELaunchDiagnosticReceiptOwner.requestedSeedId() {
       constants["seedId"] = seedId
+    }
+    // THE REFUSALS, SO A FLOW CAN SEE WHAT A CRASH USED TO HIDE. Only present
+    // when something was refused, so the normal launch carries nothing extra.
+    let refusals = DevE2ELaunchDiagnosticReceiptOwner.launchRefusalCodes()
+    if !refusals.isEmpty {
+      constants["launchRefusalCodes"] = refusals
     }
     return constants
   }

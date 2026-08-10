@@ -350,7 +350,40 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       state: 'guarded',
       by: 'test:repo-law-guards',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED — the first draft of this row entered UNENFORCED and that was a DEFECT caught in the same pass: it broke LAW ZERO (no law enters unguarded from 2026-08-10) and pushed the unguarded count 36 -> 37, the one direction Sam ruled it may never move. WHAT THE CELL HOLDS: the key exists under its own name, the value is validated against a declared shape, a malformed value is FATAL rather than degrading to "no seed", and the metro-url key carries no seed meaning. WHAT IT DOES NOT HOLD, STATED NOT IMPLIED: it cannot prove the refusal FIRES — that needs a simulator launch with a bad value, and no run-through completes yet. `e2eSeedId` is parsed and validated in DevE2ELaunchDiagnostic.swift beside e2eMetroUrl/e2eLaunchPurpose, fatalErrors on a malformed value exactly as an invalid launch purpose does, and reaches JS through the bridge that demonstrably works. IT NEEDS A NATIVE REBUILD BEFORE IT RUNS AT ALL — asked of Sam plainly, with the cost stated.',
+      receipt: 'BORN GUARDED — the first draft of this row entered UNENFORCED and that was a DEFECT caught in the same pass: it broke LAW ZERO (no law enters unguarded from 2026-08-10) and pushed the unguarded count 36 -> 37, the one direction Sam ruled it may never move. WHAT THE CELL HOLDS: the key exists under its own name, the value is validated against a declared shape, a malformed value FAILS CLOSED rather than degrading to "no seed", and the metro-url key carries no seed meaning. RE-AIMED 2026-08-10 EVENING, PROPERTY UNCHANGED: fail-closed used to be spelled `fatalError` and is now a typed refusal plus a stop, because Sam ruled a dev diagnostic may not kill the app (see LAW-diagnostic-refuses-never-crashes). The cell now asserts the malformed branch RECORDS a refusal AND RETURNS — and a new liveness probe covers the failure mode the re-aim created, a refusal that carries on and seeds nothing quietly. WHAT IT DOES NOT HOLD, STATED NOT IMPLIED: it cannot prove the refusal FIRES — that needs a simulator launch with a bad value. IT NEEDS A NATIVE REBUILD BEFORE IT RUNS AT ALL — asked of Sam plainly, with the cost stated.',
+    },
+  },
+  {
+    id: 'LAW-removal-ships-with-its-replacement',
+    law: 'A removal ships the same day its replacement does, never before.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, generalising Sam\'s binding line on the UI merge: "without destroying what i have now"',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE IS A CALL THAT WENT RIGHT, which is why it became a rule rather than a fix: ruling 6 removes the season-phase box from the day screen, its new home on the coach page does not exist yet, and the box was LEFT IN PLACE — deleting it would have left Sam with no way to change season phase at all. WHAT THE CELL HOLDS: the UI merge plan\'s own REMOVAL LEDGER is parsed and every row must name where the behaviour went; an empty destination cell, a "TBD" or a dash reds, and so does the ledger section going missing. Liveness both directions including the placeholder case, because "TBD" is the shape this defect actually takes. WHAT IT DOES NOT HOLD, STATED NOT IMPLIED: it reads the PLAN, not the diff — it cannot see a removal that never got a ledger row at all, and it cannot prove the destination named is where the behaviour truly went. It catches the removal that has nowhere to land, which is the half that has actually bitten.',
+    },
+  },
+  {
+    id: 'LAW-diagnostic-refuses-never-crashes',
+    law: 'A development diagnostic refuses loudly and lets the app boot. It may never kill the process.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, Sam via the seat after the third crash of one shape in a day: "A DEV DIAGNOSTIC MUST NOT BE ABLE TO KILL THE APP… A crash is the least debuggable possible signal: it destroys the process before anything can report why."',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). CENSUS, MEASURED NOT ESTIMATED: DevE2ELaunchDiagnostic.swift held TEN hard fatalErrors on the launch path, every one reachable from didFinishLaunchingWithOptions — before a line of JavaScript, so nothing could report the reason and it had to be reconstructed from ~/Library/Logs/DiagnosticReports each time. THREE OF THE TEN EACH COST A DEBUGGING CYCLE: the missing launch purpose (read as "the rig is dead" for 23 days), the resolved-bundle trap behind the reload flows, and the metro url — which fired at 18:56:45 on 2026-08-10 because THIS TERMINAL ran `maestro test` without the runner, so the app was handed the literal string ${E2E_METRO_URL}. Every one of the three was an input mistake OUTSIDE the app. The count is now ZERO. WHAT THE CELLS HOLD: no fatalError/precondition/assertionFailure survives in ios/LocalFootyAthlete (comment-stripped, so a comment naming the ban is not the ban being broken); the Swift side exports launchRefusalCodes over the constants bridge measured to reach JS; devE2EEntry publishes them as e2e-explorer-launch-error-<code>, through the EXISTING channel rather than a second representation; and it publishes BEFORE the hydration that would otherwise raise a consequential marker first. Liveness both directions, including the comment false-positive and a refusal being misread as a crash. WHAT IT DOES NOT HOLD: no refusal has ever FIRED on a device under this change — it is native code and NEEDS THE REBUILD Sam already owes before it runs at all.',
+    },
+  },
+  {
+    id: 'LAW-hot-file-budget',
+    law: 'A file re-read at every stop has a stated size budget, and going over it is a failure.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat relaying Sam\'s /usage: "126M tokens IN, 5k out, $68.95 for 1h43m… THEN GUARD BOTH, because this will grow back within a day otherwise"',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE IS A BILL, NOT A SMELL: almost all of that 126M input was READING, and the two files re-read at every terminal stop were SEAT_INBOX.md at 353KB and NOW.md at 53KB. Both carried a line at the top saying what they were for — "the review seat writes here; terminal reads at every stop" and "overwrite at every checkpoint (pointer, not history)" — and both had quietly become history. Same shape as every other rot here: correct when written, nobody watching it drift. THE TRIM IS NOT THE FIX, THE ALARM IS: NOW.md went 53KB -> ~4KB and the inbox 353KB -> 43KB, and either would grow back within a day. BUDGETS AND WHY, since the order asked: NOW.md 24KB (a pointer whose job is links, ~6x its post-trim size), SEAT_INBOX.md 96KB (orders are longer and several are live at once, but it is a quarter of what the file reached). WHAT THE CELL HOLDS: both files exist, both are non-empty (a budget over a missing or empty file is a green that means nothing), and neither is over. Liveness probes the 53KB case, an inside-budget case, and the inclusive boundary. WHEN IT REDS THE ANSWER IS TO ARCHIVE VERBATIM TO A DATED FILE — never to delete, and never to raise the budget to match the file.',
     },
   },
   {

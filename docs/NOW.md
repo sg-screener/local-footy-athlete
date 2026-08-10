@@ -13,10 +13,18 @@ and this file gets one line pointing at it.**
 
 ## FOR SAM — the short list
 
-- **⚠ SAM: ONE REBUILD IS STILL OWED AND NOTHING ELSE NEEDS YOU FOR IT.** Run
+- **⚠ SAM: ONE REBUILD IS STILL OWED AND IT NOW CARRIES TWO THINGS.** Run
   `npx expo run:ios --configuration Debug` — roughly 40 minutes, machine busy the
-  whole time, so pick when. Until it runs, the test rig's new practice-week door
-  is built and **has never executed**. **Not seen on your phone.**
+  whole time, so pick when. Until it runs, the test rig's practice-week door and
+  **the ten crash-points that are now refusals instead** are both built and
+  **have never executed**. **Not seen on your phone.**
+
+- **⚠ SAM: THE DAY SCREEN'S ADDITIONS ARE BUILT AND PHOTOGRAPHED.** `25565430`.
+  Eyebrow, drop-downs with exercises and prescriptions, the change card, the
+  calmer card. Both drop-down states shot at
+  `artifacts/ui-walk/dropdown-{1-collapsed,2-expanded}.png`, and
+  `.maestro/golden/day-card-dropdowns.yaml` holds them. **Simulator only — not
+  seen on your phone.**
 
 - **⚠ SAM: THE TEST RIG WORKS AND IT FOUND THE ROT YOU WARNED ABOUT.** One flow
   runs end to end in 18 seconds (`96dd6f01`), and on its first working run it
@@ -54,7 +62,15 @@ and this file gets one line pointing at it.**
 
 ## OPEN, ON US
 
-- **THE UI MERGE — SLICE 2 IS THE LIVE UNIT.** Plan:
+- **A REFUSAL HAS NEVER FIRED.** `DevE2ELaunchDiagnostic.swift` went from TEN
+  hard `fatalError`s on the launch path to ZERO, and each one is now a typed code
+  surfacing as `e2e-explorer-launch-error-<code>`. **Native — inert until the
+  rebuild.** No flow launches with a bad input to prove the marker appears; that
+  flow is the next cheap act and is deliberately not written blind.
+  `docs/LAUNCH_DIAGNOSTIC_REFUSAL_BOUNDARY_2026-08-10.md`.
+- **THE UI MERGE — SLICES 3, 4 AND 5 ARE NEXT.** Slice 2 landed at `25565430`.
+  Slice 4's modifiers strip is HELD by Sam's own excusal until the coach page has
+  a home for it. Plan:
   `docs/UI_MERGE_PLAN_2026-08-10.md` · rulings:
   `docs/UI_MERGE_RULINGS_2026-08-10.md` · her signed prototype:
   `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`.
