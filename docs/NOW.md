@@ -31,6 +31,13 @@
   practice week, and the clean fix is to load it a different way so the pop-up
   never appears. **Half the run works; the rest doesn't — and none of this has
   been on your phone yet.**
+  **AND YOU DO NOT NEED TO REBUILD ANYTHING — I CHECKED BEFORE ASKING.** There is
+  a way to load the practice week that doesn't involve the pop-up at all and
+  costs nothing. **The test now gets all the way in, and it immediately found a
+  real bug:** the practice week it saves doesn't survive being read back. That is
+  the first thing this kind of testing has ever caught here. **I have not
+  diagnosed it — it is named and nothing more**, because I've been wrong twice
+  today by moving too fast on a cause.
   **THE NUMBERS, BECAUSE THEY CHANGE WHAT IS WORTH DOING: a whole test run is
   20-26 seconds, and the part that now works takes 11.** A set of ten different
   training weeks would be under four minutes. **Cost is no longer a reason to

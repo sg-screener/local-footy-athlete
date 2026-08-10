@@ -40,6 +40,53 @@ rebuild fixed it. Measured, not assumed:
   revision 0 · mirror refusals 0 · actions 5"* is on screen, which is
   `DevE2EStatusMarkers` doing its job.
 
+
+## ✅ NO REBUILD NEEDED — PRICED BEFORE ASKING, AND (c) IS NOT THE ANSWER
+
+The seat's order: a native rebuild costs ~40 minutes **and takes over the machine
+Sam works on**, so price the alternatives first and ask him once.
+
+**(a) RIDE AN EXISTING PARSED ARGUMENT — REJECTED, NOT PRICED AWAY.**
+`e2eLaunchPurpose` is validated against six values and `fatalError`s otherwise,
+so it cannot carry a payload. `e2eMetroUrl` could physically smuggle one and
+**must not**: a second meaning on one field is the exact defect that cost a pass
+this morning with the `source` label.
+
+**(b) A CHANNEL NEEDING NO NATIVE CHANGE — THIS IS THE ANSWER, AND IT IS FREE.**
+`xcrun simctl openurl <device> "localfootyathlete://e2e/reset/<seed>"` hands the
+URL to the app **directly** rather than navigating a web page to a custom scheme.
+Safari is never involved, **so the dialog never exists.** Measured 2026-08-10: no
+`Open in …` anywhere in the hierarchy, and the seed route runs.
+
+**(c) A NEW NATIVE LAUNCH ARGUMENT — NOT NEEDED. Sam is not asked.**
+
+### AND THE LAUNCH-ARGUMENT VERSION WAS BUILT, THEN DELETED THE SAME DAY
+
+It read the seed id from `NativeModules.SettingsManager.settings`. **A probe
+printed `keys=NO_SETTINGS`: `SettingsManager` is `undefined` on this platform.**
+It could never have fired. Shipping it would have been a feature that reads as
+working and never runs — deleted rather than left in.
+
+**THE SAME PROBE CONDEMNS EXISTING CODE, LEFT AS A FINDING:**
+`nativeExplorerLaunchDiagnosticInput` ORs in
+`typeof settings?.e2eMetroUrl === 'string'`. **Unreachable, for the same reason.**
+Harmless today because the native bridge's `receiptJson` carries the real signal
+— but it is a fallback nobody can rely on that reads like one they can.
+
+## 🐛 THE RUN-THROUGH CAUGHT ITS FIRST REAL BUG
+
+With the dialog gone, the seed route runs and **fails with a named reason**:
+
+> `e2e-seed-error` · **"Persisted semantic state did not converge: program-store"**
+
+That is a genuine app-level defect — the seed writes state that does not survive
+its own readback — and it is **exactly the class of thing a run-through exists to
+find.** It is the first one, on the first day the instrument could see anything.
+
+**NOT DIAGNOSED. NOT FIXED. Named, with its receipt, and nothing more** — it is a
+new finding at the end of a long pass, and guessing at it now would be the third
+too-fast cause of the day.
+
 ## ✅ RESOLVED ENOUGH TO ACT ON — THE SEAT'S HYPOTHESIS IS CONFIRMED, AND HALF THE FLOW IS GREEN
 
 **THE FIRST GREEN STEP IN TWENTY-THREE DAYS.** With the stale dialog cleared
