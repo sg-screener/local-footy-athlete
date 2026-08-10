@@ -325,9 +325,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     // Cited honestly rather than upgraded to a law it was never written as.
     ruledAt: 'AGENTS.md "Seat coordination laws" (SEAT INBOX half, Sam 2026-08-07); the terminal-owned-section half is convention recorded in docs/SEAT_INBOX.md only and has never been ruled into AGENTS.md',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A gate over docs/SEAT_INBOX.md section structure: `## Unprocessed` exists, appears once, and is followed by the terminal-owned sections in a fixed order. Cheap — it is a headings read, the same shape as test:seat-inbox-hook.',
-      receipt: 'Violated and repaired by hand on 2026-08-10 (commit 74070cf2) — exactly the class a structural gate would have caught. NOT guarded by test:seat-inbox-hook, which reads the Unprocessed section\'s CONTENT and says nothing about the document\'s structure.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-10. Reads docs/SEAT_INBOX.md STRUCTURE: exactly one `## Unprocessed`, it is the FIRST section, and a processed section exists below it. Violated and repaired by hand on 2026-08-10 (74070cf2) before this existed. NOT guarded by test:seat-inbox-hook, which reads the queue\'s CONTENT and says nothing about the document\'s shape. THE CHECKER WAS WRONG ON ITS OWN FIRST RUN — it trimmed lines and read an INDENTED QUOTATION of the law (SEAT_INBOX.md:317) as a second queue; a heading is only a heading at column 0, and that regression now has its own cell.',
     },
   },
 
@@ -509,9 +510,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Every report, sweep and audit carries a NOT-COVERED section; omitting it is itself a defect.',
     ruledAt: 'docs/MASTER_PLAN_2026-07-23.md PART 1, L2',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A repo check over docs/*BOUNDARY*.md and audits requiring a NOT-COVERED heading. CHEAP — it is a headings grep, and it is the same shape as the seat-inbox structure guard.',
-      receipt: 'Distinct from LAW-not-covered-real-data-blocks, which governs what a NOT-COVERED item MEANS. This one governs whether the section exists at all, and nothing reads for it.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-10 over all 39 docs/*BOUNDARY*.md. Distinct from LAW-not-covered-real-data-blocks, which governs what a NOT-COVERED item MEANS; this one governs whether the section exists at all. FIRST RUN FOUND TWO REAL VIOLATIONS — R53_FIXTURE_BOOT_ORDER_BOUNDARY_2026-08-06.md and V3_BOUNDARY_BANKED_2026-08-07.md — carried as a NAMED, DATED exception list with a RATCHET cell: a doc leaves the list by gaining its section and nothing may join it.',
     },
   },
   {
@@ -773,9 +775,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'API keys and Supabase/OpenAI secrets are never exposed, repeated or committed — they belong in deployed secrets only.',
     ruledAt: 'AGENTS.md "Working Style"',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A secret scan in the chain. CHEAPEST REAL GUARD ON THE SHEET and the highest cost if it ever fires — a committed key is unrecoverable from history.',
-      receipt: 'No test:* script scans for credentials. This law has the largest gap between the cost of a violation and the cost of its guard of any row here.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-10. Scans src/ and scripts/ plus app.json/eas.json for four credential shapes (OpenAI-style key, real-payload JWT, AWS access key id, and a named credential assigned a long literal). Patterns are BUILT FROM PIECES rather than written whole, so the scanner does not have to exclude itself — a self-exclusion is the hole a real key would sit in. GREEN on its first run. This law had the largest gap in the registry between the cost of a violation and the cost of its guard.',
     },
   },
 ];
