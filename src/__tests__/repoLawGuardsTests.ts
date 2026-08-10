@@ -529,6 +529,125 @@ run('every Sam-facing claim in NOW.md carries a receipt or says OPEN-UNKNOWN', (
     + `${bare.join(' | ')}. The founding case reached him and was FALSE.`);
 });
 
+// ── INSTRUMENTATION THAT IS DEAD BY REFERENCE ─────────────────────────────
+//
+// `LAW-instrumentation-alive`: *a dead or unrun instrument is not coverage.*
+// Its founding case is eight of eleven Maestro flows crashing for 23 days.
+// **THIS CELL DOES NOT CATCH THAT CASE** — a crash needs the flow to RUN, which
+// needs a device — and the row stays UNENFORCED for exactly that reason. What it
+// catches is the cheaper sibling: a flow that names a file which is not there,
+// and a flow NOTHING can reach. Measured when this landed: **0 broken runFlow
+// targets, 7 flows reachable from no script, no doc and no other flow.**
+
+/**
+ * **EMPTY, AND THAT IS THE MEASUREMENT, NOT AN OMISSION.** This list held seven
+ * flows until the scan above was corrected three times; under the corrected scan
+ * **every flow in `.maestro/` is reachable and there are ZERO orphans.** The
+ * seven were artefacts of a scan that read too little — which is why the debt was
+ * re-derived after each fix instead of being trusted. Nothing may join this list
+ * without a receipt showing the flow is genuinely unreachable.
+ */
+const ORPHAN_FLOW_DEBT: readonly string[] = [];
+
+/**
+ * Every flow this text runs, in BOTH shapes Maestro allows.
+ *
+ * **THE FIRST VERSION READ ONLY THE ONE-LINE FORM, AND THIS REPO USES THE OTHER
+ * ONE.** Every flow here is written `- runFlow:` / newline / `    file: x.yaml`,
+ * so the scan matched NOTHING and "0 broken references" was a vacuous green. Its
+ * liveness probe passed because the probe was written in the one-line form —
+ * **a fixture that does not match the world it claims to test**
+ * (`a fixture is a claim too`). Both forms are probed now.
+ */
+function runFlowTargets(text: string): string[] {
+  return [
+    ...[...text.matchAll(/runFlow:[ \t]*\n[ \t]*file:[ \t]*([^\s#]+\.yaml)/g)].map((m) => m[1]),
+    ...[...text.matchAll(/runFlow:[ \t]+([^\s#]+\.yaml)/g)].map((m) => m[1]),
+  ].map((t) => t.replace(/["']/g, ''));
+}
+
+/** Pure: runFlow targets that do not resolve, given (flow, text) pairs. */
+function brokenFlowReferences(
+  flows: readonly { readonly file: string; readonly text: string }[],
+  exists: (candidate: string) => boolean,
+): string[] {
+  const bad: string[] = [];
+  for (const flow of flows) {
+    for (const target of runFlowTargets(flow.text)) {
+      const resolved = path.normalize(path.join(path.dirname(flow.file), target));
+      if (!exists(resolved)) bad.push(`${flow.file} -> ${target}`);
+    }
+  }
+  return bad;
+}
+
+run('no Maestro flow names a file that is not there', () => {
+  const files = filesUnder(path.join(repoRoot, '.maestro'), ['.yaml']);
+  assert(files.length > 5, `only ${files.length} flows found — the scan is reading the wrong tree`);
+  const flows = files.map((file) => ({
+    file: path.relative(repoRoot, file), text: fs.readFileSync(file, 'utf8'),
+  }));
+  const broken = brokenFlowReferences(flows, (c) => fs.existsSync(path.join(repoRoot, c)));
+  assert(broken.length === 0, `flow reference(s) that do not resolve: ${broken.join(', ')}`);
+});
+
+run('no Maestro flow is reachable from nothing', () => {
+  const files = filesUnder(path.join(repoRoot, '.maestro'), ['.yaml'])
+    .map((file) => path.relative(repoRoot, file));
+  const referenced = new Set<string>();
+  for (const file of files) {
+    const text = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+    for (const target of runFlowTargets(text)) {
+      referenced.add(path.normalize(path.join(path.dirname(file), target)));
+    }
+  }
+  // NAMED ANYWHERE A HUMAN OR A SCRIPT COULD INVOKE IT — and this corpus took
+  // THREE corrections to get right, each one a flow wrongly called an orphan:
+  //   1. `docs/` + `scripts/*.sh|js` only → nine helper flows looked orphaned;
+  //      SUITES name flows directly (`explorerLiveRunnerTests`).
+  //   2. adding `src/__tests__/*.ts` → two still looked orphaned;
+  //      `scripts/explorer-app-launch.ts` is TypeScript, and
+  //      `src/dev/e2e/README.md` is a .md outside `docs/`.
+  // **An orphan claim is a claim about the WHOLE repo, so the scan has to read
+  // the whole repo.** Narrowing it is how a live instrument gets called dead.
+  const named = [
+    fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'),
+    // THIS FILE IS EXCLUDED, AND MUTATION TESTING FOUND OUT WHY — for the SECOND
+    // time in this suite's life. A flow name written in this suite's own source
+    // (a debt entry, a comment, a probe) counted as the flow being "named", so
+    // removing its only real mention reddened nothing. **A gate that reads
+    // sources must never read its own.** Same defect as the rule-id scan next
+    // door, recurring because the two scans were written days apart.
+    ...['docs', 'scripts', 'src'].flatMap((dir) =>
+      filesUnder(path.join(repoRoot, dir), ['.md', '.ts', '.tsx', '.sh', '.js', '.json'])
+        .filter((f) => f !== __filename)
+        .map((f) => fs.readFileSync(f, 'utf8'))),
+  ].join('\n');
+  // MATCHED BY BASENAME, DELIBERATELY. `FINAL_QA_CHECKLIST` tells a human to run
+  // `fixture-move.yaml`; nothing in the repo writes its full path. **A flow named
+  // anywhere a person or script can act on it is INVOKABLE, and that is what
+  // "alive" means here.** Full-path matching called seven live flows dead — the
+  // fourth and last correction to this scan.
+  const orphans = files.filter((file) =>
+    !referenced.has(path.normalize(file)) && !named.includes(path.basename(file)));
+  const unexpected = orphans.filter((file) => !ORPHAN_FLOW_DEBT.includes(file));
+  assert(unexpected.length === 0,
+    `Maestro flow(s) no script, doc or other flow can reach: ${unexpected.join(', ')}. `
+    + 'An instrument nobody runs is not coverage.');
+  console.log(`      (${files.length} flows; ${ORPHAN_FLOW_DEBT.length} pre-existing orphans carried as dated debt)`);
+});
+
+run('the orphan-flow debt only shrinks', () => {
+  // THIS RATCHET WAS WRONG TOO, and it is why the empty list above is empty. It
+  // used to check that a debt entry still EXISTED as a file — which passes
+  // forever, even after the flow becomes reachable again. A ratchet must ask the
+  // question the cell it guards asks: is this still an orphan?
+  assert(ORPHAN_FLOW_DEBT.length === 0,
+    `ORPHAN_FLOW_DEBT is non-empty: ${ORPHAN_FLOW_DEBT.join(', ')}. `
+    + 'Re-derive it against the corrected scan before trusting it — the first seven entries '
+    + 'were artefacts of a scan that read too little.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
   // A GREEN GATE IS A CLAIM. Each checker is fed something it must catch; if the
   // reads above were reduced to no-ops, every cell would still pass.
@@ -605,6 +724,20 @@ run('the checkers red on fabricated violations (liveness)', () => {
     'an honest OPEN-UNKNOWN was flagged — the law offers it as the alternative');
   assert(samFacingClaimsWithoutAReceipt('- **A note with no warning mark.** No receipt here.').length === 0,
     'a non-Sam-facing note was pulled into scope');
+
+  // THE MULTI-LINE FORM FIRST — it is the one this repo actually writes, and a
+  // probe in the other form is what let a vacuous scan ship green.
+  const multiline = '- runFlow:\n    file: ../common/gone.yaml\n    env:\n      SEED_ID: x';
+  assert(brokenFlowReferences([{ file: '.maestro/a.yaml', text: multiline }], () => false).length === 1,
+    'the MULTI-LINE runFlow form — the only one this repo uses — was not read at all');
+  assert(brokenFlowReferences([{ file: '.maestro/a.yaml', text: multiline }], () => true).length === 0,
+    'a resolving multi-line reference was flagged');
+  assert(brokenFlowReferences(
+    [{ file: '.maestro/a.yaml', text: '- runFlow: ../common/gone.yaml' }], () => false).length === 1,
+    'the one-line runFlow form was not read');
+  assert(brokenFlowReferences(
+    [{ file: '.maestro/a.yaml', text: 'appId: com.x\n- tapOn: thing' }], () => false).length === 0,
+    'a flow with no runFlow at all was reported broken');
 
   assert(unmarkedRivalPlans([{ file: 'd/MASTER_PLAN_x.md', text: '# Plan\n\nthe road to done' }]).length === 1,
     'a rival plan with no SUPERSEDED marker passed — the 2026-08-10 case exactly');

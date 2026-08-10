@@ -213,8 +213,8 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'AGENTS.md "Instrumentation must be alive where the defects are"',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'A staleness gate over .maestro flows and tapes: fail when a named instrument has not run against the current app.',
-      receipt: 'Founding case, measured 2026-08-10: eight of eleven Maestro flows had crashed on their first command for 23 DAYS, invisible because the only flow that could launch was not the one anybody ran. test:pipeline-instrumentation exists but is NOT in test:bible.',
+      wouldTake: 'Running the flows. A crash on launch — the founding case — is only visible to a flow that RUNS, which needs the simulator binary the rig is currently blocked on. **A PARTIAL guard now exists and deliberately did NOT flip this row: `test:repo-law-guards` holds that no flow names a missing file and no flow is unreachable from every script, doc and other flow. Neither would have caught eight flows crashing for 23 days.**',
+      receipt: 'Founding case: eight of eleven Maestro flows crashed for 23 days on a missing launch parameter. The 2026-08-10 partial guard measured 22 flows, ZERO broken references and ZERO orphans — and getting to that number took FOUR corrections to the scan, each one a live flow wrongly called dead. Flipping this row on those cells would be the reads-as-covered failure the registry exists to catch.',
     },
   },
   {
@@ -647,7 +647,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1 "BATCH RULE"',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'A check over the signed-copy sheet: a batch number must carry more than one entry, or state why. The sheet is already machine-readable (signedCopy.ts REGISTRY), so this is cheap.',
+      wouldTake: 'REFUTED 2026-08-10: the row said \'the sheet is already machine-readable, so this is cheap\'. **`src/rules/signedCopy.ts` HAS NO BATCH FIELD — grep for `batch:` returns ZERO.** Batch numbers live in prose in the boundary reports, so a guard would first have to put them in the sheet. Not cheap, and priced honestly rather than left looking cheap.',
       receipt: 'test:signed-copy-extraction is in the chain and gates whether strings are signed, not whether signings were batched.',
     },
   },
