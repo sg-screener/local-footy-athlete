@@ -1327,10 +1327,27 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
 
   // THE HONEST HALF, ASSERTED SO IT CANNOT BE FORGOTTEN. The status screen is
   // READ-ONLY this pass and the file must say so.
-  ok('the status screen declares its actions unwired rather than looking finished',
-    /SLICE 3b/.test(coachTab) && /read-only|READ-ONLY/.test(coachTab),
-    'a surface whose buttons do nothing, with nothing saying so, is the '
-      + 'dead-affordance law broken in a new place');
+  // NOT-YET IS SHOWN, NOT FAKED. The seat: "a control that looks live but is not
+  // is worse than no control." Dimmed AND untappable AND captioned — all three,
+  // because any one alone still reads as "broken" rather than "coming".
+  const section = read('components/ActiveModifiersSection.tsx');
+  ok('the status screen renders its unwired controls as visibly not-yet',
+    /actionsNotYet\b/.test(status),
+    'the status screen mounts the list in live mode while its actions cannot run');
+  ok('a not-yet control is dimmed, untappable AND captioned',
+    /disabled=\{actionsNotYet\}/.test(section)
+      && /coachNoteActionNotYet/.test(section)
+      && /coach\.status\.actions_not_yet/.test(section),
+    'one of dim / disable / caption is missing — dimming alone reads as broken, '
+      + 'and a caption alone leaves a live-looking button that lies');
+  ok('the caption says where the working control is',
+    /Change this on your program screen/.test(
+      read('rules/projectionCopy.ts')),
+    'a not-yet caption that does not name the live door leaves the athlete stuck');
+  ok('the day screen still mounts the list LIVE',
+    !/actionsNotYet/.test(home),
+    'the day screen has picked up not-yet mode — its controls are the working '
+      + 'ones and nothing has replaced them');
 
   ok('the strip is outside the conversation scroll',
     coachTab.indexOf('<ModifiersStrip') < coachTab.indexOf('testID="coach-tab-conversation"'),

@@ -307,6 +307,15 @@ export function registerProjectionCopy(): void {
       text: 'Nothing is changing your program right now.',
     },
 
+    {
+      id: 'coach.status.actions_not_yet',
+      source: 'sam_ruling',
+      provenance: 'NEW — PROPOSED, batch 34. Shown under a modifier\'s controls on '
+        + 'the coach status screen while they are not wired. The seat, 2026-08-10: '
+        + '"a control that looks live but is not is worse than no control".',
+      text: 'Change this on your program screen for now.',
+    },
+
     // ── The one separator. ──
     {
       id: 'copy.joiner.plus',

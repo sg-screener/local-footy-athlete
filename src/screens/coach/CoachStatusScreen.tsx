@@ -95,6 +95,11 @@ export default function CoachStatusScreen({
             notes={modifiers as ActiveCoachNote[]}
             equipmentFactIds={equipmentFactIds}
             onAction={onAction}
+            /* SEE THE PROP'S OWN DOC. Until `handleCoachNoteAction` is lifted out
+               of `useHomeScreen`, these controls cannot run — so they render
+               dimmed, untappable and captioned with where the live one is,
+               rather than looking ready and lying. */
+            actionsNotYet
           />
         )}
       </ScrollView>

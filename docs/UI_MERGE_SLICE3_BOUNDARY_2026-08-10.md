@@ -164,3 +164,81 @@ gets by construction rather than a flag it has to carry.
   The count line belongs to the six collapsed rows. A flow assertion on Monday
   failed for exactly this reason and the selector was the fix, not the feature.
 - **NOTHING IS ON SAM'S PHONE.**
+
+---
+
+# ADDENDUM 2 — THE NOT-YET CONTROLS, AND THE INJURY SEED DIAGNOSED
+
+## ORDER 1's HEDGE IS TAKEN, AND THE KNOT IS PRICED RATHER THAN FORCED
+
+**The seat's own instruction: *"if the untangling runs long, make the dead
+buttons visibly not-yet rather than leaving them looking ready."*** It runs long.
+
+**THE PRICE, MEASURED BY READING IT.** `handleClearCoachNote` alone closes over
+`handleProgramControlResult`, `clearCoachNoteAction`,
+`registerSourceFactRenderObservation`, `temporarySourceFacts`, the pending
+restoration/observation setters and two `Alert` paths; `handleCoachNoteAction` and
+`handleUpdateCoachNoteStatus` sit on top of it, and the phase-shift machine is
+fifteen more pieces of state driving a multi-step sheet. **This is a genuine
+ownership extraction, not a move**, and the Coach Architecture Escalation Rule
+says price it before forcing it.
+
+**SO THE CONTROLS SAY WHAT THEY ARE.** On the status screen every action renders
+**dimmed, `disabled`, and captioned** — *"Change this on your program screen for
+now."* All three, because any one alone fails: dimming alone reads as "broken",
+a caption alone leaves a live-looking button that lies, and disabling alone is
+silent. **Proven on the device**, not just in source: the flow asserts
+`coach-note-actions-not-yet`.
+
+**The day screen still mounts the list LIVE and a cell asserts it does** — its
+controls are the working ones and nothing has replaced them.
+
+## ORDER 2 — `injury-case` IS DIAGNOSED, NOT FIXED
+
+**MEASURED with `scripts/probe-injury-seed.ts`, which is committed so the next
+pass does not re-derive it:**
+
+```
+=== injury-case ===
+program.id       : dev-e2e-injury-case      <- matches
+witness programId: dev-e2e-injury-case
+microcycle starts: 2026-07-13               <- matches
+witness weekStart: 2026-07-13
+```
+
+**THE SEED BUILDS CORRECTLY. The witness that fails on the device
+(`injury-case:program:dev-e2e-injury-case:2026-07-13`) cannot be failing at
+BUILD time — so it fails at INSTALL time, after the auxiliary state is applied.**
+The auxiliary state for this seed is a severity-5 canonical injury episode, and
+applying an injury of that severity **rebuilds the program** — which replaces the
+program the `program` witness was captured against.
+
+**THE LEAD, NOT YET PROVEN:** the program witness is about the seed's program
+INSTALL, and it is being validated after a subsequent mutation has legitimately
+replaced that program. If that is right the fix is ordering — validate the base
+witness before auxiliary state is applied — **not loosening the witness**, which
+would blind it to the rot it exists to catch.
+
+**NOT FIXED. NOT RETIRED. The order asked "fix or retire it, and say which" and
+the honest answer is "neither yet, and here is exactly where to look."**
+
+## NOT COVERED — ORDERS 3 TO 7 ARE NOT STARTED
+
+Said plainly rather than left to be inferred:
+
+- **ORDER 3, THE 21 SUITES** on the impossible athlete — not run against a legal
+  profile.
+- **ORDER 4, THE DRIFT CHECK** — not built.
+- **ORDER 5, THE SEEDED WORLD'S DURABILITY** — not priced this pass.
+- **ORDER 6, THE UNENFORCED COUNT** — 35 of 74; three rows were ADDED guarded
+  today (`LAW-hot-file-budget`, `LAW-diagnostic-refuses-never-crashes`,
+  `LAW-removal-ships-with-its-replacement`, plus `LAW-no-silent-blank-screen`),
+  so the count fell, but `LAW-instrumentation-alive` is untouched.
+- **ORDER 7, THE LAYOUT-BLINDNESS FINDING** — the registry row is NOT written.
+  **The finding itself is recorded above** (two real defects, neither visible to
+  any assertion) and the answer it points at is: **if only an eye can catch that
+  class, the screenshots are load-bearing and every flow must photograph every
+  state it touches.** That is a rule worth having and it is not yet a row.
+
+**THE STOPPING REASON IS CONTEXT, NOT JUDGEMENT.** Each remaining order is a real
+unit and none is blocked on Sam.

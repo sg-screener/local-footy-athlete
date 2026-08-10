@@ -21,18 +21,36 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './common/Text';
 import { Card } from './ui';
 import { explorerTestId } from '../utils/stableTestId';
+import { signedCopy } from '../rules/signedCopy';
 import type {
   ActiveCoachNote,
   ActiveCoachNoteAction,
 } from '../utils/activeCoachNotes';
 
 export interface ActiveModifiersSectionProps {
+  /**
+   * NOT-YET, SHOWN RATHER THAN FAKED.
+   *
+   * The seat's order, 2026-08-10: *"a control that looks live but is not is worse
+   * than no control — so if the untangling runs long, make the dead buttons
+   * visibly not-yet rather than leaving them looking ready."*
+   *
+   * The status screen mounts this list before its actions can run: they need
+   * `handleCoachNoteAction` lifted out of `useHomeScreen`, which is a real
+   * extraction and not a one-pass job. Until then this surface renders the same
+   * list with its controls DIMMED, UNTAPPABLE and captioned — `LAW-L5`, no dead
+   * affordances, satisfied by saying so rather than by hiding the buttons and
+   * pretending the screen is finished.
+   */
+  readonly actionsNotYet?: boolean;
   notes: ActiveCoachNote[];
   equipmentFactIds: ReadonlySet<string>;
   onAction: (note: ActiveCoachNote, action: ActiveCoachNoteAction) => void;
 }
 
-export function ActiveModifiersSection({ notes, equipmentFactIds, onAction }: ActiveModifiersSectionProps) {
+export function ActiveModifiersSection({
+  notes, equipmentFactIds, onAction, actionsNotYet = false,
+}: ActiveModifiersSectionProps) {
   if (notes.length === 0) return null;
 
   return (
@@ -83,11 +101,13 @@ export function ActiveModifiersSection({ notes, equipmentFactIds, onAction }: Ac
                   return (
                     <Pressable
                       key={action.kind}
+                      disabled={actionsNotYet}
                       onPress={() => onAction(note, action)}
                       style={({ pressed }) => [
                         styles.coachNoteAction,
                         primary && styles.coachNotePrimaryAction,
-                        pressed && { opacity: 0.72 },
+                        actionsNotYet && styles.coachNoteActionNotYet,
+                        pressed && !actionsNotYet && { opacity: 0.72 },
                       ]}
                       testID={actionTestID}
                       accessibilityRole="button"
@@ -106,6 +126,14 @@ export function ActiveModifiersSection({ notes, equipmentFactIds, onAction }: Ac
                   );
                 })}
               </View>
+              {actionsNotYet ? (
+                // THE CAPTION IS THE POINT. Dimming alone reads as "disabled
+                // right now"; the sentence says WHERE the working control is,
+                // so the athlete is never stuck looking at it.
+                <Text style={styles.coachNoteNotYet} testID="coach-note-actions-not-yet">
+                  {signedCopy('coach.status.actions_not_yet')}
+                </Text>
+              ) : null}
             </View>
           </Card>
         ))}
@@ -153,4 +181,8 @@ const styles = StyleSheet.create({
   },
   coachNoteActionText: { color: '#CFCFCF', fontSize: 12, fontWeight: '700' },
   coachNotePrimaryActionText: { color: '#C8FF00' },
+  // Not-yet: the control keeps its shape so the athlete can see what is
+  // coming, and loses its contrast so it cannot be mistaken for live.
+  coachNoteActionNotYet: { opacity: 0.38 },
+  coachNoteNotYet: { color: '#8A8A8A', fontSize: 11, lineHeight: 15, paddingTop: 2 },
 });

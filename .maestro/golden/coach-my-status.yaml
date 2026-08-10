@@ -93,6 +93,11 @@ tags:
     timeout: 10000
 - assertVisible:
     id: "program-active-coach-notes"
+# THE CONTROLS ARE VISIBLY NOT-YET, NOT SILENTLY DEAD. Asserted on the device
+# because "dimmed and captioned" is a rendering claim, and the two layout bugs
+# this slice found by eye are the reminder that a source cell cannot see one.
+- assertVisible:
+    id: "coach-note-actions-not-yet"
 - takeScreenshot: artifacts/ui-walk/coach-my-status
 
 # ── AND IT CLOSES BACK TO THE CONVERSATION ──────────────────────────────────
