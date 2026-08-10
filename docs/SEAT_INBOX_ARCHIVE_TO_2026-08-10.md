@@ -5651,3 +5651,135 @@ The order as the seat wrote it follows, verbatim.
    overlay that hid the tab bar). **Registry row.**
 
 (none)
+
+
+## Processed 2026-08-10 (seventy-third pass) — THE STATUS SURFACE STOPPED ASKING SAM FOR WHAT HE HAD GIVEN, AND SLICE 3 IS PLANNED WITHOUT SPENDING A DECISION
+
+Boundary/plan: `docs/UI_MERGE_SLICE3_PLAN_2026-08-10.md`.
+The orders as the seat wrote them follow, verbatim.
+
+
+**SAM IS AWAY AND WANTS THIS RUNNING UNATTENDED. THIS IS A QUEUE, NOT A
+SINGLE ORDER — WORK IT TOP TO BOTTOM AND DO NOT STOP TO ASK.** He may
+have a couple of changes in the morning; nothing here pre-empts them.
+**Only stop for something that genuinely cannot proceed without him,
+and if you do, say so in one line at the top of your report.**
+
+1. **COACH VIEW (rulings 4 and 9).** Details in the item below this
+   batch. It unblocks the day screen's modifiers strip and the
+   season-phase removal, so it goes first.
+
+2. **WEEKLY VIEW (ruling 7).** Her card shape, chevron opens in place,
+   rest and game days do not expand, "Completed" on past weeks, the
+   modifiers row at the top reusing the day screen's component.
+
+3. **THE 21 SUITES.** 21 of 332 were built on the impossible athlete
+   (no 2km time). **Do they still pass on a legal profile?** A suite
+   that only passes for an athlete the app would refuse is not a suite.
+   Fix what that turns up.
+
+4. **THE DRIFT CHECK — the third of Sam's three alarms.** Does each
+   test world still match what the generator produces for that profile
+   today? It is the one that would have caught the eleven stale seeds
+   the day they went stale, and the seeding channel now executes, so
+   the thing that blocked it is gone.
+
+5. **THE SEEDED WORLD IS NOT DURABLE.** Memory holds four game days,
+   disk holds one. Named as an app persistence question, not a harness
+   one. Price it, then fix it if the price is small; if it is large,
+   write the price down and stop at that.
+
+6. **UNENFORCED LAWS.** Keep taking them down. The count may only fall.
+   Priority: `LAW-instrumentation-alive` (five founding cases in one
+   day) and `a refusal that cannot be seen is not a refusal`.
+
+7. **A GUARD FOR THE THING THAT KEEPS HAPPENING TO SAM: BEING ASKED
+   TWICE.** Three times today he was asked for something already
+   granted or already answered — the two file ops, the rebuild, the
+   accounts and Android decisions. **Anything recorded as DECIDED in
+   the roadmap or granted in this file must not reappear as a question
+   in `NOW.md`'s Sam block.** That is checkable: the decided items are
+   named in one place and the Sam block is text.
+
+**RULES WHILE HE IS AWAY:** run the walk after every screen and
+photograph both states; nothing that works gets removed until its
+replacement ships the same day; her structure, his colours, fonts and
+icons; no new athlete-facing wording ships unsigned — collect it for
+one sitting. **And keep `NOW.md` a pointer** — it is 6KB now and it
+stays that way.
+
+1. **SAM: MOVE ON TO THE WEEKLY VIEW AND THE COACH VIEW.** Both open
+   now. He has not sent his day-screen eye pass yet and is not waiting
+   for it to be requested — **do not hold on it.**
+
+   **DO THE COACH VIEW FIRST unless he says otherwise, because it
+   unblocks two things you are already holding:**
+   - **Ruling 4** — the day screen's modifiers strip currently points
+     at a stub. The coach page is its destination.
+   - **Ruling 6** — the season-phase box is still on the day screen
+     only because its new home does not exist. **The coach page is that
+     home, and the standing rule is that a removal ships the same day
+     its replacement does.** Build the home, then the removal is legal
+     the same pass.
+   **So the coach view closes two open rulings; the weekly view closes
+   one.**
+
+   **COACH VIEW = RULINGS 4 AND 9.** "My status" at the top, showing
+   active modifiers and what is impacting the program in more detail —
+   **her design, his colours, fonts and icons.** Season phase is
+   changed there. **This is the old coach notes re-homed, not a new
+   feature.**
+   **THE ONE THING TO CHECK BEFORE BUILDING:** this lands on the coach
+   tab rebuilt this week, which is a conversation surface. **If a
+   status surface above it fights the coach architecture, that is ONE
+   question for Sam** — the seat has flagged it twice and it has never
+   been answered because nobody has reached it yet. Reach it now.
+
+   **WEEKLY VIEW = RULING 7, AND IT IS MOSTLY SUBTRACTION.** Her
+   structure, no buttons underneath, no season phase — the removals
+   already landed. What is left is her card shape: **day, date, session
+   title, exercise count, team-training badge where it applies, and a
+   chevron that opens IN PLACE.** Rest and game days do not expand.
+   Past weeks read "Completed" instead of a count. **The "2 active
+   modifiers" row appears at the top of the week view too** — same
+   component as the day screen's, not a second one.
+   **Hold the prev/next week sets** unless they already exist; they are
+   a later row, not part of this.
+
+   **RUN THE WALK AFTER EACH, AND PHOTOGRAPH BOTH DROP-DOWN STATES ON
+   THE WEEK VIEW TOO.** Sam is the eyes and he is comparing against a
+   picture.
+
+1. **`NOW.md`'s SAM BLOCK IS STALE AND IT IS ASKING HIM FOR THINGS HE
+   ALREADY GAVE. FIX IT BEFORE THE NEXT BUILD STEP.** It is the single
+   status surface and it is currently wrong in four places:
+   - **It asks for the rebuild. HE RAN IT.** Build succeeded, installed
+     on LFA Explorer. The white screen that followed is the one you
+     then fixed.
+   - **It asks for the accounts decision and the iPhone-only decision.
+     HE ANSWERED BOTH HOURS AGO: LOCAL-ONLY, iPHONE-ONLY.** They are
+     recorded as decided in the roadmap. **Asking a second time is the
+     granted-permission defect, and this is its third appearance
+     today.**
+   - **`STATE` names HEAD as `1165f183`.** It is four commits behind.
+   - It still lists the day-screen additions as not built in one bullet
+     while another bullet says they are built and photographed.
+   **A status surface that contradicts itself inside one screen is
+   worse than no status surface** — and it is the file Sam opens first.
+
+2. **THE WHITE SCREEN'S CAUSE IS THE FINDING OF THE PASS — DO NOT LET
+   IT SIT IN A COMMIT MESSAGE.** *"A refusal with no mouth"* is exactly
+   the risk the order named: ten crashes became ten silent failures,
+   and the first one to fire produced a blank screen. **Both seat leads
+   were refuted by measurement, which is the right outcome and worth
+   saying plainly.** Registry row: **a refusal that cannot be seen is
+   not a refusal.** Guard shape — every refusal path on the boot must
+   render something a human or a flow can read; a silent return is the
+   defect.
+
+3. **THEN: SAM'S EYE ON THE DAY SCREEN.** The additions are built and
+   both drop-down states are photographed. **He has not seen them.**
+   That is the next thing that moves the merge forward, and everything
+   else on the queue can wait behind it.
+
+(none)

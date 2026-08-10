@@ -13,18 +13,26 @@ and this file gets one line pointing at it.**
 
 ## FOR SAM — the short list
 
-- **⚠ SAM: ONE REBUILD IS STILL OWED AND IT NOW CARRIES TWO THINGS.** Run
-  `npx expo run:ios --configuration Debug` — roughly 40 minutes, machine busy the
-  whole time, so pick when. Until it runs, the test rig's practice-week door and
-  **the ten crash-points that are now refusals instead** are both built and
-  **have never executed**. **Not seen on your phone.**
+> **NOTHING IN THIS BLOCK MAY ASK SAM FOR SOMETHING HE HAS ALREADY GIVEN.** On
+> 2026-08-10 this list asked a second time for the rebuild he had run and for two
+> decisions he had made hours earlier — the granted-permission defect, third
+> appearance in one day. **Before a `⚠ SAM` bullet is written, check the roadmap
+> and the stop docs for an answer already recorded.**
 
-- **⚠ SAM: THE DAY SCREEN'S ADDITIONS ARE BUILT AND PHOTOGRAPHED.** `25565430`.
-  Eyebrow, drop-downs with exercises and prescriptions, the change card, the
-  calmer card. Both drop-down states shot at
-  `artifacts/ui-walk/dropdown-{1-collapsed,2-expanded}.png`, and
-  `.maestro/golden/day-card-dropdowns.yaml` holds them. **Simulator only — not
-  seen on your phone.**
+- **⚠ SAM: THE DAY SCREEN'S ADDITIONS ARE BUILT AND YOU CAN LOOK AT THEM NOW.**
+  `25565430`. Eyebrow, drop-downs with exercises and prescriptions, the change
+  card, the calmer card. Both states shot at
+  `artifacts/ui-walk/dropdown-{1-collapsed,2-expanded}.png`,
+  `.maestro/golden/day-card-dropdowns.yaml` holds them, and the simulator is
+  sitting on the real screen. **Your eye on it is the next thing that moves the
+  merge. Still open — you have not sent it.**
+
+- **⚠ SAM: THE REBUILD IS DONE AND THE WHITE SCREEN THAT FOLLOWED IS FIXED.**
+  `61ab9e46`. A refused development launch used to render nothing at all; it now
+  names its reason and offers a one-tap clear. **It will happen again after any
+  test run** — the leftover marker that causes it is named and NOT fixed — but it
+  now tells you what it is. **Reproduced and cleared on the simulator, in a flow;
+  not seen on your phone.** `docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`.
 
 - **⚠ SAM: THE TEST RIG WORKS AND IT FOUND THE ROT YOU WARNED ABOUT.** One flow
   runs end to end in 18 seconds (`96dd6f01`), and on its first working run it
@@ -33,21 +41,17 @@ and this file gets one line pointing at it.**
   impossible athlete** and whether they still pass on a legal profile is
   **still open**. **Not something you have seen on your phone.**
 
-- **⚠ SAM: THE UI MERGE IS OPEN AND SLICE 1 LANDED — THE ADDITIONS HAVE NOT.**
-  Slice 1 removed what your rulings took (`97066aa0`). Your eye pass named what is
-  missing: the drop-downs, the eyebrow, the calmer card, the words above the five
-  circles. **Nothing from that list has been on your phone.**
-  `docs/UI_MERGE_PLAN_2026-08-10.md`
-
-- **⚠ SAM: TWO DECISIONS ONLY YOU CAN MAKE, AND NEITHER IS URGENT TODAY.**
-  Local-only vs sign-in (**there is no auth code in the repo at all** — measured,
-  not assumed), and whether v1 is iPhone-only (**Android has never been run**).
-  Plus one line for `eas.json` — `submit.production.ios` is `{}`. **Waiting on
-  your word.**
+- **⚠ SAM: NOTHING IS BLOCKED ON YOU RIGHT NOW EXCEPT LOOKING.** The accounts
+  question (**LOCAL-ONLY**) and the platform question (**iPHONE-ONLY**) were both
+  **DECIDED BY YOU on 2026-08-10** — `docs/PUBLISH_ROADMAP_2026-08-05.md` lines
+  115 and 126, `docs/LAW_SWEEP_STOP_2026-08-10.md` items 3 and 4. **They are not
+  open and must not be asked again.** The only thing still genuinely owed is one
+  line for `eas.json` (`submit.production.ios` is `{}`) and that is a publish-day
+  item, not a today item. **Waiting on your word, on nothing urgent.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `1165f183`
+- **BRANCH:** `main` · **HEAD:** `8fc98abf` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
