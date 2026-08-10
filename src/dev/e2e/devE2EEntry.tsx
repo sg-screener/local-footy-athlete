@@ -463,7 +463,24 @@ export function installDevE2EEntry(args: {
     coordinatorReady: async () => {
       if (coordinator) return;
       await launchDiagnosticReady;
-      // Dynamic only after the hard development guard and clock barrier.
+      // A seed AUTHORS a fresh world. Quiescent boot REPLAYS an existing one.
+      // They used to overlap here because raw store hydration can finish before
+      // the app's derived-world boot does; the replay latch then swallowed the
+      // seed's durable writes under "THE BOOT DOES NOT WRITE". Finish the one
+      // app hydration owner before releasing any queued seed route. This keeps
+      // replay writes blocked and install writes durable without teaching the
+      // storage boundary a second, dev-only meaning for the latch.
+      //
+      // Dynamic only after the hard development guard and clock barrier: boot
+      // must derive against the restored deterministic clock.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { awaitAppHydration } = require('../../store/appHydrationGate');
+      const hydration = await awaitAppHydration();
+      if (hydration.status !== 'ready') {
+        throw new Error(
+          `dev_e2e_app_hydration_failed:${hydration.failedStores.join(',')}`,
+        );
+      }
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { createDefaultDevE2ESeedCoordinator } =
         require('./defaultDevE2ESeedCoordinator');

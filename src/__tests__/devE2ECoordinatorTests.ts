@@ -387,7 +387,7 @@ async function main() {
     !defaultCoordinatorSource.includes('useProgramStore.setState(') &&
       defaultCoordinatorSource.includes('commitAcceptedStateTransaction({') &&
       defaultCoordinatorSource.includes('preserveExactAcceptedWorkouts: true') &&
-      defaultCoordinatorSource.includes('applyOverride(') &&
+      defaultCoordinatorSource.includes('applyProgramOverrideWrite({') &&
       defaultCoordinatorSource.includes('createOrUpdateInjuryEpisode({') &&
       defaultCoordinatorSource.includes('commitSessionOutcomeTransaction(intent)'));
   for (const storageKey of [
@@ -412,8 +412,18 @@ async function main() {
       /Dev E2E store did not hydrate/.test(persistenceSource));
   ok('persistence readiness is semantic equality gated',
     /while \(!fingerprintMapsMatch\(expected, persisted\)\)/.test(persistenceSource));
-  ok('reload fingerprints include the reversible-adjustment ledger',
-    persistenceSource.includes('reversibleAdjustmentLedger: state.reversibleAdjustmentLedger'));
+  ok('reload fingerprints compare persisted inputs and exclude derived adjustment output',
+    [
+      'generationAnchorISO:',
+      'seasonPhaseClock:',
+      'sessionFeedback:',
+      'weightOverrides:',
+      'temporarySourceFacts:',
+      'injuryEpisodes:',
+    ].every((field) => persistenceSource.includes(field)) &&
+      !persistenceSource.includes(
+        'reversibleAdjustmentLedger: state.reversibleAdjustmentLedger',
+      ));
 
   console.log(`\nDev E2E coordinator: ${passed} passed, ${failures.length} failed`);
   if (failures.length > 0) {

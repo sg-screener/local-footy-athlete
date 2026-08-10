@@ -119,14 +119,19 @@ const releaseReturn = entrySource.indexOf('if (!isDev)');
 const coordinatorRequire = entrySource.indexOf("require('./defaultDevE2ESeedCoordinator')");
 
 ok('App loads the entry only inside __DEV__', appGuard >= 0 && appRequire > appGuard);
+const devLaunchBarrier = appSource.indexOf(
+  'void prepareDevE2EAppLaunch().then(({ ready, reason }) => {',
+);
+const rootNavigatorImport = appSource.lastIndexOf(
+  "require('./src/navigation/RootNavigator')",
+);
 ok('development restores the clock before importing RootNavigator stores',
-  appSource.includes('prepareDevE2EAppLaunch().then((ready) => {') &&
-    appSource.indexOf('prepareDevE2EAppLaunch().then((ready) => {') <
-      appSource.lastIndexOf("require('./src/navigation/RootNavigator')"));
+  devLaunchBarrier >= 0 && rootNavigatorImport >= 0 &&
+    devLaunchBarrier < rootNavigatorImport);
 ok('development installs URL ingress before the asynchronous clock barrier',
   appSource.indexOf('installDevE2EEntry();') >= 0 &&
-    appSource.indexOf('installDevE2EEntry();') <
-      appSource.indexOf('prepareDevE2EAppLaunch().then((ready) => {'));
+    devLaunchBarrier >= 0 &&
+    appSource.indexOf('installDevE2EEntry();') < devLaunchBarrier);
 ok('release imports RootNavigator without the development bootstrap',
   /} else \{[\s\S]*ReleaseRootNavigator = require\('\.\/src\/navigation\/RootNavigator'\)\.default;/.test(appSource));
 ok('release refusal occurs before coordinator import', releaseReturn >= 0 && coordinatorRequire > releaseReturn);
@@ -148,6 +153,21 @@ ok('dev E2E errors expose their exact reason to accessibility',
 ok('scenario reload errors retain their exact scenario reason marker',
   entrySource.includes('await coordinator.validateReloadCheckpoint();') &&
     entrySource.includes('activeInstallation?.coordinatorReady()'));
+
+const launchDiagnosticSettled = entrySource.indexOf('await launchDiagnosticReady;');
+const hydrationGateImport = entrySource.indexOf("require('../../store/appHydrationGate')");
+const hydrationGateWait = entrySource.indexOf('await awaitAppHydration();');
+const seedCoordinatorCreated = entrySource.indexOf(
+  'coordinator = createDefaultDevE2ESeedCoordinator(true);',
+);
+const seedRoutesReleased = entrySource.indexOf('await routeQueue.setReady(processRoute);');
+ok('boot settles before any queued seed install can write',
+  launchDiagnosticSettled >= 0 && hydrationGateImport >= 0 && hydrationGateWait >= 0 &&
+    seedCoordinatorCreated >= 0 && seedRoutesReleased >= 0 &&
+    launchDiagnosticSettled < hydrationGateImport &&
+    hydrationGateImport < hydrationGateWait &&
+    hydrationGateWait < seedCoordinatorCreated &&
+    seedCoordinatorCreated < seedRoutesReleased);
 
 function sourceFiles(directory: string): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
