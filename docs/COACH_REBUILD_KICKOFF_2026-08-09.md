@@ -43,6 +43,30 @@ reachable at every keyboard state; 60fps on the conversation scroll.
 Device pass includes explicit keyboard-up cases for every interactive
 element. Voice: SHORT openers — the coach gets to the point.
 
+L-C4 THE PARITY LAW. The coach can do exactly what the athlete's own
+buttons can do, through the same doors, with the same words, and it
+asks the same questions the buttons ask. Coach ability is not
+designed; it is DERIVED from the athlete's action surface. A
+capability the buttons have and the coach lacks is a DEFECT with a
+name, not a future slice. Every option the coach offers is the
+owner's existing signed row, READ FROM THE OWNER — if the coach needs
+a word the app does not have, that is a finding, not a string anyone
+writes.
+
+  RULED BY SAM, 2026-08-10, verbatim: "no usually i am asked 'just the
+  strengt, just the conditioning, or both?' I CANT UNDERSTAND FOR THE
+  FUCKING LIFE OF ME WHY YOU WOULDN'T JUST FIND WHAT THE BUTTONS ALL
+  DO AND MAKE THE FUCKING COACH BE ABLE TO DO THE SAME SHIT AS THEM?
+  IS THAT NOT FUCKING OBVIOUS - DO I HAVE TO SPELL IT OUT FOR YOU"
+
+  THIS SUPERSEDES THE ONE-KIND-AT-A-TIME SLICE PLAN in S3/S4 below.
+  The question is never "what should the coach be able to do?" but
+  "which button does this, and what does it already say?" The first
+  unit is the census, and nothing is built on top of it until it is
+  read: docs/COACH_PARITY_CENSUS_2026-08-10.md — which measured the
+  coach at 1 of 26 typed athlete actions, and that one without the
+  scope question its own button asks.
+
 ## ARCHITECTURE (settled, not reopened)
 
 docs/COACH_ARCHITECTURE_REASSESSMENT_2026-08-09.md §0 governs: the

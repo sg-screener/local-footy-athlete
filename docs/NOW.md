@@ -4,6 +4,27 @@
   as ordered. Sam's boot fix below is still UNSEEN on his phone and is still the
   first thing to look at.
 
+- **⛔ OPEN BLOCKER — THE MAESTRO RIG CANNOT RUN: THE SIMULATOR BINARY IS ONE DAY
+  TOO OLD. HELD, NOT BEING FIXED.** Every flow dies on the launch path with
+  `Cannot find native module 'ExpoPushTokenManager'` — `expo-notifications` →
+  `journalReminderService.ts:33` → `AppNavigator.tsx:7` → `RootNavigator.tsx:6`
+  → `App.tsx:69`, so no flow reaches any screen. **DATED RECEIPT:**
+  `expo-notifications` entered `package.json` 2026-08-09 (`8b12fcdd`) and
+  `ios/Podfile.lock` the same day (`77f5e415`); the installed simulator binary is
+  from **2026-08-08** and contains **zero** occurrences of `ExpoPushTokenManager`
+  (`strings` over the installed Mach-O). Metro serves today's JS to a binary that
+  predates the dependency. **THE FIX IS A NATIVE SIMULATOR REBUILD**
+  (`npx expo run:ios`, Debug), and it is **HELD until Sam's device workspace is
+  free** — a second `xcodebuild` against the same workspace and DerivedData would
+  contend with his in-flight device build. **Nothing that needs glass can be
+  measured until this clears**, which includes both OPEN-UNKNOWNs below.
+  - Separately FIXED and committed this pass (`dd192603`): eight of the eleven
+    flows had *also* been crashing the app since 2026-07-18 because
+    `reset-seed.yaml` omitted `e2eLaunchPurpose`, which
+    `DevE2ELaunchDiagnostic.swift:55-60` treats as a `fatalError`. That half is
+    verified green — the launch step and `e2e-entry-ready` now pass. **The rig
+    had two independent breaks and only the first is paid.**
+
 - **⚠ SAM: I TOLD YOU THE COACH COULD MOVE A SESSION. IT COULDN'T — AND NOW IT
   CAN.** The seat ordered a tape that actually runs the door instead of reading
   it. First run: your own tap on the Program tab moved the week and recorded it;
@@ -29,10 +50,20 @@
   - **Tapping it goes through the same door as your own tap, and Undo covers it**
     — `tape:coach-move-durability`, both arms byte-identical through a relaunch,
     and section [7] pins the argument the tape found missing.
-  - **The Undo TOAST on a coach move: OPEN-UNKNOWN.** The toast reads the ledger
-    and the coach's decision is byte-identical to yours, so it should appear —
-    **but nothing mounts the toast over a coach-landed move, so that is a
-    reading, not a measurement.**
+  - **The Undo TOAST on a coach move: OPEN-UNKNOWN, and the source now says it
+    probably does NOT appear.** The toast reads the ledger and the coach's
+    decision is byte-identical to yours, so it *should* appear — but
+    `UndoToast` is mounted in exactly ONE place, `HomeScreenV2.tsx:1225`, and
+    **`CoachTabScreen` mounts no undo surface at all.** Its own docstring says
+    *"This mounts once, on the Program screen."* Because bottom tabs stay
+    mounted, the likely behaviour is worse than absence: the toast arms
+    invisibly behind the Coach tab and **burns its own 6-second timer**
+    (`UndoToast.tsx:31,47`), marking the entry seen, so it is gone before you
+    ever switch tabs. `rules/undoToast.ts:17-19` predicted the gap in writing —
+    *"A coach-authored change would appear here for free."*
+    **THIS IS A HYPOTHESIS, NOT A FINDING: no cell holds it and no glass has
+    confirmed it**, and the rig that would confirm it is the blocker above. It
+    is row-listed in the L-C4 parity census as a coach/athlete parity defect.
   - **Both card buttons reachable with the keyboard up: OPEN-UNKNOWN, and it is
     the thing to watch.** Every keyboard cell reads SOURCE; no keyboard has been
     raised in this repo. The card adds height to the strip that rides the keypad
