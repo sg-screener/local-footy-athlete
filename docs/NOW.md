@@ -65,13 +65,23 @@
     strength moved, team training stayed. **The coach is refused exactly where
     you succeed.** Same day, same destination, same door. That is an L-C4 parity
     break, measured rather than argued (arm D).
-  - **THE LIKELIEST EXPLANATION OF WHAT YOU SAW, AND IT IS A HYPOTHESIS — no
-    cell holds it:** if you tapped *"Just the gym session"* on a Monday that also
-    carried conditioning, **only the strength would move, which is exactly what
-    you describe.** *"Gym session"* may be reading to you as *"my whole S&C"*.
-    **Tell me what Monday actually carried** (strength + conditioning + team
-    training?) and whether you used the coach or the picker — that one answer
-    decides whether this is a copy defect or a door defect.
+  - **~~THE LIKELIEST EXPLANATION…~~ RETRACTED 2026-08-10 — SAM ANSWERED AND THE
+    HYPOTHESIS IS DEAD.** It read: *if you tapped "Just the gym session" on a
+    Monday that also carried conditioning, only the strength would move.* **You
+    tapped nothing — you did it in the COACH CHAT — and your Monday carried GYM +
+    CONDITIONING with NO team training.** So it was never a copy defect, and the
+    scope row you never saw cannot explain it. Do not re-read that line as live.
+  - **AND SAM'S ANSWER TURNS THE RESULT ABOVE OVER.** The NOT-REPRODUCED verdict
+    was recorded on *a plain two-part day (conditioning+strength), all arms
+    carried BOTH parts* — **that is your day exactly, and the coach is the arm you
+    used.** The anchored-day parity break stays (it is real, and it is measured),
+    but it is **not your defect**: your Monday had no anchor. **The tape and the
+    phone now disagree about the same shape, and the hand-built world is the
+    suspect** — every fixture in that section is hand-assembled, which is the
+    NOT-COVERED the boundary wrote about itself: *"a real `project()` over a worn
+    athlete may hold day shapes these fixtures do not."* Next instrument: re-run
+    the section over a **GENERATED** week and diff a generated gym+conditioning
+    Monday against the hand-built one field by field.
 
 - **⚠ SAM: WHAT THE COACH TAB DOES, WITH WHAT HOLDS EACH CLAIM.** Every line
   below is either pinned by a named cell or marked **OPEN-UNKNOWN** — the new

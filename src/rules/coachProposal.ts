@@ -46,6 +46,10 @@ import { weekdayName } from '../utils/appDate';
 import type { CoachChangeRequest } from './coachRead';
 import type { VisibleDay, VisibleWeek } from './visibleProjection';
 import type { ProgramControlAction } from '../types/programControlAction';
+// TYPE-ONLY, and that is load-bearing: importing the producer's VALUES here
+// would give a pure rules module a way to read the resolved week and grow the
+// second opinion about a day that L-C4 exists to forbid.
+import type { PlanChangeMoveOptions } from '../utils/planChangeProducer';
 
 /**
  * WHY THE COACH IS NOT PROPOSING A CHANGE, TYPED.
@@ -124,6 +128,22 @@ const COACH_TAB_SOURCE = {
 export function coachProposal(args: {
   readonly request: CoachChangeRequest;
   readonly week: VisibleWeek;
+  /**
+   * `listPlanChangeOptionsForDay(...).move` FOR THE SOURCE DAY — the athlete's
+   * own picker's answer, read by the CALLER and handed in.
+   *
+   * Handed in rather than fetched because this module is pure (L14) and the
+   * owner reads the resolved week and the stores behind it. That is a
+   * constraint worth keeping: a rules module that could reach the producer
+   * could also grow its own opinion about which days carry anchors, and a
+   * second opinion is exactly the L-C4 defect this field exists to close.
+   *
+   * OPTIONAL, and its absence means "not asked", never "nothing offered". A
+   * caller that omits it gets the pre-L-C4 behaviour — a scopeless whole-day
+   * move — which is what every existing caller meant. `coachTabSlice3Tests`
+   * pins the screen's own call site so the omission cannot come back silently.
+   */
+  readonly moveOptions?: PlanChangeMoveOptions | null;
 }): CoachProposal {
   const { request, week } = args;
 
@@ -153,22 +173,55 @@ export function coachProposal(args: {
   if (!to) return refuse(COACH_ANSWER_COPY.dayNotInWeek, [from.date]);
   if (to.date === from.date) return refuse(COACH_CHANGE_COPY.alreadyThere, [from.date]);
 
-  // ── 4. THE DOOR'S OWN VOCABULARY, AND NOTHING OF THIS MODULE'S ───────────
+  // ── 4. WHAT THIS DAY CAN ACTUALLY DO — ASKED OF ITS OWNER ────────────────
   //
-  // NO `payload.scope`. That field is the COMPONENT the athlete picked ("just
-  // the gym session") and the athlete picked nothing — they named two days. An
-  // omitted scope is the door's whole-day move, which is what was asked for;
-  // inventing a component here would be the coach choosing on their behalf.
+  // L-C4, AND THE CENSUS MEASUREMENT BEHIND IT. This module used to omit
+  // `payload.scope` on purpose, reasoning: *"the athlete picked nothing — they
+  // named two days. An omitted scope is the door's whole-day move, which is
+  // what was asked for."* The first half is true and the second half is not,
+  // and the difference was measured rather than argued: on an anchored Monday
+  // the athlete's own picker offers `strength` and `team` and NO `whole_day`
+  // row, so a scopeless move is REFUSED — *"protected game/team anchor"* — on
+  // the same day, to the same destination, where the athlete's tap carrying the
+  // picker's own `strength` row APPLIES. **The coach was refused exactly where
+  // the athlete succeeds**, and the cause was that it never asked.
   //
+  // So it asks now, of `moveOptionsForDay` — the SAME call the sheet's picker
+  // makes, through the same exported entry. Not a copy of its rules, not a
+  // coach-side table of which days carry anchors: the one owner's own answer,
+  // in the one owner's own signed words.
+  const owner = args.moveOptions ?? null;
+  if (owner && owner.refusal !== null) {
+    // The owner's sentence is athlete-facing by contract (`PlanChangeMoveRefusal`
+    // — *"Never a reason code — the sheet renders this verbatim"*), and it knows
+    // things this module cannot: that every legal destination is taken, that
+    // nothing on the day is the athlete's to move. Passing it through is how the
+    // coach and the picker come to say the same thing about the same day.
+    return refuse(owner.refusal.message, [from.date, to.date]);
+  }
+
   // `requiresRebuild: false` and `oneOffOnly: true` match what the Program
   // tab's own sheet sends for this kind (`programControlActionForPlanChange`),
   // because this IS that door and a second set of flags would be a second
   // opinion about one action.
-  const action: ProgramControlAction = {
+  const scopes = owner?.scopes ?? [];
+  const baseAction: ProgramControlAction = {
     type: 'move_session',
     source: COACH_TAB_SOURCE,
     scope: 'today_only',
-    payload: { fromDate: from.date, toDate: to.date },
+    payload: {
+      fromDate: from.date,
+      toDate: to.date,
+      // ONE OFFERED WAY THROUGH IS NOT A CHOICE — it is the answer. A day whose
+      // only movable part is the gym session has exactly one meaning for "move
+      // it", and making the athlete pick from a list of one would be the
+      // chooser the sheet itself skips. `whole_day` still sends NOTHING: absent
+      // is the door's spelling of it, and two spellings of one instruction is
+      // the ambiguity this whole change exists to remove.
+      ...(scopes.length === 1 && scopes[0]!.id !== 'whole_day'
+        ? { scope: scopes[0]!.id }
+        : {}),
+    },
     requiresRebuild: false,
     createsActiveModifier: false,
     oneOffOnly: true,
@@ -177,8 +230,16 @@ export function coachProposal(args: {
   // AN ACTION THIS SLICE CANNOT DRAW IS AN ACTION IT DOES NOT PROPOSE.
   // `changeCardFor` returns null for a kind it has no card for, and L-C2 makes
   // the card the precondition of the change rather than its illustration.
-  const card = changeCardFor({ action, week });
+  const card = changeCardFor({ action: baseAction, week, moveScopes: scopes });
   if (!card) return refuse(COACH_CHANGE_COPY.changeRefused, [from.date, to.date]);
+
+  // WHEN THE DAY HAS SEVERAL WAYS THROUGH, THE PROPOSED ACTION IS THE FIRST
+  // ROW'S — and the first row is the owner's, not this module's. `moveOptions`
+  // puts `whole_day` first whenever it is offered, so an unanchored day
+  // proposes exactly what it proposed before this change and nothing regresses;
+  // an ANCHORED day, which has no `whole_day` row, now proposes the athlete's
+  // own first component instead of a scopeless move the door will refuse.
+  const action = card.choices.length > 0 ? card.choices[0]!.action : baseAction;
 
   return { verdict: 'proposed', action, card, text: '', dates: [from.date, to.date] };
 }

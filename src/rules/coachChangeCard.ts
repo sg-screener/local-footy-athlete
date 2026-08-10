@@ -46,10 +46,42 @@ export interface CoachChangeCardField {
   readonly value: string;
 }
 
+/**
+ * ONE WAY THROUGH A DAY, IN THE OWNER'S OWN WORDS.
+ *
+ * `label` and `sub` are `moveOptionsForDay`'s `MOVE_SCOPE_COPY` verbatim — the
+ * strings the athlete's own picker renders. NOTHING here is coach-authored, and
+ * that is the whole point of L-C4: on a day the athlete is offered *"Just the
+ * gym session"*, the coach offers that same row, from that same call, or it has
+ * a second opinion about what the day can do.
+ *
+ * `action` is finished. The row carries the action it means, so the screen
+ * executes a choice rather than assembling one — a screen that built the
+ * payload would be a second author of `payload.scope`.
+ */
+export interface CoachChangeCardChoice {
+  readonly id: string;
+  readonly label: string;
+  readonly sub: string;
+  readonly action: ProgramControlAction;
+}
+
 export interface CoachChangeCard {
   readonly title: string;
   /** What changes, from what, to what, and why — L-C2's four, in order. */
   readonly fields: readonly CoachChangeCardField[];
+  /**
+   * The ways through this day, when there is more than one. EMPTY when the day
+   * offers exactly one — a single row is not a choice, and rendering a chooser
+   * with one option is two names for one action (`moveOptionsForDay` makes the
+   * same call for the sheet's picker).
+   *
+   * ON THE CARD, not in a follow-up message: the seat's order is that the
+   * choice needs no second turn of context. A coach that asked *"which part?"*
+   * in prose would be re-authoring a question the owner already answers in
+   * signed words.
+   */
+  readonly choices: readonly CoachChangeCardChoice[];
   readonly confirmLabel: string;
   readonly cancelLabel: string;
   /**
@@ -77,6 +109,16 @@ export interface CoachChangeCard {
 export function changeCardFor(args: {
   readonly action: ProgramControlAction;
   readonly week: VisibleWeek;
+  /**
+   * The ways this day may move, READ FROM THE OWNER (`moveOptionsForDay`, via
+   * `listPlanChangeOptionsForDay`) by the caller and passed in whole.
+   *
+   * Passed rather than fetched because this module is L14-pure and the owner
+   * needs the resolved week, which this one does not have and must not acquire:
+   * a second read of the day here would be a second answer to "what can move
+   * off it". One row means one way through and no chooser.
+   */
+  readonly moveScopes?: readonly { readonly id: string; readonly label: string; readonly sub: string }[];
 }): CoachChangeCard | null {
   const { action, week } = args;
   if (action.type !== 'move_session') return null;
@@ -85,6 +127,26 @@ export function changeCardFor(args: {
   const to = describeDate(week, action.payload.toDate);
   if (!from || !to) return null;
 
+  const offered = args.moveScopes ?? [];
+  const choices: CoachChangeCardChoice[] = offered.length > 1
+    ? offered.map((scope) => ({
+      id: scope.id,
+      label: scope.label,
+      sub: scope.sub,
+      action: {
+        ...action,
+        payload: {
+          ...action.payload,
+          // `whole_day` is the door's meaning for an ABSENT scope, so the row
+          // that means "all of it" sends nothing rather than sending the word.
+          // Two spellings of one instruction is how the omitted-scope
+          // assumption became invisible in the first place.
+          ...(scope.id === 'whole_day' ? {} : { scope: scope.id as never }),
+        },
+      },
+    }))
+    : [];
+
   return {
     title: COACH_CHANGE_COPY.moveTitle,
     fields: [
@@ -92,6 +154,7 @@ export function changeCardFor(args: {
       { label: COACH_CHANGE_COPY.toLabel, value: to.text },
       { label: COACH_CHANGE_COPY.whyLabel, value: COACH_CHANGE_COPY.whyYouAsked },
     ],
+    choices,
     confirmLabel: COACH_CHANGE_COPY.confirmLabel,
     cancelLabel: COACH_CHANGE_COPY.cancelLabel,
     grounds: {

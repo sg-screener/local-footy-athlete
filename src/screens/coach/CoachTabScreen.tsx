@@ -17,7 +17,7 @@ import { coachAnswer } from '../../rules/coachAnswer';
 import { coachOpener } from '../../rules/coachOpener';
 import { readCoachMessage } from '../../rules/coachRead';
 import { coachProposal } from '../../rules/coachProposal';
-import type { CoachChangeCard } from '../../rules/coachChangeCard';
+import type { CoachChangeCard, CoachChangeCardChoice } from '../../rules/coachChangeCard';
 import { coachChangeDeclined, coachChangeOutcome } from '../../rules/coachChangeOutcome';
 import { COACH_CHANGE_COPY, COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
@@ -25,6 +25,7 @@ import { colors } from '../../theme/colors';
 import { borderRadius, spacing, spacingValues } from '../../theme/spacing';
 import { todayISOLocal } from '../../utils/appDate';
 import { executeProgramControlActionDurably } from '../../utils/programControlActions';
+import { listPlanChangeOptionsForDay } from '../../utils/planChangeProducer';
 import type { ProgramControlAction } from '../../types/programControlAction';
 import type { VisibleWeek } from '../../rules/visibleProjection';
 
@@ -274,16 +275,29 @@ export default function CoachTabScreen() {
       return;
     }
 
+    // WHAT THE ATHLETE'S OWN PICKER OFFERS FOR THAT DAY, FROM THAT PICKER'S OWN
+    // CALL (L-C4). The screen already holds `weekDays` for the door, so this is
+    // the same argument reaching the same owner — not a second derivation. The
+    // rule cannot make this call itself and stay pure, so the screen makes it
+    // and hands over the answer whole, deciding nothing about it.
+    const moveOptions = read.request.from?.dateISO
+      ? listPlanChangeOptionsForDay({
+        visibleWeek: weekDays,
+        date: read.request.from.dateISO,
+        todayISO,
+      }).move
+      : null;
+
     // NO CARD IS NO CHANGE, AND THE RULE OWNS THAT TOO. `coachProposal` returns
     // an action and its card together or neither, so there is no state here in
     // which the screen holds something executable that it cannot show.
-    const proposal = coachProposal({ request: read.request, week: visibleWeek });
+    const proposal = coachProposal({ request: read.request, week: visibleWeek, moveOptions });
     if (proposal.verdict !== 'proposed' || !proposal.action || !proposal.card) {
       say(proposal.text);
       return;
     }
     setPending({ action: proposal.action, card: proposal.card });
-  }, [visibleWeek, todayISO, say]);
+  }, [visibleWeek, weekDays, todayISO, say]);
 
   const handleSend = useCallback(() => send(draft.trim()), [draft, send]);
 
@@ -336,6 +350,11 @@ export default function CoachTabScreen() {
     <View style={styles.footer}>
       {pending ? (
         <ChangeCard
+          selectedChoiceId={pending.action.type === 'move_session'
+            ? (pending.action.payload.scope ?? 'whole_day')
+            : null}
+          onSelectChoice={(choice) => setPending((current) =>
+            current ? { ...current, action: choice.action } : current)}
           card={pending.card}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
@@ -440,10 +459,14 @@ export default function CoachTabScreen() {
  */
 function ChangeCard({
   card,
+  selectedChoiceId,
+  onSelectChoice,
   onConfirm,
   onCancel,
 }: {
   card: CoachChangeCard;
+  selectedChoiceId: string | null;
+  onSelectChoice: (choice: CoachChangeCardChoice) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -455,6 +478,32 @@ function ChangeCard({
           <Text variant="caption" style={styles.cardLabel}>{field.label}</Text>
           <Text variant="body" style={styles.cardValue}>{field.value}</Text>
         </View>
+      ))}
+      {/*
+        THE WAYS THROUGH THIS DAY, IN THE PICKER'S OWN WORDS (L-C4).
+        Rendered only when the day has more than one — `changeCardFor` returns
+        an empty list otherwise, so "one row" is unrepresentable here and the
+        card cannot show a chooser with nothing to choose. Every string is the
+        owner's; this component composes none of them.
+        44 high like both footer controls, for the same L-C3 reason.
+      */}
+      {card.choices.map((choice) => (
+        <Pressable
+          key={choice.id}
+          style={[
+            styles.cardChoice,
+            choice.id === selectedChoiceId ? styles.cardChoiceSelected : null,
+          ]}
+          onPress={() => onSelectChoice(choice)}
+          hitSlop={spacing.sm}
+          testID={`coach-tab-change-choice-${choice.id}`}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: choice.id === selectedChoiceId }}
+          accessibilityLabel={choice.label}
+        >
+          <Text variant="body">{choice.label}</Text>
+          <Text variant="caption" style={styles.cardChoiceSub}>{choice.sub}</Text>
+        </Pressable>
       ))}
       <View style={styles.cardActions}>
         <Pressable
@@ -575,6 +624,22 @@ const styles = StyleSheet.create({
   },
   cardValue: {
     flex: 1,
+  },
+  cardChoice: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingVertical: spacingValues.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.surface.tertiary,
+    backgroundColor: colors.surface.primary,
+  },
+  cardChoiceSelected: {
+    borderColor: colors.text.primary,
+  },
+  cardChoiceSub: {
+    color: colors.text.tertiary,
   },
   cardActions: {
     flexDirection: 'row',

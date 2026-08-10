@@ -248,6 +248,37 @@ function chooseMove(visibleWeek: VisibleWeek): { from: string; to: string } {
 // *"i tried moving monday S&C to wednesday and it only moved the strength - so
 // multi session days dont work yet"*
 //
+// ## RETRACTED THE SAME DAY, AND THE RETRACTION IS THE POINT
+//
+// The commit that added this section carried a hypothesis: *"if Sam tapped
+// 'Just the gym session' on a Monday that also carried conditioning, only the
+// strength would move"* — a COPY defect rather than a door defect. **Sam
+// answered and it is dead: he tapped nothing. He did it in the COACH CHAT, and
+// his Monday carried GYM + CONDITIONING with NO team training.** The scope row
+// he never saw cannot explain what he saw. Do not re-read it as live.
+//
+// **AND HIS ANSWER TURNED THIS SECTION'S VERDICT OVER.** NOT-REPRODUCED was
+// recorded on *a plain two-part day, all arms carried BOTH parts* — that is his
+// day exactly, reached by the arm he used. The anchored-day parity break below
+// is real and stays, but it is not his defect; his Monday had no anchor.
+//
+// ## WHAT THE FIXTURE COULD NOT SEE, AND IT WAS THE DESTINATION
+//
+// The world here is GENERATED (`reachWorldByActing`), so "hand-built fixture"
+// was the wrong suspect for the source. **The hand-built half is the
+// DESTINATION: `choosePartedMove` only ever lands on an EMPTY day, so the
+// absorb path — `stackSessionOntoTeamAnchor`, taken whenever the target carries
+// a team anchor — has never been exercised by ANY arm of this tape.** Sam moved
+// onto a WEDNESDAY, and every Wednesday in this world is a team night.
+//
+// Measured over that destination (2026-08-10, probe preserved off-tree):
+//   - a two-part gym+conditioning day → team night: BOTH parts arrived;
+//   - a three-part day carrying POWER → team night: **the power ROW is gone**
+//     (8 rows in, 7 out), while the SAME day → an empty day keeps all 8.
+// The loss is destination-dependent, with the empty-day arm as its control.
+// Attribution is OPEN between `stackTemplate`'s field allow-list and the §18
+// safety finaliser's `power_removed` budget path — measured, not attributed.
+//
 // The arms above move a day chosen through `canMoveWholeDay` and say nothing
 // about a day carrying TWO parts, which is the shape Sam actually moved. The
 // existing photograph is blind to it by construction: it prints a per-date
@@ -435,8 +466,34 @@ async function coachArm(
       door: { ok: false }, said: '(never reached)', saidVerdict: 'n/a', action: null,
     };
   }
-  const proposal = coachProposal({ request: read.request, week: visibleWeek });
+  // L-C4: THE SCREEN ASKS THE OWNER, SO THE MIRROR ASKS IT TOO — same call,
+  // same argument, in the same place in the turn. A tape that skipped this
+  // would be measuring the coach the census found, not the coach that ships.
+  const moveOptions = read.request.from?.dateISO
+    ? quiet(() => listPlanChangeOptionsForDay({
+      visibleWeek: weekDays as never,
+      date: read.request.from!.dateISO!,
+      todayISO: TODAY,
+    })).move
+    : null;
+  const proposal = coachProposal({ request: read.request, week: visibleWeek, moveOptions });
   console.log(`   [coach] proposal      : ${proposal.verdict}`);
+  // THE PARITY CLAIM, PRINTED AS A COMPARISON RATHER THAN AS A READING.
+  // "The coach offers exactly what the picker offers, from the same call" is
+  // the acceptance condition the seat set for census row 1, and it is only
+  // meaningful as two lists side by side.
+  {
+    const ownerIds = (moveOptions?.scopes ?? []).map((scope) => scope.id);
+    const coachIds = (proposal.card?.choices ?? []).map((choice) => choice.id);
+    const single = ownerIds.length === 1;
+    console.log(`   [L-C4] picker offers  : [${ownerIds.join(', ')}]`);
+    console.log(`   [L-C4] coach offers   : [${coachIds.join(', ')}]`
+      + (single ? '  (one way through is an answer, not a chooser)' : ''));
+    const agree = single
+      ? coachIds.length === 0
+      : JSON.stringify(ownerIds) === JSON.stringify(coachIds);
+    console.log(`   [L-C4] SAME LIST?     : ${agree ? 'YES' : 'NO — L-C4 BREAK'}`);
+  }
   if (proposal.verdict !== 'proposed' || !proposal.action || !proposal.card) {
     console.log(`   [coach] says instead  : "${proposal.text}"`);
     return {
@@ -887,6 +944,23 @@ const main = async (): Promise<void> => {
     console.log('      move did not. The assumption recorded in coachProposal.ts §4 —');
     console.log('      "An omitted scope is the door\'s whole-day move, which is what was');
     console.log('      asked for" — is FALSE for a multi-part day.');
+  } else if (coachRefused !== tapRefused && !offeredIds.includes('whole_day') && !coachRefused) {
+    // NOT A BREAK, AND READING IT AS ONE WOULD REPORT THE FIX AS THE DEFECT.
+    //
+    // Arm B is a SCOPELESS whole-day tap. On an anchored day the picker offers
+    // no `whole_day` row at all (`PlanChangeMoveScopeId`'s own docstring), so
+    // arm B is a shape **no athlete can produce through the sheet** — it is a
+    // hand-made request, not a control. Before L-C4 the coach sent that same
+    // unreachable shape and was refused beside it, which is what made them
+    // comparable; now the coach sends the picker's own row and lands, so the
+    // two arms differ because ONE OF THEM IS NO LONGER THE COACH'S BEHAVIOUR.
+    //
+    // The honest control on this day is ARM D — the athlete's tap carrying the
+    // picker's own row — and it is printed above.
+    console.log('   ✓ L-C4 CLOSED ON THIS DAY — the coach carried the picker\'s own scope and');
+    console.log('     LANDED where a scopeless move is refused. Arm B (scopeless) is still');
+    console.log('     refused and that is correct: the picker offers no whole_day row here,');
+    console.log('     so no athlete can make that request. Compare against ARM D, not B.');
   } else if (coachRefused !== tapRefused) {
     console.log('   ✗✗ PARITY BREAK AT THE DOOR — one arm was refused and the other was not,');
     console.log('      on the same day, with the same two dates. Read both door messages');

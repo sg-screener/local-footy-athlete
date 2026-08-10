@@ -2,6 +2,86 @@
 
 ## Unprocessed (newest first)
 
+1. **SAM ANSWERED ALL THREE OPEN QUESTIONS. ONE ANSWER TURNS THE
+   MULTI-PART RESULT OVER.** (seat, 2026-08-10, put to him as a
+   four-question card; answers verbatim below.)
+
+   - **WHERE HE DID IT: THE COACH CHAT.** Not the picker.
+   - **WHAT MONDAY CARRIED: GYM + CONDITIONING. NO TEAM TRAINING.**
+   - **BUILD ORDER: APPROVED AS THE CENSUS RANKED IT** (move-with-scope
+     → bin → swap/add session → readiness → injury → exercise-level).
+   - **SIMULATOR REBUILD: APPROVED, HIS DEVICE BUILD IS FINISHED.**
+     The condition you held on has cleared. Item 3's blocker is lifted:
+     rebuild the simulator app and RUN the L-C3 matrix you wrote unrun.
+
+   **WHAT THIS DOES TO THE MULTI-PART FINDING — READ IT CAREFULLY, IT
+   IS THE OPPOSITE OF WHAT THE TAPE CONCLUDED.** The tape's
+   NOT-REPRODUCED verdict was recorded on *"a plain two-part day
+   (conditioning+strength), all arms carried BOTH parts"* — **that is
+   Sam's day exactly, and the coach is the arm he used.** The anchored-
+   day parity break you measured is real and stays, but it is NOT his
+   defect: his Monday had no anchor. **So the tape and the phone
+   disagree about the same shape, and when a hand-built world and a
+   real one disagree, the hand-built one is the suspect.**
+   The `chooseMove` hypothesis carried in the commit — *"if Sam tapped
+   'Just the gym session'…"* — **is dead: he did not tap anything.**
+   Retract it in the tape's own comment rather than leaving it to be
+   re-read as live.
+
+   **THE ORDER, AND IT IS THE L13 HOLE THE BOUNDARY NAMED ITSELF.**
+   Every fixture in this tape is hand-built; the boundary's own
+   NOT-COVERED says *"a real `project()` over a worn athlete may hold
+   day shapes these fixtures do not."* It does. **Re-run the multi-part
+   section over a GENERATED week — the real generator, the same path
+   the app takes to make Sam a Monday — instead of a hand-assembled
+   one**, and print every day with its parts and each part's kind and
+   identity, so "which shape did this reach?" stays answerable. Compare
+   a generated gym+conditioning Monday against the hand-built one
+   FIELD BY FIELD: **the difference between those two objects is the
+   finding**, whichever way the move then goes. Prime suspect to check
+   FIRST because it is cheap and it would explain him exactly: whether
+   a generated day's conditioning is a section inside `workout` at all,
+   or a separate part the whole-day move never looks at.
+   If a generated week still cannot reproduce it, say so plainly and
+   name what a real device world has that a generated one does not —
+   that is the next instrument, not a defeat.
+
+2. **BUILD CENSUS ROW 1 — `move_session` WITH THE SCOPE, AS SAM
+   APPROVED.** Everything in the seat's earlier item 0 stands: read the
+   scopes from `moveOptionsForDay` / `PlanChangeMoveOptions`, offer the
+   owner's OWN signed rows (*"Move the whole session" / "Just the gym
+   session" / "Just the conditioning" / "Just the recovery work"* /
+   `team`), never a coach-authored word, and **put the choice on the
+   CARD** so no follow-up context is needed. L-C4 is the law now, so
+   the acceptance test is not "the coach can move a session" but **"on
+   this day, the coach offers exactly what the picker offers, from the
+   same call"** — a cell comparing the two lists is the honest shape.
+   **This also closes the anchored-day parity break you measured**: the
+   coach is refused there only because it sends no scope, and the
+   picker's `strength` row is the athlete's own way through.
+   Do NOT let item 1's investigation block this — they are independent,
+   and this one is the ranked first NO.
+
+3. **THE COACH TAB'S MISSING UNDO SURFACE RIDES WITH ROW 1** — same
+   law, same shape: `UndoToast` mounts only at `HomeScreenV2.tsx:1225`,
+   `CoachTabScreen` mounts nothing. Sam's own undo-for-everything
+   ruling is on the judgment ledger, and a change made in the coach tab
+   that shows no undo is the button having something the coach does
+   not. Your hypothesis that it arms invisibly and burns its timer
+   behind the tab is now testable ON GLASS — **fold it into the L-C3
+   simulator run you are about to make**, since a mounted app answers
+   it in one flow. Hypothesis until then, as you labelled it.
+
+4. **SEAT ACKNOWLEDGEMENT ON THE INBOX ATTRIBUTION FIX (74070cf2), NO
+   ACTION.** You were right and the correction is the seat's to carry:
+   `## Unprocessed` is the seat's channel, and the seat's own earlier
+   orders invited the collapse by parking holds there. The split you
+   made — terminal-measured blockers vs seat holds, each naming the one
+   thing that clears it — is the right shape and the seat will write
+   into it that way from here.
+
+## Previously (now processed)
+
 **NONE.** Every order the seat has written through 2026-08-10 — items 00, 0, 1,
 2 and 3 of the sixty-first and sixty-second batches — is processed. The boundary
 for the latest batch is immediately below.

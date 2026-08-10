@@ -826,7 +826,14 @@ console.log('\n[6] L-C3 — the confirm button, with the keyboard up');
   // athlete who wants to type instead of tapping is never trapped.
   ok(
     'the composer is still mounted while a card is showing',
-    /\{pending \? \([\s\S]{0,200}?\) : null\}\s*<View style=\{styles\.composer\}>/.test(screenCode),
+    // THE WINDOW IS THE INSTRUMENT, NOT THE CLAIM. The bound exists so the match
+    // cannot skip across an unrelated region to find the composer; it is not a
+    // budget on how many props `ChangeCard` may take. L-C4's scope chooser added
+    // two (`selectedChoiceId`, `onSelectChoice`) and pushed the JSX past 200
+    // characters, reddening a cell whose property — card THEN composer, both
+    // mounted — had not changed. Widened rather than relaxed: the adjacency this
+    // asserts is still exact, and `\s*` still forbids anything between them.
+    /\{pending \? \([\s\S]{0,600}?\) : null\}\s*<View style=\{styles\.composer\}>/.test(screenCode),
     'a card that replaced the composer would be a modal without a dismiss',
   );
 
@@ -1091,6 +1098,152 @@ console.log('\n[7] THE ARGUMENT THE DOOR NEEDS, AND THE WORDS IT DOES NOT LEND')
     'npm run tape:coach-move-durability — it asserts nothing and prints a '
       + 'measurement, so it is a tape and not a gate. These cells are what the '
       + 'chain sees; the tape is what a person reads',
+  );
+}
+
+// ─── [8] L-C4 — THE COACH OFFERS WHAT THE PICKER OFFERS ─────────────────────
+
+console.log('\n[8] L-C4 — the coach\'s ways through a day are the picker\'s own');
+{
+  // THE CENSUS MEASURED THE COACH AT 1 OF THE ATHLETE'S 26 ACTIONS, and the ONE
+  // it had it performed without the question its own button asks. On an anchored
+  // Monday the picker offers `strength` and `team` and NO `whole_day` row, so a
+  // scopeless coach move is REFUSED — "protected game/team anchor" — where the
+  // athlete's tap carrying the picker's own `strength` row APPLIES. Same day,
+  // same destination, same door. Measured by `tape:coach-move-durability`
+  // (2026-08-10), not argued.
+  //
+  // The fix is an OWNERSHIP move, not a scope guess: `coachProposal` takes the
+  // owner's `PlanChangeMoveOptions` and renders the owner's own rows. So the
+  // acceptance claim is not "the coach can move a session" — it is **the coach
+  // offers exactly what the picker offers, from the same call** — and these
+  // cells compare the two lists rather than reading either one.
+  //
+  // DEPTH 0, DELIBERATELY: the owner needs a resolved week and this suite is
+  // pure. The list here is a REAL `PlanChangeMoveOptions` value in the owner's
+  // own shape; whether `moveOptionsForDay` produces THAT list on a real anchored
+  // day is measured at depth 1 by the tape, which reads the producer itself.
+  const anchoredOptions = {
+    scopes: [
+      { id: 'strength', label: 'Just the gym session', sub: 'Team training stays on this day', destinations: [{ date: FRIDAY, occupiedBy: null }] },
+      { id: 'team', label: 'Team training', sub: "Pick the night it's on — we'll ask if it's permanent", destinations: [{ date: FRIDAY, occupiedBy: null }] },
+    ],
+    refusal: null,
+  } as never;
+
+  const read = readCoachMessage({ message: 'move monday to friday', week: WEEK, todayISO: TODAY });
+  const proposal = read.intent === 'change'
+    ? coachProposal({ request: read.request, week: WEEK, moveOptions: anchoredOptions })
+    : null;
+
+  ok('the coach proposed on a day whose only ways through are components',
+    proposal?.verdict === 'proposed', String(proposal?.verdict));
+
+  const offered = (proposal?.card?.choices ?? []).map((choice) => choice.id);
+  ok(
+    'and the ids it offers ARE the owner\'s ids, in the owner\'s order',
+    JSON.stringify(offered) === JSON.stringify(['strength', 'team']),
+    `coach=[${offered.join(', ')}] owner=[strength, team] — this is the L-C4 claim`,
+  );
+  ok(
+    'every word on every row came from the owner, none from the coach',
+    (proposal?.card?.choices ?? []).length === 2
+    && (proposal?.card?.choices ?? []).every((choice) =>
+      choice.label === (anchoredOptions as never as { scopes: { id: string; label: string; sub: string }[] })
+        .scopes.find((scope) => scope.id === choice.id)?.label
+      && choice.sub === (anchoredOptions as never as { scopes: { id: string; label: string; sub: string }[] })
+        .scopes.find((scope) => scope.id === choice.id)?.sub),
+    'a coach-authored phrase here would be a second name for the athlete\'s own row',
+  );
+  ok(
+    'THE PARITY BREAK IS CLOSED — the proposed action CARRIES a scope',
+    movePayload(proposal?.action)?.scope === 'strength',
+    'a scopeless move on this day is the one the door refuses; the picker\'s '
+      + 'first row is the athlete\'s own way through and now the coach\'s too',
+  );
+  ok(
+    'and each row carries the action it means, so no surface assembles one',
+    (proposal?.card?.choices ?? []).length === 2
+    && (proposal?.card?.choices ?? []).every((choice) =>
+      choice.action.type === 'move_session'
+      && (choice.action.payload.scope ?? 'whole_day') === choice.id),
+    'a screen that built the payload would be a second author of payload.scope',
+  );
+
+  // ── WHOLE_DAY STILL SENDS NOTHING, AND A ONE-ROW DAY IS NOT A CHOICE ──
+  const plainOptions = {
+    scopes: [
+      { id: 'whole_day', label: 'Move the whole session', sub: 'Pick another day for it', destinations: [{ date: FRIDAY, occupiedBy: null }] },
+      { id: 'strength', label: 'Just the gym session', sub: 'Team training stays on this day', destinations: [{ date: FRIDAY, occupiedBy: null }] },
+    ],
+    refusal: null,
+  } as never;
+  const plainRead = readCoachMessage({ message: 'move monday to friday', week: WEEK, todayISO: TODAY });
+  const plain = plainRead.intent === 'change'
+    ? coachProposal({ request: plainRead.request, week: WEEK, moveOptions: plainOptions })
+    : null;
+  ok(
+    'a day that offers whole_day proposes it, and sends NO scope word',
+    plain?.verdict === 'proposed' && movePayload(plain?.action)?.scope === undefined,
+    'absent IS the door\'s spelling of whole_day; two spellings of one '
+      + 'instruction is the ambiguity this change exists to remove',
+  );
+
+  const singleOptions = {
+    scopes: [
+      { id: 'conditioning', label: 'Just the conditioning', sub: 'The rest of the day stays', destinations: [{ date: FRIDAY, occupiedBy: null }] },
+    ],
+    refusal: null,
+  } as never;
+  const singleRead = readCoachMessage({ message: 'move monday to friday', week: WEEK, todayISO: TODAY });
+  const single = singleRead.intent === 'change'
+    ? coachProposal({ request: singleRead.request, week: WEEK, moveOptions: singleOptions })
+    : null;
+  ok(
+    'ONE way through is an answer, not a chooser',
+    single?.card?.choices.length === 0
+      && movePayload(single?.action)?.scope === 'conditioning',
+    'the sheet skips a picker with one row; a coach that rendered one would be '
+      + 'asking a question with a single answer',
+  );
+
+  // ── THE OWNER'S REFUSAL IS SPOKEN, NOT REPLACED ──
+  const refusedOptions = {
+    scopes: [],
+    refusal: {
+      reason: 'no_destination',
+      message: "There's nowhere to move this in the weeks you can edit — every "
+        + 'other day is a game, team training, or already full.',
+    },
+  } as never;
+  const refusedRead = readCoachMessage({ message: 'move monday to friday', week: WEEK, todayISO: TODAY });
+  const refused = refusedRead.intent === 'change'
+    ? coachProposal({ request: refusedRead.request, week: WEEK, moveOptions: refusedOptions })
+    : null;
+  ok(
+    'and when the owner refuses, the coach says the OWNER\'s sentence',
+    refused?.verdict === 'refused'
+      && refused.text === (refusedOptions as never as { refusal: { message: string } }).refusal.message,
+    'PlanChangeMoveRefusal: "Never a reason code — the sheet renders this '
+      + 'verbatim". The coach rendering its own would be the two surfaces '
+      + 'saying different things about one day',
+  );
+
+  // ── AND THE OMISSION CANNOT COME BACK SILENTLY ──
+  ok(
+    'the SCREEN asks the owner, with the week it already holds',
+    /listPlanChangeOptionsForDay\(\{[\s\S]{0,200}?visibleWeek: weekDays/.test(screenCode)
+      && /coachProposal\(\{[\s\S]{0,120}?moveOptions/.test(screenCode),
+    'moveOptions is optional so every existing caller keeps working — which is '
+      + 'exactly why the screen\'s own call site needs a cell of its own',
+  );
+
+  ok(
+    'this section is DEPTH 0 and says so',
+    true,
+    'the lists compared here are values, not a producer run. `npm run '
+      + 'tape:coach-move-durability` is where the coach\'s list is compared '
+      + 'against `moveOptionsForDay`\'s real output on a generated anchored day.',
   );
 }
 
