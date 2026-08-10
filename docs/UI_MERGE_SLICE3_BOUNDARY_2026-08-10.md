@@ -632,3 +632,50 @@ further edit.**
   a different problem and is priced in addendum 4. **Not redone.**
 - **THE REMAINING STRANDS ARE NOT CUT.** The confirmation-sheet actions and the
   phase-shift machine. Nothing has left the day screen.
+
+---
+
+# ADDENDUM 10 — THE KNOT MEASURED PER STRAND: THERE IS ONE ANCHOR, NOT FIVE
+
+**`LAW-one-name-two-meanings` APPLIED TO THIS FILE'S OWN EARLIER PRICING.**
+Addenda 2 and 8 said the confirmation-sheet writers "close over five hook-level
+values". **That was a count of the LABEL, not a measurement of the STRANDS**, and
+measuring them apart changes the shape of the work:
+
+| Strand | Measured | Verdict |
+| --- | --- | --- |
+| `clearCoachNoteAction` | `useCallback(…, [])` — **empty deps**, a straight call to module-level `executeProgramControlAction` | **FREE.** Never tied. |
+| `targetStatusModifierKind` | module-level function (`useHomeScreen.ts:98`) | **FREE.** Never tied. |
+| `statusModifierKindForNote` | `useCallback(…, [coachNotes])` | **FREE IN PRACTICE** — `coachNotes` is exactly what `useActiveModifiers` already provides to any screen. |
+| `temporarySourceFacts` | store-derived | **FREE** — same route as the modifiers list. |
+| `registerSourceFactRenderObservation` | observation plumbing | **FREE-ish** — writes receipts, no rebuild UI. |
+| **`handleProgramControlResult`** | `useCallback(…, [rebuildMsgOpacity, runRebuild])` | **TIED, AND IT IS THE ONLY ONE.** |
+
+## THE ANCHOR IS THE REBUILD PROGRESS UI
+
+`handleProgramControlResult` exists to drive the **rebuilding animation** —
+`rebuildMsgOpacity` and `runRebuild` are screen state about showing the athlete
+that their program is being rebuilt. **Every other strand is free or trivially
+freed.**
+
+**SO THE EXTRACTION IS NOT "MOVE THE MODIFIER ACTIONS". IT IS: WHO OWNS TELLING
+THE ATHLETE A REBUILD IS HAPPENING?** Today the day screen owns it, and any other
+surface that triggers a rebuild has nowhere to show it. That is the real
+ownership question, it is one question rather than five, and it is a much smaller
+and better-shaped unit than "untangle the knot".
+
+**THIS IS THE THIRD TIME TODAY MEASURING APART CHANGED THE ANSWER** — the latch,
+the witness point, and now the knot's own pricing. **The law earned its row within
+an hour of getting one.**
+
+## NOT COVERED
+
+- **NOT BUILT.** The rebuild-progress ownership question is named and shaped, not
+  answered. **Starting boot-adjacent-scale surgery on a 2000-line hook at the end
+  of a long pass is the half-cut state addendum 7 refused, and refusing it twice
+  is consistent rather than timid.**
+- **THE PHASE-SHIFT MACHINE IS SEPARATELY MEASURED AND UNTOUCHED** — fifteen
+  pieces of state driving a multi-step sheet. It shares the same anchor (it also
+  rebuilds), which is a reason to expect one extraction to serve both, and that
+  expectation is NOT verified.
+- **NOTHING HAS LEFT THE DAY SCREEN.**
