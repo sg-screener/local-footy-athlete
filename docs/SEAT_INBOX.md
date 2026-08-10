@@ -2,36 +2,6 @@
 
 ## Unprocessed (newest first)
 
-1. **A LEAD THAT FALLS OUT OF THE THIRD DEFECT — CHECK IT WHILE THE
-   FLOWS ARE BEING RE-AIMED, IT IS CHEAP AND IT MAY CLOSE SAM'S CASE.**
-
-   The practice athlete was missing a **2km time**, an answer the app
-   requires. **The 2km time is a conditioning input.** Sam's open
-   defect is that **0 of 11 seed worlds reach his day shape — a day
-   carrying strength AND conditioning** — and his real profile has
-   `twoKmTimeTrial: { seconds: 420 }`, `conditioningLevel: "Elite"`
-   and `sprintExposure: "2+ times per week"`.
-
-   **THE QUESTION, AND IT IS ONE RUN:** does a profile with no 2km
-   time generate weeks with less conditioning, or conditioning that
-   never shares a day with strength? **If yes, then the reason no seed
-   ever looked like Sam's Monday is the same defect the rig just
-   caught** — the seeds were built from an athlete the app would
-   refuse, and that athlete's weeks are structurally different from a
-   real one's. That would tie the two open threads into one root and
-   would explain a month of not reproducing him.
-   **If no, say so plainly and the two stay separate.** Do not stretch
-   it to fit — this is offered as a lead, not a conclusion, and a
-   refuted lead is a good outcome.
-
-   **EITHER WAY, ONE THING IS OWED:** a census of **which suites
-   consumed those seed worlds**. Unit tests over hand-passed arguments
-   are unaffected, but **anything that built its inputs from
-   `buildDevE2ESeed` was testing an impossible athlete**, and its
-   green means less than it appeared to. **Name the count and the
-   list** — Sam is entitled to know how much of the existing 328 is
-   affected, and "some" is not an answer.
-
 1. **SAM HAS SIGNED THE MERGE. THE CLASH LIST DID NOT NEED WRITING —
    HE RULED IT FIRST, AFTER TAPPING THROUGH BOTH PROTOTYPES.**
    **READ `docs/UI_MERGE_RULINGS_2026-08-10.md` BEFORE ANYTHING ELSE
@@ -760,6 +730,38 @@ only from here; the seat clears this section at every tidy.
   observation offered as a fact and not a conclusion: the standard seed now
   photographs a Monday reading "Strength + Conditioning" — the day shape Sam
   says 0 of 11 seeds reached — and that seed gained a real 2km time yesterday.**
+
+## Processed 2026-08-10 (sixty-seventh pass) — THE 2KM LEAD IS REFUTED, AND THE CENSUS IS 21 OF 332
+
+**Full report: `docs/TWO_KM_LEAD_AND_SEED_CENSUS_2026-08-10.md`. Probe kept at
+`_twoKmLead.ts` so the refutation is re-runnable.**
+
+- **REFUTED, and cleanly.** One variable — `twoKmTimeTrial` — same anchor, same
+  acceptance, same block. **Conditioning-carrying workouts: 4 of 20 in BOTH
+  arms. Strength-and-conditioning on one day: 4 in BOTH arms.** Week 1 is
+  identical field for field. **The impossible profile and the day-shape defect
+  are SEPARATE threads**; the month of not reproducing Sam is not explained by
+  the missing time. Not stretched to fit.
+- **THE FIRST PROBE WAS VACUOUS AND IS REPORTED AS SUCH.** It read 0
+  conditioning in BOTH arms and would have "refuted" from an instrument
+  incapable of any other answer. The day-walk screenshot taken an hour earlier
+  shows that Monday reading "Strength + Conditioning", which is what exposed it:
+  the generator carries conditioning as `hasCombinedConditioning` /
+  `attachedConditioningKind` / `conditioningFlavour`, not as a component row.
+  **The verdict stands on the corrected probe only.**
+- **A SECOND OBSERVATION, A QUESTION NOT AN ANSWER:** the standard seed DOES
+  reach a combined day — but as an attached `optional_flush` aerobic component,
+  not a standalone conditioning session. **So "0 of 11" and this measurement may
+  be counting different things.** It cannot be settled from disk:
+  `device-export-2026-08-10-sam-monday-wednesday.json` is a SUMMARY and carries
+  no workouts. Naming the gap rather than guessing across it.
+- **THE CENSUS: 21 SUITES OF 332 (6%), NAMED.** Transitive import closure from
+  `DEV_E2E_STANDARD_PROFILE` outward, so helper-reached suites are counted: 25
+  files, 4 of them helpers, **21 runnable scripts, every one listed in the
+  report**. The other 311 never touch the profile. **Their green was never
+  wrong downstream** — Part A shows the field changed nothing about the
+  generated week — **but it never covered the completeness gate**, which is
+  precisely why the defect survived.
 
 ## Previously (now processed)
 
