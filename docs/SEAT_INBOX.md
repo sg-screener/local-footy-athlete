@@ -75,7 +75,20 @@
    lines. **This is the guard for the defect that cost Sam an hour
    today — build it as part of the law sweep, not after it.**
 
-1b. **SAM'S ORDER OF WORK AFTER THIS QUEUE — RECORD IT IN
+1b. **[TERMINAL, 2026-08-10 — DONE, AND IT WAS THE FIRST THING DONE IN
+   THIS BATCH AS ORDERED.** Sam's five-step order is now Phase 2 of
+   `PUBLISH_ROADMAP_2026-08-05.md`, verbatim, and it explicitly
+   supersedes the 2026-08-07 order. The four items between 4 and 5 are
+   recorded as open with their receipts — **`eas.json`'s
+   `submit.production.ios` is `{}`, verified, so that really is one
+   line from Sam** — and the ASK FOR THE TEMPLATE FILES is a blockquote
+   warning at the head of step 1, because nothing in that phase can be
+   designed until they are in the repo.
+   **THE ACCOUNTS ITEM CARRIES THE MEASUREMENT: there is no auth code
+   at all** — all four paths absent, checked; the two docs claiming
+   otherwise were corrected the same day.]**
+
+   **SAM'S ORDER OF WORK AFTER THIS QUEUE — RECORD IT IN
    `PUBLISH_ROADMAP_2026-08-05.md` AS PHASE 2, VERBATIM, BEFORE
    ANYTHING ELSE IN THIS BATCH.** He gave it in chat 2026-08-10 and an
    unrecorded plan is the exact defect this week is about.

@@ -78,8 +78,52 @@ started this era, and one is re-slotted by Sam into Phase 2's neighbourhood.
       against its own 18s warning and 30s hard ceiling — the official gate is
       closer to that wall than the record reflected.
 
-## Phase 2 — the full app (Sam's reorder: before beta)
-Order RULED by Sam 2026-08-07: day-first UI → journal → coach.
+## Phase 2 — the full app
+
+**SAM'S ORDER OF WORK, GIVEN IN CHAT 2026-08-10 AND RECORDED HERE VERBATIM.**
+It supersedes the 2026-08-07 order (day-first UI → journal → coach). An
+unrecorded plan is the exact defect this week is about, so it lives here and
+nowhere else.
+
+1. **UI simplification of the DAY, WEEK and PROFILE screens.**
+   **Sam's partner has produced the templates — photos AND HTML.** That is the
+   mock, and MOCK-FIRST is a proven law here: **the templates are the direction
+   doc, not an inspiration.**
+   > ⚠ **ASK SAM FOR THE FILES BEFORE THIS PHASE OPENS.** Nothing here is
+   > designed until they are in the repo, and they are treated as signed design.
+2. **Button parity + dead-weight removal** — every button does what it should,
+   and nothing is in the app that need not be. **This is the parity census
+   widened from the coach to the WHOLE APP**, plus the legacy cuts.
+3. **Coach optimised** — the parity census's remaining **25 of 26**.
+4. **Journal** — **Sam decides then whether it comes back.** Stays BUILT and
+   HIDDEN until he says.
+5. **Beta, then App Store.**
+
+### Between 4 and 5 — four open items, each with its receipt
+
+- [ ] **THE ACCOUNTS DECISION IS UNMADE AND UNBUILT — SAM'S CALL, NOT THE
+      SEAT'S.** Phase 4 below lists "local-only vs sign-in". **There is NO auth
+      in the repo:** `src/screens/auth/`, `src/store/authStore.ts`,
+      `src/services/auth/` and `src/navigation/AuthNavigator.tsx` do not exist
+      (checked 2026-08-10), and two docs claimed otherwise until corrected the
+      same day. **Local-only costs nothing; sign-in is real work. This is the
+      largest unpriced item before the store.**
+- [ ] **BETA HAS NOT HAPPENED** — Renee plus 2-3 trusted athletes on TestFlight,
+      and **Sam training off the app for a real week**. Findings size unknowable
+      until it runs.
+- [ ] **ANDROID HAS NEVER BEEN RUN.** iPhone device passes exist
+      (`test:device-pass-2026-08-05`, exports at repo root); **Android is
+      OPEN-UNKNOWN. Whether v1 is iPhone-only is a DECISION, not an oversight**
+      — it goes to Sam as one.
+- [ ] **STORE ADMIN, AND ITS ORDER MATTERS.** Screenshots come AFTER the UI work
+      in step 1, so the drafts in `docs/appstore/` (`APP_STORE_LISTING_DRAFT.md`,
+      `PRIVACY_POLICY_DRAFT.md`, `SCREENSHOT_STORYBOARD.md`) are re-shot then,
+      not now. **The `submit.production.ios` block in `eas.json` is EMPTY** and
+      needs Sam's Apple ID / App Store Connect app id — one line from him.
+
+### Measured state of the work already underway (refreshed 2026-08-10)
+
+Order RULED by Sam 2026-08-07, now superseded by the list above:
 - [ ] 1. Day-first UI — per docs/DAY_FIRST_UI_DIRECTION_2026-08-01.md
       **KICKED OFF 2026-08-07 (Sam's overnight order), and it now runs BEFORE
       the LR-29 replay unit** — the replay unit was re-slotted behind it.
