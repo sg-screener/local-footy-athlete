@@ -2,6 +2,46 @@
 
 ## Unprocessed (newest first)
 
+1. **[TERMINAL, 2026-08-10 — THE RIG IS GREEN. SAM REBUILT, THE CHANNEL
+   WORKS, AND IT FOUND THREE REAL DEFECTS ON ITS FIRST WORKING RUN.]**
+   - **ONE FLOW GREEN END TO END: exit 0, 18 seconds.** Launch → entry
+     marker → seed → no seed error → **program screen**. First since
+     18 July. `.maestro/common/reset-seed.yaml` now seeds by launch
+     argument, so every flow through it loses the Safari dialog.
+   - **THREE DEFECTS, EACH FOUND ONE STEP AFTER THE LAST WAS FIXED —
+     and none was findable by reading.**
+     (1) **The harness checked for state the architecture stopped
+     storing.** `devE2EPersistence` fingerprinted `currentProgram`,
+     overlays and accepted context against DISK; R1.3 made `partialize`
+     INPUTS ONLY. It could never converge, on every seed, forever. Now
+     fingerprints the INPUTS, mirroring `partialize` — and a
+     `partialize` that ever grows an OUTPUT surfaces here as a mismatch,
+     which is the north star guarding itself.
+     (2) **The seed built a world the app refuses to show** —
+     `isOnboardingComplete` is `CompleteScreen`'s job and no seed goes
+     through it. Now set through `completeOnboarding()`, the store's own
+     door, so a seed that cannot pass the athlete's gate FAILS instead
+     of presenting a green screen on a rejected profile.
+     (3) **And that guard immediately caught the third:**
+     `dev_e2e_seed_profile_incomplete: your 2km time`. **The standard
+     E2E profile has NEVER carried `twoKmTimeTrial`** — a required,
+     always-visible step. Every seeded world ever produced came from a
+     profile the app would refuse from a real athlete. **That is Sam's
+     rot, already happening**, and no seeded run had ever reached the
+     screen that would show it.
+   - **WHERE THE GOLDEN FLOW STOPS, AND IT IS A STALE FLOW NOT AN APP
+     BUG:** it seeds, reaches the program screen, taps the Monday row,
+     then cannot find `make-change-link` — an id that predates the
+     day-first redesign. **Named, not fixed**; re-aiming the golden
+     flows at the current UI is its own unit.
+   - **AND SAM'S PARTNER'S UI PROTOTYPE IS NOW IN THE REPO**
+     (`docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`, arrived today).
+     **That was the standing MOCK-FIRST blocker on his step 1.** Not
+     opened beyond identifying it; his call when that phase starts.
+   - **NOT DONE:** the drift check, the profile matrix, the chain split,
+     and re-aiming the golden flows.
+
+
 1. **THE UI PROTOTYPE IS IN THE REPO. SAM'S PHASE 1 CAN OPEN THE MOMENT
    A RUN-THROUGH IS GREEN.** File:
    `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html` (seat wrote it from

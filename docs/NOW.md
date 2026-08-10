@@ -1,5 +1,28 @@
 # NOW — overwrite at every checkpoint (pointer, not history)
 
+- **✅ SAM: THE TEST NOW RUNS ALL THE WAY THROUGH. 18 SECONDS.** Your rebuild did
+  it. The test opens the app, loads a practice week, and lands on your program
+  screen — **the first time that has worked since 18 July.**
+  **AND IT FOUND THREE REAL PROBLEMS ON THE WAY, each one only visible after the
+  one before it was fixed:**
+  1. The test was checking that things got saved that **the app deliberately
+     stopped saving months ago**. It could never have passed.
+  2. The practice week was being built but **never marked as finished setting
+     up**, so the app kept showing the setup questions instead of the program.
+  3. And the moment I fixed that, it caught the real one: **the practice
+     athlete's details were missing their 2km time** — an answer the app
+     *requires*. So every practice week ever built here came from a profile the
+     app would have refused from a real person. **That is exactly the rot you
+     said would kill you if it happened again**, and it was already happening.
+  **Still not the finished job:** one test runs; the older tests still point at
+  buttons that moved in the redesign. **Not seen on your phone.**
+
+- **⚠ SAM: YOUR PARTNER'S UI PROTOTYPE IS IN THE REPO NOW** (arrived today).
+  That was the one thing blocking your step 1 — the screen simplification — and
+  nothing in that phase should be designed without it. **I have not opened it
+  beyond checking what it is.** Say the word when you want that phase started.
+  **Nothing built from it yet — not proven, and not on your phone.**
+
 - **⚠ SAM: THE THING YOU SAID WOULD KILL YOU IF IT HAPPENED AGAIN NOW HAS AN
   ALARM ON IT — MOSTLY.** You were worried a test week gets tuned to itself and
   rots. Two of the three ways that happens are now watched: **no test week can be
