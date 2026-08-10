@@ -23,13 +23,14 @@ tags:
 - assertVisible:
     id: "program-week-next"
 
-# ── THE DAY SHAPE: a week strip, and one day at full size ──
-- assertVisible:
+# ── THE DAY SHAPE: one day at full size, and NO strip (ruling 3, 2026-08-10) ──
+# The three `week-strip*` assertions here are INVERTED to one, not deleted: a
+# removal Sam ruled needs a cell watching it, or a restored line brings it back
+# unnoticed. `day-timeline` carries the day-shape-only property the strip had.
+- assertNotVisible:
     id: "week-strip"
 - assertVisible:
-    id: "week-strip-mon"
-- assertVisible:
-    id: "week-strip-sun"
+    id: "day-timeline"
 - assertVisible:
     id: "day-row-mon"
 

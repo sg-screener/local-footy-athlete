@@ -37,10 +37,17 @@ tags:
       SEED_ID: standard-in-season-week
 
 # ── DAY: the shape the app opens in ────────────────────────────────────────
-# The week strip and ONE full day. `make-change-link` is asserted, not tapped:
-# it is the door rulings 3/4/6 are about to rearrange, and its presence at the
-# top level of the day shape is the thing a merge could quietly cost.
-- assertVisible:
+# ONE full day, and NO DAY STRIP — ruling 3 landed. The strip's assertion is
+# INVERTED rather than deleted (the gate must watch the deleted surface, or one
+# restored line brings back a thing Sam ruled away with nothing noticing).
+#
+# `day-timeline` is the day shape's new witness: it exists in this shape only,
+# which is the property `week-strip` used to carry.
+#
+# `make-change-link` is asserted, not tapped: it is the door rulings 4/6 are
+# about to rearrange, and its presence at the top level of the day shape is the
+# thing a merge could quietly cost.
+- assertNotVisible:
     id: "week-strip"
 - assertVisible:
     id: "day-row-mon"
@@ -69,6 +76,11 @@ tags:
     direction: DOWN
 - assertVisible:
     id: "day-row-sun"
+# RULING 7: no buttons under weekly view. The chip row is asserted PRESENT in
+# the day shape above and ABSENT here — the same control, both directions, so
+# the cell cannot pass by the row having disappeared everywhere.
+- assertNotVisible:
+    id: "home-life-fact-chips"
 - takeScreenshot: "artifacts/ui-walk/walk-2-week"
 
 # ── AND BACK TO THE DAY ────────────────────────────────────────────────────
@@ -82,8 +94,10 @@ tags:
     id: "program-view-today"
 - extendedWaitUntil:
     visible:
-      id: "week-strip"
+      id: "day-timeline"
     timeout: 10000
+- assertNotVisible:
+    id: "week-strip"
 
 # ── PROFILE ────────────────────────────────────────────────────────────────
 - tapOn:
@@ -117,4 +131,4 @@ tags:
       id: "program-screen"
     timeout: 10000
 - assertVisible:
-    id: "week-strip"
+    id: "day-timeline"

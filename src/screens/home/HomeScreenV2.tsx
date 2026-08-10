@@ -610,12 +610,30 @@ export default function HomeScreenV2() {
             forgotten would be the one nobody looked at. */}
         {dayFirst ? (
           <View style={styles.dayFirst}>
-            <WeekStrip
-              weekDays={weekDays}
-              visibleWeek={visibleWeek}
-              activeDate={dayFirstDay?.date ?? null}
-              onSelect={handleSelectDay}
-            />
+            {/* ── RULING 3: NO DAY STRIP AT THE TOP ──
+                Sam, 2026-08-10, after tapping through both prototypes: *"No days
+                at the top of the page - people only care about the day they are
+                on and if they need to view the other days they go to weekly
+                view."*
+
+                THE BEHAVIOUR IS NOT DELETED, IT IS RE-HOMED, and this comment is
+                the ledger row that says where: **weekly view**, one tap away on
+                the Today/Week toggle directly above, which is untouched. The
+                strip's only door was `onSelect={handleSelectDay}` — choosing
+                which day this screen is about — and the week shape's seven rows
+                are that same door, drawn at full size.
+
+                SO THE DAY SCREEN IS NOW ALWAYS ABOUT TODAY. `dayFirstIdx` still
+                honours a selection made elsewhere rather than hard-coding
+                `todayIdx`: the week shape's own tap sets it, and a day-first
+                view that ignored the athlete's choice would be a second truth
+                about which day is open. Nothing here re-anchors anything.
+
+                `WeekStrip` STAYS IN THIS FILE, unreferenced by this shape.
+                Deleting the component in the same commit that removes its call
+                site would make one change into two, and Sam's binding line is
+                that nothing working is destroyed to match a picture. If it is
+                still unused when the merge lands, it retires on its own. */}
             {dayFirstDay ? renderDayRow(dayFirstDay, dayFirstIdx) : null}
             {/* THE SIX DAYS THE STRIP STANDS IN FOR STILL REPORT THEMSELVES.
                 Every day mounts its canonical state leaves in BOTH shapes — a
@@ -696,7 +714,19 @@ export default function HomeScreenV2() {
             shorter invention ("Kit", "Gear") because this app already says
             equipment everywhere; a new short label should not also be a new
             word. */}
-        {isNormal && (
+        {/* ── RULING 7: THE BUTTONS DO NOT APPEAR UNDER WEEKLY VIEW ──
+            `&& dayFirst` is the whole change. Sam's reasoning IS the spec and it
+            is a general principle, not a layout note: *"someone will make a
+            change for that day if they need it and if it's chronic they're not
+            going to have to go to each day to make the change - also, people
+            don't plan on being sick or injured in the future so those buttons
+            don't need to be on weekly view"*.
+
+            NOTHING IS RE-HOMED HERE BECAUSE NOTHING LEAVES: every chip keeps its
+            door, its testID and its place on the day screen — the day a change
+            is made on. The week shape simply stops offering a per-day control at
+            a week-level altitude. */}
+        {isNormal && dayFirst && (
           <View style={styles.lifeFactChips} testID="home-life-fact-chips">
             <LifeFactChip
               onPress={async () => {
@@ -1032,7 +1062,24 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
-        {/* ── Phase shift card ── */}
+        {/* ── RULING 6 IS NOT IN THIS SLICE, AND THAT IS THE RULING BEING
+            OBEYED, NOT DEFERRED ──
+            Sam: *"No more shift season phase at the bottom of the page on day
+            scren or week screen"* — and, binding over everything: *"the idea is
+            to merge them together… WITHOUT DESTROYING WHAT I HAVE NOW."*
+
+            Ruling 6's destination is the coach page's "my status" (ruling 4),
+            AND THAT SURFACE DOES NOT EXIST YET. Removing this card now would
+            leave the athlete with no way to change season phase at all until a
+            later slice — a real hole in a working app, dressed as progress.
+            **A removal ships in the same commit as its destination.** Rulings 3
+            and 7 are in this slice precisely because their destinations —
+            weekly view and the day screen — already exist and are untouched.
+
+            This card is deleted in the slice that mounts "my status", and the
+            removal ledger in docs/UI_MERGE_PLAN_2026-08-10.md carries the row.
+
+            ── Phase shift card ── */}
         {isNormal && (
           <View style={styles.section}>
             <Card tone="outline" padding="lg" radius="xl" style={styles.phaseCard}>
