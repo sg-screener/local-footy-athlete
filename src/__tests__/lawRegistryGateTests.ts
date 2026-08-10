@@ -53,7 +53,7 @@ armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
 
-import { LAW_REGISTRY, type LawRow } from '../rules/lawRegistry';
+import { HUMAN_GUARDABLE_LAW_IDS, LAW_REGISTRY, type LawRow } from '../rules/lawRegistry';
 
 let passed = 0;
 const failures: string[] = [];
@@ -127,6 +127,7 @@ function malformedRows(rows: readonly LawRow[]): string[] {
     // state would arrive.
     const guard = row.guard as {
       state?: string; by?: string; chainStatus?: string; receipt?: string; wouldTake?: string;
+      humanGuard?: string;
     } | undefined;
     if (!guard) {
       bad.push(`${id}: no guard — there is no third state`);
@@ -134,7 +135,26 @@ function malformedRows(rows: readonly LawRow[]): string[] {
     }
     if (guard.state === 'guarded') {
       if (!guard.by) bad.push(`${id}: guarded by nothing named`);
-      if (guard.chainStatus !== 'in_chain' && guard.chainStatus !== 'outside_chain') {
+      // THE NAMED HUMAN INSTRUMENT (Sam, 2026-08-10) — allowed ONLY where the
+      // SUBJECT of the law is the conversation itself, and the allow-list is
+      // what stops it becoming the general escape hatch he warned about. A row
+      // reaching for it from outside that set is a re-wording failure, and the
+      // reason it is checked HERE is that a hand-edited row is exactly how one
+      // would arrive.
+      if (guard.humanGuard) {
+        if (!HUMAN_GUARDABLE_LAW_IDS.includes(row.id)) {
+          bad.push(`${id}: humanGuard on a law whose subject is not the conversation `
+            + '— re-word it onto a repo surface instead');
+        }
+        if (guard.chainStatus !== 'human') {
+          bad.push(`${id}: a human guard declares chainStatus 'human', never a chain claim`);
+        }
+        if (guard.by !== guard.humanGuard) {
+          bad.push(`${id}: a human guard is guarded BY the person it names`);
+        }
+      } else if (guard.chainStatus === 'human') {
+        bad.push(`${id}: chainStatus 'human' without a named person is nobody guarding it`);
+      } else if (guard.chainStatus !== 'in_chain' && guard.chainStatus !== 'outside_chain') {
         bad.push(`${id}: guarded with no chainStatus`);
       }
       if (!guard.receipt) bad.push(`${id}: guarded with no receipt — a row without one is a belief`);
@@ -152,6 +172,9 @@ function malformedRows(rows: readonly LawRow[]): string[] {
 function guardsNamingMissingScripts(rows: readonly LawRow[], facts: ChainFacts): string[] {
   return rows
     .filter((row) => row.guard.state === 'guarded')
+    // A named human is not a script and must not be looked for in package.json.
+    // Its own well-formedness is checked above, where the allow-list lives.
+    .filter((row) => !(row.guard as { humanGuard?: string }).humanGuard)
     .filter((row) => {
       const script = guardScript((row.guard as { by: string }).by);
       return !script || !facts.scripts.has(script);
@@ -163,6 +186,7 @@ function guardsNamingMissingScripts(rows: readonly LawRow[], facts: ChainFacts):
 function misdeclaredChainStatus(rows: readonly LawRow[], facts: ChainFacts): string[] {
   return rows
     .filter((row) => row.guard.state === 'guarded')
+    .filter((row) => !(row.guard as { humanGuard?: string }).humanGuard)
     .filter((row) => {
       const guard = row.guard as { by: string; chainStatus: string };
       const script = guardScript(guard.by);

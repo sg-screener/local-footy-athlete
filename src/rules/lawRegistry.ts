@@ -78,12 +78,31 @@
 export type LawGuard =
   | {
       readonly state: 'guarded';
-      /** The npm script or named cell that FAILS when the law breaks. */
+      /** The npm script, named cell, or NAMED PERSON that fails when the law breaks. */
       readonly by: string;
       /** Whether that guard is reached by `npm run test:bible`. */
-      readonly chainStatus: 'in_chain' | 'outside_chain';
+      readonly chainStatus: 'in_chain' | 'outside_chain' | 'human';
       /** How this was verified, so the row is a receipt and not a belief. */
       readonly receipt: string;
+      /**
+       * THE NAMED HUMAN INSTRUMENT — Sam's ruling, 2026-08-10.
+       *
+       * Some laws have their SUBJECT outside the repo. `LAW-sam-chat-simplicity`
+       * governs the shape of a chat reply, and chat never reaches a file, so no
+       * script can ever see it. The row could have said `UNENFORCED` forever, or
+       * "held by discipline" — **and "held by discipline" is the loophole Sam
+       * banned this morning**, because it is `UNENFORCED` wearing a nicer word.
+       *
+       * So the guard is a PERSON, named: **Sam is the instrument, and him having
+       * to pull the seat up on it IS the red.** Still two states, never a third
+       * — the row is `guarded`, by a guard that happens not to be a script.
+       *
+       * **THIS IS NOT A GENERAL ESCAPE HATCH AND THE GATE ENFORCES THAT.** It is
+       * allowed ONLY where the subject of the law is the conversation itself
+       * (`HUMAN_GUARDABLE_LAW_IDS` below, one id today). Any other law reaching
+       * for it is a re-wording failure, and `test:law-registry` reds on it.
+       */
+      readonly humanGuard?: 'Sam';
     }
   | {
       readonly state: 'UNENFORCED';
@@ -92,6 +111,19 @@ export type LawGuard =
       /** How the absence was verified. */
       readonly receipt: string;
     };
+
+/**
+ * THE ONLY LAWS A NAMED PERSON MAY GUARD.
+ *
+ * Sam, 2026-08-10: *"use this shape ONLY where the subject of the law is the
+ * conversation itself — it is not a general escape hatch, and any other law
+ * reaching for it is a re-wording failure."*
+ *
+ * One id, and adding a second is a decision somebody has to defend in this list
+ * rather than a habit that spreads through the file. `test:law-registry` reds
+ * when a row outside this set carries `humanGuard`.
+ */
+export const HUMAN_GUARDABLE_LAW_IDS: readonly string[] = ['LAW-sam-chat-simplicity'];
 
 export interface LawRow {
   /** Stable id. Never renumbered — rows are retired, not reused. */
@@ -573,9 +605,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'The device is the arbiter — a claim about athlete-facing behaviour is settled on the phone, not in a suite.',
     ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L4',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'Not mechanisable as a cell by construction — it says a cell is not the arbiter. Its honest guard is the OPEN-UNKNOWN discipline (LAW-claim-needs-a-cell) plus L10. PROPOSED RE-WORDING FOR SAM: "an athlete-facing claim not yet seen on the phone is written OPEN-UNKNOWN", which IS mechanisable.',
-      receipt: 'PROCESS law. Raised as a finding rather than left quiet, per Sam 2026-08-10.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'RE-WORDED ONTO THE DOC SURFACE AND GUARDED, Sam 2026-08-10. He ruled the re-wording himself: "nothing may be written as done/working for an athlete-visible behaviour without a device or simulator receipt". The literal law says a CELL is not the arbiter, so no cell could hold it; the doc form is what the law actually protects and it is checkable today. Held with LAW-L10-phone-is-done by one section — the two are the same rule from either end.',
     },
   },
   {
@@ -633,9 +666,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Sam\'s phone is the definition of done — no athlete-facing fix is finished until he has seen it.',
     ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L10',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'PROPOSED RE-WORDING FOR SAM, because the literal law is about an event outside the repo: "a boundary report may not call an athlete-facing change DONE while its device line is unseen — it says NOT ON GLASS YET." That form is a doc check and would have caught three claims this week.',
-      receipt: 'PROCESS law. Raised as a finding with a re-wording rather than left quiet. The current pass carries three NOT-ON-GLASS items and says so only by the author\'s care.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'RE-WORDED AND GUARDED, Sam 2026-08-10, with LAW-L4-device-is-arbiter — one section holds both. A Sam-facing block in docs/NOW.md that claims an athlete-visible thing is done/fixed/working must carry a device or simulator receipt, or say NOT ON GLASS / UNSEEN. Its founding case is this week: three claims carried NOT-ON-GLASS only by the author\'s care.',
     },
   },
 
@@ -677,9 +711,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'A question reaches Sam only when no recorded law, ruling, Bible line or ledger instinct answers it; if the laws answer even partially, rule it and cite the law.',
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1 (Sam 2026-08-06)',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'Not mechanisable as written — it governs what a person sends. PROPOSED RE-WORDING FOR SAM: "a question put to Sam carries the registry rows it checked first", which makes it a doc check against this file.',
-      receipt: 'PROCESS law. Raised as a finding with a re-wording, per Sam 2026-08-10.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'RE-WORDED AND GUARDED, Sam 2026-08-10: "any question put to Sam carries a receipt that the Bible and ruling docs were searched first". The surface is the STOP reports\' blocked-on-Sam sections, which is where questions actually reach him. A blocking item with no cited doc, Bible line, registry id or verified-marker reds.',
     },
   },
   {
@@ -707,9 +742,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Everything said to Sam is plain coach English — a report that says "L-P6 invariant" says nothing he can act on.',
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'Not mechanisable for chat, which never touches the repo. PROPOSED RE-WORDING FOR SAM: scope it to what IS in the repo — "every ⚠ SAM line in docs/NOW.md is jargon-free", which is a vocabulary check of the kind test:generation-vocabulary already runs.',
-      receipt: 'PROCESS law governing chat. Raised as a finding with a re-wording.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'RE-WORDED AND GUARDED, Sam 2026-08-10, and his re-wording is better than the seat\'s: "it is APP WORDING, and wording already has a register" — signedCopy.ts. So the check is a jargon list over the athlete-facing SIGNED strings, not over chat. Every word the athlete reads already passes through one register; this makes that register refuse engineering vocabulary.',
     },
   },
   {
@@ -717,9 +753,11 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Every reply to Sam is three parts at most — WHAT HAPPENED / WHAT\'S NEXT / WHAT TO SEND — with no file names or commit ids in chat.',
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-09_COACH_BUILD_ERA.md §0 "SAM CHAT RULE" (Sam-forced)',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'Not mechanisable — chat output never reaches the repo, so no repo check can see it. THIS IS A FINDING, NOT A ROW TO LEAVE QUIET: either Sam accepts it is guarded only by the seat\'s discipline, or it is re-worded onto a surface that IS in the repo. HIS CALL.',
-      receipt: 'PROCESS law with no repo footprint at all — the only row in this registry of which that is true.',
+      state: 'guarded',
+      by: 'Sam',
+      chainStatus: 'human',
+      humanGuard: 'Sam',
+      receipt: 'THE NAMED HUMAN INSTRUMENT — Sam ruled this shape into existence 2026-08-10 for this row and, he said, for this row ONLY. Chat never reaches the repo, so no script can ever see it; "held by discipline" was the honest description and it is also the loophole he banned the same morning, being UNENFORCED wearing a nicer word. So: HE is the guard, named, and him having to pull the seat up on it IS the red. Two states preserved — guarded, by a guard that is not a script. The gate refuses this shape for any id outside HUMAN_GUARDABLE_LAW_IDS, so it cannot spread.',
     },
   },
   {
@@ -843,9 +881,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Commit before mutation-testing, and revert a mutation by copying the file back — never with `git checkout --` or `git stash`.',
     ruledAt: 'AGENTS.md "Environment Facts"',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'Not mechanisable as a prohibition on a shell command the terminal chooses to run. PROPOSED RE-WORDING FOR SAM: nothing — this one is honestly a habit, and its guard is that the loss it causes is now loud.',
-      receipt: 'Happened twice in ONE session on 2026-07-28: a deliberate one-line mutation reverted along with an hour of unrelated wiring in the same file, invisible until a later grep.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'GUARDED WITHOUT RE-WORDING, Sam 2026-08-10: "git proves this one outright." WHAT THE CELL HOLDS, STATED EXACTLY: no committed script, tape or tool in this repo reverts a file with `git checkout --` or `git stash` — the two mechanisms whose founding case lost an hour of unrelated wiring twice in one session on 2026-07-28. WHAT IT DOES NOT HOLD: a human typing either at a prompt. That half is loud rather than checked, and the row says so instead of implying the cell is wider than it is.',
     },
   },
   {

@@ -2,6 +2,137 @@
 
 ## Unprocessed (newest first)
 
+1. **SAM'S STANDING RULING, 2026-08-10 — WIDEN THE ELEGANCE LAW AND
+   IMPLEMENT ALL THREE PROCESS FIXES. VERBATIM:** *"I want to do this
+   in the most elegant way. EVERYTHING SHOULD BE DONE IN THE MOST
+   ELEGANT WAY. So if those 3 things need to be implemented so we have
+   the most elegant process and the most elegant outcome THEN
+   OBVIOUSLY THAT IS WHAT WE NEED TO FUCKING DO!"*
+
+   **(0) THE LAW WIDENS.** `LAW-elegant-two-options` currently reads
+   *"WHEN ASKED for the most elegant solution, compare an incremental
+   fix against an ownership redesign before coding."* **Delete "when
+   asked". It is standing, it applies to PROCESS as well as code, and
+   the seat's failure to apply it to the process for a whole week is
+   its founding case.** Same guard, wider subject.
+
+   **(1) THE APP GETS TESTED, NOT JUST THE CODE.** 328 test scripts,
+   176 in the chain, and **almost every defect Sam found himself this
+   week would have been caught by one automated run-through on a
+   simulator** — a rig that existed and had been broken since 18 July
+   with nobody noticing (`dd192603`). **Get the Maestro rig green and
+   make an athlete run-through the gate for athlete-visible work**:
+   onboard → see the week → open a day → make a change → relaunch →
+   the change survived. Then the keyboard matrix already written. **A
+   slice touching an athlete-visible surface does not close without a
+   simulator run.** This supersedes the seat's "Sam's phone is the last
+   instrument" as a practice — it was true and it was never
+   implementable, because the rig underneath it was dead.
+
+   **(2) THE CHAIN IS THE TAX — SPLIT IT.** 176 suites on every change,
+   exiting early on a red that has been declared for weeks, is why one
+   small fix costs a day. **Fast subset per change (the suites that
+   touch what changed, plus `test:compile`), full chain overnight or
+   before a device build.** And **fix or retire the standing red
+   (`test:program-control-durable`) rather than routing around it** —
+   a chain that always exits at the same failure has stopped being a
+   gate, and every reader has learned to skip past it. Price both;
+   the standing red is the elegant one to kill first.
+
+   **(3) REMOVE THE RELAY, BOTH DIRECTIONS. THIS ONE COSTS THE SEAT ITS
+   ROUTING ROLE AND THAT IS THE POINT.** Today Sam was the wire: he
+   pasted the seat's orders to you, and pasted your reports back to the
+   seat. Both halves are removable and neither needed his hands.
+   - **Seat → terminal is already fixed** by the stop-hook reading by
+     content (`f168b48b`). Nothing more needed; just do not regress it.
+   - **Terminal → seat is fixed by the seat READING THE REPO instead of
+     being read to.** The seat has the repo mounted. `docs/NOW.md`,
+     this file's processed section, `git log` and the boundary docs
+     already carry everything Sam has been pasting. **The seat's new
+     standing practice: read the repo at the start of every turn and
+     never ask Sam to relay a report.** Registry row against
+     `LAW-seat-coordination`.
+   - **What that leaves Sam, and it should be only this:** decisions,
+     device testing, and things only he has (his partner's templates,
+     his Apple ID, his exports). **If a turn asks him for anything
+     else, that is the defect.**
+   **Write (3) into the era handoff as well as the registry** — it is a
+   seat law and the next seat inherits it, and it is the one most
+   likely to be quietly dropped because it makes the seat smaller.
+
+   **SEQUENCE:** (0) is one edit and lands now. (3) is free — it is a
+   practice, not a build. (2) before (1), because the chain tax is what
+   makes (1)'s feedback loop bearable. **Report the chain's new
+   per-change runtime as a number** — that number is the honest
+   measure of whether any of this worked.
+
+1. **THE THREE ANSWERS YOU ASKED FOR TWICE. THE SEAT GAVE THEM TO SAM
+   IN CHAT AND NEVER WROTE THEM HERE — that is the seat's miss, not
+   yours, and it is the second time today the seat has answered Sam
+   without recording it (the roadmap deletion was the first). Registry
+   row against `LAW-seat-coordination`: an answer given to Sam that
+   creates work is not delivered until it is in this file.**
+
+   **(a) COMMIT THE TWO EXPORTS. SAM SAID YES.**
+   `device-export-2026-08-10-sam-monday-wednesday.json` and
+   `device-export-2026-08-10-sam-coach-wed-to-mon-KEYEVENTS.json`.
+   They are the only real world in this repo and every claim about his
+   Monday gets tested against them. Track them.
+
+   **(b) BIN THE CORRUPT FILE. DO NOT SALVAGE IT.** Sam's call, and the
+   provenance is the seat's: `CORRUPT-partial-transfer-do-not-read.json`
+   is a failed base64 transfer FROM THE SEAT — 96 characters were lost
+   in the pipe, so it is not a truncated export, it is a corrupted one.
+   Everything usable from that export is already in the `-KEYEVENTS`
+   file. **Delete it; spend nothing on it.**
+
+   **(c) THE SIX LAWS — SAM RULED. FIVE GET RE-WORDED ONTO A REPO
+   SURFACE AND GUARDED:**
+   - `LAW-L4-device-is-arbiter` + `LAW-L10-phone-is-done` → **re-word
+     onto the DOC surface:** nothing may be written as done/working for
+     an athlete-visible behaviour without a device or simulator
+     receipt. That is a doc check and it is checkable today.
+   - `LAW-rule-dont-ask` → **any question put to Sam carries a receipt
+     that the Bible and ruling docs were searched first.** Inbox check.
+   - `LAW-plain-coach-english` → **it is APP WORDING, and wording
+     already has a register** (`signedCopy.ts`). A jargon list over
+     athlete-facing signed strings checks it.
+   - `LAW-commit-before-mutation-testing` → **git proves this one
+     outright.** No re-wording needed.
+   - `LAW-sam-chat-simplicity` → **THE GUARD IS SAM, NAMED.** Chat
+     never reaches the repo, so no script can ever see it; "held by
+     discipline" is the loophole he banned this morning. So the row
+     carries an explicit human guard — **Sam is the instrument, and
+     him having to pull the seat up on it IS the red.** Still two
+     states, not three: it is GUARDED, by a named guard that happens
+     to be a person. **Use this shape ONLY where the subject of the law
+     is the conversation itself** — it is not a general escape hatch,
+     and any other law reaching for it is a re-wording failure.
+
+2. **THE REPLAY YOU DID NOT ATTEMPT IS NOW THE TOP TECHNICAL ITEM, AND
+   SAYING SO PLAINLY WAS RIGHT.** Reporting "couldn't reproduce"
+   without trying would have been the false claim; you did not make it.
+   **Now do it:** rebuild his world from
+   `device-export-2026-08-10-sam-monday-wednesday.json` and replay
+   Monday→Wednesday, then Wednesday→Monday, and compare against what he
+   saw (only the strength travelled; the conditioning reappeared).
+   **If the rebuild cannot be made faithful, the finding is WHICH FIELD
+   the export lacks** — name it, and that becomes the export's next
+   field. Do not conclude anything about his case from a world you
+   could not build.
+
+3. **THE DAY-NAME LADDER IS THE BEST LEAD OF THE DAY — CLOSE THE ONE
+   THING YOU NAMED AS OPEN.** Two stale claims in one field: (i) the
+   ladder stops at `strength` so a Mixed day never names its
+   conditioning, and (ii) the name is stamped when the week is built
+   and never re-stamped on a move, so a moved session still calls
+   itself by its old day. **Both are real. What is unproven is whether
+   the DOOR READS that name** — you said it is carried, not that it is
+   consumed. **That single question decides whether this is Sam's
+   defect or a cosmetic staleness beside it.** Answer it before
+   proposing any fix, and answer it by running the door, not by reading
+   it — that is the lesson the inert slice already charged us for.
+
 1. **[TERMINAL, 2026-08-10 — DONE AS ORDERED, AND THE WIDENING SWEEP'S
    OWN SUSPECT IS REFUTED.** (`3d1e8d70`) The label is derived from the
    DOOR in one owner — `rules/athleteActionSourceLabel.ts`, reading the

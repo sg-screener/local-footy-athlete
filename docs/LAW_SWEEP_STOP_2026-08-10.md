@@ -51,9 +51,11 @@ fall.**
 
 1. **THE TEMPLATE FILES FROM HIS PARTNER — photos AND HTML.** His own step 1 (UI
    simplification of the Day, Week and Profile screens) cannot open without them.
-   MOCK-FIRST is 2-for-2 here; the templates are the direction doc, not an
-   inspiration. **Nothing in that phase should be designed until they are in the
-   repo.**
+   **CHECKED FIRST, so this is not a question the repo could already answer:**
+   `LAW-mock-first` (registry) and docs/DAY_FIRST_UI_DIRECTION_2026-08-01.md are
+   the standing rulings, and MOCK-FIRST is 2-for-2 here; the templates are the
+   direction doc, not an inspiration. **Verified: no template asset exists in the
+   repo**, so nothing in that phase should be designed until they are in it.
 2. **ONE LINE FOR `eas.json`** — Apple ID / App Store Connect app id.
    `submit.production.ios` is `{}`, verified.
 3. **~~THE ACCOUNTS DECISION.~~ ANSWERED BY SAM 2026-08-10: LOCAL-ONLY FOR v1.**

@@ -648,7 +648,252 @@ run('the orphan-flow debt only shrinks', () => {
     + 'were artefacts of a scan that read too little.');
 });
 
+// ── THE FOUR PROCESS LAWS SAM RE-WORDED HIMSELF (2026-08-10) ──────────────
+//
+// He was put the six laws no script could check, one per line, with a proposed
+// re-wording each — his own rule that an uncheckable law is a FINDING, never a
+// quiet UNENFORCED row. **He ruled all six**, and five of them land here or
+// beside them; the sixth (`LAW-sam-chat-simplicity`) he guarded with a named
+// person, because its subject is the conversation and no file will ever see it.
+//
+// A section rather than four scripts, per this suite's own opening argument:
+// 49 guards is 49 more things to maintain.
+
+/**
+ * L4 + L10, RE-WORDED BY SAM ONTO THE DOC SURFACE.
+ *
+ * His words: *nothing may be written as done/working for an athlete-visible
+ * behaviour without a device or simulator receipt.*
+ *
+ * The literal laws could not be mechanised — L4 says a CELL is not the arbiter,
+ * so no cell can be its judge, and L10 turns on an event outside the repo. What
+ * they PROTECT is checkable, and it is this: a claim reaching Sam that something
+ * works must either carry device evidence or say it has none.
+ *
+ * **`NOT ON GLASS` and `UNSEEN` count as passing, and that is the point.** The
+ * law is not "never claim anything unseen" — it is "never claim it SILENTLY".
+ */
+const DONE_WORDS = /\b(FIXED|DONE|IT NOW|NOW IT|WORKS|WORKING|LANDED|BUILT AND|SHIPPED)\b/i;
+const DEVICE_RECEIPT = /NOT ON GLASS|NOT SEEN|UNSEEN|OPEN-UNKNOWN|on glass|device pass|simulator|on (his|your) phone|npx expo run/i;
+
+/** Pure: Sam-facing blocks claiming something is done with no device word either way. */
+function doneClaimsWithNoDeviceWord(nowFile: string): string[] {
+  return nowFile
+    .split(/\n(?=- \*\*)/)
+    .filter((block) => block.slice(0, 40).includes('⚠'))
+    .filter((block) => DONE_WORDS.test(block))
+    .filter((block) => !DEVICE_RECEIPT.test(block))
+    .map((block) => block.trim().split('\n')[0].slice(0, 70));
+}
+
+run('no athlete-visible thing is called done without saying whether it was seen', () => {
+  const now = fs.readFileSync(path.join(repoRoot, 'docs', 'NOW.md'), 'utf8');
+  const claiming = now
+    .split(/\n(?=- \*\*)/)
+    .filter((b) => b.slice(0, 40).includes('⚠'))
+    .filter((b) => DONE_WORDS.test(b));
+  assert(claiming.length >= 1,
+    `no done-claiming Sam-facing block found in NOW.md — the scan is not reading it`);
+  const bare = doneClaimsWithNoDeviceWord(now);
+  assert(bare.length === 0,
+    `done/working claim(s) with no device word either way: ${bare.join(' | ')}. `
+    + 'Say NOT ON GLASS. The law is not "never claim it unseen", it is "never claim it silently".');
+});
+
+/**
+ * `LAW-rule-dont-ask`, RE-WORDED BY SAM: *any question put to Sam carries a
+ * receipt that the Bible and ruling docs were searched first.*
+ *
+ * The surface is the STOP reports' blocked-on-Sam sections, because that is
+ * where questions actually reach him. A blocking item citing nothing is a
+ * question that may already have an answer in the repo.
+ */
+const SAM_BLOCK_HEADING = /^##+ .*BLOCKED ON SAM.*$/im;
+const SEARCH_RECEIPT = /docs\/[A-Za-z0-9_.-]+|`[A-Za-z0-9_.-]+\.(ts|tsx|json|md)`|LAW-[a-z0-9-]+|:\d{3,4}\b|verified|checked|measured/i;
+
+/** Pure: blocked-on-Sam items with no evidence anything was searched first. */
+function samQuestionsWithNoSearchReceipt(doc: string): string[] {
+  const heading = doc.match(SAM_BLOCK_HEADING);
+  if (!heading) return [];
+  const after = doc.slice(doc.indexOf(heading[0]) + heading[0].length);
+  const section = after.split(/\n##+ /)[0];
+  return section
+    .split(/\n(?=\d+\. )/)
+    .map((item) => item.trim())
+    .filter((item) => /^\d+\. /.test(item))
+    .filter((item) => !SEARCH_RECEIPT.test(item))
+    .map((item) => item.split('\n')[0].slice(0, 70));
+}
+
+run('every question put to Sam shows what was searched first', () => {
+  const stops = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .filter((file) => /STOP/i.test(path.basename(file)))
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }))
+    .filter((doc) => SAM_BLOCK_HEADING.test(doc.text));
+  assert(stops.length >= 1, 'no STOP report with a blocked-on-Sam section — the scan is wrong');
+  const bare = stops.flatMap((doc) =>
+    samQuestionsWithNoSearchReceipt(doc.text).map((item) => `${path.basename(doc.file)}: ${item}`));
+  assert(bare.length === 0,
+    `question(s) put to Sam citing nothing that was checked first: ${bare.join(' | ')}. `
+    + 'If the laws answer it even partially, rule it and cite the law.');
+});
+
+/**
+ * `LAW-plain-coach-english`, AND SAM'S RE-WORDING IS BETTER THAN THE SEAT'S.
+ *
+ * The seat proposed checking NOW.md's prose. He said: *"it is APP WORDING, and
+ * wording already has a register"* — `signedCopy.ts`. Every word the athlete
+ * reads already passes one door; this makes that door refuse engineering
+ * vocabulary, which is both narrower and exactly right.
+ */
+const JARGON = /\b(planEntryId|microcycle|overlay|canonical\w*|gateway|invariant|hydrat\w*|powerBlock|exposureContract|subphase|null|undefined|payload|serialis\w*|envelope|projection|L-[A-Z]\d)\b/i;
+
+/** Pure: signed athlete-facing strings carrying engineering vocabulary. */
+function signedStringsWithJargon(
+  entries: readonly { readonly id: string; readonly text: string }[],
+): string[] {
+  return entries
+    .filter((entry) => JARGON.test(entry.text))
+    .map((entry) => `${entry.id}: "${entry.text.slice(0, 50)}"`);
+}
+
+run('no word the athlete reads is engineering vocabulary', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { signedCopyEntries } = require('../rules/signedCopy') as {
+    signedCopyEntries: () => readonly { id: string; text: string }[];
+  };
+  // The sheet is populated by the modules that register into it, so importing
+  // them is what makes this cell non-vacuous. A sheet read before its
+  // registrars load is an empty sheet and a vacuous green.
+  require('../rules/unreadableWorldReset');
+  require('../rules/teamNightSize');
+  require('../rules/coachTabCopy');
+  require('../rules/projectionCopy');
+  const entries = signedCopyEntries();
+  assert(entries.length >= 5, `only ${entries.length} signed entries loaded — the sheet is not populated`);
+  const jargon = signedStringsWithJargon(entries);
+  assert(jargon.length === 0,
+    `athlete-facing signed string(s) carrying engineering words: ${jargon.join(' | ')}. `
+    + '"L-P6 invariant" says nothing he can act on.');
+});
+
+/**
+ * `LAW-commit-before-mutation-testing` — GUARDED WITHOUT RE-WORDING.
+ *
+ * Sam: *"git proves this one outright."*
+ *
+ * **WHAT THIS CELL HOLDS, EXACTLY:** no committed script, tape or tool in this
+ * repo reverts a file with `git checkout --` or `git stash` — the two
+ * mechanisms whose founding case lost an hour of unrelated wiring twice in one
+ * session on 2026-07-28, because both take every other edit in the file with
+ * them.
+ *
+ * **WHAT IT DOES NOT HOLD:** a human typing either at a prompt. That half stays
+ * loud rather than checked, and saying so here is the difference between a
+ * guard and a guard that reads wider than it is.
+ */
+const DESTRUCTIVE_REVERT = /git\s+(checkout\s+--|stash\b)/;
+
+/**
+ * A MENTION IS NOT A USE — and this cell's FIRST RUN flagged the two files that
+ * DEFINE the law, because both spell the forbidden command out in prose.
+ *
+ * **THE FIRST FIX WAS WRONG TOO AND ITS OWN LIVENESS PROBE CAUGHT IT.** Stripping
+ * every string literal made the TypeScript scan blind by construction: in a `.ts`
+ * file a shell command is ALWAYS inside a string, so "strip the strings" removes
+ * exactly the uses this cell exists to find. It would have gone green and read
+ * nothing.
+ *
+ * So the discriminator is not comment-vs-code, it is **EXECUTION**: in TS/JS the
+ * command counts only where it is being HANDED TO A SHELL. In a `.sh` file every
+ * line is execution, so any occurrence counts.
+ */
+const EXECUTED_DESTRUCTIVE_REVERT =
+  /\b(execSync|execFileSync|exec|spawnSync|spawn|\$)\s*\(\s*[`'"][^`'"]*git\s+(checkout\s+--|stash\b)/;
+
+/** Pure: committed tooling that reverts by a mechanism which eats neighbours. */
+function toolingThatRevertsDestructively(
+  files: readonly { readonly file: string; readonly text: string }[],
+): string[] {
+  return files
+    .filter((entry) => (/\.(ts|tsx|js)$/.test(entry.file)
+      ? EXECUTED_DESTRUCTIVE_REVERT.test(entry.text)
+      : DESTRUCTIVE_REVERT.test(entry.text.replace(/^\s*#.*$/gm, ' '))))
+    .map((entry) => path.relative(repoRoot, entry.file));
+}
+
+run('no committed tool reverts a file by a mechanism that eats its neighbours', () => {
+  // THIS FILE IS EXCLUDED FROM ITS OWN SCAN, and it is the only exclusion.
+  // Its liveness probes below hand the checker `execSync("git stash")` as a
+  // FIXTURE, which is indistinguishable from a use by any reader that does not
+  // know it is reading a test of itself. Excluding one named file is honest;
+  // widening the pattern until the fixture slips through would blind the cell
+  // for every other file too — `a fixture is a claim too`, from the other side.
+  const selfExclusion = path.join(repoRoot, 'src', '__tests__', 'repoLawGuardsTests.ts');
+  const walked = [
+    ...filesUnder(path.join(repoRoot, 'scripts'), ['.sh', '.js', '.ts']),
+    ...filesUnder(path.join(repoRoot, 'src'), ['.ts', '.tsx']),
+  ];
+  assert(walked.includes(selfExclusion), 'the self-exclusion names a file the walk does not reach');
+  const scanned = walked
+    .filter((file) => file !== selfExclusion)
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  assert(scanned.length > 50, `only ${scanned.length} files scanned — the walk is wrong`);
+  const destructive = toolingThatRevertsDestructively(scanned);
+  assert(destructive.length === 0,
+    `tool(s) reverting with git checkout --/stash: ${destructive.join(', ')}. `
+    + 'Copy the file back from the scratchpad instead — both of these take every '
+    + 'unrelated edit in the file with them, twice in one session on 2026-07-28.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the four Sam re-worded, probed BOTH directions ──
+  assert(doneClaimsWithNoDeviceWord('- **⚠ SAM: IT WORKS NOW.** trust me\n').length === 1,
+    'a done-claim with no device word passed');
+  assert(doneClaimsWithNoDeviceWord('- **⚠ SAM: IT WORKS NOW.** NOT ON GLASS yet\n').length === 0,
+    'an honestly-unseen claim was flagged — the law is about silence, not caution');
+
+  assert(samQuestionsWithNoSearchReceipt(
+    '## WHAT IS BLOCKED ON SAM\n\n1. **Which colour?** your call\n').length === 1,
+    'a question to Sam citing nothing passed');
+  assert(samQuestionsWithNoSearchReceipt(
+    '## WHAT IS BLOCKED ON SAM\n\n1. **Which colour?** docs/RULING.md says nothing\n').length === 0,
+    'a question that cites what it searched was flagged');
+
+  assert(signedStringsWithJargon([{ id: 'x', text: 'Your microcycle is ready' }]).length === 1,
+    'an athlete-facing string carrying engineering vocabulary passed');
+  assert(signedStringsWithJargon([{ id: 'x', text: 'Your week is ready' }]).length === 0,
+    'plain coach English was flagged as jargon');
+
+  assert(toolingThatRevertsDestructively(
+    [{ file: '/x/a.sh', text: 'git checkout -- src/a.ts' }]).length === 1,
+    'a destructive revert in committed tooling passed');
+  assert(toolingThatRevertsDestructively(
+    [{ file: '/x/a.sh', text: 'git checkout main' }]).length === 0,
+    'an ordinary branch checkout was flagged as a destructive revert');
+  // THE FIRST-RUN FALSE POSITIVE, PINNED. This cell flagged the two files that
+  // DEFINE the law because both spell the command out in prose.
+  assert(toolingThatRevertsDestructively(
+    [{ file: '/x/a.ts', text: '// never use git stash here\nconst x = 1;' }]).length === 0,
+    'a COMMENT naming the forbidden command was read as a use of it');
+  assert(toolingThatRevertsDestructively(
+    [{ file: '/x/a.ts', text: 'const doc = "reverting with git stash loses edits";' }]).length === 0,
+    'a PROSE STRING naming the forbidden command was read as a use of it');
+  // AND THE OPPOSITE FAULT, which the first fix walked straight into: in a .ts
+  // file the command is ALWAYS inside a string, so a scan that strips strings
+  // is blind by construction and goes green having read nothing.
+  assert(toolingThatRevertsDestructively(
+    [{ file: '/x/a.ts', text: 'execSync("git stash");' }]).length === 1,
+    'a REAL execution was missed — the scan strips the only place a command can live');
+  assert(toolingThatRevertsDestructively(
+    [{ file: '/x/a.ts', text: 'execSync(`git checkout -- src/a.ts`);' }]).length === 1,
+    'a real execution in a template literal escaped the scan');
+  // A shell file is execution end to end, but its COMMENTS are still prose.
+  assert(toolingThatRevertsDestructively(
+    [{ file: '/x/a.sh', text: '# do not git stash here\necho ok' }]).length === 0,
+    'a shell COMMENT naming the command was read as a use of it');
+
+
   // A GREEN GATE IS A CLAIM. Each checker is fed something it must catch; if the
   // reads above were reduced to no-ops, every cell would still pass.
   const fakeKey = ['s', 'k-'].join('') + 'A'.repeat(40);

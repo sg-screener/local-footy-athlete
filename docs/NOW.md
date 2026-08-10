@@ -19,9 +19,10 @@
   name, picked off a ladder — team, then strength, then conditioning. **A day
   with both stops at "strength" and the conditioning is never named.** Every
   test world we build has only one of the two, so the ladder's order has never
-  been visible. Yours has both. docs/PLAN_ENTRY_IDENTITY_MEASURED_2026-08-10.md
-  **NOT YET PROVEN TO BE YOUR DEFECT** — it explains the NAME, and what the door
-  does with that name is the next read. Your case stays open.
+  been visible. Yours has both. `3d1e8d70` ·
+  docs/PLAN_ENTRY_IDENTITY_MEASURED_2026-08-10.md
+  **NOT YET PROVEN TO BE YOUR DEFECT — OPEN-UNKNOWN.** It explains the NAME;
+  whether the door READS that name has been read, never run. **NOT ON GLASS.**
 
 - **✅ THE CLEAN-RESET DOOR IS BUILT AND THE CRASHING MIGRATION IS DELETED**
   (`a0c0cabd`). Saved training the app can no longer read now **starts fresh and
@@ -42,7 +43,8 @@
   **BUT IT IS NOT FULLY GONE:** the same old check still runs in three other places
   with no guard on it, so the undercount can still reach a current week. That is
   measured as open, not claimed as fixed. Full sweep before and after the cut: the
-  same four reds, so nothing else moved. `2ec4d49b` ·
+  same four reds, so nothing else moved. **NOT ON GLASS — this is a test result,
+  not something you have seen on your phone.** `2ec4d49b` ·
   docs/V1_EXPOSURE_CONTRACT_CUT_2026-08-10.md · green after the cut:
   `test:section18-gateway`, `test:exposure-contract-equality`,
   `test:bible-anchors`, `test:stage-b-generation-differential`.
@@ -191,7 +193,8 @@ the same thing in different words; the fuller one survives.)*
   visible week."*** One missing argument, fixed. What the tape says now: the two
   moves produce a **byte-identical** week, a byte-identical ledger entry, the
   same week after a relaunch, and Undo unwinds the coach's move and it stays
-  unwound. `npm run tape:coach-move-durability` ·
+  unwound. **NOT ON GLASS — measured in a tape, never tapped on a device.**
+  `npm run tape:coach-move-durability` ·
   docs/COACH_MOVE_DURABILITY_BOUNDARY_2026-08-10.md
 
 - **⚠ SAM: YOUR MULTI-SESSION CATCH — I COULD NOT REPRODUCE WHAT YOU SAW, AND I
@@ -226,7 +229,8 @@ the same thing in different words; the fuller one survives.)*
     NOT-COVERED the boundary wrote about itself: *"a real `project()` over a worn
     athlete may hold day shapes these fixtures do not."* Next instrument: re-run
     the section over a **GENERATED** week and diff a generated gym+conditioning
-    Monday against the hand-built one field by field.
+    Monday against the hand-built one field by field. **NOT ON GLASS — every
+    line above is a tape result; nothing here has been seen on your phone.**
 
 - **⚠ SAM: WHAT THE COACH TAB DOES, WITH WHAT HOLDS EACH CLAIM.** Every line
   below is either pinned by a named cell or marked **OPEN-UNKNOWN** — the new
