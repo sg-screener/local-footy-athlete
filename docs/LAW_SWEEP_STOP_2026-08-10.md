@@ -9,6 +9,25 @@ and this document is it.
 
 Twenty-two commits, 2026-08-10. **The chain is red by design and stays red.**
 
+## WHAT CHANGED AFTER THIS REPORT WAS FIRST WRITTEN
+
+**The hook that enforces this stop did not implement the exit it was offering.** Its
+block text has always ended *"...or a genuine STOP report is committed"* and
+**nothing ever looked for one** — so the first version of this report was committed
+and the hook blocked anyway. Fixed (`4bb9b2e0`): HEAD's subject must begin
+`docs(stop):`. **Sighting 2 of `reason-text-promises-a-mechanism-the-logic-lacks`,
+both in that same file** — the first was the `^1\.` numbering artefact.
+**COMPRESSION: whatever a gate says in its own failure text is a CLAIM, and a claim
+needs a cell.** Mutations both ways: removing the exit reds 1 cell, widening it to
+any commit reds 3.
+
+**And a commit message of mine claimed an AGENTS.md edit that had not applied**
+(`4bb9b2e0` → corrected in the open at `39c45afd`). No gate reads commit messages;
+that is named here as a gap, not proposed as the next build. **It is the day's own
+failure mode, committed by the author of the mechanism meant to catch it.**
+
+**None of the blockers below moved.**
+
 ## THE NUMBER
 
 | | |
