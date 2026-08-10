@@ -1545,7 +1545,13 @@ run('a partly-blocked set disables only the blocked part', () => {
 // two things — so what IS checkable is that the class keeps being counted. Five
 // sightings in one day is what made it a law; a sixth must not be absorbed
 // silently.
-const TWO_MEANING_SIGHTINGS = 5;
+//
+// RAISED TO 7 (2026-08-10): sighting 7 is `useHomeScreen` meaning both "the day
+// screen's state" and "the app's rebuild owner". It is the first sighting where
+// the law was applied BEFORE the code moved rather than found afterwards, and
+// the measurement paid — the two paths driving the rebuild notice turned out to
+// drive the same four pieces of state.
+const TWO_MEANING_SIGHTINGS = 7;
 
 run('the two-meanings class keeps counting its sightings', () => {
   const registry = fs.readFileSync(

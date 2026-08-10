@@ -1,8 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Animated, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useStaleOverrides } from '../../hooks/useStaleOverrides';
+import { useRebuildNotice } from '../../hooks/useRebuildNotice';
+import {
+  beginRebuildNotice,
+  endRebuildNotice,
+  setRebuildNoticeError,
+  clearRebuildNoticeError,
+} from '../../store/rebuildNoticeStore';
 import { getCurrentBlockNumberForGeneration, useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
@@ -61,8 +68,6 @@ import {
   WEEK_DAYS,
   DAY_NUM_TO_NAME,
   NEXT_PHASE,
-  REBUILD_MESSAGES,
-  REBUILD_MSG_INTERVAL_MS,
   type PhaseShiftStep,
   type InteractionMode,
 } from './homeScreenConstants';
@@ -233,13 +238,17 @@ export function useHomeScreen() {
   } | null>(null);
   // ── Rebuild state ──
   const [rebuildModalVisible, setRebuildModalVisible] = useState(false);
-  const [isRebuilding, setIsRebuilding] = useState(false);
-  // rebuildError holds the USER-FACING copy only. Raw HTML / server payloads
-  // are never assigned here — see classifyRebuildFailure() below.
-  const [rebuildError, setRebuildError] = useState<string | null>(null);
-  const [rebuildErrorCanRetry, setRebuildErrorCanRetry] = useState(true);
-  const [rebuildMsgIdx, setRebuildMsgIdx] = useState(0);
-  const rebuildMsgOpacity = useRef(new Animated.Value(1)).current;
+  // THE REBUILD NOTICE IS NOT THIS SCREEN'S STATE. A rebuild is one event in
+  // the athlete's world, so `store/rebuildNoticeStore.ts` owns it and every
+  // surface reads the same truth through this hook. This screen renders those
+  // values by the same names it always did — see docs/REBUILD_NOTICE_OWNERSHIP.
+  const {
+    isRebuilding,
+    rebuildMsgIdx,
+    rebuildMsgOpacity,
+    rebuildError,
+    rebuildErrorCanRetry,
+  } = useRebuildNotice();
   const rolloverAttemptRef = useRef<string | null>(null);
   // THE ROLLOVER IS NEVER SILENT (Sam's interim ruling, 2026-07-31). A failed
   // rollover used to be caught and logged here, leaving the athlete a program
@@ -634,14 +643,11 @@ export function useHomeScreen() {
   // ───────── Error helpers ─────────
 
   /**
-   * Clear error state. Always resets `canRetry` back to the default (true)
-   * so a stale `canRetry=false` from a previous run can't suppress the
-   * rebuild button the next time the modal is opened.
+   * Clear error state. The rule (reset `canRetry` to true so a stale
+   * `canRetry=false` can't suppress the rebuild button next time) moved to the
+   * notice's owner with the state itself; this is the local name for it.
    */
-  const clearRebuildError = () => {
-    setRebuildError(null);
-    setRebuildErrorCanRetry(true);
-  };
+  const clearRebuildError = clearRebuildNoticeError;
 
   /**
    * Safe user-facing copy + retryability for a failed rebuild.
@@ -714,10 +720,7 @@ export function useHomeScreen() {
   };
 
   const handleConfirmRebuild = async () => {
-    setRebuildMsgIdx(0);
-    rebuildMsgOpacity.setValue(1);
-    setIsRebuilding(true);
-    clearRebuildError();
+    beginRebuildNotice();
     try {
       await runRebuild();
       setRebuildModalVisible(false);
@@ -725,10 +728,9 @@ export function useHomeScreen() {
       // Log diagnostic payload to dev console — UI only ever sees safe copy.
       logger.error('[Rebuild] failed:', err?.diagnostic || err?.message || err);
       const { userMessage, canRetry } = classifyRebuildFailure(err);
-      setRebuildError(userMessage);
-      setRebuildErrorCanRetry(canRetry);
+      setRebuildNoticeError(userMessage, canRetry);
     } finally {
-      setIsRebuilding(false);
+      endRebuildNotice();
     }
   };
 
@@ -883,11 +885,8 @@ export function useHomeScreen() {
   };
 
   const executePhaseShift = async () => {
-    setRebuildMsgIdx(0);
-    rebuildMsgOpacity.setValue(1);
+    beginRebuildNotice();
     setPhaseShiftStep('building');
-    setIsRebuilding(true);
-    clearRebuildError();
     // Fall back to the step the user was on so they can act on a refusal.
     // Off-season's last interactive step is `availability`; Pre-season's is
     // `teamDays`; In-season's is `gameDay`. Matches the forward-path terminal.
@@ -932,8 +931,7 @@ export function useHomeScreen() {
       if (!result.ok) {
         const refusal = classifyProgramMutationRefusal({ reason: result.reason });
         logger.error('[PhaseShift] refused:', refusal.diagnostic ?? result.message);
-        setRebuildError(refusal.userMessage);
-        setRebuildErrorCanRetry(refusal.canRetry);
+        setRebuildNoticeError(refusal.userMessage, refusal.canRetry);
         setPhaseShiftStep(interactiveStep);
         return;
       }
@@ -941,8 +939,7 @@ export function useHomeScreen() {
         // A shift that changed nothing is an outcome the athlete is told
         // about, not a silent close that looks like success.
         const outcome = classifyProgramMutationRefusal({ reason: result.reason });
-        setRebuildError(outcome.userMessage);
-        setRebuildErrorCanRetry(outcome.canRetry);
+        setRebuildNoticeError(outcome.userMessage, outcome.canRetry);
         setPhaseShiftStep(interactiveStep);
         return;
       }
@@ -951,11 +948,10 @@ export function useHomeScreen() {
     } catch (err: any) {
       logger.error('[PhaseShift] failed:', err?.diagnostic || err?.message || err);
       const refusal = classifyProgramMutationRefusal({ error: err });
-      setRebuildError(refusal.userMessage);
-      setRebuildErrorCanRetry(refusal.canRetry);
+      setRebuildNoticeError(refusal.userMessage, refusal.canRetry);
       setPhaseShiftStep(interactiveStep);
     } finally {
-      setIsRebuilding(false);
+      endRebuildNotice();
     }
   };
 
@@ -1127,26 +1123,9 @@ export function useHomeScreen() {
   };
 
   // ───────── Rotating coach messages while rebuilding ─────────
-  useEffect(() => {
-    if (!isRebuilding) return;
-
-    const interval = setInterval(() => {
-      Animated.timing(rebuildMsgOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start(() => {
-        setRebuildMsgIdx((prev) => (prev + 1) % REBUILD_MESSAGES.length);
-        Animated.timing(rebuildMsgOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-      });
-    }, REBUILD_MSG_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [isRebuilding, rebuildMsgOpacity]);
+  // THE TICKER MOVED TO THE NOTICE'S OWNER. It used to live here as an effect,
+  // which meant a second screen mounting a rebuild reader would run a second
+  // interval and rotate the messages at double speed. One rebuild, one ticker.
 
   // ───────── Week navigation ─────────
 
@@ -1324,23 +1303,19 @@ export function useHomeScreen() {
     }
     if (!result.requiresRebuild) return;
 
-    setRebuildMsgIdx(0);
-    rebuildMsgOpacity.setValue(1);
+    beginRebuildNotice();
     setRebuildModalVisible(true);
-    setIsRebuilding(true);
-    clearRebuildError();
     try {
       await runRebuild();
       setRebuildModalVisible(false);
     } catch (err: any) {
       logger.error('[CoachNotes] rebuild after clear failed:', err?.diagnostic || err?.message || err);
       const { userMessage, canRetry } = classifyRebuildFailure(err);
-      setRebuildError(userMessage);
-      setRebuildErrorCanRetry(canRetry);
+      setRebuildNoticeError(userMessage, canRetry);
     } finally {
-      setIsRebuilding(false);
+      endRebuildNotice();
     }
-  }, [rebuildMsgOpacity, runRebuild]);
+  }, [runRebuild]);
 
   const registerSourceFactRenderObservation = useCallback((args: {
     result: ProgramControlActionResult;
