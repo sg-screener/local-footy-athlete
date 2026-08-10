@@ -58,3 +58,10 @@ tags:
     timeout: 15000
 - assertNotVisible:
     id: "day-timeline-part-strength"
+
+# LAW-flows-photograph-what-they-touch: a flow proves PRESENCE, and every
+# layout defect is a question about WHERE, which no id can carry. Two real
+# ones shipped past green flows on 2026-08-10 — a control rendered over the
+# battery icon, and a title that swamped the screen. The picture is the
+# instrument; this is the state this flow ends on.
+- takeScreenshot: artifacts/ui-walk/lower-body-deletion-end

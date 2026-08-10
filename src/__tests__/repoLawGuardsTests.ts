@@ -1377,7 +1377,154 @@ run('a refused development launch can never render as a blank screen', () => {
     + 'in one day. A refusal says what refused and offers the way out.');
 });
 
+// ── A FLOW PROVES PRESENCE, NEVER LAYOUT ────────────────────────────────────
+//
+// `LAW-flows-photograph-what-they-touch`. TWO FOUNDING CASES IN ONE PASS, both
+// shipped past a GREEN flow: the coach status screen's close control rendered ON
+// the status bar over the battery icon, and its title rendered at front-page
+// size, swamping the one card beneath it.
+//
+// **THAT IS NOT A GAP IN THE ASSERTIONS. It is the honest limit of the
+// instrument:** `assertVisible` answers *is this in the tree*, and every layout
+// defect is a question about WHERE, which no id can carry. So the answer is not
+// a cleverer assertion — it is that **the screenshots are load-bearing**, and the
+// only thing a script can enforce is that they EXIST to be looked at.
+const GOLDEN_FLOW_DIR = '.maestro/golden';
+
+/** Pure: golden flows that visit surfaces and photograph none of them. */
+function flowsThatPhotographNothing(
+  flows: readonly { readonly file: string; readonly text: string }[],
+): string[] {
+  return flows
+    // A flow that only asserts and never navigates has one surface; the law is
+    // about flows that MOVE and leave no picture of where they went.
+    .filter((flow) => /(^|\n)\s*-\s*(tapOn|launchApp|runFlow)\b/.test(flow.text))
+    .filter((flow) => !/takeScreenshot/.test(flow.text))
+    .map((flow) => flow.file);
+}
+
+/**
+ * FLOWS THAT LEGITIMATELY TAKE NO PICTURE, each with its reason.
+ *
+ * A dated, named list rather than a loosened rule — the same ratchet every other
+ * debt here carries. Nothing joins it without a sentence saying why a photograph
+ * would be meaningless for that flow.
+ */
+const NO_SCREENSHOT_EXEMPT: readonly string[] = [];
+
+run('a golden flow photographs the surfaces it reaches', () => {
+  const dir = path.join(repoRoot, GOLDEN_FLOW_DIR);
+  assert(fs.existsSync(dir), `${GOLDEN_FLOW_DIR} is gone — this gate reads nothing`);
+  const flows = fs.readdirSync(dir)
+    .filter((name) => name.endsWith('.yaml'))
+    .map((name) => ({
+      file: `${GOLDEN_FLOW_DIR}/${name}`,
+      text: fs.readFileSync(path.join(dir, name), 'utf8'),
+    }));
+  assert(flows.length >= 5, `only ${flows.length} golden flows scanned — the walk is wrong`);
+  const blind = flowsThatPhotographNothing(flows)
+    .filter((file) => !NO_SCREENSHOT_EXEMPT.includes(file));
+  assert(blind.length === 0,
+    `golden flow(s) that navigate and photograph nothing: ${blind.join(', ')}. `
+    + 'A flow proves PRESENCE; every layout defect is a question about WHERE, '
+    + 'which no id can carry. Two real ones shipped past green flows on '
+    + '2026-08-10 — a control over the battery icon and a title swamping the '
+    + 'screen. The screenshots are the instrument; take one.');
+});
+
+// ── AN INSTRUMENT THAT HAS NOT RUN IS NOT COVERAGE ──────────────────────────
+//
+// `LAW-instrumentation-alive`, and this is the cell that finally lets the row
+// leave UNENFORCED. Its founding case: **eight Maestro flows crashed on launch
+// for 23 DAYS** and every source-reading cell in the chain stayed green through
+// it, because there is nothing wrong with a flow that does not run.
+//
+// **NO SOURCE SCAN CAN CATCH THAT.** The only evidence a flow ran is a record
+// that it ran — so the guard is a RECEIPT with a staleness ratchet. Seven days,
+// because the founding case was 23: the alarm fires three times over before that
+// number is reachable again.
+//
+// WHAT IT CANNOT DO, STATED NOT IMPLIED: it cannot prove the receipt is honest.
+// A row edited without a run defeats it, exactly as a LOOP CHECK line can be
+// typed without the thinking. **That is the same trust every process law here
+// runs on**, and the alternative — enforcing nothing — is what left 23 days
+// invisible.
+const RUN_RECEIPT = 'docs/GOLDEN_FLOW_RUN_RECEIPT.md';
+const RUN_STALE_DAYS = 7;
+
+/** Pure: golden flows absent from the receipt, plus the newest date it records. */
+function runReceiptFaults(
+  receipt: string,
+  flowFiles: readonly string[],
+  todayISO: string,
+): string[] {
+  const faults: string[] = [];
+  for (const flow of flowFiles) {
+    if (!receipt.includes(`\`${flow}\``)) {
+      faults.push(`${flow} is not in the run receipt`);
+    }
+  }
+  const dates = Array.from(receipt.matchAll(/\b(\d{4}-\d{2}-\d{2})\b/g))
+    .map((m) => m[1])
+    .filter((d) => d <= todayISO)
+    .sort();
+  const newest = dates[dates.length - 1];
+  if (!newest) {
+    faults.push('the run receipt records no run date at all');
+    return faults;
+  }
+  const ageDays = Math.floor(
+    (Date.parse(`${todayISO}T00:00:00Z`) - Date.parse(`${newest}T00:00:00Z`)) / 86_400_000);
+  if (ageDays > RUN_STALE_DAYS) {
+    faults.push(`the newest recorded run is ${ageDays} days old (${newest}); `
+      + `the founding case was 23 days of a dead rig`);
+  }
+  return faults;
+}
+
+run('the golden flows have actually been run, and recently', () => {
+  const full = path.join(repoRoot, RUN_RECEIPT);
+  assert(fs.existsSync(full), `${RUN_RECEIPT} is gone — the only evidence a flow ran`);
+  const receipt = fs.readFileSync(full, 'utf8');
+  const flows = fs.readdirSync(path.join(repoRoot, GOLDEN_FLOW_DIR))
+    .filter((name) => name.endsWith('.yaml'));
+  assert(flows.length >= 5, `only ${flows.length} golden flows found — the walk is wrong`);
+  // `todayISO` from the clock, which is the ONE thing this cell needs from the
+  // outside; everything else is a pure function of two files.
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const faults = runReceiptFaults(receipt, flows, todayISO);
+  assert(faults.length === 0,
+    `${RUN_RECEIPT}: ${faults.join('; ')}. A blocked instrument does not hide `
+    + 'zero defects — it hides an unknown number, and nine were found in two '
+    + 'days once the rig ran.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the run receipt, probed BOTH directions ──
+  const OK_RECEIPT = '| `a.yaml` | 2026-08-10 | PASS |';
+  assert(runReceiptFaults(OK_RECEIPT, ['a.yaml'], '2026-08-11').length === 0,
+    'a receipt naming the flow with a fresh date was flagged');
+  assert(runReceiptFaults(OK_RECEIPT, ['a.yaml', 'b.yaml'], '2026-08-11')
+    .some((f) => /b\.yaml is not in the run receipt/.test(f)),
+    'a flow missing from the receipt passed — a new flow could ship unrun');
+  assert(runReceiptFaults(OK_RECEIPT, ['a.yaml'], '2026-09-02')
+    .some((f) => /23 days old/.test(f)),
+    'a 23-day-old receipt passed — that is the founding case exactly');
+  assert(runReceiptFaults('no dates here', ['a.yaml'], '2026-08-11')
+    .some((f) => /no run date at all/.test(f)),
+    'a receipt with no date at all passed');
+
+  // ── the photograph rule, probed BOTH directions ──
+  assert(flowsThatPhotographNothing([
+    { file: 'a.yaml', text: '- tapOn:\n    id: "x"\n- assertVisible:\n    id: "y"\n' },
+  ]).length === 1, 'a flow that navigates and photographs nothing passed');
+  assert(flowsThatPhotographNothing([
+    { file: 'a.yaml', text: '- tapOn:\n    id: "x"\n- takeScreenshot: shot\n' },
+  ]).length === 0, 'a flow that does photograph was flagged');
+  assert(flowsThatPhotographNothing([
+    { file: 'a.yaml', text: '- assertVisible:\n    id: "y"\n' },
+  ]).length === 0, 'a flow that never moves was required to photograph');
+
   // ── the blank-screen ban, probed BOTH directions ──
   const GOOD_BOOT = 'prepareDevE2EAppLaunch().then(({ ready, reason }) => {})\n'
     + 'dev-launch-refused dev-launch-refused-reason dev-launch-refused-clear';

@@ -687,10 +687,29 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
     });
   }
   if (seedId === 'equipment-restriction-case') {
+    // `'Bodyweight Only'`, NOT `'bodyweight'` — AND THAT IS THE SAME DEFECT AS
+    // THE MISSING 2KM TIME, ONE FIELD OVER.
+    //
+    // MEASURED 2026-08-10: this seed threw
+    // `I still need to know what equipment you can train with before I can build
+    // your program.` on every build. `'bodyweight'` is a TAG the resolver emits,
+    // not an OPTION the athlete can pick: `tagsForChecklistOption` recognises
+    // nothing, `recognized === 0`, and the source resolves to
+    // `unanswered_floor` — so the generator refuses, correctly, exactly as it
+    // would refuse a real person who skipped the equipment step.
+    //
+    // **THE SEED WAS ANSWERING IN A VOCABULARY THE APP DOES NOT ACCEPT.** The
+    // app's own checklist word is `'Bodyweight Only'`
+    // (`CURRENT_CHECKLIST_OPTION_TAGS`), and it maps to the same
+    // `['bodyweight']` tag the witness below asserts — so the WITNESS was right
+    // all along and the ANSWER was wrong.
+    //
+    // Recorded rather than quietly corrected because it is the second instance
+    // of the class Sam warned about: a practice athlete the app would refuse.
     return fixedProfile({
       trainingLocation: 'Outdoor',
       equipmentSelectionCompleteness: 'complete',
-      equipment: ['bodyweight'],
+      equipment: ['Bodyweight Only'],
     });
   }
   return fixedProfile();
@@ -848,7 +867,13 @@ export function witnessesForDevE2ESeed(
     case 'equipment-restriction-case':
       witnesses.push({
         kind: 'profile_equipment',
-        equipment: ['bodyweight'],
+        // THE ANSWER THE ATHLETE GAVE, in the app's own checklist vocabulary —
+        // see the profile above. This witness compares the profile's raw
+        // `equipment` array, so it must hold the OPTION (`'Bodyweight Only'`),
+        // not the TAG (`'bodyweight'`) the resolver derives from it. Holding the
+        // tag here is what let a seed answering in a made-up vocabulary look
+        // declared-and-correct.
+        equipment: ['Bodyweight Only'],
         completeness: 'complete',
       });
       witnesses.push({

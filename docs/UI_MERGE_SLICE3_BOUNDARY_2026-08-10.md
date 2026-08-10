@@ -242,3 +242,77 @@ Said plainly rather than left to be inferred:
 
 **THE STOPPING REASON IS CONTEXT, NOT JUDGEMENT.** Each remaining order is a real
 unit and none is blocked on Sam.
+
+---
+
+# ADDENDUM 3 — ORDERS 6, 7 AND HALF OF 3
+
+## ORDER 7 — THE LAYOUT-BLINDNESS FINDING IS NOW A LAW, AND IT PAID ON ITS FIRST RUN
+
+`LAW-flows-photograph-what-they-touch`, BORN GUARDED. **The answer to "what would
+catch that class" is: only an eye — so the screenshots are load-bearing, and the
+one thing a script CAN enforce is that they exist to be looked at.**
+
+**ITS FIRST RUN FOUND SIX BLIND FLOWS**: `dev-launch-refusal-speaks`,
+`explorer-all-nine`, `fixture-move`, `lower-body-deletion`, `one-set-feedback`,
+`reload-standard-week` — every one of them navigating and photographing nothing.
+**Paid, not exempted**: each now takes a shot of the state it ends on, and the
+refusal flow photographs the refusal screen itself, which is the entire thing it
+exists to prove.
+
+## ORDER 6 — `LAW-instrumentation-alive` IS OUT OF UNENFORCED. 35 → 34.
+
+**The row could not be guarded until the rig actually ran, which is the law
+describing its own history.** What enforces it is
+`docs/GOLDEN_FLOW_RUN_RECEIPT.md` plus a cell that reds when a golden flow is
+missing from the table **or the newest recorded run is more than 7 days old** —
+seven because the founding case was **23**, so the alarm fires three times over
+before that number is reachable again.
+
+**THE RECEIPT CARRIES `NOT RUN` ROWS ON PURPOSE. FIVE OF TEN FLOWS HAVE RUN**, and
+a receipt recording only successes would make the rig look alive while half of it
+was dark — precisely this law's failure mode.
+
+**WHAT IT CANNOT DO, STATED:** it cannot prove the receipt is honest. A row edited
+without a run defeats it, exactly as a LOOP CHECK line can be typed without the
+thinking. Same trust every process law here runs on; the alternative left 23 days
+invisible.
+
+## ORDER 3 — ANSWERED, AND IT FOUND A SECOND IMPOSSIBLE ATHLETE
+
+**Every suite that consumes the seed registry was run. 14 suites: 10 GREEN, 4
+RED.** And the first red is the order's own question answered with a new instance
+of the same class:
+
+> `ProgramGenError: I still need to know what equipment you can train with
+> before I can build your program.`
+
+**`equipment-restriction-case` ANSWERED IN A VOCABULARY THE APP DOES NOT ACCEPT.**
+Its profile said `equipment: ['bodyweight']` — but `'bodyweight'` is a TAG the
+resolver EMITS, not an OPTION an athlete can pick. `tagsForChecklistOption`
+recognised nothing, `recognized === 0`, the source resolved to `unanswered_floor`,
+and the generator refused **correctly — exactly as it would refuse a real person
+who skipped the equipment step.** The app's own word is `'Bodyweight Only'`.
+
+**FIXED, IN BOTH PLACES.** The profile now answers with the checklist option, and
+the `profile_equipment` witness — which compares the profile's raw array — holds
+the OPTION rather than the TAG. **Holding the tag is what let a seed answering in
+a made-up vocabulary look declared-and-correct.** `test:dev-e2e-seeds` went from
+3 failures to 2.
+
+## NOT COVERED
+
+- **THREE SEED SUITES ARE STILL RED and are NOT this pass's**:
+  `test:dev-e2e-reset-hydration` (2), `test:dev-e2e-entry` (2),
+  `test:dev-e2e-scenario-session` (1). Counted, not diagnosed.
+- **TWO REDS REMAIN IN `test:dev-e2e-seeds`** — `coach-production-replay`'s
+  visible-equality witness, and a manifest count. **Pre-existing**: this pass
+  touched only `equipment-restriction-case`.
+- **ORDER 2 IS STILL ONLY DIAGNOSED.** `injury-case` install-time failure —
+  the lead is in addendum 2 and no fix is attempted.
+- **ORDERS 4 AND 5 ARE NOT STARTED** — the drift check, and the seeded world's
+  durability price.
+- **ORDER 1's KNOT IS STILL TIED.** The hedge holds; the extraction is not begun.
+- **THE FLOWS WERE NOT RE-RUN AFTER THE SEED FIX.** No golden flow uses
+  `equipment-restriction-case`, so the receipt is not stale about them — but that
+  is a reasoned claim, not a run.

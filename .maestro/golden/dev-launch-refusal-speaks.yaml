@@ -39,6 +39,10 @@ tags:
 # digging for which of the barrier's steps failed.
 - assertVisible:
     id: "dev-launch-refused-reason"
+# THE PICTURE OF THE REFUSAL IS THE WHOLE POINT OF THIS FLOW. What replaced the
+# white screen is a LAYOUT — a heading, a reason, a button — and no assertion can
+# say whether it reads. LAW-flows-photograph-what-they-touch.
+- takeScreenshot: artifacts/ui-walk/dev-launch-refused
 
 # ── AND THERE IS A WAY OUT ────────────────────────────────────────────────────
 # One tap clears the three dev-E2E records and re-runs the barrier. Without this
@@ -51,3 +55,4 @@ tags:
     timeout: 25000
 - assertNotVisible:
     id: "dev-launch-refused"
+- takeScreenshot: artifacts/ui-walk/dev-launch-recovered
