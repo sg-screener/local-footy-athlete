@@ -51,7 +51,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `8fc98abf` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `226531b2` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -78,9 +78,14 @@ and this file gets one line pointing at it.**
   rebuild.** No flow launches with a bad input to prove the marker appears; that
   flow is the next cheap act and is deliberately not written blind.
   `docs/LAUNCH_DIAGNOSTIC_REFUSAL_BOUNDARY_2026-08-10.md`.
-- **THE UI MERGE — SLICES 3, 4 AND 5 ARE NEXT.** Slice 2 landed at `25565430`.
-  Slice 4's modifiers strip is HELD by Sam's own excusal until the coach page has
-  a home for it. Plan:
+- **THE UI MERGE — SLICES 2, 3 AND 5 LANDED** (`25565430`, `2752c90a`,
+  `226531b2`). **STILL OPEN: slice 3b** — the status screen's buttons are a NO-OP
+  and the day screen keeps every control, because wiring them needs
+  `handleCoachNoteAction` and the phase-shift machine lifted out of
+  `useHomeScreen`. **So rulings 4 and 6 are NOT closed**; only ruling 4's
+  destination exists. Also open on the week: "Completed" on past weeks, and the
+  team-training badge (deferred with a reason — the row title already says it).
+  Plan:
   `docs/UI_MERGE_PLAN_2026-08-10.md` · rulings:
   `docs/UI_MERGE_RULINGS_2026-08-10.md` · her signed prototype:
   `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`.
