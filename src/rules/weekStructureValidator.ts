@@ -1,10 +1,24 @@
 /**
  * weekStructureValidator.ts — Programming Bible weekly-structure validator.
  *
- * Phase 2 rules kernel: FINDINGS ONLY.
- *   • Never mutates a week, never blocks a write, never throws into a
- *     caller's control flow (use the *Safe/log helpers at call sites).
- *   • Enforcement is a later phase behind its own approved plan.
+ * Phase 2 rules kernel. PURE: it never mutates a week and never writes.
+ *
+ * IT IS NO LONGER ADVISORY, and the header said otherwise for long enough to
+ * become the answer to "why is the programming shit". It read "FINDINGS ONLY …
+ * enforcement is a later phase behind its own approved plan", and the later
+ * phase never came: three callers, all of them loggers, while the gate that
+ * actually blocked asked only whether the week CONFORMED. **A rule that ships
+ * wired to `log` is not shipped.**
+ *
+ * From 2026-08-12 `rules/section18CraftTier` runs `validateProgramWeek` inside
+ * the §18 accepted-week gateway, where every path that can change what the
+ * athlete sees already converges, and treats `strong` findings that name a
+ * still-changeable day as BLOCKING. Read that module before changing a severity
+ * here: `strong` now decides whether a week can be published.
+ *
+ * The `log*` helpers below stay for the three advisory callers (coach risk
+ * assessment, revision override writer, coaching engine) — a second opinion is
+ * still useful where it is not the decision.
  *
  * Rule sources: Bible Section 2 (weekly structure), Section 3 (hard
  * exposures), Section 17.B (caps), 17.C (game proximity), 17.D (double

@@ -56,6 +56,7 @@ import {
 } from '../../rules/conditioningFeasibility';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
+import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
 import { freshGenerationSurfaces } from '../../utils/liveEvaluationSurfaces';
 import type { AcceptedStateOperationKind } from '../../store/acceptedStateTransaction';
 import { applyOptionalTopUps } from '../../utils/optionalTopUpPlacement';
@@ -753,6 +754,14 @@ export function buildGeneratedMicrocycles(args: {
     // contract was satisfied before these sessions existed and is never
     // re-evaluated against them, so a top-up is INCAPABLE of affecting compliance
     // or load rather than merely checked not to.
+    //
+    // THAT ARGUMENT COVERS COUNTS AND NOT SHAPE, which is how this pass was
+    // escaping the craft tier the gateway now runs. A top-up landing on G-1, or
+    // stacking an upper session beside a lower one, is a Section 17 question and
+    // arrives after the only place that asks it. `withCraftSafeTopUps` closes
+    // the seam in the shape a top-up already has: an optional session that
+    // introduces a craft violation is simply not added.
+    const acceptedWeekBeforeTopUps = workouts;
     workouts = applyOptionalTopUps({
       workouts,
       seasonPhase: blockState.phaseClock.selectedPhase,
@@ -776,6 +785,30 @@ export function buildGeneratedMicrocycles(args: {
         governedFromISO: boundary?.governedFromISO ?? null,
       }),
     }).workouts;
+    if (exposureContractV2) {
+      const craftSafe = withCraftSafeTopUps({
+        contract: exposureContractV2,
+        weekStart: blockState.weekStart,
+        profile,
+        // The same boundary `topUpCandidateDays` above is already given, in the
+        // same shape the gateway hands its own consumers: a top-up never lands
+        // on a governed history day, so a finding there can never be one it
+        // introduced.
+        governableDates: new Set([0, 1, 2, 3, 4, 5, 6]
+          .map((day) => isoDateForWeekday(blockState.weekStart, day))
+          .filter((date) => !boundary?.governedFromISO || date >= boundary.governedFromISO)),
+        base: acceptedWeekBeforeTopUps,
+        placed: workouts.filter((workout) =>
+          !acceptedWeekBeforeTopUps.some((accepted) => accepted.id === workout.id)),
+      });
+      if (craftSafe.withheld.length > 0) {
+        logger.warn('[ProgramGen] optional top-ups withheld by the craft tier', {
+          microcycleId,
+          withheld: craftSafe.withheld.map((workout) => `${workout.dayOfWeek}:${workout.name}`),
+        });
+      }
+      workouts = craftSafe.workouts;
+    }
     // THE V1 GENERATION-TIME FALLBACK IS RETIRED (Sam, 2026-08-10: "well
     // fucking delete the old shit here?"). Contract v2 is the accepted-week
     // authority. **V1 cannot represent two valid credits stacked on one day**

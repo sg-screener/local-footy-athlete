@@ -5990,3 +5990,17 @@ The order was: BUILD `useRebuildNotice()`, route (a), and **check whether
   ruling 4's section and ruling 6's card ship out in the same commit. Until then
   the both-surfaces tape cannot exist and the gate says so rather than claiming
   it. **Nothing in this unit has been seen on a device.**
+
+---
+
+## PROCESSED 2026-08-12 (cleared by the review seat)
+
+**Order 1 — TURN ON THE CRAFT VALIDATOR. DONE, built and gated by the terminal.**
+`src/rules/section18CraftTier.ts` is the new owner; the tier runs inside the §18
+gateway's `assess` closure; `withCraftSafeTopUps` closes `applyOptionalTopUps`;
+`SAFE_PATTERN_FALLBACK` closed by construction (all three call sites precede a
+gateway entry). New suite `test:craft-tier`, 29 cells, 3 mutations killed.
+Receipts: `docs/CRAFT_TIER_BOUNDARY_2026-08-12.md`.
+**Accepted with one carry-forward: the unit's own §4 measures ZERO `strong`
+findings across all 17 QA scenarios, so it changes no generated week today. The
+half of Sam's question it does not reach is now re-issued as a fresh order.**

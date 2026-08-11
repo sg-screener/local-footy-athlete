@@ -66,6 +66,28 @@ and this file gets one line pointing at it.**
 
 ## OPEN, ON US
 
+- **SAM'S CRAFT RULES ARE SWITCHED ON.** `weekStructureValidator` was
+  FINDINGS-ONLY by its own header with three logging callers; it now runs inside
+  the §18 gateway's `assess` closure as a blocking tier and the search MOVES a
+  badly placed session instead of only naming it. **Measured: zero `strong`
+  findings across all 17 `test:qa` scenarios, so no generated week changes today
+  — the door is shut for edits, moves and stored weeks.** New `test:craft-tier`,
+  29 cells, 3 mutations killed. **Needs Sam's eye: hydration can now swap a day
+  in a week already on his phone.** `docs/CRAFT_TIER_BOUNDARY_2026-08-12.md`.
+
+- **SEAT ACCEPTED THE CRAFT TIER — AND ITS ZERO-CHANGE MEASUREMENT IS THE
+  FINDING, NOT THE REASSURANCE.** The quality Sam complains about lives in the
+  `soft` tier the craft tier declines by its own ruling 2.
+  **SAM RULED 2026-08-12:** *"4 hard days plus 1 moderate/easy day is prefered
+  but 5 hard days is okay"* — **five hard days is NOT a defect, the hard-day
+  count is CLOSED, do not re-open it.** What his words expose is the OTHER half
+  of the shape: **`achievedModerateDayCount`
+  (`section18EffectiveWeekEvaluator.ts:1034`) has ZERO readers** — no range, no
+  minimum, no finding. One half of his default week is fully governed and the
+  other half is counted and discarded. **Sighting 5, new organ: wired to a
+  write-only FIELD, not a logger** — two instances (`:1034`, `:1047`); a
+  `noUnusedWrites` gate over `contract.*` catches both. Seat inbox item 1.
+
 - **THE WHITE SCREEN IS FIXED AND ITS CAUSE IS NOT.** `61ab9e46`. A refused dev
   launch used to render nothing at all; it now names the reason and offers a
   one-tap clear (`.maestro/golden/dev-launch-refusal-speaks.yaml`, green).

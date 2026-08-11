@@ -21,6 +21,12 @@ import {
   type Section18Finding,
 } from './section18EffectiveWeekEvaluator';
 import { finaliseSection18SafetyWeek } from './section18SafetyFinaliser';
+import { resolverMayDisplace } from './athletePlacement';
+import {
+  assessWeekCraft,
+  craftBlockingSummary,
+  type WeekCraftAssessment,
+} from './section18CraftTier';
 import {
   presentDeclaredOffer,
   presentRequiredCoreConditioning,
@@ -148,7 +154,15 @@ export type Section18WeekRepairKind =
   | 'core_work_stacked_on_existing_stress_day'
   | 'athlete_removal_typed_reduction'
   | 'regenerated_candidate'
-  | 'safe_fallback_candidate';
+  | 'safe_fallback_candidate'
+  /** A session broke a Section 17 craft rule on its day; it moved rather than died. */
+  | 'craft_violation_relocated'
+  /**
+   * The craft tier rejected every candidate the search could reach, and the
+   * week published anyway with the violation named. A candidate may fail; a
+   * fact may not be vetoed (§18 ownership reassessment 2026-08-05, D3).
+   */
+  | 'craft_violation_disclosed';
 
 export interface Section18WeekRepair {
   kind: Section18WeekRepairKind;
@@ -205,6 +219,12 @@ export interface Section18AcceptedWeekGatewayResult {
   canonicalWorkouts: Workout[];
   visibleWorkouts: Workout[];
   evaluation: Section18EffectiveWeekEvaluation;
+  /**
+   * The Section 17 craft verdict on the SELECTED week. `blocking` is empty on
+   * every accepted result by construction; a non-empty one always arrives with
+   * a `craft_violation_disclosed` repair beside it.
+   */
+  craft: WeekCraftAssessment;
   repairs: Section18WeekRepair[];
   attempts: number;
   failureSignature: string | null;
@@ -800,6 +820,111 @@ function repairByStackingCandidates(args: {
   }));
 }
 
+/**
+ * RELOCATE THE SESSION THE CRAFT TIER NAMED.
+ *
+ * Without this the craft tier would only ever DISCLOSE — a second opinion
+ * nobody reads, wearing a new hat. A finding names the day and the session, and
+ * a Section 17 violation is almost always a session that is on the wrong DAY
+ * rather than a session that should not exist: a hard lower two days before the
+ * game is a fine session on Monday.
+ *
+ * So the repair is a MOVE, and it obeys THE :4688 ORDER the same way
+ * `repairDisplacedStrengthCandidates` does — relocation before substitution
+ * before reduction.
+ *
+ * TWO MOVES, AND THE SECOND IS THE ONE THAT MATTERS. Onto an empty day when the
+ * week has one; otherwise a SWAP with another day's session. Measured on the
+ * first week this was run against: a six-day in-season athlete has no empty
+ * day, so a move-only generator produced zero candidates and every craft
+ * violation fell through to disclosure. A swap creates and destroys nothing —
+ * it is the smallest change that can answer "this session is on the wrong day"
+ * on a full week.
+ *
+ * Anchor days (the game, the practice match, team training) are never a source
+ * or a target: those days are the athlete's club commitments, not the app's to
+ * move. Correctness is not this function's job either — every candidate it
+ * proposes is re-assessed against the contract AND the craft tier before it can
+ * win, so a move that trades one violation for another simply loses.
+ *
+ * AND IT ASKS `resolverMayDisplace` BEFORE IT TOUCHES ANYTHING, on both sides
+ * of the move. This is a deriver that displaces content, so it answers the
+ * app's ONE displacement predicate like every other deriver does — the first
+ * version of it did not, and `resolverDisplacementSweepTests` plus four other
+ * athlete-door suites reddened on the spot. A session the athlete put somewhere
+ * is not a defect to be tidied away.
+ */
+function repairCraftViolationCandidates(args: {
+  workouts: readonly Workout[];
+  craft: WeekCraftAssessment;
+  contract: WeeklyExposureContractV2;
+  weekStart: string;
+  /** Handed down from candidate assembly — never re-derived here. */
+  governableDates: ReadonlySet<string>;
+  availableDayNumbers?: readonly number[];
+}): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
+  if (args.craft.blocking.length === 0) return [];
+  const anchorDays = new Set(args.contract.anchors.map((anchor) => anchor.dayOfWeek));
+  const governable = (day: number): boolean =>
+    !anchorDays.has(day) && args.governableDates.has(dateForDay(args.weekStart, day));
+  const occupantByDay = new Map(args.workouts
+    .filter((workout) => (workout.exercises ?? []).length > 0)
+    .map((workout) => [workout.dayOfWeek, workout] as const));
+  const displaceable = (workout: Workout | undefined): boolean =>
+    workout === undefined || resolverMayDisplace(workout);
+  const targetDays = (args.availableDayNumbers ?? [])
+    .filter(governable)
+    .sort((a, b) => a - b);
+  if (targetDays.length === 0) return [];
+
+  const implicated = new Map<string, Set<string>>(); // date -> session names
+  for (const finding of args.craft.blocking) {
+    for (const date of finding.dates) {
+      const names = implicated.get(date) ?? new Set<string>();
+      for (const session of finding.sessions) names.add(session);
+      implicated.set(date, names);
+    }
+  }
+  const sources = args.workouts.filter((workout) => {
+    if (!governable(workout.dayOfWeek)) return false;
+    if (!resolverMayDisplace(workout)) return false;
+    const names = implicated.get(dateForDay(args.weekStart, workout.dayOfWeek));
+    return names !== undefined && names.has(workout.name);
+  });
+  const ruleIds = Array.from(new Set(args.craft.blocking.map((finding) => finding.ruleId)))
+    .sort()
+    .join(', ');
+
+  return sources.flatMap((source) => targetDays.flatMap((day) => {
+    if (day === source.dayOfWeek) return [];
+    const occupant = occupantByDay.get(day);
+    // The target day is the other half of the move: swapping a template session
+    // onto the athlete's own day displaces THEIR session just as surely.
+    if (!displaceable(occupant)) return [];
+    const moved = replaceDay(args.workouts, day, { ...source, dayOfWeek: day });
+    const withSourceDayResolved = occupant
+      ? replaceDay(moved, source.dayOfWeek, { ...occupant, dayOfWeek: source.dayOfWeek })
+      // The stub keeps the source's microcycle and timestamps and DROPS its id.
+      // The moved session still carries that id, and a week holding the same id
+      // twice is a week no override, provenance or removal record can address.
+      : replaceDay(moved, source.dayOfWeek, {
+          ...explicitRestStub(source.dayOfWeek, source),
+          id: `section18-rest-${source.dayOfWeek}`,
+        });
+    return [{
+      workouts: withSourceDayResolved,
+      repair: {
+        kind: 'craft_violation_relocated' as const,
+        detail: occupant
+          ? `Swapped ${source.name} with ${occupant.name} (${DAY_NAMES[source.dayOfWeek]} ↔ ${DAY_NAMES[day]}) — its original day breaks ${ruleIds}.`
+          : `Moved ${source.name} to ${DAY_NAMES[day]} — its original day breaks ${ruleIds}.`,
+        sourceDay: source.dayOfWeek,
+        targetDay: day,
+      },
+    }];
+  }));
+}
+
 function signature(evaluation: Section18EffectiveWeekEvaluation): string {
   return evaluation.blockingViolations
     .map((finding) => `${finding.code}:${finding.domain}:${JSON.stringify(finding.actual)}`)
@@ -1101,6 +1226,8 @@ function withDisplacedCapacityReduction(args: {
 function localRepairCandidates(args: {
   workouts: readonly Workout[];
   evaluation: Section18EffectiveWeekEvaluation;
+  craft: WeekCraftAssessment;
+  governableDates: ReadonlySet<string>;
   contract: WeeklyExposureContractV2;
   weekStart: string;
   profile?: OnboardingData | null;
@@ -1124,6 +1251,12 @@ function localRepairCandidates(args: {
       ? repairByStackingCandidates({ ...args, requireHardTarget: false })
       : []),
     ...repairCoreConditioningShortfallCandidates(args),
+    // LAST, because it is the cheapest thing to be wrong about. Everything above
+    // answers a CONTRACT breach — a week that is unlawful until it is fixed. A
+    // craft relocation answers a quality judgement on a week that already
+    // conforms, so it takes its turn after the lawfulness repairs have had
+    // theirs, exactly as the offer and the reduction do.
+    ...repairCraftViolationCandidates(args),
   ];
 }
 
@@ -1210,6 +1343,16 @@ function resolveCandidate(args: {
   const isFactDay = (day: number): boolean =>
     governedBoundaryISO !== null &&
     dateForDay(args.input.weekStart, day) < governedBoundaryISO;
+  // THE ONE OWNER'S ANSWER, HANDED OUT RATHER THAN RE-DERIVED. The craft tier
+  // and its repair generator both need to know which days are still the app's
+  // to change; neither may read `governedFromISO` to find out, because the
+  // ruling above puts exactly one reader of that field in the app and it is
+  // three lines up. `test:gateway-authority-census` holds this.
+  const governableDates: ReadonlySet<string> = new Set(
+    [0, 1, 2, 3, 4, 5, 6]
+      .filter((day) => !isFactDay(day))
+      .map((day) => dateForDay(args.input.weekStart, day)),
+  );
   const factDayWorkouts: readonly Workout[] = governedBoundaryISO === null
     ? []
     : args.candidate.workouts.filter((workout) => isFactDay(workout.dayOfWeek));
@@ -1319,6 +1462,7 @@ function resolveCandidate(args: {
     contract: WeeklyExposureContractV2;
     visibleWorkouts: Workout[];
     evaluation: Section18EffectiveWeekEvaluation;
+    craft: WeekCraftAssessment;
   };
   const search = searchWholeWeekRepairCandidates<CandidateState, CandidateEvaluation>({
     initial: { workouts: offered.workouts, repairs: initialRepairs },
@@ -1327,10 +1471,18 @@ function resolveCandidate(args: {
     diagnosticBoundary: 'section18AcceptedWeekGateway',
     diagnosticWeekId: args.input.weekStart,
     diagnosticRejection: (assessment) => ({
-      codes: assessment.evaluation.evaluation.blockingViolations.map((finding) =>
-        `${finding.code}:${finding.domain}`),
-      invariant: Array.from(new Set(assessment.evaluation.evaluation.blockingViolations
-        .map((finding) => finding.domain))).sort().join(','),
+      codes: [
+        ...assessment.evaluation.evaluation.blockingViolations.map((finding) =>
+          `${finding.code}:${finding.domain}`),
+        // NAMED IN THE SAME LIST AS THE CONTRACT'S OWN. A rejection the log
+        // cannot name is the shape `repairKinds` was added to end.
+        ...assessment.evaluation.craft.blocking.map((finding) =>
+          `${finding.ruleId}:craft`),
+      ],
+      invariant: Array.from(new Set([
+        ...assessment.evaluation.evaluation.blockingViolations.map((finding) => finding.domain),
+        ...(assessment.evaluation.craft.blocking.length > 0 ? ['week_craft'] : []),
+      ])).sort().join(','),
     }),
     stateSignature: (candidate) => JSON.stringify(candidate.workouts.map((workout) => ({
       ...workout,
@@ -1367,10 +1519,26 @@ function resolveCandidate(args: {
         });
         contract = evaluation.contract;
       }
+      // THE CRAFT TIER, ON THE SAME VISIBLE WEEK THE CONTRACT IS JUDGING.
+      //
+      // Two questions, two owners, one boundary: the evaluator asks whether the
+      // week CONFORMS (counts, ceilings, floors, prohibitions), the craft tier
+      // asks whether it reads like a coach wrote it (G-1, G-2, G+1, double-day
+      // pairings, team training pretending to be recovery). Both must be true
+      // for a candidate to be accepted, and both count toward the search's
+      // preference order — so a repair that fixes the contract while breaking
+      // the shape can no longer win.
+      const craft = assessWeekCraft({
+        contract,
+        workouts: visibleWorkouts,
+        weekStart: args.input.weekStart,
+        profile: args.input.profile,
+        governableDates,
+      });
       return {
-        accepted: evaluation.blockingViolations.length === 0,
-        blockingCount: evaluation.blockingViolations.length,
-        evaluation: { contract, visibleWorkouts, evaluation },
+        accepted: evaluation.blockingViolations.length === 0 && craft.blocking.length === 0,
+        blockingCount: evaluation.blockingViolations.length + craft.blocking.length,
+        evaluation: { contract, visibleWorkouts, evaluation, craft },
       };
     },
     expand: (candidate, assessment) => {
@@ -1390,6 +1558,8 @@ function resolveCandidate(args: {
       const repairCandidates = localRepairCandidates({
         workouts: candidate.workouts,
         evaluation: evaluated.evaluation,
+        craft: evaluated.craft,
+        governableDates,
         contract: evaluated.contract,
         weekStart: args.input.weekStart,
         profile: args.input.profile,
@@ -1409,19 +1579,39 @@ function resolveCandidate(args: {
   });
   const selected = search.candidate;
   const selectedEvaluation = search.evaluation;
+  // A CRAFT VIOLATION MAY FAIL A CANDIDATE; IT MAY NEVER VETO A FACT.
+  //
+  // The search exhausted, but the contract itself is satisfied — what is left
+  // is a SHAPE the repair generators could not reach. Reporting that as
+  // `impossible` would send the week on to the regenerate/fallback cascade and,
+  // under a restoration, throw: a stored week built before this tier existed
+  // would stop hydrating and the app would refuse to open on its own history.
+  // So the week publishes and the violation is named in the repairs, where the
+  // gateway's own log already reads the kinds.
+  const craftOnlyShortfall =
+    search.outcome === 'impossible' &&
+    selectedEvaluation.evaluation.blockingViolations.length === 0 &&
+    selectedEvaluation.craft.blocking.length > 0;
+  const repairs = craftOnlyShortfall
+    ? [...selected.repairs, {
+        kind: 'craft_violation_disclosed' as const,
+        detail: `Published with unrepaired Section 17 craft violation${selectedEvaluation.craft.blocking.length === 1 ? '' : 's'}: ${craftBlockingSummary(selectedEvaluation.craft.blocking)}.`,
+      }]
+    : selected.repairs;
   return {
-    status: search.outcome === 'impossible'
+    status: search.outcome === 'impossible' && !craftOnlyShortfall
       ? 'impossible'
-      : selected.repairs.some((repair) => repair.kind === 'regenerated_candidate')
+      : repairs.some((repair) => repair.kind === 'regenerated_candidate')
         ? 'regenerated'
-        : selected.repairs.length > 0 ? 'repaired' : 'accepted',
+        : repairs.length > 0 ? 'repaired' : 'accepted',
     contract: selectedEvaluation.contract,
     canonicalWorkouts: assembleWithFactDays(selected.workouts),
     visibleWorkouts: selectedEvaluation.visibleWorkouts,
     evaluation: selectedEvaluation.evaluation,
-    repairs: selected.repairs,
+    craft: selectedEvaluation.craft,
+    repairs,
     attempts: search.candidatesEvaluated,
-    failureSignature: search.outcome === 'impossible'
+    failureSignature: search.outcome === 'impossible' && !craftOnlyShortfall
       ? signature(selectedEvaluation.evaluation)
       : null,
   };
@@ -1467,6 +1657,12 @@ export function runSection18AcceptedWeekGateway(
       // and already on the result; the log was simply throwing them away.
       repairKinds: result.repairs.map((repair) => repair.kind),
       repairCount: result.repairs.length,
+      // THE CRAFT VERDICT TRAVELS WITH THE CONTRACT VERDICT. Same reasoning as
+      // `repairKinds` above: a week that shipped with a known bad shape has to
+      // be answerable afterwards, and only the log can be asked.
+      craftBlocking: result.craft.blocking.map((finding) =>
+        `${finding.ruleId}@${finding.dates.join(',') || 'week'}`),
+      craftFindingCount: result.craft.findings.length,
       outcome: result.status === 'impossible' ? 'rejected' : result.status,
       rejectingBoundary: result.status === 'impossible'
         ? 'section18AcceptedWeekGateway'
