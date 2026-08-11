@@ -60,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `06401d92` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `a1257884` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -102,6 +102,21 @@ and this file gets one line pointing at it.**
   unit's own suite joining the chain). `06401d92` ·
   `docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md` ·
   `docs/STOP_2026-08-12_GAME_ANCHOR.md`.
+- **NO ORDER CAN HIDE FROM THE STOP HOOK ANY MORE — and the founding case was
+  this terminal's.** The hook's scan stops at the next `## `, so a `## ` heading
+  inside the unprocessed region hid every order below it and **Sam became the
+  courier**. `test:repo-law-guards` 34 → 35 cells, mutation-tested against the
+  real file; registry row born `guarded` (96/64 → **97/65**, UNENFORCED unmoved
+  at 32). **Repairing by hand a file that HAS A PARSER, without reading the
+  parser, is the same class of mistake as the corruption it was fixing.**
+  `1fcf5c04` + `a1257884`.
+- **A SHARED CHECKOUT COST MOST OF A SESSION.** Codex checked a branch out in
+  THIS tree mid-unit; three routes to land work were denied and the stop hook —
+  which reads HEAD — could not see four stop reports sitting on `main`.
+  **`codex/program-week-navigation-bounds` is UNMERGED and its two registry rows
+  RED `test:law-registry`'s `ruledAt` cell** (both cite *"Sam … direct
+  request"*, no path). Measured on main after the switch: that cell now PASSES,
+  10 of 11, the single red the by-design UNENFORCED stop.
 - **A CONCURRENT WRITE CORRUPTED `docs/SEAT_INBOX.md` AND BOTH DOC GATES PASSED
   OVER IT.** The seat's merge-leftovers block landed **inside STAND-DOWN B's
   sentence**, splitting a stand-down whose whole job is to stop a question
