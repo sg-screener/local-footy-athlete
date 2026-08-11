@@ -960,7 +960,7 @@ export function generateProgramLocally(
   logger.debug('[ProgramGen] Local deterministic build', {
     readiness: plan.readiness,
     coreSessions: plan.coreSessions,
-    gameDay: generationProfile.usualGameDay || generationProfile.gameDay || null,
+    gameDay: storedGameAnchor(generationProfile),
     activeConstraints: generationConstraints?.activeConstraintIds ?? [],
   });
 
@@ -2042,7 +2042,7 @@ export function buildGenerationPrompt(
     // Prefer the new DayOfWeek-typed usualGameDay; fall back to legacy gameDay.
     // Without this, the G-offset labels disagree with the engine's weeklyPlan
     // (engine already uses usualGameDay via onboardingToCoachingInputs).
-    const effectiveGameDay = data.usualGameDay || data.gameDay;
+    const effectiveGameDay = storedGameAnchor(data);
     const gameDayNum = effectiveGameDay ? DAY_MAP[effectiveGameDay] : null;
     weeklyPlan.forEach((session) => {
       let gLabel = '';

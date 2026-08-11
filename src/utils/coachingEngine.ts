@@ -43,6 +43,7 @@ import type {
 } from '../types/domain';
 import { logger } from './logger';
 import { todayISOLocal } from './appDate';
+import { storedGameAnchor } from '../rules/gameAnchor';
 import {
   canonicalStrengthLabel,
   inferMovementPatterns,
@@ -8772,7 +8773,7 @@ export function onboardingToCoachingInputs(
   // conditioning budget → one slot gets no prescription).
   const availableDays = Math.max(baseTrainingDays, selectedDays.length);
   const targetFixtureDay = options.targetFixtureDay === undefined
-    ? (data.usualGameDay || data.gameDay)
+    ? (storedGameAnchor(data) ?? undefined)
     : options.targetFixtureDay;
   return {
     seasonPhase: data.seasonPhase || 'Pre-season',

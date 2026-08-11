@@ -2,6 +2,7 @@ import type { DayOfWeek, OnboardingData, Workout } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
 import { addDaysISO } from '../utils/programBlockState';
+import { storedGameAnchor } from './gameAnchor';
 
 export interface RollingHorizonSearchResult<T, S> {
   candidate: T[];
@@ -102,10 +103,8 @@ export function effectiveFixtureDatesForWeeks(args: {
   const fixtures = new Set(Object.entries(args.markedDays)
     .filter(([, mark]) => mark === 'game')
     .map(([date]) => date.slice(0, 10)));
-  const recurringDay = (args.profile.usualGameDay || args.profile.gameDay) as DayOfWeek | undefined;
-  if (args.profile.seasonPhase !== 'In-season' || !recurringDay ||
-    !['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-      .includes(recurringDay)) {
+  const recurringDay = storedGameAnchor(args.profile);
+  if (args.profile.seasonPhase !== 'In-season' || !recurringDay) {
     return fixtures;
   }
   for (const rawWeekStart of args.weekStarts) {

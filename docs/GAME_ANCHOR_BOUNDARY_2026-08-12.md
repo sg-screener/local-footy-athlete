@@ -125,6 +125,35 @@ splitting it into its own commit would have been ceremony, not honesty.
   Registry moved 95/63 → **96 rows, 64 guarded, 32 UNENFORCED** — the unguarded
   count did not move, which is the only direction it may not.
 
+## §5b CORRECTION — THE COUNT WAS WRONG BY HALF, AND THE METHOD IS WHY
+
+**Everything above says EIGHT copies. There were SIXTEEN.** Found 2026-08-12
+while reading `effectiveFixtureDatesForWeeks` for the ±7 unit.
+
+The census grepped for the legacy literal `'Varies'` plus a hand-written list of
+named readers. **Every copy that spells the fallback inline was therefore
+invisible to it** — `profile.usualGameDay || profile.gameDay`, in
+`coachingEngine.ts:8775`, `rollingHorizonRepair.ts:105`,
+`fixtureConditionedAvailability.ts:135` and `:219`,
+`acceptedStateTransaction.ts:2366` and `:2410`, and `generateProgram.ts:963`
+and `:2045`.
+
+**`a-count-taken-for-a-record`, and this one is mine.** The number named the
+INSTRUMENT'S unit — *"sites mentioning the legacy literal, plus the ones I
+listed"* — and was reported in the DOMAIN'S: *"copies of the predicate"*. The
+literal was an artefact of how the old code happened to be written; the SHAPE is
+the thing. The claim went into a commit message, this report, `NOW.md` and a law
+registry receipt before anything checked it.
+
+**Not only duplication — a latent defect.** A bare `usualGameDay || gameDay`
+hands a legacy `'Varies'` downstream **as if it were a day**. Six of the eight
+had no membership test at all. The owner returns null for it, so collapsing them
+is a correctness fix as well as a de-duplication.
+
+**All sixteen now delegate**, and the guard gained a cell that counts the SHAPE
+rather than the literal, mutation-tested by restoring one copy. A seventeenth
+cannot hide the same way.
+
 ## §6 THE DEBT THIS LEAVES, NAMED
 
 1. **`gameDay` and `usualGameDay` are still two fields for one fact.** After

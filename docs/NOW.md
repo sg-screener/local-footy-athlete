@@ -102,6 +102,16 @@ and this file gets one line pointing at it.**
   unit's own suite joining the chain). `06401d92` ·
   `docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md` ·
   `docs/STOP_2026-08-12_GAME_ANCHOR.md`.
+- **CORRECTION: THE GAME-ANCHOR COUNT WAS WRONG BY HALF — EIGHT CLAIMED,
+  SIXTEEN REAL.** The census grepped for the legacy literal plus a hand-list, so
+  every copy spelling `usualGameDay || gameDay` inline was invisible to it —
+  eight more, across `coachingEngine`, `rollingHorizonRepair`,
+  `fixtureConditionedAvailability`, `acceptedStateTransaction` and
+  `generateProgram`. **`a-count-taken-for-a-record`, and this one is ours: the
+  number named the INSTRUMENT'S unit and was read in the domain's.** Six of the
+  eight had NO membership test, so a legacy `'Varies'` travelled as if it were a
+  day — a latent defect, not just duplication. **All sixteen now delegate; the
+  guard counts the SHAPE, not the literal, and is mutation-tested.**
 - **NO ORDER CAN HIDE FROM THE STOP HOOK ANY MORE — and the founding case was
   this terminal's.** The hook's scan stops at the next `## `, so a `## ` heading
   inside the unprocessed region hid every order below it and **Sam became the

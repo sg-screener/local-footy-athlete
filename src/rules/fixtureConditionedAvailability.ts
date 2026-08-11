@@ -2,6 +2,7 @@ import type { DayOfWeek, OnboardingData } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import type { OwnedSeasonPhase } from './seasonPhaseOwner';
+import { storedGameAnchor } from './gameAnchor';
 
 export type FixtureAvailabilityKind = 'game' | 'practice_match';
 
@@ -132,7 +133,7 @@ function recurringFixture(
   weekStart: string,
   ownedPhase: OwnedSeasonPhase,
 ): TargetWeekFixture[] {
-  const day = (profile.usualGameDay || profile.gameDay) as DayOfWeek | undefined;
+  const day = storedGameAnchor(profile);
   return day ? [{ date: dateForDay(weekStart, day), kind: canonicalFixtureKind(ownedPhase) }] : [];
 }
 
@@ -216,7 +217,7 @@ export function resolveFixtureConditionedAvailability(
     .filter((fixture) => !proposedFixtureDates.has(fixture.date))
     .map((fixture) => ({ ...fixture, provenance: releaseProvenance(fixture.kind) }));
 
-  const usualGameDay = (input.profile.usualGameDay || input.profile.gameDay) as DayOfWeek | undefined;
+  const usualGameDay = storedGameAnchor(input.profile);
   if (input.byeUsualGameDay && usualGameDay) {
     const date = dateForDay(weekStart, usualGameDay);
     if (

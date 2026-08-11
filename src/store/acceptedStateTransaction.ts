@@ -50,6 +50,7 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { addDaysISO } from '../utils/programBlockState';
 import { appDateNow, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import { storedGameAnchor } from '../rules/gameAnchor';
 import {
   rebaseAcceptedEffectiveWeek,
   type AcceptedEffectiveWeekSurfaces,
@@ -2363,7 +2364,7 @@ export function commitCalendarMarkTransaction(args: {
     }
   } else if (args.mark === null && current === 'game') {
     const profile = useProfileStore.getState().onboardingData;
-    const recurringDay = (profile.usualGameDay || profile.gameDay) as DayOfWeek | undefined;
+    const recurringDay = storedGameAnchor(profile);
     if (recurringDay) {
       const recurringDate = datesInWeek(weekStart)
         .find((date) => dayNameForDate(date) === recurringDay);
@@ -2407,7 +2408,7 @@ export function proposeFixtureMarkedDays(args: {
   }
 
   if (markedDays[args.targetDate] === 'game') delete markedDays[args.targetDate];
-  const recurringDay = (args.profile.usualGameDay || args.profile.gameDay) as DayOfWeek | undefined;
+  const recurringDay = storedGameAnchor(args.profile);
   if (recurringDay) {
     const recurringDate = datesInWeek(targetWeekStart)
       .find((date) => dayNameForDate(date) === recurringDay);

@@ -14,11 +14,26 @@
  * at all** — no G-1 taper, no G-2 spacing, no G+1 recovery. An athlete who
  * plays midweek got a week that protected nothing.
  *
+ * ## CORRECTION — THE COUNT WAS WRONG, AND THE METHOD IS WHY
+ *
+ * This suite's first version said EIGHT copies of "which day is the game" and
+ * claimed to have collapsed them all. **There were SIXTEEN.** The census found
+ * them by grepping for `'Varies'` plus a hand-written list of named readers, so
+ * it missed every copy that spells the fallback inline —
+ * `profile.usualGameDay || profile.gameDay` — in `coachingEngine`,
+ * `rollingHorizonRepair`, `fixtureConditionedAvailability` (x2),
+ * `acceptedStateTransaction` (x2) and `generateProgram` (x2).
+ *
+ * `a-count-taken-for-a-record`: the number named the INSTRUMENT'S unit — "sites
+ * mentioning the legacy literal, plus the ones I listed" — and was reported in
+ * the DOMAIN'S, "copies of the predicate". The literal was an artefact of how
+ * the old code happened to be written. **The shape is the thing**, and
+ * `nothing re-implements the anchor fallback inline` now counts the shape.
+ *
  * ## WHY A SOURCE SCAN IS PART OF THE INSTRUMENT AND NOT THE WHOLE OF IT
  *
- * Cells 1-4 are BEHAVIOURAL: they build the week and read what came out.
- * Cells 5-9 read source, because the class this must stop coming back is a
- * NINTH copy of "is this a real game day?" — eight existed before this unit and
+ * The behavioural cells build the week and read what came out. The source cells
+ * exist because the class this must stop coming back is a SEVENTEENTH copy, and
  * behaviour cannot see a copy that happens to agree today.
  *
  * Per the count-names-its-instrument law, every source cell asserts the REGION
@@ -386,6 +401,47 @@ function filesStillParsingVaries(): string[] {
       !VARIES_ALLOWED_IN_CODE.has(rel) && /'Varies'|"Varies"/.test(stripComments(text)))
     .map(({ rel }) => rel);
 }
+
+/**
+ * THE SHAPE, NOT THE LITERAL — and this cell exists because the first version
+ * of this suite counted the wrong thing.
+ *
+ * The founding census claimed EIGHT copies of "which day is the game" and
+ * collapsed them. It found them by grepping for `'Varies'` plus a hand-written
+ * list of named readers, so it missed **every copy that spells the fallback
+ * inline without the legacy literal** — `profile.usualGameDay || profile.gameDay`.
+ * There were EIGHT more, in `coachingEngine`, `rollingHorizonRepair`,
+ * `fixtureConditionedAvailability` (twice), `acceptedStateTransaction` (twice)
+ * and `generateProgram` (twice). **Sixteen, not eight.**
+ *
+ * `a-count-taken-for-a-record`: the number named the INSTRUMENT'S unit — "sites
+ * mentioning 'Varies', plus the ones I listed" — and was reported in the
+ * domain's, "copies of the predicate". A literal is an artefact; the SHAPE is
+ * the thing. This cell counts the shape.
+ *
+ * It also catches a real latent defect, not just duplication: a bare
+ * `usualGameDay || gameDay` hands a legacy `'Varies'` downstream AS IF IT WERE A
+ * DAY. The owner returns null for it.
+ */
+function inlineAnchorFallbacks(): string[] {
+  const shape = /usualGameDay\s*(\|\||\?\?)\s*[A-Za-z.]*gameDay/;
+  return everySourceFile()
+    .map((full) => ({ rel: path.relative(srcRoot, full), text: fs.readFileSync(full, 'utf8') }))
+    .filter(({ rel }) => rel !== 'rules/gameAnchor.ts'
+      && rel !== '__tests__/gameAnchorOwnershipTests.ts')
+    .flatMap(({ rel, text }) => stripComments(text).split('\n')
+      .map((line, index) => ({ rel, line, index }))
+      .filter(({ line }) => shape.test(line))
+      .map(({ index }) => `${rel}:${index + 1}`));
+}
+
+run('nothing re-implements the anchor fallback inline', () => {
+  const copies = inlineAnchorFallbacks();
+  assert(copies.length === 0,
+    `these spell "usualGameDay || gameDay" by hand instead of asking the owner: `
+    + `${JSON.stringify(copies)}. Each one is a copy that can disagree, and a bare `
+    + "fallback hands a legacy 'Varies' downstream as if it were a day.");
+});
 
 run("no code outside the owner knows the word 'Varies'", () => {
   const stragglers = filesStillParsingVaries();
