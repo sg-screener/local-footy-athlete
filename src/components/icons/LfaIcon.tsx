@@ -1,6 +1,6 @@
 import React from 'react';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, G, Path } from 'react-native-svg';
 
 /**
  * One owner for the icon audit approved by Sam on 2026-08-11.
@@ -143,15 +143,22 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
 
   if (name === 'foam-roller') {
     return (
-      <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <G fill={color} rotation={-35} origin="12, 12">
-          <Path
-            fillRule="evenodd"
-            d="M7 16.25C9.34721 16.25 11.25 14.3472 11.25 12C11.25 9.65279 9.34721 7.75 7 7.75C4.65279 7.75 2.75 9.65279 2.75 12C2.75 14.3472 4.65279 16.25 7 16.25ZM7 14.05C8.13218 14.05 9.05 13.1322 9.05 12C9.05 10.8678 8.13218 9.95 7 9.95C5.86782 9.95 4.95 10.8678 4.95 12C4.95 13.1322 5.86782 14.05 7 14.05Z"
-          />
-          <Rect x={8.3} y={8.15} width={10.2} height={2.05} rx={1.025} />
-          <Rect x={8} y={10.975} width={11.1} height={2.05} rx={1.025} />
-          <Rect x={8.3} y={13.8} width={10.2} height={2.05} rx={1.025} />
+      <Svg width={size} height={size} viewBox="50 50 240 190" fill="none">
+        <G
+          stroke={color}
+          strokeWidth={5.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M82 123L202 70C222 61 246 65 259 77C264 81 266 87 265 92C276 100 280 113 277 126C275 137 270 144 263 148L153 216" />
+          <Path d="M154 126C135 113 109 112 88 120C66 128 59 147 63 174C67 201 84 222 107 227C129 232 150 220 160 198C170 175 168 144 154 126Z" />
+          <Path d="M120 140C102 134 85 143 80 160C75 178 82 197 97 206C112 215 129 207 136 191C144 174 137 146 120 140Z" />
+          <Path d="M108 111C129 105 149 116 158 134C170 158 165 191 146 210" />
+          <Path d="M135 99C156 93 177 104 187 123C199 147 193 178 174 194" />
+          <Path d="M163 86C184 80 206 92 215 111C227 135 221 163 202 180" />
+          <Path d="M191 74C213 69 234 80 243 99C254 121 249 149 230 165" />
+          <Path d="M153 147L264 93" />
+          <Path d="M162 184L270 133" />
         </G>
       </Svg>
     );

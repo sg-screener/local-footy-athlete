@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="50 50 240 190"
+  color="#C8FF00"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="5.5"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <title>Foam roller</title>
+
+  <!-- Main cylinder shell. -->
+  <path d="M82 123L202 70C222 61 246 65 259 77C264 81 266 87 265 92C276 100 280 113 277 126C275 137 270 144 263 148L153 216" />
+
+  <!-- Front end and hollow core. -->
+  <path d="M154 126C135 113 109 112 88 120C66 128 59 147 63 174C67 201 84 222 107 227C129 232 150 220 160 198C170 175 168 144 154 126Z" />
+  <path d="M120 140C102 134 85 143 80 160C75 178 82 197 97 206C112 215 129 207 136 191C144 174 137 146 120 140Z" />
+
+  <!-- Curved ribs wrapping around the roller. -->
+  <path d="M108 111C129 105 149 116 158 134C170 158 165 191 146 210" />
+  <path d="M135 99C156 93 177 104 187 123C199 147 193 178 174 194" />
+  <path d="M163 86C184 80 206 92 215 111C227 135 221 163 202 180" />
+  <path d="M191 74C213 69 234 80 243 99C254 121 249 149 230 165" />
+
+  <!-- Long surface seams. -->
+  <path d="M153 147L264 93" />
+  <path d="M162 184L270 133" />
+</svg>

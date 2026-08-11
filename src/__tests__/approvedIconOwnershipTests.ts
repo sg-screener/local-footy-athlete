@@ -38,6 +38,10 @@ const footyAsset = fs.readFileSync(
   path.resolve(root, '../assets/icons/afl-football-traced.svg'),
   'utf8',
 );
+const foamRollerAsset = fs.readFileSync(
+  path.resolve(root, '../assets/icons/foam-roller-traced.svg'),
+  'utf8',
+);
 
 console.log('\napproved icon ownership');
 
@@ -85,10 +89,15 @@ ok('every approved custom trace is owned centrally',
 ok('every approved machine and torso trace is byte-for-byte the signed-off shape',
   Object.entries(approvedTraceHash).every(([name, expected]) =>
     traceHashFromOwner(name) === expected));
-ok('the foam roller preserves the supplied rotated ribbed construction',
-  owner.includes('rotation={-35}') && owner.includes('origin="12, 12"')
-  && owner.includes('foam-roller'));
 const compactOwner = owner.replace(/\s+/g, '');
+const foamRollerPathData = Array.from(foamRollerAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
+  .map((match) => match[1].replace(/\s+/g, ''));
+ok('the app foam roller is the supplied thin cylindrical trace',
+  foamRollerPathData.length === 9
+  && foamRollerPathData.every((d) => compactOwner.includes(d))
+  && owner.includes('viewBox="50 50 240 190"')
+  && owner.includes('strokeWidth={5.5}')
+  && !owner.includes('rotation={-35}'));
 const footyPathData = Array.from(footyAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
   .map((match) => match[1].replace(/\s+/g, ''));
 ok('the app footy is the supplied thin traced ball, not the retired local drawing',

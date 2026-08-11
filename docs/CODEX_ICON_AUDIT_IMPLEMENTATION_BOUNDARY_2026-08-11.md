@@ -34,9 +34,10 @@ the same lookup rather than gaining another icon set.
 - Dumbbells and kettlebell reuse the app's library glyphs.
 - Cable machine now uses the previously approved upright selector/cable-station
   drawing. Weight machines uses Sam's later seated plate-loaded trace. Bench,
-  pull-up bar, foam roller, bike erg, air bike, row erg, ski erg and treadmill
-  use the other approved audit drawings. The rejected hanging-pulley drawing
-  is not present.
+  pull-up bar, bike erg, air bike, row erg, ski erg and treadmill use the other
+  approved audit drawings. Foam roller uses Sam's later thin cylindrical trace
+  with a hollow end, curved ribs and long surface seams. The rejected
+  hanging-pulley drawing is not present.
 - Injury regions use an injured upper-body figure, legs and a curved spine.
 - Add exercise uses the flexed arm, legs, approved torso / abs trace, medical
   shield and stretching person.
@@ -64,6 +65,10 @@ the same lookup rather than gaining another icon set.
   refusal because a prior harness clock receipt had no active checkpoint. The
   refusal offered its established clear-state door; the subsequent deterministic
   reset cleared that simulator-only state and reached Program normally.
+- The first foam-roller visual run stopped before React Native loaded because
+  Metro was no longer running; the device showed "No script URL provided".
+  Metro was restarted and the same deterministic Profile equipment flow then
+  completed. This was an instrument availability failure, not an icon result.
 
 ## Receipts
 
@@ -94,6 +99,11 @@ the same lookup rather than gaining another icon set.
   459 diagnostics with no file regression. The guard compares every path in
   the supplied SVG with the shared app owner and proves the retired local
   drawing no longer exists on that screen.
+- After the foam-roller replacement, approved icon ownership again ran 12 cells
+  with 12 passed and the compile baseline remained at 459 diagnostics with no
+  file regression. The Profile equipment flow completed after the trace canvas
+  was tightened around the drawing; visual inspection confirmed the roller
+  fills its icon circle without clipping while retaining the thin line weight.
 - The approved icon test is in the mandatory chain before the law-registry gate.
   The chain remains deliberately red because 32 unrelated registry rows remain
   unguarded; Sam explicitly overrode that stop for this unit.
