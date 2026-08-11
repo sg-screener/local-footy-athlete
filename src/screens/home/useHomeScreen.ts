@@ -39,7 +39,6 @@ import {
   type WeekReadinessApplyKind,
 } from '../../utils/weekReadinessActions';
 import { athleteSafeRefusal } from '../../utils/planChangeRefusalCopy';
-import type { EquipmentLimitationDecision } from './EquipmentLimitationSheet';
 import {
   buildGuidedInjuryConstraint,
   type GuidedInjuryFlowResult,
@@ -1157,46 +1156,6 @@ export function useHomeScreen() {
     }
   }, [handleProgramControlResult]);
 
-  const handleApplyEquipmentDecision = useCallback(async (
-    decision: EquipmentLimitationDecision,
-    anchorDateISO?: string,
-  ) => {
-    const todayISO = todayISOLocal();
-    const activeFactId = temporarySourceFacts
-      .filter(isTemporaryEquipmentFact)
-      .find((fact) => fact.status === 'active')?.factId;
-    const result = await executeProgramControlActionDurably({
-      type: 'set_equipment_modifier',
-      source: {
-        screen: 'program_tab',
-        surface: 'equipment_limitation_sheet',
-        initiatedBy: 'tap',
-      },
-      scope: 'current_week',
-      payload: {
-        decision,
-        date: anchorDateISO ?? weekDays[0]?.date ?? todayISO,
-        todayISO,
-      },
-      requiresRebuild: false,
-      createsActiveModifier: decision.kind === 'missing_this_week',
-      oneOffOnly: false,
-    }, { todayISO });
-    registerSourceFactRenderObservation({
-      result,
-      domain: 'equipment',
-      expectedStatus: decision.kind === 'available_again' ? 'resolved' : 'active',
-      factId: decision.kind === 'available_again' ? activeFactId : undefined,
-    });
-    await handleProgramControlResult(result);
-    return result;
-  }, [
-    handleProgramControlResult,
-    registerSourceFactRenderObservation,
-    temporarySourceFacts,
-    weekDays,
-  ]);
-
   // ── Weekly readiness ("I'm sick/flat today") ──
   // This surface only routes into existing owners: today's readiness signal
   // for tired/sore, a factual week-scoped cooked report, and week recovery
@@ -1693,7 +1652,6 @@ export function useHomeScreen() {
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,
-    handleApplyEquipmentDecision,
 
     // Block-rollover honest refusal (Sam's interim ruling, 2026-07-31)
     rolloverRefusal,

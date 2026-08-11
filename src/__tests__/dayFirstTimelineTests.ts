@@ -454,7 +454,7 @@ function homeScreenSource(): string {
 }
 
 /**
- * THE FIVE DOORS, AS THEY WERE BEFORE THE CHIP ROW EXISTED.
+ * THE FOUR STATUS DOORS THAT REMAIN ON THE DAY SCREEN.
  *
  * Taken from the five bars this row replaces. Each row is what the athlete's tap
  * must still reach: the handler it calls and the coordinate the walker, the
@@ -467,7 +467,6 @@ const LIFE_FACT_DOORS: readonly { readonly label: string; readonly onPress: stri
   { label: 'Away', onPress: 'setAwayDaysVisible(true)', testID: 'testID="home-away-this-week-entry"' },
   { label: 'Sick', onPress: "setReadinessEntry('sick')", testID: 'explorerTestId.readinessUpdate(weekReadiness.id)' },
   { label: 'Injured', onPress: 'setReadinessInjuryVisible(true)', testID: 'testID="home-injured-entry"' },
-  { label: 'Equipment', onPress: 'setEquipmentVisible(true)', testID: 'explorerTestId.equipmentUpdate(activeEquipmentFact.factId)' },
 ];
 
 run('the screen is in the order Sam ruled: toggle, card, then change controls', () => {
@@ -487,7 +486,7 @@ run('the screen is in the order Sam ruled: toggle, card, then change controls', 
   // of comparing -1 against -1, and stayed red until the surface settled.
   //
   // THE SPINE IS SHORTER AGAIN: My Status now owns Coach Notes, so Program ends
-  // its primary sequence after the five working change controls.
+  // its primary sequence after the four working status controls.
   const toggle = at('testID="program-view-toggle"');
   const card = at('renderDayRow(dayFirstDay, dayFirstIdx)');
   const changeCard = at('testID="home-change-card"');
@@ -497,7 +496,7 @@ run('the screen is in the order Sam ruled: toggle, card, then change controls', 
     'the Program screen is no longer in the order Sam ruled '
     + `(toggle ${toggle} → card ${card} → change card ${changeCard} → `
     + `chips ${chips}). The sequence is Today/Week, today's card directly under `
-    + 'it, then the change card holding the five circles.');
+    + 'it, then the change card holding the four status circles.');
   // THE STRIP STAYS GONE. Ruling 3 removed it and the removal has a home (the
   // week shape); a re-inserted strip would keep the order above and still be the
   // thing he ruled out. Asserted on the SPINE, not the file — `WeekStrip` the
@@ -681,7 +680,7 @@ run('Start Session sits inside the card, below the drop-downs', () => {
     + 'and the session screen behind it.');
 });
 
-run('the five circles sit in a card with words above them', () => {
+run('the four status circles sit in a card with words above them', () => {
   const home = homeScreenSource();
   const cardAt = home.indexOf('testID="home-change-card"');
   const chipsAt = home.indexOf('testID="home-life-fact-chips"');
@@ -1015,7 +1014,7 @@ run('a week row carries the day\'s exercise count, and zero shows nothing', () =
     'the week row composes its own count text instead of reading the sheet');
 });
 
-run('the chip row carries five direct change doors', () => {
+run('the chip row carries four direct status doors', () => {
   const home = homeScreenSource();
   const rowStart = home.indexOf('testID="home-life-fact-chips"');
   assert(rowStart > 0, 'the life-fact chip row is gone from HomeScreenV2 — this gate '
@@ -1028,8 +1027,8 @@ run('the chip row carries five direct change doors', () => {
     + 'span and would pass on anything');
   const chips = row.match(/<LifeFactChip\b/g) ?? [];
   assert(chips.length === LIFE_FACT_DOORS.length,
-    `the row renders ${chips.length} chip(s); Sam ruled FIVE — tired, away, `
-    + 'sick, injured, missing equipment.');
+    `the row renders ${chips.length} chip(s); the Day surface owns four — tired, `
+    + 'away, sick and injured. Equipment belongs inside the opened session.');
   for (const door of LIFE_FACT_DOORS) {
     assert(row.includes(door.onPress),
       `the "${door.label}" chip no longer calls ${door.onPress}, the direct `
@@ -1042,7 +1041,7 @@ run('the chip row carries five direct change doors', () => {
       + 'the device-pass finding Sam raised: icon meanings were not obvious.');
   }
   // ONE WORD, TITLE CASE. The short-label law, and also the copy gate: the row is
-  // five-across on a phone, and a chip label long enough to be prose is both
+  // four-across on a phone, and a chip label long enough to be prose is both
   // unreadable there and a new athlete-visible sentence nobody signed.
   const labels = [...row.matchAll(/\blabel="([^"]*)"/g)].map((match) => match[1]);
   assert(labels.length === LIFE_FACT_DOORS.length,
@@ -1055,7 +1054,7 @@ run('the chip row carries five direct change doors', () => {
   }
 });
 
-run('the five bars did not survive alongside their own chips', () => {
+run('the old status bars did not survive alongside their own chips', () => {
   const home = homeScreenSource();
   // COUNTED IN THE SCREEN BODY, NOT IN THE FILE — and the first version of this
   // cell got that wrong and said so out loud on its first run. It counted

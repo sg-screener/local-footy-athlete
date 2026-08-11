@@ -10,7 +10,6 @@ import {
 import type { StyleProp, ViewStyle } from 'react-native';
 import { PlanChangeSheet } from './PlanChangeSheet';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
-import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -107,7 +106,6 @@ export default function HomeScreenV2() {
     handleViewWorkout,
     handleFinishTeamSession,
     handleApplyGuidedInjury,
-    handleApplyEquipmentDecision,
     handleApplyAwayDays,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
@@ -247,7 +245,6 @@ export default function HomeScreenV2() {
   // forget to set. Rendered under the rows for the sheet-less door and inside
   // the sheet for the other, so the answer appears where the tap happened.
   const [scheduleAck, setScheduleAck] = useState<ReadinessAcknowledgment | null>(null);
-  const [equipmentVisible, setEquipmentVisible] = useState(false);
 
   // One typed entry owns both visibility and the first readiness question.
   // Tired and Sick share the same saved modifier pathway without forcing the
@@ -278,7 +275,6 @@ export default function HomeScreenV2() {
     isThisWeek,
     todayReadinessModifier,
   }), [isThisWeek, readinessActiveConstraints, readinessFacts, todayReadinessModifier, weekAnchorISO]);
-  const activeEquipmentFact = equipmentFacts.find((fact) => fact.status === 'active') ?? null;
   const readinessProgrammingEffectFactIds = useMemo(() => new Set(
     activeConstraints.flatMap((constraint) => constraint.temporarySourceFactIds ?? []),
   ), [activeConstraints]);
@@ -760,12 +756,13 @@ export default function HomeScreenV2() {
             two whose testID changes when a fact is already active. Nothing about
             what a tap does moved; only where the tap lives and what it looks
             like. The sentence each bar used to show is now the chip's spoken
-            hint, so the words are not deleted, they are demoted to where a five-
+            hint, so the words are not deleted, they are demoted to where a four-
             across row can still carry them.
 
             The one-word labels are signed. Tired supersedes the old Time label
-            and changes its door; Away, Sick, Injured and Equipment keep theirs.
-            Title Case, one word each — a five-across row on a phone has room for
+            and changes its door; Away, Sick and Injured keep theirs. Equipment
+            now belongs inside the opened session, where its actual requirements
+            are known. Title Case, one word each — a four-across row has room for
             a word, not a sentence. */}
         {/* ── RULING 7: THE BUTTONS DO NOT APPEAR UNDER WEEKLY VIEW ──
             `&& dayFirst` is the whole change. Sam's reasoning IS the spec and it
@@ -775,13 +772,13 @@ export default function HomeScreenV2() {
             don't plan on being sick or injured in the future so those buttons
             don't need to be on weekly view"*.
 
-            NOTHING IS RE-HOMED HERE BECAUSE NOTHING LEAVES: every chip keeps its
+            Every remaining status chip keeps its
             door, its testID and its place on the day screen — the day a change
             is made on. The week shape simply stops offering a per-day control at
             a week-level altitude. */}
-        {/* ── RULING 1: THE FIVE CIRCLES GET A CARD AND WORDS ABOVE THEM ──
+        {/* ── RULING 1: THE STATUS CIRCLES GET A CARD AND WORDS ABOVE THEM ──
             Sam's FIRST bullet on his eye pass: *"there's no text above the little
-            buttons like rens said"*. His screen had the five circles floating with
+            buttons like rens said"*. His screen had the circles floating with
             no panel and nothing telling the athlete what they are for.
 
             **HER STRUCTURE, HIS DOORS.** The panel, the heading and the sub-line
@@ -790,7 +787,7 @@ export default function HomeScreenV2() {
             doors. Nothing about what a tap does moved.
 
             The card heading and sub-line remain owned by signedCopy; this row
-            changes only the five direct controls beneath them. */}
+            changes only the direct status controls beneath them. */}
         {isNormal && dayFirst && (
           <Card tone="default" padding="md" radius="lg" style={styles.changeCard} testID="home-change-card">
             <Text style={styles.changeCardHeading}>
@@ -872,29 +869,6 @@ export default function HomeScreenV2() {
                 <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF8A4C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
                   <Path d="M8.5 8.5 15.5 15.5" />
-                </Svg>
-              }
-            />
-            <LifeFactChip
-              onPress={() => setEquipmentVisible(true)}
-              testID={activeEquipmentFact
-                ? explorerTestId.equipmentUpdate(activeEquipmentFact.factId)
-                : explorerTestId.equipmentOption('open')}
-              accessibilityLabel={activeEquipmentFact
-                ? explorerTestId.equipmentUpdate(activeEquipmentFact.factId)
-                : explorerTestId.equipmentOption('open')}
-              accessibilityHint="Missing equipment?"
-              label="Equipment"
-              tint={styles.equipmentIconTint}
-              icon={
-                /* Dumbbell struck through — Sam's pick, 2026-08-03 icon
-                   ruling row 4 (replacing the plain dumbbell): equipment
-                   MISSING, not equipment. */
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C6FF6B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Circle cx="5.5" cy="12" r="2.3" />
-                  <Circle cx="18.5" cy="12" r="2.3" />
-                  <Path d="M8 12h8" />
-                  <Path d="M3 3l18 18" />
                 </Svg>
               }
             />
@@ -1080,10 +1054,10 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
-        {/* THE FIVE LIFE-FACT BARS THAT STOOD HERE ARE THE CHIP ROW ABOVE.
-            They ran down the bottom of the screen as five full-width cards —
+        {/* THE LIFE-FACT BARS THAT STOOD HERE ARE THE CHIP ROW ABOVE.
+            They ran down the bottom of the screen as full-width cards —
             "Short on time today", "Away this week?", the weekly readiness door,
-            "I'm injured" and "Missing equipment?" — each with a 28pt icon and a
+            and "I'm injured" — each with a 28pt icon and a
             sentence. Sam's 2026-08-08 ruling makes them one row of round chips
             under the day's card. Every door, testID and accessibility label went
             with them unchanged; nothing about this row is new behaviour, and the
@@ -1210,17 +1184,6 @@ export default function HomeScreenV2() {
             traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
           });
           if (result?.ok) setAwayDaysVisible(false);
-        }}
-      />
-
-      <EquipmentLimitationSheet
-        visible={equipmentVisible}
-        activeFactId={activeEquipmentFact?.factId}
-        targetFactId={equipmentFacts.find((fact) => fact.status !== 'active')?.factId}
-        onClose={() => setEquipmentVisible(false)}
-        onApply={async (decision) => {
-          await handleApplyEquipmentDecision(decision, weekAnchorISO);
-          setEquipmentVisible(false);
         }}
       />
 
@@ -2618,7 +2581,7 @@ function TimelineChevron({ open }: { open: boolean }) {
 
 /* Coach Notes now have one visible home: My Status. The helpers below remain
  * temporarily because the status actions still route athletes back to the
- * five working Program controls; neither Today nor Week renders the notes. */
+ * four working Program status controls; neither Today nor Week renders the notes. */
 
 function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
   if (note.reversibleAdjustmentId) {
@@ -3740,7 +3703,7 @@ const styles = StyleSheet.create({
   lifeFactChipIcon: {
     width: 44, height: 44, borderRadius: 22,
     // The blue the "Short on time today" bar carried; the other four chips
-    // pass their own tint, so the five keep the colours Sam already picked.
+    // pass their own tint, so the controls keep the colours Sam already picked.
     backgroundColor: 'rgba(30, 167, 255, 0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
@@ -3769,7 +3732,6 @@ const styles = StyleSheet.create({
   awayIconTint: { backgroundColor: 'rgba(124, 196, 255, 0.12)' },
   injuredIconTint: { backgroundColor: 'rgba(255, 138, 76, 0.12)' },
   scheduleAckError: { color: '#FF7A85' },
-  equipmentIconTint: { backgroundColor: 'rgba(198, 255, 107, 0.12)' },
   readinessAck: {
     backgroundColor: 'rgba(198, 255, 0, 0.12)',
     borderRadius: 12, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,

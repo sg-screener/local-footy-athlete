@@ -9,6 +9,12 @@ import {
 } from '../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { buildSessionFeedbackPayload } from '../utils/sessionFeedbackForm';
+import {
+  buildSessionEquipmentReplacementPlan,
+  deriveSessionEquipmentRequirements,
+  missingSessionEquipmentValues,
+  sessionConditioningReplacementName,
+} from '../utils/sessionEquipment';
 
 armTotalsOrRed();
 let pass = 0;
@@ -162,6 +168,91 @@ ok('completed day has no redundant Done badge', !dayBadges.includes('label="Done
 ok('Session complete uses a tick rather than a pulse',
   /testID=\{`day-complete-\$\{dayToken\}`\}[\s\S]{0,400}name="check"[\s\S]{0,400}Session complete/.test(home) &&
     !/testID=\{`day-complete-\$\{dayToken\}`\}[\s\S]{0,400}kind="pulse"/.test(home));
+
+console.log('\n[6] Temporary equipment changes belong to the opened session');
+const equipmentRows: any[] = [
+  {
+    key: 'rower',
+    name: 'Easy Row',
+    raw: { exercise: { equipmentRequired: ['Rower'] } },
+  },
+  {
+    key: 'squat',
+    name: 'Back Squat',
+    raw: { exercise: { equipmentRequired: ['Barbell', 'Rack'] } },
+  },
+];
+const requirements = deriveSessionEquipmentRequirements(equipmentRows);
+ok('the session derives the exact row erg requirement',
+  requirements.some((requirement) =>
+    requirement.key === 'modality:row'
+      && requirement.exerciseKeys.includes('rower')));
+ok('the exact row erg does not duplicate into vague cardio equipment',
+  !requirements.some((requirement) => requirement.key === 'tag:bike_or_treadmill'));
+ok('strength equipment is derived from the session row',
+  requirements.some((requirement) =>
+    requirement.key === 'tag:barbell'
+      && requirement.exerciseKeys.includes('squat')));
+const missingValues = missingSessionEquipmentValues(new Set(['modality:row', 'tag:barbell']));
+ok('unticked requirements split into typed machine and strength constraints',
+  missingValues.modalities[0] === 'row' && missingValues.tags[0] === 'barbell');
+ok('a missing rower becomes same-tier bike work when the saved kit still has a bike',
+  sessionConditioningReplacementName({
+    exerciseName: 'Easy Row',
+    availableModalities: ['bike_erg', 'row'],
+    missingModalities: new Set(['row']),
+  }) === 'Easy Bike');
+ok('a missing rower is not invented into a bike when no machine remains',
+  sessionConditioningReplacementName({
+    exerciseName: 'Easy Row',
+    availableModalities: ['row'],
+    missingModalities: new Set(['row']),
+  }) === null);
+const replacementPlan = buildSessionEquipmentReplacementPlan({
+  exercises: equipmentRows,
+  requirements,
+  missingKeys: new Set(['modality:row']),
+  capabilities: {
+    tags: ['bodyweight', 'barbell', 'bike_or_treadmill'],
+    conditioningModalities: ['bike_erg', 'row'],
+    selectionCompleteness: 'complete',
+    source: 'athlete_answer',
+  },
+  environment: {
+    activeInjuries: {},
+    primaryInjury: null,
+    availableEquipment: ['bodyweight', 'barbell'],
+    availableEquipmentTags: ['bodyweight', 'barbell', 'bike_or_treadmill'],
+    readiness: 'high',
+    hasEquipmentConstraint: false,
+    medicalStop: false,
+  },
+});
+ok('the pure whole-session planner turns the affected row into Easy Bike',
+  replacementPlan.ok
+    && replacementPlan.replacements.length === 1
+    && replacementPlan.replacements[0].fromExercise === 'Easy Row'
+    && replacementPlan.replacements[0].toExercise.name === 'Easy Bike');
+const sessionEquipmentSheet = fs.readFileSync(
+  path.resolve(__dirname, '..', 'screens', 'home', 'SessionEquipmentSheet.tsx'),
+  'utf8',
+);
+ok('the opened-session icon mounts the one session equipment sheet',
+  /testID="day-workout-equipment-concern-action"/.test(screen)
+    && /<SessionEquipmentSheet/.test(screen)
+    && /requirements=\{sessionEquipmentRequirements\}/.test(screen));
+ok('temporary swaps are today-only and create no active modifier',
+  /surface: 'session_equipment_sheet'/.test(screen)
+    && /scope: 'today_only'/.test(screen)
+    && /createsActiveModifier: false/.test(screen));
+ok('the Day screen has no Equipment shortcut',
+  !/setEquipmentVisible\(true\)/.test(home)
+    && !/home-equipment-limitation-sheet/.test(home));
+ok('the sheet lists derived requirements rather than the whole saved kit',
+  /requirements\.map/.test(sessionEquipmentSheet)
+    && !/ownedEquipmentKit\(\)/.test(sessionEquipmentSheet));
+ok('the sheet keeps permanent equipment changes in Profile',
+  /Permanent change\? Update your equipment in Profile\./.test(sessionEquipmentSheet));
 
 console.log(`\nsessionExecutionChecklistTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);

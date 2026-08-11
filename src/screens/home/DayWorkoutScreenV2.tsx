@@ -10,6 +10,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/ui';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
+import { SessionEquipmentSheet } from './SessionEquipmentSheet';
 import ExerciseVideoModal from '../../components/ExerciseVideoModal';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
@@ -44,6 +45,12 @@ import {
   type TapSwapPrimaryInjury,
   type TapSwapReason,
 } from '../../utils/tapSwapHierarchy';
+import { resolveEquipmentCapabilities } from '../../utils/equipmentAvailability';
+import {
+  buildSessionEquipmentReplacementPlan,
+  deriveSessionEquipmentRequirements,
+  type SessionEquipmentRequirementKey,
+} from '../../utils/sessionEquipment';
 import type { RecoveryAddonBlock } from '../../types/domain';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
@@ -116,17 +123,16 @@ type SuggestedSwap =
 /**
  * TASK 8: the two-step "which exercise, then what" menu died with ruling 12
  * — swap and remove are now single-tap row buttons that already know their
- * exercise, so `pick_exercise` only exists for the two entries that start
- * from the TOP of the page with no row context yet: the injury door and the
- * no-equipment door. `'swap' | 'remove'` are gone rather than kept as dead
+ * exercise, so `pick_exercise` only exists for the injury entry that starts
+ * from the TOP of the page with no row context yet. Equipment now has a
+ * whole-session checklist instead of choosing one exercise. `'swap' | 'remove'`
+ * are gone rather than kept as dead
  * union members nothing sets. RETIREMENT PASS: `concern_reason`,
  * `injury_area` and `injury_severity` — the steps `'concern'`/an earlier
  * design would have routed through — are deleted outright rather than kept
- * as dead-but-present, per Sam's ruling: the equipment icon goes straight to
- * the swap suggestion, so nothing ever sets any of the three again.
+ * as dead-but-present.
  */
-type ExercisePickAction = 'concern' | 'injury';
-type ExerciseConcern = 'No equipment' | 'Too hard / too easy';
+type ExercisePickAction = 'injury';
 type SwapReason =
   | 'No equipment'
   | 'Injury / pain'
@@ -162,7 +168,7 @@ type FutureScopeStep =
       action: 'swap';
       exercise: EditableExercise;
       suggestion: SuggestedExercise;
-      reason: SwapReason | ExerciseConcern | 'Injury / pain';
+      reason: SwapReason | 'Injury / pain';
       injuryArea?: InjuryArea;
       injurySeverity?: InjurySeverity;
     }
@@ -183,7 +189,7 @@ type ExerciseEditStep =
       kind: 'confirm_swap';
       exercise: EditableExercise;
       suggestion: SuggestedSwap;
-      reason: SwapReason | ExerciseConcern | 'Injury / pain';
+      reason: SwapReason | 'Injury / pain';
       injuryArea?: InjuryArea;
       injurySeverity?: InjurySeverity;
     }
@@ -263,10 +269,10 @@ function baseSuggestion(
   };
 }
 
-function tapSwapReason(reason: SwapReason | ExerciseConcern): TapSwapReason {
+function tapSwapReason(reason: SwapReason): TapSwapReason {
   if (reason === 'No equipment') return 'no_equipment';
   if (reason === 'Injury / pain') return 'injury_or_pain';
-  if (reason === 'Too hard' || reason === 'Too hard / too easy') return 'too_hard';
+  if (reason === 'Too hard') return 'too_hard';
   if (reason === 'Too easy') return 'too_easy';
   if (reason === "Don't like it") return 'preference';
   return 'other';
@@ -456,6 +462,8 @@ export default function DayWorkoutScreenV2() {
     React.useState<ExerciseEditStep>({ kind: 'closed' });
   const [injuryFlowExercise, setInjuryFlowExercise] =
     React.useState<EditableExercise | null>(null);
+  const [sessionEquipmentVisible, setSessionEquipmentVisible] =
+    React.useState(false);
   const [
     pendingComponentDeletionObservation,
     setPendingComponentDeletionObservation,
@@ -470,6 +478,10 @@ export default function DayWorkoutScreenV2() {
   const editableExercises = React.useMemo(
     () => buildEditableExercises(workout, isTeamOnly),
     [workout, isTeamOnly],
+  );
+  const sessionEquipmentRequirements = React.useMemo(
+    () => deriveSessionEquipmentRequirements(editableExercises),
+    [editableExercises],
   );
 
   /**
@@ -586,10 +598,10 @@ export default function DayWorkoutScreenV2() {
     setExerciseEditStep({ kind: 'add_kind' });
   }, [editableExercises.length, isTeamOnly]);
 
-  const openExerciseConcernPicker = React.useCallback(() => {
-    if (isTeamOnly || editableExercises.length === 0) return;
-    setExerciseEditStep({ kind: 'pick_exercise', action: 'concern' });
-  }, [editableExercises.length, isTeamOnly]);
+  const openSessionEquipment = React.useCallback(() => {
+    if (isTeamOnly || sessionEquipmentRequirements.length === 0) return;
+    setSessionEquipmentVisible(true);
+  }, [isTeamOnly, sessionEquipmentRequirements.length]);
 
   const openExerciseInjuryPicker = React.useCallback(() => {
     if (isTeamOnly || editableExercises.length === 0) return;
@@ -631,7 +643,7 @@ export default function DayWorkoutScreenV2() {
   const suggestTapSwap = React.useCallback(
     (
       exercise: EditableExercise,
-      reason: SwapReason | ExerciseConcern,
+      reason: SwapReason,
       primaryInjury: TapSwapPrimaryInjury | null = null,
     ): SuggestedSwap => {
       const dateISO = date ?? todayISOLocal();
@@ -692,18 +704,80 @@ export default function DayWorkoutScreenV2() {
     [dateLabel, editableExercises, showExerciseEditFallback, workoutLabel],
   );
 
-  const prepareConcern = React.useCallback(
-    (exercise: EditableExercise, concern: ExerciseConcern) => {
-      const reason: SwapReason = concern === 'No equipment' ? 'No equipment' : 'Too hard';
+  const applySessionEquipment = React.useCallback((
+    missingKeys: ReadonlySet<SessionEquipmentRequirementKey>,
+  ) => {
+    if (!date) return;
+    const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
+    const profile = useProfileStore.getState().onboardingData;
+    const capabilities = resolveEquipmentCapabilities(profile, activeConstraints, date);
+    const environment = resolveTapSwapEnvironment({
+      date,
+      profile,
+      activeConstraints,
+      readinessSignal: useReadinessStore.getState().signalsByDate[date],
+    });
+    const plan = buildSessionEquipmentReplacementPlan({
+      exercises: editableExercises,
+      requirements: sessionEquipmentRequirements,
+      missingKeys,
+      capabilities,
+      environment,
+    });
+    if ('exerciseName' in plan) {
+      setSessionEquipmentVisible(false);
       setExerciseEditStep({
-        kind: 'confirm_swap',
-        exercise,
-        suggestion: suggestTapSwap(exercise, reason),
-        reason: concern,
+        kind: 'result',
+        ok: false,
+        title: 'No suitable replacement',
+        message: `Nothing changed. There isn’t a safe replacement for ${displayExerciseName(plan.exerciseName)} using the equipment still available.`,
       });
-    },
-    [suggestTapSwap],
-  );
+      return;
+    }
+    if (plan.replacements.length === 0) {
+      setSessionEquipmentVisible(false);
+      return;
+    }
+
+    let applied = 0;
+    for (const replacement of plan.replacements) {
+      const result = executeProgramControlAction({
+        type: 'swap_exercise',
+        source: { screen: 'session_detail', surface: 'session_equipment_sheet', initiatedBy: 'tap' },
+        scope: 'today_only',
+        payload: {
+          date,
+          fromExercise: replacement.fromExercise,
+          fromExerciseId: replacement.targetId,
+          toExercise: replacement.toExercise,
+        },
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: true,
+      });
+      if (!result.ok) {
+        setSessionEquipmentVisible(false);
+        setExerciseEditStep({
+          kind: 'result',
+          ok: false,
+          title: 'Could not finish equipment changes',
+          message: applied > 0
+            ? `${applied} ${applied === 1 ? 'exercise was' : 'exercises were'} replaced, but the remaining change could not be applied.`
+            : result.message ?? 'Nothing changed.',
+        });
+        return;
+      }
+      applied += 1;
+    }
+
+    setSessionEquipmentVisible(false);
+    setExerciseEditStep({
+      kind: 'result',
+      ok: true,
+      title: 'Session equipment updated',
+      message: `${applied} ${applied === 1 ? 'exercise was' : 'exercises were'} replaced for this session only.`,
+    });
+  }, [date, editableExercises, sessionEquipmentRequirements]);
 
   const applyExerciseGuidedInjury = React.useCallback(
     async (result: GuidedInjuryFlowResult) => {
@@ -1204,14 +1278,16 @@ export default function DayWorkoutScreenV2() {
                 icon={<PlusIcon />}
                 testID="day-workout-add-exercise-action"
               />
-              <IconButton
-                onPress={openExerciseConcernPicker}
-                accessibilityLabel="No equipment for an exercise"
-                tone="default"
-                size="sm"
-                icon={<MaterialCommunityIcons name="dumbbell" size={16} color="#C6FF6B" />}
-                testID="day-workout-equipment-concern-action"
-              />
+              {sessionEquipmentRequirements.length > 0 ? (
+                <IconButton
+                  onPress={openSessionEquipment}
+                  accessibilityLabel="Equipment for this session"
+                  tone="default"
+                  size="sm"
+                  icon={<MaterialCommunityIcons name="dumbbell" size={16} color="#C6FF6B" />}
+                  testID="day-workout-equipment-concern-action"
+                />
+              ) : null}
               <IconButton
                 onPress={openExerciseInjuryPicker}
                 accessibilityLabel="Something hurts"
@@ -1406,13 +1482,18 @@ export default function DayWorkoutScreenV2() {
         onStep={setExerciseEditStep}
         onSwapReason={prepareSwap}
         onAddKind={prepareAdd}
-        onConcern={prepareConcern}
         onInjuryStart={openExerciseInjuryFlow}
         onApplySwapToday={applySwapToday}
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
         onFutureScope={saveFutureExerciseAdjustment}
         onTodayOnly={closeFutureScopeTodayOnly}
+      />
+      <SessionEquipmentSheet
+        visible={sessionEquipmentVisible}
+        requirements={sessionEquipmentRequirements}
+        onClose={() => setSessionEquipmentVisible(false)}
+        onApply={applySessionEquipment}
       />
       <GuidedInjuryFlowSheet
         visible={injuryFlowExercise !== null}
@@ -2672,7 +2753,6 @@ interface ExerciseEditSheetProps {
   onStep: (step: ExerciseEditStep) => void;
   onSwapReason: (exercise: EditableExercise, reason: SwapReason) => void;
   onAddKind: (kind: AddExerciseKind) => void;
-  onConcern: (exercise: EditableExercise, concern: ExerciseConcern) => void;
   onInjuryStart: (exercise: EditableExercise) => void;
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
   onApplyAddToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => void;
@@ -2690,7 +2770,6 @@ function ExerciseEditSheet({
   onStep,
   onSwapReason,
   onAddKind,
-  onConcern,
   onInjuryStart,
   onApplySwapToday,
   onApplyAddToday,
@@ -2723,12 +2802,9 @@ function ExerciseEditSheet({
 
   const showBack = step.kind !== 'result';
 
-  // TASK 8: the only two doors left in front of this picker start from the
-  // TOP of the page, where there is no exercise context yet — the no-
-  // equipment door (`onConcern`, straight to the swap suggestion once an
-  // exercise is picked — SAM RULED: "equipment icon → straight to the swap
-  // suggestion... The tapped icon states the reason; no intermediate menu")
-  // and the injury door (`onInjuryStart`, unchanged — the same function the
+  // TASK 8: the only door left in front of this picker starts from the
+  // TOP of the page, where there is no exercise context yet — the injury
+  // door (`onInjuryStart`, unchanged — the same function the
   // old exercise_menu's "Something hurts" row called). `concern_reason`
   // (the menu this collapses past) is retired along with `injury_area`/
   // `injury_severity` below — none of the three has a live setter anymore.
@@ -2757,7 +2833,6 @@ function ExerciseEditSheet({
         testID={explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)}
         onPress={() => {
           if (action === 'injury') onInjuryStart(exercise);
-          if (action === 'concern') onConcern(exercise, 'No equipment');
         }}
       />
     ));

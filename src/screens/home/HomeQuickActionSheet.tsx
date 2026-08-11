@@ -6,7 +6,6 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import type { HomeQuickAction } from './homeScreenConstants';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
-import { EquipmentLimitationSheet, type EquipmentLimitationDecision } from './EquipmentLimitationSheet';
 import type { GuidedInjuryFlowResult } from '../../utils/guidedInjuryControl';
 
 interface HomeQuickActionSheetProps {
@@ -16,7 +15,6 @@ interface HomeQuickActionSheetProps {
   onOpenDayControls: () => void;
   onOpenProgramSetup: () => void;
   onApplyBusyWeekReduction: () => void;
-  onApplyEquipmentDecision: (decision: EquipmentLimitationDecision) => void | Promise<void>;
   onApplyGuidedInjury: (result: GuidedInjuryFlowResult) => void | Promise<void>;
 }
 
@@ -27,7 +25,6 @@ export function HomeQuickActionSheet({
   onOpenDayControls,
   onOpenProgramSetup,
   onApplyBusyWeekReduction,
-  onApplyEquipmentDecision,
   onApplyGuidedInjury,
 }: HomeQuickActionSheetProps) {
   const [needsDetail, setNeedsDetail] = useState(false);
@@ -87,19 +84,6 @@ export function HomeQuickActionSheet({
         titlePrefix="Injury / pain"
         onComplete={async (result) => {
           await onApplyGuidedInjury(result);
-          onClose();
-        }}
-      />
-    );
-  }
-
-  if (action.id === 'missing_equipment') {
-    return (
-      <EquipmentLimitationSheet
-        visible={visible}
-        onClose={onClose}
-        onApply={async (decision) => {
-          await onApplyEquipmentDecision(decision);
           onClose();
         }}
       />

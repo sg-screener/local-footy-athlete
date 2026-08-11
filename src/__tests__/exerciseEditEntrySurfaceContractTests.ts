@@ -181,11 +181,11 @@ console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\
   // under a standing expectation, which is the test `expectation-edited-to-
   // match-the-regression` demands before an assertion may be edited.
   //
-  // Every OTHER owner stays pinned, and that is the point of editing the list
-  // rather than the loop: ruling 12's boundary still holds for the nine flows
-  // the beta cut does not touch.
+  // The later session-equipment ruling replaces prepareConcern's one-row flow
+  // with one whole-session owner. Every OTHER owner stays pinned, and that is
+  // the point of editing the list rather than the loop.
   const flowOwners = [
-    'prepareSwap', 'prepareAdd', 'prepareConcern', 'openExerciseInjuryFlow',
+    'prepareSwap', 'prepareAdd', 'openExerciseInjuryFlow',
     'applyExerciseGuidedInjury', 'applySwapToday',
     'applyAddToday', 'saveFutureExerciseAdjustment', 'removeExerciseToday',
     'suggestTapSwap',
@@ -241,12 +241,13 @@ console.log('\n[5] The orphaned callback is deleted, not left as dead code');
     'these arrays only ever fed the injury_area/injury_severity render lists',
   );
   ok(
-    'prepareConcern is NOT deleted — it is still reached from the equipment icon',
-    /const prepareConcern = React\.useCallback/.test(source)
-      && /onConcern\(exercise, 'No equipment'\)/.test(source),
-    'unlike prepareInjurySwap, prepareConcern gained a new caller (the '
-      + 'equipment icon\'s pick_exercise collapse) rather than losing its '
-      + 'last one — it must stay, byte-identical, not be treated as orphaned',
+    'the retired single-exercise equipment picker is gone',
+    !/const prepareConcern = React\.useCallback/.test(source)
+      && !/onConcern\(exercise, 'No equipment'\)/.test(source)
+      && /<SessionEquipmentSheet/.test(source),
+    'the equipment icon now reviews the requirements for the whole opened '
+      + 'session, so its old single-row concern callback must not survive as a '
+      + 'second temporary-equipment path',
   );
 }
 

@@ -124,7 +124,6 @@ export type HomeQuickActionId =
   | 'injury'
   | 'training_cancelled'
   | 'busy_week'
-  | 'missing_equipment'
   | 'something_changed';
 
 export interface HomeQuickAction {
@@ -164,11 +163,6 @@ export const QUICK_ACTIONS: HomeQuickAction[] = [
     id: 'busy_week',
     label: 'Change my schedule',
     prefill: 'My training days have changed - can you adjust my program?',
-  },
-  {
-    id: 'missing_equipment',
-    label: 'Missing equipment',
-    prefill: "I’m missing equipment for my program — ",
   },
   { id: 'something_changed', label: 'Something changed?', prefill: '' },
 ];

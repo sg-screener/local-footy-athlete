@@ -498,6 +498,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-temporary-equipment-is-session-scoped',
+    law: 'Temporary equipment changes live only inside the opened session: the control lists equipment that session actually uses, unavailable items are replaced for that session using equipment the athlete still has, the Day screen has no Equipment shortcut, and permanent equipment editing remains in Profile.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "Equipment button should only live in the session template"; unticking a rower replaces it with work using equipment still available, while permanent changes continue through Profile. This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-execution-checklist + test:profile-reset-ui + test:day-first-timeline',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). TWO OPTIONS COMPARED: move the existing whole-kit/current-week modifier sheet into the workout, or derive one checklist from the opened workout and commit one-day swaps through the existing typed exercise door. The second removes the duplicate temporary status representation and preserves Profile as the only permanent editor. WHAT THE CELLS HOLD: the requirement derivation names an exact row erg without a second vague cardio row; strength requirements remain attached to their exercise; a missing rower selects same-tier bike work only when a saved bike remains; no machine means no invented replacement; the opened-session icon mounts one requirement-driven sheet; every committed swap is today-only and creates no active modifier; both Program variants contain no temporary Equipment shortcut; the sheet does not expand the athlete\'s whole saved kit and points permanent edits to Profile. FIRST RUN: the old V2 fifth chip, classic quick action, current-week modifier writer and single-exercise picker were all live representations of the wrong scope. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone, a session whose generated row has an unmappable equipment string, or atomic rollback if a later write in a multi-exercise swap fails after an earlier one commits.',
+    },
+  },
+  {
     id: 'LAW-one-name-two-meanings',
     law: 'A name that covers more than one thing is measured apart BEFORE it is worked on — per strand, never per label.',
     ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat: "four sightings in one day is not a coincidence — give the class a name and a row… a name that covers more than one thing is measured apart BEFORE it is worked on, and the measurement is per strand, not per label"',

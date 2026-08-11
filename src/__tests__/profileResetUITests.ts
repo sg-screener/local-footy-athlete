@@ -63,14 +63,14 @@ const HOME_V2_PATH = path.resolve(
   'HomeScreenV2.tsx',
 );
 const homeV2 = fs.readFileSync(HOME_V2_PATH, 'utf8');
-const EQUIPMENT_SHEET_PATH = path.resolve(
+const SESSION_EQUIPMENT_SHEET_PATH = path.resolve(
   __dirname,
   '..',
   'screens',
   'home',
-  'EquipmentLimitationSheet.tsx',
+  'SessionEquipmentSheet.tsx',
 );
-const equipmentSheet = fs.readFileSync(EQUIPMENT_SHEET_PATH, 'utf8');
+const sessionEquipmentSheet = fs.readFileSync(SESSION_EQUIPMENT_SHEET_PATH, 'utf8');
 const PROFILE_EQUIPMENT_EDITOR_PATH = path.resolve(
   __dirname,
   '..',
@@ -632,28 +632,23 @@ section('[10] FAQ contains MVP product questions');
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// 11. Weekly adjustment chip equipment copy is concise + routed
+// 11. Equipment scope: session for a one-off, Profile for a permanent change
 // ═════════════════════════════════════════════════════════════════════
-section('[11] Program weekly adjustment equipment chip copy');
-ok('Program chip label is Missing equipment', /label:\s*'Missing equipment'/.test(homeConstants));
-ok('old Program chip label removed', !/No access to equipment/.test(homeConstants));
+section('[11] Session-only temporary equipment changes');
+ok('Program quick actions contain no equipment button',
+  !/id:\s*'missing_equipment'/.test(homeConstants)
+    && !/label:\s*'Missing equipment'/.test(homeConstants));
 ok(
-  'Missing equipment chip has requested Coach prefill',
-  /prefill:\s*"I’m missing equipment for my program — "/.test(homeConstants),
+  'Day screen has no temporary equipment entry',
+  !/setEquipmentVisible\(true\)/.test(homeV2)
+    && !/home-equipment-limitation-sheet/.test(homeV2),
 );
 ok(
-  'Program screen has temporary equipment entry',
-  /testID=\{activeEquipmentFact[\s\S]*explorerTestId\.equipmentUpdate\(activeEquipmentFact\.factId\)[\s\S]*explorerTestId\.equipmentOption\('open'\)[\s\S]*Missing equipment\?/.test(homeV2),
-);
-ok(
-  // Sam's ruling 5 (2026-07-31): the presets are retired — the sheet lists the
-  // athlete's OWN kit and the decision is which items are missing this week.
-  'temporary equipment sheet is local and own-kit-driven',
-  /testID="home-equipment-limitation-sheet"/.test(equipmentSheet)
-    && /ownedEquipmentKit\(\)/.test(equipmentSheet)
-    && /kind: 'missing_this_week'/.test(equipmentSheet)
-    && /kind: 'available_again'/.test(equipmentSheet)
-    && !/TEMPORARY_EQUIPMENT_PRESETS/.test(equipmentSheet),
+  'session sheet asks only about this session and points permanent edits to Profile',
+  /Equipment for this session/.test(sessionEquipmentSheet)
+    && /requirements\.map/.test(sessionEquipmentSheet)
+    && /Permanent change\? Update your equipment in Profile\./.test(sessionEquipmentSheet)
+    && !/ownedEquipmentKit\(\)/.test(sessionEquipmentSheet),
 );
 
 // Section [12] asserted the behaviour of EquipmentSettingsScreen.tsx, which
