@@ -25,6 +25,8 @@ import {
   getMondayStr,
   getMondayStrForDate,
   formatWeekLabel,
+  clampProgramWeekOffset,
+  programWeekOffsetBounds,
 } from '../utils/sessionResolver';
 import { logger } from '../utils/logger';
 import type { ScheduleState, ResolvedDay } from '../utils/sessionResolver';
@@ -350,14 +352,22 @@ export function useResolvedWeek() {
   // Week offset: 0 = this week, -1 = last week, +1 = next week
   const [weekOffset, setWeekOffset] = useState(0);
 
-  const mondayStr = getMondayStr(weekOffset);
+  // The program's own dated span is the navigation owner. This is deliberately
+  // not a fixed block length: generation may make any number of weeks, and the
+  // arrows follow the dates that were actually accepted.
+  const weekBounds = programWeekOffsetBounds(state.currentProgram, todayISOLocal());
+  const boundedWeekOffset = clampProgramWeekOffset(weekOffset, weekBounds);
+
+  const mondayStr = getMondayStr(boundedWeekOffset);
   // THE ONE PROJECTION, computed once beside `weekDays` — the card surface
   // (HomeScreenV2) renders `visibleWeek.days[*].headline` / `.parts[*].headline`
   // and reads no raw `workout.name`. Shared with the day-detail screen through
   // `projectWeekFor`, so the two surfaces cannot be handed different arguments.
   const { weekDays, visibleWeek } = projectWeekFor(mondayStr, state);
   const weekLabel = formatWeekLabel(mondayStr);
-  const isThisWeek = weekOffset === 0;
+  const isThisWeek = boundedWeekOffset === 0;
+  const canGoPrev = boundedWeekOffset > weekBounds.min;
+  const canGoNext = boundedWeekOffset < weekBounds.max;
 
   // Debug (dev only)
   if (__DEV__) {
@@ -367,9 +377,15 @@ export function useResolvedWeek() {
     logger.debug(`[useSchedule] week=${mondayStr}`, summary);
   }
 
-  const goToPrev = useCallback(() => setWeekOffset(o => o - 1), []);
-  const goToNext = useCallback(() => setWeekOffset(o => o + 1), []);
-  const goToThisWeek = useCallback(() => setWeekOffset(0), []);
+  const goToPrev = useCallback(() => {
+    setWeekOffset(clampProgramWeekOffset(boundedWeekOffset - 1, weekBounds));
+  }, [boundedWeekOffset, weekBounds.max, weekBounds.min]);
+  const goToNext = useCallback(() => {
+    setWeekOffset(clampProgramWeekOffset(boundedWeekOffset + 1, weekBounds));
+  }, [boundedWeekOffset, weekBounds.max, weekBounds.min]);
+  const goToThisWeek = useCallback(() => {
+    setWeekOffset(clampProgramWeekOffset(0, weekBounds));
+  }, [weekBounds.max, weekBounds.min]);
 
   /**
    * Jump to the week containing a specific date.
@@ -389,15 +405,17 @@ export function useResolvedWeek() {
     // Compute offset in weeks
     const diffMs = targetWeekMonday.getTime() - thisMonday.getTime();
     const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
-    setWeekOffset(diffWeeks);
-  }, []);
+    setWeekOffset(clampProgramWeekOffset(diffWeeks, weekBounds));
+  }, [weekBounds.max, weekBounds.min]);
 
   return {
     weekDays,
     visibleWeek,
     weekLabel,
-    weekOffset,
+    weekOffset: boundedWeekOffset,
     isThisWeek,
+    canGoPrev,
+    canGoNext,
     goToPrev,
     goToNext,
     goToThisWeek,

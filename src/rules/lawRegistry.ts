@@ -1217,6 +1217,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-program-navigation-saved-date-range',
+    law: 'The Day/Week choice remains available and unchanged on every program week, and week navigation cannot leave the Monday-Sunday span containing the saved program start and end dates.',
+    ruledAt: 'Sam 2026-08-12 direct request: the toggle stays stuck for all weeks and navigation stops wherever the athlete\'s actual program starts and ends, without assuming a fixed block length',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. One cell proves the navigator mounts HomeScreenV2, finds the live toggle region, and fails if week position hides it or reinterprets the selected shape. A second executes one-day and uneven multi-week saved spans, clamps both edges, preserves an interior week and refuses invented weeks when no program exists. The live hook derives from currentProgram and exposes disabled edges to both arrows. NOT COVERED: physical iPhone acceptance.',
+    },
+  },
+  {
     id: 'LAW-effective-text-line-box',
     law: 'Every athlete-facing text and input resolves its effective font size to a line box large enough to contain the iPhone system font, including local font-size overrides.',
     ruledAt: 'docs/CODEX_FEEDBACK_AND_TEXT_BOUNDARY_2026-08-11.md §Sam\'s orders; Sam physical-iPhone screenshot of clipped “Session feedback” heading',

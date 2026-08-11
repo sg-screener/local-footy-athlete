@@ -53,7 +53,11 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import type { TrainingProgram } from '../types/domain';
-import type { ResolvedDay } from '../utils/sessionResolver';
+import {
+  clampProgramWeekOffset,
+  programWeekOffsetBounds,
+  type ResolvedDay,
+} from '../utils/sessionResolver';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { applyProfileOnboardingWrite } from '../store/profileStore';
@@ -453,6 +457,76 @@ function homeScreenSource(): string {
   ));
 }
 
+run('the live Program screen owns one persistent Day/Week choice across weeks', () => {
+  const wrapper = stripComments(fs.readFileSync(
+    path.join(__dirname, '..', 'screens', 'home', 'HomeScreen.tsx'), 'utf8',
+  ));
+  const home = homeScreenSource();
+  const toggle = home.slice(
+    home.indexOf('<View style={styles.viewToggle} testID="program-view-toggle">'),
+    home.indexOf('{/* WEEK NAVIGATION BELONGS TO THE WEEK SHAPE.'),
+  );
+
+  assert(/const DESIGN_VERSION: DesignVersion = 'v2'/.test(wrapper)
+    && /return <HomeScreenV2\s*\/>/.test(wrapper),
+  'the navigator wrapper no longer proves that HomeScreenV2 is the live Program screen');
+  assert(toggle.length > 500,
+    'the Day/Week toggle region was not found; this guard would otherwise pass over nothing');
+  assert(!/isThisWeek\s*&&\s*isNormal/.test(toggle),
+    'the live Day/Week toggle is still conditional on this week, so it disappears after Next week');
+  assert(/const dayFirst = preferredProgramView === 'today' && isNormal/.test(home),
+    'the Day preference is still being reinterpreted by week position instead of remaining the chosen view');
+});
+
+run('week navigation is bounded by the saved program dates, whatever its length', () => {
+  const todayISO = '2026-08-12';
+  const oneDay = programWeekOffsetBounds({
+    startDate: '2026-08-12T00:00:00.000Z',
+    endDate: '2026-08-12T00:00:00.000Z',
+  }, todayISO);
+  assert(oneDay.min === 0 && oneDay.max === 0,
+    `a program starting and ending today resolved to ${JSON.stringify(oneDay)}`);
+
+  const unevenProgramSpan = programWeekOffsetBounds({
+    startDate: '2026-08-05T00:00:00.000Z',
+    endDate: '2026-09-11T00:00:00.000Z',
+  }, todayISO);
+  assert(unevenProgramSpan.min === -1 && unevenProgramSpan.max === 4,
+    `the real dated span was replaced by a fixed block assumption: ${JSON.stringify(unevenProgramSpan)}`);
+  assert(clampProgramWeekOffset(-2, unevenProgramSpan) === -1,
+    'Previous week escaped before the first week containing programmed dates');
+  assert(clampProgramWeekOffset(5, unevenProgramSpan) === 4,
+    'Next week escaped after the final week containing programmed dates');
+  assert(clampProgramWeekOffset(2, unevenProgramSpan) === 2,
+    'an in-program week was incorrectly blocked');
+
+  const noProgram = programWeekOffsetBounds(null, todayISO);
+  assert(noProgram.min === 0 && noProgram.max === 0,
+    'an athlete with no program can browse invented past/future weeks');
+
+  const schedule = stripComments(fs.readFileSync(
+    path.join(__dirname, '..', 'hooks', 'useSchedule.ts'), 'utf8',
+  ));
+  const ownerAt = schedule.indexOf('const weekBounds = programWeekOffsetBounds(');
+  const owner = schedule.slice(ownerAt, schedule.indexOf('return {', ownerAt));
+  assert(ownerAt > 0 && owner.length > 1200,
+    'the live week-navigation owner was not found; this guard would otherwise pass over nothing');
+  assert(/programWeekOffsetBounds\(state\.currentProgram, todayISOLocal\(\)\)/.test(owner)
+    && /const canGoPrev = boundedWeekOffset > weekBounds\.min/.test(owner)
+    && /const canGoNext = boundedWeekOffset < weekBounds\.max/.test(owner),
+  'the live hook does not derive both arrow edges from the saved current program');
+
+  const home = homeScreenSource();
+  const navAt = home.indexOf('testID="program-week-navigation"');
+  const navEnd = home.indexOf('{dayFirst ? (', navAt);
+  const nav = home.slice(navAt, navEnd);
+  assert(navAt > 0 && navEnd > navAt && nav.length > 1000,
+    'the live week-navigation region was not found; this guard would otherwise pass over nothing');
+  assert(/disabled=\{!canGoPrev\}[\s\S]{0,180}testID="program-week-previous"/.test(nav)
+    && /disabled=\{!canGoNext\}[\s\S]{0,180}testID="program-week-next"/.test(nav),
+  'the visible arrow controls can still be tapped beyond the program-date edges');
+});
+
 /**
  * THE FOUR STATUS DOORS THAT REMAIN ON THE DAY SCREEN.
  *
@@ -830,7 +904,7 @@ run('the week chevron opens one flat full session, not nested drop-downs', () =>
     'the flat week session still contains an inner accordion, rail or icon layer');
 });
 
-run('the week starts and returns collapsed while Today owns today directly', () => {
+run('the week starts collapsed while Day owns its persistent weekday directly', () => {
   const home = homeScreenSource();
   const toggleAt = home.indexOf('testID="program-view-toggle"');
   const weekContentAt = home.indexOf('{dayFirst ? (', toggleAt);
@@ -859,9 +933,10 @@ run('the week starts and returns collapsed while Today owns today directly', () 
       && handler.includes(`${pair[1]}()`),
     `${pair[0]} does not collapse the Week before changing its date range`);
   }
-  assert(/const dayFirstIdx = todayIdx;/.test(home)
+  assert(/const \[preferredDayIdx, setPreferredDayIdx\] = useState\(todayIdx >= 0 \? todayIdx : 0\)/.test(home)
+    && /const dayFirstIdx = Math\.min\(Math\.max\(preferredDayIdx, 0\), Math\.max\(weekDays\.length - 1, 0\)\)/.test(home)
     && /const isSelected = dayFirst \? true : isNormal\s*\? idx === expandedWeekIdx\s*:\s*idx === selectedIdx/.test(home),
-    'Today still borrows the Week expansion index instead of owning today directly');
+    'Day still borrows Week expansion instead of owning a persistent weekday directly');
 
   const dayRowAt = home.indexOf('function DayRow(');
   const dayRow = home.slice(dayRowAt, home.indexOf('interface LifeFactChipProps', dayRowAt));
