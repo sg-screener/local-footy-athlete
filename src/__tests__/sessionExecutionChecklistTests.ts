@@ -179,6 +179,11 @@ ok('each section has stable toggle and expanded-body identities',
 ok('rows expose a checkbox', /accessibilityRole="checkbox"/.test(screen));
 ok('completed rows use a dull treatment', /executionItemComplete/.test(screen));
 ok('mobility movements use the same controlled tick owner', /completedItemIds/.test(mobility) && /onToggleItem/.test(mobility));
+ok('mobility and every other session row use one square checkbox recipe',
+  /sessionExecutionCheckbox/.test(mobility)
+    && /\.\.\.sessionExecutionCheckbox/.test(mobility)
+    && /sessionExecutionCheckbox/.test(screen)
+    && /\.\.\.sessionExecutionCheckbox/.test(screen));
 const mobilitySectionAt = screen.indexOf("filter((section) => section.id === 'mobility')");
 const mobilityRowsAt = screen.indexOf('<MobilityPrehabFlowSection', mobilitySectionAt);
 ok('mobility uses the same chevron owner as the other sections',

@@ -1,7 +1,11 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './common/Text';
-import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
+import {
+  sessionExecutionCheckbox,
+  sessionExecutionCheckboxChecked,
+  sessionExecutionCheckmark,
+} from '../theme/sessionExecutionCheckbox';
 import {
   mobilityFlowMovementDose,
   type MobilityPrehabFlow,
@@ -86,14 +90,8 @@ const styles = StyleSheet.create({
   movementDose: { color: '#7A7A7A', fontSize: 13, fontWeight: '600' },
 
   tick: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: '#5A5A5A',
-    alignItems: 'center',
-    justifyContent: 'center',
+    ...sessionExecutionCheckbox,
   },
-  tickChecked: { borderColor: colors.accent.lime },
-  tickMark: { color: colors.accent.lime, fontSize: 11, fontWeight: '800' },
+  tickChecked: { ...sessionExecutionCheckboxChecked },
+  tickMark: { ...sessionExecutionCheckmark },
 });

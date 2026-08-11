@@ -54,6 +54,11 @@ import {
 import type { RecoveryAddonBlock } from '../../types/domain';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
+import {
+  sessionExecutionCheckbox,
+  sessionExecutionCheckboxChecked,
+  sessionExecutionCheckmark,
+} from '../../theme/sessionExecutionCheckbox';
 import { useDayWorkout } from './useDayWorkout';
 import { selectMobilityPrehabFlow } from '../../utils/mobilityPrehabFlow';
 import { useAthleteContext, useResolvedWeekForDate } from '../../hooks/useSchedule';
@@ -3561,21 +3566,13 @@ const styles = StyleSheet.create({
   executionItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   executionItemComplete: { opacity: 0.42 },
   executionCheckbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#666666',
-    alignItems: 'center',
-    justifyContent: 'center',
+    ...sessionExecutionCheckbox,
     marginTop: 10,
-    flexShrink: 0,
   },
   executionCheckboxComplete: {
-    borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200,255,0,0.12)',
+    ...sessionExecutionCheckboxChecked,
   },
-  executionCheckmark: { color: colors.accent.lime, fontSize: 13, fontWeight: '900' },
+  executionCheckmark: { ...sessionExecutionCheckmark },
   executionItemContent: { flex: 1 },
   executionFallbackLabel: {
     color: colors.text.primary,

@@ -11,6 +11,7 @@ LOOP CHECK: local font sizes inheriting stale line boxes — sighting 2 — comp
   1–5 effort so the dated session result carries better load evidence.
 - Games and practice matches use the same 1–5 effort scale as regular session
   feedback.
+- Mobility uses the same square checkbox as every other live-session row.
 
 ## Options compared before implementation
 
@@ -44,12 +45,23 @@ matches through one taxonomy and one form. The UI still generated ten choices
 and the transaction still accepted 1–10 even though the rest of the scale had
 moved to five. Both the form and shared payload validator now use 1–5.
 
+### Session checkbox shape
+
+1. Copy the ordinary row's dimensions into Mobility's separate style.
+2. Keep each row's existing tap target, but make both consume one shared square
+   checkbox, checked-state and tick recipe.
+
+Option 2 owns the result. Mobility can no longer drift back to a circle while
+the rest of the checklist stays square.
+
 ## Verification boundary
 
 - The typography gate executes the minimum line-box rule and reports the local
   font-size occurrence and distinct-file census behind the two shared owners.
 - The execution gate proves performed Team Training asks both measurements,
   requires both before save, and accepts only 1–5 effort.
+- The execution gate proves Mobility and ordinary session rows consume the same
+  square checkbox recipe.
 - The transaction gate drives a real Team Training workout and proves the two
   values survive the tap adapter, accepted transaction, dated feedback store and
   durable program envelope.
