@@ -969,6 +969,55 @@ for (const scenario of scenarios) {
     console.log(`\n⚠️ Resolver error for "${scenarioDisplayLabel(scenario)}": ${err.message}`);
   }
 
+  // ── THE FIFTH HARD DAY, MEASURED BEFORE IT IS ENFORCED ──
+  //
+  // Seat order 2026-08-12, step (a): the Bible (line 4812) permits a fifth hard
+  // day when an "unavoidable anchor" causes it and refuses one that is merely
+  // app-selected stress. The app ALREADY computes that exact distinction on
+  // every assessment — `appHardDayCount`, `anchorHardDays`,
+  // `unavoidableAnchorCausedExcess` — and then writes the answer to a contract
+  // field that has ONE write, ONE type declaration, ONE null initialiser and
+  // ZERO readers (verified by grep over `src/`, fixtures excluded).
+  //
+  // INERT unless `LFA_HARD_DAY_PROBE=1`. Printing the numbers is not enforcing
+  // them, and the order is explicit that the measurement comes first — the
+  // craft tier shipped on the belief that `strong` was where the quality lived
+  // and its own measurement refuted that.
+  if (process.env.LFA_HARD_DAY_PROBE === '1' && resolvedWeek) {
+    const contractV2 = (plan as { weeklyExposureContractV2?: unknown })
+      .weeklyExposureContractV2;
+    if (contractV2) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { evaluateSection18EffectiveWeek } = require('../rules/section18EffectiveWeekEvaluator');
+      const probeWorkouts = resolvedWeek
+        .map((day) => day.workout)
+        .filter((workout): workout is Workout => !!workout);
+      try {
+        const evaluation = evaluateSection18EffectiveWeek({
+          contract: JSON.parse(JSON.stringify(contractV2)),
+          workouts: probeWorkouts,
+          weekStart: TEST_MONDAY,
+        });
+        const rest = evaluation.ledger.restStress;
+        const stress = evaluation.contract.restStress;
+        const appHardDays = rest.hardDays.filter((day: number) =>
+          !rest.anchorHardDays.includes(day));
+        console.log(`HARD_DAY_PROBE ${scenario.id} `
+          + `hardDays=${rest.hardDays.length} `
+          + `anchorHardDays=${rest.anchorHardDays.length} `
+          + `appHardDayCount=${appHardDays.length} `
+          + `preferredMax=${stress.preferredHardDayRange.max} `
+          + `permittedMax=${stress.permittedHardDayMaximum} `
+          + `authorisedAnchorExcess=${stress.authorisedUnavoidableAnchorExcess} `
+          + `unavoidableAnchorCausedExcess=${stress.unavoidableAnchorCausedExcess}`);
+      } catch (error) {
+        console.log(`HARD_DAY_PROBE ${scenario.id} ERROR ${String(error)}`);
+      }
+    } else {
+      console.log(`HARD_DAY_PROBE ${scenario.id} NO_CONTRACT_V2`);
+    }
+  }
+
   const assertions = runAssertions(plan, resolvedWeek, scenario);
 
   // ── Phase 2 rules kernel: Bible validator findings ──
