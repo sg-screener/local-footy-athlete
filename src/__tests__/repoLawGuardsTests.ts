@@ -220,6 +220,91 @@ run('the seat inbox keeps its section structure', () => {
   assert(faults.length === 0, `docs/SEAT_INBOX.md: ${faults.join('; ')}`);
 });
 
+/**
+ * `LAW-no-order-hidden-from-the-stop-hook`.
+ *
+ * THE DEFECT, AND IT HAS A COST IN SAM'S DAY. `scripts/seat-inbox-hook.sh`
+ * bounds its scan at the next `## ` heading
+ * (`awk '/^## Unprocessed/{f=1;next} f&&/^## /{exit}'`). So a `## ` heading
+ * written INSIDE the unprocessed region truncates the scan, and **every order
+ * below it becomes invisible: the terminal ends its turn believing the queue is
+ * answered and Sam has to type "check inbox" himself.** He is the message bus
+ * again — the courier toll the hook's own comments already price.
+ *
+ * FOUNDING CASE, 2026-08-12, AND IT WAS THIS TERMINAL'S. Repairing a
+ * concurrent-write corruption, it re-homed the rescued block under a `## `
+ * heading. Masked only because orders sat above it and kept the hook blocking.
+ * **Repairing by hand a file that has a parser, without reading the parser, is
+ * the same class of mistake as the corruption it was fixing.**
+ *
+ * SIGHTING 5 of the class the hook's comments catalogue twice — "the scan
+ * infers 'an order exists' from an artefact". Every previous instance was fixed
+ * INSIDE the hook and stayed invisible to anything else. **This is the first
+ * one with a gate over the FILE**, which is the half that was always missing:
+ * the hook cannot detect the heading that stops it reading.
+ *
+ * WHAT THIS HOLDS: the unprocessed region contains no `## ` heading before its
+ * terminator, so nothing in it can be hidden. Sub-headings must be `###`.
+ * WHAT IT DOES NOT: it does not check that the orders are GOOD, or that anyone
+ * acted on them.
+ */
+const INBOX_ORDERS_START = '## Unprocessed';
+const INBOX_ORDERS_END = '## SAFE FOR A PARALLEL AGENT';
+
+/** Pure: `## ` headings inside the unprocessed region that truncate the scan. */
+function headingsHidingOrders(markdown: string): string[] {
+  const lines = markdown.split('\n');
+  const start = lines.findIndex((line) => line.startsWith(INBOX_ORDERS_START));
+  if (start < 0) return ['the unprocessed region is gone — this gate reads nothing'];
+  const end = lines.findIndex((line, i) => i > start && line.startsWith(INBOX_ORDERS_END));
+  if (end < 0) return [`the region terminator "${INBOX_ORDERS_END}" is gone — this gate reads nothing`];
+  return lines
+    .slice(start + 1, end)
+    .filter((line) => /^## /.test(line))
+    .map((line) => line.trim());
+}
+
+/** Pure: order-shaped, column-0 lines the hook's own scan can actually reach. */
+function hookVisibleOrderLines(markdown: string): string[] {
+  const lines = markdown.split('\n');
+  const start = lines.findIndex((line) => line.startsWith(INBOX_ORDERS_START));
+  if (start < 0) return [];
+  const out: string[] = [];
+  for (let i = start + 1; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (/^## /.test(line)) break; // the hook stops here, and so do we
+    if (!line || /^\s/.test(line)) continue;
+    const norm = line
+      .replace(/^[*_>#]+\s*/, '')
+      .replace(/^[0-9]+\.\s*/, '')
+      .replace(/^[-*+]\s*/, '')
+      .replace(/^[*_]+/, '');
+    if (/^\(?(none|nothing|queue empty|empty)\b/i.test(norm)) continue;
+    if (/parked/i.test(line)) continue;
+    out.push(line);
+  }
+  return out;
+}
+
+run('no seat order can hide from the stop hook behind a `##` heading', () => {
+  const inbox = fs.readFileSync(path.join(repoRoot, 'docs', 'SEAT_INBOX.md'), 'utf8');
+
+  // NON-VACUITY FIRST. A region the scan cannot find, or one holding no orders,
+  // passes this cell trivially — and an empty parse is exactly what a bad
+  // bound produces (the 2026-08-07 (a) misfire, in the other direction).
+  const visible = hookVisibleOrderLines(inbox);
+  assert(visible.length > 5,
+    `the hook's own scan reaches only ${visible.length} order-shaped line(s) — `
+    + 'the region bounds are wrong and every assertion here is vacuous');
+
+  const hiding = headingsHidingOrders(inbox);
+  assert(hiding.length === 0,
+    `these '## ' heading(s) sit inside the unprocessed region and TRUNCATE the `
+    + `stop hook's scan, hiding every order below them: ${JSON.stringify(hiding)}. `
+    + 'Sub-headings inside `## Unprocessed` must be `###`. An order the hook '
+    + 'cannot see ends the turn silently and makes Sam the courier.');
+});
+
 run('every boundary report carries a NOT-COVERED section', () => {
   const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
     .filter((file) => /BOUNDARY/.test(path.basename(file)));
@@ -1567,6 +1652,39 @@ run('the two-meanings class keeps counting its sightings', () => {
 });
 
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the order-hiding heading, probed BOTH directions ──
+  // THE FOUNDING CASE, REBUILT: the exact shape this terminal wrote on
+  // 2026-08-12 when it repaired the inbox by hand.
+  // A DISTINCTIVE MARKER, because the first draft of this cell searched for a
+  // phrase its own fixture did not contain: the "is it hidden?" assertion
+  // passed by matching NOTHING, and only the "is it visible again?" assertion
+  // noticed. A vacuous probe in a liveness cell is the disease the liveness
+  // cell exists to catch.
+  const MARKER = 'ORDER-BELOW-THE-HEADING';
+  const hidden = [
+    '## Unprocessed (newest first)', '',
+    '1. a visible order', '',
+    '## THE MERGE\'S LEFTOVERS', '',
+    `2. ${MARKER}`, '',
+    '## SAFE FOR A PARALLEL AGENT',
+  ].join('\n');
+  assert(headingsHidingOrders(hidden).length === 1,
+    'the founding case — an order re-homed under its own `## ` heading — passed');
+  // And the hook's real scan confirms WHY it matters: order 2 is unreachable.
+  assert(hookVisibleOrderLines(hidden).some((l) => /a visible order/.test(l)),
+    'the visibility model cannot even see the order ABOVE the heading — it is broken');
+  assert(!hookVisibleOrderLines(hidden).some((l) => l.includes(MARKER)),
+    'the visibility model disagrees with the hook it is modelling');
+  // The corrected shape, which is what the seat actually wrote.
+  const fixed = hidden.replace("## THE MERGE'S LEFTOVERS", "### THE MERGE'S LEFTOVERS");
+  assert(headingsHidingOrders(fixed).length === 0,
+    'a correctly `###`-nested sub-heading was flagged');
+  assert(hookVisibleOrderLines(fixed).some((l) => l.includes(MARKER)),
+    'the `###` fix does not actually make the order reachable — the fix is wrong');
+  // A missing region is a READ FAILURE, never a silent pass.
+  assert(headingsHidingOrders('# SEAT INBOX\n\nnothing here').length === 1,
+    'a file with no unprocessed region passed as clean');
+
   // ── the whole-set disable, probed BOTH directions ──
   assert(wholeSetDisableFaults('disabled={actionsNotYet}').length > 0,
     'the exact pre-fix shape — one flag disabling the whole set — passed');
