@@ -15,7 +15,10 @@ import {
   pickEquivalentByTier,
   rewriteModalityInName,
 } from './coachModalitySwap';
-import type { ConditioningModality } from '../data/exerciseTags';
+import {
+  CONDITIONING_META,
+  type ConditioningModality,
+} from '../data/exerciseTags';
 import {
   getTapSwapChoices,
   type TapSwapEnvironment,
@@ -81,10 +84,10 @@ const MACHINE_MODALITY_ORDER: readonly ConditioningEquipmentModality[] = [
   'treadmill',
 ];
 
-function conditioningEquipmentForName(
+function conditioningEquipmentForModality(
+  modality: ConditioningModality | null,
   name: string,
 ): ConditioningEquipmentModality | null {
-  const modality = inferModalityFromName(name);
   if (modality === 'row') return 'row';
   if (modality === 'ski') return 'ski';
   if (modality === 'bike') {
@@ -94,6 +97,49 @@ function conditioningEquipmentForName(
   }
   if (/\btreadmill\b/i.test(name)) return 'treadmill';
   return null;
+}
+
+function conditioningEquipmentForName(
+  name: string,
+): ConditioningEquipmentModality | null {
+  return conditioningEquipmentForModality(inferModalityFromName(name), name);
+}
+
+function conditioningEquipmentForRequirement(
+  requirement: string,
+): ConditioningEquipmentModality | null {
+  const normalized = requirement.trim().toLowerCase().replace(/[\s_-]+/g, ' ');
+  if (/\b(?:rower|row erg|rowing erg|rowing machine|concept ?2 rower)\b/.test(normalized)) return 'row';
+  if (/\b(?:ski erg|skierg|ski machine)\b/.test(normalized)) return 'ski';
+  if (/\b(?:assault bike|air bike|echo bike|airdyne)\b/.test(normalized)) return 'air_bike';
+  if (/\b(?:bike erg|stationary bike|exercise bike|spin bike)\b/.test(normalized)) return 'bike_erg';
+  if (/\btreadmill\b/.test(normalized)) return 'treadmill';
+  return null;
+}
+
+/**
+ * Conditioning machines come from conditioning metadata or an authored machine
+ * requirement. Name inference remains only as a compatibility read for rows
+ * that are explicitly Cardio/Conditioning (or carry no structured row at all),
+ * so strength movement names such as Barbell Row cannot become a Row erg.
+ */
+function conditioningEquipmentForExercise(
+  exercise: SessionExercise,
+): ConditioningEquipmentModality | null {
+  const authoredModality = CONDITIONING_META[exercise.name]?.modality ?? null;
+  const authoredEquipment = conditioningEquipmentForModality(authoredModality, exercise.name);
+  if (authoredEquipment) return authoredEquipment;
+
+  const rawExercise = exercise.raw?.exercise;
+  const requirements = rawExercise?.equipmentRequired ?? [];
+  for (const requirement of requirements) {
+    const equipment = conditioningEquipmentForRequirement(String(requirement));
+    if (equipment) return equipment;
+  }
+
+  const exerciseType = String(rawExercise?.exerciseType ?? '');
+  if (rawExercise && !/cardio|conditioning/i.test(exerciseType)) return null;
+  return conditioningEquipmentForName(exercise.name);
 }
 
 function labelFor(
@@ -140,7 +186,7 @@ export function deriveSessionEquipmentRequirements(
   };
 
   for (const exercise of exercises) {
-    const modality = conditioningEquipmentForName(exercise.name);
+    const modality = conditioningEquipmentForExercise(exercise);
     if (modality) add('modality', modality, exercise);
 
     for (const rawRequirement of exercise.raw?.exercise?.equipmentRequired ?? []) {

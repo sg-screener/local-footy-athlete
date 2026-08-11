@@ -10,6 +10,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
+import { signedCopy } from '../../rules/signedCopy';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SessionEquipmentSheet } from './SessionEquipmentSheet';
 import ExerciseVideoModal from '../../components/ExerciseVideoModal';
@@ -2623,7 +2624,7 @@ function ConditioningRow({
 function TeamTrainingRow() {
   return (
     <View style={styles.exerciseCard} testID="team-training-section">
-      <Text style={styles.exerciseName}>Club/team field session</Text>
+      <Text style={styles.exerciseName}>{signedCopy('session.team_training.row')}</Text>
     </View>
   );
 }

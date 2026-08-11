@@ -171,8 +171,13 @@ ok('dumbbell and kettlebell reuse the one library glyph owner',
   equipment.includes("<LfaIcon name=\"dumbbell\"")
   && equipment.includes("<LfaIcon name=\"kettlebell\""));
 ok('Program quick actions and readiness choices use the approved replacements',
-  home.includes("<LfaIcon name=\"sick\"")
-  && home.includes("<LfaIcon name=\"injury\"")
+  home.includes('stroke="#B9A7FF"')
+  && home.includes('M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z')
+  && home.includes('stroke="#FFCA68"')
+  && home.includes('M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z')
+  && home.includes('stroke="#FF7F7F"')
+  && home.includes('M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z')
+  && home.includes("<LfaIcon name=\"sick\"")
   && home.includes("<LfaIcon name=\"no-energy\"")
   && home.includes("<LfaIcon name=\"severe-illness\""));
 ok('plan editing uses arrow, flexed arm, stretching person and medical shield',

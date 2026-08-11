@@ -814,11 +814,9 @@ export default function HomeScreenV2() {
               label="Away"
               tint={styles.awayIconTint}
               icon={
-                /* Globe — the same glyph the away row carried inside the old
-                   sheet, promoted with it. */
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#7CC4FF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" /><Path d="M3 12h18" />
-                  <Path d="M12 2a15 15 0 010 20" /><Path d="M12 2a15 15 0 000 20" />
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#B9A7FF" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" />
+                  <Circle cx={12} cy={10} r={2} />
                 </Svg>
               }
             />
@@ -841,7 +839,12 @@ export default function HomeScreenV2() {
               accessibilityHint={weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
               label="Sick"
               tint={styles.readinessIconTint}
-              icon={<LfaIcon name="sick" color="#FF7A85" />}
+              icon={
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFCA68" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z" />
+                  <Path d="M12 10v6" />
+                </Svg>
+              }
             />
             <LifeFactChip
               /* ONE OWNER, TWO DOORS. This opens the SAME `GuidedInjuryFlowSheet`
@@ -852,7 +855,11 @@ export default function HomeScreenV2() {
               accessibilityLabel="I'm injured"
               label="Injured"
               tint={styles.injuredIconTint}
-              icon={<LfaIcon name="injury" color="#FF8A4C" />}
+              icon={
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF7F7F" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z" />
+                </Svg>
+              }
             />
           </View>
           </Card>
@@ -3612,7 +3619,7 @@ const styles = StyleSheet.create({
   // Program shape controls. Today pays only for the toggle. Week adds this
   // compact navigation row underneath it, matching the accepted hierarchy
   // without shrinking the actual tap targets below a comfortable size.
-  topBar: { marginBottom: spacing.md, gap: 8 },
+  topBar: { marginBottom: spacing.md, gap: spacing.md },
   compactWeekNav: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -3705,10 +3712,10 @@ const styles = StyleSheet.create({
   // Same 0.12-alpha treatment as the blue busy icon (DAY_ROW_ACCENT.game).
   practiceMatchIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
   // Weekly readiness card = same treatment with a wellbeing tint.
-  readinessIconTint: { backgroundColor: 'rgba(255, 122, 133, 0.12)' },
+  readinessIconTint: { backgroundColor: 'rgba(255, 202, 104, 0.12)' },
   tiredIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
-  awayIconTint: { backgroundColor: 'rgba(124, 196, 255, 0.12)' },
-  injuredIconTint: { backgroundColor: 'rgba(255, 138, 76, 0.12)' },
+  awayIconTint: { backgroundColor: 'rgba(185, 167, 255, 0.12)' },
+  injuredIconTint: { backgroundColor: 'rgba(255, 127, 127, 0.12)' },
   scheduleAckError: { color: '#FF7A85' },
   readinessAck: {
     backgroundColor: 'rgba(198, 255, 0, 0.12)',

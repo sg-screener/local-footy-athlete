@@ -712,6 +712,21 @@ run('the four status circles sit in a card with words above them', () => {
   assert(/label="Tired"/.test(home) && !/label="Time"/.test(home),
     'the first circle is not the direct Tired readiness door, or the dead Time '
     + 'door has returned.');
+
+  const chipRegionEnd = home.indexOf('</View>', chipsAt);
+  assert(chipRegionEnd > chipsAt,
+    'the status-chip region could not be found before its closing view');
+  const chipRegion = home.slice(chipsAt, chipRegionEnd);
+  assert(/stroke="#B9A7FF"[\s\S]*M12 21s6-5\.2 6-11a6 6 0 1 0-12 0c0 5\.8 6 11 6 11Z/.test(chipRegion),
+    'Away is not using Renee\'s purple map-pin icon');
+  assert(/stroke="#FFCA68"[\s\S]*M10 5a2 2 0 0 1 4 0v8\.2a4 4 0 1 1-4 0Z[\s\S]*M12 10v6/.test(chipRegion),
+    'Sick is not using Renee\'s amber thermometer icon');
+  assert(/stroke="#FF7F7F"[\s\S]*M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z/.test(chipRegion),
+    'Injured is not using Renee\'s red cross icon');
+  assert(/awayIconTint:\s*\{[^}]*rgba\(185,\s*167,\s*255,\s*0\.12\)/.test(home)
+    && /readinessIconTint:\s*\{[^}]*rgba\(255,\s*202,\s*104,\s*0\.12\)/.test(home)
+    && /injuredIconTint:\s*\{[^}]*rgba\(255,\s*127,\s*127,\s*0\.12\)/.test(home),
+  'the three Renee status icons no longer carry their matching circle tints');
 });
 
 run('Tired and Sick enter one readiness sheet at their own options', () => {
@@ -895,6 +910,8 @@ run('week navigation is absent from Today and compact below the toggle in Week',
     && /compactWeekNavCurrent:\s*\{[^}]*minWidth:\s*112[^}]*minHeight:\s*40/.test(home)
     && (home.match(/<Svg width=\{17\} height=\{17\}/g) ?? []).length >= 2,
     'the Week navigator has fallen back to the rejected undersized proportions');
+  assert(/topBar:\s*\{[^}]*marginBottom:\s*spacing\.md[^}]*gap:\s*spacing\.md/.test(home),
+    'the week range is not equally spaced between the Day / Week toggle and the week cards');
 });
 
 run('all seven week days use her one card head, including today', () => {

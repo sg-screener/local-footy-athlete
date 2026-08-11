@@ -212,6 +212,9 @@ ok('mobility reuses the complete Strength exercise presentation',
 ok('Team Training expands as a plain checklist row, not an accent card',
   /function TeamTrainingRow/.test(screen) && /styles\.exerciseCard/.test(screen) &&
     !/function TeamTrainingBanner|teamTrainingCard|teamTrainingBody/.test(screen));
+ok('the Team Training checklist row uses the ruled Club session label',
+  /function TeamTrainingRow[\s\S]{0,500}signedCopy\('session\.team_training\.row'\)/.test(screen)
+  && !/Club\/team field session/.test(screen));
 ok('mobility has no optional wording in text or accessibility copy',
   !/\boptional\b/i.test(mobilityRenderer));
 ok('the in-progress checklist is a screen draft', /useState<ReadonlySet<string>>/.test(screen) && /setCompletedExerciseIds/.test(screen));
@@ -290,6 +293,28 @@ ok('strength equipment is derived from the session row',
   requirements.some((requirement) =>
     requirement.key === 'tag:barbell'
       && requirement.exerciseKeys.includes('squat')));
+const strengthRowsNamedRow: any[] = [
+  {
+    key: 'barbell-row',
+    name: 'Barbell Row',
+    raw: { exercise: { exerciseType: 'Compound', equipmentRequired: ['Barbell'] } },
+  },
+  {
+    key: 'cable-row',
+    name: 'Seated Cable Row',
+    raw: { exercise: { exerciseType: 'Compound', equipmentRequired: ['Cable Machine'] } },
+  },
+];
+const strengthRowRequirements = deriveSessionEquipmentRequirements(strengthRowsNamedRow);
+ok('strength rows named Row keep their authored barbell and cable requirements',
+  strengthRowRequirements.some((requirement) =>
+    requirement.key === 'tag:barbell'
+      && requirement.exerciseKeys.includes('barbell-row'))
+  && strengthRowRequirements.some((requirement) =>
+    requirement.key === 'tag:cables'
+      && requirement.exerciseKeys.includes('cable-row')));
+ok('strength rows named Row never invent a row erg requirement',
+  !strengthRowRequirements.some((requirement) => requirement.key === 'modality:row'));
 const missingValues = missingSessionEquipmentValues(new Set(['modality:row', 'tag:barbell']));
 ok('unticked requirements split into typed machine and strength constraints',
   missingValues.modalities[0] === 'row' && missingValues.tags[0] === 'barbell');

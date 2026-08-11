@@ -239,6 +239,14 @@ export function registerProjectionCopy(): void {
         + 'punctuation and casing follow the reference he asked the app to match.',
       text: 'Mobility / Warm-up',
     },
+    {
+      id: 'session.team_training.row',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-11 in the Codex app task: "in the session '
+        + 'view under team training it says club/field session it should just say '
+        + 'Club session".',
+      text: 'Club session',
+    },
 
     // ── The change card, ruling 1. ──
     //
