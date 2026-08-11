@@ -66,6 +66,19 @@ and this file gets one line pointing at it.**
 
 ## OPEN, ON US
 
+- **THE ARCHITECTURE ANSWER IS WRITTEN: `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md`.**
+  Sam asked for the best way to build the app, not the fastest. **Headline: this
+  app is not built wrong, it is built right and DISCONNECTED.** The calendar,
+  fixture resolution, proximity sets, the Section 17 kernel and the contract's
+  anchor array are **already list-shaped for N games on any day**; it collapses at
+  ONE line, `derivedWeekContract.ts:90` — **a waist, not a floor.** Three layers:
+  facts / the brain / **the athlete's will, which does not exist** (a `block` has
+  one button labelled `"OK"`; `canOverride` is written 9 times and read **zero**).
+  **Nine values are computed every assessment and read by nobody** — one
+  `noUnusedWrites` gate is the compression for sightings 1-6.
+
+
+
 - **THE FIFTH HARD DAY IS APP-SELECTED IN 7 WEEKS OUT OF 8.** Measured
   2026-08-12 (`a8f13d91`): eight of seventeen QA scenarios carry a fifth hard
   day and in seven of them nothing forced it but the app. The arithmetic that
@@ -82,6 +95,24 @@ and this file gets one line pointing at it.**
   29 cells, 3 mutations killed. **Needs Sam's eye: hydration can now swap a day
   in a week already on his phone.** `docs/CRAFT_TIER_BOUNDARY_2026-08-12.md`.
   Session stop report: `docs/STOP_2026-08-12_CRAFT_TIER_AND_FIFTH_HARD_DAY.md`.
+
+- **SAM RULED 2026-08-12 — HYDRATION MAY RE-SHAPE THE REST OF THE WEEK, QUIETLY.
+  CLOSED, DO NOT RE-ASK.** *"once a session is done then it's locked in, only the
+  rest of the week can change ... they realise they have a saturday game and not
+  a sunday game then wednesday to sunday should adjust to accomodate this"*. Both
+  halves already match the code (`governedFromISO` is date-stamped, past test is
+  `<`), so **no work is owed and the "tell him it moved" copy is WITHDRAWN.**
+  **He also named the fixture shape:** *"games are basically only ever on friday
+  saturday sunday - occasionally younger guys will have ... school footy thursday
+  and another game saturday or sunday but it's rare"*. **THURSDAY, not Wednesday,
+  is the realistic lost-game-day case** (`mapToLegacyGameDay` flattens it to
+  `'Varies'`), and **the two-game week cannot be expressed at all**: the profile
+  has no second-game field, while `weekStructureValidator` already takes
+  `gameDates: string[]` and three `.find()` adapters throw the extras away
+  (`section18CraftTier.ts:152`, `derivedWeekContract.ts:226`,
+  `section18AcceptedWeekGateway.ts:290`). **Friday is then G+1 and G-1 at once,
+  for the youngest athletes, protected against one arbitrary game.** Merged into
+  seat inbox item 2.
 
 - **SEAT ACCEPTED THE CRAFT TIER — AND ITS ZERO-CHANGE MEASUREMENT IS THE
   FINDING, NOT THE REASSURANCE.** The quality Sam complains about lives in the
