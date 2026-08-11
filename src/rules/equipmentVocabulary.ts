@@ -361,5 +361,45 @@ export function formatEquipmentAnswerSummary(data: {
   return 'Not selected';
 }
 
+/**
+ * Profile shows the place-level answer the athlete chose during onboarding,
+ * not the implementation checklist seeded from it. The detailed answer still
+ * owns programming and remains editable one level inside the setup sheet.
+ *
+ * An explicitly empty modern answer is the athlete choosing bodyweight-only,
+ * so it outranks a location that may have been used to seed the checklist.
+ */
+export function formatEquipmentProfileSummary(data: {
+  trainingLocation?: 'Commercial gym' | 'Home gym' | 'Club gym' | 'Outdoor';
+  equipmentAnswer?: {
+    tags: Readonly<Partial<Record<string, string>>>;
+    modalities: Readonly<Partial<Record<string, string>>>;
+  };
+  equipment?: string[];
+  equipmentSelectionCompleteness?: string;
+}): string {
+  const answer = data.equipmentAnswer;
+  if (answer) {
+    const hasSelectedEquipment = [...Object.values(answer.tags), ...Object.values(answer.modalities)]
+      .some((possession) => possession === 'have');
+    if (!hasSelectedEquipment) return 'Bodyweight only';
+  }
+
+  if (data.trainingLocation === 'Outdoor') return 'Bodyweight only';
+  if (data.trainingLocation) return data.trainingLocation;
+
+  const legacyEquipment = data.equipment ?? [];
+  if (
+    data.equipmentSelectionCompleteness === 'complete'
+    && (
+      legacyEquipment.length === 0
+      || legacyEquipment.every((item) => /bodyweight|none/i.test(item))
+    )
+  ) {
+    return 'Bodyweight only';
+  }
+  return 'Not selected';
+}
+
 /** Referenced so the rendering rules stay an import-checked source. */
 export const MODALITY_RULE_COUNT = MODALITY_RENDERING_RULES.length;

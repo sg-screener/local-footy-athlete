@@ -22,10 +22,6 @@ import {
   decideProfileSetupChange,
   profileSetupBlockCopy,
 } from '../../rules/profileSetupChange';
-import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
-import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
-import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
-import { useReadinessStore } from '../../store/readinessStore';
 import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
 import {
   clearCoachChat,
@@ -46,7 +42,6 @@ import { Button as V2Button, Sheet } from '../../components/ui';
 import { buildMailto, getClientEnvConfig } from '../../config/env';
 import { WEEK_DAYS, DAY_SHORT, REBUILD_MSG_INTERVAL_MS } from '../home/homeScreenConstants';
 import { logger } from '../../utils/logger';
-import { selectActiveCoachNotes } from '../../utils/activeCoachNotes';
 import {
   ROLE_BUCKET_OPTIONS,
   normalizeRoleBucket,
@@ -62,7 +57,7 @@ import {
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { useRefusalOnContinue } from '../../hooks/useRefusalOnContinue';
 import { EquipmentEditorSheet } from './EquipmentEditorSheet';
-import { formatEquipmentAnswerSummary } from '../../rules/equipmentVocabulary';
+import { formatEquipmentProfileSummary } from '../../rules/equipmentVocabulary';
 
 type SetupSheetStep =
   | 'overview'
@@ -149,11 +144,6 @@ export default function ProfileScreen() {
     program: currentProgramForPhase,
     profile: onboardingData,
   });
-  const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
-  const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
-  const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
-  const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
-  const readinessSignalsByDate = useReadinessStore((s) => s.signalsByDate);
   const env = getClientEnvConfig();
   const [isDevResetting, setIsDevResetting] = useState(false);
   const [setupSheetVisible, setSetupSheetVisible] = useState(false);
@@ -245,12 +235,6 @@ export default function ProfileScreen() {
   const [isSetupUpdating, setIsSetupUpdating] = useState(false);
   const [setupUpdateMsgIdx, setSetupUpdateMsgIdx] = useState(0);
   const setupUpdateMsgOpacity = useRef(new Animated.Value(1)).current;
-
-  // Render-time proof — confirms the live Profile tab actually mounts
-  // the Coach adjustments section. Pair with [reset-ui] press logs below.
-  useEffect(() => {
-    logger.debug('[profile] coach_adjustments_section_rendered');
-  }, []);
 
   useEffect(() => {
     if (!isSetupUpdating) return;
@@ -393,6 +377,16 @@ export default function ProfileScreen() {
     setSetupTapDiag((prev) => ({ ...prev, handlerEnd: prev.handlerEnd + 1 }));
   };
 
+  const openEquipmentEditor = () => {
+    // Equipment is one of the setup changes, but keeps its existing atomic
+    // editor and transaction. Close the overview sheet before opening that
+    // editor so two native sheets never compete for the same presentation.
+    setSetupSheetVisible(false);
+    setSetupSheetStep('overview');
+    setEquipmentSaveError(null);
+    setEquipmentEditorVisible(true);
+  };
+
   const displayName = onboardingData.firstName || 'Athlete';
   const position = onboardingData.position ? roleBucketLabel(onboardingData.position) : '';
   const experienceLevel = onboardingData.experienceLevel || '';
@@ -404,16 +398,6 @@ export default function ProfileScreen() {
       ? motivationGoalLabel(resolveMotivation(onboardingData).goals[0])
       : '')
     || '';
-  const activeIssues = selectActiveCoachNotes({
-    activeConstraints,
-    activeInjury,
-    athletePrefs,
-    modalityPreferences,
-    onboardingData,
-    readinessSignalsByDate,
-  }).map((note) =>
-    typeof note.severity === 'number' ? `${note.title} — ${note.severity}/10` : note.title,
-  );
   const currentPhase = (ownedSeasonPhase.phase || 'Pre-season') as SeasonPhase;
   const lfaDayCountNeedsSync =
     programDetailsSaved &&
@@ -655,7 +639,7 @@ export default function ProfileScreen() {
             PROFILE
           </Text>
           <Text variant="bodySmall" color={colors.text.secondary} style={styles.headerSubtitle}>
-            Your program setup, coach adjustments and support.
+            Your program setup and support.
           </Text>
           {/* TEMPORARY device diagnostic readout — remove with the rest. */}
           <Text
@@ -722,17 +706,8 @@ export default function ProfileScreen() {
             {mainFocus ? <ProfileRow label="Main goal / focus" value={mainFocus} /> : null}
             <ProfileRow
               label="Equipment"
-              value={formatEquipmentAnswerSummary(onboardingData)}
+              value={formatEquipmentProfileSummary(onboardingData)}
             />
-            <TouchableOpacity
-              style={styles.setupChangeButton}
-              activeOpacity={0.7}
-              onPress={() => { setEquipmentSaveError(null); setEquipmentEditorVisible(true); }}
-              testID="profile-equipment-edit"
-              accessibilityLabel="Edit equipment"
-            >
-              <Text style={styles.setupChangeText}>Edit equipment</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={styles.setupChangeButton}
               activeOpacity={0.7}
@@ -746,66 +721,6 @@ export default function ProfileScreen() {
             >
               <Text style={styles.setupChangeText}>
                 Something changed? Tell the coach
-              </Text>
-            </TouchableOpacity>
-          </Card>
-        </View>
-
-        {/* Coach adjustments */}
-        <View
-          style={styles.section}
-          testID="profile-coach-adjustments-section"
-          accessibilityLabel="Coach adjustments"
-        >
-          <Text variant="label" color={colors.accent.lime} style={styles.sectionTitle}>
-            COACH ADJUSTMENTS
-          </Text>
-          <Card style={styles.infoCard}>
-            <View style={styles.activeCoachState} testID="profile-active-coach-state">
-              {activeIssues.length > 0 ? (
-                <>
-                  <Text variant="caption" color={colors.text.tertiary} style={styles.activeLabel}>
-                    Active:
-                  </Text>
-                  {activeIssues.map((issue, index) => (
-                    <Text
-                      key={`${issue}-${index}`}
-                      variant="bodySmall"
-                      color={colors.text.primary}
-                      style={styles.activeIssue}
-                    >
-                      • {issue}
-                    </Text>
-                  ))}
-                </>
-              ) : (
-                <Text
-                  variant="bodySmall"
-                  color={colors.text.secondary}
-                  testID="profile-no-active-coach-adjustments"
-                >
-                  No active coach changes.
-                </Text>
-              )}
-            </View>
-            {/* A5: no clear control here. It cleared only the pre-§18 mirror
-                stores, so the fact, the week overlay, the ledger adjustment and
-                the visible week all survived a tap that reported success. The
-                Program tab's active-state cards own clearing — one door, through
-                the cascade. This section stays read-only. */}
-            <View style={styles.resetDivider} />
-            <TouchableOpacity
-              style={styles.resetRow}
-              activeOpacity={0.7}
-              onPress={onClearCoachChat}
-              testID="profile-clear-coach-chat"
-              accessibilityLabel="Clear coach chat"
-            >
-              <Text variant="body" color={colors.text.primary} style={{ fontWeight: '600' }}>
-                Clear coach chat
-              </Text>
-              <Text variant="caption" color={colors.text.tertiary}>
-                Clears the coach conversation only. Keeps your program.
               </Text>
             </TouchableOpacity>
           </Card>
@@ -922,6 +837,21 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.resetRow}
               activeOpacity={0.7}
+              onPress={onClearCoachChat}
+              testID="profile-clear-coach-chat"
+              accessibilityLabel="Clear coach chat"
+            >
+              <Text variant="body" color={colors.text.primary} style={{ fontWeight: '600' }}>
+                Clear coach chat
+              </Text>
+              <Text variant="caption" color={colors.text.tertiary}>
+                Clears the coach conversation only. Keeps your program.
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.resetDivider} />
+            <TouchableOpacity
+              style={styles.resetRow}
+              activeOpacity={0.7}
               onPress={onFullReset}
               testID="profile-full-reset"
               accessibilityLabel="Full reset"
@@ -991,6 +921,8 @@ export default function ProfileScreen() {
         onSaveProgramDetails={saveProgramDetails}
         onEditPlayerDetails={openPlayerDetailsEditor}
         onEditProgramDetails={openProgramDetailsEditor}
+        equipmentSummary={formatEquipmentProfileSummary(onboardingData)}
+        onEditEquipment={openEquipmentEditor}
         onReviewUpdate={() => {
           setSetupUpdateError(null);
           setSetupSheetStep('confirm');
@@ -1117,6 +1049,8 @@ interface SetupUpdateSheetProps {
   onSaveProgramDetails: () => void;
   onEditPlayerDetails: () => void;
   onEditProgramDetails: () => void;
+  equipmentSummary: string;
+  onEditEquipment: () => void;
   onReviewUpdate: () => void;
   onConfirmUpdate: () => void;
 }
@@ -1168,6 +1102,8 @@ function SetupUpdateSheet({
   onSaveProgramDetails,
   onEditPlayerDetails,
   onEditProgramDetails,
+  equipmentSummary,
+  onEditEquipment,
   onReviewUpdate,
   onConfirmUpdate,
 }: SetupUpdateSheetProps) {
@@ -1521,6 +1457,23 @@ function SetupUpdateSheet({
       </View>
 
       <View style={styles.sheetSection}>
+        <Text style={styles.sheetSectionTitle}>EQUIPMENT</Text>
+        <View style={styles.sheetCard}>
+          <SetupSummaryRow label="Training setup" value={equipmentSummary} />
+          <TouchableOpacity
+            style={styles.sheetCardAction}
+            activeOpacity={0.72}
+            onPress={onEditEquipment}
+            testID="profile-setup-equipment-edit"
+            accessibilityLabel="Edit equipment"
+          >
+            <Text style={styles.sheetCardActionText}>Edit equipment</Text>
+            <Text style={styles.sheetCardChevron}>›</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.sheetSection}>
         <Text style={styles.sheetSectionTitle}>PROGRAM SETUP</Text>
         <View style={styles.sheetCard}>
           <SetupSummaryRow label="Current phase" value={currentPhase} />
@@ -1768,16 +1721,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
-  },
-  activeCoachState: {
-    marginBottom: spacing.md,
-  },
-  activeLabel: {
-    marginBottom: spacing.xs,
-    fontWeight: '600',
-  },
-  activeIssue: {
-    marginTop: 2,
   },
   actionStack: {
     gap: spacing.sm,

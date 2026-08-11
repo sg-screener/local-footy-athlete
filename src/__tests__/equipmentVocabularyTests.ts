@@ -40,6 +40,7 @@ import {
   deriveEquipmentVocabulary,
   derivedEquipmentChecklistTags,
   derivedConditioningModalityQuestions,
+  formatEquipmentProfileSummary,
   UNMAPPABLE_REQUIREMENTS_PENDING_RULING,
 } from '../rules/equipmentVocabulary';
 import { eligiblePowerExercises } from '../rules/powerExercisePool';
@@ -277,6 +278,34 @@ console.log('\n— location presets are seeds INSIDE the vocabulary (audit rulin
       home?.preTickedModalities.length === 0,
     home);
 }
+
+console.log('\n— Profile repeats the onboarding choice, never its seeded checklist —');
+ok(
+  'a selected commercial gym reads as Commercial gym',
+  formatEquipmentProfileSummary({
+    trainingLocation: 'Commercial gym',
+    equipmentAnswer: { tags: { barbell: 'have' }, modalities: {} },
+  }) === 'Commercial gym',
+);
+ok(
+  'club and home choices retain the exact onboarding labels',
+  formatEquipmentProfileSummary({ trainingLocation: 'Club gym' }) === 'Club gym'
+    && formatEquipmentProfileSummary({ trainingLocation: 'Home gym' }) === 'Home gym',
+);
+ok(
+  'an explicitly empty equipment answer reads as Bodyweight only even when seeded from a gym',
+  formatEquipmentProfileSummary({
+    trainingLocation: 'Commercial gym',
+    equipmentAnswer: { tags: { barbell: 'never' }, modalities: {} },
+  }) === 'Bodyweight only',
+);
+ok(
+  'Profile never falls back to an itemised equipment list',
+  formatEquipmentProfileSummary({
+    equipmentSelectionCompleteness: 'complete',
+    equipment: ['Barbell', 'Dumbbells', 'Cable machine'],
+  }) === 'Not selected',
+);
 
 console.log(`\n${failures.length === 0 ? 'ALL PASS' : 'FAILURES'}: ${passed} passed, ${failures.length} failed`);
 totalsPrinted(failures.length);

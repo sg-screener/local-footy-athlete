@@ -388,6 +388,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-profile-setup-is-not-status',
+    law: 'Profile shows the athlete\'s onboarding-level equipment choice, keeps equipment editing one level inside its single setup-change door, and renders no Coach adjustments or active-modifier read model because My Status is their sole home.',
+    ruledAt: 'docs/UI_PROTOTYPE_DIVERGENCE_2026-08-11.md "SAM EYE PASS 9 — PROFILE IS SETUP, NOT STATUS"',
+    guard: {
+      state: 'guarded',
+      by: 'test:profile-reset-ui + test:equipment-vocabulary + .maestro/golden/profile-setup-equipment.yaml',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: Profile independently subscribed to four status stores, rebuilt the active Coach Notes list already owned by My Status, and rendered it as a second COACH ADJUSTMENTS section. The Equipment row separately expanded the onboarding preset into every seeded item and exposed Edit equipment beside the one setup-change door. WHAT THE CELLS HOLD: Profile imports no status stores or active-note selector, renders none of the section/copy/test ids, uses the dedicated onboarding-choice formatter, contains no direct equipment-edit control in its Program card, and mounts the existing equipment editor only through the setup sheet. The formatter pins Commercial gym, Club gym, Home gym and explicit Bodyweight only without falling back to an item list. Clear coach chat is preserved under Danger Zone because it is conversation deletion, not adjustment status. FIRST DEVICE FINDING: the existing item editor was taller than the phone, auto-height and non-scrollable, so it opened with its title and first rows above the screen. The Profile cell now requires that full editor to use a flexible Sheet and ScrollView. WHAT THE TAPE HOLDS: the commercial-gym seed reaches Profile, shows only Commercial gym, has no Coach adjustments, opens the setup sheet, reaches its equipment door, sees the editor title at the top, then scrolls the real list through to Save. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone; profiles whose old data never stored a location; completing an equipment save on-device; whether Clear coach chat belongs in a future account/settings surface.',
+    },
+  },
+  {
     id: 'LAW-week-navigation-belongs-to-week',
     law: 'The accepted new Program template renders no week-date navigation on Today; Week renders one compact previous/range/next row directly below the Day/Week toggle, and changing or returning weeks leaves every session collapsed.',
     ruledAt: 'docs/UI_PROTOTYPE_DIVERGENCE_2026-08-11.md "SAM EYE PASS 6 — WEEK NAVIGATION BELONGS TO WEEK"',

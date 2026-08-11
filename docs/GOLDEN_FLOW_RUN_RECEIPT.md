@@ -30,6 +30,7 @@ string `${E2E_METRO_URL}`.
 | `day-card-dropdowns.yaml` | 2026-08-10 | PASS — collapsed, expanded, collapsed |
 | `day-week-profile.yaml` | 2026-08-10 | PASS — day, week, profile, coach |
 | `dev-launch-refusal-speaks.yaml` | 2026-08-10 | PASS — the refusal speaks and clears |
+| `profile-setup-equipment.yaml` | 2026-08-11 | PASS — Commercial gym summary, nested editor, full scroll to Save |
 | `standard-program-week.yaml` | 2026-08-10 | PASS — seven rows, a count, and a row opening in place |
 | `explorer-all-nine.yaml` | NOT RUN | Never run this pass. Carried as debt, not as a claim. |
 | `fixture-move.yaml` | NOT RUN | RED on the dead `fixture-actions-open` id (pre-existing). |
@@ -38,7 +39,7 @@ string `${E2E_METRO_URL}`.
 | `one-set-feedback.yaml` | NOT RUN | Re-aimed 2026-08-10, never executed since. |
 | `reload-standard-week.yaml` | NOT RUN | Blocked behind the seeded world's durability (4 game days in memory, 1 on disk). |
 
-**FIVE OF TEN HAVE RUN. THAT IS THE HONEST NUMBER** and it is written here rather
-than implied by five green ones. `NOT RUN` is a state this table carries on
+**SIX OF ELEVEN HAVE RUN. THAT IS THE HONEST NUMBER** and it is written here rather
+than implied by six green ones. `NOT RUN` is a state this table carries on
 purpose: a receipt that only recorded successes would make the rig look alive
 while half of it was dark, which is precisely the failure this law names.

@@ -1,0 +1,58 @@
+appId: com.localfootyathlete.app
+name: Golden - Profile equipment belongs inside setup changes
+tags:
+  - e2e
+  - golden
+  - profile
+  - ui-merge
+---
+# Profile repeats the onboarding location choice, not the seeded kit list. The
+# same atomic equipment editor remains available, but only after the athlete
+# opens the one setup-change door.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-page-header"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "profile-program-setup-change"
+    direction: DOWN
+- assertVisible: "Commercial gym"
+- assertNotVisible: "COACH ADJUSTMENTS"
+- takeScreenshot: "artifacts/ui-walk/profile-setup-summary"
+
+- tapOn: "Something changed? Tell the coach"
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-update-sheet"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "profile-setup-equipment-edit"
+    direction: DOWN
+- assertVisible: "Training setup"
+- assertVisible: "Commercial gym"
+- takeScreenshot: "artifacts/ui-walk/profile-setup-equipment-door"
+
+- tapOn:
+    id: "profile-setup-equipment-edit"
+- extendedWaitUntil:
+    visible:
+      id: "profile-equipment-editor-sheet"
+    timeout: 10000
+- assertVisible: "Your equipment"
+- takeScreenshot: "artifacts/ui-walk/profile-equipment-editor-top"
+- scrollUntilVisible:
+    element:
+      id: "profile-equipment-editor-save"
+    direction: DOWN
+- assertVisible:
+    id: "profile-equipment-editor-save"
+- takeScreenshot: "artifacts/ui-walk/profile-equipment-editor-bottom"

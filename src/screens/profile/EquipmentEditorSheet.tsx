@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/common/Text';
 import { Sheet } from '../../components/ui';
 import { colors } from '../../theme/colors';
@@ -103,8 +103,17 @@ export function EquipmentEditorSheet({
   );
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="profile-equipment-editor-sheet">
-      <View>
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      flexibleBody
+      testID="profile-equipment-editor-sheet"
+    >
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>Your equipment</Text>
         <Text style={styles.body}>
           Tap once for what you have. Tap again for gear you'll never use — we'll stop
@@ -131,12 +140,18 @@ export function EquipmentEditorSheet({
         >
           <Text style={styles.saveLabel}>{saving ? 'Updating…' : 'Save equipment'}</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.sm,
+  },
   title: {
     color: colors.text.primary,
     fontSize: 22,

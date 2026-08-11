@@ -1,8 +1,9 @@
 /**
  * profileResetUITests — proves the MVP Profile page structure is
  * wired into the live ProfileScreen.tsx (the screen the Profile tab
- * routes to), with coach adjustment state, separated danger-zone reset,
- * FAQ copy, and reset functions still calling the canonical helpers.
+ * routes to), with My Status owning coach adjustments, equipment editing
+ * nested under the setup-change door, separated danger-zone reset, FAQ copy,
+ * and reset functions still calling the canonical helpers.
  *
  * The previous "reset is implemented" claim was false because the
  * section had been added to ProfileHomeScreen.tsx — a file the tab
@@ -70,6 +71,14 @@ const EQUIPMENT_SHEET_PATH = path.resolve(
   'EquipmentLimitationSheet.tsx',
 );
 const equipmentSheet = fs.readFileSync(EQUIPMENT_SHEET_PATH, 'utf8');
+const PROFILE_EQUIPMENT_EDITOR_PATH = path.resolve(
+  __dirname,
+  '..',
+  'screens',
+  'profile',
+  'EquipmentEditorSheet.tsx',
+);
+const profileEquipmentEditor = fs.readFileSync(PROFILE_EQUIPMENT_EDITOR_PATH, 'utf8');
 // EquipmentSettingsScreen.tsx was deleted by the Phase 1.6 purge (2df5165).
 // This suite went on reading it at module scope, so it has thrown ENOENT on
 // load ever since — asserting NOTHING, and unnoticed because it was never in
@@ -81,7 +90,7 @@ const equipmentSheet = fs.readFileSync(EQUIPMENT_SHEET_PATH, 'utf8');
 // ═════════════════════════════════════════════════════════════════════
 section('[1] ProfileScreen.tsx contains MVP Profile sections');
 ok('section title PROGRAM SETUP present', /PROGRAM SETUP/.test(src));
-ok('section title COACH ADJUSTMENTS present', /COACH ADJUSTMENTS/.test(src));
+ok('section title COACH ADJUSTMENTS is absent', !/COACH ADJUSTMENTS/.test(src));
 ok('section title LEARN / FAQ present', /LEARN \/ FAQ/.test(src));
 ok('section title DEVELOPER TOOLS present', /DEVELOPER TOOLS/.test(src));
 ok('section title SUPPORT present', /SUPPORT/.test(src));
@@ -90,7 +99,7 @@ ok('section title DANGER ZONE present', /DANGER ZONE/.test(src));
 ok('page header PROFILE present', />\s*PROFILE\s*</.test(src));
 ok(
   'page subtitle present',
-  /Your program setup, coach adjustments and support\./.test(src),
+  /Your program setup and support\./.test(src),
 );
 // A5 (Sam's v1 ruling): the Profile clear-coach-adjustments control is REMOVED.
 // It rendered, reported success with an all-zero summary, and changed nothing —
@@ -119,6 +128,11 @@ ok('LFA Days row present', /label="LFA Days"/.test(src));
 ok('Team Training row present when available', /label="Team Training"/.test(src));
 ok('Game Day row present when available', /label="Game Day"/.test(src));
 ok('Main goal / focus row present when available', /label="Main goal \/ focus"/.test(src));
+ok(
+  'Equipment row uses the onboarding-choice summary, not the itemised checklist',
+  /label="Equipment"[\s\S]{0,120}formatEquipmentProfileSummary\(onboardingData\)/.test(src)
+    && !/label="Equipment"[\s\S]{0,120}formatEquipmentAnswerSummary\(onboardingData\)/.test(src),
+);
 ok('Equipment / gym access row removed', !/Equipment \/ gym access/.test(src));
 ok(
   'long assumed equipment list is not rendered',
@@ -131,6 +145,25 @@ ok(
   /onProgramSetupChanged[\s\S]*setSetupSheetVisible\(true\)/.test(src)
     && /testID="profile-setup-update-sheet"/.test(src),
 );
+ok(
+  'equipment editing lives inside the setup-change sheet',
+  /testID="profile-setup-equipment-edit"/.test(src)
+    && /onEditEquipment=\{openEquipmentEditor\}/.test(src),
+);
+ok(
+  'the full equipment editor is a scrollable flexible sheet that starts with its title reachable',
+  /<Sheet[\s\S]*?flexibleBody[\s\S]*?testID="profile-equipment-editor-sheet"/.test(profileEquipmentEditor)
+    && /<ScrollView[\s\S]*?>[\s\S]*?<Text style=\{styles\.title\}>Your equipment<\/Text>/.test(profileEquipmentEditor),
+);
+{
+  const setupStart = src.indexOf('{/* Program setup */}');
+  const setupEnd = src.indexOf('{/* Learn / FAQ */}', setupStart);
+  const setupRegion = setupStart >= 0 && setupEnd > setupStart
+    ? src.slice(setupStart, setupEnd)
+    : '';
+  ok('the Program card has no separate Edit equipment button',
+    setupRegion.length > 0 && !/profile-equipment-edit/.test(setupRegion));
+}
 // INVERTED BY R5.7 — THE BETA COACH CUT, and inverted OUT LOUD.
 //
 // This cell pinned the setup sheet's coach fallback as SURVIVING. The beta
@@ -275,16 +308,14 @@ ok(
 );
 
 // ═════════════════════════════════════════════════════════════════════
-// 1d. Coach adjustments show active state or empty state
+// 1d. My Status is the sole active-modifier home
 // ═════════════════════════════════════════════════════════════════════
-section('[1d] Coach adjustments render active issue state');
-ok('imports useCoachUpdatesStore', /useCoachUpdatesStore/.test(src));
-ok('reads activeConstraints', /activeConstraints\s*=\s*useCoachUpdatesStore/.test(src));
-ok('imports shared active Coach Notes read model', /selectActiveCoachNotes/.test(src));
-ok('active issues derive from shared active Coach Notes', /selectActiveCoachNotes\(\{[\s\S]*activeConstraints[\s\S]*modalityPreferences[\s\S]*readinessSignalsByDate/.test(src));
-ok('Profile bullets keep severity visible when present', /\$\{note\.title\} — \$\{note\.severity\}\/10/.test(src));
-ok('renders Active label', /Active:/.test(src));
-ok('renders no active coach changes empty state', /No active coach changes\./.test(src));
+section('[1d] My Status is the sole active-modifier home');
+ok('Profile does not read active coach-update stores',
+  !/useCoachUpdatesStore|useAthletePreferencesStore|useCoachPreferencesStore|useReadinessStore/.test(src));
+ok('Profile does not import the active Coach Notes read model', !/selectActiveCoachNotes/.test(src));
+ok('Profile renders no active-adjustment copy',
+  !/Active:|No active coach changes\.|profile-active-coach-state/.test(src));
 ok(
   'A5: no clear-coach-adjustments control renders at all',
   !/profile-clear-coach-adjustments/.test(src),
@@ -342,14 +373,13 @@ ok(
 section('[4] Profile sections are in MVP order');
 {
   const setupIdx = src.indexOf('PROGRAM SETUP');
-  const coachIdx = src.indexOf('COACH ADJUSTMENTS');
   const faqIdx = src.indexOf('LEARN / FAQ');
   const devIdx = src.indexOf('DEVELOPER TOOLS');
   const supportIdx = src.indexOf('SUPPORT');
   const legalIdx = src.indexOf('LEGAL');
   const dangerIdx = src.indexOf('DANGER ZONE');
   ok('PROGRAM SETUP found', setupIdx !== -1);
-  ok('COACH ADJUSTMENTS found', coachIdx !== -1);
+  ok('COACH ADJUSTMENTS absent', src.indexOf('COACH ADJUSTMENTS') === -1);
   ok('LEARN / FAQ found', faqIdx !== -1);
   ok('DEVELOPER TOOLS found', devIdx !== -1);
   ok('SUPPORT found', supportIdx !== -1);
@@ -357,13 +387,12 @@ section('[4] Profile sections are in MVP order');
   ok('DANGER ZONE found', dangerIdx !== -1);
   ok('sections appear in requested order',
     setupIdx >= 0 &&
-    setupIdx < coachIdx &&
-    coachIdx < faqIdx &&
+    setupIdx < faqIdx &&
     faqIdx < devIdx &&
     devIdx < supportIdx &&
     supportIdx < legalIdx &&
     legalIdx < dangerIdx,
-    `setup=${setupIdx}, coach=${coachIdx}, faq=${faqIdx}, dev=${devIdx}, support=${supportIdx}, legal=${legalIdx}, danger=${dangerIdx}`);
+    `setup=${setupIdx}, faq=${faqIdx}, dev=${devIdx}, support=${supportIdx}, legal=${legalIdx}, danger=${dangerIdx}`);
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -374,20 +403,15 @@ ok('Developer Tools section is guarded by __DEV__', /\{__DEV__\s*\?\s*\(/.test(s
 ok('Dev reset button testID is inside source', /testID="profile-dev-reset-post-onboarding"/.test(src));
 
 // ═════════════════════════════════════════════════════════════════════
-// 4b. Full reset is separated from Coach adjustments
+// 4b. Conversation clearing and full reset live under Danger Zone
 // ═════════════════════════════════════════════════════════════════════
-section('[4b] Full reset is under Danger Zone, not Coach adjustments');
+section('[4b] Destructive resets live under Danger Zone');
 {
-  const coachStart = src.indexOf('COACH ADJUSTMENTS');
-  const faqStart = src.indexOf('LEARN / FAQ');
   const dangerStart = src.indexOf('DANGER ZONE');
+  const clearChat = src.indexOf('testID="profile-clear-coach-chat"');
   const fullReset = src.indexOf('testID="profile-full-reset"');
+  ok('Clear coach chat appears after DANGER ZONE', dangerStart >= 0 && clearChat > dangerStart);
   ok('Full reset appears after DANGER ZONE', dangerStart >= 0 && fullReset > dangerStart);
-  ok(
-    'Full reset is not inside Coach adjustments block',
-    coachStart >= 0 && faqStart > coachStart && (fullReset < coachStart || fullReset > faqStart),
-    `coachStart=${coachStart}, faqStart=${faqStart}, fullReset=${fullReset}`,
-  );
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -397,12 +421,10 @@ section('[5] Section lives inside ScrollView');
 {
   const scrollOpen = src.indexOf('<ScrollView');
   const scrollClose = src.indexOf('</ScrollView>');
-  const coachIdx = src.indexOf('COACH ADJUSTMENTS');
   const devIdx = src.indexOf('DEVELOPER TOOLS');
   ok('ScrollView open found', scrollOpen !== -1);
   ok('ScrollView close found', scrollClose !== -1);
-  ok('COACH ADJUSTMENTS between ScrollView tags',
-    scrollOpen < coachIdx && coachIdx < scrollClose);
+  ok('COACH ADJUSTMENTS absent from ScrollView', !/COACH ADJUSTMENTS/.test(src));
   ok('DEVELOPER TOOLS between ScrollView tags',
     scrollOpen < devIdx && devIdx < scrollClose);
 }
@@ -414,9 +436,10 @@ section('[6] testID hooks present for each row');
 ok('testID profile-program-setup-section', /testID="profile-program-setup-section"/.test(src));
 ok('testID profile-page-header', /testID="profile-page-header"/.test(src));
 ok('testID profile-program-setup-change', /testID="profile-program-setup-change"/.test(src));
-ok('testID profile-coach-adjustments-section', /testID="profile-coach-adjustments-section"/.test(src));
-ok('testID profile-active-coach-state', /testID="profile-active-coach-state"/.test(src));
-ok('testID profile-no-active-coach-adjustments', /testID="profile-no-active-coach-adjustments"/.test(src));
+ok('testID profile-coach-adjustments-section absent', !/testID="profile-coach-adjustments-section"/.test(src));
+ok('testID profile-active-coach-state absent', !/testID="profile-active-coach-state"/.test(src));
+ok('testID profile-no-active-coach-adjustments absent', !/testID="profile-no-active-coach-adjustments"/.test(src));
+ok('testID profile-setup-equipment-edit', /testID="profile-setup-equipment-edit"/.test(src));
 ok('testID profile-learn-faq-section', /testID="profile-learn-faq-section"/.test(src));
 ok('testID profile-developer-tools-section', /testID="profile-developer-tools-section"/.test(src));
 ok('testID profile-dev-reset-post-onboarding', /testID="profile-dev-reset-post-onboarding"/.test(src));
@@ -443,10 +466,8 @@ ok('Terms row navigates to Terms screen', /onPress=\{\(\) => navigation\.navigat
 // 7. Render-time + press-time logs exist
 // ═════════════════════════════════════════════════════════════════════
 section('[7] Runtime proof logs');
-ok(
-  '[profile] coach_adjustments_section_rendered',
-  /\[profile\]\s*coach_adjustments_section_rendered/.test(src),
-);
+ok('[profile] coach_adjustments_section_rendered is gone',
+  !/\[profile\]\s*coach_adjustments_section_rendered/.test(src));
 ok(
   'A5: no clear_coach_adjustments press log (control removed)',
   !/\[reset-ui\]\s*clear_coach_adjustments_pressed/.test(src),

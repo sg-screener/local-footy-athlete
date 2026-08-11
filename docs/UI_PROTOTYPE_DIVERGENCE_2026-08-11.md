@@ -519,3 +519,59 @@ column removal (the row keeps its existing single accessibility label and
 button role, source-read but not device-spoken); exceptionally long translated
 headings; the old/classic template. This is simulator acceptance, not phone
 acceptance.
+
+---
+
+## SAM EYE PASS 9 — PROFILE IS SETUP, NOT STATUS
+
+**Sam, on the Profile page:** *"edit equipment should live inside 'something
+changed? tell the coach'"*; its visible equipment value should be the selection
+from onboarding — for his profile, simply *"commercial gym"*. He also removed
+Coach adjustments from Profile because status and modifiers now live under My
+Status on Coach.
+
+**THE TWO OPTIONS COMPARED:** (1) leave the itemised equipment formatter and
+status subscriptions in Profile but hide their cards, or (2) remove the second
+status read model, present the onboarding-level equipment answer, and re-home
+the existing atomic equipment editor under Profile's one setup-change sheet.
+Option 2 landed. Hiding would leave duplicate ownership alive and ready to
+return; removing it makes My Status the only reader and presenter of modifiers.
+
+**THE EQUIPMENT BOUNDARY:** Profile is a summary, so it says Commercial gym,
+Club gym, Home gym or Bodyweight only. It does not infer a location from the
+detailed kit list and it does not use the location to program sessions. The
+detailed typed answer remains the programming input and the existing editor
+still commits it through the same atomic profile/program transaction.
+
+**FIRST-RUN FINDINGS:** the new Profile cells red at all 16 old ownership points:
+the section and subtitle, four status-store imports, active-note selector and
+copy, itemised formatter, direct edit button, old ids/log, and Clear chat being
+trapped inside the section marked for removal. Clear chat was preserved under
+Danger Zone; no status behaviour or equipment transaction was deleted. The
+first device route then opened the equipment editor with its title and first
+items above the phone: the tall body had never been scrollable. The editor now
+uses the shared sheet's definite flexible height and one scroll body; a second
+route saw its title first and reached Save by scrolling.
+
+**RECEIPTS:**
+
+- `test:profile-reset-ui`: 154 named cells run, 154 passed. It holds the absent
+  status owner, one setup-change equipment door, onboarding-choice summary and
+  preserved Clear chat action, and requires the full editor to be scrollable.
+- `test:equipment-vocabulary`: 63 named cells run, 63 passed. The four new
+  presentation cells pin Commercial, Club, Home and Bodyweight-only summaries
+  and forbid falling back to an itemised list.
+- `.maestro/golden/profile-setup-equipment.yaml`: completed on the iOS
+  simulator. It saw Commercial gym without Coach adjustments, opened the one
+  setup sheet, reached its equipment door, saw the editor title at the top and
+  scrolled through the real commercial-gym list to Save equipment.
+
+**WHAT CATCHES THE NEXT DEFECT OF THIS CLASS:** Profile subscribing to a status
+store, restoring a Coach adjustments surface, expanding a location into kit, or
+putting a second editor beside the setup door reds the chain cells. The device
+tape catches a source-correct door that cannot actually open its nested editor.
+
+**NOT COVERED:** Sam's physical iPhone; a legacy profile with no stored location;
+completing an equipment save on-device; whether Clear coach chat belongs in a
+future account/settings surface. This is simulator acceptance, not phone
+acceptance.
