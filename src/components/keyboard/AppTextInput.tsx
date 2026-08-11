@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
-import { TextInput, TextInputProps } from 'react-native';
+import { StyleSheet, TextInput, TextInputProps } from 'react-native';
+import { fontFamilies } from '../../theme/typography';
 
 /**
  * The app's only text input.
@@ -45,8 +46,13 @@ export const AppTextInput = forwardRef<TextInput, TextInputProps>(
       <TextInput
         returnKeyType={props.returnKeyType ?? defaultReturnKeyType}
         {...props}
+        style={[styles.default, props.style]}
         ref={ref}
       />
     );
   },
 );
+
+const styles = StyleSheet.create({
+  default: { fontFamily: fontFamilies.default },
+});

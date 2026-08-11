@@ -4,6 +4,14 @@
 both prototypes. They are the merge sheet — the clash list did not need
 writing because he ruled it first.**
 
+> **TYPOGRAPHY SUPERSEDED 2026-08-11.** Sam reversed the font half of the
+> governing rule after the next side-by-side eye pass: *"i like her fonts
+> better = please change to them"*, clarified *"on all pages everywhere"* and
+> *"try and match font and size for everything she has done"*. Her structure
+> and her measured type system now travel together; the app's colours and icons
+> remain unchanged. The historical wording below remains because it records
+> what governed the earlier checkpoints, not because it still governs type.
+
 Source of the "hers" column: `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`
 (his partner's interactive prototype, 12 screens). Source of the "mine"
 column: the app as it stands at this commit.

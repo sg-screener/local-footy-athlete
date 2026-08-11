@@ -231,6 +231,14 @@ export function registerProjectionCopy(): void {
         + 'the exhibit that made Sam rule on the day title).',
       text: '{count} exercise',
     },
+    {
+      id: 'day.part.mobility_warmup',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-11 in the Codex UI merge task: Renee '
+        + '"includes the mobility / warm up on the front review screen". The '
+        + 'punctuation and casing follow the reference he asked the app to match.',
+      text: 'Mobility / Warm-up',
+    },
 
     // ── The change card, ruling 1. ──
     //

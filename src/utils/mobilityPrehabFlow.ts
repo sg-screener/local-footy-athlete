@@ -93,6 +93,24 @@ export interface MobilityPrehabFlowContext {
   date: string;
 }
 
+function movementRange(min: number | undefined, max: number | undefined): string {
+  const low = Number(min ?? 0);
+  const high = Number(max ?? low);
+  return low === high ? `${low}` : `${low}-${high}`;
+}
+
+/**
+ * The flow movement's authored dose, shared by the session and its front review.
+ * A second formatter would let the card promise a different warm-up from the
+ * one the athlete sees after Start Session.
+ */
+export function mobilityFlowMovementDose(movement: PoolExercise): string {
+  const sets = movement.sets > 1 ? `${movement.sets} × ` : '';
+  const side = movement.perSide ? ' / side' : '';
+  const unit = movement.prescriptionType === 'duration' ? 's' : '';
+  return `${sets}${movementRange(movement.repsMin, movement.repsMax)}${unit}${side}`;
+}
+
 const CONDITIONING_ONLY_TYPES: ReadonlySet<string> = new Set([
   'Conditioning',
   'Flush-Out',

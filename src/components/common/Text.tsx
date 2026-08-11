@@ -51,6 +51,7 @@ export const Text = ({
 
     return {
       fontSize: typo.fontSize,
+      fontFamily: typo.fontFamily,
       fontWeight: typo.fontWeight as any,
       lineHeight: typo.lineHeight,
       letterSpacing: typo.letterSpacing,

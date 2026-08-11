@@ -3,8 +3,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './common/Text';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import type { MobilityPrehabFlow } from '../utils/mobilityPrehabFlow';
-import type { PoolExercise } from '../data/exercisePools';
+import {
+  mobilityFlowMovementDose,
+  type MobilityPrehabFlow,
+} from '../utils/mobilityPrehabFlow';
 
 interface MobilityPrehabFlowSectionProps {
   flow: MobilityPrehabFlow | null;
@@ -80,7 +82,7 @@ export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionPro
             <MovementRow
               key={`flow-movement-${exercise.id}`}
               name={exercise.name}
-              dose={movementDose(exercise)}
+              dose={mobilityFlowMovementDose(exercise)}
             />
           ))}
 
@@ -112,20 +114,6 @@ function MovementRow({ name, dose }: { name: string; dose: string }) {
       <Text style={styles.movementDose}>{dose}</Text>
     </View>
   );
-}
-
-function range(min: number | undefined, max: number | undefined): string {
-  const low = Number(min ?? 0);
-  const high = Number(max ?? low);
-  return low === high ? `${low}` : `${low}-${high}`;
-}
-
-/** The pool entry's OWN dose, rendered. Nothing here chooses a number. */
-function movementDose(movement: PoolExercise): string {
-  const sets = movement.sets > 1 ? `${movement.sets} × ` : '';
-  const side = movement.perSide ? ' / side' : '';
-  const unit = movement.prescriptionType === 'duration' ? 's' : '';
-  return `${sets}${range(movement.repsMin, movement.repsMax)}${unit}${side}`;
 }
 
 const styles = StyleSheet.create({

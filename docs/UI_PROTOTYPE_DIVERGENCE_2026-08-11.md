@@ -67,6 +67,67 @@ Nothing here was seen on Sam's phone — simulator shots only.
 
 ---
 
+## SAM EYE PASS 8 — THE DAY REVIEW FINISHES THE MATCH
+
+**Sam, comparing the two Day screens:** *"there is no yellow left highlight on
+renees screen on the day page"*; *"she also includes the mobility / warm up on
+the front review screen (and conditioning when it's there)"*; the Strength
+headline was too small and the change link too prominent. He then reversed the
+earlier style ruling for type: *"i like her fonts better"*, clarified *"on all
+pages everywhere"* and *"match font and size for everything she has done"*.
+
+**THE TWO OPTIONS COMPARED:** (1) restyle only the photographed Day-card labels
+and manufacture a warm-up row in that component, or (2) adopt the prototype's
+measured system-face scale at the shared Text/Input owners and ask the existing
+mobility-flow selector for the same optional flow the session screen shows.
+Option 2 landed. It removes a second typography interpretation and avoids a
+second warm-up prescription.
+
+**THE REVIEW BOUNDARY:** projected strength, conditioning, power and other
+load-bearing parts remain the projection's entries. The optional mobility flow
+does not pretend to be one of those parts; it is derived by the same owner and
+with the same athlete/date/phase/game-week inputs as the session screen, then
+shown first. Its movement doses now have one formatter shared by both surfaces.
+
+**FIRST-RUN FINDINGS:** the new Day cells red on the 8pt eyebrow, 16pt title,
+lime rail and link, and absent mobility selector. The app-wide typography guard
+red on the old 36pt heading scale and found that shared Text discarded its own
+declared font family while text inputs declared none. Its bypass census found
+zero athlete-facing screens importing React Native Text directly, which is why
+the owner redesign can cover the whole surface instead of spawning a file-by-
+file patch list.
+
+**RECEIPTS:**
+
+- `test:prototype-typography`: 3 named cells run, 3 passed. The cells pin the
+  measured shared scale, require the System face at both Text and TextInput,
+  and census every athlete-facing screen for a bypass of that owner.
+- `test:day-first-timeline`: 39 named cells run, 39 passed. The Day cells pin
+  the larger session title, quiet change link, absent accent rail, one gray
+  mobility icon, owned warm-up flow first and every projected component after
+  it — including conditioning when the projection carries it.
+- `.maestro/golden/day-card-dropdowns.yaml`: completed on the iOS simulator.
+  The compact card opens Mobility / Warm-up onto its four real movements and
+  doses, closes it, then opens Strength without leaving the Day screen.
+- `.maestro/golden/day-week-profile.yaml`: completed on the iOS simulator after
+  the global scale changed. Day, all seven Week cards, Profile and Coach mount,
+  remain reachable and were visually inspected without clipping.
+- `.maestro/golden/coach-my-status.yaml`: completed on the iOS simulator. Both
+  empty and populated My Status states, the season review sheet and its setup
+  questions remain reachable under the same type owner.
+
+**WHAT CATCHES THE NEXT DEFECT OF THIS CLASS:** a local font-family fork or a
+screen bypassing shared Text reds the app-wide typography cell; a Day rail,
+missing mobility row, wrong icon, manufactured conditioning row or regressed
+hierarchy reds the Day cell; the two complete simulator walks catch a scale
+that is source-correct but clips or costs a prototype-covered route.
+
+**NOT COVERED:** Sam's physical iPhone; third-party native controls and the OS
+status bar; the classic Program template. This is simulator acceptance, not
+phone acceptance.
+
+---
+
 ## RESOLVED AND BUILT — 2026-08-11
 
 **Sam answered:** *"Use her card design for all 7 days."* Today is the same week

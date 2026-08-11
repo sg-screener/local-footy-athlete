@@ -1,147 +1,157 @@
 /**
- * Typography system for Local Footy Athlete
- * Headings: Bebas Neue — bold, gritty, industrial
- * Body: Clean sans-serif system font
+ * Typography system for Local Footy Athlete.
+ *
+ * Sam, 2026-08-11: Renee's typography everywhere. Her signed prototype uses
+ * the platform system face (`-apple-system` first) and this compact hierarchy.
+ * On iPhone `System` is SF Pro; Android keeps its native Roboto equivalent.
+ * One scale here means Program, Coach, Profile, Journal, onboarding and the
+ * session flow cannot each grow their own interpretation of the reference.
  */
 
 export const typography = {
-  // Heading 1 — Bebas Neue
+  // Large page / completion title (prototype: 22-23px).
   h1: {
-    fontSize: 36,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
-    lineHeight: 42,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase' as const,
+    fontSize: 23,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 28,
+    letterSpacing: -0.2,
   },
 
-  // Heading 2 — Bebas Neue
+  // Sheet / section page title (prototype: 21px).
   h2: {
-    fontSize: 30,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
-    lineHeight: 36,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase' as const,
+    fontSize: 21,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 25,
+    letterSpacing: -0.15,
   },
 
-  // Heading 3 — Bebas Neue
+  // Prominent card title (prototype: 17px).
   h3: {
-    fontSize: 24,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
-    lineHeight: 30,
-    letterSpacing: 1,
-    textTransform: 'uppercase' as const,
+    fontSize: 17,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 21,
+    letterSpacing: 0,
   },
 
-  // Heading 4 (subheading) — Bebas Neue
+  // Card / question heading (prototype: 14px).
   h4: {
-    fontSize: 20,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
-    lineHeight: 26,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase' as const,
+    fontSize: 14,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 18,
+    letterSpacing: 0.1,
   },
 
-  // Body — clean sans-serif
+  // Body — prototype root token 11.5px.
   body: {
-    fontSize: 16,
+    fontSize: 11.5,
+    fontFamily: 'System',
     fontWeight: '400' as const,
-    lineHeight: 24,
-    letterSpacing: 0.3,
+    lineHeight: 17,
+    letterSpacing: 0,
   },
 
   // Body Emphasis
   bodyEmphasis: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    lineHeight: 24,
-    letterSpacing: 0.3,
+    fontSize: 11.5,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 17,
+    letterSpacing: 0,
   },
 
   // Body Small
   bodySmall: {
-    fontSize: 14,
+    fontSize: 10.5,
+    fontFamily: 'System',
     fontWeight: '400' as const,
-    lineHeight: 20,
-    letterSpacing: 0.2,
+    lineHeight: 15,
+    letterSpacing: 0,
   },
 
   // Body Small Emphasis
   bodySmallEmphasis: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    lineHeight: 20,
-    letterSpacing: 0.2,
+    fontSize: 10.5,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 15,
+    letterSpacing: 0,
   },
 
   // Caption — small labels and metadata
   caption: {
-    fontSize: 12,
+    fontSize: 8.5,
+    fontFamily: 'System',
     fontWeight: '400' as const,
-    lineHeight: 16,
-    letterSpacing: 0.4,
+    lineHeight: 12,
+    letterSpacing: 0,
   },
 
   // Caption Emphasis
   captionEmphasis: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    lineHeight: 16,
-    letterSpacing: 0.4,
+    fontSize: 8.5,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 12,
+    letterSpacing: 0.2,
   },
 
   // Label — form labels and button text
   label: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    lineHeight: 20,
-    letterSpacing: 0.25,
+    fontSize: 10.5,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 14,
+    letterSpacing: 0.2,
   },
 
   // Label Small
   labelSmall: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    lineHeight: 16,
-    letterSpacing: 0.5,
+    fontSize: 9.5,
+    fontFamily: 'System',
+    fontWeight: '700' as const,
+    lineHeight: 13,
+    letterSpacing: 0.35,
   },
 
-  // Overline — all caps labels (uses Bebas Neue)
+  // Overline — prototype section label.
   overline: {
-    fontSize: 13,
-    fontFamily: 'BebasNeue-Regular',
-    fontWeight: '400' as const,
-    lineHeight: 18,
-    letterSpacing: 1.5,
+    fontSize: 9,
+    fontFamily: 'System',
+    fontWeight: '800' as const,
+    lineHeight: 12,
+    letterSpacing: 0.8,
     textTransform: 'uppercase' as const,
   },
 
   // Button text
   button: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    lineHeight: 24,
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontFamily: 'System',
+    fontWeight: '800' as const,
+    lineHeight: 16,
+    letterSpacing: 0.4,
     textTransform: 'uppercase' as const,
   },
 
   // Button Small
   buttonSmall: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    lineHeight: 20,
-    letterSpacing: 0.25,
+    fontSize: 11,
+    fontFamily: 'System',
+    fontWeight: '800' as const,
+    lineHeight: 15,
+    letterSpacing: 0.35,
     textTransform: 'uppercase' as const,
   },
 };
 
 // Font families
 export const fontFamilies = {
-  // Heading font — bold, industrial
-  heading: 'BebasNeue-Regular',
+  // Renee's prototype leads with the platform system family everywhere.
+  heading: 'System',
 
   // Body font — clean system sans-serif
   default: 'System',

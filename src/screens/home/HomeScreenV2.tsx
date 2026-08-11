@@ -26,6 +26,12 @@ import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visib
 import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
 import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
 import { signedCopy } from '../../rules/signedCopy';
+import {
+  mobilityFlowMovementDose,
+  selectMobilityPrehabFlow,
+  type MobilityPrehabFlow,
+} from '../../utils/mobilityPrehabFlow';
+import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -193,6 +199,20 @@ export default function HomeScreenV2() {
   // locally instead of giving that shared index a third meaning.
   const dayFirstIdx = todayIdx;
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
+  const reviewAthlete = useAthleteContext();
+  const mobilityFlowByDate = useMemo(() => {
+    const isGameWeek = weekDays.some((day) => day.indicator === 'game');
+    return new Map(weekDays.map((day) => [
+      day.date,
+      selectMobilityPrehabFlow({
+        workout: day.workout,
+        seasonPhase: currentPhase,
+        isGameWeek,
+        athlete: reviewAthlete,
+        date: day.date,
+      }),
+    ]));
+  }, [currentPhase, reviewAthlete, weekDays]);
   const [expandedWeekIdx, setExpandedWeekIdx] = useState(-1);
   const handleClearWeekPresentation = () => {
     setExpandedWeekIdx(-1);
@@ -449,6 +469,7 @@ export default function HomeScreenV2() {
         timeline={visibleDay ? (
           <DayTimeline
             entries={dayTimeline(visibleDay, sessionFeedback[day.date])}
+            mobilityFlow={mobilityFlowByDate.get(day.date) ?? null}
             onOpen={() => handleViewWorkout(day)}
             presentation={dayFirst ? 'interactive' : 'flat'}
           />
@@ -1882,7 +1903,6 @@ function DayRow({
 }: DayRowProps) {
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
-  const rowTone = dayShape && emphasized ? 'accent' : 'default';
   // THE CARD'S ONE SOURCE OF WORDS — the projection, not the workout, and now
   // exactly ONE word. `cardLeadHeadline` gives the day's BUCKET (Strength,
   // Conditioning, Mobility, Gunshow, Accessories, Speed) for a training day,
@@ -2051,7 +2071,7 @@ function DayRow({
 
   return (
     <Card
-      tone={rowTone}
+      tone="default"
       selected={normal && (dayShape ? isSelected : day.isToday)}
       padding="none"
       radius="lg"
@@ -2076,16 +2096,6 @@ function DayRow({
         progressionReceipts={progressionReceipts}
         stateToken={stateToken}
       />
-      {dayShape ? (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.dayAccentStrip,
-            emphasized && styles.dayAccentStripSelected,
-            { backgroundColor: accentColor },
-          ]}
-        />
-      ) : null}
       <View style={[
         styles.dayRowInner,
         dayShape && emphasized && styles.dayRowInnerSelected,
@@ -2350,6 +2360,8 @@ const TIMELINE_COMPLETION_COLOR: Readonly<Record<string, string>> = {
 
 interface DayTimelineProps {
   entries: readonly DayTimelineEntry[];
+  /** Optional, non-load-bearing flow from the same owner the session screen uses. */
+  mobilityFlow: MobilityPrehabFlow | null;
   onOpen: () => void;
   /** Today is interactive; Week reveals the complete session in one simple drop. */
   presentation: 'interactive' | 'flat';
@@ -2376,7 +2388,7 @@ interface DayTimelineProps {
  * `conditioning`. A list keyed by kind would silently drop one of them — work
  * the athlete has to do, missing from the only screen that shows it.
  */
-function DayTimeline({ entries, onOpen, presentation }: DayTimelineProps) {
+function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelineProps) {
   // WHICH PARTS ARE OPEN — SCREEN STATE, AND IT IS NEVER PERSISTED.
   //
   // The north star's rule is "store only decisions, derive everything else", and
@@ -2391,7 +2403,7 @@ function DayTimeline({ entries, onOpen, presentation }: DayTimelineProps) {
   // `dayTimeline` is — `COMPONENT_TO_PART` is many-to-one, so two parts of one
   // kind must be able to open separately.
   const [openParts, setOpenParts] = useState<ReadonlySet<string>>(() => new Set<string>());
-  if (entries.length === 0) return null;
+  if (entries.length === 0 && !mobilityFlow) return null;
   const toggle = (partId: string) => {
     setOpenParts((current) => {
       const next = new Set(current);
@@ -2401,6 +2413,82 @@ function DayTimeline({ entries, onOpen, presentation }: DayTimelineProps) {
   };
   return (
     <View style={styles.timeline} testID="day-timeline">
+      {mobilityFlow ? (
+        presentation === 'flat' ? (
+          <View
+            style={styles.weekSessionSection}
+            testID="day-timeline-rows-mobility-warmup"
+          >
+            <Text style={styles.weekSessionSectionTitle}>
+              {signedCopy('day.part.mobility_warmup')}
+            </Text>
+            <View style={styles.weekSessionRows}>
+              {mobilityFlow.movements.map(({ exercise }, rowIndex) => (
+                <View key={exercise.id} style={styles.weekSessionExerciseRow}>
+                  <Text style={styles.weekSessionExerciseNumber}>{rowIndex + 1}</Text>
+                  <Text
+                    style={styles.weekSessionExerciseName}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {exercise.name}
+                  </Text>
+                  <Text style={styles.weekSessionExercisePrescription}>
+                    {mobilityFlowMovementDose(exercise)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View>
+            <Pressable
+              onPress={() => toggle('mobility-warmup')}
+              testID="day-timeline-part-mobility-warmup"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: openParts.has('mobility-warmup') }}
+              accessibilityLabel={`${signedCopy('day.part.mobility_warmup')}, ${mobilityFlow.movementCount} movements`}
+              style={({ pressed }) => [styles.timelineRow, pressed && { opacity: 0.7 }]}
+            >
+              <View style={styles.timelineIconMarker}>
+                <RowIcon kind="mobility" size={13} color={rowIconColor('mobility')} />
+              </View>
+              <View style={styles.timelinePartText}>
+                <Text style={styles.timelineHeadline} numberOfLines={1}>
+                  {signedCopy('day.part.mobility_warmup')}
+                </Text>
+                <Text style={styles.timelinePartMeta}>
+                  {signedCopy(
+                    mobilityFlow.movementCount === 1
+                      ? 'day.part.exercise_count_one'
+                      : 'day.part.exercise_count',
+                    { count: mobilityFlow.movementCount },
+                  )}
+                </Text>
+              </View>
+              <TimelineChevron open={openParts.has('mobility-warmup')} />
+            </Pressable>
+            {openParts.has('mobility-warmup') ? (
+              <View style={styles.timelineRows} testID="day-timeline-rows-mobility-warmup">
+                {mobilityFlow.movements.map(({ exercise }) => (
+                  <View key={exercise.id} style={styles.timelineExerciseRow}>
+                    <Text
+                      style={styles.timelineExerciseName}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {exercise.name}
+                    </Text>
+                    <Text style={styles.timelineExercisePrescription}>
+                      {mobilityFlowMovementDose(exercise)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        )
+      ) : null}
       {entries.map((entry) => {
         const iconKind = PART_ICON_KIND[entry.kind];
         const completionColor = entry.completion
@@ -4004,8 +4092,8 @@ const styles = StyleSheet.create({
   timelineIconMarker: { width: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   timelineHeadline: {
     color: '#E8EAED',
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 10.5,
+    lineHeight: 14,
     fontWeight: '800',
     // CAPS ARE A STYLE HERE, NOT THE STRING — see the render site. The sheet
     // keeps "Lower Body Strength"; her drop-down rows read them upper.
@@ -4018,7 +4106,7 @@ const styles = StyleSheet.create({
   // reuses the muted grey and 12pt the day date already uses, and the
   // prescription reuses the accent-free `#A7A7A7` the coach-note body uses.
   timelinePartText: { flex: 1, gap: 1 },
-  timelinePartMeta: { color: '#8A8A8A', fontSize: 9, lineHeight: 12 },
+  timelinePartMeta: { color: '#929692', fontSize: 10.5, lineHeight: 14, fontWeight: '500' },
   timelineChevronOpen: { transform: [{ rotate: '180deg' }] },
   // Indented to the part's own text column, so an exercise reads as belonging
   // to the row above it rather than as another part.
@@ -4058,7 +4146,7 @@ const styles = StyleSheet.create({
   // Small, muted, letter-spaced — the same treatment `coachNotesTitle` gives an
   // eyebrow already, minus the lime, because ruling 2 spends the accent once.
   dayEyebrow: {
-    color: '#8A8A8A', fontSize: 8, lineHeight: 11, fontWeight: '800', letterSpacing: 1,
+    color: '#989C98', fontSize: 10, lineHeight: 13, fontWeight: '700', letterSpacing: 0.75,
   },
   // ── THE CALM DAY CARD (ruling 2) ──
   // What it does NOT set is the point: no `borderColor`, no `shadow*`, no
@@ -4070,20 +4158,6 @@ const styles = StyleSheet.create({
   changeCardSubline: { color: '#8A8A8A', fontSize: 13, lineHeight: 18, marginTop: 2 },
 
   dayRow: { position: 'relative' },
-  dayAccentStrip: {
-    position: 'absolute',
-    left: 0,
-    top: 10,
-    bottom: 10,
-    width: 4,
-    borderRadius: 4,
-    opacity: 0.78,
-  },
-  dayAccentStripSelected: {
-    top: 12,
-    bottom: 12,
-    opacity: 1,
-  },
   // Tighter vertical rhythm — pulls the list into a scannable weekly
   // timeline instead of a column of spaced buttons.
   dayRowInner: {
@@ -4184,7 +4258,7 @@ const styles = StyleSheet.create({
   // Selected session title — the biggest text in the list, but still a
   // row, not a hero. White + heavier weight carry the emphasis.
   workoutTitleSelected: {
-    color: '#FFFFFF', fontSize: 16, lineHeight: 20, fontWeight: '700',
+    color: '#FFFFFF', fontSize: 19, lineHeight: 23, fontWeight: '700', letterSpacing: -0.2,
   },
   restLabel: {
     color: '#3E3E3E', fontSize: 13, fontWeight: '600', textAlign: 'right',
@@ -4204,7 +4278,7 @@ const styles = StyleSheet.create({
 
   // Tap-first change door (PlanChangeSheet trigger)
   makeChangeLink: { paddingVertical: spacing.xs, alignSelf: 'flex-start' },
-  makeChangeText: { color: '#C8FF00', fontSize: 13, fontWeight: '600' },
+  makeChangeText: { color: '#AEB0AE', fontSize: 12, lineHeight: 16, fontWeight: '500' },
 
   // Sections — larger rhythm between top-level blocks.
   // TIGHTENED xxl -> lg (Sam, 2026-08-08). 48pt above the phase card left a

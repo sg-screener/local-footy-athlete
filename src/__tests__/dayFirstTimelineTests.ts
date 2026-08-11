@@ -558,7 +558,10 @@ run('the day card leads with the eyebrow, and the Today badge is gone from it', 
 
 run('the day card lists each part\'s exercises, name and prescription', () => {
   const home = homeScreenSource();
-  const rowsStart = home.indexOf('day-timeline-rows-');
+  const projectedEntriesAt = home.indexOf('{entries.map((entry) => {');
+  assert(projectedEntriesAt > 0,
+    'the projected timeline-entry loop could not be found');
+  const rowsStart = home.indexOf('day-timeline-rows-${entry.componentId}', projectedEntriesAt);
   assert(rowsStart > 0,
     'the drop-down\'s expanded body is gone from HomeScreenV2 — Sam\'s biggest '
     + 'named gap ("there\'s no drop downs for the session overview") is unbuilt.');
@@ -608,18 +611,55 @@ run('the day timeline uses each session icon as its only marker and matches her 
   assert(/<SessionTierBadge\s+compact=\{dayShape\}/.test(home),
     'the day header still uses the oversized category badge');
 
-  assert(/dayEyebrow:\s*\{[^}]*fontSize:\s*8[^}]*lineHeight:\s*11/.test(home),
-    'the eyebrow is still at the old oversized text scale');
-  assert(/workoutTitleSelected:\s*\{[^}]*fontSize:\s*16[^}]*lineHeight:\s*20/.test(home),
-    'the day session title does not use the tighter accepted scale');
-  assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*10[^}]*lineHeight:\s*13[^}]*fontWeight:\s*'800'/.test(home),
+  assert(/dayEyebrow:\s*\{[^}]*fontSize:\s*10[^}]*lineHeight:\s*13/.test(home),
+    'the eyebrow no longer matches Renee\'s 10pt session eyebrow');
+  assert(/workoutTitleSelected:\s*\{[^}]*fontSize:\s*19[^}]*lineHeight:\s*23/.test(home),
+    'the day session title does not match Renee\'s 19pt headline');
+  assert(/timelineHeadline:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14[^}]*fontWeight:\s*'800'/.test(home),
     'the component headings remain too large or light');
-  assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*9[^}]*lineHeight:\s*12/.test(home),
-    'the exercise counts remain too large beside their headings');
+  assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14/.test(home),
+    'the exercise counts no longer match Renee\'s component meta size');
   assert(/timelineRow:\s*\{[^}]*borderTopWidth:\s*StyleSheet\.hairlineWidth/.test(home),
     'the simplified icon-led rows lost her quiet section dividers');
   assert(/label="Start Session"[\s\S]{0,100}size="sm"/.test(home),
     'the primary day action still uses the oversized hero-button treatment');
+});
+
+run('the Today card has no accent rail and its change link is quiet', () => {
+  const home = homeScreenSource();
+  const dayRowAt = home.indexOf('function DayRow(');
+  const dayRowEnd = home.indexOf('interface LifeFactChipProps', dayRowAt);
+  assert(dayRowAt > 0 && dayRowEnd > dayRowAt,
+    'the DayRow region could not be found');
+  const dayRow = home.slice(dayRowAt, dayRowEnd);
+  assert(!/dayAccentStrip/.test(dayRow),
+    'the Today card still renders the lime left rail Renee does not have');
+  assert(!/dayAccentStrip:\s*\{/.test(home),
+    'the retired Today-card accent rail style is still live');
+  assert(/makeChangeText:\s*\{[^}]*color:\s*'#AEB0AE'[^}]*fontSize:\s*12[^}]*fontWeight:\s*'500'/.test(home),
+    'Want to change something is not using Renee\'s quiet 12pt note treatment');
+});
+
+run('the front review includes the owned mobility warm-up before all projected parts', () => {
+  const home = homeScreenSource();
+  assert(/selectMobilityPrehabFlow\(/.test(home),
+    'the Program review does not ask the existing mobility-flow owner for the flow');
+  assert(/mobilityFlow=\{mobilityFlowByDate\.get\(day\.date\) \?\? null\}/.test(home),
+    'the review does not pass each day\'s owned flow into the shared timeline');
+  const timelineAt = home.indexOf('function DayTimeline(');
+  const chevronAt = home.indexOf('function TimelineChevron(', timelineAt);
+  assert(timelineAt > 0 && chevronAt > timelineAt,
+    'the DayTimeline region could not be found');
+  const timeline = home.slice(timelineAt, chevronAt);
+  assert(/mobilityFlow \? \(/.test(timeline)
+    && /testID="day-timeline-part-mobility-warmup"/.test(timeline)
+    && /mobilityFlow\.movements\.map/.test(timeline)
+    && /RowIcon kind="mobility" size=\{13\} color=\{rowIconColor\('mobility'\)\}/.test(timeline),
+  'the mobility warm-up is not a real review row with its owned movements');
+  assert(timeline.indexOf('day-timeline-part-mobility-warmup') < timeline.indexOf('entries.map'),
+    'the mobility warm-up no longer precedes the projected session parts');
+  assert(/entries\.map\(\(entry\) =>/.test(timeline),
+    'the review stopped rendering every projected part, including conditioning when present');
 });
 
 run('Start Session sits inside the card, below the drop-downs', () => {
@@ -697,7 +737,10 @@ run('the week chevron opens one flat full session, not nested drop-downs', () =>
   assert(timelineAt > 0 && chevronAt > timelineAt,
     'the DayTimeline render region could not be found');
   const timeline = home.slice(timelineAt, chevronAt);
-  const flatAt = timeline.indexOf("presentation === 'flat'");
+  const projectedEntriesAt = timeline.indexOf('{entries.map((entry) => {');
+  assert(projectedEntriesAt > 0,
+    'the projected timeline-entry loop could not be found');
+  const flatAt = timeline.indexOf("presentation === 'flat'", projectedEntriesAt);
   const interactiveAt = timeline.indexOf('<Pressable', flatAt);
   assert(flatAt > 0 && interactiveAt > flatAt,
     'the flat week-session branch was not found before the interactive rows');

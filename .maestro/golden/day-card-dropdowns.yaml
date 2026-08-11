@@ -36,9 +36,26 @@ tags:
     id: "day-today-badge"
 - assertNotVisible:
     id: "day-timeline-rows-strength"
+- assertVisible:
+    id: "day-timeline-part-mobility-warmup"
+- assertNotVisible:
+    id: "day-timeline-rows-mobility-warmup"
 - takeScreenshot: artifacts/ui-walk/dropdown-1-collapsed
 
 # ── EXPANDED: tapping a part opens it IN PLACE ─────────────────────────────
+# The front review uses the same owned optional mobility flow as the session.
+- tapOn:
+    id: "day-timeline-part-mobility-warmup"
+- extendedWaitUntil:
+    visible:
+      id: "day-timeline-rows-mobility-warmup"
+    timeout: 10000
+- takeScreenshot: artifacts/ui-walk/dropdown-2-mobility-open
+- tapOn:
+    id: "day-timeline-part-mobility-warmup"
+- assertNotVisible:
+    id: "day-timeline-rows-mobility-warmup"
+
 # The tap must NOT navigate. Before this slice the centre of this row opened the
 # session screen — that is what made the older flows tap past their own target —
 # so the day screen still being here afterwards is half of what this asserts.
@@ -52,7 +69,7 @@ tags:
     id: "program-screen"
 - assertVisible:
     id: "view-workout-button"
-- takeScreenshot: artifacts/ui-walk/dropdown-2-expanded
+- takeScreenshot: artifacts/ui-walk/dropdown-3-strength-open
 
 # ── AND IT CLOSES AGAIN ────────────────────────────────────────────────────
 # An affordance that only opens is a one-way door. Asserted rather than assumed:

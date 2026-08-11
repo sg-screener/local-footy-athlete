@@ -8,6 +8,14 @@ SCREENS until a flow walks day → week → profile end to end."*
 `.maestro/golden/day-week-profile.yaml` does, green, with a screenshot at each
 surface. **Screens may now change.**
 
+**TYPOGRAPHY / ICON SCOPE SUPERSEDED 2026-08-11.** Sam subsequently ruled that
+Renee's font family, measured type scale and session icons are the visual owner
+for every surface she designed. The older prohibition immediately below still
+protects unrelated colours and icons; it no longer prohibits the signed
+typography migration or a Renee-matching icon named by a later eye pass. The
+app-wide type owner and its Bible-chain guard are recorded in the signed rulings
+and law registry, so this is a ruled supersession rather than an exception.
+
 **THE GOVERNING RULE ABOVE EVERY LINE BELOW: HER STRUCTURE, HIS STYLE.** No
 colour token, font or icon changes in any slice. If a slice's diff touches
 `colors`, a font size, or an icon component, **it is out of scope and wrong.**
