@@ -991,59 +991,38 @@ async function main(): Promise<void> {
       `the away door borrowed the game-day sentence: "${awayNeverGameDay.message}"`);
   });
 
-  await run('the screen wires both schedule doors to that acknowledgment', async () => {
+  await run('the removed Time door stays absent and Away still acknowledges', async () => {
     // SOURCE-PINNED, because there is no render harness in this repo and the
     // defect this pays was pure wiring: a discarded result and an unconditional
     // close. Both are single lines, and both are single lines a refactor can put
     // back without failing anything else.
     const screen = fs.readFileSync(
       `${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
-    // RE-PINNED 2026-08-01 (device-pass ack bug): the tap now binds the ack it
-    // is about to render AND records the presentation into the athlete action
-    // log (`recordScheduleAckPresented` — the Release-alive witness for the
-    // render layer no harness here can mount). The pin covers the whole chain:
-    // result → ack built from it → state set → presentation recorded.
-    assert(/const result = await handleApplyShortOnTimeToday\(\);\s*\n\s*const ack = buildScheduleAcknowledgment\(result, 'short_on_time'\);\s*\n\s*setScheduleAck\(ack\);/
-      .test(screen),
-      'the short-on-time tap does not acknowledge its result — it is discarded, '
-      + 'which is the silence this unit exists to remove');
+    // SUPERSEDED 2026-08-11. Sam removed the inert Time control and gave its
+    // slot to the direct Tired readiness door. The domain action remains
+    // testable below, but no Program-screen handler or tap may expose it.
+    assert(!/handleApplyShortOnTimeToday/.test(screen)
+      && !/home-short-on-time-entry/.test(screen)
+      && !/surface: 'short_on_time_today'/.test(screen),
+      'the removed short-on-time Program door or its handler wiring has returned');
     assert(/const result = await handleApplyAwayDays\(dates\);[\s\S]{0,300}?setScheduleAck\(ack\);/
       .test(screen),
       'the away commit does not acknowledge its result');
-    for (const surface of ['short_on_time_today', 'away_this_week'] as const) {
-      assert(new RegExp(
-        `recordScheduleAckPresented\\(\\{\\s*\\n?\\s*traceId: result\\?\\.traceId, surface: '${surface}', tone: ack\\.tone,`,
-      ).test(screen),
-        `${surface}: the ack presentation is not recorded on the tape — Sam's `
-        + '2026-08-01 silence would be undiagnosable again');
-    }
+    assert(/recordScheduleAckPresented\(\{\s*\n?\s*traceId: result\?\.traceId, surface: 'away_this_week', tone: ack\.tone,/.test(screen),
+      'away_this_week: the ack presentation is not recorded on the tape');
     assert(/if \(result\?\.ok\) setAwayDaysVisible\(false\);/.test(screen),
       'the away sheet closes without checking `ok` — closing IS the confirmation, '
       + 'so an unconditional close reports a success that did not happen');
-    assert(!/onPress=\{\(\) => \{ void handleApplyShortOnTimeToday\(\); \}\}/.test(screen),
-      'the fire-and-forget tap handler is back');
   });
 
-  await run('the short-on-time handler asks for the scope its words promise', async () => {
-    // RULING 2'S BEHAVIOURAL CORE, pinned where it is decided. The scope cells
-    // above build their own action literals, so reverting the handler to
-    // `current_week` would leave every one of them green while a rushed Tuesday
-    // reduced Saturday again. The handler is the only production caller.
+  await run('the removed short-on-time handler stays absent while Away stays weekly', async () => {
     const hook = fs.readFileSync(
       `${__dirname}/../screens/home/useHomeScreen.ts`, 'utf8') as string;
-    const start = hook.indexOf('const handleApplyShortOnTimeToday');
-    assert(start > 0, 'the short-on-time handler is gone from useHomeScreen');
-    const body = hook.slice(start, hook.indexOf('}, [handleProgramControlResult]);', start));
-    assert(/surface: 'short_on_time_today'/.test(body),
-      'the short-on-time handler no longer names its own surface');
-    assert(/scope: 'today_only'/.test(body),
-      "the short-on-time handler stopped asking for 'today_only' — the button says "
-      + '"Short on time today" and the fact would span the week again');
-    assert(!/'current_week'/.test(body),
-      'the short-on-time handler asks for a week scope somewhere in its body');
+    assert(!/const handleApplyShortOnTimeToday/.test(hook)
+      && !/^\s*handleApplyShortOnTimeToday,\s*$/m.test(hook),
+      'useHomeScreen still authors or exports the removed UI handler');
 
-    // AND THE AWAY HANDLER STILL ASKS FOR THE WEEK — the two doors differ by
-    // scope, so a pin on one that would also pass for the other proves nothing.
+    // The surviving schedule door still asks for the week it names.
     const awayStart = hook.indexOf('const handleApplyAwayDays');
     const awayBody = hook.slice(awayStart, hook.indexOf('}, [weekDays, handleProgramControlResult]);', awayStart));
     assert(/scope: 'current_week'/.test(awayBody) && /surface: 'away_this_week'/.test(awayBody),

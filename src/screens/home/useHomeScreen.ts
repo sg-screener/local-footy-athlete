@@ -34,7 +34,10 @@ import {
   type ProgramControlActionResult,
   type ProgramControlStatusUpdate,
 } from '../../utils/programControlActions';
-import { readinessActionForKind } from '../../utils/weekReadinessActions';
+import {
+  readinessActionForKind,
+  type WeekReadinessApplyKind,
+} from '../../utils/weekReadinessActions';
 import { athleteSafeRefusal } from '../../utils/planChangeRefusalCopy';
 import type { EquipmentLimitationDecision } from './EquipmentLimitationSheet';
 import {
@@ -87,15 +90,7 @@ import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
-export type WeekReadinessAction =
-  | 'tired_today'
-  | 'poor_sleep_today'
-  | 'poor_sleep_week'
-  | 'cooked_week'
-  | 'sore_today'
-  | 'illness_mild'
-  | 'illness_moderate'
-  | 'illness_severe';
+export type WeekReadinessAction = WeekReadinessApplyKind;
 
 const targetStatusModifierKind = (
   status: ProgramControlStatusUpdate,
@@ -1203,36 +1198,6 @@ export function useHomeScreen() {
     weekDays,
   ]);
 
-  // ── Short on time today / Away this week (vocab group 5) ──
-  // Both are canonical temporary schedule facts through the one door. Away
-  // carries exact unavailable dates and never creates fact-owned Rest
-  // overrides.
-  //
-  // SCOPE IS THE COPY'S PROMISE, NOT A DEFAULT. Sam's ruling 2 (2026-07-31)
-  // named this button "Short on time today", so the fact it writes is
-  // today-scoped: `scope: 'today_only'` reaches the executor, which builds a
-  // `date`-kind fact horizon, which `constraintAppliesToDate` honours on
-  // exactly one day. It used to say `current_week` under the same tap, so a
-  // rushed Tuesday reduced Saturday too.
-  const handleApplyShortOnTimeToday = useCallback(async () => {
-    const todayISO = todayISOLocal();
-    const result = await executeProgramControlActionDurably({
-      type: 'set_schedule_modifier',
-      source: {
-        screen: 'program_tab',
-        surface: 'short_on_time_today',
-        initiatedBy: 'tap',
-      },
-      scope: 'today_only',
-      payload: { date: todayISO, todayISO },
-      requiresRebuild: false,
-      createsActiveModifier: true,
-      oneOffOnly: false,
-    }, { todayISO });
-    await handleProgramControlResult(result);
-    return result;
-  }, [handleProgramControlResult]);
-
   // ── Weekly readiness ("I'm sick/flat today") ──
   // This surface only routes into existing owners: today's readiness signal
   // for tired/sore, a factual week-scoped cooked report, and week recovery
@@ -1784,9 +1749,6 @@ export function useHomeScreen() {
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,
     handleApplyEquipmentDecision,
-
-    // Short on time / away + missed sessions (vocab groups 5 + 2)
-    handleApplyShortOnTimeToday,
 
     // Block-rollover honest refusal (Sam's interim ruling, 2026-07-31)
     rolloverRefusal,

@@ -756,10 +756,10 @@ export default function ProfileScreen() {
                 testID="profile-dev-reset-post-onboarding"
                 accessibilityLabel="Reset to post-onboarding state"
               >
-                <Text variant="body" color={colors.text.primary} style={{ fontWeight: '700' }}>
+                <Text style={styles.secondaryActionTitle}>
                   {isDevResetting ? 'Resetting...' : 'Reset to post-onboarding state'}
                 </Text>
-                <Text variant="caption" color={colors.text.tertiary}>
+                <Text style={styles.secondaryActionDescription}>
                   Clears test-session state and reloads a clean generated program.
                 </Text>
               </TouchableOpacity>
@@ -799,10 +799,10 @@ export default function ProfileScreen() {
               testID="profile-privacy-policy"
               accessibilityLabel="Privacy Policy"
             >
-              <Text variant="body" color={colors.text.primary} style={{ fontWeight: '600' }}>
+              <Text style={styles.secondaryActionTitle}>
                 Privacy Policy
               </Text>
-              <Text variant="caption" color={colors.text.tertiary}>
+              <Text style={styles.secondaryActionDescription}>
                 How your app, training and coach data is handled.
               </Text>
             </TouchableOpacity>
@@ -814,10 +814,10 @@ export default function ProfileScreen() {
               testID="profile-terms-of-use"
               accessibilityLabel="Terms of Use"
             >
-              <Text variant="body" color={colors.text.primary} style={{ fontWeight: '600' }}>
+              <Text style={styles.secondaryActionTitle}>
                 Terms of Use
               </Text>
-              <Text variant="caption" color={colors.text.tertiary}>
+              <Text style={styles.secondaryActionDescription}>
                 Practical use, safety and training guidance terms.
               </Text>
             </TouchableOpacity>

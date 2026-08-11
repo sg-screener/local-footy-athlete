@@ -20,6 +20,7 @@ import type { IllnessSeverityTier } from '../rules/readinessIllnessLaw';
  */
 export type WeekReadinessApplyKind =
   | 'tired_today'
+  | 'flat_today'
   | 'poor_sleep_today'
   | 'poor_sleep_week'
   | 'cooked_week'
@@ -99,7 +100,8 @@ export function readinessActionForKind(
     };
   }
 
-  // tired_today | sore_today | cooked_week → fatigue source fact.
+  // The visible tired ladder maps slight → moderate → cooked without borrowing
+  // sleep or soreness as a reason the athlete did not give.
   const cooked = kind === 'cooked_week';
   return {
     type: 'set_fatigue_status',
@@ -108,7 +110,11 @@ export function readinessActionForKind(
     payload: {
       date: cooked ? anchorDateISO : todayISO,
       todayISO,
-      level: cooked ? 'cooked' : kind === 'sore_today' ? 'sore' : 'low_energy',
+      level: cooked
+        ? 'cooked'
+        : kind === 'flat_today'
+          ? 'not_right'
+          : kind === 'sore_today' ? 'sore' : 'low_energy',
     },
     requiresRebuild: false,
     createsActiveModifier: true,

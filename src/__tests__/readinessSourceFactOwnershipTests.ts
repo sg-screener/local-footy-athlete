@@ -867,6 +867,7 @@ async function main(): Promise<void> {
 
     const cases = [
       { kind: 'tired_today', type: 'set_fatigue_status', scope: 'today_only', date: TODAY, level: 'low_energy' },
+      { kind: 'flat_today', type: 'set_fatigue_status', scope: 'today_only', date: TODAY, level: 'not_right' },
       { kind: 'sore_today', type: 'set_fatigue_status', scope: 'today_only', date: TODAY, level: 'sore' },
       { kind: 'cooked_week', type: 'set_fatigue_status', scope: 'current_week', date: ANCHOR, level: 'cooked' },
       { kind: 'poor_sleep_today', type: 'set_poor_sleep_status', scope: 'today_only', date: TODAY, pattern: 'single_night' },

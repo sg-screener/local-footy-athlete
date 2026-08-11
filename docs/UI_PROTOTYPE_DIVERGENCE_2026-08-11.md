@@ -575,3 +575,77 @@ tape catches a source-correct door that cannot actually open its nested editor.
 completing an equipment save on-device; whether Clear coach chat belongs in a
 future account/settings surface. This is simulator acceptance, not phone
 acceptance.
+
+---
+
+## SAM EYE PASS 10 — STATUS DOORS SAY THE FIRST DECISION
+
+**Sam, on the Day controls:** the Time button did nothing and should become
+Tired; Sick should not first ask Flat / Sick / Something hurts; flat should be
+its own door; pain already belongs to Injured. He then narrowed Feeling flat to
+exactly **Bit tired today**, **Pretty flat**, and **Totally cooked**, removing
+both the sleep detour and Sore or tight. On Profile, he also caught Developer
+Tools and Legal using visibly smaller copy than the adjacent Support cards.
+
+**THE OPTIONS COMPARED:** for readiness, (1) build separate Tired and Sick
+sheets, or (2) keep one readiness owner and pass it a typed starting group. The
+second landed: visibility and entry are one `flat | sick | null` state, and the
+sheet contains no repeating top-level chooser. For Pretty flat, borrowing poor
+sleep or soreness would save a reason the athlete never gave; a new typed
+`flat_today` option maps to the existing moderate fatigue level. For Profile,
+the existing Support action-card title and description styles became the one
+owner for Developer Tools, Privacy and Terms.
+
+**FIRST-RUN FINDINGS:** the chained UI cells red on the old Time handler, old
+label and three-way chooser; all nine Profile type-parity cells red on the old
+body/caption variants. The next readiness guard red because the old flat group
+had four rows and no moderate flat action; its first fall-through produced
+low-energy until the `flat_today` mapping was pinned to moderate. The first live
+flow reached the correct sheet and visibly showed all three rows, but its text
+assertion could not see them because each option intentionally exposes its
+stable semantic id as its accessibility label. The check was re-aimed to those
+ids and the whole route passed; the screenshot, not a weakened assertion,
+confirmed the words. A wider durable-control guard then found the removed Time
+door's handler still authored and exported by the hook even though it was
+unreachable; that dead UI doorway was deleted while its lower-level schedule
+action tests remain.
+
+**RECEIPTS:**
+
+- `test:day-first-timeline`: 40 named cells run, 40 passed. It pins the two
+  direct doors, removed chooser, exact three-row Tired region and the absence of
+  sleep, soreness and nested injury.
+- `test:readiness-ownership`: 22 named invariants run, 22 passed. R16 pins
+  Pretty flat to a today-scoped moderate fatigue fact through the one readiness
+  action owner.
+- `test:program-control-durable`: the two direct-door cells are green; the suite
+  still carries its unrelated pre-existing durable-move red. The new cells hold
+  the Time handler absent from both the screen and hook while Away keeps its
+  existing acknowledgment and weekly scope.
+- `test:profile-reset-ui`: 166 named cells run, 166 passed. The three Profile
+  regions must consume the same action-card title and description styles and
+  may not fall back to body/caption.
+- `.maestro/golden/day-readiness-profile-type.yaml`: completed on the iOS
+  simulator. It opened Tired straight to three options, opened Sick straight to
+  illness severity, proved the removed choices absent, and photographed both
+  sheets plus Developer Tools/Support and Legal at the matching scale.
+- `artifacts/ui-walk/tired-three-direct-options.png`,
+  `sick-direct-options.png`, `profile-developer-card-type.png` and
+  `profile-legal-card-type.png`: looked at. The two sheets are clean direct
+  ladders; Developer Tools and Legal now match Support rather than shrinking.
+
+**WHAT CATCHES THE NEXT DEFECT OF THIS CLASS:** a restored Time handler, a
+fourth Tired row, a sleep/pain detour, a nested injury door, Pretty flat storing
+the wrong severity, or one of the three Profile cards choosing its own smaller
+variants reds the chained cells. The tape catches a source-correct route that
+cannot be reached or whose options do not enter the accessibility tree.
+
+**NORTH STAR:** toward it. The Day chips choose a typed status; one owner saves
+the resulting fact. Pretty flat records the athlete's actual statement rather
+than translating it into a different cause. Profile typography now has one
+shared owner for one card family.
+
+**NOT COVERED:** Sam's physical iPhone; tapping each severity through to its
+post-save acknowledgment on-device; dynamic type at accessibility sizes; the
+Danger Zone's deliberately distinct destructive styling. This is simulator
+acceptance, not phone acceptance.

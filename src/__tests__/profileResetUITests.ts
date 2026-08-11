@@ -462,6 +462,29 @@ ok('Support opens mailto link', /Linking\.openURL\(buildMailto\(env\.supportEmai
 ok('Privacy row navigates to Privacy screen', /onPress=\{\(\) => navigation\.navigate\('Privacy'\)\}/.test(src));
 ok('Terms row navigates to Terms screen', /onPress=\{\(\) => navigation\.navigate\('Terms'\)\}/.test(src));
 
+// Sam's eye pass found that Developer Tools and Legal were still using the
+// primitive body/caption scale while the adjacent Support cards used the
+// accepted Profile action-card scale. These are one card family, so there is
+// one title/description owner rather than three almost-matching treatments.
+section('[6c] Profile action cards share one typography scale');
+{
+  const region = (startMarker: string, endMarker: string): string => {
+    const start = src.indexOf(startMarker);
+    const end = src.indexOf(endMarker, start + startMarker.length);
+    ok(`${startMarker} typography region found`, start >= 0 && end > start);
+    return start >= 0 && end > start ? src.slice(start, end) : '';
+  };
+  const developer = region('testID="profile-dev-reset-post-onboarding"', '</TouchableOpacity>');
+  const privacy = region('testID="profile-privacy-policy"', '</TouchableOpacity>');
+  const terms = region('testID="profile-terms-of-use"', '</TouchableOpacity>');
+  for (const [name, card] of [['Developer Tools', developer], ['Privacy', privacy], ['Terms', terms]] as const) {
+    ok(`${name} uses the shared action-card title scale`, card.includes('style={styles.secondaryActionTitle}'));
+    ok(`${name} uses the shared action-card description scale`, card.includes('style={styles.secondaryActionDescription}'));
+    ok(`${name} does not fall back to primitive body/caption variants`,
+      !/variant="(?:body|caption)"/.test(card));
+  }
+}
+
 // ═════════════════════════════════════════════════════════════════════
 // 7. Render-time + press-time logs exist
 // ═════════════════════════════════════════════════════════════════════

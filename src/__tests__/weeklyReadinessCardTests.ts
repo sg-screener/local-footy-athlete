@@ -117,6 +117,7 @@ const PRESEASON: Partial<OnboardingData> = {
 
 type ReadinessOption =
   | 'tired_today'
+  | 'flat_today'
   | 'poor_sleep_today'
   | 'poor_sleep_week'
   | 'cooked_week'
@@ -387,10 +388,11 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     `${__dirname}/../components/ExplorerRenderWitness.tsx`, 'utf8',
   ) as string;
   // THE ENTRY IS A CHIP NOW, NOT A ROW (Sam's chip-row ruling, 2026-08-08).
-  // The door is unchanged — same onPress, same testID, same accessibility label
-  // — but it is rendered through the shared `LifeFactChip`, so the tag this cell
+  // Sick keeps the semantic readiness identity used by the explorer, while
+  // Tired is the separate direct flat-options ingress. The element is rendered
+  // through the shared `LifeFactChip`, so the tag this cell
   // reads is a `<LifeFactChip>` and not a bare `<Pressable>`. Both element names
-  // are searched: what this cell is about is that the week-readiness entry
+  // are searched: what this cell is about is that the readiness entry
   // carries the fact's stable identity, and the element it is drawn with is not
   // the claim. A find over one name only would have gone quietly vacuous ('')
   // the moment the row was restyled — so an empty find is failed explicitly
@@ -398,7 +400,7 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   const readinessEntryTag = [
     ...jsxOpeningTags(src, 'LifeFactChip'),
     ...jsxOpeningTags(src, 'Pressable'),
-  ].find((tag) => tag.includes('setReadinessVisible(true)')) ?? '';
+  ].find((tag) => tag.includes("setReadinessEntry('sick')")) ?? '';
   const sheetOptionTags = jsxOpeningTags(src, 'SheetOption');
   const readinessFactId = 'temporary-readiness:fatigue:2026-07-20';
   const readinessFactToken = stableTestIdToken(readinessFactId);
@@ -436,17 +438,14 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   // sheet (returns with the 5.4 busy design) — no dead affordance, no dead prop.
   const readinessActionKinds: ReadinessOption[] = [
     'tired_today',
-    'poor_sleep_today',
-    'poor_sleep_week',
+    'flat_today',
     'cooked_week',
-    'sore_today',
     'illness_mild',
     'illness_moderate',
     'illness_severe',
   ];
   const readinessOptionSelectors = [
     ...readinessActionKinds.map((kind) => explorerTestId.readinessOption(kind)),
-    explorerTestId.injuryIngress('set'),
   ];
   ok('every readiness leaf + update/clear controls use semantic identities',
     new Set(readinessOptionSelectors).size === readinessOptionSelectors.length &&
@@ -454,11 +453,13 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
       tag.includes(`explorerTestId.readinessOption('${kind}')`) &&
       tag.includes(`onApply('${kind}')`))) &&
     sheetOptionTags.some((tag) =>
-      tag.includes("explorerTestId.injuryIngress('set')") && tag.includes('onInjury')) &&
-    sheetOptionTags.some((tag) =>
       tag.includes('explorerTestId.readinessUpdate(active.id)') && tag.includes('setUpdating(true)')) &&
     sheetOptionTags.some((tag) =>
       tag.includes('explorerTestId.readinessClearAction(active.id)') && tag.includes('onClear(active.id)')));
+  ok('injury has one dedicated ingress outside the readiness sheet',
+    src.includes('testID="home-injured-entry"') &&
+    src.includes('setReadinessInjuryVisible(true)') &&
+    !sheetSrc.includes("explorerTestId.injuryIngress('set')"));
 
   ok('active readiness and programming-effect witnesses use the canonical fact identity',
     /readinessFacts\.map\(\(fact\)[\s\S]*fact\.status === 'active'[\s\S]*readinessActive\(fact\.factId\)[\s\S]*readinessClear\(fact\.factId\)[\s\S]*readinessProgrammingEffectFactIds\.has\(fact\.factId\)[\s\S]*readinessProgrammingEffect\(fact\.factId\)/.test(src));
@@ -474,10 +475,11 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     /readinessFacts = useMemo\(\(\) => temporarySourceFacts\.filter/.test(hookSrc) &&
     /readinessFacts\.map\(\(fact\)[\s\S]*<ExplorerRenderWitness/.test(src) &&
     /<View[\s\S]*accessible[\s\S]*accessibilityLabel=\{accessibilityLabel\}[\s\S]*accessibilityRole="text"[\s\S]*collapsable=\{false\}[\s\S]*testID=\{testID\}/.test(witnessSrc));
-  ok('tapping opens the readiness sheet (state wiring present)',
-    src.includes('setReadinessVisible(true)') && src.includes('home-week-readiness-sheet'));
-  // X2 / R16 redesign: exactly three top-level buckets with russian-doll
-  // expansion — "Feeling flat", "Sick", "Something hurts".
+  ok('Tired and Sick open the readiness sheet at their own typed entry',
+    src.includes("setReadinessEntry('flat')") && src.includes("setReadinessEntry('sick')") &&
+    src.includes("initialBucket={readinessEntry ?? 'flat'}") && src.includes('home-week-readiness-sheet'));
+  // SUPERSEDED 2026-08-11. The day controls now name the first decision, so the
+  // three-way chooser was one tap too many and duplicated Injury's own door.
   //
   // The Sick bucket's TWO sub-options are SUPERSEDED by Sam's 2026-07-27 ruling
   // (THE THREE SICK DOORS). R16 was authored before the illness law existed, so
@@ -486,21 +488,29 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   // "Properly sick" has MOVED to moderate — it deloads without lifting a single
   // minimum. Re-pinned to the law, not weakened: the bucket count is unchanged
   // and every leaf is still asserted.
-  ok('sheet groups readiness under three top-level russian-doll buckets',
-    src.includes('Feeling flat') && src.includes('Something hurts') &&
+  ok('sheet keeps both readiness option groups without an intermediate chooser',
+    src.includes("Feeling flat — what's closest?") &&
     src.includes('A bit off') && src.includes('Properly sick') &&
     src.includes("Can't get out of bed") &&
-    src.includes('Rough sleep') && src.includes('Bit tired today') &&
+    src.includes('Pretty flat') && src.includes('Bit tired today') &&
     !sheetSrc.includes('Short on time') && !src.includes('Sick / run down') &&
     !src.includes('Just a bit tired today') &&
     // The superseded label must be GONE, not merely unused.
-    !src.includes('Coming down with something'));
+    !src.includes('Coming down with something') &&
+    !sheetSrc.includes('readiness-bucket-flat') &&
+    !sheetSrc.includes('readiness-bucket-sick') &&
+    !sheetSrc.includes('Something hurts'));
   ok('sheet maps every tier to its deterministic route (zero capability loss)',
-    src.includes("onApply('tired_today')") && src.includes("onApply('cooked_week')") &&
-    src.includes("onApply('poor_sleep_today')") && src.includes("onApply('poor_sleep_week')") &&
-    src.includes("onApply('sore_today')") && src.includes("onApply('illness_mild')") &&
+    src.includes("onApply('tired_today')") && src.includes("onApply('flat_today')") &&
+    src.includes("onApply('cooked_week')") && src.includes("onApply('illness_mild')") &&
     src.includes("onApply('illness_moderate')") &&
-    src.includes("onApply('illness_severe')") && src.includes('onPress={onInjury}'));
+    src.includes("onApply('illness_severe')") &&
+    src.includes('testID="home-injured-entry"'));
+  ok('Tired offers exactly three severities and no pain or sleep detour',
+    src.includes('label="Bit tired today"') && src.includes('label="Pretty flat"') &&
+    src.includes('label="Totally cooked"') &&
+    !sheetSrc.includes('Sore or tight') && !sheetSrc.includes('Rough sleep') &&
+    !sheetSrc.includes("bucket === 'sleep'"));
   // The "nothing required" framing follows the tier that actually lifts the
   // minimums. It moved with it — leaving it on "Properly sick" would promise an
   // optional week the moderate tier does not deliver.
@@ -548,8 +558,8 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('Short on time removed from the sheet — no dead affordance and no dead prop',
     sheetSrc.length > 0 && !sheetSrc.includes('Short on time') && !/onShortTime/.test(src) &&
     !/readinessOption\('short_time'\)/.test(src));
-  ok('top-level buckets use distinct icons (icon cleanup, no repeated-pulse spam)',
-    src.includes('flatIcon') && src.includes('sickIcon') &&
+  ok('readiness leaves use distinct icons (icon cleanup, no repeated-pulse spam)',
+    src.includes('sickIcon') && src.includes('flatTodayIcon') &&
     (src.match(/pulseIcon\(/g) || []).length <= 4);
 
   // Device finding #3: the illness_recovery week keeps its sessions (sessionTier
@@ -581,22 +591,12 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('active state update/clear affordances present',
     src.includes('Clear adjustment'));
 
-  // INVERTED OUT LOUD, 2026-08-08 — THE RULING MOVED, SO THE PIN MOVED.
-  // A4 rider (a) put the active-state surface ABOVE the seven day rows, so it
-  // explained the week it preceded. Sam's day-first layout ruling (2026-08-08,
-  // `docs/SEAT_INBOX.md`) names the order himself: Today/Week toggle → the week
-  // strip → today's card → the life-fact chip row → THEN Coach Notes. Rider (a)'s
-  // argument — the explanation sits with the thing it explains — now points the
-  // other way, because the screen leads with one day instead of seven rows.
-  // Which side moved: the RULING, on a date, by the owner. The cell is not
-  // deleted, and it still asserts a POSITION rather than mere presence — an
-  // inverted pin that only checked existence would pass on any layout at all.
-  ok('[A4] active-state notes render below the day card and its chip row',
-    src.indexOf('<CoachNotesSection') > 0 &&
-    src.indexOf('<CoachNotesSection') > src.indexOf('{weekDays.map(') &&
-    src.indexOf('<CoachNotesSection') > src.indexOf('testID="home-life-fact-chips"'));
-  ok('[A4] nothing active means no empty card takes screen space',
-    /if \(notes\.length === 0\) return null;/.test(src));
+  // SUPERSEDED 2026-08-11. My Status in Coach is now the only modifier and
+  // coach-note home; Program owns only the direct status doors.
+  ok('[A4] active-state notes do not duplicate My Status on Program',
+    !src.includes('<CoachNotesSection'));
+  ok('[A4] the removed notes component leaves no empty-state branch',
+    !/if \(notes\.length === 0\) return null;/.test(src));
   ok('no coach-chat / LLM in the flow (no askCoach or fetch in readiness paths)',
     !/WeekReadinessSheet[\s\S]{0,4000}onAskCoach/.test(src));
 

@@ -463,9 +463,9 @@ function homeScreenSource(): string {
  * them is a door Sam has tapped on a device.
  */
 const LIFE_FACT_DOORS: readonly { readonly label: string; readonly onPress: string; readonly testID: string }[] = [
-  { label: 'Time', onPress: 'handleApplyShortOnTimeToday()', testID: 'testID="home-short-on-time-entry"' },
+  { label: 'Tired', onPress: "setReadinessEntry('flat')", testID: 'testID="home-tired-entry"' },
   { label: 'Away', onPress: 'setAwayDaysVisible(true)', testID: 'testID="home-away-this-week-entry"' },
-  { label: 'Sick', onPress: 'setReadinessVisible(true)', testID: 'explorerTestId.readinessUpdate(weekReadiness.id)' },
+  { label: 'Sick', onPress: "setReadinessEntry('sick')", testID: 'explorerTestId.readinessUpdate(weekReadiness.id)' },
   { label: 'Injured', onPress: 'setReadinessInjuryVisible(true)', testID: 'testID="home-injured-entry"' },
   { label: 'Equipment', onPress: 'setEquipmentVisible(true)', testID: 'explorerTestId.equipmentUpdate(activeEquipmentFact.factId)' },
 ];
@@ -697,12 +697,58 @@ run('the five circles sit in a card with words above them', () => {
     'the change card\'s sentences are hardcoded in the screen. They are PROPOSED '
     + 'sheet entries (batch 33) awaiting Sam — a literal here is a word he can '
     + 'never re-word.');
-  // HIS WORD, NOT HERS. She labels the first circle "Time away"; he ruled on
-  // sight to keep "Time". A later reader comparing the two screens must not
-  // "fix" the difference.
-  assert(/label="Time"/.test(home) && !/label="Time away"/.test(home),
-    'the first circle adopted her "Time away". Sam ruled immediately, 2026-08-10: '
-    + 'keep "Time".');
+  // SUPERSEDED 2026-08-11. The old Time door was inert on Sam's screen and its
+  // one-tap schedule mutation did not belong beside status controls. Tired now
+  // owns this slot and enters the existing flat-readiness choices directly.
+  assert(/label="Tired"/.test(home) && !/label="Time"/.test(home),
+    'the first circle is not the direct Tired readiness door, or the dead Time '
+    + 'door has returned.');
+});
+
+run('Tired and Sick enter one readiness sheet at their own options', () => {
+  const home = homeScreenSource();
+  const sheetStart = home.indexOf('interface WeekReadinessSheetProps');
+  const sheetEnd = home.indexOf('interface AwayDaysSheetProps', sheetStart);
+  assert(sheetStart >= 0 && sheetEnd > sheetStart,
+    'the readiness sheet region could not be found — this gate would otherwise '
+    + 'claim direct routing from an empty slice');
+  const sheet = home.slice(sheetStart, sheetEnd);
+
+  assert(/const \[readinessEntry, setReadinessEntry\] = useState<'flat' \| 'sick' \| null>\(null\)/.test(home),
+    'visibility and entry choice are not owned by one typed readiness entry');
+  assert(/initialBucket=\{readinessEntry \?\? 'flat'\}/.test(home),
+    'the shared readiness sheet does not receive the door that opened it');
+  assert(/setReadinessEntry\('flat'\)/.test(home) && /setReadinessEntry\('sick'\)/.test(home),
+    'Tired and Sick do not route directly to their own option groups');
+  assert(/initialBucket: 'flat' \| 'sick'/.test(sheet),
+    'the sheet has no typed direct-entry contract');
+  assert(!/'top'/.test(sheet) && !/readiness-bucket-flat/.test(sheet)
+    && !/readiness-bucket-sick/.test(sheet),
+    'the removed flat/sick chooser still exists inside the readiness sheet');
+  assert(!/Something hurts/.test(sheet) && !/onInjury/.test(sheet),
+    'injury is still nested under readiness instead of living only behind Injured');
+  assert(/Feeling flat — what's closest\?/.test(sheet) && /Sick — how bad\?/.test(sheet),
+    'one of the two existing option groups was lost while removing the chooser');
+  const flatStart = sheet.indexOf("{showOptions && bucket === 'flat'");
+  const sickStart = sheet.indexOf("{showOptions && bucket === 'sick'", flatStart);
+  assert(flatStart >= 0 && sickStart > flatStart,
+    'the flat-options region could not be found before the sick-options region');
+  const flat = sheet.slice(flatStart, sickStart);
+  assert((flat.match(/<SheetOption\b/g) ?? []).length === 3,
+    'Tired does not show exactly three choices');
+  assert(/label="Bit tired today"/.test(flat)
+    && /label="Pretty flat"/.test(flat)
+    && /label="Totally cooked"/.test(flat),
+    'Tired is missing one of the three signed severity labels');
+  assert(/onApply\('tired_today'\)/.test(flat)
+    && /onApply\('flat_today'\)/.test(flat)
+    && /onApply\('cooked_week'\)/.test(flat),
+    'the three Tired severities do not reach three typed readiness actions');
+  assert(!/Rough sleep|Sore or tight|readiness-leaf-sleep|bucket === 'sleep'/.test(sheet),
+    'sleep or soreness still appears in the Tired pathway');
+  assert(/testID="home-injured-entry"/.test(home)
+    && /setReadinessInjuryVisible\(true\)/.test(home),
+    'the dedicated Injured door or its existing guided pathway was removed');
 });
 
 run('the week rows open in place onto the same projected session', () => {
@@ -969,7 +1015,7 @@ run('a week row carries the day\'s exercise count, and zero shows nothing', () =
     'the week row composes its own count text instead of reading the sheet');
 });
 
-run('the chip row carries the five doors the five bars carried, unchanged', () => {
+run('the chip row carries five direct change doors', () => {
   const home = homeScreenSource();
   const rowStart = home.indexOf('testID="home-life-fact-chips"');
   assert(rowStart > 0, 'the life-fact chip row is gone from HomeScreenV2 — this gate '
@@ -982,16 +1028,15 @@ run('the chip row carries the five doors the five bars carried, unchanged', () =
     + 'span and would pass on anything');
   const chips = row.match(/<LifeFactChip\b/g) ?? [];
   assert(chips.length === LIFE_FACT_DOORS.length,
-    `the row renders ${chips.length} chip(s); Sam ruled FIVE — short on time, `
-    + 'away, sick/flat, injured, missing equipment.');
+    `the row renders ${chips.length} chip(s); Sam ruled FIVE — tired, away, `
+    + 'sick, injured, missing equipment.');
   for (const door of LIFE_FACT_DOORS) {
     assert(row.includes(door.onPress),
-      `the "${door.label}" chip no longer calls ${door.onPress}. The chip row is `
-      + 'presentation: the doors behind it do not move.');
+      `the "${door.label}" chip no longer calls ${door.onPress}, the direct `
+      + 'door it owns.');
     assert(row.includes(door.testID),
       `the "${door.label}" chip no longer resolves by ${door.testID}. That is the `
-      + 'coordinate the walker and the explorer reach this door by; renaming it '
-      + 'silently is how a tap stops being findable while the screen still looks right.');
+      + 'coordinate the walker and the explorer reach this door by.');
     assert(new RegExp(`label="${door.label}"`).test(row),
       `the "${door.label}" chip lost its label. A chip with a glyph and no word is `
       + 'the device-pass finding Sam raised: icon meanings were not obvious.');

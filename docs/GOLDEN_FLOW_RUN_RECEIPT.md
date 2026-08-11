@@ -28,6 +28,7 @@ string `${E2E_METRO_URL}`.
 | --- | --- | --- |
 | `coach-my-status.yaml` | 2026-08-10 | PASS — end to end, including the not-yet caption |
 | `day-card-dropdowns.yaml` | 2026-08-10 | PASS — collapsed, expanded, collapsed |
+| `day-readiness-profile-type.yaml` | 2026-08-11 | PASS — direct three-choice Tired, illness-only Sick, matching Developer/Support/Legal type |
 | `day-week-profile.yaml` | 2026-08-10 | PASS — day, week, profile, coach |
 | `dev-launch-refusal-speaks.yaml` | 2026-08-10 | PASS — the refusal speaks and clears |
 | `profile-setup-equipment.yaml` | 2026-08-11 | PASS — Commercial gym summary, nested editor, full scroll to Save |
@@ -39,7 +40,7 @@ string `${E2E_METRO_URL}`.
 | `one-set-feedback.yaml` | NOT RUN | Re-aimed 2026-08-10, never executed since. |
 | `reload-standard-week.yaml` | NOT RUN | Blocked behind the seeded world's durability (4 game days in memory, 1 on disk). |
 
-**SIX OF ELEVEN HAVE RUN. THAT IS THE HONEST NUMBER** and it is written here rather
-than implied by six green ones. `NOT RUN` is a state this table carries on
+**SEVEN OF TWELVE HAVE RUN. THAT IS THE HONEST NUMBER** and it is written here rather
+than implied by seven green ones. `NOT RUN` is a state this table carries on
 purpose: a receipt that only recorded successes would make the rig look alive
 while half of it was dark, which is precisely the failure this law names.

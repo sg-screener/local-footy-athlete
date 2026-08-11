@@ -108,7 +108,6 @@ export default function HomeScreenV2() {
     handleFinishTeamSession,
     handleApplyGuidedInjury,
     handleApplyEquipmentDecision,
-    handleApplyShortOnTimeToday,
     handleApplyAwayDays,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
@@ -246,10 +245,12 @@ export default function HomeScreenV2() {
   const [scheduleAck, setScheduleAck] = useState<ReadinessAcknowledgment | null>(null);
   const [equipmentVisible, setEquipmentVisible] = useState(false);
 
-  // ── Weekly readiness ("I'm sick/flat today") — week-level card ──
+  // One typed entry owns both visibility and the first readiness question.
+  // Tired and Sick share the same saved modifier pathway without forcing the
+  // athlete through a chooser that simply repeats the chip they just tapped.
   // Active state is derived from the EXISTING tap modifiers for the
   // currently selected week (ids are week-keyed by Monday).
-  const [readinessVisible, setReadinessVisible] = useState(false);
+  const [readinessEntry, setReadinessEntry] = useState<'flat' | 'sick' | null>(null);
   const [readinessAck, setReadinessAck] = useState<ReadinessAcknowledgment | null>(null);
   // Opt-in "make today lighter" offer, shown after a today-scoped readiness report.
   // The offer CARRIES the fact the athlete just authored (Sam's D-3 ruling,
@@ -758,14 +759,10 @@ export default function HomeScreenV2() {
             hint, so the words are not deleted, they are demoted to where a five-
             across row can still carry them.
 
-            THE LABELS ARE NEW AND UNSIGNED. "Time", "Away", "Sick", "Injured"
-            and "Equipment" are PROPOSED under the copy regime's transitional
-            rule and join Sam's next signing batch (with "Today"/"Week" from
-            slice 1). Title Case, one word each — a five-across row on a phone
-            has room for a word, not a sentence. "Equipment" was chosen over a
-            shorter invention ("Kit", "Gear") because this app already says
-            equipment everywhere; a new short label should not also be a new
-            word. */}
+            The one-word labels are signed. Tired supersedes the old Time label
+            and changes its door; Away, Sick, Injured and Equipment keep theirs.
+            Title Case, one word each — a five-across row on a phone has room for
+            a word, not a sentence. */}
         {/* ── RULING 7: THE BUTTONS DO NOT APPEAR UNDER WEEKLY VIEW ──
             `&& dayFirst` is the whole change. Sam's reasoning IS the spec and it
             is a general principle, not a layout note: *"someone will make a
@@ -788,16 +785,8 @@ export default function HomeScreenV2() {
             accessibility label it already had — hers reach nothing, his reach real
             doors. Nothing about what a tap does moved.
 
-            **"Time" STAYS "Time".** Hers labels the first circle "Time away"; Sam
-            ruled on sight to keep his own word, so hers is not adopted. Recorded
-            here because a later reader comparing the two screens will see the
-            difference and must not "fix" it.
-
-            **THE TWO SENTENCES ARE PROPOSED, NOT SIGNED** — batch 33, under the
-            transitional rule (a string may ship PROPOSED; it may never ship
-            unlisted). They are HER words, and the governing rule is her structure
-            and HIS style, so the wording is exactly the kind of thing that goes to
-            him rather than being adopted silently. */}
+            The card heading and sub-line remain owned by signedCopy; this row
+            changes only the five direct controls beneath them. */}
         {isNormal && dayFirst && (
           <Card tone="default" padding="md" radius="lg" style={styles.changeCard} testID="home-change-card">
             <Text style={styles.changeCardHeading}>
@@ -808,34 +797,16 @@ export default function HomeScreenV2() {
             </Text>
           <View style={styles.lifeFactChips} testID="home-life-fact-chips">
             <LifeFactChip
-              onPress={async () => {
-                // NEVER IN SILENCE. The tap used to discard its result, and the
-                // result is `ok: false` on every device with a real accepted base
-                // (declared red 1) — so this button reported nothing at all while
-                // doing nothing at all.
-                setScheduleAck(null);
-                const result = await handleApplyShortOnTimeToday();
-                const ack = buildScheduleAcknowledgment(result, 'short_on_time');
-                setScheduleAck(ack);
-                // The tape's witness that the ack layer RAN — Sam's 2026-08-01
-                // silence could not be reproduced below this line, so this line
-                // reports itself. See recordScheduleAckPresented.
-                recordScheduleAckPresented({
-                  traceId: result?.traceId, surface: 'short_on_time_today', tone: ack.tone,
-                });
-              }}
-              testID="home-short-on-time-entry"
-              accessibilityLabel="Short on time today"
-              label="Time"
+              onPress={() => { setReadinessAck(null); setReadinessEntry('flat'); }}
+              testID="home-tired-entry"
+              accessibilityLabel="Tired"
+              label="Tired"
+              tint={styles.tiredIconTint}
               icon={
-                /* Stopwatch — Sam's pick, 2026-08-03 icon ruling row 1
-                   (replacing the hourglass): time being COUNTED on one day.
-                   The hourglass it replaces is now nobody's, so no two rows
-                   share a glyph. */
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M10 2h4" />
-                  <Circle cx="12" cy="14" r="8" />
-                  <Path d="M12 14l3-3" />
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFC247" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M3 8h15v8H3z" />
+                  <Path d="M21 11v2" />
+                  <Path d="M6 11v2" />
                 </Svg>
               }
             />
@@ -855,7 +826,7 @@ export default function HomeScreenV2() {
               }
             />
             <LifeFactChip
-              onPress={() => { setReadinessAck(null); setReadinessVisible(true); }}
+              onPress={() => { setReadinessAck(null); setReadinessEntry('sick'); }}
               testID={weekReadiness
                 ? explorerTestId.readinessUpdate(weekReadiness.id)
                 : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
@@ -1148,12 +1119,13 @@ export default function HomeScreenV2() {
       />
 
       <WeekReadinessSheet
-        visible={readinessVisible}
+        visible={readinessEntry !== null}
+        initialBucket={readinessEntry ?? 'flat'}
         active={weekReadiness}
         acknowledgment={readinessAck}
         lighterDayOffer={lighterDayOffer}
         lighterDayBusy={lighterDayBusy}
-        onClose={() => { setReadinessVisible(false); setReadinessAck(null); setLighterDayOffer(null); }}
+        onClose={() => { setReadinessEntry(null); setReadinessAck(null); setLighterDayOffer(null); }}
         onApply={async (kind) => {
           // Acknowledge unconditionally — never close in silence. On success the
           // sheet transitions to the adjusted/acknowledged state (active is now
@@ -1161,7 +1133,7 @@ export default function HomeScreenV2() {
           const result = await handleApplyWeekReadiness(kind, weekAnchorISO);
           setReadinessAck(buildReadinessAcknowledgment(result));
           // Opt-in lighter-day / "soften today" offer after a today-scoped report.
-          const todayScoped = kind === 'tired_today' || kind === 'poor_sleep_today' ||
+          const todayScoped = kind === 'tired_today' || kind === 'flat_today' || kind === 'poor_sleep_today' ||
             kind === 'sore_today' || kind === 'illness_mild';
           setLighterDayOffer(result?.ok && todayScoped
             ? { date: todayISOLocal(), factId: result.createdModifierIds?.[0] }
@@ -1186,16 +1158,11 @@ export default function HomeScreenV2() {
           await handleClearWeekReadiness(modifierId);
           setReadinessAck(null);
           setLighterDayOffer(null);
-          setReadinessVisible(false);
-        }}
-        onInjury={() => {
-          setReadinessVisible(false);
-          setReadinessInjuryVisible(true);
+          setReadinessEntry(null);
         }}
       />
 
-      {/* Fresh guided injury flow launched from the weekly readiness sheet.
-          Same flow + same set_injury_modifier action as the day sheet. */}
+      {/* Fresh guided injury flow launched from the dedicated Injured chip. */}
       <GuidedInjuryFlowSheet
         visible={readinessInjuryVisible}
         onClose={() => setReadinessInjuryVisible(false)}
@@ -2956,6 +2923,7 @@ function MissedChip({ label, primary, onPress }: {
 // ── Weekly "I'm sick/flat today" sheet ──
 interface WeekReadinessSheetProps {
   visible: boolean;
+  initialBucket: 'flat' | 'sick';
   active: { id: string; isRecovery: boolean; title: string; scope: 'today' | 'week' } | null;
   acknowledgment: ReadinessAcknowledgment | null;
   lighterDayOffer: { date: string; factId?: string } | null;
@@ -2965,7 +2933,6 @@ interface WeekReadinessSheetProps {
   onAcceptLighterDay: (date: string) => void | Promise<void>;
   onDeclineLighterDay: () => void;
   onClear: (modifierId: string) => void | Promise<void>;
-  onInjury: () => void;
 }
 
 /**
@@ -2974,6 +2941,7 @@ interface WeekReadinessSheetProps {
  */
 function WeekReadinessSheet({
   visible,
+  initialBucket,
   active,
   acknowledgment,
   lighterDayOffer,
@@ -2983,7 +2951,6 @@ function WeekReadinessSheet({
   onAcceptLighterDay,
   onDeclineLighterDay,
   onClear,
-  onInjury,
 }: WeekReadinessSheetProps) {
   const [updating, setUpdating] = useState(false);
   // A2: whether the athlete JUST reported something in this visit, as opposed to
@@ -2993,17 +2960,16 @@ function WeekReadinessSheet({
   // immediately offered to clear it. Sam's ruling: right after confirming, show
   // the disclosure and a way out, nothing else.
   const [confirmed, setConfirmed] = useState(false);
-  // Russian-doll navigation for the option list: three top-level buckets, each
-  // expanding to its leaves. 'sleep' is a leaf of 'flat'. Reset to the top
-  // whenever the list re-shows.
-  const [bucket, setBucket] = useState<'top' | 'flat' | 'sleep' | 'sick'>('top');
+  // The chip owns the first decision. The sheet owns only the selected group's
+  // direct severity leaves.
+  const [bucket, setBucket] = useState<'flat' | 'sick'>(initialBucket);
 
   React.useEffect(() => {
-    if (visible) { setUpdating(false); setConfirmed(false); setBucket('top'); }
-  }, [visible]);
+    if (visible) { setUpdating(false); setConfirmed(false); setBucket(initialBucket); }
+  }, [initialBucket, visible]);
   React.useEffect(() => {
-    if (updating) setBucket('top');
-  }, [updating]);
+    if (updating) setBucket(initialBucket);
+  }, [initialBucket, updating]);
 
   // A failed report must NOT read as confirmation — the error acknowledgment
   // stays in place over the options so the athlete can try again.
@@ -3024,20 +2990,13 @@ function WeekReadinessSheet({
       {children}
     </Svg>
   );
-  const flatIcon = (color: string) => svg(color, <><Path d="M3 8h13v8H3z" /><Path d="M19 11v2" /><Path d="M6 11v2" /></>);
   const sickIcon = (color: string) => svg(color, <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />);
-  const hurtIcon = (color: string) => svg(color, <><Path d="M12 9v4" /><Path d="M12 17h.01" /><Path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>);
   const moonIcon = (color: string) => svg(color, <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />);
   const dropletIcon = (color: string) => svg(color, <Path d="M12 2.69 6.34 8.35a8 8 0 1 0 11.31 0z" />);
-  // Ruling 10's named fix: "Rough sleep" used to carry a bare '>' chevron —
-  // an icon that means nothing for a sleep row. A moon VARIANT of the tired
-  // leaves' plain crescent (moonIcon), with a small cloud over it — restless,
-  // overcast sleep — so it reads as sleep-family without duplicating the
-  // leaf icons underneath it.
-  const moonRestIcon = (color: string) => svg(color, (
-    <><Path d="M17 14.5a5.5 5.5 0 1 0-9.9-3.3" />
-      <Path d="M4 17.5a3.5 3.5 0 0 1 .5-6.96A5 5 0 0 1 14 12.5" />
-      <Path d="M4 17.5h13a3 3 0 0 0 0-6" /></>
+  // The middle severity is an honest moderate fatigue fact (`not_right`), not
+  // a sleep or soreness fact borrowed to create a visual step in the ladder.
+  const flatTodayIcon = (color: string) => svg(color, (
+    <><Path d="M3 8h15v8H3z" /><Path d="M21 11v2" /><Path d="M6 11v2" /></>
   ));
   // Ruling 10's named fix: "Totally cooked" used to carry a zap bolt — zap
   // reads as ENERGY, the opposite of cooked/drained. A snuffed flame reads as
@@ -3152,34 +3111,6 @@ function WeekReadinessSheet({
         </View>
       )}
 
-      {showOptions && bucket === 'top' && (
-        <View>
-          <Text style={styles.sheetTitle}>Not 100%? What's going on?</Text>
-          <SheetOption
-            label="Feeling flat"
-            sub="Tired, poor sleep, sore or cooked"
-            testID="readiness-bucket-flat"
-            icon={flatIcon('#FFC247')}
-            onPress={() => setBucket('flat')}
-          />
-          <SheetOption
-            label="Sick"
-            sub="A bit off, properly sick, or can't get out of bed"
-            testID="readiness-bucket-sick"
-            icon={sickIcon('#1EA7FF')}
-            onPress={() => setBucket('sick')}
-          />
-          <SheetOption
-            label="Something hurts"
-            sub="A niggle or an injury"
-            testID={explorerTestId.injuryIngress('set')}
-            icon={hurtIcon('#FF7A85')}
-            onPress={onInjury}
-          />
-          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
-        </View>
-      )}
-
       {showOptions && bucket === 'flat' && (
         <View>
           <Text style={styles.sheetTitle}>Feeling flat — what's closest?</Text>
@@ -3190,45 +3121,19 @@ function WeekReadinessSheet({
             onPress={() => onApply('tired_today')}
           />
           <SheetOption
-            label="Rough sleep"
-            sub="One bad night, or a few in a row"
-            testID="readiness-leaf-sleep"
-            icon={moonRestIcon('#8A94A6')}
-            onPress={() => setBucket('sleep')}
+            label="Pretty flat"
+            testID={explorerTestId.readinessOption('flat_today')}
+            icon={flatTodayIcon('#FFC247')}
+            onPress={() => onApply('flat_today')}
           />
           <SheetOption
-            label="Sore or tight"
-            testID={explorerTestId.readinessOption('sore_today')}
-            icon={pulseIcon('#FF7A85')}
-            onPress={() => onApply('sore_today')}
-          />
-          <SheetOption
-            label="Totally cooked — easier week"
+            label="Totally cooked"
             testID={explorerTestId.readinessOption('cooked_week')}
             accent
             icon={flameOutIcon('#C8FF00')}
             onPress={() => onApply('cooked_week')}
           />
-          <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />
-        </View>
-      )}
-
-      {showOptions && bucket === 'sleep' && (
-        <View>
-          <Text style={styles.sheetTitle}>Rough sleep — how long?</Text>
-          <SheetOption
-            label="Just last night"
-            testID={explorerTestId.readinessOption('poor_sleep_today')}
-            icon={moonIcon('#FFC247')}
-            onPress={() => onApply('poor_sleep_today')}
-          />
-          <SheetOption
-            label="A few nights running"
-            testID={explorerTestId.readinessOption('poor_sleep_week')}
-            icon={moonIcon('#FF7A85')}
-            onPress={() => onApply('poor_sleep_week')}
-          />
-          <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('flat')} style={{ marginTop: spacing.md }} />
+          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
         </View>
       )}
 
@@ -3256,7 +3161,7 @@ function WeekReadinessSheet({
             icon={bedIcon('#FF7A85')}
             onPress={() => onApply('illness_severe')}
           />
-          <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />
+          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
         </View>
       )}
     </Sheet>
@@ -3835,6 +3740,7 @@ const styles = StyleSheet.create({
   practiceMatchIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
   // Weekly readiness card = same treatment with a wellbeing tint.
   readinessIconTint: { backgroundColor: 'rgba(255, 122, 133, 0.12)' },
+  tiredIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
   awayIconTint: { backgroundColor: 'rgba(124, 196, 255, 0.12)' },
   injuredIconTint: { backgroundColor: 'rgba(255, 138, 76, 0.12)' },
   scheduleAckError: { color: '#FF7A85' },

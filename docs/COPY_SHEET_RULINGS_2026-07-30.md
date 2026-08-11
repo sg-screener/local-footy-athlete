@@ -237,7 +237,7 @@ written by the terminal.
 
 | Row | String | Ruling | Where it appears (HEAD) |
 |---|---|---|---|
-| Short on time | "Short on time today" | Ruling 2 — the busy half of the split | `HomeScreenV2.tsx:627` (a11y), `:638` (Text) |
+| Short on time | Short on time today (withdrawn from this surface 2026-08-11) | Ruling 2 — the busy half of the split | removed |
 | Away | "Away this week?" | Ruling 2 — the away half of the split | `HomeScreenV2.tsx:655` (a11y), `:666` (Text) |
 | Readiness | "I'm sick/flat today" | Ruling 4 — replaces the retired old label (6-III) | `HomeScreenV2.tsx:720` (fallback title) |
 | Injury | "I'm injured" | Ruling 3 — new button, straight to the guided injury flow | `HomeScreenV2.tsx:739` (a11y), `:752` (Text) |
@@ -1148,7 +1148,7 @@ screen reader says.
 
 | Chip | PROPOSED label | The sentence it replaces on screen |
 | --- | --- | --- |
-| Short on time | "Time" | "Short on time today" |
+| Short on time | "Time" | Short on time today (withdrawn from this surface 2026-08-11) |
 | Away | "Away" | "Away this week?" |
 | Readiness | "Sick" | "I'm sick/flat today" (signed, ruling 4) |
 | Injury | "Injured" | "I'm injured" |
@@ -2171,3 +2171,32 @@ this file is equality-bound to prevent. `MON` is already upper in `day.short`.
 *"4 exercises"*) is a COUNT joined to a noun and is therefore composed copy; it is
 not in this batch and does not ship on his signature here. It goes to the next
 batch on its own, with the change card's heading and sub-line.
+
+## Batch 33 — the direct tired door (2026-08-11): SIGNED (Sam, 2026-08-11)
+
+**STATUS: SIGNED BY SAM, 2026-08-11** — *"change the time button to tired"* and
+then clarified that it should immediately open the existing flat options.
+
+| Where | SIGNED string |
+| --- | --- |
+| First Day status chip and its accessibility name | "Tired" |
+| First Tired severity | "Bit tired today" |
+| Middle Tired severity | "Pretty flat" |
+| Highest Tired severity | "Totally cooked" |
+
+**33-a. THIS SUPERSEDES BATCH 12'S `Time` LABEL ON THIS ONE SURFACE.** It is not
+a synonym swap over the old action. The old chip attempted a one-tap short-time
+schedule change and did nothing on Sam's screen; the new word opens readiness's
+existing tired/flat choices. The label and the door therefore move together.
+
+WITHDRAWN: "Short on time today"
+
+**33-b. `Sick` AND `Injured` KEEP THEIR SIGNED WORDS BUT THEIR OWNERSHIP IS NOW
+VISIBLE.** Sick opens illness severity directly. Injury is not a sickness choice
+and remains only behind Injured. No new illness or injury wording is authored by
+removing the intermediate chooser.
+
+**33-c. THE TIRED LADDER IS EXACTLY THREE ANSWERS.** Rough sleep is not a
+severity of feeling flat, and soreness is pain owned by Injured. "Pretty flat"
+records moderate fatigue directly; it does not pretend the athlete reported
+poor sleep or soreness.

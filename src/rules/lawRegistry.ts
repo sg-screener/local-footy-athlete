@@ -432,6 +432,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-profile-action-cards-share-type',
+    law: 'Developer Tools, Support and Legal are one Profile action-card family and use the same shared title and description typography; no member falls back to the smaller primitive body/caption treatment.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "why are the developer tools and the legal boxes much smaller fonts then the other boxes?" This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:profile-reset-ui + .maestro/golden/day-readiness-profile-type.yaml',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: Support used the accepted 15/20 title and 13/19 description styles, while the visually equivalent Developer Tools and Legal cards independently selected the smaller shared body/caption variants. WHAT THE CELLS HOLD: all three affected source regions are first proved found; Developer Tools, Privacy and Terms each consume secondaryActionTitle and secondaryActionDescription and contain no primitive body/caption variant. WHAT THE TAPE HOLDS: the live Profile scroll photographs Developer Tools beside Support and then Legal below it, with the corrected matching scale visible. FIRST-RUN FINDING: all nine style/parity cells red on the old rows. WHAT IT DOES NOT HOLD: Danger Zone, legal-page body copy, Sam\'s physical iPhone, dynamic type accessibility scaling.',
+    },
+  },
+  {
+    id: 'LAW-day-readiness-doors-are-direct',
+    law: 'The Day status row offers Tired and Sick as separate direct doors into one readiness owner: Tired offers exactly Bit tired today, Pretty flat and Totally cooked; Sick opens illness severity; pain is available only through Injured; the dead Time action, sleep/soreness detours and intermediate chooser do not exist.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "change the time button to tired"; "make the flat button its own thing"; Sick must remove flat and something hurts; then "Feeling flat ... should just be bit tired today, pretty flat and totally cooked". This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline + test:readiness-ownership + test:program-control-durable + .maestro/golden/day-readiness-profile-type.yaml',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO), EXPANDED WITH SAM\'S NEXT MESSAGE. TWO OPTIONS COMPARED: duplicate flat and sick sheets, or pass a typed entry into the existing readiness owner. The second removes a decision and adds no mutation representation. For Pretty flat, reusing poor-sleep or soreness would store a reason the athlete did not give; the existing moderate fatigue level (`not_right`) gets its own typed `flat_today` route instead. WHAT THE CELLS HOLD: readinessEntry is one typed visibility/entry owner; Tired routes flat and Sick routes sick; the sheet receives that entry; top/readiness-bucket-flat/readiness-bucket-sick, Something hurts and onInjury are absent; the flat region contains exactly three SheetOptions with the three signed labels and typed actions; sleep/soreness rows and bucket are absent; R16 pins flat_today to today-only moderate fatigue; the dedicated Injured control still opens the guided injury flow; the dead Time label and handler are absent from both screen and hook. WHAT THE TAPE HOLDS: Tired opens straight to the three semantic option ids with sleep/sore/injury ids absent; Sick opens straight to the three illness ids with flat/injury absent; both states are photographed. FIRST-RUN FINDINGS: four chained cells red on the old Time handler, label and chooser; the extension then red on four old flat options and on flat_today falling through to low_energy until its moderate mapping existed; the wider durable guard then found the unreachable short-time handler still authored and exported by the hook, so that dead doorway was removed while the typed domain action stayed covered. The tape\'s first text assertion failed because SheetOption deliberately exposes its stable semantic id as the accessibility label; the screenshot showed all three rows, and the rerun used those ids rather than weakening presence. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone, modal height on every device, or a new programming-content ruling about what moderate fatigue changes downstream.',
+    },
+  },
+  {
     id: 'LAW-one-name-two-meanings',
     law: 'A name that covers more than one thing is measured apart BEFORE it is worked on — per strand, never per label.',
     ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat: "four sightings in one day is not a coincidence — give the class a name and a row… a name that covers more than one thing is measured apart BEFORE it is worked on, and the measurement is per strand, not per label"',

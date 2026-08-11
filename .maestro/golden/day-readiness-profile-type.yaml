@@ -1,0 +1,85 @@
+appId: com.localfootyathlete.app
+name: Golden - direct readiness doors and Profile card type
+tags:
+  - e2e
+  - golden
+  - program
+  - profile
+  - ui-merge
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# Tired is a direct door. It has exactly the athlete's three fatigue severities;
+# sleep and pain do not appear here.
+- scrollUntilVisible:
+    element:
+      id: "home-tired-entry"
+    direction: DOWN
+- tapOn:
+    id: "home-tired-entry"
+- extendedWaitUntil:
+    visible:
+      id: "home-week-readiness-sheet"
+    timeout: 10000
+- assertVisible: "Feeling flat — what's closest?"
+- assertVisible:
+    id: "readiness-option-tired-today"
+- assertVisible:
+    id: "readiness-option-flat-today"
+- assertVisible:
+    id: "readiness-option-cooked-week"
+- assertNotVisible:
+    id: "readiness-leaf-sleep"
+- assertNotVisible:
+    id: "readiness-option-sore-today"
+- assertNotVisible:
+    id: "injury-set-action-new"
+- takeScreenshot: "artifacts/ui-walk/tired-three-direct-options"
+- tapOn: "Cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: "home-week-readiness-sheet"
+    timeout: 10000
+
+# Sick is a separate direct door. It contains illness severity only.
+- tapOn:
+    id: "readiness-set-action-readiness-2026-07-13"
+- extendedWaitUntil:
+    visible: "Sick — how bad?"
+    timeout: 10000
+- assertVisible:
+    id: "readiness-option-illness-mild"
+- assertVisible:
+    id: "readiness-option-illness-moderate"
+- assertVisible:
+    id: "readiness-option-illness-severe"
+- assertNotVisible:
+    id: "readiness-option-flat-today"
+- assertNotVisible:
+    id: "injury-set-action-new"
+- takeScreenshot: "artifacts/ui-walk/sick-direct-options"
+- tapOn: "Cancel"
+
+# Developer Tools, Support and Legal now consume one action-card type scale.
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-page-header"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "profile-developer-tools-section"
+    direction: DOWN
+- assertVisible: "Reset to post-onboarding state"
+- takeScreenshot: "artifacts/ui-walk/profile-developer-card-type"
+- scrollUntilVisible:
+    element:
+      id: "profile-legal-section"
+    direction: DOWN
+- assertVisible: "Privacy Policy"
+- assertVisible: "Terms of Use"
+- takeScreenshot: "artifacts/ui-walk/profile-legal-card-type"
