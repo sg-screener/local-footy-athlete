@@ -151,6 +151,7 @@ ok('the app footy is the supplied thin traced ball, not the retired local drawin
 ok('the shared owner exposes the approved semantic replacements',
   [
     'sick', 'injury', 'mobility', 'medical-shield', 'no-energy',
+    'half-energy', 'totally-cooked',
     'severe-illness', 'move-right', 'flexed-arm', 'upper-body-injury',
     'upper-body', 'lower-body', 'spine', 'no-equipment', 'thumbs-down',
     'dumbbell', 'kettlebell',
@@ -178,7 +179,8 @@ ok('Program quick actions and readiness choices use the approved replacements',
   && home.includes('stroke="#FF7F7F"')
   && home.includes('M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z')
   && home.includes("<LfaIcon name=\"sick\"")
-  && home.includes("<LfaIcon name=\"no-energy\"")
+  && home.includes("<LfaIcon name=\"half-energy\"")
+  && home.includes("<LfaIcon name=\"totally-cooked\"")
   && home.includes("<LfaIcon name=\"severe-illness\""));
 ok('plan editing uses arrow, flexed arm, stretching person and medical shield',
   plan.includes("<LfaIcon name=\"move-right\"")

@@ -2992,13 +2992,11 @@ function WeekReadinessSheet({
   const dropletIcon = (color: string) => <LfaIcon name="mild-illness" color={color} />;
   // The middle severity is an honest moderate fatigue fact (`not_right`), not
   // a sleep or soreness fact borrowed to create a visual step in the ladder.
-  const flatTodayIcon = (color: string) => svg(color, (
-    <><Path d="M3 8h15v8H3z" /><Path d="M21 11v2" /><Path d="M6 11v2" /></>
-  ));
-  // The audit replaces the crossed-out flame with a low battery: no energy,
-  // without showing an active flame. Illness severity uses faces rather than
-  // the misleading hydration droplet / generic bed pair.
-  const flameOutIcon = (color: string) => <LfaIcon name="no-energy" color={color} />;
+  // Its half battery is deliberately distinct from the cooked state below.
+  const flatTodayIcon = (color: string) => <LfaIcon name="half-energy" color={color} />;
+  const cookedIcon = (color: string) => <LfaIcon name="totally-cooked" color={color} />;
+  // Illness severity uses faces rather than the misleading hydration droplet /
+  // generic bed pair.
   const bedIcon = (color: string) => <LfaIcon name="severe-illness" color={color} />;
   // Lighter-day offer accept/decline — reuses the checkmark/x-cross pair
   // already established for "Clear adjustment" (accept) and the fixture
@@ -3102,7 +3100,7 @@ function WeekReadinessSheet({
           <SheetOption
             label="Bit tired today"
             testID={explorerTestId.readinessOption('tired_today')}
-            icon={moonIcon('#FFC247')}
+            icon={moonIcon('#67D7FF')}
             onPress={() => onApply('tired_today')}
           />
           <SheetOption
@@ -3115,7 +3113,7 @@ function WeekReadinessSheet({
             label="Totally cooked"
             testID={explorerTestId.readinessOption('cooked_week')}
             accent
-            icon={flameOutIcon('#C8FF00')}
+            icon={cookedIcon('#FF7F7F')}
             onPress={() => onApply('cooked_week')}
           />
           <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />

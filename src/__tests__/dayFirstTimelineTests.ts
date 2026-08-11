@@ -852,6 +852,29 @@ run('Tired and Sick enter one readiness sheet at their own options', () => {
     'the dedicated Injured door or its existing guided pathway was removed');
 });
 
+run('the Tired choices use one readable colour-and-energy ladder', () => {
+  const home = homeScreenSource();
+  const flatStart = home.indexOf("{showOptions && bucket === 'flat'");
+  const sickStart = home.indexOf("{showOptions && bucket === 'sick'", flatStart);
+  const flat = home.slice(flatStart, sickStart);
+  assert(flatStart > 0 && sickStart > flatStart && flat.length > 900,
+    'the Tired option region was not found; this guard would otherwise pass over nothing');
+
+  assert(/label="Bit tired today"[\s\S]{0,240}icon=\{moonIcon\('#67D7FF'\)\}/.test(flat),
+    'Bit tired today does not carry the distinct blue moon Sam chose');
+  assert(/label="Pretty flat"[\s\S]{0,240}icon=\{flatTodayIcon\('#FFC247'\)\}/.test(flat),
+    'Pretty flat does not carry the amber half-full battery');
+  assert(/label="Totally cooked"[\s\S]{0,280}icon=\{cookedIcon\('#FF7F7F'\)\}/.test(flat),
+    'Totally cooked does not carry the red skull-and-crossbones');
+
+  const iconOwner = stripComments(fs.readFileSync(
+    path.join(__dirname, '..', 'components', 'icons', 'LfaIcon.tsx'), 'utf8',
+  ));
+  assert(/'half-energy': 'battery-50'/.test(iconOwner)
+    && /'totally-cooked': 'skull-crossbones-outline'/.test(iconOwner),
+  'the two new readiness glyphs are not owned by the shared semantic icon map');
+});
+
 run('the week rows open in place onto the same projected session', () => {
   const home = homeScreenSource();
   // RULING 7. Sam's question — open in place, or navigate? — was answered by

@@ -465,6 +465,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-tired-severity-icon-ladder',
+    law: 'The Day-screen Tired sheet uses a blue moon for Bit tired today, an amber half-full battery for Pretty flat, and a red skull-and-crossbones for Totally cooked.',
+    ruledAt: 'Sam 2026-08-12 direct request, with supplied skull-and-crossbones reference image',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline + test:approved-icons',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. The Day-screen cell first proves it found the live three-option Tired region, then pins each label to its ruled colour and semantic icon. It also pins the half battery and outlined skull-and-crossbones to the shared icon owner, while the approved-icon gate fails if the live Program screen bypasses that owner. FIRST RUN: the cell red on the prior amber moon before implementation. NOT COVERED: physical iPhone appearance at native font/icon rendering scale.',
+    },
+  },
+  {
     id: 'LAW-profile-danger-zone-is-one-reset',
     law: 'Profile Danger Zone contains one readable Full reset action; the standalone Clear coach chat action does not exist, while Full reset still clears the complete app state through the canonical reset owner.',
     ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "danger zone has small text as well - clear coach chat does not need to be there any more = delete that part". This guarded registry row is the durable ruling site.',
