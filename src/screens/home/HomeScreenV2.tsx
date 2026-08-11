@@ -18,6 +18,7 @@ import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { Button, Card, Sheet, Badge } from '../../components/ui';
+import { LfaIcon } from '../../components/icons/LfaIcon';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
@@ -840,13 +841,7 @@ export default function HomeScreenV2() {
               accessibilityHint={weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
               label="Sick"
               tint={styles.readinessIconTint}
-              icon={
-                /* Thermometer — Sam's pick, 2026-08-03 icon ruling row 2
-                   (replacing the pulse line): being sick, not a heartbeat. */
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF7A85" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />
-                </Svg>
-              }
+              icon={<LfaIcon name="sick" color="#FF7A85" />}
             />
             <LifeFactChip
               /* ONE OWNER, TWO DOORS. This opens the SAME `GuidedInjuryFlowSheet`
@@ -857,15 +852,7 @@ export default function HomeScreenV2() {
               accessibilityLabel="I'm injured"
               label="Injured"
               tint={styles.injuredIconTint}
-              icon={
-                /* Plaster / bandage — an injury, not an alert triangle (that
-                   one belongs to the readiness sheet's own "Something hurts"
-                   row) and not the pulse above it. */
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF8A4C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
-                  <Path d="M8.5 8.5 15.5 15.5" />
-                </Svg>
-              }
+              icon={<LfaIcon name="injury" color="#FF8A4C" />}
             />
           </View>
           </Card>
@@ -1452,6 +1439,14 @@ function rowIconColor(kind: RowIconKind): string {
 
 function RowIcon({ kind, size = 15, color }: { kind: RowIconKind; size?: number; color?: string }) {
   const iconColor = color ?? rowIconColor(kind);
+
+  if (kind === 'mobility') {
+    return <LfaIcon name="mobility" color={iconColor} size={size} />;
+  }
+
+  if (kind === 'prehab') {
+    return <LfaIcon name="medical-shield" color={iconColor} size={size} />;
+  }
 
   if (kind === 'team') {
     return (
@@ -2973,31 +2968,19 @@ function WeekReadinessSheet({
       {children}
     </Svg>
   );
-  const sickIcon = (color: string) => svg(color, <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />);
+  const sickIcon = (color: string) => <LfaIcon name="sick" color={color} />;
   const moonIcon = (color: string) => svg(color, <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />);
-  const dropletIcon = (color: string) => svg(color, <Path d="M12 2.69 6.34 8.35a8 8 0 1 0 11.31 0z" />);
+  const dropletIcon = (color: string) => <LfaIcon name="mild-illness" color={color} />;
   // The middle severity is an honest moderate fatigue fact (`not_right`), not
   // a sleep or soreness fact borrowed to create a visual step in the ladder.
   const flatTodayIcon = (color: string) => svg(color, (
     <><Path d="M3 8h15v8H3z" /><Path d="M21 11v2" /><Path d="M6 11v2" /></>
   ));
-  // Ruling 10's named fix: "Totally cooked" used to carry a zap bolt — zap
-  // reads as ENERGY, the opposite of cooked/drained. A snuffed flame reads as
-  // "no more fuel", which is what the row means.
-  const flameOutIcon = (color: string) => svg(color, (
-    <><Path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
-      <Path d="M2 2l20 20" /></>
-  ));
-  // Sick-severity ladder (audit finding: two rows shared one droplet glyph
-  // differing only by colour). droplet (a bit off) / thermometer (properly
-  // sick — a fever) / bed (can't get out of bed) — each glyph is the closest
-  // literal reading of its own row, ascending in how much it takes you out.
-  const bedIcon = (color: string) => svg(color, (
-    <><Path d="M2 18v-7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v7" />
-      <Path d="M2 18v2" /><Path d="M22 18v2" />
-      <Path d="M2 13h20" />
-      <Path d="M6 13V9.5a1.5 1.5 0 0 1 1.5-1.5H10a1.5 1.5 0 0 1 1.5 1.5V13" /></>
-  ));
+  // The audit replaces the crossed-out flame with a low battery: no energy,
+  // without showing an active flame. Illness severity uses faces rather than
+  // the misleading hydration droplet / generic bed pair.
+  const flameOutIcon = (color: string) => <LfaIcon name="no-energy" color={color} />;
+  const bedIcon = (color: string) => <LfaIcon name="severe-illness" color={color} />;
   // Lighter-day offer accept/decline — reuses the checkmark/x-cross pair
   // already established for "Clear adjustment" (accept) and the fixture
   // sheet's "Remove" (decline is a no), rather than one waveform icon

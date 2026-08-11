@@ -15,6 +15,7 @@ import {
 } from '../../rules/equipmentVocabulary';
 import { ownedEquipmentKit } from '../../store/profileStore';
 import { explorerTestId } from '../../utils/stableTestId';
+import { LfaIcon } from '../../components/icons/LfaIcon';
 
 // ── Icons (ruling 10) ───────────────────────────────────────────────────────
 // One recognisable glyph per equipment tag / conditioning modality, keyed off
@@ -36,62 +37,40 @@ export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => 
   barbell: (color) => glyph(color, (
     <><Path d="M4 9v6" /><Path d="M7 7v10" /><Path d="M17 7v10" /><Path d="M20 9v6" /><Path d="M7 12h10" /></>
   )),
-  /** Dumbbells — round end weights, distinct from the barbell's flat plates. */
-  dumbbells: (color) => glyph(color, (
-    <><Circle cx="5.5" cy="12" r="2.5" /><Circle cx="18.5" cy="12" r="2.5" /><Path d="M8 12h8" /></>
-  )),
+  /** Dumbbells — the same dumbbell mark used throughout the app. */
+  dumbbells: (color) => <LfaIcon name="dumbbell" color={color} />,
   /** Cable machine — a pulley overhead, cable down to a D-handle. */
   cables: (color) => glyph(color, (
     <><Circle cx="12" cy="4.5" r="2" /><Path d="M12 6.5v9" /><Path d="M8.5 15.5h7l-1.5 4h-4z" /></>
   )),
-  /** Weight machine — a plate stack on a guide rod with a selector pin. */
-  machine: (color) => glyph(color, (
-    <><Path d="M7 5h10" /><Path d="M7 9h10" /><Path d="M7 13h10" /><Path d="M12 13v6" /><Path d="M9 19h6" /></>
-  )),
+  /** Weight machine — Sam's approved traced machine silhouette. */
+  machine: (color) => <LfaIcon name="weight-machine" color={color} />,
   /** Resistance band — a stretched, elastic S-curve. */
   bands: (color) => glyph(color, <Path d="M4 12c2-6 6-6 8 0s6 6 8 0" />),
-  /** Bench — a flat top on two short legs. */
-  bench: (color) => glyph(color, (
-    <><Path d="M3 11h18" /><Path d="M3 11v3" /><Path d="M21 11v3" /><Path d="M6 14v4" /><Path d="M18 14v4" /></>
-  )),
-  /** Pull-up bar — a bar mounted high between two posts (a doorway rig). */
-  pullup_bar: (color) => glyph(color, (
-    <><Path d="M4 6v4" /><Path d="M20 6v4" /><Path d="M4 8h16" /></>
-  )),
-  /** Kettlebell — a ball with a handle loop on top. */
-  kettlebell: (color) => glyph(color, (
-    <><Circle cx="12" cy="15" r="6" /><Path d="M9 9a3 3 0 0 1 6 0v2H9z" /></>
-  )),
-  /** Foam roller — a capsule lying on its side. */
-  foam_roller: (color) => glyph(color, (
-    <Path d="M7 8h10a4 4 0 0 1 0 8H7a4 4 0 0 1 0-8z" />
-  )),
+  /** Bench — Sam's approved traced bench silhouette. */
+  bench: (color) => <LfaIcon name="bench" color={color} />,
+  /** Pull-up bar — the approved freestanding rig. */
+  pullup_bar: (color) => <LfaIcon name="pull-up-bar" color={color} />,
+  /** Kettlebell — the same kettlebell mark used throughout the app. */
+  kettlebell: (color) => <LfaIcon name="kettlebell" color={color} />,
+  /** Foam roller — Sam's supplied hollow, ribbed roller SVG. */
+  foam_roller: (color) => <LfaIcon name="foam-roller" color={color} />,
   /** Plyo box — an isometric cube. */
   plyo_box: (color) => glyph(color, (
     <><Path d="M4 10l8-4 8 4-8 4z" /><Path d="M4 10v7l8 4 8-4v-7" /><Path d="M12 14v7" /></>
   )),
 };
 export const CONDITIONING_MODALITY_ICON: Record<ConditioningEquipmentModality, (color: string) => React.ReactNode> = {
-  /** Bike / bike erg — two wheels and a frame. */
-  bike_erg: (color) => glyph(color, (
-    <><Circle cx="6" cy="17.5" r="3.5" /><Circle cx="18" cy="17.5" r="3.5" /><Path d="M6 17.5 10 8h4l3 5" /><Path d="M10 8l3 5h5" /><Circle cx="15" cy="5.5" r="1.3" /></>
-  )),
-  /** Air / assault bike — one large fan wheel, no rear wheel (unlike the erg bike). */
-  air_bike: (color) => glyph(color, (
-    <><Circle cx="12" cy="9" r="5" /><Path d="M12 4v5l4 2" /><Path d="M8 19h8" /><Path d="M10 19v-4" /><Path d="M14 19v-4" /></>
-  )),
-  /** Row erg — a rail, a seat, and the cable running up to the handle. */
-  row: (color) => glyph(color, (
-    <><Path d="M2 19h20" /><Path d="M6 19v-3h4v3" /><Path d="M10 16l8-10" /></>
-  )),
-  /** Ski erg — two angled ski planks. */
-  ski: (color) => glyph(color, (
-    <><Path d="M5 20L9 4" /><Path d="M15 20L19 4" /></>
-  )),
-  /** Treadmill — a belt loop on a stand, an incline post at the front. */
-  treadmill: (color) => glyph(color, (
-    <><Path d="M3 18h14a3 3 0 0 0 0-6H7a3 3 0 0 0 0 6" /><Path d="M17 12V8" /><Path d="M20 21H4" /></>
-  )),
+  /** Bike erg — Sam's approved traced machine. */
+  bike_erg: (color) => <LfaIcon name="bike-erg" color={color} />,
+  /** Air / assault bike — Sam's approved traced fan bike. */
+  air_bike: (color) => <LfaIcon name="air-bike" color={color} />,
+  /** Row erg — Sam's approved traced rower. */
+  row: (color) => <LfaIcon name="row-erg" color={color} />,
+  /** Ski erg — Sam's approved traced ski erg. */
+  ski: (color) => <LfaIcon name="ski-erg" color={color} />,
+  /** Treadmill — Sam's approved traced treadmill. */
+  treadmill: (color) => <LfaIcon name="treadmill" color={color} />,
 };
 /** No askable tag or modality should ever hit this — every key in both
  * `Record`s above is exhaustive over the derived vocabulary, so TypeScript

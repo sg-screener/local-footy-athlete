@@ -18,6 +18,7 @@ import {
 } from '../../utils/guidedInjuryControl';
 import { explorerTestId } from '../../utils/stableTestId';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
+import { LfaIcon } from '../../components/icons/LfaIcon';
 
 // ── Icons (ruling 10) ──────────────────────────────────────────────────────
 // Inline stroked SVG, the house pattern (`HomeScreenV2`'s `svg` helper /
@@ -36,21 +37,12 @@ const glyph = (color: string, children: React.ReactNode) => (
     {children}
   </Svg>
 );
-/** Upper body — head + shoulders silhouette. */
-const upperBodyIcon = (color: string) => glyph(color, (
-  <><Path d="M12 2.5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
-    <Path d="M5 21v-3.5A6.5 6.5 0 0 1 11.5 11h1A6.5 6.5 0 0 1 19 17.5V21" /></>
-));
-/** Lower body — a hip bar splitting into two legs. */
-const lowerBodyIcon = (color: string) => glyph(color, (
-  <><Path d="M8 4h8" /><Path d="M12 4v5" /><Path d="M12 9l-3 11" /><Path d="M12 9l3 11" /></>
-));
-/** Back / midline — a spine: vertebrae stacked on a straight line. */
-const backMidlineIcon = (color: string) => glyph(color, (
-  <><Path d="M12 3v18" />
-    <Circle cx="12" cy="6.5" r="1.3" /><Circle cx="12" cy="11" r="1.3" />
-    <Circle cx="12" cy="15.5" r="1.3" /><Circle cx="12" cy="20" r="1.3" /></>
-));
+/** Upper body — an injured person rather than a generic shoulders silhouette. */
+const upperBodyIcon = (color: string) => <LfaIcon name="upper-body-injury" color={color} />;
+/** Lower body — a dedicated legs mark. */
+const lowerBodyIcon = (color: string) => <LfaIcon name="lower-body" color={color} />;
+/** Back / midline — the shared curved spine mark. */
+const backMidlineIcon = (color: string) => <LfaIcon name="spine" color={color} />;
 /** Other — a question mark. The region has no shape of its own to draw. */
 const otherRegionIcon = (color: string) => glyph(color, (
   <><Path d="M9.3 9a2.7 2.7 0 1 1 3.7 2.5c-.6.3-1 .9-1 1.7v.3" /><Path d="M12 16.7h.01" /></>

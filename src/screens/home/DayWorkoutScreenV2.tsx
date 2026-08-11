@@ -9,6 +9,7 @@ import Svg, { Circle, Path, Polygon } from 'react-native-svg';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/ui';
+import { LfaIcon } from '../../components/icons/LfaIcon';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SessionEquipmentSheet } from './SessionEquipmentSheet';
 import ExerciseVideoModal from '../../components/ExerciseVideoModal';
@@ -3346,15 +3347,7 @@ function PlusIcon() {
 }
 
 function InjuryIcon() {
-  // Plaster/bandage — the exact glyph `HomeScreenV2`'s "I'm injured" button
-  // draws (ruling 3/6), deliberately not the alert triangle or the pulse
-  // icon: one meaning, one mark, wherever an injury door appears.
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#FF8A4C" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M4.5 12.5 12.5 4.5a4 4 0 1 1 5.7 5.7l-8 8a4 4 0 1 1-5.7-5.7z" />
-      <Path d="M8.5 8.5 15.5 15.5" />
-    </Svg>
-  );
+  return <LfaIcon name="injury" color="#FF8A4C" size={15} />;
 }
 
 // ── ExerciseSheetOption icons (ruling 10 — swap_reason / add_kind /
@@ -3377,29 +3370,16 @@ const otherOptionIcon = (color: string) => optionGlyph(color, (
   <><Path d="M9.3 9a2.7 2.7 0 1 1 3.7 2.5c-.6.3-1 .9-1 1.7v.3" /><Path d="M12 16.7h.01" /></>
 ));
 const ADD_EXERCISE_KIND_ICON: Record<AddExerciseKind, (color: string) => React.ReactNode> = {
-  /** Upper body — head + shoulders, same family as the injury flow's region glyph. */
-  'Upper body': (color) => optionGlyph(color, (
-    <><Circle cx="12" cy="4.5" r="2.3" />
-      <Path d="M5 20v-3A6.5 6.5 0 0 1 11.5 10.5h1A6.5 6.5 0 0 1 19 17v3" /></>
-  )),
-  /** Lower body — hip bar splitting into two legs. */
-  'Lower body': (color) => optionGlyph(color, (
-    <><Path d="M8 4h8" /><Path d="M12 4v5" /><Path d="M12 9l-3 11" /><Path d="M12 9l3 11" /></>
-  )),
-  /** Midline — a torso outline with the two ab lines a "core" glyph needs. */
-  Midline: (color) => optionGlyph(color, (
-    <><Path d="M12 4a4 4 0 0 1 4 4v8a4 4 0 0 1-8 0V8a4 4 0 0 1 4-4z" />
-      <Path d="M8.3 10.5h7.4" /><Path d="M8.3 14.5h7.4" /></>
-  )),
-  /** Prehab — a shield: the armour work, same glyph as PlanChangeSheet's. */
-  Prehab: (color) => optionGlyph(color, (
-    <Path d="M12 3l8 3v6c0 4-3.5 7.5-8 9-4.5-1.5-8-5-8-9V6z" />
-  )),
-  /** Mobility — a figure reaching through a range, same glyph as PlanChangeSheet's. */
-  Mobility: (color) => optionGlyph(color, (
-    <><Circle cx="12" cy="4" r="2" /><Path d="M12 6v6" /><Path d="M7 8l5 2 5-4" />
-      <Path d="M12 12l-3 8" /><Path d="M12 12l3 8" /></>
-  )),
+  /** Upper body — the literal flexed bicep selected in the audit. */
+  'Upper body': (color) => <LfaIcon name="upper-body" color={color} />,
+  /** Lower body — a dedicated legs mark. */
+  'Lower body': (color) => <LfaIcon name="lower-body" color={color} />,
+  /** Midline — Sam's approved traced torso / abs figure. */
+  Midline: (color) => <LfaIcon name="torso-abs" color={color} />,
+  /** Prehab — the same medical shield as plan editing. */
+  Prehab: (color) => <LfaIcon name="medical-shield" color={color} />,
+  /** Mobility — the same stretching person as plan editing. */
+  Mobility: (color) => <LfaIcon name="mobility" color={color} />,
   /** Conditioning finisher — a heartbeat trace, same glyph as PlanChangeSheet's. */
   'Conditioning finisher': (color) => optionGlyph(color, (
     <Path d="M2 12h4l2-6 4 12 2-6h8" />
@@ -3407,11 +3387,8 @@ const ADD_EXERCISE_KIND_ICON: Record<AddExerciseKind, (color: string) => React.R
   Other: otherOptionIcon,
 };
 const SWAP_REASON_ICON: Record<SwapReason, (color: string) => React.ReactNode> = {
-  /** No equipment — a dumbbell struck through. */
-  'No equipment': (color) => optionGlyph(color, (
-    <><Circle cx="5.5" cy="12" r="2.3" /><Circle cx="18.5" cy="12" r="2.3" /><Path d="M8 12h8" />
-      <Path d="M3 3l18 18" /></>
-  )),
+  /** No equipment — the plain prohibited sign selected in the audit. */
+  'No equipment': (color) => <LfaIcon name="no-equipment" color={color} />,
   /** Injury / pain — the same warning triangle `WeekReadinessSheet`'s
    * "Something hurts" row draws, redrawn here. */
   'Injury / pain': (color) => optionGlyph(color, (
@@ -3427,12 +3404,8 @@ const SWAP_REASON_ICON: Record<SwapReason, (color: string) => React.ReactNode> =
   'Too easy': (color) => optionGlyph(color, (
     <><Path d="M3 7l6 6 4-4 8 8" /><Path d="M15 17h6v-6" /></>
   )),
-  /** Don't like it — thumbs down. */
-  "Don't like it": (color) => optionGlyph(color, (
-    <><Path d="M17 2v11" />
-      <Path d="M22 9a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.8 1.11L11 18v2a2 2 0 0 1-2 2c-.5 0-1-.19-1.37-.56L4 15" />
-      <Path d="M2 15h4v7H2z" /></>
-  )),
+  /** Don't like it — a recognisable hand giving thumbs down. */
+  "Don't like it": (color) => <LfaIcon name="thumbs-down" color={color} />,
   Other: otherOptionIcon,
 };
 /** future_scope — "Today only" vs. "Future weeks too": a blank calendar day
@@ -3442,11 +3415,7 @@ const SWAP_REASON_ICON: Record<SwapReason, (color: string) => React.ReactNode> =
 const todayOnlyIcon = (color: string) => optionGlyph(color, (
   <><Path d="M4 5h16v15H4z" /><Path d="M4 10h16" /><Path d="M9 3v4" /><Path d="M15 3v4" /></>
 ));
-const futureWeeksIcon = (color: string) => optionGlyph(color, (
-  <><Path d="M4 5h16v15H4z" /><Path d="M4 10h16" /><Path d="M9 3v4" /><Path d="M15 3v4" />
-    <Path d="M8 15a3 3 0 0 1 5-2.2" /><Path d="M16 15a3 3 0 0 1-5 2.2" />
-    <Path d="M8 12.5v1h1" /><Path d="M16 17.5v-1h-1" /></>
-));
+const futureWeeksIcon = (color: string) => <LfaIcon name="future-weeks" color={color} />;
 
 // ─────────────────────────────────────────────────────────────
 // Styles

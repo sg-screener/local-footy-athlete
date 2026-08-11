@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Button, Sheet } from '../../components/ui';
+import { LfaIcon } from '../../components/icons/LfaIcon';
 import { menuRowFor } from './planChangeTypeMenu';
 import { useProgramStore } from '../../store';
 import { applyProgramOverrideWrite } from '../../store/programStore';
@@ -1231,13 +1232,8 @@ const swapIcon = (color: string) => glyph(color, (
 const addIcon = (color: string) => glyph(color, (
   <><Path d="M12 5v14" /><Path d="M5 12h14" /></>
 ));
-/** Move — an arrow INTO a calendar day: the session landing somewhere (Sam's
- *  pick, 2026-08-03 icon ruling row 7; the arrow used to LEAVE the calendar,
- *  which read as the session going away rather than arriving). */
-const moveIcon = (color: string) => glyph(color, (
-  <><Path d="M13 4h6a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-6" /><Path d="M16 2v4" />
-    <Path d="M2 12h13" /><Path d="M12 9l3 3-3 3" /></>
-));
+/** Move — Sam's audit replaced the calendar combination with one clear arrow. */
+const moveIcon = (color: string) => <LfaIcon name="move-right" color={color} />;
 /** Remove — a minus in a circle (Sam's pick, 2026-08-03 icon ruling row 8,
  *  replacing the bin: the retired "bin" verb stays retired in imagery too).
  *  Same mark the day screen's per-row remove draws. Danger-tinted at the
@@ -1254,21 +1250,12 @@ const strengthIcon = (color: string) => glyph(color, (
 const conditioningIcon = (color: string) => glyph(color, (
   <Path d="M2 12h4l2-6 4 12 2-6h8" />
 ));
-/** Gunshow — a flexed arm. */
-const gunshowIcon = (color: string) => glyph(color, (
-  <><Path d="M4 18v-4a5 5 0 0 1 5-5h3" /><Path d="M12 9a4 4 0 0 1 4 4v5" />
-    <Circle cx="19" cy="7" r="2" /></>
-));
-/** Mobility — a figure reaching through a range. */
-const mobilityIcon = (color: string) => glyph(color, (
-  <><Circle cx="12" cy="4" r="2" /><Path d="M12 6v6" /><Path d="M7 8l5 2 5-4" />
-    <Path d="M12 12l-3 8" /><Path d="M12 12l3 8" /></>
-));
-/** Accessories (the `prehab` door) — a shield: the armour work. Sam kept the
- *  shield when he signed the label in 2026-07-31's ruling 1. */
-const prehabIcon = (color: string) => glyph(color, (
-  <Path d="M12 3l8 3v6c0 4-3.5 7.5-8 9-4.5-1.5-8-5-8-9V6z" />
-));
+/** Gunshow — a literal flexed bicep. */
+const gunshowIcon = (color: string) => <LfaIcon name="flexed-arm" color={color} />;
+/** Mobility — a person stretching. */
+const mobilityIcon = (color: string) => <LfaIcon name="mobility" color={color} />;
+/** Accessories / prehab — the shared medical shield. */
+const prehabIcon = (color: string) => <LfaIcon name="medical-shield" color={color} />;
 /** Recovery — a refresh loop: the "easy" scope Move/the day can carry. */
 const recoveryIcon = (color: string) => glyph(color, (
   <><Path d="M3 12a9 9 0 1 1 3 6.7" /><Path d="M3 16v-4h4" /></>
