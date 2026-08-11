@@ -1173,6 +1173,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-no-order-hidden-from-the-stop-hook',
+    law: 'No seat order may be written where the stop hook cannot see it: the unprocessed region carries no `## ` heading before its terminator, so sub-headings are `###`.',
+    ruledAt: 'docs/SEAT_INBOX.md 2026-08-12 ("SYSTEMIC FIX OWED (not yet built): a guard cell that reds when a `## ` heading between `## Unprocessed` and `## SAFE FOR A PARALLEL AGENT` contains order-shaped content"); scripts/seat-inbox-hook.sh header',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12, AND THE FOUNDING CASE WAS THE TERMINAL\'S OWN. `seat-inbox-hook.sh` bounds its scan at the next `## `, so a `## ` heading written INSIDE the unprocessed region truncates the scan and every order below it goes invisible — the turn ends silently and SAM BECOMES THE COURIER, a cost his own words already priced ("check inbox", typed twice on 2026-08-10). Repairing a concurrent-write corruption on 2026-08-12, this terminal re-homed the rescued block under a `## ` heading; masked only because orders sat above it. REPAIRING BY HAND A FILE THAT HAS A PARSER, WITHOUT READING THE PARSER, IS THE SAME CLASS OF MISTAKE AS THE CORRUPTION IT WAS FIXING. Sighting 5 of the class the hook\'s own comments catalogue twice ("the scan infers an order exists from an artefact") and THE FIRST WITH A GATE OVER THE FILE — every earlier fix was made inside the hook, which by construction cannot detect the heading that stops it reading. WHAT THE CELL HOLDS: non-vacuity FIRST (the hook\'s own scan must reach more than five order-shaped lines, or the bounds are wrong and every later assertion is empty), then zero `## ` headings inside the region. MUTATION-TESTED AGAINST THE REAL FILE: re-nesting `### THE MERGE\'S LEFTOVERS` back to `## ` reds it; restoring greens it. Liveness probes both directions plus a missing region, and caught a VACUOUS assertion in its own first draft — a probe searching for a phrase its fixture did not contain. WHAT IT DOES NOT HOLD: whether the orders are good, whether anyone acted on them, or the hook\'s own behaviour (that is `scripts/__tests__/seatInboxHookTests.sh`).',
+    },
+  },
+  {
     id: 'LAW-fixture-projection-is-not-calendar-input',
     law: 'Recurring and one-off game fixtures persist once as Profile or decision-ledger inputs; Calendar persists calendar facts and never a derived game/noGame projection.',
     ruledAt: 'docs/CODEX_UI_SESSION_PERSISTENCE_BOUNDARY_2026-08-11.md §Options compared before implementation; docs/NORTH_STAR.md',
