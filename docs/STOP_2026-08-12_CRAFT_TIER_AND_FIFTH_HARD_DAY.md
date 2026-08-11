@@ -71,17 +71,15 @@ Each one is a guard doing exactly its job, and each is worth more than a green r
 34/34. `test:gateway-authority-census` 6/6. All five formerly-regressed suites
 green, individually and inside the sweep.
 
-**THE RE-SWEEP IS STILL RUNNING AT THE TIME OF THIS COMMIT** and that is stated
-rather than rounded off. It had reached position ~165 of 189 and reproduced the
-pre-existing red set EXACTLY — `legacy-census`, `totals-or-red-law`,
-`worn-world-boot`, `onboarding-field-influence`, `action-walker`,
+**THE RE-SWEEP IS COMPLETE and the open item from this report's first commit is
+CLOSED.** `SWEEP RESULT: label=craft-tier-final failures=14 of 189`. **All
+fourteen are the pre-existing set, name for name, from the verified-clean
+baseline arm** — `legacy-census`, `totals-or-red-law`, `worn-world-boot`,
+`onboarding-field-influence`, `action-walker`, `action-walker:deep`,
 `device-pass-2026-08-05`(+evening), `fixture-identity`, `operation-ownership`,
-`fact-door-inputs` — **with zero new entries**. The tail from
-`action-walker:deep` onward (~24 suites) is UNSWEPT; in the earlier full sweep
-that tail contributed only `dev-e2e-seeds`, `dev-e2e-scenario-session` and
-`law-registry`, all three confirmed pre-existing against a verified-clean tree.
-**`.sweep/fails-craft-tier-final.txt` is the live file; read it before trusting
-this paragraph.**
+`fact-door-inputs`, `dev-e2e-seeds`, `dev-e2e-scenario-session`,
+`law-registry`. **ZERO new reds.** The two arms agree on the whole set and
+differ nowhere. `.sweep/fails-craft-tier-final.txt`.
 
 ## WHAT THE NEXT SEAT PICKS UP
 
@@ -116,7 +114,6 @@ this paragraph.**
 
 - **Nothing in this session ran on a device or a simulator.** Every verdict is
   node suites.
-- **The re-sweep tail (~24 suites) is unfinished**, as stated above.
 - **The craft tier's exercise-level rules are unproven on generated content** —
   QA scenarios carry unpopulated strength sessions, so heavy-hinge-plus-sprint,
   COD-plus-heavy-lower and the neural-primer exception had nothing to classify.

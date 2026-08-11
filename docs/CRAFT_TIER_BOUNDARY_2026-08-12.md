@@ -141,18 +141,18 @@ separately. **Two were caught by guards and fixed**
 (`gateway-authority-census`, `repo-law-guards`). **Five were REGRESSIONS I
 introduced — see §7.**
 
-**RE-SWEEP after the §7 fix (`.sweep/fails-craft-tier-final.txt`):** at the
-commit boundary the re-sweep had reached position ~165 of 189 and reproduced the
-pre-existing set EXACTLY — `legacy-census`, `totals-or-red-law`,
-`worn-world-boot`, `onboarding-field-influence`, `action-walker`,
-`device-pass-2026-08-05`(+evening), `fixture-identity`, `operation-ownership`,
-`fact-door-inputs` — **with zero new entries, and with all five formerly-regressed
-suites GREEN inside the sweep** (`athlete-session-move`, `g1-landing-ask-flow`,
-`placement-ownership`, `displacement-sweep`, `athlete-door-matrix`). **The tail
-from `action-walker:deep` onward (~24 suites) had NOT been re-swept when this
-committed** — in the earlier full sweep that tail contributed only
-`dev-e2e-seeds`, `dev-e2e-scenario-session` and `law-registry`, all three
-confirmed pre-existing. **That tail is an OPEN measurement, not a claim.**
+**RE-SWEEP after the §7 fix — COMPLETE, and it closes exactly.**
+`SWEEP RESULT: label=craft-tier-final failures=14 of 189`
+(`.sweep/fails-craft-tier-final.txt`). **All fourteen are the pre-existing set,
+name for name, from the verified-clean baseline** — `legacy-census`,
+`totals-or-red-law`, `worn-world-boot`, `onboarding-field-influence`,
+`action-walker`, `action-walker:deep`, `device-pass-2026-08-05`(+evening),
+`fixture-identity`, `operation-ownership`, `fact-door-inputs`, `dev-e2e-seeds`,
+`dev-e2e-scenario-session`, `law-registry`. **ZERO new reds**, and all five
+formerly-regressed suites green inside the sweep (`athlete-session-move`,
+`g1-landing-ask-flow`, `placement-ownership`, `displacement-sweep`,
+`athlete-door-matrix`). The baseline arm reported the same fourteen, so the two
+arms agree on the whole set and differ nowhere.
 
 ## §7 THE FIVE REGRESSIONS, AND THE METHOD FAULT THAT NEARLY HID THEM
 
