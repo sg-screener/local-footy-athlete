@@ -2,8 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { G, Path } from 'react-native-svg';
 import { Text, SelectableTile } from '../../components/common';
+import { LfaIcon } from '../../components/icons/LfaIcon';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
@@ -50,53 +50,6 @@ const PHASE_OPTIONS: PhaseOption[] = [
     icon: { type: 'aflFooty' },
   },
 ];
-
-// Mirrors assets/icons/afl-training.svg; the app uses react-native-svg
-// components directly rather than importing .svg files.
-const AflFootyIcon: React.FC<{ color: string; size: number }> = ({
-  color,
-  size,
-}) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <G rotation={90} origin="12, 12">
-      <Path
-        d="M3.8 12c1.7-3.1 4.5-4.8 8.2-4.8s6.5 1.7 8.2 4.8c-1.7 3.1-4.5 4.8-8.2 4.8S5.5 15.1 3.8 12z"
-        stroke={color}
-        strokeWidth={2.05}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M7.5 12h9"
-        stroke={color}
-        strokeWidth={2.05}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M10.2 10.6v2.8"
-        stroke={color}
-        strokeWidth={2.05}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M12 10.4v3.2"
-        stroke={color}
-        strokeWidth={2.05}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M13.8 10.6v2.8"
-        stroke={color}
-        strokeWidth={2.05}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </G>
-  </Svg>
-);
 
 /**
  * Phase picker. Selection visuals come from the shared <SelectableTile />
@@ -170,7 +123,7 @@ export const SeasonPhaseScreen: React.FC<SeasonPhaseScreenProps> = ({
                   ]}
                 >
                   {phase.icon.type === 'aflFooty' ? (
-                    <AflFootyIcon color={iconColor} size={26} />
+                    <LfaIcon name="footy" color={iconColor} size={26} />
                   ) : (
                     <MaterialCommunityIcons
                       name={phase.icon.name}

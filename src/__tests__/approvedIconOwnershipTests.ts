@@ -33,12 +33,18 @@ const home = read('screens/home/HomeScreenV2.tsx');
 const plan = read('screens/home/PlanChangeSheet.tsx');
 const injury = read('screens/home/GuidedInjuryFlowSheet.tsx');
 const day = read('screens/home/DayWorkoutScreenV2.tsx');
+const seasonPhase = read('screens/onboarding/SeasonPhaseScreen.tsx');
+const footyAsset = fs.readFileSync(
+  path.resolve(root, '../assets/icons/afl-football-traced.svg'),
+  'utf8',
+);
 
 console.log('\napproved icon ownership');
 
 const customTraces = [
   'pull-up-bar',
   'foam-roller',
+  'footy',
   'cable-machine',
   'weight-machine',
   'bench',
@@ -82,6 +88,18 @@ ok('every approved machine and torso trace is byte-for-byte the signed-off shape
 ok('the foam roller preserves the supplied rotated ribbed construction',
   owner.includes('rotation={-35}') && owner.includes('origin="12, 12"')
   && owner.includes('foam-roller'));
+const compactOwner = owner.replace(/\s+/g, '');
+const footyPathData = Array.from(footyAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
+  .map((match) => match[1].replace(/\s+/g, ''));
+ok('the app footy is the supplied thin traced ball, not the retired local drawing',
+  footyPathData.length === 8
+  && footyPathData.every((d) => compactOwner.includes(d))
+  && owner.includes('strokeWidth={24}')
+  && owner.includes('strokeWidth={15}')
+  && owner.includes('strokeWidth={13}')
+  && owner.includes('<Circle cx={210} cy={269} r={10} fill={color} />')
+  && seasonPhase.includes('<LfaIcon name="footy" color={iconColor} size={26} />')
+  && !seasonPhase.includes('AflFootyIcon'));
 ok('the shared owner exposes the approved semantic replacements',
   [
     'sick', 'injury', 'mobility', 'medical-shield', 'no-energy',

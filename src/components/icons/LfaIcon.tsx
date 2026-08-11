@@ -1,6 +1,6 @@
 import React from 'react';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { G, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
 /**
  * One owner for the icon audit approved by Sam on 2026-08-11.
@@ -28,6 +28,7 @@ export type LfaIconName =
   | 'thumbs-down'
   | 'dumbbell'
   | 'kettlebell'
+  | 'footy'
   | 'pull-up-bar'
   | 'foam-roller'
   | 'cable-machine'
@@ -83,6 +84,36 @@ const TRACED_ICON = {
 } as const;
 
 export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
+  if (name === 'footy') {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 550 550" fill="none">
+        <Path
+          d="M327 28 C276 17 221 45 175 94 C125 147 96 218 93 302 C90 388 119 461 168 506 C196 532 228 539 261 534 C338 522 409 442 443 353 C476 267 464 166 430 99 C403 47 365 25 327 28Z"
+          stroke={color}
+          strokeWidth={24}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M327 29 C290 57 265 108 239 166 C211 229 197 302 192 374 C188 438 191 491 210 529"
+          stroke={color}
+          strokeWidth={15}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <G stroke={color} strokeWidth={13} strokeLinecap="butt">
+          <Path d="M207 212L241 213" />
+          <Path d="M202 231L237 233" />
+          <Path d="M198 250L232 253" />
+          <Path d="M187 285L219 288" />
+          <Path d="M184 304L215 307" />
+          <Path d="M180 323L210 326" />
+        </G>
+        <Circle cx={210} cy={269} r={10} fill={color} />
+      </Svg>
+    );
+  }
+
   const outlined = OUTLINED_TRACED_ICON[name as keyof typeof OUTLINED_TRACED_ICON];
   if (outlined) {
     return (

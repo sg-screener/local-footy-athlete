@@ -42,6 +42,8 @@ the same lookup rather than gaining another icon set.
   shield and stretching person.
 - No equipment is a plain prohibited sign. Don't like it is a recognisable
   hand giving thumbs down.
+- The In-season choice now uses Sam's thinner traced Australian-rules ball
+  from the shared icon owner. The older screen-local ball drawing is retired.
 
 ## First-run findings
 
@@ -87,6 +89,11 @@ the same lookup rather than gaining another icon set.
   regression. The Profile equipment flow completed again; visual inspection
   confirmed the upright station at Cable machine and the seated plate-loaded
   trace at Weight machines.
+- After the thinner footy trace entered the In-season choice, approved icon
+  ownership ran 12 cells with 12 passed and the compile baseline remained at
+  459 diagnostics with no file regression. The guard compares every path in
+  the supplied SVG with the shared app owner and proves the retired local
+  drawing no longer exists on that screen.
 - The approved icon test is in the mandatory chain before the law-registry gate.
   The chain remains deliberately red because 32 unrelated registry rows remain
   unguarded; Sam explicitly overrode that stop for this unit.
@@ -108,6 +115,8 @@ screen-local drawings.
 
 - Readiness, Plan change, Injury and Add exercise were source-pinned but were
   not separately photographed in the rebuilt simulator during this unit.
+- The new In-season footy trace was source-pinned but was not separately
+  photographed in the rebuilt simulator during this unit.
 - Sam's physical iPhone has not shown the new icons. Athlete-facing acceptance
   therefore remains open.
 - Icons outside the audit decision list were not redesigned.
