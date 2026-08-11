@@ -1,0 +1,76 @@
+# COWORK SEAT HANDOFF — 2026-08-12
+
+**For the next REVIEW SEAT (a Cowork chat), not the terminal.** The terminal's
+entry point is `docs/CODEX_HANDOFF_2026-08-11.md` and it is agent-neutral.
+
+## READ EXACTLY THIS, IN THIS ORDER, AND STOP
+
+1. Your project-memory index (it loads itself).
+2. **This file.**
+3. `docs/ATLAS_VERIFICATION_2026-08-12.md` — the current state of every open
+   question, with receipts. **If you read one thing, read this.**
+4. `docs/SEAT_INBOX.md` — the live orders (5 of them, ordered).
+5. `docs/NOW.md` — status pointer only.
+
+**DO NOT READ** `docs/NOW_HISTORY_TO_2026-08-10.md`,
+`docs/SEAT_INBOX_ARCHIVE_TO_2026-08-10.md`, or any of the ~460 other files in
+`docs/`. **GREP them; never open them.** Sam has paid for a seat reading history
+twice now — $68.95 in one sitting on 2026-08-10, and this session cost $19.23
+with 12M tokens in. **The reading is the cost. Almost nothing else is.**
+
+## HOW TO SPEND SAM'S MONEY WELL — measured this session
+
+- **Subagents were 51% of the spend and they were worth it.** Six parallel
+  read-only verifiers, each given ONE claim and required to return a `file:line`
+  receipt, found **two live defects neither Sam nor the terminal had** (the
+  Wednesday game-day loss, the off-feet walking contradiction). **Use fan-out for
+  VERIFICATION. Never use it for a lookup you could grep in one call.**
+- **`device_bash` with grep/sed beats reading a file**, every time. One command
+  can answer what a 3,000-line read would.
+- **Screenshots beat prose for UI** and cost less to be right about. The parity
+  method is written down in `docs/UI_STATE_2026-08-12.md`.
+
+## WHERE THINGS STAND — measured 2026-08-12 06:05 MELB
+
+- **Branch `main`, HEAD `21ec6609`.** Terminal is **Claude Opus** as of
+  2026-08-12 (it was Codex on 08-11; Sam is back on Claude).
+- **Law registry: 95 rows, 63 guarded, 32 UNENFORCED**, red by Sam's
+  stop-the-line ruling. `test:repo-law-guards` 34/34 green.
+- **The UI merge is built and gates-green, awaiting SAM'S EYE ON A DEVICE.** The
+  week list took the prototype's card shape; the question that doc asked is
+  CLOSED and must not be re-asked. Pictures: `docs/UI_STATE_2026-08-12.md`.
+- **Five orders live in the inbox**, order 1 being the craft-validator switch.
+
+## THE ONE THING TO UNDERSTAND ABOUT THIS PROJECT RIGHT NOW
+
+Sam asked why the programming has been poor. **His Bible is not being lost and
+old code is not overriding it.** `src/rules/weekStructureValidator.ts` holds his
+Section 17 craft rules and is **FINDINGS-ONLY by its own header** — its three
+live callers only log. **His craft rules were built and then left switched off.**
+"Enforcement is a later phase" became a permanent state. Order 1 flips it.
+
+**This is also the repo's recurring disease, third sighting:** the abolished
+beginner cap that eleven fallback branches never heard about; the
+`maxExercisesPerStrengthSession` that nothing reads; this. **A rule that ships
+wired to `log` is not shipped.**
+
+## THE FOUR STANDING LAWS ON THE SEAT
+
+1. **INBOX-FIRST.** Any answer that creates work is written to
+   `docs/SEAT_INBOX.md` BEFORE it is said in chat. Telling Sam something he then
+   has to relay makes him the courier.
+2. **THREE PARTS TO SAM, ALWAYS** — what happened / what's next / what to send.
+   Twelve-year-old simple, no file names, no commit ids, no jargon. All
+   ceremony goes in the repo.
+3. **NEVER ASK FOR SOMETHING HE HAS ALREADY GIVEN.** Check the docs first. This
+   has bitten four times.
+4. **NO FILE CARDS FOR REPO PLUMBING.** Write to the repo with `device_bash`
+   heredocs. `SendUserFile` is only for things Sam himself opens — a mock, a
+   screenshot, a sheet he asked for.
+
+## ONE ENVIRONMENT GOTCHA
+
+The connected folder `.../local-footy-athlete/LFA` is **empty** — request the
+PARENT `/Users/samgeurts/Documents/local-footy-athlete`. And `device_bash`
+cannot delete: a stale `.git/HEAD.lock` from a seat commit must be **moved
+aside**, not removed (`mv .git/HEAD.lock .git/HEAD.lock.stale-seat`).
