@@ -41,6 +41,15 @@ and this file gets one line pointing at it.**
   impossible athlete** and whether they still pass on a legal profile is
   **still open**. **Not something you have seen on your phone.**
 
+- **⚠ SAM: A GAME CAN NOW BE ON ANY DAY OF THE WEEK — CHECK IT ON YOUR PHONE.**
+  Both places that ask for your game day now offer all seven days, not just
+  Friday/Saturday/Sunday. **What to check:** set your game day to a Wednesday in
+  Profile, then close the app fully and reopen it — the Wednesday games must
+  still be there. Before this, a midweek game was treated as NO game, so the
+  week got none of the protection around it, and the games vanished on reopen.
+  **Gates green, not seen on your phone**
+  (`docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md`).
+
 - **⚠ SAM: NOTHING IS BLOCKED ON YOU RIGHT NOW EXCEPT LOOKING.** The accounts
   question (**LOCAL-ONLY**) and the platform question (**iPHONE-ONLY**) were both
   **DECIDED BY YOU on 2026-08-10** — `docs/PUBLISH_ROADMAP_2026-08-05.md` lines
@@ -51,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `f4f6b3b2` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `be69d51d` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -79,6 +88,36 @@ and this file gets one line pointing at it.**
 
 
 
+- **THE GAME DAY IS OPEN TO ALL SEVEN DAYS, AND EIGHT COPIES OF ONE PREDICATE
+  BECAME ONE.** `HOW_TO_BUILD_THIS_APP` §5 items 1 AND 2, both landed.
+  `src/rules/gameAnchor.ts` is the only thing that answers "which day is the
+  game"; the Fri/Sat/Sun allowlist, the `GameDay` enum and `mapToLegacyGameDay`
+  are deleted. **The finding: three of the eight copies already accepted all
+  seven days — the app could READ a Wednesday game and could not WRITE one.**
+  **No device migration is owed and that is proven, not assumed** — the legacy
+  value was never a day and parses to null at the owner. Guarded by
+  `test:game-anchor` (14 cells, in the chain), **mutation-tested twice**;
+  registry 95/63 → 96/64 with the unguarded count unmoved.
+  `docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md`.
+- **A CONCURRENT WRITE CORRUPTED `docs/SEAT_INBOX.md` AND BOTH DOC GATES PASSED
+  OVER IT.** The seat's merge-leftovers block landed **inside STAND-DOWN B's
+  sentence**, splitting a stand-down whose whole job is to stop a question
+  reaching Sam a fourth time. **Repaired, content unchanged.**
+  `test:seat-inbox-hook` and `test:repo-law-guards` both read the broken file
+  and passed. **Nothing detects a mid-sentence splice; the inbox warns that two
+  agents in one checkout share a git index, and it should warn that they share
+  this file too.** `docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md` §6.
+- **`test:compile` WAS RED AT HEAD AND NO SWEEP CAN SEE IT.** `scripts/sweep.sh`
+  filters `test:compile` out of the chain by construction, so a typecheck
+  regression is invisible to the instrument that reports "N of 189".
+  `section18CraftTierTests.ts` landed with `2db1b8ce` missing a required field
+  and was never added to the typecheck baseline. **The one line is cleared; the
+  instrument gap is the finding and is NOT fixed.**
+- **THE ±7 INVENTION IS NOW MORE REACHABLE, NOT LESS.** `section18CraftTier.ts:161`
+  fabricates neighbouring games the validator trusts as real
+  (`weekStructureValidator.ts:255,272`). A midweek athlete can exist for the
+  first time, and an irregular fixture list is exactly what it gets wrong.
+  **`HOW_TO_BUILD_THIS_APP` §5 item 3 is the next unit.**
 - **THE FIFTH HARD DAY IS APP-SELECTED IN 7 WEEKS OUT OF 8.** Measured
   2026-08-12 (`a8f13d91`): eight of seventeen QA scenarios carry a fifth hard
   day and in seven of them nothing forced it but the app. The arithmetic that

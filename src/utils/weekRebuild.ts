@@ -96,6 +96,7 @@ import {
   type AthleteActionType,
 } from './athleteActionDiagnostics';
 import { SCAFFOLD as LEGV_SCAFFOLD } from '../rules/derivedWeekContract';
+import { storedGameAnchor } from '../rules/gameAnchor';
 
 // ─── Canonical context ───────────────────────────────────────────────
 
@@ -350,9 +351,9 @@ export function collectWeekRebuildContext(args: {
     args.newGameDay === undefined
       ? args.baseProfile
       : applyGameDayChange(args.baseProfile, args.newGameDay);
-  const effectiveGameDay = (profile.usualGameDay || profile.gameDay) as DayOfWeek | undefined;
+  const effectiveGameDay = storedGameAnchor(profile);
   const gameDates = args.gameDatesOverride ?? (
-    effectiveGameDay && ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].includes(effectiveGameDay)
+    effectiveGameDay
       ? computeGameDatesForBlock(
           effectiveGameDay,
           args.program.startDate.split('T')[0],

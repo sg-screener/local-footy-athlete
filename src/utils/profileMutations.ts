@@ -15,23 +15,19 @@
  * the AI pipeline. Callers wire those side effects.
  */
 
-import type { OnboardingData, DayOfWeek, SeasonPhase, GameDay } from '../types/domain';
+import type { OnboardingData, DayOfWeek, SeasonPhase } from '../types/domain';
 
 // ─────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────
-
-/**
- * Map a full DayOfWeek to the legacy `gameDay` enum (Fri/Sat/Sun/Varies).
- * Anything outside Fri/Sat/Sun maps to 'Varies' so the legacy field stays
- * valid for downstream consumers (edge function, ReviewScreen) without
- * losing the precise day signal — `usualGameDay` carries that.
- */
-export function mapToLegacyGameDay(day: DayOfWeek): GameDay {
-  if (day === 'Friday' || day === 'Saturday' || day === 'Sunday') return day;
-  return 'Varies';
-}
-
+//
+// `mapToLegacyGameDay` LIVED HERE AND IS DELETED (2026-08-12). It narrowed a
+// full `DayOfWeek` down to the Fri/Sat/Sun enum and wrote `'Varies'` for
+// everything else — so an athlete who told the phase-shift sheet "Wednesday"
+// had that answer thrown away on the way into storage, and `quiescentBoot`,
+// which read only the narrowed field, lost every game mark on the next
+// relaunch. `gameDay` now holds the day the athlete actually chose, and
+// `rules/gameAnchor.ts` is the one place that reads either field.
 // ─────────────────────────────────────────────────────────────────
 // Mutations
 // ─────────────────────────────────────────────────────────────────
@@ -51,7 +47,7 @@ export function applyGameDayChange(
   return {
     ...profile,
     usualGameDay: newGameDay ?? undefined,
-    gameDay: newGameDay === null ? undefined : mapToLegacyGameDay(newGameDay),
+    gameDay: newGameDay ?? undefined,
   };
 }
 
@@ -169,7 +165,7 @@ export function applyPhaseShift(
 
     if (input.targetPhase === 'In-season' && input.gameAnchor?.kind === 'usual_day') {
       updates.usualGameDay = input.gameAnchor.day;
-      updates.gameDay = mapToLegacyGameDay(input.gameAnchor.day);
+      updates.gameDay = input.gameAnchor.day;
     } else {
       // Pre-season (no fixtures in that phase), OR In-season where the athlete
       // answered "no usual game day". The unanswered case never reaches here —

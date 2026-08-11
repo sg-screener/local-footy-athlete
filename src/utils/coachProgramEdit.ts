@@ -1,4 +1,5 @@
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
+import { storedGameAnchor } from '../rules/gameAnchor';
 import type {
   DayOfWeek,
   OnboardingData,
@@ -1863,11 +1864,7 @@ export async function executeProgramSetupEdit(
     ...profilePatchResult.patch,
   };
 
-  if (
-    nextProfile.seasonPhase === 'In-season' &&
-    !nextProfile.usualGameDay &&
-    !nextProfile.gameDay
-  ) {
+  if (nextProfile.seasonPhase === 'In-season' && !storedGameAnchor(nextProfile)) {
     return {
       kind: 'clarify',
       reply: 'Do you have a regular game day right now, or should I rebuild this as a no-game training week?',

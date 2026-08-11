@@ -1,4 +1,5 @@
 import type { SeasonPhase, WeekKind } from '../types/domain';
+import { isDayOfWeek } from './gameAnchor';
 
 export type WeekContextKind =
   | 'in_season_game_week'
@@ -34,7 +35,10 @@ export interface WeekContext {
 }
 
 function hasUsableGameDay(gameDay: string | null | undefined): boolean {
-  return !!gameDay && gameDay !== 'none' && gameDay !== 'Varies';
+  // Was `!== 'none' && !== 'Varies'` — a ninth private spelling of "is this a
+  // real game day?", and one that would have said yes to any string a caller
+  // invented. The owner names the seven days and nothing else.
+  return isDayOfWeek(gameDay);
 }
 
 function resolveHasFixture(input: WeekContextInput): boolean {

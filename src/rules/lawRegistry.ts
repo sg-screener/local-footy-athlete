@@ -1184,6 +1184,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-game-anchor-any-day-one-owner',
+    law: 'A game may be on ANY day of the week, and exactly one predicate answers "which day is the athlete\'s game day" for every reader in the app.',
+    ruledAt: 'Sam 2026-08-12 ("games should be able to be placed any day of the week - i can\'t know when every single club in aus is going to play a game so I want to be prepared for everything"); docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md §5 item 1',
+    guard: {
+      state: 'guarded',
+      by: 'test:game-anchor',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT WITH THE RULING 2026-08-12, and the defect was the WRONG WEEK rather than a missing preference: `resolveEffectiveGameDay` answered `undefined` for any day outside Fri/Sat/Sun, so a midweek athlete got no G-1, no G-2 and no G+1 — the week was built as if there were no game. EIGHT copies of "is this a real game day?" existed (resolver allowlist, `profileSetupChange.storedGameDay`, `ProfileScreen.dayFromGameFields`, an inline expression in `useSeasonPhaseControl`, three `!== \'Varies\'` tests in `recoveryAddonBuilder`/`postGenerationConstraintValidation`/`generateProgram`, and an inline seven-name `includes` in `weekRebuild`); three of them already accepted all seven days, so the app could READ a Wednesday game and could not WRITE one. Fourteen cells: the owner reads all seven days; `usualGameDay` outranks the onboarding field; both pickers render from the canonical week (asserting the LOOP, not a count); fourteen named readers delegate; no code outside the owner parses the legacy value (comments stripped, so the history stays written down); and the checkers red on fabricated violations. MUTATION-TESTED TWICE: restoring the allowlist reds cell 5 naming all four silenced days, and pointing the boot re-seed back at one field reds the relaunch cell. NO DEVICE MIGRATION IS OWED and that is proven rather than assumed — the legacy `\'Varies\'` was never a day, means what `undefined` means, and parses to null at the owner. NOT COVERED: nothing ran on a device; N games in one week is untouched (`derivedWeekContract.ts:90` still collapses a fixture list to its first entry, §5 item 4).',
+    },
+  },
+  {
     id: 'LAW-game-feedback-shared-outcome-door',
     law: 'Scheduled games and practice matches save one complete match result through the regular dated session-outcome transaction, use the shared 1–5 effort scale, and recording it does not change the program.',
     ruledAt: 'Sam 2026-08-11; docs/GAME_FEEDBACK_OWNERSHIP_REASSESSMENT_2026-08-11.md',

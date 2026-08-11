@@ -38,6 +38,7 @@ import { computeProgrammingBias } from '../rules/programmingBias';
 import { motivationBiasTokens, resolveMotivation } from '../rules/motivationGoals';
 import { attachRecoveryAddonEffectEvidence } from './deterministicCoachNoteFactory';
 import { enforceCuratedAddonCueContract } from '../rules/curatedCueContract';
+import { storedGameAnchor } from '../rules/gameAnchor';
 
 const ZERO_CREDIT = {
   hardExposure: false,
@@ -339,9 +340,7 @@ function stripEmptyRecoveryAddons(workouts: Workout[]): Workout[] {
 function gameDayForWeek(workouts: Workout[], profile: OnboardingData): DayOfWeek | null {
   const explicitGame = workouts.find((workout) => workout.workoutType === 'Game');
   if (explicitGame) return DAY_INDEX_TO_NAME[explicitGame.dayOfWeek] ?? null;
-  if (profile.usualGameDay) return profile.usualGameDay;
-  if (profile.gameDay && profile.gameDay !== 'Varies') return profile.gameDay;
-  return null;
+  return storedGameAnchor(profile);
 }
 
 function availabilityDays(profile: OnboardingData): number | undefined {

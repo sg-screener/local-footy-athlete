@@ -6,6 +6,7 @@ import { logger } from './logger';
 import { acceptedStatePresenceSummary } from '../store/acceptedStateColdStart';
 import { dayOfWeekForISODate } from './appDate';
 import { selectMicrocycleForDate } from './programBlockState';
+import { storedGameAnchor } from '../rules/gameAnchor';
 
 export type OnboardingPipelineStage =
   | 'generation'
@@ -134,8 +135,8 @@ export function seedOnboardingProgram(args: {
   runAcceptedStateStep('set_today_workout', () =>
     programStore.setTodayWorkout(todayWorkout, args.todayISO));
 
-  const selectedGameDay = onboardingData?.gameDay;
-  if (selectedGameDay && selectedGameDay !== 'Varies' && program.startDate && program.endDate) {
+  const selectedGameDay = storedGameAnchor(onboardingData);
+  if (selectedGameDay && program.startDate && program.endDate) {
     const gameDates = computeGameDatesForBlock(
       selectedGameDay,
       program.startDate,

@@ -4,7 +4,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { GameDay } from '../../types/domain';
+import { DayOfWeek } from '../../types/domain';
+import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
@@ -16,27 +17,27 @@ type GameDayScreenProps = NativeStackScreenProps<
 >;
 
 /**
- * "Varies" intentionally omitted from the picker — the enum value stays in
- * `GameDay` (domain.ts) for legacy profiles and engine paths that may still
- * route through it, but onboarding forces a concrete day so downstream logic
- * (game-proximity guards, virtual-game rendering) gets a deterministic anchor.
+ * THE WHOLE WEEK. Sam, 2026-08-12: *"games should be able to be placed any day
+ * of the week - i can't know when every single club in aus is going to play a
+ * game so I want to be prepared for everything"*.
+ *
+ * This picker offered three days until then, and a midweek game answered here
+ * was not merely unavailable — the resolver's allowlist turned it into no game
+ * at all, so the athlete's week lost its taper, its spacing and its recovery
+ * day. The list is `DAYS_OF_WEEK` from the game-anchor owner, so the picker and
+ * everything that reads the answer cannot disagree about what a day is.
  *
  * Visuals come from the shared <SelectableTile /> primitive so the picker
  * matches every other selection surface (lime border + lime fill + corner
  * checkmark).
  */
-const GAME_DAY_OPTIONS: { id: GameDay; label: string }[] = [
-  { id: 'Friday', label: 'Friday' },
-  { id: 'Saturday', label: 'Saturday' },
-  { id: 'Sunday', label: 'Sunday' },
-];
 
 export const GameDayScreen: React.FC<GameDayScreenProps> = ({ navigation }) => {
-  const [selectedGameDay, setSelectedGameDay] = useState<GameDay | null>(null);
+  const [selectedGameDay, setSelectedGameDay] = useState<DayOfWeek | null>(null);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('GameDay');
   const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
-  const handleSelect = useCallback((day: GameDay) => {
+  const handleSelect = useCallback((day: DayOfWeek) => {
     setSelectedGameDay(day);
     void commitAndAdvance({ gameDay: day }, () => {
       setTimeout(() => navigation.navigate('TeamTrainingDays'), 250);
@@ -64,13 +65,13 @@ export const GameDayScreen: React.FC<GameDayScreenProps> = ({ navigation }) => {
       </View>
 
       <View style={styles.cardsContainer}>
-        {GAME_DAY_OPTIONS.map((option) => {
-          const isSelected = selectedGameDay === option.id;
+        {DAYS_OF_WEEK.map((day) => {
+          const isSelected = selectedGameDay === day;
           return (
             <SelectableTile
-              key={option.id}
+              key={day}
               isSelected={isSelected}
-              onPress={() => handleSelect(option.id)}
+              onPress={() => handleSelect(day)}
               style={styles.card}
             >
               <Text
@@ -78,7 +79,7 @@ export const GameDayScreen: React.FC<GameDayScreenProps> = ({ navigation }) => {
                 color={colors.text.primary}
                 style={styles.cardText}
               >
-                {option.label}
+                {day}
               </Text>
             </SelectableTile>
           );

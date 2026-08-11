@@ -47,6 +47,7 @@ import {
   emitAthleteActionEvent,
 } from './athleteActionDiagnostics';
 import { powerRows } from '../rules/sessionRowCounting';
+import { storedGameAnchor } from '../rules/gameAnchor';
 
 export interface FixtureReplanEditCost {
   section18Blockers: number;
@@ -1084,9 +1085,8 @@ export function buildFixtureMinimalReplan(
     .map((day) => day.dayNumber));
   const removedFixture = args.priorFixtures.find((fixture) =>
     !args.proposedFixtures.some((proposed) => proposed.date === fixture.date)) ?? null;
-  const recurringFixtureDay = args.profile.usualGameDay ?? args.profile.gameDay;
-  const preferredReplacementDay = args.proposedFixtures.length === 0 &&
-    recurringFixtureDay && recurringFixtureDay !== 'Varies'
+  const recurringFixtureDay = storedGameAnchor(args.profile);
+  const preferredReplacementDay = args.proposedFixtures.length === 0 && recurringFixtureDay
     ? DAY_NAMES.indexOf(recurringFixtureDay)
     : null;
 

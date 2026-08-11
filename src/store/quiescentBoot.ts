@@ -48,6 +48,7 @@ import { asyncStorageCompat } from './asyncStorageCompat';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import { replayableEntries, unreadableEntryCount } from '../rules/decisionLedgerReplay';
 import { recoverGenerationAnchor } from '../rules/generationAnchorRecovery';
+import { storedGameAnchor } from '../rules/gameAnchor';
 import { logger } from '../utils/logger';
 
 // The parking key + old-shape detector live at the boundary that enforces
@@ -318,7 +319,15 @@ function deriveBootFixtureMarks(
   // `ReturnType<typeof useProfileStore.getState>['onboardingData']` annotation
   // here reads as a 72nd profile-mirror consumer to LR-4's detector, and this
   // function consumes exactly one field.
-  profile: { gameDay?: string } | null,
+  //
+  // IT TAKES BOTH ANCHOR FIELDS NOW, AND THAT IS A FIX (2026-08-12,
+  // `HOW_TO_BUILD_THIS_APP` §5 item 2). It read `gameDay` ALONE, and `gameDay`
+  // used to be narrowed to Fri/Sat/Sun on the way into storage — so an athlete
+  // who told the phase sheet "Wednesday" had `usualGameDay: 'Wednesday'` and
+  // `gameDay: 'Varies'`. This function wiped every game mark on the line above
+  // and then re-seeded NOTHING, so their fixtures disappeared on relaunch. The
+  // narrowing is gone and both fields are read through the one owner.
+  profile: { gameDay?: string; usualGameDay?: string } | null,
   program: { startDate?: string; endDate?: string },
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -334,8 +343,8 @@ function deriveBootFixtureMarks(
   for (const [date, mark] of Object.entries(current)) {
     if (mark !== 'game' && mark !== 'noGame') next[date] = mark;
   }
-  const gameDay = profile?.gameDay;
-  if (gameDay && gameDay !== 'Varies' && program.startDate && program.endDate) {
+  const gameDay = storedGameAnchor(profile);
+  if (gameDay && program.startDate && program.endDate) {
     for (const date of computeGameDatesForBlock(
       gameDay, program.startDate, program.endDate,
     ) as string[]) {

@@ -99,8 +99,6 @@ export type SeasonPhase = 'Off-season' | 'Pre-season' | 'In-season';
 
 export type WeekKind = 'build' | 'deload';
 
-export type GameDay = 'Friday' | 'Saturday' | 'Sunday' | 'Varies';
-
 export type TeamTrainingDuration = '60 minutes' | '90 minutes' | '2 hours';
 
 export type TeamTrainingIntensity = 'Light' | 'Moderate' | 'Hard' | 'Very intense';
@@ -181,9 +179,20 @@ export interface OnboardingData {
   heightCm?: number;
   weightKg?: number;
   seasonPhase?: SeasonPhase;
-  gameDay?: GameDay;
+  /**
+   * The onboarding screen's game-day answer. ANY day of the week — Sam,
+   * 2026-08-12: *"i can't know when every single club in aus is going to play a
+   * game"*. This used to be a `GameDay` enum of Friday/Saturday/Sunday/'Varies',
+   * which could not hold a midweek fixture at all.
+   *
+   * READ IT THROUGH `rules/gameAnchor.ts`, never directly: a profile written
+   * before 2026-08-12 can still hold the legacy `'Varies'`, which was never a
+   * day and means what `undefined` means.
+   */
+  gameDay?: DayOfWeek;
   /** In-season usual competition day, used as a default per-week game anchor when
-   *  no explicit game has been set on the calendar for that week. */
+   *  no explicit game has been set on the calendar for that week. Same rule:
+   *  read it through `rules/gameAnchor.ts`. */
   usualGameDay?: DayOfWeek;
   teamTrainingDaysPerWeek?: number;
   teamTrainingDays?: DayOfWeek[];

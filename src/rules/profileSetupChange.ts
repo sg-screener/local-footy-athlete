@@ -26,17 +26,10 @@ import type {
   Position,
   SeasonPhase,
 } from '../types/domain';
-import { mapToLegacyGameDay } from '../utils/profileMutations';
+import { DAYS_OF_WEEK, storedGameAnchor } from './gameAnchor';
 
-export const SETUP_WEEK_DAYS: readonly DayOfWeek[] = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
+/** An ALIAS of the canonical week, not a second copy of it. */
+export const SETUP_WEEK_DAYS: readonly DayOfWeek[] = DAYS_OF_WEEK;
 
 export function sortSetupDays(days: readonly DayOfWeek[]): DayOfWeek[] {
   return [...days].sort((a, b) => SETUP_WEEK_DAYS.indexOf(a) - SETUP_WEEK_DAYS.indexOf(b));
@@ -50,13 +43,7 @@ export function sameSetupDays(a?: readonly DayOfWeek[], b?: readonly DayOfWeek[]
 
 /** The athlete's stored game anchor, read from either field. */
 export function storedGameDay(profile: OnboardingData): DayOfWeek | null {
-  if (profile.usualGameDay && SETUP_WEEK_DAYS.includes(profile.usualGameDay)) {
-    return profile.usualGameDay;
-  }
-  if (profile.gameDay && SETUP_WEEK_DAYS.includes(profile.gameDay as DayOfWeek)) {
-    return profile.gameDay as DayOfWeek;
-  }
-  return null;
+  return storedGameAnchor(profile);
 }
 
 /** Everything the sheet is currently holding, already resolved. */
@@ -154,7 +141,7 @@ export function decideProfileSetupChange(
   if (selection.seasonPhase === 'In-season') {
     if (selection.gameDay !== currentGameDay || phaseChanged) {
       patch.usualGameDay = selection.gameDay ?? undefined;
-      patch.gameDay = selection.gameDay ? mapToLegacyGameDay(selection.gameDay) : undefined;
+      patch.gameDay = selection.gameDay ?? undefined;
     }
   } else if (ownedPhase === 'In-season' || currentGameDay) {
     // Leaving In-season, or a stale anchor left behind by an earlier phase.

@@ -220,6 +220,37 @@ gate.** It subsumes the narrower `subject: 'doc' | 'behaviour'` proposal.
 
 ---
 
+## §6 A CORRECTION THE SEAT OWES, AND THE RULE THAT PREVENTS IT
+
+**On 2026-08-12 the seat told Sam the phase-shift sheet lived on the home screen.
+It does not. Sam:** *"The phase-shift sheet on the home screen thats gone now -
+dude i told you to look at the new fucking ui changes - that lives in the status
+section inside the coach tab - did you not look at all this"*. **He is right.**
+
+The seat cited `HomeScreenV2.tsx:3534` out of a doc written before the UI merge,
+**without checking who renders it.** `docs/UI_STATE_2026-08-12.md` is the picture
+index and says at its line 42 that *"the phase card left both shapes when Coach
+took My Status"*. The seat handoff says in bold: **look there before reading any
+UI prose.** It was not read.
+
+**THE ACTUAL STATE — worth knowing, because it is a half-finished move:**
+- **Surface:** `CoachTabScreen.tsx:479`, inside My Status. **Sam is correct.**
+- **Implementation:** still `HomeScreenV2.tsx:3352`.
+- **Bridge:** `src/components/SeasonPhaseShiftSheet.tsx` is a **six-line
+  re-export** whose comment says it exists *"while its surface moves from Program
+  to My Status ... instead of duplicating the sheet"*. Deliberate and documented
+  — **but the implementation never followed, so the bridge is now permanent.**
+  Same disease as §4, one step along: not a value nobody reads, a MOVE nobody
+  finished.
+
+> **RULE — `LAW-ui-location-from-the-picture`: never cite a UI location from
+> prose. Read `docs/UI_STATE_*.md`, then confirm the CONSUMER (who renders it),
+> not the definition. A component's file is where it was written, not where the
+> athlete finds it.**
+
+This is the §4 mistake in the seat's own reasoning: it trusted a write without
+checking for a reader.
+
 ## NOT COVERED
 
 - **Nothing here ran on a device or a simulator.** Static reading plus the

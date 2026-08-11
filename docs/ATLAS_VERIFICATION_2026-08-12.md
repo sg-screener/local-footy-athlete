@@ -100,7 +100,15 @@ recurring game day from `profile?.gameDay` ALONE, and skips when it reads
 `section18AcceptedWeekGateway.ts:281`). And
 `profileMutations.ts:30-33` `mapToLegacyGameDay` writes `gameDay = 'Varies'` for
 **any day outside Fri/Sat/Sun**, while the phase-shift sheet
-(`HomeScreenV2.tsx:3534`) offers **all seven days**.
+offers **all seven days** (`WEEK_DAYS` at `HomeScreenV2.tsx:3534`, asking
+*"Which day do you usually play?"*). **CORRECTED 2026-08-12 by the seat: that
+SURFACE now lives in the Coach tab's My Status, not on Program** —
+`CoachTabScreen.tsx:479` renders it. The implementation still physically sits in
+`HomeScreenV2.tsx:3352` and is reached through a **six-line re-export bridge**,
+`src/components/SeasonPhaseShiftSheet.tsx`, whose own comment says it exists
+*"while its surface moves from Program to My Status"*. **The move is half
+finished:** the surface moved, the implementation did not follow, and the bridge
+is still standing.
 
 > **FAILURE SCENARIO, in plain English: an athlete sets a Wednesday game day.
 > The week shows it. He closes the app and opens it again — the recurring game

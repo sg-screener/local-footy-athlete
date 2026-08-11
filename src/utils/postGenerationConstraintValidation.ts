@@ -85,6 +85,7 @@ import {
 } from '../rules/section18AcceptedWeekGateway';
 import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
 import { hasPowerRow } from '../rules/sessionRowCounting';
+import { storedGameAnchor } from '../rules/gameAnchor';
 import {
   hasStoredWeekDeclaration,
   selectStoredWeekDeclaration,
@@ -1486,8 +1487,7 @@ function liveWorkoutCanonicalisationContext(
   for (const [markedDate, kind] of Object.entries(markedDays)) {
     if (kind === 'game') gameDates.add(markedDate);
   }
-  const usualGameDay = profile.usualGameDay ??
-    (profile.gameDay !== 'Varies' ? profile.gameDay : undefined);
+  const usualGameDay = storedGameAnchor(profile) ?? undefined;
   if (profile.seasonPhase === 'In-season' && usualGameDay) {
     const dayNumbers: Record<string, number> = {
       Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,

@@ -156,10 +156,9 @@ function useScheduleState(): ScheduleState & {
   }).phase;
 
   // Game day fields — feed the resolver's virtual-game logic.
-  // `usualGameDay` is the new-style field set by the phase-shift modal.
-  // `gameDay` is the legacy field set by onboarding's GameDayScreen.
-  // The resolver uses `usualGameDay || gameDay` (excluding 'Varies') as the
-  // effective game day for In-season virtual games.
+  // `usualGameDay` is set by the phase-shift and profile sheets; `gameDay` is
+  // set by onboarding's GameDayScreen. Both hold any of the seven days, and
+  // `rules/gameAnchor.ts` is the one owner that decides which one wins.
   const usualGameDay = useProfileStore((s) => s.onboardingData?.usualGameDay);
   const gameDay = useProfileStore((s) => s.onboardingData?.gameDay);
 

@@ -109,6 +109,13 @@ const generated = generateProgramLocally(athlete, {
     selectedPhase: 'In-season',
     phaseEntryWeekStartISO: WEEK_START,
     originProvenance: 'explicit_user_phase_change',
+    // PRE-EXISTING RED, CLEARED IN PASSING (2026-08-12). This required field
+    // was missing from the day this file landed (`2db1b8ce`) and the file was
+    // never added to the typecheck baseline, so `test:compile` — which
+    // `scripts/sweep.sh` deliberately does not measure — has been failing ever
+    // since. It is a fixture field, not a behaviour: sucrase-node runs this
+    // suite untyped, so the suite's own result was never affected.
+    persistenceProvenance: 'preserved_persisted_state',
   },
   previousProgram: null,
 });

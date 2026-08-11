@@ -40,6 +40,7 @@ import { SelectableTile } from '../../components/common/SelectableTile';
 import { Button as V2Button, Sheet } from '../../components/ui';
 import { buildMailto, getClientEnvConfig } from '../../config/env';
 import { WEEK_DAYS, DAY_SHORT, REBUILD_MSG_INTERVAL_MS } from '../home/homeScreenConstants';
+import { storedGameAnchor } from '../../rules/gameAnchor';
 import { logger } from '../../utils/logger';
 import {
   ROLE_BUCKET_OPTIONS,
@@ -71,7 +72,6 @@ type SetupSheetStep =
   | 'confirm'
   | 'building';
 
-const GAME_DAY_OPTIONS: DayOfWeek[] = ['Friday', 'Saturday', 'Sunday'];
 const SEASON_PHASE_OPTIONS: SeasonPhase[] = ['Off-season', 'Pre-season', 'In-season'];
 const EXPERIENCE_OPTIONS: { id: ExperienceLevel; label: string }[] = [
   { id: 'Complete beginner', label: 'New to training' },
@@ -114,13 +114,7 @@ function currentRole(data: OnboardingData): RoleBucket | null {
 }
 
 function dayFromGameFields(data: OnboardingData): DayOfWeek | null {
-  if (data.usualGameDay && WEEK_DAYS.includes(data.usualGameDay)) {
-    return data.usualGameDay;
-  }
-  if (data.gameDay && WEEK_DAYS.includes(data.gameDay as DayOfWeek)) {
-    return data.gameDay as DayOfWeek;
-  }
-  return null;
+  return storedGameAnchor(data);
 }
 
 // `classifySetupUpdateError` lived here and answered every refusal with
@@ -1352,7 +1346,7 @@ function SetupUpdateSheet({
         We’ll keep your week built around match day.
       </Text>
       <DayChipGrid
-        days={GAME_DAY_OPTIONS}
+        days={WEEK_DAYS}
         selectedDays={draftGameDay ? [draftGameDay] : []}
         onToggleDay={onSetDraftGameDay}
       />

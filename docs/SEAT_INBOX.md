@@ -26,6 +26,174 @@ writing a `⚠ SAM` line.**
 
 ---
 
+## SAM'S DIRECTION, 2026-08-12 — THE UI IS NEARLY DONE AND HE OWNS THE REST OF IT
+
+**SAM:** *"i like how the app is looking now - but i have a few more UI tweaks to
+make and then it's all about getting it functioning like a proper app with my
+logic fully in the app"*.
+
+**THIS RE-PRIORITISES THE LEFTOVERS CENSUS AND MOSTLY MEANS LESS WORK:**
+
+1. **DO NOT RE-SHOOT THE SEVEN SURFACES YET. Deferred, deliberately.** Sam has
+   further UI tweaks coming, so shots taken now go stale the day they are taken.
+   **Build `LAW-picture-newer-than-code` (census §4) FIRST — the gate, not the
+   photographs** — then shoot ONCE, after his tweaks land, and let the gate name
+   exactly which surfaces need it. **The gate is the deliverable; the pictures
+   are its output.**
+2. **M1 (the Coach note sheets that cannot open) is NOT UI work — it is a lost
+   FEATURE, and it stays high.** An athlete cannot reach two sheets. Small, and
+   it belongs in "make it function properly", not in the UI pass.
+3. **M2 / M3 / M5 ride along with Sam's tweaks** — they touch the same screens.
+   Do not open them as their own units and do not touch those files while he is
+   in them.
+4. **THE MAIN EVENT IS `HOW_TO_BUILD_THIS_APP` — that IS "my logic fully in the
+   app".** Items 1-5 of this inbox are that work and they are almost all in
+   `src/rules/` and `src/store/`, NOT in screens, **so they run in parallel with
+   his UI tweaks with only three collision files** (the phase sheet,
+   `GameDayScreen.tsx`, `PlanChangeSheet.tsx`). Keep going.
+
+**THE ONE THING TO CARRY:** his phrase is *"my logic fully in the app"*. Every
+finding this session says the same thing in different words — his rules exist and
+are not consulted (the craft validator wired to log, the moderate day counted and
+discarded, the fifth-hard-day arithmetic thrown away, `canOverride` read by
+nobody). **"Fully in the app" means CONSUMED, not present.**
+
+## THE MERGE'S LEFTOVERS — from `docs/WHAT_THE_MERGE_LEFT_BEHIND_2026-08-12.md`
+
+**SAM ASKED, 2026-08-12:** *"well how many things did codex changed that haven't
+been seen and implemented properly cause thsat was not the only change we mad"*.
+**Three numbers: ZERO controls an athlete can tap that do nothing; FIVE
+half-finished moves; SEVEN of eight surfaces with no current picture.**
+
+**M1. REWRITTEN — SAM RULED THE OLD SHEETS ARE OBSOLETE, AND THE SEAT'S "LOST
+FEATURE" CLAIM WAS WRONG.**
+
+**SAM, 2026-08-12, with prototype screenshots:** *"we don't need this anymore -
+it shows up in the status bar and on the a simple thing shows on day screen and
+week screen ... you'll see where the modifiers are"*.
+
+**HIS DESIGN, from `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`:** Week shows
+one line — *"2 active modifiers impacting program"*. Day shows a small card —
+*"2 active modifiers / Currently impacting your program"* — plus a
+*"Need to make a change?"* row of five modifier icons. **Coach owns the detail:**
+a `PROGRAM STATUS` card, and My Status lists each modifier as a **row with a
+chevron**, above an `ADD A MODIFIER` row. **Day and Week are READ-ONLY
+INDICATORS. Coach/My Status is the owner.**
+
+**THE SEAT'S CORRECTION, OWED PLAINLY.** The seat reported that
+`<CoachNoteSheet>` and `<GuidedInjuryFlowSheet>` "cannot open" and called it a
+LOST FEATURE needing restoration. **The guided injury flow is NOT lost:** it has
+**four mounts and three live doors** — `HomeScreenV2.tsx:1148` (opened by the
+"Injured" control at `:856`; the comment at `:850` says *"ONE OWNER, TWO
+DOORS"*), `DayWorkoutScreenV2.tsx:1523`, and `HomeQuickActionSheet.tsx:81`
+(dormant). **`HomeScreenV2.tsx:1198` is a DUPLICATE mount of a live sheet, not
+the only one.** Only `<CoachNoteSheet>` (`:1190`, defined `:2642`) is genuinely
+orphaned — **and Sam has now ruled it obsolete.**
+**METHOD ERROR: "this code has no caller" is NOT "this feature is unreachable."
+The seat checked the first and reported the second.** Third instance — see
+`seat-verify-before-telling-sam` in project memory.
+
+**SO: DELETE, DO NOT RESTORE.** Remove `handleCoachNoteAction`
+(`HomeScreenV2.tsx:350`), its state (`:238`, `:242`), `clearCopyForNote`
+(`:2583`), the `CoachNoteSheet` component (`:2634-2642`) and its mount (`:1190`),
+and the DUPLICATE injury mount at `:1198` — **keeping `:1148`, which is live.**
+Delete the false comment at `:2578`.
+
+**BUT THERE IS ONE HARD ORDERING CONSTRAINT — DO NOT DELETE FIRST.**
+`projectionCopy.ts:378` is athlete-visible signed copy reading
+**`"Change this on your program screen for now."`** It renders on My Status
+(`ActiveModifiersSection.tsx:150`) for every modifier action still inert — **7 of
+8 kinds** (`LIVE_ACTION_KINDS = ['dismiss_note']`, `CoachStatusScreen.tsx:168`).
+**That sentence sends the athlete to the exact screen this order removes.** Delete
+the Program route first and the app tells them to go somewhere that no longer
+does anything — a dead affordance created by the fix.
+
+**THEREFORE M1 AND M3 ARE ONE UNIT, IN THIS ORDER:** (a) land the 7 remaining
+modifier actions on My Status in Sam's shape — **a row with a chevron that opens
+the modifier, not the current inline action buttons**; (b) retire the caption and
+`repoLawGuardsTests.ts:1510`'s `NOT_YET_SURFACE` cell in the same commit; (c)
+THEN delete the Program-side sheets. **Doing (c) first strands athletes.**
+
+**M2. FINISH THE PHASE-SHEET MOVE.** Implementation to `src/components/`, delete
+the six-line bridge, delete the orphaned `phaseCard` style
+(`HomeScreenV2.tsx:4173` — the existing gate greps *usage*, so the dead
+definition passes). Nothing breaks. **Good parallel-agent job, but it collides
+with items 2-4 — before or after, never during.**
+
+**M3. MY STATUS' SEVEN INERT ACTIONS (slice 3b).** 7 of 8 kinds dimmed and
+disabled — honest, not lying. **WARNING: finishing this FAILS
+`repoLawGuardsTests.ts:1510`, which pins the not-yet plumbing as law. Retire that
+cell in the same commit.** Also `CoachTabScreen.tsx:466` passes
+`EMPTY_EQUIPMENT_FACT_IDS`, so this surface's equipment testIDs are wrong by
+construction.
+
+**M4. THE PICTURE INDEX IS UNSAFE AND THAT IS WHY THE SEAT GOT IT WRONG.**
+`UI_STATE_2026-08-12.md:14` pins itself to `a9c82856` — **a DOCS-ONLY commit
+14h48m after the newest screenshot.** Three UI commits land after the last
+shutter click; the named Day and Week shots both predate the code they claim to
+show; `PlanChangeSheet` had its cannot-open crash fixed and **has never been
+photographed open**. **Do NOT just re-shoot** — implement
+`LAW-picture-newer-than-code` (census §4): SHA in the filename, a committed
+manifest (the shots are gitignored, so mtime is the only receipt and it dies at
+`git clone`), one gate cell, and the index may never pin itself to a docs commit.
+
+**M5. SMALL:** `ModifiersStrip` says "ONE COMPONENT, THREE SURFACES" and has one
+mount, with the other two gate-forbidden (`:2`, `:41-43`); and
+`ProfileScreen.tsx:147`/`:622`/`:630`/`:1626` still render diagnostics marked
+*"TEMPORARY ... REMOVE once the cause is known"*, dated 2026-07-29.
+**OPEN-UNKNOWN whether that cause was ever found — ask before deleting.**
+
+**M6. WITHDRAWN — THE SEAT WAS WRONG AND SAM WAS RIGHT.** The seat reported that
+`JournalScreen.tsx` was "still being EDITED in this merge (08-11 03:12, 1,924
+lines)" and put the question to Sam. **Sam:** *"no we didn't touch the journal -
+or at least we didn't need to and i wasn't aware of that ? I don't know what's
+happening"*. **He is correct. Nobody touched the journal.**
+Measured: 21 commits built it 08-08 23:02 → 08-09 05:33; Sam hid it at
+**08-09 07:53 (`7f9e54ab`)**. **Since the hide, exactly ONE commit touched the
+file — `5f3bf336`, and it changed ONE LINE:**
+`gameFeel: feedback.gameFeel` → `feedback.game?.feel ?? feedback.gameFeel`.
+That is the shared game-feedback data shape moving and its readers following.
+**Correct, necessary, and not journal work. Nothing to do.**
+
+**THE METHOD ERROR THAT CAUSED IT, worth more than the item:** the seat read
+"file appears in `git log --name-only`" as "someone worked on this", and quoted
+the FILE'S line count (1,924) beside it — which reads as the size of the change.
+**`--name-only` cannot distinguish a one-line sweep from a rewrite. Always read
+`--numstat` or the diff before calling a file "worked on", and never quote a file
+size as if it were a diff size.**
+
+## SAFE FOR A PARALLEL AGENT (Codex, in its OWN worktree — never this checkout)
+
+Sam runs Codex in separate worktrees under `~/Documents/lfa-*`; that pattern is
+correct and should continue. **Two agents in ONE checkout share a git index and
+a test chain — the seat hit the lock toll alone on 2026-08-12 (see the handoff's
+environment section). Give a parallel agent its own worktree and its own branch.**
+
+**HANDS OFF while items 2-4 are live** — the terminal is in these:
+- `src/components/SeasonPhaseShiftSheet.tsx` → `HomeScreenV2.tsx:3352` (the phase
+  sheet; its `pendingGameDay` / `gameAnchorAnswered` props are item 2's fixture
+  work). **NOTE THE SURFACE IS THE COACH TAB** — `CoachTabScreen.tsx:479` — not
+  the home screen; see `HOW_TO_BUILD_THIS_APP` §6.
+- `src/screens/onboarding/GameDayScreen.tsx` (item 2a opens this picker)
+- `src/components/PlanChangeSheet.tsx` (item 4 gives its `block` step a way out)
+
+**GOOD FIRST PARALLEL JOB — FINISH THE PHASE-SHEET MOVE.** The surface moved to
+My Status; the implementation did not follow, so
+`src/components/SeasonPhaseShiftSheet.tsx` is a permanent six-line re-export of a
+component that still lives inside `HomeScreenV2.tsx`. Its own comment says it is
+only for *"while its surface moves"*. **Move the implementation to
+`src/components/`, delete the bridge.** Isolated, no rules touched — **but it
+COLLIDES with items 2-4, so it runs BEFORE them or AFTER them, never during.**
+
+**STANDING INSTRUCTION FOR ANY BUTTON REMOVAL:** this repo has ~38 tap sites in
+files that read as live (`HomeScreenClassic` sits inside the file the navigator
+mounts, behind a compile-time const). **Prove a control is REACHABLE before
+removing it, and report the ones that could not be reached** — those are the
+finding, not the failure. `LAW-L5-no-dead-affordances` is UNENFORCED, so nothing
+catches a mistake here automatically.
+
+---
+
 1. **THE MODERATE DAY — the other half of Sam's shape, held by nothing.** He
    named *"4 hard days plus 1 moderate/easy day"*; the Bible states it once
    (`LFA_PROGRAMMING_BIBLE.md:4808`). **Hard days have a preferred range, a
@@ -39,7 +207,21 @@ writing a `⚠ SAM` line.**
    app builds toward 4+1. **MEASURE FIRST:** print `achievedModerateDayCount`
    across all 17 `test:qa` scenarios.
 
-2. **THE FIXTURE WORK — sequenced in `HOW_TO_BUILD_THIS_APP` §5, items 1-4.**
+2. **THE FIXTURE WORK — (a) and (b) are DONE 2026-08-12; (c) and (d) are LIVE.**
+   `docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md`, guard `test:game-anchor`.
+   **(a) any day of the week — LANDED.** One owner `src/rules/gameAnchor.ts`
+   replaced EIGHT copies of the predicate; the allowlist, the `GameDay` enum and
+   `mapToLegacyGameDay` are deleted. **The plan named one closed picker; there
+   were two** — `ProfileScreen.tsx:74` had its own three-day list. **No device
+   migration is owed and it is proven, not assumed.**
+   **(b) `quiescentBoot` — LANDED in the same unit**, because it is the same
+   line; declared rather than banked separately.
+   **(c) THE ±7 INVENTION IS THE NEXT UNIT, and it is now MORE reachable** — a
+   midweek athlete can exist for the first time, and an irregular fixture list
+   is exactly what `section18CraftTier.ts:161` gets wrong.
+   **(d) the waist at `derivedWeekContract.ts:90` is untouched.**
+
+   Original order, kept for (c) and (d):
    **Supersedes every earlier game-day order in this file, on SAM'S OWN WORDS,
    2026-08-12:** *"games should be able to be placed any day of the week - i
    can't know when every single club in aus is going to play a game so I want to

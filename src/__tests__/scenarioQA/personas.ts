@@ -369,7 +369,11 @@ export const PERSONA_SCENARIOS: Scenario[] = [
     intent: 'Some clubs have midweek games. usualGameDay=Wednesday should still produce a coherent week.',
     profile: (() => {
       const p = inseasonHealthy5d2tSat();
-      return { ...p, usualGameDay: 'Wednesday', gameDay: 'Varies' } as OnboardingData;
+      // Both fields say Wednesday now. Before 2026-08-12 `gameDay` could not
+      // hold a midweek day at all, so this persona had to carry the legacy
+      // 'Varies' beside its real answer — the exact split that lost the
+      // athlete's fixtures on relaunch.
+      return { ...p, usualGameDay: 'Wednesday', gameDay: 'Wednesday' } as OnboardingData;
     })(),
     actions: [{ type: 'onboard' }],
   },

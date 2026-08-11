@@ -22,6 +22,7 @@ import {
 } from '../../utils/sessionComponents';
 import { dayOfWeekForISODate } from '../../utils/appDate';
 import { composeDaySurfaces } from '../../rules/dayPrecedence';
+import { storedGameAnchor } from '../../rules/gameAnchor';
 import {
   DEV_E2E_DATE_ANCHORS,
   devE2EWeekStartForSeed,
@@ -632,7 +633,7 @@ function expectedOnboardingAcceptedRevision(
   let revision = 2; // clearManualOverrides + setCurrentProgram
   if (program.microcycles[0]) revision += 1;
   if (underlyingWorkoutForDate(program, anchorDate)) revision += 1;
-  if (profile.gameDay && profile.gameDay !== 'Varies') {
+  if (storedGameAnchor(profile)) {
     revision += program.microcycles.length;
   }
   return revision;

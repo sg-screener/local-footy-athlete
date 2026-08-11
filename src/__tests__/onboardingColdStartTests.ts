@@ -399,14 +399,14 @@ async function main(): Promise<void> {
   await run('4 empty calendar store means no invented non-fixture marks', () => {
     resetToSparseColdStart();
     useProfileStore.setState({
-      onboardingData: { ...DEV_TEST_ONBOARDING_DATA, gameDay: 'Varies', usualGameDay: undefined },
+      onboardingData: { ...DEV_TEST_ONBOARDING_DATA, gameDay: undefined, usualGameDay: undefined },
     });
     const value = withoutGenerationLogs(() => generateProgramLocally(
-      { ...DEV_TEST_ONBOARDING_DATA, gameDay: 'Varies', usualGameDay: undefined },
+      { ...DEV_TEST_ONBOARDING_DATA, gameDay: undefined, usualGameDay: undefined },
       { todayISO: '2026-07-13', previousProgram: null, activeConstraints: [] },
     ));
     withoutGenerationLogs(() => seedOnboardingProgram({
-      onboardingData: { ...DEV_TEST_ONBOARDING_DATA, gameDay: 'Varies', usualGameDay: undefined },
+      onboardingData: { ...DEV_TEST_ONBOARDING_DATA, gameDay: undefined, usualGameDay: undefined },
       program: value,
       todayISO: '2026-07-13',
     }));
@@ -449,7 +449,7 @@ async function main(): Promise<void> {
     const offSeason = withoutGenerationLogs(() => generateProgramLocally({
       ...DEV_TEST_ONBOARDING_DATA,
       seasonPhase: 'Off-season',
-      gameDay: 'Varies',
+      gameDay: undefined,
       usualGameDay: undefined,
       teamTrainingDaysPerWeek: 0,
       teamTrainingDays: [],

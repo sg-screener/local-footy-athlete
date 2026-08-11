@@ -20,6 +20,7 @@ import {
   WEEK_DAYS,
   type PhaseShiftStep,
 } from '../screens/home/homeScreenConstants';
+import { storedGameAnchor } from '../rules/gameAnchor';
 
 /**
  * The one owner of the athlete's season-phase review flow.
@@ -58,13 +59,8 @@ export function useSeasonPhaseControl() {
       (onboardingData.preferredTrainingDays as DayOfWeek[]) || [],
     );
     setPendingTeamDays((onboardingData.teamTrainingDays as DayOfWeek[]) || []);
-    const storedGameDay =
-      (onboardingData.usualGameDay as DayOfWeek | undefined)
-      || (typeof onboardingData.gameDay === 'string'
-        && WEEK_DAYS.includes(onboardingData.gameDay as DayOfWeek)
-        ? onboardingData.gameDay as DayOfWeek
-        : null);
-    setPendingGameDay(storedGameDay ?? null);
+    const storedGameDay = storedGameAnchor(onboardingData);
+    setPendingGameDay(storedGameDay);
     setGameAnchorAnswered(Boolean(storedGameDay));
     setVisible(true);
   };

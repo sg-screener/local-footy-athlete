@@ -1,4 +1,5 @@
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
+import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
 
 /**
  * Shared constants for the Home screen.
@@ -9,16 +10,13 @@ import type { SeasonPhase, DayOfWeek } from '../../types/domain';
  * tokens stay inside the render files.
  */
 
-/** Week day labels for the phase-shift setup selectors. */
-export const WEEK_DAYS: DayOfWeek[] = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
+/**
+ * Week day labels for the phase-shift setup selectors.
+ *
+ * An ALIAS, not a copy. The list is owned by `rules/gameAnchor.ts` so that a
+ * picker and the rule reading its answer can never disagree about the week.
+ */
+export const WEEK_DAYS: DayOfWeek[] = DAYS_OF_WEEK;
 
 export const DAY_SHORT: Record<DayOfWeek, string> = {
   Monday: 'Mon',

@@ -31,13 +31,13 @@ import type {
   SeasonPhase,
   ReadinessLevel,
   DayOfWeek,
-  GameDay,
   WeekScopedWorkoutOverlay,
   LoggedWorkout,
   UserRemovalConstraint,
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import { composeAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
@@ -155,11 +155,11 @@ export interface ScheduleState {
    */
   usualGameDay?: DayOfWeek;
   /**
-   * Legacy game day from onboarding's GameDayScreen. Used as fallback
-   * when usualGameDay is not set (only Friday/Saturday/Sunday count;
-   * 'Varies' is excluded).
+   * The onboarding screen's game day, used as the fallback when `usualGameDay`
+   * is not set. ANY of the seven days. Resolved by `storedGameAnchor`, which is
+   * also what makes a legacy `'Varies'` read as no anchor.
    */
-  gameDay?: GameDay;
+  gameDay?: DayOfWeek;
   /**
    * Athlete capacity band for conditioning caps.
    *
@@ -508,25 +508,22 @@ const DOW_TO_NUM: Record<DayOfWeek, number> = {
 /**
  * Resolve the effective game day from profile fields.
  *
- *   1. Prefer `usualGameDay` (new-style, set by phase-shift modal).
- *   2. Fallback to legacy `gameDay` if it is Friday / Saturday / Sunday
- *      (onboarding's GameDayScreen only sets this field).
- *   3. 'Varies' → no effective game day (user must mark manually).
+ * THE FRI/SAT/SUN ALLOWLIST THAT USED TO LIVE HERE IS DELETED (2026-08-12).
+ * It was the entire reason a game could not be on a Tuesday: this function
+ * answered `undefined` for any midweek day, so the week downstream was built as
+ * if there were NO GAME — no G-1, no G-2, no G+1. The athlete got the wrong
+ * week, not a missing preference.
  *
- * Returns undefined if no effective game day can be determined.
- *
- * This mirrors `coachingEngine.ts`'s `data.usualGameDay || data.gameDay`
- * so resolver + engine agree on "what day is the weekly game?".
+ * `storedGameAnchor` is now the one owner of "which day is the game", shared
+ * with the profile sheet, the phase sheet, the generator, the replan, the boot
+ * re-seed and the coach. Seven other copies of this question were collapsed
+ * onto it.
  */
 export function resolveEffectiveGameDay(
   usualGameDay?: DayOfWeek,
-  gameDay?: GameDay,
+  gameDay?: DayOfWeek,
 ): DayOfWeek | undefined {
-  if (usualGameDay) return usualGameDay;
-  if (gameDay === 'Friday' || gameDay === 'Saturday' || gameDay === 'Sunday') {
-    return gameDay;
-  }
-  return undefined;
+  return storedGameAnchor({ usualGameDay, gameDay }) ?? undefined;
 }
 
 /**
@@ -611,7 +608,7 @@ function getEffectiveGameDates(
 export function effectiveGameDatesAround(args: {
   markedDays: Readonly<Record<string, CalendarDayType>>;
   usualGameDay?: DayOfWeek;
-  gameDay?: GameDay;
+  gameDay?: DayOfWeek;
   seasonPhase: SeasonPhase | null | undefined;
   centerDate: string;
   windowDays?: number;
@@ -2201,33 +2198,27 @@ export function getBlockBounds(state: ScheduleState): {
 
 // ─── Calendar Seeding ───
 
-/** Map a GameDay name to JS dayOfWeek number (0=Sun..6=Sat). */
-const GAME_DAY_MAP: Record<string, number> = {
-  Sunday: 0,
-  Monday: 1,
-  Tuesday: 2,
-  Wednesday: 3,
-  Thursday: 4,
-  Friday: 5,
-  Saturday: 6,
-};
-
 /**
  * Compute all dates within a block that fall on a given weekday.
  * Used to seed calendarStore with game dates after onboarding.
  *
- * Example: gameDay='Saturday', block 2026-03-15 to 2026-04-05
- *   → ['2026-03-21', '2026-03-28', '2026-04-04']
+ * Example: gameDay='Wednesday', block 2026-03-15 to 2026-04-05
+ *   → ['2026-03-18', '2026-03-25', '2026-04-01']
  *
- * Returns empty array for 'Varies' (user must set manually).
+ * `GAME_DAY_MAP` used to live here and was a character-for-character duplicate
+ * of `DOW_TO_NUM` above — two tables that could drift about how many days a
+ * week has. There is one now.
+ *
+ * Anything that is not one of the seven days seeds nothing. That is how a
+ * profile still holding the legacy `'Varies'` behaves, unchanged.
  */
 export function computeGameDatesForBlock(
   gameDay: string,
   blockStartDate: string,
   blockEndDate: string,
 ): string[] {
-  const targetDow = GAME_DAY_MAP[gameDay];
-  if (targetDow === undefined) return []; // 'Varies' or unknown
+  if (!isDayOfWeek(gameDay)) return [];
+  const targetDow = DOW_TO_NUM[gameDay];
 
   const dates: string[] = [];
   const start = blockStartDate.split('T')[0];

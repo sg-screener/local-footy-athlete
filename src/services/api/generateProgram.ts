@@ -55,6 +55,7 @@ import {
   resolveWeeklyConditioningFeasibility,
 } from '../../rules/conditioningFeasibility';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
+import { storedGameAnchor } from '../../rules/gameAnchor';
 import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
 import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
 import { freshGenerationSurfaces } from '../../utils/liveEvaluationSurfaces';
@@ -262,8 +263,7 @@ function gameDayOfWeekFor(
 ): number | null {
   const game = workouts.find((workout) => workout.workoutType === 'Game');
   if (game) return game.dayOfWeek;
-  const usual = profile.usualGameDay
-    ?? (profile.gameDay && profile.gameDay !== 'Varies' ? profile.gameDay : null);
+  const usual = storedGameAnchor(profile);
   return usual ? DAY_MAP[usual] ?? null : null;
 }
 
