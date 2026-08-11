@@ -395,7 +395,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       state: 'guarded',
       by: 'test:profile-reset-ui + test:equipment-vocabulary + .maestro/golden/profile-setup-equipment.yaml',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: Profile independently subscribed to four status stores, rebuilt the active Coach Notes list already owned by My Status, and rendered it as a second COACH ADJUSTMENTS section. The Equipment row separately expanded the onboarding preset into every seeded item and exposed Edit equipment beside the one setup-change door. WHAT THE CELLS HOLD: Profile imports no status stores or active-note selector, renders none of the section/copy/test ids, uses the dedicated onboarding-choice formatter, contains no direct equipment-edit control in its Program card, and mounts the existing equipment editor only through the setup sheet. The formatter pins Commercial gym, Club gym, Home gym and explicit Bodyweight only without falling back to an item list. Clear coach chat is preserved under Danger Zone because it is conversation deletion, not adjustment status. FIRST DEVICE FINDING: the existing item editor was taller than the phone, auto-height and non-scrollable, so it opened with its title and first rows above the screen. The Profile cell now requires that full editor to use a flexible Sheet and ScrollView. WHAT THE TAPE HOLDS: the commercial-gym seed reaches Profile, shows only Commercial gym, has no Coach adjustments, opens the setup sheet, reaches its equipment door, sees the editor title at the top, then scrolls the real list through to Save. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone; profiles whose old data never stored a location; completing an equipment save on-device; whether Clear coach chat belongs in a future account/settings surface.',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: Profile independently subscribed to four status stores, rebuilt the active Coach Notes list already owned by My Status, and rendered it as a second COACH ADJUSTMENTS section. The Equipment row separately expanded the onboarding preset into every seeded item and exposed Edit equipment beside the one setup-change door. WHAT THE CELLS HOLD: Profile imports no status stores or active-note selector, renders none of the section/copy/test ids, uses the dedicated onboarding-choice formatter, contains no direct equipment-edit control in its Program card, and mounts the existing equipment editor only through the setup sheet. The formatter pins Commercial gym, Club gym, Home gym and explicit Bodyweight only without falling back to an item list. FIRST DEVICE FINDING: the existing item editor was taller than the phone, auto-height and non-scrollable, so it opened with its title and first rows above the screen. The Profile cell now requires that full editor to use a flexible Sheet and ScrollView. WHAT THE TAPE HOLDS: the commercial-gym seed reaches Profile, shows only Commercial gym, has no Coach adjustments, opens the setup sheet, reaches its equipment door, sees the editor title at the top, then scrolls the real list through to Save. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone; profiles whose old data never stored a location; completing an equipment save on-device.',
     },
   },
   {
@@ -451,6 +451,50 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       by: 'test:day-first-timeline + test:readiness-ownership + test:program-control-durable + .maestro/golden/day-readiness-profile-type.yaml',
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED (LAW ZERO), EXPANDED WITH SAM\'S NEXT MESSAGE. TWO OPTIONS COMPARED: duplicate flat and sick sheets, or pass a typed entry into the existing readiness owner. The second removes a decision and adds no mutation representation. For Pretty flat, reusing poor-sleep or soreness would store a reason the athlete did not give; the existing moderate fatigue level (`not_right`) gets its own typed `flat_today` route instead. WHAT THE CELLS HOLD: readinessEntry is one typed visibility/entry owner; Tired routes flat and Sick routes sick; the sheet receives that entry; top/readiness-bucket-flat/readiness-bucket-sick, Something hurts and onInjury are absent; the flat region contains exactly three SheetOptions with the three signed labels and typed actions; sleep/soreness rows and bucket are absent; R16 pins flat_today to today-only moderate fatigue; the dedicated Injured control still opens the guided injury flow; the dead Time label and handler are absent from both screen and hook. WHAT THE TAPE HOLDS: Tired opens straight to the three semantic option ids with sleep/sore/injury ids absent; Sick opens straight to the three illness ids with flat/injury absent; both states are photographed. FIRST-RUN FINDINGS: four chained cells red on the old Time handler, label and chooser; the extension then red on four old flat options and on flat_today falling through to low_energy until its moderate mapping existed; the wider durable guard then found the unreachable short-time handler still authored and exported by the hook, so that dead doorway was removed while the typed domain action stayed covered. The tape\'s first text assertion failed because SheetOption deliberately exposes its stable semantic id as the accessibility label; the screenshot showed all three rows, and the rerun used those ids rather than weakening presence. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone, modal height on every device, or a new programming-content ruling about what moderate fatigue changes downstream.',
+    },
+  },
+  {
+    id: 'LAW-profile-danger-zone-is-one-reset',
+    law: 'Profile Danger Zone contains one readable Full reset action; the standalone Clear coach chat action does not exist, while Full reset still clears the complete app state through the canonical reset owner.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "danger zone has small text as well - clear coach chat does not need to be there any more = delete that part". This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:profile-reset-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). WHAT THE CELLS HOLD: the live Profile imports, handler, press log, label and stable control for the standalone clear-chat action are absent; Full reset remains after the Danger Zone anchor, invokes resetProgramAndOnboarding, and uses the same shared 15/20 title plus 13/19 description scale as the other Profile action cards. The reset utility remains tested independently because Full reset still clears coach history as one part of the whole reset. FIRST RUN: nine cells red on the old row and undersized primitive text. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone or a future account-level conversation-management surface.',
+    },
+  },
+  {
+    id: 'LAW-missed-session-prompt-reuses-owned-doors',
+    law: 'The missed-session prompt offers exactly Did it, Skipped it and Move it forward: Did it opens the existing session survey without fabricated answers, Skipped it records a skipped outcome without deleting content, and Move it forward enters the existing move-session pathway without choosing a destination itself.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "it should only have 3 \"did it\" ... \"skipped it\" ... and move it forward". This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:missed-signup',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). TWO OPTIONS COMPARED: relabel the four existing direct mutations, or make the prompt a router into the existing survey/move owners and retain one accepted skip transaction. The latter removes two hidden decisions and two mutation representations. WHAT THE CELLS HOLD: exactly three labelled stable controls; old labels and response tokens absent; Did it navigates DayWorkout with its owned feedback mode; the missed-session model cannot manufacture good/full; Skipped it commits completion skipped and contains no bin or move action; Move selects PlanChangeSheet\'s move entry, whose effect calls the same startMove function as the visible menu row. FIRST RUN: the old fourth chip, fabricated feedback, bin action and automatic rest-day move all red. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone, every refusal branch in the move sheet, or the redesigned session checklist ruled immediately afterward.',
+    },
+  },
+  {
+    id: 'LAW-session-execution-checklist-owns-completion',
+    law: 'A live session is split into collapsible component sections with a checkbox for every exercise or unit. Checked rows visibly recede; those ticks are the sole completion evidence, derive full/partial/skipped results per component and section, and persist with one whole-session 1-5 effort score on a single row. Mobility and optional accessories are measured separately but remain non-load-bearing and no-penalty.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "each component of the session should be its own pop down"; exercises are checked as they are done; completion is derived from the ticks; the bottom feedback is 1-5, where 1 is very easy and 5 is very hard. This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-execution-checklist',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO), AND IT EXPLICITLY SUPERSEDES THE OLD MOBILITY UI CLAUSE THAT SAID ITS TICK WAS LOCAL, COSMETIC AND NEVER LOGGED. The programming law survives unchanged: mobility remains optional, adds no component credit and never gates Finish. TWO OPTIONS COMPARED: bolt checkboxes onto each existing renderer and infer completion again in the feedback form, or build one pure execution plan from the already-owned session template and let both rendering and feedback consume its item results. The latter removes the manual completion representation entirely. WHAT THE CELLS HOLD: one pure plan groups mobility, power, strength, accessories, conditioning, team and recovery rows; stable item ids; controlled chevron sections and checkbox rows; completed styling; component and section full/partial/skipped derivation; mobility measured with null component ownership; no load-bearing flow leak; the checklist branch contains no completion-choice chips; the saved canonical result preserves every item and one 1-5 effort score without inventing feel/soreness/reasons; all five choices fit one row and use Sam\'s very-easy/very-hard anchors; a performed session without a valid 1-5 score is refused; the result, effort score and mobility evidence survive the existing act-then-force-quit/relaunch tape. FIRST RUN: the new owner was absent, then compile caught three wiring errors; the old mobility guard correctly red on its superseded cosmetic-only clause; the legacy feedback guard caught session effort leaking into its conditioning-only path, which was narrowed back to checklist mode. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone, VoiceOver order, or analytics/recommendations that consume the new per-section evidence.',
+    },
+  },
+  {
+    id: 'LAW-completed-day-has-one-status',
+    law: 'On the day screen, a completed session is communicated once by a tick and the words Session complete; it does not also render a competing Done badge beside the session-type badge.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "maybe session complete is enough and we remove the done badge" and "make the icon next to session complete a tick not a pulse". This guarded registry row is the durable ruling site.',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-execution-checklist',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). WHAT THE CELLS HOLD: the day-card badge region is found before it is read; that region contains no Done badge; the completed line still says Session complete; a Material Community check icon precedes it; and the old pulse path cannot precede it. The week list retains its compact Done state because it has no Session complete line and therefore no duplication. FIRST RUN: the screenshot showed the Done pill visually outweighing CORE while the card repeated the same state below. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone or the week-list completed marker, which this ruling did not remove.',
     },
   },
   {
@@ -1104,6 +1148,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       state: 'UNENFORCED',
       wouldTake: 'This is LAW-north-star\'s operational half; the same persisted-key ratchet would hold both. Its three STOP conditions (classification uncertain, etc.) are what a guard must not flatten.',
       receipt: 'COLLAPSE CANDIDATE with LAW-north-star. Ordered into existence after the same ruling took NINE stops to be made — the loop-audit law\'s founding case.',
+    },
+  },
+  {
+    id: 'LAW-fixture-projection-is-not-calendar-input',
+    law: 'Recurring and one-off game fixtures persist once as Profile or decision-ledger inputs; Calendar persists calendar facts and never a derived game/noGame projection.',
+    ruledAt: 'docs/CODEX_UI_SESSION_PERSISTENCE_BOUNDARY_2026-08-11.md §Options compared before implementation; docs/NORTH_STAR.md',
+    guard: {
+      state: 'guarded',
+      by: 'test:calendar-ownership',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-11. Eight ownership cells pin the input-only Calendar selector at the store, accepted-transaction serializer and reload fingerprint. Its first run caught the second serializer after the store alone was fixed. Quiescent boot then proves the visible fixture returns by derivation, and `.maestro/golden/reload-standard-week.yaml` kills and relaunches the app before checking the visible Saturday Game Day card. NOT COVERED: legacy worlds whose only fixture record is an old Calendar game/noGame mirror.',
     },
   },
 

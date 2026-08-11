@@ -65,7 +65,7 @@ check('completed day card is driven by the persisted feedback receipt',
   /isCompleted \? \(/.test(home) &&
   /label="View summary"/.test(home));
 check('completed sessions show a Done marker in the week list',
-  /\{isCompleted && <Badge label="Done"/.test(home));
+  /function WeekDayCardHeader[\s\S]*?isCompleted \? <Badge label="Done" tone="success" size="xxs"/.test(home));
 check('reopening a completed session shows a read-only summary, not Finish again',
   /isAlreadyComplete && date \?/.test(workout) &&
   /headline="Session complete"/.test(workout) &&

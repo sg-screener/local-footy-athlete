@@ -5,6 +5,30 @@ reached 353KB and was being re-read at every terminal stop. Nothing is
 deleted; this is the same content, moved off the hot path. Do not read
 this file routinely — it is history, searched on demand.**
 
+## Processed 2026-08-11 — RENEE'S SEVEN-DAY STRUCTURE, LIVE SESSION CHECKLIST AND GAME-DAY DURABILITY
+
+**Full report: `docs/CODEX_UI_SESSION_PERSISTENCE_BOUNDARY_2026-08-11.md`.**
+
+- **THE WEEK LIST NOW USES HER CARD STRUCTURE FOR ALL SEVEN DAYS.** Sam answered
+  the only question in the order: *"Use her card design for all 7 days."* Today
+  is highlighted but collapsed, all session cards reveal the complete session
+  inline, and Rest / Game Day are shorter centred status cards.
+- **THE COMPLETE EYE PASS LANDED AS ONE OWNED SURFACE.** Day, status, season
+  review, Profile, readiness, missed-session and live-feedback decisions are
+  recorded in the boundary. The completed Day card has no redundant Done badge
+  and uses a green tick beside `Session complete`.
+- **THE DISK DEFECT IS CLOSED AT ITS OWNER.** The first reload exposed a second
+  Profile wipe; protecting it then reproduced the inbox count exactly — four
+  game days in memory, one on Calendar disk. Recurring and one-off fixtures now
+  persist once as Profile / ledger inputs and the visible week rebuilds from
+  them. The corrected cold-seed → checkpoint → process-stop → relaunch tape
+  completes and finds the Saturday Game Day card on Week.
+- **FIRST-RUN FAILURE KEPT:** filtering only the Calendar store was insufficient;
+  the accepted-state transaction had a second serializer. The new ownership
+  cell failed on that second writer before it was repaired.
+- **NOT COVERED:** Sam's physical iPhone, a census of legacy calendar-only
+  fixture worlds, and a deep accumulated checklist device walk.
+
 
 ## Processed 2026-08-10 (sixty-sixth pass) — THE WALK IS GREEN, THE CRASH IS THE HARNESS'S OWN TRAP, AND A DEV LOG BANNER HAD BLINDED THE TAB BAR
 

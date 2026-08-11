@@ -196,6 +196,7 @@ export interface RecordSessionOutcomeIntent {
   conditioning?: ConditioningPerformanceLog;
   notes?: string;
   difficulty?: number;
+  executionItems?: import('../utils/sessionExecutionChecklist').SessionExecutionItemResult[];
   source: SessionOutcomeSourceMetadata;
 }
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from './common/Text';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -10,6 +11,8 @@ import {
 
 interface MobilityPrehabFlowSectionProps {
   flow: MobilityPrehabFlow | null;
+  completedItemIds: ReadonlySet<string>;
+  onToggleItem: (itemId: string) => void;
 }
 
 /**
@@ -24,18 +27,16 @@ interface MobilityPrehabFlowSectionProps {
  * and no fill: available at a glance, silent if ignored, and visibly not a row
  * in the list it sits above.
  *
- * ## The tick is cosmetic, and that is a hard rule
- *
- * §6 item 9: a soft checkmark for the athlete's own sense of having done it —
- * never logged, never persisted beyond the session view, never synced, never
- * gating Finish Session. It is therefore plain component state, and the label
- * says so out loud rather than letting the athlete assume it counted for
- * something. `mobilityPrehabFlowTests` §6 fails if this component ever reaches
- * for a store.
+ * Each movement now reports through the session's controlled execution owner.
+ * This component still owns only disclosure; it cannot save feedback or infer
+ * session completion by itself.
  */
-export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionProps) {
+export function MobilityPrehabFlowSection({
+  flow,
+  completedItemIds,
+  onToggleItem,
+}: MobilityPrehabFlowSectionProps) {
   const [expanded, setExpanded] = React.useState(false);
-  const [done, setDone] = React.useState(false);
 
   if (!flow) return null;
 
@@ -51,7 +52,7 @@ export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionPro
       >
         <View style={styles.headerText}>
           <Text style={styles.title}>
-            Mobility &amp; Prehab{done ? ' ✓' : ''}
+            Mobility / Warm-up
           </Text>
           {/*
             NO MINUTES CLAIM ANY MORE. The duration came from a pre-built bundle
@@ -67,7 +68,11 @@ export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionPro
             {flow.movementCount} movements · optional
           </Text>
         </View>
-        <Text style={styles.chevron}>{expanded ? '−' : '+'}</Text>
+        <MaterialCommunityIcons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={colors.text.tertiary}
+        />
       </Pressable>
 
       {expanded ? (
@@ -81,38 +86,45 @@ export function MobilityPrehabFlowSection({ flow }: MobilityPrehabFlowSectionPro
           {flow.movements.map(({ exercise }) => (
             <MovementRow
               key={`flow-movement-${exercise.id}`}
+              itemId={`mobility:${exercise.id}`}
               name={exercise.name}
               dose={mobilityFlowMovementDose(exercise)}
+              completed={completedItemIds.has(`mobility:${exercise.id}`)}
+              onToggle={onToggleItem}
             />
           ))}
-
-          <Pressable
-            onPress={() => setDone((prev) => !prev)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: done }}
-            accessibilityLabel="Mark the mobility and prehab flow as done"
-            style={({ pressed }) => [styles.doneRow, pressed && { opacity: 0.7 }]}
-            testID="mobility-prehab-flow-done"
-          >
-            <View style={[styles.tick, done && styles.tickChecked]}>
-              {done ? <Text style={styles.tickMark}>✓</Text> : null}
-            </View>
-            <Text style={styles.doneLabel}>
-              {done ? 'Done — nothing is logged' : 'Mark as done'}
-            </Text>
-          </Pressable>
         </View>
       ) : null}
     </View>
   );
 }
 
-function MovementRow({ name, dose }: { name: string; dose: string }) {
+function MovementRow({ itemId, name, dose, completed, onToggle }: {
+  itemId: string;
+  name: string;
+  dose: string;
+  completed: boolean;
+  onToggle: (itemId: string) => void;
+}) {
   return (
-    <View style={styles.movementRow}>
+    <Pressable
+      onPress={() => onToggle(itemId)}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: completed }}
+      accessibilityLabel={`${completed ? 'Completed' : 'Mark complete'}: ${name}`}
+      testID={`session-execution-check-${itemId}`}
+      style={({ pressed }) => [
+        styles.movementRow,
+        completed && styles.movementComplete,
+        pressed && { opacity: 0.65 },
+      ]}
+    >
+      <View style={[styles.tick, completed && styles.tickChecked]}>
+        {completed ? <Text style={styles.tickMark}>✓</Text> : null}
+      </View>
       <Text style={styles.movementName}>{name}</Text>
       <Text style={styles.movementDose}>{dose}</Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -135,8 +147,6 @@ const styles = StyleSheet.create({
   headerText: { flex: 1, gap: 2 },
   title: { color: '#D0D0D0', fontSize: 15, fontWeight: '700' },
   summary: { color: '#7A7A7A', fontSize: 12, fontWeight: '500' },
-  chevron: { color: '#7A7A7A', fontSize: 20, fontWeight: '400' },
-
   body: { paddingBottom: spacing.md, gap: 6 },
   movementRow: {
     flexDirection: 'row',
@@ -144,17 +154,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
+  movementComplete: { opacity: 0.42 },
   movementName: { flex: 1, color: '#D0D0D0', fontSize: 14, fontWeight: '500' },
   movementDose: { color: '#7A7A7A', fontSize: 13, fontWeight: '600' },
 
-  doneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  // Deliberately not the lime CTA treatment — this action has no consequence,
-  // so it must not borrow the visual weight of one that does.
   tick: {
     width: 18,
     height: 18,
@@ -166,5 +169,4 @@ const styles = StyleSheet.create({
   },
   tickChecked: { borderColor: colors.accent.lime },
   tickMark: { color: colors.accent.lime, fontSize: 11, fontWeight: '800' },
-  doneLabel: { color: '#7A7A7A', fontSize: 13, fontWeight: '600' },
 });

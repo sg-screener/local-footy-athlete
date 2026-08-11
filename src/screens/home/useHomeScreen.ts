@@ -46,10 +46,9 @@ import {
 } from '../../utils/guidedInjuryControl';
 import {
   mostRecentMissedSession,
-  missedSessionFeedback,
+  missedSessionSkippedFeedback,
   programHistoryBoundaryFromCreatedAt,
   type MissedSession,
-  type MissedSessionResponse,
 } from '../../utils/missedSessions';
 import {
   commitSessionOutcomeTransaction,
@@ -1294,91 +1293,37 @@ export function useHomeScreen() {
   }, [weekDays, handleProgramControlResult]);
 
   // ── Missed sessions ──
-  // Did it / Missed it → record feedback (feeds progression: 'full' allows
-  // normal progression, 'skipped' holds load). Skip it → bin the day.
-  // Move it forward → move the session to the next open rest day. Every
-  // path clears the prompt because detection keys off feedback + a live
-  // trainable session on that date.
-  const handleMissedSessionResponse = useCallback(async (
-    missed: MissedSession,
-    response: MissedSessionResponse,
-  ) => {
+  // The prompt does not own a parallel survey or move engine. It exposes the
+  // existing visible owners for those two decisions; this hook owns only the
+  // two real operations it can perform without another athlete choice.
+  const handleLogMissedSession = useCallback((missed: MissedSession) => {
+    const workout = weekDays.find((day) => day.date === missed.date)?.workout;
+    if (!workout) return;
+    navigation.navigate('DayWorkout', {
+      workoutId: workout.id,
+      date: missed.date,
+      startFinished: true,
+    });
+  }, [navigation, weekDays]);
+
+  const handleSkipMissedSession = useCallback(async (missed: MissedSession) => {
     const todayISO = todayISOLocal();
-    if (response === 'did_it' || response === 'missed_it') {
-      const workout = weekDays.find((day) => day.date === missed.date)?.workout ?? null;
-      const feedback = missedSessionFeedback(missed.date, response);
-      const result = await commitSessionOutcomeTransaction(
-        createRecordSessionOutcomeIntentFromFeedback({
-          date: missed.date,
-          feedback,
-          workout,
-          todayISO,
-          source: {
-            entryPoint: 'tap',
-            surface: 'missed_session_prompt',
-          },
-        }),
-      );
-      if (!result.ok) logger.warn('[missed-session] feedback transaction failed', result);
-      return;
-    }
-    if (response === 'skip_it') {
-      const result = await executeProgramControlActionDurably({
-        type: 'bin_session',
+    const workout = weekDays.find((day) => day.date === missed.date)?.workout ?? null;
+    const feedback = missedSessionSkippedFeedback(missed.date);
+    const result = await commitSessionOutcomeTransaction(
+      createRecordSessionOutcomeIntentFromFeedback({
+        date: missed.date,
+        feedback,
+        workout,
+        todayISO,
         source: {
-          screen: 'program_tab',
+          entryPoint: 'tap',
           surface: 'missed_session_prompt',
-          initiatedBy: 'tap',
         },
-        scope: 'today_only',
-        payload: { date: missed.date },
-        requiresRebuild: false,
-        createsActiveModifier: false,
-        oneOffOnly: true,
-      }, { visibleWeek: weekDays, todayISO });
-      await handleProgramControlResult(result);
-      return;
-    }
-    // move_forward → soonest open (rest) day today-or-later this week.
-    const target = weekDays
-      .filter((day) => day.date >= todayISO && !day.workout)
-      .map((day) => day.date)
-      .sort()[0];
-    if (!target) {
-      // Nowhere open to land it — acknowledge as missed so the athlete
-      // isn't stuck, and the prompt clears.
-      const workout = weekDays.find((day) => day.date === missed.date)?.workout ?? null;
-      const feedback = missedSessionFeedback(missed.date, 'missed_it');
-      const result = await commitSessionOutcomeTransaction(
-        createRecordSessionOutcomeIntentFromFeedback({
-          date: missed.date,
-          feedback,
-          workout,
-          todayISO,
-          source: {
-            entryPoint: 'tap',
-            surface: 'missed_session_prompt_no_move_target',
-          },
-        }),
-      );
-      if (!result.ok) logger.warn('[missed-session] fallback feedback transaction failed', result);
-      return;
-    }
-    const result = await executeProgramControlActionDurably({
-      type: 'move_session',
-      source: {
-        screen: 'program_tab',
-        surface: 'missed_session_prompt',
-        initiatedBy: 'tap',
-      },
-      scope: 'today_only',
-      payload: { fromDate: missed.date, toDate: target },
-      requiresRebuild: false,
-      createsActiveModifier: false,
-      oneOffOnly: true,
-    }, { visibleWeek: weekDays, todayISO });
-    await handleProgramControlResult(result);
-  }, [weekDays, handleProgramControlResult]);
+      }),
+    );
+    if (!result.ok) logger.warn('[missed-session] skipped outcome transaction failed', result);
+  }, [weekDays]);
 
   const handleApplyGuidedInjury = useCallback(async (
     result: GuidedInjuryFlowResult,
@@ -1757,7 +1702,8 @@ export function useHomeScreen() {
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
     missedSessionPrompt,
-    handleMissedSessionResponse,
+    handleLogMissedSession,
+    handleSkipMissedSession,
 
     // Stale overrides
     staleByDate,

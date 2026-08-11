@@ -121,17 +121,10 @@ export function programHistoryBoundaryFromCreatedAt(
   return `${y}-${m}-${d}`;
 }
 
-export type MissedSessionResponse = 'did_it' | 'missed_it' | 'move_forward' | 'skip_it';
+export type MissedSessionResponse = 'did_it' | 'skipped_it' | 'move_forward';
 
-/** Neutral feedback recorded when the athlete confirms they did / missed a
- *  session from the prompt. "did_it" allows normal progression; "missed_it"
- *  records a skip so the progression engine holds load rather than assuming
- *  the work happened. */
-export function missedSessionFeedback(
-  date: string,
-  response: 'did_it' | 'missed_it',
-): SessionFeedback {
-  return response === 'did_it'
-    ? { dateStr: date, feeling: 'good', completion: 'full' }
-    : { dateStr: date, completion: 'skipped' };
+/** A skipped prompt response records attendance only. "Did it" must go through
+ *  the real survey so the app never invents effort or readiness answers. */
+export function missedSessionSkippedFeedback(date: string): SessionFeedback {
+  return { dateStr: date, completion: 'skipped' };
 }

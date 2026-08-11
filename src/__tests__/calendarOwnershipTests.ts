@@ -47,6 +47,7 @@ import {
   endCalendarResetAction,
   calendarGuardedStorage,
   CALENDAR_PERSISTENCE_KEY,
+  calendarPersistedInputs,
 } from '../store/calendarStore';
 import {
   clearAllQuarantines,
@@ -99,6 +100,32 @@ function resetMarks(): void {
 }
 
 console.log('\n-- Calendar ownership (store-armour recipe) --');
+
+run('disk keeps calendar facts, never the derived fixture projection', () => {
+  const inputs = calendarPersistedInputs({
+    '2026-08-07': 'game',
+    '2026-08-08': 'rest',
+    '2026-08-09': 'noGame',
+  });
+  assert(JSON.stringify(inputs) === JSON.stringify({ '2026-08-08': 'rest' }),
+    `calendar persistence still owns a fixture projection: ${JSON.stringify(inputs)}`);
+
+  const srcRoot = path.resolve(__dirname, '..');
+  const storeSource = fs.readFileSync(path.join(srcRoot, 'store', 'calendarStore.ts'), 'utf8');
+  const persistenceSource = fs.readFileSync(
+    path.join(srcRoot, 'dev', 'e2e', 'devE2EPersistence.ts'), 'utf8');
+  const transactionSource = fs.readFileSync(
+    path.join(srcRoot, 'store', 'coachMutationTransaction.ts'), 'utf8');
+  assert(storeSource.includes(
+    'partialize: (state) => ({ markedDays: calendarPersistedInputs(state.markedDays) })'),
+  'the calendar envelope does not use the input-only selector');
+  assert(persistenceSource.includes(
+    'select: (state) => ({ markedDays: calendarPersistedInputs(state.markedDays) })'),
+  'reload still compares the live fixture projection against the input-only disk envelope');
+  assert(transactionSource.includes(
+    'state: { markedDays: calendarPersistedInputs(mirrors.markedDays) }'),
+  'the acknowledged coach transaction writes the fixture projection around the calendar input boundary');
+});
 
 run('the door refuses the default over answered marks', () => {
   resetMarks();

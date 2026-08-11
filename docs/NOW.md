@@ -19,13 +19,13 @@ and this file gets one line pointing at it.**
 > appearance in one day. **Before a `⚠ SAM` bullet is written, check the roadmap
 > and the stop docs for an answer already recorded.**
 
-- **⚠ SAM: THE DAY SCREEN'S ADDITIONS ARE BUILT AND YOU CAN LOOK AT THEM NOW.**
-  `25565430`. Eyebrow, drop-downs with exercises and prescriptions, the change
-  card, the calmer card. Both states shot at
-  `artifacts/ui-walk/dropdown-{1-collapsed,2-expanded}.png`,
-  `.maestro/golden/day-card-dropdowns.yaml` holds them, and the simulator is
-  sitting on the real screen. **Your eye on it is the next thing that moves the
-  merge. Still open — you have not sent it.**
+- **⚠ SAM: THE FULL RENEE EYE PASS IS SIMULATOR-GREEN, NOT ON YOUR PHONE (`.maestro/golden/one-set-feedback.yaml`).**
+  All seven Week cards, collapsed Today, inline session expansion, status and
+  season review, Profile cleanup, readiness routes, missed-session choices and
+  the live exercise checklist are in one checkpoint. The completed Day card now
+  has no Done badge and shows a green tick beside `Session complete`. The real
+  reload tape also preserves the Saturday Game Day card after process death.
+  `docs/CODEX_UI_SESSION_PERSISTENCE_BOUNDARY_2026-08-11.md`.
 
 - **⚠ SAM: THE REBUILD IS DONE AND THE WHITE SCREEN THAT FOLLOWED IS FIXED.**
   `61ab9e46`. A refused development launch used to render nothing at all; it now
@@ -85,34 +85,19 @@ and this file gets one line pointing at it.**
   remaining strands AND ruling 6. Both routes priced, recommendation given with
   its reason: `docs/REBUILD_NOTICE_OWNERSHIP_2026-08-10.md`. **First thing to
   check: whether `runRebuild` closes over day-screen state.**
-- **THE UI MERGE — SLICES 2, 3 AND 5 LANDED** (`25565430`, `2752c90a`,
-  `226531b2`). **THE WEEK NOW USES HER CARD STRUCTURE AND PROPORTIONS FOR ALL
-  SEVEN DAYS** (`62385b62`): large dates, compact badges, an acted active-
-  modifier line, collapsed entry with today independently highlighted, and
-  one-chevron flat full-session expansion are green on the simulator. Rest and
-  Game Day now use the same head as shorter, vertically-centred status cards;
-  Today has no week-date navigation; Week carries a compact date row below the
-  toggle and stays collapsed through previous/next returns. Today now uses each
-  component icon as its only marker — no dot/rail or duplicate headline icon —
-  with Renee's tighter type, badge and action proportions. Sam's iPhone
-  acceptance is still owed.
-  **STILL OPEN: slice 3b** — the status screen's buttons are a NO-OP and the day
-  screen keeps every control, because wiring them needs
-  `handleCoachNoteAction` and the phase-shift machine lifted out of
-  `useHomeScreen`. **So rulings 4 and 6 are NOT closed**; only ruling 4's
-  destination exists. Also open on the week: "Completed" on past weeks, and the
-  team-training badge (deferred with a reason — the row title already says it).
-  Plan:
-  `docs/UI_MERGE_PLAN_2026-08-10.md` · rulings:
-  `docs/UI_MERGE_RULINGS_2026-08-10.md` · her signed prototype:
-  `docs/design/LFA_UI_PROTOTYPE_2026-08-10.html`.
-- **THE SEEDED WORLD IS NOT DURABLE — PRICED, NOT FIXED.** One boolean (the
-  replay latch) carries two meanings, so the boot path cannot tell a REPLAY from
-  an INSTALL and drops the install's writes. Three fix shapes and the elegant one
-  named in `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 4. **Unblocks
-  six red flows. And the open question that matters most: does a REAL ONBOARDING
-  install hit the same window? Not measured — if it does, this is athlete-facing
-  data loss, not a harness bug.**
+- **THE RENEE UI PASS AND LIVE SESSION REDESIGN ARE GATES-GREEN, AWAITING SAM
+  DEVICE ACCEPTANCE.** One Week card head owns all seven days; Today starts
+  closed; Day shows the real warm-up, strength and conditioning rows; Coach owns
+  My Status and season phase; Profile no longer duplicates those controls. The
+  live session owns per-exercise completion and a 1–5 effort result. The Day
+  completion state says `Session complete` once with a green tick. Full receipts
+  and exclusions: `docs/CODEX_UI_SESSION_PERSISTENCE_BOUNDARY_2026-08-11.md`.
+- **THE SEEDED WORLD AND GAME DAYS NOW SURVIVE A REAL PROCESS RELAUNCH.** The
+  repair removed derived `game/noGame` rows from Calendar persistence and keeps
+  fixture decisions in Profile / the decision ledger. The corrected reload tape
+  cold-seeds, checkpoints, stops the app, relaunches it and sees Saturday Game
+  Day on Week. **Still not covered:** legacy worlds whose only fixture record is
+  an old Calendar mirror, and Sam's physical iPhone.
 - **`injury-case` INSTALLS AGAIN** (`31fc279f`) — the witness was right and the
   ORDER was wrong: an install claim was being validated after a legitimate
   mutation answered a different question. **It now fails on the DURABILITY defect

@@ -779,6 +779,14 @@ export function commitRebuiltProgram(
   program: TrainingProgram,
   sweep: OverrideSweepDecision,
   options: {
+    /**
+     * The profile that produced this program, when the caller already owns it.
+     * Boot must pass its captured input instead of re-reading the compatibility
+     * mirror during publication: on a real cold reload that mirror can be
+     * republished while the derived world is being accepted, and the resulting
+     * snapshot must still describe the athlete the generator actually used.
+     */
+    profile?: OnboardingData;
     markedDays?: Record<string, import('../store/calendarStore').CalendarDayType>;
     weekScopedOverlays?: Record<string, WeekScopedWorkoutOverlay>;
     selectedDate?: string;
@@ -811,6 +819,7 @@ export function commitRebuiltProgram(
     // declare themselves at the adjustment ledger's own commit; nothing that
     // reaches this owner is one.
     operation: 'forward_decision',
+    ...(options.profile ? { profile: options.profile } : {}),
     program: proposal,
     markedDays: options.markedDays,
     validateWeekStarts: [

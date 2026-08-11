@@ -176,6 +176,7 @@ interface PlanChangeSheetProps {
   visible: boolean;
   date: string | null;
   weekDays: ResolvedDay[];
+  initialAction?: 'actions' | 'move';
   onClose: () => void;
 }
 
@@ -185,7 +186,7 @@ function weekdayLabel(dateISO: string): string {
 }
 
 export function PlanChangeSheet({
-  visible, date, weekDays, onClose,
+  visible, date, weekDays, initialAction = 'actions', onClose,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'actions' });
   const onboardingData = useProfileStore((state) => state.onboardingData);
@@ -487,6 +488,12 @@ export function PlanChangeSheet({
     }
     setStep({ kind: 'pick_move_scope' });
   };
+
+  // A missed-session handoff enters the SAME move owner as the visible menu
+  // row. It does not choose a destination, copy its policy, or mutate a day.
+  useEffect(() => {
+    if (visible && initialAction === 'move') startMove();
+  }, [visible, date, initialAction]);
 
   // Remove entry point: multi-part days pick WHICH part first; days offering one
   // scope go straight to the are-you-sure.

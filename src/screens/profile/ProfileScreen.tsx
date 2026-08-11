@@ -24,7 +24,6 @@ import {
 } from '../../rules/profileSetupChange';
 import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
 import {
-  clearCoachChat,
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
 } from '../../utils/resetCoach';
@@ -259,21 +258,6 @@ export default function ProfileScreen() {
   }, [isSetupUpdating, setupUpdateMsgOpacity]);
 
   // ─── Reset handlers ────────────────────────────────────────────────
-  const onClearCoachChat = () => {
-    logger.debug('[reset-ui] clear_coach_chat_pressed');
-    Alert.alert(
-      'Clear coach chat?',
-      'Clears the coach conversation only. Keeps your program.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear chat',
-          onPress: () => clearCoachChat(),
-        },
-      ],
-    );
-  };
-
   const onFullReset = () => {
     logger.debug('[reset-ui] full_reset_pressed');
     Alert.alert(
@@ -806,7 +790,7 @@ export default function ProfileScreen() {
                 How your app, training and coach data is handled.
               </Text>
             </TouchableOpacity>
-            <View style={styles.resetDivider} />
+            <View style={styles.legalDivider} />
             <TouchableOpacity
               style={styles.legalRow}
               activeOpacity={0.7}
@@ -837,29 +821,14 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.resetRow}
               activeOpacity={0.7}
-              onPress={onClearCoachChat}
-              testID="profile-clear-coach-chat"
-              accessibilityLabel="Clear coach chat"
-            >
-              <Text variant="body" color={colors.text.primary} style={{ fontWeight: '600' }}>
-                Clear coach chat
-              </Text>
-              <Text variant="caption" color={colors.text.tertiary}>
-                Clears the coach conversation only. Keeps your program.
-              </Text>
-            </TouchableOpacity>
-            <View style={styles.resetDivider} />
-            <TouchableOpacity
-              style={styles.resetRow}
-              activeOpacity={0.7}
               onPress={onFullReset}
               testID="profile-full-reset"
               accessibilityLabel="Full reset"
             >
-              <Text variant="body" color={colors.status.error} style={{ fontWeight: '700' }}>
+              <Text style={[styles.secondaryActionTitle, { color: colors.status.error }]}>
                 Full reset
               </Text>
-              <Text variant="caption" color={colors.text.tertiary}>
+              <Text style={styles.secondaryActionDescription}>
                 Wipes profile, program, calendar and coach history. Returns to onboarding.
               </Text>
             </TouchableOpacity>
@@ -2088,10 +2057,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.xs,
   },
-  resetDivider: {
-    height: 1,
+  legalDivider: {
+    height: StyleSheet.hairlineWidth,
     backgroundColor: colors.surface.tertiary,
-    marginVertical: 0,
   },
   dangerCard: {
     padding: spacing.lg,

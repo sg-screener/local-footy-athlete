@@ -173,6 +173,7 @@ export function createRecordSessionOutcomeIntentFromFeedback(args: {
     ...(Number.isFinite(args.feedback.difficulty)
       ? { difficulty: args.feedback.difficulty }
       : {}),
+    ...(args.feedback.executionItems ? { executionItems: args.feedback.executionItems } : {}),
     source: { ...args.source },
   };
 }
@@ -434,9 +435,10 @@ function normalizeIntent(
     ...(strength && strength.length > 0 ? { strength } : {}),
     ...(conditioning ? { conditioning } : {}),
     ...(notes ? { notes } : {}),
-    ...(!skipped && conditioningCompletion !== 'skipped' && Number.isFinite(intent.difficulty)
+    ...(!skipped && Number.isFinite(intent.difficulty)
       ? { difficulty: Math.max(1, Math.min(10, Math.round(intent.difficulty!))) }
       : {}),
+    ...(intent.executionItems ? { executionItems: intent.executionItems } : {}),
     source: { ...intent.source },
   };
 }
@@ -509,6 +511,7 @@ function feedbackFromIntent(intent: RecordSessionOutcomeIntent): SessionFeedback
     ...(intent.conditioning ? { conditioning: intent.conditioning } : {}),
     ...(intent.notes ? { notes: intent.notes } : {}),
     ...(Number.isFinite(intent.difficulty) ? { difficulty: intent.difficulty } : {}),
+    ...(intent.executionItems ? { executionItems: intent.executionItems } : {}),
   };
 }
 

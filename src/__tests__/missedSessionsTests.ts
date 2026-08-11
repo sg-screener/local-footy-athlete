@@ -8,7 +8,7 @@
 import {
   detectMissedSessions,
   mostRecentMissedSession,
-  missedSessionFeedback,
+  missedSessionSkippedFeedback,
 } from '../utils/missedSessions';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { SessionFeedback } from '../store/programStore';
@@ -91,10 +91,11 @@ console.log('[4] team-training-only days are flagged as team');
   ok('team flag set', missed[0]?.isTeamTraining === true, missed[0]);
 }
 
-console.log('[5] feedback mapping: did_it=full, missed_it=skipped');
+console.log('[5] skipped prompt response records attendance without invented effort');
 {
-  ok('did_it → full', missedSessionFeedback('2026-07-06', 'did_it').completion === 'full');
-  ok('missed_it → skipped', missedSessionFeedback('2026-07-06', 'missed_it').completion === 'skipped');
+  const skipped = missedSessionSkippedFeedback('2026-07-06');
+  ok('response → skipped', skipped.completion === 'skipped');
+  ok('response has no fabricated feeling', !('feeling' in skipped));
 }
 
 console.log(`\nmissedSessionsTests: ${pass} passed, ${fail} failed`);

@@ -339,6 +339,38 @@ const main = async () => {
       'the ledger envelope on disk moved under replay');
   });
 
+  await run('boot acceptance keeps the profile that generated the world', async () => {
+    reachWorldByActing();
+    const profile = samDevicePass20260805Profile();
+    const program = quiet(() => generateProgramLocally(profile, {
+      todayISO: SAM_PASS_20260805_GENERATION_DAY,
+      previousProgram: null,
+    })) as TrainingProgram;
+
+    // The simulator's first reload found this exact disagreement: the
+    // generator had the complete profile while the downstream compatibility
+    // mirror was temporarily empty at publication. Publication must own the
+    // input it used, not re-read that mirror and mint a different athlete.
+    useProfileStore.setState({ onboardingData: {}, isOnboardingComplete: true } as never);
+    quiet(() => commitRebuiltProgram(
+      program,
+      { preserve: [], clear: [], conflictsRemoved: [] },
+      {
+        profile,
+        markedDays: useCalendarStore.getState().markedDays ?? {},
+        selectedDate: SAM_PASS_20260805_GENERATION_DAY,
+        reason: 'quiescent-boot:captured-profile',
+      },
+    ));
+
+    const accepted = useProgramStore.getState().acceptedMaterialContext
+      .acceptedProfileSnapshot?.onboardingData;
+    assert(JSON.stringify(accepted) === JSON.stringify(profile),
+      'accepted boot snapshot re-read the empty compatibility mirror instead of the profile that generated the world');
+    assert(JSON.stringify(useProfileStore.getState().onboardingData) === JSON.stringify(profile),
+      'the compatibility mirror was not restored from the accepted boot input');
+  });
+
   await run('an old-shape envelope is parked byte-identical before any new-shape write', async () => {
     reachWorldByActing();
     await settleWrites();

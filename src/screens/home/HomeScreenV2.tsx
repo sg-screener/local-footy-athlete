@@ -112,7 +112,8 @@ export default function HomeScreenV2() {
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
     missedSessionPrompt,
-    handleMissedSessionResponse,
+    handleLogMissedSession,
+    handleSkipMissedSession,
     staleByDate,
     weekHasGame,
     showAddGameCTA,
@@ -231,7 +232,10 @@ export default function HomeScreenV2() {
   };
 
   // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
-  const [changeSheetDate, setChangeSheetDate] = useState<string | null>(null);
+  const [changeSheetEntry, setChangeSheetEntry] = useState<{
+    date: string;
+    initialAction: 'actions' | 'move';
+  } | null>(null);
   const [coachNoteSheet, setCoachNoteSheet] = useState<{
     mode: 'clear' | 'update';
     note: ActiveCoachNote;
@@ -439,7 +443,7 @@ export default function HomeScreenV2() {
         onFinishTeam={() => handleFinishTeamSession(day)}
         onLogGame={() => handleLogGame(day.date)}
         onGameDayActions={() => handleOpenGameDayActions(day.date)}
-        onMakeChange={() => setChangeSheetDate(day.date)}
+        onMakeChange={() => setChangeSheetEntry({ date: day.date, initialAction: 'actions' })}
         staleWarning={staleByDate[day.date]}
         normal={isNormal}
         feedbackReceipts={receiptIdsForDate(day.date)}
@@ -924,8 +928,22 @@ export default function HomeScreenV2() {
         {isNormal && missedSessionPrompt && (
           <MissedSessionPrompt
             missed={missedSessionPrompt}
-            onRespond={(response) =>
-              void handleMissedSessionResponse(missedSessionPrompt, response)}
+            onRespond={(response) => {
+              switch (response) {
+                case 'did_it':
+                  handleLogMissedSession(missedSessionPrompt);
+                  break;
+                case 'skipped_it':
+                  void handleSkipMissedSession(missedSessionPrompt);
+                  break;
+                case 'move_forward':
+                  setChangeSheetEntry({
+                    date: missedSessionPrompt.date,
+                    initialAction: 'move',
+                  });
+                  break;
+              }
+            }}
           />
         )}
 
@@ -1103,10 +1121,11 @@ export default function HomeScreenV2() {
 
       {/* ── Sheets ── */}
       <PlanChangeSheet
-        visible={changeSheetDate !== null}
-        date={changeSheetDate}
+        visible={changeSheetEntry !== null}
+        date={changeSheetEntry?.date ?? null}
         weekDays={weekDays}
-        onClose={() => setChangeSheetDate(null)}
+        initialAction={changeSheetEntry?.initialAction}
+        onClose={() => setChangeSheetEntry(null)}
       />
 
       <GameDaySheet
@@ -1914,8 +1933,8 @@ function DayRow({
   // — nothing required — not the prominent CORE "Start Session" treatment.
   const isOptionalSession = hasWorkout && day.workout.sessionTier === 'optional';
   // A persisted session-outcome receipt for this day means the athlete finished
-  // and saved feedback — the day is complete. Drives the "Done" marker and the
-  // read-only completed CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
+  // and saved feedback — the day is complete. Drives the read-only completed
+  // CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
   // saved outcome was persisted but never surfaced back to the card).
   const isCompleted = hasWorkout && feedbackReceipts.length > 0;
   // ── RULING 5: THE "TODAY" BADGE GOES FROM THE DAY SCREEN ──
@@ -1938,7 +1957,6 @@ function DayRow({
   const showTodayEyebrow = dayShape && emphasized && day.isToday;
   const rowBadges = (
     <>
-      {isCompleted && <Badge label="Done" tone="success" />}
       {showRowBadges && day.isToday && !showTodayEyebrow
         && <Badge label="Today" tone="accent" testID="day-today-badge" />}
       {isMoveSource
@@ -2094,7 +2112,12 @@ function DayRow({
             {isCompleted ? (
               <>
                 <View style={styles.sessionCompleteLine} testID={`day-complete-${dayToken}`}>
-                  <RowIcon kind="pulse" size={15} color="#5BD98A" />
+                  <MaterialCommunityIcons
+                    name="check"
+                    size={15}
+                    color="#5BD98A"
+                    style={styles.rowIcon}
+                  />
                   <Text style={styles.sessionCompleteText}>Session complete</Text>
                 </View>
                 <Button label="View summary" size="lg" glow={false} onPress={onViewWorkout} testID="view-completed-session-button" />
@@ -2890,22 +2913,24 @@ function MissedSessionPrompt({ missed, onRespond }: MissedSessionPromptProps) {
         know so your plan stays accurate.
       </Text>
       <View style={styles.missedActions}>
-        <MissedChip label="Did it" primary onPress={() => onRespond('did_it')} />
-        <MissedChip label="Missed it" onPress={() => onRespond('missed_it')} />
-        <MissedChip label="Move it forward" onPress={() => onRespond('move_forward')} />
-        <MissedChip label="Skip it" onPress={() => onRespond('skip_it')} />
+        <MissedChip testID="missed-session-did-it" label="Did it" primary onPress={() => onRespond('did_it')} />
+        <MissedChip testID="missed-session-skipped-it" label="Skipped it" onPress={() => onRespond('skipped_it')} />
+        <MissedChip testID="missed-session-move-forward" label="Move it forward" onPress={() => onRespond('move_forward')} />
       </View>
     </Card>
   );
 }
 
-function MissedChip({ label, primary, onPress }: {
+function MissedChip({ testID, label, primary, onPress }: {
+  testID: string;
   label: string;
   primary?: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
+      testID={testID}
+      accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [
         styles.missedChip,

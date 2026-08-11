@@ -211,6 +211,21 @@ const main = async () => {
           feeling: 'good',
           soreness: 'none',
           notes: 'felt strong',
+          difficulty: 4,
+          executionItems: [
+            {
+              itemId: 'exercise:proof-row',
+              sectionId: 'strength',
+              componentId: 'strength',
+              completed: true,
+            },
+            {
+              itemId: 'mobility:proof-row',
+              sectionId: 'mobility',
+              componentId: null,
+              completed: false,
+            },
+          ],
         } as never,
         workout: target.workout,
         source: { entryPoint: 'tap', surface: 'session_feedback_panel' },
@@ -231,6 +246,13 @@ const main = async () => {
       `the completion came back as ${String(after.completion)} instead of 'full'`);
     assert(after.notes === 'felt strong',
       `the athlete's note did not survive: ${JSON.stringify(after.notes)}`);
+    assert(after.difficulty === 4,
+      `the session effort did not survive: ${JSON.stringify(after.difficulty)}`);
+    assert(Array.isArray(after.executionItems) && after.executionItems.length === 2,
+      `the per-item completion evidence did not survive: ${JSON.stringify(after.executionItems)}`);
+    assert((after.executionItems as Array<{ sectionId?: string; completed?: boolean }>)[1]?.sectionId === 'mobility'
+      && (after.executionItems as Array<{ sectionId?: string; completed?: boolean }>)[1]?.completed === false,
+    `the mobility result changed across relaunch: ${JSON.stringify(after.executionItems)}`);
   });
 
   // ── 2. AND THE RECEIPT SURVIVES, so the day reads as done ────────────────

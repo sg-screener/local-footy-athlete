@@ -98,6 +98,23 @@ interface CalendarState {
 export const CALENDAR_PERSISTENCE_KEY = 'calendar-storage';
 
 /**
+ * Calendar INPUTS, never its fixture projection.
+ *
+ * `game` and `noGame` are rebuilt from the athlete's usual game-day answer
+ * and the fixture decision ledger. Persisting them here creates a second,
+ * stale representation (the cold-reload finding was four visible Saturdays
+ * versus one stored Saturday). Rest marks remain calendar facts and therefore
+ * remain in this envelope until their own decision-store lift is complete.
+ */
+export function calendarPersistedInputs(
+  markedDays: Record<string, CalendarDayType> | null | undefined,
+): Record<string, CalendarDayType> {
+  return Object.fromEntries(
+    Object.entries(markedDays ?? {}).filter(([, mark]) => mark === 'rest'),
+  );
+}
+
+/**
  * THE STORE'S WRITER BOUNDARY, declared once (`docs/STORE_ARMOUR_RECIPE_
  * 2026-08-03.md`). A payload carries the athlete's material when at least one
  * mark survives in it. Unreadable bytes prove nothing and answer no.
@@ -235,7 +252,7 @@ export const useCalendarStore = create<CalendarState>()(
     {
       name: CALENDAR_PERSISTENCE_KEY,
       storage: createJSONStorage(() => calendarGuardedStorage),
-      partialize: (state) => ({ markedDays: state.markedDays }),
+      partialize: (state) => ({ markedDays: calendarPersistedInputs(state.markedDays) }),
       merge: (persisted, current) => {
         const incoming = (persisted as Partial<CalendarState> | undefined) ?? {};
         return {

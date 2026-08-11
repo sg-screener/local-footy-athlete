@@ -1671,9 +1671,11 @@ export interface SessionFeedback {
    * remains as a backward-compatible aggregate only.
    */
   components?: SessionFeedbackComponent[];
+  /** Per-item checklist evidence, including mobility/accessory participation. */
+  executionItems?: import('../utils/sessionExecutionChecklist').SessionExecutionItemResult[];
   /** Session effort. Omitted for skipped sessions to avoid fake exertion data. */
   feeling?: FeedbackFeeling;
-  /** RPE-style difficulty rating (1–10). Optional for backward compat. */
+  /** Live session effort is 1–5; legacy conditioning-only feedback may be 1–10. */
   difficulty?: number;
   /** Post-session soreness level. Optional for backward compat. */
   soreness?: FeedbackSoreness;

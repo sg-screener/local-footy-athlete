@@ -21,11 +21,10 @@
  *
  * THE LOAD-BEARING RULE (§6 item 6, and the reason most of this suite exists).
  * The product assumes athletes will sometimes skip the flow entirely, so the
- * flow is NEVER load-bearing. That is not a UI preference, it is an accounting
- * boundary: flow content must not become a session component, must not gate
- * Finish Session, must not reach the feedback panel, and must not be counted as
- * work. §5 below is the part that would catch a future change quietly wiring it
- * in.
+ * flow is NEVER load-bearing. It may now be measured honestly as per-movement
+ * execution evidence, but it must not become a required session component,
+ * gate Finish Session, or count as work. §5 catches a future change quietly
+ * turning measurement into a requirement.
  *
  * Run: npm run test:mobility-flow
  */
@@ -414,7 +413,7 @@ console.log('\n[4] Days that get no flow at all');
 
 /* ══ 5. The flow is never load-bearing ══ */
 
-console.log('\n[5] The flow is never counted, never gates, never logged');
+console.log('\n[5] The flow is measured but never counted or load-bearing');
 {
   const workout = workoutOf({ exercises: [row('Bench Press')] });
   const flow = flowFor(workout);
@@ -457,19 +456,19 @@ console.log('\n[5] The flow is never counted, never gates, never logged');
     'the moment the counting owner imports the flow, it has become load-bearing',
   );
 
-  const feedbackPanel = fs.readFileSync(
-    path.join(src, 'components/SessionFeedbackPanel.tsx'),
+  const executionOwner = fs.readFileSync(
+    path.join(src, 'utils/sessionExecutionChecklist.ts'),
     'utf8',
   );
   ok(
-    'the post-session feedback panel never asks about the flow',
-    !/mobility|prehab flow/i.test(feedbackPanel),
+    'the execution owner measures mobility without assigning a counted component',
+    /sectionId:\s*'mobility'[\s\S]{0,160}componentId:\s*null/.test(executionOwner),
   );
 }
 
 /* ══ 6. Render contract ══ */
 
-console.log('\n[6] Collapsed at the top, tap to expand, cosmetic tick only');
+console.log('\n[6] Collapsed at the top, with controlled per-movement ticks');
 {
   const section = fs.readFileSync(
     path.join(src, 'components/MobilityPrehabFlowSection.tsx'),
@@ -488,6 +487,10 @@ console.log('\n[6] Collapsed at the top, tap to expand, cosmetic tick only');
   );
   ok('tapping toggles it open and shut', /setExpanded\(\(prev\) => !prev\)/.test(section));
   ok(
+    'the disclosure affordance is a chevron',
+    /name=\{expanded \? 'chevron-up' : 'chevron-down'\}/.test(section),
+  );
+  ok(
     'the collapsed header summarises the movement count',
     /movementCount/.test(section),
   );
@@ -499,19 +502,22 @@ console.log('\n[6] Collapsed at the top, tap to expand, cosmetic tick only');
   );
 
   ok(
-    'the completion tick is local component state only',
-    /useState\(false\)/.test(section) && /setDone/.test(section),
+    'each movement reads the shared completed-id owner',
+    /completedItemIds\.has\(`mobility:\$\{exercise\.id\}`\)/.test(section),
   );
   ok(
-    'the tick never writes to a store',
+    'the presentation component never writes to a store itself',
     !/useProgramStore|useProfileStore|useReadinessStore|AsyncStorage|setWeightOverride/.test(
       section,
     ),
-    'a cosmetic tick that persists is not cosmetic',
+    'the screen owns the result; this component is controlled',
   );
   ok(
-    'the tick is labelled as carrying no consequence',
-    /nothing is logged|not logged|Nothing is logged/i.test(section),
+    'each movement exposes a checkbox and delegates its stable item id',
+    /accessibilityRole="checkbox"/.test(section) &&
+      /itemId=\{`mobility:\$\{exercise\.id\}`\}/.test(section) &&
+      /onToggle=\{onToggleItem\}/.test(section) &&
+      /onPress=\{\(\) => onToggle\(itemId\)\}/.test(section),
   );
 
   ok(

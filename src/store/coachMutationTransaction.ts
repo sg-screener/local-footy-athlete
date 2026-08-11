@@ -12,6 +12,7 @@ import {
   useCalendarStore,
   applyCalendarMarkedDaysWrite,
   beginCalendarResetAction,
+  calendarPersistedInputs,
   endCalendarResetAction,
 } from './calendarStore';
 import {
@@ -772,7 +773,10 @@ function serializeAcceptedMirrorEnvelopes(
 ): Record<AcceptedMirrorStorageKey, string> {
   return {
     'calendar-storage': JSON.stringify({
-      state: { markedDays: mirrors.markedDays },
+      // Same input-only shape as CalendarStore.partialize. The transaction's
+      // acknowledged write used to bypass that boundary and put the derived
+      // fixture projection back on disk after the store had removed it.
+      state: { markedDays: calendarPersistedInputs(mirrors.markedDays) },
       version: 0,
     }),
     'readiness-store': JSON.stringify({

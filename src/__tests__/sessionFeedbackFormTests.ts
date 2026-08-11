@@ -16,7 +16,7 @@ import {
 import { deriveAdaptation } from '../utils/feedbackAdapter';
 import { findMatchingFeedback } from '../utils/feedbackAdapter';
 import { analyzeFeedbackPatterns } from '../utils/feedbackPatterns';
-import { missedSessionFeedback } from '../utils/missedSessions';
+import { missedSessionSkippedFeedback } from '../utils/missedSessions';
 import { getSessionComponents } from '../utils/sessionComponents';
 
 let pass = 0;
@@ -256,7 +256,7 @@ section('7. Save requirements');
 
 section('8. Skipped feedback does not invent effort downstream');
 {
-  const missed = missedSessionFeedback('2026-07-06', 'missed_it');
+  const missed = missedSessionSkippedFeedback('2026-07-06');
   assert(missed.completion === 'skipped', 'missed session helper records skipped completion');
   assert(!('feeling' in missed), 'missed session helper omits fake feeling');
   assert(!('soreness' in missed), 'missed session helper omits fake soreness');

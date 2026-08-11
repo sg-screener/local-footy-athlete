@@ -477,6 +477,11 @@ export async function rebuildDerivedWorld(): Promise<void> {
     });
     deriveBootFixtureMarks(profile, program);
     commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
+      // One captured input for generation AND acceptance. Re-reading the
+      // downstream ProfileStore mirror here created a cold-reload race in
+      // which the accepted snapshot (and then disk) became an empty profile
+      // even though this exact complete profile generated the program above.
+      profile,
       markedDays: useCalendarStore.getState().markedDays ?? {},
       // TODAY, not the anchor: generation is anchored to the recorded input,
       // but the accepted rebase and the selected microcycle follow the

@@ -74,6 +74,12 @@ import { stableTestIdToken } from '../../utils/stableTestId';
 import { explorerTestId } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
+import {
+  buildSessionExecutionPlan,
+  buildSessionExecutionSummary,
+  type SessionExecutionPlan,
+  type SessionExecutionSection as SessionExecutionSectionModel,
+} from '../../utils/sessionExecutionChecklist';
 
 type EditableExercise = {
   key: string;
@@ -499,6 +505,36 @@ export default function DayWorkoutScreenV2() {
       date,
     }),
     [workout, seasonPhase, isGameWeek, flowAthlete, date],
+  );
+  const [completedExerciseIds, setCompletedExerciseIds] = React.useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  React.useEffect(() => {
+    // An in-progress checklist is a screen draft. The durable result is written
+    // only when SessionFeedbackPanel commits its executionItems payload.
+    setCompletedExerciseIds(new Set());
+  }, [workout?.id]);
+  const toggleExerciseComplete = React.useCallback((itemId: string) => {
+    setCompletedExerciseIds((current) => {
+      const next = new Set(current);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  }, []);
+  const executionPlan = React.useMemo(
+    () => workout ? buildSessionExecutionPlan({
+      workout,
+      template: sessionTemplate,
+      mobilityFlow,
+    }) : null,
+    [mobilityFlow, sessionTemplate, workout],
+  );
+  const executionSummary = React.useMemo(
+    () => executionPlan
+      ? buildSessionExecutionSummary(executionPlan, completedExerciseIds)
+      : undefined,
+    [completedExerciseIds, executionPlan],
   );
   React.useEffect(() => {
     if (!pendingComponentDeletionObservation) return;
@@ -1254,20 +1290,40 @@ export default function DayWorkoutScreenV2() {
               belong on a recovery day, so the legacy behaviour was preserving a
               bug rather than conserving content.
             */}
-            <RecoveryBlock
-              exercises={workout.exercises ?? []}
-              sessionId={workout.id}
-              expandedCues={expandedCues}
-              toggleCue={toggleCue}
-              onSelectExercise={setSelectedExercise}
-              onSwapExercise={openExerciseSwap}
-              onRemoveExercise={openExerciseRemove}
-            />
-            <RecoveryAddonSection
-              addons={workout.recoveryAddons ?? []}
-              expandedCues={expandedCues}
-              toggleCue={toggleCue}
-            />
+            {executionPlan?.sections.filter((section) => section.id === 'recovery').map((section) => (
+              <SessionExecutionSection
+                key={section.id}
+                section={section}
+                completedItemIds={completedExerciseIds}
+              >
+                <RecoveryBlock
+                  exercises={workout.exercises ?? []}
+                  sessionId={workout.id}
+                  expandedCues={expandedCues}
+                  toggleCue={toggleCue}
+                  onSelectExercise={setSelectedExercise}
+                  onSwapExercise={openExerciseSwap}
+                  onRemoveExercise={openExerciseRemove}
+                  completedItemIds={completedExerciseIds}
+                  onToggleItem={toggleExerciseComplete}
+                />
+              </SessionExecutionSection>
+            ))}
+            {executionPlan?.sections.filter((section) => section.id === 'optional').map((section) => (
+              <SessionExecutionSection
+                key={section.id}
+                section={section}
+                completedItemIds={completedExerciseIds}
+              >
+                <RecoveryAddonSection
+                  addons={workout.recoveryAddons ?? []}
+                  expandedCues={expandedCues}
+                  toggleCue={toggleCue}
+                  completedItemIds={completedExerciseIds}
+                  onToggleItem={toggleExerciseComplete}
+                />
+              </SessionExecutionSection>
+            ))}
           </>
         ) : (
           <>
@@ -1276,9 +1332,16 @@ export default function DayWorkoutScreenV2() {
               never gates Finish — see MobilityPrehabFlowSection for why it is
               styled to read as available rather than as a first task.
             */}
-            <MobilityPrehabFlowSection flow={mobilityFlow} />
+            <MobilityPrehabFlowSection
+              flow={mobilityFlow}
+              completedItemIds={completedExerciseIds}
+              onToggleItem={toggleExerciseComplete}
+            />
             <SessionList
               items={sessionTemplate.items}
+              executionPlan={executionPlan!}
+              completedItemIds={completedExerciseIds}
+              onToggleItem={toggleExerciseComplete}
               sessionId={workout.id}
               expandedCues={expandedCues}
               toggleCue={toggleCue}
@@ -1312,7 +1375,12 @@ export default function DayWorkoutScreenV2() {
             {justSaved ? (
               <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
             ) : (
-              <SessionFeedbackPanel date={date} workout={workout} onSave={handleFeedbackSaved} />
+              <SessionFeedbackPanel
+                date={date}
+                workout={workout}
+                executionSummary={executionSummary}
+                onSave={handleFeedbackSaved}
+              />
             )}
           </View>
         ) : null}
@@ -1520,6 +1588,9 @@ function CoachNoteBanner({
  */
 interface SessionListProps {
   items: SessionTemplateItem[];
+  executionPlan: SessionExecutionPlan;
+  completedItemIds: ReadonlySet<string>;
+  onToggleItem: (itemId: string) => void;
   sessionId: string;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
@@ -1537,6 +1608,9 @@ interface SessionListProps {
 }
 function SessionList({
   items,
+  executionPlan,
+  completedItemIds,
+  onToggleItem,
   sessionId,
   expandedCues,
   toggleCue,
@@ -1621,52 +1695,104 @@ function SessionList({
     );
   };
 
-  // Where the optional cluster starts. The owner guarantees it is contiguous and
-  // last, so ONE index is all the renderer needs to know — it never decides which
-  // rows the header covers, it only draws the boundary the owner already set.
-  const optionalStart = items.findIndex(
-    (item) => item.kind === 'exercise' && item.optional,
+  const sections = executionPlan.sections.filter((section) =>
+    section.id !== 'mobility' && section.id !== 'recovery');
+  return (
+    <View style={styles.executionSections}>
+      {sections.map((section) => (
+        <SessionExecutionSection
+          key={section.id}
+          section={section}
+          completedItemIds={completedItemIds}
+        >
+          {section.items.map((executionItem) => (
+            <ExecutionChecklistItem
+              key={executionItem.id}
+              itemId={executionItem.id}
+              label={executionItem.label}
+              completed={completedItemIds.has(executionItem.id)}
+              onToggle={onToggleItem}
+            >
+              {executionItem.templateIndex === null
+                ? <Text style={styles.executionFallbackLabel}>{executionItem.label}</Text>
+                : renderItem(
+                    items[executionItem.templateIndex],
+                    `session-item-${executionItem.templateIndex}`,
+                    executionItem.templateIndex,
+                  )}
+            </ExecutionChecklistItem>
+          ))}
+        </SessionExecutionSection>
+      ))}
+    </View>
   );
+}
 
-  // Walk the flat list once, wrapping consecutive members of a superset group
-  // in the pairing rail. The owner already guarantees they are adjacent.
-  const rendered: React.ReactNode[] = [];
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (i === optionalStart) {
-      rendered.push(<OptionalWorkHeader key="optional-work-header" />);
-    }
-    const groupId =
-      item.kind === 'exercise' && item.superset ? item.superset.groupId : null;
-    if (!groupId) {
-      rendered.push(renderItem(item, `session-item-${i}`, i));
-      continue;
-    }
-    const members: SessionTemplateItem[] = [];
-    let j = i;
-    while (
-      j < items.length &&
-      items[j].kind === 'exercise' &&
-      (items[j] as Extract<SessionTemplateItem, { kind: 'exercise' }>).superset
-        ?.groupId === groupId
-    ) {
-      members.push(items[j]);
-      j += 1;
-    }
-    rendered.push(
-      <View key={`superset-${groupId}-${i}`} style={styles.pairWrap}>
-        <View style={styles.pairTag}>
-          <Text style={styles.pairTagText}>SUPERSET</Text>
+function SessionExecutionSection({ section, completedItemIds, children }: {
+  section: SessionExecutionSectionModel;
+  completedItemIds: ReadonlySet<string>;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const completedCount = section.items.filter((item) => completedItemIds.has(item.id)).length;
+  return (
+    <View style={styles.executionSection} testID={`session-execution-section-${section.id}`}>
+      <Pressable
+        onPress={() => setExpanded((value) => !value)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={`${section.label}, ${completedCount} of ${section.items.length} complete`}
+        testID={`session-execution-toggle-${section.id}`}
+        style={({ pressed }) => [styles.executionSectionHeader, pressed && { opacity: 0.7 }]}
+      >
+        <View style={styles.executionSectionHeading}>
+          <Text style={styles.executionSectionTitle}>{section.label}</Text>
+          <Text style={styles.executionSectionCount}>{completedCount}/{section.items.length}</Text>
         </View>
-        {members.map((member, offset) =>
-          renderItem(member, `session-item-${i + offset}`, i + offset),
-        )}
-      </View>,
-    );
-    i = j - 1;
-  }
+        <MaterialCommunityIcons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={colors.text.tertiary}
+        />
+      </Pressable>
+      {expanded ? (
+        <View
+          style={styles.executionSectionBody}
+          testID={`session-execution-items-${section.id}`}
+        >
+          {children}
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
-  return <View style={styles.exerciseList}>{rendered}</View>;
+function ExecutionChecklistItem({ itemId, label, completed, onToggle, children }: {
+  itemId: string;
+  label: string;
+  completed: boolean;
+  onToggle: (itemId: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={[styles.executionItem, completed && styles.executionItemComplete]}>
+      <Pressable
+        onPress={() => onToggle(itemId)}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: completed }}
+        accessibilityLabel={`${completed ? 'Completed' : 'Mark complete'}: ${label}`}
+        testID={`session-execution-check-${stableTestIdToken(itemId)}`}
+        style={({ pressed }) => [
+          styles.executionCheckbox,
+          completed && styles.executionCheckboxComplete,
+          pressed && { opacity: 0.65 },
+        ]}
+      >
+        {completed ? <Text style={styles.executionCheckmark}>✓</Text> : null}
+      </Pressable>
+      <View style={styles.executionItemContent}>{children}</View>
+    </View>
+  );
 }
 
 /**
@@ -1997,6 +2123,8 @@ interface RecoveryBlockProps {
   onSelectExercise: (name: string) => void;
   onSwapExercise: (exercise: any) => void;
   onRemoveExercise: (exercise: any) => void;
+  completedItemIds: ReadonlySet<string>;
+  onToggleItem: (itemId: string) => void;
 }
 function RecoveryBlock({
   exercises,
@@ -2006,6 +2134,8 @@ function RecoveryBlock({
   onSelectExercise,
   onSwapExercise,
   onRemoveExercise,
+  completedItemIds,
+  onToggleItem,
 }: RecoveryBlockProps) {
   return (
     <View style={styles.exerciseList}>
@@ -2022,9 +2152,16 @@ function RecoveryBlock({
         const exerciseToken = stableTestIdToken(componentId);
         const isEditableRow = !isTeamTrainingItem(exercise);
 
+        const executionItemId = `exercise:${componentId}`;
         return (
-          <Card
+          <ExecutionChecklistItem
             key={exercise.id}
+            itemId={executionItemId}
+            label={exerciseDisplayName}
+            completed={completedItemIds.has(executionItemId)}
+            onToggle={onToggleItem}
+          >
+          <Card
             tone="default"
             radius="xl"
             padding="md"
@@ -2064,6 +2201,7 @@ function RecoveryBlock({
               toggleCue={toggleCue}
             />
           </Card>
+          </ExecutionChecklistItem>
         );
       })}
     </View>
@@ -2081,11 +2219,15 @@ interface RecoveryAddonSectionProps {
   addons: RecoveryAddonBlock[];
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
+  completedItemIds: ReadonlySet<string>;
+  onToggleItem: (itemId: string) => void;
 }
 function RecoveryAddonSection({
   addons,
   expandedCues,
   toggleCue,
+  completedItemIds,
+  onToggleItem,
 }: RecoveryAddonSectionProps) {
   if (addons.length === 0) return null;
 
@@ -2110,29 +2252,37 @@ function RecoveryAddonSection({
             <Text style={styles.recoveryAddonMeta}>{addon.placementNote}</Text>
           ) : null}
           <View style={styles.recoveryAddonExercises}>
-            {addon.exercises.map((exercise) => (
-              <View
-                key={exercise.id}
-                style={styles.recoveryAddonExercise}
-                testID={`workout-exercise-row-${stableTestIdToken(exercise.id)}`}
-              >
-                <Text style={styles.recoveryAddonExerciseName}>{exercise.name}</Text>
-                <Text
-                  style={styles.recoveryAddonPrescription}
-                  testID={`workout-exercise-prescription-${stableTestIdToken(exercise.id)}`}
+            {addon.exercises.map((exercise) => {
+              const itemId = `exercise:${exercise.id}`;
+              return (
+                <ExecutionChecklistItem
+                  key={exercise.id}
+                  itemId={itemId}
+                  label={exercise.name}
+                  completed={completedItemIds.has(itemId)}
+                  onToggle={onToggleItem}
                 >
-                  {exercise.prescription}
-                </Text>
-                {/* Same curated source as every other row (run-7 ruling 3) —
-                    this used to print a note string hardcoded in the builder. */}
-                <CueDisclosure
-                  exerciseId={String(exercise.id ?? '')}
-                  cueText={buildCueText(exercise.name)}
-                  expandedCues={expandedCues}
-                  toggleCue={toggleCue}
-                />
-              </View>
-            ))}
+                  <View
+                    style={styles.recoveryAddonExercise}
+                    testID={`workout-exercise-row-${stableTestIdToken(exercise.id)}`}
+                  >
+                    <Text style={styles.recoveryAddonExerciseName}>{exercise.name}</Text>
+                    <Text
+                      style={styles.recoveryAddonPrescription}
+                      testID={`workout-exercise-prescription-${stableTestIdToken(exercise.id)}`}
+                    >
+                      {exercise.prescription}
+                    </Text>
+                    <CueDisclosure
+                      exerciseId={String(exercise.id ?? '')}
+                      cueText={buildCueText(exercise.name)}
+                      expandedCues={expandedCues}
+                      toggleCue={toggleCue}
+                    />
+                  </View>
+                </ExecutionChecklistItem>
+              );
+            })}
           </View>
           <Text style={styles.recoveryAddonSkip}>Skip with no penalty if it adds fatigue.</Text>
         </Card>
@@ -3316,6 +3466,61 @@ const styles = StyleSheet.create({
   // gap opens up to 10px so the document reads as a training list
   // written on a dark page, not a stack of widgets.
   exerciseList: { gap: 10 },
+  executionSections: { gap: spacing.sm },
+  executionSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  executionSectionHeader: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  executionSectionHeading: { flex: 1, gap: 2 },
+  executionSectionTitle: {
+    color: colors.text.primary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  executionSectionCount: {
+    color: colors.text.tertiary,
+    fontSize: 11.5,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+  executionSectionBody: { paddingBottom: spacing.md, gap: spacing.sm },
+  executionItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  executionItemComplete: { opacity: 0.42 },
+  executionCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#666666',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    flexShrink: 0,
+  },
+  executionCheckboxComplete: {
+    borderColor: colors.accent.lime,
+    backgroundColor: 'rgba(200,255,0,0.12)',
+  },
+  executionCheckmark: { color: colors.accent.lime, fontSize: 13, fontWeight: '900' },
+  executionItemContent: { flex: 1 },
+  executionFallbackLabel: {
+    color: colors.text.primary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+    paddingVertical: spacing.sm,
+  },
   exerciseCard: {
     backgroundColor: 'transparent',
     borderColor: 'transparent',

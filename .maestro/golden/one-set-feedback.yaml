@@ -1,5 +1,5 @@
 appId: com.localfootyathlete.app
-name: Golden - one-set prescription and session feedback
+name: Golden - live checklist and session feedback
 tags:
   - e2e
   - golden
@@ -18,10 +18,21 @@ tags:
 # then went looking for.
 - tapOn:
     id: "view-workout-button"
+- scrollUntilVisible:
+    element:
+      id: "session-execution-toggle-strength"
+    direction: DOWN
+- tapOn:
+    id: "session-execution-toggle-strength"
 - extendedWaitUntil:
     visible:
-      id: "exercise-set-count-dev-e2e-one-set-main-1"
-    timeout: 15000
+      id: "session-execution-check-exercise-dev-e2e-one-set-main"
+    timeout: 10000
+- tapOn:
+    id: "session-execution-check-exercise-dev-e2e-one-set-main"
+# The first screenshot proves the athlete can open a component and that a
+# checked row visibly recedes while the remaining work stays live.
+- takeScreenshot: artifacts/ui-walk/session-checklist-partial
 - scrollUntilVisible:
     element:
       id: "finish-session-action"
@@ -30,46 +41,27 @@ tags:
     id: "finish-session-action"
 - scrollUntilVisible:
     element:
-      id: "feedback-strength-completion-full"
+      id: "feedback-session-rpe-4"
     direction: DOWN
 - tapOn:
-    id: "feedback-strength-completion-full"
+    id: "feedback-session-rpe-4"
+- takeScreenshot: artifacts/ui-walk/session-feedback-one-to-five
 - scrollUntilVisible:
     element:
-      id: "feedback-support-completion-full"
+      id: "session-feedback-save-.*"
     direction: DOWN
 - tapOn:
-    id: "feedback-support-completion-full"
-- scrollUntilVisible:
-    element:
-      id: "feedback-recovery-addon-completion-full"
-    direction: DOWN
-- tapOn:
-    id: "feedback-recovery-addon-completion-full"
-- scrollUntilVisible:
-    element:
-      id: "feedback-feeling-good"
-    direction: DOWN
-- tapOn:
-    id: "feedback-feeling-good"
-- scrollUntilVisible:
-    element:
-      id: "feedback-soreness-none"
-    direction: DOWN
-- tapOn:
-    id: "feedback-soreness-none"
-- scrollUntilVisible:
-    element:
-      id: "feedback-save-action"
-    direction: DOWN
-- tapOn:
-    id: "feedback-save-action"
+    id: "session-feedback-save-.*"
 - assertVisible:
     id: "session-completion"
-
-# LAW-flows-photograph-what-they-touch: a flow proves PRESENCE, and every
-# layout defect is a question about WHERE, which no id can carry. Two real
-# ones shipped past green flows on 2026-08-10 — a control rendered over the
-# battery icon, and a title that swamped the screen. The picture is the
-# instrument; this is the state this flow ends on.
 - takeScreenshot: artifacts/ui-walk/one-set-feedback-end
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 15000
+- assertVisible:
+    id: "day-complete-mon"
+# LAW-flows-photograph-what-they-touch: this final frame also holds the one
+# completed-state sentence on the day card — tick + Session complete, without
+# the retired Done badge competing with CORE.
+- takeScreenshot: artifacts/ui-walk/session-complete-day-card

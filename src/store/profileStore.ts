@@ -16,7 +16,7 @@ import {
   assessOnboardingCompleteness,
   onboardingIncompleteMessage,
 } from '../utils/onboardingCompleteness';
-import { asyncStorageCompat } from './asyncStorageCompat';
+import { asyncStorageCompat, trackDurableWrite } from './asyncStorageCompat';
 import {
   decideQuarantinedWrite,
   guardedDurableWrite,
@@ -59,6 +59,10 @@ interface ProfileState {
 const initialOnboardingData: OnboardingData = {};
 
 let acceptedProfileMirrorPublicationInProgress = false;
+// Captured synchronously by the persistence wrapper. Zustand calls setItem
+// before `setState` returns, so this names the decision that produced the
+// exact envelope even though the physical write finishes later.
+let activeProfilePersistenceWriter: string | null = null;
 
 export const PROFILE_STORE_PERSISTENCE_KEY = 'profile-store';
 
@@ -70,18 +74,37 @@ export const PROFILE_STORE_PERSISTENCE_KEY = 'profile-store';
  * the same answered-count semantics the door's refusal already uses.
  * Unreadable bytes prove nothing and answer no.
  */
+function profileEnvelopeCarriesMaterial(envelope: string): boolean {
+  try {
+    const state = (JSON.parse(envelope) as {
+      state?: { onboardingData?: OnboardingData };
+    }).state;
+    return answeredCount(state?.onboardingData) > 0;
+  } catch {
+    return false;
+  }
+}
+
 registerQuarantineBoundary(PROFILE_STORE_PERSISTENCE_KEY, {
-  carriesMaterial: (envelope) => {
-    try {
-      const state = (JSON.parse(envelope) as {
-        state?: { onboardingData?: OnboardingData };
-      }).state;
-      return answeredCount(state?.onboardingData) > 0;
-    } catch {
-      return false;
-    }
-  },
+  carriesMaterial: profileEnvelopeCarriesMaterial,
 });
+
+function recordProfilePersistenceRefusal(reason: string, name: string): void {
+  emitAthleteActionEvent(beginAthleteActionTrace({
+    source: 'system',
+    actionType: 'program_change',
+    route: 'profileGuardedStorage.setItem',
+  }, undefined, { forceRoot: true }), 'persistence_result', {
+    persistenceOperation: 'write',
+    persistenceStore: name,
+    persistenceSucceeded: false,
+    originalRejectionCode: reason,
+    rejectingBoundary: 'profileGuardedStorage.setItem.quarantine',
+    failureCategory: 'persistence_failure',
+  });
+  logger.error('[profileStore] refused to persist over a quarantined payload.',
+    { store: name, reason });
+}
 
 /**
  * The single persistence writer. A REFUSAL MUST NEVER PERSIST THE STATE IT
@@ -92,30 +115,28 @@ registerQuarantineBoundary(PROFILE_STORE_PERSISTENCE_KEY, {
  */
 export const profileGuardedStorage = {
   getItem: (name: string): Promise<string | null> => asyncStorageCompat.getItem(name),
-  setItem: (name: string, value: string): Promise<void> =>
-    // Not async — zustand voids this call; guardedDurableWrite returns the
-    // base write's own (handled) promise. See refusedPayloadQuarantine.ts.
-    guardedDurableWrite({
+  setItem: (name: string, value: string): Promise<void> => {
+    const writer = activeProfilePersistenceWriter;
+    const write = () => guardedDurableWrite({
       storeKey: name,
       envelope: value,
       base: asyncStorageCompat,
-      onRefused: (reason) => {
-        emitAthleteActionEvent(beginAthleteActionTrace({
-          source: 'system',
-          actionType: 'program_change',
-          route: 'profileGuardedStorage.setItem',
-        }, undefined, { forceRoot: true }), 'persistence_result', {
-          persistenceOperation: 'write',
-          persistenceStore: name,
-          persistenceSucceeded: false,
-          originalRejectionCode: reason,
-          rejectingBoundary: 'profileGuardedStorage.setItem.quarantine',
-          failureCategory: 'persistence_failure',
-        });
-        logger.error('[profileStore] refused to persist over a quarantined payload.',
-          { store: name, reason: reason });
-      },
-    }),
+      onRefused: (reason) => recordProfilePersistenceRefusal(reason, name),
+    });
+
+    // A RESET is the only decision allowed to replace an answered profile with
+    // the bare default. Every other bare envelope first asks the disk itself.
+    // This closes the cold-reload window in which memory was still empty, so
+    // the in-memory door saw 0 -> 0 and could not know it was overwriting the
+    // 28-answer payload hydration was concurrently reading.
+    if (writer === 'reset' || profileEnvelopeCarriesMaterial(value)) return write();
+    return trackDurableWrite(
+      asyncStorageCompat.getItem(name).then((onDisk) => {
+        quarantineRefusedPayload(name, onDisk);
+        return write();
+      }),
+    );
+  },
   removeItem: (name: string): Promise<void> => asyncStorageCompat.removeItem(name),
 };
 
@@ -445,6 +466,8 @@ export function applyProfileOnboardingWrite(args: {
     : args.isOnboardingComplete;
   const silence = args.silenceMirrorFence ?? args.writer !== 'onboarding_step';
   if (silence) acceptedProfileMirrorPublicationInProgress = true;
+  const priorPersistenceWriter = activeProfilePersistenceWriter;
+  activeProfilePersistenceWriter = args.writer;
   try {
     useProfileStore.setState({
       onboardingData: normalizeOnboardingRole(args.next),
@@ -453,6 +476,7 @@ export function applyProfileOnboardingWrite(args: {
         : { isOnboardingComplete }),
     });
   } finally {
+    activeProfilePersistenceWriter = priorPersistenceWriter;
     if (silence) acceptedProfileMirrorPublicationInProgress = false;
   }
   record('applied');

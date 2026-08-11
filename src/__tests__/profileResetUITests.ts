@@ -110,7 +110,7 @@ ok(
 // control either works or does not exist).
 ok('A5: "Clear active changes" control removed', !/Clear active changes/.test(src));
 ok('old visible label "Clear coach adjustments" removed', !/>\s*Clear coach adjustments\s*</.test(src));
-ok('label "Clear coach chat" present', /Clear coach chat/.test(src));
+ok('standalone "Clear coach chat" action removed', !/Clear coach chat/.test(src));
 ok('label "Privacy Policy" present', /Privacy Policy/.test(src));
 ok('label "Terms of Use" present', /Terms of Use/.test(src));
 ok('Delete Account is not shown for no-account MVP', !/>\s*Delete Account\s*</.test(src));
@@ -334,8 +334,8 @@ ok(
   !/import\s*{[^}]*clearCoachAdjustments[^}]*}\s*from\s*['"][^'"]*resetCoach['"]/.test(src),
 );
 ok(
-  'imports clearCoachChat',
-  /import\s*{[^}]*clearCoachChat[^}]*}\s*from\s*['"][^'"]*resetCoach['"]/.test(src),
+  'does not import clearCoachChat into Profile',
+  !/import\s*{[^}]*clearCoachChat[^}]*}\s*from\s*['"][^'"]*resetCoach['"]/.test(src),
 );
 ok(
   'imports resetProgramAndOnboarding',
@@ -354,10 +354,7 @@ ok(
   'A5: no clear-coach-adjustments handler remains',
   !/onClearCoachAdjustments/.test(src),
 );
-ok(
-  'onClearCoachChat calls clearCoachChat()',
-  /onClearCoachChat[\s\S]*?clearCoachChat\(/.test(src),
-);
+ok('no standalone clear-chat handler remains', !/onClearCoachChat/.test(src));
 ok(
   'onFullReset calls resetProgramAndOnboarding()',
   /onFullReset[\s\S]*?resetProgramAndOnboarding\(/.test(src),
@@ -403,14 +400,14 @@ ok('Developer Tools section is guarded by __DEV__', /\{__DEV__\s*\?\s*\(/.test(s
 ok('Dev reset button testID is inside source', /testID="profile-dev-reset-post-onboarding"/.test(src));
 
 // ═════════════════════════════════════════════════════════════════════
-// 4b. Conversation clearing and full reset live under Danger Zone
+// 4b. Full reset is the sole Danger Zone action
 // ═════════════════════════════════════════════════════════════════════
-section('[4b] Destructive resets live under Danger Zone');
+section('[4b] Full reset is the sole Danger Zone action');
 {
   const dangerStart = src.indexOf('DANGER ZONE');
   const clearChat = src.indexOf('testID="profile-clear-coach-chat"');
   const fullReset = src.indexOf('testID="profile-full-reset"');
-  ok('Clear coach chat appears after DANGER ZONE', dangerStart >= 0 && clearChat > dangerStart);
+  ok('Clear coach chat is absent', clearChat === -1);
   ok('Full reset appears after DANGER ZONE', dangerStart >= 0 && fullReset > dangerStart);
 }
 
@@ -449,7 +446,7 @@ ok('testID profile-privacy-policy', /testID="profile-privacy-policy"/.test(src))
 ok('testID profile-terms-of-use', /testID="profile-terms-of-use"/.test(src));
 ok('testID profile-danger-zone-section', /testID="profile-danger-zone-section"/.test(src));
 ok('A5: testID profile-clear-coach-adjustments gone', !/testID="profile-clear-coach-adjustments"/.test(src));
-ok('testID profile-clear-coach-chat', /testID="profile-clear-coach-chat"/.test(src));
+ok('testID profile-clear-coach-chat absent', !/testID="profile-clear-coach-chat"/.test(src));
 ok('testID profile-full-reset', /testID="profile-full-reset"/.test(src));
 
 // ═════════════════════════════════════════════════════════════════════
@@ -477,8 +474,10 @@ section('[6c] Profile action cards share one typography scale');
   const developer = region('testID="profile-dev-reset-post-onboarding"', '</TouchableOpacity>');
   const privacy = region('testID="profile-privacy-policy"', '</TouchableOpacity>');
   const terms = region('testID="profile-terms-of-use"', '</TouchableOpacity>');
-  for (const [name, card] of [['Developer Tools', developer], ['Privacy', privacy], ['Terms', terms]] as const) {
-    ok(`${name} uses the shared action-card title scale`, card.includes('style={styles.secondaryActionTitle}'));
+  const fullReset = region('testID="profile-full-reset"', '</TouchableOpacity>');
+  for (const [name, card] of [['Developer Tools', developer], ['Privacy', privacy], ['Terms', terms], ['Full reset', fullReset]] as const) {
+    ok(`${name} uses the shared action-card title scale`,
+      /style=\{(?:styles\.secondaryActionTitle|\[styles\.secondaryActionTitle,)/.test(card));
     ok(`${name} uses the shared action-card description scale`, card.includes('style={styles.secondaryActionDescription}'));
     ok(`${name} does not fall back to primitive body/caption variants`,
       !/variant="(?:body|caption)"/.test(card));
@@ -495,10 +494,8 @@ ok(
   'A5: no clear_coach_adjustments press log (control removed)',
   !/\[reset-ui\]\s*clear_coach_adjustments_pressed/.test(src),
 );
-ok(
-  '[reset-ui] clear_coach_chat_pressed',
-  /\[reset-ui\]\s*clear_coach_chat_pressed/.test(src),
-);
+ok('[reset-ui] clear_coach_chat_pressed is gone',
+  !/\[reset-ui\]\s*clear_coach_chat_pressed/.test(src));
 ok(
   '[reset-ui] full_reset_pressed',
   /\[reset-ui\]\s*full_reset_pressed/.test(src),

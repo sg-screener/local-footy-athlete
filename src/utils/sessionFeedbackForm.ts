@@ -16,6 +16,7 @@ import {
 } from '../types/sessionOutcome';
 import type { ConditioningPerformanceLog } from './conditioningLogging';
 import type { SessionComponent } from './sessionComponents';
+import type { SessionExecutionItemResult } from './sessionExecutionChecklist';
 import type { TeamNightSize } from '../rules/teamNightSize';
 import type { StrengthExercisePerformanceLog } from './strengthLogging';
 
@@ -162,6 +163,12 @@ export interface BuildSessionFeedbackPayloadInput extends FeedbackFormDraft {
   conditioning?: ConditioningPerformanceLog;
   strength?: StrengthExercisePerformanceLog[];
   components?: SessionComponent[];
+  executionItems?: SessionExecutionItemResult[];
+}
+
+/** The live checklist's one-row effort scale. Legacy conditioning RPE remains 1–10. */
+export function isSessionEffortRating(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= 5;
 }
 
 /**
@@ -576,8 +583,12 @@ export function buildSessionFeedbackPayload(
     input.completion,
   );
   const draft = { ...input, completion };
-  if (!canSaveFeedbackDraft(draft)) return null;
+  const checklistMode = Array.isArray(input.executionItems);
+  if (!checklistMode && !canSaveFeedbackDraft(draft)) return null;
   if (!completion) return null;
+  if (checklistMode && completion !== 'skipped' && !isSessionEffortRating(input.difficulty)) {
+    return null;
+  }
 
   const componentEntries = buildFeedbackComponentEntries(
     input.components,
@@ -591,7 +602,18 @@ export function buildSessionFeedbackPayload(
     completion,
     ...(componentEntries.length > 0 ? { components: componentEntries } : {}),
     ...(notes ? { notes } : {}),
+    ...(checklistMode ? { executionItems: input.executionItems } : {}),
   };
+
+  if (checklistMode) {
+    return {
+      ...shared,
+      completion,
+      ...(completion !== 'skipped' && isSessionEffortRating(input.difficulty)
+        ? { difficulty: input.difficulty }
+        : {}),
+    };
+  }
 
   if (completion === 'skipped') {
     if (componentEntries.length > 0) {

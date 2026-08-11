@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
 import { useProgramStore } from '../../store/programStore';
-import { useCalendarStore } from '../../store/calendarStore';
+import {
+  calendarPersistedInputs,
+  useCalendarStore,
+} from '../../store/calendarStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { useCoachStore } from '../../store/coachStore';
 import { useCoachMemoryStore } from '../../store/coachMemoryStore';
@@ -120,7 +123,10 @@ const semanticStores: SemanticStoreDescriptor[] = [
   {
     key: 'calendar-storage',
     store: useCalendarStore as unknown as PersistedStore,
-    select: (state) => ({ markedDays: state.markedDays ?? {} }),
+    // The live store also carries the derived fixture projection. Compare only
+    // what this envelope owns, or a correctly rebuilt recurring game appears
+    // as a persistence failure merely because it is absent from the duplicate.
+    select: (state) => ({ markedDays: calendarPersistedInputs(state.markedDays) }),
   },
   {
     key: 'readiness-store',

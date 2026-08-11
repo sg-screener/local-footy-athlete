@@ -137,12 +137,46 @@ run('the writer boundary refuses a bare payload over a held one', async () => {
   assert(await profileGuardedStorage.getItem(PROFILE_STORE_PERSISTENCE_KEY) === MATERIAL_ENVELOPE,
     'a material payload was refused while quarantined — that strands the athlete '
     + 'instead of protecting them, and blocks the very lift that resolves it');
+  assert(quarantinedPayload(PROFILE_STORE_PERSISTENCE_KEY) === null,
+    'the hold outlived the material write that should have released it');
 
-  // A material write IS the lift succeeding: the hold must be gone.
+  // The old hold is gone, but an unowned bare write still cannot replace the
+  // answered disk profile. Only the reset door carries that authority now.
   await profileGuardedStorage.setItem(PROFILE_STORE_PERSISTENCE_KEY, BARE_ENVELOPE);
   await flushPendingStorageWrites();
-  assert(await profileGuardedStorage.getItem(PROFILE_STORE_PERSISTENCE_KEY) === BARE_ENVELOPE,
-    'the hold outlived the material write that should have released it');
+  assert(await profileGuardedStorage.getItem(PROFILE_STORE_PERSISTENCE_KEY) === MATERIAL_ENVELOPE,
+    'an unowned bare write erased the answered disk profile after the old hold released');
+  clearAllQuarantines();
+});
+
+run('the disk boundary refuses a bare cold-reload write before memory hydrates', async () => {
+  clearAllQuarantines();
+  resetProfile();
+  await flushPendingStorageWrites();
+  // The disk has the athlete; the live store is still at its boot default.
+  // This is the simulator finding, stated in the two units involved.
+  durable.set(PROFILE_STORE_PERSISTENCE_KEY, MATERIAL_ENVELOPE);
+  const outcome = applyProfileOnboardingWrite({
+    next: {},
+    writer: 'accepted_transaction',
+  });
+  assert(outcome.ok,
+    'precondition: the memory-only guard must see 0 -> 0, the cold-reload gap');
+  await flushPendingStorageWrites();
+  assert(durable.get(PROFILE_STORE_PERSISTENCE_KEY) === MATERIAL_ENVELOPE,
+    'an unowned bare envelope replaced the answered profile while memory was still empty');
+  clearAllQuarantines();
+});
+
+run('an explicit reset remains allowed to erase an answered disk profile', async () => {
+  clearAllQuarantines();
+  resetProfile();
+  await flushPendingStorageWrites();
+  durable.set(PROFILE_STORE_PERSISTENCE_KEY, MATERIAL_ENVELOPE);
+  resetProfile();
+  await flushPendingStorageWrites();
+  assert(durable.get(PROFILE_STORE_PERSISTENCE_KEY)?.includes('"onboardingData":{}'),
+    'the disk guard blocked the athlete-owned reset that is allowed to erase the profile');
   clearAllQuarantines();
 });
 

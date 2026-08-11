@@ -57,6 +57,7 @@ import {
   componentReasonsFromFeedback,
   deriveAggregateCompletion,
   getVisibleFeedbackSections,
+  isSessionEffortRating,
   sanitizeComponentReasons,
   sanitizeFeedbackDraftForCompletion,
   sanitizeFeedbackDraftForComponents,
@@ -98,12 +99,15 @@ import {
 } from '../types/sessionOutcome';
 import { AppTextInput } from '../components/keyboard/AppTextInput';
 import { logger } from '../utils/logger';
+import type { SessionExecutionSummary } from '../utils/sessionExecutionChecklist';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
   date: string;
   /** Resolved workout for deciding whether richer conditioning logging is useful. */
   workout?: Workout | null;
+  /** Live checklist result. When present, completion is derived rather than asked. */
+  executionSummary?: SessionExecutionSummary;
   /** Called after feedback is saved. Parent uses this to navigate back. */
   onSave?: (receipt: SessionOutcomeTransactionReceipt) => void;
 }
@@ -208,7 +212,12 @@ function draftFromExistingFeedback(
   );
 }
 
-export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) => {
+export const SessionFeedbackPanel: React.FC<Props> = ({
+  date,
+  workout,
+  executionSummary,
+  onSave,
+}) => {
   const existing = useProgramStore((s: any) => s.sessionFeedback[date]) as
     | SessionFeedback
     | undefined;
@@ -269,6 +278,9 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
   const [conditioningRpe, setConditioningRpe] = useState(
     textFromNumber(existing?.conditioning?.rpe),
   );
+  const [sessionRpe, setSessionRpe] = useState<number | null>(
+    isSessionEffortRating(existing?.difficulty) ? existing.difficulty : null,
+  );
 
   // Re-sync local state when navigating to a different date
   useEffect(() => {
@@ -296,6 +308,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     setBestInterval(conditioning?.bestInterval ?? '');
     setAveragePace(conditioning?.averagePace ?? '');
     setConditioningRpe(textFromNumber(conditioning?.rpe));
+    setSessionRpe(isSessionEffortRating(existing?.difficulty) ? existing.difficulty : null);
   }, [date, existing, sessionComponents, conditioningConfig.suggestedMode]);
 
   const feedbackDraft: FeedbackFormDraft = {
@@ -311,12 +324,18 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     partialReason,
     skipReason,
   };
+  const activeComponents = executionSummary?.components ?? sessionComponents;
+  const activeComponentCompletions = executionSummary?.componentCompletions ?? componentCompletions;
   const activeCompletion = deriveAggregateCompletion(
-    sessionComponents,
-    componentCompletions,
+    activeComponents,
+    activeComponentCompletions,
     completion,
   );
-  const draftIsComplete = canSaveFeedbackDraft({ ...feedbackDraft, completion: activeCompletion });
+  const sessionRpeValue = sessionRpe ?? undefined;
+  const draftIsComplete = executionSummary
+    ? activeCompletion !== null &&
+      (activeCompletion === 'skipped' || isSessionEffortRating(sessionRpeValue))
+    : canSaveFeedbackDraft({ ...feedbackDraft, completion: activeCompletion });
   // THE DOOR'S OWN RULE, ASKED — never re-implemented here (finding 4). A
   // control offered for an act its door will refuse is a dead control, and the
   // athlete taps it and nothing happens.
@@ -326,8 +345,8 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
   // the door's authored sentence, never a second one written here.
   const [saveRefusal, setSaveRefusal] = useState<string | null>(null);
   const hasComponentFlow = sessionComponents.length > 0;
-  const conditioningComponentCompletion = componentCompletions.conditioning ?? completion;
-  const strengthComponentCompletion = componentCompletions.strength ?? activeCompletion;
+  const conditioningComponentCompletion = activeComponentCompletions.conditioning ?? completion;
+  const strengthComponentCompletion = activeComponentCompletions.strength ?? activeCompletion;
   const conditioningWasPerformed =
     conditioningComponentCompletion === 'full' ||
     conditioningComponentCompletion === 'partial';
@@ -469,11 +488,11 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
         ...componentReasons,
         [componentId]: reason,
       },
-      componentCompletions,
+      activeComponentCompletions,
       sessionComponents,
     );
     setComponentReasons(nextReasons);
-  }, [componentReasons, componentCompletions, sessionComponents]);
+  }, [componentReasons, activeComponentCompletions, sessionComponents]);
 
   const handleComponentPartialReasonChange = useCallback((
     componentId: string,
@@ -556,9 +575,9 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     const feedback = buildSessionFeedbackPayload({
       dateStr: date,
       completion: activeCompletion,
-      componentCompletions,
+      componentCompletions: activeComponentCompletions,
       componentReasons,
-      components: sessionComponents,
+      components: activeComponents,
       // Only ever sent on a team night. `isTeamNight` is the same flag that decides
       // whether the question was ASKED, so the app cannot store an answer to a question
       // it did not put on the screen.
@@ -578,7 +597,8 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       partialReason,
       skipReason,
       notes,
-      difficulty: conditioningRpeValue,
+      difficulty: executionSummary ? sessionRpeValue : conditioningRpeValue,
+      executionItems: executionSummary?.items,
       conditioning,
       strength,
     });
@@ -638,8 +658,10 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     canSave,
     activeCompletion,
     componentCompletions,
+    activeComponentCompletions,
     componentReasons,
     sessionComponents,
+    activeComponents,
     feeling,
     soreness,
     strengthComponentCompletion,
@@ -651,6 +673,8 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     notes,
     date,
     onSave,
+    executionSummary,
+    sessionRpeValue,
   ]);
 
   const renderComponentReasonGroup = useCallback((component: SessionComponent) => {
@@ -722,6 +746,48 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       <Text style={styles.subheading}>
         A quick check-in - this tunes your next session.
       </Text>
+
+      {executionSummary ? (
+        <>
+          <View style={styles.checklistSummary} testID="session-feedback-checklist-summary">
+            <Text style={styles.checklistSummaryTitle}>
+              {activeCompletion === 'full'
+                ? 'Everything completed'
+                : activeCompletion === 'partial'
+                  ? 'Part of the session completed'
+                  : 'No session items completed'}
+            </Text>
+            {executionSummary.sections.map((section) => (
+              <View key={section.sectionId} style={styles.checklistSummaryRow}>
+                <Text style={styles.checklistSummaryLabel}>{section.label}</Text>
+                <Text style={styles.checklistSummaryValue}>
+                  {section.completion}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {activeCompletion !== 'skipped' ? (
+            <>
+              <SectionLabel style={styles.section}>How hard was the session?</SectionLabel>
+              <Text style={styles.rpeHint}>1 = very easy · 5 = very hard</Text>
+              <View style={styles.rpeGrid} testID="session-feedback-rpe-grid">
+                {Array.from({ length: 5 }, (_, index) => index + 1).map((value) => (
+                  <FeedbackChip
+                    key={value}
+                    testID={`feedback-session-rpe-${value}`}
+                    label={String(value)}
+                    selected={sessionRpe === value}
+                    selectedColor={colors.accent.lime}
+                    fillRow
+                    onPress={() => setSessionRpe(value)}
+                  />
+                ))}
+              </View>
+            </>
+          ) : null}
+        </>
+      ) : (
+        <>
 
       {/*
        * Completion row uses the same <FeedbackChip /> primitive as the
@@ -1030,6 +1096,8 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
           ) : null}
         </>
       ) : null}
+        </>
+      )}
 
       {/* Notes toggle + input */}
       {hasSection('notes') ? (
@@ -1107,6 +1175,7 @@ interface FeedbackChipProps {
   selected: boolean;
   selectedColor: string;
   onPress: () => void;
+  fillRow?: boolean;
 }
 
 const FeedbackChip: React.FC<FeedbackChipProps> = ({
@@ -1115,6 +1184,7 @@ const FeedbackChip: React.FC<FeedbackChipProps> = ({
   selected,
   selectedColor,
   onPress,
+  fillRow = false,
 }) => (
   <Pressable
     onPress={onPress}
@@ -1124,6 +1194,7 @@ const FeedbackChip: React.FC<FeedbackChipProps> = ({
     accessibilityLabel={label}
     style={[
       styles.chip,
+      fillRow && styles.chipFill,
       selected && {
         backgroundColor: selectedColor + '22',
         borderColor: selectedColor,
@@ -1203,6 +1274,49 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
+  checklistSummary: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.surface.tertiary,
+    gap: 6,
+  },
+  checklistSummaryTitle: {
+    color: colors.text.primary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '800',
+  },
+  checklistSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  checklistSummaryLabel: {
+    flex: 1,
+    color: colors.text.secondary,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+  },
+  checklistSummaryValue: {
+    color: colors.text.tertiary,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  rpeHint: {
+    color: colors.text.tertiary,
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginBottom: spacing.sm,
+  },
+  rpeGrid: {
+    flexDirection: 'row',
+    gap: 7,
+  },
   componentReasonSection: {
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
@@ -1257,6 +1371,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2A2A2A',
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  chipFill: {
+    flex: 1,
+    alignItems: 'center',
   },
   chipText: {
     color: colors.text.secondary,
