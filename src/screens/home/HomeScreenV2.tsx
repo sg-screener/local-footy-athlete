@@ -800,7 +800,7 @@ export default function HomeScreenV2() {
               label="Tired"
               tint={styles.tiredIconTint}
               icon={
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFC247" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#67D7FF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                   <Path d="M3 8h15v8H3z" />
                   <Path d="M21 11v2" />
                   <Path d="M6 11v2" />
@@ -3713,7 +3713,7 @@ const styles = StyleSheet.create({
   practiceMatchIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
   // Weekly readiness card = same treatment with a wellbeing tint.
   readinessIconTint: { backgroundColor: 'rgba(255, 202, 104, 0.12)' },
-  tiredIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
+  tiredIconTint: { backgroundColor: 'rgba(103, 215, 255, 0.12)' },
   awayIconTint: { backgroundColor: 'rgba(185, 167, 255, 0.12)' },
   injuredIconTint: { backgroundColor: 'rgba(255, 127, 127, 0.12)' },
   scheduleAckError: { color: '#FF7A85' },

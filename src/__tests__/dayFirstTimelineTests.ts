@@ -717,6 +717,9 @@ run('the four status circles sit in a card with words above them', () => {
   assert(chipRegionEnd > chipsAt,
     'the status-chip region could not be found before its closing view');
   const chipRegion = home.slice(chipsAt, chipRegionEnd);
+  assert(/stroke="#67D7FF"[\s\S]*M3 8h15v8H3z/.test(chipRegion)
+    && /tiredIconTint:\s*\{[^}]*rgba\(103,\s*215,\s*255,\s*0\.12\)/.test(home),
+  'Tired is not using the ruled blue battery icon and matching circle tint');
   assert(/stroke="#B9A7FF"[\s\S]*M12 21s6-5\.2 6-11a6 6 0 1 0-12 0c0 5\.8 6 11 6 11Z/.test(chipRegion),
     'Away is not using Renee\'s purple map-pin icon');
   assert(/stroke="#FFCA68"[\s\S]*M10 5a2 2 0 0 1 4 0v8\.2a4 4 0 1 1-4 0Z[\s\S]*M12 10v6/.test(chipRegion),
