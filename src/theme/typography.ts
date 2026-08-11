@@ -1,3 +1,5 @@
+import type { TextStyle } from 'react-native';
+
 /**
  * Typography system for Local Footy Athlete.
  *
@@ -147,6 +149,17 @@ export const typography = {
     textTransform: 'uppercase' as const,
   },
 };
+
+export type TypographyToken = {
+  fontSize: number;
+  fontFamily?: string;
+  fontWeight: TextStyle['fontWeight'];
+  lineHeight: number;
+  letterSpacing: number;
+  textTransform?: TextStyle['textTransform'];
+};
+
+export type TypographyScale = Record<keyof typeof typography, TypographyToken>;
 
 // Font families
 export const fontFamilies = {

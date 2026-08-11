@@ -433,13 +433,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-renee-typography-app-wide',
-    law: 'Renee\'s prototype typography is the app-wide type system on every athlete-facing page: the platform system face and its compact shared scale, with screens and editable fields unable to bypass the shared owners.',
-    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "i like her fonts better = please change to them"; clarified "on all pages everywhere" and "try and match font and size for everything she has done". This guarded registry row is the durable ruling site.',
+    law: 'Renee\'s compact prototype typography remains the shared type system for the main app, while onboarding alone retains its original larger type scale; both stay behind the shared Text owner so the exception cannot leak into other screens.',
+    ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task first ruled "on all pages everywhere", then superseded that scope after seeing onboarding: "I want the old onboarding back the rest of the app is good". This guarded registry row is the durable ruling site.',
     guard: {
       state: 'guarded',
       by: 'test:prototype-typography',
       chainStatus: 'in_chain',
-      receipt: 'BORN GUARDED (LAW ZERO). THE SUPERSEDED RULE explicitly preserved the app\'s old fonts; Sam reversed it after comparing the screens. WHAT THE CELLS HOLD: the shared variant owner pins Renee\'s measured 8.5/9/9.5/10.5/11.5/12/14/17/21/23 hierarchy and contains no Bebas family; shared Text carries each variant\'s System family through to React Native; AppTextInput applies the same family without overriding caller styles; and a source census fails if any athlete-facing screen or ordinary component imports React Native Text around that owner. Both the script and this row are in test:bible. FIRST-RUN FINDINGS: the scale cell red at the old 36pt h1 and the owner cell red because Text discarded its declared fontFamily and AppTextInput had none; the bypass census was green at zero offenders. WHAT IT DOES NOT HOLD: icon typography inside third-party native controls, OS status-bar glyphs, Sam\'s physical iPhone, every screen\'s final visual spacing after the scale changes.',
+      receipt: 'BORN GUARDED (LAW ZERO), UPDATED WITH SAM\'S ONBOARDING-ONLY SUPERSESSION. WHAT THE CELLS HOLD: the main shared variant owner still pins Renee\'s measured compact hierarchy and contains no Bebas family; onboarding\'s separate scale pins every original size and line height; one scoped owner wraps the complete onboarding navigator; shared Text reads that scope; AppTextInput keeps the system family; and a source census fails if any athlete-facing screen or ordinary component bypasses shared Text. FIRST-RUN FINDING FOR THE SUPERSESSION: the onboarding cell red because no onboarding scale or scope existed. WHAT IT DOES NOT HOLD: local per-screen size overrides that already predated the shared scale, icon typography inside third-party native controls, OS status-bar glyphs, Sam\'s physical iPhone, or final visual spacing on every onboarding step.',
     },
   },
   {

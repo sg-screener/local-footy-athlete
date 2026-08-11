@@ -4,6 +4,8 @@ import { colors } from '../theme/colors';
 import { OnboardingStackParamList } from '../types/navigation';
 import { useProfileStore } from '../store/profileStore';
 import { resolveOnboardingResumeStep } from '../utils/onboardingSteps';
+import { TypographyScope } from '../components/common/Text';
+import { onboardingTypography } from '../theme/onboardingTypography';
 
 // Import all onboarding screens
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
@@ -53,17 +55,18 @@ export default function OnboardingNavigator() {
     resumeStep === 'Name' && !onboardingData.firstName ? 'Welcome' : resumeStep;
 
   return (
-    <Stack.Navigator
-      id={undefined}
-      initialRouteName={initialRouteName}
-      screenOptions={{
-        headerShown: false,
-        contentStyle: {
-          backgroundColor: colors.surface.primary,
-        },
-        animation: 'fade',
-      }}
-    >
+    <TypographyScope scale={onboardingTypography}>
+      <Stack.Navigator
+        id={undefined}
+        initialRouteName={initialRouteName}
+        screenOptions={{
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: colors.surface.primary,
+          },
+          animation: 'fade',
+        }}
+      >
       <Stack.Screen
         name="Welcome"
         component={WelcomeScreen}
@@ -91,6 +94,7 @@ export default function OnboardingNavigator() {
       <Stack.Screen name="Injuries" component={InjuriesScreen} />
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="Complete" component={CompleteScreen} />
-    </Stack.Navigator>
+      </Stack.Navigator>
+    </TypographyScope>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import {
   Text as RNText,
   TextProps as RNTextProps,
@@ -7,7 +7,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { typography, type TypographyScale } from '../../theme/typography';
 import { safeTextLineHeight } from '../../theme/textLineBox';
 
 export type TextVariant =
@@ -36,6 +36,22 @@ interface TextProps extends RNTextProps {
   style?: StyleProp<TextStyle>;
 }
 
+const TypographyContext = createContext<TypographyScale>(typography);
+
+export function TypographyScope({
+  scale,
+  children,
+}: {
+  scale: TypographyScale;
+  children: React.ReactNode;
+}) {
+  return (
+    <TypographyContext.Provider value={scale}>
+      {children}
+    </TypographyContext.Provider>
+  );
+}
+
 export const Text = ({
   variant = 'body',
   color = colors.text.primary,
@@ -44,10 +60,11 @@ export const Text = ({
   children,
   ...props
 }: TextProps) => {
+  const activeTypography = useContext(TypographyContext);
   const getTypography = (): TextStyle => {
-    const typo = typography[variant];
+    const typo = activeTypography[variant];
     if (!typo) {
-      return typography.body;
+      return activeTypography.body;
     }
 
     return {
@@ -70,7 +87,7 @@ export const Text = ({
     ? callerStyle.fontSize
     : typeof textStyles.fontSize === 'number'
       ? textStyles.fontSize
-      : typography.body.fontSize;
+      : activeTypography.body.fontSize;
   const requestedLineHeight = typeof callerStyle.lineHeight === 'number'
     ? callerStyle.lineHeight
     : typeof textStyles.lineHeight === 'number'

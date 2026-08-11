@@ -66,6 +66,40 @@ run('the shared scale matches Renee\'s compact prototype hierarchy', () => {
     'the shared heading and body families are not both the iPhone system face');
 });
 
+run('onboarding alone keeps the original readable type scale', () => {
+  const source = read('theme/onboardingTypography.ts');
+  const expected = [
+    ['h1', 36, 42], ['h2', 30, 36], ['h3', 24, 30], ['h4', 20, 26],
+    ['body', 16, 24], ['bodySmall', 14, 20], ['caption', 12, 16],
+    ['label', 14, 20], ['labelSmall', 12, 16], ['overline', 13, 18],
+    ['button', 16, 24], ['buttonSmall', 14, 20],
+  ] as const;
+  for (const [variant, size, lineHeight] of expected) {
+    const regionAt = source.indexOf(`${variant}: {`);
+    assert(regionAt >= 0, `${variant}: onboarding typography variant was not found`);
+    const region = source.slice(regionAt, regionAt + 260);
+    assert(new RegExp(`fontSize:\\s*${String(size).replace('.', '\\.')}(?:,|\\s)`).test(region),
+      `${variant}: expected original onboarding size ${size}`);
+    assert(new RegExp(`lineHeight:\\s*${lineHeight}(?:,|\\s)`).test(region),
+      `${variant}: expected original onboarding line-height ${lineHeight}`);
+  }
+
+  const text = read('components/common/Text.tsx');
+  assert(/createContext<TypographyScale>\(typography\)/.test(text),
+    'shared Text has no scoped typography owner');
+  assert(/useContext\(TypographyContext\)/.test(text),
+    'shared Text does not read the active typography scope');
+
+  const navigator = read('navigation/OnboardingNavigator.tsx');
+  const scopeAt = navigator.indexOf('<TypographyScope scale={onboardingTypography}>');
+  const stackAt = navigator.indexOf('<Stack.Navigator');
+  const scopeCloseAt = navigator.indexOf('</TypographyScope>');
+  assert(scopeAt >= 0 && stackAt >= 0 && scopeCloseAt >= 0,
+    'onboarding typography scope anchors were not all found');
+  assert(scopeAt < stackAt && stackAt < scopeCloseAt,
+    'the onboarding typography scope does not contain the navigator');
+});
+
 run('shared Text and AppTextInput both apply the one system family', () => {
   const text = read('components/common/Text.tsx');
   const input = read('components/keyboard/AppTextInput.tsx');
