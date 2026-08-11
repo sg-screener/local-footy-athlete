@@ -1,5 +1,6 @@
 import type { Workout } from '../types/domain';
 import {
+  parseGameSessionOutcome,
   parseSessionOutcomeReason,
   type FeedbackCompletion,
   type FeedbackPartialReason,
@@ -24,6 +25,7 @@ import {
   type SessionComponent,
 } from '../utils/sessionComponents';
 import { deriveAggregateCompletion } from '../utils/sessionFeedbackForm';
+import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { buildStrengthPerformanceLogs } from '../utils/strengthLogging';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import {
@@ -174,6 +176,7 @@ export function createRecordSessionOutcomeIntentFromFeedback(args: {
       ? { difficulty: args.feedback.difficulty }
       : {}),
     ...(args.feedback.executionItems ? { executionItems: args.feedback.executionItems } : {}),
+    ...(args.feedback.game ? { game: args.feedback.game } : {}),
     source: { ...args.source },
   };
 }
@@ -421,6 +424,21 @@ function normalizeIntent(
     : intent.conditioning;
   const notes = intent.notes?.trim();
   const skipped = aggregate === 'skipped';
+  const parsedGame = intent.game === undefined ? null : parseGameSessionOutcome(intent.game);
+  if (intent.game !== undefined && parsedGame === null) {
+    throw new SessionOutcomeValidationError(
+      'invalid_game_outcome',
+      'The game result is incomplete or invalid.',
+    );
+  }
+  const targetIsGame = classifyDaySessions(target.workout)
+    .some((unit) => unit.category === 'game');
+  if (parsedGame && !targetIsGame) {
+    throw new SessionOutcomeValidationError(
+      'game_outcome_on_non_game',
+      'Game feedback can only be recorded for a game or practice match.',
+    );
+  }
   return {
     date: intent.date,
     sessionIdentity: {
@@ -439,6 +457,7 @@ function normalizeIntent(
       ? { difficulty: Math.max(1, Math.min(10, Math.round(intent.difficulty!))) }
       : {}),
     ...(intent.executionItems ? { executionItems: intent.executionItems } : {}),
+    ...(parsedGame ? { game: parsedGame } : {}),
     source: { ...intent.source },
   };
 }
@@ -512,6 +531,7 @@ function feedbackFromIntent(intent: RecordSessionOutcomeIntent): SessionFeedback
     ...(intent.notes ? { notes: intent.notes } : {}),
     ...(Number.isFinite(intent.difficulty) ? { difficulty: intent.difficulty } : {}),
     ...(intent.executionItems ? { executionItems: intent.executionItems } : {}),
+    ...(intent.game ? { game: intent.game } : {}),
   };
 }
 

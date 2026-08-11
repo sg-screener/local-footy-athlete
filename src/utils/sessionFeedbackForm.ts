@@ -19,6 +19,7 @@ import type { SessionComponent } from './sessionComponents';
 import type { SessionExecutionItemResult } from './sessionExecutionChecklist';
 import type { TeamNightSize } from '../rules/teamNightSize';
 import type { StrengthExercisePerformanceLog } from './strengthLogging';
+export { GAME_FEEL_OPTIONS } from '../rules/gameFeedback';
 
 export type FeedbackFormSectionId =
   | 'completion'
@@ -97,17 +98,6 @@ export const SKIP_REASON_OPTIONS: {
  * scale is what the design ruled and what a trend needs; what the athlete READS
  * is a sentence, because "3" is not an answer to "how were your legs".
  */
-export const GAME_FEEL_OPTIONS: {
-  key: FeedbackGameFeel;
-  label: string;
-}[] = [
-  { key: 1, label: 'Empty' },
-  { key: 2, label: 'Heavy' },
-  { key: 3, label: 'Okay' },
-  { key: 4, label: 'Good' },
-  { key: 5, label: 'Flying' },
-];
-
 /** The one-tap exception's four answers, PROPOSED (batch 18). */
 export const EXPECTATION_OPTIONS: {
   key: FeedbackExpectation;

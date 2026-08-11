@@ -47,6 +47,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { signedCopyEntries } from '../rules/signedCopy';
 import { registerProjectionCopy } from '../rules/projectionCopy';
+import '../rules/gameFeedback';
 
 // The sheet registers at call, not at import — so the id-aware half of the
 // PROPOSED cell below has entries to read.
@@ -115,6 +116,7 @@ const AUTHORING_MODULES = [
   // plainly in the app, which is the third time that exact symptom has named a
   // scope hole rather than a copy defect.
   'utils/sessionFeedbackForm.ts',
+  'rules/gameFeedback.ts',
   'utils/planChangeProducer.ts',
   'utils/coachRevisionTemplates.ts',
   'data/strengthSessionVariants.ts',

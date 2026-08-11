@@ -61,8 +61,12 @@ import {
   type CoachTurnDebug,
   type CoachTurnMessage,
 } from '../utils/coachTurnController';
+import { GAME_FEEL_OPTIONS } from '../utils/sessionFeedbackForm';
+import { classifyDaySessions } from '../rules/sessionTaxonomy';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-declare const process: { exitCode?: number };
+declare const process: { exitCode?: number; env?: Record<string, string | undefined> };
 
 const TODAY = '2026-07-16';
 const TARGET_DATE = '2026-07-13';
@@ -167,6 +171,20 @@ const SECOND_WORKOUT: Workout = {
     ...exercise({ id: 'upper-row', name: 'Bench Press', order: 1, weightKg: 70 }),
     workoutId: 'upper-session',
   }],
+};
+
+const GAME_WORKOUT: Workout = {
+  ...MIXED_WORKOUT,
+  id: 'game-session',
+  planEntryId: 'plan-entry-monday-game',
+  name: 'Game Day',
+  workoutType: 'Game',
+  sessionTier: 'core',
+  hasCombinedConditioning: false,
+  attachedConditioningKind: undefined,
+  conditioningFlavour: undefined,
+  conditioningBlock: undefined,
+  exercises: [],
 };
 
 const MICROCYCLE: Microcycle = {
@@ -603,7 +621,7 @@ async function runTap(testCase: ParityCase): Promise<RouteSnapshot> {
   const result = await commitSessionOutcomeTransaction(intent);
   if (!result.ok) throw new Error(`tap failed: ${result.code}: ${result.reason}`);
   const programAfter = acceptedProgramContentSnapshot();
-  const durableFeedback = JSON.parse(result.persistedEnvelope).state.sessionFeedback[TARGET_DATE];
+  const durableFeedback = JSON.parse(result.persistedEnvelope).state.inputs.sessionFeedback[TARGET_DATE];
   const rehydrated = await hydratedFeedback();
   if (!rehydrated) throw new Error('tap hydration did not restore feedback');
   return {
@@ -626,7 +644,7 @@ async function runCoach(testCase: ParityCase): Promise<RouteSnapshot> {
   }
   const result = execution.result;
   const programAfter = acceptedProgramContentSnapshot();
-  const durableFeedback = JSON.parse(result.persistedEnvelope).state.sessionFeedback[TARGET_DATE];
+  const durableFeedback = JSON.parse(result.persistedEnvelope).state.inputs.sessionFeedback[TARGET_DATE];
   const rehydrated = await hydratedFeedback();
   if (!rehydrated) throw new Error('coach hydration did not restore feedback');
   return {
@@ -862,9 +880,145 @@ async function runLegacyHydrationInvariant(): Promise<void> {
   ok('legacy feedback remains readable without a receipt', hydrated?.outcomeReceipt === undefined);
 }
 
+async function runGameFeedbackInvariants(): Promise<void> {
+  console.log('\n-- Game feedback transaction invariants --');
+  ok('the ruled five-point wording is exact',
+    GAME_FEEL_OPTIONS.map((option) => option.label).join(',')
+      === 'Heavy,Bad,Normal,Good,Flying',
+    GAME_FEEL_OPTIONS);
+  const panelSource = readFileSync(
+    join(__dirname, '..', 'components', 'SessionFeedbackPanel.tsx'),
+    'utf8',
+  );
+  const gameCopySource = readFileSync(
+    join(__dirname, '..', 'rules', 'gameFeedback.ts'),
+    'utf8',
+  );
+  ok('one panel selects the match form through the shared game taxonomy',
+    /classifyDaySessions\(props\.workout\)[\s\S]{0,160}GameSessionFeedbackPanel/.test(panelSource),
+    panelSource.length);
+  const practiceMatchWorkout: Workout = {
+    ...GAME_WORKOUT,
+    id: 'practice-match-session',
+    name: 'Practice Match',
+    fixtureVariant: 'practice_match',
+  };
+  ok('scheduled games and practice matches share the game feedback classification',
+    classifyDaySessions(GAME_WORKOUT).some((unit) => unit.category === 'game')
+      && classifyDaySessions(practiceMatchWorkout).some((unit) => unit.category === 'game'));
+  ok('the match form asks all four ruled questions',
+    ['Did you play the whole game?', 'Rough time on ground',
+      'How hard was the game on your body?', 'How do you feel?']
+      .every((question) => gameCopySource.includes(question))
+      && /GAME_FEEDBACK_COPY\.wholeQuestion/.test(panelSource)
+      && /GAME_FEEDBACK_COPY\.durationQuestion/.test(panelSource)
+      && /GAME_FEEDBACK_COPY\.rpeQuestion/.test(panelSource)
+      && /GAME_FEEDBACK_COPY\.feelQuestion/.test(panelSource));
+  ok('the match form writes the complete game payload through the shared transaction',
+    /const game: GameSessionOutcome = \{[\s\S]{0,220}playedWholeGame[\s\S]{0,220}timeOnGroundMinutes[\s\S]{0,220}bodyRpe[\s\S]{0,220}feel: gameFeel/.test(panelSource)
+      && /createRecordSessionOutcomeIntentFromFeedback\(\{[\s\S]{0,300}surface: 'game_feedback_panel'/.test(panelSource));
+  await resetFixture();
+  const gameMicrocycle: Microcycle = {
+    ...clone(MICROCYCLE),
+    workouts: [clone(GAME_WORKOUT), clone(SECOND_WORKOUT)],
+  };
+  const gameProgram: TrainingProgram = {
+    ...clone(PROGRAM),
+    microcycles: [gameMicrocycle],
+  };
+  useProgramStore.setState({
+    currentProgram: gameProgram,
+    currentMicrocycle: gameMicrocycle,
+  });
+  useCalendarStore.setState({ markedDays: { [TARGET_DATE]: 'game' } });
+
+  const game = {
+    playedWholeGame: false,
+    timeOnGroundMinutes: 83,
+    bodyRpe: 8,
+    feel: 3 as const,
+  };
+  const feedback: SessionFeedback = {
+    dateStr: TARGET_DATE,
+    completion: 'full',
+    game,
+  };
+  const gameTarget = resolveSessionOutcomeTarget(TARGET_DATE, TODAY);
+  const intent = createRecordSessionOutcomeIntentFromFeedback({
+    date: TARGET_DATE,
+    feedback,
+    workout: gameTarget.workout,
+    source: { entryPoint: 'tap', surface: 'game_feedback_test' },
+  });
+  eq('game payload survives the tap adapter unchanged', intent.game, game);
+  const beforeProgram = acceptedProgramContentSnapshot();
+  const result = await commitSessionOutcomeTransaction(intent, TODAY);
+  ok('complete game payload commits through the shared outcome transaction', result.ok, result);
+  eq('the persisted dated feedback carries the complete game payload',
+    useProgramStore.getState().sessionFeedback[TARGET_DATE]?.game,
+    game);
+  eq('the durable program envelope carries the complete game payload',
+    JSON.parse(result.ok ? result.persistedEnvelope : '{}')
+      ?.state?.inputs?.sessionFeedback?.[TARGET_DATE]?.game,
+    game);
+  eq('the complete game payload survives program-store hydration',
+    (await hydratedFeedback())?.game,
+    game);
+  ok('new game writes do not create the legacy standalone gameFeel field',
+    useProgramStore.getState().sessionFeedback[TARGET_DATE]?.gameFeel === undefined);
+  eq('saving game feedback leaves program content unchanged',
+    acceptedProgramContentSnapshot(),
+    beforeProgram);
+  ok('saving game feedback creates no modifier or injury',
+    useCoachUpdatesStore.getState().activeConstraints.length === 0
+      && useCoachUpdatesStore.getState().activeInjury === null);
+
+  await resetFixture();
+  const nonGameIntent = createRecordSessionOutcomeIntentFromFeedback({
+    date: TARGET_DATE,
+    feedback,
+    workout: MIXED_WORKOUT,
+    source: { entryPoint: 'tap', surface: 'game_feedback_non_game_test' },
+  });
+  const nonGameResult = await commitSessionOutcomeTransaction(nonGameIntent, TODAY);
+  ok('a non-game visible session refuses a game payload',
+    !nonGameResult.ok && 'code' in nonGameResult
+      && nonGameResult.code === 'game_outcome_on_non_game',
+    nonGameResult);
+
+  await resetFixture();
+  useProgramStore.setState({
+    currentProgram: gameProgram,
+    currentMicrocycle: gameMicrocycle,
+  });
+  useCalendarStore.setState({ markedDays: { [TARGET_DATE]: 'game' } });
+  const invalidTarget = resolveSessionOutcomeTarget(TARGET_DATE, TODAY);
+  const invalidIntent = createRecordSessionOutcomeIntentFromFeedback({
+    date: TARGET_DATE,
+    feedback: {
+      ...feedback,
+      game: { ...game, bodyRpe: 11 } as SessionFeedback['game'],
+    },
+    workout: invalidTarget.workout,
+    source: { entryPoint: 'tap', surface: 'game_feedback_invalid_test' },
+  });
+  const invalidResult = await commitSessionOutcomeTransaction(invalidIntent, TODAY);
+  ok('an incomplete or out-of-range game payload is refused at the transaction',
+    !invalidResult.ok && 'code' in invalidResult
+      && invalidResult.code === 'invalid_game_outcome',
+    invalidResult);
+}
+
 async function main(): Promise<void> {
+  if (process.env?.GAME_FEEDBACK_ONLY === '1') {
+    await runGameFeedbackInvariants();
+    console.log(`\nGame feedback outcome: ${passed} passed, ${failed} failed`);
+    if (failed > 0) process.exitCode = 1;
+    return;
+  }
   await runParityCases();
   await runProtocolInvariants();
+  await runGameFeedbackInvariants();
   await runLegacyHydrationInvariant();
   console.log(`\nSession outcome parity: ${passed} passed, ${failed} failed`);
   if (failed > 0) process.exitCode = 1;

@@ -1436,7 +1436,7 @@ export default function JournalScreen() {
         reason: feedback.skipReason ?? feedback.partialReason ?? null,
         feeling: feedback.feeling ?? null,
         soreness: feedback.soreness ?? null,
-        gameFeel: feedback.gameFeel ?? null,
+        gameFeel: feedback.game?.feel ?? feedback.gameFeel ?? null,
         expectation: feedback.expectation ?? null,
       };
     }

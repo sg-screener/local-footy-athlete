@@ -93,6 +93,7 @@ import { TEAM_NIGHT_SIZE_OPTIONS, type TeamNightSize } from '../rules/teamNightS
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import {
   expectationAsksWhy,
+  type GameSessionOutcome,
   type FeedbackExpectation,
   type FeedbackExpectationReason,
   type FeedbackGameFeel,
@@ -100,6 +101,7 @@ import {
 import { AppTextInput } from '../components/keyboard/AppTextInput';
 import { logger } from '../utils/logger';
 import type { SessionExecutionSummary } from '../utils/sessionExecutionChecklist';
+import { GAME_FEEDBACK_COPY } from '../rules/gameFeedback';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -212,7 +214,240 @@ function draftFromExistingFeedback(
   );
 }
 
-export const SessionFeedbackPanel: React.FC<Props> = ({
+/**
+ * One entry component, two presentations, one save transaction.
+ * Games and practice matches are both classified as `game` by the existing
+ * taxonomy and therefore cannot drift into separate feedback pathways.
+ */
+export const SessionFeedbackPanel: React.FC<Props> = (props) => {
+  const isGame = classifyDaySessions(props.workout)
+    .some((unit) => unit.category === 'game');
+  return isGame
+    ? <GameSessionFeedbackPanel {...props} />
+    : <TrainingSessionFeedbackPanel {...props} />;
+};
+
+const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) => {
+  const existing = useProgramStore((state: any) => state.sessionFeedback[date]) as
+    | SessionFeedback
+    | undefined;
+  const initialGame = existing?.game;
+  const initialHours = initialGame ? Math.floor(initialGame.timeOnGroundMinutes / 60) : 0;
+  const initialMinutes = initialGame ? initialGame.timeOnGroundMinutes % 60 : 0;
+  const [playedWholeGame, setPlayedWholeGame] = useState<boolean | null>(
+    initialGame?.playedWholeGame ?? null,
+  );
+  const [hours, setHours] = useState(initialGame ? String(initialHours) : '');
+  const [minutes, setMinutes] = useState(initialGame ? String(initialMinutes) : '');
+  const [bodyRpe, setBodyRpe] = useState<number | null>(initialGame?.bodyRpe ?? null);
+  const [gameFeel, setGameFeel] = useState<FeedbackGameFeel | null>(
+    initialGame?.feel ?? existing?.gameFeel ?? null,
+  );
+  const [saveRefusal, setSaveRefusal] = useState<string | null>(null);
+
+  useEffect(() => {
+    const game = existing?.game;
+    setPlayedWholeGame(game?.playedWholeGame ?? null);
+    setHours(game ? String(Math.floor(game.timeOnGroundMinutes / 60)) : '');
+    setMinutes(game ? String(game.timeOnGroundMinutes % 60) : '');
+    setBodyRpe(game?.bodyRpe ?? null);
+    setGameFeel(game?.feel ?? existing?.gameFeel ?? null);
+    setSaveRefusal(null);
+  }, [date, existing]);
+
+  const parsedHours = /^\d+$/.test(hours.trim()) ? Number(hours.trim()) : NaN;
+  const parsedMinutes = /^\d+$/.test(minutes.trim()) ? Number(minutes.trim()) : NaN;
+  const validDuration = Number.isInteger(parsedHours) && parsedHours >= 0
+    && Number.isInteger(parsedMinutes) && parsedMinutes >= 0 && parsedMinutes <= 59
+    && parsedHours * 60 + parsedMinutes > 0;
+  const timeOnGroundMinutes = validDuration ? parsedHours * 60 + parsedMinutes : 0;
+  const recordableRefusal = sessionOutcomeRecordableRefusal(date);
+  const canSave = playedWholeGame !== null
+    && validDuration
+    && bodyRpe !== null
+    && gameFeel !== null
+    && !recordableRefusal;
+
+  const handleSave = useCallback(async () => {
+    if (!canSave || playedWholeGame === null || bodyRpe === null || gameFeel === null) return;
+    setSaveRefusal(null);
+    const game: GameSessionOutcome = {
+      playedWholeGame,
+      timeOnGroundMinutes,
+      bodyRpe,
+      feel: gameFeel,
+    };
+    try {
+      const feedback: SessionFeedback = {
+        dateStr: date,
+        completion: 'full',
+        game,
+      };
+      const result = await commitSessionOutcomeTransaction(
+        createRecordSessionOutcomeIntentFromFeedback({
+          date,
+          feedback,
+          workout,
+          source: {
+            entryPoint: 'tap',
+            surface: 'game_feedback_panel',
+          },
+        }),
+      );
+      if (!result.ok) {
+        setSaveRefusal('reason' in result
+          ? result.reason
+          : "Something went wrong saving that. Nothing was recorded — please try again.");
+        return;
+      }
+      const traceId = result.receipt.source.traceId;
+      if (traceId) {
+        registerAthleteActionUIOutcome({
+          traceId,
+          observationId: `game-feedback-render:${traceId}`,
+          domainReturn: {
+            transactionId: result.receipt.transactionId,
+            sessionIdentity: result.receipt.sessionIdentity,
+            componentIds: result.receipt.componentIds,
+          },
+          controlId: explorerTestId.feedbackReceipt(result.receipt.transactionId),
+        });
+      }
+      onSave?.(result.receipt);
+    } catch (error) {
+      logger.error('[GameSessionFeedbackPanel] the save threw', { date, error });
+      setSaveRefusal("Something went wrong saving that. Nothing was recorded — please try again.");
+    }
+  }, [
+    bodyRpe,
+    canSave,
+    date,
+    gameFeel,
+    onSave,
+    playedWholeGame,
+    timeOnGroundMinutes,
+    workout,
+  ]);
+
+  return (
+    <Card
+      tone="raised"
+      padding="lg"
+      radius="xl"
+      style={styles.panel}
+      testID="game-feedback-panel"
+    >
+      <Text style={styles.eyebrow}>{GAME_FEEDBACK_COPY.eyebrow}</Text>
+      <Text style={styles.heading}>{GAME_FEEDBACK_COPY.title}</Text>
+      <Text style={styles.subheading}>{GAME_FEEDBACK_COPY.subtitle}</Text>
+
+      <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.wholeQuestion}</SectionLabel>
+      <View style={styles.row}>
+        <FeedbackChip
+          testID="game-feedback-whole-yes"
+          label={GAME_FEEDBACK_COPY.wholeYes}
+          selected={playedWholeGame === true}
+          selectedColor={colors.accent.lime}
+          onPress={() => setPlayedWholeGame(true)}
+        />
+        <FeedbackChip
+          testID="game-feedback-whole-no"
+          label={GAME_FEEDBACK_COPY.wholeNo}
+          selected={playedWholeGame === false}
+          selectedColor={colors.accent.lime}
+          onPress={() => setPlayedWholeGame(false)}
+        />
+      </View>
+
+      <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.durationQuestion}</SectionLabel>
+      <View style={styles.gameDurationRow}>
+        <View style={styles.gameDurationField}>
+          <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.hours}</Text>
+          <AppTextInput
+            testID="game-feedback-hours"
+            style={styles.gameDurationInput}
+            value={hours}
+            onChangeText={setHours}
+            placeholder="1"
+            placeholderTextColor={colors.text.tertiary}
+            keyboardType="numeric"
+            maxLength={2}
+          />
+        </View>
+        <View style={styles.gameDurationField}>
+          <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.minutes}</Text>
+          <AppTextInput
+            testID="game-feedback-minutes"
+            style={styles.gameDurationInput}
+            value={minutes}
+            onChangeText={setMinutes}
+            placeholder="30"
+            placeholderTextColor={colors.text.tertiary}
+            keyboardType="numeric"
+            maxLength={2}
+          />
+        </View>
+      </View>
+      {(hours.trim() || minutes.trim()) && !validDuration ? (
+        <Text style={styles.inputError}>{GAME_FEEDBACK_COPY.durationRefusal}</Text>
+      ) : null}
+
+      <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.rpeQuestion}</SectionLabel>
+      <Text style={styles.rpeHint}>{GAME_FEEDBACK_COPY.rpeHint}</Text>
+      <View style={styles.gameRpeGrid} testID="game-feedback-rpe-grid">
+        {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+          <FeedbackChip
+            key={value}
+            testID={`game-feedback-rpe-${value}`}
+            label={String(value)}
+            selected={bodyRpe === value}
+            selectedColor={colors.accent.lime}
+            onPress={() => setBodyRpe(value)}
+          />
+        ))}
+      </View>
+
+      <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.feelQuestion}</SectionLabel>
+      <View style={styles.row}>
+        {[...GAME_FEEL_OPTIONS].reverse().map((option) => (
+          <FeedbackChip
+            key={option.key}
+            testID={`game-feedback-feel-${option.key}`}
+            label={option.label}
+            selected={gameFeel === option.key}
+            selectedColor={colors.accent.lime}
+            onPress={() => setGameFeel(option.key)}
+          />
+        ))}
+      </View>
+
+      {saveRefusal ? (
+        <View style={styles.saveRefusalRow} testID="game-feedback-save-refusal">
+          <Text style={styles.saveRefusalText}>{saveRefusal}</Text>
+        </View>
+      ) : null}
+      {recordableRefusal ? (
+        <View style={styles.saveRefusalRow} testID="game-feedback-not-yet">
+          <Text style={styles.saveRefusalText}>{recordableRefusal.message}</Text>
+        </View>
+      ) : null}
+      {canSave ? (
+        <View style={styles.saveRow}>
+          <Button
+            label={GAME_FEEDBACK_COPY.save}
+            testID={explorerTestId.feedbackSave(workout?.id ?? date)}
+            onPress={handleSave}
+            variant="primary"
+            size="lg"
+            fullWidth
+          />
+        </View>
+      ) : null}
+    </Card>
+  );
+};
+
+const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   date,
   workout,
   executionSummary,
@@ -1331,6 +1566,35 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginTop: spacing.sm,
+  },
+  gameDurationRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  gameDurationField: {
+    flex: 1,
+  },
+  gameDurationInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    color: colors.text.primary,
+    fontSize: 18,
+    fontWeight: '700',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  gameRpeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  inputError: {
+    color: colors.status.error,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: spacing.xs,
   },
   metricInputWrap: {
     flexBasis: '31%',

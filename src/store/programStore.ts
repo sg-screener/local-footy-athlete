@@ -1704,6 +1704,8 @@ export interface SessionFeedback {
    * an answer to a question it did not put on the screen.
    */
   gameFeel?: import('../types/sessionOutcome').FeedbackGameFeel;
+  /** Canonical complete match result for scheduled games and practice matches. */
+  game?: import('../types/sessionOutcome').GameSessionOutcome;
   /**
    * "Did it match the prescription?" — the one-tap exception, and the ONLY thing
    * that records effort on a strength session (`difficulty` is written from the

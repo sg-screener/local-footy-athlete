@@ -1172,6 +1172,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BUILT 2026-08-11. Eight ownership cells pin the input-only Calendar selector at the store, accepted-transaction serializer and reload fingerprint. Its first run caught the second serializer after the store alone was fixed. Quiescent boot then proves the visible fixture returns by derivation, and `.maestro/golden/reload-standard-week.yaml` kills and relaunches the app before checking the visible Saturday Game Day card. NOT COVERED: legacy worlds whose only fixture record is an old Calendar game/noGame mirror.',
     },
   },
+  {
+    id: 'LAW-game-feedback-shared-outcome-door',
+    law: 'Scheduled games and practice matches save one complete match result through the regular dated session-outcome transaction, and recording it does not change the program.',
+    ruledAt: 'Sam 2026-08-11; docs/GAME_FEEDBACK_OWNERSHIP_REASSESSMENT_2026-08-11.md',
+    guard: {
+      state: 'guarded',
+      by: 'test:game-feedback',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT WITH THE RULING 2026-08-11. The real accepted transaction is driven with a game-classified visible workout and a complete result (whole/part, time on ground, 1-10 body RPE, 1-5 feel). The suite asserts the payload survives adapter, normalization and durable feedback publication unchanged; a non-game refuses it; an out-of-range result refuses; no legacy standalone field is written; and program content, modifiers and injury state remain unchanged. The same UI component selects this path from the existing session taxonomy, whose Game category covers both scheduled and practice fixtures.',
+    },
+  },
 
   // ── ENVIRONMENT LAWS (AGENTS.md), each learned from a real loss ───────────
   {

@@ -87,6 +87,35 @@ export type FeedbackPartialReason = typeof FEEDBACK_PARTIAL_REASONS[number];
 export type FeedbackSkipReason = typeof FEEDBACK_SKIP_REASONS[number];
 export type SessionOutcomeReason = FeedbackPartialReason | FeedbackSkipReason;
 
+/** One complete post-match result, shared by scheduled and practice games. */
+export interface GameSessionOutcome {
+  playedWholeGame: boolean;
+  timeOnGroundMinutes: number;
+  bodyRpe: number;
+  feel: FeedbackGameFeel;
+}
+
+/** Validate athlete-shaped match input at the transaction boundary. */
+export function parseGameSessionOutcome(value: unknown): GameSessionOutcome | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Partial<GameSessionOutcome>;
+  if (typeof candidate.playedWholeGame !== 'boolean') return null;
+  if (!Number.isInteger(candidate.timeOnGroundMinutes) || Number(candidate.timeOnGroundMinutes) <= 0) {
+    return null;
+  }
+  if (!Number.isInteger(candidate.bodyRpe) || Number(candidate.bodyRpe) < 1 || Number(candidate.bodyRpe) > 10) {
+    return null;
+  }
+  const feel = parseFeedbackGameFeel(candidate.feel);
+  if (feel === null) return null;
+  return {
+    playedWholeGame: candidate.playedWholeGame,
+    timeOnGroundMinutes: Number(candidate.timeOnGroundMinutes),
+    bodyRpe: Number(candidate.bodyRpe),
+    feel,
+  };
+}
+
 export function parseFeedbackCompletion(value: unknown): FeedbackCompletion | null {
   return typeof value === 'string' &&
     (FEEDBACK_COMPLETIONS as readonly string[]).includes(value)
@@ -197,6 +226,8 @@ export interface RecordSessionOutcomeIntent {
   notes?: string;
   difficulty?: number;
   executionItems?: import('../utils/sessionExecutionChecklist').SessionExecutionItemResult[];
+  /** Present only for a game-classified visible session. */
+  game?: GameSessionOutcome;
   source: SessionOutcomeSourceMetadata;
 }
 

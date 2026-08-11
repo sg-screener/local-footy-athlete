@@ -1152,7 +1152,7 @@ screen reader says.
 | Away | "Away" | "Away this week?" |
 | Readiness | "Sick" | "I'm sick/flat today" (signed, ruling 4) |
 | Injury | "Injured" | "I'm injured" |
-| Equipment | "Equipment" | "Missing equipment?" |
+| Equipment | "Equipment" | WITHDRAWN: "Missing equipment?" — removed from the Day screen 2026-08-11; temporary equipment changes now begin inside the session |
 
 **BOTH COLUMNS ARE QUOTED ON PURPOSE.** The binding gate reads every quoted
 string in a table row and asserts it is in the app. The left column binds the
@@ -1166,12 +1166,10 @@ everywhere — the sheet, the constants file, the day screen's swap reason. A
 shortened label should not also be a new noun, so the longest of the five labels
 is the one that invents nothing.
 
-**12-d. NOTHING WAS RETIRED, and that is deliberate.** "I'm sick/flat today"
-(ruling 4) and "Missing equipment?" both keep their pins in
-`weeklyReadinessCardTests`, `readinessSourceFactOwnershipTests` and
-`profileResetUITests` — they are still in the file, in the accessible position.
-If Sam signs the short labels AND rules that the sentences go, that is a
-separate, later deletion with those three pins as its receipt.
+**12-d. UPDATED 2026-08-11.** "I'm sick/flat today" remains accessible.
+"Missing equipment?" is withdrawn from the Day screen: temporary equipment
+changes now live inside the session, while permanent equipment editing stays in
+Profile.
 
 ---
 
@@ -1520,11 +1518,29 @@ words and I am guessing at his register.
 
 | Stored | PROPOSED label |
 | --- | --- |
-| 1 | "Empty" |
-| 2 | "Heavy" |
-| 3 | "Okay" |
+| 1 | "Heavy" |
+| 2 | "Bad" |
+| 3 | "Normal" |
 | 4 | "Good" |
 | 5 | "Flying" |
+
+**18-b-i. SUPERSEDED BY SAM, 2026-08-11 — THE COMPLETE GAME FORM.** Sam
+replaced the old single post-game tap with one match record shared by scheduled
+games and practice matches. The new form asks:
+
+| Where | RULING |
+| --- | --- |
+| Participation | "Did you play the whole game?" |
+| Duration | "Rough time on ground" — hours + minutes |
+| Effort | "How hard was the game on your body?" — RPE 1–10 |
+| Subjective response | "How do you feel?" |
+
+The five labels now read, in athlete-facing order: **Flying / Good / Normal /
+Bad / Heavy**. Stored values remain 5 / 4 / 3 / 2 / 1 respectively. This
+supersedes "Empty / Heavy / Okay / Good / Flying" and specifically replaces
+"Okay" with "Normal". Sam also withdrew automatic program adjustment from this
+feature: the result is recorded beside regular S&C feedback and changes no
+program content or modifier by itself.
 
 **18-c. THE TAP'S FOUR ANSWERS.** The keys are the addendum's vocabulary
 (item 8); the labels are shortened for a chip row.
