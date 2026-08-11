@@ -54,6 +54,29 @@ export interface SessionExecutionSummary {
   items: SessionExecutionItemResult[];
 }
 
+/**
+ * Whole-session completion from the sections the athlete was prescribed.
+ * The separately authored Optional Work cluster remains no-penalty; Mobility /
+ * Warm-up is an ordinary prescribed section and therefore participates exactly
+ * like Strength, Conditioning and the other session sections.
+ */
+export function deriveSessionExecutionCompletion(
+  summary: Pick<SessionExecutionSummary, 'items'>,
+): FeedbackCompletion | null {
+  return deriveSessionExecutionItemCompletion(summary.items);
+}
+
+/** The accepted save transaction uses this same item evidence. */
+export function deriveSessionExecutionItemCompletion(
+  items: readonly Pick<SessionExecutionItemResult, 'sectionId' | 'completed'>[],
+): FeedbackCompletion | null {
+  const prescribed = items.filter((item) => item.sectionId !== 'optional');
+  if (prescribed.length === 0) return null;
+  if (prescribed.every((item) => item.completed)) return 'full';
+  if (prescribed.every((item) => !item.completed)) return 'skipped';
+  return 'partial';
+}
+
 const SECTION_LABELS: Record<SessionExecutionSectionId, string> = {
   mobility: 'Mobility / Warm-up',
   power: 'Power / Primer',

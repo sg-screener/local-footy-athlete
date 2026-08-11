@@ -25,6 +25,7 @@ import {
   type SessionComponent,
 } from '../utils/sessionComponents';
 import { deriveAggregateCompletion } from '../utils/sessionFeedbackForm';
+import { deriveSessionExecutionItemCompletion } from '../utils/sessionExecutionChecklist';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { buildStrengthPerformanceLogs } from '../utils/strengthLogging';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
@@ -394,7 +395,7 @@ function normalizeIntent(
       'Every visible session component must have an outcome before feedback is recorded.',
     );
   }
-  const aggregate = deriveAggregateCompletion(
+  const componentAggregate = deriveAggregateCompletion(
     target.components,
     Object.fromEntries(componentOutcomes.map((component) => [
       component.componentId,
@@ -402,6 +403,10 @@ function normalizeIntent(
     ])),
     intent.completion,
   ) ?? intent.completion;
+  const executionAggregate = intent.executionItems?.length
+    ? deriveSessionExecutionItemCompletion(intent.executionItems)
+    : null;
+  const aggregate = executionAggregate ?? componentAggregate;
   validateReason(aggregate, intent.reason, 'session');
 
   const strengthCompletion = componentOutcomes.find((component) =>

@@ -1404,9 +1404,9 @@ export default function DayWorkoutScreenV2() {
         ) : (
           <>
             {/*
-              Sits ABOVE the first list row, collapsed. Optional, never logged,
-              never gates Finish — see MobilityPrehabFlowSection for why it is
-              styled to read as available rather than as a first task.
+              Sits above the first list row as the prescribed Mobility /
+              Warm-up section. Its controlled ticks feed the same full / partial
+              / skipped session result as the sections below it.
             */}
             <MobilityPrehabFlowSection
               flow={mobilityFlow}

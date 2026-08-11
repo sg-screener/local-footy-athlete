@@ -242,8 +242,8 @@ const main = async () => {
       'THE LOGGED SESSION IS GONE after a relaunch. Plan §2 puts training results in the '
       + 'inputs schema as their own class; a result that dies with the process is the '
       + 'defect R4 exists to close');
-    assert(after.completion === 'full',
-      `the completion came back as ${String(after.completion)} instead of 'full'`);
+    assert(after.completion === 'partial',
+      `the completion came back as ${String(after.completion)} instead of 'partial' for skipped mobility`);
     assert(after.notes === 'felt strong',
       `the athlete's note did not survive: ${JSON.stringify(after.notes)}`);
     assert(after.difficulty === 4,

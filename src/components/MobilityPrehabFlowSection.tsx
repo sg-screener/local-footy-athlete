@@ -18,18 +18,9 @@ interface MobilityPrehabFlowSectionProps {
 /**
  * The collapsed "Mobility & Prehab" flow that sits at the top of the session.
  *
- * ## Why it looks quieter than everything below it
- *
- * The list under this is what the athlete was PRESCRIBED. This is what they may
- * do. Sam's ruling (§6 item 6) is that the flow is never load-bearing — the
- * product assumes it gets skipped — so it must not read as a first task that
- * has to be cleared before the session starts. It gets one hairline-ruled line
- * and no fill: available at a glance, silent if ignored, and visibly not a row
- * in the list it sits above.
- *
- * Each movement now reports through the session's controlled execution owner.
- * This component still owns only disclosure; it cannot save feedback or infer
- * session completion by itself.
+ * Each movement reports through the session's controlled execution owner.
+ * Unticked movements are recorded as skipped, exactly like unticked Strength
+ * work; this component owns only disclosure and the controlled checkboxes.
  */
 export function MobilityPrehabFlowSection({
   flow,
@@ -46,7 +37,7 @@ export function MobilityPrehabFlowSection({
         onPress={() => setExpanded((prev) => !prev)}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        accessibilityLabel={`Mobility and prehab flow, ${flow.movementCount} movements, optional`}
+        accessibilityLabel={`Mobility and warm-up, ${flow.movementCount} movements`}
         style={({ pressed }) => [styles.header, pressed && { opacity: 0.7 }]}
         testID="mobility-prehab-flow-toggle"
       >
@@ -65,7 +56,7 @@ export function MobilityPrehabFlowSection({
             docs/COPY_SHEET_RULINGS_2026-07-30.md alongside batch 5c.
           */}
           <Text style={styles.summary}>
-            {flow.movementCount} movements · optional
+            {flow.movementCount} movements
           </Text>
         </View>
         <MaterialCommunityIcons
@@ -129,9 +120,8 @@ function MovementRow({ itemId, name, dose, completed, onToggle }: {
 }
 
 const styles = StyleSheet.create({
-  // One hairline above and below, nothing else. The rules are the only place
-  // on this screen that draws a boundary — which is exactly the point: this
-  // sits outside the list rather than at the top of it.
+  // One hairline above and below keeps this prescribed section aligned with
+  // the session's compact component language.
   section: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,

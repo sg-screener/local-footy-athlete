@@ -6,6 +6,7 @@ import {
   buildSessionExecutionPlan,
   buildSessionExecutionSummary,
   deriveChecklistComponentCompletions,
+  deriveSessionExecutionCompletion,
 } from '../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { buildSessionFeedbackPayload } from '../utils/sessionFeedbackForm';
@@ -76,8 +77,25 @@ const sectionSummary = buildSessionExecutionSummary(plan, new Set([
 ]));
 ok('mobility completion remains separately visible',
   sectionSummary.sections.find((section) => section.sectionId === 'mobility')?.completion === 'full');
+ok('unticked mobility is recorded as skipped',
+  buildSessionExecutionSummary(plan, new Set()).sections
+    .find((section) => section.sectionId === 'mobility')?.completion === 'skipped');
 ok('accessories completion remains separately visible',
   sectionSummary.sections.find((section) => section.sectionId === 'accessories')?.completion === 'skipped');
+const everythingExceptMobility = new Set(plan.items
+  .filter((item) => item.sectionId !== 'mobility' && item.sectionId !== 'optional')
+  .map((item) => item.id));
+ok('skipped mobility makes an otherwise completed prescribed session partial',
+  deriveSessionExecutionCompletion(
+    buildSessionExecutionSummary(plan, everythingExceptMobility),
+  ) === 'partial');
+const everyPrescribedItem = new Set(plan.items
+  .filter((item) => item.sectionId !== 'optional')
+  .map((item) => item.id));
+ok('a session is full when mobility and every other prescribed section are full',
+  deriveSessionExecutionCompletion(
+    buildSessionExecutionSummary(plan, everyPrescribedItem),
+  ) === 'full');
 
 console.log('\n[2b] The saved result keeps the item evidence and whole-session RPE');
 const checklistPayload = buildSessionFeedbackPayload({
@@ -125,6 +143,10 @@ console.log('\n[3] The live screen uses controlled chevrons and checkboxes');
 const screen = fs.readFileSync(path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8');
 const mobility = fs.readFileSync(path.resolve(__dirname, '..', 'components', 'MobilityPrehabFlowSection.tsx'), 'utf8');
 const feedback = fs.readFileSync(path.resolve(__dirname, '..', 'components', 'SessionFeedbackPanel.tsx'), 'utf8');
+const outcomeTransaction = fs.readFileSync(
+  path.resolve(__dirname, '..', 'store', 'sessionOutcomeTransaction.ts'),
+  'utf8',
+);
 const home = fs.readFileSync(path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'), 'utf8');
 ok('screen renders the one execution plan', /buildSessionExecutionPlan/.test(screen));
 ok('each program component uses a chevron section', /function SessionExecutionSection/.test(screen));
@@ -136,11 +158,17 @@ ok('completed rows use a dull treatment', /executionItemComplete/.test(screen));
 ok('mobility movements use the same controlled tick owner', /completedItemIds/.test(mobility) && /onToggleItem/.test(mobility));
 ok('mobility uses the same chevron language as the other sections',
   /name=\{expanded \? 'chevron-up' : 'chevron-down'\}/.test(mobility));
+ok('mobility has no optional wording in text or accessibility copy',
+  !/\boptional\b/i.test(mobility));
 ok('the in-progress checklist is a screen draft', /useState<ReadonlySet<string>>/.test(screen) && /setCompletedExerciseIds/.test(screen));
 ok('the durable outcome owns the per-item result', /executionItems:\s*executionSummary\?\.items/.test(feedback));
 
 console.log('\n[4] Feedback reads checklist completion and asks one RPE score');
 ok('feedback accepts the execution summary', /executionSummary\?:\s*SessionExecutionSummary/.test(feedback));
+ok('feedback derives whole-session completion from prescribed execution sections',
+  /executionSummary\s*\?\s*deriveSessionExecutionCompletion\(executionSummary\)/.test(feedback));
+ok('the accepted transaction derives from the same execution items before publishing',
+  /executionAggregate\s*=\s*intent\.executionItems\?\.length[\s\S]{0,180}deriveSessionExecutionItemCompletion\(intent\.executionItems\)[\s\S]{0,120}aggregate\s*=\s*executionAggregate\s*\?\?\s*componentAggregate/.test(outcomeTransaction));
 ok('feedback reviews every section, including mobility and accessories', /executionSummary\.sections\.map/.test(feedback));
 const checklistBranchStart = feedback.indexOf('executionSummary ? (');
 const legacyBranchStart = feedback.indexOf('COMPLETION_OPTIONS.map', checklistBranchStart);

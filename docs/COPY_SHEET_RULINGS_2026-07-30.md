@@ -1593,6 +1593,13 @@ has ever appeared on this sheet.** The compression is filed with that measuremen
 in the feel slice's boundary report; it is a unit of its own and is deliberately
 not folded into this slice.
 
+**18-h. MOBILITY / WARM-UP IS NOT OPTIONAL — SAM, 2026-08-11.** The prescribed
+Mobility / Warm-up section no longer describes itself as optional in visible or
+accessible copy. It remains on the session like Strength: the athlete checks the
+movements they complete, and leaving them unticked records that section as
+skipped. Separately authored Optional Work is a different session group and is
+not changed by this ruling.
+
 ## Batch 19 — the strength line, Monday card item 2 (2026-08-09): SIGNED (Sam, 2026-08-09)
 
 **STATUS: SIGNED BY SAM, 2026-08-09**, in one sitting, every string as proposed except the three his decisions changed (C2 rewords the after-session question, C3 restores the lifts empty state, C5 replaces the ISO date with the month word). His words on the compiled sheet: *"yeah i think that all looks good."* Any later wording change is a new ruling.

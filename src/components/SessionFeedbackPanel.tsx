@@ -100,7 +100,10 @@ import {
 } from '../types/sessionOutcome';
 import { AppTextInput } from '../components/keyboard/AppTextInput';
 import { logger } from '../utils/logger';
-import type { SessionExecutionSummary } from '../utils/sessionExecutionChecklist';
+import {
+  deriveSessionExecutionCompletion,
+  type SessionExecutionSummary,
+} from '../utils/sessionExecutionChecklist';
 import { GAME_FEEDBACK_COPY } from '../rules/gameFeedback';
 
 interface Props {
@@ -561,11 +564,13 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   };
   const activeComponents = executionSummary?.components ?? sessionComponents;
   const activeComponentCompletions = executionSummary?.componentCompletions ?? componentCompletions;
-  const activeCompletion = deriveAggregateCompletion(
-    activeComponents,
-    activeComponentCompletions,
-    completion,
-  );
+  const activeCompletion = executionSummary
+    ? deriveSessionExecutionCompletion(executionSummary)
+    : deriveAggregateCompletion(
+        activeComponents,
+        activeComponentCompletions,
+        completion,
+      );
   const sessionRpeValue = sessionRpe ?? undefined;
   const draftIsComplete = executionSummary
     ? activeCompletion !== null &&
