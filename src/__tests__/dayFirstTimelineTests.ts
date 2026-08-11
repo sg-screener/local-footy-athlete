@@ -470,7 +470,7 @@ const LIFE_FACT_DOORS: readonly { readonly label: string; readonly onPress: stri
   { label: 'Equipment', onPress: 'setEquipmentVisible(true)', testID: 'explorerTestId.equipmentUpdate(activeEquipmentFact.factId)' },
 ];
 
-run('the screen is in the order Sam ruled: toggle, card, change card, notes', () => {
+run('the screen is in the order Sam ruled: toggle, card, then change controls', () => {
   const home = homeScreenSource();
   const at = (needle: string): number => {
     const index = home.indexOf(needle);
@@ -486,30 +486,23 @@ run('the screen is in the order Sam ruled: toggle, card, change card, notes', ()
   // this cell navigated by stopped existing; it reported that in words instead
   // of comparing -1 against -1, and stayed red until the surface settled.
   //
-  // THE SPINE SAM RULED ON 2026-08-08 IS NOT REPEALED, IT IS SHORTER: the strip
-  // is gone and the chips gained a card around them (ruling 1). Everything else
-  // — toggle, then today's card, then the change controls, then Coach Notes —
-  // is his 2026-08-08 sequence unchanged.
+  // THE SPINE IS SHORTER AGAIN: My Status now owns Coach Notes, so Program ends
+  // its primary sequence after the five working change controls.
   const toggle = at('testID="program-view-toggle"');
   const card = at('renderDayRow(dayFirstDay, dayFirstIdx)');
   const changeCard = at('testID="home-change-card"');
   const chips = at('testID="home-life-fact-chips"');
-  // RENAMED 2026-08-10 BY SLICE 3, and the gate reported it in words rather than
-  // comparing -1: `CoachNotesSection` moved out of this file to
-  // `components/ActiveModifiersSection.tsx` because ruling 4 gives it a second
-  // mount on the coach page. Same component, same testIDs, new address.
-  const notes = at('<ActiveModifiersSection');
-  assert(toggle < card && card < changeCard && changeCard < chips && chips < notes,
+  const followUp = at('{isNormal && missedSessionPrompt');
+  assert(toggle < card && card < changeCard && changeCard < chips && chips < followUp,
     'the Program screen is no longer in the order Sam ruled '
     + `(toggle ${toggle} → card ${card} → change card ${changeCard} → `
-    + `chips ${chips} → notes ${notes}). The sequence is Today/Week, today's `
-    + 'card directly under it, the change card holding the five circles, then '
-    + 'Coach Notes below all of it.');
+    + `chips ${chips}). The sequence is Today/Week, today's card directly under `
+    + 'it, then the change card holding the five circles.');
   // THE STRIP STAYS GONE. Ruling 3 removed it and the removal has a home (the
   // week shape); a re-inserted strip would keep the order above and still be the
   // thing he ruled out. Asserted on the SPINE, not the file — `WeekStrip` the
   // component still exists and is still the week shape's, which is deliberate.
-  const spine = home.slice(toggle, notes);
+  const spine = home.slice(toggle, followUp);
   assert(!spine.includes('<WeekStrip'),
     'the seven-day strip is back at the top of the day screen. Sam, 2026-08-10: '
     + '"No days at the top of the page - people only care about the day they are '
@@ -724,10 +717,10 @@ run('the week chevron opens one flat full session, not nested drop-downs', () =>
 run('the week starts and returns collapsed while Today owns today directly', () => {
   const home = homeScreenSource();
   const toggleAt = home.indexOf('testID="program-view-toggle"');
-  const modifiersAt = home.indexOf('<ModifiersStrip', toggleAt);
-  assert(toggleAt > 0 && modifiersAt > toggleAt,
+  const weekContentAt = home.indexOf('{dayFirst ? (', toggleAt);
+  assert(toggleAt > 0 && weekContentAt > toggleAt,
     'the Today/Week toggle region could not be found');
-  const toggle = home.slice(toggleAt, modifiersAt);
+  const toggle = home.slice(toggleAt, weekContentAt);
   assert(/onPress=\{\(\) => \{[\s\S]{0,180}setPreferredProgramView\(option\)[\s\S]{0,120}handleClearWeekPresentation\(\)/.test(toggle),
     'the shape toggle does not clear the new template\'s Week expansion coordinate');
 
@@ -766,11 +759,11 @@ run('week navigation is absent from Today and compact below the toggle in Week',
   const home = homeScreenSource();
   const toggleAt = home.indexOf('testID="program-view-toggle"');
   const navAt = home.indexOf('testID="program-week-navigation"');
-  const modifiersAt = home.indexOf('<ModifiersStrip', toggleAt);
-  assert(toggleAt > 0 && navAt > toggleAt && modifiersAt > navAt,
+  const weekContentAt = home.indexOf('{dayFirst ? (', toggleAt);
+  assert(toggleAt > 0 && navAt > toggleAt && weekContentAt > navAt,
     'the compact week navigator is not ordered toggle → navigator → week content');
 
-  const betweenToggleAndContent = home.slice(toggleAt, modifiersAt);
+  const betweenToggleAndContent = home.slice(toggleAt, weekContentAt);
   assert(/\{!dayFirst \? \([\s\S]*testID="program-week-navigation"/.test(betweenToggleAndContent),
     'the week navigator is not owned by the Week shape — Today can still render it');
   const pickerAt = home.indexOf("mode.type === 'moveGame'", navAt);
@@ -872,27 +865,25 @@ run('week Game Day and Rest are shorter status cards with centred titles', () =>
     'an empty category row still reserves training-card space on Rest or Game Day');
 });
 
-run('an acted active modifier appears above the week as her compact lime line', () => {
-  const strip = fs.readFileSync(path.join(__dirname, '..', 'components', 'ModifiersStrip.tsx'), 'utf8');
-  assert(/const weekSurface = surface === 'week'/.test(strip),
-    'the shared modifier component has no explicit week treatment');
-  assert(/modifiers\.strip\.week_one/.test(strip) && /modifiers\.strip\.week/.test(strip),
-    'the week modifier line does not read its one signed sentence');
-  assert(/weekStrip:\s*\{[\s\S]{0,260}backgroundColor:\s*'transparent'/.test(strip),
-    'the week modifier line has drifted back into the large dark card treatment');
-  assert(/weekText:\s*\{[^}]*color:\s*'#C8FF00'[^}]*fontSize:\s*10\b/.test(strip),
-    'the week modifier line is not the compact lime prototype treatment');
-
+run('Coach Notes have one home and do not render on Today or Week', () => {
+  const home = homeScreenSource();
+  assert(!/import \{ ModifiersStrip \}/.test(home) && !/<ModifiersStrip/.test(home),
+    'Program still mounts the active-modifier notice after My Status became its home');
+  assert(!/import \{ ActiveModifiersSection \}/.test(home)
+    && !/<ActiveModifiersSection/.test(home),
+  'Program still mounts the Coach Notes list after My Status became its home');
   const flow = fs.readFileSync(
     path.join(__dirname, '..', '..', '.maestro', 'golden', 'standard-program-week.yaml'),
     'utf8',
   );
   const createAt = flow.indexOf('id: "equipment-preset-open"');
   const weekAt = flow.indexOf('file: ../common/show-week-shape.yaml');
-  const stripAt = flow.indexOf('id: "modifiers-strip-week"');
-  assert(createAt > 0 && weekAt > createAt && stripAt > weekAt,
-    'the visual tape does not reach an active modifier by acting before checking '
-    + 'the week strip — a zero-modifier screenshot can hide the whole feature');
+  const dayAbsenceAt = flow.indexOf('id: "modifiers-strip-day"', createAt);
+  const weekAbsenceAt = flow.indexOf('id: "modifiers-strip-week"', weekAt);
+  assert(createAt > 0 && dayAbsenceAt > createAt && weekAt > dayAbsenceAt
+    && weekAbsenceAt > weekAt,
+  'the visual tape does not create a real modifier before proving both Program '
+    + 'shapes keep Coach Notes absent');
 });
 
 run('the week cards expand details only — session and change controls stay on the day screen', () => {

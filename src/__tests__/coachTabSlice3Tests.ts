@@ -1261,10 +1261,9 @@ console.log('\n[8] L-C4 — the coach\'s ways through a day are the picker\'s ow
 // ─────────────────────────────────────────────────────────────────────────────
 // [9] UI MERGE SLICE 3 — "MY STATUS", AND THE ONE COMPONENT RULE
 //
-// Rulings 4 and 9 re-home the modifiers onto the coach page. The seat's binding
-// note on ruling 7 adds the third surface and its constraint in one sentence:
-// *"the '2 active modifiers' row appears at the top of the WEEK view too — same
-// component as the day screen's, not a second one."*
+// Rulings 4 and 9 re-home the modifiers onto the coach page. Sam's next eye
+// pass removed the temporary Program duplicates once My Status was real:
+// *"we no longer need coaches notes showing up on day page or weekly page".*
 //
 // SOURCE-SCAN LAW: read the REGION, prove it was found, and never trust a count
 // taken over a whole file.
@@ -1279,32 +1278,30 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
   const coachTab = read('screens/coach/CoachTabScreen.tsx');
   const status = read('screens/coach/CoachStatusScreen.tsx');
   const phaseControl = read('hooks/useSeasonPhaseControl.ts');
+  const projectionCopy = read('rules/projectionCopy.ts');
 
   ok('the strip exists as ONE component, not one per surface',
     /export function ModifiersStrip/.test(strip),
     'three copies of this row is three places for the count to disagree with '
       + 'the list it opens');
 
-  // EVERY SURFACE MOUNTS THE SAME IMPORT. A screen that built its own row would
-  // satisfy "there is a strip" and break the rule the seat actually wrote.
-  for (const [name, source] of [['day/week', home], ['coach', coachTab]] as const) {
-    ok(`the ${name} surface mounts the shared strip`,
-      /import \{ ModifiersStrip \}/.test(source) && /<ModifiersStrip/.test(source),
-      'the seat: "same component as the day screen\'s, not a second one"');
-  }
+  ok('Coach mounts the one My Status strip',
+    /import \{ ModifiersStrip \}/.test(coachTab) && /<ModifiersStrip/.test(coachTab),
+    'the permanent status doorway has left the Coach header');
 
-  ok('Program hides an empty notice while Coach keeps My Status reachable',
-    /if \(count <= 0 && surface !== 'coach'\) return null;/.test(strip)
-      && /signedCopy\('modifiers\.strip\.none'\)/.test(strip),
+  ok('Coach keeps My Status reachable at zero',
+    /signedCopy\('modifiers\.strip\.none'\)/.test(strip),
     'LAW-coach-status-is-a-real-destination: zero modifiers must not delete the '
-      + 'only doorway to status, while day and week must not pay for an empty notice');
+      + 'only doorway to status');
 
-  ok('Program opens My Status itself, not merely the Coach tab',
-    /navigate\('CoachTab', \{ status: 'open' \}\)/.test(home),
-    'LAW-coach-status-is-a-real-destination: switching tabs without opening '
-      + 'status is the founding failure');
+  ok('Program carries neither status notice nor Coach Notes list',
+    !/import \{ ModifiersStrip \}/.test(home)
+      && !/<ModifiersStrip/.test(home)
+      && !/import \{ ActiveModifiersSection \}/.test(home)
+      && !/<ActiveModifiersSection/.test(home),
+    'My Status is not the single destination while Program still repeats its contents');
 
-  ok('both entry surfaces address one navigation-owned open state',
+  ok('the Coach doorway addresses one navigation-owned open state',
     /route\.params\?\.status === 'open'/.test(coachTab)
       && /navigation\.setParams\(\{ status: 'open' \}\)/.test(coachTab)
       && /navigation\.setParams\(\{ status: undefined \}\)/.test(coachTab)
@@ -1314,8 +1311,8 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
 
   // THE COUNT IS THE LIST'S OWN LENGTH. A separately-carried number is the
   // `a count taken for a record` shape, sighting 14 in this repo.
-  ok('the strip is handed a length, never a separately-counted number',
-    /count=\{coachNotes\.length\}/.test(home) && /count: modifiers\.length/.test(
+  ok('the strip count is the list length, never a separately-counted number',
+    /count=\{modifierCount\}/.test(coachTab) && /count: modifiers\.length/.test(
       read('hooks/useActiveModifiers.ts')),
     'the count and the list it opens cannot disagree if one is the other\'s length');
 
@@ -1351,6 +1348,21 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
       && !/applyPhaseShift/.test(homeHook)
       && !/sourceSurface: 'phase_shift'/.test(homeHook),
     'moving the surface must not replace the established atomic phase decision');
+
+  ok('phase review selects any phase before the existing questions',
+    /currentPhase=\{phaseControl\.currentPhase\}/.test(coachTab)
+      && /onSelectTargetPhase=\{phaseControl\.selectTargetPhase\}/.test(coachTab)
+      && /\['In-season', 'Pre-season', 'Off-season'\]/.test(home)
+      && /signedCopy\('phase\.review\.title'\)/.test(home)
+      && /text: 'Review season phase'/.test(projectionCopy)
+      && /signedCopy\('phase\.review\.confirm'\)/.test(home)
+      && /targetPhase !== currentPhase \? \(/.test(home)
+      && /What days can you train\?/.test(home)
+      && /Team training days/.test(home)
+      && /Usual game day/.test(home)
+      && /if \(targetPhase === 'In-season'\) setStep\('gameDay'\)/.test(phaseControl),
+    'Review still forces the next phase, or selecting a target bypasses the '
+      + 'availability/team/game questions');
 
   ok('Renee hierarchy is explicit on both coach surfaces',
     /styles\.brand/.test(coachTab)
@@ -1402,11 +1414,6 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
       && /import \{ dismissActiveCoachNote \}/.test(coachTab),
     '"my status MOUNTS the existing doors" — a second dismiss path here would be '
       + 'the representation the merge plan forbids');
-
-  ok('the day screen still mounts the list LIVE',
-    !/actionsNotYet/.test(home),
-    'the day screen has picked up not-yet mode — its controls are the working '
-      + 'ones and nothing has replaced them');
 
   ok('the strip is outside the conversation scroll',
     coachTab.indexOf('<ModifiersStrip') < coachTab.indexOf('testID="coach-tab-conversation"'),

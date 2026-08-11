@@ -41,8 +41,8 @@ tags:
     id: "day-row-mon"
 
 # Reach the active-modifier coordinate by ACTING, never by seeding a hand-built
-# store snapshot. A clean week has zero and correctly renders no line; that is
-# why the first visual pass hid this part of the signed design entirely.
+# store snapshot. My Status is now its one home, so Program must stay free of
+# Coach Notes even when a real modifier exists.
 - scrollUntilVisible:
     element:
       id: "home-life-fact-chips"
@@ -56,10 +56,8 @@ tags:
 - tapOn:
     id: "equipment-preset-barbell"
 - tapOn: "Apply for this week"
-- extendedWaitUntil:
-    visible:
-      id: "modifiers-strip-day"
-    timeout: 15000
+- assertNotVisible:
+    id: "modifiers-strip-day"
 - scrollUntilVisible:
     element:
       id: "program-view-toggle"
@@ -98,9 +96,8 @@ tags:
     id: "day-row-thu"
 - assertVisible:
     id: "day-row-fri"
-- assertVisible:
+- assertNotVisible:
     id: "modifiers-strip-week"
-- assertVisible: "1 active modifier impacting program"
 - assertNotVisible:
     id: "day-timeline"
 

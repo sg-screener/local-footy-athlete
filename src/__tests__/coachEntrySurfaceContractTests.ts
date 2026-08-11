@@ -279,7 +279,7 @@ console.log('\n[4] The packet still feeds the frozen layers their exact shape');
   );
 }
 
-console.log('\n[4] R5.7 — the beta surface stays cut; the rebuilt status door is explicit');
+console.log('\n[4] R5.7 — the beta surface stays cut; status stays inside Coach');
 {
   // THE GATE MUST WATCH THE DELETED SURFACE. R5.7 removed the `CoachTab` tab
   // and every door that navigated to it (§6, decision C(a), signed; Sam's
@@ -302,10 +302,10 @@ console.log('\n[4] R5.7 — the beta surface stays cut; the rebuilt status door 
     return /navigate\(\s*['"`]CoachTab['"`]/.test(withoutStatusDoor);
   });
   ok(
-    'one status-addressed door exists and no bare/prefill CoachTab door returned',
-    statusDoorOccurrences === 1 && forbiddenDoors.length === 0,
-    'The rebuilt My Status destination owns one explicit `{ status: open }` door. '
-      + 'R5.7 still forbids the old bare/prefill doors into the beta chat surface. '
+    'Program has no status door and no bare/prefill CoachTab door returned',
+    statusDoorOccurrences === 0 && forbiddenDoors.length === 0,
+    'My Status is now reached from the permanent Coach doorway only. R5.7 still '
+      + 'forbids old bare/prefill doors into the beta chat surface. '
       + `status occurrences=${statusDoorOccurrences}; forbidden files=${
         forbiddenDoors.map(([file]) => file).join(', ') || 'none'}`,
   );

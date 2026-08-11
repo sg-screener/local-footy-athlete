@@ -6,46 +6,20 @@ tags:
   - coach
   - ui-merge
 ---
-# UI MERGE SLICE 3, rulings 4 and 9.
+# MY STATUS IS THE ONE STATUS DESTINATION.
 #
-# THE STRIP IS A DOORWAY AND THIS IS THE ONLY THING THAT PROVES IT OPENS. The
-# unit cells read source: they can say the component is mounted once and the
-# selector is shared, and they pass just as happily on a strip nothing can reach.
-# `test:maestro-element-contract` states the same limit in its own words —
-# existence, not reachability — and that limit is how eight flows sat broken for
-# 23 days.
+# Source cells can prove components are mounted and share a selector. This flow
+# proves the athlete can reach the empty and populated states, choose a season
+# phase before the existing setup questions, and keep Coach Notes off Program.
 #
-# ── WHAT THIS FLOW COST TO WRITE, KEPT BECAUSE IT IS REUSABLE KNOWLEDGE ──────
-#
-# 1. TEXT SELECTORS DO NOT WORK ON THIS APP'S ACTION ROWS. Every chip and sheet
-#    row carries its EXPLORER COORDINATE as its `accessibilityLabel`, and an
-#    accessibility label REPLACES the visible text for a UI runner. The tree
-#    holds `readiness-bucket-flat` where the eye reads "Feeling flat". Three
-#    attempts died on that before `maestro hierarchy` was run instead of guessed
-#    at — the second-wall law, paid late. USE IDS. Text matches only where a
-#    control has no label of its own, which is why "Apply for this week" is fine.
-# 2. A MODIFIER HAS TO BE REAL. The readiness door looked like the short path and
-#    was not: it is FOUR steps, and DECLINING its lighter-day offer applies
-#    nothing at all, so no modifier becomes active and the strip correctly
-#    renders nothing. Even accepting, a fatigue fact alone produced no coach note
-#    in that world — the day screen's own section was empty beside the strip,
-#    which is the app agreeing with itself rather than the strip failing.
-# 3. `injury-case` CANNOT BE USED, AND THAT IS A REAL FINDING. It fails its own
-#    witness validation on install:
-#    "Seed witness validation failed: injury-case:program:dev-e2e-injury-case".
-#    A seed that cannot install is a world no flow can use. Recorded in the
-#    boundary, not worked around silently.
-#
-# So the modifier is made through the EQUIPMENT door: three taps, stable ids, and
-# it produces a real active constraint.
+# A MODIFIER HAS TO BE REAL. It is made through the equipment door: three taps,
+# stable ids, and a real active constraint rather than a hand-built store seed.
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: standard-in-season-week
 
-# ── NOTHING ACTIVE: PROGRAM IS QUIET; COACH STATUS IS STILL A DOOR ───────────
-# Day/week are notices and pay no space at zero. Coach owns the permanent status
-# destination, so its doorway survives and opens an honest empty screen.
+# ── NOTHING ACTIVE: PROGRAM IS QUIET; COACH STATUS IS STILL A DOOR ──
 - assertNotVisible:
     id: "modifiers-strip-day"
 - tapOn:
@@ -58,11 +32,26 @@ tags:
     id: "coach-status-screen"
 - assertVisible:
     id: "coach-status-empty"
+
+# ── REVIEW CHOOSES A TARGET BEFORE THE EXISTING QUESTIONS ──
 - assertVisible:
     id: "coach-status-season-phase"
 - tapOn:
     id: "coach-status-season-phase"
-- assertVisible: "Shift to Off-season mode?"
+- assertVisible: "Review season phase"
+- assertVisible:
+    id: "season-phase-option-in-season"
+- assertVisible:
+    id: "season-phase-option-pre-season"
+- assertVisible:
+    id: "season-phase-option-off-season"
+- takeScreenshot: artifacts/ui-walk/season-phase-review
+- tapOn:
+    id: "season-phase-option-pre-season"
+- tapOn: "Confirm phase"
+- assertVisible: "What days can you train?"
+- tapOn: "Continue"
+- assertVisible: "Team training days"
 - tapOn: "Cancel"
 - assertVisible:
     id: "coach-status-screen"
@@ -71,7 +60,7 @@ tags:
 - tapOn:
     id: "tab-program"
 
-# ── THE ATHLETE MAKES ONE, THROUGH A DOOR THEY ALREADY HAD ──────────────────
+# ── THE ATHLETE MAKES ONE, THROUGH A DOOR THEY ALREADY HAD ──
 - scrollUntilVisible:
     element:
       id: "home-life-fact-chips"
@@ -86,21 +75,13 @@ tags:
     id: "equipment-preset-barbell"
 - tapOn: "Apply for this week"
 
-# ── THE STRIP APPEARS ON THE DAY SCREEN ─────────────────────────────────────
-- extendedWaitUntil:
-    visible:
-      id: "modifiers-strip-day"
-    timeout: 15000
-- assertVisible:
-    id: "modifiers-strip-day-count"
-# THE SINGULAR FORM IS THE ONE ON SCREEN, AND IT EARNED ITS KEEP IMMEDIATELY:
-# exactly one active modifier is the commonest non-zero case, and a strip reading
-# "1 active modifiers" would have shipped without this line.
-- assertVisible: "1 active modifier"
-
-# ── PROGRAM OPENS "MY STATUS" DIRECTLY, AND THE LIST IS THERE ───────────────
-- tapOn:
+# ── PROGRAM STAYS CLEAN; COACH OPENS THE POPULATED STATUS ──
+- assertNotVisible:
     id: "modifiers-strip-day"
+- tapOn:
+    id: "tab-coach"
+- tapOn:
+    id: "modifiers-strip-coach"
 - extendedWaitUntil:
     visible:
       id: "coach-status-screen"
@@ -110,12 +91,13 @@ tags:
 - assertVisible:
     id: "coach-status-season-phase"
 - takeScreenshot: artifacts/ui-walk/coach-my-status
-# THE COLLAPSED LIST IS RENEE'S SHAPE; ITS EXISTING CONTROLS ARE ONE TAP DEEP.
+
+# The collapsed list is Renee's shape; its existing controls are one tap deep.
 - tapOn: "Equipment restriction active"
 - assertVisible:
     id: "coach-note-actions-not-yet"
 
-# ── AND IT CLOSES BACK TO THE CONVERSATION ──────────────────────────────────
+# ── AND IT CLOSES BACK TO THE CONVERSATION ──
 - tapOn:
     id: "coach-status-close"
 - assertNotVisible:

@@ -509,6 +509,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
       <SeasonPhaseShiftSheet
         visible={phaseControl.visible}
         step={phaseControl.step}
+        currentPhase={phaseControl.currentPhase}
         targetPhase={phaseControl.targetPhase}
         isRebuilding={phaseControl.isRebuilding}
         error={phaseControl.error}
@@ -525,6 +526,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
         onTogglePendingTeamDay={phaseControl.toggleTeamDay}
         onSetPendingGameDay={phaseControl.answerGameDay}
         onAnswerNoUsualGameDay={phaseControl.answerNoGameDay}
+        onSelectTargetPhase={phaseControl.selectTargetPhase}
         onAdvance={() => { void phaseControl.advance(); }}
       />
     </SafeAreaView>

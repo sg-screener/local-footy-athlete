@@ -297,6 +297,28 @@ export function registerProjectionCopy(): void {
       text: 'No modifiers currently impacting your program.',
     },
     {
+      id: 'phase.review.title',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT, 2026-08-11. Sam supplied Renee\'s season '
+        + 'review sheet and asked that Review open this chooser before any phase '
+        + 'change. This is its exact title.',
+      text: 'Review season phase',
+    },
+    {
+      id: 'phase.review.body',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT, 2026-08-11. Exact explanatory sentence on '
+        + 'the Renee reference Sam supplied for the phase chooser.',
+      text: 'Your season phase changes the priorities, load and progression used across your program.',
+    },
+    {
+      id: 'phase.review.confirm',
+      source: 'sam_ruling',
+      provenance: 'SIGNED ON SIGHT, 2026-08-11. Exact action on the Renee phase '
+        + 'chooser Sam supplied; in this app it advances to the retained questions.',
+      text: 'Confirm phase',
+    },
+    {
       id: 'modifiers.strip.week',
       source: 'sam_ruling',
       provenance: 'SIGNED ON SIGHT, 2026-08-11. Sam compared the built week '

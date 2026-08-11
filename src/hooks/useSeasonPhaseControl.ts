@@ -37,7 +37,7 @@ export function useSeasonPhaseControl() {
   const currentPhase = (ownedPhase.phase ?? 'Pre-season') as SeasonPhase;
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState<PhaseShiftStep>('confirm');
-  const [targetPhase, setTargetPhase] = useState<SeasonPhase>(NEXT_PHASE[currentPhase]);
+  const [targetPhase, setTargetPhase] = useState<SeasonPhase>(currentPhase);
   const [pendingPreferredDays, setPendingPreferredDays] = useState<DayOfWeek[]>([]);
   const [pendingTeamDays, setPendingTeamDays] = useState<DayOfWeek[]>([]);
   const [pendingGameDay, setPendingGameDay] = useState<DayOfWeek | null>(null);
@@ -50,7 +50,7 @@ export function useSeasonPhaseControl() {
     rebuildErrorCanRetry,
   } = useRebuildNotice();
 
-  const open = (target: SeasonPhase = NEXT_PHASE[currentPhase]) => {
+  const open = (target: SeasonPhase = currentPhase) => {
     clearRebuildNoticeError();
     setTargetPhase(target);
     setStep('confirm');
@@ -67,6 +67,11 @@ export function useSeasonPhaseControl() {
     setPendingGameDay(storedGameDay ?? null);
     setGameAnchorAnswered(Boolean(storedGameDay));
     setVisible(true);
+  };
+
+  const selectTargetPhase = (target: SeasonPhase) => {
+    clearRebuildNoticeError();
+    setTargetPhase(target);
   };
 
   const close = () => {
@@ -200,6 +205,7 @@ export function useSeasonPhaseControl() {
     toggleTeamDay,
     answerGameDay,
     answerNoGameDay,
+    selectTargetPhase,
     advance,
   };
 }

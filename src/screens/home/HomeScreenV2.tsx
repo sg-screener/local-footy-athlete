@@ -26,25 +26,6 @@ import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visib
 import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
 import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
 import { signedCopy } from '../../rules/signedCopy';
-import { ActiveModifiersSection } from '../../components/ActiveModifiersSection';
-import { ModifiersStrip } from '../../components/ModifiersStrip';
-import { navigationRef } from '../../navigation/navigationRef';
-
-/**
- * THE STRIP'S DESTINATION IS MY STATUS, NOT MERELY THE COACH TAB.
- *
- * `navigationRef` and not a `navigation` prop: this screen is a tab root and the
- * target lives on a SIBLING TAB, which is a container-level move. The ref is the same
- * one `SmokeRouteEnforcer` already uses for exactly that reason.
- *
- * IT FAILS QUIETLY BY DESIGN AND THAT IS NOT A SILENT FAILURE: the guard is
- * `isReady()`, which is false only before the container mounts — a window in
- * which no athlete can have tapped anything.
- */
-function navigateToCoachStatus(): void {
-  if (!navigationRef.isReady()) return;
-  navigationRef.navigate('CoachTab', { status: 'open' });
-}
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
@@ -653,33 +634,6 @@ export default function HomeScreenV2() {
             in this same commit rather than deleted — the ruling moved, so the
             pin moves with it. */}
 
-        {/* ── RULING 4 (day) AND THE SEAT'S NOTE ON RULING 7 (week): THE
-            ACTIVE-MODIFIERS STRIP, ABOVE THE DAY'S CARD AND ABOVE THE WEEK LIST ──
-
-            ONE COMPONENT, THREE MOUNTS — the seat's own words: *"same component
-            as the day screen's, not a second one."* The third is the coach tab.
-            Three copies of this row is three places for the count to disagree
-            with the list it opens.
-
-            IT DOES NOT REPLACE THE SECTION BELOW YET. Ruling 4's full move —
-            the coach-notes block leaving this screen — waits on the status
-            screen's ACTIONS being wired, which needs `handleCoachNoteAction`
-            lifted to an owner both screens call. Until then the strip is an
-            additional door to the same list and **nothing is removed**, which is
-            `LAW-removal-ships-with-its-replacement` holding rather than being
-            worked around.
-
-            NOTHING WHEN THERE IS NOTHING ON PROGRAM: day and week render null
-            at zero. Coach keeps the permanent My Status doorway, which is not a
-            program notice and therefore does not share this hide. */}
-        {isNormal && (
-          <ModifiersStrip
-            surface={dayFirst ? 'day' : 'week'}
-            count={coachNotes.length}
-            onPress={() => navigateToCoachStatus()}
-          />
-        )}
-
         {/* ── The week ──
             ONE ROW CALL SITE FOR BOTH SHAPES. `renderDayRow` below is the only
             place a day is drawn at full size; the day-first view calls it once
@@ -973,21 +927,6 @@ export default function HomeScreenV2() {
             </Card>
           </Pressable>
         )}
-
-        {/* ── What's shaping this week ──
-            MOVED BELOW THE CARD AND THE CHIPS (Sam, 2026-08-08). A4 rider (a)
-            put it above the week it explains; the day-first layout puts today
-            first and the explanation under it, which is the same argument
-            pointed at a screen that now leads with one day. Rider (c) — one line
-            and one clear per active fact, never collapsed — and rider (d) — the
-            clears route through handleCoachNoteAction — are untouched.
-            CoachNotesSection still renders nothing when the list is empty, so a
-            normal week loses no screen space. */}
-        <ActiveModifiersSection
-          notes={coachNotes}
-          equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
-          onAction={handleCoachNoteAction}
-        />
 
         {/* ── Missed-session follow-up ── */}
         {isNormal && missedSessionPrompt && (
@@ -2599,12 +2538,9 @@ function TimelineChevron({ open }: { open: boolean }) {
   );
 }
 
-/* `CoachNotesSection` MOVED OUT 2026-08-10 (UI merge slice 3) to
- * `src/components/ActiveModifiersSection.tsx`, because ruling 4 gives it a
- * SECOND mount on the coach page's status screen and the merge plan's binding
- * rule is that "my status" MOUNTS the existing doors rather than building new
- * ones. This screen now renders `<ActiveModifiersSection>`; every testID it
- * carries is unchanged, byte for byte. */
+/* Coach Notes now have one visible home: My Status. The helpers below remain
+ * temporarily because the status actions still route athletes back to the
+ * five working Program controls; neither Today nor Week renders the notes. */
 
 function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
   if (note.reversibleAdjustmentId) {
@@ -3403,6 +3339,7 @@ function RebuildSheet({
 interface PhaseShiftSheetProps {
   visible: boolean;
   step: PhaseShiftStep;
+  currentPhase: SeasonPhase;
   targetPhase: SeasonPhase;
   isRebuilding: boolean;
   error: string | null;
@@ -3420,6 +3357,7 @@ interface PhaseShiftSheetProps {
   onTogglePendingTeamDay: (d: DayOfWeek) => void;
   onSetPendingGameDay: (d: DayOfWeek) => void;
   onAnswerNoUsualGameDay: () => void;
+  onSelectTargetPhase: (phase: SeasonPhase) => void;
   onAdvance: () => void;
 }
 
@@ -3446,11 +3384,11 @@ function BackChevron({ onPress }: { onPress: () => void }) {
 }
 
 export function SeasonPhaseShiftSheet({
-  visible, step, targetPhase, isRebuilding, error, canRetry, msgIdx, msgOpacity,
+  visible, step, currentPhase, targetPhase, isRebuilding, error, canRetry, msgIdx, msgOpacity,
   pendingPreferredDays, pendingTeamDays, pendingGameDay, gameAnchorAnswered,
   onClose, onBack,
   onTogglePendingPreferredDay, onTogglePendingTeamDay, onSetPendingGameDay,
-  onAnswerNoUsualGameDay, onAdvance,
+  onAnswerNoUsualGameDay, onSelectTargetPhase, onAdvance,
 }: PhaseShiftSheetProps) {
   const building = step === 'building' || isRebuilding;
   // Back is meaningful on every interactive step except the first. Hide on
@@ -3475,20 +3413,48 @@ export function SeasonPhaseShiftSheet({
         />
       ) : step === 'confirm' ? (
         <>
-          <Text style={styles.sheetTitle}>Shift to {targetPhase} mode?</Text>
+          <Text style={styles.sheetTitle}>{signedCopy('phase.review.title')}</Text>
           <Text style={styles.sheetBody}>
-            Your whole program will rebuild around {targetPhase} priorities.
+            {signedCopy('phase.review.body')}
           </Text>
-          <View style={styles.noteBlock}>
-            <Text style={styles.notePreserved}>✓ Game days are preserved</Text>
-            <Text style={styles.noteWiped}>✗ Any custom exercise swaps will be lost</Text>
-            <Text style={styles.notePreserved}>✓ Phase updated to {targetPhase}</Text>
+          <View style={styles.phaseOptions}>
+            {(['In-season', 'Pre-season', 'Off-season'] as const).map((phase) => {
+              const selected = targetPhase === phase;
+              return (
+                <Pressable
+                  key={phase}
+                  onPress={() => onSelectTargetPhase(phase)}
+                  testID={`season-phase-option-${phase.toLowerCase()}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={phase}
+                  style={({ pressed }) => [
+                    styles.phaseOption,
+                    selected && styles.phaseOptionSelected,
+                    pressed && { opacity: 0.72 },
+                  ]}
+                >
+                  <Text style={styles.phaseOptionLabel}>{phase}</Text>
+                  <View style={[styles.phaseRadio, selected && styles.phaseRadioSelected]}>
+                    {selected ? <View style={styles.phaseRadioInner} /> : null}
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
+          {targetPhase !== currentPhase ? (
+            <View style={styles.noteBlock}>
+              <Text style={styles.notePreserved}>✓ Game days are preserved</Text>
+              <Text style={styles.noteWiped}>✗ Any custom exercise swaps will be lost</Text>
+              <Text style={styles.notePreserved}>✓ Phase updated to {targetPhase}</Text>
+            </View>
+          ) : null}
           {error && <Text style={styles.sheetError}>{error}</Text>}
           {(!error || canRetry) && (
             <Button
-              label={error ? 'Try again' : 'Continue'}
+              label={error ? 'Try again' : signedCopy('phase.review.confirm')}
               size="lg"
+              disabled={targetPhase === currentPhase}
               onPress={onAdvance}
             />
           )}
@@ -4281,6 +4247,40 @@ const styles = StyleSheet.create({
   },
   sheetSubtext: { color: '#757575', fontSize: 13, textAlign: 'center', marginBottom: spacing.md },
   sheetError: { color: '#F44336', fontSize: 13, textAlign: 'center', marginBottom: spacing.sm },
+
+  phaseOptions: { gap: 8, marginBottom: spacing.md },
+  phaseOption: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#343834',
+    backgroundColor: '#171A17',
+  },
+  phaseOptionSelected: {
+    borderColor: '#7FA300',
+    backgroundColor: '#1C2515',
+  },
+  phaseOptionLabel: { color: '#F0F0F0', fontSize: 15, fontWeight: '700' },
+  phaseRadio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#646A64',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phaseRadioSelected: { borderColor: '#C8FF00', borderWidth: 3 },
+  phaseRadioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#C8FF00',
+  },
 
   sheetCurrentBadge: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
