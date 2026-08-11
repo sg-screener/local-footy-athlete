@@ -4285,10 +4285,10 @@ const styles = StyleSheet.create({
     gap: 8, marginBottom: spacing.sm,
   },
   // Layout-only overrides now — SelectableTile (shape="chip") owns the
-  // base / selected / pressed looks. We just force a minimum width so all
-  // seven day chips line up on a single row.
+  // base / selected / pressed looks. Four 22% columns force a balanced 4 + 3
+  // wrap on every seven-day phase question; the centred grid owns row balance.
   dayChip: {
-    minWidth: 58, alignItems: 'center',
+    width: '22%', minWidth: 58, alignItems: 'center',
   },
   phaseSkewCard: {
     backgroundColor: '#161616',

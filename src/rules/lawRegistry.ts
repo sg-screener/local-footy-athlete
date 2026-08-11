@@ -410,6 +410,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-phase-shift-days-wrap-four-three',
+    law: 'Every seven-day selector in the season-phase shift sheet wraps as a centred row of four followed by a centred row of three, never six plus an orphaned seventh button.',
+    ruledAt: 'Sam 2026-08-12 direct request: "maybe just make it 4 and 3" after the seven buttons rendered 6 + 1',
+    guard: {
+      state: 'guarded',
+      by: 'test:profile-reset-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. The guard proves HomeScreenV2 is the live Program screen, finds the complete phase-shift region, proves availability, team-training and usual-game-day all use the same wrapped grid and shared day-chip style, then pins the four-column basis and centred wrap. FIRST RUN: 170 existing checks passed and the new geometry cell red on the prior minimum-width-only style that produced 6 + 1. NOT COVERED: physical iPhone appearance and unusually narrow accessibility display modes.',
+    },
+  },
+  {
     id: 'LAW-week-navigation-belongs-to-week',
     law: 'The accepted new Program template uses a large Day / Week shape toggle; Day renders no week-date navigation, Week renders one legible previous/range/next row directly below it with 40pt controls and 13pt range type, the row is equally spaced from the toggle above and week cards below, and changing or returning weeks leaves every session collapsed.',
     ruledAt: 'docs/UI_PROTOTYPE_DIVERGENCE_2026-08-11.md "SAM EYE PASS 6 — WEEK NAVIGATION BELONGS TO WEEK"; UPDATED by Sam, 2026-08-11 in this Codex task: the week range "needs to be equally spaced above and below".',
