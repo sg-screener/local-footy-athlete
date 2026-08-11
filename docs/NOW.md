@@ -89,7 +89,9 @@ and this file gets one line pointing at it.**
   DEVICE ACCEPTANCE.** One Week card head owns all seven days; Today starts
   closed; Day shows the real warm-up, strength and conditioning rows; Coach owns
   My Status and season phase; Profile no longer duplicates those controls. The
-  live session owns per-exercise completion and a 1–5 effort result. The Day
+  live session owns per-exercise completion and a 1–5 effort result. **The
+  picture index for every current surface is `docs/UI_STATE_2026-08-12.md` —
+  look there before reading any UI prose.** The Day
   completion state says `Session complete` once with a green tick. Full receipts
   and exclusions: `docs/CODEX_UI_SESSION_PERSISTENCE_BOUNDARY_2026-08-11.md`.
 - **THE SEEDED WORLD AND GAME DAYS NOW SURVIVE A REAL PROCESS RELAUNCH.** The

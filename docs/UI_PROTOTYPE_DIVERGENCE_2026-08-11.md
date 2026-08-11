@@ -689,3 +689,23 @@ and 44pt controls.
 **NOT COVERED:** the rebuilt physical iPhone after this spacing pass; Today
 sessions with zero, one or five component rows; accessibility dynamic type;
 the old/classic Program screen. Changed-surface gates are not phone acceptance.
+
+---
+
+## RESOLVED 2026-08-12 — DO NOT PUT THE QUESTION TO SAM AGAIN
+
+**Item 1 (the week list) is CLOSED, and the answer was "her card shape", taken
+in full.** Measured, not assumed: `artifacts/ui-walk/week-prototype-parity.png`
+shows every day as a card — big date numeral, `CORE` / `OPTIONAL` chip, session
+title, `N exercises`, chevron — with today as that SAME card outlined, carrying
+the `TODAY` pill under the date and no `Start Session` inside the week list. The
+thin rows and the lime hero card are gone. Week navigation also moved BELOW the
+segment with the `THIS WEEK` pill dropped, matching the prototype's `‹ 13-19 JUL ›`.
+
+Section 2's two items are also closed by the same pass: the phase card left both
+shapes when Coach took My Status (`acf20a57`, `db5c9f5a`, `31327099`), and the
+day screen's controls moved with it.
+
+**The one question in this doc therefore never goes to Sam.** It was answered by
+building it. What is still owed is his EYE on a device — a different thing, and
+it is the standing item in `docs/NOW.md`, not a question.
