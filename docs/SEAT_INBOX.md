@@ -2,6 +2,20 @@
 
 ## Unprocessed (newest first)
 
+> **EVERY ORDER LIVES UNDER THIS HEADING. Sub-headings inside it MUST be `###`,
+> never `##`.** `scripts/seat-inbox-hook.sh` bounds its scan at the next `## `
+> (`awk '/^## Unprocessed/{f=1;next} f&&/^## /{exit}'`), so an order written
+> under its own `## ` heading is **INVISIBLE to the stop hook** — the terminal
+> ends its turn and **Sam becomes the courier again.** The seat introduced
+> exactly that on 2026-08-12 with `## THE MERGE'S LEFTOVERS`; it was masked only
+> because items 1-8 above it kept the hook blocking. **This is sighting 5 of the
+> class the hook's own comments document** — "the scan infers 'an order exists'
+> from an artefact". **The hook is right; the writer was wrong.**
+> **SYSTEMIC FIX OWED (not yet built): a guard cell that reds when a `## `
+> heading between `## Unprocessed` and `## SAFE FOR A PARALLEL AGENT` contains
+> order-shaped content.** Until then this note is the only thing holding it.
+
+
 **READ `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md` FIRST — it supersedes the
 ordering of every item below and answers Sam's 2026-08-12 brief on how the app
 should be built. `docs/ATLAS_VERIFICATION_2026-08-12.md` still carries the
@@ -26,7 +40,7 @@ writing a `⚠ SAM` line.**
 
 ---
 
-## SAM'S DIRECTION, 2026-08-12 — THE UI IS NEARLY DONE AND HE OWNS THE REST OF IT
+### SAM'S DIRECTION, 2026-08-12 — THE UI IS NEARLY DONE AND HE OWNS THE REST OF IT
 
 **SAM:** *"i like how the app is looking now - but i have a few more UI tweaks to
 make and then it's all about getting it functioning like a proper app with my
@@ -58,7 +72,51 @@ are not consulted (the craft validator wired to log, the moderate day counted an
 discarded, the fifth-hard-day arithmetic thrown away, `canOverride` read by
 nobody). **"Fully in the app" means CONSUMED, not present.**
 
-## THE MERGE'S LEFTOVERS — from `docs/WHAT_THE_MERGE_LEFT_BEHIND_2026-08-12.md`
+### SAM'S OWN UI LIST, 2026-08-12 — HE IS DOING THESE. STAY OUT OF THESE FILES.
+
+He listed 12 UI items he wants to work on. **Mostly pure UI and none of it is
+terminal work.** Recorded so nobody collides with him and so two are not built
+wrong:
+
+**BLOCKED — DO NOT BUILD THE BUTTON FIRST.** *"Add a game button - needed for
+school footy or double up weeks ... needs to live in season when a game is
+already scheduled and they need to add another game"*. **This is inbox item 3,
+not a UI item.** `derivedWeekContract.ts:90` takes `fixtures[0]` and drops the
+rest, so a second game cannot be stored. **A button shipped before item 3 is a
+dead affordance that looks like it worked.** Build item 3, then the button.
+
+**COLLISION CLEARED 2026-08-12 — GOES TO CODEX.** *"when shifting season phases
+the 7 days button option is spread across 2 lines - 6 on line 1 then 1 on line
+2"* — that is `styles.chipGrid` (`HomeScreenV2.tsx:4270`, `flexWrap: 'wrap'`,
+`justifyContent: 'center'`), used at `:3443`, `:3491`, `:3533` in the season
+phase sheet. **The seat first flagged it as colliding with item 4 and then filed
+it under "Sam is doing these" — which meant NOBODY owned it. Sam caught that:**
+*"this is being fixed by claude eventually isn't it?"* **It was not going to be.**
+Item 4's remaining work (the ±7 invention in `section18CraftTier.ts`, the waist
+at `derivedWeekContract.ts:90`) is in RULES files, not this screen, so the
+collision is over. **CODEX OWNS IT.** Seven chips at `justifyContent: 'center'`
+wrap 6+1; the fix is a design call — narrower chips, a deliberate 4+3, or a
+single scrolling row.
+
+**THE LESSON, AND IT IS THE SESSION'S OWN DISEASE:** *"blocked on a collision"*
+and *"assigned to Sam"* got merged into one note, and the item fell out of both
+queues. **An item parked for a collision must name WHO PICKS IT UP WHEN THE
+COLLISION CLEARS, or it is not parked, it is dropped.**
+
+**HIS REMAINING TEN ARE PURE UI AND HIS:** day/week toggle not sticking across
+week navigation; edit icons on injury tap-throughs; icon colours in the flat
+button; icon sizes too small overall; recovery icon → full battery when adding a
+session; weekly-view buttons (*Away this week* with the equipment yes/no →
+bodyweight branch; *Practice match* REMOVED from the day screen in pre-season,
+it already lives in both; *Bye* as its own weekly-only in-season button); and an
+add/move/swap/remove entry point on the weekly view that asks "what do you want
+to edit" then follows the existing sequence.
+
+**DO NOT start any of these. Do not "help".** They are recorded here only so the
+terminal does not enter these files and so the two above are not built in the
+wrong order.
+
+### THE MERGE'S LEFTOVERS — from `docs/WHAT_THE_MERGE_LEFT_BEHIND_2026-08-12.md`
 
 **SAM ASKED, 2026-08-12:** *"well how many things did codex changed that haven't
 been seen and implemented properly cause thsat was not the only change we mad"*.
@@ -162,39 +220,93 @@ the FILE'S line count (1,924) beside it — which reads as the size of the chang
 `--numstat` or the diff before calling a file "worked on", and never quote a file
 size as if it were a diff size.**
 
-## SAFE FOR A PARALLEL AGENT (Codex, in its OWN worktree — never this checkout)
+00. **TIME THE CHAIN. IT HAS NEVER BEEN MEASURED AND IT RUNS ON EVERY UNIT.**
+   **SAM, 2026-08-12:** *"i want to know how long that 192 tests are taking and
+   if it's really necessary"*.
 
-Sam runs Codex in separate worktrees under `~/Documents/lfa-*`; that pattern is
-correct and should continue. **Two agents in ONE checkout share a git index and
-a test chain — the seat hit the lock toll alone on 2026-08-12 (see the handoff's
-environment section). Give a parallel agent its own worktree and its own branch.**
+   `test:bible` is **192 suites run SERIALLY** and it **stops at the first
+   failure**, so a late break re-runs almost everything. **Grep found NO recorded
+   runtime anywhere in `docs/`, `AGENTS.md` or `CLAUDE.md` — the cost paid by
+   every single unit has never once been written down.**
 
-**HANDS OFF while items 2-4 are live** — the terminal is in these:
-- `src/components/SeasonPhaseShiftSheet.tsx` → `HomeScreenV2.tsx:3352` (the phase
-  sheet; its `pendingGameDay` / `gameAnchorAnswered` props are item 2's fixture
-  work). **NOTE THE SURFACE IS THE COACH TAB** — `CoachTabScreen.tsx:479` — not
-  the home screen; see `HOW_TO_BUILD_THIS_APP` §6.
-- `src/screens/onboarding/GameDayScreen.tsx` (item 2a opens this picker)
-- `src/components/PlanChangeSheet.tsx` (item 4 gives its `block` step a way out)
+   **DO THIS THE FREE WAY: you already run the chain. Time it and record it.** No
+   special run. Report: total wall-clock, and **the ten slowest suites with their
+   individual times** — that is where "is it really necessary" gets answered with
+   a number instead of an opinion. Put the figure in `docs/NOW.md` and re-stamp
+   it whenever it moves.
 
-**GOOD FIRST PARALLEL JOB — FINISH THE PHASE-SHEET MOVE.** The surface moved to
-My Status; the implementation did not follow, so
-`src/components/SeasonPhaseShiftSheet.tsx` is a permanent six-line re-export of a
-component that still lives inside `HomeScreenV2.tsx`. Its own comment says it is
-only for *"while its surface moves"*. **Move the implementation to
-`src/components/`, delete the bridge.** Isolated, no rules touched — **but it
-COLLIDES with items 2-4, so it runs BEFORE them or AFTER them, never during.**
+   **THEN THE OBVIOUS LEVER: `test:bible:parallel` EXISTS, and so does
+   `test:bible:agreement`.** Both built. `NOW.md:72` still calls parallel *"a
+   NON-OFFICIAL pre-check"*, so **every unit pays the serial cost while the
+   parallel path and its own agreement check sit unused.** Same disease as
+   everything else: built, never adopted. **If `agreement` passes, make parallel
+   official and say so in `NOW.md`. If it does not pass, report why — that is a
+   finding.**
 
-**STANDING INSTRUCTION FOR ANY BUTTON REMOVAL:** this repo has ~38 tap sites in
-files that read as live (`HomeScreenClassic` sits inside the file the navigator
-mounts, behind a compile-time const). **Prove a control is REACHABLE before
-removing it, and report the ones that could not be reached** — those are the
-finding, not the failure. `LAW-L5-no-dead-affordances` is UNENFORCED, so nothing
-catches a mistake here automatically.
+0a. **PROPORTIONATE UNITS — THIS DEFAULT IS FLIPPED NOW, NOT SCHEDULED.**
+   **SAM, 2026-08-12:** *"fic the full treatment issue for smaller iterms - again
+   I think this is something we said we fixed BUT GUESS WHAT IT'S NOT FUCKING
+   FIXED"*.
 
----
+   **LOOP CHECK `seat-rations-what-Sam-ruled` — SIGHTING 4.** The rule
+   (`AGENTS.md:99-103`) reads: *"when Sam rules a PRINCIPLE, the seat may schedule
+   the WORK but may never schedule the PRINCIPLE. The default flips on the day he
+   rules, and the backlog is what turns red, not what waits."* **The seat spent
+   2026-08-12 queueing his rulings instead of flipping them. This item is written
+   as a flipped default for that reason.**
 
-1. **THE MODERATE DAY — the other half of Sam's shape, held by nothing.** He
+   **THE DEFAULT, IN FORCE FROM NOW:** a MECHANICAL item — a style value, an icon,
+   a copy string, a label, a one-line predicate with no behaviour change — is
+   **BATCHED with its neighbours into ONE unit with ONE boundary report and ONE
+   sweep.** It does not get its own measure → build → mutation run → report →
+   stop cycle. **Mutation testing stays mandatory for anything that changes what
+   the athlete is programmed.** The test of which bucket an item is in: *would a
+   wrong answer here change an athlete's training?* If no, batch it.
+
+   **THIS DOES NOT SHRINK THE RIGOUR ON RULES WORK** and must not be read that
+   way — `CLAUDE.md:30` governs and is untouched. **It removes ceremony from work
+   that never needed it, which is what has been making small items cost the same
+   as large ones.**
+
+   **FIRST BATCH, BUILD IT AS ONE UNIT:** items 8 (off-feet walking gate), 9
+   (session-size floor and ceiling), M5 (`ModifiersStrip` dead union members;
+   the `ProfileScreen` "TEMPORARY" release diagnostics dated 2026-07-29 — **ask
+   Sam before deleting those, the cause may never have been found**).
+
+0. **STANDING, EVERY STOP: MERGE CODEX'S WORK INTO `main`. SAM NEVER MERGES.**
+   **SAM, 2026-08-12:** *"but then we'll have to merge it later won't we? how
+   will i see what he's done?"*
+
+   **AT EVERY STOP, BEFORE THE STOP REPORT:** for every `codex/*` branch holding
+   commits not in `main`, `git merge --no-ff` it, run the gates, and **fix or
+   report anything that reds — never leave the merge unmade and never ask Sam to
+   do it.** Quiet if there is nothing new. **The stop report states in ONE LINE
+   which of Sam's UI changes are now in `main`** — that is his answer to "how
+   will i see what he's done", because his phone runs `main`.
+   **The gates are the review.** Codex's work is judged like the terminal's own.
+
+   **DO NOT CARE WHICH FOLDER CODEX USES.** The seat built an isolated worktree
+   at `.claude/worktrees/ui-tweaks` on 2026-08-12, wrote a sandbox path into its
+   git pointer, and broke it for Codex. **Sam:** *"you just make things more
+   complicated for no fucking reason"* — **he is right; Codex working in the main
+   checkout had been working.** This order is branch-based, not folder-based, so
+   it holds either way. **Do not propose isolation again unless a real collision
+   is observed and named.**
+
+1. **STOP THE "BUILT BUT NOT IN THE APP" CLASS — read
+   `docs/HOW_WE_STOP_BELIEVING_THINGS_ARE_DONE_2026-08-12.md`. THIS OUTRANKS
+   EVERYTHING BELOW.** **SAM, 2026-08-12:** *"there's a lot of things that have
+   been built in the past that i believed were in the actual app working but
+   maybe they were just written down and then not included in the app ... how do
+   we make sure this happens"*. **He asked the SAME question on 2026-08-10 about
+   laws and built the answer** (`lawRegistry.ts:8`) — two states, no third, a
+   number that may only fall. **Point it at features.** Item 1 of that doc costs
+   nothing and starts now: **the word "done" is retired — every claim is
+   WORKING (name the test), BUILT (code exists, nothing checks it) or WRITTEN (a
+   doc says it, no code). Banned: done, shipped, in, handled, sorted.** Then the
+   `noUnusedWrites` gate, then the feature registry seeded honestly and ugly.
+
+2. **THE MODERATE DAY — the other half of Sam's shape, held by nothing.** He
    named *"4 hard days plus 1 moderate/easy day"*; the Bible states it once
    (`LFA_PROGRAMMING_BIBLE.md:4808`). **Hard days have a preferred range, a
    permitted maximum and two findings. Moderate days have a counter and nothing
@@ -207,7 +319,26 @@ catches a mistake here automatically.
    app builds toward 4+1. **MEASURE FIRST:** print `achievedModerateDayCount`
    across all 17 `test:qa` scenarios.
 
-2. **THE FIXTURE WORK — (a) and (b) are DONE 2026-08-12; (c) and (d) are LIVE.**
+3. **PLANNED LOAD IS NOT EXPERIENCED LOAD — read
+   `docs/HOW_THE_ATHLETE_TELLS_US_2026-08-12.md`.** **SAM, 2026-08-12:** *"we
+   might classify something as hard when it's actually not to the athlete so
+   maybe hard easy moderate is not the way to think about it or it's only a way
+   to think about it for the programming but not for managing the readiness of
+   the athlete?"* **His split is right.** Hard/moderate/easy stays for BUILDING
+   the week; readiness must read what the athlete REPORTED. **Sighting 8:
+   `conditioningSRPE` is built and correct (`journalLoad.ts:509-520`) and its
+   only importers are four journal files — behind the surface Sam hid.** Order of
+   work is §5 of that doc. **§4 (what happens when the athlete does not fill it
+   in) is a RECOMMENDATION, not a Sam ruling — do not build past it without
+   asking.** **ORDERED AFTER THE MODERATE DAY ON SAM'S CALL, 2026-08-12:** *"the moderate
+   day shouldnt this be before planed vs experienced because it's part of
+   planned?"* — **and his reason is the stronger one: do not start comparing
+   PLANNED against EXPERIENCED while the planned shape is still half-defined.**
+   Item 2 completes the planned vocabulary; this item then measures against it.
+   **MEASURE FIRST: does a strength session have a start timestamp?
+   Grep found none, and the whole plan depends on it.**
+
+4. **THE FIXTURE WORK — (a) and (b) are DONE 2026-08-12; (c) and (d) are LIVE.**
    `docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md`, guard `test:game-anchor`.
    **(a) any day of the week — LANDED.** One owner `src/rules/gameAnchor.ts`
    replaced EIGHT copies of the predicate; the allowlist, the `GameDay` enum and
@@ -241,7 +372,7 @@ catches a mistake here automatically.
    `derivedWeekContract.ts:90` `const fixture = fixtures[0] ?? null` is the ROOT
    — the twelve `.find()`/`[0]` sites are its symptoms.
 
-3. **STRENGTH JOINS THE CAPACITY ARITHMETIC.** `HOW_TO_BUILD_THIS_APP` §3.
+5. **STRENGTH JOINS THE CAPACITY ARITHMETIC.** `HOW_TO_BUILD_THIS_APP` §3.
    Sam: *"sometimes that may mean only doing 1 strength session during the week
    if they have 2 games and 2 team trainings"*. **Today unreachable by design:**
    the only gateway-time fixture-authorised reduction writes
@@ -254,7 +385,7 @@ catches a mistake here automatically.
    *"Resting {Day} means you'll miss a strength session"*, so a fixture-caused
    shortfall blames the athlete for the club's draw.
 
-4. **BUILD LAYER 3 — THE ATHLETE'S WILL.** `HOW_TO_BUILD_THIS_APP` §2. **This is
+6. **BUILD LAYER 3 — THE ATHLETE'S WILL.** `HOW_TO_BUILD_THIS_APP` §2. **This is
    what Sam actually asked for** (*"nothing so tight that ... the athlete can't
    choose to do whatever they want"*) **and it does not exist.** A `block` has
    one button, labelled `"OK"` (`PlanChangeSheet.tsx:859-883`); `canOverride` is
@@ -266,21 +397,21 @@ catches a mistake here automatically.
    written to replace**, and the `date|name` STRING JOIN at
    `section18CraftTier.ts:217-232` **which breaks on a rename.**
 
-5. **THE GATE — `LAW-computed-must-be-consumed`.** `HOW_TO_BUILD_THIS_APP` §4
+7. **THE GATE — `LAW-computed-must-be-consumed`.** `HOW_TO_BUILD_THIS_APP` §4
    lists NINE values computed and read by nobody. **One `noUnusedWrites`-style
    gate over `contract.*` and exported rule outputs catches every one, and it
    subsumes the narrower `subject: 'doc' | 'behaviour'` proposal.** Sighting 6.
 
-6. **ONE OWNER FOR OFF-FEET.** `conditioningFeasibility.ts:215` permits walking
+8. **ONE OWNER FOR OFF-FEET.** `conditioningFeasibility.ts:215` permits walking
    with no off-feet gate while `:207`/`:210` reject running and hills, and
    `:326-329` clears the flag for those two and forgets walking. Declare `onFeet`
    on the family table and derive both gates. Verification §2.2.
 
-7. **A FLOOR AND A CEILING ON SESSION SIZE.** Enforce both at
+9. **A FLOOR AND A CEILING ON SESSION SIZE.** Enforce both at
    `sessionRowCounting.ts:253` — the site its own comment nominates. Emit
    `MIN EXERCISES PER SESSION` to the prompt.
 
-8. **KEEP THE UNENFORCED LAW COUNT FALLING.** Measured 2026-08-12: **95 rows, 63
+10. **KEEP THE UNENFORCED LAW COUNT FALLING.** Measured 2026-08-12: **95 rows, 63
    guarded, 32 UNENFORCED.** Priority is the FOUR that can change what the
    athlete sees — `LAW-L6-honest-actions`, `LAW-attributed-content-change`,
    `LAW-L5-no-dead-affordances`, `LAW-L15-one-write-format`. Two rows read
@@ -291,6 +422,38 @@ catches a mistake here automatically.
 Items 9-11 (retire dormant code to `src/retired/`, make onboarding addressable
 then walk it, harvest ratchet + computed atlas) are shaped in the verification
 doc §4 and wait behind the above.
+
+## SAFE FOR A PARALLEL AGENT (Codex, in its OWN worktree — never this checkout)
+
+Sam runs Codex in separate worktrees under `~/Documents/lfa-*`; that pattern is
+correct and should continue. **Two agents in ONE checkout share a git index and
+a test chain — the seat hit the lock toll alone on 2026-08-12 (see the handoff's
+environment section). Give a parallel agent its own worktree and its own branch.**
+
+**HANDS OFF while items 2-4 are live** — the terminal is in these:
+- `src/components/SeasonPhaseShiftSheet.tsx` → `HomeScreenV2.tsx:3352` (the phase
+  sheet; its `pendingGameDay` / `gameAnchorAnswered` props are item 2's fixture
+  work). **NOTE THE SURFACE IS THE COACH TAB** — `CoachTabScreen.tsx:479` — not
+  the home screen; see `HOW_TO_BUILD_THIS_APP` §6.
+- `src/screens/onboarding/GameDayScreen.tsx` (item 2a opens this picker)
+- `src/components/PlanChangeSheet.tsx` (item 4 gives its `block` step a way out)
+
+**GOOD FIRST PARALLEL JOB — FINISH THE PHASE-SHEET MOVE.** The surface moved to
+My Status; the implementation did not follow, so
+`src/components/SeasonPhaseShiftSheet.tsx` is a permanent six-line re-export of a
+component that still lives inside `HomeScreenV2.tsx`. Its own comment says it is
+only for *"while its surface moves"*. **Move the implementation to
+`src/components/`, delete the bridge.** Isolated, no rules touched — **but it
+COLLIDES with items 2-4, so it runs BEFORE them or AFTER them, never during.**
+
+**STANDING INSTRUCTION FOR ANY BUTTON REMOVAL:** this repo has ~38 tap sites in
+files that read as live (`HomeScreenClassic` sits inside the file the navigator
+mounts, behind a compile-time const). **Prove a control is REACHABLE before
+removing it, and report the ones that could not be reached** — those are the
+finding, not the failure. `LAW-L5-no-dead-affordances` is UNENFORCED, so nothing
+catches a mistake here automatically.
+
+---
 
 ## AWAITING SAM'S EYE (not terminal work)
 
