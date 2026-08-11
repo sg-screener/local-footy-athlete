@@ -56,6 +56,10 @@ the same lookup rather than gaining another icon set.
   failures name expanded-day grouping and equipment semantic identifiers,
   neither of which was edited here. Whether all five predate this unit was not
   re-measured against a separate clean checkout, so that is OPEN-UNKNOWN.
+- The first plain simulator launch reached the existing spoken development
+  refusal because a prior harness clock receipt had no active checkpoint. The
+  refusal offered its established clear-state door; the subsequent deterministic
+  reset cleared that simulator-only state and reached Program normally.
 
 ## Receipts
 
@@ -70,6 +74,11 @@ the same lookup rather than gaining another icon set.
 - Repository process guards: 34 cells run, 34 passed.
 - Typecheck baseline: 35 product, 51 development-tool and 373 test diagnostics,
   459 total against the baseline; no file regressed.
+- The iOS simulator bundle rebuilt successfully with zero build errors. The
+  Profile -> setup change -> equipment flow then completed and photographed
+  both halves of the equipment sheet. Visual inspection found all approved
+  equipment traces contained within their circles with no clipping, and the
+  rejected pulley drawing absent.
 - The approved icon test is in the mandatory chain before the law-registry gate.
   The chain remains deliberately red because 32 unrelated registry rows remain
   unguarded; Sam explicitly overrode that stop for this unit.
@@ -89,11 +98,9 @@ screen-local drawings.
 
 ## NOT COVERED
 
-- The new bundle has not been rebuilt and visually exercised in the iOS
-  simulator. The simulator is available, but the installed build predates this
-  source change.
+- Readiness, Plan change, Injury and Add exercise were source-pinned but were
+  not separately photographed in the rebuilt simulator during this unit.
 - Sam's physical iPhone has not shown the new icons. Athlete-facing acceptance
   therefore remains open.
 - Icons outside the audit decision list were not redesigned.
 - Android rendering was not exercised.
-
