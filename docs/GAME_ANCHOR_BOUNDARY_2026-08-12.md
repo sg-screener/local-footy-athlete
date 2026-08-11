@@ -107,6 +107,11 @@ splitting it into its own commit would have been ceremony, not honesty.
   `ProfileScreen.tsx:74`, and it was not in the plan.
 - **Fourteen readers** now delegate to the owner.
 - **New guard** `test:game-anchor`, in the `test:bible` chain, 14 cells.
+- **SWEEP: `failures=14 of 190`, and the failing set is IDENTICAL to the
+  baseline name for name** — verified by diffing the two files, not by comparing
+  totals. 189 → 190 is this unit's own suite joining the chain.
+  `.sweep/fails-gameanchor-final2.txt`. Full verdict:
+  `docs/STOP_2026-08-12_GAME_ANCHOR.md`.
 - **THE SWEEP CAUGHT THIS UNIT'S OWN TEST, and that is worth recording.** The
   first full arm went red on `test:profile-mirror-narrowing` — a suite in the
   BASELINE-GREEN set, so a genuinely new red. The relaunch cell reached the
@@ -141,6 +146,16 @@ splitting it into its own commit would have been ceremony, not honesty.
    index and a test chain. **It should say they also share this file, and
    nothing detects a mid-sentence splice.** `test:seat-inbox-hook` and
    `test:repo-law-guards` both passed over the corrupted file.
+
+   **AND THE REPAIR ITSELF WAS WRONG, CAUGHT BY THE SEAT WITHIN THE HOUR.** It
+   gave the rescued block a `## ` heading. `scripts/seat-inbox-hook.sh` bounds
+   its scan at the next `## ` (`awk '/^## Unprocessed/{f=1;next} f&&/^## /{exit}'`),
+   so **every order below that heading became invisible to the stop hook** — the
+   terminal would end its turn and Sam becomes the courier again. It was masked
+   only because items 1-8 sat above it and kept the hook blocking. Sub-headings
+   inside `## Unprocessed` must be `###`. **Fixing a corruption by hand, in a
+   file with a parser, without reading the parser is the same class of mistake
+   as the corruption** — and a guard cell for it is owed and not built.
 4. **`test:compile` was RED at HEAD and the sweep cannot see it** —
    `scripts/sweep.sh` filters `test:compile` out of the chain by construction.
    `section18CraftTierTests.ts` arrived with `2db1b8ce` missing a required

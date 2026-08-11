@@ -60,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `be69d51d` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `06401d92` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -97,8 +97,11 @@ and this file gets one line pointing at it.**
   **No device migration is owed and that is proven, not assumed** — the legacy
   value was never a day and parses to null at the owner. Guarded by
   `test:game-anchor` (14 cells, in the chain), **mutation-tested twice**;
-  registry 95/63 → 96/64 with the unguarded count unmoved.
-  `docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md`.
+  registry 95/63 → 96/64 with the unguarded count unmoved. **Sweep `14 of 190`,
+  the failing set IDENTICAL to the baseline name for name** (189 → 190 is this
+  unit's own suite joining the chain). `06401d92` ·
+  `docs/GAME_ANCHOR_BOUNDARY_2026-08-12.md` ·
+  `docs/STOP_2026-08-12_GAME_ANCHOR.md`.
 - **A CONCURRENT WRITE CORRUPTED `docs/SEAT_INBOX.md` AND BOTH DOC GATES PASSED
   OVER IT.** The seat's merge-leftovers block landed **inside STAND-DOWN B's
   sentence**, splitting a stand-down whose whole job is to stop a question
