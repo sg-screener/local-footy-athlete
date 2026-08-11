@@ -56,6 +56,12 @@ ok('PlanChangeSheet accepts move entry', /initialAction\??:\s*'actions'\s*\|\s*'
 ok('move entry and menu use startMove',
   /initialAction === 'move'[\s\S]{0,160}startMove\(\)/.test(sheet) &&
   /label="Move this session"[\s\S]*?onPress=\{\(\) => startMove\(\)\}/.test(sheet));
+const closedSheetExit = sheet.indexOf('if (!date) return null;');
+ok('closed and open sheet renders call the same hooks',
+  closedSheetExit >= 0 &&
+  !/\buse(?:Effect|Memo|State|Callback|Reducer|Ref|Context|LayoutEffect)\s*\(/.test(
+    sheet.slice(closedSheetExit),
+  ));
 ok('hook does not choose prompt destination', !/handleSkipMissedSession[\s\S]{0,1500}move_forward/.test(hook));
 
 console.log(`\nmissedSessionPromptOwnershipTests: ${pass} passed, ${fail} failed`);

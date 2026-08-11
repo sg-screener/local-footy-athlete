@@ -250,6 +250,42 @@ export function PlanChangeSheet({
     [date, weekDays],
   );
 
+  // Move entry point. The producer answers with either usable scopes or a
+  // typed refusal, and BOTH are rendered — the device dead end was this tap
+  // leading to a "Move to:" heading with nothing under it and no explanation.
+  // A single scope with one obvious meaning skips straight to the destinations.
+  const startMove = () => {
+    const move = options?.move;
+    if (!move) return;
+    if (move.refusal) {
+      setStep({
+        kind: 'block_warning',
+        reasons: [move.refusal.message],
+        backStep: { kind: 'actions' },
+      });
+      return;
+    }
+    // Skipping the scope step is only safe when there is genuinely nothing to
+    // disambiguate — ONE offered scope AND one visible session. Sam's finding
+    // 3: on a day the app renders as two sessions the sheet skipped straight
+    // to destinations because a single scope came back, so "move the gym
+    // session" silently meant "move everything on this day". The producer no
+    // longer offers a bare whole_day on a multi-session day; this is the
+    // second half of the same law, and it holds even if a future offer
+    // narrows to one scope for a reason this screen cannot see.
+    if (move.scopes.length === 1 && options!.visibleSessionCount <= 1) {
+      setStep({ kind: 'pick_destination', scope: move.scopes[0].id });
+      return;
+    }
+    setStep({ kind: 'pick_move_scope' });
+  };
+
+  // A missed-session handoff enters the SAME move owner as the visible menu
+  // row. It does not choose a destination, copy its policy, or mutate a day.
+  useEffect(() => {
+    if (visible && initialAction === 'move') startMove();
+  }, [visible, date, initialAction]);
+
   if (!date) return null;
   const selectedWorkout = selectedDay?.workout ?? null;
 
@@ -459,42 +495,6 @@ export function PlanChangeSheet({
   ) => {
     applyCategory(mode, category);
   };
-
-  // Move entry point. The producer answers with either usable scopes or a
-  // typed refusal, and BOTH are rendered — the device dead end was this tap
-  // leading to a "Move to:" heading with nothing under it and no explanation.
-  // A single scope with one obvious meaning skips straight to the destinations.
-  const startMove = () => {
-    const move = options?.move;
-    if (!move) return;
-    if (move.refusal) {
-      setStep({
-        kind: 'block_warning',
-        reasons: [move.refusal.message],
-        backStep: { kind: 'actions' },
-      });
-      return;
-    }
-    // Skipping the scope step is only safe when there is genuinely nothing to
-    // disambiguate — ONE offered scope AND one visible session. Sam's finding
-    // 3: on a day the app renders as two sessions the sheet skipped straight
-    // to destinations because a single scope came back, so "move the gym
-    // session" silently meant "move everything on this day". The producer no
-    // longer offers a bare whole_day on a multi-session day; this is the
-    // second half of the same law, and it holds even if a future offer
-    // narrows to one scope for a reason this screen cannot see.
-    if (move.scopes.length === 1 && options!.visibleSessionCount <= 1) {
-      setStep({ kind: 'pick_destination', scope: move.scopes[0].id });
-      return;
-    }
-    setStep({ kind: 'pick_move_scope' });
-  };
-
-  // A missed-session handoff enters the SAME move owner as the visible menu
-  // row. It does not choose a destination, copy its policy, or mutate a day.
-  useEffect(() => {
-    if (visible && initialAction === 'move') startMove();
-  }, [visible, date, initialAction]);
 
   // Remove entry point: multi-part days pick WHICH part first; days offering one
   // scope go straight to the are-you-sure.
