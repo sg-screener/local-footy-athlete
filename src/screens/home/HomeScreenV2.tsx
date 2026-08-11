@@ -784,7 +784,7 @@ export default function HomeScreenV2() {
             The card heading and sub-line remain owned by signedCopy; this row
             changes only the direct status controls beneath them. */}
         {isNormal && dayFirst && (
-          <Card tone="default" padding="md" radius="lg" style={styles.changeCard} testID="home-change-card">
+          <Card tone="default" padding="lg" radius="lg" style={styles.changeCard} testID="home-change-card">
             <Text style={styles.changeCardHeading}>
               {signedCopy('day.change_card.heading')}
             </Text>
@@ -2092,7 +2092,7 @@ function DayRow({
                 {isRecoverySession ? (
                   <Text style={styles.expandedMeta}>Move easy. Feel better.</Text>
                 ) : null}
-                <Button label="Start Session" size="sm" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
+                <Button label="Start Session" size="md" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
               </>
             )}
             <Pressable
@@ -3696,14 +3696,14 @@ const styles = StyleSheet.create({
   },
   lifeFactChip: { flex: 1, alignItems: 'center', gap: 6 },
   lifeFactChipIcon: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 48, height: 48, borderRadius: 24,
     // The blue the "Short on time today" bar carried; the other four chips
     // pass their own tint, so the controls keep the colours Sam already picked.
     backgroundColor: 'rgba(30, 167, 255, 0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
   lifeFactChipLabel: {
-    color: '#8A8F98', fontSize: 11, fontWeight: '600', letterSpacing: 0.2,
+    color: '#8A8F98', fontSize: 12, lineHeight: 16, fontWeight: '600', letterSpacing: 0.2,
   },
 
   // Busy / away entry + missed-session prompt.
@@ -3973,11 +3973,11 @@ const styles = StyleSheet.create({
   // The component timeline inside the selected day's expanded block.
   timeline: { gap: 0 },
   timelineRow: {
-    minHeight: 44,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: 7,
+    paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.08)',
   },
@@ -4059,7 +4059,8 @@ const styles = StyleSheet.create({
   // Selected row breathes: extra vertical padding lets the bigger type
   // and the expanded CTA block sit comfortably.
   dayRowInnerSelected: {
-    paddingVertical: spacing.md,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   dayRowMoveSource: { opacity: 0.5, borderColor: 'rgba(200, 255, 0, 0.30)' },
   dayRowMoveTarget: {
@@ -4067,7 +4068,7 @@ const styles = StyleSheet.create({
   },
 
   selectedHeader: {
-    gap: 10,
+    gap: 14,
   },
   selectedMetaRow: {
     flexDirection: 'row',
@@ -4163,13 +4164,13 @@ const styles = StyleSheet.create({
     fontStyle: 'italic', textAlign: 'right',
   },
 
-  expanded: { marginTop: spacing.md, gap: spacing.sm },
+  expanded: { marginTop: 20, gap: 12 },
   expandedMeta: { color: '#888888', fontSize: 13 },
   sessionCompleteLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   sessionCompleteText: { color: '#5BD98A', fontSize: 13, fontWeight: '600' },
 
   // Tap-first change door (PlanChangeSheet trigger)
-  makeChangeLink: { paddingVertical: spacing.xs, alignSelf: 'flex-start' },
+  makeChangeLink: { paddingVertical: 6, alignSelf: 'flex-start' },
   makeChangeText: { color: '#AEB0AE', fontSize: 12, lineHeight: 16, fontWeight: '500' },
 
   // Sections — larger rhythm between top-level blocks.

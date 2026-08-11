@@ -618,10 +618,14 @@ run('the day timeline uses each session icon as its only marker and matches her 
     'the component headings remain too large or light');
   assert(/timelinePartMeta:\s*\{[^}]*fontSize:\s*10\.5[^}]*lineHeight:\s*14/.test(home),
     'the exercise counts no longer match Renee\'s component meta size');
-  assert(/timelineRow:\s*\{[^}]*borderTopWidth:\s*StyleSheet\.hairlineWidth/.test(home),
-    'the simplified icon-led rows lost her quiet section dividers');
-  assert(/label="Start Session"[\s\S]{0,100}size="sm"/.test(home),
-    'the primary day action still uses the oversized hero-button treatment');
+  assert(/timelineRow:\s*\{[^}]*minHeight:\s*52[^}]*paddingVertical:\s*10[^}]*borderTopWidth:\s*StyleSheet\.hairlineWidth/.test(home),
+    'the simplified icon-led rows lost their accepted height or quiet dividers');
+  assert(/dayRowInnerSelected:\s*\{[^}]*paddingHorizontal:\s*20[^}]*paddingVertical:\s*20/.test(home)
+    && /selectedHeader:\s*\{[^}]*gap:\s*14/.test(home)
+    && /expanded:\s*\{[^}]*marginTop:\s*20[^}]*gap:\s*12/.test(home),
+    'the Today card has fallen back to the under-filled spacing shown on Sam\'s phone');
+  assert(/label="Start Session"[\s\S]{0,100}size="md"/.test(home),
+    'the primary day action has fallen back to the rejected 36pt control');
 });
 
 run('the Today card has no accent rail and its change link is quiet', () => {
@@ -684,10 +688,16 @@ run('the four status circles sit in a card with words above them', () => {
   const home = homeScreenSource();
   const cardAt = home.indexOf('testID="home-change-card"');
   const chipsAt = home.indexOf('testID="home-life-fact-chips"');
+  const cardOpenAt = home.lastIndexOf('<Card', cardAt);
   assert(cardAt > 0, 'the change card is gone — ruling 1, Sam\'s FIRST bullet '
     + '("there\'s no text above the little buttons like rens said"), is unbuilt.');
-  assert(cardAt < chipsAt, 'the change card no longer wraps the chip row');
-  const region = home.slice(cardAt, chipsAt);
+  assert(cardOpenAt >= 0 && cardOpenAt < cardAt && cardAt < chipsAt,
+    'the complete change-card opening tag was not found before its chip row');
+  const region = home.slice(cardOpenAt, chipsAt);
+  assert(/padding="lg"/.test(region)
+    && /lifeFactChipIcon:\s*\{[^}]*width:\s*48[^}]*height:\s*48[^}]*borderRadius:\s*24/.test(home)
+    && /lifeFactChipLabel:\s*\{[^}]*fontSize:\s*12[^}]*lineHeight:\s*16/.test(home),
+    'the status card has fallen back to its undersized padding or chip geometry');
   assert(/signedCopy\('day\.change_card\.heading'\)/.test(region)
     && /signedCopy\('day\.change_card\.subline'\)/.test(region),
     'the heading and sub-line above the circles are not read from the sheet.');

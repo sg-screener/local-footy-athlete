@@ -649,3 +649,43 @@ shared owner for one card family.
 post-save acknowledgment on-device; dynamic type at accessibility sizes; the
 Danger Zone's deliberately distinct destructive styling. This is simulator
 acceptance, not phone acceptance.
+
+---
+
+## SAM EYE PASS 11 — THE DAY CARD FILLS THE SCREEN
+
+**Sam, comparing the rebuilt physical-phone Day screen with Renee's:** *"notice
+how mine looks empty - hers has slightly bigger boxes and more spacing and it
+looks cleaner"*; he asked for the Today card to take up more of the screen.
+
+**THE MEASUREMENT:** the photographed session card was about 275 logical points
+tall for three sections. Renee's composition allocates roughly 335–340 points
+to the equivalent content. The difference was not a missing feature: the live
+card used 44pt component rows, 16pt selected padding, 8pt expanded gaps and a
+36pt primary action.
+
+**THE TWO OPTIONS COMPARED:** (1) add a large `minHeight` so the card occupies
+more screen regardless of its content, or (2) increase the real content rhythm
+— row height, card padding, headline/action separation and button height. Option
+2 owns the result. It fills a three-section card without manufacturing an empty
+well, while a shorter or longer session continues to size from what it contains.
+
+**WHAT CHANGED:** the selected card uses 20pt horizontal/vertical padding and a
+14pt header gap; component rows are 52pt with 10pt vertical padding; the action
+block uses 20pt top spacing and 12pt gaps; Start Session is 48pt; the quiet
+change link gains a 6pt tap inset. The status card beneath moves to 24pt padding,
+48pt circles and 12/16pt labels so the two cards share the same calmer scale.
+
+**FIRST-RUN FINDING:** the Day-shape gate failed because it explicitly required
+the old 36pt small action. That pin was protecting the under-filled result in
+Sam's screenshot. It was replaced with exact assertions over the accepted
+padding, row, action and status-control geometry.
+
+**WHAT CATCHES THE NEXT DEFECT OF THIS CLASS:** the chained Day-shape cells fail
+if the selected card returns to 16pt padding, its rows drop below 52pt, the
+primary action returns to 36pt, or the status card falls back to 16pt padding
+and 44pt controls.
+
+**NOT COVERED:** the rebuilt physical iPhone after this spacing pass; Today
+sessions with zero, one or five component rows; accessibility dynamic type;
+the old/classic Program screen. Changed-surface gates are not phone acceptance.
