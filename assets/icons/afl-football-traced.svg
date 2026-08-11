@@ -7,7 +7,7 @@
   color="#C8FF00"
   fill="none"
   stroke="currentColor"
-  stroke-width="38"
+  stroke-width="24"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
@@ -27,7 +27,7 @@
 
   <!-- Curved centre seam. -->
   <path
-    stroke-width="24"
+    stroke-width="15"
     d="M327 29
        C290 57 265 108 239 166
        C211 229 197 302 192 374
@@ -35,7 +35,7 @@
   />
 
   <!-- Six square-ended lace bars. -->
-  <g stroke-linecap="butt" stroke-width="20">
+  <g stroke-linecap="butt" stroke-width="13">
     <path d="M207 212L241 213" />
     <path d="M202 231L237 233" />
     <path d="M198 250L232 253" />
@@ -45,5 +45,5 @@
   </g>
 
   <!-- Raised centre knot. -->
-  <circle cx="210" cy="269" r="14" fill="currentColor" stroke="none" />
+  <circle cx="210" cy="269" r="10" fill="currentColor" stroke="none" />
 </svg>
