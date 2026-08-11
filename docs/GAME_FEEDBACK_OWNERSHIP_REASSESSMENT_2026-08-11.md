@@ -66,7 +66,7 @@ It should also own the parser/validator:
 - `playedWholeGame` is a real boolean;
 - time on ground is a positive whole number expressed by hours + minutes on the
   surface;
-- body RPE is an integer from 1 to 10;
+- body effort is an integer from 1 to 5;
 - feel is one of the existing five discrete values.
 
 Both `SessionFeedback` and `RecordSessionOutcomeIntent` carry this same type as
@@ -115,7 +115,7 @@ makes omission of any part of the game result a type/transaction failure.
 The replacement needs cells that prove:
 
 1. Scheduled games and practice matches open the same game-feedback component.
-2. Whole/part game, hours + minutes, 1–10 body RPE and five-word feel are all
+2. Whole/part game, hours + minutes, 1–5 body effort and five-word feel are all
    required and validate at the domain boundary.
 3. The complete typed game payload survives UI draft → intent → normalization →
    persisted feedback byte-for-byte.
@@ -153,7 +153,7 @@ field compatibility branch.
 
 - No physical-device interaction has been run.
 - No simulator/glass run has mounted the finished form, raised the numeric
-  keyboard or proved the ten RPE chips fit the supported phone widths.
+  keyboard or proved the five effort chips fit the supported phone widths.
 - No program adaptation is covered because Sam explicitly removed it from this
   feature on 2026-08-11.
 - Historical records that contain only `gameFeel` cannot reconstruct time on

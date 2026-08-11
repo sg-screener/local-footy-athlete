@@ -89,7 +89,11 @@ import type { SessionOutcomeTransactionReceipt } from '../types/sessionOutcome';
 import { registerAthleteActionUIOutcome } from '../dev/e2e/athleteActionUIObservation';
 import { explorerTestId } from '../utils/stableTestId';
 import { isTeamTrainingSession } from '../utils/teamTraining';
-import { TEAM_NIGHT_SIZE_OPTIONS, type TeamNightSize } from '../rules/teamNightSize';
+import {
+  TEAM_NIGHT_SIZE_OPTIONS,
+  TEAM_TRAINING_FEEDBACK_COPY,
+  type TeamNightSize,
+} from '../rules/teamNightSize';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import {
   expectationAsksWhy,
@@ -97,6 +101,7 @@ import {
   type FeedbackExpectation,
   type FeedbackExpectationReason,
   type FeedbackGameFeel,
+  type TeamTrainingSessionOutcome,
 } from '../types/sessionOutcome';
 import { AppTextInput } from '../components/keyboard/AppTextInput';
 import { logger } from '../utils/logger';
@@ -176,6 +181,21 @@ function parseRpe(value: string): number | undefined {
   const parsed = parseNumberField(value);
   if (parsed === undefined) return undefined;
   return Math.max(1, Math.min(10, Math.round(parsed)));
+}
+
+function parseHoursMinutes(hours: string, minutes: string): {
+  valid: boolean;
+  totalMinutes: number;
+} {
+  const parsedHours = /^\d+$/.test(hours.trim()) ? Number(hours.trim()) : NaN;
+  const parsedMinutes = /^\d+$/.test(minutes.trim()) ? Number(minutes.trim()) : NaN;
+  const valid = Number.isInteger(parsedHours) && parsedHours >= 0
+    && Number.isInteger(parsedMinutes) && parsedMinutes >= 0 && parsedMinutes <= 59
+    && parsedHours * 60 + parsedMinutes > 0;
+  return {
+    valid,
+    totalMinutes: valid ? parsedHours * 60 + parsedMinutes : 0,
+  };
 }
 
 function draftFromExistingFeedback(
@@ -258,12 +278,9 @@ const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) =>
     setSaveRefusal(null);
   }, [date, existing]);
 
-  const parsedHours = /^\d+$/.test(hours.trim()) ? Number(hours.trim()) : NaN;
-  const parsedMinutes = /^\d+$/.test(minutes.trim()) ? Number(minutes.trim()) : NaN;
-  const validDuration = Number.isInteger(parsedHours) && parsedHours >= 0
-    && Number.isInteger(parsedMinutes) && parsedMinutes >= 0 && parsedMinutes <= 59
-    && parsedHours * 60 + parsedMinutes > 0;
-  const timeOnGroundMinutes = validDuration ? parsedHours * 60 + parsedMinutes : 0;
+  const gameDuration = parseHoursMinutes(hours, minutes);
+  const validDuration = gameDuration.valid;
+  const timeOnGroundMinutes = gameDuration.totalMinutes;
   const recordableRefusal = sessionOutcomeRecordableRefusal(date);
   const canSave = playedWholeGame !== null
     && validDuration
@@ -398,13 +415,14 @@ const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) =>
       <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.rpeQuestion}</SectionLabel>
       <Text style={styles.rpeHint}>{GAME_FEEDBACK_COPY.rpeHint}</Text>
       <View style={styles.gameRpeGrid} testID="game-feedback-rpe-grid">
-        {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+        {Array.from({ length: 5 }, (_, index) => index + 1).map((value) => (
           <FeedbackChip
             key={value}
             testID={`game-feedback-rpe-${value}`}
             label={String(value)}
             selected={bodyRpe === value}
             selectedColor={colors.accent.lime}
+            fillRow
             onPress={() => setBodyRpe(value)}
           />
         ))}
@@ -519,6 +537,19 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   const [sessionRpe, setSessionRpe] = useState<number | null>(
     isSessionEffortRating(existing?.difficulty) ? existing.difficulty : null,
   );
+  const [teamTrainingHours, setTeamTrainingHours] = useState(
+    existing?.teamTraining
+      ? String(Math.floor(existing.teamTraining.durationMinutes / 60))
+      : '',
+  );
+  const [teamTrainingMinutes, setTeamTrainingMinutes] = useState(
+    existing?.teamTraining ? String(existing.teamTraining.durationMinutes % 60) : '',
+  );
+  const [teamTrainingEffort, setTeamTrainingEffort] = useState<number | null>(
+    isSessionEffortRating(existing?.teamTraining?.effort)
+      ? existing!.teamTraining!.effort
+      : null,
+  );
 
   // Re-sync local state when navigating to a different date
   useEffect(() => {
@@ -547,6 +578,15 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     setAveragePace(conditioning?.averagePace ?? '');
     setConditioningRpe(textFromNumber(conditioning?.rpe));
     setSessionRpe(isSessionEffortRating(existing?.difficulty) ? existing.difficulty : null);
+    setTeamTrainingHours(existing?.teamTraining
+      ? String(Math.floor(existing.teamTraining.durationMinutes / 60))
+      : '');
+    setTeamTrainingMinutes(existing?.teamTraining
+      ? String(existing.teamTraining.durationMinutes % 60)
+      : '');
+    setTeamTrainingEffort(isSessionEffortRating(existing?.teamTraining?.effort)
+      ? existing!.teamTraining!.effort
+      : null);
   }, [date, existing, sessionComponents, conditioningConfig.suggestedMode]);
 
   const feedbackDraft: FeedbackFormDraft = {
@@ -572,10 +612,30 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
         completion,
       );
   const sessionRpeValue = sessionRpe ?? undefined;
-  const draftIsComplete = executionSummary
+  const isTeamNight = useMemo(() => isTeamTrainingSession(workout), [workout]);
+  const teamTrainingCompletion = executionSummary?.sections
+    .find((section) => section.sectionId === 'team_training')?.completion
+    ?? activeComponentCompletions.team_training
+    ?? null;
+  const teamTrainingWasPerformed = isTeamNight && (
+    teamTrainingCompletion === 'full' || teamTrainingCompletion === 'partial'
+  );
+  const teamTrainingDuration = parseHoursMinutes(teamTrainingHours, teamTrainingMinutes);
+  const teamTrainingOutcome: TeamTrainingSessionOutcome | undefined =
+    teamTrainingWasPerformed
+    && teamTrainingDuration.valid
+    && isSessionEffortRating(teamTrainingEffort)
+      ? {
+        durationMinutes: teamTrainingDuration.totalMinutes,
+        effort: teamTrainingEffort,
+      }
+      : undefined;
+  const baseDraftIsComplete = executionSummary
     ? activeCompletion !== null &&
       (activeCompletion === 'skipped' || isSessionEffortRating(sessionRpeValue))
     : canSaveFeedbackDraft({ ...feedbackDraft, completion: activeCompletion });
+  const draftIsComplete = baseDraftIsComplete
+    && (!teamTrainingWasPerformed || teamTrainingOutcome !== undefined);
   // THE DOOR'S OWN RULE, ASKED — never re-implemented here (finding 4). A
   // control offered for an act its door will refuse is a dead control, and the
   // athlete taps it and nothing happens.
@@ -594,7 +654,6 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   // `isTeamTrainingSession` is the app's existing owner of "is this a team night" — a
   // second answer threaded down from a caller is exactly the two-owners shape the repo
   // keeps paying for.
-  const isTeamNight = useMemo(() => isTeamTrainingSession(workout), [workout]);
   // THE SAME MOVE FOR "IS THIS A GAME", AND IT NEEDED SAYING OUT LOUD: the app
   // has FOUR spellings of that predicate today (`coachCommandRouter:1326`,
   // `scheduleDebug:379`, `weekStructureValidator:127`,
@@ -839,6 +898,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
       notes,
       difficulty: executionSummary ? sessionRpeValue : conditioningRpeValue,
       executionItems: executionSummary?.items,
+      teamTraining: teamTrainingOutcome,
       conditioning,
       strength,
     });
@@ -915,6 +975,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
     onSave,
     executionSummary,
     sessionRpeValue,
+    teamTrainingOutcome,
   ]);
 
   const renderComponentReasonGroup = useCallback((component: SessionComponent) => {
@@ -1339,6 +1400,66 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
         </>
       )}
 
+      {teamTrainingWasPerformed ? (
+        <View testID="team-training-feedback-fields">
+          <SectionLabel style={styles.section}>
+            {TEAM_TRAINING_FEEDBACK_COPY.durationQuestion}
+          </SectionLabel>
+          <View style={styles.gameDurationRow}>
+            <View style={styles.gameDurationField}>
+              <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.hours}</Text>
+              <AppTextInput
+                testID="team-training-feedback-hours"
+                style={styles.gameDurationInput}
+                value={teamTrainingHours}
+                onChangeText={setTeamTrainingHours}
+                placeholder="1"
+                placeholderTextColor={colors.text.tertiary}
+                keyboardType="numeric"
+                maxLength={2}
+              />
+            </View>
+            <View style={styles.gameDurationField}>
+              <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.minutes}</Text>
+              <AppTextInput
+                testID="team-training-feedback-minutes"
+                style={styles.gameDurationInput}
+                value={teamTrainingMinutes}
+                onChangeText={setTeamTrainingMinutes}
+                placeholder="30"
+                placeholderTextColor={colors.text.tertiary}
+                keyboardType="numeric"
+                maxLength={2}
+              />
+            </View>
+          </View>
+          {(teamTrainingHours.trim() || teamTrainingMinutes.trim())
+            && !teamTrainingDuration.valid ? (
+              <Text style={styles.inputError}>
+                {TEAM_TRAINING_FEEDBACK_COPY.durationRefusal}
+              </Text>
+            ) : null}
+
+          <SectionLabel style={styles.section}>
+            {TEAM_TRAINING_FEEDBACK_COPY.effortQuestion}
+          </SectionLabel>
+          <Text style={styles.rpeHint}>{TEAM_TRAINING_FEEDBACK_COPY.effortHint}</Text>
+          <View style={styles.rpeGrid} testID="team-training-feedback-effort-grid">
+            {Array.from({ length: 5 }, (_, index) => index + 1).map((value) => (
+              <FeedbackChip
+                key={value}
+                testID={`team-training-feedback-effort-${value}`}
+                label={String(value)}
+                selected={teamTrainingEffort === value}
+                selectedColor={colors.accent.lime}
+                fillRow
+                onPress={() => setTeamTrainingEffort(value)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       {/* Notes toggle + input */}
       {hasSection('notes') ? (
         !showNotes ? (
@@ -1592,7 +1713,6 @@ const styles = StyleSheet.create({
   },
   gameRpeGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 7,
   },
   inputError: {

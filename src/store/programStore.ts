@@ -1689,6 +1689,8 @@ export interface SessionFeedback {
    * smallest mechanism small.
    */
   teamNightSize?: import('../rules/teamNightSize').TeamNightSize;
+  /** Measured duration and 1–5 effort for a performed Team Training component. */
+  teamTraining?: import('../types/sessionOutcome').TeamTrainingSessionOutcome;
   /**
    * THE POST-GAME BODY-FEEL RATING — 1-5, the design's "linchpin".
    *

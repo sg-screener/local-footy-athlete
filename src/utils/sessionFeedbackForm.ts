@@ -13,6 +13,7 @@ import {
   type FeedbackExpectation,
   type FeedbackExpectationReason,
   type FeedbackGameFeel,
+  type TeamTrainingSessionOutcome,
 } from '../types/sessionOutcome';
 import type { ConditioningPerformanceLog } from './conditioningLogging';
 import type { SessionComponent } from './sessionComponents';
@@ -154,6 +155,7 @@ export interface BuildSessionFeedbackPayloadInput extends FeedbackFormDraft {
   strength?: StrengthExercisePerformanceLog[];
   components?: SessionComponent[];
   executionItems?: SessionExecutionItemResult[];
+  teamTraining?: TeamTrainingSessionOutcome;
 }
 
 /** The live checklist's one-row effort scale. Legacy conditioning RPE remains 1–10. */
@@ -601,6 +603,9 @@ export function buildSessionFeedbackPayload(
       completion,
       ...(completion !== 'skipped' && isSessionEffortRating(input.difficulty)
         ? { difficulty: input.difficulty }
+        : {}),
+      ...(completion !== 'skipped' && input.teamTraining
+        ? { teamTraining: input.teamTraining }
         : {}),
     };
   }

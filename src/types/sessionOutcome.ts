@@ -95,6 +95,30 @@ export interface GameSessionOutcome {
   feel: FeedbackGameFeel;
 }
 
+/** One measured team-training load, stored with the session that produced it. */
+export interface TeamTrainingSessionOutcome {
+  durationMinutes: number;
+  effort: number;
+}
+
+/** Validate the two required team-training measurements at the transaction boundary. */
+export function parseTeamTrainingSessionOutcome(
+  value: unknown,
+): TeamTrainingSessionOutcome | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Partial<TeamTrainingSessionOutcome>;
+  if (!Number.isInteger(candidate.durationMinutes) || Number(candidate.durationMinutes) <= 0) {
+    return null;
+  }
+  if (!Number.isInteger(candidate.effort) || Number(candidate.effort) < 1 || Number(candidate.effort) > 5) {
+    return null;
+  }
+  return {
+    durationMinutes: Number(candidate.durationMinutes),
+    effort: Number(candidate.effort),
+  };
+}
+
 /** Validate athlete-shaped match input at the transaction boundary. */
 export function parseGameSessionOutcome(value: unknown): GameSessionOutcome | null {
   if (!value || typeof value !== 'object') return null;
@@ -103,7 +127,7 @@ export function parseGameSessionOutcome(value: unknown): GameSessionOutcome | nu
   if (!Number.isInteger(candidate.timeOnGroundMinutes) || Number(candidate.timeOnGroundMinutes) <= 0) {
     return null;
   }
-  if (!Number.isInteger(candidate.bodyRpe) || Number(candidate.bodyRpe) < 1 || Number(candidate.bodyRpe) > 10) {
+  if (!Number.isInteger(candidate.bodyRpe) || Number(candidate.bodyRpe) < 1 || Number(candidate.bodyRpe) > 5) {
     return null;
   }
   const feel = parseFeedbackGameFeel(candidate.feel);
@@ -228,6 +252,8 @@ export interface RecordSessionOutcomeIntent {
   executionItems?: import('../utils/sessionExecutionChecklist').SessionExecutionItemResult[];
   /** Present only for a game-classified visible session. */
   game?: GameSessionOutcome;
+  /** Present only when a team-training component was performed. */
+  teamTraining?: TeamTrainingSessionOutcome;
   source: SessionOutcomeSourceMetadata;
 }
 

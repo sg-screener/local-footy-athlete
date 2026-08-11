@@ -10,6 +10,8 @@ import {
 } from '../utils/sessionExecutionChecklist';
 import { buildSessionTemplate } from '../utils/sessionTemplate';
 import { buildSessionFeedbackPayload } from '../utils/sessionFeedbackForm';
+import { parseTeamTrainingSessionOutcome } from '../types/sessionOutcome';
+import { TEAM_TRAINING_FEEDBACK_COPY } from '../rules/teamNightSize';
 import {
   buildSessionEquipmentReplacementPlan,
   deriveSessionEquipmentRequirements,
@@ -142,6 +144,24 @@ ok('checklist rejects the retired 1-10 scale', buildSessionFeedbackPayload({
   difficulty: 7,
 }) === null);
 
+const teamTrainingMeasurement = { durationMinutes: 95, effort: 4 };
+const checklistWithTeamTraining = buildSessionFeedbackPayload({
+  dateStr: '2026-08-11',
+  completion: 'partial',
+  components: sectionSummary.components,
+  componentCompletions: sectionSummary.componentCompletions,
+  componentReasons: {}, feeling: null, soreness: null, partialReason: null, skipReason: null,
+  executionItems: sectionSummary.items,
+  difficulty: 4,
+  teamTraining: teamTrainingMeasurement,
+});
+ok('team-training duration and effort ride the same checklist result',
+  checklistWithTeamTraining?.teamTraining?.durationMinutes === 95
+    && checklistWithTeamTraining.teamTraining.effort === 4);
+ok('team-training effort accepts only the shared 1-5 scale',
+  parseTeamTrainingSessionOutcome(teamTrainingMeasurement)?.effort === 4
+    && parseTeamTrainingSessionOutcome({ ...teamTrainingMeasurement, effort: 6 }) === null);
+
 console.log('\n[3] The live screen uses controlled chevrons and checkboxes');
 const screen = fs.readFileSync(path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8');
 const mobility = fs.readFileSync(path.resolve(__dirname, '..', 'components', 'MobilityPrehabFlowSection.tsx'), 'utf8');
@@ -195,6 +215,20 @@ ok('all five choices are generated on one non-wrapping row',
 ok('effort anchors say very easy and very hard', /1 = very easy · 5 = very hard/.test(feedback));
 ok('saved difficulty is the session RPE in checklist mode',
   /difficulty:\s*executionSummary\s*\?\s*sessionRpeValue\s*:\s*conditioningRpeValue/.test(feedback));
+ok('performed Team Training asks for duration and its own 1-5 effort',
+  TEAM_TRAINING_FEEDBACK_COPY.durationQuestion === 'How long was team training?'
+    && TEAM_TRAINING_FEEDBACK_COPY.effortQuestion === 'How hard was team training?'
+    && /TEAM_TRAINING_FEEDBACK_COPY\.durationQuestion/.test(feedback)
+    && /TEAM_TRAINING_FEEDBACK_COPY\.effortQuestion/.test(feedback)
+    && /team-training-feedback-hours/.test(feedback)
+    && /team-training-feedback-minutes/.test(feedback)
+    && /team-training-feedback-effort-grid/.test(feedback)
+    && /Array\.from\(\{ length: 5 \}/.test(feedback));
+ok('the extra team-training result is required only when that section was performed',
+  /const draftIsComplete = baseDraftIsComplete[\s\S]{0,180}!teamTrainingWasPerformed \|\| teamTrainingOutcome !== undefined/.test(feedback));
+ok('the accepted transaction validates and republishes the team-training result',
+  /parseTeamTrainingSessionOutcome\(intent\.teamTraining\)/.test(outcomeTransaction)
+    && /intent\.teamTraining \? \{ teamTraining: intent\.teamTraining \}/.test(outcomeTransaction));
 
 console.log('\n[5] Completed day state says it once');
 const dayBadgesStart = home.indexOf('const rowBadges = (');

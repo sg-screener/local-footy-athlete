@@ -187,6 +187,15 @@ const GAME_WORKOUT: Workout = {
   exercises: [],
 };
 
+const TEAM_TRAINING_WORKOUT = {
+  ...MIXED_WORKOUT,
+  id: 'team-training-session',
+  planEntryId: 'plan-entry-monday-team-training',
+  name: 'Strength + Team Training',
+  workoutType: 'Mixed',
+  isTeamDay: true,
+} as Workout;
+
 const MICROCYCLE: Microcycle = {
   id: 'micro-session-outcome',
   programId: 'program-session-outcome',
@@ -914,6 +923,12 @@ async function runGameFeedbackInvariants(): Promise<void> {
       && /GAME_FEEDBACK_COPY\.durationQuestion/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.rpeQuestion/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.feelQuestion/.test(panelSource));
+  ok('game and practice-match effort use five choices on one row',
+    /game-feedback-rpe-grid/.test(panelSource)
+      && /Array\.from\(\{ length: 5 \}/.test(panelSource)
+      && /GAME_FEEDBACK_COPY\.rpeHint/.test(panelSource)
+      && gameCopySource.includes('1 = very easy · 5 = very hard')
+      && !gameCopySource.includes('1 = very easy · 10 = very hard'));
   ok('the match form writes the complete game payload through the shared transaction',
     /const game: GameSessionOutcome = \{[\s\S]{0,220}playedWholeGame[\s\S]{0,220}timeOnGroundMinutes[\s\S]{0,220}bodyRpe[\s\S]{0,220}feel: gameFeel/.test(panelSource)
       && /createRecordSessionOutcomeIntentFromFeedback\(\{[\s\S]{0,300}surface: 'game_feedback_panel'/.test(panelSource));
@@ -935,7 +950,7 @@ async function runGameFeedbackInvariants(): Promise<void> {
   const game = {
     playedWholeGame: false,
     timeOnGroundMinutes: 83,
-    bodyRpe: 8,
+    bodyRpe: 4,
     feel: 3 as const,
   };
   const feedback: SessionFeedback = {
@@ -997,7 +1012,7 @@ async function runGameFeedbackInvariants(): Promise<void> {
     date: TARGET_DATE,
     feedback: {
       ...feedback,
-      game: { ...game, bodyRpe: 11 } as SessionFeedback['game'],
+      game: { ...game, bodyRpe: 6 } as SessionFeedback['game'],
     },
     workout: invalidTarget.workout,
     source: { entryPoint: 'tap', surface: 'game_feedback_invalid_test' },
@@ -1007,6 +1022,46 @@ async function runGameFeedbackInvariants(): Promise<void> {
     !invalidResult.ok && 'code' in invalidResult
       && invalidResult.code === 'invalid_game_outcome',
     invalidResult);
+
+  await resetFixture();
+  const teamMicrocycle: Microcycle = {
+    ...clone(MICROCYCLE),
+    workouts: [clone(TEAM_TRAINING_WORKOUT), clone(SECOND_WORKOUT)],
+  };
+  const teamProgram: TrainingProgram = {
+    ...clone(PROGRAM),
+    microcycles: [teamMicrocycle],
+  };
+  useProgramStore.setState({
+    currentProgram: teamProgram,
+    currentMicrocycle: teamMicrocycle,
+  });
+  const teamMeasurement = { durationMinutes: 95, effort: 4 };
+  const teamTarget = resolveSessionOutcomeTarget(TARGET_DATE, TODAY);
+  const teamIntent = createRecordSessionOutcomeIntentFromFeedback({
+    date: TARGET_DATE,
+    feedback: {
+      dateStr: TARGET_DATE,
+      completion: 'full',
+      teamTraining: teamMeasurement,
+    },
+    workout: teamTarget.workout,
+    source: { entryPoint: 'tap', surface: 'team_training_feedback_test' },
+  });
+  eq('team-training measurement survives the tap adapter unchanged',
+    teamIntent.teamTraining,
+    teamMeasurement);
+  const teamResult = await commitSessionOutcomeTransaction(teamIntent, TODAY);
+  ok('team-training duration and effort commit through the shared outcome transaction',
+    teamResult.ok,
+    teamResult);
+  eq('the persisted dated feedback carries the complete team-training measurement',
+    useProgramStore.getState().sessionFeedback[TARGET_DATE]?.teamTraining,
+    teamMeasurement);
+  eq('the durable program envelope carries the complete team-training measurement',
+    JSON.parse(teamResult.ok ? teamResult.persistedEnvelope : '{}')
+      ?.state?.inputs?.sessionFeedback?.[TARGET_DATE]?.teamTraining,
+    teamMeasurement);
 }
 
 async function main(): Promise<void> {

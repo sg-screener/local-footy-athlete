@@ -14,7 +14,7 @@ registerSignedCopy([
   { id: 'game.feedback.minutes', source: 'sam_ruling', provenance: 'Sam 2026-08-11; hours + minutes input', text: 'Minutes' },
   { id: 'game.feedback.duration_refusal', source: 'sam_ruling', provenance: 'Sam 2026-08-11; hours + minutes input validation', text: 'Enter a time, with minutes between 0 and 59.' },
   { id: 'game.feedback.rpe_question', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim', text: 'How hard was the game on your body?' },
-  { id: 'game.feedback.rpe_hint', source: 'sam_ruling', provenance: 'Sam 2026-08-11; RPE 1-10', text: '1 = very easy · 10 = very hard' },
+  { id: 'game.feedback.rpe_hint', source: 'sam_ruling', provenance: 'Sam 2026-08-11; game and practice-match effort changed to 1-5', text: '1 = very easy · 5 = very hard' },
   { id: 'game.feedback.feel_question', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim', text: 'How do you feel?' },
   { id: 'game.feedback.feel_heavy', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim scale', text: 'Heavy' },
   { id: 'game.feedback.feel_bad', source: 'sam_ruling', provenance: 'Sam 2026-08-11 verbatim scale', text: 'Bad' },

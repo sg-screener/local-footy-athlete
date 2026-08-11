@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
-import { StyleSheet, TextInput, TextInputProps } from 'react-native';
+import { StyleSheet, TextInput, TextInputProps, TextStyle } from 'react-native';
 import { fontFamilies } from '../../theme/typography';
+import { safeTextLineHeight } from '../../theme/textLineBox';
 
 /**
  * The app's only text input.
@@ -42,11 +43,20 @@ export const AppTextInput = forwardRef<TextInput, TextInputProps>(
     // there is always a way off the keyboard.
     const defaultReturnKeyType =
       props.multiline || isKeypad ? undefined : 'done';
+    const callerStyle = StyleSheet.flatten(props.style) ?? {};
+    const resolvedLineBox: TextStyle | undefined = typeof callerStyle.fontSize === 'number'
+      ? {
+        lineHeight: safeTextLineHeight(
+          callerStyle.fontSize,
+          typeof callerStyle.lineHeight === 'number' ? callerStyle.lineHeight : undefined,
+        ),
+      }
+      : undefined;
     return (
       <TextInput
         returnKeyType={props.returnKeyType ?? defaultReturnKeyType}
         {...props}
-        style={[styles.default, props.style]}
+        style={[styles.default, props.style, resolvedLineBox]}
         ref={ref}
       />
     );

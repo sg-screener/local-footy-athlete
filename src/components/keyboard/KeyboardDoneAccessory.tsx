@@ -1,11 +1,12 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   KeyboardController,
   KeyboardStickyView,
   useKeyboardState,
 } from 'react-native-keyboard-controller';
 import { colors } from '../../theme/colors';
+import { Text } from '../common/Text';
 
 /**
  * The app's one keyboard dismiss affordance — a custom, flush "Done" bar.

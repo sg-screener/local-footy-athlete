@@ -25,7 +25,7 @@
  */
 
 import type { TeamTrainingIntensity } from '../types/domain';
-import { registerSignedCopy } from './signedCopy';
+import { registerSignedCopy, signedCopy } from './signedCopy';
 
 /**
  * The three answers, and the Bible's own scale.
@@ -135,7 +135,38 @@ registerSignedCopy([
       + '· Hard = lots of running, sprinting, contact, match sim").',
     text: option.label,
   })),
+  {
+    id: 'team_training.feedback.duration_question',
+    source: 'sam_ruling',
+    provenance: 'Sam, 2026-08-11 — verbatim team-training feedback question.',
+    text: 'How long was team training?',
+  },
+  {
+    id: 'team_training.feedback.effort_question',
+    source: 'sam_ruling',
+    provenance: 'Sam, 2026-08-11 — verbatim team-training feedback question.',
+    text: 'How hard was team training?',
+  },
+  {
+    id: 'team_training.feedback.effort_hint',
+    source: 'sam_ruling',
+    provenance: 'Sam, 2026-08-11 — team-training effort uses the common 1-5 scale.',
+    text: '1 = very easy · 5 = very hard',
+  },
+  {
+    id: 'team_training.feedback.duration_refusal',
+    source: 'sam_ruling',
+    provenance: 'Sam, 2026-08-11 — hours and minutes follow the existing match duration input.',
+    text: 'Enter a time, with minutes between 0 and 59.',
+  },
 ]);
+
+export const TEAM_TRAINING_FEEDBACK_COPY = {
+  durationQuestion: signedCopy('team_training.feedback.duration_question'),
+  effortQuestion: signedCopy('team_training.feedback.effort_question'),
+  effortHint: signedCopy('team_training.feedback.effort_hint'),
+  durationRefusal: signedCopy('team_training.feedback.duration_refusal'),
+} as const;
 
 const ORDINAL: Readonly<Record<TeamNightSize, number>> = { light: 0, normal: 1, hard: 2 };
 const BY_ORDINAL: readonly TeamNightSize[] = ['light', 'normal', 'hard'];

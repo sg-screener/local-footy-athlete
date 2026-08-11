@@ -1,6 +1,7 @@
 import type { Workout } from '../types/domain';
 import {
   parseGameSessionOutcome,
+  parseTeamTrainingSessionOutcome,
   parseSessionOutcomeReason,
   type FeedbackCompletion,
   type FeedbackPartialReason,
@@ -27,6 +28,7 @@ import {
 import { deriveAggregateCompletion } from '../utils/sessionFeedbackForm';
 import { deriveSessionExecutionItemCompletion } from '../utils/sessionExecutionChecklist';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
+import { isTeamTrainingSession } from '../utils/teamTraining';
 import { buildStrengthPerformanceLogs } from '../utils/strengthLogging';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import {
@@ -178,6 +180,7 @@ export function createRecordSessionOutcomeIntentFromFeedback(args: {
       : {}),
     ...(args.feedback.executionItems ? { executionItems: args.feedback.executionItems } : {}),
     ...(args.feedback.game ? { game: args.feedback.game } : {}),
+    ...(args.feedback.teamTraining ? { teamTraining: args.feedback.teamTraining } : {}),
     source: { ...args.source },
   };
 }
@@ -430,6 +433,9 @@ function normalizeIntent(
   const notes = intent.notes?.trim();
   const skipped = aggregate === 'skipped';
   const parsedGame = intent.game === undefined ? null : parseGameSessionOutcome(intent.game);
+  const parsedTeamTraining = intent.teamTraining === undefined
+    ? null
+    : parseTeamTrainingSessionOutcome(intent.teamTraining);
   if (intent.game !== undefined && parsedGame === null) {
     throw new SessionOutcomeValidationError(
       'invalid_game_outcome',
@@ -442,6 +448,24 @@ function normalizeIntent(
     throw new SessionOutcomeValidationError(
       'game_outcome_on_non_game',
       'Game feedback can only be recorded for a game or practice match.',
+    );
+  }
+  if (intent.teamTraining !== undefined && parsedTeamTraining === null) {
+    throw new SessionOutcomeValidationError(
+      'invalid_team_training_outcome',
+      'The team-training duration or effort is incomplete or invalid.',
+    );
+  }
+  if (parsedTeamTraining && !isTeamTrainingSession(target.workout)) {
+    throw new SessionOutcomeValidationError(
+      'team_training_outcome_on_non_team_session',
+      'Team-training feedback can only be recorded for a session containing team training.',
+    );
+  }
+  if (parsedTeamTraining && skipped) {
+    throw new SessionOutcomeValidationError(
+      'team_training_outcome_on_skipped_session',
+      'Team-training feedback cannot be recorded when the session was skipped.',
     );
   }
   return {
@@ -463,6 +487,7 @@ function normalizeIntent(
       : {}),
     ...(intent.executionItems ? { executionItems: intent.executionItems } : {}),
     ...(parsedGame ? { game: parsedGame } : {}),
+    ...(parsedTeamTraining ? { teamTraining: parsedTeamTraining } : {}),
     source: { ...intent.source },
   };
 }
@@ -537,6 +562,7 @@ function feedbackFromIntent(intent: RecordSessionOutcomeIntent): SessionFeedback
     ...(Number.isFinite(intent.difficulty) ? { difficulty: intent.difficulty } : {}),
     ...(intent.executionItems ? { executionItems: intent.executionItems } : {}),
     ...(intent.game ? { game: intent.game } : {}),
+    ...(intent.teamTraining ? { teamTraining: intent.teamTraining } : {}),
   };
 }
 

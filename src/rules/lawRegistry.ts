@@ -1185,13 +1185,35 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-game-feedback-shared-outcome-door',
-    law: 'Scheduled games and practice matches save one complete match result through the regular dated session-outcome transaction, and recording it does not change the program.',
+    law: 'Scheduled games and practice matches save one complete match result through the regular dated session-outcome transaction, use the shared 1–5 effort scale, and recording it does not change the program.',
     ruledAt: 'Sam 2026-08-11; docs/GAME_FEEDBACK_OWNERSHIP_REASSESSMENT_2026-08-11.md',
     guard: {
       state: 'guarded',
       by: 'test:game-feedback',
       chainStatus: 'in_chain',
-      receipt: 'BUILT WITH THE RULING 2026-08-11. The real accepted transaction is driven with a game-classified visible workout and a complete result (whole/part, time on ground, 1-10 body RPE, 1-5 feel). The suite asserts the payload survives adapter, normalization and durable feedback publication unchanged; a non-game refuses it; an out-of-range result refuses; no legacy standalone field is written; and program content, modifiers and injury state remain unchanged. The same UI component selects this path from the existing session taxonomy, whose Game category covers both scheduled and practice fixtures.',
+      receipt: 'BUILT WITH THE RULING 2026-08-11; UPDATED WITH SAM\'S SAME-DAY SCALE CHANGE. The real accepted transaction is driven with a game-classified visible workout and a complete result (whole/part, time on ground, 1-5 body effort, 1-5 feel). The suite asserts five visible effort choices, the exact anchors, and that the payload survives adapter, normalization and durable feedback publication unchanged; a non-game refuses it; an out-of-range 6 refuses; no legacy standalone field is written; and program content, modifiers and injury state remain unchanged. The same UI component selects this path from the existing session taxonomy, whose Game category covers both scheduled and practice fixtures.',
+    },
+  },
+  {
+    id: 'LAW-team-training-measured-load',
+    law: 'A performed Team Training component asks duration and its own 1–5 effort, and stores both on the same dated session result; a skipped component stores neither.',
+    ruledAt: 'Sam 2026-08-11; docs/COPY_SHEET_RULINGS_2026-07-30.md §18-b-ii',
+    guard: {
+      state: 'guarded',
+      by: 'test:session-execution-checklist + test:game-feedback',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT WITH THE RULING 2026-08-11. The execution gate proves the questions appear only when Team Training was performed, both fields are required, effort is 1-5, and the form builds one checklist result containing the measurement. The transaction gate then drives a real team-classified workout and proves the measurement survives the tap adapter, accepted transaction, dated feedback store and durable program envelope.',
+    },
+  },
+  {
+    id: 'LAW-effective-text-line-box',
+    law: 'Every athlete-facing text and input resolves its effective font size to a line box large enough to contain the iPhone system font, including local font-size overrides.',
+    ruledAt: 'docs/CODEX_FEEDBACK_AND_TEXT_BOUNDARY_2026-08-11.md §Sam\'s orders; Sam physical-iPhone screenshot of clipped “Session feedback” heading',
+    guard: {
+      state: 'guarded',
+      by: 'test:prototype-typography',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT WITH THE PHYSICAL FINDING 2026-08-11. The gate first demonstrated its old three cells were green while a 22px local title inherited a 17px body line box. It now executes the shared minimum-line-box calculation, asserts both Text and AppTextInput flatten the caller style and apply the resolved line box last, and prints the occurrence/file census behind those two shared owners. The existing bypass census keeps every athlete-facing React Native Text behind the guarded owner.',
     },
   },
 

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { safeTextLineHeight } from '../../theme/textLineBox';
 
 export type TextVariant =
   | 'h1'
@@ -64,11 +65,25 @@ export const Text = ({
     textAlign: align,
     ...getTypography(),
   };
+  const callerStyle = StyleSheet.flatten(style) ?? {};
+  const effectiveFontSize = typeof callerStyle.fontSize === 'number'
+    ? callerStyle.fontSize
+    : typeof textStyles.fontSize === 'number'
+      ? textStyles.fontSize
+      : typography.body.fontSize;
+  const requestedLineHeight = typeof callerStyle.lineHeight === 'number'
+    ? callerStyle.lineHeight
+    : typeof textStyles.lineHeight === 'number'
+      ? textStyles.lineHeight
+      : undefined;
+  const resolvedLineBox: TextStyle = {
+    lineHeight: safeTextLineHeight(effectiveFontSize, requestedLineHeight),
+  };
 
   return (
     <RNText
       {...props}
-      style={[styles.default, textStyles, style]}
+      style={[styles.default, textStyles, style, resolvedLineBox]}
       allowFontScaling={false}
     >
       {children}

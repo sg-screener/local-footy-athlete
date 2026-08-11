@@ -15,6 +15,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { safeTextLineHeight } from '../theme/textLineBox';
 
 armTotalsOrRed();
 
@@ -72,8 +73,35 @@ run('shared Text and AppTextInput both apply the one system family', () => {
     'the shared Text drops the typography family before rendering');
   assert(/fontFamily:\s*fontFamilies\.default/.test(input),
     'AppTextInput does not apply the app-wide system family');
-  assert(/style=\{\[styles\.default, props\.style\]\}/.test(input),
-    'AppTextInput does not preserve caller styling after its family default');
+  assert(/style=\{\[styles\.default, props\.style, resolvedLineBox\]\}/.test(input),
+    'AppTextInput does not preserve caller styling before its line-box guard');
+});
+
+run('every local font-size override receives a safe effective line box', () => {
+  const text = read('components/common/Text.tsx');
+  const input = read('components/keyboard/AppTextInput.tsx');
+  assert(safeTextLineHeight(22, 17) === 26,
+    'a 22px title can still inherit the clipped 17px body line box');
+  assert(safeTextLineHeight(12, 20) === 20,
+    'an already-roomy authored line box was unnecessarily reduced');
+  assert(/StyleSheet\.flatten\(style\)/.test(text)
+      && /style=\{\[styles\.default, textStyles, style, resolvedLineBox\]\}/.test(text),
+    'shared Text does not resolve the final caller size and apply its guard last');
+  assert(/StyleSheet\.flatten\(props\.style\)/.test(input)
+      && /safeTextLineHeight\(/.test(input),
+    'AppTextInput can still render a local font size in a smaller line box');
+
+  const files = [
+    ...productionTsxFiles('screens'),
+    ...productionTsxFiles('components'),
+  ];
+  const overrides = files.flatMap((relative) => {
+    const matches = read(relative).match(/fontSize\s*:/g) ?? [];
+    return matches.map(() => relative);
+  });
+  assert(overrides.length > 0,
+    'the local font-size census reached no occurrences, so the structural guard proves nothing');
+  console.log(`      census: ${overrides.length} font-size occurrences across ${new Set(overrides).size} files`);
 });
 
 run('every athlete-facing screen stays behind the shared Text owner', () => {
@@ -83,7 +111,6 @@ run('every athlete-facing screen stays behind the shared Text owner', () => {
     ...productionTsxFiles('components'),
   ]) {
     if (relative.startsWith('components/dev/')) continue;
-    if (relative === 'components/keyboard/KeyboardDoneAccessory.tsx') continue;
     const source = read(relative);
     const imports = [...source.matchAll(
       /import\s*\{([\s\S]*?)\}\s*from\s*['"]react-native['"]/g,

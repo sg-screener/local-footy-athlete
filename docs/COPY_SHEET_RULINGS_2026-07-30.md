@@ -1534,7 +1534,7 @@ games and practice matches. The new form asks:
 | --- | --- |
 | Participation | "Did you play the whole game?" |
 | Duration | "Rough time on ground" — hours + minutes |
-| Effort | "How hard was the game on your body?" — RPE 1–10 |
+| Effort | "How hard was the game on your body?" — 1–5, very easy to very hard |
 | Subjective response | "How do you feel?" |
 
 The five labels now read, in athlete-facing order: **Flying / Good / Normal /
@@ -1543,6 +1543,13 @@ supersedes "Empty / Heavy / Okay / Good / Flying" and specifically replaces
 "Okay" with "Normal". Sam also withdrew automatic program adjustment from this
 feature: the result is recorded beside regular S&C feedback and changes no
 program content or modifier by itself.
+
+**18-b-ii. TEAM-TRAINING LOAD, SAM 2026-08-11.** When a Team Training
+component was performed, its ordinary session result additionally asks **"How
+long was team training?"** (hours + minutes) and **"How hard was team
+training?"** on the same 1–5 very-easy-to-very-hard scale. Both measurements
+live on that one dated session result; a skipped Team Training component asks
+neither question and stores neither answer.
 
 **18-c. THE TAP'S FOUR ANSWERS.** The keys are the addendum's vocabulary
 (item 8); the labels are shortened for a chip row.
