@@ -9,8 +9,10 @@
  *   word for word, so it is the one string that goes into the SIGNED-COPY SHEET
  *   rather than staying a module constant — `signed_sentence` provenance is
  *   exactly what it has.
- * - **THE OPENER FRAGMENTS ARE APPROVED AS SHIPPED** — *"the week-shape line
- *   stays as built, second bubble"*. The words did not change; their status did.
+ * - **THE OPENER FRAGMENTS REMAIN APPROVED FOR RULE ANSWERS, BUT NO LONGER OPEN
+ *   THE SCREEN.** Sam superseded the automatic second bubble on 2026-08-11:
+ *   the empty Coach conversation now shows only his greeting. `coachAnswer`
+ *   still uses the grounded opener when an athlete asks about the week.
  * - **THE HONEST NO-ANSWER REPLY IS APPROVED AS SHIPPED** (slice-1 boundary
  *   parked item 3).
  *
@@ -207,8 +209,6 @@ export const COACH_CHANGE_COPY = {
    */
   askWhichDay: 'Which day do you want to move? Say the whole thing — like "move Friday to Sunday".',
   askWhereTo: 'Where should it go? Say the whole thing — like "move Friday to Sunday".',
-  /** The one chip. One kind is built, so one affordance has somewhere to send. */
-  moveChipLabel: 'Move a session',
   /** Leads *"I can't move"* + a day name from the projection + a full stop. */
   cannotMoveLead: "I can't move",
   /** The destination is the day it is already on. */

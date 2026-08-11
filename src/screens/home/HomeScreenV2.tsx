@@ -519,20 +519,15 @@ export default function HomeScreenV2() {
         >
         {/* ── Program shape controls ── */}
         <View style={styles.topBar}>
-          {/* ── Today / Week ──
+          {/* ── Day / Week ──
               The zoom control Sam's direction asks for. Offered only where
               there is a choice to make: on another week there is no today, and
               during a game picker the athlete is choosing among all seven days.
               Both cases render the week and hide this rather than showing a
               control that would do nothing.
 
-              COPY: "Today" and "Week" are PROPOSED, UNSIGNED — the day-first
-              slice's only new chrome words, and they join Sam's next signing
-              batch. Both are already this screen's vocabulary ("Today" is the
-              day badge; "This week" / "Next week" / "Last week" are the nav
-              badges), which is why they were chosen over inventing a pair. The
-              extraction gate does not count them — it only sees prose — so this
-              comment is the record that they are new, not the gate. */}
+              Sam replaced "Today" with "Day" on 2026-08-11 so this control
+              names the two screen shapes at the same level: Day and Week. */}
           {isThisWeek && isNormal ? (
             <View style={styles.viewToggle} testID="program-view-toggle">
               {(['today', 'week'] as const).map((option) => {
@@ -550,7 +545,7 @@ export default function HomeScreenV2() {
                     testID={`program-view-${option}`}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={option === 'today' ? 'Today' : 'Week'}
+                    accessibilityLabel={option === 'today' ? 'Day' : 'Week'}
                     style={({ pressed }) => [
                       styles.viewToggleOption,
                       isActive && styles.viewToggleOptionActive,
@@ -563,7 +558,7 @@ export default function HomeScreenV2() {
                         isActive && styles.viewToggleLabelActive,
                       ]}
                     >
-                      {option === 'today' ? 'Today' : 'Week'}
+                      {option === 'today' ? 'Day' : 'Week'}
                     </Text>
                   </Pressable>
                 );
@@ -3935,19 +3930,23 @@ const styles = StyleSheet.create({
   viewToggle: {
     flexDirection: 'row',
     alignSelf: 'center',
+    width: 280,
     marginTop: spacing.sm,
-    padding: 3,
-    gap: 3,
+    padding: 4,
+    gap: 4,
     borderRadius: borderRadius.full,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   viewToggleOption: {
-    paddingVertical: 5,
-    paddingHorizontal: spacing.md,
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 9,
     borderRadius: borderRadius.full,
   },
   viewToggleOptionActive: { backgroundColor: 'rgba(200,255,0,0.14)' },
-  viewToggleLabel: { color: '#8A8F98', fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
+  viewToggleLabel: { color: '#8A8F98', fontSize: 15, fontWeight: '700', letterSpacing: 0.4 },
   viewToggleLabelActive: { color: '#C8FF00' },
 
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between', gap: 4 },

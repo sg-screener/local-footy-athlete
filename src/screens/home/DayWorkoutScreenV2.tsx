@@ -1403,16 +1403,19 @@ export default function DayWorkoutScreenV2() {
           </>
         ) : (
           <>
-            {/*
-              Sits above the first list row as the prescribed Mobility /
-              Warm-up section. Its controlled ticks feed the same full / partial
-              / skipped session result as the sections below it.
-            */}
-            <MobilityPrehabFlowSection
-              flow={mobilityFlow}
-              completedItemIds={completedExerciseIds}
-              onToggleItem={toggleExerciseComplete}
-            />
+            {executionPlan?.sections.filter((section) => section.id === 'mobility').map((section) => (
+              <SessionExecutionSection
+                key={section.id}
+                section={section}
+                completedItemIds={completedExerciseIds}
+              >
+                <MobilityPrehabFlowSection
+                  flow={mobilityFlow}
+                  completedItemIds={completedExerciseIds}
+                  onToggleItem={toggleExerciseComplete}
+                />
+              </SessionExecutionSection>
+            ))}
             <SessionList
               items={sessionTemplate.items}
               executionPlan={executionPlan!}
@@ -1714,9 +1717,7 @@ function SessionList({
   const labels = sessionListLabels(items);
 
   const renderItem = (item: SessionTemplateItem, key: string, index: number) => {
-    if (item.kind === 'team_training') {
-      return <TeamTrainingBanner key={key} />;
-    }
+    if (item.kind === 'team_training') return <TeamTrainingRow key={key} />;
     if (item.kind === 'conditioning_choice') {
       return (
         <ConditioningChoiceRow
@@ -2489,28 +2490,15 @@ function ConditioningRow({
 }
 
 /**
- * Team training — a non-badged inline banner (§6 item 2).
- *
- * It sits at its ordering position in the flat list but carries no role badge:
- * it isn't athlete-prescribed work the way the six badged categories are, it's
- * a commitment the week already knows about. The "Team Training" section header
- * goes with every other box header; the banner keeps its accent tint precisely
- * because it is NOT one of the list's exercise rows.
+ * Team training uses the same plain checklist-row language as Strength.
+ * Its section header already carries the meaning; repeating it in an accent
+ * card created a second visual system inside the same execution checklist.
  */
-function TeamTrainingBanner() {
+function TeamTrainingRow() {
   return (
-    <Card
-      tone="accent"
-      radius="lg"
-      padding="md"
-      style={styles.teamTrainingCard}
-      testID="team-training-section"
-    >
-      <Text style={styles.teamTrainingTitle}>Club/team field session.</Text>
-      <Text style={styles.teamTrainingBody}>
-        We'll account for the load in your week.
-      </Text>
-    </Card>
+    <View style={styles.exerciseCard} testID="team-training-section">
+      <Text style={styles.exerciseName}>Club/team field session</Text>
+    </View>
   );
 }
 
@@ -4040,25 +4028,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginTop: 3,
-  },
-
-  // ── Team Training block ──
-  teamTrainingCard: {
-    gap: spacing.sm,
-    borderColor: 'rgba(200, 255, 0, 0.18)',
-    backgroundColor: 'rgba(200, 255, 0, 0.06)',
-  },
-  teamTrainingTitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-    lineHeight: 20,
-  },
-  teamTrainingBody: {
-    color: '#C8C8C8',
-    fontSize: 13,
-    fontWeight: '500',
-    lineHeight: 19,
   },
 
   // ── Feedback + Finish ──

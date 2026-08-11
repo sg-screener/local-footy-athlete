@@ -46,14 +46,6 @@ const sessionComponents = fs.readFileSync(
   path.resolve(__dirname, '..', 'utils', 'sessionComponents.ts'),
   'utf8',
 );
-const powerPrimerSection = fs.readFileSync(
-  path.resolve(__dirname, '..', 'components', 'PowerPrimerSection.tsx'),
-  'utf8',
-);
-const trunkSupportSection = fs.readFileSync(
-  path.resolve(__dirname, '..', 'components', 'TrunkSupportSection.tsx'),
-  'utf8',
-);
 
 console.log('\n=== 1. Main finish CTA is not gated by team training ===');
 assert(!/!isFinished\s*&&\s*!hasTeamTraining/.test(v2), 'V2 finish CTA is not hidden by team training');
@@ -135,30 +127,19 @@ assert(
   'optional add-ons use the no-penalty completion policy',
 );
 
-console.log('\n=== 6. Power primer is visible before the main workout in both screens ===');
-// V2 took the D13 one-list template (2026-07-25): power is no longer a box the
-// screen positions above a branch, it is the first ITEM the composition owner
-// emits. The ordering proof moved with it — see sessionTemplateOneListTests §2.
+console.log('\n=== 6. Power follows the ordinary execution-row path ===');
+// The ordering and content proof lives at the template owner in
+// sessionTemplateOneListTests. This screen guard now protects the ownership
+// boundary instead of opening the deleted PowerPrimerSection and claiming to
+// cover a component the live screen cannot render.
 assert(
-  /<PowerRow key=\{key\} block=\{item\.block\} \/>/.test(v2),
-  'V2 renders power as a badged list row',
+  /buildSessionTemplate/.test(v2) && /<StrengthExerciseCard/.test(v2),
+  'V2 renders template exercises through the ordinary exercise row',
 );
 assert(
-  /buildSessionTemplate/.test(v2) && !/<PowerPrimerSection/.test(v2),
-  'V2 gets power placement from the composition owner, not from its own branch order',
+  !/PowerPrimerSection|PowerRow|item\.kind === 'power'/.test(v2),
+  'V2 has no second power-specific render path',
 );
-assert(/workout\.powerBlock\?\.title/.test(v2), 'V2 header summary includes the power block title');
-assert(/testID="power-primer-section"/.test(powerPrimerSection), 'power primer has a visible test seam');
-assert(/POWER \/ EXPLOSIVE PRIMER/.test(powerPrimerSection), 'power section is labelled clearly');
-assert(
-  /Pair with main lift/.test(powerPrimerSection) && /Before strength/.test(powerPrimerSection),
-  'primer and contrast placement are explained',
-);
-assert(/\{block\.prescription\}/.test(powerPrimerSection), 'power prescription is rendered');
-assert(/\{option\.name\}/.test(powerPrimerSection), 'power exercise name is rendered');
-assert(/option\.sets/.test(powerPrimerSection) && /option\.repsMin/.test(powerPrimerSection),
-  'power sets and reps are rendered');
-assert(/block\.notes\.map/.test(powerPrimerSection), 'power notes/rest copy are rendered');
 
 console.log('\n=== 7. Trunk/support is visible and explanation UI is removed ===');
 // V2 took the D13 one-list template (2026-07-25): trunk rows are no longer a
@@ -168,9 +149,10 @@ assert(
   !/<TrunkSupportSection/.test(v2) && /buildSessionTemplate/.test(v2),
   'V2 renders trunk rows as ordinary rows of the one list, not as a Trunk / Support box',
 );
-assert(/testID="trunk-support-section"/.test(trunkSupportSection), 'trunk/support has a visible test seam');
-assert(/>Trunk \/ Support</.test(trunkSupportSection), 'trunk/support section is labelled honestly');
-assert(/row\?\.exercise\?\.name/.test(trunkSupportSection), 'trunk/support exercise names are rendered');
+assert(
+  !/TrunkSupportSection/.test(v2) && /<StrengthExerciseCard/.test(v2),
+  'trunk/support rows reach the same ordinary exercise renderer as other Strength work',
+);
 assert(
   !/SessionExplanationBanner|Why this session/i.test(v2),
   'V2 has no Why this session link or explanation panel',
@@ -184,7 +166,7 @@ assert(
 );
 const v2ConditioningRenderer = v2.slice(
   v2.indexOf('function ConditioningRow('),
-  v2.indexOf('function TeamTrainingBanner', v2.indexOf('function ConditioningRow(')),
+  v2.indexOf('function TeamTrainingRow', v2.indexOf('function ConditioningRow(')),
 );
 assert(
   !/weightControl|prescribedWeightKg|formatWeight/.test(v2ConditioningRenderer),

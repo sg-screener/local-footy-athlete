@@ -1,5 +1,9 @@
 # MOBILITY / WARM-UP COMPLETION — BOUNDARY — 2026-08-11
 
+**LOOP CHECK: `label-changed-while-behaviour-stays-old` — first named sighting
+in this surface. The compression is one prescribed-section aggregate consumed
+by feedback, not a copy-only exception.**
+
 ## What Sam ruled
 
 Mobility / Warm-up is not optional. It stays in the session and the athlete's
@@ -48,12 +52,6 @@ The reload guard went red because its acted fixture completed Strength, skipped
 Mobility / Warm-up, and still expected a full stored session. That expectation
 was the superseded rule made executable. It now requires the partial result and
 still proves the skipped mobility evidence survives force-quit and relaunch.
-
-## LOOP CHECK
-
-`label-changed-while-behaviour-stays-old` — first named sighting in this surface.
-The compression is one prescribed-section aggregate consumed by feedback, not a
-copy-only exception.
 
 ## NOT COVERED
 

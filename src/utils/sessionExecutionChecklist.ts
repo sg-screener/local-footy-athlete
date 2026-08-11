@@ -125,9 +125,7 @@ function sectionForTemplateItem(item: SessionTemplateItem): SessionExecutionSect
   if (item.kind === 'exercise' && item.optional) return 'optional';
   if (item.role === 'power') return 'power';
   if (item.role === 'main_lift') return 'strength';
-  if (item.role === 'accessory' || item.role === 'midline' || item.role === 'prehab') {
-    return 'accessories';
-  }
+  if (item.role === 'accessory' || item.role === 'midline' || item.role === 'prehab') return 'strength';
   return 'other';
 }
 

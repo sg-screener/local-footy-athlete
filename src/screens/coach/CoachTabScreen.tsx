@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import {
   Keyboard,
@@ -15,12 +15,11 @@ import { Text } from '../../components/common/Text';
 import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { coachAnswer } from '../../rules/coachAnswer';
-import { coachOpener } from '../../rules/coachOpener';
 import { readCoachMessage } from '../../rules/coachRead';
 import { coachProposal } from '../../rules/coachProposal';
 import type { CoachChangeCard, CoachChangeCardChoice } from '../../rules/coachChangeCard';
 import { coachChangeDeclined, coachChangeOutcome } from '../../rules/coachChangeOutcome';
-import { COACH_CHANGE_COPY, COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
+import { COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
 import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
@@ -47,8 +46,9 @@ type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
  * from real data — read-only, zero mutation paths. All copy PROPOSED."*
  *
  * **THE COPY IS NO LONGER PROPOSED.** Sam ruled batch 30 on 2026-08-09 and gave
- * the greeting in his own words; it opens the conversation and the week-shape
- * line follows it as the second bubble. See `rules/coachTabCopy`.
+ * the greeting in his own words. On 2026-08-11 Sam simplified the empty
+ * conversation to that greeting alone; schedule context belongs in answers to
+ * athlete questions, not a second automatic message or a starter chip.
  *
  * ## THIS IS NOT `CoachScreen`, AND THAT IS THE POINT
  *
@@ -68,13 +68,6 @@ type CoachTabScreenProps = BottomTabScreenProps<TabParamList, 'CoachTab'>;
  * state, north star NEUTRAL**. `coachTabSlice1Tests` asserts the import list
  * itself, because "I did not write a mutation" is a claim about today and an
  * import ban is a claim about every day after it.
- *
- * ## THE OPENER IS DERIVED, NOT COMPOSED HERE
- *
- * The screen asks `useResolvedWeek()` — the same door the Program tab asks —
- * and hands the projection to `coachOpener`. It formats nothing: a surface that
- * assembled the sentence would be a second account of the week, which is the
- * defect ruling 1 retired `summariseDay` to kill.
  *
  * ## L-C3, THE NIKE BAR
  *
@@ -262,14 +255,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
     return () => subscription.remove();
   }, [pinToBottom]);
 
-  // The opener is the conversation's first line and is re-derived whenever the
-  // week does — a coach whose greeting went stale after an edit would be the
-  // stored-output defect the north star exists to make unrepresentable.
-  const opener = useMemo(
-    () => coachOpener({ week: visibleWeek, todayISO }),
-    [visibleWeek, todayISO],
-  );
-
   const trimmed = draft.trim();
   const canSend = trimmed.length > 0;
 
@@ -456,21 +441,6 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
           accessibilityLabel={COACH_TAB_COPY.conversationAccessibilityLabel}
         >
           <Bubble speaker="coach" text={coachGreeting()} testID="coach-tab-greeting" />
-          <Bubble speaker="coach" text={opener.text} testID="coach-tab-opener" />
-          {turns.length === 0 ? (
-            // THE ONE CHIP, AND IT GOES AWAY THE MOMENT THE CONVERSATION STARTS.
-            // A starter is for an empty conversation; leaving it under a running
-            // one turns it into a button that repeats what the athlete just said.
-            <Pressable
-              style={styles.chip}
-              onPress={() => send(COACH_CHANGE_COPY.moveChipLabel)}
-              testID="coach-tab-chip-move"
-              accessibilityRole="button"
-              accessibilityLabel={COACH_CHANGE_COPY.moveChipLabel}
-            >
-              <Text variant="body">{COACH_CHANGE_COPY.moveChipLabel}</Text>
-            </Pressable>
-          ) : null}
           {turns.map((turn) => (
             <Bubble
               key={turn.id}
@@ -706,16 +676,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     backgroundColor: colors.primary.light,
     borderColor: colors.surface.tertiary,
-  },
-  chip: {
-    alignSelf: 'flex-start',
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.surface.tertiary,
-    backgroundColor: colors.surface.secondary,
   },
   // THE FOOTER IS THE WHOLE KEYBOARD-RIDING STRIP: the card when there is one,
   // then the composer. Both are positioned against the keypad rather than laid

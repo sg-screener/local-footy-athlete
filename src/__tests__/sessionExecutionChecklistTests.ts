@@ -57,7 +57,10 @@ const plan = buildSessionExecutionPlan({
 console.log('\n[1] One plan groups the existing rows into collapsible components');
 ok('mobility is its own section', plan.sections.some((section) => section.id === 'mobility'));
 ok('strength is its own section', plan.sections.some((section) => section.id === 'strength'));
-ok('accessories are separately measurable', plan.sections.some((section) => section.id === 'accessories'));
+ok('accessories and prehab are folded into the Strength disclosure',
+  !plan.sections.some((section) => section.id === 'accessories') &&
+    plan.sections.find((section) => section.id === 'strength')!.items
+      .some((item) => item.label === 'Hammer Curl' || item.label === 'Band Pallof Press'));
 ok('conditioning is its own section', plan.sections.some((section) => section.id === 'conditioning'));
 ok('every planned item has one stable id', new Set(plan.items.map((item) => item.id)).size === plan.items.length);
 
@@ -80,8 +83,8 @@ ok('mobility completion remains separately visible',
 ok('unticked mobility is recorded as skipped',
   buildSessionExecutionSummary(plan, new Set()).sections
     .find((section) => section.sectionId === 'mobility')?.completion === 'skipped');
-ok('accessories completion remains separately visible',
-  sectionSummary.sections.find((section) => section.sectionId === 'accessories')?.completion === 'skipped');
+ok('the merged Strength disclosure keeps its own skipped result',
+  sectionSummary.sections.find((section) => section.sectionId === 'strength')?.completion === 'skipped');
 const everythingExceptMobility = new Set(plan.items
   .filter((item) => item.sectionId !== 'mobility' && item.sectionId !== 'optional')
   .map((item) => item.id));
@@ -156,8 +159,15 @@ ok('each section has stable toggle and expanded-body identities',
 ok('rows expose a checkbox', /accessibilityRole="checkbox"/.test(screen));
 ok('completed rows use a dull treatment', /executionItemComplete/.test(screen));
 ok('mobility movements use the same controlled tick owner', /completedItemIds/.test(mobility) && /onToggleItem/.test(mobility));
-ok('mobility uses the same chevron language as the other sections',
-  /name=\{expanded \? 'chevron-up' : 'chevron-down'\}/.test(mobility));
+const mobilitySectionAt = screen.indexOf("filter((section) => section.id === 'mobility')");
+const mobilityRowsAt = screen.indexOf('<MobilityPrehabFlowSection', mobilitySectionAt);
+ok('mobility uses the same chevron owner as the other sections',
+  mobilitySectionAt >= 0 && mobilityRowsAt > mobilitySectionAt &&
+    screen.slice(mobilitySectionAt, mobilityRowsAt).includes('<SessionExecutionSection') &&
+    !/chevron-up|chevron-down|useState\(false\)/.test(mobility));
+ok('Team Training expands as a plain checklist row, not an accent card',
+  /function TeamTrainingRow/.test(screen) && /styles\.exerciseCard/.test(screen) &&
+    !/function TeamTrainingBanner|teamTrainingCard|teamTrainingBody/.test(screen));
 ok('mobility has no optional wording in text or accessibility copy',
   !/\boptional\b/i.test(mobility));
 ok('the in-progress checklist is a screen draft', /useState<ReadonlySet<string>>/.test(screen) && /setCompletedExerciseIds/.test(screen));
@@ -169,7 +179,8 @@ ok('feedback derives whole-session completion from prescribed execution sections
   /executionSummary\s*\?\s*deriveSessionExecutionCompletion\(executionSummary\)/.test(feedback));
 ok('the accepted transaction derives from the same execution items before publishing',
   /executionAggregate\s*=\s*intent\.executionItems\?\.length[\s\S]{0,180}deriveSessionExecutionItemCompletion\(intent\.executionItems\)[\s\S]{0,120}aggregate\s*=\s*executionAggregate\s*\?\?\s*componentAggregate/.test(outcomeTransaction));
-ok('feedback reviews every section, including mobility and accessories', /executionSummary\.sections\.map/.test(feedback));
+ok('feedback reviews every execution section, including mobility and merged Strength',
+  /executionSummary\.sections\.map/.test(feedback));
 const checklistBranchStart = feedback.indexOf('executionSummary ? (');
 const legacyBranchStart = feedback.indexOf('COMPLETION_OPTIONS.map', checklistBranchStart);
 ok('checklist branch found before legacy completion choices', checklistBranchStart >= 0 && legacyBranchStart > checklistBranchStart);

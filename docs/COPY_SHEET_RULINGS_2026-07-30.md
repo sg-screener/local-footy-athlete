@@ -1105,9 +1105,11 @@ the UI as a retirement nobody signed.
 
 ## Batch 12 — day-first slices 1 + 2 (2026-08-08): SIGNED
 
-**STATUS: SIGNED BY SAM, 2026-08-08, all seven strings exactly as proposed** —
-"Today", "Week", "Time", "Away", "Sick", "Injured", "Equipment". Asked whether
-the labels were right, he answered "yep" with no rewrites
+**STATUS: SIGNED BY SAM, 2026-08-08, THEN PARTLY SUPERSEDED 2026-08-11.** The
+original seven were "Today", "Week", "Time", "Away", "Sick", "Injured",
+"Equipment". Sam later replaced the shape label "Today" with **"Day"** and
+replaced the status row separately. Asked whether the original labels were right,
+he answered "yep" with no rewrites
 (docs/WEEK_ROW_COMPOUND_BUCKET_RULING_2026-08-08.md §1). The tables below are
 unchanged from the proposal because nothing about them changed; only this status
 line moved, and the binding stays equality-bound in both directions
@@ -1127,7 +1129,7 @@ these sits under an icon that already carries the meaning.
 
 | Control | PROPOSED label |
 | --- | --- |
-| Zoom to the day | "Today" |
+| Zoom to the day | "Day" (Sam, 2026-08-11; supersedes "Today") |
 | Zoom to the week | "Week" |
 
 Both are already this screen's vocabulary — "Today" is the day badge, and

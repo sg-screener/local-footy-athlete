@@ -843,6 +843,22 @@ run('the week starts and returns collapsed while Today owns today directly', () 
     'clearing Week expansion also removed today\'s independent highlight');
 });
 
+run('the Program shape control is the large Day / Week toggle Sam chose', () => {
+  const home = homeScreenSource();
+  const toggleAt = home.indexOf('testID="program-view-toggle"');
+  const weekContentAt = home.indexOf('{dayFirst ? (', toggleAt);
+  assert(toggleAt > 0 && weekContentAt > toggleAt,
+    'the Day / Week toggle region could not be found');
+  const toggle = home.slice(toggleAt, weekContentAt);
+  assert(/accessibilityLabel=\{option === 'today' \? 'Day' : 'Week'\}/.test(toggle)
+    && /\{option === 'today' \? 'Day' : 'Week'\}/.test(toggle),
+  'the shape control does not say Day / Week in visible and accessibility copy');
+  assert(/viewToggle:\s*\{[^}]*width:\s*280\b/.test(home)
+    && /viewToggleOption:\s*\{[^}]*minHeight:\s*44\b/.test(home)
+    && /viewToggleLabel:\s*\{[^}]*fontSize:\s*15\b/.test(home),
+  'the shape control has fallen back to the old undersized pill');
+});
+
 run('week navigation is absent from Today and compact below the toggle in Week', () => {
   const home = homeScreenSource();
   const toggleAt = home.indexOf('testID="program-view-toggle"');

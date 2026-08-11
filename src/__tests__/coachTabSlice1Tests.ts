@@ -160,9 +160,9 @@ console.log('\n[1] READ-ONLY — the screen cannot reach a writer');
       + 'here is ruling 1\'s `summariseDay` returning under a new name',
   );
   ok(
-    'and it hands that week to the opener rule rather than reading days itself',
-    /coachOpener\(\{ week: visibleWeek, todayISO \}\)/.test(screenCode),
-    'the screen must pass the projection through, not walk it',
+    'the empty conversation does not auto-render a week summary',
+    !/coachOpener|coach-tab-opener/.test(screenCode),
+    'week context remains available to answer a question, but is no longer a second automatic bubble',
   );
 
   // NO STATE LEAVES THE COMPONENT. `useState` is the whole store.
@@ -655,20 +655,17 @@ console.log('\n[7] BATCH 30 — one module owns every new word, and the greeting
     'the sentence becomes true at S3; if a beta gate arrives first, the seat '
       + 're-checks it, and that is written beside the words');
 
-  // THE SCREEN SHOWS IT, AND SHOWS IT FIRST. Registering a sentence nobody
-  // renders is a sheet entry pretending to be a shipped string.
+  // THE SCREEN SHOWS ONLY IT. Sam superseded the second automatic week-shape
+  // bubble and starter chip on 2026-08-11; typed session moves still go through
+  // the proposal path below.
   const greetingAt = screenCode.indexOf('coachGreeting()');
-  const openerAt = screenCode.indexOf('text={opener.text}');
-  ok('both opening bubbles were located in the screen',
-    greetingAt >= 0 && openerAt >= 0,
-    `greeting=${greetingAt} opener=${openerAt}`);
-  ok('the greeting bubble is rendered BEFORE the week-shape bubble',
-    greetingAt >= 0 && openerAt >= 0 && greetingAt < openerAt,
-    'Sam: the greeting opens, "the week-shape line stays as built, second bubble"');
-  ok('and they are two bubbles, not one concatenated sentence',
-    /<Bubble speaker="coach" text=\{coachGreeting\(\)\}/.test(screenCode)
-      && /<Bubble speaker="coach" text=\{opener\.text\}/.test(screenCode),
-    'joining them on the screen would be the screen authoring a separator');
+  ok('the greeting bubble is rendered',
+    greetingAt >= 0 && /<Bubble speaker="coach" text=\{coachGreeting\(\)\}/.test(screenCode),
+    `greeting=${greetingAt}`);
+  ok('no second automatic bubble survives',
+    !/text=\{opener\.text\}|coach-tab-opener/.test(screenCode));
+  ok('the empty-state Move a session chip is absent',
+    !/coach-tab-chip-move|moveChipLabel/.test(screenCode));
 }
 
 // ─── [8] THE OPENER'S SENTENCE CONTAINS NOTHING BUT ITS SOURCES ──────────────

@@ -468,7 +468,7 @@ console.log('\n[5] The flow is measured but never counted or load-bearing');
 
 /* ══ 6. Render contract ══ */
 
-console.log('\n[6] Collapsed at the top, with controlled per-movement ticks');
+console.log('\n[6] Shared section shell at the top, with controlled per-movement ticks');
 {
   const section = fs.readFileSync(
     path.join(src, 'components/MobilityPrehabFlowSection.tsx'),
@@ -480,20 +480,15 @@ console.log('\n[6] Collapsed at the top, with controlled per-movement ticks');
   );
 
   ok('the flow section exists', section.length > 0);
-  ok(
-    'it starts collapsed',
-    /useState\(false\)/.test(section),
-    'collapsed by default — the athlete opts in',
-  );
-  ok('tapping toggles it open and shut', /setExpanded\(\(prev\) => !prev\)/.test(section));
-  ok(
-    'the disclosure affordance is a chevron',
-    /name=\{expanded \? 'chevron-up' : 'chevron-down'\}/.test(section),
-  );
-  ok(
-    'the collapsed header summarises the movement count',
-    /movementCount/.test(section),
-  );
+  const mobilityOwnerAt = screen.indexOf("filter((section) => section.id === 'mobility')");
+  const mobilityRowsAt = screen.indexOf('<MobilityPrehabFlowSection', mobilityOwnerAt);
+  ok('the shared execution section owns mobility disclosure',
+    mobilityOwnerAt >= 0 && mobilityRowsAt > mobilityOwnerAt &&
+      screen.slice(mobilityOwnerAt, mobilityRowsAt).includes('<SessionExecutionSection'));
+  ok('the movement renderer owns no competing disclosure state',
+    !/useState\(false\)|setExpanded|chevron-up|chevron-down/.test(section));
+  ok('the common section reports the movement total from execution items',
+    /section\.items\.length/.test(screen));
   ok(
     'and it no longer promises a duration',
     !/durationMinutes/.test(section),
@@ -521,7 +516,7 @@ console.log('\n[6] Collapsed at the top, with controlled per-movement ticks');
   );
 
   ok(
-    'the screen mounts the flow above the session list',
+    'the screen mounts the shared mobility section above the session list',
     screen.indexOf('MobilityPrehabFlowSection') > 0 &&
       screen.indexOf('<MobilityPrehabFlowSection') < screen.indexOf('<SessionList'),
   );
