@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 566 561"
+  color="#C8FF00"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="9"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <title>Plate-loaded weight machine</title>
+
+  <!-- Upper frame and its inner rail. -->
+  <path d="M269 160L303 63Q311 40 335 40L481 44Q506 45 509 68L480 178" />
+  <path d="M291 160L326 64L480 68L451 178" />
+
+  <!-- Rear plate and its visible inner edge. -->
+  <path d="M216 169H195C169 169 154 199 154 246C154 292 170 320 195 321H219" />
+  <path d="M211 184C199 194 192 217 192 246C192 277 200 300 214 309" />
+
+  <!-- Lever arms. -->
+  <path d="M219 159L369 164L430 207L423 239L355 194L207 191Z" />
+  <path d="M207 191L271 241L421 248L423 271L270 263" />
+  <path d="M226 241L421 251Q429 252 428 261Q427 271 417 270L225 260Q216 259 217 250Q218 241 226 241Z" />
+
+  <!-- Front plate pair. -->
+  <path d="M463 179H506C531 179 549 212 549 256C549 301 532 334 507 334H463C439 334 425 304 425 257C425 210 440 179 463 179Z" />
+  <path d="M507 179C483 179 469 210 469 256C469 302 484 334 507 334" />
+
+  <!-- Main triangular frame. -->
+  <path d="M259 260L220 344" />
+  <path d="M429 270L394 445Q391 459 378 470" />
+  <path d="M247 351L271 264" />
+  <path d="M249 351L367 451L420 273" />
+
+  <!-- Base/seat frame and its parallel top rail. -->
+  <path d="M35 323L219 336Q236 338 250 350L384 481Q391 488 387 496Q384 501 376 499L190 474Q173 471 157 458L29 349Q22 344 27 330Q29 322 35 323Z" />
+  <path d="M28 341L216 354Q231 355 244 367L377 491" />
+
+  <!-- Front support. -->
+  <path d="M109 374Q127 365 145 374V498Q127 509 109 498Z" />
+</svg>

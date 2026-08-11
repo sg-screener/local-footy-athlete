@@ -39,11 +39,9 @@ export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => 
   )),
   /** Dumbbells — the same dumbbell mark used throughout the app. */
   dumbbells: (color) => <LfaIcon name="dumbbell" color={color} />,
-  /** Cable machine — a pulley overhead, cable down to a D-handle. */
-  cables: (color) => glyph(color, (
-    <><Circle cx="12" cy="4.5" r="2" /><Path d="M12 6.5v9" /><Path d="M8.5 15.5h7l-1.5 4h-4z" /></>
-  )),
-  /** Weight machine — Sam's approved traced machine silhouette. */
+  /** Cable machine — the previous upright selector/cable station trace. */
+  cables: (color) => <LfaIcon name="cable-machine" color={color} />,
+  /** Weight machine — Sam's approved seated plate-loaded machine trace. */
   machine: (color) => <LfaIcon name="weight-machine" color={color} />,
   /** Resistance band — a stretched, elastic S-curve. */
   bands: (color) => glyph(color, <Path d="M4 12c2-6 6-6 8 0s6 6 8 0" />),

@@ -39,6 +39,7 @@ console.log('\napproved icon ownership');
 const customTraces = [
   'pull-up-bar',
   'foam-roller',
+  'cable-machine',
   'weight-machine',
   'bench',
   'bike-erg',
@@ -54,7 +55,8 @@ const approvedTraceHash: Record<string, string> = {
   'row-erg': '912155b4735a88ec3fd7770192940e139f78103b54adccf63444f222ffeee0c5',
   'bike-erg': '37171752b6af18e6d8a97f2710dd4014b1eaca6d1c76c3a715d7a36b25299617',
   'air-bike': 'ac2418ad895fd393416fcdd455808214c60929136dcb8d4d6a400beeff4cd599',
-  'weight-machine': 'c0997bd1af5659cabeb31ca1b6d416ca379055cac524f922ddcb8247f070d5d4',
+  'weight-machine': 'ff7401133f812884f72c78ad63c46d97eecc402143704d77c5f1c16cfb8fab04',
+  'cable-machine': 'c0997bd1af5659cabeb31ca1b6d416ca379055cac524f922ddcb8247f070d5d4',
   bench: '9106c0934aab9dcd633d0a237433cc19dfe9203a6adae3c674edc022b98055f0',
   treadmill: 'c5cfebbf3a2dac3495a00d8a5eeee8d7bb41aba0cfd35c81a40886f28ec3ef88',
   'torso-abs': '91c457cf5359af14bf014a4c15865bc66933da4b16b136799d9bf506cd1f6df3',
@@ -89,7 +91,8 @@ ok('the shared owner exposes the approved semantic replacements',
   ].every((name) => owner.includes(`'${name}'`)));
 
 ok('equipment and cardio maps route through the shared owner',
-  equipment.includes("<LfaIcon name=\"weight-machine\"")
+  equipment.includes("<LfaIcon name=\"cable-machine\"")
+  && equipment.includes("<LfaIcon name=\"weight-machine\"")
   && equipment.includes("<LfaIcon name=\"bench\"")
   && equipment.includes("<LfaIcon name=\"pull-up-bar\"")
   && equipment.includes("<LfaIcon name=\"foam-roller\"")

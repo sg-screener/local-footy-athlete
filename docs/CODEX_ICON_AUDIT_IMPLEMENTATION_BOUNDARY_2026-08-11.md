@@ -32,9 +32,11 @@ the same lookup rather than gaining another icon set.
 - Move is a plain right arrow; Gun show is a literal flexed arm; future weeks
   uses the library calendar-sync symbol.
 - Dumbbells and kettlebell reuse the app's library glyphs.
-- Weight machine, bench, pull-up bar, foam roller, bike erg, air bike, row erg,
-  ski erg and treadmill use the approved audit drawings. The rejected pulley
-  machine drawing is not present.
+- Cable machine now uses the previously approved upright selector/cable-station
+  drawing. Weight machines uses Sam's later seated plate-loaded trace. Bench,
+  pull-up bar, foam roller, bike erg, air bike, row erg, ski erg and treadmill
+  use the other approved audit drawings. The rejected hanging-pulley drawing
+  is not present.
 - Injury regions use an injured upper-body figure, legs and a curved spine.
 - Add exercise uses the flexed arm, legs, approved torso / abs trace, medical
   shield and stretching person.
@@ -79,6 +81,12 @@ the same lookup rather than gaining another icon set.
   both halves of the equipment sheet. Visual inspection found all approved
   equipment traces contained within their circles with no clipping, and the
   rejected pulley drawing absent.
+- After the later cable / weight-machine split, approved icon ownership again
+  ran 11 cells with 11 passed, equipment vocabulary ran 63 cells with 63
+  passed, and the compile baseline remained at 459 diagnostics with no file
+  regression. The Profile equipment flow completed again; visual inspection
+  confirmed the upright station at Cable machine and the seated plate-loaded
+  trace at Weight machines.
 - The approved icon test is in the mandatory chain before the law-registry gate.
   The chain remains deliberately red because 32 unrelated registry rows remain
   unguarded; Sam explicitly overrode that stop for this unit.

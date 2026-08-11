@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 550 550"
+  color="#C8FF00"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="38"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <title>Australian rules football</title>
+
+  <!-- Ball outline, faithfully traced from the approved reference. -->
+  <path
+    d="M327 28
+       C276 17 221 45 175 94
+       C125 147 96 218 93 302
+       C90 388 119 461 168 506
+       C196 532 228 539 261 534
+       C338 522 409 442 443 353
+       C476 267 464 166 430 99
+       C403 47 365 25 327 28Z"
+  />
+
+  <!-- Curved centre seam. -->
+  <path
+    stroke-width="24"
+    d="M327 29
+       C290 57 265 108 239 166
+       C211 229 197 302 192 374
+       C188 438 191 491 210 529"
+  />
+
+  <!-- Six square-ended lace bars. -->
+  <g stroke-linecap="butt" stroke-width="20">
+    <path d="M207 212L241 213" />
+    <path d="M202 231L237 233" />
+    <path d="M198 250L232 253" />
+    <path d="M187 285L219 288" />
+    <path d="M184 304L215 307" />
+    <path d="M180 323L210 326" />
+  </g>
+
+  <!-- Raised centre knot. -->
+  <circle cx="210" cy="269" r="14" fill="currentColor" stroke="none" />
+</svg>
