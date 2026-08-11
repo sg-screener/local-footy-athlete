@@ -78,7 +78,9 @@ the same lookup rather than gaining another icon set.
 - The Gun show visual route reached an existing Plan Change hook-order render
   error before the type picker mounted. The independent Add exercise route
   mounted and photographed the same shared flexed-arm owner successfully. The
-  Plan Change error was not changed as part of this icon-only unit.
+  Plan Change error was not changed as part of this icon-only unit. After the
+  independent hook-order fix landed at `f4f6b3b2`, the same route completed and
+  photographed Gun show in the real picker.
 
 ## Receipts
 
@@ -129,6 +131,18 @@ the same lookup rather than gaining another icon set.
   regression. The Add exercise flow completed and photographed the new trace
   at its real Upper body row size. The guard proves both Upper body and Gun show
   request that same trace and the retired library arm is absent.
+- The final simulator audit ran six distinct tapes. Profile equipment completed
+  and photographed the top and bottom of the real list, including all ten gym
+  equipment rows and all five cardio-machine rows. Plan change completed through
+  its actions and type picker; Add exercise completed through its body/activity
+  picker; Injury completed through its region picker; readiness completed through
+  both fatigue and illness sheets; and a non-seeded cold onboarding run reached
+  the season-phase screen and photographed the traced footy. One combined tape
+  hit an iOS accessibility hierarchy error during its second reset; each remaining
+  surface then completed in its own fresh tape, so the error did not stand in for
+  an icon result.
+- The final compile instrument again reported 35 product, 51 development-tool
+  and 373 test diagnostics, 459 total against the baseline, with no regression.
 - The approved icon test is in the mandatory chain before the law-registry gate.
   The chain remains deliberately red because 32 unrelated registry rows remain
   unguarded; Sam explicitly overrode that stop for this unit.
@@ -148,14 +162,12 @@ screen-local drawings.
 
 ## NOT COVERED
 
-- Readiness and Injury were source-pinned but were not separately photographed
-  in the rebuilt simulator during this unit.
-- Add exercise's Upper body row was photographed with the new flexed arm. Gun
-  show uses the same guarded owner, but its picker could not be photographed
-  because the existing Plan Change hook-order error stopped the route first.
-- The new In-season footy trace was source-pinned but was not separately
-  photographed in the rebuilt simulator during this unit.
 - Sam's physical iPhone has not shown the new icons. Athlete-facing acceptance
   therefore remains open.
+- Duplicate request sites were not each photographed separately: Profile was the
+  simulator representative for the shared equipment owner, and the opened
+  readiness/injury sheets were the representatives for their matching Program
+  quick-action glyphs. The ownership gate pins those duplicate sites to the same
+  icon owner.
 - Icons outside the audit decision list were not redesigned.
 - Android rendering was not exercised.
