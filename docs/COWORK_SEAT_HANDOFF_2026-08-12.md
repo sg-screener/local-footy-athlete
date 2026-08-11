@@ -68,9 +68,37 @@ wired to `log` is not shipped.**
    heredocs. `SendUserFile` is only for things Sam himself opens — a mock, a
    screenshot, a sheet he asked for.
 
-## ONE ENVIRONMENT GOTCHA
+## THE ENVIRONMENT GOTCHAS — the git one has now cost three seats, SOLVED BELOW
 
 The connected folder `.../local-footy-athlete/LFA` is **empty** — request the
-PARENT `/Users/samgeurts/Documents/local-footy-athlete`. And `device_bash`
-cannot delete: a stale `.git/HEAD.lock` from a seat commit must be **moved
-aside**, not removed (`mv .git/HEAD.lock .git/HEAD.lock.stale-seat`).
+PARENT `/Users/samgeurts/Documents/local-footy-athlete`.
+
+**THE GIT LOCK TOLL, AND ITS FIX.** `device_bash` cannot delete, so **every git
+command that writes the index leaves a `.git/index.lock` or `.git/HEAD.lock`
+behind that the seat cannot remove — and the leftover lock BLOCKS THE TERMINAL'S
+NEXT COMMIT.** Worse, `git status` itself refreshes the index, so the naive
+cleanup loop *re-creates the lock it just moved*.
+
+**THE FIX — use it for every read:**
+
+```
+git --no-optional-locks status --porcelain     # cannot create a lock
+git --no-optional-locks log --oneline -1
+```
+
+**And after any seat COMMIT (which must write the index), clean up in the SAME
+`device_bash` call, using `mv`, never `rm`:**
+
+```
+for L in .git/index.lock .git/HEAD.lock; do
+  [ -e "$L" ] && mv "$L" "$L.stale-seat"
+done
+ls -1 .git/*.lock 2>/dev/null || echo "NONE — clean"   # verify with ls, NOT git
+```
+
+Leftover `.git/objects/*/tmp_obj_*` files are harmless — git prunes them.
+
+**Better still: prefer not committing at all while the terminal is running.** The
+seat's writes are read from DISK by the terminal, so an uncommitted doc is
+already live. Commit only at a terminal stop, and only when the durability is
+worth the toll.
