@@ -46,11 +46,16 @@ const pullUpBarAsset = fs.readFileSync(
   path.resolve(root, '../assets/icons/pull-up-bar-traced.svg'),
   'utf8',
 );
+const plyoBoxAsset = fs.readFileSync(
+  path.resolve(root, '../assets/icons/plyo-box-traced.svg'),
+  'utf8',
+);
 
 console.log('\napproved icon ownership');
 
 const customTraces = [
   'pull-up-bar',
+  'plyo-box',
   'foam-roller',
   'footy',
   'cable-machine',
@@ -94,6 +99,15 @@ ok('every approved machine and torso trace is byte-for-byte the signed-off shape
   Object.entries(approvedTraceHash).every(([name, expected]) =>
     traceHashFromOwner(name) === expected));
 const compactOwner = owner.replace(/\s+/g, '');
+const plyoBoxPathData = Array.from(plyoBoxAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
+  .map((match) => match[1].replace(/\s+/g, ''));
+ok('the app plyo box is the supplied three-face chevron trace',
+  plyoBoxPathData.length === 9
+  && plyoBoxPathData.every((d) => compactOwner.includes(d))
+  && owner.includes('viewBox="40 35 240 175"')
+  && owner.includes('strokeWidth={7}')
+  && equipment.includes('<LfaIcon name="plyo-box" color={color} />')
+  && !equipment.includes('M4 10l8-4 8 4-8 4z'));
 const pullUpBarPathData = Array.from(pullUpBarAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
   .map((match) => match[1].replace(/\s+/g, ''));
 ok('the app pull-up bar is the supplied thin freestanding trace',

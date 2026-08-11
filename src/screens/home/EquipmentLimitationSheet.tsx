@@ -53,10 +53,8 @@ export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => 
   kettlebell: (color) => <LfaIcon name="kettlebell" color={color} />,
   /** Foam roller — Sam's supplied hollow, ribbed roller SVG. */
   foam_roller: (color) => <LfaIcon name="foam-roller" color={color} />,
-  /** Plyo box — an isometric cube. */
-  plyo_box: (color) => glyph(color, (
-    <><Path d="M4 10l8-4 8 4-8 4z" /><Path d="M4 10v7l8 4 8-4v-7" /><Path d="M12 14v7" /></>
-  )),
+  /** Plyo box — Sam's approved three-face box with grip chevrons. */
+  plyo_box: (color) => <LfaIcon name="plyo-box" color={color} />,
 };
 export const CONDITIONING_MODALITY_ICON: Record<ConditioningEquipmentModality, (color: string) => React.ReactNode> = {
   /** Bike erg — Sam's approved traced machine. */

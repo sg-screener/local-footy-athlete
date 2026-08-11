@@ -30,6 +30,7 @@ export type LfaIconName =
   | 'kettlebell'
   | 'footy'
   | 'pull-up-bar'
+  | 'plyo-box'
   | 'foam-roller'
   | 'cable-machine'
   | 'weight-machine'
@@ -186,6 +187,29 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
         <Path d="M252 58H262V69H252Z" fill={color} />
         <Path d="M88 245H101L109 253V261H80V253Z" fill={color} />
         <Path d="M237 245H250L258 253V261H229V253Z" fill={color} />
+      </Svg>
+    );
+  }
+
+  if (name === 'plyo-box') {
+    return (
+      <Svg width={size} height={size} viewBox="40 35 240 175" fill="none">
+        <G
+          stroke={color}
+          strokeWidth={7}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M53 68L159 45L265 67L159 91Z" />
+          <Path d="M53 68L159 91V194L53 174Z" />
+          <Path d="M159 91L265 67V171L159 194Z" />
+          <Path d="M128 109L138 118L146 109" />
+          <Path d="M128 132L138 141L146 132" />
+          <Path d="M128 155L138 164L146 155" />
+          <Path d="M198 91L207 100L202 110" />
+          <Path d="M220 87L229 96L223 107" />
+          <Path d="M242 83L251 92L246 103" />
+        </G>
       </Svg>
     );
   }

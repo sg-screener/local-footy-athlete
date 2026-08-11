@@ -41,6 +41,8 @@ the same lookup rather than gaining another icon set.
 - Pull-up bar uses Sam's later minimal freestanding trace: two thin uprights, a
   detached crossbar, side stops and solid feet. The older locally drawn braced
   frame is retired.
+- Plyo box uses Sam's later three-face trace with three front chevrons and
+  three side chevrons. The generic empty cube is retired.
 - Injury regions use an injured upper-body figure, legs and a curved spine.
 - Add exercise uses the flexed arm, legs, approved torso / abs trace, medical
   shield and stretching person.
@@ -112,6 +114,11 @@ the same lookup rather than gaining another icon set.
   regression. The Profile equipment flow completed; visual inspection
   confirmed the thin bar fits its icon circle and the retired braced frame is
   absent.
+- After the plyo-box replacement, approved icon ownership ran 14 cells with 14
+  passed and the compile baseline remained at 459 diagnostics with no file
+  regression. The Profile equipment flow completed; visual inspection
+  confirmed all three faces and both chevron groups remain readable at icon
+  size and the retired generic cube is absent.
 - The approved icon test is in the mandatory chain before the law-registry gate.
   The chain remains deliberately red because 32 unrelated registry rows remain
   unguarded; Sam explicitly overrode that stop for this unit.

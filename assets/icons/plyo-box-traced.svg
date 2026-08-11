@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="40 35 240 175"
+  color="#C8FF00"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="7"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <title>Plyometric box</title>
+
+  <!-- Three box faces. -->
+  <path d="M53 68L159 45L265 67L159 91Z" />
+  <path d="M53 68L159 91V194L53 174Z" />
+  <path d="M159 91L265 67V171L159 194Z" />
+
+  <!-- Front-face grip chevrons. -->
+  <path d="M128 109L138 118L146 109" />
+  <path d="M128 132L138 141L146 132" />
+  <path d="M128 155L138 164L146 155" />
+
+  <!-- Side-face grip chevrons. -->
+  <path d="M198 91L207 100L202 110" />
+  <path d="M220 87L229 96L223 107" />
+  <path d="M242 83L251 92L246 103" />
+</svg>
