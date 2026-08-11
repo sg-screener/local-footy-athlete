@@ -50,10 +50,15 @@ const plyoBoxAsset = fs.readFileSync(
   path.resolve(root, '../assets/icons/plyo-box-traced.svg'),
   'utf8',
 );
+const flexedArmAsset = fs.readFileSync(
+  path.resolve(root, '../assets/icons/flexed-arm-traced.svg'),
+  'utf8',
+);
 
 console.log('\napproved icon ownership');
 
 const customTraces = [
+  'flexed-arm',
   'pull-up-bar',
   'plyo-box',
   'foam-roller',
@@ -99,6 +104,14 @@ ok('every approved machine and torso trace is byte-for-byte the signed-off shape
   Object.entries(approvedTraceHash).every(([name, expected]) =>
     traceHashFromOwner(name) === expected));
 const compactOwner = owner.replace(/\s+/g, '');
+const flexedArmPathData = Array.from(flexedArmAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
+  .map((match) => match[1].replace(/\s+/g, ''));
+ok('Gun show and Upper body share the supplied flexed-arm trace',
+  flexedArmPathData.length === 8
+  && flexedArmPathData.every((d) => compactOwner.includes(d))
+  && owner.includes("name === 'flexed-arm' || name === 'upper-body'")
+  && owner.includes('viewBox="60 55 230 245"')
+  && !owner.includes('arm-flex-outline'));
 const plyoBoxPathData = Array.from(plyoBoxAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
   .map((match) => match[1].replace(/\s+/g, ''));
 ok('the app plyo box is the supplied three-face chevron trace',

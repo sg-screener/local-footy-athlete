@@ -59,10 +59,8 @@ const MCI_ICON: Partial<Record<LfaIconName, MciName>> = {
   'no-energy': 'battery-low',
   'severe-illness': 'emoticon-dead-outline',
   'move-right': 'arrow-right',
-  'flexed-arm': 'arm-flex-outline',
   'future-weeks': 'calendar-sync-outline',
   'upper-body-injury': 'account-injury-outline',
-  'upper-body': 'arm-flex-outline',
   'no-equipment': 'cancel',
   'thumbs-down': 'thumb-down-outline',
   dumbbell: 'dumbbell',
@@ -85,6 +83,28 @@ const TRACED_ICON = {
 } as const;
 
 export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
+  if (name === 'flexed-arm' || name === 'upper-body') {
+    return (
+      <Svg width={size} height={size} viewBox="60 55 230 245" fill="none">
+        <G
+          stroke={color}
+          strokeWidth={7}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M82 280C95 273 105 262 114 249C130 261 149 268 171 269C200 270 230 260 259 247C269 243 273 237 271 226L268 204C265 185 259 169 249 152L219 98C215 89 208 84 196 81L158 71C149 69 144 69 139 74L125 90C121 95 122 100 126 104C120 111 122 118 128 122C134 126 141 124 146 120C153 127 163 126 169 120C177 123 187 120 193 114" />
+          <Path d="M193 114C199 126 200 142 197 156C193 174 196 189 208 204C196 196 187 185 171 181C151 176 137 182 126 195C116 208 107 226 83 238" />
+          <Path d="M72 175C94 164 117 166 136 178" />
+          <Path d="M127 229C145 243 174 245 194 229" />
+          <Path d="M126 104L134 90" />
+          <Path d="M139 113C136 110 136 106 138 102L143 91" />
+          <Path d="M151 116C148 112 148 108 150 103L153 94" />
+          <Path d="M169 120C163 118 160 113 162 107L164 99" />
+        </G>
+      </Svg>
+    );
+  }
+
   if (name === 'footy') {
     return (
       <Svg width={size} height={size} viewBox="0 0 550 550" fill="none">

@@ -29,8 +29,9 @@ the same lookup rather than gaining another icon set.
   the Program row.
 - Mild illness no longer looks like hydration, totally cooked uses a low
   battery, and severe illness no longer uses the generic bed.
-- Move is a plain right arrow; Gun show is a literal flexed arm; future weeks
-  uses the library calendar-sync symbol.
+- Move is a plain right arrow; Gun show and Add exercise's Upper body row share
+  Sam's later thin traced flexed arm; future weeks uses the library
+  calendar-sync symbol. The older library arm is retired.
 - Dumbbells and kettlebell reuse the app's library glyphs.
 - Cable machine now uses the previously approved upright selector/cable-station
   drawing. Weight machines uses Sam's later seated plate-loaded trace. Bench,
@@ -74,6 +75,10 @@ the same lookup rather than gaining another icon set.
   Metro was no longer running; the device showed "No script URL provided".
   Metro was restarted and the same deterministic Profile equipment flow then
   completed. This was an instrument availability failure, not an icon result.
+- The Gun show visual route reached an existing Plan Change hook-order render
+  error before the type picker mounted. The independent Add exercise route
+  mounted and photographed the same shared flexed-arm owner successfully. The
+  Plan Change error was not changed as part of this icon-only unit.
 
 ## Receipts
 
@@ -119,6 +124,11 @@ the same lookup rather than gaining another icon set.
   regression. The Profile equipment flow completed; visual inspection
   confirmed all three faces and both chevron groups remain readable at icon
   size and the retired generic cube is absent.
+- After the flexed-arm replacement, approved icon ownership ran 15 cells with
+  15 passed and the compile baseline remained at 459 diagnostics with no file
+  regression. The Add exercise flow completed and photographed the new trace
+  at its real Upper body row size. The guard proves both Upper body and Gun show
+  request that same trace and the retired library arm is absent.
 - The approved icon test is in the mandatory chain before the law-registry gate.
   The chain remains deliberately red because 32 unrelated registry rows remain
   unguarded; Sam explicitly overrode that stop for this unit.
@@ -138,8 +148,11 @@ screen-local drawings.
 
 ## NOT COVERED
 
-- Readiness, Plan change, Injury and Add exercise were source-pinned but were
-  not separately photographed in the rebuilt simulator during this unit.
+- Readiness and Injury were source-pinned but were not separately photographed
+  in the rebuilt simulator during this unit.
+- Add exercise's Upper body row was photographed with the new flexed arm. Gun
+  show uses the same guarded owner, but its picker could not be photographed
+  because the existing Plan Change hook-order error stopped the route first.
 - The new In-season footy trace was source-pinned but was not separately
   photographed in the rebuilt simulator during this unit.
 - Sam's physical iPhone has not shown the new icons. Athlete-facing acceptance

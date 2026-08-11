@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="60 55 230 245"
+  color="#C8FF00"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="7"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <title>Flexed arm</title>
+
+  <!-- Outer arm, fist and forearm silhouette. -->
+  <path d="M82 280C95 273 105 262 114 249C130 261 149 268 171 269C200 270 230 260 259 247C269 243 273 237 271 226L268 204C265 185 259 169 249 152L219 98C215 89 208 84 196 81L158 71C149 69 144 69 139 74L125 90C121 95 122 100 126 104C120 111 122 118 128 122C134 126 141 124 146 120C153 127 163 126 169 120C177 123 187 120 193 114" />
+
+  <!-- Wrist, bicep and lower arm. -->
+  <path d="M193 114C199 126 200 142 197 156C193 174 196 189 208 204C196 196 187 185 171 181C151 176 137 182 126 195C116 208 107 226 83 238" />
+  <path d="M72 175C94 164 117 166 136 178" />
+  <path d="M127 229C145 243 174 245 194 229" />
+
+  <!-- Finger folds. -->
+  <path d="M126 104L134 90" />
+  <path d="M139 113C136 110 136 106 138 102L143 91" />
+  <path d="M151 116C148 112 148 108 150 103L153 94" />
+  <path d="M169 120C163 118 160 113 162 107L164 99" />
+</svg>
