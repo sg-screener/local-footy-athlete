@@ -83,6 +83,7 @@
     "test:equipment-schedule-facts": "TZ=Australia/Melbourne sucrase-node src/__tests__/equipmentScheduleFactTransactionTests.ts",
     "test:onboarding-field-influence": "TZ=Australia/Melbourne sucrase-node src/__tests__/onboardingFieldInfluenceTests.ts",
     "test:equipment-vocabulary": "TZ=Australia/Melbourne sucrase-node src/__tests__/equipmentVocabularyTests.ts",
+    "export:exercise-equipment": "TZ=Australia/Melbourne sucrase-node scripts/export-exercise-equipment.ts",
     "test:equipment-answer": "TZ=Australia/Melbourne sucrase-node src/__tests__/equipmentAnswerTests.ts",
     "test:weak-point-focus": "TZ=Australia/Melbourne sucrase-node src/__tests__/weakPointFocusTests.ts",
     "test:strength-answer-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/strengthAnswerAuthorityTests.ts",
