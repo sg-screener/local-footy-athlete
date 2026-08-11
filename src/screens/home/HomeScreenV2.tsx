@@ -590,7 +590,7 @@ export default function HomeScreenV2() {
                   pressed && { opacity: 0.6 },
                 ]}
               >
-                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <Path d="M15 18l-6-6 6-6" />
                 </Svg>
               </Pressable>
@@ -616,7 +616,7 @@ export default function HomeScreenV2() {
                   pressed && { opacity: 0.6 },
                 ]}
               >
-                <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#B5B5B5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <Path d="M9 18l6-6-6-6" />
                 </Svg>
               </Pressable>
@@ -3635,24 +3635,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 8,
   },
   compactWeekNavButton: {
-    width: 28,
-    height: 28,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   compactWeekNavCurrent: {
-    minWidth: 78,
-    minHeight: 28,
+    minWidth: 112,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   compactWeekNavLabel: {
     color: '#D2D2D2',
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     letterSpacing: 0.7,
     textTransform: 'uppercase',

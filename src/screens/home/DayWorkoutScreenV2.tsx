@@ -17,7 +17,6 @@ import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
-import { MobilityPrehabFlowSection } from '../../components/MobilityPrehabFlowSection';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel, todayISOLocal } from '../../utils/appDate';
 import {
@@ -60,7 +59,11 @@ import {
   sessionExecutionCheckmark,
 } from '../../theme/sessionExecutionCheckbox';
 import { useDayWorkout } from './useDayWorkout';
-import { selectMobilityPrehabFlow } from '../../utils/mobilityPrehabFlow';
+import {
+  mobilityFlowMovementDose,
+  selectMobilityPrehabFlow,
+  type MobilityPrehabFlow,
+} from '../../utils/mobilityPrehabFlow';
 import { useAthleteContext, useResolvedWeekForDate } from '../../hooks/useSchedule';
 import {
   buildDayWorkoutSmokeContractErrorResult,
@@ -1414,10 +1417,22 @@ export default function DayWorkoutScreenV2() {
                 section={section}
                 completedItemIds={completedExerciseIds}
               >
-                <MobilityPrehabFlowSection
+                <MobilityExerciseList
                   flow={mobilityFlow}
                   completedItemIds={completedExerciseIds}
                   onToggleItem={toggleExerciseComplete}
+                  sessionId={workout.id}
+                  expandedCues={expandedCues}
+                  toggleCue={toggleCue}
+                  editingWeightId={editingWeightId}
+                  editingWeightText={editingWeightText}
+                  setEditingWeightText={setEditingWeightText}
+                  formatWeight={formatWeight}
+                  incrementWeight={incrementWeight}
+                  decrementWeight={decrementWeight}
+                  startEditingWeight={startEditingWeight}
+                  commitWeightEdit={commitWeightEdit}
+                  onSelectExercise={setSelectedExercise}
                 />
               </SessionExecutionSection>
             ))}
@@ -1695,6 +1710,105 @@ interface SessionListProps {
   onSwapExercise: (exercise: any) => void;
   onRemoveExercise: (exercise: any) => void;
 }
+
+/**
+ * Mobility is a derived D17 prescription, but its execution UI is not a second
+ * kind of exercise. Adapt each selected pool movement into the row contract
+ * that Strength already owns, then use the exact same checklist and exercise
+ * card components. This keeps prescription, cues, load entry and video action
+ * aligned without pretending derived movements can use the program mutation
+ * doors owned by stored workout rows.
+ */
+function MobilityExerciseList({
+  flow,
+  completedItemIds,
+  onToggleItem,
+  sessionId,
+  expandedCues,
+  toggleCue,
+  editingWeightId,
+  editingWeightText,
+  setEditingWeightText,
+  formatWeight,
+  incrementWeight,
+  decrementWeight,
+  startEditingWeight,
+  commitWeightEdit,
+  onSelectExercise,
+}: {
+  flow: MobilityPrehabFlow | null;
+  completedItemIds: ReadonlySet<string>;
+  onToggleItem: (itemId: string) => void;
+  sessionId: string;
+  expandedCues: Record<string, boolean>;
+  toggleCue: (exerciseId: string) => void;
+  editingWeightId: string | null;
+  editingWeightText: string;
+  setEditingWeightText: (value: string) => void;
+  formatWeight: (exercise: any) => string;
+  incrementWeight: (exercise: any) => void;
+  decrementWeight: (exercise: any) => void;
+  startEditingWeight: (exercise: any) => void;
+  commitWeightEdit: () => void;
+  onSelectExercise: (name: string) => void;
+}) {
+  if (!flow) return null;
+
+  return (
+    <View style={styles.exerciseList} testID="mobility-prehab-flow">
+      {flow.movements.map(({ exercise }, index) => {
+        const itemId = `mobility:${exercise.id}`;
+        const row = {
+          id: itemId,
+          exerciseId: itemId,
+          prescribedSets: exercise.sets,
+          prescribedRepsMin: exercise.repsMin,
+          prescribedRepsMax: exercise.repsMax,
+          prescribedWeightKg: null,
+          prescriptionType: exercise.prescriptionType,
+          perSide: exercise.perSide,
+          restSeconds: exercise.restSeconds,
+          exercise: {
+            id: exercise.id,
+            name: exercise.name,
+            description: exercise.notes,
+            equipmentRequired: exercise.equipment,
+          },
+        };
+        return (
+          <ExecutionChecklistItem
+            key={itemId}
+            itemId={itemId}
+            label={exercise.name}
+            completed={completedItemIds.has(itemId)}
+            onToggle={onToggleItem}
+          >
+            <StrengthExerciseCard
+              exercise={row}
+              sessionId={sessionId}
+              label={`${index + 1}`}
+              isGrouped={false}
+              prescriptionLabel={mobilityFlowMovementDose(exercise)}
+              cueTextOverride={exercise.notes}
+              expandedCues={expandedCues}
+              toggleCue={toggleCue}
+              editingWeightId={editingWeightId}
+              editingWeightText={editingWeightText}
+              setEditingWeightText={setEditingWeightText}
+              formatWeight={formatWeight}
+              incrementWeight={incrementWeight}
+              decrementWeight={decrementWeight}
+              startEditingWeight={startEditingWeight}
+              commitWeightEdit={commitWeightEdit}
+              onSelectExercise={onSelectExercise}
+            />
+          </ExecutionChecklistItem>
+        );
+      })}
+    </View>
+  );
+}
+
 function SessionList({
   items,
   executionPlan,
@@ -2053,6 +2167,8 @@ interface StrengthExerciseCardProps {
   label: string;
   isGrouped: boolean;
   isLastInGroup?: boolean;
+  prescriptionLabel?: string;
+  cueTextOverride?: string | null;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -2064,8 +2180,8 @@ interface StrengthExerciseCardProps {
   startEditingWeight: (ex: any) => void;
   commitWeightEdit: () => void;
   onSelectExercise: (name: string) => void;
-  onSwapExercise: (exercise: any) => void;
-  onRemoveExercise: (exercise: any) => void;
+  onSwapExercise?: (exercise: any) => void;
+  onRemoveExercise?: (exercise: any) => void;
 }
 function StrengthExerciseCard({
   exercise,
@@ -2073,6 +2189,8 @@ function StrengthExerciseCard({
   label,
   isGrouped,
   isLastInGroup = true,
+  prescriptionLabel,
+  cueTextOverride,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -2089,9 +2207,11 @@ function StrengthExerciseCard({
 }: StrengthExerciseCardProps) {
   const exerciseName = exercise.exercise?.name || `Exercise`;
   const exerciseDisplayName = displayExerciseName(exerciseName);
-  const setsReps = formatStrengthSetsReps(exercise);
+  const setsReps = prescriptionLabel ?? formatStrengthSetsReps(exercise);
   const restLabel = exercise.restSeconds >= 90 ? formatRest(exercise.restSeconds) : null;
-  const cueText = buildCueText(exerciseName);
+  const cueText = cueTextOverride !== undefined
+    ? cueTextOverride
+    : buildCueText(exerciseName);
   const isEditing = editingWeightId === exercise.exerciseId;
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
@@ -2113,8 +2233,8 @@ function StrengthExerciseCard({
         label={label}
         name={exerciseDisplayName}
         onPlay={() => onSelectExercise(exerciseName)}
-        onSwap={isEditableRow ? () => onSwapExercise(exercise) : undefined}
-        onRemove={isEditableRow ? () => onRemoveExercise(exercise) : undefined}
+        onSwap={isEditableRow && onSwapExercise ? () => onSwapExercise(exercise) : undefined}
+        onRemove={isEditableRow && onRemoveExercise ? () => onRemoveExercise(exercise) : undefined}
         swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
         removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
       />
@@ -3563,11 +3683,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   executionSectionBody: { paddingBottom: spacing.md, gap: spacing.sm },
-  executionItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  executionItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   executionItemComplete: { opacity: 0.42 },
   executionCheckbox: {
     ...sessionExecutionCheckbox,
-    marginTop: 10,
   },
   executionCheckboxComplete: {
     ...sessionExecutionCheckboxChecked,

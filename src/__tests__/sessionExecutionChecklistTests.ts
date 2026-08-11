@@ -164,7 +164,6 @@ ok('team-training effort accepts only the shared 1-5 scale',
 
 console.log('\n[3] The live screen uses controlled chevrons and checkboxes');
 const screen = fs.readFileSync(path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8');
-const mobility = fs.readFileSync(path.resolve(__dirname, '..', 'components', 'MobilityPrehabFlowSection.tsx'), 'utf8');
 const feedback = fs.readFileSync(path.resolve(__dirname, '..', 'components', 'SessionFeedbackPanel.tsx'), 'utf8');
 const outcomeTransaction = fs.readFileSync(
   path.resolve(__dirname, '..', 'store', 'sessionOutcomeTransaction.ts'),
@@ -178,23 +177,43 @@ ok('each section has stable toggle and expanded-body identities',
     /session-execution-items-\$\{section\.id\}/.test(screen));
 ok('rows expose a checkbox', /accessibilityRole="checkbox"/.test(screen));
 ok('completed rows use a dull treatment', /executionItemComplete/.test(screen));
-ok('mobility movements use the same controlled tick owner', /completedItemIds/.test(mobility) && /onToggleItem/.test(mobility));
+ok('every checkbox is centred against its complete exercise row',
+  /executionItem:\s*\{[^}]*alignItems:\s*'center'/.test(screen)
+    && /executionCheckbox:\s*\{[^}]*\.\.\.sessionExecutionCheckbox[^}]*\}/.test(screen)
+    && !/executionCheckbox:\s*\{[^}]*marginTop/.test(screen));
+ok('mobility movements use the same controlled checklist owner',
+  /function MobilityExerciseList/.test(screen)
+    && /completedItemIds\.has\(itemId\)/.test(screen)
+    && /onToggle=\{onToggleItem\}/.test(screen));
 ok('mobility and every other session row use one square checkbox recipe',
-  /sessionExecutionCheckbox/.test(mobility)
-    && /\.\.\.sessionExecutionCheckbox/.test(mobility)
-    && /sessionExecutionCheckbox/.test(screen)
-    && /\.\.\.sessionExecutionCheckbox/.test(screen));
+  /sessionExecutionCheckbox/.test(screen)
+    && /\.\.\.sessionExecutionCheckbox/.test(screen)
+    && !/MobilityPrehabFlowSection/.test(screen));
 const mobilitySectionAt = screen.indexOf("filter((section) => section.id === 'mobility')");
-const mobilityRowsAt = screen.indexOf('<MobilityPrehabFlowSection', mobilitySectionAt);
+const mobilityRowsAt = screen.indexOf('<MobilityExerciseList', mobilitySectionAt);
+const mobilityRendererAt = screen.indexOf('function MobilityExerciseList');
+const sessionListAt = screen.indexOf('function SessionList', mobilityRendererAt);
+const mobilityRenderer = mobilityRendererAt >= 0 && sessionListAt > mobilityRendererAt
+  ? screen.slice(mobilityRendererAt, sessionListAt)
+  : '';
 ok('mobility uses the same chevron owner as the other sections',
   mobilitySectionAt >= 0 && mobilityRowsAt > mobilitySectionAt &&
     screen.slice(mobilitySectionAt, mobilityRowsAt).includes('<SessionExecutionSection') &&
-    !/chevron-up|chevron-down|useState\(false\)/.test(mobility));
+    !/chevron-up|chevron-down|useState\(false\)/.test(mobilityRenderer));
+ok('mobility reuses the complete Strength exercise presentation',
+  /<ExecutionChecklistItem/.test(mobilityRenderer)
+    && /<StrengthExerciseCard/.test(mobilityRenderer)
+    && /prescriptionLabel=\{mobilityFlowMovementDose\(exercise\)\}/.test(mobilityRenderer)
+    && /cueTextOverride=\{exercise\.notes\}/.test(mobilityRenderer)
+    && /formatWeight=\{formatWeight\}/.test(mobilityRenderer)
+    && /incrementWeight=\{incrementWeight\}/.test(mobilityRenderer)
+    && /decrementWeight=\{decrementWeight\}/.test(mobilityRenderer)
+    && /onSelectExercise=\{onSelectExercise\}/.test(mobilityRenderer));
 ok('Team Training expands as a plain checklist row, not an accent card',
   /function TeamTrainingRow/.test(screen) && /styles\.exerciseCard/.test(screen) &&
     !/function TeamTrainingBanner|teamTrainingCard|teamTrainingBody/.test(screen));
 ok('mobility has no optional wording in text or accessibility copy',
-  !/\boptional\b/i.test(mobility));
+  !/\boptional\b/i.test(mobilityRenderer));
 ok('the in-progress checklist is a screen draft', /useState<ReadonlySet<string>>/.test(screen) && /setCompletedExerciseIds/.test(screen));
 ok('the durable outcome owns the per-item result', /executionItems:\s*executionSummary\?\.items/.test(feedback));
 

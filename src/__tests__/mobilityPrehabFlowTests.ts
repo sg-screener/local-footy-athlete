@@ -468,61 +468,70 @@ console.log('\n[5] The flow is measured but never counted or load-bearing');
 
 /* ══ 6. Render contract ══ */
 
-console.log('\n[6] Shared section shell at the top, with controlled per-movement ticks');
+console.log('\n[6] Shared section and exercise-row owners at the top');
 {
-  const section = fs.readFileSync(
-    path.join(src, 'components/MobilityPrehabFlowSection.tsx'),
-    'utf8',
-  );
   const screen = fs.readFileSync(
     path.join(src, 'screens/home/DayWorkoutScreenV2.tsx'),
     'utf8',
   );
 
-  ok('the flow section exists', section.length > 0);
   const mobilityOwnerAt = screen.indexOf("filter((section) => section.id === 'mobility')");
-  const mobilityRowsAt = screen.indexOf('<MobilityPrehabFlowSection', mobilityOwnerAt);
+  const mobilityRowsAt = screen.indexOf('<MobilityExerciseList', mobilityOwnerAt);
+  const mobilityRendererAt = screen.indexOf('function MobilityExerciseList');
+  const sessionListAt = screen.indexOf('function SessionList', mobilityRendererAt);
+  const mobilityRenderer = mobilityRendererAt >= 0 && sessionListAt > mobilityRendererAt
+    ? screen.slice(mobilityRendererAt, sessionListAt)
+    : '';
+  ok('the flow renderer exists', mobilityRenderer.length > 500);
   ok('the shared execution section owns mobility disclosure',
     mobilityOwnerAt >= 0 && mobilityRowsAt > mobilityOwnerAt &&
       screen.slice(mobilityOwnerAt, mobilityRowsAt).includes('<SessionExecutionSection'));
   ok('the movement renderer owns no competing disclosure state',
-    !/useState\(false\)|setExpanded|chevron-up|chevron-down/.test(section));
+    !/useState\(false\)|setExpanded|chevron-up|chevron-down/.test(mobilityRenderer));
   ok('the common section reports the movement total from execution items',
     /section\.items\.length/.test(screen));
   ok(
     'and it no longer promises a duration',
-    !/durationMinutes/.test(section),
+    !/durationMinutes/.test(mobilityRenderer),
     'the minutes came from a retired bundle; a composed flow shrinks, so a promised '
       + 'length is a signed sentence that can lie',
   );
 
   ok(
     'each movement reads the shared completed-id owner',
-    /completedItemIds\.has\(`mobility:\$\{exercise\.id\}`\)/.test(section),
+    /completedItemIds\.has\(itemId\)/.test(mobilityRenderer),
   );
   ok(
     'the presentation component never writes to a store itself',
     !/useProgramStore|useProfileStore|useReadinessStore|AsyncStorage|setWeightOverride/.test(
-      section,
+      mobilityRenderer,
     ),
     'the screen owns the result; this component is controlled',
   );
   ok(
     'each movement exposes a checkbox and delegates its stable item id',
-    /accessibilityRole="checkbox"/.test(section) &&
-      /itemId=\{`mobility:\$\{exercise\.id\}`\}/.test(section) &&
-      /onToggle=\{onToggleItem\}/.test(section) &&
-      /onPress=\{\(\) => onToggle\(itemId\)\}/.test(section),
+    /<ExecutionChecklistItem/.test(mobilityRenderer) &&
+      /itemId=\{itemId\}/.test(mobilityRenderer) &&
+      /onToggle=\{onToggleItem\}/.test(mobilityRenderer),
+  );
+  ok(
+    'every movement reuses Strength prescription, cues, load and video presentation',
+    /<StrengthExerciseCard/.test(mobilityRenderer) &&
+      /prescriptionLabel=\{mobilityFlowMovementDose\(exercise\)\}/.test(mobilityRenderer) &&
+      /cueTextOverride=\{exercise\.notes\}/.test(mobilityRenderer) &&
+      /expandedCues=\{expandedCues\}/.test(mobilityRenderer) &&
+      /formatWeight=\{formatWeight\}/.test(mobilityRenderer) &&
+      /onSelectExercise=\{onSelectExercise\}/.test(mobilityRenderer),
   );
 
   ok(
     'the screen mounts the shared mobility section above the session list',
-    screen.indexOf('MobilityPrehabFlowSection') > 0 &&
-      screen.indexOf('<MobilityPrehabFlowSection') < screen.indexOf('<SessionList'),
+    screen.indexOf('MobilityExerciseList') > 0 &&
+      screen.indexOf('<MobilityExerciseList') < screen.indexOf('<SessionList'),
   );
   ok(
     'the flow is not rendered on the recovery-template branch',
-    !/mode === 'recovery' \? \([\s\S]{0,400}MobilityPrehabFlowSection/.test(screen),
+    !/mode === 'recovery' \? \([\s\S]{0,400}MobilityExerciseList/.test(screen),
   );
   ok(
     'the flow never gates the Finish action',

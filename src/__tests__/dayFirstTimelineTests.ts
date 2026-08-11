@@ -880,9 +880,11 @@ run('week navigation is absent from Today and compact below the toggle in Week',
     'simplifying the navigator removed one of its three established doors');
   assert(!/<IconButton\b/.test(nav) && !/<Badge\b/.test(nav),
     'the Week shape still uses the large circular buttons or relative-week badge');
-  assert(/compactWeekNavLabel:\s*\{[^}]*fontSize:\s*11\b/.test(home)
-    && /compactWeekNavButton:\s*\{[^}]*width:\s*28[^}]*height:\s*28/.test(home),
-    'the replacement is not the small plain date-and-chevron row Sam chose');
+  assert(/compactWeekNavLabel:\s*\{[^}]*fontSize:\s*13\b[^}]*lineHeight:\s*18\b/.test(home)
+    && /compactWeekNavButton:\s*\{[^}]*width:\s*40[^}]*height:\s*40/.test(home)
+    && /compactWeekNavCurrent:\s*\{[^}]*minWidth:\s*112[^}]*minHeight:\s*40/.test(home)
+    && (home.match(/<Svg width=\{17\} height=\{17\}/g) ?? []).length >= 2,
+    'the Week navigator has fallen back to the rejected undersized proportions');
 });
 
 run('all seven week days use her one card head, including today', () => {
