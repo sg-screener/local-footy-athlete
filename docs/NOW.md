@@ -66,6 +66,13 @@ and this file gets one line pointing at it.**
 
 ## OPEN, ON US
 
+- **THE FIFTH HARD DAY IS APP-SELECTED IN 7 WEEKS OUT OF 8.** Measured
+  2026-08-12 (`a8f13d91`): eight of seventeen QA scenarios carry a fifth hard
+  day and in seven of them nothing forced it but the app. The arithmetic that
+  tells "the club did this" from "the app chose this" runs on every assessment
+  and is written to a field with ZERO readers. **Enforcing it is priced and
+  NOT started** — it would turn 7 of 17 scenarios blocking at the gate every
+  write door converges on. `docs/FIFTH_HARD_DAY_MEASUREMENT_2026-08-12.md`.
 - **SAM'S CRAFT RULES ARE SWITCHED ON.** `weekStructureValidator` was
   FINDINGS-ONLY by its own header with three logging callers; it now runs inside
   the §18 gateway's `assess` closure as a blocking tier and the search MOVES a
@@ -74,6 +81,7 @@ and this file gets one line pointing at it.**
   — the door is shut for edits, moves and stored weeks.** New `test:craft-tier`,
   29 cells, 3 mutations killed. **Needs Sam's eye: hydration can now swap a day
   in a week already on his phone.** `docs/CRAFT_TIER_BOUNDARY_2026-08-12.md`.
+  Session stop report: `docs/STOP_2026-08-12_CRAFT_TIER_AND_FIFTH_HARD_DAY.md`.
 
 - **SEAT ACCEPTED THE CRAFT TIER — AND ITS ZERO-CHANGE MEASUREMENT IS THE
   FINDING, NOT THE REASSURANCE.** The quality Sam complains about lives in the
