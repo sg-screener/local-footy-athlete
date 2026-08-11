@@ -42,6 +42,10 @@ const foamRollerAsset = fs.readFileSync(
   path.resolve(root, '../assets/icons/foam-roller-traced.svg'),
   'utf8',
 );
+const pullUpBarAsset = fs.readFileSync(
+  path.resolve(root, '../assets/icons/pull-up-bar-traced.svg'),
+  'utf8',
+);
 
 console.log('\napproved icon ownership');
 
@@ -90,6 +94,14 @@ ok('every approved machine and torso trace is byte-for-byte the signed-off shape
   Object.entries(approvedTraceHash).every(([name, expected]) =>
     traceHashFromOwner(name) === expected));
 const compactOwner = owner.replace(/\s+/g, '');
+const pullUpBarPathData = Array.from(pullUpBarAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
+  .map((match) => match[1].replace(/\s+/g, ''));
+ok('the app pull-up bar is the supplied thin freestanding trace',
+  pullUpBarPathData.length === 7
+  && pullUpBarPathData.every((d) => compactOwner.includes(d))
+  && owner.includes('viewBox="65 35 210 235"')
+  && owner.includes('strokeWidth={5}')
+  && !owner.includes('M4 20V5h16v15'));
 const foamRollerPathData = Array.from(foamRollerAsset.matchAll(/<path\b[^>]*\bd="([^"]+)"[^>]*\/>/g))
   .map((match) => match[1].replace(/\s+/g, ''));
 ok('the app foam roller is the supplied thin cylindrical trace',

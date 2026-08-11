@@ -169,18 +169,23 @@ export function LfaIcon({ name, color, size = 18 }: LfaIconProps) {
       <Svg
         width={size}
         height={size}
-        viewBox="0 0 24 24"
+        viewBox="65 35 210 235"
         fill="none"
-        stroke={color}
-        strokeWidth={2.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
       >
-        <Path d="M4 20V5h16v15" />
-        <Path d="M2 20h4" />
-        <Path d="M18 20h4" />
-        <Path d="M4 10l5-5" />
-        <Path d="M20 10l-5-5" />
+        <G
+          stroke={color}
+          strokeWidth={5}
+          strokeLinecap="butt"
+          strokeLinejoin="miter"
+        >
+          <Path d="M95 44V240" />
+          <Path d="M244 44V240" />
+          <Path d="M103 63H236" />
+        </G>
+        <Path d="M77 58H87V69H77Z" fill={color} />
+        <Path d="M252 58H262V69H252Z" fill={color} />
+        <Path d="M88 245H101L109 253V261H80V253Z" fill={color} />
+        <Path d="M237 245H250L258 253V261H229V253Z" fill={color} />
       </Svg>
     );
   }

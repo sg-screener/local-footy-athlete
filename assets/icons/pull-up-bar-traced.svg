@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="65 35 210 235"
+  color="#C8FF00"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="5"
+  stroke-linecap="butt"
+  stroke-linejoin="miter"
+>
+  <title>Freestanding pull-up bar</title>
+
+  <!-- Uprights and detached crossbar. -->
+  <path d="M95 44V240" />
+  <path d="M244 44V240" />
+  <path d="M103 63H236" />
+
+  <!-- Side stops. -->
+  <path d="M77 58H87V69H77Z" fill="currentColor" stroke="none" />
+  <path d="M252 58H262V69H252Z" fill="currentColor" stroke="none" />
+
+  <!-- Solid floor feet. -->
+  <path d="M88 245H101L109 253V261H80V253Z" fill="currentColor" stroke="none" />
+  <path d="M237 245H250L258 253V261H229V253Z" fill="currentColor" stroke="none" />
+</svg>

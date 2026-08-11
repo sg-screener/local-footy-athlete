@@ -38,6 +38,9 @@ the same lookup rather than gaining another icon set.
   approved audit drawings. Foam roller uses Sam's later thin cylindrical trace
   with a hollow end, curved ribs and long surface seams. The rejected
   hanging-pulley drawing is not present.
+- Pull-up bar uses Sam's later minimal freestanding trace: two thin uprights, a
+  detached crossbar, side stops and solid feet. The older locally drawn braced
+  frame is retired.
 - Injury regions use an injured upper-body figure, legs and a curved spine.
 - Add exercise uses the flexed arm, legs, approved torso / abs trace, medical
   shield and stretching person.
@@ -104,6 +107,11 @@ the same lookup rather than gaining another icon set.
   file regression. The Profile equipment flow completed after the trace canvas
   was tightened around the drawing; visual inspection confirmed the roller
   fills its icon circle without clipping while retaining the thin line weight.
+- After the pull-up-bar replacement, approved icon ownership ran 13 cells with
+  13 passed and the compile baseline remained at 459 diagnostics with no file
+  regression. The Profile equipment flow completed; visual inspection
+  confirmed the thin bar fits its icon circle and the retired braced frame is
+  absent.
 - The approved icon test is in the mandatory chain before the law-registry gate.
   The chain remains deliberately red because 32 unrelated registry rows remain
   unguarded; Sam explicitly overrode that stop for this unit.
