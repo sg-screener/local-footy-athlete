@@ -681,60 +681,9 @@ his instruction is standing authority, not history.**
 
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 13).
 
-14. **PARTLY BUILT — the two that could change training are done; one is
-   DELIBERATELY NOT.**
-   **OFF-FEET WALKING — FIXED, and it was real.** `brisk_walking` was the only
-   on-feet family that never asked about `conditioningOffFeet`, so an athlete
-   told to stay off their feet was refused running, refused hills, **and handed
-   a walk** — the one thing the instruction was about. Both gates now derive
-   from `FAMILY_ON_FEET`. `test:off-feet-walking`, in `test:bible`,
-   mutation-checked: restoring the original condition reds the BEHAVIOURAL cell,
-   not just the table.
-   **AND THE TABLE FOUND AN ELEVENTH FAMILY ON ITS FIRST COMPILE.** `mixed` is
-   in the family UNION and absent from `ALL_FAMILIES`; a `Record` over the union
-   cannot be partial, so the type checker asked before any cell ran. That is the
-   argument for a table over two more `&&`s, made by the compiler.
-   **PROFILE "SOMETHING CHANGED?" DIAGNOSTIC — REMOVED**, as Sam confirmed the
-   dead tap now works: the counter readout, its state and all four `logger.warn`
-   probes. **The `__DEV__` stored-state export block is UNTOUCHED** — a separate
-   2026-07-30 concern, exactly as this item instructs.
-   **`ModifiersStrip`'s TWO "DEAD" UNION MEMBERS ARE NOT DELETED — AND SAM HAS
-   NOW SAID YES.** Holding them was right: `'day'` and `'week'` become live in
-   **item 16**. Had they been deleted 2026-08-12 they would be going back in
-   today. **Nothing owed here; see item 16.**
-   **WORKED 2026-08-13 (`e303c2f4`) — AND MEASURING IT CHANGED THE UNIT.**
-   **ATLAS §4.4's PREMISE IS REFUTED WHERE IT MATTERS.** Over 120 generated
-   sessions: **Strength 5-6, Mixed 4-6, Team Training 2-4. ZERO over the
-   authored ceiling of 6**, so enforcing the ceiling would guard a shape that
-   does not occur — **and all 26 sessions under 4 are TEAM-TRAINING nights**.
-   **I THEN CALLED THAT CORRECT BECAUSE THE ATHLETE IS "already at the club",
-   AND SAM STRUCK IT AS FALSE — see item 21.** Same day is not same place. The
-   26 are a DEFECT; the comment that justified them is deleted.
-   **BUILT — the part needing no ruling.** `MIN_SESSION_SIZE` was PRIVATE to
-   `exerciseScorer`, making session size two representations. It is now
-   `SESSION_SIZE_FLOOR` in `sessionRowCounting`, **labelled UNAUTHORED**. Same
-   value; the distribution is byte-identical before and after.
-   `test:row-counting` 31 -> 34 cells, BEHAVIOURAL, mutation-checked both ways.
-   **NOT BUILT ON PURPOSE, TWICE.** (1) **`MIN EXERCISES PER SESSION` is NOT
-   emitted to the prompt** — an invented MIN beside the authored MAX ships a
-   number nobody authored as coaching instruction (L7). (2) **No predicate
-   judges a session against the bounds** — it would have no production reader,
-   and a reader-less field is banned here. **Sam's ruling gives it one.**
-   Question filed under AWAITING SAM.
 
-   ~~NOT STARTED:~~ the session-size floor/ceiling at `sessionRowCounting.ts:253`
-   and `MIN EXERCISES PER SESSION` in the prompt.
 
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 14).
 
-17. **WORKING — A GAME'S LOAD IS READ (`f923523a`).** `gameSRPE` = body RPE x
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 17).**
-
-18. **THE RULE AND THE STORE ARE WORKING; THE INPUT IS BUILT (`2132f9b3`).**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 18).**
-
-20. **WORKING — THE SENTENCE NAMES ITS CAUSE AND ITS DAY.** Both branches built,
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 20).**
 
 21. **SAM HAS RULED — A GYM SESSION IS THE SAME SIZE WHATEVER ELSE IS ON THAT
     DAY.** Item 14 asked whether a team night has its own smallest size and
