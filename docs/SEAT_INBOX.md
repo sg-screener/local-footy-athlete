@@ -820,68 +820,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
     the label never changes. Pre-existing, newly visible, and it belongs to that
     seed.
 
-    ~~ORIGINAL ORDER~~ **OWNED BY THE DESKTOP AGENT — THE ONE THAT ASKED THE
-    QUESTION AND HAS THE SIMULATOR. TERMINAL: DO NOT TAKE THIS ITEM.** It edits `HomeScreenV2.tsx`,
-    which is mid-flight in this shared checkout, and it must be SEEN on glass
-    before it is called done — a count row that renders behind a header or under
-    the notch passes every assertion and is still wrong. **Terminal, skip to
-    item 13 and item 14's NOT STARTED half.** He was asked yes or no in the item-8 stop
-    report. **Sam:** *"yes — one line on week, small card on day, read-only
-    both"*. That is the whole spec and it matches what `ModifiersStrip` was
-    already written to do.
-
-    **THE COMPONENT ALREADY TAKES THE SURFACE.** `ModifiersStripProps.surface`
-    is `'day' | 'week' | 'coach'`; the week branch and its copy keys
-    (`modifiers.strip.week`, `modifiers.strip.week_one`) exist; the testIDs are
-    `modifiers-strip-${surface}`. **Nothing new is designed. It is mounted once,
-    on `CoachTabScreen.tsx:442`, and this order mounts the other two.** Do not
-    write a second component — the header says why, and the seat says it again:
-    three copies of a count row is three places for the count to disagree.
-
-    **WHAT TO BUILD:**
-    (a) **Week — ONE LINE.** The `surface="week"` branch above the seven day
-    rows in `HomeScreenV2.tsx`'s week view, above `day-row-mon`.
-    (b) **Day — A SMALL CARD.** The `surface="day"` branch above the day card,
-    which is ruling 4's placement and already what the component's header
-    describes.
-    (c) **READ-ONLY, BOTH.** Tapping opens My Status. **It carries no controls
-    of its own** — cell [5] of `test:program-tab-read-only-modifiers` holds that
-    and must stay green. `<ActiveModifiersSection>` does NOT come back to
-    Program.
-    (d) **The count comes from `useActiveModifiers`, never a separate count.**
-    (e) **Zero means nothing on Program** — the component already returns null
-    at `count <= 0` for non-coach surfaces. Leave that. Coach keeps its
-    permanent doorway.
-
-    **THREE ASSERTIONS ENCODE ITS ABSENCE ON PURPOSE AND ALL THREE MUST INVERT
-    IN THIS COMMIT** — measured 2026-08-12, not guessed:
-    - `src/__tests__/programTabIsReadOnlyModifiersTests.ts:172-180`, cell *"the
-      day/week indicator is still MISSING, and this cell is the record"*. Its
-      own failure message tells you to invert it. **Invert, do not delete** —
-      and rewrite the comment block at `:147-159` so the next reader is not told
-      a built thing is missing.
-    - `.maestro/golden/coach-my-status.yaml:24` and `:100` —
-      `assertNotVisible: modifiers-strip-day`.
-    - `.maestro/golden/standard-program-week.yaml:60` (day) and `:100` (week) —
-      both `assertNotVisible`. **The week one sits right after `day-row-fri`, so
-      the flow already walks past the exact place the line goes.**
-    **A flow that asserts a thing is invisible does not fail when you build it —
-    it fails when the strip appears, which is the point. Invert all four cells,
-    or the golden flows red for a correct change and someone reverts it.**
-
-    **THEN THE REGISTRY ROW.** `src/rules/featureRegistry.ts:128-129` carries
-    this as BUILT-BUT-UNREACHABLE with `wouldTake` naming exactly this work.
-    **Flip the row to held/reachable and rewrite the receipt with the mount
-    sites** — a registry that still says UNREACHABLE after the thing is mounted
-    is the defect the registry was built to kill.
-
-    **WHY THIS IS SAFE UNDER STAND-DOWN D:** it is a mount and four assertion
-    inversions. It touches no generator file, no `generationAnchorISO`, no
-    `section18CraftTier.ts`. **Stage by path.**
-
-    **PROOF OWED IN THE STOP REPORT:** the two new mount lines quoted with file
-    and line; the four inverted assertions quoted; `test:program-tab-read-only-modifiers`
-    green with cell [5] still green; the registry row's new text.
+   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 16).
 
 17. **WORKING — A GAME'S LOAD IS READ (`f923523a`).** `gameSRPE` = body RPE x
     minutes on the ground, in `journalLoad` beside its two siblings, carried into
@@ -902,32 +841,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
     game moves the week's measured-session count and its own row, and no weekly
     load number yet. **That is item 6's open question, not this one's.**
 
-    ~~ORIGINAL~~ **SAM HAS RULED — A GAME'S LOAD IS READ, FULL, SAME UNIT AS EVERY OTHER
-    SESSION.** Asked under `## AWAITING SAM` since item 6. **Sam, 2026-08-12:**
-    *"yes don't we do 'how long was your game?' and multiply by game RPE for a
-    score that counts toward load?"* — **and the app already asks both.**
-    `SessionFeedbackPanel.tsx:383` asks the duration (hours + minutes),
-    `:415` asks the effort on the 1-10 slider, both are validated at the
-    transaction boundary (`sessionOutcome.ts:130,137`) and **read by nothing.**
-
-    **BUILD `gameSRPE`, THE SAME SHAPE AS THE TWO THAT EXIST.** `bodyRpe x
-    timeOnGroundMinutes`, in `journalLoad.ts` beside `conditioningSRPE` and
-    `teamTrainingSRPE`. **Missing either half means UNMEASURED, never
-    half-counted** — that rule is already written in both siblings and must not
-    be softened here. Carry it into `deriveSessionLoad`, count it in `measured`,
-    and wire it from the journal producer **so it is read end to end** — a
-    reader that stops at `deriveSessionLoad` recreates the exact defect item 10
-    exists to catch.
-
-    **DELETE THE COMMENT THAT SAYS THIS IS UNRULED.** `journalLoad.ts:544-549`
-    reads *"A GAME IS DELIBERATELY NOT HERE ... a coaching question nobody has
-    ruled"*. **It is ruled. That comment becomes a lie the moment this lands**,
-    and a stale comment beside a live reader is what sent the last four
-    measurements down the wrong path. Replace it with the ruling and its date.
-
-    **FULL, NOT WEIGHTED. Do not invent a discount** because a game "isn't
-    training" — Sam considered the three options and chose full. Registry row,
-    cells in `test:journal-load`, one mutation killed at minimum.
+   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 17).
 
 18. **THE RULE AND THE STORE ARE WORKING; THE INPUT IS BUILT (`2132f9b3`).**
     **ALL FOUR KINDS ARE REAL** — `conditioningSRPE`, `teamTrainingSRPE`,
@@ -953,31 +867,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
     it sits right on the screen.** Needs a simulator pass; **PARKED behind Sam's
     phone rebuild (stand-down C), never a request.**
 
-    ~~ORIGINAL~~ **SAM HAS RULED — STRENGTH ASKS HOW LONG IT TOOK. OPTION (a), AND IT CLOSES
-    THE LAST GAP IN EXPERIENCED LOAD.** **Sam, 2026-08-12:** *"i think do a for
-    now and I will think of if thats good enough long term"*. **The "for now" is
-    his, not a hedge to build around: build (a) properly, do not leave a seam
-    for (b) or (c).**
-
-    **THE MEASURED GAP IS ONE FIELD, NOT THREE.** Re-measured 2026-08-12: a
-    strength session already asks *"How hard was the session?"* on the 1-10
-    slider and stores it as `difficulty` (`SessionFeedbackPanel.tsx:1065,892`).
-    **Actual minutes is the only missing half.**
-
-    **BUILD:** an actual-duration input on the strength feedback form — **the
-    same hours + minutes pair the game form already uses (`:383-410`), not a
-    second design** — validated the same way, then `strengthSRPE` =
-    `difficulty x actualMinutes`, wired end to end exactly as item 17.
-
-    **PLANNED MINUTES ARE NOT THE FALLBACK ANYMORE.** Sam chose (a) over (b) on
-    purpose. **A session missing the answer is UNMEASURED**, same as the other
-    three. Do not quietly substitute `domain.ts:834`'s planned value — that is
-    option (b), which he did not choose, and it would make the column look
-    complete when it is not.
-
-    **WHEN THIS LANDS, ALL FOUR KINDS ARE REAL.** Say so in the stop report with
-    the four function names, because that is the sentence item 6 has been
-    reaching for since it was written.
+   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 18).
 
 19. **BUILT AND SEEN ON GLASS — ONE ADD-FIXTURE CONTROL, WEEK-ONLY, NO CAP.**
 
@@ -1022,61 +912,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
     doing 1 strength session ... if they have 2 games and 2 team trainings"* — is
     representable now.
 
-    ~~ORIGINAL ORDER~~ **SAM HAS RULED — AS MANY GAMES AS THE WEEK NEEDS, AND
-    THE BUTTON IS THE
-    WHOLE PROBLEM.** The `## AWAITING SAM` entry asked whether a second game
-    field should land or two-game weeks be ruled out of scope. **Both were the
-    wrong question.** **Sam, 2026-08-12:** *"no a user should be able to have as
-    many games as needed in their week. Are you talking about having a button
-    that says 'add a game' when in season - like the 'add pre season practice
-    match' button?"* — **yes, that button, and he found the defect from the
-    couch.**
-
-    **MEASURED 2026-08-12, ALL THREE:**
-    - `useHomeScreen.ts:1315` — `const showPracticeMatchCTA = currentPhase ===
-      'Pre-season';`. **In season there is NO add-a-game control at all.** The
-      picker banner at `HomeScreenV2.tsx:612` already writes the in-season
-      words — *"Tap the day to set as game day"* — **for a mode nothing in
-      season can enter.** The copy was ready and the door was not.
-    - `HomeScreenV2.tsx:156` — `weekDays.find(day => day.workout?.workoutType ===
-      'Game')`. **`find`, so the FIRST.** Once one fixture exists the control
-      stops offering "add" and becomes a label for that one
-      (`:157-161`), and `handlePracticeMatchPress` (`:162`) routes to its
-      actions instead of the picker. **There is no second-game route on any
-      screen.**
-    - **THE ENGINE IS ALREADY READY AND THIS IS WHY THE ITEM IS SMALL.**
-      `derivedWeekContract.ts:90` was THE WAIST and it was unpinched
-      (`3f62ad62`): `targetWeekFixtures` returns the whole week sorted and
-      `fixtureDays` now carries **every** fixture, so each gets its anchor,
-      its G-1/G-2 protection and its credit. **This item is UI. It does not
-      re-open the contract.**
-
-    **OWNED BY THE DESKTOP AGENT, WITH ITEM 16 — BOTH EDIT
-    `HomeScreenV2.tsx`. TERMINAL: DO NOT TAKE THIS ITEM.** Two agents adding
-    controls to the same screen in a shared checkout is how the last merge cost
-    an hour. **Terminal takes 17, 18 and 20**, which are rules and journal files
-    and touch no screen.
-
-    **BUILD:**
-    (a) **The control shows IN SEASON as well as pre-season**, with the label
-    following the phase — "Add a game" in season, "Add a pre-season practice
-    match" in pre-season. The banner copy already branches; match it.
-    (b) **It stays an ADD control after the first fixture.** Existing fixtures
-    are reached by tapping their own day, which already works — the control's
-    job is adding, and one week may need several.
-    (c) **No cap.** Sam's words are *"as many games as needed"*. **Do not add a
-    two-game limit, a warning at three, or a confirm.** If the week gets ugly
-    that is the contract's job to disclose, not the button's job to prevent.
-
-    **DO NOT ADD A SECOND GAME FIELD TO THE PROFILE.** `gameDay` and
-    `usualGameDay` are the DEFAULT competition day, not the week's fixtures —
-    read through `rules/gameAnchor.ts`. The calendar holds the real ones. The
-    `## AWAITING SAM` entry that proposed a second field is **withdrawn** by his
-    answer; strike it rather than leaving two answers in the file.
-
-    **THEN ITEM 7 IS UNBLOCKED.** His own case — *"only doing 1 strength session
-    ... if they have 2 games and 2 team trainings"* — **becomes representable
-    the day this lands.** Say so in the stop report.
+   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 19).
 
 20. **WORKING — THE SENTENCE NAMES ITS CAUSE AND ITS DAY.** Both branches built,
     copy equality-bound both directions, **13 cells in `test:shortfall-copy`,
@@ -1100,112 +936,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **NOT COVERED:** no cell mounts a surface, so nothing proves the athlete SEES
     either sentence on a device.
 
-    ~~ORIGINAL~~ **THE PLUMBING IS THE JOB. DO IT — NOTHING IS BLOCKING IT.** The stop report
-    (`c8f2b4b8`) is CORRECT on all three defects and RIGHT not to bolt Sam's
-    sentence onto a wrong fact. **But it stopped on a job with no blocker.** Its
-    own words: *"I'm not stuck on a decision from you, just on this being a
-    bigger job than it looked."* **Bigger is not blocked.** Measured
-    2026-08-13 by the seat:
-    - **`src/store/acceptedStateTransaction.ts` is CLEAN and has not been
-      touched in 16 hours** (`055d901b`). It is not mid-flight and no agent
-      holds it.
-    - **It is NOT under stand-down D.** D names `generateProgram.ts`,
-      `coachingEngine.ts`'s generation paths, `generationAnchorISO` and its
-      persistence. This file is none of them.
-    - Sam has ruled the wording AND the fixture-only branch. **Nothing is owed
-      by him.**
-    **So: thread the cause and the day to the call site, THEN put Sam's sentence
-    on last — in that order, as the report itself proposes.** "Someone builds
-    it" is this queue's way of saying nobody does; the item has an owner and it
-    is whoever reads this.
-
-    **THE THREE DEFECTS, CONFIRMED — the report found them and the seat checked
-    the third independently:**
-    (i) **wrong reason** — one sentence blames a rest mark for every cause.
-    (ii) **wrong day** — the single call site passes `date: weekStart`
-    (`acceptedStateTransaction.ts:404`) and the renderer does
-    `dayNameFor(shortfall.date)`. Weeks start Monday (`mondayOfISO`), **so it
-    says "Resting Monday" on every week regardless of the day actually rested.**
-    (iii) **claims a rest that may not have happened** — the disclosure is
-    recorded from ANY blocking violation, not from a rest mark.
-    **And Sam's sentence needs a THIRD day again — the GAME's day, not the
-    rested day.** The original order did not account for that; it does now.
-
-    **DO NOT LOCK THE COPY UNTIL THE FACTS ARE RIGHT.** The equality-bound copy
-    test is what makes a wrong sentence expensive to undo. **Facts first, cell
-    last.**
-
-    ~~ORIGINAL~~ **SAM HAS CHOSEN THE WORDS — AND THE REAL DEFECT IS THAT ONE SENTENCE
-    SERVES TWO DIFFERENT CAUSES.** **Sam, 2026-08-12:** *"yeah thats bad
-    wording"*, then **A**:
-
-        "With a game Saturday, there's only room for two strength sessions
-        this week."
-
-    **`renderSection18Shortfall` (`:96-103`) has ONE unconditional sentence**,
-    *"Resting {day} means you'll miss {n} {type} session(s) this week"*, and
-    `Section18Shortfall` carries only `date` / `type` / `count`. **The date is
-    "the date whose fact caused the shortfall" — and that fact can be the
-    athlete's OWN rest mark or the club's fixture. The sentence assumes rest
-    every time.** That is precisely what Sam objected to: it blames him for the
-    draw.
-
-    **SO THE TYPE GROWS A CAUSE, AND THE RENDERER BRANCHES:**
-    - **fixture-caused** — Sam's new sentence, above.
-    - **athlete's own rest mark** — the EXISTING sentence stays. *"Resting
-      Friday means you'll miss a strength session this week"* is honest when
-      resting Friday is what he chose. **Do not replace it; it was never the
-      defect.**
-
-    **SAM'S SENTENCE STATES WHAT FITS, NOT WHAT IS MISSED — and `count` is the
-    missed number.** *"only room for two"* needs the target as well. Either
-    carry the fitting number on the shortfall or derive it at the one call
-    site; **do not subtract a hardcoded target inside the renderer.** Word the
-    number, not the digit, at one and two ("a" / "two"), matching the article
-    rule already in `articleFor`.
-
-    **THE COPY IS EQUALITY-BOUND IN BOTH DIRECTIONS** by
-    `section18ShortfallCopyTests` against the design record, same regime as the
-    G-1 warning. **Update the record and the test in the same commit** or the
-    gate reds on a change Sam signed. `ATHLETE_FORBIDDEN_VOCABULARY` still
-    applies to the new string.
-
-    **ANSWERED 2026-08-13 — SAM SAID FIXTURE-ONLY.** Asked directly: does the new
-    sentence replace both causes, or only the fixture one? **His answer: only the
-    fixture one.** The athlete's own rest mark KEEPS the existing sentence,
-    because *"Resting Friday means you'll miss a strength session this week"* is
-    honest when resting Friday is what he chose. **The branch above is now RULED,
-    not the seat's reading. Do not re-ask.**
-
-    **NOT STARTED, AND TWO MEASUREMENTS CHANGE ITS SHAPE (2026-08-13):**
-    - **THE CAUSE IS NOT AVAILABLE WHERE THE SHORTFALL IS BUILT.** The single
-      production call site is `acceptedStateTransaction.ts:404`
-      (`recordAcceptedWeekShortfall`), and it holds ONLY `weekStart` and the
-      blocking violations — **nothing about fixtures or rest marks.** So the
-      branch cannot be decided in the renderer or the producer as they stand:
-      either the caller gains a week-facts input, or the cause is resolved
-      before it. **That is a threading decision in a hot shared file, not a copy
-      change**, and it is the reason this item is larger than it reads.
-    - **CONFIRMED BY RUNNING IT — THE SENTENCE NAMES THE WRONG DAY.** Upgraded
-      from OPEN-UNKNOWN 2026-08-13: the renderer was driven with three dates and
-      names whatever it is handed, and the ONE production call site
-      (`acceptedStateTransaction.ts:515`) hands it `weekStart`. **So on a
-      Monday-start week the athlete reads "Resting Monday means you'll miss a
-      strength session this week" — whichever day was actually rested, and
-      WHETHER OR NOT THEY RESTED AT ALL.**
-    - **SO THE SENTENCE IS WRONG THREE WAYS, NOT ONE**, and Sam only had to see
-      it once to know: it names the wrong CAUSE (his complaint), the wrong DAY,
-      and it asserts a REST that may never have happened. **Writing his signed
-      sentence on top of this renderer would attach his words to a wrong fact.**
-    - **AND HIS SENTENCE NEEDS A DIFFERENT DAY AGAIN.** *"With a game Saturday…"*
-      names the GAME's date; the surviving rest sentence names the RESTED date.
-      **So `date` cannot keep one meaning across the two branches** — it becomes
-      the day belonging to the CAUSE. That is not in the order as written, which
-      is why this is reported rather than absorbed.
-    - **`fits` HAS A SOURCE ALREADY:** Sam's sentence states what FITS and
-      `count` is what is MISSED, but `shortfallsFromFindings` already reads
-      `finding.actual` — the fitting number — and currently discards it. Carry
-      that, rather than subtracting a target in the renderer.
+   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 20).
 
 21. **SAM HAS RULED — A GYM SESSION IS THE SAME SIZE WHATEVER ELSE IS ON THAT
     DAY.** Item 14 asked whether a team night has its own smallest size and
@@ -1262,10 +993,33 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **The header comment says adding a role here is a counting change and must
     come with a golden diff. Bring one.**
 
-    **THE COUNTS IN THE 120-SESSION MEASUREMENT ARE THEREFORE OVERSTATED.** A
+    ~~**THE COUNTS IN THE 120-SESSION MEASUREMENT ARE THEREFORE OVERSTATED.** A
     "4-exercise" team night is a 3-exercise lift; a "2" is a single exercise.
     **Re-run and re-report with team-training rows excluded before building
-    anything — the real gap is bigger than the item says.**
+    anything — the real gap is bigger than the item says.**~~
+    **RE-COUNTED 2026-08-13 — REFUTED ON
+    THE LOCAL DETERMINISTIC PATH. THE GAP IS EXACTLY AS FIRST MEASURED, NOT
+    BIGGER: 26 of 120, unchanged to the row.**
+    - **ZERO team-training rows sit inside `workout.exercises`** across all 120
+      generated sessions. Excluding them changed nothing because there was
+      nothing to exclude. **Not a green-and-empty bind: the rows were dumped and
+      read** — a "4-exercise" team night is *Goblet Squat, Trap Bar Deadlift,
+      Pallof Press, Back Squat*, four real lifts, and a "3" is three real lifts.
+      **So the small sessions are genuinely small; the defect is real and its
+      size was already right.**
+    - **THE ORDERED FIX WOULD BE INERT HERE, AND THIS IS THE FINDING THAT MATTERS
+      FOR THE BUILD.** A role census over every generated row: **`power` 36,
+      NO ROLE AT ALL 563.** The generator authors no role but power. Since
+      `participatesInCounting` counts any row with no role, **adding a
+      `team_training` role to `ROLES_EXEMPT_FROM_COUNTING` cannot fire until the
+      generator actually authors that role on the row.** The exemption is the
+      right shape; it needs a WRITER first, and the item does not name one.
+    - **THE MECHANISM IS STILL REAL** — `splitTeamTrainingFromExercises` exists
+      and item 21's three receipts are correct as CODE facts. They simply do not
+      occur on this path.
+    **LIMIT, STATED:** local deterministic generation only. **Whether the AI path
+    inserts a team-training row into `exercises` is UNMEASURED**, and it is the
+    one place the overstatement could still be true.
 
     **GENERATION, SO STAND-DOWN D HOLDS ON THE BUILD.** The measurement above is
     already done; the re-count is a harness run and needs no generator edit.
@@ -1425,62 +1179,7 @@ seat was wrong.
   renders. **What is owed is small and only his:** the short phrase per modifier
   kind. With them it is a copy-registry addition and a two-column row; without
   them the current rows are correct and honest, just longer than his drawing.
-  ~~ORIGINAL QUESTION~~ **does the day/week modifier notice open a SHEET first,
-  or go straight to My Status?** Sam sent his prototype
-  screen and asked whether tapping the notice opens *"something like this? which
-  you can then tap and be taken to the status area inside the coach tab"*. **It
-  does not — measured on glass, `artifacts/ui-walk/item16-week-opens-status.png`:
-  the tap lands directly on My Status inside the Coach tab, one hop, no
-  intermediate sheet.**
-  **HIS PROTOTYPE IS A TWO-STEP:** a "Your session has been modified" sheet
-  listing each modifier with what it did ("Time away — training volume
-  adjusted", "Equipment access — exercises substituted"), then **GO TO MY
-  STATUS** and **NOT NOW**.
-  **WHY IT WAS BUILT ONE-HOP, SO THE CHOICE IS INFORMED RATHER THAN RE-LITIGATED:**
-  item 16 rule (c) says the notice *"carries no controls of its own"*, and a
-  sheet with two buttons is arguably controls. That reading is what produced the
-  single hop. **His prototype overrules it if he wants the sheet — it is his
-  design, and rule (c)'s purpose was keeping the modifier LIST and its eight
-  ACTIONS off Program, which a read-only summary + a navigation button does not
-  breach.**
-  **NOT NEW INFORMATION, ONE SCREEN EARLIER.** The sheet's list is the same list
-  My Status renders, so the gain is dismissibility ("Not now") and not having to
-  leave Program to learn what changed; the cost is a sheet between the athlete
-  and a screen they already reach in one tap.
-  **Both surfaces would open it** — day and week — since they are one component.
-- **DECISION OWED — item 22(a)/(b): THREE MODIFIER KINDS HAVE NO SIGNED PHRASE,
-  AND HIDING THE TIME-CAP ROW DESYNCS THE COUNT. Measured 2026-08-13, before
-  building, because both change what gets built.**
-  **(i) THE EIGHT PHRASES DO NOT COVER THE SET.** Sam's list maps cleanly onto
-  readiness (tired -> volume adjusted, sick -> eased back), injury and injury-
-  paused, equipment, unavailable day, deload and game-moved. **Three live
-  builders are unnamed:** `preferenceModifier` (avoid exercise / preferred
-  alternative / add focus), `athletePreferenceModifier` (excluded / pinned
-  exercise) and `modalityModifier` (a conditioning slot swapped, e.g. bike for
-  run). They are real, active, athlete-visible modifiers. **Plan unless he says
-  otherwise:** they keep their own authored sentence in the row and get NO short
-  phrase — inventing one is the unsigned-words defect. **What is owed is three
-  more phrases, or a "leave those as sentences" ruling.**
-  **(ii) ANSWERED 2026-08-13 — TIME CAPS LEAVE THE PROGRAM COUNT TOO. Sam:**
-  *"hide time caps from the Program count and the popup together, keep them on
-  My Status."* The question was live because `time_limit` still has LIVE
-  writers — `coachProgramEdit.ts:1194` and `profileProgramTransaction.ts:179` —
-  so a cap CAN be active, and the notice counts exactly what the sheet lists;
-  hiding only the row would have put "2 active modifiers" above a list of one.
-  **My Status keeps them because it holds the only control that clears one**, so
-  dropping them there would strand an active constraint with no door.
-  **NOT BLOCKING (a):** the eight signed phrases are unambiguous.
-- **DECISION OWED — the moderate-day generation target (item 4).** The range and
-  the advisory are built; nothing says WHICH session becomes the moderate one, or
-  at whose expense.
-- **ANSWERED 2026-08-12, ALL FOUR — now items 17, 18, 19, 20. Do not re-ask.**
-  A game's load counts **in full** (17). Strength gets an **actual-minutes
-  field**, option (a) (18). **As many games per week as the athlete needs**, and
-  the profile does NOT grow a second game field — the add-a-game button is the
-  defect (19). The shortfall sentence gets **Sam's wording for fixture-caused
-  shortfalls only**; the rest-mark sentence stays (20).
-- **CLOSED, do not re-ask:** the week-card shape; the accounts question
-  (LOCAL-ONLY); the platform question (iPHONE-ONLY).
+   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 22).
 
 ## Previously (now processed)
 
