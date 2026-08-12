@@ -16,7 +16,12 @@ his instruction is standing authority, not history.**
 ## Unprocessed
 
 
-28-C1. **BLOCKED-BY: sam** — **THE SEVENTH WALL IS FOUND, AND IT IS NOT WHERE
+28-C1. **UNBLOCKED 2026-08-13 — SAM RULED IT; SEE ITEM 31, WHICH SUPERSEDES THE
+    QUESTION BELOW.** He did not answer "protect COD from the streak cap"; he
+    answered a better question — **WHERE COD IS ALLOWED AT ALL**: late
+    off-season, the Christmas break, or pre-season with no team training, and
+    **never in season**. The mark comes off because the ruling exists, not
+    because the cap question was settled. **THE SEVENTH WALL IS FOUND, AND IT IS NOT WHERE
     ANY OF THE SIX LOOKED. COD IS BUILT END TO END AND IS CUT EVERY TIME, BY A
     RULE OF SAM'S OWN, DOING EXACTLY WHAT HE SAID.** Measured 2026-08-13; the
     probe this item asked for was run and every premise below it is refuted.
@@ -147,10 +152,26 @@ his instruction is standing authority, not history.**
 
     **2 — THE QA SCENARIO IS INVALID AND IT MISLED TWO AGENTS AND THE SEAT.**
     S7 is *"Off-season six days with three team trainings"*. **That week cannot
-    exist.** It is also the week whose five-day field-load streak was used to
-    judge COD. **Fix or retire S7 before any COD measurement is trusted** — and
-    note the harness ALREADY flags it (*"Monday is a team day but
-    isTeamDay=false"*), so the contradiction was visible and unread.
+    exist.** ~~It is also the week whose five-day field-load streak was used to
+    judge COD.~~ **Fix or retire S7** — and note the harness ALREADY flags it
+    (*"Monday is a team day but isTeamDay=false"*), so the contradiction was
+    visible and unread.
+
+    **⚠ ONE CLAUSE STRUCK, BY THE AGENT WHOSE MEASUREMENT IT NAMES (terminal,
+    2026-08-13). THE COD STREAK WAS NOT MEASURED ON S7, AND IT COULD NOT HAVE
+    BEEN.** `autoPlacementCategories` (`coachingEngine.ts`) appends `cod_decel`
+    **only when `weekHasTeamTraining` is FALSE** — `return weekHasTeamTraining ?
+    base : [...base, 'cod_decel']`. S7 has three team trainings, so COD is never
+    even a candidate there. **My own probe output agrees:** every COD offer
+    printed `teamTraining=false`, and the `teamTraining=true` lines printed
+    `codIndex=-1`. **The five-day field-load streak that cut COD was a
+    no-team-training week.**
+    **SO THE 28-C1 MEASUREMENT STANDS AND DOES NOT NEED REDOING** — COD is
+    offered, eligibility allows it, the session is built with Sam's label, and
+    `enforceFieldLoadStreak` removes it. **S7 being invalid is still a real
+    finding on its own merits; it is just not the week that judged COD.**
+    Recorded rather than left, because a correction that is itself wrong costs
+    the next pass a whole re-measurement.
 
     **3 — THE COD GATE, FINAL. Permitted in exactly three cases:**
     - **late off-season** — his *"after first 4 weeks"* maps EXACTLY to the
