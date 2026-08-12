@@ -1025,7 +1025,23 @@ phone.** State device items as PARKED in a stop report, never as a request.
    and *"computed eight times over"* are different diseases wanting different
    instruments.
 
-11. **THE FEATURE REGISTRY.**
+11. **BUILT — THE FEATURE REGISTRY EXISTS, AND THE NUMBER IS UGLY AS ORDERED.**
+   `src/rules/featureRegistry.ts` + `test:feature-registry`, in `test:bible`,
+   mutation-checked three ways with a liveness arm. `lawRegistry`'s shape
+   verbatim — no second mechanism — plus the one field laws do not need.
+   **SEEDED: 9 rows, 7 held, 2 UNPROVEN, 3 BUILT-BUT-UNREACHABLE.**
+   **`reachable` IS THE POINT:** a law is true or not, but a feature can be
+   built, tested and impossible to get to. An `athlete_reachable` + `held` row
+   must say in its receipt HOW IT WAS SEEN, or the cell reds.
+   **IT DOES NOT RED ON `UNPROVEN`, deliberately** — Sam ruled an unguarded RULE
+   is a rule not followed; an unproven FEATURE is simply unproven, and reding
+   would mean a row could only be added once finished, so the roster would fill
+   with lies or stay empty. The count is PRINTED instead.
+   **THE ROSTER DECLARES ITS OWN INCOMPLETENESS** (`FEATURE_REGISTRY_SCOPE`,
+   asserted): it covers only what this terminal could write a receipt for on
+   2026-08-12. **Growing it is the work.**
+
+   ~~ORIGINAL ORDER~~ **THE FEATURE REGISTRY.**
    `docs/HOW_WE_STOP_BELIEVING_THINGS_ARE_DONE_2026-08-12.md`. Two states, no
    third — **`held`** (names the test that fails) or **`UNPROVEN`** (names what a
    proof would take) — plus a `reachable` field laws do not need. Copy

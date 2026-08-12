@@ -553,6 +553,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-feature-has-two-states',
+    law: 'A feature is `held` (naming the test that fails when it breaks) or `UNPROVEN` (naming what a proof would take). There is no third state, and a row also says whether an athlete can REACH it.',
+    ruledAt: 'docs/HOW_WE_STOP_BELIEVING_THINGS_ARE_DONE_2026-08-12.md; ordered as docs/SEAT_INBOX.md item 11 — "Two states, no third... plus a `reachable` field laws do not need. Copy lawRegistry.ts exactly; do not design a second mechanism. Seed it honestly and let the number be ugly."',
+    guard: {
+      state: 'guarded',
+      by: 'test:feature-registry',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). `rules/featureRegistry.ts` is `lawRegistry`\'s shape verbatim — same two-state union, same `chainStatus`, same receipt-per-row — because item 11 forbade a second mechanism, and a second answer to "is this thing real" is the disease. THE ONE FIELD LAWS DO NOT NEED IS `reachable`, and it is the point: a law is true or not, but a FEATURE can be built, tested and IMPOSSIBLE FOR AN ATHLETE TO GET TO, which is the state this repo keeps finding late (`canOverride` written nine times and read none; seven modifier controls behind a caption pointing at a page that no longer showed them). SEEDED HONESTLY: 9 rows, 7 held, 2 UNPROVEN, 3 BUILT-BUT-UNREACHABLE. WHAT THE CELLS HOLD: every row well-formed with a real receipt; every named guard is a script that EXISTS; every `in_chain` claim is checked against `package.json`\'s actual chain string, because a check nobody runs is not a check; the roster DECLARES ITS OWN INCOMPLETENESS, so an absent row is never read as an absent feature; and an `athlete_reachable` + `held` row must say in its receipt HOW IT WAS SEEN — glass, a flow, a screenshot — because `CLAUDE.md` rules that done means the athlete can see it and a green id proves presence, not placement. MUTATION-CHECKED THREE WAYS (a guard naming a script nobody wrote, a false `in_chain`, an athlete-facing row losing its how-it-was-seen) plus a liveness arm over `rowFaults`. A BUG IN THIS GATE\'S OWN FIRST CUT IS WORTH RECORDING: the in_chain cell filtered then read `FEATURE_REGISTRY[index].id`, and after a filter that index addresses a different row — it PASSED, because nothing was lying yet, and would have named the wrong feature the moment one did. WHAT IT DELIBERATELY DOES NOT DO: it does NOT red on `UNPROVEN`, unlike `test:law-registry` on `UNENFORCED`. Sam ruled an unguarded RULE is a rule not followed; an unproven FEATURE is simply unproven, and reding would mean a row could only be added after it was finished — the roster would fill with lies or stay empty.',
+    },
+  },
+  {
     id: 'LAW-computed-must-be-consumed',
     law: 'A value the app computes on every assessment and no code reads is not a feature, it is a rule that was SWITCHED OFF. Either wire it or delete it.',
     ruledAt: 'docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md §4, proposed as "a noUnusedWrites-style gate over contract.* assignments" after nine findings of the same shape in one day; ordered as docs/SEAT_INBOX.md item 10',
