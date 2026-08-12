@@ -297,8 +297,20 @@ run "a marker in an item's BODY does not block that item" block \
   "## Previously (now processed)"
 
 # EXIT 3 — a decision written down THIS COMMIT under `## AWAITING SAM`.
-git_case "a NEW line under AWAITING SAM ALLOWS" allow \
-  "docs(seat): record the decision Sam owes" "" "- Which day should the game move to?"
+git_case "a NEW line under AWAITING SAM ALLOWS when it states its registry grep" allow \
+  "docs(seat): record the decision Sam owes" "" \
+  "- Which day should the game move to? REGISTRY-GREP: grepped RULINGS_REGISTRY.md for \"game\" -> R-001 (any number of games) does not cover which DAY a move lands on."
+# THE ASK GATE (2026-08-13). Sam: *"it shouldn't even be an option for the AI to
+# fix a problem that has been fixed"*. On that day three questions were drafted
+# for him and TWO were already built and already ruled — both recorded in prose
+# no agent opened. This cell is the wall: a question that never states its grep
+# of `docs/RULINGS_REGISTRY.md` does not open the door.
+#
+# IT IS THE MUTATION PROOF FOR THE CELL ABOVE. Delete the `REGISTRY-GREP:` check
+# from the hook and this cell reds while that one still passes — which is the
+# whole reason it exists as its own case rather than a tweak to the fixture.
+git_case "an AWAITING SAM entry with NO registry grep is REFUSED" block \
+  "docs(seat): ask Sam a question" "" "- Can someone have two games in one week?"
 # ...and the same section unchanged does NOT, or a question written yesterday
 # would be a permanent door.
 git_case "an UNCHANGED AWAITING SAM section still BLOCKS" block \

@@ -152,9 +152,36 @@ if [ -n "$order" ] && git rev-parse --git-dir >/dev/null 2>&1; then
   # alternative it demands: stop tightening the exit, change what counts as work.
   #
   # EXIT 3 — a decision written down under `## AWAITING SAM` in THIS commit.
+  #
+  # THE ASK GATE — ADDED 2026-08-13 BY THE SEAT, AT SAM'S INSISTENCE THAT IT BE
+  # A MECHANISM AND NOT AN INSTRUCTION.
+  #
+  # His words: *"IT SHOULDN'T EVEN BE AN OPTION FOR THE AI TO FIX A PROBLEM THAT
+  # HAS BEEN FIXED"* and *"WRITTEN ORDERS DO KIND OF JACK SHIT ... ONLY THINGS
+  # THAT ARE BUILT AND SET IN STONE ACTUALLY CHANGE HOW THEY BEHAVE"*. He is
+  # right, and this is the door his questions come through, so this is where it
+  # belongs.
+  #
+  # ON 2026-08-13 THREE QUESTIONS WERE DRAFTED FOR HIM AND TWO WERE ALREADY
+  # BUILT — a week holding two games (`3f62ad62`, ruled "as many games as
+  # needed") and the fixture shortfall sentence (`1dc52caf`). Both were recorded
+  # in prose an agent never opened. `docs/RULINGS_REGISTRY.md` is now the one
+  # machine-held list, and THIS is what makes reading it non-optional:
+  #
+  #   AN AWAITING SAM ENTRY MUST CARRY A `REGISTRY-GREP:` LINE STATING THE GREP
+  #   THAT WAS RUN AND WHAT IT RETURNED. WITHOUT IT, THE EXIT IS NOT TAKEN.
+  #
+  # It cannot verify the grep was honest. It CAN make "I never checked" a thing
+  # the terminal has to type a lie to claim, and it puts the registry in front of
+  # every question at the moment the question is being written. That is the
+  # difference between a rule and a wall.
   if [ -n "$order" ]; then
     added=$(git show HEAD --unified=0 -- "$inbox" 2>/dev/null \
       | sed -n 's/^+\([^+].*\)/\1/p')
+    if [ -n "$added" ] && ! printf '%s\n' "$added" | grep -q 'REGISTRY-GREP:'; then
+      echo "seat-inbox-hook: AWAITING SAM entry has no REGISTRY-GREP: line. Grep docs/RULINGS_REGISTRY.md first and state what it returned. Two of three questions drafted for Sam on 2026-08-13 were already built." >&2
+      added=""
+    fi
     if [ -n "$added" ]; then
       section=$(awk '/^## AWAITING SAM/{f=1;next} f&&/^## /{exit} f&&NF{print}' "$inbox")
       if [ -n "$section" ]; then
@@ -210,6 +237,6 @@ fi
 # legal values, so a future tightening of the door cannot leave the sign behind.
 # ─────────────────────────────────────────────────────────────────────────────
 if [ -n "$order" ]; then
-  echo '{"decision":"block","reason":"The seat inbox holds a WORKABLE order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. WHEN YOU ARE STUCK ON AN ITEM, MOVE TO THE NEXT ITEM — DO NOT STOP (Sam, 2026-08-13). Mark the stuck item by putting BLOCKED-BY: sam, BLOCKED-BY: other-agent or BLOCKED-BY: external on that item HEAD line in the inbox, with the question written underneath, then go and work the next order in the SAME turn. Those three words are the whole list and an invented category marks nothing. BLOCKED means you cannot resolve it ALONE: a ruling only Sam can give, a file another agent is holding, or something outside the repo — a wall you can measure yourself is NOT a block. Neither docs(stop): nor docs(blocked): is an exit any more; a commit subject cannot end a turn (item 0, 2026-08-12; Sam, 2026-08-13). You may end the turn only when: every remaining item is marked blocked or the queue is clear, so his questions reach him in ONE batch; you wrote a NEW decision under ## AWAITING SAM in this commit; or three turn-ends have passed with no new commit at all."}'
+  echo '{"decision":"block","reason":"The seat inbox holds a WORKABLE order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. WHEN YOU ARE STUCK ON AN ITEM, MOVE TO THE NEXT ITEM — DO NOT STOP (Sam, 2026-08-13). Mark the stuck item by putting BLOCKED-BY: sam, BLOCKED-BY: other-agent or BLOCKED-BY: external on that item HEAD line in the inbox, with the question written underneath, then go and work the next order in the SAME turn. Those three words are the whole list and an invented category marks nothing. BLOCKED means you cannot resolve it ALONE: a ruling only Sam can give, a file another agent is holding, or something outside the repo — a wall you can measure yourself is NOT a block. Neither docs(stop): nor docs(blocked): is an exit any more; a commit subject cannot end a turn (item 0, 2026-08-12; Sam, 2026-08-13). You may end the turn only when: every remaining item is marked blocked or the queue is clear, so his questions reach him in ONE batch; you wrote a NEW decision under ## AWAITING SAM in this commit — and that entry CARRIES A REGISTRY-GREP: line naming the grep you ran over docs/RULINGS_REGISTRY.md and what it returned, because on 2026-08-13 two of three questions drafted for Sam were already built and already ruled; or three turn-ends have passed with no new commit at all."}'
 fi
 exit 0
