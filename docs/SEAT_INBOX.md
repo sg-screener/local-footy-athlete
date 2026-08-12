@@ -744,11 +744,48 @@ phone.** State device items as PARKED in a stop report, never as a request.
 
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 15).
 
-16. **SAM HAS RULED — MOUNT THE STRIP ON DAY AND WEEK. THE SECOND HALF OF HIS
-    OWN DESIGN, ANSWERED 2026-08-12.**
+16. **BUILT AND SEEN ON GLASS — THE DAY AND WEEK SAY WHAT IS CHANGING.**
+    Mounted twice in `HomeScreenV2.tsx`: `surface="day"` above the day card,
+    `surface="week"` above the seven rows. The count is
+    `useActiveModifiers().count` — and `useHomeScreen`'s inline
+    `selectActiveCoachNotes` memo, whose inputs were byte-identical, was
+    **COLLAPSED into that hook** rather than joined by a third copy, so rule (d)
+    is structural rather than a promise. Read-only; tapping navigates `CoachTab`
+    with `status: 'open'`. Registry row flipped to held.
 
-    **OWNED BY THE DESKTOP AGENT — THE ONE THAT ASKED THE QUESTION AND HAS THE
-    SIMULATOR. TERMINAL: DO NOT TAKE THIS ITEM.** It edits `HomeScreenV2.tsx`,
+    **FOUR ASSERTIONS, AND ONLY THREE WERE FLIPPED — THE ORDER'S OWN LIST WAS
+    NOT SAFE TO FOLLOW LITERALLY.** `coach-my-status.yaml`'s FIRST one sits in
+    the "NOTHING ACTIVE" block; flipping it would have asserted the opposite of
+    rule (e), so it is KEPT and re-commented as the zero-state proof.
+    `standard-program-week.yaml`'s two could not be flipped until its modifier
+    door was fixed: it tapped `equipment-preset-open`, **an id no product source
+    produces**, so both sat in a zero-modifier world where the strip correctly
+    renders nothing. Door re-routed onto the readiness door, then inverted.
+
+    **AND THERE WERE SIX, NOT FOUR.** `dayFirstTimelineTests` and
+    `coachTabSlice3Tests` each also asserted Program does not mount the strip.
+    The latter was ONE `&&` over two different claims — no notice, no list — and
+    only the first was ruled away, so it is SPLIT rather than loosened.
+
+    **THE FIRST THREE CELLS SHIPPED GREEN AND EMPTY.** A mutation run broke ONE
+    of the two mounts and they stayed green: they searched the whole FILE for
+    `count={modifierCount}`, and the surviving mount kept the string there. The
+    mounts are now extracted and asserted one by one. **Five mutations, five
+    killed.**
+
+    **ON GLASS:** `.maestro/golden/program-modifier-notice.yaml` — zero shows
+    nothing on BOTH shapes, both surfaces appear with a real readiness modifier,
+    both open My Status. `coach-my-status.yaml` green end to end.
+
+    **ONE RED LEFT BEHIND, AND IT IS NOT THIS UNIT'S.**
+    `standard-program-week.yaml` now reaches PAST its dead door and fails at
+    `program-week-previous` -> "Return to this week". A no-modifier control run
+    reproduced it exactly: the seed holds ONE week, so that control is inert and
+    the label never changes. Pre-existing, newly visible, and it belongs to that
+    seed.
+
+    ~~ORIGINAL ORDER~~ **OWNED BY THE DESKTOP AGENT — THE ONE THAT ASKED THE
+    QUESTION AND HAS THE SIMULATOR. TERMINAL: DO NOT TAKE THIS ITEM.** It edits `HomeScreenV2.tsx`,
     which is mid-flight in this shared checkout, and it must be SEEN on glass
     before it is called done — a count row that renders behind a header or under
     the notch passes every assertion and is still wrong. **Terminal, skip to
@@ -863,7 +900,51 @@ phone.** State device items as PARKED in a stop report, never as a request.
     the four function names, because that is the sentence item 6 has been
     reaching for since it was written.
 
-19. **SAM HAS RULED — AS MANY GAMES AS THE WEEK NEEDS, AND THE BUTTON IS THE
+19. **BUILT AND SEEN ON GLASS — ONE ADD-FIXTURE CONTROL, WEEK-ONLY, NO CAP.**
+
+    **THIS ITEM'S OWN PREMISE WAS WRONG AND THE CODE SAID SO.** It states "in
+    season there is NO add-a-game control at all". **There was one.** It was
+    gated `!weekHasGame`, so it existed on an empty week and VANISHED the moment
+    the week had a fixture. Pre-season's card had the same defect in other
+    clothes: `weekDays.find(...)` took the FIRST fixture, and once one existed
+    the card stopped being a button and became a LABEL routing to that fixture.
+    **Neither phase had a route to a SECOND game — a CAP, not an absence.** Same
+    fix, different reason; building against "there is no control" would have
+    added a third card beside the two that already existed.
+
+    **TWO CARDS BECAME ONE**, gated on the phase alone, labelled by phase ("Add
+    a game" / "Add a pre-season practice match"), always adding. No cap, no
+    warning at three, no confirm. `weekHasGame` left the hook with its last
+    reader, and the four orphaned `addGame*` style rules went in the same commit
+    as their call site — item 15's lesson, since the style gate greps USAGE.
+
+    **THEN SAM MOVED IT, 2026-08-13:** *"add a game button should only be on
+    week screen - not day screen and then you select what day you need to add it
+    too"*. The control sits in the shared scroll body, which BOTH shapes draw,
+    so it had inherited the day screen by default rather than by decision. Gated
+    `!dayFirst`. **The ruling also closes a logic hole:** tapping it enters the
+    picker, and a picker forces the week shape — so on the day screen its only
+    possible next act was to leave the day screen. "Which day?" is a week
+    question.
+
+    **ON GLASS:** `.maestro/golden/add-a-game-in-season.yaml` — the day screen
+    does NOT carry it; the week screen does, on a week that ALREADY has a
+    Saturday game; and Wednesday and Sunday both come back as `fixture-target-*`
+    so a second game has somewhere to go.
+
+    **TWO INSTRUMENT FAULTS FOUND HERE, BOTH OF WHICH BLAMED THE PRODUCT FIRST.**
+    `scrollUntilVisible` on the control's ID at 60% matched it in the view
+    hierarchy while it was still BELOW the fold and never scrolled, so the tap
+    hit nothing and the flow failed at the picker. And **in picker mode a day row
+    is `fixture-target-<date>`, not `day-row-<weekday>`** — the obvious row
+    assertion could never have passed.
+
+    **ITEM 7 IS UNBLOCKED, AS THIS ITEM ORDERED IT SAID.** Sam's own case — *"only
+    doing 1 strength session ... if they have 2 games and 2 team trainings"* — is
+    representable now.
+
+    ~~ORIGINAL ORDER~~ **SAM HAS RULED — AS MANY GAMES AS THE WEEK NEEDS, AND
+    THE BUTTON IS THE
     WHOLE PROBLEM.** The `## AWAITING SAM` entry asked whether a second game
     field should land or two-game weeks be ruled out of scope. **Both were the
     wrong question.** **Sam, 2026-08-12:** *"no a user should be able to have as
