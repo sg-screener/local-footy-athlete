@@ -132,6 +132,102 @@ phone.** State device items as PARKED in a stop report, never as a request.
 
 ---
 
+29. **THE EXIT SAM CLOSED HAS REOPENED UNDER A NEW NAME — `docs(blocked):` IS
+    NOW THE PROGRESS REPORT `docs(stop):` USED TO BE.**
+
+    **OWNED BY THE TERMINAL. This is a hook change, not a coaching one.**
+
+    **Sam noticed the symptom, 2026-08-13:** *"the terminal is short, it works
+    for like 5 min then stops and reports but doesn't need us to say anything"*.
+    **He is describing a turn that ends without needing him. That is the exact
+    thing item 0 was built to stop.**
+
+    **MEASURED:** in the last six hours the terminal made **77 commits, of which
+    18 begin `docs(blocked):`** — a declaration that it CANNOT PROCEED, roughly
+    every twenty minutes.
+
+    **THE HISTORY MAKES THIS UNAMBIGUOUS.** Item 0 (2026-08-12) removed
+    `docs(stop):` as a legal exit precisely because a routine progress report was
+    ending turns, and the hook's own comment records it
+    (`scripts/seat-inbox-hook.sh:66-71`). **EXIT 2 (`:100-102`) now carries the
+    same traffic under a different word.** Same behaviour, new label, and the
+    hook cannot tell the difference because it only reads the SUBJECT PREFIX.
+
+    **THE DISTINCTION THAT WAS NEVER WRITTEN DOWN — and half of this is the
+    seat's fault.** The seat kept ordering *"measure the layer above before you
+    build"*, which is right, and the terminal correctly began stopping at each
+    wall. **But a wall you can measure yourself is not a BLOCK.** Nobody drew
+    that line, so it drew its own.
+
+    **BLOCKED means the terminal cannot resolve it ALONE:**
+    - it needs a ruling only Sam can give, **or**
+    - it needs a file another agent is holding, **or**
+    - it needs something outside the repo.
+
+    **NOT BLOCKED, and each of these is one more step in the SAME turn:** the
+    next probe, the next measurement, a suspect to instrument, a wrong number to
+    re-take, a layer to look at. **"I have found the next question" is the
+    definition of NOT blocked** — it is the definition of knowing what to do
+    next.
+
+    **BUILD:** `docs(blocked):` requires a stated reason falling in one of the
+    three categories above, named in the commit body as `BLOCKED-BY: sam |
+    other-agent | external`. **The hook rejects the exit when that line is
+    absent or reads anything else.** Everything that is currently a `blocked`
+    commit and does not qualify becomes a plain commit and the turn CONTINUES.
+
+    **KEEP EXIT 4 UNTOUCHED** (`:124-126`, three turn-ends on one HEAD). It is
+    the loop-breaker and it is the only thing standing between a mis-tightened
+    hook and an agent that can never stop.
+
+    **THE EXPECTED EFFECT, so it can be checked:** the terminal's turns get
+    longer and fewer, and Sam stops being pinged by reports that need no answer
+    from him. **Report the blocked-commit count per hour before and after.**
+
+30. **EVERYTHING BUILT TODAY MAY BE INVISIBLE — CHANGES ONLY REACH A WEEK THAT
+    HAS NOT BEEN BUILT YET. THIS IS THE CENSUS DEFECT, IN TODAY'S WORK.**
+
+    **OWNED BY THE DESKTOP AGENT, and it found this itself by putting the away
+    flow on a PHONE rather than trusting a green suite.** That is the only reason
+    anyone knows.
+
+    **WHAT IT MEASURED:** the away flow is built and tested — team night comes
+    off a "Strength + Team Training" day and the gym half survives, a team-only
+    night or a game becomes rest, a normal session is untouched, and it all
+    returns on the return date. **On the phone, nothing changed.** Tuesday and
+    Thursday still read "Strength + Team Training"; Saturday still read "Game
+    Day". **Because the code that does it runs only when a week is FIRST BUILT,
+    and never re-runs over a week already sitting there.**
+
+    **SAM'S RULING IS THEREFORE UNMET.** Item 22(c): *"the plan should change
+    until their return date"*. **Changing what WOULD be built is not changing the
+    plan.**
+
+    **⚠ AND THE SAME DOUBT NOW COVERS THE REST OF TODAY. The desktop agent said
+    so about its own equipment work — "the note shows up, but I did not confirm
+    the exercises changed" — and that honesty is the model. EVERY change landed
+    today that is supposed to alter an EXISTING week is now UNVERIFIED, not
+    done:** the equipment substitution, the dated equipment span, the modifier
+    effects, and anything in the census fixes that reshapes a live week rather
+    than a freshly generated one. **Do not report any of them as delivered until
+    each has been seen on a week that already existed.**
+
+    **THIS IS THE CENSUS DEFECT WEARING TODAY'S CLOTHES.** Twenty findings said:
+    the app holds Sam's logic and does not read it. **This says: the app now
+    RUNS his logic and the athlete's week does not receive it.** Same shape, one
+    layer later. **The rebuild path is the reader.**
+
+    **BUILD — and it is a real unit, not a tail:** the pass that rebuilds a week
+    when something changes must apply the away/equipment/modifier facts to a week
+    that ALREADY EXISTS. The desktop agent has written down what it takes.
+    **Start it fresh, not at the end of a session — half-doing this is how the
+    last two nights went wrong.**
+
+    **THE ACCEPTANCE TEST IS NOT A SUITE. It is a phone, a week that already
+    exists, and the change appearing on it.** Nothing else counts as done for
+    this item. **A green suite has now twice agreed with a screen that had not
+    moved.**
+
 0. **BUILT — THE HOOK NOW HAS FOUR EXITS AND `docs(stop):` IS NOT ONE OF THEM.**
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0).**
 
@@ -335,7 +431,25 @@ phone.** State device items as PARKED in a stop report, never as a request.
    `LAW-team-night-load-is-read`.
    **THE GAME READER IS NOT BUILT AND WILL NOT BE WITHOUT A RULING** — it stores
    both halves too, but whether a match's minutes are full or weighted training
-   load is a coaching question. **Written under `## AWAITING SAM`.**
+   load is a coaching question. **Written under `## AWAITING SAM
+
+- **ONE LINE OWED — HOW A PACE IS SHOWN (census C2, the 2km time trial).**
+  **Not a bare question: the derivation is built, the number exists, and only
+  the WORDS are missing.**
+  `deriveMas` is correct and has **zero production callers** — an athlete runs
+  the trial, the app validates and stores it, and their conditioning card reads
+  the template's authored intensity (e.g. *"Intensity: 110% MAS"*) with **no
+  personal pace and no distance.**
+  **GREPPED FIRST, twice bitten:** `STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md`
+  rules the DERIVATION (MAS = 2km speed x 1.00; defaults 6:30 / 7:15 / 8:00 /
+  8:45 by level) and **says nothing about display**; the copy sheet has no pace
+  line. **This one genuinely is not written down.**
+  **RECOMMENDATION, his to veto in a word:** show the athlete their own pace
+  beside the authored intensity, not instead of it — the 55 signed templates own
+  the intensity ranges (`masCopy.ts:16` says so, and its own header records that
+  the "110% MAS" binary is **accreted, not authored**). So the card would read
+  the signed range plus one derived line. **The number is ready; only his
+  sentence is missing.**`.**
    **STILL NOT BUILT: strength.** That is where the estimate ruling applies, and
    it is the remaining half of this item.
    **STILL SAM'S:** whether a game's minutes count as full load or weighted, and
@@ -1458,6 +1572,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
     home, and there is exactly one.** State plainly whether COD can live there
     without displacing what is there now; if it cannot, that IS the "cut first"
     trade and Sam's ruling already decides it.
+
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
