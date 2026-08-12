@@ -56,17 +56,24 @@ concluding "room for one". That single field is not the mechanism.**
 **R-002** · *"off season means NO team training, the christmas break is
 essentially an off season inside pre season - there is never team trainings
 here"* · Off-season has NO team training, ever. The Christmas break is an
-off-season inside pre-season. · `UNENFORCED` — Bible `:1440` still implies
-otherwise; QA scenario S7 ("off-season six days with three team trainings")
-cannot exist. See SEAT_INBOX item 31.
+off-season inside pre-season. · `BUILT 5dc644ed` (2026-08-13) — Bible `:1440` and
+`:1289` amended with his words and a changelog entry; QA scenarios S7 and S5
+both corrected (S7 re-phased to pre-season, S5's team days cleared) and the
+harness's own team-day violations went 4 -> 0.
 
 **R-003** · *"the athlete can only do COD work in late off season (after first 4
 weeks of off season), in christmas break or during pre season if no team
 trainings … No COD required in season for anyone."* · The COD gate is: **no team
 training this week AND not in season AND not the first four weeks of
 off-season.** "After first 4 weeks" = `late_offseason`
-(`seasonPhaseClock.ts:72-74`). · `UNENFORCED` — the live gate reads the athlete's
-STANDING PROFILE (`defaultProgram.ts:1978`), not this week.
+(`seasonPhaseClock.ts:72-74`). · `BUILT c086ca3d` (2026-08-13) — `codDecelPermitted`
+in `conditioningSelection.ts` is the one rule, read by BOTH gates. The wrong
+input was in TWO places, not the one this row named: `defaultProgram.ts:1978`
+and `coachingEngine.ts:4126` both read the standing profile. 9 cells in
+`test:conditioning-templates`, every line mutation-killed.
+**STILL PARTLY UNENFORCED:** the week fact is profile-derived until the dated
+no-team-training span exists (item 31 part 5), so a club athlete's December week
+still reports team training.
 
 **R-004** · *"that way the app isn't guessing"* · The Christmas break is set by
 ASKING: ~10 Dec *"when is your last team training?"*, ~3 Jan *"when does team
@@ -218,16 +225,148 @@ EXISTING week is unverified until seen on a week that already existed. ·
 
 ---
 
+---
+
+## FROM THE BIBLE'S OWN CHANGELOG (§19), seeded 2026-08-13
+
+**Every entry there is a ruling by construction** — the changelog exists because
+Sam ruled that the Bible is AMENDED when a ruling supersedes it, and each entry
+names the text it replaced. **25 of the 54 entries carry `(Sam, <date>)` and are
+rows here.** The remaining 29 are Amendment-Pass edits that record WHERE a
+superseded line lived rather than a fresh decision; they are covered by the row
+their pass produced.
+
+**R-034** · *"Main lifts HALF the sets at RPE 5-6 … power/speed KEPT as a small
+sharp dose; conditioning HALF the total work with at most one quality
+exposure"* · THE DELOAD LAW. A deload is authored content, not "less volume".
+**Power is NOT removed on a deload.** · `BUILT` — `test:deload-law`, green.
+
+**R-035** · *"low readiness means one thing: the next 7 days are deloaded"* ·
+THE READINESS LAW. A ROLLING 7-day window from the declaration day, not the rest
+of the calendar week. **The tier TYPE is retired** — readiness exposes
+deloaded-or-not and nothing else. · `BUILT` — `test:readiness-illness-law`, green.
+
+**R-036** · MILD training unchanged · MODERATE deloaded while the fact is ACTIVE
+· SEVERE the authored return ladder · THE ILLNESS LAW, three tiers, all riding
+the deload law rather than carrying illness-specific dosing. ·
+`BUILT` — `test:readiness-illness-law`, green.
+
+**R-037** · Three sick doors, not two · THE THREE SICK DOORS. With only two, the
+law's MODERATE tier had **no producer, no storage and no way for an athlete to
+reach it** — a flu-level illness either did nothing or emptied the week. ·
+`BUILT` — `test:readiness-illness-law`, green.
+
+**R-038** · *"Tired"* (noted only) · *"Wrecked"* (7 days deloaded) ·
+*"Absolutely cooked"* (7 days deloaded AND every session optional) · THE
+READINESS DOOR, THREE TIERS. His labels, verbatim. ·
+`BUILT` — `test:readiness-illness-law`, green.
+
+**R-039** · Fatigue EXPOSURE-BLOCKING **abolished**. A severity-7 signal blocked
+nine exposure types and collapsed strength sessions to Rest — a count reduction
+by SIDE EFFECT. · `UNENFORCED` — no suite named for it; the abolition is recorded
+in the Bible and I could not name an enforcer.
+
+**R-040** · RAW SEVERITY IS PRIVATE TO THE DOOR. No module outside the minting
+door may read a readiness/fatigue severity, tier or magnitude; downstream
+consumes the two flags only. · `BUILT` — `test:readiness-ownership`, green.
+**⚠ I FIRST CITED A LAW ID THAT DOES NOT EXIST** (`LAW-raw-severity-is-private`);
+grepped `lawRegistry.ts` and it returns ZERO. The nearest real rows are
+`LAW-day-readiness-doors-are-direct` and `LAW-tired-severity-icon-ladder`,
+neither of which holds this. **Citation removed rather than repaired** — a
+fabricated reference in THIS file is the exact failure it exists to stop.
+
+**R-041** · READINESS IS A HOMONYM. Two unrelated signals share the name — the
+athlete's DECLARATION and a CAPACITY score from onboarding. **Ten call sites
+belong to the capacity score and are deliberately untouched.** ·
+`UNENFORCED` — a naming hazard, not a behaviour; nothing reds if they re-merge.
+
+**R-042** · Section 18 `illness_recovery` week-mode dosing **DELETED**. It
+predated the law and carried its own dosing — two representations, and the wrong
+one was running. · `BUILT` — `test:illness-recovery-mode`, green.
+
+**R-043** · Conditioning progression machinery **DELETED, not migrated**.
+`TIER_CAPS` were invented numbers quietly deciding an athlete's dose. ·
+`BUILT` — `test:conditioning-progression-inputs` asserts the retirement.
+
+**R-044** · Beginners follow the universal phase table in EVERY phase. **The last
+beginner-specific structural rule in the Bible, and the authority the code's
+`maxCoreSessions: 2` rested on — both gone.** ·
+`BUILT` — `trainingAgePolicy.ts` NORMAL_POLICY, `test:rules-kernel`.
+
+**R-045** · *"do not overload them with too many exercises"* is guidance about
+dose and complexity, **not a numeric limit** · ONE exercise cap for every
+training age. The beginner-only cap of 3 was never authored. ·
+`BUILT trainingAgePolicy.ts:43` (`maxExercisesPerStrengthSession: 6`)
+**but ⚠ THE CAP IS NOT ENFORCED — it has one reader and that reader FORWARDS it
+to the AI prompt. Eight sessions ship SEVEN counted rows (SEAT_INBOX item 25).**
+
+**R-046** · *"Running: 2 days minimum per week, 3 preferred, 4 hard max. Team
+training counts toward the running days. The app programs 3 by default."* ·
+THE RUNNING LAW. **THREE numbers, not one** — floor 2, preferred 3, hard max 4.
+A 4th running day is VALID everywhere and merely unusual; only a 5th breaches. ·
+`UNENFORCED` — no suite named for the three-number split.
+
+**R-047** · Muscle/experience sheet reconciliation. **MetCon DELETED** — the
+conditioning ruling retiring the name wins over the muscle sheet. ·
+`BUILT` — `test:muscle-experience`, green.
+
+**R-048** · THE EXPERIENCE CROSSWALK — the single authored bridge from the
+onboarding answer to the ladder (new / developing / consistent / advanced) to the
+authored exercise gates. **Regressions are visible.** ·
+`BUILT` — `test:muscle-experience`, green.
+
+**R-049** · *"Dose counts main work only. Warm-up and cool-down never count
+toward a session's conditioning dose."* · `BUILT` — `test:conditioning-dose`,
+green, anchored by `ALL-COND-DOSE-DESCRIPTOR-01`.
+
+**R-050** · THE OPTIONAL PLACEMENT LAW (§20.1). Optional placement is permitted
+under stated conditions. **SUPERSEDES the blanket ban an agent generalised from
+his words — that generalisation would have red-flagged his own authored early
+off-season all-optional contracts.** · `BUILT` — `test:optional-topup`, green.
+
+**R-051** · THE REST LAW (§20.2). **A day holding only optional work is still
+rested, and the week reports both.** · `BUILT` — the rest floor
+(`weeklyExposureContractV2` `required: 1` on all four rows, `afd07164`).
+
+**R-052** · GUNSHOW COMPOSITION (§20.3), signed · **2 biceps + 2 triceps + 2
+pump delts at 2-3 sets.** Supersedes the app's 2+2+1+1 shape whose fourth slot
+reached outside the sixteen signed candidates. **Shrink-never-pad.** ·
+`UNENFORCED` — no suite named for the composition.
+
+**R-053** · MOBILITY COMPOSED FROM THE POOL (§20.4), signed. **The ten
+`MOBILITY_FLOW_TEMPLATES` bundles are NOT recognised** — no ruling cited, no
+changeset, no divergence report. · `BUILT` — `test:mobility-accessory-doors`,
+green (21 cells, his 2-3 pairs survive the validator).
+
+**R-054** · THE SEVEN STRENGTH SESSIONS (§20.5), signed. The athlete's own door
+could previously reach only four of the seven. · `UNENFORCED` — no suite named
+for the door's coverage of all seven.
+
+**R-055** · THE FOUR QUESTIONS (§20.6), signed. For any type the app may place,
+**"who may place it" is answered by a signed placement rule, not by the word
+"generator"**. · `BUILT` — `test:session-type-charter`, green;
+`CHARTER_DEBT` is where the app does not yet answer them.
+
+**R-056** · *"off season means NO team training … so these are the only times COD
+may be useful"* · THE COD WINDOW (2026-08-13). Duplicate of R-002/R-003 as a
+Bible amendment; kept as its own row because the changelog entry is the Bible's
+record and R-002/R-003 are the inbox's. · `BUILT 5dc644ed, c086ca3d`.
+
+---
+
 ## SEEDING IS INCOMPLETE AND THAT IS STATED, NOT HIDDEN
 
-**33 rows. There are more.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
+**56 rows. There are more.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
 "RULINGS MADE TODAY", `SEAT_INBOX.md`'s answered `## AWAITING SAM` entries, the
 stand-downs, `SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md`, and
 `RULINGS_NOT_IN_THE_APP_2026-08-13.md`.
 
-**NOT YET SEEDED — do these next, and add rows as you go:** the Bible's own
-changelog (~lines 4890-5010, every ADDED/ABOLISHED/CORRECTED entry is a ruling),
-the 70 `*_RULING*.md` docs in `docs/`, and `LFA_PROGRAMMING_POLICY_DECISIONS.md`.
+**THE BIBLE CHANGELOG IS NOW SEEDED (2026-08-13)** — 25 of its 54 entries carry
+`(Sam, <date>)` and are rows R-034..R-056. The other 29 are Amendment-Pass edits
+recording WHERE a superseded line lived rather than a fresh decision.
+
+**NOT YET SEEDED — do these next, and add rows as you go:** the 70
+`*_RULING*.md` docs in `docs/`, and `LFA_PROGRAMMING_POLICY_DECISIONS.md`.
 
 **Until seeding is complete, a grep that returns NOTHING is not proof a ruling
 does not exist** — say so in the question rather than claiming he never decided.
