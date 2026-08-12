@@ -396,9 +396,28 @@ his instruction is standing authority, not history.**
      on the production function with a realistic profile; it is NOT a device
      observation.** Check that before pricing a fix — if no device is legacy,
      this is only a test cost.
-     **NEXT, and it is one probe:** the shape is a repair/anchor search that
-     explodes on team-day participation. Profile inside
-     `canonicaliseHydratedProgram` for the `[Tuesday]` case and name the loop.
+     **THE LOOP IS NAMED — PROBE RUN THE SAME NIGHT, AND IT IS NOT WHAT THE
+     PROFILE FIRST SAID.**
+     **THE PROFILER'S TOP LINE IS A DECOY.** `stateSignature`
+     (`section18AcceptedWeekGateway.ts:1487`) holds **8.3s of 18.6s (45%)** and
+     it serialises the WHOLE week per candidate — so "the dedup key is too
+     expensive" is the obvious read, **and it is wrong.** Counted per search:
+     **48 candidates, 17-24ms total, signatures 0-4ms.** Each individual search
+     is cheap.
+     **THE REAL SHAPE: `searchWholeWeekRepairCandidates` RUNS 1000 TIMES FOR ONE
+     HYDRATION, NESTED TO DEPTH 10.** The engine re-enters itself — a candidate's
+     `assess` triggers another whole-week search, which assesses candidates,
+     which search again. `maxCandidates` (48) caps the BREADTH of one level and
+     **nothing caps the DEPTH of re-entry**; the cap was written for one search.
+     **SO THE FIX IS NOT A FASTER SIGNATURE.** Making the key cheap would divide
+     an exponential by a constant. **The layer above is the re-entry.**
+     **⚠ DO NOT PATCH THIS AT THE END OF A SESSION.** The repair engine decides
+     whether an athlete's week is REPAIRABLE or REJECTED; a depth cap or a
+     shared memo can turn a repairable week into a refused one, and `assess` has
+     not been shown pure. **Its 14 cells all pass today and would still pass
+     with a wrong cap** — none of them measures re-entry.
+     **START IT FRESH, and start by asking whether the re-entry is intended at
+     all.**
      **Do not optimise the SUITE — the suite is honest; it is timing real work.**
    - **NOT PAID — the agreement law has NOT established agreement.** Last run
      AGREES (158 units, 2.17x) but **the run before it DISAGREED** on
