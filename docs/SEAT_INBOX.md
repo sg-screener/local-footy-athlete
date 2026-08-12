@@ -208,7 +208,7 @@ his instruction is standing authority, not history.**
     not a nicety; it is the missing input.
 
     ~~**5 — BUILD THE TWO QUESTIONS (desktop agent).**~~ **DONE 2026-08-13 —
-    `WORKING`, `test:christmas-break`, 34 cells, armed in `test:bible`. Boundary:
+    `WORKING`, `test:christmas-break`, 37 cells, armed in `test:bible`. Boundary:
     `docs/CHRISTMAS_BREAK_BOUNDARY_2026-08-13.md`; law:
     `LAW-christmas-break-is-two-questions`.** Both questions ask, both answers
     land on ONE `no_team_training` fact (open-ended in December, closed in
@@ -532,20 +532,6 @@ his instruction is standing authority, not history.**
 
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 7).
 
-9. **PARTLY BUILT — the athlete can now go ahead anyway; the four-answer
-   collapse is BLOCKED.** `ca33206f`. `mayOverrideBlock` is `canOverride`'s
-   FIRST production reader after nine writes; the block sheet offers "Do it
-   anyway" / "Keep my plan" when every finding allows it, and the override is
-   recorded on the tape (`athlete_action_override_allowed`) BEFORE the change
-   commits. `LAW-warn-then-allow` born guarded; `test:block-override`,
-   mutation-checked three ways.
-   **BLOCKED, NOT SKIPPED — the remainder needs two files another agent holds.**
-   Collapsing the four competing answers onto `resolverMayDisplace` means
-   editing `projectVisibleWeek.ts:214-219` and `section18CraftTier.ts:217-232`
-   (the `date|name` STRING JOIN that breaks on a rename). Both are mid-flight in
-   this shared checkout. **Take it when they are clear.**
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 9).
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
    **PAID 2026-08-13 — 29 -> 28. `LAW-verify-branch-before-commit` is GUARDED.**

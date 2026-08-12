@@ -406,3 +406,41 @@ size budget Sam pays for in dollars.
     already applies to code comments. **Check the code before marking anything
     blocked on Sam; a question he does not need to answer still costs him a
     read.** No question was sent — it was caught in the same turn.
+
+9. **PARTLY BUILT — the athlete can now go ahead anyway; the four-answer
+   collapse is BLOCKED.** `ca33206f`. `mayOverrideBlock` is `canOverride`'s
+   FIRST production reader after nine writes; the block sheet offers "Do it
+   anyway" / "Keep my plan" when every finding allows it, and the override is
+   recorded on the tape (`athlete_action_override_allowed`) BEFORE the change
+   commits. `LAW-warn-then-allow` born guarded; `test:block-override`,
+   mutation-checked three ways.
+   **BLOCKED, NOT SKIPPED — the remainder needs two files another agent holds.**
+   Collapsing the four competing answers onto `resolverMayDisplace` means
+   editing `projectVisibleWeek.ts:214-219` and `section18CraftTier.ts:217-232`
+   (the `date|name` STRING JOIN that breaks on a rename). Both are mid-flight in
+   this shared checkout. **Take it when they are clear.**
+
+   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 9).
+
+    **CLOSED 2026-08-13 — THE REMAINDER WAS WRONG ON ALL THREE COUNTS, AND EACH
+    ONE WAS CHECKED RATHER THAN ARGUED.**
+    **1. THE BLOCK WAS STALE.** `projectVisibleWeek.ts` and
+    `section18CraftTier.ts` are clean and unedited since 2026-08-12. No agent
+    holds them, and none had for a day.
+    **2. THE DEFECT IS REFUTED — THERE IS NO WINDOW FOR A RENAME.**
+    `athletePlacedSessionKeys` has exactly ONE caller (`assessWeekCraft`), which
+    passes `args.workouts`; the findings it is matched against come from
+    `validateProgramWeek(craftValidatorInput(args))`, which reads THE SAME array,
+    and each finding's `sessions` is literally `[cw.workout.name]` from those
+    same objects. **Both sides read one array in one call with no mutation
+    between them, so a rename cannot land in the middle of the join.**
+    **3. AND IF IT EVER COULD, IT IS ALREADY CAUGHT.** Cells G1-G3 in
+    `test:craft-tier` hold the behaviour the join exists for — an athlete-placed
+    violation is FOUND, never BLOCKS, and the gateway leaves the session where
+    they put it. **MUTATION-PROVEN: breaking the key (`date|RENAMED_name`) reds
+    G2 immediately.** The join is not an unguarded assumption.
+    **SO NOTHING WAS OWED.** The `date|name` key is name-shaped and reads as
+    fragile — that is why the item flagged it — but it is a single-call
+    derivation, not a cross-boundary one, and its behaviour is held.
+    **The predicate half of the item was already built (`ca33206f`,
+    `mayOverrideBlock`, `LAW-warn-then-allow`).**
