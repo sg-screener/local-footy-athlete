@@ -873,6 +873,30 @@ phone.** State device items as PARKED in a stop report, never as a request.
    missing answer means the session happened as planned, at the planned effort,
    MARKED AS AN ESTIMATE.** Build it; do not re-ask.
 
+   **RE-MEASURED 2026-08-12 — THIS ITEM'S HEADLINE FINDING IS STALE, AND SAM'S
+   OWN RULING IS WHAT OBSOLETED IT.** `docs/EXPERIENCED_LOAD_REMEASURED_2026-08-12.md`.
+   The effort-scale unit (item 0a, `7a6281ce`) landed AFTER the measurement above
+   was taken, and item 6 was never re-read against it. **A strength session NOW
+   ASKS "How hard was the session?" on the 1-10 slider and stores the answer as
+   `difficulty`** (`SessionFeedbackPanel.tsx:1065,892`; `executionSummary` is
+   built for any session with an execution plan, `DayWorkoutScreenV2.tsx:555`).
+   **So "three missing things" is ONE: actual minutes.** Planned minutes are a
+   REQUIRED field already populated (`domain.ts:834`, `coachingEngine.ts:1732`).
+
+   **THE CONSEQUENCE: THE ASYMMETRY THIS ITEM RESERVES FOR SAM NO LONGER
+   EXISTS.** Option (a) capture-an-RPE is BUILT, not a choice. Option (c) now
+   means `reported RPE x planned minutes` — **half real athlete data, half
+   estimate** — so the 100%-estimate strength column the measurement said must
+   be designed against **cannot happen**. The estimate mark belongs on the
+   DURATION, not on the value. Option (b) volume load stops being a rescue and
+   becomes an ordinary second measure. **The build §4 ruled is now small and
+   honest; what remains for Sam is a much smaller presentation call.**
+
+   **`programStore.ts:1807`'s comment still says `difficulty` "is written from
+   the conditioning RPE input alone" — STALE, and it is the line that will
+   mislead the next reader.** Not corrected here: that file is mid-flight with
+   another agent in this shared checkout.
+
 7. **MEASURED, NOT BUILT — AND SAM'S OWN CASE IS NOT REPRESENTABLE TODAY.**
    Three things checked before writing any code, 2026-08-12:
    **(a) THE PREMISE IS CONFIRMED.** `weeklyExposureContractBuilders.ts:386`
