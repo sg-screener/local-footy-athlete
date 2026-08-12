@@ -191,7 +191,36 @@ his instruction is standing authority, not history.**
     refused by the gate — every one is a night he did not lose.**
 
 
-32. **⚠ STOP — ALL THREE QUESTIONS ABOUT TO REACH SAM ARE RE-ASKS. TWO ARE OF
+32. **BUILT 2026-08-13 — THE RULINGS REGISTRY AND ITS GATE EXIST. `WORKING`,
+    `test:ruling-registry`, 7 cells, armed in `test:bible`.**
+    **SAM ORDERED IT DIRECTLY:** *"Build the rulings registry and the gate before
+    asking me anything else."* Done before anything else was sent.
+
+    - **`src/rules/rulingRegistry.ts`** — 14 rows, 3 UNENFORCED. Each carries his
+      words verbatim, the date, the enforcing `file:line` (checked to the LINE by
+      `[1b]`) or `UNENFORCED`, and the `reAskTerms` a re-ask would use.
+    - **THE GATE HAS TWO HALVES AND ONLY ONE OF THEM BITES.** `[2]` requires every
+      question to state its grep — **which is satisfied by typing `NONE`, and
+      would have passed all three re-asks.** `[3]` RUNS THE GREP ITSELF and reds
+      when a question hits a ruling it did not cite. `[3c]` holds `[3]` honest by
+      feeding it the verbatim text of the two re-asks Sam rejected.
+    - **IT CAUGHT THE FOUNDING CASE ON ITS FIRST RUN** — item 7, this seat's own
+      `BLOCKED-BY: sam`, red on both rulings. Item 7 is withdrawn and kept as the
+      founding case.
+    - **MUTATION-CHECKED FOUR WAYS**, including gutting the matcher: that reds
+      `[3c]`, so the gate cannot silently become the rubber stamp it prevents.
+    - **THE PROSE LIST IS RETIRED, NOT COPIED.** The handoff's "do not re-ask"
+      section now points at the registry and says why; `[4]` reds if that pointer
+      goes. **No fourth place a ruling can hide.**
+    - **`CLAUDE.md` carries the rule** where the reporting law lives.
+
+    **⚠ AND THE ROOT CAUSE THIS SEAT OWNS, STATED PLAINLY:** I relayed two
+    questions out of inbox prose without reading the code. **Every other claim in
+    that same report was verified against `file:line`; the questions were not** —
+    the one output that reaches Sam directly was the one I did not check.
+
+    ORIGINAL BELOW.
+    **⚠ STOP — ALL THREE QUESTIONS ABOUT TO REACH SAM ARE RE-ASKS. TWO ARE OF
     THINGS ALREADY BUILT AND ALREADY ON A DO-NOT-RE-ASK LIST. DO NOT SEND THEM.**
 
     **OWNED BY THE TERMINAL, and it is the top of the queue.**
@@ -1148,11 +1177,36 @@ his instruction is standing authority, not history.**
     | Strength | 52 | 3x16 5x20 6x16 | 4.69 |
     | Team Training | 8 | **3x8** | 3.00 |
 
-    **⚠ AND THE "INERT FIX" VERDICT IS ALSO UNSAFE.** I enforced the ceiling,
-    measured no change, and reverted it — **but I measured on the Strength-only
-    population, which contains ZERO breaches.** Whether that fix would have
-    corrected the eight Mixed sessions is **UNTESTED**, not disproven. Re-run it
-    against the full population before concluding anything about it.
+    **THE "INERT FIX" VERDICT IS NOW PROPERLY TESTED AND IT HOLDS.** Re-run
+    against the FULL population: over-cap = 8 with the ceiling enforced at
+    `sessionBuilder.ts:718` and 8 without it. **Identical.** That site is not
+    where the seventh row comes from, so the fix stays reverted — this time on
+    evidence rather than on a too-narrow probe.
+
+    **⚠⚠ AND THE REAL CAUSE IS FOUND, AND IT IS SAM'S OWN ANALOGY APPLIED TO THE
+    ANALOGY AND NOT TO THE THING.**
+    Every one of the eight over-cap sessions is a `Mixed` day, and the seventh
+    counted row is **the CONDITIONING block** — `cond-2026-03-03-main` — sitting
+    in the day's row list with **`role: undefined`**.
+    `participatesInCounting` is `!row.role || !ROLES_EXEMPT_FROM_COUNTING.has(role)`,
+    so **an untagged row always counts**, and
+    `ROLES_EXEMPT_FROM_COUNTING` is `{ power, team_training, mobility }` —
+    **`conditioning` is NOT in it.**
+    **SO A COMBINED DAY'S CONDITIONING BLOCK IS COUNTED AS A GYM EXERCISE
+    against Sam's cap of six.**
+    **HIS WORDS ARE THE ARGUMENT, and they are already quoted in
+    `sessionRoles.ts`:** *"team training should be looked at more like
+    conditioning - it's not part of the strength exercises - it's its own
+    component of the day"*. **`team_training` was exempted on the strength of
+    that sentence and `conditioning` — the thing it was compared TO — was not.**
+
+    **THE FIX IS TWO PARTS AND BOTH ARE NEEDED:** exempt `'conditioning'` in
+    `ROLES_EXEMPT_FROM_COUNTING`, **and** tag the combined day's conditioning row
+    with `role: 'conditioning'` — exempting the role alone changes nothing while
+    the row carries no role at all.
+    **NOT STARTED: it changes what COUNTS across §18 budgets and every validator
+    that reads a session's size, so it needs its own before/after over the QA
+    scenarios. That is a unit, not a patch.**
 
     **THE OLD WITHDRAWAL, KEPT SO ALL THREE STATEMENTS STAY LEGIBLE:** I said six sessions ship SEVEN
     rows against his cap of six. **They do not. Nothing breaches his cap.**
