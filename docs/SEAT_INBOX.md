@@ -1413,10 +1413,22 @@ seat was wrong.
   reversible adjustment is minted (`test:program-control-durable`). **Store the
   decision, derive everything else** — the deriving lane was the wrong tool and
   is what made the door refuse on a real world.
-  **STILL OPEN, and it is a DISPLAY question, not a training one:** the calendar
-  CARD for a game inside the trip. The training around it is gone; the card is
-  still drawn from his calendar mark. Sam allowed either — *"removed or at least
-  blanked out"* — so blanking it is the smaller move and is the next act.
+  **AND THE CARD IS DONE TOO, 2026-08-13, after he said the halfway version was
+  not good enough:** *"no it shouldn't show + team training and the game really
+  should just be removed as well … if the person is away, consider the time they
+  are away as building a new program and their old program is gone for the time
+  being … thats clunky and unprofessional"*.
+  **HIS FRAMING IS THE FIX AND IT NAMED THE GAP I HAD BEEN PATCHING AROUND.** The
+  two earlier filters both change what a week *IS* — the plan stops marking team
+  days, a fixture stops anchoring. **Neither touches a week that was ALREADY
+  STORED with the club on it, and that is the week he is looking at.** So the
+  third filter is on the READ: `applyAwayPass` in `sessionResolver`, the last
+  pass of `resolveWeekWithConditioning`. A fixture inside the trip stands down to
+  an empty day; a team night is stripped from its day and a club-only day empties;
+  a combined day keeps its own half, renamed through the one owner.
+  **IT IS A FILTER, NOT AN EDIT.** His calendar mark, his accepted program and the
+  team night all still exist and all come back when the fact expires or he clears
+  it. Held by `test:away-flow` [15]/[15b], non-vacuity first; mutation-checked.
 - **ANSWERED 2026-08-13 — a game inside the trip DISAPPEARS.** Sam: ***"yes it
   should disappear OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***. **Built the same
   day** — the fixture is dropped at the plan, so the week loses its taper and

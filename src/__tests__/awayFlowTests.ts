@@ -304,8 +304,11 @@ async function main(): Promise<void> {
   // whole day to rest — the exact behaviour item 28 removed.
   const executor = fs.readFileSync(
     path.join(__dirname, '..', 'utils', 'programControlActions.ts'), 'utf8');
+  // PINNED BY PROPERTY, NOT BY THE EXPRESSION. The first form matched the exact
+  // ternary and reddened the day a neighbouring change added a second span kind
+  // to it — a cell that fails on somebody else's correct edit is noise.
   run('[5d] a span-shaped trip marks no date unavailable',
-    /unavailableDates: awaySpan \? \[\] : awayDates/.test(executor));
+    /unavailableDates: [^\n]*awaySpan[^\n]*\?\s*\[\]/.test(executor));
 
   // ── [6] THE SHEET HANDS THE SPAN OVER, AND ONLY WHEN IT HAS ONE ──────────
   // ONE MENU, NOT TWO (Sam: *"the athlete just removes the equipment they don't
@@ -559,6 +562,40 @@ async function main(): Promise<void> {
     JSON.stringify(awayWeekOf22.fixtureDays) !== JSON.stringify(homeWeekOf15.fixtureDays)
       || awayWeekOf22.anchorState === 'game',
     { away22: awayWeekOf22.fixtureDays });
+
+  // ── [15] THE WEEK ON HIS SCREEN — Sam, 2026-08-13 ──────────────────────────
+  //
+  // *"if the person is away, consider the time they are away as building a new
+  // program and their old program is gone for the time being … why should game
+  // day or TT still show up? thats clunky and unprofessional"*.
+  //
+  // [13] AND [14] BOTH FIX WHAT A WEEK *IS* — the plan stops marking team days,
+  // a fixture inside the trip stops anchoring. **Neither touches a week that was
+  // ALREADY STORED with the club on it, and that is the week he is looking at.**
+  // This holds the READ: while the trip is live, the club is not shown.
+  const { resolveWeekWithConditioning: resolveWeek } =
+    require('../utils/sessionResolver') as typeof import('../utils/sessionResolver');
+  const awayState: any = {
+    seasonPhase: 'In-season',
+    markedDays: { '2026-08-15': 'game' },
+    temporarySourceFacts: [travelFact],
+  };
+  const homeState: any = { ...awayState, temporarySourceFacts: [] };
+  const dayOn = (state: any, date: string) =>
+    (resolveWeek('2026-08-10', state) as any[]).find((day) => day.date === date);
+
+  const gameHome = dayOn(homeState, '2026-08-15');
+  const gameAway = dayOn(awayState, '2026-08-15');
+  // NON-VACUITY FIRST: it must BE a game day before "no game day" means anything.
+  run('[15] the 15th is a game day when he is home',
+    !!gameHome && (gameHome.source === 'game' || gameHome.indicator === 'game'
+      || gameHome.workout?.workoutType === 'Game'),
+    { source: gameHome?.source, indicator: gameHome?.indicator });
+  run('[15b] and it is NOT on his week while he is away',
+    !!gameAway && gameAway.source !== 'game' && gameAway.indicator !== 'game'
+      && gameAway.workout?.workoutType !== 'Game',
+    { source: gameAway?.source, indicator: gameAway?.indicator,
+      type: gameAway?.workout?.workoutType });
 
   console.log(`\naway flow: ${passed} passed, ${failed} failed`);
   if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }

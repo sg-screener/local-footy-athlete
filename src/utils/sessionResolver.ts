@@ -23,6 +23,7 @@
  *   - No useMemo for schedule data — derive on every render (trivial cost)
  */
 
+import { getTeamTrainingWorkoutState } from './teamTraining';
 import type {
   Workout,
   Exercise,
@@ -2168,7 +2169,70 @@ export function resolveWeekWithConditioning(
   // the week. This catches sessions added by the conditioning + recovery
   // overlays (which call buildDay directly without the wrapper). Manual
   // overrides are preserved as-is by `applyInjuryFilterPass`.
-  return applyInjuryFilterPass(result, state);
+  return applyAwayPass(applyInjuryFilterPass(result, state), state);
+}
+
+/**
+ * WHILE HE IS AWAY, THE CLUB IS NOT ON HIS WEEK — SEAT_INBOX item 30.
+ *
+ * **Sam, 2026-08-13, after seeing a team night and a Game Day survive a trip:**
+ * *"if the person is away, consider the time they are away as building a new
+ * program and their old program is gone for the time being — they won't have TT
+ * commitments or games … so why should game day or TT still show up? thats
+ * clunky and unprofessional"*.
+ *
+ * THE OTHER TWO FIXES WERE BOTH ABOUT WHAT THE WEEK *IS*: the plan stops marking
+ * team days (`onboardingToCoachingInputs`) and a fixture inside the trip stops
+ * anchoring it (`derivedWeekContract`). **Neither touches a week that was
+ * ALREADY STORED with the club on it**, and the athlete's current week is
+ * exactly that — which is why he still saw both. This is the read.
+ *
+ * IT IS A FILTER, NOT AN EDIT. Nothing is written: his calendar mark, his
+ * accepted program and the team night all still exist and all come back the day
+ * the fact expires or he clears it. What changes is what the week SHOWS while
+ * the trip is live.
+ */
+function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[] {
+  const spans = (state.temporarySourceFacts ?? [])
+    .filter((fact) => 'factKind' in fact && (fact as { factKind?: string }).factKind === 'schedule' &&
+      (fact as { scheduleKind?: string }).scheduleKind === 'travel' &&
+      (fact as { status?: string }).status === 'active' &&
+      typeof (fact as { effectiveUntil?: unknown }).effectiveUntil === 'string')
+    .map((fact) => ({
+      from: String((fact as { effectiveFrom: string }).effectiveFrom).slice(0, 10),
+      until: String((fact as { effectiveUntil: string }).effectiveUntil).slice(0, 10),
+    }));
+  if (spans.length === 0) return days;
+  const isAway = (date: string): boolean =>
+    spans.some((span) => date >= span.from && date <= span.until);
+  const today = todayISOLocal();
+  return days.map((day) => {
+    if (!isAway(day.date)) return day;
+    // A FIXTURE HE IS NOT AT IS NOT A DAY ON HIS WEEK. `buildDay(..., null,
+    // 'none')` is the resolver's own way of saying "nothing here" — the same
+    // call the max-one-game guard above uses to stand a duplicate down.
+    if (day.source === 'game' || day.indicator === 'game' ||
+      day.workout?.workoutType === 'Game') {
+      return buildDay(day.date, day.dayOfWeek, today, null, 'none');
+    }
+    if (!day.workout) return day;
+    const team = getTeamTrainingWorkoutState(day.workout);
+    if (!team.hasTeamTraining) return day;
+    // A day that was ONLY the club becomes empty; a combined day keeps its own
+    // half and loses the club's, renamed through the ONE owner of that question.
+    if (team.isTeamTrainingOnly) {
+      return buildDay(day.date, day.dayOfWeek, today, null, 'none');
+    }
+    return {
+      ...day,
+      workout: {
+        ...day.workout,
+        name: team.displayName ?? day.workout.name,
+        workoutType: (team.displayWorkoutType ?? day.workout.workoutType) as typeof day.workout.workoutType,
+        exercises: team.renderableExercises,
+      },
+    };
+  });
 }
 
 /**
