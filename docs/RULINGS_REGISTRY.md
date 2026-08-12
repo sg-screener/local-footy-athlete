@@ -404,6 +404,18 @@ this law does not govern"* · The readiness HOMONYM, restated as a boundary: the
 capacity score is not the declaration. · `UNENFORCED` — same as R-041; a naming
 hazard with no gate.
 
+**R-070** · **"One main per pattern; Deadlift + RDL is illegal."**
+(`LFA_PROGRAMMING_BIBLE.md:226`) · Two heavy lifts of the SAME pattern may not
+share a session. · `UNENFORCED` — **no duplicate-pattern validator exists.** The
+production fallback at `defaultProgram.ts:1172-1177` emits RDLs + Hip Thrusts,
+both `movement: 'hinge'`; again at `:1194-1196`, Overhead Press + Incline DB
+Bench, both `push`. The only stacking cap in the repo says the OPPOSITE —
+`exerciseScorer.ts:405` allows two of a pattern and bars only three.
+**⚠ THIS ROW EXISTS BECAUSE THE GATE CAUGHT ME.** I was carrying "the double
+hinge — allowed or not?" to Sam as an open question **for four batches**. It is
+RULED, in his own Bible, and has been since before the census wrote it down as
+A4. Census `RULINGS_NOT_IN_THE_APP_2026-08-13.md:67`.
+
 ---
 
 ## QUESTIONS ALREADY PUT TO SAM AND NEVER ANSWERED
@@ -422,6 +434,18 @@ authored range owns it) are already written out. **STILL OPEN.**
 **⚠ THIS IS THE SAME CONFLICT AS THE OPEN PACE QUESTION in SEAT_INBOX item 6's
 C2 line** — his answer to the sheet settles both, and they must not be asked as
 two separate questions.
+
+**Q-002** · **THE SPRINT CAP: 2 NIGHTS OR 2-3 EXPOSURES?** · **TWO OF SAM'S OWN
+LINES, IN DIFFERENT UNITS, AND THEY CANNOT BOTH BE THE ENFORCED NUMBER.**
+`LFA_PROGRAMMING_BIBLE.md:90` — *"Sprinting limited to 2 nights per week which
+includes nights at team training"* — HARD, counted in NIGHTS.
+`:129` — *"A second exposure may occur naturally, while 2-3 remains the usual
+maximum"* — SOFT, counted in EXPOSURES.
+**This is genuinely his to settle; it is not a lookup.** Census A6. **What the
+app does: `sprint: { max: null }` on four contract rows, and team training and
+games are CREDITED as sprint exposures (`sessionClassificationAdapter.ts:165`)
+— so three team nights alone can reach the cap before the app programs
+anything.** **STILL OPEN.**
 
 ---
 
@@ -475,7 +499,7 @@ minimum.** · `BUILT` — §18 phase planner; `test:section18-phase-planner`
 
 ## SEEDING IS INCOMPLETE AND THAT IS STATED, NOT HIDDEN
 
-**69 rows, plus one OPEN question.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
+**70 rows, plus two OPEN questions.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
 "RULINGS MADE TODAY", `SEAT_INBOX.md`'s answered `## AWAITING SAM` entries, the
 stand-downs, `SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md`, and
 `RULINGS_NOT_IN_THE_APP_2026-08-13.md`.
