@@ -2191,4 +2191,60 @@ phone.** State device items as PARKED in a stop report, never as a request.
    is OPEN-UNKNOWN for the current week for the same reason.** Account and fix
    cost: `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.
 
+---
+
+## item 29 — full report
+
+29. **THE EXIT SAM CLOSED HAS REOPENED UNDER A NEW NAME — `docs(blocked):` IS
+    NOW THE PROGRESS REPORT `docs(stop):` USED TO BE.**
+
+    **OWNED BY THE TERMINAL. This is a hook change, not a coaching one.**
+
+    **Sam noticed the symptom, 2026-08-13:** *"the terminal is short, it works
+    for like 5 min then stops and reports but doesn't need us to say anything"*.
+    **He is describing a turn that ends without needing him. That is the exact
+    thing item 0 was built to stop.**
+
+    **MEASURED:** in the last six hours the terminal made **77 commits, of which
+    18 begin `docs(blocked):`** — a declaration that it CANNOT PROCEED, roughly
+    every twenty minutes.
+
+    **THE HISTORY MAKES THIS UNAMBIGUOUS.** Item 0 (2026-08-12) removed
+    `docs(stop):` as a legal exit precisely because a routine progress report was
+    ending turns, and the hook's own comment records it
+    (`scripts/seat-inbox-hook.sh:66-71`). **EXIT 2 (`:100-102`) now carries the
+    same traffic under a different word.** Same behaviour, new label, and the
+    hook cannot tell the difference because it only reads the SUBJECT PREFIX.
+
+    **THE DISTINCTION THAT WAS NEVER WRITTEN DOWN — and half of this is the
+    seat's fault.** The seat kept ordering *"measure the layer above before you
+    build"*, which is right, and the terminal correctly began stopping at each
+    wall. **But a wall you can measure yourself is not a BLOCK.** Nobody drew
+    that line, so it drew its own.
+
+    **BLOCKED means the terminal cannot resolve it ALONE:**
+    - it needs a ruling only Sam can give, **or**
+    - it needs a file another agent is holding, **or**
+    - it needs something outside the repo.
+
+    **NOT BLOCKED, and each of these is one more step in the SAME turn:** the
+    next probe, the next measurement, a suspect to instrument, a wrong number to
+    re-take, a layer to look at. **"I have found the next question" is the
+    definition of NOT blocked** — it is the definition of knowing what to do
+    next.
+
+    **BUILD:** `docs(blocked):` requires a stated reason falling in one of the
+    three categories above, named in the commit body as `BLOCKED-BY: sam |
+    other-agent | external`. **The hook rejects the exit when that line is
+    absent or reads anything else.** Everything that is currently a `blocked`
+    commit and does not qualify becomes a plain commit and the turn CONTINUES.
+
+    **KEEP EXIT 4 UNTOUCHED** (`:124-126`, three turn-ends on one HEAD). It is
+    the loop-breaker and it is the only thing standing between a mis-tightened
+    hook and an agent that can never stop.
+
+    **THE EXPECTED EFFECT, so it can be checked:** the terminal's turns get
+    longer and fewer, and Sam stops being pinged by reports that need no answer
+    from him. **Report the blocked-commit count per hour before and after.**
+
 
