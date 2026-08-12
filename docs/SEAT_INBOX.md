@@ -46,6 +46,133 @@ phone.** State device items as PARKED in a stop report, never as a request.
    or (c) Sam says stop. **A unit that ends "blocked, attempt 2 must do X first"
    is not a stopping point: X is the next unit.**
 
+0a. **PAID IN FULL — `7a6281ce`, `f3861b31`, `f9f84123`.** One scale, one
+   slider, one predicate. **The order's third site was REAL and my first two
+   commits missed it:** the transaction validators still refused anything over
+   5, so the slider was offering answers the transaction threw away — green at
+   both ends because nothing compared them. `test:effort-scale` (42 cells,
+   mutation-checked) now binds the slider, the form and BOTH transactions to
+   `isEffortRating`. Three law-registry rows, two receipts and four comments
+   that still said "1-5" were corrected. **`feel` is a DIFFERENT 1-5 scale
+   (Heavy/Bad/Normal/Good/Flying) and correctly did NOT move.**
+   **AWAITING SAM — the words.** He named `7 — hard` and the two ends; the
+   seven between are the terminal's and are marked `PROPOSED ... AWAITING SAM`
+   in the signed table: *2 easy · 3 light · 4 moderate · 5 steady · 6 solid ·
+   8 very hard · 9 brutal*. **PARKED — no device pass on the slider's feel.**
+
+   ~~ORIGINAL ORDER~~ **ONE EFFORT SCALE: 1-10, EVERYWHERE. SAM RULED 2026-08-12.**
+   *"okay do 1-10 for everything i think? can you make sure he does that and
+   updtes all the session feedback forms as well"* — and, on strength: *"ask
+   me"*, i.e. **strength sessions get an effort rating of their own.**
+
+   **THERE ARE THREE SCALES TODAY AND A TRANSLATOR BETWEEN THEM:**
+   - conditioning RPE is **1-10** (`sessionFeedbackForm.ts:161` — *"Legacy
+     conditioning RPE remains 1-10"*)
+   - the live checklist's effort is **1-5** (`programStore.ts:1678` — *"Live
+     session effort is 1-5; legacy conditioning-only feedback may be 1-10"*)
+   - game / practice-match effort is **1-5**
+   - and `feedbackAdapter.ts:274` exists only to *"map the 5-level feeling to
+     approximate RPE difficulty (1-10)"* — **a conversion nobody owns, which is
+     the session's own defect class.**
+
+   **THIS RE-SCOPES SAM'S OWN EARLIER RULING AND HE MADE THE CHANGE HIMSELF.**
+   `gameFeedback.ts:17` carries *"Sam 2026-08-11; game and practice-match effort
+   changed to 1-5"* with the copy *"1 = very easy · 5 = very hard"*. **Superseded
+   2026-08-12: 1-10.**
+
+   **WHY 10 AND NOT 5 — HIS BIBLE IS ALREADY WRITTEN IN TENS.**
+   `LFA_PROGRAMMING_BIBLE.md:771`: *"in season should be big weights, not to
+   complete fatigue or max though. Could say 7/8 out of 10. Pre season off season
+   ... 8/9 out of 10."* Plus RPE 6-7 for beginners (`:4968`, blessed by him) and
+   RPE 5-6 on a deload (`:3749`, `:4956`). **The app already PRESCRIBES a number
+   out of ten and never asks whether the athlete hit it. A 1-5 answer cannot be
+   checked against a /10 prescription without the very translator this deletes.**
+
+   **DO:** one scale type, 1-10, used by conditioning, the live checklist,
+   strength (new — "ask me"), and game / practice-match. **Update every feedback
+   form and its athlete-visible copy** through the signed-copy path, not by
+   editing strings in place. **DELETE `feedbackAdapter.ts:274`'s 5→10 mapping**
+   once nothing feeds it — if anything still does, that caller is the finding.
+   **Migration: existing stored 1-5 values must be handled explicitly** — either
+   converted with a stated rule or marked as legacy-scale. **Do not silently
+   reinterpret an old 3 as a new 3.**
+
+   **THIS UNBLOCKS ITEM 6** (planned vs experienced load): strength gains a real
+   effort number, so it stops being an all-estimate column.
+
+0b. **THE COMPLETION GATE — NOTHING MAY BE CALLED FINISHED UNTIL THE RIGHT
+   CHECKS PASS. TOOLING ONLY; DO NOT CHANGE APP BEHAVIOUR.**
+   Sam approved this on 2026-08-12 as step 2 of three. **Step 1 (the iOS
+   Simulator pane) is DONE — the app builds, installs and boots in it.**
+
+   **WHY IT IS NEEDED AND WHAT IT IS NOT.** The existing `Stop` hook
+   (`scripts/seat-inbox-hook.sh`) only checks whether the INBOX is clear. **It
+   cannot tell a real "done" from a false one.** This is a different hook.
+
+   **BUILD:** a `TaskCompleted` hook — `.claude/settings.json` plus one script
+   under `.claude/hooks/`. **Exit code 2 blocks completion** and the reason is
+   fed back. **Path-aware, using ONLY commands that already exist in
+   `package.json` — invent nothing:**
+   - TypeScript changed → typecheck
+   - rules / store / generation files changed → the relevant targeted suites
+   - program generation, repair, scheduling or coaching rules changed → the
+     full scenario suite
+   - visual-only or docs-only changes → **must NOT** run the expensive suite
+
+   **CONSTRAINTS: no new registry, no new doc, no worktree, at most two
+   permanent files.** Show the proposed file list and which existing command
+   each check calls BEFORE writing anything. Verify with `/hooks` afterwards.
+
+0c. **THE REST OF THE TOOLING PLAN — SAM RULED IT IN, 2026-08-12.**
+   *"i really want to get all of chat's ideas in there so we can build this more
+   efficiently going forward"*. **The seat had parked these on its own judgment;
+   that was `seat-rations-what-Sam-ruled` again and it is withdrawn.** Build in
+   this order, cheapest first. **Each is TOOLING — no app behaviour changes.**
+
+   **(i) TypeScript language server.** `npm install -g typescript-language-server
+   typescript`, then the `typescript-lsp` plugin. Gives real go-to-definition,
+   reference search and post-edit diagnostics **instead of grepping and
+   re-reading files**, which is the single biggest recurring token cost.
+   **NOTE: an open issue reports the official plugin missing its `plugin.json` —
+   if it will not install, say so and stop; do not hand-roll a substitute.**
+
+   **(ii) Path-scoped rules, `.claude/rules/*.md`** with `paths:` frontmatter
+   globs. **`AGENTS.md` is 746 lines re-read every single turn.** Move the rules
+   that only matter when specific files are touched — the program generator,
+   repair engine, coach planning, scenario tests — into a path-scoped rule that
+   loads only then. **Do NOT copy the law registry into it.** Target: what
+   remains loaded always is short. Verify with `/context`.
+
+   **(iii) `/lfa-task` skill**, `.claude/skills/lfa-task/SKILL.md`,
+   `disable-model-invocation: true`, taking ONE observable outcome as
+   `$ARGUMENTS` and injecting live git state with `` !`git status --short` ``.
+   It must force: acceptance criteria and non-goals up front; search the ruling
+   registry BEFORE asking Sam anything; trace the data flow before editing;
+   extend existing mechanisms rather than adding abstractions; a vertical slice
+   with writer, reader, reachable entry point, persistence and test; simulator
+   proof for UI; the full scenario report for generation changes.
+   **`argument-hint` is REJECTED by the current skill format — do not use it.**
+
+   **(iv) `lfa-verifier` subagent**, `.claude/agents/lfa-verifier.md`, read-only,
+   `memory: local`. Reviews the diff against the task and the rulings and reports
+   ONLY material gaps: built but unreachable, written but never consumed,
+   persistence claimed without a relaunch, a ruling contradicted, tests using an
+   internal shortcut instead of the real path, preference regressions,
+   over-fitting, unsupported completion claims. **No style or naming noise.**
+   **CHECK FIRST whether item 0b's gate already covers part of this and say so —
+   two overlapping reviewers is the disease, not the cure.**
+
+   **(v) `/day-end` skill** — today's commits, working tree and task state into
+   one factual report: actually completed, verified, still unfinished, tomorrow's
+   first action. **Attempted work must never be reported as completed.**
+
+   **(vi) `/goal`** is not a build — it is how Sam and the terminal USE a big
+   task. Document it in `CLAUDE.md` in two lines and stop.
+
+   **CONSTRAINTS ON ALL SIX: no new registry — extend the law registry. No
+   worktree. No new documentation file. Reuse what exists. Show the file list
+   before writing.** `/rename` does not exist; ignore any reference to it.
+
 1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
    always in force; they are not work items to clear.
 
@@ -144,8 +271,8 @@ phone.** State device items as PARKED in a stop report, never as a request.
    new one not yet written), so the profile's recurring `usualGameDay` rule
    re-supplies the very fixture being moved away from. **149 occurrences in one
    suite run.** The rule itself is correct — an unmarked week really does have
-   the usual game — so what is wrong is WHEN it is asked. (An earlier answer,
-   "a before snapshot", was wrong and is withdrawn in the doc.) **(b) `UNDEFINED` is NOT reachable in production** — the only
+   the usual game — so what is wrong is WHEN it is asked. (An earlier answer — *"a before
+   snapshot legitimately in flight"* — was wrong and is withdrawn in the doc.) **(b) `UNDEFINED` is NOT reachable in production** — the only
    production caller of the replan always computes the authority, and the
    replan's inner type already declares it required; every UNDEFINED came from
    suites calling the gateway DIRECTLY, which is the harness entering below the
@@ -223,31 +350,25 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **NOT BUILT:** the range, the advisory finding and the generation target.
    Nothing here says WHICH session should become moderate or at whose expense.
 
-5. **UNPINCH THE FIXTURE WAIST — PAID, `3f62ad62`.** The root is gone:
-   `Section18ContractV2Input.fixtureDay` is now `fixtureDays: readonly number[]`
-   and `anchorsFor` LOOPS, the same `uniqueDays` map `teamTrainingDays` always
-   had. **Measured through the real function first: a Wednesday + Saturday split
-   round resolves BOTH fixtures and `fixtures[0]` kept only the Wednesday** — so
-   the second game had no anchor, and therefore no G-1/G-2 protection, no
-   conditioning credit and no place in the week's identity. Blast radius was 17
-   real references across 5 files (not the 50 raw matches), the contract is NOT
-   persisted (partialize is inputs-only since R1.3) so no migration was owed,
-   and `section18OfferPlacement`'s six local offset parameters are correctly
-   untouched. Six cells, mutation-checked, **sweep 10 of 190 IDENTICAL to
-   baseline**. **Sam's "add a game" button is no longer blocked on this line.**
-   **NOT DONE:** the twelve downstream `.find()`/`[0]` symptom sites still
-   collapse locally — harmless while they read a list that is now complete, and
-   each is its own small unit. **The KIND still comes from the first fixture; a
-   week mixing a practice match with a game has no declared mode and that is
-   Sam's call if it becomes reachable.**
+5. **THE 17 SCENARIOS MUST REPORT SAM'S PREFERENCES, NOT JUST HARD LIMITS.**
+   **Sam's step 3 of three, approved 2026-08-12, and his oldest fear:** *"I
+   don't want to get 2 weeks down the line and realise that a weekly template
+   optimised for that and that alone."*
 
-   ~~ORIGINAL ORDER~~ `derivedWeekContract.ts:90`
-   `const fixture = fixtures[0] ?? null` is the ROOT; the twelve `.find()`/`[0]`
-   sites are symptoms. Then `Section18ContractV2Input.fixtureDay` →
-   `fixtureDays: number[]` and `anchorsFor` mapping over it
-   (`weeklyExposureContractV2.ts:693-736`). Consumers that already `.filter()`
-   need no change. **`HOW_TO_BUILD_THIS_APP` §5.4. Sam's "add a game" button
-   cannot be built until this lands.**
+   **The scenarios currently answer "is this week legal", never "is this a week
+   Sam would write".** That is why item 4's finding — **his 4-hard-plus-1-
+   moderate shape occurs in 2 of 17 weeks, and in ZERO fixture weeks** — went
+   unseen for months. The instrument existed; the question was never asked.
+
+   **BUILD:** every rules-engine change emits a before/after table across all 17
+   — hard violations, whether the 4+1 shape holds, a preference score, and
+   **changed-from-baseline**. Three outcomes, distinguished: **hard failure**
+   (blocks), **preference regression** (continues only with a stated reason),
+   **intentional change** (baseline updated with evidence). **And the one his
+   fear names: a big gain on ONE scenario with broad regression across the rest
+   is REJECTED as over-fitting, not celebrated.**
+   **Extend the existing `HARD_DAY_PROBE` seam — do not add a second flag.**
+   **Do not build 500 synthetic athletes.** Make the 17 report properly first.
 
 6. **PLANNED LOAD IS NOT EXPERIENCED LOAD.**
    `docs/HOW_THE_ATHLETE_TELLS_US_2026-08-12.md`. Hard/moderate/easy stays for
