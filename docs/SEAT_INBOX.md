@@ -1314,6 +1314,12 @@ phone.** State device items as PARKED in a stop report, never as a request.
       its G-1/G-2 protection and its credit. **This item is UI. It does not
       re-open the contract.**
 
+    **OWNED BY THE DESKTOP AGENT, WITH ITEM 16 — BOTH EDIT
+    `HomeScreenV2.tsx`. TERMINAL: DO NOT TAKE THIS ITEM.** Two agents adding
+    controls to the same screen in a shared checkout is how the last merge cost
+    an hour. **Terminal takes 17, 18 and 20**, which are rules and journal files
+    and touch no screen.
+
     **BUILD:**
     (a) **The control shows IN SEASON as well as pre-season**, with the label
     following the phase — "Add a game" in season, "Add a pre-season practice
