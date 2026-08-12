@@ -114,6 +114,9 @@ function names(items: SessionTemplateItem[]): string[] {
  */
 import { ROLES_EXEMPT_FROM_COUNTING } from '../rules/sessionRowCounting';
 
+import { formatStrengthSetsReps } from '../screens/home/dayWorkoutHelpers';
+import { displayReps } from '../rules/prescriptionDisplay';
+
 const NON_COUNTING_EXTRAS = new Set(['team_training', 'mobility']);
 
 console.log('\n[1] Exactly six roles, with a source-grounded mapping rule');
@@ -769,6 +772,37 @@ console.log('\n[12] The screen renders one "Optional work" header, and no per-ro
     /Optional work/.test(code) && !/Optional Recovery Add-on/.test(code),
     'the recovery branch keeps its own template but shares the one header',
   );
+}
+
+// ── A3: ONE MIDDLE NUMBER, NOT A RANGE ────────────────────────────────────
+//
+// Sam's prescription-display law, Bible :4936 (Section 5, source D9): "ranges
+// remain the generation source, the athlete sees a single middle number, logging
+// assumes it." His example at :770: "3x8-12 is written as 3x10".
+//
+// The renderer showed the RANGE, so the athlete picked a number themselves —
+// the exact ambiguity the law exists to end — while the journal scored their
+// load against a midpoint they were never shown. Census A3, found independently
+// by two auditors.
+{
+  const ex = (min: number, max: number, sets = 3) =>
+    formatStrengthSetsReps({ prescribedSets: sets, prescribedRepsMin: min, prescribedRepsMax: max });
+
+  ok('a rep RANGE is shown as a single middle number (Bible :4936)',
+    ex(8, 12) === '3 × 10',
+    `his own example reads "${ex(8, 12)}", not "3 × 10"`);
+
+  ok('a range with no exact middle still shows ONE number, never a range',
+    !ex(8, 10).includes('-') && ex(8, 10) === '3 × 9', ex(8, 10));
+
+  ok('a fixed prescription is unchanged — nothing to collapse',
+    ex(6, 6, 4) === '4 × 6', ex(6, 6, 4));
+
+  ok('the displayed number is always whole — an athlete cannot do 9.5 reps',
+    ([[8, 11], [5, 8], [10, 15], [3, 4]] as Array<[number, number]>).every(([a, b]) => {
+      const n = displayReps(a, b);
+      return n !== null && Number.isInteger(n);
+    }));
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

@@ -1,3 +1,4 @@
+import { displayReps } from '../../rules/prescriptionDisplay';
 import { EXERCISE_TAGS } from '../../data/exerciseTags';
 import { getExerciseCue } from '../../data/exerciseCues';
 import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
@@ -246,13 +247,19 @@ export function groupStrengthExercises(exercises: any[]): StrengthGroup[] {
 
 /**
  * Format a "sets × reps" prescription string for strength exercises.
- * "3 × 8" when min==max, "3 × 8–10" when range.
+ *
+ * ONE MIDDLE NUMBER, NOT A RANGE — Sam's prescription-display law, Bible
+ * `:4936`: *"ranges remain the generation source, the athlete sees a single
+ * middle number, logging assumes it."* His example, `:770`: "3x8-12 is written
+ * as 3x10". This rendered the RANGE, so the athlete picked a number themselves —
+ * the exact ambiguity the law exists to end (census A3).
+ *
+ * The number comes from `rules/prescriptionDisplay`, not from arithmetic here,
+ * because the law binds display and logging to the same middle.
  */
 export function formatStrengthSetsReps(exercise: any): string {
-  const reps = exercise.prescribedRepsMin === exercise.prescribedRepsMax
-    ? `${exercise.prescribedRepsMin}`
-    : `${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax}`;
-  return `${exercise.prescribedSets} × ${reps}`;
+  const shown = displayReps(exercise.prescribedRepsMin, exercise.prescribedRepsMax);
+  return `${exercise.prescribedSets} × ${shown ?? exercise.prescribedRepsMin}`;
 }
 
 /**
