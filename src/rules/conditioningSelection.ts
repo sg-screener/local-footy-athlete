@@ -29,6 +29,7 @@
 import {
   CONDITIONING_TEMPLATES,
   LEGACY_CONDITIONING_FORMAT_MAP,
+  MODALITY_RENDERING_RULES,
   type ConditioningModality,
   type ConditioningQuality,
   type ConditioningTemplate,
@@ -307,15 +308,40 @@ function cappedErgModalities(
   return modalities.filter((modality) => !ERG_CAPPED_MODALITIES.has(modality));
 }
 
-/** Sam's cap and the machines it binds — his numbers, not re-authored here. */
-const ERG_CAP_MINUTES = 8;
+/**
+ * SAM'S CAP, READ FROM WHERE HE AUTHORED IT — not re-typed here.
+ *
+ * The first cut of this enforcer DID re-type it (`= 8`, and the three machines
+ * as a literal set), which left `ergCapMinutes` and `excludedModalities` still
+ * "read by nothing but a test" — the exact complaint census C3 was raising.
+ * Two owners for one number is how a cap drifts from the sheet that authored
+ * it: change `erg_interval_cap` and the enforcement would have silently kept
+ * the old ceiling. The rule row is the owner; this reads it.
+ *
+ * `erg_interval_cap` is a required row, so its absence is a data defect and not
+ * a case to degrade quietly through — a missing cap must not read as "no cap".
+ */
+const ERG_CAP_RULE = MODALITY_RENDERING_RULES.find((rule) => rule.id === 'erg_interval_cap');
+if (ERG_CAP_RULE?.ergCapMinutes === undefined || ERG_CAP_RULE.excludedModalities === undefined) {
+  throw new Error('conditioning_erg_interval_cap_rule_missing');
+}
+const ERG_CAP_MINUTES: number = ERG_CAP_RULE.ergCapMinutes;
 const ERG_CAPPED_MODALITIES: ReadonlySet<ConditioningModality> =
-  new Set<ConditioningModality>(['ski', 'row', 'air_bike']);
+  new Set<ConditioningModality>(ERG_CAP_RULE.excludedModalities);
 
 export function renderableModalities(template: ConditioningTemplate): ConditioningModality[] {
   const full = template.modalityNotes.toLowerCase();
   if (/all 5 modalities|any modality/.test(full)) {
-    return ['run', 'bike', 'air_bike', 'ski', 'row'];
+    // CAPPED, like every other exit. This branch used to return uncapped, and
+    // it is the FIRST one — so a row authored as "all 5 modalities" with a work
+    // interval over 8 min would have shipped a ten-minute Ski block past a cap
+    // Sam wrote as HARD. The identical fallback four lines below was already
+    // capped, and its comment says exactly why; the explicit branch was missed
+    // because the enforcer was tested on its OUTPUT and not on each BRANCH.
+    // Found by moving the authored ceiling to 7 and watching this path ignore
+    // it. Latent, not shipping: no authored row today says "all 5 modalities"
+    // AND exceeds 8 minutes — which is one authored row away from a defect.
+    return cappedErgModalities(template, ['run', 'bike', 'air_bike', 'ski', 'row']);
   }
   // A clause like "Ski/Row use 'Steady Blocks'" or "Ski/Row/Air Bike
   // substitute ..." names modalities the row does NOT render on — it points

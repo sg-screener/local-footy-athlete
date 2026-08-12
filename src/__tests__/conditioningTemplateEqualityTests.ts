@@ -618,6 +618,72 @@ ok(
   // Second-scale rows are out of reach of a minutes cap.
   ok('a seconds-based row yields no minute figure',
     longestWorkIntervalMinutes({ workPeriod: '10 s hard' } as never) === null);
+
+  // ── THE ENFORCER READS THE AUTHORED RULE, IT DOES NOT AGREE WITH IT ───────
+  //
+  // C3's own complaint was that `ergCapMinutes` and `excludedModalities` were
+  // "read by nothing but a test". The first enforcer re-typed both as literals,
+  // which satisfied the behaviour and left the complaint TRUE — two owners for
+  // one of Sam's numbers, free to drift apart silently.
+  //
+  // Asserting `ERG_CAP_MINUTES === 8` would be worthless: a hardcoded 8 passes
+  // it. So this MOVES THE AUTHORED NUMBER and requires the behaviour to follow.
+  // A row at exactly 8 minutes is legal under the real cap; drop the ceiling to
+  // 7 and that same row must lose its ergs. Only a reader can do that.
+  {
+    const capRule = MODALITY_RENDERING_RULES.find((r) => r.id === 'erg_interval_cap');
+    ok('the erg cap rule is authored in the sheet, with both fields',
+      capRule?.ergCapMinutes === 8 && capRule?.excludedModalities?.join(',') === 'ski,row,air_bike',
+      JSON.stringify(capRule ?? null));
+
+    const eightMinuteErgRow = CONDITIONING_TEMPLATES.find((t) =>
+      longestWorkIntervalMinutes(t) === 8
+      && renderableModalities(t).some((m) => m === 'ski' || m === 'row' || m === 'air_bike'));
+    ok('an 8-minute row that DOES offer an erg exists — the probe below is not vacuous',
+      eightMinuteErgRow !== undefined, String(eightMinuteErgRow?.name));
+
+    // The probe: re-read the module with the authored ceiling lowered to 7.
+    let lowered: string[] = [];
+    let probeRan = false;
+    if (eightMinuteErgRow) {
+      const original = capRule!.ergCapMinutes;
+      try {
+        (capRule as { ergCapMinutes?: number }).ergCapMinutes = 7;
+        delete require.cache[require.resolve('../rules/conditioningSelection')];
+        const reloaded = require('../rules/conditioningSelection');
+        lowered = reloaded.renderableModalities(eightMinuteErgRow);
+        probeRan = true;
+      } finally {
+        (capRule as { ergCapMinutes?: number }).ergCapMinutes = original;
+        delete require.cache[require.resolve('../rules/conditioningSelection')];
+      }
+    }
+    ok('lowering the AUTHORED cap to 7 strips the ergs off an 8-minute row',
+      probeRan && !lowered.some((m) => m === 'ski' || m === 'row' || m === 'air_bike'),
+      `probeRan=${probeRan} modalities=${lowered.join(',')}`);
+
+    // EVERY BRANCH, NOT THE OUTPUT. The probe above found the "all 5
+    // modalities" branch returning BEFORE the cap was applied — the first exit
+    // of five, and the only uncapped one. It survived because the cap was only
+    // ever asserted over the authored rows, and no authored row today combines
+    // that phrase with a >8 min interval. These are SYNTHETIC, so the guard
+    // does not depend on which rows happen to exist.
+    for (const phrase of ['All 5 modalities.', 'Any modality.']) {
+      ok(`a synthetic 10-minute "${phrase}" row is still capped`,
+        !renderableModalities({
+          modalityNotes: phrase, workPeriod: '10 min continuous',
+        } as never).some((m) => m === 'ski' || m === 'row' || m === 'air_bike'),
+        renderableModalities({
+          modalityNotes: phrase, workPeriod: '10 min continuous',
+        } as never).join(','));
+    }
+    // ...and the same row at 8 minutes keeps all five, so the cell above is
+    // asserting the CAP and not simply that the branch returns nothing.
+    ok('a synthetic 8-minute "All 5 modalities" row keeps all five',
+      renderableModalities({
+        modalityNotes: 'All 5 modalities.', workPeriod: '8 min continuous',
+      } as never).length === 5);
+  }
 }
 
 console.log(

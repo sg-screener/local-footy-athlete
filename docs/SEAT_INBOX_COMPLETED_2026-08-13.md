@@ -141,3 +141,61 @@ size budget Sam pays for in dollars.
     its three cells are INVERTED, not deleted. 36 cells, three fresh mutations
     killed. **`LAW-stop-needs-an-exit` rewritten in the same commit. ITEM 29 IS
     CLOSED.**
+
+29-C3. **⚠ I WAS WRONG — THE CENSUS IS RIGHT AND THE BREACH IS REAL. I READ THE
+    BIBLE AND IT SETTLES IT AGAINST ME.**
+
+    **HIS TEXT, THREE TIMES, UNAMBIGUOUS:**
+    - `:1297` — *"Work intervals longer than 8 minutes are Run or Bike only. Ski,
+      Row and Air Bike have a HARD CAP of 8 minutes **in any one work
+      interval**."*
+    - `:1401` (Rower) and `:1402` (Ski) — *"HARD CAP 8 minutes in any one work
+      interval... **Anything longer than 8 minutes must be Run or Bike.**"*
+
+    **"IN ANY ONE WORK INTERVAL" COVERS A CONTINUOUS BLOCK.** A single continuous
+    10-minute piece IS one work interval — it is the largest possible one. My
+    "a continuous block is not an interval" reading was a distinction Sam never
+    drew, invented to explain away a row, and **it would have dismissed a real
+    defect.**
+    **THE "Short Flush" ROW STRADDLES THE CAP:** *"one continuous 8–10 min
+    block"* complies at 8 and breaches at 9 or 10. Its own note calling it
+    *"the cap-compliant option"* is true only of the bottom of its range.
+    **SO C3 IS BUILDABLE AND THE RULE IS CLEAR:** Ski, Row and Air Bike may not
+    render for any work interval over 8 minutes. `ergCapMinutes`,
+    `uncappedModalities` and `excludedModalities` already encode it and are read
+    by nothing but a test; `renderableModalities` decides by prose regex.
+    Interval length is `workPeriod`, a STRING, so a parser is needed — **and the
+    authored range "8–10 min" must be read at its TOP, since that is what can
+    ship.**
+
+    **OWNED BY THE TERMINAL.**
+
+    **THE CENSUS SAYS** the authored "Short Flush" row breaches the erg cap by
+    offering *"one continuous 8–10 min block"* on Ski/Row.
+    **THE ROW ITSELF SAYS OTHERWISE**, verbatim (`conditioningTemplates.ts:1197`):
+    *"Ski/Row: one continuous 8–10 min block is **the cap-compliant option (rule
+    3)**; Air Bike allowed (ruling 5)."* **Sam wrote that it complies, and cited
+    the rule while doing it.**
+    **THE LIKELY RESOLUTION, and it is a UNIT question — the fourth this
+    session:** the cap governs *"work intervals over 8 min"*. **A continuous
+    flush block is not a work interval.** If so the row is compliant, the census
+    row is over-called, and **an enforcer built to the census's reading would
+    REJECT one of Sam's own authored rows.**
+    **SO: establish what the cap counts before enforcing it.** Does
+    `ergCapMinutes` bound an interval inside repeated work, or any continuous
+    block? Bible `:1297` and `:1401-1402` are the text to read.
+    **THE REST OF C3 STANDS AND IS BUILDABLE:** `ergCapMinutes: 8`,
+    `uncappedModalities`, `excludedModalities` are data read by **nothing but a
+    test**, and `renderableModalities` decides Ski/Row by a **prose regex** over
+    `modalityNotes`. Interval length lives in `workPeriod`, which is a STRING —
+    so enforcement needs a parser over authored text, and that parser must not
+    mistake a continuous block for an interval.
+
+    **CLOSED 2026-08-13 BY THE TERMINAL.** Built at `conditioningSelection.ts`
+    (`longestWorkIntervalMinutes` reads the authored range at its TOP;
+    `cappedErgModalities` strips ski/row/air_bike above the ceiling). Then two
+    things this item asked for that the first cut had not done: the enforcer now
+    READS `erg_interval_cap` instead of re-typing 8 — the item's own complaint was
+    that the data was "read by nothing but a test", and a literal left it true —
+    and the `all 5 modalities` branch, which returned BEFORE the cap, is capped
+    like every other exit. 68 cells, three mutants killed.
