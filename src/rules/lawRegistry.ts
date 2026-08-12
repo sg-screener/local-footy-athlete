@@ -704,6 +704,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BUILT 2026-08-10. Reads docs/SEAT_INBOX.md STRUCTURE: exactly one `## Unprocessed`, it is the FIRST section, and a processed section exists below it. Violated and repaired by hand on 2026-08-10 (74070cf2) before this existed. NOT guarded by test:seat-inbox-hook, which reads the queue\'s CONTENT and says nothing about the document\'s shape. THE CHECKER WAS WRONG ON ITS OWN FIRST RUN — it trimmed lines and read an INDENTED QUOTATION of the law (SEAT_INBOX.md:317) as a second queue; a heading is only a heading at column 0, and that regression now has its own cell.',
     },
   },
+  {
+    id: 'LAW-definition-of-done',
+    law: 'Finished means the athlete can see it: the proof is the visible Program flow, a UI change needs simulator proof, a persistence claim needs a relaunch, a generation change needs the full scenario report — and the only three words for a claim are WORKING, BUILT and WRITTEN.',
+    ruledAt: 'docs/SEAT_INBOX.md item 0d(i), Sam 2026-08-12: CLAUDE.md "DOES NOT SAY WHAT COUNTS AS FINISHED. It governs how to TALK to Sam and nothing else." Written into CLAUDE.md "WHAT COUNTS AS FINISHED" the same day.',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12, AND THE ROW SAYS WHICH HALF. The cell holds what a script can see: the section exists in CLAUDE.md, it still offers all three words, the banned-words line is still there, and EVERY COMMAND IT NAMES IS REAL — a command table is the part of a doc that rots first, and a renamed script leaves the instruction looking exactly as authoritative as a true one. PARTIAL, stated rather than implied: the JUDGMENT half — is this proof really athlete-visible — is carried by lfa-verifier and scripts/completion-gate.sh, neither of which is a cell. Mutations 2026-08-12: renaming lfa:dev in package.json reds it (the doc goes stale), and replacing the banned-words line reds it. The placeholder `npm run test:<name>` is skipped deliberately — an early version read it as the script name `test:` and reddened on correct prose.',
+    },
+  },
+  {
+    id: 'LAW-one-startup-command',
+    law: 'There is exactly ONE startup recipe — `npm run lfa:dev`, which is `scripts/qa-start.sh` — and it reaches a RUNNING app, not a booted simulator.',
+    ruledAt: 'docs/SEAT_INBOX.md item 0d(ii), Sam 2026-08-12: the startup recipe "is rediscovered every session ... Do not leave several startup scripts or temporary variants behind — one."',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. The cell scans scripts/ for any OTHER file that starts the dev server (comments stripped — prose naming a command is not a use) and asserts npm run lfa:dev invokes the one script. Mutations: a fabricated scripts/tmp-rival-start.sh reds it; renaming lfa:dev reds it. SCOPE IS SCRIPT FILES, not npm scripts — `start`, `web` and `dev:coach-semantic-active` are one-line Expo passthroughs, not recipes, and a law that reddened on them would be switched off within a week. WHAT THE ORDER ASKED FOR THAT A CELL CANNOT HOLD: that the command reaches a running app. Proven by hand on 2026-08-12 — launched com.localfootyathlete.app on the booted simulator (pid 35161) and screenshotted the Profile screen.',
+    },
+  },
 
   // ── (b) THE COACH REBUILD LAWS ────────────────────────────────────────────
   {

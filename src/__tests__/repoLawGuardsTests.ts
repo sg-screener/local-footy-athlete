@@ -1651,7 +1651,152 @@ run('the two-meanings class keeps counting its sightings', () => {
     + 'added, never absorbed, and the ones already found are what make it a class.');
 });
 
+// ── LAW-one-startup-command ────────────────────────────────────────────────
+//
+// Seat inbox 0d(ii), Sam 2026-08-12: the startup recipe — environment, Metro,
+// which simulator, which app — *"is rediscovered every session"*, and the order
+// ends **"Do not leave several startup scripts or temporary variants behind —
+// one."**
+//
+// A second startup script does not announce itself. It arrives as
+// `qa-start-2.sh` or `run-dev-tmp.sh` in a hurry, both work for a week, and then
+// they drift and the recipe is a question again. That is what this counts.
+//
+// SCOPE IS SCRIPT FILES, not npm scripts. `start`, `web` and
+// `dev:coach-semantic-active` are one-line Expo passthroughs that have always
+// existed and are not recipes; scoping the law to them would red on day one and
+// be turned off by the end of the week.
+
+const THE_STARTUP_SCRIPT = 'scripts/qa-start.sh';
+const THE_STARTUP_COMMAND = 'lfa:dev';
+
+/** Strips `#` and `//` line comments — prose naming a command is not a use. */
+function withoutLineComments(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => line.replace(/(^|\s)(#|\/\/).*$/, '$1'))
+    .join('\n');
+}
+
+/** Pure: committed scripts that start the dev server and are not THE one. */
+function rivalStartupScripts(
+  scripts: readonly { readonly file: string; readonly text: string }[],
+): string[] {
+  return scripts
+    .filter((script) => script.file !== THE_STARTUP_SCRIPT)
+    .filter((script) => /\bexpo start\b/.test(withoutLineComments(script.text)))
+    .map((script) => script.file);
+}
+
+// ── LAW-definition-of-done ─────────────────────────────────────────────────
+//
+// `CLAUDE.md` gained a "WHAT COUNTS AS FINISHED" section on 2026-08-12 (0d(i)).
+// The judgment half of that law — is the athlete-visible proof real — is what
+// `lfa-verifier` and the completion gate carry. **The half a script can hold is
+// that the section is THERE and that the commands it hands a new session are
+// REAL**, because a command table is the part of a doc that rots first: a
+// renamed npm script leaves the instruction looking authoritative and wrong.
+
+const DONE_SECTION = '## WHAT COUNTS AS FINISHED';
+const THE_THREE_WORDS: readonly string[] = ['WORKING', 'BUILT', 'WRITTEN'];
+
+/**
+ * Pure: commands a document names that do not exist.
+ *
+ * PLACEHOLDERS ARE NOT COMMANDS. The table deliberately writes
+ * `npm run test:<name>` for "whichever suite this is", and a checker that reads
+ * an angle bracket as a script name would red on correct prose — the fastest
+ * way to get a cell deleted.
+ */
+function commandsNamedThatDoNotExist(
+  markdown: string,
+  npmScripts: readonly string[],
+  fileExists: (relativePath: string) => boolean,
+): string[] {
+  const missing: string[] = [];
+  // `<>` is INSIDE the character class deliberately: stopping the match at the
+  // angle bracket turns `npm run test:<name>` into the script name `test:`,
+  // which no package.json has — the placeholder must be matched to be skipped.
+  for (const match of markdown.matchAll(/npm run ([A-Za-z0-9:._<>-]+)/g)) {
+    const name = match[1];
+    if (name.includes('<')) continue;
+    if (!npmScripts.includes(name)) missing.push(`npm run ${name}`);
+  }
+  for (const match of markdown.matchAll(/\bscripts\/[A-Za-z0-9/_.-]+\.sh\b/g)) {
+    if (!fileExists(match[0])) missing.push(match[0]);
+  }
+  return [...new Set(missing)];
+}
+
+run('there is exactly ONE startup script, and lfa:dev invokes it', () => {
+  const scripts = filesUnder(path.join(repoRoot, 'scripts'), ['.sh', '.js', '.ts'])
+    .map((file) => ({
+      file: path.relative(repoRoot, file),
+      text: fs.readFileSync(file, 'utf8'),
+    }));
+  assert(scripts.length > 10, `the scan found only ${scripts.length} scripts — it is reading the wrong tree`);
+  assert(fs.existsSync(path.join(repoRoot, THE_STARTUP_SCRIPT)),
+    `${THE_STARTUP_SCRIPT} is gone — the one command has nothing behind it`);
+
+  const rivals = rivalStartupScripts(scripts);
+  assert(rivals.length === 0,
+    `a second startup script exists: ${rivals.join(', ')}. There is one recipe `
+    + `(${THE_STARTUP_SCRIPT}); add a flag to it rather than a file beside it.`);
+
+  const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const command: unknown = pkg.scripts?.[THE_STARTUP_COMMAND];
+  assert(typeof command === 'string' && command.includes(THE_STARTUP_SCRIPT),
+    `npm run ${THE_STARTUP_COMMAND} must invoke ${THE_STARTUP_SCRIPT}; it is ${String(command)}`);
+});
+
+run('CLAUDE.md says what counts as finished, and every command it names is real', () => {
+  const claudeMd = fs.readFileSync(path.join(repoRoot, 'CLAUDE.md'), 'utf8');
+  assert(claudeMd.includes(DONE_SECTION),
+    `CLAUDE.md has lost "${DONE_SECTION}" — "finished" goes back to being decided fresh every session`);
+
+  const sectionAt = claudeMd.indexOf(DONE_SECTION);
+  const section = claudeMd.slice(sectionAt, claudeMd.indexOf('\n## ', sectionAt + 1));
+  for (const word of THE_THREE_WORDS) {
+    assert(section.includes(`**${word}**`),
+      `the section no longer offers ${word} — the three words are the whole vocabulary`);
+  }
+  assert(/Banned:.*\bdone\b/i.test(section),
+    'the banned-words line is gone, so "done" is legal again');
+
+  const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const missing = commandsNamedThatDoNotExist(
+    claudeMd,
+    Object.keys(pkg.scripts ?? {}),
+    (relative) => fs.existsSync(path.join(repoRoot, relative)),
+  );
+  assert(missing.length === 0,
+    `CLAUDE.md hands a new session commands that do not exist: ${missing.join(', ')}. `
+    + 'A stale instruction reads exactly as authoritative as a true one.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the one startup script, probed BOTH directions ──
+  assert(rivalStartupScripts([{ file: 'scripts/qa-start-2.sh', text: 'npx expo start --port 8082' }]).length === 1,
+    'a second startup script passed — that is the whole law');
+  assert(rivalStartupScripts([{ file: THE_STARTUP_SCRIPT, text: 'npx expo start' }]).length === 0,
+    'THE startup script was flagged as its own rival');
+  assert(rivalStartupScripts([{ file: 'scripts/other.sh', text: '# never run expo start by hand' }]).length === 0,
+    'a COMMENT naming the command was read as a use of it');
+  assert(rivalStartupScripts([{ file: 'scripts/other.sh', text: 'echo hello' }]).length === 0,
+    'an ordinary script was read as a startup recipe');
+
+  // ── the commands CLAUDE.md names, probed BOTH directions ──
+  assert(commandsNamedThatDoNotExist('run `npm run gone:away`', ['lfa:dev'], () => true).length === 1,
+    'a command that does not exist passed — a stale instruction is the rot this catches');
+  assert(commandsNamedThatDoNotExist('run `npm run lfa:dev`', ['lfa:dev'], () => true).length === 0,
+    'a real command was reported missing');
+  assert(commandsNamedThatDoNotExist('run `npm run test:<name>`', [], () => true).length === 0,
+    'a PLACEHOLDER was read as a script name — the table writes one deliberately');
+  assert(commandsNamedThatDoNotExist('see `scripts/gone.sh`', [], () => false).length === 1,
+    'a named script file that does not exist passed');
+  assert(commandsNamedThatDoNotExist('see `scripts/sweep.sh`', [], () => true).length === 0,
+    'an existing script file was reported missing');
+
   // ── the order-hiding heading, probed BOTH directions ──
   // THE FOUNDING CASE, REBUILT: the exact shape this terminal wrote on
   // 2026-08-12 when it repaired the inbox by hand.

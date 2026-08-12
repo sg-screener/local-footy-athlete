@@ -60,7 +60,13 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `ab43825c` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `0d TOOLING` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
+  only startup script — the law is `LAW-one-startup-command`). It picks the
+  BOOTED simulator that has the app, starts Metro, and **launches**; it fails
+  closed naming `npx expo run:ios`. Recipe recorded as the `lfa-dev` skill.
+  **`CLAUDE.md` now says what counts as finished** (`LAW-definition-of-done`)
+  and got shorter doing it, 137 → 104 lines.
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has

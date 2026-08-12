@@ -5,11 +5,13 @@
 ## Start everything (one command)
 
 ```bash
-bash scripts/qa-start.sh
+npm run lfa:dev
 ```
 
-Boots the simulator, checks `.env`, starts Metro from THIS checkout on
-port 8081. Then reset to a deterministic week:
+Checks `.env`, picks a simulator (a booted one with the app wins — see
+`scripts/qa-start.sh`), boots it, starts Metro from THIS checkout on port 8081,
+and **launches the app**. Safe to run twice. **It is the only startup script in
+this repo; do not add a second.** Then reset to a deterministic week:
 
 ```bash
 E2E_METRO_URL=http://127.0.0.1:8081 scripts/dev-e2e/run-maestro-ios.sh \

@@ -52,85 +52,53 @@ then works it in vertical slices, checking each slice against that same
 statement rather than against the last thing said. **When a slice drifts from
 the stated goal, the goal wins and the drift is reported, not absorbed.**
 
-The short version: for coach chat bugs, do not add phrase-by-phrase special
-cases as the main fix. Improve the typed intent, context, target-resolution,
-mutation history, executor, or verification layer that explains the whole class
-of behaviour. If the correct abstraction is unclear, ask first.
+## WHAT COUNTS AS FINISHED
 
-## Coach Architecture Escalation Rule
+**Sam, 2026-08-12, on why this section exists:** this file governed how to TALK
+to him and nothing else, so "finished" was decided fresh every session.
 
-For coach chat, AI coach, program-edit, and plan-adjustment work, do not keep
-patching the same pipeline after repeated failures.
+**SOURCE OF TRUTH, IN THIS ORDER.** The task's acceptance criteria → the law and
+ruling registry (`src/rules/lawRegistry.ts`, `AGENTS.md`, `docs/SEAT_INBOX.md`)
+→ the executable tests → the code. **The code is evidence of what was BUILT,
+never of what was INTENDED.** A chat message is not a durable ruling: when Sam
+rules, the registry is updated in the same task, or the ruling is lost.
 
-If either of these happens:
+**DONE MEANS THE ATHLETE CAN SEE IT.** The primary proof is the athlete-visible
+Program flow — **not a coach mutation, a log line, a debug marker or an internal
+function call.** A UI change needs simulator proof. A persistence claim needs a
+relaunch. A generation change needs the full scenario report.
 
-- the same class of coach bug appears twice after a supposedly general fix
-- the AI/semantic layer understands the user correctly, but a later layer
-  changes, blocks, downgrades, or reinterprets that intent
+**EVERY NEW DOMAIN FIELD NAMES ITS WRITER, ITS READER AND ITS BEHAVIOURAL TEST,
+IN THE SAME TASK.** A field with no reader is not half-built, it is dead weight
+that later code will trust. `canOverride` was written nine times and read zero.
 
-then stop implementation immediately.
+**THREE WORDS, AND ONLY THESE THREE.** **WORKING** — name the test that fails if
+it breaks. **BUILT** — the code exists, nothing checks it. **WRITTEN** — a doc
+says so, no code. **Banned: done, shipped, wired, handled, sorted, passing.**
 
-Before writing more code, produce an architecture reassessment that answers:
+**THE COMMANDS.**
 
-1. What is the current source of truth?
-2. How many representations of the user request exist?
-3. Where can intent, domain, date, target, or scope be reinterpreted?
-4. Which layer should own the decision?
-5. What simpler architecture would remove representations instead of adding
-   more guards?
-6. Which legacy paths should be bypassed or retired rather than patched?
-7. What tests prove the new ownership boundary?
+| what | command |
+| --- | --- |
+| start the app | `npm run lfa:dev` |
+| typecheck | `npm run test:compile` — the ratchet, and the gate. `npm run typecheck` is the raw compiler over a documented backlog; it is not the gate |
+| one suite | `npm run test:<name>` |
+| the whole chain, without stopping at the first red | `scripts/sweep.sh <label>` — `npm run test:bible` stops at the first failing suite and hides the rest |
+| scenarios | `npm run test:scenarios`, and `npm run test:qa` for the full report |
 
-Do not add another resolver, guard, fallback, regex, compatibility branch,
-phrase handler, or finaliser patch until the reassessment is approved.
+## Coach chat, program edits and plan adjustment
 
-Prefer architectures that reduce the number of representations and ownership
-boundaries.
-
-## Stop-Patching Trigger
-
-For coach chat, AI coach, program-edit, and plan-adjustment failures, treat
-these phrases and implementation moves as red flags:
-
-- "just add a guard"
-- "fallback to legacy"
-- "one more resolver"
-- "compatibility path"
-- "targetItemId guard"
-- "special-case this route"
-- "patch the finaliser"
-
-When these appear after repeated coach failures, reassess whether the pipeline
-itself is wrong before coding further.
+> **MOVED to `.claude/rules/coach-and-plan-edits.md`** on 2026-08-12 — the Coach
+> Intelligence Rules, the Architecture Escalation Rule and the Stop-Patching
+> Trigger all live there and load when coach or plan-edit files are touched.
+> **Nothing was deleted. If that mechanism is ever inert, read that file
+> directly — it is tracked, not local.** The short version, because it decides
+> whether to open the file at all: **do not fix a coach bug with phrase-by-phrase
+> special cases; fix the layer that explains the whole class.**
 
 ## Elegant Solution Requirement
 
-**STANDING — NOT "WHEN ASKED". Sam, 2026-08-10, verbatim:** *"I want to do this
-in the most elegant way. EVERYTHING SHOULD BE DONE IN THE MOST ELEGANT WAY."*
-
-**"When asked" is deleted, and the deletion has a founding case: the seat applied
-this law to CODE all week and never once to the PROCESS**, which is how a broken
-simulator rig sat unnoticed since 18 July and a 176-suite chain kept being paid
-in full for one-line changes. **The law's subject is the work, not the code** —
-process, instruments and chains answer to it the same way an abstraction does.
-
-Compare at least two options before coding:
-
-1. Incremental fix inside the current system.
-2. Simpler source-of-truth / ownership redesign.
-
-If the redesign removes whole classes of bugs, recommend it even if it is a
-bigger pivot.
-
-For AI coach one-off edits, prefer:
-
-visible program snapshot
-
-- user message
-  -> proposed revised visible plan
-  -> diff
-  -> validation
-  -> override
-  -> visible verification
-
-over command/resolver/event chains unless there is a clear reason not to.
+> **Lives in `AGENTS.md` "Elegant Solution Requirement"**, which this file
+> already tells you to read. It was duplicated here word for word until
+> 2026-08-12. **STANDING, not "when asked", and its subject is the WORK — process
+> and instruments answer to it the same way an abstraction does.**

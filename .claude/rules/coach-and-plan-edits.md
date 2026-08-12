@@ -80,3 +80,24 @@ phrase handler, or finaliser patch until the reassessment is approved.
 
 Prefer architectures that reduce the number of representations and ownership
 boundaries.
+
+## Stop-Patching Trigger
+
+**MOVED HERE FROM `CLAUDE.md` ON 2026-08-12, word for word.** It is coach and
+plan-edit law, so it belongs where that law loads; `CLAUDE.md` keeps a pointer.
+Reports written before that date cite it as "CLAUDE.md's stop-patching trigger"
+and those citations stay true — the pointer is one hop.
+
+For coach chat, AI coach, program-edit, and plan-adjustment failures, treat
+these phrases and implementation moves as red flags:
+
+- "just add a guard"
+- "fallback to legacy"
+- "one more resolver"
+- "compatibility path"
+- "targetItemId guard"
+- "special-case this route"
+- "patch the finaliser"
+
+When these appear after repeated coach failures, reassess whether the pipeline
+itself is wrong before coding further.

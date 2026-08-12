@@ -28,12 +28,11 @@ audit, group failures after).
       fix, Group C, Group D, stack-primitive stage, anchor-day swap
       regression verified, `SUPPORTED_ATHLETE_ACTIONS.md` game-day contract
       text, ship logistics). This checklist is blocker #9 — the last one.
-- [ ] `bash scripts/qa-start.sh` boots cleanly (simulator boots or is
-      already running, `.env` present with `EXPO_PUBLIC_SUPABASE_URL`,
-      Metro serving on the resolved port). Note: this script is currently
-      untracked (`??` in `git status`) — confirm it's been committed before
-      relying on it as a release-gate step for anyone other than the
-      current checkout.
+- [ ] `npm run lfa:dev` reaches a RUNNING APP (simulator booted, `.env`
+      present with `EXPO_PUBLIC_SUPABASE_URL`, Metro serving on the resolved
+      port, and the app launched — not merely "boots cleanly"). It is
+      `scripts/qa-start.sh`, tracked since 2026-08-12 and the only startup
+      script in the repo.
 - [ ] Seed reset succeeds:
       `E2E_METRO_URL=http://127.0.0.1:8081 scripts/dev-e2e/run-maestro-ios.sh .maestro/common/reset-seed.yaml -e SEED_ID=standard-in-season-week`
 

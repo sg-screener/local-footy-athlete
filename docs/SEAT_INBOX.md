@@ -266,6 +266,95 @@ phone.** State device items as PARKED in a stop report, never as a request.
    worktree. No new documentation file. Reuse what exists. Show the file list
    before writing.** `/rename` does not exist; ignore any reference to it.
 
+0d. **BOTH BUILT AND BOTH GUARDED — `CLAUDE.md` 137 -> 104 lines, and
+   `npm run lfa:dev` reached a RUNNING app.**
+   **(i)** `CLAUDE.md` gained `## WHAT COUNTS AS FINISHED` — source-of-truth
+   order, athlete-visible proof, writer/reader/test per new field, the three
+   words, and a command table. **It got SHORTER, not longer:** the Coach
+   Escalation Rule and the Stop-Patching Trigger moved to
+   `.claude/rules/coach-and-plan-edits.md` (pointer left), and the Elegant
+   Solution Requirement was a word-for-word duplicate of `AGENTS.md` and is now
+   a pointer.
+   **(ii) THE RECIPE ALREADY EXISTED AND WAS NAMED, NOT REWRITTEN** —
+   `scripts/qa-start.sh`, tracked, now behind `npm run lfa:dev`. **It stopped
+   one step short of the order's words:** it booted a simulator and started
+   Metro and left launching the app as homework, which is the step being
+   rediscovered. It now picks **the booted simulator that has the app** (this
+   machine holds a dozen `LFA Explorer` sims; the default `iPhone 17 Pro` is not
+   the one on screen), launches the app, and **fails closed naming
+   `npx expo run:ios` when nothing has it installed.** Recorded as the `lfa-dev`
+   skill; `QA_RUNBOOK` and `FINAL_QA_CHECKLIST` now name the one command.
+   **PROVEN, NOT ASSERTED: launched on the booted sim (pid 35161) and
+   screenshotted — the Profile screen, real state.**
+   **TWO REGISTRY ROWS, BOTH BORN GUARDED** by `test:repo-law-guards`
+   (37 cells, +2, mutation-tested three ways): `LAW-definition-of-done` and
+   `LAW-one-startup-command`. Registry **97/65 -> 99/67, UNENFORCED unmoved at
+   32.** The done-row's receipt says out loud which half a script cannot hold.
+   **FOUND WHILE BUILDING:** `simctl list devices` pads its lines with a
+   trailing space, so the first device parser matched NOTHING and the script
+   reported "not installed on any simulator" about a simulator with the app open
+   on it. Fixed and commented at the regex.
+
+   ~~ORIGINAL~~ **THE TWO PIECES OF THE TOOLING PLAN THE SEAT MISSED. Sam caught it:**
+   *"all of chat is done? wasn't there like 7-8 things?"* — **there were, and
+   0c only covered six. The seat said "all of it" without counting.**
+
+   **(i) `CLAUDE.md` DOES NOT SAY WHAT COUNTS AS FINISHED.** It governs how to
+   TALK to Sam and nothing else. Add, in his words not jargon:
+   - **Source-of-truth order:** the task's acceptance criteria → the law/ruling
+     registry → executable tests → the code (which is evidence of what was
+     built, NOT of what was intended). **Chat messages are not durable rulings —
+     when Sam rules, the registry is updated in the same task.**
+   - **Definition of done:** the primary proof is the athlete-visible Program
+     flow — **not a coach mutation, a log line, a debug marker or an internal
+     function call.** UI changes need simulator proof. Persistence claims need a
+     relaunch. Generation changes need the full scenario report.
+   - **Every new domain field needs a writer, a reader and a behavioural test,
+     named in the same task.** *(This alone would have caught `canOverride`,
+     written nine times and read zero.)*
+   - **The three words:** WORKING / BUILT / WRITTEN. Banned: done, shipped,
+     wired, handled, sorted, passing.
+   - **The actual commands** it cannot infer — start, typecheck, targeted tests,
+     scenarios.
+   **KEEP IT SHORT.** It is 130 lines; adding this should not double it. **Cut
+   anything now covered by `AGENTS.md` or the path-scoped rules in the same
+   edit.**
+
+   **(ii) ONE COMMAND THAT STARTS EVERYTHING.** Today the startup recipe —
+   environment, Metro, which simulator, which app, reaching a known baseline —
+   is rediscovered every session. **Make ONE deterministic command
+   (`npm run lfa:dev`) that gets to a running app, and record the recipe as a
+   skill so it is not re-derived.** `/run-skill-generator` is the intended tool.
+   **Do not leave several startup scripts or temporary variants behind — one.**
+   **CHECK FIRST whether a working recipe already exists** in `package.json` or
+   the Maestro setup; if it does, name it rather than writing a second one.
+
+0e. **THE LAST TWO OF THE TOOLING PLAN. Sam counted and the seat was wrong
+   twice — "all of chat is done" was said before checking, then 0d covered only
+   two of the four remaining.** These are the last.
+
+   **(i) FIVE PERMANENT ATHLETE FLOWS, NOT A THROWAWAY PER BUG.** The plan:
+   *"You do not need a brand-new temporary Maestro flow for every bug. Keep a
+   handful of canonical athlete flows."* Named: **move a session; delete a
+   session; preview and approve a repaired week; relaunch and prove persistence;
+   clear/reverse an adjustment.** **CENSUS FIRST — `.maestro/` already holds
+   flows; say which of the five exist, which are one-offs that should be retired
+   into them, and which are genuinely missing.** Do not write five new ones on
+   top of what is there. **And the simulator pane now covers interactive
+   checking — Maestro's job is the repeatable regression set, nothing else.**
+
+   **(ii) SAY WHAT AUTO MEMORY IS FOR, AND WHAT IT MUST NEVER HOLD.** Two lines
+   in `CLAUDE.md` (fold into 0d(i), do not write a new file):
+   **YES — environment and navigation:** the right Metro command, an env var a
+   test needs, which module owns program persistence, a simulator reset quirk.
+   **NEVER — product law:** what makes a valid football week, what deletion
+   means, whether athlete intent is hard or soft, which session may move, what
+   `canOverride` is for. **Those live in the law registry or they do not exist.**
+   **This is the trap Sam has actually been in** — a ruling remembered in a place
+   that is machine-local, model-authored and silently truncated is a ruling that
+   will vanish. *"i constantly give a fix and a law and believe you will remember
+   and you never fucking do."*
+
 1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
    always in force; they are not work items to clear.
 
