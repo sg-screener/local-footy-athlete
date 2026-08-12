@@ -412,7 +412,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-phase-shift-days-wrap-four-three',
     law: 'Every seven-day selector in the season-phase shift sheet wraps as a centred row of four followed by a centred row of three, never six plus an orphaned seventh button.',
-    ruledAt: 'Sam 2026-08-12 direct request: "maybe just make it 4 and 3" after the seven buttons rendered 6 + 1',
+    ruledAt: 'docs/PHASE_SHIFT_DAY_GRID_BOUNDARY_2026-08-12.md "What Sam ordered" — Sam 2026-08-12 direct request: "maybe just make it 4 and 3" after the seven buttons rendered 6 + 1',
     guard: {
       state: 'guarded',
       by: 'test:profile-reset-ui',
@@ -478,7 +478,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-tired-severity-icon-ladder',
     law: 'The Day-screen Tired sheet uses a blue moon for Bit tired today, an amber half-full battery for Pretty flat, and a red skull-and-crossbones for Totally cooked.',
-    ruledAt: 'Sam 2026-08-12 direct request, with supplied skull-and-crossbones reference image',
+    ruledAt: 'docs/TIRED_ICON_LADDER_BOUNDARY_2026-08-12.md "What Sam ordered" — Sam 2026-08-12 direct request, with supplied skull-and-crossbones reference image',
     guard: {
       state: 'guarded',
       by: 'test:day-first-timeline + test:approved-icons',
@@ -1351,7 +1351,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   {
     id: 'LAW-program-navigation-saved-date-range',
     law: 'The Day/Week choice remains available and unchanged on every program week, and week navigation cannot leave the Monday-Sunday span containing the saved program start and end dates.',
-    ruledAt: 'Sam 2026-08-12 direct request: the toggle stays stuck for all weeks and navigation stops wherever the athlete\'s actual program starts and ends, without assuming a fixed block length',
+    ruledAt: 'docs/PROGRAM_WEEK_NAVIGATION_BOUNDARY_2026-08-12.md "What Sam ordered" — Sam 2026-08-12 direct request: the toggle stays stuck for all weeks and navigation stops wherever the athlete\'s actual program starts and ends, without assuming a fixed block length',
     guard: {
       state: 'guarded',
       by: 'test:day-first-timeline',

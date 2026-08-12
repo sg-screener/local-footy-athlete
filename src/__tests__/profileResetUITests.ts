@@ -98,7 +98,17 @@ const profileEquipmentEditor = fs.readFileSync(PROFILE_EQUIPMENT_EDITOR_PATH, 'u
 // ═════════════════════════════════════════════════════════════════════
 section('[0] Season phase shift day-grid geometry');
 const phaseSheetAt = homeV2.indexOf('export function SeasonPhaseShiftSheet(');
-const phaseSheetEnd = homeV2.indexOf('interface BuildingStateProps', phaseSheetAt);
+// RE-AIMED 2026-08-12. The end anchor was `interface BuildingStateProps`, and
+// `BuildingState` MOVED to `components/RebuildSheet` with SEAT_INBOX item 8 —
+// Coach / My Status can now cause a rebuild, so the progress sheet had to be
+// mountable from two screens. `indexOf` returns -1 for a missing anchor and a
+// slice to -1 silently yields the WRONG region, which is why this cell asserts
+// the region was found before asserting anything about it. It caught the move,
+// which is the anchoring law working as intended.
+//
+// The new end is the file's stylesheet — the last thing after the sheet, and a
+// declaration that cannot leave while the screen has any styling at all.
+const phaseSheetEnd = homeV2.indexOf('const styles = StyleSheet.create(', phaseSheetAt);
 const phaseSheet = homeV2.slice(phaseSheetAt, phaseSheetEnd);
 ok(
   'HomeScreenV2 is the live Program screen and its phase sheet region was found',
