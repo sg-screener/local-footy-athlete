@@ -1246,6 +1246,61 @@ phone.** State device items as PARKED in a stop report, never as a request.
     not happen" and "I am not looking where it happens". **They are not the same
     finding and must never again be reported as if they were.**
 
+28-C1e. **THE COD LABEL IS NOT A NEW RULING — SAM ALREADY NAMED IT. DO NOT ASK
+    HIM FOR A WORD HE HAS WRITTEN.**
+
+    **The terminal was right to refuse to invent athlete-facing text, and right
+    that finding the label before placement shipped saved a wrong word reaching
+    Sam. It then parked a question that a grep dissolves** — the same shape as
+    the seat's own session-size mistake earlier tonight. **BIBLE FIRST applies to
+    COPY as much as to coaching.**
+
+    **HIS NAME FOR IT, from his own sheet, three receipts:**
+    - `docs/CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:122` — *"Applies to the
+      whole **Change of Direction/Decel** row"*.
+    - `docs/conditioning_templates_sam_state_2026-07-25.json:405` and `:709` —
+      the TAB is titled **"Change of Direction/Decel"**. That file is Sam's own
+      annotated state, not a seat's paraphrase.
+    - `:326` calls it *"the Bible's own thinnest category"* — his framing, his
+      words.
+
+    **SO THE LABEL IS `Change of Direction/Decel`, ORIGIN-SIGNED.** Using an
+    athlete-facing name Sam himself wrote is not invention. **Register it as
+    `signed_sentence` with provenance citing the sheet tab and this item** — do
+    not mint a new phrase beside it.
+
+    **ANSWERED 2026-08-13 — THE CARD SHOWS THE TEMPLATE NAME, SO COD NEEDS
+    NOTHING NEW.** Measured on a generated week: a standalone conditioning card
+    reads **`name="Long Aerobic Intervals"`** — Sam's own template name — with
+    rows `Warm-up | Long Aerobic Intervals`. Combined days show the STRENGTH name
+    (`"Upper Push"`) with conditioning attached.
+    **So a placed COD session would read *Up-Back Shuttle* / *45-Degree Cut Reps*
+    / *Low-Intensity Deceleration Drills* / *Deceleration and Landing Work* — his
+    four authored names, already correct, needing no category label.**
+    **THE LABEL FIX (`28d804cd`) WAS STILL RIGHT:** the focus text is planning
+    vocabulary, not the card, and it was borrowing the INTERVAL sentence. It is
+    now a total map with the compiler as enforcer. **But it is not what the
+    athlete reads, and the card needs no further work for COD.**
+
+    ~~ORIGINAL~~ **AND THE SESSION CARD MAY NOT NEED THE CATEGORY AT ALL.** Each of the four
+    templates already carries Sam's own authored NAME — *Up-Back Shuttle*,
+    *Low-Intensity Deceleration Drills*, *Deceleration and Landing Work*,
+    *45-Degree Cut Reps* (`conditioningTemplates.ts:628,645,662,679`).
+    **Check what the other qualities put on the card before deciding COD needs a
+    category label** — if the card shows the template name, COD needs nothing
+    new and the only defect is the fall-through to the interval text.
+
+    **THE FALL-THROUGH IS THE REAL FINDING AND IT IS A CLASS, NOT A ROW.** A
+    quality with no wording silently borrows another quality's sentence. **That
+    is the same silent-substitution shape as the category waist — an unmapped
+    thing quietly becomes a mapped thing instead of failing.** Make it a total
+    map with a compile-time enforcer, exactly as `REQUESTABLE_CATEGORIES_FOR_
+    QUALITY` did, and report any OTHER quality currently borrowing wording it
+    was never given. **That census is the unit; COD is one row of it.**
+
+    **ONE-WORD VETO ONLY:** Sam is being shown the label and told it is his own
+    tab name. **If he says nothing, it ships.** Do not hold placement for it.
+
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
 addressable then walk it; the harvest ratchet and a computed tap atlas.
