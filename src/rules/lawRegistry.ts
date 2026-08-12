@@ -553,6 +553,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-rehydration-never-un-finishes',
+    law: 'A rehydration may RESTORE state and may never take it away. Onboarding completion is monotonic within a process — only the athlete\'s own reset door may lower it.',
+    ruledAt: 'docs/SEAT_INBOX.md item 2, 2026-08-12: "Rehydrating an EMPTY profile envelope does not merely fail to restore answers: profileStore\'s merge spreads ...persisted over the live state, so it flips isOnboardingComplete from true to false in memory. An empty envelope actively un-finishes a finished profile."',
+    guard: {
+      state: 'guarded',
+      by: 'test:profile-rehydration-cannot-unfinish',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: `profileStore`\'s merge returned `{ ...currentState, ...persisted, onboardingData: merged }`. It took real care over ONE field — `onboardingData` is spread so a missing answer cannot erase a live one — and then let every OTHER field take the disk\'s word, including `isOnboardingComplete`. THE ASYMMETRY WAS THE WHOLE BUG: someone saw the danger for the answers and did not see that the FLAG saying those answers exist carries it too. Reading back the 103-byte shell an interrupted wipe leaves flipped a finished profile to unfinished IN MEMORY, and that flag gates the app — a finished athlete is sent to the first-run flow with their program still sitting in the other stores, with nothing thrown and nothing logged. Found beside the L16 write-ordering fix (`fd4f68a2`), which fixed what WROTE the shell; this is what happens when one is READ, whatever wrote it. WHAT THE CELLS HOLD: the merge is a NAMED EXPORTED owner (it was an inline zustand callback, so no cell could reach the rule at all), a bare envelope cannot lower a live `true`, and — the non-vacuity arm — a real envelope still RAISES an unfinished live state and persisted answers still merge over live ones, so the guard cannot be satisfied by ignoring the disk. Mutation-checked BOTH directions. `||` and not `??`, because the bare envelope carries `false` rather than nothing and a nullish check would not see it. WHAT IT DOES NOT HOLD, STATED PLAINLY: it protects ONE field. A future field whose absence is destructive needs the same treatment and its own cell; this merge is not generally safe and the owner\'s header says so.',
+    },
+  },
+  {
     id: 'LAW-never-disable-a-set-for-part-of-it',
     law: 'Never disable a whole set because part of it is blocked. Per control, per strand — and the notice retires itself as each is freed.',
     ruledAt: 'docs/SEAT_INBOX.md 2026-08-10, seat: "dimming every button and sending Sam elsewhere for something he could do right there is the same fault mirrored… never disable a set because part of it is blocked"',

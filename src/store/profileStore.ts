@@ -194,6 +194,83 @@ function quarantineDiskCopyBestEffort(): void {
     .catch(() => {});
 }
 
+/**
+ * WHAT A REHYDRATION MAY AND MAY NOT DO — the profile merge, as a named owner.
+ *
+ * ## Why it is a function and not an inline callback
+ *
+ * It was inline until 2026-08-12, which meant the rule it enforces could not be
+ * called by any cell — and the rule turned out to be wrong. A behaviour nothing
+ * can reach is a behaviour nothing can check.
+ *
+ * ## THE DEFECT THIS CLOSES (SEAT_INBOX item 2, "NOT PAID, NOT INVESTIGATED")
+ *
+ * The old body ended `{ ...currentState, ...persisted, onboardingData: merged }`.
+ * It took real care over ONE field — `onboardingData` is merged so a missing
+ * answer cannot erase a live one — and then let every OTHER field take the
+ * disk's word, including `isOnboardingComplete`.
+ *
+ * So reading back a bare envelope (the 103-byte shell an interrupted wipe
+ * leaves) flipped a finished profile to unfinished IN MEMORY. That flag gates
+ * the app: a finished athlete is sent to the first-run flow with their program
+ * still sitting in the other stores. Nothing throws and nothing logs.
+ *
+ * **The asymmetry was the whole bug.** Someone saw the danger for the answers
+ * and did not see that the flag SAYING those answers exist carries it too.
+ *
+ * ## THE RULE: COMPLETION IS MONOTONIC WITHIN A PROCESS
+ *
+ * Onboarding finishing is an EVENT, and reading the disk is not an event. So
+ * this may RAISE the flag from a persisted `true` and may never lower a live
+ * one. Un-finishing has exactly one door and it is the athlete's own —
+ * `resetProfile`, which sets the flag directly and does not come through here.
+ *
+ * ## WHAT IT DELIBERATELY DOES NOT DO
+ *
+ * It does not protect every field. Stating the narrow scope is the honest half:
+ * a future field whose absence is destructive gets the same treatment and its
+ * own cell, and the next reader must not assume this merge is generally safe.
+ */
+export function mergePersistedProfileState(
+  persisted: Partial<ProfileState> | undefined,
+  currentState: ProfileState,
+): ProfileState {
+  const merged = normalizeOnboardingRole({
+    ...currentState.onboardingData,
+    ...(persisted?.onboardingData ?? {}),
+  });
+  // THE ONE WRITER THAT CANNOT GO THROUGH THE OWNER — zustand calls this
+  // itself, and it returns state rather than setting it. It merges, so it
+  // cannot produce the wipe; but a LATE rehydration inside a suspicious
+  // window is exactly the kind of thing four reconstructions could not
+  // rule in or out, so it goes on the tape with its three counts.
+  try {
+    emitAthleteActionEvent(beginAthleteActionTrace({
+      source: 'system',
+      actionType: 'hydration',
+      route: 'profile_store_rehydrate',
+    }, undefined, { forceRoot: true }), 'profile_rehydrated', {
+      persistedAnswerCount: Object.keys(persisted?.onboardingData ?? {}).length,
+      liveAnswerCount: Object.keys(currentState.onboardingData ?? {}).length,
+      mergedAnswerCount: Object.keys(merged ?? {}).length,
+      persistedOnboardingComplete: !!persisted?.isOnboardingComplete,
+      // The count that would have shown this defect on the tape for a month.
+      liveOnboardingComplete: !!currentState.isOnboardingComplete,
+    });
+  } catch {
+    // Rehydration must not fail because a diagnostic did.
+  }
+  return {
+    ...currentState,
+    ...persisted,
+    onboardingData: merged,
+    // MONOTONIC, AND THIS LINE IS THE FIX. `||` and not `??`: the bare envelope
+    // carries `false` rather than nothing, so a nullish check would not see it.
+    isOnboardingComplete:
+      !!currentState.isOnboardingComplete || !!persisted?.isOnboardingComplete,
+  };
+}
+
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set, get) => ({
@@ -319,37 +396,10 @@ export const useProfileStore = create<ProfileState>()(
     {
       name: PROFILE_STORE_PERSISTENCE_KEY,
       storage: createJSONStorage(() => profileGuardedStorage),
-      merge: (persistedState, currentState) => {
-        const persisted = persistedState as Partial<ProfileState> | undefined;
-        const merged = normalizeOnboardingRole({
-          ...currentState.onboardingData,
-          ...(persisted?.onboardingData ?? {}),
-        });
-        // THE ONE WRITER THAT CANNOT GO THROUGH THE OWNER — zustand calls this
-        // itself, and it returns state rather than setting it. It merges, so it
-        // cannot produce the wipe; but a LATE rehydration inside a suspicious
-        // window is exactly the kind of thing four reconstructions could not
-        // rule in or out, so it goes on the tape with its three counts.
-        try {
-          emitAthleteActionEvent(beginAthleteActionTrace({
-            source: 'system',
-            actionType: 'hydration',
-            route: 'profile_store_rehydrate',
-          }, undefined, { forceRoot: true }), 'profile_rehydrated', {
-            persistedAnswerCount: Object.keys(persisted?.onboardingData ?? {}).length,
-            liveAnswerCount: Object.keys(currentState.onboardingData ?? {}).length,
-            mergedAnswerCount: Object.keys(merged ?? {}).length,
-            persistedOnboardingComplete: !!persisted?.isOnboardingComplete,
-          });
-        } catch {
-          // Rehydration must not fail because a diagnostic did.
-        }
-        return {
-          ...currentState,
-          ...persisted,
-          onboardingData: merged,
-        };
-      },
+      merge: (persistedState, currentState) => mergePersistedProfileState(
+        persistedState as Partial<ProfileState> | undefined,
+        currentState,
+      ),
     },
   ),
 );
