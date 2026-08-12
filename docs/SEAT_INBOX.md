@@ -25,6 +25,12 @@ entry point is `docs/CODEX_HANDOFF_2026-08-11.md`.
 day is prefered but 5 hard days is okay"*. Five is not a defect. Measured well
 (`a8f13d91`), correctly not wired. **Do not switch it on.**
 
+**AND THE 4+1 GENERATION TARGET IS PARKED TOO, 2026-08-13 — SAME AREA, SAME
+ANSWER: NOT NOW.** **Sam:** *"stop worrying about this moderate day thing - this
+is only on 17 QA - when we get deeper into the app and test 100 then we will
+have many more useful scenarios where it might make sense"*. **Reopen when the
+harness carries ~100 weeks, not before. Do not re-ask.** See item 4.
+
 **B. HYDRATION MAY QUIETLY RE-SHAPE THE DAYS AHEAD — ALREADY ANSWERED.** **Sam:**
 *"once a session is done then it's locked in, only the rest of the week can
 change ... wednesday to sunday should adjust to accomodate this"*. Both halves
@@ -471,9 +477,21 @@ phone.** State device items as PARKED in a stop report, never as a request.
    17 QA scenarios are identical before and after (4 of 17 meet both preferences
    in both arms) because that placer does not run in them. **12 of 17 still have
    zero moderate days.**
-   **NOT BUILT: the generation target toward 4+1.** The item itself says nothing
-   about WHICH session should become moderate or at whose expense — **that is
-   Sam's call, and it is the only thing left on this item.**
+   **PARKED BY SAM 2026-08-13 — DO NOT BUILD THE GENERATION TARGET, AND DO NOT
+   RE-ASK.** The seat re-ran `test:qa` and reported the real shape rather than
+   the item's summary: **NINE of 17 weeks build FIVE hard days** (S1, S2, S4,
+   S10, S11, S13, E1, E2, E3); four build four; two build three; two build one
+   (off-season low availability, correctly small). The narrowed question put to
+   him was which of the five softens — team nights and the game cannot, leaving
+   the Monday strength day or the midweek conditioning day. **His answer was to
+   refuse the question at this sample size:** *"stop worrying about this moderate
+   day thing - this is only on 17 QA - when we get deeper into the app and test
+   100 then we will have many more useful scenarios where it might make sense"*.
+   **THE REOPEN CONDITION IS THE SCENARIO SET, NOT A RULING:** revisit when the
+   harness carries roughly 100 weeks. **Until then the moderate-day target is not
+   owed, not blocked, and not a defect.** Everything built above — the range, the
+   advisory finding, the stress-vocabulary law — STAYS: it costs nothing and it
+   is the instrument that will answer him when the set is big enough.
    Registry 103/71 -> 105/73, **UNENFORCED unmoved at 32** (the vocabulary law
    was born UNENFORCED and its guard built in the same pass rather than banked as
    debt).
@@ -1067,8 +1085,51 @@ phone.** State device items as PARKED in a stop report, never as a request.
     inserts a team-training row into `exercises` is UNMEASURED**, and it is the
     one place the overstatement could still be true.
 
-    **GENERATION, SO STAND-DOWN D HOLDS ON THE BUILD.** The measurement above is
-    already done; the re-count is a harness run and needs no generator edit.
+    **BUILT AND DIAGNOSED 2026-08-13 — THE FENCE IS IN, THE SMALL SESSIONS ARE
+    NOT FIXED, AND THE ORDERED FIX IS NOT THE FIX.**
+    **THE COUNTING FENCE IS BUILT (`e8521b79`).** `team_training` is a role and
+    is exempt; two cells INVERTED not deleted; the compiler forced the §18
+    crosswalk question and the answer is that a team night has **no §18 row
+    spelling** — it is already credited at the SESSION level under 17.E, so a row
+    spelling would count it twice. **THE GOLDEN DIFF THE HEADER DEMANDS IS
+    EMPTY**, as the census predicted. It closes the fence for the AI path; **it
+    did not fix the small sessions.**
+    **THE SMALL SESSIONS, PROBED BRANCH BY BRANCH across 120 sessions:**
+    - Team days hit exactly two branches — `upper [push+pull]` and
+      `lower [squat+hinge]` — and **both return 3 rows.**
+    - **NON-team days hit the SAME 3-row branches** (16 of them). **The gym piece
+      is 3 rows everywhere; only the DAY TOTAL differs**, because conditioning
+      rows land on non-team days and not on team nights.
+    - **The table is internally inconsistent and that is the real defect:**
+      `hinge+pull` returns 5, `full_body` 4, but `squat+hinge` and `push+pull`
+      return 3 — same two-pattern shape, different sizes.
+    **ATTEMPTED AND REVERTED, WITH NUMBERS.** Raising those two branches 3 -> 4
+    took team nights from `2x3 3x23 4x6` to `3x4 4x22 5x6` — **under-floor 26 ->
+    4, ceiling never breached. But MIXED MOVED** (`4x20 5x8 6x28` ->
+    `4x8 5x16 6x32`), and this item's own acceptance is *"without the other two
+    moving"*. Non-team days share those branches, so a branch edit cannot be
+    targeted. **Reverted; the generator is clean.**
+    **THE CORRECT SHAPE, NAMED FOR THE NEXT PASS:** the floor belongs at the DAY,
+    after conditioning rows land — **`finaliseBuiltWorkout` in `defaultProgram.ts`
+    is the seam** and it already receives the plan entry. A day-level floor is
+    universal, so it is **NOT the team-night case Sam forbade**; it only bites
+    where the day is short. **It must protect the authored small sessions** — the
+    signed G-2 primer (its row count is load-bearing for `looksLikeNeuralPrimer`),
+    recovery, speed and conditioning-only days. **That guard list is the whole
+    risk, and the 17 QA scenarios must be run either side.**
+
+    **STAND-DOWN D IS SPENT — AND THIS LINE BLOCKED THE TERMINAL ON 2026-08-13
+    WHILE ALREADY STALE.** The terminal declared itself blocked (`fe6a58b6`)
+    citing *"stand-down D, which Sam has not lifted"* — but the header of THIS
+    file had already recorded Sam lifting it. Two places in one file disagreed
+    and the agent believed the older one. **Sam:** *"Your reopen-bug fix landed 9
+    hours ago and no generator file has moved since, so unless you know otherwise
+    the generator is free."* **RE-VERIFIED at the top of 08-13 rather than taken
+    on trust:** `generateProgram.ts` last moved at `f2152d2b` 08-12 17:05,
+    `coachingEngine.ts` at `3f62ad62` 08-12 13:33, `weekRebuild.ts` at `06401d92`
+    08-12 08:35, and **every one of them is CLEAN in the working tree.** The
+    desktop agent is in `programControlAction.ts`, which is not on the generator
+    path. **ITEM 21'S BUILD IS CLEAR. Stage by path as always.**
 
     **Sam, on testing:** *"run whatever little tests you have to"*. Behavioural
     cells, and the 120-session distribution is the instrument: team nights join
@@ -1170,12 +1231,90 @@ phone.** State device items as PARKED in a stop report, never as a request.
       this item lands, away stops moving sessions and starts substituting
       exercises, and that effect moves with it.
 
-    **NOT STARTED — the build is the next unit, and it is the whole of (c).**
-    (a) and (b) are BUILT and on glass (`5ff77758`).
+    **SLICE 1 BUILT — THE DATED EQUIPMENT FACT (`bfad51b7`).** A
+    `missing_for_span` decision carrying `from`/`until`, scoped to a WINDOW so
+    it lifts itself on the return date. **`kind: 'window'` was already in
+    `TemporarySourceFactScope`** — the equipment path hard-coded
+    `{ kind: 'week' }` and never used it, so this was a scope argument rather
+    than new machinery. Held by `test:dated-equipment-fact`. **The compiler did
+    NOT catch the gap:** the executor's fall-through reads `tags` off either
+    variant, so a span-carrying decision compiled and was silently week-scoped.
+
+    **AND A NEW BLOCKER FOR THE DOOR, MEASURED 2026-08-13.**
+    `EquipmentScreen.tsx:122` hard-navigates to `'GymExperience'`, an ONBOARDING
+    route, and `:132`/`:189` call `navigation.goBack()`. **So it cannot simply
+    be registered on an in-app navigator: its "continue" would aim at a screen
+    the app stack does not contain.** Reusing the door — which is Sam's explicit
+    instruction, and right — means its DESTINATION becomes an input (a
+    completion callback or a route param) instead of a hard-coded onboarding
+    step. That is the next act, and it is small, but it is a change to a signed
+    onboarding screen rather than a pure addition.
+
+    **STILL NOT STARTED:** the away flow's equipment question, the rebuild on
+    the new kit, and the copy that still says the program is "avoiding the dates
+    you are away". (a) and (b) are BUILT and on glass (`5ff77758`).
 
     **GENERATION IS INVOLVED (a rebuild on a new kit) — STAND-DOWN D APPLIES to
     the rebuild half.** The sheet, the question and the dated equipment fact are
     clear to build now.
+
+23. **BUILT — TWELVE PHRASES SHIP, AND THE MISCOUNT IS FIXED AT ITS SOURCE.**
+    `74d76479`. Four `signed_sentence` entries, four union members, the pool
+    builder BRANCHES on `kind`, and the "three live builders" comment is
+    corrected. **The count did not move, as ordered:** `my-status-modifiers`
+    8 -> 8, `program-tab-read-only-modifiers` 9 -> 9. `'unsigned'` stays, with
+    three sites (soreness, generated programme-effect notes, and the catch-all
+    for constraints that are neither readiness nor schedule) and its cell
+    untouched. **A new cell drives the REAL builder with an excluded and a
+    pinned exercise and reds if they share an effect** — mutating the branch
+    away reproduces exactly the defect this item was raised to prevent.
+
+    ~~ORIGINAL ORDER~~ **SAM SIGNED THE LAST FOUR SHORT PHRASES — AND IT WAS FOUR, NOT THREE.**
+
+    **OWNED BY THE DESKTOP AGENT** — the same files as item 22(a):
+    `src/rules/projectionCopy.ts`, `src/utils/activeProgramModifiers.ts`,
+    `ModifiersSheet`, `src/__tests__/modifierEffectPhrasesTests.ts`.
+    **TERMINAL: NOT YOURS. Go to item 21, which is now clear.**
+
+    **Sam, 2026-08-13:** *"i'd rather them shortened"*, then, shown these four,
+    ***"signed"***. They are signed copy and may ship verbatim:
+    - an exercise preference (avoid / preferred alternative / added focus)
+      → **Exercise preference applied**
+    - an EXCLUDED exercise → **Exercise removed**
+    - a PINNED exercise → **Exercise prioritised**
+    - a conditioning modality swap → **Conditioning swapped**
+
+    **WHY FOUR WHEN EVERY DOC SAID THREE — MEASURED BEFORE IT WAS PUT TO HIM.**
+    `athletePreferenceModifier` is ONE builder carrying `kind: 'excluded' |
+    'pinned'` (`activeProgramModifiers.ts:1201-1226`), and the two are OPPOSITES
+    — excluded AVOIDS the exercise, pinned PRIORITISES it. One phrase for both
+    would have been false every second time it rendered. **The comment block at
+    `activeProgramModifiers.ts:117-121` says "Three live builders" and is now
+    wrong by one — correct it in the same pass.**
+
+    **`'unsigned'` DOES NOT DISAPPEAR. DELETING THE UNION MEMBER WILL BREAK THE
+    BUILD.** There are **FIVE** `effect: 'unsigned'` sites, not three. Sam's four
+    cover three. The other two are DELIBERATE and stay:
+    - **soreness** (`:986`) — its own sentence names the body part, which this
+      file already argues is more useful than a generic phrase.
+    - **deterministic programme-effect notes** (`:696`) — generated notes with
+      their own authored sentence.
+    **Keep the member, and keep the `isShownOnProgram({ effect: 'unsigned' })`
+    cell exactly as written:** a missing phrase is a gap in the WORDS and never a
+    reason to stop telling the athlete their program changed.
+
+    **BUILD:** four `signed_sentence` entries under the item-22(a) block in
+    `projectionCopy.ts`, `provenance` citing THIS item and the date; four new
+    members on `ActiveProgramModifierEffect`; **the pool builder must BRANCH on
+    `kind`** rather than return one effect for both. Then four more rows in
+    `SAM_PHRASES` — **that array is the signing record, so type his words in by
+    hand; do not import them from the registry the suite exists to check.**
+
+    **THE CELL THAT CAN BREAK IS THE COUNT, NOT THE COPY.**
+    `test:modifier-effect-phrases` asserts every phrase-bearing effect is shown
+    on Program. Four kinds move from a long sentence to a short phrase and **the
+    visible row count must not move.** Run `test:my-status-modifiers` and
+    `test:program-tab-read-only-modifiers` either side and report both numbers.
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
@@ -1238,18 +1377,13 @@ seat was wrong.
   stands between the notice and My Status on both Program shapes, with his
   prototype's five strings signed verbatim. **Do not re-ask.** One follow-up
   question it raised is the entry directly below.
-- **DECISION OWED — the sheet's rows are ONE column, not two, and only Sam can
-  close the gap (item 16, asked 2026-08-13).** His prototype's rows are a name
-  and a short EFFECT: "Time away / Training volume adjusted", "Equipment access
-  / Exercises substituted". **No such phrase exists in the domain** —
-  `ActiveCoachNote` carries `title` and `body`, and there is no signed effect
-  wording for the other modifier kinds. Inventing one per kind would put
-  unsigned athlete-facing words on the glass, which is the single thing
-  `SignedCopy` exists to prevent, **so the sheet ships showing each modifier's
-  own authored title and sentence instead** — the same two strings My Status
-  renders. **What is owed is small and only his:** the short phrase per modifier
-  kind. With them it is a copy-registry addition and a two-column row; without
-  them the current rows are correct and honest, just longer than his drawing.
+- **ANSWERED 2026-08-13, NOW ITEM 23 — the short phrase per modifier kind is
+  SIGNED and the column question is closed with it.** Sam: *"i'd rather them
+  shortened"*, then ***"signed"*** on the four phrases in item 23. **It was FOUR,
+  not the three every doc said** — excluded and pinned are opposites sharing one
+  builder. The rows become two columns for every kind that HAS a phrase; soreness
+  and the generated programme-effect notes keep their own sentence on purpose and
+  stay one column. **Do not re-ask.**
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 22).
 
 ## Previously (now processed)
