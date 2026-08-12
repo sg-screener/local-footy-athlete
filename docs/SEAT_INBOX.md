@@ -1321,6 +1321,36 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **A GAME INSIDE THE TRIP — THE ONE HALF OF HIS OWN RULING THAT CANNOT BE BUILT
+  WITHOUT HIM. Asked 2026-08-13 by the desktop agent, after building the other
+  half.** He ruled *"yes clear team training and games while away"*. **Team
+  training is now buildable and measured working** — a week planned inside a
+  live trip comes back with no team night and the athlete still trains five
+  days. **A GAME IS NOT THE SAME SHAPE, and that is measured, not assumed.**
+
+  **WHAT WAS SEARCHED FIRST.** A team night is a FLAG on the plan
+  (`isTeamDay`), so dropping it is a filter. A fixture is an ANCHOR: the week is
+  built around it (G-1, G+1, the whole taper), the projection says
+  `NOTHING_MAY_BE_DONE` to it (`projectVisibleWeek.ts` `partCapabilities`), and
+  the athlete has never been able to remove one. Removing a game therefore does
+  not filter a list — **it changes the shape of the week around a day that is
+  still on the club's calendar.**
+
+  **THE QUESTION, and either answer is one afternoon's work once he gives it:**
+  when he is away over a game day, does that game
+  **(a) DISAPPEAR from his week** — the week rebuilds as if there were no
+  fixture, so no G-1 taper and no G+1 recovery, because he is not playing; or
+  **(b) STAY on the calendar as a day he is missing** — the week keeps its
+  shape, the game is still shown, and only the training around it is his to
+  change?
+
+  **RECOMMENDED: (a).** His sentence puts games beside team training, and a
+  taper for a match he is not at is training built on a false premise.
+  **BUT (b) IS NOT SILLY** and is why this is his call rather than mine: the
+  fixture is the club's fact, it happened whether he was there or not, and a
+  season view that quietly loses matches is a different kind of wrong.
+  **NOT BUILT EITHER WAY.**
+
 - **ANSWERED 2026-08-13, NOW PART OF ITEM 28 — away and the club.** Sam:
   ***"yes clear team training and games while away"***. **Do not re-ask.** Built
   the same day; see item 28 for what is WORKING and what is only BUILT.
