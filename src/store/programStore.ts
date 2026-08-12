@@ -1431,7 +1431,39 @@ function canonicaliseAcceptedBoundaryState(
       const date = addDaysISO(weekStart, offset);
       const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
       const before = effectiveByDate.get(date) ?? null;
-      const after = acceptedByDay.get(dayOfWeek) ?? null;
+      // A RE-DERIVATION CARRIES WHAT POINTED AT IT, OR IT IS A DELETION.
+      //
+      // This loop overwrites the day with the week the gateway just re-derived,
+      // and the re-derivation does not carry `derivedSessionProvenance`. So a
+      // dependency the PROPOSAL held — "this Monday exists because of Sunday's
+      // game" — was destroyed at commit time, silently, on every path that
+      // re-gates a hydrated week.
+      //
+      // IT WAS INVISIBLE FOR ONE REASON ONLY: `section18CraftTier` fabricated
+      // neighbouring fixtures at ±7 days, so the re-derived Monday happened to
+      // be a G+1 day and minted its own record. Three attempts to delete that
+      // phantom were reverted for "losing the link"; measured in both arms, the
+      // link is derived MORE often without it (30 vs 23) and dies here.
+      // `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md` §7-§12.
+      //
+      // CARRIED, NOT RESURRECTED. Only records the CURRENT fixture authority
+      // still supports travel: `buildDerivedSessionExpiryCandidates` is the one
+      // owner of "is this record still valid", and it is asked here rather than
+      // re-answered. A record whose fixture is gone is left to expire exactly as
+      // it does today — this restores history that survived, it does not keep
+      // stale history alive.
+      //
+      // SAME CLASS AS `LAW-rename-carries-its-references`, second sighting in
+      // one day: there a seed stabiliser renamed rows and orphaned the block
+      // that pointed at them; here a canonicaliser rebuilds a week and drops the
+      // provenance pointing into it.
+      const after = carryProvenanceThroughRegate({
+        before,
+        after: acceptedByDay.get(dayOfWeek) ?? null,
+        contract: accepted.contract,
+        weekStart,
+        activeFixtureDates,
+      });
       if (JSON.stringify(before) === JSON.stringify(after)) continue;
       if (dateOverrides && Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
         // D-2 PROBE (Sam's ruling: measure first, LR-27 method). An INSTRUMENT,
@@ -1536,6 +1568,68 @@ export interface AcceptedStateCandidateCanonicalisationOptions {
 }
 
 /** Runtime acceptance owns validation, but never legacy hydration migration. */
+/**
+ * Carry a day's still-valid provenance through a re-derivation.
+ *
+ * The gateway rebuilds a week from the contract and hands back canonical
+ * workouts with no `derivedSessionProvenance`. Writing those over the proposal
+ * deletes the history the proposal was carrying — which is a deletion wearing a
+ * rebuild. See the call site for the founding case.
+ *
+ * WHAT TRAVELS: records the CURRENT fixture authority still supports. Validity
+ * is not re-answered here — `buildDerivedSessionExpiryCandidates` already owns
+ * that question, so it is asked, and anything it would expire is left behind to
+ * expire. A record kept alive past its fixture would be the opposite defect.
+ *
+ * WHAT DOES NOT TRAVEL: anything, when either side is absent. A day the
+ * re-derivation removed stays removed; provenance is not a reason to resurrect a
+ * session, and inventing one here would put this function in the business of
+ * deciding what the week holds.
+ */
+export function carryProvenanceThroughRegate(args: {
+  before: Workout | null;
+  after: Workout | null;
+  contract: WeeklyExposureContractV2 | undefined;
+  weekStart: string;
+  activeFixtureDates?: ReadonlySet<string>;
+}): Workout | null {
+  const { before, after, contract } = args;
+  if (!before || !after || !contract) return after;
+  const carried = (before.derivedSessionProvenance ?? []).filter((record) => !!record.dependency);
+  if (carried.length === 0) return after;
+  if ((after.derivedSessionProvenance ?? []).some((record) => !!record.dependency)) return after;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { buildDerivedSessionExpiryCandidates } = require('../rules/derivedSessionProvenance');
+  const probe = { ...after, derivedSessionProvenance: carried };
+  const expiries = buildDerivedSessionExpiryCandidates({
+    workouts: [probe],
+    contract,
+    weekStart: args.weekStart,
+    activeFixtureDates: args.activeFixtureDates,
+  });
+  // MATCH THE OWNER'S ANSWER ON ITS OWN FIELDS. A `DerivedSessionExpiry` is
+  // `{ planEntryId, workoutId, origin, scope, reason }` — there is no record id
+  // on it, and the first version of this filter keyed on one, so NOTHING ever
+  // expired and a record whose fixture was gone travelled anyway. The cell that
+  // caught it is the "opposite defect" branch in
+  // `derivedRepairOwnershipTests`.
+  //
+  // CONSERVATIVE BY CONSTRUCTION: candidates are ALTERNATIVES for the whole-week
+  // owner to choose between, so if ANY of them would expire a record, it is not
+  // carried. Choosing among candidates here would be this function re-answering
+  // a question that already has an owner.
+  const expiring = new Set<string>();
+  for (const candidate of expiries) {
+    for (const expiry of candidate.expiries ?? []) {
+      expiring.add(`${expiry.origin}|${expiry.scope}|${expiry.planEntryId ?? ''}`);
+    }
+  }
+  const surviving = carried.filter((record) =>
+    !expiring.has(`${record.origin}|${record.scope}|${record.sourcePlanEntryId ?? ''}`));
+  if (surviving.length === 0) return after;
+  return { ...after, derivedSessionProvenance: surviving };
+}
+
 export function canonicaliseAcceptedStateCandidate(
   candidate: Partial<ProgramState>,
   options: AcceptedStateCandidateCanonicalisationOptions = {},

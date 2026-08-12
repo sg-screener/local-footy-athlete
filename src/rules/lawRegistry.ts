@@ -793,6 +793,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-regate-carries-provenance',
+    law: 'A week re-derived at commit time carries the provenance the proposal held — the still-valid records travel, the expired ones do not, and a day the re-derivation removed is never resurrected.',
+    ruledAt: 'docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md §11-§12; the same class as LAW-rename-carries-its-references, second sighting in one day',
+    guard: {
+      state: 'guarded',
+      by: 'test:derived-repair-ownership + test:accepted-state-transactions',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12, AFTER FOUR ATTEMPTS AND TWO FULL MEASUREMENT PASSES. `canonicaliseAcceptedStateCandidate` re-gates every hydrated week and writes the gateway\'s re-derived day over the proposal\'s; the re-derivation carries no `derivedSessionProvenance`, so a cross-week dependency the proposal held was destroyed at commit time on every path that re-gates. MEASURED AT THE WRITE, BOTH ARMS: overlay Monday 2026-07-19 -> accepted Monday 2026-07-19 with the ±7 phantom present, and -> NONE without it. THE PHANTOM WAS THE ONLY THING HIDING IT. THE END-TO-END CELL is the fixture-move property, which fails without this carry once the phantom is gone; the two branches that property cannot reach have their own cells — a record whose fixture is gone must NOT travel, and a removed day must not be resurrected. VALIDITY IS ASKED, NEVER RE-ANSWERED: `buildDerivedSessionExpiryCandidates` owns it, and because candidates are ALTERNATIVES, a record any candidate would expire is not carried. TWO CORRECTIONS CAUGHT BY CELLS, NOT BY READING: the first filter keyed on `expiry.record.id`, a field that does not exist on a `DerivedSessionExpiry`, so NOTHING ever expired and a stale record travelled; and the first cell passed a two-field contract stub that died inside the expiry owner. Mutations: carrying nothing reds the cell AND the property; carrying everything reds the opposite-defect branch.',
+    },
+  },
+  {
+    id: 'LAW-no-invented-fixture',
+    law: 'The craft tier reads the fixtures that exist; it never fabricates a neighbouring game at ±7 days, because the Section 17 kernel trusts what it is handed as real.',
+    ruledAt: 'docs/SEAT_INBOX.md item 3, Sam 2026-08-12 ("kill the ±7 invention"); reproduced in docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md',
+    guard: {
+      state: 'guarded',
+      by: 'test:craft-tier',
+      chainStatus: 'in_chain',
+      receipt: 'LANDED 2026-08-12 ON THE FOURTH ATTEMPT, and only after the defect it was hiding was fixed (LAW-regate-carries-provenance). `section18CraftTier` fabricated `previousGameDate`/`nextGameDate` at ±7 days and `weekStructureValidator` trusts them as real: a Sunday-fixture week judged its Monday `g_plus1_hard_work`, a Monday-fixture week judged its Sunday `g1_not_light`, both against games that do not exist. The tier now reads a supplied `activeFixtureDates` — the authority the gateway already threads to the replan and the provenance rules — and falls back to ±7 ONLY with no authority, because an absent authority is not evidence of an absent fixture. 36/36 green, mutation-checked. SWEEP: 15 of 196 failures, IDENTICAL name for name to the HEAD baseline measured the same hour. The 17 QA scenarios are unchanged — no hard failures, no preference regressions, no improvements.',
+    },
+  },
+  {
     id: 'LAW-rename-carries-its-references',
     law: 'A step that rewrites identities rewrites everything that points at them. Seed stabilisation may change ids; it may never change content.',
     ruledAt: 'src/dev/e2e/devE2ESeedRegistry.ts stabilizeMicrocycle header, 2026-08-12 — the founding case, measured rather than ruled: 23 of 23 seeded workouts carrying a conditioning block had lost it.',

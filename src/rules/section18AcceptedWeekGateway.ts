@@ -1534,6 +1534,10 @@ function resolveCandidate(args: {
         weekStart: args.input.weekStart,
         profile: args.input.profile,
         governableDates,
+        // THE SAME AUTHORITY THIS GATEWAY ALREADY THREADS to the replan and the
+        // provenance rules. Passed, never re-derived — re-derivation one level
+        // down is sighting 3 of the class the census gate exists for.
+        activeFixtureDates: args.input.activeFixtureDates,
       });
       return {
         accepted: evaluation.blockingViolations.length === 0 && craft.blocking.length === 0,

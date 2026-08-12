@@ -584,14 +584,45 @@ phone.** State device items as PARKED in a stop report, never as a request.
      load-bearing" is FALSE** — a second premise refuted in the same unit.
      Three priced routes are in the doc; **none started**, because the two
      section18 files a real fix touches are mid-flight with another agent.
-   - **THE QUESTION THIS OPENS, AND IT IS BIGGER THAN THE CHAIN.**
+   - **THE QUESTION THIS OPENED IS CLOSED, AND THE ANSWER IS NO.**
      `canonicaliseHydratedProgram` took **20.4s and 17.9s** on a migrated
-     in-season week where three others on the same shape took 8-85ms. It runs on
-     hydration of a LEGACY program. **If a real device carrying a
-     pre-Contract-v2 program hits that, it is a twenty-second launch, not a slow
-     test.** OPEN-UNKNOWN: nothing here measured a device.
+     in-season week where three others on the same shape took 8-85ms — so
+     "twenty-second launch" was a real thing to fear. **An athlete cannot reach
+     it.** The only function setting `structuralMigrationRequired` has NO
+     production caller, and `programStore.partialize` persists INPUTS ONLY —
+     `currentProgram` never touches disk, so no launch reads a legacy program
+     back. The north star is what makes the slow path unreachable.
+     **Guarded, because it is one line of `partialize` from vanishing:**
+     `test:legacy-migration-unreachable`, mutation-checked both ways.
 
-3. **THE MEASUREMENT THE SECOND-WALL LAW DEMANDED IS TAKEN — AND THE ASSUMPTION
+3. **THE ±7 IS DELETED. FOURTH ATTEMPT, AND THE THREE BEFORE IT WERE HUNTING THE
+   WRONG THING.** `test:craft-tier` 36/36, the property that reverted attempt 1
+   now **PASSES with the ±7 GONE**, and the sweep is **15 of 196 — IDENTICAL name
+   for name to the HEAD baseline measured the same hour.** The 17 QA scenarios
+   are unchanged: no hard failures, no preference regressions, no improvements.
+   **THE ±7 WAS NEVER THE DEFECT. IT WAS THE LID.**
+   `canonicaliseAcceptedStateCandidate` re-gates every hydrated week at commit
+   time and writes the gateway's re-derived day over the proposal's — and the
+   re-derivation **carries no provenance**. A cross-week dependency the proposal
+   held was destroyed at commit, on every path that re-gates. Measured at the
+   write, both arms: `overlay Monday 2026-07-19 -> accepted Monday 2026-07-19`
+   with the phantom present, `-> NONE` without it. **With a fabricated game at ±7
+   the re-derived Monday happened to be a G+1 day and minted its own record, so
+   the loss was invisible.** Three attempts read the deletion as "breaking the
+   link"; it only stopped hiding a defect already there.
+   **SECOND SIGHTING OF ONE CLASS IN ONE DAY** — `LAW-rename-carries-its-references`
+   this morning (a seed stabiliser renaming rows and orphaning the block that
+   pointed at them), `LAW-regate-carries-provenance` tonight.
+   **TWO OF MY OWN CELLS WERE WRONG AND THE CELLS CAUGHT THEM, NOT READING:** the
+   expiry filter keyed on a field a `DerivedSessionExpiry` does not have, so
+   nothing ever expired and a stale record travelled; and the first test contract
+   was a two-field stub that died inside the expiry owner.
+   **VALIDITY IS ASKED, NEVER RE-ANSWERED** — `buildDerivedSessionExpiryCandidates`
+   owns it, and because its candidates are ALTERNATIVES, a record any candidate
+   would expire is not carried.
+   Registry rows `LAW-regate-carries-provenance`, `LAW-no-invented-fixture`.
+
+   ~~ORIGINAL~~ **THE MEASUREMENT THE SECOND-WALL LAW DEMANDED IS TAKEN — AND THE ASSUMPTION
    BEHIND ALL THREE ATTEMPTS IS FALSE.** Sam freed the generator 2026-08-12;
    this is the first act under that. **`docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md`
    §7.**

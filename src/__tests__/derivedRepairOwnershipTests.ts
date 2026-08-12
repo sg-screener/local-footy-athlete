@@ -54,7 +54,7 @@ import type { TrainingProgram, Workout } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { PlanChange } from '../utils/planChangeTypes';
 import { generateProgramLocally } from '../services/api/generateProgram';
-import { useProgramStore } from '../store/programStore';
+import { carryProvenanceThroughRegate, useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
@@ -297,6 +297,78 @@ run('a rest mark on a week the athlete has already edited keeps his edit', () =>
     `the rest mark did not empty 2026-07-28 — the screen shows "${rested?.workout?.name}"`);
   assert(splitDays().length === 0,
     `screen and accepted week disagree on ${JSON.stringify(splitDays())}`);
+});
+
+// ── A RE-DERIVATION CARRIES WHAT POINTED AT IT (±7 attempt 4, 2026-08-12) ──
+//
+// `canonicaliseAcceptedStateCandidate` re-gates every hydrated week at commit
+// time and writes the gateway's re-derived day over the proposal's. The
+// re-derivation carries no `derivedSessionProvenance`, so a dependency the
+// proposal held — "this Monday exists because of Sunday's game" — was destroyed
+// silently. `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md` §11-§12.
+//
+// THE END-TO-END CLAIM IS HELD BY `test:accepted-state-transactions`' fixture-move
+// property, which fails without this carry once the ±7 phantom is gone. THESE
+// CELLS HOLD THE TWO BRANCHES THAT PROPERTY CANNOT REACH — the opposite defects,
+// where carrying too much would be as wrong as carrying nothing.
+run('a re-derived day inherits the provenance the proposal carried', () => {
+  const dependency = {
+    kind: 'fixture_to_session' as const,
+    source: { date: '2026-07-19', weekStart: '2026-07-13' },
+    target: { date: '2026-07-20', weekStart: '2026-07-20' },
+    crossesWeekBoundary: true,
+    displacedSession: { targetDate: '2026-07-20', sourcePlanEntryId: null, workout: null },
+    restoration: { targetDate: '2026-07-20', sourcePlanEntryId: null, workout: null },
+  };
+  const record = {
+    id: 'prov-1', origin: 'fixture_recovery', scope: 'session', authorship: 'system',
+    triggerSignature: 'fixture:2026-07-19:g_plus_1', credit: { metric: 'full_rest', amount: 1 },
+    originatingDate: '2026-07-20', originatingFixtureDate: '2026-07-19', sourcePlanEntryId: null,
+    validWhile: [{ kind: 'fixture_present', fixtureDate: '2026-07-19' }],
+    invalidWhen: [{ kind: 'fixture_absent', fixtureDate: '2026-07-19' }],
+    history: [], dependency,
+  } as unknown as NonNullable<Workout['derivedSessionProvenance']>[number];
+  const before = { id: 'w', dayOfWeek: 1, derivedSessionProvenance: [record] } as unknown as Workout;
+  const after = { id: 'w', dayOfWeek: 1 } as unknown as Workout;
+  // A REAL-SHAPED CONTRACT, because the expiry owner reads deep into one
+  // (`section18ContractLifecycleSignature` alone touches five branches). The
+  // first version of this cell passed a two-field stub and died on
+  // `contract.mainStrength.exposure` — a fixture too thin to reach the code it
+  // was written to exercise.
+  const contract = {
+    protocolVersion: 1,
+    identity: { seasonPhase: 'In-season', mode: 'in_season_game_week', weekKind: 'normal', anchorState: 'game' },
+    anchors: [{ id: 'game-0', kind: 'game', dayOfWeek: 0, participation: 'normal_unrestricted' }],
+    mainStrength: { exposure: { plannerSelectedTarget: 3 } },
+    conditioning: { core: { plannerSelectedTarget: 3 } },
+    sprintHighSpeed: { exposure: { plannerSelectedTarget: 1 } },
+    strengthPatterns: { requiredSafePatterns: [] },
+    restStress: { requiredFullRestMinimum: 1, permittedHardDayMaximum: 5, normalProgrammedHardDayMaximum: 4 },
+    safety: { prohibitedPatterns: [], prohibitedSprintHighSpeed: false, prohibitedPower: false },
+  } as never;
+
+  const kept = carryProvenanceThroughRegate({
+    before, after, contract, weekStart: '2026-07-20',
+    activeFixtureDates: new Set(['2026-07-19']),
+  });
+  assert((kept?.derivedSessionProvenance ?? []).length === 1,
+    'the re-derived day did not inherit the record the proposal carried');
+
+  // THE OPPOSITE DEFECT: a record whose fixture is GONE must not be kept alive.
+  // Validity is the expiry owner's question and is asked, never re-answered.
+  const expired = carryProvenanceThroughRegate({
+    before, after, contract, weekStart: '2026-07-20',
+    activeFixtureDates: new Set(['2026-08-30']),
+  });
+  assert((expired?.derivedSessionProvenance ?? []).length === 0,
+    'a record whose fixture no longer exists was carried through the re-gate');
+
+  // AND A DAY THE RE-DERIVATION REMOVED STAYS REMOVED. Provenance is not a
+  // reason to resurrect a session.
+  assert(carryProvenanceThroughRegate({
+    before, after: null, contract, weekStart: '2026-07-20',
+    activeFixtureDates: new Set(['2026-07-19']),
+  }) === null, 'a removed day was resurrected by its provenance');
 });
 
 console.log(`\nDerived repair ownership totals: ${passed} passed, ${failed} failed`);

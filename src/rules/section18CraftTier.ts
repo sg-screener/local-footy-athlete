@@ -102,6 +102,16 @@ export interface WeekCraftInput {
    * is downstream. It is TOLD which days are still the app's to change.
    */
   governableDates: ReadonlySet<string>;
+  /**
+   * THE FIXTURES THAT ACTUALLY EXIST, around this week — supplied, never
+   * invented. `undefined` means the caller had no authority to give, and the
+   * ±7 fallback below applies (see `craftValidatorInput`).
+   *
+   * ATTEMPT 2, 2026-08-12. The same field the gateway already threads to the
+   * replan and the provenance rules (`section18AcceptedWeekGateway:183`), asked
+   * for here so the tier stops fabricating neighbours at ±7 days.
+   */
+  activeFixtureDates?: ReadonlySet<string>;
 }
 
 function shiftISO(dateISO: string, days: number): string {
@@ -137,6 +147,33 @@ export function craftBlockingSummary(findings: readonly WeekFinding[]): string {
  * the EDGES of the week — a Sunday game means this Monday is G+1, and no
  * session inside this week can tell you that.
  */
+/**
+ * The nearest real fixture either side of this week's own, from the authority.
+ *
+ * Returns the ±7 fabrication ONLY when there is no authority to read. With one,
+ * a week whose neighbour does not exist gets no neighbour — which is the entire
+ * point: `weekStructureValidator` trusts these dates as real games.
+ */
+function neighbouringFixtures(
+  fixtureDate: string,
+  activeFixtureDates: ReadonlySet<string> | undefined,
+): { previousGameDate?: string; nextGameDate?: string } {
+  if (!activeFixtureDates) {
+    return { previousGameDate: shiftISO(fixtureDate, -7), nextGameDate: shiftISO(fixtureDate, 7) };
+  }
+  const anchor = fixtureDate.slice(0, 10);
+  const dates = Array.from(activeFixtureDates)
+    .map((date) => date.slice(0, 10))
+    .filter((date) => date !== anchor)
+    .sort();
+  const previous = dates.filter((date) => date < anchor).pop();
+  const next = dates.find((date) => date > anchor);
+  return {
+    ...(previous ? { previousGameDate: previous } : {}),
+    ...(next ? { nextGameDate: next } : {}),
+  };
+}
+
 function craftValidatorInput(args: WeekCraftInput): ValidateProgramWeekInput {
   const weekStart = args.weekStart.slice(0, 10);
   const byDay = new Map<number, Array<Workout | null>>();
@@ -157,9 +194,20 @@ function craftValidatorInput(args: WeekCraftInput): ValidateProgramWeekInput {
     teamTrainingDates: args.contract.anchors
       .filter((anchor) => anchor.kind === 'team_training')
       .map((anchor) => isoDateForWeekday(weekStart, anchor.dayOfWeek)),
-    ...(fixtureDate
-      ? { previousGameDate: shiftISO(fixtureDate, -7), nextGameDate: shiftISO(fixtureDate, 7) }
-      : {}),
+    // THE NEIGHBOURS ARE READ, NOT INVENTED — attempt 2, 2026-08-12.
+    //
+    // This used to be `shiftISO(fixtureDate, ±7)` unconditionally, and
+    // `weekStructureValidator.ts:255,272` TRUSTS what it is handed: a
+    // Sunday-fixture week judged its Monday as `g_plus1_hard_work` and a
+    // Monday-fixture week judged its Sunday as `g1_not_light`, both against
+    // games that do not exist.
+    //
+    // When the caller supplies the authority, the nearest REAL fixture on each
+    // side is used and a week with no neighbour gets none. When it does not,
+    // the old behaviour stands rather than silently reporting "no neighbouring
+    // game" — an absent authority is not evidence of an absent fixture, and
+    // that distinction is the whole subject of the census gate.
+    ...(fixtureDate ? neighbouringFixtures(fixtureDate, args.activeFixtureDates) : {}),
   };
 
   const profile = {
