@@ -92,12 +92,16 @@ tags:
     id: "make-change-link"
 - tapOn:
     id: "session-delete-action-.*"
+# NO SCOPE ROW HERE, AND THE ID IS NOT SPELLED THE WAY THE SCOPE IS — both learned
+# by running it (2026-08-12). A day that offers ONE scope skips the "remove what?"
+# step and lands on its confirm (`PlanChangeSheet` step `confirm_remove`), so the
+# first deletion above picks a scope and this one does not. And every id goes
+# through `stableTestIdToken`, which turns `whole_day` into `whole-day` — the
+# underscore never reaches the tree.
 - tapOn:
-    id: "session-delete-scope-.*-whole_day"
-- tapOn:
-    id: "session-delete-scope-.*-confirm-whole_day"
+    id: "session-delete-scope-.*-confirm-whole-day"
 - assertVisible:
-    id: "session-delete-result-.*-whole_day"
+    id: "session-delete-result-.*-whole-day"
 - tapOn:
     id: "plan-change-done"
 - extendedWaitUntil:

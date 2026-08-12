@@ -36,7 +36,7 @@ string `${E2E_METRO_URL}`.
 | `explorer-all-nine.yaml` | NOT RUN | Never run this pass. Carried as debt, not as a claim. |
 | `fixture-move.yaml` | NOT RUN | RED on the dead `fixture-actions-open` id (pre-existing). |
 | `injury-case` (seed, via `reset-seed`) | 2026-08-10 | **WITNESS FAILURE GONE.** Now blocked behind the calendar-storage durability defect — a DIFFERENT problem, priced in the slice 3 boundary addendum 4. |
-| `lower-body-deletion.yaml` | 2026-08-12 | **RAN, WENT RED, AND THE RED WAS THE SEED — not the app and not the flow.** Its assertion that today shows a conditioning part was correct; `stabilizeMicrocycle` had been breaking the conditioning block's row references in every seed. Fixed at the seed, held by `test:dev-e2e-seeds`; the flow's assertion is restored and the file now also covers the whole-day scope and a relaunch. **RE-RUN OWED — the simulator belongs to another agent.** |
+| `lower-body-deletion.yaml` | 2026-08-12 | **PASS, END TO END — and it is the on-glass proof of the seed fix.** The conditioning part is visible BEFORE the deletion (it was not, in every seeded world, until `stabilizeMicrocycle` learned to carry row-id references). Then: strength scope deleted → conditioning remains; whole day deleted → the day is rest; and rest survives a checkpoint + relaunch. **Two things the re-run taught, both now commented at the code:** a day offering ONE scope SKIPS the "remove what?" step and lands on its confirm, and `stableTestIdToken` turns `whole_day` into `whole-day`, so the underscore never reaches the tree. |
 | `one-set-feedback.yaml` | NOT RUN | Re-aimed 2026-08-10, never executed since. |
 | `reload-standard-week.yaml` | NOT RUN | Blocked behind the seeded world's durability (4 game days in memory, 1 on disk). |
 | `session-move.yaml` | 2026-08-12 | PASS — whole session moved onto the empty Sunday, Monday redrawn as rest, Sunday as scheduled, and both survive a checkpoint + relaunch. First run, no iteration. |
@@ -47,11 +47,17 @@ than implied by the green ones. `NOT RUN` is a state this table carries on
 purpose: a receipt that only recorded successes would make the rig look alive
 while half of it was dark, which is precisely the failure this law names.
 
-**THE SIMULATOR IS SHARED TOO, AND IT COST A RE-RUN (2026-08-12).** Midway
-through this pass three other `maestro test` processes appeared on the same
-device — a concurrent agent running `standard-program-week` and
-`one-set-feedback`. Two Maestro sessions on one simulator interleave taps into
-the same app, so the honest outcome is "unknown", not "red". The re-aimed
-`lower-body-deletion.yaml` run was **stopped rather than reported**, and its row
-above says so. `AGENTS.md` warns that the git index is shared; **the device is
-shared in exactly the same way and nothing said so before now.**
+**CORRECTED 2026-08-12 — THEY WERE NOT A CONCURRENT AGENT, THEY WERE WEDGED
+PROCESSES, AND I REPORTED THE WRONG CAUSE FIRST.** Three `maestro test` processes
+were holding this device and I recorded them as another agent running flows
+alongside me. `ps -o etime` says otherwise: **one had been running for 1 day 12
+hours, another for 1 day 10, a fourth `maestro hierarchy` for 22 DAYS.** They
+were abandoned runs still holding the iOS driver, not work in progress. Killed;
+the owed run then passed first time.
+
+**THE STANDING LESSON IS STILL THE SHARED DEVICE, JUST NOT THE SHARED AGENT.**
+Two Maestro sessions on one simulator interleave taps into the same app, so a run
+that collides is "unknown", not "red" — stop it rather than record it. **AND
+BEFORE BLAMING A COLLISION, ASK `ps` HOW OLD THE OTHER PROCESS IS**: an elapsed
+time is the difference between "someone is working" and "something died here a
+fortnight ago".
