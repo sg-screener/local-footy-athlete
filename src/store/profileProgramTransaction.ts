@@ -347,21 +347,32 @@ export async function commitProfileProgramTransaction(
       : []),
     ...Object.keys(base.surfaces.weekScopedOverlays),
   ])).sort();
-  // Leaving In-season retires explicit fixture marks. Virtual games vanish on
-  // their own once the phase moves, but an explicit 'game'/'noGame' mark set
-  // during the in-season run would bleed into the new phase.
+  // THE FIXTURE MARKS ARE NOT CARRIED BY THIS TRANSACTION ANY MORE
+  // (Sam's ruling, 2026-08-12, option A of
+  // `docs/FIXTURE_STALENESS_OWNERSHIP_REASSESSMENT_2026-08-12.md`).
   //
-  // This runs INSIDE the transaction. It used to be a `clearAllGames()` call
-  // fired before the rebuild was even attempted, so a shift that then failed
-  // had already destroyed the athlete's calendar. Deriving it here rather than
-  // asking the caller to remember also means the Profile setup sheet — which
-  // can shift phase too — gets the same behaviour instead of its own.
-  const leavingInSeason = currentProfile.seasonPhase === 'In-season'
-    && nextProfile.seasonPhase !== 'In-season';
-  const nextMarkedDays = leavingInSeason
-    ? Object.fromEntries(Object.entries(before.markedDays)
-      .filter(([, mark]) => mark !== 'game' && mark !== 'noGame'))
-    : before.markedDays;
+  // They are a PROJECTION of the profile answer plus the ledger — boot proves
+  // it by DROPPING every stored `game`/`noGame` mark and rebuilding them
+  // (`quiescentBoot.deriveBootFixtureMarks`, `FIXTURE_BOOT_ORDER_RULING`). This
+  // door used to carry `before.markedDays` forward whenever the athlete STAYED
+  // In-season, so the one door that had just changed the answer was the one
+  // door that did not consult it: game day Saturday -> Wednesday committed,
+  // reached disk, and left the athlete's fixtures on Saturday until they killed
+  // the app and reopened it.
+  //
+  // A `leavingInSeason` branch used to live here and is DELETED rather than
+  // extended. It was a second author of the same projection, correct only about
+  // the case it was written for; the settle below re-derives BOTH cases from
+  // the answer, so retiring the marks on a phase exit is now a consequence of
+  // the derivation rather than a rule this door remembers. `cell 4` of
+  // `fixtureSettleAfterSetupTests` holds that behaviour so the deletion cannot
+  // silently regress it.
+  //
+  // The publication still DECLARES the marks — absent would inherit the prior
+  // context and re-open the same staleness one layer down — so it declares the
+  // marks it inherited, and the settle re-derives them the moment the decision
+  // has landed.
+  const nextMarkedDays = before.markedDays;
   const factFingerprint = semanticFingerprint(before.temporarySourceFacts);
   const profileFingerprint = semanticFingerprint(nextProfile);
   let committedBaseFingerprint: string | null = null;
@@ -446,6 +457,21 @@ export async function commitProfileProgramTransaction(
       reason: transaction.reason,
     };
   }
+  // THE DECISION HAS LANDED, SO THE WORLD SETTLES BY RE-DERIVING — R5.1's
+  // switchover, and the same call the injury door and the undo door already
+  // make (`injuryEpisodeTransaction.ts`, `undoLastDecision.ts`). It IS
+  // `rebuildDerivedWorld` under the replay latch, so the week the athlete sees
+  // after changing their setup is the week they see after a relaunch BY
+  // CONSTRUCTION rather than by two engines happening to agree.
+  //
+  // This is what makes the fixture marks above safe to stop hand-carrying: the
+  // projection is rebuilt from the answer that just changed. Deliberately AFTER
+  // the rollback check — a refused transaction has nothing to settle, and
+  // re-deriving over a rolled-back world would publish the very state the
+  // refusal protected the athlete from.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { settleDerivedWorldAfterDecision } = require('./quiescentBoot');
+  await settleDerivedWorldAfterDecision();
   const accepted = normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext,
   );
