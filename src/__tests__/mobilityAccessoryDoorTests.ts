@@ -60,6 +60,13 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
 import type { TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
 import { validatePairings } from '../data/defaultProgram';
+import { mobilityRegionOf } from '../rules/mobilitySessionComposition';
+import {
+  MOBILITY_PAIRS_MAX,
+  pairMobilityWithAccessories,
+  pairableAccessories,
+  pickMobilityFor,
+} from '../rules/mobilityPairing';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import {
@@ -460,6 +467,124 @@ run('a group that is not exactly 2 is still stripped', () => {
 run('pairing on a non-core session is still stripped', () => {
   const groups = survivingGroups(THREE_PAIRS, 'optional');
   assert(groups.size === 0, `${groups.size} group(s) survived on a non-core session`);
+});
+
+// ── THE PAIRING PRODUCER — Sam's design, built (seat item 26) ──────────────
+//
+// Seven Sam-ruled rules, signed 2026-07-31, unbuilt for thirteen days. These
+// cells drive the REAL signed pool and the REAL row classifier, not a stand-in.
+const liftRow = (name: string, order: number): WorkoutExercise => ({
+  id: `we-${order}`, workoutId: 'w', exerciseId: name, exerciseOrder: order,
+  prescribedSets: 3, prescribedRepsMin: 8, prescribedRepsMax: 12, restSeconds: 60,
+  exercise: { id: name, name },
+} as unknown as WorkoutExercise);
+
+const upperDay = (): Workout => ({
+  id: 'w', microcycleId: 'mc', dayOfWeek: 2, name: 'Upper Body Strength',
+  description: '', intensity: 'Moderate', workoutType: 'Strength', durationMinutes: 45,
+  exercises: [
+    liftRow('Bench Press', 1),
+    liftRow('Chest Supported Row', 2),
+    liftRow('Face Pulls', 3),
+    liftRow('Bicep Curls', 4),
+    liftRow('Tricep Pushdowns', 5),
+  ],
+  createdAt: '2026-08-13T00:00:00.000Z', updatedAt: '2026-08-13T00:00:00.000Z',
+} as unknown as Workout);
+
+run('accessories are pairable and MAIN LIFTS ARE NOT (rule 2)', () => {
+  const day = upperDay();
+  const names = pairableAccessories(day).map((r) => r.exercise?.name);
+  assert(names.length >= 2, `only ${names.length} pairable accessories found`);
+  assert(!names.includes('Bench Press'),
+    `a MAIN LIFT was offered for pairing: ${names.join(', ')} — rule 2 says never`);
+});
+
+run('2-3 accessories are paired as supersets, by default (rule 1)', () => {
+  const out = pairMobilityWithAccessories(upperDay());
+  const groups = new Set((out.exercises ?? []).filter((r) => r.supersetGroup)
+    .map((r) => r.supersetGroup));
+  assert(groups.size >= 2 && groups.size <= MOBILITY_PAIRS_MAX,
+    `${groups.size} pairs produced — his ruling is 2-3`);
+  const everyGroupHasTwo = [...groups].every((g) =>
+    (out.exercises ?? []).filter((r) => r.supersetGroup === g).length === 2);
+  assert(everyGroupHasTwo, 'a superset group did not come out as exactly two rows');
+});
+
+run('NON-COMPETE: an upper accessory never draws upper mobility (rule 3)', () => {
+  const out = pairMobilityWithAccessories(upperDay());
+  const mobilityRows = (out.exercises ?? []).filter((r) => r.supersetOrder === 2);
+  assert(mobilityRows.length >= 2, 'no mobility rows were produced at all');
+  // His signed example is single-arm bench + butterfly: an UPPER lift drawing
+  // HIPS. On an all-upper day every pick must be lower, hips or midline.
+  for (const row of mobilityRows) {
+    const region = mobilityRegionOf(
+      mobilityPool().find((e) => e.name === row.exercise?.name)!);
+    assert(region !== 'upper',
+      `an upper day drew UPPER mobility (${row.exercise?.name}) — that is the `
+      + 'competing pick rule 3 forbids');
+  }
+});
+
+run('the pick comes from the SIGNED pool and never repeats (rule 6)', () => {
+  const out = pairMobilityWithAccessories(upperDay());
+  const picks = (out.exercises ?? []).filter((r) => r.supersetOrder === 2)
+    .map((r) => r.exercise?.name ?? '');
+  const signed = new Set(mobilityPool().map((e) => e.name));
+  assert(picks.every((name) => signed.has(name)),
+    `a pick came from outside the signed pool: ${picks.join(', ')}`);
+  assert(new Set(picks).size === picks.length, `a movement repeated: ${picks.join(', ')}`);
+});
+
+run('the mobility row carries its OWN authored dose and counts toward nothing (rule 5)', () => {
+  const out = pairMobilityWithAccessories(upperDay());
+  const row = (out.exercises ?? []).find((r) => r.supersetOrder === 2)!;
+  const entry = mobilityPool().find((e) => e.name === row.exercise?.name)!;
+  assert(row.prescribedSets === entry.sets && row.prescribedRepsMax === entry.repsMax,
+    'the pair did not carry the pool entry\'s authored warm-up dose');
+  assert(row.role === 'prehab',
+    `the mobility row is role="${row.role}" — rule 5 says it counts toward nothing, `
+    + 'which sessionRowCounting enforces by ROLE');
+});
+
+run('a day with too few accessories is left alone — shrink, never pad', () => {
+  const thin = upperDay();
+  thin.exercises = (thin.exercises ?? []).slice(0, 2);
+  const out = pairMobilityWithAccessories(thin);
+  assert(out === thin, 'a day that cannot carry 2 pairs was paired anyway');
+});
+
+const SIDE_CHECK = (r: string): string | null =>
+  r === 'upper' ? 'upper' : r === 'midline' ? null : 'lower';
+
+run('the HARD non-compete filter holds even with no preference to hide behind', () => {
+  // THIS CELL EXISTS BECAUSE A MUTATION SURVIVED WITHOUT IT. Deleting the hard
+  // rule-3 filter left the earlier cell green, because the "prefer a region the
+  // session does not touch" preference was independently avoiding upper picks —
+  // so the cell could not tell the RULE from the PREFERENCE.
+  //
+  // Passing NO trained sides removes that cover: every region is now "untouched",
+  // the preference protects nothing, and only rule 3 itself can keep an upper
+  // pick away from an upper lift.
+  // Two shadows had to be removed before this cell could see the rule at all.
+  // Passing no trained sides kills the "untouched region" preference; excluding
+  // every NON-upper movement kills pool ORDER, which was the second thing quietly
+  // supplying the right answer. What is left is only the rule: with nothing legal
+  // remaining, a chooser that obeys rule 3 must return NOTHING rather than reach
+  // for the competing pick.
+  const nonUpper = new Set(mobilityPool()
+    .filter((entry) => mobilityRegionOf(entry) !== 'upper')
+    .map((entry) => entry.name));
+  const upperOnlyLeft = pickMobilityFor('Bench Press', new Set(), nonUpper);
+  assert(upperOnlyLeft === null,
+    `with only UPPER mobility left, the chooser returned "${upperOnlyLeft?.name}" `
+    + 'for an upper lift — rule 3 is not being enforced, only shadowed by pool order');
+
+  // And it still finds a legal pick when one exists, so the cell above cannot
+  // pass merely because the chooser refuses everything.
+  const legal = pickMobilityFor('Bench Press', new Set(), new Set());
+  assert(legal !== null && SIDE_CHECK(legal.region) !== 'upper',
+    `no legal pick was found for an upper lift: ${legal?.name}`);
 });
 
 console.log(`\nMobility and Accessories doors: ${passed} passed, ${failed} failed`);
