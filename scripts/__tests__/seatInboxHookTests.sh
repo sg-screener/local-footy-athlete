@@ -298,5 +298,64 @@ stall_case() {
 }
 stall_case
 
+# ── THE SIGN ON THE DOOR MUST DESCRIBE THE DOOR. (Item 29, 2026-08-13.) ──────
+#
+# EXIT 2 grew a body requirement and the block reason kept saying "naming why
+# you cannot proceed" — prose a terminal satisfies while still being refused,
+# for a rule its own instructions never stated. This is the same class as
+# `4bb9b2e0` (the hook promised a stop exit and never implemented one), pointing
+# the other way: there the sign over-promised, here it under-described.
+#
+# So the reason text is now ASSERTED, not trusted. Every legal value is named
+# individually, so dropping one from the door and forgetting the sign reds here.
+reason_case() {
+  local repo; repo="$(mktemp -d)"
+  mkdir -p "$repo/docs"
+  printf '%s\n' "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+    "1. A REAL ORDER, unprocessed." "" "## Previously (now processed)" \
+    > "$repo/docs/SEAT_INBOX.md"
+  ( cd "$repo" && git init -q && git config user.email t@t && git config user.name t \
+    && git add -A && git commit -q -m "feat: ordinary" ) >/dev/null 2>&1
+  local out; out="$(cd "$repo" && bash "$HOOK")"
+  rm -rf "$repo"
+  local missing=""
+  for needle in 'BLOCKED-BY: sam' 'BLOCKED-BY: other-agent' 'BLOCKED-BY: external'; do
+    printf '%s' "$out" | grep -qF -- "$needle" || missing="$missing [$needle]"
+  done
+  if [ -z "$missing" ]; then
+    echo "  PASS the block reason names the BLOCKED-BY line and all three legal values"
+    pass=$((pass + 1))
+  else
+    echo "  FAIL the block reason does not tell the terminal about:$missing"
+    fail=$((fail + 1))
+  fi
+}
+reason_case
+
+# NON-VACUITY for the cell above: it must red when a value is taken off the
+# sign. Proven by removing one from a COPY of the hook and re-reading it, so the
+# assertion cannot be passing on a string that happens to contain the words for
+# some other reason.
+reason_liveness_case() {
+  local repo; repo="$(mktemp -d)"
+  mkdir -p "$repo/docs"
+  printf '%s\n' "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+    "1. A REAL ORDER, unprocessed." "" "## Previously (now processed)" \
+    > "$repo/docs/SEAT_INBOX.md"
+  ( cd "$repo" && git init -q && git config user.email t@t && git config user.name t \
+    && git add -A && git commit -q -m "feat: ordinary" ) >/dev/null 2>&1
+  sed 's/BLOCKED-BY: other-agent or //' "$HOOK" > "$repo/mutated-hook.sh"
+  local out; out="$(cd "$repo" && bash ./mutated-hook.sh)"
+  rm -rf "$repo"
+  if printf '%s' "$out" | grep -qF -- 'BLOCKED-BY: other-agent'; then
+    echo "  FAIL the reason cell is vacuous — the mutant still reads as complete"
+    fail=$((fail + 1))
+  else
+    echo "  PASS the reason cell reds when a legal value is dropped from the sign (liveness)"
+    pass=$((pass + 1))
+  fi
+}
+reason_liveness_case
+
 echo "Seat inbox hook totals: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

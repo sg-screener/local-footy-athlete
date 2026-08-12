@@ -169,7 +169,20 @@ ADDED
   fi
 fi
 
+# ─────────────────────────────────────────────────────────────────────────────
+# THE REASON TEXT IS THE ONLY PLACE THE TERMINAL IS EVER TOLD THE RULE.
+#
+# It went stale the moment EXIT 2 grew a body requirement (item 29): the door
+# started demanding `BLOCKED-BY:` and this sentence still said "naming why you
+# cannot proceed", which a terminal satisfies by writing prose. So the exit was
+# refused for a reason its own instructions never mentioned — the same class as
+# the promise this hook once made in its block text and never implemented
+# (`4bb9b2e0`), pointing the other way.
+#
+# `seatInboxHookTests.sh` now asserts this string names the line AND all three
+# legal values, so a future tightening of the door cannot leave the sign behind.
+# ─────────────────────────────────────────────────────────────────────────────
 if [ -n "$order" ]; then
-  echo '{"decision":"block","reason":"The seat inbox holds an unprocessed order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. A docs(stop): progress report is NO LONGER an exit (item 0, 2026-08-12). End your turn only when: the queue is clear; HEAD is a commit whose subject begins docs(blocked): naming why you cannot proceed; you wrote a NEW decision under ## AWAITING SAM in this commit; or three turn-ends have passed with no new commit at all."}'
+  echo '{"decision":"block","reason":"The seat inbox holds an unprocessed order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. A docs(stop): progress report is NO LONGER an exit (item 0, 2026-08-12). End your turn only when: the queue is clear; HEAD is a commit whose subject begins docs(blocked): AND whose body carries a line reading BLOCKED-BY: sam, BLOCKED-BY: other-agent or BLOCKED-BY: external — those three words are the whole list, and the prefix alone is not an exit (item 29, 2026-08-13). BLOCKED means you cannot resolve it ALONE: a ruling only Sam can give, a file another agent is holding, or something outside the repo. A wall you can measure yourself is NOT a block — finding the next question is the definition of knowing what to do next, so take that step in THIS turn. You may also end when you wrote a NEW decision under ## AWAITING SAM in this commit, or when three turn-ends have passed with no new commit at all."}'
 fi
 exit 0
