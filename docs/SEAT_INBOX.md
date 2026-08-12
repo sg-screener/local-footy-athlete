@@ -1171,7 +1171,37 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **DO NOT ASK SAM TO RE-RULE ANY OF THIS.** The document is signed. Build it
     and show him the session on glass.
 
-27. **THE CENSUS SAM COMMISSIONED — 20 OF HIS RULINGS ARE NOT IN THE APP, AND
+27. **A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —
+    IT IS A PLANNER CHANGE, NOT A POOL ONE.**
+    **A1 — the "cooked" tap no longer deloads forever.** It was minted with
+    illness's OPEN horizon; it now carries Sam's 7-day window, wired to the
+    `resolveReadinessDeload` code that had existed since his ruling with NO
+    CALLER. Four cells, three mutations, one inverted cell (`fact-horizon` T2
+    asserted the defect).
+    **B1 — the abolished conditioning progression no longer doses.** The authored
+    duration ships unmodified; the `_progression*` stamps went with it (measured:
+    no production reader). Its suite is INVERTED into a retirement guard, 8 cells,
+    mutation-checked. Scenarios and the 17 QA weeks unchanged either side.
+    **C1 — MEASURED FURTHER THAN THE CENSUS, AND IT IS BIGGER THAN A MISSING
+    `case`.** The census says `poolForCategory` has no `cod_decel` branch. **It is
+    worse: `AthleteConditioningCategory` has NO `cod_decel` MEMBER AT ALL**
+    (`conditioningSelection.ts:57-63`) — `cod_decel` exists only as a template
+    QUALITY. So there is no category for a planner to ask for.
+    **THE CHAIN IS FOUR LINKS, and only the first three are mechanical:** add the
+    category member (the compiler then forces the `poolForCategory` branch); add
+    the branch; pass `noTeamTrainingWeek` so the existing gate opens — **verified
+    again: ZERO production callers pass it.**
+    **THE FOURTH IS THE RULING AND IT IS PLANNER WORK.** The category is chosen at
+    `defaultProgram.ts:1953` from `planEntry.conditioningCategory`, which the
+    COACHING ENGINE sets. Sam's rule — *"prescribed in weeks with no team
+    training (late off-season, Christmas break) and cut first when something has
+    to give"* — is a planner decision with a priority, not a pool lookup.
+    **Building links 1-3 alone would make the templates reachable and still
+    unreached — a field with no reader, the exact class item 27 is about.** So it
+    is stopped rather than half-built, and it needs a full pass with the
+    120-session and 17-scenario proof either side.
+
+    ~~ORIGINAL~~ **THE CENSUS SAM COMMISSIONED — 20 OF HIS RULINGS ARE NOT IN THE APP, AND
     SIX OF THEM THE APP CONTRADICTS. THIS IS THE TOP OF THE QUEUE.**
 
     **READ `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md`. Every finding carries a
