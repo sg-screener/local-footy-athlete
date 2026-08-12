@@ -847,7 +847,26 @@ phone.** State device items as PARKED in a stop report, never as a request.
     and line; the four inverted assertions quoted; `test:program-tab-read-only-modifiers`
     green with cell [5] still green; the registry row's new text.
 
-17. **SAM HAS RULED — A GAME'S LOAD IS READ, FULL, SAME UNIT AS EVERY OTHER
+17. **WORKING — A GAME'S LOAD IS READ (`f923523a`).** `gameSRPE` = body RPE x
+    minutes on the ground, in `journalLoad` beside its two siblings, carried into
+    `deriveSessionLoad`, counted in `measured`, and wired from the journal
+    producer. **FULL, NOT WEIGHTED** — no coefficient exists in the path and a
+    cell pins the product. Missing either half is UNMEASURED, never half-counted.
+    **The "nobody has ruled" comment is deleted in the same commit that made it
+    false**, in both `journalLoad` and the sibling registry row.
+    **The test that fails if it breaks:** `test:journal-load` (124 -> 133 cells),
+    plus a SOURCE cell requiring `JournalScreen` actually hand the game over —
+    a reader that stops at `deriveSessionLoad` is the defect item 10 names.
+    **Mutation-checked four ways:** half-counting, a smuggled 0.5 discount,
+    dropping the game from `measured`, unwiring the producer. Registry row
+    `LAW-game-load-is-full`.
+    **MEASURED LIMIT:** `gameSRPE` stops at the session load and the `measured`
+    flag — **exactly as `teamTrainingSRPE` does. NEITHER reaches
+    `JournalLoadWeekTotals`**, where only conditioning has a stream. So a rated
+    game moves the week's measured-session count and its own row, and no weekly
+    load number yet. **That is item 6's open question, not this one's.**
+
+    ~~ORIGINAL~~ **SAM HAS RULED — A GAME'S LOAD IS READ, FULL, SAME UNIT AS EVERY OTHER
     SESSION.** Asked under `## AWAITING SAM` since item 6. **Sam, 2026-08-12:**
     *"yes don't we do 'how long was your game?' and multiply by game RPE for a
     score that counts toward load?"* — **and the app already asks both.**
@@ -874,7 +893,31 @@ phone.** State device items as PARKED in a stop report, never as a request.
     training" — Sam considered the three options and chose full. Registry row,
     cells in `test:journal-load`, one mutation killed at minimum.
 
-18. **SAM HAS RULED — STRENGTH ASKS HOW LONG IT TOOK. OPTION (a), AND IT CLOSES
+18. **THE RULE AND THE STORE ARE WORKING; THE INPUT IS BUILT (`2132f9b3`).**
+    **ALL FOUR KINDS ARE REAL** — `conditioningSRPE`, `teamTrainingSRPE`,
+    `gameSRPE`, `strengthSRPE` — which is the sentence item 6 has been reaching
+    for, and a cell asserts it rather than announcing it.
+    **THE GAP WAS ONE FIELD:** effort was already stored as `difficulty`; actual
+    minutes was the only missing half. **Option (b) is the trap and three cells
+    guard it** — nothing back-fills the planned value, and a mutation adding a
+    60-minute default reds all three. **NOT SAVE-BLOCKING on purpose:** the
+    ruling's own shape is that a missing answer is UNMEASURED, so a blank must
+    not strand an athlete who did not time their lift.
+    **THE WORDS ARE SAM'S — "Rough time in the gym"**, chosen by him 2026-08-13
+    from his own two existing lines. Hours/minutes labels and the refusal are
+    REUSED from the game copy, not re-signed. Same `parseHoursMinutes`; not a
+    second design.
+    **THE CELL THAT EARNS ITS KEEP:** `buildSessionFeedbackPayload` REBUILDS its
+    object, so a field it does not name is lost when the athlete edits an answer
+    — the class that bit the team-night unit. Asserted THROUGH the builder on the
+    checklist path. `test:journal-load` -> 142, `test:team-night-size` -> 56.
+    Registry row `LAW-strength-load-is-actual-minutes`.
+    **BUILT, NOT WORKING, ON THE UI HALF — AND THAT IS THE HONEST WORD.** No cell
+    mounts the panel, so **nothing proves the athlete SEES the new input or that
+    it sits right on the screen.** Needs a simulator pass; **PARKED behind Sam's
+    phone rebuild (stand-down C), never a request.**
+
+    ~~ORIGINAL~~ **SAM HAS RULED — STRENGTH ASKS HOW LONG IT TOOK. OPTION (a), AND IT CLOSES
     THE LAST GAP IN EXPERIENCED LOAD.** **Sam, 2026-08-12:** *"i think do a for
     now and I will think of if thats good enough long term"*. **The "for now" is
     his, not a hedge to build around: build (a) properly, do not leave a seam
