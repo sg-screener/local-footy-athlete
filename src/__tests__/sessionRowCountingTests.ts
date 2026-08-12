@@ -39,10 +39,14 @@ import {
   ROLES_EXEMPT_FROM_COUNTING,
   SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE,
   SESSION_ROLE_TO_SECTION18_ROW_ROLE,
+  SESSION_SIZE_FLOOR,
   countingRows,
   exerciseBudgetRows,
   participatesInCounting,
 } from '../rules/sessionRowCounting';
+import { selectExercises, type SessionIntent } from '../utils/exerciseScorer';
+import type { FilterContext } from '../utils/exerciseFilter';
+import { EXERCISE_TAGS } from '../data/exerciseTags';
 import { SESSION_ROLE_ORDER, type SessionRole } from '../utils/sessionRoles';
 import { classifyProgressionEligibility } from '../utils/strengthProgressionIntegration';
 import { POWER_EXERCISE_POOL } from '../rules/powerExercisePool';
@@ -443,6 +447,59 @@ console.log('\n[6] STRUCTURAL — no second strip path survives');
     writers.length === 0,
     writers.join(', '),
   );
+}
+
+// ── THE SESSION-SIZE FLOOR HAS ONE OWNER, AND ITS READER PROVES IT ──────────
+//
+// The floor was `MIN_SESSION_SIZE`, private to `exerciseScorer`. Session size
+// therefore had TWO representations in two files — that private floor and the
+// authored ceiling on the training-age policy — and only one of them could be
+// found by anyone looking for "how big is a session".
+//
+// A MOVED CONSTANT WITH NO CELL IS A CONSTANT THAT CAN BE SILENTLY UN-MOVED.
+// So this is deliberately BEHAVIOURAL, not a source grep: it drives the real
+// selector with an under-filling intent and asserts the session it builds is
+// sized by the shared owner. Change `SESSION_SIZE_FLOOR` and this cell moves —
+// which is the only thing that proves the scorer READS it rather than merely
+// importing it.
+console.log('\n[SESSION SIZE] the floor has one owner');
+{
+  const candidates = Object.keys(EXERCISE_TAGS);
+  const ctx: FilterContext = {
+    daysToGame: null,
+    daysSinceGame: null,
+    dayOfWeek: 3,
+    inSeason: false,
+    activeInjuries: {},
+  };
+  // ONE slot, but room for more: slot-filling under-fills, so the filler branch
+  // — the only reader of the floor — is the thing under test. An intent that
+  // already fills itself would make this cell green and VACUOUS.
+  const intent: SessionIntent = {
+    targetMovements: ['squat'],
+    targetRegion: 'lower',
+    exerciseCount: 6,
+    slots: [{
+      role: 'primary',
+      preferredMovements: ['squat'],
+      maxLoad: null,
+      maxFatigue: null,
+      requireUnilateral: null,
+    }],
+  };
+  const selected = selectExercises(candidates, intent, ctx, new Set<string>());
+
+  ok('the floor is the shared owner, not a private copy',
+    SESSION_SIZE_FLOOR === 4, `SESSION_SIZE_FLOOR=${SESSION_SIZE_FLOOR}`);
+  ok('an under-filled session is topped up TO the shared floor',
+    selected.length === SESSION_SIZE_FLOOR,
+    `one slot asked for 1 exercise; the selector returned ${selected.length}, floor is ${SESSION_SIZE_FLOOR}`);
+  // The floor is a FLOOR, never a target: the intent's own count still caps it.
+  const capped = selectExercises(
+    candidates, { ...intent, exerciseCount: 2 }, ctx, new Set<string>());
+  ok('the intent\'s own exercise count still caps the top-up',
+    capped.length <= 2,
+    `exerciseCount 2 produced ${capped.length} — the floor overrode the intent`);
 }
 
 console.log(

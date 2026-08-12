@@ -43,6 +43,7 @@ import {
   type MainStrengthPattern,
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
+import { SESSION_SIZE_FLOOR } from '../rules/sessionRowCounting';
 
 // ─── Session Intent ───
 
@@ -191,8 +192,13 @@ const SESSION_LIMITS = {
  * If slot-filling produces fewer than this, safe low-cost exercises
  * are appended (core, arm isolation, carries) to make the session
  * feel complete without violating intent or introducing fatigue.
+ *
+ * THE NUMBER LIVES IN `rules/sessionRowCounting` NOW, beside the counting
+ * fence it answers to and beside the record that it is UNAUTHORED. It was
+ * private here, which made session size two representations in two files —
+ * this floor, and the authored ceiling on the training-age policy.
  */
-const MIN_SESSION_SIZE = 4;
+const MIN_SESSION_SIZE = SESSION_SIZE_FLOOR;
 
 /**
  * Filler-eligible regions by target region.

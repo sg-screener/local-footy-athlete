@@ -255,3 +255,54 @@ export function exerciseBudgetRows(
 ): readonly WorkoutExercise[] {
   return countingRows(workout);
 }
+
+/**
+ * THE SESSION-SIZE FLOOR — and it is UNAUTHORED. Sam has never ruled a number.
+ *
+ * ## Why it moved here
+ *
+ * It was `MIN_SESSION_SIZE` inside `exerciseScorer`, module-private, next to
+ * nothing. Session size then had TWO representations in two files: a ceiling
+ * (`trainingAgePolicy.maxExercisesPerStrengthSession`, authored — Bible §11's
+ * "ONE exercise cap for every training age") and this floor, invented, where
+ * only one module could see it. This module is the choke point for what a
+ * session's rows ARE, so how many of them there must be belongs beside it.
+ *
+ * Moving it changed no behaviour: the value is the same 4 it has always been,
+ * and `exerciseScorer` is its only reader. What changed is that the floor is
+ * now visible next to the fence it answers to, and labelled as unauthored so
+ * nobody reads it as law.
+ *
+ * ## What it is NOT
+ *
+ * It is not a validator and it is not enforced. Nothing trims a session that
+ * exceeds the ceiling and nothing pads one that falls under this floor; the
+ * scorer merely tops up its own selection toward it. A predicate that judged
+ * whole sessions would have no production reader today, and this repo bans
+ * building one before its reader exists.
+ *
+ * ## The measurement that decides what happens next (2026-08-13)
+ *
+ * Over 120 generated sessions from the local deterministic path — three season
+ * phases x four experience levels — counted rows ran min 2, max 6:
+ *
+ *   Strength        n=32   5 to 6      never under the floor
+ *   Mixed           n=56   4 to 6      never under the floor
+ *   Team Training   n=32   2 to 4      26 sessions under it
+ *
+ * ZERO sessions exceeded the authored ceiling of 6. Every session below the
+ * floor was a TEAM-TRAINING night — a day the athlete is already at the club,
+ * carrying a deliberately small added piece ("Team Training + Lower Body
+ * Strength"). So the claim that 3-exercise days are old logic surviving into
+ * shipped output is REFUTED for strength and mixed days, and on team nights a
+ * small session may well be correct.
+ *
+ * WHICH MAKES THE FLOOR A PRODUCT QUESTION, NOT A CODE ONE, and product
+ * questions are Sam's (LAW-L7). It is recorded under AWAITING SAM in the seat
+ * inbox: does a team night have a session-size floor at all, and if so what
+ * number. Until he answers, `MIN EXERCISES PER SESSION` is deliberately NOT
+ * emitted to the AI prompt — the prompt already carries the authored MAX, and
+ * adding an invented MIN beside it would ship a number nobody authored as
+ * coaching instruction.
+ */
+export const SESSION_SIZE_FLOOR = 4;
