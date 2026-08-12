@@ -1030,7 +1030,22 @@ phone.** State device items as PARKED in a stop report, never as a request.
     STRENGTH rows only** — a 6-exercise session with 3 mobility pairs is 9 rows on
     glass and still six. Stated here so the two items cannot disagree.
 
-26. **SAM'S MOBILITY PAIRING WAS AUTHORED ON 2026-07-31 AND NEVER BUILT — AND
+26. **THE ⚠ HALF IS BUILT — HIS 2-3 PAIRS SURVIVE THE VALIDATOR NOW.**
+    `validatePairings` capped a session at ONE pair and silently binned the rest;
+    the ceiling is now his THREE, and a FOURTH is still stripped because four is
+    not his design either. Rules 2-4 untouched. **Five cells in
+    `test:mobility-accessory-doors` (16 -> 21), including the one this item names:
+    it fails if a 3-pair session survives as a 1-pair session. Mutation-checked
+    two ways** — cap back to one reds three cells, ceiling removed reds the
+    fourth-pair cell.
+    **THE PRODUCER IS STILL NOT BUILT.** Nothing writes a superset, so this
+    protects a design with no writer yet. **That is the main half and it is
+    next.**
+    **RECEIPT NOTE:** the code landed inside `220dfef9`, another agent's commit —
+    they staged the whole tree while my files sat in the shared checkout, so the
+    reasoning above is recorded here rather than in a commit message of its own.
+
+    ~~ORIGINAL~~ **SAM'S MOBILITY PAIRING WAS AUTHORED ON 2026-07-31 AND NEVER BUILT — AND
     THE APP ACTIVELY DELETES IT.**
 
     **OWNED BY THE TERMINAL.** Composition, not UI.
