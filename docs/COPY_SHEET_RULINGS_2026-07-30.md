@@ -2221,7 +2221,18 @@ a synonym swap over the old action. The old chip attempted a one-tap short-time
 schedule change and did nothing on Sam's screen; the new word opens readiness's
 existing tired/flat choices. The label and the door therefore move together.
 
-WITHDRAWN: "Short on time today"
+Short on time today (withdrawn from the DAY-SCREEN CONTROL 2026-08-11)
+
+**AND THE WIDENED GATE FOUND WHERE IT STILL SHIPS — 2026-08-13.** Adding
+`rules/temporarySourceFact.ts` to the binding gate's scope (the away flow needed
+it, batch 34) immediately reddened this row: the sentence is still the MODIFIER
+TITLE a single-day time-cap fact shows on My Status
+(`temporarySourceFact.ts:971,1038`). **That is correct and stays** — 33-a
+withdrew the inert Day-screen CONTROL, not the words the resulting fact uses to
+describe itself, and the door that writes that fact lives on inside the
+readiness sheet. The row is re-worded to say which surface it left, using the
+same parenthetical form batch 12 already uses, rather than claiming a
+whole-app retirement that never happened.
 
 **33-b. `Sick` AND `Injured` KEEP THEIR SIGNED WORDS BUT THEIR OWNERSHIP IS NOW
 VISIBLE.** Sick opens illness severity directly. Injury is not a sickness choice
@@ -2254,6 +2265,8 @@ about a trip, and the sentence the athlete gets back.
 | Equipment sheet heading, when it is a trip | "What will you be without?" |
 | Equipment sheet apply, when it is a trip | "Apply while I'm away" |
 | Equipment row status, when it is a trip | "Missing while away" |
+| The away modifier's sentence, on My Status | "Team training and games are off while you are away. Your own sessions keep running." |
+| The away modifier's short phrase (item 23's right-hand column) | "Team training and games off" |
 
 **34-a. THE YES ANSWER GETS A SENTENCE AND NO MODIFIER**, because Sam's own
 answer to that branch is *"if yes, follow same program"*. The sentence names the
@@ -2269,6 +2282,19 @@ LIE of the no branch. That commit substitutes exercises for a dated span:
 
 > "Got it — your sessions will work around the gear you're without until you're
 > back."
+
+**34-a-iii. TWO OF THESE REPLACE SENTENCES THAT BECAME FALSE, and Sam ruled the
+behaviour that made them false.** He answered the open question with *"yes clear
+team training and games while away"*. So:
+
+- **WITHDRAWN: "Your program is avoiding the dates you are away."** It described
+  the door that marked every away date UNAVAILABLE and collapsed the whole day —
+  the athlete's own gym session with it. Nothing is avoided now; club-bound work
+  comes off and solo work keeps running.
+- **The short phrase was "Sessions moved"** (item 22(a), signed for a day the
+  athlete cannot train). Nothing moves any more, so travel gets its own phrase
+  rather than borrowing a signed one that has stopped being true. **It is
+  PROPOSED — the behaviour is his, the four words are not yet.**
 
 **34-b. NOTHING REPLACES A SIGNED WORD.** "Away" is already his (batch 12);
 only its SURFACE moved. The Day-screen sentence "Away this week?" is

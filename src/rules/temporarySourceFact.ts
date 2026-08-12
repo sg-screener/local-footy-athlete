@@ -972,8 +972,14 @@ function scheduleProjection(
         : fact.scheduleKind === 'team_night_move'
           ? 'Team training moved this week'
           : 'Temporary availability active',
+    // ── ITEM 28, 2026-08-13: THE SENTENCE FOLLOWS THE BEHAVIOUR ──
+    // It read "Your program is avoiding the dates you are away", which was true
+    // of the door that MARKED THOSE DATES UNAVAILABLE and deleted the whole
+    // day. Sam ruled that away twice over: the plan keeps running on whatever
+    // kit he has, and what away actually removes is club-bound work —
+    // *"yes clear team training and games while away"*.
     modifierBody: fact.scheduleKind === 'travel'
-      ? 'Your program is avoiding the dates you are away.'
+      ? 'Team training and games are off while you are away. Your own sessions keep running.'
       : fact.scheduleKind === 'busy_week'
         ? (scheduleFactIsSingleDay(fact)
             ? "Today's session drops the highest-cost work. The rest of your week is untouched."

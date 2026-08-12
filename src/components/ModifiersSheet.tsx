@@ -68,6 +68,7 @@ const EFFECT_COPY_ID: Record<ActiveProgramModifierEffect, string | null> = {
   training_paused: 'modifiers.effect.training_paused',
   exercises_substituted: 'modifiers.effect.exercises_substituted',
   sessions_moved: 'modifiers.effect.sessions_moved',
+  club_sessions_off: 'modifiers.effect.club_sessions_off',
   planned_lighter: 'modifiers.effect.planned_lighter',
   week_rebuilt: 'modifiers.effect.week_rebuilt',
   exercise_preference_applied: 'modifiers.effect.exercise_preference_applied',

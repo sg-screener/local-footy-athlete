@@ -86,6 +86,10 @@ import {
 import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
 import { hasPowerRow } from '../rules/sessionRowCounting';
 import { storedGameAnchor } from '../rules/gameAnchor';
+// THE ONE OWNER OF "what part of this day is the club's" (item 28). This seam
+// asks it rather than matching names itself, so away and the day card can never
+// disagree about what a team night is.
+import { getTeamTrainingWorkoutState } from './teamTraining';
 import {
   hasStoredWeekDeclaration,
   selectStoredWeekDeclaration,
@@ -330,6 +334,60 @@ export function validateWorkoutAgainstActiveConstraints(
       };
     }
     return alignedResult();
+  }
+
+  // ── WHAT BEING AWAY DOES — SEAT_INBOX item 28, Sam 2026-08-13 ──
+  //
+  // **His ruling, in full:** the away flow asks when he leaves and when he
+  // returns, the plan keeps running on whatever kit he has — *"if yes, follow
+  // same program"* — and *"yes clear team training and games while away"*.
+  //
+  // THE TWO HALVES ARE ONE RULE AND THIS IS WHERE IT LIVES, because this is the
+  // only seam that knows what a day is MADE OF. Away used to arrive here as
+  // `unavailableDates` and collapse the whole day to rest, which deleted the
+  // athlete's own gym session along with the club's night — the defect item 28
+  // exists to remove. A trip does not stop him training; it stops him getting
+  // to the club.
+  //
+  // SO: club-bound work goes, solo work stays and is reshaped by the equipment
+  // answer he gave in the same flow. A day that was ONLY club work becomes
+  // rest, which is the honest end of the same rule rather than a second one.
+  const travelling = active.some((constraint): constraint is ActiveScheduleConstraint =>
+    constraint.type === 'schedule' && constraint.scheduleKind === 'travel');
+  if (travelling) {
+    // THE SAME PAIR `programEditWriteGuard` USES to recognise a fixture, so the
+    // two cannot disagree about what a game day is. A practice match rides the
+    // `sessionTier` half; `workoutType: 'Game'` is the stub the generator lays
+    // down for a real fixture.
+    const fixtureStub = alignedWorkout.workoutType === 'Game' ||
+      (alignedWorkout as { sessionTier?: unknown }).sessionTier === 'game';
+    const team = getTeamTrainingWorkoutState(alignedWorkout);
+    if (fixtureStub || team.isTeamTrainingOnly) {
+      return {
+        workout: null,
+        changed: true,
+        collapsedToRest: true,
+        preservedAnchor: false,
+        activeConstraintIds: active.map((constraint) => constraint.id),
+        removedExerciseNames: (alignedWorkout.exercises ?? [])
+          .map((row: any) => row?.exercise?.name ?? row?.name ?? '')
+          .filter(Boolean),
+        removedComponents: [],
+      };
+    }
+    if (team.hasTeamTraining) {
+      // THE DAY KEEPS ITS OWN HALF. Its name follows the survivors through the
+      // ONE owner of that question (`getTeamTrainingWorkoutState`), so a
+      // "Strength + Team Training" day cannot keep announcing a team night the
+      // athlete is a thousand kilometres from.
+      alignedWorkout = {
+        ...alignedWorkout,
+        name: team.displayName ?? alignedWorkout.name,
+        workoutType: team.displayWorkoutType ?? alignedWorkout.workoutType,
+        exercises: team.renderableExercises,
+      } as typeof alignedWorkout;
+      scheduleDurationChanged = true;
+    }
   }
 
   const blockingSchedule = active.find((constraint): constraint is ActiveScheduleConstraint =>

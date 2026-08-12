@@ -957,6 +957,17 @@ export function scheduleFactScopeForAction(
   action: Extract<ProgramControlAction, { type: 'set_schedule_modifier' }>,
 ): TemporarySourceFactScope {
   const date = action.payload.date.slice(0, 10);
+  // THE TRIP IS THE HORIZON (item 28). The athlete gave a leave date and a
+  // return date; the window between them is the fact, and no scope word can
+  // improve on it.
+  const span = action.payload.awaySpan;
+  if (span) {
+    return temporaryFactScope({
+      kind: 'window',
+      from: span.from.slice(0, 10),
+      until: span.until.slice(0, 10),
+    });
+  }
   const awayDates = scheduleModifierAwayDates(action);
   // Away names its own dates, so the window IS the answer — a scope word cannot
   // improve on the days the athlete ticked.
@@ -1251,7 +1262,8 @@ async function executeProgramControlActionDurablyWithinTrace(
     // deriving lane builds the compressed session (main lift kept, cut to
     // essentials). Away and max-sessions requests stay UNRULED schedule facts
     // and commit record-only through the inert lane.
-    const shortOnTimeToday = awayDates.length === 0 &&
+    const awaySpan = action.payload.awaySpan;
+    const shortOnTimeToday = awayDates.length === 0 && !awaySpan &&
       action.payload.maxSessionsThisWeek === undefined &&
       action.scope === 'today_only';
     const fact = shortOnTimeToday
@@ -1267,10 +1279,16 @@ async function executeProgramControlActionDurablyWithinTrace(
       : createTemporaryScheduleFact({
           observedDate: date,
           scope: scheduleFactScopeForAction(action),
-          scheduleKind: awayDates.length > 0
+          scheduleKind: awayDates.length > 0 || awaySpan
             ? 'travel'
             : action.payload.maxSessionsThisWeek !== undefined ? 'max_sessions' : 'busy_week',
-          unavailableDates: awayDates,
+          // A SPAN-SHAPED TRIP MARKS NO DATE UNAVAILABLE, and that is the whole
+          // difference between it and the door it replaced. `unavailableDates`
+          // means "there is no training on this day at all", which collapsed
+          // the athlete's own gym session along with the club's night. What
+          // being away DOES is decided at the deriving seam, from the day's
+          // PARTS: club-bound work goes, solo work stays.
+          unavailableDates: awaySpan ? [] : awayDates,
           maxSessions: action.payload.maxSessionsThisWeek,
           sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
           sourceSurface,

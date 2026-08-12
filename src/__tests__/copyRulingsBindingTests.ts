@@ -129,6 +129,15 @@ const AUTHORING_MODULES = [
   // shortfall-copy regime; what this list adds is the RETIRED direction, so a
   // sentence Sam replaces cannot quietly survive here.
   'rules/deloadWeekRules.ts',
+  // THE MODIFIER SENTENCES EVERY TEMPORARY FACT SHOWS ON MY STATUS
+  // (`scheduleProjection`'s `modifierTitle`/`modifierBody`), added 2026-08-13 by
+  // the away flow — and it is the SAME hatch opening for the FIFTH time, for the
+  // reason already written out below: words are authored where the feature's
+  // decision lives, and that is almost never in `screens/`. Away's sentence
+  // ("Your program is avoiding the dates you are away") was WITHDRAWN here when
+  // Sam changed what away does, and without this line the gate could not see
+  // either the old string leaving or the new one arriving.
+  'rules/temporarySourceFact.ts',
   // THE MONDAY NOTIFICATION'S SENTENCE (batch 28, C6), added 2026-08-09 — and it
   // is the FOURTH time this hatch has been opened for the same reason, which is
   // now worth stating as a pattern rather than a coincidence: **words are

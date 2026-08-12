@@ -137,6 +137,7 @@ export type ActiveProgramModifierEffect =
   | 'training_paused'
   | 'exercises_substituted'
   | 'sessions_moved'
+  | 'club_sessions_off'
   | 'planned_lighter'
   | 'week_rebuilt'
   | 'exercise_preference_applied'
@@ -1000,7 +1001,14 @@ function statusModifier(
         : readinessFactKind === 'soreness' ? 'unsigned'
           : c.type === 'schedule' && c.scheduleKind === 'time_cap' ? 'not_shown'
             : c.type === 'schedule' && c.noteProof?.kind === 'game_change' ? 'week_rebuilt'
-              : c.type === 'schedule' ? 'sessions_moved'
+              // ── ITEM 28: TRAVEL IS ITS OWN EFFECT NOW ──
+              // "Sessions moved" was honest while away marked its dates
+              // UNAVAILABLE and the composer shuffled the week. Sam's ruling
+              // changed what away does — *"yes clear team training and games
+              // while away"* — so nothing moves; club-bound work comes off and
+              // the athlete's own sessions stay where they are.
+              : c.type === 'schedule' && c.scheduleKind === 'travel' ? 'club_sessions_off'
+                : c.type === 'schedule' ? 'sessions_moved'
                 : 'unsigned';
 
   return {

@@ -402,6 +402,14 @@ export function registerProjectionCopy(): void {
       text: 'Sessions moved',
     },
     {
+      id: 'modifiers.effect.club_sessions_off',
+      source: 'authored_sheet',
+      provenance: 'PROPOSED 2026-08-13, copy sheet batch 34 — SEAT_INBOX item '
+        + '28. Sam ruled the BEHAVIOUR ("yes clear team training and games '
+        + 'while away") and owes the words. Shown for an away/travel span.',
+      text: 'Team training and games off',
+    },
+    {
       id: 'modifiers.effect.planned_lighter',
       source: 'signed_sentence',
       provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '

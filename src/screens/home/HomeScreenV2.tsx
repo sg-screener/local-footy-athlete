@@ -112,6 +112,7 @@ export default function HomeScreenV2() {
     handleViewWorkout,
     handleFinishTeamSession,
     handleApplyGuidedInjury,
+    handleApplyAwaySpan,
     handleApplyAwayEquipment,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
@@ -1263,23 +1264,27 @@ export default function HomeScreenV2() {
         visible={awayVisible}
         weekDays={weekDays}
         onClose={() => setAwayVisible(false)}
-        onDone={({ leaveISO, returnISO, hasNormalEquipment }) => {
+        onDone={async ({ leaveISO, returnISO, hasNormalEquipment }) => {
           setAwayVisible(false);
-          if (hasNormalEquipment) {
-            // SAM'S OWN ANSWER TO THE YES BRANCH: *"if yes, follow same
-            // program"*. Nothing is stored, because nothing changes — a fact
-            // written here would be a modifier that modifies nothing, which is
-            // the shape the north star calls presumed-wrong.
-            setScheduleAck({
-              tone: 'success',
-              message: `You're away ${shortDayMonthLabel(leaveISO)} to ${shortDayMonthLabel(returnISO)} with your normal gear, so your program stays as it is.`,
-            });
-            return;
-          }
           // `until` IS THE LAST DAY AWAY, not the return date: the athlete is
           // home on the day they return, and the program is normal again that
           // morning without them clearing anything.
-          setAwayEquipmentSpan({ from: leaveISO, until: addDaysISO(returnISO, -1) });
+          const span = { from: leaveISO, until: addDaysISO(returnISO, -1) };
+          // THE TRIP IS WRITTEN IN BOTH BRANCHES (Sam, 2026-08-13: *"yes clear
+          // team training and games while away"*). The club is shut to him
+          // whatever is in his suitcase; the equipment answer only decides what
+          // his OWN sessions look like.
+          const result = await handleApplyAwaySpan(span);
+          const ack = buildScheduleAcknowledgment(
+            result, hasNormalEquipment ? 'away' : 'away_equipment');
+          recordScheduleAckPresented({
+            traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
+          });
+          if (!result?.ok || hasNormalEquipment) {
+            setScheduleAck(ack);
+            return;
+          }
+          setAwayEquipmentSpan(span);
         }}
       />
 

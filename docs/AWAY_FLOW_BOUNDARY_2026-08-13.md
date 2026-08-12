@@ -217,3 +217,76 @@ broken on purpose and the right cells went red:
 - **THE DIAGNOSTICS SURFACE IS STILL `away_this_week`** on a fact that can span
   a fortnight. Kept on purpose (persisted `sourceSurface` labels, four test
   files) and named so it is fixed deliberately.
+
+
+---
+
+## SLICE 2 — WHAT BEING AWAY DOES, ruled the same day
+
+**Sam, 2026-08-13, answering the one question slice 1 left open:** ***"yes clear
+team training and games while away"***.
+
+**IT LIVES AT ONE SEAM.** `validateWorkoutAgainstActiveConstraints` is the only
+place that knows what a day is MADE OF, so that is where "away" is turned into
+an effect. A live `travel` span now:
+
+- removes **team-training rows** from a day and keeps the rest of it, renaming
+  the day through `getTeamTrainingWorkoutState` — the one owner of "what part of
+  this is the club's", so away and the day card cannot disagree;
+- collapses a day that was **only** club work (a team-only night, a game stub, a
+  practice match) to rest;
+- **touches nothing else.**
+
+**IT MARKS NO DATE UNAVAILABLE, and that is the whole design.** `unavailableDates`
+means "there is no training here at all" — it was what the replaced door sent,
+and it deleted the athlete's own gym session along with the club's night. The
+payload now carries `awaySpan: { from, until }` and nothing else; the executor
+writes `unavailableDates: []` for it, and `test:away-flow` [5c]/[5d] red if
+either half comes back.
+
+**THE FACT IS WRITTEN IN BOTH BRANCHES.** The club is shut to the athlete
+whatever is in his suitcase, so "yes, same as usual" writes the trip too — one
+fact, no equipment restriction. *"If yes, follow same program"* stays true of
+every session that was ever his to do.
+
+### Mutation runs, and this pair is the point
+
+A rule can be wrong by being ABSENT or by being TOO WIDE, and the second is
+exactly how the door this replaced went wrong. One mutation each way:
+
+| Mutation | Expected red | Result |
+| --- | --- | --- |
+| Disable the travel rule entirely | the club work survives | **[8], [9], [10] RED** |
+| Widen it back to the old whole-day collapse | the athlete's own work dies | **[8], [8b], [11] RED** |
+
+### Copy the behaviour change forced
+
+- **WITHDRAWN: "Your program is avoiding the dates you are away."** Nothing is
+  avoided now.
+- **The short phrase was "Sessions moved"** — signed (item 22(a)) for a day the
+  athlete cannot train. Nothing moves any more, so travel gets its own effect
+  (`club_sessions_off`) rather than borrowing a signed phrase that stopped being
+  true. **"Team training and games off" is PROPOSED, batch 34.**
+
+### A finding the widened copy gate earned
+
+Adding `rules/temporarySourceFact.ts` to `test:copy-rulings-binding`'s scope
+(needed for the sentence above) immediately reddened an UNRELATED row: batch
+33-a's `WITHDRAWN: "Short on time today"` claimed a whole-app retirement, and the
+sentence is still the modifier title a time-cap fact shows on My Status. **That
+is correct and stays** — 33-a withdrew the inert Day-screen CONTROL, not the
+words the fact uses about itself. The row is re-worded to the surface-scoped form
+batch 12 already uses. **The gate got stricter and found a doc that was wrong;
+nothing was loosened to pass.**
+
+### Not covered, slice 2
+
+- **NO GENERATION MEASUREMENT BEYOND PARITY.** `test:scenarios` fails on exactly
+  one case (`GAME-MOVE-SAT-TO-FRI`) **and fails identically at HEAD** — measured
+  in a detached worktree, not assumed. The 120-session distribution and the 17
+  QA weeks were NOT re-run: no generator file was touched, and the new branch is
+  inert unless a travel fact is live.
+- **THE LEGACY `clear_days` AWAY FACT KEEPS ITS BLANKET COLLAPSE** and now also
+  gets the club rule. It has no product caller; a retire pass owns it.
+- **PARTICIPATION IS NOT MODELLED.** An athlete away who could still do a club
+  session remotely has no way to say so. Nothing was invented for it.

@@ -298,6 +298,22 @@ export type ProgramControlAction =
       date: string;
       todayISO?: string;
       maxSessionsThisWeek?: number;
+      /**
+       * THE TRIP — SEAT_INBOX item 28, Sam 2026-08-13. `from` is the day the
+       * athlete leaves, `until` is the LAST DAY AWAY (the day before they
+       * return), and the pair IS the fact's horizon.
+       *
+       * IT CARRIES NO DATE LIST ON PURPOSE. The old away door sent
+       * `planChange: { kind: 'clear_days', dates }` and every one of those
+       * dates became UNAVAILABLE — the whole day collapsed to rest, including
+       * the athlete's own gym session. Sam ruled the opposite twice
+       * (*"if yes, follow same program"*), and then ruled what away DOES do:
+       * *"yes clear team training and games while away"* — club-bound work
+       * only. That rule lives at the deriving seam
+       * (`postGenerationConstraintValidation`) where the day's PARTS are
+       * known, so this payload states the SPAN and nothing else.
+       */
+      awaySpan?: { from: string; until: string };
       /** Away / holiday dates. The durable executor stores them as schedule
        *  facts; it never creates fact-owned Rest overrides. */
       planChange?: PlanChange;

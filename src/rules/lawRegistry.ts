@@ -1530,13 +1530,13 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-away-is-an-equipment-answer',
-    law: "Away is a dated EQUIPMENT answer, never a schedule removal. The athlete gives a leave date (bounded to the week on screen), a return date (unbounded), then says whether they have their normal kit; \"no\" writes ONE `missing_for_span` equipment fact over leave..return-1, which lifts itself on the return date. Away removes no session and marks no date unavailable.",
+    law: "Away has two halves and both are Sam's. (1) The athlete gives a leave date (bounded to the week on screen), a return date (unbounded), then says whether they have their normal kit; \"no\" writes a `missing_for_span` equipment fact over leave..return-1. (2) The trip itself is a span-shaped `travel` fact that marks NO date unavailable: while it is live, CLUB-BOUND work comes off — team training and fixtures — and every solo session stays exactly where it is, reshaped by the kit answer. Both lift themselves on the return date.",
     ruledAt: 'docs/SEAT_INBOX.md item 28 (Sam, 2026-08-13); docs/AWAY_FLOW_BOUNDARY_2026-08-13.md',
     guard: {
       state: 'guarded',
       by: 'test:away-flow',
       chainStatus: 'in_chain',
-      receipt: 'BUILT 2026-08-13. 13 cells through the real durable executor on a TEN-DAY trip crossing two Sundays. [5b] reds if a schedule fact or `clear_days` returns to the away handler — the shape that used to take the athlete\'s sessions away and that would also have made the equipment answer vacuous. [2b]/[2c] red if the span stops reaching the days it names; [3] reds if the fact survives the return date. MUTATION-CHECKED: forcing a week scope reds [1b]/[2b]/[2c]; setting `until` to the return date reds [3]. Seen on the simulator end to end — week control, both dates, marked kit, "1 active modifier impacting program" / "Equipment restriction active - Exercises substituted" afterwards.',
+      receipt: 'BUILT 2026-08-13, both halves. 21 cells through the real durable executor and the real deriving seam on a TEN-DAY trip crossing two Sundays. [5b] reds if a schedule fact or `clear_days` returns to the away handler — the shape that used to take the athlete\'s sessions away and that would also have made the equipment answer vacuous. [2b]/[2c] red if the span stops reaching the days it names; [3] reds if the fact survives the return date. MUTATION-CHECKED FOUR WAYS: forcing a week scope reds [1b]/[2b]/[2c]; setting `until` to the return date reds [3]; disabling the travel rule reds [8]/[9]/[10] (the club work survives); widening it back to the old whole-day collapse reds [8]/[8b]/[11] (the athlete\'s own work dies). The pair is what proves the rule is the RIGHT width rather than merely present. Seen on the simulator end to end — week control, both dates, marked kit, "1 active modifier impacting program" / "Equipment restriction active - Exercises substituted" afterwards.',
     },
   },
 ];

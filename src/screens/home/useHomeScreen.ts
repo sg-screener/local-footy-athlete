@@ -1189,6 +1189,42 @@ export function useHomeScreen() {
    * WHEN THE ATHLETE HAS THEIR NORMAL KIT, NOTHING IS WRITTEN, and that is the
    * ruling rather than an omission: *"if yes, follow same program"*.
    */
+  /**
+   * THE TRIP ITSELF — SEAT_INBOX item 28, and Sam's answer to the one question
+   * this flow left open: *"yes clear team training and games while away"*.
+   *
+   * WRITTEN IN BOTH BRANCHES, because the club is shut to him either way. The
+   * equipment answer decides what his OWN sessions look like; this fact decides
+   * that he is not at the club. A trip with normal kit therefore still writes
+   * exactly one fact, and *"if yes, follow same program"* stays true of every
+   * session that was ever his to do.
+   *
+   * IT MARKS NO DATE UNAVAILABLE. What being away DOES is derived at
+   * `postGenerationConstraintValidation`, where the day's parts are known —
+   * club-bound work goes, solo work stays. The door that stood here sent
+   * `clear_days` and lost the whole day.
+   */
+  const handleApplyAwaySpan = useCallback(async (
+    span: { from: string; until: string },
+  ) => {
+    const todayISO = todayISOLocal();
+    const result = await executeProgramControlActionDurably({
+      type: 'set_schedule_modifier',
+      source: {
+        screen: 'program_tab',
+        surface: 'away_this_week',
+        initiatedBy: 'tap',
+      },
+      scope: 'current_week',
+      payload: { date: span.from, todayISO, awaySpan: span },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { visibleWeek: weekDays, todayISO });
+    await handleProgramControlResult(result);
+    return result;
+  }, [weekDays, handleProgramControlResult]);
+
   const handleApplyAwayEquipment = useCallback(async (
     decision: EquipmentLimitationDecision,
   ) => {
@@ -1445,6 +1481,7 @@ export function useHomeScreen() {
     // Block-rollover honest refusal (Sam's interim ruling, 2026-07-31)
     rolloverRefusal,
     handleRetryRollover,
+    handleApplyAwaySpan,
     handleApplyAwayEquipment,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
