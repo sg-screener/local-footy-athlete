@@ -61,6 +61,7 @@ armTotalsOrRed();
 import type { TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
 import { validatePairings } from '../data/defaultProgram';
 import { mobilityRegionOf } from '../rules/mobilitySessionComposition';
+import { participatesInCounting } from '../rules/sessionRowCounting';
 import {
   MOBILITY_PAIRS_MAX,
   pairMobilityWithAccessories,
@@ -542,9 +543,13 @@ run('the mobility row carries its OWN authored dose and counts toward nothing (r
   const entry = mobilityPool().find((e) => e.name === row.exercise?.name)!;
   assert(row.prescribedSets === entry.sets && row.prescribedRepsMax === entry.repsMax,
     'the pair did not carry the pool entry\'s authored warm-up dose');
-  assert(row.role === 'prehab',
-    `the mobility row is role="${row.role}" — rule 5 says it counts toward nothing, `
-    + 'which sessionRowCounting enforces by ROLE');
+  // ASSERT THE EXEMPTION, NOT THE ROLE NAME. This cell said `role === 'prehab'`
+  // and passed while the row was NOT exempt at all — prehab counts. A cell that
+  // checks the label instead of the property is how the false claim survived.
+  assert(!participatesInCounting(row),
+    `the mobility row still COUNTS (role="${row.role}") — rule 5 says it counts `
+    + 'toward nothing, and that is a property of ROLES_EXEMPT_FROM_COUNTING, not '
+    + 'of the role\'s name');
 });
 
 run('a day with too few accessories is left alone — shrink, never pad', () => {

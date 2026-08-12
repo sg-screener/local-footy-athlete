@@ -42,7 +42,18 @@ export type SessionRole =
    * `isTeamTrainingItem` matches a name set and three regexes; that is the
    * ingress lift for rows authored before this role, not the fence.
    */
-  | 'team_training';
+  | 'team_training'
+  /**
+   * PAIRED MOBILITY — the mobility half of a superset (Sam's pairing rules,
+   * 2026-07-31, rule 5): *"Not logged for weight or performance — no load entry,
+   * no progression tracking. Counts toward nothing (mobility law: never hard, no
+   * load credit, never breaks rest)."*
+   *
+   * NOT `prehab`, and the difference is load-bearing: prehab rows COUNT. A paired
+   * mobility row stamped `prehab` would have been counted against the per-session
+   * exercise budget, which is precisely what rule 5 forbids.
+   */
+  | 'mobility';
 
 /**
  * D2's session order applied to the flat list (§3.1):
@@ -58,6 +69,7 @@ export const SESSION_ROLE_ORDER: readonly SessionRole[] = [
   'accessory',
   'midline',
   'prehab',
+  'mobility',
   'conditioning',
 ];
 

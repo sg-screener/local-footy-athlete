@@ -127,10 +127,11 @@ ok(
   // and the cell still refuses a THIRD arriving unannounced, which is the job
   // it was doing all along — the module's header calls adding a role here a
   // counting change that must come with a golden diff.
-  'exactly power and team training are exempt — a third may not arrive unannounced',
-  ROLES_EXEMPT_FROM_COUNTING.size === 2
+  'exactly power, team training and mobility are exempt — a fourth may not arrive unannounced',
+  ROLES_EXEMPT_FROM_COUNTING.size === 3
     && ROLES_EXEMPT_FROM_COUNTING.has('power')
-    && ROLES_EXEMPT_FROM_COUNTING.has('team_training'),
+    && ROLES_EXEMPT_FROM_COUNTING.has('team_training')
+    && ROLES_EXEMPT_FROM_COUNTING.has('mobility'),
   [...ROLES_EXEMPT_FROM_COUNTING].join(', '),
 );
 

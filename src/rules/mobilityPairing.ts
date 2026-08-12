@@ -193,9 +193,15 @@ export function pairMobilityWithAccessories(workout: Workout): Workout {
 /**
  * The mobility half of a pair, at its OWN authored dose (rule 5).
  *
- * `role: 'prehab'` is what keeps it out of every count — rule 5 says it *"counts
+ * `role: 'mobility'` is what keeps it out of every count — rule 5 says it *"counts
  * toward nothing"*, and `sessionRowCounting` enforces that by ROLE rather than by
  * reading the name.
+ *
+ * IT WAS `prehab` FOR AN HOUR AND THAT WAS WRONG. `prehab` is NOT in
+ * `ROLES_EXEMPT_FROM_COUNTING`, so those rows would have counted against the
+ * per-session budget while a comment right here claimed they did not. Caught by
+ * checking the claim, not by a failing cell — which is why the cell below now
+ * asserts the EXEMPTION rather than the role name.
  */
 function mobilityRowFor(pick: MobilityPick, workoutId: string, order: number): WorkoutExercise {
   const entry = mobilityPool().find((candidate) => candidate.name === pick.mobility)!;
@@ -209,7 +215,7 @@ function mobilityRowFor(pick: MobilityPick, workoutId: string, order: number): W
     prescribedRepsMax: entry.repsMax,
     restSeconds: entry.restSeconds,
     notes: entry.notes,
-    role: 'prehab',
+    role: 'mobility',
     supersetGroup: pick.group,
     supersetOrder: 2,
     pairType: 'superset',

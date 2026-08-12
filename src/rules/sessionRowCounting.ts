@@ -77,6 +77,12 @@ export const ROLES_EXEMPT_FROM_COUNTING: ReadonlySet<SessionRole> = new Set<Sess
   // an unfiltered list is the bug." `isTeamTrainingItem` stays what it is — the
   // display split and the read-ingress lift for rows authored before the role.
   'team_training',
+  // THE FOURTH CASE, and it was caught by checking a claim rather than by a red.
+  // The pairing producer stamped its mobility rows `prehab` and a comment claimed
+  // that kept them out of the count. IT DID NOT — `prehab` is not in this set, so
+  // every paired mobility row would have counted against the per-session exercise
+  // budget, directly against Sam's rule 5: *"counts toward nothing"*.
+  'mobility',
 ]);
 
 /** Whether one row takes part in counting. Authored role only — never a name. */
@@ -153,6 +159,9 @@ export const SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE: readonly Section18RowRole
  */
 export const SESSION_ROLES_WITHOUT_SECTION18_ROW_ROLE: readonly SessionRole[] = [
   'team_training',
+  // Same reason: rule 5 says paired mobility counts toward nothing, so giving it
+  // a §18 row spelling would be inventing the credit the rule denies.
+  'mobility',
 ];
 
 /**
