@@ -136,11 +136,23 @@ phone.** State device items as PARKED in a stop report, never as a request.
 
 3. **KILL THE ±7 INVENTION — ATTEMPT 1 BUILT, WORKED, AND WAS REVERTED FOR ONE
    NEW RED. `docs/PLUS_MINUS_7_ATTEMPT_1_BLOCKED_2026-08-12.md`.**
-   **THIS ORDER IS RE-SCOPED BY ATTEMPT 1'S OWN FINDING, QUOTED:**
-   *"Make activeFixtureDates a REQUIRED input on the craft path and reconcile
-   the paths that disagree ... DO NOT re-attempt in the other order. Deleting
-   the invention while the authority is inconsistent trades a phantom fixture
-   for a missing one, and the sweep says so."*
+   **THE PREREQUISITE CENSUS IS DONE —
+   `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md`. IT DE-RISKS THIS ITEM.** The
+   "six answers" were THREE things and only one is a defect:
+   **(a) the "cancelled fixture" is NOT stale** — it is the BEFORE snapshot,
+   read deliberately at the mutation-planning stage while the AFTER snapshot is
+   read at commit; two stages of one transaction, each asking about its own
+   world. **(b) `UNDEFINED` is NOT reachable in production** — the only
+   production caller of the replan always computes the authority, and the
+   replan's inner type already declares it required; every UNDEFINED came from
+   suites calling the gateway DIRECTLY, which is the harness entering below the
+   door. **(c) the one real question is small:** which snapshot should the craft
+   tier judge a PROPOSED week against (almost certainly the AFTER one).
+   **SO ATTEMPT 2 IS: (1) make `activeFixtureDates` REQUIRED on the gateway
+   input — free in production, and it stops the suites entering below the door;
+   (2) answer (c); (3) THEN delete the ±7 using the cells already written and
+   proven red-before/green-after.** The regression that forced attempt 1's
+   revert is explained by (c), not by a reason to keep inventing fixtures.
    `section18CraftTier.ts:161` fabricates neighbouring games at ±7 days and
    `weekStructureValidator.ts:255,272` **trusts them as real**. **The defect is
    now REPRODUCED, not predicted:** a Sunday-fixture week judges its Monday as
