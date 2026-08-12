@@ -1069,8 +1069,26 @@ phone.** State device items as PARKED in a stop report, never as a request.
    dies at `git clone`), one gate cell, and the index may never pin to a docs
    commit. **Then shoot once, after Sam's UI work settles.**
 
-13. **KEEP THE UNENFORCED LAW COUNT FALLING.** Measured 2026-08-12 by the
-   terminal: **97 rows, 65 guarded, 32 UNENFORCED.** Priority is the FOUR that
+13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
+   **PAID ONCE, 2026-08-12: 32 -> 31.** `LAW-L5-no-dead-affordances` is guarded
+   by `test:dead-affordances` (in `test:bible`, mutation-checked three ways on a
+   real screen). **It holds ONE SHAPE and the receipt says so first:** a press
+   that provably does nothing and a control disabled by a literal. The walker
+   pass the old row asked for is still unbuilt.
+   **Its two founding cases both landed in this session and neither was caught
+   by anything** — My Status's seven live-looking dead controls (`8de98d3f`) and
+   the block sheet's single `OK` (`ca33206f`).
+   **AN ALLOW-LIST, NOT A BAN:** both `onPress={() => {}}` in the tree are
+   CORRECT (a tap-shield over a modal's dismiss layer, and a dev panel), so a
+   no-op press must DECLARE itself with a reason. `disabled={notYet}` — a
+   variable — stays legal.
+   **STILL UNENFORCED of the priority four:** `LAW-L6-honest-actions`,
+   `LAW-attributed-content-change`, `LAW-L15-one-write-format`. L6 is the
+   hardest and the most valuable: it is the general form of "Done. Session
+   moved." beside a deleted row.
+
+   ~~ORIGINAL MEASUREMENT~~ **97 rows, 65 guarded, 32 UNENFORCED** (the registry
+   is 117 rows now; the count that matters is UNENFORCED, and it is 31). Priority is the FOUR that
    change what the athlete sees — `LAW-L6-honest-actions`,
    `LAW-attributed-content-change`, `LAW-L5-no-dead-affordances`,
    `LAW-L15-one-write-format`. Two rows read guarded but are held by grepping
