@@ -319,6 +319,26 @@ his instruction is standing authority, not history.**
    both halves too, but whether a match's minutes are full or weighted training
    load is a coaching question. **Written under `## AWAITING SAM
 
+- **ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
+  the census says.**
+  **His rule, Bible `:226`:** *"ONE MAIN PER PATTERN PER SESSION... A second
+  heavy lift in a session must be a different pattern."*
+  **MEASURED across every fallback branch: exactly ONE violating shape —
+  `RDLs + Hip Thrusts`, both hinge, both classifying as main lifts — in two
+  branches.**
+  **AND THE CENSUS'S SECOND EXAMPLE IS OVER-CALLED:** `Overhead Press + Incline
+  DB Bench` does NOT come out as two mains — only one of the pair classifies as
+  a main lift, so it does not breach the rule.
+  **THE CALL IS WHICH WAY TO FIX IT, and that is CONTENT (L7):**
+  **(a) drop Hip Thrusts** — the day becomes one main hinge plus accessories,
+  but the session loses a row and gets smaller; or
+  **(b) keep the row and lighten it** to an accessory dose so it stops being a
+  second heavy hinge.
+  **RECOMMENDATION: (b).** It obeys `:226` exactly — the rule bars a second
+  HEAVY lift of the pattern, not a second exercise — and it does not shrink a
+  session, which is the thing that bit us on team nights. **One word and it
+  ships.**
+
 - **ONE LINE OWED — HOW A PACE IS SHOWN (census C2, the 2km time trial).**
   **Not a bare question: the derivation is built, the number exists, and only
   the WORDS are missing.**
