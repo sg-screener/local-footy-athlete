@@ -13,28 +13,47 @@
  * across sessions, and it is why it moves WITH the thumb rather than sitting in
  * a legend.
  *
- * PROVENANCE IS SPLIT, HONESTLY. `7 = hard` and the two ends are Sam's; the
- * seven words between them are PROPOSED by the terminal and are marked as such.
- * A `sam_ruling` provenance on a word he never said would be the copy system
- * lying about its own authority — the exact thing signing exists to prevent.
- * **They are athlete-facing and they await his eye.**
+ * EVERY WORD IS SIGNED, and the provenance says HOW. Sam named `hard`, `cruisy`
+ * and the two ends; he moved `comfortable` and `steady` to agree with the
+ * deload law; the rest he was shown in full and approved. Nothing here is a
+ * guess wearing a ruling's provenance, which is the thing signing exists to
+ * prevent.
  */
 import { registerSignedCopy, signedCopy } from './signedCopy';
 
-const RULED = 'Sam 2026-08-12; slider ruling, "7 — hard" verbatim';
-const PROPOSED = 'PROPOSED by the terminal 2026-08-12 — AWAITING SAM. '
-  + 'Interpolated between his ruled anchors (1, 7, 10); not his words.';
+/**
+ * SAM REVIEWED ALL TEN AND RULED, 2026-08-12. He was shown the full list,
+ * changed three, and said *"Rest are fine"* — so nothing here is the terminal's
+ * guess any more and the PROPOSED marks are gone.
+ */
+const NAMED = 'Sam 2026-08-12, named verbatim';
+const APPROVED = 'Sam 2026-08-12; proposed by the terminal, shown to him in full '
+  + 'and approved — "Rest are fine"';
+/**
+ * THE DELOAD LAW OWNS THE EASY END, AND SAM POINTED AT IT.
+ *
+ * *"My deload law says RPE 5-6 is easy, so 5 and 6 read too hard here."* Verified
+ * against the law rather than taken on trust: `deloadWeekRules.ts:39` —
+ * *"Every set easy — RPE 5-6 ... nowhere near failure."* So `steady` moved DOWN
+ * from 5 to 6 and `comfortable` took 5, and this scale now agrees with the one
+ * the deload week already prescribes against. Two vocabularies for one number
+ * is the defect this whole file exists to end; the deload law was here first.
+ */
+const DELOAD_ALIGNED = 'Sam 2026-08-12: "my deload law says RPE 5-6 is easy" — '
+  + 'aligned with deloadWeekRules.ts:39';
 
 registerSignedCopy([
   { id: 'effort.1', source: 'sam_ruling', provenance: 'Sam 2026-08-12; the low anchor, carried from the 1-5 scale', text: 'very easy' },
-  { id: 'effort.2', source: 'sam_ruling', provenance: PROPOSED, text: 'easy' },
-  { id: 'effort.3', source: 'sam_ruling', provenance: PROPOSED, text: 'light' },
-  { id: 'effort.4', source: 'sam_ruling', provenance: PROPOSED, text: 'moderate' },
-  { id: 'effort.5', source: 'sam_ruling', provenance: PROPOSED, text: 'steady' },
-  { id: 'effort.6', source: 'sam_ruling', provenance: PROPOSED, text: 'solid' },
-  { id: 'effort.7', source: 'sam_ruling', provenance: RULED, text: 'hard' },
-  { id: 'effort.8', source: 'sam_ruling', provenance: PROPOSED, text: 'very hard' },
-  { id: 'effort.9', source: 'sam_ruling', provenance: PROPOSED, text: 'brutal' },
+  { id: 'effort.2', source: 'sam_ruling', provenance: APPROVED, text: 'easy' },
+  // `light` sat here and read as a second way of saying `easy` — Sam:
+  // *"2 and 3 are the same word twice"*.
+  { id: 'effort.3', source: 'sam_ruling', provenance: NAMED, text: 'cruisy' },
+  { id: 'effort.4', source: 'sam_ruling', provenance: APPROVED, text: 'moderate' },
+  { id: 'effort.5', source: 'sam_ruling', provenance: DELOAD_ALIGNED, text: 'comfortable' },
+  { id: 'effort.6', source: 'sam_ruling', provenance: DELOAD_ALIGNED, text: 'steady' },
+  { id: 'effort.7', source: 'sam_ruling', provenance: NAMED, text: 'hard' },
+  { id: 'effort.8', source: 'sam_ruling', provenance: APPROVED, text: 'very hard' },
+  { id: 'effort.9', source: 'sam_ruling', provenance: APPROVED, text: 'brutal' },
   { id: 'effort.10', source: 'sam_ruling', provenance: 'Sam 2026-08-12; the high anchor', text: 'max effort' },
   {
     id: 'effort.empty',
