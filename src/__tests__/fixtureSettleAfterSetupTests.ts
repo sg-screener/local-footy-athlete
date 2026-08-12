@@ -376,7 +376,7 @@ async function main(): Promise<void> {
   );
 
   console.log(`\nFixture settle-after-setup totals: ${passed} passed, ${failed} failed`);
-  totalsPrinted();
+  totalsPrinted(failures.length);
   if (failures.length > 0) {
     for (const failure of failures) console.log(`  - ${failure}`);
     process.exitCode = 1;
