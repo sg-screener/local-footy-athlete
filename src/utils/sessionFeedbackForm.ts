@@ -158,9 +158,26 @@ export interface BuildSessionFeedbackPayloadInput extends FeedbackFormDraft {
   teamTraining?: TeamTrainingSessionOutcome;
 }
 
-/** The live checklist's one-row effort scale. Legacy conditioning RPE remains 1–10. */
+/**
+ * THE ONE EFFORT SCALE — 1-10, everywhere. Sam, 2026-08-12: *"make it 1-10
+ * everywhere instead of 1-5 and change the buttons to match 1-10 not 1-5"*.
+ *
+ * IT WAS 1-5, AND THAT INVERTED THE ATHLETE. `difficulty` carries session
+ * effort AND conditioning RPE, and conditioning's input clamps to 1-10 while
+ * this clamped to 1-5 — one field, two units, no marker saying which.
+ * `feedbackAdapter` is written for 1-10 (its own helper says so) and branches
+ * at `>= 9`, `>= 8` and `<= 5`. So a strength session rated 5 — the panel's
+ * own label for VERY HARD — fell into the `<= 5` branch and the athlete was
+ * given MORE volume, told *"Load increased due to strong performance last
+ * session."* Rules 3 and 4 were unreachable from a strength session at all.
+ * Measured in `docs/EFFORT_SCALE_INVERSION_2026-08-12.md`.
+ *
+ * Sam's earlier 1-5 rulings for game (2026-08-11) and team-night effort
+ * (2026-08-11) are SUPERSEDED by the 2026-08-12 instruction above, and their
+ * signed copy moved with them in the same commit — one scale is the whole point.
+ */
 export function isSessionEffortRating(value: unknown): value is number {
-  return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= 5;
+  return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= 10;
 }
 
 /**

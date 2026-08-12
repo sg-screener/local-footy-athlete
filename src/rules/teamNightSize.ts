@@ -150,8 +150,8 @@ registerSignedCopy([
   {
     id: 'team_training.feedback.effort_hint',
     source: 'sam_ruling',
-    provenance: 'Sam, 2026-08-11 — team-training effort uses the common 1-5 scale.',
-    text: '1 = very easy · 5 = very hard',
+    provenance: 'Sam, 2026-08-12 — the common scale is 1-10; supersedes the 2026-08-11 1-5 ruling.',
+    text: '1 = very easy · 10 = very hard',
   },
   {
     id: 'team_training.feedback.duration_refusal',

@@ -415,7 +415,7 @@ const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) =>
       <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.rpeQuestion}</SectionLabel>
       <Text style={styles.rpeHint}>{GAME_FEEDBACK_COPY.rpeHint}</Text>
       <View style={styles.gameRpeGrid} testID="game-feedback-rpe-grid">
-        {Array.from({ length: 5 }, (_, index) => index + 1).map((value) => (
+        {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
           <FeedbackChip
             key={value}
             testID={`game-feedback-rpe-${value}`}
@@ -1070,9 +1070,9 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
           {activeCompletion !== 'skipped' ? (
             <>
               <SectionLabel style={styles.section}>How hard was the session?</SectionLabel>
-              <Text style={styles.rpeHint}>1 = very easy · 5 = very hard</Text>
+              <Text style={styles.rpeHint}>1 = very easy · 10 = very hard</Text>
               <View style={styles.rpeGrid} testID="session-feedback-rpe-grid">
-                {Array.from({ length: 5 }, (_, index) => index + 1).map((value) => (
+                {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
                   <FeedbackChip
                     key={value}
                     testID={`feedback-session-rpe-${value}`}
@@ -1445,7 +1445,7 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
           </SectionLabel>
           <Text style={styles.rpeHint}>{TEAM_TRAINING_FEEDBACK_COPY.effortHint}</Text>
           <View style={styles.rpeGrid} testID="team-training-feedback-effort-grid">
-            {Array.from({ length: 5 }, (_, index) => index + 1).map((value) => (
+            {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
               <FeedbackChip
                 key={value}
                 testID={`team-training-feedback-effort-${value}`}

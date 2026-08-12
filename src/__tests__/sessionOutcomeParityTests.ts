@@ -923,12 +923,19 @@ async function runGameFeedbackInvariants(): Promise<void> {
       && /GAME_FEEDBACK_COPY\.durationQuestion/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.rpeQuestion/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.feelQuestion/.test(panelSource));
-  ok('game and practice-match effort use five choices on one row',
+  // INVERTED 2026-08-12, NOT DELETED — and note this cell's last clause was the
+  // one that FORBADE the 1-10 anchor. Sam reversed the 2026-08-11 ruling it
+  // encoded ("make it 1-10 everywhere") because the 1-5 scale shared `difficulty`
+  // with the 1-10 conditioning RPE, and the reader — written for 1-10 — took a
+  // strength session's "very hard" 5 as EASY and added volume for it.
+  // `docs/EFFORT_SCALE_INVERSION_2026-08-12.md`. The forbidding clause now
+  // points the other way, so the retired scale cannot creep back.
+  ok('game and practice-match effort use TEN choices on one row',
     /game-feedback-rpe-grid/.test(panelSource)
-      && /Array\.from\(\{ length: 5 \}/.test(panelSource)
+      && /Array\.from\(\{ length: 10 \}/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.rpeHint/.test(panelSource)
-      && gameCopySource.includes('1 = very easy · 5 = very hard')
-      && !gameCopySource.includes('1 = very easy · 10 = very hard'));
+      && gameCopySource.includes('1 = very easy · 10 = very hard')
+      && !gameCopySource.includes('1 = very easy · 5 = very hard'));
   ok('the match form writes the complete game payload through the shared transaction',
     /const game: GameSessionOutcome = \{[\s\S]{0,220}playedWholeGame[\s\S]{0,220}timeOnGroundMinutes[\s\S]{0,220}bodyRpe[\s\S]{0,220}feel: gameFeel/.test(panelSource)
       && /createRecordSessionOutcomeIntentFromFeedback\(\{[\s\S]{0,300}surface: 'game_feedback_panel'/.test(panelSource));

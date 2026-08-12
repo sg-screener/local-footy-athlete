@@ -134,15 +134,27 @@ ok('performed checklist refuses to save without RPE', buildSessionFeedbackPayloa
   skipReason: null,
   executionItems: sectionSummary.items,
 }) === null);
-ok('checklist rejects the retired 1-10 scale', buildSessionFeedbackPayload({
+// INVERTED 2026-08-12, NOT DELETED. This asserted that 1-10 was RETIRED and
+// that a `difficulty` of 7 must be refused. Sam reversed it — "make it 1-10
+// everywhere" — because the 1-5 scale shared one field with the 1-10
+// conditioning RPE and `feedbackAdapter`, written for 1-10, read a strength
+// session's "very hard" 5 as EASY and increased the athlete's volume for it
+// (`docs/EFFORT_SCALE_INVERSION_2026-08-12.md`). So 7 is now legal, and the
+// cell keeps its teeth by pinning the NEW boundary instead.
+const effortPayload = (difficulty: number) => buildSessionFeedbackPayload({
   dateStr: '2026-08-11',
   completion: 'partial',
   components: sectionSummary.components,
   componentCompletions: sectionSummary.componentCompletions,
   componentReasons: {}, feeling: null, soreness: null, partialReason: null, skipReason: null,
   executionItems: sectionSummary.items,
-  difficulty: 7,
-}) === null);
+  difficulty,
+});
+ok('checklist ACCEPTS the 1-10 scale — 7 is a legal effort', effortPayload(7) !== null);
+ok('checklist accepts both ends of 1-10',
+  effortPayload(1) !== null && effortPayload(10) !== null);
+ok('checklist still refuses a rating outside 1-10',
+  effortPayload(0) === null && effortPayload(11) === null);
 
 const teamTrainingMeasurement = { durationMinutes: 95, effort: 4 };
 const checklistWithTeamTraining = buildSessionFeedbackPayload({
@@ -235,14 +247,18 @@ const checklistBranch = checklistBranchStart >= 0 && legacyBranchStart > checkli
   ? feedback.slice(checklistBranchStart, legacyBranchStart)
   : '';
 ok('checklist branch does not render completion choice chips', !checklistBranch.includes('COMPLETION_OPTIONS.map'));
-ok('feedback asks the 1-5 effort question', /How hard was the session\?/.test(feedback));
-ok('all five choices are generated on one non-wrapping row',
-  /Array\.from\(\{ length: 5 \}/.test(feedback) && /fillRow/.test(feedback) &&
+ok('feedback asks the effort question', /How hard was the session\?/.test(feedback));
+ok('all TEN choices are generated on one non-wrapping row',
+  /Array\.from\(\{ length: 10 \}/.test(feedback) && /fillRow/.test(feedback) &&
     !/rpeGrid:\s*\{[\s\S]{0,120}flexWrap/.test(feedback));
-ok('effort anchors say very easy and very hard', /1 = very easy · 5 = very hard/.test(feedback));
+ok('effort anchors say very easy and very hard on the 1-10 scale',
+  /1 = very easy · 10 = very hard/.test(feedback));
+// THE RETIRED SCALE MUST NOT COME BACK on any of the three surfaces that moved.
+ok('no 1-5 effort anchor survives anywhere in the panel',
+  !/1 = very easy · 5 = very hard/.test(feedback));
 ok('saved difficulty is the session RPE in checklist mode',
   /difficulty:\s*executionSummary\s*\?\s*sessionRpeValue\s*:\s*conditioningRpeValue/.test(feedback));
-ok('performed Team Training asks for duration and its own 1-5 effort',
+ok('performed Team Training asks for duration and its own 1-10 effort',
   TEAM_TRAINING_FEEDBACK_COPY.durationQuestion === 'How long was team training?'
     && TEAM_TRAINING_FEEDBACK_COPY.effortQuestion === 'How hard was team training?'
     && /TEAM_TRAINING_FEEDBACK_COPY\.durationQuestion/.test(feedback)
@@ -250,7 +266,7 @@ ok('performed Team Training asks for duration and its own 1-5 effort',
     && /team-training-feedback-hours/.test(feedback)
     && /team-training-feedback-minutes/.test(feedback)
     && /team-training-feedback-effort-grid/.test(feedback)
-    && /Array\.from\(\{ length: 5 \}/.test(feedback));
+    && /Array\.from\(\{ length: 10 \}/.test(feedback));
 ok('the extra team-training result is required only when that section was performed',
   /const draftIsComplete = baseDraftIsComplete[\s\S]{0,180}!teamTrainingWasPerformed \|\| teamTrainingOutcome !== undefined/.test(feedback));
 ok('the accepted transaction validates and republishes the team-training result',
