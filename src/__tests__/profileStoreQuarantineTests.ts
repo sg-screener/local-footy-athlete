@@ -212,6 +212,62 @@ run("a door refusal captures the DISK copy — the athlete's surviving envelope"
   resetProfile();
 });
 
+/**
+ * ISSUE ORDER IS LAND ORDER — Sam's ruling, 2026-08-12: "fix it".
+ *
+ * THE DEFECT. The bare arm of `profileGuardedStorage.setItem` asks the disk
+ * before it writes and the material arm does not, so a WIPE issued FIRST used
+ * to finish LAST and land on top of the answers issued after it. Measured in
+ * the walker's L16 relaunch: issued 103B, 1261B, 1260B, 1260B, 1260B — arrived
+ * with the 103B LAST, and the athlete's profile was empty on disk while memory
+ * still held all 40 answers. The next launch had nothing to rebuild from.
+ *
+ * THIS CELL DRIVES THE RACE DIRECTLY. Both writes go out in the SAME TICK with
+ * no await between them, which is the only window the defect ever had — on a
+ * phone a reset and an answer are seconds apart and the disk read lands long
+ * before. A test that awaited the first write would prove nothing.
+ *
+ * TWO ASSERTIONS, AND THE SECOND IS THE POINT. The bytes must be the answers
+ * (order), AND the bare write must have been REFUSED (the quarantine law, which
+ * could only ever work once the reads stopped racing ahead of the writes).
+ */
+run('a wipe issued before the answers can never land after them', async () => {
+  clearAllQuarantines();
+  const key = PROFILE_STORE_PERSISTENCE_KEY;
+
+  // Start from a disk that holds nothing, so the only thing that can put
+  // answers there is the write below — never a leftover from another cell.
+  await profileGuardedStorage.removeItem(key);
+
+  // THE RACE, IN ONE TICK. The bare envelope goes first and is the one that
+  // needs the async disk read; the material envelope follows immediately.
+  const wipe = profileGuardedStorage.setItem(key, BARE_ENVELOPE);
+  const answers = profileGuardedStorage.setItem(key, MATERIAL_ENVELOPE);
+  await Promise.all([wipe, answers]);
+  await flushPendingStorageWrites().catch(() => undefined);
+
+  const onDisk = await profileGuardedStorage.getItem(key);
+  assert(onDisk === MATERIAL_ENVELOPE,
+    'the wipe issued BEFORE the answers landed AFTER them — the athlete\'s '
+    + `profile is ${onDisk === BARE_ENVELOPE ? 'the bare envelope' : String(onDisk)} `
+    + 'on disk while memory still holds the answers, and the next launch has '
+    + 'nothing to rebuild the program from');
+
+  // NON-VACUITY. If both writes had simply been dropped, the assertion above
+  // would pass on a missing key rather than on the right bytes.
+  assert(onDisk !== null, 'nothing was written at all — this cell proves nothing about order');
+});
+
+// THE OTHER DIRECTION is already guarded, one cell below: 'an explicit reset
+// remains allowed to erase an answered disk profile' drives the REAL reset door
+// (`applyProfileOnboardingWrite` with `writer: 'reset'`, which is what sets the
+// writer latch) and fails if sequencing ever hardens into a lock the athlete
+// cannot get out of. A second cell here would have been the same claim stated
+// worse: the first draft called `beginProfileResetAction` and wrote through the
+// storage directly, which never sets the latch, so it was asserting that a
+// NON-reset bare write erases answers — the exact defect the quarantine exists
+// to prevent.
+
 run('the guarded storage is what the store actually persists through', () => {
   // A boundary the persist config does not use is a green gate that lies. The
   // storage literal is pinned by content: the persist options must name the

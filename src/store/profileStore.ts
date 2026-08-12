@@ -113,29 +113,71 @@ function recordProfilePersistenceRefusal(reason: string, name: string): void {
  * the hold. Exported for `profileStoreQuarantineTests`, which proves this
  * store's boundary rather than trusting the law's fixture cell.
  */
+/**
+ * WRITES TO THIS STORE LAND IN THE ORDER THEY WERE ISSUED — Sam's ruling,
+ * 2026-08-12: "fix it".
+ *
+ * THE DEFECT THIS EXISTS FOR. The bare-envelope arm below asks the disk before
+ * it writes, and that question is one async hop. The material arm asks nothing
+ * and goes straight through. So a WIPE issued FIRST could finish LAST and land
+ * on top of the answers issued after it — the guard meant to protect the
+ * athlete's answers was what sent the wipe to the back of the queue, where it
+ * won.
+ *
+ * Measured on 2026-08-12, in the walker's L16 relaunch cell. Five writes, in
+ * issue order at this boundary: bare 103B, then 1261B, 1260B, 1260B, 1260B —
+ * four of them carrying all 40 answers with `isOnboardingComplete: true`. In
+ * ARRIVAL order at the durable boundary the bare one came LAST, and the disk
+ * kept 103 bytes. The athlete's profile was then empty on disk while memory
+ * still held it, so the next launch had no answers to rebuild the program from
+ * and `THE L16 SLICE` failed at PERSIST, exactly as it said.
+ *
+ * THE FIX IS THE REMOVAL OF THE REORDERING, NOT A GUARD OVER IT. Every write to
+ * this key is chained onto the one before it, so the disk question happens at
+ * the asking write's OWN position in the queue rather than racing ahead of it.
+ * Two things follow, and the second is the point:
+ *
+ *   1. Issue order IS land order. A later write can no longer be overtaken.
+ *   2. THE QUARANTINE LAW STARTS WORKING. The bare write now reads a disk that
+ *      already holds the answers written before it, so `quarantineRefusedPayload`
+ *      holds a MATERIAL payload and `guardedDurableWrite` REFUSES the bare
+ *      envelope — which is what the law said all along. Racing ahead meant it
+ *      read an empty disk, held nothing, and was allowed through.
+ *
+ * The chain swallows rejections for SEQUENCING only: one failed write must not
+ * strand every later write behind it. The rejection itself still travels to
+ * whoever awaits this call, and to `flushPendingStorageWrites` through
+ * `trackDurableWrite`.
+ */
+let profileWriteChain: Promise<unknown> = Promise.resolve();
+
 export const profileGuardedStorage = {
   getItem: (name: string): Promise<string | null> => asyncStorageCompat.getItem(name),
   setItem: (name: string, value: string): Promise<void> => {
+    // READ AT ISSUE TIME, NOT AT WRITE TIME. The writer identity belongs to the
+    // moment the write was requested; by the time the chain reaches this write
+    // the latch has long since been restored to whatever came next.
     const writer = activeProfilePersistenceWriter;
-    const write = () => guardedDurableWrite({
-      storeKey: name,
-      envelope: value,
-      base: asyncStorageCompat,
-      onRefused: (reason) => recordProfilePersistenceRefusal(reason, name),
-    });
+    const queued = profileWriteChain.then(async () => {
+      const write = (): Promise<void> => guardedDurableWrite({
+        storeKey: name,
+        envelope: value,
+        base: asyncStorageCompat,
+        onRefused: (reason) => recordProfilePersistenceRefusal(reason, name),
+      });
 
-    // A RESET is the only decision allowed to replace an answered profile with
-    // the bare default. Every other bare envelope first asks the disk itself.
-    // This closes the cold-reload window in which memory was still empty, so
-    // the in-memory door saw 0 -> 0 and could not know it was overwriting the
-    // 28-answer payload hydration was concurrently reading.
-    if (writer === 'reset' || profileEnvelopeCarriesMaterial(value)) return write();
-    return trackDurableWrite(
-      asyncStorageCompat.getItem(name).then((onDisk) => {
-        quarantineRefusedPayload(name, onDisk);
-        return write();
-      }),
-    );
+      // A RESET is the only decision allowed to replace an answered profile with
+      // the bare default. Every other bare envelope first asks the disk itself.
+      // This closes the cold-reload window in which memory was still empty, so
+      // the in-memory door saw 0 -> 0 and could not know it was overwriting the
+      // 28-answer payload hydration was concurrently reading.
+      if (writer === 'reset' || profileEnvelopeCarriesMaterial(value)) return write();
+      const onDisk = await asyncStorageCompat.getItem(name);
+      quarantineRefusedPayload(name, onDisk);
+      return write();
+    });
+    profileWriteChain = queued.catch(() => undefined);
+    return trackDurableWrite(queued);
   },
   removeItem: (name: string): Promise<void> => asyncStorageCompat.removeItem(name),
 };
