@@ -139,19 +139,21 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **THE PREREQUISITE CENSUS IS DONE —
    `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md`. IT DE-RISKS THIS ITEM.** The
    "six answers" were THREE things and only one is a defect:
-   **(a) the "cancelled fixture" is NOT stale** — it is the BEFORE snapshot,
-   read deliberately at the mutation-planning stage while the AFTER snapshot is
-   read at commit; two stages of one transaction, each asking about its own
-   world. **(b) `UNDEFINED` is NOT reachable in production** — the only
+   **(a) the "cancelled fixture" is STILL UNEXPLAINED** — the first answer
+   ("a before snapshot") was WRONG and is withdrawn in the doc: that call site
+   reads the PROPOSED calendar, so a cancelled Saturday has no business in it.
+   **OPEN.** **(b) `UNDEFINED` is NOT reachable in production** — the only
    production caller of the replan always computes the authority, and the
    replan's inner type already declares it required; every UNDEFINED came from
    suites calling the gateway DIRECTLY, which is the harness entering below the
    door. **(c) the one real question is small:** which snapshot should the craft
    tier judge a PROPOSED week against (almost certainly the AFTER one).
-   **SO ATTEMPT 2 IS: (1) make `activeFixtureDates` REQUIRED on the gateway
-   input — free in production, and it stops the suites entering below the door;
-   (2) answer (c); (3) THEN delete the ±7 using the cells already written and
-   proven red-before/green-after.** The regression that forced attempt 1's
+   **SO ATTEMPT 2 IS: (1) answer (c); (2) THEN delete the ±7 using the cells
+   already written and proven red-before/green-after.** The earlier "make it
+   REQUIRED" step is **WITHDRAWN**: `test:gateway-authority-census` already
+   scans every call site and demands the authority or a declared reason, in both
+   directions — a required field would break the legitimate hand-built-contract
+   cells and could not tell "must supply" from "has none, and here is why". The regression that forced attempt 1's
    revert is explained by (c), not by a reason to keep inventing fixtures.
    `section18CraftTier.ts:161` fabricates neighbouring games at ±7 days and
    `weekStructureValidator.ts:255,272` **trusts them as real**. **The defect is

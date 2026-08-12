@@ -29,13 +29,27 @@ recurring anchor for weeks that have no explicit mark and are not `noGame`/
 
 ## §2 THE THREE THINGS — resolved one by one
 
-**(a) THE "CANCELLED FIXTURE" (`2026-07-18` on a week whose game had moved to
-the 19th) IS NOT STALE. IT IS THE BEFORE-SNAPSHOT, AND IT IS CORRECT.**
-`:1847` runs during mutation PLANNING and deliberately reads the pre-mutation
-calendar — the code immediately above it derives `proposedFixtures` and
-`targetGameDay` from that same world. `:2274` reads `afterMarkedDays`. **Two
-stages of one transaction, each asking about its own world.** Nothing is stale;
-the earlier report inferred a defect from a snapshot boundary.
+**(a) THE "CANCELLED FIXTURE" IS STILL UNEXPLAINED. MY FIRST ANSWER HERE WAS
+WRONG AND IS WITHDRAWN.**
+
+This section first said `:1847` reads the pre-mutation calendar, so the
+`2026-07-18` was a legitimate BEFORE-snapshot. **That is false.** Its enclosing
+function is `buildFixtureProjection`, and its caller `weekRebuild.ts:492-498`
+passes the PROPOSED calendar as `markedDays` and the current one separately as
+`sourceMarkedDays`. So `:1847` reads the **AFTER** world, and a cancelled
+Saturday has no business in it.
+
+**WHAT IS ACTUALLY KNOWN:** the authority for week `2026-07-20` contained
+`2026-07-18` — a fixture the move had cancelled — on some calls and not others.
+**Why is OPEN.** One untested hypothesis, recorded as a hypothesis:
+`effectiveFixtureDatesForWeeks` adds the RECURRING anchor for any week with no
+explicit `game` mark, and the athlete's profile still says `usualGameDay:
+Saturday`. A moment in which the old mark is cleared and the new one is not yet
+written would therefore have the recurring rule re-supply the very fixture being
+moved away from. **That is a guess. It has not been measured, and this section
+has already been wrong once by reasoning instead of measuring.**
+
+**IT DOES NOT BLOCK (b) OR (c)**, which stand on their own evidence.
 
 **(b) `UNDEFINED` IS NOT REACHABLE IN PRODUCTION.** In production the ONLY
 caller of `fixtureMinimalReplan` is `acceptedStateTransaction` (verified by
@@ -57,11 +71,19 @@ six, and it is an ownership question rather than a Sam ruling.**
 The recorded prerequisite was *"make `activeFixtureDates` REQUIRED and reconcile
 the paths that disagree."* After this census that reads:
 
-1. **Make it REQUIRED on `Section18AcceptedWeekGatewayInput`** — production
-   already always supplies it, so this costs nothing in production and forces
-   the SUITES to stop entering below the door. That is the whole of the
-   "UNDEFINED" half.
-2. **Answer (c)** — one line, and the before/after sites are already labelled.
+1. ~~Make it REQUIRED on the gateway input.~~ **WITHDRAWN — the repo already
+   has a STRONGER mechanism and I proposed this without checking.**
+   `test:gateway-authority-census` (6 cells, green) scans every call site and
+   fails any that neither supplies the authority nor carries a DECLARED
+   exemption naming why — and it fails in the other direction too, so paying a
+   debt must drop its declaration in the same commit. Every current exemption is
+   a unit fixture that hand-builds a contract and has no fixture horizon to
+   pass. **A required field would BREAK exactly those legitimate cells and could
+   not tell "must supply" from "has none, and here is why".** The census is the
+   better instrument and it already exists. Nothing is owed here.
+2. **Answer (c)** — which snapshot the craft tier judges a proposed week
+   against. **This is now the WHOLE of attempt 2's prerequisite**, since (1) is
+   withdrawn and (b) needs nothing.
 3. **Then delete the ±7**, with the cells from
    `PLUS_MINUS_7_ATTEMPT_1_BLOCKED_2026-08-12.md` §1 (which are written and were
    proven to red before the fix and green after).
@@ -93,6 +115,12 @@ where it is actually reachable.
   proving one production replan caller; the required-vs-optional declarations;
   the before/after 173101 identical counts.
 - **WORKING** — nothing. **The tree is unchanged by this pass.**
+- **WITHDRAWN** — §2(a)'s first answer (a "before snapshot") and §3's first
+  step (a required field). Both were reasoned rather than measured, and both
+  were wrong. They are struck through rather than deleted so the next pass does
+  not re-derive them.
+- **OPEN** — why a cancelled fixture appears in an AFTER-world authority
+  (§2(a)); one unmeasured hypothesis is recorded there as a hypothesis.
 - **NOT INVESTIGATED** — whether `derivedSessionProvenance`'s
   `exactFixtureDatePresent` (`:417-425`), which reads the same optional set and
   falls back to a contract-shape check when it is absent, has the same
