@@ -1284,68 +1284,21 @@ phone.** State device items as PARKED in a stop report, never as a request.
 
 28. **THE AWAY FLOW IS BUILT — AND AWAY STOPPED DELETING THE ATHLETE'S WEEK.**
 
-    **OWNED BY THE DESKTOP AGENT.** Built 2026-08-13. **Held by
-    `test:away-flow` (13 cells), `test:day-first-timeline` and
-    `test:program-control-durable`.**
+    **OWNED BY THE DESKTOP AGENT. Built 2026-08-13.** Held by `test:away-flow`
+    (13 cells, mutation-checked), `test:day-first-timeline` and
+    `test:program-control-durable`.
 
-    **Sam's ruling, verbatim, and it is what shipped:** *"I think the away
-    button should live on the weekly screen, it should say 'when do you leave?'
-    then 'when do you return' thhe leave button should be limited to that week
-    in dates, but the return date can be any date in the future / then you are
-    asked about the equipment stuff"*.
-
-    **WHAT LANDED:**
-    1. The `Away` control is on the WEEK shape (`home-away-entry`), beside
-       add-a-game and for the same reason. The day-screen chip
-       `home-away-this-week-entry` is GONE; that row is three chips now.
-    2. **"When do you leave?"** — the days of the week on screen, today or
-       later.
-    3. **"When do you return?"** — a month calendar with **no forward stop**.
-       There is no date-picker dependency in this app, so it is built from the
-       same primitives as everything else (`AwayReturnCalendar`).
-    4. **"Do you have your normal equipment?"** — `no` opens
-       `EquipmentLimitationSheet` with the span; `yes` stores NOTHING and says
-       so, which is his own ruling (*"if yes, follow same program"*).
-
-    **THE ONE BEHAVIOUR CHANGE, AND IT IS THE POINT OF THE ITEM.** The old away
-    door wrote a `travel` SCHEDULE fact with the away dates marked
-    **unavailable** — it took the sessions away. **That is the opposite of what
-    Sam ruled twice** (*"if yes, follow same program"*, *"the plan should change
-    until their return date"*) **and it also made step 4 impossible to build
-    honestly: an equipment answer dated over days that no longer hold a session
-    substitutes nothing.** It would have shipped green and empty, which is
-    exactly how slice 3 died. So the away door now writes ONE fact — the dated
-    equipment fact — and `test:away-flow` cell [5b] reds if a schedule fact or a
-    `clear_days` ever returns to that handler.
-
-    **`until` IS THE LAST DAY AWAY, NEVER THE RETURN DATE**, from his own build
-    order: *"on the return date the modifier drops off and the program goes back
-    to normal by itself"*. Proven by cells [2c] and [3] on a **ten-day trip that
-    crosses two Sundays** — the shape the replaced sheet could not express at
-    all, which was the bigger defect this item names.
-
-    **MUTATION-CHECKED, not asserted:** forcing the week scope back reds [1b],
-    [2b] and [2c]; setting `until` to the return date reds [3].
-
-    **MEASURED WHILE BUILDING, and it corrects this item's own premise:**
-    `EquipmentLimitationSheet` existed but **was mounted NOWHERE** and
-    `set_equipment_modifier` had **no product caller at all** — only its icon
-    helper was imported. "The door already exists" was true of the sheet and
-    false of the door. The away flow is now its first caller.
-
-    **STILL OPEN, NAMED RATHER THAN QUIETLY KEPT:**
-    - The `travel` schedule fact, `clear_days`, and their copy (*"Your program
-      is avoiding the dates you are away."*) now have **no athlete-facing
-      caller**. They are still reachable from the walker and the coach path.
-      **A retire pass owns them, not this item.**
-    - The diagnostics surface is still named `away_this_week` on a fact that can
-      span a fortnight. Kept deliberately — renaming it touches persisted
-      `sourceSurface` labels and four test files — **and named here so it is
-      fixed on purpose rather than found later.**
-    - `MONTH_NAMES` was added to `utils/appDate.ts` (the one date-display
-      owner). **Four private `MONTH_SHORT` tables already exist**
-      (`staleOverrideDetector`, `sessionResolver`, `teamNightMoveAsk`,
-      `JournalScreen`); they are reported, not extended.
+    **Full boundary report: `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`** — the
+    measurement, the mutation runs, the corrected premise and the named
+    leftovers. **The three things a later reader needs from the inbox itself:**
+    - The `Away` control is on the WEEK shape (`home-away-entry`); the
+      day-screen chip is gone. Leave date → return date (unbounded) → "Do you
+      have your normal equipment?".
+    - **Away now writes ONE fact — the dated equipment fact — and NO schedule
+      fact.** The old door marked the away dates UNAVAILABLE, which is the
+      opposite of Sam's ruling twice over and would also have made the equipment
+      answer vacuous. `test:away-flow` [5b] reds if it comes back.
+    - `until` is the LAST DAY AWAY, never the return date.
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
@@ -1385,6 +1338,22 @@ shared data-shape change its readers correctly followed. Sam was right and the
 seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
+
+- **ONE THING THE AWAY FLOW NO LONGER DOES, AND IT IS SAM'S CALL WHETHER IT
+  SHOULD. Raised 2026-08-13 by building item 28.** The sheet it replaced cleared
+  the training days the athlete ticked. **The new flow clears nothing** — that is
+  his ruling (*"if yes, follow same program"*), and it is what makes the
+  equipment answer able to do anything at all. **But a TEAM NIGHT and a GAME are
+  at his club**, and an athlete in another city cannot attend either, so those
+  two now stay on the week while he is away.
+  **The athlete is not stuck** — both can still be binned or moved from the day
+  screen — but it is no longer automatic.
+  **RECOMMENDED, not assumed: away clears CLUB-BOUND days only** (team training
+  and fixtures) inside the span, and leaves every solo session in place to be
+  reshaped by the kit answer. That is the smallest rule that is true of both
+  halves. **Not built, because he has not ruled it and it would put session
+  removal back into a door this item just took it out of.**
+
 
 - **MEASURED 2026-08-13, AND IT REFUTES THIS SEAT'S OWN PREMISE. Sam asked
   *"do you actually set a return date when saying you're away?"* — and the
