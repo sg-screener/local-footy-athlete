@@ -2328,4 +2328,177 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **ONE-WORD VETO ONLY:** Sam is being shown the label and told it is his own
     tab name. **If he says nothing, it ships.** Do not hold placement for it.
 
+---
 
+## item 25 — original order, archived verbatim 2026-08-13
+
+25. **SAM ALREADY RULED SESSION SIZE. THE APP HOLDS HIS RULING AND OBEYS
+    SOMETHING ELSE. THIS IS THE DISCONNECTION, NOT A MISSING RULE.**
+
+    **OWNED BY THE TERMINAL.** It is the same defect item 21's second half is
+    circling; **read this item FIRST — it changes what the fix is.**
+
+    **Sam, 2026-08-13, and this is the whole item:** *"i've answered this type of
+    shit so many times - all my programming logic should be in the app by now and
+    it's not WHERE THE FUCK IS IT AND WHY IS IT NOT IN THE APP BY NOW"*.
+
+    **HE IS RIGHT, AND THE SEAT BROKE THE BIBLE-FIRST LAW BY ASKING HIM AGAIN.**
+    The seat put "how many exercises should a gym session have?" to him. **That
+    question was already answered, IN THE BIBLE, BY HIM.** Grepping first would
+    have dissolved it. Recorded so the next seat does not repeat it.
+
+    **HIS AUTHORED RULING — `LFA_PROGRAMMING_BIBLE.md:3149`, §11, verbatim:**
+    *"ONE exercise cap for every training age. The beginner-only cap of 3
+    exercises per strength session was never authored; 'do not overload them with
+    too many exercises' is guidance about dose and complexity, not a numeric
+    limit, and a separate beginner cap is exactly the 'second beginner/experienced
+    representation' this section forbids."*
+
+    **HE STRUCK THE NUMBER 3 HIMSELF. It is still coming out of the app.**
+
+    **WHERE HIS RULING LIVES — it is in there, and it is inert.**
+    - `trainingAgePolicy.ts:43` — `maxExercisesPerStrengthSession: 6`, ONE value
+      for every training age, exactly as he ruled. **AUTHORED.**
+    - `trainingAgePolicy.ts:112` records the retired `3` and why: *"never
+      authored"*.
+    - `coachingEngine.ts:8682` passes it to the AI as `maxExercisesPerSession`.
+    - **AND THAT IS THE END OF ITS REACH.** `sessionRowCounting.ts:315-318`
+      states it plainly: *"It is not a validator and it is not enforced. Nothing
+      trims a session that exceeds the ceiling and nothing pads one that falls
+      under this floor."*
+
+    **WHAT THE APP ACTUALLY OBEYS INSTEAD — one line, and no ruling behind it.**
+    `sessionBuilder.ts:718`: `const exerciseCount = templateWorkout.exercises.length || 5;`
+    **Session size is however many rows a human happened to type into a template
+    file.** Two templates were written with three. That is the entire provenance
+    of the number Sam has never seen a reason for. And
+    `exerciseScorer.ts:317` — `Math.min(intent.exerciseCount, MIN_SESSION_SIZE)`
+    — means the floor **cannot even top up past the template's own accident**:
+    a 3-row template stays 3 no matter what the floor says.
+
+    **SO THE FIX IS NOT "PICK A NUMBER" AND NOT "FIX TWO TEMPLATES."** Both are
+    edge-case patches and Sam's standing project instruction forbids them:
+    *"Don't fix edge cases, build a systemic fix into the system so issues are
+    fixed globally"*.
+
+    **BUILD: SESSION SIZE IS DERIVED FROM THE AUTHORED POLICY, NOT FROM A
+    TEMPLATE'S ROW COUNT.** A template supplies WHICH exercises and in what
+    order. **It must not supply HOW MANY.** The count comes from
+    `trainingAgePolicy`, the same object that already holds his ceiling, and the
+    scorer fills to it. **Delete the `|| 5` fallback and the
+    `Math.min(..., MIN_SESSION_SIZE)` clamp — both are the accident, not the
+    rule.**
+
+    **THE FLOOR STILL NEEDS AUTHORING AND SAM MUST NOT BE ASKED COLD.** The
+    ceiling is his (6). The floor is not. **Do not park a bare number question on
+    him.** Derive a candidate from what his own signed weeks already do, bring
+    him the distribution and ONE recommendation with its reasoning, and let him
+    veto in a word. That is the only shape this question may reach him in.
+
+    **THE CLASS, NOT THE INSTANCE — THIS IS THE ITEM THAT MATTERS.** An authored
+    ruling of Sam's sitting in a policy object, computed, passed along, and read
+    by no enforcer is exactly the architecture finding in
+    `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md`: **the app is built RIGHT and
+    DISCONNECTED.** Session size is one instance. **Report how many OTHER
+    authored values in `trainingAgePolicy` and the Bible-derived rule objects
+    have no enforcer** — that census is the next unit, and it is the answer to
+    the question he actually asked.
+
+    **AND THE RECEIPT ALREADY EXISTED, MEASURED 2026-08-12, AND NOBODY BUILT
+    IT.** `ATLAS_VERIFICATION_2026-08-12.md:180` finding 7, verbatim verdict:
+    **"3-exercise days are old logic surviving — CONFIRMED, AND WORSE."** It
+    names the producer: **eleven 3-row branches** in `defaultProgram.ts:1069`
+    `fallbackExercisesForPlanEntry`, reachable by three live paths, and
+    **`generateProgramLocally` synthesises EVERY day from them**
+    (`generateProgram.ts:866-872`, whose own comment reads *"3-ish core
+    exercises per session"*). **They are not an error path. They are the normal
+    output of non-AI generation.** And: *"there is no floor AND no ceiling —
+    `maxExercisesPerStrengthSession` is read by no prompt builder, validator or
+    trim"*; the AI prompt emits a MAX with no MIN.
+    **`HOW_TO_BUILD_THIS_APP_2026-08-12.md:174` gives that value a reader count
+    of ZERO.** So this was diagnosed a day before Sam's anger, written down
+    twice, and left. **The measurement is DONE. Do not re-measure it. Build.**
+
+    **THE STRING TO KILL IS `"3-ish core exercises per session"`.** That comment
+    and the eleven branches beneath it are the entire provenance of the number
+    Sam says he never authored — because he didn't. He ABOLISHED it on
+    2026-07-27 (`LFA_PROGRAMMING_BIBLE.md:4969`) and it is still shipping.
+
+    **PROVE IT:** 120-session distribution and the 17 QA scenarios either side,
+    all four numbers.
+
+    ---
+    **DERIVED 2026-08-13 — AND HIS OWN SIGNED WEEKS ANSWER IT. THE FLOOR OF 4 WAS
+    NEVER HIS AND NEITHER IS A FLOOR.**
+    Item 25 says derive from what his signed weeks do, bring ONE recommendation,
+    let him veto in a word. **Three signed sources, all his:**
+    - **GUNSHOW (§20.3, signed 2026-07-30): 2 biceps + 2 triceps + 2 pump delts =
+      SIX.**
+    - **MOBILITY (Bible `:4910`, signed): *"a composed session aims for 6
+      movements inside the 5-8 window"* — SIX, with a stated window.**
+    - **THE CEILING (§11, `:3149`): SIX.**
+    **All three land on the same number, and it is the number already in the
+    policy object.**
+    **AND HE ALREADY RULED THE MECHANISM, AGAINST PADDING.** §20.3, his words:
+    *"Under restricted equipment a gunshow gets smaller, never padded. There are
+    no cross-family top-ups: the app never invents to fill a quota."*
+    **⚠ SAM VETOED THE 6 AND HE WAS RIGHT — MY RECOMMENDATION BELOW IS WRONG AND
+    IS STRUCK. 2026-08-13:** *"no 6 is not a ceiling i dont know where the fuck
+    you're getting that from, there's to many variables to give 6 as a ceiling,
+    you should be able to figure out what is needed that day from the bible and
+    all the programming logic i have put in there"*.
+    **AND THE MEASUREMENT AGREES WITH HIM. I CALLED THE 6 "AUTHORED" AND IT IS
+    NOT.** Grepped after his veto: **the number 6 appears NOWHERE in the Bible as
+    a cap.** §11 `:3149` abolishes the beginner 3 and says there is "ONE
+    per-session exercise cap for every training age" — **it never states the
+    number.** `trainingAgePolicy.ts:43`'s `6` was chosen in code, exactly like the
+    `3` before it. **So BOTH numbers are invented, and item 25's premise is
+    stronger than it was written: the app does not hold his ruling and disobey
+    it — it holds an INVENTED ceiling and calls it his.**
+    **AND HIS SIZES ARE IN THE BIBLE AFTER ALL — `:122`, HIS OWN WORDS:**
+    *"I wouldn't stack lower body strength (say **6-7 exercises**) with upper body
+    strength (**6-7 exercises**) because that would be 12-14 lifts in one day. I'd
+    prefer to just make that a full body day i.e. **full body strength and 7
+    exercises**."*
+    **SO HE DID AUTHOR SESSION SIZES, PER SESSION TYPE: lower 6-7, upper 6-7,
+    full body 7** — and they are HIGHER than the invented ceiling of 6 the code
+    has been enforcing as "his". **A 6-exercise cap was clipping his own 7.**
+    This is exactly what he meant by *"figure out what is needed that day from the
+    bible"*, and it is the input the derivation starts from. **Still not a single
+    constant: `:108` and `:122` both make size follow the session TYPE and the
+    day's shape.**
+
+    **WHAT HE ACTUALLY RULED: session size is DERIVED PER DAY** from the Bible's
+    own logic — phase sets/reps (`:767-769`), the seven strength sessions
+    (§20.5), game proximity (`:204`), accessory dose (`:818`), equipment and
+    injury. **Not a constant, and not a template's row count. The next unit is
+    that derivation. Do not bring him another number.**
+
+    ~~**RECOMMENDATION (one, his to veto): session size is a TARGET OF 6, not a
+    floor that pads.** Templates stop dictating HOW MANY; the app aims for 6 and
+    **shrinks honestly** when equipment, injury or game proximity restrict it —
+    never inventing filler to hit a number. **The 4 is deleted, not re-authored:
+    it was `MIN_SESSION_SIZE`, invented in one file, and it contradicts his
+    shrink-never-pad rule.**~~
+    **DISTRIBUTION TODAY, for the same message:** Strength 5-6, Mixed 4-6, Team
+    Training 2-4; **zero sessions over 6**; 26 of 120 under 4.
+
+    **THE CENSUS ITEM 25 ORDERS — `trainingAgePolicy`, 13 authored fields:**
+    - **`initialLoadMultiplier` — AUTHORED BY SAM (50%, Bible `:3142`, `:4968`
+      correcting the code's invented 0.75) AND HAS ZERO PRODUCTION READERS.**
+      **A new athlete is not getting his 50% starting load.** This is a SECOND
+      live instance of the exact defect he is angry about, found while measuring
+      the first.
+    - `maxExercisesPerStrengthSession` — **one "reader", and it only FORWARDS the
+      value to the AI prompt.** No enforcer, which is this item.
+    - `maxHardExposures`, `maxOptionalSessions` — zero readers, but **correctly**:
+      Sam ABOLISHED both (§11). **They are dead fields to delete, not unenforced
+      rulings.** Distinguishing the two is the point of the census.
+    - The remaining 9 have readers.
+    **SO: 13 fields, 3 unread, of which ONE is a live unenforced ruling, TWO are
+    abolished leftovers, and the headline field is forwarded but never enforced.**
+
+    **ITEM 26 CONSTRAINS THIS AND MUST BE ANSWERED IN THE SAME BUILD.** His rule 5
+    says paired mobility *"counts toward nothing"*. **So the target of 6 counts
+    STRENGTH rows only** — a 6-exercise session with 3 mobility pairs is 9 rows on
+    glass and still six. Stated here so the two items cannot disagree.
