@@ -60,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `8f7354d3` (item 5, `docs/STOP_2026-08-12_PREFERENCE_REPORT.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `2a981d55` (item 3 measurement, `docs/STOP_2026-08-12_WALKTHROUGH_AND_ITEM3_MEASUREMENT.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails
@@ -77,9 +77,10 @@ and this file gets one line pointing at it.**
   affected and no product code changed.** Fixed at the seed, three cells in
   `test:dev-e2e-seeds`, `LAW-rename-carries-its-references`.
   `docs/STOP_2026-08-12_SEED_CONDITIONING_IDENTITY.md`.
-  **⚠ THE SIMULATOR IS NOT OURS RIGHT NOW — Sam ruled 2026-08-12 that Claude
-  Code owns it; use it only when he says so.** The deletion flow's re-run is
-  OWED. `docs/GOLDEN_FLOW_RUN_RECEIPT.md`.
+  **THE DELETION WALKTHROUGH IS GREEN ON GLASS (2026-08-12)** — and its first
+  assertion is the on-glass proof of the seed fix. **Ask `ps -o etime` before
+  calling a maestro collision a concurrent agent: three processes holding the
+  device were 1-22 DAYS old and wedged.** `docs/GOLDEN_FLOW_RUN_RECEIPT.md`.
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
