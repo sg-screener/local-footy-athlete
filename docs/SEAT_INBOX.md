@@ -1126,6 +1126,74 @@ phone.** State device items as PARKED in a stop report, never as a request.
     trusting it hid for a month. That is the pattern to copy into the other
     nineteen census rows.**
 
+28-C1c. **STOP CHASING COD. THE WALL YOU HIT IS CENSUS FINDING C5 — THE
+    SPARE-ROOM MEASUREMENT WAS TAKEN ON AN ILLEGAL WEEK.**
+
+    **⚠ CORRECTED 2026-08-13 BY THE TERMINAL — THE WEEK WAS LEGAL. THE "ZERO
+    REST DAYS" NUMBER WAS MY INSTRUMENT FAULT, NOT THE APP'S.** I counted
+    workouts whose `workoutType` is `'Rest'`, and there are none, because **REST
+    IS REPRESENTED BY ABSENCE — a day with no session at all.** Counted properly
+    the week covers days 1-6 and leaves day 0 empty: **ONE rest day, which is
+    legal at Sam's floor of 1-2.** `a-count-taken-for-a-record`, second sighting
+    this session.
+    **SO THIS ITEM'S PREMISE IS WITHDRAWN: the measurement was not taken on an
+    illegal week.** "There is no spare room" still stands, but for the plain
+    reason that all six chosen training days carry work — not because a ruling
+    was broken.
+    **C5 IS FIXED ANYWAY (`afd07164`) AND WAS RIGHT ON ITS OWN MERITS**, exactly
+    as this item predicted: all four `required: 0` rows now require 1 (including
+    `early_offseason`, which the receipt did not name — same ruling, same
+    defect), so a genuinely rest-free week can now be rejected. **Measured impact:
+    NONE — nothing currently violates it.**
+    **THE STANDING RULE THIS ITEM ADDS IS UNAFFECTED and is the better half:**
+    grep the census before treating any obstacle as a fact of the system.
+
+    **OWNED BY THE TERMINAL. Read this before the next COD unit.**
+
+    **THE MEASUREMENT:** *"A six-day off-season week produces six workouts and
+    zero rest days. Every day already has work."* Correct as an observation —
+    **and that week breaks a ruling of Sam's, so the number it produced cannot
+    be used to decide anything.**
+
+    **SAM'S RULING, verbatim (`LFA_PROGRAMMING_BIBLE.md:128`):** *"Full rest
+    days: 1-2 stands everywhere except bye-recovery weeks and early off-season,
+    where 3 full rest days are permitted."*
+    **Read the exception carefully — it permits MORE rest, not less. There is no
+    phase in which ZERO rest days is legal.**
+
+    **THE CODE (census C5, receipted):** `weeklyExposureContractV2.ts:1005`
+    (`mid_offseason`), `:1016` (`late_offseason`) and `:1030` (all three
+    pre-season rows) carry `rest: { required: 0, preferred: { min: 2, max: 2 } }`.
+    **The app knows the preferred answer is 2 and requires 0**, and `required` is
+    the sole input to the blocking check
+    (`section18EffectiveWeekEvaluator.ts:1484`), so with 0 that check is
+    unreachable.
+
+    **SO: "there is no room" is not a fact about the week. It is the symptom of
+    an unenforced ruling.** A legal mid/late off-season week is FIVE training
+    days and two rest days. **Re-measure spare room on a legal week before any
+    further COD work.**
+
+    **⚠ DO NOT OVERCLAIM THE FIX, AND DO NOT SKIP THE NEXT QUESTION.** Restoring
+    the rest floor frees a DAY. It does not by itself create a STANDALONE
+    conditioning slot, and the terminal's own next question — *why does a week
+    with no team training never produce a standalone conditioning slot?* —
+    remains the right one. **Both are needed. C5 first, because it is already
+    ruled, already receipted, and correct on its own merits whatever COD does.**
+
+    **THE PATTERN, NAMED BY THE TERMINAL ITSELF AND NOW A STANDING RULE.** Four
+    attempts, four reverts, and its own verdict: *"three of the four went wrong
+    the same way — changing code before measuring the layer above it."* **The
+    compression is one question, asked before every build from now on:**
+
+    > **IS THE WALL I JUST HIT ITSELF A CENSUS FINDING?**
+
+    **Here it was, and nobody checked.** `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md`
+    has twenty rows; the wall at layer four was row C5 the whole time. **Grep the
+    census before treating any obstacle as a fact of the system.** Twenty
+    known-broken rulings mean the odds are good that the thing blocking you is
+    one of them.
+
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
 addressable then walk it; the harvest ratchet and a computed tap atlas.
