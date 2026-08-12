@@ -15,6 +15,36 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+30-A5. **THE 6TH HARD DAY: SAM SAYS REFUSE, THE MODULE RESERVES ITS ONLY REFUSAL
+    FOR INJURY. THE TENSION IS REAL AND IT IS AN ENGINEERING CALL.**
+
+    **OWNED BY THE TERMINAL. Measured, not built — the fix has blast radius.**
+
+    **HIS RULING, Bible `:118`:** *"An edit that would create a 6th hard day is
+    **refused**, with plain-language copy saying why."*
+    **THE APP:** `weekStructureValidator.ts:481` grades `hd >= 6` as `'strong'`
+    with `canOverride: true`, and `conflictResolutionHierarchy.ts:106-107` maps
+    **only `hard_stop` to `block`** — `strong` maps to `confirm`. So the week he
+    called impossible is **one tap away.**
+
+    **⚠ AND THE OBVIOUS FIX IS BARRED BY THE MODULE'S OWN LAW.**
+    `weekStructureValidator.ts:32-35`: *"`hard_stop` — RESERVED for true
+    safety/injury situations... **this validator does not emit `hard_stop` for
+    programming-risk pairings — those are strong.**"* **A 6th hard day is
+    programming risk, not a medical stop.** Promoting it to `hard_stop` would
+    break a documented convention to satisfy a ruling — and would make a loading
+    decision indistinguishable from a red-flag symptom.
+
+    **TWO HONEST ROUTES, both engineering, neither a one-liner:**
+    **(a)** make the hierarchy honour `canOverride: false` so a `strong` finding
+    can refuse without claiming to be a medical stop — **this is the one that
+    fits both texts**, and it is the recommendation; or
+    **(b)** widen `hard_stop`'s reservation to cover authored REFUSALS as well as
+    safety, and say so in its header.
+    **(a) has blast radius: every `strong` finding's `canOverride` value becomes
+    load-bearing. Census what currently sets `canOverride: false` BEFORE
+    changing the mapping** — that number decides whether (a) is small or huge.
+
 29-C3. **⚠ I WAS WRONG — THE CENSUS IS RIGHT AND THE BREACH IS REAL. I READ THE
     BIBLE AND IT SETTLES IT AGAINST ME.**
 
