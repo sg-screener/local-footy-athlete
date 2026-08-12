@@ -62,6 +62,7 @@ import {
   type JournalLoadModel,
   teamTrainingSRPE,
   gameSRPE,
+  strengthSRPE,
   type JournalLoadSessionInput,
   type PlannedLift,
 } from '../rules/journalLoad';
@@ -1085,6 +1086,54 @@ ok('a day that was not a game produces no number', gameSRPE(null) === null);
     /game:\s*feedback\?\.game\s*\?\?\s*null/.test(producer),
     'JournalScreen builds JournalLoadSessionInput without `game` — the number is '
     + 'computed and never fed, which is the defect this item names');
+}
+
+// ── THE STRENGTH SESSION'S OWN DURATION (seat item 18, Sam ruled 2026-08-12) ──
+//
+// The last of the four kinds. Sam: *"i think do a for now and I will think of if
+// thats good enough long term"* — option (a), ACTUAL minutes. The 1-10 effort
+// was already stored as `difficulty`; actual minutes was the only missing half.
+ok('a rated, timed strength session produces sRPE in the same unit as the other three',
+  strengthSRPE(7, 55) === 385, strengthSRPE(7, 55));
+// PLANNED MINUTES ARE NOT THE FALLBACK — that is option (b), which Sam did NOT
+// choose. Substituting them would make the column look complete when it is not.
+ok('a session with effort but no timing is unmeasured, not back-filled',
+  strengthSRPE(7, null) === null);
+ok('a session timed but never rated is unmeasured', strengthSRPE(null, 55) === null);
+ok('a zero duration is not an answer', strengthSRPE(7, 0) === null);
+
+{
+  const derived = deriveSessionLoad({
+    date: '2026-07-15', strength: [], conditioning: null,
+    difficulty: 8, actualMinutes: 45,
+  });
+  ok('the derived session carries the strength session', derived.strengthSRPE === 360,
+    derived.strengthSRPE);
+  ok('a strength session the athlete rated and timed counts as measured',
+    derived.measured === true);
+  const halfAnswered = deriveSessionLoad({
+    date: '2026-07-15', strength: [], conditioning: null, difficulty: 8,
+  });
+  ok('effort alone does not make a session measured',
+    halfAnswered.strengthSRPE === null && halfAnswered.measured === false);
+  // THE FOUR ARE INDEPENDENT.
+  const producer = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  ok('the journal producer hands BOTH strength halves to the load model',
+    /difficulty:\s*feedback\?\.difficulty\s*\?\?\s*null/.test(producer)
+    && /actualMinutes:\s*feedback\?\.actualMinutes\s*\?\?\s*null/.test(producer),
+    'JournalScreen builds JournalLoadSessionInput without the strength halves');
+}
+
+// ALL FOUR KINDS ARE REAL — the sentence item 6 has been reaching for since it
+// was written, asserted rather than announced.
+{
+  const kinds: readonly unknown[] = [
+    conditioningSRPE, teamTrainingSRPE, gameSRPE, strengthSRPE,
+  ];
+  ok('all four kinds of experienced load exist, and are four distinct functions',
+    kinds.every((fn) => typeof fn === 'function') && new Set(kinds).size === 4,
+    kinds.map((fn) => typeof fn));
 }
 
 console.log(`\njournalLoadTests: ${pass} passed, ${fail} failed`);

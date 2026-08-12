@@ -111,6 +111,7 @@ import {
   type SessionExecutionSummary,
 } from '../utils/sessionExecutionChecklist';
 import { GAME_FEEDBACK_COPY } from '../rules/gameFeedback';
+import { STRENGTH_FEEDBACK_COPY } from '../rules/strengthSessionFeedback';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -530,6 +531,15 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   const [sessionRpe, setSessionRpe] = useState<number | null>(
     isSessionEffortRating(existing?.difficulty) ? existing.difficulty : null,
   );
+  // THE STRENGTH SESSION'S ACTUAL DURATION (seat item 18, Sam's option (a)).
+  // Seeded from what was stored, so re-opening a logged session shows the
+  // athlete their own answer rather than an empty box.
+  const [strengthHours, setStrengthHours] = useState(
+    existing?.actualMinutes ? String(Math.floor(existing.actualMinutes / 60)) : '',
+  );
+  const [strengthMinutes, setStrengthMinutes] = useState(
+    existing?.actualMinutes ? String(existing.actualMinutes % 60) : '',
+  );
   const [teamTrainingHours, setTeamTrainingHours] = useState(
     existing?.teamTraining
       ? String(Math.floor(existing.teamTraining.durationMinutes / 60))
@@ -613,6 +623,15 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
   const teamTrainingWasPerformed = isTeamNight && (
     teamTrainingCompletion === 'full' || teamTrainingCompletion === 'partial'
   );
+  // THE SAME PARSER THE OTHER TWO USE — not a second design, per the order.
+  const strengthDuration = parseHoursMinutes(strengthHours, strengthMinutes);
+  const strengthAnswered = strengthHours.trim() !== '' || strengthMinutes.trim() !== '';
+  // OPTIONAL, AND THAT IS THE RULING'S OWN SHAPE. A session missing the answer
+  // is UNMEASURED (Sam chose (a) over (b)), so a blank must not block the save —
+  // blocking would strand an athlete who simply did not time their session.
+  const strengthActualMinutes = strengthAnswered && strengthDuration.valid
+    ? strengthDuration.totalMinutes
+    : undefined;
   const teamTrainingDuration = parseHoursMinutes(teamTrainingHours, teamTrainingMinutes);
   const teamTrainingOutcome: TeamTrainingSessionOutcome | undefined =
     teamTrainingWasPerformed
@@ -890,6 +909,9 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
       skipReason,
       notes,
       difficulty: executionSummary ? sessionRpeValue : conditioningRpeValue,
+      // Only sent on the strength (checklist) path — the flag that decides
+      // whether the question is ASKED decides whether the answer is SENT.
+      actualMinutes: executionSummary ? strengthActualMinutes : undefined,
       executionItems: executionSummary?.items,
       teamTraining: teamTrainingOutcome,
       conditioning,
@@ -1069,6 +1091,42 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
                 value={sessionRpe}
                 onChange={setSessionRpe}
               />
+              <SectionLabel style={styles.section}>
+                {STRENGTH_FEEDBACK_COPY.durationQuestion}
+              </SectionLabel>
+              <View style={styles.gameDurationRow}>
+                <View style={styles.gameDurationField}>
+                  <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.hours}</Text>
+                  <AppTextInput
+                    testID="strength-feedback-hours"
+                    style={styles.gameDurationInput}
+                    value={strengthHours}
+                    onChangeText={setStrengthHours}
+                    placeholder="1"
+                    placeholderTextColor={colors.text.tertiary}
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                </View>
+                <View style={styles.gameDurationField}>
+                  <Text style={styles.metricLabel}>{GAME_FEEDBACK_COPY.minutes}</Text>
+                  <AppTextInput
+                    testID="strength-feedback-minutes"
+                    style={styles.gameDurationInput}
+                    value={strengthMinutes}
+                    onChangeText={setStrengthMinutes}
+                    placeholder="30"
+                    placeholderTextColor={colors.text.tertiary}
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                </View>
+              </View>
+              {strengthAnswered && !strengthDuration.valid ? (
+                <Text style={styles.inputError}>
+                  {GAME_FEEDBACK_COPY.durationRefusal}
+                </Text>
+              ) : null}
             </>
           ) : null}
         </>

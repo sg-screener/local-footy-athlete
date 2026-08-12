@@ -860,6 +860,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-strength-load-is-actual-minutes',
+    law: 'A strength session\'s experienced load is its 1-10 effort times the minutes it ACTUALLY took. Planned minutes are never substituted: a session missing either half is UNMEASURED.',
+    ruledAt: 'docs/SEAT_INBOX.md item 18, Sam 2026-08-12: "i think do a for now and I will think of if thats good enough long term" — option (a), actual duration',
+    guard: {
+      state: 'guarded',
+      by: 'test:journal-load',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-13, AND IT COMPLETES THE FOUR. With `LAW-game-load-is-full`, `LAW-team-night-load-is-read` and conditioning\'s existing cells, all four kinds of experienced load are now real functions — `conditioningSRPE`, `teamTrainingSRPE`, `gameSRPE`, `strengthSRPE` — which is the sentence item 6 had been reaching for since it was written, and a cell asserts it rather than announcing it. THE MEASURED GAP WAS ONE FIELD, NOT THREE: a strength session already asked "How hard was the session?" on the 1-10 slider and stored it as `difficulty`; ACTUAL MINUTES was the only missing half. OPTION (a) IS THE RULING AND (b) IS THE TRAP: Sam chose actual minutes over falling back to the planned value, so nothing back-fills `domain.ts`\'s planned number — that would make the column look complete when it is not, and the mutation that introduces a 60-minute default reds THREE cells. NOT SAVE-BLOCKING, ON PURPOSE: the ruling\'s own shape is that a session missing the answer is UNMEASURED, so a blank must not refuse the save and strand an athlete who did not time their lift. THE WORDS ARE SAM\'S: "Rough time in the gym", chosen by him 2026-08-13 from his own two existing lines, because the terminal does not invent athlete words; hours/minutes labels and the refusal are REUSED from the game copy rather than re-signed, so one word cannot disagree in three places. THE PERSISTENCE TRAP IS THE CELL THAT EARNS ITS KEEP: `buildSessionFeedbackPayload` REBUILDS its object, so a field it does not name is lost the moment the athlete edits an answer — the exact class that bit the team-night unit — so the field is asserted THROUGH the builder on the checklist path, plus absence-stays-absence and a zero-is-not-an-answer arm. MUTATION-CHECKED THREE WAYS: deleting the field from the payload builder, back-filling a default duration, and unwiring the journal producer each red their own cells. WHAT IT DOES NOT REACH: like its three siblings, `strengthSRPE` stops at the session load and the `measured` flag and is not summed into `JournalLoadWeekTotals`. No cell mounts the panel, so nothing here proves the athlete SEES the new input — that is a simulator pass, and Sam cannot device-test until he rebuilds his phone.',
+    },
+  },
+  {
     id: 'LAW-regate-carries-provenance',
     law: 'A week re-derived at commit time carries the provenance the proposal held — the still-valid records travel, the expired ones do not, and a day the re-derivation removed is never resurrected.',
     ruledAt: 'docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md §11-§12; the same class as LAW-rename-carries-its-references, second sighting in one day',

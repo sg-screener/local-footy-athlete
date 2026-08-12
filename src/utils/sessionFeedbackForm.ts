@@ -147,10 +147,27 @@ export interface ComponentFeedbackReasonState {
   skipReason: FeedbackSkipReason | null;
 }
 
+/**
+ * A stored minute count, or null. ONE PLACE, because "did the athlete answer?"
+ * must mean the same thing at the form, the transaction and the load model — a
+ * zero is not an answer, and neither is a fraction of a minute.
+ */
+function positiveMinutes(value: number | undefined): number | null {
+  if (!Number.isFinite(value)) return null;
+  const rounded = Math.round(Number(value));
+  return rounded > 0 ? rounded : null;
+}
+
 export interface BuildSessionFeedbackPayloadInput extends FeedbackFormDraft {
   dateStr: string;
   notes?: string;
   difficulty?: number;
+  /**
+   * HOW LONG THE STRENGTH SESSION ACTUALLY TOOK, in minutes (Sam's option (a),
+   * 2026-08-12). Pairs with `difficulty` to make strength sRPE. Optional: a
+   * session without it is UNMEASURED, never back-filled from the planned value.
+   */
+  actualMinutes?: number;
   conditioning?: ConditioningPerformanceLog;
   strength?: StrengthExercisePerformanceLog[];
   components?: SessionComponent[];
@@ -620,6 +637,12 @@ export function buildSessionFeedbackPayload(
       completion,
       ...(completion !== 'skipped' && isSessionEffortRating(input.difficulty)
         ? { difficulty: input.difficulty }
+        : {}),
+      // NAMED HERE OR LOST HERE. This builder REBUILDS its object, so a field it
+      // does not mention is dropped the moment the athlete edits their answer —
+      // the exact class the team-night unit was bitten by.
+      ...(completion !== 'skipped' && positiveMinutes(input.actualMinutes) !== null
+        ? { actualMinutes: positiveMinutes(input.actualMinutes)! }
         : {}),
       ...(completion !== 'skipped' && input.teamTraining
         ? { teamTraining: input.teamTraining }

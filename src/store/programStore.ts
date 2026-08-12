@@ -1771,6 +1771,18 @@ export interface SessionFeedback {
   feeling?: FeedbackFeeling;
   /** Session effort, 1-10 — one scale for every input since 2026-08-12. */
   difficulty?: number;
+  /**
+   * HOW LONG A STRENGTH SESSION ACTUALLY TOOK, in minutes. Sam chose option (a)
+   * on 2026-08-12: *"i think do a for now and I will think of if thats good
+   * enough long term"*.
+   *
+   * With `difficulty` it makes strength sRPE (`rules/journalLoad.strengthSRPE`),
+   * the fourth and last of the four kinds. PLANNED MINUTES ARE NOT ITS FALLBACK
+   * — that was option (b) and he did not choose it. A session without this
+   * answer is UNMEASURED, and substituting the planned value would make the
+   * column look complete when it is not.
+   */
+  actualMinutes?: number;
   /** Post-session soreness level. Optional for backward compat. */
   soreness?: FeedbackSoreness;
   /**
@@ -1803,9 +1815,13 @@ export interface SessionFeedback {
   /** Canonical complete match result for scheduled games and practice matches. */
   game?: import('../types/sessionOutcome').GameSessionOutcome;
   /**
-   * "Did it match the prescription?" — the one-tap exception, and the ONLY thing
-   * that records effort on a strength session (`difficulty` is written from the
-   * conditioning RPE input alone).
+   * "Did it match the prescription?" — the one-tap exception.
+   *
+   * THIS COMMENT USED TO SAY it was "the ONLY thing that records effort on a
+   * strength session (`difficulty` is written from the conditioning RPE input
+   * alone)". That stopped being true when the 1-10 scale landed: the panel
+   * writes `difficulty` from the SESSION RPE whenever there is an execution
+   * summary, which is the strength path. Corrected 2026-08-13 (seat item 18).
    *
    * NOT `feeling`, which answers how HARD it was. A very_hard session can be
    * exactly as expected; one field for both questions is the two-owners defect.

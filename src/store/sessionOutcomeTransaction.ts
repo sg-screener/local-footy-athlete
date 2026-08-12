@@ -178,6 +178,9 @@ export function createRecordSessionOutcomeIntentFromFeedback(args: {
     ...(Number.isFinite(args.feedback.difficulty)
       ? { difficulty: args.feedback.difficulty }
       : {}),
+    ...(Number.isFinite(args.feedback.actualMinutes) && Number(args.feedback.actualMinutes) > 0
+      ? { actualMinutes: args.feedback.actualMinutes }
+      : {}),
     ...(args.feedback.executionItems ? { executionItems: args.feedback.executionItems } : {}),
     ...(args.feedback.game ? { game: args.feedback.game } : {}),
     ...(args.feedback.teamTraining ? { teamTraining: args.feedback.teamTraining } : {}),
@@ -484,6 +487,9 @@ function normalizeIntent(
     ...(notes ? { notes } : {}),
     ...(!skipped && Number.isFinite(intent.difficulty)
       ? { difficulty: Math.max(1, Math.min(10, Math.round(intent.difficulty!))) }
+      : {}),
+    ...(!skipped && Number.isFinite(intent.actualMinutes) && Number(intent.actualMinutes) > 0
+      ? { actualMinutes: Math.round(intent.actualMinutes!) }
       : {}),
     ...(intent.executionItems ? { executionItems: intent.executionItems } : {}),
     ...(parsedGame ? { game: parsedGame } : {}),

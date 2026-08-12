@@ -1479,6 +1479,11 @@ export default function JournalScreen() {
         // been collected and validated since the game form shipped, and this is
         // the line that finally reads them.
         game: feedback?.game ?? null,
+        // THE STRENGTH SESSION'S OWN EFFORT AND DURATION — the fourth kind
+        // (seat item 18). Actual minutes only; the planned value is never
+        // substituted, because that is option (b) and Sam chose (a).
+        difficulty: feedback?.difficulty ?? null,
+        actualMinutes: feedback?.actualMinutes ?? null,
       }));
 
     // THE PLAN HALF OF LAYER 4, read off the same resolved week the rest of the

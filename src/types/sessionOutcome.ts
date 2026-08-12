@@ -256,6 +256,8 @@ export interface RecordSessionOutcomeIntent {
   conditioning?: ConditioningPerformanceLog;
   notes?: string;
   difficulty?: number;
+  /** Actual strength-session minutes. Pairs with `difficulty` for strength sRPE. */
+  actualMinutes?: number;
   executionItems?: import('../utils/sessionExecutionChecklist').SessionExecutionItemResult[];
   /** Present only for a game-classified visible session. */
   game?: GameSessionOutcome;

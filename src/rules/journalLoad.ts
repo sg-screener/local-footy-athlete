@@ -272,6 +272,10 @@ export interface JournalLoadSessionInput {
   readonly teamTraining?: TeamTrainingSessionOutcome | null;
   /** The post-match result as stored, or null when the day was not a game. */
   readonly game?: GameSessionOutcome | null;
+  /** Session effort 1-10 as stored — the strength half of strength sRPE. */
+  readonly difficulty?: number | null;
+  /** Actual strength minutes as stored. NEVER the planned value (Sam, option a). */
+  readonly actualMinutes?: number | null;
 }
 
 export interface BuildJournalLoadInput {
@@ -317,6 +321,12 @@ export interface JournalSessionLoad {
    * 2026-08-12). Null means the athlete did not supply both halves.
    */
   readonly gameSRPE: number | null;
+  /**
+   * sRPE AU for a strength session — effort times ACTUAL minutes. The fourth
+   * and last kind. Null when either half is missing; planned minutes are never
+   * substituted.
+   */
+  readonly strengthSRPE: number | null;
   /** Lifts whose tonnage could not be computed — reported, never assumed zero. */
   readonly liftsUnmeasured: number;
   /** True when either stream produced a number. */
@@ -583,6 +593,16 @@ export function teamTrainingSRPE(outcome: TeamTrainingSessionOutcome | null): nu
  * rather than half-counted. A game the athlete never rated must not read as a
  * light game.
  */
+export function strengthSRPE(
+  difficulty: number | null | undefined,
+  actualMinutes: number | null | undefined,
+): number | null {
+  const effort = positive(difficulty ?? null);
+  const minutes = positive(actualMinutes ?? null);
+  if (effort === null || minutes === null) return null;
+  return effort * minutes;
+}
+
 export function gameSRPE(outcome: GameSessionOutcome | null): number | null {
   if (!outcome) return null;
   const rpe = positive(outcome.bodyRpe);
@@ -724,6 +744,7 @@ export function deriveSessionLoad(
 
   const teamSrpe = teamTrainingSRPE(session.teamTraining ?? null);
   const matchSrpe = gameSRPE(session.game ?? null);
+  const liftSrpe = strengthSRPE(session.difficulty ?? null, session.actualMinutes ?? null);
   const srpe = conditioningSRPE(session.conditioning);
   if (srpe !== null && session.conditioning) {
     const muscles = conditioningSessionMuscles({
@@ -747,6 +768,7 @@ export function deriveSessionLoad(
     conditioningSRPE: srpe,
     teamTrainingSRPE: teamSrpe,
     gameSRPE: matchSrpe,
+    strengthSRPE: liftSrpe,
     liftsUnmeasured,
     // A TEAM NIGHT THE ATHLETE RATED IS A MEASURED SESSION. Leaving it out of
     // this flag would have the week report "unmeasured" for a day whose load
@@ -755,7 +777,8 @@ export function deriveSessionLoad(
     measured: strengthMeasuredLifts > 0
       || srpe !== null
       || teamSrpe !== null
-      || matchSrpe !== null,
+      || matchSrpe !== null
+      || liftSrpe !== null,
     regions,
     patternTonnageKg,
     upperLowerTonnageKg: upperLower,

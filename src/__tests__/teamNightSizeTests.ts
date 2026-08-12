@@ -238,6 +238,39 @@ console.log('\n[5] THE ANSWER SURVIVES THE FORM AND REACHES STORAGE');
   });
   ok('a skipped night stores no size', skipped !== null && !('teamNightSize' in skipped));
 
+  // ── THE STRENGTH SESSION'S ACTUAL MINUTES SURVIVE THE SAME REBUILD ────────
+  //
+  // Item 18's field rides the SAME builder that this suite's own header calls
+  // out: it REBUILDS its object, so a field it does not name is lost the moment
+  // the athlete changes an answer. That class already bit once here, which is
+  // why the new field is asserted through the builder rather than at its type.
+  // `checklistMode` — an executionItems array — IS the strength path, and it is
+  // the branch the field is named in. A cell on the other branch would pass for
+  // the wrong reason.
+  const timed = buildSessionFeedbackPayload({
+    dateStr: '2026-07-22', ...draft(), executionItems: [], difficulty: 7, actualMinutes: 55,
+  });
+  ok('a timed strength session carries its actual minutes into SessionFeedback',
+    timed?.actualMinutes === 55, timed);
+  const untimed = buildSessionFeedbackPayload({
+    dateStr: '2026-07-22', ...draft(), executionItems: [], difficulty: 7,
+  });
+  ok('a session the athlete did not time stores no minutes — absence stays absence',
+    untimed !== null && !('actualMinutes' in untimed), untimed);
+  // A ZERO IS NOT AN ANSWER, and storing it would read as an instant session.
+  const zero = buildSessionFeedbackPayload({
+    dateStr: '2026-07-22', ...draft(), executionItems: [], difficulty: 7, actualMinutes: 0,
+  });
+  ok('a zero duration is stored as no answer, never as zero minutes',
+    zero !== null && !('actualMinutes' in zero), zero);
+  const skippedTimed = buildSessionFeedbackPayload({
+    dateStr: '2026-07-22',
+    ...draft({ completion: 'skipped', teamNightSize: null, skipReason: 'busy_no_time' }),
+    executionItems: [], difficulty: 7, actualMinutes: 55,
+  });
+  ok('a skipped session stores no duration', 
+    skippedTimed !== null && !('actualMinutes' in skippedTimed));
+
   // End-to-end: stored feedback → the read. This is the join the two halves share, and it
   // is the one place a field-name mismatch between store and rule would show up.
   const stored: SessionFeedback[] = [
