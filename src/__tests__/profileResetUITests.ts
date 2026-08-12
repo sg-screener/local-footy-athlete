@@ -97,7 +97,14 @@ const profileEquipmentEditor = fs.readFileSync(PROFILE_EQUIPMENT_EDITOR_PATH, 'u
 // 0. The live phase-shift sheet keeps every seven-day choice at 4 + 3
 // ═════════════════════════════════════════════════════════════════════
 section('[0] Season phase shift day-grid geometry');
-const phaseSheetAt = homeV2.indexOf('export function SeasonPhaseShiftSheet(');
+// MOVED WITH THE COMPONENT, 2026-08-12 (SEAT_INBOX item 15). The phase sheet's
+// surface has been on the Coach tab since the merge and its implementation
+// finally followed, so this region lives in `components/SeasonPhaseShiftSheet`.
+// A cell left pointing at HomeScreenV2 would slice to -1 and assert over an
+// empty string — which is why it checks the region was FOUND first.
+const phaseSheetSource = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'SeasonPhaseShiftSheet.tsx'), 'utf8');
+const phaseSheetAt = phaseSheetSource.indexOf('export function SeasonPhaseShiftSheet(');
 // RE-AIMED 2026-08-12. The end anchor was `interface BuildingStateProps`, and
 // `BuildingState` MOVED to `components/RebuildSheet` with SEAT_INBOX item 8 —
 // Coach / My Status can now cause a rebuild, so the progress sheet had to be
@@ -108,8 +115,8 @@ const phaseSheetAt = homeV2.indexOf('export function SeasonPhaseShiftSheet(');
 //
 // The new end is the file's stylesheet — the last thing after the sheet, and a
 // declaration that cannot leave while the screen has any styling at all.
-const phaseSheetEnd = homeV2.indexOf('const styles = StyleSheet.create(', phaseSheetAt);
-const phaseSheet = homeV2.slice(phaseSheetAt, phaseSheetEnd);
+const phaseSheetEnd = phaseSheetSource.indexOf('const styles = StyleSheet.create(', phaseSheetAt);
+const phaseSheet = phaseSheetSource.slice(phaseSheetAt, phaseSheetEnd);
 ok(
   'HomeScreenV2 is the live Program screen and its phase sheet region was found',
   /const DESIGN_VERSION: DesignVersion = 'v2'/.test(homeWrapper)

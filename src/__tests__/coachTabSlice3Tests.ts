@@ -1274,6 +1274,7 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
     path.join(__dirname, '..', ...rel.split('/')), 'utf8');
   const strip = read('components/ModifiersStrip.tsx');
   const home = read('screens/home/HomeScreenV2.tsx');
+  const phaseSheet = read('components/SeasonPhaseShiftSheet.tsx');
   const homeHook = read('screens/home/useHomeScreen.ts');
   const coachTab = read('screens/coach/CoachTabScreen.tsx');
   const status = read('screens/coach/CoachStatusScreen.tsx');
@@ -1352,14 +1353,19 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
   ok('phase review selects any phase before the existing questions',
     /currentPhase=\{phaseControl\.currentPhase\}/.test(coachTab)
       && /onSelectTargetPhase=\{phaseControl\.selectTargetPhase\}/.test(coachTab)
-      && /\['In-season', 'Pre-season', 'Off-season'\]/.test(home)
-      && /signedCopy\('phase\.review\.title'\)/.test(home)
+      // RE-AIMED 2026-08-12 (SEAT_INBOX item 15). These read the phase SHEET,
+      // which lived inside HomeScreenV2 only because its move was never
+      // finished — the surface has been on the Coach tab since the merge. The
+      // assertions follow the component; leaving them on `home` would have them
+      // testing a file that no longer contains the sheet.
+      && /\['In-season', 'Pre-season', 'Off-season'\]/.test(phaseSheet)
+      && /signedCopy\('phase\.review\.title'\)/.test(phaseSheet)
       && /text: 'Review season phase'/.test(projectionCopy)
-      && /signedCopy\('phase\.review\.confirm'\)/.test(home)
-      && /targetPhase !== currentPhase \? \(/.test(home)
-      && /What days can you train\?/.test(home)
-      && /Team training days/.test(home)
-      && /Usual game day/.test(home)
+      && /signedCopy\('phase\.review\.confirm'\)/.test(phaseSheet)
+      && /targetPhase !== currentPhase \? \(/.test(phaseSheet)
+      && /What days can you train\?/.test(phaseSheet)
+      && /Team training days/.test(phaseSheet)
+      && /Usual game day/.test(phaseSheet)
       && /if \(targetPhase === 'In-season'\) setStep\('gameDay'\)/.test(phaseControl),
     'Review still forces the next phase, or selecting a target bypasses the '
       + 'availability/team/game questions');

@@ -1131,7 +1131,24 @@ phone.** State device items as PARKED in a stop report, never as a request.
    block is a SEPARATE 2026-07-30 concern — read its own comment before touching
    it, and do not delete it in the same sweep.**
 
-15. **FINISH THE PHASE-SHEET MOVE.** The surface is on the Coach tab
+15. **BUILT — THE MOVE IS FINISHED AND THE BRIDGE IS GONE.**
+   `SeasonPhaseShiftSheet` (props, `BackChevron`, the component and its 20 style
+   rules) moved BYTE-FOR-BYTE into `src/components/SeasonPhaseShiftSheet.tsx`;
+   the six-line re-export is deleted. **A file that says "during the move" and
+   never stops saying it is a file that has stopped being read.**
+   **THE ORPHANED STYLE WAS FOUR, NOT ONE.** The item names `phaseCard`;
+   `phaseBadge`, `phaseBody` and `phaseBodyAccent` also measured ZERO uses
+   repo-wide. The phase card left Program at the merge and its styling stayed a
+   month — **the existing style gate greps USAGE, so a definition nothing uses
+   passes it**, which is exactly why the item had to name one by hand.
+   **TWO GUARDS MOVED WITH THE SURFACE:** `profileResetUITests`' day-grid region
+   and `coachTabSlice3Tests`' phase-review cell both sliced `HomeScreenV2` for a
+   component no longer in it. Re-aimed, not deleted.
+   **ON GLASS:** `.maestro/golden/coach-my-status.yaml` green end to end, phase
+   review included (Review -> the three options -> Confirm -> "What days can you
+   train?" -> Cancel).
+
+   ~~ORIGINAL ORDER~~ **FINISH THE PHASE-SHEET MOVE.** The surface is on the Coach tab
    (`CoachTabScreen.tsx:479`); the implementation never followed, so
    `src/components/SeasonPhaseShiftSheet.tsx` is a permanent six-line re-export
    of a component still inside `HomeScreenV2.tsx:3352`. Move it, delete the
