@@ -652,6 +652,64 @@ async function main(): Promise<void> {
       + 'and the after count must be zero.');
   });
 
+  // ── ITEM 30: THE WEEK THAT ALREADY EXISTS ────────────────────────────────
+  //
+  // **The census defect wearing today's clothes:** the app now RUNS Sam's logic
+  // and the athlete's week does not receive it. Everything else about equipment
+  // was measured at GENERATION — build a fresh week with and without a
+  // missing-barbell fact and the exercises differ. That proves nothing about the
+  // week already sitting on his phone, which is the only week he has.
+  //
+  // SO THIS CELL WALKS TO A WORLD FIRST and applies the fact to it. It is the
+  // acceptance item 30 asks for, and it is the shape every "changes only reach a
+  // week that has not been built yet" claim has to answer to.
+  await run('ITEM 30: an equipment fact reaches a week that ALREADY EXISTS', async () => {
+    reachHisWorldByActing();
+    // READ THE EQUIPMENT, NOT THE NAME. The first version of this matched
+    // /overhead press/ and reported "Half-Kneeling Single-Arm Overhead Press" —
+    // a DUMBBELL exercise — as a surviving barbell row. A name is not a kit
+    // list, and a cell that confuses them fails on correct behaviour.
+    const barbellRows = (): string[] => projectedWeek()
+      .flatMap((day) => (day.workout?.exercises ?? []) as any[])
+      .filter((row: any) => ((row?.exercise?.equipmentRequired ?? []) as unknown[])
+        .some((item) => /barbell/i.test(String(item))))
+      .map((row: any) => String(row?.exercise?.name ?? row?.name ?? ''));
+    const before = barbellRows();
+    // NON-VACUITY FIRST. "No barbell survives" is trivially true of a week that
+    // never had one — the exact trap the away cell above fell into.
+    assert(before.length > 0,
+      'this world has no barbell row to lose, so the assertion below would pass '
+      + 'on emptiness. Walk to a world that has one.');
+
+    const result = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_equipment_modifier',
+      source: { screen: 'program_tab', surface: 'away_this_week', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: {
+        decision: {
+          kind: 'missing_this_week',
+          tags: ['barbell'],
+          conditioningModalities: [],
+        },
+        date: TODAY,
+        todayISO: TODAY,
+      },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    } as ProgramControlAction, { todayISO: TODAY }));
+    assert(result.ok === true, `the equipment door was refused: "${result.message}"`);
+    assert(result.changedProgram === true,
+      'the equipment fact reports NO program change — the athlete reads '
+      + '"Exercises substituted" over a week that still holds the barbell');
+
+    const after = barbellRows();
+    assert(after.length === 0,
+      `${after.length} barbell row(s) survived in the week the athlete is `
+      + `looking at: ${after.slice(0, 4).join(', ')}. Substituting only what has `
+      + 'not been built yet is not substituting.');
+  });
+
   await run('a deriving short-on-time commit compresses today and touches no other day', async () => {
     // DECLARED RED 2's payment, ruled half — "the real law: today lightens, the
     // other six days are untouched", exactly as the old cell said it must be

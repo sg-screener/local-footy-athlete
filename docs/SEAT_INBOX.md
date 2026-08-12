@@ -195,6 +195,23 @@ his instruction is standing authority, not history.**
 
     **⚠ IN FLIGHT BY ITS OWNER RIGHT NOW — DO NOT START A SECOND ONE.**
     **Measured 2026-08-13 05:45 by the terminal, read-only, nothing touched.**
+
+    **ANSWERED IN PART, AND ONE OF MY OWN CLAIMS IS WITHDRAWN. Desktop,
+    2026-08-13.** The acceptance this item asks for now EXISTS as a cell:
+    `test:program-control-durable` "ITEM 30: an equipment fact reaches a week
+    that ALREADY EXISTS" — walk to a world, assert it holds barbell rows, apply
+    a `missing_this_week` fact, assert none survive. **It is GREEN**, so the
+    equipment substitution does reach an existing week.
+    **BUT IT IS NOT MY LANE CHANGE THAT DELIVERS IT.** Putting equipment back on
+    the inert lane leaves the cell GREEN — measured by mutation — so that
+    substitution was already arriving by another route, and `0f31219d`'s claim
+    that the lane fix is what made it land is WITHDRAWN. The lane fix is still
+    right (a ruled fact must author its weeks, and it mints the adjustment the
+    undo needs); it is not the reader this item was looking for.
+    **STILL UNMET: the AWAY half.** The week does move, but the club work does
+    not come off, because a day is a team day via the PLAN's `isTeamDay` and the
+    name enforcement re-derives it after the constraint seam runs. **The next
+    act is the allocator: do not mark `isTeamDay` inside a live travel span.**
     The desktop agent has UNCOMMITTED edits in `temporarySourceFactTransaction.ts`
     (last write 05:10) plus four more files, and a `.git/index.lock` stale since
     05:31. **The edit is exactly this item's fix:** `isRuledDerivingConstraint`
