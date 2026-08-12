@@ -60,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `70eb0125` (items 3/4/7, `docs/STOP_2026-08-12_ITEMS_3_4_7.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `8f206cfd` (the ±7 deleted; `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md` §11-§12) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails
@@ -123,7 +123,16 @@ and this file gets one line pointing at it.**
   (`LAW-stress-vocabulary-is-one-word`). **The fix changed NOTHING measurable —
   all 17 scenarios identical — because that placer does not run in them.**
   **12 of 17 weeks still have zero moderate days.**
-- **THE ±7 IS DIAGNOSED AND NOT FIXED.** Measured in both arms: the dependency
+- **THE ±7 IS DELETED — fourth attempt, and it was never the defect.** The real
+  one: `canonicaliseAcceptedStateCandidate` re-derives a week at commit time and
+  writes it over the proposal WITHOUT its provenance, so a cross-week dependency
+  died at commit on every re-gating path. **The phantom fixture was the only
+  thing hiding it.** Fixed by carrying still-valid records through the re-gate
+  (`LAW-regate-carries-provenance`); the ±7 then deletes cleanly
+  (`LAW-no-invented-fixture`). **Sweep 15 of 196, IDENTICAL name for name to the
+  HEAD baseline; the 17 scenarios unchanged.** Second sighting in one day of
+  "a rebuild must carry what pointed at it".
+- ~~**THE ±7 IS DIAGNOSED AND NOT FIXED.**~~ Measured in both arms: the dependency
   link is derived MORE often without the ±7, reaches the materialiser MORE often,
   and the proposal carries it IDENTICALLY — **the COMMIT is where it dies.** Five
   candidates dead. `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md` §7-§10.
