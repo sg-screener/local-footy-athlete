@@ -39,6 +39,7 @@ import {
   ROLES_EXEMPT_FROM_COUNTING,
   SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE,
   SESSION_ROLE_TO_SECTION18_ROW_ROLE,
+  SESSION_ROLES_WITHOUT_SECTION18_ROW_ROLE,
   SESSION_SIZE_FLOOR,
   countingRows,
   exerciseBudgetRows,
@@ -119,8 +120,17 @@ ok(
 );
 ok('power is exempt', ROLES_EXEMPT_FROM_COUNTING.has('power'));
 ok(
-  'no other role is exempt yet — only power migrates',
-  ROLES_EXEMPT_FROM_COUNTING.size === 1,
+  // INVERTED 2026-08-13, NOT DELETED — the exemption set's history stays
+  // readable. It said "only power migrates" and that was true until Sam ruled
+  // team training out of the strength accounting: *"it's not part of the
+  // strength exercises - it's its own component of the day"*. TWO members now,
+  // and the cell still refuses a THIRD arriving unannounced, which is the job
+  // it was doing all along — the module's header calls adding a role here a
+  // counting change that must come with a golden diff.
+  'exactly power and team training are exempt — a third may not arrive unannounced',
+  ROLES_EXEMPT_FROM_COUNTING.size === 2
+    && ROLES_EXEMPT_FROM_COUNTING.has('power')
+    && ROLES_EXEMPT_FROM_COUNTING.has('team_training'),
   [...ROLES_EXEMPT_FROM_COUNTING].join(', '),
 );
 
@@ -318,10 +328,24 @@ console.log('\n[5] The role vocabularies map 1:1, in both directions');
   const sessionRoles = [...SESSION_ROLE_ORDER];
   const mapped = Object.keys(SESSION_ROLE_TO_SECTION18_ROW_ROLE) as SessionRole[];
   ok(
-    'every SessionRole has a Section 18 spelling',
-    sessionRoles.every((role) => mapped.includes(role)) &&
-      mapped.length === sessionRoles.length,
-    `roles=${sessionRoles.join(',')} mapped=${mapped.join(',')}`,
+    // NARROWED 2026-08-13 TO "EVERY ROLE IS ACCOUNTED FOR", which is the claim
+    // that was always meant: a role must either have a §18 spelling or be a
+    // DECLARED exception. `team_training` is the first of the latter, because a
+    // team night is already credited at the SESSION level by the taxonomy and a
+    // row spelling would count it twice. The cell still fails on a role that is
+    // neither mapped nor declared, which is the drift it guards.
+    'every SessionRole is either mapped to Section 18 or declared exempt from it',
+    sessionRoles.every((role) =>
+      mapped.includes(role) || SESSION_ROLES_WITHOUT_SECTION18_ROW_ROLE.includes(role))
+      && mapped.length + SESSION_ROLES_WITHOUT_SECTION18_ROW_ROLE.length === sessionRoles.length,
+    `roles=${sessionRoles.join(',')} mapped=${mapped.join(',')} `
+      + `declared=${SESSION_ROLES_WITHOUT_SECTION18_ROW_ROLE.join(',')}`,
+  );
+
+  ok(
+    'a declared Section 18 exception must not ALSO be mapped',
+    !SESSION_ROLES_WITHOUT_SECTION18_ROW_ROLE.some((role) => mapped.includes(role)),
+    SESSION_ROLES_WITHOUT_SECTION18_ROW_ROLE.join(','),
   );
 
   const targets = Object.values(SESSION_ROLE_TO_SECTION18_ROW_ROLE);

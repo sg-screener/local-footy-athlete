@@ -63,6 +63,20 @@ import type { Section18RowRole } from './weeklyExposureContractV2';
  */
 export const ROLES_EXEMPT_FROM_COUNTING: ReadonlySet<SessionRole> = new Set<SessionRole>([
   'power',
+  // THE THIRD CASE OF THE SHAPE THIS SET WAS BUILT FOR, and the note above
+  // predicted it: a component that is not strength work, riding the same row
+  // list, counted against the strength budget by accident of storage.
+  //
+  // Sam, 2026-08-13: *"team training should be looked at more like conditioning
+  // - it's not part of the strength exercises - it's its own component of the
+  // day"*. A team-training row is the CLUB's session; counting it against the
+  // per-session exercise cap makes a four-row gym night read as three lifts.
+  //
+  // ADDED BY ROLE, NOT BY NAME, because this module's own header forbids the
+  // alternative: "FILTER BY ROLE BEFORE ANY NAME PROBE RUNS. A name probe over
+  // an unfiltered list is the bug." `isTeamTrainingItem` stays what it is — the
+  // display split and the read-ingress lift for rows authored before the role.
+  'team_training',
 ]);
 
 /** Whether one row takes part in counting. Authored role only — never a name. */
@@ -103,7 +117,8 @@ export function countingRows(
  * SENTINEL for hydrated rows whose evidence predates the classifier, not a kind
  * of work an author can choose. Nothing may map onto it.
  */
-export const SESSION_ROLE_TO_SECTION18_ROW_ROLE: Readonly<Record<SessionRole, Section18RowRole>> = {
+export const SESSION_ROLE_TO_SECTION18_ROW_ROLE:
+  Readonly<Partial<Record<SessionRole, Section18RowRole>>> = {
   power: 'power',
   main_lift: 'main_strength',
   accessory: 'strength_accessory',
@@ -115,6 +130,29 @@ export const SESSION_ROLE_TO_SECTION18_ROW_ROLE: Readonly<Record<SessionRole, Se
 /** Section 18 row roles with no authored `SessionRole` partner, and why. */
 export const SECTION18_ROW_ROLES_WITHOUT_SESSION_ROLE: readonly Section18RowRole[] = [
   'legacy_unknown',
+];
+
+/**
+ * `SessionRole`s with NO Section 18 row spelling, and why — the other direction
+ * of the same declared exception, added 2026-08-13 with `team_training`.
+ *
+ * THE MAP WENT FROM TOTAL TO PARTIAL AND THAT IS THE POINT, not a loosening.
+ * The compiler demanded an entry the moment the role existed, which is exactly
+ * the question worth being asked; the honest answer is that there is no §18
+ * spelling for it, so declaring one would be inventing accounting.
+ *
+ * A TEAM NIGHT IS ALREADY COUNTED, AT THE SESSION LEVEL. `sessionTaxonomy`
+ * credits it as running, sprint/COD and conditioning exposure under Section
+ * 17.E. Mapping the ROW onto `conditioning` as well would credit the same
+ * training twice — once as the day's identity and once as row evidence — which
+ * is the double-count this crosswalk exists to make visible rather than cause.
+ *
+ * Sam's own words place it outside the strength accounting entirely
+ * (2026-08-13): *"it's not part of the strength exercises - it's its own
+ * component of the day"*. Not counted is what "its own component" means here.
+ */
+export const SESSION_ROLES_WITHOUT_SECTION18_ROW_ROLE: readonly SessionRole[] = [
+  'team_training',
 ];
 
 /**

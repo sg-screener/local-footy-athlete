@@ -31,7 +31,18 @@ export type SessionRole =
   | 'accessory'
   | 'midline'
   | 'prehab'
-  | 'conditioning';
+  | 'conditioning'
+  /**
+   * THE CLUB'S OWN SESSION, riding the day's row list (Sam, 2026-08-13):
+   * *"team training should be looked at more like conditioning - it's not part
+   * of the strength exercises - it's its own component of the day"*.
+   *
+   * It is a ROLE and not a name because `sessionRowCounting`'s header bans the
+   * alternative in its own words — "FILTER BY ROLE BEFORE ANY NAME PROBE RUNS".
+   * `isTeamTrainingItem` matches a name set and three regexes; that is the
+   * ingress lift for rows authored before this role, not the fence.
+   */
+  | 'team_training';
 
 /**
  * D2's session order applied to the flat list (§3.1):
@@ -39,6 +50,9 @@ export type SessionRole =
  *   → conditioning finisher.
  */
 export const SESSION_ROLE_ORDER: readonly SessionRole[] = [
+  // The club's session anchors the day it is on — it is what the athlete turns
+  // up to, and the gym work is arranged around it.
+  'team_training',
   'power',
   'main_lift',
   'accessory',
