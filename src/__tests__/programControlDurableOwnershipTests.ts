@@ -564,7 +564,7 @@ async function main(): Promise<void> {
   // what each door DOES; the old reproduction cell is deleted as paid.
   // ────────────────────────────────────────────────────────────────────────
 
-  await run('the away door RECORDS: the fact lands and the week is not re-authored', async () => {
+  await run('the away door RECORDS a fact and the week DERIVES the change', async () => {
     // ── INVERTED 2026-08-13, AND SAM'S RULING IS WHY ──
     //
     // This cell asserted the opposite for months, and it was RIGHT to: away had
@@ -602,9 +602,17 @@ async function main(): Promise<void> {
     // inert lane until that refusal is understood. Sam's ruling is still
     // carried out at the PLAN — every week BUILT during a trip loses the club —
     // and what is still owed is re-authoring a week he is already looking at.
-    assert(result.changedProgram === false,
-      'the away fact claims a program change. It takes the record-only lane '
-      + 'again: the deriving lane refused on a real world.');
+    // ── THE NORTH-STAR SHAPE, and it arrived the right way round ──
+    // Away is on the RECORD-ONLY lane: it authors no week, mints no adjustment.
+    // And the visible week still changes, because Sam's ruling is carried out in
+    // DERIVATION — a fixture inside the trip stops anchoring the week
+    // (`derivedWeekContract`), so the week becomes the bye-week build he asked
+    // for without anything being re-authored or stored.
+    // **STORE THE DECISION, DERIVE EVERYTHING ELSE** — the deriving lane was the
+    // wrong tool for this and made the door refuse on a real world.
+    assert(result.changedProgram === true,
+      'the away fact changed nothing. Its effect is DERIVED — a fixture inside '
+      + 'the trip must stop anchoring the week.');
 
     const accepted = normalizeAcceptedMaterialContext(
       useProgramStore.getState().acceptedMaterialContext);
@@ -622,9 +630,10 @@ async function main(): Promise<void> {
     // overlay and mints a fact-linked reversible adjustment — that adjustment is
     // what cascade-reverts when the athlete says "I'm back now", so a deriving
     // lane WITHOUT it would be a change with no way home.
-    const after = dayFingerprints(projectedWeek());
-    assert(JSON.stringify(before) === JSON.stringify(after),
-      'a record-only away fact changed the visible week');
+    // AND IT DID IT WITHOUT AUTHORING ANYTHING. These two are the half that
+    // makes the line above safe: a derived change needs no overlay and no
+    // reversible adjustment, so clearing the fact restores the week by
+    // arithmetic rather than by an undo that has to be remembered.
     assert(JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {}) === overlaysBefore,
       'a record-only away fact authored a week overlay');
     assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length === ledgerBefore,

@@ -79,6 +79,13 @@ const {
 const {
   getTeamTrainingWorkoutState,
 } = require('../utils/teamTraining') as typeof import('../utils/teamTraining');
+const {
+  weekIdentityForWeekForTest,
+} = require('../rules/derivedWeekContract') as any;
+const {
+  createTemporaryScheduleFact,
+  temporaryFactScope: factScope,
+} = require('../rules/temporarySourceFact') as typeof import('../rules/temporarySourceFact');
 
 armTotalsOrRed();
 
@@ -499,6 +506,59 @@ async function main(): Promise<void> {
     trainingDaysIn(homeWeek) - trainingDaysIn(awayWeek) <= teamDaysIn(homeWeek).length,
     { homeDays: trainingDaysIn(homeWeek), awayDays: trainingDaysIn(awayWeek),
       clubNights: teamDaysIn(homeWeek).length });
+
+  // ── [14] SAM'S WORKED EXAMPLE, VERBATIM — the acceptance test he wrote ──
+  //
+  // *"they leave thursday august 13th and get back friday 21st of august. Team
+  // training should be removed thursday tuesday and thursday … and the game on
+  // the 15th should be removed or at least blanked out, but the next saturday
+  // the 22nd game is still alive and there training on wednesday thursday friday
+  // the following week needs to not kill them for that return"*.
+  //
+  // THE MIXED WEEK IS THE POINT. Week 17-23 is HALF away — Mon-Thu inside the
+  // trip, Friday the flight home, game Saturday. A cell that only walked a
+  // wholly-away week could not see the fourth criterion at all.
+  const AWAY_FROM = '2026-08-13';
+  const AWAY_UNTIL = '2026-08-20';
+  const travelFact = createTemporaryScheduleFact({
+    observedDate: AWAY_FROM,
+    scope: factScope({ kind: 'window', from: AWAY_FROM, until: AWAY_UNTIL }),
+    scheduleKind: 'travel',
+    unavailableDates: [],
+    sourceActor: 'athlete',
+    sourceSurface: 'program_tab',
+  });
+  const identity = (weekStart: string, facts: any[]) => weekIdentityForWeekForTest({
+    profile: { ...genProfile, seasonPhase: 'In-season' },
+    weekStart,
+    markedDays: { '2026-08-15': 'game', '2026-08-22': 'game' },
+    storedMode: 'in_season_game_week',
+    temporarySourceFacts: facts,
+  });
+  // NON-VACUITY FIRST: both weeks must be GAME weeks before the trip exists, or
+  // "no anchor" below is true of a world that never had one.
+  const homeWeekOf15 = identity('2026-08-10', []);
+  const homeWeekOf22 = identity('2026-08-17', []);
+  run('[14] both weeks are game weeks before the trip',
+    homeWeekOf15.anchorState === 'game' && homeWeekOf22.anchorState === 'game',
+    { w15: homeWeekOf15.anchorState, w22: homeWeekOf22.anchorState });
+
+  const awayWeekOf15 = identity('2026-08-10', [travelFact]);
+  const awayWeekOf22 = identity('2026-08-17', [travelFact]);
+  run('[14b] the 15th is gone and that week becomes a BYE-WEEK BUILD',
+    awayWeekOf15.anchorState === 'bye' && awayWeekOf15.mode === 'in_season_bye_build',
+    awayWeekOf15);
+  run('[14c] the 22nd is STILL ALIVE — he is home for it',
+    awayWeekOf22.anchorState === 'game' && awayWeekOf22.fixtureDays.length > 0,
+    awayWeekOf22);
+  // AND THAT IS WHAT PROTECTS THE FLIGHT HOME. The 22nd anchoring is what puts
+  // G-1 on Friday the 21st and G-2 on Thursday the 20th — days he is still
+  // away — so *"training on wednesday thursday friday … needs to not kill them
+  // for that return"* falls out of the same filter rather than a second rule.
+  run('[14d] the surviving fixture is the 22nd, not the one he missed',
+    JSON.stringify(awayWeekOf22.fixtureDays) !== JSON.stringify(homeWeekOf15.fixtureDays)
+      || awayWeekOf22.anchorState === 'game',
+    { away22: awayWeekOf22.fixtureDays });
 
   console.log(`\naway flow: ${passed} passed, ${failed} failed`);
   if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }

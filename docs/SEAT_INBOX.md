@@ -1348,9 +1348,24 @@ seat was wrong.
   **THE MIXED WEEK IS THE REAL TEST.** A cell that only walks a wholly-away week
   cannot see criterion 4 at all.
 
-  **NOT BUILT. The wiring is the work:** `targetWeekFixtures` has several callers
-  and none passes an away span today — the same thread the team-day filter took
-  through `onboardingToCoachingInputs`'s two callers.
+  **BUILT 2026-08-13, AND IT NEEDED NO WIRING AT ALL.** The filter went in at
+  `derivedWeekContract`'s `fixtureIdentityForWeek`, which **already receives
+  `temporarySourceFacts`** — so the trip was in scope the whole time and the
+  seven `targetWeekFixtures` callers never had to be threaded.
+  **His worked example is a cell:** `test:away-flow` [14]-[14d] — both weeks are
+  game weeks first (non-vacuity), then the 15th's week becomes
+  `anchorState: 'bye'` / `in_season_bye_build` and the 22nd's week stays a game
+  week. **Mutation-checked:** disabling the filter reds [14b].
+  **AND IT REACHES THE WEEK THE ATHLETE IS ALREADY LOOKING AT** — which is what
+  item 30 had been chasing through the deriving lane and failing. The effect is
+  DERIVED, so `changedProgram` is true while NO overlay is authored and NO
+  reversible adjustment is minted (`test:program-control-durable`). **Store the
+  decision, derive everything else** — the deriving lane was the wrong tool and
+  is what made the door refuse on a real world.
+  **STILL OPEN, and it is a DISPLAY question, not a training one:** the calendar
+  CARD for a game inside the trip. The training around it is gone; the card is
+  still drawn from his calendar mark. Sam allowed either — *"removed or at least
+  blanked out"* — so blanking it is the smaller move and is the next act.
 - **ANSWERED 2026-08-13 — a game inside the trip DISAPPEARS.** Sam: ***"yes it
   should disappear OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***. **Built the same
   day** — the fixture is dropped at the plan, so the week loses its taper and
