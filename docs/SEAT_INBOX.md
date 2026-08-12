@@ -1136,6 +1136,43 @@ phone.** State device items as PARKED in a stop report, never as a request.
     strength and mixed days in the 4-6 band **without the other two moving.**
     Run the 17 QA scenarios either side and report both numbers.
 
+    **HALF BUILT 2026-08-13 (`e8521b79`), AND THE SECOND HALF IS RESUMED HERE.**
+    The role fix landed with an EMPTY golden diff, reported honestly: it guards
+    a case the local path does not currently produce. **The size half was
+    diagnosed, attempted, and REVERTED — correctly.**
+
+    **THE DIAGNOSIS IS ACCEPTED AND IT SUPERSEDES THIS ITEM'S FIRST GUESS.** The
+    gym session is 3 exercises on EVERY day; other days gain a conditioning
+    piece and reach 4-6, a team night gains nothing and stays at 3. **So the
+    fault is not the team night at all — two templates hand out 3 where their
+    equivalents hand out 4-5.** That is a template-parity defect wearing a
+    team-night costume, and it is why Sam's *"keep sessions for gym the same
+    before footy training"* is already true in the code and still looks wrong on
+    glass.
+
+    **WHY THE REVERT WAS RIGHT, RECORDED SO IT IS NOT UNDONE:** fixing the two
+    templates moved days that were not broken, which this item forbids. **The
+    floor is being applied in the wrong place.** `SESSION_SIZE_FLOOR` (=4,
+    `sessionRowCounting.ts:358`) is consumed at `exerciseScorer.ts:201` as
+    `MIN_SESSION_SIZE` — **per template, before the day exists.** A day-level
+    truth cannot be enforced by a template that cannot see the day.
+
+    **BUILD: apply the floor AFTER the day is composed, not inside a template.**
+    Templates keep their own sizes; the day-level pass tops a short day up to
+    the floor.
+
+    **THE EXEMPTION LIST IS THE RISK, AND IT IS THE ONE THING TO GET RIGHT.**
+    Some sessions are MEANT to be small — Sam personally signed at least one
+    where the exercise count is load-bearing. **Enumerate them from their signed
+    source and cite each one in the code; do not infer the list from what is
+    currently small,** which would freeze today's defect into the rule. **If a
+    session's smallness cannot be traced to a signed ruling, it is not exempt —
+    say so and list it rather than guessing.**
+
+    **PROVE IT:** the 120-session distribution AND the 17 QA scenarios either
+    side. Team nights join the 4-6 band; **strength days and mixed days must not
+    move by a single row.** Report all four numbers.
+
 22. **SAM SIGNED THE POPUP'S SHORT PHRASES, DROPPED ONE ROW, AND TURNED ANOTHER
     INTO A FEATURE. 2026-08-13.**
 
@@ -1250,9 +1287,23 @@ phone.** State device items as PARKED in a stop report, never as a request.
     step. That is the next act, and it is small, but it is a change to a signed
     onboarding screen rather than a pure addition.
 
-    **STILL NOT STARTED:** the away flow's equipment question, the rebuild on
-    the new kit, and the copy that still says the program is "avoiding the dates
-    you are away". (a) and (b) are BUILT and on glass (`5ff77758`).
+    **SLICE 2 BUILT — THE DOOR OPENS BOTH WAYS (`0ee5caf1`, item 24).**
+    `EquipmentScreen`'s exit is an optional `onDone` defaulting to the original
+    `GymExperience` navigate. Onboarding passes nothing and is unmoved, proven
+    either side.
+
+    **THE HOOK POINT FOR SLICE 3, MEASURED so the next pass does not re-find it:**
+    `HomeScreenV2.tsx:1223`, the `onAwayDays` handler. It already receives the
+    away `dates` — **which ARE the span**: first date is `from`, the return is
+    the day after the last. On `result.ok` it currently just closes the sheet.
+    **That success branch is where "Do you have your normal equipment?" goes**,
+    with `no` routing to `EquipmentScreen` (now reusable) and its `onDone`
+    writing a `missing_for_span` decision over those same dates.
+
+    **STILL NOT STARTED, and it is UI-first:** the question itself, the routing,
+    the rebuild on the new kit, and the copy that still says the program is
+    "avoiding the dates you are away". (a) and (b) are BUILT and on glass
+    (`5ff77758`).
 
     **GENERATION IS INVOLVED (a rebuild on a new kit) — STAND-DOWN D APPLIES to
     the rebuild half.** The sheet, the question and the dated equipment fact are
@@ -1315,6 +1366,36 @@ phone.** State device items as PARKED in a stop report, never as a request.
     on Program. Four kinds move from a long sentence to a short phrase and **the
     visible row count must not move.** Run `test:my-status-modifiers` and
     `test:program-tab-read-only-modifiers` either side and report both numbers.
+
+24. **SAM SAYS YES — THE EQUIPMENT SCREEN'S EXIT BECOMES AN INPUT.**
+
+    **OWNED BY THE DESKTOP AGENT.** Asked by it 2026-08-13 before touching a
+    signed screen, which was the right call.
+
+    **Sam's answer: YES, change it — onboarding must behave exactly as it does
+    today.** This was already implied by his own ruling (*"this is basically what
+    happens in the onboarding process - now it can just be inside the app"*,
+    item 22(c)): a door that can only be entered from onboarding cannot be
+    reused from the away flow. Reuse REQUIRES the exit to move.
+
+    **MEASURED BEFORE ANSWERING — the change is one line, not a refactor.**
+    `EquipmentScreen.tsx:122` holds a single hard navigate,
+    `() => navigation.navigate('GymExperience')`. The screen is mounted in
+    exactly ONE place, `OnboardingNavigator.tsx:86`. There is no second caller
+    to regress.
+
+    **THE SHAPE, so onboarding cannot drift:** the exit is a prop/param that
+    **DEFAULTS to today's `GymExperience` navigate**. Onboarding passes nothing
+    and is byte-identical in behaviour; the away flow passes its own return.
+    **Do not invert this** — a required param would make onboarding's behaviour
+    a caller's responsibility, which is how a signed screen quietly changes.
+
+    **PROVE ONBOARDING DID NOT MOVE, do not assert it.** `test:equipment-answer`
+    already reads this file (`equipmentAnswerTests.ts:347`); run the onboarding
+    walk either side and report both numbers. **His audit ruling 3 is untouched
+    by this** — "where do you train" first, pre-ticked checklist, the athlete
+    edits it, the stored answer is the final ticked list. **Nothing about the
+    QUESTION changes. Only where "continue" lands.**
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
