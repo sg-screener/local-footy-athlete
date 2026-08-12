@@ -345,6 +345,55 @@ export function getMondayStrForDate(dateISO: string): string {
   return formatDate(d);
 }
 
+export interface ProgramWeekOffsetBounds {
+  /** Earliest Monday-relative offset containing any part of the saved program. */
+  min: number;
+  /** Latest Monday-relative offset containing any part of the saved program. */
+  max: number;
+}
+
+function weekOffsetBetween(currentMonday: string, targetMonday: string): number {
+  const current = new Date(`${currentMonday}T12:00:00`);
+  const target = new Date(`${targetMonday}T12:00:00`);
+  return Math.round((target.getTime() - current.getTime()) / (7 * 24 * 60 * 60 * 1000));
+}
+
+/**
+ * The saved program owns the Program tab's navigable date range.
+ *
+ * Bounds are week-shaped because the surface is week-shaped: a program that
+ * begins on Wednesday still permits the Monday-Sunday week containing that
+ * Wednesday, but never the prior week. No block-length assumption appears
+ * here; two-, four- and six-week programs all resolve from their own dates.
+ */
+export function programWeekOffsetBounds(
+  program: Pick<TrainingProgram, 'startDate' | 'endDate'> | null | undefined,
+  todayISO: string,
+): ProgramWeekOffsetBounds {
+  if (!program?.startDate || !program.endDate) return { min: 0, max: 0 };
+
+  const startDate = program.startDate.slice(0, 10);
+  const endDate = program.endDate.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)
+    || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)
+    || startDate > endDate) {
+    return { min: 0, max: 0 };
+  }
+
+  const currentMonday = getMondayStrForDate(todayISO);
+  return {
+    min: weekOffsetBetween(currentMonday, getMondayStrForDate(startDate)),
+    max: weekOffsetBetween(currentMonday, getMondayStrForDate(endDate)),
+  };
+}
+
+export function clampProgramWeekOffset(
+  requestedOffset: number,
+  bounds: ProgramWeekOffsetBounds,
+): number {
+  return Math.min(bounds.max, Math.max(bounds.min, requestedOffset));
+}
+
 function toDateString(year: number, month: number, day: number): string {
   const m = String(month + 1).padStart(2, '0');
   const d = String(day).padStart(2, '0');

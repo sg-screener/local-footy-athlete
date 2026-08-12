@@ -86,6 +86,8 @@ export default function HomeScreenV2() {
     visibleWeek,
     weekLabel,
     isThisWeek,
+    canGoPrev,
+    canGoNext,
     handlePrev,
     handleNext,
     handleThisWeek,
@@ -185,11 +187,13 @@ export default function HomeScreenV2() {
   //     their testIDs stay exactly as they were.
   const [preferredProgramView, setPreferredProgramView] =
     useState<'today' | 'week'>('today');
-  const dayFirst = preferredProgramView === 'today' && isThisWeek && isNormal;
-  // TODAY IS AN IDENTITY, NOT A SELECTED WEEK ROW. The shared selection also
-  // serves picker/classic-screen behavior, so the new template owns expansion
-  // locally instead of giving that shared index a third meaning.
-  const dayFirstIdx = todayIdx;
+  // The view choice is independent of week position. Day keeps the same weekday
+  // as the athlete browses a different allowed week; Week remains Week. This is
+  // one persistent presentation preference, not a rule that another week may
+  // silently reinterpret.
+  const [preferredDayIdx, setPreferredDayIdx] = useState(todayIdx >= 0 ? todayIdx : 0);
+  const dayFirst = preferredProgramView === 'today' && isNormal;
+  const dayFirstIdx = Math.min(Math.max(preferredDayIdx, 0), Math.max(weekDays.length - 1, 0));
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
   const reviewAthlete = useAthleteContext();
   const mobilityFlowByDate = useMemo(() => {
@@ -483,15 +487,14 @@ export default function HomeScreenV2() {
         {/* ── Program shape controls ── */}
         <View style={styles.topBar}>
           {/* ── Day / Week ──
-              The zoom control Sam's direction asks for. Offered only where
-              there is a choice to make: on another week there is no today, and
-              during a game picker the athlete is choosing among all seven days.
-              Both cases render the week and hide this rather than showing a
-              control that would do nothing.
+              The zoom control Sam's direction asks for. It remains mounted on
+              every week the saved program permits, so changing the week cannot
+              change the athlete's chosen screen shape. A game picker still
+              forces the week because the athlete is choosing among seven days.
 
               Sam replaced "Today" with "Day" on 2026-08-11 so this control
               names the two screen shapes at the same level: Day and Week. */}
-          {isThisWeek && isNormal ? (
+          {isNormal ? (
             <View style={styles.viewToggle} testID="program-view-toggle">
               {(['today', 'week'] as const).map((option) => {
                 const isActive = preferredProgramView === option;
@@ -499,6 +502,9 @@ export default function HomeScreenV2() {
                   <Pressable
                     key={option}
                     onPress={() => {
+                      if (option === 'today' && expandedWeekIdx >= 0) {
+                        setPreferredDayIdx(expandedWeekIdx);
+                      }
                       setPreferredProgramView(option);
                       // Both shape transitions close transient week detail. The
                       // shared selection is also cleared so a picker/classic
@@ -543,13 +549,16 @@ export default function HomeScreenV2() {
           {!dayFirst ? (
             <View style={styles.compactWeekNav} testID="program-week-navigation">
               <Pressable
-                onPress={handleCompactPrev}
+                onPress={canGoPrev ? handleCompactPrev : undefined}
+                disabled={!canGoPrev}
                 accessibilityRole="button"
                 accessibilityLabel="Previous week"
+                accessibilityState={{ disabled: !canGoPrev }}
                 testID="program-week-previous"
                 hitSlop={8}
                 style={({ pressed }) => [
                   styles.compactWeekNavButton,
+                  !canGoPrev && styles.compactWeekNavButtonDisabled,
                   pressed && { opacity: 0.6 },
                 ]}
               >
@@ -569,13 +578,16 @@ export default function HomeScreenV2() {
                 </Text>
               </Pressable>
               <Pressable
-                onPress={handleCompactNext}
+                onPress={canGoNext ? handleCompactNext : undefined}
+                disabled={!canGoNext}
                 accessibilityRole="button"
                 accessibilityLabel="Next week"
+                accessibilityState={{ disabled: !canGoNext }}
                 testID="program-week-next"
                 hitSlop={8}
                 style={({ pressed }) => [
                   styles.compactWeekNavButton,
+                  !canGoNext && styles.compactWeekNavButtonDisabled,
                   pressed && { opacity: 0.6 },
                 ]}
               >
@@ -630,15 +642,15 @@ export default function HomeScreenV2() {
 
                 THE BEHAVIOUR IS NOT DELETED, IT IS RE-HOMED, and this comment is
                 the ledger row that says where: **weekly view**, one tap away on
-                the Today/Week toggle directly above. The strip's old door chose
-                another subject for the day screen; Sam's accepted template has
-                now removed week browsing from Today entirely. The Week shape's
-                seven rows replace that route by opening their details in place.
+                the Day/Week toggle directly above. The strip's old door chose
+                another subject for the day screen. The Week shape's seven rows
+                replace that route by opening their details in place.
 
-                SO THE DAY SCREEN IS ALWAYS ABOUT TODAY. `dayFirstIdx` reads
-                `todayIdx` directly, while Week expansion has its own local
-                coordinate. A tap in one shape can no longer reinterpret what
-                the other shape means by "selected".
+                THE DAY SCREEN OWNS ONE WEEKDAY. It starts on today's weekday
+                and keeps that weekday when the athlete changes between saved
+                program weeks. Week expansion has its own local coordinate; it
+                only becomes the Day choice when the athlete explicitly taps
+                Day. A tap in one shape cannot otherwise reinterpret the other.
 
                 `WeekStrip` STAYS IN THIS FILE, unreferenced by this shape.
                 Deleting the component in the same commit that removes its call
@@ -2741,13 +2753,11 @@ function WeekReadinessSheet({
   const dropletIcon = (color: string) => <LfaIcon name="mild-illness" color={color} />;
   // The middle severity is an honest moderate fatigue fact (`not_right`), not
   // a sleep or soreness fact borrowed to create a visual step in the ladder.
-  const flatTodayIcon = (color: string) => svg(color, (
-    <><Path d="M3 8h15v8H3z" /><Path d="M21 11v2" /><Path d="M6 11v2" /></>
-  ));
-  // The audit replaces the crossed-out flame with a low battery: no energy,
-  // without showing an active flame. Illness severity uses faces rather than
-  // the misleading hydration droplet / generic bed pair.
-  const flameOutIcon = (color: string) => <LfaIcon name="no-energy" color={color} />;
+  // Its half battery is deliberately distinct from the cooked state below.
+  const flatTodayIcon = (color: string) => <LfaIcon name="half-energy" color={color} />;
+  const cookedIcon = (color: string) => <LfaIcon name="totally-cooked" color={color} />;
+  // Illness severity uses faces rather than the misleading hydration droplet /
+  // generic bed pair.
   const bedIcon = (color: string) => <LfaIcon name="severe-illness" color={color} />;
   // Lighter-day offer accept/decline — reuses the checkmark/x-cross pair
   // already established for "Clear adjustment" (accept) and the fixture
@@ -2851,7 +2861,7 @@ function WeekReadinessSheet({
           <SheetOption
             label="Bit tired today"
             testID={explorerTestId.readinessOption('tired_today')}
-            icon={moonIcon('#FFC247')}
+            icon={moonIcon('#67D7FF')}
             onPress={() => onApply('tired_today')}
           />
           <SheetOption
@@ -2864,7 +2874,7 @@ function WeekReadinessSheet({
             label="Totally cooked"
             testID={explorerTestId.readinessOption('cooked_week')}
             accent
-            icon={flameOutIcon('#C8FF00')}
+            icon={cookedIcon('#FF7F7F')}
             onPress={() => onApply('cooked_week')}
           />
           <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
@@ -3311,7 +3321,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
 
-  // Program shape controls. Today pays only for the toggle. Week adds this
+  // Program shape controls. Day pays only for the toggle. Week adds this
   // compact navigation row underneath it, matching the accepted hierarchy
   // without shrinking the actual tap targets below a comfortable size.
   topBar: { marginBottom: spacing.md, gap: spacing.md },
@@ -3327,6 +3337,9 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  compactWeekNavButtonDisabled: {
+    opacity: 0.25,
   },
   compactWeekNavCurrent: {
     minWidth: 112,
@@ -3967,10 +3980,10 @@ const styles = StyleSheet.create({
     gap: 8, marginBottom: spacing.sm,
   },
   // Layout-only overrides now — SelectableTile (shape="chip") owns the
-  // base / selected / pressed looks. We just force a minimum width so all
-  // seven day chips line up on a single row.
+  // base / selected / pressed looks. Four 22% columns force a balanced 4 + 3
+  // wrap on every seven-day phase question; the centred grid owns row balance.
   dayChip: {
-    minWidth: 58, alignItems: 'center',
+    width: '22%', minWidth: 58, alignItems: 'center',
   },
   phaseSkewCard: {
     backgroundColor: '#161616',

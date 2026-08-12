@@ -410,6 +410,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-phase-shift-days-wrap-four-three',
+    law: 'Every seven-day selector in the season-phase shift sheet wraps as a centred row of four followed by a centred row of three, never six plus an orphaned seventh button.',
+    ruledAt: 'Sam 2026-08-12 direct request: "maybe just make it 4 and 3" after the seven buttons rendered 6 + 1',
+    guard: {
+      state: 'guarded',
+      by: 'test:profile-reset-ui',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. The guard proves HomeScreenV2 is the live Program screen, finds the complete phase-shift region, proves availability, team-training and usual-game-day all use the same wrapped grid and shared day-chip style, then pins the four-column basis and centred wrap. FIRST RUN: 170 existing checks passed and the new geometry cell red on the prior minimum-width-only style that produced 6 + 1. NOT COVERED: physical iPhone appearance and unusually narrow accessibility display modes.',
+    },
+  },
+  {
     id: 'LAW-week-navigation-belongs-to-week',
     law: 'The accepted new Program template uses a large Day / Week shape toggle; Day renders no week-date navigation, Week renders one legible previous/range/next row directly below it with 40pt controls and 13pt range type, the row is equally spaced from the toggle above and week cards below, and changing or returning weeks leaves every session collapsed.',
     ruledAt: 'docs/UI_PROTOTYPE_DIVERGENCE_2026-08-11.md "SAM EYE PASS 6 — WEEK NAVIGATION BELONGS TO WEEK"; UPDATED by Sam, 2026-08-11 in this Codex task: the week range "needs to be equally spaced above and below".',
@@ -462,6 +473,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       by: 'test:day-first-timeline + test:readiness-ownership + test:program-control-durable + .maestro/golden/day-readiness-profile-type.yaml',
       chainStatus: 'in_chain',
       receipt: 'BORN GUARDED (LAW ZERO), EXPANDED WITH SAM\'S NEXT MESSAGE. TWO OPTIONS COMPARED: duplicate flat and sick sheets, or pass a typed entry into the existing readiness owner. The second removes a decision and adds no mutation representation. For Pretty flat, reusing poor-sleep or soreness would store a reason the athlete did not give; the existing moderate fatigue level (`not_right`) gets its own typed `flat_today` route instead. WHAT THE CELLS HOLD: readinessEntry is one typed visibility/entry owner; Tired routes flat and Sick routes sick; the sheet receives that entry; top/readiness-bucket-flat/readiness-bucket-sick, Something hurts and onInjury are absent; the flat region contains exactly three SheetOptions with the three signed labels and typed actions; sleep/soreness rows and bucket are absent; R16 pins flat_today to today-only moderate fatigue; the dedicated Injured control still opens the guided injury flow; the dead Time label and handler are absent from both screen and hook. WHAT THE TAPE HOLDS: Tired opens straight to the three semantic option ids with sleep/sore/injury ids absent; Sick opens straight to the three illness ids with flat/injury absent; both states are photographed. FIRST-RUN FINDINGS: four chained cells red on the old Time handler, label and chooser; the extension then red on four old flat options and on flat_today falling through to low_energy until its moderate mapping existed; the wider durable guard then found the unreachable short-time handler still authored and exported by the hook, so that dead doorway was removed while the typed domain action stayed covered. The tape\'s first text assertion failed because SheetOption deliberately exposes its stable semantic id as the accessibility label; the screenshot showed all three rows, and the rerun used those ids rather than weakening presence. WHAT IT DOES NOT HOLD: Sam\'s physical iPhone, modal height on every device, or a new programming-content ruling about what moderate fatigue changes downstream.',
+    },
+  },
+  {
+    id: 'LAW-tired-severity-icon-ladder',
+    law: 'The Day-screen Tired sheet uses a blue moon for Bit tired today, an amber half-full battery for Pretty flat, and a red skull-and-crossbones for Totally cooked.',
+    ruledAt: 'Sam 2026-08-12 direct request, with supplied skull-and-crossbones reference image',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline + test:approved-icons',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. The Day-screen cell first proves it found the live three-option Tired region, then pins each label to its ruled colour and semantic icon. It also pins the half battery and outlined skull-and-crossbones to the shared icon owner, while the approved-icon gate fails if the live Program screen bypasses that owner. FIRST RUN: the cell red on the prior amber moon before implementation. NOT COVERED: physical iPhone appearance at native font/icon rendering scale.',
     },
   },
   {
@@ -1324,6 +1346,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       by: 'test:session-execution-checklist + test:game-feedback',
       chainStatus: 'in_chain',
       receipt: 'BUILT WITH THE RULING 2026-08-11. The execution gate proves the questions appear only when Team Training was performed, both fields are required, effort is 1-10 (raised 2026-08-12), and the form builds one checklist result containing the measurement. The transaction gate then drives a real team-classified workout and proves the measurement survives the tap adapter, accepted transaction, dated feedback store and durable program envelope.',
+    },
+  },
+  {
+    id: 'LAW-program-navigation-saved-date-range',
+    law: 'The Day/Week choice remains available and unchanged on every program week, and week navigation cannot leave the Monday-Sunday span containing the saved program start and end dates.',
+    ruledAt: 'Sam 2026-08-12 direct request: the toggle stays stuck for all weeks and navigation stops wherever the athlete\'s actual program starts and ends, without assuming a fixed block length',
+    guard: {
+      state: 'guarded',
+      by: 'test:day-first-timeline',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. One cell proves the navigator mounts HomeScreenV2, finds the live toggle region, and fails if week position hides it or reinterprets the selected shape. A second executes one-day and uneven multi-week saved spans, clamps both edges, preserves an interior week and refuses invented weeks when no program exists. The live hook derives from currentProgram and exposes disabled edges to both arrows. NOT COVERED: physical iPhone acceptance.',
     },
   },
   {

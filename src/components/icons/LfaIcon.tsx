@@ -16,6 +16,8 @@ export type LfaIconName =
   | 'mobility'
   | 'medical-shield'
   | 'no-energy'
+  | 'half-energy'
+  | 'totally-cooked'
   | 'severe-illness'
   | 'move-right'
   | 'flexed-arm'
@@ -57,6 +59,8 @@ const MCI_ICON: Partial<Record<LfaIconName, MciName>> = {
   mobility: 'yoga',
   'medical-shield': 'shield-plus-outline',
   'no-energy': 'battery-low',
+  'half-energy': 'battery-50',
+  'totally-cooked': 'skull-crossbones-outline',
   'severe-illness': 'emoticon-dead-outline',
   'move-right': 'arrow-right',
   'future-weeks': 'calendar-sync-outline',

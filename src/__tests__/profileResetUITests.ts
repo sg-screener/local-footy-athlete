@@ -63,6 +63,14 @@ const HOME_V2_PATH = path.resolve(
   'HomeScreenV2.tsx',
 );
 const homeV2 = fs.readFileSync(HOME_V2_PATH, 'utf8');
+const HOME_WRAPPER_PATH = path.resolve(
+  __dirname,
+  '..',
+  'screens',
+  'home',
+  'HomeScreen.tsx',
+);
+const homeWrapper = fs.readFileSync(HOME_WRAPPER_PATH, 'utf8');
 const SESSION_EQUIPMENT_SHEET_PATH = path.resolve(
   __dirname,
   '..',
@@ -84,6 +92,33 @@ const profileEquipmentEditor = fs.readFileSync(PROFILE_EQUIPMENT_EDITOR_PATH, 'u
 // load ever since — asserting NOTHING, and unnoticed because it was never in
 // `test:bible`. It is wired into the bible gate now; a suite nothing runs is
 // worse than no suite, because it reads as coverage.
+
+// ═════════════════════════════════════════════════════════════════════
+// 0. The live phase-shift sheet keeps every seven-day choice at 4 + 3
+// ═════════════════════════════════════════════════════════════════════
+section('[0] Season phase shift day-grid geometry');
+const phaseSheetAt = homeV2.indexOf('export function SeasonPhaseShiftSheet(');
+const phaseSheetEnd = homeV2.indexOf('interface BuildingStateProps', phaseSheetAt);
+const phaseSheet = homeV2.slice(phaseSheetAt, phaseSheetEnd);
+ok(
+  'HomeScreenV2 is the live Program screen and its phase sheet region was found',
+  /const DESIGN_VERSION: DesignVersion = 'v2'/.test(homeWrapper)
+    && /return <HomeScreenV2\s*\/>/.test(homeWrapper)
+    && phaseSheetAt > 0
+    && phaseSheetEnd > phaseSheetAt
+    && phaseSheet.length > 8000,
+);
+ok(
+  'availability, team and game-day steps share the same seven-day chip grid',
+  /step === 'availability'[\s\S]*styles\.chipGrid[\s\S]*WEEK_DAYS\.map[\s\S]*styles\.dayChip/.test(phaseSheet)
+    && /step === 'teamDays'[\s\S]*styles\.chipGrid[\s\S]*WEEK_DAYS\.map[\s\S]*styles\.dayChip/.test(phaseSheet)
+    && /Usual game day[\s\S]*styles\.chipGrid[\s\S]*WEEK_DAYS\.map[\s\S]*styles\.dayChip/.test(phaseSheet),
+);
+ok(
+  'seven day chips wrap as four then three, centred rather than six plus one',
+  /chipGrid:\s*\{[^}]*flexWrap:\s*'wrap'[^}]*justifyContent:\s*'center'/.test(homeV2)
+    && /dayChip:\s*\{[^}]*width:\s*'22%'[^}]*minWidth:\s*58/.test(homeV2),
+);
 
 // ═════════════════════════════════════════════════════════════════════
 // 1. The actual file rendered by the Profile tab contains the MVP sections
