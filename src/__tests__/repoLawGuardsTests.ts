@@ -2287,6 +2287,238 @@ run('the checkers red on fabricated violations (liveness)', () => {
   }]).length === 1, 'a supersession marker buried below the opening lines was accepted');
 });
 
+// ── LAW-L15-one-write-format ─────────────────────────────────────────────────
+//
+// "One write format — a superseded shape survives only as a lift, never as a
+// second live writer." The registry row asked for exactly one instrument:
+// *"a gate enumerating writers per stored shape and failing on a second live
+// one"*. That is what these cells are, and the enumeration is the point.
+//
+// WHY AN ENUMERATION AND NOT A SPOT-CHECK. `motivationGoalsTests` [6] already
+// holds L15 for ONE shape, and it does it by listing seven files by hand. That
+// is the right cell and the wrong reach: a NEW file writing the retired shape is
+// invisible to it, and so is every other stored shape. The same argument
+// `storedStateWriterAuditTests` makes for its own audit applies here — the
+// defect is an ABSENCE, and an absence is invisible to a test that checks the
+// files it already thought about.
+//
+// WHAT THE FIRST RUN FOUND, AND IT IS THE REASON THE CELL IS WORTH HAVING.
+// Twelve of the thirteen persisted stores have exactly ONE writer — their own
+// module. `useProgramStore` has EIGHT `setState` occurrences, six of them in
+// FIVE modules that do not own it. That is the law's subject, measured, and it
+// is carried below as a dated debt rather than fixed here: four of the five are
+// declared transaction owners under L12, and deciding whether a transaction
+// owner is a second live writer or the store's real writer boundary is an
+// architecture ruling, not a test edit.
+//
+// THE SCOPE IS STORED SHAPES. A store that is not persisted holds no stored
+// shape, so `useRebuildNoticeStore` (six writes, all its own) is correctly out
+// of reach. The list of persisted stores is read from the boot registry, which
+// `onboardingReliabilityTests` D1 already pins as complete, so a NEW persisted
+// store cannot escape by not being remembered here.
+
+/**
+ * The modules that write a store they do not own, per store.
+ *
+ * A store's OWNER is the module that creates it. Ownership is derived, never
+ * listed: a store whose creating module is renamed keeps its owner.
+ */
+function storeWritersOutsideTheOwner(
+  files: readonly { rel: string; text: string }[],
+): { store: string; owner: string; modules: string[]; occurrences: number }[] {
+  const ownerOf = new Map<string, string>();
+  for (const file of files) {
+    for (const match of file.text.matchAll(/export const (use\w*Store)\s*=\s*create/g)) {
+      ownerOf.set(match[1]!, file.rel);
+    }
+  }
+  const writesByStore = new Map<string, string[]>();
+  for (const file of files) {
+    for (const match of file.text.matchAll(/\b(use\w*Store)\.setState\s*\(/g)) {
+      const store = match[1]!;
+      writesByStore.set(store, [...(writesByStore.get(store) ?? []), file.rel]);
+    }
+  }
+  const out: { store: string; owner: string; modules: string[]; occurrences: number }[] = [];
+  for (const [store, modules] of writesByStore) {
+    const owner = ownerOf.get(store) ?? '(uncreated)';
+    const outside = modules.filter((module) => module !== owner);
+    if (outside.length === 0) continue;
+    out.push({
+      store,
+      owner,
+      modules: [...new Set(outside)].sort(),
+      occurrences: outside.length,
+    });
+  }
+  return out.sort((a, b) => a.store.localeCompare(b.store));
+}
+
+/**
+ * THE DECLARED DEBT — stores with more than one live writer today, 2026-08-13.
+ *
+ * MEASURED, not estimated: 6 outside occurrences across 5 distinct modules, on
+ * ONE store. The pair of numbers is deliberate — an occurrence count names the
+ * scanner's unit, not the number of modules that can wipe a program.
+ *
+ * The list is one-way. A module may leave it; nothing may join. Paying it down
+ * is an architecture unit (one writer boundary for `program-store`, which is
+ * what `storedStateWriterAuditTests` protects the store's PAYLOAD with today),
+ * not a test edit.
+ */
+const MULTI_WRITER_STORE_DEBT: Readonly<Record<string, readonly string[]>> = {
+  useProgramStore: [
+    'store/acceptedStateTransaction.ts',
+    'store/coachMutationTransaction.ts',
+    'store/quiescentBoot.ts',
+    'store/sessionOutcomeTransaction.ts',
+    'utils/planChangeProducer.ts',
+  ],
+};
+
+/**
+ * Shapes declared RETIRED FOR WRITING under L15, and the guard each one names.
+ *
+ * A retirement is a CLAIM ("nothing writes this any more"), and this repo's own
+ * law is that a claim with no cell is prose. So the declaration must name the
+ * suite that holds it, and this checker fails a marker that names none — which
+ * makes the NEXT retirement arrive with a guard instead of a comment.
+ */
+function retiredShapesNamingNoGuard(
+  files: readonly { rel: string; text: string }[],
+): { file: string; line: string }[] {
+  const out: { file: string; line: string }[] = [];
+  for (const file of files) {
+    const lines = file.text.split('\n');
+    lines.forEach((line, index) => {
+      if (!/RETIRED FOR WRITING \(L15/.test(line)) return;
+      // The guard may be named on the marker line or in the doc comment under
+      // it — the shape this repo actually writes.
+      const block = lines.slice(index, index + 12).join('\n');
+      if (!/\b\w*[Tt]ests\b|\btest:[\w-]+/.test(block)) {
+        out.push({ file: file.rel, line: line.trim() });
+      }
+    });
+  }
+  return out;
+}
+
+/** A retired persist key that something registered as a live persisted store. */
+function retiredKeysBackInTheBootRegistry(
+  registrySource: string,
+  retiredKeys: readonly string[],
+): string[] {
+  const body = registrySource.match(
+    /PERSISTED_STORE_HYDRATION_REGISTRY[^=]*=\s*\[([\s\S]*?)\n\];/)?.[1] ?? '';
+  return retiredKeys.filter((key) => body.includes(`'${key}'`));
+}
+
+// ── THE CELLS ────────────────────────────────────────────────────────────────
+
+run('every persisted store has ONE live writer, or is named in the debt', () => {
+  const files = filesUnder(path.join(repoRoot, 'src'), ['.ts', '.tsx'])
+    .map((file) => ({ rel: path.relative(path.join(repoRoot, 'src'), file), text: fs.readFileSync(file, 'utf8') }))
+    .filter((file) => !file.rel.startsWith('__tests__'));
+  assert(files.length > 200, `only ${files.length} product files read — the scan is reading the wrong tree`);
+
+  const offenders = storeWritersOutsideTheOwner(files);
+  assert(offenders.length > 0,
+    'ZERO stores have an outside writer — the measured baseline was one, so this scan has gone blind');
+
+  const undeclared = offenders.flatMap(({ store, modules }) =>
+    modules.filter((module) => !(MULTI_WRITER_STORE_DEBT[store] ?? []).includes(module))
+      .map((module) => `${store} <- ${module}`));
+  assert(undeclared.length === 0,
+    `a SECOND live writer joined a stored shape: ${undeclared.join(', ')}. `
+    + 'L15: a superseded shape survives only as a lift, never as a second live writer. '
+    + 'Write through the store\'s own module, or pay the debt down rather than joining it.');
+
+  const totals = offenders.map((o) => `${o.store} ${o.occurrences} occurrences / ${o.modules.length} modules`);
+  console.log(`      (${files.length} product files; declared debt: ${totals.join('; ')})`);
+});
+
+run('the multi-writer debt only shrinks', () => {
+  // THE RATCHET. Without it the debt list is a place to park a new writer, and
+  // the law decays one entry at a time.
+  const files = filesUnder(path.join(repoRoot, 'src'), ['.ts', '.tsx'])
+    .map((file) => ({ rel: path.relative(path.join(repoRoot, 'src'), file), text: fs.readFileSync(file, 'utf8') }))
+    .filter((file) => !file.rel.startsWith('__tests__'));
+  const live = new Map(storeWritersOutsideTheOwner(files).map((o) => [o.store, new Set(o.modules)]));
+  const paid = Object.entries(MULTI_WRITER_STORE_DEBT).flatMap(([store, modules]) =>
+    modules.filter((module) => !live.get(store)?.has(module)).map((module) => `${store} <- ${module}`));
+  assert(paid.length === 0,
+    `these modules stopped writing a store they do not own — delete them from `
+    + `MULTI_WRITER_STORE_DEBT: ${paid.join(', ')}`);
+});
+
+run('every shape retired for writing names the guard that holds it', () => {
+  const files = filesUnder(path.join(repoRoot, 'src'), ['.ts', '.tsx'])
+    .map((file) => ({ rel: path.relative(path.join(repoRoot, 'src'), file), text: fs.readFileSync(file, 'utf8') }))
+    .filter((file) => !file.rel.startsWith('__tests__'));
+  const declared = files.filter((file) => /RETIRED FOR WRITING \(L15/.test(file.text));
+  assert(declared.length > 0,
+    'no shape declares itself RETIRED FOR WRITING — the marker this cell reads has been renamed, '
+    + 'and the cell is now vacuous');
+  const unguarded = retiredShapesNamingNoGuard(files);
+  assert(unguarded.length === 0,
+    `a shape is declared retired for writing and names no guard: `
+    + `${unguarded.map((u) => `${u.file} — ${u.line}`).join(' | ')}. `
+    + 'A retirement is a claim; a claim with no cell is prose.');
+  console.log(`      (${declared.length} file(s) declare a retired write format)`);
+});
+
+run('a retired store persist key never comes back as a live persisted store', () => {
+  const gate = fs.readFileSync(path.join(repoRoot, 'src', 'store', 'appHydrationGate.ts'), 'utf8');
+  const retired = [...gate.matchAll(/RETIRED_STORE_PERSIST_KEYS[^=]*=\s*\[([\s\S]*?)\];/g)]
+    .flatMap((match) => [...match[1]!.matchAll(/'([^']+)'/g)].map((k) => k[1]!));
+  assert(retired.length > 0, 'RETIRED_STORE_PERSIST_KEYS read as empty — the parse has drifted');
+  const resurrected = retiredKeysBackInTheBootRegistry(gate, retired);
+  assert(resurrected.length === 0,
+    `a retired persist key is registered as a live persisted store again: ${resurrected.join(', ')}. `
+    + 'Boot DELETES these envelopes, so registering one means boot eats its state on every launch. '
+    + 'Take the key off RETIRED_STORE_PERSIST_KEYS in the same commit that registers it.');
+  console.log(`      (${retired.length} retired persist key(s): ${retired.join(', ')})`);
+});
+
+run('the L15 checkers red on fabricated violations (liveness)', () => {
+  const owner = { rel: 'store/thingStore.ts', text: 'export const useThingStore = create(() => ({}));' };
+
+  assert(storeWritersOutsideTheOwner([owner,
+    { rel: 'utils/rogue.ts', text: 'useThingStore.setState({ a: 1 });' },
+  ]).length === 1, 'an outside writer of a store passed — that is the whole law');
+  assert(storeWritersOutsideTheOwner([
+    { rel: owner.rel, text: `${owner.text}\nuseThingStore.setState({ a: 1 });` },
+  ]).length === 0, 'a store writing ITSELF was reported as a second writer');
+  assert(storeWritersOutsideTheOwner([owner,
+    { rel: 'screens/Read.tsx', text: 'const x = useThingStore((s) => s.a);' },
+  ]).length === 0, 'a READ was counted as a write — L15 permits reads and lifts');
+  // The pair of numbers, not one of them: five modules writing once each and one
+  // module writing five times are different defects and must not read alike.
+  const many = storeWritersOutsideTheOwner([owner,
+    { rel: 'utils/a.ts', text: 'useThingStore.setState({});useThingStore.setState({});' },
+    { rel: 'utils/b.ts', text: 'useThingStore.setState({});' },
+  ])[0]!;
+  assert(many.occurrences === 3 && many.modules.length === 2,
+    `occurrences/modules collapsed into one number: ${many.occurrences}/${many.modules.length}`);
+
+  assert(retiredShapesNamingNoGuard([{
+    rel: 'types/domain.ts', text: '/** RETIRED FOR WRITING (L15, ruling). Nothing writes it. */\n  field?: string;',
+  }]).length === 1, 'a retirement naming no guard passed — the claim would be prose');
+  assert(retiredShapesNamingNoGuard([{
+    rel: 'types/domain.ts',
+    text: '/** RETIRED FOR WRITING (L15, ruling).\n   * `thingTests` fails the build if anything does. */',
+  }]).length === 0, 'a retirement naming its guard suite was flagged');
+  assert(retiredShapesNamingNoGuard([{
+    rel: 'types/domain.ts', text: '/** An ordinary field. */\n  field?: string;',
+  }]).length === 0, 'a field with no retirement marker was pulled into scope');
+
+  const fakeGate = "PERSISTED_STORE_HYDRATION_REGISTRY: readonly X[] = [\n  handle('auth-store', useAuthStore),\n];";
+  assert(retiredKeysBackInTheBootRegistry(fakeGate, ['auth-store']).length === 1,
+    'a retired key registered as live passed — boot would eat that store every launch');
+  assert(retiredKeysBackInTheBootRegistry(fakeGate, ['ui-store']).length === 0,
+    'a retired key that is NOT registered was reported resurrected');
+});
+
 console.log(`\nrepo law guards totals: ${passed} passed, ${failures.length} failed`);
 totalsPrinted(failures.length);
 if (failures.length > 0) {
