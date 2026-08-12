@@ -13,7 +13,39 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 **Sam's QUOTED WORDS were kept inline wherever an item still answers to them:
 his instruction is standing authority, not history.**
 
-## Unprocessed (newest first)
+## Unprocessed
+
+28-C1h. **THE COD PROBE RAN — ELIGIBILITY NEVER SEES `cod_decel` AT ALL, AND A
+    SECOND CALLER WAS HIDING THE WHOLE TIME.**
+
+    **OWNED BY THE TERMINAL. One probe away; the noise is cleared.**
+
+    **RESULT: ZERO eligibility hits.** All nine `finisherEligibility` downgrade
+    sites were tagged with `strengthContext` and a five-day no-team-training
+    off-season week generated. **`cod_decel` reached eligibility NOT ONCE** — so
+    the refusal is NOT in eligibility, and the earlier "site #7" reading (from
+    the attached path) explains nothing about standalone.
+
+    **AND THE THING NOBODY HAD SEEN: `pickPlacementCondCategories` HAS TWO
+    CALLERS.**
+    - `:3744` `pickStandaloneCondDecision` — the standalone piece.
+    - **`:3701` `shouldAttachBestFinisher` — the ATTACHED path, and it was never
+      in view during five previous attempts.** Every earlier eligibility
+      measurement was this caller.
+    **The standalone patch correctly flagged only `:3744`** — that part is right
+    and is parked at `scratchpad/cod-standalone-pass.patch`.
+
+    **SO THE REMAINING UNKNOWN IS NARROW AND NAMED:** with COD ranked first at
+    `:3744`, why does the loop never call `finisherEligibility` with it? Either
+    the guard does not fire on the slots that matter, or
+    `pickStandaloneCondDecision` is not reached for the standalone piece on this
+    week. **Probe `:3744`'s candidate list directly — print `zzCands[0]` — and
+    the answer is one line.**
+    **⚠ MY PROBE FOR EXACTLY THAT SILENTLY FAILED TO APPLY** (the anchor moved
+    after the patch) **and I read the empty output as a result before checking
+    the instrument was in.** Verify the probe is present before trusting its
+    silence — that is the sixth instrument fault of the session and the second
+    where absence was mistaken for evidence. (newest first)
 
 Deep background: `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md` (the architecture
 answer) and `docs/ATLAS_VERIFICATION_2026-08-12.md` (receipts). A new agent's
