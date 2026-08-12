@@ -1235,6 +1235,83 @@ phone.** State device items as PARKED in a stop report, never as a request.
     strength and mixed days in the 4-6 band **without the other two moving.**
     Run the 17 QA scenarios either side and report both numbers.
 
+22. **SAM SIGNED THE POPUP'S SHORT PHRASES, DROPPED ONE ROW, AND TURNED ANOTHER
+    INTO A FEATURE. 2026-08-13.**
+
+    **OWNED BY THE DESKTOP AGENT — all three parts. (a) is its own popup; (c)
+    is the onboarding equipment screen and the away flow, both UI. TERMINAL:
+    STAY ON ITEM 20, then item 21's re-count.**
+
+    **(a) THE SIGNED PHRASES — his words, use them as the right-hand column:**
+    - Cooked / tired → **Training volume adjusted**
+    - Sick → **Training eased back**
+    - Injury → **Exercises swapped out**
+    - Injury (paused) → **Training paused**
+    - Equipment missing → **Exercises substituted**
+    - Day unavailable → **Sessions moved**
+    - Deload week → **Planned lighter week**
+    - Game moved → **Week rebuilt around the game**
+
+    **(b) TIME CAP IS OUT.** **Sam:** *"i've taken out time caps for now - i
+    figure if people are short on time they will just do less of the session"*.
+    **No phrase, and do not render a time-cap row in the sheet.** The
+    `time_limit` constraint kind still exists in the type
+    (`domain.ts:153`) — **this is a display ruling, not a deletion order. Do not
+    rip the kind out** until he says so; other facts still write it.
+
+    **(c) TRAVEL IS NOT A PHRASE, IT IS A FLOW — AND TODAY IT DOES THE OPPOSITE
+    OF WHAT HE WANTS.** **Sam:** *"Away this week (do you have access to regular
+    equipment? if yes, follow same program, if no = reselect equipment i.e.
+    commercial gym vs home/club gym, vs bodyweight and then give program based
+    on that information) ... and then the plan should change until their return
+    date"*.
+
+    **MEASURED 2026-08-13, and the gap is behavioural, not cosmetic:**
+    - Travel today reads *"Away / travel period active"* / *"Your program is
+      avoiding the dates you are away."* (`temporarySourceFact.ts:968,975`).
+      **It REMOVES training on those dates. Sam wants it RESHAPED.** Away is not
+      a rest period; it is a different gym.
+    - **Nothing in the travel path asks about equipment.** No reference to
+      equipment exists in `equipmentAvailability.ts` for travel.
+    - **The equipment modifier is THIS WEEK ONLY and has no return date.**
+      `set_equipment_modifier`'s decision is `missing_this_week`
+      (`programControlAction.ts:245-259`). Travel already carries
+      `effectiveFrom` / `effectiveUntil`. **The two must meet: an equipment
+      change that lasts a dated span, then lifts itself.**
+
+    **BUILD, in his order:** away is set with a return date → **"Do you have
+    your normal equipment?"** → **yes**: program unchanged, only the dates he is
+    away are honoured → **no**: he picks what he DOES have, the program rebuilds
+    on that kit for the span, and **on the return date the modifier drops off
+    and the program goes back to normal by itself.**
+
+    **IT IS THE ONBOARDING DOOR, MOVED INSIDE THE APP. Sam, 2026-08-13:**
+    *"this is basically what happens in the onboarding process - now it can just
+    be inside the app"*. **He is right, and it is already built and already
+    signed — DO NOT DESIGN A NEW SHEET.**
+    - `EquipmentScreen.tsx` is his audit ruling 3 (2026-07-31): *"Where do you
+      train?" first; the choice PRE-TICKS the checklist as a visible starting
+      point; the athlete unticks what their place doesn't have ... THE STORED
+      ANSWER IS THE FINAL TICKED LIST.*
+    - `EQUIPMENT_LOCATION_PRESETS` is **commercial gym / club gym / home gym**
+      (`equipmentLocationPresets.ts:50-67`) — Sam's three, already there.
+      Bodyweight-only is continuing with nothing ticked, which that screen's
+      header already calls a real answer.
+    - **This is why it does not breach ruling 5.** A location that SEEDS a
+      checklist you then edit is ruling 3; a preset menu whose answer is FINAL
+      is what ruling 5 retired. Same day, no conflict. **Reuse the door; do not
+      rebuild the menu he killed.**
+
+    **SO THE WORK IS: make that door reachable in-app from the away flow, and
+    give its answer a START and an END.** The screen and the checklist exist;
+    what does not is a dated equipment fact
+    (`set_equipment_modifier` is `missing_this_week`, no return date) and the
+    away flow's question in front of it.
+
+    **GENERATION IS INVOLVED (a rebuild on a new kit) — STAND-DOWN D APPLIES to
+    the rebuild half.** The sheet, the question and the dated equipment fact are
+    clear to build now.
+
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
 addressable then walk it; the harvest ratchet and a computed tap atlas.
