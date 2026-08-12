@@ -764,7 +764,38 @@ phone.** State device items as PARKED in a stop report, never as a request.
    missing answer means the session happened as planned, at the planned effort,
    MARKED AS AN ESTIMATE.** Build it; do not re-ask.
 
-7. **STRENGTH JOINS THE CAPACITY ARITHMETIC.** Sam: *"sometimes that may mean
+7. **MEASURED, NOT BUILT — AND SAM'S OWN CASE IS NOT REPRESENTABLE TODAY.**
+   Three things checked before writing any code, 2026-08-12:
+   **(a) THE PREMISE IS CONFIRMED.** `weeklyExposureContractBuilders.ts:386`
+   caps strength at `Math.min(targetCount, selected.length)` — **every selected
+   day, the GAME DAY included**, while conditioning and sprint are capped at
+   `anchorCredit + placementDays` and `nonTeamDays` (`:277`) exists and is used
+   for everything else. **Strength is the only allocation whose capacity counts
+   a day it can never be placed on.**
+   **(b) TEAM DAYS ARE NOT THE DEFECT.** Strength legitimately STACKS on a team
+   night — "Team Training + Upper Pull" is a real generated session — so
+   counting team days is correct and the item's phrasing on that point is too
+   strong. **The game day is the wrong one to count.**
+   **(c) SAM'S SENTENCE CANNOT BE EXPRESSED AT ALL.** *"1 strength session ... if
+   they have 2 games and 2 team trainings"* — **the profile has ONE game field**
+   (`domain.ts:192,196`: `gameDay`, `usualGameDay`). A second game in a week has
+   nowhere to live, so the case that motivates this item cannot be built or
+   tested until that lands. **Same blocker item 2 already records.**
+   **THE COPY IS ONE TEMPLATE, CONFIRMED** — `section18ShortfallDisclosure.ts:97`
+   has a single unconditional return, *"Resting {Day} means you'll miss a
+   strength session this week"*, with no branch for a shortfall the FIXTURES
+   caused. **The fix needs a second SIGNED sentence, which is Sam's to sign** —
+   the words are not the terminal's to invent, and the effort-scale words are the
+   precedent (marked PROPOSED, awaiting him).
+   **NOT BUILT: the capacity change and the copy.** The capacity change is
+   generation behaviour and must land with the full scenario report against the
+   committed preference baseline (item 5's instrument, which now exists for
+   exactly this).
+   **⚠ AWAITING SAM — two things, both his:** the second-game field (or a ruling
+   that a two-game week is out of scope), and the words for a fixture-caused
+   shortfall.
+
+   ~~ORIGINAL~~ **STRENGTH JOINS THE CAPACITY ARITHMETIC.** Sam: *"sometimes that may mean
    only doing 1 strength session during the week if they have 2 games and 2 team
    trainings"* — **unreachable today by design.** The only fixture-authorised
    gateway reduction writes `conditioning_core_frequency` ONLY

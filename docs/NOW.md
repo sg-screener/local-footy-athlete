@@ -60,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `69726846` (±7 attempt 2 measured, `docs/STOP_2026-08-12_PLUS_MINUS_7_ATTEMPT_2_MEASURED.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `70eb0125` (items 3/4/7, `docs/STOP_2026-08-12_ITEMS_3_4_7.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails
@@ -113,6 +113,23 @@ and this file gets one line pointing at it.**
   `parallel` stays NON-OFFICIAL until both are answered.
 
 ## OPEN, ON US
+
+- **THE MODERATE HALF OF SAM'S SHAPE NOW SPEAKS** (`LAW-moderate-day-advisory`),
+  advisory and never blocking — making it blocking throws and takes the suite
+  down, which is the outage that ruling prevents. **And a FOURTH WORD was found:
+  `stressLevel: 'moderate'` outside the union `high|medium|low`, hidden by an
+  `as never` cast, so every "easier option" offer was invisible to the moderate
+  count.** Fixed and guarded by a source scan
+  (`LAW-stress-vocabulary-is-one-word`). **The fix changed NOTHING measurable —
+  all 17 scenarios identical — because that placer does not run in them.**
+  **12 of 17 weeks still have zero moderate days.**
+- **THE ±7 IS DIAGNOSED AND NOT FIXED.** Measured in both arms: the dependency
+  link is derived MORE often without the ±7, reaches the materialiser MORE often,
+  and the proposal carries it IDENTICALLY — **the COMMIT is where it dies.** Five
+  candidates dead. `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md` §7-§10.
+- **ITEM 7 IS BLOCKED ON SAM, TWICE:** the profile has ONE game field, so
+  *"2 games and 2 team trainings"* cannot be expressed; and the fixture-caused
+  shortfall needs a second SIGNED sentence.
 
 - **THE 17 SCENARIOS NOW ANSWER "IS THIS A WEEK SAM WOULD WRITE"** (item 5,
   `LAW-preference-report`). `LFA_HARD_DAY_PROBE=1 npm run test:qa` prints a
