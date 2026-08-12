@@ -157,7 +157,7 @@ run "an EMPTY Unprocessed section ALLOWS" allow \
 # subject-only fixture can no longer express any of them.
 git_case() {
   local name="$1" expected="$2" subject="$3" awaiting_before="${4:-}" awaiting_after="${5:-}" \
-    elsewhere="${6:-}"
+    elsewhere="${6:-}" body="${7:-}"
   local repo; repo="$(mktemp -d)"
   mkdir -p "$repo/docs"
   write_inbox() {
@@ -176,7 +176,11 @@ git_case() {
     && git config user.email t@t && git config user.name t \
     && git add -A && git commit -q -m "an earlier commit" ) >/dev/null 2>&1
   write_inbox "${awaiting_after:-$awaiting_before}" "$elsewhere"
-  ( cd "$repo" && git add -A && git commit -q --allow-empty -m "$subject" ) >/dev/null 2>&1
+  if [ -n "$body" ]; then
+    ( cd "$repo" && git add -A && git commit -q --allow-empty -m "$subject" -m "$body" ) >/dev/null 2>&1
+  else
+    ( cd "$repo" && git add -A && git commit -q --allow-empty -m "$subject" ) >/dev/null 2>&1
+  fi
   local out; out="$(cd "$repo" && bash "$HOOK")"
   local actual="allow"
   echo "$out" | grep -q '"decision":"block"' && actual="block"
@@ -204,9 +208,44 @@ git_case "an unprocessed order BLOCKS when HEAD is an ordinary commit" block \
 git_case "a routine docs(stop): progress report NO LONGER ends the turn" block \
   "docs(stop): STOP — item 4 landed, item 7 measured"
 
-# EXIT 2 — it genuinely cannot proceed, and says so in a different word.
-git_case "docs(blocked): ALLOWS the turn to end" allow \
+# ── ITEM 29, 2026-08-13: THE EXIT SAM CLOSED REOPENED UNDER A NEW NAME. ──────
+#
+# Item 0 removed `docs(stop):` because a routine progress report was ending
+# turns. `docs(blocked):` then carried the same traffic under a different word —
+# 18 of 77 commits in six hours, one roughly every twenty minutes — and the hook
+# could not tell, because it read only the subject PREFIX. Sam saw the symptom:
+# "it works for like 5 min then stops and reports but doesn't need us to say
+# anything".
+#
+# THE DISTINCTION, NOW WRITTEN DOWN. BLOCKED means the terminal cannot resolve it
+# ALONE: a ruling only Sam can give, a file another agent holds, or something
+# outside the repo. A wall it can MEASURE ITSELF is not a block — "I have found
+# the next question" is the definition of NOT blocked.
+#
+# INVERTED, NOT DELETED, so the exit's history stays legible: the bare subject
+# used to allow and now blocks.
+git_case "docs(blocked): with NO stated reason no longer ends the turn" block \
   "docs(blocked): the second-game field does not exist, item 7 cannot be built"
+
+# Each of the three legitimate categories opens the door.
+git_case "BLOCKED-BY: sam ALLOWS — only he can rule it" allow \
+  "docs(blocked): the moderate-day target needs a ruling" "" "" "" \
+  "BLOCKED-BY: sam"
+git_case "BLOCKED-BY: other-agent ALLOWS — the file is held elsewhere" allow \
+  "docs(blocked): HomeScreenV2 is mid-flight in this checkout" "" "" "" \
+  "BLOCKED-BY: other-agent"
+git_case "BLOCKED-BY: external ALLOWS — outside the repo" allow \
+  "docs(blocked): the simulator will not build" "" "" "" \
+  "BLOCKED-BY: external"
+
+# ...and a reason OUTSIDE the three keeps the door shut. This is the cell that
+# stops the category becoming a rubber stamp: any word would otherwise do.
+git_case "an invented BLOCKED-BY category still BLOCKS" block \
+  "docs(blocked): I found the next question" "" "" "" \
+  "BLOCKED-BY: measurement"
+git_case "a BLOCKED-BY naming the terminal itself still BLOCKS" block \
+  "docs(blocked): I need to probe one more layer" "" "" "" \
+  "BLOCKED-BY: terminal"
 
 # EXIT 3 — a decision written down THIS COMMIT under `## AWAITING SAM`.
 git_case "a NEW line under AWAITING SAM ALLOWS" allow \

@@ -97,9 +97,31 @@ if [ -n "$order" ] && git rev-parse --git-dir >/dev/null 2>&1; then
   head_subject=$(git log -1 --pretty=%s 2>/dev/null || echo "")
   head_sha=$(git rev-parse HEAD 2>/dev/null || echo "")
 
-  # EXIT 2 — a declaration that it cannot proceed.
+  # EXIT 2 — a declaration that it cannot proceed, AND A REASON THAT QUALIFIES.
+  #
+  # THE EXIT SAM CLOSED REOPENED UNDER A NEW NAME (item 29, 2026-08-13). Item 0
+  # removed `docs(stop):` because a routine progress report was ending turns;
+  # `docs(blocked):` then carried the same traffic under a different word — 18 of
+  # 77 commits in six hours, roughly one every twenty minutes. The hook could not
+  # tell, because it only read the subject PREFIX.
+  #
+  # THE DISTINCTION, WHICH NOBODY HAD WRITTEN DOWN. BLOCKED means the terminal
+  # cannot resolve it ALONE: it needs a ruling only Sam can give, a file another
+  # agent is holding, or something outside the repo. A wall it can MEASURE ITSELF
+  # is not a block — "I have found the next question" is the definition of NOT
+  # blocked, because it is the definition of knowing what to do next.
+  #
+  # So the subject is no longer enough. The body must name the category, and the
+  # word must be one of three. Anything else and the exit stays shut: the commit
+  # is fine, it just does not end the turn.
   case "$head_subject" in
-    'docs(blocked):'*) order="" ;;
+    'docs(blocked):'*)
+      blocked_by=$(git log -1 --pretty=%B 2>/dev/null \
+        | sed -n 's/^BLOCKED-BY:[[:space:]]*\([a-z-]*\).*/\1/p' | head -1)
+      case "$blocked_by" in
+        sam|other-agent|external) order="" ;;
+      esac
+      ;;
   esac
 
   # EXIT 3 — a decision written down under `## AWAITING SAM` in THIS commit.
