@@ -229,7 +229,7 @@ function contract(
     weekKind: 'build',
     anchorState: identity.anchorState,
     teamTrainingDays: [],
-    fixtureDay: null,
+    fixtureDays: [],
     readiness: 'medium',
     plannerSelected: {
       mainStrength: 4,
@@ -463,7 +463,7 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
 // The conditioning half (6b) is unchanged: a fixture week still requires three.
 {
   const c = contract('practice_match_week', {
-    fixtureDay: 6, fixtureParticipation: 'normal_unrestricted', currentProductionClaimsAnchorCredit: true,
+    fixtureDays: [6], fixtureParticipation: 'normal_unrestricted', currentProductionClaimsAnchorCredit: true,
     plannerSelected: { mainStrength: 2, coreConditioning: 1, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 2 },
   });
   witnesses.practiceMatchUnder = evaluate(c, [strength(1, ['push', 'pull'])]);
@@ -827,7 +827,7 @@ for (const participation of
   const c = contract('in_season_game_week', {
     teamTrainingDays: [2, 4],
     teamParticipation: normalParticipation(2),
-    fixtureDay: 6,
+    fixtureDays: [6],
     fixtureParticipation: participation,
   });
   const evaluation = evaluate(c, []);
@@ -847,7 +847,7 @@ for (const participation of ['did_not_participate', 'unknown'] as const) {
   const c = contract('in_season_game_week', {
     teamTrainingDays: [2, 4],
     teamParticipation: normalParticipation(2),
-    fixtureDay: 6,
+    fixtureDays: [6],
     fixtureParticipation: participation,
   });
   const row = evaluate(c, []).ledger.anchors.find((entry) => entry.dayOfWeek === 6);
@@ -885,6 +885,70 @@ for (const mode of ALL_WEEK_MODES) {
     }
   }
 }
+
+
+// ── A WEEK MAY HOLD MORE THAN ONE FIXTURE (the waist, 2026-08-12) ──
+//
+// `HOW_TO_BUILD_THIS_APP` §5.4 named `derivedWeekContract:90`'s
+// `fixtures[0] ?? null` as THE waist, and this is the contract end of it: the
+// input carried ONE `fixtureDay`, so a split round — a midweek game AND the
+// usual weekend one — reached the contract as a one-game week. The dropped
+// fixture got no anchor, and an anchor is what carries G-1/G-2 protection,
+// conditioning credit and the week's identity.
+//
+// MEASURED BEFORE THE CHANGE: `targetWeekFixtures` for a Wednesday + Saturday
+// week returns BOTH, and `fixtures[0]` kept the Wednesday. The list was never
+// missing; it was thrown away one line later.
+console.log('\n-- A week may hold more than one fixture --');
+
+const splitRound = contract('in_season_game_week', {
+  teamTrainingDays: [2],
+  fixtureDays: [3, 6],
+});
+const fixtureAnchors = splitRound.anchors.filter((anchor) =>
+  anchor.kind === 'game' || anchor.kind === 'practice_match');
+
+ok('a two-fixture week produces TWO fixture anchors',
+  fixtureAnchors.length === 2, splitRound.anchors.map((a) => `${a.kind}:${a.dayOfWeek}`));
+ok('both fixture days are anchored, not just the first',
+  fixtureAnchors.some((anchor) => anchor.dayOfWeek === 3)
+  && fixtureAnchors.some((anchor) => anchor.dayOfWeek === 6),
+  fixtureAnchors.map((a) => a.dayOfWeek));
+ok('each fixture anchor keeps a distinct id',
+  new Set(fixtureAnchors.map((anchor) => anchor.id)).size === 2,
+  fixtureAnchors.map((a) => a.id));
+
+// NON-VACUITY, BOTH WAYS. Without these, "two anchors" would also pass against
+// a builder that emitted an anchor per DAY OF THE WEEK, and the single-fixture
+// case — every other cell in this file — must be untouched.
+const singleFixture = contract('in_season_game_week', {
+  teamTrainingDays: [2],
+  fixtureDays: [6],
+});
+ok('a one-fixture week still produces exactly ONE fixture anchor',
+  singleFixture.anchors.filter((anchor) =>
+    anchor.kind === 'game' || anchor.kind === 'practice_match').length === 1,
+  singleFixture.anchors.map((a) => `${a.kind}:${a.dayOfWeek}`));
+
+const noFixture = contract('in_season_bye_build', {
+  teamTrainingDays: [2],
+  fixtureDays: [],
+});
+ok('a bye week still produces NO fixture anchor',
+  noFixture.anchors.every((anchor) =>
+    anchor.kind !== 'game' && anchor.kind !== 'practice_match'),
+  noFixture.anchors.map((a) => `${a.kind}:${a.dayOfWeek}`));
+
+// A REPEATED DAY IS ONE ANCHOR — `uniqueDays` owns that, exactly as it does for
+// team training, so two marks on one date cannot double-count the fixture.
+const duplicated = contract('in_season_game_week', {
+  teamTrainingDays: [2],
+  fixtureDays: [6, 6],
+});
+ok('a repeated fixture day collapses to one anchor',
+  duplicated.anchors.filter((anchor) =>
+    anchor.kind === 'game' || anchor.kind === 'practice_match').length === 1,
+  duplicated.anchors.map((a) => `${a.kind}:${a.dayOfWeek}`));
 
 console.log(`\nsection18ContractV2Tests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);

@@ -477,7 +477,22 @@ export interface Section18ContractV2Input {
   weekKind?: WeekKind;
   anchorState: Section18AnchorState;
   teamTrainingDays: readonly number[];
-  fixtureDay?: number | null;
+  /**
+   * EVERY FIXTURE THIS WEEK, NOT THE FIRST ONE.
+   *
+   * Was `fixtureDay?: number | null`. A week can hold more than one fixture —
+   * a split round, a midweek game plus the usual weekend one — and
+   * `targetWeekFixtures` has always RETURNED them all. The singular field is
+   * where they were thrown away: `derivedWeekContract:90` took `fixtures[0]`
+   * and the rest never reached an anchor, so the second game of a Wednesday +
+   * Saturday week got no G-1/G-2 protection, no credit and no place in the
+   * week's identity. Measured 2026-08-12: both fixtures resolve, one survives.
+   *
+   * `teamTrainingDays` directly above has been a list since the beginning and
+   * `anchorsFor` has always mapped over it; this is the same shape applied to
+   * the anchor kind that needed it more.
+   */
+  fixtureDays?: readonly number[];
   fixtureParticipation?: AnchorParticipationState;
   teamParticipation?: Readonly<Record<number, AnchorParticipationState>>;
   participationProvenance?: Section18AnchorContract['participationProvenance'];
@@ -710,14 +725,14 @@ function anchorsFor(input: Section18ContractV2Input): Section18AnchorContract[] 
       formalPowerPrimerCredit: false,
     },
   }));
-  if (input.fixtureDay !== null && input.fixtureDay !== undefined) {
+  for (const fixtureDay of uniqueDays(input.fixtureDays ?? [])) {
     const kind: Section18AnchorKind = input.anchorState === 'practice_match'
       ? 'practice_match'
       : 'game';
     anchors.push({
-      id: `${kind}-${input.fixtureDay}`,
+      id: `${kind}-${fixtureDay}`,
       kind,
-      dayOfWeek: input.fixtureDay,
+      dayOfWeek: fixtureDay,
       participation: input.fixtureParticipation ?? 'unknown',
       participationProvenance: input.fixtureParticipation ? 'explicit' : provenance,
       currentProductionClaim: {
@@ -1491,7 +1506,9 @@ export function migrateLegacyWeeklyExposureContractV2(
     weekKind: legacy.identity.weekKind,
     anchorState: anchorStateFromLegacy(legacy),
     teamTrainingDays: legacy.anchors.teamTrainingDays,
-    fixtureDay: legacy.anchors.gameDay,
+    // The legacy shape carries ONE game day and cannot express more; a list of
+    // one is the honest translation, not a widening.
+    fixtureDays: legacy.anchors.gameDay === null ? [] : [legacy.anchors.gameDay],
     readiness: 'medium',
     plannerSelected: {
       mainStrength: legacy.strength.targetCount,

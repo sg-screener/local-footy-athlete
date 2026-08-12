@@ -773,7 +773,9 @@ function buildParallelSection18Contract(args: {
     weekKind: inputs.weekKind,
     anchorState: identity.anchorState,
     teamTrainingDays: (inputs.teamTrainingDays ?? []).map(dayNameToNumber),
-    fixtureDay: legacy.anchors.gameDay,
+    // The legacy planner shape holds ONE game day; a list of one is the honest
+    // translation of it, never a widening.
+    fixtureDays: legacy.anchors.gameDay === null ? [] : [legacy.anchors.gameDay],
     // This is a live planner decision with the current profile/constraint
     // context in hand. Persisted or genuinely missing participation must use
     // current_input_missing and remains unknown at the safety boundary.

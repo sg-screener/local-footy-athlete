@@ -204,7 +204,7 @@ function safetyContract(readiness?: { deloaded: boolean; sessionsOptional: boole
     weekKind: 'build',
     anchorState: 'game',
     teamTrainingDays: [2, 4],
-    fixtureDay: 6,
+    fixtureDays: [6],
     readiness: 'medium',
     plannerSelected: {
       mainStrength: 4, coreConditioning: 4, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 2,
@@ -512,7 +512,7 @@ for (const phase of ['In-season', 'Pre-season', 'Off-season'] as const) {
     weekKind: 'build',
     anchorState: 'none',
     teamTrainingDays: [],
-    fixtureDay: null,
+    fixtureDays: [],
     readiness: 'medium',
     plannerSelected: {
       mainStrength: 4, coreConditioning: 4, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0,

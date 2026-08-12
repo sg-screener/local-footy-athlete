@@ -79,7 +79,7 @@ function fixtureIdentityForWeek(args: {
   weekStart: string;
   markedDays?: Readonly<Record<string, CalendarDayType>>;
   storedMode: Section18WeekMode;
-}): { anchorState: Section18AnchorState; fixtureDay: number | null; mode: Section18WeekMode } {
+}): { anchorState: Section18AnchorState; fixtureDays: number[]; mode: Section18WeekMode } {
   const ownedPhase = ownSeasonPhaseForGeneration(args.profile);
   const fixtures = targetWeekFixtures({
     profile: args.profile,
@@ -99,16 +99,28 @@ function fixtureIdentityForWeek(args: {
       : args.storedMode;
     // A pre-season week with no fixture has anchor state `none`, not `bye`:
     // `bye` is an IN-SEASON fact (the round exists and this team is not in it).
-    return { anchorState: inSeason ? 'bye' : 'none', fixtureDay: null, mode };
+    return { anchorState: inSeason ? 'bye' : 'none', fixtureDays: [], mode };
   }
-  const fixtureDay = new Date(`${fixture.date}T12:00:00`).getDay();
+  // EVERY FIXTURE, NOT `fixtures[0]`. `targetWeekFixtures` already returns the
+  // whole week's list sorted by date; this line used to keep the first and drop
+  // the rest, so a split round (a Wednesday game AND the usual Saturday) reached
+  // the contract as a one-game week. The dropped fixture got no anchor, and
+  // therefore no G-1/G-2 protection, no credit and no place in the week's
+  // identity. `HOW_TO_BUILD_THIS_APP` §5.4 named this line as THE waist.
+  //
+  // The KIND still comes from the first fixture: a practice-match week is a
+  // mode, and a week mixing a practice match with a game has no declared mode
+  // to be. Sam's call if it ever becomes reachable; today the kind is uniform
+  // because `canonicalFixtureKind` derives it from the owned phase.
+  const fixtureDays = fixtures.map((entry) =>
+    new Date(`${entry.date}T12:00:00`).getDay());
   if (fixture.kind === 'practice_match') {
-    return { anchorState: 'practice_match', fixtureDay, mode: 'practice_match_week' };
+    return { anchorState: 'practice_match', fixtureDays, mode: 'practice_match_week' };
   }
   const mode: Section18WeekMode = args.storedMode.startsWith('in_season')
     ? 'in_season_game_week'
     : args.storedMode;
-  return { anchorState: 'game', fixtureDay, mode };
+  return { anchorState: 'game', fixtureDays, mode };
 }
 
 /**
@@ -133,7 +145,7 @@ function weekIdentityForWeek(args: {
   markedDays?: Readonly<Record<string, CalendarDayType>>;
   storedMode: Section18WeekMode;
   temporarySourceFacts?: readonly TemporarySourceFact[];
-}): { anchorState: Section18AnchorState; fixtureDay: number | null; mode: Section18WeekMode } {
+}): { anchorState: Section18AnchorState; fixtureDays: number[]; mode: Section18WeekMode } {
   const fixture = fixtureIdentityForWeek(args);
   const optional = deriveIllnessRecoveryWeekMode({
     temporarySourceFacts: args.temporarySourceFacts ?? [],
@@ -224,11 +236,18 @@ export function deriveWeekContract(args: {
   });
   const storedFixture = stored.anchors.find((anchor) =>
     anchor.kind === 'game' || anchor.kind === 'practice_match');
-  const storedFixtureDay = storedFixture?.dayOfWeek ?? null;
+  // THE WHOLE SET, SORTED — a week that gained or lost its SECOND fixture is a
+  // week whose identity moved, and comparing one day could not see that.
+  const sameDays = (left: readonly number[], right: readonly number[]): boolean =>
+    left.length === right.length
+    && [...left].sort().every((day, index) => day === [...right].sort()[index]);
+  const storedFixtureDays = stored.anchors
+    .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
+    .map((anchor) => anchor.dayOfWeek);
   if (
     derived.mode === stored.identity.mode &&
     derived.anchorState === stored.identity.anchorState &&
-    derived.fixtureDay === storedFixtureDay
+    sameDays(derived.fixtureDays, storedFixtureDays)
   ) {
     return withRemovalLedger(stored, args);
   }
@@ -262,7 +281,7 @@ export function deriveWeekContract(args: {
     weekKind: stored.identity.weekKind,
     anchorState: derived.anchorState,
     teamTrainingDays,
-    fixtureDay: derived.fixtureDay,
+    fixtureDays: derived.fixtureDays,
     // PRICING DEFECT 1, found and fixed on the scaffold: participation and the production claim
     // are FACTS ABOUT THE ANCHOR and travel. Rebuilding them from a boolean
     // resurrects claims the safety finaliser already demoted.

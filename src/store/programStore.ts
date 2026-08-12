@@ -748,7 +748,7 @@ function deriveContractlessLegacyContract(args: {
     weekKind: args.phaseResolution.weekKind,
     anchorState: identity.anchorState,
     teamTrainingDays,
-    fixtureDay: fixture?.dayOfWeek ?? null,
+    fixtureDays: fixture ? [fixture.dayOfWeek] : [],
     participationProvenance: 'legacy_unknown',
     currentProductionClaimsAnchorCredit: false,
     readiness: 'medium',

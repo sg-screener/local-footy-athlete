@@ -314,7 +314,7 @@ function patternContract() {
     anchorState: 'none',
     teamTrainingDays: [],
     participationProvenance: 'derived_healthy_unrestricted',
-    fixtureDay: null,
+    fixtureDays: [],
     readiness: 'medium',
     plannerSelected: {
       mainStrength: 4, coreConditioning: 0, sprintHighSpeed: 0, powerPrimers: 0,

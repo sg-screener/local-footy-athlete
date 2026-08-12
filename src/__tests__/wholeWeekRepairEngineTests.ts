@@ -37,7 +37,7 @@ function contract(fixture: boolean) {
     mode: fixture ? 'in_season_game_week' : 'in_season_bye_build',
     anchorState: fixture ? 'game' : 'bye',
     teamTrainingDays: [2, 4],
-    fixtureDay: fixture ? 0 : null,
+    fixtureDays: fixture ? [0] : [],
     fixtureParticipation: 'normal_unrestricted',
     participationProvenance: 'explicit',
     currentProductionClaimsAnchorCredit: true,

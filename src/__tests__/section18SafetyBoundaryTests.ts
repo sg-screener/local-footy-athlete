@@ -202,7 +202,7 @@ function baseContract(args: {
     teamTrainingDays: [2],
     teamParticipation: args.teamParticipation,
     participationProvenance: 'derived_healthy_unrestricted',
-    fixtureDay: null,
+    fixtureDays: [],
     readiness: args.readiness ?? 'medium',
     cookedReadiness: args.readiness === 'low',
     plannerSelected: {
