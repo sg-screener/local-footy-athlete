@@ -255,8 +255,22 @@ phone.** State device items as PARKED in a stop report, never as a request.
    is built and correct (`journalLoad.ts:509-520`) and its only importers are
    four journal files, behind the surface Sam hid. **Ordered after item 4 on
    Sam's call** — *"the moderate day shouldnt this be before planed vs
-   experienced because it's part of planned?"* **MEASURE FIRST: does a strength
-   session have a start timestamp? Grep found none and the plan depends on it.**
+   experienced because it's part of planned?"* **MEASURED 2026-08-12 —
+   `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md`. THE ANSWER IS WORSE THAN
+   "no timestamp": a strength session stores NO rpe, NO minutes and NO start or
+   end time — three missing things, not one — while conditioning stores both
+   halves of sRPE and needs nothing.** So the plan's premise is only half
+   satisfiable today.
+   **AND SAM'S §4 RULING HAS AN UNSTATED CONSEQUENCE:** "assume they did as
+   planned, marked as an estimate" means **for strength EVERY value is an
+   estimate, on every session, forever, until an RPE is captured** — the mark is
+   not an edge case there, it is the whole column, against 0% of logged
+   conditioning. **That asymmetry is what any design must answer.**
+   **A THIRD OPTION EXISTS AND IS IN NEITHER THE PLAN NOR THIS ITEM:** strength
+   already stores actual sets/reps/weight, and VOLUME LOAD is already computed
+   beside `conditioningSRPE`. It reads real athlete data with nothing new to
+   build; its cost is a different unit from conditioning's sRPE. **Sam's call
+   between capture-an-RPE / volume-load / estimate-everything.**
    **§4 IS NOW RULED. Sam, 2026-08-12:** *"assume they did as planned"*. **A
    missing answer means the session happened as planned, at the planned effort,
    MARKED AS AN ESTIMATE.** Build it; do not re-ask.
