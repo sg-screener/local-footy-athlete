@@ -1290,6 +1290,28 @@ phone.** State device items as PARKED in a stop report, never as a request.
     category label** — if the card shows the template name, COD needs nothing
     new and the only defect is the fall-through to the interval text.
 
+    **PLACEMENT ISOLATED 2026-08-13 — IT IS A CONDITIONING-COUNT DECISION, NOT A
+    CATEGORY ONE. The chase can stop here with a precise handoff.**
+    Re-applied the parked pass on a FIVE-day no-team-training week (which does
+    produce standalone conditioning) and probed the guard at every slot:
+    - slot 1: `ess=false` tally all zero
+    - slot 2: `ess=false` tally `aerobic_base:1`
+    - **slot 3: `ess=true`, `unplaced=true` — the guard IS satisfied and COD
+      ranks FIRST — and the result is still `COD sessions = 0`.**
+    **SO THE CATEGORY LIST IS NO LONGER THE CONSTRAINT.** COD is first in line at
+    slot 3 and never placed, because **the week only ever allocates TWO
+    conditioning sessions** (`aerobic_base` then `tempo`) and no third
+    conditioning DAY is chosen. A category ranking only matters once a day has
+    been picked as a conditioning day.
+    **NEXT UNIT, NARROW AND NAMED: what decides how many conditioning sessions a
+    week gets?** COD needs the week to allocate a THIRD, or to substitute for one
+    of the two. **That is a quota decision in the day-scorer, and it is the last
+    layer.** Everything around it is now correct: category, pool, availability
+    gate, must-cover split, focus wording, and the card (which shows the template
+    name and needs nothing).
+    **Reverted again** — the pass reorders candidates for every week and still
+    buys nothing.
+
     **THE FALL-THROUGH IS THE REAL FINDING AND IT IS A CLASS, NOT A ROW.** A
     quality with no wording silently borrows another quality's sentence. **That
     is the same silent-substitution shape as the category waist — an unmapped
