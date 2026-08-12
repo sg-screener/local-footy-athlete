@@ -100,8 +100,28 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **THIS UNBLOCKS ITEM 6** (planned vs experienced load): strength gains a real
    effort number, so it stops being an all-estimate column.
 
-0b. **THE COMPLETION GATE — NOTHING MAY BE CALLED FINISHED UNTIL THE RIGHT
-   CHECKS PASS. TOOLING ONLY; DO NOT CHANGE APP BEHAVIOUR.**
+0b. **PROPOSED, NOT BUILT — `docs/STOP_2026-08-12_COMPLETION_GATE_PROPOSAL.md`.
+   The order says "show the proposed file list ... BEFORE writing anything", and
+   nothing has been written.**
+   **THE FINDING THAT DECIDES THE DESIGN: three of the commands this order
+   implies are ALREADY RED, so built literally the gate would refuse every
+   completion from its first run.** `npm run typecheck` is RED (459 errors — the
+   weak config the ratchet replaced); `npm run test:qa`, the "full scenario
+   suite", is RED (84 pre-existing failures); `npm run test:law-registry` is RED
+   **by Sam's own stop-the-line ruling** and must never be wired in.
+   **PROPOSED INSTEAD, all green today and all already in `package.json`:**
+   any `.ts`/`.tsx` -> `test:compile` (the RATCHET — fails on NEW drift, ignores
+   the documented backlog, which is exactly a completion gate's job);
+   `rules/**`+`store/**` -> also `test:repo-law-guards`; generation/repair/
+   coaching -> also `test:rules-kernel`; docs-only -> nothing.
+   **TWO FILES, the constraint's maximum:** `.claude/hooks/completion-gate.sh`
+   (new) and `.claude/settings.json` (edited — it already holds the Stop hook).
+   **AWAITING SAM — one decision:** green proxies now, or fix `typecheck` and
+   `test:qa` first so the order can be built literally? **Recommended: proxies
+   now.** Also `/hooks` verification is his — this hook blocks HIS completions.
+
+   ~~ORIGINAL ORDER~~ **THE COMPLETION GATE — NOTHING MAY BE CALLED FINISHED
+   UNTIL THE RIGHT CHECKS PASS. TOOLING ONLY; DO NOT CHANGE APP BEHAVIOUR.**
    Sam approved this on 2026-08-12 as step 2 of three. **Step 1 (the iOS
    Simulator pane) is DONE — the app builds, installs and boots in it.**
 
