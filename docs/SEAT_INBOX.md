@@ -100,9 +100,19 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **THIS UNBLOCKS ITEM 6** (planned vs experienced load): strength gains a real
    effort number, so it stops being an all-estimate column.
 
-0b. **PROPOSED, NOT BUILT — `docs/STOP_2026-08-12_COMPLETION_GATE_PROPOSAL.md`.
-   The order says "show the proposed file list ... BEFORE writing anything", and
-   nothing has been written.**
+0b. **BUILT AND LIVE — `59164984`. Sam ruled "proxies" 2026-08-12.**
+   `scripts/completion-gate.sh` + a `TaskCompleted` entry in
+   `.claude/settings.json`. **CORRECTION TO THE ORDER'S FILE PATH: `.claude/` is
+   GITIGNORED here and nothing under it is tracked, so the script lives in
+   `scripts/` like the existing Stop hook's does — a hook nobody can read in a
+   diff is not a shared instrument.** Verified by driving it three ways: valid
+   tree exit 0; docs-only exit 0 in **0.04s running nothing**; a broken `.ts`
+   exit 2 naming the command and the file. **NOT DONE — `/hooks` verification
+   is Sam's, since this blocks HIS completions too.**
+   The proposal and the red-command measurement behind it stay at
+   `docs/STOP_2026-08-12_COMPLETION_GATE_PROPOSAL.md`.
+
+   ~~PROPOSED, NOT BUILT~~
    **THE FINDING THAT DECIDES THE DESIGN: three of the commands this order
    implies are ALREADY RED, so built literally the gate would refuse every
    completion from its first run.** `npm run typecheck` is RED (459 errors — the
