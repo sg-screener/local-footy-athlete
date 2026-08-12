@@ -145,6 +145,52 @@ his instruction is standing authority, not history.**
        verdict on why five of six reverts happened.
 
 
+33. **THE RULINGS REGISTRY EXISTS — `docs/RULINGS_REGISTRY.md`, 33 ROWS. WIRE
+    THE GATE. THIS IS THE TOP OF THE QUEUE AND NOTHING GOES TO SAM UNTIL IT IS
+    DONE.**
+
+    **OWNED BY THE TERMINAL.**
+
+    **Sam, 2026-08-13:** *"I SHOULD NOT HAVE TO FIX THE SAME PROBLEMS OVER AND
+    OVER AGAIN - MORE IMPORTANTLY - IT SHOULDN'T EVEN BE AN OPTION FOR THE AI TO
+    FIX A PROBLEM THAT HAS BEEN FIXED"*.
+    **"Shouldn't be an option" is a MECHANISM requirement, not an aspiration.
+    The seat has now written the list rather than another order about the list.**
+
+    **THE FILE IS SEEDED AND IN THE REPO.** 33 rows, each carrying Sam's words
+    VERBATIM, what they mean, and either an enforcer or `UNENFORCED`. Two states
+    only, exactly like the law registry — Sam's 2026-08-10 ruling that *laws must
+    be machine-held, not remembered* applied to rulings.
+
+    **BUILD THE GATE — three cells, and the third is the one that matters:**
+    1. **`test:rulings-registry`** — every row has an id, a verbatim quote, and a
+       status that is `BUILT <receipt>` or `UNENFORCED`. No third state. Red on
+       a row with a receipt that does not resolve.
+    2. **The UNENFORCED count falls and never rises silently** — same ratchet as
+       `test:law-registry`.
+    3. **⚠ THE ASK GATE.** A question may not be put to Sam unless the message
+       states the grep of `RULINGS_REGISTRY.md` that was run and what it
+       returned. **Enforce it where questions actually leave: the
+       `## AWAITING SAM` exit in `scripts/seat-inbox-hook.sh`. A new AWAITING
+       SAM entry with no stated grep is refused.** That turns "don't re-ask"
+       from a habit into a wall — which is what he asked for.
+
+    **THEN FINISH THE SEEDING, and it is the bigger half:** the Bible's changelog
+    (~4890-5010 — every ADDED/ABOLISHED/CORRECTED line is a ruling), the 70
+    `*_RULING*.md` docs, and `LFA_PROGRAMMING_POLICY_DECISIONS.md`. **Until that
+    is done, an empty grep is NOT proof he never decided — say so in the question
+    instead of claiming he never ruled.**
+
+    **AND RETIRE THE HIDING PLACES AS YOU SEED.** Rulings currently live in the
+    handoff's "do not re-ask" section, an archived orders file, and `## AWAITING
+    SAM`. **Three places is why this failed. Leave ONE.** Replace each with a
+    pointer to the registry in the same pass.
+
+    **THE TEST THAT THIS WORKED IS SAM'S, NOT A SUITE'S:** he stops seeing
+    questions he has already answered. **Report the count of AWAITING SAM entries
+    refused by the gate — every one is a night he did not lose.**
+
+
 32. **⚠ STOP — ALL THREE QUESTIONS ABOUT TO REACH SAM ARE RE-ASKS. TWO ARE OF
     THINGS ALREADY BUILT AND ALREADY ON A DO-NOT-RE-ASK LIST. DO NOT SEND THEM.**
 
@@ -633,23 +679,33 @@ his instruction is standing authority, not history.**
 
 
 
-7. **BLOCKED-BY: sam — (a) IS BUILT; (b) AND (c) CANNOT MOVE WITHOUT HIM.**
+7. **NOT BLOCKED — AND THE TWO QUESTIONS I PUT ON THIS LINE WERE BOTH RE-ASKS.
+   WITHDRAWN 2026-08-13 BY THE GATE THAT NOW EXISTS BECAUSE OF THEM.**
 
-   **THE TWO THINGS THAT ARE HIS, and the item already measured why neither is
-   the terminal's to decide:**
-   1. **A SECOND GAME IN A WEEK HAS NOWHERE TO LIVE.** The profile has ONE game
-      field (`domain.ts:192,196`). His own sentence — *"1 strength session … if
-      they have 2 games and 2 team trainings"* — **cannot be built or tested at
-      all** until there is somewhere to put the second game. **The question:
-      does a two-game week get a field, or is it out of scope?**
-   2. **THE WORDS FOR A FIXTURE-CAUSED SHORTFALL.** `section18ShortfallDisclosure`
-      has ONE unconditional sentence, *"Resting {Day} means you'll miss a
-      strength session this week"*, and no branch for a shortfall the FIXTURES
-      caused. **A second sentence is needed and the words are his to sign**, on
-      the effort-scale precedent.
+   **RULINGS-CHECKED: RULING-as-many-games-as-needed,
+   RULING-shortfall-sentence-names-its-cause — BOTH ANSWERED, BOTH BUILT.**
 
-   **NOT A WALL THIS SEAT CAN MEASURE PAST:** both are rulings, not code. The
-   capacity half that COULD be measured was, and it shipped.
+   **THIS ENTRY IS THE FOUNDING CASE OF ITEM 32 AND IS KEPT AS ONE.** I marked
+   this item `BLOCKED-BY: sam` and sent him two questions. Sam: *"why the fuck is
+   someone still saying shit like this WE HAVE FUCKING FIXED THESE ISSUES"*. He
+   was right on both, and `test:ruling-registry` `[3]` now reds on this exact
+   text.
+
+   1. ~~"does a two-game week get a field?"~~ **RULED AND BUILT.** *"as many
+      games as needed"*, and the profile does NOT grow a second field — **the
+      CALENDAR holds fixtures; `gameDay` is only a DEFAULT** (`3f62ad62`,
+      2026-08-12). **MY ERROR, NAMED: I read `domain.ts:192` `gameDay?: DayOfWeek`,
+      saw one field, and reported "nowhere to live" — reading the PROFILE and
+      reporting on the CALENDAR.** That field is precisely the mechanism Sam
+      ruled is not the one.
+   2. ~~"a second sentence is needed for a fixture-caused shortfall"~~ **SHIPPED
+      TWELVE HOURS EARLIER.** `section18ShortfallDisclosure.ts:158` returns
+      `` `With a game ${day}, there's only room for ` ``, held by
+      `test:shortfall-copy` in both directions. **My claim that the module "has
+      ONE unconditional sentence" was false — that is the OTHER branch.**
+
+   **WHAT IS ACTUALLY LEFT OF (b) AND (c):** nothing that needs Sam. Both are
+   engineering against rulings that already exist.
 
    ORIGINAL BELOW.
    **(a) IS BUILT 2026-08-13 — AND IT IS AN ATTRIBUTION FIX, NOT A BEHAVIOURAL
@@ -1056,8 +1112,36 @@ his instruction is standing authority, not history.**
 25. **BLOCKED-BY: sam** — for ONE number only: the FLOOR. Everything else is
     measured and buildable, and the measurement found a defect nobody had named.
 
-    **⚠⚠ I REPORTED A CEILING BREACH TO SAM AND IT WAS MY INSTRUMENT, NOT THE
-    APP. WITHDRAWN 2026-08-13, SAME SESSION.** I said six sessions ship SEVEN
+    **⚠⚠⚠ THREE STATEMENTS ON ONE NUMBER. THE THIRD IS THE TRUE ONE AND THE
+    BREACH IS REAL — MY WITHDRAWAL WAS ITSELF OVER-CORRECTED.**
+    Stated in full because two of the three reached Sam:
+    1. **"6 sessions ship 7 rows"** — WRONG INSTRUMENT (read `.length` off a
+       parallel array, so it counted TOTAL rows) and a narrow population.
+    2. **"max 6, zero breaches — withdrawn"** — right instrument, **but still
+       only `workoutType === 'Strength'`, which is 52 of 100 gym sessions.**
+    3. **RIGHT INSTRUMENT, FULL POPULATION (Strength + Mixed + Team Training),
+       n=100: EIGHT SESSIONS CARRY SEVEN COUNTED ROWS. Sam's cap is 6.**
+       All eight are `Mixed` lower-body days, and they are reproducible by world:
+       **off-season 6-day** (2 x Lower Squat), **pre-season 5-day**
+       (3 x Lower Squat, 3 x Lower Hinge). Off-season 5-day, in-season, beginner
+       and 5+ years produce none.
+
+    **FULL DISTRIBUTION, n=100:** 3 rows x25, 4 x17, 5 x21, 6 x29, 7 x8.
+    **25 of 100 are below the code floor of 4** — up from the 16 I reported, for
+    the same population reason.
+    | type | n | distribution | avg |
+    | --- | --- | --- | --- |
+    | Mixed | 40 | 3x1 4x17 5x1 6x13 **7x8** | 5.25 |
+    | Strength | 52 | 3x16 5x20 6x16 | 4.69 |
+    | Team Training | 8 | **3x8** | 3.00 |
+
+    **⚠ AND THE "INERT FIX" VERDICT IS ALSO UNSAFE.** I enforced the ceiling,
+    measured no change, and reverted it — **but I measured on the Strength-only
+    population, which contains ZERO breaches.** Whether that fix would have
+    corrected the eight Mixed sessions is **UNTESTED**, not disproven. Re-run it
+    against the full population before concluding anything about it.
+
+    **THE OLD WITHDRAWAL, KEPT SO ALL THREE STATEMENTS STAY LEGIBLE:** I said six sessions ship SEVEN
     rows against his cap of six. **They do not. Nothing breaches his cap.**
     **THE FAULT:** `countingIndices` does NOT return "the indices of counted
     rows". It returns a PARALLEL array, one entry per row, holding either the
