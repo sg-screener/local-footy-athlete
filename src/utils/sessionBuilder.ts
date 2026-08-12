@@ -1374,13 +1374,19 @@ export function buildConditioningSession(
     ...realInputOverrides,
   };
 
-  const progression = resolveConditioningProgression(progressionInput);
-
-  // Apply progression adjustments
-  const adjustedDuration = Math.max(
-    15,
-    baseDuration + (progression.adjustment.durationDelta || 0),
-  );
+  // ── THE RETIRED PROGRESSION LAYER IS GONE (census B1, 2026-08-13) ──
+  //
+  // `resolveConditioningProgression` nudged the duration here, on top of Sam's
+  // authored dose. He retired that system outright on 2026-07-27, Bible `:4966`:
+  // its caps "were never authored ... invented numbers that quietly decide an
+  // athlete's conditioning dose", and Section 6 already says *"Doses come from
+  // the templates sheet. A layer that invents its own conditioning dose is a
+  // defect."* The replacement has been live at `conditioningSelection` the whole
+  // time, so BOTH were dosing — precisely the two-systems state he forbade, with
+  // the older one inventing its numbers.
+  //
+  // THE AUTHORED DOSE NOW SHIPS UNMODIFIED. `baseDuration` is the template's own
+  // number, and nothing between it and the athlete adjusts it.
 
   return {
     id: workoutId,
@@ -1388,18 +1394,17 @@ export function buildConditioningSession(
     dayOfWeek,
     name: result.exerciseName,
     description: result.exerciseName,
-    durationMinutes: adjustedDuration,
+    durationMinutes: baseDuration,
     intensity: conditioningIntensity(result.tier),
     workoutType,
     sessionTier: result.tier === 'C' ? 'recovery' : 'core',
     exercises,
     createdAt: now,
     updatedAt: now,
-    // Store progression metadata for downstream consumers
-    _progressionState: progression.state,
-    _progressionNote: progression.note,
-    _progressionAdjustment: progression.adjustment,
-  } as Workout & { _progressionState?: string; _progressionNote?: string; _progressionAdjustment?: any };
+    // The `_progression*` metadata went with the layer that produced it. It had
+    // NO production reader — measured before removal — so nothing downstream
+    // loses a value it was using.
+  } as Workout;
 }
 
 
