@@ -72,8 +72,60 @@ his instruction is standing authority, not history.**
     changing the mapping** — that number decides whether (a) is small or huge.
 
 
-28-C1. **COD — SIX WALLS DOWN, ONE LEFT. The trail is archived; this is the live
-    state.** Full history verbatim in `docs/SEAT_INBOX_COD_TRAIL_2026-08-13.md`.
+28-C1. **BLOCKED-BY: sam** — **THE SEVENTH WALL IS FOUND, AND IT IS NOT WHERE
+    ANY OF THE SIX LOOKED. COD IS BUILT END TO END AND IS CUT EVERY TIME, BY A
+    RULE OF SAM'S OWN, DOING EXACTLY WHAT HE SAID.** Measured 2026-08-13; the
+    probe this item asked for was run and every premise below it is refuted.
+
+    **THE ONE QUESTION FOR SAM, and it is the only thing left:** COD reaches the
+    athlete's plan correctly, with his own signed label, and is then **removed by
+    the field-load streak cap — because standalone conditioning is the
+    designated first thing cut, which IS his "cut first when something has to
+    give".** On a real week the streak was **Monday–Friday, five field-load days
+    against a cap of three**, so the cut was legitimate. **Result: COD placed 2
+    times across 34 QA weeks and shipped 0.**
+    **SO: should a COD session be protected from the field-load streak cap, or
+    is "an athlete in a busy week never sees COD" the right answer?** Either way
+    is one small change. **Nothing else about COD is open.**
+
+    **THE MEASUREMENT, because three premises died with it.**
+    - **REFUTED — "the block is upstream of eligibility, in the standalone
+      caller's choice of kind".** `pickPlacementCondCategories` OFFERS
+      `cod_decel` on every no-team-training week, and **offers it FIRST**
+      (`codIndex=0`) on six of them. Pass 2 iterates the placement pool
+      directly, so the pool is a source, not only a filter.
+    - **REFUTED — "eligibility never sees `cod_decel` at all".** It sees it and
+      **ALLOWS it**: `allow=true category=cod_decel downgraded=false`, at the
+      real placement site, not just the scoring one.
+    - **REFUTED — my own next hypothesis, before it became a finding.** I
+      suspected `st.condCategories['cod_decel']` was `undefined`, making the
+      uncovered test `undefined === 0` false. **It is initialised to 0**
+      (`coachingEngine.ts:3361`). Recorded because it was wrong, not omitted.
+    - **THE SESSION IS ACTUALLY BUILT:** pushed with
+      `focus="Conditioning - Change of Direction/Decel"` — his tab name, the
+      label 28-C1e fixed — and then demoted to *"Mobility, foam rolling, light
+      movement"* with `conditioningCategory` cleared.
+    - **THE OWNER:** `enforceFieldLoadStreak`'s `isBreakable`, whose own comment
+      says it: *"Standalone conditioning is the most replaceable field-load
+      day."* **COD can only ever BE standalone** — the attached slots correctly
+      refuse a hard category — **so COD is always the first thing this cap eats.**
+
+    **WHY SIX ATTEMPTS MISSED IT: they were all upstream of the push, and the
+    removal is downstream of it.** The bisect took four probes: the count is 1
+    after `optimiseStrengthLoadSequence`, 1 after `enforceWeekendPeak`, and 0
+    after `enforceFieldLoadStreak`.
+    **AND THE "COD = 0" NUMBER WAS ALWAYS TRUE OF THE RIGHT UNIT** — I checked,
+    because four counts have been wrong this session. It is 0 on the ENGINE'S
+    OWN OUTPUT OBJECT (`plan.weeklyPlan`, 34 weeks), not on printed text. My
+    first attempt to count it from the report WAS a bad instrument, and the
+    aerobic control showed only 2 of 4 pushes reaching print, so I stopped
+    using it rather than report from it.
+    **ALL INSTRUMENTATION REMOVED — `coachingEngine.ts` and `weekPlanQA.ts` are
+    byte-identical to HEAD.**
+
+    **BELOW IS THE EARLIER STATE, KEPT BECAUSE ITS SHIPPED LIST IS STILL TRUE.
+    Its "one wall left" paragraph is the part now refuted.**
+    Full history verbatim in `docs/SEAT_INBOX_COD_TRAIL_2026-08-13.md`.
     **OWNED BY THE TERMINAL.**
 
     **SHIPPED AND STANDING** (each survived a revert of the attempt around it):
@@ -194,8 +246,29 @@ his instruction is standing authority, not history.**
     **A FIXTURE INSIDE THE SPAN IS THE SECOND HALF and is NOT the same shape** —
     a game is an anchor the week is built around, not a plan flag, so it needs
     its own measurement before anyone touches it.
-    **NOT STARTED HERE ON THIS ITEM'S OWN INSTRUCTION** — *"start it fresh, not
-    at the end of a session"*. Everything it needs is above.
+    **BUILT, MEASURED, AND THEN BACKED OUT — 2026-08-13, and both reasons are
+    worth more than the code was.**
+    **IT WORKS.** With the filter in, a week planned inside a live trip has NO
+    team day at all: Tue "Team Training + Upper Pull" and Thu "Team Training +
+    Upper Push" become "Lower Body Strength" and "Upper Push", **and the athlete
+    still trains the same five days.** Three cells held it, non-vacuity first,
+    and removing the filter reds the middle one. `test:qa`'s team-day check
+    stayed green and its failure count did not move (84 either side).
+    **REASON 1 — MY OWN RED, AND IT IS A REAL FINDING, NOT A NUISANCE:**
+    `test:action-walker` L4b *"SCREEN = DOMAIN after away_this_week"* goes red —
+    *the resolver says "Hard Conditioning", the screen says "Hard Intervals"*.
+    Proven mine by neutralising only the filter (walker returns to 23/23). **A
+    week without team days is a week shape those two namers had never both been
+    asked about**, so this is a latent naming disagreement the away filter
+    UNCOVERED. **It must be fixed, not suppressed, and it is the first act of
+    the next pass.**
+    **REASON 2 — THE FILE IS NOT FREE.** `coachingEngine.ts` carries the other
+    seat's uncommitted `[COD_STAGE]`/`[COD_ELIG]` probes and their two type
+    errors (`FinisherDecision.category`/`.downgraded`, `:3797`), so
+    `test:compile` cannot pass and my change cannot be committed without
+    carrying their unfinished work. **Backed out rather than left sitting in a
+    shared generator file another agent is mid-edit in.**
+    **NOTHING IS LOST: the build is four edits and all four are named above.**
     The desktop agent has UNCOMMITTED edits in `temporarySourceFactTransaction.ts`
     (last write 05:10) plus four more files, and a `.git/index.lock` stale since
     05:31. **The edit is exactly this item's fix:** `isRuledDerivingConstraint`
