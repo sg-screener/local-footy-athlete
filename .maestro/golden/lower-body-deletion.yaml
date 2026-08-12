@@ -36,23 +36,31 @@ tags:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: lower-body-deletion
-# RE-AIMED AGAIN, 2026-08-12, AND THE RE-AIM FOUND A DEFECT — seat item 0e(i).
+# THIS FLOW WAS RIGHT AND THE WORLD IT RAN IN WAS WRONG — 2026-08-12, item 0e(i).
 #
-# The flow asserted the conditioning part was visible BEFORE the deletion. It is
-# not, and this is not seed drift: after the strength part is deleted the card
-# titles itself "Conditioning" and draws a conditioning part that was there all
-# along. **Today's card does not draw everything today holds** — the athlete has
-# a conditioning session and cannot see it until something else is removed.
-# Photographed both sides and reported to the seat; NOT diagnosed here, because
-# a projection defect is its own unit and this one is a flow.
+# Its assertion that the conditioning part is visible BEFORE the deletion went
+# red, and the first reading of that red was "the card does not draw everything
+# the day holds". **That reading was wrong and is withdrawn.** The cause was the
+# SEED: `stabilizeMicrocycle` rewrote every exercise row id and left
+# `conditioningBlock.options[].exerciseIds` pointing at the old ones, so the
+# conditioning row matched nothing and was filed as strength — in 23 of 23
+# seeded workouts carrying a block, i.e. every seed. The generator's own output
+# was measured at the same time and is correct, so no athlete was ever affected.
 #
-# The flow's claim is unchanged and is the true one: deleting the strength part
-# leaves a day that still trains. What moved is WHEN the conditioning witness is
-# asserted — after the deletion, where the screen actually shows it.
+# Fixed in `devE2ESeedRegistry.ts`, held by `test:dev-e2e-seeds`. The assertion
+# below is therefore restored to what it always said.
+#
+# NOT RE-RUN ON GLASS: the simulator belongs to another agent (Sam, 2026-08-12,
+# "don't drive the simulator"). Proven instead where a suite can see it —
+# `projectParts` now yields `strength` AND `conditioning` for this day, and
+# yielded only `strength` before. `docs/GOLDEN_FLOW_RUN_RECEIPT.md` carries the
+# owed run.
 - assertVisible:
     id: "day-timeline-part-strength"
 - assertVisible:
     id: "day-timeline-part-mobility-warmup"
+- assertVisible:
+    id: "day-timeline-part-conditioning"
 - tapOn:
     id: "make-change-link"
 - tapOn:

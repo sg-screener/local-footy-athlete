@@ -327,31 +327,66 @@ function stabilizeMicrocycle(
     updatedAt: FIXED_TIMESTAMP,
     workouts: stable.workouts.map((workout) => {
       const workoutId = `dev-e2e-${seedId}-${weekStartDate}-dow-${workout.dayOfWeek}`;
+      // A RENAME CARRIES ITS REFERENCES OR IT IS A DELETION.
+      //
+      // Row ids are rewritten below to make a seed reproducible. Anything that
+      // POINTS AT a row by id has to travel with the rename, and until
+      // 2026-08-12 nothing did — so `conditioningBlock.options[].exerciseIds`
+      // still named the generator's ids, matched no row, and
+      // `conditioningIdsFromBlock` returned an empty set. The conditioning work
+      // was then filed as strength: **23 of 23 seeded workouts carrying a
+      // conditioning block lost their conditioning component**, every seed, and
+      // a day the generator built as "Strength + Conditioning" seeded as
+      // "Strength" with the conditioning buried inside the strength part.
+      //
+      // THE RAW GENERATED PROGRAM IS CORRECT AND WAS MEASURED — 4 of 4 blocks
+      // resolve, components read `strength, conditioning`. The loss belonged
+      // entirely to this stabiliser, which is why it was invisible to every
+      // suite that reads the generator and visible only by driving a seeded app.
+      //
+      // The map below is the whole fix: identities may change here, CONTENT may
+      // never. `test:dev-e2e-seeds` holds it.
+      const rowIdRewrites = new Map<string, string>();
+      const exercises = workout.exercises.map((exercise, exerciseIndex) => {
+        const exerciseIdentity = stableIdPart(
+          exercise.exerciseId || exercise.exercise?.id || String(exerciseIndex + 1),
+        );
+        const stableRowId = `${workoutId}-exercise-${exerciseIdentity}-${exerciseIndex + 1}`;
+        if (exercise.id) rowIdRewrites.set(String(exercise.id), stableRowId);
+        return {
+          ...exercise,
+          id: stableRowId,
+          workoutId,
+          createdAt: FIXED_TIMESTAMP,
+          updatedAt: FIXED_TIMESTAMP,
+          exercise: exercise.exercise
+            ? {
+                ...exercise.exercise,
+                createdAt: FIXED_TIMESTAMP,
+                updatedAt: FIXED_TIMESTAMP,
+              }
+            : exercise.exercise,
+        };
+      });
+      const conditioningBlock = workout.conditioningBlock
+        ? {
+            ...workout.conditioningBlock,
+            options: workout.conditioningBlock.options.map((option) => ({
+              ...option,
+              exerciseIds: (option.exerciseIds ?? []).map(
+                (rowId) => rowIdRewrites.get(String(rowId)) ?? rowId,
+              ),
+            })),
+          }
+        : workout.conditioningBlock;
       return {
         ...workout,
         id: workoutId,
         microcycleId,
         createdAt: FIXED_TIMESTAMP,
         updatedAt: FIXED_TIMESTAMP,
-        exercises: workout.exercises.map((exercise, exerciseIndex) => {
-          const exerciseIdentity = stableIdPart(
-            exercise.exerciseId || exercise.exercise?.id || String(exerciseIndex + 1),
-          );
-          return {
-            ...exercise,
-            id: `${workoutId}-exercise-${exerciseIdentity}-${exerciseIndex + 1}`,
-            workoutId,
-            createdAt: FIXED_TIMESTAMP,
-            updatedAt: FIXED_TIMESTAMP,
-            exercise: exercise.exercise
-              ? {
-                  ...exercise.exercise,
-                  createdAt: FIXED_TIMESTAMP,
-                  updatedAt: FIXED_TIMESTAMP,
-                }
-              : exercise.exercise,
-          };
-        }),
+        exercises,
+        ...(workout.conditioningBlock ? { conditioningBlock } : {}),
       };
     }),
   };

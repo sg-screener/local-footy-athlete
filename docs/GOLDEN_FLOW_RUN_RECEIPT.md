@@ -36,7 +36,7 @@ string `${E2E_METRO_URL}`.
 | `explorer-all-nine.yaml` | NOT RUN | Never run this pass. Carried as debt, not as a claim. |
 | `fixture-move.yaml` | NOT RUN | RED on the dead `fixture-actions-open` id (pre-existing). |
 | `injury-case` (seed, via `reset-seed`) | 2026-08-10 | **WITNESS FAILURE GONE.** Now blocked behind the calendar-storage durability defect — a DIFFERENT problem, priced in the slice 3 boundary addendum 4. |
-| `lower-body-deletion.yaml` | 2026-08-12 | **RAN AND WENT RED, THEN FOUND A DEFECT.** Its 2026-08-10 assertion that today shows a conditioning part is false — the part exists and the card does not draw it until the strength part is deleted. Re-aimed and extended to the whole-day scope; **the re-run is owed** (see the note below). |
+| `lower-body-deletion.yaml` | 2026-08-12 | **RAN, WENT RED, AND THE RED WAS THE SEED — not the app and not the flow.** Its assertion that today shows a conditioning part was correct; `stabilizeMicrocycle` had been breaking the conditioning block's row references in every seed. Fixed at the seed, held by `test:dev-e2e-seeds`; the flow's assertion is restored and the file now also covers the whole-day scope and a relaunch. **RE-RUN OWED — the simulator belongs to another agent.** |
 | `one-set-feedback.yaml` | NOT RUN | Re-aimed 2026-08-10, never executed since. |
 | `reload-standard-week.yaml` | NOT RUN | Blocked behind the seeded world's durability (4 game days in memory, 1 on disk). |
 | `session-move.yaml` | 2026-08-12 | PASS — whole session moved onto the empty Sunday, Monday redrawn as rest, Sunday as scheduled, and both survive a checkpoint + relaunch. First run, no iteration. |

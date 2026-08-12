@@ -7,6 +7,7 @@ import {
 } from '../dev/e2e/devE2ESeedRegistry';
 import { DEV_E2E_SCENARIO_MANIFESTS } from '../dev/e2e/devE2EScenarioManifestRegistry';
 import { semanticFingerprint } from '../dev/e2e/semanticFingerprint';
+import { getSessionComponents } from '../utils/sessionComponents';
 import { buildDevE2EWitnessState } from './devE2ESeedTestSupport';
 
 let passed = 0;
@@ -86,6 +87,72 @@ try {
       `${seedId} keeps its typed witness contract`,
       seed.witnesses.map((witness) => witness.kind).join(',') ===
         EXPECTED_WITNESS_KINDS[seedId],
+    );
+  }
+
+  // ── STABILISATION MAY CHANGE IDENTITIES; IT MAY NEVER CHANGE CONTENT ─────
+  //
+  // FOUNDING CASE, 2026-08-12, and it was found by DRIVING a seeded app rather
+  // than by reading code. `stabilizeMicrocycle` rewrites every exercise row id
+  // so a seed is reproducible, and nothing rewrote the references TO those ids.
+  // `conditioningBlock.options[].exerciseIds` still named the generator's ids,
+  // matched no row, and `conditioningIdsFromBlock` returned an empty set — so
+  // the conditioning work was filed as strength.
+  //
+  // **23 of 23 seeded workouts carrying a conditioning block were affected —
+  // every seed, not a sample.** A Monday the generator built as strength PLUS a
+  // walk seeded as strength alone, with the walk buried inside the strength
+  // part, and the day-first card drew one component where the athlete has two.
+  // The raw generated program was measured at the same time and is CORRECT
+  // (4 of 4 blocks resolve), so this never reached a real athlete — it made
+  // every seeded world a world no athlete is in, which is the fixture-fidelity
+  // law's exact subject.
+  //
+  // A RENAME CARRIES ITS REFERENCES OR IT IS A DELETION. That is what this
+  // cell holds, and it is stated as the general rule because the next field to
+  // point at a row id will arrive the same way this one did.
+  {
+    let workoutsWithBlock = 0;
+    let unresolvedBlockIds = 0;
+    let workoutsWithConditioningComponent = 0;
+    for (const seedId of DEV_E2E_SEED_IDS) {
+      for (const microcycle of buildDevE2ESeed(seedId).program.microcycles) {
+        for (const workout of microcycle.workouts) {
+          const options = workout.conditioningBlock?.options ?? [];
+          if (options.length === 0) continue;
+          workoutsWithBlock += 1;
+          const rowIds = new Set((workout.exercises ?? []).map((row) => String(row.id)));
+          for (const option of options) {
+            for (const rowId of option.exerciseIds ?? []) {
+              if (!rowIds.has(String(rowId))) unresolvedBlockIds += 1;
+            }
+          }
+          if (getSessionComponents(workout).some((part) => part.kind === 'conditioning')) {
+            workoutsWithConditioningComponent += 1;
+          }
+        }
+      }
+    }
+    // ANTI-VACUOUS: a world with no conditioning blocks would satisfy the
+    // resolve check by having nothing to resolve.
+    ok(
+      'the seeds still contain conditioning blocks for this cell to read',
+      workoutsWithBlock >= 20,
+      `only ${workoutsWithBlock} seeded workouts carry a conditioning block`,
+    );
+    ok(
+      'every conditioning block id resolves to a row on its own workout',
+      unresolvedBlockIds === 0,
+      `${unresolvedBlockIds} of the block ids across ${workoutsWithBlock} workouts point at no row — `
+      + 'the stabiliser renamed rows without carrying their references',
+    );
+    // THE CONSEQUENCE, ASSERTED SEPARATELY FROM THE CAUSE. Ids that resolve are
+    // only interesting because the component survives; asserting the id alone
+    // would pass on a classifier that had stopped reading the block at all.
+    ok(
+      'a seeded day that carries attached conditioning still reports it as a component',
+      workoutsWithConditioningComponent === workoutsWithBlock,
+      `${workoutsWithConditioningComponent} of ${workoutsWithBlock} report a conditioning component`,
     );
   }
 

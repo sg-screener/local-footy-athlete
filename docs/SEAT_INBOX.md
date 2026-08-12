@@ -329,6 +329,35 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **CHECK FIRST whether a working recipe already exists** in `package.json` or
    the Maestro setup; if it does, name it rather than writing a second one.
 
+0f. **THE "HIDDEN SESSION" IS FIXED — AND MY FIRST READING OF IT WAS WRONG.**
+   **Sam, 2026-08-12: fix it, and do NOT drive the simulator — Claude Code owns
+   it.** Both obeyed: this was worked entirely in node.
+   **THE CORRECTION FIRST.** 0e reported that today's card does not draw
+   everything the day holds. **It draws everything the day holds. The SEED was
+   wrong.** `stabilizeMicrocycle` rewrites every exercise row id to make a seed
+   reproducible and **never rewrote `conditioningBlock.options[].exerciseIds`**,
+   so the block pointed at ids no row had, the conditioning row was filed as
+   strength, and `getSessionComponents` reported one component where the day has
+   two. **23 of 23 seeded workouts carrying a block — every seed, not a sample.**
+   **THE GENERATOR'S OWN OUTPUT WAS MEASURED AT THE SAME TIME AND IS CORRECT**
+   (4 of 4 blocks resolve; components read `strength, conditioning`). **No
+   athlete was ever affected and no product code changed.**
+   **FIXED IN THE SEED, PROVEN WITHOUT GLASS:** `projectParts` for that Monday
+   now yields `strength` AND `conditioning`; before the fix, `strength` alone.
+   Three cells in `test:dev-e2e-seeds` (cause, consequence, anti-vacuous),
+   mutation-checked. Registry row `LAW-rename-carries-its-references`, 101/69 ->
+   102/70, UNENFORCED unmoved at 32.
+   **THE COST OF THE SEED BUG BEYOND THIS BUG:** every seeded world was a world
+   no athlete is in, on exactly the axis the fixture-fidelity law names.
+   **⚠ OWED AND BLOCKED: the deletion flow's re-run on glass**, because the
+   simulator is Claude Code's until Sam says otherwise.
+   **⚠ THREE REDS IN THIS TREE ARE NOT MINE** — `test:compile` on untracked
+   `fixtureSettleAfterSetupTests.ts`; `test:dev-e2e-seeds` and
+   `test:dev-e2e-scenario-session` on the same pre-existing "manifests add no
+   seed families" cell (identical name for name at HEAD, measured both ways);
+   and `test:repo-law-guards`' orphan-flow cell now names the other agent's
+   untracked `.maestro/tmp-gameday-verify.yaml`.
+
 0e. **BOTH BUILT. THE CENSUS CAME FIRST AND IT PAID TWICE.**
    **(i) THE SET WAS NOT A SET.** Of the five named flows: **move a session had
    NOTHING** — `fixture-move.yaml` moves a GAME, and the explorer's `session.move`

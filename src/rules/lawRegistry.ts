@@ -716,6 +716,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-rename-carries-its-references',
+    law: 'A step that rewrites identities rewrites everything that points at them. Seed stabilisation may change ids; it may never change content.',
+    ruledAt: 'src/dev/e2e/devE2ESeedRegistry.ts stabilizeMicrocycle header, 2026-08-12 — the founding case, measured rather than ruled: 23 of 23 seeded workouts carrying a conditioning block had lost it.',
+    guard: {
+      state: 'guarded',
+      by: 'test:dev-e2e-seeds',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. FOUNDING CASE, AND IT WAS FOUND BY DRIVING A SEEDED APP, NOT BY READING CODE. `stabilizeMicrocycle` rewrites every exercise row id so a seed is reproducible; nothing rewrote `conditioningBlock.options[].exerciseIds`, so `conditioningIdsFromBlock` matched no row, the conditioning work was filed as strength, and `getSessionComponents` reported one component where the day had two. Measured: 23 of 23 seeded workouts with a block, EVERY seed — and the raw generated program measured CORRECT at the same time (4 of 4 blocks resolve), so no athlete was ever affected and no product code changed. THE FIRST READING OF THE SYMPTOM WAS WRONG and is withdrawn in the same commit: the day card was accused of not drawing what the day holds. THREE CELLS, one anti-vacuous (>= 20 seeded workouts must still carry a block, or "every id resolves" passes on nothing to resolve), one on the cause (ids resolve) and one on the consequence (the component survives) — asserting the id alone would pass on a classifier that had stopped reading the block. Mutation: dropping the rewrite while keeping the cells reds two of the three, and the anti-vacuous cell correctly stays green.',
+    },
+  },
+  {
     id: 'LAW-canonical-athlete-flows',
     law: 'There is a small permanent set of athlete flows — move a session, delete a session, preview and approve a repaired week, relaunch and prove persistence, clear or reverse an adjustment. A bug earns an assertion inside one of them, never a new throwaway flow.',
     ruledAt: 'docs/SEAT_INBOX.md item 0e(i), Sam 2026-08-12: "You do not need a brand-new temporary Maestro flow for every bug. Keep a handful of canonical athlete flows."',
