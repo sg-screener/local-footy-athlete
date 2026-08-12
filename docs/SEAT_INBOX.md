@@ -704,9 +704,10 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **ATLAS §4.4's PREMISE IS REFUTED WHERE IT MATTERS.** Over 120 generated
    sessions: **Strength 5-6, Mixed 4-6, Team Training 2-4. ZERO over the
    authored ceiling of 6**, so enforcing the ceiling would guard a shape that
-   does not occur — **and all 26 sessions under 4 are TEAM-TRAINING nights**, a
-   day the athlete is already at the club. The 3-row branches are real code but
-   are not what reaches the athlete on a strength or mixed day.
+   does not occur — **and all 26 sessions under 4 are TEAM-TRAINING nights**.
+   **I THEN CALLED THAT CORRECT BECAUSE THE ATHLETE IS "already at the club",
+   AND SAM STRUCK IT AS FALSE — see item 21.** Same day is not same place. The
+   26 are a DEFECT; the comment that justified them is deleted.
    **BUILT — the part needing no ruling.** `MIN_SESSION_SIZE` was PRIVATE to
    `exerciseScorer`, making session size two representations. It is now
    `SESSION_SIZE_FLOOR` in `sessionRowCounting`, **labelled UNAUTHORED**. Same
@@ -983,12 +984,41 @@ phone.** State device items as PARKED in a stop report, never as a request.
     Bible already carries this exact line** (`testingBias.ts:52-53`, quoting
     `:378`). Wire it; do not author a rival.
 
-    **GENERATION, SO STAND-DOWN D HOLDS. One thing to check first, then build
-    when the generator is free:** the size comes from the template
-    (`sessionBuilder.ts:718`), not from any team-night branch — so **find out
-    whether the counted rows include the "Team Training" row itself.** If they
-    do, a "4-exercise" team night is really a 3-exercise lift and a "2" is a
-    single exercise. Different defect, different fix; say which.
+    **AND SAM HAS NAMED THE SHAPE. 2026-08-13:** *"team training should be
+    looked at more like conditioning - it's not part of the strength exercises -
+    it's its own component of the day"*. **THE CHECK THIS ITEM ORDERED IS
+    ANSWERED, AND HE IS RIGHT — MEASURED, three receipts:**
+    - **A team-training row lives in `workout.exercises`, the same array as the
+      lifts.** `teamTraining.ts:126` `splitTeamTrainingFromExercises` exists
+      solely to pull them back out for display.
+    - **`ROLES_EXEMPT_FROM_COUNTING` has ONE member: `'power'`**
+      (`sessionRowCounting.ts:64`). There is no `team_training` role at all —
+      `SessionRole` is power / main_lift / accessory / midline / prehab /
+      conditioning (`sessionRoles.ts:28-34`). **So a team-training row COUNTS
+      against the per-session exercise budget.** That is the defect, stated.
+    - **IT IS IDENTIFIED BY NAME, WHICH THAT MODULE BANS IN ITS OWN HEADER.**
+      `isTeamTrainingItem` (`teamTraining.ts:103-119`) matches on
+      `workoutType`, a name set, and three regexes. `sessionRowCounting.ts:36-37`
+      reads: *"FILTER BY ROLE BEFORE ANY NAME PROBE RUNS. A name probe over an
+      unfiltered list is the bug."*
+
+    **THE FIX IS THE ONE THAT MODULE WAS BUILT TO RECEIVE, AND ITS HEADER SAYS
+    SO.** `sessionRowCounting.ts:57-61`: *"`conditioningBlock` and `speedBlock`
+    have the same shape problem power did ... when they become rows they join
+    this set rather than growing a second mechanism beside it."* **Team training
+    is the third case of that exact shape. Give it an authored role and add that
+    role to `ROLES_EXEMPT_FROM_COUNTING`. Do not write a name-based exemption
+    beside the fence — that is the banned pattern, in the file that bans it.**
+    **The header comment says adding a role here is a counting change and must
+    come with a golden diff. Bring one.**
+
+    **THE COUNTS IN THE 120-SESSION MEASUREMENT ARE THEREFORE OVERSTATED.** A
+    "4-exercise" team night is a 3-exercise lift; a "2" is a single exercise.
+    **Re-run and re-report with team-training rows excluded before building
+    anything — the real gap is bigger than the item says.**
+
+    **GENERATION, SO STAND-DOWN D HOLDS ON THE BUILD.** The measurement above is
+    already done; the re-count is a harness run and needs no generator edit.
 
     **Sam, on testing:** *"run whatever little tests you have to"*. Behavioural
     cells, and the 120-session distribution is the instrument: team nights join
