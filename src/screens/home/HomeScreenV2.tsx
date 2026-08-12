@@ -114,6 +114,7 @@ export default function HomeScreenV2() {
     showAddFixtureCTA,
     currentPhase,
     coachNotes,
+    programModifiers,
     modifierCount,
     handleOpenMyStatus,
     activeConstraints,
@@ -1130,7 +1131,7 @@ export default function HomeScreenV2() {
           never list a different number of things than the row that opened it. */}
       <ModifiersSheet
         visible={modifiersSheetOpen}
-        modifiers={coachNotes}
+        modifiers={programModifiers}
         onClose={() => setModifiersSheetOpen(false)}
         onGoToStatus={() => {
           // CLOSED BEFORE NAVIGATING, and it matters on a real device: a modal

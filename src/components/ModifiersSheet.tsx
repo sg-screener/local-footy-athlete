@@ -20,15 +20,26 @@
  * So `note.actions` is deliberately NOT read here. The two controls this sheet
  * has are a navigation and a dismiss, and neither changes a modifier.
  *
- * WHY IT RENDERS `title` + `body` AND NOT A TWO-WORD EFFECT COLUMN. His
- * prototype's rows read "Time away / Training volume adjusted" and "Equipment
- * access / Exercises substituted" — a short effect phrase per row. No such
- * phrase exists in the domain: `ActiveCoachNote` carries `title` and `body`,
- * and there is no signed effect wording for the other modifier kinds. Inventing
- * one per kind would put unsigned athlete-facing words on the glass, which is
- * the one thing `SignedCopy` exists to stop. So each row shows the modifier's
- * OWN authored title and its OWN authored sentence — the same two strings My
- * Status shows, because they are the same modifier describing itself.
+ * THE RIGHT-HAND COLUMN IS SAM'S, SIGNED 2026-08-13 (SEAT_INBOX 22a). Eight
+ * short phrases, one per modifier kind, keyed off the modifier's own `effect`
+ * — a field its BUILDER sets, because only the builder can tell a tired week
+ * from a sick one or an injury worked around from an injury that stopped
+ * training. `EFFECT_COPY_ID` is a `Record` over the closed union, so adding a
+ * member without giving it a phrase does not compile.
+ *
+ * FOUR KINDS DELIBERATELY HAVE NO PHRASE and fall back to their own authored
+ * sentence: exercise preferences, pool preferences, modality swaps and
+ * soreness. Sam's list does not name them, and writing one per kind is the
+ * unsigned-athlete-words defect `SignedCopy` exists to stop. Owed, and recorded
+ * under `## AWAITING SAM`.
+ *
+ * TIME CAPS RENDER NO ROW AT ALL (22b). Sam: *"i've taken out time caps for
+ * now"*. **And they are absent from the COUNT as well, by his 2026-08-13
+ * ruling** — the notice above this sheet counts what this sheet lists, so
+ * hiding only the row would have put "2 active modifiers" over a list of one.
+ * `PROGRAM_HIDDEN_EFFECTS` is the one filter, exported so the count and the
+ * list cannot apply different ones. My Status is unfiltered on purpose: it
+ * holds the only control that clears a cap.
  */
 
 import React from 'react';
@@ -37,7 +48,30 @@ import { Text } from './common/Text';
 import { Button, Sheet } from './ui';
 import { signedCopy } from '../rules/signedCopy';
 import type { ActiveCoachNote } from '../utils/activeCoachNotes';
+import type { ActiveProgramModifierEffect } from '../utils/activeProgramModifiers';
 import { spacing } from '../theme/spacing';
+import { isShownOnProgram } from '../rules/programModifierVisibility';
+
+/**
+ * Sam's eight phrases, by effect. `null` means "no short phrase" and the row
+ * shows the modifier's own sentence instead — never an invented phrase.
+ *
+ * A `Record` over the closed union, so a new effect member CANNOT be added
+ * without a decision here. That is the same trick the family table used in item
+ * 14, where the compiler found an eleventh family nobody had noticed.
+ */
+const EFFECT_COPY_ID: Record<ActiveProgramModifierEffect, string | null> = {
+  volume_adjusted: 'modifiers.effect.volume_adjusted',
+  training_eased: 'modifiers.effect.training_eased',
+  exercises_swapped: 'modifiers.effect.exercises_swapped',
+  training_paused: 'modifiers.effect.training_paused',
+  exercises_substituted: 'modifiers.effect.exercises_substituted',
+  sessions_moved: 'modifiers.effect.sessions_moved',
+  planned_lighter: 'modifiers.effect.planned_lighter',
+  week_rebuilt: 'modifiers.effect.week_rebuilt',
+  not_shown: null,
+  unsigned: null,
+};
 
 export interface ModifiersSheetProps {
   readonly visible: boolean;
@@ -60,7 +94,7 @@ export function ModifiersSheet({
       <Text style={styles.body}>{signedCopy('modifiers.sheet.body')}</Text>
 
       <View style={styles.list}>
-        {modifiers.map((note) => (
+        {modifiers.filter(isShownOnProgram).map((note) => (
           // KEYED AND ADDRESSED BY THE MODIFIER'S OWN CONSTRAINT ID, the same
           // identity My Status uses. An array position would rename every row
           // the moment one modifier clears.
@@ -70,7 +104,13 @@ export function ModifiersSheet({
             testID={`modifiers-sheet-row-${note.constraintId}`}
           >
             <Text style={styles.rowTitle} numberOfLines={2}>{note.title}</Text>
-            <Text style={styles.rowBody}>{note.body}</Text>
+            {/* SAM'S PHRASE WHERE HE WROTE ONE; THE MODIFIER'S OWN SENTENCE
+                OTHERWISE. Never a phrase this file made up. */}
+            <Text style={styles.rowBody}>
+              {EFFECT_COPY_ID[note.effect]
+                ? signedCopy(EFFECT_COPY_ID[note.effect] as string)
+                : note.body}
+            </Text>
           </View>
         ))}
       </View>

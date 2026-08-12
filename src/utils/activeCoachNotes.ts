@@ -8,6 +8,7 @@ import {
   type ActiveProgramModifierActionKind,
   type ActiveProgramModifierSnapshot,
   type ActiveProgramModifierType,
+  type ActiveProgramModifierEffect,
 } from './activeProgramModifiers';
 import { useCoachUpdatesStore, type ActiveConstraint } from '../store/coachUpdatesStore';
 import type { InjuryState } from './injuryProgression';
@@ -21,6 +22,12 @@ export interface ActiveCoachNote {
   modifierId: string;
   constraintId: string;
   type: ActiveCoachNoteType;
+  /**
+   * What this modifier DID, for the sheet's right-hand column. Carried from
+   * the modifier rather than re-derived here: only the builder can tell a
+   * tired week from a sick one, and a second derivation is a second answer.
+   */
+  effect: ActiveProgramModifierEffect;
   title: string;
   body: string;
   severity?: number;
@@ -67,6 +74,7 @@ export function buildCoachNotesFromModifiers(
     modifierId: modifier.id,
     constraintId: modifier.sourceId,
     type: modifier.type,
+    effect: modifier.effect,
     title: modifier.title,
     body: modifier.body,
     severity: modifier.severity,

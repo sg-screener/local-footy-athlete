@@ -22,6 +22,7 @@ import {
 } from '../../utils/weekRebuild';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
+import { isShownOnProgram } from '../../rules/programModifierVisibility';
 import {
   getActiveProgramModifiers,
   type ActiveProgramModifier,
@@ -432,10 +433,35 @@ export function useHomeScreen() {
    * My Status renders, which is why the number on the day screen cannot
    * disagree with the list behind it.
    */
-  const { modifiers: coachNotes, count: modifierCount } = useActiveModifiers({
+  const { modifiers: coachNotes } = useActiveModifiers({
     visibleWeekDays: weekDays,
     weekKind: visibleWeekKind,
   });
+
+  /**
+   * WHAT PROGRAM SHOWS, AND THEREFORE WHAT PROGRAM COUNTS — SEAT_INBOX 22(b).
+   *
+   * **Sam, 2026-08-13:** *"hide time caps from the Program count and the popup
+   * together, keep them on My Status."*
+   *
+   * ONE FILTER, APPLIED ONCE, FEEDING BOTH. The notice's number and the sheet's
+   * rows are the same array here, so they cannot disagree — which was the whole
+   * risk in hiding a row. `isShownOnProgram` lives beside the sheet that renders
+   * the rows, so there is no second copy of the rule to drift.
+   *
+   * `coachNotes` STAYS WHOLE for `coachNoteActions` below: the action router is
+   * about what CAN be acted on, not what Program draws, and narrowing it here
+   * would quietly remove a door rather than a row.
+   *
+   * MY STATUS IS UNFILTERED, by the same ruling — it holds the only control
+   * that clears a time cap, so filtering there would strand an active
+   * constraint with no door at all.
+   */
+  const programModifiers = useMemo(
+    () => coachNotes.filter(isShownOnProgram),
+    [coachNotes],
+  );
+  const modifierCount = programModifiers.length;
 
   useEffect(() => {
     if (!pendingFixtureObservation) return;
@@ -1409,6 +1435,7 @@ export function useHomeScreen() {
     showAddFixtureCTA,
     currentPhase,
     coachNotes,
+    programModifiers,
     modifierCount,
     handleOpenMyStatus,
     activeConstraints,

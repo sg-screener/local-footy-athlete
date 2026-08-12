@@ -92,6 +92,46 @@ export interface ActiveProgramModifierAction {
   label: string;
 }
 
+/**
+ * WHAT THIS MODIFIER DID TO THE PROGRAM, IN SAM'S OWN WORDS — SEAT_INBOX 22(a).
+ *
+ * He signed eight short phrases for the modifier sheet's right-hand column on
+ * 2026-08-13. This union is the discriminator they hang off, and it exists as a
+ * FIELD ON THE MODIFIER rather than a lookup in the sheet for one reason: the
+ * sheet cannot tell a tired week from a sick one. `type` is four broad kinds
+ * (`injury`, `temporary_status`, `exercise_adjustment`, `coach_restriction`)
+ * and `source` is where the fact came from; neither separates "cooked" from
+ * "sick", or an injury being worked around from an injury that PAUSED
+ * training. Only the builder knows, so only the builder can say.
+ *
+ * WRITER: every builder in this file, one `effect` each. READER:
+ * `ModifiersSheet`, through a `Record` over this union so the compiler demands
+ * a phrase for every member the day a member is added. TEST:
+ * `test:modifier-effect-phrases`.
+ *
+ * `'not_shown'` IS A DECISION, NOT AN ABSENCE. Sam withdrew time caps on
+ * 2026-08-13 — *"i've taken out time caps for now"* — so a time-cap modifier
+ * renders no row. Spelling that as a named member rather than `undefined`
+ * keeps it a ruling anyone can find, and keeps the `Record` total.
+ *
+ * `'unsigned'` IS THE HONEST GAP. Three live builders — exercise preferences,
+ * athlete pool preferences and modality swaps — are not in Sam's eight. They
+ * keep their own authored sentence and get NO short phrase, because inventing
+ * one per kind is precisely the unsigned-athlete-words defect `SignedCopy`
+ * exists to prevent. It is recorded under `## AWAITING SAM`.
+ */
+export type ActiveProgramModifierEffect =
+  | 'volume_adjusted'
+  | 'training_eased'
+  | 'exercises_swapped'
+  | 'training_paused'
+  | 'exercises_substituted'
+  | 'sessions_moved'
+  | 'planned_lighter'
+  | 'week_rebuilt'
+  | 'not_shown'
+  | 'unsigned';
+
 export interface ActiveProgramModifier {
   id: string;
   source: ActiveProgramModifierSource;
@@ -99,6 +139,8 @@ export interface ActiveProgramModifier {
   type: ActiveProgramModifierType;
   title: string;
   body: string;
+  /** See `ActiveProgramModifierEffect`. Required, so a new builder must choose. */
+  effect: ActiveProgramModifierEffect;
   severity?: number;
   actions: ActiveProgramModifierAction[];
   affects: ActiveProgramModifierAffect[];
@@ -626,6 +668,8 @@ function deloadWeekModifier(
     type: 'temporary_status',
     title: 'Deload week active',
     body,
+    // Sam's phrase: a deload is PLANNED, not a setback.
+    effect: 'planned_lighter',
     affects: ['current_week'],
     actions: [],
     payload: {
@@ -646,6 +690,10 @@ function deterministicProgramEffectModifiers(
     type: 'temporary_status',
     title: descriptor.title,
     body: descriptor.body,
+    // NOT IN SAM'S EIGHT. These are generated programme-effect notes —
+    // "Training adaptation active", "Beginner dose active", "Small session
+    // before your game". They keep their own authored sentence.
+    effect: 'unsigned',
     affects: descriptor.affects,
     actions: [],
     payload: {
@@ -836,6 +884,10 @@ function injuryModifier(
     source,
     sourceId: c.id,
     type: 'injury',
+    // BOTH OF SAM'S INJURY ROWS, SPLIT ON THE SAME FLAG THE TITLE USES.
+    // `isSerious` is 8-10/10 or an explicit `training_paused` level, and it is
+    // the difference between working AROUND an injury and stopping for it.
+    effect: isSerious ? 'training_paused' : 'exercises_swapped',
     title: c.modifierTitle ?? (isSerious ? 'Training paused for injury' : `${displayPart} issue active`),
     body: c.modifierBody ?? fallbackBody,
     severity: c.severity,
@@ -913,11 +965,36 @@ function statusModifier(
     ? 'End temporary restriction'
     : 'Schedule is back to normal';
 
+  /* SAM'S PHRASES FOR EVERY READINESS AND SCHEDULE FACT (SEAT_INBOX 22a).
+     Branched on `readinessFactKind`, the SAME typed discriminator the title
+     already reads — not on the constraint type, which is what once made a
+     severe illness read as "Recovery mode active" (every health fact shares
+     the `fatigue` constraint type).
+
+     TIME CAPS ARRIVE HERE TOO, and this is their SECOND door: a time cap can
+     be a `schedule` constraint with `scheduleKind: 'time_cap'` as well as a
+     `time_limit` availability constraint. Sam withdrew time caps on
+     2026-08-13, so both doors render no row — finding one and missing the
+     other would have hidden the row on one path and shown it on the other.
+
+     SORENESS IS DELIBERATELY UNSIGNED. Sam's row reads "Cooked / tired", and
+     soreness is neither; its own sentence names the body part, which is more
+     than a short phrase could say. Recorded under `## AWAITING SAM`. */
+  const effect: ActiveProgramModifierEffect =
+    readinessFactKind === 'illness' ? 'training_eased'
+      : readinessFactKind === 'fatigue' || readinessFactKind === 'poor_sleep' ? 'volume_adjusted'
+        : readinessFactKind === 'soreness' ? 'unsigned'
+          : c.type === 'schedule' && c.scheduleKind === 'time_cap' ? 'not_shown'
+            : c.type === 'schedule' && c.noteProof?.kind === 'game_change' ? 'week_rebuilt'
+              : c.type === 'schedule' ? 'sessions_moved'
+                : 'unsigned';
+
   return {
     id: modifierId(source, c.id),
     source,
     sourceId: c.id,
     type: isCoachRestriction ? 'coach_restriction' : 'temporary_status',
+    effect,
     title: modifierString(sourceConstraint, 'modifierTitle') ?? fallbackTitle,
     body: modifierString(sourceConstraint, 'modifierBody') ?? fallbackBody,
     severity: 'severity' in c ? c.severity : undefined,
@@ -1039,6 +1116,7 @@ function equipmentModifier(
     source,
     sourceId: c.id,
     type: 'coach_restriction',
+    effect: 'exercises_substituted',
     title: modifierString(c, 'modifierTitle') ?? title,
     body: modifierString(c, 'modifierBody') ??
       equipmentModifierBody(c, affects, equipmentHasVisibleProof(c, visibleWeekDays)),
@@ -1100,6 +1178,9 @@ function preferenceModifier(
     source,
     sourceId: c.id,
     type: 'exercise_adjustment',
+    // NOT IN SAM'S EIGHT — an exercise preference (avoid, preferred
+    // alternative, or an added focus). Keeps its own authored sentence.
+    effect: 'unsigned',
     title,
     body,
     affects: ['future_generation'],
@@ -1128,6 +1209,8 @@ function athletePreferenceModifier(
     source: 'athlete_preferences',
     sourceId,
     type: 'exercise_adjustment',
+    // NOT IN SAM'S EIGHT — an excluded or pinned exercise. Keeps its sentence.
+    effect: 'unsigned',
     title: kind === 'excluded'
       ? `${displayExercise} adjustment active`
       : `${displayExercise} preference active`,
@@ -1166,6 +1249,8 @@ function modalityModifier(
     source: 'modality_preferences',
     sourceId: key,
     type: 'exercise_adjustment',
+    // NOT IN SAM'S EIGHT — a conditioning slot swapped (bike for run).
+    effect: 'unsigned',
     title: `${prettySessionKey(key)} adjustment active`,
     body: from
       ? `Similar sessions will use ${to} instead of ${from}.`
@@ -1188,6 +1273,8 @@ function availabilityModifier(
       source: 'profile_availability',
       sourceId: constraint.id,
       type: 'coach_restriction',
+      // Sam's phrase: a day the athlete cannot train MOVES sessions.
+      effect: 'sessions_moved',
       title: `${constraint.dayOfWeek} unavailable`,
       body: `Your program is avoiding training on ${constraint.dayOfWeek}.`,
       affects: ['future_generation'],
@@ -1204,6 +1291,11 @@ function availabilityModifier(
       source: 'profile_availability',
       sourceId: constraint.id,
       type: 'coach_restriction',
+      // TIME CAPS RENDER NO ROW (SEAT_INBOX 22b). Sam, 2026-08-13: "i've taken
+      // out time caps for now". A DISPLAY ruling, not a deletion — the kind
+      // still exists and this builder still runs, because other facts write it
+      // and My Status still needs to show and clear one.
+      effect: 'not_shown',
       title: `${constraint.dayOfWeek} time cap active`,
       body: `${constraint.dayOfWeek} sessions are capped at ${constraint.maxSessionMinutes} minutes.`,
       affects: ['future_generation'],
@@ -1220,6 +1312,10 @@ function availabilityModifier(
       source: 'profile_availability',
       sourceId: constraint.id,
       type: 'coach_restriction',
+      // TODAY travel REMOVES training on the away dates, so "sessions moved"
+      // is what it honestly does. SEAT_INBOX 22(c) reshapes this — away is a
+      // different gym, not a rest period — and this effect moves with it.
+      effect: 'sessions_moved',
       title: 'Travel adjustment active',
       body: "Your program is reducing or avoiding sessions while you're away.",
       affects: ['future_generation'],

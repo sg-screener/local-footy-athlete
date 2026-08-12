@@ -312,6 +312,71 @@ export function registerProjectionCopy(): void {
         + 'the meaning: "no modifiers currently impacting".',
       text: 'No modifiers currently impacting your program.',
     },
+    // ── THE MODIFIER SHEET'S RIGHT-HAND COLUMN — SAM'S EIGHT, 2026-08-13. ──
+    //
+    // SIGNED VERBATIM. He wrote these as a list in SEAT_INBOX item 22(a),
+    // one short phrase per modifier kind, to sit opposite the modifier's name
+    // in his prototype's two-column row. They say what the app DID, never what
+    // is wrong with the athlete.
+    //
+    // THERE IS NO NINTH FOR TIME CAPS, ON PURPOSE. Sam: "i've taken out time
+    // caps for now" — that modifier renders no row at all.
+    {
+      id: 'modifiers.effect.volume_adjusted',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '
+        + 'verbatim. Shown for tired / cooked.',
+      text: 'Training volume adjusted',
+    },
+    {
+      id: 'modifiers.effect.training_eased',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '
+        + 'verbatim. Shown for sick.',
+      text: 'Training eased back',
+    },
+    {
+      id: 'modifiers.effect.exercises_swapped',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '
+        + 'verbatim. Shown for injury being worked around.',
+      text: 'Exercises swapped out',
+    },
+    {
+      id: 'modifiers.effect.training_paused',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '
+        + 'verbatim. Shown for injury at the paused tier.',
+      text: 'Training paused',
+    },
+    {
+      id: 'modifiers.effect.exercises_substituted',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '
+        + 'verbatim. Shown for equipment missing.',
+      text: 'Exercises substituted',
+    },
+    {
+      id: 'modifiers.effect.sessions_moved',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '
+        + 'verbatim. Shown for a day the athlete cannot train.',
+      text: 'Sessions moved',
+    },
+    {
+      id: 'modifiers.effect.planned_lighter',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '
+        + 'verbatim. Shown for a deload.',
+      text: 'Planned lighter week',
+    },
+    {
+      id: 'modifiers.effect.week_rebuilt',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 22(a) — Sam\'s own list, '
+        + 'verbatim. Shown for a game moved.',
+      text: 'Week rebuilt around the game',
+    },
     // ── The modifier SHEET, Sam's own prototype, ruled 2026-08-13. ──
     //
     // SIGNED ON SIGHT. He sent the prototype screen, asked whether tapping the
