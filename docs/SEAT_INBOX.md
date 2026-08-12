@@ -174,7 +174,26 @@ phone.** State device items as PARKED in a stop report, never as a request.
    permanent files.** Show the proposed file list and which existing command
    each check calls BEFORE writing anything. Verify with `/hooks` afterwards.
 
-0c. **THE REST OF THE TOOLING PLAN — SAM RULED IT IN, 2026-08-12.**
+0c. **ALL SIX BUILT — `dc7d7246`, `ab43825c` (and (i) installed).**
+   **(i) DONE** — LSP + plugin enabled, **~0 tokens per session**, out-of-process.
+   **(ii) BUILT WITH ITS RISK CONTAINED** — `.claude/rules/coach-and-plan-edits.md`
+   and `suites-and-fixtures.md`; AGENTS.md **746 -> 645**. Every moved section
+   leaves a POINTER, because the mechanism is still unverified from here — if it
+   is inert the law is one hop away, not gone.
+   **(iii)/(iv)/(v)/(vi) BUILT** — `/lfa-task`, `lfa-verifier`, `/day-end`, and
+   two lines in `CLAUDE.md` for `/goal`.
+   **THE OVERLAP CHECK IS ANSWERED IN THE VERIFIER ITSELF:** 0b's gate owns the
+   MECHANICAL questions and the verifier is told never to repeat them; its
+   question is whether the CLAIM is true.
+   **THE IGNORE EXCEPTION WENT WIDER THAN SAM NAMED** — `skills/` and `agents/`
+   as well as `rules/`, on his own reasoning that a law only one machine sees is
+   not a law. **Two lines to revert.** Also: `!.claude/rules/` alone is SILENTLY
+   POWERLESS under `.claude/` — git cannot re-include inside an excluded
+   directory; it needs `.claude/*`. Verified before writing.
+   **⚠ SAM OWES ONE CHECK: restart, then `/context`** — that the rules load and
+   the skills/agent are picked up. Until then it is a saving on paper.
+
+   ~~ORIGINAL~~ **THE REST OF THE TOOLING PLAN — SAM RULED IT IN, 2026-08-12.**
    *"i really want to get all of chat's ideas in there so we can build this more
    efficiently going forward"*. **The seat had parked these on its own judgment;
    that was `seat-rations-what-Sam-ruled` again and it is withdrawn.** Build in
