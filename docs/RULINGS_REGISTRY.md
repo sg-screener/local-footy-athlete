@@ -354,9 +354,128 @@ record and R-002/R-003 are the inbox's. · `BUILT 5dc644ed, c086ca3d`.
 
 ---
 
+---
+
+## FROM THE RULING DOCS, seeded 2026-08-13
+
+**61 `*RULING*` / `*DECISION*` docs were scanned for Sam's verbatim words. Only
+NINE carry any** — the rest record engineering decisions made under his rulings,
+which belong to the law registry, not here. **That is the finding, not a
+shortfall:** the ruling docs are mostly derivative, and the two sources that
+actually hold his words are the Bible changelog and the inbox.
+
+**R-057** · *"i like her fonts > better = please change to them"* · *"on all
+pages everywhere"* · *"try and match font and size for everything she has
+done"* · THE UI MERGE: Renee's typography, everywhere. ·
+`BUILT` — see `docs/UI_MERGE_PLAN_2026-08-10.md`; nine rulings signed.
+
+**R-058** · *"the idea is to merge them together - in the best way possible >
+without destroying what i have now"* · The UI merge takes HER STRUCTURE and HIS
+STYLE. **Not a replacement.** · `BUILT` — same plan.
+
+**R-059** · *"No days at the top of the page - people only care about the day
+they are on and if they need to view the other days they go to weekly view."* ·
+No day-strip on the day screen. · `BUILT` — the day/week toggle and the 7-day
+chip grid landed 2026-08-12 (Codex).
+
+**R-060** · *"you can already undo changes using coaches notes"* · Undo is the
+COACH's job, not a separate surface. · `BUILT` — `test:undo-*`; see
+`UNDO_SHAPE_RULING_2026-08-09.md`.
+
+**R-061** · *"the coach should be its own tab and the athlete just talks to it
+when it wants to change something without tapping all the buttons? we've spoken
+about this before."* · The coach is a TAB and the athlete talks to it. ·
+`BUILT` — the coach tab ships; slices 1-3 landed 2026-08-10.
+
+**R-062** · *"the year-round required minimum is 1 genuine sprint/high-speed
+exposure per week except early off-season… Any reduction below the floor
+requires an explicit typed authorised reason."* · THE SPRINT FLOOR — one per
+week, year-round, early off-season excepted, and a reduction must carry a typed
+reason. · `UNENFORCED` — no suite named for the floor; the typed-reason
+machinery exists (`WeeklyExposureReductionReason`) but nothing was found
+asserting the floor itself.
+
+**R-063** · *"counts are STRUCTURE, and the deload law holds structure constant
+while the work inside shrinks"* · A deload does NOT cut session COUNTS; it cuts
+the work inside them. · `BUILT` — `test:deload-law`, green.
+
+**R-064** · *"`readiness === 'low'` is the CAPACITY score, a different signal
+this law does not govern"* · The readiness HOMONYM, restated as a boundary: the
+capacity score is not the declaration. · `UNENFORCED` — same as R-041; a naming
+hazard with no gate.
+
+---
+
+## QUESTIONS ALREADY PUT TO SAM AND NEVER ANSWERED
+
+**A question he has already been asked, in a document he never came back to, is
+the SAME failure this registry exists to stop** — it just fails in the other
+direction. Re-asking it in new words wastes the answer he was already offered.
+**Grep this section too.**
+
+**Q-001** · **%MAS: RANGE OR BINARY?** ·
+`docs/MAS_RANGE_VS_BINARY_DECISION_SHEET_2026-08-04.md`, written FOR him and
+explicitly *"Nothing is decided here"*. Template rows carry `90-100% MAS`
+ranges; `masCopy.ts` carries a binary `<=30s -> 110% / >30s -> 100%` rule — **two
+representations of one intensity.** Three options and a recommendation (the
+authored range owns it) are already written out. **STILL OPEN.**
+**⚠ THIS IS THE SAME CONFLICT AS THE OPEN PACE QUESTION in SEAT_INBOX item 6's
+C2 line** — his answer to the sheet settles both, and they must not be asked as
+two separate questions.
+
+---
+
+---
+
+## FROM LFA_PROGRAMMING_POLICY_DECISIONS.md, seeded 2026-08-13
+
+**Sam-APPROVED policy, July 2026.** This file carries no verbatim quotes — it
+records what he approved rather than what he said — so these rows quote the
+DECISION text and say so. **The oldest rulings in the registry, and the ones an
+agent is least likely to have read.**
+
+**R-065** · **FOUR HARD DAYS IS THE PREFERRED/DEFAULT SHAPE, NOT A UNIVERSAL
+ABSOLUTE MAXIMUM.** Contract v2 owns both the preferred range and the permitted
+maximum by phase/mode. **Up to FIVE may be accepted where that mode permits five
+and the full §18 evaluation passes.** · `BUILT` — `weeklyExposureCounts.ts:84`
+`maxHardDays: 4` is the TARGET and the finding fires above it;
+`weekStructureValidator.ts:481` grades 5 as soft/info and 6+ as strong.
+**This is the authority behind the 6-hard-day copy split (`b027fef1`).**
+
+**R-066** · **A fixture occupies its day but does not make that weekday
+permanently unavailable.** Removing it releases the day; moving it releases the
+old day and occupies the new one ATOMICALLY. A known in-season bye releases the
+usual game day. · `BUILT` — fixture-conditioned replan;
+`test:fixture-conditioned-replan` exists (RED at HEAD, 27 failures — pre-existing).
+
+**R-067** · **THE ACCEPTED EFFECTIVE WEEK IS THE SOLE MUTATION SOURCE** once any
+program surface has been accepted. It composes base microcycle + week overlay +
+date overrides + accepted calendar/constraint context, then resolves the visible
+week under the carried Contract v2. · `BUILT` — `acceptedStateTransaction.ts`,
+`test:accepted-state-transactions` 23/23 + 10/10 + 10/10.
+
+**R-068** · **AN ATHLETE MAY BIN A PROGRAMMED SESSION** — even one marked CORE,
+even one supplying a required weekly exposure. **The explicit deletion OWNS the
+named target.** CORE creates an obligation on the planner to preserve equivalent
+exposure elsewhere where possible; it is NOT a veto on the athlete. ·
+`BUILT` — `LAW-warn-then-allow` / `mayOverrideBlock` (`ca33206f`),
+`test:block-override`.
+
+**R-069** · THE FIVE LOCKED DECISIONS, 14 July 2026: (1) practice-match weeks use
+S3 with 1-2 TT and S3-4/default3 with 0 TT; (2) bye recovery is **exactly 2
+lighter lifts**; (3) the first off-season block is early/early/mid/mid **with no
+Week 4 deload**, then late off-season continues until the athlete changes phase;
+(4) multi-pattern credit requires meaningful main-strength work with equal or
+near-equal weekly main-lift balance; (5) **field activity NEVER receives
+automatic power-primer credit, and power has no required weekly numeric
+minimum.** · `BUILT` — §18 phase planner; `test:section18-phase-planner`
+(RED at HEAD — pre-existing, not from this seeding).
+
+---
+
 ## SEEDING IS INCOMPLETE AND THAT IS STATED, NOT HIDDEN
 
-**56 rows. There are more.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
+**69 rows, plus one OPEN question.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
 "RULINGS MADE TODAY", `SEAT_INBOX.md`'s answered `## AWAITING SAM` entries, the
 stand-downs, `SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md`, and
 `RULINGS_NOT_IN_THE_APP_2026-08-13.md`.
@@ -365,8 +484,20 @@ stand-downs, `SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md`, and
 `(Sam, <date>)` and are rows R-034..R-056. The other 29 are Amendment-Pass edits
 recording WHERE a superseded line lived rather than a fresh decision.
 
-**NOT YET SEEDED — do these next, and add rows as you go:** the 70
-`*_RULING*.md` docs in `docs/`, and `LFA_PROGRAMMING_POLICY_DECISIONS.md`.
+**THE RULING DOCS ARE NOW SCANNED (2026-08-13).** All 61 `*RULING*`/`*DECISION*`
+docs were searched for Sam's verbatim words; only NINE carry any, and those are
+rows R-057..R-064. **The rest record engineering decisions made UNDER his
+rulings** — they belong to the law registry, not here.
+
+**EVERY NAMED SOURCE IS NOW SEEDED (2026-08-13):** the handoff, the inbox's
+answered AWAITING SAM entries, the stand-downs, the archived orders, the census,
+**the Bible changelog** (R-034..R-056), **the 61 ruling docs** (R-057..R-064) and
+**`LFA_PROGRAMMING_POLICY_DECISIONS.md`** (R-065..R-069).
+
+**THAT IS NOT THE SAME AS COMPLETE.** Rulings Sam made in CHAT and captured
+nowhere are, by definition, not here — the registry can only hold what was
+written down. **A grep returning nothing still means "not recorded", never "he
+never decided".**
 
 **Until seeding is complete, a grep that returns NOTHING is not proof a ruling
 does not exist** — say so in the question rather than claiming he never decided.
