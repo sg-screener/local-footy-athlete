@@ -101,131 +101,19 @@ phone.** State device items as PARKED in a stop report, never as a request.
 ---
 
 0. **BUILT — THE HOOK NOW HAS FOUR EXITS AND `docs(stop):` IS NOT ONE OF THEM.**
-   All four are in `scripts/seat-inbox-hook.sh` and proven in
-   `test:seat-inbox-hook` (**21 -> 25 cells, four mutations killed**):
-   **(1) queue empty** — unchanged. **(2) `docs(blocked):`** — a different word
-   on purpose, so the exit cannot be taken by the report that used to take it.
-   **(3) a NEW line under `## AWAITING SAM` in THAT commit** — "not already
-   recorded" made checkable, because a question written yesterday would be a
-   permanent door. **(4) three turn-ends on one HEAD** — measured in COMMITS,
-   never a clock, exactly as the order reasons; state lives machine-local under
-   `.claude/`, and a new commit RESETS it.
-   **THE OLD CELL WAS THE HOLE.** `test:seat-inbox-hook` asserted *"a committed
-   STOP report ALLOWS the turn to end"* and it PASSED — so this was never
-   disobedience: a note in a file does not beat a door in a script. **The cell is
-   INVERTED, not deleted**, so the exit's history stays readable.
-   **ONE MUTATION SURVIVED AND ITS CASE WAS ADDED BECAUSE OF IT:** "the line must
-   be NEW" was enforced only by there being no diff at all, so a hook that
-   allowed on ANY added line passed every cell. There is now a case where a line
-   is added ELSEWHERE in the inbox and the exit must stay shut.
-   **I BUILT THE WRONG THING FIRST AND THREW IT AWAY.** Before re-reading this
-   item I built a `STOP CONDITION:` declaration on top of `docs(stop):` — my own
-   inference from the older wording. **The order says `docs(stop):` stops being
-   an exit at all.** Reverted to HEAD and rebuilt to what is written. Registry
-   row `LAW-stop-needs-an-exit`; 105/73 -> 106/74, UNENFORCED unmoved at 32.
-   **⚠ SAM: `/hooks` verification is yours** — it blocks your completions too.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0).**
 
 0a. **PAID IN FULL — `7a6281ce`, `f3861b31`, `f9f84123`.** One scale, one
-   slider, one predicate. **The order's third site was REAL and my first two
-   commits missed it:** the transaction validators still refused anything over
-   5, so the slider was offering answers the transaction threw away — green at
-   both ends because nothing compared them. `test:effort-scale` (42 cells,
-   mutation-checked) now binds the slider, the form and BOTH transactions to
-   `isEffortRating`. Three law-registry rows, two receipts and four comments
-   that still said "1-5" were corrected. **`feel` is a DIFFERENT 1-5 scale
-   (Heavy/Bad/Normal/Good/Flying) and correctly did NOT move.**
-   **AWAITING SAM — the words.** He named `7 — hard` and the two ends; the
-   seven between are the terminal's and are marked `PROPOSED ... AWAITING SAM`
-   in the signed table: *2 easy · 3 light · 4 moderate · 5 steady · 6 solid ·
-   8 very hard · 9 brutal*. **PARKED — no device pass on the slider's feel.**
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0a).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0a).**
 
 0b. **BUILT AND LIVE — `59164984`. Sam ruled "proxies" 2026-08-12.**
-   `scripts/completion-gate.sh` + a `TaskCompleted` entry in
-   `.claude/settings.json`. **CORRECTION TO THE ORDER'S FILE PATH: `.claude/` is
-   GITIGNORED here and nothing under it is tracked, so the script lives in
-   `scripts/` like the existing Stop hook's does — a hook nobody can read in a
-   diff is not a shared instrument.** Verified by driving it three ways: valid
-   tree exit 0; docs-only exit 0 in **0.04s running nothing**; a broken `.ts`
-   exit 2 naming the command and the file. **NOT DONE — `/hooks` verification
-   is Sam's, since this blocks HIS completions too.**
-   The proposal and the red-command measurement behind it stay at
-   `docs/STOP_2026-08-12_COMPLETION_GATE_PROPOSAL.md`.
-
-   ~~PROPOSED, NOT BUILT~~
-   **THE FINDING THAT DECIDES THE DESIGN: three of the commands this order
-   implies are ALREADY RED, so built literally the gate would refuse every
-   completion from its first run.** `npm run typecheck` is RED (459 errors — the
-   weak config the ratchet replaced); `npm run test:qa`, the "full scenario
-   suite", is RED (84 pre-existing failures); `npm run test:law-registry` is RED
-   **by Sam's own stop-the-line ruling** and must never be wired in.
-   **PROPOSED INSTEAD, all green today and all already in `package.json`:**
-   any `.ts`/`.tsx` -> `test:compile` (the RATCHET — fails on NEW drift, ignores
-   the documented backlog, which is exactly a completion gate's job);
-   `rules/**`+`store/**` -> also `test:repo-law-guards`; generation/repair/
-   coaching -> also `test:rules-kernel`; docs-only -> nothing.
-   **TWO FILES, the constraint's maximum:** `.claude/hooks/completion-gate.sh`
-   (new) and `.claude/settings.json` (edited — it already holds the Stop hook).
-   **AWAITING SAM — one decision:** green proxies now, or fix `typecheck` and
-   `test:qa` first so the order can be built literally? **Recommended: proxies
-   now.** Also `/hooks` verification is his — this hook blocks HIS completions.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0b).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0b).**
 
 0c. **ALL SIX BUILT — `dc7d7246`, `ab43825c` (and (i) installed).**
-   **(i) DONE** — LSP + plugin enabled, **~0 tokens per session**, out-of-process.
-   **(ii) BUILT WITH ITS RISK CONTAINED** — `.claude/rules/coach-and-plan-edits.md`
-   and `suites-and-fixtures.md`; AGENTS.md **746 -> 645**. Every moved section
-   leaves a POINTER, because the mechanism is still unverified from here — if it
-   is inert the law is one hop away, not gone.
-   **(iii)/(iv)/(v)/(vi) BUILT** — `/lfa-task`, `lfa-verifier`, `/day-end`, and
-   two lines in `CLAUDE.md` for `/goal`.
-   **THE OVERLAP CHECK IS ANSWERED IN THE VERIFIER ITSELF:** 0b's gate owns the
-   MECHANICAL questions and the verifier is told never to repeat them; its
-   question is whether the CLAIM is true.
-   **THE IGNORE EXCEPTION WENT WIDER THAN SAM NAMED** — `skills/` and `agents/`
-   as well as `rules/`, on his own reasoning that a law only one machine sees is
-   not a law. **Two lines to revert.** Also: `!.claude/rules/` alone is SILENTLY
-   POWERLESS under `.claude/` — git cannot re-include inside an excluded
-   directory; it needs `.claude/*`. Verified before writing.
-   **⚠ SAM OWES ONE CHECK: restart, then `/context`** — that the rules load and
-   the skills/agent are picked up. Until then it is a saving on paper.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0c).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0c).**
 
 0d. **BOTH BUILT AND BOTH GUARDED — `CLAUDE.md` 137 -> 104 lines, and
-   `npm run lfa:dev` reached a RUNNING app.**
-   **(i)** `CLAUDE.md` gained `## WHAT COUNTS AS FINISHED` — source-of-truth
-   order, athlete-visible proof, writer/reader/test per new field, the three
-   words, and a command table. **It got SHORTER, not longer:** the Coach
-   Escalation Rule and the Stop-Patching Trigger moved to
-   `.claude/rules/coach-and-plan-edits.md` (pointer left), and the Elegant
-   Solution Requirement was a word-for-word duplicate of `AGENTS.md` and is now
-   a pointer.
-   **(ii) THE RECIPE ALREADY EXISTED AND WAS NAMED, NOT REWRITTEN** —
-   `scripts/qa-start.sh`, tracked, now behind `npm run lfa:dev`. **It stopped
-   one step short of the order's words:** it booted a simulator and started
-   Metro and left launching the app as homework, which is the step being
-   rediscovered. It now picks **the booted simulator that has the app** (this
-   machine holds a dozen `LFA Explorer` sims; the default `iPhone 17 Pro` is not
-   the one on screen), launches the app, and **fails closed naming
-   `npx expo run:ios` when nothing has it installed.** Recorded as the `lfa-dev`
-   skill; `QA_RUNBOOK` and `FINAL_QA_CHECKLIST` now name the one command.
-   **PROVEN, NOT ASSERTED: launched on the booted sim (pid 35161) and
-   screenshotted — the Profile screen, real state.**
-   **TWO REGISTRY ROWS, BOTH BORN GUARDED** by `test:repo-law-guards`
-   (37 cells, +2, mutation-tested three ways): `LAW-definition-of-done` and
-   `LAW-one-startup-command`. Registry **97/65 -> 99/67, UNENFORCED unmoved at
-   32.** The done-row's receipt says out loud which half a script cannot hold.
-   **FOUND WHILE BUILDING:** `simctl list devices` pads its lines with a
-   trailing space, so the first device parser matched NOTHING and the script
-   reported "not installed on any simulator" about a simulator with the app open
-   on it. Fixed and commented at the regex.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0d).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0d).**
 
 0f. **THE "HIDDEN SESSION" IS FIXED — AND MY FIRST READING OF IT WAS WRONG.**
    **Sam, 2026-08-12: fix it, and do NOT drive the simulator — Claude Code owns
@@ -257,42 +145,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
    untracked `.maestro/tmp-gameday-verify.yaml`.
 
 0e. **BOTH BUILT. THE CENSUS CAME FIRST AND IT PAID TWICE.**
-   **(i) THE SET WAS NOT A SET.** Of the five named flows: **move a session had
-   NOTHING** — `fixture-move.yaml` moves a GAME, and the explorer's `session.move`
-   enters through a 2x2px dev-only control, not the athlete's button; **clear or
-   reverse an adjustment had NOTHING** — the readiness flow opens both doors and
-   presses Cancel; **delete a session was half** — one part-scope, no whole day,
-   no relaunch; **relaunch/persistence exists**; **preview and approve a repaired
-   week HAS NO DOOR** (`SUPPORTED_ATHLETE_ACTIONS` 5.4 is DECIDED, NOT BUILT), so
-   no flow was written for it and the gap is carried by name.
-   **BUILT AND GREEN ON THE SIMULATOR, FIRST RUN:** `.maestro/golden/session-move.yaml`
-   (whole session onto the empty Sunday, both days redrawn, survives a relaunch)
-   and `.maestro/golden/readiness-adjust-and-clear.yaml` (illness adjusts the
-   week, "I'm good now" takes it back, the clear survives a relaunch).
-   `lower-body-deletion.yaml` extended to the whole-day scope + relaunch.
-   **THE RE-AIM FOUND A DEFECT, AND IT IS AN ATHLETE ONE — SEAT PLEASE ROUTE:**
-   on the `lower-body-deletion` seed today's card is titled "Strength" and draws
-   two parts; **delete the strength part and the card becomes "Conditioning" with
-   a part that was there all along.** The athlete has a session today they cannot
-   see. Photographed both sides. **Not diagnosed here — a projection defect is
-   its own unit.**
-   **(ii) TWO PARAGRAPHS IN `CLAUDE.md`,** folded into 0d(i)'s section as
-   ordered: auto memory is for environment and navigation, **never product law**,
-   which lives in the registry or nowhere.
-   **TWO REGISTRY ROWS, BORN GUARDED** — `LAW-canonical-athlete-flows`,
-   `LAW-memory-not-a-law-store`. Registry **99/67 -> 101/69, UNENFORCED unmoved
-   at 32**; `test:repo-law-guards` 37 -> 38 cells.
-   **⚠ TWO THINGS THE SEAT SHOULD KNOW, NEITHER MINE.** (1) **THE SIMULATOR IS
-   SHARED AND NOBODY SAID SO** — three `maestro test` runs from a concurrent
-   agent appeared on the same device mid-pass, so my re-aimed deletion run was
-   STOPPED rather than reported; two Maestro sessions interleave taps into one
-   app and the honest outcome is "unknown", not "red". **That re-run is owed.**
-   (2) **`test:compile` IS RED ON A FILE THAT IS NOT MINE** — untracked
-   `src/__tests__/fixtureSettleAfterSetupTests.ts`, 1 error, the same
-   red-belongs-to-no-committed-change shape the inbox already records for
-   `anchorRepro.ts`.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0e).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0e).**
 
 1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
    always in force; they are not work items to clear.
@@ -420,116 +273,13 @@ phone.** State device items as PARKED in a stop report, never as a request.
      `test:legacy-migration-unreachable`, mutation-checked both ways.
 
 3. **THE ±7 IS DELETED. FOURTH ATTEMPT, AND THE THREE BEFORE IT WERE HUNTING THE
-   WRONG THING.** `test:craft-tier` 36/36, the property that reverted attempt 1
-   now **PASSES with the ±7 GONE**, and the sweep is **15 of 196 — IDENTICAL name
-   for name to the HEAD baseline measured the same hour.** The 17 QA scenarios
-   are unchanged: no hard failures, no preference regressions, no improvements.
-   **THE ±7 WAS NEVER THE DEFECT. IT WAS THE LID.**
-   `canonicaliseAcceptedStateCandidate` re-gates every hydrated week at commit
-   time and writes the gateway's re-derived day over the proposal's — and the
-   re-derivation **carries no provenance**. A cross-week dependency the proposal
-   held was destroyed at commit, on every path that re-gates. Measured at the
-   write, both arms: `overlay Monday 2026-07-19 -> accepted Monday 2026-07-19`
-   with the phantom present, `-> NONE` without it. **With a fabricated game at ±7
-   the re-derived Monday happened to be a G+1 day and minted its own record, so
-   the loss was invisible.** Three attempts read the deletion as "breaking the
-   link"; it only stopped hiding a defect already there.
-   **SECOND SIGHTING OF ONE CLASS IN ONE DAY** — `LAW-rename-carries-its-references`
-   this morning (a seed stabiliser renaming rows and orphaning the block that
-   pointed at them), `LAW-regate-carries-provenance` tonight.
-   **TWO OF MY OWN CELLS WERE WRONG AND THE CELLS CAUGHT THEM, NOT READING:** the
-   expiry filter keyed on a field a `DerivedSessionExpiry` does not have, so
-   nothing ever expired and a stale record travelled; and the first test contract
-   was a two-field stub that died inside the expiry owner.
-   **VALIDITY IS ASKED, NEVER RE-ANSWERED** — `buildDerivedSessionExpiryCandidates`
-   owns it, and because its candidates are ALTERNATIVES, a record any candidate
-   would expire is not carried.
-   Registry rows `LAW-regate-carries-provenance`, `LAW-no-invented-fixture`.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 3).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 3).**
 
 4. **BUILT — THE MODERATE HALF NOW SPEAKS, AND A FOURTH WORD WAS FOUND.**
-   **THE INSTRUCTION THIS ITEM ANSWERS TO, in Sam's words:** *"4 hard days plus
-   1 moderate/easy day"*. (Kept inline when the original order was archived —
-   his words are the standing authority, not history.)
-   **THE RANGE AND THE ADVISORY ARE IN.** `preferredModerateDayRange` on the
-   contract (min 1; **max 7 meaning UNBOUNDED — the ruling gives a minimum and
-   no ceiling, and a max of 1 would make a two-moderate-day week a defect**), and
-   a `moderate_day_missing` finding that is **advisory and can never be anything
-   else**. Held by `test:section18-v2`, 3 cells, in the chain.
-   **THE MUTATION DEMONSTRATES THE RULING RATHER THAN ASSERTING IT:** making the
-   finding `blocking` does not merely red a cell — it throws
-   `Section18WeekAcceptanceError` and takes the suite down. That is exactly the
-   outage "advisory, never blocking" exists to prevent.
-   **THE CELLS DRIVE THE CONTRACT NUMBER, NOT A WORLD.** The first version
-   asserted "a week with no moderate day" over a hand-built fixture that turned
-   out to have TWO — the fixture was wrong, not the rule.
-   **AND THE REASON THE MODERATE TIER LOOKED EMPTY HAS A SECOND CAUSE:**
-   `section18OfferPlacement.ts:508` wrote `stressLevel: 'moderate'` — **a word
-   outside the union `high | medium | low`**, cast `as never` two lines below so
-   the compiler never saw it. The ledger counts a moderate day by `=== 'medium'`,
-   **so every offer the app marked as the easier option was invisible to the
-   count.** Fixed, and guarded by a source scan (`LAW-stress-vocabulary-is-one-word`)
-   because a type cannot reach past a cast. **The scan had to be widened twice —
-   it missed its own founding case (a ternary), then flagged a comparison operand
-   — and both corrections carry their own probe.**
-   **⚠ THE FIX CHANGED NOTHING MEASURABLE AND THAT IS REPORTED, NOT HIDDEN:** all
-   17 QA scenarios are identical before and after (4 of 17 meet both preferences
-   in both arms) because that placer does not run in them. **12 of 17 still have
-   zero moderate days.**
-   **PARKED BY SAM 2026-08-13 — DO NOT BUILD THE GENERATION TARGET, AND DO NOT
-   RE-ASK.** The seat re-ran `test:qa` and reported the real shape rather than
-   the item's summary: **NINE of 17 weeks build FIVE hard days** (S1, S2, S4,
-   S10, S11, S13, E1, E2, E3); four build four; two build three; two build one
-   (off-season low availability, correctly small). The narrowed question put to
-   him was which of the five softens — team nights and the game cannot, leaving
-   the Monday strength day or the midweek conditioning day. **His answer was to
-   refuse the question at this sample size:** *"stop worrying about this moderate
-   day thing - this is only on 17 QA - when we get deeper into the app and test
-   100 then we will have many more useful scenarios where it might make sense"*.
-   **THE REOPEN CONDITION IS THE SCENARIO SET, NOT A RULING:** revisit when the
-   harness carries roughly 100 weeks. **Until then the moderate-day target is not
-   owed, not blocked, and not a defect.** Everything built above — the range, the
-   advisory finding, the stress-vocabulary law — STAYS: it costs nothing and it
-   is the instrument that will answer him when the set is big enough.
-   Registry 103/71 -> 105/73, **UNENFORCED unmoved at 32** (the vocabulary law
-   was born UNENFORCED and its guard built in the same pass rather than banked as
-   debt).
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 4).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 4).**
 
 5. **BUILT — THE 17 NOW ANSWER "IS THIS A WEEK SAM WOULD WRITE".**
-   `LFA_HARD_DAY_PROBE=1 npm run test:qa` prints a table across all 17: hard
-   days, anchor-caused hard days, moderate days, each week's own preferred
-   maximum, a score, and a verdict against a committed baseline
-   (`scripts/preference-baseline.json`). **Same flag, no second seam**, as
-   ordered.
-   **TODAY'S NUMBER: 4 of 17 weeks meet both of his ruled preferences. 0 hard
-   violations.**
-   **THE SCORE INVENTS NO POLICY** — it counts RULED preferences (hard days
-   within the week's own preferred max; at least one moderate day), each quoted
-   at the code, both thresholds READ from the contract so an off-season week
-   whose preferred max is 2 is judged against 2, not 4. A fifth hard day costs
-   the preference and is never a violation (stand-down A).
-   **THE THREE OUTCOMES ARE KEPT APART** — hard failure, preference regression
-   (continues only with a stated reason), intentional change (baseline updated
-   with evidence) — and **over-fitting is mechanical**: improvements ≥ 1 with
-   more regressions than improvements is REJECTED.
-   **`test:qa` PRINTS AND DOES NOT BLOCK, ON PURPOSE:** it carries 84
-   pre-existing failures, so a verdict inside its exit code would be
-   indistinguishable from them. The rules are held by **`test:preference-shape`,
-   8 cells, green, in the chain**, three mutations killed. Registry row
-   `LAW-preference-report`; 102/70 -> 103/71, UNENFORCED unmoved at 32.
-   **⚠ ONE DISCREPANCY FOR THE SEAT, NOT RESOLVED HERE.** Item 4 records the
-   shape as occurring in **2 of 17 and in ZERO fixture weeks**. My count is
-   **4 of 17**, and two of the four (S3, S12) carry anchor-caused hard days.
-   **The two counts are different questions** — "exactly 4 hard days" versus
-   "within this week's preferred maximum" — and I have not established what item
-   4 counted as a fixture week. **A count names its instrument's unit; both
-   readings are printed side by side in the table rather than reconciled by
-   assertion.**
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 5).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 5).**
 
 6. **RE-MEASURED — THE PREMISE MOVED, AND TWO SESSION KINDS ALREADY STORE BOTH
    HALVES OF sRPE WITH NO READER.** `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md`
@@ -595,38 +345,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 7).
 
 8. **BUILT — MY STATUS OWNS THE MODIFIERS, AND SAM HAS SEEN IT ON GLASS.**
-   `a0e293b3` (writers take their source as a parameter) → `8de98d3f` (a+b, one
-   commit) → `2e16fb9f` (c) → `cbc36bcf` (his copy ruling). **The ruled order
-   was kept.** All eight modifier actions are live on My Status;
-   `EMPTY_EQUIPMENT_FACT_IDS` is retired; the caption and its guard are gone; the
-   Program-side leftovers are deleted. Held by `test:my-status-modifiers` (8
-   cells), `test:coach-note-action-source` (4) and
-   `test:program-tab-read-only-modifiers` (6), all in `test:bible`, all
-   mutation-checked. `.maestro/golden/coach-my-status.yaml` is green on LFA
-   Explorer and its not-yet assertion is INVERTED, not deleted.
-
-   **FOUR THINGS THE ORDER DID NOT CONTAIN, each found by building it:**
-   **(1) THE DECISION LEDGER RECORDS NONE OF THESE ACTIONS** — only three
-   exercise-level types reach it, so the tape is the whole record and the order's
-   "tape and ledger" premise was half false. **(2) THE DURABLE DOOR WAS DROPPING
-   THE SCREEN** (`program_control_durable:<surface ?? screen>`, and every
-   coach-note action sets a surface) — the lift would have LOST the provenance,
-   not forged it. **(3) `coach_tab` WAS THE WRONG VALUE**: it maps to the
-   diagnostic label `'coach'`, the field Sam asked for on 2026-08-10 so an
-   investigation can tell his own tap from a coach-authored change. The screen id
-   is `my_status`. **(4) THREE COMPONENTS HAD TO BE EXTRACTED, NOT DELETED** —
-   the confirmation sheet, the rebuild sheet and the rebuild owner all lived
-   inside `HomeScreenV2`, and (a) made My Status depend on all three. The rebuild
-   was measured, not assumed: four modifier families return
-   `rebuildRequired: true`.
-
-   **SAM RULED THE STATUS SHEET TWICE THE SAME DAY, AND BOTH ARE RECORDED.**
-   *"Drop 'Worse' … four options only … And change 'Still sick' to 'Still pretty
-   sick'"*, then *"actually keep worse for now"*. The rename ships, `worse`
-   stays, five answers, all now SIGNED copy rather than inline literals.
-
-   **AWAITING SAM — see `## AWAITING SAM` below.** The second half of his design
-   is not built.
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 8).**
 
 9. **PARTLY BUILT — the athlete can now go ahead anyway; the four-answer
    collapse is BLOCKED.** `ca33206f`. `mayOverrideBlock` is `canOverride`'s
@@ -644,61 +363,13 @@ phone.** State device items as PARKED in a stop report, never as a request.
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 9).
 
 10. **BUILT — THE GATE EXISTS, AND ITS FIRST RUN FOUND SIXTEEN, NOT TWO.**
-   **THE INSTRUCTION THIS ITEM ANSWERS TO:** the §4 class named *"Computed and
-   unread"* — a field *"computed eight times over"* and read by nothing. (Kept
-   inline when the original order was archived.)
-   `test:computed-must-be-consumed`, in `test:bible`, mutation-checked three
-   ways with a liveness arm. §4 named two `contract.*` offenders; measuring all
-   **42 assigned `contract.*` fields found SIXTEEN** written on every assessment
-   and read by nothing — **fourteen of them one module's entire achieved-ledger
-   family** (`section18EffectiveWeekEvaluator`). **The doc's nine was a sample,
-   not a census** — `LAW-count-names-instrument` again, and why the gate
-   measures instead of encoding the list it was handed.
-   **The sixteen are declared as dated debt and the list MAY ONLY SHRINK:** the
-   gate reds when the set grows AND when a declared field gains a reader without
-   leaving the list.
-   **NOTE FOR ITEM 4's OWNER:** `achievedModerateDayCount` is STILL unread. The
-   moderate-day finding reads `ledger.restStress.moderateDays.length` directly,
-   so that unit did not close this one.
-   **WHAT IT DOES NOT COVER, STATED:** six of §4's nine are not `contract.*` —
-   a Set indexed `[0]`, a decision list, a collapsed N-list. `canOverride` was
-   closed separately (`LAW-warn-then-allow`, `ca33206f`). A call-graph gate for
-   "exported and never called" is NOT built.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 10).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 10).**
 
 11. **BUILT — THE FEATURE REGISTRY EXISTS, AND THE NUMBER IS UGLY AS ORDERED.**
-   `src/rules/featureRegistry.ts` + `test:feature-registry`, in `test:bible`,
-   mutation-checked three ways with a liveness arm. `lawRegistry`'s shape
-   verbatim — no second mechanism — plus the one field laws do not need.
-   **SEEDED: 9 rows, 7 held, 2 UNPROVEN, 3 BUILT-BUT-UNREACHABLE.**
-   **`reachable` IS THE POINT:** a law is true or not, but a feature can be
-   built, tested and impossible to get to. An `athlete_reachable` + `held` row
-   must say in its receipt HOW IT WAS SEEN, or the cell reds.
-   **IT DOES NOT RED ON `UNPROVEN`, deliberately** — Sam ruled an unguarded RULE
-   is a rule not followed; an unproven FEATURE is simply unproven, and reding
-   would mean a row could only be added once finished, so the roster would fill
-   with lies or stay empty. The count is PRINTED instead.
-   **THE ROSTER DECLARES ITS OWN INCOMPLETENESS** (`FEATURE_REGISTRY_SCOPE`,
-   asserted): it covers only what this terminal could write a receipt for on
-   2026-08-12. **Growing it is the work.**
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 11).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 11).**
 
 12. **BUILT — THE MECHANISM SHIPS, THE PICTURES DO NOT (as ordered).**
-   `src/dev/uiPictureManifest.ts` + `test:ui-picture-manifest`, in `test:bible`,
-   mutation-checked both ways. **SHA in the filename, a TRACKED manifest
-   (`artifacts/` is gitignored, so mtime dies at clone), one gate cell, and the
-   index may never pin to a docs commit.**
-   **IT RED ON ITS FIRST RUN, ON THE FOUNDING DEFECT.** `a9c82856` changed two
-   docs and nothing else; `UI_STATE_2026-08-12.md` said its four surfaces "stand
-   at" it. **The pin is now GONE rather than corrected** — the shots really are
-   out of date (`8de98d3f` changed My Status, `e231a6bc` merged three UI fixes),
-   so a truer SHA would still point at pictures that do not show it.
-   **ALL FOUR ROWS ARE `STALE` AND SAY WHAT RE-SHOOTING TAKES. NOT RE-SHOT,
-   DELIBERATELY** — *"Then shoot once, after Sam's UI work settles."*
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 12).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 12).**
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
    **WHAT IS LEFT IS PRICED, 2026-08-13 — so the next pass does not re-derive it.**
@@ -826,181 +497,22 @@ phone.** State device items as PARKED in a stop report, never as a request.
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 14).
 
 15. **BUILT — THE MOVE IS FINISHED AND THE BRIDGE IS GONE.**
-   `SeasonPhaseShiftSheet` (props, `BackChevron`, the component and its 20 style
-   rules) moved BYTE-FOR-BYTE into `src/components/SeasonPhaseShiftSheet.tsx`;
-   the six-line re-export is deleted. **A file that says "during the move" and
-   never stops saying it is a file that has stopped being read.**
-   **THE ORPHANED STYLE WAS FOUR, NOT ONE.** The item names `phaseCard`;
-   `phaseBadge`, `phaseBody` and `phaseBodyAccent` also measured ZERO uses
-   repo-wide. The phase card left Program at the merge and its styling stayed a
-   month — **the existing style gate greps USAGE, so a definition nothing uses
-   passes it**, which is exactly why the item had to name one by hand.
-   **TWO GUARDS MOVED WITH THE SURFACE:** `profileResetUITests`' day-grid region
-   and `coachTabSlice3Tests`' phase-review cell both sliced `HomeScreenV2` for a
-   component no longer in it. Re-aimed, not deleted.
-   **ON GLASS:** `.maestro/golden/coach-my-status.yaml` green end to end, phase
-   review included (Review -> the three options -> Confirm -> "What days can you
-   train?" -> Cancel).
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 15).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 15).**
 
 16. **BUILT AND SEEN ON GLASS — THE DAY AND WEEK SAY WHAT IS CHANGING.**
-    Mounted twice in `HomeScreenV2.tsx`: `surface="day"` above the day card,
-    `surface="week"` above the seven rows. The count is
-    `useActiveModifiers().count` — and `useHomeScreen`'s inline
-    `selectActiveCoachNotes` memo, whose inputs were byte-identical, was
-    **COLLAPSED into that hook** rather than joined by a third copy, so rule (d)
-    is structural rather than a promise. Read-only; tapping navigates `CoachTab`
-    with `status: 'open'`. Registry row flipped to held.
-
-    **FOUR ASSERTIONS, AND ONLY THREE WERE FLIPPED — THE ORDER'S OWN LIST WAS
-    NOT SAFE TO FOLLOW LITERALLY.** `coach-my-status.yaml`'s FIRST one sits in
-    the "NOTHING ACTIVE" block; flipping it would have asserted the opposite of
-    rule (e), so it is KEPT and re-commented as the zero-state proof.
-    `standard-program-week.yaml`'s two could not be flipped until its modifier
-    door was fixed: it tapped `equipment-preset-open`, **an id no product source
-    produces**, so both sat in a zero-modifier world where the strip correctly
-    renders nothing. Door re-routed onto the readiness door, then inverted.
-
-    **AND THERE WERE SIX, NOT FOUR.** `dayFirstTimelineTests` and
-    `coachTabSlice3Tests` each also asserted Program does not mount the strip.
-    The latter was ONE `&&` over two different claims — no notice, no list — and
-    only the first was ruled away, so it is SPLIT rather than loosened.
-
-    **THE FIRST THREE CELLS SHIPPED GREEN AND EMPTY.** A mutation run broke ONE
-    of the two mounts and they stayed green: they searched the whole FILE for
-    `count={modifierCount}`, and the surviving mount kept the string there. The
-    mounts are now extracted and asserted one by one. **Five mutations, five
-    killed.**
-
-    **ON GLASS:** `.maestro/golden/program-modifier-notice.yaml` — zero shows
-    nothing on BOTH shapes, both surfaces appear with a real readiness modifier,
-    both open My Status. `coach-my-status.yaml` green end to end.
-
-    **ONE RED LEFT BEHIND, AND IT IS NOT THIS UNIT'S.**
-    `standard-program-week.yaml` now reaches PAST its dead door and fails at
-    `program-week-previous` -> "Return to this week". A no-modifier control run
-    reproduced it exactly: the seed holds ONE week, so that control is inert and
-    the label never changes. Pre-existing, newly visible, and it belongs to that
-    seed.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 16).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 16).**
 
 17. **WORKING — A GAME'S LOAD IS READ (`f923523a`).** `gameSRPE` = body RPE x
-    minutes on the ground, in `journalLoad` beside its two siblings, carried into
-    `deriveSessionLoad`, counted in `measured`, and wired from the journal
-    producer. **FULL, NOT WEIGHTED** — no coefficient exists in the path and a
-    cell pins the product. Missing either half is UNMEASURED, never half-counted.
-    **The "nobody has ruled" comment is deleted in the same commit that made it
-    false**, in both `journalLoad` and the sibling registry row.
-    **The test that fails if it breaks:** `test:journal-load` (124 -> 133 cells),
-    plus a SOURCE cell requiring `JournalScreen` actually hand the game over —
-    a reader that stops at `deriveSessionLoad` is the defect item 10 names.
-    **Mutation-checked four ways:** half-counting, a smuggled 0.5 discount,
-    dropping the game from `measured`, unwiring the producer. Registry row
-    `LAW-game-load-is-full`.
-    **MEASURED LIMIT:** `gameSRPE` stops at the session load and the `measured`
-    flag — **exactly as `teamTrainingSRPE` does. NEITHER reaches
-    `JournalLoadWeekTotals`**, where only conditioning has a stream. So a rated
-    game moves the week's measured-session count and its own row, and no weekly
-    load number yet. **That is item 6's open question, not this one's.**
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 17).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 17).**
 
 18. **THE RULE AND THE STORE ARE WORKING; THE INPUT IS BUILT (`2132f9b3`).**
-    **ALL FOUR KINDS ARE REAL** — `conditioningSRPE`, `teamTrainingSRPE`,
-    `gameSRPE`, `strengthSRPE` — which is the sentence item 6 has been reaching
-    for, and a cell asserts it rather than announcing it.
-    **THE GAP WAS ONE FIELD:** effort was already stored as `difficulty`; actual
-    minutes was the only missing half. **Option (b) is the trap and three cells
-    guard it** — nothing back-fills the planned value, and a mutation adding a
-    60-minute default reds all three. **NOT SAVE-BLOCKING on purpose:** the
-    ruling's own shape is that a missing answer is UNMEASURED, so a blank must
-    not strand an athlete who did not time their lift.
-    **THE WORDS ARE SAM'S — "Rough time in the gym"**, chosen by him 2026-08-13
-    from his own two existing lines. Hours/minutes labels and the refusal are
-    REUSED from the game copy, not re-signed. Same `parseHoursMinutes`; not a
-    second design.
-    **THE CELL THAT EARNS ITS KEEP:** `buildSessionFeedbackPayload` REBUILDS its
-    object, so a field it does not name is lost when the athlete edits an answer
-    — the class that bit the team-night unit. Asserted THROUGH the builder on the
-    checklist path. `test:journal-load` -> 142, `test:team-night-size` -> 56.
-    Registry row `LAW-strength-load-is-actual-minutes`.
-    **BUILT, NOT WORKING, ON THE UI HALF — AND THAT IS THE HONEST WORD.** No cell
-    mounts the panel, so **nothing proves the athlete SEES the new input or that
-    it sits right on the screen.** Needs a simulator pass; **PARKED behind Sam's
-    phone rebuild (stand-down C), never a request.**
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 18).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 18).**
 
 19. **BUILT AND SEEN ON GLASS — ONE ADD-FIXTURE CONTROL, WEEK-ONLY, NO CAP.**
-
-    **THIS ITEM'S OWN PREMISE WAS WRONG AND THE CODE SAID SO.** It states "in
-    season there is NO add-a-game control at all". **There was one.** It was
-    gated `!weekHasGame`, so it existed on an empty week and VANISHED the moment
-    the week had a fixture. Pre-season's card had the same defect in other
-    clothes: `weekDays.find(...)` took the FIRST fixture, and once one existed
-    the card stopped being a button and became a LABEL routing to that fixture.
-    **Neither phase had a route to a SECOND game — a CAP, not an absence.** Same
-    fix, different reason; building against "there is no control" would have
-    added a third card beside the two that already existed.
-
-    **TWO CARDS BECAME ONE**, gated on the phase alone, labelled by phase ("Add
-    a game" / "Add a pre-season practice match"), always adding. No cap, no
-    warning at three, no confirm. `weekHasGame` left the hook with its last
-    reader, and the four orphaned `addGame*` style rules went in the same commit
-    as their call site — item 15's lesson, since the style gate greps USAGE.
-
-    **THEN SAM MOVED IT, 2026-08-13:** *"add a game button should only be on
-    week screen - not day screen and then you select what day you need to add it
-    too"*. The control sits in the shared scroll body, which BOTH shapes draw,
-    so it had inherited the day screen by default rather than by decision. Gated
-    `!dayFirst`. **The ruling also closes a logic hole:** tapping it enters the
-    picker, and a picker forces the week shape — so on the day screen its only
-    possible next act was to leave the day screen. "Which day?" is a week
-    question.
-
-    **ON GLASS:** `.maestro/golden/add-a-game-in-season.yaml` — the day screen
-    does NOT carry it; the week screen does, on a week that ALREADY has a
-    Saturday game; and Wednesday and Sunday both come back as `fixture-target-*`
-    so a second game has somewhere to go.
-
-    **TWO INSTRUMENT FAULTS FOUND HERE, BOTH OF WHICH BLAMED THE PRODUCT FIRST.**
-    `scrollUntilVisible` on the control's ID at 60% matched it in the view
-    hierarchy while it was still BELOW the fold and never scrolled, so the tap
-    hit nothing and the flow failed at the picker. And **in picker mode a day row
-    is `fixture-target-<date>`, not `day-row-<weekday>`** — the obvious row
-    assertion could never have passed.
-
-    **ITEM 7 IS UNBLOCKED, AS THIS ITEM ORDERED IT SAID.** Sam's own case — *"only
-    doing 1 strength session ... if they have 2 games and 2 team trainings"* — is
-    representable now.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 19).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 19).**
 
 20. **WORKING — THE SENTENCE NAMES ITS CAUSE AND ITS DAY.** Both branches built,
-    copy equality-bound both directions, **13 cells in `test:shortfall-copy`,
-    mutation-checked six ways.** Registry row `LAW-shortfall-names-its-cause`.
-    **The plumbing was the job and it was done: `recordAcceptedWeekShortfall`
-    now derives the day from the week's own facts.**
-    **THE ORDER DIAGNOSED ONE DEFECT; MEASUREMENT FOUND THREE.** Wrong CAUSE
-    (Sam's complaint), wrong DAY, and a REST asserted that may never have
-    happened — the call site passed `weekStart`, so every Monday-start week read
-    *"Resting Monday"*. **Confirmed by rendering it, not by reading.** `date` is
-    now THE DAY BELONGING TO THE CAUSE.
-    **A REGRESSION CORRECTED ME MID-BUILD:** a rest mark is a CALENDAR fact, not
-    a workout named Rest, so my first version found no rested day and SILENCED
-    the disclosure — the exact case accept-and-reduce exists for. The athlete's
-    marks are the primary fact now; the week's sessions are the fallback.
-    **NO NEW PREDICATE:** `classifyDaySessions` is asked what a game is — two
-    private copies exist already and a third is the defect this repo keeps
-    finding.
-    **BEHAVIOUR CHANGE, STATED:** a week with neither a game nor a rest mark now
-    produces NO disclosure rather than one naming a day nobody chose.
-    **NOT COVERED:** no cell mounts a surface, so nothing proves the athlete SEES
-    either sentence on a device.
-
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 20).
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 20).**
 
 21. **SAM HAS RULED — A GYM SESSION IS THE SAME SIZE WHATEVER ELSE IS ON THAT
     DAY.** Item 14 asked whether a team night has its own smallest size and
@@ -1310,62 +822,7 @@ phone.** State device items as PARKED in a stop report, never as a request.
     clear to build now.
 
 23. **BUILT — TWELVE PHRASES SHIP, AND THE MISCOUNT IS FIXED AT ITS SOURCE.**
-    `74d76479`. Four `signed_sentence` entries, four union members, the pool
-    builder BRANCHES on `kind`, and the "three live builders" comment is
-    corrected. **The count did not move, as ordered:** `my-status-modifiers`
-    8 -> 8, `program-tab-read-only-modifiers` 9 -> 9. `'unsigned'` stays, with
-    three sites (soreness, generated programme-effect notes, and the catch-all
-    for constraints that are neither readiness nor schedule) and its cell
-    untouched. **A new cell drives the REAL builder with an excluded and a
-    pinned exercise and reds if they share an effect** — mutating the branch
-    away reproduces exactly the defect this item was raised to prevent.
-
-    ~~ORIGINAL ORDER~~ **SAM SIGNED THE LAST FOUR SHORT PHRASES — AND IT WAS FOUR, NOT THREE.**
-
-    **OWNED BY THE DESKTOP AGENT** — the same files as item 22(a):
-    `src/rules/projectionCopy.ts`, `src/utils/activeProgramModifiers.ts`,
-    `ModifiersSheet`, `src/__tests__/modifierEffectPhrasesTests.ts`.
-    **TERMINAL: NOT YOURS. Go to item 21, which is now clear.**
-
-    **Sam, 2026-08-13:** *"i'd rather them shortened"*, then, shown these four,
-    ***"signed"***. They are signed copy and may ship verbatim:
-    - an exercise preference (avoid / preferred alternative / added focus)
-      → **Exercise preference applied**
-    - an EXCLUDED exercise → **Exercise removed**
-    - a PINNED exercise → **Exercise prioritised**
-    - a conditioning modality swap → **Conditioning swapped**
-
-    **WHY FOUR WHEN EVERY DOC SAID THREE — MEASURED BEFORE IT WAS PUT TO HIM.**
-    `athletePreferenceModifier` is ONE builder carrying `kind: 'excluded' |
-    'pinned'` (`activeProgramModifiers.ts:1201-1226`), and the two are OPPOSITES
-    — excluded AVOIDS the exercise, pinned PRIORITISES it. One phrase for both
-    would have been false every second time it rendered. **The comment block at
-    `activeProgramModifiers.ts:117-121` says "Three live builders" and is now
-    wrong by one — correct it in the same pass.**
-
-    **`'unsigned'` DOES NOT DISAPPEAR. DELETING THE UNION MEMBER WILL BREAK THE
-    BUILD.** There are **FIVE** `effect: 'unsigned'` sites, not three. Sam's four
-    cover three. The other two are DELIBERATE and stay:
-    - **soreness** (`:986`) — its own sentence names the body part, which this
-      file already argues is more useful than a generic phrase.
-    - **deterministic programme-effect notes** (`:696`) — generated notes with
-      their own authored sentence.
-    **Keep the member, and keep the `isShownOnProgram({ effect: 'unsigned' })`
-    cell exactly as written:** a missing phrase is a gap in the WORDS and never a
-    reason to stop telling the athlete their program changed.
-
-    **BUILD:** four `signed_sentence` entries under the item-22(a) block in
-    `projectionCopy.ts`, `provenance` citing THIS item and the date; four new
-    members on `ActiveProgramModifierEffect`; **the pool builder must BRANCH on
-    `kind`** rather than return one effect for both. Then four more rows in
-    `SAM_PHRASES` — **that array is the signing record, so type his words in by
-    hand; do not import them from the registry the suite exists to check.**
-
-    **THE CELL THAT CAN BREAK IS THE COUNT, NOT THE COPY.**
-    `test:modifier-effect-phrases` asserts every phrase-bearing effect is shown
-    on Program. Four kinds move from a long sentence to a short phrase and **the
-    visible row count must not move.** Run `test:my-status-modifiers` and
-    `test:program-tab-read-only-modifiers` either side and report both numbers.
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 23).**
 
 24. **SAM SAYS YES — THE EQUIPMENT SCREEN'S EXIT BECOMES AN INPUT.**
 
@@ -1396,6 +853,196 @@ phone.** State device items as PARKED in a stop report, never as a request.
     by this** — "where do you train" first, pre-ticked checklist, the athlete
     edits it, the stored answer is the final ticked list. **Nothing about the
     QUESTION changes. Only where "continue" lands.**
+
+25. **SAM ALREADY RULED SESSION SIZE. THE APP HOLDS HIS RULING AND OBEYS
+    SOMETHING ELSE. THIS IS THE DISCONNECTION, NOT A MISSING RULE.**
+
+    **OWNED BY THE TERMINAL.** It is the same defect item 21's second half is
+    circling; **read this item FIRST — it changes what the fix is.**
+
+    **Sam, 2026-08-13, and this is the whole item:** *"i've answered this type of
+    shit so many times - all my programming logic should be in the app by now and
+    it's not WHERE THE FUCK IS IT AND WHY IS IT NOT IN THE APP BY NOW"*.
+
+    **HE IS RIGHT, AND THE SEAT BROKE THE BIBLE-FIRST LAW BY ASKING HIM AGAIN.**
+    The seat put "how many exercises should a gym session have?" to him. **That
+    question was already answered, IN THE BIBLE, BY HIM.** Grepping first would
+    have dissolved it. Recorded so the next seat does not repeat it.
+
+    **HIS AUTHORED RULING — `LFA_PROGRAMMING_BIBLE.md:3149`, §11, verbatim:**
+    *"ONE exercise cap for every training age. The beginner-only cap of 3
+    exercises per strength session was never authored; 'do not overload them with
+    too many exercises' is guidance about dose and complexity, not a numeric
+    limit, and a separate beginner cap is exactly the 'second beginner/experienced
+    representation' this section forbids."*
+
+    **HE STRUCK THE NUMBER 3 HIMSELF. It is still coming out of the app.**
+
+    **WHERE HIS RULING LIVES — it is in there, and it is inert.**
+    - `trainingAgePolicy.ts:43` — `maxExercisesPerStrengthSession: 6`, ONE value
+      for every training age, exactly as he ruled. **AUTHORED.**
+    - `trainingAgePolicy.ts:112` records the retired `3` and why: *"never
+      authored"*.
+    - `coachingEngine.ts:8682` passes it to the AI as `maxExercisesPerSession`.
+    - **AND THAT IS THE END OF ITS REACH.** `sessionRowCounting.ts:315-318`
+      states it plainly: *"It is not a validator and it is not enforced. Nothing
+      trims a session that exceeds the ceiling and nothing pads one that falls
+      under this floor."*
+
+    **WHAT THE APP ACTUALLY OBEYS INSTEAD — one line, and no ruling behind it.**
+    `sessionBuilder.ts:718`: `const exerciseCount = templateWorkout.exercises.length || 5;`
+    **Session size is however many rows a human happened to type into a template
+    file.** Two templates were written with three. That is the entire provenance
+    of the number Sam has never seen a reason for. And
+    `exerciseScorer.ts:317` — `Math.min(intent.exerciseCount, MIN_SESSION_SIZE)`
+    — means the floor **cannot even top up past the template's own accident**:
+    a 3-row template stays 3 no matter what the floor says.
+
+    **SO THE FIX IS NOT "PICK A NUMBER" AND NOT "FIX TWO TEMPLATES."** Both are
+    edge-case patches and Sam's standing project instruction forbids them:
+    *"Don't fix edge cases, build a systemic fix into the system so issues are
+    fixed globally"*.
+
+    **BUILD: SESSION SIZE IS DERIVED FROM THE AUTHORED POLICY, NOT FROM A
+    TEMPLATE'S ROW COUNT.** A template supplies WHICH exercises and in what
+    order. **It must not supply HOW MANY.** The count comes from
+    `trainingAgePolicy`, the same object that already holds his ceiling, and the
+    scorer fills to it. **Delete the `|| 5` fallback and the
+    `Math.min(..., MIN_SESSION_SIZE)` clamp — both are the accident, not the
+    rule.**
+
+    **THE FLOOR STILL NEEDS AUTHORING AND SAM MUST NOT BE ASKED COLD.** The
+    ceiling is his (6). The floor is not. **Do not park a bare number question on
+    him.** Derive a candidate from what his own signed weeks already do, bring
+    him the distribution and ONE recommendation with its reasoning, and let him
+    veto in a word. That is the only shape this question may reach him in.
+
+    **THE CLASS, NOT THE INSTANCE — THIS IS THE ITEM THAT MATTERS.** An authored
+    ruling of Sam's sitting in a policy object, computed, passed along, and read
+    by no enforcer is exactly the architecture finding in
+    `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md`: **the app is built RIGHT and
+    DISCONNECTED.** Session size is one instance. **Report how many OTHER
+    authored values in `trainingAgePolicy` and the Bible-derived rule objects
+    have no enforcer** — that census is the next unit, and it is the answer to
+    the question he actually asked.
+
+    **AND THE RECEIPT ALREADY EXISTED, MEASURED 2026-08-12, AND NOBODY BUILT
+    IT.** `ATLAS_VERIFICATION_2026-08-12.md:180` finding 7, verbatim verdict:
+    **"3-exercise days are old logic surviving — CONFIRMED, AND WORSE."** It
+    names the producer: **eleven 3-row branches** in `defaultProgram.ts:1069`
+    `fallbackExercisesForPlanEntry`, reachable by three live paths, and
+    **`generateProgramLocally` synthesises EVERY day from them**
+    (`generateProgram.ts:866-872`, whose own comment reads *"3-ish core
+    exercises per session"*). **They are not an error path. They are the normal
+    output of non-AI generation.** And: *"there is no floor AND no ceiling —
+    `maxExercisesPerStrengthSession` is read by no prompt builder, validator or
+    trim"*; the AI prompt emits a MAX with no MIN.
+    **`HOW_TO_BUILD_THIS_APP_2026-08-12.md:174` gives that value a reader count
+    of ZERO.** So this was diagnosed a day before Sam's anger, written down
+    twice, and left. **The measurement is DONE. Do not re-measure it. Build.**
+
+    **THE STRING TO KILL IS `"3-ish core exercises per session"`.** That comment
+    and the eleven branches beneath it are the entire provenance of the number
+    Sam says he never authored — because he didn't. He ABOLISHED it on
+    2026-07-27 (`LFA_PROGRAMMING_BIBLE.md:4969`) and it is still shipping.
+
+    **PROVE IT:** 120-session distribution and the 17 QA scenarios either side,
+    all four numbers.
+
+    ---
+    **DERIVED 2026-08-13 — AND HIS OWN SIGNED WEEKS ANSWER IT. THE FLOOR OF 4 WAS
+    NEVER HIS AND NEITHER IS A FLOOR.**
+    Item 25 says derive from what his signed weeks do, bring ONE recommendation,
+    let him veto in a word. **Three signed sources, all his:**
+    - **GUNSHOW (§20.3, signed 2026-07-30): 2 biceps + 2 triceps + 2 pump delts =
+      SIX.**
+    - **MOBILITY (Bible `:4910`, signed): *"a composed session aims for 6
+      movements inside the 5-8 window"* — SIX, with a stated window.**
+    - **THE CEILING (§11, `:3149`): SIX.**
+    **All three land on the same number, and it is the number already in the
+    policy object.**
+    **AND HE ALREADY RULED THE MECHANISM, AGAINST PADDING.** §20.3, his words:
+    *"Under restricted equipment a gunshow gets smaller, never padded. There are
+    no cross-family top-ups: the app never invents to fill a quota."*
+    **RECOMMENDATION (one, his to veto): session size is a TARGET OF 6, not a
+    floor that pads.** Templates stop dictating HOW MANY; the app aims for 6 and
+    **shrinks honestly** when equipment, injury or game proximity restrict it —
+    never inventing filler to hit a number. **The 4 is deleted, not re-authored:
+    it was `MIN_SESSION_SIZE`, invented in one file, and it contradicts his
+    shrink-never-pad rule.**
+    **DISTRIBUTION TODAY, for the same message:** Strength 5-6, Mixed 4-6, Team
+    Training 2-4; **zero sessions over 6**; 26 of 120 under 4.
+
+    **THE CENSUS ITEM 25 ORDERS — `trainingAgePolicy`, 13 authored fields:**
+    - **`initialLoadMultiplier` — AUTHORED BY SAM (50%, Bible `:3142`, `:4968`
+      correcting the code's invented 0.75) AND HAS ZERO PRODUCTION READERS.**
+      **A new athlete is not getting his 50% starting load.** This is a SECOND
+      live instance of the exact defect he is angry about, found while measuring
+      the first.
+    - `maxExercisesPerStrengthSession` — **one "reader", and it only FORWARDS the
+      value to the AI prompt.** No enforcer, which is this item.
+    - `maxHardExposures`, `maxOptionalSessions` — zero readers, but **correctly**:
+      Sam ABOLISHED both (§11). **They are dead fields to delete, not unenforced
+      rulings.** Distinguishing the two is the point of the census.
+    - The remaining 9 have readers.
+    **SO: 13 fields, 3 unread, of which ONE is a live unenforced ruling, TWO are
+    abolished leftovers, and the headline field is forwarded but never enforced.**
+
+    **ITEM 26 CONSTRAINS THIS AND MUST BE ANSWERED IN THE SAME BUILD.** His rule 5
+    says paired mobility *"counts toward nothing"*. **So the target of 6 counts
+    STRENGTH rows only** — a 6-exercise session with 3 mobility pairs is 9 rows on
+    glass and still six. Stated here so the two items cannot disagree.
+
+26. **SAM'S MOBILITY PAIRING WAS AUTHORED ON 2026-07-31 AND NEVER BUILT — AND
+    THE APP ACTIVELY DELETES IT.**
+
+    **OWNED BY THE TERMINAL.** Composition, not UI.
+
+    **Sam, 2026-08-13:** *"I ALSO SAID THINGS LIKE ACCESSORY LIFTS SHOULD BE
+    PAIRED WITH MOBILITY - WE SPENT FUCKING DAYS ON THIS - WHY IS IT NOT IN THE
+    APP YET"*.
+
+    **HE IS RIGHT. FOUND, WITH THE RECEIPT:**
+    `docs/MOBILITY_PAIRING_RULINGS_2026-07-31.md` — seven numbered rules, all
+    Sam-ruled, with signed examples (split squats + QL extension; single-arm
+    bench + butterfly). **Its own status line reads: "AUTHORED, NOT
+    COMMISSIONED."** It has sat there for thirteen days.
+
+    **HIS RULES, so nobody re-derives them:** (1) on strength days **2-3
+    accessories are paired with mobility as SUPERSETS BY DEFAULT**, programmed
+    and visible, athlete free to skip; (2) **main lifts are NEVER paired**;
+    (3) **non-compete** — the mobility pick targets a region that is neither the
+    accessory's nor any of the day's main-lift regions; (4) the warm-up flow
+    trains the area being trained, PAIRED mobility trains areas that are not;
+    (5) dose is the authored warm-up dose, **logged for nothing, counts toward
+    nothing**; (6) picks come from the signed 20-exercise mobility pool, prefer
+    equipment-light; (7) the standalone Mobility session is UNCHANGED.
+
+    **WHY IT IS NOT ON GLASS — THREE FACTS, MEASURED.**
+    - **There is no producer.** `src/rules/` holds `mobilitySessionComposition.ts`
+      (the STANDALONE session) and nothing that pairs. No module writes a
+      mobility superset.
+    - **The rendering already exists and is idle.** `supersetGroup`,
+      `supersetOrder` and `pairType: 'contrast' | 'superset' | 'circuit'`
+      (`domain.ts:1241-1245`), grouping in `dayWorkoutHelpers.ts:214-237`, the
+      one-list pill in the session template. **Built right, disconnected —
+      again.**
+    - **⚠ AND THE VALIDATOR WOULD DELETE HIS RULING IF GENERATION PRODUCED IT.**
+      `defaultProgram.ts:1299`: *"Max 1 paired block per workout (strip all
+      groups beyond the first)"*, plus a strip of any group that is not exactly
+      2 and any unknown `pairType`. **Sam ruled 2-3 pairs per session. The app
+      caps at 1 and silently bins the rest.** Building the producer without
+      touching this validator produces a session that loses two thirds of his
+      design with no error. **Fix the validator in the SAME unit and bring a
+      cell that fails if a 3-pair session survives as a 1-pair session.**
+
+    **THE PAIRING IS ALSO WHY ITEM 25's COUNT ARGUMENT IS NOT THE WHOLE PICTURE.**
+    Mobility rows *"count toward nothing"* by his rule 5. A session of 6
+    exercises with 3 mobility pairs is 9 rows on glass. **Any size rule built in
+    item 25 must state which of those it counts, and it must agree with rule 5.**
+
+    **DO NOT ASK SAM TO RE-RULE ANY OF THIS.** The document is signed. Build it
+    and show him the session on glass.
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
