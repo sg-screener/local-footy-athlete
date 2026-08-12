@@ -336,3 +336,38 @@ week, which is a change inside the accepted-state transaction — the
 one-owner-of-derivation area — and not a change to this flow. **It is not
 started, and starting it at the end of a long session is the thing this item was
 twice deferred to avoid.**
+
+
+---
+
+## THE REFUSAL HUNT, archived from the inbox 2026-08-13
+
+Kept verbatim because two of its steps are instrument lessons, not away lessons.
+
+    - **CAPTURED 2026-08-13 ON A SECOND METRO** (`npx expo start --dev-client
+      --port 8082` with its console to a file, then the flow with
+      `E2E_METRO_URL=…:8082` — the running Metro belongs to a human-started
+      `expo run:ios` whose console is unreadable from here). **The scoped regen
+      DOES run on device:** Metro shows `[ProgramGen] … completing from
+      deterministic plan` and `[WorkoutCanonicalisation] Generated workout
+      finalised` for days 2, 3 and 4 of the away week.
+    - **AND THE REFUSAL IS SILENT.** Nothing in Metro's output mentions
+      verification, the ledger, the candidate or §18 — no error, no warning.
+      **So generation succeeds and the commit is rejected afterwards without
+      saying why.** That puts it in `verifyCandidate` /
+      `assertAcceptedVisibleLedgerEquivalence` inside
+      `temporarySourceFactTransaction` — the only step between a finished regen
+      and the athlete's sentence. **The next act is to make that step SAY its
+      reason** (it returns a typed `reason` already; nothing logs it), then read
+      it. **THAT is the reading job — and a refusal with no reason on the wire
+      is itself the defect underneath this one.**
+    - **THE LOGGING IS BUILT (`247eb6d3`) AND THE RE-RUN WITHDREW THE PREMISE.**
+      With it in, the flow was run again and **the refusal did not reproduce —
+      it committed, and the week MOVED.** So the refusal is STATE-DEPENDENT, not
+      structural, and *"the §18 gate refuses a club-less week"* is WITHDRAWN.
+    - **⚠ WHAT THE WEEK DID INSTEAD IS WRONG, AND DIAGNOSABLY SO. Seen on glass
+      2026-08-13:** Tuesday lost its team night correctly (*"Strength + Team
+      Training"* → *"Strength"*); **Thursday became a Rest Day; WEDNESDAY GAINED
+      a team night it never had; Saturday kept its game.** The club MOVED rather
+      than left.
+    - ~~THE SUSPECT IS THE `availabilityDateISO` ANCHOR~~ **— REFUTED below.**

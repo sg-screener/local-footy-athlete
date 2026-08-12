@@ -200,41 +200,28 @@ his instruction is standing authority, not history.**
       noise. **Capture it from Metro's output** (`/tmp/qa-metro.log` when
       `lfa:dev` starts it; the current Metro belongs to an `expo run:ios` a
       human started, so its console is in that terminal).
-    - **CAPTURED 2026-08-13 ON A SECOND METRO** (`npx expo start --dev-client
-      --port 8082` with its console to a file, then the flow with
-      `E2E_METRO_URL=…:8082` — the running Metro belongs to a human-started
-      `expo run:ios` whose console is unreadable from here). **The scoped regen
-      DOES run on device:** Metro shows `[ProgramGen] … completing from
-      deterministic plan` and `[WorkoutCanonicalisation] Generated workout
-      finalised` for days 2, 3 and 4 of the away week.
-    - **AND THE REFUSAL IS SILENT.** Nothing in Metro's output mentions
-      verification, the ledger, the candidate or §18 — no error, no warning.
-      **So generation succeeds and the commit is rejected afterwards without
-      saying why.** That puts it in `verifyCandidate` /
-      `assertAcceptedVisibleLedgerEquivalence` inside
-      `temporarySourceFactTransaction` — the only step between a finished regen
-      and the athlete's sentence. **The next act is to make that step SAY its
-      reason** (it returns a typed `reason` already; nothing logs it), then read
-      it. **THAT is the reading job — and a refusal with no reason on the wire
-      is itself the defect underneath this one.**
-    - **THE LOGGING IS BUILT (`247eb6d3`) AND THE RE-RUN WITHDREW THE PREMISE.**
-      With it in, the flow was run again and **the refusal did not reproduce —
-      it committed, and the week MOVED.** So the refusal is STATE-DEPENDENT, not
-      structural, and *"the §18 gate refuses a club-less week"* is WITHDRAWN.
-    - **⚠ WHAT THE WEEK DID INSTEAD IS WRONG, AND DIAGNOSABLY SO. Seen on glass
-      2026-08-13:** Tuesday lost its team night correctly (*"Strength + Team
-      Training"* → *"Strength"*); **Thursday became a Rest Day; WEDNESDAY GAINED
-      a team night it never had; Saturday kept its game.** The club MOVED rather
-      than left.
-    - **THE SUSPECT IS ONE ARGUMENT, checkable before any code moves:** the
-      filter maps a weekday to a date with `options.availabilityDateISO`, and in
-      the SCOPED REGEN path that is not the week being planned — the regen
-      authors week by week (`generateProgramLocally({ todayISO: weekStart … })`)
-      while `onboardingToCoachingInputs` still receives the caller's availability
-      date. **A wrong anchor maps Tuesday to the wrong Tuesday**, which is
-      exactly the shape the screen showed, and the fixture drop fails the same
-      way for the same reason. **Check the anchor first; do not touch the
-      filter's logic until that is ruled in or out.**
+    - **THE HUNT FOR THE REFUSAL IS ARCHIVED to `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`** — a second Metro on its own port is how you read this app's console; `simctl log` is not.
+    - **⚠ REFUTED, MEASURED ON DEVICE 2026-08-13.** A probe inside the filter,
+      run through the real flow against a logged Metro, printed:
+      `{"anchor":"2026-07-13","spans":[{"from":"2026-07-13","until":"2026-07-19"}],
+      "before":["Tuesday","Thursday"],"after":[]}`. **The anchor IS the week
+      being planned, the span is right, and the filter empties the club list
+      exactly as designed. The plan half is CORRECT — do not go back to it.**
+    - **SO BOTH SYMPTOMS HAVE NEW OWNERS, each a specific place:**
+      **(1) THE WEDNESDAY TEAM NIGHT IS NOT FROM THE PLAN** — the plan carried no
+      team day at all. A regenerated week is built with
+      `previousProgram: currentProgram`, so a day whose session is CARRIED OVER
+      keeps the name and identity it already had, *"+ Team Training"* included,
+      on a plan that no longer says so. **The leak is SESSION REUSE, not
+      allocation.**
+      **(2) THE SATURDAY GAME SURVIVES BECAUSE IT IS A CALENDAR MARK**, not the
+      profile's game day: `devE2ESeedRegistry.ts:773` seeds
+      `{ kind: 'calendar_mark', date: fixtureDate, mark: 'game' }`, and the
+      filter drops `targetFixtureDay` — the profile's usual fixture — which a
+      marked day never travels through. **A marked fixture needs its own removal
+      at the marked-days owner.**
+    - **NEITHER IS A GUESS:** the first is what the probe's empty `after` forces,
+      the second is a line in the seed.
 
     Two guesses were
     already wrong today: narrowing L4b (broke two more cells, and was loosening a
