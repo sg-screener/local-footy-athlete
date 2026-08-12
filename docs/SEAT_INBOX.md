@@ -2,20 +2,6 @@
 
 ## Unprocessed (newest first)
 
-> **EVERY ORDER LIVES UNDER THIS HEADING. Sub-headings inside it MUST be `###`,
-> never `##`.** `scripts/seat-inbox-hook.sh` bounds its scan at the next `## `
-> (`awk '/^## Unprocessed/{f=1;next} f&&/^## /{exit}'`), so an order written
-> under its own `## ` heading is **INVISIBLE to the stop hook** — the terminal
-> ends its turn and **Sam becomes the courier again.** The seat introduced
-> exactly that on 2026-08-12 with `## THE MERGE'S LEFTOVERS`; it was masked only
-> because items 1-8 above it kept the hook blocking. **This is sighting 5 of the
-> class the hook's own comments document** — "the scan infers 'an order exists'
-> from an artefact". **The hook is right; the writer was wrong.**
-> **SYSTEMIC FIX OWED (not yet built): a guard cell that reds when a `## `
-> heading between `## Unprocessed` and `## SAFE FOR A PARALLEL AGENT` contains
-> order-shaped content.** Until then this note is the only thing holding it.
-
-
 **READ `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md` FIRST — it supersedes the
 ordering of every item below and answers Sam's 2026-08-12 brief on how the app
 should be built. `docs/ATLAS_VERIFICATION_2026-08-12.md` still carries the
@@ -457,6 +443,17 @@ catches a mistake here automatically.
 
 ## AWAITING SAM'S EYE (not terminal work)
 
+- **SAM CANNOT DEVICE-TEST ANYTHING UNTIL HE REBUILDS HIS PHONE. DO NOT ASK
+  AGAIN.** **Sam, 2026-08-12:** *"I can't test until I've rebuilt my phone"*.
+  **Every device acceptance is parked behind that one act, not behind him.** The
+  Wednesday game-day check, the Renee UI pass and the craft-tier hydration move
+  all queue behind it. **Keep building — nothing in the queue depends on his
+  phone.** State device items as PARKED in a stop report; never as a request.
+  **Fifth appearance of the granted-permission defect if this is re-asked.**
+  When he does rebuild: the white screen after a refused dev launch is expected
+  and now names its own cause (`docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`).
+
+
 - **RULED, 2026-08-12 — HYDRATION MAY ADJUST THE REST OF THE WEEK, QUIETLY. This
   item is CLOSED; do not re-ask it.** Sam, asked when a stored week should be
   allowed to move a session: *"once a session is done then it's locked in, only
@@ -490,3 +487,19 @@ Moved to `docs/SEAT_INBOX_ARCHIVE_TO_2026-08-10.md` — most recently order 1
 terminal stop paid to re-read it. Keep it small: the seat clears
 processed items into the archive at every tidy, and a terminal reply
 that is not an order does not belong in `## Unprocessed` at all.
+
+
+## HOUSEKEEPING FOR THE SEAT (not an order — the hook never reads this far)
+
+> **EVERY ORDER LIVES UNDER THIS HEADING. Sub-headings inside it MUST be `###`,
+> never `##`.** `scripts/seat-inbox-hook.sh` bounds its scan at the next `## `
+> (`awk '/^## Unprocessed/{f=1;next} f&&/^## /{exit}'`), so an order written
+> under its own `## ` heading is **INVISIBLE to the stop hook** — the terminal
+> ends its turn and **Sam becomes the courier again.** The seat introduced
+> exactly that on 2026-08-12 with `## THE MERGE'S LEFTOVERS`; it was masked only
+> because items 1-8 above it kept the hook blocking. **This is sighting 5 of the
+> class the hook's own comments document** — "the scan infers 'an order exists'
+> from an artefact". **The hook is right; the writer was wrong.**
+> **SYSTEMIC FIX OWED (not yet built): a guard cell that reds when a `## `
+> heading between `## Unprocessed` and `## SAFE FOR A PARALLEL AGENT` contains
+> order-shaped content.** Until then this note is the only thing holding it.
