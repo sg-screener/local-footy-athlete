@@ -2519,6 +2519,173 @@ run('the L15 checkers red on fabricated violations (liveness)', () => {
     'a retired key that is NOT registered was reported resurrected');
 });
 
+
+// ── LAW-anchor-must-be-found ─────────────────────────────────────────────────
+//
+// "Any assertion locating something in source by POSITION must prove every
+// anchor was FOUND before claiming anything." Its row asked for a gate over
+// source-reading cells: an `indexOf` anchor must be asserted found before it is
+// used as a bound.
+//
+// WHY THIS IS THE DEFECT AND NOT A STYLE POINT. `indexOf` returns -1 when it
+// misses. Fed to `slice(-1, …)` that silently yields a region measured from the
+// END of the file — so the cell reads a real string, asserts something true
+// about the WRONG region, and goes green. Nothing fails. That is
+// `a-gate-passing-on-coordinates-it-never-builds`, and this repo has now caught
+// it by hand more than once.
+//
+// MEASURED FIRST, 2026-08-13: 335 `indexOf`-assigned anchors in the suites, of
+// which 124 are fed into `slice`/`substring` with NO found-check anywhere in
+// their file, across 32 files. Far too many to repair in this unit, and a
+// blanket ban would red 124 places at once — so they are DATED, PER-FILE DEBT
+// THAT MAY ONLY SHRINK. A file at its declared count stays green; one that
+// grows reds; one that improves must lower its number. A clean file may never
+// gain its first.
+//
+// PER FILE, NOT A TOTAL, on purpose: a single ceiling would let a new unguarded
+// anchor appear in one file while another removed one, which is the decay this
+// ratchet exists to stop.
+
+/** An `indexOf` anchor used as a slice bound with no found-check in its file. */
+function unguardedSourceAnchors(
+  files: readonly { rel: string; text: string }[],
+): { file: string; line: number; variable: string }[] {
+  const out: { file: string; line: number; variable: string }[] = [];
+  for (const file of files) {
+    const lines = file.text.split('\n');
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('*') || trimmed.startsWith('//')) return;
+      const assigned = /\b(?:const|let)\s+(\w+)\s*=\s*[\w.[\]()]+\.indexOf\(/.exec(line);
+      if (!assigned) return;
+      const variable = assigned[1]!;
+      // The guard may be anywhere in the file — an early `assert(x >= 0)` is the
+      // shape this law asks for, and it need not sit on the next line.
+      const guarded = new RegExp(
+        `\\b${variable}\\s*(?:>=\\s*0|>\\s*-1|!==\\s*-1|===\\s*-1|<\\s*0)`).test(file.text);
+      const usedAsBound = new RegExp(
+        `\\.(?:slice|substring)\\(\\s*(?:[^)]*\\b${variable}\\b)`).test(file.text);
+      if (usedAsBound && !guarded) out.push({ file: file.rel, line: index + 1, variable });
+    });
+  }
+  return out;
+}
+
+/**
+ * THE DATED DEBT, measured 2026-08-13. One-way: a number may fall, never rise,
+ * and a file absent from this list may never gain its first unguarded anchor.
+ */
+const UNGUARDED_ANCHOR_DEBT: Readonly<Record<string, number>> = {
+  'coachPromptContractTests.ts': 1,
+  'coachSemanticProgramEditDraftControllerTests.ts': 1,
+  'coachTabSlice2Tests.ts': 1,
+  'dayFirstTimelineTests.ts': 47,
+  'devE2ECoordinatorTests.ts': 1,
+  'explorerLiveRunnerTests.ts': 3,
+  'gameAnchorOwnershipTests.ts': 1,
+  'journalChangesTests.ts': 2,
+  'journalFeelTests.ts': 2,
+  'journalHiddenContractTests.ts': 4,
+  'journalLoadTests.ts': 4,
+  'journalMonthTests.ts': 4,
+  'journalReminderTests.ts': 7,
+  'journalStrengthTrendTests.ts': 2,
+  'journalUiLawsTests.ts': 4,
+  'journalWeekJobTests.ts': 2,
+  'journalWeekTests.ts': 2,
+  'loadRatioRulingTests.ts': 1,
+  'missedSessionPromptOwnershipTests.ts': 1,
+  'mobilityPrehabFlowTests.ts': 2,
+  'nonStrengthContextLoadTripwireTests.ts': 1,
+  'onboardingFieldInfluenceTests.ts': 1,
+  'planChangeMoveScopingTests.ts': 3,
+  'planChangeProducerTests.ts': 8,
+  'profileResetUITests.ts': 4,
+  'programControlDecisionTests.ts': 5,
+  'programControlDurableOwnershipTests.ts': 1,
+  'projectionOwnershipTests.ts': 1,
+  'repoLawGuardsTests.ts': 2,
+  'sessionExecutionChecklistTests.ts': 4,
+  'weekIdentityOwnershipTests.ts': 1,
+  'welcomeScreenDevSkipContractTests.ts': 1,
+};
+
+function suiteFilesForAnchors(): { rel: string; text: string }[] {
+  const testRoot = path.join(repoRoot, 'src', '__tests__');
+  return filesUnder(testRoot, ['.ts', '.tsx']).map((file) => ({
+    rel: path.relative(testRoot, file),
+    text: fs.readFileSync(file, 'utf8'),
+  }));
+}
+
+function anchorCountsByFile(): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const found of unguardedSourceAnchors(suiteFilesForAnchors())) {
+    counts.set(found.file, (counts.get(found.file) ?? 0) + 1);
+  }
+  return counts;
+}
+
+run('no source-reading cell gains an unproven anchor', () => {
+  const files = suiteFilesForAnchors();
+  assert(files.length > 150, `only ${files.length} suite files read — the scan is reading the wrong tree`);
+  const counts = anchorCountsByFile();
+  const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
+  assert(total > 0, 'ZERO unguarded anchors found — the measured baseline was 124, so this scan has gone blind');
+
+  const grown: string[] = [];
+  for (const [file, count] of counts) {
+    const allowed = UNGUARDED_ANCHOR_DEBT[file] ?? 0;
+    if (count > allowed) grown.push(`${file}: ${count} > ${allowed} allowed`);
+  }
+  assert(grown.length === 0,
+    `unproven source anchors appeared: ${grown.join('; ')}. `
+    + 'An indexOf that misses returns -1, and slice(-1, …) reads from the END of the '
+    + 'file — the cell then asserts something true about the WRONG region and passes. '
+    + 'Assert the anchor was FOUND (>= 0) before using it as a bound.');
+  console.log(`      (${total} unguarded anchors across ${counts.size} files, all declared)`);
+});
+
+run('the unguarded-anchor debt only shrinks', () => {
+  const counts = anchorCountsByFile();
+  const stale: string[] = [];
+  for (const [file, allowed] of Object.entries(UNGUARDED_ANCHOR_DEBT)) {
+    const actual = counts.get(file) ?? 0;
+    if (actual < allowed) stale.push(`${file}: now ${actual}, still declared ${allowed}`);
+  }
+  assert(stale.length === 0,
+    `these files repaired anchors — lower them in UNGUARDED_ANCHOR_DEBT: ${stale.join('; ')}`);
+});
+
+run('the anchor checker reds on fabricated violations (liveness)', () => {
+  const unguarded = { rel: 'a.ts', text: "const at = src.indexOf('X');\nconst body = src.slice(at);" };
+  assert(unguardedSourceAnchors([unguarded]).length === 1,
+    'an unguarded anchor fed straight into slice passed — that is the whole law');
+
+  const guarded = {
+    rel: 'a.ts',
+    text: "const at = src.indexOf('X');\nassert(at >= 0, 'not found');\nconst body = src.slice(at);",
+  };
+  assert(unguardedSourceAnchors([guarded]).length === 0,
+    'a properly guarded anchor was flagged — the law asks for the guard, not for no indexOf');
+
+  const notABound = { rel: 'a.ts', text: "const at = src.indexOf('X');\nassertSomething(at);" };
+  assert(unguardedSourceAnchors([notABound]).length === 0,
+    'an indexOf never used as a slice bound was pulled into scope');
+
+  const commented = { rel: 'a.ts', text: "// const at = src.indexOf('X');\nconst body = src.slice(at);" };
+  assert(unguardedSourceAnchors([commented]).length === 0,
+    'a commented-out anchor was counted');
+
+  // The other guard spellings the repo actually writes.
+  for (const spelling of ['at > -1', 'at !== -1', 'at === -1']) {
+    assert(unguardedSourceAnchors([{
+      rel: 'a.ts',
+      text: `const at = src.indexOf('X');\nif (${spelling}) return;\nconst body = src.slice(at);`,
+    }]).length === 0, `the guard spelling "${spelling}" was not recognised`);
+  }
+});
+
 console.log(`\nrepo law guards totals: ${passed} passed, ${failures.length} failed`);
 totalsPrinted(failures.length);
 if (failures.length > 0) {

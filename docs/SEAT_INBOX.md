@@ -683,6 +683,19 @@ phone.** State device items as PARKED in a stop report, never as a request.
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 12).
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
+   **PAID A THIRD TIME, 2026-08-13: 30 -> 29.** `LAW-anchor-must-be-found` is held
+   by `test:repo-law-guards`, on its DECIDABLE half — an `indexOf` anchor must be
+   proven found before it is used as a `slice` bound. **`indexOf` returns -1 on a
+   miss and `slice(-1, …)` reads from the END of the file, so the cell asserts
+   something TRUE about the WRONG region and goes green.**
+   **MEASURED BEFORE BUILT: 124 unguarded anchors across 32 files** (of 335
+   total), carried as **per-file, shrink-only debt** — per file, not one total,
+   so a new one cannot hide behind someone else's repair. Largest is
+   `dayFirstTimelineTests` at 47. Mutation-checked three ways.
+   **THE `{0,N}` HALF IS NOT DONE and is named, not forgotten: 194 character-window
+   regexes exist; banning them would red 194 places at once and deserves its own
+   unit.**
+
    **PAID AGAIN, 2026-08-13: 31 -> 30** (`a538a12f`). `LAW-L15-one-write-format`
    is held by `test:repo-law-guards` (already in `test:bible`) — four cells,
    mutation-checked five ways. Detail in the commit and the registry receipt.
