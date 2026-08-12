@@ -362,3 +362,35 @@ half of this question is now CLOSED and must not be re-opened:
 - `repairOptionalRestCandidates` is not on this path (§8).
 - `test:craft-tier` is GREEN with the ±7 removed — the fix itself is not in
   question; only what the changed findings do to the published week.
+
+## §9 THE PUBLISHER IS NARROWED TO ONE SITE — three more candidates eliminated
+
+Same pass, same method: probe, do not argue. **Every candidate below was
+eliminated by a trace that printed nothing, or printed the same thing in both
+arms.**
+
+| candidate | verdict | evidence |
+| --- | --- | --- |
+| `programStore`'s accepted-week repair loop | **NOT the publisher** | every call for `2026-07-20` prints `equal=true` → `continue`. 3 of 35 already carry the dependency on BOTH sides |
+| `rollingHorizonDependencyClosure` | **NEVER CALLED** in this suite | 0 traces |
+| `repairOptionalRestCandidates` (gateway) | **NEVER CALLED** in this suite | 0 traces, §8 |
+| `sessionResolver`'s mint | **fires in both arms, MORE without the ±7** | 30 vs 23, §8 |
+
+**WHAT IS LEFT IS ONE SITE:** `acceptedStateTransaction.ts:2951` —
+
+    for (const projection of repair.projections)
+      weekScopedOverlays[projection.weekStart] = projection.overlay;
+
+The following week's overlay exists **iff the rolling horizon repair returned a
+projection for it.** Nothing else writes it on this path.
+
+**ATTEMPT 3'S PROBE, AND IT IS ONE PRINT:** at that loop, in both arms, print
+`repair.weekStarts`, each `projection.weekStart`, and whether that projection's
+Monday carries a `dependency`. If the next week is missing from `projections`
+with the ±7 removed, the ±7 was **holding a week inside the repair horizon** —
+which is a far more serious thing than a phantom neighbour, and it would mean the
+property has been asserting horizon membership through a proxy all along.
+
+**THE ELIMINATIONS ARE BANKED. Do not re-probe them:** the resolver mints it, the
+materialiser sees it, the closure never runs, the gateway's copier never runs,
+and the store's repair loop skips the day as unchanged.
