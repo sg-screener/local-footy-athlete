@@ -22,7 +22,7 @@ recurring anchor for weeks that have no explicit mark and are not `noGame`/
 
 | call site | markedDays it uses | guarded on profile |
 |---|---|---|
-| `acceptedStateTransaction.ts:1847` | `args.markedDays` (**BEFORE**) | no |
+| `acceptedStateTransaction.ts:1847` | `args.markedDays` (**the PROPOSED calendar** — `weekRebuild:492-498` passes the current one separately as `sourceMarkedDays`) | no |
 | `acceptedStateTransaction.ts:2274` | `args.afterMarkedDays` (**AFTER**) | no |
 | `programStore.ts:1272` | `options.markedDays` | **yes** — `undefined` without one |
 | `sessionResolver.ts:1001` | `args.state.markedDays` | **yes** — `undefined` without one |
@@ -39,17 +39,29 @@ passes the PROPOSED calendar as `markedDays` and the current one separately as
 `sourceMarkedDays`. So `:1847` reads the **AFTER** world, and a cancelled
 Saturday has no business in it.
 
-**WHAT IS ACTUALLY KNOWN:** the authority for week `2026-07-20` contained
-`2026-07-18` — a fixture the move had cancelled — on some calls and not others.
-**Why is OPEN.** One untested hypothesis, recorded as a hypothesis:
-`effectiveFixtureDatesForWeeks` adds the RECURRING anchor for any week with no
-explicit `game` mark, and the athlete's profile still says `usualGameDay:
-Saturday`. A moment in which the old mark is cleared and the new one is not yet
-written would therefore have the recurring rule re-supply the very fixture being
-moved away from. **That is a guess. It has not been measured, and this section
-has already been wrong once by reasoning instead of measuring.**
+**NOW MEASURED, AND THE HYPOTHESIS HOLDS — 149 times in one suite run.**
+Instrumenting the one place that adds a recurring date:
 
-**IT DOES NOT BLOCK (b) OR (c)**, which stand on their own evidence.
+```
+[rec] week=2026-07-13 ADDED recurring 2026-07-18 (explicit marks in week: [])
+[rec] week=2026-07-13 ADDED recurring 2026-07-18 (explicit marks in week: ["2026-07-16"])
+```
+
+`effectiveFixtureDatesForWeeks` adds the profile's RECURRING anchor to any week
+holding no explicit `game` mark, and the athlete's profile still says
+`usualGameDay: Saturday`. The authority is computed at a moment when the move
+has cleared the old mark and not yet written the new one — **so the recurring
+rule re-supplies the very fixture being moved away from.**
+
+**AND THAT RULE IS NOT WRONG.** For an ordinary week with no marks, the usual
+Saturday IS the fixture; the `noGame`/`rest` branch directly below already
+handles a real cancellation. What is wrong is WHEN it was asked: a half-applied
+calendar is not a world anything should be judged against.
+
+**SO (a) COLLAPSES INTO (c).** It is not a second defect and it is not a stale
+snapshot — it is the same question of which settled world the authority
+describes. My first answer named the right suspect (a snapshot boundary) for the
+wrong reason, and the mechanism is now measured rather than reasoned.
 
 **(b) `UNDEFINED` IS NOT REACHABLE IN PRODUCTION.** In production the ONLY
 caller of `fixtureMinimalReplan` is `acceptedStateTransaction` (verified by
@@ -88,12 +100,14 @@ the paths that disagree."* After this census that reads:
    `PLUS_MINUS_7_ATTEMPT_1_BLOCKED_2026-08-12.md` §1 (which are written and were
    proven to red before the fix and green after).
 
-**The regression that forced the revert is explained by this census.** The
-`test:accepted-state-transactions` property that broke asserts the FOLLOWING
-week's G+1 dependency after a fixture move. Attempt 1 removed the invented
-neighbour and the honest one did not arrive — because on that path the craft
-tier was reading a snapshot that did not contain it. **That is (c), not a reason
-to keep inventing fixtures.**
+**THE REGRESSION THAT FORCED THE REVERT IS A CANDIDATE FOR (c), NOT AN EXPLAINED
+FACT.** The `test:accepted-state-transactions` property that broke asserts the
+FOLLOWING week's G+1 dependency after a fixture move. Attempt 1 removed the
+invented neighbour and the honest one did not arrive. **Whether that is because
+the tier read a half-applied world is PLAUSIBLE AND UNPROVEN** — the §2(a)
+measurement shows such moments exist and are frequent, but nothing here traces
+that specific property's failure to one. **Attempt 2 must measure it, not assume
+it.** It is in any case not an argument for continuing to invent fixtures.
 
 ## §4 THE CHANGE THAT WAS WRITTEN AND REVERTED — recorded so it is not re-tried
 
@@ -106,8 +120,8 @@ BOTH TIMES — identical.** The change is inert on every path any suite exercise
 because the undefined values come from §2(b)'s direct gateway calls, not from
 the guarded sites. **A confident comment over an inert change is exactly the
 shape this repo keeps cataloguing**, so it is not in the tree. The reasoning may
-still be right; it is simply unproven, and §3 item 1 addresses the same problem
-where it is actually reachable.
+still be right; it is simply unproven, and §2(b) shows the problem it targets is
+test-only, which `test:gateway-authority-census` already governs.
 
 ## §5 STATUS
 
@@ -119,8 +133,12 @@ where it is actually reachable.
   step (a required field). Both were reasoned rather than measured, and both
   were wrong. They are struck through rather than deleted so the next pass does
   not re-derive them.
-- **OPEN** — why a cancelled fixture appears in an AFTER-world authority
-  (§2(a)); one unmeasured hypothesis is recorded there as a hypothesis.
+- **ANSWERED BY MEASUREMENT** — §2(a): the recurring anchor re-supplies the
+  fixture being moved away from, because the authority is computed while the
+  calendar is half-applied. 149 occurrences in one suite run. It collapses into
+  (c) rather than being a second defect.
+- **OPEN** — whether the reverted attempt's one regression is caused by that
+  half-applied world. Plausible, and NOT traced.
 - **NOT INVESTIGATED** — whether `derivedSessionProvenance`'s
   `exactFixtureDatePresent` (`:417-425`), which reads the same optional set and
   falls back to a contract-shape check when it is absent, has the same

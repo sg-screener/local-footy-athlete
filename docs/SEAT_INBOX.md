@@ -139,10 +139,13 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **THE PREREQUISITE CENSUS IS DONE —
    `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md`. IT DE-RISKS THIS ITEM.** The
    "six answers" were THREE things and only one is a defect:
-   **(a) the "cancelled fixture" is STILL UNEXPLAINED** — the first answer
-   ("a before snapshot") was WRONG and is withdrawn in the doc: that call site
-   reads the PROPOSED calendar, so a cancelled Saturday has no business in it.
-   **OPEN.** **(b) `UNDEFINED` is NOT reachable in production** — the only
+   **(a) the "cancelled fixture" is MEASURED and collapses into (c)** — the
+   authority is computed while the calendar is HALF-APPLIED (old mark cleared,
+   new one not yet written), so the profile's recurring `usualGameDay` rule
+   re-supplies the very fixture being moved away from. **149 occurrences in one
+   suite run.** The rule itself is correct — an unmarked week really does have
+   the usual game — so what is wrong is WHEN it is asked. (An earlier answer,
+   "a before snapshot", was wrong and is withdrawn in the doc.) **(b) `UNDEFINED` is NOT reachable in production** — the only
    production caller of the replan always computes the authority, and the
    replan's inner type already declares it required; every UNDEFINED came from
    suites calling the gateway DIRECTLY, which is the harness entering below the
