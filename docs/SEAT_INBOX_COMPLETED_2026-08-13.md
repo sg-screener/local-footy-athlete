@@ -294,3 +294,115 @@ size budget Sam pays for in dollars.
     days this week. I would not apply that without confirmation."* It is not
     inaccurate, so it was left alone. **Whether the coach should speak his signed
     sentence too is a ruling, not a cleanup.**
+
+6. **BLOCKED-BY: sam** — the team-night half is BUILT and read end to end; the
+    GAME half needs one coaching decision and nothing else.
+    **⚠ AND ITS CROSS-REFERENCE WAS DANGLING — SECOND TIME TONIGHT.** This item
+    said the question was *"written under `## AWAITING SAM`"*. **It is not there**
+    — every entry in that section is ANSWERED or a blocker note. The question was
+    lost, exactly as 30-A5's was. Written out here so it batches instead of
+    pointing at an empty place.
+    **THE QUESTION, and the app already stores everything needed to answer it:**
+    a game records **body RPE (1-10)** and **time on ground (minutes)**. Team
+    training and conditioning both count as `effort x minutes`.
+    **Does a match count the same way, or is a match minute worth more?**
+    - **SAME** — a 7/10 for 80 minutes is the same load as a team night at 7/10
+      for 80. Simplest, and the reader is already written for the other kinds.
+    - **WEIGHTED** — a match minute is harder than a training minute, so it is
+      multiplied. **If so, by how much?** That number is yours, not mine.
+    **The reader is one function either way; the multiplier is the only unknown,
+    and inventing it would be inventing training load.**
+    **RE-MEASURED — THE PREMISE MOVED, AND TWO SESSION KINDS ALREADY STORE BOTH
+   HALVES OF sRPE WITH NO READER.** `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md`
+   §6, taken after `0a` put every effort input on one 1-10 scale.
+   **Team training stores `effort` + `durationMinutes`. A game stores `bodyRpe` +
+   `timeOnGroundMinutes`. Both are written, validated at the transaction
+   boundary — and `journalLoad` has NO path for either.** Its only sRPE reader
+   takes a `ConditioningPerformanceLog`.
+   **SO THE ASYMMETRY IS NOT WHAT §3 SAID.** Three of four kinds have real
+   athlete-reported load and two of those three are discarded. **Only STRENGTH
+   needs Sam's estimate ruling**; team training and games need **a reader, not a
+   ruling**, and it is the same shape as `conditioningSRPE`.
+   **THIRD SIGHTING TODAY of written-and-never-consumed** —
+   `achievedModerateDayCount` (item 4), `canOverride`, and now these two.
+   **Item 10's `LAW-computed-must-be-consumed` is the compression for all of
+   them.**
+   **THE TEAM-NIGHT READER IS BUILT** — `teamTrainingSRPE` (effort x minutes,
+   same unit as conditioning), carried into `deriveSessionLoad`, counted in
+   `measured`, and wired from the journal producer so it is read end to end.
+   Six cells in `test:journal-load` (122/0), two mutations killed. Registry row
+   `LAW-team-night-load-is-read`.
+   **THE GAME READER IS NOT BUILT AND WILL NOT BE WITHOUT A RULING** — it stores
+   both halves too, but whether a match's minutes are full or weighted training
+   load is a coaching question. **Written under `## AWAITING SAM
+
+- **BLOCKED-BY: sam. ONE RULING — SPRINT CAP: 2 NIGHTS OR 2-3 EXPOSURES? (census A6). Two of your
+  own lines disagree, in different units.**
+  - **Bible `:90`:** *"Sprinting limited to **2 nights per week** which includes
+    nights at team training."* — HARD, counted in NIGHTS.
+  - **Bible `:129`:** *"A second exposure may occur naturally, while **2-3
+    remains the usual maximum**."* — SOFT, counted in EXPOSURES.
+  **They cannot both be the enforced number.** A hard 2 refuses weeks `:129`
+  calls usual; leaving it open is today's behaviour.
+  **MEASURED (the census receipt is partly wrong):** four rows carry
+  `max: null` — in-season game week, both bye rows, mid off-season. **Pre-season
+  is NOT uncapped: `:1030` already sets `max: 2`.** Early off-season is `max: 0`,
+  correctly.
+  **RECOMMENDATION:** enforce **`:90` — 2 nights, team training counted** — and
+  read `:129`'s "2-3" as the exposure preference it says it is, not a cap. That
+  makes the four `null` rows `max: 2`. **Units have been the trap tonight, so I
+  have not guessed.**
+
+- **BLOCKED-BY: sam. ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
+  the census says.**
+  **His rule, Bible `:226`:** *"ONE MAIN PER PATTERN PER SESSION... A second
+  heavy lift in a session must be a different pattern."*
+  **MEASURED across every fallback branch: exactly ONE violating shape —
+  `RDLs + Hip Thrusts`, both hinge, both classifying as main lifts — in two
+  branches.**
+  **AND THE CENSUS'S SECOND EXAMPLE IS OVER-CALLED:** `Overhead Press + Incline
+  DB Bench` does NOT come out as two mains — only one classifies as a main lift.
+  **THE CALL IS WHICH WAY TO FIX IT, and that is CONTENT (L7):**
+  **(a) drop Hip Thrusts**, losing a row and shrinking the session; or
+  **(b) keep it and lighten it** to an accessory dose.
+  **RECOMMENDATION: (b).** It obeys `:226` exactly — the rule bars a second
+  HEAVY lift of the pattern, not a second exercise — and it does not shrink a
+  session, which is what bit us on team nights.
+
+- **BLOCKED-BY: sam. ONE LINE OWED — HOW A PACE IS SHOWN (census C2, the 2km time trial).**
+  **Not a bare question: the derivation is built, the number exists, and only
+  the WORDS are missing.**
+  `deriveMas` is correct and has **zero production callers** — an athlete runs
+  the trial, the app validates and stores it, and their conditioning card reads
+  the template's authored intensity (e.g. *"Intensity: 110% MAS"*) with **no
+  personal pace and no distance.**
+  **GREPPED FIRST:** `STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md` rules the
+  DERIVATION (MAS = 2km speed x 1.00; defaults 6:30 / 7:15 / 8:00 / 8:45 by
+  level) and **says nothing about display**; the copy sheet has no pace line.
+  **RECOMMENDATION:** show the athlete their own pace BESIDE the authored
+  intensity, not instead of it — the 55 signed templates own the intensity
+  ranges (`masCopy.ts:16`, whose header records the "110% MAS" binary as
+  **accreted, not authored**). **The number is ready; only the words are not.**
+   **STILL NOT BUILT: strength.** That is where the estimate ruling applies, and
+   it is the remaining half of this item.
+   **STILL SAM'S:** whether a game's minutes count as full load or weighted, and
+   whether strength's VOLUME LOAD may share a column with sRPE (§4's open fork).
+
+   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 6).
+
+    **⚠ CLOSED 2026-08-13, AND I MARKED IT BLOCKED BY MISTAKE MINUTES EARLIER.**
+    I read this item's own words — *"THE GAME READER IS NOT BUILT AND WILL NOT BE
+    WITHOUT A RULING"* — marked it `BLOCKED-BY: sam`, and wrote Sam a question
+    about whether a match minute is weighted. **The item was STALE and the code
+    already answered it.** `gameSRPE` exists (`journalLoad.ts:606`) and is
+    `bodyRpe x timeOnGroundMinutes` — the SAME unit as every other kind — read
+    end to end at `:746`. Item 17 recorded it as WORKING (`f923523a`) and I had
+    not read item 17 before marking item 6.
+    **ALL FOUR KINDS NOW HAVE A READER:** `conditioningSRPE`,
+    `teamTrainingSRPE`, `gameSRPE`, `strengthSRPE`, all four wired at
+    `journalLoad.ts:745-748`. `test:journal-load` 142/0.
+    **THE LESSON, AND IT IS THE ITEM'S OWN:** an item's text is evidence of what
+    was TRUE WHEN WRITTEN, never of what is built now — the same rule the repo
+    already applies to code comments. **Check the code before marking anything
+    blocked on Sam; a question he does not need to answer still costs him a
+    read.** No question was sent — it was caught in the same turn.
