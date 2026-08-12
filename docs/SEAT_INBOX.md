@@ -154,9 +154,18 @@ phone.** State device items as PARKED in a stop report, never as a request.
    holding the MOVED one (correct), and one holding NOTHING. **The ±7 looked
    stable only because it answered from the CONTRACT and could not tell them
    apart**; the empty-authority calls are precisely where attempt 1 lost the
-   neighbour. **Attempt 2's target is exact: stop the craft tier being asked
-   about a week whose calendar has not settled — a settled input, not a new
-   fallback.**
+   neighbour. **THE ROOT IS NAMED: the gateway RE-ENTERS ITSELF through the
+   resolver** (`assess` -> `resolveFinalVisibleSection18Week` ->
+   `sessionResolver:973` -> the gateway again), and the inner call **derives a
+   FRESH authority from its own `state.markedDays`** instead of inheriting the
+   outer one. Empty state, empty authority. **THIS IS SIGHTING 3 of the class
+   `gatewayAuthorityInputCensusTests` exists for** — sighting 2 was this same
+   input, paid by giving the resolver the field; the disease came back one level
+   down as RE-DERIVATION. **ATTEMPT 2: thread `activeFixtureDates` through
+   `resolveFinalVisibleSection18Week` into `section18TierFour` so the inner
+   resolve INHERITS it, then delete the ±7 with the cells already written.**
+   **The census gate is owed a third cell: an authority re-derived downstream of
+   one already established is the same defect as one never passed.**
    **SO ATTEMPT 2 IS: (1) answer (c); (2) THEN delete the ±7 using the cells
    already written and proven red-before/green-after.** The earlier "make it
    REQUIRED" step is **WITHDRAWN**: `test:gateway-authority-census` already

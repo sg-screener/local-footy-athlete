@@ -104,8 +104,44 @@ answer is easier to build a passing test on than three honest ones.
 correctly claims no neighbour and the phantom used to supply `07-18`. That is
 the behavioural gap the reverted attempt opened.
 
-**SO ATTEMPT 2'S TARGET IS EXACT: stop the craft tier being asked about a week
-whose calendar has not settled.** Not a new fallback — a settled input.
+**AND THE EMPTY ROWS NOW HAVE A NAMED ROOT.** Stack-tracing every empty-authority
+craft evaluation of that week:
+
+```
+assess                        section18AcceptedWeekGateway:1535
+searchWholeWeekRepairCandidates
+resolveCandidate              section18AcceptedWeekGateway:1467
+runSection18AcceptedWeekGateway
+section18TierFour             sessionResolver:973      <- computes its OWN authority
+resolveWeekWithConditioning
+resolveFinalVisibleSection18Week
+                              section18AcceptedWeekGateway:1494  <- the outer gateway
+```
+
+**THE GATEWAY RE-ENTERS ITSELF THROUGH THE RESOLVER.** Its `assess` closure
+resolves each candidate with `resolveFinalVisibleSection18Week`, which runs the
+READ path, which calls the gateway again — and at `sessionResolver:1001` that
+inner call **derives a FRESH `activeFixtureDates` from `args.state.markedDays`**
+instead of inheriting the authority the outer transaction already established.
+When that schedule state carries no marks, the inner authority is `[]`.
+
+**THIS IS SIGHTING 3 OF THE CLASS `gatewayAuthorityInputCensusTests` WAS BUILT
+FOR**, and its own header names sighting 2 as this same input: *"the staging
+owners thread it everywhere; `sessionResolver` had ZERO occurrences of it."*
+That was paid by GIVING the resolver the input. **The disease came back one
+level down: the resolver now HAS the input and RE-DERIVES it from a different
+world.** The census gate cannot see this — it checks that a call site supplies
+the authority, not that it supplies the SAME one.
+
+**SO ATTEMPT 2'S TARGET IS EXACT, AND IT IS NOT A FALLBACK: the inner resolve
+must INHERIT the outer authority rather than re-derive one.** Thread
+`activeFixtureDates` through `resolveFinalVisibleSection18Week` into
+`section18TierFour`, and have the resolver prefer a supplied authority over a
+computed one. Only then delete the ±7 — with the cells already written.
+
+**AND THE CENSUS GATE IS OWED A THIRD CELL:** *an authority that is RE-DERIVED
+downstream of one already established is the same defect as one not passed at
+all.* Sighting 3 makes that a compression, not a suggestion.
 
 ## §3 WHAT THIS MEANS FOR THE ±7 FIX
 
