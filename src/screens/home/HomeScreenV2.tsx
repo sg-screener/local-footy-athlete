@@ -1032,8 +1032,19 @@ export default function HomeScreenV2() {
 
             NO CAP, BY EXPLICIT RULING. No two-game limit, no warning at three,
             no confirm. If a week gets ugly the contract discloses it; a button
-            that refuses is a button deciding the athlete's season for them. */}
-        {isNormal && showAddFixtureCTA && (
+            that refuses is a button deciding the athlete's season for them.
+
+            WEEK SHAPE ONLY — SAM, 2026-08-13, ON SEEING IT ON THE DAY SCREEN:
+            *"add a game button should only be on week screen - not day screen
+            and then you select what day you need to add it too"*.
+
+            AND THE RULING MATCHES WHAT THE CONTROL ALREADY DOES. Tapping it
+            enters the add-game picker, and a picker FORCES the week shape
+            because the athlete is choosing among seven days. So on the day
+            screen this button's only possible next act was to leave the day
+            screen — it asked a question the shape it sat in could not answer.
+            The day screen is about ONE day; "which day?" is a week question. */}
+        {isNormal && !dayFirst && showAddFixtureCTA && (
           <Pressable
             onPress={handleAddGameMode}
             testID={explorerTestId.fixtureIngress('add', weekAnchorISO)}

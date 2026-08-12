@@ -26,23 +26,37 @@ tags:
     env:
       SEED_ID: standard-in-season-week
 
+# ── THE DAY SCREEN DOES NOT CARRY IT — SAM, 2026-08-13 ──
+# *"add a game button should only be on week screen - not day screen and then
+# you select what day you need to add it too"*. Asserted BEFORE the week shape,
+# on the screen the app opens on, because that is where he found it. The control
+# lives in the scroll body BOTH shapes draw, so this absence is held by one
+# `!dayFirst` and by nothing else.
+- assertNotVisible:
+    id: "fixture-add-action-2026-07-13"
+- takeScreenshot: artifacts/ui-walk/item19-day-screen-has-no-add-button
+
 # The Saturday fixture the seed carries. Asserting it FIRST is what makes the
 # rest of this flow mean anything: the control below appears while this exists.
 - runFlow:
     file: ../common/show-week-shape.yaml
 - assertVisible:
     id: "day-row-sat"
-- tapOn:
-    id: "program-view-today"
 
-# ── THE CONTROL IS THERE ON A WEEK THAT ALREADY HAS A GAME ──
+# ── THE WEEK SCREEN CARRIES IT, ON A WEEK THAT ALREADY HAS A GAME ──
 # In season the label is "Add a game"; pre-season it reads "Add a pre-season
 # practice match". One control, one testID, the words following the phase.
+# SCROLLED BY ITS WORDS, AND AT 100%, ON PURPOSE. Targeting the id at 60% found
+# the control in the view hierarchy while it was still BELOW the fold and
+# reported success without scrolling — the seven week rows put it much further
+# down than the day shape ever did. The tap then landed on nothing and the flow
+# failed at the picker, blaming the product for an instrument fault. Requiring
+# the visible TEXT at full visibility makes "visible" mean on the glass.
 - scrollUntilVisible:
     element:
-      id: "fixture-add-action-2026-07-13"
+      text: "Add a game"
     direction: DOWN
-    visibilityPercentage: 60
+    visibilityPercentage: 100
 - assertVisible: "Add a game"
 - assertNotVisible: "No game this week - add one"
 - takeScreenshot: artifacts/ui-walk/item19-add-a-game-with-a-game
@@ -53,5 +67,34 @@ tags:
 # route; the banner's own words are the witness.
 - tapOn:
     id: "fixture-add-action-2026-07-13"
+# The picker banner sits ABOVE the seven days — it has to, because it is telling
+# the athlete to tap one of them — and the control that was just pressed is
+# below them. So the screen is scrolled back up to read the answer.
+#
+# SCROLLED TO THE BANNER ITSELF, NOT TO THE DAY/WEEK TOGGLE. Aiming at the
+# toggle failed here, and the failure was the proof rather than a fault: a
+# picker is not `isNormal`, so the toggle is NOT RENDERED in this mode. Waiting
+# for it was waiting for a control the app is correctly hiding.
+- scrollUntilVisible:
+    element:
+      text: "Tap the day to set as game day"
+    direction: UP
+    visibilityPercentage: 100
 - assertVisible: "Tap the day to set as game day"
+# AND EVERY DAY IS ON OFFER, WHICH IS THE OTHER HALF OF SAM'S SENTENCE:
+# "then you select what day you need to add it too".
+#
+# ASSERTED BY THE TARGET ID, NOT `day-row-tue`, AND THE DIFFERENCE IS THE WHOLE
+# POINT. In picker mode a day row STOPS being `day-row-<weekday>` and becomes
+# `fixture-target-<date>` — it is no longer a day you read, it is a day you can
+# put a game on. Asserting the ordinary row id here passed nothing and taught
+# nothing; asserting the target id proves the day is ELIGIBLE.
+#
+# WEDNESDAY IS AN ORDINARY TRAINING DAY AND SUNDAY IS REST — neither is the
+# Saturday fixture the week already holds. So a SECOND game has somewhere to go,
+# which is the thing Sam asked for.
+- assertVisible:
+    id: "fixture-target-2026-07-15"
+- assertVisible:
+    id: "fixture-target-2026-07-19"
 - takeScreenshot: artifacts/ui-walk/item19-second-game-picker

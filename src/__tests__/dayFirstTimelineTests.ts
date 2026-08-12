@@ -1290,10 +1290,11 @@ run('the old status bars did not survive alongside their own chips', () => {
 run('the add-fixture control never caps the week at one game', () => {
   const home = homeScreenSource();
   const body = home.slice(home.indexOf('function HomeScreenV2'));
-  assert(/isNormal && showAddFixtureCTA &&/.test(body),
-    'the add-fixture control is gated on something other than the phase alone. '
-    + 'Any extra condition here is a cap on how many games a week may hold, and '
-    + 'Sam ruled there is none.');
+  assert(/isNormal && !dayFirst && showAddFixtureCTA &&/.test(body),
+    'the add-fixture control is not gated on exactly `isNormal`, the WEEK shape '
+    + 'and the phase. Sam ruled it is week-only ("not day screen"), and any '
+    + 'condition BEYOND those three is a cap on how many games a week may hold, '
+    + 'which he ruled out in the same breath.');
   assert(!/weekHasGame/.test(body),
     'the Program screen reads weekHasGame again — that is the exact gate that '
     + 'made the control disappear once the week had one game');
@@ -1301,6 +1302,29 @@ run('the add-fixture control never caps the week at one game', () => {
     'the screen has re-grown a `find`-the-first-fixture binding. A week may hold '
     + 'several fixtures; the first of a set is how the one-game assumption gets '
     + 'back in, and it is what made the control become a label.');
+});
+
+// SAM, 2026-08-13, ON SEEING THE BUTTON ON THE DAY SCREEN: *"add a game button
+// should only be on week screen - not day screen and then you select what day
+// you need to add it too"*.
+//
+// THE SHAPE GATE IS THE CLAIM, SO THE SHAPE GATE IS THE CELL. The control lives
+// in the shared scroll body, which BOTH shapes render — so week-only is not
+// something the code says by where it sits, and nothing but an assertion keeps
+// it true. It is one edit away from showing on the day screen again, which is
+// exactly where Sam found it.
+run('the add-fixture control is on the WEEK shape only', () => {
+  const home = homeScreenSource();
+  const body = home.slice(home.indexOf('function HomeScreenV2'));
+  const mount = body.slice(body.indexOf('showAddFixtureCTA &&'));
+  assert(body.includes('!dayFirst && showAddFixtureCTA'),
+    'the add-fixture control is no longer gated on the week shape. It sits in '
+    + 'the scroll body that BOTH shapes draw, so without `!dayFirst` it is back '
+    + 'on the day screen — and a day screen is about ONE day, so "which day?" '
+    + 'is a question it cannot answer.');
+  assert(mount.indexOf('fixtureIngress(\'add\', weekAnchorISO)') > -1,
+    'the week-only add control no longer carries the add-ingress identity the '
+    + 'explorer resolves it by');
 });
 
 run('the add-fixture control shows in BOTH competitive phases, labelled by phase', () => {
