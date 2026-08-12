@@ -1329,6 +1329,30 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **ONE-WORD VETO ONLY:** Sam is being shown the label and told it is his own
     tab name. **If he says nothing, it ships.** Do not hold placement for it.
 
+28-C1g-RESULT. **THE ZERO WAS MY PROBE, CONFIRMED — AND COD-AS-A-THIRD-KIND WAS
+    BUILT, MEASURED AND REVERTED (SIXTH). THE REFUSAL IS STANDALONE-SIDE.**
+    **THE ZERO: my error, exactly as Sam said.** `countWeeklyExposures` takes
+    `WeekDayInput[]` — `{ date, workout }` pairs — and I passed raw `Workout[]`,
+    so every day looked empty and the count was 0. **The counter is fine.**
+    **THE BUILD:** COD ranked FIRST on the STANDALONE path only, gated on no team
+    training, once per week — the right shape, because the week's three
+    conditioning pieces are 1 standalone + 2 attached, and the two attached
+    cannot be COD (a hard category on a lower/hinge/full day is correctly
+    refused). **The standalone piece is the only one COD can be.**
+    **RESULT: still `COD=0 of 10 conditioning pieces`, with and without team
+    training.** So being first on the standalone list is not enough either —
+    **eligibility refuses COD in the STANDALONE context too**, and site #7 (the
+    lower/hinge/full pairing rule) does not apply there, so it is a DIFFERENT
+    site.
+    **NEXT, AND IT IS ONE PROBE:** tag the nine `finisherEligibility` downgrade
+    sites again but with `strengthContext === 'standalone'` in the log, and read
+    which site fires. **The earlier tagging run showed all six refusals at site
+    #7 — those were the ATTACHED path. Nobody has yet seen which site refuses a
+    STANDALONE COD request.** That single line is the whole remaining unknown.
+    **Patch parked at `scratchpad/cod-standalone-pass.patch`. Reverted for the
+    same reason as the other five: it changes candidate order for every week and
+    buys nothing while the count is zero.**
+
 28-C1f. **THE CONDITIONING COUNT IS NOT A FRESH JOB AND NOT SAM'S DECISION —
     THE CONTRACT ALREADY REQUIRES 3. THE WEEK SHIPS 2.**
 
@@ -1429,6 +1453,49 @@ phone.** State device items as PARKED in a stop report, never as a request.
     sixth attempt. **That is the behaviour this queue wants.** Each revert also
     left something shipped and standing: the category, the selector branch, the
     gate, the rest floor, the signed label. **COD is one link from the athlete.**
+
+28-C1g. **THE ZERO IS THE PROBE, NOT THE COUNTER — ANSWERED WITH EVIDENCE THE
+    SEAT ALREADY HELD, SO NOBODY SPENDS A PASS ON IT.**
+
+    **The terminal asked for this to be verified and was right to flag it as
+    UNVERIFIED rather than announce a fifth miscount.** That restraint is the
+    correct behaviour and is why this took one paragraph instead of an hour.
+
+    **THE OPEN ITEM:** its probe read the validator's conditioning count as ZERO
+    on a week with three visible conditioning sessions.
+
+    **THE COUNTER IS FINE. RECEIPT, from the seat's own `npm run test:qa` run
+    earlier this session** — the QA harness prints
+    `counts.conditioningExposures` straight from `weeklyExposureCounts`
+    (`weekShapeSummary.ts:283`), and across the 17 scenarios it returned:
+    **S1 = 5, S2 = 5, S3 = 3, S4 = 3, S5 = 2, S6 = 1, S7 = 3, S8 = 4, S9 = 4,
+    S10 = 5, S11 = 4, S12 = 4, E1 = 3, E2 = 5, E3 = 5, S13 = 5, S14 = 4.**
+    **Seventeen weeks, seventeen non-zero counts, same function.** A counter
+    that returns 0 on a week with three sessions is not the counter.
+
+    **WHY, MECHANICALLY:** `countWeeklyExposures` walks `dayWorkouts(day)` and
+    calls `classifyVisibleSession(w)` per workout
+    (`weeklyExposureCounts.ts:241-250`). **It counts RESOLVED, VISIBLE sessions.**
+    Feed it plan entries, unresolved days, or a day list whose workouts have not
+    been composed yet and every contribution is zero — **correctly, because
+    there are no visible sessions to classify.** **Check the INPUT the probe
+    passed before touching the counter.**
+
+    **AND THE FOURTH MISCOUNT CONFIRMS THE STANDING RULE RATHER THAN WEAKENING
+    IT.** The terminal's "2" was a count of CATEGORIES compared against a
+    contract expressed in SESSIONS. That is the same failure as team-training
+    rows, hard days, and rest days: **two units, one word.** The rule stands and
+    is now four-for-four: **state what is being counted and show one instance.**
+    **Add the unit to the number itself — "3 sessions", "2 categories" — never a
+    bare integer.** Every one of the four would have died at that step.
+
+    **THE LIVE QUESTION IS UNCHANGED AND IS THE LAST ONE:** the week has three
+    conditioning sessions and two kinds. **COD must become one of the kinds those
+    sessions are drawn from.** Two of the three are attached to lifting days
+    where hard work is correctly refused — **so the standalone slot is the only
+    home, and there is exactly one.** State plainly whether COD can live there
+    without displacing what is there now; if it cannot, that IS the "cut first"
+    trade and Sam's ruling already decides it.
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
