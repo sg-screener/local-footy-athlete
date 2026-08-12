@@ -1145,6 +1145,18 @@ phone.** State device items as PARKED in a stop report, never as a request.
     `early_offseason`, which the receipt did not name — same ruling, same
     defect), so a genuinely rest-free week can now be rejected. **Measured impact:
     NONE — nothing currently violates it.**
+    **⚠ A FIFTH UNLISTED LINK, FOUND 2026-08-13 — THE LABEL. Do not place COD
+    before fixing this.** `coachingEngine.ts:4804`'s `case 'COND'` maps category
+    to the athlete-facing focus text and has branches for aerobic_base, tempo,
+    vo2, glycolytic and sprint — **and NO `cod_decel` branch.** A placed COD
+    session falls through to *"Conditioning - high intensity intervals (short,
+    hard repeats with short rest)"*. **That is athlete-facing text describing the
+    wrong session**, and it would ship the moment placement succeeds. Sam's
+    signed-copy law applies: **the words are his, and this fallthrough invents
+    them.**
+    **THE CHAIN IS FIVE LINKS, NOT FOUR** — category, pool, gate, placement, and
+    now the LABEL. Four are fixed or measured; the label is untouched.
+
     **THE STANDING RULE THIS ITEM ADDS IS UNAFFECTED and is the better half:**
     grep the census before treating any obstacle as a fact of the system.
 
@@ -1193,6 +1205,46 @@ phone.** State device items as PARKED in a stop report, never as a request.
     census before treating any obstacle as a fact of the system.** Twenty
     known-broken rulings mean the odds are good that the thing blocking you is
     one of them.
+
+28-C1d. **28-C1c WAS WRONG AND THE SEAT OWNS IT — the week was legal. AND THE
+    THIRD MISCOUNT IN ONE SESSION HAS THE SAME SHAPE, SO IT IS NOW A RULE.**
+
+    **RETRACTED:** 28-C1c told the terminal the six-day off-season week was
+    ILLEGAL and that the COD wall was census finding C5. **That was false.** Rest
+    is stored as an EMPTY DAY, not as a session named "Rest"
+    (`section18EffectiveWeekEvaluator.ts:746` — `trueRestDays` is every day NOT
+    in `requiredWorkDays`), so the week trains six days, leaves Sunday empty, and
+    has ONE rest day. **Sam's floor is 1-2. One is legal.** The seat passed on an
+    agent's number without checking what it counted — **the exact rule the seat
+    is bound by, broken by the seat.** Recorded, not smoothed.
+
+    **WHAT STILL STANDS, and it is not a consolation prize:** `required: 0`
+    meant the blocking check could never fire, so a genuinely rest-free week
+    could never have been REJECTED whatever the generator happens to emit today.
+    The floor is now `required: 1` on all four rows (`weeklyExposureContractV2.ts:
+    1002,1021,1040,1062`) with nothing moved. **Correct on its own merits.**
+
+    **WHAT IS BACK OPEN:** "no spare room" is true for the plain reason — all six
+    chosen training days are used. **The COD wall is UNEXPLAINED, and the
+    standalone-conditioning-slot question is again the only live one.**
+
+    **⚠ THE THIRD MISCOUNT TONIGHT, AND ALL THREE HAVE ONE SHAPE:**
+    1. Team-training rows "inside `workout.exercises`" — there were none; the
+       count was of a thing that does not occur on that path.
+    2. "Hard days" — the validator counts a strength day as hard, the QA
+       expectations do not. Same word, two definitions, three different targets.
+    3. Rest days — counted as sessions NAMED rest; rest is an ABSENCE.
+
+    **THE STANDING RULE, effective now, for every agent and this seat:**
+
+    > **BEFORE REPORTING A COUNT, STATE WHAT IS BEING COUNTED AND SHOW ONE
+    > INSTANCE OF IT. A count of zero must show what a non-zero would have
+    > looked like.**
+
+    Every one of the three would have died at that step. **A zero is the most
+    dangerous number in this repo** — it is equally produced by "the thing does
+    not happen" and "I am not looking where it happens". **They are not the same
+    finding and must never again be reported as if they were.**
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
