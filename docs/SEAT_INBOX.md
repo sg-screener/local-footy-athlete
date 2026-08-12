@@ -24,6 +24,27 @@ change ... wednesday to sunday should adjust to accomodate this"*. Both halves
 already match the code. **No work owed. Do not ask again — fourth appearance of
 the granted-permission defect.**
 
+**D. HANDS OFF THE GENERATOR AND THE GENERATION ANCHOR — ANOTHER AGENT HOLDS
+THEM. Sam, 2026-08-12:** *"Claude Code is working the reopen bug in this same
+folder. Stay out of the program generator and anything touching the generation
+anchor until it's done."*
+
+**OFF LIMITS until Sam lifts it:** `src/services/api/generateProgram.ts`,
+`src/utils/coachingEngine.ts`'s generation paths, `generationAnchorISO` and
+everything that reads or writes it (`programStore` persistence, the quiescent
+boot, `seedOnboardingProgram`).
+
+**WHICH QUEUED ITEMS THIS BLOCKS:** **item 3** (±7 — its remaining step is in
+the craft tier and the fixture authority, both generator-side), **item 4** (the
+moderate day — its fix is a generation target), **item 7** (strength capacity —
+the gateway's authorised reductions). **Items 8-15 are clear** (UI, gates,
+registries, docs).
+
+**SHARED CHECKOUT, NOT A WORKTREE.** That agent's files appear in `git status`
+mid-commit. **Stage explicitly by path; never `git add -A`.** Its untracked
+`src/__tests__/anchorRepro.ts` is why `test:profile-mirror-narrowing` reds — a
+red that belongs to no committed change.
+
 **C. SAM CANNOT DEVICE-TEST UNTIL HE REBUILDS HIS PHONE.** **Sam:** *"I can't
 test until I've rebuilt my phone"*. **Nothing in this queue depends on his
 phone.** State device items as PARKED in a stop report, never as a request.
