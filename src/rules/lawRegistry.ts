@@ -1066,11 +1066,11 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     // ─────────────────────────────────────────────────────────────────────
     id: 'LAW-green-gate-is-a-claim',
     law: 'A green gate is a claim: a gate must be shown to fail when its subject breaks.',
-    ruledAt: 'NOT STATED IN THE REPO — carried only in the terminal\'s memory index and cited as ruled by boundary reports. AGENTS.md L12 ("Verification strategy is reviewed like code") is adjacent and does not say it. NEEDS A RULING SITE.',
+    ruledAt: 'AGENTS.md "L12a — A GREEN GATE IS A CLAIM" — written down 2026-08-13, beside L12, whose other half it is. The row previously read "NOT STATED IN THE REPO … NEEDS A RULING SITE"; that precondition is now PAID.',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'Standing mutation-testing in the chain, or a per-suite liveness assertion of the kind athleteActionWalkerTests already carries. FIRST, THOUGH: write the law down somewhere Sam can read it — a law with no ruling site cannot be audited against one.',
-      receipt: 'One liveness check exists in the whole repo (athleteActionWalkerTests.ts:323). Mutation testing is a per-pass habit, done by hand and required by nothing. test:law-registry\'s own liveness cell is the second, added 2026-08-10.',
+      wouldTake: 'STANDING MUTATION TESTING IN THE CHAIN — and the obvious cheap alternative is REFUTED, so nobody builds it twice. A per-suite "does this file carry a liveness arm" scan is satisfied by a COMMENT: the detector reads prose, so a suite could mention the word and pass while asserting nothing. That gate would BE the green-and-empty shape this law forbids, which makes it the one guard this law may not have. The honest mechanisation runs the chain, mutates a subject, and requires a named cell to die — infrastructure, not a cell, and it needs its own unit with a runtime budget.',
+      receipt: 'MEASURED 2026-08-13: 21 of 200 chain suites contain any liveness or mutation arm. That is a real number rather than the earlier "one liveness check exists in the whole repo", which counted a narrower shape and predated a month of work. THE PRECONDITION IS PAID — the law now has a ruling site (AGENTS.md L12a) and can be audited against one; what remains is genuinely the hard half, and it is left UNENFORCED honestly rather than closed with a scan that could not fail. The law is nonetheless the most PRACTISED unenforced rule in the repo: every guard flipped on 2026-08-13 (L15 five mutations, LAW-game-load-is-full four, LAW-strength-load-is-actual-minutes three, LAW-shortfall-names-its-cause six, LAW-anchor-must-be-found three) was mutation-checked by hand, and one of those mutations SURVIVED and had to be told apart from a blind gate — which is the corollary now recorded in L12a.',
     },
   },
 

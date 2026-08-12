@@ -497,6 +497,45 @@ This pairs with the mandatory NOT-COVERED section (L2): NOT-COVERED says what wa
 not looked at, L12 says what the looking would have to change to catch the next
 one.
 
+#### L12a — A GREEN GATE IS A CLAIM
+
+**Written down 2026-08-13 because it had no home.** This law has been cited as
+ruled by boundary reports for weeks, obeyed by habit, and stated NOWHERE — its
+registry row read *"NOT STATED IN THE REPO … NEEDS A RULING SITE"*, and a law
+with no ruling site cannot be audited against one. It is recorded here, beside
+L12, because it is L12's other half: L12 says the verification STRATEGY is under
+review; this says the verification's own PASS is a claim under review.
+
+**A gate must be shown to FAIL when its subject breaks.** A green cell asserts
+two things — that the subject holds, and that the cell can tell. The second is
+the one nothing checks, and it is the one that decays. Until a cell has been
+seen red for the right reason, it is a claim about the code and an unproven
+claim about itself.
+
+**In practice: mutate the thing, watch the cell die, restore.** Name the
+mutations in the boundary report. A cell that survives a mutation of its own
+subject is not a passing cell, it is an absent one.
+
+**THE FAILURE SHAPES THIS EXISTS FOR, all sighted in this repo:** a bind that is
+green and EMPTY; a gate passing on coordinates it never builds; a half-mutation
+that proves nothing; a fixture whose input cannot exhibit the defect; a
+vocabulary gate blind to a legal word. Each was green, and each was measuring
+nothing.
+
+**AND THE MUTATION ITSELF IS A CLAIM.** On 2026-08-13 a mutation written to
+prove a new anchor gate SURVIVED — not because the gate was blind, but because
+the injected code did not match the detector's shape. A surviving mutation means
+"the gate is blind OR the mutation missed", and those must be told apart before
+either is reported.
+
+**WHAT IT DOES NOT SAY:** that every suite carries a liveness cell today. It
+does not — MEASURED 2026-08-13: **21 of 200 chain suites** contain any liveness
+or mutation arm. **That gap is NOT closable by a keyword scan**: "does this file
+mention liveness" is satisfied by a COMMENT, so such a gate would itself be the
+green-and-empty shape this law forbids, and building it would be the law
+breaking itself. The honest mechanisation is standing mutation testing in the
+chain, which is infrastructure and not a cell.
+
 ### L13 — The walker reaches ACCUMULATED state
 
 > **MOVED to `.claude/rules/suites-and-fixtures.md`** on 2026-08-12 — it loads only when the
