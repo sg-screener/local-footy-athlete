@@ -145,6 +145,93 @@ his instruction is standing authority, not history.**
        verdict on why five of six reverts happened.
 
 
+34. **⚠ SAM HAS RULED HOW A SESSION IS BUILT, AND IT IS NOT A NUMBER. THE
+    SESSION-FLOOR QUESTION IS VOID. 2026-08-13.**
+
+    **OWNED BY THE TERMINAL. Top of the queue — it deletes one of the five
+    questions about to be sent to him and rewrites two more.**
+
+    **HIS WORDS, verbatim — every clause is a slot:**
+    > *"because the number of exercises is not important the total work being
+    > done evenly across the body is"*
+    > *"lower body strength should have a hinge, a squat, an single leg knee, a
+    > single leg hip, and accessory and/or some core"*
+    > *"and upper body strength day should have push pull on the horizontal,
+    > push pull on the vertical then should arm work or accessory work for the
+    > shoulders"*
+    > *"if you upper body pull or upper body push then it just becomes
+    > horizontal movement, vertical movement, more arm work, more accessory
+    > work, maybe a lift like a single arm press so you get some pushing and
+    > core in at the same time"*
+    > *"then you can throw power and stuff in there"*
+    > *"i thought this would have been explained by now"*
+
+    **1 — THE FLOOR QUESTION IS DEAD. DO NOT SEND IT.** "Minimum exercises in a
+    gym session — 3, 4 or 5?" is question 1 of the five drafted for him.
+    **He has just answered a better question than the one being asked: the rule
+    is PATTERN COVERAGE, and a count is a proxy for it.** A session is the right
+    size when its slots are filled. Registry row R-014 changes from UNRULED to
+    this ruling. **A short session is now a session MISSING A PATTERN, which is a
+    nameable defect instead of a number nobody authored.**
+
+    **2 — CONDITIONING STOPS COUNTING AS A STRENGTH EXERCISE. Sam, same
+    message:** *"yes it should be its own thing and not count as a strength
+    exercise - thats stupid"*. `ROLES_EXEMPT_FROM_COUNTING`
+    (`sessionRowCounting.ts:64-86`) holds `power`, `team_training`, `mobility`
+    — **add `conditioning`.** It is the fifth case of the shape that set exists
+    for, and it is the one his own team-training ruling used as its REFERENCE
+    (*"looked at more like conditioning"*) while conditioning itself still
+    counted. **Golden diff required, as the module's header demands.**
+
+    **3 — ⚠ AND HE IS RIGHT THAT IT WAS ALREADY EXPLAINED. IT IS IN HIS BIBLE,
+    VERBATIM, AND THE APP DOES NOT DO IT.**
+    - **LOWER — `LFA_PROGRAMMING_BIBLE.md:227`:** *"Lower-session heavy-slot
+      ladder, in fill order: heavy squat pattern -> heavy hinge pattern ->
+      single-leg knee-dominant -> single-leg hip-dominant -> accessories. An
+      athlete is better served by a squat and a hinge than by two squats."*
+      **That is his message, word for word, written before today.**
+    - **UPPER — `:338` *"Push: Horizontal and vertical pressing"*, `:348`
+      *"Pull: Horizontal and vertical pulling"*, `:3322` *"Horizontal/vertical
+      pull"*.**
+    - **THIS IS CENSUS ROW C7, STATUS: NOT IN APP.** Strength selection for
+      generated weeks is done by the model and the prompt never mentions the
+      ladder — `grep -rniE "single-leg|unilateral" src/services/api/generateProgram.ts`
+      returns ZERO. The only ladder-shaped code
+      (`exerciseScorer.ts:597-601`) is reachable from ONE call site,
+      `coachRevisionTemplates.ts:597`, which is the coach-revision path — **never
+      the weekly generator.**
+    - **AND THE FALLBACKS ACTIVELY BREACH IT:** the squat-only branch
+      (`defaultProgram.ts:1179-1183`) is Back Squat + Reverse Lunges + Leg
+      Extension — **no hinge, no hip-dominant single leg**; the hinge-only branch
+      (`:1172-1177`) is RDLs + Hip Thrusts + Hamstring Curl — **no squat, no
+      single leg at all, and two hinges, which `:227` names as the exact thing to
+      avoid.** That is also census row A4 (two main lifts, one pattern).
+
+    **4 — SO THE BUILD IS ONE UNIT, NOT THREE.** C7 (the ladder), A4 (no two
+    mains of one pattern) and the session-size item are **the same defect**:
+    nothing composes a session by PATTERN. **Build the slot list as the authored
+    owner and fill it; the count falls out.**
+    - **LOWER SLOTS:** hinge · squat · single-leg knee-dominant · single-leg
+      hip-dominant · accessory and/or core.
+    - **UPPER (full):** horizontal push · horizontal pull · vertical push ·
+      vertical pull · arm/shoulder accessory.
+    - **UPPER (split push OR pull day):** horizontal · vertical · more arm work ·
+      more accessory · optionally a combined lift such as a **single-arm press**,
+      which he names specifically because it buys pressing and core together.
+    - **POWER SITS ON TOP** — *"then you can throw power and stuff in there"* —
+      consistent with power already being exempt from the count.
+
+    **5 — WHAT THIS DOES TO THE OTHER FOUR QUESTIONS.** Q4 ("the double hinge")
+    is ANSWERED BY THIS RULING and by `:227`; it is no longer his. **Re-check all
+    five against `RULINGS_REGISTRY.md` before any of them is sent** — that is
+    what the ask gate is for, and this item is its first real test.
+
+    **PROVE IT:** the 17 QA scenarios and the 120-session distribution either
+    side, **plus a new cell per slot: a lower day with no hinge is RED, a lower
+    day with two squats is RED, an upper day missing vertical is RED.** Sam's
+    sentence is the assertion — nothing else needs authoring.
+
+
 33. **THE RULINGS REGISTRY EXISTS — `docs/RULINGS_REGISTRY.md`, 33 ROWS. WIRE
     THE GATE. THIS IS THE TOP OF THE QUEUE AND NOTHING GOES TO SAM UNTIL IT IS
     DONE.**
@@ -191,103 +278,59 @@ his instruction is standing authority, not history.**
     refused by the gate — every one is a night he did not lose.**
 
 
-32. **BUILT 2026-08-13 — THE RULINGS REGISTRY AND ITS GATE EXIST. `WORKING`,
-    `test:ruling-registry`, 7 cells, armed in `test:bible`.**
-    **SAM ORDERED IT DIRECTLY:** *"Build the rulings registry and the gate before
-    asking me anything else."* Done before anything else was sent.
+32. **THE ASK GATE IS BUILT AND IT GREPS — `WORKING`, `test:ruling-registry`,
+    5 cells, armed in `test:bible`. THE REGISTRY IS THE TERMINAL'S
+    `docs/RULINGS_REGISTRY.md` AND THERE IS ONLY ONE.**
 
-    - **`src/rules/rulingRegistry.ts`** — 14 rows, 3 UNENFORCED. Each carries his
-      words verbatim, the date, the enforcing `file:line` (checked to the LINE by
-      `[1b]`) or `UNENFORCED`, and the `reAskTerms` a re-ask would use.
-    - **THE GATE HAS TWO HALVES AND ONLY ONE OF THEM BITES.** `[2]` requires every
-      question to state its grep — **which is satisfied by typing `NONE`, and
-      would have passed all three re-asks.** `[3]` RUNS THE GREP ITSELF and reds
-      when a question hits a ruling it did not cite. `[3c]` holds `[3]` honest by
-      feeding it the verbatim text of the two re-asks Sam rejected.
-    - **IT CAUGHT THE FOUNDING CASE ON ITS FIRST RUN** — item 7, this seat's own
-      `BLOCKED-BY: sam`, red on both rulings. Item 7 is withdrawn and kept as the
-      founding case.
-    - **MUTATION-CHECKED FOUR WAYS**, including gutting the matcher: that reds
-      `[3c]`, so the gate cannot silently become the rubber stamp it prevents.
-    - **THE PROSE LIST IS RETIRED, NOT COPIED.** The handoff's "do not re-ask"
-      section now points at the registry and says why; `[4]` reds if that pointer
-      goes. **No fourth place a ruling can hide.**
-    - **`CLAUDE.md` carries the rule** where the reporting law lives.
+    **TWO GATES GOT BUILT IN PARALLEL AND SAM CHOSE BETWEEN THEM:** *"if you
+    built a gate that runs the search itself, keep that one over the
+    state-your-grep version."*
+    - **The terminal's** `seat-inbox-hook.sh` requires a `REGISTRY-GREP:` line,
+      and its own comment states the limit honestly: *"It cannot verify the grep
+      was honest."* **Left in place, unduplicated** — it catches "I never
+      checked".
+    - **This one greps.** `[3]` reads every question pointed at Sam, searches
+      the registry itself, and reds when a question hits a row it does not cite.
+      It catches *"I checked and was wrong"*, which is what actually happened.
+      `[3c]` pins the matcher at BOTH ends against the real case, so it can
+      neither rot into a rubber stamp nor refuse every question.
+
+    **⚠ AND THIS SEAT BUILT A RIVAL REGISTRY WITHOUT LOOKING — 14 ROWS IN
+    TYPESCRIPT, WHILE THE REAL ONE WAS BEING COMMITTED AT 33.** Sam: *"The
+    registry has 33 rows, not 14 — check before you add or trim."* **A second
+    list of rulings is the exact defect item 32 exists to end, and I built one
+    inside the item that forbids it.** Deleted; `[4]` holds its absence as a cell
+    rather than a memory. Its 14 rows were checked against the real registry
+    first and every one was already covered.
+
+    **TWO INSTRUMENT FAULTS IN THE GATE, BOTH FOUND BY IT REDDENING ON CORRECT
+    CONTENT:** it matched the words `BLOCKED-BY: sam` anywhere, so it flagged the
+    paragraph QUOTING the marker while withdrawing it and the inbox's own legend
+    of legal values; and it enumerated the status vocabulary, reddening on
+    `PARKED`, `UNRULED` and `BINDING`.
+
+    **⚠ FOR THE REGISTRY'S AUTHOR — ITS HEADER IS OUT OF DATE, NOT ITS ROWS.**
+    Rule 4 says *"Two states only"* (BUILT / UNENFORCED). The rows use at least
+    five: R-008 `PARKED BY SAM`, R-014 `UNRULED`, R-030 `BINDING`. **All are
+    right** — "he parked it", "he has never ruled it" and "this binds every
+    reply" are real states neither of the two can express. This gate reads the
+    row FORMAT instead, so it never argues about vocabulary.
+
+    **⚠⚠ AND A HAZARD TO THE REGISTRY ITSELF, MEASURED NOT ASSUMED.**
+    `docs/RULINGS_REGISTRY.md` is **STAGED FOR DELETION** in the shared index
+    (`git diff --cached` shows 372 deletions) while an untracked copy carrying
+    the live rows sits on disk. **A commit taken with that index removes the
+    registry from the repo**, leaving it one `git clean` from gone — the exact
+    fate the copy-sheet nearly met. **Not touched by this seat: it is the
+    terminal's index and it may be mid-rename.** Named loudly instead.
 
     **⚠ AND THE ROOT CAUSE THIS SEAT OWNS, STATED PLAINLY:** I relayed two
     questions out of inbox prose without reading the code. **Every other claim in
-    that same report was verified against `file:line`; the questions were not** —
-    the one output that reaches Sam directly was the one I did not check.
+    that report was verified against `file:line`; the questions were not** — the
+    one output that reaches Sam directly was the one I did not check.
 
-    ORIGINAL BELOW.
-    **⚠ STOP — ALL THREE QUESTIONS ABOUT TO REACH SAM ARE RE-ASKS. TWO ARE OF
-    THINGS ALREADY BUILT AND ALREADY ON A DO-NOT-RE-ASK LIST. DO NOT SEND THEM.**
-
-    **OWNED BY THE TERMINAL, and it is the top of the queue.**
-
-    **Sam, 2026-08-13, on being shown them:** *"why the fuck is someone still
-    saying shit like this WE HAVE FUCKING FIXED THESE ISSUES"*. **He is right on
-    two of three, and the third is the wrong SHAPE of question. Receipts:**
-
-    **Q1 — "Can someone have two games in one week? The app only has room for
-    one." RULED AND BUILT. TWICE OVER.**
-    - **RULED:** *"as many games as needed"*
-      (`SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md:764`, marked **"No cap"**), and
-      the same day: **the profile does NOT grow a second game field — the
-      CALENDAR holds fixtures; `gameDay` is only a DEFAULT.**
-    - **BUILT:** `3f62ad62`, 2026-08-12 — *"A WEEK MAY HOLD MORE THAN ONE
-      FIXTURE — the waist named in §5.4 is unpinched, and a split round no
-      longer loses its second game."*
-    - **WHY THE TERMINAL CONCLUDED OTHERWISE:** it looked at `domain.ts:192`
-      `gameDay?: DayOfWeek` — ONE field — and read "room for one". **That single
-      field is exactly what Sam ruled is NOT the mechanism.** Reading the profile
-      and reporting on the calendar is the same category error as reading a
-      category count and reporting sessions.
-
-    **Q2 — "the app needs a sentence for when a fixture causes the miss."
-    SHIPPED 12 HOURS AGO.** `section18ShortfallDisclosure.ts:158` returns
-    `` `With a game ${day}, there's only room for ` `` — landed in `1dc52caf`,
-    *"THE SENTENCE NAMES ITS CAUSE AND ITS DAY"*, with `test:shortfall-copy`
-    holding it against the signed record **in both directions**. **The claim
-    that it "only knows how to say Resting Tuesday…" is false; that is the OTHER
-    branch, and both exist.**
-
-    **Q3 — the session floor. NOT a re-ask of a ruling, but the WRONG SHAPE, and
-    Sam refused this exact question this morning.** He was asked for the number
-    cold and answered: *"i've answered this type of shit so many times"*. **Item
-    25 already states the only permitted shape: derive a candidate from what his
-    own signed weeks do, bring him the DISTRIBUTION and ONE recommendation with
-    its reasoning, and let him veto in a word.** A bare "give me one number" is
-    barred.
-
-    **⚠ AND THE ROOT CAUSE IS STRUCTURAL, NOT CARELESSNESS. FIX THAT, NOT THE
-    THREE ROWS.** Both re-asked rulings are recorded in
-    `docs/COWORK_SEAT_HANDOFF_2026-08-13.md` under **"RULINGS MADE TODAY — do not
-    re-ask"** and in an ARCHIVED orders file. **The terminal reads neither.**
-    There is no machine-held list of what Sam has already decided, so
-    "already ruled" survives only in prose an agent may never open. **This is
-    precisely the defect Sam's own LAW REGISTRY ruling (2026-08-10) exists to
-    prevent: *laws must be machine-held, not remembered.* Rulings are not.**
-
-    **BUILD — THE RULINGS REGISTRY, and it is the compression this whole session
-    has been paying for:**
-    - **One machine-readable file. One row per ruling:** Sam's words verbatim,
-      the date, the enforcing `file:line` (or `UNENFORCED`), and a stable id.
-    - **Seed it from the three places rulings already hide:** the handoff's
-      "do not re-ask" section, `## AWAITING SAM`'s answered entries, and
-      `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md`.
-    - **THE GATE, and it is the point: no question may be put to Sam without a
-      grep of that registry first, and the question must state what the grep
-      returned.** A question with no stated grep is refused the same way an
-      unenforced law is refused.
-    - **The registry is the ONE list.** Do not add a fourth place a ruling can
-      hide — retire the prose sections into it as they are seeded.
-
-    **WHAT TO ACTUALLY SEND SAM FROM THAT BATCH: NOTHING.** Q1 and Q2 are
-    answered and built; Q3 comes back only in the item-25 shape. **The nine
-    Christmas-break sentences ARE legitimately his** — seven are the agent's
-    words and athlete copy is never invented. Send those alone, as one list, with
-    the two that are already his marked so he does not re-read his own words.
+    ~~ORIGINAL ORDER~~ — archived verbatim to
+    `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 32).
 
 
 31. **PARTS 1-4 BUILT 2026-08-13 BY THE TERMINAL.** (1) Bible amended at `:1289`
@@ -925,12 +968,12 @@ his instruction is standing authority, not history.**
 21. **BLOCKED-BY: sam — SAME NUMBER AS ITEM 25, AND HIS RULING IS BEING BROKEN
     TODAY. MEASURED 2026-08-13.**
 
-    **RULINGS-CHECKED: RULING-gym-session-same-size-whatever-else,
-    RULING-session-floor-shape-not-a-bare-number.** Both hit, and NEITHER
-    answers this. The first is the ruling being BROKEN here, not a prior answer
-    to the question; the second bars a BARE number, and what follows is the
-    permitted shape — the distribution from his own weeks, one recommendation,
-    veto in a word.
+    **REGISTRY-GREP: R-010, R-014 — and neither closes this.** R-010
+    (*"just keep sessions for gym the same before footy training"*) is the ruling
+    being BROKEN here, which is the opposite of a prior answer. R-014 records
+    that the FLOOR has never been ruled and bars a bare number; what follows is
+    the shape it permits — the distribution from his own signed weeks, ONE
+    recommendation, veto in a word.
 
     **THE OLD BLOCK IS STALE:** it said the fix sits in files "the terminal holds
     uncommitted". The terminal holds nothing — `sessionBuilder.ts` and
@@ -1148,11 +1191,15 @@ his instruction is standing authority, not history.**
 25. **BLOCKED-BY: sam** — for ONE number only: the FLOOR. Everything else is
     measured and buildable, and the measurement found a defect nobody had named.
 
-    **RULINGS-CHECKED: RULING-session-floor-shape-not-a-bare-number.** It hits,
-    and it does NOT close this: Sam refused a bare "give me one number", and
-    this item is already in the shape he permits — his own signed weeks'
-    distribution, ONE recommendation (FLOOR = 4) with its reasoning, and a veto
-    in a word. **The number itself has never been authored.**
+    **REGISTRY-GREP: R-014, R-010, R-012, R-024, R-050 — none closes this, and
+    the last three are the matcher being broad, not four prior answers.** R-014
+    is the one that governs: the FLOOR has never been ruled, and a bare "give me
+    a number" is barred. **This item is already in the shape R-014 permits** —
+    his own signed weeks' distribution, ONE recommendation (FLOOR = 4) with its
+    reasoning, and a veto in a word. R-010 is the CEILING-side ruling on the same
+    subject; R-012 (team training is its own component), R-024 (a game's load
+    counts in full) and R-050 (optional placement) share this item's vocabulary
+    and answer none of it.
 
     **⚠⚠⚠ THREE STATEMENTS ON ONE NUMBER. THE THIRD IS THE TRUE ONE AND THE
     BREACH IS REAL — MY WITHDRAWAL WAS ITSELF OVER-CORRECTED.**
@@ -1456,10 +1503,33 @@ seat was wrong.
   edit would compile, the flow would run, and the new stamp would not appear
   while older stamps in the same file did. **Two conclusions were drawn from that
   silence and both were wrong.**
-  **SO THE NEXT PASS'S FIRST ACT IS INSTRUMENT DISCIPLINE, NOT PRODUCT CODE:**
-  change an EXISTING log line's text and confirm the new text appears before
-  trusting any absence. `expo start --clear` on its own was not enough. **Until
-  that is done, treat "the club still shows on his current week" as the state.**
+  **THE INSTRUMENT WAS FIXED AND IT FOUND THE REAL LINE. 2026-08-13.**
+  **THE INSTRUMENT FAULT WAS THREE ORPHANED METRO PROCESSES ON ONE PORT** — the
+  app connected to one holding an old cache, so edits compiled and never landed.
+  `pkill -f "expo start --dev-client"`, ONE fresh `--clear` start, then a CONTROL
+  (change an existing log's text) and the TEST in the same edit: control 18 hits,
+  so the bundle is fresh. **Every "it never fired" conclusion taken before that
+  is void.**
+  **AND THE REAL DEFECT: `resolveWeekWithConditioning` HAS THREE EXITS, NOT TWO.**
+  The no-season guard, **`return section18TierFour({...})` at `:1894`**, and the
+  final line. **A real week has a stored §18 contract, so it leaves at the middle
+  one** — which is why every filter added at the BOTTOM of that function over two
+  days never ran. Wrapped: `return applyAwayPass(section18TierFour({...}), state)`.
+  **SEEN ON GLASS, and it is the first athlete-visible win of this item: the
+  Saturday card changed from "Game Day" to "Training Day".**
+  **STILL SHOWING: the team night.** "Strength + Team Training" survives, because
+  the card's words come from the visible projection's PARTS and a team part is
+  emitted by `getSessionComponents` from `teamState.hasTeamTraining ||
+  workoutNameHasTeamTraining(workout)` — the club is in the NAME, and
+  `getTeamTrainingWorkoutState().displayName` does NOT rewrite a composed name
+  when the day carries no team-training ROWS (measured: it returns
+  "Strength + Team Training" unchanged).
+  **TWO BLIND FIXES FOR THAT WERE TRIED AND REVERTED** — setting `isTeamDay:
+  false` and stripping the name segment — and together they made it WORSE on
+  glass: the day lost its strength half and read "Team Training" alone. **Do not
+  patch the name. The next act is to make the away pass remove the team PART at
+  the component owner (`getSessionComponents`), which is where the card's words
+  actually come from.**
   **THE PASS IS KEPT** — it is correct, tested and live for the resolver's other
   callers — but **the athlete's week is unchanged by it, and the screenshots
   still show the club.**

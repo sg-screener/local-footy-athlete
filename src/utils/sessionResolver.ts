@@ -1891,7 +1891,14 @@ export function resolveWeekWithConditioning(
     // installing the derivation only at `acceptedEffectiveWeek.ts:102` leaves
     // tier 4 here conforming against the STORED contract and a fixture's
     // REMOVAL never reaches the conformance pass (scaffold defect 4).
-    return section18TierFour({
+    // ⚠ THE THIRD RETURN, AND IT IS THE ONE THE ATHLETE'S WEEK TAKES —
+    // measured 2026-08-13 with a CONTROLLED probe (SEAT_INBOX item 30).
+    // `resolveWeekWithConditioning` has three exits, not two: the no-season
+    // guard, this §18 tier-four path, and the final line. A real week has a
+    // stored §18 contract, so it leaves HERE — which is why every filter added
+    // at the bottom of this function over two days never ran, and why the club
+    // kept showing on a week the athlete was already looking at.
+    return applyAwayPass(section18TierFour({
       days: rested,
       storedContract: section18StoredContract,
       // The AUTHORED week, which is what the publisher relocated from. A
@@ -1900,7 +1907,7 @@ export function resolveWeekWithConditioning(
       weekStart: mondayStr,
       today,
       state,
-    });
+    }), state);
   }
 
   // Pass 2: progressive conditioning placement
