@@ -15,6 +15,32 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+29-C3. **C3'S "BREACH" IS PROBABLY NOT ONE — SAM'S OWN ROW SAYS IT COMPLIES.
+    MEASURE THE UNIT BEFORE BUILDING THE ENFORCER.**
+
+    **OWNED BY THE TERMINAL.**
+
+    **THE CENSUS SAYS** the authored "Short Flush" row breaches the erg cap by
+    offering *"one continuous 8–10 min block"* on Ski/Row.
+    **THE ROW ITSELF SAYS OTHERWISE**, verbatim (`conditioningTemplates.ts:1197`):
+    *"Ski/Row: one continuous 8–10 min block is **the cap-compliant option (rule
+    3)**; Air Bike allowed (ruling 5)."* **Sam wrote that it complies, and cited
+    the rule while doing it.**
+    **THE LIKELY RESOLUTION, and it is a UNIT question — the fourth this
+    session:** the cap governs *"work intervals over 8 min"*. **A continuous
+    flush block is not a work interval.** If so the row is compliant, the census
+    row is over-called, and **an enforcer built to the census's reading would
+    REJECT one of Sam's own authored rows.**
+    **SO: establish what the cap counts before enforcing it.** Does
+    `ergCapMinutes` bound an interval inside repeated work, or any continuous
+    block? Bible `:1297` and `:1401-1402` are the text to read.
+    **THE REST OF C3 STANDS AND IS BUILDABLE:** `ergCapMinutes: 8`,
+    `uncappedModalities`, `excludedModalities` are data read by **nothing but a
+    test**, and `renderableModalities` decides Ski/Row by a **prose regex** over
+    `modalityNotes`. Interval length lives in `workPeriod`, which is a STRING —
+    so enforcement needs a parser over authored text, and that parser must not
+    mistake a continuous block for an interval.
+
 28-C1h. **THE COD PROBE RAN — ELIGIBILITY NEVER SEES `cod_decel` AT ALL, AND A
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1h).**
 
