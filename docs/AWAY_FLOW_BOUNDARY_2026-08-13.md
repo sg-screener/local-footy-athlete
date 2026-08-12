@@ -290,3 +290,49 @@ nothing was loosened to pass.**
   gets the club rule. It has no product caller; a retire pass owns it.
 - **PARTICIPATION IS NOT MODELLED.** An athlete away who could still do a club
   session remotely has no way to say so. Nothing was invented for it.
+
+
+---
+
+## THE GLASS RUN CONTRADICTED THE SLICE-2 CELLS, AND THE CELLS WERE NOT WRONG
+
+**MEASURED 2026-08-13, on the simulator, after `9f4f243c`.** Away 13/7 → 20/7
+with normal equipment. The flow ran end to end and the acknowledgment appeared.
+**The week did not move.** Tue 14 and Thu 16 still read *"Strength + Team
+Training, 3 exercises"*; Sat 18 still read *"Game Day"*.
+
+**THE CELLS ARE HONEST AND SO IS THE SCREEN — they are measuring different
+moments.** `test:away-flow` [8]–[12] call
+`validateWorkoutAgainstActiveConstraints` directly, and that function does
+exactly what those cells say. **What it does NOT do is run over a week that is
+already accepted.** Its only production callers are:
+
+- `generateProgram.ts` — at GENERATION, and
+- `validateLiveWorkoutWrite` — on an individual edit.
+
+Adding a temporary source fact recomposes the accepted state through
+`canonicaliseAcceptedStateCandidate`, which applies the §18 safety contract and
+`canonicaliseHydratedSafetyWorkout` — **not the active-constraint validation.**
+`validateProgramAgainstActiveConstraints` and `validateWeekAgainstActiveConstraints`
+have NO production caller at all; only suites reach them.
+
+**SO, IN THE THREE WORDS THIS REPO ALLOWS:**
+
+| | |
+| --- | --- |
+| The away flow's four questions and both facts | **WORKING** — `test:away-flow`, seen on glass |
+| The equipment span lifting itself on the return date | **WORKING** — [3], [4] |
+| **Away removing club-bound work from the visible week** | **BUILT** — the rule exists at the seam and is held by [8]–[12]; it does not reach a week the athlete is already looking at |
+
+**THE SAME DOUBT FALLS ON THE EQUIPMENT HALF, and it is recorded rather than
+assumed away:** the modifier appears and says *"Exercises substituted"*, but the
+visible session's exercises were NOT re-checked on glass and travel by the same
+recomposition path. **Treat "the sessions change" as OPEN-UNKNOWN for the
+current week until a cell or a device pass says otherwise.**
+
+**WHAT IT WOULD TAKE, named so the next pass does not re-find it:** the accepted
+recomposition would have to run active-constraint validation over the composed
+week, which is a change inside the accepted-state transaction — the
+one-owner-of-derivation area — and not a change to this flow. **It is not
+started, and starting it at the end of a long session is the thing this item was
+twice deferred to avoid.**

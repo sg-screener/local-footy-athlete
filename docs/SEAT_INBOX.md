@@ -1084,6 +1084,13 @@ phone.** State device items as PARKED in a stop report, never as a request.
 28. **THE AWAY FLOW IS BUILT — AND AWAY STOPPED DELETING THE ATHLETE'S WEEK.**
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28).**
 
+   **⚠ THE CLUB HALF IS *BUILT*, NOT *WORKING* — the glass run said so.**
+   `postGenerationConstraintValidation` only runs at GENERATION and on a
+   single-workout write, so the rule never reaches an already-accepted week and
+   the athlete's current week does not move. **The equipment half's substitution
+   is OPEN-UNKNOWN for the current week for the same reason.** Account and fix
+   cost: `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.
+
 28-C1b. **ANSWERED 2026-08-13 — THE MEASUREMENT GATE IS PAID, THE PASS WAS BUILT,
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1b).**
 
@@ -1492,11 +1499,8 @@ seat was wrong.
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
 - **ANSWERED 2026-08-13, NOW PART OF ITEM 28 — away and the club.** Sam:
-  ***"yes clear team training and games while away"***. Built the same day: a
-  live travel span removes team-training rows and fixture stubs and leaves every
-  solo session in place. **Do not re-ask.** The four words on the modifier
-  ("Team training and games off") are PROPOSED in copy batch 34 and are the only
-  part still his.
+  ***"yes clear team training and games while away"***. **Do not re-ask.** Built
+  the same day; see item 28 for what is WORKING and what is only BUILT.
 - **ANSWERED 2026-08-13, NOW ITEM 21 — the team-night size question is
   CLOSED and its premise refused.** Sam: a team night's strength session is
   **a normal strength session**; the only difference is ORDER (prefer not to
