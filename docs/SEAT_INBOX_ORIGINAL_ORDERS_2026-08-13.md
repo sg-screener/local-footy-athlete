@@ -2502,3 +2502,193 @@ phone.** State device items as PARKED in a stop report, never as a request.
     says paired mobility *"counts toward nothing"*. **So the target of 6 counts
     STRENGTH rows only** — a 6-exercise session with 3 mobility pairs is 9 rows on
     glass and still six. Stated here so the two items cannot disagree.
+
+---
+
+## item 21 — original order, archived verbatim 2026-08-13
+
+21. **ASSIGNED TO THE TERMINAL, AND ITS ONE NON-GENERATION ORDER IS ALREADY
+    PAID.**
+
+    **NOTHING IS OWED TO SAM — he has already ruled it:** *"just keep sessions
+    for gym the same before footy training"*. What is left is generation work.
+
+    **MEASURED 2026-08-13, desktop agent.** Item 22's own routing line says
+    **"TERMINAL: STAY ON ITEM 20, then item 21's re-count"**, and the fix this
+    item names is generation-side (`sessionBuilder.ts:718`) in files the terminal
+    holds uncommitted. **Its one order a desktop seat could have taken — delete
+    the "already at the club" falsehood — IS DONE**: `sessionRowCounting.ts:346`
+    now carries the correction and Sam's words, not the claim. Checked before
+    assuming, because the grep that finds the fix and the grep that finds the
+    fault return the same line.
+
+    **SAM HAS RULED — A GYM SESSION IS THE SAME SIZE WHATEVER ELSE IS ON THAT
+    DAY.** Item 14 asked whether a team night has its own smallest size and
+    offered "no floor" or "a floor of N". **Sam, 2026-08-13, refused both, and
+    then said the order was overcomplicating it:** *"just keep sessions for gym
+    the same before footy training"*.
+
+    **THAT IS THE WHOLE RULE. There is no team-night size case.** No exception
+    to `SESSION_SIZE_FLOOR` in either direction.
+
+    **AND THE REASON THE SMALL SESSIONS LOOKED CORRECT IS FALSE. Sam:** *"just
+    because the strength is on the same day doesn't mean they are doing it at
+    the club, they might do it in the morning or on the drive to footy"*.
+    **DELETE THE CLAIM WHEREVER IT IS WRITTEN** — `sessionRowCounting.ts:294`
+    says *"a day the athlete is already at the club"* and that is now a stated
+    falsehood sitting in a comment beside the constant it justifies. **A session
+    sharing a DATE with team training says nothing about where or when it is
+    done.** Do not reason from same-day to same-place again.
+
+    **SO 26 OF 32 TEAM NIGHTS UNDER 4 EXERCISES IS A DEFECT**, not a correct
+    smallness.
+
+    **THE ONLY REAL TEAM-NIGHT DIFFERENCE IS ORDER, AND IT IS A PREFERENCE:**
+    prefer not to put lower body or sprint work before training — **but place it
+    there when that is the only room in the week.** A lean, never a block. **The
+    Bible already carries this exact line** (`testingBias.ts:52-53`, quoting
+    `:378`). Wire it; do not author a rival.
+
+    **AND SAM HAS NAMED THE SHAPE. 2026-08-13:** *"team training should be
+    looked at more like conditioning - it's not part of the strength exercises -
+    it's its own component of the day"*. **THE CHECK THIS ITEM ORDERED IS
+    ANSWERED, AND HE IS RIGHT — MEASURED, three receipts:**
+    - **A team-training row lives in `workout.exercises`, the same array as the
+      lifts.** `teamTraining.ts:126` `splitTeamTrainingFromExercises` exists
+      solely to pull them back out for display.
+    - **`ROLES_EXEMPT_FROM_COUNTING` has ONE member: `'power'`**
+      (`sessionRowCounting.ts:64`). There is no `team_training` role at all —
+      `SessionRole` is power / main_lift / accessory / midline / prehab /
+      conditioning (`sessionRoles.ts:28-34`). **So a team-training row COUNTS
+      against the per-session exercise budget.** That is the defect, stated.
+    - **IT IS IDENTIFIED BY NAME, WHICH THAT MODULE BANS IN ITS OWN HEADER.**
+      `isTeamTrainingItem` (`teamTraining.ts:103-119`) matches on
+      `workoutType`, a name set, and three regexes. `sessionRowCounting.ts:36-37`
+      reads: *"FILTER BY ROLE BEFORE ANY NAME PROBE RUNS. A name probe over an
+      unfiltered list is the bug."*
+
+    **THE FIX IS THE ONE THAT MODULE WAS BUILT TO RECEIVE, AND ITS HEADER SAYS
+    SO.** `sessionRowCounting.ts:57-61`: *"`conditioningBlock` and `speedBlock`
+    have the same shape problem power did ... when they become rows they join
+    this set rather than growing a second mechanism beside it."* **Team training
+    is the third case of that exact shape. Give it an authored role and add that
+    role to `ROLES_EXEMPT_FROM_COUNTING`. Do not write a name-based exemption
+    beside the fence — that is the banned pattern, in the file that bans it.**
+    **The header comment says adding a role here is a counting change and must
+    come with a golden diff. Bring one.**
+
+    ~~**THE COUNTS IN THE 120-SESSION MEASUREMENT ARE THEREFORE OVERSTATED.** A
+    "4-exercise" team night is a 3-exercise lift; a "2" is a single exercise.
+    **Re-run and re-report with team-training rows excluded before building
+    anything — the real gap is bigger than the item says.**~~
+    **RE-COUNTED 2026-08-13 — REFUTED ON
+    THE LOCAL DETERMINISTIC PATH. THE GAP IS EXACTLY AS FIRST MEASURED, NOT
+    BIGGER: 26 of 120, unchanged to the row.**
+    - **ZERO team-training rows sit inside `workout.exercises`** across all 120
+      generated sessions. Excluding them changed nothing because there was
+      nothing to exclude. **Not a green-and-empty bind: the rows were dumped and
+      read** — a "4-exercise" team night is *Goblet Squat, Trap Bar Deadlift,
+      Pallof Press, Back Squat*, four real lifts, and a "3" is three real lifts.
+      **So the small sessions are genuinely small; the defect is real and its
+      size was already right.**
+    - **THE ORDERED FIX WOULD BE INERT HERE, AND THIS IS THE FINDING THAT MATTERS
+      FOR THE BUILD.** A role census over every generated row: **`power` 36,
+      NO ROLE AT ALL 563.** The generator authors no role but power. Since
+      `participatesInCounting` counts any row with no role, **adding a
+      `team_training` role to `ROLES_EXEMPT_FROM_COUNTING` cannot fire until the
+      generator actually authors that role on the row.** The exemption is the
+      right shape; it needs a WRITER first, and the item does not name one.
+    - **THE MECHANISM IS STILL REAL** — `splitTeamTrainingFromExercises` exists
+      and item 21's three receipts are correct as CODE facts. They simply do not
+      occur on this path.
+    **LIMIT, STATED:** local deterministic generation only. **Whether the AI path
+    inserts a team-training row into `exercises` is UNMEASURED**, and it is the
+    one place the overstatement could still be true.
+
+    **BUILT AND DIAGNOSED 2026-08-13 — THE FENCE IS IN, THE SMALL SESSIONS ARE
+    NOT FIXED, AND THE ORDERED FIX IS NOT THE FIX.**
+    **THE COUNTING FENCE IS BUILT (`e8521b79`).** `team_training` is a role and
+    is exempt; two cells INVERTED not deleted; the compiler forced the §18
+    crosswalk question and the answer is that a team night has **no §18 row
+    spelling** — it is already credited at the SESSION level under 17.E, so a row
+    spelling would count it twice. **THE GOLDEN DIFF THE HEADER DEMANDS IS
+    EMPTY**, as the census predicted. It closes the fence for the AI path; **it
+    did not fix the small sessions.**
+    **THE SMALL SESSIONS, PROBED BRANCH BY BRANCH across 120 sessions:**
+    - Team days hit exactly two branches — `upper [push+pull]` and
+      `lower [squat+hinge]` — and **both return 3 rows.**
+    - **NON-team days hit the SAME 3-row branches** (16 of them). **The gym piece
+      is 3 rows everywhere; only the DAY TOTAL differs**, because conditioning
+      rows land on non-team days and not on team nights.
+    - **The table is internally inconsistent and that is the real defect:**
+      `hinge+pull` returns 5, `full_body` 4, but `squat+hinge` and `push+pull`
+      return 3 — same two-pattern shape, different sizes.
+    **ATTEMPTED AND REVERTED, WITH NUMBERS.** Raising those two branches 3 -> 4
+    took team nights from `2x3 3x23 4x6` to `3x4 4x22 5x6` — **under-floor 26 ->
+    4, ceiling never breached. But MIXED MOVED** (`4x20 5x8 6x28` ->
+    `4x8 5x16 6x32`), and this item's own acceptance is *"without the other two
+    moving"*. Non-team days share those branches, so a branch edit cannot be
+    targeted. **Reverted; the generator is clean.**
+    **THE CORRECT SHAPE, NAMED FOR THE NEXT PASS:** the floor belongs at the DAY,
+    after conditioning rows land — **`finaliseBuiltWorkout` in `defaultProgram.ts`
+    is the seam** and it already receives the plan entry. A day-level floor is
+    universal, so it is **NOT the team-night case Sam forbade**; it only bites
+    where the day is short. **It must protect the authored small sessions** — the
+    signed G-2 primer (its row count is load-bearing for `looksLikeNeuralPrimer`),
+    recovery, speed and conditioning-only days. **That guard list is the whole
+    risk, and the 17 QA scenarios must be run either side.**
+
+    **STAND-DOWN D IS SPENT — AND THIS LINE BLOCKED THE TERMINAL ON 2026-08-13
+    WHILE ALREADY STALE.** The terminal declared itself blocked (`fe6a58b6`)
+    citing *"stand-down D, which Sam has not lifted"* — but the header of THIS
+    file had already recorded Sam lifting it. Two places in one file disagreed
+    and the agent believed the older one. **Sam:** *"Your reopen-bug fix landed 9
+    hours ago and no generator file has moved since, so unless you know otherwise
+    the generator is free."* **RE-VERIFIED at the top of 08-13 rather than taken
+    on trust:** `generateProgram.ts` last moved at `f2152d2b` 08-12 17:05,
+    `coachingEngine.ts` at `3f62ad62` 08-12 13:33, `weekRebuild.ts` at `06401d92`
+    08-12 08:35, and **every one of them is CLEAN in the working tree.** The
+    desktop agent is in `programControlAction.ts`, which is not on the generator
+    path. **ITEM 21'S BUILD IS CLEAR. Stage by path as always.**
+
+    **Sam, on testing:** *"run whatever little tests you have to"*. Behavioural
+    cells, and the 120-session distribution is the instrument: team nights join
+    strength and mixed days in the 4-6 band **without the other two moving.**
+    Run the 17 QA scenarios either side and report both numbers.
+
+    **HALF BUILT 2026-08-13 (`e8521b79`), AND THE SECOND HALF IS RESUMED HERE.**
+    The role fix landed with an EMPTY golden diff, reported honestly: it guards
+    a case the local path does not currently produce. **The size half was
+    diagnosed, attempted, and REVERTED — correctly.**
+
+    **THE DIAGNOSIS IS ACCEPTED AND IT SUPERSEDES THIS ITEM'S FIRST GUESS.** The
+    gym session is 3 exercises on EVERY day; other days gain a conditioning
+    piece and reach 4-6, a team night gains nothing and stays at 3. **So the
+    fault is not the team night at all — two templates hand out 3 where their
+    equivalents hand out 4-5.** That is a template-parity defect wearing a
+    team-night costume, and it is why Sam's *"keep sessions for gym the same
+    before footy training"* is already true in the code and still looks wrong on
+    glass.
+
+    **WHY THE REVERT WAS RIGHT, RECORDED SO IT IS NOT UNDONE:** fixing the two
+    templates moved days that were not broken, which this item forbids. **The
+    floor is being applied in the wrong place.** `SESSION_SIZE_FLOOR` (=4,
+    `sessionRowCounting.ts:358`) is consumed at `exerciseScorer.ts:201` as
+    `MIN_SESSION_SIZE` — **per template, before the day exists.** A day-level
+    truth cannot be enforced by a template that cannot see the day.
+
+    **BUILD: apply the floor AFTER the day is composed, not inside a template.**
+    Templates keep their own sizes; the day-level pass tops a short day up to
+    the floor.
+
+    **THE EXEMPTION LIST IS THE RISK, AND IT IS THE ONE THING TO GET RIGHT.**
+    Some sessions are MEANT to be small — Sam personally signed at least one
+    where the exercise count is load-bearing. **Enumerate them from their signed
+    source and cite each one in the code; do not infer the list from what is
+    currently small,** which would freeze today's defect into the rule. **If a
+    session's smallness cannot be traced to a signed ruling, it is not exempt —
+    say so and list it rather than guessing.**
+
+    **PROVE IT:** the 120-session distribution AND the 17 QA scenarios either
+    side. Team nights join the 4-6 band; **strength days and mixed days must not
+    move by a single row.** Report all four numbers.
