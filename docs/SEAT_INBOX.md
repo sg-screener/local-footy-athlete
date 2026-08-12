@@ -1182,7 +1182,26 @@ phone.** State device items as PARKED in a stop report, never as a request.
     duration ships unmodified; the `_progression*` stamps went with it (measured:
     no production reader). Its suite is INVERTED into a retirement guard, 8 cells,
     mutation-checked. Scenarios and the 17 QA weeks unchanged either side.
-    **C1 — MEASURED FURTHER THAN THE CENSUS, AND IT IS BIGGER THAN A MISSING
+    **C1 — THE WAIST AND THE POOL-SIZE TRAP ARE FIXED (`c307c9a5`, `7d1667ae`);
+    COD IS STILL ZERO AND THE REASON IS NOW EXACT (`a09eb497`).**
+    Sam's 8 authored qualities are a TOTAL `Record` — a new quality with nowhere
+    to be requested from is a BUILD-TIME red. **MUST-COVER is now separate from
+    AVAILABLE:** the scorer counted the whole pool, so pool SIZE was a term in
+    every conditioning score — that is why adding COD moved four phase checks.
+    Mutation-checked: pointing the maths back at the pool reproduces 7/4 exactly.
+    **THE REFUSAL IS ONE NAMED BRANCH, AND THAT BRANCH IS RIGHT.** All nine
+    downgrade sites in `finisherEligibility` were instrumented: **six requests,
+    ALL hitting site #7 — *"Pairing: lower/hinge/full days take easy off-feet
+    aerobic only"***. **COD is only ever requested as an ATTACHED FINISHER on a
+    lower-body day, where refusing it is correct — the lift owns the legs.**
+    **THE DEFECT IS THAT COD IS NEVER REQUESTED STANDALONE.** Field COD is a
+    session, not a finisher after a squat day. **DO NOT exempt COD at site #7** —
+    that would put hard change-of-direction work straight after a heavy lower
+    lift, which no ruling asks for. **Next: measure why
+    `pickStandaloneCondDecision` never reaches COD** (the pool contains it —
+    probed `pool=aerobic_base,cod_decel`), then place it as a standalone.
+
+    ~~SUPERSEDED~~ **C1 — MEASURED FURTHER THAN THE CENSUS, AND IT IS BIGGER THAN A MISSING
     `case`.** The census says `poolForCategory` has no `cod_decel` branch. **It is
     worse: `AthleteConditioningCategory` has NO `cod_decel` MEMBER AT ALL**
     (`conditioningSelection.ts:57-63`) — `cod_decel` exists only as a template
