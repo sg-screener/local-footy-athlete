@@ -447,7 +447,7 @@ his instruction is standing authority, not history.**
    both halves too, but whether a match's minutes are full or weighted training
    load is a coaching question. **Written under `## AWAITING SAM
 
-- **ONE RULING — SPRINT CAP: 2 NIGHTS OR 2-3 EXPOSURES? (census A6). Two of your
+- **BLOCKED-BY: sam. ONE RULING — SPRINT CAP: 2 NIGHTS OR 2-3 EXPOSURES? (census A6). Two of your
   own lines disagree, in different units.**
   - **Bible `:90`:** *"Sprinting limited to **2 nights per week** which includes
     nights at team training."* — HARD, counted in NIGHTS.
@@ -464,7 +464,7 @@ his instruction is standing authority, not history.**
   makes the four `null` rows `max: 2`. **Units have been the trap tonight, so I
   have not guessed.**
 
-- **ONE SENTENCE — THE 6-HARD-DAY WARNING UNDERSTATES ITSELF (A5's only live
+- **BLOCKED-BY: sam. ONE SENTENCE — THE 6-HARD-DAY WARNING UNDERSTATES ITSELF (A5's only live
   part). Measured; the block half is correctly NOT built.**
   **What the athlete reads today** (`planChangeRefusalCopy.ts:43`):
   *"This gives you 6 hard days this week. That's the upper edge."*
@@ -477,7 +477,7 @@ his instruction is standing authority, not history.**
   it is past the permitted max. **The words are yours; the numbers in it are
   already your own (4 preferred, 5 permitted).**
 
-- **ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
+- **BLOCKED-BY: sam. ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
   the census says.**
   **His rule, Bible `:226`:** *"ONE MAIN PER PATTERN PER SESSION... A second
   heavy lift in a session must be a different pattern."*
@@ -493,7 +493,7 @@ his instruction is standing authority, not history.**
   HEAVY lift of the pattern, not a second exercise — and it does not shrink a
   session, which is what bit us on team nights.
 
-- **ONE LINE OWED — HOW A PACE IS SHOWN (census C2, the 2km time trial).**
+- **BLOCKED-BY: sam. ONE LINE OWED — HOW A PACE IS SHOWN (census C2, the 2km time trial).**
   **Not a bare question: the derivation is built, the number exists, and only
   the WORDS are missing.**
   `deriveMas` is correct and has **zero production callers** — an athlete runs
