@@ -1034,9 +1034,34 @@ phone.** State device items as PARKED in a stop report, never as a request.
     gate reds on a change Sam signed. `ATHLETE_FORBIDDEN_VOCABULARY` still
     applies to the new string.
 
-    **⚠ SAM, ONE LINE BACK IN THE STOP REPORT:** the branch above is the seat's
-    reading of *why* the wording was bad, not a second ruling by him. **If he
-    wants his sentence used for BOTH causes, say so and the rest branch goes.**
+    **ANSWERED 2026-08-13 — SAM SAID FIXTURE-ONLY.** Asked directly: does the new
+    sentence replace both causes, or only the fixture one? **His answer: only the
+    fixture one.** The athlete's own rest mark KEEPS the existing sentence,
+    because *"Resting Friday means you'll miss a strength session this week"* is
+    honest when resting Friday is what he chose. **The branch above is now RULED,
+    not the seat's reading. Do not re-ask.**
+
+    **NOT STARTED, AND TWO MEASUREMENTS CHANGE ITS SHAPE (2026-08-13):**
+    - **THE CAUSE IS NOT AVAILABLE WHERE THE SHORTFALL IS BUILT.** The single
+      production call site is `acceptedStateTransaction.ts:404`
+      (`recordAcceptedWeekShortfall`), and it holds ONLY `weekStart` and the
+      blocking violations — **nothing about fixtures or rest marks.** So the
+      branch cannot be decided in the renderer or the producer as they stand:
+      either the caller gains a week-facts input, or the cause is resolved
+      before it. **That is a threading decision in a hot shared file, not a copy
+      change**, and it is the reason this item is larger than it reads.
+    - **`date` IS THE WEEK START, NOT THE RESTING DAY.** `:404` passes
+      `date: weekStart`, and `renderSection18Shortfall` does
+      `dayNameFor(shortfall.date)`. **So today's sentence appears to say "Resting
+      Monday" on every Monday-start week regardless of which day was rested.**
+      If that holds, the sentence Sam objected to may also be naming the WRONG
+      DAY — a second defect inside the one he caught. **MEASURED BY READING, NOT
+      BY RUNNING: no cell was written and no world was walked, so this is
+      OPEN-UNKNOWN until someone renders one.** Check it before writing copy.
+    - **`fits` HAS A SOURCE ALREADY:** Sam's sentence states what FITS and
+      `count` is what is MISSED, but `shortfallsFromFindings` already reads
+      `finding.actual` — the fitting number — and currently discards it. Carry
+      that, rather than subtracting a target in the renderer.
 
 21. **SAM HAS RULED — A GYM SESSION IS THE SAME SIZE WHATEVER ELSE IS ON THAT
     DAY.** Item 14 asked whether a team night has its own smallest size and
