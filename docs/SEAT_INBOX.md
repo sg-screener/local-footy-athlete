@@ -1050,87 +1050,10 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 27).**
 
 28. **THE AWAY FLOW IS BUILT — AND AWAY STOPPED DELETING THE ATHLETE'S WEEK.**
-
-    **OWNED BY THE DESKTOP AGENT. Built 2026-08-13.** Held by `test:away-flow`
-    (13 cells, mutation-checked), `test:day-first-timeline` and
-    `test:program-control-durable`.
-
-    **Full boundary report: `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`** — the
-    measurement, the mutation runs, the corrected premise and the named
-    leftovers. **The three things a later reader needs from the inbox itself:**
-    - The `Away` control is on the WEEK shape (`home-away-entry`); the
-      day-screen chip is gone. Leave date → return date (unbounded) → "Do you
-      have your normal equipment?".
-    - **Away now writes ONE fact — the dated equipment fact — and NO schedule
-      fact.** The old door marked the away dates UNAVAILABLE, which is the
-      opposite of Sam's ruling twice over and would also have made the equipment
-      answer vacuous. `test:away-flow` [5b] reds if it comes back.
-    - `until` is the LAST DAY AWAY, never the return date.
-    - **SAM ANSWERED THE ONE OPEN QUESTION, 2026-08-13:** *"yes clear team
-      training and games while away"*. So a live travel span takes CLUB-BOUND
-      work off — team training rows and fixture stubs — and leaves every solo
-      session exactly where it is. **It marks NO date unavailable**; the rule
-      lives at `postGenerationConstraintValidation`, the one seam that knows a
-      day's PARTS. A day that was only club work becomes rest.
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28).**
 
 28-C1b. **ANSWERED 2026-08-13 — THE MEASUREMENT GATE IS PAID, THE PASS WAS BUILT,
-    AND THE WALL IS ONE LAYER FURTHER OUT AGAIN.**
-
-    **SPARE ROOM: NONE.** Off-season, no team training, block 3 — a six-day week
-    produces SIX workouts and **ZERO rest days**; five- and four-day weeks the
-    same. Every day already carries work. **So "place if there is room" can never
-    fire, and COD can only enter by SUBSTITUTION** — taking the slot an extra
-    aerobic session would have had. That follows from *"prescribed"*, so it needs
-    no new ruling.
-
-    **THE PASS WAS BUILT ANYWAY, TO FIND THE NEXT WALL** — COD ranked FIRST (not
-    last: the list is first-match-wins), gated on no team training, fired only
-    once every must-cover category is covered, once per week. **"Cut first"
-    expressed by the GUARD, not the rank.**
-    **IT FIRES — probed: `COD ranked first`, `tt=false unplaced=true ess=true
-    inPool=true`. AND THE ATHLETE STILL RECEIVES ZERO** (0 of 24 on six days,
-    0 of 20 on five).
-    **SO PLACEMENT IS NOT THE BLOCKER EITHER. THE SLOT SHAPE IS.** A six-day
-    no-team-training week produces conditioning that is **entirely COMBINED**
-    (`standalone=0`), and an attached hard category on a lower/hinge/full day
-    hits the pairing rule — **which is correct; the lift owns the legs.**
-    **NEXT QUESTION, AND IT IS NOT ELIGIBILITY:** why does a no-team-training week
-    produce NO standalone conditioning slot? Measure the attached-vs-standalone
-    decision before touching anything — **three of the four reverts on this item
-    came from changing code before measuring the layer above it.**
-    **REVERTED** (`scratchpad/cod-pass0.patch`): the pass reorders candidates for
-    every week and buys nothing while COD is zero.
-
-    ~~ORIGINAL~~ **"CUT FIRST" MEANS DROPPED UNDER PRESSURE, NOT NEVER PLACED — the
-    reading is locked, so nobody re-argues it mid-build.**
-
-    **Sam's words:** COD is prescribed in weeks with no team training and *"cut
-    first when something has to give"*. **A thing that is cut first must first
-    be IN.** "Never placed" satisfies the sentence only by making it meaningless.
-
-    **THE TERMINAL'S DIAGNOSIS IS ACCEPTED AND IT IS THE BEST ONE ON THIS ITEM:**
-    ranked last + take-the-first-that-works = never chosen, because easy aerobic
-    sits above it and is always usable. **Sam's rule and the mechanism cancel
-    exactly.** Recorded because it is a CLASS: any preference expressed as
-    ranking, consumed by a first-match picker, is inert. **Look for others.**
-
-    **AND THE OBVIOUS FIX IS BARRED, as the terminal said:** promoting COD up the
-    order makes it beat ordinary aerobic work on normal weeks, which is the
-    opposite of the ruling. **Do not reorder. Place-if-there-is-room, drop-first
-    when there is not.**
-
-    **THE MEASUREMENT GATE STANDS AND IS THE NEXT UNIT:** how much spare
-    conditioning room a six-day off-season week actually has. **If the answer is
-    "none", the placement pass would never fire and the ruling needs Sam, not
-    code — bring him the NUMBER and a recommendation, never a bare question.**
-
-    **CREDIT WHERE THE MECHANISM EARNED IT:** the total `Record<
-    ConditioningQuality, …>` map ordered in 28-C1 immediately exposed a THIRD
-    narrowing nobody had written down — `aerobic_capacity` splits across
-    `aerobic_base` AND `tempo`, and five templates were unreachable
-    (`conditioningSelection.ts:171-189`). **Asserting the map found what
-    trusting it hid for a month. That is the pattern to copy into the other
-    nineteen census rows.**
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1b).**
 
 28-C1c. **STOP CHASING COD. THE WALL YOU HIT IS CENSUS FINDING C5 — THE
     SPARE-ROOM MEASUREMENT WAS TAKEN ON AN ILLEGAL WEEK.**
