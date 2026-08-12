@@ -441,6 +441,29 @@ export function buildInitialGeneratedCoachingPlan(args: {
   });
 }
 
+/**
+ * THE LIVE TRIPS OVER THE WEEK BEING PLANNED — SEAT_INBOX item 30.
+ *
+ * Read straight off the active constraints, because a `travel` constraint IS a
+ * span: `startDate` to `expiresAt`, both already published by
+ * `scheduleProjection`. A constraint with no end is not a trip and is skipped —
+ * an open horizon would take the club off the calendar forever.
+ */
+function awaySpansFromConstraints(
+  constraints: readonly any[] | undefined,
+): { from: string; until: string }[] {
+  return (constraints ?? [])
+    .filter((constraint) => constraint?.type === 'schedule' &&
+      constraint?.scheduleKind === 'travel' &&
+      constraint?.status !== 'resolved' &&
+      typeof constraint?.startDate === 'string' &&
+      typeof constraint?.expiresAt === 'string')
+    .map((constraint) => ({
+      from: String(constraint.startDate).slice(0, 10),
+      until: String(constraint.expiresAt).slice(0, 10),
+    }));
+}
+
 function collectActiveConstraintsForGeneration(
   options: GenerateProgramFromProfileOptions,
   todayISO: string,
@@ -948,6 +971,7 @@ export function generateProgramLocally(
     preseasonSubphase: phaseResolution.preseasonSubphase ?? undefined,
     targetWeekAvailability: options.targetWeekAvailability,
     targetFixtureDay: options.targetFixtureDay,
+    awaySpans: awaySpansFromConstraints(options.activeConstraints),
   });
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,
@@ -1478,6 +1502,7 @@ export async function generateProgramFromProfile(
     preseasonSubphase: phaseResolution.preseasonSubphase ?? undefined,
     targetWeekAvailability: options.targetWeekAvailability,
     targetFixtureDay: options.targetFixtureDay,
+    awaySpans: awaySpansFromConstraints(options.activeConstraints),
   });
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,

@@ -241,6 +241,22 @@ export interface OnboardingToCoachingInputsOptions {
    * windows are not compared with the machine clock.
    */
   availabilityDateISO?: string;
+  /**
+   * THE TRIP, WHEN ONE IS LIVE OVER THE WEEK BEING PLANNED — SEAT_INBOX item 30.
+   *
+   * **Sam, 2026-08-13:** *"yes clear team training and games while away"*, and
+   * on the fixture half: ***"yes it should disappear OBVIOUSLY YOU'RE NOT GOING
+   * TO BE THERE"***.
+   *
+   * A DATE RANGE, NOT A FLAG, because a trip does not have to start on a Monday.
+   * Both the club night and the fixture are dropped HERE, at the one owner,
+   * because `isTeamDay` and `gameDay` are read off these inputs
+   * (`buildWeeklyPlan`) and the team-day name enforcement re-derives a day's
+   * name from them AFTER post-generation validation runs — so a rule applied
+   * any later is overwritten. Measured: without this, a week generated with a
+   * live travel constraint is byte-identical.
+   */
+  awaySpans?: readonly { from: string; until: string }[];
   weekNumber?: number;
   miniCycleNumber?: number;
   weekInBlock?: number;
@@ -1695,6 +1711,39 @@ function dayNameToNumber(name: string): number {
   const idx = DAY_NAMES.indexOf(name);
   return idx >= 0 ? idx : -1;
 }
+
+/**
+ * THE DATE A WEEKDAY FALLS ON, in the week containing `anchorISO` — item 30.
+ *
+ * `dayNameToNumber` is JS-indexed (Sunday 0) and this app's weeks run Monday to
+ * Sunday, so the offset is computed against the anchor's Monday. Noon-anchored
+ * so it cannot drift across a daylight-saving boundary.
+ */
+function dateForWeekdayInWeekOf(anchorISO: string, dayName: string): string {
+  const num = dayNameToNumber(dayName);
+  if (num < 0) return anchorISO.slice(0, 10);
+  const anchor = new Date(`${anchorISO.slice(0, 10)}T12:00:00`);
+  const monday = new Date(anchor);
+  monday.setDate(monday.getDate() - ((anchor.getDay() + 6) % 7));
+  monday.setDate(monday.getDate() + ((num + 6) % 7));
+  const y = monday.getFullYear();
+  const m = String(monday.getMonth() + 1).padStart(2, '0');
+  const d = String(monday.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** Is this weekday, in the week containing `anchorISO`, inside a live trip? */
+function weekdayIsAway(
+  anchorISO: string | undefined,
+  dayName: string,
+  spans: readonly { from: string; until: string }[] | undefined,
+): boolean {
+  if (!anchorISO || !spans?.length) return false;
+  const date = dateForWeekdayInWeekOf(anchorISO, dayName);
+  return spans.some((span) =>
+    date >= span.from.slice(0, 10) && date <= span.until.slice(0, 10));
+}
+
 
 /**
  * Calculate G-offset: how many days before game day is this day?
@@ -8819,7 +8868,15 @@ export function onboardingToCoachingInputs(
   // restores the club fact with no write. Same boundary, same reasoning as the
   // union below.
   const ownedPhaseForClub = ownSeasonPhaseForGeneration(data).phase;
-  const teamDays = clubTrainingDaysForPhase(ownedPhaseForClub, data.teamTrainingDays);
+  const teamDaysForPhase = clubTrainingDaysForPhase(ownedPhaseForClub, data.teamTrainingDays);
+  // ── AWAY TAKES THE CLUB OFF THE WEEK — Sam, 2026-08-13 ──
+  // INERT UNLESS A TRIP IS LIVE, which is why this cannot move the 120-session
+  // distribution or the 17 QA weeks: none of them carries a travel fact. The
+  // weekday is dropped only when ITS OWN DATE in the week being planned falls
+  // inside the span — a Tuesday team night is off for the Tuesday he is away
+  // and untouched for the Tuesday he is home.
+  const teamDays = teamDaysForPhase.filter((day) =>
+    !weekdayIsAway(options.availabilityDateISO, day, options.awaySpans));
   const selectedDays: string[] = [...prefDays];
   for (const td of teamDays) {
     if (!selectedDays.includes(td)) selectedDays.push(td);
@@ -8832,9 +8889,22 @@ export function onboardingToCoachingInputs(
   // relative to the real week shape (e.g. 5 schedulable days but 4-day
   // conditioning budget → one slot gets no prescription).
   const availableDays = Math.max(baseTrainingDays, selectedDays.length);
-  const targetFixtureDay = options.targetFixtureDay === undefined
+  const resolvedFixtureDay = options.targetFixtureDay === undefined
     ? (storedGameAnchor(data) ?? undefined)
     : options.targetFixtureDay;
+  // ── AND THE GAME GOES WITH IT — Sam, 2026-08-13, on being away over a match:
+  // ***"yes it should disappear OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***.
+  //
+  // DROPPED HERE, NOT LATER, because `hasGame` and `gameDay` below are the only
+  // inputs the week's SHAPE is built from: G-1, G+1 and the taper all hang off
+  // them. Removing the fixture card while leaving those set would keep the
+  // taper for a match he is not at — training built on a false premise, which
+  // is the reason he gave for the ruling. Same span, same filter, same
+  // inertness: no travel fact, no change.
+  const targetFixtureDay = resolvedFixtureDay !== undefined &&
+    weekdayIsAway(options.availabilityDateISO, resolvedFixtureDay, options.awaySpans)
+    ? undefined
+    : resolvedFixtureDay;
   return {
     seasonPhase: data.seasonPhase || 'Pre-season',
     availableDays,

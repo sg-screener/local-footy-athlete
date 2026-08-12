@@ -73,6 +73,12 @@ const {
 const {
   validateWorkoutAgainstActiveConstraints,
 } = require('../utils/postGenerationConstraintValidation') as typeof import('../utils/postGenerationConstraintValidation');
+const {
+  generateProgramLocally,
+} = require('../services/api/generateProgram') as typeof import('../services/api/generateProgram');
+const {
+  getTeamTrainingWorkoutState,
+} = require('../utils/teamTraining') as typeof import('../utils/teamTraining');
 
 armTotalsOrRed();
 
@@ -416,6 +422,83 @@ async function main(): Promise<void> {
     homeAgain.workout !== null
       && homeNames.some((n: string) => /team training/i.test(String(n))),
     homeNames);
+
+  // ── [13] THE PLAN ITSELF — where being away has to bite, and the only place
+  //
+  // Sam ruled both halves: *"yes clear team training and games while away"* and,
+  // on the fixture, ***"yes it should disappear OBVIOUSLY YOU'RE NOT GOING TO BE
+  // THERE"***. The seam cells above hold the RULE; these hold the ATHLETE'S
+  // WEEK, and the difference between the two cost a day. A day is a team day
+  // because the PLAN says `isTeamDay`, and a week is shaped around a fixture
+  // because the PLAN says `gameDay` — both re-derived after post-generation
+  // validation runs, so the club has to come off at the plan or not at all.
+  const genProfile = {
+    trainingLocation: 'Commercial gym' as const,
+    equipment: ['Full Gym'],
+    equipmentSelectionCompleteness: 'complete' as const,
+    seasonPhase: 'In-season' as const,
+    trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+    gameDay: 'Saturday',
+    recentTrainingLoad: 'Pretty consistent',
+    conditioningLevel: 'Average',
+  } as any;
+  const GEN_WEEK = '2026-07-13';
+  const genTravel = [{
+    id: 'source-fact:schedule:gen', type: 'schedule', scheduleKind: 'travel',
+    status: 'active', severity: 7, startDate: GEN_WEEK, expiresAt: '2026-07-19',
+    lastUpdatedAt: `${GEN_WEEK}T09:00:00.000Z`, source: 'tap',
+    unavailableDates: [], unavailableWeekdays: [], modifierAffects: ['current_week'],
+    rules: [], safeFocus: [], advice: [],
+  }];
+  const workoutsOf = (program: any): any[] => program?.microcycles?.[0]?.workouts ?? [];
+  const teamDaysIn = (program: any): string[] => workoutsOf(program)
+    .filter((workout: any) => getTeamTrainingWorkoutState(workout).hasTeamTraining)
+    .map((workout: any) => String(workout.name));
+  const gameDaysIn = (program: any): string[] => workoutsOf(program)
+    .filter((workout: any) => workout.workoutType === 'Game')
+    .map((workout: any) => String(workout.name));
+  const trainingDaysIn = (program: any): number => workoutsOf(program)
+    .filter((workout: any) => (workout.exercises ?? []).length > 0).length;
+
+  const homeWeek = generateProgramLocally(genProfile, {
+    todayISO: GEN_WEEK, blockNumber: 1, microcycleLimit: 1,
+  });
+  const awayWeek = generateProgramLocally(genProfile, {
+    todayISO: GEN_WEEK, blockNumber: 1, microcycleLimit: 1,
+    activeConstraints: genTravel as any,
+  });
+  // NON-VACUITY FIRST, ALWAYS: "no team day" and "no game" are both trivially
+  // true of a week that never had one, and that exact trap has already been
+  // sprung once on this item.
+  run('[13] the home week HAS team days, so the cells below can fail',
+    teamDaysIn(homeWeek).length === 2, teamDaysIn(homeWeek));
+  run('[13b] a week planned inside the trip has NO team day at all',
+    teamDaysIn(awayWeek).length === 0, teamDaysIn(awayWeek));
+  run('[13c] and no game either — he is not going to be there',
+    gameDaysIn(awayWeek).length === 0, gameDaysIn(awayWeek));
+  // AND HE STILL TRAINS — *"Everything else stays."*
+  //
+  // THE PROPERTY IS THE WORK, NOT THE DAY COUNT, and the first version of this
+  // cell got that wrong and reddened on correct behaviour. The away week has
+  // FOUR training days where the home week has five, because two of those five
+  // were club nights; their gym halves redistribute across the days that
+  // remain. **Counting days would have made "he lost a session" the law, when
+  // what he lost was two nights at a club he is nowhere near.** Rows are the
+  // honest unit: 21 either way.
+  const rowsIn = (program: any): number => workoutsOf(program)
+    .reduce((total: number, workout: any) => total + (workout.exercises ?? []).length, 0);
+  run('[13d] and every row of his own training survives the trip',
+    rowsIn(awayWeek) === rowsIn(homeWeek),
+    { home: rowsIn(homeWeek), away: rowsIn(awayWeek),
+      homeDays: trainingDaysIn(homeWeek), awayDays: trainingDaysIn(awayWeek) });
+  // AND THE DAYS DID FALL, ON PURPOSE — stated so the number above cannot be
+  // read as "nothing moved". Two club nights left; the work did not.
+  run('[13e] the trip costs him exactly the club nights and no more',
+    trainingDaysIn(homeWeek) - trainingDaysIn(awayWeek) <= teamDaysIn(homeWeek).length,
+    { homeDays: trainingDaysIn(homeWeek), awayDays: trainingDaysIn(awayWeek),
+      clubNights: teamDaysIn(homeWeek).length });
 
   console.log(`\naway flow: ${passed} passed, ${failed} failed`);
   if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }

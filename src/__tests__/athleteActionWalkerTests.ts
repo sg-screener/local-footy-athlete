@@ -2331,10 +2331,17 @@ async function walkTheScheduleDoors(): Promise<void> {
           type: 'set_schedule_modifier',
           source: { screen: 'program_tab', surface: 'away_this_week', initiatedBy: 'tap' },
           scope: 'current_week',
+          // ── THE SHAPE THE ATHLETE'S DOOR ACTUALLY SENDS, from 2026-08-13 ──
+          // This walked `planChange: { kind: 'clear_days' }`, which is the door
+          // Sam's ruling RETIRED: it marked the away dates unavailable and took
+          // the whole day, gym session included. `useHomeScreen` now sends a
+          // SPAN, and this comment's own promise — "the action `useHomeScreen`
+          // builds, field for field" — is what makes walking the retired shape
+          // a defect rather than extra coverage.
           payload: {
             date: occupied[0].date,
             todayISO,
-            planChange: { kind: 'clear_days', dates: [occupied[0].date] },
+            awaySpan: { from: occupied[0].date, until: occupied[0].date },
           },
           requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
         }

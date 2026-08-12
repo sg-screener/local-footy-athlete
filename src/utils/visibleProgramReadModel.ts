@@ -141,6 +141,30 @@ export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[])
   return out;
 }
 
+/**
+ * A TRIP IS AUTHORED INTO THE WEEK, NOT PROJECTED ONTO IT — SEAT_INBOX item 30.
+ *
+ * **Sam ruled what away does** (*"yes clear team training and games while
+ * away"*, and on the fixture ***"yes it should disappear OBVIOUSLY YOU'RE NOT
+ * GOING TO BE THERE"***), and that ruling is carried out at the PLAN: the
+ * allocator stops marking a team day and stops seeing a fixture inside the span,
+ * and the scoped regen re-authors the week. **The result is already in the
+ * accepted week the resolver reads.**
+ *
+ * SO PROJECTING IT AGAIN AT READ TIME APPLIES IT TWICE, and the second
+ * application is the one nobody asked for: it re-shapes a session the plan
+ * already settled and renames it, which is how `test:action-walker` L4b
+ * (SCREEN = DOMAIN) started reporting the resolver and the screen disagreeing
+ * about a conditioning session on an away week. **The rename was the symptom;
+ * double application was the defect.**
+ *
+ * Every other temporary fact still projects — they have no authoring lane of
+ * their own for this shape.
+ */
+function isAuthoredTravelConstraint(constraint: any): boolean {
+  return constraint?.type === 'schedule' && constraint?.scheduleKind === 'travel';
+}
+
 function isTemporaryFactProjectionConstraint(constraint: any): boolean {
   return (constraint?.temporarySourceFactIds?.length ?? 0) > 0 ||
     (constraint?.type === 'injury' && !!constraint?.injuryEpisodeId);
@@ -171,7 +195,8 @@ export function buildProgramTabProjectedWeek(args: {
     const projectionConstraints = hasAcceptedWeekContract(args.state, day.date)
       ? dayActiveConstraints.filter(isTemporaryFactProjectionConstraint)
       : dayActiveConstraints;
-    const extraConstraints = buildExtraConstraintsForVisibleProgram(projectionConstraints);
+    const extraConstraints = buildExtraConstraintsForVisibleProgram(
+      projectionConstraints.filter((constraint: any) => !isAuthoredTravelConstraint(constraint)));
     const canonicalInjuryProjection = args.state.injuryProjectionOwner === 'accepted_episode';
     return projectVisibleDay({
       day,
