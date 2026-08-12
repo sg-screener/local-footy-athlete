@@ -505,7 +505,17 @@ function buildCoreConditioningSession(args: {
       conditioningCategory: wantsHard ? 'glycolytic' : 'aerobic_base',
       section18ConditioningRole: 'required_core',
       conditioningVariant: 'full',
-      stressLevel: wantsHard ? 'high' : 'moderate',
+      // `'medium'`, NOT `'moderate'` — seat item 4, 2026-08-12.
+      //
+      // This line said `'moderate'` for as long as it has existed. The union is
+      // `'high' | 'medium' | 'low'` (`weeklyExposureContract.ts:149`) and the
+      // array is cast `as never` two lines below, so the compiler never saw it.
+      // **The §18 ledger counts a moderate day by `stressLevel === 'medium'`**,
+      // so every offer this placer marked as the easier option was invisible to
+      // the count — which is why `achievedModerateDayCount` reads 0 on every
+      // in-season fixture week, and why the half of Sam's shape that says "plus
+      // one moderate/easy day" could never be satisfied by the app's own offer.
+      stressLevel: wantsHard ? 'high' : 'medium',
       planEntryId: `core:${args.weekStart}:${dayName.toLowerCase()}:conditioning`,
     }] as never,
     args.profile ?? undefined,

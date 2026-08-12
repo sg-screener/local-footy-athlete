@@ -46,6 +46,14 @@ export type Section18FindingCode =
   | 'power_policy_breach'
   | 'full_rest_miscount'
   | 'hard_day_breach'
+  /**
+   * The week has no moderate day. **ADVISORY, and it may never be anything
+   * else** — seat item 4: a blocking form would fail 11 of 17 scenarios the day
+   * it landed, including every in-season fixture week, which is an outage
+   * rather than a gate. It says the week misses Sam's four-plus-one shape and
+   * lets the week through.
+   */
+  | 'moderate_day_missing'
   | 'reduction_contradiction'
   | 'phase_subphase_policy_mismatch'
   | 'illegal_first_offseason_deload'
@@ -1532,6 +1540,35 @@ export function evaluateSection18EffectiveWeek(
       expected: contract.restStress.preferredHardDayRange,
       actual: ledger.restStress.hardDays.length,
       detail: 'Hard-day count is above the preferred range but within the mode-specific permitted maximum.',
+      evidence: ledger.restStress.hardDays.map((day) => dateForDay(input.weekStart, day)),
+    });
+  }
+
+  // ── THE MODERATE DAY — ADVISORY, NEVER BLOCKING (seat item 4) ──
+  //
+  // Sam: *"4 hard days plus 1 moderate/easy day is prefered but 5 hard days is
+  // okay"*. The hard half above blocks at the permitted maximum and advises
+  // above the preferred range. **The moderate half has never said anything at
+  // all** — `achievedModerateDayCount` is written on line 1034 and read by
+  // nothing, so a four-hard, zero-moderate week passed in silence.
+  //
+  // ADVISORY IS THE WHOLE POINT AND IT IS THE ITEM'S OWN WORD. A blocking
+  // finding here would fail 11 of 17 scenarios the day it landed — including
+  // every in-season fixture week — which is not a gate, it is an outage. This
+  // says the week misses his shape and lets it through.
+  //
+  // ONLY `min` IS READ. More moderate days than one is not a defect; the item's
+  // acceptance test requires silence on S7, which has two.
+  const preferredModerateMinimum = contract.restStress.preferredModerateDayRange?.min ??
+    contract.restStress.moderateDayDefault;
+  if (ledger.restStress.moderateDays.length < preferredModerateMinimum) {
+    addFinding(findings, {
+      code: 'moderate_day_missing', severity: 'advisory', domain: 'hard_days',
+      expected: contract.restStress.preferredModerateDayRange ??
+        { min: preferredModerateMinimum, max: 7 },
+      actual: ledger.restStress.moderateDays.length,
+      detail: 'The week has no moderate day. Sam\'s preferred shape is four hard days '
+        + 'plus one moderate or easy day; this week is all-or-nothing.',
       evidence: ledger.restStress.hardDays.map((day) => dateForDay(input.weekStart, day)),
     });
   }

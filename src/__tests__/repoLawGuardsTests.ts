@@ -1844,7 +1844,92 @@ run('the five canonical athlete flows are all still on disk', () => {
   console.log(`      (${CANONICAL_ATHLETE_FLOWS.length} canonical actions; ${gaps.length} with no door to tap yet)`);
 });
 
+// ── LAW-stress-vocabulary-is-one-word ──────────────────────────────────────
+//
+// FOUNDING CASE, 2026-08-12, found while building the moderate-day advisory:
+// `section18OfferPlacement.ts:508` wrote `stressLevel: 'moderate'` — a fourth
+// word — for as long as the file existed. The union is `high | medium | low`
+// and the §18 ledger counts a moderate day by `=== 'medium'`, so every offer
+// that placer marked as the easier option was invisible to the count.
+//
+// **THE COMPILER COULD NOT HAVE CAUGHT IT AND NEVER WILL:** the array carrying
+// it is cast `as never` two lines below. That is why this is a SOURCE SCAN and
+// not a type. A cast is a promise the type system stops checking, so the check
+// has to live where the cast cannot reach.
+
+const STRESS_LEVEL_WORDS = ['high', 'medium', 'low'] as const;
+
+/** Pure: `stressLevel:` writes whose string literal is not in the union. */
+function stressLevelsOutsideTheUnion(
+  sources: readonly { readonly file: string; readonly text: string }[],
+): string[] {
+  const faults: string[] = [];
+  for (const source of sources) {
+    // READ THE WHOLE ASSIGNMENT, NOT THE FIRST TOKEN AFTER THE COLON. The first
+    // version of this scan matched `stressLevel:\s*'word'` and was BLIND TO ITS
+    // OWN FOUNDING CASE, which is a ternary:
+    //   `stressLevel: wantsHard ? 'high' : 'moderate',`
+    // It passed the mutation that put the bad word back — a cell that cannot
+    // catch the defect it was written for.
+    for (const line of withoutLineComments(source.text).split('\n')) {
+      const at = line.indexOf('stressLevel:');
+      if (at < 0) continue;
+      // COMPARISON OPERANDS ARE NOT WRITES, and the widened scan's first run
+      // proved it: `stressLevel: args.stress === 'hard' ? 'high' : 'medium'`
+      // writes two legal words and was flagged for the word it TESTS.
+      const assignment = line.slice(at + 'stressLevel:'.length)
+        .replace(/[=!]==?\s*'[a-z_]+'/g, '');
+      for (const literal of assignment.matchAll(/'([a-z_]+)'/g)) {
+        if (!(STRESS_LEVEL_WORDS as readonly string[]).includes(literal[1])) {
+          faults.push(`${source.file}: '${literal[1]}'`);
+        }
+      }
+    }
+  }
+  return faults;
+}
+
+run('no producer writes a stress level outside high/medium/low', () => {
+  const files = filesUnder(path.join(repoRoot, 'src'), ['.ts', '.tsx'])
+    .filter((file) => !file.includes('__tests__'));
+  assert(files.length > 100, `the scan found only ${files.length} files — it is reading the wrong tree`);
+  const faults = stressLevelsOutsideTheUnion(files.map((file) => ({
+    file: path.relative(repoRoot, file),
+    text: fs.readFileSync(file, 'utf8'),
+  })));
+  assert(faults.length === 0,
+    `stress level(s) outside the union: ${faults.join(', ')}. The ledger counts a `
+    + 'moderate day by `=== \'medium\'`; a fourth word is invisible to it, and a '
+    + 'cast will hide the mistake from the compiler.');
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the stress vocabulary, probed BOTH directions ──
+  assert(stressLevelsOutsideTheUnion([{ file: 'a.ts', text: "stressLevel: 'moderate'," }]).length === 1,
+    'the founding case itself passed the scan');
+  assert(stressLevelsOutsideTheUnion([{ file: 'a.ts', text: "stressLevel: 'medium'," }]).length === 0,
+    'a legal word was flagged');
+  assert(stressLevelsOutsideTheUnion([{ file: 'a.ts', text: '// stressLevel: \'moderate\' once' }]).length === 0,
+    'a COMMENT naming the old value was read as a write');
+  assert(stressLevelsOutsideTheUnion([{ file: 'a.ts', text: 'stressLevel: computedStress,' }]).length === 0,
+    'a computed stress level was flagged — the scan only judges literals');
+  // THE FOUNDING CASE'S REAL SHAPE — a ternary. The first scan missed exactly
+  // this and passed its own mutation.
+  assert(stressLevelsOutsideTheUnion(
+    [{ file: 'a.ts', text: "stressLevel: wantsHard ? 'high' : 'moderate'," }]).length === 1,
+    'the ternary form of the founding case escaped the scan');
+  assert(stressLevelsOutsideTheUnion(
+    [{ file: 'a.ts', text: "stressLevel: wantsHard ? 'high' : 'medium'," }]).length === 0,
+    'a legal ternary was flagged');
+  // THE FIRST WIDENED RUN'S FALSE POSITIVE, PINNED: the word being TESTED is not
+  // the word being written.
+  assert(stressLevelsOutsideTheUnion(
+    [{ file: 'a.ts', text: "stressLevel: args.stress === 'hard' ? 'high' : 'medium'," }]).length === 0,
+    'a comparison operand was read as a written value');
+  assert(stressLevelsOutsideTheUnion(
+    [{ file: 'a.ts', text: "stressLevel: args.stress === 'hard' ? 'high' : 'moderate'," }]).length === 1,
+    'a bad word alongside a comparison escaped the scan');
+
   // ── the canonical five, probed BOTH directions ──
   assert(canonicalFlowsMissing(
     [{ action: 'move', file: '.maestro/golden/gone.yaml' }], () => false).length === 1,

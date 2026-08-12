@@ -441,6 +441,24 @@ export interface WeeklyExposureContractV2 {
     authorisedUnavoidableAnchorExcess: number;
     unavoidableAnchorCausedExcess: number | null;
     achievedModerateDayCount: number | null;
+    /**
+     * THE OTHER HALF OF SAM'S SHAPE — *"4 hard days plus 1 moderate/easy day"*
+     * (`LFA_PROGRAMMING_BIBLE.md:4808`), seat item 4.
+     *
+     * The hard half has had a range, a permitted maximum and two findings since
+     * Contract v2 shipped. The moderate half had a counter with **zero
+     * readers**, so a week of four hard days and no moderate day passed in
+     * silence — measured 2026-08-12 at **11 of 17 scenarios with no moderate
+     * day at all**, and every in-season fixture week among them.
+     *
+     * **`max` IS 7, WHICH MEANS UNBOUNDED, AND THAT IS DELIBERATE.** The ruling
+     * gives a minimum — *one* moderate day — and says nothing about a ceiling.
+     * A max of 1 would make S7's two moderate days a defect, which the item's
+     * own acceptance test forbids. Only `min` is read; the shape stays a
+     * `Section18Range` because that is what the order named and what every
+     * other preference here is.
+     */
+    preferredModerateDayRange: Section18Range;
     achievedHardDayCount: number | null;
     moderateDayDefault: number;
     hardDayMaximumBreach: number | null;
@@ -1357,6 +1375,10 @@ export function buildSection18WeeklyExposureContractV2(
       authorisedUnavoidableAnchorExcess: Math.max(0, input.authorisedUnavoidableAnchorExcess ?? 0),
       unavoidableAnchorCausedExcess: null,
       achievedModerateDayCount: null,
+      // `moderateDayDefault` has been 1 since Contract v2 shipped and nothing
+      // ever compared anything to it. The range says the same thing where a
+      // reader can find it; 7 is "no ceiling", see the type.
+      preferredModerateDayRange: { min: 1, max: 7 },
       achievedHardDayCount: null,
       moderateDayDefault: 1,
       hardDayMaximumBreach: null,

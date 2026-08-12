@@ -731,9 +731,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'A session\'s stress level is `high | medium | low`. No producer may write a fourth word, and a cast may not be used to smuggle one past the compiler.',
     ruledAt: 'src/rules/weeklyExposureContract.ts:149 (the union); found 2026-08-12 while building seat item 4',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A source scan over every `stressLevel:` write asserting the literal is in the union — the same shape as the repo-law-guards secret scan. It cannot be a type check: the founding case sat inside an `as never` cast and the compiler was blind to it by construction.',
-      receipt: 'FOUND, FIXED, AND HONESTLY UNGUARDED. `section18OfferPlacement.ts:508` wrote `stressLevel: \'moderate\'` — a value outside the union — for as long as the file has existed, cast `as never` two lines below so nothing could see it. The §18 ledger counts a moderate day by `stressLevel === \'medium\'`, so every offer this placer marked as the easier option was invisible to the count. THE FIX CHANGED NOTHING MEASURABLE: all 17 QA scenarios are byte-identical before and after (4 of 17 meet both preferences, both arms), because this placer does not run in them. Said out loud rather than claimed as a win — the defect is real, the fix is right, and its effect on the measured set is ZERO.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12, and the guard had to be widened TWICE before it could catch its own founding case. `section18OfferPlacement.ts:508` wrote `stressLevel: \'moderate\'` — outside the union — for as long as the file existed, cast `as never` two lines below so the compiler was blind by construction. The §18 ledger counts a moderate day by `=== \'medium\'`, so every offer that placer marked as the easier option was invisible to the count. THE SCAN IS A SOURCE SCAN BECAUSE A TYPE CANNOT REACH PAST A CAST. Correction 1: the first version matched `stressLevel:\\s*\'word\'` and MISSED THE FOUNDING CASE ITSELF, which is a ternary — it passed the mutation that put the bad word back. Correction 2: widened to the whole assignment, it then flagged `stressLevel: args.stress === \'hard\' ? \'high\' : \'medium\'` for the word it TESTS rather than the words it writes; comparison operands are now stripped. Both corrections have their own liveness probe. Mutation: restoring the founding case reds it; the real tree is green. THE FIX ITSELF CHANGED NOTHING MEASURABLE — all 17 QA scenarios are identical before and after, because that placer does not run in them. Said out loud rather than claimed as a win.',
     },
   },
   {

@@ -51,21 +51,46 @@ phone.** State device items as PARKED in a stop report, never as a request.
 
 ---
 
-0. **DO NOT STOP WHILE THIS QUEUE HAS ITEMS. SAM'S STANDING ORDER, 2026-08-12.**
-   *"Work continuously through the seat inbox in order — don't stop to ask me.
-   My rulings are all recorded in the file. If something genuinely needs my
-   decision, write it down, skip it, and take the next item."*
+0. **MAKE "DO NOT STOP" A MECHANISM, NOT A NOTE — THEN RUN THE LIST OVERNIGHT.
+   BUILD THIS FIRST, BEFORE ANY OTHER ITEM.**
+   **SAM, 2026-08-12:** *"why does it keep fuckign stopping if theres nothing for
+   me to say"* and *"i want it to run through the list overnight as long as it
+   can"*.
 
-   **A `docs(stop):` commit is a LEGAL EXIT FROM THE HOOK, NOT PERMISSION TO
-   STOP.** On 2026-08-12 the terminal wrote two stop reports back to back and
-   halted for 50 minutes with twelve items still queued — **and neither report
-   contained a question for Sam.** Both named their own next step.
+   **THE DIAGNOSIS, AND IT IS THE SESSION'S OWN LESSON.** Order 0 has said "do
+   not stop while this queue has items" for hours and the terminal has stopped
+   after nearly every unit anyway. **It is not disobeying — a `docs(stop):`
+   commit is a LEGAL EXIT in `scripts/seat-inbox-hook.sh`, and a note in a file
+   never beats a door in a script.** Sam should not be the restart button.
 
-   **SO: after a stop report, TAKE THE NEXT ITEM.** Stop only when (a) the queue
-   is genuinely empty, (b) a decision is needed that is NOT already ruled in this
-   file — in which case write it under `## AWAITING SAM`, skip it, and continue —
-   or (c) Sam says stop. **A unit that ends "blocked, attempt 2 must do X first"
-   is not a stopping point: X is the next unit.**
+   **CHANGE THE HOOK. It may allow a stop ONLY when one of these is true:**
+   1. **The queue is empty.**
+   2. **HEAD is a commit whose subject begins `docs(blocked):`** — a declaration
+      that it genuinely cannot proceed, naming why. **A routine progress report
+      is NOT this.** `docs(stop):` alone stops being an exit.
+   3. **A decision is needed that is NOT already recorded in this file** — write
+      it under `## AWAITING SAM`, then it may stop.
+   4. **NO PROGRESS: three consecutive turn-ends with no new commit on `main`.**
+      **This is the loop breaker and it is the safety this whole change rests
+      on.** Measure it — do not estimate it. **Progress means a commit, not
+      activity.** On the third, allow the stop and say plainly that it stalled.
+
+   **WHY "no progress" AND NOT A CLOCK:** a time budget stops useful work as
+   readily as useless work. A commit counter only fires when nothing is actually
+   being produced, which is the only failure worth interrupting for.
+
+   **WHAT SAM GETS:** it works down the list continuously without him, and the
+   report he reads covers everything since the last stop rather than one unit.
+   **Progress reports still get written — they just stop ending the turn.**
+
+   **BUILD IT SAFELY:** the hook is live while you edit it. **Test the new logic
+   in isolation first** (the existing `scripts/__tests__/seatInboxHookTests.sh`
+   is the place, and it already proves both directions — must-block AND
+   must-not-block; the must-not-block cases are the ones that catch a hook that
+   can never be satisfied). **Prove all four exits fire, and prove a routine
+   `docs(stop):` no longer ends the turn, BEFORE you rely on it.**
+
+   **THEN: work the list. Do not stop to report progress. Sam is asleep.**
 
 0a. **PAID IN FULL — `7a6281ce`, `f3861b31`, `f9f84123`.** One scale, one
    slider, one predicate. **The order's third site was REAL and my first two
@@ -608,7 +633,40 @@ phone.** State device items as PARKED in a stop report, never as a request.
    the precedent verbatim); **only then** delete the `±7`. Deleting it while the
    authority disagrees with itself trades a phantom fixture for a missing one.
 
-4. **THE MODERATE DAY — half of Sam's shape, held by nothing.**
+4. **BUILT — THE MODERATE HALF NOW SPEAKS, AND A FOURTH WORD WAS FOUND.**
+   **THE RANGE AND THE ADVISORY ARE IN.** `preferredModerateDayRange` on the
+   contract (min 1; **max 7 meaning UNBOUNDED — the ruling gives a minimum and
+   no ceiling, and a max of 1 would make a two-moderate-day week a defect**), and
+   a `moderate_day_missing` finding that is **advisory and can never be anything
+   else**. Held by `test:section18-v2`, 3 cells, in the chain.
+   **THE MUTATION DEMONSTRATES THE RULING RATHER THAN ASSERTING IT:** making the
+   finding `blocking` does not merely red a cell — it throws
+   `Section18WeekAcceptanceError` and takes the suite down. That is exactly the
+   outage "advisory, never blocking" exists to prevent.
+   **THE CELLS DRIVE THE CONTRACT NUMBER, NOT A WORLD.** The first version
+   asserted "a week with no moderate day" over a hand-built fixture that turned
+   out to have TWO — the fixture was wrong, not the rule.
+   **AND THE REASON THE MODERATE TIER LOOKED EMPTY HAS A SECOND CAUSE:**
+   `section18OfferPlacement.ts:508` wrote `stressLevel: 'moderate'` — **a word
+   outside the union `high | medium | low`**, cast `as never` two lines below so
+   the compiler never saw it. The ledger counts a moderate day by `=== 'medium'`,
+   **so every offer the app marked as the easier option was invisible to the
+   count.** Fixed, and guarded by a source scan (`LAW-stress-vocabulary-is-one-word`)
+   because a type cannot reach past a cast. **The scan had to be widened twice —
+   it missed its own founding case (a ternary), then flagged a comparison operand
+   — and both corrections carry their own probe.**
+   **⚠ THE FIX CHANGED NOTHING MEASURABLE AND THAT IS REPORTED, NOT HIDDEN:** all
+   17 QA scenarios are identical before and after (4 of 17 meet both preferences
+   in both arms) because that placer does not run in them. **12 of 17 still have
+   zero moderate days.**
+   **NOT BUILT: the generation target toward 4+1.** The item itself says nothing
+   about WHICH session should become moderate or at whose expense — **that is
+   Sam's call, and it is the only thing left on this item.**
+   Registry 103/71 -> 105/73, **UNENFORCED unmoved at 32** (the vocabulary law
+   was born UNENFORCED and its guard built in the same pass rather than banked as
+   debt).
+
+   ~~ORIGINAL~~ **THE MODERATE DAY — half of Sam's shape, held by nothing.**
    *"4 hard days plus 1 moderate/easy day"* (`LFA_PROGRAMMING_BIBLE.md:4808`).
    Hard days have a range, a maximum and two findings.
    `achievedModerateDayCount` (`section18EffectiveWeekEvaluator.ts:1034`) has

@@ -950,6 +950,52 @@ ok('a repeated fixture day collapses to one anchor',
     anchor.kind === 'game' || anchor.kind === 'practice_match').length === 1,
   duplicated.anchors.map((a) => `${a.kind}:${a.dayOfWeek}`));
 
+
+// ── THE MODERATE DAY — ADVISORY, NEVER BLOCKING (seat item 4, 2026-08-12) ──
+//
+// `achievedModerateDayCount` was written on every assessment and read by
+// NOTHING, so a week below Sam's "plus one moderate/easy day" passed in
+// silence. Measured the same day: 12 of 17 QA scenarios have zero moderate
+// days, and every in-season fixture week is among them.
+//
+// THE CELLS DRIVE THE CONTRACT'S OWN NUMBER, NOT A WORLD. The first version of
+// this block asserted "a week with no moderate day" over a hand-built fixture
+// that turned out to HAVE two (days 3 and 5) — the fixture was wrong, not the
+// rule, and a cell built on it would have been asserting the fixture. Moving
+// the contract's minimum either side of the achieved count tests the rule in
+// both directions and cannot be fooled by what a fixture happens to classify.
+{
+  const c = contract('in_season_game_week', {
+    teamTrainingDays: [2], fixtureDays: [6],
+    plannerSelected: { mainStrength: 3, coreConditioning: 3, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0 },
+  });
+  const workouts = [strength(1, ['squat']), strength(3, ['push']), strength(5, ['pull'])];
+  const achieved = evaluate(c, workouts).ledger.restStress.moderateDays.length;
+  ok('the fixture reaches a known moderate-day count for these cells to move around',
+    achieved >= 1, achieved);
+
+  const demanding = contract('in_season_game_week', {
+    teamTrainingDays: [2], fixtureDays: [6],
+    plannerSelected: { mainStrength: 3, coreConditioning: 3, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0 },
+  });
+  demanding.restStress.preferredModerateDayRange = { min: achieved + 1, max: 7 };
+  const below = evaluate(demanding, workouts);
+  ok('a week below the preferred moderate minimum raises the advisory',
+    has(below, 'moderate_day_missing', 'hard_days'), below.findings.map((f) => f.code));
+  ok('the moderate-day finding is ADVISORY and never blocks',
+    below.findings.some((f) => f.code === 'moderate_day_missing' && f.severity === 'advisory') &&
+    !below.blockingViolations.some((f) => f.code === 'moderate_day_missing'),
+    below.blockingViolations.map((f) => f.code));
+
+  const relaxed = contract('in_season_game_week', {
+    teamTrainingDays: [2], fixtureDays: [6],
+    plannerSelected: { mainStrength: 3, coreConditioning: 3, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0 },
+  });
+  relaxed.restStress.preferredModerateDayRange = { min: 0, max: 7 };
+  ok('the advisory reads the CONTRACT minimum, not a hard-coded 1',
+    !has(evaluate(relaxed, workouts), 'moderate_day_missing'));
+}
+
 console.log(`\nsection18ContractV2Tests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 console.log(`SECTION18_V2_TOTALS scenarios=12 rules=12 properties=${propertyCount} mutations=${mutationCount}`);
