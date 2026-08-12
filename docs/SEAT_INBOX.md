@@ -1066,6 +1066,12 @@ phone.** State device items as PARKED in a stop report, never as a request.
       opposite of Sam's ruling twice over and would also have made the equipment
       answer vacuous. `test:away-flow` [5b] reds if it comes back.
     - `until` is the LAST DAY AWAY, never the return date.
+    - **SAM ANSWERED THE ONE OPEN QUESTION, 2026-08-13:** *"yes clear team
+      training and games while away"*. So a live travel span takes CLUB-BOUND
+      work off — team training rows and fixture stubs — and leaves every solo
+      session exactly where it is. **It marks NO date unavailable**; the rule
+      lives at `postGenerationConstraintValidation`, the one seam that knows a
+      day's PARTS. A day that was only club work becomes rest.
 
 28-C1b. **ANSWERED 2026-08-13 — THE MEASUREMENT GATE IS PAID, THE PASS WAS BUILT,
     AND THE WALL IS ONE LAYER FURTHER OUT AGAIN.**
@@ -1323,6 +1329,107 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **ONE-WORD VETO ONLY:** Sam is being shown the label and told it is his own
     tab name. **If he says nothing, it ships.** Do not hold placement for it.
 
+28-C1f. **THE CONDITIONING COUNT IS NOT A FRESH JOB AND NOT SAM'S DECISION —
+    THE CONTRACT ALREADY REQUIRES 3. THE WEEK SHIPS 2.**
+
+    **OWNED BY THE TERMINAL. Measured by the seat before handing it back, so the
+    sixth attempt does not start with an exploratory pass.**
+
+    **THE TERMINAL'S QUESTION** — *"what decides how many conditioning sessions a
+    week gets? COD needs a third slot, or to take one of the two"* — **has an
+    answer already in the contract, and it is not 2:**
+    - **`mid_offseason`: `conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 5 }`** (`weeklyExposureContractV2.ts:1010`)
+    - **`late_offseason`: `required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }`** (`:1029`)
+    - Sam's own weekly floor agrees: **`conditioningExposures: { min: 3, max: 5 }`** (`weeklyExposureCounts.ts:45`).
+
+    **SO THE THIRD SLOT COD NEEDS IS A SLOT THE CONTRACT ALREADY DEMANDS.** Do
+    not put "should an off-season week have 3 conditioning sessions?" to Sam.
+    **He has answered it twice, in two places.** The live question is only WHY 2
+    ships against a required 3.
+
+    **TWO CANDIDATE MECHANISMS. MEASURE WHICH, DO NOT ASSUME — and note they are
+    not exclusive.**
+    1. **The under-finding is advisory** (census C4): `weeklyExposureCounts.ts:
+       323-367` emits `kind: 'under'`, and `weekStructureValidator.ts:454-466`
+       takes the `under` branch FIRST and hardcodes `severity: 'info'`,
+       `canOverride: true`. Ceilings refuse; floors do not.
+    2. **⚠ THE REQUIREMENT REWRITES ITSELF TO MATCH THE OUTPUT.**
+       `weeklyExposureContract.ts:759-760`, inside
+       `reconcileWeeklyExposureContractToLedger`:
+       `contract.conditioning.required = Math.min(required, actual);`
+       **A week that delivers 2 sets required to 2, and is then short of
+       nothing.** It is NOT silent — it writes an `addExposureReduction` with a
+       reason first (`:745-752`) — **so the whole question is whether a legitimate
+       reason authorised it, or whether it fires simply because the generator
+       produced fewer.** **Read the reason on a real off-season week before
+       judging this line.** If the reason is anything other than an authorised
+       reduction, this is the defect, and it is a bigger one than COD.
+
+    **CLEARED 2026-08-13 — AND THE TRAP WAS REAL. "THE WEEK SHIPS 2" WAS MY
+    FOURTH MISCOUNT.** Measured on a five-day mid-off-season week, block 3:
+    - **standalone SESSIONS = 1, combined PIECES = 2, TOTAL = 3.**
+    - **The contract requires 3. The week DELIVERS 3.** There is no shortfall.
+    **My "2" was a count of CATEGORIES (`aerobic_base`, `tempo`), not sessions.**
+    Two categories spread across three pieces. **So this item's premise —
+    "required 3, ships 2" — is comparing a session count with a category count,
+    and it is withdrawn.**
+    **MECHANISM 2 IS ANSWERED AND IS NOT FIRING.** The reconcile line
+    (`contract.conditioning.required = Math.min(required, actual)`) was
+    instrumented on that week: **it never fired for conditioning** — no reduction
+    was written at all, because `actual >= from`. **The requirement is not
+    rewriting itself here.**
+    **SO COD'S "THIRD SLOT" ALREADY EXISTS.** The week has three conditioning
+    pieces; what it does not have is a third CATEGORY. COD does not need a new
+    slot — **it needs to be one of the categories those three pieces are drawn
+    from**, and two of the three are attached to lifting days where a hard
+    category is correctly refused.
+    **⚠ ONE NUMBER I WILL NOT REPORT AS A FINDING:** my probe read
+    `conditioningExposures = 0` from `countWeeklyExposures` on the same week.
+    **That contradicts three visible pieces, so it is far more likely my call
+    passed the wrong input shape than that the counter is broken.** Per the
+    standing rule it is recorded as UNVERIFIED, not as a defect. **Verify the
+    call before anyone builds on it.**
+
+    ~~ORIGINAL~~ **THE UNIT TRAP, GIVEN THREE MISCOUNTS TONIGHT — CLEAR IT FIRST.** The
+    contract says "conditioning sessions"; the validator counts
+    `conditioningExposures`. **A conditioning piece attached to a lifting day may
+    count as an exposure while not being a standalone SESSION.** Per the standing
+    rule: **state what is being counted and show one instance before reporting
+    either number.** If the two units differ, "required 3 vs delivered 2" may be
+    comparing different things and this whole item needs restating.
+
+    **⚠ SAM ASKED THE QUESTION THAT SHARPENS THIS, AND IT PARTLY DEFENDS THE
+    LINE:** *"what if they said they can only train 2 days or something? or is
+    that not a scenario we have created yet"*. **It IS a scenario, it is coded,
+    and it has a TYPED REASON.** `WeeklyExposureReductionReason`
+    (`weeklyExposureContract.ts:31-44`) opens with `'insufficient_availability'`,
+    and `coachingEngine.ts:2800` branches on `inputs.availableDays <= 2`.
+    **So lowering required-3 to actual is CORRECT for a 2-day athlete** — that is
+    the mechanism working, not a defect, and 28-C1f's flag must not be read as
+    condemning the line.
+
+    **WHICH MAKES THE TEST EXACT, AND IT IS ONE RUN:** on a **five-day**
+    off-season week with **no** availability limit, no injury, no deload and no
+    equipment problem, **the contract requires 3 and the week ships 2 — so WHAT
+    REASON IS ON THAT REDUCTION?**
+    - **If it is `insufficient_availability` on a five-day week — THAT IS THE
+      DEFECT**, and it is bigger than COD: every floor Sam has written is being
+      excused by a constraint that is not present.
+    - **If no reduction is recorded at all**, the requirement dropped without
+      authorisation and the reduction ledger is not the owner it claims to be.
+    - **If a genuine reason is recorded**, there is no defect here, COD's third
+      slot is legitimately unavailable, and **COD must take one of the two
+      existing slots instead — which is Sam's "cut first" read from the other
+      side and needs no new ruling.**
+    **Report the reason string verbatim. That one string decides which of three
+    different jobs this is.**
+
+    **AND CREDIT, BECAUSE THE DISCIPLINE IS WHAT PRODUCED THIS.** Five attempts,
+    five reverts, and the terminal handed over a MEASURED LAYER instead of a
+    sixth attempt. **That is the behaviour this queue wants.** Each revert also
+    left something shipped and standing: the category, the selector branch, the
+    gate, the rest floor, the signed label. **COD is one link from the athlete.**
+
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
 addressable then walk it; the harvest ratchet and a computed tap atlas.
@@ -1362,73 +1469,12 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **ONE THING THE AWAY FLOW NO LONGER DOES, AND IT IS SAM'S CALL WHETHER IT
-  SHOULD. Raised 2026-08-13 by building item 28.** The sheet it replaced cleared
-  the training days the athlete ticked. **The new flow clears nothing** — that is
-  his ruling (*"if yes, follow same program"*), and it is what makes the
-  equipment answer able to do anything at all. **But a TEAM NIGHT and a GAME are
-  at his club**, and an athlete in another city cannot attend either, so those
-  two now stay on the week while he is away.
-  **The athlete is not stuck** — both can still be binned or moved from the day
-  screen — but it is no longer automatic.
-  **RECOMMENDED, not assumed: away clears CLUB-BOUND days only** (team training
-  and fixtures) inside the span, and leaves every solo session in place to be
-  reshaped by the kit answer. That is the smallest rule that is true of both
-  halves. **Not built, because he has not ruled it and it would put session
-  removal back into a door this item just took it out of.**
-
-
-- **MEASURED 2026-08-13, AND IT REFUTES THIS SEAT'S OWN PREMISE. Sam asked
-  *"do you actually set a return date when saying you're away?"* — and the
-  answer is NO.** `AwayDaysSheet` (`HomeScreenV2.tsx:3030-3042`) asks **"Which
-  days are you away?"** and offers `weekDays.filter(day => day.date >= todayISO
-  && day.workout && workoutType !== 'Game')` — **individually toggled TRAINING
-  days, from today, inside the VISIBLE WEEK ONLY.** There is no return-date
-  field, no date range, and **no way to say "away for ten days"**: a trip
-  crossing into next week cannot be expressed at all.
-  **SO "AUTOMATIC ON THE RETURN DATE" IS NOT AVAILABLE TODAY.** The seat wrote
-  "the return date he already gives when setting Away" — that was ASSUMED, not
-  measured, and Sam caught it by asking. The nearest real thing is the last
-  toggled day, which is not a return date and cannot leave this week.
-  **THIS CHANGES HIS CONDITIONAL.** He said *"if you do, then yes make it
-  automatic"*. The antecedent is false, so the automatic ruling does not fire.
-  **The live choice is now: (A) ship MANUAL** — his own proposal, works today,
-  the athlete clears it with "I'm back now"; **or (B) add a real return date to
-  the away flow FIRST** — new UI on a sheet Sam owns, and the thing that would
-  make automatic possible and let a trip span more than one week.
-  **`missing_for_span` (`bfad51b7`) is unused under (A)** and will be reported
-  as such rather than quietly kept.
-  ~~SUPERSEDED BY THE MEASUREMENT ABOVE~~ **MANUAL, OR MANUAL PLUS THE RETURN DATE? (item 22(c), asked
-  2026-08-13.)** Sam's new proposal is MANUAL — it stays until he says he is
-  back. **His EARLIER word in the same item was automatic:** *"the plan should
-  change until their return date"*. Both work and they are not the same:
-  **manual only** risks an athlete who gets home, forgets, and keeps training
-  as though away; **manual plus the date** lifts on the return date he already
-  gives when setting Away, with the clear button as an early-exit backstop.
-  **The dated half is already built** (`missing_for_span`, `bfad51b7`), so
-  "both" costs nothing extra. **Recommended: both.** If he says manual only,
-  `missing_for_span` becomes unused and should be reported, not silently kept.
-  ~~WITHDRAWN, kept for the record~~ **THE AWAY EQUIPMENT ANSWER IS THE WRONG WAY
-  ROUND, AND ONE OF THREE FIXES IS SAM'S TO PICK. Asked 2026-08-13.**
-  `EquipmentScreen` produces what the athlete **HAS** where they are going —
-  ruling 3's pre-ticked checklist, unticked down to their real kit.
-  `set_equipment_modifier` stores what they are **MISSING**. Away needs the
-  COMPLEMENT — normal kit minus away kit — and **nothing computes it**, because
-  onboarding never had to: its answer IS the kit, with no prior list to subtract
-  from.
-  **THIS WAS FOUND BY BUILDING IT AND THROWING IT AWAY.** A route and wrapper
-  compiled, passed the gate, and wrote `tags: []` — a dated fact asserting
-  nothing is absent. It would have shipped green and left the athlete training
-  around a gym they were not in. Fully reverted (`234f917c`).
-  **THE THREE:** **(i)** derive the complement from the stored answer before and
-  after; **(ii)** give the equipment fact a `have` mode beside `without`, so the
-  away answer stores as-is; **(iii)** ask what is MISSING on the away screen —
-  named ONLY so it can be ruled out on the record, since it contradicts ruling
-  3's pre-ticked shape.
-  **NOT BLOCKING THE REST OF 22(c)'s FOUNDATIONS**, which are built: the dated
-  fact (`bfad51b7`) and the reusable door (`0ee5caf1`). It blocks the wiring
-  between them, which is the last piece.
-
+- **ANSWERED 2026-08-13, NOW PART OF ITEM 28 — away and the club.** Sam:
+  ***"yes clear team training and games while away"***. Built the same day: a
+  live travel span removes team-training rows and fixture stubs and leaves every
+  solo session in place. **Do not re-ask.** The four words on the modifier
+  ("Team training and games off") are PROPOSED in copy batch 34 and are the only
+  part still his.
 - **ANSWERED 2026-08-13, NOW ITEM 21 — the team-night size question is
   CLOSED and its premise refused.** Sam: a team night's strength session is
   **a normal strength session**; the only difference is ORDER (prefer not to
