@@ -1338,6 +1338,23 @@ seat was wrong.
   **IT IS A FILTER, NOT AN EDIT.** His calendar mark, his accepted program and the
   team night all still exist and all come back when the fact expires or he clears
   it. Held by `test:away-flow` [15]/[15b], non-vacuity first; mutation-checked.
+
+  **⚠ AND IT DOES NOT REACH THE PROGRAM TAB. MEASURED, NOT SUSPECTED,
+  2026-08-13.** A probe at the top of `applyAwayPass`, run through the real flow
+  against a logged Metro, **never fired once** — while a probe in the coaching
+  engine on the same run did. **So `resolveWeekWithConditioning` is NOT what
+  draws the athlete's week**, even though `buildProgramTabProjectedWeek` appears
+  to call it and `useResolvedWeek` → `projectWeekFor` →
+  `buildProgramTabProjectedWeek` is the documented chain.
+  **THE NEXT ACT IS TO FIND THE ACTUAL READER, and the probe is the way** —
+  instrument `buildProgramTabProjectedWeek` itself and see whether IT fires. If
+  it does not, the screen's week comes from a cached/derived surface
+  (`deriveVisibleWeek` / `assembleScheduleState`) and that is where every one of
+  these filters belongs. **Do not add a fourth filter anywhere until that probe
+  has answered.**
+  **THE PASS IS KEPT** — it is correct, tested and live for the resolver's other
+  callers — but **the athlete's week is unchanged by it, and the screenshots
+  still show the club.**
 - **ANSWERED 2026-08-13 — a game inside the trip DISAPPEARS.** Sam: ***"yes it
   should disappear OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***. **Built the same
   day** — the fixture is dropped at the plan, so the week loses its taper and
