@@ -1,5 +1,5 @@
 /**
- * SAM'S EIGHT PHRASES, AND THE TWO KINDS THAT DELIBERATELY HAVE NONE.
+ * SAM'S TWELVE PHRASES, AND THE TWO KINDS THAT DELIBERATELY HAVE NONE.
  *
  * SEAT_INBOX item 22(a)/(b), ruled 2026-08-13. This suite is the READER half of
  * the `effect` field's contract: the field names its writer (every builder in
@@ -15,7 +15,10 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { registerProjectionCopy } from '../rules/projectionCopy';
 import { signedCopy } from '../rules/signedCopy';
 import { isShownOnProgram, PROGRAM_HIDDEN_EFFECTS } from '../rules/programModifierVisibility';
-import type { ActiveProgramModifierEffect } from '../utils/activeProgramModifiers';
+import {
+  selectActiveProgramModifiers,
+  type ActiveProgramModifierEffect,
+} from '../utils/activeProgramModifiers';
 
 armTotalsOrRed();
 registerProjectionCopy();
@@ -29,7 +32,7 @@ function run(name: string, fn: () => void): void {
 }
 function assert(cond: boolean, msg: string): void { if (!cond) throw new Error(msg); }
 
-console.log('\n-- Modifier effect phrases (SEAT_INBOX 22a/22b) --');
+console.log('\n-- Modifier effect phrases (SEAT_INBOX 22a/22b + 23) --');
 
 // Sam's list, transcribed ONCE here because this is the signing record itself:
 // the suite's job is to prove the shipped words are his, so it must hold his
@@ -43,9 +46,16 @@ const SAM_PHRASES: ReadonlyArray<[ActiveProgramModifierEffect, string]> = [
   ['sessions_moved', 'Sessions moved'],
   ['planned_lighter', 'Planned lighter week'],
   ['week_rebuilt', 'Week rebuilt around the game'],
+  // SEAT_INBOX 23, signed 2026-08-13. Typed by hand like the eight above,
+  // because this array IS the signing record: importing them from the registry
+  // this suite exists to check would make it agree with itself.
+  ['exercise_preference_applied', 'Exercise preference applied'],
+  ['exercise_removed', 'Exercise removed'],
+  ['exercise_prioritised', 'Exercise prioritised'],
+  ['conditioning_swapped', 'Conditioning swapped'],
 ];
 
-run('all eight of Sam\'s phrases ship exactly as he wrote them', () => {
+run('all twelve of Sam\'s phrases ship exactly as he wrote them', () => {
   for (const [effect, expected] of SAM_PHRASES) {
     const actual = signedCopy(`modifiers.effect.${effect}`) as unknown as string;
     assert(actual === expected,
@@ -84,6 +94,40 @@ run('hiding a row also removes it from the count', () => {
   assert(shown.length === 2,
     `Program would count ${shown.length} of these three. The notice counts what `
     + 'the sheet lists, so any difference is a number the athlete can see is wrong.');
+});
+
+// ── THE CORRECTION ITEM 23 WAS BUILT ON, HELD BY A CELL ──
+//
+// Every doc said THREE unnamed kinds. It was four, because
+// `athletePreferenceModifier` is ONE builder carrying `kind: 'excluded' |
+// 'pinned'` and those are OPPOSITES: excluded takes an exercise OUT, pinned
+// asks for MORE of it. A single effect for both compiles, ships, and is false
+// every second time it renders — and nothing else in this suite would notice,
+// because both would still have a signed phrase and both would still be shown.
+//
+// So this cell drives the REAL builder with both preferences present and
+// asserts the two outcomes differ.
+run('an excluded exercise and a pinned one do not share a phrase', () => {
+  const modifiers = selectActiveProgramModifiers({
+    athletePrefs: {
+      excluded: ['Back Squat'],
+      pinned: ['Chin-Up'],
+    } as never,
+  });
+  const effects = modifiers
+    .filter((m) => m.source === 'athlete_preferences')
+    .map((m) => m.effect);
+  assert(effects.length >= 2,
+    `the pool builder produced ${effects.length} modifier(s) for one excluded and `
+    + 'one pinned exercise; this cell cannot compare what it cannot reach');
+  assert(new Set(effects).size === effects.length,
+    `excluded and pinned both resolved to ${JSON.stringify(effects)}. They are `
+    + 'OPPOSITES — one removes an exercise, the other asks for more of it — so a '
+    + 'shared phrase is wrong every second time it renders. That is exactly why '
+    + 'SEAT_INBOX 23 is four phrases and not three.');
+  assert(effects.includes('exercise_removed') && effects.includes('exercise_prioritised'),
+    `the pool effects are ${JSON.stringify(effects)}; Sam signed "Exercise removed" `
+    + 'for excluded and "Exercise prioritised" for pinned');
 });
 
 console.log(`\nmodifier effect phrases: ${passed} passed, ${failed} failed`);

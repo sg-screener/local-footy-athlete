@@ -312,6 +312,44 @@ export function registerProjectionCopy(): void {
         + 'the meaning: "no modifiers currently impacting".',
       text: 'No modifiers currently impacting your program.',
     },
+    // ── THE LAST FOUR, SIGNED 2026-08-13 (SEAT_INBOX item 23). ──
+    //
+    // Sam: *"i'd rather them shortened"*, then ***"signed"***. These close the
+    // gap item 22(a) left open — with one correction the measurement forced:
+    // it was FOUR phrases, not the three every doc said. `excluded` and
+    // `pinned` share one builder and are OPPOSITES, so one phrase for both
+    // would have been false every second time it rendered.
+    //
+    // TWO KINDS STILL HAVE NO PHRASE ON PURPOSE: soreness (its own sentence
+    // names the body part) and the generated programme-effect notes.
+    {
+      id: 'modifiers.effect.exercise_preference_applied',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 23 — Sam\'s word was '
+        + '"signed" on these four, verbatim. Shown for an exercise preference — avoid, preferred alternative, or an added focus.',
+      text: 'Exercise preference applied',
+    },
+    {
+      id: 'modifiers.effect.exercise_removed',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 23 — Sam\'s word was '
+        + '"signed" on these four, verbatim. Shown for an EXCLUDED exercise, which is taken out.',
+      text: 'Exercise removed',
+    },
+    {
+      id: 'modifiers.effect.exercise_prioritised',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 23 — Sam\'s word was '
+        + '"signed" on these four, verbatim. Shown for a PINNED exercise, which is asked for more often.',
+      text: 'Exercise prioritised',
+    },
+    {
+      id: 'modifiers.effect.conditioning_swapped',
+      source: 'signed_sentence',
+      provenance: 'SIGNED 2026-08-13, SEAT_INBOX item 23 — Sam\'s word was '
+        + '"signed" on these four, verbatim. Shown for a conditioning modality swap, e.g. bike for run.',
+      text: 'Conditioning swapped',
+    },
     // ── THE MODIFIER SHEET'S RIGHT-HAND COLUMN — SAM'S EIGHT, 2026-08-13. ──
     //
     // SIGNED VERBATIM. He wrote these as a list in SEAT_INBOX item 22(a),

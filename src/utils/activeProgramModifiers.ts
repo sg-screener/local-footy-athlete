@@ -114,11 +114,21 @@ export interface ActiveProgramModifierAction {
  * renders no row. Spelling that as a named member rather than `undefined`
  * keeps it a ruling anyone can find, and keeps the `Record` total.
  *
- * `'unsigned'` IS THE HONEST GAP. Three live builders — exercise preferences,
- * athlete pool preferences and modality swaps — are not in Sam's eight. They
- * keep their own authored sentence and get NO short phrase, because inventing
- * one per kind is precisely the unsigned-athlete-words defect `SignedCopy`
- * exists to prevent. It is recorded under `## AWAITING SAM`.
+ * `'unsigned'` IS THE HONEST GAP, AND IT DID NOT CLOSE.
+ *
+ * CORRECTED 2026-08-13 (SEAT_INBOX 23): this comment said "Three live builders
+ * — exercise preferences, athlete pool preferences and modality swaps". It was
+ * wrong by one, and the missing one mattered. `athletePreferenceModifier` is a
+ * SINGLE builder carrying `kind: 'excluded' | 'pinned'`, and those are
+ * OPPOSITES — excluded AVOIDS an exercise, pinned PRIORITISES it. Counting the
+ * builder instead of the outcomes would have shipped one phrase for both, false
+ * every second time it rendered. Sam signed FOUR phrases, not three.
+ *
+ * TWO SITES STILL CARRY `'unsigned'` AND STAY THAT WAY, by his ruling:
+ * SORENESS, whose own sentence names the body part, and the generated
+ * PROGRAMME-EFFECT notes, which carry their own authored sentence. A missing
+ * phrase is a gap in the WORDS and never a reason to stop telling the athlete
+ * their program changed — which is why `isShownOnProgram` still shows them.
  */
 export type ActiveProgramModifierEffect =
   | 'volume_adjusted'
@@ -129,6 +139,10 @@ export type ActiveProgramModifierEffect =
   | 'sessions_moved'
   | 'planned_lighter'
   | 'week_rebuilt'
+  | 'exercise_preference_applied'
+  | 'exercise_removed'
+  | 'exercise_prioritised'
+  | 'conditioning_swapped'
   | 'not_shown'
   | 'unsigned';
 
@@ -1178,9 +1192,10 @@ function preferenceModifier(
     source,
     sourceId: c.id,
     type: 'exercise_adjustment',
-    // NOT IN SAM'S EIGHT — an exercise preference (avoid, preferred
-    // alternative, or an added focus). Keeps its own authored sentence.
-    effect: 'unsigned',
+    // SIGNED 2026-08-13 (SEAT_INBOX 23) — one phrase covers all three
+    // preference kinds (avoid, preferred alternative, added focus), which is
+    // what Sam signed: they are the same act from the athlete's side.
+    effect: 'exercise_preference_applied',
     title,
     body,
     affects: ['future_generation'],
@@ -1209,8 +1224,12 @@ function athletePreferenceModifier(
     source: 'athlete_preferences',
     sourceId,
     type: 'exercise_adjustment',
-    // NOT IN SAM'S EIGHT — an excluded or pinned exercise. Keeps its sentence.
-    effect: 'unsigned',
+    // SIGNED 2026-08-13 (SEAT_INBOX 23), AND IT BRANCHES BECAUSE THE TWO ARE
+    // OPPOSITES. One builder, two outcomes: `excluded` takes an exercise OUT,
+    // `pinned` asks for MORE of it. A single phrase here would be wrong every
+    // second time it rendered, which is why the item is four phrases and not
+    // three.
+    effect: kind === 'excluded' ? 'exercise_removed' : 'exercise_prioritised',
     title: kind === 'excluded'
       ? `${displayExercise} adjustment active`
       : `${displayExercise} preference active`,
@@ -1249,8 +1268,8 @@ function modalityModifier(
     source: 'modality_preferences',
     sourceId: key,
     type: 'exercise_adjustment',
-    // NOT IN SAM'S EIGHT — a conditioning slot swapped (bike for run).
-    effect: 'unsigned',
+    // SIGNED 2026-08-13 (SEAT_INBOX 23) — a conditioning slot swapped.
+    effect: 'conditioning_swapped',
     title: `${prettySessionKey(key)} adjustment active`,
     body: from
       ? `Similar sessions will use ${to} instead of ${from}.`

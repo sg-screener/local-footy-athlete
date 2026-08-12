@@ -27,11 +27,12 @@
  * training. `EFFECT_COPY_ID` is a `Record` over the closed union, so adding a
  * member without giving it a phrase does not compile.
  *
- * FOUR KINDS DELIBERATELY HAVE NO PHRASE and fall back to their own authored
- * sentence: exercise preferences, pool preferences, modality swaps and
- * soreness. Sam's list does not name them, and writing one per kind is the
- * unsigned-athlete-words defect `SignedCopy` exists to stop. Owed, and recorded
- * under `## AWAITING SAM`.
+ * TWELVE PHRASES NOW, AFTER SEAT_INBOX 23 SIGNED THE LAST FOUR. Only TWO kinds
+ * still fall back to their own authored sentence, and both by ruling rather
+ * than omission: SORENESS, whose sentence names the body part, and the
+ * generated PROGRAMME-EFFECT notes, which carry their own. They are still
+ * SHOWN and still COUNTED — a missing phrase is a gap in the words, never a
+ * reason to stop telling the athlete their program changed.
  *
  * TIME CAPS RENDER NO ROW AT ALL (22b). Sam: *"i've taken out time caps for
  * now"*. **And they are absent from the COUNT as well, by his 2026-08-13
@@ -69,6 +70,10 @@ const EFFECT_COPY_ID: Record<ActiveProgramModifierEffect, string | null> = {
   sessions_moved: 'modifiers.effect.sessions_moved',
   planned_lighter: 'modifiers.effect.planned_lighter',
   week_rebuilt: 'modifiers.effect.week_rebuilt',
+  exercise_preference_applied: 'modifiers.effect.exercise_preference_applied',
+  exercise_removed: 'modifiers.effect.exercise_removed',
+  exercise_prioritised: 'modifiers.effect.exercise_prioritised',
+  conditioning_swapped: 'modifiers.effect.conditioning_swapped',
   not_shown: null,
   unsigned: null,
 };
