@@ -339,10 +339,19 @@ his instruction is standing authority, not history.**
    reds"* fifteen times. If a wait cannot be blocked on, say so in one line and
    stop.
 
-2. **MAKE THE CHAIN CHEAP — MEASURED 2026-08-12, AND THIS ITEM'S OWN DIAGNOSIS
+2. **BLOCKED-BY: other-agent — MAKE THE CHAIN CHEAP. MEASURED 2026-08-12, AND THIS ITEM'S OWN DIAGNOSIS
    WAS WRONG.** `docs/STOP_2026-08-12_WALKER_TIMING.md`. **Sam, 2026-08-12:**
    *"i want to know how long that 192 tests are taking and if it's really
    necessary"*.
+
+   **THE BLOCK, PRECISELY, 2026-08-13:** every remaining route on the 89s suite
+   is a real fix in the two §18 files, and this item already records them as
+   **mid-flight with another agent**. Re-checked today rather than taken on
+   trust — `coachingEngine.ts` still carries that seat's uncommitted probes and
+   two type errors. **NOTHING IS OWED BY SAM. It clears when those files are
+   clean; the priced routes are in
+   `docs/STOP_2026-08-12_ACCEPTED_STATE_TRANSACTIONS_COST.md` and the six
+   expensive cells are named below.**
    - **PAID — the ~25 minutes.** `action-walker:deep` is **not** an expensive
      suite: it was **34.6s and green on 2026-08-10**. It cost ~25 minutes on
      2026-08-12 **only because it went RED** — one walk breaks a law at step 87
@@ -431,6 +440,22 @@ his instruction is standing authority, not history.**
      repair engine bounds `assess` by `maxCandidates` and does NOT bound
      signing: it signs every generated CHILD, and `expand` returns tens of
      thousands.
+   - **THE 10% IS TAKEN 2026-08-13 (desktop), and it is only 10% — this is a
+     footnote to the measurement above, not a rival to it.** `seed()` was
+     generating a whole program on all 25 calls; it now memoises by
+     (profile, start), so **25 generations become 7**. Deep clone out,
+     `resetStores()` still per call, and the suite's own determinism cell is
+     what makes it safe. All 43 cells stay green. **The terminal's finding
+     stands unchanged: the cost is `stateSignature`, not generation.**
+     **AND THE SIX CELLS THAT HOLD THE TIME ARE NOW NAMED**, via the suite's own
+     `AST_TIME=1` switch: `13 legacy unknown anchors remain uncredited` 18.6s ·
+     `unknown legacy participation never gains anchor credit` 16.6s · `no
+     calendar mutation can bypass the gateway` 14.6s · `visible projection is
+     ledger-equivalent to gateway acceptance` 12.5s · `hydration remains
+     deterministic and idempotent` 12.2s · `no contractless material week
+     persists without accepted Contract v2` 8.2s. **82 of 89 seconds in six
+     cells; the other 37 cost 7.** Whoever takes a priced route has the list of
+     callers to aim at.
    - **THE 42% CUT EXISTS AND WAS REVERTED, BECAUSE IT IS NOT FREE.** Queueing
      children unsigned takes the suite **91s -> 53s** and breaks the property
      *"a fixture MOVE publishes its dependent week once"* with
