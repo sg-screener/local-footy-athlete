@@ -566,8 +566,30 @@ phone.** State device items as PARKED in a stop report, never as a request.
      state, so it flips `isOnboardingComplete` from **true to false** in memory.
      An empty envelope actively un-finishes a finished profile. Reachable
      whenever disk is bare and memory is not.
-   - **STILL OPEN — `test:accepted-state-transactions` is 89.5s**, the largest
-     real unit, new since 2026-08-07, never looked at.
+   - **MEASURED 2026-08-12 — `test:accepted-state-transactions`, and the answer
+     is a PRODUCT function, not a test.** `docs/STOP_2026-08-12_ACCEPTED_STATE_TRANSACTIONS_COST.md`.
+     **Generation is 12.0s of 91s** — the obvious suspect, refuted, and worth
+     only 10% if memoised. A CPU profile put **~33s of self time in ONE
+     function**: the gateway's `stateSignature`, a full `JSON.stringify` of
+     every workout and exercise row. Instrumented: **977,034 calls, 40.2s, and
+     25.9 GB of JSON** — to evaluate at most 48 candidates per search. The
+     repair engine bounds `assess` by `maxCandidates` and does NOT bound
+     signing: it signs every generated CHILD, and `expand` returns tens of
+     thousands.
+   - **THE 42% CUT EXISTS AND WAS REVERTED, BECAUSE IT IS NOT FREE.** Queueing
+     children unsigned takes the suite **91s -> 53s** and breaks the property
+     *"a fixture MOVE publishes its dependent week once"* with
+     `following-week dependency was not committed in the same snapshot`. That is
+     an athlete-facing atomicity guarantee. **"The pre-check is not
+     load-bearing" is FALSE** — a second premise refuted in the same unit.
+     Three priced routes are in the doc; **none started**, because the two
+     section18 files a real fix touches are mid-flight with another agent.
+   - **THE QUESTION THIS OPENS, AND IT IS BIGGER THAN THE CHAIN.**
+     `canonicaliseHydratedProgram` took **20.4s and 17.9s** on a migrated
+     in-season week where three others on the same shape took 8-85ms. It runs on
+     hydration of a LEGACY program. **If a real device carrying a
+     pre-Contract-v2 program hits that, it is a twenty-second launch, not a slow
+     test.** OPEN-UNKNOWN: nothing here measured a device.
 
 3. **THE MEASUREMENT THE SECOND-WALL LAW DEMANDED IS TAKEN — AND THE ASSUMPTION
    BEHIND ALL THREE ATTEMPTS IS FALSE.** Sam freed the generator 2026-08-12;
