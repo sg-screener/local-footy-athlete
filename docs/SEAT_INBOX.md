@@ -683,6 +683,21 @@ phone.** State device items as PARKED in a stop report, never as a request.
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 12).
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
+   **A FOURTH PASS THAT DID NOT LOWER THE COUNT, AND SAYS SO. 2026-08-13.**
+   `LAW-green-gate-is-a-claim` — the law every guard tonight rested on — had
+   **NO RULING SITE**: cited by boundary reports for weeks, obeyed by habit,
+   written nowhere. Its own row named that as the precondition. **It is now
+   written down as `AGENTS.md` L12a, beside L12 whose other half it is, and the
+   row's `ruledAt` points there. The precondition is PAID.**
+   **THE OBVIOUS GUARD IS REFUTED, so nobody builds it twice.** A per-suite "does
+   this file carry a liveness arm" scan **is satisfied by a COMMENT** — it reads
+   prose, so a suite could mention the word and pass while asserting nothing.
+   **That gate would BE the green-and-empty shape the law forbids.** Measured:
+   **21 of 200 chain suites** carry any liveness or mutation arm. The honest
+   mechanisation is standing mutation testing in the chain — infrastructure with
+   a runtime budget, not a cell — so the row stays **UNENFORCED honestly rather
+   than closed with a scan that could not fail.**
+
    **PAID A THIRD TIME, 2026-08-13: 30 -> 29.** `LAW-anchor-must-be-found` is held
    by `test:repo-law-guards`, on its DECIDABLE half — an `indexOf` anchor must be
    proven found before it is used as a `slice` bound. **`indexOf` returns -1 on a
@@ -1114,6 +1129,31 @@ phone.** State device items as PARKED in a stop report, never as a request.
     what does not is a dated equipment fact
     (`set_equipment_modifier` is `missing_this_week`, no return date) and the
     away flow's question in front of it.
+
+    **MEASURED 2026-08-13 — THE FULL MAP, so the build starts on facts.**
+    - **The door:** the `Away` chip is `home-away-this-week-entry`
+      (`HomeScreenV2.tsx:843`), which opens `AwayDaysSheet` and lands on
+      `handleApplyAwayDays(dates)`. That is where the equipment question goes.
+    - **The copy to change:** `temporarySourceFact.ts` — title *"Away / travel
+      period active"*, body *"Your program is avoiding the dates you are away."*
+      **That sentence IS the defect**: it states removal, and Sam wants reshape.
+    - **The screen to reuse, and why it is not reachable:** `EquipmentScreen` is
+      registered ONLY in `OnboardingNavigator.tsx:86` as route `Equipment`
+      inside the onboarding stack. **It is not on any in-app navigator**, which
+      is precisely "make that door reachable in-app".
+    - **The write with no end date:** `EquipmentLimitationSheet.tsx:148` writes
+      `kind: 'missing_this_week'` (typed at
+      `types/programControlAction.ts:253`). **Nothing in that shape can express
+      a span**, which is the dated equipment fact the item asks for. Travel
+      already carries `effectiveFrom`/`effectiveUntil`; the equipment answer
+      does not.
+    - **The effect field now names it:** travel currently ships
+      `effect: 'sessions_moved'`, which is what it honestly does TODAY. When
+      this item lands, away stops moving sessions and starts substituting
+      exercises, and that effect moves with it.
+
+    **NOT STARTED — the build is the next unit, and it is the whole of (c).**
+    (a) and (b) are BUILT and on glass (`5ff77758`).
 
     **GENERATION IS INVOLVED (a rebuild on a new kit) — STAND-DOWN D APPLIES to
     the rebuild half.** The sheet, the question and the dated equipment fact are
