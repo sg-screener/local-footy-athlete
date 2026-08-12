@@ -1163,6 +1163,29 @@ seat was wrong.
 - **ANSWERED 2026-08-12, NOW ITEM 16 — the day/week modifier indicator.**
   Sam: *"yes — one line on week, small card on day, read-only both"*. Moved
   out of this section into the queue. **Do not re-ask.**
+- **DECISION OWED — does the day/week modifier notice open a SHEET first, or go
+  straight to My Status? (item 16, asked 2026-08-13.)** Sam sent his prototype
+  screen and asked whether tapping the notice opens *"something like this? which
+  you can then tap and be taken to the status area inside the coach tab"*. **It
+  does not — measured on glass, `artifacts/ui-walk/item16-week-opens-status.png`:
+  the tap lands directly on My Status inside the Coach tab, one hop, no
+  intermediate sheet.**
+  **HIS PROTOTYPE IS A TWO-STEP:** a "Your session has been modified" sheet
+  listing each modifier with what it did ("Time away — training volume
+  adjusted", "Equipment access — exercises substituted"), then **GO TO MY
+  STATUS** and **NOT NOW**.
+  **WHY IT WAS BUILT ONE-HOP, SO THE CHOICE IS INFORMED RATHER THAN RE-LITIGATED:**
+  item 16 rule (c) says the notice *"carries no controls of its own"*, and a
+  sheet with two buttons is arguably controls. That reading is what produced the
+  single hop. **His prototype overrules it if he wants the sheet — it is his
+  design, and rule (c)'s purpose was keeping the modifier LIST and its eight
+  ACTIONS off Program, which a read-only summary + a navigation button does not
+  breach.**
+  **NOT NEW INFORMATION, ONE SCREEN EARLIER.** The sheet's list is the same list
+  My Status renders, so the gain is dismissibility ("Not now") and not having to
+  leave Program to learn what changed; the cost is a sheet between the athlete
+  and a screen they already reach in one tap.
+  **Both surfaces would open it** — day and week — since they are one component.
 - **DECISION OWED — the moderate-day generation target (item 4).** The range and
   the advisory are built; nothing says WHICH session becomes the moderate one, or
   at whose expense.
