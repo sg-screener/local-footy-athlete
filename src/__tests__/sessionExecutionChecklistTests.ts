@@ -248,9 +248,20 @@ const checklistBranch = checklistBranchStart >= 0 && legacyBranchStart > checkli
   : '';
 ok('checklist branch does not render completion choice chips', !checklistBranch.includes('COMPLETION_OPTIONS.map'));
 ok('feedback asks the effort question', /How hard was the session\?/.test(feedback));
-ok('all TEN choices are generated on one non-wrapping row',
-  /Array\.from\(\{ length: 10 \}/.test(feedback) && /fillRow/.test(feedback) &&
-    !/rpeGrid:\s*\{[\s\S]{0,120}flexWrap/.test(feedback));
+// MOVED WITH THE SURFACE, 2026-08-12. This pinned the CHIP implementation —
+// ten choices on one non-wrapping row — and Sam replaced the chips with a
+// slider in the same pass, for the reason the cell itself was straining at:
+// ten tap targets do not fit a row. The claim underneath survives and is now
+// stated against the thing that ships.
+ok('the session effort input is a slider, not chips',
+  /<EffortSlider/.test(feedback)
+    && /testID="session-feedback-rpe-grid"/.test(feedback)
+    && !/feedback-session-rpe-\$\{value\}/.test(feedback));
+ok('the slider is handed a nullable value and a setter, so it can start EMPTY',
+  /value=\{sessionRpe\}/.test(feedback) && /onChange=\{setSessionRpe\}/.test(feedback));
+ok('an untouched session effort is null, never a number that looks like an answer',
+  /const \[sessionRpe, setSessionRpe\] = useState<number \| null>\(\s*isSessionEffortRating\(existing\?\.difficulty\) \? existing\.difficulty : null,/
+    .test(feedback));
 ok('effort anchors say very easy and very hard on the 1-10 scale',
   /1 = very easy · 10 = very hard/.test(feedback));
 // THE RETIRED SCALE MUST NOT COME BACK on any of the three surfaces that moved.
@@ -266,7 +277,7 @@ ok('performed Team Training asks for duration and its own 1-10 effort',
     && /team-training-feedback-hours/.test(feedback)
     && /team-training-feedback-minutes/.test(feedback)
     && /team-training-feedback-effort-grid/.test(feedback)
-    && /Array\.from\(\{ length: 10 \}/.test(feedback));
+    && /<EffortSlider/.test(feedback));
 ok('the extra team-training result is required only when that section was performed',
   /const draftIsComplete = baseDraftIsComplete[\s\S]{0,180}!teamTrainingWasPerformed \|\| teamTrainingOutcome !== undefined/.test(feedback));
 ok('the accepted transaction validates and republishes the team-training result',

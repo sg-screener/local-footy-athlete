@@ -930,12 +930,15 @@ async function runGameFeedbackInvariants(): Promise<void> {
   // strength session's "very hard" 5 as EASY and added volume for it.
   // `docs/EFFORT_SCALE_INVERSION_2026-08-12.md`. The forbidding clause now
   // points the other way, so the retired scale cannot creep back.
-  ok('game and practice-match effort use TEN choices on one row',
+  ok('game and practice-match effort use the SLIDER on the 1-10 scale',
     /game-feedback-rpe-grid/.test(panelSource)
-      && /Array\.from\(\{ length: 10 \}/.test(panelSource)
+      && /<EffortSlider/.test(panelSource)
       && /GAME_FEEDBACK_COPY\.rpeHint/.test(panelSource)
       && gameCopySource.includes('1 = very easy · 10 = very hard')
       && !gameCopySource.includes('1 = very easy · 5 = very hard'));
+  ok('the game effort starts EMPTY — an untouched form is not an answer',
+    /const \[bodyRpe, setBodyRpe\] = useState<number \| null>\(initialGame\?\.bodyRpe \?\? null\)/
+      .test(panelSource));
   ok('the match form writes the complete game payload through the shared transaction',
     /const game: GameSessionOutcome = \{[\s\S]{0,220}playedWholeGame[\s\S]{0,220}timeOnGroundMinutes[\s\S]{0,220}bodyRpe[\s\S]{0,220}feel: gameFeel/.test(panelSource)
       && /createRecordSessionOutcomeIntentFromFeedback\(\{[\s\S]{0,300}surface: 'game_feedback_panel'/.test(panelSource));

@@ -35,6 +35,7 @@ import { Text } from './common/Text';
 import { Card, Button, SectionLabel } from './ui';
 import { stableTestIdToken } from '../utils/stableTestId';
 import { colors } from '../theme/colors';
+import { EffortSlider } from './EffortSlider';
 import { spacing, borderRadius } from '../theme/spacing';
 import type { Workout } from '../types/domain';
 import {
@@ -414,19 +415,11 @@ const GameSessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave }) =>
 
       <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.rpeQuestion}</SectionLabel>
       <Text style={styles.rpeHint}>{GAME_FEEDBACK_COPY.rpeHint}</Text>
-      <View style={styles.gameRpeGrid} testID="game-feedback-rpe-grid">
-        {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
-          <FeedbackChip
-            key={value}
-            testID={`game-feedback-rpe-${value}`}
-            label={String(value)}
-            selected={bodyRpe === value}
-            selectedColor={colors.accent.lime}
-            fillRow
-            onPress={() => setBodyRpe(value)}
-          />
-        ))}
-      </View>
+      <EffortSlider
+        testID="game-feedback-rpe-grid"
+        value={bodyRpe}
+        onChange={setBodyRpe}
+      />
 
       <SectionLabel style={styles.section}>{GAME_FEEDBACK_COPY.feelQuestion}</SectionLabel>
       <View style={styles.row}>
@@ -1071,19 +1064,11 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
             <>
               <SectionLabel style={styles.section}>How hard was the session?</SectionLabel>
               <Text style={styles.rpeHint}>1 = very easy · 10 = very hard</Text>
-              <View style={styles.rpeGrid} testID="session-feedback-rpe-grid">
-                {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
-                  <FeedbackChip
-                    key={value}
-                    testID={`feedback-session-rpe-${value}`}
-                    label={String(value)}
-                    selected={sessionRpe === value}
-                    selectedColor={colors.accent.lime}
-                    fillRow
-                    onPress={() => setSessionRpe(value)}
-                  />
-                ))}
-              </View>
+              <EffortSlider
+                testID="session-feedback-rpe-grid"
+                value={sessionRpe}
+                onChange={setSessionRpe}
+              />
             </>
           ) : null}
         </>
@@ -1444,19 +1429,11 @@ const TrainingSessionFeedbackPanel: React.FC<Props> = ({
             {TEAM_TRAINING_FEEDBACK_COPY.effortQuestion}
           </SectionLabel>
           <Text style={styles.rpeHint}>{TEAM_TRAINING_FEEDBACK_COPY.effortHint}</Text>
-          <View style={styles.rpeGrid} testID="team-training-feedback-effort-grid">
-            {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
-              <FeedbackChip
-                key={value}
-                testID={`team-training-feedback-effort-${value}`}
-                label={String(value)}
-                selected={teamTrainingEffort === value}
-                selectedColor={colors.accent.lime}
-                fillRow
-                onPress={() => setTeamTrainingEffort(value)}
-              />
-            ))}
-          </View>
+          <EffortSlider
+            testID="team-training-feedback-effort-grid"
+            value={teamTrainingEffort}
+            onChange={setTeamTrainingEffort}
+          />
         </View>
       ) : null}
 
