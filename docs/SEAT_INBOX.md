@@ -120,7 +120,19 @@ his instruction is standing authority, not history.**
        verdict on why five of six reverts happened.
 
 
-31. **SAM RULED THE COD WINDOW AND ASKED FOR A CHRISTMAS-BREAK CONTROL.
+31. **PARTS 1-4 BUILT 2026-08-13 BY THE TERMINAL.** (1) Bible amended at `:1289`
+    and `:1440` with a changelog entry naming the replaced text — `test:bible-anchors`
+    274/274. (2) S7 re-phased to Pre-season AND **S5 fixed too, which the item did
+    not name** — same contradiction, same harness violation; QA violations 4 -> 0,
+    failing assertions 84 -> 76 with no added line. (3) `codDecelPermitted` is the
+    one rule, 9 cells, every line mutation-killed. (4) **THE WRONG INPUT WAS IN TWO
+    PLACES** — `coachingEngine.ts:4126` read the same standing profile as
+    `defaultProgram.ts:1978`; both now ask the rule. **STILL OPEN: the week fact
+    itself is profile-derived until part 5's dated span exists (desktop agent), and
+    the same impossible off-season-with-team-training shape survives in
+    `finisherEligibilityTests.ts`, where re-phasing changes what is asserted.**
+    ORIGINAL BELOW.
+    **SAM RULED THE COD WINDOW AND ASKED FOR A CHRISTMAS-BREAK CONTROL.
     2026-08-13. THIS CLOSES 28-C1 AND CORRECTS THE BIBLE.**
 
     **OWNED BY THE TERMINAL** (the gate and the phase rule). **The two questions
@@ -195,8 +207,30 @@ his instruction is standing authority, not history.**
     athlete the ruling is written for.** This is why the Christmas control is
     not a nicety; it is the missing input.
 
-    **5 — BUILD THE TWO QUESTIONS (desktop agent). Sam: *"that way the app isn't
-    guessing"* — so do not infer either date.**
+    ~~**5 — BUILD THE TWO QUESTIONS (desktop agent).**~~ **DONE 2026-08-13 —
+    `WORKING`, `test:christmas-break`, 34 cells, armed in `test:bible`. Boundary:
+    `docs/CHRISTMAS_BREAK_BOUNDARY_2026-08-13.md`; law:
+    `LAW-christmas-break-is-two-questions`.** Both questions ask, both answers
+    land on ONE `no_team_training` fact (open-ended in December, closed in
+    January), the club comes off every week the span touches, and **his fixtures
+    survive — that is the whole difference from `travel` and cell [8c] holds
+    it.** `Christmas-Block` was checked first as instructed: it is a
+    `ProgramPhase` member with NO READER anywhere in `src/`, so there was nothing
+    to reuse; left as found.
+    **STILL OPEN, AND IT IS PART 4's, NOT PART 5's: the gate at
+    `defaultProgram.ts:1978` is not rewired.** The input it needs now exists —
+    `onboardingToCoachingInputs` returns `teamTrainingDays` already filtered by
+    the break, so "no team training THIS WEEK" is `teamDays.length === 0` at that
+    seam. **ALSO OWED: a device pass with the clock at 10 December and 3 January
+    — the ask is date-gated and the simulator clock is August, so the four screen
+    cells are SOURCE-PINNED, not glass.**
+    **AND A FINDING FOR ITEM 28: `awayFlowTests` `[13c]` ("no game either") is
+    VACUOUS** — its `[13]` control checks TEAM DAYS only, and the home week it
+    compares against has no fixture at all, so the cell is `0 === 0`. The away
+    RULE is still held by `[14b]` at the week-identity seam; the row-counting
+    cell is not what holds it. Named, not fixed — that suite is item 28's.
+
+    Sam: *"that way the app isn't guessing"* — so do not infer either date.
     - **~10 December: "When is your last team training?"**
     - **~3 January: "When does team training go back?"**
     **The answers create a dated NO-TEAM-TRAINING SPAN.** Between those dates
@@ -525,7 +559,24 @@ his instruction is standing authority, not history.**
 
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 6).
 
-7. **MEASURED, NOT BUILT — AND SAM'S OWN CASE IS NOT REPRESENTABLE TODAY.**
+7. **(a) IS BUILT 2026-08-13 — AND IT IS AN ATTRIBUTION FIX, NOT A BEHAVIOURAL
+   ONE. MEASURED BOTH WAYS BEFORE THE CLAIM.** Strength capacity now excludes
+   the game day (`weeklyExposureContractBuilders.ts`), so it no longer counts a
+   day no strength session can be placed on. **The target NUMBER is identical to
+   HEAD on every shape tested (2, 2, 3, 3, 1)** — `spacing_safety_conflict` was
+   already cutting the same week to the same number. **What changes is which
+   rule takes the credit**, and that is worth having: the reduction now names its
+   true cause, and if spacing ever changes, capacity still holds the line.
+   **TEAM DAYS ARE STILL COUNTED** — strength stacks on a team night — so this
+   deliberately does NOT reuse `nonTeamDays`, and a cell reds if it ever does.
+   **3 cells, 2 mutants killed. AND MY FIRST DRAFT WAS GREEN-AND-EMPTY:** it
+   asserted `targetCount <= 2` and PASSED AT HEAD; its own non-vacuity cell
+   caught it, which is the only reason it was rewritten to assert the REASON.
+   **The coordinate is BUILT by the cell** — across all 34 QA weeks the game day
+   is never among the selected training days, so no fixture exercises this;
+   nothing prevents the overlap, so it is reachable and merely unexercised.
+   **(b) and (c) UNCHANGED and still open.** ORIGINAL BELOW.
+   **MEASURED, NOT BUILT — AND SAM'S OWN CASE IS NOT REPRESENTABLE TODAY.**
    Three things checked before writing any code, 2026-08-12:
    **(a) THE PREMISE IS CONFIRMED.** `weeklyExposureContractBuilders.ts:386`
    caps strength at `Math.min(targetCount, selected.length)` — **every selected
