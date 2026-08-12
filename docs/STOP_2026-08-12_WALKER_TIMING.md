@@ -1,6 +1,6 @@
 # STOP — THE CHAIN'S 25 MINUTES WAS A SHRINK STORM, NOT A SUITE
 
-**2026-08-12. HEAD `69f388c3`, branch `main`.** Pays the measurement half of
+**2026-08-12. HEAD `0ad3793f`, branch `main`.** Pays the measurement half of
 seat inbox item 2 ("MAKE THE CHAIN CHEAP"). **Its premise is REFUTED by
 measurement and the item is rewritten, not ticked.**
 
@@ -25,6 +25,7 @@ artefacts:
 | 2026-08-10 21:36 (`results-parallel-8.json`) | **34.6s** | green, seed 3 clean |
 | 2026-08-12 | **~25 min** | RED |
 | 2026-08-12, after the cap | **213s** | RED, same verdict |
+| 2026-08-12, after §7 was paid | **47s** | seed 3 CLEAN |
 
 **It is 25 minutes because it went RED, and for no other reason.** The order was
 written from the terminal's own commentary and nobody had looked inside.
@@ -145,7 +146,7 @@ has a short head and a very long tail of near-free units.
 has never been looked at either.** It was 0 on the 2026-08-07 list — it is new.
 **Not started. Named here so the next pass does not re-derive it.**
 
-## 7. THE RED UNDERNEATH — MEASURED, NOT FIXED, AND IT NEEDS SAM
+## 7. THE RED UNDERNEATH — MEASURED, RULED BY SAM, AND PAID
 
 `L-P4 MENU = PROJECTION`, seed 3, 2026-10-15. Diagnosed without paying the
 shrink, by swallowing the violation and dumping the day:
@@ -188,9 +189,39 @@ commitment stays immovable through the owner's own answer instead of through a
 kind list kept in a second file.** That is the direction `CLAUDE.md` names:
 fewer representations, not more guards.
 
-**NOT BUILT IN THIS COMMIT.** It changes what Move offers on every day carrying
-an appointment section, so it is its own unit with its own measurement and
-mutation pass. **Ruled, named, next.**
+**BUILT — `0ad3793f`.** Both halves of the offer now come from the projection.
+`MOVE_SCOPE_SECTION_KIND` and `MOVABLE_SECTION_KINDS` are DELETED in the same
+commit as their replacement; nothing else read them.
+
+**THE NEAR-MISS IS REAL AND IS WHY IT IS A NAMED PREDICATE, NOT A BOOLEAN.**
+"Would a whole-day move drag something that must stay?" is NOT
+`part.capabilities.canMove` — a recovery add-on also answers false and yet RIDES
+with the day, so keying on it would retire the whole-day move from every day
+carrying one. `partHoldsTheDayDown` is exported from the owner and imported by
+the door.
+
+**RECEIPTS.**
+
+- **Seed 3 walks clean to 94 days. `action-walker:deep` is 47 SECONDS** — from
+  ~25 min, via 213s with the cap, to 47s once it stopped being red.
+- **Two cells in `test:projection-ownership`** (a GREEN suite, 11 → 13). One pins
+  all three positions of the predicate: appointment TRUE, add-on FALSE, team
+  night FALSE. The other pins that the door actually CALLS it and that neither
+  deleted table came back — a correct predicate nobody calls is how the two
+  decompositions drifted apart in the first place.
+- **Mutation-tested, and each mutation reds only its own cell:** dropping
+  `canRemove` from the predicate reds cell one; putting the card's section kinds
+  back in the door reds cell two.
+- **Ten suites around the door green**, including `athlete-door-matrix` (433
+  cells), `athlete-session-move` (22), `move-scoping` (16) and
+  `visible-program-projection` (83).
+- **`test:plan-change-producer` is RED and was RED before this change** — 68
+  failures, **identical set name for name**, diffed rather than counted.
+- **FULL SWEEP: `14 of 190`, the failing set IDENTICAL to the recorded baseline
+  name for name.** Zero new reds, zero suites newly green.
+
+**`action-walker:deep` STAYS in that failing set** — §8's L16 persist failure is
+untouched and still red.
 
 ## 8. NOT VERIFIED — stated so it is not mistaken for a finding
 
@@ -209,6 +240,7 @@ here. **Its cause is NOT investigated. Do not read this line as a diagnosis.**
 - **MEASURED** — the per-step table, the replay trajectory, the per-suite times,
   the L-P4 day dump. Instruments were read-only and outside the repo.
 - **WRITTEN** — nothing. No claim here rests on a doc alone.
-- **RULED, NOT BUILT** — L-P4's owner (§7). Sam: *"recovery session"*.
+- **WORKING** — L-P4's owner (§7), `0ad3793f`. Sam: *"recovery session"*. Two
+  cells, both mutation-checked; sweep 14 of 190 identical to baseline.
 - **OPEN** — the agreement re-run's verdict (§5),
   `test:accepted-state-transactions` at 89.5s (§6), the L16 persist failure (§8).

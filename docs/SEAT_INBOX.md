@@ -90,13 +90,18 @@ phone.** State device items as PARKED in a stop report, never as a request.
      `chain:runSlice1`'s exit code, and the chain has grown 158 → 192 units.
      **The flake is the finding.** `parallel` stays NON-OFFICIAL; `NOW.md:72` is
      deliberately unchanged.
-   - **NOT PAID — the red underneath, and Sam has RULED it.** `L-P4 MENU =
-     PROJECTION` on a day the card calls a "Rest" appointment and the projection
-     calls a movable recovery session. **Sam, 2026-08-12: "recovery session"** —
-     so the card is wrong and `moveOptionsForDay` must take its scope list from
-     the projection's `parts` instead of re-deriving it from
-     `visibleSessionKindsForSnapshot`. **This REMOVES a representation, it does
-     not add a guard.** §7 of the stop report. **Its own unit, next.**
+   - **PAID — the red underneath.** `L-P4 MENU = PROJECTION` fired on a day the
+     card called a "Rest" appointment and the projection called a movable
+     recovery session. **Sam, 2026-08-12: "recovery session"**, so
+     `moveOptionsForDay` now takes BOTH halves of its offer from the projection
+     and `MOVE_SCOPE_SECTION_KIND`/`MOVABLE_SECTION_KINDS` are deleted. A
+     representation removed, not a guard added. `0ad3793f` — seed 3 clean,
+     **deep is 47s**, two mutation-checked cells, sweep 14 of 190 identical to
+     baseline.
+   - **NOT PAID — `THE L16 SLICE` fails in both walker tiers** (*"the program did
+     not survive the relaunch at all — the loop is broken at PERSIST"*).
+     Pre-existing, **cause NOT investigated**, and it is why `action-walker`
+     and `action-walker:deep` stay in the failing set.
 
 3. **KILL THE ±7 INVENTION — A LIVE CORRECTNESS DEFECT, AND NOW MORE REACHABLE.**
    `section18CraftTier.ts:161` fabricates neighbouring games at ±7 days and

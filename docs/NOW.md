@@ -60,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `69f388c3` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `0ad3793f` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -81,8 +81,9 @@ and this file gets one line pointing at it.**
   tail, not a broadly slow chain.
   **`action-walker:deep` was ~25 min (~70% of the chain) ONLY because it is RED:**
   a 200-replay shrink at 11-15s a replay. Budget is now 12 (`69f388c3`) and the
-  suite measures **213s**. It was 34.6s green on 2026-08-10. **Sharding it was
-  refused with reasons — all the time sat inside ONE walk.**
+  suite measures **213s** capped — and **47s** since its red was paid
+  (`0ad3793f`). **Sharding it was refused with reasons — all the time sat inside
+  ONE walk.**
   **`accepted-state-transactions` at 89.5s is the largest real unit and has never
   been looked at.**
 - **THE AGREEMENT LAW HAS NOT ESTABLISHED AGREEMENT.** Last run AGREES (158
