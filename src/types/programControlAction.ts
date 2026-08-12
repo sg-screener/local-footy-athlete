@@ -254,6 +254,27 @@ export type ProgramControlAction =
             tags: readonly EquipmentTag[];
             conditioningModalities: readonly ConditioningEquipmentModality[];
           }
+        /**
+         * THE AWAY ANSWER — SEAT_INBOX 22(c). Sam, 2026-08-13: *"reselect
+         * equipment ... and then the plan should change until their return
+         * date"*.
+         *
+         * SAME DECISION AS `missing_this_week`, WITH A SPAN. It is a separate
+         * kind rather than two optional dates on that one because the name
+         * `missing_this_week` is a CLAIM — a payload called "this week"
+         * carrying a fortnight is how a reader learns the wrong rule.
+         *
+         * `until` IS THE RETURN DATE and it is INCLUSIVE of the last day away:
+         * the fact stops applying after it, which is what makes the modifier
+         * lift itself with no second decision to remember.
+         */
+        | {
+            kind: 'missing_for_span';
+            tags: readonly EquipmentTag[];
+            conditioningModalities: readonly ConditioningEquipmentModality[];
+            from: string;
+            until: string;
+          }
         | { kind: 'available_again' };
       date: string;
       todayISO?: string;

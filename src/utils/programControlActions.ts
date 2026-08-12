@@ -1130,9 +1130,28 @@ async function executeProgramControlActionDurablyWithinTrace(
     }
     // The decision is 'without' by construction: the athlete marked which of
     // their OWN items are missing. There is no preset menu to translate.
+    //
+    // THE SPAN IS THE AWAY ANSWER — SEAT_INBOX 22(c). A `missing_for_span`
+    // decision carries the athlete's return date, so the fact is scoped to a
+    // WINDOW and stops applying after it: the modifier lifts itself with no
+    // second decision for the athlete to remember. `missing_this_week` keeps
+    // the week scope it always had.
+    //
+    // `kind: 'window'` IS NOT NEW MACHINERY — it has been in
+    // `TemporarySourceFactScope` all along with `from`/`until`, and the
+    // equipment path simply hard-coded `{ kind: 'week' }` and never reached
+    // for it. That is why "an equipment answer with a start and an end date"
+    // is a scope argument here rather than a new fact shape.
+    const scope = decision.kind === 'missing_for_span'
+      ? temporaryFactScope({
+          kind: 'window',
+          from: decision.from.slice(0, 10),
+          until: decision.until.slice(0, 10),
+        })
+      : temporaryFactScope({ kind: 'week', date });
     const fact = createTemporaryEquipmentFact({
       observedDate: date,
-      scope: temporaryFactScope({ kind: 'week', date }),
+      scope,
       mode: 'without',
       equipmentTags: decision.tags,
       conditioningModalities: decision.conditioningModalities,

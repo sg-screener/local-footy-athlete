@@ -370,6 +370,7 @@
     "test:rebuild-notice-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/rebuildNoticeOwnershipTests.ts",
     "test:coach-note-action-source": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachNoteActionSourceTests.ts",
     "test:my-status-modifiers": "TZ=Australia/Melbourne sucrase-node src/__tests__/myStatusOwnsTheModifiersTests.ts",
+    "test:dated-equipment-fact": "TZ=Australia/Melbourne sucrase-node src/__tests__/datedEquipmentFactTests.ts",
     "test:modifier-effect-phrases": "TZ=Australia/Melbourne sucrase-node src/__tests__/modifierEffectPhrasesTests.ts",
     "test:program-tab-read-only-modifiers": "TZ=Australia/Melbourne sucrase-node src/__tests__/programTabIsReadOnlyModifiersTests.ts",
     "test:profile-rehydration-cannot-unfinish": "TZ=Australia/Melbourne sucrase-node src/__tests__/profileRehydrationCannotUnfinishTests.ts",
