@@ -122,6 +122,8 @@ import {
   shortfallsFromFindings,
   renderSection18ShortfallDisclosure,
 } from '../rules/section18ShortfallDisclosure';
+import { classifyDaySessions } from '../rules/sessionTaxonomy';
+import { isoDateForWeekday } from '../utils/appDate';
 import {
   athleteActionDiagnosticHash,
   athleteActionDiagnosticsEnabled,
@@ -395,13 +397,65 @@ let lastAcceptedWeekShortfall: {
   shortfalls: ReturnType<typeof shortfallsFromFindings>;
 } | null = null;
 
+/**
+ * THE DAY THE SHORTFALL SENTENCE NAMES, read off the week the athlete actually
+ * has rather than assumed.
+ *
+ * NO NEW PREDICATE. `classifyDaySessions` is the session-identity owner and
+ * already answers "is this a game" and "is this an explicit rest stub"; the game
+ * test exists privately in two other modules already, and a third copy is the
+ * defect this repo keeps finding. So identity is ASKED, never re-implemented.
+ */
+function shortfallDayFacts(
+  weekStart: string,
+  workouts: readonly Workout[],
+  markedDays: Record<string, CalendarDayType> | undefined,
+): { gameDate: string | null; restedDate: string | null } {
+  // THE ATHLETE'S OWN MARKS COME FIRST, and a regression is why. A rest mark is
+  // a CALENDAR fact — `markedDays[date] === 'rest'` — not a workout named Rest,
+  // so reading only the week's sessions found no rested day and the disclosure
+  // fell silent on exactly the case Sam's accept-and-reduce ruling exists for:
+  // the athlete states a fact about their life, the work is reduced, and they
+  // must be TOLD. Caught by `acceptedStateTransactionTests` regression 3.
+  const weekDates = new Set(
+    Array.from({ length: 7 }, (_, offset) => addDaysISO(weekStart, offset)));
+  let gameDate: string | null = null;
+  let restedDate: string | null = null;
+  for (const [date, mark] of Object.entries(markedDays ?? {})) {
+    if (!weekDates.has(date)) continue;
+    if (!gameDate && mark === 'game') gameDate = date;
+    if (!restedDate && mark === 'rest') restedDate = date;
+  }
+  // THE WEEK'S OWN SESSIONS ARE THE FALLBACK, for a fixture that arrived as a
+  // generated game rather than a mark. Identity is ASKED, never re-implemented:
+  // `classifyDaySessions` is the owner and two private copies of "is this a
+  // game" already exist elsewhere — a third is the defect this repo keeps
+  // finding. A workout carries `dayOfWeek`, not a date, and `isoDateForWeekday`
+  // is the shared owner of that conversion.
+  if (!gameDate || !restedDate) {
+    for (const workout of workouts) {
+      const date = isoDateForWeekday(weekStart, workout.dayOfWeek);
+      const categories = classifyDaySessions(workout).map((unit) => unit.category);
+      if (!gameDate && categories.includes('game')) gameDate = date;
+      if (!restedDate && categories.includes('rest')) restedDate = date;
+    }
+  }
+  return { gameDate, restedDate };
+}
+
 function recordAcceptedWeekShortfall(
   weekStart: string,
   blockingViolations: readonly { domain: Section18FindingDomain; expected: unknown; actual: unknown }[],
+  visibleWorkouts: readonly Workout[],
+  markedDays: Record<string, CalendarDayType> | undefined,
 ): void {
+  // THE WEEK'S OWN FACTS DECIDE THE SENTENCE. Passing `weekStart` as the day was
+  // the live defect: every Monday-start week read "Resting Monday" whichever day
+  // was rested, and whether or not anything was rested at all.
+  const { gameDate, restedDate } = shortfallDayFacts(weekStart, visibleWorkouts, markedDays);
   lastAcceptedWeekShortfall = {
     weekStart,
-    shortfalls: shortfallsFromFindings({ date: weekStart, findings: blockingViolations }),
+    shortfalls: shortfallsFromFindings({ gameDate, restedDate, findings: blockingViolations }),
   };
 }
 
@@ -512,7 +566,8 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
             .map((finding: { code: string }) => finding.code).join(',')}`,
         );
       }
-      recordAcceptedWeekShortfall(weekStart, evaluation.blockingViolations);
+      recordAcceptedWeekShortfall(
+        weekStart, evaluation.blockingViolations, rebased.visibleWorkouts, context.markedDays);
     }
     emitAthleteActionEvent(args.trace, 'visible_projection_result', {
       acceptedStateVersion: context.revision,

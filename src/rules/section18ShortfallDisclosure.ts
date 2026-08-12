@@ -67,13 +67,47 @@ export const ATHLETE_WORD_FOR_DOMAIN: Record<Section18FindingDomain, string | nu
   migration: null,
 };
 
+/**
+ * WHY the week is short, and it decides BOTH sentences and BOTH days.
+ *
+ * Sam, 2026-08-12, on the single unconditional sentence: *"yeah thats bad
+ * wording"*. It read *"Resting {day} means you'll miss …"* whatever the cause,
+ * so a week squeezed by the club's draw blamed the athlete for it.
+ *
+ * `fixture` — the club's game took the room. Sam's sentence, naming the GAME's
+ * day. `athlete_rest` — the athlete marked the day themselves. The ORIGINAL
+ * sentence survives untouched, naming the RESTED day, because "Resting Friday
+ * means you'll miss a strength session this week" is honest when resting Friday
+ * is what they chose. Sam ruled fixture-only on 2026-08-13 when asked whether
+ * his new sentence should replace both.
+ */
+export type Section18ShortfallCause = 'fixture' | 'athlete_rest';
+
 export interface Section18Shortfall {
-  /** The date whose fact caused the shortfall, ISO `YYYY-MM-DD`. */
+  /**
+   * THE DAY THE SENTENCE NAMES, and it BELONGS TO THE CAUSE — the game's day
+   * for `fixture`, the rested day for `athlete_rest`.
+   *
+   * IT USED TO BE THE WEEK START AND THAT WAS A LIVE DEFECT. The one production
+   * call site passed `weekStart`, so every Monday-start week told the athlete
+   * "Resting Monday" whichever day they rested — and whether or not they rested
+   * at all. Measured by rendering it, 2026-08-13. Sam caught the sentence for
+   * its CAUSE; it was also naming the wrong DAY and asserting a rest that may
+   * never have happened.
+   */
   date: string;
   /** Athlete-facing training word, already translated out of contract nouns. */
   type: string;
   /** How many sessions short the week now is. Always >= 1. */
   count: number;
+  /** Which sentence the athlete gets, and which day it names. */
+  cause: Section18ShortfallCause;
+  /**
+   * How many DO fit — what Sam's sentence states, where `count` is what is
+   * missed. Read from the finding's own `actual`, never by subtracting a target
+   * inside the renderer.
+   */
+  fits: number;
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
@@ -89,16 +123,42 @@ function articleFor(word: string): string {
 }
 
 /**
- * Sam's signed sentence, rendered. One session reads "a strength session";
- * more than one reads "2 strength sessions" — the `[a/n]` in the signed string
- * is exactly that choice, and the plural moves with it.
+ * FIXTURE SENTENCE ONLY: "a" / "two" / "3" — worded at one and two, the digit
+ * above, which is how Sam wrote it ("only room for two strength sessions").
+ *
+ * THE REST SENTENCE KEEPS THE DIGIT. Its signed record has read "2 conditioning
+ * sessions" since 2026-07-29 and Sam's ruling was explicit that the rest branch
+ * is NOT the defect: *"Do not replace it; it was never the defect."* Re-wording
+ * copy he signed, and did not ask to change, is not this unit's to do.
+ */
+function fixtureCount(n: number, type: string): string {
+  if (n === 1) return articleFor(type);
+  if (n === 2) return 'two';
+  return String(n);
+}
+
+/**
+ * Sam's TWO signed sentences, rendered — one per cause.
+ *
+ * FIXTURE: *"With a game Saturday, there's only room for two strength sessions
+ * this week."* It states what FITS, so it reads `fits`, and it names the GAME's
+ * day. ATHLETE REST: the ORIGINAL sentence, untouched, stating what is MISSED
+ * and naming the RESTED day.
+ *
+ * ONE SENTENCE FOR TWO CAUSES WAS THE DEFECT. The old renderer said "Resting
+ * {day}" unconditionally, which blamed the athlete for the club's draw — and,
+ * because the day it was handed was the week start, usually named the wrong day
+ * as well.
  */
 export function renderSection18Shortfall(shortfall: Section18Shortfall): string {
   const day = dayNameFor(shortfall.date);
-  const quantity = shortfall.count === 1
-    ? articleFor(shortfall.type)
-    : String(shortfall.count);
   const noun = shortfall.count === 1 ? 'session' : 'sessions';
+  if (shortfall.cause === 'fixture') {
+    const fitsNoun = shortfall.fits === 1 ? 'session' : 'sessions';
+    return `With a game ${day}, there's only room for `
+      + `${fixtureCount(shortfall.fits, shortfall.type)} ${shortfall.type} ${fitsNoun} this week`;
+  }
+  const quantity = shortfall.count === 1 ? articleFor(shortfall.type) : String(shortfall.count);
   return `Resting ${day} means you'll miss ${quantity} ${shortfall.type} ${noun} this week`;
 }
 
@@ -112,10 +172,24 @@ export function renderSection18Shortfall(shortfall: Section18Shortfall): string 
  * instead of two sentences about the same gap.
  */
 export function shortfallsFromFindings(args: {
-  date: string;
+  /**
+   * The day the GAME is on, when the week carries one. Its presence is what
+   * makes a shortfall fixture-caused, so it is the cause input as well as the
+   * day input — one fact, not two that could disagree.
+   */
+  gameDate?: string | null;
+  /** The day the ATHLETE marked as rest, when they marked one. */
+  restedDate?: string | null;
   findings: readonly { domain: Section18FindingDomain; expected: unknown; actual: unknown }[];
 }): Section18Shortfall[] {
-  const byType = new Map<string, number>();
+  // THE FIXTURE WINS WHEN BOTH ARE PRESENT, and that is Sam's own complaint
+  // read straight: on a week that has a game, saying "resting {day}" blames him
+  // for the draw. A week with neither fact produces no disclosure at all rather
+  // than a sentence about a day nobody chose — see the caller.
+  const cause: Section18ShortfallCause = args.gameDate ? 'fixture' : 'athlete_rest';
+  const date = args.gameDate ?? args.restedDate ?? null;
+  if (!date) return [];
+  const byType = new Map<string, { gap: number; fits: number }>();
   for (const finding of args.findings) {
     const type = ATHLETE_WORD_FOR_DOMAIN[finding.domain];
     if (!type) continue;
@@ -126,10 +200,14 @@ export function shortfallsFromFindings(args: {
     // inventing one would be the disclosure lying about size.
     const gap = expected !== null && actual !== null ? expected - actual : 1;
     if (gap <= 0) continue;
-    byType.set(type, Math.max(byType.get(type) ?? 0, gap));
+    // `fits` IS THE FINDING'S OWN `actual` — read, never derived by subtracting
+    // a target in the renderer, which is what the order forbids.
+    const fits = actual ?? 0;
+    const seen = byType.get(type);
+    if (!seen || gap > seen.gap) byType.set(type, { gap, fits });
   }
   return [...byType.entries()]
-    .map(([type, count]) => ({ date: args.date, type, count }))
+    .map(([type, { gap, fits }]) => ({ date, type, count: gap, cause, fits }))
     .sort((left, right) => left.type.localeCompare(right.type));
 }
 

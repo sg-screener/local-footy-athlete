@@ -36,6 +36,24 @@ THEM. Sam, 2026-08-12:** *"Claude Code is working the reopen bug in this same
 folder. Stay out of the program generator and anything touching the generation
 anchor until it's done."*
 
+**WHO "ANOTHER AGENT" MEANS — CLARIFIED BY SAM 2026-08-13, AND IT HAD ALREADY
+COST ONE WRONG SELF-BLOCK.** *"you're Claude Code, and you're the one who had
+it. Stand-down D was written for the terminal to keep it off your files."* **This
+stand-down points ONE WAY: it keeps the TERMINAL out of the desktop agent's
+generator work. The desktop agent is not blocked by it and never was** — it read
+its own stand-down as applying to itself and offered to build item 22(c) in
+halves for no reason.
+
+**AND IT IS SPENT. Sam:** *"Your reopen-bug fix landed 9 hours ago and no
+generator file has moved since, so unless you know otherwise the generator is
+free."* **VERIFIED 2026-08-13 02:18 rather than taken on trust:** the newest
+commit touching `generateProgram.ts`, `coachingEngine.ts`, `weekRebuild.ts`,
+`derivedWeekContract.ts` or `acceptedStateTransaction.ts` is `f2152d2b` at
+08-12 17:05 — nine hours — and every one of those files is clean in the working
+tree. **The generator is FREE. Item 22(c) may be built whole, rebuild included.**
+(One adjacent file, `acceptedStateTransaction.ts`, carries uncommitted work from
+the other seat; it is not on the rebuild path, but stage by path as always.)
+
 **OFF LIMITS until Sam lifts it:** `src/services/api/generateProgram.ts`,
 `src/utils/coachingEngine.ts`'s generation paths, `generationAnchorISO` and
 everything that reads or writes it (`programStore` persistence, the quiescent
@@ -1060,7 +1078,29 @@ phone.** State device items as PARKED in a stop report, never as a request.
     ... if they have 2 games and 2 team trainings"* — **becomes representable
     the day this lands.** Say so in the stop report.
 
-20. **THE PLUMBING IS THE JOB. DO IT — NOTHING IS BLOCKING IT.** The stop report
+20. **WORKING — THE SENTENCE NAMES ITS CAUSE AND ITS DAY.** Both branches built,
+    copy equality-bound both directions, **13 cells in `test:shortfall-copy`,
+    mutation-checked six ways.** Registry row `LAW-shortfall-names-its-cause`.
+    **The plumbing was the job and it was done: `recordAcceptedWeekShortfall`
+    now derives the day from the week's own facts.**
+    **THE ORDER DIAGNOSED ONE DEFECT; MEASUREMENT FOUND THREE.** Wrong CAUSE
+    (Sam's complaint), wrong DAY, and a REST asserted that may never have
+    happened — the call site passed `weekStart`, so every Monday-start week read
+    *"Resting Monday"*. **Confirmed by rendering it, not by reading.** `date` is
+    now THE DAY BELONGING TO THE CAUSE.
+    **A REGRESSION CORRECTED ME MID-BUILD:** a rest mark is a CALENDAR fact, not
+    a workout named Rest, so my first version found no rested day and SILENCED
+    the disclosure — the exact case accept-and-reduce exists for. The athlete's
+    marks are the primary fact now; the week's sessions are the fallback.
+    **NO NEW PREDICATE:** `classifyDaySessions` is asked what a game is — two
+    private copies exist already and a third is the defect this repo keeps
+    finding.
+    **BEHAVIOUR CHANGE, STATED:** a week with neither a game nor a rest mark now
+    produces NO disclosure rather than one naming a day nobody chose.
+    **NOT COVERED:** no cell mounts a surface, so nothing proves the athlete SEES
+    either sentence on a device.
+
+    ~~ORIGINAL~~ **THE PLUMBING IS THE JOB. DO IT — NOTHING IS BLOCKING IT.** The stop report
     (`c8f2b4b8`) is CORRECT on all three defects and RIGHT not to bolt Sam's
     sentence onto a wrong fact. **But it stopped on a job with no blocker.** Its
     own words: *"I'm not stuck on a decision from you, just on this being a
@@ -1408,6 +1448,28 @@ seat was wrong.
   leave Program to learn what changed; the cost is a sheet between the athlete
   and a screen they already reach in one tap.
   **Both surfaces would open it** — day and week — since they are one component.
+- **DECISION OWED — item 22(a)/(b): THREE MODIFIER KINDS HAVE NO SIGNED PHRASE,
+  AND HIDING THE TIME-CAP ROW DESYNCS THE COUNT. Measured 2026-08-13, before
+  building, because both change what gets built.**
+  **(i) THE EIGHT PHRASES DO NOT COVER THE SET.** Sam's list maps cleanly onto
+  readiness (tired -> volume adjusted, sick -> eased back), injury and injury-
+  paused, equipment, unavailable day, deload and game-moved. **Three live
+  builders are unnamed:** `preferenceModifier` (avoid exercise / preferred
+  alternative / add focus), `athletePreferenceModifier` (excluded / pinned
+  exercise) and `modalityModifier` (a conditioning slot swapped, e.g. bike for
+  run). They are real, active, athlete-visible modifiers. **Plan unless he says
+  otherwise:** they keep their own authored sentence in the row and get NO short
+  phrase — inventing one is the unsigned-words defect. **What is owed is three
+  more phrases, or a "leave those as sentences" ruling.**
+  **(ii) ANSWERED 2026-08-13 — TIME CAPS LEAVE THE PROGRAM COUNT TOO. Sam:**
+  *"hide time caps from the Program count and the popup together, keep them on
+  My Status."* The question was live because `time_limit` still has LIVE
+  writers — `coachProgramEdit.ts:1194` and `profileProgramTransaction.ts:179` —
+  so a cap CAN be active, and the notice counts exactly what the sheet lists;
+  hiding only the row would have put "2 active modifiers" above a list of one.
+  **My Status keeps them because it holds the only control that clears one**, so
+  dropping them there would strand an active constraint with no door.
+  **NOT BLOCKING (a):** the eight signed phrases are unambiguous.
 - **DECISION OWED — the moderate-day generation target (item 4).** The range and
   the advisory are built; nothing says WHICH session becomes the moderate one, or
   at whose expense.
