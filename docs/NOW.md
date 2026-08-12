@@ -60,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `a1257884` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `69f388c3` — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
@@ -72,6 +72,24 @@ and this file gets one line pointing at it.**
   needs `scripts/sweep.sh <label>`. `npm run test:bible:parallel` is a
   NON-OFFICIAL pre-check. **Verify `git branch --show-current` before every
   commit** (shared worktree).
+- **REAL PER-SUITE TIMES, MEASURED 2026-08-12** (`docs/STOP_2026-08-12_WALKER_TIMING.md`).
+  Serial arm, 165 of 192 units, **449s**: `accepted-state-transactions` 89.5s ·
+  `chain:runSlice1` 48.7s · `action-walker` 31.0s · `program-control-durable`
+  26.7s · `injury-authority` 18.9s · `athlete-door-matrix` 18.2s ·
+  `operation-ownership` 18.1s · `fact-horizon` 13.5s · `compile` 12.5s.
+  **125 of the 165 finish under a second** — a short head and a very long free
+  tail, not a broadly slow chain.
+  **`action-walker:deep` was ~25 min (~70% of the chain) ONLY because it is RED:**
+  a 200-replay shrink at 11-15s a replay. Budget is now 12 (`69f388c3`) and the
+  suite measures **213s**. It was 34.6s green on 2026-08-10. **Sharding it was
+  refused with reasons — all the time sat inside ONE walk.**
+  **`accepted-state-transactions` at 89.5s is the largest real unit and has never
+  been looked at.**
+- **THE AGREEMENT LAW HAS NOT ESTABLISHED AGREEMENT.** Last run AGREES (158
+  units, 2.17x, 2026-08-07) but **the run before it DISAGREED** on
+  `chain:runSlice1`'s exit code, and the chain has since grown 158 → 192 units.
+  **A flake in the arm that decides whether suites are lost is the finding.**
+  `parallel` stays NON-OFFICIAL until both are answered.
 
 ## OPEN, ON US
 

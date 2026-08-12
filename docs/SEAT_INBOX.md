@@ -63,19 +63,40 @@ phone.** State device items as PARKED in a stop report, never as a request.
    reds"* fifteen times. If a wait cannot be blocked on, say so in one line and
    stop.
 
-2. **MAKE THE CHAIN CHEAP. THIS PAYS FOR EVERY ITEM BELOW IT.**
-   **Sam, 2026-08-12:** *"i want to know how long that 192 tests are taking and
-   if it's really necessary"*.
-   - **Sam started `npm run test:bible:agreement` himself at ~00:20.** It has
-     never been run before. **Report its verdict in one line: does the parallel
-     runner agree suite-for-suite with serial?** If yes, make
-     `test:bible:parallel` official and delete *"NON-OFFICIAL pre-check"* from
-     `NOW.md:72`. If no, the disagreement is the finding.
-   - **THE REAL BOTTLENECK IS ONE SUITE.** The terminal's own commentary: the
-     sweep is **~35 minutes** and **`action-walker:deep` alone is ~25** —
-     **~70% of the wall clock in one suite.** Parallelism cannot beat 25 minutes
-     while one suite is 25 minutes. **Shard it, or take it out of the per-unit
-     chain and run it per batch.** Record real per-suite times in `NOW.md`.
+2. **MAKE THE CHAIN CHEAP — MEASURED 2026-08-12, AND THIS ITEM'S OWN DIAGNOSIS
+   WAS WRONG.** `docs/STOP_2026-08-12_WALKER_TIMING.md`. **Sam, 2026-08-12:**
+   *"i want to know how long that 192 tests are taking and if it's really
+   necessary"*.
+   - **PAID — the ~25 minutes.** `action-walker:deep` is **not** an expensive
+     suite: it was **34.6s and green on 2026-08-10**. It cost ~25 minutes on
+     2026-08-12 **only because it went RED** — one walk breaks a law at step 87
+     and the shrinker replayed the whole 88-action history up to **200 times at
+     11-15s a replay**. The walking itself is 7-9s per walk; the laws cost 5ms
+     per action; nothing is rebuilt per step; there are no sleeps, polls,
+     retries or timeouts. Budget is now **12** (`69f388c3`, both arms
+     mutation-checked) and the suite measures **213s**.
+   - **"SHARD IT" IS REFUSED, WITH REASONS.** All the time sat inside ONE walk,
+     so three shards is still one 25-minute shard; the walks share module-level
+     mutable state and cannot overlap in a process; and the stale-debt cell
+     reads declared-red hits across the WHOLE tier, so it fails in every shard.
+     **"Walk only what changed" does not exist** — there is no map from a source
+     file to a walker coordinate.
+   - **Per-suite times recorded in `NOW.md`.** The chain is a short head and a
+     long free tail: **125 of 165 units finish under a second.**
+   - **NOT PAID — `test:accepted-state-transactions` is 89.5s**, the largest real
+     unit, new since 2026-08-07, and **never looked at.**
+   - **NOT PAID — the agreement law has NOT established agreement.** Last run
+     AGREES (158 units, 2.17x) but **the run before it DISAGREED** on
+     `chain:runSlice1`'s exit code, and the chain has grown 158 → 192 units.
+     **The flake is the finding.** `parallel` stays NON-OFFICIAL; `NOW.md:72` is
+     deliberately unchanged.
+   - **NOT PAID — the red underneath, and Sam has RULED it.** `L-P4 MENU =
+     PROJECTION` on a day the card calls a "Rest" appointment and the projection
+     calls a movable recovery session. **Sam, 2026-08-12: "recovery session"** —
+     so the card is wrong and `moveOptionsForDay` must take its scope list from
+     the projection's `parts` instead of re-deriving it from
+     `visibleSessionKindsForSnapshot`. **This REMOVES a representation, it does
+     not add a guard.** §7 of the stop report. **Its own unit, next.**
 
 3. **KILL THE ±7 INVENTION — A LIVE CORRECTNESS DEFECT, AND NOW MORE REACHABLE.**
    `section18CraftTier.ts:161` fabricates neighbouring games at ±7 days and
