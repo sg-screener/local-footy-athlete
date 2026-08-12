@@ -1194,7 +1194,30 @@ phone.** State device items as PARKED in a stop report, never as a request.
     ALL hitting site #7 — *"Pairing: lower/hinge/full days take easy off-feet
     aerobic only"***. **COD is only ever requested as an ATTACHED FINISHER on a
     lower-body day, where refusing it is correct — the lift owns the legs.**
-    **THE DEFECT IS THAT COD IS NEVER REQUESTED STANDALONE.** Field COD is a
+    **CORRECTED AGAIN — AND THE MYSTERY IS SOLVED. COD *IS* OFFERED STANDALONE.**
+    Instrumented `pickStandaloneCondDecision`'s candidate list: **COD appears
+    every time**, and on day 3 it is ranked SECOND
+    (`candidates=tempo,cod_decel,aerobic_base`). **The six site-#7 refusals were
+    the ATTACHED path, a different caller — not this one.**
+    **THE REAL MECHANISM IS FIRST-MATCH-WINS.** `pickStandaloneCondDecision`
+    returns on the FIRST allowed category. COD is ranked LAST — correctly, since
+    Sam says cut it first — and `aerobic_base` above it is essentially always
+    allowed. **So a lower-ranked category is only ever reached if everything above
+    it is DENIED, which never happens.** "Offered last" and "first match wins"
+    combine to mean NEVER OFFERED. This is
+    `first-match-wins-hides-its-ordering`, sighting in a new place.
+    **SO THE FIX IS PLACEMENT, NOT RANK AND NOT ELIGIBILITY.** Sam's rule is
+    *"prescribed in weeks with no team training ... cut first when something has
+    to give"* — **"cut first" means dropped under contention, NOT "never placed
+    when there is room"**. COD needs a slot when the week has spare conditioning
+    capacity, then to be the first thing dropped when it does not. **Ranking it
+    last in a first-match-wins list can never express that.**
+    **⚠ AND THE OBVIOUS FIX IS THE TRAP:** raising COD's rank would make it beat
+    `aerobic_base` on ordinary weeks. **Do not re-rank. Give it a
+    place-if-room pass** — and remember the coverage maths is pool-size
+    sensitive, which is already fixed but will bite again if must-cover grows.
+
+    ~~SUPERSEDED — the attached path misled me~~ **THE DEFECT IS THAT COD IS NEVER REQUESTED STANDALONE.** Field COD is a
     session, not a finisher after a squat day. **DO NOT exempt COD at site #7** —
     that would put hard change-of-direction work straight after a heavy lower
     lift, which no ruling asks for. **Next: measure why
