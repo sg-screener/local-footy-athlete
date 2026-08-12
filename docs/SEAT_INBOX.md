@@ -392,6 +392,56 @@ his instruction is standing authority, not history.**
   athlete copy — but the numbers in it are already your own (4 preferred, 5
   permitted).**
 
+- **ONE CONTENT CALL — THE DOUBLE HINGE (census A4).** Bible `:226`: *"ONE MAIN
+  PER PATTERN PER SESSION."* **Measured: exactly ONE violating shape —
+  `RDLs + Hip Thrusts`, both hinge, both mains — in two branches.** The census's
+  second example (Overhead Press + Incline DB Bench) does NOT breach; only one of
+  that pair classifies as a main. **RECOMMENDATION: keep Hip Thrusts and lighten
+  it to an accessory dose** — the rule bars a second HEAVY lift of the pattern,
+  not a second exercise, and dropping it shrinks the session.
+
+- **ONE SENTENCE — THE 6-HARD-DAY WARNING UNDERSTATES ITSELF (A5's only live
+  part). Measured; the block half is correctly NOT built.**
+  **What the athlete reads today** (`planChangeRefusalCopy.ts:43`):
+  *"This gives you 6 hard days this week. That's the upper edge."*
+  **It is plain language and carries no banned vocabulary — the bar your ruling
+  sets is met on clarity.** The defect is accuracy: **your budget is PREFER 4,
+  PERMIT 5** (Bible `:118`), so **five IS the upper edge and six is PAST it.**
+  One sentence serves both, and at six it tells the athlete they are at the
+  limit when they are beyond it. **Same shape as the shortfall sentence you
+  corrected earlier — one string covering two different cases.**
+  **RECOMMENDATION:** keep the sentence for five, and give six its own line
+  saying it is past the permitted max. **The words are yours — I will not invent
+  athlete copy — but the numbers in it are already your own (4 preferred, 5
+  permitted).**
+
+- **ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
+  the census says.**
+  **His rule, Bible `:226`:** *"ONE MAIN PER PATTERN PER SESSION... A second
+  heavy lift in a session must be a different pattern."*
+  **MEASURED across every fallback branch: exactly ONE violating shape —
+  `RDLs + Hip Thrusts`, both hinge, both classifying as main lifts — in two
+  branches.**
+  **AND THE CENSUS'S SECOND EXAMPLE IS OVER-CALLED:** `Overhead Press + Incline
+  DB Bench` does NOT come out as two mains — only one of the pair classifies as
+  a main lift, so it does not breach the rule.
+  **THE CALL IS WHICH WAY TO FIX IT, and that is CONTENT (L7):**
+  **(a) drop Hip Thrusts** — the day becomes one main hinge plus accessories,
+  but the session loses a row and gets smaller; or
+  **(b) keep the row and lighten it** to an accessory dose so it stops being a
+  second heavy hinge.
+  **RECOMMENDATION: (b).** It obeys `:226` exactly — the rule bars a second
+  HEAVY lift of the pattern, not a second exercise — and it does not shrink a
+  session, which is the thing that bit us on team nights. **One word and it
+  ships.**
+
+- **ONE LINE OWED — HOW A PACE IS SHOWN (census C2).** `deriveMas` is correct
+  with **zero production callers**: you run the 2km, the app stores it, and your
+  card shows the template's intensity with **no personal pace**. Grepped — the
+  Stage C ruling covers the MATHS and says nothing about display; no pace copy
+  exists. **RECOMMENDATION: show your pace BESIDE the authored intensity, not
+  instead of it** (the 55 signed templates own intensity). One sentence ships it.
+
 - **ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
   the census says.**
   **His rule, Bible `:226`:** *"ONE MAIN PER PATTERN PER SESSION... A second
