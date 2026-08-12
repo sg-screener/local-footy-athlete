@@ -2055,4 +2055,140 @@ The inbox keeps a pointer at each site.
     trusting it hid for a month. That is the pattern to copy into the other
     nineteen census rows.**
 
+---
+
+## item 28-C1h — full report
+
+28-C1h. **THE COD PROBE RAN — ELIGIBILITY NEVER SEES `cod_decel` AT ALL, AND A
+    SECOND CALLER WAS HIDING THE WHOLE TIME.**
+
+    **OWNED BY THE TERMINAL. One probe away; the noise is cleared.**
+
+    **RESULT: ZERO eligibility hits.** All nine `finisherEligibility` downgrade
+    sites were tagged with `strengthContext` and a five-day no-team-training
+    off-season week generated. **`cod_decel` reached eligibility NOT ONCE** — so
+    the refusal is NOT in eligibility, and the earlier "site #7" reading (from
+    the attached path) explains nothing about standalone.
+
+    **AND THE THING NOBODY HAD SEEN: `pickPlacementCondCategories` HAS TWO
+    CALLERS.**
+    - `:3744` `pickStandaloneCondDecision` — the standalone piece.
+    - **`:3701` `shouldAttachBestFinisher` — the ATTACHED path, and it was never
+      in view during five previous attempts.** Every earlier eligibility
+      measurement was this caller.
+    **The standalone patch correctly flagged only `:3744`** — that part is right
+    and is parked at `scratchpad/cod-standalone-pass.patch`.
+
+    **SO THE REMAINING UNKNOWN IS NARROW AND NAMED:** with COD ranked first at
+    `:3744`, why does the loop never call `finisherEligibility` with it? Either
+    the guard does not fire on the slots that matter, or
+    `pickStandaloneCondDecision` is not reached for the standalone piece on this
+    week. **Probe `:3744`'s candidate list directly — print `zzCands[0]` — and
+    the answer is one line.**
+    **⚠ MY PROBE FOR EXACTLY THAT SILENTLY FAILED TO APPLY** (the anchor moved
+    after the patch) **and I read the empty output as a result before checking
+    the instrument was in.** Verify the probe is present before trusting its
+    silence — that is the sixth instrument fault of the session and the second
+    where absence was mistaken for evidence. (newest first)
+
+Deep background: `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md` (the architecture
+answer) and `docs/ATLAS_VERIFICATION_2026-08-12.md` (receipts). A new agent's
+entry point is `docs/CODEX_HANDOFF_2026-08-11.md`.
+
+**THREE STAND-DOWNS — each has already cost time or money once.**
+
+**A. THE FIFTH HARD DAY IS CLOSED.** **Sam:** *"4 hard days plus 1 moderate/easy
+day is prefered but 5 hard days is okay"*. Five is not a defect. Measured well
+(`a8f13d91`), correctly not wired. **Do not switch it on.**
+
+**AND THE 4+1 GENERATION TARGET IS PARKED TOO, 2026-08-13 — SAME AREA, SAME
+ANSWER: NOT NOW.** **Sam:** *"stop worrying about this moderate day thing - this
+is only on 17 QA - when we get deeper into the app and test 100 then we will
+have many more useful scenarios where it might make sense"*. **Reopen when the
+harness carries ~100 weeks, not before. Do not re-ask.** See item 4.
+
+**B. HYDRATION MAY QUIETLY RE-SHAPE THE DAYS AHEAD — ALREADY ANSWERED.** **Sam:**
+*"once a session is done then it's locked in, only the rest of the week can
+change ... wednesday to sunday should adjust to accomodate this"*. Both halves
+already match the code. **No work owed. Do not ask again — fourth appearance of
+the granted-permission defect.**
+
+**D. HANDS OFF THE GENERATOR AND THE GENERATION ANCHOR — ANOTHER AGENT HOLDS
+THEM. Sam, 2026-08-12:** *"Claude Code is working the reopen bug in this same
+folder. Stay out of the program generator and anything touching the generation
+anchor until it's done."*
+
+**WHO "ANOTHER AGENT" MEANS — CLARIFIED BY SAM 2026-08-13, AND IT HAD ALREADY
+COST ONE WRONG SELF-BLOCK.** *"you're Claude Code, and you're the one who had
+it. Stand-down D was written for the terminal to keep it off your files."* **This
+stand-down points ONE WAY: it keeps the TERMINAL out of the desktop agent's
+generator work. The desktop agent is not blocked by it and never was** — it read
+its own stand-down as applying to itself and offered to build item 22(c) in
+halves for no reason.
+
+**AND IT IS SPENT. Sam:** *"Your reopen-bug fix landed 9 hours ago and no
+generator file has moved since, so unless you know otherwise the generator is
+free."* **VERIFIED 2026-08-13 02:18 rather than taken on trust:** the newest
+commit touching `generateProgram.ts`, `coachingEngine.ts`, `weekRebuild.ts`,
+`derivedWeekContract.ts` or `acceptedStateTransaction.ts` is `f2152d2b` at
+08-12 17:05 — nine hours — and every one of those files is clean in the working
+tree. **The generator is FREE. Item 22(c) may be built whole, rebuild included.**
+(One adjacent file, `acceptedStateTransaction.ts`, carries uncommitted work from
+the other seat; it is not on the rebuild path, but stage by path as always.)
+
+**OFF LIMITS until Sam lifts it:** `src/services/api/generateProgram.ts`,
+`src/utils/coachingEngine.ts`'s generation paths, `generationAnchorISO` and
+everything that reads or writes it (`programStore` persistence, the quiescent
+boot, `seedOnboardingProgram`).
+
+**WHICH QUEUED ITEMS THIS BLOCKS:** **item 3** (±7 — its remaining step is in
+the craft tier and the fixture authority, both generator-side), **item 4** (the
+moderate day — its fix is a generation target), **item 7** (strength capacity —
+the gateway's authorised reductions). **Items 8-15 are clear** (UI, gates,
+registries, docs).
+
+**SHARED CHECKOUT, NOT A WORKTREE.** That agent's files appear in `git status`
+mid-commit. **Stage explicitly by path; never `git add -A`.** Its untracked
+`src/__tests__/anchorRepro.ts` is why `test:profile-mirror-narrowing` reds — a
+red that belongs to no committed change.
+
+**AND STAGING BY PATH IS NOT ENOUGH — STAGE AND COMMIT IN ONE STEP. SIGHTING 2,
+MEASURED 2026-08-13.** Twice now, work staged by path was swept into the OTHER
+agent's commit before its own `git commit` ran, landing under a subject that
+describes different work entirely:
+- **`4b5218e0` "docs(inbox): ITEM 21 CUT TO THE RULE"** actually carries all of
+  **items 16 and 19** — 12 files, the day/week modifier notice and the
+  add-a-game control.
+- **`c8f2b4b8` "docs(blocked): ITEM 20 CANNOT BE BUILT AS WRITTEN"** actually
+  carries **`ModifiersSheet`**, Sam's "add the popup" sheet, and its five signed
+  strings.
+**Nothing was lost and both are verified** — but `git log` now lies about when
+those features landed, and anyone bisecting will be reading the wrong subjects.
+**THE HALF THAT IS OURS TO FIX:** a `git add` in one command and a `git commit`
+in the next leaves a window the other agent's `commit` walks through. Run them
+as ONE command (`git add <paths> && git commit ...`). **The half that is not:**
+whatever that agent uses commits the whole index rather than its own paths,
+which is this stand-down's existing rule being broken from the other side.
+
+**C. SAM CANNOT DEVICE-TEST UNTIL HE REBUILDS HIS PHONE.** **Sam:** *"I can't
+test until I've rebuilt my phone"*. **Nothing in this queue depends on his
+phone.** State device items as PARKED in a stop report, never as a request.
+
+---
+
+
+---
+
+## item 28 — full report
+
+28. **THE AWAY FLOW IS BUILT — AND AWAY STOPPED DELETING THE ATHLETE'S WEEK.**
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28).**
+
+   **⚠ THE CLUB HALF IS *BUILT*, NOT *WORKING* — the glass run said so.**
+   `postGenerationConstraintValidation` only runs at GENERATION and on a
+   single-workout write, so the rule never reaches an already-accepted week and
+   the athlete's current week does not move. **The equipment half's substitution
+   is OPEN-UNKNOWN for the current week for the same reason.** Account and fix
+   cost: `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.
+
 
