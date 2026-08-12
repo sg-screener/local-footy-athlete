@@ -47,6 +47,8 @@ import {
   REQUESTABLE_CATEGORIES_FOR_QUALITY,
   UNREQUESTABLE_AUTHORED_QUALITIES,
   poolForCategoryPublic,
+  renderableModalities,
+  longestWorkIntervalMinutes,
 } from '../rules/conditioningSelection';
 
 let passed = 0;
@@ -577,6 +579,45 @@ ok(
   const codTemplates = CONDITIONING_TEMPLATES.filter((t) => t.quality === 'cod_decel');
   ok('the four signed COD/decel templates still exist on the sheet',
     codTemplates.length === 4, String(codTemplates.length));
+}
+
+// ── C3: THE ERG CAP IS ENFORCED, NOT JUST ENCODED ─────────────────────────
+//
+// Sam, Bible :1297 and repeated per machine at :1401 (Rower) and :1402 (Ski):
+// "Work intervals longer than 8 minutes are Run or Bike only. Ski, Row and Air
+// Bike have a HARD CAP of 8 minutes IN ANY ONE WORK INTERVAL... Anything longer
+// than 8 minutes must be Run or Bike."
+//
+// It was fully encoded as data and read by NOTHING but a test, while
+// renderableModalities decided Ski/Row from a prose regex that could not see it.
+{
+  const over = CONDITIONING_TEMPLATES.filter((t) => {
+    const n = longestWorkIntervalMinutes(t);
+    return n !== null && n > 8;
+  });
+  ok('some authored rows DO exceed 8 minutes — the cell is not vacuous',
+    over.length > 0, String(over.length));
+
+  const leaking = over.filter((t) =>
+    renderableModalities(t).some((m) => m === 'ski' || m === 'row' || m === 'air_bike'));
+  ok('no row over 8 minutes offers Ski, Row or Air Bike',
+    leaking.length === 0,
+    leaking.map((t) => `${t.name} (${longestWorkIntervalMinutes(t)}min)`).join('; '));
+
+  // AT the cap is legal — his number is a ceiling, not a limbo.
+  const atCap = CONDITIONING_TEMPLATES.filter((t) => longestWorkIntervalMinutes(t) === 8);
+  ok('a row AT exactly 8 minutes is untouched — 8 is legal, 9 is not',
+    atCap.every((t) => renderableModalities(t).length > 0), String(atCap.length));
+
+  // THE RANGE IS READ AT ITS TOP, because the top is what can ship.
+  ok('an authored range is read at its TOP, not its bottom',
+    longestWorkIntervalMinutes({
+      workPeriod: '8 min easy (or one continuous 8–10 min block on Ski/Row)',
+    } as never) === 10);
+
+  // Second-scale rows are out of reach of a minutes cap.
+  ok('a seconds-based row yields no minute figure',
+    longestWorkIntervalMinutes({ workPeriod: '10 s hard' } as never) === null);
 }
 
 console.log(

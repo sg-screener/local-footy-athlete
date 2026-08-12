@@ -262,6 +262,56 @@ export function templatesForTier(tier: ConditioningSelectionTier): ConditioningT
  * representation gap, same as `equipmentVocabulary`'s reader) — this reader
  * is deliberately conservative and mirrors Sam's own wording.
  */
+/**
+ * THE LONGEST WORK INTERVAL A ROW PRESCRIBES, in minutes — READ AT THE TOP.
+ *
+ * `workPeriod` is authored prose ("6–8 min", "8 min easy (or one continuous 8–10
+ * min block on Ski/Row)"), so this reads every minute figure in it and takes the
+ * LARGEST. The top of a range is what can actually ship, and the cap is a HARD
+ * one — a row offering "8–10 min" can put ten minutes in front of an athlete.
+ *
+ * Second-based rows ("10 s hard", "≈6 s (20 m build)") yield null: they are not
+ * minute-scale work and the cap does not reach them.
+ */
+export function longestWorkIntervalMinutes(template: ConditioningTemplate): number | null {
+  const found = [...String(template.workPeriod ?? '').matchAll(/(\d+)\s*(?:[–-]\s*(\d+)\s*)?min/g)]
+    .flatMap((match) => [Number(match[1]), match[2] ? Number(match[2]) : Number.NaN])
+    .filter((value) => Number.isFinite(value));
+  return found.length > 0 ? Math.max(...found) : null;
+}
+
+/**
+ * THE ERG CAP, ENFORCED AT LAST (census C3).
+ *
+ * Sam, Bible `:1297` and repeated per machine at `:1401` (Rower) and `:1402`
+ * (Ski): *"Work intervals longer than 8 minutes are Run or Bike only. Ski, Row
+ * and Air Bike have a HARD CAP of 8 minutes IN ANY ONE WORK INTERVAL... Anything
+ * longer than 8 minutes must be Run or Bike."*
+ *
+ * The cap was fully encoded as data — `ergCapMinutes: 8`, `uncappedModalities`,
+ * `excludedModalities` — and read by NOTHING but a test, while
+ * `renderableModalities` decided Ski/Row from a prose regex that could not see
+ * it. So a continuous ten-minute Ski or Row block could ship: over the ceiling,
+ * on two machines he barred by name.
+ *
+ * "IN ANY ONE WORK INTERVAL" COVERS A CONTINUOUS BLOCK — the largest interval a
+ * row can have. I first read a continuous block as exempt; that distinction is
+ * nowhere in his text and would have dismissed the defect.
+ */
+function cappedErgModalities(
+  template: ConditioningTemplate,
+  modalities: ConditioningModality[],
+): ConditioningModality[] {
+  const longest = longestWorkIntervalMinutes(template);
+  if (longest === null || longest <= ERG_CAP_MINUTES) return modalities;
+  return modalities.filter((modality) => !ERG_CAPPED_MODALITIES.has(modality));
+}
+
+/** Sam's cap and the machines it binds — his numbers, not re-authored here. */
+const ERG_CAP_MINUTES = 8;
+const ERG_CAPPED_MODALITIES: ReadonlySet<ConditioningModality> =
+  new Set<ConditioningModality>(['ski', 'row', 'air_bike']);
+
 export function renderableModalities(template: ConditioningTemplate): ConditioningModality[] {
   const full = template.modalityNotes.toLowerCase();
   if (/all 5 modalities|any modality/.test(full)) {
@@ -292,8 +342,12 @@ export function renderableModalities(template: ConditioningTemplate): Conditioni
   }
   // Modality-agnostic work (e.g. the bodyweight fallback) names no modality;
   // treat it as runnable anywhere so no filter can strand it.
-  if (out.size === 0) return ['run', 'bike', 'air_bike', 'ski', 'row'];
-  return [...out];
+  if (out.size === 0) {
+    // The all-modality fallback is capped too, or a modality-agnostic row would
+    // be the one place a ten-minute Ski block could still ship.
+    return cappedErgModalities(template, ['run', 'bike', 'air_bike', 'ski', 'row']);
+  }
+  return cappedErgModalities(template, [...out]);
 }
 
 export function rendersOffFeet(template: ConditioningTemplate): boolean {
