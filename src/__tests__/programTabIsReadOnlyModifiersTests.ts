@@ -162,6 +162,29 @@ run('the shared confirmation sheet still exists and Coach still mounts it', () =
 // weaken [5]: a notice that grew a control would satisfy neither, which is why
 // `ActiveModifiersSection` is still named below and still forbidden here.
 
+// THE SHEET LISTS AND IT DOES NOT ACT.
+//
+// Sam's *"add the popup"* overruled the ROUTE, not the reason behind it. Rule
+// (c) exists to keep the modifier list's eight ACTIONS on My Status alone, and
+// a sheet is exactly where those actions would creep back in — it already has
+// the list and it already has buttons. So the sheet is pinned to the two
+// controls Sam drew, and reading `note.actions` there is forbidden by name.
+run('the modifier sheet is read-only — it lists, and it does not act', () => {
+  const sheet = read('src/components/ModifiersSheet.tsx');
+  assert(!/note\.actions/.test(sheet),
+    'the modifier sheet renders the modifiers\' ACTIONS. Those eight controls '
+    + 'have one home and it is My Status — a read-only summary that grew a '
+    + '"clear" button is the exact drift rule (c) was written to stop');
+  assert(!/<ActiveModifiersSection\b/.test(sheet),
+    'the sheet mounts the full My Status list component, which brings its '
+    + 'controls with it');
+  const buttons = sheet.match(/<Button\b/g) ?? [];
+  assert(buttons.length === 2,
+    `the sheet has ${buttons.length} buttons; Sam's prototype has exactly two — `
+    + '"Go to my status" and "Not now". A third is a control this surface is '
+    + 'not allowed to own.');
+});
+
 run('the modifier list and its controls have exactly one home', () => {
   const home = read(HOME);
   assert(!/<ActiveModifiersSection\b/.test(home),
@@ -252,16 +275,29 @@ run('Program counts modifiers through the one hook, not beside it', () => {
 
 // READ-ONLY MEANS THE NOTICE OPENS A DOOR AND OWNS NOTHING BEHIND IT.
 run('the Program notice is a doorway, not a control surface', () => {
+  // RE-AIMED 2026-08-13. Sam saw the one-hop route, sent his prototype, and
+  // ruled *"add the popup"*: the notice now opens a sheet listing WHICH
+  // modifiers are acting, and the sheet's own button goes to My Status. So the
+  // doorway is TWO hops and this cell walks both — asserting only the first
+  // would leave the second free to open nothing, which is the same dead
+  // affordance one step further along.
   const home = read(HOME);
   const mounts = stripMounts(home);
   assert(mounts.length > 0, 'Program mounts no ModifiersStrip at all');
   for (const mount of mounts) {
     const surface = mount.match(/surface="(\w+)"/)?.[1] ?? 'unknown';
-    assert(/onPress=\{handleOpenMyStatus\}/.test(mount),
-      `the ${surface} notice no longer opens My Status, so Program shows the `
-      + 'athlete that something changed and gives them nowhere to go and see '
-      + 'what — LAW-L5-no-dead-affordances, on a row that looks tappable');
+    assert(/onPress=\{\(\) => setModifiersSheetOpen\(true\)\}/.test(mount),
+      `the ${surface} notice no longer opens the modifier sheet, so Program `
+      + 'shows the athlete that something changed and gives them nowhere to go '
+      + 'and see what — LAW-L5-no-dead-affordances, on a row that looks tappable');
   }
+  assert(/<ModifiersSheet[\s\S]*?onGoToStatus=\{[\s\S]*?handleOpenMyStatus\(\)/.test(home),
+    'the sheet\'s "Go to my status" no longer reaches My Status. The notice now '
+    + 'stops at the sheet, so this is the ONLY remaining route from Program to '
+    + 'the screen that owns the controls');
+  assert(/setModifiersSheetOpen\(false\);[\s\S]{0,80}handleOpenMyStatus\(\)/.test(home),
+    'the sheet is left open while navigating to another tab — the athlete '
+    + 'returns to Program and finds a sheet they already finished with');
   const hook = read('src/screens/home/useHomeScreen.ts');
   assert(/navigation\.navigate\('CoachTab', \{ status: 'open' \}\)/.test(hook),
     'My Status is opened by something other than the navigation-owned `status` '

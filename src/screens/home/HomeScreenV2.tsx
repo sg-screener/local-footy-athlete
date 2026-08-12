@@ -17,6 +17,7 @@ import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
+import { ModifiersSheet } from '../../components/ModifiersSheet';
 import { Button, Card, Sheet, Badge } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
@@ -218,6 +219,19 @@ export default function HomeScreenV2() {
       }),
     ]));
   }, [currentPhase, reviewAthlete, weekDays]);
+  /* ── SAM'S SHEET, RULED 2026-08-13: *"add the popup"* ──
+     The day/week notice used to navigate straight to My Status. It now opens
+     this sheet first, which lists WHICH modifiers are acting and offers "Go to
+     my status" or "Not now" — his prototype's two-step.
+
+     LOCAL STATE, NOT A NAVIGATION PARAM, and the difference is deliberate. My
+     Status is opened by `navigation.setParams({ status: 'open' })` because TWO
+     tabs must be able to open it and one of them is not its owner. This sheet
+     has exactly one owner and one opener: the notice on this screen. A
+     navigation param would make a private presentation detail addressable from
+     anywhere, which is the disconnected-handoff shape cell [9] of
+     `test:coach-tab-slice3` exists to prevent, pointed the other way. */
+  const [modifiersSheetOpen, setModifiersSheetOpen] = useState(false);
   const [expandedWeekIdx, setExpandedWeekIdx] = useState(-1);
   const handleClearWeekPresentation = () => {
     setExpandedWeekIdx(-1);
@@ -682,7 +696,7 @@ export default function HomeScreenV2() {
             <ModifiersStrip
               surface="day"
               count={modifierCount}
-              onPress={handleOpenMyStatus}
+              onPress={() => setModifiersSheetOpen(true)}
             />
             {dayFirstDay ? renderDayRow(dayFirstDay, dayFirstIdx) : null}
             {/* THE SIX DAYS THE STRIP STANDS IN FOR STILL REPORT THEMSELVES.
@@ -752,7 +766,7 @@ export default function HomeScreenV2() {
             <ModifiersStrip
               surface="week"
               count={modifierCount}
-              onPress={handleOpenMyStatus}
+              onPress={() => setModifiersSheetOpen(true)}
             />
             {weekDays.map((day, idx) => renderDayRow(day, idx))}
           </View>
@@ -1106,6 +1120,27 @@ export default function HomeScreenV2() {
       </ScrollView>
 
       {/* ── Sheets ── */}
+      {/* SAM'S TWO-STEP (2026-08-13). The notice opens this; this opens My
+          Status. "Not now" closes it and leaves the athlete on their session,
+          which is the half of his design that makes a sheet on the day screen
+          acceptable rather than an obstacle.
+
+          `coachNotes` IS the list the notice counted — the same
+          `useActiveModifiers` derivation, not a second read — so the sheet can
+          never list a different number of things than the row that opened it. */}
+      <ModifiersSheet
+        visible={modifiersSheetOpen}
+        modifiers={coachNotes}
+        onClose={() => setModifiersSheetOpen(false)}
+        onGoToStatus={() => {
+          // CLOSED BEFORE NAVIGATING, and it matters on a real device: a modal
+          // left mounted across a tab change is the "hidden surface leaves
+          // state outside the app" shape — the athlete comes back to Program
+          // and finds a sheet they already finished with.
+          setModifiersSheetOpen(false);
+          handleOpenMyStatus();
+        }}
+      />
       <PlanChangeSheet
         visible={changeSheetEntry !== null}
         date={changeSheetEntry?.date ?? null}

@@ -312,6 +312,58 @@ export function registerProjectionCopy(): void {
         + 'the meaning: "no modifiers currently impacting".',
       text: 'No modifiers currently impacting your program.',
     },
+    // ── The modifier SHEET, Sam's own prototype, ruled 2026-08-13. ──
+    //
+    // SIGNED ON SIGHT. He sent the prototype screen, asked whether tapping the
+    // notice opened "something like this", and answered his own question with
+    // *"add the popup"*. These five strings are read VERBATIM off that screen —
+    // his words, not a paraphrase of them, which is what `signed_sentence`
+    // means and why the provenance can cite an image rather than a doc.
+    //
+    // THE SHEET LISTS AND IT DOES NOT ACT. Its two controls go to My Status or
+    // dismiss; every control that CHANGES a modifier still lives on My Status
+    // alone, which is what cell [5] of `test:program-tab-read-only-modifiers`
+    // keeps true.
+    {
+      id: 'modifiers.sheet.title',
+      source: 'signed_sentence',
+      provenance: 'SIGNED ON SIGHT, 2026-08-13. Sam\'s prototype screen, the '
+        + 'sheet\'s headline, verbatim. It names what happened to the SESSION, '
+        + 'not what is wrong with the athlete.',
+      text: 'Your session has been modified',
+    },
+    {
+      id: 'modifiers.sheet.body',
+      source: 'signed_sentence',
+      provenance: 'SIGNED ON SIGHT, 2026-08-13. The sheet\'s second line on the '
+        + 'same prototype screen, verbatim.',
+      text: 'The following modifiers are currently impacting your programming.',
+    },
+    {
+      id: 'modifiers.sheet.footer',
+      source: 'signed_sentence',
+      provenance: 'SIGNED ON SIGHT, 2026-08-13. The line above the buttons on '
+        + 'the same screen, verbatim. It says where changes are MADE, which is '
+        + 'the sheet stating its own read-only limit to the athlete.',
+      text: 'Visit Coach to make changes or update your status.',
+    },
+    {
+      id: 'modifiers.sheet.go',
+      source: 'signed_sentence',
+      provenance: 'SIGNED ON SIGHT, 2026-08-13. The primary button, verbatim. '
+        + 'Stored sentence-case and uppercased by the STYLE, like every other '
+        + 'button in this app — the prototype\'s capitals are a typeface '
+        + 'decision, not different words.',
+      text: 'Go to my status',
+    },
+    {
+      id: 'modifiers.sheet.dismiss',
+      source: 'signed_sentence',
+      provenance: 'SIGNED ON SIGHT, 2026-08-13. The secondary control, verbatim. '
+        + 'It is the half that makes the sheet acceptable on the day screen: the '
+        + 'athlete can read what changed and get on with the session.',
+      text: 'Not now',
+    },
     {
       id: 'phase.review.title',
       source: 'sam_ruling',

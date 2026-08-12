@@ -1093,14 +1093,22 @@ phone.** State device items as PARKED in a stop report, never as a request.
       either the caller gains a week-facts input, or the cause is resolved
       before it. **That is a threading decision in a hot shared file, not a copy
       change**, and it is the reason this item is larger than it reads.
-    - **`date` IS THE WEEK START, NOT THE RESTING DAY.** `:404` passes
-      `date: weekStart`, and `renderSection18Shortfall` does
-      `dayNameFor(shortfall.date)`. **So today's sentence appears to say "Resting
-      Monday" on every Monday-start week regardless of which day was rested.**
-      If that holds, the sentence Sam objected to may also be naming the WRONG
-      DAY — a second defect inside the one he caught. **MEASURED BY READING, NOT
-      BY RUNNING: no cell was written and no world was walked, so this is
-      OPEN-UNKNOWN until someone renders one.** Check it before writing copy.
+    - **CONFIRMED BY RUNNING IT — THE SENTENCE NAMES THE WRONG DAY.** Upgraded
+      from OPEN-UNKNOWN 2026-08-13: the renderer was driven with three dates and
+      names whatever it is handed, and the ONE production call site
+      (`acceptedStateTransaction.ts:515`) hands it `weekStart`. **So on a
+      Monday-start week the athlete reads "Resting Monday means you'll miss a
+      strength session this week" — whichever day was actually rested, and
+      WHETHER OR NOT THEY RESTED AT ALL.**
+    - **SO THE SENTENCE IS WRONG THREE WAYS, NOT ONE**, and Sam only had to see
+      it once to know: it names the wrong CAUSE (his complaint), the wrong DAY,
+      and it asserts a REST that may never have happened. **Writing his signed
+      sentence on top of this renderer would attach his words to a wrong fact.**
+    - **AND HIS SENTENCE NEEDS A DIFFERENT DAY AGAIN.** *"With a game Saturday…"*
+      names the GAME's date; the surviving rest sentence names the RESTED date.
+      **So `date` cannot keep one meaning across the two branches** — it becomes
+      the day belonging to the CAUSE. That is not in the order as written, which
+      is why this is reported rather than absorbed.
     - **`fits` HAS A SOURCE ALREADY:** Sam's sentence states what FITS and
       `count` is what is MISSED, but `shortfallsFromFindings` already reads
       `finding.actual` — the fitting number — and currently discards it. Carry

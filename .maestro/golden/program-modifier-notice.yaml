@@ -86,8 +86,39 @@ tags:
 # A row that looks tappable and opens nothing is a dead affordance
 # (LAW-L5-no-dead-affordances). It must land on the SAME My Status the Coach
 # strip opens — one destination, reached from either side.
+#
+# TWO HOPS SINCE 2026-08-13, BY SAM'S RULING (*"add the popup"*). The notice
+# opens a sheet that says WHICH modifiers are acting; the sheet goes to My
+# Status. Both hops are walked because a sheet that opens and then leads
+# nowhere is the same dead end one step further along.
 - tapOn:
     id: "modifiers-strip-day"
+- extendedWaitUntil:
+    visible:
+      id: "modifiers-sheet"
+    timeout: 10000
+- assertVisible: "Your session has been modified"
+- takeScreenshot: artifacts/ui-walk/item16-day-sheet
+
+# "NOT NOW" IS HALF THE DESIGN — it is what makes a sheet on the day screen
+# acceptable rather than an obstacle, so it is proven, not assumed. The athlete
+# reads what changed and gets on with the session.
+- tapOn:
+    id: "modifiers-sheet-dismiss"
+- assertNotVisible:
+    id: "modifiers-sheet"
+- assertVisible:
+    id: "modifiers-strip-day"
+
+# AND THE OTHER BUTTON GOES WHERE IT SAYS.
+- tapOn:
+    id: "modifiers-strip-day"
+- extendedWaitUntil:
+    visible:
+      id: "modifiers-sheet"
+    timeout: 10000
+- tapOn:
+    id: "modifiers-sheet-go-to-status"
 - extendedWaitUntil:
     visible:
       id: "coach-status-screen"
@@ -98,6 +129,10 @@ tags:
     id: "coach-status-close"
 - tapOn:
     id: "tab-program"
+# THE SHEET DID NOT SURVIVE THE TRIP. A modal left mounted across a tab change
+# greets the athlete on their return with a sheet they already finished with.
+- assertNotVisible:
+    id: "modifiers-sheet"
 
 # ── THE WEEK SHAPE: SAM'S ONE LINE, ABOVE THE SEVEN ROWS ──
 # `day-row-mon` is asserted AFTER the line so the two are proven to coexist:
@@ -113,6 +148,14 @@ tags:
 # ── AND THE WEEK LINE IS THE SAME DOOR ──
 - tapOn:
     id: "modifiers-strip-week"
+- extendedWaitUntil:
+    visible:
+      id: "modifiers-sheet"
+    timeout: 10000
+- assertVisible: "Your session has been modified"
+- takeScreenshot: artifacts/ui-walk/item16-week-sheet
+- tapOn:
+    id: "modifiers-sheet-go-to-status"
 - extendedWaitUntil:
     visible:
       id: "coach-status-screen"
