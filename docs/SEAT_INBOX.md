@@ -52,6 +52,24 @@ mid-commit. **Stage explicitly by path; never `git add -A`.** Its untracked
 `src/__tests__/anchorRepro.ts` is why `test:profile-mirror-narrowing` reds — a
 red that belongs to no committed change.
 
+**AND STAGING BY PATH IS NOT ENOUGH — STAGE AND COMMIT IN ONE STEP. SIGHTING 2,
+MEASURED 2026-08-13.** Twice now, work staged by path was swept into the OTHER
+agent's commit before its own `git commit` ran, landing under a subject that
+describes different work entirely:
+- **`4b5218e0` "docs(inbox): ITEM 21 CUT TO THE RULE"** actually carries all of
+  **items 16 and 19** — 12 files, the day/week modifier notice and the
+  add-a-game control.
+- **`c8f2b4b8` "docs(blocked): ITEM 20 CANNOT BE BUILT AS WRITTEN"** actually
+  carries **`ModifiersSheet`**, Sam's "add the popup" sheet, and its five signed
+  strings.
+**Nothing was lost and both are verified** — but `git log` now lies about when
+those features landed, and anyone bisecting will be reading the wrong subjects.
+**THE HALF THAT IS OURS TO FIX:** a `git add` in one command and a `git commit`
+in the next leaves a window the other agent's `commit` walks through. Run them
+as ONE command (`git add <paths> && git commit ...`). **The half that is not:**
+whatever that agent uses commits the whole index rather than its own paths,
+which is this stand-down's existing rule being broken from the other side.
+
 **C. SAM CANNOT DEVICE-TEST UNTIL HE REBUILDS HIS PHONE.** **Sam:** *"I can't
 test until I've rebuilt my phone"*. **Nothing in this queue depends on his
 phone.** State device items as PARKED in a stop report, never as a request.
