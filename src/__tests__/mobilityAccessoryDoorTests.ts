@@ -58,7 +58,8 @@ process.env.TZ = 'Australia/Melbourne';
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
-import type { TrainingProgram, Workout } from '../types/domain';
+import type { TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
+import { validatePairings } from '../data/defaultProgram';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import {
@@ -397,6 +398,68 @@ run('D2. NON-VACUITY — a real strength session still does all three', () => {
     'a real strength session moved no exposure total — the ledger is not counting');
   assert(!ledger.restStress.trueFullRestDays.includes(FREE_DAY),
     'a real strength session did not break rest — the rest law is not being applied');
+});
+
+// ── SAM'S 2-3 MOBILITY PAIRS SURVIVE THE VALIDATOR (seat item 26) ──────────
+//
+// docs/MOBILITY_PAIRING_RULINGS_2026-07-31.md rule 1, Sam-ruled 2026-07-31:
+// "On strength days, 2-3 accessory exercises are paired with mobility exercises
+// as SUPERSETS by default". The validator capped a session at ONE pair and
+// silently binned the rest, so a producer built to his design would have lost
+// two thirds of it with NO ERROR. The item names this cell: it must fail if a
+// 3-pair session survives as a 1-pair session.
+const pairedRow = (group: string, order: number, name: string): WorkoutExercise => ({
+  id: `we-${group}-${order}`,
+  workoutId: 'w',
+  exerciseId: name,
+  exerciseOrder: order,
+  prescribedSets: 2,
+  prescribedRepsMin: 8,
+  prescribedRepsMax: 12,
+  restSeconds: 60,
+  supersetGroup: group,
+  supersetOrder: order,
+  pairType: 'superset',
+  exercise: { id: name, name },
+} as unknown as WorkoutExercise);
+
+const THREE_PAIRS: WorkoutExercise[] = [
+  pairedRow('g1', 1, 'Split Squat'), pairedRow('g1', 2, 'QL Extension'),
+  pairedRow('g2', 1, 'Single-Arm Bench'), pairedRow('g2', 2, 'Butterfly'),
+  pairedRow('g3', 1, 'Chest Supported Row'), pairedRow('g3', 2, 'Ankle Rock'),
+];
+
+const survivingGroups = (rows: WorkoutExercise[], tier: 'core' | 'optional'): Set<string> =>
+  new Set(validatePairings(rows, tier)
+    .filter((ex) => ex.supersetGroup)
+    .map((ex) => ex.supersetGroup as string));
+
+run("Sam's three mobility pairs survive the validator — all three, not one", () => {
+  const groups = survivingGroups(THREE_PAIRS, 'core');
+  assert(groups.size === 3,
+    `${groups.size} group(s) survived, expected 3: ${[...groups].join(',')}`);
+});
+
+run('every surviving paired row keeps its group, order and type', () => {
+  const kept = validatePairings(THREE_PAIRS, 'core')
+    .filter((ex) => ex.supersetGroup && ex.supersetOrder && ex.pairType);
+  assert(kept.length === 6, `${kept.length} rows kept their pairing fields, expected 6`);
+});
+
+run('a FOURTH pair is still stripped — his number is 2-3, not unlimited', () => {
+  const four = [...THREE_PAIRS, pairedRow('g4', 1, 'Curl'), pairedRow('g4', 2, 'Hip Flexor')];
+  const groups = survivingGroups(four, 'core');
+  assert(groups.size === 3, `${groups.size} groups survived, expected the ceiling of 3`);
+});
+
+run('a group that is not exactly 2 is still stripped', () => {
+  const groups = survivingGroups([pairedRow('g1', 1, 'Split Squat')], 'core');
+  assert(groups.size === 0, `${groups.size} incomplete group(s) survived`);
+});
+
+run('pairing on a non-core session is still stripped', () => {
+  const groups = survivingGroups(THREE_PAIRS, 'optional');
+  assert(groups.size === 0, `${groups.size} group(s) survived on a non-core session`);
 });
 
 console.log(`\nMobility and Accessories doors: ${passed} passed, ${failed} failed`);

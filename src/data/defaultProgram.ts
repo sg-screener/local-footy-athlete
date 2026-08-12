@@ -1294,12 +1294,25 @@ function completeCoachWorkoutsFromPlan(
  * Validate and strip invalid or excessive superset pairings.
  *
  * Rules enforced:
- *   1. Max 1 paired block per workout (strip all groups beyond the first)
+ *   1. Max THREE paired blocks per workout (strip all groups beyond the third)
  *   2. Pairing only allowed on core strength sessions
  *   3. Each group must have exactly 2 exercises (strip incomplete groups)
  *   4. pairType must be 'contrast' | 'superset' | 'circuit' (strip unknown)
+ *
+ * ## Rule 1 was ONE and Sam authored THREE — corrected 2026-08-13
+ *
+ * `docs/MOBILITY_PAIRING_RULINGS_2026-07-31.md` rule 1, Sam-ruled: *"On strength
+ * days, 2-3 accessory exercises are paired with mobility exercises as SUPERSETS
+ * by default"*. This validator capped a session at ONE pair and silently binned
+ * the rest, so a producer built to his design would have lost two thirds of it
+ * with no error — the session would simply arrive smaller and nothing would say
+ * why. Its ceiling is now his number.
+ *
+ * IT IS STILL A CEILING, NOT A TARGET. Four pairs is not his design either, so
+ * the fourth is still stripped; what changed is where the line sits.
  */
-function validatePairings(
+const MAX_PAIRED_BLOCKS_PER_SESSION = 3;
+export function validatePairings(
   exercises: WorkoutExercise[],
   tier: SessionTier | undefined,
 ): WorkoutExercise[] {
@@ -1332,17 +1345,18 @@ function validatePairings(
     }
   }
 
-  // Rule 1: only keep the first valid group, strip the rest
-  let allowedGroup: string | null = null;
+  // Rule 1: keep the first THREE valid groups in authored order, strip the rest.
+  const allowedGroups = new Set<string>();
   const excessGroups = new Set<string>();
   for (const ex of exercises) {
-    if (ex.supersetGroup && !invalidGroups.has(ex.supersetGroup)) {
-      if (allowedGroup === null) {
-        allowedGroup = ex.supersetGroup;
-      } else if (ex.supersetGroup !== allowedGroup) {
-        logger.warn(`[PairingValidator] Stripped excess group "${ex.supersetGroup}" — max 1 pair per session`);
-        excessGroups.add(ex.supersetGroup);
-      }
+    if (!ex.supersetGroup || invalidGroups.has(ex.supersetGroup)) continue;
+    if (allowedGroups.has(ex.supersetGroup)) continue;
+    if (allowedGroups.size < MAX_PAIRED_BLOCKS_PER_SESSION) {
+      allowedGroups.add(ex.supersetGroup);
+    } else {
+      logger.warn(`[PairingValidator] Stripped excess group "${ex.supersetGroup}" — `
+        + `max ${MAX_PAIRED_BLOCKS_PER_SESSION} pairs per session`);
+      excessGroups.add(ex.supersetGroup);
     }
   }
 

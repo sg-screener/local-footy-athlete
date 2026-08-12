@@ -982,12 +982,31 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **AND HE ALREADY RULED THE MECHANISM, AGAINST PADDING.** §20.3, his words:
     *"Under restricted equipment a gunshow gets smaller, never padded. There are
     no cross-family top-ups: the app never invents to fill a quota."*
-    **RECOMMENDATION (one, his to veto): session size is a TARGET OF 6, not a
+    **⚠ SAM VETOED THE 6 AND HE WAS RIGHT — MY RECOMMENDATION BELOW IS WRONG AND
+    IS STRUCK. 2026-08-13:** *"no 6 is not a ceiling i dont know where the fuck
+    you're getting that from, there's to many variables to give 6 as a ceiling,
+    you should be able to figure out what is needed that day from the bible and
+    all the programming logic i have put in there"*.
+    **AND THE MEASUREMENT AGREES WITH HIM. I CALLED THE 6 "AUTHORED" AND IT IS
+    NOT.** Grepped after his veto: **the number 6 appears NOWHERE in the Bible as
+    a cap.** §11 `:3149` abolishes the beginner 3 and says there is "ONE
+    per-session exercise cap for every training age" — **it never states the
+    number.** `trainingAgePolicy.ts:43`'s `6` was chosen in code, exactly like the
+    `3` before it. **So BOTH numbers are invented, and item 25's premise is
+    stronger than it was written: the app does not hold his ruling and disobey
+    it — it holds an INVENTED ceiling and calls it his.**
+    **WHAT HE ACTUALLY RULED: session size is DERIVED PER DAY** from the Bible's
+    own logic — phase sets/reps (`:767-769`), the seven strength sessions
+    (§20.5), game proximity (`:204`), accessory dose (`:818`), equipment and
+    injury. **Not a constant, and not a template's row count. The next unit is
+    that derivation. Do not bring him another number.**
+
+    ~~**RECOMMENDATION (one, his to veto): session size is a TARGET OF 6, not a
     floor that pads.** Templates stop dictating HOW MANY; the app aims for 6 and
     **shrinks honestly** when equipment, injury or game proximity restrict it —
     never inventing filler to hit a number. **The 4 is deleted, not re-authored:
     it was `MIN_SESSION_SIZE`, invented in one file, and it contradicts his
-    shrink-never-pad rule.**
+    shrink-never-pad rule.**~~
     **DISTRIBUTION TODAY, for the same message:** Strength 5-6, Mixed 4-6, Team
     Training 2-4; **zero sessions over 6**; 26 of 120 under 4.
 
@@ -1100,6 +1119,27 @@ shared data-shape change its readers correctly followed. Sam was right and the
 seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
+
+- **DECISION OWED — ITEM 22(c): THE AWAY EQUIPMENT ANSWER IS THE WRONG WAY
+  ROUND, AND ONE OF THREE FIXES IS SAM'S TO PICK. Asked 2026-08-13.**
+  `EquipmentScreen` produces what the athlete **HAS** where they are going —
+  ruling 3's pre-ticked checklist, unticked down to their real kit.
+  `set_equipment_modifier` stores what they are **MISSING**. Away needs the
+  COMPLEMENT — normal kit minus away kit — and **nothing computes it**, because
+  onboarding never had to: its answer IS the kit, with no prior list to subtract
+  from.
+  **THIS WAS FOUND BY BUILDING IT AND THROWING IT AWAY.** A route and wrapper
+  compiled, passed the gate, and wrote `tags: []` — a dated fact asserting
+  nothing is absent. It would have shipped green and left the athlete training
+  around a gym they were not in. Fully reverted (`234f917c`).
+  **THE THREE:** **(i)** derive the complement from the stored answer before and
+  after; **(ii)** give the equipment fact a `have` mode beside `without`, so the
+  away answer stores as-is; **(iii)** ask what is MISSING on the away screen —
+  named ONLY so it can be ruled out on the record, since it contradicts ruling
+  3's pre-ticked shape.
+  **NOT BLOCKING THE REST OF 22(c)'s FOUNDATIONS**, which are built: the dated
+  fact (`bfad51b7`) and the reusable door (`0ee5caf1`). It blocks the wiring
+  between them, which is the last piece.
 
 - **ANSWERED 2026-08-13, NOW ITEM 21 — the team-night size question is
   CLOSED and its premise refused.** Sam: a team night's strength session is
