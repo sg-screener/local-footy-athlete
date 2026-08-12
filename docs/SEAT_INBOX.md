@@ -231,6 +231,29 @@ his instruction is standing authority, not history.**
     **Start it fresh, not at the end of a session — half-doing this is how the
     last two nights went wrong.**
 
+    **⚠ IN FLIGHT BY ITS OWNER RIGHT NOW — DO NOT START A SECOND ONE.**
+    **Measured 2026-08-13 05:45 by the terminal, read-only, nothing touched.**
+    The desktop agent has UNCOMMITTED edits in `temporarySourceFactTransaction.ts`
+    (last write 05:10) plus four more files, and a `.git/index.lock` stale since
+    05:31. **The edit is exactly this item's fix:** `isRuledDerivingConstraint`
+    gains `type === 'equipment'` and `scheduleKind === 'travel'`, moving both off
+    the INERT lane and onto the DERIVING one.
+
+    **AND THE CHAIN CLOSES — VERIFIED, so its owner does not have to re-find it.**
+    The deriving lane calls `commitDerivingSourceFactScopedRegen`
+    (`temporarySourceFactTransaction.ts:438`), which calls `generateProgramLocally`
+    (`:531`) with the constraints threaded; that is `generateProgram.ts:909`, and
+    at `:683-697` it builds `hardPostGenerationConstraints` — **`type ===
+    'equipment'` plus any `schedule` kind except `busy_week` and `max_sessions`,
+    so travel and equipment BOTH pass the filter** — and runs
+    `validateWorkoutAgainstActiveConstraints` over every workout. **That is the
+    away rule, reaching a week that already exists.** The boundary report's
+    "what it would take" is the shape being built.
+
+    **STILL UNPROVEN AND STILL THE ONLY THING THAT COUNTS: the phone.** No device
+    pass has been run on this. **Two green suites have now agreed with a screen
+    that had not moved** — do not report it delivered on a suite.
+
     **THE ACCEPTANCE TEST IS NOT A SUITE. It is a phone, a week that already
     exists, and the change appearing on it.** Nothing else counts as done for
     this item. **A green suite has now twice agreed with a screen that had not
