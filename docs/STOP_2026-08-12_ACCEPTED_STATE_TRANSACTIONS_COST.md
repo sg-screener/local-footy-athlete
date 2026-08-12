@@ -122,13 +122,28 @@ this unit's deliverable; the redesign is Sam's or the seat's call.**
 
 - **No device pass.** This is chain cost, not athlete-visible behaviour — but
   see below, because it may be both.
-- **WHETHER AN ATHLETE PAYS THIS IS OPEN-UNKNOWN, AND IT IS THE QUESTION WORTH
-  ASKING NEXT.** `canonicaliseHydratedProgram` runs on hydration of a legacy
-  program. If a real device carrying a pre-Contract-v2 program hits the same
-  20-second canonicalisation, this is not a test-speed finding at all — it is a
-  twenty-second launch. **Nothing here measured a device.** The two 20 s calls
-  were on a migrated in-season week with one team-training day; whether that
-  shape reaches a phone was not established.
+- ~~WHETHER AN ATHLETE PAYS THIS IS OPEN-UNKNOWN~~ **ANSWERED THE SAME DAY, AND
+  THE ANSWER IS NO — held by `test:legacy-migration-unreachable`.**
+
+  The 20-second path is `canonicaliseAcceptedBoundaryState` with
+  `structuralMigrationRequired: true`. **Exactly one function sets that flag —
+  `canonicaliseHydratedState` — and it has NO PRODUCTION CALLER.** Only suites
+  reach it.
+
+  It has none because there is nothing to migrate. `programStore`'s
+  `partialize` persists **inputs only**: the generation anchor, the season phase
+  clock, session feedback, weight overrides, source facts and injury episodes.
+  **`currentProgram` and `currentMicrocycle` are never written to disk**, so no
+  launch reads a stored program back, legacy or otherwise — the week is DERIVED
+  at boot. That is `docs/NORTH_STAR.md`'s own sentence already doing its job:
+  *store only decisions, derive everything else*.
+
+  **THE PROTECTION IS ONE LINE OF `partialize` AWAY FROM VANISHING**, which is
+  why it now has a cell rather than a paragraph. Mutation-checked both ways:
+  persisting `currentProgram` reds it, and adding a production caller of the
+  migration entry reds it. The day someone stores the program "for a faster
+  cold start", they are told what it costs instead of discovering it as a
+  mystery.
 - The other five slow units were not split the way `migrated()` was; they are
   attributed to the same `stateSignature` by the profile, not by per-call
   timing.
