@@ -1022,7 +1022,11 @@ async function runGameFeedbackInvariants(): Promise<void> {
     date: TARGET_DATE,
     feedback: {
       ...feedback,
-      game: { ...game, bodyRpe: 6 } as SessionFeedback['game'],
+      // 11, NOT 6 — 6 became a LEGAL rating when Sam moved every effort input
+      // to 1-10 on 2026-08-12. This cell pinned the old ceiling and would
+      // otherwise have asserted that a rating the slider now offers must be
+      // refused, which is the drift it exists to prevent.
+      game: { ...game, bodyRpe: 11 } as SessionFeedback['game'],
     },
     workout: invalidTarget.workout,
     source: { entryPoint: 'tap', surface: 'game_feedback_invalid_test' },

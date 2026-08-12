@@ -1675,7 +1675,7 @@ export interface SessionFeedback {
   executionItems?: import('../utils/sessionExecutionChecklist').SessionExecutionItemResult[];
   /** Session effort. Omitted for skipped sessions to avoid fake exertion data. */
   feeling?: FeedbackFeeling;
-  /** Live session effort is 1–5; legacy conditioning-only feedback may be 1–10. */
+  /** Session effort, 1-10 — one scale for every input since 2026-08-12. */
   difficulty?: number;
   /** Post-session soreness level. Optional for backward compat. */
   soreness?: FeedbackSoreness;
@@ -1689,10 +1689,10 @@ export interface SessionFeedback {
    * smallest mechanism small.
    */
   teamNightSize?: import('../rules/teamNightSize').TeamNightSize;
-  /** Measured duration and 1–5 effort for a performed Team Training component. */
+  /** Measured duration and 1-10 effort for a performed Team Training component. */
   teamTraining?: import('../types/sessionOutcome').TeamTrainingSessionOutcome;
   /**
-   * THE POST-GAME BODY-FEEL RATING — 1-5, the design's "linchpin".
+   * THE POST-GAME BODY-FEEL RATING — 1-10 since 2026-08-12, the design's "linchpin".
    *
    * Rides `SessionFeedback` for the same reason `teamNightSize` does: the app
    * already records a completed session per date through a transaction with a

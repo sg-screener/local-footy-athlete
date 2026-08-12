@@ -174,7 +174,7 @@ export interface JournalFelt {
   /** Games the athlete rated their legs and energy on. */
   readonly gameFeelsRecorded: number;
   /**
-   * THE LATEST GAME'S RATING, 1–5, or null when no game was rated.
+   * THE LATEST GAME'S RATING, 1-10 since 2026-08-12, or null when no game was rated.
    *
    * A COUNT AND A RATING ARE DIFFERENT FACTS, and the UI ruling's glanceable
    * wants the second one. `gameFeelsRecorded` says how many games were rated;

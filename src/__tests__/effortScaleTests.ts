@@ -22,6 +22,10 @@ import {
   effortWord,
 } from '../rules/effortScale';
 import { isSessionEffortRating } from '../utils/sessionFeedbackForm';
+import {
+  parseGameSessionOutcome,
+  parseTeamTrainingSessionOutcome,
+} from '../types/sessionOutcome';
 
 let pass = 0;
 let fail = 0;
@@ -80,6 +84,43 @@ for (const bad of [0, 11, -1, 3.5, Number.NaN]) {
 // the only reason it is shown at all.
 const words = Array.from({ length: EFFORT_MAX }, (_, index) => effortWord(index + 1));
 ok('all ten words are distinct', new Set(words).size === words.length, words);
+
+
+// ── EVERY GATE THE ANSWER PASSES THROUGH ACCEPTS THE WHOLE SCALE ──
+//
+// THE GAP THIS CLOSES, AND IT WAS LIVE FOR ONE COMMIT. The scale moved to 1-10
+// and the slider offered ten values, while `parseGameSessionOutcome` and
+// `parseTeamTrainingSessionOutcome` still refused anything over 5 — so the UI
+// collected an answer the transaction threw away, with no cell anywhere
+// comparing the two. Every suite stayed green because each end was internally
+// consistent.
+//
+// A range restated as a literal in four files is four owners. These cells bind
+// them to one, and they are written so that ANY of the four regressing reds
+// them — not just the one that regressed last time.
+console.log('\n-- Every gate accepts the whole scale --');
+
+// `feel` is a DIFFERENT 1-5 scale and stays one: Heavy/Bad/Normal/Good/Flying
+// answers HOW YOU FEEL, not how hard it was. Sam's ruling moved the EFFORT
+// scale only, and conflating the two is the defect this whole unit is about.
+const gameAt = (bodyRpe: number) => parseGameSessionOutcome({
+  playedWholeGame: true, timeOnGroundMinutes: 90, bodyRpe, feel: 3,
+});
+const teamAt = (effort: number) => parseTeamTrainingSessionOutcome({
+  durationMinutes: 90, effort,
+});
+
+for (let rating = EFFORT_MIN; rating <= EFFORT_MAX; rating += 1) {
+  ok(`the game transaction accepts ${rating}`, gameAt(rating) !== null);
+  ok(`the team-training transaction accepts ${rating}`, teamAt(rating) !== null);
+}
+
+// AND STILL REFUSE WHAT IS OFF THE SCALE — otherwise "accepts everything" would
+// pass these cells just as well as "accepts the scale".
+for (const bad of [0, EFFORT_MAX + 1, -1, 2.5]) {
+  ok(`the game transaction refuses ${bad}`, gameAt(bad) === null);
+  ok(`the team-training transaction refuses ${bad}`, teamAt(bad) === null);
+}
 
 console.log(`\nEffort scale totals: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);

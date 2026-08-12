@@ -170,9 +170,15 @@ const checklistWithTeamTraining = buildSessionFeedbackPayload({
 ok('team-training duration and effort ride the same checklist result',
   checklistWithTeamTraining?.teamTraining?.durationMinutes === 95
     && checklistWithTeamTraining.teamTraining.effort === 4);
-ok('team-training effort accepts only the shared 1-5 scale',
+// MOVED WITH THE SCALE, 2026-08-12. This pinned 6 as out-of-range, which was
+// true while the shared scale was 1-5 and is the exact claim Sam's "1-10
+// everywhere" ruling reverses. The boundary is what the cell is for, so it
+// keeps one — at the new edge.
+ok('team-training effort accepts the shared 1-10 scale, and nothing past it',
   parseTeamTrainingSessionOutcome(teamTrainingMeasurement)?.effort === 4
-    && parseTeamTrainingSessionOutcome({ ...teamTrainingMeasurement, effort: 6 }) === null);
+    && parseTeamTrainingSessionOutcome({ ...teamTrainingMeasurement, effort: 6 })?.effort === 6
+    && parseTeamTrainingSessionOutcome({ ...teamTrainingMeasurement, effort: 10 })?.effort === 10
+    && parseTeamTrainingSessionOutcome({ ...teamTrainingMeasurement, effort: 11 }) === null);
 
 console.log('\n[3] The live screen uses controlled chevrons and checkboxes');
 const screen = fs.readFileSync(path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'), 'utf8');

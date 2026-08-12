@@ -1,3 +1,4 @@
+import { isEffortRating } from '../rules/effortScale';
 import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
 import type { SessionComponentKind } from '../utils/sessionComponents';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
@@ -110,7 +111,9 @@ export function parseTeamTrainingSessionOutcome(
   if (!Number.isInteger(candidate.durationMinutes) || Number(candidate.durationMinutes) <= 0) {
     return null;
   }
-  if (!Number.isInteger(candidate.effort) || Number(candidate.effort) < 1 || Number(candidate.effort) > 5) {
+  // Same owner as the game rating above — see there for why this is not a
+  // literal range.
+  if (!isEffortRating(candidate.effort)) {
     return null;
   }
   return {
@@ -127,7 +130,11 @@ export function parseGameSessionOutcome(value: unknown): GameSessionOutcome | nu
   if (!Number.isInteger(candidate.timeOnGroundMinutes) || Number(candidate.timeOnGroundMinutes) <= 0) {
     return null;
   }
-  if (!Number.isInteger(candidate.bodyRpe) || Number(candidate.bodyRpe) < 1 || Number(candidate.bodyRpe) > 5) {
+  // THE ONE SCALE, ASKED — never re-stated as a literal range here. Sam moved
+  // every effort input to 1-10 on 2026-08-12, and this validator kept refusing
+  // 6 while the slider above it offered 10: the UI would have collected an
+  // answer the transaction silently threw away. One owner, both ends.
+  if (!isEffortRating(candidate.bodyRpe)) {
     return null;
   }
   const feel = parseFeedbackGameFeel(candidate.feel);

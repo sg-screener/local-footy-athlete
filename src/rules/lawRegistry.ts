@@ -488,7 +488,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-session-execution-checklist-owns-completion',
-    law: 'A live session uses one shared collapsible section shell and the same vertically centred square checkbox for every exercise or unit. Mobility / Warm-up and Strength use the same exercise-card owner for numbering, sets and reps, form cues, performed-load controls and video; accessories and prehab are rows inside Strength, and Team Training expands to a plain checklist row labelled Club session rather than a second card. Checked rows visibly recede; those ticks are the sole completion evidence and persist with one whole-session 1-5 effort score. Mobility is prescribed with no optional wording; separately authored Optional Work remains no-penalty.',
+    law: 'A live session uses one shared collapsible section shell and the same vertically centred square checkbox for every exercise or unit. Mobility / Warm-up and Strength use the same exercise-card owner for numbering, sets and reps, form cues, performed-load controls and video; accessories and prehab are rows inside Strength, and Team Training expands to a plain checklist row labelled Club session rather than a second card. Checked rows visibly recede; those ticks are the sole completion evidence and persist with one whole-session 1-10 effort score. Mobility is prescribed with no optional wording; separately authored Optional Work remains no-penalty.',
     ruledAt: 'NOT STATED IN THE REPO — Sam, 2026-08-11 in this Codex task: "each component of the session should be its own pop down"; exercises are checked as they are done; completion is derived from the ticks; the bottom feedback is 1-5, where 1 is very easy and 5 is very hard. UPDATED by Sam 2026-08-11 in this Codex task: "Don\'t make the mobility warm-up optional - just have it there and they can mark as skipped or not skipped - just like they would do with strength work - so remove optional wording"; and "in the session view under team training it says club/field session it should just say Club session". This guarded registry row is the durable ruling site.',
     guard: {
       state: 'guarded',
@@ -1207,24 +1207,24 @@ export const LAW_REGISTRY: readonly LawRow[] = [
   },
   {
     id: 'LAW-game-feedback-shared-outcome-door',
-    law: 'Scheduled games and practice matches save one complete match result through the regular dated session-outcome transaction, use the shared 1–5 effort scale, and recording it does not change the program.',
+    law: 'Scheduled games and practice matches save one complete match result through the regular dated session-outcome transaction, use the shared 1-10 effort scale, and recording it does not change the program.',
     ruledAt: 'Sam 2026-08-11; docs/GAME_FEEDBACK_OWNERSHIP_REASSESSMENT_2026-08-11.md',
     guard: {
       state: 'guarded',
       by: 'test:game-feedback',
       chainStatus: 'in_chain',
-      receipt: 'BUILT WITH THE RULING 2026-08-11; UPDATED WITH SAM\'S SAME-DAY SCALE CHANGE. The real accepted transaction is driven with a game-classified visible workout and a complete result (whole/part, time on ground, 1-5 body effort, 1-5 feel). The suite asserts five visible effort choices, the exact anchors, and that the payload survives adapter, normalization and durable feedback publication unchanged; a non-game refuses it; an out-of-range 6 refuses; no legacy standalone field is written; and program content, modifiers and injury state remain unchanged. The same UI component selects this path from the existing session taxonomy, whose Game category covers both scheduled and practice fixtures.',
+      receipt: 'BUILT WITH THE RULING 2026-08-11; UPDATED WITH SAM\'S SAME-DAY SCALE CHANGE. The real accepted transaction is driven with a game-classified visible workout and a complete result (whole/part, time on ground, body effort — 1-5 then, 1-10 since 2026-08-12 — and a 1-5 feel, which is a DIFFERENT scale and did not move). UPDATED AGAIN 2026-08-12 WITH SAM\'S 1-10 SCALE AND SLIDER RULINGS. The suite asserts the effort SLIDER (the chips could not hold ten choices on one row), the exact anchors, and that the payload survives adapter, normalization and durable feedback publication unchanged; a non-game refuses it; an out-of-range 11 refuses (6 is now LEGAL and the cell that pinned it moved); no legacy standalone field is written; and program content, modifiers and injury state remain unchanged. The same UI component selects this path from the existing session taxonomy, whose Game category covers both scheduled and practice fixtures.',
     },
   },
   {
     id: 'LAW-team-training-measured-load',
-    law: 'A performed Team Training component asks duration and its own 1–5 effort, and stores both on the same dated session result; a skipped component stores neither.',
+    law: 'A performed Team Training component asks duration and its own 1-10 effort, and stores both on the same dated session result; a skipped component stores neither.',
     ruledAt: 'Sam 2026-08-11; docs/COPY_SHEET_RULINGS_2026-07-30.md §18-b-ii',
     guard: {
       state: 'guarded',
       by: 'test:session-execution-checklist + test:game-feedback',
       chainStatus: 'in_chain',
-      receipt: 'BUILT WITH THE RULING 2026-08-11. The execution gate proves the questions appear only when Team Training was performed, both fields are required, effort is 1-5, and the form builds one checklist result containing the measurement. The transaction gate then drives a real team-classified workout and proves the measurement survives the tap adapter, accepted transaction, dated feedback store and durable program envelope.',
+      receipt: 'BUILT WITH THE RULING 2026-08-11. The execution gate proves the questions appear only when Team Training was performed, both fields are required, effort is 1-10 (raised 2026-08-12), and the form builds one checklist result containing the measurement. The transaction gate then drives a real team-classified workout and proves the measurement survives the tap adapter, accepted transaction, dated feedback store and durable program envelope.',
     },
   },
   {
