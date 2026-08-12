@@ -102,3 +102,36 @@ Leftover `.git/objects/*/tmp_obj_*` files are harmless — git prunes them.
 seat's writes are read from DISK by the terminal, so an uncommitted doc is
 already live. Commit only at a terminal stop, and only when the durability is
 worth the toll.
+
+## THE THIRD SIGHTING — MEASURE BEFORE YOU PARK A QUESTION ON SAM
+
+**Added 2026-08-12 after it happened three times in one day.** Every time, the
+seat wrote a DECISION OWED under `## AWAITING SAM`, Sam answered — and the
+answer showed the question itself had been wrong, because a measurement nobody
+took would have dissolved it:
+
+1. **"Does a game's minutes count as training load?"** The app had *already been
+   asking* the athlete both halves — duration at `SessionFeedbackPanel.tsx:383`,
+   effort at `:415`, both validated on the way in and read by nothing. Sam's
+   answer was *"don't we already do that?"* **He was right, and one grep would
+   have said so before the question was written.**
+2. **"Should a second game field land on the profile, or are two-game weeks out
+   of scope?"** Neither. The engine had been multi-fixture since the waist was
+   unpinched; the real defect was `useHomeScreen.ts:1315` — the add-a-game
+   control **only exists in pre-season**, and the in-season copy for it was
+   already written for a mode nothing could enter. **Sam found this from the
+   couch, phrased as a question, because the seat had framed it as data
+   modelling instead of looking at the button.**
+3. **"Which measure should experienced load show?"** Sam's own earlier ruling
+   plus the 1-10 effort scale had already collapsed the fork. The item was
+   re-measured and the "asymmetry reserved for Sam" **no longer existed.**
+
+**THE RULE, and it is cheap: before writing a DECISION OWED, run the one command
+that would prove the question is already answered.** Does the field exist? Does
+the control exist? Does a ruling of his already cover it? **A question parked on
+Sam costs him a turn and costs the queue a night; a grep costs one call.**
+
+**IT IS NOT A BAN ON ASKING.** The moderate-day generation target is a real
+coaching decision no measurement can settle, and it is still correctly parked.
+**The test is whether the answer lives in the codebase or in Sam's head.** Only
+the second kind is his.

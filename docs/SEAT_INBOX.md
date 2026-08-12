@@ -956,6 +956,70 @@ phone.** State device items as PARKED in a stop report, never as a request.
     reading of *why* the wording was bad, not a second ruling by him. **If he
     wants his sentence used for BOTH causes, say so and the rest branch goes.**
 
+21. **SAM HAS RULED — AND HE REFUSED THE QUESTION'S PREMISE. A TEAM NIGHT'S
+    STRENGTH SESSION IS A NORMAL STRENGTH SESSION.** Item 14 asked whether a
+    team night has its own smallest size, offering "(a) no floor" or "(b) N".
+    **Sam, 2026-08-13, chose NEITHER:** *"no it should be a regular strength
+    session on team nights? so whatever it normally is thats what it should be
+    ... it makes no difference in the plan if it is conditioning vs team
+    training - the only difference is the type of work done before it ie
+    preferably not lower body before training or sprinting but it can take
+    place if thats the only room for it"*.
+
+    **SO THERE IS NO TEAM-NIGHT SIZE RULE, BECAUSE A TEAM NIGHT IS NOT A SIZE
+    CASE.** The strength session on a team night is **the same session it would
+    be on any other day**. `SESSION_SIZE_FLOOR` needs no team-night exception in
+    either direction: not a lower floor, not a special N. **The measurement that
+    found 26 of 32 team nights under 4 did not find a correct smallness — it
+    found a DEFECT, and this ruling is what makes it one.**
+
+    **THE ONE REAL DIFFERENCE IS ORDER, NOT SIZE, AND IT IS A PREFERENCE:**
+    prefer not to place **lower body or sprint work before team training** —
+    **but place it there when that is the only room in the week.** That is Sam's
+    standing shape (*"nothing so tight that ..."*) applied to this day: a lean,
+    never a block, and the week's total work is not cut to honour it.
+
+    **AND THE BIBLE ALREADY SAYS THIS — DO NOT AUTHOR A RIVAL RULE.**
+    `testingBias.ts:52-53` cites it: *"Upper strength can stay in year-round. It
+    can often be placed before team training or closer to game day than lower
+    strength."* **Sam's sentence and the Bible's line are the same rule.** Wire
+    the existing one; a second copy is a second thing to drift.
+
+    **BLOCKED BY STAND-DOWN D — THIS IS GENERATION. MEASURE NOW, BUILD WHEN THE
+    GENERATOR IS FREE.** Two measurements, both cheap, both owed before any
+    edit, because the last four attempts at generator work each hunted a cause
+    that was not there:
+
+    **(i) WHY are team nights small?** The size comes from the TEMPLATE —
+    `sessionBuilder.ts:718`, `exerciseCount = templateWorkout.exercises.length
+    || 5` — not from a team-night branch anyone wrote. **So find whether the
+    counted rows INCLUDE the team-training row itself** (a 4-row team night
+    would then be 1 team row + a 3-exercise lift, and a "2-row" night is a
+    single exercise), **or whether the templates chosen for team days are
+    genuinely authored smaller.** Those are different defects with different
+    fixes and the report must say which. **Count strength rows only, using the
+    same 120-session harness, and print one team night in full.**
+
+    **(ii) DOES THE UPPER-BEFORE-TEAM-TRAINING PREFERENCE EXIST TODAY, and is it
+    a lean or a block?** If it does not exist, say so plainly rather than
+    assuming the Bible line is wired. If it exists as a BLOCK, that is a second
+    defect under the same ruling: Sam said *"it can take place if thats the only
+    room for it"*.
+
+    **THEN BUILD, WHEN D LIFTS:** the team night's strength session is generated
+    at normal size, and the upper-before-training lean is a preference the
+    selector can overrule when the week has no other room. **Registry row.
+    Behavioural cells, not source greps** — the 120-session distribution is the
+    instrument, and the proof is that team nights join strength and mixed days
+    in the 4-6 band **without the other two moving.**
+
+    **⚠ THIS CHANGES GENERATED PROGRAMS.** It is not a tidy-up. Re-run the 17 QA
+    scenarios before and after and report both numbers; if the craft score
+    falls, STOP and report rather than tuning it back.
+
+    **CLOSES the `## AWAITING SAM` entry "does a TEAM-TRAINING night have a
+    smallest size?" — strike it, do not leave two answers in the file.**
+
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
 addressable then walk it; the harvest ratchet and a computed tap atlas.
@@ -995,20 +1059,12 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **DECISION OWED — does a TEAM-TRAINING night have a smallest size? (item 14,
-  2026-08-13.)** **This is one word from him and the code has nowhere else to
-  get it.** Measured first, so it is not a fishing question: across 120
-  generated sessions, **strength days run 5-6 exercises and mixed days 4-6 —
-  neither ever smaller.** The only sessions under 4 are **team-training nights,
-  which run 2 to 4** ("Team Training + Lower Body Strength"). That may be exactly
-  right — he is already at the club that night — which is why nothing was
-  changed. **The app currently uses 4 as a floor everywhere, and NOBODY
-  AUTHORED THAT NUMBER**; it was invented inside one file and has now been moved
-  somewhere visible and labelled as unauthored. **Two answers close it: (a) a
-  team night has no floor, small is correct; (b) a team night's smallest is N.**
-  Until then the app also does NOT tell the AI a minimum — telling it an
-  invented number would make it law by accident.
-
+- **ANSWERED 2026-08-13, NOW ITEM 21 — the team-night size question is
+  CLOSED and its premise refused.** Sam: a team night's strength session is
+  **a normal strength session**; the only difference is ORDER (prefer not to
+  put lower body or sprint work before training, but allow it when that is
+  the only room). **No team-night floor, in either direction. Do not
+  re-ask.**
 - The Wednesday game-day check (`06401d92`), the Renee UI pass, and the craft
   tier's hydration relocation are all **BUILT, awaiting device acceptance**.
   When he rebuilds, the white screen after a refused dev launch is expected and
