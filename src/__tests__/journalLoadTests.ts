@@ -61,6 +61,7 @@ import {
   type JournalLoadConstant,
   type JournalLoadModel,
   teamTrainingSRPE,
+  gameSRPE,
   type JournalLoadSessionInput,
   type PlannedLift,
 } from '../rules/journalLoad';
@@ -1020,6 +1021,70 @@ ok('a day that was not a team night produces no number',
   const without = deriveSessionLoad({ date: '2026-07-14', strength: [], conditioning: null });
   ok('a day with no team night produces no team-night number',
     without.teamTrainingSRPE === null && without.measured === false);
+}
+
+// ── THE GAME'S OWN LOAD (seat item 17, Sam ruled 2026-08-12) ──────────────
+//
+// The question sat under AWAITING SAM since item 6. Sam: *"yes don't we do 'how
+// long was your game?' and multiply by game RPE for a score that counts toward
+// load?"* — and the app already asked both halves, validated both, and read
+// NEITHER. FULL, NOT WEIGHTED: he was given full / discounted / excluded and
+// chose full, so no coefficient appears here or in the rule.
+ok('a rated game produces sRPE in the same unit as the other three',
+  gameSRPE({ bodyRpe: 8, timeOnGroundMinutes: 100, playedWholeGame: true, feel: 3 }) === 800,
+  gameSRPE({ bodyRpe: 8, timeOnGroundMinutes: 100, playedWholeGame: true, feel: 3 }));
+// THE RULING IS FULL, AND THIS IS THE CELL THAT WOULD CATCH A DISCOUNT. A
+// weighting is a Bible change, not a tweak, so a coefficient smuggled in later
+// reds here rather than quietly shrinking every athlete's game load.
+ok('a game is counted FULL — no weighting is applied to the minutes',
+  gameSRPE({ bodyRpe: 5, timeOnGroundMinutes: 120, playedWholeGame: true, feel: 3 })
+    === 5 * 120);
+// HALF A MEASUREMENT IS NOT A MEASUREMENT — the rule both siblings live by. A
+// game the athlete never rated must not read as a LIGHT game.
+ok('a game with no minutes is unmeasured, not half-counted',
+  gameSRPE({ bodyRpe: 8, timeOnGroundMinutes: 0, playedWholeGame: false, feel: 3 } as never)
+    === null);
+ok('a game with no body RPE is unmeasured, not half-counted',
+  gameSRPE({ bodyRpe: 0, timeOnGroundMinutes: 90, playedWholeGame: true, feel: 3 } as never)
+    === null);
+ok('a day that was not a game produces no number', gameSRPE(null) === null);
+
+{
+  const derived = deriveSessionLoad({
+    date: '2026-07-18', strength: [], conditioning: null,
+    game: { bodyRpe: 9, timeOnGroundMinutes: 80, playedWholeGame: false, feel: 3 },
+  });
+  ok('the derived session carries the game', derived.gameSRPE === 720, derived.gameSRPE);
+  // A GAME DAY IS THE ONE THE ATHLETE IS MOST LIKELY TO NOTICE MISSING from the
+  // week's coverage, which is why the flag matters more here than anywhere.
+  ok('a game the athlete rated in full counts as measured', derived.measured === true);
+  const without = deriveSessionLoad({ date: '2026-07-18', strength: [], conditioning: null });
+  ok('a day with no game produces no game number',
+    without.gameSRPE === null && without.measured === false);
+  // THE FOUR ARE INDEPENDENT: a game must not be mistaken for a team night by
+  // any reader, so one day carrying both keeps both numbers distinct.
+  const both = deriveSessionLoad({
+    date: '2026-07-18', strength: [], conditioning: null,
+    teamTraining: { effort: 6, durationMinutes: 75 },
+    game: { bodyRpe: 9, timeOnGroundMinutes: 80, playedWholeGame: false, feel: 3 },
+  });
+  ok('a game and a team night on one day stay separate numbers',
+    both.gameSRPE === 720 && both.teamTrainingSRPE === 450,
+    `${both.gameSRPE} / ${both.teamTrainingSRPE}`);
+
+  // A READER THAT STOPS AT `deriveSessionLoad` IS THE DEFECT ITEM 10 EXISTS TO
+  // CATCH — and it is exactly how both halves of a game sat validated and unread
+  // for as long as they did. The derivation above is worth nothing if the screen
+  // never hands it the game, so the PRODUCER is asserted too. A source scan
+  // because the wiring is the claim: the input the screen builds must carry the
+  // field, not merely be capable of carrying it.
+  const producer = readFileSync(
+    join(__dirname, '..', 'screens', 'journal', 'JournalScreen.tsx'), 'utf8');
+  ok('the journal producer was actually read', producer.length > 4000, producer.length);
+  ok('the journal producer hands the game to the load model',
+    /game:\s*feedback\?\.game\s*\?\?\s*null/.test(producer),
+    'JournalScreen builds JournalLoadSessionInput without `game` — the number is '
+    + 'computed and never fed, which is the defect this item names');
 }
 
 console.log(`\njournalLoadTests: ${pass} passed, ${fail} failed`);

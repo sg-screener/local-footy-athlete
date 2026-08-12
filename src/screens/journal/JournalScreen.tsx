@@ -1475,6 +1475,10 @@ export default function JournalScreen() {
         // THE TEAM NIGHT'S OWN LOAD, which the athlete has been supplying all
         // along and nothing has ever read (seat item 6).
         teamTraining: feedback?.teamTraining ?? null,
+        // THE GAME'S OWN LOAD, same story and ruled 2026-08-12: both halves have
+        // been collected and validated since the game form shipped, and this is
+        // the line that finally reads them.
+        game: feedback?.game ?? null,
       }));
 
     // THE PLAN HALF OF LAYER 4, read off the same resolved week the rest of the

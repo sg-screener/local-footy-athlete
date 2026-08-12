@@ -59,7 +59,7 @@ import {
   type MainStrengthPattern,
 } from './strengthPatternContributions';
 import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
-import type { TeamTrainingSessionOutcome } from '../types/sessionOutcome';
+import type { GameSessionOutcome, TeamTrainingSessionOutcome } from '../types/sessionOutcome';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 
 // ─── Provenance ──────────────────────────────────────────────────────────
@@ -270,6 +270,8 @@ export interface JournalLoadSessionInput {
   readonly conditioning: ConditioningPerformanceLog | null;
   /** The team-training result as stored, or null when the day was not one. */
   readonly teamTraining?: TeamTrainingSessionOutcome | null;
+  /** The post-match result as stored, or null when the day was not a game. */
+  readonly game?: GameSessionOutcome | null;
 }
 
 export interface BuildJournalLoadInput {
@@ -310,6 +312,11 @@ export interface JournalSessionLoad {
   readonly conditioningSRPE: number | null;
   /** sRPE AU for team training — the same unit, from the same two halves. */
   readonly teamTrainingSRPE: number | null;
+  /**
+   * sRPE AU for a game — the same unit again, FULL and never weighted (Sam,
+   * 2026-08-12). Null means the athlete did not supply both halves.
+   */
+  readonly gameSRPE: number | null;
   /** Lifts whose tonnage could not be computed — reported, never assumed zero. */
   readonly liftsUnmeasured: number;
   /** True when either stream produced a number. */
@@ -541,10 +548,8 @@ export function conditioningSRPE(log: ConditioningPerformanceLog | null): number
  * a value computed and never consumed (`achievedModerateDayCount`,
  * `canOverride`, this). `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md` §6.
  *
- * A GAME IS DELIBERATELY NOT HERE. It stores both halves as well
- * (`bodyRpe`, `timeOnGroundMinutes`), but whether a match's minutes count as
- * full training load or a weighted one is a coaching question nobody has ruled,
- * and inventing a weighting here would be this file making it.
+ * A GAME IS HERE NOW — see `gameSRPE` below. This comment used to say a game
+ * was deliberately absent because nobody had ruled it. Sam ruled it 2026-08-12.
  */
 export function teamTrainingSRPE(outcome: TeamTrainingSessionOutcome | null): number | null {
   if (!outcome) return null;
@@ -552,6 +557,38 @@ export function teamTrainingSRPE(outcome: TeamTrainingSessionOutcome | null): nu
   const minutes = positive(outcome.durationMinutes);
   if (effort === null || minutes === null) return null;
   return effort * minutes;
+}
+
+/**
+ * A game's sRPE AU — the athlete's body RPE times the minutes they were on.
+ *
+ * RULED BY SAM, 2026-08-12, after the question sat open under AWAITING SAM since
+ * seat item 6: *"yes don't we do 'how long was your game?' and multiply by game
+ * RPE for a score that counts toward load?"* — and the app already asked both
+ * halves. `SessionFeedbackPanel` collects the duration and the 1-10 body RPE,
+ * `parseGameSessionOutcome` validates both at the transaction boundary, and
+ * until this function existed **nothing read either one.**
+ *
+ * FULL, NOT WEIGHTED, AND THAT IS THE RULING RATHER THAN THIS FILE'S CHOICE.
+ * Sam was given the three options — full, discounted, or excluded — and chose
+ * full: a game's minutes count in the same unit as every other session's. So
+ * there is no coefficient here, and adding one later is a Bible change, not a
+ * tweak. The earlier comment in `teamTrainingSRPE` said the opposite because
+ * the question was genuinely open; it was replaced in the same commit that
+ * closed it, because a stale comment beside a live reader is what sent four
+ * previous measurements down the wrong path.
+ *
+ * SAME SHAPE AS ITS TWO SIBLINGS, INCLUDING THE PART THAT REFUSES: both halves
+ * are stored and both are optional, so a game missing either is UNMEASURED
+ * rather than half-counted. A game the athlete never rated must not read as a
+ * light game.
+ */
+export function gameSRPE(outcome: GameSessionOutcome | null): number | null {
+  if (!outcome) return null;
+  const rpe = positive(outcome.bodyRpe);
+  const minutes = positive(outcome.timeOnGroundMinutes);
+  if (rpe === null || minutes === null) return null;
+  return rpe * minutes;
 }
 
 // ─── Layer 3: the region distribution ────────────────────────────────────
@@ -686,6 +723,7 @@ export function deriveSessionLoad(
   }
 
   const teamSrpe = teamTrainingSRPE(session.teamTraining ?? null);
+  const matchSrpe = gameSRPE(session.game ?? null);
   const srpe = conditioningSRPE(session.conditioning);
   if (srpe !== null && session.conditioning) {
     const muscles = conditioningSessionMuscles({
@@ -708,11 +746,16 @@ export function deriveSessionLoad(
     strengthMainLiftTonnageKg,
     conditioningSRPE: srpe,
     teamTrainingSRPE: teamSrpe,
+    gameSRPE: matchSrpe,
     liftsUnmeasured,
     // A TEAM NIGHT THE ATHLETE RATED IS A MEASURED SESSION. Leaving it out of
     // this flag would have the week report "unmeasured" for a day whose load
-    // the athlete supplied in full.
-    measured: strengthMeasuredLifts > 0 || srpe !== null || teamSrpe !== null,
+    // the athlete supplied in full. A RATED GAME IS THE SAME (Sam, 2026-08-12) —
+    // and a game day is the one the athlete is most likely to notice missing.
+    measured: strengthMeasuredLifts > 0
+      || srpe !== null
+      || teamSrpe !== null
+      || matchSrpe !== null,
     regions,
     patternTonnageKg,
     upperLowerTonnageKg: upperLower,
