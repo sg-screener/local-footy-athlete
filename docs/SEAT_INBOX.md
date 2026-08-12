@@ -200,7 +200,23 @@ his instruction is standing authority, not history.**
       noise. **Capture it from Metro's output** (`/tmp/qa-metro.log` when
       `lfa:dev` starts it; the current Metro belongs to an `expo run:ios` a
       human started, so its console is in that terminal).
-    **THEN read it, do not guess it.** Two guesses were
+    - **CAPTURED 2026-08-13 ON A SECOND METRO** (`npx expo start --dev-client
+      --port 8082` with its console to a file, then the flow with
+      `E2E_METRO_URL=…:8082` — the running Metro belongs to a human-started
+      `expo run:ios` whose console is unreadable from here). **The scoped regen
+      DOES run on device:** Metro shows `[ProgramGen] … completing from
+      deterministic plan` and `[WorkoutCanonicalisation] Generated workout
+      finalised` for days 2, 3 and 4 of the away week.
+    - **AND THE REFUSAL IS SILENT.** Nothing in Metro's output mentions
+      verification, the ledger, the candidate or §18 — no error, no warning.
+      **So generation succeeds and the commit is rejected afterwards without
+      saying why.** That puts it in `verifyCandidate` /
+      `assertAcceptedVisibleLedgerEquivalence` inside
+      `temporarySourceFactTransaction` — the only step between a finished regen
+      and the athlete's sentence. **The next act is to make that step SAY its
+      reason** (it returns a typed `reason` already; nothing logs it), then read
+      it. **THAT is the reading job — and a refusal with no reason on the wire
+      is itself the defect underneath this one.** Two guesses were
     already wrong today: narrowing L4b (broke two more cells, and was loosening a
     law to fit a change) and filtering travel out of the read-time projection
     (fixed L4b and broke the commit's ledger-equivalence, which is what produced
