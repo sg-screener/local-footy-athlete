@@ -48,8 +48,11 @@ registerSignedCopy([
   // `light` sat here and read as a second way of saying `easy` — Sam:
   // *"2 and 3 are the same word twice"*.
   { id: 'effort.3', source: 'sam_ruling', provenance: NAMED, text: 'cruisy' },
-  { id: 'effort.4', source: 'sam_ruling', provenance: APPROVED, text: 'moderate' },
-  { id: 'effort.5', source: 'sam_ruling', provenance: DELOAD_ALIGNED, text: 'comfortable' },
+  // `moderate` sat at 4 and `comfortable` at 5, which read BACKWARDS — a 5 that
+  // sounds easier than the 4 below it. Sam moved `comfortable` down and put
+  // `normal` at 5, 2026-08-12.
+  { id: 'effort.4', source: 'sam_ruling', provenance: NAMED, text: 'comfortable' },
+  { id: 'effort.5', source: 'sam_ruling', provenance: NAMED, text: 'normal' },
   { id: 'effort.6', source: 'sam_ruling', provenance: DELOAD_ALIGNED, text: 'steady' },
   { id: 'effort.7', source: 'sam_ruling', provenance: NAMED, text: 'hard' },
   { id: 'effort.8', source: 'sam_ruling', provenance: APPROVED, text: 'very hard' },
