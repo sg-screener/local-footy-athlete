@@ -61,6 +61,7 @@ import {
   workoutTypeForCategory,
   type AthleteConditioningCategory,
   type ConditioningRole,
+  codDecelPermitted,
 } from '../rules/conditioningSelection';
 import { selectPowerExercise } from '../rules/powerExercisePool';
 import {
@@ -1972,10 +1973,26 @@ export function buildWorkoutsFromCoach(
       offFeet: planEntry.conditioningOffFeet === true || legSparingOffFeet || undefined,
       availableMachines,
       role: selectionRole,
-      // THE GATE THAT WAS DEAD TWICE. `availability_gate_no_team_training` has
-      // sat on the four COD templates since they were authored and NO caller
-      // ever passed this flag, so the filter could never open.
-      noTeamTrainingWeek: (onboardingData?.teamTrainingDays?.length ?? 0) === 0,
+      // THE GATE THAT WAS DEAD TWICE, AND THEN READ THE WRONG THING.
+      // `availability_gate_no_team_training` sat on the four COD templates since
+      // they were authored with NO caller passing the flag, so the filter could
+      // never open. It was then wired to
+      // `onboardingData.teamTrainingDays.length === 0` — the athlete's STANDING
+      // PROFILE, not a fact about THIS WEEK. A club athlete's list is non-empty
+      // all year, so the gate stayed shut in December for exactly the athlete
+      // Sam's ruling is written for (item 31, measured).
+      //
+      // NOW IT ASKS THE ONE RULE (Sam, 2026-08-13): no team training this week
+      // AND not in season AND past off-season's first four weeks. The week fact
+      // is the PLAN's team days — `weeklyPlan` is what this week actually
+      // contains — so a dated fact that clears team training (the away span
+      // today, the Christmas span when it exists) opens the gate by itself,
+      // which is why the Christmas break needs no case of its own.
+      noTeamTrainingWeek: codDecelPermitted({
+        weekHasTeamTraining: (weeklyPlan ?? []).some((entry) => entry.isTeamDay === true),
+        seasonPhase: onboardingData?.seasonPhase,
+        offseasonSubphase: offseasonSubphase ?? null,
+      }),
     });
     const candidateName = selectedTemplate.name;
 

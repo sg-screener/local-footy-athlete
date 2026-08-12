@@ -97,6 +97,7 @@ import {
   speedTemplateByName,
   templateDurationMinutes,
   templatePrescriptionLine,
+  codDecelPermitted,
 } from '../rules/conditioningSelection';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
@@ -1733,15 +1734,24 @@ function dateForWeekdayInWeekOf(anchorISO: string, dayName: string): string {
 }
 
 /** Is this weekday, in the week containing `anchorISO`, inside a live trip? */
+/**
+ * Does this weekday, IN THE WEEK BEING PLANNED, fall inside one of the spans?
+ *
+ * `until: null` is an OPEN span and covers every date from `from` onward — the
+ * shape the Christmas break arrives in between the December question and the
+ * January one (SEAT_INBOX item 31 part 5). A trip never sends one; an unclosed
+ * break always does until the athlete says the club is back.
+ */
 function weekdayIsAway(
   anchorISO: string | undefined,
   dayName: string,
-  spans: readonly { from: string; until: string }[] | undefined,
+  spans: readonly { from: string; until: string | null }[] | undefined,
 ): boolean {
   if (!anchorISO || !spans?.length) return false;
   const date = dateForWeekdayInWeekOf(anchorISO, dayName);
   return spans.some((span) =>
-    date >= span.from.slice(0, 10) && date <= span.until.slice(0, 10));
+    date >= span.from.slice(0, 10) &&
+    (span.until === null || date <= span.until.slice(0, 10)));
 }
 
 
@@ -4124,12 +4134,23 @@ function buildWeeklyPlan(
      * when slots run short it is the one that does not fit.
      */
     const weekHasTeamTraining = (inputs.teamTrainingDays?.length ?? 0) > 0;
+    // SAM'S RULING, 2026-08-13 (item 31): team training is not the whole gate.
+    // COD is permitted ONLY where there is no team training this week, the
+    // athlete is not in season, and off-season is past its first four weeks —
+    // "No COD required in season for anyone." One rule, two readers: this and
+    // the template filter in defaultProgram both ask `codDecelPermitted`, so
+    // the gate cannot be half-applied at one of them again.
+    const codPermitted = codDecelPermitted({
+      weekHasTeamTraining,
+      seasonPhase: inputs.seasonPhase,
+      offseasonSubphase: offseasonPolicy?.subphase ?? null,
+    });
 
     function autoPlacementCategories(): CondCategory[] {
       const base = categoryPriority.filter((category) =>
         category !== 'sprint' || sprintExposureGate().allowStandaloneSprint,
       ).filter((category) => category !== 'cod_decel');
-      return weekHasTeamTraining ? base : [...base, 'cod_decel'];
+      return codPermitted ? [...base, 'cod_decel'] : base;
     }
 
     /**

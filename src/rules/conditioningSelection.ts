@@ -416,6 +416,70 @@ export interface ConditioningSelectionArgs {
   readonly role?: ConditioningRole;
 }
 
+/**
+ * WHERE COD/DECEL IS ALLOWED AT ALL — SAM'S RULING, 2026-08-13, AS ONE RULE.
+ *
+ * HIS WORDS: *"So the athlete can only do COD work in late off season (after
+ * first 4 weeks of off season), in christmas break or during pre season if no
+ * team trainings (i.e some people play for cash a few hours away from home so
+ * they don't train with the team). No COD required in season for anyone."*
+ * And the premise underneath it: *"off season means NO team training, the
+ * christmas break is essentially an off season inside pre season - there is
+ * never team trainings here so these are the only times COD may be useful"*.
+ *
+ * WRITTEN AS ONE RULE, NOT THREE PHASE BRANCHES, BECAUSE HE ASKED FOR THAT AND
+ * BECAUSE IT IS TRUE: no team training this week AND not in season AND not the
+ * first four weeks of off-season. The three cases he named fall out of it —
+ * late off-season, pre-season without a club, and the Christmas break, which
+ * needs no case of its own precisely because it IS "pre-season with no team
+ * training this week". A phase list would have needed a fourth branch and a new
+ * phase; this needs neither.
+ *
+ * "AFTER FIRST 4 WEEKS" IS ALREADY THE CLOCK'S VOCABULARY — `early_offseason`
+ * is weeks 1-2 and `mid_offseason` 3-4 (`seasonPhaseClock.ts:72-74`), so
+ * `late_offseason` IS "after the first four weeks". Nothing new is minted.
+ * The reason the first four weeks are excluded is RECOVERY, not team training.
+ *
+ * CLOSED WHEN THE PHASE IS UNKNOWN. COD is the category Sam calls "cut first";
+ * offering it because we could not tell what phase an athlete is in would be
+ * the least-informed state behaving as the most confident one.
+ */
+/*
+ * WRITTEN AS AN ALLOWLIST, AND A SURVIVING MUTANT IS WHY.
+ *
+ * The first cut opened with `if (seasonPhase === 'In-season') return false;` —
+ * the clearest line in Sam's ruling, spelled out. Deleting that whole branch
+ * changed NOTHING and no cell reddened: in-season is neither of the two
+ * permitted phases, so it was already refused by the closing `return false`.
+ * The branch was decoration, and a cell asserting "in season is refused" passed
+ * with or without it.
+ *
+ * So the refusal is stated the only way that can rot: as the DEFAULT. Every
+ * phase is refused unless it is named here, which means a new phase, a typo, or
+ * a missing value is CLOSED rather than open — and the mutation that flips this
+ * default reds immediately. "No COD required in season for anyone" is now held
+ * by the shape of the function instead of by a line that could be deleted
+ * without consequence.
+ */
+export function codDecelPermitted(args: {
+  /** Does THIS WEEK carry team training — not "does this athlete have a club". */
+  readonly weekHasTeamTraining: boolean;
+  readonly seasonPhase: string | null | undefined;
+  readonly offseasonSubphase: string | null | undefined;
+}): boolean {
+  // The club does the change of direction. True in every phase, so it leads.
+  if (args.weekHasTeamTraining) return false;
+  // Off-season: only past the first four weeks — those are recovery, and that,
+  // not team training, is why they are excluded.
+  if (args.seasonPhase === 'Off-season') return args.offseasonSubphase === 'late_offseason';
+  // Pre-season without a club — his "some people play for cash a few hours away
+  // from home". The Christmas break arrives here too, as pre-season whose week
+  // has had its team training cleared.
+  if (args.seasonPhase === 'Pre-season') return true;
+  // IN-SEASON, AND EVERY PHASE NOBODY HAS INVENTED YET.
+  return false;
+}
+
 /** Parsed low end of the authored total session time, or null. */
 function totalMinutesLow(template: ConditioningTemplate): number | null {
   const parsed = parseConditioningDose(template.totalSessionTime);

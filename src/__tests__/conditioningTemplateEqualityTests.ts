@@ -49,6 +49,7 @@ import {
   poolForCategoryPublic,
   renderableModalities,
   longestWorkIntervalMinutes,
+  codDecelPermitted,
 } from '../rules/conditioningSelection';
 
 let passed = 0;
@@ -684,6 +685,59 @@ ok(
         modalityNotes: 'All 5 modalities.', workPeriod: '8 min continuous',
       } as never).length === 5);
   }
+}
+
+// ── SAM'S COD WINDOW, RULED 2026-08-13 (item 31) ────────────────────────────
+//
+// "So the athlete can only do COD work in late off season (after first 4 weeks
+// of off season), in christmas break or during pre season if no team trainings
+// ... No COD required in season for anyone."
+//
+// He asked for ONE RULE rather than three phase branches, so these assert the
+// rule and then assert his three named cases FALL OUT of it.
+{
+  const permitted = (
+    weekHasTeamTraining: boolean,
+    seasonPhase: string | null | undefined,
+    offseasonSubphase: string | null | undefined,
+  ) => codDecelPermitted({ weekHasTeamTraining, seasonPhase, offseasonSubphase });
+
+  ok('[COD] late off-season with no team training is PERMITTED',
+    permitted(false, 'Off-season', 'late_offseason') === true);
+  ok('[COD] pre-season with no team training is PERMITTED — "some people play for cash"',
+    permitted(false, 'Pre-season', null) === true);
+  // The Christmas break needs no case of its own: it IS pre-season with the
+  // week's team training cleared. That is the whole reason the rule beats a
+  // phase list, so it is asserted rather than assumed.
+  ok('[COD] the Christmas break falls out — pre-season, team training cleared for the week',
+    permitted(false, 'Pre-season', null) === true
+      && permitted(true, 'Pre-season', null) === false);
+
+  // NEVER IN SEASON, FOR ANYONE — including a week with no team training, which
+  // is exactly the case a "no team training" gate alone would have let through.
+  ok('[COD] in season is REFUSED even when the week has no team training',
+    permitted(false, 'In-season', null) === false);
+
+  // THE FIRST FOUR WEEKS ARE RECOVERY. early = weeks 1-2, mid = 3-4.
+  ok('[COD] early off-season is REFUSED', permitted(false, 'Off-season', 'early_offseason') === false);
+  ok('[COD] mid off-season is REFUSED', permitted(false, 'Off-season', 'mid_offseason') === false);
+
+  // TEAM TRAINING SHUTS IT IN EVERY PHASE — the club does the change of
+  // direction. Without this the phase half could pass while the week half rots.
+  ok('[COD] team training this week REFUSES in every phase',
+    permitted(true, 'Off-season', 'late_offseason') === false
+      && permitted(true, 'Pre-season', null) === false
+      && permitted(true, 'In-season', null) === false);
+
+  // CLOSED WHEN THE PHASE IS UNKNOWN. COD is the "cut first" category; the
+  // least-informed state must not be the most permissive one.
+  ok('[COD] an unknown phase is REFUSED, not assumed permissive',
+    permitted(false, undefined, null) === false && permitted(false, null, null) === false);
+
+  // NON-VACUITY: the rule must say YES to something, or every cell above passes
+  // on a function that returns false forever.
+  ok('[COD] the rule is not a constant false',
+    permitted(false, 'Off-season', 'late_offseason') === true);
 }
 
 console.log(
