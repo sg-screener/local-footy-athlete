@@ -524,10 +524,20 @@ phone.** State device items as PARKED in a stop report, never as a request.
    of the FINDINGS did. Two candidates named and ordered in §7 (the craft tier's
    repair search moving sessions; what the gateway accepts as
    `crossWeekFixtureDependency`).
-   **ATTEMPT 2'S FIRST ACT IS A MEASUREMENT, NOT A FIX:** delete the ±7 again
-   and instrument where `crossWeekFixtureDependency` comes from on the failing
-   property. **Nothing is built until that prints** — three attempts have each
-   named a plausible cause and been wrong.
+   **AND THE MEASUREMENT IS TAKEN — §8. THE LOSS IS AT PUBLISH, NOT IN
+   DERIVATION, AND THAT KILLS THE PREMISE OF ALL THREE ATTEMPTS.** Both arms
+   measured: with the ±7 GONE the resolver mints the Sunday→Monday link **30×
+   (vs 23 at HEAD)** and the materialiser sees a Monday carrying it **4× (vs
+   2×)** — **more, not less** — and the property still fails.
+   `repairOptionalRestCandidates` never runs in this suite (0 calls both arms),
+   so §7's second candidate is eliminated too. **`test:craft-tier` is 36/36
+   GREEN with the ±7 removed: the fix is not in question, only what its changed
+   FINDINGS do to the week that gets published.**
+   **REVERTED — nothing shipped without a receipt.**
+   **ATTEMPT 3'S FIRST ACT IS AGAIN A MEASUREMENT:** instrument the overlay
+   publish and print which workout reaches `workoutsByDate[NEXT_WEEK]`, with its
+   provenance, in both arms. **The derivation half is CLOSED — do not re-open
+   it.**
    **NOT STARTED: the deletion itself.**
 
    ~~ORIGINAL~~ **KILL THE ±7 INVENTION — ATTEMPT 1 BUILT, WORKED, AND WAS REVERTED FOR ONE

@@ -314,3 +314,51 @@ one names a MEASUREMENT and the second-wall law is satisfied only by taking it.
 
 **BANKED SO IT IS NOT RE-DERIVED: the dependency record's source is
 `effectiveGameDatesAround`, in every writer, always.**
+
+## §8 ATTEMPT 2's MEASUREMENT — the record is DERIVED in both arms; the loss is at PUBLISH
+
+**Taken 2026-08-12, exactly as §7 prescribed: delete the ±7 again and measure,
+build nothing.** The change was applied (the tier reads a supplied
+`activeFixtureDates` and falls back to ±7 only when it has no authority), the
+failing property reproduced, three probes run in BOTH arms, and **the change was
+then reverted — nothing shipped without a receipt.**
+
+**ARM A** = ±7 removed. **ARM B** = HEAD.
+
+| probe | ARM A (±7 gone) | ARM B (HEAD) |
+| --- | --- | --- |
+| `test:craft-tier` | **36/36 green** | 36/36 green |
+| the property | **FAILS** — "following-week dependency was not committed" | passes (10/10) |
+| resolver MINTS the Sun 19 Jul → Mon 20 Jul `g_plus_1` record | **30×** | 23× |
+| the materialiser SEES a Monday carrying that dependency | **4×** | 2× |
+| `repairOptionalRestCandidates` (the gateway's dependency copier) | **0 calls** | 0 calls |
+
+**READ THE MIDDLE TWO ROWS AGAIN. The link is derived MORE often without the ±7,
+and it reaches the materialiser MORE often, and the property still fails.** Every
+attempt so far has looked for a lost derivation. **There isn't one.**
+
+**AND THE GATEWAY'S COPIER IS NOT ON THIS PATH AT ALL** — it runs only when
+`restShort`, which never fires in this suite. That eliminates the second
+candidate §7 named, without an argument.
+
+**SO THE DEFECT IS DOWNSTREAM OF MATERIALISATION: what gets PUBLISHED into
+`weekScopedOverlays[NEXT_WEEK]`.** The property reads exactly that
+(`workoutsByDate[NEXT_WEEK]`), and the same property asserts in its other half
+that the DECIDED week publishes a declaration with no content — so the publish
+step is already known to make per-week decisions about content. **A different
+craft-finding set changes which candidate the search accepts, and the accepted
+candidate's following-Monday is published without the record even though a
+Monday that carries it was derived.**
+
+**ATTEMPT 3'S FIRST ACT — and it is again a measurement, not a fix:** instrument
+the overlay publish for the following week in both arms and print which workout
+is written to `workoutsByDate[NEXT_WEEK]`, with its provenance. The derivation
+half of this question is now CLOSED and must not be re-opened:
+
+**BANKED, DO NOT RE-DERIVE:**
+- The ±7 does not feed `dependency.source` (§7).
+- The record is derived and materialised in BOTH arms, more often without the
+  ±7 (§8).
+- `repairOptionalRestCandidates` is not on this path (§8).
+- `test:craft-tier` is GREEN with the ±7 removed — the fix itself is not in
+  question; only what the changed findings do to the published week.
