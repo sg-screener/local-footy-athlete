@@ -85,8 +85,7 @@ function HomeScreenClassic() {
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,
     staleByDate,
-    weekHasGame,
-    showAddGameCTA,
+    showAddFixtureCTA,
     currentPhase,
     gameModalVisible,
     gameModalLabel,
@@ -359,8 +358,18 @@ function HomeScreenClassic() {
           })}
         </View>
 
-        {/* ─── No Game This Week — Add One ─── */}
-        {mode.type === 'normal' && !weekHasGame && showAddGameCTA && (
+        {/* ─── Add a fixture ───
+            CARRIED, NOT REDESIGNED (SEAT_INBOX item 19, 2026-08-13). This is
+            `HomeScreenClassic`, which `DESIGN_VERSION = 'v2'` means never
+            renders. It is updated only far enough to keep compiling against the
+            hook's one `showAddFixtureCTA` flag, which replaced `showAddGameCTA`
+            and `showPracticeMatchCTA`. The `!weekHasGame` gate goes because it
+            is the very defect item 19 names — a control that vanishes once the
+            week has one game — and leaving it here would leave a working copy
+            of the bug for whoever revives this screen. Its copy and plus icon
+            are NOT re-styled: a dead screen is not the place to spend Sam's
+            UI decisions. */}
+        {mode.type === 'normal' && showAddFixtureCTA && (
           <TouchableOpacity style={styles.addGameBanner} onPress={handleAddGameMode} activeOpacity={0.7}>
             <View style={styles.addGameIconWrap}>
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">

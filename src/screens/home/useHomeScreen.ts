@@ -13,8 +13,6 @@ import {
 import { getCurrentBlockNumberForGeneration, useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
-import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
-import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { generateProgramFromProfile } from '../../services/api/generateProgram';
 import { classifyProgramGenerationFailure } from '../../utils/onboardingGenerationOutcome';
@@ -23,7 +21,7 @@ import {
   decideSweepForCurrentStores,
 } from '../../utils/weekRebuild';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
-import { selectActiveCoachNotes } from '../../utils/activeCoachNotes';
+import { useActiveModifiers } from '../../hooks/useActiveModifiers';
 import {
   getActiveProgramModifiers,
   type ActiveProgramModifier,
@@ -292,10 +290,13 @@ export function useHomeScreen() {
   const temporarySourceFacts = useProgramStore((s) =>
     s.acceptedMaterialContext.temporarySourceFacts);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
-  const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
-  const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
-  const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
-  const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
+  // `activeInjury`, `dismissedCoachNoteIds`, `athletePrefs` and
+  // `modalityPreferences` were read here ONLY to feed the inline
+  // `selectActiveCoachNotes` memo above. That memo is now `useActiveModifiers`,
+  // which subscribes to the same four itself, so these four reads lost their
+  // last reader in the same edit and go with it — a subscription nothing reads
+  // is not spare capacity, it is a re-render the screen pays for and a fact the
+  // next reader will assume somebody uses.
   const readinessSignalsByDate = useReadinessStore((s) => s.signalsByDate);
   const todayReadinessModifier = useMemo<ActiveProgramModifier | null>(() => {
     const todayISO = todayISOLocal();
@@ -414,30 +415,27 @@ export function useHomeScreen() {
     }
     return undefined;
   }, [blockState, currentPhase, currentProgram, visibleWeekStart]);
-  const coachNotes = useMemo(
-    () => selectActiveCoachNotes({
-      activeConstraints,
-      activeInjury,
-      dismissedCoachNoteIds,
-      athletePrefs,
-      modalityPreferences,
-      onboardingData,
-      readinessSignalsByDate,
-      weekKind: visibleWeekKind,
-      visibleWeekDays: weekDays,
-    }),
-    [
-      activeConstraints,
-      activeInjury,
-      dismissedCoachNoteIds,
-      athletePrefs,
-      modalityPreferences,
-      onboardingData,
-      readinessSignalsByDate,
-      visibleWeekKind,
-      weekDays,
-    ],
-  );
+  /**
+   * THE SAME DERIVATION MY STATUS USES, NOT A SECOND ONE.
+   *
+   * Until 2026-08-13 this was an inline `selectActiveCoachNotes` memo whose
+   * seven store reads and two week inputs were byte-for-byte the ones inside
+   * `useActiveModifiers`. That was survivable while Program only needed the
+   * LIST — but SEAT_INBOX item 16 puts a COUNT on the day and week screens,
+   * and its rule (d) is that the count comes from this hook and never from a
+   * separate tally. Two copies of one selector is `a count taken for a record`
+   * (sighting 14 in this repo): the copies agree until the day one of them is
+   * given a filter the other never hears about.
+   *
+   * So the duplicate is COLLAPSED rather than joined by a third: the strip's
+   * count is `modifiers.length` of the very list `coachNoteActions` acts on and
+   * My Status renders, which is why the number on the day screen cannot
+   * disagree with the list behind it.
+   */
+  const { modifiers: coachNotes, count: modifierCount } = useActiveModifiers({
+    visibleWeekDays: weekDays,
+    weekKind: visibleWeekKind,
+  });
 
   useEffect(() => {
     if (!pendingFixtureObservation) return;
@@ -989,6 +987,19 @@ export function useHomeScreen() {
     navigation.navigate('ProfileTab');
   }, [navigation]);
 
+  /**
+   * THE DAY/WEEK NOTICE IS A DOORWAY, AND THIS IS THE DOOR IT OPENS.
+   *
+   * `status: 'open'` is a NAVIGATION param, not a Coach-private boolean, and
+   * that is the whole reason Program can open My Status at all — cell [9] of
+   * `test:coach-tab-slice3` holds that ownership ("a private Coach boolean
+   * cannot be opened by Program"). `CoachTabScreen` reads the param, opens the
+   * screen, and clears it; Program only has to ask.
+   */
+  const handleOpenMyStatus = useCallback(() => {
+    navigation.navigate('CoachTab', { status: 'open' });
+  }, [navigation]);
+
   const registerSourceFactRenderObservation = useCallback((args: {
     result: ProgramControlActionResult;
     domain: 'readiness' | 'equipment';
@@ -1290,18 +1301,45 @@ export function useHomeScreen() {
 
   // ───────── Add-game CTA ─────────
 
-  const weekHasGame = weekDays.some((d) => d.workout?.workoutType === 'Game');
+  // `weekHasGame` WAS COMPUTED AND RETURNED HERE, AND IT LEFT WITH ITS ONLY
+  // READERS (SEAT_INBOX item 19, 2026-08-13). Both screens used it for one
+  // purpose — hiding the add-a-game control once the week had a game — which is
+  // exactly the behaviour Sam ruled out. A returned field with no reader is not
+  // spare capacity; it is a fact the next surface will trust and re-introduce
+  // the cap by accident. The week's fixtures are still derivable from
+  // `weekDays` by anything that genuinely needs them.
 
   /**
-   * Visibility for the regular-season "No game this week — add one" CTA.
-   * Pre-season practice matches are exposed by a separate tap/edit card so
-   * they can use practice-match copy without duplicating the in-season CTA.
+   * ONE ADD-FIXTURE CONTROL, IN BOTH COMPETITIVE PHASES, AND IT NEVER STOPS
+   * BEING AN *ADD* CONTROL (SEAT_INBOX item 19).
+   *
+   * **Sam, 2026-08-12:** *"no a user should be able to have as many games as
+   * needed in their week"*, pointing straight at the button while he said it.
+   *
+   * WHAT WAS ACTUALLY WRONG — AND IT WAS NOT WHAT THE ORDER SAID. The order
+   * states "in season there is NO add-a-game control at all". Measured
+   * 2026-08-13: there WAS one. It was gated `!weekHasGame`, so it existed on an
+   * empty week and VANISHED the moment the week had a fixture. Pre-season's
+   * card had the same defect wearing different clothes: once a fixture existed
+   * it stopped being a button and became a LABEL for that one fixture, routing
+   * to its actions. **Neither phase had a route to a SECOND game.** The
+   * defect Sam found is real and the fix is the same; the premise was not, and
+   * building against "there is no control" would have added a third card beside
+   * two that already existed.
+   *
+   * SO THE GATE IS THE PHASE AND NOTHING ELSE. No fixture count, no cap, no
+   * warning at three — his words are "as many games as needed", and a week that
+   * gets ugly is the contract's job to disclose, not this button's job to
+   * prevent. Off-season keeps no control, exactly as before.
+   *
+   * TWO FLAGS BECAME ONE because they were one decision wearing two names, and
+   * the copy is not this hook's business: the screen already knows the phase and
+   * picks the words, the way the picker banner above the days already does.
    */
-  const showAddGameCTA = useMemo(() => {
-    return currentPhase === 'In-season';
-  }, [currentPhase]);
-
-  const showPracticeMatchCTA = currentPhase === 'Pre-season';
+  const showAddFixtureCTA = useMemo(
+    () => currentPhase === 'In-season' || currentPhase === 'Pre-season',
+    [currentPhase],
+  );
 
   const handleAddGameMode = () => {
     setMode({ type: 'addGame' });
@@ -1368,11 +1406,11 @@ export function useHomeScreen() {
     staleByDate,
 
     // Week context / derived
-    weekHasGame,
-    showAddGameCTA,
-    showPracticeMatchCTA,
+    showAddFixtureCTA,
     currentPhase,
     coachNotes,
+    modifierCount,
+    handleOpenMyStatus,
     activeConstraints,
     todayReadinessModifier,
     injuryEpisodes,

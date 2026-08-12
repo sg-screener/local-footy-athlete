@@ -16,6 +16,7 @@ import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
+import { ModifiersStrip } from '../../components/ModifiersStrip';
 import { Button, Card, Sheet, Badge } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
@@ -109,11 +110,11 @@ export default function HomeScreenV2() {
     handleLogMissedSession,
     handleSkipMissedSession,
     staleByDate,
-    weekHasGame,
-    showAddGameCTA,
-    showPracticeMatchCTA,
+    showAddFixtureCTA,
     currentPhase,
     coachNotes,
+    modifierCount,
+    handleOpenMyStatus,
     activeConstraints,
     todayReadinessModifier,
     injuryEpisodes,
@@ -150,19 +151,27 @@ export default function HomeScreenV2() {
   } = useHomeScreen();
 
   const isNormal = mode.type === 'normal';
-  const practiceMatchDay = weekDays.find((day) => day.workout?.workoutType === 'Game') ?? null;
-  const practiceMatchLabel = practiceMatchDay
-    ? `Practice match: ${new Date(practiceMatchDay.date + 'T12:00:00').toLocaleDateString('en-AU', {
-        weekday: 'long',
-      })}`
-    : 'Add a pre-season practice match';
-  const handlePracticeMatchPress = () => {
-    if (practiceMatchDay) {
-      handleOpenGameDayActions(practiceMatchDay.date);
-      return;
-    }
-    handleAddGameMode();
-  };
+  /* ── ITEM 19: THE ADD-FIXTURE CONTROL NAMES THE PHASE AND NOTHING ELSE ──
+     Sam, 2026-08-12: *"a user should be able to have as many games as needed in
+     their week"*.
+
+     WHAT THIS REPLACED, AND WHY IT WAS THE WHOLE DEFECT. `practiceMatchDay` was
+     `weekDays.find(...)` — the FIRST fixture — and the label and the handler
+     both branched on it. So the moment a week had one game, the control stopped
+     offering to add and became a label pointing at that game. The in-season
+     card next door was gated `!weekHasGame` and simply disappeared for the same
+     reason. **Two cards, two spellings of "you may have one game".**
+
+     A `find` for the first of a set is the tell. The week may hold several
+     fixtures and the engine already carries every one of them; only these two
+     surfaces still believed in a single game.
+
+     EXISTING FIXTURES ARE REACHED BY TAPPING THEIR OWN DAY, which is a door
+     that already works and is per-fixture rather than first-fixture. This
+     control's job is adding, so it only ever adds. */
+  const addFixtureLabel = currentPhase === 'Pre-season'
+    ? 'Add a pre-season practice match'
+    : 'Add a game';
 
   // ── Day-first vs week (Sam's day-first direction, 2026-08-01) ──
   //
@@ -657,6 +666,24 @@ export default function HomeScreenV2() {
                 site would make one change into two, and Sam's binding line is
                 that nothing working is destroyed to match a picture. If it is
                 still unused when the merge lands, it retires on its own. */}
+            {/* ── ITEM 16 (b): THE DAY'S SMALL CARD, ABOVE THE DAY CARD ──
+                Sam, 2026-08-12: *"yes — one line on week, small card on day,
+                read-only both"*. Ruling 4's placement, and the same component
+                the Coach header mounts — not a second one, because three copies
+                of a count row is three places for the count to disagree.
+
+                READ-ONLY. It carries no controls; tapping opens My Status,
+                which owns every control that changes a modifier. Cell [5] of
+                `test:program-tab-read-only-modifiers` is what stops
+                `ActiveModifiersSection` coming back to Program behind it.
+
+                NOTHING AT ZERO. `ModifiersStrip` returns null at `count <= 0`
+                for non-coach surfaces, so a quiet week pays nothing for this. */}
+            <ModifiersStrip
+              surface="day"
+              count={modifierCount}
+              onPress={handleOpenMyStatus}
+            />
             {dayFirstDay ? renderDayRow(dayFirstDay, dayFirstIdx) : null}
             {/* THE SIX DAYS THE STRIP STANDS IN FOR STILL REPORT THEMSELVES.
                 Every day mounts its canonical state leaves in BOTH shapes — a
@@ -711,6 +738,22 @@ export default function HomeScreenV2() {
           </View>
         ) : (
           <View style={styles.dayList}>
+            {/* ── ITEM 16 (a): THE WEEK'S ONE LINE, ABOVE THE SEVEN ROWS ──
+                Same component, asking for the WEEK surface, which is the branch
+                that draws a single quiet line instead of the day's card. The
+                surface name is deliberately not repeated as a literal in this
+                prose: a comment carrying the exact string a gate greps for can
+                answer for the code instead of the code doing it (`a comment is
+                not a shipped string`), and this comment had already swallowed a
+                mutation that was aimed at the mount below it. It sits above
+                `day-row-mon` because it is about the week those rows are, and
+                the athlete should not have to scroll to learn the week is being
+                changed. Read-only here too — the line opens My Status. */}
+            <ModifiersStrip
+              surface="week"
+              count={modifierCount}
+              onPress={handleOpenMyStatus}
+            />
             {weekDays.map((day, idx) => renderDayRow(day, idx))}
           </View>
         )}
@@ -974,23 +1017,39 @@ export default function HomeScreenV2() {
           <ExplorerRenderWitness key={testID} testID={testID} />
         ))}
 
-        {/* ── No game CTA ── */}
-        {isNormal && currentPhase === 'In-season' && !weekHasGame && showAddGameCTA && (
+        {/* ── ITEM 19: ONE ADD-FIXTURE CONTROL, BOTH PHASES, NO CAP ──
+            THE TWO CARDS THAT STOOD HERE ARE THIS ONE. An in-season "No game
+            this week - add one" card gated on the week having no game, and a
+            pre-season practice-match card that became a label once a fixture
+            existed. They were one control with two spellings and two ways of
+            saying "one game per week is all you get".
+
+            THE PLUS ICON AND ITS COPY WENT WITH THEM, and that is Sam's order
+            rather than a preference: the label follows the PHASE now ("Add a
+            game" / "Add a pre-season practice match"), so "No game this week"
+            could not survive — it is a sentence that is false on exactly the
+            weeks this control now has to appear on.
+
+            NO CAP, BY EXPLICIT RULING. No two-game limit, no warning at three,
+            no confirm. If a week gets ugly the contract discloses it; a button
+            that refuses is a button deciding the athlete's season for them. */}
+        {isNormal && showAddFixtureCTA && (
           <Pressable
             onPress={handleAddGameMode}
             testID={explorerTestId.fixtureIngress('add', weekAnchorISO)}
             accessibilityRole="button"
-            accessibilityLabel={explorerTestId.fixtureIngress('add', weekAnchorISO)}
+            accessibilityLabel={addFixtureLabel}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
           >
-            <Card tone="default" padding="md" radius="lg" style={styles.addGame}>
-              <View style={styles.addGameRow}>
-                <View style={styles.addGameIcon}>
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M12 5v14" /><Path d="M5 12h14" />
-                  </Svg>
+            {/* Same treatment as the busy/away card — only the icon, tint and
+                label differ. Reuses the busyAway* styles so the cards cannot
+                drift apart. */}
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.practiceMatchIconTint]}>
+                  <RowIcon kind="game" size={14} color={DAY_ROW_ACCENT.game} />
                 </View>
-                <Text style={styles.addGameText}>No game this week - add one</Text>
+                <Text style={styles.busyAwayText}>{addFixtureLabel}</Text>
               </View>
             </Card>
           </Pressable>
@@ -1027,31 +1086,10 @@ export default function HomeScreenV2() {
             schedule acknowledgment moved up with them so an answer still appears
             beside the thing that was tapped. */}
 
-        {isNormal && showPracticeMatchCTA && (
-          <Pressable
-            onPress={handlePracticeMatchPress}
-            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID={practiceMatchDay?.workout
-              ? explorerTestId.fixtureActions(practiceMatchDay.workout.id)
-              : explorerTestId.fixtureIngress('add', weekAnchorISO)}
-            accessibilityRole="button"
-            accessibilityLabel={practiceMatchDay?.workout
-              ? explorerTestId.fixtureActions(practiceMatchDay.workout.id)
-              : explorerTestId.fixtureIngress('add', weekAnchorISO)}
-          >
-            {/* Same component treatment as the busy/away card above — only
-                the icon, tint and label differ. Reuses the busyAway* styles
-                so the two cards can never drift apart. */}
-            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
-              <View style={styles.busyAwayRow}>
-                <View style={[styles.busyAwayIcon, styles.practiceMatchIconTint]}>
-                  <RowIcon kind="game" size={14} color={DAY_ROW_ACCENT.game} />
-                </View>
-                <Text style={styles.busyAwayText}>{practiceMatchLabel}</Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
+        {/* THE PRE-SEASON PRACTICE-MATCH CARD STOOD HERE. It is the control
+            above now — one card, phase-labelled, always adding. Moving it up
+            beside the card it merged with is the point: two add-a-fixture cards
+            at opposite ends of one screen is how they drifted apart. */}
 
         </Pressable>
       </ScrollView>
@@ -3085,19 +3123,14 @@ const styles = StyleSheet.create({
   moveText: { color: '#C8FF00', fontSize: 14, fontWeight: '600' },
   moveCancel: { color: '#B0B0B0', fontSize: 14, fontWeight: '600' },
 
-  // Add game — no border, lighter surface
-  addGame: {
-    marginTop: spacing.sm,
-    backgroundColor: '#121212',
-    borderColor: 'transparent',
-  },
-  addGameRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  addGameIcon: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: 'rgba(200, 255, 0, 0.12)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  addGameText: { color: '#B5B5B5', fontSize: 14, fontWeight: '500' },
+  // THE FOUR `addGame*` RULES THAT STOOD HERE WENT WITH THEIR CARD
+  // (SEAT_INBOX item 19, 2026-08-13). The in-season add-game card merged into
+  // the one phase-labelled control, which reuses the `busyAway*` treatment, so
+  // `addGame`, `addGameRow`, `addGameIcon` and `addGameText` lost their only
+  // call site. DELETED IN THE SAME COMMIT AS THAT CALL SITE, and item 15 is why
+  // it is spelled out: the style gate greps USAGE, so a definition nothing uses
+  // passes it silently and sits there for a month. `mode.type === 'addGame'`
+  // is a different thing entirely — that is the picker mode, and it stays.
 
   // ── The life-fact chip row ──
   // Five chips across, equal width, one gap. `justifyContent: space-between`

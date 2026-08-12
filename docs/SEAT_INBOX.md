@@ -956,69 +956,44 @@ phone.** State device items as PARKED in a stop report, never as a request.
     reading of *why* the wording was bad, not a second ruling by him. **If he
     wants his sentence used for BOTH causes, say so and the rest branch goes.**
 
-21. **SAM HAS RULED — AND HE REFUSED THE QUESTION'S PREMISE. A TEAM NIGHT'S
-    STRENGTH SESSION IS A NORMAL STRENGTH SESSION.** Item 14 asked whether a
-    team night has its own smallest size, offering "(a) no floor" or "(b) N".
-    **Sam, 2026-08-13, chose NEITHER:** *"no it should be a regular strength
-    session on team nights? so whatever it normally is thats what it should be
-    ... it makes no difference in the plan if it is conditioning vs team
-    training - the only difference is the type of work done before it ie
-    preferably not lower body before training or sprinting but it can take
-    place if thats the only room for it"*.
+21. **SAM HAS RULED — A GYM SESSION IS THE SAME SIZE WHATEVER ELSE IS ON THAT
+    DAY.** Item 14 asked whether a team night has its own smallest size and
+    offered "no floor" or "a floor of N". **Sam, 2026-08-13, refused both, and
+    then said the order was overcomplicating it:** *"just keep sessions for gym
+    the same before footy training"*.
 
-    **SO THERE IS NO TEAM-NIGHT SIZE RULE, BECAUSE A TEAM NIGHT IS NOT A SIZE
-    CASE.** The strength session on a team night is **the same session it would
-    be on any other day**. `SESSION_SIZE_FLOOR` needs no team-night exception in
-    either direction: not a lower floor, not a special N. **The measurement that
-    found 26 of 32 team nights under 4 did not find a correct smallness — it
-    found a DEFECT, and this ruling is what makes it one.**
+    **THAT IS THE WHOLE RULE. There is no team-night size case.** No exception
+    to `SESSION_SIZE_FLOOR` in either direction.
 
-    **THE ONE REAL DIFFERENCE IS ORDER, NOT SIZE, AND IT IS A PREFERENCE:**
-    prefer not to place **lower body or sprint work before team training** —
-    **but place it there when that is the only room in the week.** That is Sam's
-    standing shape (*"nothing so tight that ..."*) applied to this day: a lean,
-    never a block, and the week's total work is not cut to honour it.
+    **AND THE REASON THE SMALL SESSIONS LOOKED CORRECT IS FALSE. Sam:** *"just
+    because the strength is on the same day doesn't mean they are doing it at
+    the club, they might do it in the morning or on the drive to footy"*.
+    **DELETE THE CLAIM WHEREVER IT IS WRITTEN** — `sessionRowCounting.ts:294`
+    says *"a day the athlete is already at the club"* and that is now a stated
+    falsehood sitting in a comment beside the constant it justifies. **A session
+    sharing a DATE with team training says nothing about where or when it is
+    done.** Do not reason from same-day to same-place again.
 
-    **AND THE BIBLE ALREADY SAYS THIS — DO NOT AUTHOR A RIVAL RULE.**
-    `testingBias.ts:52-53` cites it: *"Upper strength can stay in year-round. It
-    can often be placed before team training or closer to game day than lower
-    strength."* **Sam's sentence and the Bible's line are the same rule.** Wire
-    the existing one; a second copy is a second thing to drift.
+    **SO 26 OF 32 TEAM NIGHTS UNDER 4 EXERCISES IS A DEFECT**, not a correct
+    smallness.
 
-    **BLOCKED BY STAND-DOWN D — THIS IS GENERATION. MEASURE NOW, BUILD WHEN THE
-    GENERATOR IS FREE.** Two measurements, both cheap, both owed before any
-    edit, because the last four attempts at generator work each hunted a cause
-    that was not there:
+    **THE ONLY REAL TEAM-NIGHT DIFFERENCE IS ORDER, AND IT IS A PREFERENCE:**
+    prefer not to put lower body or sprint work before training — **but place it
+    there when that is the only room in the week.** A lean, never a block. **The
+    Bible already carries this exact line** (`testingBias.ts:52-53`, quoting
+    `:378`). Wire it; do not author a rival.
 
-    **(i) WHY are team nights small?** The size comes from the TEMPLATE —
-    `sessionBuilder.ts:718`, `exerciseCount = templateWorkout.exercises.length
-    || 5` — not from a team-night branch anyone wrote. **So find whether the
-    counted rows INCLUDE the team-training row itself** (a 4-row team night
-    would then be 1 team row + a 3-exercise lift, and a "2-row" night is a
-    single exercise), **or whether the templates chosen for team days are
-    genuinely authored smaller.** Those are different defects with different
-    fixes and the report must say which. **Count strength rows only, using the
-    same 120-session harness, and print one team night in full.**
+    **GENERATION, SO STAND-DOWN D HOLDS. One thing to check first, then build
+    when the generator is free:** the size comes from the template
+    (`sessionBuilder.ts:718`), not from any team-night branch — so **find out
+    whether the counted rows include the "Team Training" row itself.** If they
+    do, a "4-exercise" team night is really a 3-exercise lift and a "2" is a
+    single exercise. Different defect, different fix; say which.
 
-    **(ii) DOES THE UPPER-BEFORE-TEAM-TRAINING PREFERENCE EXIST TODAY, and is it
-    a lean or a block?** If it does not exist, say so plainly rather than
-    assuming the Bible line is wired. If it exists as a BLOCK, that is a second
-    defect under the same ruling: Sam said *"it can take place if thats the only
-    room for it"*.
-
-    **THEN BUILD, WHEN D LIFTS:** the team night's strength session is generated
-    at normal size, and the upper-before-training lean is a preference the
-    selector can overrule when the week has no other room. **Registry row.
-    Behavioural cells, not source greps** — the 120-session distribution is the
-    instrument, and the proof is that team nights join strength and mixed days
-    in the 4-6 band **without the other two moving.**
-
-    **⚠ THIS CHANGES GENERATED PROGRAMS.** It is not a tidy-up. Re-run the 17 QA
-    scenarios before and after and report both numbers; if the craft score
-    falls, STOP and report rather than tuning it back.
-
-    **CLOSES the `## AWAITING SAM` entry "does a TEAM-TRAINING night have a
-    smallest size?" — strike it, do not leave two answers in the file.**
+    **Sam, on testing:** *"run whatever little tests you have to"*. Behavioural
+    cells, and the 120-session distribution is the instrument: team nights join
+    strength and mixed days in the 4-6 band **without the other two moving.**
+    Run the 17 QA scenarios either side and report both numbers.
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding

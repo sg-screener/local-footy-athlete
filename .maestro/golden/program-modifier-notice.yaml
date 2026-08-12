@@ -1,0 +1,133 @@
+appId: com.localfootyathlete.app
+name: Golden - the day/week modifier notice, both shapes, read-only
+tags:
+  - e2e
+  - golden
+  - program
+  - ui-merge
+---
+# SAM'S SECOND HALF, ON GLASS (SEAT_INBOX item 16).
+#
+# *"yes — one line on week, small card on day, read-only both"*. Source cells
+# can prove `ModifiersStrip` is mounted twice and fed one count. Only a flow can
+# prove the athlete SEES it — a count row that renders behind a header or under
+# the notch satisfies every assertion in the suite and is still wrong.
+#
+# WHY THIS FLOW EXISTS RATHER THAN LIVING IN `standard-program-week.yaml`.
+# The week assertion IS also in that flow, at the coordinate the item named
+# (after `day-row-fri`). But that flow fails BEFORE reaching it, at a step this
+# unit did not write and did not break: after `program-week-previous`, it waits
+# for "Return to this week", which is the `program-week-current` control's
+# accessibility label when the athlete is NOT on the current week. Measured
+# 2026-08-13 with a NO-MODIFIER control run: the seeded program holds a single
+# week, so the previous control is inert, the label stays "This week", and that
+# step cannot pass on this seed. It is a flow/seed mismatch that has been
+# unreachable — the dead `equipment-preset-open` door above it failed first —
+# and it belongs to whoever owns that seed, not to the notice.
+#
+# So the inversion stays there for when that step is fixed, and the notice gets
+# a proof that RUNS TODAY. An assertion parked behind a red step is not a proof;
+# it is a plan.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# ── ZERO SHOWS NOTHING ON PROGRAM — BOTH SHAPES ──
+# Item 16 rule (e). `ModifiersStrip` returns null at `count <= 0` for non-coach
+# surfaces, and this is the only place that is proven on GLASS for the week
+# shape as well as the day. Coach is deliberately different and is asserted in
+# `coach-my-status.yaml`: My Status stays a permanent doorway at zero.
+- assertNotVisible:
+    id: "modifiers-strip-day"
+- runFlow:
+    file: ../common/show-week-shape.yaml
+- assertNotVisible:
+    id: "modifiers-strip-week"
+- tapOn:
+    id: "program-view-today"
+
+# ── MAKE ONE BY ACTING, THROUGH A DOOR THE ATHLETE ALREADY HAS ──
+# Never a hand-built store seed: a fixture whose state no athlete could reach
+# proves something false. `visibilityPercentage: 40` because the chips sit low
+# in a tall card and a 100% requirement never settles on an iPhone frame.
+- scrollUntilVisible:
+    element:
+      id: "home-life-fact-chips"
+    direction: DOWN
+    visibilityPercentage: 40
+- tapOn:
+    id: "home-tired-entry"
+- extendedWaitUntil:
+    visible:
+      id: "readiness-option-cooked-week"
+    timeout: 10000
+- tapOn:
+    id: "readiness-option-cooked-week"
+# The ack confirms the report landed; whether it is still on screen when the
+# next tap arrives is a race, not a property.
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 10000
+- tapOn:
+    text: "Done"
+    optional: true
+
+# ── THE DAY SHAPE: SAM'S SMALL CARD, ABOVE THE DAY CARD ──
+- scrollUntilVisible:
+    element:
+      id: "program-view-toggle"
+    direction: UP
+- assertVisible:
+    id: "modifiers-strip-day"
+- takeScreenshot: artifacts/ui-walk/item16-day-notice
+
+# ── THE DAY NOTICE IS A DOOR ──
+# A row that looks tappable and opens nothing is a dead affordance
+# (LAW-L5-no-dead-affordances). It must land on the SAME My Status the Coach
+# strip opens — one destination, reached from either side.
+- tapOn:
+    id: "modifiers-strip-day"
+- extendedWaitUntil:
+    visible:
+      id: "coach-status-screen"
+    timeout: 10000
+- assertVisible:
+    id: "program-active-coach-notes"
+- tapOn:
+    id: "coach-status-close"
+- tapOn:
+    id: "tab-program"
+
+# ── THE WEEK SHAPE: SAM'S ONE LINE, ABOVE THE SEVEN ROWS ──
+# `day-row-mon` is asserted AFTER the line so the two are proven to coexist:
+# the line sits above the rows, it does not replace one.
+- runFlow:
+    file: ../common/show-week-shape.yaml
+- assertVisible:
+    id: "modifiers-strip-week"
+- assertVisible:
+    id: "day-row-mon"
+- takeScreenshot: artifacts/ui-walk/item16-week-notice
+
+# ── AND THE WEEK LINE IS THE SAME DOOR ──
+- tapOn:
+    id: "modifiers-strip-week"
+- extendedWaitUntil:
+    visible:
+      id: "coach-status-screen"
+    timeout: 10000
+- assertVisible:
+    id: "program-active-coach-notes"
+- takeScreenshot: artifacts/ui-walk/item16-week-opens-status
+
+# ── READ-ONLY: PROGRAM SHOWS THE COUNT AND OWNS NONE OF THE CONTROLS ──
+# The list and its eight actions live here, on My Status, and nowhere else.
+# Cell [5] of `test:program-tab-read-only-modifiers` holds the source side;
+# this is the same claim where the athlete can see it.
+- tapOn:
+    id: "coach-status-close"
+- tapOn:
+    id: "tab-program"
+- assertNotVisible:
+    id: "program-active-coach-notes"

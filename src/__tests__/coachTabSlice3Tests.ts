@@ -1295,10 +1295,22 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
     'LAW-coach-status-is-a-real-destination: zero modifiers must not delete the '
       + 'only doorway to status');
 
-  ok('Program carries neither status notice nor Coach Notes list',
-    !/import \{ ModifiersStrip \}/.test(home)
-      && !/<ModifiersStrip/.test(home)
-      && !/import \{ ActiveModifiersSection \}/.test(home)
+  // SPLIT 2026-08-13 (SEAT_INBOX item 16), AND THE SPLIT IS THE FINDING.
+  //
+  // This was ONE assertion over two different things: that Program carries no
+  // status NOTICE, and that Program carries no modifier LIST. Sam's ruling
+  // ("one line on week, small card on day, read-only both") made the first half
+  // false and left the second half exactly as true as it was. A single `&&`
+  // cannot express that, so it becomes two cells rather than being loosened to
+  // whichever half still passes — the failure this file exists to catch is
+  // Program growing the CONTENTS back, and that half must keep its own red.
+  ok('Program mounts the status notice, and it is the shared one',
+    /import \{ ModifiersStrip \}/.test(home) && /<ModifiersStrip/.test(home),
+    'Program lost the day/week modifier notice Sam asked for; My Status being '
+      + 'the one destination does not mean Program may not say a change exists');
+
+  ok('Program still does not repeat the modifier LIST',
+    !/import \{ ActiveModifiersSection \}/.test(home)
       && !/<ActiveModifiersSection/.test(home),
     'My Status is not the single destination while Program still repeats its contents');
 

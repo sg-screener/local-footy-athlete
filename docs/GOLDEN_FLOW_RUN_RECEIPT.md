@@ -26,13 +26,15 @@ string `${E2E_METRO_URL}`.
 
 | Flow | LAST RUN | Outcome |
 | --- | --- | --- |
-| `coach-my-status.yaml` | 2026-08-10 | PASS — end to end, including the not-yet caption |
+| `add-a-game-in-season.yaml` | 2026-08-13 | **PASS, END TO END — the on-glass proof of item 19.** Run on `standard-in-season-week`, which ALREADY HAS a Saturday game: "Add a game" is visible anyway (it used to vanish once a week had one), the old "No game this week - add one" copy is gone, and tapping it opens the day picker rather than pointing at the first fixture. Screenshots: `artifacts/ui-walk/item19-add-a-game-with-a-game.png`, `item19-second-game-picker.png`. |
+| `coach-my-status.yaml` | 2026-08-13 | PASS — end to end. Re-run for SEAT_INBOX item 16: the day notice now appears once a real "cooked week" report exists, opens My Status from Program, and the ZERO-state assertion above it deliberately still asserts the notice is absent. |
+| `program-modifier-notice.yaml` | 2026-08-13 | **PASS, END TO END — the on-glass proof of item 16.** Zero shows nothing on BOTH Program shapes; the readiness door makes one; the day's small card and the week's one line both appear; each opens My Status; Program never carries the list. Screenshots: `artifacts/ui-walk/item16-day-zero.png`, `item16-day-notice.png`, `item16-week-notice.png`, `item16-week-opens-status.png`. |
 | `day-card-dropdowns.yaml` | 2026-08-10 | PASS — collapsed, expanded, collapsed |
 | `day-readiness-profile-type.yaml` | 2026-08-11 | PASS — direct three-choice Tired, illness-only Sick, matching Developer/Support/Legal type |
 | `day-week-profile.yaml` | 2026-08-10 | PASS — day, week, profile, coach |
 | `dev-launch-refusal-speaks.yaml` | 2026-08-10 | PASS — the refusal speaks and clears |
 | `profile-setup-equipment.yaml` | 2026-08-11 | PASS — Commercial gym summary, nested editor, full scroll to Save |
-| `standard-program-week.yaml` | 2026-08-10 | PASS — seven rows, a count, and a row opening in place |
+| `standard-program-week.yaml` | 2026-08-13 | **RED, AND FURTHER IN THAN IT HAS EVER REACHED.** Its modifier door (`equipment-preset-open`) produced nothing, so everything below it had been dark; re-routed onto the readiness door, it now passes the day shape, the real modifier, and `assertVisible: modifiers-strip-day`. It then fails at `program-week-previous` → "Return to this week", which a NO-MODIFIER control run reproduced exactly: the seed holds ONE week, so that control is inert and the label never changes. **Pre-existing, newly visible, and it belongs to that seed — not to the notice.** The item-16 week assertion sits after it and is therefore not reached here; `program-modifier-notice.yaml` is where the week line is actually proven. |
 | `explorer-all-nine.yaml` | NOT RUN | Never run this pass. Carried as debt, not as a claim. |
 | `fixture-move.yaml` | NOT RUN | RED on the dead `fixture-actions-open` id (pre-existing). |
 | `injury-case` (seed, via `reset-seed`) | 2026-08-10 | **WITNESS FAILURE GONE.** Now blocked behind the calendar-storage durability defect — a DIFFERENT problem, priced in the slice 3 boundary addendum 4. |
@@ -42,10 +44,17 @@ string `${E2E_METRO_URL}`.
 | `session-move.yaml` | 2026-08-12 | PASS — whole session moved onto the empty Sunday, Monday redrawn as rest, Sunday as scheduled, and both survive a checkpoint + relaunch. First run, no iteration. |
 | `readiness-adjust-and-clear.yaml` | 2026-08-12 | PASS — severe illness adjusts the week (fact, adjustment and programming-effect witnesses all appear), "Clear adjustment — I'm good now" takes it back, and the clear survives a relaunch. |
 
-**TEN OF FOURTEEN HAVE RUN. THAT IS THE HONEST NUMBER** and it is written here rather
+**TWELVE OF SIXTEEN HAVE RUN. THAT IS THE HONEST NUMBER** and it is written here rather
 than implied by the green ones. `NOT RUN` is a state this table carries on
 purpose: a receipt that only recorded successes would make the rig look alive
 while half of it was dark, which is precisely the failure this law names.
+
+**AND "HAS RUN" IS NOT "PASSES" — 2026-08-13 IS THE FIRST ROW TO PROVE IT.**
+`standard-program-week.yaml` had a green row on 2026-08-10 and was, on that same
+date, dying at a door no product source could open. Its row now reads RED, which
+is a BETTER receipt than the green one it replaces: the flow reaches further than
+it ever has and reports a real defect at the end of it. **A table that only ever
+moves toward PASS is a table being edited toward comfort.**
 
 **CORRECTED 2026-08-12 — THEY WERE NOT A CONCURRENT AGENT, THEY WERE WEDGED
 PROCESSES, AND I REPORTED THE WRONG CAUSE FIRST.** Three `maestro test` processes

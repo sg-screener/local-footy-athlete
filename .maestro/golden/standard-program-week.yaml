@@ -41,22 +41,49 @@ tags:
     id: "day-row-mon"
 
 # Reach the active-modifier coordinate by ACTING, never by seeding a hand-built
-# store snapshot. My Status is now its one home, so Program must stay free of
-# Coach Notes even when a real modifier exists.
+# store snapshot.
+#
+# RE-ROUTED 2026-08-13 THROUGH THE READINESS DOOR, AND THE OLD ROUTE IS A
+# FINDING, NOT A PREFERENCE. This block used to open `equipment-preset-open`
+# and tap `equipment-preset-barbell` — ids NO PRODUCT SOURCE PRODUCES. Measured
+# 2026-08-13: `grep -rn equipment-preset` over `src` and `.maestro` finds them
+# in THIS FILE and in the test that reads this file, and nowhere else. The same
+# dead door was already found and re-routed in `coach-my-status.yaml` on
+# 2026-08-12; this is its second copy, cut for the same reason.
+#
+# **THAT IS WHY THE TWO `assertNotVisible` LINES BELOW COULD NOT SIMPLY BE
+# FLIPPED.** SEAT_INBOX item 16 lists them among four assertions to invert when
+# the day/week notice is built. But a tap on an id nothing produces creates NO
+# modifier, so both sat in a ZERO-modifier world — where `ModifiersStrip`
+# correctly renders nothing. Flipping them against a dead door would have made
+# the flow demand a notice for a change that was never made. The door is fixed
+# FIRST, and then the inversion is true.
 - scrollUntilVisible:
     element:
       id: "home-life-fact-chips"
     direction: DOWN
+    visibilityPercentage: 40
 - tapOn:
-    id: "equipment-preset-open"
+    id: "home-tired-entry"
 - extendedWaitUntil:
     visible:
-      id: "equipment-preset-barbell"
+      id: "readiness-option-cooked-week"
     timeout: 10000
 - tapOn:
-    id: "equipment-preset-barbell"
-- tapOn: "Apply for this week"
-- assertNotVisible:
+    id: "readiness-option-cooked-week"
+# The ack reports that the report landed; whether it is still on screen when the
+# next tap arrives is a race, not a property — hence `optional`.
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 10000
+- tapOn:
+    text: "Done"
+    optional: true
+
+# ── THE DAY SHAPE NOW CARRIES SAM'S SMALL CARD ──
+# INVERTED 2026-08-13: a real modifier exists from the door directly above, so
+# the day screen must say so. Read-only — the detail is on My Status.
+- assertVisible:
     id: "modifiers-strip-day"
 - scrollUntilVisible:
     element:
@@ -96,7 +123,14 @@ tags:
     id: "day-row-thu"
 - assertVisible:
     id: "day-row-fri"
-- assertNotVisible:
+# ── THE WEEK SHAPE NOW CARRIES SAM'S ONE LINE ──
+# INVERTED 2026-08-13. The item's own note is why this coordinate was chosen:
+# the flow already walks past the exact place the line goes. It sits ABOVE
+# `day-row-mon`, so proving it here — after all seven rows have been asserted —
+# proves the line and the seven rows coexist rather than one replacing the
+# other. Same component and same count as the day's card, drawn on the WEEK
+# surface: one quiet line rather than a card.
+- assertVisible:
     id: "modifiers-strip-week"
 - assertNotVisible:
     id: "day-timeline"

@@ -1,0 +1,57 @@
+appId: com.localfootyathlete.app
+name: Golden - a week that already has a game can still add another
+tags:
+  - e2e
+  - golden
+  - program
+---
+# SAM'S RULING, ON GLASS (SEAT_INBOX item 19).
+#
+# **Sam, 2026-08-12:** *"no a user should be able to have as many games as
+# needed in their week. Are you talking about having a button that says 'add a
+# game' when in season - like the 'add pre season practice match' button?"*
+#
+# THE SEED IS THE WHOLE INSTRUMENT. `standard-in-season-week` is IN SEASON and
+# ALREADY HAS A SATURDAY GAME. That is exactly the state where the control used
+# to disappear: it was gated `!weekHasGame`, so a week with one fixture offered
+# no route to a second. A flow run on an empty week would pass against the OLD
+# code and prove nothing — the defect only exists once a game is there.
+#
+# WHAT THE ORDER GOT WRONG, RECORDED HERE BECAUSE THE NEXT READER WILL HIT IT.
+# Item 19 says "in season there is NO add-a-game control at all". There was one;
+# it was capped, not absent. Same fix, different reason, and the difference is
+# why this flow asserts on a week WITH a game rather than a week without.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# The Saturday fixture the seed carries. Asserting it FIRST is what makes the
+# rest of this flow mean anything: the control below appears while this exists.
+- runFlow:
+    file: ../common/show-week-shape.yaml
+- assertVisible:
+    id: "day-row-sat"
+- tapOn:
+    id: "program-view-today"
+
+# ── THE CONTROL IS THERE ON A WEEK THAT ALREADY HAS A GAME ──
+# In season the label is "Add a game"; pre-season it reads "Add a pre-season
+# practice match". One control, one testID, the words following the phase.
+- scrollUntilVisible:
+    element:
+      id: "fixture-add-action-2026-07-13"
+    direction: DOWN
+    visibilityPercentage: 60
+- assertVisible: "Add a game"
+- assertNotVisible: "No game this week - add one"
+- takeScreenshot: artifacts/ui-walk/item19-add-a-game-with-a-game
+
+# ── AND IT STILL ADDS, RATHER THAN POINTING AT THE FIRST FIXTURE ──
+# The old pre-season card became a LABEL once a fixture existed and routed to
+# that fixture's actions. Tapping must open the day PICKER, which is the add
+# route; the banner's own words are the witness.
+- tapOn:
+    id: "fixture-add-action-2026-07-13"
+- assertVisible: "Tap the day to set as game day"
+- takeScreenshot: artifacts/ui-walk/item19-second-game-picker

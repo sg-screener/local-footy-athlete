@@ -20,6 +20,22 @@ tags:
       SEED_ID: standard-in-season-week
 
 # ── NOTHING ACTIVE: PROGRAM IS QUIET; COACH STATUS IS STILL A DOOR ──
+#
+# THIS LINE IS NOT INVERTED, AND THAT IS DELIBERATE — READ BEFORE "FIXING" IT.
+# SEAT_INBOX item 16 lists this assertion among four to flip when the day/week
+# notice is built. Three of the four sat at points where a real modifier
+# exists. THIS ONE DOES NOT: the seed has just been reset and nothing is
+# active, which is why the block it heads is called "NOTHING ACTIVE".
+#
+# So its MEANING inverted while its text stayed. It used to record that the
+# notice was never built; it now proves item 16 rule (e) — "Zero means nothing
+# on Program" — which is the behaviour `ModifiersStrip` gets from returning
+# null at `count <= 0` for non-coach surfaces. Flipping it to `assertVisible`
+# would assert the opposite of the rule it was cited to protect, and would ask
+# a quiet week to carry an empty notice.
+#
+# The Coach assertion two lines down is the counterweight and always was:
+# zero deletes Program's notice, and never My Status's doorway.
 - assertNotVisible:
     id: "modifiers-strip-day"
 - tapOn:
@@ -95,9 +111,36 @@ tags:
     text: "Done"
     optional: true
 
-# ── PROGRAM STAYS CLEAN; COACH OPENS THE POPULATED STATUS ──
-- assertNotVisible:
+# ── PROGRAM NOW SAYS SO; COACH STILL OWNS THE DETAIL ──
+#
+# INVERTED 2026-08-13 (SEAT_INBOX item 16), and this is the one of the four
+# named assertions that had a real modifier under it. A "cooked week" readiness
+# report was just filed through the athlete's own door, so the count is not
+# zero, and Sam's ruling — *"one line on week, small card on day, read-only
+# both"* — says the day screen must show it.
+#
+# "PROGRAM STAYS CLEAN" WAS THE OLD HEADING AND IT MEANT TWO THINGS AT ONCE:
+# no notice, and no list. Only the first was ruled away. The list assertion is
+# still below, on the Coach tab, where the list is allowed to be.
+- assertVisible:
     id: "modifiers-strip-day"
+# THE NOTICE IS A DOOR, AND A DOOR THAT DOES NOT OPEN IS DECORATION. Tapping it
+# from Program must land on the SAME My Status screen the Coach strip opens —
+# one destination, reached from either side, which is the whole reason the open
+# state is a navigation param rather than a Coach-private boolean.
+- tapOn:
+    id: "modifiers-strip-day"
+- extendedWaitUntil:
+    visible:
+      id: "coach-status-screen"
+    timeout: 10000
+- assertVisible:
+    id: "program-active-coach-notes"
+- takeScreenshot: artifacts/ui-walk/day-modifier-notice-opens-status
+- tapOn:
+    id: "coach-status-close"
+- tapOn:
+    id: "tab-program"
 - tapOn:
     id: "tab-coach"
 - tapOn:

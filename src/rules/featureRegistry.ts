@@ -121,12 +121,12 @@ export const FEATURE_REGISTRY: readonly FeatureRow[] = [
     id: 'FEAT-day-week-modifier-indicator',
     feature: 'The day and week screens show that SOMETHING is currently modifying the program, without the detail.',
     askedFor: 'Sam 2026-08-12, the second half of the same sentence: "a simple thing shows on day screen and week screen"',
-    reachable: 'built_unreachable',
+    reachable: 'athlete_reachable',
     proof: {
-      state: 'UNPROVEN',
-      claim: 'BUILT',
-      wouldTake: 'Mount `ModifiersStrip` on the Program tab and invert `.maestro/golden/coach-my-status.yaml`\'s `assertNotVisible: modifiers-strip-day`; the component and its surface prop already exist.',
-      receipt: 'MEASURED 2026-08-12: `ModifiersStrip`\'s own header describes three mounts (day, week, coach); it is mounted ONCE, on `CoachTabScreen`. Program shows no modifier indicator at all. Held by cell [6] of `test:program-tab-read-only-modifiers`, which reds the day it IS built. AWAITING SAM — asked in the item-8 stop report, not yet answered.',
+      state: 'held',
+      by: 'test:program-tab-read-only-modifiers',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-13 (SEAT_INBOX item 16), after Sam answered the item-8 stop report: "yes — one line on week, small card on day, read-only both". MOUNTED TWICE, in `HomeScreenV2.tsx`: `surface="day"` above the day card inside `styles.dayFirst`, and `surface="week"` above the seven rows inside `styles.dayList` — the SAME `ModifiersStrip` the Coach header mounts, not a second component. The count is `useHomeScreen`\'s `modifierCount`, which is `useActiveModifiers().count` — the duplicate inline `selectActiveCoachNotes` memo that sat beside it was COLLAPSED into that hook in the same commit, so the number and My Status\'s list cannot disagree. Read-only: tapping calls `navigation.navigate(\'CoachTab\', { status: \'open\' })` and Program owns no control. Held by cells [6]-[8] of `test:program-tab-read-only-modifiers` (both surfaces, the one-hook count, the doorway), and cell [5] still forbids `ActiveModifiersSection` on Program. ON GLASS: `artifacts/ui-walk/day-modifier-notice.png` and `week-modifier-notice.png`. FOUR ABSENCE ASSERTIONS RESOLVED, not all by flipping: `coach-my-status.yaml`\'s populated one inverted to `assertVisible`; its ZERO-state one deliberately KEPT as `assertNotVisible`, because rule (e) is that zero shows nothing on Program; `standard-program-week.yaml`\'s two inverted only after its modifier door was re-routed off `equipment-preset-open`, an id no product source produces.',
     },
   },
   {

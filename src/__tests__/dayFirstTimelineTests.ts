@@ -1101,8 +1101,14 @@ run('week Game Day and Rest are shorter status cards with centred titles', () =>
 
 run('Coach Notes have one home and do not render on Today or Week', () => {
   const home = homeScreenSource();
-  assert(!/import \{ ModifiersStrip \}/.test(home) && !/<ModifiersStrip/.test(home),
-    'Program still mounts the active-modifier notice after My Status became its home');
+  // INVERTED 2026-08-13 (SEAT_INBOX item 16). "One home" was always about the
+  // LIST and its controls, never about whether Program may say that a change
+  // exists. Sam ruled the notice back onto both Program shapes — read-only,
+  // opening My Status — so this line now asserts the notice IS mounted; the
+  // line below it, which is the one this cell is actually named for, is
+  // untouched.
+  assert(/import \{ ModifiersStrip \}/.test(home) && /<ModifiersStrip/.test(home),
+    'Program no longer mounts the read-only active-modifier notice on Today or Week');
   assert(!/import \{ ActiveModifiersSection \}/.test(home)
     && !/<ActiveModifiersSection/.test(home),
   'Program still mounts the Coach Notes list after My Status became its home');
@@ -1110,14 +1116,33 @@ run('Coach Notes have one home and do not render on Today or Week', () => {
     path.join(__dirname, '..', '..', '.maestro', 'golden', 'standard-program-week.yaml'),
     'utf8',
   );
-  const createAt = flow.indexOf('id: "equipment-preset-open"');
+  // RE-AIMED 2026-08-13. This cell pinned the tape's ORDER — make a real
+  // modifier, then check both Program shapes — and that order is still the
+  // property worth holding. Two things under it changed:
+  //
+  //   1. The door. `equipment-preset-open` is produced by no product source
+  //      (measured 2026-08-13, `grep -rn` over `src` and `.maestro`), so this
+  //      cell was pinning the tape to an id that resolves to nothing. It now
+  //      pins the readiness door, which is live and is the one the sibling
+  //      golden flow was re-routed onto.
+  //   2. The verdict. Item 16 mounted the notice, so the tape proves both
+  //      shapes SHOW it rather than hide it.
+  //
+  // The `assertVisible:` prefix is part of each search on purpose: matching the
+  // bare id would pass just as happily on an `assertNotVisible`, which is the
+  // exact line this cell exists to stop someone quietly restoring.
+  const createAt = flow.indexOf('id: "readiness-option-cooked-week"');
   const weekAt = flow.indexOf('file: ../common/show-week-shape.yaml');
-  const dayAbsenceAt = flow.indexOf('id: "modifiers-strip-day"', createAt);
-  const weekAbsenceAt = flow.indexOf('id: "modifiers-strip-week"', weekAt);
-  assert(createAt > 0 && dayAbsenceAt > createAt && weekAt > dayAbsenceAt
-    && weekAbsenceAt > weekAt,
-  'the visual tape does not create a real modifier before proving both Program '
-    + 'shapes keep Coach Notes absent');
+  const dayNoticeAt = flow.search(
+    /- assertVisible:\s*\n\s*id: "modifiers-strip-day"/);
+  const weekNoticeAt = flow.search(
+    /- assertVisible:\s*\n\s*id: "modifiers-strip-week"/);
+  assert(createAt > 0 && dayNoticeAt > createAt && weekAt > dayNoticeAt
+    && weekNoticeAt > weekAt,
+  'the visual tape does not create a real modifier before proving BOTH Program '
+    + 'shapes show the read-only notice — day first, then week after the shape '
+    + 'switch. A tape that asserts the notice before anything is active is '
+    + 'asserting the zero state and calling it the built one.');
 });
 
 run('the week cards expand details only — session and change controls stay on the day screen', () => {
@@ -1235,11 +1260,68 @@ run('the old status bars did not survive alongside their own chips', () => {
     `${barIcons.length} card(s) still use the old 28pt bar icon treatment; exactly `
     + 'one may — the practice-match CTA. The five life-fact bars that used it are '
     + 'the chip row now.');
-  const practiceMatch = body.slice(body.indexOf('showPracticeMatchCTA'));
-  assert(practiceMatch.includes('styles.busyAwayIcon'),
+  // RE-AIMED 2026-08-13 (SEAT_INBOX item 19). The survivor used to be pinned by
+  // `showPracticeMatchCTA`, a flag that no longer exists: the pre-season
+  // practice-match card and the in-season add-game card merged into ONE
+  // phase-labelled add-fixture control, which is now the single card carrying
+  // the old bar treatment. The property is unchanged — exactly one survivor,
+  // named — only its name moved.
+  const addFixture = body.slice(body.indexOf('showAddFixtureCTA'));
+  assert(body.includes('showAddFixtureCTA'),
+    'the add-fixture control is gone from the Program screen body, so the one '
+    + 'card allowed to keep the old bar treatment cannot be identified at all');
+  assert(addFixture.includes('styles.busyAwayIcon'),
     'the one card allowed to keep the old bar treatment is no longer the '
-    + 'practice-match CTA — something else inherited it, which is the leftover '
+    + 'add-fixture CTA — something else inherited it, which is the leftover '
     + 'this cell exists to find.');
+});
+
+// ── ITEM 19: AS MANY GAMES AS THE WEEK NEEDS ────────────────────────────────
+//
+// **Sam, 2026-08-12:** *"no a user should be able to have as many games as
+// needed in their week."* He was looking at the button when he said it.
+//
+// THE ORDER'S PREMISE WAS WRONG AND THE CELLS SAY SO. It states "in season
+// there is NO add-a-game control at all". There was one; it was gated
+// `!weekHasGame` and vanished once the week had a fixture, and pre-season's
+// card turned into a LABEL for the first fixture at the same moment. The defect
+// is real — no route to a SECOND game — but it was a CAP, not an absence, and
+// these cells hold the cap down rather than holding a third card up.
+run('the add-fixture control never caps the week at one game', () => {
+  const home = homeScreenSource();
+  const body = home.slice(home.indexOf('function HomeScreenV2'));
+  assert(/isNormal && showAddFixtureCTA &&/.test(body),
+    'the add-fixture control is gated on something other than the phase alone. '
+    + 'Any extra condition here is a cap on how many games a week may hold, and '
+    + 'Sam ruled there is none.');
+  assert(!/weekHasGame/.test(body),
+    'the Program screen reads weekHasGame again — that is the exact gate that '
+    + 'made the control disappear once the week had one game');
+  assert(!/practiceMatchDay/.test(body),
+    'the screen has re-grown a `find`-the-first-fixture binding. A week may hold '
+    + 'several fixtures; the first of a set is how the one-game assumption gets '
+    + 'back in, and it is what made the control become a label.');
+});
+
+run('the add-fixture control shows in BOTH competitive phases, labelled by phase', () => {
+  const hook = fs.readFileSync(
+    path.join(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'), 'utf8');
+  assert(/currentPhase === 'In-season' \|\| currentPhase === 'Pre-season'/.test(hook),
+    'the add-fixture control no longer shows in both competitive phases — in '
+    + 'season is the half Sam found missing, and pre-season is the half that '
+    + 'already worked');
+  assert(!/showPracticeMatchCTA|showAddGameCTA/.test(hook),
+    'the two old CTA flags are back. They were one decision wearing two names, '
+    + 'and two names is how the two cards drifted into disagreeing about '
+    + 'whether a week may have a second game.');
+  const home = homeScreenSource();
+  assert(/'Add a pre-season practice match'/.test(home) && /'Add a game'/.test(home),
+    'the control no longer carries both phase labels; the order is that the '
+    + 'label follows the phase, matching the picker banner that already branches');
+  assert(!/No game this week/.test(home),
+    'the old in-season copy is back. "No game this week - add one" is FALSE on '
+    + 'exactly the weeks this control now has to appear on — the ones that '
+    + 'already have a game.');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

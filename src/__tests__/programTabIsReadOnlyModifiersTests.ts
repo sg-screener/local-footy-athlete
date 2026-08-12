@@ -145,18 +145,22 @@ run('the shared confirmation sheet still exists and Coach still mounts it', () =
 
 // ── [5] THE CONTROLS HAVE ONE HOME, AND PROGRAM IS NOT IT ─────────────────
 //
-// The half of Sam's design this commit is responsible for. The OTHER half —
-// *"a simple thing shows on day screen and week screen"* — is NOT BUILT, and
-// this cell says so rather than asserting it into existence:
+// The half of Sam's design this commit was responsible for. The OTHER half —
+// *"a simple thing shows on day screen and week screen"* — WAS NOT BUILT, and
+// cell [6] below recorded its absence rather than asserting it into existence.
 //
-//   `ModifiersStrip`'s own header describes three mounts (day, week, coach).
-//   Measured 2026-08-12: it is mounted ONCE, on `CoachTabScreen`. Program has
-//   no modifier indicator at all, and `.maestro/golden/coach-my-status.yaml`
-//   encodes that absence with `assertNotVisible: modifiers-strip-day`.
+// **THAT ABSENCE ENDED 2026-08-13 (SEAT_INBOX item 16).** Sam answered the
+// question the old comment here was waiting on: *"yes — one line on week, small
+// card on day, read-only both"*. `HomeScreenV2` now mounts `ModifiersStrip`
+// twice, `surface="day"` above the day card and `surface="week"` above the
+// seven rows, and cell [6] is INVERTED — it holds the mounts up rather than
+// holding their absence down.
 //
-// That is a MISSING SURFACE, not a leftover, so (c) does not touch it — but it
-// is written here because the next reader of this file would otherwise conclude
-// from cells [1]-[4] that Sam's design is complete. It is not; it is reported.
+// **THE TWO CELLS DIVIDE LIKE THIS, AND THE DIVISION IS THE WHOLE POINT.**
+// [5] says the modifier LIST and its CONTROLS live only on My Status. [6] says
+// the read-only NOTICE lives on Program. Building [6] is not permission to
+// weaken [5]: a notice that grew a control would satisfy neither, which is why
+// `ActiveModifiersSection` is still named below and still forbidden here.
 
 run('the modifier list and its controls have exactly one home', () => {
   const home = read(HOME);
@@ -169,14 +173,100 @@ run('the modifier list and its controls have exactly one home', () => {
     + 'removed from Program now exist nowhere at all');
 });
 
-run('the day/week indicator is still MISSING, and this cell is the record', () => {
+// ── [6] THE DAY/WEEK INDICATOR IS BUILT, READ-ONLY, AND SHARES ONE COUNT ──
+//
+// INVERTED 2026-08-13. This cell used to assert `!<ModifiersStrip` in
+// `HomeScreenV2` and its failure message said, in as many words, to invert it
+// the day the mount landed. That day is today, so it is inverted rather than
+// deleted: a surface Sam asked for twice needs a cell that reds when it goes
+// away again, and an assertion that only ever recorded a hole cannot do that.
+// EVERY CELL BELOW READS THE MOUNTS ONE BY ONE, AND THAT IS A CORRECTION.
+//
+// These three cells first shipped asking whether the file CONTAINED
+// `count={modifierCount}` and `onPress={handleOpenMyStatus}`. Both passed a
+// mutation run that broke ONE of the two mounts — the surviving mount kept the
+// string in the file, so the search found it and the cell stayed green while
+// the day screen was wired wrong. That is `a bind can be green and empty`, and
+// it is the same shape as first-match-wins hiding an ordering: one satisfied
+// instance answering for a set.
+//
+// So the mounts are EXTRACTED and asserted over individually. A cell about two
+// mounts has to look at two mounts.
+const stripMounts = (source: string): readonly string[] =>
+  source.match(/<ModifiersStrip[\s\S]*?\/>/g) ?? [];
+
+run('the day and week screens both mount the read-only modifier notice', () => {
   const home = read(HOME);
-  const strip = /<ModifiersStrip\b/.test(home);
-  assert(!strip,
-    "the day screen now mounts ModifiersStrip — Sam's second half is BUILT, "
-    + 'which is good news and makes this cell wrong. Invert it, and update '
-    + '.maestro/golden/coach-my-status.yaml, which asserts `modifiers-strip-day` '
-    + 'is NOT visible.');
+  assert(/import \{ ModifiersStrip \}/.test(home),
+    'Program no longer imports ModifiersStrip, so the day/week notice Sam asked '
+    + 'for ("one line on week, small card on day") is gone from the screen again');
+  const mounts = stripMounts(home);
+  const surfaces = mounts
+    .map((mount) => mount.match(/surface="(\w+)"/)?.[1])
+    .filter((surface): surface is string => !!surface)
+    .sort();
+  assert(surfaces.length === mounts.length,
+    `a ModifiersStrip on Program is mounted without a surface prop, so its `
+    + `testID collapses to \`modifiers-strip-undefined\` and no flow can say `
+    + `which screen it asserted (${mounts.length} mounts, ${surfaces.length} surfaced)`);
+  assert(surfaces.includes('day'),
+    'the DAY screen no longer mounts the notice — half of Sam\'s answer is '
+    + 'missing, and the half that is left will look deliberate to the next reader');
+  assert(surfaces.includes('week'),
+    'the WEEK screen no longer mounts the notice — the week is the shape that '
+    + 'shows all seven days, so it is the shape most able to hide a change');
+  assert(!surfaces.includes('coach'),
+    'Program mounts the COACH surface, which draws the permanent doorway that '
+    + 'never hides at zero — a quiet week would carry a notice saying nothing');
+});
+
+// THE COUNT IS THE LIST'S OWN LENGTH, ON PROGRAM TOO.
+//
+// Item 16 rule (d): "The count comes from `useActiveModifiers`, never a
+// separate count." A second tally is `a count taken for a record` — sighting 14
+// in this repo — and the copies agree right up until one of them is taught a
+// filter the other never hears about. `useHomeScreen` therefore DELEGATES to
+// the hook instead of re-running the selector beside it, which is why the
+// number on the day screen cannot disagree with the list it opens.
+run('Program counts modifiers through the one hook, not beside it', () => {
+  const hook = read('src/screens/home/useHomeScreen.ts');
+  assert(/useActiveModifiers\(/.test(hook),
+    'the Program hook stopped using useActiveModifiers, so its count is now '
+    + 'derived somewhere else than My Status\'s list');
+  assert(!/selectActiveCoachNotes\(/.test(hook),
+    'the Program hook runs selectActiveCoachNotes directly again — that is a '
+    + 'SECOND derivation of the same list beside useActiveModifiers, and two '
+    + 'copies of one selector is two places for the count to drift');
+  const home = read(HOME);
+  const mounts = stripMounts(home);
+  assert(mounts.length > 0, 'Program mounts no ModifiersStrip at all');
+  for (const mount of mounts) {
+    const surface = mount.match(/surface="(\w+)"/)?.[1] ?? 'unknown';
+    assert(/count=\{modifierCount\}/.test(mount),
+      `the ${surface} notice is no longer fed the hook-derived count; a literal, `
+      + 'a second selector call or a locally recomputed number here is the exact '
+      + 'defect rule (d) forbids — and it only has to be wrong on ONE surface for '
+      + 'the day and the week to disagree about the same week');
+  }
+});
+
+// READ-ONLY MEANS THE NOTICE OPENS A DOOR AND OWNS NOTHING BEHIND IT.
+run('the Program notice is a doorway, not a control surface', () => {
+  const home = read(HOME);
+  const mounts = stripMounts(home);
+  assert(mounts.length > 0, 'Program mounts no ModifiersStrip at all');
+  for (const mount of mounts) {
+    const surface = mount.match(/surface="(\w+)"/)?.[1] ?? 'unknown';
+    assert(/onPress=\{handleOpenMyStatus\}/.test(mount),
+      `the ${surface} notice no longer opens My Status, so Program shows the `
+      + 'athlete that something changed and gives them nowhere to go and see '
+      + 'what — LAW-L5-no-dead-affordances, on a row that looks tappable');
+  }
+  const hook = read('src/screens/home/useHomeScreen.ts');
+  assert(/navigation\.navigate\('CoachTab', \{ status: 'open' \}\)/.test(hook),
+    'My Status is opened by something other than the navigation-owned `status` '
+    + 'param — cell [9] of test:coach-tab-slice3 owns that route, and a private '
+    + 'Coach boolean cannot be opened by Program at all');
 });
 
 console.log(`\nprogram tab read-only modifiers: ${passed} passed, ${failed} failed`);
