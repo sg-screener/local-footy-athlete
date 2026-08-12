@@ -106,7 +106,7 @@ them rather than rediscover them:**
   injurySheet: InjurySheetState; confirmSheet: ConfirmSheetState }`.
 - Consumes: the existing store doors unchanged — no new writer is introduced.
 
-- [ ] **Step 1: Write the failing provenance cell**
+- [x] **Step 1: Write the failing provenance cell**
 
 The cell that makes the lift safe. It asserts the recorded surface follows the
 screen the athlete actually used, which no existing test checks.
@@ -132,35 +132,35 @@ run('the program tab still records the program tab', async () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `npm run test:coach-note-action-source`
 Expected: FAIL — `createCoachNoteActions` does not exist yet.
 
-- [ ] **Step 3: Create the hook, moving the bodies verbatim and parameterising only the source**
+- [x] **Step 3: Create the hook, moving the bodies verbatim and parameterising only the source**
 
 Move `handleClearCoachNote` (`useHomeScreen.ts:1331`) and
 `handleUpdateCoachNoteStatus` (`:1456`) plus the injury/confirm sheet state.
 Every `screen: 'program_tab'` inside the moved code becomes `screen`, taken from
 the hook's argument. **Do not change any other behaviour in this task.**
 
-- [ ] **Step 4: Re-point `useHomeScreen` at the hook**
+- [x] **Step 4: Re-point `useHomeScreen` at the hook**
 
 `useHomeScreen` mounts `useCoachNoteActions({ screen: 'program_tab' })` and
 re-exports the same names it exports today (`:1683`, `:1685`), so no caller
 changes in this task.
 
-- [ ] **Step 5: Run the cell and the neighbours**
+- [x] **Step 5: Run the cell and the neighbours**
 
 Run: `npm run test:coach-note-action-source && npm run test:action-log && npm run test:coach-tab-slice3 && npm run test:decision-ledger-ownership`
 Expected: all PASS.
 
-- [ ] **Step 6: Mutation-test the parameter**
+- [x] **Step 6: Mutation-test the parameter**
 
 Hard-code `screen: 'program_tab'` back inside the hook. Expected: the My Status
 cell REDS and the program-tab cell stays green. Restore.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/screens/coach/useCoachNoteActions.ts src/__tests__/coachNoteActionSourceTests.ts src/screens/home/useHomeScreen.ts package.json
@@ -182,7 +182,7 @@ git commit -m "refactor(coach-notes): THE WRITERS TAKE THEIR SOURCE AS A PARAMET
 **Interfaces:**
 - Consumes: `useCoachNoteActions` from Task 1.
 
-- [ ] **Step 1: Write the failing cell — every kind is live on My Status**
+- [x] **Step 1: Write the failing cell — every kind is live on My Status**
 
 ```ts
 run('My Status offers no dead controls', () => {
@@ -194,26 +194,26 @@ run('My Status offers no dead controls', () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail** — seven kinds missing.
+- [x] **Step 2: Run it and watch it fail** — seven kinds missing.
 
-- [ ] **Step 3: Wire the seven through the hook** in `CoachTabScreen`'s
+- [x] **Step 3: Wire the seven through the hook** in `CoachTabScreen`'s
   `onAction`, mounting `useCoachNoteActions({ screen: 'coach_tab' })`, and pass
   its real `equipmentFactIds` instead of `EMPTY_EQUIPMENT_FACT_IDS`.
 
-- [ ] **Step 4: Grow `LIVE_ACTION_KINDS` to all eight** and drop `actionsNotYet`
+- [x] **Step 4: Grow `LIVE_ACTION_KINDS` to all eight** and drop `actionsNotYet`
   at `CoachStatusScreen.tsx:129`.
 
-- [ ] **Step 5: Retire the caption and its guard IN THIS SAME COMMIT** —
+- [x] **Step 5: Retire the caption and its guard IN THIS SAME COMMIT** —
   `projectionCopy.ts:378`, the not-yet machinery in `ActiveModifiersSection`,
   the `NOT_YET_SURFACE` cell, and the `coachTabSlice3Tests` assertion. Record in
   the guard's place WHY it went (its founding case is preserved in
   `lawRegistry.ts:541`).
 
-- [ ] **Step 6: Run the chain**
+- [x] **Step 6: Run the chain**
 
 Run: `npm run test:coach-tab-slice3 && npm run test:repo-law-guards && npm run test:copy-rulings-binding && npm run test:approved-icons && npm run test:coach-note-action-source`
 
-- [ ] **Step 7: LOOK AT IT.** Seed and photograph — this unit is glass and a
+- [x] **Step 7: LOOK AT IT.** Seed and photograph — this unit is glass and a
   green id proves presence, not placement.
 
 ```bash
@@ -225,7 +225,7 @@ modifier, screenshot the expanded row, tap one freed action, screenshot the
 result. Use `visibilityPercentage: 40` when scrolling; match literal subtitles,
 never ALL-CAPS titles.
 
-- [ ] **Step 8: Commit (a)+(b) together — never separately.**
+- [x] **Step 8: Commit (a)+(b) together — never separately.**
 
 ---
 
@@ -237,16 +237,42 @@ never ALL-CAPS titles.
   (`:2634`, mount `:1190`), the DUPLICATE injury mount (`:1198`) —
   **keep `:1148`, it is live** — and the false comment (`:2578`).
 
-- [ ] **Step 1: Write the failing cell** asserting the Program tab mounts the
+- [x] **Step 1: Write the failing cell** asserting the Program tab mounts the
   injury sheet exactly ONCE and no longer defines a coach-note handler.
-- [ ] **Step 2: Run it and watch it fail** (two mounts today).
-- [ ] **Step 3: Delete the leftovers**, keeping `:1148`.
-- [ ] **Step 4: Run** `npm run test:coach-tab-slice3 && npm run test:athlete-door-matrix && npm run test:action-walker`
-- [ ] **Step 5: Photograph the Program tab** — the modifier strip must still
+- [x] **Step 2: Run it and watch it fail** (two mounts today).
+- [x] **Step 3: Delete the leftovers**, keeping `:1148`.
+- [x] **Step 4: Run** `npm run test:coach-tab-slice3 && npm run test:athlete-door-matrix && npm run test:action-walker`
+- [x] **Step 5: Photograph the Program tab** — the modifier strip must still
   render as a READ-ONLY indicator with no dead buttons.
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ---
+
+## Outcome — ALL THREE TASKS LANDED, IN THE RULED ORDER (2026-08-12)
+
+| task | commit | what proves it |
+|---|---|---|
+| 1 — the source becomes a parameter | `a0e293b3` | `test:coach-note-action-source`, mutation-checked |
+| 2 — (a)+(b), one commit | `8de98d3f` | `test:my-status-modifiers` + the golden flow on glass |
+| 3 — (c), the leftovers | `2e16fb9f` | `test:program-tab-read-only-modifiers` |
+
+**FOUR THINGS THE PLAN DID NOT CONTAIN, EACH FOUND BY BUILDING IT:**
+
+1. **The decision ledger does not record these actions at all** — only three
+   exercise-level types reach it. The plan's Global Constraint said `screen`
+   lands "in the action tape and the decision ledger"; the tape is the whole
+   record.
+2. **The durable door was DROPPING the screen** (`<surface ?? screen>`), so the
+   lift would have LOST the provenance rather than forged it.
+3. **`coach_tab` was the wrong value.** It maps to the diagnostic label
+   `'coach'`. My Status is the athlete's tap, so the screen id is `my_status`.
+4. **Three components had to be extracted, not deleted** — the confirmation
+   sheet, the rebuild sheet and the rebuild owner all lived inside
+   `HomeScreenV2`, and (a) made My Status depend on all three.
+
+**AND ONE GAP THE PLAN ASSUMED AWAY:** Sam's *"a simple thing shows on day
+screen and week screen"* is **NOT BUILT** — `ModifiersStrip` is mounted once, on
+the Coach tab. Held by cell [6] of `test:program-tab-read-only-modifiers`.
 
 ## Self-review
 
