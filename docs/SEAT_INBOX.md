@@ -1233,6 +1233,147 @@ phone.** State device items as PARKED in a stop report, never as a request.
     and line; the four inverted assertions quoted; `test:program-tab-read-only-modifiers`
     green with cell [5] still green; the registry row's new text.
 
+17. **SAM HAS RULED — A GAME'S LOAD IS READ, FULL, SAME UNIT AS EVERY OTHER
+    SESSION.** Asked under `## AWAITING SAM` since item 6. **Sam, 2026-08-12:**
+    *"yes don't we do 'how long was your game?' and multiply by game RPE for a
+    score that counts toward load?"* — **and the app already asks both.**
+    `SessionFeedbackPanel.tsx:383` asks the duration (hours + minutes),
+    `:415` asks the effort on the 1-10 slider, both are validated at the
+    transaction boundary (`sessionOutcome.ts:130,137`) and **read by nothing.**
+
+    **BUILD `gameSRPE`, THE SAME SHAPE AS THE TWO THAT EXIST.** `bodyRpe x
+    timeOnGroundMinutes`, in `journalLoad.ts` beside `conditioningSRPE` and
+    `teamTrainingSRPE`. **Missing either half means UNMEASURED, never
+    half-counted** — that rule is already written in both siblings and must not
+    be softened here. Carry it into `deriveSessionLoad`, count it in `measured`,
+    and wire it from the journal producer **so it is read end to end** — a
+    reader that stops at `deriveSessionLoad` recreates the exact defect item 10
+    exists to catch.
+
+    **DELETE THE COMMENT THAT SAYS THIS IS UNRULED.** `journalLoad.ts:544-549`
+    reads *"A GAME IS DELIBERATELY NOT HERE ... a coaching question nobody has
+    ruled"*. **It is ruled. That comment becomes a lie the moment this lands**,
+    and a stale comment beside a live reader is what sent the last four
+    measurements down the wrong path. Replace it with the ruling and its date.
+
+    **FULL, NOT WEIGHTED. Do not invent a discount** because a game "isn't
+    training" — Sam considered the three options and chose full. Registry row,
+    cells in `test:journal-load`, one mutation killed at minimum.
+
+18. **SAM HAS RULED — STRENGTH ASKS HOW LONG IT TOOK. OPTION (a), AND IT CLOSES
+    THE LAST GAP IN EXPERIENCED LOAD.** **Sam, 2026-08-12:** *"i think do a for
+    now and I will think of if thats good enough long term"*. **The "for now" is
+    his, not a hedge to build around: build (a) properly, do not leave a seam
+    for (b) or (c).**
+
+    **THE MEASURED GAP IS ONE FIELD, NOT THREE.** Re-measured 2026-08-12: a
+    strength session already asks *"How hard was the session?"* on the 1-10
+    slider and stores it as `difficulty` (`SessionFeedbackPanel.tsx:1065,892`).
+    **Actual minutes is the only missing half.**
+
+    **BUILD:** an actual-duration input on the strength feedback form — **the
+    same hours + minutes pair the game form already uses (`:383-410`), not a
+    second design** — validated the same way, then `strengthSRPE` =
+    `difficulty x actualMinutes`, wired end to end exactly as item 17.
+
+    **PLANNED MINUTES ARE NOT THE FALLBACK ANYMORE.** Sam chose (a) over (b) on
+    purpose. **A session missing the answer is UNMEASURED**, same as the other
+    three. Do not quietly substitute `domain.ts:834`'s planned value — that is
+    option (b), which he did not choose, and it would make the column look
+    complete when it is not.
+
+    **WHEN THIS LANDS, ALL FOUR KINDS ARE REAL.** Say so in the stop report with
+    the four function names, because that is the sentence item 6 has been
+    reaching for since it was written.
+
+19. **SAM HAS RULED — AS MANY GAMES AS THE WEEK NEEDS, AND THE BUTTON IS THE
+    WHOLE PROBLEM.** The `## AWAITING SAM` entry asked whether a second game
+    field should land or two-game weeks be ruled out of scope. **Both were the
+    wrong question.** **Sam, 2026-08-12:** *"no a user should be able to have as
+    many games as needed in their week. Are you talking about having a button
+    that says 'add a game' when in season - like the 'add pre season practice
+    match' button?"* — **yes, that button, and he found the defect from the
+    couch.**
+
+    **MEASURED 2026-08-12, ALL THREE:**
+    - `useHomeScreen.ts:1315` — `const showPracticeMatchCTA = currentPhase ===
+      'Pre-season';`. **In season there is NO add-a-game control at all.** The
+      picker banner at `HomeScreenV2.tsx:612` already writes the in-season
+      words — *"Tap the day to set as game day"* — **for a mode nothing in
+      season can enter.** The copy was ready and the door was not.
+    - `HomeScreenV2.tsx:156` — `weekDays.find(day => day.workout?.workoutType ===
+      'Game')`. **`find`, so the FIRST.** Once one fixture exists the control
+      stops offering "add" and becomes a label for that one
+      (`:157-161`), and `handlePracticeMatchPress` (`:162`) routes to its
+      actions instead of the picker. **There is no second-game route on any
+      screen.**
+    - **THE ENGINE IS ALREADY READY AND THIS IS WHY THE ITEM IS SMALL.**
+      `derivedWeekContract.ts:90` was THE WAIST and it was unpinched
+      (`3f62ad62`): `targetWeekFixtures` returns the whole week sorted and
+      `fixtureDays` now carries **every** fixture, so each gets its anchor,
+      its G-1/G-2 protection and its credit. **This item is UI. It does not
+      re-open the contract.**
+
+    **BUILD:**
+    (a) **The control shows IN SEASON as well as pre-season**, with the label
+    following the phase — "Add a game" in season, "Add a pre-season practice
+    match" in pre-season. The banner copy already branches; match it.
+    (b) **It stays an ADD control after the first fixture.** Existing fixtures
+    are reached by tapping their own day, which already works — the control's
+    job is adding, and one week may need several.
+    (c) **No cap.** Sam's words are *"as many games as needed"*. **Do not add a
+    two-game limit, a warning at three, or a confirm.** If the week gets ugly
+    that is the contract's job to disclose, not the button's job to prevent.
+
+    **DO NOT ADD A SECOND GAME FIELD TO THE PROFILE.** `gameDay` and
+    `usualGameDay` are the DEFAULT competition day, not the week's fixtures —
+    read through `rules/gameAnchor.ts`. The calendar holds the real ones. The
+    `## AWAITING SAM` entry that proposed a second field is **withdrawn** by his
+    answer; strike it rather than leaving two answers in the file.
+
+    **THEN ITEM 7 IS UNBLOCKED.** His own case — *"only doing 1 strength session
+    ... if they have 2 games and 2 team trainings"* — **becomes representable
+    the day this lands.** Say so in the stop report.
+
+20. **SAM HAS CHOSEN THE WORDS — AND THE REAL DEFECT IS THAT ONE SENTENCE
+    SERVES TWO DIFFERENT CAUSES.** **Sam, 2026-08-12:** *"yeah thats bad
+    wording"*, then **A**:
+
+        "With a game Saturday, there's only room for two strength sessions
+        this week."
+
+    **`renderSection18Shortfall` (`:96-103`) has ONE unconditional sentence**,
+    *"Resting {day} means you'll miss {n} {type} session(s) this week"*, and
+    `Section18Shortfall` carries only `date` / `type` / `count`. **The date is
+    "the date whose fact caused the shortfall" — and that fact can be the
+    athlete's OWN rest mark or the club's fixture. The sentence assumes rest
+    every time.** That is precisely what Sam objected to: it blames him for the
+    draw.
+
+    **SO THE TYPE GROWS A CAUSE, AND THE RENDERER BRANCHES:**
+    - **fixture-caused** — Sam's new sentence, above.
+    - **athlete's own rest mark** — the EXISTING sentence stays. *"Resting
+      Friday means you'll miss a strength session this week"* is honest when
+      resting Friday is what he chose. **Do not replace it; it was never the
+      defect.**
+
+    **SAM'S SENTENCE STATES WHAT FITS, NOT WHAT IS MISSED — and `count` is the
+    missed number.** *"only room for two"* needs the target as well. Either
+    carry the fitting number on the shortfall or derive it at the one call
+    site; **do not subtract a hardcoded target inside the renderer.** Word the
+    number, not the digit, at one and two ("a" / "two"), matching the article
+    rule already in `articleFor`.
+
+    **THE COPY IS EQUALITY-BOUND IN BOTH DIRECTIONS** by
+    `section18ShortfallCopyTests` against the design record, same regime as the
+    G-1 warning. **Update the record and the test in the same commit** or the
+    gate reds on a change Sam signed. `ATHLETE_FORBIDDEN_VOCABULARY` still
+    applies to the new string.
+
+    **⚠ SAM, ONE LINE BACK IN THE STOP REPORT:** the branch above is the seat's
+    reading of *why* the wording was bad, not a second ruling by him. **If he
+    wants his sentence used for BOTH causes, say so and the rest branch goes.**
+
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
 addressable then walk it; the harvest ratchet and a computed tap atlas.
@@ -1276,12 +1417,6 @@ seat was wrong.
   tier's hydration relocation are all **BUILT, awaiting device acceptance**.
   When he rebuilds, the white screen after a refused dev launch is expected and
   now names its own cause (`docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`).
-- **DECISION OWED — which measure "experienced load" SHOWS (item 6).** Sam's §4
-  ruling settles what a MISSING answer means; it does not settle what the column
-  IS. Re-measured 2026-08-12: strength now captures an RPE (his own effort-scale
-  unit), so the choice is no longer "real data or an all-estimate column" — it
-  is `reported RPE x planned minutes, duration marked estimated` versus volume
-  load beside it. **A much smaller call than item 6 describes, and still his.**
 - **NOT A DECISION, A BLOCKER, RECORDED SO IT IS NOT RE-ATTEMPTED:** item 9's
   four-answer collapse and item 3's remaining step both need files another agent
   is editing in this shared checkout (`section18CraftTier.ts`,
@@ -1290,25 +1425,15 @@ seat was wrong.
 - **ANSWERED 2026-08-12, NOW ITEM 16 — the day/week modifier indicator.**
   Sam: *"yes — one line on week, small card on day, read-only both"*. Moved
   out of this section into the queue. **Do not re-ask.**
-- **DECISION OWED — a second game in one week.** Sam's own sentence for item 7,
-  *"only doing 1 strength session ... if they have 2 games and 2 team
-  trainings"*, **cannot be expressed**: the profile carries ONE game field
-  (`domain.ts:192,196`). Either a second-game field lands, or a two-game week is
-  ruled out of scope. **Item 7 is skipped until then, per item 0.**
-- **WORDS OWED — the fixture-caused shortfall.**
-  `section18ShortfallDisclosure.ts:97` has one unconditional sentence,
-  *"Resting {Day} means you'll miss a strength session this week"*, which blames
-  the athlete when it was the club's draw. **The replacement is SIGNED COPY and
-  his to write** — the terminal does not invent athlete words.
 - **DECISION OWED — the moderate-day generation target (item 4).** The range and
   the advisory are built; nothing says WHICH session becomes the moderate one, or
   at whose expense.
-- **DECISION OWED — does a GAME's minutes count as training load?** A match
-  stores both halves of sRPE (`bodyRpe` + `timeOnGroundMinutes`) and nothing
-  reads them. The team-night reader landed today because a team night IS a
-  training session; **a match is not, and whether its minutes count in full,
-  weighted, or not at all is coaching, not code.** The reader is one line once
-  he rules. (Item 6.)
+- **ANSWERED 2026-08-12, ALL FOUR — now items 17, 18, 19, 20. Do not re-ask.**
+  A game's load counts **in full** (17). Strength gets an **actual-minutes
+  field**, option (a) (18). **As many games per week as the athlete needs**, and
+  the profile does NOT grow a second game field — the add-a-game button is the
+  defect (19). The shortfall sentence gets **Sam's wording for fixture-caused
+  shortfalls only**; the rest-mark sentence stays (20).
 - **CLOSED, do not re-ask:** the week-card shape; the accounts question
   (LOCAL-ONLY); the platform question (iPHONE-ONLY).
 
