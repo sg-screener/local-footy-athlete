@@ -553,6 +553,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-pictures-newer-than-code',
+    law: 'A UI picture names the CODE it shows, in its filename and in a tracked manifest, and that commit must have touched source. An index may never pin itself to a docs-only commit.',
+    ruledAt: 'docs/SEAT_INBOX.md item 12, 2026-08-12: "UI_STATE_2026-08-12.md:14 pins itself to a9c82856, a docs-only commit 14h48m after the newest screenshot — which is why the seat cited a stale UI location with confidence"',
+    guard: {
+      state: 'guarded',
+      by: 'test:ui-picture-manifest',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO), AND IT RED ON ITS FIRST RUN — on the founding defect itself, which is reported here rather than fixed quietly. FOUNDING CASE, VERIFIED BY THE GATE not quoted from the order: `a9c82856` changed `docs/ATLAS_VERIFICATION_2026-08-12.md` and `docs/SEAT_INBOX.md` and NOTHING ELSE, and the picture index said its four surfaces "stand at" it. A SHA naming a commit that touched no code reads as provenance and carries none. WHY A TRACKED MANIFEST AT ALL: `artifacts/` is gitignored (`.gitignore:26`), so the shots do not survive a clone and every filesystem instinct for "is this current" — mtime, existence — dies with them. Provenance has to be committed, and it has to be in the FILENAME too so a loose PNG still says what it shows. WHAT THE CELLS HOLD: a `pinned` row names a commit git confirms touched `src/**.ts(x)`; its filename carries that SHA; the index carries no docs-only pin; a `STALE` row says what re-shooting would take. Cell [5] is liveness and runs the founding case AS A PROBE rather than trusting the header — `a9c82856` must still measure as docs-only, or three headers quoting it are wrong. `filesChangedBy` returns NULL when git cannot answer and null is never read as "touched no code", so a shallow clone produces no fabricated finding. MUTATION-CHECKED BOTH WAYS: restoring the index heading reds cell [3]; a row claiming `pinned: a9c82856` reds cell [1]. A SECOND DEFECT CAUGHT IN THIS CELL\'S OWN FIRST GREEN RUN: the index now EXPLAINS the pin it removed, quoting the old wording, and a whole-file regex read that explanation as the offence — `a-comment-is-not-a-shipped-string`, so the reader matches HEADINGS only, never prose about a heading. WHAT IT DOES NOT DO, BY ORDER: it does not re-shoot. All four rows are STALE and say so. Sam has more UI coming and fresh shots would restale immediately; the mechanism ships first and the pictures come once his UI settles.',
+    },
+  },
+  {
     id: 'LAW-feature-has-two-states',
     law: 'A feature is `held` (naming the test that fails when it breaks) or `UNPROVEN` (naming what a proof would take). There is no third state, and a row also says whether an athlete can REACH it.',
     ruledAt: 'docs/HOW_WE_STOP_BELIEVING_THINGS_ARE_DONE_2026-08-12.md; ordered as docs/SEAT_INBOX.md item 11 — "Two states, no third... plus a `reachable` field laws do not need. Copy lawRegistry.ts exactly; do not design a second mechanism. Seed it honestly and let the number be ugly."',

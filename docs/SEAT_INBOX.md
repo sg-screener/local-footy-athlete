@@ -1048,7 +1048,20 @@ phone.** State device items as PARKED in a stop report, never as a request.
    `lawRegistry.ts` exactly; **do not design a second mechanism.** Seed it
    honestly and let the number be ugly.
 
-12. **PICTURES MUST BE NEWER THAN CODE.** `UI_STATE_2026-08-12.md:14` pins itself
+12. **BUILT — THE MECHANISM SHIPS, THE PICTURES DO NOT (as ordered).**
+   `src/dev/uiPictureManifest.ts` + `test:ui-picture-manifest`, in `test:bible`,
+   mutation-checked both ways. **SHA in the filename, a TRACKED manifest
+   (`artifacts/` is gitignored, so mtime dies at clone), one gate cell, and the
+   index may never pin to a docs commit.**
+   **IT RED ON ITS FIRST RUN, ON THE FOUNDING DEFECT.** `a9c82856` changed two
+   docs and nothing else; `UI_STATE_2026-08-12.md` said its four surfaces "stand
+   at" it. **The pin is now GONE rather than corrected** — the shots really are
+   out of date (`8de98d3f` changed My Status, `e231a6bc` merged three UI fixes),
+   so a truer SHA would still point at pictures that do not show it.
+   **ALL FOUR ROWS ARE `STALE` AND SAY WHAT RE-SHOOTING TAKES. NOT RE-SHOT,
+   DELIBERATELY** — *"Then shoot once, after Sam's UI work settles."*
+
+   ~~ORIGINAL ORDER~~ **PICTURES MUST BE NEWER THAN CODE.** `UI_STATE_2026-08-12.md:14` pins itself
    to `a9c82856`, **a docs-only commit 14h48m after the newest screenshot** —
    which is why the seat cited a stale UI location with confidence. **Do NOT
    just re-shoot** (Sam has more UI coming; they would restale immediately):
