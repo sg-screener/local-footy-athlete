@@ -982,7 +982,20 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **AWAITING SAM — see `## AWAITING SAM` below.** The second half of his design
    is not built.
 
-9. **BUILD LAYER 3 — THE ATHLETE'S WILL. RULED BY SAM 2026-08-12:** *"should
+9. **PARTLY BUILT — the athlete can now go ahead anyway; the four-answer
+   collapse is BLOCKED.** `ca33206f`. `mayOverrideBlock` is `canOverride`'s
+   FIRST production reader after nine writes; the block sheet offers "Do it
+   anyway" / "Keep my plan" when every finding allows it, and the override is
+   recorded on the tape (`athlete_action_override_allowed`) BEFORE the change
+   commits. `LAW-warn-then-allow` born guarded; `test:block-override`,
+   mutation-checked three ways.
+   **BLOCKED, NOT SKIPPED — the remainder needs two files another agent holds.**
+   Collapsing the four competing answers onto `resolverMayDisplace` means
+   editing `projectVisibleWeek.ts:214-219` and `section18CraftTier.ts:217-232`
+   (the `date|name` STRING JOIN that breaks on a rename). Both are mid-flight in
+   this shared checkout. **Take it when they are clear.**
+
+   ~~ORIGINAL ORDER~~ **BUILD LAYER 3 — THE ATHLETE'S WILL. RULED BY SAM 2026-08-12:** *"should
    give warnings but allow them to do whatever they want"*. **So: the app warns
    and RECORDS that it warned, then does what the athlete asked. A `block` with
    no way through is retired except where the action is physically impossible.**
@@ -1198,6 +1211,17 @@ seat was wrong.
   tier's hydration relocation are all **BUILT, awaiting device acceptance**.
   When he rebuilds, the white screen after a refused dev launch is expected and
   now names its own cause (`docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`).
+- **DECISION OWED — which measure "experienced load" SHOWS (item 6).** Sam's §4
+  ruling settles what a MISSING answer means; it does not settle what the column
+  IS. Re-measured 2026-08-12: strength now captures an RPE (his own effort-scale
+  unit), so the choice is no longer "real data or an all-estimate column" — it
+  is `reported RPE x planned minutes, duration marked estimated` versus volume
+  load beside it. **A much smaller call than item 6 describes, and still his.**
+- **NOT A DECISION, A BLOCKER, RECORDED SO IT IS NOT RE-ATTEMPTED:** item 9's
+  four-answer collapse and item 3's remaining step both need files another agent
+  is editing in this shared checkout (`section18CraftTier.ts`,
+  `projectVisibleWeek.ts`, the generator under stand-down D). **Neither is
+  skipped for want of a ruling; both are waiting for a clear file.**
 - **DECISION OWED — the day/week modifier indicator, the SECOND HALF of Sam's
   own design, IS NOT BUILT.** He said *"it shows up in the status bar and on the
   a simple thing shows on day screen and week screen"*. Item 8 built the first
