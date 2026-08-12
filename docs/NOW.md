@@ -60,13 +60,20 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `3194fc05` (0d, `docs/STOP_2026-08-12_TOOLING_0D.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `ce09b522` (0e, `docs/STOP_2026-08-12_TOOLING_0E.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails
   closed naming `npx expo run:ios`. Recipe recorded as the `lfa-dev` skill.
   **`CLAUDE.md` now says what counts as finished** (`LAW-definition-of-done`)
   and got shorter doing it, 137 → 104 lines.
+- **THE FIVE CANONICAL ATHLETE FLOWS EXIST AS A SET** (`LAW-canonical-athlete-flows`).
+  Move a session and clear an adjustment had NO flow at all; both are built and
+  green on the simulator. **The re-aim of the deletion flow found an athlete
+  defect: today's card does not draw everything today holds** — a conditioning
+  session appears only after the strength part is deleted.
+  **⚠ THE SIMULATOR IS SHARED between agents and nothing said so** — a
+  concurrent Maestro run cost a re-run, which is OWED. `docs/GOLDEN_FLOW_RUN_RECEIPT.md`.
 - **`test:bible` IS DELIBERATELY RED and stays red until every law has a guard.**
   `test:law-registry` is the chain's last link and fails while any registry row
   reads `UNENFORCED`. The red does not mean the app broke — it means the app has
