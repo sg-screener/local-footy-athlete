@@ -291,18 +291,30 @@ export function exerciseBudgetRows(
  *   Team Training   n=32   2 to 4      26 sessions under it
  *
  * ZERO sessions exceeded the authored ceiling of 6. Every session below the
- * floor was a TEAM-TRAINING night — a day the athlete is already at the club,
- * carrying a deliberately small added piece ("Team Training + Lower Body
- * Strength"). So the claim that 3-exercise days are old logic surviving into
- * shipped output is REFUTED for strength and mixed days, and on team nights a
- * small session may well be correct.
+ * floor was a TEAM-TRAINING night.
  *
- * WHICH MAKES THE FLOOR A PRODUCT QUESTION, NOT A CODE ONE, and product
- * questions are Sam's (LAW-L7). It is recorded under AWAITING SAM in the seat
- * inbox: does a team night have a session-size floor at all, and if so what
- * number. Until he answers, `MIN EXERCISES PER SESSION` is deliberately NOT
- * emitted to the AI prompt — the prompt already carries the authored MAX, and
- * adding an invented MIN beside it would ship a number nobody authored as
- * coaching instruction.
+ * ## AND THE 26 ARE A DEFECT — SAM RULED IT 2026-08-13 (seat item 21)
+ *
+ * This comment used to justify those 26 by calling a team night "a day the
+ * athlete is already at the club". **That was FALSE, it was mine, and Sam
+ * struck it:** *"just because the strength is on the same day doesn't mean they
+ * are doing it at the club, they might do it in the morning or on the drive to
+ * footy"*. A session sharing a DATE with team training says nothing about where
+ * or when it is done. **Do not reason from same-day to same-place again.**
+ *
+ * His rule is simpler than the question I asked: *"just keep sessions for gym
+ * the same before footy training"*. **There is no team-night size case and no
+ * exception to this floor in either direction** — so 26 of 32 team nights under
+ * four exercises is a defect, not a correct smallness.
+ *
+ * THE FIX IS GENERATION-SIDE AND IS NOT DONE HERE (stand-down D). Size comes
+ * from the template at `sessionBuilder.ts:718`, not from a team-night branch,
+ * and the open question item 21 names first is whether these counted rows
+ * include the "Team Training" row itself — if they do, a "4-exercise" team night
+ * is really a 3-exercise lift and the defect is a different one.
+ *
+ * `MIN EXERCISES PER SESSION` is still NOT emitted to the AI prompt: this floor
+ * remains unauthored as a NUMBER. Sam ruled that gym sessions are the same size
+ * everywhere, not that the size is 4.
  */
 export const SESSION_SIZE_FLOOR = 4;
