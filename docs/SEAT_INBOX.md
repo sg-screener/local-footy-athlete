@@ -15,8 +15,31 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-29-C3. **C3'S "BREACH" IS PROBABLY NOT ONE — SAM'S OWN ROW SAYS IT COMPLIES.
-    MEASURE THE UNIT BEFORE BUILDING THE ENFORCER.**
+29-C3. **⚠ I WAS WRONG — THE CENSUS IS RIGHT AND THE BREACH IS REAL. I READ THE
+    BIBLE AND IT SETTLES IT AGAINST ME.**
+
+    **HIS TEXT, THREE TIMES, UNAMBIGUOUS:**
+    - `:1297` — *"Work intervals longer than 8 minutes are Run or Bike only. Ski,
+      Row and Air Bike have a HARD CAP of 8 minutes **in any one work
+      interval**."*
+    - `:1401` (Rower) and `:1402` (Ski) — *"HARD CAP 8 minutes in any one work
+      interval... **Anything longer than 8 minutes must be Run or Bike.**"*
+
+    **"IN ANY ONE WORK INTERVAL" COVERS A CONTINUOUS BLOCK.** A single continuous
+    10-minute piece IS one work interval — it is the largest possible one. My
+    "a continuous block is not an interval" reading was a distinction Sam never
+    drew, invented to explain away a row, and **it would have dismissed a real
+    defect.**
+    **THE "Short Flush" ROW STRADDLES THE CAP:** *"one continuous 8–10 min
+    block"* complies at 8 and breaches at 9 or 10. Its own note calling it
+    *"the cap-compliant option"* is true only of the bottom of its range.
+    **SO C3 IS BUILDABLE AND THE RULE IS CLEAR:** Ski, Row and Air Bike may not
+    render for any work interval over 8 minutes. `ergCapMinutes`,
+    `uncappedModalities` and `excludedModalities` already encode it and are read
+    by nothing but a test; `renderableModalities` decides by prose regex.
+    Interval length is `workPeriod`, a STRING, so a parser is needed — **and the
+    authored range "8–10 min" must be read at its TOP, since that is what can
+    ship.**
 
     **OWNED BY THE TERMINAL.**
 
