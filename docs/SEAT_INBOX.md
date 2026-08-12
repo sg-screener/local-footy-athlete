@@ -896,6 +896,13 @@ his instruction is standing authority, not history.**
 21. **BLOCKED-BY: sam — SAME NUMBER AS ITEM 25, AND HIS RULING IS BEING BROKEN
     TODAY. MEASURED 2026-08-13.**
 
+    **RULINGS-CHECKED: RULING-gym-session-same-size-whatever-else,
+    RULING-session-floor-shape-not-a-bare-number.** Both hit, and NEITHER
+    answers this. The first is the ruling being BROKEN here, not a prior answer
+    to the question; the second bars a BARE number, and what follows is the
+    permitted shape — the distribution from his own weeks, one recommendation,
+    veto in a word.
+
     **THE OLD BLOCK IS STALE:** it said the fix sits in files "the terminal holds
     uncommitted". The terminal holds nothing — `sessionBuilder.ts` and
     `sessionRowCounting.ts` are both clean. So this was worked.
@@ -1111,6 +1118,12 @@ his instruction is standing authority, not history.**
 
 25. **BLOCKED-BY: sam** — for ONE number only: the FLOOR. Everything else is
     measured and buildable, and the measurement found a defect nobody had named.
+
+    **RULINGS-CHECKED: RULING-session-floor-shape-not-a-bare-number.** It hits,
+    and it does NOT close this: Sam refused a bare "give me one number", and
+    this item is already in the shape he permits — his own signed weeks'
+    distribution, ONE recommendation (FLOOR = 4) with its reasoning, and a veto
+    in a word. **The number itself has never been authored.**
 
     **⚠⚠⚠ THREE STATEMENTS ON ONE NUMBER. THE THIRD IS THE TRUE ONE AND THE
     BREACH IS REAL — MY WITHDRAWAL WAS ITSELF OVER-CORRECTED.**
@@ -1353,13 +1366,22 @@ seat was wrong.
   verified by listing every `return` in the body and every top-level `}`), the
   function is entered 61 times, and its final pass is never reached. **I cannot
   explain that, and I am not guessing a fifth time.**
-  **THE NEXT ACT IS THE NARROWEST POSSIBLE PROBE:** put one `console.warn` on the
-  line IMMEDIATELY BEFORE `return applyAwayPass(...)` and one on the first line
-  INSIDE it. If the outer fires and the inner does not, the call is being
-  optimised or shadowed and the answer is in the module graph — `sessionResolver`
-  sits in four of the require cycles Metro warns about on every boot, and a cycle
-  is the only mechanism left that fits.
-  **Do not add a fourth filter anywhere until that has answered.**
+  **THE PROBE WAS RUN AND IT FOUND THE LINE — `sessionResolver.ts:1729`,
+  `if (!state.seasonPhase) return baseDays`.** Two stamps added in ONE edit:
+  the top of `resolveWeekWithConditioning` fired 61 times, the pass at the bottom
+  ZERO. **`state.seasonPhase` is empty in the state the screen builds, so the
+  whole conditioning tail is skipped and the athlete's week is `resolveWeek`'s
+  output — every filter added below that line over two days could never run.**
+  **THE EARLY RETURN NOW RUNS THE AWAY PASS TOO** (`:1729`). All suites green.
+  **⚠ AND IT IS NOT PROVEN ON GLASS, because the instrument stopped being
+  trustworthy.** Late in the session Metro repeatedly served a STALE bundle: an
+  edit would compile, the flow would run, and the new stamp would not appear
+  while older stamps in the same file did. **Two conclusions were drawn from that
+  silence and both were wrong.**
+  **SO THE NEXT PASS'S FIRST ACT IS INSTRUMENT DISCIPLINE, NOT PRODUCT CODE:**
+  change an EXISTING log line's text and confirm the new text appears before
+  trusting any absence. `expo start --clear` on its own was not enough. **Until
+  that is done, treat "the club still shows on his current week" as the state.**
   **THE PASS IS KEPT** — it is correct, tested and live for the resolver's other
   callers — but **the athlete's week is unchanged by it, and the screenshots
   still show the club.**
@@ -1376,7 +1398,9 @@ seat was wrong.
   put lower body or sprint work before training, but allow it when that is
   the only room). **No team-night floor, in either direction. Do not
   re-ask.**
-- The Wednesday game-day check (`06401d92`), the Renee UI pass, and the craft
+- **RULINGS-CHECKED: NONE — and this is not a question, it is a waiting-list.**
+  Nothing here asks Sam anything; it records what is built and needs his phone.
+  The Wednesday game-day check (`06401d92`), the Renee UI pass, and the craft
   tier's hydration relocation are all **BUILT, awaiting device acceptance**.
   When he rebuilds, the white screen after a refused dev launch is expected and
   now names its own cause (`docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`).

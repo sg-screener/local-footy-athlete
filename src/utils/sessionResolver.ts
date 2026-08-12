@@ -1720,7 +1720,13 @@ export function resolveWeekWithConditioning(
   const baseDays = resolveWeek(mondayStr, state);
 
   // Guard: skip conditioning + recovery if no season context
-  if (!state.seasonPhase) return baseDays;
+  // ⚠ THIS IS THE RETURN THE PROGRAM TAB TAKES — measured on a device
+  // 2026-08-13 (SEAT_INBOX item 30), and it is why three filters added BELOW it
+  // over two days could never run. `state.seasonPhase` is empty in the state the
+  // screen builds, so the whole conditioning tail is skipped and the athlete's
+  // week is `resolveWeek`'s output. Probes: this function entered 61 times in
+  // one flow, the line at the bottom of it reached ZERO.
+  if (!state.seasonPhase) return applyAwayPass(baseDays, state);
 
   // ── Availability hard-filter ──
   // Build a Set of allowed day-of-week numbers for O(1) lookup.
