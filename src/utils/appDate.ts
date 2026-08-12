@@ -147,6 +147,32 @@ export const WEEKDAY_NAMES: readonly string[] = [
   'Saturday',
 ];
 
+/**
+ * THE TWELVE MONTHS, IN FULL — added 2026-08-13 for the away flow's return-date
+ * calendar (SEAT_INBOX item 28), which is the first surface in this app that has
+ * to name a month the athlete is not already looking at.
+ *
+ * IT LIVES HERE FOR THE SAME REASON `WEEKDAY_NAMES` DOES: this module is the one
+ * owner of how a date is spoken. **FOUR PRIVATE `MONTH_SHORT` TABLES ALREADY
+ * EXIST** (`staleOverrideDetector`, `sessionResolver`, `teamNightMoveAsk`,
+ * `JournalScreen`) and they are reported, not extended — a fifth copy inside a
+ * screen file is how the five silently disagree.
+ */
+export const MONTH_NAMES: readonly string[] = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 /** The weekday a date falls on, named in full — "Saturday". */
 export function weekdayName(dateISO: string): string {
   return WEEKDAY_NAMES[dayOfWeekForISODate(dateISO)];

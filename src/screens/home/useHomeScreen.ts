@@ -31,6 +31,7 @@ import {
   executeProgramControlActionDurably,
   type ProgramControlActionResult,
 } from '../../utils/programControlActions';
+import type { EquipmentLimitationDecision } from './EquipmentLimitationSheet';
 import {
   readinessActionForKind,
   type WeekReadinessApplyKind,
@@ -1165,13 +1166,36 @@ export function useHomeScreen() {
     weekDays,
   ]);
 
-  const handleApplyAwayDays = useCallback(async (dates: string[]) => {
+  /**
+   * AWAY IS AN EQUIPMENT ANSWER WITH DATES ON IT — SEAT_INBOX item 28.
+   *
+   * **Sam, 2026-08-13, refusing the question this seat asked him:** *"can't we
+   * just treat going away as a modifier for equipment? the athlete just removes
+   * the equipment they don't have while on the trip and it's kept that way
+   * until they turn the modifier off and say 'i'm back now'"*.
+   *
+   * THE DOOR THAT STOOD HERE WROTE A `travel` SCHEDULE FACT WITH THE AWAY DAYS
+   * MARKED UNAVAILABLE — it took the sessions AWAY. That is the opposite of
+   * what he asked for twice (*"if yes, follow same program"*, *"the plan should
+   * change until their return date"*), and it also made this item impossible to
+   * build honestly: an equipment answer dated over days that no longer hold a
+   * session substitutes nothing. It would have shipped green and empty.
+   *
+   * So the away door now writes ONE fact — the dated equipment fact
+   * (`missing_for_span`, `bfad51b7`) — over the span the athlete just gave. The
+   * sessions stay; the exercises change; the fact lifts itself on the return
+   * date, with "Equipment available again" as the early exit.
+   *
+   * WHEN THE ATHLETE HAS THEIR NORMAL KIT, NOTHING IS WRITTEN, and that is the
+   * ruling rather than an omission: *"if yes, follow same program"*.
+   */
+  const handleApplyAwayEquipment = useCallback(async (
+    decision: EquipmentLimitationDecision,
+  ) => {
     const todayISO = todayISOLocal();
-    // Anchor the schedule note to the week the away days actually fall in
-    // so it shows + expires on the right week (not necessarily this one).
-    const anchor = [...dates].sort()[0] ?? todayISO;
+    const anchor = decision.kind === 'missing_for_span' ? decision.from : todayISO;
     const result = await executeProgramControlActionDurably({
-      type: 'set_schedule_modifier',
+      type: 'set_equipment_modifier',
       source: {
         screen: 'program_tab',
         surface: 'away_this_week',
@@ -1179,9 +1203,9 @@ export function useHomeScreen() {
       },
       scope: 'current_week',
       payload: {
+        decision,
         date: anchor,
         todayISO,
-        planChange: { kind: 'clear_days', dates },
       },
       requiresRebuild: false,
       createsActiveModifier: true,
@@ -1421,7 +1445,7 @@ export function useHomeScreen() {
     // Block-rollover honest refusal (Sam's interim ruling, 2026-07-31)
     rolloverRefusal,
     handleRetryRollover,
-    handleApplyAwayDays,
+    handleApplyAwayEquipment,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
     missedSessionPrompt,

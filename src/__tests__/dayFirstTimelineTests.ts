@@ -528,17 +528,21 @@ run('week navigation is bounded by the saved program dates, whatever its length'
 });
 
 /**
- * THE FOUR STATUS DOORS THAT REMAIN ON THE DAY SCREEN.
+ * THE THREE STATUS DOORS THAT REMAIN ON THE DAY SCREEN.
  *
  * Taken from the five bars this row replaces. Each row is what the athlete's tap
  * must still reach: the handler it calls and the coordinate the walker, the
  * explorer and the dev-e2e finder resolve it by. A chip that minted a new testID
  * from its own label would be a silent rename of five doors, and every one of
  * them is a door Sam has tapped on a device.
+ *
+ * **AWAY LEFT THIS ROW ON 2026-08-13 (SEAT_INBOX item 28).** Sam: *"I think the
+ * away button should live on the weekly screen"*. It is INVERTED rather than
+ * deleted — the cell below asserts it is absent here and present there, because
+ * a move that only deletes is how a door quietly stops existing.
  */
 const LIFE_FACT_DOORS: readonly { readonly label: string; readonly onPress: string; readonly testID: string }[] = [
   { label: 'Tired', onPress: "setReadinessEntry('flat')", testID: 'testID="home-tired-entry"' },
-  { label: 'Away', onPress: 'setAwayDaysVisible(true)', testID: 'testID="home-away-this-week-entry"' },
   { label: 'Sick', onPress: "setReadinessEntry('sick')", testID: 'explorerTestId.readinessUpdate(weekReadiness.id)' },
   { label: 'Injured', onPress: 'setReadinessInjuryVisible(true)', testID: 'testID="home-injured-entry"' },
 ];
@@ -758,7 +762,7 @@ run('Start Session sits inside the card, below the drop-downs', () => {
     + 'and the session screen behind it.');
 });
 
-run('the four status circles sit in a card with words above them', () => {
+run('the status circles sit in a card with words above them', () => {
   const home = homeScreenSource();
   const cardAt = home.indexOf('testID="home-change-card"');
   const chipsAt = home.indexOf('testID="home-life-fact-chips"');
@@ -794,8 +798,12 @@ run('the four status circles sit in a card with words above them', () => {
   assert(/stroke="#67D7FF"[\s\S]*M3 8h15v8H3z/.test(chipRegion)
     && /tiredIconTint:\s*\{[^}]*rgba\(103,\s*215,\s*255,\s*0\.12\)/.test(home),
   'Tired is not using the ruled blue battery icon and matching circle tint');
-  assert(/stroke="#B9A7FF"[\s\S]*M12 21s6-5\.2 6-11a6 6 0 1 0-12 0c0 5\.8 6 11 6 11Z/.test(chipRegion),
-    'Away is not using Renee\'s purple map-pin icon');
+  // ITEM 28: THE MAP PIN IS NOT IN THIS ROW ANY MORE, and its own cell below
+  // proves it landed on the week shape rather than simply disappearing.
+  assert(!/M12 21s6-5\.2 6-11a6 6 0 1 0-12 0c0 5\.8 6 11 6 11Z/.test(chipRegion),
+    'the Away map-pin is still in the day-screen chip row — Sam moved that '
+    + 'control to the weekly screen, and two live copies is the duplicate this '
+    + 'file exists to catch');
   assert(/stroke="#FFCA68"[\s\S]*M10 5a2 2 0 0 1 4 0v8\.2a4 4 0 1 1-4 0Z[\s\S]*M12 10v6/.test(chipRegion),
     'Sick is not using Renee\'s amber thermometer icon');
   assert(/stroke="#FF7F7F"[\s\S]*M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z/.test(chipRegion),
@@ -806,10 +814,56 @@ run('the four status circles sit in a card with words above them', () => {
   'the three Renee status icons no longer carry their matching circle tints');
 });
 
+/**
+ * ITEM 28 — THE OTHER HALF OF THE MOVE, AND THE HALF A DELETION WOULD PASS.
+ *
+ * Sam, 2026-08-13: *"I think the away button should live on the weekly screen,
+ * it should say 'when do you leave?' then 'when do you return' thhe leave button
+ * should be limited to that week in dates, but the return date can be any date
+ * in the future / then you are asked about the equipment stuff"*.
+ *
+ * The cell above asserts the chip row LOST it. Without this one, deleting the
+ * control outright would leave that suite green and the athlete with no way to
+ * say they are away at all.
+ */
+run('Away is a week-shape control, and it asks leave, return, then equipment', () => {
+  const home = homeScreenSource();
+  const entryAt = home.indexOf('testID="home-away-entry"');
+  assert(entryAt > 0,
+    'there is no away entry on the Program screen at all. It left the day-screen '
+    + 'chip row by Sam\'s ruling; if it did not land on the week shape, the '
+    + 'athlete cannot say they are away.');
+  const gateAt = home.lastIndexOf('{isNormal && !dayFirst && (', entryAt);
+  assert(gateAt >= 0 && entryAt - gateAt < 900,
+    'the away entry is not rendered under `isNormal && !dayFirst` — it is either '
+    + 'back on the day screen or on both shapes at once');
+
+  const sheetAt = home.indexOf('interface AwaySheetProps');
+  assert(sheetAt >= 0, 'the away sheet is gone; the entry opens nothing');
+  const calendarAt = home.indexOf('function AwayReturnCalendar', sheetAt);
+  assert(calendarAt >= 0 && calendarAt > sheetAt,
+    'the return-date calendar no longer follows the away sheet, so this cell '
+    + 'cannot bound the sheet region and would read to the end of the file');
+  const sheet = home.slice(sheetAt, calendarAt);
+  assert(/When do you leave\?/.test(sheet)
+    && /When do you return\?/.test(sheet)
+    && /Do you have your normal equipment\?/.test(sheet),
+    'the away sheet no longer asks Sam\'s three questions in his words');
+  assert(/date >= todayISO/.test(sheet) && /weekDays/.test(sheet),
+    'the leave date is no longer bounded to the week on screen');
+  assert(/home-away-return-calendar/.test(home),
+    'the unbounded return-date calendar is gone — a bounded picker is the exact '
+    + 'defect item 28 exists to remove ("away for ten days" was unsayable)');
+
+  // THE OLD SHEET MUST NOT SURVIVE BESIDE THE NEW ONE.
+  assert(!/Which days are you away\?/.test(home) && !/AwayDaysSheet/.test(home),
+    'the replaced "which days are you away?" sheet is still in the screen');
+});
+
 run('Tired and Sick enter one readiness sheet at their own options', () => {
   const home = homeScreenSource();
   const sheetStart = home.indexOf('interface WeekReadinessSheetProps');
-  const sheetEnd = home.indexOf('interface AwayDaysSheetProps', sheetStart);
+  const sheetEnd = home.indexOf('type AwayAnswer = {', sheetStart);
   assert(sheetStart >= 0 && sheetEnd > sheetStart,
     'the readiness sheet region could not be found — this gate would otherwise '
     + 'claim direct routing from an empty slice');
@@ -1185,7 +1239,7 @@ run('a week row carries the day\'s exercise count, and zero shows nothing', () =
     'the week row composes its own count text instead of reading the sheet');
 });
 
-run('the chip row carries four direct status doors', () => {
+run('the chip row carries its direct status doors and no others', () => {
   const home = homeScreenSource();
   const rowStart = home.indexOf('testID="home-life-fact-chips"');
   assert(rowStart > 0, 'the life-fact chip row is gone from HomeScreenV2 — this gate '
@@ -1198,8 +1252,9 @@ run('the chip row carries four direct status doors', () => {
     + 'span and would pass on anything');
   const chips = row.match(/<LifeFactChip\b/g) ?? [];
   assert(chips.length === LIFE_FACT_DOORS.length,
-    `the row renders ${chips.length} chip(s); the Day surface owns four — tired, `
-    + 'away, sick and injured. Equipment belongs inside the opened session.');
+    `the row renders ${chips.length} chip(s); the Day surface owns three — tired, `
+    + 'sick and injured. Equipment belongs inside the opened session, and Away '
+    + 'belongs on the week shape (item 28).');
   for (const door of LIFE_FACT_DOORS) {
     assert(row.includes(door.onPress),
       `the "${door.label}" chip no longer calls ${door.onPress}, the direct `
@@ -1255,21 +1310,40 @@ run('the old status bars did not survive alongside their own chips', () => {
   // week-level offer with a composed label, not a life fact. So the survivor is
   // pinned by name rather than the treatment being banned outright: a SECOND
   // survivor is a bar that was missed, and this reds on it.
+  //
+  // RE-COUNTED 2026-08-13 (SEAT_INBOX item 28): TWO, AND BOTH ARE NAMED. Away
+  // moved to the week shape by Sam's ruling, and it is a week-level control
+  // exactly like add-a-game — same shape, same treatment, deliberately. The
+  // property this cell holds is unchanged and is not the number: it is that
+  // every survivor is NAMED, so a life-fact bar cannot creep back in wearing
+  // the treatment. Both names are asserted below.
   const barIcons = body.match(/styles\.busyAwayIcon\b/g) ?? [];
-  assert(barIcons.length === 1,
+  assert(barIcons.length === 2,
     `${barIcons.length} card(s) still use the old 28pt bar icon treatment; exactly `
-    + 'one may — the practice-match CTA. The five life-fact bars that used it are '
-    + 'the chip row now.');
+    + 'two may — the add-fixture CTA and the away entry, both week-shape controls. '
+    + 'The five life-fact bars that used it are the chip row now.');
+  const awayEntryAt = body.indexOf('testID="home-away-entry"');
+  assert(awayEntryAt >= 0,
+    'the away entry is not in the Program screen body at all, so the second card '
+    + 'allowed to keep the old bar treatment cannot be identified');
+  assert(body.slice(awayEntryAt, awayEntryAt + 600).includes('styles.busyAwayIcon'),
+    'the second card allowed to keep the old bar treatment is not the away entry '
+    + '— something else inherited it, which is the leftover this cell exists to '
+    + 'find.');
   // RE-AIMED 2026-08-13 (SEAT_INBOX item 19). The survivor used to be pinned by
   // `showPracticeMatchCTA`, a flag that no longer exists: the pre-season
   // practice-match card and the in-season add-game card merged into ONE
   // phase-labelled add-fixture control, which is now the single card carrying
   // the old bar treatment. The property is unchanged — exactly one survivor,
   // named — only its name moved.
-  const addFixture = body.slice(body.indexOf('showAddFixtureCTA'));
-  assert(body.includes('showAddFixtureCTA'),
+  // BOUNDED, because there is a second survivor now: an unbounded slice would
+  // let the AWAY card satisfy this assertion and the add-fixture card could
+  // quietly lose its icon with nothing red.
+  const addFixtureAt = body.indexOf('showAddFixtureCTA');
+  assert(addFixtureAt >= 0,
     'the add-fixture control is gone from the Program screen body, so the one '
     + 'card allowed to keep the old bar treatment cannot be identified at all');
+  const addFixture = body.slice(addFixtureAt, addFixtureAt + 900);
   assert(addFixture.includes('styles.busyAwayIcon'),
     'the one card allowed to keep the old bar treatment is no longer the '
     + 'add-fixture CTA — something else inherited it, which is the leftover '

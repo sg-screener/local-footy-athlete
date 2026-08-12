@@ -71,7 +71,7 @@ export function buildReadinessAcknowledgment(
 
 /** Which schedule door is speaking. Both write the same fact kind; they promise
  *  the athlete different things, so they acknowledge differently. */
-export type ScheduleDoor = 'short_on_time' | 'away';
+export type ScheduleDoor = 'short_on_time' | 'away' | 'away_equipment';
 
 /**
  * Build an acknowledgment from a schedule-door result. Never null — a tap that
@@ -98,6 +98,20 @@ export function buildScheduleAcknowledgment(
       return {
         tone: 'success',
         message: "Got it — logged the days you're away. Your program stays as planned for now.",
+      };
+    }
+    // ── ITEM 28: THE AWAY DOOR THAT DOES CHANGE SOMETHING ──
+    // PROPOSED (copy sheet batch 34, 2026-08-13). The sentence above is the
+    // record-only away answer and it is still correct for the athlete who has
+    // their normal kit. **It is a LIE for the athlete who just marked gear
+    // missing** — that commit substitutes exercises for a dated span, which is
+    // the opposite of "stays as planned". One door word, two honest sentences,
+    // rather than one sentence that is true half the time.
+    if (door === 'away_equipment') {
+      return {
+        tone: 'success',
+        message: "Got it — your sessions will work around the gear you're without "
+          + 'until you\'re back.',
       };
     }
     if (result.inertReason === 'fixture_day') {

@@ -238,7 +238,7 @@ written by the terminal.
 | Row | String | Ruling | Where it appears (HEAD) |
 |---|---|---|---|
 | Short on time | Short on time today (withdrawn from this surface 2026-08-11) | Ruling 2 — the busy half of the split | removed |
-| Away | "Away this week?" | Ruling 2 — the away half of the split | `HomeScreenV2.tsx:655` (a11y), `:666` (Text) |
+| Away | WITHDRAWN: "Away this week?" — the Day-screen away chip moved to the WEEK shape 2026-08-13 (SEAT_INBOX item 28, Sam: *"I think the away button should live on the weekly screen"*). The control is now labelled "Away" and its first question is "When do you leave?" | Ruling 2 — the away half of the split | removed |
 | Readiness | "I'm sick/flat today" | Ruling 4 — replaces the retired old label (6-III) | `HomeScreenV2.tsx:720` (fallback title) |
 | Injury | "I'm injured" | Ruling 3 — new button, straight to the guided injury flow | `HomeScreenV2.tsx:739` (a11y), `:752` (Text) |
 
@@ -1151,7 +1151,7 @@ screen reader says.
 | Chip | PROPOSED label | The sentence it replaces on screen |
 | --- | --- | --- |
 | Short on time | "Time" | Short on time today (withdrawn from this surface 2026-08-11) |
-| Away | "Away" | "Away this week?" |
+| Away | "Away" | WITHDRAWN: "Away this week?" — the chip left this row for the week shape 2026-08-13 (item 28); the sentence it replaced is gone with it |
 | Readiness | "Sick" | "I'm sick/flat today" (signed, ruling 4) |
 | Injury | "Injured" | "I'm injured" |
 | Equipment | "Equipment" | WITHDRAWN: "Missing equipment?" — removed from the Day screen 2026-08-11; temporary equipment changes now begin inside the session |
@@ -2232,3 +2232,45 @@ removing the intermediate chooser.
 severity of feeling flat, and soreness is pain owned by Injured. "Pretty flat"
 records moderate fatigue directly; it does not pretend the athlete reported
 poor sleep or soreness.
+
+## Batch 34 — the away flow (2026-08-13): PROPOSED
+
+**STATUS: PROPOSED, AWAITING SAM.** He ruled the FLOW verbatim — *"it should say
+'when do you leave?' then 'when do you return' thhe leave button should be
+limited to that week in dates, but the return date can be any date in the future
+/ then you are asked about the equipment stuff"* (SEAT_INBOX item 28) — so the
+three questions below are HIS WORDS, lifted straight out. **What is proposed is
+the rest**: the two answer buttons, the sheet's own heading when it is asked
+about a trip, and the sentence the athlete gets back.
+
+| Where | PROPOSED string |
+| --- | --- |
+| Away sheet, question 1 | "When do you leave?" |
+| Away sheet, question 2 | "When do you return?" |
+| Away sheet, question 3 | "Do you have your normal equipment?" |
+| Question 3, yes | "Yes, same as usual" |
+| Question 3, no | "No, I'll be without some gear" |
+| The week-shape control | "Away" |
+| Equipment sheet heading, when it is a trip | "What will you be without?" |
+| Equipment sheet apply, when it is a trip | "Apply while I'm away" |
+| Equipment row status, when it is a trip | "Missing while away" |
+
+**34-a. THE YES ANSWER GETS A SENTENCE AND NO MODIFIER**, because Sam's own
+answer to that branch is *"if yes, follow same program"*. The sentence names the
+dates back to the athlete so the tap is not silent:
+
+> "You're away 17/8 to 27/8 with your normal gear, so your program stays as it
+> is."
+
+**34-a-ii. THE ANSWER TO THE NO BRANCH IS A DIFFERENT SENTENCE**, because the
+away acknowledgment that already exists — *"Got it — logged the days you're
+away. Your program stays as planned for now."* — is TRUE of the yes branch and a
+LIE of the no branch. That commit substitutes exercises for a dated span:
+
+> "Got it — your sessions will work around the gear you're without until you're
+> back."
+
+**34-b. NOTHING REPLACES A SIGNED WORD.** "Away" is already his (batch 12);
+only its SURFACE moved. The Day-screen sentence "Away this week?" is
+WITHDRAWN in batch 12-b, because a control that can now describe a fortnight
+cannot keep a label that says "this week".

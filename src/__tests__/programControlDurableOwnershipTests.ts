@@ -1005,28 +1005,47 @@ async function main(): Promise<void> {
       && !/home-short-on-time-entry/.test(screen)
       && !/surface: 'short_on_time_today'/.test(screen),
       'the removed short-on-time Program door or its handler wiring has returned');
-    assert(/const result = await handleApplyAwayDays\(dates\);[\s\S]{0,300}?setScheduleAck\(ack\);/
+    // RE-AIMED 2026-08-13 BY SEAT_INBOX ITEM 28. The away door no longer writes a
+    // schedule fact at all: Sam ruled away IS the dated equipment modifier
+    // (*"the athlete just removes the equipment they don't have while on the
+    // trip"*), so the commit these three lines guard is the equipment one. The
+    // PROPERTY is unchanged and is the whole point — the result is
+    // acknowledged, the ack reaches the tape, and the sheet may only close on
+    // `ok`, because closing IS the confirmation.
+    assert(/const result = await handleApplyAwayEquipment\(decision\);[\s\S]{0,300}?setScheduleAck\(ack\);/
       .test(screen),
       'the away commit does not acknowledge its result');
     assert(/recordScheduleAckPresented\(\{\s*\n?\s*traceId: result\?\.traceId, surface: 'away_this_week', tone: ack\.tone,/.test(screen),
       'away_this_week: the ack presentation is not recorded on the tape');
-    assert(/if \(result\?\.ok\) setAwayDaysVisible\(false\);/.test(screen),
-      'the away sheet closes without checking `ok` — closing IS the confirmation, '
-      + 'so an unconditional close reports a success that did not happen');
+    assert(/if \(result\?\.ok\) setAwayEquipmentSpan\(null\);/.test(screen),
+      'the away equipment sheet closes without checking `ok` — closing IS the '
+      + 'confirmation, so an unconditional close reports a success that did not '
+      + 'happen');
   });
 
-  await run('the removed short-on-time handler stays absent while Away stays weekly', async () => {
+  await run('the removed short-on-time handler stays absent while Away writes a dated equipment fact', async () => {
     const hook = fs.readFileSync(
       `${__dirname}/../screens/home/useHomeScreen.ts`, 'utf8') as string;
     assert(!/const handleApplyShortOnTimeToday/.test(hook)
       && !/^\s*handleApplyShortOnTimeToday,\s*$/m.test(hook),
       'useHomeScreen still authors or exports the removed UI handler');
 
-    // The surviving schedule door still asks for the week it names.
-    const awayStart = hook.indexOf('const handleApplyAwayDays');
+    // ITEM 28: THE AWAY DOOR IS AN EQUIPMENT WRITER NOW, AND THAT IS THE CELL.
+    // The `travel` schedule fact it used to write marked the away dates
+    // UNAVAILABLE — it removed the sessions — which is the opposite of Sam's
+    // ruling twice over (*"if yes, follow same program"*) and would also have
+    // made this item vacuous: an equipment answer dated over days that hold no
+    // session substitutes nothing.
+    const awayStart = hook.indexOf('const handleApplyAwayEquipment');
+    assert(awayStart > 0, 'useHomeScreen no longer owns an away handler at all');
     const awayBody = hook.slice(awayStart, hook.indexOf('}, [weekDays, handleProgramControlResult]);', awayStart));
-    assert(/scope: 'current_week'/.test(awayBody) && /surface: 'away_this_week'/.test(awayBody),
-      'the away handler no longer asks for the week scope it names');
+    assert(/type: 'set_equipment_modifier'/.test(awayBody)
+      && /surface: 'away_this_week'/.test(awayBody),
+      'the away handler no longer writes an equipment decision through the door '
+      + 'that names it');
+    assert(!/set_schedule_modifier/.test(awayBody) && !/clear_days/.test(awayBody),
+      'the away handler is writing a schedule fact again — that is the door that '
+      + 'took the athlete\'s sessions away while they were travelling');
   });
 
   // ────────────────────────────────────────────────────────────────────────

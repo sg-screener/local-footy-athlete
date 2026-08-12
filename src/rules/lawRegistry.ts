@@ -1528,6 +1528,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       receipt: 'BUILT 2026-08-10. Scans src/ and scripts/ plus app.json/eas.json for four credential shapes (OpenAI-style key, real-payload JWT, AWS access key id, and a named credential assigned a long literal). Patterns are BUILT FROM PIECES rather than written whole, so the scanner does not have to exclude itself — a self-exclusion is the hole a real key would sit in. GREEN on its first run. This law had the largest gap in the registry between the cost of a violation and the cost of its guard.',
     },
   },
+  {
+    id: 'LAW-away-is-an-equipment-answer',
+    law: "Away is a dated EQUIPMENT answer, never a schedule removal. The athlete gives a leave date (bounded to the week on screen), a return date (unbounded), then says whether they have their normal kit; \"no\" writes ONE `missing_for_span` equipment fact over leave..return-1, which lifts itself on the return date. Away removes no session and marks no date unavailable.",
+    ruledAt: 'docs/SEAT_INBOX.md item 28 (Sam, 2026-08-13); docs/AWAY_FLOW_BOUNDARY_2026-08-13.md',
+    guard: {
+      state: 'guarded',
+      by: 'test:away-flow',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-13. 13 cells through the real durable executor on a TEN-DAY trip crossing two Sundays. [5b] reds if a schedule fact or `clear_days` returns to the away handler — the shape that used to take the athlete\'s sessions away and that would also have made the equipment answer vacuous. [2b]/[2c] red if the span stops reaching the days it names; [3] reds if the fact survives the return date. MUTATION-CHECKED: forcing a week scope reds [1b]/[2b]/[2c]; setting `until` to the return date reds [3]. Seen on the simulator end to end — week control, both dates, marked kit, "1 active modifier impacting program" / "Equipment restriction active - Exercises substituted" afterwards.',
+    },
+  },
 ];
 
 /** Rows whose law has nothing holding it — the list Sam steers by. */

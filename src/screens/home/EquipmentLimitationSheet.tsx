@@ -14,6 +14,7 @@ import {
   type AskableEquipmentTag,
 } from '../../rules/equipmentVocabulary';
 import { ownedEquipmentKit } from '../../store/profileStore';
+import { shortDayMonthLabel } from '../../utils/appDate';
 import { explorerTestId } from '../../utils/stableTestId';
 import { LfaIcon } from '../../components/icons/LfaIcon';
 
@@ -102,6 +103,24 @@ export type EquipmentLimitationDecision =
       tags: readonly EquipmentTag[];
       conditioningModalities: readonly ConditioningEquipmentModality[];
     }
+  /**
+   * THE SAME ANSWER, OVER THE TRIP THE ATHLETE JUST DESCRIBED — SEAT_INBOX
+   * item 28, Sam 2026-08-13: *"when do you leave ... when do you return ...
+   * then you are asked about the equipment stuff"*.
+   *
+   * ONE MENU, NOT TWO. Sam's ruling on the away flow names this sheet by its
+   * behaviour — *"the athlete just removes the equipment they don't have while
+   * on the trip"* — so away does not get a second equipment question. It gets
+   * THIS one with a `span`, and the span is the only difference: the fact it
+   * writes ends on its own instead of on Sunday.
+   */
+  | {
+      kind: 'missing_for_span';
+      tags: readonly EquipmentTag[];
+      conditioningModalities: readonly ConditioningEquipmentModality[];
+      from: string;
+      until: string;
+    }
   | { kind: 'available_again' };
 
 interface EquipmentLimitationSheetProps {
@@ -110,6 +129,14 @@ interface EquipmentLimitationSheetProps {
   onApply: (decision: EquipmentLimitationDecision) => void | Promise<void>;
   activeFactId?: string | null;
   targetFactId?: string | null;
+  /**
+   * THE TRIP, WHEN THIS SHEET IS THE LAST STEP OF THE AWAY FLOW. Present =>
+   * the answer is dated (`missing_for_span`) and lifts itself on the return
+   * date; absent => the sheet keeps the this-week answer it has always given.
+   * `until` is the LAST DAY AWAY, never the return date itself: Sam's build
+   * order says the program is back to normal *on* the day the athlete returns.
+   */
+  span?: { from: string; until: string } | null;
 }
 
 export function EquipmentLimitationSheet({
@@ -118,6 +145,7 @@ export function EquipmentLimitationSheet({
   onApply,
   activeFactId,
   targetFactId,
+  span = null,
 }: EquipmentLimitationSheetProps) {
   // Read once per open: the sheet lists the athlete's baseline kit, which a
   // mid-sheet store change cannot legitimately alter.
@@ -144,11 +172,19 @@ export function EquipmentLimitationSheet({
   const nothingMarked = missingTags.size === 0 && missingModalities.size === 0;
   const apply = () => {
     if (nothingMarked) return;
-    void onApply({
-      kind: 'missing_this_week',
-      tags: [...missingTags],
-      conditioningModalities: [...missingModalities],
-    });
+    void onApply(span
+      ? {
+          kind: 'missing_for_span',
+          tags: [...missingTags],
+          conditioningModalities: [...missingModalities],
+          from: span.from,
+          until: span.until,
+        }
+      : {
+          kind: 'missing_this_week',
+          tags: [...missingTags],
+          conditioningModalities: [...missingModalities],
+        });
     setMissingTags(new Set());
     setMissingModalities(new Set());
   };
@@ -166,17 +202,22 @@ export function EquipmentLimitationSheet({
         : explorerTestId.equipmentOption(item);
 
   const kitIsEmpty = kit.tags.length === 0 && kit.conditioningModalities.length === 0;
+  const rowMissingLabel = span ? 'Missing while away' : 'Missing this week';
 
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-equipment-limitation-sheet">
       <View>
-        <Text style={styles.title}>Missing equipment this week?</Text>
+        <Text style={styles.title}>
+          {span ? 'What will you be without?' : 'Missing equipment this week?'}
+        </Text>
         <Text style={styles.body}>
           {activeFactId
             ? 'A restriction is active. Mark what is missing, or clear it below.'
             : kitIsEmpty
               ? 'Your program is already bodyweight-only, so there is nothing to mark missing.'
-              : "Mark what you won't have this week. Your program works around it."}
+              : span
+                ? `Mark what you won't have while you're away. Your sessions work around it until ${shortDayMonthLabel(span.until)}.`
+                : "Mark what you won't have this week. Your program works around it."}
         </Text>
         {activeFactId ? (
           <ExplorerRenderWitness testID={explorerTestId.equipmentActive(activeFactId)} />
@@ -188,6 +229,7 @@ export function EquipmentLimitationSheet({
             label={EQUIPMENT_TAG_LABELS[tag as AskableEquipmentTag] ?? labelFor(tag)}
             icon={equipmentIconFor(tag, missingTags.has(tag) ? EQUIPMENT_ICON_MUTED : EQUIPMENT_ICON_ACCENT)}
             missing={missingTags.has(tag)}
+            missingLabel={rowMissingLabel}
             testID={optionTestId(tag)}
             onPress={() => toggleTag(tag)}
           />
@@ -198,6 +240,7 @@ export function EquipmentLimitationSheet({
             label={CONDITIONING_MODALITY_LABELS[modality]}
             icon={equipmentIconFor(modality, missingModalities.has(modality) ? EQUIPMENT_ICON_MUTED : EQUIPMENT_ICON_ACCENT)}
             missing={missingModalities.has(modality)}
+            missingLabel={rowMissingLabel}
             testID={optionTestId(modality)}
             onPress={() => toggleModality(modality)}
           />
@@ -216,7 +259,9 @@ export function EquipmentLimitationSheet({
             ]}
           >
             <Text style={styles.applyLabel}>
-              {nothingMarked ? 'Mark what is missing' : 'Apply for this week'}
+              {nothingMarked
+                ? 'Mark what is missing'
+                : span ? "Apply while I'm away" : 'Apply for this week'}
             </Text>
           </Pressable>
         ) : null}
@@ -255,12 +300,16 @@ function MissingToggle({
   label,
   icon,
   missing,
+  missingLabel,
   testID,
   onPress,
 }: {
   label: string;
   icon: React.ReactNode;
   missing: boolean;
+  /** What the row SAYS once it is marked. "this week" is a claim, and it is
+   *  false when the sheet was opened by the away flow over a dated span. */
+  missingLabel: string;
   testID: string;
   onPress: () => void;
 }) {
@@ -275,7 +324,7 @@ function MissingToggle({
       <View style={[styles.optionIcon, missing && styles.optionIconMuted]}>{icon}</View>
       <View style={styles.optionRow}>
         <Text style={[styles.optionLabel, missing && styles.missingLabel]}>{label}</Text>
-        <Text style={styles.optionSub}>{missing ? 'Missing this week' : ''}</Text>
+        <Text style={styles.optionSub}>{missing ? missingLabel : ''}</Text>
       </View>
     </Pressable>
   );

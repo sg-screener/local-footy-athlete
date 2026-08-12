@@ -35,7 +35,15 @@ import {
 import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
-import { dayOfMonthLabel, shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
+import {
+  MONTH_NAMES,
+  dayOfMonthLabel,
+  dayOfWeekForISODate,
+  shortDayMonthLabel,
+  todayISOLocal,
+} from '../../utils/appDate';
+import { addDaysISO } from '../../utils/programBlockState';
+import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
 import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
@@ -104,7 +112,7 @@ export default function HomeScreenV2() {
     handleViewWorkout,
     handleFinishTeamSession,
     handleApplyGuidedInjury,
-    handleApplyAwayDays,
+    handleApplyAwayEquipment,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
     missedSessionPrompt,
@@ -256,7 +264,14 @@ export default function HomeScreenV2() {
     date: string;
     initialAction: 'actions' | 'move';
   } | null>(null);
-  const [awayDaysVisible, setAwayDaysVisible] = useState(false);
+  // ── ITEM 28: THE AWAY FLOW'S THREE ANSWERS ──
+  // The sheet owns the two dates; this screen owns only what survives it — the
+  // SPAN, which is the input the equipment question needs. `null` span means
+  // the equipment sheet is closed; a span means the athlete said they will not
+  // have their normal kit and is now marking which parts.
+  const [awayVisible, setAwayVisible] = useState(false);
+  const [awayEquipmentSpan, setAwayEquipmentSpan] =
+    useState<{ from: string; until: string } | null>(null);
   // ONE ACK STATE FOR BOTH SCHEDULE DOORS. They are two buttons writing one fact
   // kind through one executor; two acknowledgment states would be two places to
   // forget to set. Rendered under the rows for the sheet-less door and inside
@@ -839,19 +854,14 @@ export default function HomeScreenV2() {
                 </Svg>
               }
             />
-            <LifeFactChip
-              onPress={() => { setScheduleAck(null); setAwayDaysVisible(true); }}
-              testID="home-away-this-week-entry"
-              accessibilityLabel="Away this week?"
-              label="Away"
-              tint={styles.awayIconTint}
-              icon={
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#B9A7FF" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" />
-                  <Circle cx={12} cy={10} r={2} />
-                </Svg>
-              }
-            />
+            {/* ── ITEM 28: THE AWAY CHIP LEFT THIS ROW FOR THE WEEK SCREEN ──
+                Sam, 2026-08-13: *"I think the away button should live on the
+                weekly screen, it should say 'when do you leave?' then 'when do
+                you return'"*. The same reasoning that moved add-a-game (item
+                19): "when do you leave" is a question about a SPAN, and this
+                row sits on the screen about ONE day. Its door, its icon and
+                its purple tint all moved together — see the away entry under
+                `!dayFirst` above. */}
             <LifeFactChip
               onPress={() => { setReadinessAck(null); setReadinessEntry('sick'); }}
               testID={weekReadiness
@@ -900,7 +910,7 @@ export default function HomeScreenV2() {
         {/* The answer to a chip tap, in the athlete's own words, directly under
             the chip that was tapped. Tapping it dismisses it — an acknowledgment
             the athlete cannot clear is a banner. */}
-        {isNormal && scheduleAck && !awayDaysVisible && (
+        {isNormal && scheduleAck && !awayVisible && (
           <Pressable
             onPress={() => setScheduleAck(null)}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
@@ -1081,6 +1091,41 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
+        {/* ── ITEM 28: AWAY IS A WEEK-SHAPE CONTROL ──
+            Sam, 2026-08-13: *"I think the away button should live on the weekly
+            screen, it should say 'when do you leave?' then 'when do you return'
+            thhe leave button should be limited to that week in dates, but the
+            return date can be any date in the future / then you are asked about
+            the equipment stuff"*.
+
+            IT IS THE SAME MOVE AS ADD-A-GAME, FOR THE SAME REASON. A trip is a
+            SPAN — it starts on one day and ends on another, and the ten-day
+            version of it does not fit inside the week the athlete is looking
+            at. The day screen could not ask that question; it was only ever
+            able to tick training days inside the visible week, which is why
+            "away for ten days" was unsayable in this app until now. */}
+        {isNormal && !dayFirst && (
+          <Pressable
+            onPress={() => { setScheduleAck(null); setAwayVisible(true); }}
+            testID="home-away-entry"
+            accessibilityRole="button"
+            accessibilityLabel="Away"
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.awayIconTint]}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#B9A7FF" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" />
+                    <Circle cx={12} cy={10} r={2} />
+                  </Svg>
+                </View>
+                <Text style={styles.busyAwayText}>Away</Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
         {/* ── Block-rollover honest refusal (Sam's interim ruling, 2026-07-31) ──
             NOT gated on isNormal: a program that stopped must say so whatever
             mode the screen is in. The sentence is the ack owner's
@@ -1214,24 +1259,49 @@ export default function HomeScreenV2() {
         }}
       />
 
-      <AwayDaysSheet
-        visible={awayDaysVisible}
+      <AwaySheet
+        visible={awayVisible}
         weekDays={weekDays}
-        visibleWeek={visibleWeek}
-        acknowledgment={scheduleAck}
-        onClose={() => { setAwayDaysVisible(false); setScheduleAck(null); }}
-        onAwayDays={async (dates) => {
-          // CLOSING IS THE CONFIRMATION, so it may only happen on success. The
-          // sheet used to close unconditionally after the await, which is how a
-          // refused commit read as "done" — the athlete watched the sheet
-          // dismiss and believed their days were cleared.
-          const result = await handleApplyAwayDays(dates);
-          const ack = buildScheduleAcknowledgment(result, 'away');
+        onClose={() => setAwayVisible(false)}
+        onDone={({ leaveISO, returnISO, hasNormalEquipment }) => {
+          setAwayVisible(false);
+          if (hasNormalEquipment) {
+            // SAM'S OWN ANSWER TO THE YES BRANCH: *"if yes, follow same
+            // program"*. Nothing is stored, because nothing changes — a fact
+            // written here would be a modifier that modifies nothing, which is
+            // the shape the north star calls presumed-wrong.
+            setScheduleAck({
+              tone: 'success',
+              message: `You're away ${shortDayMonthLabel(leaveISO)} to ${shortDayMonthLabel(returnISO)} with your normal gear, so your program stays as it is.`,
+            });
+            return;
+          }
+          // `until` IS THE LAST DAY AWAY, not the return date: the athlete is
+          // home on the day they return, and the program is normal again that
+          // morning without them clearing anything.
+          setAwayEquipmentSpan({ from: leaveISO, until: addDaysISO(returnISO, -1) });
+        }}
+      />
+
+      {/* ── ITEM 28 STEP 4: THE EQUIPMENT QUESTION IS THE DOOR THAT ALREADY
+          EXISTS ── Sam: *"the athlete just removes the equipment they don't
+          have while on the trip and it's kept that way until they turn the
+          modifier off and say 'i'm back now'"*. No second equipment menu was
+          built; this is the same sheet, handed the span. */}
+      <EquipmentLimitationSheet
+        visible={awayEquipmentSpan !== null}
+        span={awayEquipmentSpan}
+        onClose={() => setAwayEquipmentSpan(null)}
+        onApply={async (decision) => {
+          // CLOSING IS THE CONFIRMATION, so it may only happen on success — the
+          // athlete must never watch a sheet dismiss over a refused commit.
+          const result = await handleApplyAwayEquipment(decision);
+          const ack = buildScheduleAcknowledgment(result, 'away_equipment');
           setScheduleAck(ack);
           recordScheduleAckPresented({
             traceId: result?.traceId, surface: 'away_this_week', tone: ack.tone,
           });
-          if (result?.ok) setAwayDaysVisible(false);
+          if (result?.ok) setAwayEquipmentSpan(null);
         }}
       />
 
@@ -2998,110 +3068,238 @@ function WeekReadinessSheet({
 }
 
 /**
- * THE MENU STEP IS GONE, because there is no longer a question to ask.
+ * THE AWAY FLOW — SEAT_INBOX ITEM 28, RULED BY SAM ON 2026-08-13.
  *
- * Sam's ruling 2 (2026-07-31) split "Busy or away this week?" into two buttons
- * on the week screen. "Short on time today" commits on the tap — as the busy row
- * inside this sheet already did, one step further in — so the only thing left
- * behind a sheet is the one question that genuinely has an answer: WHICH days.
- * A menu whose every entry is already a button on the screen behind it is a step
- * that exists to be dismissed.
+ * **His words are the spec:** *"I think the away button should live on the
+ * weekly screen, it should say 'when do you leave?' then 'when do you return'
+ * thhe leave button should be limited to that week in dates, but the return
+ * date can be any date in the future / then you are asked about the equipment
+ * stuff"*.
+ *
+ * THREE QUESTIONS, ONE AT A TIME, AND THE THIRD IS NOT ASKED HERE. Leave and
+ * return are dates; "do you have your normal equipment?" is a yes/no whose NO
+ * hands the span to `EquipmentLimitationSheet` — the door Sam named, already
+ * built, already asking exactly the right question (*"the athlete just removes
+ * the equipment they don't have while on the trip"*). This sheet does not own a
+ * second equipment menu and must never grow one.
+ *
+ * WHAT IT REPLACES, AND WHY THAT IS THE BIGGER FIX. The sheet that stood here
+ * asked "Which days are you away?" and toggled individual TRAINING days inside
+ * the visible week. A trip that crossed a Sunday could not be expressed at all
+ * — "away for ten days" was unsayable. The return date is unbounded precisely
+ * so that it can be.
+ *
+ * THE TWO BOUNDS ARE HIS, NOT A DESIGN CHOICE: leave is limited to the week on
+ * screen (the athlete is looking at that week; a trip starting three months out
+ * is not a thing this control is for), and return is any future date.
  */
-interface AwayDaysSheetProps {
+type AwayAnswer = {
+  leaveISO: string;
+  returnISO: string;
+  hasNormalEquipment: boolean;
+};
+interface AwaySheetProps {
   visible: boolean;
   weekDays: any[];
-  visibleWeek: VisibleWeek;
-  acknowledgment: ReadinessAcknowledgment | null;
   onClose: () => void;
-  onAwayDays: (dates: string[]) => void | Promise<void>;
+  onDone: (answer: AwayAnswer) => void;
 }
-function AwayDaysSheet({
-  visible, weekDays, visibleWeek, acknowledgment, onClose, onAwayDays,
-}: AwayDaysSheetProps) {
-  const [selected, setSelected] = useState<string[]>([]);
+function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
+  const [leaveISO, setLeaveISO] = useState<string | null>(null);
+  const [returnISO, setReturnISO] = useState<string | null>(null);
 
   React.useEffect(() => {
-    if (visible) setSelected([]);
+    if (visible) { setLeaveISO(null); setReturnISO(null); }
   }, [visible]);
 
   const todayISO = todayISOLocal();
-  // Days the athlete can be away on: real (non-game) sessions today-or-later
-  // in the viewed week. Clearing a rest day is a no-op, so we hide those.
-  const awayCandidates = weekDays.filter(
-    (day) => day.date >= todayISO && day.workout && day.workout.workoutType !== 'Game',
-  );
+  // LEAVING IS BOUNDED BY THE WEEK ON SCREEN — Sam: *"limited to that week in
+  // dates"*. Every day of it, not only training days: a trip starts when it
+  // starts, and the old sheet's training-days-only list is exactly why a
+  // Saturday departure could not be said.
+  const leaveCandidates = weekDays
+    .map((day) => day.date as string)
+    .filter((date) => date >= todayISO);
 
-  const toggle = (date: string) =>
-    setSelected((prev) =>
-      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date],
-    );
+  const step: 'leave' | 'return' | 'equipment' =
+    leaveISO === null ? 'leave' : returnISO === null ? 'return' : 'equipment';
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="home-away-days-sheet">
+    <Sheet visible={visible} onClose={onClose} testID="home-away-sheet">
       <View>
-          <Text style={styles.sheetTitle}>Which days are you away?</Text>
-          {acknowledgment && (
-            <Text
-              style={[styles.busyAwayEmpty, acknowledgment.tone === 'error' && styles.scheduleAckError]}
-              testID="home-away-days-ack"
-            >
-              {acknowledgment.message}
-            </Text>
-          )}
-          {awayCandidates.length === 0 ? (
+        {step === 'leave' && (
+          <>
+            <Text style={styles.sheetTitle}>When do you leave?</Text>
+            {leaveCandidates.length === 0 ? (
+              <Text style={styles.busyAwayEmpty} testID="home-away-leave-empty">
+                This week is already behind you. Move to next week to set a trip.
+              </Text>
+            ) : leaveCandidates.map((date) => (
+              <Pressable
+                key={date}
+                onPress={() => setLeaveISO(date)}
+                testID={`home-away-leave-${dayOfWeekTestIdToken(dayOfWeekForISODate(date))}`}
+                accessibilityRole="button"
+                accessibilityLabel={shortDayMonthLabel(date)}
+                style={({ pressed }) => [styles.awayDayRow, pressed && { opacity: 0.75 }]}
+              >
+                <Text style={styles.awayDayText}>{shortDayMonthLabel(date)}</Text>
+              </Pressable>
+            ))}
+          </>
+        )}
+
+        {step === 'return' && leaveISO !== null && (
+          <>
+            <Text style={styles.sheetTitle}>When do you return?</Text>
             <Text style={styles.busyAwayEmpty}>
-              No upcoming sessions to clear this week.
+              Leaving {shortDayMonthLabel(leaveISO)}. Pick any day — it can be
+              weeks away.
             </Text>
-          ) : (
-            awayCandidates.map((day) => {
-              const isOn = selected.includes(day.date);
-              return (
-                <Pressable
-                  key={day.date}
-                  onPress={() => toggle(day.date)}
-                  style={({ pressed }) => [
-                    styles.awayDayRow,
-                    isOn && styles.awayDayRowOn,
-                    pressed && { opacity: 0.75 },
-                  ]}
-                >
-                  <View style={[styles.awayCheck, isOn && styles.awayCheckOn]}>
-                    {isOn && (
-                      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#0B0B0B" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><Path d="M20 6L9 17l-5-5"/></Svg>
-                    )}
-                  </View>
-                  <Text style={styles.awayDayText}>
-                    {shortDayMonthLabel(day.date)}
-                    {(() => {
-                      // The projection's own words for this date, not the raw
-                      // workout name — the SAME `cardLeadHeadline` rule the
-                      // week card uses. This list filters `workoutType !==
-                      // 'Game'` only (not the broader fixture set —
-                      // `dayIsFixture` also matches `workoutType: 'Practice
-                      // Match'`), so a practice-match row can reach here;
-                      // `cardLeadHeadline` still answers it correctly via
-                      // `kind === 'game'`.
-                      const candidate = visibleWeek.days.find(
-                        (day2) => day2.date === day.date,
-                      );
-                      const label = cardLeadHeadline(candidate);
-                      return label ? ` · ${label}` : '';
-                    })()}
-                  </Text>
-                </Pressable>
-              );
-            })
-          )}
-          <Button
-            label={selected.length > 0 ? `Clear ${selected.length} day${selected.length > 1 ? 's' : ''}` : 'Pick days to clear'}
-            size="lg"
-            glow={false}
-            onPress={() => selected.length > 0 && onAwayDays(selected)}
-            style={{ marginTop: spacing.md, opacity: selected.length > 0 ? 1 : 0.5 }}
-          />
-          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.sm }} />
+            <AwayReturnCalendar
+              minISO={addDaysISO(leaveISO, 1)}
+              onPick={setReturnISO}
+            />
+            <Button
+              label="Back"
+              variant="secondary"
+              size="md"
+              onPress={() => setLeaveISO(null)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </>
+        )}
+
+        {step === 'equipment' && leaveISO !== null && returnISO !== null && (
+          <>
+            <Text style={styles.sheetTitle}>Do you have your normal equipment?</Text>
+            <Text style={styles.busyAwayEmpty}>
+              Away {shortDayMonthLabel(leaveISO)} to {shortDayMonthLabel(returnISO)}.
+            </Text>
+            {/* YES IS A REAL ANSWER AND IT STORES NOTHING. Sam: *"if yes, follow
+                same program"*. */}
+            <Button
+              label="Yes, same as usual"
+              size="lg"
+              glow={false}
+              testID="home-away-equipment-yes"
+              onPress={() => onDone({ leaveISO, returnISO, hasNormalEquipment: true })}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              label="No, I'll be without some gear"
+              variant="secondary"
+              size="lg"
+              testID="home-away-equipment-no"
+              onPress={() => onDone({ leaveISO, returnISO, hasNormalEquipment: false })}
+              style={{ marginTop: spacing.sm }}
+            />
+            <Button
+              label="Back"
+              variant="secondary"
+              size="md"
+              onPress={() => setReturnISO(null)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </>
+        )}
+
+        <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.sm }} />
       </View>
     </Sheet>
+  );
+}
+
+/**
+ * THE RETURN DATE HAS NO CEILING, SO IT CANNOT BE A LIST OF CHIPS.
+ *
+ * Sam: *"the return date can be any date in the future"*. A month grid with no
+ * forward stop is the only shape that answers that honestly; a "next 14 days"
+ * row would quietly reintroduce the bound this whole item exists to remove.
+ * There is no date-picker dependency in this app, and this is the one screen
+ * that needs one, so it is built from the same primitives as everything else.
+ */
+function AwayReturnCalendar({
+  minISO,
+  onPick,
+}: {
+  minISO: string;
+  onPick: (dateISO: string) => void;
+}) {
+  const [monthAnchorISO, setMonthAnchorISO] = useState(minISO);
+  const anchor = monthAnchorISO.slice(0, 10);
+  const year = Number(anchor.slice(0, 4));
+  const month = Number(anchor.slice(5, 7));
+  const firstOfMonth = `${anchor.slice(0, 7)}-01`;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  // Monday-first, matching every other week shape in this app.
+  const leadingBlanks = (dayOfWeekForISODate(firstOfMonth) + 6) % 7;
+  const cells: (string | null)[] = [
+    ...Array.from({ length: leadingBlanks }, () => null),
+    ...Array.from({ length: daysInMonth }, (_unused, index) =>
+      `${anchor.slice(0, 7)}-${String(index + 1).padStart(2, '0')}`),
+  ];
+
+  return (
+    <View testID="home-away-return-calendar">
+      <View style={styles.awayCalendarHead}>
+        <Pressable
+          onPress={() => setMonthAnchorISO(addDaysISO(firstOfMonth, -1))}
+          testID="home-away-return-prev-month"
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
+          style={({ pressed }) => [styles.awayCalendarNav, pressed && { opacity: 0.6 }]}
+        >
+          <Text style={styles.awayCalendarNavLabel}>‹</Text>
+        </Pressable>
+        <Text style={styles.awayCalendarMonth}>
+          {MONTH_NAMES[month - 1]} {year}
+        </Text>
+        <Pressable
+          onPress={() => setMonthAnchorISO(addDaysISO(`${anchor.slice(0, 7)}-${String(daysInMonth).padStart(2, '0')}`, 1))}
+          testID="home-away-return-next-month"
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
+          style={({ pressed }) => [styles.awayCalendarNav, pressed && { opacity: 0.6 }]}
+        >
+          <Text style={styles.awayCalendarNavLabel}>›</Text>
+        </Pressable>
+      </View>
+      <View style={styles.awayCalendarGrid}>
+        {WEEK_DAYS.map((day) => (
+          <View key={`head-${day}`} style={styles.awayCalendarCell}>
+            <Text style={styles.awayCalendarWeekday}>{DAY_SHORT[day]}</Text>
+          </View>
+        ))}
+        {cells.map((dateISO, index) => {
+          if (dateISO === null) {
+            return <View key={`blank-${index}`} style={styles.awayCalendarCell} />;
+          }
+          const selectable = dateISO >= minISO;
+          return (
+            <Pressable
+              key={dateISO}
+              disabled={!selectable}
+              onPress={() => onPick(dateISO)}
+              testID={`home-away-return-${dateISO}`}
+              accessibilityRole="button"
+              accessibilityLabel={shortDayMonthLabel(dateISO)}
+              style={({ pressed }) => [
+                styles.awayCalendarCell,
+                pressed && selectable && { opacity: 0.6 },
+              ]}
+            >
+              <Text style={[
+                styles.awayCalendarDay,
+                !selectable && styles.awayCalendarDayDisabled,
+              ]}>
+                {Number(dateISO.slice(8, 10))}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -3240,14 +3438,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  awayDayRowOn: {},
-  awayCheck: {
-    width: 22, height: 22, borderRadius: 6,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)',
+  awayDayText: { color: '#FFFFFF', fontSize: 15, fontWeight: '500', flex: 1 },
+
+  // ── ITEM 28: THE RETURN-DATE CALENDAR ──
+  // Seven columns, Monday first, same as every other week shape in the app.
+  awayCalendarHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: spacing.sm, marginBottom: spacing.xs,
+  },
+  awayCalendarNav: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  awayCalendarNavLabel: { color: '#FFFFFF', fontSize: 22, lineHeight: 24 },
+  awayCalendarMonth: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  awayCalendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  awayCalendarCell: {
+    width: `${100 / 7}%`, height: 40,
     alignItems: 'center', justifyContent: 'center',
   },
-  awayCheckOn: { backgroundColor: '#C8FF00', borderColor: '#C8FF00' },
-  awayDayText: { color: '#FFFFFF', fontSize: 15, fontWeight: '500', flex: 1 },
+  awayCalendarWeekday: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '600' },
+  awayCalendarDay: { color: '#FFFFFF', fontSize: 15 },
+  awayCalendarDayDisabled: { color: 'rgba(255,255,255,0.22)' },
 
   missedCard: { marginTop: spacing.sm },
   missedTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 4 },
