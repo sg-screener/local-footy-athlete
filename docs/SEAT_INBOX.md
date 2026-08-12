@@ -387,15 +387,25 @@ his instruction is standing authority, not history.**
      **TEAM TRAINING IS THE TRIGGER. Every real in-season footballer has team
      training days — so the 60ms case is the unrealistic one and the 18-second
      case is the normal one.**
-     **WHERE IT RUNS: HYDRATION.** `programStore.ts:1101` calls it at rehydrate
-     when `structuralMigrationRequired` — **that is the app STARTING UP.** So a
-     legacy in-season program plausibly means ~18 seconds of blocking work at
-     launch, and a phone is slower than this machine, not faster.
-     **⚠ WHAT IS *NOT* MEASURED, and I will not claim it:** whether any real
-     device is in the `structuralMigrationRequired` state. **The 18s is measured
-     on the production function with a realistic profile; it is NOT a device
-     observation.** Check that before pricing a fix — if no device is legacy,
-     this is only a test cost.
+     **⚠ CORRECTED THE SAME NIGHT, BY ME, AND THE CORRECTION IS THE IMPORTANT
+     HALF: NO ATHLETE CAN EVER HIT THIS.** I wrote that hydration "plausibly
+     means ~18 seconds of blocking work at launch". **That was wrong, and it was
+     already written down before I said it.**
+     `FEAT-legacy-program-migration` (`featureRegistry.ts:205`) is
+     **`built_unreachable` ON PURPOSE**, and it even records the same number —
+     *"a measured 20.4s canonicalisation"* kept off the athlete's launch.
+     **I VERIFIED BOTH PROTECTIONS MYSELF rather than taking the row's word:**
+     `canonicaliseHydratedState` has **no production caller**, and
+     `programStore.partialize` persists **inputs only** — anchor, phase clock,
+     feedback, weight overrides, facts, injuries — **no program, no
+     microcycles**, so no launch reads a stored program back to migrate.
+     **Held by `test:legacy-migration-unreachable`, 3 cells, green, in chain.**
+     **THIS IS THE NORTH STAR PAYING OUT:** store only decisions, derive
+     everything else. Because the program is DERIVED and never stored, the
+     expensive migration has nothing to migrate.
+     **SO THE 18s IS A TEST-ONLY COST**, and the lesson is mine: **I read a call
+     site and inferred a launch. The feature registry is the place that answers
+     "does this actually run", and I should have checked it before saying so.**
      **THE LOOP IS NAMED — PROBE RUN THE SAME NIGHT, AND IT IS NOT WHAT THE
      PROFILE FIRST SAID.**
      **THE PROFILER'S TOP LINE IS A DECOY.** `stateSignature`
