@@ -43,6 +43,12 @@ import { readSheetRecords, readXlsx } from './support/xlsxReader';
 const repoRoot = path.resolve(__dirname, '../..');
 const SHEET = path.join(repoRoot, 'docs/CONDITIONING_TEMPLATES_FINAL_2026-07-25.xlsx');
 
+import {
+  REQUESTABLE_CATEGORIES_FOR_QUALITY,
+  UNREQUESTABLE_AUTHORED_QUALITIES,
+  poolForCategoryPublic,
+} from '../rules/conditioningSelection';
+
 let passed = 0;
 const failures: string[] = [];
 
@@ -511,6 +517,53 @@ ok(
 );
 
 /* ── Result ── */
+
+// ── THE WAIST: 8 QUALITIES -> 6 CATEGORIES -> 5 STORED (item 28-C1) ────────
+//
+// Sam authors EIGHT conditioning qualities; the selector offers SIX categories;
+// the stored domain object offers FIVE. Narrowed at two joints, and nothing
+// reported the loss — a quality with no category cannot be REQUESTED, so its
+// templates are unreachable however many `case` branches exist. An attempt on
+// 2026-08-13 wired all four links and the athlete still received ZERO COD
+// sessions, which is what proved the blocker was the waist and not the selector.
+{
+  const quality = REQUESTABLE_CATEGORIES_FOR_QUALITY;
+  const qualities = Object.keys(quality) as (keyof typeof quality)[];
+
+  ok('every authored quality declares whether it can be requested',
+    qualities.length === 8 && new Set(CONDITIONING_TEMPLATES.map((t) => t.quality)).size <= 8
+      && [...new Set(CONDITIONING_TEMPLATES.map((t) => t.quality))].every((q) => q in quality),
+    `map has ${qualities.length}; sheet uses ${[...new Set(CONDITIONING_TEMPLATES.map((t) => t.quality))].length}`);
+
+  // EVERY TEMPLATE MUST BE REACHABLE FROM ITS DECLARED CATEGORY. This is the
+  // cell that would have caught the original defect: a mapping that points at a
+  // category whose pool does not actually contain the template is the same
+  // silent loss one joint further along.
+  const unreachable: string[] = [];
+  for (const template of CONDITIONING_TEMPLATES) {
+    const categories = quality[template.quality];
+    if (categories.length === 0) continue;
+    const reachable = categories.some((category) =>
+      poolForCategoryPublic(category).some((t) => t.name === template.name));
+    if (!reachable) {
+      unreachable.push(`${template.name} (${template.quality} -> ${categories.join('|')})`);
+    }
+  }
+  ok('every requestable template is actually in its category\'s pool',
+    unreachable.length === 0, unreachable.join('; '));
+
+  // THE LOSS IS NAMED, NOT SILENT. This cell is expected to list cod_decel
+  // today; it exists so the number can only FALL, and so nobody re-discovers it.
+  ok('the authored qualities no planner can reach are exactly the declared ones',
+    JSON.stringify(UNREQUESTABLE_AUTHORED_QUALITIES) === JSON.stringify(['cod_decel']),
+    `unreachable = ${UNREQUESTABLE_AUTHORED_QUALITIES.join(', ')} — if this shrank, `
+    + 'delete the entry; if it GREW, an authored quality just became unreachable');
+
+  // AND THE COUNT SAM CARES ABOUT, stated every run rather than inferred.
+  const codTemplates = CONDITIONING_TEMPLATES.filter((t) => t.quality === 'cod_decel');
+  ok('the four signed COD/decel templates still exist on the sheet',
+    codTemplates.length === 4, String(codTemplates.length));
+}
 
 console.log(
   `\nConditioning template equality: passed=${passed}/${passed + failures.length} failures=${failures.length}`,

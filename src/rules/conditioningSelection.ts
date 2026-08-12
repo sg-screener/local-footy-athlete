@@ -129,6 +129,68 @@ function templatesOfQuality(...qualities: ConditioningQuality[]): ConditioningTe
   return CONDITIONING_TEMPLATES.filter((template) => qualities.includes(template.quality));
 }
 
+/**
+ * THE WAIST, MADE EXPLICIT AND TOTAL — every authored quality declares where it
+ * can be REQUESTED from, or declares that it cannot.
+ *
+ * ## The defect this exists to make impossible
+ *
+ * Sam's sheet authors EIGHT conditioning qualities. The selector offers SIX
+ * categories. The stored domain object offers FIVE. **8 -> 6 -> 5, narrowed at
+ * two joints, and nothing reported the loss.** A quality with no category cannot
+ * be asked for by any planner, so its templates are unreachable no matter how
+ * many `case` branches exist — which is precisely what an attempt on 2026-08-13
+ * measured: all four links wired, and the athlete still received ZERO COD
+ * sessions.
+ *
+ * The app's own comment already knew the failure mode
+ * (`section18OfferPlacement.ts:501-504`): *"an unknown category silently empties
+ * `poolForCategory` and the selector throws on it."* **The code knew and nothing
+ * enforced it.**
+ *
+ * ## Why a Record and not a switch
+ *
+ * A `switch` with a default is satisfied by silence; a total `Record` is not. The
+ * compiler now refuses a new authored quality that nobody has decided how to
+ * request — which is the enforcement the two narrowings never had. Sam's
+ * standing instruction is to fix the class, not the instance.
+ *
+ * ## `cod_decel` is `null` ON PURPOSE, and that is the finding
+ *
+ * `null` means AUTHORED BUT NOT REQUESTABLE: Sam signed four COD/deceleration
+ * templates on 2026-07-25 and there is no category any planner can name to reach
+ * them. It is written here rather than left as an absence, because an absence is
+ * what hid it for a month. **Giving it a category is a placement change — the
+ * planner's coverage maths is sensitive to pool SIZE, and adding one member
+ * moved four unrelated phase checks — so it is a separate unit with its own
+ * before/after, not a line in this one.**
+ */
+export const REQUESTABLE_CATEGORIES_FOR_QUALITY:
+  Readonly<Record<ConditioningQuality, readonly AthleteConditioningCategory[]>> = {
+  // Sprint-family qualities are reached through the one `sprint` category.
+  acceleration: ['sprint'],
+  top_end_speed: ['sprint'],
+  repeat_sprint: ['sprint'],
+  // AUTHORED, NOT REQUESTABLE. Four signed templates, no category, no reader.
+  cod_decel: [],
+  anaerobic: ['glycolytic'],
+  aerobic_power: ['vo2'],
+  // A LIST, NOT ONE VALUE, AND A CELL TAUGHT ME THAT. My first version mapped
+  // this to `aerobic_base` alone and the reachability cell immediately named
+  // five templates it could not reach: capacity work is SPLIT by two named
+  // lists, so five of these sit in the `tempo` pool and the rest in
+  // `aerobic_base`. The quality does not decide the category on its own — a
+  // THIRD narrowing nobody had written down, found by asserting the map instead
+  // of trusting it.
+  aerobic_capacity: ['aerobic_base', 'tempo'],
+  flush: ['recovery_flush'],
+};
+
+/** Qualities Sam authored that no planner can ask for. Empty is the goal. */
+export const UNREQUESTABLE_AUTHORED_QUALITIES: readonly ConditioningQuality[] =
+  (Object.keys(REQUESTABLE_CATEGORIES_FOR_QUALITY) as ConditioningQuality[])
+    .filter((quality) => REQUESTABLE_CATEGORIES_FOR_QUALITY[quality].length === 0);
+
 function poolForCategory(category: AthleteConditioningCategory): ConditioningTemplate[] {
   switch (category) {
     case 'aerobic_base':
@@ -144,6 +206,13 @@ function poolForCategory(category: AthleteConditioningCategory): ConditioningTem
     case 'recovery_flush':
       return templatesOfQuality('flush');
   }
+}
+
+/** The pool a category resolves to, exposed so a cell can prove reachability. */
+export function poolForCategoryPublic(
+  category: AthleteConditioningCategory,
+): ConditioningTemplate[] {
+  return poolForCategory(category);
 }
 
 /**
