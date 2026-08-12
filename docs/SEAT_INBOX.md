@@ -98,10 +98,25 @@ phone.** State device items as PARKED in a stop report, never as a request.
      representation removed, not a guard added. `0ad3793f` — seed 3 clean,
      **deep is 47s**, two mutation-checked cells, sweep 14 of 190 identical to
      baseline.
-   - **NOT PAID — `THE L16 SLICE` fails in both walker tiers** (*"the program did
-     not survive the relaunch at all — the loop is broken at PERSIST"*).
-     Pre-existing, **cause NOT investigated**, and it is why `action-walker`
-     and `action-walker:deep` stay in the failing set.
+   - **PAID — `THE L16 SLICE`, and it was a REAL data-loss defect, not a test
+     artefact.** A bare profile envelope must ask the disk before it writes; a
+     material one need not. So a WIPE issued FIRST landed LAST, on top of the
+     answers issued after it — the athlete's 40 answers were in memory and the
+     disk held a 103-byte empty shell. Persisted state is inputs only, so the
+     next launch had nothing to rebuild the program from. Writes to the profile
+     key now chain, which also makes the quarantine law work for the first time
+     (the bare write now reads a disk that holds the answers, so it is REFUSED).
+     `fd4f68a2` — one mutation-checked cell, **sweep 14 of 190 -> 10 of 190,
+     FOUR suites green, ZERO new reds.** Two named suspects were refuted first:
+     the quarantine held nothing and the replay latch was false.
+   - **NOT PAID, NOT INVESTIGATED — a second defect found on the way past.**
+     Rehydrating an EMPTY profile envelope does not merely fail to restore
+     answers: `profileStore`'s `merge` spreads `...persisted` over the live
+     state, so it flips `isOnboardingComplete` from **true to false** in memory.
+     An empty envelope actively un-finishes a finished profile. Reachable
+     whenever disk is bare and memory is not.
+   - **STILL OPEN — `test:accepted-state-transactions` is 89.5s**, the largest
+     real unit, new since 2026-08-07, never looked at.
 
 3. **KILL THE ±7 INVENTION — A LIVE CORRECTNESS DEFECT, AND NOW MORE REACHABLE.**
    `section18CraftTier.ts:161` fabricates neighbouring games at ±7 days and
@@ -136,8 +151,9 @@ phone.** State device items as PARKED in a stop report, never as a request.
    Sam's call** — *"the moderate day shouldnt this be before planed vs
    experienced because it's part of planned?"* **MEASURE FIRST: does a strength
    session have a start timestamp? Grep found none and the plan depends on it.**
-   **§4 of that doc is a RECOMMENDATION, not a Sam ruling — ask before building
-   past it.**
+   **§4 IS NOW RULED. Sam, 2026-08-12:** *"assume they did as planned"*. **A
+   missing answer means the session happened as planned, at the planned effort,
+   MARKED AS AN ESTIMATE.** Build it; do not re-ask.
 
 7. **STRENGTH JOINS THE CAPACITY ARITHMETIC.** Sam: *"sometimes that may mean
    only doing 1 strength session during the week if they have 2 games and 2 team
@@ -170,8 +186,11 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **(c) BEFORE (a)+(b) STRANDS ATHLETES** — the caption sends them to the screen
    (c) removes.
 
-9. **BUILD LAYER 3 — THE ATHLETE'S WILL.** `HOW_TO_BUILD_THIS_APP` §2. **What
-   Sam actually asked for** — *"nothing so tight that ... the athlete can't
+9. **BUILD LAYER 3 — THE ATHLETE'S WILL. RULED BY SAM 2026-08-12:** *"should
+   give warnings but allow them to do whatever they want"*. **So: the app warns
+   and RECORDS that it warned, then does what the athlete asked. A `block` with
+   no way through is retired except where the action is physically impossible.**
+   `HOW_TO_BUILD_THIS_APP` §2. **What Sam actually asked for** — *"nothing so tight that ... the athlete can't
    choose to do whatever they want"* — **and it does not exist.** A `block` has
    one button labelled `"OK"` (`PlanChangeSheet.tsx:859-883`); `canOverride` is
    written in nine places and **read nowhere in production**; an allowed override
@@ -218,9 +237,12 @@ phone.** State device items as PARKED in a stop report, never as a request.
    reject running and hills and `:326-329` forgets walking — declare `onFeet` on
    the family table and derive both gates); session-size floor and ceiling at
    `sessionRowCounting.ts:253` plus `MIN EXERCISES PER SESSION` in the prompt;
-   `ModifiersStrip`'s two dead union members (`:41-43`). **NOT in this batch:
-   the `ProfileScreen` "TEMPORARY" diagnostics (`:147`, `:622`, `:630`, `:1626`)
-   dated 2026-07-29 — ASK SAM, the cause may never have been found.**
+   `ModifiersStrip`'s two dead union members (`:41-43`). **INCLUDE the `ProfileScreen` "TEMPORARY" diagnostics
+   (`:147`, `:622`, `:630`, `:1626`): SAM CONFIRMED 2026-08-12 that the
+   "Something changed?" dead tap the 29 July diagnostic was chasing now WORKS.**
+   Delete the counter readout and its state. **The `:630` release-visible export
+   block is a SEPARATE 2026-07-30 concern — read its own comment before touching
+   it, and do not delete it in the same sweep.**
 
 15. **FINISH THE PHASE-SHEET MOVE.** The surface is on the Coach tab
    (`CoachTabScreen.tsx:479`); the implementation never followed, so
