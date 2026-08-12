@@ -16,7 +16,32 @@ his instruction is standing authority, not history.**
 ## Unprocessed
 
 
-28-C1. **UNBLOCKED 2026-08-13 — SAM RULED IT; SEE ITEM 31, WHICH SUPERSEDES THE
+28-C1. **BLOCKED-BY: other-agent — ITS QUESTION IS VOID AND ITS REMAINING WORK
+    IS THE TERMINAL'S, WHOSE FILES ARE OPEN RIGHT NOW.**
+
+    **NOTHING IS OWED TO SAM HERE.** Item 31 part 6 dissolved the pending
+    question in his own words — the five-day field-load streak came from a week
+    with three team trainings, **which off-season cannot have**, so "protect COD
+    from the cap or leave it cut" was asked about an impossible week. **DO NOT
+    ASK HIM.** What is left is a RE-MEASUREMENT on a legal no-team-training week,
+    and that is not a wall — it is simply not this seat's file.
+
+    **THE BLOCK, MEASURED NOT ASSUMED (2026-08-13, desktop agent).** The four
+    files that re-measurement touches — `src/rules/conditioningSelection.ts`,
+    `src/data/defaultProgram.ts`, `src/utils/coachingEngine.ts` and
+    `src/__tests__/weekPlanQA.ts` — are all `MM` in the shared checkout with
+    changes this seat did not make. The item's own line says **OWNED BY THE
+    TERMINAL**, and a second agent editing the same four files is how a commit
+    absorbs work nobody meant to ship.
+
+    **AND ONE THING IT WAS WAITING ON IS NOW PAID.** Item 31's *"the week fact
+    itself is profile-derived until part 5's dated span exists"* is closed —
+    part 5 landed and BOTH COD readers now see the week, measured at
+    `test:christmas-break` `[11]`-`[11c]`. **So the legal week this item needs
+    can now be built.** Details under item 31.
+
+    ORIGINAL BELOW.
+    **UNBLOCKED 2026-08-13 — SAM RULED IT; SEE ITEM 31, WHICH SUPERSEDES THE
     QUESTION BELOW.** He did not answer "protect COD from the streak cap"; he
     answered a better question — **WHERE COD IS ALLOWED AT ALL**: late
     off-season, the Christmas break, or pre-season with no team training, and
@@ -127,10 +152,23 @@ his instruction is standing authority, not history.**
     failing assertions 84 -> 76 with no added line. (3) `codDecelPermitted` is the
     one rule, 9 cells, every line mutation-killed. (4) **THE WRONG INPUT WAS IN TWO
     PLACES** — `coachingEngine.ts:4126` read the same standing profile as
-    `defaultProgram.ts:1978`; both now ask the rule. **STILL OPEN: the week fact
-    itself is profile-derived until part 5's dated span exists (desktop agent), and
-    the same impossible off-season-with-team-training shape survives in
-    `finisherEligibilityTests.ts`, where re-phasing changes what is asserted.**
+    `defaultProgram.ts:1978`; both now ask the rule.
+    ~~**STILL OPEN: the week fact itself is profile-derived until part 5's dated
+    span exists (desktop agent)**~~ **— PAID 2026-08-13 BY PART 5, AND MEASURED
+    RATHER THAN CLAIMED.** The span exists and it reaches BOTH readers, which is
+    the half that could have failed silently: the engine asks
+    `inputs.teamTrainingDays.length`, the plan asks `weeklyPlan.some(isTeamDay)`,
+    and a span that reached one of them would have left the other
+    profile-derived with every existing cell still green. `test:christmas-break`
+    `[11]` refuses COD to a pre-season club athlete with no break (non-vacuity),
+    `[11b]` permits it to the SAME athlete inside the break, `[11c]` holds the
+    plan reader. **Mutation-checked: dropping the break from the club-day filter
+    reds `[11b]` and `[11c]` and leaves `[11]` green.** No change was made to
+    `codDecelPermitted` or to either call site — they were already correct and
+    were waiting on an input.
+    **STILL OPEN, AND UNTOUCHED BY PART 5: the same impossible
+    off-season-with-team-training shape survives in `finisherEligibilityTests.ts`,
+    where re-phasing changes what is asserted.**
     ORIGINAL BELOW.
     **SAM RULED THE COD WINDOW AND ASKED FOR A CHRISTMAS-BREAK CONTROL.
     2026-08-13. THIS CLOSES 28-C1 AND CORRECTS THE BIBLE.**
@@ -534,7 +572,24 @@ his instruction is standing authority, not history.**
 
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
-   **PAID 2026-08-13 — 29 -> 28. `LAW-verify-branch-before-commit` is GUARDED.**
+   **PAID TWICE 2026-08-13 — 29 -> 28 -> 27.**
+   **SECOND: `LAW-visible-first` is GUARDED.** Built to the shape its own row
+   named — a boundary report must say what the athlete can see, or say
+   NOT-VISIBLE and why. **3 cells over 74 reports, 3 mutants killed.** 64 of 74
+   already complied, so the ten that did not are DECLARED DEBT on the same
+   ratchet as NOT-COVERED — the list only shrinks, and a compliant file left in
+   it reds. **Saying NOT-VISIBLE is compliance; SILENCE is what the law forbids.**
+   **AND A THIRD LAW WAS CORRECTED RATHER THAN GUARDED —
+   `LAW-terminal-is-stopped-after-a-report`, whose text had gone FALSE.** Its
+   first clause ("a terminal ENDS ITS TURN at every report and is STOPPED until
+   someone types at it") is the OPPOSITE of Sam's ruling today. **A registry row
+   contradicting a live ruling is worse than an unguarded one.** Its proposed
+   guard is also REFUTED: scanned NOW.md plus every BOUNDARY and STOP report — 75
+   files — for "an agent is currently building/working" claims and found **ZERO**,
+   so that gate would be green and empty. **And the founding case was a claim made
+   in CHAT, which no repo test can read.** Recorded so nobody builds the vacuous
+   version. **Count unchanged by that one, and it says so.**
+   **FIRST: `LAW-verify-branch-before-commit` is GUARDED.**
    Its own row had said for weeks that it was *"MECHANISABLE AND CHEAP — the one
    process law in the file with an obvious hook shape"*. It was.
    `scripts/verify-branch-before-commit.sh` now runs as a real `pre-commit` hook
