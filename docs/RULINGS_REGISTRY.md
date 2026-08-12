@@ -130,12 +130,35 @@ never authored** (Bible `:3149`, `:4969`) · One cap, all training ages. The
 number 3 is abolished. · `UNENFORCED` — `maxExercisesPerStrengthSession` has
 ZERO readers; eleven 3-row fallback branches still ship. SEAT_INBOX item 25.
 
-**R-014** · **The session FLOOR has never been ruled.** · Sam has given a
-CEILING, not a floor. · `UNRULED — and the question may only reach him in the
-item-25 shape:` derive a candidate from his own signed weeks, bring the
-DISTRIBUTION and ONE recommendation, let him veto in a word. **A bare "give me a
-number" is barred — he refused it 2026-08-13:** *"i've answered this type of shit
-so many times"*.
+**R-014** · **⚠ RULED 2026-08-13, AND THE QUESTION IS VOID — THERE IS NO FLOOR
+BECAUSE SIZE IS NOT THE RULE.** *"because the number of exercises is not
+important the total work being done evenly across the body is"* ·
+**A SESSION IS THE RIGHT SIZE WHEN ITS PATTERN SLOTS ARE FILLED.** The count is
+a proxy and he refused it. **His slots, verbatim:**
+*"lower body strength should have a hinge, a squat, an single leg knee, a single
+leg hip, and accessory and/or some core"*;
+*"upper body strength day should have push pull on the horizontal, push pull on
+the vertical then should arm work or accessory work for the shoulders"*;
+*"if you upper body pull or upper body push then it just becomes horizontal
+movement, vertical movement, more arm work, more accessory work, maybe a lift
+like a single arm press"*; *"then you can throw power and stuff in there"*. ·
+`UNENFORCED` — **nothing composes a session by pattern.** The generator's
+strength selection is done by the model and the prompt never mentions the ladder.
+**AND IT WAS ALREADY IN HIS BIBLE at `:227`** — *"heavy squat pattern -> heavy
+hinge pattern -> single-leg knee-dominant -> single-leg hip-dominant ->
+accessories. An athlete is better served by a squat and a hinge than by two
+squats."* — which is why he said *"i thought this would have been explained by
+now"*. Census C7. **DO NOT SEND HIM A FLOOR NUMBER QUESTION.**
+
+**R-071** · *"yes it should be its own thing and not count as a strength exercise
+- thats stupid"* · **CONDITIONING IS NOT A STRENGTH EXERCISE** and does not count
+against the per-session cap. · `BUILT 01ef5863` (2026-08-13) — `conditioning`
+added to `ROLES_EXEMPT_FROM_COUNTING` **and** `conditioningRow` now stamps the
+role, because the rows carried none and an untagged row counts by default.
+**Golden diff: 100 sessions, over-cap 8 -> 0, every session byte-identical —
+only the COUNT moved.** 4 cells in `test:row-counting` (43/43); the
+"a fourth may not arrive unannounced" gate reddened on the change and was updated
+with the diff cited, not weakened.
 
 **R-015** · *"On strength days, 2-3 accessory exercises are paired with mobility
 exercises as SUPERSETS by default"* (+ 6 further clauses,
