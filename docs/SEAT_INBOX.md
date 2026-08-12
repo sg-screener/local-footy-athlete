@@ -478,8 +478,19 @@ phone.** State device items as PARKED in a stop report, never as a request.
    never leave it unmade and never ask Sam to merge.** Quiet if nothing is new.
    **The stop report names in ONE LINE which of Sam's UI changes are now in
    `main`** — his phone runs `main`, so that is how he sees Codex's work.
-   **KNOWN BLOCKER: `codex/program-week-navigation-bounds` adds two registry rows
-   that red `test:law-registry`'s `ruledAt` cell. Fix them in the merge.**
+   ~~KNOWN BLOCKER~~ **PAID 2026-08-12 — `e231a6bc` merged
+   `codex/program-week-navigation-bounds` (week-navigation bounds, tired icon
+   ladder, phase-shift day grid) and `7aef3749` fixed BOTH reds it brought: the
+   three registry rows now cite the boundary docs they shipped with, and
+   `profileResetUITests`' phase-sheet slice was re-aimed after `BuildingState`
+   moved.**
+
+   **AND THE OTHER 42 BRANCHES ARE STALE — MEASURED, SO NOBODY RE-ASKS.** 43
+   `codex/*` branches carry a content delta. **42 of them fork from mid-July and
+   sit 1100-1230 commits behind `main`**; merging them would revert a month of
+   work. Only `program-week-navigation-bounds` forked from 2026-08-12 (66
+   behind). **Check merge-base AGE, never commit count** — `git rev-list --count
+   main..branch` says "1 commit" for a branch a month stale.
    **Do not care which folder Codex uses** — the seat broke an isolated worktree
    on 2026-08-12 and Sam said *"you just make things more complicated for no
    fucking reason"*. This order is branch-based. **Do not propose isolation
@@ -832,46 +843,39 @@ phone.** State device items as PARKED in a stop report, never as a request.
    means you'll miss a strength session"*, which blames the athlete for the
    club's draw.
 
-8. **MY STATUS OWNS THE MODIFIERS — ONE UNIT, THIS ORDER, DO NOT REORDER.**
-   **Sam ruled the old Program sheets obsolete:** *"we don't need this anymore -
-   it shows up in the status bar and on the a simple thing shows on day screen
-   and week screen"*. His design: Day and Week are READ-ONLY indicators; Coach /
-   My Status owns the detail as **a row with a chevron**, not inline buttons.
-   **(a)** land the 7 inert actions on My Status in that shape
-   (`LIVE_ACTION_KINDS = ['dismiss_note']`, `CoachStatusScreen.tsx:168`); also
-   `CoachTabScreen.tsx:466` passes `EMPTY_EQUIPMENT_FACT_IDS` so its equipment
-   testIDs are wrong by construction. **(b)** retire the caption
-   (`projectionCopy.ts:378` *"Change this on your program screen for now."*) and
-   `repoLawGuardsTests.ts:1510`'s `NOT_YET_SURFACE` cell **in the same commit —
-   finishing (a) without this FAILS that guard**. **(c)** THEN delete the
-   Program-side leftovers: `handleCoachNoteAction` (`HomeScreenV2.tsx:350`), its
-   state (`:238`, `:242`), `clearCopyForNote` (`:2583`), `CoachNoteSheet`
-   (`:2634`, mount `:1190`), the DUPLICATE injury mount `:1198` (**keep `:1148`,
-   it is live**), and the false comment at `:2578`.
-   **(c) BEFORE (a)+(b) STRANDS ATHLETES** — the caption sends them to the screen
-   (c) removes.
+8. **BUILT — MY STATUS OWNS THE MODIFIERS, AND SAM HAS SEEN IT ON GLASS.**
+   `a0e293b3` (writers take their source as a parameter) → `8de98d3f` (a+b, one
+   commit) → `2e16fb9f` (c) → `cbc36bcf` (his copy ruling). **The ruled order
+   was kept.** All eight modifier actions are live on My Status;
+   `EMPTY_EQUIPMENT_FACT_IDS` is retired; the caption and its guard are gone; the
+   Program-side leftovers are deleted. Held by `test:my-status-modifiers` (8
+   cells), `test:coach-note-action-source` (4) and
+   `test:program-tab-read-only-modifiers` (6), all in `test:bible`, all
+   mutation-checked. `.maestro/golden/coach-my-status.yaml` is green on LFA
+   Explorer and its not-yet assertion is INVERTED, not deleted.
 
-   **PRICED 2026-08-12, NOT BUILT. TWO FINDINGS THE ORDER DOES NOT CONTAIN:**
-   **(1) THE CHEVRON SHAPE ALREADY EXISTS.** `CoachStatusScreen.tsx:103-133`
-   already renders each modifier as a row with a `<Chevron>` that expands to the
-   actions. **(a) is not a redesign — it is only "make the seven live".**
-   **(2) THE WRITERS HARD-CODE `screen: 'program_tab'` — NINE SITES in
-   `useHomeScreen.ts`,** with surfaces like `coach_notes_injury_resolved`. Those
-   go into the action tape and the decision ledger. **Lifting them to My Status
-   unchanged would write a FALSE surface onto every decision the athlete makes
-   there**, so the extraction must make the source a PARAMETER, not move the
-   code. That is the difference between a move and a lift, and the order prices
-   neither.
-   **ALSO PART OF THE SAME EXTRACTION, NOT A ONE-LINER:**
-   `equipmentFactIds={EMPTY_EQUIPMENT_FACT_IDS}` (`CoachTabScreen.tsx:464`) is
-   wrong because the Coach tab has no `equipmentFacts` source at all — the
-   Program side gets it from `useHomeScreen`. It comes free WITH the extraction
-   and cannot be fixed before it.
-   **SCOPE, THEN:** extract `handleClearCoachNote`, `handleUpdateCoachNoteStatus`
-   and the injury/confirm sheets out of `useHomeScreen` into a hook both screens
-   mount, with the action source injected; then (a)+(b) in one commit; then (c).
-   **NOT STARTED — no device verification is possible while Sam's phone is
-   un-rebuilt, and this unit is entirely glass.**
+   **FOUR THINGS THE ORDER DID NOT CONTAIN, each found by building it:**
+   **(1) THE DECISION LEDGER RECORDS NONE OF THESE ACTIONS** — only three
+   exercise-level types reach it, so the tape is the whole record and the order's
+   "tape and ledger" premise was half false. **(2) THE DURABLE DOOR WAS DROPPING
+   THE SCREEN** (`program_control_durable:<surface ?? screen>`, and every
+   coach-note action sets a surface) — the lift would have LOST the provenance,
+   not forged it. **(3) `coach_tab` WAS THE WRONG VALUE**: it maps to the
+   diagnostic label `'coach'`, the field Sam asked for on 2026-08-10 so an
+   investigation can tell his own tap from a coach-authored change. The screen id
+   is `my_status`. **(4) THREE COMPONENTS HAD TO BE EXTRACTED, NOT DELETED** —
+   the confirmation sheet, the rebuild sheet and the rebuild owner all lived
+   inside `HomeScreenV2`, and (a) made My Status depend on all three. The rebuild
+   was measured, not assumed: four modifier families return
+   `rebuildRequired: true`.
+
+   **SAM RULED THE STATUS SHEET TWICE THE SAME DAY, AND BOTH ARE RECORDED.**
+   *"Drop 'Worse' … four options only … And change 'Still sick' to 'Still pretty
+   sick'"*, then *"actually keep worse for now"*. The rename ships, `worse`
+   stays, five answers, all now SIGNED copy rather than inline literals.
+
+   **AWAITING SAM — see `## AWAITING SAM` below.** The second half of his design
+   is not built.
 
 9. **BUILD LAYER 3 — THE ATHLETE'S WILL. RULED BY SAM 2026-08-12:** *"should
    give warnings but allow them to do whatever they want"*. **So: the app warns
@@ -981,6 +985,18 @@ seat was wrong.
   tier's hydration relocation are all **BUILT, awaiting device acceptance**.
   When he rebuilds, the white screen after a refused dev launch is expected and
   now names its own cause (`docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`).
+- **DECISION OWED — the day/week modifier indicator, the SECOND HALF of Sam's
+  own design, IS NOT BUILT.** He said *"it shows up in the status bar and on the
+  a simple thing shows on day screen and week screen"*. Item 8 built the first
+  half (My Status owns the detail and its controls). **Measured 2026-08-12:
+  `ModifiersStrip`'s own header describes three mounts — day, week, coach — and
+  it is mounted ONCE, on the Coach tab.** Program shows no modifier indicator at
+  all, and `.maestro/golden/coach-my-status.yaml` encodes that absence with
+  `assertNotVisible: modifiers-strip-day`. **Held by cell [6] of
+  `test:program-tab-read-only-modifiers`, which reds the day it IS built**, so
+  it cannot be forgotten again. **He was asked in the item-8 stop report: build
+  it next, yes or no?** Not started until he answers — building it inverts a
+  golden-flow assertion that was written deliberately.
 - **DECISION OWED — a second game in one week.** Sam's own sentence for item 7,
   *"only doing 1 strength session ... if they have 2 games and 2 team
   trainings"*, **cannot be expressed**: the profile carries ONE game field
