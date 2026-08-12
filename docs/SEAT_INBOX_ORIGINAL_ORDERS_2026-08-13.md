@@ -1655,4 +1655,312 @@ The inbox keeps a pointer at each site.
 
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 23).
 
+---
+
+## item 26 — full report
+
+26. **THE ⚠ HALF IS BUILT — HIS 2-3 PAIRS SURVIVE THE VALIDATOR NOW.**
+    `validatePairings` capped a session at ONE pair and silently binned the rest;
+    the ceiling is now his THREE, and a FOURTH is still stripped because four is
+    not his design either. Rules 2-4 untouched. **Five cells in
+    `test:mobility-accessory-doors` (16 -> 21), including the one this item names:
+    it fails if a 3-pair session survives as a 1-pair session. Mutation-checked
+    two ways** — cap back to one reds three cells, ceiling removed reds the
+    fourth-pair cell.
+    **THE PRODUCER IS BUILT (`f9287d95`, `923e9cd0`) AND WIRING IT IS BLOCKED ON
+    ONE THING — MEASURED 2026-08-13 BY WIRING IT AND READING THE RESULT.**
+    Wired at `finaliseBuiltWorkout` on core days, through `validatePairings`
+    rather than around it, **22 of 120 sessions carried pairs** (Mixed 2-pair x4,
+    Mixed 3-pair x6, Team Training 2-pair x12; every group 2 or 3, none over his
+    max) **and the counted-row distribution did NOT move** — rule 5 working end to
+    end. **Scenarios and the 17 QA weeks were unchanged.**
+    **BUT `test:power-counting`'s committed golden RED: `countedRows.strength
+    5 -> 6`, and a mobility pick ("Cat-Cow") appeared in `strengthRowNames` and as
+    a `recovery_addon` component.** So **the role exemption does NOT reach that
+    counter** — it classifies by `classifyGeneratedWorkoutRow`, which reads names
+    and shape, not the authored role. **Rule 5 is enforced at
+    `sessionRowCounting` and NOT at the §18/golden instrument.** Same class as
+    the `prehab` slip: a fence that holds in one place and not the next.
+    **WIRING IS REVERTED** until a paired mobility row is non-counting at BOTH,
+    so the tree stays green. **That reconciliation is the next act — it is a
+    counting-ownership question, not a pairing one.**
+
+    ~~THE PRODUCER IS STILL NOT BUILT — AND RULE 3 NEEDS ONE BRIDGE THAT NOBODY
+    SIGNED. This is NOT a request to re-rule his design.**
+    Rule 3 (non-compete) compares **an accessory's region** with **a mobility
+    pick's region**. Those are two DIFFERENT signed vocabularies and no crosswalk
+    exists between them:
+    - the mobility side is **`MOBILITY_REGIONS = lower | hips | midline | upper`**,
+      signed 20/20 on 2026-07-30;
+    - the accessory side is **`MuscleGroup`, 19 values** from the signed muscle
+      sheet (`Quads`, `Glutes`, `Lats`, `Traps`, `Grip`, …).
+    **This repo treats a crosswalk as authored law** — §11's experience crosswalk
+    says *"No other crosswalk may exist"* — so inventing this one quietly is the
+    exact defect items 25 and 26 are both about.
+    **⚠ RESOLVED BY SAM, 2026-08-13 — THE 19-VALUE CROSSWALK IS NOT NEEDED AND
+    THE BLOCK BELOW IS STRUCK. He said:** *"i have written something about
+    mobility pairings being non compete with the accessory lift i.e. upper body
+    lift paired with lower body mobility"*. **He had, and it is rule 3's own
+    SIGNED EXAMPLES, which nobody had read as the specification they are:**
+    - **split squats (LOWER lift) + QL extension (MIDLINE mobility)**
+    - **single-arm bench (UPPER lift) + butterfly (HIPS mobility)**
+    **So non-compete operates at the SIDE, not at the muscle.** The rule is:
+    **the mobility pick's side must differ from the accessory's side**, with the
+    four signed regions falling out as **`lower` + `hips` = the lower side,
+    `upper` = the upper side, `midline` = NEUTRAL** — his first example pairs a
+    lower lift with midline, so midline never competes.
+    **THAT NEEDS NO NEW AUTHORED TABLE.** The accessory's side comes from the
+    EXISTING `upperOrLowerForExerciseName`, and the region-to-side mapping is
+    demonstrated by his own two examples rather than invented. **The producer is
+    UNBLOCKED and nothing is owed by Sam.**
+
+    ~~**DERIVED, NOT INVENTED, so it can be vetoed in a word rather than asked
+    cold** (the shape item 25 taught). It is anatomical and mechanical:
+    - **lower** — Quads, Hamstrings, Calves, Knee, Feet
+    - **hips** — Glutes, Hips, Groin, Outer hip
+    - **midline** — Midline, Low back
+    - **upper** — Upper back, Lats, Chest, Shoulders, Triceps, Biceps, Traps, Grip
+    **The only judgement calls are `Low back` -> midline (not lower) and `Grip` ->
+    upper.** Everything else is unambiguous. **Confirm or correct those two and
+    the producer is unblocked**; it would be a total `Record<MuscleGroup,
+    MobilityRegion>` so the compiler refuses a new muscle group with no region.~~
+    **THE REST OF THE PRODUCER IS SPECIFIED AND NEEDS NOTHING FROM SAM:** pick 2-3
+    ACCESSORY rows (never main lifts, rule 2 — identified by
+    `classifyGeneratedWorkoutRow`, since the generator authors no roles); pick
+    from `mobilityPool()` via `mobilityRegionOf`, preferring a region untouched by
+    the whole session (rule 3) and equipment-light (rule 6); carry the pool
+    entry's OWN authored dose (rule 5, "counts toward nothing"); stamp
+    `supersetGroup`/`supersetOrder`/`pairType: 'superset'`, which the renderer
+    already groups. The standalone session is untouched (rule 7).
+    **RECEIPT NOTE:** the code landed inside `220dfef9`, another agent's commit —
+    they staged the whole tree while my files sat in the shared checkout, so the
+    reasoning above is recorded here rather than in a commit message of its own.
+
+    ~~ORIGINAL~~ **SAM'S MOBILITY PAIRING WAS AUTHORED ON 2026-07-31 AND NEVER BUILT — AND
+    THE APP ACTIVELY DELETES IT.**
+
+    **OWNED BY THE TERMINAL.** Composition, not UI.
+
+    **Sam, 2026-08-13:** *"I ALSO SAID THINGS LIKE ACCESSORY LIFTS SHOULD BE
+    PAIRED WITH MOBILITY - WE SPENT FUCKING DAYS ON THIS - WHY IS IT NOT IN THE
+    APP YET"*.
+
+    **HE IS RIGHT. FOUND, WITH THE RECEIPT:**
+    `docs/MOBILITY_PAIRING_RULINGS_2026-07-31.md` — seven numbered rules, all
+    Sam-ruled, with signed examples (split squats + QL extension; single-arm
+    bench + butterfly). **Its own status line reads: "AUTHORED, NOT
+    COMMISSIONED."** It has sat there for thirteen days.
+
+    **HIS RULES, so nobody re-derives them:** (1) on strength days **2-3
+    accessories are paired with mobility as SUPERSETS BY DEFAULT**, programmed
+    and visible, athlete free to skip; (2) **main lifts are NEVER paired**;
+    (3) **non-compete** — the mobility pick targets a region that is neither the
+    accessory's nor any of the day's main-lift regions; (4) the warm-up flow
+    trains the area being trained, PAIRED mobility trains areas that are not;
+    (5) dose is the authored warm-up dose, **logged for nothing, counts toward
+    nothing**; (6) picks come from the signed 20-exercise mobility pool, prefer
+    equipment-light; (7) the standalone Mobility session is UNCHANGED.
+
+    **WHY IT IS NOT ON GLASS — THREE FACTS, MEASURED.**
+    - **There is no producer.** `src/rules/` holds `mobilitySessionComposition.ts`
+      (the STANDALONE session) and nothing that pairs. No module writes a
+      mobility superset.
+    - **The rendering already exists and is idle.** `supersetGroup`,
+      `supersetOrder` and `pairType: 'contrast' | 'superset' | 'circuit'`
+      (`domain.ts:1241-1245`), grouping in `dayWorkoutHelpers.ts:214-237`, the
+      one-list pill in the session template. **Built right, disconnected —
+      again.**
+    - **⚠ AND THE VALIDATOR WOULD DELETE HIS RULING IF GENERATION PRODUCED IT.**
+      `defaultProgram.ts:1299`: *"Max 1 paired block per workout (strip all
+      groups beyond the first)"*, plus a strip of any group that is not exactly
+      2 and any unknown `pairType`. **Sam ruled 2-3 pairs per session. The app
+      caps at 1 and silently bins the rest.** Building the producer without
+      touching this validator produces a session that loses two thirds of his
+      design with no error. **Fix the validator in the SAME unit and bring a
+      cell that fails if a 3-pair session survives as a 1-pair session.**
+
+    **THE PAIRING IS ALSO WHY ITEM 25's COUNT ARGUMENT IS NOT THE WHOLE PICTURE.**
+    Mobility rows *"count toward nothing"* by his rule 5. A session of 6
+    exercises with 3 mobility pairs is 9 rows on glass. **Any size rule built in
+    item 25 must state which of those it counts, and it must agree with rule 5.**
+
+    **DO NOT ASK SAM TO RE-RULE ANY OF THIS.** The document is signed. Build it
+    and show him the session on glass.
+
+
+---
+
+## item 27 — full report
+
+27. **A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —
+    IT IS A PLANNER CHANGE, NOT A POOL ONE.**
+    **A1 — the "cooked" tap no longer deloads forever.** It was minted with
+    illness's OPEN horizon; it now carries Sam's 7-day window, wired to the
+    `resolveReadinessDeload` code that had existed since his ruling with NO
+    CALLER. Four cells, three mutations, one inverted cell (`fact-horizon` T2
+    asserted the defect).
+    **B1 — the abolished conditioning progression no longer doses.** The authored
+    duration ships unmodified; the `_progression*` stamps went with it (measured:
+    no production reader). Its suite is INVERTED into a retirement guard, 8 cells,
+    mutation-checked. Scenarios and the 17 QA weeks unchanged either side.
+    **C1 — THE WAIST AND THE POOL-SIZE TRAP ARE FIXED (`c307c9a5`, `7d1667ae`);
+    COD IS STILL ZERO AND THE REASON IS NOW EXACT (`a09eb497`).**
+    Sam's 8 authored qualities are a TOTAL `Record` — a new quality with nowhere
+    to be requested from is a BUILD-TIME red. **MUST-COVER is now separate from
+    AVAILABLE:** the scorer counted the whole pool, so pool SIZE was a term in
+    every conditioning score — that is why adding COD moved four phase checks.
+    Mutation-checked: pointing the maths back at the pool reproduces 7/4 exactly.
+    **THE REFUSAL IS ONE NAMED BRANCH, AND THAT BRANCH IS RIGHT.** All nine
+    downgrade sites in `finisherEligibility` were instrumented: **six requests,
+    ALL hitting site #7 — *"Pairing: lower/hinge/full days take easy off-feet
+    aerobic only"***. **COD is only ever requested as an ATTACHED FINISHER on a
+    lower-body day, where refusing it is correct — the lift owns the legs.**
+    **CORRECTED AGAIN — AND THE MYSTERY IS SOLVED. COD *IS* OFFERED STANDALONE.**
+    Instrumented `pickStandaloneCondDecision`'s candidate list: **COD appears
+    every time**, and on day 3 it is ranked SECOND
+    (`candidates=tempo,cod_decel,aerobic_base`). **The six site-#7 refusals were
+    the ATTACHED path, a different caller — not this one.**
+    **THE REAL MECHANISM IS FIRST-MATCH-WINS.** `pickStandaloneCondDecision`
+    returns on the FIRST allowed category. COD is ranked LAST — correctly, since
+    Sam says cut it first — and `aerobic_base` above it is essentially always
+    allowed. **So a lower-ranked category is only ever reached if everything above
+    it is DENIED, which never happens.** "Offered last" and "first match wins"
+    combine to mean NEVER OFFERED. This is
+    `first-match-wins-hides-its-ordering`, sighting in a new place.
+    **SO THE FIX IS PLACEMENT, NOT RANK AND NOT ELIGIBILITY.** Sam's rule is
+    *"prescribed in weeks with no team training ... cut first when something has
+    to give"* — **"cut first" means dropped under contention, NOT "never placed
+    when there is room"**. COD needs a slot when the week has spare conditioning
+    capacity, then to be the first thing dropped when it does not. **Ranking it
+    last in a first-match-wins list can never express that.**
+    **CAPACITY MEASURED 2026-08-13 — AND IT CHANGES THE FIX'S SHAPE. THERE IS NO
+    SPARE ROOM.** Off-season, no team training, block 3:
+    - **6 days: 6 workouts, ZERO rest days, conditioning = aerobic_base x2 (+
+      tempo x1 from week 3).**
+    - 5 days: 5 workouts, zero rest. 4 days: 4 workouts, zero rest.
+    **Every day already carries work and the conditioning is 2-3 sessions.** So
+    a "place if room" pass would never fire — **there is no empty slot to fill.**
+    **COD CAN ONLY ENTER BY SUBSTITUTION**, taking the place of one aerobic
+    session in a no-team-training week. That follows from Sam's own word
+    *"prescribed"* — it is IN the week, not squeezed into a gap that does not
+    exist — but it is a DIFFERENT change from what the last note proposed, and it
+    is the one to build.
+    **AND OFF-SEASON ONLY EVER OFFERS TWO CATEGORIES:** `categoryPriority` for
+    off-season is `['aerobic_base', 'tempo']`, so vo2, glycolytic and sprint never
+    appear either. **COD is not a lone exile; it is the fourth name on a list the
+    off-season policy does not carry.** Whether that policy should carry it is the
+    question the substitution answers.
+
+    **⚠ AND THE OBVIOUS FIX IS THE TRAP:** raising COD's rank would make it beat
+    `aerobic_base` on ordinary weeks. **Do not re-rank. Give it a
+    place-if-room pass** — and remember the coverage maths is pool-size
+    sensitive, which is already fixed but will bite again if must-cover grows.
+
+    ~~SUPERSEDED — the attached path misled me~~ **THE DEFECT IS THAT COD IS NEVER REQUESTED STANDALONE.** Field COD is a
+    session, not a finisher after a squat day. **DO NOT exempt COD at site #7** —
+    that would put hard change-of-direction work straight after a heavy lower
+    lift, which no ruling asks for. **Next: measure why
+    `pickStandaloneCondDecision` never reaches COD** (the pool contains it —
+    probed `pool=aerobic_base,cod_decel`), then place it as a standalone.
+
+    ~~SUPERSEDED~~ **C1 — MEASURED FURTHER THAN THE CENSUS, AND IT IS BIGGER THAN A MISSING
+    `case`.** The census says `poolForCategory` has no `cod_decel` branch. **It is
+    worse: `AthleteConditioningCategory` has NO `cod_decel` MEMBER AT ALL**
+    (`conditioningSelection.ts:57-63`) — `cod_decel` exists only as a template
+    QUALITY. So there is no category for a planner to ask for.
+    **THE CHAIN IS FOUR LINKS, and only the first three are mechanical:** add the
+    category member (the compiler then forces the `poolForCategory` branch); add
+    the branch; pass `noTeamTrainingWeek` so the existing gate opens — **verified
+    again: ZERO production callers pass it.**
+    **ATTEMPTED IN FULL 2026-08-13 AND REVERTED — WITH NUMBERS. The patch is at
+    `scratchpad/c1-cod-chain.patch`.**
+    All four links were built: `cod_decel` added to
+    `OffseasonConditioningCategory` and `AthleteConditioningCategory` (the
+    compiler then forced the `poolForCategory` branch, and four more narrow
+    unions — `DeloadConditioningCategory`, `AllocationLike`, `SessionAllocation`,
+    `Workout` — which is the pressure working); the pool branch; the
+    `noTeamTrainingWeek` flag wired from the profile so the gate that was "dead
+    twice" finally opens; and the planner offering `cod_decel` LAST, only in a
+    week with no team training — "cut first" expressed as "offered last", since
+    there is only one list.
+    **PROBED AND CONFIRMED THE POOL OFFERS IT:**
+    `pool=aerobic_base,cod_decel` on a no-team-training week.
+    **AND THE ATHLETE STILL RECEIVED ZERO.** Measured both ways — 0 of 16
+    workouts with team training, 0 of 16 without. **It is refused DOWNSTREAM, in
+    `finisherEligibility`, which appears to downgrade an unrecognised category to
+    `aerobic_base` rather than deny it.** That function is the real fourth link,
+    not the placement pool.
+    **AND IT PERTURBED THE PLANNER WHILE DELIVERING NOTHING:**
+    `test:phase-structure` went **10/1 -> 7/4**, because an extra member in the
+    placement pool changes coverage counting and shifts what else gets placed.
+    **Reverted: a change that produces no COD session AND moves other weeks is
+    strictly worse than no change.**
+    **NEXT PASS STARTS AT `finisherEligibility`**, not at the type — the types
+    are the easy part and the patch has them.
+
+    **THE FOURTH IS THE RULING AND IT IS PLANNER WORK.** The category is chosen at
+    `defaultProgram.ts:1953` from `planEntry.conditioningCategory`, which the
+    COACHING ENGINE sets. Sam's rule — *"prescribed in weeks with no team
+    training (late off-season, Christmas break) and cut first when something has
+    to give"* — is a planner decision with a priority, not a pool lookup.
+    **Building links 1-3 alone would make the templates reachable and still
+    unreached — a field with no reader, the exact class item 27 is about.** So it
+    is stopped rather than half-built, and it needs a full pass with the
+    120-session and 17-scenario proof either side.
+
+    ~~ORIGINAL~~ **THE CENSUS SAM COMMISSIONED — 20 OF HIS RULINGS ARE NOT IN THE APP, AND
+    SIX OF THEM THE APP CONTRADICTS. THIS IS THE TOP OF THE QUEUE.**
+
+    **READ `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md`. Every finding carries a
+    `file:line` receipt and the grep that would have found an enforcer if one
+    existed. Do not re-measure it. Build.**
+
+    **Sam commissioned it in these words:** *"find what I've ruled on that
+    currently does not make it to the app, or things in the app that contradict
+    what I've said ... my rulings should all be in the app by now and I'm fucking
+    sick of fixing these tiny little edge cases when the real logic i have
+    already put in place IS NOT ACTUALLY IN FUCKING PLACE."*
+
+    **BUILD ORDER IS BY ATHLETE HARM, NOT BY EFFORT.**
+    1. **A1 — one "cooked" tap deloads the athlete FOREVER.** The 7-day window
+       code exists and has no caller. Worst live defect in the app.
+    2. **B1 — the conditioning progression system Sam ABOLISHED is still dosing
+       sessions**, on top of the authored templates. Two systems, exactly what
+       he forbade.
+    3. **C1 — no athlete has ever received a COD/decel session**, in any phase.
+       Four authored templates unreachable.
+    4. **C2 — the 2km time trial is collected, validated, stored and never
+       read.** The card shows the literal string "Intensity: 110% MAS".
+    5. **A3 — the athlete is shown "3 × 8-10" and must pick a number**, while
+       the journal scores them against a midpoint they never saw.
+    6. Then A2, A4, A5, A6, C9, and the rest in document order.
+
+    **DO NOT PUT ANY OF THESE BACK TO SAM AS A QUESTION.** Every one is already
+    ruled, dated and quoted in the census. **Re-asking is the defect he is
+    angriest about.** If a fix genuinely needs a number he has not given, say so
+    in the same message as a recommendation and its reasoning — never a bare
+    question.
+
+    **⚠ AND THE CLASS MATTERS MORE THAN ANY ROW.** Nine of the twenty are a
+    value, a typed status, or a whole function that EXISTS, is CORRECT, and has
+    NO CONSUMER: `deriveMas`, `resolveDayDirective`, `ergCapMinutes`,
+    `set_length_max_4_5_min`, `maxExercisesPerStrengthSession`, the COD
+    templates, the heavy-slot ladder, the contrast pairing, the mobility
+    pairing. **That is one defect twenty times.** The repo already has
+    `test:computed-must-be-consumed` and **it did not catch a single one of
+    them** — establishing why is part of this item, not a footnote.
+
+    **THE SYSTEMIC UNIT, and it is the one Sam's standing instruction demands:**
+    every authored ruling carries a NAMED ENFORCER plus a cell that fails when
+    the enforcer is removed. **A ruling with no enforcer is UNENFORCED and is
+    counted like the law registry counts its rows** — visible, falling,
+    stop-the-line. Widen `test:computed-must-be-consumed` from VALUES to
+    RULINGS. **Do this alongside the top rows, not after them** — the rows are
+    what Sam sees, the widening is what stops the twenty-first.
+
+    **AND A CAPTURE RULE, effective now:** three of the twenty sat in docs whose
+    own status line read *"AUTHORED, NOT COMMISSIONED"*. **A ruling captured
+    without an inbox item created in the same pass is a defect at the moment of
+    capture.** Never file one again.
+
 
