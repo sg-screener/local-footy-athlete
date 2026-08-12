@@ -180,14 +180,37 @@ phone.** State device items as PARKED in a stop report, never as a request.
    that was `seat-rations-what-Sam-ruled` again and it is withdrawn.** Build in
    this order, cheapest first. **Each is TOOLING — no app behaviour changes.**
 
-   **(i) TypeScript language server.** `npm install -g typescript-language-server
-   typescript`, then the `typescript-lsp` plugin. Gives real go-to-definition,
-   reference search and post-edit diagnostics **instead of grepping and
-   re-reading files**, which is the single biggest recurring token cost.
-   **NOTE: an open issue reports the official plugin missing its `plugin.json` —
-   if it will not install, say so and stop; do not hand-roll a substitute.**
+   **(i) TypeScript language server — DONE 2026-08-12, VERIFIED.**
+   `typescript-language-server@5.3.0` + `typescript@7.0.2` installed globally;
+   `typescript-lsp@claude-plugins-official` installed and **enabled**.
+   `claude plugin details` reports **1 LSP server, ~0 tokens added to every
+   session** — out-of-process, so it costs context nothing.
+   **THE WARNED-ABOUT DEFECT DID NOT BITE.** The plugin's source directory
+   genuinely has no `plugin.json` — but neither does `frontend-design`, which
+   works — because the marketplace entry carries the whole `lspServers` config
+   itself and `strict: false`. It installed first try. **REQUIRES A RESTART to
+   take effect.**
 
-   **(ii) Path-scoped rules, `.claude/rules/*.md`** with `paths:` frontmatter
+   **(ii) BLOCKED ON TWO THINGS, NEITHER OF WHICH IS EFFORT. Not started.**
+   **(1) I CANNOT VERIFY THE MECHANISM EXISTS IN THIS BUILD.** There is no
+   `.claude/rules/` anywhere on this machine, `claude --help` never mentions
+   rules, and there is no example to copy. The order asserts the feature as
+   fact; a ruling premise is a claim too. **Building a rules file I cannot
+   observe loading is exactly the "hand-roll a substitute" that (i) forbids** —
+   and only `/context`, which is Sam's to run, could confirm it.
+   **(2) `.claude/` IS GITIGNORED HERE (`.gitignore:7`), SO MOVING LAWS THERE
+   DELETES THEM FOR EVERYONE ELSE.** `AGENTS.md` is tracked; `.claude/rules/`
+   would not be. The concurrent agent in this same checkout would silently lose
+   whatever moved, and so would a fresh clone. **FIX IS ONE LINE — a
+   `!.claude/rules/` exception — but that is Sam's call on his own ignore file.**
+   **MEASURED SO THE NEXT PASS NEED NOT: ~125-149 of AGENTS.md's 746 lines are
+   genuinely path-scoped** (Coach Intelligence 27, Coach Escalation 30,
+   hand-built fixtures 38, L13 walker 30, L14 domain purity 10, L16 slice 14).
+   **That is a 20% cut, not a transformation** — the other 600 lines are Law
+   Zero, the counting laws, the process laws and the seat rules, all of which
+   apply to every turn.
+
+   ~~ORIGINAL~~ **Path-scoped rules, `.claude/rules/*.md`** with `paths:` frontmatter
    globs. **`AGENTS.md` is 746 lines re-read every single turn.** Move the rules
    that only matter when specific files are touched — the program generator,
    repair engine, coach planning, scenario tests — into a path-scoped rule that
