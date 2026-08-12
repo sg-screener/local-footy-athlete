@@ -553,6 +553,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-computed-must-be-consumed',
+    law: 'A value the app computes on every assessment and no code reads is not a feature, it is a rule that was SWITCHED OFF. Either wire it or delete it.',
+    ruledAt: 'docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md §4, proposed as "a noUnusedWrites-style gate over contract.* assignments" after nine findings of the same shape in one day; ordered as docs/SEAT_INBOX.md item 10',
+    guard: {
+      state: 'guarded',
+      by: 'test:computed-must-be-consumed',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). THE FIRST RUN FOUND SIXTEEN, NOT TWO. §4 named two `contract.*` offenders (`unavoidableAnchorCausedExcess`, `achievedModerateDayCount`); measuring all 42 assigned `contract.*` fields found SIXTEEN written on every assessment and read by nothing — fourteen of them one module\'s entire achieved-ledger family. The doc\'s nine was a sample, not a census, which is `LAW-count-names-instrument` again and the reason the gate measures instead of encoding the list it was handed. WHAT IT HOLDS: a write is `contract[.path].field =`; a read is any `.field` occurrence that is not the left side of an assignment, anywhere in production. The unit is textual reads of a member NAME and it is deliberately generous — a field read once, by any object, passes — so a field this gate calls unconsumed is one nothing mentions at all, which is the form of the claim that cannot be argued with. The sixteen are declared as dated debt and the list MAY ONLY SHRINK: the gate reds when the set grows (a new rule switched off) AND when a declared field gains a reader without leaving the list, because a debt list that overstates itself is a number the next reader prices against. MUTATION-CHECKED THREE WAYS: a fabricated `contract.x.y =` with no reader reds cell [2]; dropping a real offender from the list reds cell [2]; a fictitious entry reds cell [3]. Cell [4] is liveness — the matcher is shown a plain write and a plain read and must see both, so [2] and [3] cannot be green because the detector went blind. WHAT IT DOES NOT HOLD, AND THIS IS STATED RATHER THAN IMPLIED: SIX OF §4\'s NINE ARE NOT `contract.*` AT ALL — a Set indexed `[0]` one line later, a decision list, a collapsed N-list, `canOverride` (closed separately by `LAW-warn-then-allow`). "Is this exported function ever called" needs a call graph; a gate believed to be general is worse than one known to be narrow.',
+    },
+  },
+  {
     id: 'LAW-warn-then-allow',
     law: 'The app WARNS, RECORDS that it warned, and then does what the athlete asked. A refusal with no way through survives only where the action is physically impossible.',
     ruledAt: 'docs/SEAT_INBOX.md item 9, Sam 2026-08-12: "should give warnings but allow them to do whatever they want", and earlier "nothing so tight that ... the athlete can\'t choose to do whatever they want"',

@@ -996,7 +996,26 @@ phone.** State device items as PARKED in a stop report, never as a request.
    `projectVisibleWeek.ts:214-219` and the `date|name` STRING JOIN at
    `section18CraftTier.ts:217-232` **which breaks on a rename**.
 
-10. **THE GATE — `LAW-computed-must-be-consumed`.** `HOW_TO_BUILD_THIS_APP` §4
+10. **BUILT — THE GATE EXISTS, AND ITS FIRST RUN FOUND SIXTEEN, NOT TWO.**
+   `test:computed-must-be-consumed`, in `test:bible`, mutation-checked three
+   ways with a liveness arm. §4 named two `contract.*` offenders; measuring all
+   **42 assigned `contract.*` fields found SIXTEEN** written on every assessment
+   and read by nothing — **fourteen of them one module's entire achieved-ledger
+   family** (`section18EffectiveWeekEvaluator`). **The doc's nine was a sample,
+   not a census** — `LAW-count-names-instrument` again, and why the gate
+   measures instead of encoding the list it was handed.
+   **The sixteen are declared as dated debt and the list MAY ONLY SHRINK:** the
+   gate reds when the set grows AND when a declared field gains a reader without
+   leaving the list.
+   **NOTE FOR ITEM 4's OWNER:** `achievedModerateDayCount` is STILL unread. The
+   moderate-day finding reads `ledger.restStress.moderateDays.length` directly,
+   so that unit did not close this one.
+   **WHAT IT DOES NOT COVER, STATED:** six of §4's nine are not `contract.*` —
+   a Set indexed `[0]`, a decision list, a collapsed N-list. `canOverride` was
+   closed separately (`LAW-warn-then-allow`, `ca33206f`). A call-graph gate for
+   "exported and never called" is NOT built.
+
+   ~~ORIGINAL ORDER~~ **THE GATE — `LAW-computed-must-be-consumed`.** `HOW_TO_BUILD_THIS_APP` §4
    lists NINE values computed every assessment and read by nobody. One
    `noUnusedWrites`-style gate over `contract.*` and exported rule outputs
    catches all nine. **Subsumes the narrower `subject: 'doc' | 'behaviour'`
