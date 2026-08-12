@@ -379,6 +379,21 @@ his instruction is standing authority, not history.**
    both halves too, but whether a match's minutes are full or weighted training
    load is a coaching question. **Written under `## AWAITING SAM
 
+- **ONE SENTENCE — THE 6-HARD-DAY WARNING UNDERSTATES ITSELF (A5's only live
+  part). Measured; the block half is correctly NOT built.**
+  **What the athlete reads today** (`planChangeRefusalCopy.ts:43`):
+  *"This gives you 6 hard days this week. That's the upper edge."*
+  **It is plain language and carries no banned vocabulary — the bar your ruling
+  sets is met on clarity.** The defect is accuracy: **your budget is PREFER 4,
+  PERMIT 5** (Bible `:118`), so **five IS the upper edge and six is PAST it.**
+  One sentence serves both, and at six it tells the athlete they are at the
+  limit when they are beyond it. **Same shape as the shortfall sentence you
+  corrected earlier — one string covering two different cases.**
+  **RECOMMENDATION:** keep the sentence for five, and give six its own line
+  saying it is past the permitted max. **The words are yours — I will not invent
+  athlete copy — but the numbers in it are already your own (4 preferred, 5
+  permitted).**
+
 - **ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
   the census says.**
   **His rule, Bible `:226`:** *"ONE MAIN PER PATTERN PER SESSION... A second
