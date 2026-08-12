@@ -1010,6 +1010,21 @@ for (const scenario of scenarios) {
           + `permittedMax=${stress.permittedHardDayMaximum} `
           + `authorisedAnchorExcess=${stress.authorisedUnavoidableAnchorExcess} `
           + `unavoidableAnchorCausedExcess=${stress.unavoidableAnchorCausedExcess}`);
+        // THE OTHER HALF OF SAM'S SHAPE, ON THE SAME SEAM. Seat order item 4:
+        // "4 hard days plus 1 moderate/easy day is preferred". The hard half
+        // above has a range, a maximum and two findings; the MODERATE half has
+        // one write and zero readers, so a week of four hard days and no
+        // moderate day passes in silence. The order says MEASURE FIRST, and a
+        // second probe flag for the same question would be a second instrument
+        // for one measurement — this extends the one that already exists.
+        console.log(`MODERATE_DAY_PROBE ${scenario.id} `
+          + `hardDays=${rest.hardDays.length} `
+          + `moderateDays=${rest.moderateDays.length} `
+          + `activeRecovery=${rest.activeRecoveryDays.length} `
+          + `trueFullRest=${rest.trueFullRestDays.length} `
+          + `achievedModerate=${stress.achievedModerateDayCount} `
+          + `samShape=${rest.hardDays.length === 4 && rest.moderateDays.length >= 1
+            ? 'MET' : `${rest.hardDays.length}+${rest.moderateDays.length}`}`);
       } catch (error) {
         console.log(`HARD_DAY_PROBE ${scenario.id} ERROR ${String(error)}`);
       }

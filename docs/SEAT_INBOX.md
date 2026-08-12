@@ -144,8 +144,20 @@ phone.** State device items as PARKED in a stop report, never as a request.
    `achievedModerateDayCount` (`section18EffectiveWeekEvaluator.ts:1034`) has
    **ZERO readers** — a week of 4 hard days and no moderate day passes silently.
    **FIX: a `preferredModerateDayRange` + an ADVISORY finding, never blocking**
-   (`:4810`), then a generation target toward 4+1. **MEASURE FIRST:** print the
-   count across all 17 `test:qa` scenarios.
+   (`:4810`), then a generation target toward 4+1.
+   **MEASURED 2026-08-12 — `docs/MODERATE_DAY_MEASUREMENT_2026-08-12.md`. The
+   step this item ordered first is DONE and the answer is sharper than the item
+   assumed: 2 of 17 scenarios meet 4+1, and 11 of 17 have ZERO moderate days.
+   THE SPLIT IS SEASONAL — every in-season/pre-season FIXTURE week is
+   `moderate=0` (12 of 12, S3 the lone exception); every moderate day the app
+   produces is in an off-season or no-fixture week. In the season the athlete
+   plays in, the moderate tier effectively does not exist.** S14 (low readiness
+   AND injuries) still lands 4 hard / 0 moderate.
+   **THE ADVISORY'S ACCEPTANCE TEST IS NOW WRITTEN DOWN: it must fire on 11
+   scenarios the day it lands and stay SILENT on S3 and S7.** A finding that
+   fires everywhere or nowhere is not measuring Sam's shape.
+   **NOT BUILT:** the range, the advisory finding and the generation target.
+   Nothing here says WHICH session should become moderate or at whose expense.
 
 5. **UNPINCH THE FIXTURE WAIST.** `derivedWeekContract.ts:90`
    `const fixture = fixtures[0] ?? null` is the ROOT; the twelve `.find()`/`[0]`
