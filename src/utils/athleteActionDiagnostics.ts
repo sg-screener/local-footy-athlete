@@ -56,6 +56,13 @@ export type AthleteActionEventName =
   | 'visible_projection_result'
   | 'coach_notes_result'
   | 'athlete_action_completed'
+  // THE ATHLETE WENT AHEAD AFTER BEING WARNED — Sam, 2026-08-12: *"should give
+  // warnings but allow them to do whatever they want"*. The app warns, RECORDS
+  // that it warned, then does as it was asked. An override nobody wrote down is
+  // an override that never happened as far as every later reader is concerned,
+  // which is the state SEAT_INBOX item 9 names at
+  // `planChangeProducer.ts:2412-2416`.
+  | 'athlete_action_override_allowed'
   | 'athlete_action_failed'
   | 'athlete_ui_outcome_shown'
   | 'ui_outcome_mapped'

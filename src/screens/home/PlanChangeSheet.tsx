@@ -40,7 +40,15 @@ import {
   TEAM_NIGHT_MOVE_ROUTE_IDS,
   type TeamNightMoveAskContext,
 } from '../../rules/teamNightMoveAsk';
-import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
+import {
+  emitAthleteActionEvent,
+  type AthleteActionTraceContext,
+} from '../../utils/athleteActionDiagnostics';
+import {
+  mayOverrideBlock,
+  BLOCK_OVERRIDE_LABEL,
+  BLOCK_KEEP_LABEL,
+} from '../../rules/blockOverride';
 import {
   observeRenderedAthleteActionOutcome,
   registerAthleteActionUIOutcome,
@@ -114,6 +122,20 @@ type Step =
       kind: 'block_warning';
       reasons: string[];
       backStep: Step;
+      /**
+       * THE WAY THROUGH, WHEN THERE IS ONE — Sam, 2026-08-12: *"should give
+       * warnings but allow them to do whatever they want"*.
+       *
+       * Absent means the refusal stands, and it stands for exactly one reason:
+       * the action is physically impossible (`canOverride: false`), or the app
+       * could not say why it refused. `rules/blockOverride` owns that decision;
+       * this screen only renders its answer.
+       */
+      override?: {
+        change: PlanChange;
+        closeOnSuccess?: boolean;
+        trace?: AthleteActionTraceContext;
+      };
     }
   | {
       // Sam's G-1 ask. The athlete has put a session on the day before their
@@ -406,6 +428,13 @@ export function PlanChangeSheet({
         kind: 'block_warning',
         reasons: riskReasons(preview.assessment.findings),
         backStep,
+        // LAYER 3. `canOverride` has been written in nine places and read in
+        // none since it was added; this is its first production reader. When
+        // every finding allows it, the athlete gets a way through — the app
+        // warns, and then does what it was asked.
+        override: mayOverrideBlock(preview.assessment.findings)
+          ? { change, closeOnSuccess: opts?.closeOnSuccess, trace: preview.trace }
+          : undefined,
       });
       return;
     }
@@ -875,10 +904,40 @@ export function PlanChangeSheet({
               </Text>
             ))
           )}
-          <MenuOption
-            label="OK"
-            onPress={() => setStep(step.backStep)}
-          />
+          {/* TWO CONTROLS WHEN THERE IS A WAY THROUGH, ONE WHEN THERE IS NOT.
+              The refusal that stands keeps its single acknowledgement; the one
+              the athlete may pass gets their choice, with the app's advice
+              listed above it and its own words on the button. */}
+          {step.override ? (
+            <>
+              <MenuOption
+                label={BLOCK_KEEP_LABEL}
+                onPress={() => setStep(step.backStep)}
+              />
+              <MenuOption
+                label={BLOCK_OVERRIDE_LABEL}
+                testID="plan-change-block-override"
+                onPress={() => {
+                  const { change: overridden, closeOnSuccess, trace } = step.override!;
+                  // RECORDED BEFORE IT IS DONE, and on the same trace as the
+                  // change. An override the app did not write down is an
+                  // override that never happened as far as every later reader
+                  // is concerned — which is the state item 9 names.
+                  emitAthleteActionEvent(trace, 'athlete_action_override_allowed', {
+                    overriddenReasons: step.reasons,
+                    overriddenReasonCount: step.reasons.length,
+                    changeKind: overridden.kind,
+                  });
+                  void commitPlanChange(overridden, { closeOnSuccess }, trace);
+                }}
+              />
+            </>
+          ) : (
+            <MenuOption
+              label="OK"
+              onPress={() => setStep(step.backStep)}
+            />
+          )}
         </View>
       )}
 

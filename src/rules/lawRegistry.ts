@@ -553,6 +553,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-warn-then-allow',
+    law: 'The app WARNS, RECORDS that it warned, and then does what the athlete asked. A refusal with no way through survives only where the action is physically impossible.',
+    ruledAt: 'docs/SEAT_INBOX.md item 9, Sam 2026-08-12: "should give warnings but allow them to do whatever they want", and earlier "nothing so tight that ... the athlete can\'t choose to do whatever they want"',
+    guard: {
+      state: 'guarded',
+      by: 'test:block-override',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED (LAW ZERO). FOUNDING CASE: a `block` in `PlanChangeSheet` rendered its reasons and ONE button labelled `OK`. There was no way through, for any reason, ever — while the finding underneath it already carried the answer. `canOverride` had been WRITTEN IN NINE PLACES AND READ IN NONE (`weekStructureValidator`, `programEditRiskAssessment`, `planChangeProducer`), which is `CLAUDE.md`\'s own example of the dead-field defect: "a field with no reader is not half-built, it is dead weight that later code will trust". WHAT THE CELLS HOLD: `rules/blockOverride.mayOverrideBlock` is the ONE reader — every finding must allow it, because one physically-impossible reason among five is still impossible and offering to proceed would promise what the app cannot deliver; an EMPTY finding list is NOT an override, because `[].every()` is `true` and an inline check would have turned "we could not say why" into "go ahead" on exactly the path where the app already failed to explain itself; the sheet assigns its way through DIRECTLY from the rule; and the override is emitted on the athlete-action tape (`athlete_action_override_allowed`) with the reasons it overrode, BEFORE the change commits. MUTATION-CHECKED THREE WAYS, and the third one earned its cell: `override: false && mayOverrideBlock(...)` — the way through disabled for every athlete — left the first reader cell GREEN, because a source scan asks whether a word is present and "present" is not "running". Cell [3b] exists because of that miss. WHAT IT DOES NOT HOLD: item 9 also asks that four competing answers to "is this the athlete\'s will" collapse onto `resolverMayDisplace` (`projectVisibleWeek.ts:214-219`, `section18CraftTier.ts:217-232`). NOT DONE — those files are mid-flight with another agent in this shared checkout, and the STRING JOIN that breaks on a rename is untouched.',
+    },
+  },
+  {
     id: 'LAW-rehydration-never-un-finishes',
     law: 'A rehydration may RESTORE state and may never take it away. Onboarding completion is monotonic within a process — only the athlete\'s own reset door may lower it.',
     ruledAt: 'docs/SEAT_INBOX.md item 2, 2026-08-12: "Rehydrating an EMPTY profile envelope does not merely fail to restore answers: profileStore\'s merge spreads ...persisted over the live state, so it flips isOnboardingComplete from true to false in memory. An empty envelope actively un-finishes a finished profile."',
