@@ -59,6 +59,7 @@ import {
   type MainStrengthPattern,
 } from './strengthPatternContributions';
 import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
+import type { TeamTrainingSessionOutcome } from '../types/sessionOutcome';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 
 // ─── Provenance ──────────────────────────────────────────────────────────
@@ -267,6 +268,8 @@ export interface JournalLoadSessionInput {
   readonly strength: readonly StrengthExercisePerformanceLog[];
   /** The conditioning log as stored, or null when the flow never asked. */
   readonly conditioning: ConditioningPerformanceLog | null;
+  /** The team-training result as stored, or null when the day was not one. */
+  readonly teamTraining?: TeamTrainingSessionOutcome | null;
 }
 
 export interface BuildJournalLoadInput {
@@ -305,6 +308,8 @@ export interface JournalSessionLoad {
   readonly strengthMainLiftTonnageKg: number | null;
   /** sRPE AU — the athlete's difficulty rating times the session's minutes. */
   readonly conditioningSRPE: number | null;
+  /** sRPE AU for team training — the same unit, from the same two halves. */
+  readonly teamTrainingSRPE: number | null;
   /** Lifts whose tonnage could not be computed — reported, never assumed zero. */
   readonly liftsUnmeasured: number;
   /** True when either stream produced a number. */
@@ -520,6 +525,35 @@ export function conditioningSRPE(log: ConditioningPerformanceLog | null): number
   return rpe * minutes;
 }
 
+/**
+ * A team-training session's sRPE AU — the athlete's effort times its minutes.
+ *
+ * SAME SHAPE AS `conditioningSRPE` AND FOR THE SAME REASON: both halves are
+ * stored (`TeamTrainingSessionOutcome.effort`, `.durationMinutes`), both are
+ * validated at the transaction boundary, and a session missing either is
+ * unmeasured rather than half-counted.
+ *
+ * WHY IT DID NOT EXIST UNTIL 2026-08-12 (seat item 6). The measurement that
+ * opened that item said strength stores no effort and conditioning stores both
+ * halves, and stopped there. Re-measured after the 1-10 effort scale landed,
+ * TEAM TRAINING already stored both halves too — written by the feedback panel,
+ * validated on the way in, and **read by nothing**. Third sighting in one day of
+ * a value computed and never consumed (`achievedModerateDayCount`,
+ * `canOverride`, this). `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md` §6.
+ *
+ * A GAME IS DELIBERATELY NOT HERE. It stores both halves as well
+ * (`bodyRpe`, `timeOnGroundMinutes`), but whether a match's minutes count as
+ * full training load or a weighted one is a coaching question nobody has ruled,
+ * and inventing a weighting here would be this file making it.
+ */
+export function teamTrainingSRPE(outcome: TeamTrainingSessionOutcome | null): number | null {
+  if (!outcome) return null;
+  const effort = positive(outcome.effort);
+  const minutes = positive(outcome.durationMinutes);
+  if (effort === null || minutes === null) return null;
+  return effort * minutes;
+}
+
 // ─── Layer 3: the region distribution ────────────────────────────────────
 
 function addRegion(
@@ -651,6 +685,7 @@ export function deriveSessionLoad(
     if (muscles) distributeToRegions(regions, tonnage, muscles.primary, muscles.secondary);
   }
 
+  const teamSrpe = teamTrainingSRPE(session.teamTraining ?? null);
   const srpe = conditioningSRPE(session.conditioning);
   if (srpe !== null && session.conditioning) {
     const muscles = conditioningSessionMuscles({
@@ -672,8 +707,12 @@ export function deriveSessionLoad(
     date: session.date,
     strengthMainLiftTonnageKg,
     conditioningSRPE: srpe,
+    teamTrainingSRPE: teamSrpe,
     liftsUnmeasured,
-    measured: strengthMeasuredLifts > 0 || srpe !== null,
+    // A TEAM NIGHT THE ATHLETE RATED IS A MEASURED SESSION. Leaving it out of
+    // this flag would have the week report "unmeasured" for a day whose load
+    // the athlete supplied in full.
+    measured: strengthMeasuredLifts > 0 || srpe !== null || teamSrpe !== null,
     regions,
     patternTonnageKg,
     upperLowerTonnageKg: upperLower,

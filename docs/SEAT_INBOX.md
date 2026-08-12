@@ -842,8 +842,16 @@ phone.** State device items as PARKED in a stop report, never as a request.
    `achievedModerateDayCount` (item 4), `canOverride`, and now these two.
    **Item 10's `LAW-computed-must-be-consumed` is the compression for all of
    them.**
-   **NOT BUILT: the readers.** The build is now smaller and better shaped than
-   the item assumed.
+   **THE TEAM-NIGHT READER IS BUILT** — `teamTrainingSRPE` (effort x minutes,
+   same unit as conditioning), carried into `deriveSessionLoad`, counted in
+   `measured`, and wired from the journal producer so it is read end to end.
+   Six cells in `test:journal-load` (122/0), two mutations killed. Registry row
+   `LAW-team-night-load-is-read`.
+   **THE GAME READER IS NOT BUILT AND WILL NOT BE WITHOUT A RULING** — it stores
+   both halves too, but whether a match's minutes are full or weighted training
+   load is a coaching question. **Written under `## AWAITING SAM`.**
+   **STILL NOT BUILT: strength.** That is where the estimate ruling applies, and
+   it is the remaining half of this item.
    **STILL SAM'S:** whether a game's minutes count as full load or weighted, and
    whether strength's VOLUME LOAD may share a column with sRPE (§4's open fork).
 
@@ -1107,6 +1115,12 @@ seat was wrong.
 - **DECISION OWED — the moderate-day generation target (item 4).** The range and
   the advisory are built; nothing says WHICH session becomes the moderate one, or
   at whose expense.
+- **DECISION OWED — does a GAME's minutes count as training load?** A match
+  stores both halves of sRPE (`bodyRpe` + `timeOnGroundMinutes`) and nothing
+  reads them. The team-night reader landed today because a team night IS a
+  training session; **a match is not, and whether its minutes count in full,
+  weighted, or not at all is coaching, not code.** The reader is one line once
+  he rules. (Item 6.)
 - **CLOSED, do not re-ask:** the week-card shape; the accounts question
   (LOCAL-ONLY); the platform question (iPHONE-ONLY).
 

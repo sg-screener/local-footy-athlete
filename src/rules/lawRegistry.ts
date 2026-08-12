@@ -793,6 +793,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-team-night-load-is-read',
+    law: 'A team night the athlete rated produces sRPE in the same unit as conditioning, and counts as a measured session. Both halves are stored; neither may be discarded.',
+    ruledAt: 'docs/SEAT_INBOX.md item 6; measured in docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md §6',
+    guard: {
+      state: 'guarded',
+      by: 'test:journal-load',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. `TeamTrainingSessionOutcome` stores `effort` (1-10) AND `durationMinutes`, is written by the feedback panel and validated at the transaction boundary — and READ BY NOTHING. `journalLoad`\'s only sRPE reader took a `ConditioningPerformanceLog`. THIRD SIGHTING IN ONE DAY of a value computed and never consumed (`achievedModerateDayCount`, `canOverride`, this), which is the case for item 10\'s `LAW-computed-must-be-consumed`. THE ITEM\'S OWN PREMISE MOVED UNDER IT: the measurement that opened item 6 said conditioning stores both halves and strength stores none, and stopped there; re-measured after the 1-10 effort scale landed, THREE of four kinds have athlete-reported load and two of those three were being thrown away. Six cells: the product, both half-measurements refused, a non-team day, the carry into the session load, and the measured flag. Mutations: counting half a measurement reds two, dropping the team night from `measured` reds one. A GAME IS DELIBERATELY NOT INCLUDED — it stores both halves too, but whether a match\'s minutes are full or weighted training load is a coaching question nobody has ruled, and this file will not make it.',
+    },
+  },
+  {
     id: 'LAW-regate-carries-provenance',
     law: 'A week re-derived at commit time carries the provenance the proposal held — the still-valid records travel, the expired ones do not, and a day the re-derivation removed is never resurrected.',
     ruledAt: 'docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md §11-§12; the same class as LAW-rename-carries-its-references, second sighting in one day',

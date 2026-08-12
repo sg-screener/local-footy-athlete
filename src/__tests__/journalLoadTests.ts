@@ -60,6 +60,7 @@ import {
   type Derived,
   type JournalLoadConstant,
   type JournalLoadModel,
+  teamTrainingSRPE,
   type JournalLoadSessionInput,
   type PlannedLift,
 } from '../rules/journalLoad';
@@ -985,6 +986,40 @@ console.log('\n[9] WEEK IDENTITY, AND THE SURFACE READS ONLY THROUGH THE DOOR');
     /testID="journal-load-headline"/.test(screen));
   ok('the region observation line exists behind the refusal too',
     /testID="journal-load-region"/.test(screen));
+}
+
+// ── THE TEAM NIGHT'S OWN LOAD (seat item 6, 2026-08-12) ───────────────────
+//
+// `TeamTrainingSessionOutcome` stores effort AND durationMinutes, is written by
+// the feedback panel and validated at the transaction boundary — and until today
+// NOTHING read it. Third sighting in one day of a value computed and never
+// consumed. `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md` §6.
+ok('a rated team night produces sRPE in the same unit as conditioning',
+  teamTrainingSRPE({ effort: 7, durationMinutes: 90 }) === 630,
+  teamTrainingSRPE({ effort: 7, durationMinutes: 90 }));
+// HALF A MEASUREMENT IS NOT A MEASUREMENT — the same rule conditioningSRPE lives
+// by, because a session counted at half its load is worse than one counted at
+// none.
+ok('a team night with no minutes is unmeasured, not half-counted',
+  teamTrainingSRPE({ effort: 7, durationMinutes: 0 } as never) === null);
+ok('a team night with no effort is unmeasured, not half-counted',
+  teamTrainingSRPE({ effort: 0, durationMinutes: 90 } as never) === null);
+ok('a day that was not a team night produces no number',
+  teamTrainingSRPE(null) === null);
+
+{
+  const derived = deriveSessionLoad({
+    date: '2026-07-14', strength: [], conditioning: null,
+    teamTraining: { effort: 6, durationMinutes: 75 },
+  });
+  ok('the derived session carries the team night', derived.teamTrainingSRPE === 450,
+    derived.teamTrainingSRPE);
+  // THE FLAG IS THE POINT: without it the week reports "unmeasured" for a day
+  // whose load the athlete supplied in full.
+  ok('a day the athlete rated in full counts as measured', derived.measured === true);
+  const without = deriveSessionLoad({ date: '2026-07-14', strength: [], conditioning: null });
+  ok('a day with no team night produces no team-night number',
+    without.teamTrainingSRPE === null && without.measured === false);
 }
 
 console.log(`\njournalLoadTests: ${pass} passed, ${fail} failed`);

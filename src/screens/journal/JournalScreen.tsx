@@ -1472,6 +1472,9 @@ export default function JournalScreen() {
         date,
         strength: feedback?.strength ?? [],
         conditioning: feedback?.conditioning ?? null,
+        // THE TEAM NIGHT'S OWN LOAD, which the athlete has been supplying all
+        // along and nothing has ever read (seat item 6).
+        teamTraining: feedback?.teamTraining ?? null,
       }));
 
     // THE PLAN HALF OF LAYER 4, read off the same resolved week the rest of the
