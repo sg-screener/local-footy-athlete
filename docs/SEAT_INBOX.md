@@ -359,8 +359,38 @@ his instruction is standing authority, not history.**
      file to a walker coordinate.
    - **Per-suite times recorded in `NOW.md`.** The chain is a short head and a
      long free tail: **125 of 165 units finish under a second.**
-   - **NOT PAID — `test:accepted-state-transactions` is 89.5s**, the largest real
-     unit, new since 2026-08-07, and **never looked at.**
+   - **PAID 2026-08-13 — AND LOOKING AT IT FOUND AN ATHLETE-FACING PROBLEM, NOT
+     A TEST ONE. THIS IS THE HEADLINE, NOT THE TIMING.**
+     **THE SUITE:** 87.4s, 43 assertions, green. **The cost is not spread —
+     5 of 43 tests are 76.4s of it (82%)**, and the top 6 are ~90%. Nothing is
+     wasted setup: `generate()` is 12-17ms every time.
+     **ONE FUNCTION IS THE WHOLE BILL, AND IT IS PRODUCTION CODE.**
+     `canonicaliseHydratedProgram` (`programStore.ts:981`) took **60ms on one
+     input and 18,415ms on the next.** Same function, same call, 300x.
+     **WHAT SWITCHES IT — and it is the worst possible answer:**
+
+     | In-season, Saturday game | team days | canonicalise |
+     | --- | --- | --- |
+     | ✓ | none | **60ms** |
+     | ✓ | `[Tuesday]` | **18,415ms** |
+     | ✓ | `[Tuesday, Thursday]` | **16,889ms** |
+
+     **TEAM TRAINING IS THE TRIGGER. Every real in-season footballer has team
+     training days — so the 60ms case is the unrealistic one and the 18-second
+     case is the normal one.**
+     **WHERE IT RUNS: HYDRATION.** `programStore.ts:1101` calls it at rehydrate
+     when `structuralMigrationRequired` — **that is the app STARTING UP.** So a
+     legacy in-season program plausibly means ~18 seconds of blocking work at
+     launch, and a phone is slower than this machine, not faster.
+     **⚠ WHAT IS *NOT* MEASURED, and I will not claim it:** whether any real
+     device is in the `structuralMigrationRequired` state. **The 18s is measured
+     on the production function with a realistic profile; it is NOT a device
+     observation.** Check that before pricing a fix — if no device is legacy,
+     this is only a test cost.
+     **NEXT, and it is one probe:** the shape is a repair/anchor search that
+     explodes on team-day participation. Profile inside
+     `canonicaliseHydratedProgram` for the `[Tuesday]` case and name the loop.
+     **Do not optimise the SUITE — the suite is honest; it is timing real work.**
    - **NOT PAID — the agreement law has NOT established agreement.** Last run
      AGREES (158 units, 2.17x) but **the run before it DISAGREED** on
      `chain:runSlice1`'s exit code, and the chain has grown 158 → 192 units.
