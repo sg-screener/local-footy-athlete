@@ -60,7 +60,7 @@ and this file gets one line pointing at it.**
 
 ## STATE
 
-- **BRANCH:** `main` · **HEAD:** `0ab0c18d` (the seed identity fix, `docs/STOP_2026-08-12_SEED_CONDITIONING_IDENTITY.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
+- **BRANCH:** `main` · **HEAD:** `8f7354d3` (item 5, `docs/STOP_2026-08-12_PREFERENCE_REPORT.md`) — **re-stamp this line at every checkpoint; it was four commits stale on 2026-08-10 and a stale HEAD makes every other line in this file unverifiable.**
 - **ONE COMMAND STARTS THE APP: `npm run lfa:dev`** (`scripts/qa-start.sh`, the
   only startup script — the law is `LAW-one-startup-command`). It picks the
   BOOTED simulator that has the app, starts Metro, and **launches**; it fails
@@ -112,6 +112,17 @@ and this file gets one line pointing at it.**
   `parallel` stays NON-OFFICIAL until both are answered.
 
 ## OPEN, ON US
+
+- **THE 17 SCENARIOS NOW ANSWER "IS THIS A WEEK SAM WOULD WRITE"** (item 5,
+  `LAW-preference-report`). `LFA_HARD_DAY_PROBE=1 npm run test:qa` prints a
+  table against a committed baseline; **4 of 17 weeks meet both ruled
+  preferences, 0 hard violations.** The score COUNTS ruled preferences and
+  invents no weighting; over-fitting (a gain on one week bought with regressions
+  across the rest) is REJECTED mechanically. Rules held by
+  `test:preference-shape`, 8 cells, in the chain — `test:qa` prints and does
+  not block because its 84 pre-existing failures would hide any verdict.
+  **OPEN: item 4 counts the shape as 2 of 17, this counts 4 of 17 — two
+  different questions, not reconciled.**
 
 - **THE ARCHITECTURE ANSWER IS WRITTEN: `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md`.**
   Sam asked for the best way to build the app, not the fastest. **Headline: this
