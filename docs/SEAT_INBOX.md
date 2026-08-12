@@ -1067,7 +1067,35 @@ phone.** State device items as PARKED in a stop report, never as a request.
       answer vacuous. `test:away-flow` [5b] reds if it comes back.
     - `until` is the LAST DAY AWAY, never the return date.
 
-28-C1b. **"CUT FIRST" MEANS DROPPED UNDER PRESSURE, NOT NEVER PLACED — the
+28-C1b. **ANSWERED 2026-08-13 — THE MEASUREMENT GATE IS PAID, THE PASS WAS BUILT,
+    AND THE WALL IS ONE LAYER FURTHER OUT AGAIN.**
+
+    **SPARE ROOM: NONE.** Off-season, no team training, block 3 — a six-day week
+    produces SIX workouts and **ZERO rest days**; five- and four-day weeks the
+    same. Every day already carries work. **So "place if there is room" can never
+    fire, and COD can only enter by SUBSTITUTION** — taking the slot an extra
+    aerobic session would have had. That follows from *"prescribed"*, so it needs
+    no new ruling.
+
+    **THE PASS WAS BUILT ANYWAY, TO FIND THE NEXT WALL** — COD ranked FIRST (not
+    last: the list is first-match-wins), gated on no team training, fired only
+    once every must-cover category is covered, once per week. **"Cut first"
+    expressed by the GUARD, not the rank.**
+    **IT FIRES — probed: `COD ranked first`, `tt=false unplaced=true ess=true
+    inPool=true`. AND THE ATHLETE STILL RECEIVES ZERO** (0 of 24 on six days,
+    0 of 20 on five).
+    **SO PLACEMENT IS NOT THE BLOCKER EITHER. THE SLOT SHAPE IS.** A six-day
+    no-team-training week produces conditioning that is **entirely COMBINED**
+    (`standalone=0`), and an attached hard category on a lower/hinge/full day
+    hits the pairing rule — **which is correct; the lift owns the legs.**
+    **NEXT QUESTION, AND IT IS NOT ELIGIBILITY:** why does a no-team-training week
+    produce NO standalone conditioning slot? Measure the attached-vs-standalone
+    decision before touching anything — **three of the four reverts on this item
+    came from changing code before measuring the layer above it.**
+    **REVERTED** (`scratchpad/cod-pass0.patch`): the pass reorders candidates for
+    every week and buys nothing while COD is zero.
+
+    ~~ORIGINAL~~ **"CUT FIRST" MEANS DROPPED UNDER PRESSURE, NOT NEVER PLACED — the
     reading is locked, so nobody re-argues it mid-build.**
 
     **Sam's words:** COD is prescribed in weeks with no team training and *"cut
