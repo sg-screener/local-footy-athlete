@@ -1153,6 +1153,103 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **DO NOT ASK SAM TO RE-RULE ANY OF THIS.** The document is signed. Build it
     and show him the session on glass.
 
+27. **THE CENSUS SAM COMMISSIONED — 20 OF HIS RULINGS ARE NOT IN THE APP, AND
+    SIX OF THEM THE APP CONTRADICTS. THIS IS THE TOP OF THE QUEUE.**
+
+    **READ `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md`. Every finding carries a
+    `file:line` receipt and the grep that would have found an enforcer if one
+    existed. Do not re-measure it. Build.**
+
+    **Sam commissioned it in these words:** *"find what I've ruled on that
+    currently does not make it to the app, or things in the app that contradict
+    what I've said ... my rulings should all be in the app by now and I'm fucking
+    sick of fixing these tiny little edge cases when the real logic i have
+    already put in place IS NOT ACTUALLY IN FUCKING PLACE."*
+
+    **BUILD ORDER IS BY ATHLETE HARM, NOT BY EFFORT.**
+    1. **A1 — one "cooked" tap deloads the athlete FOREVER.** The 7-day window
+       code exists and has no caller. Worst live defect in the app.
+    2. **B1 — the conditioning progression system Sam ABOLISHED is still dosing
+       sessions**, on top of the authored templates. Two systems, exactly what
+       he forbade.
+    3. **C1 — no athlete has ever received a COD/decel session**, in any phase.
+       Four authored templates unreachable.
+    4. **C2 — the 2km time trial is collected, validated, stored and never
+       read.** The card shows the literal string "Intensity: 110% MAS".
+    5. **A3 — the athlete is shown "3 × 8-10" and must pick a number**, while
+       the journal scores them against a midpoint they never saw.
+    6. Then A2, A4, A5, A6, C9, and the rest in document order.
+
+    **DO NOT PUT ANY OF THESE BACK TO SAM AS A QUESTION.** Every one is already
+    ruled, dated and quoted in the census. **Re-asking is the defect he is
+    angriest about.** If a fix genuinely needs a number he has not given, say so
+    in the same message as a recommendation and its reasoning — never a bare
+    question.
+
+    **⚠ AND THE CLASS MATTERS MORE THAN ANY ROW.** Nine of the twenty are a
+    value, a typed status, or a whole function that EXISTS, is CORRECT, and has
+    NO CONSUMER: `deriveMas`, `resolveDayDirective`, `ergCapMinutes`,
+    `set_length_max_4_5_min`, `maxExercisesPerStrengthSession`, the COD
+    templates, the heavy-slot ladder, the contrast pairing, the mobility
+    pairing. **That is one defect twenty times.** The repo already has
+    `test:computed-must-be-consumed` and **it did not catch a single one of
+    them** — establishing why is part of this item, not a footnote.
+
+    **THE SYSTEMIC UNIT, and it is the one Sam's standing instruction demands:**
+    every authored ruling carries a NAMED ENFORCER plus a cell that fails when
+    the enforcer is removed. **A ruling with no enforcer is UNENFORCED and is
+    counted like the law registry counts its rows** — visible, falling,
+    stop-the-line. Widen `test:computed-must-be-consumed` from VALUES to
+    RULINGS. **Do this alongside the top rows, not after them** — the rows are
+    what Sam sees, the widening is what stops the twenty-first.
+
+    **AND A CAPTURE RULE, effective now:** three of the twenty sat in docs whose
+    own status line read *"AUTHORED, NOT COMMISSIONED"*. **A ruling captured
+    without an inbox item created in the same pass is a defect at the moment of
+    capture.** Never file one again.
+
+28. **BUILD THE AWAY FLOW — SAM RULED IT 2026-08-13. THREE QUESTIONS, ON THE
+    WEEK SCREEN.**
+
+    **OWNED BY THE DESKTOP AGENT.** It edits `HomeScreenV2.tsx` and the away
+    sheet. **TERMINAL: NOT YOURS.**
+
+    **Sam, verbatim:** *"I think the away button should live on the weekly
+    screen, it should say 'when do you leave?' then 'when do you return' thhe
+    leave button should be limited to that week in dates, but the return date
+    can be any date in the future / then you are asked about the equipment
+    stuff"*.
+
+    **THE SHAPE:**
+    1. **The Away control moves to the WEEK screen.** Same reasoning that moved
+       add-a-game there (item 19): "when do you leave" is a question about a
+       week, and the day screen is about one day. **The day-screen chip
+       `home-away-this-week-entry` goes.**
+    2. **"When do you leave?" — LIMITED TO THAT WEEK'S DATES.**
+    3. **"When do you return?" — ANY future date, unbounded.**
+    4. **THEN the equipment question** — his earlier ruling: the athlete marks
+       what they do NOT have, through the door that ALREADY EXISTS
+       (`EquipmentLimitationSheet`), cleared by "I'm back now"
+       (`available_again` / `equipmentClear`). **Do not build a second
+       equipment menu.**
+
+    **WHAT THIS REPLACES, and it is the bigger defect:** today's sheet asks
+    *"Which days are you away?"* and toggles individual TRAINING days inside the
+    visible week (`HomeScreenV2.tsx:3030`). **A trip cannot currently cross a
+    week boundary at all** — ten days away is unsayable. Step 3 fixes that.
+
+    **AND IT MAKES AUTOMATIC LIVE.** Sam: *"if you do [set a return date], then
+    yes make it automatic"*. Measurement showed no return date existed, so that
+    ruling could not fire; step 3 creates one. **The equipment answer lifts
+    itself on the return date, with "I'm back now" as the early exit.**
+
+    **BOTH FOUNDATIONS ARE BUILT — this is wiring, not invention:** the dated
+    equipment fact `missing_for_span` (`bfad51b7`) and the equipment screen's
+    exit as an input (`0ee5caf1`, item 24).
+
+    **PROOF OWED:** the whole run-through on the simulator — week screen, leave
+    date, return date, mark missing kit, and the modifier present afterwards.
+
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
 addressable then walk it; the harvest ratchet and a computed tap atlas.
@@ -1192,52 +1289,6 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **RULED 2026-08-13 — THE AWAY FLOW IS THREE QUESTIONS ON THE WEEK SCREEN.
-  This is an ORDER, not a decision owed; it supersedes the current away sheet.**
-  **Sam, verbatim:** *"I think the away button should live on the weekly screen,
-  it should say 'when do you leave?' then 'when do you return' thhe leave button
-  should be limited to that week in dates, but the return date can be any date
-  in the future / then you are asked about the equipment stuff"*.
-  **THE SHAPE:**
-  1. **The Away control moves to the WEEK screen.** Same reasoning that moved
-     add-a-game there (item 19): "when do you leave" is a question about a week,
-     and the day screen is about one day. **The day-screen `Away` chip
-     (`home-away-this-week-entry`) goes.**
-  2. **"When do you leave?" — LIMITED TO THAT WEEK'S DATES.**
-  3. **"When do you return?" — ANY future date, unbounded.**
-  4. **THEN the equipment question**, which is his earlier ruling: the athlete
-     marks what they do NOT have, through the door that already exists
-     (`EquipmentLimitationSheet`), cleared by "I'm back now"
-     (`available_again` / `equipmentClear`).
-  **WHAT THIS REPLACES:** today's sheet asks *"Which days are you away?"* and
-  toggles individual TRAINING days inside the visible week
-  (`HomeScreenV2.tsx:3030`). **A trip cannot currently cross a week boundary at
-  all** — this ruling is what fixes that, and it is the real reason it matters,
-  beyond the wording.
-  **AND IT UNBLOCKS AUTOMATIC.** His conditional — *"if you do [set a return
-  date], then yes make it automatic"* — becomes LIVE the moment step 3 exists.
-  So the away equipment answer should lift itself on the return date, with
-  "I'm back now" as the early exit. **`missing_for_span` (`bfad51b7`) is used
-  after all** and is no longer at risk of being unused.
-  **NOT STARTED.** The two foundations stand: the dated fact (`bfad51b7`) and
-  the reusable equipment door (`0ee5caf1`).
-
-- **DISSOLVED 2026-08-13 — SAM REFUSED THE PREMISE AND HE IS RIGHT. The three
-  options below are WITHDRAWN; do not build any of them.** Sam: *"can't we just
-  treat going away as a modifier for equipment? the athlete just removes the
-  equipment they don't have while on the trip and it's kept that way until they
-  turn the modifier off and say 'i'm back now'"*.
-  **THAT REMOVES THE MISMATCH INSTEAD OF CONVERTING IT.** The direction problem
-  existed only because `EquipmentScreen` asks what the athlete HAS. If the
-  athlete instead marks what they DO NOT have, that IS the stored shape, and no
-  complement is needed.
-  **AND IT IS ALREADY BUILT.** `EquipmentLimitationSheet` (`:96`) asks exactly
-  that — *"which of the things THEY HAVE are missing"* — and writes
-  `missing_this_week`; `available_again` plus `equipmentClear` on My Status is
-  the "I'm back now" door. **The only gap is that the away flow does not offer
-  it.** This also retires the plan to reuse the ONBOARDING equipment screen from
-  the away flow: item 24's `onDone` stands and is harmless, but away no longer
-  needs that door.
 - **MEASURED 2026-08-13, AND IT REFUTES THIS SEAT'S OWN PREMISE. Sam asked
   *"do you actually set a return date when saying you're away?"* — and the
   answer is NO.** `AwayDaysSheet` (`HomeScreenV2.tsx:3030-3042`) asks **"Which
