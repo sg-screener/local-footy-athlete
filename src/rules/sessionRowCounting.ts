@@ -83,6 +83,22 @@ export const ROLES_EXEMPT_FROM_COUNTING: ReadonlySet<SessionRole> = new Set<Sess
   // every paired mobility row would have counted against the per-session exercise
   // budget, directly against Sam's rule 5: *"counts toward nothing"*.
   'mobility',
+  // THE FIFTH CASE, AND SAM NAMED IT HIMSELF AFTER THE APP SHIPPED IT WRONG.
+  //
+  // 2026-08-13: *"yes it should be its own thing and not count as a strength
+  // exercise - thats stupid"*.
+  //
+  // THIS IS THE ROLE THE TEAM-TRAINING EXEMPTION USED AS ITS OWN REFERENCE.
+  // Read the `team_training` note above: his argument for exempting the club's
+  // session was *"looked at more like conditioning - it's not part of the
+  // strength exercises"*. The exemption was applied to the ANALOGY and not to
+  // the thing it was compared to, so a combined day's conditioning block went on
+  // counting as a gym exercise for another day.
+  //
+  // MEASURED BEFORE AND AFTER: 8 of 100 gym sessions carried SEVEN counted rows
+  // against his cap of six, and every one of the eight was a `Mixed` day whose
+  // seventh row was the conditioning block.
+  'conditioning',
 ]);
 
 /** Whether one row takes part in counting. Authored role only — never a name. */

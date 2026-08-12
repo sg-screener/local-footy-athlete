@@ -122,18 +122,25 @@ ok(
 );
 ok('power is exempt', ROLES_EXEMPT_FROM_COUNTING.has('power'));
 ok(
-  // INVERTED 2026-08-13, NOT DELETED — the exemption set's history stays
-  // readable. It said "only power migrates" and that was true until Sam ruled
-  // team training out of the strength accounting: *"it's not part of the
-  // strength exercises - it's its own component of the day"*. TWO members now,
-  // and the cell still refuses a THIRD arriving unannounced, which is the job
-  // it was doing all along — the module's header calls adding a role here a
-  // counting change that must come with a golden diff.
-  'exactly power, team training and mobility are exempt — a fourth may not arrive unannounced',
-  ROLES_EXEMPT_FROM_COUNTING.size === 3
+  // WIDENED 2026-08-13 TO FOUR, NOT DELETED — the exemption set's history stays
+  // readable. "Only power migrates" was true until Sam ruled team training out
+  // of the strength accounting, then mobility followed, and now conditioning:
+  // *"yes it should be its own thing and not count as a strength exercise -
+  // thats stupid"*.
+  //
+  // THIS CELL DID ITS JOB TODAY. It went RED the moment `conditioning` was
+  // added, which is exactly what it is for — the module's header calls adding a
+  // role here a counting change that must come with a GOLDEN DIFF. That diff was
+  // run before this line moved: 100 gym sessions, over-cap 8 -> 0, and every
+  // session byte-identical (same rows, same ids) because only the COUNT changed.
+  // Updating it without that diff would have been the unannounced arrival it
+  // exists to refuse.
+  'exactly power, team training, mobility and conditioning are exempt — a fifth may not arrive unannounced',
+  ROLES_EXEMPT_FROM_COUNTING.size === 4
     && ROLES_EXEMPT_FROM_COUNTING.has('power')
     && ROLES_EXEMPT_FROM_COUNTING.has('team_training')
-    && ROLES_EXEMPT_FROM_COUNTING.has('mobility'),
+    && ROLES_EXEMPT_FROM_COUNTING.has('mobility')
+    && ROLES_EXEMPT_FROM_COUNTING.has('conditioning'),
   [...ROLES_EXEMPT_FROM_COUNTING].join(', '),
 );
 
@@ -571,6 +578,40 @@ console.log('\n[SESSION SIZE] the floor has one owner');
   ]);
   ok('with no exempt row, length and counted-count agree',
     allCounting.filter((index) => index !== NON_COUNTING_ROW_INDEX).length === allCounting.length);
+}
+
+// ── SAM'S RULING: CONDITIONING IS NOT A STRENGTH EXERCISE (2026-08-13) ──────
+//
+// *"yes it should be its own thing and not count as a strength exercise - thats
+// stupid"*. It is the FIFTH case of the shape this exempt set exists for, and
+// the one his own team-training exemption used as its REFERENCE — "looked at
+// more like conditioning" — while conditioning itself went on counting.
+//
+// BOTH HALVES ARE ASSERTED, because either alone is inert: the ROLE must be
+// exempt, AND the emitter must actually stamp it. `participatesInCounting` is
+// `!row.role || !EXEMPT.has(role)`, so an untagged row counts no matter what
+// the set says.
+{
+  const condRow = row('Tempo Run', 0, 'conditioning');
+  ok('[R-034] a conditioning row does NOT count as a strength exercise',
+    !participatesInCounting(condRow));
+  ok('[R-034] conditioning is in the exempt set by ROLE',
+    ROLES_EXEMPT_FROM_COUNTING.has('conditioning'));
+  // THE HALF A ROLE-ONLY FIX WOULD MISS: an untagged row still counts, which is
+  // why the emitter had to be changed too.
+  ok('[R-034] an UNTAGGED row still counts — the default is COUNT',
+    participatesInCounting(row('Mystery Row', 1)));
+  // A combined day: 6 lifts + 1 conditioning block reads as SIX, not seven.
+  const combined = [
+    row('Back Squat', 0, 'main_lift'), row('RDL', 1, 'main_lift'),
+    row('Split Squat', 2, 'accessory'), row('Hip Thrust', 3, 'accessory'),
+    row('Pallof Press', 4, 'midline'), row('Curl', 5, 'accessory'),
+    row('Tempo Run', 6, 'conditioning'),
+  ];
+  const counted = countingIndices(combined)
+    .filter((index) => index !== NON_COUNTING_ROW_INDEX).length;
+  ok('[R-034] six lifts plus a conditioning block is SIX, not seven — his cap holds',
+    counted === 6, `counted=${counted}`);
 }
 
 console.log(

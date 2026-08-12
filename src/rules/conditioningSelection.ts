@@ -612,6 +612,16 @@ function conditioningRow(
     // authored source: the headline carries Sam's template name verbatim, the
     // warm-up carries his signed sentence. So the owner says so, once, here.
     nameProvenance: 'authored',
+    // THE ROLE, SET AT THE ONE OWNER THAT EMITS THESE ROWS (Sam, 2026-08-13:
+    // *"yes it should be its own thing and not count as a strength exercise"*).
+    //
+    // EXEMPTING THE ROLE ALONE WOULD HAVE CHANGED NOTHING AND I PROVED THAT
+    // FIRST: `participatesInCounting` is `!row.role || !EXEMPT.has(row.role)`,
+    // so an UNTAGGED row counts whatever the exempt set says — and these rows
+    // carried no role at all. 550 of 570 generated rows are untagged, which is
+    // why the default is the real hazard. Both halves are needed; either alone
+    // is inert.
+    role: 'conditioning',
     workoutId: '',
     exerciseId: id,
     exerciseOrder: order,
