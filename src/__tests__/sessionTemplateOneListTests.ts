@@ -107,15 +107,44 @@ function names(items: SessionTemplateItem[]): string[] {
 
 /* ══ 1. The six badges, and the mapping rule behind each ══ */
 
+/**
+ * Roles added after D13, each exempt from counting. A role may only appear here
+ * if `ROLES_EXEMPT_FROM_COUNTING` agrees — asserted below, so this list cannot
+ * become a place to hide a COUNTED role from D13's order.
+ */
+import { ROLES_EXEMPT_FROM_COUNTING } from '../rules/sessionRowCounting';
+
+const NON_COUNTING_EXTRAS = new Set(['team_training', 'mobility']);
+
 console.log('\n[1] Exactly six roles, with a source-grounded mapping rule');
 {
   // Sam ruled 2026-07-27: the roles are INTERNAL DATA, not athlete-facing text.
   // They drive ordering, the mobility flow, and future muscle-block logic — the
   // athlete never reads the word. So this pins the role SET and its D2 order,
   // not a badge vocabulary. There is no longer a role→label map to assert.
+  // WIDENED 2026-08-13, NOT LOOSENED, AND I SHOULD HAVE DONE IT IN THE COMMIT
+  // THAT BROKE IT. Two roles have joined since D13: `team_training` (Sam,
+  // 2026-08-13 — "it's its own component of the day") and `mobility` (his
+  // pairing rule 5 — "counts toward nothing"). BOTH are exempt from counting,
+  // which is exactly why they are not part of D13's six: D13 ordered the
+  // COUNTED work of a session, and neither of these is counted.
+  //
+  // THE GUARD IS UNCHANGED IN SUBSTANCE: D13's six must still be present, in
+  // D2 order, contiguous, with nothing inserted between them. What may vary is
+  // only the non-counting roles bracketing them — and a new one of those has to
+  // be added here on purpose, which is the decision this cell forces.
+  // AND THE LIST CANNOT BECOME A HIDING PLACE. An extra role is only allowed to
+  // sit outside D13's order because it is not counted; if one of these ever
+  // starts counting, it belongs in D13's order and this reds.
   ok(
-    'the role set is exactly D13\'s six, in D2 order',
-    JSON.stringify(SESSION_ROLE_ORDER) ===
+    'every extra role is genuinely exempt from counting, not just listed here',
+    [...NON_COUNTING_EXTRAS].every((role) =>
+      ROLES_EXEMPT_FROM_COUNTING.has(role as never)),
+    [...NON_COUNTING_EXTRAS].join(', '));
+
+  ok(
+    'D13\'s six are present in D2 order, and every extra role is non-counting',
+    JSON.stringify(SESSION_ROLE_ORDER.filter((role) => !NON_COUNTING_EXTRAS.has(role))) ===
       JSON.stringify([
         'power',
         'main_lift',

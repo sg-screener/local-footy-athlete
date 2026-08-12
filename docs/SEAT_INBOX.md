@@ -1051,7 +1051,25 @@ phone.** State device items as PARKED in a stop report, never as a request.
     it fails if a 3-pair session survives as a 1-pair session. Mutation-checked
     two ways** — cap back to one reds three cells, ceiling removed reds the
     fourth-pair cell.
-    **THE PRODUCER IS STILL NOT BUILT — AND RULE 3 NEEDS ONE BRIDGE THAT NOBODY
+    **THE PRODUCER IS BUILT (`f9287d95`, `923e9cd0`) AND WIRING IT IS BLOCKED ON
+    ONE THING — MEASURED 2026-08-13 BY WIRING IT AND READING THE RESULT.**
+    Wired at `finaliseBuiltWorkout` on core days, through `validatePairings`
+    rather than around it, **22 of 120 sessions carried pairs** (Mixed 2-pair x4,
+    Mixed 3-pair x6, Team Training 2-pair x12; every group 2 or 3, none over his
+    max) **and the counted-row distribution did NOT move** — rule 5 working end to
+    end. **Scenarios and the 17 QA weeks were unchanged.**
+    **BUT `test:power-counting`'s committed golden RED: `countedRows.strength
+    5 -> 6`, and a mobility pick ("Cat-Cow") appeared in `strengthRowNames` and as
+    a `recovery_addon` component.** So **the role exemption does NOT reach that
+    counter** — it classifies by `classifyGeneratedWorkoutRow`, which reads names
+    and shape, not the authored role. **Rule 5 is enforced at
+    `sessionRowCounting` and NOT at the §18/golden instrument.** Same class as
+    the `prehab` slip: a fence that holds in one place and not the next.
+    **WIRING IS REVERTED** until a paired mobility row is non-counting at BOTH,
+    so the tree stays green. **That reconciliation is the next act — it is a
+    counting-ownership question, not a pairing one.**
+
+    ~~THE PRODUCER IS STILL NOT BUILT — AND RULE 3 NEEDS ONE BRIDGE THAT NOBODY
     SIGNED. This is NOT a request to re-rule his design.**
     Rule 3 (non-compete) compares **an accessory's region** with **a mobility
     pick's region**. Those are two DIFFERENT signed vocabularies and no crosswalk
