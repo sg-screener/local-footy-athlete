@@ -1094,7 +1094,32 @@ phone.** State device items as PARKED in a stop report, never as a request.
    `LAW-L15-one-write-format`. Two rows read guarded but are held by grepping
    `NOW.md` for a word (`LAW-L4-device-is-arbiter`, `LAW-L10-phone-is-done`).
 
-14. **FIRST BATCH UNDER 1c — ONE UNIT.** Off-feet walking gate
+14. **PARTLY BUILT — the two that could change training are done; one is
+   DELIBERATELY NOT.**
+   **OFF-FEET WALKING — FIXED, and it was real.** `brisk_walking` was the only
+   on-feet family that never asked about `conditioningOffFeet`, so an athlete
+   told to stay off their feet was refused running, refused hills, **and handed
+   a walk** — the one thing the instruction was about. Both gates now derive
+   from `FAMILY_ON_FEET`. `test:off-feet-walking`, in `test:bible`,
+   mutation-checked: restoring the original condition reds the BEHAVIOURAL cell,
+   not just the table.
+   **AND THE TABLE FOUND AN ELEVENTH FAMILY ON ITS FIRST COMPILE.** `mixed` is
+   in the family UNION and absent from `ALL_FAMILIES`; a `Record` over the union
+   cannot be partial, so the type checker asked before any cell ran. That is the
+   argument for a table over two more `&&`s, made by the compiler.
+   **PROFILE "SOMETHING CHANGED?" DIAGNOSTIC — REMOVED**, as Sam confirmed the
+   dead tap now works: the counter readout, its state and all four `logger.warn`
+   probes. **The `__DEV__` stored-state export block is UNTOUCHED** — a separate
+   2026-07-30 concern, exactly as this item instructs.
+   **`ModifiersStrip`'s TWO "DEAD" UNION MEMBERS ARE NOT DELETED, ON PURPOSE.**
+   `'day'` and `'week'` are unused only because the day/week indicator is not
+   built — and that is the **open question under `## AWAITING SAM`**. Deleting
+   them now removes the surface he may say yes to, and would have to be undone.
+   **Not a miss; a decision, waiting on his answer.**
+   **NOT STARTED:** the session-size floor/ceiling at `sessionRowCounting.ts:253`
+   and `MIN EXERCISES PER SESSION` in the prompt.
+
+   ~~ORIGINAL ORDER~~ **FIRST BATCH UNDER 1c — ONE UNIT.** Off-feet walking gate
    (`conditioningFeasibility.ts:215` permits walking ungated while `:207`/`:210`
    reject running and hills and `:326-329` forgets walking — declare `onFeet` on
    the family table and derive both gates); session-size floor and ceiling at

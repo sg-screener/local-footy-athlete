@@ -55,6 +55,55 @@ const ALL_FAMILIES: ConditioningSubstitutionFamily[] = [
   'safe_mixed_modal',
 ];
 
+/**
+ * IS THIS FAMILY ON THE ATHLETE'S FEET? — declared ONCE, read by both gates.
+ *
+ * SEAT_INBOX item 14: *"declare `onFeet` on the family table and derive both
+ * gates"*. Before this table the answer lived in two `&&` chains written at
+ * different times, and they disagreed:
+ *
+ * - the SELECTION gate refused `outdoor_running` and `hill_running_or_walking`
+ *   to an off-feet athlete and then offered them `brisk_walking`, which is the
+ *   one thing an off-feet report is about;
+ * - the CLEARING step below cleared `conditioningOffFeet` for running and hills
+ *   and forgot walking.
+ *
+ * The same omission twice, because the property had no home. A `Record` over the
+ * union makes a family with no answer a COMPILE error rather than a third place
+ * to forget.
+ *
+ * TREADMILL IS DELIBERATELY `false`, and it is the one entry a reader could
+ * reasonably argue with. A treadmill is literally on your feet — but
+ * `conditioningOffFeet` here is the athlete's report about impact and terrain,
+ * set beside restrictions that refuse outdoor running and hills, and the
+ * treadmill is ordered with the MACHINES that exist to serve that athlete.
+ * Declaring it on-feet would take a machine option away from the person it was
+ * chosen for. Changing it is a Sam ruling, not a tidy-up.
+ */
+export const FAMILY_ON_FEET: Record<ConditioningSubstitutionFamily, boolean> = {
+  selected_modality: false,
+  bike: false,
+  row: false,
+  ski: false,
+  // FOUND BY THE TABLE ON ITS FIRST COMPILE, which is the argument for a table
+  // rather than two more `&&`s. `mixed` is in the family UNION and is NOT in
+  // `ALL_FAMILIES` — an erg pairing (`bike/mixed/row/ski`, :160-161), so it is
+  // machine work and off-feet like its neighbours. Nothing had to answer for it
+  // before, because nothing asked.
+  mixed: false,
+  treadmill: false,
+  outdoor_running: true,
+  hill_running_or_walking: true,
+  brisk_walking: true,
+  bodyweight_circuit: false,
+  safe_mixed_modal: false,
+};
+
+/** The one reader of that table. Both gates go through here. */
+export function familyIsOnFeet(family: ConditioningSubstitutionFamily): boolean {
+  return FAMILY_ON_FEET[family] === true;
+}
+
 function stableHash(value: string): number {
   let hash = 0;
   for (let index = 0; index < value.length; index++) {
@@ -162,7 +211,17 @@ function stressFor(entry: SessionAllocation): 'light' | 'moderate' | 'hard' {
   return 'moderate';
 }
 
-function substitutionDecision(args: {
+/**
+ * EXPORTED FOR ONE REASON: the claim this module makes is about a CHOICE, and a
+ * choice can only be checked by making it.
+ *
+ * `test:off-feet-walking` asserts the table (`FAMILY_ON_FEET`) and then asserts
+ * this function's ANSWER for an off-feet athlete. Testing only the table would
+ * be `AGENTS.md`'s own warning — *"a cell that names a function does not cover
+ * its arguments"* — and the defect it is about was precisely a correct fact used
+ * in one place and forgotten in another.
+ */
+export function substitutionDecision(args: {
   entry: SessionAllocation;
   context: ConditioningFeasibilityContext;
   allowed: AllowedErgModality[];
@@ -212,7 +271,11 @@ function substitutionDecision(args: {
   }
 
   attempted.push('brisk_walking');
-  if (!lowerRestricted && stress !== 'hard' && !genuineSprint) {
+  // `!entry.conditioningOffFeet` IS THE FIX. Walking was the only on-feet family
+  // that never asked, so an athlete told to stay off their feet was refused
+  // running, refused hills, and handed a walk.
+  if (!lowerRestricted && stress !== 'hard' && !genuineSprint
+    && !(entry.conditioningOffFeet && familyIsOnFeet('brisk_walking'))) {
     return { family: 'brisk_walking', attempted };
   }
 
@@ -324,7 +387,11 @@ export function resolveConditioningFeasibility(
   return {
     ...entry,
     ...(resolved.erg ? { ergModality: resolved.erg } : { ergModality: undefined }),
-    ...(resolved.family === 'outdoor_running' || resolved.family === 'hill_running_or_walking'
+    // DERIVED FROM THE TABLE, not a hand-written pair. This read
+    // `outdoor_running || hill_running_or_walking` and forgot `brisk_walking` —
+    // the same omission as the selection gate above, in the second of the two
+    // places that had to agree.
+    ...(familyIsOnFeet(resolved.family)
       ? { conditioningOffFeet: false }
       : {}),
     conditioningFeasibility: {

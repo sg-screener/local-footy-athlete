@@ -144,24 +144,19 @@ export default function ProfileScreen() {
   const [equipmentSaving, setEquipmentSaving] = useState(false);
   const [equipmentSaveError, setEquipmentSaveError] = useState<string | null>(null);
 
-  // ─── TEMPORARY DEVICE DIAGNOSTIC — "Something changed?" dead tap ───
-  // 2026-07-29. The tap does nothing on Sam's device and reproduces nowhere in
-  // code. This splits the two candidate causes on-device:
-  //
-  //   no counters move          → the touch never reaches the control
-  //                               (layout/hit-target — the renderer class)
-  //   counters move, no sheet   → Modal presentation
-  //
-  // `logger.warn`, NOT `logger.debug`: debug/info are gated behind
-  // EXPO_PUBLIC_ENABLE_DEBUG_LOGS, so a debug line would print nothing on a
-  // normal build and be misread as "the touch never arrived".
-  //
-  // The visible counter exists so the split works with no console attached.
-  // REMOVE once the cause is known.
-  const [setupTapDiag, setSetupTapDiag] = useState({ pressIn: 0, press: 0, handlerEnd: 0 });
-  useEffect(() => {
-    logger.warn(`[setup-tap] rendered with sheetVisible=${setupSheetVisible}`);
-  }, [setupSheetVisible]);
+  /* THE "Something changed?" DEAD-TAP DIAGNOSTIC IS GONE — 2026-07-29 to
+   * 2026-08-12, and it did its job.
+   *
+   * It existed to split two candidate causes on Sam's device: no counters
+   * moving meant the touch never reached the control, counters moving with no
+   * sheet meant Modal presentation. **SAM CONFIRMED 2026-08-12 THAT THE TAP NOW
+   * WORKS**, so the split has an answer and the instrument comes out — counters,
+   * their state, and the three `logger.warn` probes with them.
+   *
+   * NOT REMOVED IN THIS SWEEP: the `__DEV__`-visible stored-state export lower
+   * down is a SEPARATE 2026-07-30 concern with its own reasoning, and
+   * SEAT_INBOX item 14 says so explicitly. Read its own comment before touching
+   * it. */
   const [setupSheetStep, setSetupSheetStep] = useState<SetupSheetStep>('overview');
   // The 2km time trial (D14). Held as the two boxes the athlete types into,
   // committed as one answer through `recordTwoKmTime`. `null` seconds is the
@@ -321,8 +316,6 @@ export default function ProfileScreen() {
   };
 
   const onProgramSetupChanged = () => {
-    logger.warn('[setup-tap] 2/3 onPress fired — handler entered');
-    setSetupTapDiag((prev) => ({ ...prev, press: prev.press + 1 }));
     const currentName = onboardingData.firstName || '';
     const currentPosition = currentRole(onboardingData);
     const currentExperience = (onboardingData.experienceLevel as ExperienceLevel) || null;
@@ -351,8 +344,6 @@ export default function ProfileScreen() {
     setSetupUpdateError(null);
     setSetupSheetStep('overview');
     setSetupSheetVisible(true);
-    logger.warn('[setup-tap] 3/3 setSetupSheetVisible(true) returned — handler completed');
-    setSetupTapDiag((prev) => ({ ...prev, handlerEnd: prev.handlerEnd + 1 }));
   };
 
   const openEquipmentEditor = () => {
@@ -619,14 +610,6 @@ export default function ProfileScreen() {
           <Text variant="bodySmall" color={colors.text.secondary} style={styles.headerSubtitle}>
             Your program setup and support.
           </Text>
-          {/* TEMPORARY device diagnostic readout — remove with the rest. */}
-          <Text
-            variant="bodySmall"
-            color={colors.accent.lime}
-            testID="profile-setup-tap-diagnostic"
-          >
-            {`tap in ${setupTapDiag.pressIn} · press ${setupTapDiag.press} · handler ${setupTapDiag.handlerEnd} · sheet ${setupSheetVisible ? 'OPEN' : 'closed'}`}
-          </Text>
           {/* ─── TEMPORARY, DELIBERATELY VISIBLE IN RELEASE ───
               2026-07-30. The developer-tools section is `__DEV__`-only, so on
               Sam's Release build the export was unreachable — his Profile goes
@@ -689,10 +672,6 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.setupChangeButton}
               activeOpacity={0.7}
-              onPressIn={() => {
-                logger.warn('[setup-tap] 1/3 onPressIn — touch reached the control');
-                setSetupTapDiag((prev) => ({ ...prev, pressIn: prev.pressIn + 1 }));
-              }}
               onPress={onProgramSetupChanged}
               testID="profile-program-setup-change"
               accessibilityLabel="Something changed? Tell the coach"
