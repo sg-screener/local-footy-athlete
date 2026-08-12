@@ -634,6 +634,26 @@ his instruction is standing authority, not history.**
 
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
+   **A FIFTH PASS PRICED ONE MORE AND DID NOT LOWER THE COUNT — 2026-08-13,
+   desktop agent.** `LAW-doc-truth`. The obvious gate is "every `test:<name>` and
+   every `src/...` path a doc cites must exist", and over all 451 docs it is very
+   much non-empty: **14 occurrences / 6 DISTINCT dead `test:` scripts, and 159
+   occurrences / 126 DISTINCT dead `src/` paths.**
+   **⚠ THE FIRST COUNT WAS WRONG AND IS RECORDED WRONG-THEN-RIGHT: 200/141**,
+   because the path regex alternated `(ts|tsx)` in that order and matched `.ts`
+   inside `.tsx` — **41 occurrences of "dead" files that are alive**. Sighting 15
+   of the count-names-the-instrument law, in the pass that was about to build a
+   gate on the number.
+   **THEN THE GATE IS REFUTED BY SCOPE, and that is the finding worth keeping.**
+   Restricted to LIVING docs — the four standing files plus every doc the
+   registry cites in `ruledAt`, 32 files — it is **GREEN AND EMPTY**: zero dead
+   `test:` citations, and its only two dead paths are in a ROADMAP naming files
+   it proposes to build. **Every real violation is in an ARCHIVED doc, where the
+   citation was true when written**, and a gate forcing those green would rewrite
+   history this repo deliberately keeps. **What is needed is not a scan but a
+   RENAME MAP** — retiring a `test:` script must update the docs citing it or
+   record the old name as retired. **6 distinct names is the entire standing
+   debt.** Row updated; count unchanged, and it says so.
    **PAID TWICE 2026-08-13 — 29 -> 28 -> 27.**
    **SECOND: `LAW-visible-first` is GUARDED.** Built to the shape its own row
    named — a boundary report must say what the athlete can see, or say
@@ -1437,12 +1457,25 @@ seat was wrong.
   draws the athlete's week**, even though `buildProgramTabProjectedWeek` appears
   to call it and `useResolvedWeek` → `projectWeekFor` →
   `buildProgramTabProjectedWeek` is the documented chain.
-  **THE NEXT ACT IS TO FIND THE ACTUAL READER, and the probe is the way** —
-  instrument `buildProgramTabProjectedWeek` itself and see whether IT fires. If
-  it does not, the screen's week comes from a cached/derived surface
-  (`deriveVisibleWeek` / `assembleScheduleState`) and that is where every one of
-  these filters belongs. **Do not add a fourth filter anywhere until that probe
-  has answered.**
+  **THE READER IS FOUND, AND IT IS THE ONE I ALREADY EDITED — which makes the
+  remaining gap NARROW AND STRANGE. Measured 2026-08-13 with probes at four
+  layers, twice, the second time on a cache-cleared Metro:**
+  `projectWeekFor` (9 calls) → `buildProgramTabProjectedWeek` (18) →
+  `resolveWeekWithConditioning` (61, twenty of them WITH the travel fact
+  present, `facts=1`). **So the chain is exactly as documented and the fact
+  reaches it.**
+  **⚠ AND `applyAwayPass` — the LAST LINE of that same function — logged ZERO
+  times.** Both of the function's two returns call it (`:1732` and `:2181`,
+  verified by listing every `return` in the body and every top-level `}`), the
+  function is entered 61 times, and its final pass is never reached. **I cannot
+  explain that, and I am not guessing a fifth time.**
+  **THE NEXT ACT IS THE NARROWEST POSSIBLE PROBE:** put one `console.warn` on the
+  line IMMEDIATELY BEFORE `return applyAwayPass(...)` and one on the first line
+  INSIDE it. If the outer fires and the inner does not, the call is being
+  optimised or shadowed and the answer is in the module graph — `sessionResolver`
+  sits in four of the require cycles Metro warns about on every boot, and a cycle
+  is the only mechanism left that fits.
+  **Do not add a fourth filter anywhere until that has answered.**
   **THE PASS IS KEPT** — it is correct, tested and live for the resolver's other
   callers — but **the athlete's week is unchanged by it, and the screenshots
   still show the club.**
