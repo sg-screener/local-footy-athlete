@@ -72,11 +72,40 @@ authority unconditionally. The replan's own inner type declares it **required**
 `runSection18AcceptedWeekGateway` directly, which is the harness entering below
 the door.** The optional `?` on the gateway's own input is what let it.
 
-**(c) THE ONE REAL QUESTION, AND IT IS SMALL.** Which snapshot should the CRAFT
-TIER judge a candidate week against? It judges a week that is being PROPOSED, so
-the answer is almost certainly the AFTER world — but it is currently handed
-whichever snapshot its call path happens to hold. **That is one decision, not
-six, and it is an ownership question rather than a Sam ruling.**
+**(c) THE ONE REAL QUESTION — NOW MEASURED AT THE EXACT POINT OF FAILURE.**
+
+Which world should the CRAFT TIER judge a candidate week against? It judges a
+week being PROPOSED, so it should be the settled proposed world. It is currently
+handed whatever its call path holds. Re-applying attempt 1's fix in the working
+tree and logging every craft evaluation of the week the broken property drives
+(`2026-07-20`), with the old code's answer printed beside the new one:
+
+```
+authority=["2026-07-18","2026-07-25","2026-08-01","2026-08-08"]  prev=2026-07-18   oldPhantom=2026-07-18
+authority=["2026-07-19","2026-07-25","2026-08-01"]               prev=2026-07-19   oldPhantom=2026-07-18
+authority=["2026-07-19","2026-07-25"]                            prev=2026-07-19   oldPhantom=2026-07-18
+authority=["2026-07-18","2026-08-01"]                            prev=2026-07-18   oldPhantom=null
+authority=[]                                                     prev=null         oldPhantom=2026-07-18
+authority=[]                                                     prev=null         oldPhantom=null
+```
+
+**THREE DISTINCT WORLDS REACH ONE WEEK'S CRAFT EVALUATION:** one holding the
+CANCELLED Saturday (`07-18`), one holding the MOVED Sunday (`07-19` — the
+correct answer), and one holding NOTHING AT ALL.
+
+**AND THE OLD CODE WAS BLIND TO THE DIFFERENCE, WHICH IS WHY IT LOOKED STABLE.**
+`oldPhantom` is `fixtureDates[0] − 7` — computed from the CONTRACT, so it
+answered `2026-07-18` in five of the six calls regardless of which world the
+authority described. **The ±7 did not survive because it was right. It survived
+because it could not tell these worlds apart**, and one arbitrary constant
+answer is easier to build a passing test on than three honest ones.
+
+**THE EMPTY ROWS ARE THE REGRESSION.** Where the authority is `[]`, attempt 1
+correctly claims no neighbour and the phantom used to supply `07-18`. That is
+the behavioural gap the reverted attempt opened.
+
+**SO ATTEMPT 2'S TARGET IS EXACT: stop the craft tier being asked about a week
+whose calendar has not settled.** Not a new fallback — a settled input.
 
 ## §3 WHAT THIS MEANS FOR THE ±7 FIX
 
@@ -137,8 +166,11 @@ test-only, which `test:gateway-authority-census` already governs.
   fixture being moved away from, because the authority is computed while the
   calendar is half-applied. 149 occurrences in one suite run. It collapses into
   (c) rather than being a second defect.
-- **OPEN** — whether the reverted attempt's one regression is caused by that
-  half-applied world. Plausible, and NOT traced.
+- **MEASURED, AND IT WAS THE OPEN QUESTION** — §2(c): three distinct worlds
+  (cancelled fixture / moved fixture / empty) reach one week's craft evaluation,
+  and the `[]` rows are where the reverted attempt lost the neighbour the
+  phantom used to supply. The ±7 looked stable only because it answered from the
+  contract and could not tell the three worlds apart.
 - **NOT INVESTIGATED** — whether `derivedSessionProvenance`'s
   `exactFixtureDatePresent` (`:417-425`), which reads the same optional set and
   falls back to a contract-shape check when it is absent, has the same

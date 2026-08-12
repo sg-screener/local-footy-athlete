@@ -149,8 +149,14 @@ phone.** State device items as PARKED in a stop report, never as a request.
    production caller of the replan always computes the authority, and the
    replan's inner type already declares it required; every UNDEFINED came from
    suites calling the gateway DIRECTLY, which is the harness entering below the
-   door. **(c) the one real question is small:** which snapshot should the craft
-   tier judge a PROPOSED week against (almost certainly the AFTER one).
+   door. **(c) MEASURED at the exact point of failure:** THREE distinct worlds
+   reach one week's craft evaluation — one holding the CANCELLED fixture, one
+   holding the MOVED one (correct), and one holding NOTHING. **The ±7 looked
+   stable only because it answered from the CONTRACT and could not tell them
+   apart**; the empty-authority calls are precisely where attempt 1 lost the
+   neighbour. **Attempt 2's target is exact: stop the craft tier being asked
+   about a week whose calendar has not settled — a settled input, not a new
+   fallback.**
    **SO ATTEMPT 2 IS: (1) answer (c); (2) THEN delete the ±7 using the cells
    already written and proven red-before/green-after.** The earlier "make it
    REQUIRED" step is **WITHDRAWN**: `test:gateway-authority-census` already
