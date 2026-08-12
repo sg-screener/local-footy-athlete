@@ -1212,6 +1212,24 @@ phone.** State device items as PARKED in a stop report, never as a request.
     when there is room"**. COD needs a slot when the week has spare conditioning
     capacity, then to be the first thing dropped when it does not. **Ranking it
     last in a first-match-wins list can never express that.**
+    **CAPACITY MEASURED 2026-08-13 — AND IT CHANGES THE FIX'S SHAPE. THERE IS NO
+    SPARE ROOM.** Off-season, no team training, block 3:
+    - **6 days: 6 workouts, ZERO rest days, conditioning = aerobic_base x2 (+
+      tempo x1 from week 3).**
+    - 5 days: 5 workouts, zero rest. 4 days: 4 workouts, zero rest.
+    **Every day already carries work and the conditioning is 2-3 sessions.** So
+    a "place if room" pass would never fire — **there is no empty slot to fill.**
+    **COD CAN ONLY ENTER BY SUBSTITUTION**, taking the place of one aerobic
+    session in a no-team-training week. That follows from Sam's own word
+    *"prescribed"* — it is IN the week, not squeezed into a gap that does not
+    exist — but it is a DIFFERENT change from what the last note proposed, and it
+    is the one to build.
+    **AND OFF-SEASON ONLY EVER OFFERS TWO CATEGORIES:** `categoryPriority` for
+    off-season is `['aerobic_base', 'tempo']`, so vo2, glycolytic and sprint never
+    appear either. **COD is not a lone exile; it is the fourth name on a list the
+    off-season policy does not carry.** Whether that policy should carry it is the
+    question the substitution answers.
+
     **⚠ AND THE OBVIOUS FIX IS THE TRAP:** raising COD's rank would make it beat
     `aerobic_base` on ordinary weeks. **Do not re-rank. Give it a
     place-if-room pass** — and remember the coverage maths is pool-size
@@ -1341,6 +1359,37 @@ phone.** State device items as PARKED in a stop report, never as a request.
       opposite of Sam's ruling twice over and would also have made the equipment
       answer vacuous. `test:away-flow` [5b] reds if it comes back.
     - `until` is the LAST DAY AWAY, never the return date.
+
+28-C1b. **"CUT FIRST" MEANS DROPPED UNDER PRESSURE, NOT NEVER PLACED — the
+    reading is locked, so nobody re-argues it mid-build.**
+
+    **Sam's words:** COD is prescribed in weeks with no team training and *"cut
+    first when something has to give"*. **A thing that is cut first must first
+    be IN.** "Never placed" satisfies the sentence only by making it meaningless.
+
+    **THE TERMINAL'S DIAGNOSIS IS ACCEPTED AND IT IS THE BEST ONE ON THIS ITEM:**
+    ranked last + take-the-first-that-works = never chosen, because easy aerobic
+    sits above it and is always usable. **Sam's rule and the mechanism cancel
+    exactly.** Recorded because it is a CLASS: any preference expressed as
+    ranking, consumed by a first-match picker, is inert. **Look for others.**
+
+    **AND THE OBVIOUS FIX IS BARRED, as the terminal said:** promoting COD up the
+    order makes it beat ordinary aerobic work on normal weeks, which is the
+    opposite of the ruling. **Do not reorder. Place-if-there-is-room, drop-first
+    when there is not.**
+
+    **THE MEASUREMENT GATE STANDS AND IS THE NEXT UNIT:** how much spare
+    conditioning room a six-day off-season week actually has. **If the answer is
+    "none", the placement pass would never fire and the ruling needs Sam, not
+    code — bring him the NUMBER and a recommendation, never a bare question.**
+
+    **CREDIT WHERE THE MECHANISM EARNED IT:** the total `Record<
+    ConditioningQuality, …>` map ordered in 28-C1 immediately exposed a THIRD
+    narrowing nobody had written down — `aerobic_capacity` splits across
+    `aerobic_base` AND `tempo`, and five templates were unreachable
+    (`conditioningSelection.ts:171-189`). **Asserting the map found what
+    trusting it hid for a month. That is the pattern to copy into the other
+    nineteen census rows.**
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
