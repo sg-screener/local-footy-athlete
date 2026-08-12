@@ -183,7 +183,24 @@ his instruction is standing authority, not history.**
     the whole transaction rolls back. **A door that refuses is worse than a door
     that records**, so travel is back on the record-only lane and the sentence
     the athlete reads was rewritten to promise exactly that and no more.
-    **THE NEXT ACT IS THAT REFUSAL — read it, do not guess it.** Two guesses were
+    **THE REFUSAL WAS HUNTED 2026-08-13 AND TWO REPRODUCTION ROUTES ARE RULED
+    OUT — so the next pass does not spend the same hour.**
+    - **The durable-suite world does NOT refuse.** With travel on the deriving
+      lane, `reachHisWorldByActing()` + the away door returns
+      `ok: true, changedProgram: true` and the message *"the visible program was
+      safely recomposed"*. So the lane is not refusing in general.
+    - **The dev seed rebuilt in NODE does not refuse either** — it returns
+      `ok: true, changedProgram: FALSE`, *"No visible session needed changing"*:
+      the scoped regen never fires there, because that harness has no
+      microcycles to regen into (`canScopedRegen`).
+    - **Only the SIMULATOR refuses**, so the refusal needs the real app's boot
+      and hydrated state. **The OS log is the wrong instrument** — React
+      Native's console goes to METRO, not `simctl log`, and a filtered
+      `log stream` over the away tap returned nothing but network and installd
+      noise. **Capture it from Metro's output** (`/tmp/qa-metro.log` when
+      `lfa:dev` starts it; the current Metro belongs to an `expo run:ios` a
+      human started, so its console is in that terminal).
+    **THEN read it, do not guess it.** Two guesses were
     already wrong today: narrowing L4b (broke two more cells, and was loosening a
     law to fit a change) and filtering travel out of the read-time projection
     (fixed L4b and broke the commit's ledger-equivalence, which is what produced
