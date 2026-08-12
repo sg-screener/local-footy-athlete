@@ -563,7 +563,26 @@ his instruction is standing authority, not history.**
 
 
 
-7. **(a) IS BUILT 2026-08-13 — AND IT IS AN ATTRIBUTION FIX, NOT A BEHAVIOURAL
+7. **BLOCKED-BY: sam — (a) IS BUILT; (b) AND (c) CANNOT MOVE WITHOUT HIM.**
+
+   **THE TWO THINGS THAT ARE HIS, and the item already measured why neither is
+   the terminal's to decide:**
+   1. **A SECOND GAME IN A WEEK HAS NOWHERE TO LIVE.** The profile has ONE game
+      field (`domain.ts:192,196`). His own sentence — *"1 strength session … if
+      they have 2 games and 2 team trainings"* — **cannot be built or tested at
+      all** until there is somewhere to put the second game. **The question:
+      does a two-game week get a field, or is it out of scope?**
+   2. **THE WORDS FOR A FIXTURE-CAUSED SHORTFALL.** `section18ShortfallDisclosure`
+      has ONE unconditional sentence, *"Resting {Day} means you'll miss a
+      strength session this week"*, and no branch for a shortfall the FIXTURES
+      caused. **A second sentence is needed and the words are his to sign**, on
+      the effort-scale precedent.
+
+   **NOT A WALL THIS SEAT CAN MEASURE PAST:** both are rulings, not code. The
+   capacity half that COULD be measured was, and it shipped.
+
+   ORIGINAL BELOW.
+   **(a) IS BUILT 2026-08-13 — AND IT IS AN ATTRIBUTION FIX, NOT A BEHAVIOURAL
    ONE. MEASURED BOTH WAYS BEFORE THE CLAIM.** Strength capacity now excludes
    the game day (`weeklyExposureContractBuilders.ts`), so it no longer counts a
    day no strength session can be placed on. **The target NUMBER is identical to
@@ -1086,6 +1105,22 @@ his instruction is standing authority, not history.**
     His weeks already cluster at **5** (20 of 52), so 5 stays the typical session
     and nothing he has seen moves. **Veto in a word if 5 or 3 is the floor
     instead.**
+
+    **⚠ THE CENSUS THIS ITEM CALLS "the next unit" ALREADY EXISTS — IT IS IN
+    ITEM 27, TWO SCREENS DOWN THIS FILE.** *"13 fields, 3 unread, of which ONE is
+    a live unenforced ruling, TWO are abolished leftovers, and the headline field
+    is forwarded but never enforced."*
+    **I RE-RAN IT INDEPENDENTLY BEFORE FINDING THAT, AND IT REPRODUCES EXACTLY** —
+    which is worth more than either measurement alone. Reading every production
+    file for each of the 13 `TrainingAgePolicy` fields:
+    `maxHardExposures` **0 readers**, `maxOptionalSessions` **0 readers** (both
+    abolished by Sam in §11 — dead fields, not unenforced rulings);
+    `maxExercisesPerStrengthSession` **1 reader, and it FORWARDS to the AI
+    prompt** rather than enforcing; the other nine have real readers, verified
+    against a control (`maxSetsPerExercise` clamps in `defaultProgram.ts:971`).
+    **INSTRUMENT LIMIT, STATED: `level` is uncountable this way** — the word
+    collides with unrelated fields and my scan returned 57 false readers for it.
+    **SO THE CENSUS IS NOT OWED. What is owed is acting on it.**
 
     **BUILDABLE WITHOUT HIM, AND NOT STARTED — the ceiling half.** Enforcing 6 is
     his own authored number and needs no ruling; it changes 6 of 52 sessions and
