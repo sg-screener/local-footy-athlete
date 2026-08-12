@@ -394,3 +394,45 @@ property has been asserting horizon membership through a proxy all along.
 **THE ELIMINATIONS ARE BANKED. Do not re-probe them:** the resolver mints it, the
 materialiser sees it, the closure never runs, the gateway's copier never runs,
 and the store's repair loop skips the day as unchanged.
+
+## §10 THE ANSWER — the proposal is IDENTICAL in both arms; the COMMIT strips it
+
+**§9's "one line left" was named from a grep and it was WRONG — that loop never
+runs on this path either (0 traces).** Recorded rather than quietly corrected:
+naming a site by reading is the same mistake this census keeps documenting. The
+real publisher is `weekRebuild.ts:508`, where the rolling repair's projections
+become `adjacentOverlays` and are committed with the reversible adjustment.
+
+**AND THE PROBE AT THAT SITE ENDS THE HUNT:**
+
+| | proposed next-week Monday | STORED next-week Monday |
+| --- | --- | --- |
+| **HEAD (±7 present)** | `dependency.source = 2026-07-19` | **`2026-07-19` — kept** |
+| **±7 REMOVED** | `dependency.source = 2026-07-19` | **`none` — stripped** |
+
+**THE PROPOSAL IS BYTE-FOR-BYTE THE SAME CLAIM IN BOTH ARMS.** The rolling repair
+projects the following week, its Monday carries the dependency, and the commit is
+handed exactly that in both cases. **The accepted-state transaction keeps it with
+the phantom fixture present and drops it without.**
+
+So the whole chain is now known and none of it is where three attempts looked:
+
+    resolver mints it (more, without the ±7)
+      -> materialiser sees it (more, without the ±7)
+        -> rolling repair projects the week WITH it (both arms)
+          -> the proposal carries it (both arms, identical)
+            -> THE COMMIT KEEPS IT ONLY WHEN THE PHANTOM EXISTS   <- the defect
+
+**ATTEMPT 3 IS ONE QUESTION, NOT A THEORY: which line inside
+`commitReversibleAdjustmentCreationTransaction` → `commitAcceptedStateTransaction`
+replaces the proposed Monday?** The transaction re-derives every week in
+`validateWeekStarts`, and a re-derivation that produces a Monday without the
+record is the strip. **The ±7's phantom neighbour is what makes that re-derivation
+keep it — which means the property has been depending on a fabricated fixture to
+preserve a real record.**
+
+**THAT IS THE FINDING, AND IT IS BIGGER THAN THE ±7:** a commit that re-derives a
+week can silently discard provenance the proposal carried, and today only an
+invented game hides it.
+
+**BANKED — every hop above is measured, in both arms. Do not re-derive any of it.**
