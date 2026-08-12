@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import {
   ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
   acceptedProfileForContext,
@@ -1207,6 +1208,21 @@ async function transactTemporarySourceFactWithinTrace(
     testHooks: input.testHooks,
   });
   if (!persisted.ok) {
+    // ── A REFUSAL WITH NO REASON ON THE WIRE IS ITS OWN DEFECT ──
+    // **SEAT_INBOX item 30, 2026-08-13.** The athlete read *"That didn't save —
+    // your week is unchanged."* on a real device and NOTHING said why: two
+    // reproduction attempts, an OS-log detour and a second Metro all found the
+    // regen succeeding and the commit rejected in silence. **The typed reason
+    // existed the whole time and nobody printed it.**
+    // It goes to `logger.warn` rather than a diagnostic tape on purpose — the
+    // tape is for athlete ACTIONS, and this is the engine explaining a refusal
+    // to whoever is watching the bundler when it happens.
+    logger.warn('[temporary-source-fact] refused', {
+      route: persisted.route,
+      reason: persisted.reason,
+      operation: effectiveOperation,
+      factId: targetFactId,
+    });
     return {
       outcome: persisted.route === 'conflicted' ? 'conflicted' : 'safely_rejected',
       factId: targetFactId,
