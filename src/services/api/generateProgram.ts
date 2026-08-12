@@ -1913,6 +1913,13 @@ export async function generateProgramFromProfile(
     primaryFocus: generationProfile.motivation || 'Strength and Conditioning',
     isActive: true,
     microcycles,
+    // R1.3 (shell rebuild): generation records its own anchor input — and THIS
+    // producer is the one the onboarding screen calls, so its silence was an
+    // athlete's first program carrying no anchor at all. Persisted state is
+    // inputs only; boot REBUILDS the program from them and refuses, typed,
+    // when the world cannot say WHEN it was generated. So a missing key here
+    // was not a missing field, it was the next launch not opening.
+    generationAnchorISO: effectiveTodayISO,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

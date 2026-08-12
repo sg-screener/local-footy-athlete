@@ -298,6 +298,7 @@
     "test:derived-week-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/derivedWeekOwnershipTests.ts",
     "test:door-ledger-append": "TZ=Australia/Melbourne sucrase-node src/__tests__/doorLedgerAppendTests.ts",
     "test:worn-world-boot": "TZ=Australia/Melbourne sucrase-node src/__tests__/wornWorldBootTests.ts",
+    "test:generation-anchor-stamp": "EXPO_PUBLIC_SUPABASE_URL=https://example.test EXPO_PUBLIC_SUPABASE_ANON_KEY=anchor-stamp-test TZ=Australia/Melbourne sucrase-node src/__tests__/generationAnchorStampTests.ts",
     "test:quiescent-boot": "TZ=Australia/Melbourne sucrase-node src/__tests__/quiescentBootTests.ts",
     "test:calendar-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/calendarOwnershipTests.ts",
     "test:coach-prefs-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachPreferencesOwnershipTests.ts",
