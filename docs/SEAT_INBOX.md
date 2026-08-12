@@ -1292,8 +1292,24 @@ seat was wrong.
 - **ANSWERED 2026-08-12, NOW ITEM 16 — the day/week modifier indicator.**
   Sam: *"yes — one line on week, small card on day, read-only both"*. Moved
   out of this section into the queue. **Do not re-ask.**
-- **DECISION OWED — does the day/week modifier notice open a SHEET first, or go
-  straight to My Status? (item 16, asked 2026-08-13.)** Sam sent his prototype
+- **ANSWERED 2026-08-13 — BUILT. Sam: *"add the popup"*.** `ModifiersSheet` now
+  stands between the notice and My Status on both Program shapes, with his
+  prototype's five strings signed verbatim. **Do not re-ask.** One follow-up
+  question it raised is the entry directly below.
+- **DECISION OWED — the sheet's rows are ONE column, not two, and only Sam can
+  close the gap (item 16, asked 2026-08-13).** His prototype's rows are a name
+  and a short EFFECT: "Time away / Training volume adjusted", "Equipment access
+  / Exercises substituted". **No such phrase exists in the domain** —
+  `ActiveCoachNote` carries `title` and `body`, and there is no signed effect
+  wording for the other modifier kinds. Inventing one per kind would put
+  unsigned athlete-facing words on the glass, which is the single thing
+  `SignedCopy` exists to prevent, **so the sheet ships showing each modifier's
+  own authored title and sentence instead** — the same two strings My Status
+  renders. **What is owed is small and only his:** the short phrase per modifier
+  kind. With them it is a copy-registry addition and a two-column row; without
+  them the current rows are correct and honest, just longer than his drawing.
+  ~~ORIGINAL QUESTION~~ **does the day/week modifier notice open a SHEET first,
+  or go straight to My Status?** Sam sent his prototype
   screen and asked whether tapping the notice opens *"something like this? which
   you can then tap and be taken to the status area inside the coach tab"*. **It
   does not — measured on glass, `artifacts/ui-walk/item16-week-opens-status.png`:
