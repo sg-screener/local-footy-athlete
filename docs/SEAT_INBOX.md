@@ -329,7 +329,43 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **CHECK FIRST whether a working recipe already exists** in `package.json` or
    the Maestro setup; if it does, name it rather than writing a second one.
 
-0e. **THE LAST TWO OF THE TOOLING PLAN. Sam counted and the seat was wrong
+0e. **BOTH BUILT. THE CENSUS CAME FIRST AND IT PAID TWICE.**
+   **(i) THE SET WAS NOT A SET.** Of the five named flows: **move a session had
+   NOTHING** — `fixture-move.yaml` moves a GAME, and the explorer's `session.move`
+   enters through a 2x2px dev-only control, not the athlete's button; **clear or
+   reverse an adjustment had NOTHING** — the readiness flow opens both doors and
+   presses Cancel; **delete a session was half** — one part-scope, no whole day,
+   no relaunch; **relaunch/persistence exists**; **preview and approve a repaired
+   week HAS NO DOOR** (`SUPPORTED_ATHLETE_ACTIONS` 5.4 is DECIDED, NOT BUILT), so
+   no flow was written for it and the gap is carried by name.
+   **BUILT AND GREEN ON THE SIMULATOR, FIRST RUN:** `.maestro/golden/session-move.yaml`
+   (whole session onto the empty Sunday, both days redrawn, survives a relaunch)
+   and `.maestro/golden/readiness-adjust-and-clear.yaml` (illness adjusts the
+   week, "I'm good now" takes it back, the clear survives a relaunch).
+   `lower-body-deletion.yaml` extended to the whole-day scope + relaunch.
+   **THE RE-AIM FOUND A DEFECT, AND IT IS AN ATHLETE ONE — SEAT PLEASE ROUTE:**
+   on the `lower-body-deletion` seed today's card is titled "Strength" and draws
+   two parts; **delete the strength part and the card becomes "Conditioning" with
+   a part that was there all along.** The athlete has a session today they cannot
+   see. Photographed both sides. **Not diagnosed here — a projection defect is
+   its own unit.**
+   **(ii) TWO PARAGRAPHS IN `CLAUDE.md`,** folded into 0d(i)'s section as
+   ordered: auto memory is for environment and navigation, **never product law**,
+   which lives in the registry or nowhere.
+   **TWO REGISTRY ROWS, BORN GUARDED** — `LAW-canonical-athlete-flows`,
+   `LAW-memory-not-a-law-store`. Registry **99/67 -> 101/69, UNENFORCED unmoved
+   at 32**; `test:repo-law-guards` 37 -> 38 cells.
+   **⚠ TWO THINGS THE SEAT SHOULD KNOW, NEITHER MINE.** (1) **THE SIMULATOR IS
+   SHARED AND NOBODY SAID SO** — three `maestro test` runs from a concurrent
+   agent appeared on the same device mid-pass, so my re-aimed deletion run was
+   STOPPED rather than reported; two Maestro sessions interleave taps into one
+   app and the honest outcome is "unknown", not "red". **That re-run is owed.**
+   (2) **`test:compile` IS RED ON A FILE THAT IS NOT MINE** — untracked
+   `src/__tests__/fixtureSettleAfterSetupTests.ts`, 1 error, the same
+   red-belongs-to-no-committed-change shape the inbox already records for
+   `anchorRepro.ts`.
+
+   ~~ORIGINAL~~ **THE LAST TWO OF THE TOOLING PLAN. Sam counted and the seat was wrong
    twice — "all of chat is done" was said before checking, then 0d covered only
    two of the four remaining.** These are the last.
 

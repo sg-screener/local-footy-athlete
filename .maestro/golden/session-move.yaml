@@ -1,0 +1,90 @@
+appId: com.localfootyathlete.app
+name: Golden - move today's session to another day, and it survives a relaunch
+tags:
+  - e2e
+  - golden
+  - plan-change
+---
+# THE CANONICAL "MOVE A SESSION" FLOW — built 2026-08-12 for seat item 0e(i),
+# after a census found the door had NO flow at all.
+#
+# WHAT THE CENSUS FOUND, AND WHY THIS FILE IS NEW RATHER THAN A RE-AIM.
+# `golden/fixture-move.yaml` moves a GAME. `action-trace-v2/fixture-mutation-
+# reload.yaml` moves the same game again. Moving a SESSION — action 1.5 in
+# SUPPORTED_ATHLETE_ACTIONS.md, the one an athlete does most — was exercised by
+# nothing that taps. The explorer campaign has `session.move` coverage, but the
+# explorer enters through a 2x2px dev-only control (`ExplorerActionIngressControl`)
+# carrying a `controlTestId` as a CLAIM about which real control corresponds. That
+# is a different question from "the athlete's button works".
+#
+# THE WHOLE PRODUCT LOOP, NOT THE TAP. SUPPORTED_ATHLETE_ACTIONS.md's pass
+# criteria are five, and the fifth is "the change survives app relaunch" — so
+# this flow ends on a checkpoint and reload rather than on the result row.
+#
+# THE DATE IS PINNED AND THE SESSION ID IS NOT, deliberately. `2026-07-19` is
+# Sunday of this seed's declared week (`DEV_E2E_DATE_ANCHORS`, anchored Mon
+# 2026-07-13) — a value the seed contract owns. The session id is whatever the
+# generator minted, so it is matched by shape, the same way the deletion flow
+# learned to.
+#
+# SUNDAY IS THE DESTINATION BECAUSE IT IS THE ONLY EMPTY ONE. The picker offers
+# "Sunday 19 Jul - Currently a rest day" and four SWAPS ("Swap with Team Training
+# + Upper Pull", ...). A swap changes two days and its assertion would have to
+# describe both; the rest day is the clean single-day claim, and a move onto an
+# occupied day is a different action with its own defect class.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# TODAY HOLDS THE THING THAT IS ABOUT TO MOVE. Asserting the part rather than a
+# whole-day token is the lesson `lower-body-deletion.yaml` paid for: a day-state
+# proxy stops meaning what the flow needs the moment the day holds two things.
+- assertVisible:
+    id: "day-timeline-part-strength"
+- assertVisible:
+    id: "day-row-mon-state-selected"
+
+- tapOn:
+    id: "make-change-link"
+- tapOn:
+    id: "session-move-action-.*"
+- tapOn:
+    id: "plan-change-move-scope-whole_day"
+- tapOn:
+    id: "session-move-destination-2026-07-19"
+- assertVisible:
+    id: "session-move-result-.*"
+- tapOn:
+    id: "plan-change-done"
+
+# THE VISIBLE PLAN CHANGED — both halves of it. A move that only emptied the
+# source would pass a "today is rest" assertion while the session fell on the
+# floor, which is the conservation defect this repo keeps re-finding.
+- extendedWaitUntil:
+    visible:
+      id: "day-row-mon-state-rest"
+    timeout: 15000
+- assertNotVisible:
+    id: "day-timeline-part-strength"
+- runFlow:
+    file: ../common/show-week-shape.yaml
+- assertVisible:
+    id: "day-row-sun-state-scheduled"
+- takeScreenshot: artifacts/ui-walk/session-move-week-after
+
+# AND IT SURVIVES A RELAUNCH — pass criterion 5.
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- runFlow:
+    file: ../common/show-week-shape.yaml
+- assertVisible:
+    id: "day-row-sun-state-scheduled"
+- assertVisible:
+    id: "day-row-mon-state-rest"
+
+# LAW-flows-photograph-what-they-touch: a flow proves PRESENCE, and every layout
+# defect is a question about WHERE, which no id can carry.
+- takeScreenshot: artifacts/ui-walk/session-move-end

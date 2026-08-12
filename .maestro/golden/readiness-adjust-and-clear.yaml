@@ -1,0 +1,95 @@
+appId: com.localfootyathlete.app
+name: Golden - the week adjusts around an illness, and clearing it puts the week back
+tags:
+  - e2e
+  - golden
+  - readiness
+  - plan-change
+---
+# THE CANONICAL "CLEAR / REVERSE AN ADJUSTMENT" FLOW — built 2026-08-12 for seat
+# item 0e(i), after a census found no flow ever applied one.
+#
+# WHAT THE CENSUS FOUND. `golden/day-readiness-profile-type.yaml` opens both
+# readiness doors, asserts the OPTIONS each one offers, and taps Cancel — it
+# proves the menu, never the change. `action-trace-v2/restoration-reload.yaml`
+# restores a FIXTURE and reaches it by tapping the words "Restore fixture",
+# which is the copy coupling `stableTestId.ts` exists to prevent. The
+# `readiness-clear-action-*` and `adjustment-restore-*` selectors had no caller
+# in `.maestro/` at all.
+#
+# WHY SEVERE ILLNESS AND NOT "TIRED". The reversal has to be observable, and a
+# mild report is INERT by ruling (SUPPORTED_ATHLETE_ACTIONS 3.2: "week unchanged
+# unless the soften offer is accepted") — a flow built on it could pass with the
+# whole adjustment layer dead. Severe illness re-derives the visible week:
+# Monday goes from "Strength" to "Strength + Conditioning", the card is badged
+# OPTIONAL, and the button becomes "Start optional session".
+#
+# THE WITNESSES ARE THE PROGRAMMING EFFECT, NOT THE COPY. `readiness-active-*`
+# alone would prove the app recorded a fact; `readiness-programming-effect-*` is
+# the claim that the fact reached the plan. Asserting the sentence instead would
+# couple this flow to signed copy, which moves on its own schedule.
+#
+# THE IDS CARRY A TIMESTAMP. The adjustment's id is minted per commit
+# (`...deriving-source-fact-20260812t074650294z...`), so every selector here is
+# matched by shape. Pinning one would pin the flow to the run that wrote it.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# THE BASELINE IS PART OF THE CLAIM. A flow that only asserts the end state
+# cannot tell "the clear worked" from "nothing ever applied".
+- assertVisible:
+    id: "readiness-clear-state-2026-07-13"
+- assertNotVisible:
+    id: "readiness-active-.*"
+- assertNotVisible:
+    id: "adjustment-active-.*"
+
+- tapOn:
+    id: "readiness-set-action-readiness-2026-07-13"
+- tapOn:
+    id: "readiness-option-illness-severe"
+- assertVisible:
+    id: "home-week-readiness-confirmed"
+- tapOn:
+    id: "home-week-readiness-confirmed-done"
+
+# THE WEEK IS ADJUSTED — the fact, the adjustment, and the effect on programming.
+- extendedWaitUntil:
+    visible:
+      id: "readiness-active-.*"
+    timeout: 15000
+- assertVisible:
+    id: "readiness-programming-effect-.*"
+- assertVisible:
+    id: "adjustment-active-.*"
+- takeScreenshot: artifacts/ui-walk/readiness-week-adjusted
+
+# AND THE ATHLETE TAKES IT BACK.
+- tapOn:
+    id: "readiness-update-.*"
+- tapOn:
+    id: "readiness-clear-action-.*"
+- extendedWaitUntil:
+    visible:
+      id: "readiness-clear-state-2026-07-13"
+    timeout: 15000
+- assertNotVisible:
+    id: "readiness-active-.*"
+- assertNotVisible:
+    id: "adjustment-active-.*"
+
+# THE REVERSAL SURVIVES A RELAUNCH. An undo that only holds in memory is the
+# defect this repo already found once in the decision ledger.
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- assertVisible:
+    id: "readiness-clear-state-2026-07-13"
+- assertNotVisible:
+    id: "readiness-active-.*"
+
+# LAW-flows-photograph-what-they-touch: the picture is the instrument.
+- takeScreenshot: artifacts/ui-walk/readiness-cleared-end

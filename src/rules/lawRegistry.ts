@@ -716,6 +716,28 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-canonical-athlete-flows',
+    law: 'There is a small permanent set of athlete flows — move a session, delete a session, preview and approve a repaired week, relaunch and prove persistence, clear or reverse an adjustment. A bug earns an assertion inside one of them, never a new throwaway flow.',
+    ruledAt: 'docs/SEAT_INBOX.md item 0e(i), Sam 2026-08-12: "You do not need a brand-new temporary Maestro flow for every bug. Keep a handful of canonical athlete flows."',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12, AFTER A CENSUS THE ORDER DEMANDED FIRST. What the census found: `.maestro/` had a permanent flow for moving a GAME and NONE for moving a SESSION (action 1.5, the one an athlete does most); the deletion flow stopped at one part-scope; and the readiness flow opened both doors and pressed Cancel, so no flow had ever applied or reversed an adjustment. The explorer campaign covers session.move and session.delete but enters through `ExplorerActionIngressControl`, a 2x2px dev-only pressable whose `controlTestId` is a CLAIM about which real control corresponds — a different question from "the athlete\'s button works". Two flows built and green on the simulator (`session-move.yaml`, `readiness-adjust-and-clear.yaml`), one extended (`lower-body-deletion.yaml`, whole-day scope + relaunch). THE FIFTH HAS NO FILE ON PURPOSE: "preview and approve a repaired week" has no door — SUPPORTED_ATHLETE_ACTIONS 5.4 is DECIDED, NOT BUILT, and PlanChangeSheet applies then reports. The cell holds that every named flow is still on disk and that at most ONE canonical action is fileless, so the set cannot quietly drift back into a flow per bug. Mutation: hiding session-move.yaml reds it; the declared gap does not.',
+    },
+  },
+  {
+    id: 'LAW-memory-not-a-law-store',
+    law: 'Auto memory holds environment and navigation — commands, env vars, which module owns what, simulator quirks. It never holds product law; that lives in the law registry or it does not exist.',
+    ruledAt: 'docs/SEAT_INBOX.md item 0e(ii), Sam 2026-08-12, naming the trap: "i constantly give a fix and a law and believe you will remember and you never fucking do." Written into CLAUDE.md "WHAT COUNTS AS FINISHED".',
+    guard: {
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. PARTIAL BY CONSTRUCTION AND THE ROW SAYS SO: the memory store is machine-local and outside the repo, so no cell can read what is in it. What the cell holds is that the BAN and its destination are still written where every session reads them — the "NEVER product law" half and the registry pointer, both scoped to that paragraph. TWO CORRECTIONS DURING THE MUTATION RUN, both of the same family: the first version matched a HEADING (`/AUTO MEMORY/i`), so replacing the whole law with "Auto memory is handy." left it green; the second read the WHOLE SECTION for `lawRegistry.ts`, which the source-of-truth line four paragraphs up already names, so deleting the destination from the memory rule left it green too. Both are the vacuous-cell class this suite exists to catch, caught by mutating rather than by reading. Three mutations now kill it.',
+    },
+  },
+  {
     id: 'LAW-one-startup-command',
     law: 'There is exactly ONE startup recipe — `npm run lfa:dev`, which is `scripts/qa-start.sh` — and it reaches a RUNNING app, not a booted simulator.',
     ruledAt: 'docs/SEAT_INBOX.md item 0d(ii), Sam 2026-08-12: the startup recipe "is rediscovered every session ... Do not leave several startup scripts or temporary variants behind — one."',

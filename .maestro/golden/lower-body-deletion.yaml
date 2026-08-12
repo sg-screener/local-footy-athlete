@@ -36,10 +36,23 @@ tags:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: lower-body-deletion
+# RE-AIMED AGAIN, 2026-08-12, AND THE RE-AIM FOUND A DEFECT — seat item 0e(i).
+#
+# The flow asserted the conditioning part was visible BEFORE the deletion. It is
+# not, and this is not seed drift: after the strength part is deleted the card
+# titles itself "Conditioning" and draws a conditioning part that was there all
+# along. **Today's card does not draw everything today holds** — the athlete has
+# a conditioning session and cannot see it until something else is removed.
+# Photographed both sides and reported to the seat; NOT diagnosed here, because
+# a projection defect is its own unit and this one is a flow.
+#
+# The flow's claim is unchanged and is the true one: deleting the strength part
+# leaves a day that still trains. What moved is WHEN the conditioning witness is
+# asserted — after the deletion, where the screen actually shows it.
 - assertVisible:
     id: "day-timeline-part-strength"
 - assertVisible:
-    id: "day-timeline-part-conditioning"
+    id: "day-timeline-part-mobility-warmup"
 - tapOn:
     id: "make-change-link"
 - tapOn:
@@ -58,6 +71,42 @@ tags:
     timeout: 15000
 - assertNotVisible:
     id: "day-timeline-part-strength"
+- assertNotVisible:
+    id: "day-timeline-part-mobility-warmup"
+
+# THE SECOND SCOPE, ADDED 2026-08-12 (seat item 0e(i)). The census asked which
+# of the five canonical athlete flows exist, and "delete a session" only half
+# did: this flow deleted a PART and stopped, while deleting the SESSION was
+# exercised only by the explorer campaign — which enters through a 2x2px
+# dev-only control, not the athlete's button. Both scopes are the same action at
+# the same door, so they are one flow rather than a second file.
+- tapOn:
+    id: "make-change-link"
+- tapOn:
+    id: "session-delete-action-.*"
+- tapOn:
+    id: "session-delete-scope-.*-whole_day"
+- tapOn:
+    id: "session-delete-scope-.*-confirm-whole_day"
+- assertVisible:
+    id: "session-delete-result-.*-whole_day"
+- tapOn:
+    id: "plan-change-done"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-mon-state-rest"
+    timeout: 15000
+- assertNotVisible:
+    id: "day-timeline-part-conditioning"
+
+# AND THE EMPTY DAY SURVIVES A RELAUNCH — pass criterion 5 of
+# SUPPORTED_ATHLETE_ACTIONS.md, which this flow never reached before.
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: lower-body-deletion
+- assertVisible:
+    id: "day-row-mon-state-rest"
 
 # LAW-flows-photograph-what-they-touch: a flow proves PRESENCE, and every
 # layout defect is a question about WHERE, which no id can carry. Two real

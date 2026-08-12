@@ -1763,6 +1763,30 @@ run('CLAUDE.md says what counts as finished, and every command it names is real'
   assert(/Banned:.*\bdone\b/i.test(section),
     'the banned-words line is gone, so "done" is legal again');
 
+  // 0e(ii), Sam 2026-08-12. BOTH halves or neither: "auto memory is useful"
+  // without the ban is how a ruling ends up in a machine-local, model-authored,
+  // silently-truncated file instead of the registry — the trap he named.
+  //
+  // AND THE FIRST VERSION OF THIS ASSERTION DID NOT KILL ITS MUTANT. It matched
+  // `/AUTO MEMORY/i`, so replacing the whole law with "Auto memory is handy."
+  // left it green — a cell watching a HEADING rather than the rule under it.
+  // It now reads the ban and its destination, which is the half that bites.
+  // READ THE PARAGRAPH, NOT THE SECTION, and that is the second correction this
+  // cell needed. Asserting `lawRegistry.ts` anywhere in the section could never
+  // fail: the source-of-truth line four paragraphs up names the same file, so
+  // deleting the destination from the memory rule left the cell green.
+  const memoryRule = section.split(/\n\s*\n/).find((para) => /AUTO MEMORY/i.test(para)) ?? '';
+  assert(memoryRule.length > 0, 'the auto-memory boundary is gone from the section entirely');
+  // `\s+` between the words, not a space: this file hard-wraps at 80 columns and
+  // the ban lands as "product\nlaw". The first version demanded a literal space
+  // and reddened on the very paragraph it was written to protect.
+  assert(/NEVER:?\s*\*{0,2}\s*product\s+law/i.test(memoryRule),
+    'the "never product law" ban is gone from the auto-memory boundary — that '
+    + 'ban IS the law; the permission half is just its context');
+  assert(memoryRule.includes('lawRegistry.ts'),
+    'the auto-memory boundary no longer names the registry as the place product '
+    + 'law actually lives, so it bans a habit without offering the alternative');
+
   const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
   const missing = commandsNamedThatDoNotExist(
     claudeMd,
@@ -1774,7 +1798,80 @@ run('CLAUDE.md says what counts as finished, and every command it names is real'
     + 'A stale instruction reads exactly as authoritative as a true one.');
 });
 
+// ── LAW-canonical-athlete-flows ────────────────────────────────────────────
+//
+// Seat item 0e(i), Sam 2026-08-12: *"You do not need a brand-new temporary
+// Maestro flow for every bug. Keep a handful of canonical athlete flows."*
+//
+// The census that built this list found the folder was NOT that: it held a
+// permanent flow for moving a GAME and none for moving a SESSION, a deletion
+// flow that stopped at one scope, and a readiness flow that opened both doors
+// and pressed Cancel. The five below are the set; a new bug earns an ASSERTION
+// INSIDE one of them, not a sixth file.
+//
+// THE FIFTH HAS NO FILE AND THAT IS NOT AN OMISSION. "Preview and approve a
+// repaired week" has no door to tap: `SUPPORTED_ATHLETE_ACTIONS.md` 5.4 carries
+// it as **DECIDED 2026-07-22, NOT BUILT**, and `PlanChangeSheet` applies a
+// change and shows a result rather than proposing one. A flow written against
+// it would be a fixture for a screen that does not exist. It is carried here as
+// a NAMED gap so the set stays five and the missing one keeps saying so.
+
+const CANONICAL_ATHLETE_FLOWS: readonly {
+  readonly action: string;
+  readonly file: string | null;
+}[] = [
+  { action: 'move a session', file: '.maestro/golden/session-move.yaml' },
+  { action: 'delete a session', file: '.maestro/golden/lower-body-deletion.yaml' },
+  { action: 'preview and approve a repaired week', file: null },
+  { action: 'relaunch and prove persistence', file: '.maestro/golden/reload-standard-week.yaml' },
+  {
+    action: 'clear or reverse an adjustment',
+    file: '.maestro/golden/readiness-adjust-and-clear.yaml',
+  },
+];
+
+/** Pure: canonical actions whose named flow is not on disk. */
+function canonicalFlowsMissing(
+  entries: readonly { readonly action: string; readonly file: string | null }[],
+  exists: (relativePath: string) => boolean,
+): string[] {
+  return entries
+    .filter((entry) => entry.file !== null && !exists(entry.file))
+    .map((entry) => `${entry.action} (${entry.file})`);
+}
+
+run('the five canonical athlete flows are all still on disk', () => {
+  const missing = canonicalFlowsMissing(
+    CANONICAL_ATHLETE_FLOWS,
+    (relative) => fs.existsSync(path.join(repoRoot, relative)),
+  );
+  assert(missing.length === 0,
+    `canonical athlete flow(s) gone: ${missing.join(', ')}. A bug earns an `
+    + 'assertion inside one of these, never a sixth throwaway file — and none of '
+    + 'them may be deleted without saying where its coverage went.');
+
+  // THE RATCHET, and it points the other way from the usual one: the gap list
+  // may only SHRINK. When 5.4 is built, its flow joins and this cell says so.
+  const gaps = CANONICAL_ATHLETE_FLOWS.filter((entry) => entry.file === null);
+  assert(gaps.length <= 1,
+    `${gaps.length} canonical actions have no flow. One is carried by ruling `
+    + '(SUPPORTED_ATHLETE_ACTIONS 5.4, DECIDED NOT BUILT); a second would mean '
+    + 'the set is drifting back into "a flow per bug".');
+  console.log(`      (${CANONICAL_ATHLETE_FLOWS.length} canonical actions; ${gaps.length} with no door to tap yet)`);
+});
+
 run('the checkers red on fabricated violations (liveness)', () => {
+  // ── the canonical five, probed BOTH directions ──
+  assert(canonicalFlowsMissing(
+    [{ action: 'move', file: '.maestro/golden/gone.yaml' }], () => false).length === 1,
+    'a canonical flow that is not on disk passed');
+  assert(canonicalFlowsMissing(
+    [{ action: 'move', file: '.maestro/golden/here.yaml' }], () => true).length === 0,
+    'a canonical flow that exists was reported missing');
+  assert(canonicalFlowsMissing(
+    [{ action: 'preview a repaired week', file: null }], () => false).length === 0,
+    'the DECLARED gap was counted as a missing file — it has no door to tap yet');
+
   // ── the one startup script, probed BOTH directions ──
   assert(rivalStartupScripts([{ file: 'scripts/qa-start-2.sh', text: 'npx expo start --port 8082' }]).length === 1,
     'a second startup script passed — that is the whole law');

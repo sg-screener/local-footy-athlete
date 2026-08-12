@@ -76,6 +76,15 @@ that later code will trust. `canOverride` was written nine times and read zero.
 it breaks. **BUILT** — the code exists, nothing checks it. **WRITTEN** — a doc
 says so, no code. **Banned: done, shipped, wired, handled, sorted, passing.**
 
+**AUTO MEMORY IS FOR THE ENVIRONMENT, NEVER FOR THE LAW.** **YES:** how to get
+around and get things running — the Metro command, an env var a suite needs,
+which module owns program persistence, a simulator quirk. **NEVER: product
+law** — what makes a valid football week, what deletion means, whether the
+athlete's intent is hard or soft, which session may move, what `canOverride` is
+for. **Those live in `src/rules/lawRegistry.ts` or they do not exist.** A ruling
+remembered somewhere machine-local, model-authored and silently truncated is a
+ruling that will vanish, and that is the trap Sam has actually been in.
+
 **THE COMMANDS.**
 
 | what | command |
