@@ -46,6 +46,12 @@ the unit moved toward or away from the north star.
 
 Read and follow `AGENTS.md` before changing this repo.
 
+**`/goal` is not a command — it is how a big task is USED.** Sam states the
+outcome once; the terminal restates it as acceptance criteria and non-goals,
+then works it in vertical slices, checking each slice against that same
+statement rather than against the last thing said. **When a slice drifts from
+the stated goal, the goal wins and the drift is reported, not absorbed.**
+
 The short version: for coach chat bugs, do not add phrase-by-phrase special
 cases as the main fix. Improve the typed intent, context, target-resolution,
 mutation history, executor, or verification layer that explains the whole class

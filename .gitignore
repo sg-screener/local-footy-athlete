@@ -13,6 +13,14 @@ node_modules
 # 2026-08-12 with `git check-ignore -v` before this line was written.
 .claude/*
 !.claude/rules/
+# EXTENDED 2026-08-12 BY THE SAME REASONING SAM APPROVED FOR `rules/`, and said
+# out loud because he named only `rules/`: `/lfa-task` and `lfa-verifier` encode
+# THIS PROJECT'S process and review laws, not one machine's preferences. A
+# shared checkout where one agent has the task discipline and the other does not
+# is the defect these were built to remove. Revert these two lines if that is
+# not wanted; `settings.json`, caches and hook wiring stay local either way.
+!.claude/skills/
+!.claude/agents/
 dist/
 .DS_Store
 artifacts/
