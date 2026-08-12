@@ -28,7 +28,33 @@ import {
 } from '../../rules/equipmentLocationPresets';
 import { todayISOLocal } from '../../utils/appDate';
 
-type EquipmentScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Equipment'>;
+/**
+ * WHERE "CONTINUE" LANDS IS AN INPUT — SEAT_INBOX item 24, Sam 2026-08-13.
+ *
+ * WHY IT MOVED. Sam ruled the away flow must reuse THIS screen rather than grow
+ * a second one: *"this is basically what happens in the onboarding process - now
+ * it can just be inside the app"*. A door that can only be entered from
+ * onboarding cannot be reused, so the exit had to stop being hard-coded.
+ *
+ * IT DEFAULTS TO TODAY'S BEHAVIOUR, AND THAT DIRECTION IS THE WHOLE RULING.
+ * Onboarding passes NOTHING and is behaviourally identical; only a new caller
+ * supplies its own return. **A required param would have made onboarding's
+ * behaviour a caller's responsibility** — which is how a signed screen quietly
+ * changes — so `onDone` is optional and the fallback lives here, beside the
+ * screen that owns it.
+ *
+ * NOTHING ABOUT THE QUESTION CHANGES. Sam's audit ruling 3 stands untouched:
+ * "where do you train" first, the choice PRE-TICKS the checklist, the athlete
+ * unticks what their place lacks, and THE STORED ANSWER IS THE FINAL TICKED
+ * LIST. This prop moves where the athlete goes afterwards, and nothing else.
+ */
+type EquipmentScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Equipment'> & {
+  /**
+   * Called instead of advancing to the next ONBOARDING step. Omitted by
+   * onboarding, which keeps the original navigate.
+   */
+  readonly onDone?: () => void;
+};
 
 /**
  * THE EQUIPMENT DOOR — Sam's audit ruling 3 (2026-07-31), verbatim intent:
@@ -45,7 +71,7 @@ type EquipmentScreenProps = NativeStackScreenProps<OnboardingStackParamList, 'Eq
  * surface. Continuing with nothing ticked is a real answer — bodyweight-only
  * programming, never a refusal.
  */
-export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) => {
+export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation, onDone }) => {
   // Seeded once on mount from the store's own named door.
   const existing = savedEquipmentAnswer();
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Equipment');
@@ -119,10 +145,12 @@ export const EquipmentScreen: React.FC<EquipmentScreenProps> = ({ navigation }) 
         // downstream reads it (Sam's ruling 3).
         ...(location ? { trainingLocation: equipmentLocationPreset(location).storesLocation } : {}),
       },
-      () => navigation.navigate('GymExperience'),
+      // THE DEFAULT IS THE OLD LINE, VERBATIM. Onboarding passes no `onDone`,
+      // so this resolves to exactly what shipped before item 24.
+      onDone ?? (() => navigation.navigate('GymExperience')),
     );
   }, [askableTags, askableModalities, tickedTags, tickedModalities, existing, location,
-    commitAndAdvance, navigation]);
+    commitAndAdvance, navigation, onDone]);
 
   if (!showChecklist) {
     return (

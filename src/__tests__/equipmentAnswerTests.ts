@@ -341,6 +341,29 @@ console.log('\n[9] THE PROFILE SURFACE — one canonical write, through the owne
   ok('the profile surface never writes the legacy baseline shape',
     !/baseline_equipment/.test(profileScreen));
 
+  // ── ITEM 24: THE EXIT IS AN INPUT, AND IT DEFAULTS THE RIGHT WAY ──
+  //
+  // Sam ruled the away flow must REUSE this screen, so "continue" stopped being
+  // hard-coded to the next onboarding step. The direction of the default is the
+  // ruling itself: onboarding passes NOTHING and behaves exactly as before.
+  // A REQUIRED param would make onboarding's behaviour a caller's
+  // responsibility, which is how a signed screen quietly changes — so these
+  // cells red on that inversion, not merely on the prop going missing.
+  const equipmentScreen = read('screens/onboarding/EquipmentScreen.tsx');
+  ok('the equipment screen takes an OPTIONAL exit',
+    /onDone\?: \(\) => void/.test(equipmentScreen),
+    'the exit is no longer optional. Onboarding passes nothing, so a required '
+      + 'param makes its behaviour depend on a caller remembering to supply the '
+      + 'old one — the exact inversion item 24 forbids.');
+  ok('the default exit is the onboarding navigate it replaced',
+    /onDone \?\? \(\(\) => navigation\.navigate\('GymExperience'\)\)/.test(equipmentScreen),
+    'the fallback is no longer the original `GymExperience` navigate, so an '
+      + 'onboarding athlete who ticks their equipment lands somewhere new');
+  ok('onboarding still passes no exit of its own',
+    !/onDone=/.test(read('navigation/OnboardingNavigator.tsx')),
+    'the onboarding navigator now supplies an exit. It must pass NOTHING — that '
+      + 'is what keeps the signed onboarding flow byte-identical.');
+
   const editor = read('screens/profile/EquipmentEditorSheet.tsx');
   ok('NEVER lives on the profile editor (the tri-state cycle), not onboarding',
     /'never'/.test(editor) &&
