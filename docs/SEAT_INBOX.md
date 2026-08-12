@@ -1208,7 +1208,27 @@ seat was wrong.
   it.** This also retires the plan to reuse the ONBOARDING equipment screen from
   the away flow: item 24's `onDone` stands and is harmless, but away no longer
   needs that door.
-- **DECISION OWED — MANUAL, OR MANUAL PLUS THE RETURN DATE? (item 22(c), asked
+- **MEASURED 2026-08-13, AND IT REFUTES THIS SEAT'S OWN PREMISE. Sam asked
+  *"do you actually set a return date when saying you're away?"* — and the
+  answer is NO.** `AwayDaysSheet` (`HomeScreenV2.tsx:3030-3042`) asks **"Which
+  days are you away?"** and offers `weekDays.filter(day => day.date >= todayISO
+  && day.workout && workoutType !== 'Game')` — **individually toggled TRAINING
+  days, from today, inside the VISIBLE WEEK ONLY.** There is no return-date
+  field, no date range, and **no way to say "away for ten days"**: a trip
+  crossing into next week cannot be expressed at all.
+  **SO "AUTOMATIC ON THE RETURN DATE" IS NOT AVAILABLE TODAY.** The seat wrote
+  "the return date he already gives when setting Away" — that was ASSUMED, not
+  measured, and Sam caught it by asking. The nearest real thing is the last
+  toggled day, which is not a return date and cannot leave this week.
+  **THIS CHANGES HIS CONDITIONAL.** He said *"if you do, then yes make it
+  automatic"*. The antecedent is false, so the automatic ruling does not fire.
+  **The live choice is now: (A) ship MANUAL** — his own proposal, works today,
+  the athlete clears it with "I'm back now"; **or (B) add a real return date to
+  the away flow FIRST** — new UI on a sheet Sam owns, and the thing that would
+  make automatic possible and let a trip span more than one week.
+  **`missing_for_span` (`bfad51b7`) is unused under (A)** and will be reported
+  as such rather than quietly kept.
+  ~~SUPERSEDED BY THE MEASUREMENT ABOVE~~ **MANUAL, OR MANUAL PLUS THE RETURN DATE? (item 22(c), asked
   2026-08-13.)** Sam's new proposal is MANUAL — it stays until he says he is
   back. **His EARLIER word in the same item was automatic:** *"the plan should
   change until their return date"*. Both work and they are not the same:
