@@ -528,3 +528,39 @@ size budget Sam pays for in dollars.
 
     **CLOSED 2026-08-13.** `LAW-shortfall-names-its-cause` is `guarded` by
     `test:shortfall-copy`, 13/0.
+
+24. **SAM SAYS YES — THE EQUIPMENT SCREEN'S EXIT BECOMES AN INPUT.**
+
+    **OWNED BY THE DESKTOP AGENT.** Asked by it 2026-08-13 before touching a
+    signed screen, which was the right call.
+
+    **Sam's answer: YES, change it — onboarding must behave exactly as it does
+    today.** This was already implied by his own ruling (*"this is basically what
+    happens in the onboarding process - now it can just be inside the app"*,
+    item 22(c)): a door that can only be entered from onboarding cannot be
+    reused from the away flow. Reuse REQUIRES the exit to move.
+
+    **MEASURED BEFORE ANSWERING — the change is one line, not a refactor.**
+    `EquipmentScreen.tsx:122` holds a single hard navigate,
+    `() => navigation.navigate('GymExperience')`. The screen is mounted in
+    exactly ONE place, `OnboardingNavigator.tsx:86`. There is no second caller
+    to regress.
+
+    **THE SHAPE, so onboarding cannot drift:** the exit is a prop/param that
+    **DEFAULTS to today's `GymExperience` navigate**. Onboarding passes nothing
+    and is byte-identical in behaviour; the away flow passes its own return.
+    **Do not invert this** — a required param would make onboarding's behaviour
+    a caller's responsibility, which is how a signed screen quietly changes.
+
+    **PROVE ONBOARDING DID NOT MOVE, do not assert it.** `test:equipment-answer`
+    already reads this file (`equipmentAnswerTests.ts:347`); run the onboarding
+    walk either side and report both numbers. **His audit ruling 3 is untouched
+    by this** — "where do you train" first, pre-ticked checklist, the athlete
+    edits it, the stored answer is the final ticked list. **Nothing about the
+    QUESTION changes. Only where "continue" lands.**
+
+    **CLOSED 2026-08-13 — BUILT, and by its owner.** `EquipmentScreen.tsx:150`
+    now reads `onDone ?? (() => navigation.navigate('GymExperience'))`: the exit
+    is an injectable prop with the onboarding navigate as its DEFAULT, so
+    onboarding behaves exactly as before and the away flow can reuse the door.
+    That is the shape this item specified, one line, no second caller to regress.

@@ -169,6 +169,17 @@ his instruction is standing authority, not history.**
     **STILL OPEN, AND UNTOUCHED BY PART 5: the same impossible
     off-season-with-team-training shape survives in `finisherEligibilityTests.ts`,
     where re-phasing changes what is asserted.**
+
+    **⚠ AND A NEW RED ARRIVED WITH PART 2's RE-PHASING — FOR THE TERMINAL, NOT
+    THIS SEAT.** `test:phase-structure` cell 4, *"early off-season stays
+    all-optional (Bible :110)"*, is FAILING. **ATTRIBUTED IN A DETACHED WORKTREE
+    AT HEAD, so it is not this seat's working tree talking**: it is red in
+    COMMITTED code, and it was GREEN in this same tree earlier today, before
+    `8a2f5ef2`, `edcfc663` and `df1ee8e1` landed. Nothing in part 5 can reach it
+    — the break's span filter is inert with no span, and off-season already
+    derives zero team days through `clubTrainingDaysForPhase`. **Named here
+    because a suite that goes red between two of your own commits is the cheapest
+    bug anyone will ever fix, and only for about an hour.**
     ORIGINAL BELOW.
     **SAM RULED THE COD WINDOW AND ASKED FOR A CHRISTMAS-BREAK CONTROL.
     2026-08-13. THIS CLOSES 28-C1 AND CORRECTS THE BIBLE.**
@@ -246,7 +257,7 @@ his instruction is standing authority, not history.**
     not a nicety; it is the missing input.
 
     ~~**5 — BUILD THE TWO QUESTIONS (desktop agent).**~~ **DONE 2026-08-13 —
-    `WORKING`, `test:christmas-break`, 37 cells, armed in `test:bible`. Boundary:
+    `WORKING`, `test:christmas-break`, 43 cells, armed in `test:bible`. Boundary:
     `docs/CHRISTMAS_BREAK_BOUNDARY_2026-08-13.md`; law:
     `LAW-christmas-break-is-two-questions`.** Both questions ask, both answers
     land on ONE `no_team_training` fact (open-ended in December, closed in
@@ -292,7 +303,25 @@ his instruction is standing authority, not history.**
     **DO NOT ask Sam "protect it or leave it cut" — that question is now void.**
 
 
-30. **THE AWAY RULING IS CARRIED OUT WHEN A WEEK IS BUILT — and NOT YET on a
+30. **BLOCKED-BY: other-agent — THE TERMINAL IS INSIDE THIS ITEM RIGHT NOW.**
+
+    **NOTHING IS OWED TO SAM.** He has already ruled the shape (bye-week build);
+    what is left is engineering.
+
+    **MEASURED, NOT ASSUMED (2026-08-13, desktop agent).** The terminal's three
+    newest commits include `8a2f5ef2 docs(away): THE READ FILTER NEVER RUNS ON
+    THE PROGRAM TAB — measured, and I am not closing this out`, and it is holding
+    `src/rules/derivedWeekContract.ts`, `src/data/defaultProgram.ts` and
+    `src/utils/coachingEngine.ts` uncommitted — the three files the session-reuse
+    leak lives behind. Two agents in those files is how one commit swallows the
+    other's half-finished work.
+
+    **WHAT THIS SEAT ADDED WITHOUT ENTERING THEM:** the leak now has a second
+    fact under it, and it has been asked rather than assumed — see the new
+    paragraph at the end of this item.
+
+    ORIGINAL BELOW.
+    **THE AWAY RULING IS CARRIED OUT WHEN A WEEK IS BUILT — and NOT YET on a
     week already on screen.**
     **WORKING:** a week planned inside a trip loses the team night and keeps
     every row of the athlete's own training (`test:away-flow` [13]-[13e]).
@@ -308,6 +337,20 @@ his instruction is standing authority, not history.**
     **AND SAM HAS SINCE RULED THE WHOLE SHAPE (see `## AWAITING SAM`): away is a
     BYE-WEEK BUILD, and dropping fixtures inside the span at `targetWeekFixtures`
     delivers it.**
+
+    **THE LEAK NOW HAS A SECOND FACT UNDER IT — item 31 part 5's Christmas break
+    (desktop agent, 2026-08-13).** It takes the club off a week the same way away
+    does, so it is exposed to the same reuse. **ASKED, NOT ASSUMED:**
+    `test:christmas-break` `[10e]`-`[10g]` rebuild a break week FROM a normal
+    week that really does name team training (the non-vacuity half), and nothing
+    carries forward — no name, no `isTeamDay`.
+    **⚠ AND THAT IS THE SMALLER CLAIM, DELIBERATELY.** Those cells drive FULL
+    generation with `previousProgram`; the defect was seen on a PHONE through the
+    SCOPED REGEN path, and this item's own archive says why no node harness
+    reaches it — *"the scoped regen never fires there, because that harness has
+    no microcycles to regen into (`canScopedRegen`)"*. **So: the break does not
+    leak on the path a suite can reach, and its scoped-regen behaviour is
+    UNMEASURED, exactly as away's is.** One fix here serves both facts.
 
 1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
    always in force; they are not work items to clear.
@@ -1010,37 +1053,46 @@ his instruction is standing authority, not history.**
     the rebuild half.** The sheet, the question and the dated equipment fact are
     clear to build now.
 
-24. **SAM SAYS YES — THE EQUIPMENT SCREEN'S EXIT BECOMES AN INPUT.**
 
-    **OWNED BY THE DESKTOP AGENT.** Asked by it 2026-08-13 before touching a
-    signed screen, which was the right call.
+25. **BLOCKED-BY: sam** — for ONE number only: the FLOOR. Everything else is
+    measured and buildable, and the measurement found a defect nobody had named.
 
-    **Sam's answer: YES, change it — onboarding must behave exactly as it does
-    today.** This was already implied by his own ruling (*"this is basically what
-    happens in the onboarding process - now it can just be inside the app"*,
-    item 22(c)): a door that can only be entered from onboarding cannot be
-    reused from the away flow. Reuse REQUIRES the exit to move.
+    **⚠ HIS AUTHORED CEILING IS BEING BREACHED TODAY. MEASURED 2026-08-13,
+    52 gym sessions across 6 athlete worlds, counting STRENGTH rows only
+    (item 26's rule — paired mobility counts toward nothing):**
 
-    **MEASURED BEFORE ANSWERING — the change is one line, not a refactor.**
-    `EquipmentScreen.tsx:122` holds a single hard navigate,
-    `() => navigation.navigate('GymExperience')`. The screen is mounted in
-    exactly ONE place, `OnboardingNavigator.tsx:86`. There is no second caller
-    to regress.
+    | counted rows | sessions |
+    | --- | --- |
+    | 3 | 15 |
+    | 4 | 1 |
+    | 5 | 20 |
+    | 6 | 10 |
+    | **7** | **6** |
 
-    **THE SHAPE, so onboarding cannot drift:** the exit is a prop/param that
-    **DEFAULTS to today's `GymExperience` navigate**. Onboarding passes nothing
-    and is byte-identical in behaviour; the away flow passes its own return.
-    **Do not invert this** — a required param would make onboarding's behaviour
-    a caller's responsibility, which is how a signed screen quietly changes.
+    **SIX SESSIONS SHIP SEVEN ROWS. Sam authored SIX as the cap
+    (`trainingAgePolicy.ts:43`) and the app is over it** — the ceiling is as
+    unenforced as this item says, and it fails in the direction nobody checked.
+    **FIFTEEN SHIP THREE**, below the code's own `SESSION_SIZE_FLOOR = 4`, which
+    can never lift them because `exerciseScorer.ts:317` clamps the top-up target
+    to `Math.min(template count, 4)` — a 3-row template stays 3 forever.
+    **AND BEGINNER AND 5+ YEARS PRODUCE IDENTICAL COUNTS** — right answer, wrong
+    reason: it is the template accident being uniform, not his one-cap ruling
+    being enforced.
 
-    **PROVE ONBOARDING DID NOT MOVE, do not assert it.** `test:equipment-answer`
-    already reads this file (`equipmentAnswerTests.ts:347`); run the onboarding
-    walk either side and report both numbers. **His audit ruling 3 is untouched
-    by this** — "where do you train" first, pre-ticked checklist, the athlete
-    edits it, the stored answer is the final ticked list. **Nothing about the
-    QUESTION changes. Only where "continue" lands.**
+    **THE ONE QUESTION, AND IT IS NOT A BARE NUMBER — his own weeks answer most
+    of it.** The ceiling is his (6). The floor has never been authored.
+    **RECOMMENDATION: FLOOR = 4.** It is already the number in the code, it is
+    the smallest possible change, and it lifts only the fifteen 3-row sessions.
+    His weeks already cluster at **5** (20 of 52), so 5 stays the typical session
+    and nothing he has seen moves. **Veto in a word if 5 or 3 is the floor
+    instead.**
 
-25. **SAM ALREADY RULED SESSION SIZE. THE APP HOLDS HIS RULING AND OBEYS
+    **BUILDABLE WITHOUT HIM, AND NOT STARTED — the ceiling half.** Enforcing 6 is
+    his own authored number and needs no ruling; it changes 6 of 52 sessions and
+    is a generation change with real blast radius, so it starts fresh rather than
+    at the end of a long turn.
+
+    **SAM ALREADY RULED SESSION SIZE. THE APP HOLDS HIS RULING AND OBEYS
     SOMETHING ELSE. THIS IS THE DISCONNECTION, NOT A MISSING RULE.**
 
     **OWNED BY THE TERMINAL.** It is the same defect item 21's second half is
