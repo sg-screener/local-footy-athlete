@@ -15,62 +15,6 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-30-A5. **BLOCKED-BY: sam** — one sentence of athlete copy, nothing else. **⚠ DO
-    NOT BUILD A5 — SAM OVERRULED IT 2026-08-12; THE APP ALREADY OBEYS.**
-
-    **THE ONE QUESTION, AND ITS CROSS-REFERENCE WAS DANGLING.** This item said
-    *"the only live part is COPY — see AWAITING SAM"* and **AWAITING SAM has no
-    such entry**; it was reported in `8c182ca8`'s body and never reached the
-    section a reader is pointed at. Written out here so it batches.
-    **WHAT THE ATHLETE READS TODAY** (`planChangeRefusalCopy.ts:44`):
-    *"This gives you N hard days this week. That's the upper edge."*
-    **THE DEFECT IS ACCURACY, NOT CLARITY** — no jargon, so the clarity bar is
-    met. But Sam's budget is **prefer 4, permit 5** (Bible `:118`), so **five is
-    the upper edge and six is past it**, and one string serves both numbers: at
-    six it tells the athlete they are at the limit when they are beyond it.
-    **RECOMMENDATION:** keep that sentence for five; give six its own line saying
-    it is past the permitted maximum. **The numbers are already his; only the
-    words are missing, and athlete copy is never invented here.**
-    **His words:** *"should give warnings but allow them to do whatever they
-    want"*. `blockOverride.ts` is `canOverride`'s one reader: the app warns,
-    records, and proceeds — **a refusal survives ONLY when the action is
-    physically impossible.** A 6th hard day is not. **Bible `:118`'s "is refused"
-    is the EARLIER text and is superseded on this exact question.**
-    **Both routes I proposed (hierarchy refusing on `canOverride: false`;
-    widening `hard_stop`) would have BUILT THE REFUSAL HE REMOVED.** Census
-    `canOverride: false` = 6 production sites. **The only live part is COPY —
-    see AWAITING SAM.**
-
-    ~~ORIGINAL~~ **THE 6TH HARD DAY: SAM SAYS REFUSE, THE MODULE RESERVES ITS ONLY REFUSAL
-    FOR INJURY. THE TENSION IS REAL AND IT IS AN ENGINEERING CALL.**
-
-    **OWNED BY THE TERMINAL. Measured, not built — the fix has blast radius.**
-
-    **HIS RULING, Bible `:118`:** *"An edit that would create a 6th hard day is
-    **refused**, with plain-language copy saying why."*
-    **THE APP:** `weekStructureValidator.ts:481` grades `hd >= 6` as `'strong'`
-    with `canOverride: true`, and `conflictResolutionHierarchy.ts:106-107` maps
-    **only `hard_stop` to `block`** — `strong` maps to `confirm`. So the week he
-    called impossible is **one tap away.**
-
-    **⚠ AND THE OBVIOUS FIX IS BARRED BY THE MODULE'S OWN LAW.**
-    `weekStructureValidator.ts:32-35`: *"`hard_stop` — RESERVED for true
-    safety/injury situations... **this validator does not emit `hard_stop` for
-    programming-risk pairings — those are strong.**"* **A 6th hard day is
-    programming risk, not a medical stop.** Promoting it to `hard_stop` would
-    break a documented convention to satisfy a ruling — and would make a loading
-    decision indistinguishable from a red-flag symptom.
-
-    **TWO HONEST ROUTES, both engineering, neither a one-liner:**
-    **(a)** make the hierarchy honour `canOverride: false` so a `strong` finding
-    can refuse without claiming to be a medical stop — **this is the one that
-    fits both texts**, and it is the recommendation; or
-    **(b)** widen `hard_stop`'s reservation to cover authored REFUSALS as well as
-    safety, and say so in its header.
-    **(a) has blast radius: every `strong` finding's `canOverride` value becomes
-    load-bearing. Census what currently sets `canOverride: false` BEFORE
-    changing the mapping** — that number decides whether (a) is small or huge.
-
 
 28-C1. **BLOCKED-BY: sam** — **THE SEVENTH WALL IS FOUND, AND IT IS NOT WHERE
     ANY OF THE SIX LOOKED. COD IS BUILT END TO END AND IS CUT EVERY TIME, BY A
@@ -171,178 +115,106 @@ his instruction is standing authority, not history.**
        verdict on why five of six reverts happened.
 
 
+31. **SAM RULED THE COD WINDOW AND ASKED FOR A CHRISTMAS-BREAK CONTROL.
+    2026-08-13. THIS CLOSES 28-C1 AND CORRECTS THE BIBLE.**
+
+    **OWNED BY THE TERMINAL** (the gate and the phase rule). **The two questions
+    are UI and belong to the desktop agent — split it at that line.**
+
+    **HIS WORDS, verbatim, because every clause is a specification:**
+    > *"off season means NO team training, the christmas break is essentially an
+    > off season inside pre season - there is never team trainings here so these
+    > are the only times COD may be useful"*
+    > *"it may be helpful to add a button for Christmas break and removing team
+    > training sessions from the app - maybe around the 10th of December. That
+    > way an athlete can select when their last team training is, and then
+    > around the 3rd of Jan they should be ask when does team training go back?
+    > that way the app isn't guessing"*
+    > *"also if an athlete is in pre season mode but has no team trainings they
+    > can do COD"*
+    > *"So the athlete can only do COD work in late off season (after first 4
+    > weeks of off season), in christmas break or during pre season if no team
+    > trainings (i.e some people play for cash a few hours away from home so
+    > they don't train with the team). No COD required in season for anyone."*
+
+    **1 — THE BIBLE IS WRONG AND SAM HAS CORRECTED IT.** `:1440` reads *"Late
+    off-season and the Christmas break are the only normal home for COD/Decel
+    work, because those are the weeks with no team training"*, which IMPLIES
+    early/mid off-season has team training. **It does not. OFF-SEASON MEANS NO
+    TEAM TRAINING, full stop.** Amend `:1440` and `:1289` with his words and a
+    changelog line. **The reason COD is late-off-season-only is NOT team
+    training — it is that the first four weeks are recovery.**
+
+    **2 — THE QA SCENARIO IS INVALID AND IT MISLED TWO AGENTS AND THE SEAT.**
+    S7 is *"Off-season six days with three team trainings"*. **That week cannot
+    exist.** It is also the week whose five-day field-load streak was used to
+    judge COD. **Fix or retire S7 before any COD measurement is trusted** — and
+    note the harness ALREADY flags it (*"Monday is a team day but
+    isTeamDay=false"*), so the contradiction was visible and unread.
+
+    **3 — THE COD GATE, FINAL. Permitted in exactly three cases:**
+    - **late off-season** — his *"after first 4 weeks"* maps EXACTLY to the
+      existing clock: `early_offseason` weeks 1-2, `mid_offseason` 3-4,
+      `late_offseason` 5+ (`seasonPhaseClock.ts:72-74`). **No new phase needed.**
+    - **the Christmas break**
+    - **pre-season WITH NO TEAM TRAINING** — a real athlete, not an edge case:
+      *"some people play for cash a few hours away from home so they don't train
+      with the team"*.
+    **NEVER in season, for anyone.**
+    **THE UNIFYING RULE, and it is simpler than the phase list:** the gate is
+    **"no team training this week" AND "not in season" AND "not the first four
+    weeks of off-season"**. Write it that way, not as three phase branches.
+
+    **4 — THE GATE IS ALREADY LIVE BUT READS THE WRONG THING. MEASURED.**
+    `defaultProgram.ts:1978` now passes
+    `noTeamTrainingWeek: (onboardingData?.teamTrainingDays?.length ?? 0) === 0`.
+    **That is the athlete's STANDING PROFILE answer, not a fact about THIS
+    WEEK.** An athlete who trains with a club in season has a non-empty list all
+    year, so the gate is false in December — **COD can never fire for the very
+    athlete the ruling is written for.** This is why the Christmas control is
+    not a nicety; it is the missing input.
+
+    **5 — BUILD THE TWO QUESTIONS (desktop agent). Sam: *"that way the app isn't
+    guessing"* — so do not infer either date.**
+    - **~10 December: "When is your last team training?"**
+    - **~3 January: "When does team training go back?"**
+    **The answers create a dated NO-TEAM-TRAINING SPAN.** Between those dates
+    team training is removed from the week and the COD gate opens; on the return
+    date it closes by itself. **This is the same shape as the away/equipment
+    span built today — a dated fact that lifts itself. Reuse it; do not invent a
+    second mechanism.**
+    **`Christmas-Block` ALREADY EXISTS as a `ProgramPhase`** (`domain.ts:243`)
+    and `clubSeasonScope.ts:19` already quotes the Bible line. **Check what
+    those two do today before adding anything.**
+    **The dates are DEFAULTS, not rules** — he said *"maybe around"* and
+    *"around"*. The athlete's answer is the truth; the date only decides when to
+    ask.
+
+    **6 — WHAT THIS DOES TO 28-C1's PENDING QUESTION.** It **dissolves it.** The
+    question was whether COD should be protected from the field-load streak cap.
+    **It should not, and it does not need to be:** the streak came from a week
+    with three team trainings, which off-season cannot have. **In a genuine
+    no-team-training week the field load is the app's own and the cap is not
+    under pressure. Re-measure on a legal week before changing the cap.**
+    **DO NOT ask Sam "protect it or leave it cut" — that question is now void.**
+
+
 30. **THE AWAY RULING IS CARRIED OUT WHEN A WEEK IS BUILT — and NOT YET on a
-    week already on screen. Both halves of that sentence are measured.**
-    **WORKING:** a week planned inside a trip loses the team night and the
-    fixture and keeps every row of his own training (21 rows either way;
-    `test:away-flow` [13]-[13e], non-vacuity first).
-    **NOT WORKING, and seen on glass rather than reasoned about:** putting travel
-    on the DERIVING lane so it re-authors the CURRENT week made the athlete's tap
-    fail — *"That didn't save — your week is unchanged."* The scoped regen
-    re-authors the week without the club and the §18 gate refuses the result, so
-    the whole transaction rolls back. **A door that refuses is worse than a door
-    that records**, so travel is back on the record-only lane and the sentence
-    the athlete reads was rewritten to promise exactly that and no more.
-    **THE REFUSAL WAS HUNTED 2026-08-13 AND TWO REPRODUCTION ROUTES ARE RULED
-    OUT — so the next pass does not spend the same hour.**
-    - **The durable-suite world does NOT refuse.** With travel on the deriving
-      lane, `reachHisWorldByActing()` + the away door returns
-      `ok: true, changedProgram: true` and the message *"the visible program was
-      safely recomposed"*. So the lane is not refusing in general.
-    - **The dev seed rebuilt in NODE does not refuse either** — it returns
-      `ok: true, changedProgram: FALSE`, *"No visible session needed changing"*:
-      the scoped regen never fires there, because that harness has no
-      microcycles to regen into (`canScopedRegen`).
-    - **Only the SIMULATOR refuses**, so the refusal needs the real app's boot
-      and hydrated state. **The OS log is the wrong instrument** — React
-      Native's console goes to METRO, not `simctl log`, and a filtered
-      `log stream` over the away tap returned nothing but network and installd
-      noise. **Capture it from Metro's output** (`/tmp/qa-metro.log` when
-      `lfa:dev` starts it; the current Metro belongs to an `expo run:ios` a
-      human started, so its console is in that terminal).
-    - **THE HUNT FOR THE REFUSAL IS ARCHIVED to `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`** — a second Metro on its own port is how you read this app's console; `simctl log` is not.
-    - **⚠ REFUTED, MEASURED ON DEVICE 2026-08-13.** A probe inside the filter,
-      run through the real flow against a logged Metro, printed:
-      `{"anchor":"2026-07-13","spans":[{"from":"2026-07-13","until":"2026-07-19"}],
-      "before":["Tuesday","Thursday"],"after":[]}`. **The anchor IS the week
-      being planned, the span is right, and the filter empties the club list
-      exactly as designed. The plan half is CORRECT — do not go back to it.**
-    - **TWO OWNERS, NEITHER A GUESS. (1) THE WEDNESDAY TEAM NIGHT IS NOT FROM THE
-      PLAN** — the plan carried none; a regenerated week is built with
-      `previousProgram`, so a CARRIED-OVER session keeps its old name,
-      *"+ Team Training"* included. **The leak is SESSION REUSE.**
-      **(2) THE SATURDAY GAME IS A CALENDAR MARK**, not the profile's game day
-      (`devE2ESeedRegistry.ts:773`), and marks reach the week through
-      `targetWeekFixtures` — **which Sam's bye-week ruling now tells us exactly
-      what to do with (see `## AWAITING SAM`).**
-
-    Two guesses were
-    already wrong today: narrowing L4b (broke two more cells, and was loosening a
-    law to fit a change) and filtering travel out of the read-time projection
-    (fixed L4b and broke the commit's ledger-equivalence, which is what produced
-    the refusal on glass). **The real defect L4b found IS fixed in kind: away was
-    being applied twice, authored into the week and projected onto it again.**
-    **EVERYTHING BUILT TODAY MAY BE INVISIBLE — CHANGES ONLY REACH A WEEK THAT
-    HAS NOT BEEN BUILT YET. THIS IS THE CENSUS DEFECT, IN TODAY'S WORK.**
-
-    **OWNED BY THE DESKTOP AGENT, and it found this itself by putting the away
-    flow on a PHONE rather than trusting a green suite.** That is the only reason
-    anyone knows.
-
-    **WHAT IT MEASURED:** the away flow is built and tested — team night comes
-    off a "Strength + Team Training" day and the gym half survives, a team-only
-    night or a game becomes rest, a normal session is untouched, and it all
-    returns on the return date. **On the phone, nothing changed.** Tuesday and
-    Thursday still read "Strength + Team Training"; Saturday still read "Game
-    Day". **Because the code that does it runs only when a week is FIRST BUILT,
-    and never re-runs over a week already sitting there.**
-
-    **SAM'S RULING IS THEREFORE UNMET.** Item 22(c): *"the plan should change
-    until their return date"*. **Changing what WOULD be built is not changing the
-    plan.**
-
-    **⚠ AND THE SAME DOUBT NOW COVERS THE REST OF TODAY. The desktop agent said
-    so about its own equipment work — "the note shows up, but I did not confirm
-    the exercises changed" — and that honesty is the model. EVERY change landed
-    today that is supposed to alter an EXISTING week is now UNVERIFIED, not
-    done:** the equipment substitution, the dated equipment span, the modifier
-    effects, and anything in the census fixes that reshapes a live week rather
-    than a freshly generated one. **Do not report any of them as delivered until
-    each has been seen on a week that already existed.**
-
-    **THIS IS THE CENSUS DEFECT WEARING TODAY'S CLOTHES.** Twenty findings said:
-    the app holds Sam's logic and does not read it. **This says: the app now
-    RUNS his logic and the athlete's week does not receive it.** Same shape, one
-    layer later. **The rebuild path is the reader.**
-
-    **BUILD — and it is a real unit, not a tail:** the pass that rebuilds a week
-    when something changes must apply the away/equipment/modifier facts to a week
-    that ALREADY EXISTS. The desktop agent has written down what it takes.
-    **Start it fresh, not at the end of a session — half-doing this is how the
-    last two nights went wrong.**
-
-    **⚠ IN FLIGHT BY ITS OWNER RIGHT NOW — DO NOT START A SECOND ONE.**
-    **Measured 2026-08-13 05:45 by the terminal, read-only, nothing touched.**
-
-    **ANSWERED IN PART, AND ONE OF MY OWN CLAIMS IS WITHDRAWN. Desktop,
-    2026-08-13.** The acceptance this item asks for now EXISTS as a cell:
-    `test:program-control-durable` "ITEM 30: an equipment fact reaches a week
-    that ALREADY EXISTS" — walk to a world, assert it holds barbell rows, apply
-    a `missing_this_week` fact, assert none survive. **It is GREEN**, so the
-    equipment substitution does reach an existing week.
-    **BUT IT IS NOT MY LANE CHANGE THAT DELIVERS IT.** Putting equipment back on
-    the inert lane leaves the cell GREEN — measured by mutation — so that
-    substitution was already arriving by another route, and `0f31219d`'s claim
-    that the lane fix is what made it land is WITHDRAWN. The lane fix is still
-    right (a ruled fact must author its weeks, and it mints the adjustment the
-    undo needs); it is not the reader this item was looking for.
-    **STILL UNMET: the AWAY half.** The week does move, but the club work does
-    not come off, because a day is a team day via the PLAN's `isTeamDay` and the
-    name enforcement re-derives it after the constraint seam runs.
-
-    **THE NEXT ACT IS MEASURED TO ITS LINE, so the next pass builds instead of
-    hunting.** `coachingEngine.ts:1792` reads
-    `teamDayNums = inputs.teamTrainingDays.map(dayNameToNumber)` and `:1798`
-    stamps `isTeamDay` from it. Its ONE owner is `onboardingToCoachingInputs`,
-    called from exactly TWO places (`generateProgram.ts:939` and `:1469`), both
-    of which already hold the week's date and the active constraints. **The
-    build: drop a weekday from `teamTrainingDays` when that weekday's DATE in
-    the week being planned falls inside a live `travel` span.**
-    **THE BLAST RADIUS IS SMALL AND THE REASON IS CHECKABLE: the filter is
-    INERT unless a travel fact is live, and no scenario or QA week has one** —
-    so the 120-session distribution and the 17 QA weeks cannot move. Run them
-    either side anyway and report both numbers.
-    **A FIXTURE INSIDE THE SPAN IS THE SECOND HALF and is NOT the same shape** —
-    a game is an anchor the week is built around, not a plan flag, so it needs
-    its own measurement before anyone touches it.
-    **BUILT, MEASURED, AND THEN BACKED OUT — 2026-08-13, and both reasons are
-    worth more than the code was.**
-    **IT WORKS.** With the filter in, a week planned inside a live trip has NO
-    team day at all: Tue "Team Training + Upper Pull" and Thu "Team Training +
-    Upper Push" become "Lower Body Strength" and "Upper Push", **and the athlete
-    still trains the same five days.** Three cells held it, non-vacuity first,
-    and removing the filter reds the middle one. `test:qa`'s team-day check
-    stayed green and its failure count did not move (84 either side).
-    **REASON 1 — MY OWN RED, AND IT IS A REAL FINDING, NOT A NUISANCE:**
-    `test:action-walker` L4b *"SCREEN = DOMAIN after away_this_week"* goes red —
-    *the resolver says "Hard Conditioning", the screen says "Hard Intervals"*.
-    Proven mine by neutralising only the filter (walker returns to 23/23). **A
-    week without team days is a week shape those two namers had never both been
-    asked about**, so this is a latent naming disagreement the away filter
-    UNCOVERED. **It must be fixed, not suppressed, and it is the first act of
-    the next pass.**
-    **REASON 2 — THE FILE IS NOT FREE.** `coachingEngine.ts` carries the other
-    seat's uncommitted `[COD_STAGE]`/`[COD_ELIG]` probes and their two type
-    errors (`FinisherDecision.category`/`.downgraded`, `:3797`), so
-    `test:compile` cannot pass and my change cannot be committed without
-    carrying their unfinished work. **Backed out rather than left sitting in a
-    shared generator file another agent is mid-edit in.**
-    **NOTHING IS LOST: the build is four edits and all four are named above.**
-    The desktop agent has UNCOMMITTED edits in `temporarySourceFactTransaction.ts`
-    (last write 05:10) plus four more files, and a `.git/index.lock` stale since
-    05:31. **The edit is exactly this item's fix:** `isRuledDerivingConstraint`
-    gains `type === 'equipment'` and `scheduleKind === 'travel'`, moving both off
-    the INERT lane and onto the DERIVING one.
-
-    **AND THE CHAIN CLOSES — VERIFIED, so its owner does not have to re-find it.**
-    The deriving lane calls `commitDerivingSourceFactScopedRegen`
-    (`temporarySourceFactTransaction.ts:438`), which calls `generateProgramLocally`
-    (`:531`) with the constraints threaded; that is `generateProgram.ts:909`, and
-    at `:683-697` it builds `hardPostGenerationConstraints` — **`type ===
-    'equipment'` plus any `schedule` kind except `busy_week` and `max_sessions`,
-    so travel and equipment BOTH pass the filter** — and runs
-    `validateWorkoutAgainstActiveConstraints` over every workout. **That is the
-    away rule, reaching a week that already exists.** The boundary report's
-    "what it would take" is the shape being built.
-
-    **STILL UNPROVEN AND STILL THE ONLY THING THAT COUNTS: the phone.** No device
-    pass has been run on this. **Two green suites have now agreed with a screen
-    that had not moved** — do not report it delivered on a suite.
-
-    **THE ACCEPTANCE TEST IS NOT A SUITE. It is a phone, a week that already
-    exists, and the change appearing on it.** Nothing else counts as done for
-    this item. **A green suite has now twice agreed with a screen that had not
-    moved.**
+    week already on screen.**
+    **WORKING:** a week planned inside a trip loses the team night and keeps
+    every row of the athlete's own training (`test:away-flow` [13]-[13e]).
+    **THE PLAN HALF IS MEASURED CORRECT** — a device probe showed the anchor and
+    the span right and the club list emptied. **Do not go back to it.**
+    **NOT WORKING, and seen on glass:** putting travel on the DERIVING lane so it
+    re-authors the CURRENT week made the tap fail once, then succeed and produce
+    a WRONG week — a team night appeared on a day the plan never marked, because
+    a regenerated week reuses sessions and a reused session KEEPS ITS OLD NAME.
+    **That is the one open defect on this half: SESSION REUSE, not allocation.**
+    **Everything else — the refusal hunt, the two refuted theories, the instrument
+    lessons — is archived to `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.**
+    **AND SAM HAS SINCE RULED THE WHOLE SHAPE (see `## AWAITING SAM`): away is a
+    BYE-WEEK BUILD, and dropping fixtures inside the span at `targetWeekFixtures`
+    delivers it.**
 
 1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
    always in force; they are not work items to clear.
@@ -594,19 +466,6 @@ his instruction is standing authority, not history.**
   read `:129`'s "2-3" as the exposure preference it says it is, not a cap. That
   makes the four `null` rows `max: 2`. **Units have been the trap tonight, so I
   have not guessed.**
-
-- **BLOCKED-BY: sam. ONE SENTENCE — THE 6-HARD-DAY WARNING UNDERSTATES ITSELF (A5's only live
-  part). Measured; the block half is correctly NOT built.**
-  **What the athlete reads today** (`planChangeRefusalCopy.ts:43`):
-  *"This gives you 6 hard days this week. That's the upper edge."*
-  **No banned vocabulary — the clarity bar is met.** The defect is accuracy:
-  **your budget is PREFER 4, PERMIT 5** (Bible `:118`), so **five IS the upper
-  edge and six is PAST it.** One string covers both cases, so at six it tells
-  the athlete they are at the limit when they are beyond it — the same shape as
-  the shortfall sentence you corrected earlier.
-  **RECOMMENDATION:** keep the sentence for five, give six its own line saying
-  it is past the permitted max. **The words are yours; the numbers in it are
-  already your own (4 preferred, 5 permitted).**
 
 - **BLOCKED-BY: sam. ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
   the census says.**
@@ -1424,9 +1283,13 @@ seat was wrong.
   **THE RULING, AS ACCEPTANCE CRITERIA:**
   1. **A fixture INSIDE the trip does not ANCHOR the week** — no G-1 taper, no
      G+1 recovery. He is not playing it.
-  2. **His calendar mark is NOT deleted.** He named the cost himself (*"your
-     season view quietly loses a game that really happened"*), so the record
-     stays; what stops is the training around it.
+  2. **⚠ CORRECTED BY SAM THE SAME DAY, AND MY RECOMMENDATION IS OVERRULED.**
+     I recommended leaving his calendar mark alone. He said: *"i think the game
+     should be removed if the athlete is away … the game on the 15th should be
+     removed or at least blanked out"*. **So the fixture inside the trip GOES
+     from the week — removed, or blanked so it plainly is not his to play.**
+     He had already weighed the cost he named (*"your season view quietly loses
+     a game that really happened"*) and ruled anyway. **Do not re-argue it.**
   3. **The away period is shaped like a BYE WEEK BUILD or an off-season block,
      with no team training.**
   4. **A fixture AFTER he returns still shapes the tail of the trip.** No heavy
@@ -1441,6 +1304,28 @@ seat was wrong.
   because the filter is on the READ and not the store (2); a bye-week build for
   the span (3); and a fixture OUTSIDE the span still anchoring, so the
   travel-home Friday is still G-1 (4).
+
+  **HIS WORKED EXAMPLE IS THE ACCEPTANCE TEST, verbatim** — *"they leave thursday
+  august 13th and get back friday 21st of august. Team training should be removed
+  thursday tuesday and thursday (if they train those nights), and the game on the
+  15th should be removed or at least blanked out, but the next saturday the 22nd
+  game is still alive and there training on wednesday thursday friday the
+  following week needs to not kill them for that return"*.
+
+  **UNFOLDED, and every line is checkable:**
+  - Away span **Thu 13 Aug → Thu 20 Aug** (back Friday the 21st).
+  - Team nights **Thu 13, Tue 18, Thu 20** all go.
+  - **Sat 15 game: GONE.** That week (10-16) has no fixture left, so it derives
+    `anchorState: 'bye'` / `in_season_bye_build` — the shape he named.
+  - **Sat 22 game: ALIVE.** Its week (17-23) is HALF AWAY: Mon-Thu inside the
+    trip, Fri 21 the travel home, game Saturday.
+  - **So the tail of the trip is still G-2 and G-1** — Thu 20 and Fri 21 — and
+    must not *"kill them for that return"*. **This falls out of the same filter
+    rather than needing its own rule: the 22nd is outside the span, so it
+    anchors, and its taper reaches back into days the athlete is still away.**
+
+  **THE MIXED WEEK IS THE REAL TEST.** A cell that only walks a wholly-away week
+  cannot see criterion 4 at all.
 
   **NOT BUILT. The wiring is the work:** `targetWeekFixtures` has several callers
   and none passes an away span today — the same thread the team-day filter took

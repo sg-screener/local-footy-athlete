@@ -212,3 +212,85 @@ size budget Sam pays for in dollars.
     `section18CraftTier.ts` and `projectVisibleWeek.ts` are both clean in the
     working tree, unedited since 2026-08-12. **Nothing was owed; the note was
     stale.**
+
+30-A5. **BLOCKED-BY: sam** — one sentence of athlete copy, nothing else. **⚠ DO
+    NOT BUILD A5 — SAM OVERRULED IT 2026-08-12; THE APP ALREADY OBEYS.**
+
+    **THE ONE QUESTION, AND ITS CROSS-REFERENCE WAS DANGLING.** This item said
+    *"the only live part is COPY — see AWAITING SAM"* and **AWAITING SAM has no
+    such entry**; it was reported in `8c182ca8`'s body and never reached the
+    section a reader is pointed at. Written out here so it batches.
+    **WHAT THE ATHLETE READS TODAY** (`planChangeRefusalCopy.ts:44`):
+    *"This gives you N hard days this week. That's the upper edge."*
+    **THE DEFECT IS ACCURACY, NOT CLARITY** — no jargon, so the clarity bar is
+    met. But Sam's budget is **prefer 4, permit 5** (Bible `:118`), so **five is
+    the upper edge and six is past it**, and one string serves both numbers: at
+    six it tells the athlete they are at the limit when they are beyond it.
+    **RECOMMENDATION:** keep that sentence for five; give six its own line saying
+    it is past the permitted maximum. **The numbers are already his; only the
+    words are missing, and athlete copy is never invented here.**
+    **His words:** *"should give warnings but allow them to do whatever they
+    want"*. `blockOverride.ts` is `canOverride`'s one reader: the app warns,
+    records, and proceeds — **a refusal survives ONLY when the action is
+    physically impossible.** A 6th hard day is not. **Bible `:118`'s "is refused"
+    is the EARLIER text and is superseded on this exact question.**
+    **Both routes I proposed (hierarchy refusing on `canOverride: false`;
+    widening `hard_stop`) would have BUILT THE REFUSAL HE REMOVED.** Census
+    `canOverride: false` = 6 production sites. **The only live part is COPY —
+    see AWAITING SAM.**
+
+    ~~ORIGINAL~~ **THE 6TH HARD DAY: SAM SAYS REFUSE, THE MODULE RESERVES ITS ONLY REFUSAL
+    FOR INJURY. THE TENSION IS REAL AND IT IS AN ENGINEERING CALL.**
+
+    **OWNED BY THE TERMINAL. Measured, not built — the fix has blast radius.**
+
+    **HIS RULING, Bible `:118`:** *"An edit that would create a 6th hard day is
+    **refused**, with plain-language copy saying why."*
+    **THE APP:** `weekStructureValidator.ts:481` grades `hd >= 6` as `'strong'`
+    with `canOverride: true`, and `conflictResolutionHierarchy.ts:106-107` maps
+    **only `hard_stop` to `block`** — `strong` maps to `confirm`. So the week he
+    called impossible is **one tap away.**
+
+    **⚠ AND THE OBVIOUS FIX IS BARRED BY THE MODULE'S OWN LAW.**
+    `weekStructureValidator.ts:32-35`: *"`hard_stop` — RESERVED for true
+    safety/injury situations... **this validator does not emit `hard_stop` for
+    programming-risk pairings — those are strong.**"* **A 6th hard day is
+    programming risk, not a medical stop.** Promoting it to `hard_stop` would
+    break a documented convention to satisfy a ruling — and would make a loading
+    decision indistinguishable from a red-flag symptom.
+
+    **TWO HONEST ROUTES, both engineering, neither a one-liner:**
+    **(a)** make the hierarchy honour `canOverride: false` so a `strong` finding
+    can refuse without claiming to be a medical stop — **this is the one that
+    fits both texts**, and it is the recommendation; or
+    **(b)** widen `hard_stop`'s reservation to cover authored REFUSALS as well as
+    safety, and say so in its header.
+    **(a) has blast radius: every `strong` finding's `canOverride` value becomes
+    load-bearing. Census what currently sets `canOverride: false` BEFORE
+    changing the mapping** — that number decides whether (a) is small or huge.
+
+    **CLOSED 2026-08-13 — SAM RULED THE SENTENCE AND IT IS BUILT.**
+    **HIS WORDS, VERBATIM AND SIGNED:** *"That's 6 hard days. More than I'd
+    program for anyone — you can go ahead, but the week's carrying more than it
+    should."*
+    **THE SPLIT IS AT SIX, and the numbers are his own:** the finding fires from
+    5 upward (target 4, `weeklyExposureCounts.ts:84`), his budget PERMITS 5, so
+    five keeps *"That's the upper edge."* and six gets the sentence above.
+    **The domain already graded them apart** (`weekStructureValidator.ts:481`,
+    `hd >= 6` is `strong`); only the athlete-facing copy collapsed them.
+    **IT WARNS AND LETS THEM THROUGH**, which is his A5 ruling in his own words —
+    *"you can go ahead"*.
+    **ONE WORD IS NOT HIS AND IS DECLARED:** the count is interpolated, so at
+    seven it reads *"That's 7 hard days"*. Freezing his literal 6 would print
+    "6" on a seven-day week — an understatement replaced by a falsehood. **Every
+    other word is exactly as he wrote it.**
+    **SIX CELLS in `test:plan-change-producer` [9b], four mutants killed:**
+    collapsing the split, freezing the 6, using his line for every count, and
+    rewording him each red the right cell. The split itself has its own cell —
+    *"five and six do not share a sentence"* — because a copy owner returning his
+    line for EVERY count would otherwise pass.
+    **NOT DONE, AND NAMED RATHER THAN SWEPT:** `coachTurnController.ts:2255`
+    writes a SECOND sentence for this same finding — *"This would give you N hard
+    days this week. I would not apply that without confirmation."* It is not
+    inaccurate, so it was left alone. **Whether the coach should speak his signed
+    sentence too is a ruling, not a cleanup.**
