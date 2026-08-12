@@ -97,15 +97,18 @@ export function buildScheduleAcknowledgment(
 ): ReadinessAcknowledgment {
   if (result?.ok) {
     if (door === 'away') {
-      // ── ITEM 28: "STAYS AS PLANNED" STOPPED BEING TRUE ON 2026-08-13 ──
-      // It was honest while away was record-only. Sam then ruled the effect —
-      // *"yes clear team training and games while away"* — and the fact now
-      // derives, so the week the athlete is looking at DOES move. A sentence
-      // that says otherwise is the app lying about a change it just made.
-      // PROPOSED, copy sheet batch 34.
+      // ── THE SENTENCE SAYS EXACTLY WHAT IS TRUE, AND NO MORE ──
+      // "Your program stays as planned for now" was honest while away was
+      // record-only and meant nothing. Sam then ruled the effect — *"yes clear
+      // team training and games while away"* — so that sentence became a lie.
+      // **AND ITS FIRST REPLACEMENT WAS A LIE THE OTHER WAY**: it said the club
+      // was off, and on a week the athlete is ALREADY LOOKING AT it is not —
+      // the ruling is carried out when a week is BUILT, and re-authoring one
+      // already on screen is still owed (SEAT_INBOX item 30). So the tense is
+      // future and the promise is exact. PROPOSED, copy sheet batch 34.
       return {
         tone: 'success',
-        message: "Got it — team training and games are off while you're away. Everything else stays.",
+        message: "Got it — logged that you're away. Team training and games come off as your plan updates.",
       };
     }
     // ── ITEM 28: THE AWAY DOOR THAT DOES CHANGE SOMETHING ──

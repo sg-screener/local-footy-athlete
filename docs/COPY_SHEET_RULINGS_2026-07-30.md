@@ -2267,7 +2267,7 @@ about a trip, and the sentence the athlete gets back.
 | Equipment row status, when it is a trip | "Missing while away" |
 | The away modifier's sentence, on My Status | "Team training and games are off while you are away. Your own sessions keep running." |
 | The away modifier's short phrase (item 23's right-hand column) | "Team training and games off" |
-| The answer to the YES branch | "Got it — team training and games are off while you're away. Everything else stays." |
+| The answer to the YES branch | "Got it — logged that you're away. Team training and games come off as your plan updates." |
 
 **34-a. THE YES ANSWER GETS A SENTENCE AND NO MODIFIER**, because Sam's own
 answer to that branch is *"if yes, follow same program"*. The sentence names the

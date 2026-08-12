@@ -758,12 +758,18 @@ export async function commitTemporarySourceFactSet(
       // so the week has to be re-authored around it.
       constraint.type === 'equipment' ||
       (constraint.type === 'schedule' &&
-        // ── AND SO DOES A TRIP, for the same reason and by the same ruling ──
-        // Sam, 2026-08-13: *"yes clear team training and games while away"*.
-        // That is a ruled effect on the days of the trip, and the rule lives at
-        // `postGenerationConstraintValidation`, which only ever runs when a
-        // week is AUTHORED. Leaving travel inert left the rule real and unread.
-        (constraint.scheduleKind === 'travel' ||
+        // ── A TRIP DOES **NOT** TAKE THIS LANE, AND THAT IS MEASURED ──
+        // It did, for one commit. On the real seeded world the athlete tapped
+        // Away and got *"That didn't save — your week is unchanged."*: the
+        // scoped regen re-authors the week without the club, the §18 gate
+        // refuses the result, and the whole transaction rolls back. **A door
+        // that refuses is worse than a door that records**, so travel stays on
+        // the inert lane until that refusal is understood.
+        // WHAT SAM'S RULING STILL GETS: the plan-side filter
+        // (`onboardingToCoachingInputs`) is unaffected and takes the club off
+        // every week BUILT while a trip is live. What it does not yet do is
+        // re-author a week he is already looking at.
+        (
         ((constraint.scheduleKind === 'time_cap' &&
           // Sam's §7 answer: a cap aimed only at fixture days is INERT —
           // there is nothing to shorten. Mixed or plain-day caps keep

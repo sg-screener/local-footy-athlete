@@ -171,9 +171,24 @@ his instruction is standing authority, not history.**
        verdict on why five of six reverts happened.
 
 
-30. **THE AWAY HALF IS WORKING — a week planned inside a trip loses the club and
-    keeps every row of his own training.** The block cleared, the four edits
-    landed, and the two walls behind them were real defects rather than friction.
+30. **THE AWAY RULING IS CARRIED OUT WHEN A WEEK IS BUILT — and NOT YET on a
+    week already on screen. Both halves of that sentence are measured.**
+    **WORKING:** a week planned inside a trip loses the team night and the
+    fixture and keeps every row of his own training (21 rows either way;
+    `test:away-flow` [13]-[13e], non-vacuity first).
+    **NOT WORKING, and seen on glass rather than reasoned about:** putting travel
+    on the DERIVING lane so it re-authors the CURRENT week made the athlete's tap
+    fail — *"That didn't save — your week is unchanged."* The scoped regen
+    re-authors the week without the club and the §18 gate refuses the result, so
+    the whole transaction rolls back. **A door that refuses is worse than a door
+    that records**, so travel is back on the record-only lane and the sentence
+    the athlete reads was rewritten to promise exactly that and no more.
+    **THE NEXT ACT IS THAT REFUSAL — read it, do not guess it.** Two guesses were
+    already wrong today: narrowing L4b (broke two more cells, and was loosening a
+    law to fit a change) and filtering travel out of the read-time projection
+    (fixed L4b and broke the commit's ledger-equivalence, which is what produced
+    the refusal on glass). **The real defect L4b found IS fixed in kind: away was
+    being applied twice, authored into the week and projected onto it again.**
     **EVERYTHING BUILT TODAY MAY BE INVISIBLE — CHANGES ONLY REACH A WEEK THAT
     HAS NOT BEEN BUILT YET. THIS IS THE CENSUS DEFECT, IN TODAY'S WORK.**
 
