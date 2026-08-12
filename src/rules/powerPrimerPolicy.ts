@@ -238,7 +238,23 @@ function decideFullPowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | null 
 
   // Contrast is the higher-quality option — only when fresh (high readiness),
   // no niggle, and not stacked on a pre-season team day.
-  const contrastEligible = ctx.readiness === 'high' && !reduced && !isPreseasonTeamDay;
+  //
+  // AND ONLY AT `consistent` OR `advanced` ON THE LADDER (census A2). Sam, Bible
+  // `:225`, restated `:4940`: *"Contrast is allowed only for athletes at
+  // training age `consistent` or `advanced`. A `developing` athlete does not
+  // receive contrast work."*
+  //
+  // THE RUNG WAS NOWHERE IN THIS EXPRESSION. It read readiness, niggle and
+  // team-day only, and the one experience input in scope — `ctx.isBeginner` — is
+  // `level === 'new'`, so a `developing` athlete (the "1-2 years" answer) sailed
+  // through and received true contrast prescriptions TWO RUNGS below his gate.
+  //
+  // `ctx.experienced` IS THE RUNG, ALREADY CORRECT AND ALREADY SUPPLIED: it is
+  // `'2-5 years' || '5+ years'`, which the experience crosswalk maps to exactly
+  // `consistent` and `advanced`. No new field, no second representation — the
+  // input was here and the gate did not read it.
+  const contrastEligible = ctx.readiness === 'high' && !reduced && !isPreseasonTeamDay
+    && ctx.experienced;
   // Off-season is the best time to build power → contrast by default when
   // eligible. Pre-season only upgrades to contrast when the athlete's goal
   // actually pulls toward power (nudge, not force).

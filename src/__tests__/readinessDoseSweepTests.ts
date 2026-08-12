@@ -694,6 +694,47 @@ console.log('\n[8] The shrink used for low capacity is the authored one');
 }
 
 const total = passed + failures.length;
+/* ══ A2: CONTRAST IS GATED TO THE LADDER ══════════════════════════════════
+ *
+ * Sam, Bible :225, restated :4940: "Contrast is allowed only for athletes at
+ * training age `consistent` or `advanced`. A `developing` athlete does not
+ * receive contrast work."
+ *
+ * The eligibility expression read readiness, niggle and team-day only — no rung
+ * appeared in it at all — and the one experience input in scope, `isBeginner`,
+ * is `level === 'new'`. So the "1-2 years" answer (developing) received true
+ * contrast prescriptions, two rungs below his gate. Census A2, reached
+ * independently by two auditors.
+ */
+console.log('\n[A2] Contrast is gated to consistent/advanced');
+{
+  const fresh = {
+    phase: 'Off-season' as const,
+    strengthPattern: 'lower' as const,
+    hasGame: false,
+    gOffset: -99,
+    isTeamDay: false,
+    isBeginner: false,
+    injuries: [],
+    powerGoalNudge: false,
+    readiness: 'high' as const,
+    offseasonSubphase: 'late_offseason' as const,
+  };
+  const hasContrast = (spec: unknown): boolean =>
+    JSON.stringify(spec ?? {}).toLowerCase().includes('contrast');
+
+  const consistentOrAdvanced = decidePowerPrimer({ ...fresh, experienced: true });
+  const developing = decidePowerPrimer({ ...fresh, experienced: false });
+
+  ok('a consistent/advanced athlete CAN get contrast — the cell is not vacuous',
+    hasContrast(consistentOrAdvanced), JSON.stringify(consistentOrAdvanced));
+  ok('a DEVELOPING athlete never receives contrast work (Bible :225)',
+    !hasContrast(developing),
+    `developing got: ${JSON.stringify(developing)}`);
+  ok('and the developing athlete still gets a primer — gated, not emptied',
+    developing !== null);
+}
+
 console.log(`\nReadiness dose sweep: passed=${passed}/${total} failures=${failures.length}`);
 totalsPrinted(failures.length);
 if (failures.length > 0) {
