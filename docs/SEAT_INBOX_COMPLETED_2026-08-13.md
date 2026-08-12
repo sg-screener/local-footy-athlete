@@ -199,3 +199,16 @@ size budget Sam pays for in dollars.
     that the data was "read by nothing but a test", and a literal left it true —
     and the `all 5 modalities` branch, which returned BEFORE the cap, is capped
     like every other exit. 68 cells, three mutants killed.
+
+3. **THE ±7 IS DELETED. FOURTH ATTEMPT, AND THE THREE BEFORE IT WERE HUNTING THE
+   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 3).**
+
+    **CLOSED 2026-08-13 BY THE TERMINAL.** Both laws it registered are
+    `guarded` in the registry and both guards are GREEN — `test:craft-tier`
+    36/36 (`LAW-no-invented-fixture`) and `test:derived-repair-ownership` 5/5
+    (`LAW-regate-carries-provenance`, with `test:accepted-state-transactions`).
+    **AND ITS RECORDED BLOCKER HAS CLEARED:** `AWAITING SAM` said this item's
+    remaining step was waiting on files another agent held —
+    `section18CraftTier.ts` and `projectVisibleWeek.ts` are both clean in the
+    working tree, unedited since 2026-08-12. **Nothing was owed; the note was
+    stale.**

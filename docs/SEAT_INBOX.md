@@ -504,8 +504,6 @@ his instruction is standing authority, not history.**
      **Guarded, because it is one line of `partialize` from vanishing:**
      `test:legacy-migration-unreachable`, mutation-checked both ways.
 
-3. **THE ±7 IS DELETED. FOURTH ATTEMPT, AND THE THREE BEFORE IT WERE HUNTING THE
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 3).**
 
 6. **RE-MEASURED — THE PREMISE MOVED, AND TWO SESSION KINDS ALREADY STORE BOTH
    HALVES OF sRPE WITH NO READER.** `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md`
@@ -647,6 +645,20 @@ his instruction is standing authority, not history.**
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 9).
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
+   **PAID 2026-08-13 — 29 -> 28. `LAW-verify-branch-before-commit` is GUARDED.**
+   Its own row had said for weeks that it was *"MECHANISABLE AND CHEAP — the one
+   process law in the file with an obvious hook shape"*. It was.
+   `scripts/verify-branch-before-commit.sh` now runs as a real `pre-commit` hook
+   (`core.hooksPath .githooks`), so the branch check happens at EVERY commit
+   without anyone remembering. **9 cells (`test:verify-branch-hook`, in
+   `test:bible`), 4 mutants killed, and a 5th SURVIVED and rewrote the script** —
+   an unborn-HEAD escape I had reasoned my way into was unreachable, because
+   `--show-current` prints the branch HEAD points at even when unborn.
+   **FAIL-OPEN BY DESIGN:** one refusal only (detached HEAD, where the commit
+   lands on no branch), because this checkout is shared and a hook that reds for
+   an unforeseen reason stops another agent for something it did not cause.
+   **NOT HELD: installation.** `core.hooksPath` is per-clone config — a fresh
+   clone gets the script and the cells and must run the config line once.
    **WHAT IS LEFT IS PRICED, 2026-08-13 — so the next pass does not re-derive it.**
    Four of the remaining 29 were measured tonight and each needs something a
    gate cannot supply:
@@ -1393,11 +1405,12 @@ seat was wrong.
   tier's hydration relocation are all **BUILT, awaiting device acceptance**.
   When he rebuilds, the white screen after a refused dev launch is expected and
   now names its own cause (`docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`).
-- **NOT A DECISION, A BLOCKER, RECORDED SO IT IS NOT RE-ATTEMPTED:** item 9's
-  four-answer collapse and item 3's remaining step both need files another agent
-  is editing in this shared checkout (`section18CraftTier.ts`,
-  `projectVisibleWeek.ts`, the generator under stand-down D). **Neither is
-  skipped for want of a ruling; both are waiting for a clear file.**
+- **⚠ STALE, CORRECTED 2026-08-13 — THE FILES ARE CLEAR AND ITEM 3 IS CLOSED.**
+  This entry said item 9's four-answer collapse and item 3's remaining step were
+  waiting on files another agent held. **`section18CraftTier.ts` and
+  `projectVisibleWeek.ts` are both clean, unedited since 2026-08-12.** Item 3
+  owed nothing — both its laws are `guarded` and green — and is archived.
+  **Item 9 is workable whenever someone picks it up; it is not blocked.**
 - **ANSWERED 2026-08-12, NOW ITEM 16 — the day/week modifier indicator.**
   Sam: *"yes — one line on week, small card on day, read-only both"*. Moved
   out of this section into the queue. **Do not re-ask.**
