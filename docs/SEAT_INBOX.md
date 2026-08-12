@@ -15,7 +15,22 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-30-A5. **⚠ DO NOT BUILD A5 — SAM OVERRULED IT 2026-08-12; THE APP ALREADY OBEYS.**
+30-A5. **BLOCKED-BY: sam** — one sentence of athlete copy, nothing else. **⚠ DO
+    NOT BUILD A5 — SAM OVERRULED IT 2026-08-12; THE APP ALREADY OBEYS.**
+
+    **THE ONE QUESTION, AND ITS CROSS-REFERENCE WAS DANGLING.** This item said
+    *"the only live part is COPY — see AWAITING SAM"* and **AWAITING SAM has no
+    such entry**; it was reported in `8c182ca8`'s body and never reached the
+    section a reader is pointed at. Written out here so it batches.
+    **WHAT THE ATHLETE READS TODAY** (`planChangeRefusalCopy.ts:44`):
+    *"This gives you N hard days this week. That's the upper edge."*
+    **THE DEFECT IS ACCURACY, NOT CLARITY** — no jargon, so the clarity bar is
+    met. But Sam's budget is **prefer 4, permit 5** (Bible `:118`), so **five is
+    the upper edge and six is past it**, and one string serves both numbers: at
+    six it tells the athlete they are at the limit when they are beyond it.
+    **RECOMMENDATION:** keep that sentence for five; give six its own line saying
+    it is past the permitted maximum. **The numbers are already his; only the
+    words are missing, and athlete copy is never invented here.**
     **His words:** *"should give warnings but allow them to do whatever they
     want"*. `blockOverride.ts` is `canOverride`'s one reader: the app warns,
     records, and proceeds — **a refusal survives ONLY when the action is
@@ -210,8 +225,25 @@ his instruction is standing authority, not history.**
     undo needs); it is not the reader this item was looking for.
     **STILL UNMET: the AWAY half.** The week does move, but the club work does
     not come off, because a day is a team day via the PLAN's `isTeamDay` and the
-    name enforcement re-derives it after the constraint seam runs. **The next
-    act is the allocator: do not mark `isTeamDay` inside a live travel span.**
+    name enforcement re-derives it after the constraint seam runs.
+
+    **THE NEXT ACT IS MEASURED TO ITS LINE, so the next pass builds instead of
+    hunting.** `coachingEngine.ts:1792` reads
+    `teamDayNums = inputs.teamTrainingDays.map(dayNameToNumber)` and `:1798`
+    stamps `isTeamDay` from it. Its ONE owner is `onboardingToCoachingInputs`,
+    called from exactly TWO places (`generateProgram.ts:939` and `:1469`), both
+    of which already hold the week's date and the active constraints. **The
+    build: drop a weekday from `teamTrainingDays` when that weekday's DATE in
+    the week being planned falls inside a live `travel` span.**
+    **THE BLAST RADIUS IS SMALL AND THE REASON IS CHECKABLE: the filter is
+    INERT unless a travel fact is live, and no scenario or QA week has one** —
+    so the 120-session distribution and the 17 QA weeks cannot move. Run them
+    either side anyway and report both numbers.
+    **A FIXTURE INSIDE THE SPAN IS THE SECOND HALF and is NOT the same shape** —
+    a game is an anchor the week is built around, not a plan flag, so it needs
+    its own measurement before anyone touches it.
+    **NOT STARTED HERE ON THIS ITEM'S OWN INSTRUCTION** — *"start it fresh, not
+    at the end of a session"*. Everything it needs is above.
     The desktop agent has UNCOMMITTED edits in `temporarySourceFactTransaction.ts`
     (last write 05:10) plus four more files, and a `.git/index.lock` stale since
     05:31. **The edit is exactly this item's fix:** `isRuledDerivingConstraint`
