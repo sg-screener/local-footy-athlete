@@ -1135,7 +1135,33 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **DECISION OWED — ITEM 22(c): THE AWAY EQUIPMENT ANSWER IS THE WRONG WAY
+- **DISSOLVED 2026-08-13 — SAM REFUSED THE PREMISE AND HE IS RIGHT. The three
+  options below are WITHDRAWN; do not build any of them.** Sam: *"can't we just
+  treat going away as a modifier for equipment? the athlete just removes the
+  equipment they don't have while on the trip and it's kept that way until they
+  turn the modifier off and say 'i'm back now'"*.
+  **THAT REMOVES THE MISMATCH INSTEAD OF CONVERTING IT.** The direction problem
+  existed only because `EquipmentScreen` asks what the athlete HAS. If the
+  athlete instead marks what they DO NOT have, that IS the stored shape, and no
+  complement is needed.
+  **AND IT IS ALREADY BUILT.** `EquipmentLimitationSheet` (`:96`) asks exactly
+  that — *"which of the things THEY HAVE are missing"* — and writes
+  `missing_this_week`; `available_again` plus `equipmentClear` on My Status is
+  the "I'm back now" door. **The only gap is that the away flow does not offer
+  it.** This also retires the plan to reuse the ONBOARDING equipment screen from
+  the away flow: item 24's `onDone` stands and is harmless, but away no longer
+  needs that door.
+- **DECISION OWED — MANUAL, OR MANUAL PLUS THE RETURN DATE? (item 22(c), asked
+  2026-08-13.)** Sam's new proposal is MANUAL — it stays until he says he is
+  back. **His EARLIER word in the same item was automatic:** *"the plan should
+  change until their return date"*. Both work and they are not the same:
+  **manual only** risks an athlete who gets home, forgets, and keeps training
+  as though away; **manual plus the date** lifts on the return date he already
+  gives when setting Away, with the clear button as an early-exit backstop.
+  **The dated half is already built** (`missing_for_span`, `bfad51b7`), so
+  "both" costs nothing extra. **Recommended: both.** If he says manual only,
+  `missing_for_span` becomes unused and should be reported, not silently kept.
+  ~~WITHDRAWN, kept for the record~~ **THE AWAY EQUIPMENT ANSWER IS THE WRONG WAY
   ROUND, AND ONE OF THREE FIXES IS SAM'S TO PICK. Asked 2026-08-13.**
   `EquipmentScreen` produces what the athlete **HAS** where they are going —
   ruling 3's pre-ticked checklist, unticked down to their real kit.
