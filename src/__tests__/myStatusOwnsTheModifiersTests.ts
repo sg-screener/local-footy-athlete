@@ -190,7 +190,57 @@ run('the coach tab passes real equipment fact ids, not an empty set', () => {
     + 'the call site is a second derivation of the athlete\'s equipment facts');
 });
 
-// ── [5] THE CHECKER ITSELF REDS ON A FABRICATED VIOLATION ──────────────────
+// ── [5] SAM'S FIVE ANSWERS, IN HIS WORDS ───────────────────────────────────
+//
+// He ruled this sheet on the simulator the day it became reachable from My
+// Status, and he ruled it TWICE — first dropping "Worse", then *"actually keep
+// worse for now"*. Both are in `rules/projectionCopy.ts` beside the words.
+//
+// THE SET AND ITS SIZE ARE BOTH THE RULING. A cell that only checked the four
+// he kept would be green on a sheet that had quietly grown a sixth answer, and
+// a cell that only counted would be green on five wrong words. This checks the
+// exact ids, their exact text, and that nothing else is offered.
+
+run("the status sheet offers Sam's five answers and no others", () => {
+  const copy = read('src/rules/projectionCopy.ts');
+  const expected: Record<string, string> = {
+    'status_update.good_now': "I'm good now",
+    'status_update.still_not_right': 'Still not right',
+    'status_update.still_pretty_sick': 'Still pretty sick',
+    'status_update.still_cooked': 'Still cooked',
+    'status_update.worse': 'Worse',
+  };
+  for (const [id, text] of Object.entries(expected)) {
+    const row = copy.indexOf(`id: '${id}'`);
+    assert(row > -1,
+      `the signed row '${id}' is gone. Sam ruled these words on 2026-08-12; a `
+      + 'string he ruled cannot leave without him saying so.');
+    const block = copy.slice(row, row + 700);
+    assert(block.includes(`text: ${JSON.stringify(text).replace(/"/g, text.includes("'") ? '"' : "'")}`)
+      || block.includes(`text: "${text}"`) || block.includes(`text: '${text}'`),
+      `'${id}' no longer reads ${JSON.stringify(text)} — the athlete is being `
+      + 'shown a word nobody signed');
+  }
+  const registered = (copy.match(/id: 'status_update\.[a-z_]+'/g) ?? []);
+  assert(registered.length === 5,
+    `${registered.length} status-update answers are registered, not 5: `
+    + `${registered.join(', ')}. The COUNT is part of what Sam ruled.`);
+});
+
+run('the sheet reads those words through signedCopy, not literals', () => {
+  const sheet = read('src/components/CoachNoteSheet.tsx');
+  for (const id of ['good_now', 'still_not_right', 'still_pretty_sick',
+    'still_cooked', 'worse']) {
+    assert(sheet.includes(`signedCopy('status_update.${id}')`),
+      `CoachNoteSheet does not read '${id}' through signedCopy. An inline `
+      + 'literal is a word anyone can change without Sam — which is exactly how '
+      + '"Still sick" sat on his screen with no record of who chose it.');
+  }
+  assert(!/label="Still sick"/.test(sheet) && !/label="Worse"/.test(sheet),
+    'a hard-coded status label is back in the sheet — two sources for one word');
+});
+
+// ── [6] THE CHECKER ITSELF REDS ON A FABRICATED VIOLATION ──────────────────
 //
 // LIVENESS, moved here with the law it now holds. Cell [1] passes when every
 // kind has a route — and it would ALSO pass if `coachNoteActionRoute` simply

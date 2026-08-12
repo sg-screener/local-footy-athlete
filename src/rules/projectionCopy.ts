@@ -383,6 +383,72 @@ export function registerProjectionCopy(): void {
     // nothing on it: an athlete who followed the sentence found an empty room
     // and no way back. That is the finding, not a footnote.
 
+    // ── THE STATUS-UPDATE SHEET'S FIVE ANSWERS. SAM RULED THEM 2026-08-12. ──
+    //
+    // He read the sheet on the simulator the moment it went live on My Status,
+    // and he ruled it TWICE. Both messages are recorded, because the second
+    // reverses the first and a reversal kept only in a chat log is a reversal
+    // the next reader undoes.
+    //
+    //   FIRST: *"Drop 'Worse' from that sheet — four options only: I'm good
+    //   now, Still not right, Still pretty sick, Still cooked. And change
+    //   'Still sick' to 'Still pretty sick'."*
+    //
+    //   THEN: *"actually keep worse for now"*.
+    //
+    // SO THE RENAME STANDS AND `worse` STAYS. Five answers ship. "for now" is
+    // his own word and is left as his — it is not read here as a plan to remove
+    // it later, and nothing in the code is staged against that reading.
+    //
+    // THE COUNT IS PART OF THE SET. `test:my-status-modifiers` holds these five
+    // ids AND their exact words, so a sixth answer cannot appear, and none of
+    // the five can be silently reworded, without him saying so.
+    //
+    // THEY ARE SIGNED RATHER THAN EDITED IN PLACE because that is what this
+    // repo does with a ruled athlete-facing string: all five were inline
+    // literals in `HomeScreenV2` for months — unsigned, and therefore
+    // attributable to nobody, which is how "Still sick" reached his screen with
+    // no record of who chose it. His ruling is what gives them a source.
+    {
+      id: 'status_update.good_now',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-12, verbatim in the ruling above. '
+        + 'Pre-existing wording he kept unchanged.',
+      text: "I'm good now",
+    },
+    {
+      id: 'status_update.still_not_right',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-12, verbatim in the ruling above. '
+        + 'Pre-existing wording he kept unchanged.',
+      text: 'Still not right',
+    },
+    {
+      id: 'status_update.still_pretty_sick',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-12. HE CHANGED THIS ONE: it read '
+        + '"Still sick" and he renamed it to "Still pretty sick" in the same '
+        + 'message that dropped "Worse".',
+      text: 'Still pretty sick',
+    },
+    {
+      id: 'status_update.still_cooked',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-12, verbatim in the ruling above. '
+        + 'Pre-existing wording he kept unchanged.',
+      text: 'Still cooked',
+    },
+    {
+      id: 'status_update.worse',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-12, and the ONLY row here with a '
+        + 'reversal in its history: his first message dropped this option, his '
+        + 'second said "actually keep worse for now". It ships. The row exists '
+        + 'so the next reader finds the reversal beside the word rather than '
+        + 're-applying the instruction that was withdrawn.',
+      text: 'Worse',
+    },
+
     // ── The one separator. ──
     {
       id: 'copy.joiner.plus',
