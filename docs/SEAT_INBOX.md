@@ -478,6 +478,28 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **(c) BEFORE (a)+(b) STRANDS ATHLETES** — the caption sends them to the screen
    (c) removes.
 
+   **PRICED 2026-08-12, NOT BUILT. TWO FINDINGS THE ORDER DOES NOT CONTAIN:**
+   **(1) THE CHEVRON SHAPE ALREADY EXISTS.** `CoachStatusScreen.tsx:103-133`
+   already renders each modifier as a row with a `<Chevron>` that expands to the
+   actions. **(a) is not a redesign — it is only "make the seven live".**
+   **(2) THE WRITERS HARD-CODE `screen: 'program_tab'` — NINE SITES in
+   `useHomeScreen.ts`,** with surfaces like `coach_notes_injury_resolved`. Those
+   go into the action tape and the decision ledger. **Lifting them to My Status
+   unchanged would write a FALSE surface onto every decision the athlete makes
+   there**, so the extraction must make the source a PARAMETER, not move the
+   code. That is the difference between a move and a lift, and the order prices
+   neither.
+   **ALSO PART OF THE SAME EXTRACTION, NOT A ONE-LINER:**
+   `equipmentFactIds={EMPTY_EQUIPMENT_FACT_IDS}` (`CoachTabScreen.tsx:464`) is
+   wrong because the Coach tab has no `equipmentFacts` source at all — the
+   Program side gets it from `useHomeScreen`. It comes free WITH the extraction
+   and cannot be fixed before it.
+   **SCOPE, THEN:** extract `handleClearCoachNote`, `handleUpdateCoachNoteStatus`
+   and the injury/confirm sheets out of `useHomeScreen` into a hook both screens
+   mount, with the action source injected; then (a)+(b) in one commit; then (c).
+   **NOT STARTED — no device verification is possible while Sam's phone is
+   un-rebuilt, and this unit is entirely glass.**
+
 9. **BUILD LAYER 3 — THE ATHLETE'S WILL. RULED BY SAM 2026-08-12:** *"should
    give warnings but allow them to do whatever they want"*. **So: the app warns
    and RECORDS that it warned, then does what the athlete asked. A `block` with
