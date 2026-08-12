@@ -96,3 +96,48 @@ size budget Sam pays for in dollars.
 23. **BUILT — TWELVE PHRASES SHIP, AND THE MISCOUNT IS FIXED AT ITS SOURCE.**
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 23).**
 
+29. **BUILT AND MEASURED — AND THE MEASUREMENT SAYS THE ITEM'S EXPECTED EFFECT
+    DID NOT HAPPEN. THE DOOR IS TIGHT; THE TRAFFIC RECLASSIFIED.**
+   **Original order archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 29).**
+
+    **BUILT (`b5ba7894`):** EXIT 2 now demands `BLOCKED-BY: sam | other-agent |
+    external` in the commit body; anything else and the turn continues. Eight
+    cells in `scripts/__tests__/seatInboxHookTests.sh`, both directions.
+    **PLUS, this commit: the SIGN on the door.** The block reason still said
+    "naming why you cannot proceed" — prose a terminal satisfies while still
+    being refused, for a rule its own instructions never stated. Same class as
+    `4bb9b2e0`, pointing the other way. It now names the line and all three
+    values, with a liveness cell that reds when one is dropped. **32 green.**
+
+    **THE MEASUREMENT THE ITEM ASKED FOR, and it is not the predicted answer:**
+    - **BEFORE** (the 6h to `b5ba7894`): 78 commits, **18 blocked = 3.0/hour.**
+    - **AFTER** (32 min, 17 commits): **4 blocked = 7.4/hour.**
+    - **THE GATE ITSELF IS WORKING: 0 of the 18 before carry a `BLOCKED-BY:`
+      line; 4 of 4 after do.** The unqualified exit is genuinely shut.
+    - **AND ALL FOUR ARE `BLOCKED-BY: sam`.** Zero `other-agent`, zero
+      `external`.
+
+    **SO THE WORD CHANGED AND THE PING DID NOT.** Sam's symptom — *"it works for
+    like 5 min then stops and reports"* — is unchanged at a turn-end every ~8
+    minutes, and every one of them now lands on him. **The four are individually
+    legitimate** (A4's shape, the 6-hard-day copy, the sprint-cap units, C2's
+    wording all genuinely need a ruling) — **which is exactly why this is a
+    structural hole and not disobedience.**
+
+    **THE HOLE, STATED PRECISELY: BLOCKED ON ONE ITEM IS NOT BLOCKED ON THE
+    QUEUE.** Each of the four stopped the turn while **22 other live orders sat
+    workable**. The item's own prose already forbids this — *"each of these is
+    one more step in the SAME turn"* — and **the hook cannot see it**, because it
+    reads HEAD's body and never asks how much other work is open.
+
+    **RULED AND BUILT THE SAME NIGHT — SAM TOOK THE TRADE, VERBATIM:** *"batch —
+    and when you're stuck on an item, move to the next item instead of stopping.
+    Only stop when the whole list is blocked."*
+    **THE FIX IS NOT A DOOR, AND THAT IS THE POINT.** A stuck item is MARKED
+    `BLOCKED-BY: …` on its head line and stops counting as work, so the scan
+    walks past it — **"the whole list is blocked" becomes "the scan found
+    nothing", which is EXIT 1 and already existed.** No new exit, no new state,
+    no clock. **EXIT 2 IS WITHDRAWN ENTIRELY**, the third withdrawal of one door;
+    its three cells are INVERTED, not deleted. 36 cells, three fresh mutations
+    killed. **`LAW-stop-needs-an-exit` rewritten in the same commit. ITEM 29 IS
+    CLOSED.**

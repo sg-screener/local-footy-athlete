@@ -227,25 +227,74 @@ git_case "a routine docs(stop): progress report NO LONGER ends the turn" block \
 git_case "docs(blocked): with NO stated reason no longer ends the turn" block \
   "docs(blocked): the second-game field does not exist, item 7 cannot be built"
 
-# Each of the three legitimate categories opens the door.
-git_case "BLOCKED-BY: sam ALLOWS — only he can rule it" allow \
+# ── SAM, 2026-08-13: THE COMMIT-SUBJECT EXIT IS WITHDRAWN ALTOGETHER. ────────
+#
+# Item 29 measured its own fix and it had missed: 0 of the 18 blocked commits
+# before qualified and 4 of 4 after did, yet the rate went UP, 3.0/hour to
+# 7.4/hour, all four landing on Sam. THE DOOR WAS NEVER THE PROBLEM — blocked on
+# one item is not blocked on the queue, and each of those four stopped with 22
+# live orders workable.
+#
+# HIS RULING: "batch — and when you're stuck on an item, move to the next item
+# instead of stopping. Only stop when the whole list is blocked."
+#
+# THESE THREE ARE INVERTED, NOT DELETED — third time this door has been the hole
+# (docs(stop): 2026-08-10, docs(blocked): 2026-08-12, the qualified body
+# 2026-08-13), and a deleted cell would erase that.
+git_case "BLOCKED-BY: sam no longer ends the turn — work the next item instead" block \
   "docs(blocked): the moderate-day target needs a ruling" "" "" "" \
   "BLOCKED-BY: sam"
-git_case "BLOCKED-BY: other-agent ALLOWS — the file is held elsewhere" allow \
+git_case "BLOCKED-BY: other-agent no longer ends the turn" block \
   "docs(blocked): HomeScreenV2 is mid-flight in this checkout" "" "" "" \
   "BLOCKED-BY: other-agent"
-git_case "BLOCKED-BY: external ALLOWS — outside the repo" allow \
+git_case "BLOCKED-BY: external no longer ends the turn" block \
   "docs(blocked): the simulator will not build" "" "" "" \
   "BLOCKED-BY: external"
 
-# ...and a reason OUTSIDE the three keeps the door shut. This is the cell that
-# stops the category becoming a rubber stamp: any word would otherwise do.
+# These two already blocked and MUST STILL BLOCK. They are not redundant with
+# the inversions above: they are the cells that would catch a re-opening of the
+# door in its narrow form, and they cost nothing to keep.
 git_case "an invented BLOCKED-BY category still BLOCKS" block \
   "docs(blocked): I found the next question" "" "" "" \
   "BLOCKED-BY: measurement"
 git_case "a BLOCKED-BY naming the terminal itself still BLOCKS" block \
   "docs(blocked): I need to probe one more layer" "" "" "" \
   "BLOCKED-BY: terminal"
+
+# ── THE REPLACEMENT, SHIPPED IN THE SAME COMMIT AS THE REMOVAL. ──────────────
+#
+# A blocked item stops COUNTING as work, so the scan walks past it to the next
+# one and "the whole list is blocked" becomes "the scan found nothing" — EXIT 1,
+# which already existed. The marker sits on the item HEAD line because column 0
+# is the only thing the scan reads.
+run "a marked-blocked item is walked PAST to the next order" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. NEEDS A RULING — BLOCKED-BY: sam" "" \
+  "2. AN ORDER THAT IS STILL WORKABLE." "" \
+  "## Previously (now processed)"
+
+run "the whole list marked blocked ALLOWS — his questions arrive in ONE batch" allow \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. NEEDS A RULING — BLOCKED-BY: sam" "" \
+  "2. THE FILE IS HELD — BLOCKED-BY: other-agent" "" \
+  "3. THE SIMULATOR WILL NOT BUILD — BLOCKED-BY: external" "" \
+  "## Previously (now processed)"
+
+# THE ONE THAT STOPS THE MARKER BECOMING A RUBBER STAMP. Any word would
+# otherwise buy silence, and the terminal writes this file itself.
+run "an INVENTED blocked category marks nothing — the item stays workable" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. I FOUND THE NEXT QUESTION — BLOCKED-BY: measurement" "" \
+  "## Previously (now processed)"
+
+# AND THE MARKER MUST BE ON THE HEAD LINE. An indented continuation is not an
+# item, so a marker buried in an item's body cannot silence its own head — which
+# is exactly the "hidden from the scan" class this file has hit five times.
+run "a marker in an item's BODY does not block that item" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. A REAL ORDER whose body mentions the vocabulary." \
+  "    We are BLOCKED-BY: sam on one sub-question, not on the item." "" \
+  "## Previously (now processed)"
 
 # EXIT 3 — a decision written down THIS COMMIT under `## AWAITING SAM`.
 git_case "a NEW line under AWAITING SAM ALLOWS" allow \

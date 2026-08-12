@@ -49,6 +49,30 @@ while IFS= read -r line; do
   printf '%s' "$norm" | grep -qiE '^\(?(none|nothing|queue empty|empty)\b' && continue
   # A parked item is marked parked in its own text.
   printf '%s' "$line" | grep -qi 'parked' && continue
+  # ───────────────────────────────────────────────────────────────────────────
+  # A BLOCKED ITEM IS NOT A WORKABLE ORDER. (Sam, 2026-08-13.)
+  #
+  # HIS RULING, verbatim: *"batch — and when you're stuck on an item, move to
+  # the next item instead of stopping. Only stop when the whole list is
+  # blocked."*
+  #
+  # WHY IT LANDED HERE AND NOT AS A FIFTH EXIT. Item 29 shut the unqualified
+  # `docs(blocked):` exit and the blocked rate went UP, 3.0/hour to 7.4/hour,
+  # every one of them `BLOCKED-BY: sam`. The gate was tight and the goal was
+  # missed, because BLOCKED ON ONE ITEM IS NOT BLOCKED ON THE QUEUE: each stop
+  # left 22 other live orders workable. A door cannot fix that — the fix is that
+  # a blocked item stops COUNTING as work, so the scan walks past it to the next
+  # one, and "the whole list is blocked" becomes "the scan found nothing", which
+  # is EXIT 1 and already exists. No new exit, no new state, no clock.
+  #
+  # THE MARKER IS THE VOCABULARY ITEM 29 ALREADY RULED — one word list, and the
+  # queue now says on its face what is stuck and on whom. It must sit on the
+  # item's HEAD line, because column 0 is the only thing this scan reads; an
+  # invented category is not a marker, so the item stays workable and the
+  # terminal cannot rubber-stamp its way to silence.
+  # ───────────────────────────────────────────────────────────────────────────
+  printf '%s' "$line" \
+    | grep -qiE 'BLOCKED-BY:[[:space:]]*(other-agent|external|sam)([^a-zA-Z-]|$)' && continue
   order="$line"
   break
 done <<EOF
@@ -72,13 +96,18 @@ EOF
 # WITHDRAWN — it became the hole. A routine progress report no longer ends a
 # turn; progress reports are still written, they just stop being a door.
 #
+# THREE EXITS, NOT FOUR — EXIT 2 WAS WITHDRAWN 2026-08-13, see its own block
+# below. The numbering is KEPT so the history stays legible: exit 3 is still
+# called exit 3, because renumbering would make every doc and cell that names
+# them silently wrong.
+#
 # A STOP IS ALLOWED ONLY WHEN ONE OF THESE IS TRUE:
 #
-#   1. THE QUEUE IS EMPTY — the scan above found no order.
-#   2. HEAD's subject begins `docs(blocked):` — a declaration that the terminal
-#      genuinely cannot proceed, naming why. Deliberately a DIFFERENT word from
-#      `docs(stop):`, so the exit cannot be taken by the report it used to be
-#      taken by.
+#   1. THE QUEUE IS EMPTY — the scan above found no WORKABLE order. Since
+#      2026-08-13 that includes a queue whose every remaining item is MARKED
+#      blocked, which is how "only stop when the whole list is blocked" is
+#      enforced: not by a door, but by a blocked item ceasing to be work.
+#   2. WITHDRAWN.
 #   3. A DECISION WAS WRITTEN DOWN THIS COMMIT — HEAD adds a line inside
 #      `## AWAITING SAM`. "Not already recorded in this file" is the order's
 #      wording, so the check is that the line is NEW, not merely that the section
@@ -94,36 +123,34 @@ EOF
 # and how many turn-ends have ended on that same HEAD.
 # ─────────────────────────────────────────────────────────────────────────────
 if [ -n "$order" ] && git rev-parse --git-dir >/dev/null 2>&1; then
-  head_subject=$(git log -1 --pretty=%s 2>/dev/null || echo "")
   head_sha=$(git rev-parse HEAD 2>/dev/null || echo "")
 
-  # EXIT 2 — a declaration that it cannot proceed, AND A REASON THAT QUALIFIES.
+  # EXIT 2 IS WITHDRAWN — RETIRED 2026-08-13 BY SAM, AND ITS REPLACEMENT SHIPS
+  # IN THE SAME COMMIT (the marker in the scan above).
   #
-  # THE EXIT SAM CLOSED REOPENED UNDER A NEW NAME (item 29, 2026-08-13). Item 0
-  # removed `docs(stop):` because a routine progress report was ending turns;
-  # `docs(blocked):` then carried the same traffic under a different word — 18 of
-  # 77 commits in six hours, roughly one every twenty minutes. The hook could not
-  # tell, because it only read the subject PREFIX.
+  # ITS WHOLE HISTORY, BECAUSE THIS IS THE SECOND TIME THIS DOOR WAS THE HOLE.
+  # 2026-08-10: the exit was `docs(stop):`. Item 0 (2026-08-12) withdrew it
+  # because a routine progress report was ending turns. Item 29 (2026-08-13)
+  # caught the same traffic wearing `docs(blocked):` — 18 of 77 commits in six
+  # hours — and tightened it to demand `BLOCKED-BY: sam|other-agent|external` in
+  # the body. THAT TIGHTENING WORKED AND MISSED THE POINT: measured, 0 of the 18
+  # before qualified and 4 of 4 after did, while the rate went UP, 3.0/hour to
+  # 7.4/hour, all four landing on Sam.
   #
-  # THE DISTINCTION, WHICH NOBODY HAD WRITTEN DOWN. BLOCKED means the terminal
-  # cannot resolve it ALONE: it needs a ruling only Sam can give, a file another
-  # agent is holding, or something outside the repo. A wall it can MEASURE ITSELF
-  # is not a block — "I have found the next question" is the definition of NOT
-  # blocked, because it is the definition of knowing what to do next.
+  # THE DIAGNOSIS THREE ATTEMPTS HAD MISSED: the door was never the problem.
+  # BLOCKED ON ONE ITEM IS NOT BLOCKED ON THE QUEUE. Sam, 2026-08-13: *"when
+  # you're stuck on an item, move to the next item instead of stopping. Only
+  # stop when the whole list is blocked."* So a blocked item stops counting as
+  # work — marked, walked past, batched — and the stop it used to justify is
+  # EXIT 1, reached honestly when nothing workable is left.
   #
-  # So the subject is no longer enough. The body must name the category, and the
-  # word must be one of three. Anything else and the exit stays shut: the commit
-  # is fine, it just does not end the turn.
-  case "$head_subject" in
-    'docs(blocked):'*)
-      blocked_by=$(git log -1 --pretty=%B 2>/dev/null \
-        | sed -n 's/^BLOCKED-BY:[[:space:]]*\([a-z-]*\).*/\1/p' | head -1)
-      case "$blocked_by" in
-        sam|other-agent|external) order="" ;;
-      esac
-      ;;
-  esac
-
+  # NOTHING IS LOST BY REMOVING IT. A `docs(blocked):` commit is still written
+  # and still names its category; it just is not a door. The turn ends when the
+  # QUEUE says so, not when a commit subject does.
+  #
+  # THE THIRD ATTEMPT AT ONE DOOR IS §8's SECOND-WALL SHAPE, and this is the
+  # alternative it demands: stop tightening the exit, change what counts as work.
+  #
   # EXIT 3 — a decision written down under `## AWAITING SAM` in THIS commit.
   if [ -n "$order" ]; then
     added=$(git show HEAD --unified=0 -- "$inbox" 2>/dev/null \
@@ -183,6 +210,6 @@ fi
 # legal values, so a future tightening of the door cannot leave the sign behind.
 # ─────────────────────────────────────────────────────────────────────────────
 if [ -n "$order" ]; then
-  echo '{"decision":"block","reason":"The seat inbox holds an unprocessed order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. A docs(stop): progress report is NO LONGER an exit (item 0, 2026-08-12). End your turn only when: the queue is clear; HEAD is a commit whose subject begins docs(blocked): AND whose body carries a line reading BLOCKED-BY: sam, BLOCKED-BY: other-agent or BLOCKED-BY: external — those three words are the whole list, and the prefix alone is not an exit (item 29, 2026-08-13). BLOCKED means you cannot resolve it ALONE: a ruling only Sam can give, a file another agent is holding, or something outside the repo. A wall you can measure yourself is NOT a block — finding the next question is the definition of knowing what to do next, so take that step in THIS turn. You may also end when you wrote a NEW decision under ## AWAITING SAM in this commit, or when three turn-ends have passed with no new commit at all."}'
+  echo '{"decision":"block","reason":"The seat inbox holds a WORKABLE order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. WHEN YOU ARE STUCK ON AN ITEM, MOVE TO THE NEXT ITEM — DO NOT STOP (Sam, 2026-08-13). Mark the stuck item by putting BLOCKED-BY: sam, BLOCKED-BY: other-agent or BLOCKED-BY: external on that item HEAD line in the inbox, with the question written underneath, then go and work the next order in the SAME turn. Those three words are the whole list and an invented category marks nothing. BLOCKED means you cannot resolve it ALONE: a ruling only Sam can give, a file another agent is holding, or something outside the repo — a wall you can measure yourself is NOT a block. Neither docs(stop): nor docs(blocked): is an exit any more; a commit subject cannot end a turn (item 0, 2026-08-12; Sam, 2026-08-13). You may end the turn only when: every remaining item is marked blocked or the queue is clear, so his questions reach him in ONE batch; you wrote a NEW decision under ## AWAITING SAM in this commit; or three turn-ends have passed with no new commit at all."}'
 fi
 exit 0

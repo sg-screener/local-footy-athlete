@@ -151,48 +151,10 @@ his instruction is standing authority, not history.**
     6. **Measure the layer above before changing code** — the terminal's own
        verdict on why five of six reverts happened.
 
-29. **BUILT AND MEASURED — AND THE MEASUREMENT SAYS THE ITEM'S EXPECTED EFFECT
-    DID NOT HAPPEN. THE DOOR IS TIGHT; THE TRAFFIC RECLASSIFIED.**
-   **Original order archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 29).**
 
-    **BUILT (`b5ba7894`):** EXIT 2 now demands `BLOCKED-BY: sam | other-agent |
-    external` in the commit body; anything else and the turn continues. Eight
-    cells in `scripts/__tests__/seatInboxHookTests.sh`, both directions.
-    **PLUS, this commit: the SIGN on the door.** The block reason still said
-    "naming why you cannot proceed" — prose a terminal satisfies while still
-    being refused, for a rule its own instructions never stated. Same class as
-    `4bb9b2e0`, pointing the other way. It now names the line and all three
-    values, with a liveness cell that reds when one is dropped. **32 green.**
-
-    **THE MEASUREMENT THE ITEM ASKED FOR, and it is not the predicted answer:**
-    - **BEFORE** (the 6h to `b5ba7894`): 78 commits, **18 blocked = 3.0/hour.**
-    - **AFTER** (32 min, 17 commits): **4 blocked = 7.4/hour.**
-    - **THE GATE ITSELF IS WORKING: 0 of the 18 before carry a `BLOCKED-BY:`
-      line; 4 of 4 after do.** The unqualified exit is genuinely shut.
-    - **AND ALL FOUR ARE `BLOCKED-BY: sam`.** Zero `other-agent`, zero
-      `external`.
-
-    **SO THE WORD CHANGED AND THE PING DID NOT.** Sam's symptom — *"it works for
-    like 5 min then stops and reports"* — is unchanged at a turn-end every ~8
-    minutes, and every one of them now lands on him. **The four are individually
-    legitimate** (A4's shape, the 6-hard-day copy, the sprint-cap units, C2's
-    wording all genuinely need a ruling) — **which is exactly why this is a
-    structural hole and not disobedience.**
-
-    **THE HOLE, STATED PRECISELY: BLOCKED ON ONE ITEM IS NOT BLOCKED ON THE
-    QUEUE.** Each of the four stopped the turn while **22 other live orders sat
-    workable**. The item's own prose already forbids this — *"each of these is
-    one more step in the SAME turn"* — and **the hook cannot see it**, because it
-    reads HEAD's body and never asks how much other work is open.
-
-    **⚠ NOT BUILT, BECAUSE IT IS A TRADE ONLY SAM CAN PRICE.** Requiring the
-    queue to be exhausted before a `BLOCKED-BY: sam` exit would give him the long
-    overnight run he asked for, at the cost of his questions arriving in one
-    batch at the end instead of when they are found. **EXIT 4 is the safety
-    either way** — three turn-ends on one HEAD always releases. **Do not build
-    this without his word; the surface it changes is his sleep.**
-
-30. **EVERYTHING BUILT TODAY MAY BE INVISIBLE — CHANGES ONLY REACH A WEEK THAT
+30. **BLOCKED-BY: other-agent** — its owner is inside the fix right now; see the
+    marker note at the foot of this item. **EVERYTHING BUILT TODAY MAY BE
+    INVISIBLE — CHANGES ONLY REACH A WEEK THAT
     HAS NOT BEEN BUILT YET. THIS IS THE CENSUS DEFECT, IN TODAY'S WORK.**
 
     **OWNED BY THE DESKTOP AGENT, and it found this itself by putting the away
@@ -1275,6 +1237,17 @@ cleared 2026-08-12. **This file holds LIVE ORDERS ONLY.** It was 353KB once and
 every stop paid to re-read it.
 
 ## HOUSEKEEPING (not an order — the hook stops scanning before here)
+
+**WHEN YOU ARE STUCK ON AN ITEM, MARK IT AND WORK THE NEXT ONE.** Sam,
+2026-08-13: *"batch — and when you're stuck on an item, move to the next item
+instead of stopping. Only stop when the whole list is blocked."* Put
+**`BLOCKED-BY: sam`**, **`BLOCKED-BY: other-agent`** or **`BLOCKED-BY: external`**
+**on the item's HEAD line** — column 0 is all the hook reads, so a marker in the
+body silences nothing — and write the question underneath. The hook then walks
+past it to the next order. **When every remaining item is marked, and only then,
+the turn ends and his questions reach him in one batch.** Those three words are
+the whole list; an invented category marks nothing. **A commit subject is no
+longer an exit — `docs(blocked):` does not end a turn.**
 
 **EVERY ORDER LIVES UNDER `## Unprocessed`. Sub-headings inside it MUST be
 `###`.** `scripts/seat-inbox-hook.sh` bounds its scan at the next `## `, so an
