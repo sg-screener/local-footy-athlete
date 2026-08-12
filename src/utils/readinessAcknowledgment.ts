@@ -83,8 +83,10 @@ export type ScheduleDoor = 'short_on_time' | 'away' | 'away_equipment';
  * selected by the COMMITTED result, never by the door alone: a short-on-time
  * commit that compressed today says so; one that changed nothing (rest day,
  * already short) keeps the plain logged sentence, because a signed sentence
- * must never claim a state-dependent outcome. Away is record-only by ruling
- * (its effect is unruled), so its clause states exactly that. A commit the
+ * must never claim a state-dependent outcome. **Away STOPPED being record-only on
+ * 2026-08-13** — Sam ruled its effect (*"yes clear team training and games while
+ * away"*), the fact derives, and both away sentences now name a change the app
+ * actually made. A commit the
  * transaction marked inert FOR THE FIXTURE DAY (`inertReason: 'fixture_day'`,
  * Sam's §7 answer 2026-08-03) gets the signed game-day sentence — the third
  * clause, still selected by the committed result.
@@ -95,9 +97,15 @@ export function buildScheduleAcknowledgment(
 ): ReadinessAcknowledgment {
   if (result?.ok) {
     if (door === 'away') {
+      // ── ITEM 28: "STAYS AS PLANNED" STOPPED BEING TRUE ON 2026-08-13 ──
+      // It was honest while away was record-only. Sam then ruled the effect —
+      // *"yes clear team training and games while away"* — and the fact now
+      // derives, so the week the athlete is looking at DOES move. A sentence
+      // that says otherwise is the app lying about a change it just made.
+      // PROPOSED, copy sheet batch 34.
       return {
         tone: 'success',
-        message: "Got it — logged the days you're away. Your program stays as planned for now.",
+        message: "Got it — team training and games are off while you're away. Everything else stays.",
       };
     }
     // ── ITEM 28: THE AWAY DOOR THAT DOES CHANGE SOMETHING ──
@@ -110,8 +118,7 @@ export function buildScheduleAcknowledgment(
     if (door === 'away_equipment') {
       return {
         tone: 'success',
-        message: "Got it — your sessions will work around the gear you're without "
-          + 'until you\'re back.',
+        message: "Got it — your sessions will work around the gear you're without until you're back.",
       };
     }
     if (result.inertReason === 'fixture_day') {

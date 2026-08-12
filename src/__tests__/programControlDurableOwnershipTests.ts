@@ -564,23 +564,38 @@ async function main(): Promise<void> {
   // what each door DOES; the old reproduction cell is deleted as paid.
   // ────────────────────────────────────────────────────────────────────────
 
-  await run('the away door commits inert: recorded, honest, program byte-unchanged', async () => {
-    // DECLARED RED 1's payment, unruled half. Away has no ruled effect yet, so
-    // the fact commits RECORD-ONLY: the fact and its constraint land, the
-    // program bytes do not move, no overlay or adjustment is minted, and the
-    // §18 mutation gate is not re-run (a contextual signal is not a program
-    // mutation). The door is alive AND honest.
+  await run('the away door DERIVES: the fact lands and the week is re-authored', async () => {
+    // ── INVERTED 2026-08-13, AND SAM'S RULING IS WHY ──
+    //
+    // This cell asserted the opposite for months, and it was RIGHT to: away had
+    // no ruled effect, so its fact took the record-only lane and the program
+    // bytes could not move. **Sam ruled the effect on 2026-08-13** — *"yes clear
+    // team training and games while away"* — and a ruled effect that still
+    // takes the inert lane is a modifier the athlete reads and never receives.
+    // That is exactly what the simulator showed: the flow completed, the
+    // acknowledgment appeared, and the week did not move.
+    //
+    // WHAT IS UNCHANGED IS THE PART THAT MATTERS: the fact still lands, its
+    // constraint still composes, and the door is still honest about what it
+    // did. Only `changedProgram` and the byte-equality flipped, because what
+    // away MEANS changed.
     reachHisWorldByActing();
     const before = dayFingerprints(projectedWeek());
     const overlaysBefore = JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {});
     const ledgerBefore = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length;
     const awayDates = ['2026-08-01', '2026-08-02'];
+    const clubRowsBefore = weekOf(awayDates[0])
+      .filter((day) => awayDates.includes(day.date))
+      .flatMap((day) => (day.workout?.exercises ?? []) as any[])
+      .map((row: any) => String(row?.exercise?.name ?? row?.name ?? ''))
+      .filter((name) => /team training/i.test(name));
 
     const result = await quietAsync(() =>
       executeProgramControlActionDurably(awayAction(awayDates), { todayISO: TODAY }));
     assert(result.ok === true, `the away door is still refused: "${result.message}"`);
-    assert(result.changedProgram === false,
-      'an unruled away fact claims a program change — record-only must be honest about it');
+    assert(result.changedProgram === true,
+      'a ruled away fact reports NO program change — the athlete would read '
+      + '"team training and games off" on a week that still holds both');
 
     const accepted = normalizeAcceptedMaterialContext(
       useProgramStore.getState().acceptedMaterialContext);
@@ -594,13 +609,47 @@ async function main(): Promise<void> {
       constraint.type === 'schedule' && constraint.scheduleKind === 'travel'),
       'the away fact composed no constraint — nothing would reach future generation');
 
+    // THE WEEK MOVED, AND THE UNDO EXISTS. A deriving fact authors a week
+    // overlay and mints a fact-linked reversible adjustment — that adjustment is
+    // what cascade-reverts when the athlete says "I'm back now", so a deriving
+    // lane WITHOUT it would be a change with no way home.
     const after = dayFingerprints(projectedWeek());
-    assert(JSON.stringify(before) === JSON.stringify(after),
-      'a record-only away fact changed the visible week');
-    assert(JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {}) === overlaysBefore,
-      'a record-only away fact authored a week overlay');
-    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length === ledgerBefore,
-      'a record-only away fact minted a reversible adjustment');
+    assert(JSON.stringify(before) !== JSON.stringify(after),
+      'the away fact left the visible week byte-identical — the ruled effect '
+      + 'never reached the week the athlete is looking at, which is the defect '
+      + 'this inversion exists to hold down');
+    assert(JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {}) !== overlaysBefore,
+      'a deriving away fact authored no week overlay');
+    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length > ledgerBefore,
+      'a deriving away fact minted no reversible adjustment, so nothing can '
+      + 'cascade-revert when the athlete gets home');
+
+    // AND THE CHANGE IS THE RULED ONE, not merely "different bytes". A regen
+    // that reshuffled the week for any other reason would satisfy every
+    // assertion above; this one names what Sam actually asked for.
+    const clubRowsOn = (week: ReturnType<typeof weekOf>): string[] => week
+      .filter((day) => awayDates.includes(day.date))
+      .flatMap((day) => (day.workout?.exercises ?? []) as any[])
+      .map((row: any) => String(row?.exercise?.name ?? row?.name ?? ''))
+      .filter((name) => /team training/i.test(name));
+    // NON-VACUITY FIRST, and this cell exists because the positive form alone
+    // passed on a week that never had a team row to lose. "No team training
+    // survives" is trivially true of a week that never had any — `a bind can be
+    // green and empty`, at the address that matters most.
+    // ⚠ AND THE ANSWER IS THAT IT DOES NOT, YET — MEASURED, NOT ASSUMED. This
+    // world has NO team-training row on either away day, because the generator
+    // marks a team day on the PLAN (`isTeamDay`) and names it from there. The
+    // positive form of this assertion passed VACUOUSLY on exactly that emptiness
+    // (`a bind can be green and empty`), which is why it is written as a
+    // measurement of the gap rather than a claim about the athlete's week.
+    // **When the plan-side fix lands, this flips to `> 0` before and `=== 0`
+    // after, and it is the cell that proves it.**
+    const clubRowsAfter = clubRowsOn(weekOf(awayDates[0]));
+    assert(clubRowsBefore.length === 0 && clubRowsAfter.length === 0,
+      `the world grew a team-training row (${clubRowsBefore.length} before, `
+      + `${clubRowsAfter.length} after). That is the shape this cell has been `
+      + 'waiting for — invert it now: the before count is the non-vacuity proof '
+      + 'and the after count must be zero.');
   });
 
   await run('a deriving short-on-time commit compresses today and touches no other day', async () => {
@@ -971,11 +1020,20 @@ async function main(): Promise<void> {
     assert(!/compressed|main lift/i.test(recordedOnly.message),
       'a no-change commit claims a compression that did not happen: '
       + `"${recordedOnly.message}"`);
+    // INVERTED 2026-08-13 WITH THE RULING. This asserted "stays as planned",
+    // which was the honest RECORD-ONLY clause while away had no ruled effect.
+    // Sam ruled one — *"yes clear team training and games while away"* — the
+    // fact derives, and the week moves, so that clause became the lie it was
+    // written to prevent. The PROPERTY is unchanged: the away ack must name
+    // what away actually does to the week, and must not claim a compression.
     const awayLanded = buildScheduleAcknowledgment(
       { ok: true, changedProgram: false }, 'away');
-    assert(/stays as planned/i.test(awayLanded.message),
-      'the away ack no longer carries its honest record-only clause: '
+    assert(/team training and games are off/i.test(awayLanded.message),
+      'the away ack no longer names the ruled effect: '
       + `"${awayLanded.message}"`);
+    assert(!/stays as planned/i.test(awayLanded.message),
+      'the away ack still promises the week is untouched, which stopped being '
+      + `true when Sam ruled the effect: "${awayLanded.message}"`);
 
     // THE THIRD CLAUSE (Sam's §7 answer): selected by the committed result's
     // typed inertReason — verbatim, and never for the away door, whose facts
@@ -987,7 +1045,7 @@ async function main(): Promise<void> {
       `the fixture-day clause is not Sam's signed sentence verbatim: "${gameDayAck.message}"`);
     const awayNeverGameDay = buildScheduleAcknowledgment(
       { ok: true, changedProgram: false, inertReason: 'fixture_day' }, 'away');
-    assert(/stays as planned/i.test(awayNeverGameDay.message),
+    assert(!/game day|go play/i.test(awayNeverGameDay.message),
       `the away door borrowed the game-day sentence: "${awayNeverGameDay.message}"`);
   });
 

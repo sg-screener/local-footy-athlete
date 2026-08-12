@@ -748,7 +748,22 @@ export async function commitTemporarySourceFactSet(
   }): boolean =>
     isTemporarySourceFactConstraint(constraint as never) &&
     (constraint.type === 'fatigue' || constraint.type === 'injury' ||
+      // ── EQUIPMENT DERIVES, 2026-08-13 (SEAT_INBOX item 28) ──
+      // Its effect has been RULED for two weeks and signed as a phrase the
+      // athlete reads — *"Exercises substituted"* (item 22(a)) — while the
+      // fact itself took the INERT lane, so nothing was substituted in the week
+      // he was looking at. A modifier that names an effect and takes the
+      // record-only lane is the same green-and-empty shape this flow has now
+      // hit twice. The kit the athlete has IS what a session can be built from,
+      // so the week has to be re-authored around it.
+      constraint.type === 'equipment' ||
       (constraint.type === 'schedule' &&
+        // ── AND SO DOES A TRIP, for the same reason and by the same ruling ──
+        // Sam, 2026-08-13: *"yes clear team training and games while away"*.
+        // That is a ruled effect on the days of the trip, and the rule lives at
+        // `postGenerationConstraintValidation`, which only ever runs when a
+        // week is AUTHORED. Leaving travel inert left the rule real and unread.
+        (constraint.scheduleKind === 'travel' ||
         ((constraint.scheduleKind === 'time_cap' &&
           // Sam's §7 answer: a cap aimed only at fixture days is INERT —
           // there is nothing to shorten. Mixed or plain-day caps keep
@@ -757,7 +772,7 @@ export async function commitTemporarySourceFactSet(
           // Team-night movability (Sam, signed 2026-08-02): the one-off fact's
           // ruled effect relocates the team anchor within its week — an
           // authoring event, so it derives. See rules/teamNightMoveDerivation.
-          constraint.scheduleKind === 'team_night_move')));
+          constraint.scheduleKind === 'team_night_move'))));
   const derivingSignature = (constraints: readonly unknown[]): string =>
     JSON.stringify((constraints as Array<{ id?: string; type?: string; severity?: number; scheduleKind?: string }>)
       .filter(isRuledDerivingConstraint)

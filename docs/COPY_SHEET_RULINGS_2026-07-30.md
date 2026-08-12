@@ -2267,6 +2267,7 @@ about a trip, and the sentence the athlete gets back.
 | Equipment row status, when it is a trip | "Missing while away" |
 | The away modifier's sentence, on My Status | "Team training and games are off while you are away. Your own sessions keep running." |
 | The away modifier's short phrase (item 23's right-hand column) | "Team training and games off" |
+| The answer to the YES branch | "Got it — team training and games are off while you're away. Everything else stays." |
 
 **34-a. THE YES ANSWER GETS A SENTENCE AND NO MODIFIER**, because Sam's own
 answer to that branch is *"if yes, follow same program"*. The sentence names the
@@ -2295,6 +2296,12 @@ team training and games while away"*. So:
   athlete cannot train). Nothing moves any more, so travel gets its own phrase
   rather than borrowing a signed one that has stopped being true. **It is
   PROPOSED — the behaviour is his, the four words are not yet.**
+
+**34-a-iv. AND THE OLD AWAY ANSWER IS WITHDRAWN FOR THE SAME REASON.**
+**WITHDRAWN: "Got it — logged the days you're away. Your program stays as planned
+for now."** It was honest while away was RECORD-ONLY. Sam ruled the effect, the
+fact now derives, and the week does move — so a sentence promising it does not is
+the app lying about a change it just made.
 
 **34-b. NOTHING REPLACES A SIGNED WORD.** "Away" is already his (batch 12);
 only its SURFACE moved. The Day-screen sentence "Away this week?" is

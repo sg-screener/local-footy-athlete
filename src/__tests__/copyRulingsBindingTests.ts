@@ -138,6 +138,13 @@ const AUTHORING_MODULES = [
   // Sam changed what away does, and without this line the gate could not see
   // either the old string leaving or the new one arriving.
   'rules/temporarySourceFact.ts',
+  // THE ACK SENTENCES EVERY TAP DOOR ANSWERS WITH (`buildScheduleAcknowledgment`,
+  // `buildReadinessAcknowledgment`), added 2026-08-13 with the away flow — the
+  // SIXTH time this hatch has opened for the reason written out above. The away
+  // door's answer had to change when Sam ruled that away CHANGES the week
+  // ("Your program stays as planned for now" became a lie), and without this
+  // line neither the withdrawal nor its replacement was visible to the gate.
+  'utils/readinessAcknowledgment.ts',
   // THE MONDAY NOTIFICATION'S SENTENCE (batch 28, C6), added 2026-08-09 — and it
   // is the FOURTH time this hatch has been opened for the same reason, which is
   // now worth stating as a pattern rather than a coincidence: **words are

@@ -2372,16 +2372,25 @@ async function walkTheScheduleDoors(): Promise<void> {
       + 'regressed to the dead third lane');
 
     if (door === 'away_this_week') {
-      // UNRULED → RECORD-ONLY, HONEST. The fact and constraint land; the
-      // program bytes do not move; no overlay, no adjustment.
-      assert(weekFingerprint() === fingerprintBefore,
-        `${door}: a record-only away fact changed the visible week`);
+      // ── RULED 2026-08-13, SO THE LAW HERE INVERTED (SEAT_INBOX item 28) ──
+      // This asserted the fact was RECORD-ONLY and the week byte-unchanged,
+      // which was correct while away had no ruled effect. Sam ruled one —
+      // *"yes clear team training and games while away"* — so away now derives
+      // and the week MUST move. Leaving this cell as it stood would have made
+      // "the athlete's week never changes" the law the walker defends, which is
+      // the opposite of what he asked for.
+      assert(weekFingerprint() !== fingerprintBefore,
+        `${door}: the away fact left the visible week byte-identical — the ruled `
+        + 'effect never reached the week the athlete is looking at');
       const accepted = useProgramStore.getState().acceptedMaterialContext;
       assert(accepted.temporarySourceFacts.some((fact) =>
         'factKind' in fact && fact.factKind === 'schedule'),
         `${door}: the away fact did not land in the accepted context`);
-      assert(Object.keys(useProgramStore.getState().weekScopedOverlays ?? {}).length === 0,
-        `${door}: a record-only fact authored a week overlay`);
+      // AND THE OVERLAY EXISTS, because that is what a deriving fact writes and
+      // what its reversible adjustment points at. Without it there is nothing
+      // to cascade-revert when the athlete gets home.
+      assert(Object.keys(useProgramStore.getState().weekScopedOverlays ?? {}).length > 0,
+        `${door}: a deriving away fact authored no week overlay`);
     } else {
       // RULED → DERIVING. Today's session is compressed under the 35-minute
       // owner (Sam 2026-08-02: main lift kept, cut to essentials); the other

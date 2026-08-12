@@ -352,6 +352,16 @@ export function validateWorkoutAgainstActiveConstraints(
   // SO: club-bound work goes, solo work stays and is reshaped by the equipment
   // answer he gave in the same flow. A day that was ONLY club work becomes
   // rest, which is the honest end of the same rule rather than a second one.
+  // ⚠ MEASURED 2026-08-13, AND THIS RULE DOES NOT YET REACH THE REAL GENERATOR.
+  // Generating a week with a live travel constraint produces a BYTE-IDENTICAL
+  // week: the day's team identity is `isTeamDay` on the PLAN entry, and the
+  // team-day name enforcement re-derives the name and workoutType from it
+  // AFTER this seam runs (`defaultProgram.ts` "Team-day name enforcement"), so
+  // anything decided here about a plan-derived team day is overwritten. What
+  // this rule DOES hold is the row-shaped team training the coach path and the
+  // legacy fixtures produce, which is what its cells exercise.
+  // **THE REAL FIX IS IN THE PLAN — the allocator must not mark a day
+  // `isTeamDay` inside a live travel span.** Named here rather than half-built.
   const travelling = active.some((constraint): constraint is ActiveScheduleConstraint =>
     constraint.type === 'schedule' && constraint.scheduleKind === 'travel');
   if (travelling) {

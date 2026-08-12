@@ -317,6 +317,14 @@ async function main(): Promise<void> {
     /from: leaveISO, until: addDaysISO\(returnISO, -1\)/.test(screen));
 
   // ── [8] WHAT BEING AWAY DOES TO A DAY — Sam, 2026-08-13 ──────────────────
+  //
+  // ⚠ READ THIS BEFORE TRUSTING [8]-[12] AS AN ATHLETE-VISIBLE CLAIM. They call
+  // the seam DIRECTLY with row-shaped team training, and the seam does exactly
+  // what they say. **The real generator marks a team day on the PLAN
+  // (`isTeamDay`) and re-derives its name after this seam runs**, so a
+  // generated week is byte-identical with a travel constraint live — measured,
+  // not assumed. These cells therefore hold the RULE, not the athlete's screen.
+  // The plan-side fix is named in `postGenerationConstraintValidation`.
   // *"yes clear team training and games while away"*, answering the one
   // question item 28 left open. The rule has two halves and BOTH have to hold
   // or it is the wrong rule: the club's work comes off, and the athlete's OWN
