@@ -1418,6 +1418,34 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **DOES AWAY TOUCH A GAME HE ENTERED HIMSELF? Asked 2026-08-13, after his
+  "yes it should disappear" landed and the measurement showed WHICH game it
+  reached.**
+
+  **WHAT WAS SEARCHED FIRST.** His ruling is built for the fixture that comes
+  from his PROFILE — the usual game day — and that one is dropped inside a trip.
+  **The Saturday game still on screen is a different thing: a CALENDAR MARK**
+  (`devE2ESeedRegistry.ts:773` seeds `{ kind: 'calendar_mark', mark: 'game' }`),
+  and marked fixtures reach the week through their own owner,
+  `targetWeekFixtures` (`rules/fixtureConditionedAvailability.ts:141`), which
+  never sees the trip. **So the two halves of "a game" are not one thing, and
+  only one of them is covered.**
+
+  **THE QUESTION.** A marked game is a fact HE TYPED IN — a real fixture his club
+  is playing whether he is there or not. When he is away over it, does the app
+  **(a) hide it too**, so his week reads as if there is no match at all; or
+  **(b) leave the mark and only drop the training around it** — no taper, no
+  G+1, but the match still shown as a day he is missing?
+
+  **THIS IS NOT THE QUESTION HE ALREADY ANSWERED.** That one was about the
+  week's SHAPE — tapering for a match he is not at. **This one is about editing
+  a record he entered by hand**, which is why it is not mine to assume: the app
+  suppressing something the athlete typed is a different act from the app not
+  generating something itself.
+  **RECOMMENDED: (b).** "Disappear" is satisfied by the training around it going;
+  quietly hiding his own entry is the part he did not ask for.
+  **NOT BUILT EITHER WAY.**
+
 - **ANSWERED 2026-08-13 — a game inside the trip DISAPPEARS.** Sam: ***"yes it
   should disappear OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***. **Built the same
   day** — the fixture is dropped at the plan, so the week loses its taper and
