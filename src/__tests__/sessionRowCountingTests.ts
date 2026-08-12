@@ -546,9 +546,9 @@ console.log('\n[SESSION SIZE] the floor has one owner');
 // where the next reader is already looking.
 {
   const rows = [
-    row('Back Squat', 0, 'main_strength'),
+    row('Back Squat', 0, 'main_lift'),
     row('Trap Bar Jump', 1, 'power'),
-    row('Romanian Deadlift', 2, 'main_strength'),
+    row('Romanian Deadlift', 2, 'main_lift'),
   ];
   const indices = countingIndices(rows);
 
@@ -566,8 +566,8 @@ console.log('\n[SESSION SIZE] the floor has one owner');
   // NON-VACUITY: with no exempt row the two DO agree, so the cell above is
   // asserting the exemption and not simply that filtering shrinks an array.
   const allCounting = countingIndices([
-    row('Back Squat', 0, 'main_strength'),
-    row('Romanian Deadlift', 1, 'main_strength'),
+    row('Back Squat', 0, 'main_lift'),
+    row('Romanian Deadlift', 1, 'main_lift'),
   ]);
   ok('with no exempt row, length and counted-count agree',
     allCounting.filter((index) => index !== NON_COUNTING_ROW_INDEX).length === allCounting.length);
