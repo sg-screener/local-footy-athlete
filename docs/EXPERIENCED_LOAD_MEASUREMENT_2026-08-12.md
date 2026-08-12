@@ -91,3 +91,41 @@ conditioning's sRPE is its cost.
   what the SHAPES permit, not observed logging behaviour.
 
 **NORTH STAR: neutral.** Nothing stored, nothing derived; this reports.
+
+## §6 RE-MEASURED AFTER THE EFFORT SCALE LANDED — the premise moved, and one kind already stores BOTH halves
+
+**Measured 2026-08-12, after `0a` put every effort input on one 1-10 scale.**
+§1 was taken before that landed and is now incomplete in a way that changes what
+this item should build.
+
+| session kind | effort/RPE stored | duration stored | sRPE computable | who READS it |
+| --- | --- | --- | --- | --- |
+| **conditioning** | `ConditioningPerformanceLog.rpe` | `.totalTimeMinutes` | **yes** | `conditioningSRPE` → `deriveSessionLoad` |
+| **team training** | `TeamTrainingSessionOutcome.effort` (1-10) | `.durationMinutes` | **yes** | **NOTHING** |
+| **game** | `GameSessionOutcome.bodyRpe` (1-10) | `.timeOnGroundMinutes` | **yes** | **NOTHING** |
+| **strength** | — | — | no (volume load only) | `liftTonnageKg` |
+
+**TWO OF THE FOUR KINDS ALREADY STORE BOTH HALVES OF sRPE AND NOTHING COUNTS
+THEM.** `TeamTrainingSessionOutcome` and `GameSessionOutcome` are written by the
+feedback panel through `sessionFeedbackForm`, validated at the transaction
+boundary, and `journalLoad.ts` has no path for either — `conditioningSRPE` is its
+only sRPE reader, and it takes a `ConditioningPerformanceLog`.
+
+**SO §3'S ASYMMETRY IS SMALLER AND SHARPER THAN IT LOOKED.** It is not
+"conditioning has data, everything else is an estimate". It is:
+
+> **three of four kinds have real athlete-reported load, and two of those three
+> are thrown away. Only STRENGTH genuinely needs Sam's estimate ruling.**
+
+**WHAT THAT DOES TO THE BUILD.** Option (c) — planned, marked estimate — applies
+to strength ALONE, not to the column. Team training and games need **a reader,
+not a ruling**, and that reader is the same shape as `conditioningSRPE`: effort ×
+minutes, both already validated as present. **This is the same
+written-and-never-consumed class as `achievedModerateDayCount` (item 4) and
+`canOverride` — third sighting today, and `LAW-computed-must-be-consumed`
+(item 10) is the compression that would have caught all three.**
+
+**NOT COVERED:** whether the game's `timeOnGroundMinutes` should count as full
+load or be weighted (a game is not a training session, and nobody has ruled a
+weighting); and whether mixing strength's VOLUME LOAD unit with sRPE is
+acceptable in one column — **§4's open question is still open and still Sam's.**

@@ -827,7 +827,27 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **Extend the existing `HARD_DAY_PROBE` seam — do not add a second flag.**
    **Do not build 500 synthetic athletes.** Make the 17 report properly first.
 
-6. **PLANNED LOAD IS NOT EXPERIENCED LOAD.**
+6. **RE-MEASURED — THE PREMISE MOVED, AND TWO SESSION KINDS ALREADY STORE BOTH
+   HALVES OF sRPE WITH NO READER.** `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md`
+   §6, taken after `0a` put every effort input on one 1-10 scale.
+   **Team training stores `effort` + `durationMinutes`. A game stores `bodyRpe` +
+   `timeOnGroundMinutes`. Both are written, validated at the transaction
+   boundary — and `journalLoad` has NO path for either.** Its only sRPE reader
+   takes a `ConditioningPerformanceLog`.
+   **SO THE ASYMMETRY IS NOT WHAT §3 SAID.** Three of four kinds have real
+   athlete-reported load and two of those three are discarded. **Only STRENGTH
+   needs Sam's estimate ruling**; team training and games need **a reader, not a
+   ruling**, and it is the same shape as `conditioningSRPE`.
+   **THIRD SIGHTING TODAY of written-and-never-consumed** —
+   `achievedModerateDayCount` (item 4), `canOverride`, and now these two.
+   **Item 10's `LAW-computed-must-be-consumed` is the compression for all of
+   them.**
+   **NOT BUILT: the readers.** The build is now smaller and better shaped than
+   the item assumed.
+   **STILL SAM'S:** whether a game's minutes count as full load or weighted, and
+   whether strength's VOLUME LOAD may share a column with sRPE (§4's open fork).
+
+   ~~ORIGINAL~~ **PLANNED LOAD IS NOT EXPERIENCED LOAD.**
    `docs/HOW_THE_ATHLETE_TELLS_US_2026-08-12.md`. Hard/moderate/easy stays for
    BUILDING; readiness must read what the athlete REPORTED. `conditioningSRPE`
    is built and correct (`journalLoad.ts:509-520`) and its only importers are
