@@ -360,6 +360,23 @@ his instruction is standing authority, not history.**
    both halves too, but whether a match's minutes are full or weighted training
    load is a coaching question. **Written under `## AWAITING SAM
 
+- **ONE RULING — SPRINT CAP: 2 NIGHTS OR 2-3 EXPOSURES? (census A6). Two of your
+  own lines disagree, in different units.**
+  - **Bible `:90`:** *"Sprinting limited to **2 nights per week** which includes
+    nights at team training."* — a HARD cap, counted in NIGHTS.
+  - **Bible `:129`:** *"A second exposure may occur naturally, while **2-3
+    remains the usual maximum**."* — a SOFT preference, counted in EXPOSURES.
+  **They cannot both be the enforced number.** Setting a hard 2 would refuse
+  weeks `:129` calls usual; leaving it open is today's behaviour.
+  **MEASURED (the census receipt is partly wrong):** four rows carry
+  `max: null` — in-season game week, both bye rows, mid off-season. **Pre-season
+  is NOT uncapped: `:1030` already sets `max: 2`.** Early off-season is `max: 0`,
+  correctly.
+  **RECOMMENDATION:** enforce **`:90` — 2 nights, team training counted** — and
+  read `:129`'s "2-3" as the exposure-count preference it says it is, not a cap.
+  That makes the four `null` rows `max: 2`. **One word and it ships; the units
+  matter, so I have not guessed.**
+
 - **ONE SENTENCE — THE 6-HARD-DAY WARNING UNDERSTATES ITSELF (A5's only live
   part). Measured; the block half is correctly NOT built.**
   **What the athlete reads today** (`planChangeRefusalCopy.ts:43`):
