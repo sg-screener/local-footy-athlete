@@ -4803,21 +4803,38 @@ function buildWeeklyPlan(
         case 'U-co': return 'Upper body - combined push + pull (horizontal + vertical, balanced load)';
         case 'COND': {
           const fl = flavour || 'aerobic';
-          if (category === 'aerobic_base' || (!category && fl === 'aerobic')) {
-            return 'Conditioning - aerobic base / zone 2 (steady state, conversational pace)';
-          }
-          if (category === 'tempo' || (!category && fl === 'tempo')) {
-            return 'Conditioning - tempo / controlled repeat efforts (6-7/10, worked but composed)';
-          }
-          if (category === 'vo2') {
-            return 'Conditioning - VO2 / hard repeat efforts (8-9/10 intervals)';
-          }
-          if (category === 'glycolytic') {
-            return 'Conditioning - high-intensity repeat efforts (8-9/10 intervals)';
-          }
-          if (category === 'sprint') {
-            return 'Conditioning - sprint / speed exposure (quality reps, full recovery)';
-          }
+          // TOTAL MAP, NOT AN IF-CHAIN WITH A FALL-THROUGH. Every category
+          // declares its own words or the compiler refuses the build.
+          //
+          // THE FALL-THROUGH WAS AN ATHLETE-FACING DEFECT (item 28-C1e).
+          // `cod_decel` had no wording and silently borrowed the INTERVAL
+          // sentence, so a change-of-direction session would have announced
+          // itself as "high intensity intervals" the moment placement worked.
+          // An unmapped thing quietly becoming a mapped thing is the same
+          // silent-substitution shape as the category waist.
+          //
+          // CENSUS OF BORROWERS, as the item ordered: within THIS function the
+          // vocabulary is `CondCategory` (= OffseasonConditioningCategory), and
+          // `cod_decel` was the ONLY member without its own words. The selector's
+          // wider `AthleteConditioningCategory` also carries `recovery_flush`,
+          // which never reaches here and is separately named 'Recovery' at its
+          // own emitter (`workoutTypeForCategory`) — so it is NOT a borrower.
+          //
+          // THE WORD IS SAM'S, NOT INVENTED: his own tab name, "Change of
+          // Direction/Decel" (`docs/CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:122`
+          // and the tab title in his annotated state file). He ruled it 2026-08-13:
+          // "The label is your own tab name. Don't ask me, ship it.""
+          const COND_FOCUS: Record<CondCategory, string> = {
+            aerobic_base: 'Conditioning - aerobic base / zone 2 (steady state, conversational pace)',
+            tempo: 'Conditioning - tempo / controlled repeat efforts (6-7/10, worked but composed)',
+            vo2: 'Conditioning - VO2 / hard repeat efforts (8-9/10 intervals)',
+            glycolytic: 'Conditioning - high-intensity repeat efforts (8-9/10 intervals)',
+            sprint: 'Conditioning - sprint / speed exposure (quality reps, full recovery)',
+            cod_decel: 'Conditioning - Change of Direction/Decel',
+          };
+          if (category) return COND_FOCUS[category];
+          if (fl === 'tempo') return COND_FOCUS.tempo;
+          if (fl === 'aerobic') return COND_FOCUS.aerobic_base;
           return 'Conditioning - high intensity intervals (short, hard repeats with short rest)';
         }
         case 'S+C': {
