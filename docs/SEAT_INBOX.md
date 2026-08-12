@@ -15,7 +15,37 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-30-A5. **THE 6TH HARD DAY: SAM SAYS REFUSE, THE MODULE RESERVES ITS ONLY REFUSAL
+30-A5. **⚠ DO NOT BUILD A5. SAM OVERRULED IT ON 2026-08-12 AND THE APP IS
+    ALREADY OBEYING THE LATER RULING.**
+
+    **THE CENSUS ROW IS OUT OF DATE, and the one-grep census I set myself found
+    the reason immediately.** `canOverride: false` appears SIX times in
+    production and `src/rules/blockOverride.ts` is its one reader — a file whose
+    header is the whole answer.
+
+    **Sam, 2026-08-12, verbatim:** *"should give warnings but allow them to do
+    whatever they want"*, and earlier *"nothing so tight that ... the athlete
+    can't choose to do whatever they want"*.
+    **`blockOverride.ts:11-12`:** *"the app WARNS, RECORDS that it warned, and
+    then does what it was asked. A refusal with no way through survives in
+    exactly one case: **the action is physically impossible**."*
+
+    **A 6th hard day is not physically impossible.** So a warn-and-allow is
+    EXACTLY what his later ruling requires, and that is what
+    `weekStructureValidator` + `conflictResolutionHierarchy` already do.
+    **Bible `:118`'s "is refused" is the EARLIER text; 2026-08-12 supersedes it
+    on precisely this question — whether the athlete may proceed.**
+
+    **BOTH ROUTES I PROPOSED LAST TURN WERE WRONG** — (a) making the hierarchy
+    refuse on `canOverride: false` and (b) widening `hard_stop` — because each
+    would have built the refusal he removed. **The tension I reported between the
+    ruling and the module's convention was not a tension: the module is right and
+    the census row is stale.**
+    **WHAT MAY STILL BE OWED IS COPY, NOT A BLOCK:** his ruling says warn *"with
+    plain-language copy saying why"*. Whether today's 6-hard-day message meets
+    that bar is a copy question and the only live part of A5.
+
+    ~~ORIGINAL~~ **THE 6TH HARD DAY: SAM SAYS REFUSE, THE MODULE RESERVES ITS ONLY REFUSAL
     FOR INJURY. THE TENSION IS REAL AND IT IS AN ENGINEERING CALL.**
 
     **OWNED BY THE TERMINAL. Measured, not built — the fix has blast radius.**
