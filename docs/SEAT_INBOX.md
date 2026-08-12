@@ -1124,11 +1124,10 @@ phone.** State device items as PARKED in a stop report, never as a request.
    dead tap now works: the counter readout, its state and all four `logger.warn`
    probes. **The `__DEV__` stored-state export block is UNTOUCHED** — a separate
    2026-07-30 concern, exactly as this item instructs.
-   **`ModifiersStrip`'s TWO "DEAD" UNION MEMBERS ARE NOT DELETED, ON PURPOSE.**
-   `'day'` and `'week'` are unused only because the day/week indicator is not
-   built — and that is the **open question under `## AWAITING SAM`**. Deleting
-   them now removes the surface he may say yes to, and would have to be undone.
-   **Not a miss; a decision, waiting on his answer.**
+   **`ModifiersStrip`'s TWO "DEAD" UNION MEMBERS ARE NOT DELETED — AND SAM HAS
+   NOW SAID YES.** Holding them was right: `'day'` and `'week'` become live in
+   **item 16**. Had they been deleted 2026-08-12 they would be going back in
+   today. **Nothing owed here; see item 16.**
    **NOT STARTED:** the session-size floor/ceiling at `sessionRowCounting.ts:253`
    and `MIN EXERCISES PER SESSION` in the prompt.
 
@@ -1169,7 +1168,14 @@ phone.** State device items as PARKED in a stop report, never as a request.
    greps *usage*, so the dead definition passes). Nothing breaks.
 
 16. **SAM HAS RULED — MOUNT THE STRIP ON DAY AND WEEK. THE SECOND HALF OF HIS
-    OWN DESIGN, ANSWERED 2026-08-12.** He was asked yes or no in the item-8 stop
+    OWN DESIGN, ANSWERED 2026-08-12.**
+
+    **OWNED BY THE DESKTOP AGENT — THE ONE THAT ASKED THE QUESTION AND HAS THE
+    SIMULATOR. TERMINAL: DO NOT TAKE THIS ITEM.** It edits `HomeScreenV2.tsx`,
+    which is mid-flight in this shared checkout, and it must be SEEN on glass
+    before it is called done — a count row that renders behind a header or under
+    the notch passes every assertion and is still wrong. **Terminal, skip to
+    item 13 and item 14's NOT STARTED half.** He was asked yes or no in the item-8 stop
     report. **Sam:** *"yes — one line on week, small card on day, read-only
     both"*. That is the whole spec and it matches what `ModifiersStrip` was
     already written to do.
