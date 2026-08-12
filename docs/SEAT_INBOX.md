@@ -105,8 +105,51 @@ his instruction is standing authority, not history.**
     so enforcement needs a parser over authored text, and that parser must not
     mistake a continuous block for an interval.
 
-28-C1h. **THE COD PROBE RAN — ELIGIBILITY NEVER SEES `cod_decel` AT ALL, AND A
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1h).**
+28-C1. **COD — SIX WALLS DOWN, ONE LEFT. The trail is archived; this is the live
+    state.** Full history verbatim in `docs/SEAT_INBOX_COD_TRAIL_2026-08-13.md`.
+    **OWNED BY THE TERMINAL.**
+
+    **SHIPPED AND STANDING** (each survived a revert of the attempt around it):
+    the `cod_decel` category; the selector branch; the eligibility gate; the
+    explicit 8-quality → category map (which found a THIRD narrowing nobody knew
+    about — `aerobic_capacity` splits across two categories, five templates were
+    unreachable); Sam's own tab name **"Change of Direction/Decel"** as signed
+    copy; and the rest floor, fixed in passing.
+
+    **CLEARED, so nobody re-suspects them:** the week is NOT short of conditioning
+    (contract wants 3, ships 3 — the "2" was a count of KINDS, not sessions); the
+    reconcile line that lowers a requirement to match delivery **never fires** on
+    a real week; the validator's conditioning counter is fine (non-zero on all 17
+    QA weeks — a probe read it wrong); the six-day week is legal.
+
+    **THE ONE WALL LEFT:** the week draws its three conditioning sessions from
+    **two kinds**, and two of the three are attached to lifting days where hard
+    work is correctly refused. **COD must become one of the kinds the standalone
+    slot is drawn from.** Eligibility never sees `cod_decel` at all — nine
+    refusal points tagged, not one hit — so the block is upstream of eligibility,
+    in the standalone caller's choice of kind.
+
+    **NEXT, and it is one line of output:** print what the standalone caller's
+    first choice actually is. That says whether the parked rule fires on the slots
+    that matter, or whether that path is never reached for the standalone session.
+
+    **⚠ SIX MEASURING FAULTS CAME OUT OF THIS ITEM AND THE RULES THEY EARNED ARE
+    BINDING ON EVERY AGENT AND THIS SEAT:**
+    1. **State what is being counted and show one instance.** Put the UNIT on the
+       number — "3 sessions", "2 kinds" — never a bare integer. Four of the six
+       were one word covering two units.
+    2. **A zero is the most dangerous number in this repo.** It is equally
+       produced by "the thing does not happen" and "I am not looking where it
+       happens". Show what a non-zero would have looked like.
+    3. **Check the instrument is in place before trusting its silence.** A probe
+       that silently failed to apply was read as an answer, twice.
+    4. **A function's second caller is a different world.** Five attempts measured
+       the attached-conditioning caller while reasoning about the standalone one.
+    5. **Is the wall I just hit itself a census finding?** Grep
+       `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md` before treating any obstacle as
+       a fact of the system.
+    6. **Measure the layer above before changing code** — the terminal's own
+       verdict on why five of six reverts happened.
 
 29. **THE EXIT SAM CLOSED HAS REOPENED UNDER A NEW NAME — `docs(blocked):` IS
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 29).**
@@ -154,53 +197,6 @@ his instruction is standing authority, not history.**
     exists, and the change appearing on it.** Nothing else counts as done for
     this item. **A green suite has now twice agreed with a screen that had not
     moved.**
-
-0. **BUILT — THE HOOK NOW HAS FOUR EXITS AND `docs(stop):` IS NOT ONE OF THEM.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0).**
-
-0a. **PAID IN FULL — `7a6281ce`, `f3861b31`, `f9f84123`.** One scale, one
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0a).**
-
-0b. **BUILT AND LIVE — `59164984`. Sam ruled "proxies" 2026-08-12.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0b).**
-
-0c. **ALL SIX BUILT — `dc7d7246`, `ab43825c` (and (i) installed).**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0c).**
-
-0d. **BOTH BUILT AND BOTH GUARDED — `CLAUDE.md` 137 -> 104 lines, and
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0d).**
-
-0f. **THE "HIDDEN SESSION" IS FIXED — AND MY FIRST READING OF IT WAS WRONG.**
-   **Sam, 2026-08-12: fix it, and do NOT drive the simulator — Claude Code owns
-   it.** Both obeyed: this was worked entirely in node.
-   **THE CORRECTION FIRST.** 0e reported that today's card does not draw
-   everything the day holds. **It draws everything the day holds. The SEED was
-   wrong.** `stabilizeMicrocycle` rewrites every exercise row id to make a seed
-   reproducible and **never rewrote `conditioningBlock.options[].exerciseIds`**,
-   so the block pointed at ids no row had, the conditioning row was filed as
-   strength, and `getSessionComponents` reported one component where the day has
-   two. **23 of 23 seeded workouts carrying a block — every seed, not a sample.**
-   **THE GENERATOR'S OWN OUTPUT WAS MEASURED AT THE SAME TIME AND IS CORRECT**
-   (4 of 4 blocks resolve; components read `strength, conditioning`). **No
-   athlete was ever affected and no product code changed.**
-   **FIXED IN THE SEED, PROVEN WITHOUT GLASS:** `projectParts` for that Monday
-   now yields `strength` AND `conditioning`; before the fix, `strength` alone.
-   Three cells in `test:dev-e2e-seeds` (cause, consequence, anti-vacuous),
-   mutation-checked. Registry row `LAW-rename-carries-its-references`, 101/69 ->
-   102/70, UNENFORCED unmoved at 32.
-   **THE COST OF THE SEED BUG BEYOND THIS BUG:** every seeded world was a world
-   no athlete is in, on exactly the axis the fixture-fidelity law names.
-   **⚠ OWED AND BLOCKED: the deletion flow's re-run on glass**, because the
-   simulator is Claude Code's until Sam says otherwise.
-   **⚠ THREE REDS IN THIS TREE ARE NOT MINE** — `test:compile` on untracked
-   `fixtureSettleAfterSetupTests.ts`; `test:dev-e2e-seeds` and
-   `test:dev-e2e-scenario-session` on the same pre-existing "manifests add no
-   seed families" cell (identical name for name at HEAD, measured both ways);
-   and `test:repo-law-guards`' orphan-flow cell now names the other agent's
-   untracked `.maestro/tmp-gameday-verify.yaml`.
-
-0e. **BOTH BUILT. THE CENSUS CAME FIRST AND IT PAID TWICE.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 0e).**
 
 1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
    always in force; they are not work items to clear.
@@ -330,12 +326,6 @@ his instruction is standing authority, not history.**
 3. **THE ±7 IS DELETED. FOURTH ATTEMPT, AND THE THREE BEFORE IT WERE HUNTING THE
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 3).**
 
-4. **BUILT — THE MODERATE HALF NOW SPEAKS, AND A FOURTH WORD WAS FOUND.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 4).**
-
-5. **BUILT — THE 17 NOW ANSWER "IS THIS A WEEK SAM WOULD WRITE".**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 5).**
-
 6. **RE-MEASURED — THE PREMISE MOVED, AND TWO SESSION KINDS ALREADY STORE BOTH
    HALVES OF sRPE WITH NO READER.** `docs/EXPERIENCED_LOAD_MEASUREMENT_2026-08-12.md`
    §6, taken after `0a` put every effort input on one 1-10 scale.
@@ -363,57 +353,32 @@ his instruction is standing authority, not history.**
 - **ONE RULING — SPRINT CAP: 2 NIGHTS OR 2-3 EXPOSURES? (census A6). Two of your
   own lines disagree, in different units.**
   - **Bible `:90`:** *"Sprinting limited to **2 nights per week** which includes
-    nights at team training."* — a HARD cap, counted in NIGHTS.
+    nights at team training."* — HARD, counted in NIGHTS.
   - **Bible `:129`:** *"A second exposure may occur naturally, while **2-3
-    remains the usual maximum**."* — a SOFT preference, counted in EXPOSURES.
-  **They cannot both be the enforced number.** Setting a hard 2 would refuse
-  weeks `:129` calls usual; leaving it open is today's behaviour.
+    remains the usual maximum**."* — SOFT, counted in EXPOSURES.
+  **They cannot both be the enforced number.** A hard 2 refuses weeks `:129`
+  calls usual; leaving it open is today's behaviour.
   **MEASURED (the census receipt is partly wrong):** four rows carry
   `max: null` — in-season game week, both bye rows, mid off-season. **Pre-season
   is NOT uncapped: `:1030` already sets `max: 2`.** Early off-season is `max: 0`,
   correctly.
   **RECOMMENDATION:** enforce **`:90` — 2 nights, team training counted** — and
-  read `:129`'s "2-3" as the exposure-count preference it says it is, not a cap.
-  That makes the four `null` rows `max: 2`. **One word and it ships; the units
-  matter, so I have not guessed.**
+  read `:129`'s "2-3" as the exposure preference it says it is, not a cap. That
+  makes the four `null` rows `max: 2`. **Units have been the trap tonight, so I
+  have not guessed.**
 
 - **ONE SENTENCE — THE 6-HARD-DAY WARNING UNDERSTATES ITSELF (A5's only live
   part). Measured; the block half is correctly NOT built.**
   **What the athlete reads today** (`planChangeRefusalCopy.ts:43`):
   *"This gives you 6 hard days this week. That's the upper edge."*
-  **It is plain language and carries no banned vocabulary — the bar your ruling
-  sets is met on clarity.** The defect is accuracy: **your budget is PREFER 4,
-  PERMIT 5** (Bible `:118`), so **five IS the upper edge and six is PAST it.**
-  One sentence serves both, and at six it tells the athlete they are at the
-  limit when they are beyond it. **Same shape as the shortfall sentence you
-  corrected earlier — one string covering two different cases.**
-  **RECOMMENDATION:** keep the sentence for five, and give six its own line
-  saying it is past the permitted max. **The words are yours — I will not invent
-  athlete copy — but the numbers in it are already your own (4 preferred, 5
-  permitted).**
-
-- **ONE CONTENT CALL — THE DOUBLE HINGE (census A4).** Bible `:226`: *"ONE MAIN
-  PER PATTERN PER SESSION."* **Measured: exactly ONE violating shape —
-  `RDLs + Hip Thrusts`, both hinge, both mains — in two branches.** The census's
-  second example (Overhead Press + Incline DB Bench) does NOT breach; only one of
-  that pair classifies as a main. **RECOMMENDATION: keep Hip Thrusts and lighten
-  it to an accessory dose** — the rule bars a second HEAVY lift of the pattern,
-  not a second exercise, and dropping it shrinks the session.
-
-- **ONE SENTENCE — THE 6-HARD-DAY WARNING UNDERSTATES ITSELF (A5's only live
-  part). Measured; the block half is correctly NOT built.**
-  **What the athlete reads today** (`planChangeRefusalCopy.ts:43`):
-  *"This gives you 6 hard days this week. That's the upper edge."*
-  **It is plain language and carries no banned vocabulary — the bar your ruling
-  sets is met on clarity.** The defect is accuracy: **your budget is PREFER 4,
-  PERMIT 5** (Bible `:118`), so **five IS the upper edge and six is PAST it.**
-  One sentence serves both, and at six it tells the athlete they are at the
-  limit when they are beyond it. **Same shape as the shortfall sentence you
-  corrected earlier — one string covering two different cases.**
-  **RECOMMENDATION:** keep the sentence for five, and give six its own line
-  saying it is past the permitted max. **The words are yours — I will not invent
-  athlete copy — but the numbers in it are already your own (4 preferred, 5
-  permitted).**
+  **No banned vocabulary — the clarity bar is met.** The defect is accuracy:
+  **your budget is PREFER 4, PERMIT 5** (Bible `:118`), so **five IS the upper
+  edge and six is PAST it.** One string covers both cases, so at six it tells
+  the athlete they are at the limit when they are beyond it — the same shape as
+  the shortfall sentence you corrected earlier.
+  **RECOMMENDATION:** keep the sentence for five, give six its own line saying
+  it is past the permitted max. **The words are yours; the numbers in it are
+  already your own (4 preferred, 5 permitted).**
 
 - **ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
   the census says.**
@@ -423,44 +388,13 @@ his instruction is standing authority, not history.**
   `RDLs + Hip Thrusts`, both hinge, both classifying as main lifts — in two
   branches.**
   **AND THE CENSUS'S SECOND EXAMPLE IS OVER-CALLED:** `Overhead Press + Incline
-  DB Bench` does NOT come out as two mains — only one of the pair classifies as
-  a main lift, so it does not breach the rule.
+  DB Bench` does NOT come out as two mains — only one classifies as a main lift.
   **THE CALL IS WHICH WAY TO FIX IT, and that is CONTENT (L7):**
-  **(a) drop Hip Thrusts** — the day becomes one main hinge plus accessories,
-  but the session loses a row and gets smaller; or
-  **(b) keep the row and lighten it** to an accessory dose so it stops being a
-  second heavy hinge.
+  **(a) drop Hip Thrusts**, losing a row and shrinking the session; or
+  **(b) keep it and lighten it** to an accessory dose.
   **RECOMMENDATION: (b).** It obeys `:226` exactly — the rule bars a second
   HEAVY lift of the pattern, not a second exercise — and it does not shrink a
-  session, which is the thing that bit us on team nights. **One word and it
-  ships.**
-
-- **ONE LINE OWED — HOW A PACE IS SHOWN (census C2).** `deriveMas` is correct
-  with **zero production callers**: you run the 2km, the app stores it, and your
-  card shows the template's intensity with **no personal pace**. Grepped — the
-  Stage C ruling covers the MATHS and says nothing about display; no pace copy
-  exists. **RECOMMENDATION: show your pace BESIDE the authored intensity, not
-  instead of it** (the 55 signed templates own intensity). One sentence ships it.
-
-- **ONE CONTENT CALL — THE DOUBLE HINGE (census A4). Measured, and smaller than
-  the census says.**
-  **His rule, Bible `:226`:** *"ONE MAIN PER PATTERN PER SESSION... A second
-  heavy lift in a session must be a different pattern."*
-  **MEASURED across every fallback branch: exactly ONE violating shape —
-  `RDLs + Hip Thrusts`, both hinge, both classifying as main lifts — in two
-  branches.**
-  **AND THE CENSUS'S SECOND EXAMPLE IS OVER-CALLED:** `Overhead Press + Incline
-  DB Bench` does NOT come out as two mains — only one of the pair classifies as
-  a main lift, so it does not breach the rule.
-  **THE CALL IS WHICH WAY TO FIX IT, and that is CONTENT (L7):**
-  **(a) drop Hip Thrusts** — the day becomes one main hinge plus accessories,
-  but the session loses a row and gets smaller; or
-  **(b) keep the row and lighten it** to an accessory dose so it stops being a
-  second heavy hinge.
-  **RECOMMENDATION: (b).** It obeys `:226` exactly — the rule bars a second
-  HEAVY lift of the pattern, not a second exercise — and it does not shrink a
-  session, which is the thing that bit us on team nights. **One word and it
-  ships.**
+  session, which is what bit us on team nights.
 
 - **ONE LINE OWED — HOW A PACE IS SHOWN (census C2, the 2km time trial).**
   **Not a bare question: the derivation is built, the number exists, and only
@@ -469,16 +403,13 @@ his instruction is standing authority, not history.**
   the trial, the app validates and stores it, and their conditioning card reads
   the template's authored intensity (e.g. *"Intensity: 110% MAS"*) with **no
   personal pace and no distance.**
-  **GREPPED FIRST, twice bitten:** `STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md`
-  rules the DERIVATION (MAS = 2km speed x 1.00; defaults 6:30 / 7:15 / 8:00 /
-  8:45 by level) and **says nothing about display**; the copy sheet has no pace
-  line. **This one genuinely is not written down.**
-  **RECOMMENDATION, his to veto in a word:** show the athlete their own pace
-  beside the authored intensity, not instead of it — the 55 signed templates own
-  the intensity ranges (`masCopy.ts:16` says so, and its own header records that
-  the "110% MAS" binary is **accreted, not authored**). So the card would read
-  the signed range plus one derived line. **The number is ready; only his
-  sentence is missing.**`.**
+  **GREPPED FIRST:** `STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md` rules the
+  DERIVATION (MAS = 2km speed x 1.00; defaults 6:30 / 7:15 / 8:00 / 8:45 by
+  level) and **says nothing about display**; the copy sheet has no pace line.
+  **RECOMMENDATION:** show the athlete their own pace BESIDE the authored
+  intensity, not instead of it — the 55 signed templates own the intensity
+  ranges (`masCopy.ts:16`, whose header records the "110% MAS" binary as
+  **accreted, not authored**). **The number is ready; only the words are not.**
    **STILL NOT BUILT: strength.** That is where the estimate ruling applies, and
    it is the remaining half of this item.
    **STILL SAM'S:** whether a game's minutes count as full load or weighted, and
@@ -519,9 +450,6 @@ his instruction is standing authority, not history.**
 
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 7).
 
-8. **BUILT — MY STATUS OWNS THE MODIFIERS, AND SAM HAS SEEN IT ON GLASS.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 8).**
-
 9. **PARTLY BUILT — the athlete can now go ahead anyway; the four-answer
    collapse is BLOCKED.** `ca33206f`. `mayOverrideBlock` is `canOverride`'s
    FIRST production reader after nine writes; the block sheet offers "Do it
@@ -536,15 +464,6 @@ his instruction is standing authority, not history.**
    this shared checkout. **Take it when they are clear.**
 
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 9).
-
-10. **BUILT — THE GATE EXISTS, AND ITS FIRST RUN FOUND SIXTEEN, NOT TWO.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 10).**
-
-11. **BUILT — THE FEATURE REGISTRY EXISTS, AND THE NUMBER IS UGLY AS ORDERED.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 11).**
-
-12. **BUILT — THE MECHANISM SHIPS, THE PICTURES DO NOT (as ordered).**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 12).**
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
    **WHAT IS LEFT IS PRICED, 2026-08-13 — so the next pass does not re-derive it.**
@@ -671,20 +590,11 @@ his instruction is standing authority, not history.**
 
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 14).
 
-15. **BUILT — THE MOVE IS FINISHED AND THE BRIDGE IS GONE.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 15).**
-
-16. **BUILT AND SEEN ON GLASS — THE DAY AND WEEK SAY WHAT IS CHANGING.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 16).**
-
 17. **WORKING — A GAME'S LOAD IS READ (`f923523a`).** `gameSRPE` = body RPE x
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 17).**
 
 18. **THE RULE AND THE STORE ARE WORKING; THE INPUT IS BUILT (`2132f9b3`).**
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 18).**
-
-19. **BUILT AND SEEN ON GLASS — ONE ADD-FIXTURE CONTROL, WEEK-ONLY, NO CAP.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 19).**
 
 20. **WORKING — THE SENTENCE NAMES ITS CAUSE AND ITS DAY.** Both branches built,
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 20).**
@@ -1014,9 +924,6 @@ his instruction is standing authority, not history.**
     the rebuild half.** The sheet, the question and the dated equipment fact are
     clear to build now.
 
-23. **BUILT — TWELVE PHRASES SHIP, AND THE MISCOUNT IS FIXED AT ITS SOURCE.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 23).**
-
 24. **SAM SAYS YES — THE EQUIPMENT SCREEN'S EXIT BECOMES AN INPUT.**
 
     **OWNED BY THE DESKTOP AGENT.** Asked by it 2026-08-13 before touching a
@@ -1227,305 +1134,6 @@ his instruction is standing authority, not history.**
 28. **THE AWAY FLOW IS BUILT — AND AWAY STOPPED DELETING THE ATHLETE'S WEEK.**
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28).**
 
-28-C1b. **ANSWERED 2026-08-13 — THE MEASUREMENT GATE IS PAID, THE PASS WAS BUILT,
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1b).**
-
-28-C1c. **STOP CHASING COD. THE WALL YOU HIT IS CENSUS FINDING C5 — THE
-    SPARE-ROOM MEASUREMENT WAS TAKEN ON AN ILLEGAL WEEK.**
-
-    **⚠ CORRECTED 2026-08-13 BY THE TERMINAL — THE WEEK WAS LEGAL. THE "ZERO
-    REST DAYS" NUMBER WAS MY INSTRUMENT FAULT, NOT THE APP'S.** I counted
-    workouts whose `workoutType` is `'Rest'`, and there are none, because **REST
-    IS REPRESENTED BY ABSENCE — a day with no session at all.** Counted properly
-    the week covers days 1-6 and leaves day 0 empty: **ONE rest day, which is
-    legal at Sam's floor of 1-2.** `a-count-taken-for-a-record`, second sighting
-    this session.
-    **SO THIS ITEM'S PREMISE IS WITHDRAWN: the measurement was not taken on an
-    illegal week.** "There is no spare room" still stands, but for the plain
-    reason that all six chosen training days carry work — not because a ruling
-    was broken.
-    **C5 IS FIXED ANYWAY (`afd07164`) AND WAS RIGHT ON ITS OWN MERITS**, exactly
-    as this item predicted: all four `required: 0` rows now require 1 (including
-    `early_offseason`, which the receipt did not name — same ruling, same
-    defect), so a genuinely rest-free week can now be rejected. **Measured impact:
-    NONE — nothing currently violates it.**
-    **⚠ A FIFTH UNLISTED LINK, FOUND 2026-08-13 — THE LABEL. Do not place COD
-    before fixing this.** `coachingEngine.ts:4804`'s `case 'COND'` maps category
-    to the athlete-facing focus text and has branches for aerobic_base, tempo,
-    vo2, glycolytic and sprint — **and NO `cod_decel` branch.** A placed COD
-    session falls through to *"Conditioning - high intensity intervals (short,
-    hard repeats with short rest)"*. **That is athlete-facing text describing the
-    wrong session**, and it would ship the moment placement succeeds. Sam's
-    signed-copy law applies: **the words are his, and this fallthrough invents
-    them.**
-    **THE CHAIN IS FIVE LINKS, NOT FOUR** — category, pool, gate, placement, and
-    now the LABEL. Four are fixed or measured; the label is untouched.
-
-    **THE STANDING RULE THIS ITEM ADDS IS UNAFFECTED and is the better half:**
-    grep the census before treating any obstacle as a fact of the system.
-
-    **OWNED BY THE TERMINAL. Read this before the next COD unit.**
-
-    **THE MEASUREMENT:** *"A six-day off-season week produces six workouts and
-    zero rest days. Every day already has work."* Correct as an observation —
-    **and that week breaks a ruling of Sam's, so the number it produced cannot
-    be used to decide anything.**
-
-    **SAM'S RULING, verbatim (`LFA_PROGRAMMING_BIBLE.md:128`):** *"Full rest
-    days: 1-2 stands everywhere except bye-recovery weeks and early off-season,
-    where 3 full rest days are permitted."*
-    **Read the exception carefully — it permits MORE rest, not less. There is no
-    phase in which ZERO rest days is legal.**
-
-    **THE CODE (census C5, receipted):** `weeklyExposureContractV2.ts:1005`
-    (`mid_offseason`), `:1016` (`late_offseason`) and `:1030` (all three
-    pre-season rows) carry `rest: { required: 0, preferred: { min: 2, max: 2 } }`.
-    **The app knows the preferred answer is 2 and requires 0**, and `required` is
-    the sole input to the blocking check
-    (`section18EffectiveWeekEvaluator.ts:1484`), so with 0 that check is
-    unreachable.
-
-    **SO: "there is no room" is not a fact about the week. It is the symptom of
-    an unenforced ruling.** A legal mid/late off-season week is FIVE training
-    days and two rest days. **Re-measure spare room on a legal week before any
-    further COD work.**
-
-    **⚠ DO NOT OVERCLAIM THE FIX, AND DO NOT SKIP THE NEXT QUESTION.** Restoring
-    the rest floor frees a DAY. It does not by itself create a STANDALONE
-    conditioning slot, and the terminal's own next question — *why does a week
-    with no team training never produce a standalone conditioning slot?* —
-    remains the right one. **Both are needed. C5 first, because it is already
-    ruled, already receipted, and correct on its own merits whatever COD does.**
-
-    **THE PATTERN, NAMED BY THE TERMINAL ITSELF AND NOW A STANDING RULE.** Four
-    attempts, four reverts, and its own verdict: *"three of the four went wrong
-    the same way — changing code before measuring the layer above it."* **The
-    compression is one question, asked before every build from now on:**
-
-    > **IS THE WALL I JUST HIT ITSELF A CENSUS FINDING?**
-
-    **Here it was, and nobody checked.** `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md`
-    has twenty rows; the wall at layer four was row C5 the whole time. **Grep the
-    census before treating any obstacle as a fact of the system.** Twenty
-    known-broken rulings mean the odds are good that the thing blocking you is
-    one of them.
-
-28-C1d. **28-C1c WAS WRONG AND THE SEAT OWNS IT — the week was legal. AND THE
-    THIRD MISCOUNT IN ONE SESSION HAS THE SAME SHAPE, SO IT IS NOW A RULE.**
-
-    **RETRACTED:** 28-C1c told the terminal the six-day off-season week was
-    ILLEGAL and that the COD wall was census finding C5. **That was false.** Rest
-    is stored as an EMPTY DAY, not as a session named "Rest"
-    (`section18EffectiveWeekEvaluator.ts:746` — `trueRestDays` is every day NOT
-    in `requiredWorkDays`), so the week trains six days, leaves Sunday empty, and
-    has ONE rest day. **Sam's floor is 1-2. One is legal.** The seat passed on an
-    agent's number without checking what it counted — **the exact rule the seat
-    is bound by, broken by the seat.** Recorded, not smoothed.
-
-    **WHAT STILL STANDS, and it is not a consolation prize:** `required: 0`
-    meant the blocking check could never fire, so a genuinely rest-free week
-    could never have been REJECTED whatever the generator happens to emit today.
-    The floor is now `required: 1` on all four rows (`weeklyExposureContractV2.ts:
-    1002,1021,1040,1062`) with nothing moved. **Correct on its own merits.**
-
-    **WHAT IS BACK OPEN:** "no spare room" is true for the plain reason — all six
-    chosen training days are used. **The COD wall is UNEXPLAINED, and the
-    standalone-conditioning-slot question is again the only live one.**
-
-    **⚠ THE THIRD MISCOUNT TONIGHT, AND ALL THREE HAVE ONE SHAPE:**
-    1. Team-training rows "inside `workout.exercises`" — there were none; the
-       count was of a thing that does not occur on that path.
-    2. "Hard days" — the validator counts a strength day as hard, the QA
-       expectations do not. Same word, two definitions, three different targets.
-    3. Rest days — counted as sessions NAMED rest; rest is an ABSENCE.
-
-    **THE STANDING RULE, effective now, for every agent and this seat:**
-
-    > **BEFORE REPORTING A COUNT, STATE WHAT IS BEING COUNTED AND SHOW ONE
-    > INSTANCE OF IT. A count of zero must show what a non-zero would have
-    > looked like.**
-
-    Every one of the three would have died at that step. **A zero is the most
-    dangerous number in this repo** — it is equally produced by "the thing does
-    not happen" and "I am not looking where it happens". **They are not the same
-    finding and must never again be reported as if they were.**
-
-28-C1e. **THE COD LABEL IS NOT A NEW RULING — SAM ALREADY NAMED IT. DO NOT ASK
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1e).**
-
-28-C1g-RESULT. **THE ZERO WAS MY PROBE, CONFIRMED — AND COD-AS-A-THIRD-KIND WAS
-    BUILT, MEASURED AND REVERTED (SIXTH). THE REFUSAL IS STANDALONE-SIDE.**
-    **THE ZERO: my error, exactly as Sam said.** `countWeeklyExposures` takes
-    `WeekDayInput[]` — `{ date, workout }` pairs — and I passed raw `Workout[]`,
-    so every day looked empty and the count was 0. **The counter is fine.**
-    **THE BUILD:** COD ranked FIRST on the STANDALONE path only, gated on no team
-    training, once per week — the right shape, because the week's three
-    conditioning pieces are 1 standalone + 2 attached, and the two attached
-    cannot be COD (a hard category on a lower/hinge/full day is correctly
-    refused). **The standalone piece is the only one COD can be.**
-    **RESULT: still `COD=0 of 10 conditioning pieces`, with and without team
-    training.** So being first on the standalone list is not enough either —
-    **eligibility refuses COD in the STANDALONE context too**, and site #7 (the
-    lower/hinge/full pairing rule) does not apply there, so it is a DIFFERENT
-    site.
-    **NEXT, AND IT IS ONE PROBE:** tag the nine `finisherEligibility` downgrade
-    sites again but with `strengthContext === 'standalone'` in the log, and read
-    which site fires. **The earlier tagging run showed all six refusals at site
-    #7 — those were the ATTACHED path. Nobody has yet seen which site refuses a
-    STANDALONE COD request.** That single line is the whole remaining unknown.
-    **Patch parked at `scratchpad/cod-standalone-pass.patch`. Reverted for the
-    same reason as the other five: it changes candidate order for every week and
-    buys nothing while the count is zero.**
-
-28-C1f. **THE CONDITIONING COUNT IS NOT A FRESH JOB AND NOT SAM'S DECISION —
-    THE CONTRACT ALREADY REQUIRES 3. THE WEEK SHIPS 2.**
-
-    **OWNED BY THE TERMINAL. Measured by the seat before handing it back, so the
-    sixth attempt does not start with an exploratory pass.**
-
-    **THE TERMINAL'S QUESTION** — *"what decides how many conditioning sessions a
-    week gets? COD needs a third slot, or to take one of the two"* — **has an
-    answer already in the contract, and it is not 2:**
-    - **`mid_offseason`: `conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 5 }`** (`weeklyExposureContractV2.ts:1010`)
-    - **`late_offseason`: `required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }`** (`:1029`)
-    - Sam's own weekly floor agrees: **`conditioningExposures: { min: 3, max: 5 }`** (`weeklyExposureCounts.ts:45`).
-
-    **SO THE THIRD SLOT COD NEEDS IS A SLOT THE CONTRACT ALREADY DEMANDS.** Do
-    not put "should an off-season week have 3 conditioning sessions?" to Sam.
-    **He has answered it twice, in two places.** The live question is only WHY 2
-    ships against a required 3.
-
-    **TWO CANDIDATE MECHANISMS. MEASURE WHICH, DO NOT ASSUME — and note they are
-    not exclusive.**
-    1. **The under-finding is advisory** (census C4): `weeklyExposureCounts.ts:
-       323-367` emits `kind: 'under'`, and `weekStructureValidator.ts:454-466`
-       takes the `under` branch FIRST and hardcodes `severity: 'info'`,
-       `canOverride: true`. Ceilings refuse; floors do not.
-    2. **⚠ THE REQUIREMENT REWRITES ITSELF TO MATCH THE OUTPUT.**
-       `weeklyExposureContract.ts:759-760`, inside
-       `reconcileWeeklyExposureContractToLedger`:
-       `contract.conditioning.required = Math.min(required, actual);`
-       **A week that delivers 2 sets required to 2, and is then short of
-       nothing.** It is NOT silent — it writes an `addExposureReduction` with a
-       reason first (`:745-752`) — **so the whole question is whether a legitimate
-       reason authorised it, or whether it fires simply because the generator
-       produced fewer.** **Read the reason on a real off-season week before
-       judging this line.** If the reason is anything other than an authorised
-       reduction, this is the defect, and it is a bigger one than COD.
-
-    **CLEARED 2026-08-13 — AND THE TRAP WAS REAL. "THE WEEK SHIPS 2" WAS MY
-    FOURTH MISCOUNT.** Measured on a five-day mid-off-season week, block 3:
-    - **standalone SESSIONS = 1, combined PIECES = 2, TOTAL = 3.**
-    - **The contract requires 3. The week DELIVERS 3.** There is no shortfall.
-    **My "2" was a count of CATEGORIES (`aerobic_base`, `tempo`), not sessions.**
-    Two categories spread across three pieces. **So this item's premise —
-    "required 3, ships 2" — is comparing a session count with a category count,
-    and it is withdrawn.**
-    **MECHANISM 2 IS ANSWERED AND IS NOT FIRING.** The reconcile line
-    (`contract.conditioning.required = Math.min(required, actual)`) was
-    instrumented on that week: **it never fired for conditioning** — no reduction
-    was written at all, because `actual >= from`. **The requirement is not
-    rewriting itself here.**
-    **SO COD'S "THIRD SLOT" ALREADY EXISTS.** The week has three conditioning
-    pieces; what it does not have is a third CATEGORY. COD does not need a new
-    slot — **it needs to be one of the categories those three pieces are drawn
-    from**, and two of the three are attached to lifting days where a hard
-    category is correctly refused.
-    **⚠ ONE NUMBER I WILL NOT REPORT AS A FINDING:** my probe read
-    `conditioningExposures = 0` from `countWeeklyExposures` on the same week.
-    **That contradicts three visible pieces, so it is far more likely my call
-    passed the wrong input shape than that the counter is broken.** Per the
-    standing rule it is recorded as UNVERIFIED, not as a defect. **Verify the
-    call before anyone builds on it.**
-
-    ~~ORIGINAL~~ **THE UNIT TRAP, GIVEN THREE MISCOUNTS TONIGHT — CLEAR IT FIRST.** The
-    contract says "conditioning sessions"; the validator counts
-    `conditioningExposures`. **A conditioning piece attached to a lifting day may
-    count as an exposure while not being a standalone SESSION.** Per the standing
-    rule: **state what is being counted and show one instance before reporting
-    either number.** If the two units differ, "required 3 vs delivered 2" may be
-    comparing different things and this whole item needs restating.
-
-    **⚠ SAM ASKED THE QUESTION THAT SHARPENS THIS, AND IT PARTLY DEFENDS THE
-    LINE:** *"what if they said they can only train 2 days or something? or is
-    that not a scenario we have created yet"*. **It IS a scenario, it is coded,
-    and it has a TYPED REASON.** `WeeklyExposureReductionReason`
-    (`weeklyExposureContract.ts:31-44`) opens with `'insufficient_availability'`,
-    and `coachingEngine.ts:2800` branches on `inputs.availableDays <= 2`.
-    **So lowering required-3 to actual is CORRECT for a 2-day athlete** — that is
-    the mechanism working, not a defect, and 28-C1f's flag must not be read as
-    condemning the line.
-
-    **WHICH MAKES THE TEST EXACT, AND IT IS ONE RUN:** on a **five-day**
-    off-season week with **no** availability limit, no injury, no deload and no
-    equipment problem, **the contract requires 3 and the week ships 2 — so WHAT
-    REASON IS ON THAT REDUCTION?**
-    - **If it is `insufficient_availability` on a five-day week — THAT IS THE
-      DEFECT**, and it is bigger than COD: every floor Sam has written is being
-      excused by a constraint that is not present.
-    - **If no reduction is recorded at all**, the requirement dropped without
-      authorisation and the reduction ledger is not the owner it claims to be.
-    - **If a genuine reason is recorded**, there is no defect here, COD's third
-      slot is legitimately unavailable, and **COD must take one of the two
-      existing slots instead — which is Sam's "cut first" read from the other
-      side and needs no new ruling.**
-    **Report the reason string verbatim. That one string decides which of three
-    different jobs this is.**
-
-    **AND CREDIT, BECAUSE THE DISCIPLINE IS WHAT PRODUCED THIS.** Five attempts,
-    five reverts, and the terminal handed over a MEASURED LAYER instead of a
-    sixth attempt. **That is the behaviour this queue wants.** Each revert also
-    left something shipped and standing: the category, the selector branch, the
-    gate, the rest floor, the signed label. **COD is one link from the athlete.**
-
-28-C1g. **THE ZERO IS THE PROBE, NOT THE COUNTER — ANSWERED WITH EVIDENCE THE
-    SEAT ALREADY HELD, SO NOBODY SPENDS A PASS ON IT.**
-
-    **The terminal asked for this to be verified and was right to flag it as
-    UNVERIFIED rather than announce a fifth miscount.** That restraint is the
-    correct behaviour and is why this took one paragraph instead of an hour.
-
-    **THE OPEN ITEM:** its probe read the validator's conditioning count as ZERO
-    on a week with three visible conditioning sessions.
-
-    **THE COUNTER IS FINE. RECEIPT, from the seat's own `npm run test:qa` run
-    earlier this session** — the QA harness prints
-    `counts.conditioningExposures` straight from `weeklyExposureCounts`
-    (`weekShapeSummary.ts:283`), and across the 17 scenarios it returned:
-    **S1 = 5, S2 = 5, S3 = 3, S4 = 3, S5 = 2, S6 = 1, S7 = 3, S8 = 4, S9 = 4,
-    S10 = 5, S11 = 4, S12 = 4, E1 = 3, E2 = 5, E3 = 5, S13 = 5, S14 = 4.**
-    **Seventeen weeks, seventeen non-zero counts, same function.** A counter
-    that returns 0 on a week with three sessions is not the counter.
-
-    **WHY, MECHANICALLY:** `countWeeklyExposures` walks `dayWorkouts(day)` and
-    calls `classifyVisibleSession(w)` per workout
-    (`weeklyExposureCounts.ts:241-250`). **It counts RESOLVED, VISIBLE sessions.**
-    Feed it plan entries, unresolved days, or a day list whose workouts have not
-    been composed yet and every contribution is zero — **correctly, because
-    there are no visible sessions to classify.** **Check the INPUT the probe
-    passed before touching the counter.**
-
-    **AND THE FOURTH MISCOUNT CONFIRMS THE STANDING RULE RATHER THAN WEAKENING
-    IT.** The terminal's "2" was a count of CATEGORIES compared against a
-    contract expressed in SESSIONS. That is the same failure as team-training
-    rows, hard days, and rest days: **two units, one word.** The rule stands and
-    is now four-for-four: **state what is being counted and show one instance.**
-    **Add the unit to the number itself — "3 sessions", "2 categories" — never a
-    bare integer.** Every one of the four would have died at that step.
-
-    **THE LIVE QUESTION IS UNCHANGED AND IS THE LAST ONE:** the week has three
-    conditioning sessions and two kinds. **COD must become one of the kinds those
-    sessions are drawn from.** Two of the three are attached to lifting days
-    where hard work is correctly refused — **so the standalone slot is the only
-    home, and there is exactly one.** State plainly whether COD can live there
-    without displacing what is there now; if it cannot, that IS the "cut first"
-    trade and Sam's ruling already decides it.
-
-
-Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
-`src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
-addressable then walk it; the harvest ratchet and a computed tap atlas.
-
 ## SAFE FOR A PARALLEL AGENT — context, not orders
 
 **This heading is the stop hook's region terminator** (`repoLawGuardsTests.ts:252`
@@ -1596,6 +1204,10 @@ seat was wrong.
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 22).
 
 ## Previously (now processed)
+
+`docs/SEAT_INBOX_COMPLETED_2026-08-13.md` — items 0, 0a-0f, 4, 5, 8, 10, 11, 12,
+15, 16, 19 and 23, moved out of the queue 2026-08-13 **verbatim, byte-identical,
+nothing reworded**. Each was a BUILT stub with no open sub-order.
 
 `docs/SEAT_INBOX_ARCHIVE_TO_2026-08-10.md` — most recently the craft validator,
 cleared 2026-08-12. **This file holds LIVE ORDERS ONLY.** It was 353KB once and
