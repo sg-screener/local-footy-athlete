@@ -127,7 +127,7 @@ import {
 import { projectDayDetail } from '../rules/visibleDayDetail';
 import type { VisibleWeek } from '../rules/visibleProjection';
 import {
-  walk, describeHistory, makeRng,
+  walk, describeHistory, makeRng, SHRINK_REPLAY_BUDGET,
   type WalkerAction, type WalkerHost, type WalkerStepResult,
 } from './support/athleteActionWalker';
 import {
@@ -1961,6 +1961,94 @@ run('the declaration matcher decomposes combinations and refuses novelty', () =>
     + `${cases.filter((testCase) => testCase.expect === null).length} of them must NOT match`);
 });
 
+/**
+ * THE SHRINK BUDGET IS A CLAIM, SO IT GETS A CELL — Sam's ruling, 2026-08-12.
+ *
+ * The budget exists because a red walk cost ~25 minutes of the chain's ~35 in
+ * shrink replays alone (see `SHRINK_REPLAY_BUDGET`). A cap with no cell would be
+ * a constant anyone could raise back to 200 in a refactor with nothing going
+ * red, and — worse — a capped shrink returns the same SHAPE as a converged one,
+ * so "minimal" would silently start meaning "as far as we got".
+ *
+ * BOTH ARMS, because either one alone is vacuous. An exhausted-only cell passes
+ * against a shrinker that always reports exhaustion; a converged-only cell
+ * passes against one that never does.
+ *
+ * The host here is synthetic on purpose: it makes the two endings reachable in
+ * milliseconds, where reaching them through the real doors is the 25 minutes
+ * this whole unit is about.
+ */
+run('the shrink budget is spent, is bounded, and says which ending it got', () => {
+  /** A host whose violation condition is stated by the caller. */
+  const countingHost = (violates: (history: WalkerAction[]) => boolean) => {
+    let history: WalkerAction[] = [];
+    let replays = 0;
+    const host: WalkerHost = {
+      reset: () => { history = []; replays += 1; },
+      perform: (action) => {
+        history.push(action);
+        return { action, outcome: 'ok', message: 'fine', threw: null };
+      },
+      // The one action that carries the synthetic law arrives THIRD, never
+      // first: a violation on step 0 has a one-action history already, so the
+      // shrinker returns without replaying anything and the converged arm would
+      // pass while proving nothing about converging.
+      propose: (_rng, step) => (step === 2
+        ? { kind: 'advance_time', days: 1 }
+        : { kind: 'clear_source_facts' }),
+      checkInvariants: () => (violates(history)
+        ? [{ law: 'L-TEST', detail: 'the synthetic law broke' }]
+        : []),
+    };
+    return { host, replays: () => replays };
+  };
+
+  // THE CEILING, PINNED WITH ITS REASON. Every assert below is relative to
+  // `SHRINK_REPLAY_BUDGET`, so raising it back to 200 would keep them all green
+  // and quietly restore the 25 minutes. This is the one absolute claim.
+  assert(SHRINK_REPLAY_BUDGET <= 20,
+    `one replay costs 11-15 SECONDS on the deep tier, so a budget of ${
+      SHRINK_REPLAY_BUDGET} puts a red walk back over five minutes on its own`);
+
+  // ARM 1 — EXHAUSTED. Only the full history reproduces, so no candidate ever
+  // improves and the shrinker scans until the budget stops it.
+  const long = countingHost((history) => history.length >= 20);
+  const exhausted = walk({ host: long.host, seed: 1, length: 40 });
+  assert(exhausted !== null, 'the synthetic law did not break — the arm is vacuous');
+  assert(exhausted!.shrinkBudgetSpent === true,
+    'a shrink that ran out of budget reported itself as converged');
+  // reset() is called once for the walk and once per replay, so this is the
+  // replay count measured rather than assumed.
+  const spent = long.replays() - 1;
+  assert(spent <= SHRINK_REPLAY_BUDGET,
+    `the shrinker spent ${spent} replays against a budget of ${SHRINK_REPLAY_BUDGET}`);
+  assert(spent === SHRINK_REPLAY_BUDGET,
+    `an unimprovable history should spend the whole budget, it spent ${spent}`);
+
+  // ARM 2 — CONVERGED. One action is enough to reproduce, so the shrinker runs
+  // out of candidates long before it runs out of budget.
+  const short = countingHost((history) =>
+    history.some((action) => action.kind === 'advance_time'));
+  const converged = walk({ host: short.host, seed: 1, length: 5 });
+  assert(converged !== null, 'the synthetic law did not break — the arm is vacuous');
+  assert(converged!.shrinkBudgetSpent === false,
+    'a shrink that converged reported itself as budget-exhausted');
+  assert(converged!.history.length === 1,
+    `a one-action reproduction did not shrink to one action (${
+      converged!.history.length} actions)`);
+  const convergedReplays = short.replays() - 1;
+  assert(convergedReplays < SHRINK_REPLAY_BUDGET,
+    'the converged arm spent the whole budget, so it proves nothing about converging');
+  // A shrink that never replayed is not a shrink that converged — it is a
+  // shrink that had nothing to do, and it would pass every assert above.
+  assert(convergedReplays >= 2,
+    `the converged arm replayed ${convergedReplays} times, so it never exercised `
+    + 'the shrinker at all');
+
+  console.log(`      shrink budget ${SHRINK_REPLAY_BUDGET}: exhausted arm spent ${
+    spent}, converged arm spent ${convergedReplays}`);
+});
+
 run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold every law`, () => {
   const violations: string[] = [];
   const shallow: string[] = [];
@@ -1971,9 +2059,18 @@ run(`${WALK_COUNT} walks of ${WALK_LENGTH} actions hold every law`, () => {
       // L1 crashes never reach `checkInvariants`, so the declared-red filter has
       // to be offered one more chance here.
       if (declaredRedFor(violation.law, violation.detail)) continue;
+      // THE WORD "MINIMAL" IS EARNED, NOT ASSUMED. A shrink that ran out of
+      // budget returns the shortest history it FOUND, and calling that minimal
+      // would send whoever reads this report hunting for a cause that is not in
+      // it. `reproduce with` is the line that actually reproduces either way.
+      const minimality = violation.shrinkBudgetSpent
+        ? `shortest history FOUND before the shrink budget ran out (${
+          violation.history.length} actions — NOT proven minimal)`
+        : `minimal failing history (${violation.history.length} actions)`;
       violations.push(
         `\n    SEED ${seed} — ${violation.law}\n    ${violation.detail}\n`
-        + `    minimal failing history (${violation.history.length} actions):\n`
+        + `    reproduce with: WALKER_TIER=${DEEP ? 'deep' : 'bounded'} seed ${seed}\n`
+        + `    ${minimality}:\n`
         + `${describeHistory(violation.history)}`);
       // Report every distinct law, not just the first seed that trips.
       if (violations.length >= 5) break;

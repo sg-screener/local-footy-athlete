@@ -89,6 +89,16 @@ export interface WalkerViolation {
   detail: string;
   atStep: number;
   history: WalkerAction[];
+  /**
+   * TRUE when the shrinker ran out of budget before it ran out of ideas — the
+   * history below is the shortest one FOUND, not the shortest one that exists.
+   *
+   * Declared rather than left implicit because a capped shrink and a converged
+   * shrink return the same shape, and a non-minimal history presented as minimal
+   * is a claim with no receipt. The reporter prints it; `shrinkBudgetTests`
+   * proves both arms.
+   */
+  shrinkBudgetSpent?: boolean;
 }
 
 /**
@@ -170,13 +180,44 @@ function signatureOf(violation: { law: string; detail: string }): string {
     .replace(/"[^"]*"/g, '<name>')
     .slice(0, 160)}`;
 }
+/**
+ * HOW MANY REPLAYS THE SHRINKER MAY SPEND. Sam's ruling, 2026-08-12: "both" —
+ * cap this, and fix the failure underneath it.
+ *
+ * A REPLAY IS A WHOLE WALK. Every candidate history is re-run from a fresh
+ * install through every door, so on the deep tier one replay costs 11-15
+ * SECONDS. The budget was 200, and on 2026-08-12 the deep tier spent all of it:
+ * `action-walker:deep` went from 35 seconds (2026-08-10, green) to ~25 MINUTES —
+ * ~70% of the whole chain's wall clock — the day one of its walks turned red.
+ * None of that time was the walking. Measured, from the run itself:
+ *
+ *   50 replays / 11 minutes bought a reproduction of 79 actions, down from 88.
+ *   Replays 1-4 bought nothing; 5 bought one action; 41-49 bought one action.
+ *
+ * WHY 12 AND NOT A CLOCK. A time budget would make the reported reproduction
+ * depend on how busy the machine was, so the same seed would shrink differently
+ * on two runs — and a harness whose report is not reproducible is the thing this
+ * file exists to be the opposite of. A replay budget is deterministic: same
+ * seed, same history, every time, on any machine.
+ *
+ * WHAT 12 COSTS. Nothing that is CHECKED — every walk still walks its full
+ * length, every law is still asked after every action, every violation is still
+ * found and reported. The only thing that shrinks is how short the reported
+ * reproduction gets: about 85 actions instead of about 72. Neither is a
+ * sequence a human reads; the reproduction anyone actually uses is the seed and
+ * the tier, which the reporter prints either way. `shrinkBudgetSpent` says
+ * plainly when the cap was reached, so a long history is never mistaken for a
+ * minimal one.
+ */
+export const SHRINK_REPLAY_BUDGET = 12;
+
 function shrink(host: WalkerHost, violation: WalkerViolation): WalkerViolation {
-  // Diagnosis seam: shrinking replays up to 200 sub-histories, each a full
-  // re-walk with program generations — minutes of work and real memory. When a
-  // deep walk dies INSIDE the shrink (2026-08-03: heap exhaustion at 12GB
-  // before the shrunk result ever printed), the violation that started it is
-  // the evidence that never got reported. Print it first, behind an env flag,
-  // so a dying shrink still names its defect.
+  // Diagnosis seam: shrinking replays whole sub-histories, each a full re-walk
+  // with program generations — minutes of work and real memory. When a deep walk
+  // dies INSIDE the shrink (2026-08-03: heap exhaustion at 12GB before the
+  // shrunk result ever printed), the violation that started it is the evidence
+  // that never got reported. Print it first, behind an env flag, so a dying
+  // shrink still names its defect.
   if (process.env.WALKER_LOG_PRESHRINK === '1') {
     console.error(`[walker] pre-shrink violation at step ${violation.atStep}: `
       + `${violation.law} — ${violation.detail}`);
@@ -184,11 +225,11 @@ function shrink(host: WalkerHost, violation: WalkerViolation): WalkerViolation {
   let best = violation;
   let improved = true;
   let guard = 0;
-  while (improved && guard < 200) {
+  while (improved && guard < SHRINK_REPLAY_BUDGET) {
     improved = false;
     for (let index = best.history.length - 1; index >= 0; index--) {
+      if (guard >= SHRINK_REPLAY_BUDGET) break;
       guard += 1;
-      if (guard >= 200) break;
       const candidate = best.history.filter((_, position) => position !== index);
       if (candidate.length === 0) continue;
       const replayed = runHistory(host, candidate);
@@ -199,7 +240,10 @@ function shrink(host: WalkerHost, violation: WalkerViolation): WalkerViolation {
       }
     }
   }
-  return best;
+  // EXHAUSTED, NOT FINISHED. `improved` is still true when the inner loop broke
+  // on the budget rather than on running out of candidates, so the two endings
+  // are distinguishable and the report can say which one it got.
+  return { ...best, shrinkBudgetSpent: guard >= SHRINK_REPLAY_BUDGET };
 }
 
 /**
