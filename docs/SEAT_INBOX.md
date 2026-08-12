@@ -118,13 +118,25 @@ phone.** State device items as PARKED in a stop report, never as a request.
    - **STILL OPEN — `test:accepted-state-transactions` is 89.5s**, the largest
      real unit, new since 2026-08-07, never looked at.
 
-3. **KILL THE ±7 INVENTION — A LIVE CORRECTNESS DEFECT, AND NOW MORE REACHABLE.**
+3. **KILL THE ±7 INVENTION — ATTEMPT 1 BUILT, WORKED, AND WAS REVERTED FOR ONE
+   NEW RED. `docs/PLUS_MINUS_7_ATTEMPT_1_BLOCKED_2026-08-12.md`.**
    `section18CraftTier.ts:161` fabricates neighbouring games at ±7 days and
-   `weekStructureValidator.ts:255,272` **trusts them as real**, so an irregular
-   fixture list gets the WRONG protection, not a missing one. **Any-day games
-   landed 2026-08-12, so a midweek athlete can exist for the first time — this
-   defect just became reachable by real users.** Derive from the fixture list or
-   pass nothing.
+   `weekStructureValidator.ts:255,272` **trusts them as real**. **The defect is
+   now REPRODUCED, not predicted:** a Sunday-fixture week judges its Monday as
+   `g_plus1_hard_work`, a Monday-fixture week judges its Sunday as
+   `g1_not_light`. The fix (read `activeFixtureDates`, drop the `.find()`) made
+   `test:craft-tier` 42/42 and mutation-checked clean.
+   **REVERTED because the sweep went 10 -> 11:** the ±7 was accidentally
+   supplying the FOLLOWING week's G+1 link on a fixture move, and
+   `test:accepted-state-transactions` asserts it.
+   **THE REAL BLOCKER, AND IT IS THE BIGGER FINDING: `activeFixtureDates` gives
+   SIX different answers for one week in one operation — including UNDEFINED and
+   including a fixture the move had already CANCELLED.** The old code never
+   asked, so it was consistently wrong instead of inconsistently right.
+   **DO THIS FIRST, IN THIS ORDER:** census the three gateway call paths and
+   explain the stale date; make the input REQUIRED (`governableDates` carries
+   the precedent verbatim); **only then** delete the `±7`. Deleting it while the
+   authority disagrees with itself trades a phantom fixture for a missing one.
 
 4. **THE MODERATE DAY — half of Sam's shape, held by nothing.**
    *"4 hard days plus 1 moderate/easy day"* (`LFA_PROGRAMMING_BIBLE.md:4808`).
