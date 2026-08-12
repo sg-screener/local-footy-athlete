@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  ActivityIndicator,
   Animated,
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
@@ -34,13 +33,6 @@ import {
 import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
-import type {
-  ActiveCoachNote,
-  ActiveCoachNoteAction,
-} from '../../utils/activeCoachNotes';
-import type { ProgramControlStatusUpdate } from '../../utils/programControlActions';
-import { guidedInjuryResultFromConstraint } from '../../utils/guidedInjuryControl';
-import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
 import { dayOfMonthLabel, shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
@@ -51,7 +43,6 @@ import type { MissedSession, MissedSessionResponse } from '../../utils/missedSes
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 import { UndoToast } from '../../components/UndoToast';
-import { CoachNoteSheet } from '../../components/CoachNoteSheet';
 import { BuildingState, RebuildSheet } from '../../components/RebuildSheet';
 import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedbackRenderWitness';
 import {
@@ -237,11 +228,6 @@ export default function HomeScreenV2() {
     date: string;
     initialAction: 'actions' | 'move';
   } | null>(null);
-  const [coachNoteSheet, setCoachNoteSheet] = useState<{
-    mode: 'clear' | 'update';
-    note: ActiveCoachNote;
-  } | null>(null);
-  const [injuryFlowNote, setInjuryFlowNote] = useState<ActiveCoachNote | null>(null);
   const [awayDaysVisible, setAwayDaysVisible] = useState(false);
   // ONE ACK STATE FOR BOTH SCHEDULE DOORS. They are two buttons writing one fact
   // kind through one executor; two acknowledgment states would be two places to
@@ -349,45 +335,19 @@ export default function HomeScreenV2() {
     return Array.from(new Set(testIDs));
   }, [visibleReversibleAdjustments]);
 
-  const handleCoachNoteAction = (
-    note: ActiveCoachNote,
-    action: ActiveCoachNoteAction,
-  ) => {
-    if (action.kind === 'update_injury') {
-      setInjuryFlowNote(note);
-      return;
-    }
-    if (action.kind === 'dismiss_note') {
-      handleDismissCoachNote(note.id);
-      return;
-    }
-    setCoachNoteSheet({
-      mode: action.kind.startsWith('clear') || action.kind === 'restore_adjustment'
-        ? 'clear'
-        : 'update',
-      note,
-    });
-  };
-
-  const handleConfirmCoachNoteClear = () => {
-    if (!coachNoteSheet) return;
-    void handleClearCoachNote(coachNoteSheet.note.id);
-    setCoachNoteSheet(null);
-  };
-
-  const handleCoachNoteStatusUpdate = (status: ProgramControlStatusUpdate) => {
-    if (!coachNoteSheet) return;
-    void handleUpdateCoachNoteStatus(coachNoteSheet.note.id, status);
-    setCoachNoteSheet(null);
-  };
-  const injuryFlowConstraint = injuryFlowNote
-    ? activeConstraints.find((constraint): constraint is ActiveInjuryConstraint =>
-        constraint.type === 'injury' && constraint.id === injuryFlowNote.constraintId)
-    : null;
-  const injuryFlowInitial = useMemo(
-    () => guidedInjuryResultFromConstraint(injuryFlowConstraint),
-    [injuryFlowConstraint],
-  );
+  /* THE COACH-NOTE MACHINERY IS GONE FROM THE DAY SCREEN — item 8 (c),
+   * 2026-08-12, and it goes AFTER (a)+(b) by ruling.
+   *
+   * `handleCoachNoteAction` routed a modifier action to a sheet; nothing had
+   * called it since the UI merge stopped this screen rendering the modifier
+   * list. It went with `coachNoteSheet`, `injuryFlowNote`, their two confirm
+   * handlers and the injury prefill they fed.
+   *
+   * ALL OF IT STILL EXISTS — on the screen that owns the modifiers.
+   * `useCoachNoteActions` holds the routing and the sheet state for both
+   * mounts, and `coachNoteActionRoute` is the same three branches this router
+   * had. Deleting it before My Status was live would have left seven controls
+   * pointing at a screen with nothing on it. */
 
   /**
    * ONE DAY OWNER, WHICHEVER SHAPE THE SCREEN IS IN.
@@ -1189,28 +1149,11 @@ export default function HomeScreenV2() {
         onConfirm={handleConfirmRebuild}
       />
 
-      <CoachNoteSheet
-        state={coachNoteSheet}
-        equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
-        onClose={() => setCoachNoteSheet(null)}
-        onConfirmClear={handleConfirmCoachNoteClear}
-        onUpdateStatus={handleCoachNoteStatusUpdate}
-      />
-
-      <GuidedInjuryFlowSheet
-        visible={injuryFlowNote !== null}
-        onClose={() => setInjuryFlowNote(null)}
-        initial={injuryFlowInitial}
-        episodeId={injuryFlowNote?.injuryEpisodeId}
-        titlePrefix="Update injury"
-        onComplete={async (result) => {
-          await handleApplyGuidedInjury(
-            result,
-            injuryFlowConstraint?.id ?? injuryFlowNote?.constraintId,
-          );
-          setInjuryFlowNote(null);
-        }}
-      />
+      {/* THE SECOND `GuidedInjuryFlowSheet` MOUNT IS GONE (item 8 (c)).
+          It was opened only by `handleCoachNoteAction`'s `update_injury` arm,
+          which nothing called. The mount above — the Injured chip's, driven by
+          `readinessInjuryVisible` — is a LIVE athlete door and stays; My Status
+          opens its own through `useCoachNoteActions`. */}
 
       {/*
         UNDO'S ONLY SCREEN-LEVEL AFFORDANCE (ruled 2026-08-09).
