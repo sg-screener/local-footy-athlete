@@ -30,6 +30,22 @@ phone.** State device items as PARKED in a stop report, never as a request.
 
 ---
 
+0. **DO NOT STOP WHILE THIS QUEUE HAS ITEMS. SAM'S STANDING ORDER, 2026-08-12.**
+   *"Work continuously through the seat inbox in order — don't stop to ask me.
+   My rulings are all recorded in the file. If something genuinely needs my
+   decision, write it down, skip it, and take the next item."*
+
+   **A `docs(stop):` commit is a LEGAL EXIT FROM THE HOOK, NOT PERMISSION TO
+   STOP.** On 2026-08-12 the terminal wrote two stop reports back to back and
+   halted for 50 minutes with twelve items still queued — **and neither report
+   contained a question for Sam.** Both named their own next step.
+
+   **SO: after a stop report, TAKE THE NEXT ITEM.** Stop only when (a) the queue
+   is genuinely empty, (b) a decision is needed that is NOT already ruled in this
+   file — in which case write it under `## AWAITING SAM`, skip it, and continue —
+   or (c) Sam says stop. **A unit that ends "blocked, attempt 2 must do X first"
+   is not a stopping point: X is the next unit.**
+
 1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
    always in force; they are not work items to clear.
 
@@ -120,6 +136,11 @@ phone.** State device items as PARKED in a stop report, never as a request.
 
 3. **KILL THE ±7 INVENTION — ATTEMPT 1 BUILT, WORKED, AND WAS REVERTED FOR ONE
    NEW RED. `docs/PLUS_MINUS_7_ATTEMPT_1_BLOCKED_2026-08-12.md`.**
+   **THIS ORDER IS RE-SCOPED BY ATTEMPT 1'S OWN FINDING, QUOTED:**
+   *"Make activeFixtureDates a REQUIRED input on the craft path and reconcile
+   the paths that disagree ... DO NOT re-attempt in the other order. Deleting
+   the invention while the authority is inconsistent trades a phantom fixture
+   for a missing one, and the sweep says so."*
    `section18CraftTier.ts:161` fabricates neighbouring games at ±7 days and
    `weekStructureValidator.ts:255,272` **trusts them as real**. **The defect is
    now REPRODUCED, not predicted:** a Sunday-fixture week judges its Monday as
@@ -159,7 +180,25 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **NOT BUILT:** the range, the advisory finding and the generation target.
    Nothing here says WHICH session should become moderate or at whose expense.
 
-5. **UNPINCH THE FIXTURE WAIST.** `derivedWeekContract.ts:90`
+5. **UNPINCH THE FIXTURE WAIST — PAID, `3f62ad62`.** The root is gone:
+   `Section18ContractV2Input.fixtureDay` is now `fixtureDays: readonly number[]`
+   and `anchorsFor` LOOPS, the same `uniqueDays` map `teamTrainingDays` always
+   had. **Measured through the real function first: a Wednesday + Saturday split
+   round resolves BOTH fixtures and `fixtures[0]` kept only the Wednesday** — so
+   the second game had no anchor, and therefore no G-1/G-2 protection, no
+   conditioning credit and no place in the week's identity. Blast radius was 17
+   real references across 5 files (not the 50 raw matches), the contract is NOT
+   persisted (partialize is inputs-only since R1.3) so no migration was owed,
+   and `section18OfferPlacement`'s six local offset parameters are correctly
+   untouched. Six cells, mutation-checked, **sweep 10 of 190 IDENTICAL to
+   baseline**. **Sam's "add a game" button is no longer blocked on this line.**
+   **NOT DONE:** the twelve downstream `.find()`/`[0]` symptom sites still
+   collapse locally — harmless while they read a list that is now complete, and
+   each is its own small unit. **The KIND still comes from the first fixture; a
+   week mixing a practice match with a game has no declared mode and that is
+   Sam's call if it becomes reachable.**
+
+   ~~ORIGINAL ORDER~~ `derivedWeekContract.ts:90`
    `const fixture = fixtures[0] ?? null` is the ROOT; the twelve `.find()`/`[0]`
    sites are symptoms. Then `Section18ContractV2Input.fixtureDay` →
    `fixtureDays: number[]` and `anchorsFor` mapping over it
