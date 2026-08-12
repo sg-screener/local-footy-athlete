@@ -60,15 +60,30 @@ export type ActiveProgramModifierSource =
   | 'week_kind'
   | 'program_effect';
 
+/**
+ * THE ACTION VOCABULARY, AS A VALUE — so a surface can be checked against ALL of
+ * it rather than against a copy of it.
+ *
+ * Added 2026-08-12 with SEAT_INBOX item 8. A type union cannot be iterated at
+ * runtime, so every cell asking *"is this control live on that screen?"* had to
+ * retype the eight kinds — and a retyped list agrees with the type right up
+ * until someone adds a ninth. `satisfies` makes the two sides fail together:
+ * a kind added to the union and not to this list stops compiling, and a kind in
+ * this list with nowhere to go reds `test:my-status-modifiers`.
+ */
+export const ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS = [
+  'clear_injury',
+  'update_injury',
+  'clear_status',
+  'update_status',
+  'clear_adjustment',
+  'update_adjustment',
+  'restore_adjustment',
+  'dismiss_note',
+] as const;
+
 export type ActiveProgramModifierActionKind =
-  | 'clear_injury'
-  | 'update_injury'
-  | 'clear_status'
-  | 'update_status'
-  | 'clear_adjustment'
-  | 'update_adjustment'
-  | 'restore_adjustment'
-  | 'dismiss_note';
+  (typeof ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS)[number];
 
 export type ActiveProgramModifierAffect = ActiveConstraintModifierAffect;
 

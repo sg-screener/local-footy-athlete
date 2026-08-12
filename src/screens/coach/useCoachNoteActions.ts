@@ -69,6 +69,13 @@ import {
 } from '../../utils/programControlActions';
 import type { ProgramControlScreen } from '../../types/programControlAction';
 import { dismissActiveCoachNote } from '../../utils/activeCoachNotes';
+import {
+  buildGuidedInjuryConstraint,
+  guidedInjuryResultFromConstraint,
+  type GuidedInjuryFlowResult,
+} from '../../utils/guidedInjuryControl';
+import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
+import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
 import type {
   ActiveCoachNote,
   ActiveCoachNoteAction,
@@ -154,6 +161,18 @@ export interface CoachNoteActionsInput {
 export interface CoachNoteActions {
   clearCoachNote: (noteId: string, observeResult?: boolean) => Promise<void>;
   dismissCoachNote: (noteId: string) => void;
+  /**
+   * THE THIRD WRITER OF THE SAME FAMILY, AND IT HAD TO COME TOO.
+   *
+   * `update_injury` opens the guided injury flow, and the flow's COMPLETION is
+   * this call. Leaving it behind in `useHomeScreen` would have meant My Status
+   * opening a sheet it could not commit — or a second copy of the writer on the
+   * coach side, which is the one thing the merge plan forbids by name.
+   */
+  applyGuidedInjury: (
+    result: GuidedInjuryFlowResult,
+    existingId?: string,
+  ) => Promise<void>;
   updateCoachNoteStatus: (
     noteId: string,
     status: ProgramControlStatusUpdate,
@@ -311,6 +330,50 @@ export function createCoachNoteActions(input: CoachNoteActionsInput): CoachNoteA
     await onResult(result);
   };
 
+  const applyGuidedInjury = async (
+    result: GuidedInjuryFlowResult,
+    existingId?: string,
+  ): Promise<void> => {
+    const todayISO = todayISOLocal();
+    const constraint = buildGuidedInjuryConstraint(result, { todayISO, existingId });
+    const actionResult = await executeProgramControlActionDurably({
+      type: 'set_injury_modifier',
+      source: {
+        screen,
+        surface: 'guided_injury_flow',
+        initiatedBy: 'tap',
+      },
+      scope: 'current_and_future',
+      payload: { constraint },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { todayISO });
+    const episodeId = actionResult.createdModifierIds?.[0];
+    if (actionResult.ok && actionResult.traceId && episodeId) {
+      const controlId = explorerTestId.injuryActive(episodeId);
+      const observationId = `injury-active:${actionResult.traceId}`;
+      registerAthleteActionUIOutcome({
+        traceId: actionResult.traceId,
+        observationId,
+        domainReturn: {
+          episodeId,
+          existingConstraintId: existingId ?? null,
+          changedProgram: actionResult.changedProgram,
+        },
+        controlId,
+      });
+      observers?.onInjuryOutcome?.({
+        traceId: actionResult.traceId,
+        observationId,
+        episodeId,
+        expectedStatus: 'active',
+        controlId,
+      });
+    }
+    await onResult(actionResult);
+  };
+
   const updateCoachNoteStatus = async (
     noteId: string,
     status: ProgramControlStatusUpdate,
@@ -374,6 +437,7 @@ export function createCoachNoteActions(input: CoachNoteActionsInput): CoachNoteA
 
   return {
     clearCoachNote,
+    applyGuidedInjury,
     // NOT WRAPPED, NOT COPIED. `dismissActiveCoachNote` is a module-level
     // function with no hook dependencies — it is the one strand that was never
     // tangled, only standing behind the tangle. It joins the set so both mounts
@@ -384,6 +448,52 @@ export function createCoachNoteActions(input: CoachNoteActionsInput): CoachNoteA
   };
 }
 
+/**
+ * WHERE ONE MODIFIER ACTION GOES — the whole routing decision, in one pure
+ * function, TOTAL over the eight kinds.
+ *
+ * This was three `if`s inside `HomeScreenV2.handleCoachNoteAction`. It is a
+ * function now for one reason: the claim *"My Status offers no dead controls"*
+ * is a claim about EVERY kind, and the only honest way to check "every" is to
+ * ask the router about each one. A screen-embedded branch can only be read, and
+ * a source scan that reads it is satisfied by dead code.
+ *
+ * `null` means "this kind reaches nothing", which is what
+ * `test:my-status-modifiers` exists to forbid. It is not a fallback — there is
+ * deliberately no `default` arm returning a sheet, because a router that always
+ * answers cannot report a kind it does not know.
+ */
+export type CoachNoteActionRoute =
+  | 'injury_flow'
+  | 'dismiss'
+  | 'clear_sheet'
+  | 'update_sheet';
+
+export function coachNoteActionRoute(
+  action: ActiveCoachNoteAction,
+): CoachNoteActionRoute | null {
+  switch (action.kind) {
+    case 'update_injury':
+      return 'injury_flow';
+    case 'dismiss_note':
+      return 'dismiss';
+    case 'clear_injury':
+    case 'clear_status':
+    case 'clear_adjustment':
+    // RESTORE IS A CLEAR, AND THAT IS THE DAY SCREEN'S OWN ANSWER, NOT A NEW
+    // ONE. `HomeScreenV2` read `kind.startsWith('clear') || kind ===
+    // 'restore_adjustment'`; putting an adjustment back is undoing it, and the
+    // sheet it opens asks "Restore the previous fixture?".
+    case 'restore_adjustment':
+      return 'clear_sheet';
+    case 'update_status':
+    case 'update_adjustment':
+      return 'update_sheet';
+    default:
+      return null;
+  }
+}
+
 /** What a confirmation sheet is currently asking about, on either screen. */
 export interface CoachNoteSheetState {
   readonly mode: 'clear' | 'update';
@@ -391,6 +501,16 @@ export interface CoachNoteSheetState {
 }
 
 export interface CoachNoteActionsHook extends CoachNoteActions {
+  /**
+   * THE CONSTRAINT BEHIND THE NOTE THE INJURY FLOW IS EDITING, AND ITS PREFILL.
+   *
+   * Derived HERE and not at the mount, because `CoachTabScreen` may not import a
+   * store — `coachTabSlice1Tests` asserts that import ban by name, and it is the
+   * thing that keeps the coach tab from growing a second reading of the
+   * athlete's state. This hook already reads the stores the writers need.
+   */
+  readonly injuryConstraint: ActiveInjuryConstraint | null;
+  readonly injuryInitial: Partial<GuidedInjuryFlowResult> | undefined;
   /** The clear/update confirmation sheet's state, and its two edges. */
   readonly sheet: CoachNoteSheetState | null;
   readonly closeSheet: () => void;
@@ -417,24 +537,30 @@ export function useCoachNoteActions(input: CoachNoteActionsInput): CoachNoteActi
     [screen, notes, onResult, observers, notifyRefusal],
   );
 
+  const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
+  const injuryConstraint = useMemo(() => (injuryNote
+    ? activeConstraints.find((constraint): constraint is ActiveInjuryConstraint =>
+        constraint.type === 'injury' && constraint.id === injuryNote.constraintId) ?? null
+    : null), [activeConstraints, injuryNote]);
+  const injuryInitial = useMemo(
+    () => guidedInjuryResultFromConstraint(injuryConstraint),
+    [injuryConstraint],
+  );
+
   const onAction = useCallback((
     note: ActiveCoachNote,
     action: ActiveCoachNoteAction,
   ) => {
-    if (action.kind === 'update_injury') {
-      setInjuryNote(note);
-      return;
+    switch (coachNoteActionRoute(action)) {
+      case 'injury_flow': return setInjuryNote(note);
+      case 'dismiss': return actions.dismissCoachNote(note.id);
+      case 'clear_sheet': return setSheet({ mode: 'clear', note });
+      case 'update_sheet': return setSheet({ mode: 'update', note });
+      // A kind with no route does NOTHING here, visibly and on purpose. The
+      // alternative — a fallback sheet — would open a confirmation for an action
+      // this screen cannot perform, and the athlete would tap yes on it.
+      default: return undefined;
     }
-    if (action.kind === 'dismiss_note') {
-      actions.dismissCoachNote(note.id);
-      return;
-    }
-    setSheet({
-      mode: action.kind.startsWith('clear') || action.kind === 'restore_adjustment'
-        ? 'clear'
-        : 'update',
-      note,
-    });
   }, [actions]);
 
   const confirmClear = useCallback(() => {
@@ -451,6 +577,8 @@ export function useCoachNoteActions(input: CoachNoteActionsInput): CoachNoteActi
 
   return {
     ...actions,
+    injuryConstraint,
+    injuryInitial,
     sheet,
     closeSheet: useCallback(() => setSheet(null), []),
     confirmClear,

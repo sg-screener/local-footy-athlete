@@ -1586,43 +1586,27 @@ run('the golden flows have actually been run, and recently', () => {
 
 // ── NEVER DISABLE A SET BECAUSE PART OF IT IS BLOCKED ───────────────────────
 //
-// `LAW-never-disable-a-set-for-part-of-it`. Founding case: the coach status
-// screen dimmed EVERY modifier control and captioned them "Change this on your
-// program screen for now" — right for most, WRONG for `dismiss_note`, which
-// works. **The dead-affordance law mirrored:** a control that looks live but is
-// not, and a control that looks dead but works, are the same defect pointing
-// opposite ways.
-const NOT_YET_SURFACE = 'src/components/ActiveModifiersSection.tsx';
-
-/** Pure: ways a not-yet surface can go back to disabling the whole set. */
-function wholeSetDisableFaults(source: string): string[] {
-  const faults: string[] = [];
-  if (!/liveActionKinds/.test(source)) {
-    faults.push('there is no per-action exception list — the flag is per SCREEN again');
-  }
-  if (!/disabled=\{notYet\}/.test(source)) {
-    faults.push('the disabled prop no longer reads the per-action value');
-  }
-  // The caption must be conditioned on THAT note still holding an inert action,
-  // or a note whose every control works still sends the athlete elsewhere.
-  if (!/note\.actions\.some\(/.test(source)) {
-    faults.push('the caption is not conditioned on the note actually holding an inert action');
-  }
-  return faults;
-}
-
-run('a partly-blocked set disables only the blocked part', () => {
-  const full = path.join(repoRoot, NOT_YET_SURFACE);
-  assert(fs.existsSync(full), `${NOT_YET_SURFACE} is gone — this gate reads nothing`);
-  const source = fs.readFileSync(full, 'utf8');
-  assert(/actionsNotYet/.test(source),
-    'the not-yet surface no longer exists — this cell is watching nothing');
-  const faults = wholeSetDisableFaults(source);
-  assert(faults.length === 0,
-    `${NOT_YET_SURFACE}: ${faults.join('; ')}. Telling the athlete to go `
-    + 'elsewhere for something they can do right here is the dead-affordance law '
-    + 'mirrored.');
-});
+// `LAW-never-disable-a-set-for-part-of-it`. THE LAW STANDS; ITS INSTRUMENT
+// MOVED, 2026-08-12 (SEAT_INBOX item 8).
+//
+// The cell that lived here read `ActiveModifiersSection` for `liveActionKinds`,
+// `disabled={notYet}` and `note.actions.some(`. It held the right property while
+// SEVEN of the eight modifier controls were inert: the dimming had to be
+// resolved per ACTION, so freeing a strand lit it up and retired its own caption.
+//
+// All eight are live on My Status now, so that machinery is deleted, and a cell
+// anchored on deleted strings is a cell measuring nothing — which is exactly the
+// silent-green shape the anchoring law is about. It is not enough to say the
+// mechanism went; the LAW needs an instrument that still bites.
+//
+// ITS REPLACEMENT IS `test:my-status-modifiers`, and it is a STRONGER claim than
+// this one was. The old cell asked "is the dimming per-action?". The new one
+// asks "does every action in the vocabulary reach a door?", reading the eight
+// kinds from `ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS` — the type's own value — so
+// a ninth kind arriving with nowhere to go reds on the day it arrives. The
+// founding case (dimming `dismiss_note`, which worked, and captioning it "Change
+// this on your program screen for now") is preserved verbatim in the registry
+// row's receipt.
 
 // ── A NAME THAT COVERS TWO THINGS IS MEASURED APART FIRST ───────────────────
 //
@@ -1927,15 +1911,13 @@ run('the checkers red on fabricated violations (liveness)', () => {
   assert(headingsHidingOrders('# SEAT INBOX\n\nnothing here').length === 1,
     'a file with no unprocessed region passed as clean');
 
-  // ── the whole-set disable, probed BOTH directions ──
-  assert(wholeSetDisableFaults('disabled={actionsNotYet}').length > 0,
-    'the exact pre-fix shape — one flag disabling the whole set — passed');
-  assert(wholeSetDisableFaults(
-    'liveActionKinds\ndisabled={notYet}\nnote.actions.some((a) => x)').length === 0,
-    'a correctly per-action surface was flagged');
-  assert(wholeSetDisableFaults('liveActionKinds\ndisabled={notYet}')
-    .some((f) => /caption/.test(f)),
-    'a surface captioning every note regardless passed');
+  // ── the whole-set disable: PROBED IN ITS NEW HOME ──
+  // `wholeSetDisableFaults` went with its cell on 2026-08-12 (see the section
+  // above). `LAW-never-disable-a-set-for-part-of-it` is now held by
+  // `test:my-status-modifiers`, whose own liveness probe feeds
+  // `coachNoteActionRoute` a kind with no door and requires it to answer null.
+  // The probe lives beside the checker it probes; a liveness assertion left
+  // behind here would be testing a function this file no longer has.
 
   // ── the run receipt, probed BOTH directions ──
   const OK_RECEIPT = '| `a.yaml` | 2026-08-10 | PASS |';

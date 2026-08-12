@@ -81,6 +81,11 @@ import { canonicalFixtureKind } from '../../rules/fixtureConditionedAvailability
 import { classifyProgramMutationRefusal } from '../../rules/programMutationRefusal';
 import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
 import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
+import {
+  useProgramRebuild,
+  classifyRebuildFailure,
+  alertGameConflicts,
+} from '../../hooks/useProgramRebuild';
 import { useCoachNoteActions } from '../coach/useCoachNoteActions';
 
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -215,7 +220,20 @@ export function useHomeScreen() {
     controlId: string;
   } | null>(null);
   // ── Rebuild state ──
-  const [rebuildModalVisible, setRebuildModalVisible] = useState(false);
+  // ONE OWNER, TWO SCREENS. Extracted 2026-08-12 into `hooks/useProgramRebuild`
+  // so Coach / My Status — which now owns the modifier controls, four families
+  // of which come back asking for a rebuild — runs the SAME rebuild through the
+  // SAME notice rather than growing a second one. `LAW-one-name-two-meanings`
+  // sighting 7 is this file meaning both "the day screen's state" and "the
+  // app's rebuild owner"; this is the second meaning leaving.
+  const {
+    rebuildModalVisible,
+    setRebuildModalVisible,
+    runRebuild,
+    handleProgramControlResult,
+    handleCancelRebuild,
+    handleConfirmRebuild,
+  } = useProgramRebuild();
   // THE REBUILD NOTICE IS NOT THIS SCREEN'S STATE. A rebuild is one event in
   // the athlete's world, so `store/rebuildNoticeStore.ts` owns it and every
   // surface reads the same truth through this hook. This screen renders those
@@ -612,11 +630,6 @@ export function useHomeScreen() {
    * Raw HTML / server payloads NEVER flow here — generateProgram.ts already
    * redacts them to a safe `userMessage` before throwing.
    */
-  const classifyRebuildFailure = (err: unknown): { userMessage: string; canRetry: boolean } => {
-    const { userMessage, canRetry } = classifyProgramGenerationFailure(err);
-    return { userMessage, canRetry };
-  };
-
   // ───────── Rebuild handlers ─────────
 
   // THERE IS NO ATHLETE-FACING REBUILD DOOR (Sam, device pass 2026-07-29).
@@ -629,60 +642,6 @@ export function useHomeScreen() {
   // The handlers below stay because the rebuilds the athlete DOES ask for by
   // name — clearing a coach note, shifting phase, changing a fixture — still
   // need somewhere to show progress and to report a failure they can retry.
-
-  const handleCancelRebuild = () => {
-    if (isRebuilding) return;
-    setRebuildModalVisible(false);
-    clearRebuildError();
-  };
-
-  // A preserved manual edit that clashed with a game window was removed —
-  // protect the game, but never silently.
-  const alertGameConflicts = (conflictsRemoved: Array<{ date: string; name: string }>) => {
-    if (conflictsRemoved.length === 0) return;
-    const lines = conflictsRemoved
-      .map((c) => `• ${c.name} (${new Date(c.date + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })})`)
-      .join('\n');
-    Alert.alert(
-      'Protected your game day',
-      `These custom sessions were too close to the game and were removed:\n${lines}`,
-    );
-  };
-
-  // AI rebuild path (onboarding / phase shift). Commits through the SAME
-  // canonical weekRebuild policy as tap/edit rebuilds — modifier-owned
-  // overrides and user manual edits survive; system junk is cleared.
-  const runRebuild = async (profileOverride?: typeof onboardingData) => {
-    const profile = profileOverride ?? onboardingData;
-    const program = await generateProgramFromProfile(profile, {
-      // The athlete asked for this rebuild (onboarding, phase shift). A week
-      // that cannot meet its contract is disclosed downstream, not refused.
-      weekAcceptance: 'forward_decision',
-      blockNumber: getCurrentBlockNumberForGeneration(),
-    });
-    const sweep = decideSweepForCurrentStores(program, profile);
-    commitRebuiltProgram(program, {
-      preserve: sweep.preserve,
-      clear: sweep.clear,
-      conflictsRemoved: sweep.conflictsRemoved,
-    });
-    alertGameConflicts(sweep.conflictsRemoved);
-  };
-
-  const handleConfirmRebuild = async () => {
-    beginRebuildNotice();
-    try {
-      await runRebuild();
-      setRebuildModalVisible(false);
-    } catch (err: any) {
-      // Log diagnostic payload to dev console — UI only ever sees safe copy.
-      logger.error('[Rebuild] failed:', err?.diagnostic || err?.message || err);
-      const { userMessage, canRetry } = classifyRebuildFailure(err);
-      setRebuildNoticeError(userMessage, canRetry);
-    } finally {
-      endRebuildNotice();
-    }
-  };
 
   /**
    * Commit a phase shift ATOMICALLY.
@@ -1028,29 +987,6 @@ export function useHomeScreen() {
     navigation.navigate('ProfileTab');
   }, [navigation]);
 
-  const handleProgramControlResult = useCallback(async (
-    result: ProgramControlActionResult,
-  ) => {
-    if (result.fallbackToCoach) {
-      logger.warn('[ProgramControl] action requested Coach fallback:', result.fallbackReason);
-      return;
-    }
-    if (!result.requiresRebuild) return;
-
-    beginRebuildNotice();
-    setRebuildModalVisible(true);
-    try {
-      await runRebuild();
-      setRebuildModalVisible(false);
-    } catch (err: any) {
-      logger.error('[CoachNotes] rebuild after clear failed:', err?.diagnostic || err?.message || err);
-      const { userMessage, canRetry } = classifyRebuildFailure(err);
-      setRebuildNoticeError(userMessage, canRetry);
-    } finally {
-      endRebuildNotice();
-    }
-  }, [runRebuild]);
-
   const registerSourceFactRenderObservation = useCallback((args: {
     result: ProgramControlActionResult;
     domain: 'readiness' | 'equipment';
@@ -1249,50 +1185,6 @@ export function useHomeScreen() {
     if (!result.ok) logger.warn('[missed-session] skipped outcome transaction failed', result);
   }, [weekDays]);
 
-  const handleApplyGuidedInjury = useCallback(async (
-    result: GuidedInjuryFlowResult,
-    existingId?: string,
-  ) => {
-    const todayISO = todayISOLocal();
-    const constraint = buildGuidedInjuryConstraint(result, { todayISO, existingId });
-    const actionResult = await executeProgramControlActionDurably({
-      type: 'set_injury_modifier',
-      source: {
-        screen: 'program_tab',
-        surface: 'guided_injury_flow',
-        initiatedBy: 'tap',
-      },
-      scope: 'current_and_future',
-      payload: { constraint },
-      requiresRebuild: false,
-      createsActiveModifier: true,
-      oneOffOnly: false,
-    }, { todayISO });
-    const episodeId = actionResult.createdModifierIds?.[0];
-    if (actionResult.ok && actionResult.traceId && episodeId) {
-      const controlId = explorerTestId.injuryActive(episodeId);
-      const observationId = `injury-active:${actionResult.traceId}`;
-      registerAthleteActionUIOutcome({
-        traceId: actionResult.traceId,
-        observationId,
-        domainReturn: {
-          episodeId,
-          existingConstraintId: existingId ?? null,
-          changedProgram: actionResult.changedProgram,
-        },
-        controlId,
-      });
-      setPendingInjuryObservation({
-        traceId: actionResult.traceId,
-        observationId,
-        episodeId,
-        expectedStatus: 'active',
-        controlId,
-      });
-    }
-    await handleProgramControlResult(actionResult);
-  }, [handleProgramControlResult]);
-
   /**
    * THE COACH-NOTE WRITERS NOW LIVE IN ONE PLACE, AND THIS SCREEN NAMES ITSELF
    * TO THEM.
@@ -1322,6 +1214,7 @@ export function useHomeScreen() {
     }), [registerSourceFactRenderObservation]),
   });
   const handleClearCoachNote = coachNoteActions.clearCoachNote;
+  const handleApplyGuidedInjury = coachNoteActions.applyGuidedInjury;
   const handleDismissCoachNote = coachNoteActions.dismissCoachNote;
   const handleUpdateCoachNoteStatus = coachNoteActions.updateCoachNoteStatus;
 

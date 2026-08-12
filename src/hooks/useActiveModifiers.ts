@@ -30,6 +30,9 @@ import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
+import { useProgramStore } from '../store/programStore';
+import { isTemporaryEquipmentFact } from '../rules/temporarySourceFact';
+import { factHorizonCoversWeek } from '../rules/durableFactHorizon';
 
 export interface ActiveModifiersSnapshotInput {
   /**
@@ -55,6 +58,23 @@ export interface ActiveModifiersSnapshotInput {
 export interface ActiveModifiers {
   readonly modifiers: readonly ActiveCoachNote[];
   readonly count: number;
+  /**
+   * WHICH OF THE ATHLETE'S SOURCE FACTS ARE EQUIPMENT, FOR THE WEEK ON SCREEN.
+   *
+   * `ActiveModifiersSection` needs this to pick the equipment-specific testIDs
+   * for `clear_adjustment` and `update_adjustment` — the ids the explorer, the
+   * walker and every dev-e2e finder resolve those two controls by.
+   *
+   * IT LIVES HERE BECAUSE IT IS PART OF THE SAME DERIVATION, and until
+   * 2026-08-12 it was not: `useHomeScreen` computed it and `CoachTabScreen`,
+   * having no way to reach it, passed an EMPTY SET. That is not a stub — an
+   * empty set does not disable those ids, it silently swaps them for the
+   * fallback, so the one screen that owns the controls advertised coordinates
+   * nothing could resolve. A second derivation at that call site would have
+   * been the same defect one layer up; this is the same fix `modifiers` itself
+   * got when this file was written.
+   */
+  readonly equipmentFactIds: ReadonlySet<string>;
 }
 
 export function useActiveModifiers(
@@ -94,8 +114,21 @@ export function useActiveModifiers(
     ],
   );
 
+  // THE SAME TWO FILTERS `useHomeScreen` HAS ALWAYS APPLIED, IN THE SAME ORDER.
+  // The horizon filter is not optional: comparing `scope.until` directly drops
+  // every OPEN fact, which blanks exactly the durable reports (severe illness,
+  // cooked, no gym for a month) that most need showing.
+  const temporarySourceFacts = useProgramStore((s) =>
+    s.acceptedMaterialContext.temporarySourceFacts);
+  const visibleWeekStart = (visibleWeekDays?.[0] as { date?: string } | undefined)?.date;
+  const equipmentFactIds = useMemo(() => new Set(temporarySourceFacts
+    .filter(isTemporaryEquipmentFact)
+    .filter((fact) => !visibleWeekStart || factHorizonCoversWeek(fact, visibleWeekStart))
+    .map((fact) => fact.factId)),
+  [temporarySourceFacts, visibleWeekStart]);
+
   return useMemo(
-    () => ({ modifiers, count: modifiers.length }),
-    [modifiers],
+    () => ({ modifiers, count: modifiers.length, equipmentFactIds }),
+    [modifiers, equipmentFactIds],
   );
 }

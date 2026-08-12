@@ -369,14 +369,19 @@ export function registerProjectionCopy(): void {
       text: 'Nothing is changing your program right now.',
     },
 
-    {
-      id: 'coach.status.actions_not_yet',
-      source: 'sam_ruling',
-      provenance: 'NEW — PROPOSED, batch 34. Shown under a modifier\'s controls on '
-        + 'the coach status screen while they are not wired. The seat, 2026-08-10: '
-        + '"a control that looks live but is not is worse than no control".',
-      text: 'Change this on your program screen for now.',
-    },
+    // WITHDRAWN 2026-08-12 — 'coach.status.actions_not_yet', which read
+    // "Change this on your program screen for now."
+    //
+    // It captioned the seven dimmed modifier controls on My Status. SEAT_INBOX
+    // item 8 (a) made all eight live, so there is nothing left for it to
+    // explain — and (b) retires it IN THE SAME COMMIT because a caption that
+    // outlived its dimming would be pointing athletes away from a control that
+    // works.
+    //
+    // IT WAS ALREADY WRONG BEFORE IT WAS OBSOLETE. `HomeScreenV2` stopped
+    // rendering the modifier list at the UI merge, so "your program screen" had
+    // nothing on it: an athlete who followed the sentence found an empty room
+    // and no way back. That is the finding, not a footnote.
 
     // ── The one separator. ──
     {

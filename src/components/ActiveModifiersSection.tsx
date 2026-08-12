@@ -21,49 +21,36 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './common/Text';
 import { Card } from './ui';
 import { explorerTestId } from '../utils/stableTestId';
-import { signedCopy } from '../rules/signedCopy';
 import type {
   ActiveCoachNote,
   ActiveCoachNoteAction,
 } from '../utils/activeCoachNotes';
 
+/* THE NOT-YET MACHINERY RETIRED 2026-08-12 (SEAT_INBOX item 8 (b)).
+ *
+ * `actionsNotYet` and `liveActionKinds` existed because My Status mounted this
+ * list before its writers could run: they dimmed the controls that were not
+ * wired yet and captioned them "Change this on your program screen for now."
+ *
+ * ALL EIGHT KINDS ARE LIVE ON MY STATUS NOW, so there is nothing left to dim —
+ * and keeping the machinery would mean the only thing it could still do is dim
+ * a control that works, which is `LAW-never-disable-a-set-for-part-of-it`
+ * pointing the other way. Its founding case is preserved in
+ * `src/rules/lawRegistry.ts`; the law is not retired, its instrument moved to
+ * `test:my-status-modifiers`, which asserts the ROUTER is total over the eight
+ * kinds rather than that a dimming flag is resolved per action.
+ *
+ * The caption was ALSO ALREADY FALSE. `HomeScreenV2` stopped rendering this
+ * list at the UI merge, so the Program screen it pointed at had nothing on it —
+ * an athlete who followed the sentence found an empty room. */
 export interface ActiveModifiersSectionProps {
-  /**
-   * NOT-YET, SHOWN RATHER THAN FAKED.
-   *
-   * The seat's order, 2026-08-10: *"a control that looks live but is not is worse
-   * than no control — so if the untangling runs long, make the dead buttons
-   * visibly not-yet rather than leaving them looking ready."*
-   *
-   * The status screen mounts this list before its actions can run: they need
-   * `handleCoachNoteAction` lifted out of `useHomeScreen`, which is a real
-   * extraction and not a one-pass job. Until then this surface renders the same
-   * list with its controls DIMMED, UNTAPPABLE and captioned — `LAW-L5`, no dead
-   * affordances, satisfied by saying so rather than by hiding the buttons and
-   * pretending the screen is finished.
-   */
-  readonly actionsNotYet?: boolean;
-  /**
-   * ACTION KINDS THAT ARE LIVE EVEN WHEN `actionsNotYet` IS SET.
-   *
-   * THE KNOT IS NOT ONE ROPE. `dismiss_note` runs `dismissActiveCoachNote`, a
-   * module-level function with ZERO hook dependencies — it was never tangled in
-   * `useHomeScreen` at all. Every other action routes through a confirmation
-   * sheet whose writers ARE tangled.
-   *
-   * **So the not-yet state is per-ACTION, not per-screen.** Dimming a control
-   * that works would be the dead-affordance law broken in the opposite
-   * direction: telling the athlete to go elsewhere for something they can do
-   * right here.
-   */
-  readonly liveActionKinds?: readonly string[];
   notes: ActiveCoachNote[];
   equipmentFactIds: ReadonlySet<string>;
   onAction: (note: ActiveCoachNote, action: ActiveCoachNoteAction) => void;
 }
 
 export function ActiveModifiersSection({
-  notes, equipmentFactIds, onAction, actionsNotYet = false, liveActionKinds,
+  notes, equipmentFactIds, onAction,
 }: ActiveModifiersSectionProps) {
   if (notes.length === 0) return null;
 
@@ -95,8 +82,6 @@ export function ActiveModifiersSection({
               <View style={styles.coachNoteActions}>
                 {note.actions.map((action, index) => {
                   const primary = index === 0;
-                  const notYet = actionsNotYet
-                    && !(liveActionKinds ?? []).includes(action.kind);
                   const sourceFactId = note.temporarySourceFactIds?.[0];
                   const isEquipmentFact = sourceFactId
                     ? equipmentFactIds.has(sourceFactId)
@@ -117,13 +102,11 @@ export function ActiveModifiersSection({
                   return (
                     <Pressable
                       key={action.kind}
-                      disabled={notYet}
                       onPress={() => onAction(note, action)}
                       style={({ pressed }) => [
                         styles.coachNoteAction,
                         primary && styles.coachNotePrimaryAction,
-                        notYet && styles.coachNoteActionNotYet,
-                        pressed && !notYet && { opacity: 0.72 },
+                        pressed && { opacity: 0.72 },
                       ]}
                       testID={actionTestID}
                       accessibilityRole="button"
@@ -142,15 +125,6 @@ export function ActiveModifiersSection({
                   );
                 })}
               </View>
-              {actionsNotYet && note.actions.some((a) =>
-                !(liveActionKinds ?? []).includes(a.kind)) ? (
-                // THE CAPTION IS THE POINT. Dimming alone reads as "disabled
-                // right now"; the sentence says WHERE the working control is,
-                // so the athlete is never stuck looking at it.
-                <Text style={styles.coachNoteNotYet} testID="coach-note-actions-not-yet">
-                  {signedCopy('coach.status.actions_not_yet')}
-                </Text>
-              ) : null}
             </View>
           </Card>
         ))}
@@ -198,8 +172,4 @@ const styles = StyleSheet.create({
   },
   coachNoteActionText: { color: '#CFCFCF', fontSize: 12, fontWeight: '700' },
   coachNotePrimaryActionText: { color: '#C8FF00' },
-  // Not-yet: the control keeps its shape so the athlete can see what is
-  // coming, and loses its contrast so it cannot be mistaken for live.
-  coachNoteActionNotYet: { opacity: 0.38 },
-  coachNoteNotYet: { color: '#8A8A8A', fontSize: 11, lineHeight: 15, paddingTop: 2 },
 });

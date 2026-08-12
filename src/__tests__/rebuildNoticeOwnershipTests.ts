@@ -148,9 +148,17 @@ console.log('\n[4] The day screen no longer owns any of it');
     !/REBUILD_MSG_INTERVAL_MS/.test(hook));
 
   ok('the day screen reads the shared notice', /useRebuildNotice\(\)/.test(hook));
-  ok('and writes through the owner s acts',
-    /beginRebuildNotice\(\)/.test(hook) && /endRebuildNotice\(\)/.test(hook)
-    && /setRebuildNoticeError\(/.test(hook));
+  // RE-AIMED 2026-08-12 (SEAT_INBOX item 8). The notice's WRITES moved out of
+  // the day screen into `hooks/useProgramRebuild`, because Coach / My Status can
+  // now cause a rebuild and a second writer would be a second opinion about
+  // whether one is running. This section's claim — *the day screen no longer
+  // owns any of it* — got STRONGER, not weaker: it now writes none of it either.
+  const rebuildOwner = read('src/hooks/useProgramRebuild.ts');
+  ok('the rebuild owner writes through the notice s acts',
+    /beginRebuildNotice\(\)/.test(rebuildOwner) && /endRebuildNotice\(\)/.test(rebuildOwner)
+    && /setRebuildNoticeError\(/.test(rebuildOwner));
+  ok('and the day screen writes NONE of them itself',
+    !/beginRebuildNotice\(\)/.test(hook) && !/endRebuildNotice\(\)/.test(hook));
 }
 
 console.log('\n[5] The rendering did NOT change — this was a move, not a rewrite');
@@ -177,8 +185,12 @@ console.log('\n[5] The rendering did NOT change — this was a move, not a rewri
   ok('the progress sheet is still mounted on the day screen', /<RebuildSheet/.test(v2));
 
   // Every begin is paired with an end, or a rebuild would spin forever.
-  const begins = (hook.match(/beginRebuildNotice\(\)/g) || []).length;
-  const ends = (hook.match(/endRebuildNotice\(\)/g) || []).length;
+  // COUNTED IN THE OWNER, where the acts now live. Counting them in a file that
+  // has none would read `0 === 0` and pass — the vacuous shape this suite's own
+  // comment above is about.
+  const rebuildOwnerSource = read('src/hooks/useProgramRebuild.ts');
+  const begins = (rebuildOwnerSource.match(/beginRebuildNotice\(\)/g) || []).length;
+  const ends = (rebuildOwnerSource.match(/endRebuildNotice\(\)/g) || []).length;
   ok(`every begin has an end (begins=${begins} ends=${ends})`,
     begins > 0 && begins === ends);
 }

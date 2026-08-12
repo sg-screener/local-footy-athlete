@@ -51,11 +51,24 @@ console.log('\n[coach failure copy] no raw developer diagnostics reach the athle
     'the fallback bodies come from planChangeRefusalCopy, not inline prose',
   );
 
+  // RE-AIMED 2026-08-12 AT THE WRITER'S NEW HOME (SEAT_INBOX item 8). The
+  // restoration refusal moved out of `useHomeScreen` into
+  // `screens/coach/useCoachNoteActions`, which both the Program tab and Coach /
+  // My Status now mount — so the property this cell holds got WIDER: one
+  // sanitiser covering both screens instead of one screen's copy of it.
+  const writer = read('screens/coach/useCoachNoteActions.ts');
+  ok(
+    'the adjustment-undo refusal routes its reason through athleteSafeRefusal',
+    /Couldn.{0,3}t restore this adjustment[\s\S]{0,120}athleteSafeRefusal\(/.test(writer),
+    'result.reason (a raw transaction error.message) must not reach the athlete verbatim',
+  );
+  // AND NO COPY WAS LEFT BEHIND. A second, un-sanitised Alert surviving in the
+  // day screen would make the assertion above true and the app still wrong.
   const home = read('screens/home/useHomeScreen.ts');
   ok(
-    'the adjustment-undo Alert routes its reason through athleteSafeRefusal',
-    /Couldn.{0,3}t restore this adjustment[\s\S]{0,120}athleteSafeRefusal\(/.test(home),
-    'result.reason (a raw transaction error.message) must not reach the Alert verbatim',
+    'the day screen kept no second copy of that Alert',
+    !/Couldn.{0,3}t restore this adjustment/.test(home),
+    'two restoration refusals means two places to forget the sanitiser',
   );
 
   // The owner's copy is itself athlete-safe (passes the gate unchanged).

@@ -117,15 +117,26 @@ console.log('\n[4] The rebuild machinery the athlete DID ask for still exists');
   // The counterweight. Without this, deleting the sheet outright would pass
   // every assertion above while removing the only progress and failure surface
   // the coach-note and phase-shift rebuilds have.
-  const hook = read('src/screens/home/useHomeScreen.ts');
-  ok('a rebuild can still run', /const runRebuild\s*=/.test(hook));
+  // RE-AIMED 2026-08-12 AT THE REBUILD'S NEW OWNER (SEAT_INBOX item 8).
+  // `runRebuild`, `classifyRebuildFailure` and the sheet's visibility moved out
+  // of `useHomeScreen` into `hooks/useProgramRebuild`, because Coach / My Status
+  // can now cause a rebuild and a second copy would be two rebuilds. These
+  // assertions follow the machinery; pointing them at the old file would have
+  // left them reading a module that no longer owns any of it.
+  const owner = read('src/hooks/useProgramRebuild.ts');
+  ok('a rebuild can still run', /const runRebuild\s*=/.test(owner));
   ok('a rebuild failure is still classified for the athlete',
-    /classifyRebuildFailure/.test(hook));
+    /classifyRebuildFailure/.test(owner));
   ok('the progress sheet still has state to render',
-    /rebuildModalVisible/.test(hook));
+    /rebuildModalVisible/.test(owner));
 
+  // MOUNTED ON BOTH SCREENS THAT CAN CAUSE ONE, and that is the assertion the
+  // move added rather than preserved. A rebuild started from My Status with no
+  // sheet on the Coach tab is an athlete watching nothing for several seconds.
   const v2 = read('src/screens/home/HomeScreenV2.tsx');
-  ok('the progress sheet is still mounted', /<RebuildSheet/.test(v2));
+  ok('the progress sheet is still mounted on Program', /<RebuildSheet/.test(v2));
+  const coachTab = read('src/screens/coach/CoachTabScreen.tsx');
+  ok('the progress sheet is mounted on Coach too', /<RebuildSheet/.test(coachTab));
 }
 
 const total = passed + failures.length;

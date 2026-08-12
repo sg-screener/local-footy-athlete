@@ -61,19 +61,39 @@ tags:
     id: "tab-program"
 
 # ── THE ATHLETE MAKES ONE, THROUGH A DOOR THEY ALREADY HAD ──
+# RE-ROUTED 2026-08-12 THROUGH THE READINESS DOOR, AND THE OLD ROUTE IS A
+# FINDING, NOT A PREFERENCE. This block used to open `equipment-preset-open` —
+# an id NO PRODUCT SOURCE PRODUCES any more (`grep` finds it only in this flow
+# and in a test that reads this flow). The flow had been aiming at nothing, and
+# `test:maestro-element-contract` is already red on that class of drift; it is
+# pre-existing and belongs to whoever retired that door, not to this unit.
+#
+# `visibilityPercentage: 40` because the chips sit low in a tall card and a
+# 100%-visible requirement never settles on an iPhone frame.
 - scrollUntilVisible:
     element:
       id: "home-life-fact-chips"
     direction: DOWN
+    visibilityPercentage: 40
 - tapOn:
-    id: "equipment-preset-open"
+    id: "home-tired-entry"
 - extendedWaitUntil:
     visible:
-      id: "equipment-preset-barbell"
+      id: "readiness-option-cooked-week"
     timeout: 10000
 - tapOn:
-    id: "equipment-preset-barbell"
-- tapOn: "Apply for this week"
+    id: "readiness-option-cooked-week"
+# THE ACK IS A CONFIRMATION, NOT A GATE. It reports that the report landed and
+# the week recomposed; whether it is still on screen by the time the next tap
+# lands is a race, not a property. `optional: true` because the modifier is
+# already written by this point — waiting on the acknowledgment would make this
+# flow fail on timing rather than on behaviour.
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 10000
+- tapOn:
+    text: "Done"
+    optional: true
 
 # ── PROGRAM STAYS CLEAN; COACH OPENS THE POPULATED STATUS ──
 - assertNotVisible:
@@ -92,10 +112,41 @@ tags:
     id: "coach-status-season-phase"
 - takeScreenshot: artifacts/ui-walk/coach-my-status
 
-# The collapsed list is Renee's shape; its existing controls are one tap deep.
-- tapOn: "Equipment restriction active"
-- assertVisible:
+# ── (a) THE CONTROLS ARE LIVE, AND THIS IS WHERE THAT IS PROVEN ON GLASS ──
+#
+# UNTIL 2026-08-12 THIS BLOCK ASSERTED THE OPPOSITE. It tapped the row and
+# required `coach-note-actions-not-yet` — the caption reading "Change this on
+# your program screen for now" — to be visible. SEAT_INBOX item 8 made all eight
+# modifier actions live here and retired that caption, so the assertion is
+# INVERTED rather than deleted: the surface moved, and its guard moved with it.
+#
+# The literal subtitle, never the ALL-CAPS title: the caps are `textTransform`
+# styling and the accessibility text keeps its original casing, so a selector
+# written as "ACTIVE MODIFIERS" matches nothing.
+- tapOn: "Cooked this week"
+- assertNotVisible:
     id: "coach-note-actions-not-yet"
+- takeScreenshot: artifacts/ui-walk/coach-my-status-expanded
+
+# ── AND ONE OF THE FREED CONTROLS ACTUALLY OPENS ITS DOOR ──
+#
+# `Update status` is one of the SEVEN that were inert until 2026-08-12. A green
+# id proves the button is in the tree; only tapping it proves the wiring behind
+# it, and only the screenshot proves the sheet lands where a thumb can reach it.
+# BY ID, NOT BY LABEL, AND THE REASON IS IN `ActiveModifiersSection`: every
+# action Pressable sets `accessibilityLabel={actionTestID}`, so the button's
+# accessible name IS its id and a selector written as the visible text
+# ("Update status") matches nothing. The id is regex-matched because the
+# readiness fact id is minted at write time.
+- tapOn:
+    id: "readiness-update-.*"
+- extendedWaitUntil:
+    visible: "How are you feeling now?"
+    timeout: 10000
+- takeScreenshot: artifacts/ui-walk/coach-my-status-action-live
+- tapOn: "Cancel"
+- assertVisible:
+    id: "coach-status-screen"
 
 # ── AND IT CLOSES BACK TO THE CONVERSATION ──
 - tapOn:

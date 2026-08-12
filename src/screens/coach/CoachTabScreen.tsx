@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import {
+  Alert,
   Keyboard,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -23,7 +24,12 @@ import { COACH_TAB_COPY, coachGreeting } from '../../rules/coachTabCopy';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useActiveModifiers } from '../../hooks/useActiveModifiers';
 import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
-import { dismissActiveCoachNote } from '../../utils/activeCoachNotes';
+import { useProgramRebuild } from '../../hooks/useProgramRebuild';
+import { useCoachNoteActions } from './useCoachNoteActions';
+import { CoachNoteSheet } from '../../components/CoachNoteSheet';
+import { GuidedInjuryFlowSheet } from '../home/GuidedInjuryFlowSheet';
+import { RebuildSheet } from '../../components/RebuildSheet';
+import { useRebuildNotice } from '../../hooks/useRebuildNotice';
 import { ModifiersStrip } from '../../components/ModifiersStrip';
 import CoachStatusScreen from './CoachStatusScreen';
 import { colors } from '../../theme/colors';
@@ -206,8 +212,27 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   // screen is already looking at, for the reason the comment above gives about
   // `executePlanChangeAction` — a surface that re-derived its own week would be
   // free to describe a week nobody is reading.
-  const { modifiers, count: modifierCount } = useActiveModifiers({
+  const { modifiers, count: modifierCount, equipmentFactIds } = useActiveModifiers({
     visibleWeekDays: weekDays,
+  });
+  // ── (a) THE SEVEN GO LIVE, THROUGH THE DAY SCREEN'S OWN WRITERS ───────────
+  //
+  // SEAT_INBOX item 8. Until 2026-08-12 only `dismiss_note` worked here and the
+  // other seven were dimmed under a caption pointing at the Program screen —
+  // which had already stopped rendering the modifier list, so the caption sent
+  // athletes to an empty room. `useCoachNoteActions` is `useHomeScreen`'s two
+  // writers, extracted with their source injected; NOTHING here is a new door.
+  //
+  // `screen: 'my_status'` and NOT `'coach_tab'`. The coach-tab id maps to the
+  // diagnostic label `'coach'` — the field Sam asked for so an investigation can
+  // tell a coach-authored change from his own tap. These are his taps.
+  const rebuild = useProgramRebuild();
+  const rebuildNotice = useRebuildNotice();
+  const coachNoteActions = useCoachNoteActions({
+    screen: 'my_status',
+    notes: modifiers,
+    onResult: rebuild.handleProgramControlResult,
+    notifyRefusal: Alert.alert,
   });
   // MY STATUS IS NAVIGATION STATE, NOT PRIVATE SCREEN STATE. Program and Coach
   // now address the same destination, so one surface cannot merely switch tabs
@@ -461,21 +486,53 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
         <View style={StyleSheet.absoluteFill}>
           <CoachStatusScreen
             modifiers={modifiers}
-            equipmentFactIds={EMPTY_EQUIPMENT_FACT_IDS}
+            equipmentFactIds={equipmentFactIds}
             currentPhase={phaseControl.currentPhase}
             onReviewPhase={() => phaseControl.open()}
-            onAction={(note, action) => {
-              // THE LIVE STRAND, THROUGH THE SAME MODULE-LEVEL DOOR THE DAY
-              // SCREEN CALLS — `dismissActiveCoachNote`, not a copy of it. The
-              // merge plan's binding rule holds: my status MOUNTS the existing
-              // door. Every other kind is inert here and says so on screen; see
-              // LIVE_ACTION_KINDS in CoachStatusScreen.
-              if (action.kind === 'dismiss_note') dismissActiveCoachNote(note.id);
-            }}
+            // ALL EIGHT KINDS, THROUGH THE DAY SCREEN'S OWN ROUTER. Not a
+            // branch written here: `coachNoteActions.onAction` is the same
+            // `coachNoteActionRoute` the Program tab has always used, so the
+            // two surfaces cannot disagree about what a tap means.
+            onAction={coachNoteActions.onAction}
             onClose={() => navigation.setParams({ status: undefined })}
           />
         </View>
       ) : null}
+      {/* THE THREE SHEETS MY STATUS'S CONTROLS OPEN.
+          Mounted OUTSIDE the `statusVisible` block on purpose: a rebuild
+          triggered by a clear outlives the screen the athlete cleared from, and
+          a progress sheet that unmounts mid-rebuild is a blank wait. */}
+      <CoachNoteSheet
+        state={coachNoteActions.sheet}
+        equipmentFactIds={equipmentFactIds}
+        onClose={coachNoteActions.closeSheet}
+        onConfirmClear={coachNoteActions.confirmClear}
+        onUpdateStatus={coachNoteActions.updateStatus}
+      />
+      <GuidedInjuryFlowSheet
+        visible={coachNoteActions.injuryNote !== null}
+        onClose={coachNoteActions.closeInjuryFlow}
+        initial={coachNoteActions.injuryInitial}
+        episodeId={coachNoteActions.injuryNote?.injuryEpisodeId}
+        titlePrefix="Update injury"
+        onComplete={async (result) => {
+          await coachNoteActions.applyGuidedInjury(
+            result,
+            coachNoteActions.injuryConstraint?.id ?? coachNoteActions.injuryNote?.constraintId,
+          );
+          coachNoteActions.closeInjuryFlow();
+        }}
+      />
+      <RebuildSheet
+        visible={rebuild.rebuildModalVisible}
+        onClose={rebuild.handleCancelRebuild}
+        isRebuilding={rebuildNotice.isRebuilding}
+        error={rebuildNotice.rebuildError}
+        canRetry={rebuildNotice.rebuildErrorCanRetry}
+        msgIdx={rebuildNotice.rebuildMsgIdx}
+        msgOpacity={rebuildNotice.rebuildMsgOpacity}
+        onConfirm={rebuild.handleConfirmRebuild}
+      />
       <SeasonPhaseShiftSheet
         visible={phaseControl.visible}
         step={phaseControl.step}
@@ -503,20 +560,16 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
   );
 }
 
-/**
- * EMPTY, AND SAID OUT LOUD RATHER THAN LEFT LOOKING FINISHED.
+/* `EMPTY_EQUIPMENT_FACT_IDS` RETIRED 2026-08-12 (SEAT_INBOX item 8).
  *
- * `ActiveModifiersSection` uses this set to pick the equipment-specific testIDs
- * for two of its actions. Those ids only matter once the ACTIONS are wired, and
- * on this surface they are not: `onAction` is a no-op for now.
- *
- * **THE MODIFIER ACTIONS ARE STILL SLICE 3b.** The season-phase machine has now
- * been extracted and re-homed; these remaining actions need their own existing
- * handlers lifted by the same rule. Re-implementing them here would create a
- * second decision door, so they remain visibly unavailable while dismiss stays
- * live.
- */
-const EMPTY_EQUIPMENT_FACT_IDS: ReadonlySet<string> = new Set<string>();
+ * It was never a harmless placeholder. `ActiveModifiersSection` uses that set to
+ * choose the equipment-specific testIDs for `clear_adjustment` and
+ * `update_adjustment` — so an empty set did not disable those ids, it silently
+ * swapped them for the fallback, and the one screen that owns those controls
+ * advertised coordinates nothing could resolve. `useActiveModifiers` now derives
+ * the real set from the same snapshot it derives the modifiers from, which is
+ * the fix `modifiers` itself got when that hook was written. */
+
 
 /**
  * THE CHANGE CARD — L-C2 ON THE GLASS.

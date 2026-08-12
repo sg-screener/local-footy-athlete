@@ -1372,48 +1372,25 @@ console.log('\n[9] "MY STATUS" — one strip, one list, and no second door');
       && /coach-status-modifier-/.test(status),
     'the old full-width title/card stack has returned or the new hierarchy is incomplete');
 
-  // THE HONEST HALF, ASSERTED SO IT CANNOT BE FORGOTTEN. The status screen is
-  // READ-ONLY this pass and the file must say so.
-  // NOT-YET IS SHOWN, NOT FAKED. The seat: "a control that looks live but is not
-  // is worse than no control." Dimmed AND untappable AND captioned — all three,
-  // because any one alone still reads as "broken" rather than "coming".
-  const section = read('components/ActiveModifiersSection.tsx');
-  ok('the status screen renders its unwired controls as visibly not-yet',
-    /actionsNotYet\b/.test(status),
-    'the status screen mounts the list in live mode while its actions cannot run');
-  ok('a not-yet control is dimmed, untappable AND captioned',
-    // `notYet`, not `actionsNotYet` — the flag became PER-ACTION when the first
-    // strand of the knot came loose. Same property, and the cell moved with it
-    // rather than being deleted.
-    /disabled=\{notYet\}/.test(section)
-      && /coachNoteActionNotYet/.test(section)
-      && /coach\.status\.actions_not_yet/.test(section),
-    'one of dim / disable / caption is missing — dimming alone reads as broken, '
-      + 'and a caption alone leaves a live-looking button that lies');
-  ok('the caption says where the working control is',
-    /Change this on your program screen/.test(
-      read('rules/projectionCopy.ts')),
-    'a not-yet caption that does not name the live door leaves the athlete stuck');
-  // THE KNOT IS NOT ONE ROPE, AND THE NOT-YET STATE IS PER-ACTION.
-  ok('the one untangled action is LIVE on the status screen',
-    /LIVE_ACTION_KINDS[\s\S]{0,200}'dismiss_note'/.test(status)
-      && /liveActionKinds=\{LIVE_ACTION_KINDS\}/.test(status),
-    'dismiss_note runs a module-level function with zero hook dependencies — '
-      + 'dimming a control that WORKS is the dead-affordance law broken in the '
-      + 'opposite direction');
-  ok('a live action is neither disabled nor dimmed',
-    /const notYet = actionsNotYet[\s\S]{0,120}liveActionKinds/.test(section)
-      && /disabled=\{notYet\}/.test(section),
-    'the not-yet state is still per-SCREEN — a working control would be dimmed');
-  ok('the caption only appears when something on THAT note is inert',
-    /note\.actions\.some\(\(a\) =>[\s\S]{0,120}liveActionKinds/.test(section),
-    'a note whose every action works would still tell the athlete to go '
-      + 'elsewhere');
-  ok('the coach tab dismisses through the SAME module-level door',
-    /dismissActiveCoachNote\(note\.id\)/.test(coachTab)
-      && /import \{ dismissActiveCoachNote \}/.test(coachTab),
-    '"my status MOUNTS the existing doors" — a second dismiss path here would be '
-      + 'the representation the merge plan forbids');
+  // ── THE HONEST HALF, AND ON 2026-08-12 IT STOPPED BEING HALF ──────────────
+  //
+  // Eight assertions lived here pinning the status screen as READ-ONLY: the
+  // controls were dimmed, untappable and captioned "Change this on your program
+  // screen for now", with `dismiss_note` the one live strand.
+  //
+  // SEAT_INBOX item 8 (a)+(b) made all eight kinds live and deleted that
+  // machinery, so every one of those assertions now anchors on a string that no
+  // longer exists — and an `indexOf`/regex over a missing anchor passes, which
+  // is how a suite goes quietly vacuous. They are REPLACED, not dropped:
+  // `test:my-status-modifiers` asserts the stronger property (every kind in
+  // `ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS` reaches a door, and the router reds
+  // on one it does not know), and `test:coach-note-action-source` asserts the
+  // taps are recorded as My Status rather than the Program tab.
+  //
+  // The dismiss assertion went with them for the same reason: dismiss is no
+  // longer a special case routed by hand at this call site, it is one arm of
+  // `coachNoteActionRoute`, which cell [2] of the new suite pins against the
+  // day screen's own branches.
 
   ok('the strip is outside the conversation scroll',
     coachTab.indexOf('<ModifiersStrip') < coachTab.indexOf('testID="coach-tab-conversation"'),

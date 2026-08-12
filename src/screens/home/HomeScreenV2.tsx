@@ -51,6 +51,8 @@ import type { MissedSession, MissedSessionResponse } from '../../utils/missedSes
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 import { UndoToast } from '../../components/UndoToast';
+import { CoachNoteSheet } from '../../components/CoachNoteSheet';
+import { BuildingState, RebuildSheet } from '../../components/RebuildSheet';
 import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedbackRenderWitness';
 import {
   WEEK_DAYS,
@@ -2576,196 +2578,12 @@ function TimelineChevron({ open }: { open: boolean }) {
   );
 }
 
-/* Coach Notes now have one visible home: My Status. The helpers below remain
- * temporarily because the status actions still route athletes back to the
- * four working Program status controls; neither Today nor Week renders the notes. */
+/* THE MODIFIER CONFIRMATION SHEET MOVED OUT 2026-08-12 (SEAT_INBOX item 8).
+ * It lives in `components/CoachNoteSheet` because My Status now opens it for
+ * five of its eight controls, and a second copy on the coach side would be a
+ * second door for a decision that already has one. This screen still MOUNTS it
+ * until step (c) removes the Program-side coach-note leftovers. */
 
-function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
-  if (note.reversibleAdjustmentId) {
-    return {
-      title: 'Restore the previous fixture?',
-      body: 'This puts the moved sessions back and sorts the week around your game.',
-    };
-  }
-  if (note.type === 'injury') {
-    const clearLabel = note.actions.find((action) => action.kind === 'clear_injury')?.label ?? '';
-    if (/cleared/i.test(clearLabel) || /training paused/i.test(note.title)) {
-      return {
-        title: 'Resume normal training?',
-        body: "Only clear this if you've been checked or the issue has settled enough to train normally.",
-      };
-    }
-    return {
-      title: 'Clear this injury?',
-      body: "We'll stop adjusting your program around this and update your week.",
-    };
-  }
-  if (note.type === 'temporary_status') {
-    return {
-      title: 'Clear this adjustment?',
-      body: "We'll stop adjusting your program around this and update your week.",
-    };
-  }
-  return {
-    title: 'Clear this adjustment?',
-    body: "We'll stop factoring this in and get your week back to normal.",
-  };
-}
-
-function updateCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
-  if (note.type === 'injury') {
-    return {
-      title: note.actions.find((a) => a.kind === 'update_injury')?.label ?? 'Update injury',
-      body: 'Keep this note active if the issue still affects training. Clear it only when it has settled.',
-    };
-  }
-  if (note.type === 'temporary_status') {
-    return {
-      title: 'How are you feeling now?',
-      body: 'Choose the closest option and your program will update from there.',
-    };
-  }
-  return {
-    title: 'Update adjustment',
-    body: 'Keep this adjustment active for future sessions, or clear it if it no longer applies.',
-  };
-}
-
-interface CoachNoteSheetProps {
-  state: { mode: 'clear' | 'update'; note: ActiveCoachNote } | null;
-  equipmentFactIds: ReadonlySet<string>;
-  onClose: () => void;
-  onConfirmClear: () => void;
-  onUpdateStatus: (status: ProgramControlStatusUpdate) => void;
-}
-
-function CoachNoteSheet({
-  state,
-  equipmentFactIds,
-  onClose,
-  onConfirmClear,
-  onUpdateStatus,
-}: CoachNoteSheetProps) {
-  if (!state) return null;
-
-  const copy = state.mode === 'clear'
-    ? clearCopyForNote(state.note)
-    : updateCopyForNote(state.note);
-  const clearAction = state.note.actions.find((action) => action.kind.startsWith('clear'));
-  const isStatusUpdate = state.mode === 'update' && state.note.type === 'temporary_status';
-  const injuryEpisodeId = state.note.injuryEpisodeId;
-  const reversibleAdjustmentId = state.note.reversibleAdjustmentId;
-  const sourceFactId = state.note.temporarySourceFactIds?.[0] ?? state.note.constraintId;
-  const isEquipmentFact = equipmentFactIds.has(sourceFactId);
-
-  return (
-    <Sheet
-      visible={Boolean(state)}
-      onClose={onClose}
-      testID={injuryEpisodeId
-        ? explorerTestId.injuryDetail(injuryEpisodeId)
-        : reversibleAdjustmentId
-          ? explorerTestId.adjustmentRestore(reversibleAdjustmentId)
-          : `coach-note-detail-${sourceFactId}`}
-    >
-      <Text style={styles.sheetTitle}>{copy.title}</Text>
-      <Text style={styles.sheetBody}>{copy.body}</Text>
-      {state.mode === 'clear' ? (
-        <>
-          <Button
-            label={state.note.reversibleAdjustmentId
-              ? 'Restore fixture'
-              : 'Clear and update program'}
-            size="lg"
-            onPress={onConfirmClear}
-            testID={reversibleAdjustmentId
-              ? explorerTestId.adjustmentRestore(reversibleAdjustmentId)
-              : injuryEpisodeId
-                ? explorerTestId.injuryResolveAction(injuryEpisodeId)
-                : isEquipmentFact
-                  ? explorerTestId.equipmentClear(sourceFactId)
-                  : explorerTestId.readinessClearAction(sourceFactId)}
-          />
-          <Button
-            label="Cancel"
-            variant="secondary"
-            size="md"
-            onPress={onClose}
-            style={{ marginTop: spacing.md }}
-          />
-        </>
-      ) : isStatusUpdate ? (
-        <>
-          <Button
-            label="I'm good now"
-            size="lg"
-            onPress={() => onUpdateStatus('good_now')}
-            testID={explorerTestId.readinessClearAction(sourceFactId)}
-          />
-          <Button
-            label="Still not right"
-            variant="secondary"
-            size="md"
-            onPress={() => onUpdateStatus('still_not_right')}
-            testID={explorerTestId.readinessOption('still_not_right')}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Button
-            label="Still sick"
-            variant="secondary"
-            size="md"
-            onPress={() => onUpdateStatus('still_sick')}
-            testID={explorerTestId.readinessOption('still_sick')}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Button
-            label="Still cooked"
-            variant="secondary"
-            size="md"
-            onPress={() => onUpdateStatus('still_cooked')}
-            testID={explorerTestId.readinessOption('still_cooked')}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Button
-            label="Worse"
-            variant="secondary"
-            size="md"
-            onPress={() => onUpdateStatus('worse')}
-            testID={explorerTestId.readinessOption('worse')}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Button
-            label="Cancel"
-            variant="secondary"
-            size="md"
-            onPress={onClose}
-            style={{ marginTop: spacing.md }}
-          />
-        </>
-      ) : (
-        <>
-          <Button
-            label="Keep active"
-            size="lg"
-            onPress={onClose}
-          />
-          <Button
-            label={clearAction?.label ?? 'Clear adjustment'}
-            variant="secondary"
-            size="md"
-            onPress={onConfirmClear}
-            testID={injuryEpisodeId
-              ? explorerTestId.injuryResolveAction(injuryEpisodeId)
-              : isEquipmentFact
-                ? explorerTestId.equipmentClear(sourceFactId)
-                : explorerTestId.readinessClearAction(sourceFactId)}
-            style={{ marginTop: spacing.md }}
-          />
-        </>
-      )}
-    </Sheet>
-  );
-}
 
 interface GameDaySheetProps {
   visible: boolean;
@@ -3249,58 +3067,11 @@ function AwayDaysSheet({
   );
 }
 
-interface RebuildSheetProps {
-  visible: boolean;
-  onClose: () => void;
-  isRebuilding: boolean;
-  error: string | null;
-  canRetry: boolean;
-  msgIdx: number;
-  msgOpacity: Animated.Value;
-  onConfirm: () => void;
-}
-function RebuildSheet({
-  visible, onClose, isRebuilding, error, canRetry, msgIdx, msgOpacity, onConfirm,
-}: RebuildSheetProps) {
-  return (
-    <Sheet visible={visible} onClose={onClose} dismissable={!isRebuilding}>
-      {isRebuilding ? (
-        <BuildingState
-          title="Building your program…"
-          msgIdx={msgIdx}
-          msgOpacity={msgOpacity}
-          messages={REBUILD_MESSAGES}
-        />
-      ) : (
-        <>
-          <Text style={styles.sheetTitle}>Rebuild this week?</Text>
-          <Text style={styles.sheetBody}>
-            Fresh exercise content will be generated from your current profile.
-          </Text>
-          <View style={styles.noteBlock}>
-            <Text style={styles.notePreserved}>✓ Game days and logged workouts are preserved</Text>
-            <Text style={styles.noteWiped}>✗ Any custom exercise swaps will be lost</Text>
-          </View>
-          {error && <Text style={styles.sheetError}>{error}</Text>}
-          {(!error || canRetry) && (
-            <Button
-              label={error ? 'Try again' : 'Rebuild week'}
-              size="lg"
-              onPress={onConfirm}
-            />
-          )}
-          <Button
-            label={error && !canRetry ? 'Close' : 'Cancel'}
-            variant="secondary"
-            size="md"
-            onPress={onClose}
-            style={{ marginTop: spacing.md }}
-          />
-        </>
-      )}
-    </Sheet>
-  );
-}
+/* THE REBUILD SHEET MOVED OUT 2026-08-12 (SEAT_INBOX item 8) to
+ * `components/RebuildSheet`. Coach / My Status can now cause a rebuild — four
+ * modifier families ask for one when cleared — and an athlete watching nothing
+ * happen for the seconds a regeneration takes is a control that works and says
+ * so to nobody. One progress surface, both screens. */
 
 interface PhaseShiftSheetProps {
   visible: boolean;
@@ -3587,25 +3358,6 @@ export function SeasonPhaseShiftSheet({
         </>
       )}
     </Sheet>
-  );
-}
-
-interface BuildingStateProps {
-  title: string;
-  msgIdx: number;
-  msgOpacity: Animated.Value;
-  messages: string[];
-}
-function BuildingState({ title, msgIdx, msgOpacity, messages }: BuildingStateProps) {
-  return (
-    <View style={styles.building}>
-      <ActivityIndicator size="large" color="#C8FF00" style={styles.buildingSpinner} />
-      <Text style={styles.sheetTitle}>{title}</Text>
-      <Text style={styles.sheetSubtext}>This can take up to 1 minute</Text>
-      <Animated.View style={{ opacity: msgOpacity }}>
-        <Text style={styles.buildingMsg}>{messages[msgIdx]}</Text>
-      </Animated.View>
-    </View>
   );
 }
 

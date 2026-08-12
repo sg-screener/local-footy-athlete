@@ -125,8 +125,6 @@ export default function CoachStatusScreen({
                     notes={[note] as ActiveCoachNote[]}
                     equipmentFactIds={equipmentFactIds}
                     onAction={onAction}
-                    actionsNotYet
-                    liveActionKinds={LIVE_ACTION_KINDS}
                   />
                 ) : null}
               </View>
@@ -156,16 +154,18 @@ function Chevron({ open = false }: { open?: boolean }) {
   );
 }
 
-/**
- * WHAT THIS SCREEN CAN ACTUALLY DO TODAY.
+/* `LIVE_ACTION_KINDS` RETIRED 2026-08-12 (SEAT_INBOX item 8 (a)).
  *
- * A LIST, NOT A BOOLEAN, because the knot is not one rope: every other action
- * routes through a confirmation sheet whose writers live in `useHomeScreen` and
- * need the ownership extraction priced in
- * `docs/UI_MERGE_SLICE3_BOUNDARY_2026-08-10.md` addendum 2. As each is freed it
- * joins this list, and the caption under it disappears on its own.
- */
-const LIVE_ACTION_KINDS: readonly string[] = ['dismiss_note'];
+ * It read `['dismiss_note']` — one live control out of eight — and its comment
+ * said each kind *"joins this list as it is freed"*. They are all freed, so the
+ * list is the whole vocabulary, and a list that says "everything" is a list
+ * saying nothing.
+ *
+ * What replaced it is not a longer list but a different KIND of check:
+ * `coachNoteActionRoute` in `useCoachNoteActions` is total over the eight kinds
+ * and `test:my-status-modifiers` proves it, so a ninth kind arriving without a
+ * door reds on the day it arrives rather than the day someone remembers this
+ * screen exists. */
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0A0A0A' },
