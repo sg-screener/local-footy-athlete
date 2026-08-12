@@ -207,21 +207,14 @@ his instruction is standing authority, not history.**
       "before":["Tuesday","Thursday"],"after":[]}`. **The anchor IS the week
       being planned, the span is right, and the filter empties the club list
       exactly as designed. The plan half is CORRECT — do not go back to it.**
-    - **SO BOTH SYMPTOMS HAVE NEW OWNERS, each a specific place:**
-      **(1) THE WEDNESDAY TEAM NIGHT IS NOT FROM THE PLAN** — the plan carried no
-      team day at all. A regenerated week is built with
-      `previousProgram: currentProgram`, so a day whose session is CARRIED OVER
-      keeps the name and identity it already had, *"+ Team Training"* included,
-      on a plan that no longer says so. **The leak is SESSION REUSE, not
-      allocation.**
-      **(2) THE SATURDAY GAME SURVIVES BECAUSE IT IS A CALENDAR MARK**, not the
-      profile's game day: `devE2ESeedRegistry.ts:773` seeds
-      `{ kind: 'calendar_mark', date: fixtureDate, mark: 'game' }`, and the
-      filter drops `targetFixtureDay` — the profile's usual fixture — which a
-      marked day never travels through. **A marked fixture needs its own removal
-      at the marked-days owner.**
-    - **NEITHER IS A GUESS:** the first is what the probe's empty `after` forces,
-      the second is a line in the seed.
+    - **TWO OWNERS, NEITHER A GUESS. (1) THE WEDNESDAY TEAM NIGHT IS NOT FROM THE
+      PLAN** — the plan carried none; a regenerated week is built with
+      `previousProgram`, so a CARRIED-OVER session keeps its old name,
+      *"+ Team Training"* included. **The leak is SESSION REUSE.**
+      **(2) THE SATURDAY GAME IS A CALENDAR MARK**, not the profile's game day
+      (`devE2ESeedRegistry.ts:773`), and marks reach the week through
+      `targetWeekFixtures` — **which Sam's bye-week ruling now tells us exactly
+      what to do with (see `## AWAITING SAM`).**
 
     Two guesses were
     already wrong today: narrowing L4b (broke two more cells, and was loosening a
@@ -1418,34 +1411,40 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **DOES AWAY TOUCH A GAME HE ENTERED HIMSELF? Asked 2026-08-13, after his
-  "yes it should disappear" landed and the measurement showed WHICH game it
-  reached.**
+- **ANSWERED 2026-08-13, AND HIS ANSWER IS BIGGER THAN THE QUESTION — AWAY IS A
+  BYE-WEEK BUILD.** Sam, verbatim: *"If you're away, you're not playing, so a
+  taper and a recovery day would be training for a match you're not at. The other
+  side: your season view quietly loses a game that really happened. The period
+  you're away should almost look like a bye week build or an off season block
+  with no team training, ensuring that when you treat when you get back enough
+  time to recover before the next game so you wouldn't do heavy legs on a friday
+  when you are travelling home that day just because you're away, a game still
+  may be that weekend"*.
 
-  **WHAT WAS SEARCHED FIRST.** His ruling is built for the fixture that comes
-  from his PROFILE — the usual game day — and that one is dropped inside a trip.
-  **The Saturday game still on screen is a different thing: a CALENDAR MARK**
-  (`devE2ESeedRegistry.ts:773` seeds `{ kind: 'calendar_mark', mark: 'game' }`),
-  and marked fixtures reach the week through their own owner,
-  `targetWeekFixtures` (`rules/fixtureConditionedAvailability.ts:141`), which
-  never sees the trip. **So the two halves of "a game" are not one thing, and
-  only one of them is covered.**
+  **THE RULING, AS ACCEPTANCE CRITERIA:**
+  1. **A fixture INSIDE the trip does not ANCHOR the week** — no G-1 taper, no
+     G+1 recovery. He is not playing it.
+  2. **His calendar mark is NOT deleted.** He named the cost himself (*"your
+     season view quietly loses a game that really happened"*), so the record
+     stays; what stops is the training around it.
+  3. **The away period is shaped like a BYE WEEK BUILD or an off-season block,
+     with no team training.**
+  4. **A fixture AFTER he returns still shapes the tail of the trip.** No heavy
+     legs on the Friday he flies home if there is a game that weekend.
 
-  **THE QUESTION.** A marked game is a fact HE TYPED IN — a real fixture his club
-  is playing whether he is there or not. When he is away over it, does the app
-  **(a) hide it too**, so his week reads as if there is no match at all; or
-  **(b) leave the mark and only drop the training around it** — no taper, no
-  G+1, but the match still shown as a day he is missing?
+  **THE APP ALREADY HAS THE SHAPE HE NAMED, which is why this is small.**
+  `derivedWeekContract.ts:92-102`: a week with NO FIXTURE derives
+  `anchorState: 'bye'` and mode `in_season_bye_build`. **So dropping fixtures
+  that fall inside the away span — at the one fixture owner,
+  `targetWeekFixtures` (`rules/fixtureConditionedAvailability.ts:141`) — gives
+  all four at once:** no anchor for the game he misses (1); the mark untouched,
+  because the filter is on the READ and not the store (2); a bye-week build for
+  the span (3); and a fixture OUTSIDE the span still anchoring, so the
+  travel-home Friday is still G-1 (4).
 
-  **THIS IS NOT THE QUESTION HE ALREADY ANSWERED.** That one was about the
-  week's SHAPE — tapering for a match he is not at. **This one is about editing
-  a record he entered by hand**, which is why it is not mine to assume: the app
-  suppressing something the athlete typed is a different act from the app not
-  generating something itself.
-  **RECOMMENDED: (b).** "Disappear" is satisfied by the training around it going;
-  quietly hiding his own entry is the part he did not ask for.
-  **NOT BUILT EITHER WAY.**
-
+  **NOT BUILT. The wiring is the work:** `targetWeekFixtures` has several callers
+  and none passes an away span today — the same thread the team-day filter took
+  through `onboardingToCoachingInputs`'s two callers.
 - **ANSWERED 2026-08-13 — a game inside the trip DISAPPEARS.** Sam: ***"yes it
   should disappear OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***. **Built the same
   day** — the fixture is dropped at the plan, so the week loses its taper and
