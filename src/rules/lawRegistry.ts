@@ -716,6 +716,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-preference-report',
+    law: 'A rules-engine change must say what it did to Sam\'s PREFERENCES across all 17 scenarios, not only whether the weeks stayed legal — and a gain on one scenario bought with regressions across the rest is rejected as over-fitting.',
+    ruledAt: 'docs/SEAT_INBOX.md item 5, Sam 2026-08-12 (his oldest fear): "I don\'t want to get 2 weeks down the line and realise that a weekly template optimised for that and that alone."',
+    guard: {
+      state: 'guarded',
+      by: 'test:preference-shape',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12. THE INSTRUMENT EXISTED AND THE QUESTION WAS NEVER PUT TO IT — the 17 scenarios answered "is this week legal" and never "is this a week Sam would write", which is how the 4-hard-plus-1-moderate finding sat unseen for months. Built on the EXISTING `LFA_HARD_DAY_PROBE` seam as the order required; no second flag. THE SCORE IS A COUNT OF RULED PREFERENCES, NOT AN INVENTED WEIGHTING: two axes today, each quoted at the code, and both read their thresholds from the contract (`preferredHardDayRange.max`, `permittedHardDayMaximum`) rather than hard-coding 4 and 5 — an off-season week whose preferred max is 2 is judged against ITS OWN number. A fifth hard day costs the preference and is NEVER a violation (stand-down A). THE SPLIT IS DELIBERATE: `test:qa` PRINTS the table and does not block, because it already carries 84 pre-existing failures and a verdict inside that exit code would be indistinguishable from them; this suite holds the rules and is green. 8 cells, each probed both directions, including: a hard failure is not also counted as a regression (one event, two names, and the blocking one must not be diluted); a broad gain with one cost is NOT over-fitting; and a scenario that VANISHES between runs is not a pass — dropping the failing week is the cheapest way to satisfy any set of preferences. TODAY\'S MEASUREMENT, committed as `scripts/preference-baseline.json`: 4 of 17 scenarios meet both preferences, 0 hard violations.',
+    },
+  },
+  {
     id: 'LAW-rename-carries-its-references',
     law: 'A step that rewrites identities rewrites everything that points at them. Seed stabilisation may change ids; it may never change content.',
     ruledAt: 'src/dev/e2e/devE2ESeedRegistry.ts stabilizeMicrocycle header, 2026-08-12 — the founding case, measured rather than ruled: 23 of 23 seeded workouts carrying a conditioning block had lost it.',

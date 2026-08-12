@@ -66,6 +66,13 @@ import {
   renderAllowedFinding,
   validateAllowedFindingPolicy,
 } from './weekPlanQA/allowedFindings';
+import {
+  PREFERENCE_AXES,
+  comparePreferenceRuns,
+  preferenceRow,
+  preferenceTable,
+  type WeekPreferenceRow,
+} from '../rules/weekPreferenceShape';
 
 // ═══════════════════════════════════════════════════
 // TYPES
@@ -915,6 +922,8 @@ const scenarios: Scenario[] = [
 
 let totalPassed = 0;
 let totalFailed = 0;
+/** Seat item 5 — one row per scenario, collected under `LFA_HARD_DAY_PROBE=1`. */
+const preferenceRows: WeekPreferenceRow[] = [];
 const usedAllowedFindingPolicyKeys = new Set<string>();
 const qaPolicyFailures: string[] = [];
 
@@ -1025,6 +1034,25 @@ for (const scenario of scenarios) {
           + `achievedModerate=${stress.achievedModerateDayCount} `
           + `samShape=${rest.hardDays.length === 4 && rest.moderateDays.length >= 1
             ? 'MET' : `${rest.hardDays.length}+${rest.moderateDays.length}`}`);
+        // ── SEAT ITEM 5: IS THIS A WEEK SAM WOULD WRITE? ──
+        //
+        // The two probes above answer "what shape is this week". They print and
+        // nothing reads them, which is how the 4+1 finding stayed invisible for
+        // months. The row below is the same numbers turned into an ANSWER, kept
+        // beside a committed baseline so a rules change has to say what it did
+        // to the set — not just whether the set stayed legal.
+        //
+        // ON THE SAME FLAG, DELIBERATELY. The order: "Extend the existing
+        // HARD_DAY_PROBE seam — do not add a second flag." One measurement, one
+        // switch.
+        preferenceRows.push(preferenceRow({
+          scenarioId: scenario.id,
+          hardDays: rest.hardDays.length,
+          anchorHardDays: rest.anchorHardDays.length,
+          moderateDays: rest.moderateDays.length,
+          preferredHardDayMax: stress.preferredHardDayRange.max,
+          permittedHardDayMax: stress.permittedHardDayMaximum,
+        }));
       } catch (error) {
         console.log(`HARD_DAY_PROBE ${scenario.id} ERROR ${String(error)}`);
       }
@@ -1198,6 +1226,49 @@ if (staleAllowedFindings.length > 0) {
   totalFailed += staleAllowedFindings.length;
 } else {
   console.log('  No stale allowed findings.');
+}
+
+// ── SEAT ITEM 5: THE PREFERENCE REPORT ─────────────────────────────────────
+//
+// "The scenarios currently answer 'is this week legal', never 'is this a week
+// Sam would write'." This is where they answer the second question, across all
+// 17 at once, against a committed baseline.
+//
+// IT PRINTS AND DOES NOT BLOCK, AND THAT IS DELIBERATE. `test:qa` already
+// carries 84 pre-existing failures, so a verdict wired into its exit code would
+// be indistinguishable from them on every run. The BLOCKING half lives in
+// `test:preference-shape`, which holds the rules this report applies and is
+// green — printing is not enforcing, and this repo has paid for confusing them.
+if (process.env.LFA_HARD_DAY_PROBE === '1') {
+  console.log(`\n${'═'.repeat(72)}`);
+  console.log('  PREFERENCE REPORT — is this a week Sam would write?');
+  console.log(`${'═'.repeat(72)}`);
+  let baseline: WeekPreferenceRow[] = [];
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    baseline = require('../../scripts/preference-baseline.json') as WeekPreferenceRow[];
+  } catch {
+    console.log('  NO BASELINE FILE — this run is the first. Paste the JSON below into');
+    console.log('  scripts/preference-baseline.json to make it the baseline.');
+  }
+  const comparison = comparePreferenceRuns(baseline, preferenceRows);
+  for (const line of preferenceTable(comparison, preferenceRows)) console.log(`  ${line}`);
+  const shapeMet = preferenceRows.filter((row) => row.samShapeMet).length;
+  console.log(`\n  SAM'S SHAPE (${PREFERENCE_AXES.join(' + ')}): `
+    + `${shapeMet} of ${preferenceRows.length} scenarios`);
+  console.log(`  hard failures: ${comparison.hardFailures.length ? comparison.hardFailures.join(', ') : 'none'}`);
+  console.log(`  preference regressions: ${comparison.regressions.length ? comparison.regressions.join(', ') : 'none'}`);
+  console.log(`  improvements: ${comparison.improvements.length ? comparison.improvements.join(', ') : 'none'}`);
+  if (comparison.overFitting) {
+    console.log('  ⚠ OVER-FITTING: more scenarios regressed than improved. Sam\'s own words —');
+    console.log('    "I don\'t want to get 2 weeks down the line and realise that a weekly');
+    console.log('    template optimised for that and that alone." REJECT, do not celebrate.');
+  }
+  if (comparison.regressions.length > 0) {
+    console.log('  A regression continues ONLY with a stated reason. Write it in the');
+    console.log('  boundary report, or update the baseline with the evidence for the change.');
+  }
+  console.log(`\n  PREFERENCE_BASELINE_JSON ${JSON.stringify(preferenceRows)}`);
 }
 
 // ── Summary ──

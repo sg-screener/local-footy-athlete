@@ -1,0 +1,226 @@
+[
+  {
+    "scenarioId": "S1",
+    "hardDays": 5,
+    "anchorHardDays": 3,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S2",
+    "hardDays": 5,
+    "anchorHardDays": 3,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S3",
+    "hardDays": 4,
+    "anchorHardDays": 3,
+    "moderateDays": 1,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [
+      "hardDaysWithinPreferred",
+      "hasModerateDay"
+    ],
+    "score": 2,
+    "samShapeMet": true
+  },
+  {
+    "scenarioId": "S4",
+    "hardDays": 5,
+    "anchorHardDays": 2,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S5",
+    "hardDays": 1,
+    "anchorHardDays": 0,
+    "moderateDays": 2,
+    "preferredHardDayMax": 2,
+    "permittedHardDayMax": 4,
+    "hardViolation": false,
+    "preferencesMet": [
+      "hardDaysWithinPreferred",
+      "hasModerateDay"
+    ],
+    "score": 2,
+    "samShapeMet": true
+  },
+  {
+    "scenarioId": "S6",
+    "hardDays": 1,
+    "anchorHardDays": 0,
+    "moderateDays": 2,
+    "preferredHardDayMax": 2,
+    "permittedHardDayMax": 4,
+    "hardViolation": false,
+    "preferencesMet": [
+      "hardDaysWithinPreferred",
+      "hasModerateDay"
+    ],
+    "score": 2,
+    "samShapeMet": true
+  },
+  {
+    "scenarioId": "S7",
+    "hardDays": 4,
+    "anchorHardDays": 0,
+    "moderateDays": 2,
+    "preferredHardDayMax": 2,
+    "permittedHardDayMax": 4,
+    "hardViolation": false,
+    "preferencesMet": [
+      "hasModerateDay"
+    ],
+    "score": 1,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S8",
+    "hardDays": 4,
+    "anchorHardDays": 3,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [
+      "hardDaysWithinPreferred"
+    ],
+    "score": 1,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S9",
+    "hardDays": 4,
+    "anchorHardDays": 2,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [
+      "hardDaysWithinPreferred"
+    ],
+    "score": 1,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S10",
+    "hardDays": 5,
+    "anchorHardDays": 4,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S11",
+    "hardDays": 5,
+    "anchorHardDays": 3,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S12",
+    "hardDays": 3,
+    "anchorHardDays": 2,
+    "moderateDays": 2,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [
+      "hardDaysWithinPreferred",
+      "hasModerateDay"
+    ],
+    "score": 2,
+    "samShapeMet": true
+  },
+  {
+    "scenarioId": "E1",
+    "hardDays": 5,
+    "anchorHardDays": 2,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "E2",
+    "hardDays": 5,
+    "anchorHardDays": 3,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "E3",
+    "hardDays": 5,
+    "anchorHardDays": 3,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S13",
+    "hardDays": 5,
+    "anchorHardDays": 3,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [],
+    "score": 0,
+    "samShapeMet": false
+  },
+  {
+    "scenarioId": "S14",
+    "hardDays": 4,
+    "anchorHardDays": 3,
+    "moderateDays": 0,
+    "preferredHardDayMax": 4,
+    "permittedHardDayMax": 5,
+    "hardViolation": false,
+    "preferencesMet": [
+      "hardDaysWithinPreferred"
+    ],
+    "score": 1,
+    "samShapeMet": false
+  }
+]

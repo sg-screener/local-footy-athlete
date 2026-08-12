@@ -597,7 +597,38 @@ phone.** State device items as PARKED in a stop report, never as a request.
    **NOT BUILT:** the range, the advisory finding and the generation target.
    Nothing here says WHICH session should become moderate or at whose expense.
 
-5. **THE 17 SCENARIOS MUST REPORT SAM'S PREFERENCES, NOT JUST HARD LIMITS.**
+5. **BUILT — THE 17 NOW ANSWER "IS THIS A WEEK SAM WOULD WRITE".**
+   `LFA_HARD_DAY_PROBE=1 npm run test:qa` prints a table across all 17: hard
+   days, anchor-caused hard days, moderate days, each week's own preferred
+   maximum, a score, and a verdict against a committed baseline
+   (`scripts/preference-baseline.json`). **Same flag, no second seam**, as
+   ordered.
+   **TODAY'S NUMBER: 4 of 17 weeks meet both of his ruled preferences. 0 hard
+   violations.**
+   **THE SCORE INVENTS NO POLICY** — it counts RULED preferences (hard days
+   within the week's own preferred max; at least one moderate day), each quoted
+   at the code, both thresholds READ from the contract so an off-season week
+   whose preferred max is 2 is judged against 2, not 4. A fifth hard day costs
+   the preference and is never a violation (stand-down A).
+   **THE THREE OUTCOMES ARE KEPT APART** — hard failure, preference regression
+   (continues only with a stated reason), intentional change (baseline updated
+   with evidence) — and **over-fitting is mechanical**: improvements ≥ 1 with
+   more regressions than improvements is REJECTED.
+   **`test:qa` PRINTS AND DOES NOT BLOCK, ON PURPOSE:** it carries 84
+   pre-existing failures, so a verdict inside its exit code would be
+   indistinguishable from them. The rules are held by **`test:preference-shape`,
+   8 cells, green, in the chain**, three mutations killed. Registry row
+   `LAW-preference-report`; 102/70 -> 103/71, UNENFORCED unmoved at 32.
+   **⚠ ONE DISCREPANCY FOR THE SEAT, NOT RESOLVED HERE.** Item 4 records the
+   shape as occurring in **2 of 17 and in ZERO fixture weeks**. My count is
+   **4 of 17**, and two of the four (S3, S12) carry anchor-caused hard days.
+   **The two counts are different questions** — "exactly 4 hard days" versus
+   "within this week's preferred maximum" — and I have not established what item
+   4 counted as a fixture week. **A count names its instrument's unit; both
+   readings are printed side by side in the table rather than reconciled by
+   assertion.**
+
+   ~~ORIGINAL~~ **THE 17 SCENARIOS MUST REPORT SAM'S PREFERENCES, NOT JUST HARD LIMITS.**
    **Sam's step 3 of three, approved 2026-08-12, and his oldest fear:** *"I
    don't want to get 2 weeks down the line and realise that a weekly template
    optimised for that and that alone."*
