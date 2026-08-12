@@ -1192,6 +1192,36 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **RULED 2026-08-13 — THE AWAY FLOW IS THREE QUESTIONS ON THE WEEK SCREEN.
+  This is an ORDER, not a decision owed; it supersedes the current away sheet.**
+  **Sam, verbatim:** *"I think the away button should live on the weekly screen,
+  it should say 'when do you leave?' then 'when do you return' thhe leave button
+  should be limited to that week in dates, but the return date can be any date
+  in the future / then you are asked about the equipment stuff"*.
+  **THE SHAPE:**
+  1. **The Away control moves to the WEEK screen.** Same reasoning that moved
+     add-a-game there (item 19): "when do you leave" is a question about a week,
+     and the day screen is about one day. **The day-screen `Away` chip
+     (`home-away-this-week-entry`) goes.**
+  2. **"When do you leave?" — LIMITED TO THAT WEEK'S DATES.**
+  3. **"When do you return?" — ANY future date, unbounded.**
+  4. **THEN the equipment question**, which is his earlier ruling: the athlete
+     marks what they do NOT have, through the door that already exists
+     (`EquipmentLimitationSheet`), cleared by "I'm back now"
+     (`available_again` / `equipmentClear`).
+  **WHAT THIS REPLACES:** today's sheet asks *"Which days are you away?"* and
+  toggles individual TRAINING days inside the visible week
+  (`HomeScreenV2.tsx:3030`). **A trip cannot currently cross a week boundary at
+  all** — this ruling is what fixes that, and it is the real reason it matters,
+  beyond the wording.
+  **AND IT UNBLOCKS AUTOMATIC.** His conditional — *"if you do [set a return
+  date], then yes make it automatic"* — becomes LIVE the moment step 3 exists.
+  So the away equipment answer should lift itself on the return date, with
+  "I'm back now" as the early exit. **`missing_for_span` (`bfad51b7`) is used
+  after all** and is no longer at risk of being unused.
+  **NOT STARTED.** The two foundations stand: the dated fact (`bfad51b7`) and
+  the reusable equipment door (`0ee5caf1`).
+
 - **DISSOLVED 2026-08-13 — SAM REFUSED THE PREMISE AND HE IS RIGHT. The three
   options below are WITHDRAWN; do not build any of them.** Sam: *"can't we just
   treat going away as a modifier for equipment? the athlete just removes the
