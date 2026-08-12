@@ -216,7 +216,27 @@ his instruction is standing authority, not history.**
       and the athlete's sentence. **The next act is to make that step SAY its
       reason** (it returns a typed `reason` already; nothing logs it), then read
       it. **THAT is the reading job — and a refusal with no reason on the wire
-      is itself the defect underneath this one.** Two guesses were
+      is itself the defect underneath this one.**
+    - **THE LOGGING IS BUILT (`247eb6d3`) AND THE RE-RUN WITHDREW THE PREMISE.**
+      With it in, the flow was run again and **the refusal did not reproduce —
+      it committed, and the week MOVED.** So the refusal is STATE-DEPENDENT, not
+      structural, and *"the §18 gate refuses a club-less week"* is WITHDRAWN.
+    - **⚠ WHAT THE WEEK DID INSTEAD IS WRONG, AND DIAGNOSABLY SO. Seen on glass
+      2026-08-13:** Tuesday lost its team night correctly (*"Strength + Team
+      Training"* → *"Strength"*); **Thursday became a Rest Day; WEDNESDAY GAINED
+      a team night it never had; Saturday kept its game.** The club MOVED rather
+      than left.
+    - **THE SUSPECT IS ONE ARGUMENT, checkable before any code moves:** the
+      filter maps a weekday to a date with `options.availabilityDateISO`, and in
+      the SCOPED REGEN path that is not the week being planned — the regen
+      authors week by week (`generateProgramLocally({ todayISO: weekStart … })`)
+      while `onboardingToCoachingInputs` still receives the caller's availability
+      date. **A wrong anchor maps Tuesday to the wrong Tuesday**, which is
+      exactly the shape the screen showed, and the fixture drop fails the same
+      way for the same reason. **Check the anchor first; do not touch the
+      filter's logic until that is ruled in or out.**
+
+    Two guesses were
     already wrong today: narrowing L4b (broke two more cells, and was loosening a
     law to fit a change) and filtering travel out of the read-time projection
     (fixed L4b and broke the commit's ledger-equivalence, which is what produced
