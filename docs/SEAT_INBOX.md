@@ -1191,6 +1191,32 @@ phone.** State device items as PARKED in a stop report, never as a request.
     category member (the compiler then forces the `poolForCategory` branch); add
     the branch; pass `noTeamTrainingWeek` so the existing gate opens — **verified
     again: ZERO production callers pass it.**
+    **ATTEMPTED IN FULL 2026-08-13 AND REVERTED — WITH NUMBERS. The patch is at
+    `scratchpad/c1-cod-chain.patch`.**
+    All four links were built: `cod_decel` added to
+    `OffseasonConditioningCategory` and `AthleteConditioningCategory` (the
+    compiler then forced the `poolForCategory` branch, and four more narrow
+    unions — `DeloadConditioningCategory`, `AllocationLike`, `SessionAllocation`,
+    `Workout` — which is the pressure working); the pool branch; the
+    `noTeamTrainingWeek` flag wired from the profile so the gate that was "dead
+    twice" finally opens; and the planner offering `cod_decel` LAST, only in a
+    week with no team training — "cut first" expressed as "offered last", since
+    there is only one list.
+    **PROBED AND CONFIRMED THE POOL OFFERS IT:**
+    `pool=aerobic_base,cod_decel` on a no-team-training week.
+    **AND THE ATHLETE STILL RECEIVED ZERO.** Measured both ways — 0 of 16
+    workouts with team training, 0 of 16 without. **It is refused DOWNSTREAM, in
+    `finisherEligibility`, which appears to downgrade an unrecognised category to
+    `aerobic_base` rather than deny it.** That function is the real fourth link,
+    not the placement pool.
+    **AND IT PERTURBED THE PLANNER WHILE DELIVERING NOTHING:**
+    `test:phase-structure` went **10/1 -> 7/4**, because an extra member in the
+    placement pool changes coverage counting and shifts what else gets placed.
+    **Reverted: a change that produces no COD session AND moves other weeks is
+    strictly worse than no change.**
+    **NEXT PASS STARTS AT `finisherEligibility`**, not at the type — the types
+    are the easy part and the patch has them.
+
     **THE FOURTH IS THE RULING AND IT IS PLANNER WORK.** The category is chosen at
     `defaultProgram.ts:1953` from `planEntry.conditioningCategory`, which the
     COACHING ENGINE sets. Sam's rule — *"prescribed in weeks with no team
@@ -1256,47 +1282,70 @@ phone.** State device items as PARKED in a stop report, never as a request.
     without an inbox item created in the same pass is a defect at the moment of
     capture.** Never file one again.
 
-28. **BUILD THE AWAY FLOW — SAM RULED IT 2026-08-13. THREE QUESTIONS, ON THE
-    WEEK SCREEN.**
+28. **THE AWAY FLOW IS BUILT — AND AWAY STOPPED DELETING THE ATHLETE'S WEEK.**
 
-    **OWNED BY THE DESKTOP AGENT.** It edits `HomeScreenV2.tsx` and the away
-    sheet. **TERMINAL: NOT YOURS.**
+    **OWNED BY THE DESKTOP AGENT.** Built 2026-08-13. **Held by
+    `test:away-flow` (13 cells), `test:day-first-timeline` and
+    `test:program-control-durable`.**
 
-    **Sam, verbatim:** *"I think the away button should live on the weekly
-    screen, it should say 'when do you leave?' then 'when do you return' thhe
-    leave button should be limited to that week in dates, but the return date
-    can be any date in the future / then you are asked about the equipment
-    stuff"*.
+    **Sam's ruling, verbatim, and it is what shipped:** *"I think the away
+    button should live on the weekly screen, it should say 'when do you leave?'
+    then 'when do you return' thhe leave button should be limited to that week
+    in dates, but the return date can be any date in the future / then you are
+    asked about the equipment stuff"*.
 
-    **THE SHAPE:**
-    1. **The Away control moves to the WEEK screen.** Same reasoning that moved
-       add-a-game there (item 19): "when do you leave" is a question about a
-       week, and the day screen is about one day. **The day-screen chip
-       `home-away-this-week-entry` goes.**
-    2. **"When do you leave?" — LIMITED TO THAT WEEK'S DATES.**
-    3. **"When do you return?" — ANY future date, unbounded.**
-    4. **THEN the equipment question** — his earlier ruling: the athlete marks
-       what they do NOT have, through the door that ALREADY EXISTS
-       (`EquipmentLimitationSheet`), cleared by "I'm back now"
-       (`available_again` / `equipmentClear`). **Do not build a second
-       equipment menu.**
+    **WHAT LANDED:**
+    1. The `Away` control is on the WEEK shape (`home-away-entry`), beside
+       add-a-game and for the same reason. The day-screen chip
+       `home-away-this-week-entry` is GONE; that row is three chips now.
+    2. **"When do you leave?"** — the days of the week on screen, today or
+       later.
+    3. **"When do you return?"** — a month calendar with **no forward stop**.
+       There is no date-picker dependency in this app, so it is built from the
+       same primitives as everything else (`AwayReturnCalendar`).
+    4. **"Do you have your normal equipment?"** — `no` opens
+       `EquipmentLimitationSheet` with the span; `yes` stores NOTHING and says
+       so, which is his own ruling (*"if yes, follow same program"*).
 
-    **WHAT THIS REPLACES, and it is the bigger defect:** today's sheet asks
-    *"Which days are you away?"* and toggles individual TRAINING days inside the
-    visible week (`HomeScreenV2.tsx:3030`). **A trip cannot currently cross a
-    week boundary at all** — ten days away is unsayable. Step 3 fixes that.
+    **THE ONE BEHAVIOUR CHANGE, AND IT IS THE POINT OF THE ITEM.** The old away
+    door wrote a `travel` SCHEDULE fact with the away dates marked
+    **unavailable** — it took the sessions away. **That is the opposite of what
+    Sam ruled twice** (*"if yes, follow same program"*, *"the plan should change
+    until their return date"*) **and it also made step 4 impossible to build
+    honestly: an equipment answer dated over days that no longer hold a session
+    substitutes nothing.** It would have shipped green and empty, which is
+    exactly how slice 3 died. So the away door now writes ONE fact — the dated
+    equipment fact — and `test:away-flow` cell [5b] reds if a schedule fact or a
+    `clear_days` ever returns to that handler.
 
-    **AND IT MAKES AUTOMATIC LIVE.** Sam: *"if you do [set a return date], then
-    yes make it automatic"*. Measurement showed no return date existed, so that
-    ruling could not fire; step 3 creates one. **The equipment answer lifts
-    itself on the return date, with "I'm back now" as the early exit.**
+    **`until` IS THE LAST DAY AWAY, NEVER THE RETURN DATE**, from his own build
+    order: *"on the return date the modifier drops off and the program goes back
+    to normal by itself"*. Proven by cells [2c] and [3] on a **ten-day trip that
+    crosses two Sundays** — the shape the replaced sheet could not express at
+    all, which was the bigger defect this item names.
 
-    **BOTH FOUNDATIONS ARE BUILT — this is wiring, not invention:** the dated
-    equipment fact `missing_for_span` (`bfad51b7`) and the equipment screen's
-    exit as an input (`0ee5caf1`, item 24).
+    **MUTATION-CHECKED, not asserted:** forcing the week scope back reds [1b],
+    [2b] and [2c]; setting `until` to the return date reds [3].
 
-    **PROOF OWED:** the whole run-through on the simulator — week screen, leave
-    date, return date, mark missing kit, and the modifier present afterwards.
+    **MEASURED WHILE BUILDING, and it corrects this item's own premise:**
+    `EquipmentLimitationSheet` existed but **was mounted NOWHERE** and
+    `set_equipment_modifier` had **no product caller at all** — only its icon
+    helper was imported. "The door already exists" was true of the sheet and
+    false of the door. The away flow is now its first caller.
+
+    **STILL OPEN, NAMED RATHER THAN QUIETLY KEPT:**
+    - The `travel` schedule fact, `clear_days`, and their copy (*"Your program
+      is avoiding the dates you are away."*) now have **no athlete-facing
+      caller**. They are still reachable from the walker and the coach path.
+      **A retire pass owns them, not this item.**
+    - The diagnostics surface is still named `away_this_week` on a fact that can
+      span a fortnight. Kept deliberately — renaming it touches persisted
+      `sourceSurface` labels and four test files — **and named here so it is
+      fixed on purpose rather than found later.**
+    - `MONTH_NAMES` was added to `utils/appDate.ts` (the one date-display
+      owner). **Four private `MONTH_SHORT` tables already exist**
+      (`staleOverrideDetector`, `sessionResolver`, `teamNightMoveAsk`,
+      `JournalScreen`); they are reported, not extended.
 
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
