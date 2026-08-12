@@ -4,7 +4,15 @@ node_modules/
 # and checkout then clobbered the ignored real tree with it (2026-08-03).
 node_modules
 .expo/
-.claude/
+# .claude/ is LOCAL — settings, hooks wiring, caches — with ONE exception.
+# `.claude/rules/` holds path-scoped LAWS, and a law only this machine can see
+# is not a law: the concurrent agent in this shared checkout and any fresh clone
+# must get them too. Written as `.claude/*` rather than `.claude/`, because git
+# cannot re-include a path inside an EXCLUDED DIRECTORY — a bare
+# `!.claude/rules/` under `.claude/` is silently powerless, verified here
+# 2026-08-12 with `git check-ignore -v` before this line was written.
+.claude/*
+!.claude/rules/
 dist/
 .DS_Store
 artifacts/
@@ -37,3 +45,4 @@ test-results/bible-conformance/
 
 # parallel-gate runner output — measurements, not source
 .bible-parallel/
+
