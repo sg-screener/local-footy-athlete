@@ -23,22 +23,19 @@ import {
   decideSweepForCurrentStores,
 } from '../../utils/weekRebuild';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
-import { dismissActiveCoachNote, selectActiveCoachNotes } from '../../utils/activeCoachNotes';
+import { selectActiveCoachNotes } from '../../utils/activeCoachNotes';
 import {
   getActiveProgramModifiers,
   type ActiveProgramModifier,
 } from '../../utils/activeProgramModifiers';
 import {
-  executeProgramControlAction,
   executeProgramControlActionDurably,
   type ProgramControlActionResult,
-  type ProgramControlStatusUpdate,
 } from '../../utils/programControlActions';
 import {
   readinessActionForKind,
   type WeekReadinessApplyKind,
 } from '../../utils/weekReadinessActions';
-import { athleteSafeRefusal } from '../../utils/planChangeRefusalCopy';
 import {
   buildGuidedInjuryConstraint,
   type GuidedInjuryFlowResult,
@@ -72,7 +69,6 @@ import { logger } from '../../utils/logger';
 import {
   executeFixtureMutationTransaction,
 } from '../../store/fixtureMutationTransaction';
-import { clearReversibleAdjustment } from '../../store/reversibleAdjustmentTransaction';
 import {
   observeRenderedAthleteActionOutcome,
   registerAthleteActionUIOutcome,
@@ -85,18 +81,10 @@ import { canonicalFixtureKind } from '../../rules/fixtureConditionedAvailability
 import { classifyProgramMutationRefusal } from '../../rules/programMutationRefusal';
 import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
 import { useSeasonPhaseControl } from '../../hooks/useSeasonPhaseControl';
+import { useCoachNoteActions } from '../coach/useCoachNoteActions';
 
-type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
 export type WeekReadinessAction = WeekReadinessApplyKind;
-
-const targetStatusModifierKind = (
-  status: ProgramControlStatusUpdate,
-): Exclude<StatusModifierKind, 'unknown'> => {
-  if (status === 'still_sick') return 'recovery';
-  if (status === 'still_cooked') return 'load_reduction';
-  return 'readiness';
-};
 
 /**
  * useHomeScreen — single source of truth for the Home screen's state,
@@ -1040,29 +1028,6 @@ export function useHomeScreen() {
     navigation.navigate('ProfileTab');
   }, [navigation]);
 
-  const clearCoachNoteAction = useCallback((noteId: string) => executeProgramControlAction({
-    type: 'clear_active_modifier',
-    source: {
-      screen: 'program_tab',
-      surface: 'coach_notes',
-      initiatedBy: 'tap',
-    },
-    scope: 'current_and_future',
-    payload: { noteId },
-    requiresRebuild: false,
-    createsActiveModifier: false,
-    oneOffOnly: false,
-  }), []);
-
-  const statusModifierKindForNote = useCallback((noteId: string): StatusModifierKind => {
-    const note = coachNotes.find((candidate) => candidate.id === noteId);
-    const sourceId = note?.constraintId ?? note?.modifierId ?? noteId;
-    if (sourceId.includes('tap-recovery-mode')) return 'recovery';
-    if (sourceId.includes('tap-load-reduction')) return 'load_reduction';
-    if (sourceId.includes('readiness:')) return 'readiness';
-    return 'unknown';
-  }, [coachNotes]);
-
   const handleProgramControlResult = useCallback(async (
     result: ProgramControlActionResult,
   ) => {
@@ -1328,198 +1293,37 @@ export function useHomeScreen() {
     await handleProgramControlResult(actionResult);
   }, [handleProgramControlResult]);
 
-  const handleClearCoachNote = useCallback(async (
-    noteId: string,
-    observeResult = true,
-  ) => {
-    const note = coachNotes.find((candidate) => candidate.id === noteId);
-    if (note?.injuryEpisodeId) {
-      const result = await executeProgramControlActionDurably({
-        type: 'clear_injury_modifier',
-        source: {
-          screen: 'program_tab',
-          surface: 'coach_notes_injury_resolved',
-          initiatedBy: 'tap',
-        },
-        scope: 'current_and_future',
-        payload: { noteId, episodeId: note.injuryEpisodeId },
-        requiresRebuild: false,
-        createsActiveModifier: false,
-        oneOffOnly: false,
-      }, { todayISO: todayISOLocal() });
-      if (result.ok && result.traceId) {
-        const controlId = explorerTestId.injuryResolved(note.injuryEpisodeId);
-        const observationId = `injury-resolved:${result.traceId}`;
-        registerAthleteActionUIOutcome({
-          traceId: result.traceId,
-          observationId,
-          domainReturn: {
-            episodeId: note.injuryEpisodeId,
-            changedProgram: result.changedProgram,
-          },
-          controlId,
-        });
-        setPendingInjuryObservation({
-          traceId: result.traceId,
-          observationId,
-          episodeId: note.injuryEpisodeId,
-          expectedStatus: 'resolved',
-          controlId,
-        });
-      }
-      await handleProgramControlResult(result);
-      if (!result.ok) {
-        Alert.alert('Couldn’t resolve this injury', result.message ??
-          'The accepted program could not be safely recomposed.');
-      }
-      return;
-    }
-    if (note?.reversibleAdjustmentId) {
-      const result = await clearReversibleAdjustment(
-        note.reversibleAdjustmentId,
-        useProgramStore.getState().acceptedMaterialContext.revision,
-      );
-      const restored = result.outcome === 'restored' || result.outcome === 'recomposed' ||
-        result.outcome === 'already-cleared';
-      if (result.traceId && restored) {
-        const observationId = `home-restoration-result:${result.traceId}`;
-        registerAthleteActionUIOutcome({
-          traceId: result.traceId,
-          observationId,
-          domainReturn: {
-            outcome: result.outcome,
-            acceptedRevisionAfter: result.acceptedRevisionAfter,
-            affectedDates: result.affectedDates,
-          },
-          controlId: explorerTestId.adjustmentRestored(note.reversibleAdjustmentId),
-        });
-        setPendingRestorationObservation({
-          traceId: result.traceId,
-          observationId,
-          acceptedRevisionAfter: result.acceptedRevisionAfter,
-          affectedDates: result.affectedDates,
-          adjustmentId: note.reversibleAdjustmentId,
-          controlId: explorerTestId.adjustmentRestored(note.reversibleAdjustmentId),
-        });
-      }
-      if (result.outcome === 'safely-rejected' || result.outcome === 'conflicted' ||
-        result.outcome === 'superseded') {
-        // result.reason can be a raw transaction error.message — never show it
-        // verbatim (census finding #8 / addendum i). The safety gate collapses an
-        // internal reason to plain copy; a curated reason passes through.
-        Alert.alert('Couldn’t restore this adjustment', athleteSafeRefusal(result.reason ??
-          'Your program has changed since this adjustment was made.'));
-      }
-      return;
-    }
-    const constraint = note
-      ? useProgramStore.getState().acceptedMaterialContext.activeConstraints
-          .find((candidate) => candidate.id === note.constraintId)
-      : null;
-    const sourceFactId = note?.temporarySourceFactIds?.[0];
-    const sourceFactDomain = sourceFactId && temporarySourceFacts.some((fact) =>
-      isTemporaryEquipmentFact(fact) && fact.factId === sourceFactId)
-      ? 'equipment' as const
-      : 'readiness' as const;
-    const result = (constraint?.temporarySourceFactIds?.length ?? 0) > 0
-      ? await executeProgramControlActionDurably({
-          type: 'clear_fatigue_status',
-          source: { screen: 'program_tab', surface: 'coach_notes_resolved', initiatedBy: 'tap' },
-          scope: 'current_and_future',
-          payload: { noteId, modifierId: note?.modifierId, date: todayISOLocal() },
-          requiresRebuild: false,
-          createsActiveModifier: false,
-          oneOffOnly: false,
-        }, { todayISO: todayISOLocal() })
-      : clearCoachNoteAction(noteId);
-    if (sourceFactId && observeResult) {
-      registerSourceFactRenderObservation({
-        result,
-        domain: sourceFactDomain,
-        expectedStatus: 'resolved',
-        factId: sourceFactId,
-      });
-    }
-    await handleProgramControlResult(result);
-  }, [
-    clearCoachNoteAction,
-    coachNotes,
-    handleProgramControlResult,
-    registerSourceFactRenderObservation,
-    temporarySourceFacts,
-  ]);
-
-  const handleDismissCoachNote = useCallback((noteId: string) => {
-    dismissActiveCoachNote(noteId);
-  }, []);
-
-  const handleUpdateCoachNoteStatus = useCallback(async (
-    noteId: string,
-    status: ProgramControlStatusUpdate,
-  ) => {
-    if (status === 'good_now') {
-      await handleClearCoachNote(noteId);
-      return;
-    }
-    const todayISO = todayISOLocal();
-    const currentStatusKind = statusModifierKindForNote(noteId);
-    const nextStatusKind = targetStatusModifierKind(status);
-    if (currentStatusKind !== 'unknown' && currentStatusKind !== nextStatusKind) {
-      await handleClearCoachNote(noteId, false);
-    }
-    const result = status === 'still_sick'
-      ? executeProgramControlAction({
-          type: 'set_recovery_mode',
-          source: {
-            screen: 'program_tab',
-            surface: 'coach_notes_status_update',
-            initiatedBy: 'tap',
-          },
-          scope: 'current_week',
-          payload: {
-            date: todayISO,
-            todayISO,
-            recoveryScope: 'week',
-          },
-          requiresRebuild: false,
-          createsActiveModifier: true,
-          oneOffOnly: false,
-        }, { todayISO })
-      : await executeProgramControlActionDurably({
-          type: 'set_fatigue_status',
-          source: {
-            screen: 'program_tab',
-            surface: 'coach_notes_status_update',
-            initiatedBy: 'tap',
-          },
-          scope: status === 'still_cooked' ? 'current_week' : 'today_only',
-          payload: {
-            date: todayISO,
-            todayISO,
-            level: status === 'still_cooked'
-              ? 'cooked'
-              : status === 'worse'
-                ? 'worse'
-                : 'not_right',
-          },
-          requiresRebuild: false,
-          createsActiveModifier: true,
-          oneOffOnly: false,
-        }, { todayISO });
-    registerSourceFactRenderObservation({
-      result,
-      domain: 'readiness',
-      expectedStatus: 'active',
-    });
-    await handleProgramControlResult(result);
-  }, [
-    clearCoachNoteAction,
-    handleClearCoachNote,
-    handleDismissCoachNote,
-    handleProgramControlResult,
-    registerSourceFactRenderObservation,
-    statusModifierKindForNote,
-  ]);
+  /**
+   * THE COACH-NOTE WRITERS NOW LIVE IN ONE PLACE, AND THIS SCREEN NAMES ITSELF
+   * TO THEM.
+   *
+   * Extracted 2026-08-12 (SEAT_INBOX item 8) into
+   * `screens/coach/useCoachNoteActions`, which Coach / My Status mounts with
+   * its own source. The bodies are unchanged; the ONLY difference is that the
+   * nine `screen: 'program_tab'` literals that used to sit inside them are now
+   * this one argument.
+   *
+   * **The rebuild and the render witnesses stayed here on purpose.**
+   * `handleProgramControlResult` reaches `runRebuild`, which regenerates the
+   * program, and the pending-observation setters are this screen watching ITSELF
+   * re-render a door's result. Neither is a property of the writer, so neither
+   * moved — they are handed in, and a surface without them still writes the same
+   * state through the same door.
+   */
+  const coachNoteActions = useCoachNoteActions({
+    screen: 'program_tab',
+    notes: coachNotes,
+    onResult: handleProgramControlResult,
+    notifyRefusal: Alert.alert,
+    observers: useMemo(() => ({
+      onInjuryOutcome: setPendingInjuryObservation,
+      onRestorationOutcome: setPendingRestorationObservation,
+      onSourceFactOutcome: registerSourceFactRenderObservation,
+    }), [registerSourceFactRenderObservation]),
+  });
+  const handleClearCoachNote = coachNoteActions.clearCoachNote;
+  const handleDismissCoachNote = coachNoteActions.dismissCoachNote;
+  const handleUpdateCoachNoteStatus = coachNoteActions.updateCoachNoteStatus;
 
   // ───────── Game day modal ─────────
 

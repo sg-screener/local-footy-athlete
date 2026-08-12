@@ -109,6 +109,23 @@ export type ProgramControlScreen =
    * one's.
    */
   | 'coach_tab'
+  /**
+   * COACH / MY STATUS — THE ATHLETE'S OWN SURFACE, WHICH HAPPENS TO LIVE ON THE
+   * COACH TAB (SEAT_INBOX item 8, 2026-08-12).
+   *
+   * It is NOT `coach_tab`, and the difference is the whole reason this value
+   * exists. `rules/athleteActionSourceLabel.ts` maps `coach_tab` to the
+   * diagnostic label `'coach'` — the fix Sam asked for on 2026-08-10 so an
+   * investigation can tell a coach-authored change from his own tap. The
+   * modifier controls on My Status are his taps: he opened the screen, he read
+   * the note, he cleared it. Stamping them `coach_tab` would tell the next
+   * investigation the coach resolved the athlete's injury, and would count
+   * every one of them into a census of coach-authored decisions.
+   *
+   * So it falls through to `'tap'` like every other athlete surface, and the
+   * route still says exactly which door it was.
+   */
+  | 'my_status'
   | 'setup'
   | 'system'
   | 'test';

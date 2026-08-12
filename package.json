@@ -367,7 +367,8 @@
     "test:coach-tab-slice3": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachTabSlice3Tests.ts",
     "test:unreadable-world-reset": "TZ=Australia/Melbourne sucrase-node src/__tests__/unreadableWorldResetTests.ts",
     "test:diagnostic-label-names-the-door": "TZ=Australia/Melbourne sucrase-node src/__tests__/diagnosticLabelNamesTheDoorTests.ts",
-    "test:rebuild-notice-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/rebuildNoticeOwnershipTests.ts"
+    "test:rebuild-notice-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/rebuildNoticeOwnershipTests.ts",
+    "test:coach-note-action-source": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachNoteActionSourceTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

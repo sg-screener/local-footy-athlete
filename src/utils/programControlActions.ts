@@ -985,7 +985,14 @@ export async function executeProgramControlActionDurably(
   const trace = beginAthleteActionTrace({
     source: athleteActionSourceForDoor(action.source),
     actionType: diagnosticActionType(action),
-    route: `program_control_durable:${action.source.surface ?? action.source.screen}`,
+    // THE SCREEN, THEN THE SURFACE — the same shape the synchronous door above
+    // uses, and it was NOT the same until 2026-08-12. This read
+    // `${surface ?? screen}`, and since every durable caller sets a surface the
+    // SCREEN never reached the tape at all. `route` is the field that saved the
+    // 2026-08-10 investigation (`rules/athleteActionSourceLabel.ts` writes that
+    // story out); on this door it could not have, because the one thing it was
+    // asked to answer — which door — was the part being dropped.
+    route: `program_control_durable:${action.source.screen}:${action.source.surface ?? 'default'}`,
     sourceDate: action.type === 'move_session' ? action.payload.fromDate : date,
     targetDate: action.type === 'move_session' ? action.payload.toDate : undefined,
     sessionDate: date,
