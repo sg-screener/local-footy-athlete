@@ -923,7 +923,7 @@ export interface Workout {
    * controlled repeat efforts at 6-7/10 — worked but composed. It is NOT
    * the old mislabelled VO2 work; vo2/glycolytic remain hard.
    */
-  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
+  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic' | 'cod_decel';
   /** Final allocation feasibility decision; display fields never override it. */
   conditioningFeasibility?: ConditioningFeasibilityDecision;
 

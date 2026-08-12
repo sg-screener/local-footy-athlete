@@ -6,7 +6,14 @@ export type OffseasonConditioningCategory =
   | 'tempo'
   | 'sprint'
   | 'vo2'
-  | 'glycolytic';
+  | 'glycolytic'
+  /**
+   * COD / DECELERATION — Sam's ruling, and it had no category until 2026-08-13.
+   * `CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:121`, Bible `:1440`: prescribed in
+   * weeks with NO TEAM TRAINING and cut first when something has to give.
+   * It is AVAILABLE, never MUST-COVER — see `mustCoverCategories`.
+   */
+  | 'cod_decel';
 
 // `blocked_low_readiness` is RETIRED from both unions (Sam's readiness law,
 // 2026-07-28). Leaving the word in the vocabulary leaves somewhere for the block

@@ -60,7 +60,9 @@ export type AthleteConditioningCategory =
   | 'sprint'
   | 'vo2'
   | 'glycolytic'
-  | 'recovery_flush';
+  | 'recovery_flush'
+  /** COD / deceleration — see `OffseasonConditioningCategory` for the ruling. */
+  | 'cod_decel';
 
 /** Placement tier — the eligibility engine's vocabulary, unchanged. */
 export type ConditioningSelectionTier = 'A' | 'B-high' | 'B-low' | 'C';
@@ -172,7 +174,7 @@ export const REQUESTABLE_CATEGORIES_FOR_QUALITY:
   top_end_speed: ['sprint'],
   repeat_sprint: ['sprint'],
   // AUTHORED, NOT REQUESTABLE. Four signed templates, no category, no reader.
-  cod_decel: [],
+  cod_decel: ['cod_decel'],
   anaerobic: ['glycolytic'],
   aerobic_power: ['vo2'],
   // A LIST, NOT ONE VALUE, AND A CELL TAUGHT ME THAT. My first version mapped
@@ -205,6 +207,8 @@ function poolForCategory(category: AthleteConditioningCategory): ConditioningTem
       return templatesOfQuality('acceleration', 'top_end_speed', 'repeat_sprint');
     case 'recovery_flush':
       return templatesOfQuality('flush');
+    case 'cod_decel':
+      return templatesOfQuality('cod_decel');
   }
 }
 

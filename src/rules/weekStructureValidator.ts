@@ -614,7 +614,7 @@ export interface AllocationLike {
   isHardExposure?: boolean;
   hasCombinedConditioning?: boolean;
   conditioningFlavour?: 'aerobic' | 'tempo' | 'high-intensity';
-  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
+  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic' | 'cod_decel';
 }
 
 /** Reference Monday for synthetic allocation-week dates (2026-01-05 = Mon). */

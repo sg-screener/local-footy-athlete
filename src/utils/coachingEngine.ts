@@ -296,7 +296,7 @@ export interface SessionAllocation {
    * planning. 'tempo' (4B) is TRUE medium conditioning: controlled repeat
    * efforts at 6-7/10 — medium stress, never a hard exposure.
    */
-  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
+  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic' | 'cod_decel';
   /** Section 18 ownership; canonical construction must preserve this identity. */
   section18ConditioningRole?: Section18ConditioningRole;
   /**
@@ -3323,7 +3323,7 @@ function buildWeeklyPlan(
       upperCount: 0,
       condCount: 0,
       condFlavours: { aerobic: 0, tempo: 0, 'high-intensity': 0 },
-      condCategories: { aerobic_base: 0, tempo: 0, sprint: 0, vo2: 0, glycolytic: 0 },
+      condCategories: { aerobic_base: 0, tempo: 0, sprint: 0, vo2: 0, glycolytic: 0, cod_decel: 0 },
       fbCount: 0,
       coreStrengthCount: 0,
       lastCoreSubtype: null,
@@ -4065,10 +4065,49 @@ function buildWeeklyPlan(
       if (!list.includes(category)) list.push(category);
     }
 
+    /**
+     * COD IS OFFERED ONLY IN A WEEK WITH NO TEAM TRAINING, AND LAST.
+     *
+     * Sam: prescribed in weeks with no team training — late off-season, the
+     * Christmas break — and cut first when something has to give. The GATE is
+     * the team-training count: a week that has team training gets its change of
+     * direction at the club. The PRIORITY is the second half — appended last, so
+     * when slots run short it is the one that does not fit.
+     */
+    const weekHasTeamTraining = (inputs.teamTrainingDays?.length ?? 0) > 0;
+
     function autoPlacementCategories(): CondCategory[] {
-      return categoryPriority.filter((category) =>
+      const base = categoryPriority.filter((category) =>
         category !== 'sprint' || sprintExposureGate().allowStandaloneSprint,
-      );
+      ).filter((category) => category !== 'cod_decel');
+      return weekHasTeamTraining ? base : [...base, 'cod_decel'];
+    }
+
+    /**
+     * THE CATEGORIES A WEEK IS TRYING TO COVER — and it is NOT the placement pool.
+     *
+     * ## Why the two had to be split
+     *
+     * The scorer computes `uncovered` from the placement pool and adds
+     * `uncovered * 3` to every conditioning slot's score. So the pool's SIZE is a
+     * term in every conditioning decision: adding one member raises the urgency
+     * of every slot by 3 and reshuffles weeks that have nothing to do with the
+     * new category. Measured on 2026-08-13 — adding `cod_decel` to the pool moved
+     * FOUR passing phase checks while placing zero COD sessions, and the attempt
+     * was reverted for it.
+     *
+     * ## What must-cover means
+     *
+     * A category the week is trying to COVER creates urgency when missing. A
+     * category that is merely AVAILABLE does not. Sam's COD rule is explicitly
+     * the second kind: prescribed when there is room, *"cut first when something
+     * has to give"* — so a missing COD session is not a gap the planner should
+     * push to fill. Keeping it out of this set is what "cut first" means in the
+     * scoring, and it is why COD can now be offered without moving anyone else's
+     * week.
+     */
+    function mustCoverCategories(): CondCategory[] {
+      return autoPlacementCategories().filter((category) => category !== 'cod_decel');
     }
 
     // ── Pick conditioning category candidates (off-season / pre-season) ──
@@ -4622,7 +4661,9 @@ function buildWeeklyPlan(
           const pickedCat = pickCondCategory(pos);
           // Tempo is not a must-cover category (4B), and off-season sprint
           // is not auto-requested until the speed-block model exists.
-          const ALL_CATS: CondCategory[] = autoPlacementCategories();
+          // MUST-COVER, not the whole pool — see `mustCoverCategories`. Using the
+          // pool here made its SIZE a term in every conditioning score.
+          const ALL_CATS: CondCategory[] = mustCoverCategories();
           const uncovered = ALL_CATS.filter(
             cat => st.condCategories[cat] === 0,
           ).length;

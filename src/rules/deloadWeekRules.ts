@@ -13,7 +13,8 @@ export type DeloadConditioningCategory =
   | 'tempo'
   | 'sprint'
   | 'vo2'
-  | 'glycolytic';
+  | 'glycolytic'
+  | 'cod_decel';
 
 /**
  * THE DELOAD LAW — Sam's authored transformation (2026-07-27, Bible §14).

@@ -1972,6 +1972,10 @@ export function buildWorkoutsFromCoach(
       offFeet: planEntry.conditioningOffFeet === true || legSparingOffFeet || undefined,
       availableMachines,
       role: selectionRole,
+      // THE GATE THAT WAS DEAD TWICE. `availability_gate_no_team_training` has
+      // sat on the four COD templates since they were authored and NO caller
+      // ever passed this flag, so the filter could never open.
+      noTeamTrainingWeek: (onboardingData?.teamTrainingDays?.length ?? 0) === 0,
     });
     const candidateName = selectedTemplate.name;
 

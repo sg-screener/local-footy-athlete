@@ -554,10 +554,24 @@ ok(
 
   // THE LOSS IS NAMED, NOT SILENT. This cell is expected to list cod_decel
   // today; it exists so the number can only FALL, and so nobody re-discovers it.
-  ok('the authored qualities no planner can reach are exactly the declared ones',
-    JSON.stringify(UNREQUESTABLE_AUTHORED_QUALITIES) === JSON.stringify(['cod_decel']),
-    `unreachable = ${UNREQUESTABLE_AUTHORED_QUALITIES.join(', ')} — if this shrank, `
-    + 'delete the entry; if it GREW, an authored quality just became unreachable');
+  // THE WAIST NO LONGER LOSES ANYTHING — cod_decel gained a category on
+  // 2026-08-13, so this set is empty and must stay empty. It reds if a future
+  // authored quality arrives with nowhere to be requested from, which is the
+  // silent narrowing this whole unit exists to end.
+  ok('no authored quality is unreachable through the vocabulary waist',
+    UNREQUESTABLE_AUTHORED_QUALITIES.length === 0,
+    `unreachable = ${UNREQUESTABLE_AUTHORED_QUALITIES.join(', ')}`);
+
+  // ⚠ AND THE WAIST BEING FIXED IS NOT THE SAME AS COD REACHING AN ATHLETE.
+  // Measured 2026-08-13 after the category landed: cod_decel is REQUESTED 12
+  // times in a six-day no-team-training week and the athlete still receives
+  // ZERO, because `finisherEligibility` treats every non-aerobic_base category
+  // as "hard" and DOWNGRADES it. That is a SECOND narrowing, one joint further
+  // on, and it is not this map's to fix. Recorded here so a green waist cannot
+  // be mistaken for a delivered session.
+  ok('cod_decel is requestable through the waist (its category exists)',
+    REQUESTABLE_CATEGORIES_FOR_QUALITY.cod_decel.length === 1,
+    'cod_decel lost its category again');
 
   // AND THE COUNT SAM CARES ABOUT, stated every run rather than inferred.
   const codTemplates = CONDITIONING_TEMPLATES.filter((t) => t.quality === 'cod_decel');
