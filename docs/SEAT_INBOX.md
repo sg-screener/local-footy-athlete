@@ -812,10 +812,28 @@ phone.** State device items as PARKED in a stop report, never as a request.
     with `no` routing to `EquipmentScreen` (now reusable) and its `onDone`
     writing a `missing_for_span` decision over those same dates.
 
-    **STILL NOT STARTED, and it is UI-first:** the question itself, the routing,
-    the rebuild on the new kit, and the copy that still says the program is
-    "avoiding the dates you are away". (a) and (b) are BUILT and on glass
-    (`5ff77758`).
+    **SLICE 3 ATTEMPTED AND REVERTED 2026-08-13 — AND THE REVERT IS THE
+    FINDING.** The route and a wrapper compiled and were thrown away, because
+    the write at the end of them was a NO-OP: **`EquipmentScreen` produces what
+    the athlete HAS, and `set_equipment_modifier` wants what they are
+    MISSING.** The wrapper had `tags: []`, which says "nothing is missing" — a
+    dated fact that changes nothing, shipping green.
+    **THE GAP THE ITEM DID NOT ANTICIPATE:** away needs the COMPLEMENT — the
+    athlete's normal kit MINUS the kit where they are going — and nothing today
+    computes it. The onboarding screen never had to: onboarding's answer IS the
+    kit, with no prior list to subtract from.
+    **THREE WAYS OUT, and it is Sam's call which:** (i) derive the complement
+    from the stored answer before and after; (ii) give the equipment fact a
+    `have` mode beside `without`, so the away answer is stored as-is; or
+    (iii) have the away screen ask what is MISSING rather than what is present,
+    which contradicts ruling 3's pre-ticked shape and is named here only to be
+    ruled out on the record.
+    **Nothing was left half-wired:** the attempt is fully reverted, the tree is
+    clean and the gate passes.
+
+    **STILL NOT STARTED:** the question itself, the routing, the rebuild, and
+    the copy that still says the program is "avoiding the dates you are away".
+    (a) and (b) are BUILT and on glass (`5ff77758`).
 
     **GENERATION IS INVOLVED (a rebuild on a new kit) — STAND-DOWN D APPLIES to
     the rebuild half.** The sheet, the question and the dated equipment fact are
