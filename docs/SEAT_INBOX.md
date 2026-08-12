@@ -51,7 +51,32 @@ phone.** State device items as PARKED in a stop report, never as a request.
 
 ---
 
-0. **MAKE "DO NOT STOP" A MECHANISM, NOT A NOTE — THEN RUN THE LIST OVERNIGHT.
+0. **BUILT — THE HOOK NOW HAS FOUR EXITS AND `docs(stop):` IS NOT ONE OF THEM.**
+   All four are in `scripts/seat-inbox-hook.sh` and proven in
+   `test:seat-inbox-hook` (**21 -> 25 cells, four mutations killed**):
+   **(1) queue empty** — unchanged. **(2) `docs(blocked):`** — a different word
+   on purpose, so the exit cannot be taken by the report that used to take it.
+   **(3) a NEW line under `## AWAITING SAM` in THAT commit** — "not already
+   recorded" made checkable, because a question written yesterday would be a
+   permanent door. **(4) three turn-ends on one HEAD** — measured in COMMITS,
+   never a clock, exactly as the order reasons; state lives machine-local under
+   `.claude/`, and a new commit RESETS it.
+   **THE OLD CELL WAS THE HOLE.** `test:seat-inbox-hook` asserted *"a committed
+   STOP report ALLOWS the turn to end"* and it PASSED — so this was never
+   disobedience: a note in a file does not beat a door in a script. **The cell is
+   INVERTED, not deleted**, so the exit's history stays readable.
+   **ONE MUTATION SURVIVED AND ITS CASE WAS ADDED BECAUSE OF IT:** "the line must
+   be NEW" was enforced only by there being no diff at all, so a hook that
+   allowed on ANY added line passed every cell. There is now a case where a line
+   is added ELSEWHERE in the inbox and the exit must stay shut.
+   **I BUILT THE WRONG THING FIRST AND THREW IT AWAY.** Before re-reading this
+   item I built a `STOP CONDITION:` declaration on top of `docs(stop):` — my own
+   inference from the older wording. **The order says `docs(stop):` stops being
+   an exit at all.** Reverted to HEAD and rebuilt to what is written. Registry
+   row `LAW-stop-needs-an-exit`; 105/73 -> 106/74, UNENFORCED unmoved at 32.
+   **⚠ SAM: `/hooks` verification is yours** — it blocks your completions too.
+
+   ~~ORIGINAL~~ **MAKE "DO NOT STOP" A MECHANISM, NOT A NOTE — THEN RUN THE LIST OVERNIGHT.
    BUILD THIS FIRST, BEFORE ANY OTHER ITEM.**
    **SAM, 2026-08-12:** *"why does it keep fuckign stopping if theres nothing for
    me to say"* and *"i want it to run through the list overnight as long as it
@@ -956,6 +981,19 @@ seat was wrong.
   tier's hydration relocation are all **BUILT, awaiting device acceptance**.
   When he rebuilds, the white screen after a refused dev launch is expected and
   now names its own cause (`docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`).
+- **DECISION OWED — a second game in one week.** Sam's own sentence for item 7,
+  *"only doing 1 strength session ... if they have 2 games and 2 team
+  trainings"*, **cannot be expressed**: the profile carries ONE game field
+  (`domain.ts:192,196`). Either a second-game field lands, or a two-game week is
+  ruled out of scope. **Item 7 is skipped until then, per item 0.**
+- **WORDS OWED — the fixture-caused shortfall.**
+  `section18ShortfallDisclosure.ts:97` has one unconditional sentence,
+  *"Resting {Day} means you'll miss a strength session this week"*, which blames
+  the athlete when it was the club's draw. **The replacement is SIGNED COPY and
+  his to write** — the terminal does not invent athlete words.
+- **DECISION OWED — the moderate-day generation target (item 4).** The range and
+  the advisory are built; nothing says WHICH session becomes the moderate one, or
+  at whose expense.
 - **CLOSED, do not re-ask:** the week-card shape; the accounts question
   (LOCAL-ONLY); the platform question (iPHONE-ONLY).
 

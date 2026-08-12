@@ -678,6 +678,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-stop-needs-an-exit',
+    law: 'A turn may end while the queue holds orders ONLY on one of four exits: the queue is empty; HEAD declares `docs(blocked):` and names why; a NEW decision was written under `## AWAITING SAM` in that commit; or three turn-ends have passed with no new commit at all. A progress report is not an exit.',
+    ruledAt: 'docs/SEAT_INBOX.md item 0, Sam 2026-08-12: "why does it keep fuckign stopping if theres nothing for me to say" and "i want it to run through the list overnight as long as it can"',
+    guard: {
+      state: 'guarded',
+      by: 'test:seat-inbox-hook',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-12, AND THE OLD CELL WAS THE HOLE. `test:seat-inbox-hook` used to assert "a committed STOP report ALLOWS the turn to end" and it PASSED — so order 0 said "do not stop while this queue has items" for hours while this script held the door open, and the terminal stopped after nearly every unit. IT WAS NOT DISOBEDIENCE: a note in a file never beats a door in a script, and Sam was left as the restart button. The case is INVERTED rather than deleted so the exit\'s history stays legible. FOUR EXITS, 25 cells, FOUR MUTATIONS KILLED: re-opening `docs(stop):` reds the inversion; accepting ANY added inbox line reds the case that a line added ELSEWHERE must not open the AWAITING SAM exit; firing the no-progress breaker on the first turn-end reds five cells; and removing the counter reset reds the breaker case. THE SECOND MUTATION SURVIVED AT FIRST and its case was added because of it — "the line must be NEW" was enforced only by there being no diff at all, so a hook that allowed on any added line passed every cell. THE BREAKER IS MEASURED IN COMMITS, NOT TIME, on Sam\'s reasoning: a clock stops useful work as readily as useless work; a commit counter only fires when nothing is being produced. Its state is machine-local under `.claude/` because it is about this terminal\'s turns, not about the repo.',
+    },
+  },
+  {
     id: 'LAW-inbox-order-is-content',
     law: 'An unprocessed seat order stops the terminal from ending its turn, and an order is identified by its CONTENT, never by its numbering.',
     ruledAt: 'Sam 2026-08-10 (item 000(B), the courier toll); scripts/seat-inbox-hook.sh',

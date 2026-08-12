@@ -56,32 +56,98 @@ $heads
 EOF
 
 # ─────────────────────────────────────────────────────────────────────────────
-# THE STOP-REPORT EXIT, WHICH THIS HOOK HAS BEEN PROMISING AND NEVER HAD.
+# THE FOUR EXITS. (Item 0, built 2026-08-12 to Sam's order, verbatim.)
 #
-# The block reason has always ended "...or a genuine STOP report is committed" —
-# and **nothing in this script ever looked for one**. A terminal that committed a
-# real STOP was blocked exactly as hard as one that had done nothing, so the only
-# way out was to keep working or to leave the queue unanswered. **Same defect
-# class as the `^1\.` numbering artefact: the reason text promised a mechanism
-# the logic did not implement.** 2026-08-10.
+# **SAM:** *"why does it keep fuckign stopping if theres nothing for me to say"*
+# and *"i want it to run through the list overnight as long as it can"*.
 #
-# WHAT COUNTS, and it is deliberately narrow: the CURRENT HEAD commit is a stop
-# report — subject beginning `docs(stop):`. Not "a stop report exists somewhere
-# in history"; not a marker a terminal can write into a file it also authors. It
-# must be the last thing committed, so the exit costs a real commit whose message
-# is the report and whose diff is on the record.
+# THE DIAGNOSIS IS THIS SESSION'S OWN. Order 0 said "do not stop while this queue
+# has items" for hours and the terminal stopped after nearly every unit anyway.
+# **It was not disobeying: `docs(stop):` was a LEGAL EXIT in this script, and a
+# note in a file never beats a door in a script.** Sam was the restart button.
 #
-# THIS IS NOT A WAY TO SKIP WORK. A stop report that is not true is a lie in the
-# git log with the author's name on it, which is a worse position than an
-# unanswered queue. LAW-do-as-instructed and DOC-TRUTH both bind it.
+# HISTORY, KEPT BECAUSE IT IS THE REASON THIS BLOCK EXISTS: from 2026-08-10 the
+# exit was "HEAD's subject begins `docs(stop):`", which itself fixed a promise
+# this hook had made in its block text and never implemented. That exit is now
+# WITHDRAWN — it became the hole. A routine progress report no longer ends a
+# turn; progress reports are still written, they just stop being a door.
+#
+# A STOP IS ALLOWED ONLY WHEN ONE OF THESE IS TRUE:
+#
+#   1. THE QUEUE IS EMPTY — the scan above found no order.
+#   2. HEAD's subject begins `docs(blocked):` — a declaration that the terminal
+#      genuinely cannot proceed, naming why. Deliberately a DIFFERENT word from
+#      `docs(stop):`, so the exit cannot be taken by the report it used to be
+#      taken by.
+#   3. A DECISION WAS WRITTEN DOWN THIS COMMIT — HEAD adds a line inside
+#      `## AWAITING SAM`. "Not already recorded in this file" is the order's
+#      wording, so the check is that the line is NEW, not merely that the section
+#      exists: a section that has held something since yesterday would otherwise
+#      be a permanent door.
+#   4. NO PROGRESS — three consecutive turn-ends with the same HEAD. **Measured,
+#      not estimated: progress is a COMMIT, not activity.** This is the loop
+#      breaker and the safety the whole change rests on; without it a terminal
+#      that cannot commit would be blocked forever with no way out.
+#
+# THE COUNTER'S STATE IS MACHINE-LOCAL (`.claude/` is gitignored) because it is
+# about THIS terminal's turns, not about the repo. It stores the HEAD it last saw
+# and how many turn-ends have ended on that same HEAD.
+# ─────────────────────────────────────────────────────────────────────────────
 if [ -n "$order" ] && git rev-parse --git-dir >/dev/null 2>&1; then
   head_subject=$(git log -1 --pretty=%s 2>/dev/null || echo "")
+  head_sha=$(git rev-parse HEAD 2>/dev/null || echo "")
+
+  # EXIT 2 — a declaration that it cannot proceed.
   case "$head_subject" in
-    'docs(stop):'*) order="" ;;
+    'docs(blocked):'*) order="" ;;
   esac
+
+  # EXIT 3 — a decision written down under `## AWAITING SAM` in THIS commit.
+  if [ -n "$order" ]; then
+    added=$(git show HEAD --unified=0 -- "$inbox" 2>/dev/null \
+      | sed -n 's/^+\([^+].*\)/\1/p')
+    if [ -n "$added" ]; then
+      section=$(awk '/^## AWAITING SAM/{f=1;next} f&&/^## /{exit} f&&NF{print}' "$inbox")
+      if [ -n "$section" ]; then
+        while IFS= read -r line; do
+          [ -n "$line" ] || continue
+          # `--` is not decoration: an AWAITING SAM line starts with "- ", and
+          # without it grep reads the added line as its own options and dies.
+          if printf '%s\n' "$section" | grep -qxF -- "$line"; then order=""; break; fi
+        done <<ADDED
+$added
+ADDED
+      fi
+    fi
+  fi
+
+  # EXIT 4 — the loop breaker. Three turn-ends on one HEAD and the stop is
+  # allowed, because at that point the terminal is not producing anything and
+  # blocking it again only burns Sam's tokens.
+  if [ -n "$order" ] && [ -n "$head_sha" ]; then
+    state_dir=".claude"
+    state_file="$state_dir/seat-inbox-hook-state"
+    [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
+    last_sha=""; stalls=0
+    if [ -f "$state_file" ]; then
+      last_sha=$(sed -n '1p' "$state_file" 2>/dev/null)
+      stalls=$(sed -n '2p' "$state_file" 2>/dev/null)
+      case "$stalls" in ''|*[!0-9]*) stalls=0 ;; esac
+    fi
+    if [ "$last_sha" = "$head_sha" ]; then
+      stalls=$((stalls + 1))
+    else
+      stalls=1
+    fi
+    printf '%s\n%s\n' "$head_sha" "$stalls" > "$state_file" 2>/dev/null
+    if [ "$stalls" -ge 3 ]; then
+      order=""
+      echo "seat-inbox-hook: STALLED — three turn-ends on $head_sha with no new commit. Allowing the stop; say plainly that it stalled." >&2
+    fi
+  fi
 fi
 
 if [ -n "$order" ]; then
-  echo '{"decision":"block","reason":"The seat inbox holds an unprocessed order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. End your turn only when the inbox is clear, or when HEAD is a committed STOP report (a commit whose subject begins docs(stop):)."}'
+  echo '{"decision":"block","reason":"The seat inbox holds an unprocessed order. Read docs/SEAT_INBOX.md — the topmost item under \"## Unprocessed\" — and continue under the one-turn law. Item numbering carries no meaning; the order is whatever is written there. A docs(stop): progress report is NO LONGER an exit (item 0, 2026-08-12). End your turn only when: the queue is clear; HEAD is a commit whose subject begins docs(blocked): naming why you cannot proceed; you wrote a NEW decision under ## AWAITING SAM in this commit; or three turn-ends have passed with no new commit at all."}'
 fi
 exit 0

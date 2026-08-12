@@ -151,17 +151,32 @@ run "an EMPTY Unprocessed section ALLOWS" allow \
 # the exit is defined by HEAD's commit subject and a fixture cannot fake that
 # without making the claim vacuous.
 
+# `body`, `awaiting` and `stale` were added 2026-08-12 when item 0 became a
+# mechanism: the exits now read a DIFFERENT subject word, a NEW line under
+# `## AWAITING SAM`, and a counter of turn-ends with no new commit. A
+# subject-only fixture can no longer express any of them.
 git_case() {
-  local name="$1" expected="$2" subject="$3"
+  local name="$1" expected="$2" subject="$3" awaiting_before="${4:-}" awaiting_after="${5:-}" \
+    elsewhere="${6:-}"
   local repo; repo="$(mktemp -d)"
   mkdir -p "$repo/docs"
-  printf '%s\n' "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
-    "1. A REAL ORDER, unprocessed." "" "## Previously (now processed)" \
-    > "$repo/docs/SEAT_INBOX.md"
+  write_inbox() {
+    {
+      printf '%s\n' "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+        "1. A REAL ORDER, unprocessed."
+      [ -n "$2" ] && printf '%s\n' "$2"
+      printf '%s\n' "" "## AWAITING SAM — his call" ""
+      [ -n "$1" ] && printf '%s\n' "$1"
+      printf '%s\n' "" "## Previously (now processed)"
+    } > "$repo/docs/SEAT_INBOX.md"
+  }
+  write_inbox "$awaiting_before" ""
   ( cd "$repo" \
     && git init -q \
     && git config user.email t@t && git config user.name t \
-    && git add -A && git commit -q -m "$subject" ) >/dev/null 2>&1
+    && git add -A && git commit -q -m "an earlier commit" ) >/dev/null 2>&1
+  write_inbox "${awaiting_after:-$awaiting_before}" "$elsewhere"
+  ( cd "$repo" && git add -A && git commit -q --allow-empty -m "$subject" ) >/dev/null 2>&1
   local out; out="$(cd "$repo" && bash "$HOOK")"
   local actual="allow"
   echo "$out" | grep -q '"decision":"block"' && actual="block"
@@ -174,16 +189,75 @@ git_case() {
 }
 
 # NON-VACUITY FIRST: the same unprocessed order must still BLOCK when HEAD is an
-# ordinary commit. Without this, "allow" below would prove nothing.
+# ordinary commit. Without this, every "allow" below would prove nothing.
 git_case "an unprocessed order BLOCKS when HEAD is an ordinary commit" block \
   "feat(thing): did some work"
-git_case "a committed STOP report ALLOWS the turn to end" allow \
-  "docs(stop): STOP — the next move needs Sam"
-# The exit is HEAD-only on purpose: a stop report buried in history is not an exit.
-git_case "a commit that merely MENTIONS a stop still BLOCKS" block \
-  "docs(seat): item 3 is a measured stop and is carried forward"
-git_case "a docs commit that is not a stop report still BLOCKS" block \
-  "docs(now): pointer update"
+
+# ── ITEM 0, 2026-08-12: `docs(stop):` IS NO LONGER AN EXIT. ────────────────
+#
+# THIS CELL USED TO READ "a committed STOP report ALLOWS the turn to end" AND IT
+# PASSED. That expectation WAS the hole Sam ordered closed: *"why does it keep
+# fuckign stopping if theres nothing for me to say"*. The terminal was not
+# disobeying order 0 — this script held a door open that the order forbade, and
+# a note in a file never beats a door in a script. The case is INVERTED, not
+# deleted, so the history of the exit stays legible.
+git_case "a routine docs(stop): progress report NO LONGER ends the turn" block \
+  "docs(stop): STOP — item 4 landed, item 7 measured"
+
+# EXIT 2 — it genuinely cannot proceed, and says so in a different word.
+git_case "docs(blocked): ALLOWS the turn to end" allow \
+  "docs(blocked): the second-game field does not exist, item 7 cannot be built"
+
+# EXIT 3 — a decision written down THIS COMMIT under `## AWAITING SAM`.
+git_case "a NEW line under AWAITING SAM ALLOWS" allow \
+  "docs(seat): record the decision Sam owes" "" "- Which day should the game move to?"
+# ...and the same section unchanged does NOT, or a question written yesterday
+# would be a permanent door.
+git_case "an UNCHANGED AWAITING SAM section still BLOCKS" block \
+  "docs(seat): tidy something else" "- Which day should the game move to?" "- Which day should the game move to?"
+git_case "an EMPTY AWAITING SAM section still BLOCKS" block \
+  "docs(seat): tidy something else"
+# THE CASE THAT MAKES "NEW" MEAN ANYTHING, added after a mutation survived: a
+# commit that DOES add a line to the inbox, just not under AWAITING SAM. Without
+# it, "the line must be in that section" was enforced only by there being no
+# diff at all, and a hook that allowed on ANY added line passed every cell.
+git_case "a line added ELSEWHERE in the inbox does not open the AWAITING SAM exit" block \
+  "docs(seat): add another order" "- An old question, unchanged." "- An old question, unchanged." \
+  "2. A SECOND ORDER the seat just wrote."
+
+# EXIT 4 — the loop breaker, measured in COMMITS and not in time. Three
+# turn-ends on one HEAD and the stop is allowed; the first two still block.
+stall_case() {
+  local repo; repo="$(mktemp -d)"
+  mkdir -p "$repo/docs"
+  printf '%s\n' "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
+    "1. A REAL ORDER, unprocessed." "" "## Previously (now processed)" \
+    > "$repo/docs/SEAT_INBOX.md"
+  ( cd "$repo" && git init -q && git config user.email t@t && git config user.name t \
+    && git add -A && git commit -q -m "feat: ordinary" ) >/dev/null 2>&1
+  local first second third
+  first="$(cd "$repo" && bash "$HOOK")"
+  second="$(cd "$repo" && bash "$HOOK")"
+  third="$(cd "$repo" && bash "$HOOK")"
+  local ok=1
+  echo "$first"  | grep -q '"decision":"block"' || ok=0
+  echo "$second" | grep -q '"decision":"block"' || ok=0
+  echo "$third"  | grep -q '"decision":"block"' && ok=0
+  # AND A NEW COMMIT RESETS IT — otherwise the breaker would fire on a terminal
+  # that is working perfectly well, three units in.
+  ( cd "$repo" && git commit -q --allow-empty -m "feat: progress" ) >/dev/null 2>&1
+  local after; after="$(cd "$repo" && bash "$HOOK")"
+  echo "$after" | grep -q '"decision":"block"' || ok=0
+  rm -rf "$repo"
+  if [ "$ok" -eq 1 ]; then
+    echo "  PASS three turn-ends with no new commit ALLOW the third, and a commit RESETS the counter"
+    pass=$((pass + 1))
+  else
+    echo "  FAIL the no-progress breaker did not fire on the third turn-end, or a new commit did not reset it"
+    fail=$((fail + 1))
+  fi
+}
+stall_case
 
 echo "Seat inbox hook totals: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
