@@ -1168,6 +1168,65 @@ phone.** State device items as PARKED in a stop report, never as a request.
    bridge, delete the orphaned `phaseCard` style (`:4173` — the existing gate
    greps *usage*, so the dead definition passes). Nothing breaks.
 
+16. **SAM HAS RULED — MOUNT THE STRIP ON DAY AND WEEK. THE SECOND HALF OF HIS
+    OWN DESIGN, ANSWERED 2026-08-12.** He was asked yes or no in the item-8 stop
+    report. **Sam:** *"yes — one line on week, small card on day, read-only
+    both"*. That is the whole spec and it matches what `ModifiersStrip` was
+    already written to do.
+
+    **THE COMPONENT ALREADY TAKES THE SURFACE.** `ModifiersStripProps.surface`
+    is `'day' | 'week' | 'coach'`; the week branch and its copy keys
+    (`modifiers.strip.week`, `modifiers.strip.week_one`) exist; the testIDs are
+    `modifiers-strip-${surface}`. **Nothing new is designed. It is mounted once,
+    on `CoachTabScreen.tsx:442`, and this order mounts the other two.** Do not
+    write a second component — the header says why, and the seat says it again:
+    three copies of a count row is three places for the count to disagree.
+
+    **WHAT TO BUILD:**
+    (a) **Week — ONE LINE.** The `surface="week"` branch above the seven day
+    rows in `HomeScreenV2.tsx`'s week view, above `day-row-mon`.
+    (b) **Day — A SMALL CARD.** The `surface="day"` branch above the day card,
+    which is ruling 4's placement and already what the component's header
+    describes.
+    (c) **READ-ONLY, BOTH.** Tapping opens My Status. **It carries no controls
+    of its own** — cell [5] of `test:program-tab-read-only-modifiers` holds that
+    and must stay green. `<ActiveModifiersSection>` does NOT come back to
+    Program.
+    (d) **The count comes from `useActiveModifiers`, never a separate count.**
+    (e) **Zero means nothing on Program** — the component already returns null
+    at `count <= 0` for non-coach surfaces. Leave that. Coach keeps its
+    permanent doorway.
+
+    **THREE ASSERTIONS ENCODE ITS ABSENCE ON PURPOSE AND ALL THREE MUST INVERT
+    IN THIS COMMIT** — measured 2026-08-12, not guessed:
+    - `src/__tests__/programTabIsReadOnlyModifiersTests.ts:172-180`, cell *"the
+      day/week indicator is still MISSING, and this cell is the record"*. Its
+      own failure message tells you to invert it. **Invert, do not delete** —
+      and rewrite the comment block at `:147-159` so the next reader is not told
+      a built thing is missing.
+    - `.maestro/golden/coach-my-status.yaml:24` and `:100` —
+      `assertNotVisible: modifiers-strip-day`.
+    - `.maestro/golden/standard-program-week.yaml:60` (day) and `:100` (week) —
+      both `assertNotVisible`. **The week one sits right after `day-row-fri`, so
+      the flow already walks past the exact place the line goes.**
+    **A flow that asserts a thing is invisible does not fail when you build it —
+    it fails when the strip appears, which is the point. Invert all four cells,
+    or the golden flows red for a correct change and someone reverts it.**
+
+    **THEN THE REGISTRY ROW.** `src/rules/featureRegistry.ts:128-129` carries
+    this as BUILT-BUT-UNREACHABLE with `wouldTake` naming exactly this work.
+    **Flip the row to held/reachable and rewrite the receipt with the mount
+    sites** — a registry that still says UNREACHABLE after the thing is mounted
+    is the defect the registry was built to kill.
+
+    **WHY THIS IS SAFE UNDER STAND-DOWN D:** it is a mount and four assertion
+    inversions. It touches no generator file, no `generationAnchorISO`, no
+    `section18CraftTier.ts`. **Stage by path.**
+
+    **PROOF OWED IN THE STOP REPORT:** the two new mount lines quoted with file
+    and line; the four inverted assertions quoted; `test:program-tab-read-only-modifiers`
+    green with cell [5] still green; the registry row's new text.
+
 Not ordered yet, shaped in `ATLAS_VERIFICATION` §4: retire dormant code to
 `src/retired/` (49 unreachable tap sites, 67 unmounted routes); make onboarding
 addressable then walk it; the harvest ratchet and a computed tap atlas.
@@ -1222,18 +1281,9 @@ seat was wrong.
   is editing in this shared checkout (`section18CraftTier.ts`,
   `projectVisibleWeek.ts`, the generator under stand-down D). **Neither is
   skipped for want of a ruling; both are waiting for a clear file.**
-- **DECISION OWED — the day/week modifier indicator, the SECOND HALF of Sam's
-  own design, IS NOT BUILT.** He said *"it shows up in the status bar and on the
-  a simple thing shows on day screen and week screen"*. Item 8 built the first
-  half (My Status owns the detail and its controls). **Measured 2026-08-12:
-  `ModifiersStrip`'s own header describes three mounts — day, week, coach — and
-  it is mounted ONCE, on the Coach tab.** Program shows no modifier indicator at
-  all, and `.maestro/golden/coach-my-status.yaml` encodes that absence with
-  `assertNotVisible: modifiers-strip-day`. **Held by cell [6] of
-  `test:program-tab-read-only-modifiers`, which reds the day it IS built**, so
-  it cannot be forgotten again. **He was asked in the item-8 stop report: build
-  it next, yes or no?** Not started until he answers — building it inverts a
-  golden-flow assertion that was written deliberately.
+- **ANSWERED 2026-08-12, NOW ITEM 16 — the day/week modifier indicator.**
+  Sam: *"yes — one line on week, small card on day, read-only both"*. Moved
+  out of this section into the queue. **Do not re-ask.**
 - **DECISION OWED — a second game in one week.** Sam's own sentence for item 7,
   *"only doing 1 strength session ... if they have 2 games and 2 team
   trainings"*, **cannot be expressed**: the profile carries ONE game field
