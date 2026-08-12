@@ -53,7 +53,7 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
 import { getSessionComponents } from '../utils/sessionComponents';
-import { project, projectParts } from '../rules/projectVisibleWeek';
+import { partHoldsTheDayDown, project, projectParts } from '../rules/projectVisibleWeek';
 import { projectDayDetail, visibleDayLeadHeadline } from '../rules/visibleDayDetail';
 import { UnsignedCopyError, isSignedCopyText, signedCopy } from '../rules/signedCopy';
 import { PART_COUNTS_TOWARD_LOAD } from '../rules/visibleProjection';
@@ -634,6 +634,90 @@ run('the projection cannot reach the name channel (source contract)', () => {
     `splitSessionName is back in ${offenders.join(', ')}. A name is not evidence `
     + 'about content: ask the projection for `parts`, or name a component from its '
     + 'own typed intent and rows (`strengthComponentDisplayName`).');
+});
+
+/**
+ * THE MOVE DOOR STOPPED DECOMPOSING THE DAY ITSELF — Sam's ruling, 2026-08-12.
+ *
+ * `moveOptionsForDay` used to build its scope offer from the CARD's section
+ * kinds while its gate above asked the PROJECTION. Two decompositions of one
+ * day, and on a real walked week they disagreed: the card rendered a lone
+ * recovery session as a `session` appointment named "Rest", the projection
+ * carried a movable `recovery` part, and the door refused `nothing_movable`
+ * about work the app itself said could move (walker `L-P4 MENU = PROJECTION`,
+ * seed 3, 2026-10-15). Asked which was right, Sam answered "recovery session".
+ *
+ * `partHoldsTheDayDown` is the predicate the door now imports instead of
+ * re-deriving. It has THREE positions and only one of them may answer true —
+ * the other two are the near-misses that made the old comment refuse to move
+ * this question to the projection in the first place, and getting either wrong
+ * is a silent behaviour change on every day of that shape.
+ */
+run('partHoldsTheDayDown separates an appointment from its two near-misses', () => {
+  const caps = (canMove: boolean, canRemove: boolean) =>
+    ({ capabilities: { canSwap: false, canMove, canRemove, canEditRows: false } });
+
+  // POSITION 2 — a non-team appointment ("Club Session"). Does not travel, CAN
+  // be dropped for one date. This is the only true.
+  assert(partHoldsTheDayDown(caps(false, true)),
+    'an appointment stopped holding the day down, so a whole-day move would now '
+    + 'drag a fixed commitment onto another date');
+
+  // NEAR-MISS 1 — AN ADD-ON. Also `canMove: false`, and it RIDES WITH the day,
+  // so it must not suppress the whole-day move. `NOTHING_MAY_BE_DONE`.
+  assert(!partHoldsTheDayDown(caps(false, false)),
+    'a recovery add-on was treated as holding the day down — this retires the '
+    + 'whole-day move from every day that carries one, which is the exact '
+    + 'regression the old comment refused to risk');
+
+  // NEAR-MISS 2 — A TEAM NIGHT. An appointment the athlete MAY move (Sam,
+  // signed 2026-08-02), so it answers `canMove: true` and the `team` scope is
+  // keyed on the projection's typed anchor instead.
+  assert(!partHoldsTheDayDown(caps(true, true)),
+    'a team night was treated as holding the day down, contradicting the '
+    + 'team-night movability ruling');
+
+  // AND ORDINARY WORK, which is what the ruled day turned out to be.
+  assert(!partHoldsTheDayDown(caps(true, true)),
+    'a movable part was treated as holding the day down');
+});
+
+/**
+ * THE DOOR ASKS THE OWNER — the deletion half, checked at the source.
+ *
+ * The cell above proves the predicate. This one proves the door actually uses
+ * it, because a correct predicate nobody calls is exactly the shape that let
+ * the two decompositions drift apart for as long as they did. Both tables the
+ * door used to read are named here: their reintroduction is the defect coming
+ * back, whatever it gets called next time.
+ */
+run('the move door reads the projection, not a second decomposition of the day', () => {
+  const fs = require('fs') as typeof import('fs');
+  const path = require('path') as typeof import('path');
+  const src = (rel: string): string =>
+    fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+
+  const door = src('utils/planChangeProducer.ts');
+  const code = door.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  assert(/partHoldsTheDayDown/.test(code),
+    'the move door no longer imports the projection\'s own predicate for "does '
+    + 'this part hold the day down" — it is deriving that answer a second time');
+
+  const moveOffer = code.slice(code.indexOf('function moveOptionsForDay'));
+  const offerBody = moveOffer.slice(0, moveOffer.indexOf('\nfunction '));
+  assert(offerBody.length > 0, 'moveOptionsForDay was not found — this cell is vacuous');
+  assert(!/visibleSessionKindsForSnapshot/.test(offerBody),
+    'moveOptionsForDay is reading the card\'s section kinds again. That is the '
+    + 'second decomposition Sam ruled against on 2026-08-12: the card called a '
+    + 'lone recovery session a "Rest" appointment and the door refused a move the '
+    + 'projection offered.');
+
+  for (const gone of ['MOVE_SCOPE_SECTION_KIND', 'MOVABLE_SECTION_KINDS']) {
+    assert(!new RegExp(`\\b${gone}\\b`).test(code),
+      `${gone} is back. It maps a move scope onto a card section kind, which is `
+      + 'the mapping the projection now owns.');
+  }
 });
 
 console.log(`\nProjection ownership totals: ${passed} passed, ${failed} failed`);

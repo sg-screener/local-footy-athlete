@@ -33,7 +33,9 @@ import {
   type CoachRevisionSectionKind,
   type CoachVisibleDaySnapshot,
 } from './coachRevisionProposal';
-import { dayIsFixture, projectParts, type ProjectedDayParts } from '../rules/projectVisibleWeek';
+import {
+  dayIsFixture, partHoldsTheDayDown, projectParts, type ProjectedDayParts,
+} from '../rules/projectVisibleWeek';
 import {
   buildCoachRevisionTemplateWorkout,
   listCoachRevisionTemplates,
@@ -745,13 +747,28 @@ function moveOptionsForDay(args: {
   // `['whole_day']`. Immovability is a fact about the SHAPE of the day, not
   // about what its rows are called, so it is decided here from the kind and the
   // anchor is left to mean what it means.
-  const visibleKinds = visibleSessionKindsForSnapshot(args.snapshot);
+  // WHAT IS ON THIS DAY IS THE PROJECTION'S ANSWER TOO — Sam's ruling,
+  // 2026-08-12. The gate above already asks the owner whether anything may leave;
+  // the OFFER used to be built from a second decomposition of the same day
+  // (`visibleSessionKindsForSnapshot`, the card's section kinds), and on
+  // 2026-08-12 the two disagreed on a real walked day. The card rendered a lone
+  // recovery session as a `session` appointment named "Rest"; the projection
+  // carried a movable `recovery` part. `session` is correctly absent from the
+  // movable section kinds, so the offer came out empty and the door refused
+  // `nothing_movable` about work the app itself said could move — walker L-P4,
+  // seed 3, 2026-10-15. Asked which decomposition was right, Sam answered
+  // "recovery session".
+  //
+  // So the second reading is DELETED rather than corrected. Both halves of the
+  // offer now come from `args.projected`, and the scope ids stay the mutation
+  // vocabulary the writer speaks — the ids are what the transaction addresses, the
+  // MEMBERSHIP is what the owner decides.
   const componentScopes: PlanChangeMoveScopeId[] = [
-    ...MOVABLE_COMPONENT_SCOPES.filter((scope) =>
-      visibleKinds.includes(MOVE_SCOPE_SECTION_KIND[scope])),
+    ...MOVABLE_COMPONENT_SCOPES.filter((scope) => args.projected.parts.some(
+      (part) => part.kind === scope && part.capabilities.canMove)),
     // The anchor itself, LAST — keyed on the projection's typed anchor fact,
-    // never on the 'session' section kind (a "Club Session" commitment is a
-    // 'session' section with no team anchor and stays immovable).
+    // never on a section kind (a "Club Session" commitment carries no team
+    // anchor and stays immovable).
     ...(holdsTeamAnchor ? (['team'] as const) : []),
   ];
   // Content the athlete cannot reschedule: a commitment is a fixed appointment,
@@ -759,17 +776,16 @@ function moveOptionsForDay(args: {
   // movable to another day. Its presence is what makes a whole-day move wrong —
   // that move would take the commitment with it.
   //
-  // AND THIS IS NOT THE PROJECTION'S QUESTION, WHICH IS WHY IT IS STILL ASKED
-  // HERE. "Can anything leave this day?" is a capability and belongs to the
-  // owner — it is the gate at the top of this function now. "Would a WHOLE-DAY
-  // move drag something that must stay?" is a different question with a
-  // different answer for the same part: a recovery add-on cannot leave on its
-  // own (so `canMove` is false for it) but it TRAVELS with a whole-day move,
-  // because the workout moves and the add-on is a field on the workout. Reading
-  // `part.capabilities.canMove` here would turn every add-on day into a scoped
+  // NOT `part.capabilities.canMove`, WHICH IS THE NEAR-MISS THIS COMMENT USED TO
+  // WARN ABOUT. A recovery add-on also answers `canMove: false` and yet TRAVELS
+  // with a whole-day move, because the workout moves and the add-on is a field on
+  // the workout; keying on `canMove` would turn every add-on day into a scoped
   // offer and quietly retire the whole-day move from days that should have it.
-  const carriesImmovableContent = visibleKinds.some(
-    (kind) => !MOVABLE_SECTION_KINDS.includes(kind));
+  // `partHoldsTheDayDown` is the owner's own name for the difference — position 2
+  // of `partCapabilities` (does not travel, CAN be dropped for one date) against
+  // an add-on's `NOTHING_MAY_BE_DONE` — imported rather than re-stated, so what
+  // this door treats as immovable is exactly what the projection means by it.
+  const carriesImmovableContent = args.projected.parts.some(partHoldsTheDayDown);
   const dragsSomethingItShouldNot = carriesImmovableContent ||
     hasProtectedAnchors(args.snapshot);
   // A single-component day has nothing to scope: moving "just the gym session"
@@ -795,23 +811,14 @@ function moveOptionsForDay(args: {
 const MOVABLE_COMPONENT_SCOPES: readonly Exclude<PlanChangeMoveScopeId, 'whole_day' | 'team'>[] =
   ['strength', 'conditioning', 'recovery'] as const;
 
-const MOVE_SCOPE_SECTION_KIND: Record<
-  Exclude<PlanChangeMoveScopeId, 'whole_day' | 'team'>,
-  CoachRevisionSectionKind
-> = {
-  strength: 'strength',
-  conditioning: 'conditioning',
-  recovery: 'recovery',
-};
-
-/**
- * The section kinds a move may take off a day on their own. Exhaustive against
- * `CoachRevisionSectionKind` by construction — the fourth kind, `session`, is
- * absent because a commitment cannot be rescheduled by the athlete, and a kind
- * added later is absent until someone decides which it is.
- */
-const MOVABLE_SECTION_KINDS: readonly CoachRevisionSectionKind[] =
-  Object.values(MOVE_SCOPE_SECTION_KIND);
+// `MOVE_SCOPE_SECTION_KIND` and `MOVABLE_SECTION_KINDS` were DELETED here on
+// 2026-08-12, in the commit that stopped this door reading the card's section
+// kinds. They mapped a move scope onto a `CoachRevisionSectionKind` and listed
+// which of those kinds could travel — the second decomposition of a day that
+// disagreed with the projection on a real walked week (see `moveOptionsForDay`).
+// The scope ids survive as `MOVABLE_COMPONENT_SCOPES`, because the TRANSACTION
+// still speaks them; only the membership test moved to the owner. Nothing else
+// read either table.
 
 // ── Bin scopes ──
 // Which parts of a day can be binned individually. Derived from the day

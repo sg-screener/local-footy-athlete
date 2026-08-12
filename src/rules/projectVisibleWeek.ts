@@ -310,6 +310,37 @@ function partCapabilities(
 }
 
 /**
+ * DOES THIS PART HOLD THE DAY DOWN? — position 2 of `partCapabilities`, named.
+ *
+ * A whole-day move takes everything on the day with it, so a day carrying an
+ * APPOINTMENT must not offer one: the commitment would travel, and a commitment
+ * is a fixed date by definition. That question has two near-misses and this
+ * predicate exists to keep them apart:
+ *
+ *   AN ADD-ON also answers `canMove: false` — and an add-on RIDES WITH the day,
+ *   so it must NOT suppress the whole-day move (`ATTACHED_COMPONENTS`). It is
+ *   `NOTHING_MAY_BE_DONE`, so `canRemove` is false and it is excluded here.
+ *
+ *   A TEAM NIGHT is an appointment the athlete MAY move (Sam, signed
+ *   2026-08-02), so it answers `canMove: true` and is excluded here too — the
+ *   move door keys the `team` scope on the projection's typed team anchor.
+ *
+ * EXPORTED BECAUSE THE MOVE DOOR ASKS IT. `planChangeProducer.moveOptionsForDay`
+ * used to answer this for itself, from `CoachVisibleSectionSnapshot.kind`, and
+ * on 2026-08-12 the two decompositions disagreed on a real walked day: the card
+ * rendered a lone recovery session as a `session` appointment named "Rest" while
+ * the projection carried a movable `recovery` part, so the door refused
+ * `nothing_movable` about work the app itself said could move (walker L-P4,
+ * seed 3, 2026-10-15). Sam ruled the day a recovery session. One predicate, both
+ * ends — the same shape `isComposedPrescriptionRow` already has.
+ */
+export function partHoldsTheDayDown(part: {
+  readonly capabilities: PartCapabilities;
+}): boolean {
+  return !part.capabilities.canMove && part.capabilities.canRemove;
+}
+
+/**
  * The row-level rescue: same numbers, an authored template.
  *
  * Reuses the SHAPE `dayWorkoutHelpers.formatStrengthSetsReps` /
