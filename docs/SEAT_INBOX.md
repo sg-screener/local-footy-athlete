@@ -1208,6 +1208,30 @@ his instruction is standing authority, not history.**
     that reads a session's size, so it needs its own before/after over the QA
     scenarios. That is a unit, not a patch.**
 
+    **⚠⚠ AND THE ROLE CENSUS MAKES IT BIGGER — TWO OF THE THREE EXEMPTIONS CAN
+    NEVER FIRE.** Every row the generator emits, 6 worlds, **570 rows**:
+
+    | `WorkoutExercise.role` | rows | counting |
+    | --- | --- | --- |
+    | `power` | 20 | exempt |
+    | **(no role at all)** | **550** | **ALL counting** |
+
+    **THE APP SETS EXACTLY ONE ROLE. `team_training` and `mobility` are in
+    `ROLES_EXEMPT_FROM_COUNTING` and NOTHING EVER CARRIES THEM**, so both
+    exemptions are dead code — and `team_training` is the one Sam's sentence was
+    built into. **His ruling was implemented as an exemption on a role nothing
+    sets: green, shipped, and unable to fire.**
+    **`!row.role` MEANS COUNT, so the default is COUNT and the tagging is the
+    exception** — every row the generator forgets to tag is inside the strength
+    budget by omission, which is 550 of 570.
+    **CHECKED DOWNSTREAM TOO, because a role could have been attached later:**
+    `section18WorkoutEvidence` writes `section18Evidence` and leaves `role`
+    untouched, and its evidence uses a DIFFERENT vocabulary
+    (`main_strength` / `strength_accessory`) — a second representation of the
+    same idea, which is its own finding.
+    **SCOPE, STATED: 6 generated worlds, generator output plus evidence
+    attachment. Not every possible world, and not the coach-edit paths.**
+
     **THE OLD WITHDRAWAL, KEPT SO ALL THREE STATEMENTS STAY LEGIBLE:** I said six sessions ship SEVEN
     rows against his cap of six. **They do not. Nothing breaches his cap.**
     **THE FAULT:** `countingIndices` does NOT return "the indices of counted
