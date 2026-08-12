@@ -683,6 +683,24 @@ phone.** State device items as PARKED in a stop report, never as a request.
    ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 12).
 
 13. **KEEP THE UNENFORCED LAW COUNT FALLING.**
+   **WHAT IS LEFT IS PRICED, 2026-08-13 — so the next pass does not re-derive it.**
+   Four of the remaining 29 were measured tonight and each needs something a
+   gate cannot supply:
+   - **`LAW-green-gate-is-a-claim`** — needs STANDING MUTATION TESTING, which is
+     infrastructure with a runtime budget, not a cell. **Its precondition is paid
+     (see below); the keyword shortcut is REFUTED.**
+   - **`LAW-L9-checkpoint-discipline`** — **1 of the last 40 `src/`-touching
+     commits moved `NOW.md`.** A gate reds on arrival, and **git history cannot
+     shrink, so the debt-ratchet shape does not apply.** It needs a
+     from-here-forward cutoff, which is a process decision over other agents
+     mid-flight and is not the terminal's to impose alone.
+   - **`LAW-attributed-content-change`** — its row names a one-line probe, but
+     the suite that owns the case says the loss **reproduces ONLY on a real
+     accepted composition base with the dev-reset Saturday game mark**, and that
+     a hand-built seed does NOT reproduce it. Reaching that world is the unit.
+   - **`LAW-L6-honest-actions`** — structural: success derived FROM the applied
+     transaction rather than composed beside it. Unchanged assessment.
+
    **A FOURTH PASS THAT DID NOT LOWER THE COUNT, AND SAYS SO. 2026-08-13.**
    `LAW-green-gate-is-a-claim` — the law every guard tonight rested on — had
    **NO RULING SITE**: cited by boundary reports for weeks, obeyed by habit,
