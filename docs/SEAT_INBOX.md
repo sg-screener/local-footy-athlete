@@ -161,9 +161,20 @@ phone.** State device items as PARKED in a stop report, never as a request.
    outer one. Empty state, empty authority. **THIS IS SIGHTING 3 of the class
    `gatewayAuthorityInputCensusTests` exists for** — sighting 2 was this same
    input, paid by giving the resolver the field; the disease came back one level
-   down as RE-DERIVATION. **ATTEMPT 2: thread `activeFixtureDates` through
-   `resolveFinalVisibleSection18Week` into `section18TierFour` so the inner
-   resolve INHERITS it, then delete the ±7 with the cells already written.**
+   down as RE-DERIVATION. **ATTEMPT 3 WAS BUILT AND DID NOT WORK — see §6 of the census doc.**
+   Threading the authority so the inner resolve INHERITS it is
+   behaviour-preserving on its own (suite stays 10/10) but **does NOT unblock
+   the ±7 deletion**: with both applied the same property still fails. Reverted;
+   nothing shipped without a receipt.
+   **§8 SECOND-WALL LAW FIRES — same wall, third pass.** Three attempts have
+   each named a plausible cause and none has explained the failure.
+   **STOP GUESSING AND MEASURE THE PROPERTY ITSELF:** the dependency record is
+   written by the REPLAN, not the craft tier, and every attempt so far has
+   ASSUMED the craft tier's anchors feed it. **That assumption has never been
+   checked and is the first thing to check.**
+   **BANKED, DO NOT RE-DERIVE:** the defect is real and celled; UNDEFINED is
+   test-only; the gateway re-entrancy is a genuine defect **worth paying on its
+   own merits with its own cell, NOT as a prerequisite for this item.**
    **The census gate is owed a third cell: an authority re-derived downstream of
    one already established is the same defect as one never passed.**
    **SO ATTEMPT 2 IS: (1) answer (c); (2) THEN delete the ±7 using the cells

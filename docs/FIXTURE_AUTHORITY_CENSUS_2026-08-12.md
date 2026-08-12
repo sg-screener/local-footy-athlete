@@ -212,3 +212,55 @@ test-only, which `test:gateway-authority-census` already governs.
   falls back to a contract-shape check when it is absent, has the same
   test-only exposure. Same shape, not measured.
 - **NORTH STAR: neutral.** Nothing stored, nothing derived; this reports.
+
+
+---
+
+## §6 ATTEMPT 2 WAS BUILT AND IT DID NOT WORK — §8 SECOND-WALL LAW FIRES
+
+**The fix this document prescribed was implemented and REVERTED. Tree unchanged.**
+
+Built exactly as §2(c) specified: `ScheduleState` gained
+`activeFixtureDates?: ReadonlySet<string>`, `section18TierFour` preferred a
+SUPPLIED authority over a re-derived one (`undefined` = "nobody told me" derives;
+an empty SET is a real answer and is inherited), and the gateway's re-entrant
+`assess` closure handed its own authority down through
+`resolveFinalVisibleSection18Week`.
+
+**On its own it is behaviour-preserving:** `test:accepted-state-transactions`
+stayed 23/23 + 10/10 + 10/10.
+
+**And it did NOT unblock the ±7 deletion.** With both changes applied together
+the same property fails exactly as before — `properties=9/10`, *"following-week
+dependency was not committed in the same snapshot"*. **The re-derived authority
+was NOT the cause of that regression**, or was not the only one.
+
+So the inheritance change has no receipt: it fixes a thing that is real (§2(c)'s
+stack trace is not in doubt) but that does not produce the failure it was
+prescribed for. **Shipping it would be a confident comment over a change with no
+measured effect — the same standard that killed §4's change.** Reverted.
+
+### THE LAW THAT APPLIES
+
+**`second-wall-law` — same wall SHAPE three times now.** Attempt 1 (delete the
+±7) → one red. Attempt 2 (make the input required) → withdrawn before building,
+the census gate already covered it. Attempt 3 (inherit rather than re-derive) →
+built, green on its own, **still one red**. Three passes have each named a
+plausible cause and none has explained that property's failure.
+
+**STOP GUESSING AT THE CAUSE AND MEASURE THE PROPERTY ITSELF.** Nothing in three
+attempts has traced *why* `derivedSessionProvenance` fails to record the
+following week's G+1 dependency when the neighbour is honest instead of
+invented. That record is written by the replan, not by the craft tier, and every
+attempt so far has assumed the craft tier's anchors are what feed it. **That
+assumption has never been checked and is now the first thing to check.**
+
+### WHAT IS BANKED AND MUST NOT BE RE-DERIVED
+
+- The defect is REAL and reproduced by cells (`PLUS_MINUS_7_ATTEMPT_1_BLOCKED` §1).
+- `UNDEFINED` authority is test-only (§2(b)).
+- The gateway re-enters itself and re-derives the authority (§2(c)) — a real
+  defect of the class the census gate exists for, **worth paying on its own
+  merits with its own cell, and not as a prerequisite for the ±7.**
+- The ±7 survives only because it answers from the contract and cannot tell
+  three worlds apart (§2(c)).
