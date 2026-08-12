@@ -991,7 +991,15 @@ function policyFor(input: Pick<
         conditioning: { required: 0, defaultTarget: 0, preferred: { min: 1, max: 2 }, max: 3, stress: ['light'], optionalFlush: { min: 1, max: 2 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 0 },
         sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
         power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'early_offseason' },
-        rest: { required: 0, preferred: { min: 3, max: 4 } },
+        // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
+        // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and
+        // early off-season, where 3 full rest days are permitted."* The exception
+        // permits MORE rest, never less — there is no phase in which zero is
+        // legal. `required` is the SOLE input to the blocking check
+        // (`section18EffectiveWeekEvaluator.ts:1484`), so a 0 made that check
+        // unreachable: the app knew the preferred answer was 2 and required
+        // nothing, and generated six-day weeks with no rest day at all.
+        rest: { required: 1, preferred: { min: 3, max: 4 } },
         hardDays: { preferred: { min: 0, max: 2 }, permittedMaximum: 4 },
         balance: false,
         selectionKind: 'optional',
@@ -1002,7 +1010,15 @@ function policyFor(input: Pick<
         conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 1 },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
-        rest: { required: 0, preferred: { min: 2, max: 2 } },
+        // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
+        // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and
+        // early off-season, where 3 full rest days are permitted."* The exception
+        // permits MORE rest, never less — there is no phase in which zero is
+        // legal. `required` is the SOLE input to the blocking check
+        // (`section18EffectiveWeekEvaluator.ts:1484`), so a 0 made that check
+        // unreachable: the app knew the preferred answer was 2 and required
+        // nothing, and generated six-day weeks with no rest day at all.
+        rest: { required: 1, preferred: { min: 2, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
@@ -1013,7 +1029,15 @@ function policyFor(input: Pick<
         conditioning: { required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 2 },
         sprint: { required: 1, preferred: { min: 1, max: 2 }, max: 2 },
         power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
-        rest: { required: 0, preferred: { min: 2, max: 2 } },
+        // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
+        // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and
+        // early off-season, where 3 full rest days are permitted."* The exception
+        // permits MORE rest, never less — there is no phase in which zero is
+        // legal. `required` is the SOLE input to the blocking check
+        // (`section18EffectiveWeekEvaluator.ts:1484`), so a 0 made that check
+        // unreachable: the app knew the preferred answer was 2 and required
+        // nothing, and generated six-day weeks with no rest day at all.
+        rest: { required: 1, preferred: { min: 2, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
@@ -1027,7 +1051,15 @@ function policyFor(input: Pick<
         conditioning: { required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }, max: 4, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
-        rest: { required: 0, preferred: { min: 2, max: 2 } },
+        // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
+        // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and
+        // early off-season, where 3 full rest days are permitted."* The exception
+        // permits MORE rest, never less — there is no phase in which zero is
+        // legal. `required` is the SOLE input to the blocking check
+        // (`section18EffectiveWeekEvaluator.ts:1484`), so a 0 made that check
+        // unreachable: the app knew the preferred answer was 2 and required
+        // nothing, and generated six-day weeks with no rest day at all.
+        rest: { required: 1, preferred: { min: 2, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
