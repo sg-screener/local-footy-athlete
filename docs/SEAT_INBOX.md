@@ -995,6 +995,19 @@ phone.** State device items as PARKED in a stop report, never as a request.
     `3` before it. **So BOTH numbers are invented, and item 25's premise is
     stronger than it was written: the app does not hold his ruling and disobey
     it — it holds an INVENTED ceiling and calls it his.**
+    **AND HIS SIZES ARE IN THE BIBLE AFTER ALL — `:122`, HIS OWN WORDS:**
+    *"I wouldn't stack lower body strength (say **6-7 exercises**) with upper body
+    strength (**6-7 exercises**) because that would be 12-14 lifts in one day. I'd
+    prefer to just make that a full body day i.e. **full body strength and 7
+    exercises**."*
+    **SO HE DID AUTHOR SESSION SIZES, PER SESSION TYPE: lower 6-7, upper 6-7,
+    full body 7** — and they are HIGHER than the invented ceiling of 6 the code
+    has been enforcing as "his". **A 6-exercise cap was clipping his own 7.**
+    This is exactly what he meant by *"figure out what is needed that day from the
+    bible"*, and it is the input the derivation starts from. **Still not a single
+    constant: `:108` and `:122` both make size follow the session TYPE and the
+    day's shape.**
+
     **WHAT HE ACTUALLY RULED: session size is DERIVED PER DAY** from the Bible's
     own logic — phase sets/reps (`:767-769`), the seven strength sessions
     (§20.5), game proximity (`:204`), accessory dose (`:818`), equipment and
@@ -1038,9 +1051,53 @@ phone.** State device items as PARKED in a stop report, never as a request.
     it fails if a 3-pair session survives as a 1-pair session. Mutation-checked
     two ways** — cap back to one reds three cells, ceiling removed reds the
     fourth-pair cell.
-    **THE PRODUCER IS STILL NOT BUILT.** Nothing writes a superset, so this
-    protects a design with no writer yet. **That is the main half and it is
-    next.**
+    **THE PRODUCER IS STILL NOT BUILT — AND RULE 3 NEEDS ONE BRIDGE THAT NOBODY
+    SIGNED. This is NOT a request to re-rule his design.**
+    Rule 3 (non-compete) compares **an accessory's region** with **a mobility
+    pick's region**. Those are two DIFFERENT signed vocabularies and no crosswalk
+    exists between them:
+    - the mobility side is **`MOBILITY_REGIONS = lower | hips | midline | upper`**,
+      signed 20/20 on 2026-07-30;
+    - the accessory side is **`MuscleGroup`, 19 values** from the signed muscle
+      sheet (`Quads`, `Glutes`, `Lats`, `Traps`, `Grip`, …).
+    **This repo treats a crosswalk as authored law** — §11's experience crosswalk
+    says *"No other crosswalk may exist"* — so inventing this one quietly is the
+    exact defect items 25 and 26 are both about.
+    **⚠ RESOLVED BY SAM, 2026-08-13 — THE 19-VALUE CROSSWALK IS NOT NEEDED AND
+    THE BLOCK BELOW IS STRUCK. He said:** *"i have written something about
+    mobility pairings being non compete with the accessory lift i.e. upper body
+    lift paired with lower body mobility"*. **He had, and it is rule 3's own
+    SIGNED EXAMPLES, which nobody had read as the specification they are:**
+    - **split squats (LOWER lift) + QL extension (MIDLINE mobility)**
+    - **single-arm bench (UPPER lift) + butterfly (HIPS mobility)**
+    **So non-compete operates at the SIDE, not at the muscle.** The rule is:
+    **the mobility pick's side must differ from the accessory's side**, with the
+    four signed regions falling out as **`lower` + `hips` = the lower side,
+    `upper` = the upper side, `midline` = NEUTRAL** — his first example pairs a
+    lower lift with midline, so midline never competes.
+    **THAT NEEDS NO NEW AUTHORED TABLE.** The accessory's side comes from the
+    EXISTING `upperOrLowerForExerciseName`, and the region-to-side mapping is
+    demonstrated by his own two examples rather than invented. **The producer is
+    UNBLOCKED and nothing is owed by Sam.**
+
+    ~~**DERIVED, NOT INVENTED, so it can be vetoed in a word rather than asked
+    cold** (the shape item 25 taught). It is anatomical and mechanical:
+    - **lower** — Quads, Hamstrings, Calves, Knee, Feet
+    - **hips** — Glutes, Hips, Groin, Outer hip
+    - **midline** — Midline, Low back
+    - **upper** — Upper back, Lats, Chest, Shoulders, Triceps, Biceps, Traps, Grip
+    **The only judgement calls are `Low back` -> midline (not lower) and `Grip` ->
+    upper.** Everything else is unambiguous. **Confirm or correct those two and
+    the producer is unblocked**; it would be a total `Record<MuscleGroup,
+    MobilityRegion>` so the compiler refuses a new muscle group with no region.~~
+    **THE REST OF THE PRODUCER IS SPECIFIED AND NEEDS NOTHING FROM SAM:** pick 2-3
+    ACCESSORY rows (never main lifts, rule 2 — identified by
+    `classifyGeneratedWorkoutRow`, since the generator authors no roles); pick
+    from `mobilityPool()` via `mobilityRegionOf`, preferring a region untouched by
+    the whole session (rule 3) and equipment-light (rule 6); carry the pool
+    entry's OWN authored dose (rule 5, "counts toward nothing"); stamp
+    `supersetGroup`/`supersetOrder`/`pairType: 'superset'`, which the renderer
+    already groups. The standalone session is untouched (rule 7).
     **RECEIPT NOTE:** the code landed inside `220dfef9`, another agent's commit —
     they staged the whole tree while my files sat in the shared checkout, so the
     reasoning above is recorded here rather than in a commit message of its own.
