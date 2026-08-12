@@ -508,7 +508,29 @@ phone.** State device items as PARKED in a stop report, never as a request.
    - **STILL OPEN — `test:accepted-state-transactions` is 89.5s**, the largest
      real unit, new since 2026-08-07, never looked at.
 
-3. **KILL THE ±7 INVENTION — ATTEMPT 1 BUILT, WORKED, AND WAS REVERTED FOR ONE
+3. **THE MEASUREMENT THE SECOND-WALL LAW DEMANDED IS TAKEN — AND THE ASSUMPTION
+   BEHIND ALL THREE ATTEMPTS IS FALSE.** Sam freed the generator 2026-08-12;
+   this is the first act under that. **`docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md`
+   §7.**
+   **THE CRAFT TIER'S ±7 ANCHORS DO NOT REACH THE DEPENDENCY RECORD BY ANY
+   PATH.** Three writers exist and only ONE mints a source date —
+   `sessionResolver.ts:734`, from `effectiveGameDatesAround` (marks + the
+   in-season recurring rule). The gateway and the replan COPY it. The craft
+   tier's fabricated `previousGameDate`/`nextGameDate` feed
+   `validateProgramWeek` — **findings only, and no finding can become a
+   `dependency.source`.**
+   **SO ATTEMPT 1'S REGRESSION IS NOT WHAT IT LOOKED LIKE.** Deleting the ±7
+   could not remove the following week's record directly; something downstream
+   of the FINDINGS did. Two candidates named and ordered in §7 (the craft tier's
+   repair search moving sessions; what the gateway accepts as
+   `crossWeekFixtureDependency`).
+   **ATTEMPT 2'S FIRST ACT IS A MEASUREMENT, NOT A FIX:** delete the ±7 again
+   and instrument where `crossWeekFixtureDependency` comes from on the failing
+   property. **Nothing is built until that prints** — three attempts have each
+   named a plausible cause and been wrong.
+   **NOT STARTED: the deletion itself.**
+
+   ~~ORIGINAL~~ **KILL THE ±7 INVENTION — ATTEMPT 1 BUILT, WORKED, AND WAS REVERTED FOR ONE
    NEW RED. `docs/PLUS_MINUS_7_ATTEMPT_1_BLOCKED_2026-08-12.md`.**
    **THE PREREQUISITE CENSUS IS DONE —
    `docs/FIXTURE_AUTHORITY_CENSUS_2026-08-12.md`. IT DE-RISKS THIS ITEM.** The

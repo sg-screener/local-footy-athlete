@@ -264,3 +264,53 @@ assumption has never been checked and is now the first thing to check.**
   merits with its own cell, and not as a prerequisite for the ±7.**
 - The ±7 survives only because it answers from the contract and cannot tell
   three worlds apart (§2(c)).
+
+## §7 THE ASSUMPTION EVERY ATTEMPT MADE IS FALSE — measured 2026-08-12
+
+**The order's own instruction after the second-wall law fired:** *"STOP GUESSING
+AND MEASURE THE PROPERTY ITSELF: the dependency record is written by the REPLAN,
+not the craft tier, and every attempt so far has ASSUMED the craft tier's anchors
+feed it. That assumption has never been checked and is the first thing to check."*
+
+**IT IS CHECKED, AND IT IS FALSE. The craft tier's fabricated ±7 anchors do not
+reach the dependency record by any path.**
+
+**THE CENSUS OF WRITERS — three, and only one MINTS a source date:**
+
+| writer | what it does with `dependency.source` |
+| --- | --- |
+| `sessionResolver.ts:734` (G+1 / G-1 derivation) | **MINTS it**, from `args.fixtureDate` |
+| `section18AcceptedWeekGateway.ts:753` (rest distribution) | **COPIES** `crossWeekFixtureDependency.dependency.source` |
+| `fixtureMinimalReplan.ts:577` (required-core relocation) | **COPIES** `fixtureDisplacement.dependency` |
+
+`args.fixtureDate` comes from `getEffectiveGameDates` → `effectiveGameDatesAround`
+— explicit calendar marks plus the in-season recurring game day. **That is the
+resolver's own answer, and it is a RULE, not a fabrication:** an unmarked
+in-season week really does have the usual game (§2(a) already established the
+rule is correct and only its TIMING is wrong).
+
+`section18CraftTier.ts:161`'s `previousGameDate` / `nextGameDate` feed
+`validateProgramWeek` — **findings only**. There is no path from a finding to a
+`dependency.source`.
+
+**SO THE REGRESSION THAT REVERTED ATTEMPT 1 CANNOT BE WHAT IT LOOKED LIKE.**
+Deleting the ±7 did not, and could not, remove the following week's dependency
+record directly. Something downstream of the FINDINGS changed instead — the two
+candidates, in order of cost to check:
+
+1. **The craft tier's repair search.** Findings drive it, and it MOVES sessions.
+   A different set of findings is a different set of moves, and a moved session
+   is a different input to whatever later establishes the cross-week dependency.
+2. **What the gateway treats as `crossWeekFixtureDependency`.** It copies a
+   source it was handed; if the hand-off depends on a `g_plus1` classification
+   that the fabricated neighbour was producing, the record disappears without
+   anything about fixtures having changed.
+
+**ATTEMPT 2'S FIRST ACT IS THEREFORE NOT A FIX.** It is: delete the ±7 again,
+and instrument `crossWeekFixtureDependency`'s origin on the failing property —
+which of the two above supplies it, and with what. **Nothing is built until that
+prints.** Three attempts have each named a plausible cause and been wrong; this
+one names a MEASUREMENT and the second-wall law is satisfied only by taking it.
+
+**BANKED SO IT IS NOT RE-DERIVED: the dependency record's source is
+`effectiveGameDatesAround`, in every writer, always.**
