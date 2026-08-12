@@ -1060,7 +1060,42 @@ phone.** State device items as PARKED in a stop report, never as a request.
     ... if they have 2 games and 2 team trainings"* — **becomes representable
     the day this lands.** Say so in the stop report.
 
-20. **SAM HAS CHOSEN THE WORDS — AND THE REAL DEFECT IS THAT ONE SENTENCE
+20. **THE PLUMBING IS THE JOB. DO IT — NOTHING IS BLOCKING IT.** The stop report
+    (`c8f2b4b8`) is CORRECT on all three defects and RIGHT not to bolt Sam's
+    sentence onto a wrong fact. **But it stopped on a job with no blocker.** Its
+    own words: *"I'm not stuck on a decision from you, just on this being a
+    bigger job than it looked."* **Bigger is not blocked.** Measured
+    2026-08-13 by the seat:
+    - **`src/store/acceptedStateTransaction.ts` is CLEAN and has not been
+      touched in 16 hours** (`055d901b`). It is not mid-flight and no agent
+      holds it.
+    - **It is NOT under stand-down D.** D names `generateProgram.ts`,
+      `coachingEngine.ts`'s generation paths, `generationAnchorISO` and its
+      persistence. This file is none of them.
+    - Sam has ruled the wording AND the fixture-only branch. **Nothing is owed
+      by him.**
+    **So: thread the cause and the day to the call site, THEN put Sam's sentence
+    on last — in that order, as the report itself proposes.** "Someone builds
+    it" is this queue's way of saying nobody does; the item has an owner and it
+    is whoever reads this.
+
+    **THE THREE DEFECTS, CONFIRMED — the report found them and the seat checked
+    the third independently:**
+    (i) **wrong reason** — one sentence blames a rest mark for every cause.
+    (ii) **wrong day** — the single call site passes `date: weekStart`
+    (`acceptedStateTransaction.ts:404`) and the renderer does
+    `dayNameFor(shortfall.date)`. Weeks start Monday (`mondayOfISO`), **so it
+    says "Resting Monday" on every week regardless of the day actually rested.**
+    (iii) **claims a rest that may not have happened** — the disclosure is
+    recorded from ANY blocking violation, not from a rest mark.
+    **And Sam's sentence needs a THIRD day again — the GAME's day, not the
+    rested day.** The original order did not account for that; it does now.
+
+    **DO NOT LOCK THE COPY UNTIL THE FACTS ARE RIGHT.** The equality-bound copy
+    test is what makes a wrong sentence expensive to undo. **Facts first, cell
+    last.**
+
+    ~~ORIGINAL~~ **SAM HAS CHOSEN THE WORDS — AND THE REAL DEFECT IS THAT ONE SENTENCE
     SERVES TWO DIFFERENT CAUSES.** **Sam, 2026-08-12:** *"yeah thats bad
     wording"*, then **A**:
 
