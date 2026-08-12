@@ -78,7 +78,7 @@ import {
 } from '../rules/temporarySourceFact';
 import { SHORT_ON_TIME_MINUTES } from '../rules/timeAvailabilityPolicy';
 import type { FixtureAvailabilityKind } from '../rules/fixtureConditionedAvailability';
-import { durableStateFactScope } from '../rules/durableFactHorizon';
+import { durableStateFactScope, readinessDeloadFactScope } from '../rules/durableFactHorizon';
 import {
   commitTemporarySourceFactSet,
   transactTemporarySourceFact,
@@ -1375,8 +1375,12 @@ async function executeProgramControlActionDurablyWithinTrace(
           })
         : createTemporaryFatigueFact({
             observedDate: date,
+            // COOKED IS A 7-DAY WINDOW, NOT AN OPEN HOLD (census A1). It used
+            // to take `durableStateFactScope` — illness's open horizon, which
+            // never elapses — so one tap deloaded the athlete forever. Sam's
+            // ruling is that readiness and illness differ in exactly this.
             scope: action.payload.level === 'cooked'
-              ? durableStateFactScope({ anchorDate: date, todayISO })
+              ? readinessDeloadFactScope({ declaredOnISO: date, todayISO })
               : temporaryFactScope({ kind: 'date', date }),
             athleteReportedLevel: action.payload.level === 'cooked'
               ? 'cooked'

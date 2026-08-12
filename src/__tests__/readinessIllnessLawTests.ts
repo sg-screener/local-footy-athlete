@@ -48,6 +48,10 @@ import { applyGenerationSafetyToSection18Contract } from '../rules/section18Safe
 
 const repoRoot = path.resolve(__dirname, '../..');
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { readinessDeloadFactScope } from '../rules/durableFactHorizon';
+
 let passed = 0;
 const failures: string[] = [];
 
@@ -539,6 +543,41 @@ for (const phase of ['In-season', 'Pre-season', 'Off-season'] as const) {
 }
 
 /* ── Result ── */
+
+// ── A1: COOKED IS A 7-DAY WINDOW, NOT AN OPEN HOLD ────────────────────────
+//
+// docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md A1 — ranked the worst live defect in
+// the app. A "cooked" declaration was minted with the OPEN scope that belongs to
+// illness, and durableFactHorizon states that open horizons never elapse, so ONE
+// tap deloaded the athlete and made every session optional indefinitely, every
+// week, until they cleared it by hand.
+//
+// Sam, 2026-07-27: readiness and illness "differ in ONE thing, the horizon:
+// readiness runs a fixed 7-day rolling window, illness holds open until cleared".
+// READINESS_DELOAD_WINDOW_DAYS and resolveReadinessDeload had existed since that
+// ruling with NO CALLER anywhere in src/.
+{
+  const scope = readinessDeloadFactScope({
+    declaredOnISO: '2026-08-13', todayISO: '2026-08-13',
+  });
+  ok('a cooked declaration CLOSES — it is not an open horizon',
+    scope.kind !== 'open' && scope.until !== null,
+    `kind=${scope.kind} until=${String(scope.until)}`);
+  ok('and it closes on the 7th day, inclusive of the declaration day',
+    scope.until === '2026-08-19',
+    `until=${String(scope.until)} (expected 2026-08-19: 13th + 6)`);
+  ok('the window is the LAW\'s, not a number re-derived here',
+    READINESS_DELOAD_WINDOW_DAYS === 7);
+
+  // THE DOOR IS THE THING THAT MATTERS, so the mint site is asserted too: a
+  // scope helper nothing calls is exactly the defect A1 names.
+  const producer = readFileSync(
+    join(__dirname, '..', 'utils', 'programControlActions.ts'), 'utf8');
+  ok('the cooked mint site uses the readiness window, not the open illness scope',
+    /level === 'cooked'\s*\n\s*\?\s*readinessDeloadFactScope\(/.test(producer),
+    'programControlActions still mints cooked with durableStateFactScope — the '
+    + 'open horizon that never elapses');
+}
 
 console.log(
   `\nReadiness + illness law: passed=${passed}/${passed + failures.length} failures=${failures.length}`,

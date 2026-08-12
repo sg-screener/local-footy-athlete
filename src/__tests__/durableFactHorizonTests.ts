@@ -299,12 +299,45 @@ function registerScenarios(): void {
       `next week's ACCEPTED mode is "${acceptedWeek(WEEK_2).mode}" — the fact reached the derivation but was never materialised`);
   });
 
+  // T2b — THE INVERTED CELL. Cooked must NOT reach next week, which is the
+  // property A1's fix installs. Stated as its own scenario so the change is
+  // visible in the report rather than implied by an absence.
+  scenario('t2-cooked_week-window', 'T2b cooked_week STOPS after 7 days — it is not an open hold', async () => {
+    seedSpentWeekFriday();
+    await markSpentDaysDone();
+    const result = await commitReadiness('cooked_week');
+    assert((result as { ok?: boolean }).ok === true,
+      `cooked_week was rejected: ${(result as { message?: string }).message}`);
+    const fact = activeFacts().find((candidate) => !isInjurySourceFact(candidate) &&
+      candidate.factKind === 'fatigue');
+    assert(fact && !isInjurySourceFact(fact), 'cooked_week recorded no durable fact');
+    assert(fact.effectiveUntil !== null,
+      'cooked_week minted an OPEN horizon — that is the A1 defect, one tap '
+      + 'deloading the athlete forever');
+    assert(!factHorizonCoversWeek(fact, WEEK_2),
+      `cooked_week still reaches next week (until=${fact.effectiveUntil}) — Sam's `
+      + 'ruling is a fixed 7-day rolling window, not illness\'s open hold');
+  });
+
   // ── T2 — the sibling invariant. A3a is week-scope-wide, not illness-specific:
   // `cooked_week` and `poor_sleep_week` mint their windows from the same
   // `temporaryFactScope({kind:'week'})` call. Pinning them here is what forces
   // the fix to live at the FACT level — a fix that only touches
   // `deriveIllnessRecoveryWeekMode` leaves both of these red.
-  for (const kind of ['cooked_week', 'poor_sleep_week'] as const) {
+  // COOKED IS NO LONGER IN THIS LOOP — INVERTED 2026-08-13, NOT DELETED, and the
+  // reason is Sam's ruling rather than a convenience. This cell asserted that a
+  // cooked declaration reaches NEXT week, which was true only because cooked was
+  // minted with illness's OPEN horizon. Census A1 named that the worst live
+  // defect in the app: one tap deloaded the athlete indefinitely, every week,
+  // until they cleared it by hand. Sam, 2026-07-27 — readiness and illness
+  // "differ in ONE thing, the horizon: readiness runs a fixed 7-day rolling
+  // window, illness holds open until cleared" (Bible :4961).
+  //
+  // `poor_sleep_week` KEEPS the invariant: it is a week-scoped fact and its
+  // horizon genuinely is a fact property. What changed is cooked's SCOPE, not
+  // this file's claim about scopes — which is why the loop narrows rather than
+  // the assertion weakening.
+  for (const kind of ['poor_sleep_week'] as const) {
     scenario(`t2-${kind}`, `T2 ${kind} reaches next week too (the horizon is a fact property, not an illness one)`, async () => {
       seedSpentWeekFriday();
       await markSpentDaysDone();

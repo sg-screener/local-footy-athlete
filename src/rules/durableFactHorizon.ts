@@ -74,12 +74,50 @@ function laterOf(left: string, right: string): string {
  * replaces. Reported on Friday, it starts Friday. Reported on Friday about next
  * week (the athlete is looking at next week's card), it starts next Monday.
  */
+import { resolveReadinessDeload } from './readinessIllnessLaw';
+
 export function durableStateFactScope(args: {
   anchorDate: string;
   todayISO: string;
 }): TemporarySourceFactScope {
   const from = laterOf(args.anchorDate.slice(0, 10), args.todayISO.slice(0, 10));
   return { kind: 'open', from, until: null };
+}
+
+/**
+ * THE READINESS DELOAD WINDOW AS A FACT SCOPE — 7 days, closed, from the day it
+ * was declared.
+ *
+ * ## The defect this exists to end
+ *
+ * A "cooked" declaration was minted with `durableStateFactScope`, the OPEN scope
+ * that belongs to illness — and `:134` of this file says plainly that open
+ * horizons never elapse. So ONE tap on "cooked" deloaded the athlete and made
+ * every session optional **indefinitely, every week, until they went back and
+ * cleared it by hand**. Census `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md` A1,
+ * ranked the worst live defect in the app.
+ *
+ * ## It is his ruling, and the code for it was already written
+ *
+ * Sam, 2026-07-27: readiness and illness *"differ in ONE thing, the horizon:
+ * readiness runs a fixed 7-day rolling window, illness holds open until
+ * cleared"* (Bible `:4961`, `:4957`, `:4960`). `READINESS_DELOAD_WINDOW_DAYS`
+ * and `resolveReadinessDeload` have existed since that ruling and had NO CALLER
+ * anywhere in `src/` — the law was built, correct, and disconnected.
+ *
+ * This function is the missing joint. The window itself is still owned by
+ * `readinessIllnessLaw`; nothing here re-derives seven.
+ */
+export function readinessDeloadFactScope(args: {
+  declaredOnISO: string;
+  todayISO: string;
+}): TemporarySourceFactScope {
+  const window = resolveReadinessDeload({
+    declaredOnISO: args.declaredOnISO,
+    lowReadiness: true,
+  })!;
+  const from = laterOf(window.startISO, args.todayISO.slice(0, 10));
+  return { kind: 'window', from, until: window.endISO };
 }
 
 /**
