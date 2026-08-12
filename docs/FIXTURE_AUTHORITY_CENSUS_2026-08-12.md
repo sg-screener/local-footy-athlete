@@ -436,3 +436,53 @@ week can silently discard provenance the proposal carried, and today only an
 invented game hides it.
 
 **BANKED — every hop above is measured, in both arms. Do not re-derive any of it.**
+
+## §11 THE LINE — canonicalisation re-derives the week and writes the re-derivation over the proposal
+
+**Attempt 3's single probe, taken 2026-08-12. The hunt is finished.**
+
+`commitAcceptedStateTransaction` → **`canonicaliseAcceptedStateCandidate`**
+(`programStore.ts:1539`) re-gates **every hydrated week start**, including the
+following week, and writes the gateway's re-derived day back over the one the
+proposal carried. Probed at that write, both arms:
+
+| | overlay Monday (the proposal) | accepted Monday (the re-derivation) | written back |
+| --- | --- | --- | --- |
+| **HEAD (±7 present)** | `2026-07-19` | **`2026-07-19`** | record survives |
+| **±7 REMOVED** | `2026-07-19` | **`none`** | **record destroyed** |
+
+And one hop earlier, at the canonicaliser's own boundary:
+
+    canon-in  2026-07-19   ->   canon-out  none      (±7 removed)
+    canon-in  2026-07-19   ->   canon-out  2026-07-19 (HEAD)
+
+**THE PROPOSAL IS IDENTICAL IN BOTH ARMS. The re-derivation is not.**
+
+## §12 WHAT IT MEANS — the defect is not the ±7, and it never was
+
+**`canonicaliseAcceptedStateCandidate` does not carry `derivedSessionProvenance`
+through its re-gate.** A week re-derived at commit time comes back without the
+history the proposal was carrying, and the day is overwritten with it.
+
+**THE PHANTOM FIXTURE WAS THE ONLY THING HIDING THAT.** With a fabricated game at
+±7 days, the re-derived Monday happened to be a G+1 day, so the re-derivation
+minted its own record and the loss was invisible. Delete the phantom — correctly,
+because it is an invented fixture the validator trusts as real — and the same
+re-derivation produces a Monday with nothing on it. **Three attempts read that as
+"the deletion broke the link". The deletion only stopped hiding a defect that was
+already there.**
+
+**IT IS THE SAME CLASS AS `LAW-rename-carries-its-references`, LANDED THIS
+MORNING:** a step that rebuilds a thing must carry what pointed at it. There it
+was a seed stabiliser renaming rows and orphaning `conditioningBlock`; here it is
+a commit-time canonicaliser re-deriving a week and dropping provenance. **Second
+sighting of the class in one day, in two unrelated files.**
+
+**ATTEMPT 4 IS A FIX, NOT A PROBE, AND IT IS NAMED:** the re-gate write-back must
+preserve provenance the proposal carried — or the re-derivation must inherit it —
+and then the ±7 deletion lands with its own cells (`test:craft-tier` 36/36, both
+mutation-checked) and the property stays green. **Do not attempt the ±7 deletion
+before that; it is downstream of this.**
+
+**BANKED — every hop measured in both arms, five candidates eliminated, and the
+line named with a trace rather than a grep.**
