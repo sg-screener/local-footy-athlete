@@ -201,7 +201,24 @@ end, because two fixes aimed at it changed nothing:**
    THE ONE UNKNOWN LEFT, and it is the whole remaining unit.** Do not rebuild the
    composer until that row's disappearance is measured; two fixes have already
    been spent on layers that turned out not to be in the chain.
-5. **NARROWED FURTHER:** instrumented at BOTH fallback call sites. The
+5. **NARROWED TO A THREE-STEP WINDOW — instrumented stage by stage.** The
+   corrected fallback's hinge SURVIVES: `aiExercises` = *"Back Squat | Deadlift |
+   Walking Lunges | Single Leg RDL | Nordic Lower"* (RDLs rotated to Deadlift,
+   still a hinge), and it is **still all five rows** after `validatePairings`,
+   after `applyPhaseRepSchemesToWorkoutExercises`, after the load-estimation
+   step, and after `applySubphaseMainLiftLoadMultiplier`.
+   **THE SHIPPED DAY IS FOUR ROWS — *"Back Squat, Walking Lunges, Single Leg RDL,
+   Nordic Lower"*, `missing: [hinge]`.**
+   **SO THE DROP IS AFTER `applySubphaseMainLiftLoadMultiplier` AND BEFORE THE
+   WORKOUT IS RETURNED.** The remaining candidates are exactly:
+   `applyTrainingAgePrescription` (`defaultProgram.ts:2536`) and the
+   strength/conditioning assembly below it — **and the assembly's own branch did
+   NOT run for these days**, which points at the training-age step first.
+   **ONE PROBE CLOSES THIS.** Print the row names either side of
+   `applyTrainingAgePrescription` on a `Lower Squat` day.
+   **⚠ AND IT IS NOT THE ROTATION, NOT THE FALLBACK, AND NOT `validatePairings`
+   — all three are CLEARED by measurement.**
+6. **ALSO instrumented at BOTH fallback call sites. The
    missing-day site (`:1288`) emits the corrected five rows verbatim —
    *"Lower Squat: Back Squat | RDLs | Reverse Lunges | Single Leg RDL | Leg
    Extension"* — and the AI-had-no-strength site (`:2461`) never fired in that
