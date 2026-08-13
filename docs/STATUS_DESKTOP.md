@@ -1172,3 +1172,39 @@ morning.
 3. **ITEMS 26 AND 42**, both named to their lines, both waiting only for a delta
    measurement against the golden — **not for the golden to be clean**, which was
    my own over-strict rule and is withdrawn.
+
+
+---
+
+## 2026-08-13 — ⚠ `tsc` AND THE GATE ANSWER DIFFERENT QUESTIONS, AND I ALMOST FILED IT AS A FAULT
+
+**Chasing the last compile red I ran the raw compiler and got NOTHING, while the
+gate insisted on four errors in the same file. That looks exactly like an
+instrument fault, and it is not one:**
+
+    npx tsc --noEmit                        -> 0 errors for repoLawGuardsTests.ts
+    npx tsc --noEmit -p tsconfig.tests.json -> the 4 the gate reports
+
+**Bare `tsc` uses `tsconfig.json`, which the gate's own header says only ever
+checked `App.tsx` and its reachable graph.** `scripts/typecheck-gate.js:30-32`
+runs three SCOPED configs — `tsconfig.compile.json`, `tsconfig.devtools.json`,
+`tsconfig.tests.json`. **A test file can be clean under bare `tsc` and red under
+the gate, and the gate is the one telling the truth.**
+
+**TO SEE WHAT THE GATE SEES, RUN THE SCOPED CONFIG.** This belongs beside the
+existing note that `npm run typecheck` is the raw compiler over a documented
+backlog and `npm run test:compile` is the gate — the same distinction, one level
+down.
+
+**THE FOUR, HANDED OVER RATHER THAN FIXED** (the file had an 8-minute-old write,
+so a seat is live in it): `repoLawGuardsTests.ts` `:1495`, `:1497`, `:1537`,
+`:1540` — an `added` property against a record typed
+`{ sha, agent, lines }`. **The uses were updated and the type was not**, or the
+reverse. Four lines, one shape, a half-finished edit rather than a defect.
+
+**FIFTH TIME TODAY THAT READING THE SOURCE SETTLED SOMETHING I WAS ABOUT TO
+REPORT WRONG** — after the erg probe's argument type, the "equipment data is
+missing" claim, the by-kind breakdown over-read, and the array-shortening
+illusion twice. **The running theme of this session is not any one defect: it is
+that every instrument I trusted without opening it was lying in a different
+direction.**
