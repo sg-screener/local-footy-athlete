@@ -1249,7 +1249,23 @@ his instruction is standing authority, not history.**
 27. **A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 27).**
 
-28. **DO THE REBUILD — SAM'S ORDER, 2026-08-13, AND IT IS THE ONLY THING LEFT.**
+28. **BLOCKED-BY: other-agent — THE TERMINAL IS EDITING STEP 1'S EXACT LINE AS
+    THIS IS WRITTEN.**
+
+    **NOTHING IS OWED TO SAM — he gave the order: *"do the rebuild"*.**
+
+    **MEASURED, NOT ASSUMED (2026-08-13, desktop agent).** Step 1 is *"add
+    `constraint.scheduleKind === 'travel'` back to `isRuledDerivingConstraint`"*,
+    which lives at `src/store/temporarySourceFactTransaction.ts:745`. That file
+    is `MM`, and its live diff shows the terminal moving that very line:
+    `- (constraint.scheduleKind === 'travel' ||` becoming
+    `+ constraint.scheduleKind === 'travel' ||`, with a new comment reading
+    *"a door that refuses is worse than a door that records, so travel stays
+    on"*. **Steps 2 and 3 are a device pass that cannot start until step 1
+    lands, so the whole item is theirs until it does.**
+
+    ORIGINAL BELOW.
+    **DO THE REBUILD — SAM'S ORDER, 2026-08-13, AND IT IS THE ONLY THING LEFT.**
 
     **His words on seeing the Saturday: *"why the fuck does it read training day?
     it should read whatever the new program is i.e. conditioning, lower body
