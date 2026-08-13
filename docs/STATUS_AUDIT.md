@@ -45,6 +45,40 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE LAST 9 UNARMED SUITES — ANCHORS MEASURED AND HANDED OVER, **NOT SWEPT**
+
+**None of the nine are mine.** All predate today; my 31 are done. Recording the
+per-file anchors so the owner does not re-derive them:
+
+| suite | failure counter | totals line |
+| --- | --- | --- |
+| `approvedIconOwnership` | `let failed = 0` | 203 |
+| `devE2ECoordinator` | `const failures: string[]` | 444 |
+| `devE2EEntryBoundary` | `const failures: string[]` | 198 |
+| `devE2EScenarioSession` | `const failures: string[]` | 600 |
+| `devE2ESeedRegistry` | `const failures: string[]` | 296 |
+| `devE2EWitness` | `const failures: string[]` | 166 |
+| `durableWriteNeverSilent` | `const failures: string[]` | 67 |
+| **`maestroElementContract`** | **NONE FOUND** | **NONE** |
+| `sessionOutcomeParity` | `let failed = 0` | 1092 |
+
+**WHY THIS IS A HANDOVER AND NOT A SWEEP — three measured reasons, not caution:**
+1. **Seven of nine count failures in an ARRAY (`failures: string[]`), not a
+   number.** `totalsPrinted` takes a COUNT, so each needs `failures.length` —
+   a different call from the 31 I armed, and one my pass would have got wrong.
+2. **`maestroElementContract` has NO totals line and NO counter at all.** It
+   cannot be armed without first giving it something true to say. That is
+   authoring, not wiring.
+3. **FOUR OF THE NINE ARE ALREADY RED** (`devE2EScenarioSession`,
+   `devE2ESeedRegistry`, `maestroElementContract`, `sessionOutcomeParity`).
+   Arming a red suite is safe, but touching four failing suites I did not write,
+   at the end of a long session, is how five went red an hour ago.
+
+**THE PRECEDENT IS TODAY'S OWN.** I removed a line the law told me to remove
+across eight files; five broke because the shape differed from the one I had
+generalised from. **These nine differ from my 31 in exactly that way — the
+counter is an array, not an integer.**
+
 ### `teamTrainingRenderingTests` 28/3 — ONE CANDIDATE ELIMINATED, TRIAGE OPEN
 
 Three failures: *"combined fallback keeps strength rows"* (a
