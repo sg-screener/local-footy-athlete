@@ -67,9 +67,39 @@ his instruction is standing authority, not history.**
     free against the budget"*, Bible `:118`). **If the sprint cap and the hard-day
     budget disagree on that night, report it — do not pick one.**
 
+    **5 — ⚠ AMENDED BY SAM MINUTES LATER, AND IT CHANGES WHAT "3" MEANT. DO NOT
+    BUILD FROM POINT 2 ALONE.**
+    > *"sprint training should also not be allowed in season unless they are away
+    > but even then it's probably not worth it - unless they have no team
+    > training then it could be put on g-3 or earlier"*
+
+    **THE TWO STATEMENTS ARE NOT IN CONFLICT — ONE IS A CEILING, THE OTHER IS A
+    PRODUCER.** *"in season that may mean 3 sprint sessions"* describes what the
+    athlete ALREADY GETS from the club: two team trainings and the game. **It was
+    never permission for the app to ADD any.**
+
+    **THE RULE, IN SEASON:**
+    - **The app programs NO sprint work while the athlete has team training.**
+      The anchors already satisfy the floor — Bible `:88`/`:129` say exactly this
+      (*"no extra app sprint is required when those anchors already satisfy the
+      floor"*), and this ruling makes the guidance a REFUSAL.
+    - **THE ONLY EXCEPTION IS AN ATHLETE WITH NO TEAM TRAINING** — away, or no
+      club sessions that week. **Then ONE may be placed, at G-3 OR EARLIER.**
+      Never G-2, never G-1.
+    - **AND IT IS DISCOURAGED EVEN THEN:** *"even then it's probably not worth
+      it"*. **Build it as permitted-not-preferred** — the same shape as his COD
+      ruling. If the week is at all tight it does not go in.
+
+    **THE TEST OF WHETHER THIS IS BUILT RIGHT: an ordinary in-season week with two
+    team trainings and a game contains ZERO app-programmed sprint sessions**, and
+    still reports 3 sprint NIGHTS from the anchors. **Those two numbers being
+    different is the whole ruling.**
+
     **PROVE IT:** the 17 QA scenarios either side, and report sprint NIGHTS per
-    phase — in-season ≤3, late off-season 1, Christmas 1, and a pre-season team
-    night that carries flying sprints without becoming a second hard day.
+    phase — in-season ≤3 **all from anchors, none app-added**; late off-season 1;
+    Christmas 1; a pre-season team night carrying flying sprints without becoming
+    a second hard day; and an in-season no-team-training week placing at most one,
+    at G-3 or earlier.
 
 
 38. **BLOCKED-BY: other-agent — BOTH RULINGS ARE BUILT; THE LIVE REMAINDER IS THE
@@ -532,7 +562,29 @@ his instruction is standing authority, not history.**
     fix are ONE commit, never two. **Next session starts at the branch, not at
     the hunt.**
 
-31. **COD WINDOW + CHRISTMAS BREAK CONTROL — SAM RULED 2026-08-13.** Full text:
+31. **BLOCKED-BY: other-agent — ALL THREE PARTS VERIFIED BUILT BY `audit`
+    2026-08-13; ONLY ARCHIVAL REMAINS, AND THAT IS THE SEAT'S EDIT. COD WINDOW +
+    CHRISTMAS BREAK CONTROL — SAM RULED 2026-08-13.**
+
+    **VERIFIED PART BY PART, NOT TAKEN FROM THE ITEM'S OWN SUMMARY:**
+    1. **The two December questions — BUILT AND READ.** `christmasBreakAsk.ts`
+       (145 lines) with **two PRODUCTION readers**, `useHomeScreen.ts` and
+       `HomeScreenV2.tsx` — not test-only.
+    2. **Bible `:1440` — CORRECTED, and it now carries his ruling verbatim:**
+       *"Late off-season, the Christmas break, and pre-season for an athlete with
+       no team training are the only normal home for COD/Decel work… No COD is
+       required in-season for anyone."*
+    3. **QA scenario S7 — RE-PHASED, not retired.** It was *"off-season with
+       three team trainings"*, a week that cannot exist; it is now
+       `phase: 'Pre-season'`, which legally carries three team days, and the
+       three-team-day shape it exists to guard is preserved.
+
+    **NOTHING IS OWED TO SAM AND NOTHING IS OWED IN CODE.** The marker is
+    `other-agent` because the only remaining act is **archiving to
+    `SEAT_INBOX_COMPLETED`, which is a rewrite of this file and therefore the
+    SEAT's edit, not a terminal's.** ⚠ **AND THAT IS A STRUCTURAL TRAP WORTH
+    NAMING: a fully discharged item keeps the stop hook firing forever, because
+    the one edit that would clear it is the one edit a terminal may not make.** Full text:
     `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
     **Off-season means NO team training, full stop; the Christmas break is an
     off-season inside pre-season.** COD is permitted ONLY when: **no team
