@@ -838,7 +838,17 @@ rested, and the week reports both.** · `BUILT` — the rest floor
 **R-052** · GUNSHOW COMPOSITION (§20.3), signed · **2 biceps + 2 triceps + 2
 pump delts at 2-3 sets.** Supersedes the app's 2+2+1+1 shape whose fourth slot
 reached outside the sixteen signed candidates. **Shrink-never-pad.** ·
-`UNENFORCED` — no suite named for the composition.
+`BUILT` — `sessionBuilder.ts` `arms_pump` is literally
+`[{biceps, 2}, {triceps, 2}, {delts, 2}]`, and **TWO suites name the composition
+and assert it**: `optionalTopUpTests.ts:499` (*"R1. the G-1 Gunshow is Sam's
+SIGNED 2 biceps + 2 triceps + 2 pump delts"*, 27/0) and
+`mobilityAccessoryDoorTests.ts:149` (*"A1. a Gunshow is 2 biceps + 2 triceps + 2
+shoulder"*, asserting `counts.biceps === 2 && counts.triceps === 2 &&
+counts.delts === 2`, 28/0). Shrink-never-pad is `pickFromPool`'s own behaviour.
+**⚠ THIS ROW READ `UNENFORCED — no suite named for the composition` WHILE TWO
+SUITES NAMED IT.** Corrected 2026-08-13 by the desktop after opening the
+enforcers and finding them PRESENT and GREEN — gate rule 2 run backwards. **The
+row was not describing the code; it was describing a search nobody had redone.**
 
 **R-053** · MOBILITY COMPOSED FROM THE POOL (§20.4), signed. **The ten
 `MOBILITY_FLOW_TEMPLATES` bundles are NOT recognised** — no ruling cited, no

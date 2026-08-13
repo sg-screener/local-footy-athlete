@@ -407,3 +407,35 @@ and was not being done.**
 
 `test:ruling-registry` [2] *"the UNENFORCED ruling count only falls"* stays green
 — this is a fall, and an honest one, because the work is genuinely there.
+
+
+---
+
+## 2026-08-13 — THE STALE-`UNENFORCED` SWEEP: TWO ROWS WERE DESCRIBING A SEARCH, NOT THE CODE
+
+**R-004 was not a one-off, so I swept all 77 rows for the same shape.** Two are
+corrected; both had a real enforcer sitting in the tree the whole time.
+
+| row | what it claimed | what is actually there |
+| --- | --- | --- |
+| **R-004** | `UNENFORCED — SEAT_INBOX item 31 part 5` | `christmasBreakAsk.ts` + **two production readers** (`useHomeScreen.ts:79`/`:1584`, `HomeScreenV2.tsx:118`) + `test:christmas-break` **44/0** |
+| **R-052** | `UNENFORCED — no suite named for the composition` | `sessionBuilder.ts` `arms_pump` is literally 2 biceps / 2 triceps / 2 delts, and **TWO suites name it**: `optionalTopUpTests.ts:499` (27/0) and `mobilityAccessoryDoorTests.ts:149` (28/0) |
+
+**BOTH ROWS WERE DESCRIBING A SEARCH NOBODY HAD REDONE, NOT THE CODE.** R-052's
+status is the sharper case: it says *"no suite named for the composition"* while
+two suites name it in their own cell titles.
+
+**WHY THIS MATTERS MORE THAN THE COUNT.** Gate rule 2 guards one direction — *"no
+work starts on a `BUILT` row without opening the enforcer and finding it
+ABSENT"*. **Nothing guards the other**, and a row that says `UNENFORCED` over
+shipped work is worse than a missing row: **it sends the next agent to rebuild
+something that already works**, which is the waste Sam has been angriest about.
+The ask gate reads these rows to decide what reaches him, so a stale status also
+mis-aims the wall that protects his attention.
+
+**THE REVERSE CHECK SHOULD BE ROUTINE** — open the enforcer named in the row's own
+status before believing it. It cost two greps per row and found two in twelve.
+**Ten remain and I did not touch them**: each names a real gap on its face
+(R-013's zero readers, R-014's composer, R-054's *"no suite"*, R-070's pattern
+legality), and marking one `BUILT` without opening its enforcer would be the same
+defect pointing the other way.
