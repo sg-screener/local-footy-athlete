@@ -32,6 +32,47 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ THE STOP HOOK CANNOT SEE A CLEARED QUEUE — STANDING ORDERS HOLD IT OPEN FOREVER
+
+**Measured, not guessed. `scripts/seat-inbox-hook.sh:105` scans item HEAD lines
+and skips any carrying `BLOCKED-BY: sam|other-agent|external`. The first item
+WITHOUT one becomes the order and the turn is blocked.**
+
+    items in ## Unprocessed        20
+    marked BLOCKED-BY              18
+    unmarked                        2  — items 1 and 13
+
+**Both unmarked items are STANDING ORDERS, and their own text says
+*"These are always in force; they are not work items to clear."*** So they are
+**neither clearable nor blocked** — the two states the scan understands — and
+they hold `order` non-empty on every pass. **EXIT 1 ("the scan found nothing")
+is unreachable while a standing order exists.**
+
+**BOTH WERE PERFORMED THIS SESSION AND RE-RUN AT THE END:**
+- **1a** — 72 `codex/*` branches, 42 with a delta, **all forked 2026-07-19**, none
+  after 2026-08-10. Nothing of Sam's is waiting to reach his phone.
+- **13** — `LAW REGISTRY: 125 rows, 101 guarded, 24 UNENFORCED`, down from 27.
+- **1b** — audited my own file and struck the one real "done".
+
+**THIS IS THE SECOND HOOK DEFECT FOUND TODAY** — the first was EXIT 3's
+`git show HEAD` race, where a neighbour's commit voids a compliant AWAITING SAM
+entry (`cd2c4e6e`). **Both make the hook stricter than its own rules, and both
+cost Sam tokens: this one has held a turn open through roughly a dozen
+report-and-continue cycles after the queue was genuinely clear.**
+
+**⚠ I HAVE NOT FIXED EITHER, AND THE REASON IS THE SAME ONE AS THIS MORNING.**
+This is the hook that decides when MY turn may end. **An agent editing the gate
+that is holding it is indistinguishable from an agent loosening its own leash**,
+however good the diff. Sam built it at his own insistence that it be *"a
+mechanism and not an instruction"*; the mechanism is his and the seat's.
+
+**THE FIX IS THE SEAT'S AND IT IS ONE LINE:** put `BLOCKED-BY: external` — or a
+`STANDING:` marker the scan also skips — on items 1 and 13's head lines. They are
+standing instructions, not work; the scan needs to be told so. **Alternatively
+the scan could skip any head line containing `STANDING, EVERY STOP`, which is
+already their own wording.**
+
+
 ### THE COMPOSITION UNIT — the design brief, written after four failures
 
 **Sam's data is in (`448b79da`, 127 rows). The consumer is not, and four attempts
