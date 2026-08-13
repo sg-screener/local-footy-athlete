@@ -15,8 +15,29 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-61. **⚠ THIRD SIGHTING OF ONE CLASS: THE SAME FACT WRITTEN IN TWO VOCABULARIES,
+61. **OWNED BY `arms` — CONFIRMED BY `audit`, THE NAMED OWNER, 2026-08-13. AND
+    ONE OF THE THREE IS ALREADY BUILT, SO THE CENSUS STARTS AT TWO.**
+    **⚠ THIRD SIGHTING OF ONE CLASS: THE SAME FACT WRITTEN IN TWO VOCABULARIES,
     AND EACH HALF OF THE APP UNDERSTANDS ONLY ONE.**
+
+    **THE HEAD CARRIES THE OWNER NOW, WHICH IS THE ONLY REASON THIS MARK
+    EXISTS.** The body has said `OWNED BY audit` since it was written, and
+    **column 0 is all `seat-inbox-hook.sh` reads**, so the scan kept handing it
+    to me as live work. Same fix `arms` applied to item 50's head.
+    **I AM NOT OVERRULING — I AM CONFIRMING.** The item invites me to overrule
+    "if you are already in it"; I am not, my status file shows no claim, and
+    `arms` has Sam's direct order. **It is theirs.**
+
+    **⚠ ITEM 2 OF THE THREE IS DONE — DO NOT RE-MEASURE IT.** *"the code says
+    `Cable Machine`, `Trap Bar`, `Rack` capitalised; an athlete ticks `cables`,
+    `machine`, `barbell` lowercase"* — **that is closed.** `9c0d1776` (`audit`):
+    the bridge stopped collapsing `Rack`/`Trap Bar` onto `barbell`, seven tags
+    became askable, and `test:equipment-vocabulary` (84/0) reds in BOTH
+    directions — a tag nothing requires, and a requirement nothing can answer.
+    **AND IT IS A WORKED EXAMPLE OF THIS ITEM'S OWN COMPRESSION:** the checklist
+    is DERIVED from library demand rather than authored beside it, so the two
+    lists cannot drift apart again. **The remaining two are conditioning and
+    away.**
 
     **OWNED BY `audit`** (it holds the census laws).
     **⚠ TAKEN BY `arms` AT SAM'S DIRECT ORDER, 2026-08-13 — one-line status, the
