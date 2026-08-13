@@ -45,6 +45,41 @@ thing that actually bit.**
 
 ## STATUS
 
+### `recoveryContentIntegrity` 3 reds — TWO ARE COSMETIC, ONE IS A REAL DATA GAP, and my census of it was a DEAD INSTRUMENT
+
+**Followed my own map to the pure-unit suites, where a genuine defect was most
+likely. It found one, and it is small.**
+
+**TWO OF THE THREE ARE COSMETIC — the real reader already handles them.**
+The cells compare against `EXERCISE_TAGS` directly and fail on CASE:
+*expected "Copenhagen Plank (Half)", got "Copenhagen plank (half)"*. But
+`getExerciseTags` **CANONICALISES FIRST** (fixed today), and measured through the
+real reader **both spellings return `groin=caution`**. No safety gap. The cells
+read the raw map where the app reads through a normaliser — **the layer lesson
+again, this time on DATA rather than on a pipeline.**
+
+**ONE IS REAL: `Adductor Rockback` HAS NO TAG ENTRY.** Confirmed twice through
+`getExerciseTags` — `UNDEFINED`. It IS prescribed: `recoveryAddonCoverage.ts:171`
+lists it as a groin recovery exercise and `exercisePools.ts:294` carries it as a
+*"Groin opener"*. **Anything reading tags for it — movement, load, injury caution
+— gets nothing.**
+
+**⚠ WHETHER THAT COSTS AN ATHLETE IS UNMEASURED AND I AM NOT GUESSING.** It is a
+groin OPENER prescribed FOR groin recovery, so an absent groin caution may be
+harmless or even correct. **That needs the injury filter read, not inferred.**
+
+**⚠ AND MY CENSUS OF HOW WIDESPREAD IT IS WAS A DEAD INSTRUMENT — number VOID.**
+I reported *"86 pooled exercises, 0 untagged"*. Re-probed: my walk over
+`EXERCISE_POOLS` returns **ZERO names** — its shape is not `{name}` objects, so
+the census never reached the recovery/prehab pools at all. **The 86 came entirely
+from `STRENGTH_POOLS`, and "0 untagged" is a statement about a set that excludes
+the very exercise that prompted it.**
+
+**TENTH INSTRUMENT FAULT OF THE SESSION, same shape as the other nine:** a
+confident number from a scan that did not reach its subject. **Caught because the
+count contradicted a direct probe I had already run** — two measurements
+disagreeing is the cheapest defect detector I have used all day.
+
 ### THE 21 REDS, CLASSIFIED IN ONE PASS — and the last athlete-facing candidate is REFUTED
 
 **At the fourth layer-mismatch I stopped diagnosing one at a time and classified
