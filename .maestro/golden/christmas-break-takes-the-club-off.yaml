@@ -1,0 +1,106 @@
+appId: com.localfootyathlete.app
+name: Golden - the Christmas break takes team training off the weeks after it
+tags:
+  - e2e
+  - golden
+  - program
+---
+# SAM'S RULING, ON GLASS (SEAT_INBOX item 31 part 5).
+#
+# **Sam, 2026-08-13:** *"it may be helpful to add a button for Christmas break
+# and removing team training sessions from the app - maybe around the 10th of
+# December. That way an athlete can select when their last team training is …
+# that way the app isn't guessing"*.
+#
+# ── WHY THIS FLOW EXISTS RATHER THAN A SCREENSHOT ──
+#
+# **§8 SECOND-WALL LAW.** The last owed pixel of this unit — the club actually
+# coming OFF a week inside the break — was hand-driven three times and died the
+# same way each time: seed, answer, tap the week-forward arrow, and the
+# dev-harness cold-start gate fires (*"DevE2EClock reload mismatch: clock
+# receipt has no active checkpoint"*). Three identical failures is the law's
+# stop sign, and this file is the alternative it demands. **A flow does not
+# interleave with a human's taps, does not depend on hand-computed point
+# coordinates, and leaves a REPEATABLE receipt instead of a screenshot.**
+#
+# ── THE SEED IS THE WHOLE INSTRUMENT ──
+#
+# `christmas-break-ask` is anchored `2026-12-10` — Sam's own date — because the
+# ask is DATE-GATED and no July seed can reach it. The DevE2EClock pins
+# `todayISOLocal()` (`appDate.ts:63-77` reads the snapshot before the wall
+# clock), which is the only reason a simulator can be inside the window at all.
+# Its athlete is PRE-SEASON WITH A CLUB (Tuesday/Thursday): the question is
+# asked only when the phase has a club season AND team days were answered, so a
+# clubless or off-season seed would render nothing and read as a broken control.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: christmas-break-ask
+
+# ── THE CARD IS ON THE WEEK SHAPE, NOT THE DAY SHAPE ──
+# A span is not a day question — the same reasoning that put Away and Add-a-game
+# on the week. Asserted absent on the day screen first, because that is the
+# claim the `!dayFirst` gate makes and nothing else holds it.
+- assertNotVisible:
+    id: "home-christmas-break-ask"
+- runFlow:
+    file: ../common/show-week-shape.yaml
+
+# ── NON-VACUITY FIRST, AND IT IS THE CELL THAT MATTERS MOST ──
+# **The week of the 7th MUST still carry its club nights.** The break starts on
+# the 18th, so if team training were missing HERE the control would be deleting
+# the club wholesale and every assertion below would still pass. This is the
+# difference between "the break works" and "something removed team training".
+- assertVisible:
+    id: "day-row-tue"
+- assertVisible: ".*Team Training.*"
+- takeScreenshot: artifacts/ui-walk/christmas-week-before-break-keeps-the-club
+
+# ── THE DECEMBER QUESTION, IN SAM'S OWN WORDS ──
+- scrollUntilVisible:
+    element:
+      id: "home-christmas-break-ask"
+    direction: DOWN
+    visibilityPercentage: 100
+- assertVisible: "When is your last team training\\?"
+- assertVisible: "We train through Christmas"
+- tapOn:
+    id: "home-christmas-break-open"
+
+# ── THE SHEET OPENS ON DECEMBER, NOT ON ITS FLOOR'S MONTH ──
+# FOUND ON GLASS 2026-08-13 and fixed the same day: the grid anchored its month
+# on `minISO`, and this question's floor is 30 days BACK, so on the 10th it
+# opened on NOVEMBER and made the athlete page forward to reach his own club
+# night. Away never exposed it because its floor IS the month it wants.
+- assertVisible:
+    id: "home-christmas-break-sheet"
+- assertVisible: "December 2026"
+
+# THURSDAY 17 DECEMBER IS A CLUB NIGHT for this athlete, so the break starts on
+# the 18th — the off-by-one the sheet owns.
+- tapOn:
+    id: "home-christmas-break-2026-12-17"
+- assertVisible: "Got it — team training comes off your weeks from then. We'll ask you in January when it's back."
+- takeScreenshot: artifacts/ui-walk/christmas-answer-acknowledged
+
+# ── AND NOW THE WEEK INSIDE THE BREAK ──
+# Two weeks forward is 21-27 December, wholly inside the span. **The club is
+# gone and the athlete's own training is not** — that pair is the ruling, and
+# asserting only the first half would pass on a control that emptied the week.
+# SCROLL BACK TO THE TOP FIRST — the week navigation lives above the day list
+# and answering the question left the screen scrolled to the card. The first
+# version of this flow tapped straight for `program-week-next` and failed
+# "Element not found", which reads exactly like a missing control and is not.
+- scrollUntilVisible:
+    element:
+      id: "program-week-navigation"
+    direction: UP
+    visibilityPercentage: 100
+- tapOn:
+    id: "program-week-next"
+- tapOn:
+    id: "program-week-next"
+- assertVisible:
+    id: "day-row-mon"
+- assertNotVisible: ".*Team Training.*"
+- takeScreenshot: artifacts/ui-walk/christmas-break-week-has-no-club

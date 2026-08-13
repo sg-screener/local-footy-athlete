@@ -280,10 +280,19 @@ function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
   // asking what an active fact does to the week the athlete swipes to next.
   // A single-microcycle seed answers that question with an empty week, which
   // is a seed artifact rather than a finding.
+  // AND `christmas-break-ask` NEEDS FOUR FOR THE SAME REASON, MEASURED THE HARD
+  // WAY. Its whole product is what happens to the weeks AFTER the break starts:
+  // the athlete answers on 10 December and the club comes off from the 18th. A
+  // one-week seed cannot express that — the week-forward control has nowhere to
+  // go, and a flow paging into the break lands back on the week it started on.
+  // **The golden flow's "team training is gone" assertion then fails against
+  // the week BEFORE the break, which legitimately still has it, and reads
+  // exactly like a product defect.** It is not one; it is a seed with one week.
   return seedId === 'spent-week-friday' ||
     seedId === 'feedback-progression-case' ||
     seedId === 'multi-reload-fixture-chain' ||
-    seedId === 'coach-production-replay'
+    seedId === 'coach-production-replay' ||
+    seedId === 'christmas-break-ask'
     ? 4
     : 1;
 }

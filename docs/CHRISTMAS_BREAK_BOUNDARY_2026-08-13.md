@@ -146,8 +146,22 @@ and no rule about which wins.
    page forward to reach his own club night. Away never exposed it because its
    floor IS the month it wants. Fixed with `initialMonthISO`, re-verified on
    glass (it opens on December), held by `[10h]`.
-   **STILL NOT SEEN: the club actually COMING OFF a week inside the break.**
-   The behaviour is held by `[7b]`, `[9]` and `[11c]`; the pixel is owed.
+   **⚠⚠ SEEN, AND IT DOES NOT HAPPEN. THE FLOW FOUND THE REAL GAP.**
+   `.maestro/golden/christmas-break-takes-the-club-off.yaml` seeds December,
+   answers the question, pages to **21-27 December — wholly inside the break** —
+   and **Tuesday the 22nd and Thursday the 24th still read "Strength + Team
+   Training"**, with `1 active modifier impacting program` in the header. The
+   fact is live and the weeks already on screen are unchanged.
+   **THIS IS ITEM 30's DEFECT AND THIS UNIT INHERITS IT WHOLE:** *"the away
+   ruling is carried out when a week is BUILT, and NOT YET on a week already on
+   screen."* The suite is green because `[7b]`, `[9]` and `[11c]` GENERATE weeks
+   with the constraint live; the app has four weeks built before the athlete
+   answers, and nothing re-authors them. **A cell that builds its own world
+   cannot see this, which is the whole reason the pixel was owed.**
+   **THE FLOW STAYS RED ON PURPOSE.** It states Sam's ruling — the club comes
+   off — and weakening it to pass would convert a real gap into a green cell.
+   **One fix serves both facts**, and it is the deriving-lane work item 28 step 1
+   is already inside.
    **⚠ §8 SECOND-WALL LAW — THIS WALL HAS NOW BEEN HIT THREE TIMES AND I HAVE
    STOPPED HAND-DRIVING IT.** Every attempt dies the same way: seed, answer the
    question, tap the week-forward arrow, and the dev-harness cold-start gate
