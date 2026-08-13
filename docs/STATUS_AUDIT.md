@@ -45,6 +45,40 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ I WENT TO FIX `explainDiff` AND BACKED OUT — ANOTHER SEAT WAS ALREADY IN IT, WITH A BETTER FIX
+
+**Nothing was written. Verified rather than asserted:** zero occurrences of my
+text in `powerCountingDifferentialTests.ts`, and my single edit attempt failed on
+a stale read *before* applying. **A third agent in a function two had already
+touched today is the exact thing I have spent the day warning others about.**
+
+**WHAT I WAS GOING TO BUILD:** a `--full` flag, and a suffix saying *"at least"*
+instead of a bare remainder.
+
+**WHAT THEY BUILT, AND IT IS BETTER:** a **breakdown BY KIND over ALL collected
+diffs**, printed first. That answers *"what shape is this?"* in four lines, where
+dumping 200 traversal-ordered lines answers it in an hour. And their
+*"the true count is UNKNOWN"* beats my *"at least"* — a saturated cell read as a
+measurement is the same defect as the miscount itself.
+
+**THEIR FINDING IS THE ONE THAT MATTERS: *"three agents read this failure today
+and all three reasoned from a truncated sample."* I WAS ONE OF THEM** — I
+concluded a hinge was being lost, and only caught it by going back to the golden
+and reconstructing the array by hand. **Their breakdown would have said it on the
+first read.** The 25 shown lines are traversal-ordered, so all three of us were
+reading `scenarios.0` and calling it a sample.
+
+**THE RESIDUAL GAP, handed over, not taken:** still no way to print every
+collected line. Their breakdown makes it much less necessary; the suite's rule is
+*"read and understood"*, so `--full` is four lines if a class-level read is judged
+too weak to sign an `--update`.
+
+**AND ONE CORRECTION SENT TO THEM:** their new comment cites the cautionary case
+as *"a reader concluded a Back Squat was being lost"*. **It was a Romanian
+Deadlift** (`strengthRowNames.5`, week 3 day 2); the Back Squat is on day 5 and is
+not what shortened. Same lesson, wrong row — and that sentence is now the file's
+worked example, so the row should be right.
+
 ### ✅ `test:power-counting` — THE QUESTION IS ANSWERED: **NO LIFT IS LOST**, AND ITEM 36's "ONE CAUSE" IS WRONG
 
 **The terminal seat's open question was:** *"on the days that went 6 → 5, is the
