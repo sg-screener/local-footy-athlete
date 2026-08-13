@@ -225,3 +225,85 @@ commit of that path by me would sweep it.
 **THE ACCEPTANCE CRITERION IS A NUMBER, NOT A GREEN SUITE:** *"92 of 318 falls
 and the ratchet holds it down. A green suite with an unmoved census is not this
 item done."*
+
+---
+
+## 2026-08-13 — ITEM 63's OWN FIX IS INERT. I BUILT IT, MEASURED IT, AND BACKED IT OUT
+
+**THE CENSUS DID NOT MOVE, AND THAT IS THE WHOLE POINT OF THE ITEM.** Item 63
+was written because R-089's ordering landed and the census stayed at 92 of 318.
+**I made the change item 63 prescribes and got the same receipt.**
+
+### WHAT I BUILT, AND WHAT IT DID
+
+Exactly as ordered: `buildStrengthIntent` (`coachingEngine.ts:~5019`) — lower
+archetypes gained `single_leg_knee` + `single_leg_hip`, FB became six patterns,
+addition never substitution, the two single-leg slots always added as a PAIR per
+R-089.
+
+| | baseline `HEAD` | with my change |
+| --- | --- | --- |
+| census | **92 deficient of 318** | **92 deficient of 318** |
+| shapes | 6 distinct | **the same 6, identical text** |
+| row histogram | `{3:126,4:12,5:70,6:42,7:54,8:14}` | **identical** |
+
+**Controlled in a separate worktree at clean HEAD.** Not "the same number" —
+byte-identical shapes and histogram.
+
+**AND THE DIRECT PROBE SAYS WHY.** A full-gym `Lower Body Strength` day ships
+`Back Squat · Deadlift · Walking Lunges · Single-Leg RDL · Pallof Press` —
+**Sam's whole five-slot ladder — and it shipped that at HEAD, before my change.**
+The same probe run in the control worktree returns the identical row list.
+
+**SO THE PLAN IS NOT WHAT COMPOSES THESE ROWS.** Item 63's one-line diagnosis —
+*"`coachingEngine.ts:5016` — the FB case plans `['squat','hinge','push','pull']`…
+put the slots in the plan"* — **is refuted by its own acceptance criterion.**
+
+**I BACKED THE CHANGE OUT** (`ce.bak`, md5 `3c8ddd40…` identical). It is not
+merely inert: it would also stop the `contributions.length === 1` fallback
+branches from ever firing, which is a silent behaviour change bought for nothing.
+**Shipping it green would have looked like progress and been dead weight.**
+
+### WHERE THE 92 ACTUALLY LIVE — MEASURED, ONE CONCRETE DAY
+
+Every deficient day I sampled is the **BODYWEIGHT** athlete's `Lower Body
+Strength`:
+
+```
+Vertical Jump · Walking Lunges · Single-Leg RDL · Reverse Lunges ·
+Glute Bridge · Pallof Press · Romanian Deadlift · (conditioning circuit)
+missing=["squat"]  dup=["hinge","single_leg_knee"]
+```
+
+- `Walking Lunges` **and** `Reverse Lunges` — two single-leg knees.
+- `Glute Bridge` **and** `Romanian Deadlift` — two hinges.
+- **No squat at all** — and `"Bodyweight Squat": []` on Sam's own sheet, so it
+  needs nothing and was available the whole time.
+- **SIX counted strength rows against R-088's cap of seven — there was ROOM.**
+
+**THIS IS A SELECTION DEFECT, NOT A PLANNING ONE.** Single-leg work is already
+being produced. The selector spends its rows duplicating slots it has already
+covered instead of filling one it has not, and `exerciseScorer` has **no
+slot-coverage awareness at all** — one comment mentions `sessionSlotCoverage`
+and nothing reads it.
+
+**R-089 IS THE RIGHT RULE AND IT IS AIMED AT THE WRONG LAYER.** *"Uncovered
+first, then repeat"* is exactly what would fix this day — applied to SELECTION,
+where the rows are chosen, not to the plan, which already asks for enough.
+
+### WHAT I DID NOT DO, AND WHY
+
+**I did not rewrite the selector.** That is a generation change owing
+`test:scenarios` + `test:qa` either side, item 34 bars starting one at a session
+tail, and `.claude/rules/coach-and-plan-edits.md`'s escalation rule is explicit
+about this exact shape — *the earlier layer states the intent correctly and a
+later layer reinterprets it* — **stop, and answer "which layer should own the
+decision" before writing more code.**
+
+**ITEM 63 IS NOT DONE. 92 of 318 has not fallen.** Its own sentence is the
+standard I am holding myself to: *"A green suite with an unmoved census is not
+this item done."*
+
+**`vocab` stamped this item's head line seconds before me and has not touched it
+since; my claim note stands and the code is back to HEAD, so nothing is half-built
+in their way.**
