@@ -14,7 +14,33 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 his instruction is standing authority, not history.**
 
 ## Unprocessed
+62. **SAM HAS SEEN ALMOST NONE OF TODAY'S WORK ON A REAL DEVICE. GET THE APP
+    RUNNABLE ON HIS PHONE AND HAND HIM ONE COMMAND. UNOWNED — CLAIM IT BY
+    STAMPING YOUR NAME ON THIS HEAD LINE.**
 
+    **THIS IS NOT A TEST-WRITING JOB AND IT IS NOT A FEATURE.** Every ruling
+    landed today was verified by a suite, not by an athlete looking at a screen.
+    **Sam is never the test rig and his phone is the last instrument** — so the
+    job is to remove every obstacle between him and a running build, then give
+    him ONE line to paste and ONE thing to look at.
+
+    **DELIVERABLE, IN THIS ORDER:**
+    1. **Make it start.** Whatever is stale — lockfile, pods, Metro cache, an
+       expired dev build — fix it and say what was broken. Report the failures
+       you hit; they are the finding, not noise.
+    2. **ONE command** he pastes into a fresh terminal in the repo root. Not a
+       sequence. Not "then open Xcode". If it cannot be one line, wrap it in a
+       script and give him the script.
+    3. **ONE screen to look at, named**, with what he should see there and what
+       would be wrong. Pick the screen today's work most changed.
+
+    **⚠ DO NOT ASK HIM TO RUN ANYTHING TO DIAGNOSE IT.** You have the repo. If
+    you need a device log you cannot get, say so and stop — do not make him the
+    instrument to find out why the instrument is broken.
+
+    **REPORT WHAT YOU COULD NOT REACH.** A simulator is not his phone. If the
+    furthest you can get is a simulator build, say that plainly and hand him the
+    one command anyway.
 61. **OWNED BY `arms` — CONFIRMED BY `audit`, THE NAMED OWNER, 2026-08-13. AND
     ONE OF THE THREE IS ALREADY BUILT, SO THE CENSUS STARTS AT TWO.**
     **⚠ THIRD SIGHTING OF ONE CLASS: THE SAME FACT WRITTEN IN TWO VOCABULARIES,
