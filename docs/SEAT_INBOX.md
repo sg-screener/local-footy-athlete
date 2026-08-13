@@ -223,6 +223,32 @@ his instruction is standing authority, not history.**
     than from "no pattern is safe". **A cut with no proof is a defect, not a
     reduction.**
 
+    **⚠ THE MEASUREMENT SITE IS FOUND — 2026-08-13, desktop agent. This is the
+    piece the item did not have, and it is one line.**
+    `postGenerationConstraintValidation.ts:1012` runs
+    `while (workouts.filter(hasMainStrength).length < selectedMainStrength)`,
+    trying to reach the selected target by cloning main-strength rows onto days
+    that carry none — skipping fixture days and anything inside three days of a
+    fixture. **`if (!source || !targetWorkout) break;` (`:1026`) IS the moment
+    the week runs out of room, and it records NOTHING.** That break is the
+    exhaustion PROOF the ruling asks for: a day did not remain, measured, not
+    inferred. **`selectedMainStrength` (`:1008`) is the target it fell short of**,
+    so the reduced value is known at the same line.
+
+    **AND THE INJURY PRODUCER AT `section18SafetyPolicy.ts:311` IS NOT THE ONE TO
+    REPLACE.** Its `reason` is `injury_restriction` and its comment records a
+    differential-golden defect it exists to avoid — reading an all-optional
+    early-off-season mode fact as a whole-body restriction and zeroing the
+    frequency. **These are two different reductions with two different reasons.
+    The item's "rather than" reads as a swap; it is an ADDITION.**
+
+    **⚠ ONE QUESTION THE BUILD MUST ANSWER FIRST, AND IT IS ARCHITECTURE, NOT
+    SAM'S:** the break is in POST-GENERATION VALIDATION and the contract is built
+    upstream. **Does that seam write back to the contract, or does the exhaustion
+    status have to be measured where the contract is authored?** Answer that
+    before adding a field — a status written from a seam that does not own it is
+    how `canOverride` was written nine times and read zero.
+
     **(c) BLOCKED-BY: other-agent — THE MAS BLOCK LIMIT.** The fourth clause goes
     in `conditioningSelection.ts:291-304`, and that file is `MM` in the shared
     checkout with changes this seat did not make. **The finding is confirmed
