@@ -261,3 +261,52 @@ it is a contract change, the deepest layer, and it owes `test:scenarios` +
 `test:qa` either side. `coachingEngine.ts` is byte-identical to HEAD. **Next
 session starts at `weeklyExposureContract`, with the two dead ends and this
 alternative all measured.**
+
+
+---
+
+## 2026-08-13 — R-075 STRENGTH ARM: THREE ATTEMPTS, AND §8 SAYS THE ARCHITECTURE IS THE QUESTION
+
+**Three placements tried, all measured, all reverted. `coachingEngine.ts` is
+byte-identical to HEAD.** Under §8 (*"3+ fixes failed → question the
+architecture, do not attempt a fourth"*) I am stopping and stating the
+architectural finding, which the third attempt is what earned.
+
+| attempt | where | what happened |
+| --- | --- | --- |
+| 1 | game branch's remaining-days loop | **DEAD CODE** — the away arm never enters it (`isByeWeek=true`) |
+| 2 | bye branch, FIRST free day | placed on Tuesday, **displaced**; plan came back `Mon[core] Tue[core] Fri[core]` |
+| 3 | bye branch, LAST free day | placed on Thursday, **displaced**; plan came back `Mon[core] Thu[core] Fri[core]` |
+
+**ATTEMPT 3 IS THE ONE THAT EXPLAINS THE OTHER TWO.** The optional did not
+disappear — **it was CONSUMED.** The plan's shape moved from `Mon/Tue/Fri` to
+`Mon/Thu/Fri`, which is my Thursday placement promoted to core. Wherever I put an
+optional, the strength repair takes it: `DISPLACEABLE_TIERS` includes
+`'optional'`, and the repair is looking for a core day.
+
+### THE ARCHITECTURAL FINDING
+
+**THE BYE ALLOCATOR EMITS TWO CORE SESSIONS AGAINST A TARGET OF THREE, AND THE
+REPAIR SILENTLY COVERS THE DIFFERENCE.** Measured directly: after the bye
+branch's own loop the plan is `[Monday[core] Friday[core]]` — two — and the
+contract's `actualCore` is three. The third core day is not planned, it is
+REPAIRED in.
+
+**SO THE WEEK IS PERMANENTLY ONE CORE SHORT AT PLANNING TIME, AND ANY OPTIONAL IS
+THE NEAREST THING FOR THE REPAIR TO EAT.** Sam's Gunshow can never survive while
+that is true — not on the first free day, not on the last, not anywhere. **The
+placement was never the lever, and neither is the contract** (which I said last
+pass and now withdraw: the contract's number is correct at 3; it is the ALLOCATOR
+that under-delivers against it).
+
+**THE UNIT, THEREFORE:** make the bye allocator emit its full core target, so the
+repair stops consuming optionals to do the allocator's job. Then the optional
+budget — already `2`, already computed, already unused by this branch — has room
+for R-075's replacement with no new placement code at all.
+
+**A FOURTH PLACEMENT ATTEMPT IS THE WRONG MOVE AND §8 SAYS SO.** Each of the three
+revealed a new consumer in a different place; that is the pattern the law names.
+
+**BASELINES CAPTURED FOR WHOEVER BUILDS IT** (so the either-side numbers are not
+re-derived): `test:scenarios` **1 failed** (`GAME-MOVE-SAT-TO-FRI`, pre-existing);
+`test:qa` **168 passed / 11 failed across 17 scenarios, 5 allowed findings used**.
