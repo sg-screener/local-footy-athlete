@@ -166,13 +166,25 @@ his instruction is standing authority, not history.**
       pre-season with no club and for late off-season, `false` in season.
     - **Ranking is not it** (the table above).
 
-    **WHAT IS NOT KNOWN, AND I AM NOT GUESSING A FOURTH TIME:** whether the
-    category never reaches template selection at all (`useCategoryPlanner`, or
-    `codPermitted` computing `false` at RUNTIME for a world where the pure
-    function says true), or whether eligibility vets it and downgrades — the
-    picker's own comment says it *"may deliberately downgrade"*. **The next seat
-    instruments ONE thing: does `cod_decel` ever arrive at template selection?
-    That single answer splits the two.**
+    **AND THAT ONE INSTRUMENT WAS RUN RATHER THAN HANDED ON. THE ANSWER IS: IT
+    NEVER ARRIVES.** A probe at `selectConditioningTemplate`
+    (`conditioningSelection.ts:555`, the ONE place a category becomes a template)
+    over pre-season-no-club, **with COD promoted to FIRST so ranking could not be
+    the excuse**:
+
+        5 x category=tempo     4 x category=recovery_flush     2 x category=vo2
+
+    **Eleven calls, THREE categories. `cod_decel` is not among them — and neither
+    are `aerobic_base`, `glycolytic` or `sprint`.** So eligibility is NOT vetoing
+    COD; the planner's chosen category is not what reaches the selector at all.
+    **The wall is UPSTREAM of template selection, it is not COD-specific, and it
+    is losing four of the seven categories — which is a much bigger fact than
+    this item was chasing.**
+
+    **THE NEXT STEP, NAMED AND NOT GUESSED:** find what sits between
+    `pickCondCategory` and `selectConditioningTemplate` and collapses seven
+    categories into three. **Do NOT touch ranking, the pool, or
+    `codDecelPermitted` — all three are measured innocent above.**
     **OWNER: unclaimed — `coachingEngine.ts` is free (`cmp` vs `HEAD`, this
     stop). NOTHING IS OWED TO SAM.**
 
@@ -861,6 +873,53 @@ shared data-shape change its readers correctly followed. Sam was right and the
 seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
+
+- **⚠ NEW 2026-08-13 — THE COMMIT STAMP HE ORDERED THIS MORNING IS ALREADY
+  AMBIGUOUS: TWO SEATS ARE WRITING `Agent: audit`.**
+
+  **REGISTRY-GREP:** grepped `docs/RULINGS_REGISTRY.md` for `Agent:`, *agent
+  name*, *attribution*, *stamp*, *seat name*, *one owner*, *ownership*, *naming*.
+  **Returned NOTHING on agent identity** — `naming` (5) is all exercise-name law
+  (R-027 *"athlete-facing words are never invented by an agent"*), `ownership`
+  and `stamp` (1 each) are program-ownership and provenance. **No row governs
+  who may use which agent name, so this is a gap, not a re-ask.**
+
+  **HIS ORDER, 2026-08-13:** *"you're not labelling your commits, so nobody can
+  see what you've done. From now on end every commit message with `Agent: <name>`
+  — pick a name for what you do."*
+
+  **MEASURED, NOT SUSPECTED.** Ten commits now end `Agent: audit`. **Eight are
+  this seat's** (`4794a18a`, `d15b1a3f`, `c802a08a`, `15d32ef2`, `63fe3fba`,
+  `b19109d4`, `d7953e9d`, `9c865a84`). **`8bf8548b` and `569c27b4` are not** —
+  they are the MAS / census-C2 work and they create `src/rules/masPace.ts`, which
+  this seat has never opened.
+
+  **HOW, AND IT IS INNOCENT:** `docs/STATUS_AGENT3.md` was renamed
+  `docs/STATUS_AUDIT.md` at 11:34 with the new stamp written into it; a seat
+  working from the old filename picked the name up out of that file 14 minutes
+  later. **Nobody impersonated anybody.**
+
+  **IT HAS ALREADY MISFIRED TWICE, IN BOTH DIRECTIONS:**
+  1. A paragraph on item 28-C1 credits `audit` with marking it blocked and
+     withdrawing it. **This seat never touched 28-C1** — `git log
+     --grep='Agent: audit' -- docs/SEAT_INBOX.md` returns exactly ONE commit,
+     `c802a08a`, item 37 only. That paragraph entered in `9c2b7562`/`faa69c2f`,
+     both `Agent: terminal`.
+  2. Corrections this seat wrote were **absorbed into `1229ef0b`** — another
+     seat's commit, also stamped `Agent: audit`. **Nothing was lost**, but the
+     history now cannot say who wrote them.
+
+  **WHY IT IS WORTH HIS THIRTY SECONDS:** every commit in this repo is authored
+  `sg-screener`, so **git cannot separate the seats and the stamp is the ONLY
+  attribution that exists.** A shared stamp is worth LESS than no stamp, because
+  it reads as certainty. **This is precisely the thing he asked for, not working.**
+
+  **RECOMMENDATION, so this is not a bare question:** the second adopter takes a
+  new name — eight of ten commits, the status file, and the cross-session memory
+  are already `audit`, and those cannot be re-stamped retroactively. **A name per
+  SEAT, allocated once and written in the registry, beats a name per job.**
+  **NOT BLOCKING ANYTHING** — work continues either way; only the record suffers.
+  **This seat will not unilaterally take a second name.**
 
 - **✅ ANSWERED AND CLOSED 2026-08-13 — SAM RULED IT AS R-075, AND HIS ANSWER WAS
   "BOTH OF YOUR OPTIONS ARE WRONG".**
