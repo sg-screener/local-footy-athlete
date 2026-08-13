@@ -13,6 +13,11 @@ import {
 } from '../dev/e2e/coachInterpretationReceipt';
 
 let passed = 0;
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 let failed = 0;
 
 function test(name: string, run: () => void): void {
@@ -531,4 +536,5 @@ test('public schema version remains exactly V1', () => {
 });
 
 console.log(`\nCoach interpretation receipt tests: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) process.exit(1);

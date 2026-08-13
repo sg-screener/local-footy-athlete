@@ -5,6 +5,11 @@ import {
 } from '../utils/coachPlan';
 
 let pass = 0;
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 let fail = 0;
 const failures: string[] = [];
 
@@ -154,6 +159,7 @@ if (lowLoadSkiToHiit) {
 }
 
 console.log(`\n— Summary —\n  Pass: ${pass}\n  Fail: ${fail}`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log('\n— Failures —');
   for (const f of failures) console.log(`  • ${f}`);

@@ -31,6 +31,11 @@ import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import type { InjuryState } from '../utils/injuryProgression';
 
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 let pass = 0, fail = 0;
 const failures: string[] = [];
 function ok(name: string, cond: boolean, detail?: string) {
@@ -187,4 +192,5 @@ function currentInjuryConstraint(bucket: string): ActiveInjuryConstraint | undef
 }
 
 console.log(`\nInjury reintroduction tests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) { console.log('\nFailures:'); failures.forEach((n) => console.log(`  - ${n}`)); process.exit(1); }

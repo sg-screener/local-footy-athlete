@@ -26,6 +26,11 @@ import {
 // ─── Test harness ───
 
 let pass = 0;
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 let fail = 0;
 const failures: string[] = [];
 
@@ -410,6 +415,7 @@ console.log('\n[summarizeDiffBullets] composes with filterDiffFromDate (today-fo
 // ─── Summary ───
 
 console.log(`\n[coachWeekDiff] ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log('\nFailures:');
   failures.forEach((f) => console.log(`  • ${f}`));
