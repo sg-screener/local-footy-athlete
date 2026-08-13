@@ -301,6 +301,48 @@ en-dash strip is visible in that screenshot — the authored `10–20 min`,
 `3–4/10` and `8–10 min` all render as `10 20 min`, `3 4/10`, `8 10 min`. **Not
 mine, not fixed, now photographed.**
 
+### 2026-08-13 — CENSUS C4: STEP 1 SHIPPED, STEP 2 ATTEMPTED AND BACKED OUT
+
+**SHIPPED — `f6808ed7` + `4d24be47`.** The running-floor exemption reaches the
+validator, and the QA corpus was a THIRD caller with the same gap. Two wrong nags
+gone (S5 and S6, both early off-season, both carrying a message that PROMISED the
+lift). Corpus 11 → 10 failures, and the full failure diff is exactly those two
+lines. Six cells, mutation-checked both directions.
+
+**⛔ STEP 2 — SEVERITY PARITY — BUILT, MEASURED, REVERTED. IT IS NOT READY AND
+THE REASON IS A FIFTH SIGHTING OF THE SAME DISEASE.**
+
+Raising the `under` branch from hardcoded `'info'` to the ceilings' own
+`capSeverity` map took the corpus **10 → 13**. Read the lines, not the count:
+S5's two findings simply gained weight (`info` → `soft`, correct), and **S6 gained
+two findings it did not have** — the allowed-findings policy is severity-keyed,
+so raising weight orphans its entries.
+
+**BUT THE REAL BLOCKER IS THE SPRINT FLOOR'S OWN SENTENCE.** It ships
+*"0 sprint/COD exposures (Bible target ≥ 1; **zero is valid only in early
+off-season** or with an authorised reduction)"* — and **S6 IS early off-season.**
+`auditWeekAgainstCaps` has exactly ONE exemption parameter in the whole file
+(`runningFloorExemption`, `weeklyExposureCounts.ts:160`). **The sprint floor
+promises an exemption that has no mechanism at all — two lines below the one I
+just fixed.**
+
+So parity now would nag an early-off-season athlete for a sprint floor the app
+itself says is lifted for them. **Backed out; validator verified byte-identical
+to `HEAD`; corpus back to 10.**
+
+**SO C4 IS THREE STEPS, NOT TWO, AND THIS IS THE ORDER:**
+1. ✅ running-floor exemption reaches the validator and the corpus.
+2. **Give the sprint floor (and check conditioning) the same typed exemption**
+   its own message already advertises.
+3. **THEN severity parity**, plus re-keying the severity-sensitive entries in
+   `weekPlanQA/allowedFindings.ts` — which is bookkeeping, not loosening, but
+   must be done with the diff read line by line.
+
+**INSTRUMENT NOTE FROM THE DESKTOP SEAT, WORTH KEEPING:** bare `npx tsc --noEmit`
+reads `tsconfig.json`, which only covers `App.tsx`'s reachable graph — a TEST
+file can be clean under bare `tsc` and red under the gate. **To see what the gate
+sees, run the scoped config (`tsconfig.tests.json`), not `tsc`.**
+
 ### NEXT SESSION STARTS HERE
 
 1. **The glass proof for the pace line** — a golden flow driving the Away control
