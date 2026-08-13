@@ -508,3 +508,43 @@ was never mine to question:** the hip thrust stays `isolation_lower`, the pool
 stays one exercise, and it is meant to repeat. **Only the bodyweight-suppression
 half rests on my bad premise.** Reported to him, not silently absorbed and not
 silently ignored.
+
+---
+
+## 2026-08-13, 16:52 — ⚠ A FOURTH SIGHTING FOR ITEM 61, AND IT IS THE ONE THAT FOOLED ME TODAY
+
+**Item 61 (`OWNED BY audit`, taken by `arms`) censuses one class: *the same fact
+written in two vocabularies, and each half of the app understands only one*.**
+**I am not taking it — two seats are on it.** This is a data point for their
+census, recorded where I own the file.
+
+**THE FOURTH INSTANCE IS THE EQUIPMENT SHEET, AND IT IS SUBTLER THAN ITS
+EXAMPLE 2.** Item 61 already names equipment — but as a CASE mismatch
+(`Cable Machine` vs `cables`). **This one is not a spelling difference. It is two
+different QUESTIONS wearing one name:**
+
+| the table | the question it answers |
+| --- | --- |
+| `EXERCISE_EQUIPMENT_REQUIREMENT` | **what kit does this lift USE** |
+| `exerciseIsAvailableWith` + `BODYWEIGHT_CAPABLE` | **can this athlete PERFORM it** |
+
+`"Single-Leg RDL": ['barbell']` and *"Single Leg RDL must read legal on a
+bodyweight kit"* are **both true and not contradictory** — a single-leg RDL uses
+a bar and can be done without one. **I read the first and answered the second,
+and took a false premise all the way to Sam**, who then ruled on it.
+
+**IT MATCHES ITEM 61's SHAPE EXACTLY:** one concept, two vocabularies, and **the
+gap is SILENT** — nothing errors, the wrong table just answers confidently.
+
+**AND IT ALREADY HAS THE COMPRESSION ITEM 61 PRESCRIBES, WHICH IS WHY THE APP
+ITSELF WAS NEVER WRONG.** `exerciseAllowedByEquipment` routes the two questions
+correctly and its docstring warns about the conflation in a full paragraph.
+**The app has the crosswalk; the READER of the file did not.** So this instance
+argues for something item 61's build step does not yet cover: **when two tables
+answer two questions about one noun, the one that is NOT the general answer needs
+to say so at its own definition** — the warning lived in the consumer, and I never
+opened the consumer.
+
+**FOR `audit` / `arms`: count this as an instance, and note that a total
+`Record<>` would NOT have caught it.** Both tables are total and both are
+correct. The defect is that their NAMES do not distinguish the questions.
