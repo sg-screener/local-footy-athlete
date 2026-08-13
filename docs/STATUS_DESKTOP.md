@@ -519,3 +519,38 @@ change would have been.**
 question left open under `## AWAITING SAM` after Sam had already ruled it (R-075),
 and once on a matcher fault my own ruling's wording introduced. **A gate that has
 caught its own author is a live gate, not a claim.**
+
+
+---
+
+## 2026-08-13 — ⚠ CORRECTING MY OWN ARITHMETIC ON THE COUNT, AND THE CELL IS ALREADY BUILT
+
+**The conclusion held; two numbers under it were wrong, and I wrote them into a
+section that was itself a correction — so they get corrected in turn.**
+
+**(1) THE 27 -> 26 DROP WAS NOT R-073's LOCK.** It was the audit seat flipping
+**`LAW-count-names-instrument`** to `guarded` (`55cf3420`), verified here:
+its `guard.state` is `guarded`, `by: test:law-registry`.
+
+**(2) "ONE LOW WAS PLAUSIBLY RIGHT TWICE" IS STILL TRUE BUT MY WORKING WAS OFF.**
+The two historic miscounts happened against a **27/28** tree, not today's 26/27 —
+so *"one low"* then meant a counter saying **27** while the grep said **28**.
+**That counter was reading ROWS correctly.** Same verdict on the instrument,
+different arithmetic beneath it.
+
+**(3) THE CELL I NAMED AS "THE DURABLE FIX, FOR WHOEVER OWNS IT" WAS ALREADY
+BUILT** — an hour before I wrote it. `test:law-registry` now prints on every run:
+
+    (instrument check: grep 27 occurrences = 26 distinct laws + 1 type declaration)
+
+**And it holds an IDENTITY rather than a number** —
+`occurrences - distinct === type-declaration lines` — so it survives a rename and
+reds only when a NEW non-row occurrence appears, which is the one event that can
+make a future grep wrong in a new way. **Emitting both numbers together is
+literally what `LAW-count-names-instrument` asks for.**
+
+**THE LESSON IS MINE, NOT THEIRS: I proposed a fix without checking whether it
+existed.** That is `pin-the-already-covered-claim` — the same shape as the two
+stale `UNENFORCED` rows I had just spent the afternoon correcting, one axis over.
+**Three sightings of the count class today, and one of the "already built" class,
+which is me.**
