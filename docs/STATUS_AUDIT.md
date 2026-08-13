@@ -45,6 +45,37 @@ thing that actually bit.**
 
 ## STATUS
 
+### `phaseRepPrescription` 12/9 — THE RULES ARE CORRECT; THE SUBPHASE IS NOT REACHING THEM. **ATHLETE-FACING IF IT REPRODUCES, AND I HAVE NOT PROVEN THAT.**
+
+**MEASURED DIRECTLY — `OFFSEASON_SUBPHASE_MAIN_LIFT_REP_SCHEMES` is right:**
+
+    early_offseason   base 3x10  reps 8-12  "Early off-season body-armour work"
+    mid_offseason     base 3x8   reps 6-10  "Mid off-season bridge work"
+    late_offseason    base 3x8   reps 6-8   "Late off-season strength work"
+
+**`mid_offseason` returns exactly what the failing cell asks for** — *"a 6-10
+bridge prescription"*. The rules module is not the defect.
+
+**BUT THE CELL DRIVES `buildWorkoutsFromCoach` WITH `weekInBlock: 3` AND GETS THE
+EARLY SCHEME** — `3 x 8-12`, *"Early off-season body-armour work"*, load
+multiplier 0.75 instead of 0.9. **The subphase is not reaching the schemes.**
+
+**WHAT THAT WOULD COST AN ATHLETE IF IT REPRODUCES IN THE APP:** a mid-off-season
+lifter gets early-off-season dosing — lighter load, higher reps — for the whole
+block. **Sam's own ladder (`early` weeks 1-2, `mid` 3-4) would be inert.**
+
+**⚠ AND I AM NOT CALLING IT A LIVE DEFECT, BECAUSE I HAVE NOT MEASURED THE REAL
+PIPELINE.** The cell calls the builder DIRECTLY with `{ miniCycleNumber: 1,
+weekInBlock: 3 }` and no explicit `offseasonSubphase`. **The real generator may
+pass the subphase explicitly, in which case this is a mis-aimed cell** — the exact
+shape of the conditioning-floor cell I over-claimed on this afternoon and had to
+correct. **Twice is enough.**
+
+**THE NEXT STEP IS ONE PROBE:** generate a real off-season week at block week 3
+and read the prescribed reps. **If they are 8-12, it is athlete-facing. If 6-10,
+the cell is mis-aimed and needs the subphase threading its own inputs already
+have.** Not run here; named so it starts from a measurement rather than a hunch.
+
 ### THE RECEIPT SWEEP STOPS AT TWO — THE OTHER NINE **CANNOT BE CHECKED THIS WAY**, and my comparison was the wrong unit
 
 **Two receipts were genuinely stale and are corrected:**
