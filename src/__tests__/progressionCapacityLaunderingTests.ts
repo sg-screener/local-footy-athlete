@@ -286,8 +286,23 @@ console.log('\n[6] THE CONDITIONING ARM — the same cut, the third writer');
 // It survives for the same reason `test:qa` is byte-identical across this whole
 // change: **no suite in the chain generates a week from an athlete with real
 // session-feedback history**, so the flags never fire in any generated world.
-// Killing it needs a walker world carrying accumulated feedback (L13's
-// territory), which is a unit of its own.
+//
+// **AND THE CHEAP WAY OUT WAS TRIED AND MEASURED, NOT ASSUMED.** Driving
+// `resolveWeekWithConditioning(monday, state)` directly with a hand-built
+// `ScheduleState` does NOT work:
+//   - the feedback set is right — `analyzeFeedbackPatterns` on four `very_hard`
+//     sessions returns `FATIGUE_STREAK, COOKED_REPEAT, FULL_COMPLETION_RUN,
+//     MIXED_SIGNALS`, so the writer would fire;
+//   - but with `currentProgram: null` the resolver returns **seven empty days**,
+//     identical with and without the feedback. **There is nothing for the
+//     conditioning pass to place, so the wire is never exercised.**
+// A test built on that state would have been GREEN, PROVED NOTHING, and looked
+// exactly like a passing wire test — the precise failure this suite's header
+// warns about one paragraph up.
+//
+// **So killing M5 needs a SEEDED world (accepted program + profile), which is
+// the walker's territory (L13) and a unit of its own.** That is now a
+// measurement, not a guess.
 //
 // **Recorded here rather than in a status file because a surviving mutant that
 // only the author knows about is the same as no mutation testing at all.**
