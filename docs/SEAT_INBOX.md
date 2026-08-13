@@ -172,6 +172,37 @@ his instruction is standing authority, not history.**
     **PROVE IT:** a lower day with no hinge is RED; two squats is RED; an upper
     day missing vertical is RED.
 
+    **✅ THE DROP SITE IS NAMED TO THE LINE — 2026-08-13, AND IT IS NOT A BUG,
+    IT IS A GUARD.** R-014 had this bounded to one function
+    (`finaliseWorkoutAfterMutation`) with *"what is left is WHICH LINE INSIDE
+    IT"*. Probed at the candidate branch through the REAL generator; it printed
+    exactly ONE line in the whole away suite, and it is exactly the missing row:
+
+        DRIFT-DROP "Deadlift" pattern=hinge intended=[squat] workout="Lower Squat"
+
+    **THE `main_pattern_drift` BRANCH DELETES THE HINGE ON PURPOSE.** The plan
+    entry names the day's main lift (`squat`), the fallback correctly emits Sam's
+    ladder (squat AND hinge), and the canonicaliser removes the hinge as drift
+    *from the plan*. **So `:227` and `main_pattern_drift` are in direct
+    contradiction and the guard is winning** — *"an athlete is better served by a
+    squat and a hinge than by two squats"*.
+    **SEVEN STAGES WERE CLEARED BEFORE THIS ONE AND TWO FIXES WERE SPENT ON
+    LAYERS NOT IN THE CHAIN — so the receipt matters more than the line.**
+
+    **THE FIX, one sentence, explaining the class rather than the case:**
+    `intendedPatterns` names the day's MAIN LIFT, never its whole content, so a
+    row whose pattern COMPLETES that day's own ladder is not drift. **Do not
+    special-case squat/hinge. Do not delete the drift guard** — it exists to stop
+    a day wandering off its plan.
+
+    **WHY IT IS NOT LANDED IN THIS COMMIT, and this is a cost, not a block:** it
+    changes generated output, so it owes `test:scenarios` + `test:qa` either side
+    plus the drift branch's firing rate across the corpus. **AND THE GUARD THE
+    ORDER ASKS FOR CANNOT SHIP WITHOUT IT:** `LAW-0-registry` forbids a new law
+    row entering as `UNENFORCED`, so *"a lower day with no hinge is RED"* and the
+    fix are ONE commit, never two. **Next session starts at the branch, not at
+    the hunt.**
+
 33. **THE RULINGS REGISTRY + ASK GATE — BUILT.** Full text:
     `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
     `docs/RULINGS_REGISTRY.md`, 70 rows, seeded from every named source; the gate

@@ -231,6 +231,32 @@ end, because two fixes aimed at it changed nothing:**
    **WHAT IS LEFT IS WHICH LINE INSIDE IT** — the function is long and classifies
    rows by domain (`domainPatterns`, `:635`) before rebuilding `finalRows`
    (`:955`). **The unit is now bounded to one file and one function.**
+   **✅ THE LINE IS NAMED, 2026-08-13. IT IS THE `main_pattern_drift` BRANCH**
+   (`workoutCanonicalisation.ts`, the `strengthAndSupportRows` loop —
+   `intendedPatterns.size > 0 && pattern && !intendedPatterns.has(pattern) && !isMinorCrossPatternAccessory(item)`).
+   Probed at that branch through the REAL generator, it printed exactly one line
+   in the whole away suite and it is exactly the missing row:
+
+       DRIFT-DROP "Deadlift" pattern=hinge intended=[squat] workout="Lower Squat"
+
+   **SO NOTHING IS LOSING THE HINGE BY ACCIDENT — THE APP IS DELETING IT ON
+   PURPOSE, AND THE GUARD DOING IT IS THE ONE THAT ENFORCES THE PLAN.** The plan
+   entry names the day's MAIN lift (`squat`), the fallback correctly emits Sam's
+   ladder (squat AND hinge, per `:227`), and the canonicaliser then removes the
+   hinge as drift *from the plan*. **`:227` and `main_pattern_drift` are in
+   direct contradiction, and the guard is currently winning:** *"An athlete is
+   better served by a squat and a hinge than by two squats."*
+   **THE FIX IS ONE SENTENCE AND IT EXPLAINS THE CLASS, NOT THE CASE:
+   `intendedPatterns` names the day's MAIN LIFT, never its whole content, so a
+   row whose pattern COMPLETES that day's own ladder is not drift.** Do not
+   special-case squat/hinge; do not delete the drift guard, which exists to stop
+   a day wandering off its plan.
+   **WHAT IT COSTS TO LAND, stated so it is not started blind:** it changes
+   generated output, so it needs `test:scenarios` and `test:qa` either side, and
+   the drift branch's firing rate across the corpus — one probe, already written.
+   **AND IT CANNOT ENTER THE LAW REGISTRY UNTIL IT IS FIXED:** `LAW-0-registry`
+   forbids a new row entering as `UNENFORCED` (Sam withdrew that clause
+   2026-08-10), so the guard and the fix are ONE commit, never two.
    **⚠ AND A SECOND FINDING FELL OUT OF THE SAME PROBE:** two other days NAMED
    *"Lower Squat"* arrive carrying **only upper-body accessories** — *"Bicep
    Curls | Tricep Pushdowns | Face Pulls | Leg Extension | Pallof Press"* and one
