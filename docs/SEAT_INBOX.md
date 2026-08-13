@@ -319,7 +319,25 @@ his instruction is standing authority, not history.**
     today — copy that unit exactly.**
 
 
-34. **⚠ SAM HAS RULED HOW A SESSION IS BUILT, AND IT IS NOT A NUMBER. THE
+34. **BLOCKED-BY: other-agent — THE TERMINAL IS BUILDING THIS RIGHT NOW, AND
+    PART 2 HAS ALREADY LANDED.**
+
+    **NOTHING IS OWED TO SAM. He ruled it; this is engineering.**
+
+    **MEASURED 2026-08-13, desktop agent — the item is moving under the file:**
+    - **Part 2 IS BUILT** — `01ef5863` *"CONDITIONING STOPS COUNTING AS A GYM
+      EXERCISE"*, which is this item's `ROLES_EXEMPT_FROM_COUNTING` addition.
+    - **Part 1 IS IN FLIGHT** — `cc6ef611` *"SAM'S SLOT LAW IS A RULE NOW"* added
+      `src/rules/sessionSlotCoverage.ts` and its suite (158 + 152 lines) minutes
+      ago, and `sessionRowCounting.ts` is `MM` in the shared checkout with
+      changes this seat did not make.
+
+    **AND ITS EFFECT ON THE QUEUE IS ALREADY PAID:** the floor question it voids
+    was removed from items 21 and 25 in `61424153`, and R-014 carries the ruling.
+    **Zero questions now point at Sam.**
+
+    ORIGINAL BELOW.
+    **⚠ SAM HAS RULED HOW A SESSION IS BUILT, AND IT IS NOT A NUMBER. THE
     SESSION-FLOOR QUESTION IS VOID. 2026-08-13.**
 
     **OWNED BY THE TERMINAL. Top of the queue — it deletes one of the five
