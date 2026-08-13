@@ -258,6 +258,49 @@ by 12.5KB — a file Sam pays for by the byte.
 > ON IT".** I put the stat and the commit in one shell invocation, so a
 > 155-deletion number scrolled past unread. Two commands, always.
 
+### 2026-08-13 — THE GLASS ROUTE IS BUILT AND TWO THIRDS PROVEN
+
+**Two flows under `.maestro/golden/mas-*`. The route that was "unknown" this
+morning is now driveable end to end; only the last assertion is unproven.**
+
+**✅ PROVEN — `mas-pace-absent-while-the-club-runs.yaml`, green, screenshotted.**
+The non-vacuity half. Opens Monday's session on the standard seed, **expands the
+conditioning section**, and reads a rendered row: `Bodyweight Conditioning
+Circuit`, *"Intensity: Very easy, 3–4/10"* — **an aerobic flush, no %MAS at all**
+— and no pace line. **That is the app being right**, and it is the exact frame my
+offline measurement predicted (0 MAS rows on a club week).
+
+**⚠ AND ITS FIRST VERSION WAS VACUOUS — THE SCREENSHOT IS THE ONLY THING THAT
+CAUGHT IT.** It asserted "no pace" straight after opening the session, and
+`SessionExecutionSection` starts COLLAPSED (`useState(false)`), so the
+conditioning rows were never in the tree. **A green cell reading a section nobody
+had opened.** Fifth sighting of the instrument-first law this turn and the one I
+would have shipped as proof.
+
+**✅ PROVEN — the Away control drives green, and the frame is a receipt for
+someone else's ruling too.** `mas-session-names-his-own-pace.yaml` runs week
+shape → `home-away-entry` → leave Tue → return 2026-07-27 → equipment yes, all
+COMPLETED, and the week comes back with **Tue/Thu stripped of "+ Team Training"
+and Saturday's GAME replaced by a CORE Conditioning day** — R-075's conditioning
+half, repeatable rather than a one-off screenshot
+(`artifacts/ui-walk/pace-away-week-applied.png`).
+
+**⛔ UNPROVEN — the last three steps: open Wednesday's session, expand
+conditioning, read `Your pace:`.** Not a flow defect. **The simulator is shared
+and the desktop seat is driving it for the scenarios golden right now**; the app
+dropped into the dev-harness cold-start gate (*"DevE2EClock reload mismatch"*)
+mid-run twice, and item 35 records the identical collision from the other side.
+**I stopped rather than fight for the device.**
+
+**WHAT THE NEXT RUN NEEDS — nothing rewritten, just an uncontended simulator.**
+Run the pair in order. If Wednesday turns out not to carry the MAS row, Saturday
+is the other candidate; both read CORE Conditioning on the away week.
+
+**AND A NOTE I FILED THIS MORNING IS CONFIRMED ON GLASS:** `cleanNotes`'
+en-dash strip is visible in that screenshot — the authored `10–20 min`,
+`3–4/10` and `8–10 min` all render as `10 20 min`, `3 4/10`, `8 10 min`. **Not
+mine, not fixed, now photographed.**
+
 ### NEXT SESSION STARTS HERE
 
 1. **The glass proof for the pace line** — a golden flow driving the Away control
