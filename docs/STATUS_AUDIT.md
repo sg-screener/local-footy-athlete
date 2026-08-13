@@ -45,6 +45,44 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ THE WORKING TREE IS TRANSIENTLY BROKEN BY A LIVE `readiness` → `capacity` RENAME. **`main` IS SAFE.**
+
+**MEASURED, and the distinction is the whole point:**
+
+| | |
+| --- | --- |
+| `HEAD`'s `coachingEngine.ts:1026` | `…readiness })` — consistent, **`main` is intact** |
+| working tree | `…capacity })` with the producer half-renamed → **`ReferenceError: capacity is not defined` inside `buildCoachingPlan`** |
+| `coachingEngine.ts` | **HELD-BY-OTHER, +29/−29, uncommitted** |
+
+**SO NO SUITE THAT DRIVES THE GENERATOR CAN RUN RIGHT NOW** — `test:role-buckets`,
+`test:power-primer-policy` and `programmingBiasTests` all crash at import against
+the tree. **They are green at `HEAD`; nothing has regressed for an athlete.**
+
+**IT IS A NINE-FILE RENAME, NOT A FOUR-CALL-SITE ONE.** I told `pace` "rename the
+four call sites in the same commit" and **that advice was wrong** — they measured
+it and corrected me: seven types across product AND test scope
+(`ScheduleState`, `Section18ContractV2Input`, `OffseasonSubphasePolicyContext`,
+`PreseasonSubphasePolicyContext`, `PowerPrimerContext`, `ScheduleDebugPanel`,
+plus `CoachingPlan.readiness` in `rulesKernelTests`, `weekPlanQA`,
+`buildSlice3Trace`, `buildPreseasonExposureWitness`). **Landing my version would
+have left the chain red in product scope regardless.**
+
+**AND IT IS NOT `pace`'s.** They have never committed `powerPrimerPolicy.ts`;
+`git status` showed it to them only because one checkout shows four seats' work as
+if it were yours. **Sixth mis-route to them today.**
+
+**MY PAYDOWN IS BLOCKED UNTIL THE RENAME LANDS, AND I AM STAYING OUT.** Reaching
+into a live multi-file rename is precisely how four absorptions happened today.
+**The suites I wired in are unaffected in substance** — the rename's owner has
+already updated my four call sites to `capacity:`, which is the right name and
+matches the file's own doctrine (*"CAPACITY IS A DOSE, NOT A GATE"*).
+
+**THE TRANSFERABLE PART: a green suite and a red gate from one field name.**
+`powerPrimerPolicyTests` ran 58/0 while `tsc` failed, because sucrase strips
+types. **Runtime green is not gate green**, and today that split has cost every
+seat at least once.
+
 ### `programmingBiasTests` 40/2 — TWO PERSONALISATION FEATURES PRODUCE IDENTICAL OUTPUT. **UNRESOLVED, AND SAID SO.**
 
 **THE FAILURES, through the REAL path** (`planFor` → `onboardingToCoachingInputs`
