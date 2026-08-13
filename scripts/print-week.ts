@@ -1,0 +1,833 @@
+/**
+ * THE PAPER PHONE — SEAT_INBOX item 65, seat `printer`, 2026-08-13.
+ *
+ *   npm run print:week          (or: npx sucrase-node scripts/print-week.ts)
+ *
+ * Runs the REAL generator offline and writes six plain-English markdown files
+ * to `docs/printed-weeks/`. Sam reads them on his phone and says "that week is
+ * wrong because X". That is the whole point: every ruling this repo landed was
+ * verified by a suite, and a suite can tell you a slot is empty but it cannot
+ * tell you a week is shit.
+ *
+ * ## IT PRINTS THE APP'S OWN CHAIN, NOT A SECOND ONE
+ *
+ * `useSchedule.ts:projectWeekFor` is the app's read path. This mirrors it:
+ *
+ *   1. `generateProgramLocally` — the deterministic, no-network generator the
+ *      app itself runs for every rebuild. Not a test fixture, not a plan
+ *      builder called directly: the same function the Rebuild button calls.
+ *   2. `buildProgramTabProjectedWeek` — the resolver + projection the Program
+ *      tab reads.
+ *   3. `project()` — THE ONE CANONICAL PROJECTION. Every athlete-visible string
+ *      it returns is `SignedCopy`.
+ *
+ * ## ⚠ NOT ONE WORD IN THE OUTPUT IS WRITTEN BY THIS SCRIPT
+ *
+ * The SignedCopy law says athlete-facing words come from an authored source or
+ * a Sam ruling, and `signedCopy()` THROWS rather than falling back. This script
+ * does not catch that and paper over it — it catches it, records the id, and
+ * prints `[NO COPY — the app has no words here]` in that slot. The count and the
+ * id list at the foot of every file are the most valuable thing here: they are
+ * exactly the words Sam still owes the app, measured rather than guessed.
+ *
+ * The one thing the script chooses is LAYOUT — headings, indentation, the order
+ * of the days. Layout is not vocabulary.
+ *
+ * READ-ONLY AND OFFLINE. It generates, projects and writes markdown. It touches
+ * no store, no network and no app file.
+ */
+
+/* eslint-disable import/first */
+declare global {
+  // eslint-disable-next-line no-var
+  var __DEV__: boolean;
+}
+(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+
+import { mkdirSync, writeFileSync } from 'fs';
+import { resolve } from 'path';
+
+import { generateProgramLocally } from '../src/services/api/generateProgram';
+import { buildProgramTabProjectedWeek } from '../src/utils/visibleProgramReadModel';
+import { project } from '../src/rules/projectVisibleWeek';
+import { ownSeasonPhase } from '../src/rules/seasonPhaseOwner';
+import { profileCapacityBandOrNull } from '../src/utils/readiness';
+import { resolveEquipmentAvailability } from '../src/utils/equipmentAvailability';
+import {
+  equipmentRequiredFor,
+  exerciseIsAvailableWith,
+} from '../src/data/exerciseEquipmentRequirement';
+import { displayReps } from '../src/rules/prescriptionDisplay';
+import {
+  UnsignedCopyError,
+  registerSignedCopy,
+  signedCopyEntry,
+} from '../src/rules/signedCopy';
+import {
+  createTemporaryScheduleFact,
+  composeTemporarySourceFactCompatibility,
+  temporaryFactScope,
+} from '../src/rules/temporarySourceFact';
+import type { SeasonPhaseClock } from '../src/rules/seasonPhaseClock';
+import type { VisibleDay, VisiblePart, VisibleWeek } from '../src/rules/visibleProjection';
+import type { DayOfWeek, OnboardingData, TrainingProgram } from '../src/types/domain';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE GAP MARKER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * WHAT GOES IN A SLOT THE APP HAS NO WORDS FOR.
+ *
+ * Item 65, verbatim: *"If the app shows nothing, print `[NO COPY — the app has
+ * no words here]` and count how many times you had to."*
+ *
+ * ## WHY THIS IS REGISTERED INTO THE SHEET RATHER THAN CAUGHT PER FIELD
+ *
+ * `project()` composes a whole week and throws on the FIRST unsigned id, so a
+ * try/catch around it yields one gap and hides every other. The ids themselves
+ * are computed inside `project`'s private helpers — re-deriving them out here
+ * would be a second naming authority, which is the exact defect the projection
+ * exists to prevent.
+ *
+ * So the loop below runs `project()`, reads the id out of the `UnsignedCopyError`
+ * it threw, registers THAT id — and only that id — carrying this marker, and
+ * runs again. It converges on the full gap list, one id per pass, and the list
+ * is printed. Nothing invents a word: the registered text says, in the output,
+ * that there is no word.
+ *
+ * This mutation is process-local to a script that only writes markdown. Nothing
+ * it registers is ever persisted, and the app is not changed.
+ */
+const NO_COPY = '[NO COPY — the app has no words here]';
+
+const MAX_GAP_PASSES = 400;
+
+/** Run `project()`, filling every gap it hits with the marker. Returns both. */
+function projectWithGapsMarked(args: {
+  week: Parameters<typeof project>[0]['week'];
+  weekStart: string;
+}): { visibleWeek: VisibleWeek; gapIds: string[] } {
+  const gapIds: string[] = [];
+  for (let pass = 0; pass < MAX_GAP_PASSES; pass += 1) {
+    try {
+      return { visibleWeek: project(args), gapIds };
+    } catch (err) {
+      if (!(err instanceof UnsignedCopyError)) throw err;
+      const id = /"([^"]+)"/.exec(err.message)?.[1];
+      if (!id) throw err;
+      if (signedCopyEntry(id)) {
+        // Registered and still throwing means the throw was not this id — bail
+        // rather than loop, because a silent spin is worse than a loud stop.
+        throw err;
+      }
+      gapIds.push(id);
+      registerSignedCopy([{
+        id,
+        source: 'sam_ruling',
+        provenance:
+          'NOT A WORD. scripts/print-week.ts marks a slot the signed-copy sheet '
+          + 'does not cover, so the gap is printed and counted instead of being '
+          + 'invented. Never persisted; process-local to the printer.',
+        text: NO_COPY,
+      }]);
+    }
+  }
+  throw new Error(
+    `print-week: still hitting unsigned copy after ${MAX_GAP_PASSES} passes — `
+    + 'the gap list is not converging, which is itself the finding.',
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE SIX ATHLETES
+// ═══════════════════════════════════════════════════════════════════════════
+
+const WEEK_MONDAY = '2026-08-10';
+
+/**
+ * A FULL GYM, so a thin week is never explained away by a missing rack. The
+ * bodyweight scenario is the one that removes it, deliberately and alone.
+ */
+const FULL_GYM = {
+  tags: {
+    barbell: 'have', dumbbells: 'have', bench: 'have', rack: 'have',
+    pullup_bar: 'have', bands: 'have', kettlebell: 'have', plyo_box: 'have',
+    foam_roller: 'have', cables: 'have', machine: 'have', trap_bar: 'have',
+  },
+  modalities: { bike_erg: 'have', rower: 'have', treadmill: 'have' },
+  answeredOn: '2026-08-01',
+} as const;
+
+/** Bodyweight only. `tags: {}` IS the answer — see `equipmentAnswerTests` [3]:
+ *  "an athlete who owns nothing gets bodyweight and nothing else". */
+const BODYWEIGHT_ONLY = {
+  tags: {},
+  modalities: {},
+  answeredOn: '2026-08-01',
+} as const;
+
+function athlete(overrides: Partial<OnboardingData>): OnboardingData {
+  return {
+    firstName: 'Sam',
+    ageRange: '22-26',
+    position: 'Midfielder',
+    heightCm: 183,
+    weightKg: 84,
+    experienceLevel: 'Intermediate',
+    squatStrength: 'Around bodyweight',
+    benchStrength: 'Around bodyweight',
+    twoKmTimeTrial: { seconds: 420, testedOn: '2026-07-20' },
+    conditioningLevel: 'Good',
+    sprintExposure: '2+ times per week',
+    recentTrainingLoad: 'Very consistent',
+    injuries: [],
+    goals: ['Get stronger', 'Run faster'],
+    trainingLocation: 'Commercial gym',
+    equipmentAnswer: FULL_GYM,
+    teamTrainingDuration: '90 minutes',
+    teamTrainingIntensity: 'Hard',
+    ...overrides,
+  } as unknown as OnboardingData;
+}
+
+const WEEKDAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+/** A clock that puts the target week at `phaseWeekNumber` inside its phase. */
+function clockAtPhaseWeek(
+  selectedPhase: 'Off-season' | 'Pre-season' | 'In-season',
+  phaseWeekNumber: number,
+): SeasonPhaseClock {
+  const entry = new Date(`${WEEK_MONDAY}T12:00:00`);
+  entry.setDate(entry.getDate() - (phaseWeekNumber - 1) * 7);
+  return {
+    protocolVersion: 1,
+    selectedPhase,
+    phaseEntryWeekStartISO: `${entry.getFullYear()}-${String(entry.getMonth() + 1)
+      .padStart(2, '0')}-${String(entry.getDate()).padStart(2, '0')}`,
+    originProvenance: 'explicit_user_phase_change',
+    persistenceProvenance: 'preserved_persisted_state',
+  };
+}
+
+const DAY_NAME_TO_NUMBER: Readonly<Record<string, number>> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+  Thursday: 4, Friday: 5, Saturday: 6,
+};
+
+/**
+ * THE SAME `ScheduleState` `useScheduleState` HANDS THE PROJECTION.
+ *
+ * ⚠ THIS WAS THE PRINTER'S FIRST REAL BUG AND IT IS WORTH THE COMMENT. The
+ * first run passed only `currentProgram` + `currentMicrocycle`, and Saturday came
+ * out EMPTY on an in-season athlete whose answer was "Saturday". It read like the
+ * generator had lost the game. It had not: the recurring fixture is derived by
+ * `effectiveGameDatesAround` from `state.gameDay` / `state.usualGameDay` /
+ * `state.seasonPhase`, and a state missing those three says "no games" rather
+ * than failing. **An under-fed harness manufactures a defect that looks exactly
+ * like a real one.** Every field the live adapter sets is set here, from the
+ * app's own owners — the phase from `ownSeasonPhase`, the capacity band from
+ * `profileCapacityBandOrNull`, the equipment from `resolveEquipmentAvailability`
+ * — so nothing in the output is this script's idea of a default.
+ */
+function scheduleStateFor(args: {
+  profile: OnboardingData;
+  program: TrainingProgram;
+  todayISO: string;
+  activeConstraints: readonly unknown[];
+  temporarySourceFacts: readonly unknown[];
+  markedDays: Readonly<Record<string, string>>;
+}) {
+  const preferred = args.profile.preferredTrainingDays ?? [];
+  return {
+    currentProgram: args.program,
+    currentMicrocycle: args.program.microcycles[0] ?? null,
+    manualOverrides: {},
+    weekScopedOverlays: {},
+    userRemovalConstraints: [],
+    removalDecisions: [],
+    temporarySourceFacts: args.temporarySourceFacts,
+    markedDays: args.markedDays,
+    athleteContext: {
+      injuries: args.profile.injuries ?? [],
+      equipmentTags: resolveEquipmentAvailability(
+        args.profile, args.activeConstraints as never, args.todayISO,
+      ),
+      onboardingData: args.profile,
+    },
+    seasonPhase: ownSeasonPhase({ program: args.program, profile: args.profile }).phase,
+    usualGameDay: args.profile.usualGameDay,
+    gameDay: args.profile.gameDay,
+    capacity: profileCapacityBandOrNull(args.profile),
+    blockState: undefined,
+    sessionFeedback: {},
+    weightOverrides: {},
+    availableDayNumbers: preferred.length > 0
+      ? preferred.map((name) => DAY_NAME_TO_NUMBER[name]).filter((n) => n !== undefined)
+      : undefined,
+    activeInjury: null,
+    activeConstraints: args.activeConstraints,
+    modalityPreferences: {},
+  };
+}
+
+interface PrintScenario {
+  readonly slug: string;
+  readonly title: string;
+  /** What Sam is being asked to judge in THIS week, in his words not the code's. */
+  readonly whatToLookFor: string;
+  readonly profile: OnboardingData;
+  readonly phaseWeek: number;
+  /** undefined = the profile's game day; null = a bye, no fixture at all. */
+  readonly targetFixtureDay?: DayOfWeek | null;
+  /**
+   * The athlete's calendar marks. A BYE IS A MARK, not just a generation option
+   * — `effectiveGameDatesAround` re-derives a virtual recurring fixture from
+   * `gameDay` + In-season unless the day carries `'noGame'` or `'rest'`. Telling
+   * generation `targetFixtureDay: null` and leaving the calendar empty produced
+   * a week that was PLANNED as a bye and DISPLAYED with a Game Day on it — the
+   * printer's second harness bug, and the second one that would have been filed
+   * as an app defect.
+   */
+  readonly markedDays?: Readonly<Record<string, string>>;
+  readonly awaySpan?: { from: string; until: string };
+}
+
+const SCENARIOS: PrintScenario[] = [
+  {
+    slug: '1-early-off-season',
+    title: 'Early off-season — week 1 back, no club, full gym',
+    whatToLookFor:
+      'Nothing here comes from the club. Is this a sane first week back — '
+      + 'enough lifting, not too much running, and does it look like something '
+      + 'you would actually walk into a gym and do?',
+    profile: athlete({
+      seasonPhase: 'Off-season',
+      gameDay: undefined,
+      trainingDaysPerWeek: 4,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      teamTrainingDaysPerWeek: 0,
+      teamTrainingDays: [],
+    }),
+    phaseWeek: 1,
+  },
+  {
+    slug: '2-deep-pre-season',
+    title: 'Deep pre-season — six weeks in, three club nights, full gym',
+    whatToLookFor:
+      'This is the heaviest week the app ever writes. Is the running hard '
+      + 'enough for six weeks into pre-season, and is there any day here you '
+      + 'would refuse to do on top of three club nights?',
+    profile: athlete({
+      seasonPhase: 'Pre-season',
+      gameDay: undefined,
+      trainingDaysPerWeek: 6,
+      preferredTrainingDays: [...WEEKDAYS, 'Saturday'],
+      teamTrainingDaysPerWeek: 3,
+      teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+    }),
+    phaseWeek: 6,
+  },
+  {
+    slug: '3-in-season-two-team-nights',
+    title: 'In-season — Saturday game, Tuesday and Thursday at the club',
+    whatToLookFor:
+      'The ordinary week, and the one that has to be right. Tuesday and '
+      + 'Thursday are club nights and Saturday is the game. Is there anything '
+      + 'on those days you would not do, and is Friday light enough?',
+    profile: athlete({
+      seasonPhase: 'In-season',
+      gameDay: 'Saturday',
+      trainingDaysPerWeek: 5,
+      preferredTrainingDays: [...WEEKDAYS],
+      teamTrainingDaysPerWeek: 2,
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+    }),
+    phaseWeek: 8,
+  },
+  {
+    slug: '4-bye-week',
+    title: 'In-season bye — no game this Saturday',
+    whatToLookFor:
+      'Same athlete as file 3, with the game taken off. Does the week USE the '
+      + 'bye — more work, a proper session on the Saturday — or does it just '
+      + 'leave a hole where the game was?',
+    profile: athlete({
+      seasonPhase: 'In-season',
+      gameDay: 'Saturday',
+      trainingDaysPerWeek: 5,
+      preferredTrainingDays: [...WEEKDAYS],
+      teamTrainingDaysPerWeek: 2,
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+    }),
+    phaseWeek: 8,
+    targetFixtureDay: null,
+    markedDays: { '2026-08-15': 'noGame' },
+  },
+  {
+    slug: '5-away-trip',
+    title: 'In-season, away all week — Wednesday to Sunday',
+    whatToLookFor:
+      'Same athlete as file 3, away from Wednesday. The club nights and the '
+      + 'game are meant to come off and his OWN sessions are meant to stay. '
+      + 'Compare it to file 3 side by side: what actually changed?',
+    profile: athlete({
+      seasonPhase: 'In-season',
+      gameDay: 'Saturday',
+      trainingDaysPerWeek: 5,
+      preferredTrainingDays: [...WEEKDAYS],
+      teamTrainingDaysPerWeek: 2,
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+    }),
+    phaseWeek: 8,
+    awaySpan: { from: '2026-08-12', until: '2026-08-16' },
+  },
+  {
+    slug: '6-bodyweight-only',
+    title: 'In-season with nothing but a floor — no gym at all',
+    whatToLookFor:
+      'The athlete owns no equipment. Every exercise here has to be doable in '
+      + 'a hotel room or a park. Is any of it impossible without kit, and is '
+      + 'there enough of it to be worth opening the app for?',
+    profile: athlete({
+      seasonPhase: 'In-season',
+      gameDay: 'Saturday',
+      trainingDaysPerWeek: 5,
+      preferredTrainingDays: [...WEEKDAYS],
+      teamTrainingDaysPerWeek: 2,
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+      equipmentAnswer: BODYWEIGHT_ONLY as unknown as OnboardingData['equipmentAnswer'],
+    }),
+    phaseWeek: 8,
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RUNNING ONE SCENARIO THROUGH THE APP'S CHAIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * The away trip, built the way the AWAY DOOR builds it.
+ *
+ * `HomeScreenV2`'s away sheet writes a `set_schedule_modifier` action, whose
+ * executor calls `createTemporaryScheduleFact` with a WINDOW scope and
+ * `scheduleKind: 'travel'` and NO unavailable dates (a span-shaped trip marks
+ * no day unavailable — that is the difference between it and the door it
+ * replaced). Generation then reads it back through
+ * `composeTemporarySourceFactCompatibility`, which is the ONLY route a fact
+ * takes into generation. Both halves here are the app's, so what prints is what
+ * the athlete would get.
+ */
+function awayConstraintsFor(span: { from: string; until: string }, todayISO: string) {
+  const fact = createTemporaryScheduleFact({
+    observedDate: span.from,
+    scope: temporaryFactScope({ kind: 'window', from: span.from, until: span.until }),
+    scheduleKind: 'travel',
+    unavailableDates: [],
+    unavailableWeekdays: [],
+    maxSessions: null,
+    sourceActor: 'athlete',
+    sourceSurface: 'away_this_week',
+  } as Parameters<typeof createTemporaryScheduleFact>[0]);
+  const compatibility = composeTemporarySourceFactCompatibility({
+    temporarySourceFacts: [fact],
+    onDate: todayISO,
+  });
+  return { fact, compatibility };
+}
+
+interface PrintedWeek {
+  readonly scenario: PrintScenario;
+  readonly program: TrainingProgram;
+  readonly visibleWeek: VisibleWeek;
+  readonly gapIds: readonly string[];
+  /** What the athlete actually owns, resolved by the app's own equipment owner. */
+  readonly equipmentTags: readonly string[];
+}
+
+function runScenario(scenario: PrintScenario): PrintedWeek {
+  const todayISO = WEEK_MONDAY;
+  const away = scenario.awaySpan ? awayConstraintsFor(scenario.awaySpan, todayISO) : null;
+  const activeConstraints = away ? [...away.compatibility.activeConstraints] : [];
+  const temporarySourceFacts = away ? [away.fact] : [];
+
+  const program = generateProgramLocally(scenario.profile, {
+    todayISO,
+    seasonPhaseClock: clockAtPhaseWeek(
+      scenario.profile.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
+      scenario.phaseWeek,
+    ),
+    activeConstraints,
+    temporarySourceFacts,
+    previousProgram: null,
+    ...(scenario.targetFixtureDay !== undefined
+      ? { targetFixtureDay: scenario.targetFixtureDay }
+      : {}),
+  } as Parameters<typeof generateProgramLocally>[1]);
+
+  const weekDays = buildProgramTabProjectedWeek({
+    mondayISO: WEEK_MONDAY,
+    todayISO,
+    state: scheduleStateFor({
+      profile: scenario.profile,
+      program,
+      todayISO,
+      activeConstraints,
+      temporarySourceFacts,
+      markedDays: scenario.markedDays ?? {},
+    }) as unknown as Parameters<typeof buildProgramTabProjectedWeek>[0]['state'],
+    overrideContexts: {},
+    modalityPreferences: {},
+  });
+
+  const { visibleWeek, gapIds } = projectWithGapsMarked({
+    week: weekDays,
+    weekStart: WEEK_MONDAY,
+  });
+  const equipmentTags = resolveEquipmentAvailability(
+    scenario.profile, activeConstraints as never, todayISO,
+  );
+  return { scenario, program, visibleWeek, gapIds, equipmentTags };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE PAGE
+// ═══════════════════════════════════════════════════════════════════════════
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+  'August', 'September', 'October', 'November', 'December'];
+
+function dayHeading(dateISO: string): string {
+  const date = new Date(`${dateISO}T12:00:00`);
+  return `${DAY_NAMES[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+}
+
+/**
+ * SOMETHING THE ATHLETE COULD NOT DO, OR COULD NOT READ.
+ *
+ * Item 65: *"If a value cannot be rendered in words an athlete would use, THAT
+ * IS A FINDING — print it loudly rather than prettifying it."* So these are not
+ * swallowed and they are not silently fixed. They print beside the line that
+ * caused them and again at the foot of the page.
+ */
+interface PrintFinding {
+  readonly date: string;
+  readonly kind:
+    | 'impossible_without_kit'
+    | 'unreadable_prescription'
+    | 'named_block_with_nothing_in_it';
+  readonly line: string;
+}
+
+/**
+ * PARTS THAT ARE ALLOWED TO CARRY NO EXERCISES.
+ *
+ * Team training and the fixture are APPOINTMENTS — the club runs them and the
+ * app has nothing to list, so an empty row list is the correct answer. Every
+ * other kind is work the plan chose for the athlete, and a plan that names a
+ * block and then puts nothing in it has given them a heading to look at. The
+ * distinction is the projection's own (`APPOINTMENT_COMPONENTS` in
+ * `projectVisibleWeek`), read here by part kind rather than re-guessed.
+ */
+const PARTS_THAT_MAY_BE_EMPTY: ReadonlySet<string> = new Set(['team_training', 'game']);
+
+/**
+ * IS THIS EXERCISE POSSIBLE WITH WHAT THE ATHLETE OWNS?
+ *
+ * Asked of `exerciseIsAvailableWith` — the app's OWN equipment owner, the same
+ * one generation filters with — never of a list this script keeps. It already
+ * knows that Walking Lunges are fine unloaded (`BODYWEIGHT_CAPABLE`) and that a
+ * Face Pull is not, so the answer is the app's, not the printer's opinion.
+ */
+function impossibleWithKit(name: string, equipmentTags: readonly string[]): string | null {
+  if (equipmentTags.length === 0) return null;
+  if (exerciseIsAvailableWith(name, equipmentTags as string[])) return null;
+  const required = equipmentRequiredFor(name);
+  return required && required.length > 0
+    ? `needs ${required.join(' + ')}, which this athlete does not have`
+    : 'the app says this athlete cannot do it with their equipment';
+}
+
+/**
+ * A RANGE WHERE SAM'S OWN LAW SAYS ONE NUMBER.
+ *
+ * The prescription-display law (`rules/prescriptionDisplay.ts`, Bible `:4936`):
+ * *"ranges remain the generation source, the athlete sees a single middle
+ * number, logging assumes it."* His example: "3x8-12 is written as 3x10".
+ *
+ * `DayWorkoutScreenV2:2213` obeys it — `formatStrengthSetsReps` runs the numbers
+ * through `displayReps`. `project()`, the projection that is supposed to be the
+ * ONE authority, emits `row.prescription.sets_reps_range` instead. So the two
+ * surfaces show the same set two different ways.
+ *
+ * Counted per page rather than marked per line: it is true of nearly EVERY
+ * strength row, and a warning on all of them would bury the findings that are
+ * about one exercise. The midpoint shown is `displayReps`'s own, so the "should
+ * read" figure is the app's answer and not the printer's arithmetic.
+ */
+function rangeAgainstTheLaw(prescription: string): string | null {
+  const match = /^(\d+)\s*×\s*(\d+)-(\d+)$/.exec(prescription.trim());
+  if (!match) return null;
+  const shown = displayReps(Number(match[2]), Number(match[3]));
+  return shown === null ? null : `${match[1]} × ${shown}`;
+}
+
+function renderPart(
+  part: VisiblePart,
+  ctx: {
+    date: string;
+    equipmentTags: readonly string[];
+    findings: PrintFinding[];
+    ranges: { count: number; example: string | null };
+  },
+): string[] {
+  const lines: string[] = [];
+  lines.push(`**${part.headline}**`);
+  if (part.detail) lines.push(part.detail);
+  if (part.rows.length === 0) {
+    lines.push('');
+    if (PARTS_THAT_MAY_BE_EMPTY.has(part.kind)) {
+      lines.push('_(the club runs this one — the app lists nothing for it)_');
+    } else {
+      lines.push(
+        '_(no exercises listed)_  ⚠ **THIS BLOCK HAS A NAME AND NOTHING IN IT.**',
+      );
+      ctx.findings.push({
+        date: ctx.date,
+        kind: 'named_block_with_nothing_in_it',
+        line: `"${part.headline}" is on the day with no exercises under it`,
+      });
+    }
+    return lines;
+  }
+  lines.push('');
+  for (const row of part.rows) {
+    let line = `- ${row.name} — ${row.prescription}`;
+    const impossible = impossibleWithKit(String(row.name), ctx.equipmentTags);
+    if (impossible) {
+      line += `  ⚠ **CANNOT BE DONE — ${impossible}.**`;
+      ctx.findings.push({
+        date: ctx.date,
+        kind: 'impossible_without_kit',
+        line: `${row.name} — ${impossible}`,
+      });
+    }
+    // `1 × 1` is not a prescription an athlete can act on. The day screen
+    // suppresses it deliberately (`formatConditioningRowPrescription` returns
+    // '' for rep-based conditioning rows: "showing '1 reps' would be confusing
+    // filler"); the projection prints it. Flagged, not tidied away.
+    if (/^\s*1\s*×\s*1\s*$/.test(String(row.prescription))) {
+      line += '  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**';
+      ctx.findings.push({
+        date: ctx.date,
+        kind: 'unreadable_prescription',
+        line: `${row.name} — the app says "1 × 1"`,
+      });
+    }
+    const shouldRead = rangeAgainstTheLaw(String(row.prescription));
+    if (shouldRead) {
+      ctx.ranges.count += 1;
+      if (!ctx.ranges.example) {
+        ctx.ranges.example = `"${row.prescription}" should read "${shouldRead}"`;
+      }
+    }
+    lines.push(line);
+    if (row.cue) lines.push(`  - ${row.cue}`);
+  }
+  return lines;
+}
+
+function renderDay(
+  day: VisibleDay,
+  ctx: {
+    equipmentTags: readonly string[];
+    findings: PrintFinding[];
+    ranges: { count: number; example: string | null };
+  },
+): string[] {
+  const lines: string[] = [];
+  lines.push(`## ${dayHeading(day.date)}`);
+  lines.push('');
+  lines.push(`### ${day.headline}`);
+  lines.push('');
+  if (day.parts.length === 0) {
+    if (day.capabilities.refusal) lines.push(day.capabilities.refusal);
+    else lines.push('_(nothing on this day)_');
+    lines.push('');
+    return lines;
+  }
+  for (const part of day.parts) {
+    lines.push(...renderPart(part, { date: day.date, ...ctx }));
+    lines.push('');
+  }
+  return lines;
+}
+
+/**
+ * THE ONE RENDERER — projected week in, plain-English markdown out.
+ *
+ * EXPORTED BECAUSE ITEM 66 ASKED FOR IT, and item 66's order says so directly:
+ * *"Pairs with item 65 — reuse its printer, do not write a second one."* The
+ * synthetic athlete (seat `sim`) arrives at a projected week a different way —
+ * out of lived-in accepted state rather than a fresh generation — and from
+ * `project()` onward it is this exact function. Two renderers would produce two
+ * [NO COPY] counts, and neither would be worth reading.
+ *
+ * IT TAKES A PROJECTED WEEK, NOT A PROFILE. Everything upstream — which athlete,
+ * which week, how the state was reached — is the caller's. This owns layout and
+ * the two loud checks, and nothing else.
+ */
+export function renderWeekAsPlainEnglish(args: {
+  projected: VisibleWeek;
+  heading: string;
+  /** One line telling Sam what to judge in this week. Optional. */
+  intro?: string;
+  /** Gap ids from `projectWithGapsMarked`. Counted and listed at the foot. */
+  noCopyIds?: readonly string[];
+  /**
+   * The athlete's resolved equipment, from `resolveEquipmentAvailability`. Pass
+   * it and every row is checked against what they own; omit it and the check is
+   * skipped rather than guessed.
+   */
+  equipmentTags?: readonly string[];
+}): { markdown: string; noCopyCount: number; findings: readonly PrintFinding[] } {
+  const gapIds = args.noCopyIds ?? [];
+  const equipmentTags = args.equipmentTags ?? [];
+  const findings: PrintFinding[] = [];
+  const ranges = { count: 0, example: null as string | null };
+  const lines: string[] = [];
+
+  lines.push(`# ${args.heading}`);
+  lines.push('');
+  lines.push(`**Week of ${dayHeading(args.projected.weekStart)}.**`);
+  lines.push('');
+  if (args.intro) {
+    lines.push(`**What to look for:** ${args.intro}`);
+    lines.push('');
+  }
+  lines.push('---');
+  lines.push('');
+  for (const day of args.projected.days) {
+    lines.push(...renderDay(day, { equipmentTags, findings, ranges }));
+  }
+  lines.push('---');
+  lines.push('');
+
+  lines.push('## Words the app does not have');
+  lines.push('');
+  if (gapIds.length === 0) {
+    lines.push('None. Every word on this page came out of the app.');
+  } else {
+    const counts = new Map<string, number>();
+    for (const id of gapIds) counts.set(id, (counts.get(id) ?? 0) + 1);
+    lines.push(
+      `**${gapIds.length} thing${gapIds.length === 1 ? '' : 's'} on this week has `
+      + `no wording written for it yet.** Wherever you see \`${NO_COPY}\` above, `
+      + 'it is one of these:',
+    );
+    lines.push('');
+    for (const id of [...counts.keys()].sort()) lines.push(`- \`${id}\``);
+  }
+  lines.push('');
+
+  lines.push('## Things wrong with this week');
+  lines.push('');
+  if (ranges.count > 0) {
+    lines.push(
+      `**Every set on this page is written as a range — ${ranges.count} of them.** `
+      + 'Your rule is that the athlete sees one middle number, not a range '
+      + `(${ranges.example}). The day screen inside the app follows that rule; `
+      + 'this list does not, so the same set is written two different ways '
+      + 'depending on where you look at it.',
+    );
+    lines.push('');
+  }
+  if (findings.length === 0 && ranges.count === 0) {
+    lines.push('Nothing the printer could detect. Judge the training itself.');
+  } else if (findings.length > 0) {
+    const impossible = findings.filter((f) => f.kind === 'impossible_without_kit');
+    const unreadable = findings.filter((f) => f.kind === 'unreadable_prescription');
+    if (impossible.length > 0) {
+      lines.push(
+        `**${impossible.length} exercise${impossible.length === 1 ? '' : 's'} the `
+        + 'athlete has no equipment for:**',
+      );
+      lines.push('');
+      for (const f of impossible) lines.push(`- ${dayHeading(f.date)} — ${f.line}`);
+      lines.push('');
+    }
+    if (unreadable.length > 0) {
+      lines.push(
+        `**${unreadable.length} line${unreadable.length === 1 ? '' : 's'} that does `
+        + 'not say how much work to do:**',
+      );
+      lines.push('');
+      for (const f of unreadable) lines.push(`- ${dayHeading(f.date)} — ${f.line}`);
+      lines.push('');
+    }
+    const empty = findings.filter((f) => f.kind === 'named_block_with_nothing_in_it');
+    if (empty.length > 0) {
+      lines.push(
+        `**${empty.length} block${empty.length === 1 ? '' : 's'} with a name and no `
+        + 'exercises:**',
+      );
+      lines.push('');
+      for (const f of empty) lines.push(`- ${dayHeading(f.date)} — ${f.line}`);
+      lines.push('');
+    }
+  }
+
+  return { markdown: lines.join('\n'), noCopyCount: gapIds.length, findings };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+const OUT_DIR = resolve(__dirname, '..', 'docs', 'printed-weeks');
+
+function main(): void {
+  mkdirSync(OUT_DIR, { recursive: true });
+  const printed: PrintedWeek[] = [];
+  const failures: { slug: string; error: string }[] = [];
+
+  let totalFindings = 0;
+  for (const scenario of SCENARIOS) {
+    try {
+      const result = runScenario(scenario);
+      printed.push(result);
+      const rendered = renderWeekAsPlainEnglish({
+        projected: result.visibleWeek,
+        heading: scenario.title,
+        intro: scenario.whatToLookFor,
+        noCopyIds: result.gapIds,
+        equipmentTags: result.equipmentTags,
+      });
+      totalFindings += rendered.findings.length;
+      writeFileSync(resolve(OUT_DIR, `${scenario.slug}.md`), rendered.markdown, 'utf8');
+      console.log(
+        `  wrote ${scenario.slug}.md — ${result.visibleWeek.days.length} days, `
+        + `${rendered.noCopyCount} missing words, ${rendered.findings.length} findings`,
+      );
+      for (const f of rendered.findings) console.log(`      ${f.date}  ${f.line}`);
+    } catch (err) {
+      const error = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      failures.push({ slug: scenario.slug, error });
+      console.error(`  FAILED ${scenario.slug} — ${error}`);
+    }
+  }
+
+  const totalGaps = printed.reduce((sum, p) => sum + p.gapIds.length, 0);
+  const allIds = new Set(printed.flatMap((p) => [...p.gapIds]));
+  console.log(`\nSix weeks asked for, ${printed.length} written.`);
+  console.log(`[NO COPY] total: ${totalGaps} across ${allIds.size} distinct ids.`);
+  for (const id of [...allIds].sort()) console.log(`  ${id}`);
+  console.log(`Findings across the six weeks: ${totalFindings}.`);
+  if (failures.length) {
+    console.error(`\n${failures.length} scenario(s) did not generate at all.`);
+    process.exitCode = 1;
+  }
+}
+
+main();
