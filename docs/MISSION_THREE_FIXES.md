@@ -13,6 +13,7 @@ four slices; nothing else.
 | 1B | Equipment class — every route asked, not just the pool walk | **PARTIAL** — item 5 shipped (`116bf886`); items 1–4 built and measured, not shipped |
 | 1B-completion | R-090 lands; all four routes closed | **HARD STOP AT BUDGET** — every acceptance criterion met on the six printed scenarios, but 20 kit-limited worlds in the 180-world sweep are newly REFUSED. Not shipped; parked on `slice1bc-parked` (`375f32ce`). |
 | 1B-final | Find the lost record, fix that one site | **STOP — STEP 1 INCONCLUSIVE.** Both named suspects killed with receipts. **The record is not lost anywhere.** No fix written. |
+| 1B-final-2 | Name why the gateway refuses a week its evaluator accepts | **STOP — THE PREMISE IS FALSE AND THREE MECHANISMS CONTRIBUTE.** The evaluator never accepted it; my 1B-final receipt was wrong. Measurement only, no code. |
 | 2 | Authorship | NOT STARTED |
 | 3 | Close the loop | NOT STARTED |
 
@@ -565,6 +566,153 @@ worlds" into a named site.
 - Nothing about the record itself resisted at any point. It is written where it
   should be, survives every pass, and reaches the evaluator intact.
 
+### Slice 1B-final-2 — measurement only. The question's premise was mine, and it was wrong
+
+**⚠ FIRST, A CORRECTION TO MY OWN 1B-FINAL RECEIPT.** I reported that
+`evaluateSection18EffectiveWeek` **ACCEPTS** the athlete's real w2 week. **It does
+not.** That was inferred from a printer that only emitted *changed* verdicts, so
+an unprinted line was read as "accepted". Instrumenting the gateway directly
+shows the primary candidate's evaluation blocking with all six findings. The
+question this slice was given — *"why does the gateway refuse a week its own
+evaluator accepts"* — rests on that error. **Nothing accepts this week.**
+
+World: **`Off-season / 4d / club / Bodyweight Only / w2`**, run against
+`slice1bc-parked` (`375f32ce`) in a temporary worktree. Probes discarded with the
+worktree; nothing committed but this report.
+
+#### 1. The candidate table
+
+Four gateway entries for week `2026-07-27`, each `hasRegenerate=false
+hasSafeFallback=false` at the inner level. 13 `resolveCandidate` resolutions.
+
+| # | Arm | Input sessions | main_strength rows IN | removals IN | Selected candidate | Selected `main_strength` rows | Selected removals | Search | Evaluator blocking | Disposition |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| w1 ×4 | primary | Upper Push, Lower Squat, Full Body Strength | **1** | 3 days | same | 1 | 3 | accepted | none | **repaired → PUBLISHED** |
+| 1 | primary | Upper Push, Tempo Intervals, Lower Body Strength, Lower Squat | **0** | 4 days | Hard Conditioning ×3 | 0 | **0** | impossible (2 evaluated) | 6 findings | impossible |
+| 2 | primary (+HC) | …, Hard Conditioning, … | **0** | 4 days | Hard Conditioning ×3 | 0 | **0** | impossible | 6 | impossible |
+| 3 | displaced_capacity_reduced | same 4 | **0** | 4 days | input + Hard Conditioning | 0 | 4 | impossible | 6 | impossible |
+| 4 | regenerated | same 4 | **0** | 4 days | input + Hard Conditioning | 0 | 4 | impossible | 6 | impossible |
+| 5 | safe_fallback | same 4 | **0** | 4 days | input + Hard Conditioning | 0 | 4 | impossible | 6 | impossible |
+
+The six findings are identical on every arm:
+`required_minimum_shortfall:main_strength:0`,
+`required_minimum_shortfall:sprint_high_speed:0`, and
+`pattern_restore_failure:strength_patterns:0` **×4** — one per pattern.
+
+#### 2. The refusal mechanism — THREE, and they are independent
+
+Per the fence, they are named and **not fixed**.
+
+**M1 — THE DIRECT CAUSE, AND IT IS NOT R-090's.** The composed w2 week contains
+**zero rows classified `main_strength`**. Every surviving lift —
+`Bodyweight Squat`, `Walking Lunges`, `Single-Leg RDL`, `Glute Bridge`,
+`Push-ups` — carries `section18Evidence.role = 'strength_accessory'` and
+`mainStrengthPattern = null`. With no main lift anywhere, §18 correctly reports
+`main_strength:0` and all four patterns unrestored. Predicate:
+`section18EffectiveWeekEvaluator.ts` `ledger.strengthPatterns.meaningfulMainLiftCount[pattern] > 0`,
+and `evaluateNumeric`'s `args.actual < args.required` for `main_strength`.
+**A bodyweight week has no main lift by classification, independent of any
+equipment removal.** Week 1 published because it retained exactly **one**.
+
+**M2 — R-090's DOWNGRADE DOES NOT FIRE, AND I CANNOT SAY WHY FROM THIS WORLD.**
+All four patterns *are* named across the week's removals (push on Mon, pull on
+Tue, squat + hinge on Thu, squat on Fri), so `kitUnachievablePatterns` should be
+complete and every finding should come back `domain: 'equipment'`, advisory. They
+come back `domain: 'strength_patterns'`, blocking — on arms 3–5 where the
+selected candidate *does* carry removals. Candidate selection and the visible
+projection (`resolveFinalVisibleSection18Week`, which is what the evaluator is
+handed) are both plausible, **and I am not guessing between them.**
+
+**M3 — A DEFECT IN THE PARKED IMPLEMENTATION, found by looking at the week.**
+Three removals name exercises whose `requires` is `[]`, which under Sam's sheet
+convention means *"bodyweight — needs nothing"*: **`Chest Supported Row`,
+`Romanian Deadlift`, `Pallof Press`. The gate removed work this athlete can
+actually do**, and the record it wrote says the exercise needs nothing. The
+likely mechanism is the alias step added in 1B-completion —
+`resolveExerciseName(rawName)` before the sheet lookup — resolving these to
+barbell-requiring names while `requires` is reported from the raw name, so the
+test and the reason disagree about which exercise they are talking about.
+**Unproven, and not fixed.**
+
+#### 3. The thrown signature vs an honest one
+
+- **What actually caused the refusal:** the athlete's own composed w2 week
+  (`primary`), which has zero main-strength rows. Arm 1 is already impossible.
+- **What `failureSignature` currently describes:** `selectedEvaluation` — the
+  repair search's *selected* candidate, which on arms 1–2 is a synthesised
+  **`Hard Conditioning ×3`** week the athlete never had and which carries no
+  removals at all.
+- **Why that matters even though the codes coincide here:** `main_strength:0` is
+  true of both weeks, so the signature *looks* right and has misled three
+  slices. It is right by coincidence, not by construction. **I must also correct
+  my 1B-final claim that the signature "reports the last repair candidate, not
+  the week that failed": the primary arm carries the identical signature, so the
+  thrown text is not wrong about this world — it is merely uninformative.**
+- **What an honest signature should report for this world:** the arm that failed
+  (`primary`), the identity of the week evaluated (composed vs synthesised
+  repair candidate), and the discriminating fact — *"composed week contains 0
+  rows classified main_strength; patterns squat/hinge/push/pull all absent; 4 of
+  4 named kit-impossible by the week's own removal record"*. Specification only;
+  no code touched.
+
+#### 4. The composed w2 week, in plain athlete language
+
+**This is the ORIGINAL composed week — the `primary` candidate, not a repair
+candidate.** It is what R-090 would publish if §18 let it through.
+
+> **Monday — "Upper Push"** *(the app has retyped this day as Conditioning)*
+> - Warm-up
+> - 20 m Acceleration Reps — 8 sets
+> - Push-ups — 3 × 8-15
+> - Bodyweight Conditioning Circuit
+> - *Left out: Overhead Press (needs barbell + rack), Lateral Raise (needs dumbbells)*
+>
+> **Tuesday — "Tempo Intervals"** *(this is the day that was Upper Pull)*
+> - Bodyweight Conditioning Circuit — 13 sets
+> - *Left out: Pull-Ups (needs a bar), Face Pulls (needs cables), Chest Supported Row (**needs nothing — see M3**)*
+> - **There is no pulling of any kind left on this day, and no upper-body work at all.**
+>
+> **Thursday — "Lower Body Strength"** *(retyped Conditioning)*
+> - Bodyweight Squat — 3 × 8-15
+> - Single-Leg RDL — 2 × 8-15
+> - Walking Lunges — 3 × 8-15
+> - Glute Bridge — 2 × 8-15
+> - Bodyweight Conditioning Circuit
+> - *Left out: Back Squat (needs barbell + rack), Romanian Deadlift (**needs nothing — M3**), Pallof Press (**needs nothing — M3**)*
+>
+> **Friday — "Lower Squat"**
+> - Bodyweight Squat — 3 × 8-15
+> - Single-Leg RDL — 3 × 8-15
+> - Walking Lunges — 3 × 8-15
+> - Glute Bridge — 2 × 8-15
+> - *Left out: Back Squat (needs barbell + rack), Leg Extension (needs a machine)*
+
+**For Sam's judgement, three things this week actually is:** Thursday and Friday
+are **near-duplicates** of each other; Tuesday is a session in name only; and
+**the whole week contains no upper-body pulling and one push movement.** Whether
+that is the best achievable week for a floor-and-bodyweight athlete is his call,
+not mine — but the app currently refuses to publish it at all, and the athlete
+gets nothing instead.
+
+#### 5. What fought the measurement
+
+- **My own previous measurement.** A transition-only printer made an unprinted
+  verdict look like an acceptance, and I reported it as fact. Corrected above and
+  in the R-090 receipt.
+- **The signature is right for the wrong reason.** It matches the true cause here
+  by coincidence, which is exactly why three slices trusted it.
+- Nothing else resisted. The gateway instrumented cleanly on the first attempt.
+
+#### 6. Confirmation
+
+- **No production code was changed.** All probes lived in the temporary worktree
+  and were discarded with it (`git worktree remove --force`, uncommitted).
+- **No ruling was added.** No R-091. No composer/AI principle recorded.
+- **No fix was attempted**, including none to `failureSignature`.
+- **The shared checkout never left `main`** (`85b3d698` before and after).
+- **The parked implementation remains unmerged** — `slice1bc-parked` still at
+  `375f32ce`.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -591,3 +739,8 @@ worlds" into a named site.
 - `evaluateSection18EffectiveWeek` accepting a week does not mean the gateway accepts it; there are at least two verdicts and only the outer one throws.
 - `wholeWeekRepairEngine.searchWholeWeekRepairCandidates` assesses an EMPTY week as a candidate (`section18AcceptedWeekGateway.ts:1391` → `section18SafetyFinaliser.ts:640`).
 - One `Off-season/4d/club/Bodyweight Only` world takes ~270 evaluator calls at HEAD and ~51 with kit-limited composition — the repair search's cost scales with how thin the composed week is.
+- Every bodyweight lift classifies `strength_accessory`, never `main_strength`, so a bodyweight week has zero main lifts by construction — §18's main-strength floor is unreachable for that athlete regardless of equipment removals.
+- The parked R-090 gate removes exercises whose sheet entry is `[]` ("needs nothing"): `Chest Supported Row`, `Romanian Deadlift`, `Pallof Press` — the alias step and the reason-reporting disagree about which exercise is being judged.
+- The canonicaliser retypes `Upper Push`, `Lower Body Strength` and the ex-`Upper Pull` day to `workoutType: 'Conditioning'` once their strength content thins, so a day's name and its type disagree on the athlete's screen.
+- A kit-limited week composes Thursday and Friday as near-duplicate lower-body days (same four bodyweight lifts) — the variety rotator has nothing left to vary.
+- `resolveFinalVisibleSection18Week` is what the evaluator is handed, not the composed workouts; whether `equipmentRemovals` survives that projection is unestablished.

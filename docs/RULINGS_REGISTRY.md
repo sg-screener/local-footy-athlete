@@ -1844,11 +1844,30 @@ build, and reaches `evaluateSection18EffectiveWeek` fully typed — and that
 evaluator **ACCEPTS** the athlete's real week. Both suspects are killed: the
 week-2 build path does thread it, and the gateway's fallback candidates carry no
 record only because they contain no strength rows to remove.
-**THE SIGNATURE WAS THE LIAR.** `Section18WeekAcceptanceError.failureSignature`
-reports the LAST repair candidate tried — an EMPTY week and three
-conditioning-only weeks explored by `wholeWeekRepairEngine` — not the week that
-failed. Every `pattern_restore_failure:strength_patterns:0` chased since slice 1B
-came from evaluating a week with no strength in it by construction.
-**STILL UNNAMED, AND DELIBERATELY NOT GUESSED:** which gate turns "the evaluator
-accepted this week" into "the gateway refused this world". Until that is named
-with an executed receipt, no fix is written.
+**THE SIGNATURE DESCRIBES THE SELECTED REPAIR CANDIDATE**, not the composed week
+— on the failing arms that candidate is a synthesised `Hard Conditioning x3`
+week the athlete never had.
+**⚠ RECEIPT 3, 2026-08-14 (slice 1B-final-2) — TWO CLAIMS IN RECEIPT 2 ARE
+CORRECTED BY DIRECT GATEWAY INSTRUMENTATION OF THE SAME WORLD.**
+(1) Receipt 2 said `evaluateSection18EffectiveWeek` **ACCEPTS** the athlete's real
+w2 week. **IT DOES NOT.** That was inferred from a printer that emitted only
+CHANGED verdicts, so an unprinted line was read as an acceptance. The primary
+candidate's evaluation is blocking, with all six findings.
+(2) Receipt 2 said the signature "reports the last repair candidate, not the week
+that failed". **The primary arm carries the IDENTICAL signature**, so the thrown
+text is not wrong about this world — it is uninformative, and right by
+coincidence, which is why three slices trusted it.
+**THE REAL CAUSE, MEASURED:** the composed w2 week contains **ZERO rows
+classified `main_strength`**. Every bodyweight lift — `Bodyweight Squat`,
+`Walking Lunges`, `Single-Leg RDL`, `Push-ups` — classifies `strength_accessory`
+with `mainStrengthPattern: null`. §18 then correctly reports `main_strength:0`
+and four unrestored patterns. **That is a row-classification property of a
+bodyweight week and is INDEPENDENT of R-090.** Week 1 published only because it
+retained exactly one main lift.
+**THREE INDEPENDENT MECHANISMS CONTRIBUTE** (named, not fixed, per the slice
+fence): the zero-main-lift classification above; R-090's downgrade not firing
+even where the evaluated candidate carries removals naming all four patterns;
+and a defect in the PARKED code — it removes `Chest Supported Row`,
+`Romanian Deadlift` and `Pallof Press`, whose sheet entry is `[]` meaning
+*needs nothing*. **The parked implementation removes work this athlete can do.**
+Full table and the composed week in `docs/MISSION_THREE_FIXES.md`.
