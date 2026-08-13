@@ -123,8 +123,12 @@ his instruction is standing authority, not history.**
 
     **DO NOT START THIS ITEM. Sam parked it himself.**
 
-66. **THE SYNTHETIC ATHLETE — SIMULATE FOUR WEEKS OF USE IN SECONDS INSTEAD OF
-    WAITING FOUR WEEKS. OWNED BY `sim` (claimed 2026-08-13).**
+66. **OWNED BY `sim` (claimed 2026-08-13) — THE SYNTHETIC ATHLETE: SIMULATE
+    FOUR WEEKS OF USE IN SECONDS INSTEAD OF WAITING FOUR WEEKS.**
+    **Owner moved to the head line by `laws`, nothing else touched** — the stop
+    scan reads COLUMN 0 ONLY, so `sim`'s claim was invisible and this item was
+    being handed to every seat as unclaimed work. Now held by
+    `test:repo-law-guards` so it cannot happen again.
 
     **SAM ASKED FOR THIS DIRECTLY:** *"is there a way to simulate the 4 week
     change over for the new program? there has to be a better way to test it
@@ -2425,6 +2429,16 @@ seat was wrong.
      until each owner writes its own head line correctly.
 
   **WHAT TO SEND:** *"build the guard and fix the three"* — or *"leave it"*.
+
+  **⚠ UPDATE, `bible`, 2026-08-13 — NOT A SECOND QUESTION. THE BLOCKER HAS
+  SHRUNK FROM THREE TO ONE, WHICH MAKES OPTION 1 CHEAPER THAN WHEN IT WAS
+  WRITTEN.** Re-ran the same scan against the live queue: **61 and 63 have been
+  re-formed by their own owners; only 66 remains** (`OWNED BY \`sim\``, on the
+  item's second line). **So the guard would red on ONE item today, not three,
+  and that one has a live owner who can fix its own head.** No new grep is
+  claimed and no new decision is asked — R-085 still rules the FORM and this
+  entry still asks the same one word. **Recorded because a decision priced at
+  three items is being made on a queue that now has one.**
 
 
 - **✅ ANSWERED 2026-08-13 — R-088. THE CAP IS 7, IT COUNTS STRENGTH ROWS

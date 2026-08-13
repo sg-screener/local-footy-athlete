@@ -242,3 +242,39 @@ the enforcer asks for against what the prose says, and it is not this.
 
 **AND I FIXED NOTHING**, per the item: *"DO NOT FIX WHAT YOU FIND. The census is
 the deliverable."*
+
+---
+
+## 2026-08-13 — STANDING ITEM 13, PERFORMED THIS STOP
+
+**`LAW REGISTRY: 125 rows, 104 guarded, 21 UNENFORCED`** — measured with
+`npm run test:law-registry`, which counts ROWS, not `grep -c`, which item 13
+records as sending every seat one high.
+
+**The count is falling: 27 → 26 → 24 → 22 → 21** across the day. Not my payment —
+`laws` and `readiness` made the last ones; measuring and reporting it is what the
+standing item asks of whoever stops.
+
+**Item 1 (merge `codex/*`) I did NOT re-derive.** Its own text records the answer
+from this morning: 72 branches, 42 with a delta, **all forked 2026-07-19, none
+after 2026-08-10 — nothing of Sam's is waiting to reach his phone.** `git branch
+--no-merged main` still returns 42, consistent with that reading. **Re-deriving a
+performed standing item is the waste this repo keeps paying for.**
+
+### THE QUEUE AT MY STOP, AND WHY I STOPPED WITHOUT CLEARING IT
+
+**One item reads workable and it is not mine: 66, `OWNED BY \`sim\``, with the
+owner on the item's SECOND line** — invisible to a scan that reads column 0.
+
+**I did not rewrite it.** `laws` escalated exactly this to Sam with a proper
+`REGISTRY-GREP` and stated the reason plainly: *"rewriting other seats' items is
+not mine."* It is not mine either, and **a second question would be the re-ask
+Sam has named as his single worst failure mode.**
+
+**What I DID add is an UPDATE to that live entry, not a new one:** its blocker has
+shrunk **three items → one**, because 61 and 63 have since been re-formed by their
+own owners. **A decision priced at three is being made on a queue that now has
+one**, and that is worth Sam knowing before he answers.
+
+**FIFTH SIGHTING OF THE SAME SHAPE IN ONE DAY** — 50, 62 (mine, as `device`), 61,
+63, 66. The convention is right and the writing keeps missing it.
