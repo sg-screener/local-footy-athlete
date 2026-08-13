@@ -661,11 +661,30 @@ section('12. Isolation_lower (accessory-only slot)');
   assert(crossToIso === 100,
     `Cross-slot (squat → isolation_lower) unchanged (${crossToIso})`);
 
-  // applyPoolRotation for iso_lower rewrites within the accessory pool
+  // applyPoolRotation for iso_lower rewrites within the accessory pool — AND
+  // WITHIN THE MUSCLE GROUP.
+  //
+  // ⚠ THIS EXPECTATION CHANGED 2026-08-13, AND IT IS NOT A REGRESSION BEING
+  // PAPERED OVER. It used to assert `entries[4]` — flat index arithmetic over
+  // the whole 7-deep pool — which at mc=2 resolves to `Tib Raises`. **That is a
+  // HAMSTRING exercise rotating into a CALF raise.** The slot's own docstring
+  // has always claimed rotation order groups (hamstring → quad → calf/ankle);
+  // they were comments, and `selectPoolEntry` picked `cycleIndex % entries.length`
+  // straight across them. So the old cell was pinning the defect, not the rule.
+  // `PoolEntry.group` makes those blocks real, and the measured shipping case
+  // was worse in the upper pool: `Bicep Curl | Bicep Curl | Hammer Curl` — three
+  // curls, no triceps.
+  //
+  // WHAT IS ASSERTED NOW IS STRONGER THAN AN INDEX: the pick is a HAMSTRING
+  // exercise, whatever the arithmetic happens to land on. An index assertion
+  // silently changes meaning when an entry is added; this one cannot.
   const nordicMc2 = applyPoolRotation('Nordic Lower', { miniCycleNumber: 2, weekInBlock: 1 });
-  // base = (2-1)*4 + (1-1) = 4 → 4 mod 7 = 4 → entries[4]
-  assert(nordicMc2 === accessory.entries[4].name,
-    `Nordic Lower mc=2/w=1 → ${nordicMc2} (expected ${accessory.entries[4].name})`);
+  const hamstrings = accessory.entries.filter((e) => e.group === 'hamstring').map((e) => e.name);
+  assert(hamstrings.length >= 2,
+    `fixture needs >=2 hamstring entries or the cell below cannot fail (got ${hamstrings.length})`);
+  assert(hamstrings.includes(nordicMc2),
+    `Nordic Lower mc=2/w=1 → ${nordicMc2}, which is not a hamstring. Rotation may not `
+    + `cross a muscle group; hamstring entries are ${JSON.stringify(hamstrings)}.`);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -1028,6 +1047,74 @@ section('14. Athlete overrides (prefs filter / bias)');
   } finally {
     console.warn = originalWarn;
   }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ROTATION MAY NOT CROSS A MUSCLE GROUP (PoolEntry.group)
+// ─────────────────────────────────────────────────────────────────
+section('Rotation stays inside its muscle group');
+{
+  // THE DEFECT THESE HOLD, measured 2026-08-13: `isolation_upper/accessory`
+  // mixes biceps, triceps and shoulders in one list, and `selectPoolEntry`
+  // picked by `cycleIndex % entries.length` across all of it. The "// Bicep
+  // block" comments were decoration. It shipped `Bicep Curl (Barbell) | Bicep
+  // Curl (Dumbbell) | Hammer Curl` — three curls, no triceps — and a PUSH day
+  // whose accessory rotated from Lateral Raise into a bicep curl.
+  const groupOf = (name: string): string | undefined => findPoolEntry(name)?.entry.group;
+
+  // NON-VACUITY FIRST: if the groups are not actually on the entries, every
+  // assertion below passes for the wrong reason.
+  assert(groupOf('Tricep Pushdown') === 'tricep',
+    `Tricep Pushdown should be group 'tricep', got ${String(groupOf('Tricep Pushdown'))}`);
+  assert(groupOf('Bicep Curl (Barbell)') === 'bicep',
+    `Bicep Curl (Barbell) should be group 'bicep', got ${String(groupOf('Bicep Curl (Barbell)'))}`);
+  assert(groupOf('Lateral Raise') === 'shoulder',
+    `Lateral Raise should be group 'shoulder', got ${String(groupOf('Lateral Raise'))}`);
+  // R-076: Sam ruled the face pull is shoulder work, so it sits with the delts.
+  assert(groupOf('Face Pull') === 'shoulder',
+    `R-076: Face Pull should be group 'shoulder', got ${String(groupOf('Face Pull'))}`);
+
+  // THE RULE. Rotate each one across many cycles; it must never leave its group.
+  for (const [name, expected] of [
+    ['Tricep Pushdown', 'tricep'],
+    ['Bicep Curl (Barbell)', 'bicep'],
+    ['Lateral Raise', 'shoulder'],
+    ['Face Pull', 'shoulder'],
+    ['Nordic Lower', 'hamstring'],
+    ['Calf Raises', 'calf'],
+  ] as const) {
+    let crossed: string | null = null;
+    for (let cycle = 1; cycle <= 12; cycle += 1) {
+      for (const weekInBlock of [1, 2, 3, 4]) {
+        const out = applyPoolRotation(name, { miniCycleNumber: cycle, weekInBlock } as RotationContext);
+        const outGroup = groupOf(out);
+        if (outGroup !== expected) { crossed = `${name} -> ${out} (group ${String(outGroup)})`; break; }
+      }
+      if (crossed) break;
+    }
+    assert(crossed === null,
+      `rotation crossed a muscle group: ${crossed ?? ''} — expected to stay in '${expected}'`);
+  }
+
+  // AND IT STILL ROTATES. A guard that froze every exercise would pass the cells
+  // above and destroy the variety system, so at least one grouped exercise must
+  // actually MOVE across cycles.
+  const seen = new Set<string>();
+  for (let cycle = 1; cycle <= 12; cycle += 1) {
+    seen.add(applyPoolRotation('Bicep Curl (Barbell)', { miniCycleNumber: cycle, weekInBlock: 1 } as RotationContext));
+  }
+  assert(seen.size > 1,
+    `grouping froze rotation — Bicep Curl (Barbell) never moved across 12 cycles (${JSON.stringify([...seen])})`);
+
+  // AN UNGROUPED SLOT IS UNTOUCHED — every squat anchor is a squat, so it needs
+  // no groups and must keep whole-slot rotation.
+  assert(groupOf('Back Squat') === undefined,
+    'squat anchors should carry no group — grouping a uniform slot is noise');
+  const squatSeen = new Set<string>();
+  for (let cycle = 1; cycle <= 6; cycle += 1) {
+    squatSeen.add(applyPoolRotation('Back Squat', { miniCycleNumber: cycle, weekInBlock: 1 } as RotationContext));
+  }
+  assert(squatSeen.size > 1, 'ungrouped slot stopped rotating');
 }
 
 // ─────────────────────────────────────────────────────────────────

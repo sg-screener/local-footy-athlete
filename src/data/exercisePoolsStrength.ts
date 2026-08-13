@@ -59,6 +59,26 @@ export interface PoolEntry {
   /** Must match an EXERCISE_TAGS key (or be resolvable by findOrCreateExercise). */
   name: string;
   /**
+   * MUSCLE SUB-GROUP INSIDE THE SLOT — ROTATION MAY NOT CROSS IT.
+   *
+   * **A pool slot answers "what movement is this"; a group answers "what does it
+   * TRAIN". Rotation is variety WITHIN a group, never across one.** Before this
+   * field the blocks below existed only as COMMENTS — `// Bicep block`,
+   * `// Tricep block`, `// Shoulder / trap block` — while `selectPoolEntry`
+   * picked by `cycleIndex % entries.length` across the whole flat list, so the
+   * labels were decoration and rotation ignored them.
+   *
+   * MEASURED, 2026-08-13, what that shipped: `Bicep Curls | Tricep Pushdowns`
+   * rotating to `Bicep Curl (Barbell) | Bicep Curl (Dumbbell) | Hammer Curl` —
+   * three bicep curls and NO TRICEPS. Sam's *"an athlete is better served by a
+   * squat and a hinge than by two squats"* (`:227`) in arm form.
+   *
+   * OPTIONAL BY DESIGN: a slot whose entries are all one thing (every squat
+   * anchor is a squat) needs no groups, and leaving it undefined keeps the
+   * existing whole-slot rotation. Only slots that MIX muscle groups need it.
+   */
+  group?: string;
+  /**
    * Load ratio relative to the slot's reference exercise.
    *   squat            ref: Back Squat       → 1.00
    *   hinge            ref: Deadlift         → 1.00
@@ -349,7 +369,18 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       // variety here, stated rather than discovered later: there are few
       // horizontal-pull accessories that are not shoulder work.
       slot: 'horizontal_pull', role: 'accessory', entries: [
-        { name: 'Seated Cable Row', loadRatio: 0.90 },
+        { name: 'Seated Cable Row',        loadRatio: 0.90 },
+        // REFILLED FROM THE LOCKED VOCABULARY, NOT INVENTED. R-076 took three of
+        // this slot's four accessories to the shoulder group, leaving one — and
+        // `test:pools` caught it immediately ("accessory has >=3 entries (got 1)"),
+        // which is the pool-integrity cell doing exactly its job. Exercise names
+        // may never be authored by an agent, so these two are EXISTING
+        // `EXERCISE_TAGS` entries tagged `horizontal_pull` that no pool had
+        // claimed yet. Both are genuine rows, which is the whole point.
+        { name: 'Chest-Supported DB Row',  loadRatio: 0.60 },
+        // Bodyweight: loadRatio 0, the same no-progression-transfer convention
+        // used by plyo and isolation_lower.
+        { name: 'Inverted Row (Bodyweight)', loadRatio: 0 },
       ],
     },
   },
@@ -417,29 +448,31 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
     accessory: {
       slot: 'isolation_upper', role: 'accessory', entries: [
         // Bicep block
-        { name: 'Bicep Curl (Barbell)',   loadRatio: 0.25 },
-        { name: 'Bicep Curl (Dumbbell)',  loadRatio: 0.20 },
-        { name: 'Hammer Curl',            loadRatio: 0.20 },
-        { name: 'Incline Dumbbell Curl',  loadRatio: 0.18 },
-        { name: 'Lying Dumbbell Curl',    loadRatio: 0.18 },
-        { name: 'Banded Bicep Curl',      loadRatio: 0.15 },
-        { name: 'Concentration Curl',     loadRatio: 0.15 },
+        { name: 'Bicep Curl (Barbell)',   loadRatio: 0.25, group: 'bicep' },
+        { name: 'Bicep Curl (Dumbbell)',  loadRatio: 0.20, group: 'bicep' },
+        { name: 'Hammer Curl',            loadRatio: 0.20, group: 'bicep' },
+        { name: 'Incline Dumbbell Curl',  loadRatio: 0.18, group: 'bicep' },
+        { name: 'Lying Dumbbell Curl',    loadRatio: 0.18, group: 'bicep' },
+        { name: 'Banded Bicep Curl',      loadRatio: 0.15, group: 'bicep' },
+        { name: 'Concentration Curl',     loadRatio: 0.15, group: 'bicep' },
         // Tricep block
-        { name: 'Tricep Pushdown',           loadRatio: 0.30 },
-        { name: 'Banded Tricep Pushdown',    loadRatio: 0.20 },
-        { name: 'Overhead Tricep Extension', loadRatio: 0.25 },
-        { name: 'Dumbbell Skull Crusher',    loadRatio: 0.25 },
-        { name: 'Dumbbell Kickback',         loadRatio: 0.15 },
-        { name: 'Tricep Circuit (Dirty 30)', loadRatio: 0.20 },
+        { name: 'Tricep Pushdown',           loadRatio: 0.30, group: 'tricep' },
+        { name: 'Banded Tricep Pushdown',    loadRatio: 0.20, group: 'tricep' },
+        { name: 'Overhead Tricep Extension', loadRatio: 0.25, group: 'tricep' },
+        { name: 'Dumbbell Skull Crusher',    loadRatio: 0.25, group: 'tricep' },
+        { name: 'Dumbbell Kickback',         loadRatio: 0.15, group: 'tricep' },
+        { name: 'Tricep Circuit (Dirty 30)', loadRatio: 0.20, group: 'tricep' },
         // Shoulder / trap block
-        { name: 'Lateral Raise',    loadRatio: 0.20 },
-        { name: 'Incline Y Raise',  loadRatio: 0.15 },
-        { name: 'Single-Arm Shrug', loadRatio: 0.60 },
+        { name: 'Lateral Raise',    loadRatio: 0.20, group: 'shoulder' },
+        { name: 'Incline Y Raise',  loadRatio: 0.15, group: 'shoulder' },
+        { name: 'Single-Arm Shrug', loadRatio: 0.60, group: 'shoulder' },
         // R-076, Sam 2026-08-13: "face pull is shoulder work for sure". Moved
         // here from horizontal_pull/accessory, with its two rear-delt siblings.
-        { name: 'Face Pull',        loadRatio: 0.20 },
-        { name: 'Rear Delt Fly',    loadRatio: 0.15 },
-        { name: 'Band Pull-Apart',  loadRatio: 0.10 },
+        { name: 'Face Pull',        loadRatio: 0.20, group: 'shoulder' },
+        { name: 'Rear Delt Fly',    loadRatio: 0.15, group: 'shoulder' },
+        { name: 'Band Pull-Apart',  loadRatio: 0.10, group: 'shoulder' },
+        // Same ruling, same reasoning: a cable face pull is a face pull.
+        { name: 'Cable Face Pull',  loadRatio: 0.20, group: 'shoulder' },
       ],
     },
   },
@@ -473,17 +506,17 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
     accessory: {
       slot: 'isolation_lower', role: 'accessory', entries: [
         // Hamstring block
-        { name: 'Nordic Lower',    loadRatio: 0 },
-        { name: 'Hamstring Curl',  loadRatio: 0 },
+        { name: 'Nordic Lower',    loadRatio: 0, group: 'hamstring' },
+        { name: 'Hamstring Curl',  loadRatio: 0, group: 'hamstring' },
         // Quad block
-        { name: 'Leg Extension',   loadRatio: 0 },
+        { name: 'Leg Extension',   loadRatio: 0, group: 'quad' },
         // Calf / ankle block
-        { name: 'Calf Raises',     loadRatio: 0 },
-        { name: 'Tib Raises',       loadRatio: 0 },
+        { name: 'Calf Raises',     loadRatio: 0, group: 'calf' },
+        { name: 'Tib Raises',       loadRatio: 0, group: 'calf' },
         // Glute / posterior block — Sam's locked-list additions (2026-07-24),
         // which also replaced the retired Adductor Machine in this slot.
-        { name: 'Single-Leg Hip Thrust', loadRatio: 0 },
-        { name: 'Back Extension',        loadRatio: 0 },
+        { name: 'Single-Leg Hip Thrust', loadRatio: 0, group: 'glute' },
+        { name: 'Back Extension',        loadRatio: 0, group: 'glute' },
       ],
     },
   },
@@ -897,6 +930,26 @@ export function applyPoolRotation(
   // prevent routing here, but fall through untouched if we ever do land
   // on an empty pool rather than throwing.
   if (pool.entries.length === 0) return suggestedName;
+
+  // ── ROTATION MAY NOT CROSS A MUSCLE GROUP ────────────────────────────────
+  //
+  // A slot says what MOVEMENT this is; `PoolEntry.group` says what it TRAINS.
+  // `isolation_upper/accessory` holds biceps, triceps and shoulders in one list,
+  // and `selectPoolEntry` picks by `cycleIndex % entries.length` across all of
+  // it — so a tricep pushdown could rotate into a bicep curl. Measured shipping
+  // `Bicep Curl (Barbell) | Bicep Curl (Dumbbell) | Hammer Curl`: three curls,
+  // no triceps, which is `:227`'s "two squats" in arm form.
+  //
+  // NARROW BY DESIGN. Only entries that DECLARE a group are constrained, and
+  // only when the suggested exercise has one — a slot whose entries are all the
+  // same thing (every squat anchor is a squat) is untouched, and an exercise
+  // that is not in any pool still rotates exactly as before.
+  const suggestedGroup = findPoolEntry(suggestedName)?.entry.group;
+  const fullPool = pool;
+  if (suggestedGroup) {
+    const sameGroup = pool.entries.filter((entry) => entry.group === suggestedGroup);
+    if (sameGroup.length > 0) pool = { ...pool, entries: sameGroup };
+  }
   if (
     prefs?.availableEquipment?.length &&
     entriesAllowedByEquipment(pool, prefs).length === 0
@@ -926,7 +979,26 @@ export function applyPoolRotation(
     avoid = new Set<string>();
   }
 
-  const pick = selectPoolEntryAvoiding(pool, ctx, avoid, prefs);
+  // ── ROTATION STAYS IN ITS GROUP; AVOIDANCE MAY LEAVE IT ──────────────────
+  //
+  // TWO DIFFERENT JOBS SHARE THIS FUNCTION AND THEY WANT OPPOSITE THINGS, which
+  // is why the first version of the group rule broke a real behaviour:
+  //
+  //   ROTATION — vary ONE exercise across cycles. Crossing a group here is the
+  //     defect: a tricep pushdown must not become a bicep curl.
+  //   AVOIDANCE — a session suggested the same exercise more than once, and the
+  //     picks must differ. Crossing a group here is the FEATURE: three
+  //     `isolation_lower` rows should come back hamstring / quad / calf, not the
+  //     same muscle twice.
+  //
+  // So the group narrows the pool for the ordinary pick, and is RELEASED only
+  // when every in-group candidate is already used in this session. A cell holds
+  // each half — rotation never leaves its group across 12 cycles, and three
+  // Nordic Lower suggestions still resolve to three distinct picks.
+  let pick = selectPoolEntryAvoiding(pool, ctx, avoid, prefs);
+  if (suggestedGroup && avoid.has(pick.name) && fullPool.entries.length > pool.entries.length) {
+    pick = selectPoolEntryAvoiding(fullPool, ctx, avoid, prefs);
+  }
 
   if (usedInSession) {
     const existing = usedInSession.get(key);
