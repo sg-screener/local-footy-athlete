@@ -1195,9 +1195,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Estimates come with the previous item\'s actual, so a forecast is calibrated rather than hoped.',
     ruledAt: 'AGENTS.md "PROCESS LAW — L1 to L10" (lifted verbatim 2026-08-10 from the retired docs/MASTER_PLAN PART 1), L8',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A repo check over boundary reports: an estimate must appear beside a measured prior. Related to Sam\'s 2026-08-10 velocity ask (NEW vs REDISCOVERY vs RE-WORK), which is the same law asking for a number.',
-      receipt: 'PROCESS law, mechanisable as a doc check. Nothing reads for it.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-13 (Agent: laws) TO THE PRESCRIPTION IN THIS ROW ITSELF - a repo check over boundary reports, an estimate must appear beside a measured prior. IT NEEDS NO DEBT LIST AND THAT IS A MEASUREMENT, NOT LUCK: four reports in all of docs/ state an estimate and ALL FOUR already cite a measured prior, so the law is being FOLLOWED and the gate stops it lapsing. Every other ratchet in this suite carries dated debt because its law was being broken when the gate arrived; a debt list added here for symmetry would invent forgiveness nobody needs. SCOPE IS ALL OF docs/, not from-a-cutoff, for the same reason - there is nothing to grandfather, and a report enters scope only by CLAIMING an estimate, so one that forecasts nothing can never trip it. NON-VACUITY IS ASSERTED: the cell reds if NO report forecasts at all, because a world with no estimates would otherwise report a comfortable zero. MUTATION-CHECKED: neutering the measured-prior test reds a cell. WHAT IT CANNOT DO: it reads that a prior actual is PRESENT, never whether the forecast was calibrated against the right one.',
     },
   },
   {

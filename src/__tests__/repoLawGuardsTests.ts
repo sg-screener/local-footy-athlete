@@ -871,6 +871,76 @@ run('LAW-elegant-two-options: the field checker reds on a silent report and is n
     "the law's own words did not satisfy its gate — the field is a field OR the sentence");
 });
 
+/**
+ * LAW-L8-reporting-calibration — AN ESTIMATE COMES WITH THE PREVIOUS ITEM'S
+ * ACTUAL, SO A FORECAST IS CALIBRATED RATHER THAN HOPED.
+ *
+ * **BUILT TO THE ROW'S OWN PRESCRIPTION**, verbatim: *"A repo check over
+ * boundary reports: an estimate must appear beside a measured prior."*
+ *
+ * **IT NEEDS NO DEBT LIST AND THAT IS THE MEASUREMENT, NOT LUCK.** Four reports
+ * in the whole of `docs/` state an estimate, and **all four already cite a
+ * measured prior** — so the law is being FOLLOWED and the gate simply stops it
+ * lapsing. Every other ratchet in this suite carries dated debt because its law
+ * was being broken when the gate arrived; this one does not, and a debt list
+ * added "for symmetry" would be inventing forgiveness nobody needs.
+ *
+ * SCOPE IS THE WHOLE OF docs/, not from-a-cutoff, for the same reason: there is
+ * nothing to grandfather. A report only enters scope by CLAIMING an estimate,
+ * so a report that forecasts nothing can never trip it.
+ */
+const ESTIMATE_LANGUAGE = /\bestimate[sd]?\b|\bETA\b|expected to take|should take about/i;
+const MEASURED_PRIOR = /\bactual\b|\bmeasured\b|took [0-9]|in [0-9]+ ?(?:min|h\b|hours)/i;
+
+/** Pure: reports forecasting without a measured prior beside the forecast. */
+function uncalibratedEstimates(
+  reports: readonly { readonly name: string; readonly text: string }[],
+): string[] {
+  return reports
+    .filter((r) => ESTIMATE_LANGUAGE.test(r.text))
+    .filter((r) => !MEASURED_PRIOR.test(r.text))
+    .map((r) => r.name);
+}
+
+run('LAW-L8-reporting-calibration: a report that estimates also cites a measured prior', () => {
+  const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  const reports = docs
+    .filter((d) => /BOUNDARY/.test(path.basename(d.file)))
+    .map((d) => ({ name: path.basename(d.file), text: d.text }));
+  assert(reports.length > 10, `only ${reports.length} boundary report(s) read — the scan is blind`);
+
+  // NON-VACUITY: this cell can only prove something if some report actually
+  // forecasts. A world where nobody estimates would report a comfortable zero.
+  const forecasting = reports.filter((r) => ESTIMATE_LANGUAGE.test(r.text));
+  assert(forecasting.length > 0,
+    'no boundary report states an estimate at all — this cell is vacuous and should be '
+    + 'deleted rather than left looking green');
+
+  const bad = uncalibratedEstimates(reports);
+  assert(bad.length === 0,
+    `report(s) stating an estimate with no measured prior beside it: ${bad.join(', ')}. `
+    + 'A forecast with nothing behind it is a hope; the law asks for the previous '
+    + "item's actual so the number can be judged.");
+  console.log(`      (${forecasting.length} report(s) forecast; all cite a measured prior, 0 debt)`);
+});
+
+run('LAW-L8-reporting-calibration: the calibration check reds on a bare forecast (liveness)', () => {
+  const bare = [{ name: 'a.md', text: 'Estimate: two more days for the rest of it.' }];
+  assert(uncalibratedEstimates(bare).length === 1,
+    'a bare estimate was not caught — the cell is vacuous');
+  const calibrated = [{
+    name: 'b.md',
+    text: 'Estimate: two days. The previous slice was estimated at one and the actual was three.',
+  }];
+  assert(uncalibratedEstimates(calibrated).length === 0,
+    'an estimate standing beside a measured prior was refused — that is the calibrated form');
+  const noForecast = [{ name: 'c.md', text: 'We built it and it works. No forecast here.' }];
+  assert(uncalibratedEstimates(noForecast).length === 0,
+    'a report that forecasts nothing was pulled into scope — a report enters only by '
+    + 'CLAIMING an estimate');
+});
+
 run('the LOOP CHECK debt only shrinks', () => {
   const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
     .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
