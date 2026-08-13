@@ -49,6 +49,11 @@ armTotalsOrRed();
 
 import fs from 'fs';
 import path from 'path';
+// `execSync` is used by the one-writer rule. WITHOUT THIS IMPORT that cell was
+// VACUOUS: its first call sat inside a try/catch meant for a missing cutoff, so
+// a ReferenceError was swallowed and the cell returned early, green, having
+// checked nothing. Caught by asking why it passed rather than being glad it did.
+import { execSync } from 'child_process';
 
 let passed = 0;
 const failures: string[] = [];
@@ -1394,6 +1399,182 @@ run('the owner-less debt is lowered when it is paid (liveness)', () => {
     'an order that names its owner is still counted — the ratchet can never be paid down');
   assert(ownerlessOrders([{ label: '2', body: '2. **BLOCKED-BY: sam** — a question' }]).length === 0,
     'a BLOCKED-BY order counts as owner-less — a blocked item is owned by whoever it waits on');
+});
+
+/**
+ * ONE WRITER PER FILE — THE SEAT OWNS THE INBOX, EACH AGENT OWNS ITS STATUS.
+ *
+ * Sam, 2026-08-13, after a commit swept up ~26 files of another agent's finished
+ * work: *"i think this is moving faster than just having one of them work"* — it
+ * is, and this is what makes two safe.
+ *
+ * MEASURED BEFORE BUILDING, and the measurement chose the design. Over six
+ * hours the two agents made 68 commits to `docs/SEAT_INBOX.md`: median 40 lines,
+ * p75 83, p90 286, max 864. **The small ones are legitimate** — marking an item
+ * blocked, naming an owner. **The huge ones are wholesale rewrites, and two of
+ * them swept the other agent's work.** So the line is drawn between the two,
+ * not at zero.
+ *
+ * AND IT IS NOT WORKTREES. The same measurement showed the agents barely touch
+ * the same SOURCE files — terminal in the rules engine, desktop in screens and
+ * flows. Separate folders would have forced a branch and a merge per agent to
+ * fix a collision that lives in exactly one file. This repo already carries 72
+ * abandoned branches from the last time that was tried.
+ *
+ * FROM-HERE-FORWARD, NOT RETROACTIVE. History cannot shrink, so a guard over
+ * past commits would red on arrival with no path down — the shape refuted for
+ * `LAW-L9-checkpoint-discipline`. The cutoff is the commit at which the law was
+ * written; everything before it is out of scope by construction.
+ */
+const ONE_WRITER_CUTOFF = '634bb927c668f199ebf832ba43fabc9bc783ba8a';
+// DELETIONS, NOT TOTAL LINES — CORRECTED 2026-08-13 AFTER THE FIRST VERSION
+// FLAGGED THE WRONG HALF OF EVERY PAIR.
+//
+// The seat cannot commit (its mount refuses), so every seat edit is swept into
+// whichever agent commits next and arrives under that agent's name. A seat
+// order is an INSERTION — 203 added, 1 deleted. A sweep is a DELETION — 1
+// added, 203 deleted. Counting added+deleted made those two identical at 204
+// and flagged the restore alongside the damage.
+//
+// Measured on the five real cases: sweeps deleted 99, 155, 203, 203; the
+// restores deleted 1 and 52. A deletion threshold separates them cleanly and
+// can never fire on a seat writing a new order.
+const INBOX_AGENT_MAX_DELETIONS = 60;
+
+/**
+ * AND A CEILING ON ADDITIONS, ADDED 2026-08-13 WHEN THE DELETION-ONLY RULE LET
+ * THE FILE EAT ITSELF ANYWAY.
+ *
+ * The file has a hard 96KB budget because Sam pays for it being re-read at every
+ * stop. Three agents append to it. It went 96KB -> 108KB -> 115KB in about an
+ * hour, and BOTH attempts to trim it with a script destroyed orders instead —
+ * six live orders in one, 86 cross-references in the other. **Tidying cannot
+ * outrun three writers; the writing is what has to stop.**
+ *
+ * An agent MARKS its item — a `BLOCKED-BY:` line, an owner, a one-line status.
+ * That is small. Everything else it wants to say goes in its own status file,
+ * which has no ceiling and no other writer. **A large addition is an agent
+ * writing its notes in the seat's file, and it is what breaks the budget.**
+ */
+const INBOX_AGENT_MAX_INSERTIONS = 40;
+
+/**
+ * THREE DATED EXCEPTIONS — THE LAW'S FOUNDING CASE, AND IT CAUGHT IT ON ITS
+ * FIRST LIVE RUN.
+ *
+ * `faa69c2f` swept 99 lines out of the inbox; `015753d7` and `9c2b7562` put them
+ * back. All three are 151 changed lines, all three post-date the cutoff, and all
+ * three are REAL — the sweep is exactly what this rule exists to stop, and the
+ * two restores are the repair.
+ *
+ * They are named rather than forgiven by raising the threshold, because raising
+ * it to 151 would retire the law to fit its first violation. History cannot
+ * shrink; new violations still red.
+ */
+// RE-DECLARED 2026-08-13 once the rule counted DELETIONS. Two of the original
+// three (`015753d7`, `9c2b7562`) were the RESTORES and stopped firing on their
+// own — which is the correction working. These four are real sweeps that have
+// already happened; history cannot shrink, and a new one still reds.
+const INBOX_REWRITE_DEBT: readonly string[] = [
+  'faa69c2f', '0f1dd37f', 'fe97872d', 'bcba5d16', '0576c3c8',
+];
+
+/** Pure: agent-attributed commits whose inbox edit is a rewrite, not a mark. */
+function oversizedInboxEdits(
+  // `added` is OPTIONAL on purpose: the insertion arm was added after this
+  // signature, the real-history caller predates it, and both use sites already
+  // read `c.added ?? 0`. Making it required would force every caller to supply a
+  // number it may not have, to satisfy a check that treats absent as zero anyway.
+  commits: readonly {
+    readonly sha: string;
+    readonly agent: string;
+    readonly lines: number;
+    readonly added?: number;
+  }[],
+): string[] {
+  // ONLY `seat` IS EXEMPT, AND AN UNLABELLED COMMIT IS NOT EXEMPT. Sam runs a
+  // THIRD agent that stamps no `Agent:` trailer, so `agent !== ''` would have
+  // left the widest hole open to the one participant nobody can see. If the
+  // seat's own rewrite is being committed on an agent's behalf — the seat
+  // reaches this repo over a mount that cannot commit — that commit says
+  // `Agent: seat`, because that is who authored it.
+  return commits
+    .filter((c) => !INBOX_REWRITE_DEBT.some((d) => c.sha.startsWith(d)))
+    .filter((c) => c.agent !== 'seat'
+      && (c.lines > INBOX_AGENT_MAX_DELETIONS || (c.added ?? 0) > INBOX_AGENT_MAX_INSERTIONS))
+    .map((c) => `${c.sha.slice(0, 8)} (${c.agent || 'UNLABELLED'}) `
+      + `deleted ${c.lines}, added ${c.added ?? 0}`);
+}
+
+run('an agent marks the inbox, it does not rewrite it', () => {
+  let cutoffPresent = true;
+  try {
+    execSync(`git cat-file -e ${ONE_WRITER_CUTOFF}`, { cwd: repoRoot, stdio: 'ignore' });
+  } catch {
+    cutoffPresent = false; // not in this clone's history
+  }
+  if (!cutoffPresent) return;
+  const range = `${ONE_WRITER_CUTOFF}..HEAD`;
+  const shas = execSync(`git log --format=%H ${range}`, { cwd: repoRoot, encoding: 'utf8' })
+    .split('\n').filter(Boolean);
+  const commits = shas.map((sha) => {
+    // QUOTED. Unquoted, `%(trailers:...)` reaches /bin/sh with bare parentheses
+    // and dies with "Syntax error: ( unexpected" — which surfaced only once the
+    // missing `execSync` import was fixed and this cell started actually running.
+    // Two vacuity faults in one cell, both found by asking why it was green.
+    const agent = (execSync(`git log -1 --format='%(trailers:key=Agent,valueonly)' ${sha}`,
+      { cwd: repoRoot, encoding: 'utf8' }) || '').trim();
+    const stat = execSync(`git show --numstat --format="" ${sha} -- docs/SEAT_INBOX.md`,
+      { cwd: repoRoot, encoding: 'utf8' }).trim();
+    // field 2 of numstat is DELETIONS. Field 1 (insertions) is deliberately
+    // ignored: a big insertion is the seat writing an order, which is its job.
+    const lines = stat ? (Number(stat.split(/\s+/)[1]) || 0) : 0;
+    const added = stat ? (Number(stat.split(/\s+/)[0]) || 0) : 0;
+    return { sha, agent, lines, added };
+  });
+  const bad = oversizedInboxEdits(commits);
+  assert(bad.length === 0,
+    `${bad.length} agent commit(s) REWROTE docs/SEAT_INBOX.md instead of marking it: `
+    + `${bad.join(' | ')}. The inbox is the seat's file — mark your item and write `
+    + 'the rest in docs/STATUS_<YOURS>.md. A rewrite is how ~26 files of the other '
+    + "agent's work were swept away on 2026-08-13.");
+});
+
+run('the one-writer rule catches a rewrite and lets a mark through (liveness)', () => {
+  assert(oversizedInboxEdits([{ sha: 'a'.repeat(40), agent: 'terminal', lines: 203 }]).length === 1,
+    'a 203-line DELETION is not being caught — the rule is vacuous');
+  assert(oversizedInboxEdits([{ sha: 'g'.repeat(40), agent: 'terminal', lines: 0, added: 400 }]).length === 1,
+    'a 400-line ADDITION by an agent is not caught — that is notes being written '
+    + "in the seat's file, and it is what pushed the inbox past its budget twice");
+  assert(oversizedInboxEdits([{ sha: 'h'.repeat(40), agent: 'terminal', lines: 2, added: 6 }]).length === 0,
+    'a 6-line mark is being refused — marking an item is exactly what agents may do');
+  assert(oversizedInboxEdits([{ sha: 'e'.repeat(40), agent: 'terminal', lines: 1 }]).length === 0,
+    'a 203-added/1-deleted commit is being flagged — that is a seat ORDER being '
+    + "swept into an agent's commit, which is normal and not damage");
+  assert(oversizedInboxEdits([{ sha: 'b'.repeat(40), agent: 'desktop', lines: 40 }]).length === 0,
+    'a 40-line mark is being refused — that is the median edit and it is legitimate');
+  assert(oversizedInboxEdits([{ sha: 'c'.repeat(40), agent: 'seat', lines: 900 }]).length === 0,
+    "the seat's own rewrite is being refused — the seat owns this file");
+  assert(oversizedInboxEdits([{ sha: INBOX_REWRITE_DEBT[0] + 'f'.repeat(32), agent: 'terminal', lines: 151 }]).length === 0,
+    'a named dated exception is being counted — the debt list is not being read');
+  assert(oversizedInboxEdits([{ sha: 'd'.repeat(40), agent: '', lines: 864 }]).length === 1,
+    'an UNLABELLED 864-line rewrite is slipping through — the third agent stamps '
+    + 'no trailer, so an empty agent must never be treated as exempt');
+});
+
+// DISCOVERED, NOT LISTED. Sam runs three agents and the count changes; a
+// hardcoded pair would go quietly stale the moment a fourth window opens.
+const STATUS_FILE_FLOOR = 3;
+
+run('every running agent has a status file of its own to write to', () => {
+  const found = fs.readdirSync(path.join(repoRoot, 'docs'))
+    .filter((f) => /^STATUS_[A-Z0-9_]+\.md$/.test(f));
+  assert(found.length >= STATUS_FILE_FLOOR,
+    `${found.length} agent status file(s), floor ${STATUS_FILE_FLOOR}: ${found.join(', ') || 'none'}. `
+    + 'The one-writer rule takes the inbox away from the agents; it must give each '
+    + 'of them somewhere else, or they will write there anyway. Add '
+    + 'docs/STATUS_<NAME>.md when a new agent starts, and RENAME it to what that '
+    + 'agent actually is — an unnamed agent is one nobody can hand work to.');
 });
 
 const HOT_FILE_BUDGETS: readonly { readonly file: string; readonly maxBytes: number }[] = [
