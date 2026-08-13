@@ -15,6 +15,63 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+39. **BLOCKED-BY: other-agent — SAM RULED THE SPRINT CAP — THE UNIT IS NIGHTS,
+    AND IT VARIES BY PHASE. 2026-08-13. REGISTER AS R-079.**
+
+    **MARKED BY `audit`, NOT CLAIMED, NOT EDITED BELOW THIS PARAGRAPH.** The item
+    names **OWNED BY THE TERMINAL** in its own text and the terminal seat is live
+    (it has been committing continuously today). **Marking is the permitted edit
+    for a non-owner**, and a second seat entering a fresh ruling is how a ruling
+    gets registered twice under two numbers.
+
+    **OWNED BY THE TERMINAL.**
+    **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *sprint* — nothing ruled
+    the UNIT or the per-phase numbers. Census row A6 (sprint has no cap in six
+    phases) now has an authored answer.
+
+    **HIS WORDS:**
+    > *"yes we do nights - in season that may mean 3 sprint sessions"*
+    > *"in pre season you can do flying sprints when there is team training
+    > because you will get accelerations at footy"*
+    > *"in later off season after first 4 weeks of off season, they can sprint
+    > once a week - in pre season christmas break they can sprint once a week as
+    > well"*
+
+    **1 — THE UNIT IS NIGHTS.** *"yes we do nights"*. **This settles the clash
+    between Bible `:90` (nights) and `:129` (exposures, "2-3 the usual
+    maximum").** `:90` wins on the unit. **A night is a night whether it holds one
+    sprint effort or twenty.**
+
+    **2 — THE PER-PHASE NUMBERS, and they are not one number:**
+    - **In season: up to 3 sprint nights.** *"in season that may mean 3 sprint
+      sessions"* — team trainings and the game are what get it there, and that is
+      ACCEPTABLE, not a breach. **Bible `:90`'s flat "2 nights" is corrected by
+      this; amend it and changelog the correction.**
+    - **Late off-season (after the first 4 weeks): ONE night a week.**
+    - **Christmas break: ONE night a week.**
+    - **Pre-season: no number given — see 3, which is what he gave instead.**
+
+    **3 — PRE-SEASON IS A QUALITY RULE, NOT A COUNT, AND DO NOT FLATTEN IT INTO
+    ONE.** *"you can do flying sprints when there is team training because you
+    will get accelerations at footy"*. **So in pre-season the app MAY place
+    FLYING SPRINTS (top-end speed) ON a team-training night** — the club supplies
+    the accelerations, the app supplies the top end. **This is permission to
+    DOUBLE UP on a team night, which the counting must not treat as a breach.**
+    **It is quality-specific:** `top_end_speed` on a team night is his ruling;
+    `acceleration` on a team night is the duplication he is avoiding.
+
+    **4 — CROSS-CHECK BEFORE BUILDING, because two of his rules meet here.**
+    R-003 gates COD to no-team-training weeks and R-007 makes a double-up ONE
+    hard day. **A pre-season team night carrying flying sprints must stay one
+    hard day** (*"team training plus strength on the same day is deliberately
+    free against the budget"*, Bible `:118`). **If the sprint cap and the hard-day
+    budget disagree on that night, report it — do not pick one.**
+
+    **PROVE IT:** the 17 QA scenarios either side, and report sprint NIGHTS per
+    phase — in-season ≤3, late off-season 1, Christmas 1, and a pre-season team
+    night that carries flying sprints without becoming a second hard day.
+
+
 38. **BLOCKED-BY: other-agent — BOTH RULINGS ARE BUILT; THE LIVE REMAINDER IS THE
     TERMINAL'S POOL WORK.**
 
