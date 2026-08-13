@@ -410,12 +410,34 @@ IS ONE EXACT DAY, NOT A DIFFUSE SHORTFALL.** Traced week by week:
 GROWS (9 -> 13 strength rows) because the club's upper volume comes back as real
 sessions; what disappears is one OPTIONAL strength day per week, which is why the
 count falls by exactly 4 over a 4-week block.
-**THE LEVER IS NAMED AND BOTH ARMS ARE MEASURED: it is NOT the day set.**
-`onboardingToCoachingInputs` returns `selectedDays` = Mon-Fri and
-`availableDays` = 5 in **both** arms; only `teamTrainingDays` ([] vs [Tue,Thu])
-and `hasGame` (false vs true) differ. **So `buildCoachingPlan` allocates one
-fewer OPTIONAL session when the club anchors are gone, despite the same five
-available days.** That is the whole remaining unit.
+**THE LEVER IS FOUND, AND TWO WRONG SUSPECTS WERE ELIMINATED BY MEASUREMENT
+FIRST — neither is the day set nor the budget.**
+- `onboardingToCoachingInputs` returns `selectedDays` = Mon-Fri and
+  `availableDays` = 5 in **both** arms. Not the day set.
+- `actualCore=3, extraDays=2, optionalSessions=2` — **byte-identical in both
+  arms.** Not the budget.
+- `buildWeeklyPlan` then returns **4 allocations home and 3 away**, and the one
+  missing away is the only `tier: 'optional'` entry.
+
+**THE MISSING DAY IS THE GUNSHOW, AND IT IS ANCHORED TO THE FIXTURE.**
+`coachingEngine.ts`, the remaining-days loop: the Gunshow is placed on
+`slot.offset === -1` — **G−1, the day before the match.** Home has a Saturday
+game, so G−1 is Friday and the Gunshow lands. **Away has no game, so there is no
+G−1 and the Gunshow is never placed.** The code says so in its own words: *"the
+gunshow is fixture-relative"*.
+
+**SO THE TRIP REMOVES TWO THINGS AND REPLACES ONE.** The game goes (correctly,
+R-020) and the G−1 session goes with it as a side effect. **That is precisely
+what R-075 forbids** — *"replace the work it removes, not just delete it"*.
+
+**⚠ AND IT MEETS A SIGNED RULING GOING THE OTHER WAY, RECONCILED HERE RATHER THAN
+BUILT OVER.** Sam killed spare-day accessories on 2026-07-30 — *"Empty days stay
+empty; the athlete has the add menu"* (R3), and re-ruled its neighbour need-based:
+*"The trigger is the LACK, not the day."* **These do not collide, and the reason
+is the TRIGGER:** R3 forbids filling a day because it is EMPTY; R-075 requires
+filling because the TRIP TOOK SOMETHING. The second is the need-based shape Sam
+already approved, with the trip as the need. **Build it as a need triggered by a
+live travel span — never as "there is a spare day".**
 **IT IS GENERATION-SIDE AND MUST NOT BE STARTED AT THE TAIL OF A SESSION** — it
 owes `test:scenarios` + `test:qa` either side, and half-doing a generator change
 late is the documented way the last two nights went wrong.
