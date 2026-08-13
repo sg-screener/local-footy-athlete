@@ -10,7 +10,8 @@ four slices; nothing else.
 | # | Slice | Status |
 | --- | --- | --- |
 | 1A | Equipment probe — the pool refuses a slot no kit can fill | **DONE** — `bad0bfc1` |
-| 1B | Equipment class — every route asked, not just the pool walk | **HARD STOP** — item 5 shipped; items 1–4 built, measured, and NOT shipped: closing the restore route makes §18 refuse the whole week |
+| 1B | Equipment class — every route asked, not just the pool walk | **PARTIAL** — item 5 shipped (`116bf886`); items 1–4 built and measured, not shipped |
+| 1B-completion | R-090 lands; all four routes closed | **HARD STOP AT BUDGET** — every acceptance criterion met on the six printed scenarios, but 20 kit-limited worlds in the 180-world sweep are newly REFUSED. Not shipped. |
 | 2 | Authorship | NOT STARTED |
 | 3 | Close the loop | NOT STARTED |
 
@@ -313,6 +314,151 @@ That is a composer gap 1A exposed rather than caused, and it is in the ledger.
 thin-day filling; the scenarios exit-code bug and the rows-vs-usable-rows check
 left in the ledger untouched.
 
+### Slice 1B-completion — everything asked for works, and I am not shipping it
+
+**NOT SHIPPED. The tree is at `116bf886`.** The whole change is preserved at
+`scratchpad/slice1bc/` (9 files). The reason is at §5 and it is the same class of
+reason that stopped 1B: a state where an athlete gets NO WEEK is worse than the
+defect being fixed, and I reached the budget fence before I could close it.
+
+**⚠ A CORRECTION FIRST: there was no `slice1b-parked` branch.** I never created
+one — the 1B fence's allowed-outputs list did not include a branch, and my report
+said the diff was in session scratch. Re-landed from `scratchpad/slice1b/`.
+
+#### 1. Instruments, baseline → after
+
+Baseline is `116bf886` (1A + 1B item 5). "After" is the unshipped tree.
+
+| Instrument | Baseline | After | |
+| --- | --- | --- | --- |
+| `print:week` scenarios written | **5 of 6** (scenario 6 refused) | **6 of 6** | ✅ |
+| scenario 6 `impossible_without_kit` | 5 | **0** | ✅ |
+| scenario 6 findings total | 6 | **1** (the unrelated `1 × 1` prescription) | ✅ |
+| `row_restored` resurrections | 12 | **0** | ✅ |
+| athlete copy naming the kit | none | **on glass** — see §4 | ✅ |
+| `test:section18-v2` | 135/0 | **141/0** (+6 new cells) | ✅ |
+| `test:workout-canonicalisation` | 41/0 | **47/0** (+6 new cells) | ✅ |
+| `test:section18-gateway` | 91/0 | **91/0** | ✅ |
+| pools suite | 504/0 | **504/0** | ✅ |
+| `test:compile` | 459 PASSED | **459 PASSED** | ✅ |
+| `test:qa` | 168/10 | **168/10** | unchanged |
+| `test:scenarios` | 1 failed | **1 failed** | unchanged |
+| `test:ladder-wide` kit-blocked census | 86 days | **96 days** (vertical_pull 66, vertical_push 38, horizontal_pull 20) | reported |
+| `test:ladder-wide` deficient | 126 / 318 | 137 / 312 (ceiling 88, untouched) | reported |
+| **`test:ladder-wide` worlds refused** | **6 of 180** | **26 of 180** | ❌ **THE STOP** |
+
+#### 2. The third route — it was never a route
+
+**`Band Pallof Press` was a NAME, not a pipeline.** I instrumented the triage to
+print every row it sees:
+
+```
+[PROBE-TRIAGE] saw "Pallof Press" kind=trunk_support reason=registry_trunk_support
+               role=undefined linkedCond=false kit=["bodyweight"]
+```
+
+The row is built as **`Pallof Press`**. Sam's sheet is keyed
+**`Band Pallof Press`**. The printer judges the canonical spelling; the oracle was
+judging the raw one — and with no sheet row under `Pallof Press`,
+`equipmentRequiredFor` returned null and the whole question fell through to the
+load classifier, which said yes. Two slices called this "a route nothing checks".
+
+**RECEIPT:** fixed in `exerciseAllowedByEquipment` (`exercisePoolsStrength.ts`),
+not at the three callers — `resolveExerciseName(rawName)` before the sheet
+lookup. Scenario 6's last impossible row went with it.
+
+**⚠ AND THE OBVIOUS FIX WAS THE WRONG ONE.** `canonicalExerciseName` is the app's
+full canonicaliser and was the first attempt; it imports the selectable
+vocabulary, which reads `STRENGTH_POOLS` from that same module at import time.
+The cycle left `STRENGTH_POOLS` undefined and `print:week` died on
+`Cannot read properties of undefined (reading 'squat')` before building a single
+week. `resolveExerciseName` is the alias table that canonicaliser consults first
+and already lives in a dependency.
+
+#### 3. What §18 did after being taught the kit — THE HEADLINE
+
+**It fought back three times, each in a different voice, and I did not find them
+by reading.**
+
+1. **`pattern_restore_failure` ×3** — the site the ruling names. Fixed by
+   judging `requiredSafePatterns` against the kit-achievable set, read from the
+   week's own `equipmentRemovals`. Severity → `advisory`, domain → `equipment`.
+   The finding is still RAISED; the gap is disclosed, not deleted.
+2. **`required_minimum_shortfall:main_strength:1`** — the SESSION minimum, a
+   different code in a different function. Same ruling, same treatment, gated
+   tightly: it downgrades only when every required pattern with no main lift is
+   one the removals NAME as impossible.
+3. **`planner_selected_target_miss:main_strength:3`** — a THIRD code, the branch
+   immediately below the second in `evaluateNumeric`, for the planner's selected
+   target rather than the hard floor. It did not appear in `print:week` at all;
+   `test:section18-gateway` found it. **§18 says "not enough main strength" in
+   three voices and the kit has to answer all three.**
+
+**And a fourth thing bit before any of them, from my own side.**
+`resolveEquipmentCapabilities` returns `['bodyweight']` for BOTH *"the athlete
+owns nothing"* and *"nobody ever asked them"* — the typed `source` field
+(`unanswered_floor` / `legacy_positive_lift` / `athlete_answer` /
+`complete_selection`) is what tells them apart, and I was not reading it.
+Handing the floor to a REMOVAL gate reads silence as a declaration: it emptied a
+pools fixture that passes no profile at all and took the census from 6 refused
+worlds to 30. Only an exhaustive declaration may delete.
+
+#### 4. The hydration proof
+
+**What I did:** stamped the removals, serialised with `JSON.stringify`, revived,
+and re-canonicalised **with no kit** — the way `canonicaliseHydratedWorkout`
+actually calls it. Held by two cells in `test:workout-canonicalisation`.
+
+**What it found, and it changed the design.** Stamping only what THIS pass
+removed **erased the record on the very next pass**: §18's gateway
+re-canonicalises the week without the kit, and by then the illegal rows are gone,
+so a recomputation finds nothing and writes `undefined` over the reason the day
+is short. §18 then read an empty set and refused the week it had just been taught
+to publish. **A removal that happened is a fact about the workout, not a quantity
+to re-derive** — it is merged forward, and clears only on regeneration.
+
+**What survives:** the reason, through serialise → revive → kit-less
+re-canonicalisation, and the removed lift is not resurrected on the way back.
+Persistence itself is `JSON.stringify` of the whole state, so no field mapper
+drops it. And the line reaches glass — this is the published bodyweight Monday:
+
+```
+**Lower Squat**
+Some of this needs gym kit you don't have, so it's been left out rather than
+swapped for something easier. Training these properly needs a gym.
+```
+
+That is `part.detail`, the first non-null `detail` the projection has ever
+emitted, read from `Workout.equipmentRemovals` and signed as
+`part.detail.kit_cannot_train` under R-083.
+
+#### 5. WHY IT IS NOT SHIPPED
+
+`test:ladder-wide` sweeps 180 worlds. Refusals go **6 → 26**, and the ~20 new
+ones are almost entirely `Bodyweight Only` and `Dumbbells` —
+**exactly the athletes R-090 exists to serve.** They are refused with
+`pattern_restore_failure ... domain=strength_patterns`, which means
+`kitUnachievablePatterns` was EMPTY there: the removal record is not reaching the
+evaluator on those paths. Nearly every off-season case is `w2`, and the gateway
+log names a `safe_fallback_candidate` — *"Safe deterministic fallback entered the
+same gateway"* — so the strong hypothesis is a second week-builder
+(`section18AcceptedWeekGateway.ts`) that constructs workouts without carrying
+`equipmentRemovals`. **Stated as a hypothesis because I did not measure it** —
+I had already been wrong twice today by reasoning instead of probing.
+
+**Three reasons to stop rather than continue:**
+1. **Budget.** 437 changed production lines against a ~300 fence, 10 files
+   against ~10.
+2. **The next file is `section18AcceptedWeekGateway.ts`** — the file
+   `SEAT_INBOX` item 48 records as having eaten two reverted commits.
+3. **Publishing a week with an impossible row beats publishing no week.** That
+   is the standard I applied in 1B and agreed with then; it applies against me
+   now.
+
+**One targeted step remains:** find why `equipmentRemovals` does not reach the
+evaluator on the fallback/second-week path, and carry it. Everything else in this
+slice is measured and green.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -330,3 +476,8 @@ left in the ledger untouched.
 - The pool is narrower than the tagged library: a slot can be kit-trainable while the pool holds no legal entry for it, which is ~34 of the wide census's remaining deficient days.
 - `Workout.equipmentRemovals` (built in 1B, unshipped) is not yet carried through store hydration — a persisted week would lose the reason its day is short.
 - 1A's report called `RDLs` a non-pool route; it is the restored `Romanian Deadlift` renamed at the projection. Corrected in the 1B report.
+- `resolveEquipmentCapabilities` returns `['bodyweight']` for both "owns nothing" and "never asked"; only the typed `source` field separates them, and callers that delete work must read it.
+- §18 reports "not enough main strength" under three separate finding codes (`pattern_restore_failure`, `required_minimum_shortfall`, `planner_selected_target_miss`); any rule about strength sufficiency has to answer all three.
+- `canonicalExerciseName` cannot be imported by `exercisePoolsStrength` — the selectable vocabulary reads `STRENGTH_POOLS` at module-init and the cycle leaves it undefined.
+- A second week-builder path (likely `section18AcceptedWeekGateway.ts`'s safe deterministic fallback) appears not to carry `Workout.equipmentRemovals`; unproven, and it is what blocks R-090.
+- `test:ladder-wide` swallows §18 refusals into a bare counter, so a refusal-rate regression is invisible without instrumenting the `catch`.

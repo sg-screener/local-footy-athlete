@@ -1552,6 +1552,24 @@ triage. Unlocated.
 `part.detail.kit_cannot_train` + `projectVisibleWeek.partDetail` exist and are
 preserved, but they hang off the removal in (1) and could not be seen on glass
 while scenario 6 refuses to generate.
+**⚠ RECEIPT 3, 2026-08-14 (slice 1B-completion) — ALL FOUR ROUTES ARE CLOSED IN
+A MEASURED TREE THAT IS NOT SHIPPED, SO THE ROW STAYS `UNENFORCED`.** See the
+R-090 row below, which unblocked the §18 half, and `docs/MISSION_THREE_FIXES.md`.
+**THE THIRD ROUTE WAS NEVER A ROUTE — IT WAS A NAME.** `Band Pallof Press`
+reached bodyweight athletes because the row is built as **`Pallof Press`** while
+Sam's sheet is keyed **`Band Pallof Press`**: `equipmentRequiredFor` found no row
+under the raw spelling, returned null, and the question fell through to the load
+classifier, which said yes. Two slices reported it as an unlocated pipeline.
+Fixed in the ONE oracle (`exerciseAllowedByEquipment` resolves the spelling
+first), not at the three callers. **`canonicalExerciseName` cannot be used there
+— it imports the selectable vocabulary, which reads `STRENGTH_POOLS` at
+module-init, and the cycle kills `print:week` before a week is built.**
+**THE SAYING IS DELIVERED IN THAT TREE AND SURVIVES A REOPEN**, which was the
+open question: the record is CARRIED FORWARD, not recomputed, because §18's
+gateway re-canonicalises without the kit and a recomputation wrote `undefined`
+over the reason the day is short.
+**STILL THE ONE THING BETWEEN THIS ROW AND `BUILT`:** 20 kit-limited worlds are
+newly refused (R-090's receipt). Nothing else is outstanding.
 
 **R-084** · *"single leg hip thrust is an accessory"* (2026-08-13) · **A
 SINGLE-LEG HIP THRUST IS AN ACCESSORY, NOT SINGLE-LEG HIP WORK.** Its existing
@@ -1774,3 +1792,46 @@ substitution class that refused twelve worlds. (2) This corpus never produces
 two squats in one week, so the exact `2 squats / 1 hinge` shape he named is
 currently UNREACHABLE here — the guard is green and mutation-proven, not
 green-because-exercised.
+
+**R-090** · **SEAT-DRAFTED WORDING, APPROVED BY SAM (2026-08-14) — these are NOT
+his verbatim words and must never be quoted as such.** Grounded in **R-083** and
+**Bible §0** (*"find what they can still do"*), and **in nothing else — do NOT
+cite D3**, which governs access to strength-session VARIANTS and has nothing to
+do with equipment acceptance. · **WHEN AN ATHLETE'S KIT CANNOT TRAIN A REQUIRED
+PATTERN, §18 JUDGES REQUIRED PATTERNS AGAINST THE KIT-ACHIEVABLE SET, PUBLISHES
+THE BEST ACHIEVABLE WEEK, AND THE DAY NAMES THE GAP IN PLAIN ATHLETE LANGUAGE.**
+A kit-caused gap is a **typed, disclosed shortfall — never a refusal.**
+**WHY IT EXISTS:** R-083 says a pattern the kit cannot train is REMOVED, and §18
+said a required safe pattern must be RESTORED or the week is rejected. For a
+bodyweight athlete both cannot hold, and §18 had the last word: measured
+2026-08-14, honouring R-083 made `print:week` scenario 6 produce **no week at
+all**. The athlete getting nothing is worse than a row they can see and skip.
+**⚠ EQUIPMENT MAY NEVER WEAKEN AN ACHIEVABLE REQUIREMENT.** The exemption is
+PATTERN-SCOPED: a week that names `pull` as kit-impossible has said nothing about
+`push`, and a full-gym athlete missing a pattern is still a §18 failure exactly
+as before.
+**Search words:** kit achievable, equipment shortfall, bodyweight athlete, week
+refused, pattern_restore_failure, required_minimum_shortfall,
+planner_selected_target_miss, best achievable week, disclose not refuse, R-083,
+Bible section 0.
+· `UNENFORCED` — **BUILT AND MEASURED, DELIBERATELY NOT SHIPPED.** The tree is at
+`116bf886`; the change is preserved at `scratchpad/slice1bc/` and reported in
+full in `docs/MISSION_THREE_FIXES.md` (slice 1B-completion).
+**WHAT WORKS:** all six `print:week` scenarios publish (was 5 of 6), scenario 6's
+`impossible_without_kit` findings go **5 → 0**, `row_restored` resurrections of
+kit-illegal rows go **12 → 0**, and the athlete reads *"Some of this needs gym
+kit you don't have…"* on the day. Six new cells in `test:section18-v2` hold the
+ruling and its control (full gym still fails); six in
+`test:workout-canonicalisation` hold the removal and its survival through
+persistence + a kit-less re-canonicalisation.
+**WHY IT IS NOT SHIPPED:** `test:ladder-wide`'s 180-world sweep goes from **6
+refused weeks to 26**, and the ~20 new ones are `Bodyweight Only` and `Dumbbells`
+— the very athletes this ruling exists to serve. They refuse with
+`pattern_restore_failure ... domain=strength_patterns`, meaning the removal
+record never reached the evaluator on those paths. **Shipping that would refuse
+20 kit-limited worlds to publish six, which inverts the ruling.**
+**⚠ §18 REPORTS THIS SHORTFALL UNDER THREE SEPARATE CODES** —
+`pattern_restore_failure`, `required_minimum_shortfall` and
+`planner_selected_target_miss` — in two different functions. Whoever finishes
+this must answer all three; the third was found only by
+`test:section18-gateway`, never by `print:week`.
