@@ -124,12 +124,32 @@ stays GREEN at 46/0, because `[13d]` is a one-sided floor and losing the hinge
 does not push the away week below the home week. **`test:slot-coverage` is the
 only suite that reds.** Do not read away's green as coverage of this.
 
+**IT REACHES THE ATHLETE — measured, not inferred.** The away week's generated
+"Lower Squat" day went **5 rows -> 6** and the week **22 -> 23**, which is the
+exact number this file predicted before the fix was written. The hinge is on the
+day now.
+
 **R-014 STAYS `UNENFORCED`, HONESTLY.** It asks that a session be COMPOSED by
-pattern; nothing composes yet. This removed the thing that was DESTROYING
-coverage — a step toward the law, not the law. **The composer is the next unit**,
-and R-014's own row names its blocker: the pattern lookup is an exact-name map
-and 20 distinct shipped names (151 rows) resolve to NOTHING, so a composer cannot
-be built on an oracle that cannot see its own rows. **Fix the lookup first.**
+pattern; nothing composes yet. This removed the thing DESTROYING coverage — a
+step toward the law, not the law.
+
+**⚠ TWO OF R-014's BLOCKERS ARE NOW CLOSED, AND ITS ROW SAID OTHERWISE. I
+re-measured instead of believing it:**
+1. **The pattern lookup is FIXED.** `getExerciseTags` canonicalises before
+   looking up (`exerciseTags.ts:3439`). Probed the 25 names the generator
+   actually ships: **24 resolve.** The one that does not is `Short Flush`, a
+   CONDITIONING template — absence there is the right answer. **My own previous
+   entry said "fix the lookup first"; that was wrong and is struck.**
+2. **The hinge-drop hunt is CLOSED.** R-014's row calls it *"the ONE unknown left
+   … the whole remaining unit"* and narrows it to a window after
+   `applySubphaseMainLiftLoadMultiplier`. That window ends at
+   `finaliseWorkoutAfterMutation`'s `main_pattern_drift`, which `9b19244f` fixed.
+
+**SO THE NEXT UNIT REALLY IS THE COMPOSER**, with no blocker in front of it —
+and R-014's own trace says where NOT to build it: `buildTagAwareSession` and
+`exerciseScorer` are **not on the generation path** (one production caller, the
+coach-revision path; the top-up block fires zero times in five worlds). Two fixes
+have already been spent on layers not in the chain.
 
 **I ALSO WROTE A SECOND COPY OF SAM'S THREE REDS AND DELETED IT.** Section `[2]`
 of `sessionSlotCoverageTests.ts` already held all three from the earlier R-014

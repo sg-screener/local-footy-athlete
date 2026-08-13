@@ -177,6 +177,27 @@ to report absence.
 **SO THE FIRST STEP OF C7 IS NOT THE COMPOSER — IT IS MAKING THE PATTERN
 KNOWABLE.**
 
+**⇒ THAT FIRST STEP IS DONE. RE-MEASURED 2026-08-13 (terminal), and this row's
+blocker is CLOSED — do not chase it.** `getExerciseTags` canonicalises before
+looking up (`exerciseTags.ts:3439`), so every name this row lists as unresolved
+now resolves: `Face Pulls` -> `Face Pull`, `Pallof Press` -> `Band Pallof
+Press`, `Bicep Curls` -> `Bicep Curl (Dumbbell)`, `Tricep Pushdowns` ->
+`Tricep Pushdown`, `Romanian Deadlift` -> `RDLs`. **Probed over the 25 names the
+generator actually ships in the away and QA weeks: 24 resolve.** The one that
+does not is `Short Flush`, which is a CONDITIONING template
+(`conditioningTemplates.ts:1186`) and correctly carries no strength tags —
+**absence there is the right answer, not a blind spot.**
+
+**AND THE DRIFT HALF IS ALSO DONE — `9b19244f`.** `main_pattern_drift` was
+DESTROYING coverage: it measured every row against the plan's MAIN LIFT, so the
+fallback emitted Sam's ladder and the canonicaliser deleted the hinge back out
+(measured: 1 drop in the away suite, 0 across the QA corpus). Drift is now
+measured against the day's own ladder (`patternsCompletingLadder`), and the guard
+still refuses genuine drift — a push row on a squat day is still removed.
+**⚠ Neither of these COMPOSES anything, so this row stays `UNENFORCED` and that
+is honest.** What is left is the composer itself, and per the trace below it is
+NOT `buildTagAwareSession`.
+
 **⚠ AND THE COMPOSER IS NOT WHERE ANYONE WOULD LOOK. TRACED 2026-08-13, end to
 end, because two fixes aimed at it changed nothing:**
 1. **`buildTagAwareSession` / `exerciseScorer` ARE NOT ON THE GENERATION PATH.**
