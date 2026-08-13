@@ -15,8 +15,16 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-37. **AWAY MUST REPLACE THE WORK IT REMOVES — SAM, 2026-08-13, AND HE CLOSED MY
-    QUESTION INSTEAD OF ANSWERING IT.**
+37. **BLOCKED-BY: other-agent — AWAY MUST REPLACE THE WORK IT REMOVES — SAM,
+    2026-08-13, AND HE CLOSED MY QUESTION INSTEAD OF ANSWERING IT.**
+
+    **MARKED BY `audit`, 2026-08-13, NOT CLAIMED AND NOT EDITED BELOW THIS
+    PARAGRAPH.** This item names the DESKTOP as owner and the terminal seat is
+    also live in `src/utils/sessionResolver.ts` (written minutes ago, and it
+    holds that file). **Two seats are already in it; a third is how b62add9f
+    happened.** Marking is the permitted edit for a non-owner — the duplicate
+    below is marked the same way, and **collapsing the two 37s stays the SEAT's
+    edit, exactly as this item already says.**
 
     **⚠ DUPLICATE — THE SEAT'S FULLER COPY OF THIS ITEM IS BELOW AND IT CARRIES
     MORE OF SAM'S WORDS THAN THIS ONE DOES. READ THAT ONE.** Two 37s exist
@@ -97,8 +105,10 @@ his instruction is standing authority, not history.**
     **NOTHING IS OWED TO SAM.** ~~ORIGINAL~~ — archived verbatim to
     `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1).
 
-37. **AWAY REPLACES THE WORK IT REMOVES — SAM RULED 2026-08-13. THE SATURDAY
-    REST DAY IS WRONG.**
+37. **BLOCKED-BY: other-agent — AWAY REPLACES THE WORK IT REMOVES — SAM RULED
+    2026-08-13. THE SATURDAY REST DAY IS WRONG.** (Seat's fuller copy; marked by
+    `audit`, same reason as the duplicate above — owned by the desktop, and the
+    terminal seat holds `sessionResolver.ts`.)
 
     **✅ THE DAY HALF IS BUILT AND ON GLASS — `59b0994a`+, 2026-08-13, desktop.**
     The vacated Saturday reads **"Conditioning — 2 exercises"** (`400 m Repeats`,
