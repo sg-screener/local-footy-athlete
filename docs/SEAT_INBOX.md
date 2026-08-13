@@ -1043,6 +1043,43 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, terminal — DOES A TEAM NIGHT *COUNT AS* YOUR SPRINT, OR
+  DOES IT *EARN* ONE ON TOP? Your R-079 and the app disagree, and both readings
+  are defensible.**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *sprint*, *target met*,
+  *anchor*, *team night*, *flying*. **Returned R-007, R-062, R-079** — R-007 is
+  the hard-day budget, R-062 unrelated, and **R-079 is my own row from today,
+  which rules the UNIT (nights) and the per-phase NUMBERS but never says whether
+  the club's own session IS the exposure.** *"target met"* and *"team night"*
+  return NOTHING. **This is a gap, not a re-ask.**
+
+  **THE DISAGREEMENT, MEASURED:** you ruled *"in pre season you can do flying
+  sprints when there is team training because you will get accelerations at
+  footy"* — the club gives accelerations, the app adds top-end. **I built that
+  (`0d4824df`) and it changes nothing**, because `sprintExposureGate` answers
+  `preseason_target_met` first: `anchorSprintCodExposures >= target`, i.e. **the
+  team night is already counted as your sprint for the week, so the app refuses
+  to add more.** Your ruling says add; the gate says you already have one.
+
+  **AND IT IS THE SAME QUESTION UNDER THE SECOND GAP:** an athlete with **no
+  club, in-season** gets ZERO sprint work. Their week requires 1, correctly
+  raises a BLOCKING shortfall, and **the only code that could place a sprint does
+  not run in-season at all** — because in-season sprint is treated as the club's
+  job. For a club athlete that is right. For this athlete nobody wrote the case.
+
+  **WHAT TO SEND — one line each, and either answer is buildable:**
+  1. *"a team night IS my sprint"* (the gate is right; your pre-season flying
+     sprints need a different door, and my inert change comes out), **or**
+  2. *"a team night EARNS a sprint on top"* (the gate stops counting anchors
+     against the target in pre-season, and the change I already landed starts
+     working).
+  3. And for the no-club athlete: *"in season with no club, give them sprints"*
+     or *"leave it — that is what a club is for"*.
+
+  **NOT BLOCKING.** The unit, the numbers and the cells are built and green;
+  only these two doors wait.
+
 - **✅ ANSWERED AND CLOSED 2026-08-13 — SAM RULED *"leave it"*. REGISTERED AS
   R-078 AND HELD BY A CELL IN THE SAME COMMIT.**
 
