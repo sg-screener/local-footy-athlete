@@ -45,6 +45,40 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE RECEIPT SWEEP STOPS AT TWO — THE OTHER NINE **CANNOT BE CHECKED THIS WAY**, and my comparison was the wrong unit
+
+**Two receipts were genuinely stale and are corrected:**
+- `LAW-totals-or-red` — *"175 suites"* → **244** (measured: files calling
+  `armTotalsOrRed`).
+- `LAW-rulings-are-machine-held` — *"11 of 70"* → **14 of 81** (measured: `R-`
+  rows and `UNENFORCED` rows in `RULINGS_REGISTRY.md`).
+
+**Both cite a DIRECTLY COUNTABLE quantity, which is why they were checkable.**
+
+**⚠ THE OTHER NINE ARE NOT, AND MY SWEEP PRODUCED NONSENSE BEFORE I CAUGHT IT.**
+I compared each row's *"N cells"* against its suite's PASS COUNT:
+
+| row | claims | suite total |
+| --- | --- | --- |
+| `LAW-inbox-order-is-content` | 21 cells | 39 |
+| `LAW-away-is-an-equipment-answer` | 21 cells | 49 |
+| `LAW-stop-needs-an-exit` | 25, 36 cells | 39 |
+
+**Those are not drifts.** *"21 cells"* means **the cells THAT UNIT ADDED**; the
+suite's total is every cell it has ever held. **The two numbers were never
+supposed to match**, and "correcting" them would have overwritten true statements
+with a number measuring something else entirely.
+
+**`a-count-taken-for-a-record`, NINTH SIGHTING TODAY, and mine again** — the
+comparison's unit has to be the claim's unit. A contribution count is not
+recoverable from a total, so **these nine are unverifiable by any cheap method
+and I am not touching them.**
+
+**RECORDED SO NOBODY "FIXES" THEM.** The obvious next move for a reader who sees
+`21 cells` beside a suite reporting 39 is to update the row. **That would be
+wrong, and it would look like diligence** — which is exactly how a correct
+statement becomes a false one.
+
 ### ✅ 40 UNARMED → **ONE**. I RECONSIDERED MY OWN "HANDED OVER, NOT SWEPT" AND THE RECONSIDERATION WAS RIGHT.
 
 **Twenty minutes ago I wrote that the last nine were a handover, not a sweep, and
