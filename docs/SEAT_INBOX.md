@@ -48,8 +48,20 @@ his instruction is standing authority, not history.**
     week, his ruling is only half true and that is a defect to report.
 
 
-37. **BLOCKED-BY: sam (STRENGTH ARM ONLY) — AWAY MUST REPLACE THE WORK IT
-    REMOVES. THE DAY HALF IS BUILT AND ON GLASS.**
+37. **CLOSED — SAM RULED IT AS R-077 AND THE ANSWER WAS "DO NOTHING". AWAY IS
+    DONE.**
+
+    **R-077:** *"they will likely train less than normal and i think they can
+    always add a session in if they need to"* — **R-069(2) wins on the STRENGTH
+    count**, so an away week keeps the 2-lift bye shape. **The three placement
+    attempts stay reverted and `coachingEngine.ts` is untouched.**
+    **⚠ R-075 IS NOT OVERTURNED — the conditioning replacement STANDS** and is on
+    glass (`c8702c56`). Away replaces the club's work in KIND; it just does not
+    chase the lifts.
+    **THE ESCAPE HATCH IS VERIFIED, NOT ASSUMED** — all seven days of a live away
+    week return `canAdd: true` and offer `strength_upper/lower/full` and
+    `gunshow`, measured through the real door. `test:away-flow` [17e]/[17f]/[17g],
+    non-vacuity first. **His ruling is whole, not half true.**
 
     **RE-MARKED BY the desktop, 2026-08-13, from `other-agent` to `sam`:** the
     desktop owns this and is no longer holding it. **What remains is a
@@ -513,24 +525,6 @@ his instruction is standing authority, not history.**
     fix are ONE commit, never two. **Next session starts at the branch, not at
     the hunt.**
 
-33. **THE RULINGS REGISTRY + ASK GATE — BUILT.** Full text:
-    `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
-    `docs/RULINGS_REGISTRY.md`, 70 rows, seeded from every named source; the gate
-    is in `scripts/seat-inbox-hook.sh` with cells.
-    **Sam, 2026-08-13:** *"IT SHOULDN'T EVEN BE AN OPTION FOR THE AI TO FIX A
-    PROBLEM THAT HAS BEEN FIXED"*, and *"ONLY THINGS THAT ARE BUILT AND SET IN
-    STONE ACTUALLY CHANGE HOW THEY BEHAVE"* — which is why this is a hook and not
-    an instruction. **Remaining: nothing — but a grep returning nothing still
-    means "not recorded", never "he never decided".**
-
-32. **THE THREE QUESTIONS DRAFTED FOR SAM WERE RE-ASKS — CLOSED.** Full text:
-    `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
-    Two were already built (`3f62ad62` many games per week; `1dc52caf` the
-    fixture shortfall sentence). The third was barred in shape.
-    **Sam, 2026-08-13:** *"why the fuck is someone still saying shit like this WE
-    HAVE FUCKING FIXED THESE ISSUES"*. **Superseded by item 33 — the registry and
-    the gate now exist.**
-
 31. **COD WINDOW + CHRISTMAS BREAK CONTROL — SAM RULED 2026-08-13.** Full text:
     `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
     **Off-season means NO team training, full stop; the Christmas break is an
@@ -703,130 +697,6 @@ his instruction is standing authority, not history.**
    snapshot. **Three priced routes; none started, because the two section18
    files they touch are mid-flight with another agent.**
 
-7. **✅ BOTH NAMED BUILDS EXIST — RE-MEASURED BY `audit`, 2026-08-13, WHICH IS
-   WHAT THIS ITEM'S LAST LINE ASKS FOR. NOTHING IS OWED TO SAM.**
-
-   This item names exactly two things and **both are in the tree now:**
-
-   1. **THE CAPACITY HALF — BUILT, and it is labelled with this item's own
-      number.** `weeklyExposureContractBuilders.ts:406` carries *"STRENGTH WAS
-      THE ONLY ALLOCATION COUNTING A DAY IT CAN NEVER USE (item 7a)"* and now
-      caps strength at `strengthCapacityDays` — selected days minus the game
-      day — reducing with `insufficient_availability`. **⚠ AND IT IS NOT WHAT
-      THIS ITEM ASKED FOR: it drops the GAME day, not the TEAM days.** The
-      comment refuses the team-day half ON PURPOSE and says why — *"strength
-      legitimately STACKS on a team night ('Team Training + Upper Pull' is a real
-      generated session)"* — which is R-010's territory, not a miscount.
-      **Its own honesty note: INERT across all 34 QA weeks, because the game day
-      is never among the selected training days; fixed because nothing PREVENTS
-      the overlap.**
-   2. **THE COPY HALF — BUILT.** The one-sentence-for-two-causes defect is gone:
-      `section18ShortfallDisclosure.ts:84` is `cause: 'fixture' | 'athlete_rest'`
-      with a sentence each, and the day named now belongs to the cause. **The
-      renderer had a second live defect this item never knew about — the one
-      production call site passed `weekStart`, so every Monday-start week said
-      "Resting Monday" whichever day was rested, and whether or not one was.**
-      **Sam ruled fixture-only on 2026-08-13.**
-
-   **AND THE HEADLINE IS STILL TRUE — I MEASURED IT RATHER THAN ASSUMING THE
-   SUB-BUILDS CLOSED IT.** `buildWeeklyExposureContract` called directly,
-   in-season, normal readiness:
-
-   | week | strength target |
-   | --- | --- |
-   | 4 selected days, 2 team, 1 game | 3 |
-   | 3 selected days, 2 team, 1 game | 2 |
-   | **2 selected days (both team nights), 1 game** | **2** |
-   | 5 selected days, 2 team, no game | 3 |
-
-   **IT FLOORS AT 2 AND NEVER REACHES 1, in the tightest week the input can even
-   express.** And it cannot express his week at all: **`gameDay` is
-   `number | null`** (`weeklyExposureContractBuilders.ts:35`), so a SECOND game
-   has no representation at this layer. **Two independent reasons, both now
-   numbers rather than adjectives.**
-
-   **⚠ AND I AM SCOPING MY OWN TABLE BEFORE ANYONE BUILDS ON IT — IT MEASURES
-   ONE LAYER, NOT THE PIPELINE.** Single-variable, holding days fixed and
-   toggling only the game: **strength = 3 with no game, 3 with a game, 3 with
-   zero team days, 3 with three team days.** Conditioning moves (3 -> 4);
-   **strength never does.** So at the CONTRACT layer club load costs strength
-   nothing, and only the selected-day count can reduce it.
-
-   **BUT THE CONTRACT IS NOT WHERE THE GAME'S COST LANDS, AND R-073's OWN
-   MEASUREMENT SAYS SO** — it counted `spacing_safety_conflict` **x4** across 28
-   weeks, *"Game-day, G-1 and G+1 protection leave fewer safe gym placements"*.
-   **That is a fixture reducing strength, downstream, in the §18 evaluator.**
-   **So "a game never costs strength" is TRUE OF THE LAYER I PROBED AND FALSE OF
-   THE APP, and I am not repeating this turn's earlier mistake of publishing a
-   null result without checking it reached the right code.**
-
-   **WHAT IS ACTUALLY ESTABLISHED, AND IT IS ONE STRUCTURAL FACT:**
-   `WeeklyExposureContractInput.gameDay` is `number | null`
-   (`weeklyExposureContractBuilders.ts:35`) — **at this seam a week has at most
-   ONE game**, so Sam's *"2 games and 2 team trainings"* cannot even be posed
-   here. (Item 32 records many-games-per-week as BUILT `3f62ad62` — **that is the
-   CALENDAR; this seam did not follow.**)
-
-   **✅ THAT MEASUREMENT IS NOW DONE, 2026-08-13 (`pace`), AND IT IS STRUCTURAL
-   RATHER THAN STATISTICAL — THE SECOND GAME NEVER REACHES THE LAYER THAT SETS
-   THE STRENGTH TARGET.**
-
-   **⚠ FIRST, ONE LINE OF MY OWN EVIDENCE IS STRUCK, AND THE REGISTRY GATE IS
-   WHAT CAUGHT IT.** I listed `OnboardingData.gameDay?: DayOfWeek`
-   (`types/domain.ts:192`) as seam one, "carries ONE game". **R-001 forbids
-   exactly that inference and names it by line:** *"the profile does NOT grow a
-   second game field — the CALENDAR holds fixtures; `gameDay` is only a
-   DEFAULT"*, and it already carries **⚠ RE-ASKED 2026-08-13 by reading
-   `domain.ts:192` `gameDay?: DayOfWeek` and concluding "room for one". That
-   single field is not the mechanism.** **I made the same wrong read, from the
-   same line, on the same day.** `BUILT 3f62ad62` — a split round keeps its
-   second game. **Struck, not quietly deleted.**
-
-   **THE FINDING SURVIVES WITHOUT IT, AND IT IS THE HALF R-001 DOES NOT COVER —
-   a DOWNSTREAM seam, not the profile:**
-   - `WeeklyExposureContractInput.gameDay: number | null`
-     (`weeklyExposureContractBuilders.ts:35`) — **ONE.**
-   - **BOTH production callers pass one and there is no fixture LIST on the
-     path:** `coachingEngine.ts:1066`
-     `gameDay: inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null`, and
-     `postGenerationConstraintValidation.ts:845/1955` `resolvedGameDay` /
-     `targetGameDay`.
-   - **`generateProgramLocally` hardcodes `markedDays: {}`**
-     (`services/api/generateProgram.ts:1088`) when it bakes the block, so a
-     second game entered on the CALENDAR never reaches generation at all.
-
-   **THE PLURAL OWNER EXISTS AND SERVES A DIFFERENT PATH.**
-   `targetWeekFixtures` (`fixtureConditionedAvailability.ts:141`) returns a LIST
-   straight off `markedDays`, so two games in a week ARE representable — item
-   32's *"many games per week"* (`3f62ad62`) is real. **It feeds the READ/derive
-   side (`derivedWeekContract`), never the strength contract.**
-
-   **SO THIS ITEM'S TITLE IS EXACT AND NOW HAS A MECHANISM: Sam's *"2 games and 2
-   team trainings"* week is not unreachable because the arithmetic refuses it —
-   it is unreachable because the arithmetic is never told about the second game.**
-   **AND THERE IS NO QUESTION FOR HIM IN IT. R-001 already rules *"as many games
-   as needed"* and names the calendar as the mechanism; what has not followed is
-   one downstream seam. That is engineering, not a ruling — do not draft this to
-   him.**
-   **It is census C2's shape one layer up: the fact exists, and the code that
-   would act on it has no reader for it.**
-
-   **THE BUILD, NAMED:** thread the fixture LIST (`targetWeekFixtures`) into the
-   exposure contract in place of the single `gameDay`, then let the strength
-   target answer to it. **It changes generated output, so it owes
-   `test:scenarios` + `test:qa` both arms.** **NOTHING IS OWED TO SAM — the
-   quote at the top of this item IS the ruling. OWNER: unclaimed.**
-
-   ── original below ──
-
-   **NOT BLOCKED — SAM'S OWN CASE IS NOT REPRESENTABLE TODAY.** Full text:
-   `docs/SEAT_ORDERS_PARKED_FULL_2026-08-13.md`.
-   The two questions this item put to Sam were withdrawn — the answers were
-   already in the code and in his rulings. **Sam, 2026-08-13, on being asked
-   things already settled:** *"WE HAVE FUCKING FIXED THESE ISSUES"*. **What remains is the build, and it is
-   the seat's measurement that is stale, not his instruction.** Re-measure before
-   starting: this item has been wrong about its own premise once already.
-
 13. **STANDING, EVERY STOP — KEEP THE UNENFORCED LAW COUNT FALLING.** Full
     text, the priced routes and the refutations:
     `docs/SEAT_ORDERS_PARKED_FULL_2026-08-13.md`.
@@ -928,17 +798,6 @@ his instruction is standing authority, not history.**
 
     ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 21).
 
-
-25. **CLOSED BY R-014 — there is no session floor, because size was never the
-    rule. Measurement archived verbatim to
-    `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 25).**
-    **REGISTRY-GREP: R-014**, which now reads *"because the number of exercises
-    is not important the total work being done evenly across the body is"* and
-    ends **"DO NOT SEND HIM A FLOOR NUMBER QUESTION."** The "FLOOR = 4"
-    recommendation is WITHDRAWN. **The 3-row sessions it measured are still a
-    defect — but the defect is an UNFILLED PATTERN, not a count**, and that
-    build is item 34's. R-014 stays `UNENFORCED`: nothing composes a session by
-    pattern.
 
 26. **THE ⚠ HALF IS BUILT — HIS 2-3 PAIRS SURVIVE THE VALIDATOR NOW.**
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 26).**

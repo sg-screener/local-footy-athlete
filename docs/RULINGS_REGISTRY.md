@@ -496,6 +496,29 @@ proven live (`true` away, `false` home) and the branch is proven correct, so a
 third guess is the third wall of the same shape. `coachingEngine.ts` was restored
 byte-identical to HEAD.
 
+**R-077** · *"let's go by week for that actually they will likely train less than
+normal and i think they can always add a session in if they need to"* (Sam,
+2026-08-13, answering R-075 vs R-069(2) on the STRENGTH count) · **AN AWAY WEEK
+KEEPS THE BYE SHAPE FOR STRENGTH.** R-069(2) — *"bye recovery is exactly 2
+lighter lifts"* — WINS. A trip is not a rebuild of the three gym days it
+replaced, and the missing lifts are not chased. · `BUILT` — **the answer was DO
+NOTHING, and nothing was done**: `coachingEngine.ts` is untouched and the three
+placement attempts recorded under R-075 stay reverted.
+**⚠ SCOPE — R-075 IS NOT OVERTURNED.** He ruled the STRENGTH count only. **The
+conditioning replacement stands and ships**: a freed fixture day carries a
+conditioning session (`freedByTheTrip`, `c8702c56`, seen on glass). Away still
+replaces the club's work in KIND; it simply does not chase the lifts.
+**THE ESCAPE HATCH IS PART OF THE RULING, AND IT IS VERIFIED RATHER THAN
+ASSUMED** — he accepted training less BECAUSE he can top it up. Measured through
+the real door (`listPlanChangeOptionsForDay`) on a live away week: **all seven
+days return `canAdd: true` and offer `strength_upper`, `strength_lower`,
+`strength_full` and `gunshow`.** Held by `test:away-flow` [17e]/[17f]/[17g],
+non-vacuity first — at HOME the fixture day is `locked: 'game_day', canAdd:
+false`, which proves the door is live.
+**AND THE FREED DAY GAINED MORE THAN A SESSION:** at home that Saturday is a
+LOCKED fixture; away it is editable and takes an added session on top. The
+freed-Saturday work did not just fill the hole, it opened it to him.
+
 **R-021** · *"i've taken out time caps for now"* · No time-cap row renders. **A
 DISPLAY ruling, not a deletion order — the `time_limit` kind stays in the type.**
 · `BUILT`.

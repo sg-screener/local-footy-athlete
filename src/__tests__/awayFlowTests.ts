@@ -830,6 +830,51 @@ async function main(): Promise<void> {
     { source: awaySat.day?.source, type: awaySat.day?.workout?.workoutType,
       rows: awaySat.rows, name: awaySat.day?.workout?.name });
 
+  // ── [17e] R-077's ESCAPE HATCH IS PART OF THE RULING, SO IT IS PART OF THE
+  //         CELL ───────────────────────────────────────────────────────────────
+  //
+  // **Sam, 2026-08-13, ruling that an away week keeps the BYE's two lifts rather
+  // than rebuilding the three it replaced:** *"let's go by week for that actually
+  // they will likely train less than normal and i think **they can always add a
+  // session in if they need to**"*.
+  //
+  // **THE SECOND HALF OF THAT SENTENCE IS LOAD-BEARING.** He accepted training
+  // less BECAUSE he can top it up himself. **If the add door were shut on an
+  // away week, his ruling would be only half true and the athlete would simply
+  // have lost the sessions** — so this asserts the hatch, not just the shape.
+  //
+  // NON-VACUITY IS THE HOME GAME DAY: it IS locked (`game_day`, `canAdd: false`),
+  // which proves this is reading a live door rather than a permissive default.
+  const { listPlanChangeOptionsForDay } = require('../utils/planChangeProducer') as any;
+  const optionsOn = (state: any, date: string) => {
+    const week = resolveWeek('2026-08-10', state) as any[];
+    return listPlanChangeOptionsForDay({ visibleWeek: week, date, todayISO: '2026-08-10' });
+  };
+  const STRENGTH_ADDS = ['strength_upper', 'strength_lower', 'strength_full'];
+  const homeGameDay = optionsOn(homeState, '2026-08-15');
+  run('[17e] at home the fixture day is LOCKED — so the cells below can fail',
+    homeGameDay.locked === 'game_day' && homeGameDay.canAdd === false,
+    { locked: homeGameDay.locked, canAdd: homeGameDay.canAdd });
+
+  const awayWeekDates = ['2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13',
+    '2026-08-14', '2026-08-15', '2026-08-16'];
+  const shutDays = awayWeekDates.filter((date) => {
+    const options = optionsOn(awayState, date);
+    const ids = (options.categories ?? []).map((category: any) => category.id);
+    return !options.canAdd || !STRENGTH_ADDS.every((id) => ids.includes(id));
+  });
+  run('[17f] EVERY day of an away week can take an added STRENGTH session',
+    shutDays.length === 0,
+    { shutDays, needed: STRENGTH_ADDS });
+  // AND THE DAY THE TRIP FREED IS THE ONE THAT CHANGED MOST — at home it is a
+  // locked fixture, away it is an editable day carrying conditioning. **The
+  // freed-Saturday work did not just fill the hole, it OPENED it to him.**
+  const awayFreed = optionsOn(awayState, '2026-08-15');
+  run('[17g] and the freed fixture day is editable, where at home it is locked',
+    awayFreed.locked === null && awayFreed.canAdd === true,
+    { locked: awayFreed.locked, canAdd: awayFreed.canAdd,
+      homeLocked: homeGameDay.locked });
+
   // ── [16] THE CARD'S WORDS — Sam: *"it shouldn't show + team training"* ──
   //
   // THE CARD DOES NOT READ `workout.name`. It renders the visible projection's
