@@ -96,10 +96,22 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
   const out: SessionSlot[] = [];
   const unilateral = tag.unilateral === true;
 
+  // ⚠ A UNILATERAL LIFT FILLS ITS SINGLE-LEG SLOT AND NOT THE BILATERAL ONE.
+  //
+  // FOUND BY USING THIS RULE ON SAM'S OWN FILL ORDER. The first version had a
+  // unilateral hinge fill BOTH `hinge` and `single_leg_hip`, so a day built
+  // exactly to `:227` — heavy hinge, squat, single-leg knee, single-leg RDL,
+  // accessory — reported `duplicated: [hinge]`. It flagged his own prescription.
+  //
+  // The model was self-contradictory: his list REQUIRES a heavy hinge AND a
+  // single-leg hip lift, and a single-leg hip lift IS a hinge. Counting the
+  // overlap as a duplicate made the two requirements impossible to satisfy at
+  // once. It also let a day with ONLY a single-leg RDL claim the heavy-hinge
+  // slot, which his fill order plainly separates.
   switch (tag.movement) {
     case 'squat':
-      out.push('squat');
       if (unilateral) out.push('single_leg_knee');
+      else out.push('squat');
       break;
     case 'lunge':
       // A lunge IS the single-leg knee-dominant slot — that is what the pattern
@@ -107,8 +119,8 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
       out.push('single_leg_knee');
       break;
     case 'hinge':
-      out.push('hinge');
       if (unilateral) out.push('single_leg_hip');
+      else out.push('hinge');
       break;
     case 'horizontal_push': out.push('horizontal_push'); break;
     case 'horizontal_pull': out.push('horizontal_pull'); break;

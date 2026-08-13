@@ -1170,17 +1170,40 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
           { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
         ];
   }
+  // ── SAM'S FILL ORDER, Bible `:227` — NOT a list of same-pattern lifts ─────
+  //
+  // *"heavy squat pattern -> heavy hinge pattern -> single-leg knee-dominant ->
+  // single-leg hip-dominant -> accessories. An athlete is better served by a
+  // squat and a hinge than by two squats."* Restated by him 2026-08-13:
+  // *"lower body strength should have a hinge, a squat, an single leg knee, a
+  // single leg hip, and accessory and/or some core"*.
+  //
+  // WHAT THIS REPLACED, AND HIS OWN RULE CONVICTED IT: RDLs + Hip Thrusts +
+  // Hamstring Curl is TWO HINGES and no squat — `sessionSlotCoverage` reports
+  // `duplicated: [hinge]`, `missing: [squat, single_leg_knee, single_leg_hip]`.
+  // That is the exact shape `:227` names as the thing to avoid, in hinge form.
+  //
+  // The CONTRIBUTION still leads — a hinge day opens with the heavy hinge — but
+  // the day covers the body instead of repeating one pattern.
   if (contributions.length === 1 && contributions[0] === 'hinge') {
     return [
       { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Hip Thrusts', sets: 3, repsMin: 8, repsMax: 12 },
-      { name: 'Hamstring Curl', sets: 2, repsMin: 10, repsMax: 12 },
+      { name: 'Back Squat', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'Bulgarian Split Squats', sets: 3, repsMin: 8, repsMax: 12 },
+      { name: 'Single Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
+      { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12 },
     ];
   }
+  // THE SAME FILL ORDER, SQUAT-LED. This branch is LIVE — measured firing 6
+  // times across 5 generated worlds — and it shipped Back Squat + Reverse Lunges
+  // + Leg Extension: `missing: [hinge, single_leg_hip]`. A lower day with no
+  // hinge at all, which is `:227`'s first requirement after the squat.
   if (contributions.length === 1 && contributions[0] === 'squat') {
     return [
       { name: 'Back Squat', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
       { name: 'Reverse Lunges', sets: 3, repsMin: 8, repsMax: 12 },
+      { name: 'Single Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
       { name: 'Leg Extension', sets: 2, repsMin: 10, repsMax: 12 },
     ];
   }

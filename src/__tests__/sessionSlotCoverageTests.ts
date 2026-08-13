@@ -168,6 +168,50 @@ console.log('\n[5] The day kind is DELEGATED to the one owner, not re-inferred')
     slotDayKindFor('Full Body Strength') === null);
 }
 
+console.log('\n[6] A unilateral lift fills its SINGLE-LEG slot, not the bilateral one');
+{
+  // FOUND BY USING THE RULE ON SAM'S OWN FILL ORDER. The first version had a
+  // unilateral hinge fill BOTH `hinge` and `single_leg_hip`, so a day built
+  // exactly to Bible :227 reported `duplicated: [hinge]` — the rule flagged his
+  // own prescription. His list requires a heavy hinge AND a single-leg hip lift,
+  // and a single-leg hip lift IS a hinge; counting the overlap made the two
+  // impossible to satisfy at once.
+  ok('a single-leg RDL is the single-leg HIP slot, not a second heavy hinge',
+    JSON.stringify(slotsFilledByRow(row('Single Leg RDL'))) === JSON.stringify(['single_leg_hip']),
+    JSON.stringify(slotsFilledByRow(row('Single Leg RDL'))));
+  // ...so a day with ONLY a single-leg RDL is still MISSING its heavy hinge,
+  // which is what his fill order separates.
+  ok('a day with only a single-leg RDL still lacks the heavy hinge',
+    sessionSlotCoverage([row('Back Squat'), row('Single Leg RDL')], 'lower').missing.includes('hinge'));
+}
+
+console.log('\n[7] THE TWO PRODUCTION FALLBACKS, judged by his own rule');
+{
+  // These are the exact lists `defaultProgram.ts` returns. The squat one is LIVE
+  // — measured firing 6 times across 5 generated worlds.
+  const fallback = (names: readonly string[]) => sessionSlotCoverage(names.map((n) => row(n)), 'lower');
+
+  const oldSquat = fallback(['Back Squat', 'Reverse Lunges', 'Leg Extension']);
+  ok('[:227] the OLD squat fallback had NO HINGE',
+    oldSquat.missing.includes('hinge') && oldSquat.missing.includes('single_leg_hip'),
+    JSON.stringify(oldSquat.missing));
+  const oldHinge = fallback(['RDLs', 'Hip Thrusts', 'Hamstring Curl']);
+  ok('[:227] the OLD hinge fallback was TWO HINGES — his exact "two squats" shape',
+    oldHinge.duplicated.includes('hinge') && oldHinge.missing.includes('squat'),
+    `dup=${JSON.stringify(oldHinge.duplicated)} missing=${JSON.stringify(oldHinge.missing)}`);
+
+  // AND THE REPLACEMENTS COVER THE BODY. If either of these ever reds, a
+  // fallback has drifted back off his fill order.
+  const newSquat = fallback(['Back Squat', 'RDLs', 'Reverse Lunges', 'Single Leg RDL', 'Leg Extension']);
+  ok('[:227] the squat-led fallback now covers every slot, none doubled',
+    newSquat.missing.length === 0 && newSquat.duplicated.length === 0,
+    `missing=${JSON.stringify(newSquat.missing)} dup=${JSON.stringify(newSquat.duplicated)}`);
+  const newHinge = fallback(['RDLs', 'Back Squat', 'Bulgarian Split Squats', 'Single Leg RDL', 'Pallof Press']);
+  ok('[:227] the hinge-led fallback now covers every slot, none doubled',
+    newHinge.missing.length === 0 && newHinge.duplicated.length === 0,
+    `missing=${JSON.stringify(newHinge.missing)} dup=${JSON.stringify(newHinge.duplicated)}`);
+}
+
 console.log(
   `\nSession slot coverage: passed=${passed}/${passed + failures.length} failures=${failures.length}`,
 );
