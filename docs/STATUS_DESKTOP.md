@@ -935,3 +935,49 @@ be worth nothing if I exempted my own lane from it.
 **THE ORDER IS: settle the session flip → re-record with its four SHAs → then C8
 and item 26 land as clean single-cause diffs.** Both are named to their lines and
 neither needs re-diagnosing.
+
+
+---
+
+## 2026-08-13 — THE ORACLE ALREADY KNOWS, AND NOTHING READS IT. NEITHER LEG DAY HAS ANY SINGLE-LEG WORK.
+
+**The terminal refuted my pool hypothesis with a control run (reverting
+`exercisePoolsStrength.ts` to `bf1681c1^` reproduces the shape unchanged) and
+pointed me at `sessionSlotCoverage` as a cheap detector. Ran it. It is the
+sharpest statement of the whole problem:**
+
+    CURRENT  "Lower Hinge"   filled [hinge, accessory_or_core]
+                             MISSING [squat, single_leg_knee, single_leg_hip]
+    CURRENT  "Lower Squat"   filled [squat, accessory_or_core]
+                             MISSING [hinge, single_leg_knee, single_leg_hip]
+    GOLDEN   prehab day      filled [single_leg_knee, accessory_or_core]
+
+**BOTH LEG DAYS FILL 2 OF 5 SLOTS, AND BOTH ARE MISSING `single_leg_knee` AND
+`single_leg_hip`.** R-014 is Sam's own sentence: *"lower body strength should have
+a hinge, a squat, a single leg knee, a single leg hip, and accessory and/or some
+core"*. **Across two leg days in one week the athlete gets NO single-leg work at
+all.**
+
+**AND IT JOINS THE SESSION FLIP TO THE LEG DAYS — one finding, not two.** The
+golden's prehab day was filling `single_leg_knee`. **When it flipped to Mobility
+the week lost its ONLY single-leg knee coverage**, because neither leg day
+supplies it. So the ~14-diff regression is worse than "five rows lost": it is the
+last single-leg work in the week.
+
+**THE ORACLE IS RIGHT AND HAS NO BUILD-TIME CONSUMER.** `sessionSlotCoverage`
+would have named all of this — `missing: [squat, single_leg_knee, single_leg_hip]`
+— on every generated day. **Nothing calls it during generation.** That is the
+fourth authored-and-inert instrument today, after `DEFAULT_ATHLETE_CONTEXT`,
+`set_length_max_4_5_min` and `categoryToFlavour`. **It is also the file `b62add9f`
+deleted outright and the audit seat restored.**
+
+**SO THE HIGHEST-VALUE UNIT ON THE BOARD IS NOT "arms on leg days" — IT IS
+"nothing checks a day against Sam's ladder at build time".** The arms are a
+symptom of the same silence: the slots are unfilled, so whatever the pools hand
+over survives unchallenged. **The oracle exists, is correct, and is one call away
+from being a gate.**
+
+**NOT BUILT HERE — same measured block as items 42 and 26:** a build-time slot
+gate changes generated weeks and moves `test:power-counting`'s golden, which still
+holds an unresolved regression. **It is now the first thing to do after that
+golden is settled, ahead of both.**
