@@ -475,8 +475,22 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
     'Seated Cable Row': 'cables', 'Lat Pulldown': 'cables',
     'Leg Extension': 'machine', 'Hamstring Curl': 'machine', 'Leg Press': 'machine',
   };
-  /** Measured 2026-08-13. Lower it as the gap closes; never raise it. */
-  const KIT_VIOLATION_CEILING = 5;
+  /**
+   * Measured 2026-08-13. Lower it as the gap closes; never raise it.
+   *
+   * **5 -> 3 when the canonicaliser's restore stopped handing out barbells**
+   * (`workoutCanonicalisation.ts`'s `FALLBACK_PATTERN_EXERCISE` is four hardcoded
+   * barbell lifts; the restored row is now substituted for one the athlete's kit
+   * allows). Every `Back Squat` prescribed to a bodyweight athlete is gone.
+   *
+   * **THE REMAINING 3 HAVE TWO DISTINCT CAUSES AND NEITHER IS A PICKER BUG:**
+   * `Overhead Press` and `Pull-Ups` are in their pools and **have no
+   * bodyweight-legal sibling to substitute to** — a vocabulary gap, not a
+   * selection one. `Romanian Deadlift` is **NOT IN ANY POOL** under that
+   * spelling (`RDLs` is), so nothing can reach it; that is the exact-name lookup
+   * miss recorded on R-014, whose source fix is REFUTED and deliberately unbuilt.
+   */
+  const KIT_VIOLATION_CEILING = 3;
   const bodyweightProfile = {
     trainingLocation: 'Commercial gym', equipment: ['Bodyweight Only'],
     equipmentSelectionCompleteness: 'complete', trainingDaysPerWeek: 5,

@@ -420,13 +420,61 @@ function matchingReferenceRow(
   return null;
 }
 
+/**
+ * THE RESTORED ROW MUST BE ONE THE ATHLETE CAN ACTUALLY PERFORM.
+ *
+ * **`FALLBACK_PATTERN_EXERCISE` is four hardcoded BARBELL lifts — `Back Squat`,
+ * `Romanian Deadlift`, `Overhead Press`, `Pull-Ups` — and this is where a
+ * BODYWEIGHT-ONLY athlete was getting them.** Measured across 5 worlds x 3
+ * weeks, the kit-impossible lifts prescribed to bodyweight athletes were exactly
+ * those four names and no others: 9 Back Squat, 6 Romanian Deadlift, 6
+ * Pull-Ups, 6 Overhead Press.
+ *
+ * **TWO EARLIER FIXES AIMED AT THIS AND BOTH MEASURED INERT** — the
+ * equipment-blind fallback in `defaultProgram` is real but its rows are
+ * discarded, and the accessory-regex defect meant a leg day never reached the
+ * squat branch. **This is the third site and the one the names actually come
+ * from.** Recorded so the next reader does not spend the same two attempts.
+ *
+ * THE SUBSTITUTION IS DELEGATED, NOT INVENTED: `applyPoolRotation` already owns
+ * "what can this athlete do instead", already filters by equipment, and already
+ * returns the name unchanged when the kit allows it — verified for full-gym.
+ * A fixed rotation context is used deliberately: this is a REPAIR, not variety,
+ * so the same gap must resolve the same way every week.
+ */
+/** Swap an authored fallback name for one the athlete's kit allows. */
+function equipmentSafeFallbackName(
+  authored: string,
+  profile: OnboardingData | null | undefined,
+): string {
+  if (!profile) return authored;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { resolveEquipmentCapabilities } = require('./equipmentAvailability') as {
+    resolveEquipmentCapabilities: (p: OnboardingData) => { tags: string[] };
+  };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { applyPoolRotation } = require('../data/exercisePoolsStrength') as {
+    applyPoolRotation: (n: string, ctx: unknown, used?: unknown, prefs?: unknown) => string;
+  };
+  const tags = resolveEquipmentCapabilities(profile)?.tags;
+  if (!tags?.length) return authored;
+  return applyPoolRotation(
+    authored,
+    { miniCycleNumber: 1, weekInBlock: 1 },
+    undefined,
+    { availableEquipment: tags },
+  );
+}
+
 function fallbackPatternRow(
   workout: Workout,
   pattern: MainStrengthPattern,
   index: number,
   earlyOffseason: boolean,
+  profile?: OnboardingData | null,
 ): WorkoutExercise {
-  const name = FALLBACK_PATTERN_EXERCISE[pattern];
+  const authored = FALLBACK_PATTERN_EXERCISE[pattern];
+  const name = equipmentSafeFallbackName(authored, profile);
   const now = new Date().toISOString();
   const id = `canonical-${workout.id}-${pattern}`;
   return {
@@ -882,7 +930,9 @@ export function finaliseWorkoutAfterMutation(
     for (const pattern of intendedPatterns) {
       if (represented.has(pattern)) continue;
       const restored = matchingReferenceRow(context.referenceWorkout, pattern) ??
-        fallbackPatternRow(workout, pattern, strengthAndSupportRows.length, earlyOffseason);
+        fallbackPatternRow(
+          workout, pattern, strengthAndSupportRows.length, earlyOffseason, context.profile,
+        );
       strengthAndSupportRows.push({
         row: restored,
         index: strengthAndSupportRows.length,
