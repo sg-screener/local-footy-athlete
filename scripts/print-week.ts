@@ -103,8 +103,15 @@ const NO_COPY = '[NO COPY — the app has no words here]';
 
 const MAX_GAP_PASSES = 400;
 
-/** Run `project()`, filling every gap it hits with the marker. Returns both. */
-function projectWithGapsMarked(args: {
+/**
+ * Run `project()`, filling every gap it hits with the marker. Returns both.
+ *
+ * EXPORTED FOR ITEM 66 (seat `sim`). Callers must use THIS rather than
+ * `project()` directly: `project()` throws on the FIRST unsigned id, so a plain
+ * try/catch yields one gap and hides the rest, and two callers counting gaps two
+ * ways is two [NO COPY] numbers that disagree.
+ */
+export function projectWithGapsMarked(args: {
   week: Parameters<typeof project>[0]['week'];
   weekStart: string;
 }): { visibleWeek: VisibleWeek; gapIds: string[] } {
