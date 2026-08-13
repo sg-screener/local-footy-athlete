@@ -1578,7 +1578,53 @@ his instruction is standing authority, not history.**
 27. **A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 27).**
 
-28. **THE AWAY FLOW IS BUILT — full report in
+28. **DO THE REBUILD — SAM'S ORDER, 2026-08-13, AND IT IS THE ONLY THING LEFT.**
+
+    **His words on seeing the Saturday: *"why the fuck does it read training day?
+    it should read whatever the new program is i.e. conditioning, lower body
+    strength etc"*, then *"do the rebuild"*.**
+
+    **THE DIAGNOSIS IS SETTLED, so start from it rather than re-deriving it.**
+    Everything shipped so far FILTERS the week on the way out — it can HIDE the
+    club, it cannot PUT his away session in the hole the game left. "Training
+    Day" is `day.headline.training`, the app's placeholder for a day that exists
+    and holds nothing (`projectionCopy.ts:148`). **Filtering was the wrong tool
+    for a slot that needs filling.**
+
+    **WHAT THE REBUILD MEANS, in Sam's own frame:** *"consider the time they are
+    away as building a new program and their old program is gone for the time
+    being"*. The trip's weeks are RE-AUTHORED — no team days, no fixtures, the
+    athlete's own sessions distributed across the days he has — and the plan-side
+    work for that is ALREADY BUILT and measured (`test:away-flow` [13]-[13e]:
+    a week planned inside a trip has no team day, no game, and every row of his
+    own training survives).
+
+    **THE ONE THING IN THE WAY, and it is diagnosable now:** putting travel on
+    the DERIVING lane (`isRuledDerivingConstraint`,
+    `store/temporarySourceFactTransaction.ts`) makes the scoped regen re-author
+    those weeks — and on a real seeded world the commit was REFUSED once
+    (*"That didn't save — your week is unchanged."*). **That refusal now LOGS its
+    typed reason (`247eb6d3`), which it never did before.** So the next act is
+    three steps, not a hunt:
+    1. Add `constraint.scheduleKind === 'travel'` back to
+       `isRuledDerivingConstraint`.
+    2. Run the away flow against a logged Metro and READ the
+       `[temporary-source-fact] refused` line.
+    3. Fix what it names.
+
+    **⚠ INSTRUMENT DISCIPLINE FIRST, OR THE WHOLE THING WASTES A DAY AGAIN.**
+    `pkill -f "expo start --dev-client"`, then ONE `npx expo start --dev-client
+    --port 8082 --clear`, and put a CONTROL in the same edit as the test — change
+    an EXISTING log's text and confirm the NEW text appears before trusting any
+    absence. **Three orphaned Metro processes on one port served stale bundles
+    for hours and produced two confidently wrong conclusions.**
+
+    **WHAT IS ALREADY WORKING AND MUST NOT REGRESS** (all seen on glass): the
+    week-shape Away control, leave date, unbounded return date, the equipment
+    question and its dated span, **the game off the week**, **the team night off
+    a combined day**, and a fixture inside the trip no longer anchoring its week.
+
+29. **THE AWAY FLOW IS BUILT — full report in
     `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.**
     **WORKING, seen on glass:** the week-shape control, the leave date, the
     unbounded return date, the equipment question and its dated span, the GAME
