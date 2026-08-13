@@ -10,6 +10,7 @@ export const DEV_E2E_SEED_IDS = [
   'feedback-progression-case',
   'multi-reload-fixture-chain',
   'coach-production-replay',
+  'christmas-break-ask',
 ] as const;
 
 export type DevE2ESeedId = (typeof DEV_E2E_SEED_IDS)[number];
@@ -37,6 +38,14 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
   'feedback-progression-case': '2026-07-13',
   'multi-reload-fixture-chain': '2026-07-13',
   'coach-production-replay': '2026-07-13',
+  // ── THE ONLY SEED NOT IN JULY, AND THAT IS ITS WHOLE POINT ──
+  // The Christmas-break ask is DATE-GATED (SEAT_INBOX item 31 part 5, Sam:
+  // *"maybe around the 10th of December"*), so its four screen cells are
+  // SOURCE-PINNED and no device has ever rendered them. The DevE2EClock pins
+  // `todayISOLocal()` (`appDate.ts:63-77` reads `devE2EClockSnapshot()` before
+  // the wall clock), so anchoring a seed on the 10th is the ONLY way to put a
+  // simulator inside the window. **10 December 2026 is Sam's own date.**
+  'christmas-break-ask': '2026-12-10',
 };
 
 export function isDevE2ESeedId(value: string): value is DevE2ESeedId {

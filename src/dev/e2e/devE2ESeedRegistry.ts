@@ -748,6 +748,17 @@ export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
       equipment: ['Bodyweight Only'],
     });
   }
+  if (seedId === 'christmas-break-ask') {
+    // ── A CLUB ATHLETE IN PRE-SEASON, ON 10 DECEMBER ──
+    // `decideChristmasBreakAsk` asks the December question only when the phase
+    // HAS a club season and the athlete answered team days — an off-season or
+    // clubless athlete is correctly never asked, and a seed missing either half
+    // would render nothing and look like the control was broken.
+    // **The standard profile is In-season with Tuesday/Thursday club nights**;
+    // only the phase moves, because Sam's break is *"an off season inside pre
+    // season"*.
+    return fixedProfile({ seasonPhase: 'Pre-season' });
+  }
   return fixedProfile();
 }
 

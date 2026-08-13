@@ -47,6 +47,12 @@ const EXPECTED_WITNESS_KINDS: Record<DevE2ESeedId, string> = {
     'program,profile_exact,accepted_week_count,calendar_mark,fixture_identity,eligible_target_date,workout,absent_source_fact,absent_source_fact,absent_source_fact,absent_source_fact,reversible_ledger_state,accepted_revision,visible_card_detail_equality,visible_card_detail_equality,visible_card_detail_equality',
   'coach-production-replay':
     'program,profile_exact,empty_coach_state,calendar_mark,fixture_identity,eligible_target_date,workout,exercise_present,future_progression_target,absent_source_fact,absent_source_fact,absent_source_fact,absent_source_fact,reversible_ledger_state,visible_card_detail_equality,visible_card_detail_equality,visible_card_detail_equality,visible_card_detail_equality',
+  // THE THINNEST WITNESS LIST IN THE REGISTRY, AND DELIBERATELY SO. This seed
+  // exists to put a simulator on 10 December with a club — its whole product is
+  // the CLOCK and the PROFILE, which `program` and `profile_exact` already pin.
+  // A witness asserting the Christmas card is on screen would belong to a
+  // Maestro flow, not to the seed: the seed's job is the world, not the render.
+  'christmas-break-ask': 'program,profile_exact',
 };
 
 const originalFetch = globalThis.fetch;
@@ -58,8 +64,12 @@ globalThis.fetch = (async () => {
 
 try {
   ok(
+    // 11 -> 12: `christmas-break-ask` (SEAT_INBOX item 31 part 5). **A COUNT
+    // RAISED DELIBERATELY, IN THE COMMIT THAT EARNS IT** — this cell exists so a
+    // seed cannot appear without someone saying why, and the why is that the
+    // Christmas ask is date-gated to December and no seed could reach it.
     'Explorer campaign adds exactly the two requested seed IDs',
-    DEV_E2E_SEED_IDS.length === 11 &&
+    DEV_E2E_SEED_IDS.length === 12 &&
       DEV_E2E_SEED_IDS.filter((seedId) =>
       (EXPLORER_SEEDS as readonly string[]).includes(seedId)).join(',') ===
       EXPLORER_SEEDS.join(','),
