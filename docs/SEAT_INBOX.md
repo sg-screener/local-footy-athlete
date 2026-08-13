@@ -54,6 +54,27 @@ his instruction is standing authority, not history.**
     session sheet). That payload's only two writers are in
     `EquipmentLimitationSheet`, the PROGRAM-screen week/span door. The name is
     imprecise there; it is not carrying "just this session".
+    **⚠ (b) MEASURED 2026-08-13 BY THE TERMINAL — THE DEFECT DOES NOT REPRODUCE.
+    DO NOT BUILD IT YET.** 28 weeks, 7 worlds, 4 injury-free and 3 with a SEVERE
+    injury (knee / lower back / shoulder), 3-day and game weeks included:
+    **ZERO weeks with an unexplained main-strength shortfall.** Every cut already
+    names a PROVEN reason — `insufficient_availability` x2 (*"Selected-day
+    availability cannot safely hold the original strength target"*),
+    `spacing_safety_conflict` x4 — and **`injury_restriction` fired ZERO times.**
+    **The `availableSafePatterns.length === 0` producer never ran once.**
+    **THE ONE STATE I COULD NOT REACH:** it needs NO main pattern safe, which a
+    single injured area does not achieve. **A multi-area severe injury might —
+    produce that state before building.** R-073 carries the numbers.
+    **(c) BUILT `97c8d41b`** — the 4-5 min set cap is the fourth clause in the
+    selection filter, 87 cells, two mutants killed THROUGH THE REAL SELECTOR.
+    **⚠ THE UNIT WAS NEARLY WRONG:** all three capped templates use SECOND-scale
+    intervals, so a filter on `longestWorkIntervalMinutes` would have been
+    permanently inert. A block is rounds x (work + rest). **This item's
+    BLOCKED-BY was a phantom** — `conditioningSelection.ts` showed `MM` and was
+    byte-identical to HEAD.
+    **THE ROWS ARE R-072/R-073/R-074, not R-071/072/073 — R-071 was already
+    taken** (`01ef5863`). Ids are addresses.
+
     **(b) Census C10 — Sam: *"that sounds shit and not good"*.** The only typed
     main-strength reduction fires on `availableSafePatterns.length === 0`, an
     INFERENCE. His own 2026-08-06 ruling specifies the fix: the same
