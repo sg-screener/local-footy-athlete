@@ -358,7 +358,22 @@ his instruction is standing authority, not history.**
     **Correct Bible `:1440`, and fix or retire QA scenario S7** (off-season with
     three team trainings — a week that cannot exist).
 
-30. **BLOCKED-BY: other-agent — THE TERMINAL IS INSIDE THIS ITEM RIGHT NOW.**
+30. **BLOCKED-BY: other-agent — AND THE BLOCK IS NOW ONLY ONE FILE WIDE.
+    RE-MEASURED 2026-08-13 by the terminal, which is the session this marker
+    names.** The marker was written when a PREVIOUS terminal session held three
+    files. Checked with `cmp` against `git show HEAD:<path>`, not `git status`:
+
+    | file | state |
+    | --- | --- |
+    | `src/rules/derivedWeekContract.ts` | **FREE** — byte-identical to HEAD |
+    | `src/data/defaultProgram.ts` | **FREE** — byte-identical to HEAD |
+    | `src/utils/coachingEngine.ts` | **HELD** — carries uncommitted work |
+
+    **So two thirds of the stated block has lifted and the marker was over-stating
+    it.** Left BLOCKED rather than cleared, because one file genuinely is held and
+    I do not know whether the fix needs it — **that is a question for whoever
+    holds `coachingEngine.ts`, not a wall I can measure away.** Whoever takes this
+    should re-check that one file first; the other two are ready.
 
     **NOTHING IS OWED TO SAM.** He has already ruled the shape (bye-week build);
     what is left is engineering.
