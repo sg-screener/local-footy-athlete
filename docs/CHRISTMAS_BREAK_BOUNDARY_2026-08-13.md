@@ -130,11 +130,27 @@ and no rule about which wins.
 
 **Say what was not looked at (L2). Omitting this is itself a defect.**
 
-1. **THE ATHLETE HAS NOT SEEN IT.** The ask is date-gated to December and
-   January; the simulator clock is 2026-08-13. `[10]`-`[10d]` are SOURCE-PINNED
-   — they name the mount, the two questions, the December-only dismissal and the
-   off-by-one. **No pixel of this was looked at.** Owed: a run with the clock at
-   10 December and again at 3 January.
+1. ~~**THE ATHLETE HAS NOT SEEN IT.**~~ **SEEN 2026-08-13 — and the run found a
+   defect the cells could not.** A `christmas-break-ask` seed anchored
+   `2026-12-10` (the dev clock pins `todayISOLocal()`) put a pre-season club
+   athlete inside the window. **PROVEN ON GLASS:** the week reads `7 - 13 DEC`
+   with TODAY on Thursday the 10th; the card renders on the WEEK shape with
+   *"When is your last team training?"*, `Pick the date` and `We train through
+   Christmas`; the sheet opens; picking Thursday 17 December commits and returns
+   *"Got it — team training comes off your weeks from then. We'll ask you in
+   January when it's back."*; the header then reads **`1 active modifier
+   impacting program`**; and the week of the 7th CORRECTLY KEEPS its Tuesday and
+   Thursday club nights, because the break starts on the 18th.
+   **THE DEFECT: the calendar opened on NOVEMBER.** It anchored its month on
+   `minISO`, and this question's floor is 30 days BACK — so the athlete had to
+   page forward to reach his own club night. Away never exposed it because its
+   floor IS the month it wants. Fixed with `initialMonthISO`, re-verified on
+   glass (it opens on December), held by `[10h]`.
+   **STILL NOT SEEN: the club actually COMING OFF a week inside the break.**
+   Paging to 21-27 December tripped the dev-harness cold-start gate. The
+   behaviour is held by `[7b]`, `[9]` and `[11c]`; the pixel is owed.
+   **ALSO STILL OWED: the January question**, which needs a second seed anchored
+   in the new year.
 2. **THE SCOPED-REGEN PATH.** `[10e]`-`[10g]` prove the break does not drag a
    stale team-night name through FULL generation with `previousProgram`. **The
    scoped regen path is not exercised by any node harness** — item 30 measured
