@@ -26,10 +26,6 @@ import {
   todayISOLocal,
 } from '../utils/appDate';
 import { EQUIPMENT, prescribableWeight } from './equipmentLattice';
-// Items 46/47: the authored fallback templates below name exercises as bare
-// strings, so they need the same legality test the strength pools already use.
-import { exerciseAllowedByEquipment } from './exercisePoolsStrength';
-import type { EquipmentTag } from './exercisePools';
 import {
   applyLoadEstimates,
   equipmentClassFor,
@@ -1066,7 +1062,7 @@ function fallbackNameForPlanEntry(entry: SessionAllocation): string {
   return 'Strength Session';
 }
 
-function authoredFallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGeneratedWorkoutInput['exercises'] {
+function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGeneratedWorkoutInput['exercises'] {
   const strengthText = strengthFocusForPlanEntry(entry);
   const lower = strengthText.toLowerCase();
   const contributions = entry.strengthIntent?.plannedPatterns ?? entry.strengthPatternContributions ??
@@ -1278,38 +1274,6 @@ function authoredFallbackExercisesForPlanEntry(entry: SessionAllocation): CoachG
   ];
 }
 
-/**
- * THE EQUIPMENT GATE ON THE AUTHORED FALLBACK TEMPLATES — items 46/47.
- *
- * Every branch above names exercises as BARE STRINGS chosen by session focus,
- * and not one of them ever asked what the athlete owns. That is how a
- * bodyweight leg day was prescribed a Back Squat and a Leg Extension: not by a
- * broken filter, but by a path with NO filter on it at all.
- *
- * **THE FILTER IS HERE, AT THE ONE EXIT, AND NOT IN THE FOURTEEN BRANCHES.**
- * Editing each list would leave the next authored branch unguarded, and the
- * branches are Sam's authored content — they should keep saying what the RIGHT
- * session is, with the kit deciding how much of it this athlete can do.
- *
- * **REMOVED, NOT SUBSTITUTED — R-083, Sam 2026-08-13:** *"ya can't do much
- * with overhead pushing or pull or even horizontal pulling without equipment -
- * i can't account for everyone and if they want to train properly they'll sign
- * up to a gym"*. So an illegal row is DROPPED and the day gets shorter. No
- * filler, no barbell he cannot lift.
- *
- * Unknown kit and unknown exercise both pass: this refuses only what it can
- * PROVE is impossible, which is the same rule `exerciseAllowedByEquipment`
- * already applies inside the strength pools.
- */
-function fallbackExercisesForPlanEntry(
-  entry: SessionAllocation,
-  availableEquipment?: readonly EquipmentTag[],
-): CoachGeneratedWorkoutInput['exercises'] {
-  const authored = authoredFallbackExercisesForPlanEntry(entry);
-  if (!availableEquipment?.length) return authored;
-  return authored.filter((row) => exerciseAllowedByEquipment(row.name, availableEquipment));
-}
-
 function strengthFocusForPlanEntry(entry: SessionAllocation): string {
   const parts = String(entry.focus ?? '')
     .split('+')
@@ -1322,7 +1286,6 @@ function strengthFocusForPlanEntry(entry: SessionAllocation): string {
 function completeCoachWorkoutsFromPlan(
   coachWorkouts: CoachGeneratedWorkoutInput[],
   weeklyPlan?: SessionAllocation[],
-  availableEquipment?: readonly EquipmentTag[],
 ): CoachGeneratedWorkoutInput[] {
   if (!weeklyPlan?.length) return coachWorkouts;
 
@@ -1340,7 +1303,7 @@ function completeCoachWorkoutsFromPlan(
       name: fallbackNameForPlanEntry(entry),
       workoutType: fallbackWorkoutTypeForPlanEntry(entry),
       sessionTier: entry.tier,
-      exercises: fallbackExercisesForPlanEntry(entry, availableEquipment),
+      exercises: fallbackExercisesForPlanEntry(entry),
     });
     existingDows.add(dayOfWeek);
   }
@@ -1839,16 +1802,9 @@ export function buildWorkoutsFromCoach(
     return [withoutUnselectedConditioning];
   });
   const edgeProvidedDays = new Set(feasibleCoachWorkouts.map((workout) => workout.dayOfWeek));
-  // Items 46/47: the athlete's kit, resolved ONCE for every fallback path in
-  // this builder. `undefined` when there is no profile — an unanswered athlete
-  // is not a bodyweight athlete, and must not be filtered as if he were.
-  const athleteEquipment: readonly EquipmentTag[] | undefined = onboardingData
-    ? resolveEquipmentCapabilities(onboardingData).tags
-    : undefined;
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(
     feasibleCoachWorkouts,
     effectiveWeeklyPlan,
-    athleteEquipment,
   );
 
   const finaliseBuiltWorkout = (
@@ -2550,7 +2506,7 @@ export function buildWorkoutsFromCoach(
     const aiHasStrengthContent = classifiedRows.some(({ classification }) =>
       classification.kind === 'strength_main' || classification.kind === 'strength_accessory');
     const fallbackStrengthExercises = requiresStrengthContent && !aiHasStrengthContent
-      ? fallbackExercisesForPlanEntry(planEntry!, athleteEquipment)
+      ? fallbackExercisesForPlanEntry(planEntry!)
       : [];
     const sourceAiExercises: CoachGeneratedWorkoutInput['exercises'] = fallbackStrengthExercises.length > 0
       ? fallbackStrengthExercises
