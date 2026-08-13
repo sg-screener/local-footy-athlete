@@ -184,6 +184,68 @@ section('[6] architectural wiring guards');
     /const requestBody = buildProgramGenerationEdgePayload\(/.test(clientSource));
 }
 
+/* ── LOAD IS NOT AVAILABILITY — R-083's second site, per row ───────────────
+ *
+ * Sam set this acceptance test himself, 2026-08-13: *"Prove it per row on a
+ * bodyweight kit: Pull-Ups must read illegal, Walking Lunges and Single Leg
+ * RDL must read legal."*
+ *
+ * IT IS A PER-ROW TABLE ON PURPOSE. The defect being closed was one field
+ * answering two questions, and it was wrong in BOTH directions at once — so a
+ * cell that only checked the illegal side would have passed on the old,
+ * conflated field. **Every row therefore carries its bodyweight verdict AND a
+ * full-gym control**, and the two directions are asserted separately below so
+ * a regression names which way it went.
+ */
+{
+  const { exerciseAllowedByEquipment } =
+    require('../data/exercisePoolsStrength') as typeof import('../data/exercisePoolsStrength');
+  const BODYWEIGHT = ['bodyweight'] as never;
+  const FULL_GYM = [
+    'bodyweight', 'dumbbells', 'barbell', 'rack', 'bench', 'pullup_bar', 'dip_bars',
+    'rings_trx', 'machine', 'cables', 'kettlebell', 'plyo_box', 'bands',
+  ] as never;
+
+  // The three Sam named, then the rest of R-083's family, then the controls
+  // that must NOT have been swept up.
+  const ROWS: readonly { name: string; legalOnBodyweight: boolean; why: string }[] = [
+    { name: 'Pull-Ups', legalOnBodyweight: false, why: 'no load, but needs a BAR — the wrong direction the old field got wrong' },
+    { name: 'Walking Lunges', legalOnBodyweight: true, why: 'classed `dumbbell` for LOAD, still a walking lunge without them' },
+    { name: 'Single-Leg RDL', legalOnBodyweight: true, why: 'authored `barbell`, and Sam ruled it performable unloaded' },
+    { name: 'Dips', legalOnBodyweight: false, why: 'no load, needs dip bars' },
+    { name: 'Inverted Row (Bodyweight)', legalOnBodyweight: false, why: 'no load, needs rings/TRX — R-083 closes the horizontal pull' },
+    { name: 'Overhead Press', legalOnBodyweight: false, why: 'R-083: no vertical push on a bodyweight kit' },
+    { name: 'Leg Extension', legalOnBodyweight: false, why: 'machine' },
+    { name: 'Back Squat', legalOnBodyweight: false, why: 'needs a rack' },
+    { name: 'Reverse Lunges', legalOnBodyweight: true, why: 'authored as needing nothing' },
+    { name: 'Push-ups', legalOnBodyweight: true, why: 'control — a true bodyweight row must survive' },
+    { name: 'Bodyweight Squat', legalOnBodyweight: true, why: 'control' },
+  ];
+
+  for (const row of ROWS) {
+    const onBodyweight = exerciseAllowedByEquipment(row.name, BODYWEIGHT);
+    ok(
+      `[avail] '${row.name}' is ${row.legalOnBodyweight ? 'LEGAL' : 'ILLEGAL'} on a bodyweight kit — ${row.why}`,
+      onBodyweight === row.legalOnBodyweight,
+      { got: onBodyweight, want: row.legalOnBodyweight },
+    );
+  }
+
+  // THE CONTROL ARM. Without it the table above passes on a filter that
+  // refuses everything, which is the failure mode this whole unit produced
+  // once already (a week thinned to 8 rows and the census read a happy zero).
+  const illegalInGym = ROWS
+    .map((row) => row.name)
+    .filter((name) => !exerciseAllowedByEquipment(name, FULL_GYM));
+  ok('[avail] every row above is LEGAL on a full gym — the filter refuses kit, not exercises',
+    illegalInGym.length === 0, illegalInGym);
+
+  // NON-VACUITY: the table must actually contain both verdicts, or it is
+  // asserting one thing twice.
+  ok('[avail] the table asserts BOTH directions (the old field was wrong both ways)',
+    ROWS.some((r) => r.legalOnBodyweight) && ROWS.some((r) => !r.legalOnBodyweight));
+}
+
 console.log(`\nedgeGenerationEquipmentTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 if (fail > 0) {

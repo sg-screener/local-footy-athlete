@@ -162,3 +162,70 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly st
 export function equipmentRequiredFor(name: string): readonly string[] | null {
   return EXERCISE_EQUIPMENT_REQUIREMENT[name] ?? null;
 }
+
+/**
+ * ── THE THIRD QUESTION, AND IT IS THE ONE AVAILABILITY ACTUALLY ASKS ────────
+ *
+ * The sheet above answers **"what kit does this exercise USE"**. That is not
+ * the same as **"can this athlete PERFORM it at all"**, and Sam named the gap
+ * himself when he set the acceptance test for this unit:
+ *
+ *   *"Pull-Ups must read illegal, Walking Lunges and Single Leg RDL must read
+ *   legal"* — on a bodyweight kit.
+ *
+ * **HIS SHEET SAYS `Walking Lunges -> dumbbells` AND `Single-Leg RDL ->
+ * barbell`**, so read verbatim BOTH come out illegal and both of his own
+ * acceptance rows fail. **The sheet is not wrong — it is answering the other
+ * question.** A walking lunge uses dumbbells and is still a walking lunge
+ * without them; a pull-up without a bar is nothing at all.
+ *
+ * SO THERE ARE THREE FACTS, NOT TWO, AND EACH HAS ONE OWNER:
+ *   1. **LOAD** — `TRUE_BODYWEIGHT_EXERCISES` (`loadEstimation.ts`): does it
+ *      carry external load. Correct as it stands; **not touched by this unit.**
+ *   2. **KIT USED** — the sheet above. Sam's, signed, unchanged.
+ *   3. **PERFORMABLE UNLOADED** — this set. **A movement whose named kit only
+ *      LOADS it, and which survives losing that load.**
+ *
+ * **WHY THIS IS AN AUTHORED LIST AND NOT A RULE OVER TAG KINDS.** The obvious
+ * shortcut — "a missing LOADING implement (barbell/dumbbell/kettlebell) is
+ * survivable, a missing APPARATUS is not" — reproduces every row Sam named,
+ * and then quietly makes `Deadlift`, `Banded Bicep Curl` and `Goblet Squat`
+ * legal on a bodyweight kit. A band curl without the band is not a curl, and a
+ * goblet squat is DEFINED by the thing you hold. **A tag cannot tell you
+ * whether a movement survives losing its load; only the movement can, and only
+ * Sam can say so.**
+ *
+ * **IT HOLDS EXACTLY THE TWO HE HAS RULED.** Anything not here follows the
+ * sheet verbatim. **Adding a row is a Sam ruling, never an inference** — the
+ * moment it grows by guess it becomes the conflated field this unit exists to
+ * delete.
+ */
+export const BODYWEIGHT_CAPABLE: ReadonlySet<string> = new Set([
+  // Sam, 2026-08-13, setting this unit's acceptance test: *"Walking Lunges is
+  // classed dumbbell but can be done unloaded"* and *"Walking Lunges and
+  // Single Leg RDL must read legal"* on a bodyweight kit.
+  'Walking Lunges',
+  'Single-Leg RDL',
+]);
+
+/**
+ * CAN THIS ATHLETE PERFORM THIS MOVEMENT AT ALL?
+ *
+ * The availability answer, and the ONLY one generation's equipment filter
+ * should ask. Returns `true` when it cannot prove otherwise — an unknown
+ * exercise and an unanswered kit both pass, so this refuses only what Sam's
+ * own sheet says is impossible.
+ */
+export function exerciseIsAvailableWith(
+  name: string,
+  availableEquipment: readonly string[] | undefined,
+): boolean {
+  if (!availableEquipment?.length) return true;
+  const required = equipmentRequiredFor(name);
+  if (required === null) return true;        // not on his sheet — unknown, allow
+  if (required.length === 0) return true;    // his convention: needs nothing
+  const kit = new Set(availableEquipment);
+  if (required.every((tag) => kit.has(tag))) return true;
+  // Missing something — but the movement may survive losing its LOAD.
+  return BODYWEIGHT_CAPABLE.has(name);
+}

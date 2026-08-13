@@ -35,6 +35,11 @@ import type { ConditioningEquipmentModality } from '../types/domain';
 import type { ExperienceLevel, WeekKind } from '../types/domain';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import { equipmentClassFor, type EquipmentClass } from '../utils/loadEstimation';
+// AVAILABILITY, which is a different question from LOAD. Pure data, no cycle.
+import {
+  equipmentRequiredFor,
+  exerciseIsAvailableWith,
+} from './exerciseEquipmentRequirement';
 import {
   resolveTrainingAgePolicy,
   type TrainingAgePoolSlot,
@@ -881,6 +886,26 @@ export function exerciseAllowedByEquipment(
   name: string,
   availableEquipment: readonly EquipmentTag[] | undefined,
 ): boolean {
+  // ── SAM'S AVAILABILITY ANSWER OUTRANKS THE LOAD CLASSIFIER ────────────────
+  //
+  // `equipmentClassFor` answers **"what does this lift LOAD with"**. Asked
+  // "can this athlete do it", it is wrong in BOTH directions at once, and on
+  // exactly the exercises R-083 names: a `Pull-Up` carries no load and needs a
+  // BAR, so it classed `bodyweight` and sailed through; `Walking Lunges` is
+  // classed `dumbbell` and was refused, though it is still a walking lunge
+  // without them. **That is one field answering two questions, and it is why
+  // the second site dropped the single-leg slot while keeping the pull-up.**
+  //
+  // `exerciseIsAvailableWith` reads Sam's authored sheet, plus the small set of
+  // movements he has ruled performable unloaded. Where he has answered, HIS
+  // ANSWER DECIDES and the load classifier is not consulted at all.
+  if (equipmentRequiredFor(name) !== null) {
+    return exerciseIsAvailableWith(name, availableEquipment);
+  }
+
+  // Not on his sheet: fall back to the load classifier, which is the only
+  // signal left. It stays wrong in the ways described above, and the fix is a
+  // sheet row, not a cleverer inference here.
   const allowed = equipmentClassesForTags(availableEquipment);
   if (!allowed) return true;
   const klass = equipmentClassFor(name);

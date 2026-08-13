@@ -1016,14 +1016,38 @@ section('14. Athlete overrides (prefs filter / bias)');
   const dbWarnings: string[] = [];
   console.warn = (msg: string) => { dbWarnings.push(msg); };
   try {
+    // ⚠ THE KIT GAINED A BENCH, 2026-08-13, AND THE EXPECTATION DID NOT MOVE.
+    //
+    // This cell used to pass `['bodyweight', 'dumbbells']` and expect
+    // `DB Bench Press`. Sam's authored sheet says `DB Bench Press ->
+    // ['bench', 'dumbbells']`, so on that kit the DB variant is genuinely
+    // ILLEGAL — you cannot bench press without a bench — and the rotation
+    // correctly fell to `Push-ups` instead.
+    //
+    // The cell's INTENT is "no barbell ⇒ rotate to the same-slot DB
+    // accessory", and that intent needs an athlete who can actually do the DB
+    // accessory. So the KIT is corrected rather than the assertion: this is
+    // the intent it always meant, now stated against a kit that can express
+    // it. The no-bench case is asserted immediately below rather than lost.
     const dbOnlyBench = applyPoolRotation(
+      'Bench Press',
+      ctx,
+      undefined,
+      { excluded: [], pinned: [], availableEquipment: ['bodyweight', 'dumbbells', 'bench'] },
+    );
+    assert(dbOnlyBench === 'DB Bench Press',
+      `Dumbbells-only Bench Press rotates to DB Bench Press (got "${dbOnlyBench}")`);
+
+    // AND THE ROW THE SHEET ADDED: no bench, no bench press of any kind. The
+    // honest answer is the horizontal push the athlete CAN do.
+    const noBench = applyPoolRotation(
       'Bench Press',
       ctx,
       undefined,
       { excluded: [], pinned: [], availableEquipment: ['bodyweight', 'dumbbells'] },
     );
-    assert(dbOnlyBench === 'DB Bench Press',
-      `Dumbbells-only Bench Press rotates to DB Bench Press (got "${dbOnlyBench}")`);
+    assert(noBench !== 'Bench Press' && noBench !== 'DB Bench Press',
+      `Without a bench, neither bench press may be prescribed (got "${noBench}")`);
     assert(dbWarnings.some((w) => w.includes('[pool-equipment-role-fallback]')),
       `Dumbbells-only role fallback logs structured warning (got ${JSON.stringify(dbWarnings)})`);
   } finally {
