@@ -759,17 +759,39 @@ export async function commitTemporarySourceFactSet(
       // so the week has to be re-authored around it.
       constraint.type === 'equipment' ||
       (constraint.type === 'schedule' &&
-        // ── A TRIP DOES **NOT** TAKE THIS LANE, AND THAT IS MEASURED ──
-        // It did, for one commit. On the real seeded world the athlete tapped
-        // Away and got *"That didn't save — your week is unchanged."*: the
-        // scoped regen re-authors the week without the club, the §18 gate
-        // refuses the result, and the whole transaction rolls back. **A door
-        // that refuses is worse than a door that records**, so travel stays on
-        // the inert lane until that refusal is understood.
-        // WHAT SAM'S RULING STILL GETS: the plan-side filter
-        // (`onboardingToCoachingInputs`) is unaffected and takes the club off
-        // every week BUILT while a trip is live. What it does not yet do is
-        // re-author a week he is already looking at.
+        // ── A TRIP DOES **NOT** TAKE THIS LANE, AND IT IS NOW REFUTED ON GLASS
+        // RATHER THAN FEARED — 2026-08-13, SEAT_INBOX item 28 ──
+        //
+        // Item 28 ordered this line changed, twice. It has now been changed,
+        // run on the simulator against the same seed and the same week, and
+        // **PHOTOGRAPHED BOTH WAYS.** The deriving lane is WORSE for the
+        // athlete, and the numbers are not close:
+        //
+        // | Thu 16 (a team night he is away for) | inert: **Strength** | deriving: **Rest Day** |
+        // | Tue 14                               | inert: **Strength** | deriving: Strength + Conditioning |
+        // | Sat 18 (his game)                    | inert: "Training Day" | deriving: "Training Day" |
+        // | the tap                              | inert: instant | deriving: ~1 min, 1,220 workouts generated |
+        //
+        // **THE DERIVING LANE COSTS HIM A TRAINING DAY AND FIXES NOTHING.**
+        // Removing the club anchors makes the week a bye-build whose contract
+        // declares more core conditioning than the week carries, so §18 runs
+        // `repairCoreConditioningShortfallCandidates` through its 48-candidate
+        // search, regenerates Thursday 616 times, and still hands back an empty
+        // day. The one defect Sam actually named — Saturday reading *"Training
+        // Day"* — is IDENTICAL either way, so it was never this lane's to fix.
+        //
+        // THE OLD REASON FOR THIS COMMENT IS ALSO WITHDRAWN, and that matters
+        // because it is what kept the question open: the refusal (*"That didn't
+        // save — your week is unchanged."*) DID NOT REPRODUCE. With
+        // `[temporary-source-fact] lane` logging on every commit, the fact
+        // committed cleanly and no refusal line was ever printed. **The lane is
+        // not refusing. It is simply the wrong tool**, exactly as the north star
+        // says: away is a DECISION, and the week it implies is DERIVED
+        // (`derivedWeekContract` drops the fixture anchor; `coachingEngine`'s
+        // `onboardingToCoachingInputs` drops the club days). Neither stores a
+        // thing, and both already work on a week the athlete is looking at.
+        //
+        // **DO NOT ORDER THIS LINE CHANGED A THIRD TIME WITHOUT A NEW FACT.**
         (
         ((constraint.scheduleKind === 'time_cap' &&
           // Sam's §7 answer: a cap aimed only at fixture days is INERT —
@@ -803,6 +825,22 @@ export async function commitTemporarySourceFactSet(
   const scopedRegen = canScopedRegen &&
     Array.from(derivingSourceFactIds(compatibility.activeConstraints))
       .some((id) => !priorDerivingIds.has(id));
+  // ── THE LANE SAYS WHICH LANE IT TOOK ──
+  // **SEAT_INBOX item 28's instrument rule, and it is the CONTROL for every
+  // absence read off this file.** The refusal line below only speaks when the
+  // commit fails, so a silent Metro could mean "it worked", "it never ran", or
+  // "you are reading a stale bundle" — and this repo has already published two
+  // confidently wrong conclusions from exactly that ambiguity. This line fires
+  // on EVERY commit, so a run with no `[temporary-source-fact] lane` in it is a
+  // dead instrument, not a result.
+  logger.warn('[temporary-source-fact] lane', {
+    operation: args.reason,
+    factId: args.targetFactId,
+    derivingCompositionChanged,
+    canScopedRegen,
+    scopedRegen,
+    derivingIds: Array.from(derivingSourceFactIds(compatibility.activeConstraints)),
+  });
   // Stage 1: which weeks a deriving fact re-authors is the FACT's business, not
   // `mondayFor(todayISO)`'s. The candidates are the weeks the athlete actually
   // has (the accepted program's microcycles, plus the current week); the fact's

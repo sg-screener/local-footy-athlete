@@ -2228,20 +2228,56 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
   const today = todayISOLocal();
   return days.map((day) => {
     if (!isAway(day.date)) return day;
-    // A FIXTURE HE IS NOT AT IS NOT A DAY ON HIS WEEK. `buildDay(..., null,
-    // 'none')` is the resolver's own way of saying "nothing here" — the same
-    // call the max-one-game guard above uses to stand a duplicate down.
+    // A FIXTURE HE IS NOT AT IS NOT A DAY ON HIS WEEK — AND THE DAY IT LEAVES
+    // BEHIND IS A REST DAY, NOT A HOLE.
+    //
+    // ── `'rest'`, NOT `'none'`, AND SAM NAMED THIS EXACT CELL ──
+    // *"why the fuck does it read training day? it should read whatever the new
+    // program is i.e. conditioning, lower body strength etc"*, looking at the
+    // Saturday his game had just been taken off.
+    //
+    // **"Training Day" WAS THIS LINE.** `'none'` means "no workout" and
+    // `dayKind` (`rules/projectVisibleWeek.ts:208`) maps every non-fixture,
+    // non-`'rest'` day to `'training'`, whose signed headline is
+    // *"Training Day"* — the app's word for a day that exists and holds
+    // nothing. So vacating a fixture to `'none'` printed a placeholder where a
+    // game used to be, on every away week, for as long as away has worked.
+    //
+    // WHY `'rest'` IS THE TRUE WORD AND NOT A NICER ONE. R-020 — *"yes clear
+    // team training and games while away"* — says the club goes and **the
+    // athlete's own sessions stay**. Nothing of his was ever on a fixture day,
+    // so once the game goes the day holds nothing and is owed nothing: he is
+    // not training that day. R-006 permits up to three full rest days in
+    // exactly this shape of week (bye-recovery), so a rest day here is inside
+    // the ruled bounds rather than an exception to them.
+    //
+    // ⚠ AND IT DOES **NOT** WIDEN `dayKind`'s REST/EMPTY DISTINCTION, which is
+    // load-bearing: *"an empty training day and a rest day must be
+    // distinguishable here"* — that conflation is what once let a deletion door
+    // write a schedule fact. This says the narrower thing, at the one seam that
+    // knows it: a day VACATED BY A LIVE TRIP is a rest day. A day that is empty
+    // for any other reason is untouched and still reads as it did.
+    //
+    // STILL A FILTER, NEVER AN EDIT — same as every other line in this pass.
+    // The mark, the fixture and the stored week are all intact and all return
+    // when the fact lifts.
     if (day.source === 'game' || day.indicator === 'game' ||
       day.workout?.workoutType === 'Game') {
-      return buildDay(day.date, day.dayOfWeek, today, null, 'none');
+      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
     }
     if (!day.workout) return day;
     const team = getTeamTrainingWorkoutState(day.workout);
     if (!team.hasTeamTraining) return day;
-    // A day that was ONLY the club becomes empty; a combined day keeps its own
-    // half and loses the club's, renamed through the ONE owner of that question.
+    // A day that was ONLY the club becomes a REST day — same word, same reason
+    // as the fixture above, and it has to be the same or the week contradicts
+    // itself: a team-only Tuesday and a vacated Saturday are both "a day whose
+    // only content was the club, and the club is shut to him this week".
+    // Reading one as *"Rest Day"* and the other as *"Training Day"* is the
+    // clunkiness Sam named, one day over. A combined day is NOT this case — it
+    // keeps its own half and loses the club's, renamed through the ONE owner of
+    // that question, below.
     if (team.isTeamTrainingOnly) {
-      return buildDay(day.date, day.dayOfWeek, today, null, 'none');
+      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
     }
     return {
       ...day,

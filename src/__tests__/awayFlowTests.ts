@@ -597,6 +597,58 @@ async function main(): Promise<void> {
     { source: gameAway?.source, indicator: gameAway?.indicator,
       type: gameAway?.workout?.workoutType });
 
+  // ── [15c] WHAT THE GAME LEAVES BEHIND — Sam, 2026-08-13, on that Saturday ──
+  //
+  // ***"why the fuck does it read training day? it should read whatever the new
+  // program is i.e. conditioning, lower body strength etc"***.
+  //
+  // **[15b] ABOVE IS THE REASON THIS WAS MISSED FOR A DAY.** It proves the game
+  // is GONE and says nothing about what stands in its place, so it stayed green
+  // over a Saturday reading *"Training Day"* — the app's placeholder for a day
+  // that exists and holds nothing. A cell that asserts an absence and never
+  // asserts the presence is half a cell, and this is the other half.
+  //
+  // R-020 decides the word, so nothing new is being ruled here: *"yes clear team
+  // training and games while away"* — the club goes and **the athlete's own
+  // sessions stay**. He never had a session of his own on a fixture day, so once
+  // the game is off he is not training that day, and the honest word for that is
+  // the one the registry already holds. R-006 permits up to three full rest days
+  // in exactly this shape of week.
+  //
+  // ASSERTED THROUGH THE COPY REGISTRY, NEVER AGAINST A LITERAL — the words may
+  // be re-signed without this cell going stale, and it reds if the ID it names
+  // stops being what the athlete reads.
+  const { project: projectWeek } =
+    require('../rules/projectVisibleWeek') as typeof import('../rules/projectVisibleWeek');
+  const { signedCopy: copy } =
+    require('../rules/signedCopy') as typeof import('../rules/signedCopy');
+  const headlineOn = (state: any, date: string) => {
+    const week = resolveWeek('2026-08-10', state) as any[];
+    const visible = projectWeek({ week: week as never, weekStart: '2026-08-10' });
+    return String(visible.days.find((day: any) => day.date === date)?.headline ?? '');
+  };
+  const restWord = String(copy('day.headline.rest'));
+  const trainingWord = String(copy('day.headline.training'));
+  const gameWord = String(copy('day.headline.game'));
+
+  // NON-VACUITY FIRST, AND IT IS THE WHOLE POINT: the day must read GAME at home,
+  // or "it does not read Training Day away" is true of a day that never changed.
+  run('[15c] at home that Saturday reads GAME',
+    headlineOn(homeState, '2026-08-15') === gameWord,
+    { headline: headlineOn(homeState, '2026-08-15'), expected: gameWord });
+  run('[15d] away, it reads REST — never the empty-day placeholder',
+    headlineOn(awayState, '2026-08-15') === restWord
+      && headlineOn(awayState, '2026-08-15') !== trainingWord,
+    { headline: headlineOn(awayState, '2026-08-15'),
+      expected: restWord, forbidden: trainingWord });
+  // AND THE TYPED READ UNDERNEATH IT, so a copy change alone cannot make [15d]
+  // pass on a day that is still structurally a hole.
+  run('[15e] and the day is typed as rest, not merely worded as it',
+    gameAway?.source === 'rest' && gameAway?.indicator === 'rest'
+      && gameAway?.workout === null,
+    { source: gameAway?.source, indicator: gameAway?.indicator,
+      workout: gameAway?.workout === null ? 'null' : 'present' });
+
   // ── [16] THE CARD'S WORDS — Sam: *"it shouldn't show + team training"* ──
   //
   // THE CARD DOES NOT READ `workout.name`. It renders the visible projection's
