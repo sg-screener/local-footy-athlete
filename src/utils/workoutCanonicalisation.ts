@@ -852,7 +852,23 @@ export function finaliseWorkoutAfterMutation(
       });
       continue;
     }
-    const plain = item.row.pairType === 'contrast'
+    // ── A COMPLETE CONTRAST PAIRING IS NOT STALE (item 42) ──────────────────
+    //
+    // This used to strip EVERY `pairType: 'contrast'` unconditionally, as
+    // `stale_raw_contrast_pairing`. That was right while nothing legitimately
+    // formed one — a raw contrast pairing could only be leftover generator
+    // noise. `powerRowAlignment` now forms a REAL one, so the blanket strip
+    // would delete the pairing in the same pass that created it.
+    //
+    // THE TEST IS COMPLETENESS, NOT PRESENCE: a pairing with a partner in the
+    // same `supersetGroup` is the authored contrast block and survives; one
+    // whose partner did not survive generation is exactly the stale leftover
+    // the original strip existed for, and still goes. Bible `:225`.
+    const pairedPartnerSurvives = item.row.pairType === 'contrast' &&
+      !!item.row.supersetGroup &&
+      (workout.exercises ?? []).some((other) =>
+        other.id !== item.row.id && other.supersetGroup === item.row.supersetGroup);
+    const plain = item.row.pairType === 'contrast' && !pairedPartnerSurvives
       ? withoutPairing(item.row)
       : item.row;
     if (plain !== item.row) {
@@ -885,9 +901,29 @@ export function finaliseWorkoutAfterMutation(
     canonicalConditioningRow(item, earlyOffseason, actions));
   // Power leads. Its position in the one list is what carries "do this fresh,
   // before the main lifts" — no renderer has to know power is special.
+  //
+  // ⚠ EXCEPT CONTRAST, WHICH SITS AT THE MAIN SLOT (item 42, Bible `:225`:
+  // *"The pairing sits at the MAIN slot; it is not appended to the end of the
+  // session."*). A contrast row led the list like every other power row, which
+  // put it BEFORE the heavy lift its own notes told the athlete to do it after.
+  // Position is what carries order here — `exerciseOrder` is not consulted at
+  // this point — so the fix is to SPLICE the paired row in after its partner
+  // rather than concatenate it at the front.
+  //
+  // A contrast row whose partner did not survive is NOT spliced and keeps the
+  // leading position: it is a primer in all but name, and `powerRowAlignment`
+  // relabels it on the next pass.
+  const pairedPower = authoredPowerRows.filter(({ row }) =>
+    row.pairType === 'contrast' && !!row.supersetGroup &&
+    strengthAndSupportRows.some(({ row: other }) => other.supersetGroup === row.supersetGroup));
+  const leadingPower = authoredPowerRows.filter((item) => !pairedPower.includes(item));
+  const strengthWithContrast = strengthAndSupportRows.flatMap(({ row }) => {
+    const partner = pairedPower.find(({ row: power }) => power.supersetGroup === row.supersetGroup);
+    return partner ? [row, partner.row] : [row];
+  });
   const finalRows = [
-    ...authoredPowerRows.map(({ row }) => row),
-    ...strengthAndSupportRows.map(({ row }) => row),
+    ...leadingPower.map(({ row }) => row),
+    ...strengthWithContrast,
     ...finalConditioningRows,
   ];
   const finalConditioningBlock = buildCanonicalConditioningBlock({

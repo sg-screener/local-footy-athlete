@@ -287,6 +287,7 @@
     "test:verify-branch-hook": "bash scripts/__tests__/verifyBranchHookTests.sh",
     "test:census-hook": "bash scripts/__tests__/announceDeletionsHookTests.sh",
     "test:coach-phrase-ratchet": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachPhraseHandlerRatchetTests.ts",
+    "test:power-primer-policy": "TZ=Australia/Melbourne sucrase-node src/__tests__/powerPrimerPolicyTests.ts",
     "test:legacy-census": "TZ=Australia/Melbourne sucrase-node src/__tests__/legacyReckoningCensusTests.ts",
     "test:day-detail-composition-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/dayDetailCompositionOwnershipTests.ts",
     "test:section18-recovery-neutrality": "TZ=Australia/Melbourne sucrase-node src/__tests__/section18RecoveryNeutralityTests.ts",

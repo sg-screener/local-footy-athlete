@@ -370,9 +370,47 @@ function workoutsFor(
       options: [{ title: 'Easy Bike', description: '20 minutes easy', exerciseIds: ['we-bike'] }],
     },
   } as any);
+  // ⚠ THIS CELL'S ACTION CHANGED FROM 'unchanged' TO 'paired' (item 42), AND
+  // THAT IS NOT AN EXPECTATION EDITED TO MATCH A REGRESSION. Its claim is
+  // "contrast power is PRESERVED", which is what the second half asserts and
+  // which is still true. 'unchanged' was only ever a proxy for "not removed and
+  // not downgraded"; the row is now also PAIRED, which is more than preserved.
+  // The cells below are what make the new half non-vacuous.
   ok('mixed S+C with real heavy same-family strength preserves contrast power',
-    heavyLower.action === 'unchanged' && powerRows(heavyLower.workout)[0]?.power?.kind === 'contrast',
+    heavyLower.action === 'paired' && powerRows(heavyLower.workout)[0]?.power?.kind === 'contrast',
     JSON.stringify(heavyLower));
+
+  // ── ITEM 42: CONTRAST IS A PAIRING, NOT A SENTENCE ────────────────────────
+  //
+  // Sam: *"contrast is never actually a pairing"*. Bible `:225` — a heavy lift
+  // SUPERSETS with an explosive lift, and *"the pairing sits at the MAIN slot"*.
+  // Before this, `kind: 'contrast'` changed a NOTES STRING and nothing else:
+  // no `supersetGroup`, no `supersetOrder`, no `pairType`, and the row rendered
+  // BEFORE the heavy set its own note told the athlete to do it after.
+  const pairedPower = powerRows(heavyLower.workout)[0];
+  const pairedSquat = (heavyLower.workout.exercises ?? []).find((row) => row.id === 'we-squat');
+  ok('[42a] the contrast power row carries a superset group',
+    !!pairedPower?.supersetGroup, JSON.stringify(pairedPower));
+  ok('[42b] the HEAVY LIFT carries the SAME group — a pairing has two halves',
+    !!pairedSquat?.supersetGroup && pairedSquat.supersetGroup === pairedPower?.supersetGroup,
+    { squat: pairedSquat?.supersetGroup, power: pairedPower?.supersetGroup });
+  ok('[42c] the heavy lift is FIRST and the explosive movement SECOND',
+    pairedSquat?.supersetOrder === 1 && pairedPower?.supersetOrder === 2,
+    { squat: pairedSquat?.supersetOrder, power: pairedPower?.supersetOrder });
+  ok('[42d] both halves are typed as contrast',
+    pairedSquat?.pairType === 'contrast' && pairedPower?.pairType === 'contrast',
+    { squat: pairedSquat?.pairType, power: pairedPower?.pairType });
+  // NON-VACUITY: the bike is same-workout but not the partner. If the pairing
+  // were applied to every row this would red, and [42b] alone would not notice.
+  const unpairedBike = (heavyLower.workout.exercises ?? []).find((row) => row.id === 'we-bike');
+  ok('[42e] a non-partner row in the same session is NOT dragged into the pairing',
+    !unpairedBike?.supersetGroup && !unpairedBike?.pairType, JSON.stringify(unpairedBike));
+  // NON-VACUITY: the downgrade path must NOT pair. Without a heavy same-family
+  // lift there is nothing to contrast against, so a group here would be a
+  // pairing to a partner that does not exist.
+  ok('[42f] a downgraded primer is never paired',
+    !powerRows(lightLower.workout)[0]?.supersetGroup,
+    JSON.stringify(powerRows(lightLower.workout)[0]));
 }
 
 // Deload week → power SURVIVES, smaller and just as sharp.

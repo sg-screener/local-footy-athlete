@@ -45,6 +45,76 @@ thing that actually bit.**
 
 ## STATUS
 
+### ITEM 42 — CONTRAST IS NEVER A PAIRING (Sam assigned it to `audit` directly, overriding the block)
+
+**ALL FOUR OF THE ITEM'S CLAIMS RE-VERIFIED AT CURRENT LINES** (they had drifted
+again), **and a FIFTH found. But the item's ACCEPTANCE TEST IS REFUTED — by Sam's
+own authored examples.**
+
+**⚠ THE REFUTATION FIRST, because building the item as written would FORBID the
+pairings he authored.** The item says *"PROVE IT: a contrast day ships one paired
+block at the main slot, **same pattern both halves**. Mutation: break the pattern
+match, cell reds."* Measured through the app's own tag lookup:
+
+| heavy half | explosive half | same pattern? |
+| --- | --- | --- |
+| Box Squat `squat` | Vertical Jump `plyo` | **NO** |
+| Back Squat `squat` | Broad Jump `plyo` | **NO** |
+| Trap Bar Deadlift `hinge` | Broad Jump `plyo` | **NO** |
+| Split Squat *(untagged)* | Vertical Jump `plyo` | **NO** |
+| Bench Press `horizontal_push` | Explosive Push-up `horizontal_push` | yes |
+
+**EVERY LOWER ENTRY IN `POWER_EXERCISE_POOL` TAGS AS `movement: 'plyo'`** — never
+`squat`, never `hinge`. So *"same pattern both halves"* is **false for four of the
+five pairings Sam wrote into the Bible** (`:1115-1121`), and a cell asserting it
+would red on his own examples.
+
+**THE AUTHORED TEXT CONTRADICTS ITSELF AND THE DATA SETTLES IT.** `:225` says
+*"of the SAME pattern"*; `:1099` says *"an explosive movement that uses a SIMILAR
+pattern"*. **`:1099` is the one that matches both the pool and his examples.**
+
+**SO THE ITEM'S THIRD CLAIM IS NOT A DEFECT.** It reads
+*"`powerRowAlignment.ts:99` checks only same-FAMILY, so 'heavy deadlift + vertical
+jump' passes"* — **that pairing is Sam's own authored example.** The family check
+is CORRECT and must not be tightened to pattern. **A correct behaviour was read as
+a bug because the item trusted `:225` without opening `:1099` or the pool.**
+
+**WHAT IS GENUINELY BROKEN — and it is exactly what Sam said, "contrast is never
+actually a pairing":**
+1. **`buildPowerRow` (`defaultProgram.ts:1543-1556`) sets NO `supersetGroup`, NO
+   `supersetOrder`, NO `pairType`.** The only thing contrast changes is a notes
+   string.
+2. **`workoutCanonicalisation.ts:855-857` ACTIVELY STRIPS any
+   `pairType === 'contrast'`**, logging `stale_raw_contrast_pairing`. So even if
+   something set the pairing, it is removed.
+3. **PLACEMENT IS WRONG AND THE ROW CONTRADICTS ITSELF.** `exerciseOrder: 0` plus
+   the concatenation at `:888-892` (`...authoredPowerRows` first) puts power
+   **ahead of the main lift**, while the same row's note says *"perform sharply
+   **straight after your heavy set**"*. Bible `:225`: *"The pairing sits at the
+   MAIN slot; it is not appended to the end of the session."*
+4. **THE FIFTH FACT (desktop's, confirmed):** the note and `exerciseOrder: 0` are
+   in the same function, four lines apart.
+
+**ALREADY CORRECT, so nobody rebuilds it:** the training-age gate. `:1100` says a
+`developing` athlete never gets contrast, and `powerPrimerPolicy.ts:256`'s
+`ctx.experienced` is exactly `consistent`/`advanced`.
+
+**THE FIX HAS TWO OWNERS, and neither is `buildPowerRow`** — it builds a row
+before any main lift exists, so it cannot know its partner:
+- **`powerRowAlignment`** already holds the power row AND the strength rows and
+  already downgrades when no heavy same-family lift survives. **It is where the
+  pairing gets FORMED.**
+- **`workoutCanonicalisation`** must stop stripping a COMPLETE pairing, and must
+  **splice a paired power row next to its partner instead of leading with it** —
+  `:888` builds the list by concatenation, so position, not `exerciseOrder`, is
+  what carries "power leads".
+
+**⚠ AND IT MOVES `test:power-counting`'s GOLDEN, which is the block the item
+declared.** That golden already carries an unresolved session-flip regression and
+289 of 291 diffs attributed. **This adds a fifth cause.** Measured and reported
+rather than assumed — see below.
+
+
 ### THE SWEEP I OWE SAM — WHAT IT WILL AND WILL NOT MEASURE
 
 **A number has to say what it measured, so this is written BEFORE the number

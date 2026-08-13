@@ -32,7 +32,7 @@ import { getExerciseTags } from '../data/exerciseTags';
 import { resolveExerciseName } from '../utils/loadEstimation';
 import { getSessionComponentRows } from '../utils/sessionComponents';
 
-export type PowerRowAlignmentAction = 'unchanged' | 'removed' | 'downgraded';
+export type PowerRowAlignmentAction = 'unchanged' | 'removed' | 'downgraded' | 'paired';
 
 export interface PowerRowAlignmentResult {
   workout: Workout;
@@ -111,6 +111,60 @@ export function alignPowerToFinalWorkoutContent(
       action: 'downgraded',
       reason: 'no_heavy_same_family_main_lift',
     };
+  }
+
+  // ── CONTRAST IS A PAIRING, AND UNTIL NOW IT WAS ONLY A SENTENCE (item 42) ──
+  //
+  // Bible `:225`: *"A heavy lift may SUPERSET with an explosive lift… The
+  // pairing sits at the MAIN slot; it is not appended to the end of the
+  // session."* `:1099`-`:1112`: *"finish the heavy set, walk to the power
+  // movement, then do it sharply."*
+  //
+  // NONE OF THAT WAS EXPRESSED IN DATA. `buildPowerRow` sets no
+  // `supersetGroup`, no `supersetOrder`, no `pairType` — the only thing
+  // `kind: 'contrast'` changed was a NOTES STRING telling the athlete to do it
+  // "straight after your heavy set", while the row's own `exerciseOrder: 0` and
+  // the canonical list's power-first concatenation put it BEFORE that set. The
+  // app told him one thing and rendered another.
+  //
+  // THIS IS THE ONLY PLACE THAT CAN FORM THE PAIRING. `buildPowerRow` runs
+  // before any main lift exists, so it cannot know its partner; this function
+  // already holds the power row AND the strength rows, and already decides
+  // whether contrast survives at all. One owner, no new representation.
+  //
+  // ⚠ THE PARTNER IS CHOSEN BY FAMILY, NOT BY PATTERN, AND THAT IS DELIBERATE.
+  // Item 42 asked for "same pattern both halves". Measured against Sam's own
+  // authored pairings, that is wrong: every LOWER entry in `POWER_EXERCISE_POOL`
+  // tags `movement: 'plyo'`, so `Box Squat`(squat)->`Vertical Jump`(plyo) and
+  // `Trap Bar Deadlift`(hinge)->`Broad Jump`(plyo) are DIFFERENT patterns —
+  // four of his five examples. `:225` says "SAME pattern" but `:1099` says
+  // "SIMILAR", and only `:1099` agrees with the pool and the examples. So the
+  // family check is CORRECT and tightening it would forbid the pairings he
+  // wrote.
+  const heavyIndex = signals.findIndex((signal) => signal.family === family && signal.heavy);
+  if (kind === 'contrast' && heavyIndex >= 0) {
+    const heavyRow = getSessionComponentRows(workout).strengthRows[heavyIndex];
+    const group = `contrast-${workout.id}`;
+    // Already paired to this partner — nothing to do, and re-forming it every
+    // pass would churn the golden for no behavioural reason.
+    if (heavyRow && heavyRow.supersetGroup !== group) {
+      return {
+        workout: {
+          ...workout,
+          exercises: (workout.exercises ?? []).map((row) => {
+            if (row.id === heavyRow.id) {
+              return { ...row, supersetGroup: group, supersetOrder: 1, pairType: 'contrast' as const };
+            }
+            if (row.role === 'power' && row.power?.kind === 'contrast') {
+              return { ...row, supersetGroup: group, supersetOrder: 2, pairType: 'contrast' as const };
+            }
+            return row;
+          }),
+        },
+        action: 'paired',
+        reason: `contrast_paired_to_main:${family}`,
+      };
+    }
   }
 
   return { workout, action: 'unchanged', reason: null };
