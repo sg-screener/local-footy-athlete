@@ -175,3 +175,89 @@ number is stated with its command beside it.
 laws; the mutation-proving I did was per-change, and `LAW-green-gate-is-a-claim`
 needs it STANDING. **Claiming a law is enforced because a related cell exists is
 the failure this registry was built to stop.**
+
+
+---
+
+## 2026-08-13 — MY STANDING RULE: I DO NOT WRITE `docs/SEAT_INBOX.md` ANY MORE
+
+**THIRD INSTANCE TODAY, SO IT GETS A RULE INSTEAD OF A THIRD APOLOGY.** Three of
+my commits carried another agent's uncommitted inbox edits: `a46d8c9e` (items 35,
+2, 7, 13 removals), `44066a92` (781 changed lines), `9c2b7562` (151 changed lines,
+items 34 and 35). **Nothing was lost in any of them — I checked the archives each
+time and every removal pointed at content already committed elsewhere — but that
+is luck, not method.**
+
+**THE CAUSE IS NOT CARELESSNESS AND THAT IS WHY IT KEPT HAPPENING.** I commit
+through a private index by explicit path, which is the documented protection —
+and **it does not protect a SHARED FILE.** `git add docs/SEAT_INBOX.md` stages
+whatever that file currently holds, including edits a neighbour has not committed
+yet. The private index stops me staging their *other* files; it cannot stop me
+staging their lines in *my* file. **Two agents editing one file is the whole
+defect, which is exactly what Sam's one-writer rule says.**
+
+**SO: I READ THE INBOX AND I DO NOT WRITE IT.** Item status, blockers, findings
+and handoffs go HERE, in my own file, which nobody else edits. If an item needs a
+marking the seat has not made, I write the marking here and name the item. **The
+one exception I will still take is retiring a question I myself put under
+`## AWAITING SAM`** — leaving it there after Sam has ruled makes
+`test:ruling-registry` red, and it is my line to remove.
+
+**AND THE ONE-WRITER RULE IS NOT HOLDING ELSEWHERE EITHER:** `docs/STATUS_AUDIT.md`
+has commits from the terminal (`569c27b4`, the MAS census C2 work). Almost
+certainly innocent — that file was `STATUS_AGENT3.md` until the audit seat renamed
+it, so anyone holding the old name lands in it. **Worth telling them the name
+moved rather than that they trespassed.**
+
+
+---
+
+## 2026-08-13 — R-075's STRENGTH ARM: THE §8 ALTERNATIVE, AND MY OWN DIAGNOSIS WITHDRAWN
+
+**§8 asks for an ALTERNATIVE on the table before attempt three. I had stopped
+without putting one up, which is only half the law.** Here it is, and finding it
+refuted what I had written an hour earlier.
+
+**WITHDRAWN: *"`allocations` and the final plan disagree about Tuesday — the bye
+allocator has a second writer the final loop cannot see."*** True as far as it
+went, and the wrong frame. **`buildWeeklyPlan` is 5,387 lines (`:1844`-`:7231`)
+and does not return `plan` — it returns `adjusted`.** Between them sits a REPAIR
+STAGE, and that is the second writer:
+
+- `freeDayCandidates` — one bare `core` allocation per day not already occupied.
+- `freeSlots()` — those candidates, **but only while `restBudgetSpare() > 0`**,
+  i.e. only while spending a free day still leaves the week its required rest.
+- `claimSlot()` — pushes a claimed day into `adjusted`.
+- `strengthShortfall` — what makes it claim.
+
+**SO TUESDAY IS NOT AN ALLOCATION AT ALL. It is a REPAIR** — the bye allocator
+emits Monday and Friday, the repair sees the week short of strength and claims
+Tuesday as core. **And that is why my optional Gunshow on Tuesday vanished: I put
+a session on a day the repair was about to claim, so the repair claimed elsewhere
+or not at all, and the count never moved.** The placement was never the lever.
+
+### AND THE HONEST ANSWER IS THAT NOTHING IS SHORT
+
+`restBudgetSpare()` is **not** the blocker — R-006 sets `fullRest.required: 1` and
+the away week achieves 3, so there are two spare days to claim. **The repair does
+not fire because `strengthShortfall` is ZERO: the away week meets its contract
+exactly.** Its target is 3 core and it delivers 3.
+
+**THE GUNSHOW WAS NEVER CONTRACT WORK.** It is a fixture-relative extra, placed on
+G−1 by the game branch and never counted by the exposure contract at all. So when
+the trip removes the fixture, **nothing in the app's own accounting registers a
+loss** — which is exactly why no repair, no shortfall and no placement fixes it.
+
+### THEREFORE: THE UNIT IS THE CONTRACT, NOT THE PLAN
+
+**R-075's strength arm needs the WEEKLY EXPOSURE CONTRACT to want one more session
+when a trip removed the fixture.** Then the machinery that already exists — the
+shortfall, the free-day budget, `claimSlot` — does the rest with no new placement
+code. **Any fix in the allocator or the repair is treating a number that is
+already correct.**
+
+**NOT ATTEMPTED, and this is the third time today I have named the same reason:**
+it is a contract change, the deepest layer, and it owes `test:scenarios` +
+`test:qa` either side. `coachingEngine.ts` is byte-identical to HEAD. **Next
+session starts at `weeklyExposureContract`, with the two dead ends and this
+alternative all measured.**
