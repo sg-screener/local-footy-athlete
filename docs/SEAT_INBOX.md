@@ -1214,6 +1214,44 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ THE TERMINAL'S THREE OPEN QUESTIONS, BATCHED — 2026-08-13. Each is one
+  line from him and each unblocks work that is already built.** Consolidated
+  because the two entries below say the same things in two places, and the whole
+  point of this section is that his questions reach him ONCE.
+
+  **REGISTRY-GREP (all three topics, run together):** grepped
+  `RULINGS_REGISTRY.md` for *duplicate*, *bodyweight*, *substitut*, *sprint*,
+  *team night*, *anchor credit*, *no club*, *target met*.
+  **Returned: R-002/R-003 (duplicate — off-season team training and the COD
+  window, neither about repeated rows), R-007/R-062/R-079 (sprint — the hard-day
+  budget, and my own R-079 from today).** *bodyweight*, *substitut*,
+  *team night*, *anchor credit*, *no club* and *target met* return **NOTHING**.
+  **R-079 rules the sprint UNIT and the per-phase NUMBERS and does not touch any
+  of the three. All three are gaps, not re-asks.**
+
+  **1. A BODYWEIGHT LEG DAY SHIPS THE SAME SQUAT TWICE.** With bodyweight-only
+  kit the squat pool filters to almost nothing, so two different rows both
+  rotate to `Bodyweight Squat` and within-session avoidance has nowhere left to
+  go. Control-proven older than today's work.
+  **Send: *"repeat it"*, *"drop it"*, or *"tell me the day is short"*.**
+
+  **2. DOES A TEAM NIGHT *COUNT AS* YOUR SPRINT, OR *EARN* ONE ON TOP?** His
+  R-079 clause 3 says the app may add flying sprints to a pre-season team night.
+  **Built (`0d4824df`) and measured INERT**, because `sprintExposureGate`
+  answers `preseason_target_met` first — the team night is already counted as
+  the week's sprint.
+  **Send: *"a team night IS my sprint"* or *"a team night EARNS a sprint on
+  top"*.**
+
+  **3. IN-SEASON WITH NO CLUB, ZERO SPRINT.** The week requires 1, correctly
+  raises a BLOCKING shortfall, and the only code that could place one does not
+  run in-season at all.
+  **Send: *"give them sprints"* or *"leave it — that is what a club is for"*.**
+
+  **NONE ARE BLOCKING THE OTHER SEATS.** Everything the terminal built today is
+  green; these three decide what gets built next, not whether today's work
+  stands.
+
 - **⚠ NEW 2026-08-13, terminal — A BODYWEIGHT LEG DAY SHIPS THE SAME SQUAT
   TWICE. When there is no other legal exercise, does the app REPEAT it, DROP it,
   or SHIP THE DAY SHORT?**
