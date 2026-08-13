@@ -272,6 +272,31 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
     pullJudgedAsPush.missing.includes('horizontal_push'),
     JSON.stringify(pullJudgedAsPush.missing));
 
+  // ── THE APP'S OWN PULL DAY, WHICH THE ORACLE USED TO FAIL ──────────────
+  // `Pull-Ups + Barbell Row + Face Pulls` was reported missing arm work AND
+  // doubling horizontal pull, 12 times across a 5-world sweep. It is a complete
+  // day by Sam's split sentence — a vertical, a horizontal, and accessory work.
+  const realPullDay = sessionSlotCoverage(
+    [row('Pull-Ups'), row('Barbell Row'), row('Face Pulls')], 'upper_split_pull');
+  ok('the generator\'s real pull day is COMPLETE, not missing arm work',
+    realPullDay.missing.length === 0, JSON.stringify(realPullDay.missing));
+  ok('...and its face pull is SPENT as the accessory, not counted as a second row',
+    realPullDay.duplicated.length === 0, JSON.stringify(realPullDay.duplicated));
+  // AND THE ANCHOR IS STILL AN ANCHOR — the non-vacuity. Two ROWS with nowhere
+  // else to go is still his "two squats" shape and must still report doubled.
+  const twoAnchors = sessionSlotCoverage(
+    [row('Barbell Row'), row('Chest Supported Row'), row('Pull-Ups')], 'upper_split_pull');
+  ok('two horizontal-pull ANCHORS still report a doubled slot',
+    twoAnchors.duplicated.includes('horizontal_pull'),
+    JSON.stringify(twoAnchors.duplicated));
+  // ORDER-INDEPENDENCE, which is the whole reason the matching is exact rather
+  // than greedy. The same rows in a different order must give the same answer.
+  const reversed = sessionSlotCoverage(
+    [row('Face Pulls'), row('Barbell Row'), row('Pull-Ups')], 'upper_split_pull');
+  ok('the answer does not depend on row order',
+    reversed.missing.length === 0 && reversed.duplicated.length === 0,
+    `missing=${JSON.stringify(reversed.missing)} dup=${JSON.stringify(reversed.duplicated)}`);
+
   // NON-VACUITY: an empty intent admits nothing, so the caller's own
   // `intendedPatterns.size > 0` check is what turns the guard on — not this.
   ok('[non-vacuity] no plan patterns means no admissions',

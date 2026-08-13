@@ -167,6 +167,37 @@ export function patternsCompletingLadder(
  * in at the same time"*). Returning a SET rather than one answer is what lets a
  * five-row session cover five slots.
  */
+/**
+ * Is this upper row an ACCESSORY in the app's own pools, not the day's anchor?
+ *
+ * ⚠ CANONICALISES FIRST, AND THAT IS NOT OPTIONAL — THIRD SIGHTING OF THE SAME
+ * DEFECT IN ONE DAY. `classifyPoolSlot` is an EXACT-NAME lookup: the pool holds
+ * `Face Pull` and the generator ships `Face Pulls`, so it returns `null` and the
+ * row silently reads as "not an accessory". R-014 recorded this shape for
+ * `getExerciseTags` (151 rows resolving to nothing) and that one has since been
+ * fixed AT the lookup; `classifyPoolSlot` has the same hole and has NOT been.
+ *
+ * FIXED HERE RATHER THAN THERE, DELIBERATELY. Fixing `classifyPoolSlot` itself
+ * is the better fix and is named as the next unit in `docs/STATUS_TERMINAL.md` —
+ * but it feeds rotation and scoring, so turning its `null`s into answers changes
+ * generated output and owes a corpus measurement this unit has not taken. A
+ * local normalise is honest and has zero blast radius; a shared one taken blind
+ * is how two fixes were already spent on layers not in the chain.
+ */
+function isUpperAccessory(name: string): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { classifyPoolSlot } = require('../data/exercisePoolsStrength') as {
+    classifyPoolSlot: (n: string) => { slot: string; role: string } | null;
+  };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { canonicalExerciseName } = require('../utils/exerciseCanonicalisation') as {
+    canonicalExerciseName: (raw: string) => string;
+  };
+  const direct = classifyPoolSlot(name);
+  if (direct) return direct.role === 'accessory';
+  return classifyPoolSlot(canonicalExerciseName(name))?.role === 'accessory';
+}
+
 export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
   // Power, conditioning, team training and mobility are not strength slots.
   // They are exempt from counting for the same reason they cannot fill a slot.
@@ -204,10 +235,38 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
       if (unilateral) out.push('single_leg_hip');
       else out.push('hinge');
       break;
-    case 'horizontal_push': out.push('horizontal_push'); break;
-    case 'horizontal_pull': out.push('horizontal_pull'); break;
-    case 'vertical_push': out.push('vertical_push'); break;
-    case 'vertical_pull': out.push('vertical_pull'); break;
+    // ── AN UPPER *ACCESSORY* IS ALSO HIS "ARM WORK OR ACCESSORY WORK" ───────
+    //
+    // Sam's split-day sentence is *"horizontal movement, vertical movement, more
+    // arm work, more accessory work"* — so an upper day's third row is EXPECTED
+    // to be accessory work, and it does not stop being a pull because of it.
+    //
+    // MEASURED 2026-08-13, and the day the oracle was wrong about is the app's
+    // own pull day: `Pull-Ups + Barbell Row + Face Pulls` came back
+    // `missing: [arm_or_shoulder], duplicated: [horizontal_pull]` — 12 times
+    // across the sweep. **That day is fine.** It has a vertical, a horizontal and
+    // shoulder accessory work, which is his sentence exactly.
+    //
+    // THE DISCRIMINATOR IS NOT A NEW OPINION — the pools already hold it.
+    // `Barbell Row` is horizontal_pull **anchor**; `Face Pull` is horizontal_pull
+    // **accessory**, sitting in the same list as `Rear Delt Fly` and
+    // `Band Pull-Apart`. The app has always considered them the same kind of
+    // thing; this rule reads that answer instead of inventing a second one.
+    //
+    // AND THE TAG IS DELIBERATELY NOT TOUCHED. Retagging `Face Pull` as
+    // `isolation_upper` would change every reader — the pools, the scorer, the
+    // injury filters — to fix one oracle. The row genuinely IS a horizontal pull;
+    // it is ALSO shoulder work. Returning both is the honest answer, and it is
+    // what `sessionSlotCoverage`'s assignment step is for.
+    case 'horizontal_push':
+    case 'horizontal_pull':
+    case 'vertical_push':
+    case 'vertical_pull': {
+      const plane = tag.movement as SessionSlot;
+      out.push(plane);
+      if (isUpperAccessory(name)) out.push('arm_or_shoulder');
+      break;
+    }
     case 'isolation_upper': out.push('arm_or_shoulder'); break;
     case 'isolation_lower':
     case 'core':
@@ -236,18 +295,58 @@ export function sessionSlotCoverage(
   kind: SlotDayKind,
 ): SlotCoverage {
   const required = SLOTS_FOR_KIND[kind];
-  const counts = new Map<SessionSlot, number>();
-  for (const row of rows) {
-    for (const slot of slotsFilledByRow(row)) {
-      counts.set(slot, (counts.get(slot) ?? 0) + 1);
+
+  // ── IT ASSIGNS, IT DOES NOT TALLY ────────────────────────────────────────
+  //
+  // A row may fill more than one slot, and a TALLY cannot SPEND it on the slot
+  // the day actually needs — it credits every slot the row could fill and then
+  // calls the overlap a duplicate. That is how `Pull-Ups + Barbell Row + Face
+  // Pulls` read as "missing arm work AND doubled horizontal pull" when it is a
+  // complete day: the face pull was counted as a second row rather than spent as
+  // the accessory.
+  //
+  // EXACT MATCHING, NOT GREEDY, AND THE CHOICE IS DELIBERATE. Greedy is
+  // order-dependent — feed the same day's rows in a different order and it
+  // answers differently — and this oracle has already been wrong twice in one
+  // day. With at most 5 slots and a handful of rows, an augmenting-path search
+  // is small and exact, so the answer cannot depend on row order.
+  const candidates = rows.map((row) => {
+    const slots = new Set(slotsFilledByRow(row));
+    return required.filter((slot) => slots.has(slot));
+  });
+  const rowForSlot = new Map<SessionSlot, number>();
+  const slotForRow = new Map<number, SessionSlot>();
+  const assign = (slot: SessionSlot, seen: Set<number>): boolean => {
+    for (let index = 0; index < candidates.length; index += 1) {
+      if (!candidates[index].includes(slot) || seen.has(index)) continue;
+      seen.add(index);
+      const held = slotForRow.get(index);
+      if (held === undefined || assign(held, seen)) {
+        rowForSlot.set(slot, index);
+        slotForRow.set(index, slot);
+        return true;
+      }
     }
+    return false;
+  };
+  for (const slot of required) assign(slot, new Set<number>());
+
+  const filled = required.filter((slot) => rowForSlot.has(slot));
+  const missing = required.filter((slot) => !rowForSlot.has(slot));
+
+  // A DUPLICATE IS A ROW WITH NOWHERE ELSE TO GO — his "two squats" shape. Two
+  // rows that can ONLY fill the same required slot is the honest reading: a
+  // second back squat has no other home, whereas a face pull does and is not a
+  // duplicate of the row. Accessory and arm slots are exempt as before, because
+  // two accessory rows are normal and are not what his sentence is about.
+  const onlySlotCounts = new Map<SessionSlot, number>();
+  for (const slots of candidates) {
+    if (slots.length !== 1) continue;
+    onlySlotCounts.set(slots[0], (onlySlotCounts.get(slots[0]) ?? 0) + 1);
   }
-  const filled = required.filter((slot) => (counts.get(slot) ?? 0) > 0);
-  const missing = required.filter((slot) => (counts.get(slot) ?? 0) === 0);
-  // A duplicate only matters on a slot the day is trying to fill; two accessory
-  // rows are normal and are not what his sentence is about.
   const duplicated = required.filter((slot) =>
-    slot !== 'accessory_or_core' && slot !== 'arm_or_shoulder' && (counts.get(slot) ?? 0) > 1);
+    slot !== 'accessory_or_core' && slot !== 'arm_or_shoulder'
+    && (onlySlotCounts.get(slot) ?? 0) > 1);
   return { kind, required, filled, missing, duplicated };
 }
 
