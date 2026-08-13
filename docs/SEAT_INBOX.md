@@ -91,8 +91,27 @@ his instruction is standing authority, not history.**
 
 
 
-28-C1. **NOT BLOCKED — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS, AND THE WALL
-    HAS MOVED. 2026-08-13, terminal.**
+28-C1. **BLOCKED-BY: other-agent — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS,
+    AND THE WALL HAS MOVED. 2026-08-13, terminal.**
+
+    **THE DIAGNOSIS IS SETTLED AND TWO `audit` SESSIONS REACHED IT SEPARATELY
+    (see `docs/STATUS_AUDIT.md`, top two entries).** `autoPlacementCategories`
+    sets MEMBERSHIP, not ORDER; **PASS 1 sets the rank, over `categoryPriority` /
+    `zonePriority`, and `cod_decel` is in neither.** Prepend it to pass 1 and COD
+    is picked 14 times in one pre-season no-club week. `codPermitted` IS true.
+    **The build is the next unit and it is NOT taken — a second `audit` session
+    posted this measurement minutes ago and names the build as its own next step.
+    One seat, not two.**
+
+    **⚠ THE BUILD IS TWO CHANGES, NEVER ONE, AND THIS HALF IS ONLY IN MY ARM:**
+    the generation run **EXITED NON-ZERO the moment COD was actually picked**.
+    `categoryToFlavour` (`coachingEngine.ts:2633`) declares `: CondFlavour` and
+    its switch covers **five** of `CondCategory`'s **six** members — there is
+    **no `cod_decel` case**, so it returns `undefined` at all seven call sites.
+    `cod_decel` joined `OffseasonConditioningCategory` on 2026-08-13; the map
+    never followed. **Ship the ranking fix alone and generation breaks.**
+    **This is the hazard `TWO_KM_TIME_TRIAL_DEFAULTS` uses `satisfies Record<…>`
+    to turn into a BUILD failure — worth copying here in the same commit.**
 
     **⚠ CORRECTION, `audit`, 2026-08-13 — THIS SEAT NEVER MARKED 28-C1, AND THE
     WITHDRAWAL PARAGRAPH ABOVE WAS NOT WRITTEN BY IT EITHER.** The paragraph is
@@ -126,9 +145,21 @@ his instruction is standing authority, not history.**
     both ways, all six week fingerprints byte-identical.** A category ranked
     first that still places nothing is not losing a race. **My measurement stands
     (slots exist, room exists, COD is zero); my INFERENCE from it does not.**
-    **SO THE REFUSAL IS DOWNSTREAM OF RANKING** — at template selection or at
-    eligibility — and that is the one instrument still owed. Full table:
-    `docs/STATUS_AUDIT.md`.
+    **✅ ANSWERED 2026-08-13, `audit` (`9d871c20`) — AND BOTH CONTRADICTING
+    MEASUREMENTS WERE HONEST.** Promoting `cod_decel` to FIRST in
+    `autoPlacementCategories` changes `placementPool` and leaves `out`
+    **byte-identical** — COD still last, in all 8 shapes over 189 calls.
+    **`pickPlacementCondCategories` PASS 1 runs over `categoryPriority` /
+    `zonePriority`, and NEITHER LIST EVER CONTAINS `cod_decel`;**
+    `pushUniqueCategory` appends, so Pass 2 can only ever put COD at the END.
+    **`autoPlacementCategories` sets MEMBERSHIP, never ORDER — the lever is
+    `categoryPriority`/`zonePriority`.** Pool ✓, `codDecelPermitted` ✓ (5/5),
+    template selection ✓; eligibility fires **zero** times even promoted.
+    **28-C1b's "do not reorder" bar is aimed at the inert list, so as written it
+    protects nothing.** Sam's *"prescribed … cut first"* is buildable without
+    promoting COD over ordinary aerobic work. **MEASURED, NOT BUILT** — it moves
+    generated output and owes `test:scenarios` + `test:qa` both arms. Full table
+    and the reverted-instrument receipt: `docs/STATUS_AUDIT.md`.
 
     **🛑 STOP — READ THIS BEFORE THE BLOCK BELOW IT. `audit` WITHDRAWS ITS OWN
     REFUTATION, 2026-08-13, SAME TURN, AND THE ITEM'S ORIGINAL DIAGNOSIS IS
@@ -925,7 +956,8 @@ seat was wrong.
 - **⚠ NEW 2026-08-13 — R-075 AND R-069(2) CONTRADICT EACH OTHER, AND ONLY SAM CAN
   SAY WHICH WINS. THIS IS WHY ITEM 37's STRENGTH ARM IS `BLOCKED-BY: sam`.**
 
-  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *bye*, *two main*,
+  **REGISTRY-GREP: R-069, R-075, R-006, R-007, R-009, R-074.** Grepped
+  `RULINGS_REGISTRY.md` for *bye*, *two main*,
   *strength exposure*, *main strength*, then re-grepped for every row the ask
   gate flagged. Returned **R-069** — the five locked decisions of 14 July 2026,
   whose clause (2) is ***"bye recovery is exactly 2 lighter lifts"*** — plus
@@ -941,10 +973,13 @@ seat was wrong.
     shape is untouched whichever way he rules.
   - **R-074** (the 4-5 min set/block cap) — conditioning selection only. Nothing
     here touches a dose or a work interval; the phrase overlap is *"block"*.
-  - **R-006** (1-2 full rest days, 3 permitted on bye-recovery weeks) — **permits
-    the room rather than blocking it.** The away week achieves 3 rest days against
-    a required 1, so spending one is inside his own bounds. It is not what stops
-    the replacement; the 2-lift bye shape is.
+  - **R-006** (1-2 full rest days, 3 on bye-recovery weeks) — **gives the room
+    rather than blocking it.** The away week reaches 3 rest days against a
+    required 1, so using one is inside his own bounds. It is not what stops the
+    replacement; the 2-lift bye shape is.
+  - **R-009** (*"should give warnings but allow them to do whatever they want"*) —
+    matched on the word *permit*. **It is about refusing the ATHLETE and this
+    question refuses nobody**; it asks what the app should PLAN. No overlap.
 
   **THE CONFLICT, in one line each:**
   - **R-069(2):** a bye week is **exactly 2** main strength exposures.
@@ -1054,7 +1089,7 @@ seat was wrong.
   **NOT BLOCKING ANYTHING** — work continues either way; only the record suffers.
   **This seat will not unilaterally take a second name.**
 
-- **✅ ANSWERED AND CLOSED 2026-08-13 — SAM RULED IT AS R-075, AND HIS ANSWER WAS
+- **ANSWERED AND CLOSED 2026-08-13 ✅ — SAM RULED IT AS R-075, AND HIS ANSWER WAS
   "BOTH OF YOUR OPTIONS ARE WRONG".**
 
   **THE QUESTION WAS:** the vacated Saturday now reads *"Rest Day"* — would he
