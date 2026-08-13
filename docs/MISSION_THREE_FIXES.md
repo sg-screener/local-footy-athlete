@@ -14,6 +14,7 @@ four slices; nothing else.
 | 1B-completion | R-090 lands; all four routes closed | **HARD STOP AT BUDGET** — every acceptance criterion met on the six printed scenarios, but 20 kit-limited worlds in the 180-world sweep are newly REFUSED. Not shipped; parked on `slice1bc-parked` (`375f32ce`). |
 | 1B-final | Find the lost record, fix that one site | **STOP — STEP 1 INCONCLUSIVE.** Both named suspects killed with receipts. **The record is not lost anywhere.** No fix written. |
 | 1B-final-2 | Name why the gateway refuses a week its evaluator accepts | **STOP — THE PREMISE IS FALSE AND THREE MECHANISMS CONTRIBUTE.** The evaluator never accepted it; my 1B-final receipt was wrong. Measurement only, no code. |
+| 1B-ship | Fix M1/M2/M3 and ship | **STOP — SHIP GATE NOT MET.** Sheet + M3 + M1 all built and green (8 new cells); sweep refusals unchanged at 26 vs baseline 6, a new blocking code appeared, and the census breadth floor reds. Parked at `81ba20f9`. |
 | 2 | Authorship | NOT STARTED |
 | 3 | Close the loop | NOT STARTED |
 
@@ -713,6 +714,129 @@ gets nothing instead.
 - **The parked implementation remains unmerged** — `slice1bc-parked` still at
   `375f32ce`.
 
+### Slice 1B-ship — all three mechanisms fixed, and it still does not ship
+
+**PARKED, NOT MERGED.** `slice1bc-parked` **`81ba20f9`** (on top of `375f32ce`),
+7 files, +282/−38. The shared checkout never left `main` (`12b8242b` before and
+after). **Nothing in this slice reached production.**
+
+#### 1. Instruments, before → after
+
+| Instrument | Before (`375f32ce`) | After (`81ba20f9`) | |
+| --- | --- | --- | --- |
+| `print:week` scenarios written | 6 of 6 | **6 of 6** | held |
+| scenario 6 `impossible_without_kit` | 0 | **0** | held |
+| scenario 6 findings total | 1 (`1 × 1`) | **1** | held |
+| `test:workout-canonicalisation` | 47/0 | **57/0** (+10 cells) | ✅ |
+| `test:section18-v2` | 141/0 | **141/0** | held |
+| **180-world sweep refusals** | **26** | **26** | ❌ baseline is **6** |
+| sweep laddered days | 312 | **290** | ❌ floor is 300 — **new red** |
+| sweep deficient | 137 | 133 (ceiling 88) | pre-existing red |
+| kit-blocked census | 96 days | **70 days** (v_pull 44, v_push 32, h_pull 18) | fell — fewer slots now unfillable |
+| census cells | 10/11, 1 failure | **9/11, 2 failures** | ❌ **new red** |
+
+#### 2. Per-mechanism receipts
+
+**SHEET — Sam's authority, applied to the one oracle.** His words, 2026-08-14:
+*"Chest Supported Row, needs a bench and dumbbels / Romanian Deadlift needs
+barbell or dumbbells / Pallof Press needs a band."*
+`exerciseEquipmentRequirement.ts` — `Chest Supported Row: ['bench','dumbbells']`,
+`Pallof Press: ['bands']`, and **`RDLs` and `Romanian Deadlift` now carry ONE
+answer**, `[['barbell','dumbbells']]`. The OR is expressed **in the sheet**: a
+nested array is an OR-group, a bare tag is required — `exerciseIsAvailableWith`
+gained one `satisfied()` predicate. **No second lookup.** A rule that "knew"
+barbell and dumbbells are interchangeable would be a second authority on his
+answers, and the first exercise where that is false would split them. Verified:
+`Romanian Deadlift` legal on dumbbells, illegal on bodyweight; `Chest Supported
+Row` legal only with bench+dumbbells; `Walking Lunges` and `Single-Leg RDL` still
+legal on bodyweight via `BODYWEIGHT_CAPABLE`.
+
+**M3 — the gate never removes what the sheet permits.** The bug was in the
+REASON, not the removal: `equipmentRequiredFor(name) ?? []` flattened *"not on
+the sheet"* into `[]`, which under Sam's own convention means **needs nothing**.
+So a record said `Romanian Deadlift` needs nothing while removing it for needing
+a barbell. `EquipmentRemoval.requires` is now the sheet's own words
+(`"barbell or dumbbells"`) or `null` for unknown —
+`equipmentRequirementLabel()` in the same module, one table, two views.
+**4 cells**, including both directions: the hinge survives a dumbbell kit and
+still goes on bodyweight, and the reason is never an empty list.
+
+**M1 — Sam's ruling, verbatim.** *"i think any push pull hinge squat single leg
+knee single leg hip get the main lift role there."* Implemented as
+`promoteUncreditedPrimaryLifts` in `section18WorkoutEvidence.ts` — the one place
+the role is stamped, immediately after the existing pass that DEMOTES surplus
+main lifts. For each **planned** pattern the day delivers but no row was credited
+with, the **first** matching row is promoted. **It promotes, it does not
+choose**: no ranking, no new exercise, no reorder.
+It reads `plannedPatterns`, not `effectivePatterns`, deliberately — `effective`
+is derived from what the content was CLASSIFIED as, so asking it would be asking
+the answer to grade itself.
+**6 cells:** (a) a bodyweight day carries main-strength rows, one per delivered
+pattern; (b) **a full-gym day is untouched** — its anchors already credit their
+patterns so nothing is uncredited, and its accessory count is unchanged;
+(c) a dumbbell athlete gets the role on the loaded primaries its kit supports;
+(d) four lower lifts across two patterns yield exactly **two** main lifts, not
+four.
+
+**M2 — PARTLY MOOT, AND I DID NOT FIX THE UNPROVEN SITE.** With M1 in, the
+evaluator reports `kitUnachievablePatterns = ["push","squat","hinge"]` and the
+downgrade has nothing left to downgrade for those three — they now have main
+lifts. **The symptom is gone for them without touching either named site.**
+It is **not** fully moot: `pull` still blocks, and the reason is measured —
+the week evaluated no longer contains the day that carried the pull removals.
+That day (`Tempo Intervals`, the ex-`Upper Pull`) has been replaced by a
+`Hard Conditioning` day with `equipmentRemovals: []`. **That is neither of the
+two sites I named**, so per the fence I left both untouched.
+
+#### 3. The sweep's remaining refusals
+
+**26, unchanged.** M1 fixed classification; it did not reduce refusals. The
+traced world (`Off-season/4d/club/Bodyweight Only/w2`) now fails on three codes:
+
+```
+pattern_imbalance:strength_patterns:{squat:2, hinge:1, single_leg_knee:0,
+                                     single_leg_hip:0, push:1, pull:0}
+pattern_restore_failure:strength_patterns:0          ← pull
+planner_selected_target_miss:main_strength:3
+```
+
+- `pattern_restore_failure` for **pull** — the removal record is on a replaced
+  day (M2 above).
+- `planner_selected_target_miss:main_strength:3` — the planner wants more
+  main-strength SESSIONS than the kit-limited week has days for.
+- **`pattern_imbalance` IS NEW TO THIS WORLD AND M1 CAUSED IT.** Creating main
+  lifts pattern-by-pattern makes squat 2 / hinge 1 / pull 0, which
+  `balanceExpectation: 'equal_or_near_equal'` blocks. **Balance policy for a kit
+  that cannot reach every pattern is unruled**, and week QUALITY is explicitly
+  parked, so I did not touch it.
+
+And the census breadth floor now reds — **290 laddered days against a floor of
+300** — because refused worlds contribute no laddered days.
+
+#### 4. Registry rows as landed
+
+**Unchanged: R-083 `UNENFORCED`, R-090 `UNENFORCED`.** No main-lift-role row was
+added: the registry's rule is that a ruling lands with the commit that enforces
+it, and nothing enforces it in production — it is parked. Adding a `BUILT` row
+pointing at an unmerged branch would be the false receipt this campaign has
+already corrected twice. **The UNENFORCED ceiling was not raised.** No R-091, no
+gym-access ruling.
+
+#### 5. What fought me
+
+- **M1 worked and bought nothing at the gate.** Main lifts now exist —
+  `squat 2, hinge 1, push 1` where there were zero — and the refusal count did
+  not move by one. Fixing the named cause is not the same as fixing the failure.
+- **My own fix created the next blocker.** `pattern_imbalance` fires *because*
+  M1 succeeded: a kit that can reach three patterns and not the fourth is, by
+  §18's balance rule, an unbalanced week. That is not a bug in M1 — it is the
+  next unruled question, and it was invisible until M1 landed.
+- **A `git checkout -- src/__tests__` I typed while meaning to run `git status`
+  discarded two cell edits.** Caught immediately by re-reading the diff, redone.
+  Noted because it is the same class of shared-tree write this repo has paid for
+  before, and I did it inside a worktree only by luck of where I was standing.
+- The sheet, M3 and M1 themselves resisted nothing. Every cell passed first run.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -744,3 +868,7 @@ gets nothing instead.
 - The canonicaliser retypes `Upper Push`, `Lower Body Strength` and the ex-`Upper Pull` day to `workoutType: 'Conditioning'` once their strength content thins, so a day's name and its type disagree on the athlete's screen.
 - A kit-limited week composes Thursday and Friday as near-duplicate lower-body days (same four bodyweight lifts) — the variety rotator has nothing left to vary.
 - `resolveFinalVisibleSection18Week` is what the evaluator is handed, not the composed workouts; whether `equipmentRemovals` survives that projection is unestablished.
+- §18's `balanceExpectation: 'equal_or_near_equal'` blocks any week whose kit can reach three main patterns but not the fourth — unruled for kit-limited athletes.
+- `planner_selected_target_miss:main_strength` asks a kit-limited week for more main-strength SESSIONS than its training days can carry once impossible patterns are removed.
+- The ex-`Upper Pull` day is replaced by a freshly composed `Hard Conditioning` day whose `equipmentRemovals` is empty, so the reason the pull vanished does not travel with its replacement.
+- `test:ladder-wide`'s breadth floor (300 laddered days) falls when worlds are refused, so a refusal regression reds the floor cell rather than the refusal counter.
