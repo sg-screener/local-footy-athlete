@@ -439,3 +439,42 @@ status before believing it. It cost two greps per row and found two in twelve.
 (R-013's zero readers, R-014's composer, R-054's *"no suite"*, R-070's pattern
 legality), and marking one `BUILT` without opening its enforcer would be the same
 defect pointing the other way.
+
+
+---
+
+## 2026-08-13 — ⚠ STANDING ITEM 13's OWN COUNTING COMMAND READS ONE HIGH
+
+Item 13 says: *"The truth is `grep -c \"state: 'UNENFORCED'\" src/rules/lawRegistry.ts`
+— the terminal has miscounted this twice, both times one low."*
+
+**THE COMMAND COUNTS THE TYPE DEFINITION.** `lawRegistry.ts:108` is
+`readonly state: 'UNENFORCED';` inside the `LawGuard` union — the shape of a
+guard, not a law with one. Measured:
+
+| | |
+| --- | --- |
+| the item's command | **27** |
+| minus the type at `:108` | **26** |
+| rows whose `guard.state` is `UNENFORCED` (parsed) | **26** of **125** laws |
+
+**SO "ONE LOW" MAY HAVE BEEN RIGHT TWICE.** A terminal counting ROWS gets 26; the
+prescribed command gets 27 and calls that a miscount. **The instrument, not the
+counter, is the thing that was off** — and the standing order has been correcting
+people toward the wrong number.
+
+**THIS IS `a-count-taken-for-a-record` AGAIN, EXACTLY** — a number naming the
+INSTRUMENT'S unit (grep lines) rather than the thing counted (law rows). It is the
+same class that has now bitten me twice today: `workoutType` totals reading
+*"Mixed"* as neither strength nor conditioning, and the displacement gate counting
+PROSE as a call site (the audit seat's `b19109d4`). **Three sightings in one day,
+all "the count is of the wrong unit".**
+
+**I ALSO REPORTED `28` TO SAM EARLIER, BY THAT COMMAND. The honest number is 26
+rows.** The drop from 27 to 26 in between is real — the audit seat built R-073's
+lock — but my figure carried the +1 either way.
+
+**NOT FIXED IN THE INBOX**: item 13 is the seat's text and I no longer write that
+file. **The durable fix is a cell** — pin the row count as ROWS, so no one can
+miscount it again — and `test:law-registry` is the place, but it is RED BY RULING
+while any law is UNENFORCED and it is not my suite. **Named for whoever owns it.**
