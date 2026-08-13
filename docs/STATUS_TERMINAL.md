@@ -61,11 +61,29 @@ season you can do flying sprints when there is team training because you will ge
 accelerations at footy"*. That is one named line, and it is the buildable half of
 his ruling.
 
-**STILL A REAL GAP: no-club IN-SEASON and mid/late off-season get zero sprint
-work against `required: 1`**, and `9j` proves the week raises a BLOCKING
-shortfall it cannot clear. Why Monday and Tuesday are not eligible in that world
-— neither is a team day, a game day, G-1 or G-2 — is NOT yet explained. **Start
-there.**
+**⇒ AND THE "WHY" IS ANSWERED: THE FREE DAYS ARE NOT REFUSED — THEY ARE NEVER
+CONSIDERED.** Instrumented the sprint-rescue condition
+(`coachingEngine.ts:5894`) and ran both worlds:
+
+    PRE-SEASON no club   SPRINT-GATE useCategoryPlanner=true alreadySprint=false
+                         allowStandalone=true reason=preseason_shortfall   -> sprint placed
+    IN-SEASON  no club   (no line printed at all)
+
+**The probe sits on the `if` itself, so silence means the ENCLOSING PATH NEVER
+RUNS IN-SEASON.** Every day-level gate I read first — `isTeamDay`, the
+adjacent-day rule, game/G-1/G-2, the upper-day requirement, the lower-day
+predecessor — is downstream of a block that is never entered. **I spent four
+reads on eligibility rules that were never consulted.** The `sprintExposureGate`
+itself is innocent: it answers `inseason_shortfall` / `allowStandaloneSprint:
+true` when asked, and in-season it is not asked.
+
+**SO THE GAP IS STRUCTURAL, NOT A THRESHOLD.** A no-club in-season athlete gets
+zero sprint against `required: 1`, cell `9j` proves the week raises a BLOCKING
+shortfall, and the only code that could fix it does not execute in that phase.
+**Next: find what makes the enclosing path pre-season-only, and decide whether
+in-season no-club should reach it.** That is a real product question — in-season
+sprint is normally the club's job (which is why the path is where it is), and the
+no-club athlete is the case nobody wrote.
 
 ### 2026-08-13 — R-079 BUILT (`0dc40d0c`, `ff31d40c`). ~~AND THE APP PRESCRIBES NO SPRINT WORK AT ALL~~ — struck, see the correction above.
 
