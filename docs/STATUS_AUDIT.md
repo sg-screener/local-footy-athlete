@@ -45,6 +45,42 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE 21 REDS, CLASSIFIED IN ONE PASS — and the last athlete-facing candidate is REFUTED
+
+**At the fourth layer-mismatch I stopped diagnosing one at a time and classified
+all 21 by WHICH LAYER THEY DRIVE:**
+
+| drives | count | reading |
+| --- | --- | --- |
+| DIRECT BUILDER only | **6** | `beginnerDeterministicProgram`, `byeWeekClassification`, `offseasonSubphaseConditioningIntegration`, `phaseRepPrescription`, `programmingBias`, `teamTrainingRendering` — **mis-aim candidates** |
+| BOTH | 2 | `generationConstraintReentry` (diagnosed: safe), `sprintExposureGate` |
+| REAL PIPELINE only | **1** | `recoveryAddonAttachment` — **the highest-signal one, so I took it** |
+| pure unit (neither) | 11 | a red here is a unit defect or a stale expectation, not a layer mismatch |
+
+**THE REAL-PIPELINE ONE IS REFUTED, AND IT WAS THE ONE MOST LIKELY TO BE REAL.**
+*"generated week receives visible recovery add-ons"* fails because
+`workout.recoveryAddons` is **0 in every phase** — Pre-season, Off-season,
+In-season. That looks exactly like athletes losing their prehab.
+
+**THEY ARE NOT. IT MOVED.** Measured on a real Pre-season week:
+
+    Prehab & Accessories: Long-Lever Copenhagen, Band Pull-Apart, Seated Calf Raise
+    Lower Hinge:          Pallof Press
+
+**Prehab is a ROW IN THE SESSION LIST, which is the Bible's own design** —
+*"The session is ONE list… every exercise renders in the single session list
+carrying a role badge: power, main lift, accessory, midline, prehab,
+conditioning."* `recoveryAddons` is the RETIRED separate-box mechanism, and it is
+empty because the box no longer exists.
+
+**FIFTH TIME TODAY a red cell was measuring a mechanism the app has retired.**
+And the second time in an hour that a zero which looked like loss was a MOVE.
+
+**WHAT THE MAP IS WORTH:** the next agent does not open 21 suites blind. The 6
+direct-builder ones are mis-aim candidates before they are read; the 11 pure-unit
+ones are where a genuine defect is most likely to be hiding, because nothing
+about them is layer-confused.
+
 ### ✅ INJURY SAFETY IS INTACT — `generationConstraintReentry` 13/6 is the LAYER MISMATCH again, and this was the highest-stakes case
 
 **Six failures, all injury/readiness — hamstring, shoulder, knee, low readiness,
