@@ -306,9 +306,71 @@ seat that had already finished — so `pace` could have sat behind it indefinite
 **Corrected in R-079's row, in the registry, where the next reader will hit it.**
 
 **⚠ AND I DID NOT DECLARE ITEM 54 UNBLOCKED, BECAUSE ONLY HALF THE SENTENCE WAS
-STALE.** The other half is a real wall and it is untouched: **a dated span is not
+STALE.** ‡ The other half is a real wall and it is untouched: **a dated span is not
 a WEEK IDENTITY.** `Section18WeekMode` has eleven members and none is a Christmas
 break, so there is still nowhere to hang 1/week. Growing that union is the
 `cod_decel` hazard for the third time — the `satisfies Record<…>` ships in the
 same commit as the member or generation breaks. **Item 54 stays blocked, on the
 truth this time, and its owner is unchanged.**
+
+---
+
+## 2026-08-13 — THE STOP HOOK KNEW TWO STATES AND THE QUEUE HAD BEEN WRITING FIVE
+
+**THE HOOK RE-FIRED FOUR TIMES ON A QUEUE WITH NO FREE WORK IN IT**, and each
+time it told me to take an item another seat was committing to. So I stopped
+reporting that and fixed the instrument.
+
+**`scripts/seat-inbox-hook.sh` reads item HEAD lines and skips exactly three
+things: an empty-queue marker, `parked`, and `BLOCKED-BY: sam|other-agent|
+external`. Everything else is a WORKABLE ORDER.** The inbox has been writing
+three other states in its own words for days, and **every one of them is already
+named as a DEFECT in the repo's own text, by a different agent, before I got
+here:**
+
+| state | who named it | what they wrote |
+| --- | --- | --- |
+| `OWNED BY \`seat\`` | `CLAUDE.md`, this morning | *"OWNED IS NOT BLOCKED. THIS ONE WORD WAS DOING TWO JOBS… you walk past it. You do NOT mark it blocked."* |
+| `✅ CLOSED` | inbox item 40 | *"a `✅ CLOSED` head is still WORKABLE to the stop hook… a finished item keeps the queue non-empty until the SEAT archives it."* |
+| `STANDING, EVERY STOP` | inbox item 13 | *"THESE TWO ITEMS HOLD THE STOP HOOK OPEN FOREVER — A DEFECT, NOT A BACKLOG… `EXIT 1` is unreachable while a standing order exists."* |
+
+**THE TRAP IN ITS SHARPEST FORM:** an OWNED item counted as work, so the only way
+past it was to write a `BLOCKED-BY` that `CLAUDE.md` forbids. **The scan was
+asking every seat for the exact false marker the rule was written to stop** — and
+15 of 19 items had already worn it. Item 13's author hit the identical wall and
+refused, correctly: *"writing a false marker to buy my own exit is exactly
+that."* **Nobody fixed the instrument, so everyone kept paying the toll.**
+
+**BUILT — three skips, each NARROW, each mutation-proven, none of them a new
+category.** They are the queue's own vocabulary; the scan simply learns to read
+it.
+
+| skip | the rubber-stamp guard | mutant → |
+| --- | --- | --- |
+| `OWNED BY \`name\`` | must NAME an owner in backticks; a bare *"OWNED BY somebody"* skips nothing | delete it → *"a queue owned end to end ALLOWS"* **RED** |
+| head OPENS with `✅` | a ✅ inside an item's prose is a receipt about one part, not a finished order | delete it → *"a queue of ONLY closed items ALLOWS"* **RED** |
+| `STANDING, EVERY STOP` | item 13's own wording, and those items say of themselves *"they are not work items to clear"* | delete it → *"a queue of ONLY standing orders ALLOWS"* **RED** |
+
+**`test:seat-inbox-hook` 39 → 48, all green**, and it is in `test:bible`.
+
+**⚠ AND I FOUND A HOLE IN MY OWN SUITE BEFORE IT SHIPPED, WHICH IS THE PART
+WORTH KEEPING.** My first pass had a *"walked PAST"* cell for `✅` and no
+must-not-block twin. **Deleting the `✅` skip left every cell green** — because a
+walked-past case passes either way once a workable order sits below it. **A skip
+with no must-not-block case is a skip nothing holds.** The pairs are why the
+other two were provable and this one was not; the missing twin is now cell
+*"a queue of ONLY closed items ALLOWS"*.
+
+### THE EFFECT ON THE REAL QUEUE, MEASURED
+
+Running the new scan over `docs/SEAT_INBOX.md` as it stands: **eleven head lines
+go in, ONE comes out** — and it is not an order.
+
+**`50. THE THIRTEEN UNENFORCED RULINGS, ORDERED. ONE PER AGENT.`** — the seat's
+own INDEX, whose body reads *"OWNED BY THE SEAT to write; each sub-item names its
+own owner."* **The owner is in its body, not its head, and column 0 is the only
+thing the scan reads.** One `OWNED BY \`seat\`` on that head line clears the
+queue honestly. **It is the seat's line, in the seat's file, and I did not write
+it** — the same boundary I have kept all session.
+
+**SO THE QUEUE IS: ten items closed, blocked or owned, and one index header.**

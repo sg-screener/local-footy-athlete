@@ -302,6 +302,91 @@ run "a marker in an item's BODY does not block that item" block \
   "    We are BLOCKED-BY: sam on one sub-question, not on the item." "" \
   "## Previously (now processed)"
 
+# ── THE THREE STATES THE QUEUE WROTE AND THIS SCAN COULD NOT READ ────────────
+# (2026-08-13, seat `arms`.) Each was named as a DEFECT in the inbox's own text,
+# by a different agent, before this existed: OWNED BY (`CLAUDE.md`, "OWNED IS
+# NOT BLOCKED"), ✅ CLOSED (item 40, "a ✅ CLOSED head is still WORKABLE to the
+# stop hook"), STANDING, EVERY STOP (item 13, "these two items hold the stop
+# hook open forever — A DEFECT, NOT A BACKLOG").
+#
+# THE MUST-NOT-BLOCK AND MUST-BLOCK CELLS COME IN PAIRS, because a skip that is
+# too wide is how the marker becomes a rubber stamp — the exact class the
+# invented-category cell above guards.
+
+run "an OWNED item is walked PAST — owned is not blocked" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. A PATTERN UNIT. OWNED BY \`patterns\`." "" \
+  "2. AN ORDER THAT IS STILL WORKABLE." "" \
+  "## Previously (now processed)"
+
+# THE CELL THIS WHOLE CHANGE EXISTS FOR. Before it, a queue of owned items left
+# only two moves: work another seat's item, or write a BLOCKED-BY that
+# `CLAUDE.md` forbids. **The scan was asking for the false marker.**
+run "a queue owned end to end ALLOWS, without a false BLOCKED-BY" allow \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. THE BIG ONE. OWNED BY \`patterns\`." "" \
+  "2. THE PHONE UNIT. OWNED BY \`audit\`." "" \
+  "3. THE FILE IS HELD — BLOCKED-BY: other-agent" "" \
+  "## Previously (now processed)"
+
+# AND IT MUST NAME SOMEBODY. A bare "OWNED BY" cannot be typed over a queue to
+# buy silence, and the name is what another seat checks before walking past.
+run "an UNNAMED owner marks nothing — the item stays workable" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. SOMEBODY SHOULD DO THIS. OWNED BY somebody." "" \
+  "## Previously (now processed)"
+
+run "a ✅ CLOSED item is walked PAST — item 40's trap" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. ✅ CLOSED — the build landed and only archival remains." "" \
+  "2. AN ORDER THAT IS STILL WORKABLE." "" \
+  "## Previously (now processed)"
+
+# ITEM 40'S OWN CASE, END TO END. Without this cell the ✅ skip is UNPROVABLE:
+# I deleted it and every cell stayed green, because a "walked PAST" case passes
+# either way once a workable order sits below it. **A skip with no
+# must-not-block case is a skip nothing holds** — found in my own suite before
+# it shipped, which is the whole reason both directions are written in pairs.
+run "a queue of ONLY closed items ALLOWS — the seat has not archived yet" allow \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. ✅ CLOSED — the build landed and only archival remains." "" \
+  "2. ✅ MEASURED STALE — the premise was false and the row is corrected." "" \
+  "## Previously (now processed)"
+
+# THE COMPLETION MARK OPENS THE HEAD OR IT IS NOT A COMPLETION MARK. A ✅ inside
+# an item's prose is a receipt about ONE PART of it — half-built items in this
+# queue carry several — and must not silence the whole order.
+run "a ✅ inside the head's prose does NOT close the item" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. A REAL ORDER whose first half ✅ landed; the second half has not." "" \
+  "## Previously (now processed)"
+
+run "a STANDING, EVERY STOP item is walked PAST — item 13's defect" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. **STANDING, EVERY STOP — KEEP THE UNENFORCED LAW COUNT FALLING.**" "" \
+  "2. AN ORDER THAT IS STILL WORKABLE." "" \
+  "## Previously (now processed)"
+
+# ITEM 13'S OWN CASE, END TO END: two standing orders and nothing else. Their
+# own text says "they are not work items to clear", and before this the queue
+# could never be empty while they existed.
+run "a queue of ONLY standing orders ALLOWS — EXIT 1 is reachable again" allow \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.**" "" \
+  "13. **STANDING, EVERY STOP — KEEP THE UNENFORCED LAW COUNT FALLING.**" "" \
+  "## Previously (now processed)"
+
+# NON-VACUITY FOR ALL THREE AT ONCE: the same queue with one unmarked order in
+# it still BLOCKS, so none of the skips above can be passing by emptying the
+# scan.
+run "one unmarked order among all three markers still BLOCKS" block \
+  "# SEAT INBOX" "" "## Unprocessed" "" \
+  "1. ✅ CLOSED — archival only." "" \
+  "2. OWNED BY \`patterns\`." "" \
+  "3. **STANDING, EVERY STOP — the merge check.**" "" \
+  "4. A REAL ORDER NOBODY HAS TAKEN." "" \
+  "## Previously (now processed)"
+
 # THE HALT (2026-08-13) — the human always wins.
 #
 # Sam had to stop the terminal twice and it kept going, because this hook gave

@@ -104,6 +104,43 @@ while IFS= read -r line; do
   # ───────────────────────────────────────────────────────────────────────────
   printf '%s' "$line" \
     | grep -qiE 'BLOCKED-BY:[[:space:]]*(other-agent|external|sam)([^a-zA-Z-]|$)' && continue
+  # ───────────────────────────────────────────────────────────────────────────
+  # THREE MORE STATES THE QUEUE ALREADY WRITES AND THIS SCAN COULD NOT READ.
+  # (2026-08-13, seat `arms`, after the hook re-fired four times on a queue whose
+  # every item was closed, blocked, or owned by a seat that was actively
+  # committing.)
+  #
+  # NOTHING HERE IS A NEW CATEGORY — that is the whole design. The scan knew two
+  # states, BLOCKED and WORKABLE, and the inbox has been writing three others in
+  # its own words for days. Each one is named as a DEFECT in the inbox's own
+  # text, by a different agent, before I arrived:
+  #
+  #   · OWNED BY — `CLAUDE.md`, this morning: *"OWNED IS NOT BLOCKED. THIS ONE
+  #     WORD WAS DOING TWO JOBS… you walk past it. You do NOT mark it blocked."*
+  #     An owned item was WORKABLE here, so the only way past it was to write a
+  #     BLOCKED-BY the rule forbids. **The scan was asking for the false marker
+  #     the rule was written to stop**, and 15 of 19 items had already worn it.
+  #   · ✅ CLOSED — item 40: *"a `✅ CLOSED` head is still WORKABLE to the stop
+  #     hook… so a finished item keeps the queue non-empty until the SEAT
+  #     archives it. Same structural trap named on item 31."*
+  #   · STANDING, EVERY STOP — item 13: *"THESE TWO ITEMS HOLD THE STOP HOOK
+  #     OPEN FOREVER — A DEFECT, NOT A BACKLOG… neither clearable nor blocked,
+  #     the only two states the scan knows, and `EXIT 1` is unreachable while a
+  #     standing order exists."* It names this fix and its own wording for it.
+  #
+  # EACH IS DELIBERATELY NARROW, because the rubber-stamp risk is the same one
+  # the invented-category cell guards:
+  #   · OWNED BY must NAME an owner in backticks. A bare "OWNED BY" skips
+  #     nothing, so it cannot be typed over a queue to buy silence, and the name
+  #     is the thing another seat checks before walking past.
+  #   · the completion mark must OPEN the head line — a ✅ inside an item's prose
+  #     is a receipt about some part of it, not a statement that it is finished.
+  #   · the standing phrase is item 13's own, and those items say of themselves
+  #     *"they are not work items to clear."*
+  # ───────────────────────────────────────────────────────────────────────────
+  printf '%s' "$line" | grep -qiE 'OWNED BY[[:space:]]+`[^`]+`' && continue
+  printf '%s' "$norm" | grep -q '^✅' && continue
+  printf '%s' "$line" | grep -qi 'STANDING, EVERY STOP' && continue
   order="$line"
   break
 done <<EOF
