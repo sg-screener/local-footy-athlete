@@ -338,12 +338,16 @@ run()
     console.log(`\n- Summary -`);
     console.log(`  Pass: ${pass}`);
     console.log(`  Fail: ${fail}`);
+    // ⚠ THE CLEAR BELONGS ON THE SUCCESS PATH, AND MY ARMING PASS PUT IT ONLY IN
+    // `.catch()`. That left this branch relying on `process.exit(0)` to leave
+    // green — which is the bypass the law bans, and it is why deleting that call
+    // turned this suite RED. The clear goes here, and the bypass goes.
+    totalsPrinted(fail);
     if (fail > 0) {
       console.log(`\n- Failures -`);
       for (const f of failures) console.log(`  - ${f}`);
       process.exit(1);
     }
-    process.exit(0);
   })
   .catch((err) => {
     fail++;

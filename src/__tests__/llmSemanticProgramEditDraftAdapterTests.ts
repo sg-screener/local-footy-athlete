@@ -343,12 +343,15 @@ run()
     console.log(`\n- Summary -`);
     console.log(`  Pass: ${pass}`);
     console.log(`  Fail: ${fail}`);
+    // ⚠ THE CLEAR BELONGS ON THE SUCCESS PATH. The arming pass put it only in
+    // `.catch()`, leaving this branch to rely on `process.exit(0)` — the bypass
+    // the law bans, and the reason deleting that call turned this suite RED.
+    totalsPrinted(fail);
     if (fail > 0) {
       console.log(`\n- Failures -`);
       for (const f of failures) console.log(`  - ${f}`);
       process.exit(1);
     }
-    process.exit(0);
   })
   .catch((err) => {
     fail++;
