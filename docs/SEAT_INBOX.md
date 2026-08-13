@@ -15,6 +15,37 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+70. **OWNED BY `seat` — BLOCKED-BY: sam — THE TWO AUDITS ARE RECONCILED. THEY
+    AGREE. ONE FRAMING IN ITEM 68's REPORT IS CORRECTED AND ONE ROOT CAUSE IS
+    NOW A FIVE-LINE FIX. NOBODY STARTS WORK OFF THIS ITEM.**
+
+    Sam put codex's `docs/ELEGANCE_AUDIT_2026-08-14.md` beside the seat's
+    `docs/ELEGANCE_AUDIT_VERIFICATION_2026-08-13.md` and asked where they agree,
+    where they differ, and what each missed. Answer with receipts:
+    **`docs/TWO_AUDITS_RECONCILED_2026-08-13.md`**.
+
+    **RE-RAN, NOT TRUSTED.** `scripts/measure-elegance-audit.js` reproduces the
+    report's graph table exactly (549 files, 242 in circular groups). The
+    459-error compile baseline is real (`scripts/typecheck-baseline.json`,
+    product scope 35).
+
+    **THE BODYWEIGHT ROOT CAUSE IS CONFIRMED AND IT IS ONE FUNCTION.**
+    `src/data/exercisePoolsStrength.ts:964 selectPoolEntryAvoiding` — at `:977`,
+    when equipment filtering empties the slot, it logs `[pool-override-fallback]`
+    (`:982`) and falls through to the RAW pool (`:989`). **That is why the
+    bodyweight-only printed week prescribes Barbell Row, Overhead Press,
+    Pull-Ups and RDL.** It is not an equipment-data problem. **DO NOT FIX IT
+    YET** — it is one of the two cheap probes offered to Sam in the doc, and he
+    has not chosen.
+
+    **CORRECTION TO ITEM 68's §4 — do not carry it forward.** "The judging
+    system grew faster than the product brain" holds for the LAW and doc
+    scaffolding, NOT for `src/rules`: 127/135 rules modules have runtime
+    consumers, 44 are imported directly by the code that decides content vs 24
+    by post-build checkers, and test:production code is 0.996:1. **Option B must
+    not be sold on the refuted "rules are referees" line** — it stands on the
+    cycle count, the repair stack and the authorship gap, which are all real.
+
 69. **OWNED BY `seat` — BLOCKED-BY: sam — THE ELEGANCE AUDIT WAS INDEPENDENTLY
     VERIFIED AND ITS VERDICT HOLDS. ONE STANDING HYPOTHESIS IS REFUTED. NOBODY
     STARTS WORK OFF THIS ITEM.**
