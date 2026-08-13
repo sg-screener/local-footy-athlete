@@ -56,6 +56,37 @@ export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => 
   foam_roller: (color) => <LfaIcon name="foam-roller" color={color} />,
   /** Plyo box — Sam's approved three-face box with grip chevrons. */
   plyo_box: (color) => <LfaIcon name="plyo-box" color={color} />,
+  // ── Item 46/47, 2026-08-13 — the seven newly askable tags. ──
+  // Drawn with the inline `glyph` primitive, NOT with new `LfaIcon` names:
+  // the LfaIcon set is Sam's approved traced artwork and adding a name there
+  // is his call, not mine. These are plain marks in the same stroke language,
+  // and they are placeholders he can replace without touching this map's keys.
+  /** Squat rack — two uprights carrying a bar. */
+  rack: (color) => glyph(color, (
+    <><Path d="M5 4v16" /><Path d="M19 4v16" /><Path d="M5 9h14" /><Path d="M3 20h4" /><Path d="M17 20h4" /></>
+  )),
+  /** Trap bar — the hexagonal frame stood on end plates. */
+  trap_bar: (color) => glyph(color, (
+    <><Path d="M8 5h8l4 7-4 7H8l-4-7z" /><Path d="M4 10v4" /><Path d="M20 10v4" /></>
+  )),
+  /** Swiss ball — a plain sphere. */
+  swiss_ball: (color) => glyph(color, <Path d="M12 3a9 9 0 100 18 9 9 0 100-18" />),
+  /** Ab wheel — a wheel on a through-handle. */
+  ab_wheel: (color) => glyph(color, (
+    <><Path d="M12 6a6 6 0 100 12 6 6 0 100-12" /><Path d="M3 12h3" /><Path d="M18 12h3" /></>
+  )),
+  /** 45° back extension — the angled pad on its frame. */
+  back_extension_bench: (color) => glyph(color, (
+    <><Path d="M4 18L16 6" /><Path d="M12 20v-4" /><Path d="M8 20h8" /><Path d="M14 4h5" /></>
+  )),
+  /** Dip bars — two parallel rails on uprights. */
+  dip_bars: (color) => glyph(color, (
+    <><Path d="M4 8h16" /><Path d="M4 14h16" /><Path d="M6 8v10" /><Path d="M18 14v4" /></>
+  )),
+  /** Rings / TRX — two straps dropping to a pair of rings. */
+  rings_trx: (color) => glyph(color, (
+    <><Path d="M4 4h16" /><Path d="M8 4v8" /><Path d="M16 4v8" /><Path d="M8 15a3 3 0 100 6 3 3 0 100-6" /><Path d="M16 15a3 3 0 100 6 3 3 0 100-6" /></>
+  )),
 };
 export const CONDITIONING_MODALITY_ICON: Record<ConditioningEquipmentModality, (color: string) => React.ReactNode> = {
   /** Bike erg — Sam's approved traced machine. */
