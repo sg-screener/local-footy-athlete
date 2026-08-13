@@ -164,6 +164,37 @@ for (const list of ROW_PHRASES.values()) {
   for (const p of new Set(list)) PHRASE_ROWS.set(p, (PHRASE_ROWS.get(p) ?? 0) + 1);
 }
 
+/**
+ * PHRASES THAT ARE UNIQUE BY ACCIDENT AND CARRY NO SIGNAL.
+ *
+ * **UNIQUENESS WAS DOING TWO JOBS AND ONLY DESERVED ONE.** The matcher asks
+ * "does this question contain a phrase that belongs to exactly one row" — a good
+ * question, because *"second game"* or *"floor number"* really do name their
+ * ruling. **But a phrase can be unique to one row for a reason that has nothing
+ * to do with subject**, and R-075 is the case that proved it: it quotes Sam
+ * REJECTING an answer — *"your Saturday Rest Day is the wrong case"* — which
+ * made `rest day` unique to it. From that moment *"what colour should the rest
+ * day icon be on the profile screen"* matched R-075, and [3c]'s
+ * fire-on-everything guard reddened. **The words came from the answer he threw
+ * out, not from what the ruling is about.**
+ *
+ * These are the app's day-type nouns. They appear in ordinary questions about
+ * UI, copy and layout that no ruling here governs. **A ruling that is genuinely
+ * about one of them will still be matched by its own distinctive phrasing** —
+ * R-020's *"clear team training and games while away"* is not on this list and
+ * neither is R-006's *"full rest days"*.
+ *
+ * ⚠ ADD TO THIS LIST ONLY WITH A MEASURED FALSE POSITIVE, never pre-emptively:
+ * every entry is a phrase the gate can no longer catch a re-ask with, so the
+ * list is a cost, not a tidy-up.
+ */
+const GENERIC_PHRASES = new Set<string>([
+  'rest day',
+  'training day',
+  'game day',
+  'team training',
+]);
+
 export function rulingsMatching(questionText: string): Row[] {
   const hay = ` ${questionText.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ')} `;
   return REGISTRY_ROWS.filter((row) => {
@@ -180,7 +211,7 @@ export function rulingsMatching(questionText: string): Row[] {
     // question and teaches the next agent that the gate cries wolf, which is how
     // a wall becomes a formality. Uniqueness is the whole signal — "second game",
     // "floor number question" — so that is now the only test.
-    return hits.some((p) => (PHRASE_ROWS.get(p) ?? 0) === 1);
+    return hits.some((p) => (PHRASE_ROWS.get(p) ?? 0) === 1 && !GENERIC_PHRASES.has(p));
     // **⚠ STILL IMPRECISE, AND SAYING SO RATHER THAN TUNING IT BLIND.** After
     // this tightening the matcher STILL flags the terminal's 2026-08-13 AWAITING
     // SAM entry (the vacated-Saturday question) against R-014 and R-059 — two
