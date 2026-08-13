@@ -32,6 +32,39 @@ thing that actually bit.**
 
 ## STATUS
 
+### R-082's CONDITIONING HALF IS ALREADY BUILT — verified before building, per registry rule 2
+
+**Item 47 orders a modality-derived conditioning equipment map. It exists.**
+`sessionEquipment.ts:87` `conditioningEquipmentForModality` reads
+`CONDITIONING_META[name].modality` and returns exactly Sam's five rows:
+
+| his map | the code |
+| --- | --- |
+| running -> *(nothing)* | returns `null` |
+| ski -> SkiErg | `'ski'` |
+| bike -> BikeErg | `'bike_erg'` |
+| air bike -> Air Bike | `'air_bike'` |
+| row -> Rower | `'row'` |
+
+**There is no 44-row per-session table to collapse — the collapse has happened.**
+Registry gate rule 2 (*"no work starts on a row whose status is BUILT without
+first opening the enforcer and finding it ABSENT"*) is why this was checked
+rather than rebuilt. **One extra exists beyond his five — `treadmill`, inferred
+from the NAME** — worth his eye but not a defect.
+
+**⚠ ONE CLAUSE OF THE PROVE IT IS NOT MET, AND IT IS A DIFFERENT QUESTION.**
+*"An athlete with no erg and no treadmill still gets RUNNING conditioning"* —
+measured, off-season 4-day:
+
+    NO ERG (bodyweight)   conditioning rows: Bodyweight Conditioning Circuit
+    FULL GYM              conditioning rows: Warm-up · Short Flush
+
+**The no-erg athlete gets a CIRCUIT, not running.** That is conditioning
+SELECTION, not the equipment map — the map correctly says running needs nothing;
+something upstream is not choosing running. **Not chased: it is a separate unit
+and this session has already spent three attempts on one adjacent hunt.**
+
+
 ### R-083's SECOND SITE: THREE ATTEMPTS, THREE DIFFERENT FAILURES, ALL BACKED OUT
 
 **The tree is green at `188d6fad` — SLOT 0/6, EQUIPMENT 1, suites 54/54. Nothing
