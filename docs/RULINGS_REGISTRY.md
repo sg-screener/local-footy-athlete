@@ -899,7 +899,20 @@ fabricated reference in THIS file is the exact failure it exists to stop.
 **R-041** · READINESS IS A HOMONYM. Two unrelated signals share the name — the
 athlete's DECLARATION and a CAPACITY score from onboarding. **Ten call sites
 belong to the capacity score and are deliberately untouched.** ·
-`UNENFORCED` — a naming hazard, not a behaviour; nothing reds if they re-merge.
+`BUILT` — `test:readiness-structure-law` block [8], 2026-08-13, seat `readiness`.
+**⚠ THE ROW'S OWN PREDICTION CAME TRUE AND IT IS WHY THIS IS NO LONGER
+`UNENFORCED`.** It read *"nothing reds if they re-merge"*, and between
+2026-07-27 and 2026-08-13 **they re-merged in ten sites and nothing red** — the
+census's detector included, which matched on the word `readiness` and so could
+never see the difference. **The ten sites this row calls "deliberately
+untouched" are STILL correct and were not touched; the ten in
+`docs/STATUS_READINESS.md` are a DIFFERENT ten**, and the coincidence of the
+number is why they had to be counted rather than assumed.
+**THE SIGNALS NOW HAVE SEPARATE NAMES** (Sam's order, 2026-08-13): the
+DECLARATION keeps `readiness`; CAPACITY is `CapacityBand` / `capacity` /
+`calculateCapacity`, finishing the migration `capacityRubric.ts` began. **The
+gate reds on any `readiness` compared against `'low'`/`'medium'`/`'high'`,
+because after the split the declaration is never a three-level band.**
 
 **R-042** · Section 18 `illness_recovery` week-mode dosing **DELETED**. It
 predated the law and carried its own dosing — two representations, and the wrong
@@ -1057,8 +1070,11 @@ the work inside them. · `BUILT` — `test:deload-law`, green.
 
 **R-064** · *"`readiness === 'low'` is the CAPACITY score, a different signal
 this law does not govern"* · The readiness HOMONYM, restated as a boundary: the
-capacity score is not the declaration. · `UNENFORCED` — same as R-041; a naming
-hazard with no gate.
+capacity score is not the declaration. ·
+`BUILT` — same gate as R-041, `test:readiness-structure-law` block [8],
+2026-08-13. **AND THE QUOTED CODE NO LONGER COMPILES:** `readiness === 'low'` is
+now `capacity === 'low'`, so the row's own example is the shape the gate
+refuses. The boundary is a compile error and a red cell, not a sentence.
 
 **R-070** · **"One main per pattern; Deadlift + RDL is illegal."**
 (`LFA_PROGRAMMING_BIBLE.md:226`) · Two heavy lifts of the SAME pattern may not

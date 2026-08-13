@@ -159,7 +159,113 @@ been doing so silently because the ternary looks like it is reading something.
 
 ---
 
-## 5. WHAT IS NOT MINE, AND WAS NOT TOUCHED
+## 5. SLICE 2 — THE FIELDS. `readiness` -> `capacity`, 154 lines, 78 files.
+
+**COMPILER-DRIVEN, LINE-SCOPED, NEVER GLOBAL.** `readiness` is also the
+declaration's name, so a global pass would have renamed the athlete's own words.
+Every rewrite was scoped to a line `tsc` itself flagged, and every one printed.
+
+**TWO THINGS THE SCOPING CAUGHT THAT A GLOBAL PASS WOULD HAVE EATEN:**
+- `low_readiness` (a §18 reduction reason) and `cookedReadiness` (the
+  declaration) both survive untouched — `\breadiness\b` matches neither, one
+  because `_` is a word character and one because of the capital R.
+- `explorerRuntimeTests` `target: { kind: 'readiness' }` — a **declaration
+  discriminant** swept in because its line was flagged for an unrelated error.
+  **Reverted by hand TWICE:** the iterating loop re-broke it after the first
+  revert. **That is the argument for printing every line a script writes**; a
+  silent script would have shipped it.
+
+**TWO FIELDS NOW SIT BESIDE THEIR OPPOSITE AND SAY SO IN THE TYPE:**
+`RecoveryAddonCoverageContext` (`capacity` above `readinessDeloaded`) and
+`Section18ContractV2Input` (`capacity` above `cookedReadiness` — **the exact two
+fields Sam cut the conflation between on 2026-07-27**).
+
+`calculateReadiness` -> `calculateCapacity`; `lowerReadiness` -> `lowerCapacity`;
+`CoachingPlan.readinessFactors` -> `capacityFactors`; `WeekLog.readiness` ->
+`capacity`.
+
+**GATE: `npm run test:compile` PASSES.** 461 -> 459 errors, **no file
+regressed** — including the equipment seat's file that was red at my baseline.
+
+---
+
+## 6. SLICE 3 — THE GATE. R-041 AND R-064 STOP SAYING `UNENFORCED`.
+
+`test:readiness-structure-law` block [8], **86 -> 94 cells, 94/94.**
+
+**THE SHAPE, AND WHY IT IS THIS SHAPE.** After the split the declaration is
+never a three-level band — it is `{deloaded, sessionsOptional}`, a
+`ReadinessSignal`, or one of R-038's named tiers. **So a `readiness` compared
+against `'low'`/`'medium'`/`'high'` can only be the capacity band wearing the
+wrong name.** `homonymBandComparisonsIn` is the census's own idiom pointed at
+the other word, so the two cannot drift apart: whatever one counts as an edge,
+the other counts as a violation.
+
+**NON-VACUOUS BY CONSTRUCTION, THEN MUTATION-PROVEN.** Six pins run either side
+BEFORE the sweep, so a detector matching nothing cannot pass by being inert.
+Planting `const readiness = capacity;` in `recoveryRules` reds the sweep cell
+**and names the file**; restored from my own backup, `git diff` clean.
+
+**⚠ AND THE CENSUS'S OWN DETECTOR WAS NAME-COUPLED — THIS IS WHAT CAUGHT IT.**
+`readinessEdgesIn` matched the word `readiness`. It had **always** counted the
+CAPACITY score (its own law: *"capacity/readiness affects DOSE only"*), and that
+word was the last thing keeping both signals on one instrument. The rename took
+**all ten declared files to zero edges at once** and the suite went **20 red**.
+Renamed `capacityEdgesIn`. **A detector named after the wrong signal counts the
+wrong thing the moment the names diverge** — worth carrying as a class.
+
+**ONE MORE CONFLATION FOUND, IN A FIXTURE.**
+`section18SafetyBoundaryTests.baseContract` fed **one** `readiness` argument to
+**both** `capacity` and `cookedReadiness` — asking for a detrained athlete
+silently also declared him wrecked. Split into two arguments.
+**Behaviour-identical, provably: no caller passes the old one**, so both arms
+were already `'medium'` and `false`.
+
+---
+
+## 7. FOUR SUITES ARE RED AND NONE ARE MINE — PROVEN, NOT ASSERTED
+
+A **control worktree at `ef38f5e8`** (the commit before my first) runs
+byte-identical:
+
+| suite | baseline | my arm |
+| --- | --- | --- |
+| `tap-swap-hierarchy` | exit 1, 3 fails, `MissingCapacityAnswerError` | identical |
+| `readiness` | exit 1, 0 fails, `MissingCapacityAnswerError` | identical |
+| `section18-planner` | exit 1, 1 fail | identical |
+| `section18-gateway` | exit 1, 0 fails | identical |
+
+`test:ruling-registry` [3] is also red and also not mine: its four offending
+questions hit R-009/R-011/R-012/R-078/R-072/R-046/R-055/R-069/R-080/R-014/
+R-081/R-074 — **not R-041 and not R-064.**
+
+Green on my side: `readiness-dose-sweep` 104, `section18-safety` 37,
+`section18-v2` 135, `capacity-rubric` 55, `capacity-render-safety` 16,
+`readiness-illness-law` 121, `readiness-ownership` 22, `weekly-readiness` 30,
+`power-primer-policy` 58, `readiness-structure-law` 94.
+
+---
+
+## 8. ⚠ NOT DONE, AND DELIBERATELY NOT STARTED — THE LAUNDERING CUTS
+
+**Section 4(a)'s six sites and 4(b)'s three are RENAMED but NOT REWIRED.** They
+still step the capacity band down from session feedback, and
+`deriveScheduleReadiness` still returns a blend.
+
+**Cutting them MOVES GENERATED OUTPUT** and owes `test:scenarios` + `test:qa`
+either side. SEAT_INBOX item 34 bars starting a generation change at a session
+tail, and this is one. **The rename is what makes the next seat's job small:**
+every one of those sites now reads `capacity` in its signature while its input
+is a fatigue pattern, so the mismatch is visible in one line instead of
+requiring the July archaeology this seat had to do.
+
+**The two §18 round-trip sites (4(c)) are renamed and still dead** — they read a
+reason no production site mints. Fixing them also moves output. **Both are named
+in this file rather than half-built.**
+
+---
+
+## 9. WHAT IS NOT MINE, AND WAS NOT TOUCHED
 
 - **`exercisePools.ts` / `equipmentAvailability.ts`** — modified in the shared
   tree by the equipment seat when this unit started. Never opened, never staged.
