@@ -301,6 +301,39 @@ en-dash strip is visible in that screenshot — the authored `10–20 min`,
 `3–4/10` and `8–10 min` all render as `10 20 min`, `3 4/10`, `8 10 min`. **Not
 mine, not fixed, now photographed.**
 
+### ✅ 2026-08-13 — CENSUS C4 IS CLOSED. Three steps, and the order was the work.
+
+**`f6808ed7` → `4d24be47` → `05e609af` → `f6e955a1`.** Sam's floors now carry his
+ceilings' weight, and three wrong nags are gone.
+
+**THE ITEM ORDERED ONE STEP AND IT WAS THE LAST ONE.** "Give the floors the same
+weight as the ceilings" would have made S5 and S6 unbuildable — `maxRunningExposures`
+is `'strong'` and `section18CraftTier` blocks on `strong`. I built it, measured
+10 → 13, backed it out, fixed what was underneath, and did it last. **An ordered
+step is a claim too.**
+
+| step | what | result |
+| --- | --- | --- |
+| 1 | running-floor exemption reaches the validator | S5 + S6 running nags gone |
+| 1b | the QA corpus was a THIRD caller with the same gap | corpus can see it |
+| 2 | the sprint floor gets the exemption its own sentence advertises | S5 sprint nag gone |
+| 3 | floors take the ceilings' `capSeverity` map | S5 conditioning `info` → `soft` |
+
+**168/11 → 168/10, nothing added, and every removed nag was an early-off-season
+week told it breached a floor its own message lifts for it.**
+
+**THE ARTEFACT WORTH KEEPING.** An allowed-findings row read *"Early off-season
+low-availability scenario intentionally has no sprint/COD anchor"* — **Sam's
+exemption, living in a TEST POLICY because the code could not express it.** That
+file was the fourth place the rule existed without being executable, after the
+athlete's sentence, the row comment and the untested intent. **Retiring that row
+is what made the rule real.** Two other rows were RE-KEYED `info` → `soft`, which
+is the opposite operation and says so in the file: bookkeeping for a weight that
+moved, not an excuse for a finding.
+
+**PRE-EXISTING AND NOT MINE:** the "S3 …_under no longer matched" orphan was in
+the original baseline twice, before any of this.
+
 ### 2026-08-13 — CENSUS C4: STEP 1 SHIPPED, STEP 2 ATTEMPTED AND BACKED OUT
 
 **SHIPPED — `f6808ed7` + `4d24be47`.** The running-floor exemption reaches the
