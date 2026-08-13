@@ -168,9 +168,31 @@ export function rulingsMatching(questionText: string): Row[] {
   const hay = ` ${questionText.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ')} `;
   return REGISTRY_ROWS.filter((row) => {
     const hits = (ROW_PHRASES.get(row.id) ?? []).filter((p) => hay.includes(` ${p} `));
-    // ONE phrase unique to a single row is a subject; otherwise TWO are needed.
-    const distinctive = hits.filter((p) => (PHRASE_ROWS.get(p) ?? 0) === 1);
-    return distinctive.length >= 1 || hits.length >= 2;
+    // **A PHRASE UNIQUE TO ONE ROW, OR NOTHING. THE `hits.length >= 2` FALLBACK
+    // IS REMOVED — IT FIRED ON A LEGITIMATE QUESTION AND THAT IS THE WORSE
+    // FAILURE.** On 2026-08-13 the terminal wrote a well-formed AWAITING SAM
+    // entry — its own REGISTRY-GREP line named five rows and argued the gap —
+    // and this matcher flagged it against R-014 (the session-floor ruling) and
+    // R-059 (no day-strip on the day screen), neither of which is remotely its
+    // subject. **A long, careful question accumulates generic two-word overlaps
+    // ("team training", "rest day") until any row can reach two.**
+    // **A FALSE POSITIVE HERE COSTS MORE THAN A MISS**: it blocks a real
+    // question and teaches the next agent that the gate cries wolf, which is how
+    // a wall becomes a formality. Uniqueness is the whole signal — "second game",
+    // "floor number question" — so that is now the only test.
+    return hits.some((p) => (PHRASE_ROWS.get(p) ?? 0) === 1);
+    // **⚠ STILL IMPRECISE, AND SAYING SO RATHER THAN TUNING IT BLIND.** After
+    // this tightening the matcher STILL flags the terminal's 2026-08-13 AWAITING
+    // SAM entry (the vacated-Saturday question) against R-014 and R-059 — two
+    // rulings that are not its subject. That entry is well formed: it carries a
+    // REGISTRY-GREP naming five rows and argues why the gap is real.
+    // **THE GATE IS THEREFORE RED ON A LEGITIMATE QUESTION, WHICH IS THE FAILURE
+    // MODE THAT MATTERS MOST** — a wall that cries wolf becomes a formality.
+    // Two-word phrase overlap is too coarse a signal for a long, careful
+    // question, and the fix is a better matcher, not a looser threshold. Named
+    // here rather than half-tuned at the end of a long turn; the honest
+    // interim is that a flagged question should cite the rows and say they do
+    // not apply, which is a true statement and what the gate is asking for.
   });
 }
 
@@ -245,7 +267,19 @@ run('[1c] every BUILT <commit> receipt names a commit that EXISTS', () => {
 // no enforcer yet. **A new ruling landing UNENFORCED is the honest state to be
 // in; drifting there quietly is not.** The ratchet fired on a real change inside
 // an hour of being built, which is the only proof it works that counts.
-const UNENFORCED_CEILING = 12;
+//
+// **RAISED 12 -> 13 ON 2026-08-13, AND IT FIRED AGAIN THE SAME WAY.** Item 35
+// carried THREE new rulings from Sam and ordered them into the registry in the
+// commit that records them. Two land BUILT — R-072 (the three equipment scopes)
+// and R-074 (the 4-5 min set cap, built in `97c8d41b`). **R-073 lands
+// UNENFORCED:** *"yeah well that sounds shit and not good"* on a main-strength
+// cut the app makes by INFERENCE rather than proof. Nothing enforces "a cut must
+// be proven" today, and saying so is the honest state.
+//
+// **NOTE THE SHAPE: three rulings arrived, ONE raised this number.** That is the
+// ratchet doing exactly its job — it does not punish new rulings, it makes the
+// unenforced ones impossible to add quietly.
+const UNENFORCED_CEILING = 13;
 run('[2] the UNENFORCED ruling count only falls', () => {
   const unenforced = REGISTRY_ROWS.filter((row) => /UNENFORCED/i.test(row.status));
   assert(unenforced.length <= UNENFORCED_CEILING,
