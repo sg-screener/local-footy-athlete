@@ -94,11 +94,34 @@ with no triceps), and **every guard is green** — scenarios 64/1 unchanged, poo
 479/0, slot-coverage 49/0, away-flow 49/0, conditioning-templates 91/0, typecheck
 459. Reverting reinstates known defects to hide an unexplained one.
 
-**THE REAL QUESTION FOR THE NEXT SESSION, and it is bigger than the golden:**
-find what re-types a session from its rows, and decide whether a day named
-`Prehab & Accessories` may become `Mobility` because one accessory rotated.
-**If a session's identity is derived from its content, then every rotation is a
-re-typing risk** — that is an architecture finding, not a golden update. It may even be an IMPROVEMENT — those five rows are prehab
+**⇒ AND THE MECHANISM IS FOUND. IT IS NOT A BUG — IT IS A STATED RULE, and the
+code names it in its own reason strings** (`workoutCanonicalisation.ts:961-982`):
+
+    type_changed   reason: 'final_component_structure_owns_type'
+    name_changed   reason: 'final_content_owns_name'
+
+**A SESSION'S IDENTITY IS DERIVED FROM ITS ROWS, BY DESIGN.** The canonicaliser
+re-types and re-names a workout from whatever content survives it. So when the
+day's five rows stopped counting as strength, `hasStrength` went false, the day
+became `Recovery`, and the rows were re-emitted as the `Mobility` add-on
+(`:985-995`). Nothing "deleted" the prehab session — **it was renamed by its own
+content.**
+
+**THAT IS THE ARCHITECTURE FINDING, and it is exactly the north star's shape:**
+identity is DERIVED, not stored, which is right — but it means **every change to
+what lands in a day is a change to what the day IS.** A variant swap is enough.
+Rotation, drift removal, an accessory exemption: all of them can re-type a
+session, and none of them look like they should.
+
+**WHAT IS STILL OPEN, and it is the narrow question now:** why did those five
+rows — `Bird Dog`, `Lateral Lunge`, `Scap Push-Up`, `Single-Leg Calf Raise`,
+`Swiss Ball Hamstring Curl` — stop counting as strength when grouping landed?
+`countedRows.strength` went 5 -> 0 in one step, which is a WHOLESALE
+reclassification, not one row moving. **Start at `classifyRow` /
+`participatesInCounting` with that day's rows, before and after `bf1681c1`.**
+A single rotated name cannot explain five rows changing bucket, so either the
+classification reads the DAY (a feedback loop), or one row's move flipped a
+day-level branch. It may even be an IMPROVEMENT — those five rows are prehab
 movements, not strength, and the day gained a row — **but I did not intend it,
 cannot yet explain it, and a golden re-record would bury it under "regenerate,
 looks routine" forever.**
