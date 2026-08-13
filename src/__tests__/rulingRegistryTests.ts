@@ -237,7 +237,15 @@ run('[1c] every BUILT <commit> receipt names a commit that EXISTS', () => {
 // state to STAY in.** Raising this number is allowed — new rulings arrive
 // unenforced — but only deliberately, in the commit that earns it, so the trend
 // cannot drift the wrong way while every individual pass looks reasonable.
-const UNENFORCED_CEILING = 11;
+// **RAISED 11 -> 12 ON 2026-08-13, DELIBERATELY AND WITH ITS REASON**, which is
+// what this cell's own message demands. R-014 arrived unenforced in `37d91482`:
+// Sam ruled the session FLOOR out of existence — *"because the number of
+// exercises is not important the total work being done evenly across the body
+// is"* — and "a session is the right size when its pattern slots are filled" has
+// no enforcer yet. **A new ruling landing UNENFORCED is the honest state to be
+// in; drifting there quietly is not.** The ratchet fired on a real change inside
+// an hour of being built, which is the only proof it works that counts.
+const UNENFORCED_CEILING = 12;
 run('[2] the UNENFORCED ruling count only falls', () => {
   const unenforced = REGISTRY_ROWS.filter((row) => /UNENFORCED/i.test(row.status));
   assert(unenforced.length <= UNENFORCED_CEILING,
