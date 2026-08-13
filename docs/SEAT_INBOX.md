@@ -15,6 +15,48 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+37. **AWAY MUST REPLACE THE WORK IT REMOVES — SAM, 2026-08-13, AND HE CLOSED MY
+    QUESTION INSTEAD OF ANSWERING IT.**
+
+    **His words:** *"Away has to replace the work it removes, not just delete it
+    - your Saturday Rest Day is the wrong case. Don't ask me about it."*
+    **Registered as R-075 in the same commit** (registry gate rule 3).
+
+    **SO BOTH ANSWERS SHIPPED SO FAR ARE WRONG, AND THE SECOND ONE WAS MINE.**
+    *"Training Day"* (the empty-day placeholder) and *"Rest Day"* are two wordings
+    of the same hole. He does not want the hole named better; he wants it FILLED.
+
+    **⚠ `'rest'` IS LEFT IN PLACE ON PURPOSE, AND IT IS NOT THE ANSWER.** It is
+    strictly better than the placeholder he swore at, so reverting it would
+    regress his ORIGINAL complaint while fixing nothing. **It is a holding
+    position with a ruling against it — do not read it as done.**
+
+    **THE BLOCKER IS ARCHITECTURAL AND IT IS MEASURED, NOT ASSUMED. TWO ROUTES
+    TRIED TODAY, BOTH ON GLASS, BOTH FAILED:**
+    1. **THE READ CANNOT AUTHOR.** `applyAwayPass` filters `ResolvedDay[]`, and
+       §18 tier four runs at read time with `resolveVisibleWorkouts` = the
+       IDENTITY, so it can CONFORM a week but has no generator. **Moving the away
+       pass BEFORE §18 was built and photographed: Saturday stayed empty and
+       WEDNESDAY GOT WORSE** — core `Conditioning` became optional
+       `Accessories`. Reverted.
+    2. **THE AUTHORING ROUTE COSTS MORE THAN IT PAYS** — item 28: the deriving
+       lane re-authors the week but takes Thursday from `Strength` to `Rest Day`,
+       runs ~1 minute and generates 1,220 workouts.
+
+    **BOTH ROUTES DEAD-END AT THE SAME PLACE, AND THAT IS THE FINDING:** a
+    club-less week's §18 contract declares more core conditioning than a
+    bye-build delivers, and the 48-candidate repair search cannot close it.
+    **ONE UNIT NOW SITS BEHIND BOTH ITEM 28 AND R-075.**
+
+    **START HERE, NOT FROM SCRATCH — THE MECHANISM HE WANTS ALREADY EXISTS.**
+    `sessionResolver.ts` `_resolveDateRaw` already answers *"a game slot was
+    freed"* with `buildDerivedSession('prehab_accessories', …, 'Freed game slot',
+    …)`. It never fires for away because it is gated to a TEMPLATE game with NO
+    calendar mark, and an away-vacated fixture is a MARKED one. **A freed slot is
+    a freed slot however it was freed** — that is the sentence to build, and it
+    needs no new machinery, no stored state, and no §18 change.
+
+
 
 28-C1. **THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS, AND THE WALL HAS MOVED.
     2026-08-13, terminal.**
@@ -37,6 +79,47 @@ his instruction is standing authority, not history.**
 
     **NOTHING IS OWED TO SAM.** ~~ORIGINAL~~ — archived verbatim to
     `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1).
+
+37. **AWAY REPLACES THE WORK IT REMOVES — SAM RULED 2026-08-13. THE SATURDAY
+    REST DAY IS WRONG.**
+
+    **OWNED BY THE DESKTOP AGENT** (it owns the away flow).
+    **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *away* — R-018 (away
+    RESHAPES, does not avoid the dates), R-019 (equipment is a subtraction),
+    R-020 (*"clear team training and games while away"*). **R-020 said what comes
+    OFF and never said what goes back. This is the missing half, and it makes the
+    Saturday question void — do not ask it.**
+
+    **HIS WORDS:**
+    > *"If nothing was on that day then it's probably worth just leaving as rest
+    > - if something was on that day then it should be substited with a new
+    > similar session to keep the program flowing - it really is common sense"*
+    > *"if I go away for 2 weeks and I was going to miss 4 team trainings 1 game
+    > and 5 strength sessions, then the 2 weeks should aim to fill those with 5
+    > conditionings and 5 strength ya know"*
+
+    **THE RULE, and his example IS the specification:**
+    - **A day that held NOTHING of his stays REST.**
+    - **A day that held SOMETHING gets a SIMILAR session in its place.**
+    - **The unit is the AWAY BLOCK, not the day.** Count what the trip removes,
+      replace it like-for-like in QUALITY across the block: **4 team trainings +
+      1 game = 5 removed → 5 CONDITIONING. 5 strength → 5 STRENGTH.**
+    - **Team training and games map to CONDITIONING** — that is the quality they
+      supplied. This is the same crosswalk the exposure counts already use
+      (`sessionClassificationAdapter.ts:165` credits an anchor as sprint/COD).
+    - ***"AIM to fill"*** — a target, not a hard floor. Equipment or days
+      available may reduce it; **a shortfall must SAY SO**, in the sentence that
+      already branches by cause (R-029).
+
+    **SO THE CURRENT BUILD IS WRONG AT THE SATURDAY.** That day held a GAME —
+    something — so it must get a similar session, not `Rest Day`. **The `'rest'`
+    fix at the vacate sites was right for a day that held nothing and wrong for a
+    day that held a fixture. Split the two cases.**
+
+    **PROVE IT with his own example:** a 2-week away block over 4 team trainings,
+    1 game and 5 strength returns **5 conditioning and 5 strength**, and a day
+    that was already empty is still rest. Run the 17 QA scenarios either side.
+
 
 36. **THE `[13d]` RED IS PAID — AND THE PRESCRIBED FIX WAS REFUTED BY THE SAME
     MEASUREMENT THAT PAID IT. `test:away-flow` IS 44/0.**
