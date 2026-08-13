@@ -217,4 +217,3 @@ if (fail > 0) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-process.exit(0);

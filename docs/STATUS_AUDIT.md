@@ -45,6 +45,37 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE `process.exit(0)` BYPASS — 3 REMOVED, **5 REVERTED**, AND THE LAW'S OWN REMEDY IS WRONG FOR ASYNC SUITES
+
+`test:totals-or-red-law` says of the bypass: *"Delete the call — `totalsPrinted()`
+already set the code from the report."* **That is true for a SYNCHRONOUS suite and
+FALSE for a promise-chained one.**
+
+**MEASURED, before/after, all 8:**
+
+| | |
+| --- | --- |
+| removed and still green | **3** — `coachCommandExecutorRiskGate`, `coachWeekDiff`, `deloadCoachNotes` |
+| removed and **WENT RED** | **5** — the `llmSemantic*` and `semantic*` pair-groups |
+
+**ALL FIVE REVERTED, all five green again.** Their `process.exit(0)` sits inside a
+`.then()` of a promise chain with a `.catch()` after it; **deleting it lets the
+chain continue past the report**, and the suite exits non-zero. **The call is
+LOAD-BEARING there — it is not the lazy bypass the law assumes.**
+
+**THE PROTOCOL IS WHAT SAVED THIS.** Exit codes captured for all 8 BEFORE, the
+edit applied with a per-file assert, then all 8 re-run and `diff`ed. **The diff
+showed 5 regressions in one line.** Without the before-capture I would have
+committed five red suites into `test:bible` on a "the law told me to" argument.
+
+**SO THE LAW HAS A GAP, NAMED NOT FIXED:** its remedy is unconditional and its
+detection is a regex over source. **A suite whose report is inside a promise
+callback needs `process.exit(0)` to stop the chain, and the honest fix is either
+`return` from the callback or an `await`-shaped rewrite — a real change to five
+suites I did not write.** Not mine to make on someone else's async control flow at
+the end of a long session. **Five bypasses remain, and they remain for a reason
+that is now written down instead of being rediscovered.**
+
 ### THE TOTALS-OR-RED DEBT IS PAID DOWN — 40 UNARMED → 13, AND MY OWN GUARD CAUGHT MY OWN BYPASS
 
 **27 suites armed** (`armTotalsOrRed()` + `totalsPrinted(fail)`), every one of them

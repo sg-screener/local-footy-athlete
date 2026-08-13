@@ -421,4 +421,3 @@ if (fail > 0) {
   failures.forEach((f) => console.log(`  • ${f}`));
   process.exit(1);
 }
-process.exit(0);
