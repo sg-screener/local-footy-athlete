@@ -32,6 +32,48 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ R-083's SECOND SITE IS BLOCKED ON A CONFLATED FIELD — "BODYWEIGHT-LOADED" IS NOT "NEEDS NO KIT"
+
+**Measured per row, bodyweight kit, after substitution:**
+
+| row | substitute | reads legal? | truth |
+| --- | --- | --- | --- |
+| `Reverse Lunges` | `Walking Lunges` | **no** | **WRONG** — a walking lunge needs nothing |
+| `Single Leg RDL` | (not in any pool) | **no** | **WRONG** — bodyweight-capable |
+| `Pull-Ups` | `Pull-Ups` | **YES** | **WRONG** — a pull-up needs a BAR |
+| `Overhead Press` | `Overhead Press` | no | correct |
+| `Leg Extension` | `Leg Extension` | no | correct (machine) |
+
+**THE FIELD IS ANSWERING A DIFFERENT QUESTION THAN THE ONE I ASKED IT.**
+`TRUE_BODYWEIGHT_EXERCISES` (`loadEstimation.ts:101`) means **"carries no
+external LOAD"** — its own docstring says *"These should show 'BW' in the UI"*.
+`Pull-Ups`, `Dips` and `Inverted Row (Bodyweight)` are all correctly in it, and
+all three **require a bar or rings.** Meanwhile `Walking Lunges` is classed
+`dumbbell` because its LOAD RATIO assumes dumbbells, though it can be done
+unloaded.
+
+**SO THE PREDICATE IS RIGHT FOR LOAD AND WRONG FOR AVAILABILITY, IN BOTH
+DIRECTIONS AT ONCE** — and it is wrong on exactly the exercises Sam's ruling
+names. That is why my second-site attempt dropped the single-leg slot while
+keeping the pull-up: it faithfully implemented the wrong question.
+
+**AND SAM'S RULING ALREADY SETTLES THE PRODUCT HALF**, so this is not a question
+for him: *"ya can't do much with overhead pushing or pull or even horizontal
+pulling without equipment"*. **Bodyweight means NO BAR.** He has said what the
+answer is; the app has no field that can express it.
+
+**WHAT THE NEXT UNIT IS:** a per-exercise EQUIPMENT REQUIREMENT distinct from
+load class — what a lift NEEDS (bar, rings, none), not what it is LOADED with.
+`equipmentTagsForRequirement` already exists for the profile side, so the
+vocabulary is there; what is missing is the per-exercise mapping. **Until it
+exists, R-083's second site cannot be built correctly, and building it on the
+load field produces exactly the over-removal I backed out.**
+
+**⚠ DO NOT "FIX" THIS BY EDITING `TRUE_BODYWEIGHT_EXERCISES`.** It is correct for
+its own purpose and the UI reads it; moving `Pull-Ups` out of it would make a
+pull-up display a load estimate. **Two questions, two fields.**
+
+
 ### R-083's SECOND SITE — TRIED, OVER-REMOVED, BACKED OUT
 
 **The canonicaliser's restore is landed (`188d6fad`) and good.** The OTHER route
