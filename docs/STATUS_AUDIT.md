@@ -2574,3 +2574,33 @@ the signal to stop, not to iterate once more at the tail of a session.
 `UNENFORCED`. **The honest read is that its gate is one careful unit, not a
 bolt-on** — the same conclusion the other three tractable rows reached in
 writing before me.
+
+### R-033 — THE STRUCTURAL ANSWER, AND IT CONVERGES WITH ITEM 56
+
+**I finished the per-suite judgement the last entry said was the real work**,
+and it produced something better than a debt list: **the reason the gate cannot
+be green and honest on the same day.**
+
+**THE LAW'S PROPERTY IS FALSE IN THE PRODUCT RIGHT NOW.** R-033 asserts *"an
+athlete-answered constraint changes a week that ALREADY EXISTED"*. The Christmas
+golden pages into the break and **22 and 24 December still read "Strength + Team
+Training"** (item 30, on glass). **A gate that asserts the law reds on arrival —
+`LAW-0-registry` forbids exactly that.** So the only green gate available is a
+TEST-SHAPE ratchet, which is a different thing wearing the law's name.
+
+**THE PER-SUITE JUDGEMENT, DONE:**
+
+| suite | verdict |
+| --- | --- |
+| `dayFirstTimelineTests` | **OUT** — `awayEntryAt`, `awayIconTint`: a UI affordance, not a constraint changing a week |
+| `gameChangeLocalRebuildTests` | IN — `awayFact`, `awayConstraint` |
+| `programControlDurableOwnershipTests` | IN — `awayLanded`, `away_this_week` |
+| `equipmentScheduleFactTransactionTests` | IN — `awayDates` over a span |
+| `athleteActionWalkerTests` | IN — `away_this_week`, and it reaches state by ACTING, which is the shape the law wants |
+
+**⇒ THE CONVERGENCE, AND IT IS THE FINDING WORTH KEEPING: R-033 AND R-075 ARE
+BEHIND THE SAME ENGINEERING UNIT — item 30's §18 bye-build.** R-075 needs it to
+AUTHOR replacement work; R-033 needs it so the property it gates is TRUE. **Two
+of the thirteen unenforced rulings, one unit.** Item 50 hands them out as two
+orders to two agents; **they are one job, and doing them apart is how the same
+wall gets paid for twice.**
