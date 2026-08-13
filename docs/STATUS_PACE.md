@@ -163,9 +163,19 @@ failure — worth copying here in the same commit.**
 
 **Structural, not statistical, and every seam was read rather than assumed:**
 
+**⚠ ONE ROW OF THIS TABLE IS STRUCK AND THE REGISTRY GATE IS WHAT CAUGHT IT.** I
+had `OnboardingData.gameDay` (`types/domain.ts:192`) as seam one. **R-001 forbids
+that inference by line** — *"the profile does NOT grow a second game field — the
+CALENDAR holds fixtures; `gameDay` is only a DEFAULT"* — and already carries
+**⚠ RE-ASKED 2026-08-13 by reading `domain.ts:192` and concluding "room for
+one"**. **I made the identical wrong read, from the identical line, the same
+day.** `BUILT 3f62ad62`. **The gate did its job before this reached Sam, which is
+the entire reason it exists; the finding survives on the seams R-001 does not
+cover.**
+
 | seam | games it can carry |
 | --- | --- |
-| `OnboardingData.gameDay` (`types/domain.ts:192`) | **one** |
+| ~~`OnboardingData.gameDay`~~ | ~~one~~ — **STRUCK, refuted by R-001** |
 | `WeeklyExposureContractInput.gameDay` (`weeklyExposureContractBuilders.ts:35`) | **one** |
 | `coachingEngine.ts:1066` — `inputs.gameDay ? dayNameToNumber(...) : null` | **one** |
 | `postGenerationConstraintValidation.ts:845/1955` | **one** |

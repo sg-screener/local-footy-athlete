@@ -15,6 +15,39 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+38. **SAM ANSWERED BOTH OPEN QUESTIONS, 2026-08-13. R-076 AND R-077.**
+
+    **OWNED BY THE TERMINAL** (face pull / pool membership) **AND THE AWAY SEAT**
+    (the strength arm of item 37). **Add both rows to `RULINGS_REGISTRY.md` in
+    the same commit that builds them.**
+
+    **R-076 — FACE PULL IS SHOULDER WORK. His words:** *"face pull is shoulder
+    work for sure"*. **It leaves the horizontal-pull pool and stops being
+    swappable with a row.** The refuted swap (`faa69c2f`, backed out) turned a
+    pull day into two rows with no shoulder work and two bicep curls with no
+    triceps — his own two-squats shape in arm form. **The lookup miss this was
+    blocked on is now decided: fix the pool membership, then re-run the
+    composer's before/after.**
+
+    **R-077 — AN AWAY WEEK KEEPS THE BYE SHAPE FOR STRENGTH. His words:**
+    *"let's go by week for that actually they will likely train less than normal
+    and i think they can always add a session in if they need to"*.
+    **So R-069(2) WINS over R-075 on the strength count: an away week is the
+    2-main-strength bye shape, not a rebuild of the 3 gym days it replaced.**
+    Item 37's strength arm is **UNBLOCKED and the answer is: do nothing to it.**
+
+    **⚠ R-075 IS NOT OVERTURNED — READ THE SCOPE BEFORE TOUCHING ANYTHING.** He
+    has ruled on the STRENGTH count only. **The conditioning replacement stands
+    and is already built** (the freed Saturday carries a conditioning session).
+    **Do not use this answer to delete that.** Away still replaces the club's
+    work with conditioning; it simply does not chase the missing lifts.
+
+    **AND THE ESCAPE HATCH IS PART OF THE RULING:** *"they can always add a
+    session in if they need to"*. **Verify the athlete CAN add a strength session
+    to an away week** — if that control is missing or refused on a bye-shaped
+    week, his ruling is only half true and that is a defect to report.
+
+
 37. **BLOCKED-BY: sam (STRENGTH ARM ONLY) — AWAY MUST REPLACE THE WORK IT
     REMOVES. THE DAY HALF IS BUILT AND ON GLASS.**
 
@@ -736,8 +769,21 @@ his instruction is standing authority, not history.**
 
    **✅ THAT MEASUREMENT IS NOW DONE, 2026-08-13 (`pace`), AND IT IS STRUCTURAL
    RATHER THAN STATISTICAL — THE SECOND GAME NEVER REACHES THE LAYER THAT SETS
-   THE STRENGTH TARGET. Four seams, each read rather than assumed:**
-   - `OnboardingData.gameDay?: DayOfWeek` (`types/domain.ts:192`) — **ONE.**
+   THE STRENGTH TARGET.**
+
+   **⚠ FIRST, ONE LINE OF MY OWN EVIDENCE IS STRUCK, AND THE REGISTRY GATE IS
+   WHAT CAUGHT IT.** I listed `OnboardingData.gameDay?: DayOfWeek`
+   (`types/domain.ts:192`) as seam one, "carries ONE game". **R-001 forbids
+   exactly that inference and names it by line:** *"the profile does NOT grow a
+   second game field — the CALENDAR holds fixtures; `gameDay` is only a
+   DEFAULT"*, and it already carries **⚠ RE-ASKED 2026-08-13 by reading
+   `domain.ts:192` `gameDay?: DayOfWeek` and concluding "room for one". That
+   single field is not the mechanism.** **I made the same wrong read, from the
+   same line, on the same day.** `BUILT 3f62ad62` — a split round keeps its
+   second game. **Struck, not quietly deleted.**
+
+   **THE FINDING SURVIVES WITHOUT IT, AND IT IS THE HALF R-001 DOES NOT COVER —
+   a DOWNSTREAM seam, not the profile:**
    - `WeeklyExposureContractInput.gameDay: number | null`
      (`weeklyExposureContractBuilders.ts:35`) — **ONE.**
    - **BOTH production callers pass one and there is no fixture LIST on the
@@ -758,6 +804,10 @@ his instruction is standing authority, not history.**
    **SO THIS ITEM'S TITLE IS EXACT AND NOW HAS A MECHANISM: Sam's *"2 games and 2
    team trainings"* week is not unreachable because the arithmetic refuses it —
    it is unreachable because the arithmetic is never told about the second game.**
+   **AND THERE IS NO QUESTION FOR HIM IN IT. R-001 already rules *"as many games
+   as needed"* and names the calendar as the mechanism; what has not followed is
+   one downstream seam. That is engineering, not a ruling — do not draft this to
+   him.**
    **It is census C2's shape one layer up: the fact exists, and the code that
    would act on it has no reader for it.**
 
@@ -893,7 +943,30 @@ his instruction is standing authority, not history.**
 26. **THE ⚠ HALF IS BUILT — HIS 2-3 PAIRS SURVIVE THE VALIDATOR NOW.**
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 26).**
 
-27. **A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —
+27. **C1's MECHANISM IS NOW EXACT, AND ONE OF ITS CONCLUSIONS IS OFF-SEASON-ONLY
+   — `audit`, 2026-08-13 (`9d871c20`, `769d1922`). C1 AND 28-C1 ARE ONE DEFECT.**
+   **CONFIRMED, INDEPENDENTLY:** C1's *"COD appears every time… on day 3 ranked
+   SECOND"* reproduces exactly — I measured `out=["aerobic_base","cod_decel",
+   "tempo"]` among 8 shapes over 189 calls. **`first-match-wins` + an
+   always-allowed `aerobic_base` above it is the refusal, exactly as C1 says.**
+   **⚠ WHAT C1 COULD NOT KNOW, AND IT CHANGES WHERE THE FIX GOES:** the rank is
+   **NOT settable from the pool.** Promoting `cod_decel` to FIRST in
+   `autoPlacementCategories` leaves `out` **byte-identical**, because
+   `pickPlacementCondCategories` **PASS 1** orders from `categoryPriority` /
+   `zonePriority` — **neither of which contains `cod_decel`** — and
+   `pushUniqueCategory` appends. **`autoPlacementCategories` sets MEMBERSHIP,
+   never ORDER.** C1 says *"the fix is placement, not rank"*; it is truer than it
+   knew — rank is not even reachable from there.
+   **⚠ AND "THERE IS NO SPARE ROOM" IS OFF-SEASON-ONLY.** C1 measured off-season
+   (6 days, 6 workouts, ZERO rest) and concluded *"COD can only enter by
+   SUBSTITUTION"*. **Pre-season with no club — which 28-C1 named as the LIVE case
+   — has `standalone=11`, `combined=0` and 12 EMPTY DAYS across 4 weeks.** So in
+   the live case **Sam's literal *"place if there is room"* CAN fire**, and the
+   substitution-only conclusion does not carry over. **Neither measurement is
+   wrong; they are different phases, and only one of them is the live case.**
+   **Full tables and the reverted-instrument receipt: `docs/STATUS_AUDIT.md`.**
+
+   ~~A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —~~
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 27).**
 
 28. **THE REBUILD IS DONE, AND ITS ORDERED STEP 1 WAS THE WRONG STEP — REFUTED
