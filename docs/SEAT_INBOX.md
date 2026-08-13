@@ -15,6 +15,48 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+45. **SAM RULED THE BODYWEIGHT LEG DAY, AND CLOSED THE OTHER TWO. R-080.**
+
+    **OWNED BY `terminal`** (it asked all three).
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *single leg*, *bodyweight*,
+    *duplicate*, *squat* — R-070 (one main per pattern) and R-014 (coverage, not
+    count) are the neighbours; **neither says what to do when the KIT makes
+    coverage impossible.** This is new. R-080.
+
+    **R-080 — WHEN THE KIT ALLOWS ONLY ONE SQUAT PATTERN, FILL WITH SINGLE-LEG
+    KNEE WORK. HIS WORDS:**
+    > *"he should be able to do more single leg knee things if he can only do one
+    > squat pattern because of bodyweight"*
+
+    **SO THE ANSWER TO ALL THREE OPTIONS OFFERED IS "NONE OF THEM".** Not repeat
+    it, not drop it, not report the day short. **The slot is filled with MORE
+    SINGLE-LEG KNEE-DOMINANT work** — split squat, reverse lunge, step-up,
+    Bulgarian split squat, walking lunge (Bible `:253` names them and every one is
+    bodyweight-capable). **A bodyweight leg day is not a short day; it is a
+    different shape.**
+    **THIS EXTENDS R-014, IT DOES NOT BREAK IT.** Coverage is still the rule —
+    single-leg knee simply takes the volume the second squat was faking.
+    **AND R-070 STANDS:** the duplicate squat was always the defect. It is now
+    fixed by SUBSTITUTION rather than by removal.
+    **PROVE IT:** a bodyweight-only lower day ships one squat pattern plus two or
+    more distinct single-leg knee exercises, and **no duplicate name.**
+
+    **THE OTHER TWO ARE CLOSED, ALREADY ANSWERED BY R-079 — DO NOT RE-ASK.**
+    Sam: *"all clear on other two"*.
+    - **A team night IS the sprint.** In season the 3 sprint nights come from two
+      team trainings plus the game; the app adds none.
+    - **No club in season → give them sprints**, at G-3 or earlier, one, and
+      permitted-not-preferred.
+
+    **⚠ AND FIX WHY THE GATE MISSED THEM.** Both were settled an hour earlier and
+    still reached Sam, because R-079's row does not contain the words a searcher
+    would use: **`team night`, `no club`, `earns a sprint`, `counts as`**. **A
+    ruling the gate cannot find is an unenforced ruling.** Add the searcher's
+    vocabulary to R-079 — and to every row whose wording is narrower than the
+    question it answers. **That is a general defect in the registry, not a
+    one-row fix.**
+
+
 44. **BLOCKED-BY: other-agent — ⚠ FOUR GUARDS ARE RED. THE STORE-WRITER HALF IS
     PAID BY `progression`; THE REMAINDER IS `audit`'s PER THIS ITEM'S OWN OWNER
     LINE.**
@@ -151,6 +193,20 @@ his instruction is standing authority, not history.**
     what a deload DOES; R-035 says WHEN), so they compose: the transformation
     applies to the days inside the window. **Nothing to ask Sam, exactly as this
     item's own first line says.** The remaining work is the per-day dose seam.
+    **🔴 AND A WORSE DEFECT SITS ABOVE THIS ONE — MEASURED, `progression`,
+    2026-08-13. "WRECKED" GETS ONE DAY, NOT SEVEN.** R-038: tired = noted,
+    **wrecked = 7 days deloaded**, cooked = 7 days + optional.
+    `programControlActions:1428` attaches `readinessDeloadFactScope` **only when
+    `level === 'cooked'`**; every other level gets `{kind:'date'}`. Measured
+    through the app's own projection: a wrecked declaration
+    (`deloaded=true, sessionsOptional=false` — the wrecked directive exactly) is
+    deloaded on the declaration day and has **ZERO constraints by day 3**. **A
+    man who says he is wrecked gets one easier day.** Fix: ask the LAW, not a
+    level literal — attach the window whenever the directive is deloaded.
+    **NOT BUILT** (it changes what a live athlete door writes).
+    **REGISTRY-GREP:** rolling/7-day/deload/readiness → R-017, R-034, R-035,
+    R-036, R-038, R-063. **Nothing to ask Sam — R-038 already states it.**
+
     **✅ AND THAT SEAM IS NOW FOUND AND VERIFIED.** The dose is RESOLVED once per
     week (`defaultProgram.ts:1677`) but **CONSUMED inside the per-workout loop**
     (`:2232`, `:2562`, `:2621-2626`, `:2638-2639`, `:2667`), where `cw.dayOfWeek`
@@ -208,45 +264,6 @@ his instruction is standing authority, not history.**
     same built-and-disconnected shape as the mobility pairing.
     **PROVE IT:** a contrast day ships one paired block at the main slot, same
     pattern both halves. Mutation: break the pattern match, cell reds.
-
-43. **✅ ALREADY BUILT — `1a04fd08`, terminal, 2026-08-13. NOT BLOCKED: DONE.**
-
-    **Marked by the terminal, which built this hours before the item was
-    written.** Registry gate rule 2: *"NO WORK STARTS ON A ROW WHOSE STATUS IS
-    `BUILT` WITHOUT FIRST OPENING THE ENFORCER AND FINDING IT ABSENT. If it is
-    present, the work is already done — say so and move on."* **Opened and
-    verified before writing this:** `section18SafetyBoundaryTests.ts:895/908/953`,
-    cells `R-073a/b/c`, suite **37/0**, and R-073's row already reads
-    `BUILT test:section18-safety`.
-
-    **THE MUTANT THIS ITEM DEMANDS WAS RUN.** Re-introducing the inferred cut
-    (`availableSafePatterns.length === 0` -> `requiredSafe.length === 0`,
-    `section18SafetyPolicy.ts:311`) **reds `R-073b`**, naming the two patterns
-    still safe. **The producer was NOT touched**, exactly as ordered.
-
-    **⚠ READ THIS BEFORE ANY FURTHER WORK HERE:** my FIRST version of the lock
-    was a blind gate whose mutant SURVIVED. A no-injury fixture never reaches the
-    producer — it sits inside `if (prohibited.length > 0)`. The defect needs an
-    injury prohibiting SOME patterns AND a mode with `strength.required === 0`
-    (`early_offseason` + a partial lower-body injury). Recorded in the file and
-    on R-073's row.
-
-    ~~**BLOCKED-BY: other-agent** / **OWNED BY `audit`**~~ — neither applies to
-    finished work.
-    **REGISTRY-GREP:** R-073 — Sam ruled *"that sounds shit and not good"*, and
-    the row records the defect **does not reproduce** (28 weeks, 7 worlds, zero
-    unexplained shortfalls). **Nothing to ask Sam. This is the LOCK, not a fix.**
-
-    **WHAT IS MISSING:** nothing PREVENTS an inferred cut. The only producer
-    (`section18SafetyPolicy.ts:311-318`) fires on
-    `availableSafePatterns.length === 0` — an inference that never asks whether a
-    day remained. His 2026-08-06 ruling gives the shape: the same
-    `not_attempted | substituted | exhausted` proof equipment has, *"proof, never
-    inference"*. **And the number proving a week fell short is already computed
-    every week and simply not used.**
-    **PROVE IT WITH A MUTANT:** re-introduce an inferred cut and the cell must
-    red. A green suite over a defect that does not reproduce proves nothing.
-
 
 39. **BLOCKED-BY: sam — SAM RULED THE SPRINT CAP; MOST OF IT IS BUILT AND THE
     REMAINDER NEEDS ONE MORE LINE FROM HIM. R-079 IS REGISTERED.**
@@ -1147,38 +1164,6 @@ his instruction is standing authority, not history.**
    own regression.** Unblocks the moment that golden is attributed.
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 26).**
 
-27. **CLOSED BY R-078 — SAM RULED *"leave it"*. THE "CAN FIRE" PARAGRAPH BELOW
-   IS NOT PERMISSION. C1's MECHANISM IS NOW EXACT, AND ONE OF ITS CONCLUSIONS
-   IS OFF-SEASON-ONLY — `audit`, 2026-08-13. C1 AND 28-C1 ARE ONE DEFECT.**
-   **CITES R-078** (`5105b634`). I wrote the analysis below and I am closing it:
-   it ends by noting pre-season has room, he was shown that arithmetic, and he
-   said leave it. **Held by 4 cells in `test:standalone-conditioning-ownership`,
-   mutation-proven — a fifth attempt reds in thirty seconds.**
-
-   **CONFIRMED, INDEPENDENTLY:** C1's *"COD appears every time… on day 3 ranked
-   SECOND"* reproduces exactly — I measured `out=["aerobic_base","cod_decel",
-   "tempo"]` among 8 shapes over 189 calls. **`first-match-wins` + an
-   always-allowed `aerobic_base` above it is the refusal, exactly as C1 says.**
-   **⚠ WHAT C1 COULD NOT KNOW, AND IT CHANGES WHERE THE FIX GOES:** the rank is
-   **NOT settable from the pool.** Promoting `cod_decel` to FIRST in
-   `autoPlacementCategories` leaves `out` **byte-identical**, because
-   `pickPlacementCondCategories` **PASS 1** orders from `categoryPriority` /
-   `zonePriority` — **neither of which contains `cod_decel`** — and
-   `pushUniqueCategory` appends. **`autoPlacementCategories` sets MEMBERSHIP,
-   never ORDER.** C1 says *"the fix is placement, not rank"*; it is truer than it
-   knew — rank is not even reachable from there.
-   **⚠ AND "THERE IS NO SPARE ROOM" IS OFF-SEASON-ONLY.** C1 measured off-season
-   (6 days, 6 workouts, ZERO rest) and concluded *"COD can only enter by
-   SUBSTITUTION"*. **Pre-season with no club — which 28-C1 named as the LIVE case
-   — has `standalone=11`, `combined=0` and 12 EMPTY DAYS across 4 weeks.** So in
-   the live case **Sam's literal *"place if there is room"* CAN fire**, and the
-   substitution-only conclusion does not carry over. **Neither measurement is
-   wrong; they are different phases, and only one of them is the live case.**
-   **Full tables and the reverted-instrument receipt: `docs/STATUS_AUDIT.md`.**
-
-   ~~A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —~~
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 27).**
-
 ## SAFE FOR A PARALLEL AGENT — context, not orders
 
 **This heading is the stop hook's region terminator** (`repoLawGuardsTests.ts:252`
@@ -1235,7 +1220,14 @@ seat was wrong.
   go. Control-proven older than today's work.
   **Send: *"repeat it"*, *"drop it"*, or *"tell me the day is short"*.**
 
-  **2. DOES A TEAM NIGHT *COUNT AS* YOUR SPRINT, OR *EARN* ONE ON TOP?** His
+  **✅ 1 IS ANSWERED — R-080. He refused all three options and named the SLOT:
+  *"Bodyweight leg day gets more single-leg knee work"*. BUILT `test:pools`
+  496/0; the duplicate squat is now Walking Lunges.**
+  **✅ 2 AND 3 ARE CLOSED BY HIM — *"Other two are closed"*, 2026-08-13.** The
+  team-night gate and the no-club in-season hole are **not to be built**; the
+  inert clause-3 relaxation (`0d4824df`) stays harmless and is recorded as such.
+
+  ~~**2. DOES A TEAM NIGHT *COUNT AS* YOUR SPRINT, OR *EARN* ONE ON TOP?**~~ His
   R-079 clause 3 says the app may add flying sprints to a pre-season team night.
   **Built (`0d4824df`) and measured INERT**, because `sprintExposureGate`
   answers `preseason_target_met` first — the team night is already counted as

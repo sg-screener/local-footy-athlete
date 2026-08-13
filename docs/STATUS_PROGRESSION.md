@@ -133,6 +133,50 @@ its own first line ("Nothing to ask him").**
 reason I did not. That is the mechanism working as designed, and it is worth the
 line.
 
+### 🔴 NEW DEFECT, ABOVE C6 AND WORSE FOR THE ATHLETE: "WRECKED" GETS ONE DAY, NOT SEVEN
+
+**This is the question I named as "check first" — and the answer is a breach.**
+
+**R-038 and the law module's own table are unambiguous:**
+
+    tired              "Tired"             noted only
+    wrecked            "Wrecked"           7 days deloaded
+    absolutely_cooked  "Absolutely cooked" 7 days deloaded + every session optional
+
+**MEASURED, building each fact exactly as `programControlActions:1421-1433`
+does, and reading it back through the app's own projection:**
+
+| declaration | fact scope | 9 Jul | 11 Jul | 14 Jul |
+| --- | --- | --- | --- | --- |
+| **cooked** | `window 2026-07-09 → 15` | deloaded ✓ optional ✓ | deloaded ✓ | deloaded ✓ |
+| **wrecked** (`worse`/`high`) | **`date 2026-07-09` — ONE DAY** | deloaded ✓ optional ✗ | **0 constraints, NOT deloaded** | **0 constraints, NOT deloaded** |
+
+**THE TIER IS CONFIRMED, NOT ASSUMED:** the wrecked arm returns
+`deloaded=true, sessionsOptional=false` — which is `resolveReadinessDirective`'s
+answer for **`wrecked`** exactly, and for no other tier.
+
+**THE CAUSE IS ONE TERNARY.** `programControlActions:1428` attaches
+`readinessDeloadFactScope` **only** when `level === 'cooked'`; every other level
+takes `temporaryFactScope({ kind: 'date', date })`. **So the seven days are
+given to the top tier and withheld from the middle one, which Sam's ruling says
+also gets seven.**
+
+**AND IT IS WORSE FOR THE ATHLETE THAN THE DEFECT I WAS CHASING.** C6's
+week-snapping at least OVER-delivers for cooked. Here a man who says he is
+wrecked gets **one easier day and is back at full load by the second**.
+
+**THE FIX SHOULD ASK THE LAW, NOT A LEVEL LITERAL.** The correct sentence is *a
+declaration that DELOADS gets the deload window* — i.e. resolve the tier, and
+attach `readinessDeloadFactScope` whenever the directive is deloaded (wrecked OR
+cooked). That is one expression, uses `readinessIllnessLaw` as the owner, and
+removes the level-literal that caused this. **NOT BUILT: it changes what a live
+athlete door writes, so it owes its own cell and verification.**
+
+**NOTHING TO ASK SAM. REGISTRY-GREP:** *rolling*, *7-day*, *deload*,
+*readiness* → **R-017, R-034, R-035, R-036, R-038, R-063.** R-038 states the
+three tiers verbatim and gives wrecked seven days. **This is the app disagreeing
+with a ruling already recorded, not a question.**
+
 ### ⚠ NEAR-MISS TO WRITE DOWN: I REVERTED BY OVERWRITING FROM `HEAD`, IN A SHARED CHECKOUT
 
 **How I backed the build out was `git show HEAD:<path> > <path>` across five
