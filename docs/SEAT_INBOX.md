@@ -15,6 +15,30 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+71. **OWNED BY `seat` — BLOCKED-BY: sam — THREE TEST FILES COVER EXACTLY THE
+    DEFECTS THE TWO AUDITS FOUND, AND NO COMMAND RUNS THEM.**
+
+    Found while reconciling the two audits (items 69, 70). `src/__tests__/`
+    contains `postGenerationConstraintValidationTests.ts` (23,813 bytes),
+    `programEditWriteGuardTests.ts` (8,581) and `phaseRepPrescriptionTests.ts`
+    (10,745) — the restore pass, the edit write guard, and the phase rep
+    prescription. **All three are in `scripts/unrunnable-suite-baseline.json`;
+    `grep` of `package.json` for their module names returns nothing; all three
+    contain 0 `assert(` calls.** `phaseRepPrescriptionTests.ts:62` checks for
+    `3 x 2-4` — the exact prescription item 69 found silently overwriting Sam's
+    authored `3 x 5-8`.
+
+    **This settles a disagreement in Sam's favour AND against the seat's own
+    framing:** the seat told Sam the app "is not bloated with rules and tests"
+    on a mass measurement (test:prod 0.996:1). Mass was the wrong measure. **The
+    apparatus is bloated and disconnected** — 406 `test:*` commands, 21 suites
+    nothing runs, a compile gate green only against a 459-error baseline. Codex
+    was right on that point; the correction is recorded here so it is not
+    re-argued.
+
+    **NOT AN ORDER YET.** Wiring these three in is small and safe, but nothing
+    starts before Sam picks his direction. **Do not "fix" them by deleting them.**
+
 70. **OWNED BY `seat` — BLOCKED-BY: sam — THE TWO AUDITS ARE RECONCILED. THEY
     AGREE. ONE FRAMING IN ITEM 68's REPORT IS CORRECTED AND ONE ROOT CAUSE IS
     NOW A FIVE-LINE FIX. NOBODY STARTS WORK OFF THIS ITEM.**
