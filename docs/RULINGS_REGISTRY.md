@@ -1423,6 +1423,31 @@ a defect to solve.**
 isolation, one exercise pool, re-tag, refile, empty slot, bodyweight leg day.
 · `BUILT` — the tag already carries `isolation_lower`; nothing to change.
 
+---
+
+**R-085** · *"yes, skip standing, owned and closed"* (2026-08-13, answering
+`audit`'s AWAITING SAM entry) · **THE STOP SCAN SKIPS THREE MORE STATES THE
+QUEUE WAS ALREADY WRITING.** It knew only BLOCKED and WORKABLE, so a
+`STANDING, EVERY STOP` order, an item `OWNED BY` another seat, and a finished
+`✅ CLOSED` item all read as live work — and `EXIT 1` was unreachable by
+construction while any of them existed. **Measured before asking: the scan
+handed one seat 10 live orders and NOT ONE was its own** (5 owned, 3 closed, 2
+standing).
+**⚠ THE OWNED CASE IS THE ONE THAT MATTERED, AND IT WAS THE RULE FIGHTING
+ITSELF.** `CLAUDE.md` says *"OWNED IS NOT BLOCKED … you walk past it. You do
+NOT mark it blocked"* — so the only way past an owned item was to write the
+false marker that rule exists to forbid. **The scan was asking for the lie.**
+**Each skip is deliberately narrow, so it cannot be typed over a queue to buy
+silence:** `OWNED BY` must name its owner in backticks, the completion mark
+must OPEN the head line, and the standing phrase is item 13's own wording.
+**Search words:** stop hook, seat inbox hook, standing order, owned by, closed,
+skip, exit 1, queue empty, nagging, keeps asking, duplicate work, walk past.
+· `BUILT 2026-08-13 by seat `arms`` — all three skips live in
+`scripts/seat-inbox-hook.sh`; verified by reproducing the scan against the live
+queue, which now finds nothing. **`audit` raised it and did NOT build it: an
+agent editing the script that governs it needs the person paying for it to say
+yes, and this row is that yes.**
+
 **⚠ WHY THESE THREE ARRIVED LATE, AND IT IS A DEFECT IN THIS FILE'S PROCESS.**
 All three were ruled by Sam on 2026-08-13 and written into `SEAT_INBOX.md`
 items 47 and 48 with instructions to register them. **Nobody did, and the seat
