@@ -45,6 +45,48 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ A REAL ATHLETE-FACING DEFECT, HIDDEN BY A SUITE NOTHING RAN — IN-SEASON BALANCE REPAIR STRIPS THE WEEK'S ONLY CONDITIONING
+
+**Found by running the 50 unrunnable suites instead of just counting them.**
+
+`conditioningBalanceRepairTests.ts` — never named by any npm script, never run —
+is **10 passed, 1 failed**, and the failure is not a stale fixture:
+
+| cell | result |
+| --- | --- |
+| *"test starts with one real conditioning exposure"* (`before === 1`) | **PASS** |
+| *"balance repair restores push and pull"* | **PASS** |
+| *"game-week conditioning floor remains satisfied after repair"* (`>= 1`) | **FAIL** |
+
+**THE FIRST CELL PROVES THE INPUT HAD ONE.** The dump on failure is
+`Monday:-:-, Tuesday:-:-, Wednesday:-:-, Thursday:-:-, Friday:-:-` — every
+`conditioningCategory` and `attachedConditioningKind` empty. **So
+`enforceInSeasonPushPullBalance` fixes push/pull by removing the athlete's only
+conditioning session on a GAME week.** Elite conditioning level, Saturday game.
+
+**NOT FIXED HERE, AND NOT LEFT SILENT EITHER.** It is in-season generation, it is
+one function (`enforceInSeasonPushPullBalance`), and the reproduction is a suite
+that already exists and already reds. **Naming it precisely is worth more than a
+guessed fix from the seat that found it at the end of a long session** — but it
+is athlete-facing and should not wait long. **NOT wired into `test:bible`,
+because a red suite would red the chain on arrival; wiring it is the same commit
+as the fix.**
+
+### THE ORPHAN RATCHET IS PAYING DOWN — 50 → 45
+
+Four of the sixteen I ran were green and are now in the chain:
+`coachInterpretationReceiptTests` (28/0), `coachRevisionOverrideWriterTests`
+(51/0), `coachWeekDiffTests` (46/0), `edgeGenerationEquipmentTests` (24/0).
+**149 cells that could not fail the chain this morning can fail it now.**
+
+**⚠ AND MY FIRST BATCH RUN WAS A DEAD INSTRUMENT — SEVENTH SIGHTING TODAY, MINE
+AGAIN.** All sixteen reported *"NO TOTALS LINE / DIED"*, which I nearly wrote up
+as sixteen dead suites. **`timeout` does not exist on macOS** (it is `gtimeout`),
+so every run was `command not found` and **not one suite was executed.** Caught
+only because sixteen identical results is a smell — a uniform answer is the shape
+of an instrument fault, not of sixteen independent facts. **The real spread is
+4 green, 1 red, 11 needing a closer look.**
+
 ### ✅ SAM RULED — *"similar is right"* (2026-08-13). CONTRAST PAIRS ON A SIMILAR PATTERN.
 
 **HIS WORDS, VERBATIM: *"similar is right"*.** Answering `audit` directly on the
