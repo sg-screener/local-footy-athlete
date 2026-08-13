@@ -283,3 +283,32 @@ this morning precisely because 15 of 19 items wore the wrong word. The terminal
 faced the identical trap on items 1 and 13 and refused for the same reason:
 *"writing a false marker to buy my own exit is exactly that."* **I walked past
 them instead, which is what the rule says to do.**
+
+**AND `patterns` IS LIVE, MEASURED NOT ASSUMED:** it committed `dde910c7`
+(R-039 + R-041, items 57 and 58) **two minutes** before I checked. The ruling
+registry's `UNENFORCED_CEILING` has fallen **13 → 10 (mine) → 4** inside this
+session; item 50's tranche of thirteen is nearly clear.
+
+---
+
+## 2026-08-13 — A FALSE BLOCK, CLEARED: ITEM 54 WAS WAITING ON ME, AND I WAS ALREADY DONE
+
+**Found by reading the four remaining `UNENFORCED` rows rather than stopping.**
+R-079's row carried *"R-004's dated span is still `UNENFORCED`, so there is
+nowhere to hang the number"*, and **SEAT_INBOX item 54 blocks its Christmas half
+on exactly that clause** — *"Blocked on R-004, which item 55 puts on another
+seat — not on effort."*
+
+**That seat is me, and item 55 was closed an hour before I read this.** R-004 is
+`BUILT`; the dated span ships and is mutation-proven. **A block nobody clears is
+indistinguishable from finished work** (`CLAUDE.md`), and this one pointed at a
+seat that had already finished — so `pace` could have sat behind it indefinitely.
+**Corrected in R-079's row, in the registry, where the next reader will hit it.**
+
+**⚠ AND I DID NOT DECLARE ITEM 54 UNBLOCKED, BECAUSE ONLY HALF THE SENTENCE WAS
+STALE.** The other half is a real wall and it is untouched: **a dated span is not
+a WEEK IDENTITY.** `Section18WeekMode` has eleven members and none is a Christmas
+break, so there is still nowhere to hang 1/week. Growing that union is the
+`cod_decel` hazard for the third time — the `satisfies Record<…>` ships in the
+same commit as the member or generation breaks. **Item 54 stays blocked, on the
+truth this time, and its owner is unchanged.**

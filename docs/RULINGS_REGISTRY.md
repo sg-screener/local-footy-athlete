@@ -421,8 +421,23 @@ and cell `9f` caught it by reading `permittedMaximum` off the contract the app
 builds and finding it unchanged. **Both tables now carry the ruling; the V2 one
 is the one that binds.** This is the fourth sighting today of a fix aimed at a
 layer not in the chain. **⚠ CHRISTMAS IS NOT BUILT** — the break
-has no mode of its own yet (R-002 makes it an off-season inside pre-season) and
-R-004's dated span is still `UNENFORCED`, so there is nowhere to hang the number.
+has no mode of its own yet (R-002 makes it an off-season inside pre-season).
+**⚠ AND HALF OF THE STATED BLOCKER IS GONE — CORRECTED 2026-08-13, seat `arms`.**
+This sentence read *"and R-004's dated span is still `UNENFORCED`, so there is
+nowhere to hang the number"*, and **SEAT_INBOX item 54 blocks its Christmas half
+on exactly that clause** (*"Blocked on R-004, which item 55 puts on another
+seat"*). **R-004 is `BUILT` and the dated span SHIPS** — measured through the
+generator, not read: `noTeamTrainingSpansFromConstraints` → `clubClosedSpans`
+(`coachingEngine.ts:8943`) → `teamDays`, held by `test:christmas-break`
+`[11]`/`[11b]`/`[11c]` at 44/0 and **mutation-proven** (unhooking the span reds 7
+cells; the non-vacuity control stays green). **So item 54 is NOT waiting on a
+seat, and nobody should wait for one.**
+**THE REAL WALL IS THE OTHER HALF OF THAT SENTENCE AND IT STANDS UNTOUCHED:** a
+dated span is not a WEEK IDENTITY. `Section18WeekMode` has eleven members
+(`weeklyExposureContractV2.ts:27`) and none of them is a Christmas break, so
+there is still nowhere to hang 1/week. **Growing that union is the `cod_decel`
+hazard for the third time** — ship the `satisfies Record<…>` in the same commit
+as the member or generation breaks. **Owner unchanged: item 54's, `pace`.**
 **3. PRE-SEASON IS A QUALITY RULE, NOT A COUNT — `UNENFORCED`.** `top_end_speed`
 on a team night is his ruling; `acceleration` on a team night is the duplication
 he is avoiding. **The nights unit is the PRECONDITION for it** — under a source
@@ -930,6 +945,35 @@ session-action rule converting a session to recovery once 75% of its rows were
 stripped"* — lives BELOW this builder and a contract comparison cannot see it.
 It needs the action walker, is named in the suite's own NOT-COVERED line and in
 `docs/STATUS_PATTERNS.md`, and is **not** claimed here.
+**✅ MECHANISM THREE NOW HAS ITS OWN ARM — `test:fatigue-session-collapse`
+(`fatigueSessionCollapseLawTests.ts`, 14 cells), seat `readiness`, 2026-08-13,
+same inbox item 57. It does not re-assert the sibling's contract comparison.**
+**THE MECHANISM IS GONE AS CLAIMED, AND WHAT KEEPS IT GONE IS AN ACCIDENT.** The
+75% conversion still exists for INJURY (`injuryAdjustmentEngine.ts:327`) and that
+file contains **zero** occurrences of `fatigue` — but measurement found the door
+ajar: `extractInjuryContext('im absolutely cooked 9/10')` returns
+**`{bodyPart:'unknown', bucket:null, severity:9}`**. **A pure fatigue sentence —
+the verbatim name of R-038's most severe READINESS tier — enters the INJURY door
+at the pause band, on a live path** (`CoachScreen.tsx:1294`), because "cooked" is
+a negative descriptor and body part is deliberately optional.
+**IT STRIPS NOTHING FOR ONE REASON ONLY: with `bucket:null` every strength row
+rates `good`**, so `removeNames` is empty and the >=50% swap is unreachable.
+**Nothing anywhere stated that.** Making the region-agnostic fallback more
+careful — *"no body part? be cautious with everything"* — reinstates mechanism
+three for fatigue instantly. **The suite pins the INERTNESS, not the leak**, and
+records the leak as its own cell so closing it reds rather than silently
+invalidating the guard above it.
+**FOUR CELLS ARE STRUCTURAL:** `TierDirective`'s key set is pinned EXACTLY, so a
+`removesExposures` field reds the day it is added; and **severity 6 and 7 must
+give the identical directive** — the abolished trigger was `7+`, and
+`injurySeverityBands` records that *"7 was never a band edge"*.
+**THREE MUTANTS KILLED, 2 cells each:** a removal field on the directive; the
+`7+` escalation reinstated; **the null-bucket fallback opened** — which reds the
+load-bearing cell AND the asymmetry control. Restored from backup, `git diff`
+clean. **STILL NOT COVERED:** driving a real week through the session-action
+layer, which needs the action walker. **The gap is now narrow rather than
+open** — the only route from a fatigue sentence to a stripped row is that
+fallback, and it is watched.
 
 **R-040** · RAW SEVERITY IS PRIVATE TO THE DOOR. No module outside the minting
 door may read a readiness/fatigue severity, tier or magnitude; downstream
