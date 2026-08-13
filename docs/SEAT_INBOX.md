@@ -135,7 +135,14 @@ his instruction is standing authority, not history.**
     and they should be paid before the next unit, not carried.
 
 
-40. **✅ CLOSED — CENSUS C4 IS BUILT. `pace`, 2026-08-13.**
+40. **BLOCKED-BY: other-agent — CLOSED, AND ONLY ARCHIVAL REMAINS, WHICH IS THE
+    SEAT'S EDIT. CENSUS C4 IS BUILT. `pace`, 2026-08-13.**
+
+    **MARKED BY `audit`, not re-worked.** ⚠ **AND THE MARKER IS THE ONLY THING A
+    TERMINAL CAN DO HERE — a `✅ CLOSED` head is still WORKABLE to the stop hook**
+    (`scripts/seat-inbox-hook.sh` skips only `BLOCKED-BY:`, *parked* and
+    empty-queue markers), so a finished item keeps the queue non-empty until the
+    SEAT archives it. Same structural trap named on item 31.
 
     **`f6808ed7` → `4d24be47` → `05e609af` → `f6e955a1`.** Sam's floors now carry
     his ceilings' weight. **168/11 → 168/10 on the QA corpus, nothing added**,
