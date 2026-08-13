@@ -13,9 +13,48 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 **Sam's QUOTED WORDS were kept inline wherever an item still answers to them:
 his instruction is standing authority, not history.**
 
-## Unprocessed65. **THE PAPER PHONE — PRINT REAL GENERATED WEEKS AS PLAIN ENGLISH SO SAM CAN
+## Unprocessed
+
+65. **OWNED BY `printer` (marked by `vocab`, 2026-08-13 — see below). THE PAPER
+    PHONE — PRINT REAL GENERATED WEEKS AS PLAIN ENGLISH SO SAM CAN
     READ THEM ON HIS PHONE WITHOUT A BUILD. THIS IS THE FIRST GATE TO RELEASE
-    AND NOTHING ELSE ON THIS LIST OUTRANKS IT. UNOWNED — STAMP THE HEAD LINE.**
+    AND NOTHING ELSE ON THIS LIST OUTRANKS IT.**
+
+    **⚠ MARKED BY `vocab` AFTER COLLIDING WITH `printer` ON IT — THE HEAD LINE
+    STILL SAID "UNOWNED" WHILE THE WORK WAS ALREADY UNDERWAY.** I read this item
+    as the topmost unowned order, built `scripts/print-week.ts`, ran it, and got
+    six readable weeks; while I was fixing the last field, the file was replaced
+    by `printer`'s own 528-line version. **Their work is the one on disk and I
+    have not touched it.** Mine was never committed — the shared index was held
+    by other seats throughout — so nothing of theirs is at risk and nothing of
+    mine survives. Owner line only; the order below is not re-scoped.
+
+    **THIS IS THE SECOND COLLISION IN A ROW FOR THIS SEAT** (item 63 was the
+    first, same shape). **A seat mid-build is invisible: `git status` and
+    `git log` both report the file free, and an inbox head line saying UNOWNED
+    keeps the scan handing the item to the next agent.** Stamping the head the
+    moment work starts is the only thing that closes it — which is what item 50
+    and item 63 already had to do.
+
+    **AND `## Unprocessed` HAD BEEN SWALLOWED ONTO THIS HEAD LINE AGAIN** — the
+    same repair item 64 made when it was swallowed onto item 63's. It recurs
+    every time an item is inserted at the top without a blank line after the
+    heading, and while it is swallowed **the hook reads column 0 and cannot see
+    the top item at all.** Separated here.
+
+    **FREELY GIVEN TO `printer`, so it is not paid for twice:** the generator
+    entry is `generateProgramLocally(profile, { todayISO, blockNumber,
+    microcycleLimit })`, and the profile MUST carry `recentTrainingLoad` and
+    `conditioningLevel` or §18 refuses every world with *"Capacity cannot be
+    scored"* — my first run printed six refusals and a flawless `0 / 0` score,
+    which is the green-and-empty trap. The kit strings that match are
+    `Full Gym` / `Bodyweight Only` (capitalised). On the row, the name is
+    `row.exercise.name` and the dose is `prescribedSets` /
+    `prescribedRepsMin` / `prescribedRepsMax`; `workout.dayOfWeek` is a
+    **number**, not a name. Reading those wrong manufactured a "127 places the
+    app has no words" finding that was entirely my own bug — **count sessions
+    and rows printed alongside any [NO COPY] total, or a broken reader reports
+    as a clean bill of health.**
 
     **WHY IT EXISTS.** Every ruling landed today was verified by a suite. **Not
     one generated week has ever been READ by the person whose rules they are.**
@@ -116,7 +155,14 @@ his instruction is standing authority, not history.**
     side for each profile, and say what changed and whether it should have.
     **Pairs with item 65 — reuse its printer, do not write a second one.**
 
-64. **OWNED BY `bible` (claimed 2026-08-13). THE BIBLE HAS NO COVERAGE CHECK, WHICH IS WHY A RULE SAM WROTE DOWN CAN**
+64. **✅ BOTH STEPS LANDED. OWNED BY `bible`. 1,003 RULE LINES · 8 HELD · DEBT 995 · COVERAGE 0.8%.**
+    **`1074f181` the measurement alone as ordered, `91f1417d` the ratchet. Mutation-proven three ways —**
+    **deleting one enforcer name reds two cells; NARROWING the rule definition "improves" the debt**
+    **995 → 838 with ZERO rules enforced and reds two others, because `:227` stops being seen as a**
+    **rule the instant it narrows. `test:bible-coverage` 5/5, in `test:bible`. Nothing fixed, per the**
+    **item. Worst-first: `:227` is still unheld — five slots authored, four planned, single-leg never**
+    **requested. Detail: `docs/STATUS_BIBLE.md`. ORIGINAL ORDER BELOW.**
+    **THE BIBLE HAS NO COVERAGE CHECK, WHICH IS WHY A RULE SAM WROTE DOWN CAN**
     **SIT IN THE APP UNBUILT FOR MONTHS AND NOTHING GOES RED. BUILD ONE.**
 
     **THE SIGHTING THAT ORDERED THIS.** Bible `:227` gives a lower day five
