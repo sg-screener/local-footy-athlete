@@ -62,6 +62,26 @@ import {
 } from './powerCountingDifferential/buildCountSnapshot';
 import { projectPower } from './powerCountingDifferential/powerProjection';
 
+/**
+ * Collection ceiling — RAISED FROM 200 TO 5000 ON 2026-08-13, and the old value
+ * is why three readers got this failure wrong on the same day.
+ *
+ * **200 WAS A DISPLAY GUARD DOING A COLLECTION JOB.** The failure only ever
+ * PRINTS 25 lines, so the low ceiling bought nothing on screen and cost the one
+ * thing that mattered: **the TOTAL saturated at 201, and a saturated total reads
+ * exactly like a measured one.** An attribution table built on it — "none of my
+ * code: 38, all of it: 201" — has a real number in one cell and a ceiling in the
+ * other, and nothing on the page says which is which.
+ *
+ * It also capped the by-kind BREAKDOWN below, so an entire class of diff could
+ * sit past line 200 and never be named at all.
+ *
+ * 5000 is not a measurement either, but it is far above any real diff on this
+ * corpus, and `explainDiff` now SAYS when it is hit instead of printing a number
+ * that looks measured.
+ */
+const WALK_DIFF_CAP = 5000;
+
 const GOLDEN_PATH = path.join(
   __dirname,
   'powerCountingDifferential',
@@ -377,15 +397,55 @@ function explainDiff(golden: string, current: string): string {
   const currentSnapshot = JSON.parse(current) as CountSnapshot;
   const diffs: string[] = [];
   walk(goldenSnapshot, currentSnapshot, '', diffs);
+  // ── THE CAP MUST NOT HIDE THE SHAPE OF THE DIFF ──────────────────────────
+  //
+  // **THREE AGENTS READ THIS FAILURE ON 2026-08-13 AND ALL THREE REASONED FROM A
+  // TRUNCATED SAMPLE.** The shown lines are TRAVERSAL-ORDERED, so they all come
+  // from `scenarios.0` — not merely a small sample, a systematically one-corner
+  // one. One reader concluded a ROMANIAN DEADLIFT was being lost
+  // (`strengthRowNames.5: "Romanian Deadlift" → undefined`, week 3 day 2) — it
+  // was the array SHORTENING after `Face Pulls` left, and the hinge had simply
+  // moved to index 4. Another could not see that a whole SESSION TYPE had
+  // changed elsewhere in the file. **A truncated sample nearly bought a
+  // `--update` that would have signed for every diff in it.**
+  //
+  // ⚠ AND WHEN THE BREAKDOWN WAS FIRST RUN IT PAID FOR ITSELF IMMEDIATELY: the
+  // true total is **291**, not the 201 everyone had been quoting — 201 was the
+  // old ceiling — and it contains **POWER-PROBE and TAXONOMY diffs that nobody
+  // had named**, in a golden whose entire subject is power counting.
+  //
+  // So the failure now LEADS with a breakdown by kind over ALL collected diffs.
+  // Four lines, and it is the thing that would have said "a session type moved"
+  // on the first read instead of the fourth hour.
+  const kindOf = (line: string): string => (line.split(':')[0] ?? line)
+    // Drop array indices so `…days.5.strengthRowNames.3` groups with `.4`.
+    .replace(/\.\d+/g, '.N')
+    .replace(/^scenarios\.N\.weeks\.N\.days\.N\./, '');
+  const byKind = new Map<string, number>();
+  for (const line of diffs) {
+    const kind = kindOf(line);
+    byKind.set(kind, (byKind.get(kind) ?? 0) + 1);
+  }
+  const breakdown = [...byKind.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .map(([kind, count]) => `${count} x ${kind}`)
+    .join('\n        ');
+  // ⚠ AND THE TOTAL IS HONEST ABOUT SATURATION. `walk` stops collecting past
+  // `WALK_DIFF_CAP`, so a bare number at the ceiling is the CAP, not a
+  // measurement — and an attribution table built on it reads a saturated cell as
+  // a real one. Say so rather than printing a number that looks measured.
+  const total = diffs.length > WALK_DIFF_CAP
+    ? `${diffs.length}+ diff(s) — ⚠ COLLECTION CAPPED AT ${WALK_DIFF_CAP}, the true count is UNKNOWN`
+    : `${diffs.length} diff(s)`;
   const shown = diffs.slice(0, 25);
   const suffix = diffs.length > shown.length
-    ? `\n        … and ${diffs.length - shown.length} more`
+    ? `\n        … and ${diffs.length - shown.length} more — THESE 25 ARE TRAVERSAL-ORDERED, NOT A SAMPLE`
     : '';
-  return `${shown.join('\n        ')}${suffix}\n\n      If the diff is CORRECT, regenerate with --update and say so in the commit.`;
+  return `${total}, by kind:\n        ${breakdown}\n\n      ${shown.join('\n        ')}${suffix}\n\n      If the diff is CORRECT, regenerate with --update and say so in the commit.`;
 }
 
 function walk(left: unknown, right: unknown, at: string, out: string[]): void {
-  if (out.length > 200) return;
+  if (out.length > WALK_DIFF_CAP) return;
   if (JSON.stringify(left) === JSON.stringify(right)) return;
   if (
     left === null || right === null ||
