@@ -524,6 +524,99 @@ console.log(
   `\nLAW REGISTRY: ${LAW_REGISTRY.length} rows, `
   + `${LAW_REGISTRY.length - unenforcedNow.length} guarded, `
   + `${unenforcedNow.length} UNENFORCED`);
+/**
+ * LAW-doc-truth — A "BUILT"/"FIXED" CLAIM CARRIES A CODE RECEIPT.
+ *
+ * **THIS FILE ALREADY CHECKED EVERYTHING EXCEPT THE RECEIPTS.** `every guard
+ * names a script that EXISTS` and `every 'ruledAt' names a file that EXISTS`
+ * hold the two structured fields. The `receipt` field — the one that actually
+ * makes the claim *"BUILT `<sha>`"* — was never read by anything.
+ *
+ * **A COMMIT SHA IS THE ONE CITATION THAT CANNOT BE PROSE.** The first version
+ * of this cell also resolved file paths out of receipts and immediately
+ * produced a FALSE POSITIVE: `LAW-one-startup-command`'s receipt says *"a
+ * FABRICATED `scripts/tmp-rival-start.sh` reds it"* — describing a mutation
+ * fixture that was deliberately temporary, not claiming a file exists. **A
+ * receipt is free prose and a path inside it may be hypothetical; a sha is
+ * always a claim about history.** So the scope is shas, and it is narrow on
+ * purpose rather than by accident.
+ *
+ * FAILURE MODE IT CATCHES: a receipt citing a commit that never landed, was
+ * rebased away, or was copied from another branch — a law that reads GUARDED
+ * and whose evidence does not exist.
+ */
+function receiptShasThatDoNotResolve(
+  rows: readonly LawRow[],
+  resolves: (sha: string) => boolean,
+): string[] {
+  const bad: string[] = [];
+  for (const row of rows) {
+    const receipt = String((row.guard as { receipt?: string }).receipt ?? '');
+    // 7-40 hex chars standing alone. Bounded by non-hex so a word like
+    // "deadbeefcafe" inside a longer token is not pulled in.
+    for (const match of receipt.matchAll(/\b([0-9a-f]{7,40})\b/g)) {
+      const sha = match[1];
+      if (!resolves(sha)) bad.push(`${row.id} cites ${sha}`);
+    }
+  }
+  return bad;
+}
+
+run('LAW-doc-truth: every commit a law receipt cites EXISTS', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { execFileSync } = require('child_process') as typeof import('child_process');
+  const repoRootDir = path.resolve(__dirname, '../..');
+  // execFileSync, not execSync: no shell, so the sha is passed as an argument
+  // rather than interpolated into a command string. The regex above already
+  // restricts it to hex, but a gate is the wrong place to rely on that.
+  const resolves = (sha: string): boolean => {
+    try {
+      execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
+        cwd: repoRootDir,
+        stdio: 'ignore',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  // NON-VACUITY FIRST: if no receipt cites a sha, this cell proves nothing and
+  // must say so rather than reporting a comfortable zero.
+  const cited = LAW_REGISTRY.reduce((n, row) => n
+    + [...String((row.guard as { receipt?: string }).receipt ?? '')
+      .matchAll(/\b([0-9a-f]{7,40})\b/g)].length, 0);
+  assert(cited > 0, 'no law receipt cites a commit at all — this cell is vacuous');
+
+  const bad = receiptShasThatDoNotResolve(LAW_REGISTRY, resolves);
+  assert(bad.length === 0,
+    `law receipt(s) citing a commit that does not exist: ${bad.join('; ')}. `
+    + 'A receipt is the difference between a guarded law and a claim; one that '
+    + 'names a commit nobody can open is the second wearing the first.');
+  console.log(`      (${cited} commit citation(s) across ${LAW_REGISTRY.length} receipts, all resolve)`);
+});
+
+run('LAW-doc-truth: the receipt checker reds on a fabricated sha (liveness)', () => {
+  const never = () => false;
+  const always = () => true;
+  const withSha = [{ id: 'LAW-x', guard: { receipt: 'BUILT abc1234 on a real day.' } }] as never;
+  assert(receiptShasThatDoNotResolve(withSha, never).length === 1,
+    'a receipt citing an unresolvable commit was not caught — the cell is vacuous');
+  assert(receiptShasThatDoNotResolve(withSha, always).length === 0,
+    'a receipt citing a REAL commit was flagged — the cell reds on the wrong thing');
+  const noSha = [{ id: 'LAW-y', guard: { receipt: 'BUILT 2026-08-13, proven by hand.' } }] as never;
+  assert(receiptShasThatDoNotResolve(noSha, never).length === 0,
+    'a receipt citing no commit was pulled into scope — a date is not a sha');
+  // The false positive that shaped the scope: a PATH inside a receipt is prose
+  // and may be hypothetical. It must never be resolved as evidence.
+  const fixture = [{
+    id: 'LAW-z',
+    guard: { receipt: 'a fabricated scripts/tmp-rival-start.sh reds it' },
+  }] as never;
+  assert(receiptShasThatDoNotResolve(fixture, never).length === 0,
+    'a mutation-fixture PATH was treated as a receipt claim — that is the false '
+    + 'positive this cell was scoped to avoid');
+});
+
 console.log(`law registry gate totals: ${passed} passed, ${failures.length} failed`);
 totalsPrinted(failures.length);
 if (failures.length > 0) {

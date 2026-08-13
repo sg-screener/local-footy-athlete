@@ -664,6 +664,213 @@ run('a repeated sighting states its disposition — iterate or compress', () => 
     + 'requires an alternative on the table before a third attempt at the same wall.');
 });
 
+/**
+ * LAW-no-completeness-claims — NEVER ASSERT COMPLETENESS ABOUT WORK NOT MEASURED.
+ *
+ * **THIS IS THE GATE THE ROW ITSELF ASKED FOR**, verbatim: *"a vocabulary gate
+ * over reports and NOW.md forbidding 'last', 'final', 'no more', 'nothing left
+ * to find' unless beside a cited run."* Built to that description rather than
+ * to a wider one I preferred.
+ *
+ * IT INHERITS THE KNOWN WEAKNESS ITS OWN ROW NAMES: a phrase list cannot catch
+ * a completeness claim phrased a new way. **That is a ceiling on what it
+ * proves, not a defect in it** — and it is why the escape below is a CITED RUN
+ * rather than a softer word.
+ *
+ * THE ESCAPE IS DELIBERATE. "No more defects" is a lie when nobody measured
+ * and a fact when a named run says so, so a claim standing beside a `test:`
+ * citation or a pass/fail count is allowed. That is the law's own three-way
+ * status — MEASURED-DONE cites the run.
+ */
+const COMPLETENESS_PHRASES =
+  /\b(nothing left to find|no more (?:defects|bugs|issues)|the last (?:one|defect|bug)|there are no remaining)\b/i;
+
+/** A cited run: a named suite, or a totals line, within two lines of the claim. */
+const RUN_CITATION = /\btest:[a-z0-9-]+|\b\d+\s+passed\b|\bpassed=\d+/i;
+
+/** Pure: reports asserting completeness with no run cited beside the claim. */
+function uncitedCompletenessClaims(
+  reports: readonly { readonly name: string; readonly text: string }[],
+): string[] {
+  const bad: string[] = [];
+  for (const report of reports) {
+    const lines = report.text.split('\n');
+    for (let i = 0; i < lines.length; i += 1) {
+      if (!COMPLETENESS_PHRASES.test(lines[i])) continue;
+      const window = lines.slice(Math.max(0, i - 2), i + 3).join('\n');
+      if (!RUN_CITATION.test(window)) { bad.push(report.name); break; }
+    }
+  }
+  return bad;
+}
+
+/**
+ * DATED DEBT — three reports written before this gate existed. History cannot
+ * shrink, so they are NAMED rather than forgiven by weakening the phrase list;
+ * a new violation still reds, and fixing one of these must delete it here.
+ */
+const COMPLETENESS_CLAIM_DEBT: readonly string[] = [
+  'FINDING_3_STEP2_BOUNDARY_REPORT_2026-08-06.md',
+  'DAY_FIRST_SLICE1_BOUNDARY_2026-08-08.md',
+  'LR1_PROGRAM_DOOR_BOUNDARY_2026-08-03.md',
+];
+
+run('LAW-no-completeness-claims: a completeness claim cites the run that measured it', () => {
+  const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  const reports = docs
+    .filter((d) => /BOUNDARY/.test(path.basename(d.file)) || path.basename(d.file) === 'NOW.md')
+    .map((d) => ({ name: path.basename(d.file), text: d.text }));
+  assert(reports.length > 10, `only ${reports.length} report(s) read — the scan is not seeing docs/`);
+
+  const bad = uncitedCompletenessClaims(reports)
+    .filter((name) => !COMPLETENESS_CLAIM_DEBT.includes(name));
+  assert(bad.length === 0,
+    `report(s) claiming completeness with no run cited beside the claim: ${bad.join(', ')}. `
+    + 'Status is MEASURED-DONE (cite the run), ATTRIBUTED-NOT-FIXED (cite the doc) or '
+    + 'OPEN-UNKNOWN. "No more bugs" with nothing measured is the first of those wearing '
+    + "the last one's certainty.");
+  console.log(`      (${reports.length} reports scanned; ${COMPLETENESS_CLAIM_DEBT.length} carried as dated debt)`);
+});
+
+run('LAW-no-completeness-claims: the phrase gate reds on a bare claim and lets a cited one through (liveness)', () => {
+  const bare = [{ name: 'a.md', text: 'We swept it.\nThere are no remaining defects.\nShipping.' }];
+  assert(uncitedCompletenessClaims(bare).length === 1,
+    'a bare completeness claim was not caught — the gate is vacuous');
+  const cited = [{
+    name: 'b.md',
+    text: 'test:slot-coverage passed=54/54\nThere are no remaining defects.\nShipping.',
+  }];
+  assert(uncitedCompletenessClaims(cited).length === 0,
+    'a claim standing beside a cited run was refused — MEASURED-DONE is the legal form');
+  const unrelated = [{ name: 'c.md', text: 'The final score was 12.\nWe moved on.' }];
+  assert(uncitedCompletenessClaims(unrelated).length === 0,
+    '"final" in ordinary prose was pulled into scope — the list is phrases, not words');
+  const debtIsReal = [{
+    name: 'd.md',
+    text: 'Nothing left to find here.\nNo counts, no suites.',
+  }];
+  assert(uncitedCompletenessClaims(debtIsReal).length === 1,
+    'the phrase list no longer matches the shape the debt was measured on');
+});
+
+/**
+ * LAW-elegant-two-options — COMPARE AN INCREMENTAL FIX AGAINST AN OWNERSHIP
+ * REDESIGN BEFORE CODING, ALWAYS.
+ *
+ * **BUILT TO THE ROW'S OWN PRESCRIPTION**, verbatim: *"A boundary-report field
+ * ('options compared') checked by `test:repo-law-guards`, the same shape as
+ * the LOOP CHECK cell already in that suite."* Its warning is against flipping
+ * on the strength of an edit to the law's SENTENCE — so the sentence is
+ * untouched and this is the field it named.
+ *
+ * **FROM-HERE-FORWARD, AND THAT IS THE ONLY HONEST SHAPE.** 3 of 59 existing
+ * reports carry the field. A retroactive gate would red on 56 reports whose
+ * authors were never asked for it, and the only way down would be to rewrite
+ * history this repo deliberately keeps — the shape already refuted for
+ * `LAW-L9-checkpoint-discipline`. The cutoff is the day the law gained its
+ * gate; everything before it is out of scope by construction, and the debt
+ * cannot grow because every new report is in scope.
+ *
+ * WHAT IT CANNOT DO: it reads that two options were WEIGHED, not whether the
+ * weighing was any good. That is a review question, and a cell claiming
+ * otherwise would be the "reads as covered" failure this registry exists to
+ * stop.
+ */
+const TWO_OPTIONS_LAW_DATE = '2026-08-13';
+
+/** A report states it compared two paths — the field, or the law's own words. */
+const OPTIONS_COMPARED =
+  /options compared|two options|incremental fix .{0,40}(?:vs|versus|against)|ownership redesign/i;
+
+/**
+ * TWO REPORTS WRITTEN EARLIER ON THE CUTOFF DAY, BEFORE THIS GATE EXISTED.
+ * Named rather than dodged by moving the cutoff to tomorrow: a cutoff pushed
+ * forward to make a red go away is the ratchet loosening itself, and it would
+ * also let every report written for the rest of today through. The list may
+ * only SHRINK — a new silent report reds on arrival.
+ */
+const TWO_OPTIONS_DEBT: readonly string[] = [
+  'AWAY_FLOW_BOUNDARY_2026-08-13.md',
+  'CHRISTMAS_BREAK_BOUNDARY_2026-08-13.md',
+];
+
+/** Pure: in-scope reports that never say two options were weighed. */
+function reportsWithoutTwoOptions(
+  reports: readonly { readonly name: string; readonly text: string }[],
+): string[] {
+  return reports
+    .filter((r) => (/(\d{4}-\d{2}-\d{2})/.exec(r.name)?.[1] ?? '') >= TWO_OPTIONS_LAW_DATE)
+    .filter((r) => !OPTIONS_COMPARED.test(r.text))
+    .map((r) => r.name)
+    .filter((name) => !TWO_OPTIONS_DEBT.includes(name));
+}
+
+run('LAW-elegant-two-options: a report from the cutoff forward says which two options it weighed', () => {
+  const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  const reports = docs
+    .filter((d) => /BOUNDARY/.test(path.basename(d.file)))
+    .map((d) => ({ name: path.basename(d.file), text: d.text }));
+  assert(reports.length > 10, `only ${reports.length} boundary report(s) read — the scan is blind`);
+
+  const inScope = reports.filter(
+    (r) => (/(\d{4}-\d{2}-\d{2})/.exec(r.name)?.[1] ?? '') >= TWO_OPTIONS_LAW_DATE,
+  );
+  const bad = reportsWithoutTwoOptions(reports);
+  assert(bad.length === 0,
+    `boundary report(s) dated ${TWO_OPTIONS_LAW_DATE} or later that never say which two options `
+    + `were weighed: ${bad.join(', ')}. The law is "compare an incremental fix against an `
+    + `ownership redesign BEFORE coding" — a report that names only what was built cannot show `
+    + 'the comparison happened.');
+  console.log(`      (${inScope.length} report(s) in scope from ${TWO_OPTIONS_LAW_DATE}; `
+    + `${reports.length - inScope.length} predate the gate)`);
+});
+
+run('LAW-elegant-two-options: the two-options debt only shrinks', () => {
+  // THE OTHER DIRECTION, AND WITHOUT IT THIS RATCHET COULD NEVER RED. A debt
+  // list larger than reality passes silently for ever: today BOTH in-scope
+  // reports are excused, so the forward cell is green while holding nothing,
+  // and only this cell can notice when that stops being true. (Learnt the hard
+  // way on an earlier ratchet in this same suite whose mutation survived
+  // because it only ever asked one question.)
+  const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
+    .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
+  const byName = new Map(docs.map((d) => [path.basename(d.file), d.text]));
+  const paid = TWO_OPTIONS_DEBT.filter((name) => {
+    const text = byName.get(name);
+    return text !== undefined && OPTIONS_COMPARED.test(text);
+  });
+  assert(paid.length === 0,
+    `these reports gained a two-options statement — delete them from TWO_OPTIONS_DEBT: `
+    + `${paid.join(', ')}. A debt entry outliving its defect makes the count unfalsifiable.`);
+  const missing = TWO_OPTIONS_DEBT.filter((name) => !byName.has(name));
+  assert(missing.length === 0,
+    `TWO_OPTIONS_DEBT names report(s) that no longer exist: ${missing.join(', ')}`);
+});
+
+run('LAW-elegant-two-options: the field checker reds on a silent report and is not fooled by date (liveness)', () => {
+  const silent = [{ name: 'X_BOUNDARY_2026-08-13.md', text: 'We fixed it. It works now.' }];
+  assert(reportsWithoutTwoOptions(silent).length === 1,
+    'an in-scope report naming no comparison passed — the gate is vacuous');
+  const compared = [{
+    name: 'Y_BOUNDARY_2026-08-13.md',
+    text: 'Options compared: patch the reader, or move ownership to the composer. Took the second.',
+  }];
+  assert(reportsWithoutTwoOptions(compared).length === 0,
+    'a report that DID weigh two options was flagged — that is the shape the law asks for');
+  const old = [{ name: 'Z_BOUNDARY_2026-08-01.md', text: 'We fixed it.' }];
+  assert(reportsWithoutTwoOptions(old).length === 0,
+    'a report predating the cutoff was pulled in — history cannot shrink, which is why '
+    + 'this law is from-here-forward');
+  const prose = [{
+    name: 'W_BOUNDARY_2026-08-13.md',
+    text: 'Weighed the incremental fix against an ownership redesign and took the redesign.',
+  }];
+  assert(reportsWithoutTwoOptions(prose).length === 0,
+    "the law's own words did not satisfy its gate — the field is a field OR the sentence");
+});
+
 run('the LOOP CHECK debt only shrinks', () => {
   const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
     .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));

@@ -188,9 +188,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Compare an incremental fix against an ownership redesign before coding — ALWAYS, not only when asked, and for PROCESS and instruments as well as code.',
     ruledAt: 'AGENTS.md "Elegant Solution Requirement"; CLAUDE.md; widened by Sam 2026-08-10',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A boundary-report field ("options compared") checked by test:repo-law-guards, the same shape as the LOOP CHECK cell already in that suite. NOT BUILT IN THIS PASS AND NOT CLAIMED: widening a law is not guarding it, and a row that flipped to `guarded` on the strength of an edit to its sentence would be the exact "reads as covered" failure this registry exists to stop.',
-      receipt: 'Process law; no script observes deliberation. The widening changed the SUBJECT, not the guard — the row is still honestly red.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-13 (Agent: laws) TO THE PRESCRIPTION IN THIS ROW ITSELF - a boundary-report field (options compared) checked by test:repo-law-guards, the same shape as the LOOP CHECK cell. THE SENTENCE OF THE LAW IS UNTOUCHED: this row warned that flipping on the strength of an edit to its own wording would be the reads-as-covered failure, so the gate was built and the wording left alone. FROM-HERE-FORWARD (cutoff 2026-08-13): only 3 of 59 existing reports carry the field, so a retroactive gate would red on 56 whose authors were never asked - the shape already refuted for LAW-L9-checkpoint-discipline. TWO reports written earlier on the cutoff day are named as debt rather than pushing the cutoff to tomorrow, which would have let the rest of the day through. BOTH DIRECTIONS: a silent in-scope report reds, AND a debt entry that gains the field must be struck - without that second cell the ratchet could never red, a failure this seat paid for earlier the same day. MUTATION-CHECKED both arms. WHAT IT CANNOT DO: it reads that two options were WEIGHED, never whether the weighing was good. That is a review question, not a cell.',
     },
   },
   {
@@ -1352,9 +1353,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     law: 'Never assert completeness about work not yet measured; status is MEASURED-DONE (cite the run), ATTRIBUTED-NOT-FIXED (cite the doc), or OPEN-UNKNOWN.',
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §7 (Sam-forced, third sighting)',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A vocabulary gate over reports and NOW.md forbidding "last", "final", "no more", "nothing left to find" unless beside a cited run. Same shape as the coach truth gate\'s forbidden-phrase list — and it inherits that list\'s known weakness (a phrase list cannot see an omission), so pair it with the three-bucket requirement.',
-      receipt: 'COLLAPSE CANDIDATE with LAW-claim-needs-a-cell and LAW-doc-truth: all three say a claim carries a receipt or is marked unknown. One structural check over reports could hold all three.',
+      state: 'guarded',
+      by: 'test:repo-law-guards',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-13 (Agent: laws) TO THE PRESCRIPTION IN THIS ROW ITSELF, which asked for a vocabulary gate over reports and NOW.md forbidding completeness words unless beside a cited run. 60 reports scanned (every *BOUNDARY*.md plus NOW.md). A completeness phrase is legal ONLY when a run is cited within two lines - a test: script name or a pass/fail count - which is the MEASURED-DONE form the law names. 3 pre-existing violations are carried as DATED DEBT rather than forgiven by weakening the phrase list. MUTATION-CHECKED: neutering the phrase test reds a cell. LIVENESS: a bare claim reds, a cited claim passes, and the word final in ordinary prose is NOT pulled in - the list is phrases, not words. WHAT IT DOES NOT DO, and this row said so first: a phrase list cannot catch a completeness claim phrased a new way. That is a ceiling on what it proves, not a defect in it.',
     },
   },
   {
