@@ -152,3 +152,93 @@ section — **there is no chapter you could enforce and be done.**
 there are to hold. **How many are held, and by what, is the ratchet — and it is
 the next commit, deliberately not this one**, because the item says step one
 lands alone.
+
+---
+
+## 2026-08-13 — STEP TWO: THE RATCHET. **8 OF 1,003.**
+
+# DEBT 995 · COVERAGE 0.8%
+
+**Eight rule lines out of a thousand have a named enforcer.** The mechanism to
+cite the Bible from code exists, is bidirectional, is tested — and reaches
+**eight**.
+
+| | |
+| --- | --- |
+| RULE LINES | 1,003 |
+| **HELD — a cited enforcer names them** | **8** |
+| **DEBT** | **995** |
+| coverage | **0.8%** |
+
+Held: Bible lines `105, 110, 132, 4890, 4898, 4904, 4908, 4918`.
+
+### NOTHING IS HAND-TYPED — THE MAP IS DERIVED END TO END
+
+The item requires the mapping be machine-held and derived where derivation is
+possible. **No line number appears anywhere in the suite.**
+
+| what | derived from |
+| --- | --- |
+| rule lines | the step-one definition, re-applied to the same corpus |
+| enforcers | `data/bibleThresholdAnchors.ts` — 18 entries, each quoting a Bible sentence verbatim |
+| the citation | a `BIBLE_ANCHOR: <id>` marker in production code — **18 of 18 present** |
+| **held lines** | **found by LOCATING each quote in the Bible.** Edit the Bible and the map moves with it |
+
+**An anchor counts only when BOTH halves exist.** A registry row nothing cites is
+a claim; a marker citing no row is a dangling name.
+
+### ⚠ WHY 18 ANCHORS HOLD ONLY 8 RULE LINES
+
+The 18 quotes land on 18 Bible lines, but **10 of those are lines my own
+definition does not call rules** — they are doses and table rows without a
+normative token. **The two instruments disagree about what a rule is**, and that
+disagreement is a finding, not a rounding error: the enforcement mechanism that
+exists is pointed largely at lines the rule-census cannot see. Widening the
+definition to catch bare doses would raise BOTH numbers. Stated here so the 8 is
+not read as "10 anchors are broken" — they are not.
+
+### MUTATION-PROVEN THREE WAYS, AND THE ITEM DEMANDED THE FIRST
+
+| mutant | result |
+| --- | --- |
+| **delete one enforcer name from the mapping** (`BIBLE_ANCHOR: gunshow_two_two_two`) | held **8 → 7**, debt **995 → 996**, cells **[3] and [4] RED** |
+| ceiling 995 → 994 | **[4] RED** |
+| **NARROW the rule definition** (drop the arrow and two modals) — the blinding case | debt "improves" **995 → 838 with ZERO rules enforced**, and **[2] and [5] RED** |
+
+**THAT THIRD ROW IS THE ONE THAT MATTERS.** A coverage number can be improved by
+enforcing a rule or by ceasing to notice it, and they look identical in a totals
+line. **Cell [2] catches it because the founding sighting `:227` stops being seen
+as a rule the moment the definition narrows** — the case that ordered this item
+is the tripwire that keeps the instrument honest. Cell [5] catches the same move
+from the other side: a fall of more than 10 must be BANKED in the ceiling.
+
+`test:bible-coverage`, **5/5**, in `test:bible`.
+
+### ORDERED BY WHAT AN ATHLETE WOULD NOTICE, NOT BY EASE
+
+The item asks for this explicitly — *"the single-leg case sat behind a green
+suite for months precisely because nobody was ranking by harm."*
+
+1. **`:227` — the lower-day ladder.** Five slots authored, four planned, and
+   single-leg work never requested. **An athlete does legs all year and never
+   gets a lunge or a single-leg RDL.** This is the founding case and it is still
+   unheld. Cell [2] pins it.
+2. **Dose lines with no token** — *"30m build + 30m fast"*, *"15-25 min easy
+   aerobic"*. These PRESCRIBE. They are invisible to both the census and the
+   anchor registry, so an athlete could be given any distance and nothing
+   anywhere would object.
+3. **The 164 rule lines in the last 500-line band** — Section 18 and the
+   exposure tables, the densest rules in the document, holding **zero** anchors
+   between `:4890` and `:4918`'s six.
+
+### WHAT THIS DOES NOT CLAIM
+
+**COVERAGE IS NOT CONFORMANCE.** A line counts as held when a cited enforcer
+names it. `:227` is the proof that a rule can have a checker, have a planner,
+and still not be obeyed — `sessionSlotCoverage` CHECKS five slots while
+`coachingEngine` PLANS four, and both are individually correct. **This census
+would call such a line HELD.** The next instrument is the one that compares what
+the enforcer asks for against what the prose says, and it is not this.
+
+**AND I FIXED NOTHING**, per the item: *"DO NOT FIX WHAT YOU FIND. The census is
+the deliverable."*
