@@ -38,12 +38,28 @@ his instruction is standing authority, not history.**
     **NOTHING IS OWED TO SAM.** ~~ORIGINAL~~ — archived verbatim to
     `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1).
 
-35. **BLOCKED-BY: other-agent — (a)'s GLASS CHECK NEEDS THE SHARED SIMULATOR AND
-    (c)'s FILE IS HELD. (b) IS SPECIFIED TO THE LINE AND NOT BUILT.**
-    **Nothing is owed to Sam on any of the three.** (a) answered in source, glass
-    owed — the simulator is the terminal's away run. (b) five measurement passes,
-    build specified, needs the full scenario report. (c) `conditioningSelection.ts`
-    is `MM` with changes this seat did not make.
+35. **⚠ MY BLOCK ON THIS WAS WRONG TWICE — WITHDRAWN 2026-08-13.**
+    I marked (c) `BLOCKED-BY: other-agent` because `conditioningSelection.ts`
+    showed `MM`. **It was byte-identical to HEAD — the file was FREE — and the
+    work was ALREADY BUILT** (`97c8d41b`, the reader is at `:570`). **I blocked a
+    finished job on a file nobody was holding.**
+    **THE CAUSE IS AN ENVIRONMENT FACT WORTH MORE THAN THIS ITEM: `git status`
+    LIES IN THIS CHECKOUT.** After a private-index commit the shared index goes
+    stale and files show `MM` while identical to HEAD. **Verify with
+    `git show HEAD:<path> | cmp -s - <path>`, never with the status letters.**
+    Found by the terminal on 28-C1; re-verified here across seven files —
+    **five were free, two genuinely held.**
+    **RE-VERIFIED BASES FOR THIS SEAT'S OTHER BLOCKS:** item 28 stands
+    (`temporarySourceFactTransaction.ts` genuinely differs); item 30's
+    `defaultProgram.ts` genuinely differs; **items 33 and 34 rested partly on
+    files that are FREE** — their remaining claim is the terminal's COMMIT
+    ACTIVITY, which is real, not a file hold.
+    **WHERE (a) AND (b) ACTUALLY STAND — no file blocks either.**
+    (a) answered in source; **the glass check is owed and is blocked by the
+    SHARED SIMULATOR, which is a device, not a file.** (b) five measurement
+    passes, build specified to the line, not started: it needs the full scenario
+    report because `assessContract` is called by the acceptance gates.
+    **Nothing is owed to Sam on any of the three.**
     ORIGINAL BELOW.
     **EQUIPMENT SCOPES · THE GUESSED SESSION CUT · THE MAS BLOCK CHECK — Sam,
     2026-08-13.** Full text: `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
