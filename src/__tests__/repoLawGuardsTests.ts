@@ -941,6 +941,149 @@ run('LAW-L8-reporting-calibration: the calibration check reds on a bare forecast
     + 'CLAIMING an estimate');
 });
 
+/**
+ * R-085's FORM, ENFORCED — AN ITEM'S STATE MUST BE ON THE LINE THE SCAN READS.
+ *
+ * **Sam, 2026-08-13: *"build the guard"*.** This is the compression for a class
+ * sighted FOUR times in one day (items 50, 62, 63, 66), each fixed by hand.
+ *
+ * **THE DEFECT IS NOT A MISSING RULE — R-085 ALREADY RULES THE FORM:** *"`OWNED
+ * BY` must name its owner in backticks, the completion mark must OPEN the head
+ * line."* The defect is that `seat-inbox-hook.sh` reads **COLUMN 0 ONLY**, so an
+ * owner written on the item's SECOND line is invisible to it. The item then
+ * reads as unclaimed work and **every seat is handed every other seat's job** —
+ * which is the duplicate-work failure the ownership rule exists to prevent.
+ *
+ * **⚠ AND THE OBVIOUS FIX IS THE WRONG ONE, WHICH IS WHY THIS GUARDS THE
+ * WRITING AND NOT THE SCAN.** Widening the scan to find owners further down
+ * would let *"the seat holding `some-file.ts`"* count as an owner — precisely
+ * the rubber-stamp `arms` made the rule narrow to prevent. **The narrowness is
+ * correct; the writing is what drifts.** So this cell asks the item to say on
+ * its head line what its own body already says.
+ *
+ * IT CANNOT DEMAND A STATE. An item with no owner, no block and no completion
+ * mark is genuinely open work and passes untouched — this only fires when the
+ * item DECLARES something and then hides it.
+ */
+// These three mirror `seat-inbox-hook.sh` exactly. If the hook's vocabulary
+// changes, this cell must change with it — a guard that disagrees with the
+// mechanism it guards is worse than none.
+const SCAN_BLOCKED_RE = /BLOCKED-BY:\s*(other-agent|external|sam)([^a-zA-Z-]|$)/i;
+const SCAN_OWNED_RE = /OWNED BY\s+`[^`]+`/i;
+const SCAN_STANDING_RE = /STANDING, EVERY STOP/i;
+
+/** The head line, stripped the way the hook strips it before reading. */
+function normalisedHead(line: string): string {
+  return line
+    .replace(/^\s*/, '')
+    .replace(/^[*_>#]+\s*/, '')
+    .replace(/^[0-9]+\.\s*/, '')
+    .replace(/^[-*+]\s*/, '')
+    .replace(/^[*_]+/, '');
+}
+
+/** True when the scan can read a skippable state off this ONE line. */
+function scanCanSee(headLine: string): boolean {
+  return SCAN_BLOCKED_RE.test(headLine)
+    || SCAN_OWNED_RE.test(headLine)
+    || SCAN_STANDING_RE.test(headLine)
+    || /^✅/.test(normalisedHead(headLine));
+}
+
+/**
+ * Pure: items whose HEAD BLOCK declares a state the HEAD LINE does not carry.
+ * `blocks` is [headLine, ...continuation lines of the bolded title].
+ */
+function headsHidingTheirState(
+  blocks: readonly { readonly headLine: string; readonly block: string }[],
+): string[] {
+  return blocks
+    .filter(({ headLine, block }) => {
+      if (scanCanSee(headLine)) return false;
+      const declaresBelow = SCAN_BLOCKED_RE.test(block)
+        || SCAN_OWNED_RE.test(block)
+        || SCAN_STANDING_RE.test(block)
+        || /(^|\n)\s*\*{0,2}✅/.test(block);
+      return declaresBelow;
+    })
+    .map(({ headLine }) => headLine.slice(0, 60));
+}
+
+/** Read the Unprocessed items as head line + the lines of its bolded title. */
+function unprocessedHeadBlocks(
+  inbox: string,
+): { headLine: string; block: string }[] {
+  const lines = inbox.split('\n');
+  const start = lines.findIndex((l) => /^## Unprocessed/.test(l));
+  if (start < 0) return [];
+  const out: { headLine: string; block: string }[] = [];
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (/^## /.test(lines[i])) break;
+    if (!/^[0-9]+[a-zA-Z0-9-]*\.\s/.test(lines[i])) continue;
+    // The bolded title runs to the first BLANK line — that is the "head" a
+    // reader sees, and where an owner is written when it misses column 0.
+    const body: string[] = [lines[i]];
+    for (let j = i + 1; j < lines.length && lines[j].trim() !== ''; j += 1) body.push(lines[j]);
+    out.push({ headLine: lines[i], block: body.join('\n') });
+  }
+  return out;
+}
+
+run('R-085: an item that declares its state says so on the line the scan reads', () => {
+  const inbox = fs.readFileSync(path.join(repoRoot, 'docs/SEAT_INBOX.md'), 'utf8');
+  const blocks = unprocessedHeadBlocks(inbox);
+  assert(blocks.length > 5, `only ${blocks.length} item head(s) parsed — the reader is blind`);
+
+  const hidden = headsHidingTheirState(blocks);
+  assert(hidden.length === 0,
+    `item head(s) declaring a state their HEAD LINE does not carry: ${hidden.join(' | ')}. `
+    + '`seat-inbox-hook.sh` reads COLUMN 0 ONLY, so an owner on the second line is '
+    + 'invisible and the item is handed to every seat as unclaimed work. Move it up — '
+    + 'do NOT widen the scan, which would let a file path count as an owner.');
+  console.log(`      (${blocks.length} item heads read; all declared states are on the head line)`);
+});
+
+run('R-085: the head-state checker catches a hidden owner and lets an open item through (liveness)', () => {
+  const hidden = [{
+    headLine: '66. **THE SYNTHETIC ATHLETE — SIMULATE FOUR WEEKS OF USE INSTEAD OF',
+    block: '66. **THE SYNTHETIC ATHLETE — SIMULATE FOUR WEEKS OF USE INSTEAD OF\n'
+      + '    WAITING FOUR WEEKS. OWNED BY `sim` (claimed 2026-08-13).**',
+  }];
+  assert(headsHidingTheirState(hidden).length === 1,
+    'an owner on the second line was not caught — this is the exact founding case');
+
+  const onHead = [{
+    headLine: '66. **OWNED BY `sim` — THE SYNTHETIC ATHLETE.**',
+    block: '66. **OWNED BY `sim` — THE SYNTHETIC ATHLETE.**\n    Body text.',
+  }];
+  assert(headsHidingTheirState(onHead).length === 0,
+    'an owner correctly ON the head line was flagged — that is the form R-085 asks for');
+
+  const openWork = [{
+    headLine: '70. **SOMETHING NOBODY HAS CLAIMED YET.**',
+    block: '70. **SOMETHING NOBODY HAS CLAIMED YET.**\n    Nobody owns this.',
+  }];
+  assert(headsHidingTheirState(openWork).length === 0,
+    'a genuinely unclaimed item was flagged — this cell may never DEMAND a state, '
+    + 'only refuse a hidden one');
+
+  const blockedBelow = [{
+    headLine: '71. **A TITLE.**',
+    block: '71. **A TITLE.**\n    BLOCKED-BY: other-agent — the file is held.',
+  }];
+  assert(headsHidingTheirState(blockedBelow).length === 1,
+    'a BLOCKED-BY written below the head line was not caught — same defect, other marker');
+
+  const fileNotOwner = [{
+    headLine: '63. **OWNED BY THE SEAT HOLDING `src/utils/coachingEngine.ts` — X.**',
+    block: '63. **OWNED BY THE SEAT HOLDING `src/utils/coachingEngine.ts` — X.**',
+  }];
+  assert(headsHidingTheirState(fileNotOwner).length === 0,
+    'this spelling DOES satisfy the scan regex (backticks follow OWNED BY), so the '
+    + 'cell must not flag it — the scan and this guard have to agree, or one of them '
+    + 'is lying about what the queue means');
+});
+
 run('the LOOP CHECK debt only shrinks', () => {
   const docs = filesUnder(path.join(repoRoot, 'docs'), ['.md'])
     .map((file) => ({ file, text: fs.readFileSync(file, 'utf8') }));
