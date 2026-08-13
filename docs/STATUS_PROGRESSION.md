@@ -76,9 +76,34 @@ something else that happens to land on the same number**, and the session is
 otherwise byte-identical (same exercises, same order), so it is not a plan-shape
 or session-type change either.
 
-**WHAT IS LEFT TO CHECK:** whatever authors the day's FIRST main lift's set
-count — the plan entry's tier or the scheme selection feeding `baseSetsFromScheme`
-— under a live readiness constraint.
+**✅ AND THE MECHANISM IS NOW FOUND. IT IS THE WEEK'S `isHardExposure`.**
+
+Probed the day metadata either side, and one field moves:
+
+    dow1  control : name="Lower Hinge" tier=core intensity=High
+    dow1  declared: name="Lower Hinge" tier=core intensity=Moderate
+    dow2  control : name="Team Training + Upper Push" tier=core intensity=High
+    dow2  declared: name="Team Training + Upper Push" tier=core intensity=Moderate
+
+**Same name, same type, same TIER — only `intensity` drops, on days OUTSIDE the
+window.** And `defaultProgram:2249` decides it in one line:
+
+    canonicalIntensity = planEntry.isHardExposure ? 'High'
+      : planEntry.tier === 'core' ? 'Moderate' : 'Light';
+
+**`tier` is `core` in both arms, so `intensity: Moderate` can only mean
+`isHardExposure` FLIPPED OFF.** A live readiness constraint is suppressing the
+week's hard exposures — **every day of the calendar week, the window ignored** —
+and a non-hard day then authors one fewer set on its main lift.
+
+**SO THE RESIDUAL IS THE SAME DEFECT AS C6, ONE LAYER UP.** C6 was the DOSE
+applied week-wide; this is the PLAN's hard-exposure flag applied week-wide. The
+fix I shipped bounded the dose; the plan layer still has no window.
+
+**WHERE IT LIVES:** `coachingEngine`'s plan construction, which sets
+`isHardExposure` — not `defaultProgram`, which only reads it. **That is a plan-
+layer change and its own unit**, and it needs the same treatment: the readiness
+window decides WHICH DAYS lose their hard exposure, not the calendar week.
 
 **WHY THE CELL ASSERTS A RATIO AND NOT EQUALITY.** Loosening it to "unchanged"
 would have hidden this; asserting equality would have red-flagged a defect the
