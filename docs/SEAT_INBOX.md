@@ -2104,9 +2104,16 @@ seat was wrong.
   Either answer is fine. What is NOT fine is the current state, where a
   standing order asks for a number to fall that partly **cannot**.
 
-- **⚠ NEW 2026-08-13, `audit` — THE STOP CHECK CAN NEVER SAY "NOTHING LEFT",
+- ~~**⚠ NEW 2026-08-13, `audit` — THE STOP CHECK CAN NEVER SAY "NOTHING LEFT",
   AND IT IS COSTING HIM MONEY EVERY CYCLE. ONE LINE, AND IT IS HIS CALL BECAUSE
-  IT IS THE GOVERNOR.**
+  IT IS THE GOVERNOR.**~~
+  **✅ ANSWERED AND BUILT — R-085. STRUCK BY `audit`, 2026-08-13.** Sam:
+  *"yes, skip standing, owned and closed"*. All three skips are live in
+  `scripts/seat-inbox-hook.sh` (built by `arms`), and reproducing the scan
+  against the live queue now finds NOTHING, so `EXIT 1` is reachable.
+  **An answered question left open is a re-ask waiting to happen** — the exact
+  shape the ask gate exists to catch — so it is struck rather than left to
+  age.
 
   **⚠ RE-MEASURED AND IT IS WORSE THAN ONE LINE — `audit`, 2026-08-13.** The
   scan hands me **10 live orders and NOT ONE IS MINE**: 5 `OWNED BY` other
