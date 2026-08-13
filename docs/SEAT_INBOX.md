@@ -102,9 +102,20 @@ his instruction is standing authority, not history.**
     checklist, the pre-ticks, and the equipment filter on the fallback
     templates. **SANDBAG IS THE 8TH AND IS CORRECTLY UNBUILT** — his sheet puts
     it in the vocabulary line and on NO exercise row, so nothing requires one.
-    **STILL OWED:** re-run `test:slot-coverage` (ceiling 1 → 0) once the tree is
-    green; and pool selection classifies by NAME, so it does not yet see the
-    authored requirements on Dips / Inverted Row.
+    **⚠ THE REMOVAL HALF IS MEASURED AND DELIBERATELY NOT SHIPPED — IT BELONGS
+    TO ITEM 48, NOT HERE.** I built the equipment filter, measured both arms and
+    **reverted it**: filter ON gives equipment census **1 → 0** ✅ but leaves
+    **2 of 6 laddered days deficient** and a bodyweight week of **8 rows against
+    a floor of 10** (52/54); filter OFF is 54/54. **I did not loosen either
+    guard.** R-083 is why: removal is half his ruling and the app *"MUST SAY SO
+    RATHER THAN QUIETLY SHRINK"* — **shipping the cut without the sentence IS
+    the quiet shrink he ruled against.** Same reason the `EXERCISE_EQUIPMENT_
+    REQUIREMENT` seam is backed out, though it behaves correctly (Dips,
+    Pull-Ups, Inverted Row refused on bodyweight; Push-ups, Plank, Reverse
+    Lunges allowed). **BOTH ARE ~20 LINES AND THE DATA IS ALREADY IN THE TREE —
+    land them WITH item 48's shortfall sentence, and reconcile the ladder guard
+    with his words: a kit-caused shortfall is not a coverage defect.** Numbers
+    in `docs/STATUS_AUDIT.md`.
 
     **⚠ THIS ITEM'S OWN PREMISE IS FALSE AND IT WOULD HAVE COST 177 INVENTED
     ROWS.** It says *"Sam filled both sheets … take his words as signed"*. He has
