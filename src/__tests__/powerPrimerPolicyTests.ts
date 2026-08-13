@@ -88,7 +88,41 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
 // power at all. The RATCHET is structural: the policy has no deload input left,
 // so the removal cannot be reinstated by flipping a condition.
 {
-  ok('low readiness blocks power', decidePowerPrimer(ctx({ readiness: 'low' })) === null);
+  // ⚠ RE-POINTED 2026-08-13, NOT DELETED — the same treatment the deload half of
+  // this block already received four lines above, and for the same reason.
+  //
+  // This asserted `=== null`: "low readiness blocks power". That is the
+  // behaviour Sam's readiness law (2026-07-28) RETIRED — *"capacity/readiness
+  // affects DOSE only"* — and `powerPrimerPolicy.ts:26-35` says so in full, with
+  // his quote, and states that the decision body deliberately contains no
+  // readiness branch that can return `null` so the removal cannot grow back.
+  //
+  // SO THE CODE IS RIGHT AND THE CELL WAS STALE AGAINST A RULING. It survived
+  // because THIS SUITE WAS IN NO NPM SCRIPT — 54 cells nothing in the chain
+  // could run, so a cell asserting a retired behaviour never had to answer for
+  // it. That is why it is being fixed in the same unit that wired the suite in.
+  const lowReadiness = decidePowerPrimer(ctx({ readiness: 'low' }));
+  ok('low readiness KEEPS power — capacity is a dose, not a gate (Sam 2026-07-28)',
+    lowReadiness !== null, JSON.stringify(lowReadiness));
+  // NON-VACUITY: "not null" alone would pass on an unreduced dose, which is the
+  // opposite of the ruling. The dose must actually be the reduced one.
+  //
+  // ⚠ COMPARED AGAINST **MEDIUM**, NOT HIGH, AND A SURVIVING MUTANT IS WHY.
+  // My first version compared low against HIGH and it was CONFOUNDED BY KIND:
+  // high readiness returns a CONTRAST spec (3 sets, reps 3-5) while low returns
+  // a PRIMER (2 sets, 3-3), so `repsMax 3 < 5` passed on the kind difference and
+  // said nothing about the readiness reduction. Deleting the reduction outright
+  // (`readiness === 'low'` → not reduced) left the cell GREEN.
+  //
+  // MEDIUM AND LOW ARE BOTH PRIMERS, so sets is the only thing moving and the
+  // reduction is the only thing that can move it: medium 3 sets, low 2.
+  // `a-count-taken-for-a-record` — the comparison's unit has to be the claim's
+  // unit, and "any smaller number" is not "reduced by readiness".
+  const mediumPrimer = decidePowerPrimer(ctx({ readiness: 'medium' }));
+  ok('and the low-readiness dose is REDUCED against the same-KIND medium dose',
+    !!lowReadiness && !!mediumPrimer && lowReadiness.kind === mediumPrimer.kind &&
+      lowReadiness.sets < mediumPrimer.sets,
+    { low: lowReadiness, medium: mediumPrimer });
   ok(
     'the policy takes no deload input at all — a deload cannot gate power here',
     !('isDeload' in BASE) &&
@@ -108,7 +142,16 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
   ok('G-2 experienced+fresh → tiny primer only', g2?.kind === 'primer' && g2.sets === 2 && g2.repsMax === 3, JSON.stringify(g2));
   ok('G-2 beginner → no power', decidePowerPrimer(ctx({ ...game, gOffset: -2, isBeginner: true })) === null);
   ok('G-2 non-experienced → no power', decidePowerPrimer(ctx({ ...game, gOffset: -2, experienced: false })) === null);
-  ok('G-2 medium readiness → no power', decidePowerPrimer(ctx({ ...game, gOffset: -2, readiness: 'medium' })) === null);
+  // ⚠ RE-POINTED for the same reason as the low-readiness cell above: readiness
+  // is a DOSE, not a GATE. The two cells either side of this one — beginner and
+  // non-experienced — are TRAINING-AGE gates and DO still return null, which is
+  // what keeps this re-point honest rather than a blanket loosening.
+  const g2Medium = decidePowerPrimer(ctx({ ...game, gOffset: -2, readiness: 'medium' }));
+  ok('G-2 medium readiness KEEPS the tiny primer — readiness is a dose, not a gate',
+    g2Medium !== null && g2Medium.kind === 'primer', JSON.stringify(g2Medium));
+  ok('and G-2 medium is no bigger than G-2 fresh',
+    !!g2Medium && !!g2 && g2Medium.sets <= g2.sets && g2Medium.repsMax <= g2.repsMax,
+    { medium: g2Medium, fresh: g2 });
 
   // Away from the game (G-3 or earlier) power is allowed again.
   ok('G-3 in-season allows small primer', decidePowerPrimer(ctx({ ...game, gOffset: -3 }))?.kind === 'primer');
