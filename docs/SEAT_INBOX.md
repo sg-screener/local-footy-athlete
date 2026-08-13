@@ -591,6 +591,28 @@ his instruction is standing authority, not history.**
     **Correct Bible `:1440`, and fix or retire QA scenario S7** (off-season with
     three team trainings — a week that cannot exist).
 
+    **✅ ALL THREE ARE BUILT — VERIFIED 2026-08-13 BY `audit`, NOT REBUILT.
+    NOTHING IS OWED HERE.** Checked because re-doing settled work is the thing
+    Sam has been angriest about; each piece names its receipt:
+    - **Bible `:1440` — CARRIES HIS RULING VERBATIM**, including *"the reason COD
+      is late-off-season-only is NOT team training — it is that the first four
+      weeks of off-season are recovery"* and *"no COD is required in-season for
+      anyone"*.
+    - **S7 IS RE-PHASED, NOT RETIRED** — `weekPlanQA.ts:854` is now
+      *"S7: Pre-season, 6 days, team Mon+Wed+Fri"* on
+      `preSeasonThreeTeamDaysAthlete()`. **The week that cannot exist is gone**
+      and the coverage it carried is kept, which is the better of the two
+      outcomes the order allowed.
+    - **THE TWO QUESTIONS ARE BUILT *AND MOUNTED*** — `src/rules/christmasBreakAsk.ts`
+      holds both halves keyed to one break year, and it has **production readers**
+      (`screens/home/useHomeScreen.ts`, `screens/home/HomeScreenV2.tsx`), so it is
+      not a field with no reader. Held by `test:christmas-break`.
+
+    **⚠ ONE THING WORTH KNOWING: THE BIBLE LINE WAS DELETED AND CAME BACK.**
+    `b62add9f` removed it; `4794a18a` restored it. **Anyone who checked this item
+    between 11:05 and 11:34 would have found the correction missing and rebuilt
+    it** — which is the second-order cost of that commit, after the 3,421 lines.
+
 30. **BLOCKED-BY: other-agent — AND THE BLOCK IS NOW ONLY ONE FILE WIDE.
     RE-MEASURED 2026-08-13 by the terminal, which is the session this marker
     names.** The marker was written when a PREVIOUS terminal session held three
@@ -753,11 +775,28 @@ his instruction is standing authority, not history.**
       "Resting Monday" whichever day was rested, and whether or not one was.**
       **Sam ruled fixture-only on 2026-08-13.**
 
-   **SO THE OPEN QUESTION IS NARROWER THAN THE ITEM AND IT IS NOT A RULING:** is
-   Sam's *"only 1 strength session … 2 games and 2 team trainings"* week
-   reachable now? **Unmeasured — the capacity fix drops one day (the game), and
-   his case needs the arithmetic to reach 1.** That is a measurement, and it is
-   the whole of what is left here. **OWNER: unclaimed.**
+   **AND THE HEADLINE IS STILL TRUE — I MEASURED IT RATHER THAN ASSUMING THE
+   SUB-BUILDS CLOSED IT.** `buildWeeklyExposureContract` called directly,
+   in-season, normal readiness:
+
+   | week | strength target |
+   | --- | --- |
+   | 4 selected days, 2 team, 1 game | 3 |
+   | 3 selected days, 2 team, 1 game | 2 |
+   | **2 selected days (both team nights), 1 game** | **2** |
+   | 5 selected days, 2 team, no game | 3 |
+
+   **IT FLOORS AT 2 AND NEVER REACHES 1, in the tightest week the input can even
+   express.** And it cannot express his week at all: **`gameDay` is
+   `number | null`** (`weeklyExposureContractBuilders.ts:35`), so a SECOND game
+   has no representation at this layer. **Two independent reasons, both now
+   numbers rather than adjectives.**
+
+   **SO: both named sub-builds landed, and the item's own title survives them.
+   What is left is ONE unit — let the strength target reach 1, and give the
+   contract input more than one game.** It changes generated output, so it owes
+   `test:scenarios` + `test:qa` both arms. **NOTHING IS OWED TO SAM: he already
+   ruled the behaviour in the quote at the top of this item. OWNER: unclaimed.**
 
    ── original below ──
 
