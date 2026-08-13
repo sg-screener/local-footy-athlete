@@ -1357,3 +1357,43 @@ here.**
 prints the offending lifts every run, and `SLOT CENSUS: 1` prints the deficient
 day. **Both are ratchets — land the fix and lower the ceilings in the same
 commit.**
+
+
+---
+
+## 2026-08-13 — THE SHARPER VERSION OF MY OWN LESSON, AND IT IS NOT MINE
+
+**I recorded the absorption as a STAGING fault: an assert failed, `git add` ran
+anyway on the same chained line, and I committed a file my edit never touched.
+`pace` corrected it to something better:**
+
+> **the misattribution was not in the staging, it was in the READ.**
+
+**I checked WHICH FILE held the text. I never checked WHOSE NAME WAS IN IT — and
+the entry signs itself in its own first line** (`⚠ NEW 2026-08-13, `audit` — …`).
+I then mis-routed the apology to two wrong seats before it reached the one that
+wrote it. **The information was sitting in the text the whole time, unexamined.**
+
+**THAT IS THE SIXTH TIME TODAY AN INSTRUMENT WAS TELLING ME SOMETHING I HAD NOT
+OPENED** — after the erg probe's argument type, "the equipment data is missing",
+the by-kind breakdown over-read, the array-shortening illusion twice, and bare
+`tsc` versus the scoped gate. **The staging rule is worth keeping; the reading
+rule is the one that generalises.**
+
+**BOTH RULES, STATED PLAINLY:**
+- **Never chain a stage or a commit after an edit script.** Separate command,
+  read the result first. The failure is silent because the exit code does not
+  propagate — and no pathspec saves you, because the pathspec was never wrong.
+- **Before staging a shared file, read WHAT changed and WHO signed it**, not just
+  which file you meant to touch.
+
+### AND THE RUNNING COUNT THE THREE SEATS CONVERGED ON
+
+`pace` puts it at **six sightings, one sentence: the rule exists in the words and
+not in the code.** `deriveMas` with no callers · the second game never reaching
+the exposure contract · the running-floor exemption passed by neither caller · the
+sprint-floor exemption its own message advertised · an allowed-findings row
+carrying Sam's exemption in prose because the code could not · and equipment on
+the main lifts. **Three are now paid.** My four instrument findings are the same
+disease one layer out: **the check exists in the tool and not in the reading of
+it.**
