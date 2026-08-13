@@ -91,6 +91,38 @@ the registry's header argues hard for exactly two states.
 flow that kills and relaunches… blocked today by the same simulator-binary
 blocker as everything else"*.
 
+**⚠ AND THE `LAW-standing-derivation` / `LAW-north-star` COLLAPSE QUESTION IS
+ANSWERED: THEY MUST NOT COLLAPSE.** The row calls itself a *"COLLAPSE CANDIDATE"*
+and its `wouldTake` says *"the same persisted-key ratchet would hold both"*,
+while warning that the three STOP conditions *"are what a guard must not
+flatten"*. **Read both and the answer is not close:**
+
+- **`LAW-north-star` is a PROPERTY** — *"store only decisions; derive everything
+  else"*. A property is exactly what a disk-level ratchet can hold, and
+  `test:persisted-inputs-schema` holds it.
+- **`LAW-standing-derivation` is a PROCEDURE** — *"when measurement FINDS a
+  stored representation feeding a computation, derive it and retire the stored
+  copy, **no seat round-trip**"* — plus three conditions under which the terminal
+  must **stop and ask** instead. **Its subject is what a PERSON does next on
+  finding a violation.**
+
+**A GATE CANNOT HOLD "PROCEED WITHOUT A ROUND-TRIP".** And the existing ratchet's
+own receipt already concedes the gap: *"the guard prevents silent GROWTH and does
+not itself decide that a newly proposed classification is legitimate."* **Growth
+is north-star. Retirement is standing-derivation, and nothing measures it.**
+
+**AND THE CLASSIFICATION HAS NO CLASS FOR THE THING THE LAW IS ABOUT** —
+`InputClass` is `profile | fact | decision | result`, and `result` means
+*"training results — what was done"* (`sessionFeedback`, `weightOverrides`),
+which are INPUTS. **There is no "computed output" class**, so a stored
+computation cannot even be named by the instrument that was proposed to guard it.
+
+**SO IT BELONGS WITH `LAW-coach-escalation`** — *"not mechanisable as a cell; it
+governs what a person does next"*. **Binding it to the ratchet would flatten the
+law into its neighbour and let the registry report 25 where nothing changed.**
+That is the whole failure mode item 13 exists to prevent, so it is recorded and
+NOT done.
+
 **⚠ AND `LAW-doc-truth`'s PRESCRIBED SHAPE IS REFUTED TOO — MEASURED BEFORE
 BUILDING, WHICH IS THE ONLY REASON IT COST TEN MINUTES.** Its `wouldTake` says
 *"the same shape as `test:copy-rulings-binding`"*. **The shape does not carry
