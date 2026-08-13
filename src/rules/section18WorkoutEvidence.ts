@@ -90,25 +90,57 @@ function conditioningRole(workout: Workout): Section18ConditioningRole {
   return 'planner_selected_core';
 }
 
+/**
+ * The categories a stored `Workout` can actually carry. **It is an INLINE union
+ * in `domain.ts`, not `AthleteConditioningCategory`** — the same word-list
+ * spelled twice, once named and once by hand, differing by `recovery_flush`.
+ * Deriving the key type from the field means this table cannot drift from the
+ * field it reads, whichever of the two lists moves.
+ */
+type WorkoutConditioningCategory = NonNullable<Workout['conditioningCategory']>;
+
+/**
+ * CATEGORY → STRESS, TOTAL AND COMPILER-ENFORCED — SEAT_INBOX item 61.
+ *
+ * **THIS WAS A `switch` WITH A `default: return 'unknown'`**, and that is item
+ * 61's defect in its own words: *"the gap is SILENT — an unmapped value becomes
+ * an empty result or a plausible neighbour instead of an error."* It covered 5
+ * of 6 categories, so `cod_decel` fell through the default and came back
+ * `'unknown'` with nothing to say so. **A `Record<>` over the union makes the
+ * compiler the enforcer; a switch with a default cannot.**
+ *
+ * ⚠ **OUTPUT-INERT ON PURPOSE. EVERY ANSWER BELOW IS WHAT THE SWITCH ALREADY
+ * RETURNED, `cod_decel` INCLUDED.** Its `'unknown'` is not a new opinion — it is
+ * the old default, said out loud. **Changing it is a RULING, not a tidy-up**:
+ * `cod_decel` is tier `A` in Sam's own authored `TIER_FOR_QUALITY`, which would
+ * argue `'hard'`, and R-078 (*"leave it"*, asked directly with the number in
+ * front of him) settles the neighbouring COD question and carries **"do not
+ * re-open without a new ruling from Sam"** after FOUR reverted attempts. So the
+ * gap is now NAMED and STILL OPEN rather than quietly filled by this seat.
+ */
+const CONDITIONING_STRESS_BY_CATEGORY: Readonly<Record<
+  WorkoutConditioningCategory,
+  (workout: Workout) => Section18ConditioningStress
+>> = {
+  vo2: () => 'hard',
+  glycolytic: () => 'hard',
+  sprint: () => 'hard',
+  tempo: () => 'moderate',
+  // Section 18 explicitly treats controlled long slow aerobic as moderate.
+  aerobic_base: (workout) => (workout.sessionTier === 'recovery' ? 'light' : 'moderate'),
+  cod_decel: () => 'unknown',
+};
+
 function conditioningStress(
   workout: Workout,
   role: Section18ConditioningRole,
 ): Section18ConditioningStress {
   if (role === 'none') return 'unknown';
   if (role === 'optional_flush' || role === 'optional_recovery_aerobic') return 'light';
-  switch (workout.conditioningCategory) {
-    case 'vo2':
-    case 'glycolytic':
-    case 'sprint':
-      return 'hard';
-    case 'tempo':
-      return 'moderate';
-    case 'aerobic_base':
-      // Section 18 explicitly treats controlled long slow aerobic as moderate.
-      return workout.sessionTier === 'recovery' ? 'light' : 'moderate';
-    default:
-      return 'unknown';
-  }
+  const category = workout.conditioningCategory;
+  // A workout with NO category is a genuine absence, not an unmapped member.
+  if (!category) return 'unknown';
+  return CONDITIONING_STRESS_BY_CATEGORY[category](workout);
 }
 
 function legacyUnknownWorkoutEvidence(workout: Workout): WorkoutSection18Evidence {
