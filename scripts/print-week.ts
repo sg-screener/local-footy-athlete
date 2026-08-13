@@ -837,4 +837,15 @@ function main(): void {
   }
 }
 
-main();
+/**
+ * ONLY WHEN RUN, NEVER WHEN IMPORTED.
+ *
+ * This was a bare `main()`, which meant `import { renderWeekAsPlainEnglish }`
+ * generated six weeks and rewrote `docs/printed-weeks/` as a side effect of the
+ * import. Seat `sim` tried the import for item 66, saw it republish this seat's
+ * output, and backed out rather than ship it. **A module that does its work on
+ * import is not a reusable seam — it is a script wearing one**, and the whole
+ * point of exporting the renderer was that item 66 could call it without
+ * inheriting item 65's run.
+ */
+if (require.main === module) main();
