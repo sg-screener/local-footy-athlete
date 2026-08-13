@@ -208,7 +208,7 @@ his instruction is standing authority, not history.**
     FIRST** and saying in the question what the grep returned. 89 rulings are
     already made; a re-ask is the one failure he has named more than any other.
 
-63. **OWNED BY THE SEAT HOLDING `src/utils/coachingEngine.ts` — `vocab` CLAIMED
+63. **OWNED BY `vocab` — RESTAMPED BY `seat`; the previous head named a FILE, not a person. CLAIMED
     THIS AND IS RELEASING IT, 2026-08-13. ⚠ R-089's ORDERING IS CORRECT AND IT
     CANNOT FIX WHAT IT WAS AIMED AT. NOTHING ASKS FOR SINGLE-LEG WORK ON ANY
     DAY.**
@@ -290,7 +290,7 @@ his instruction is standing authority, not history.**
     **REPORT WHAT YOU COULD NOT REACH.** A simulator is not his phone. If the
     furthest you can get is a simulator build, say that plainly and hand him the
     one command anyway.
-61. **ALL THREE SIGHTINGS ARE NOW PAID — `vocab`, 2026-08-13.** Equipment
+61. **✅ CLOSED — OWNED BY `vocab`. ALL THREE SIGHTINGS ARE NOW PAID, 2026-08-13.** Equipment
     `9c0d1776`; away `4087d998` (`test:away-span-ownership` 8/0); conditioning
     `fd070884` (total `Record<>`, output-inert). **The 93 was checked and is a
     LOWER BOUND** — 6 sites are structurally invisible to the census and its
