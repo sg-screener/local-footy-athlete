@@ -327,6 +327,72 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
     patternsCompletingLadder([]).size === 0);
 }
 
+// ── THE ORACLE POINTED AT WHAT THE APP ACTUALLY SHIPS ─────────────────────
+//
+// **EVERY CELL ABOVE FEEDS THIS ORACLE HAND-BUILT ROWS.** They prove it answers
+// correctly; **not one of them asks whether a week the app GENERATES passes it.**
+// That is the fixture-fidelity law one step on — a suite can be entirely green
+// about a rule the product breaks on every build, and this one was.
+//
+// **WHAT IT FOUND, 2026-08-13:** an off-season BODYWEIGHT week ships a
+// *"Lower Squat"* day missing `hinge`, `single_leg_knee` AND `single_leg_hip` —
+// three of the five slots R-014 names in Sam's own words (*"lower body strength
+// should have a hinge, a squat, a single leg knee, a single leg hip, and
+// accessory and/or some core"*). **The full-gym worlds pass**, so this is not the
+// ladder being unbuildable; it is the ladder going unchecked where equipment is
+// thin, and bodyweight single-leg work plainly exists (lunges, single-leg RDL,
+// step-ups).
+//
+// **A RATCHET, NOT A PIN.** It asserts the deficient count does not GROW. Pinning
+// the exact number would red on every legitimate improvement; asserting zero
+// today would be a knowingly-red cell in a chain suite. The number falls or the
+// cell reds — the same shape as the typecheck gate and the UNENFORCED count.
+{
+  const { generateProgramLocally } = require('../services/api/generateProgram') as any;
+  const CENSUS_BASE = {
+    trainingLocation: 'Commercial gym', equipment: ['Full Gym'],
+    equipmentSelectionCompleteness: 'complete', trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    teamTrainingDays: ['Tuesday', 'Thursday'], gameDay: 'Saturday',
+    recentTrainingLoad: 'Pretty consistent', conditioningLevel: 'Average',
+  };
+  const CENSUS_WORLDS: Array<[string, unknown]> = [
+    ['in-season full gym', { ...CENSUS_BASE, seasonPhase: 'In-season' }],
+    ['pre-season full gym', { ...CENSUS_BASE, seasonPhase: 'Pre-season' }],
+    ['off-season bodyweight', {
+      ...CENSUS_BASE, seasonPhase: 'Off-season',
+      equipment: ['Bodyweight Only'], teamTrainingDays: [],
+    }],
+  ];
+  /** Measured 2026-08-13. Lower it when a day is fixed; never raise it. */
+  const DEFICIENT_CEILING = 1;
+  let laddered = 0;
+  const deficient: string[] = [];
+  for (const [label, profile] of CENSUS_WORLDS) {
+    const program = generateProgramLocally(profile as never, {
+      todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1,
+    });
+    for (const workout of (program?.microcycles?.[0]?.workouts ?? [])) {
+      const kind = slotDayKindFor(String(workout.name ?? ''));
+      if (!kind) continue;
+      laddered += 1;
+      const coverage = sessionSlotCoverage(workout.exercises ?? [], kind);
+      if (coverage.missing.length > 0 || coverage.duplicated.length > 0) {
+        deficient.push(`${label} | ${workout.name} [${kind}] missing=${JSON.stringify(coverage.missing)} duplicated=${JSON.stringify(coverage.duplicated)}`);
+      }
+    }
+  }
+  // NON-VACUITY FIRST, AND IT IS THE WHOLE RISK HERE: a census that generated no
+  // laddered day would report ZERO deficient and look like perfect health.
+  ok('[non-vacuity] the census actually reached laddered days',
+    laddered >= 3, `laddered days seen: ${laddered}`);
+  ok('no generated day is missing MORE of Sam\'s ladder than it was',
+    deficient.length <= DEFICIENT_CEILING,
+    `${deficient.length} deficient of ${laddered} (ceiling ${DEFICIENT_CEILING})\n     ${deficient.join('\n     ')}`);
+  console.log(`\n  SLOT CENSUS: ${deficient.length} deficient of ${laddered} laddered days (ceiling ${DEFICIENT_CEILING})`);
+  for (const line of deficient) console.log(`    ${line}`);
+}
+
 console.log(
   `\nSession slot coverage: passed=${passed}/${passed + failures.length} failures=${failures.length}`,
 );
