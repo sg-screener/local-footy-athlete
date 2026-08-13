@@ -32,6 +32,50 @@ thing that actually bit.**
 
 ## STATUS
 
+### 2026-08-13 — R-076 LANDED (`b4ec714b`). NEXT: SUB-GROUP `isolation_upper`.
+
+**Sam ruled: *"face pull is shoulder work for sure"*.** Face Pull, Rear Delt Fly
+and Band Pull-Apart moved out of `horizontal_pull/accessory` into the
+`isolation_upper/accessory` shoulder block. **A pool slot is an
+INTERCHANGEABILITY claim** — rotation swaps freely inside a (slot, role) pair —
+so filing a face pull beside `Seated Cable Row` said they were substitutes.
+
+**MEASURED OUTPUT-NEUTRAL ON ITS OWN.** 3 worlds x 3 weeks, generated names
+byte-identical. It is a PREREQUISITE, not a fix — the name-lookup miss still
+masks rotation here.
+
+**⚠ THE LOOKUP FIX IS REFUTED FOR THE SECOND TIME, AND THE NEW REASON IS THE
+NEXT UNIT.** Re-applied on top of R-076 and measured:
+
+| before | after |
+| --- | --- |
+| `… Face Pulls` | `… Bicep Curl (Barbell)` |
+| `… Bicep Curls \| Tricep Pushdowns` | `… Bicep Curl (Barbell) \| Bicep Curl (Dumbbell) \| Hammer Curl` |
+
+**Three bicep curls and no triceps** — his two-squats shape in arm form.
+
+**THE CAUSE: `isolation_upper/accessory` is ONE pool holding THREE muscle
+groups.** The file's own comments name them (`// Bicep block`, `// Tricep
+block`, `// Shoulder / trap block`) and rotation ignores all three, so it will
+happily swap a tricep pushdown for a bicep curl. **`isolation_lower` already has
+the pattern to copy** — `exercisePoolsStrength.ts:436` documents rotation order
+groups (hamstring -> quad -> calf/ankle). Do the same for upper, THEN close the
+lookup miss, THEN re-run the composer before/after.
+
+**THE ORDER MATTERS AND IT IS NOW PROVEN TWICE:** the lookup miss is
+load-bearing — it is accidentally protecting rows from a rotation that would
+spoil them. Fix the POOL first, every time.
+
+### WHAT I DID *NOT* TOUCH, DELIBERATELY
+
+`Face Pull`'s `tag.movement` is still `horizontal_pull` in `exerciseTags`. Sam
+ruled INTERCHANGEABILITY (which pool), and the pool move is what stops the bad
+swap. The tag feeds injury filters and scoring, so changing it is a separate
+unit with its own measurement. `slotsFilledByRow` already returns
+`arm_or_shoulder` for it via the pool role, so nothing downstream needs the tag
+to move today.
+
+
 ### 2026-08-13 — NOW: starting item 34 (pattern coverage / census C7)
 
 **Lane: the rules engine.** Away, screens and flows are the desktop's — including
