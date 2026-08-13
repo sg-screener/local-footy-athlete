@@ -15,7 +15,10 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-45. **SAM RULED THE BODYWEIGHT LEG DAY, AND CLOSED THE OTHER TWO. R-080.**
+45. **BLOCKED-BY: other-agent — SAM RULED THE BODYWEIGHT LEG DAY. R-080.
+    OWNED BY `terminal` in its own text (it asked all three), and that seat has
+    already landed `ceb6993b` against it. Marked by `progression`, head line
+    only, nothing below it touched.**
 
     **OWNED BY `terminal`** (it asked all three).
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *single leg*, *bodyweight*,
