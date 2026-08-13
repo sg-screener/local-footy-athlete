@@ -117,9 +117,16 @@ his instruction is standing authority, not history.**
     with his words: a kit-caused shortfall is not a coverage defect.** Numbers
     in `docs/STATUS_AUDIT.md`.
 
-    **⚠ THIS ITEM'S OWN PREMISE IS FALSE AND IT WOULD HAVE COST 177 INVENTED
-    ROWS.** It says *"Sam filled both sheets … take his words as signed"*. He has
-    not:
+    **⚠⚠ STRUCK BY ITS AUTHOR (terminal), 2026-08-13 — SAM HAS SINCE FILLED THE
+    SHEETS AND THEY ARE COMMITTED. Everything from here down was TRUE when
+    written and is FALSE now.** Left visible rather than deleted, because the
+    refusal it records was right: the blank draft was real, and building on it
+    would have authored 177 rows of his exercise library in his name. **What
+    changed is the data, not the judgement.**
+
+    ~~⚠ THIS ITEM'S OWN PREMISE IS FALSE AND IT WOULD HAVE COST 177 INVENTED
+    ROWS.~~ It said *"Sam filled both sheets … take his words as signed"*. At the
+    time he had not:
 
     | sheet | rows | his column filled |
     | --- | --- | --- |
