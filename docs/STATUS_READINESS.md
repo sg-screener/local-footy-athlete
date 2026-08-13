@@ -566,7 +566,76 @@ that "I'm sure it's unruled" is not a reason to skip it.
 
 ---
 
-## 19. WHAT IS NOT MINE, AND WAS NOT TOUCHED
+## 20. ITEM 51 / R-014 — THE MISSING SINGLE-LEG WORK IS **ALL IN ONE DAY KIND**, AND THE PLANNER CANNOT ASK FOR IT
+
+**Sam's order:** *"a lower day still ships without single-leg knee or single-leg
+hip work in both in-season and pre-season. Finish it so sessions are built from
+Sam's slots, not a count."*
+
+**MEASURED IN A CLEAN WORKTREE at `27d4be3f`**, because `composer` recorded that
+the shared checkout gave 92 where a worktree at the same commit gave 88.
+**174 worlds** (3 phases x 5 day-counts x club/no-club x 3 kits x 2 weeks),
+**318 laddered days.**
+
+### THE PREMISE IS HALF RIGHT, AND THE HALF THAT IS WRONG REDIRECTS THE FIX
+
+**No judged day anywhere is missing single-leg work.** Across all 318, every
+deficient shape is `missing:["squat"]` with a DOUBLED `single_leg_knee` — and
+**every one is `Bodyweight Only` or `Dumbbells`, zero in `Full Gym`.** That is
+the EQUIPMENT class `composer` already handed to another owner, and the doubled
+single-leg knee is **what R-080 ORDERED** (*"he should be able to do more single
+leg knee things if he can only do one squat pattern"*).
+
+**THE REAL DEFECT IS IN THE DAYS THE ORACLE DOES NOT JUDGE AT ALL:**
+
+| day kind | days | judged? | as-lower verdict |
+| --- | --- | --- | --- |
+| **`Full Body Strength`** | **102** | **NO** | **ALL missing `single_leg_knee`; 68 also missing `single_leg_hip`** |
+| `Team Training + Lower Body Strength` | 6 | NO | **not** missing single-leg work |
+
+**And the phase is off-season + pre-season, NOT in-season** — the in-season
+lower days are clean. So the symptom is real, bigger than stated (102 days), and
+one phase off.
+
+### THE ROOT: THE PLANNER'S VOCABULARY CANNOT SPELL TWO OF HIS FIVE SLOTS
+
+A full-body day's intent reads
+`plannedPatterns: ["squat","hinge","push","pull"]`. **It never asks for
+single-leg work — because `MainStrengthPattern` is `squat | hinge | push | pull`
+and the single-leg slots are not in it.** `SessionSlot` (the ladder's vocabulary)
+has all five. **One concept, two word-lists, and the planner half cannot express
+what the ladder half checks** — which is exactly item 61's class, and it is why
+the composer is only half landed: `composer` filled slots by hardcoding rows in
+fallback branches, because the planner could not be asked.
+
+**WIDENING THAT UNION IS NOT A TAIL-END CHANGE:** 15 non-test files, including
+`weeklyExposureContractV2`, `section18SafetyPolicy` and
+`section18EffectiveWeekEvaluator` — so it changes **what counts as a main
+strength exposure**, and every unextended switch returns `undefined` (the
+`cod_decel` hazard, fourth sighting today).
+
+### AND SAM HAS ALREADY RULED THE SIZE, WHICH BOUNDS THE ANSWER
+
+Bible `:122`, his words: *"I wouldn't stack lower body strength (say 6-7
+exercises) with upper body strength (6-7 exercises)… **I'd prefer to just make
+that a full body day i.e. full body strength and 7 exercises**."*
+
+**So a full-body day is a CONSOLIDATION at ~7 rows — it cannot carry both full
+ladders (10 slots).** That closes `composer`'s parked *"what ladder does a
+full-body day answer to?"* halfway: the SIZE is ruled, the SELECTION is not.
+Today's 102 days spend their rows on `squat + hinge + push + pull + core`
+(+vertical push, +plyo). Adding both single-leg slots inside 7 rows means
+**dropping something he currently gets**, and which one is his call, not mine.
+
+**NOT BUILT, DELIBERATELY.** Either route is architectural: widen a 15-file
+domain union that feeds §18 counting, or re-prioritise a 7-row budget. The
+Elegant Solution Requirement is explicit — *"if the right abstraction is
+unclear, ask before editing"* — and `composer` independently reached the same
+parked question from the other side.
+
+---
+
+## 21. WHAT IS NOT MINE, AND WAS NOT TOUCHED
 
 - **`exercisePools.ts` / `equipmentAvailability.ts`** — modified in the shared
   tree by the equipment seat when this unit started. Never opened, never staged.

@@ -2000,6 +2000,61 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, `readiness` — YOUR FULL BODY DAY HAS NO SINGLE-LEG WORK AT
+  ALL (102 DAYS), AND FIXING IT MEANS DROPPING SOMETHING YOU CURRENTLY GET.**
+
+  **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *full body*, *mixed day*,
+  *ladder* — **one hit and it is not an answer** (line 376 merely lists
+  *"Full Body Strength"* as one of his seven signed session names). **No row
+  rules what a full-body day must contain.** Bible `:81`, `:94`, `:147`, `:150`
+  all PRESCRIBE full-body days; **`:122` rules their SIZE and nothing rules
+  their SLOTS.**
+
+  **⚠ THE ASK GATE FLAGGED THIS ENTRY AGAINST R-014, R-080 AND R-083. IT WAS
+  RIGHT TO, AND ALL THREE ARE OPENED AND CITED HERE — NONE ANSWERS IT:**
+  - **R-014** rules a LOWER ladder and an UPPER ladder, verbatim. **A full-body
+    day is neither**, and at his own 7-row size it cannot hold both (ten slots).
+    **What is new: which ladder a CONSOLIDATED day answers to.**
+  - **R-080** fills with single-leg knee work *"if he can only do one squat
+    pattern because of bodyweight"* — an EQUIPMENT case. **What is new: these
+    102 days include `Full Gym` athletes with every pattern available.** Nothing
+    is being substituted for a missing kit; the slot is simply never asked for.
+  - **R-083** removes patterns a bodyweight kit cannot train. **Same answer:
+    not an equipment case.** These athletes CAN do single-leg work and are not
+    being offered it.
+  - **R-084** (*"single leg hip thrust is an accessory"*) closes the single-leg
+    HIP pool at one exercise — `Single-Leg RDL` — and says he is not adding
+    more. **It rules what fills that slot and explicitly refuses to grow the
+    pool; it does not rule whether a full-body day has the slot.** Note it also
+    warns the slot *"is meant to repeat"*, so filling it here costs no variety.
+  - **R-086** (*"leave it at two"*) closes the bodyweight-capable set at
+    `Walking Lunges` and `Single-Leg RDL` — **which are exactly the two
+    exercises that would fill these slots.** It rules WHICH lifts may be used
+    without load; **it does not rule WHETHER a full-body day carries the slot at
+    all.** So the fill is already authored and only the SLOT is open — which is
+    what makes this a one-word answer rather than a design exercise.
+
+  **MEASURED, clean worktree, 174 worlds / 318 laddered days:** every
+  `Full Body Strength` day — **102 of them** — is missing `single_leg_knee`, and
+  **68 are missing `single_leg_hip` too.** No other judged day anywhere is
+  missing single-leg work. Off-season and pre-season.
+
+  **HIS OWN SIZE RULING IS THE CONSTRAINT.** Bible `:122`: *"I wouldn't stack
+  lower body strength (say 6-7 exercises) with upper body strength (6-7
+  exercises)… I'd prefer to just make that a full body day i.e. **full body
+  strength and 7 exercises**."* Seven rows cannot hold both full ladders (ten
+  slots). **Today those 7 go to squat + hinge + push + pull + core (+ vertical
+  push, + plyo).** Adding both single-leg slots means one of those goes.
+
+  **WHAT TO ASK HIM:** *"On a full body day — 7 exercises — do you want single
+  leg work in there? And if so, what comes out: the second big lift, or the
+  overhead press?"*
+
+  **DO NOT BUILD EITHER WAY UNTIL HE SAYS.** The alternative route — teaching
+  the planner the single-leg slots — widens `MainStrengthPattern` across 15
+  files including the §18 exposure contract, which changes what counts as a main
+  strength exposure. That is his call too, not a refactor.
+
 - **⚠ NEW 2026-08-13, `readiness` — SAYING "I'M ABSOLUTELY COOKED 9/10" PUTS THE
   ATHLETE THROUGH THE INJURY DOOR. TWO OF YOUR OWN FIXES DISAGREE ON ONE
   SENTENCE.**
