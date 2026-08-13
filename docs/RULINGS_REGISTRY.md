@@ -1426,8 +1426,31 @@ PER-SESSION TABLE.** running → nothing · ski → SkiErg · bike → BikeErg �
 Rower · air bike → Air Bike. **44 rows collapse to 5. Do not author a
 session-by-session list** — the modality is already on the template.
 **Search words:** conditioning equipment, erg, treadmill, modality, machine,
-which machine, rower, no erg. · `UNENFORCED` — the derivation is not built; the
-sheets record it and nothing reads it.
+which machine, rower, no erg. ·
+`BUILT` — **THE ROW WAS WRONG, NOT THE APP, AND IT WAS WRONG IN BOTH HALVES.**
+The derivation is `conditioningEquipmentForModality`
+(`src/utils/sessionEquipment.ts:87`), reading `CONDITIONING_META[name].modality`,
+and it is exactly his five rows. **There is no 44-row table to collapse — the
+collapse had already happened**, and 0 of the 90 conditioning templates carries a
+hand-written equipment list. Two seats opened it independently before building
+(`docs/STATUS_TERMINAL.md`, `docs/STATUS_AUDIT.md`) and neither rebuilt it, which
+is registry rule 2 working.
+**⚠ BUT NOTHING IN THE CHAIN WAS WATCHING THE MODALITY BRANCH.** The only
+in-chain cells fed an AUTHORED `equipmentRequired: ['Rower']` — **the
+per-session-table branch this ruling exists to forbid** — so the whole modality
+derivation could have been deleted and `test:session-execution-checklist` stayed
+green. Guarded now by 8 cells in that suite (79/0, in `test:bible`) which pass a
+BARE template name so the answer can only come from the modality:
+row -> `modality:row`, ski -> `ski`, bike -> `bike_erg`, air bike -> `air_bike`,
+**running -> NOTHING**, plus a cell asserting no template authors a list at all.
+**Mutation-proven both ways:** deleting the ski row reds 1 cell; making row
+return `bike_erg` reds 4, three of them pre-existing.
+**⚠ TWO ANSWERS EXIST BEYOND HIS FIVE, DECLARED AND PINNED so the count cannot
+grow quietly.** `mixed` (40 templates) derives nothing — defensible, a circuit is
+mostly bodyweight, but it is a sixth answer he did not rule. `swim` (1 template)
+derives nothing, and **a swim session needs a POOL**. One template, so it is
+named rather than chased. `treadmill` is inferred from the NAME, not the
+modality, and is a seventh path — worth his eye, not a defect.
 
 **R-083** · *"ya can't do much with overhead pushing or pull or even horizontal
 pulling without equipment - i can't account for everyone and if they want to
@@ -1439,8 +1462,32 @@ something else. **The app must SAY the kit is the cause** rather than shrink
 silently — this is the one case where a short session is not a defect.
 **Search words:** bodyweight, no equipment, no kit, pull-up, dip, inverted row,
 vertical push, vertical pull, horizontal pull, missing pattern, short day, gym
-membership, sign up to a gym. · `UNENFORCED` — one site delivered, the second
-blocked on the load/availability conflation.
+membership, sign up to a gym. ·
+`BUILT cf77855f` — **THE BLOCKER NAMED IN THIS ROW IS CLEARED.** *"one site
+delivered, the second blocked on the load/availability conflation"* was true when
+written; `cf77855f` separated the two questions. `equipmentClassFor` answers
+*"what does this lift LOAD with"* and was being asked *"can this athlete DO it
+with no kit"* — **wrong in BOTH directions**: a `Pull-Up` carries no load and
+needs a bar, a `Reverse Lunge` is load-classed dumbbell and needs nothing. That
+conflation is exactly why a bodyweight athlete was prescribed Pull-Ups, Dips and
+Inverted Rows. `EXERCISE_EQUIPMENT_REQUIREMENT`
+(`src/data/exerciseEquipmentRequirement.ts`) is now the separate availability
+field, read by `exerciseAllowedByEquipment`.
+**REMOVED, NOT SUBSTITUTED, is held at the oracle too:** `slotIsTrainableOnKit`
+(`src/rules/sessionSlotCoverage.ts`) drops a slot no legal exercise can fill, and
+it is DERIVED — it does not know the words "vertical pull", it asks the tagged
+library, so the day a bodyweight lift is authored the exemption disappears by
+itself.
+**GUARDED:** `test:edge-generation-equipment` (38/0, in `test:bible`) carries a
+per-row table under the heading *"LOAD IS NOT AVAILABILITY — R-083's second
+site"*, asserting each named lift's bodyweight verdict AND the reason, with
+`Push-ups` as the control that must stay legal.
+**⚠ THE SECOND CLAUSE IS NOT DELIVERED AND THE ROW MUST NOT PRETEND IT IS.**
+*"The app must SAY the kit is the cause"* — `SlotCoverage.unavailable` names the
+dropped slots and **has NO reader outside the rule module.** Nothing athlete-
+facing says *"you'd need a gym for this"*; the day just comes out shorter. **The
+removal is BUILT and the SAYING is not**, and by "done means the athlete can see
+it" that half is still owed. It is the one piece of this row left.
 
 **R-084** · *"single leg hip thrust is an accessory"* (2026-08-13) · **A
 SINGLE-LEG HIP THRUST IS AN ACCESSORY, NOT SINGLE-LEG HIP WORK.** Its existing
@@ -1514,3 +1561,45 @@ that is not in it is, mechanically, a ruling that does not exist.**
 **Each row above now carries a `Search words:` line** — the second half of the
 same lesson, learnt when R-079 was re-asked because it did not contain the words
 "team night" or "no club".
+
+---
+
+**R-087** · *"depends what's in the rest of the week / each week should contain
+all the main lifts i.e. squat, hinge, single leg knee, single leg hip, push pull
+in both horizontal and vertical then accessories for uppers and lowers and some
+core"* (2026-08-13, answering `readiness`'s awaiting-sam entry on which slots
+drop from a 7-exercise full body day) · **THE WEEK IS THE UNIT OF COVERAGE, NOT
+THE DAY. A FULL BODY DAY HAS NO FIXED TEMPLATE.**
+
+**THE COMPLETE WEEKLY SET, IN SAM'S WORDS:** squat · hinge · single-leg knee ·
+single-leg hip · horizontal push · horizontal pull · vertical push · vertical
+pull · upper accessory · lower accessory · core.
+
+**THIS ANSWERS THE QUESTION BY DISSOLVING IT.** `readiness` asked which two of
+the current seven come out to make room for the single-leg slots. **Sam's answer
+is that the seven are not a list to be edited — they are whatever the week has
+not covered yet.** A full body day placed after a lower day that already ran
+squat and hinge is a DIFFERENT SEVEN from a full body day that is the week's
+first strength session. **Any fix that hardcodes a full-body row list, however
+carefully chosen, contradicts this ruling on the day it lands.**
+
+**AND THIS IS WHY THE 102 FULL BODY DAYS ARE MISSING SINGLE-LEG WORK.** They
+were never asked for it, because a full-body day's intent is
+`plannedPatterns:["squat","hinge","push","pull"]` and `MainStrengthPattern`
+cannot say the single-leg slots. **The composer's job is not to add two rows to
+a template. It is to make a full body day ASK the week what is still open** —
+which is the same union-widening `readiness` measured, now with a stated purpose
+rather than a guessed row list.
+
+**Bible :122 sets the SIZE at 7 and Sam has not moved it.** Eleven slots into
+seven rows means a full body day cannot be the only strength day in a week and
+still cover everything — which is exactly why the answer depends on the rest of
+the week. **Coverage is owed BY THE WEEK. Where a week's structure cannot pay
+it, that is a real deficiency to report, not a template to pad.**
+
+**Search words:** full body, full body strength, seven exercises, 7 exercises,
+which exercises, what are the 7, template, slot list, weekly coverage, main
+lifts, all the main lifts, rest of the week, squat hinge single leg, MainStrengthPattern,
+plannedPatterns, composer, R-014, item 51.
+· `UNENFORCED` — no reader asks the week what is open before composing a full
+body day; `MainStrengthPattern` is still `squat|hinge|push|pull`.
