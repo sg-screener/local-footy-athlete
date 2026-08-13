@@ -2669,3 +2669,27 @@ implemented and committed by `arms`.** Reproducing the scan against the live
 queue now finds NOTHING. **Recorded as R-085 instead** — the ruling was in chat
 only, and a chat message is not durable. **Walking past it is the ownership
 rule working, and it is the same rule R-085 is about.**
+
+### R-086 — "LEAVE IT AT TWO", AND THE PIN GUARDS THE *FIX*, NOT THE BUG
+
+Sam, asked directly whether `Deadlift` and `Goblet Squat` should join
+`BODYWEIGHT_CAPABLE`: **"leave it at two"**. Recorded as **R-086** and pinned.
+
+**THE PIN IS AN EQUALITY, NOT A SUBSET, AND THAT IS THE WHOLE POINT.** The
+danger here is not someone deleting an entry — it is someone *completing* the
+list. The generalisation *"a missing LOADING implement is survivable, a missing
+APPARATUS is not"* reproduces **both** ruled rows, looks principled, and then
+silently legalises `Deadlift`, `Goblet Squat` and `Banded Bicep Curl` on a
+bodyweight kit. **It would pass the per-row table and be wrong.**
+
+**So the guard is aimed at the plausible fix, not at the original defect.**
+Mutation-proven: adding `Deadlift` reds the pin immediately.
+`test:edge-generation-equipment` 38/0.
+
+**AND I STRUCK MY OWN ANSWERED QUESTION** (the stop-check entry, settled by
+R-085). An answered question left open in `## AWAITING SAM` is a re-ask waiting
+to happen — that is how R-084 was re-asked verbatim on the day it was ruled.
+
+**MEASURED BEFORE COMMITTING, BOTH TIMES:** `test:ruling-registry` cell [3] is
+red at HEAD and **identical with or without my rows** — 7 re-asking questions,
+8 sites either way. Not mine, and not made worse.
