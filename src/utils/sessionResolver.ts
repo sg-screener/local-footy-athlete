@@ -2238,6 +2238,55 @@ function withoutTeamTrainingSegment(name: string | undefined): string {
   return kept.length > 0 ? kept.join(' + ') : String(name ?? '');
 }
 
+/**
+ * WHAT STANDS ON A DAY THE TRIP EMPTIED — R-075, Sam 2026-08-13.
+ *
+ * ***"Away has to replace the work it removes, not just delete it - your
+ * Saturday Rest Day is the wrong case."***
+ *
+ * **BOTH OF THIS APP'S PREVIOUS ANSWERS WERE THE SAME WRONG ANSWER.**
+ * `'none'` printed *"Training Day"* — the empty-day placeholder — and `'rest'`
+ * printed *"Rest Day"*. Two wordings of one hole. He does not want the hole
+ * named better; he wants it FILLED. **Away is a SUBSTITUTION, never a
+ * subtraction.**
+ *
+ * ── AND THE APP ALREADY KNEW THE ANSWER, ONE BRANCH OVER ──
+ * `_resolveDateRaw` answers *"a game slot was freed"* with exactly this call —
+ * `buildDerivedSession('prehab_accessories', …, 'Freed game slot', …)`. It never
+ * reached an away week only because it is gated to a TEMPLATE game with NO
+ * calendar mark, and an away-vacated fixture is a MARKED one. **A freed slot is
+ * a freed slot however it was freed**, so this reuses that owner rather than
+ * inventing a second one — no new machinery, no stored state, no §18 change.
+ *
+ * IT IS STILL DERIVATION, WHICH IS WHY IT MAY LIVE IN A READ PASS AT ALL. The
+ * session is BUILT on every read from the athlete's own context and never
+ * written; his mark, his fixture and his accepted week are untouched and all
+ * return the moment the fact lifts. `buildDerivedSession` is the resolver's own
+ * builder and is already called this way three lines of reasoning away.
+ *
+ * ⚠ WHAT THIS DOES NOT CLAIM. It fills the DAY; it does not re-plan the WEEK.
+ * The bigger half of R-075 — a club-less week whose §18 contract declares more
+ * core conditioning than a bye-build delivers — is measured, open, and shared
+ * with SEAT_INBOX item 28. **This is the day the athlete was looking at, not the
+ * whole ruling.**
+ */
+function freedByTheTrip(date: string, state: ScheduleState): Workout {
+  return buildDerivedSession(
+    'prehab_accessories',
+    date,
+    microcycleIdForDate(date, state),
+    'Freed by the trip',
+    // ⚠ THE FALLBACK IS NOT DEFENSIVE PADDING — IT IS THIS PASS'S REACH.
+    // `athleteContext` is REQUIRED by the builder (it reads `.injuries`) and is
+    // absent in the thin projection worlds this pass now runs in, which every
+    // OTHER caller in this file is shielded from by an earlier return. Reached
+    // it on the first run and it threw. `DEFAULT_ATHLETE_CONTEXT` was already
+    // imported here and read by nothing — the same authored-and-inert shape this
+    // week keeps finding.
+    state.athleteContext ?? DEFAULT_ATHLETE_CONTEXT,
+  );
+}
+
 function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[] {
   const spans = (state.temporarySourceFacts ?? [])
     .filter((fact) => 'factKind' in fact && (fact as { factKind?: string }).factKind === 'schedule' &&
@@ -2289,7 +2338,8 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
     // when the fact lifts.
     if (day.source === 'game' || day.indicator === 'game' ||
       day.workout?.workoutType === 'Game') {
-      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
+      return buildDay(day.date, day.dayOfWeek, today,
+        freedByTheTrip(day.date, state), 'gameProximity');
     }
     if (!day.workout) return day;
     const team = getTeamTrainingWorkoutState(day.workout);
@@ -2303,7 +2353,8 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
     // keeps its own half and loses the club's, renamed through the ONE owner of
     // that question, below.
     if (team.isTeamTrainingOnly) {
-      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
+      return buildDay(day.date, day.dayOfWeek, today,
+        freedByTheTrip(day.date, state), 'gameProximity');
     }
     return {
       ...day,

@@ -711,22 +711,47 @@ async function main(): Promise<void> {
   const gameWord = String(copy('day.headline.game'));
 
   // NON-VACUITY FIRST, AND IT IS THE WHOLE POINT: the day must read GAME at home,
-  // or "it does not read Training Day away" is true of a day that never changed.
+  // or anything said about the away side is true of a day that never changed.
   run('[15c] at home that Saturday reads GAME',
     headlineOn(homeState, '2026-08-15') === gameWord,
     { headline: headlineOn(homeState, '2026-08-15'), expected: gameWord });
-  run('[15d] away, it reads REST — never the empty-day placeholder',
-    headlineOn(awayState, '2026-08-15') === restWord
-      && headlineOn(awayState, '2026-08-15') !== trainingWord,
-    { headline: headlineOn(awayState, '2026-08-15'),
-      expected: restWord, forbidden: trainingWord });
-  // AND THE TYPED READ UNDERNEATH IT, so a copy change alone cannot make [15d]
-  // pass on a day that is still structurally a hole.
-  run('[15e] and the day is typed as rest, not merely worded as it',
-    gameAway?.source === 'rest' && gameAway?.indicator === 'rest'
-      && gameAway?.workout === null,
-    { source: gameAway?.source, indicator: gameAway?.indicator,
-      workout: gameAway?.workout === null ? 'null' : 'present' });
+
+  // ── [15d]/[15e] REWRITTEN ON SAM'S RULING R-075, 2026-08-13 ──
+  //
+  // ***"Away has to replace the work it removes, not just delete it - your
+  // Saturday Rest Day is the wrong case."***
+  //
+  // **THESE TWO CELLS ASSERTED "Rest Day" FOR ABOUT AN HOUR AND HE RULED IT
+  // WRONG.** They were written against the defect they could see — the
+  // *"Training Day"* placeholder — and picked the other empty-day word instead
+  // of asking what the day is FOR. **Two wordings of one hole is not a fix**, and
+  // a cell that pins the nicer wording would have frozen the defect in place
+  // with a green tick on it. Recorded rather than quietly rewritten, because the
+  // mistake is the lesson: **`day.headline` names a day that holds NOTHING, so
+  // asserting on it at all was a sign the day was still empty.**
+  //
+  // WHAT THEY ASSERT NOW IS THE RULING: away is a SUBSTITUTION. The day the trip
+  // empties carries WORK, and both empty-day words are forbidden by name.
+  const dayCarriesWork = (state: any, date: string) => {
+    const day = dayOn(state, date);
+    const rows = (day?.workout?.exercises ?? []).length;
+    return { day, rows };
+  };
+  const awaySat = dayCarriesWork(awayState, '2026-08-15');
+  run('[15d] away, that Saturday CARRIES WORK — neither empty-day word',
+    !!awaySat.day?.workout && awaySat.rows > 0 &&
+      headlineOn(awayState, '2026-08-15') !== restWord &&
+      headlineOn(awayState, '2026-08-15') !== gameWord,
+    { rows: awaySat.rows, headline: headlineOn(awayState, '2026-08-15'),
+      forbidden: [restWord, trainingWord, gameWord] });
+  // AND IT IS A REAL SESSION, NOT A NAMED EMPTY ONE. The half that stops [15d]
+  // passing on a workout object with no rows in it — which is exactly the
+  // green-and-empty shape this flow has already hit twice.
+  run('[15e] and it is a real session, not an empty shell',
+    !!awaySat.day?.workout && awaySat.rows >= 2 &&
+      awaySat.day.source !== 'rest' && awaySat.day.source !== 'none',
+    { source: awaySat.day?.source, indicator: awaySat.day?.indicator,
+      rows: awaySat.rows, name: awaySat.day?.workout?.name });
 
   // ── [16] THE CARD'S WORDS — Sam: *"it shouldn't show + team training"* ──
   //
