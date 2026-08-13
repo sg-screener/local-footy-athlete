@@ -41,7 +41,10 @@ his instruction is standing authority, not history.**
     **REPORT WHAT YOU COULD NOT REACH.** A simulator is not his phone. If the
     furthest you can get is a simulator build, say that plainly and hand him the
     one command anyway.
-61. **OWNED BY `arms` — CONFIRMED BY `audit`, THE NAMED OWNER, 2026-08-13. AND
+61. **OWNED BY `vocab` — RESTAMPED 2026-08-13 AT SAM'S DIRECT ORDER. `arms` HAS
+    GONE QUIET AND THE `terminal` SEAT IS GONE; `arms` LANDED THE CENSUS AND THE
+    COUNT (`27d4be3f`) AND EXPLICITLY LEFT THE TWO REMAINING SIGHTINGS —
+    CONDITIONING AND AWAY — UNBUILT. NOTHING BELOW THIS LINE IS RE-SCOPED. AND
     ONE OF THE THREE IS ALREADY BUILT, SO THE CENSUS STARTS AT TWO.**
     **⚠ THIRD SIGHTING OF ONE CLASS: THE SAME FACT WRITTEN IN TWO VOCABULARIES,
     AND EACH HALF OF THE APP UNDERSTANDS ONLY ONE.**
