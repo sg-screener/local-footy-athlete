@@ -1049,6 +1049,32 @@ DECLARATION keeps `readiness`; CAPACITY is `CapacityBand` / `capacity` /
 gate reds on any `readiness` compared against `'low'`/`'medium'`/`'high'`,
 because after the split the declaration is never a three-level band.**
 
+**AND THE CALL SITES ARE CUT — ALL THREE WRITERS, 2026-08-13, seat `readiness`.**
+`applyPatternBiases`, `applyReadinessBias` and `biasConditioningReadiness` each
+stepped the CAPACITY band down from session feedback. The vote they were really
+casting now travels as `recentFatiguePattern`, a peer of the fatigue signals the
+soft-deload counters already carried. Held by
+`test:progression-capacity-laundering`, 25 cells, 4 mutants killed; **one mutant
+survives and is named in the suite** (severing the resolver->input wire, which
+nothing catches because no suite generates a week from an athlete with real
+feedback history — L13 walker territory).
+
+**⚠ THE AUTHORITY FOR THAT CUT IS SAM'S OWN 2026-07-27 RULING, NOT A NEW
+DECISION, AND I NEARLY ASKED HIM FOR ONE.** I carried *"should a rough fortnight
+lower his capacity band?"* to him in **three separate reports** before grepping.
+It is answered twice, verbatim, in the text this very row is about:
+> *"a CAPACITY score computed from onboarding answers … **which reads no facts
+> at all and changes only when the profile changes**"* (Bible `:4964`)
+> *"**It changes only when the profile changes**, and it means 'this athlete's
+> baseline is low', not 'I am cooked today'"* (Bible `:3717`)
+
+**Session feedback IS a fact, and a fatigue streak is not a profile change.** The
+build follows the ruling; the question is WITHDRAWN as already settled.
+**This is the failure the ask gate exists to stop, committed by the seat that
+had just quoted the rule against it twice in the same session** — R-046 and
+R-062 were corrected precisely because their rows were trusted instead of
+measured, and then the same trust was extended to my own memory.
+
 **R-042** · Section 18 `illness_recovery` week-mode dosing **DELETED**. It
 predated the law and carried its own dosing — two representations, and the wrong
 one was running. · `BUILT` — `test:illness-recovery-mode`, green.
