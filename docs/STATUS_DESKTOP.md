@@ -935,3 +935,100 @@ be worth nothing if I exempted my own lane from it.
 **THE ORDER IS: settle the session flip → re-record with its four SHAs → then C8
 and item 26 land as clean single-cause diffs.** Both are named to their lines and
 neither needs re-diagnosing.
+
+
+---
+
+## 2026-08-13 — THE ORACLE ALREADY KNOWS, AND NOTHING READS IT. NEITHER LEG DAY HAS ANY SINGLE-LEG WORK.
+
+**The terminal refuted my pool hypothesis with a control run (reverting
+`exercisePoolsStrength.ts` to `bf1681c1^` reproduces the shape unchanged) and
+pointed me at `sessionSlotCoverage` as a cheap detector. Ran it. It is the
+sharpest statement of the whole problem:**
+
+    CURRENT  "Lower Hinge"   filled [hinge, accessory_or_core]
+                             MISSING [squat, single_leg_knee, single_leg_hip]
+    CURRENT  "Lower Squat"   filled [squat, accessory_or_core]
+                             MISSING [hinge, single_leg_knee, single_leg_hip]
+    GOLDEN   prehab day      filled [single_leg_knee, accessory_or_core]
+
+**BOTH LEG DAYS FILL 2 OF 5 SLOTS, AND BOTH ARE MISSING `single_leg_knee` AND
+`single_leg_hip`.** R-014 is Sam's own sentence: *"lower body strength should have
+a hinge, a squat, a single leg knee, a single leg hip, and accessory and/or some
+core"*. **Across two leg days in one week the athlete gets NO single-leg work at
+all.**
+
+**AND IT JOINS THE SESSION FLIP TO THE LEG DAYS — one finding, not two.** The
+golden's prehab day was filling `single_leg_knee`. **When it flipped to Mobility
+the week lost its ONLY single-leg knee coverage**, because neither leg day
+supplies it. So the ~14-diff regression is worse than "five rows lost": it is the
+last single-leg work in the week.
+
+**THE ORACLE IS RIGHT AND HAS NO BUILD-TIME CONSUMER.** `sessionSlotCoverage`
+would have named all of this — `missing: [squat, single_leg_knee, single_leg_hip]`
+— on every generated day. **Nothing calls it during generation.** That is the
+fourth authored-and-inert instrument today, after `DEFAULT_ATHLETE_CONTEXT`,
+`set_length_max_4_5_min` and `categoryToFlavour`. **It is also the file `b62add9f`
+deleted outright and the audit seat restored.**
+
+**SO THE HIGHEST-VALUE UNIT ON THE BOARD IS NOT "arms on leg days" — IT IS
+"nothing checks a day against Sam's ladder at build time".** The arms are a
+symptom of the same silence: the slots are unfilled, so whatever the pools hand
+over survives unchallenged. **The oracle exists, is correct, and is one call away
+from being a gate.**
+
+**NOT BUILT HERE — same measured block as items 42 and 26:** a build-time slot
+gate changes generated weeks and moves `test:power-counting`'s golden, which still
+holds an unresolved regression. **It is now the first thing to do after that
+golden is settled, ahead of both.**
+
+
+---
+
+## 2026-08-13 — `single_leg_hip` HAS EXACTLY ONE EXERCISE IN THE WHOLE REGISTRY
+
+**Measured across all 149 registry exercises, by asking `slotsFilledByRow` which
+of Sam's ladder slots each one fills:**
+
+| slot | exercises that can fill it |
+| --- | --- |
+| `hinge` | **7** — Deadlift, Trap Bar Deadlift, RDLs, Hip Thrusts, **Glute Bridge**, Kettlebell Swings, Speed Trap Bar |
+| `single_leg_knee` | **9** — Bulgarian Split Squat, Walking/Reverse Lunge, Step Ups, Slant Board Step-Down, Cossack Squat, Lateral Lunge, Single-Leg Squat (to Box) … |
+| `single_leg_hip` | **1** — `Single-Leg RDL`. **That is the entire supply.** |
+
+**A SLOT SAM NAMES IN HIS LADDER HAS ONE OPTION.** Anything that filters that one
+exercise out — equipment, an injury rule, rotation avoidance, a name-lookup miss
+— **makes the slot structurally unfillable, and nothing says so.** That is a
+fragility of a different kind from a selector bug: no amount of fixing the picker
+helps a pool of one.
+
+**AND IT SEPARATES THE CENSUS FINDING INTO TWO DIFFERENT PROBLEMS:**
+- **`hinge` and `single_leg_knee` missing is a SELECTOR failure.** Both have
+  bodyweight-capable options in supply — `Glute Bridge`, and six of the nine
+  single-leg-knee movements. The week could have filled them and did not.
+- **`single_leg_hip` missing may be UNAVOIDABLE.** One option, and if it is
+  excluded the slot cannot be filled by anything.
+
+**THE TERMINAL'S ADJACENT CONTROL WORLD FILLED BOTH** (`Glute Bridge` and
+`Single Leg RDL` on its bodyweight Lower Squat day), which is the proof the supply
+is reachable — **so my census world is a selector failure, not a data floor**, for
+at least two of the three slots.
+
+**WHAT IT WOULD TAKE:** more `single_leg_hip` movements in the registry
+(single-leg glute bridge, single-leg hip thrust, B-stance RDL — all bodyweight,
+all standard), or an explicit statement that the slot may go unfilled when its
+pool is empty. **Authored data, not code** — which is why it is recorded here for
+whoever owns the exercise registry rather than taken.
+
+### ⚠ AND I AM WEAKENING MY OWN SEQUENCING ARGUMENT, BECAUSE I HAVE DISPROVED IT
+
+**I told two seats, three times, that generation work must wait for the golden to
+be re-recorded or the causes become unreadable. My own `dba1e400` refutes that:**
+I predicted a −2 delta, measured exactly −2, and the cause was perfectly readable
+against a red golden with 291 diffs in it. **A new cause stays separable as long
+as the change STATES ITS OWN DELTA and the by-kind breakdown can show it.**
+
+**So the honest rule is narrower than the one I have been enforcing:** a change
+must be able to name what it moves in the golden — not wait for the golden to be
+clean. **Items 26 and 42 are still correctly held**, but for the smaller reason
+that neither has been measured for its delta yet, not because the golden is red.
