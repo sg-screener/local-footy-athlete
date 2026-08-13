@@ -38,6 +38,60 @@ his instruction is standing authority, not history.**
     **NOTHING IS OWED TO SAM.** ~~ORIGINAL~~ — archived verbatim to
     `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1).
 
+36. **THE `[13d]` RED IS PAID — AND THE PRESCRIBED FIX WAS REFUTED BY THE SAME
+    MEASUREMENT THAT PAID IT. `test:away-flow` IS 44/0.**
+
+    **REGISTRY-GREP: R-018, R-020, R-006, R-070/`:227`.** R-020 (*"yes clear team
+    training and games while away"* — the club goes, his own sessions stay) and
+    R-018 (*"the plan should change until their return date"*) are the two that
+    bite. **Neither is breached. No question for Sam.**
+
+    **THE ORDER SAID: "assert the athlete's own rows are a SUPERSET home→away,
+    not equal", and "state the +1 honestly — the fallback grew by TWO rows and
+    the week shows ONE". BOTH HALVES ARE ANSWERED BY DUMPING THE ROWS INSTEAD OF
+    THE TOTALS:**
+
+    | | rows |
+    | --- | --- |
+    | HOME | Lower Body Strength [4] · Team+Upper Pull [3] · Team+Upper Push [3] · Gunshow [6] · Prehab [5] = **21** |
+    | AWAY | Lower Body Strength [7] · Lower Squat [5] · Upper Body Strength [5] · Prehab [5] = **22** |
+
+    **ELEVEN ROWS LOST, ELEVEN GAINED.** Gone: Short Flush, Pull-Ups, Overhead
+    Press, DB Bench Press, Bicep Curl, and the entire six-row Gunshow arm day.
+    Arrived: Vertical Jump, 20 m Acceleration Reps, Continuous Aerobic Run,
+    Walking Lunges, Single Leg RDL, Nordic Lower, Explosive Push-up, Bench Press,
+    Classic 4x4.
+
+    **SO A SUPERSET REDS INSTANTLY — eleven of his own rows are not there.** And
+    **there is no arithmetic gap to explain**: the +1 is not a shared set that
+    grew, it is an eleven-for-eleven SWAP that nets one, so attributing it to a
+    fallback that grew by two rows is not supported by the rows.
+
+    **AND THE OLD CELL WAS PASSING BY COINCIDENCE — 21 == 21 over two completely
+    different weeks.** Its name claimed *"every row of his own training survives
+    the trip"*, which has never been true of this app. **The operator was not the
+    defect; the premise was.** Same shape as item 28's step 1, twice in one day:
+    an ordered fix aimed at a mechanism that measurement then said was not there.
+
+    **THE SWAP IS THE APP OBEYING SAM, NOT DRIFTING FROM HIM** — *"consider the
+    time they are away as building a new program and their old program is gone
+    for the time being"*. The club was carrying his conditioning and half his
+    upper volume; take it away and a REAL upper day has to appear (Friday's
+    optional arm day became core Upper Body Strength) and the app has to supply
+    the running the club used to (sprints, an aerobic run, a 4x4). **A week that
+    merely deleted the club would be the defect.**
+
+    **WHAT LANDED, and neither is a count range:**
+    - **`[13d]` the trip does not COST him training — his volume never falls.**
+      A one-sided floor. It still reds the day a trip starts eating his work,
+      which is the only reason the cell has ever existed.
+    - **`[13f]` the away week is RE-AUTHORED, not the home week minus the club.**
+      This is `[13d]`'s non-vacuity AND a pin: without it the floor sits green
+      over a week that merely subtracted two club nights — which is what
+      everyone believed was happening, for as long as the totals matched.
+
+    **THE FALLBACK IS UNTOUCHED** — `c69151d9` stands, exactly as ordered.
+
 35. **EQUIPMENT SCOPES · THE GUESSED SESSION CUT · THE MAS BLOCK CHECK.** Full
     text: `docs/SEAT_ORDERS_FULL_2026-08-13.md`; the block history and its two
     withdrawals: `docs/SEAT_ORDERS_PARKED_FULL_2026-08-13.md`.

@@ -495,14 +495,68 @@ async function main(): Promise<void> {
   // FOUR training days where the home week has five, because two of those five
   // were club nights; their gym halves redistribute across the days that
   // remain. **Counting days would have made "he lost a session" the law, when
-  // what he lost was two nights at a club he is nowhere near.** Rows are the
-  // honest unit: 21 either way.
+  // what he lost was two nights at a club he is nowhere near.**
+  //
+  // ── ⚠ REWRITTEN 2026-08-13, AND THE OLD CELL WAS PASSING BY COINCIDENCE ──
+  //
+  // It asserted `rows(away) === rows(home)` and its NAME claimed *"every row of
+  // his own training survives the trip"*. **The name was never true, and the
+  // equality was 21 == 21 over two COMPLETELY DIFFERENT ROW SETS.** Measured,
+  // by dumping both weeks rather than their totals:
+  //
+  //   HOME  Lower Body Strength [4] · Team+Upper Pull [3] · Team+Upper Push [3]
+  //         · Gunshow [6] · Prehab [5]                                  = 21
+  //   AWAY  Lower Body Strength [7] · Lower Squat [5] · Upper Body Strength [5]
+  //         · Prehab [5]                                                = 22
+  //
+  //   LOST   (11): Short Flush, Pull-Ups, Overhead Press, DB Bench Press,
+  //                Bicep Curl, and the whole six-row Gunshow arm day.
+  //   GAINED (11): Vertical Jump, 20 m Acceleration Reps, Continuous Aerobic
+  //                Run, Walking Lunges, Single Leg RDL, Nordic Lower,
+  //                Explosive Push-up, Bench Press, Classic 4x4, …
+  //
+  // **SO THE SEAT'S PROPOSED FIX — "assert a SUPERSET home→away" — IS REFUTED
+  // BY THE SAME MEASUREMENT.** A superset reds instantly: eleven of his own
+  // rows are gone. **AND THE +1 NEEDS NO ARITHMETIC EXPLANATION, because it is
+  // not a shared set that grew by one** — it is an eleven-for-eleven SWAP that
+  // happens to net +1, so attributing it to a fallback that grew by two rows is
+  // not supported by the rows themselves.
+  //
+  // **AND THE SWAP IS THE APP OBEYING SAM, NOT DRIFTING FROM HIM:** *"consider
+  // the time they are away as building a new program and their old program is
+  // gone for the time being"*. The club was carrying his conditioning and half
+  // his upper volume. Take it away and a REAL upper day has to appear (it did:
+  // Friday's optional arm day became core Upper Body Strength) and the app has
+  // to supply the running the club used to (it did: sprints, an aerobic run, a
+  // 4x4). **A week that merely deleted the club would be the defect.**
+  //
+  // WHAT IS ASSERTED INSTEAD IS THE THING THAT MATTERS AND IS TRUE: the trip
+  // must not COST him training. A one-sided floor, never a range — it still
+  // reds the day a trip starts eating his work, which is the only reason this
+  // cell has ever existed.
   const rowsIn = (program: any): number => workoutsOf(program)
     .reduce((total: number, workout: any) => total + (workout.exercises ?? []).length, 0);
-  run('[13d] and every row of his own training survives the trip',
-    rowsIn(awayWeek) === rowsIn(homeWeek),
+  run('[13d] the trip does not COST him training — his volume never falls',
+    rowsIn(awayWeek) >= rowsIn(homeWeek),
     { home: rowsIn(homeWeek), away: rowsIn(awayWeek),
       homeDays: trainingDaysIn(homeWeek), awayDays: trainingDaysIn(awayWeek) });
+  // AND THE WEEK IS GENUINELY RE-PLANNED, NOT "THE HOME WEEK MINUS THE CLUB".
+  //
+  // THIS IS THE NON-VACUITY FOR [13d] AND A PIN IN ITS OWN RIGHT. Without it,
+  // [13d]'s floor would sit green over a week that simply deleted two club
+  // nights and kept everything else — which is what everyone believed was
+  // happening, for as long as the totals matched. **It reds if away ever stops
+  // re-authoring and goes back to subtracting.**
+  const rowNamesIn = (program: any): string[] => workoutsOf(program)
+    .flatMap((workout: any) => (workout.exercises ?? [])
+      .map((row: any) => String(row?.exercise?.name ?? row?.name ?? '?')));
+  const awayNames = new Set(rowNamesIn(awayWeek));
+  const droppedFromHome = rowNamesIn(homeWeek).filter((name) => !awayNames.has(name));
+  run('[13f] the away week is RE-AUTHORED, not the home week minus the club',
+    droppedFromHome.length > 0 && rowNamesIn(awayWeek).some((name) =>
+      !new Set(rowNamesIn(homeWeek)).has(name)),
+    { dropped: droppedFromHome.length, homeRows: rowNamesIn(homeWeek).length,
+      awayRows: rowNamesIn(awayWeek).length });
   // AND THE DAYS DID FALL, ON PURPOSE — stated so the number above cannot be
   // read as "nothing moved". Two club nights left; the work did not.
   run('[13e] the trip costs him exactly the club nights and no more',
