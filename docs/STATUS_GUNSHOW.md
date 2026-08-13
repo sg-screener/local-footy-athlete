@@ -385,3 +385,61 @@ Recorded here instead, which is the only surface I own.
 
 **WHAT I DID NOT DO: edit a single held file.** Sam's order is real and it is
 answered by the seat already holding those files, three minutes ahead of me.
+
+---
+
+## 2026-08-13, 16:30 — ❌ I WAS WRONG. "THE NUMBER IS 7, NOT ELEVEN" IS RETRACTED — THE ROW SAID ELEVEN AND ELEVEN IS EXACT
+
+**`patterns` recorded on item 51: *"Eleven 3-row fallback branches is EXACT — 15
+branches"*. They are right and I am not.** I committed the opposite as a subject
+line (`d30c043e`) and told Sam the job was smaller than the row said. **Retracted
+here, in the same file that carried the claim.**
+
+### THE INSTRUMENT WAS TOO NARROW — TWICE, AND THE SECOND TIME I THOUGHT I HAD FIXED IT
+
+My first attempt was a `slice(0, 3)` grep. **I caught that one myself, called it
+"the wrong shape", and refused to report a number from it.** Then I wrote a
+parser, believed it because it was a parser, and **the parser was too narrow in
+exactly the same way.** It matched only `return [` at end-of-line, so it never saw
+the array-opens that sit behind a **ternary** or a nested block:
+
+| parser | branches found | 3-row |
+| --- | --- | --- |
+| mine, `return \[\s*$` only | **13** | **7** ← what I published |
+| corrected, also `? [` and `: [` | **17** | **11** |
+
+**Four array-open sites were invisible to me, and they were the ones I most
+needed to see.** Refusing the bad grep and then trusting the bad parser is the
+same error wearing a better costume — *a count taken for a record*.
+
+### AND THE TREE MOVED UNDER THE NUMBER TOO, WHICH IS WHY 7 LOOKED PLAUSIBLE
+
+Counting the corrected parser on **both** trees:
+
+| tree | branches | rows -> count |
+| --- | --- | --- |
+| **committed `HEAD`** | 17 | 1x2, **11x3**, 1x4, 4x5 |
+| **working tree (live, +29 uncommitted)** | 17 | 1x2, **7x3**, 1x4, **8x5** |
+
+**So 7 IS a real number — it is the number AFTER the live seat's uncommitted work
+lands.** Four more branches have already been rebuilt from 3 rows to 5 in the
+working tree. **My wrong instrument happened to land on the in-flight value, which
+is the most dangerous kind of wrong: right-looking, and right for no reason I
+could have defended.**
+
+### WHAT IS TRUE, FINAL
+
+- **R-013's row is EXACT on committed HEAD: eleven 3-row branches.** It is not
+  stale, it is not "directionally right and numerically stale" as I wrote. **It is
+  simply correct**, and my `e90d9223`/`d30c043e` characterisations of it are
+  withdrawn.
+- **The fix is landing live** — 11 -> 7 three-row branches sitting uncommitted in
+  another seat's tree right now.
+- **`patterns` owns this and is inside it.** Their count was taken on the
+  committed tree, which is the right tree to quote a row against.
+
+**THE LESSON, AND IT IS MINE:** I spent this session correcting other people's
+stale numbers, and the one number I published myself was the wrong one. **A row
+that survives five re-checks is more likely right than the instrument that just
+contradicted it** — and the cheap test I skipped was to count the branches BY HAND
+once, which would have taken a minute and refuted me on the spot.
