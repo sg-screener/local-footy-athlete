@@ -18,12 +18,25 @@ his instruction is standing authority, not history.**
 48. **BLOCKED-BY: other-agent — owned by `terminal` in its own text. HALF BUILT BY THE TERMINAL (its owner). R-084 NEEDS NOTHING; R-083 IS
     DELIVERED AT ONE SITE AND NEEDS A DIFFERENT SHAPE AT THE OTHER.**
 
-    **✅ WHAT IS BUILT — `188d6fad`, and the PROVE IT's second clause is met:**
-    the canonicaliser's restore no longer hands out a lift the athlete cannot do,
-    and **every laddered day now covers Sam's `:227` ladder — `SLOT CENSUS 1 -> 0`
-    of 6.** `EQUIPMENT CENSUS 5 -> 3 -> 1`. A leg day carries `Single-Leg RDL`
-    every week with no rotator objection, which is R-084 satisfied by doing
-    NOTHING — the pool of one is deliberate and nothing re-tags it.
+    **❌ WHAT WAS BUILT IS REVERTED — BOTH COMMITS MADE §18 REJECT THE WEEK.**
+    `a55d1a6c` and `188d6fad` are undone. A full chain sweep found they had
+    reddened **`test:section18-gateway` and `test:athlete-session-deletion`**,
+    which belong to other seats, with
+    `pattern_restore_failure:strength_patterns:0`. **Attributed by binary search
+    over 223 commits in a detached worktree, and it took TWO searches — the first
+    cause MASKS the second, so neutralising `equipmentSafeFallbackName` at HEAD
+    still reds and reads falsely as "not mine".**
+
+    **So `SLOT CENSUS 0/6` and `EQUIPMENT CENSUS 1` ARE VOID**, and the ceilings
+    went back with the code in the same commit, so no gate asserts a win that no
+    longer exists. **R-084 still needs nothing** — it was satisfied by the pool of
+    one being deliberate, which no code change touched.
+
+    **WHY REVERT RATHER THAN REPAIR:** a kit-impossible lift is visible and
+    survivable; **a week §18 REFUSES is not**. Two repair theories were built and
+    both refuted — the substitute does not stop classifying as the pattern and it
+    does not throw; a probe printed `Back Squat -> Back Squat`, the name coming
+    back UNCHANGED, so the restored row was identical either way.
 
     **⚠ R-083's FIRST CLAUSE IS NOT MET AND THREE ATTEMPTS FAILED — full record
     in `docs/STATUS_TERMINAL.md` (`b5a8f1d1`). Read it before attempt four.**
@@ -1635,10 +1648,13 @@ seat was wrong.
   re-asks.
 
   **1. A BODYWEIGHT ATHLETE STILL GETS `Overhead Press` AND `Pull-Ups`.**
-  Measured after today's fix (`a55d1a6c`), kit-impossible lifts fell 33 -> 18 and
-  every `Back Squat` is gone. **These two remain because their pools contain NO
-  bodyweight-legal sibling to substitute to** — the app looked, correctly, and
-  found nothing. It is a supply gap, not a picker bug.
+  **⚠ THE FIX THAT MEASUREMENT CAME FROM (`a55d1a6c`) IS REVERTED** — it made §18
+  reject the week — so "33 -> 18, every `Back Squat` gone" is VOID and the
+  `Back Squat` is back. **THE QUESTION IS UNCHANGED AND STILL HIS.** These two
+  remain because their pools contain NO bodyweight-legal sibling to substitute
+  to — the app looked, correctly, and found nothing. **That is a supply gap in
+  the vocabulary, not a picker bug, and no code change can close it**: under
+  R-027 the name must come from Sam.
   **What to send: a bodyweight vertical PUSH and a bodyweight vertical PULL.**
   (The app already ships `Push-ups` and `Inverted Row (Bodyweight)` for the
   HORIZONTAL planes, so the shape of the answer is known — the vertical ones are
