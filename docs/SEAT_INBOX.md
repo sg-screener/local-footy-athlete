@@ -15,6 +15,55 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+47. **SAM FINISHED THE EQUIPMENT MAP, AND CONDITIONING NEEDS NO MAP AT ALL.
+    R-082. 2026-08-13.**
+
+    **OWNED BY `terminal`.** Extends item 46 — build them together.
+
+    **R-082 — CONDITIONING EQUIPMENT IS THE MODALITY. HIS WORDS:**
+    > *"the equipment for conditioning is very simple whatever modality it
+    > chooses - thats the equipment needed and there's only 5 - running =
+    > bodyweight, ski = skiErg, bike = bikeErg, row = Rower and air bike = air
+    > bike"*
+
+    **SO THERE IS NO PER-SESSION CONDITIONING EQUIPMENT TABLE. It is DERIVED:**
+    | modality | equipment |
+    | --- | --- |
+    | running | *(bodyweight — needs nothing)* |
+    | ski | SkiErg |
+    | bike | BikeErg |
+    | row | Rower |
+    | air bike | Air Bike |
+    **44 rows collapse to 5.** Do not author a session-by-session list — that is
+    the second-representation defect this repo keeps finding. **The modality
+    already exists on the template; read it.**
+    **AND IT CLOSES A REAL GAP:** an athlete with no erg gets running work and
+    nothing else, without anyone maintaining a list.
+
+    **THE STRENGTH MAP IS AUTHORED AND COMPLETE.** Sam filled both sheets —
+    `docs/EXERCISE_EQUIPMENT_FOR_SAM.md` and `..._PART2.md`. **Take his words as
+    signed; do not re-guess a row he wrote.** His corrections to the existing 26
+    are authoritative over what is in the code today.
+
+    **⚠ TWO MORE TAGS FROM HIS EDITS, ON TOP OF ITEM 46's SIX:** `dip_bars`
+    (Dips) and `rings_trx` (Inverted Row). **Eight new tags in total** — rack,
+    trap_bar, swiss_ball, ab_wheel, back_extension_bench, sandbag, dip_bars,
+    rings_trx. **Pre-tick dip_bars and rings_trx on commercial gym only.**
+
+    **⚠ AND THE SEAT'S OWN FILTER WAS WRONG — RECORDED SO THE LIST IS NOT TRUSTED
+    BLIND.** Part 2's "conditioning" section was built by matching the word
+    `Row`, so it swept in **Barbell Row, Chest Supported Row, Chest-Supported DB
+    Row, Seated Cable Row, Side Plank Row and Single-Arm DB Row** — six STRENGTH
+    exercises listed as conditioning sessions. **They are strength rows and take
+    strength equipment** (barbell / dumbbells / cables / bench). Sam's own edits
+    already give most of them. **Check the strength sheet covers all six before
+    building.**
+
+    **PROVE IT:** an athlete with no erg and no treadmill still gets running
+    conditioning; an athlete with an erg only gets erg work; and no conditioning
+    session carries a hand-written equipment list.
+
+
 45. **BLOCKED-BY: other-agent — HALF BUILT BY THE TERMINAL (its owner) — THE
     NO-DUPLICATE HALF IS DONE, THE "TWO OR MORE" HALF IS NOT, AND IT IS GATED ON
     THE EQUIPMENT FIX.**
@@ -240,8 +289,32 @@ his instruction is standing authority, not history.**
     across 17 scenarios; the S5/S6 `_under` findings are among the 11.
     **NOTHING IS OWED TO SAM.**
 
-41. **BLOCKED-BY: other-agent — CENSUS C6, OWNED BY `progression`, WHO HAS
-    ALREADY VERIFIED THE PREMISE AND MEASURED THE DEFECT.**
+41. **✅ CENSUS C6 IS FIXED AND SHIPPED — `cd559cb2`, `progression`, 2026-08-13.
+    THE RESIDUAL IS LOCATED AND HANDED TO §18.**
+
+    **THE DEFECT IS GONE.** Measured either side, same seed, same week, total
+    strength sets: a Thursday declaration used to HALVE the Monday and Tuesday
+    already trained (Mon 14->6, Tue 8->4); it now leaves them (14->13, 8->7)
+    while Thu/Fri stay properly deloaded (5->2, 11->4). Held by
+    `test:deload-week` 44/0 — including *the days INSIDE the window still ARE
+    deloaded*, so the outside cell cannot pass over a week nothing deloaded.
+    Mutation-proven. **A prerequisite shipped first (`9d566afd`): "Wrecked" was
+    getting ONE day instead of seven, which is also why this cell can attribute
+    at all.**
+
+    **⚠ ONE RESIDUAL REMAINS AND IT IS §18's, NOT THIS SEAT'S.** ~1 set/day on
+    days outside the window, traced to `strengthIntensityCeiling = 'Moderate'`
+    (`section18SafetyPolicy:197`, fed by `coachingEngine:789`, read at
+    `derivedWeekContract:338`). **R-063 says that CEILING is correct** — counts
+    are structure, a deload shrinks the work not the count — **so only its SCOPE
+    is wrong: it covers the calendar week instead of the window.** Same class as
+    C6, one layer up. **A week's exposure contract is legitimately week-shaped,
+    so making its ceiling day-aware is a DESIGN call in §18, not a threading
+    change.** Full trace and three refuted theories in
+    `docs/STATUS_PROGRESSION.md`.
+
+    ~~BLOCKED-BY: other-agent — CENSUS C6, OWNED BY `progression`, WHO HAS
+    ALREADY VERIFIED THE PREMISE AND MEASURED THE DEFECT.~~
     Marked by `desktop` so the scan walks past an item with a live owner rather
     than counting it as free work. Nothing here is mine and nothing is asked of
     Sam.
