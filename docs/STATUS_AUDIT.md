@@ -354,6 +354,73 @@ import a suite's `support/` prelude first. **Do not add it to `src/` permanently
 — run it, read it, delete it**, and note that a stray `.ts` at the repo root is
 one `git add -A` from another seat's commit (mine was removed within the minute).
 
+### ✅ ITEM 28-C1 — MEASURED ON PRE-SEASON, AND **BOTH** STANDING EXPLANATIONS ARE REFUTED
+
+**The probe re-run through `src/__tests__/` (the door that works), 4 worlds x
+4 weeks, then DELETED — `src/` verified clean of it.**
+
+| world | cond pieces | STANDALONE days | COMBINED | EMPTY days | categories | **cod_decel** |
+| --- | --- | --- | --- | --- | --- | --- |
+| pre-season no club, 5d | 11 | **11** | **0** | 12 | aerobic_base 4, tempo 5, vo2 2 | **0** |
+| pre-season no club, 6d | 11 | **11** | **0** | 12 | aerobic_base 4, tempo 5, vo2 2 | **0** |
+| pre-season no club, 4d | 8 | **8** | **0** | 16 | tempo 5, vo2 2, aerobic_base 1 | **0** |
+| **CONTROL — with club** | 4 | 4 | 0 | 12 | aerobic_base 4 | **0** |
+
+**THE CONTROL IS THE NON-VACUITY HALF and it behaves:** add a club and
+conditioning collapses 11 -> 4, all `aerobic_base`. So the probe is reading a
+real difference, not a constant.
+
+**REFUTATION 1 — "NO STANDALONE SLOT" IS FALSE HERE.** 28-C1b measured
+off-season and found conditioning *"entirely COMBINED (`standalone=0`)"*, and
+named that the wall. **In pre-season it is the exact opposite: `standalone=11`,
+`combined=0`.** Every conditioning piece is already a standalone slot.
+
+**REFUTATION 2 — "SPARE ROOM: NONE" IS FALSE HERE.** 28-C1b measured a six-day
+off-season week producing *"SIX workouts and ZERO rest days"* and concluded
+*"place if there is room can never fire"*. **Pre-season no-club leaves 12 EMPTY
+DAYS across 4 weeks.** There is room.
+
+**SO THE ONLY SURVIVING EXPLANATION IS SELECTION ORDER, WHICH IS WHAT 28-C1
+SAID.** 11 standalone slots, 12 empty days, COD permitted on every call, and it
+is placed ZERO times — because it sits last in the pool and `aerobic_base`,
+`tempo` and `vo2` above it are always eligible, and both consumers take the
+FIRST allowed.
+
+**⚠ AND THIS UNBLOCKS THE SHAPE SAM ACTUALLY AUTHORISED, WITHOUT REORDERING.**
+28-C1b reverted its placement pass because it *"buys nothing while COD is
+zero"* — **measured on off-season, where there was no room.** Sam's own words are
+*"place if there is room, drop first when there is not"*. **There IS room in
+pre-season, so his sentence can now be implemented literally: a guarded pass that
+places COD into spare capacity, still ranked last so it is still the first thing
+cut.** That is not the barred "promote it above aerobic work".
+
+**⚠ ONE ODDITY, NOT A RESULT — the 5-day and 6-day worlds returned IDENTICAL
+numbers** (11 pieces, 12 empty). That may be a real cap or my override may not
+have taken. **Do not build on it; re-measure it deliberately if it matters.**
+
+### ⚠ THE NAME `audit` IS ALREADY AMBIGUOUS — TWO SEATS ARE STAMPING IT
+
+**Sam's reason for the stamp was *"nobody can see what you've done"*. As of today
+it is 10 commits, and only EIGHT are this seat's.**
+
+- **MINE (8):** `4794a18a`, `d15b1a3f`, `c802a08a`, `15d32ef2`, `63fe3fba`,
+  `b19109d4`, `d7953e9d`, `9c865a84`.
+- **NOT MINE (2):** `8bf8548b` (11:48) and `569c27b4` (11:55) — the MAS /
+  census-C2 work, which creates `src/rules/masPace.ts`. **This seat never touched
+  that file.**
+
+**HOW IT HAPPENED, and it is nobody's fault:** I renamed `STATUS_AGENT3.md` ->
+`STATUS_AUDIT.md` at 11:34 and stamped `Agent: audit`. A seat that was working
+the old file picked up the new name from it 14 minutes later. **The desktop seat
+checked and correctly reports it never wrote a `STATUS_*` file at all** — so my
+earlier note blaming an unnamed writer was wrong, and this is the correction.
+
+**WHY IT MATTERS RATHER THAN BEING TIDY-UP:** `git` cannot separate us — every
+commit here is authored `sg-screener` — so **the stamp is the ONLY attribution
+that exists**, and a shared stamp is worth less than no stamp, because it reads
+as certainty. **This needs Sam or the seat to allocate names, not me to
+unilaterally take one.**
+
 ### ITEM 28-C1 — THE WALL IS NAMED TO THE LINE, AND THE STANDING BAR MAY HAVE EXPIRED
 
 **READ-ONLY THIS SESSION. NOTHING IN `coachingEngine.ts` WAS TOUCHED** — a sweep
