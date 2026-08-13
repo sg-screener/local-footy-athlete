@@ -45,6 +45,46 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ THE "FAILS OPEN" CONCERN IS **REFUTED** — there are TWO injury mechanisms, and the untagged 34 are covered by the other one
+
+**THE CENSUS, done properly this time.** My first attempt imported
+`EXERCISE_POOLS`, which **does not exist** — the pools are separate exports
+(`BICEPS_POOL`, `GROIN_ADDUCTORS_POOL`, …), so the walk returned zero and *"0
+untagged"* was void. **Corrected instrument: 14 arrays, 90 distinct pooled
+exercises, 34 with no `EXERCISE_TAGS` entry.**
+
+**AND THE 34 ARE NOT UNPROTECTED. THERE IS A SECOND MECHANISM AT A DIFFERENT
+LAYER:**
+
+    exercisePools.ts:309   ex('jefferson-curl', 'Jefferson Curl', … ['lower_back','hamstring','neck'])
+    sessionBuilder.ts:408  if (ex.contraindications.some(c => injuryTags.has(c))) return false;
+
+**The pool entry carries its own contraindications and the SELECTOR reads them —
+refusing the exercise before it is ever chosen.** Spot-checked across the
+loadable ones, which is where risk actually lives:
+
+| exercise | pool contraindications |
+| --- | --- |
+| Jefferson Curl | `lower_back, hamstring, neck` |
+| Dead Hang | `shoulder, elbow` |
+| ATG Split Squat | `knee, hip` |
+| Dumbbell Pullovers | `shoulder, ribs` |
+| Adductor Rockback | `groin` |
+
+**SO MY OWN "SILENT SAFETY GAP" FRAMING WAS WRONG.** `injuryWorkoutFilter` fails
+open on `'unknown'` — that part is true and traced. **But it is the FILTER over an
+already-built week, not the only guard.** The SELECTOR refuses contraindicated
+exercises at the point of choosing, using a field the tags map never held.
+**Two mechanisms, two layers, and I had measured one and described the system.**
+
+**SIXTH SIGHTING OF THE LAYER LESSON TODAY — and the fourth time it has turned an
+athlete-facing alarm into a non-event.** The remaining 30 untagged are stretches,
+breathing and foam rolling, where a caution is arguably unnecessary anyway.
+
+**WHAT IS ACTUALLY LEFT:** a documentation question, not a defect. Two injury
+mechanisms exist and neither names the other. **That is worth a line in whichever
+file a future reader opens first — not a fix.**
+
 ### ⚠ THE INJURY FILTER FAILS **OPEN** ON AN UNTAGGED EXERCISE — traced end to end, and the population is UNMEASURED
 
 **Traced from the one real red to the behaviour, three hops, each read not
