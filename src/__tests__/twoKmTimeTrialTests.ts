@@ -56,6 +56,8 @@ import {
 import { EXERCISE_CUES } from '../data/exerciseCues';
 import { isSelectable } from '../data/selectableExerciseVocabulary';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
+import { composeConditioningRows } from '../rules/conditioningSelection';
+import { parseMasBand, personalPaceLine } from '../rules/masPace';
 import {
   auditWeekAgainstCaps,
   countWeeklyExposures,
@@ -642,6 +644,208 @@ console.log('\n[22] LOGGING A RESULT — the athlete\'s real run beats their ans
   const absurd = recordTimeTrialResult(95, '2026-08-03');
   ok('an impossible logged time is refused, not stored',
     !absurd.ok && !absurd.answer, String(absurd.answer?.seconds));
+}
+
+console.log('\n[23] THE PARSE — the sheet\'s own words, and a refusal for the ones that are not MAS');
+{
+  // NON-VACUITY FIRST. Every cell below is about reading authored strings, so
+  // if the sheet stopped carrying MAS bands the whole block would pass over
+  // nothing. Count them out of the REAL templates, not a fixture.
+  const authored = CONDITIONING_TEMPLATES
+    .map((t) => t.intensity)
+    .filter((text) => parseMasBand(text) !== null);
+  ok('the conditioning sheet really does prescribe %MAS',
+    authored.length >= 10, `parsed ${authored.length} of ${CONDITIONING_TEMPLATES.length}`);
+
+  const everyMasRowParses = CONDITIONING_TEMPLATES
+    .filter((t) => /%\s*MAS\b/.test(t.intensity))
+    .every((t) => parseMasBand(t.intensity) !== null);
+  ok('and every row that says "% MAS" yields a band',
+    everyMasRowParses);
+
+  // RANGE BEFORE POINT. Trying the point pattern first reads '90-100% MAS' as a
+  // flat 90 and the athlete is handed the bottom of their own band as if it
+  // were the prescription.
+  ok('a range is a range, not its first number',
+    JSON.stringify(parseMasBand('90–100% MAS — even splits'))
+      === JSON.stringify({ lowPct: 90, highPct: 100 }),
+    JSON.stringify(parseMasBand('90–100% MAS — even splits')));
+  ok('a single figure is a point',
+    JSON.stringify(parseMasBand('110% MAS')) === JSON.stringify({ lowPct: 110, highPct: 110 }));
+  ok('and the sheet\'s "≈" prefix does not hide it',
+    parseMasBand('≈100% MAS')?.lowPct === 100);
+
+  // FIRST-MATCH-WINS HIDES ITS ORDERING — so feed it a string that matches two
+  // rules. Both of these authored rows carry a SECOND percentage that is not a
+  // MAS percentage, and reading the wrong one prices a run off a heart rate.
+  ok('a trailing HR band does not steal the MAS one',
+    JSON.stringify(parseMasBand('65–80% MAS; 70–85% HRmax; conversational'))
+      === JSON.stringify({ lowPct: 65, highPct: 80 }),
+    JSON.stringify(parseMasBand('65–80% MAS; 70–85% HRmax; conversational')));
+  ok('nor does a trailing "HR 90–95% max"',
+    JSON.stringify(parseMasBand('90–100% MAS; HR 90–95% max late'))
+      === JSON.stringify({ lowPct: 90, highPct: 100 }));
+
+  // THE REFUSALS. Twenty-odd authored rows carry a percentage that is NOT a
+  // fraction of a 2km pace. Pricing a max-velocity sprint at 95% of MAS would
+  // be worse than saying nothing at all.
+  ok('"95–100% maximal" is not a MAS band', parseMasBand('95–100% maximal') === null);
+  ok('"90–95% — mechanics-gated" is not a MAS band',
+    parseMasBand('90–95% — mechanics first, speed follows') === null);
+  ok('a bare HR band is not a MAS band', parseMasBand('70–85% HRmax') === null);
+  ok('prose with no figure yields nothing',
+    parseMasBand('Maximal — sets should mirror each other') === null);
+
+  // THE REAL INPUT IS THE ROW'S NOTES, NOT A BARE INTENSITY. `joinNotes` puts
+  // the Intensity line ahead of the effort cue, and one authored cue says "pace
+  // it off your actual MAS" — no figure, but the same token.
+  const composed = composeConditioningRows(
+    CONDITIONING_TEMPLATES.find((t) => t.intensity === '110% MAS')!,
+    '2026-08-13',
+  );
+  const headline = composed[composed.length - 1];
+  ok('the composed row really carries the intensity words',
+    (headline.notes ?? '').includes('110% MAS'), headline.notes);
+  ok('and the band parses straight out of the notes blob',
+    parseMasBand(headline.notes ?? '')?.lowPct === 110);
+  ok('a cue that says MAS with no figure changes nothing',
+    JSON.stringify(parseMasBand('Intensity: 65–80% MAS\nThis is engine work — pace it off your actual MAS, not what feels good on rep 1.'))
+      === JSON.stringify({ lowPct: 65, highPct: 80 }));
+}
+
+console.log('\n[24] THE PACE — his own number, and it says which kind of number it is');
+{
+  const measured: TwoKmTimeTrialAnswer = {
+    seconds: 480, recordedOn: '2026-08-13', source: 'onboarding',
+  };
+  // 7200/480 = 15.00 km/h. 90% = 13.5, 100% = 15.
+  const line = personalPaceLine({
+    intensityText: 'Intensity: 90–100% MAS — even splits',
+    answer: measured,
+    experienceLevel: '1-2 years',
+  });
+  ok('a measured time becomes a pace band', line === 'Your pace: 13.5-15 km/h', String(line));
+
+  // THE HONESTY BRANCH. `DerivedMas.source` was written to carry exactly this
+  // and had no consumer either — an athlete reading Sam's default for their
+  // level must not be shown it with a measurement's confidence.
+  const skipped = personalPaceLine({
+    intensityText: 'Intensity: 90–100% MAS — even splits',
+    answer: undefined,
+    experienceLevel: '1-2 years',
+  });
+  ok('a skipped trial says Estimated, not Your',
+    skipped === 'Estimated pace: 13.5-15 km/h', String(skipped));
+  ok('"haven\'t tested" is the same estimate — a stored null is not a measurement',
+    personalPaceLine({
+      intensityText: '90–100% MAS',
+      answer: { seconds: null, recordedOn: '2026-08-13', source: 'onboarding' },
+      experienceLevel: '1-2 years',
+    }) === 'Estimated pace: 13.5-15 km/h');
+
+  // The estimate is Sam's ladder, so it MOVES with the level rather than being
+  // one number wearing four labels.
+  const beginner = personalPaceLine({
+    intensityText: '90–100% MAS', answer: undefined, experienceLevel: 'Complete beginner',
+  });
+  const advanced = personalPaceLine({
+    intensityText: '90–100% MAS', answer: undefined, experienceLevel: '5+ years',
+  });
+  ok('the estimate is slower for a beginner than for an advanced athlete',
+    beginner !== advanced && beginner === 'Estimated pace: 12.3-13.7 km/h',
+    `${beginner} vs ${advanced}`);
+
+  // A POINT BAND GETS A POINT SENTENCE. "16.5-16.5 km/h" is not a thing anyone
+  // would write down.
+  ok('a single-figure band reads as one number',
+    personalPaceLine({
+      intensityText: '110% MAS',
+      answer: { seconds: 435, recordedOn: '2026-08-13', source: 'session_log' },
+      experienceLevel: '2-5 years',
+    }) === 'Your pace: 18.2 km/h',
+    String(personalPaceLine({
+      intensityText: '110% MAS',
+      answer: { seconds: 435, recordedOn: '2026-08-13', source: 'session_log' },
+      experienceLevel: '2-5 years',
+    })));
+
+  // DERIVED AT THE READ IS THE WHOLE ARCHITECTURE. A pace written into a
+  // program at generation would still say 13.5-15 after a faster run.
+  const faster = recordTimeTrialResult(402, '2026-08-14');
+  ok('logging a faster 2km reprices the same row with no regeneration',
+    personalPaceLine({
+      intensityText: 'Intensity: 90–100% MAS — even splits',
+      answer: faster.answer,
+      experienceLevel: '1-2 years',
+    }) === 'Your pace: 16.1-17.9 km/h',
+    String(personalPaceLine({
+      intensityText: 'Intensity: 90–100% MAS — even splits',
+      answer: faster.answer,
+      experienceLevel: '1-2 years',
+    })));
+
+  // THE REFUSALS. Sam's no-clamp ruling is that the app never substitutes its
+  // own number and carries on; that applies to a pace it cannot honestly know.
+  ok('a row with no %MAS gets no pace line',
+    personalPaceLine({
+      intensityText: 'Intensity: 95–100% maximal — crisp first step',
+      answer: measured, experienceLevel: '1-2 years',
+    }) === null);
+  ok('and a profile with neither a time nor a level invents nothing',
+    personalPaceLine({
+      intensityText: '90–100% MAS', answer: undefined, experienceLevel: undefined,
+    }) === null);
+  ok('but a MEASURED time needs no level at all',
+    personalPaceLine({
+      intensityText: '90–100% MAS', answer: measured, experienceLevel: undefined,
+    }) === 'Your pace: 13.5-15 km/h');
+  ok('empty words get nothing rather than a crash',
+    personalPaceLine({ intensityText: '', answer: measured, experienceLevel: '1-2 years' }) === null);
+}
+
+console.log('\n[25] THE READER EXISTS — census C2\'s receipt, inverted');
+{
+  // C2's receipt was `deriveMas` having ZERO production callers. That is the
+  // claim this cell reds on if it ever becomes true again — a source scan,
+  // because "is this exported function called" is what the census measured and
+  // what a future deletion would quietly restore.
+  const production = ['src/rules', 'src/data', 'src/utils', 'src/screens', 'src/components']
+    .flatMap((dir) => fs.readdirSync(path.join(repoRoot, dir), { recursive: true } as never) as string[])
+    .length;
+  ok('the production tree is readable at all', production > 0, String(production));
+
+  const paceSource = fs.readFileSync(path.join(repoRoot, 'src/rules/masPace.ts'), 'utf8');
+  ok('the MAS reader calls the one derivation',
+    stripComments(paceSource).includes('deriveMas('),
+    'masPace.ts must consume deriveMas — that absence IS census C2');
+
+  // AND IT IS ON THE ATHLETE'S SCREEN, IN BOTH CONDITIONING ROW SHAPES. A
+  // derivation with a caller that no surface mounts is the same defect one
+  // layer up — `a-bind-can-be-green-and-empty`.
+  const screen = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/screens/home/DayWorkoutScreenV2.tsx'), 'utf8'));
+  ok('the day screen imports the reader',
+    screen.includes("from '../../rules/masPace'"));
+  ok('and mounts it on BOTH conditioning row shapes',
+    (screen.match(/usePersonalPace\(/g) ?? []).length >= 3,
+    `usePersonalPace occurrences: ${(screen.match(/usePersonalPace\(/g) ?? []).length}`);
+  ok('the pace has its own testID so a device flow can see it',
+    screen.includes('workout-exercise-pace-'));
+
+  // Q-001 (%MAS: RANGE OR BINARY?) IS STILL OPEN AND THIS UNIT DID NOT ANSWER
+  // IT. `masCopy` holds the unauthored binary; giving it a consumer would be
+  // deciding a question that is Sam's. The pace derives from the words the card
+  // already shows, so his answer moves it for free.
+  const consumers = ['src/rules', 'src/data', 'src/utils', 'src/screens', 'src/components']
+    .flatMap((dir) => {
+      const root = path.join(repoRoot, dir);
+      return (fs.readdirSync(root, { recursive: true } as never) as string[])
+        .filter((rel) => rel.endsWith('.ts') || rel.endsWith('.tsx'))
+        .map((rel) => path.join(root, rel));
+    })
+    .filter((file) => stripComments(fs.readFileSync(file, 'utf8')).includes('masCopy'));
+  ok('masCopy still has no production consumer — Q-001 is untouched',
+    consumers.length === 0, consumers.join(', '));
 }
 
 const total = passed + failures.length;

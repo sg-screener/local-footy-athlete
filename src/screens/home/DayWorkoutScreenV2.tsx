@@ -82,6 +82,7 @@ import {
   formatConditioningRowPrescription,
 } from './dayWorkoutHelpers';
 import { isTeamTrainingItem } from '../../utils/teamTraining';
+import { personalPaceLine } from '../../rules/masPace';
 import {
   buildSessionTemplate,
   sessionListLabels,
@@ -2501,6 +2502,26 @@ function RecoveryAddonSection({
 }
 
 /**
+ * THE ATHLETE'S OWN PACE, UNDER THE PERCENTAGE THAT ASKED FOR IT.
+ *
+ * `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md` C2: the 2km time trial was
+ * collected, validated and stored, and `deriveMas` had ZERO production callers —
+ * so a card said `Intensity: 110% MAS` and never said 110% of what. This hook is
+ * that reader, and it is the ONLY one: the pace is derived here, at the read,
+ * from the words already on the row. Nothing writes a pace into a program, so
+ * logging a faster 2km reprices every card at once and no stored number can go
+ * stale. See `rules/masPace.ts` for why that is structural rather than tidy.
+ */
+function usePersonalPace(notes: string | null | undefined) {
+  const answer = useProfileStore((s: any) => s.onboardingData?.twoKmTimeTrial);
+  const experienceLevel = useProfileStore((s: any) => s.onboardingData?.experienceLevel);
+  return React.useMemo(
+    () => personalPaceLine({ intensityText: notes, answer, experienceLevel }),
+    [notes, answer, experienceLevel],
+  );
+}
+
+/**
  * One conditioning phase, as a flat-list row.
  *
  * Was a tinted "phase card" inside the conditioning branch. The tint carried
@@ -2524,6 +2545,7 @@ function ConditioningPhaseRow({
   const restLabel = formatRest(exercise.restSeconds, 'recovery');
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
+  const paceLine = usePersonalPace(description);
 
   return (
     <View
@@ -2551,6 +2573,14 @@ function ConditioningPhaseRow({
           testID={`workout-exercise-prescription-${exerciseToken}`}
         >
           {description}
+        </Text>
+      ) : null}
+      {paceLine ? (
+        <Text
+          style={styles.personalPace}
+          testID={`workout-exercise-pace-${exerciseToken}`}
+        >
+          {paceLine}
         </Text>
       ) : null}
       {restLabel ? <Text style={styles.conditioningRest}>{restLabel}</Text> : null}
@@ -2581,6 +2611,11 @@ function ConditioningRow({
   const prescription = formatConditioningRowPrescription(exercise);
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
+  // The RAW notes, not `cleanNotes(notes)`: step 2 of that cleaner replaces
+  // every en dash with a space, so "90–100% MAS" reaches the glass as
+  // "90 100% MAS" and a band parse over the cleaned string would read a lone
+  // 100. Parse the words the row CARRIES, render beneath the words it SHOWS.
+  const paceLine = usePersonalPace(notes);
 
   return (
     <View
@@ -2610,6 +2645,14 @@ function ConditioningRow({
         ) : null}
         {notes ? (
           <Text style={styles.conditioningRowNotes}>{cleanNotes(notes)}</Text>
+        ) : null}
+        {paceLine ? (
+          <Text
+            style={styles.personalPace}
+            testID={`workout-exercise-pace-${exerciseToken}`}
+          >
+            {paceLine}
+          </Text>
         ) : null}
       </View>
     </View>
@@ -4113,6 +4156,16 @@ const styles = StyleSheet.create({
     color: '#8A8A8A',
     fontSize: 12,
     lineHeight: 17,
+    marginTop: 3,
+  },
+  // The derived pace is a PRESCRIPTION, not a note — it is the number the
+  // athlete runs to — so it takes the prescription's accent rather than the
+  // grey the notes sit in. One step quieter than the prescription line above
+  // it so the two do not compete for the same row.
+  personalPace: {
+    color: colors.accent.lime,
+    fontSize: 12,
+    fontWeight: '700',
     marginTop: 3,
   },
 
