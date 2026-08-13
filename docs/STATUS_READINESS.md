@@ -432,7 +432,78 @@ disk and self-attributed. **This section is their durable copy.**
 
 ---
 
-## 15. WHAT IS NOT MINE, AND WAS NOT TOUCHED
+## 16. THE LAUNDERING IS CUT — §4(a)'s SIX SITES, AND §8 IS SUPERSEDED
+
+**§8 said this was "deliberately not started" because it moves generated output
+and item 34 bars starting one at a session tail. That was a wall I set myself,
+and the one-turn law is explicit: *"a wall you can measure yourself is NOT a
+block."* So it was measured and done.**
+
+**THE MEASUREMENT THAT DECIDED THE SHAPE**, and it changed my plan. I had
+expected to route the bias into `sessionFeeling`. Then I read the soft-deload
+counter:
+
+```
+if (input.capacity === 'low') softCount++;
+if (rpe >= 8) softCount++;
+if (input.missedSessionsThisWeek >= 1) softCount++;
+if (input.sessionFeeling === 'Cooked') softCount++;
+```
+
+**`capacity` sat there as a PEER of three genuine fatigue signals.** The writers
+were lowering the band to buy **one vote** — and paying for it at every other
+`capacity` reader: the phase build/hold branches, both high-capacity gates, and
+the athlete-visible note *"Pre-season, low capacity - build"*.
+
+Routing to `sessionFeeling` would have been wrong too: `FEELING_UP_ONE` steps
+Good -> Sore, and only `'Cooked'` scores, so the vote would have been silently
+**lost**. **The honest fix is a named field, not a different borrowed one** —
+`recentFatiguePattern`, same writers, same reader, same weight.
+
+`feedbackPatterns`' own comment had already worked this out —
+*"This prevents double-stacking: readiness down + feeling up would be two
+steps."* **The code knew they were one axis; only the name was wrong.**
+
+**⚠ `test:qa` IS BYTE-IDENTICAL AND THAT IS NOT SAFETY.** 1393 lines, zero diff,
+168/10 both ways — **because the 17 scenarios generate from profiles with no
+feedback history**, so none of the three flags ever fires in them. **The corpus
+is BLIND to this path, and a zero diff would look identical if the change were
+wrong.** That is why `test:progression-capacity-laundering` (16 cells) exists,
+and why its non-vacuity cells are explicit: the same input *without* the vote
+must not deload, and the vote *alone* must not either.
+
+**THREE MUTANTS KILLED:** reinstating the capacity write reds 3; dropping the
+vote from the counter reds 2; defaulting the field to `true` reds 2.
+
+### ⚠ A REGRESSION I SHIPPED IN THE RENAME, AND THE HOLE THAT HID IT
+
+`strengthProgressionIntegrationTests` is a **`.js`** file. **The compile gate
+reads three tsconfigs and cannot see it.** My compiler-driven rename missed 18
+stale `readiness` fields, the gate stayed green, and the suite went **3 red** —
+and it stayed that way across two commits before I ran it.
+
+**A COMPILER-DRIVEN RENAME IS ONLY AS COMPLETE AS THE COMPILER'S FILE SET.** I
+treated "the gate passes" as "the rename is complete", and those are different
+claims — the same collapse as §10, one layer out. Now **104/0, up from 101**, no
+cells lost.
+
+**Swept every untyped file afterwards:** the only other seven referencing
+`readiness` (`progressionTests.js`, `conditioningTests.js`, and five more) are
+**orphans** — they `require('/tmp/lfa-compiled/…')`, a build directory that no
+longer exists, and **are wired into nothing**. Red before this session, not
+mine, and left for the `audit` seat's orphan unit.
+
+### NOT CUT — THE CONDITIONING ARM
+
+`biasConditioningReadiness` -> `sessionResolver.ts:1941` still steps the band
+down. `conditioningProgressionRules`' counter has **no feeling-equivalent** to
+route through — its peers are `recentRPE` and `completionQuality` — so it needs
+the same field on that input, and it moves the conditioning arm of generated
+output. **A slice of its own, named in the suite rather than half-built.**
+
+---
+
+## 17. WHAT IS NOT MINE, AND WAS NOT TOUCHED
 
 - **`exercisePools.ts` / `equipmentAvailability.ts`** — modified in the shared
   tree by the equipment seat when this unit started. Never opened, never staged.
