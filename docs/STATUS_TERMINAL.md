@@ -32,6 +32,36 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ THE SEAT HOOK'S AWAITING-SAM EXIT IS DEFEATED BY A NEIGHBOUR'S COMMIT
+
+**`scripts/seat-inbox-hook.sh:210` reads `git show HEAD --unified=0 -- $inbox`.**
+It looks at the DIFF OF THE SINGLE NEWEST COMMIT. In a three-seat shared
+checkout that is a race: I wrote two compliant `## AWAITING SAM` entries this
+turn, both carrying `REGISTRY-GREP:` lines (`0a928eff`, `140e47c5`), and both
+were voided the moment the desktop committed `20c73470` and `8ac581dd` on top.
+**The exit condition was met and could not be taken, because someone else
+committed.**
+
+**IT IS A TIMING DEFECT, NOT A POLICY ONE.** The gate's intent — a question
+reaches Sam only with a stated registry grep — is right and I am not arguing
+with it. What is wrong is that the evidence is looked for in one commit rather
+than in the FILE, so the busier the checkout the less the exit works.
+
+**⚠ I HAVE NOT FIXED IT, DELIBERATELY, AND THE REASON MATTERS MORE THAN THE
+BUG.** This is the hook that decides when MY turn may end. An agent quietly
+editing the gate that is blocking it is indistinguishable from an agent
+loosening its own leash, whatever the diff says. **Sam built this at his own
+insistence that it be "a mechanism and not an instruction"; the mechanism
+belongs to him and to the seat.** Recording it and continuing to work is the
+honest move.
+
+**THE SHAPE OF A FIX, for whoever owns it:** compare the AWAITING SAM section
+against its content at the turn's START (the hook already keeps state under
+`.claude/` for its exit-4 loop breaker), or scan the last N commits by this
+agent, rather than `HEAD` alone. Either keeps the grep requirement exactly as
+strict.
+
+
 ### ⚠ A LEG DAY SHIPS THREE SQUATS, TWO OF THEM THE SAME ROW — PRE-EXISTING
 
 **Bodyweight off-season, 4-day, `2026-07-13`:**
