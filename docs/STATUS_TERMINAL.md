@@ -32,6 +32,45 @@ thing that actually bit.**
 
 ## STATUS
 
+### 2026-08-13 — R-079 BUILT (`0dc40d0c`, `ff31d40c`). AND THE APP PRESCRIBES NO SPRINT WORK AT ALL.
+
+**Sam's clause 3 — *"in pre season you can do flying sprints when there is team
+training"* — is MOOT IN PRACTICE, and that is the finding.** Measured across
+pre-season (1 and 2 team nights) and in-season (2 team nights + game), two weeks
+each, checking **every route sprint work could arrive by**:
+
+| route | result |
+| --- | --- |
+| `workout.speedBlock` | **0 in every world** |
+| `conditioningCategory === 'sprint'` | **0** — pre-season conditioning is `aerobic_base` |
+| rows named sprint/accel/flying/tempo | **0** |
+
+**So the app never PRESCRIBES sprint work. Every sprint credit in the ledger
+comes from a team-training anchor** (`kind: anchor.kind`, evidence
+`normal_unrestricted_participation`). His permission to put flying sprints on a
+team night cannot fire, because there are no flying sprints to place.
+
+**AND THE VOCABULARY CANNOT EXPRESS HIS DISTINCTION EITHER.** `SpeedWorkKind` is
+`true_speed | repeated_sprint | cod` — **there is no `acceleration` kind.** His
+rule separates `top_end_speed` on a team night (allowed) from `acceleration` on a
+team night (the duplication he is avoiding); the second half has no word in this
+app. **Clause 3 is therefore UNENFORCED and not merely unbuilt — recorded on
+R-079's row rather than left to be rediscovered.**
+
+**⚠ THE NEXT QUESTION, AND IT IS THE SHARP ONE:** every phase's contract sets
+`sprint.required: 1`. A CLUB athlete meets it from anchors alone. **A NO-CLUB
+athlete gets zero sprint work and the contract requires one — does §18 raise
+`required_minimum_shortfall` on sprint, or is it silent?** If silent, the app
+owes a weekly exposure it never delivers and never reports. **Measure that
+first; it is one evaluator call.**
+
+**MY EARLIER PROBE WAS WRONG AND THIS REPLACES IT.** In `0dc40d0c` I reported
+sprint nights as "not measured" because a name-regex probe returned 0 everywhere
+and I assumed the instrument was at fault. **The instrument was crude but the
+zero was REAL** — there genuinely are no sprint rows. Fourth instrument scare
+today, and the first where the instrument turned out to be right.
+
+
 ### ⚠ DO NOT RE-RECORD `test:power-counting` YET — I FOUND A CHANGE I CANNOT EXPLAIN
 
 **The desktop refused to bless this golden and was RIGHT to.** Its diff is 201
