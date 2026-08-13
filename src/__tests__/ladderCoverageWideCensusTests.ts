@@ -108,7 +108,25 @@ const KITS: string[][] = [['Full Gym'], ['Bodyweight Only'], ['Dumbbells', 'Band
  * improvement, and asserting 0 today would be a knowingly-red cell in a chain
  * suite, which the registry forbids as loudly as it forbids a silent debt.
  */
-const DEFICIENT_CEILING = 50;
+/**
+ * **LOWERED 50 -> 36 ON 2026-08-13, in the commit that paid it.** The composer
+ * landed for the combined lower/upper days and the hinge accessory pool was
+ * split so `Single-Leg RDL` can no longer rotate into a bilateral hinge.
+ *
+ * **50 -> 36 of the SAME 216 laddered days, and the shapes fell 5 -> 3.** Both
+ * `single_leg_hip`-missing shapes are gone; what remains is the equipment class
+ * (`missing: [squat]` with a doubled `single_leg_knee`, and a doubled `squat`),
+ * which belongs to the kit fallback and not to this ladder.
+ *
+ * **⚠ THE CORPUS IS STILL 216 AND THAT IS NOT THE TRUE BREADTH.** Measured the
+ * same day: `slotDayKindFor` returns NOTHING for `Lower Body Strength` — the
+ * app's commonest strength day — so ~102 more laddered days are invisible to
+ * this census. Judging them takes the count to 88 of 318. **That is a
+ * denominator change, not a regression, and it is deliberately NOT in this
+ * commit**: a widening must not ride in on a narrowing, or neither number can be
+ * read afterwards.
+ */
+const DEFICIENT_CEILING = 36;
 
 let worldsBuilt = 0;
 let worldsRefused = 0;

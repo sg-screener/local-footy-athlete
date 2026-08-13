@@ -167,6 +167,16 @@ console.log('\n[5] The day kind is DELEGATED to the one owner, not re-inferred')
   // strength sessions (Bible §20.5) and the shared inference returns NOTHING for
   // them, so those days are currently unjudged. Catching them with a local regex
   // would restore the second representation this delegation exists to remove.
+  //
+  // ⚠ AND THE GAP IS BIGGER THAN THIS DECLARATION SAYS. Measured 2026-08-13 over
+  // 6 generated worlds x 4 weeks: 46 of 94 strength days answer to NO ladder, and
+  // the commonest unjudged name is `Lower Body Strength` — 20 days — which these
+  // two cells never mentioned. **A declared gap is a claim too.** Closing it is
+  // its own unit and its own commit: the authored set in
+  // `data/strengthSessionVariants.ts` already states each label's
+  // `plannedPatterns`, so the fix is a delegation and not the regex refused here.
+  // It is separated deliberately — it GROWS the judged corpus, and a commit that
+  // widens the denominator must not ride in on one that lowers the numerator.
   ok('DECLARED GAP: the shared owner does not classify "Upper Body Strength"',
     slotDayKindFor('Upper Body Strength') === null,
     'if this now resolves, the owner was fixed — delete this cell and celebrate');
@@ -216,6 +226,105 @@ console.log('\n[7] THE TWO PRODUCTION FALLBACKS, judged by his own rule');
   ok('[:227] the hinge-led fallback now covers every slot, none doubled',
     newHinge.missing.length === 0 && newHinge.duplicated.length === 0,
     `missing=${JSON.stringify(newHinge.missing)} dup=${JSON.stringify(newHinge.duplicated)}`);
+
+  // ── AND THE COMBINED DAYS, WHICH WERE THE LAST 3-ROW LOWER FALLBACK ──────
+  //
+  // **`Lower Body Strength` is the commonest strength day the app builds — 20
+  // of 94 in a 6-world x 4-week sweep — and it shipped three rows.** Naming BOTH
+  // lower patterns had somehow bought FEWER of Sam's slots than naming one.
+  const oldCombinedLower = fallback(['Back Squat', 'RDLs', 'Pallof Press']);
+  ok('[:227] the OLD combined-lower fallback had NEITHER single-leg slot',
+    oldCombinedLower.missing.includes('single_leg_knee')
+      && oldCombinedLower.missing.includes('single_leg_hip'),
+    JSON.stringify(oldCombinedLower.missing));
+  const newCombinedSquatLed = fallback(['Back Squat', 'RDLs', 'Reverse Lunges', 'Single Leg RDL', 'Pallof Press']);
+  ok('[:227] the squat-led COMBINED fallback covers every slot, none doubled',
+    newCombinedSquatLed.missing.length === 0 && newCombinedSquatLed.duplicated.length === 0,
+    `missing=${JSON.stringify(newCombinedSquatLed.missing)} dup=${JSON.stringify(newCombinedSquatLed.duplicated)}`);
+  const newCombinedHingeLed = fallback(['RDLs', 'Goblet Squat', 'Bulgarian Split Squats', 'Single Leg RDL', 'Pallof Press']);
+  ok('[:227] the hinge-led COMBINED fallback covers every slot, none doubled',
+    newCombinedHingeLed.missing.length === 0 && newCombinedHingeLed.duplicated.length === 0,
+    `missing=${JSON.stringify(newCombinedHingeLed.missing)} dup=${JSON.stringify(newCombinedHingeLed.duplicated)}`);
+
+  // THE UPPER COMBINED DAY ANSWERS TO BOTH PLANES AND BOTH DIRECTIONS —
+  // *"push pull on the horizontal, push pull on the vertical then … arm work"*.
+  const upper = (names: readonly string[]) => sessionSlotCoverage(names.map((n) => row(n)), 'upper_full');
+  const oldCombinedUpper = upper(['Bench Press', 'Chest Supported Row', 'Face Pulls']);
+  ok('[SAM] the OLD combined-upper fallback had NEITHER vertical',
+    oldCombinedUpper.missing.includes('vertical_push')
+      && oldCombinedUpper.missing.includes('vertical_pull'),
+    JSON.stringify(oldCombinedUpper.missing));
+  const newCombinedUpper = upper(['Bench Press', 'Chest Supported Row', 'Overhead Press', 'Pull-Ups', 'Face Pulls']);
+  ok('[SAM] the push-led COMBINED upper fallback covers every slot',
+    newCombinedUpper.missing.length === 0,
+    `missing=${JSON.stringify(newCombinedUpper.missing)}`);
+  const newCombinedUpperPullLed = upper(['Pull-Ups', 'Incline DB Bench', 'Barbell Row', 'Overhead Press', 'Face Pulls']);
+  ok('[SAM] the pull-led COMBINED upper fallback covers every slot',
+    newCombinedUpperPullLed.missing.length === 0,
+    `missing=${JSON.stringify(newCombinedUpperPullLed.missing)}`);
+}
+
+// ── THE SLOT SURVIVES ROTATION, WHICH IS WHERE IT WAS BEING LOST ───────────
+//
+// **THE COMPOSER PUT THE ROW IN AND `applyPoolRotation` TOOK IT BACK OUT.**
+// `Single-Leg RDL` shared a (slot, role) pair with `Hip Thrusts`,
+// `Kettlebell Swings` and `Glute Bridge` — three BILATERAL hinges — and a pool
+// slot is an interchangeability claim (R-076). So the single-leg hip lift
+// rotated into a second heavy hinge: 20 days missing `single_leg_hip` and 22
+// reporting a doubled `hinge` across 6 worlds x 4 weeks, one defect wearing two
+// numbers.
+//
+// This is R-080's ruling landing on its sibling slot. R-080 split the SQUAT
+// accessory pool for the identical reason — *"a lunge may not rotate into a
+// squat"* — and the hinge pool one slot over was never looked at.
+console.log('\n[7b] A single-leg hip lift may not rotate into a bilateral hinge');
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { STRENGTH_POOLS } = require('../data/exercisePoolsStrength') as any;
+  const entries = STRENGTH_POOLS.hinge.accessory.entries as Array<{ name: string; group?: string }>;
+  const groupOf = (name: string) => entries.find((e) => e.name === name)?.group;
+
+  // NON-VACUITY: if the pool is ever renamed or emptied, `groupOf` returns
+  // undefined for everything and a naive inequality check passes on nothing.
+  ok('[non-vacuity] the hinge accessory pool holds the rows this cell judges',
+    entries.length >= 4 && entries.every((e) => typeof e.group === 'string'),
+    `entries=${JSON.stringify(entries.map((e) => [e.name, e.group]))}`);
+  ok('Single-Leg RDL is NOT interchangeable with Hip Thrusts',
+    groupOf('Single-Leg RDL') !== groupOf('Hip Thrusts'));
+  ok('...nor with Kettlebell Swings or Glute Bridge',
+    groupOf('Single-Leg RDL') !== groupOf('Kettlebell Swings')
+      && groupOf('Single-Leg RDL') !== groupOf('Glute Bridge'));
+  // AND THE THREE BILATERAL HINGES STAY INTERCHANGEABLE WITH EACH OTHER — the
+  // split narrows exactly one thing and must not quietly narrow rotation twice.
+  ok('the three bilateral hinges still rotate among themselves',
+    groupOf('Hip Thrusts') === groupOf('Kettlebell Swings')
+      && groupOf('Hip Thrusts') === groupOf('Glute Bridge'));
+
+  // ── AND THE BEHAVIOURAL HALF, BECAUSE THE TABLE CELLS ABOVE ARE STRUCTURE ──
+  //
+  // ⚠ THE GROUP CELLS ALONE ARE NOT ENOUGH, AND THAT WAS MEASURED, NOT ASSUMED.
+  // Collapsing the two groups back into one reddens the three cells above — and
+  // **the generated census below stayed green at 1 of 7**, because its three
+  // worlds x one week never reach the rotation index that spends the slot. A
+  // structural assertion about a table is not an assertion about what the
+  // athlete is handed. This drives the real rotation over a full block.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { applyPoolRotation } = require('../data/exercisePoolsStrength') as {
+    applyPoolRotation: (name: string, ctx: { miniCycleNumber: number; weekInBlock?: number }) => string;
+  };
+  const rotated: string[] = [];
+  for (let cycle = 1; cycle <= 4; cycle += 1) {
+    for (let week = 1; week <= 4; week += 1) {
+      rotated.push(applyPoolRotation('Single-Leg RDL', { miniCycleNumber: cycle, weekInBlock: week }));
+    }
+  }
+  ok('[non-vacuity] rotation was actually exercised over a whole block',
+    rotated.length === 16 && rotated.every((name) => name.length > 0));
+  const lostTheSlot = rotated.filter(
+    (name) => !slotsFilledByRow(row(name)).includes('single_leg_hip'));
+  ok('rotation never spends the single-leg hip slot on a bilateral hinge',
+    lostTheSlot.length === 0,
+    `rotated into: ${[...new Set(lostTheSlot)].join(', ')}`);
 }
 
 // ── THE LADDER ADMISSION RULE — what stopped `main_pattern_drift` eating it ──

@@ -1160,17 +1160,45 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
       { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
     ];
   }
+  // ── THE COMBINED DAYS ANSWER TO THE SAME LADDER AS THE LED DAYS ──────────
+  //
+  // **THESE TWO BRANCHES WERE THE LAST 3-ROW LOWER/UPPER FALLBACKS, AND THE
+  // COMMONEST DAY IN THE APP CAME OUT OF THE FIRST ONE.** Measured 2026-08-13,
+  // 6 generated worlds x 4 weeks: `Lower Body Strength` is 20 of 94 strength
+  // days, every one of them shipping `Back Squat | Deadlift | Pallof Press` —
+  // a squat, a hinge and a core row, with **no single-leg work of either kind.**
+  // Against Sam's own sentence — *"lower body strength should have a hinge, a
+  // squat, an single leg knee, a single leg hip, and accessory and/or some
+  // core"* — that is 3 of his 5 slots, on the day named after the rule.
+  //
+  // **THE CLASS, NOT THE CASE.** The squat-led and hinge-led branches below were
+  // already brought to his five slots; naming BOTH patterns was somehow taken as
+  // licence to ship fewer rows than naming one. A combined lower day is a lower
+  // day: it answers to `LOWER_SLOTS`, and a combined upper day answers to
+  // `UPPER_FULL_SLOTS` (*"push pull on the horizontal, push pull on the vertical
+  // then … arm work"*). The fill order below is `:227`'s, in his order.
+  //
+  // **THE EXISTING ROWS AND THEIR DOSES ARE UNTOUCHED — only the missing slots
+  // are added.** A combined day leads heavier (3x5-8) and carries a secondary
+  // maintenance dose, and that distinction is authored; rewriting it to match the
+  // led-day ladder would be a dose change nobody ordered, and the authored dose
+  // now bounds progression.
   if (contributions.includes('squat') && contributions.includes('hinge')) {
     const squatPrimary = entry.strengthIntent?.primaryPattern !== 'hinge';
     return squatPrimary
       ? [
           { name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 8 },
           { name: 'RDLs', sets: 2, repsMin: 8, repsMax: 10, notes: 'Secondary maintenance dose' },
+          { name: 'Reverse Lunges', sets: 3, repsMin: 8, repsMax: 12 },
+          // `Single-Leg RDL`, HYPHENATED — the spelling every other table keys on.
+          { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
           { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
         ]
       : [
           { name: 'RDLs', sets: 3, repsMin: 5, repsMax: 8 },
           { name: 'Goblet Squat', sets: 2, repsMin: 8, repsMax: 10, notes: 'Secondary maintenance dose' },
+          { name: 'Bulgarian Split Squats', sets: 3, repsMin: 8, repsMax: 12 },
+          { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
           { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
         ];
   }
@@ -1180,11 +1208,15 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
       ? [
           { name: 'Bench Press', sets: 3, repsMin: 5, repsMax: 8 },
           { name: 'Chest Supported Row', sets: 3, repsMin: 8, repsMax: 10 },
+          { name: 'Overhead Press', sets: 2, repsMin: 8, repsMax: 10 },
+          { name: 'Pull-Ups', sets: 2, repsMin: 8, repsMax: 12 },
           { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
         ]
       : [
           { name: 'Pull-Ups', sets: 3, repsMin: 5, repsMax: 8 },
           { name: 'Incline DB Bench', sets: 3, repsMin: 8, repsMax: 10 },
+          { name: 'Barbell Row', sets: 2, repsMin: 8, repsMax: 10 },
+          { name: 'Overhead Press', sets: 2, repsMin: 8, repsMax: 10 },
           { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
         ];
   }

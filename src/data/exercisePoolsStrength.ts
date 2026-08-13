@@ -297,14 +297,42 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       ],
     },
     accessory: {
+      // ── R-080'S SIBLING SLOT, AND IT HAD THE IDENTICAL DEFECT ────────────
+      //
+      // R-080 split the SQUAT accessory pool above because rotation was turning
+      // a lunge into a bilateral squat. **This pool held the same mixture one
+      // slot over and nobody looked**: `Single-Leg RDL` is Sam's `single_leg_hip`
+      // slot, and `Hip Thrusts` / `Kettlebell Swings` / `Glute Bridge` are
+      // bilateral hinges. Ungrouped, rotation swapped freely between them.
+      //
+      // **MEASURED 2026-08-13, and it is why fixing the fallbacks alone did
+      // nothing.** The squat-led and hinge-led ladders have emitted
+      // `Single-Leg RDL` since they were corrected, and the shipped day reads:
+      //
+      //     ROT Single-Leg RDL -> Hip Thrusts        [hinge/accessory]
+      //     ROT Single-Leg RDL -> Kettlebell Swings  [hinge/accessory]
+      //     ROT Single-Leg RDL -> Glute Bridge       [hinge/accessory]
+      //
+      // Across 6 worlds x 4 weeks that was **20 days missing `single_leg_hip`
+      // and 22 days reporting a DOUBLED `hinge`** — one defect wearing two
+      // numbers, and the single commonest deficiency in the whole corpus. The
+      // composer put the row in and the rotation took it straight back out.
+      //
+      // **THE NARROWING IS REAL AND IS STATED, NOT FOUND LATER:** the app owns
+      // exactly ONE single-leg hip lift in this pool, so that group cannot
+      // rotate at all today. `Single-Leg Hip Thrust` exists but is tagged
+      // `isolation_lower`, so it fills accessory/core and not this slot —
+      // re-tagging it to buy variety here would move a row every other reader
+      // sees, which is R-076's mistake. A repeated Single-Leg RDL is a smaller
+      // wrong than a lost slot; more variety is a content unit, not this one.
       slot: 'hinge', role: 'accessory', entries: [
-        { name: 'Single-Leg RDL',    loadRatio: 0.45 },
-        { name: 'Hip Thrusts',       loadRatio: 1.10 },
-        { name: 'Kettlebell Swings', loadRatio: 0.35 },
+        { name: 'Single-Leg RDL',    loadRatio: 0.45, group: 'single_leg_hip' },
+        { name: 'Hip Thrusts',       loadRatio: 1.10, group: 'bilateral_hinge' },
+        { name: 'Kettlebell Swings', loadRatio: 0.35, group: 'bilateral_hinge' },
         // Sam ruled 2026-07-25: bodyweight-with-optional. loadRatio 0 means no
         // progression transfer to or from its hinge siblings, which is the
         // honest reading of a lift with no prescribed load.
-        { name: 'Glute Bridge',      loadRatio: 0.00 },
+        { name: 'Glute Bridge',      loadRatio: 0.00, group: 'bilateral_hinge' },
       ],
     },
   },
