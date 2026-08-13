@@ -324,11 +324,32 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       ],
     },
     accessory: {
+      // ── R-076: SHOULDER WORK IS NOT A ROW ────────────────────────────
+      //
+      // **Sam, 2026-08-13: *"face pull is shoulder work for sure"*.** A pool
+      // slot is an INTERCHANGEABILITY claim — `applyPoolRotation` swaps freely
+      // within (slot, role) — and filing a face pull beside `Seated Cable Row`
+      // claimed the two are substitutes. They are not.
+      //
+      // WHAT IT SHIPPED, measured 3 worlds x 3 weeks before the move: closing an
+      // unrelated name-lookup miss let rotation act on this membership, and a
+      // pull day went `Pull-Ups | Barbell Row | Face Pulls` ->
+      // `Pull-Ups | Barbell Row | Seated Cable Row` — two rows and NO shoulder
+      // work. That swap was refuted and backed out (`faa69c2f`) and this row is
+      // why it happened.
+      //
+      // REAR DELT FLY AND BAND PULL-APART MOVED WITH IT, and that is a decision
+      // worth naming: **Sam ruled the face pull by name**, but his sentence is
+      // about the class, and those two are rear-delt work by any reading. Moving
+      // one and leaving its two siblings would have left the identical defect
+      // under two other names.
+      //
+      // SEATED CABLE ROW STAYS — it is a genuine horizontal pull, and it is now
+      // the only accessory in this slot. That is a real narrowing of rotation
+      // variety here, stated rather than discovered later: there are few
+      // horizontal-pull accessories that are not shoulder work.
       slot: 'horizontal_pull', role: 'accessory', entries: [
         { name: 'Seated Cable Row', loadRatio: 0.90 },
-        { name: 'Face Pull',        loadRatio: 0.20 },
-        { name: 'Rear Delt Fly',    loadRatio: 0.15 },
-        { name: 'Band Pull-Apart',  loadRatio: 0.10 },
       ],
     },
   },
@@ -414,6 +435,11 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Lateral Raise',    loadRatio: 0.20 },
         { name: 'Incline Y Raise',  loadRatio: 0.15 },
         { name: 'Single-Arm Shrug', loadRatio: 0.60 },
+        // R-076, Sam 2026-08-13: "face pull is shoulder work for sure". Moved
+        // here from horizontal_pull/accessory, with its two rear-delt siblings.
+        { name: 'Face Pull',        loadRatio: 0.20 },
+        { name: 'Rear Delt Fly',    loadRatio: 0.15 },
+        { name: 'Band Pull-Apart',  loadRatio: 0.10 },
       ],
     },
   },

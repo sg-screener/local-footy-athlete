@@ -329,6 +329,34 @@ only the COUNT moved.** 4 cells in `test:row-counting` (43/43); the
 "a fourth may not arrive unannounced" gate reddened on the change and was updated
 with the diff cited, not weakened.
 
+**R-076** · *"face pull is shoulder work for sure"* (2026-08-13) · **A POOL SLOT
+IS AN INTERCHANGEABILITY CLAIM, and a face pull is not a substitute for a row.**
+`applyPoolRotation` swaps freely within a (slot, role) pair, so filing
+`Face Pull` under `horizontal_pull/accessory` beside `Seated Cable Row` declared
+them equivalent. · `BUILT` — `exercisePoolsStrength.ts`: `Face Pull`,
+`Rear Delt Fly` and `Band Pull-Apart` moved to the `isolation_upper/accessory`
+shoulder block. **He ruled the face pull BY NAME; the two siblings moved with it
+because his sentence is about the class and leaving them would keep the identical
+defect under two other names.** `Seated Cable Row` stays and is now the only
+accessory in that slot — a real narrowing of rotation variety there, stated
+rather than found later.
+**THE FOUNDING CASE:** closing an unrelated name-lookup miss let rotation act on
+this membership and shipped `Pull-Ups | Barbell Row | Face Pulls` ->
+`Pull-Ups | Barbell Row | Seated Cable Row` — two rows, no shoulder work.
+Refuted and backed out (`faa69c2f`) before it reached him.
+**MEASURED OUTPUT-NEUTRAL ON ITS OWN:** 3 worlds x 3 weeks, generated names
+byte-identical before and after, because the lookup miss still masks rotation
+here. It is a PREREQUISITE, not a fix on its own.
+**⚠ AND THE LOOKUP FIX IS STILL REFUTED, FOR A NEW AND DEEPER REASON.** With
+R-076 landed, canonicalising `classifyPoolSlot` swaps `Face Pulls` ->
+`Bicep Curl (Barbell)`, and turns `Bicep Curls | Tricep Pushdowns` into
+`Bicep Curl (Barbell) | Bicep Curl (Dumbbell) | Hammer Curl` — **three bicep
+curls and no triceps**, his own two-squats shape in arm form.
+**`isolation_upper/accessory` is ONE undifferentiated pool holding three muscle
+groups.** The file's own comments name them — `// Bicep block`,
+`// Tricep block`, `// Shoulder / trap block` — and rotation ignores all three.
+**Sub-grouping that pool is the next unit, and the lookup fix waits on it.**
+
 **R-015** · *"On strength days, 2-3 accessory exercises are paired with mobility
 exercises as SUPERSETS by default"* (+ 6 further clauses,
 `MOBILITY_PAIRING_RULINGS_2026-07-31.md`) · Main lifts are NEVER paired; the

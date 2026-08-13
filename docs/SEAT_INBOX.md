@@ -48,6 +48,108 @@ his instruction is standing authority, not history.**
     week, his ruling is only half true and that is a defect to report.
 
 
+37. **CLOSED — SAM RULED IT AS R-077 AND THE ANSWER WAS "DO NOTHING". AWAY IS
+    DONE.**
+
+    **R-077:** *"they will likely train less than normal and i think they can
+    always add a session in if they need to"* — **R-069(2) wins on the STRENGTH
+    count**, so an away week keeps the 2-lift bye shape. **The three placement
+    attempts stay reverted and `coachingEngine.ts` is untouched.**
+    **⚠ R-075 IS NOT OVERTURNED — the conditioning replacement STANDS** and is on
+    glass (`c8702c56`). Away replaces the club's work in KIND; it just does not
+    chase the lifts.
+    **THE ESCAPE HATCH IS VERIFIED, NOT ASSUMED** — all seven days of a live away
+    week return `canAdd: true` and offer `strength_upper/lower/full` and
+    `gunshow`, measured through the real door. `test:away-flow` [17e]/[17f]/[17g],
+    non-vacuity first. **His ruling is whole, not half true.**
+
+    **RE-MARKED BY the desktop, 2026-08-13, from `other-agent` to `sam`:** the
+    desktop owns this and is no longer holding it. **What remains is a
+    contradiction between two of his own rulings** — R-069(2) (*"bye recovery is
+    exactly 2 lighter lifts"*, locked 14 July) against R-075 (*"replace the work
+    it removes"*). Away is built as a bye on his own instruction, so it inherits
+    the 2-lift shape, and **the code is OBEYING R-069(2)** — three attempts to
+    hand the session back were each consumed by the strength repair. Question and
+    full `REGISTRY-GREP` under `## AWAITING SAM` (`9822ddea`); measurement trail
+    in `docs/STATUS_DESKTOP.md`.
+
+    **EXPLICITLY NOT BLOCKED, AND DONE:** the day half (`c8702c56`) — a vacated
+    Saturday reads *"Conditioning — 2 exercises"* — and the conditioning arm of
+    his own arithmetic, one-for-one (`test:away-flow` [13g]/[13h], 46/0).
+
+    **MARKED BY `audit`, 2026-08-13, NOT CLAIMED AND NOT EDITED BELOW THIS
+    PARAGRAPH.** This item names the DESKTOP as owner. **Two seats are already in
+    it; a third is how b62add9f happened.**
+
+    **⚠ ONE HALF OF THAT MARKING IS WRONG, AND THE TERMINAL IS CORRECTING THE
+    CLAIM ABOUT ITSELF (2026-08-13).** It said *"the terminal seat is also live in
+    `src/utils/sessionResolver.ts` … and it holds that file"*. **The terminal has
+    never edited that file.** Checked the way this very item says to:
+    `git show HEAD:src/utils/sessionResolver.ts | cmp -s - src/utils/sessionResolver.ts`
+    — **IDENTICAL, so nobody holds it.** The desktop wrote it and committed
+    (`186c2b1b`, `59b0994a`). **THE BLOCK STILL STANDS on its real reason — the
+    desktop owns this item — but a phantom file-hold is exactly the thing that
+    stalls a seat for no reason, so it is struck rather than left.** Marking is the permitted edit for a non-owner — the duplicate
+    below is marked the same way, and **collapsing the two 37s stays the SEAT's
+    edit, exactly as this item already says.**
+
+    **⚠ DUPLICATE — THE SEAT'S FULLER COPY OF THIS ITEM IS BELOW AND IT CARRIES
+    MORE OF SAM'S WORDS THAN THIS ONE DOES. READ THAT ONE.** Two 37s exist
+    because the desktop wrote one from his chat message and the seat wrote one
+    from the same message with more of it quoted. **Collapsing them is the SEAT's
+    edit, not mine** (one writer per file). Marked rather than merged.
+
+    **THE DAY HALF IS BUILT — `59b0994a`+, seen on glass:** the vacated Saturday
+    reads *"Conditioning — 2 exercises"*. **The BLOCK half is not built.**
+
+    **OWNED BY THE DESKTOP** — corrected 2026-08-13. The terminal claimed this
+    for ninety minutes on a wrong inference (the desktop's handoff said it was
+    going back to Sam; Sam's reply is what pulled it straight back in). **Sam
+    assigned this one directly in chat**, and the desktop wrote both the item and
+    R-075 from that message. The owner ratchet (`test:repo-law-guards`) went
+    16 -> 17 the moment this item arrived and is what surfaced the collision at
+    all — on the day it was built.
+
+    **His words:** *"Away has to replace the work it removes, not just delete it
+    - your Saturday Rest Day is the wrong case. Don't ask me about it."*
+    **Registered as R-075 in the same commit** (registry gate rule 3).
+
+    **SO BOTH ANSWERS SHIPPED SO FAR ARE WRONG, AND THE SECOND ONE WAS MINE.**
+    *"Training Day"* (the empty-day placeholder) and *"Rest Day"* are two wordings
+    of the same hole. He does not want the hole named better; he wants it FILLED.
+
+    **⚠ `'rest'` IS LEFT IN PLACE ON PURPOSE, AND IT IS NOT THE ANSWER.** It is
+    strictly better than the placeholder he swore at, so reverting it would
+    regress his ORIGINAL complaint while fixing nothing. **It is a holding
+    position with a ruling against it — do not read it as done.**
+
+    **THE BLOCKER IS ARCHITECTURAL AND IT IS MEASURED, NOT ASSUMED. TWO ROUTES
+    TRIED TODAY, BOTH ON GLASS, BOTH FAILED:**
+    1. **THE READ CANNOT AUTHOR.** `applyAwayPass` filters `ResolvedDay[]`, and
+       §18 tier four runs at read time with `resolveVisibleWorkouts` = the
+       IDENTITY, so it can CONFORM a week but has no generator. **Moving the away
+       pass BEFORE §18 was built and photographed: Saturday stayed empty and
+       WEDNESDAY GOT WORSE** — core `Conditioning` became optional
+       `Accessories`. Reverted.
+    2. **THE AUTHORING ROUTE COSTS MORE THAN IT PAYS** — item 28: the deriving
+       lane re-authors the week but takes Thursday from `Strength` to `Rest Day`,
+       runs ~1 minute and generates 1,220 workouts.
+
+    **BOTH ROUTES DEAD-END AT THE SAME PLACE, AND THAT IS THE FINDING:** a
+    club-less week's §18 contract declares more core conditioning than a
+    bye-build delivers, and the 48-candidate repair search cannot close it.
+    **ONE UNIT NOW SITS BEHIND BOTH ITEM 28 AND R-075.**
+
+    **START HERE, NOT FROM SCRATCH — THE MECHANISM HE WANTS ALREADY EXISTS.**
+    `sessionResolver.ts` `_resolveDateRaw` already answers *"a game slot was
+    freed"* with `buildDerivedSession('prehab_accessories', …, 'Freed game slot',
+    …)`. It never fires for away because it is gated to a TEMPLATE game with NO
+    calendar mark, and an away-vacated fixture is a MARKED one. **A freed slot is
+    a freed slot however it was freed** — that is the sentence to build, and it
+    needs no new machinery, no stored state, and no §18 change.
+
+
+
 28-C1. **BLOCKED-BY: other-agent — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS,
     AND THE WALL HAS MOVED. 2026-08-13, terminal.**
 
@@ -743,6 +845,106 @@ his instruction is standing authority, not history.**
    ~~A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —~~
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 27).**
 
+28. **THE REBUILD IS DONE, AND ITS ORDERED STEP 1 WAS THE WRONG STEP — REFUTED
+    ON GLASS, BOTH SIDES PHOTOGRAPHED, 2026-08-13.**
+
+    **SAM'S COMPLAINT IS FIXED.** *"why the fuck does it read training day?"* —
+    that Saturday now reads **"Rest Day"** on the simulator, and his five own
+    training days are all still there (Tue Strength, Wed Conditioning, Thu
+    Strength, Fri Gunshow, plus today).
+
+    **IT WAS ONE WORD, IN THE READ.** `sessionResolver.ts` `applyAwayPass`
+    vacated a fixture day with `buildDay(..., null, 'none')`. `'none'` means "no
+    workout", and `dayKind` (`rules/projectVisibleWeek.ts:208`) maps every
+    non-fixture, non-`'rest'` day to `'training'`, whose signed headline is
+    *"Training Day"* — the app's placeholder for a day that exists and holds
+    nothing. **So the game came off correctly and printed a placeholder in the
+    hole, on every away week, for as long as away has worked.** Now `'rest'`, at
+    BOTH vacate sites (the fixture, and a team-only day) — they have to agree or
+    the same week calls two identical holes by two different names.
+    **R-020 DECIDES THE WORD, so nothing new was ruled:** *"yes clear team
+    training and games while away"* — the club goes and **his own sessions
+    stay**; he never had a session of his own on a fixture day, so once the game
+    is off he is not training that day. R-006 permits up to three full rest days
+    in exactly this shape of week.
+    **HELD BY `test:away-flow` [15c]/[15d]/[15e]** — non-vacuity first (at home
+    that Saturday reads GAME), then the headline through the COPY REGISTRY
+    rather than a literal, then the typed read underneath it so a copy change
+    alone cannot make the cell pass on a day that is still a hole. **Mutation-
+    proven: [15d] and [15e] both red at HEAD.**
+    **AND [15b] IS WHY THIS SURVIVED A DAY.** It asserts the game is GONE and
+    says nothing about what stands in its place, so it stayed green over a
+    Saturday reading *"Training Day"*. **A cell that asserts an absence and never
+    asserts the presence is half a cell.**
+
+    ── **STEP 1 IS REFUTED. DO NOT ORDER THAT LINE CHANGED A THIRD TIME.** ──
+
+    Travel WAS put back on `isRuledDerivingConstraint`, run on the simulator
+    against the same seed and the same week, and photographed. **The deriving
+    lane is worse for the athlete and the numbers are not close:**
+
+    | | inert lane (HEAD) | deriving lane |
+    | --- | --- | --- |
+    | Thu 16 — a team night he is away for | **Strength** | **Rest Day** |
+    | Sat 18 — his game | "Training Day" | "Training Day" |
+    | the tap | instant | **~1 min, 1,220 workouts generated** |
+
+    **IT COSTS HIM A TRAINING DAY AND FIXES NOTHING.** Removing the club anchors
+    makes the week a bye-build whose contract declares more core conditioning
+    than the week carries, so §18 runs
+    `repairCoreConditioningShortfallCandidates` through its 48-candidate search
+    (`section18AcceptedWeekGateway.ts`), regenerates Thursday **616 times**, and
+    still hands back an empty day. The one defect Sam actually named was
+    IDENTICAL either way — so it was never that lane's to fix.
+
+    **AND THE PREMISE THE WHOLE HUNT RESTED ON IS WITHDRAWN: THE REFUSAL DOES
+    NOT REPRODUCE.** A new `[temporary-source-fact] lane` line now logs on EVERY
+    commit (not only on failure) — it fired, showed `scopedRegen: true`, and **no
+    `refused` line was ever printed.** The lane is not refusing. It is simply the
+    wrong tool, exactly as the north star says: away is a DECISION, and the week
+    it implies is DERIVED — `derivedWeekContract` drops the fixture anchor,
+    `onboardingToCoachingInputs` drops the club days, `applyAwayPass` filters the
+    read. **None of them stores a thing, and all three already reach a week the
+    athlete is looking at.**
+
+    **THE CONTROL IS NOW PERMANENT INFRASTRUCTURE, and it is the only reason any
+    of this was readable.** `[temporary-source-fact] lane` fires on every commit,
+    so a run with no lane line is a DEAD INSTRUMENT, not a result — which is the
+    distinction that produced two confidently wrong conclusions on this item
+    before it existed.
+
+    **STILL OPEN, NAMED SO NOBODY RE-FINDS IT:** with no club anchors the week's
+    §18 contract declares more core conditioning than a bye-build delivers, and
+    the 48-candidate repair search burns ~1,200 generations on it. **That is a
+    §18 unit, not an away unit** — it is only visible from here because away is
+    the cheapest way to make a club-less week. It costs nothing today because
+    travel is inert.
+
+    **WHAT IS WORKING AND MUST NOT REGRESS** (all seen on glass): the week-shape
+    Away control, leave date, unbounded return date, the equipment question and
+    its dated span, **the game off the week**, **the team night off a combined
+    day**, a fixture inside the trip no longer anchoring its week, and now **the
+    vacated day reading Rest Day instead of a placeholder**.
+
+    **INSTRUMENT NOTE, PAID FORWARD.** The device flow that proves all of this
+    lived in a session scratchpad and was nearly lost twice. `pkill -f "expo
+    start --dev-client"`, then ONE `npx expo start --dev-client --port 8082
+    --clear`, then the flow via `scripts/dev-e2e/run-maestro-ios.sh` with
+    `-e SEED_ID=standard-in-season-week`. It runs 14/14.
+
+29. **THE AWAY FLOW IS BUILT — full report in
+    `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.**
+    **WORKING, seen on glass:** the week-shape control, the leave date, the
+    unbounded return date, the equipment question and its dated span, the GAME
+    coming off the week during a trip, and a fixture inside the trip no longer
+    anchoring its week.
+    **STILL SHOWING: the team night on a combined day.** The card's words come
+    from `getSessionComponents`, and the two-field fix for it measured WORSE on
+    the real day — it took his gym session off the card. The exact next place is
+    named in the boundary report.
+    **Held by `test:away-flow` (36 cells), `test:day-first-timeline`,
+    `test:program-control-durable`.**
+
 ## SAFE FOR A PARALLEL AGENT — context, not orders
 
 **This heading is the stop hook's region terminator** (`repoLawGuardsTests.ts:252`
@@ -1114,7 +1316,7 @@ seat was wrong.
 ## Previously (now processed)
 
 `docs/SEAT_INBOX_COMPLETED_2026-08-13.md` — items 0, 0a-0f, 4, 5, 8, 10, 11, 12,
-15, 16, 19, 23 **and 36, 37, 28, 29**, moved out of the queue 2026-08-13 **verbatim, byte-identical,
+15, 16, 19, 23 **and 36**, moved out of the queue 2026-08-13 **verbatim, byte-identical,
 nothing reworded**. Each was a BUILT stub with no open sub-order.
 
 `docs/SEAT_INBOX_ARCHIVE_TO_2026-08-10.md` — most recently the craft validator,
