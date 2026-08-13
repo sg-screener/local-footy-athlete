@@ -15,7 +15,9 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-44. **⚠ FOUR GUARDS ARE RED AND ONE IS A REAL REGRESSION FROM THE LAST HOUR.**
+44. **BLOCKED-BY: other-agent — ⚠ FOUR GUARDS ARE RED. THE STORE-WRITER HALF IS
+    PAID BY `progression`; THE REMAINDER IS `audit`'s PER THIS ITEM'S OWN OWNER
+    LINE.**
 
     **OWNED BY `progression` (the store writer) and `audit` (the two flows).**
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *store*, *writer*, *flow* — the
@@ -52,7 +54,7 @@ his instruction is standing authority, not history.**
     and they should be paid before the next unit, not carried.
 
 
-40. **CENSUS C4 — SAM'S FLOORS DO NOTHING. BUILD THE ENFORCEMENT.**
+40. **BLOCKED-BY: other-agent — CENSUS C4. OWNED BY `pace` in its own text.**
 
     **OWNED BY `pace`.**
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *running*, *floor*, *minimum* —
@@ -90,8 +92,14 @@ his instruction is standing authority, not history.**
     a `DeloadWeekPolicy`. **The DOSE is resolved once per week.** A window
     starting on a Thursday needs the POLICY resolution moved inside the per-day
     loop — which lands on R-034's owner, whose transformation is stated per WEEK.
-    **So this is an ARCHITECTURE call, not a wiring one**, and the escalation
-    rule says produce the reassessment before writing more code. The small blast
+    **⚠ AND I WITHDRAW "this is an ARCHITECTURE call" — R-035 ALREADY SETTLES
+    IT and the ask gate caught me. REGISTRY-GREP:** *rolling*, *7-day*,
+    *deload*, *readiness* → R-017, R-034, R-035, R-036, R-038, R-063. **R-035 is
+    verbatim: a ROLLING 7-day window from the declaration day, "NOT THE REST OF
+    THE CALENDAR WEEK"** — the exact defect. **R-034 does NOT collide** (it says
+    what a deload DOES; R-035 says WHEN), so they compose: the transformation
+    applies to the days inside the window. **Nothing to ask Sam, exactly as this
+    item's own first line says.** The remaining work is the per-day dose seam. The small blast
     radius at the top (`doorDeload` has two uses) is exactly what makes it read
     as a one-liner. **Next session starts at that decision, not at the wiring.**
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *deload*, *cooked*, *readiness*
@@ -139,7 +147,7 @@ his instruction is standing authority, not history.**
     **PROVE IT:** a contrast day ships one paired block at the main slot, same
     pattern both halves. Mutation: break the pattern match, cell reds.
 
-43. **CENSUS C10 — THE LOCK ON A GUESSED STRENGTH CUT.**
+43. **BLOCKED-BY: other-agent — CENSUS C10. OWNED BY `audit` in its own text.**
 
     **OWNED BY `audit`.**
     **REGISTRY-GREP:** R-073 — Sam ruled *"that sounds shit and not good"*, and

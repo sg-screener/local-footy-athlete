@@ -102,17 +102,36 @@ read point alone — **the deload POLICY resolution has to move inside the per-d
 loop**, which lands on R-034's owner (`deloadWeekRules`, `test:deload-law`), a
 law whose transformation is stated per WEEK ("main lifts HALF the sets").
 
-**SO THIS IS AN ARCHITECTURE QUESTION, NOT A WIRING ONE, AND SAYING SO IS THE
-CONTRIBUTION.** The blast radius is deceptively small at the top — `doorDeload`
-has exactly two uses — which is precisely how this item reads as a one-line fix.
-**It is not.** Two ordered fixes on this list were refuted by measurement on
-2026-08-13; this is the same shape caught BEFORE the build rather than after.
+**SO THE REMAINING WORK IS A PER-DAY DOSE SEAM, NOT A REWIRING — and the blast
+radius is deceptively small at the top** (`doorDeload` has exactly two uses),
+which is precisely how this item reads as a one-line fix. **It is not one.** Two
+ordered fixes on this list were refuted by measurement on 2026-08-13; this is
+the same shape, caught BEFORE the build rather than after.
 
-**WHAT I AM NOT DOING: guessing which way it should resolve.** Whether R-034's
-week transformation becomes per-day, or the rolling window is honoured some
-other way, is a design call that belongs with whoever owns the deload law — and
-`.claude/rules/coach-and-plan-edits.md`'s escalation rule says to produce the
-reassessment before writing more code, not to add another guard.
+**⚠ AND I WITHDRAW THE PARAGRAPH THAT USED TO SIT HERE. IT SAID THE RESOLUTION
+WAS "a design call that belongs with whoever owns the deload law". IT IS NOT —
+SAM ALREADY RULED IT, AND THE ASK GATE IS WHAT CAUGHT ME.**
+
+**REGISTRY-GREP** over `docs/RULINGS_REGISTRY.md` for *rolling*, *7-day*,
+*deload*, *readiness* → **R-017, R-034, R-035, R-036, R-038, R-063.**
+
+**R-035 SETTLES IT IN HIS OWN WORDS, and they are the exact words of this
+defect:** *"low readiness means one thing: the next 7 days are deloaded"* —
+**"A ROLLING 7-day window from the declaration day, NOT THE REST OF THE CALENDAR
+WEEK."** The app does the calendar-week thing his ruling names and rejects.
+**Marked `BUILT` in the registry** on the strength of `test:readiness-illness-law`
+— true at the FACT level, and false at the generation level, which is this item.
+
+**AND R-034 DOES NOT COLLIDE WITH IT — my "two rulings collide" reading was
+wrong.** R-034 says what a deload DOES (half the sets, RPE 5-6); R-035 says WHEN
+it applies (a rolling 7 days). **They compose: the transformation applies to the
+days inside the window.** There is no ambiguity for Sam to resolve and no
+architecture call to escalate — **it is engineering, exactly as the item said in
+its own first line ("Nothing to ask him").**
+
+**I NEARLY SENT HIM A QUESTION HE HAD ALREADY ANSWERED.** The grep is the only
+reason I did not. That is the mechanism working as designed, and it is worth the
+line.
 
 **BUILD NOT STARTED, DELIBERATELY.** It changes generated output and owes
 `test:scenarios` + `test:qa` either side; item 34 says in as many words that
