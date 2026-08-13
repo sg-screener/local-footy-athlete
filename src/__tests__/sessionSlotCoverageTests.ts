@@ -364,6 +364,26 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
       equipment: ['Bodyweight Only'], teamTrainingDays: [],
     }],
   ];
+  // ── A LOWER DAY MUST CONTAIN LOWER WORK ────────────────────────────────
+  //
+  // **THE DEFECT: a leg day shipped ARM WORK because its own description said
+  // the word "accessory".** The plan entry's focus reads *"Lower body - squat
+  // emphasis (quad-dominant: squat, lunge, leg press; optional quad ACCESSORY:
+  // leg extension)"*, and `fallbackExercisesForPlanEntry`'s
+  // `/accessor|prehab|gunshow|pump|low-fatigue/i` branch matched inside it —
+  // BEFORE any pattern branch — returning
+  // `Bicep Curls · Tricep Pushdowns · Face Pulls · Calf Raises · Pallof Press`.
+  //
+  // Measured on the bodyweight world, the day named `Lower Squat`:
+  //   before  missing=[hinge, single_leg_knee, single_leg_hip]
+  //   after   missing=[]
+  //
+  // THIS CELL IS THE FLOOR, NOT THE LADDER. Coverage is already ratcheted below;
+  // this asserts the cruder thing that ratchet cannot say — that a day the plan
+  // calls LOWER contains at least one squat-or-hinge row at all. A day of curls
+  // named "Lower Squat" is a different kind of wrong from a day missing a slot.
+  const lowerDaysWithoutLowerWork: string[] = [];
+
   /** Measured 2026-08-13. Lower it when a day is fixed; never raise it. */
   const DEFICIENT_CEILING = 1;
   let laddered = 0;
@@ -375,6 +395,24 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
     for (const workout of (program?.microcycles?.[0]?.workouts ?? [])) {
       const kind = slotDayKindFor(String(workout.name ?? ''));
       if (!kind) continue;
+      if (kind === 'lower') {
+        // ⚠ THE FIRST VERSION OF THIS ASKED "does the day contain ANY lower
+        // row" AND ITS MUTANT SURVIVED. The defective day was
+        // `Bicep Curls · Tricep Pushdowns · Tib Raises · Pallof Press · Back
+        // Squat` — it HAS a squat, so "any lower row" was satisfied while the
+        // day was three-quarters arm work. Caught by removing the production
+        // guard and watching this cell stay green.
+        //
+        // THE HONEST QUESTION IS THE OPPOSITE ONE: Sam's LOWER ladder contains
+        // no `arm_or_shoulder` slot at all, so an arm row on a leg day is not
+        // "extra" — it is the wrong body half, and one is enough to say so.
+        const armRows = (workout.exercises ?? [])
+          .filter((row) => slotsFilledByRow(row).includes('arm_or_shoulder'))
+          .map((row) => String(row?.exercise?.name ?? '?'));
+        if (armRows.length > 0) {
+          lowerDaysWithoutLowerWork.push(`${label} | ${workout.name} -> ${armRows.join(', ')}`);
+        }
+      }
       laddered += 1;
       const coverage = sessionSlotCoverage(workout.exercises ?? [], kind);
       if (coverage.missing.length > 0 || coverage.duplicated.length > 0) {
@@ -389,6 +427,13 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   ok('no generated day is missing MORE of Sam\'s ladder than it was',
     deficient.length <= DEFICIENT_CEILING,
     `${deficient.length} deficient of ${laddered} (ceiling ${DEFICIENT_CEILING})\n     ${deficient.join('\n     ')}`);
+
+  // THE FLOOR, BENEATH THE LADDER RATCHET ABOVE. A day of curls named
+  // "Lower Squat" is a different kind of wrong from a day missing one slot, and
+  // the ratchet cannot say it — it counts deficiencies, not absurdities.
+  ok('a LOWER day carries no arm/shoulder work — his ladder has no such slot',
+    lowerDaysWithoutLowerWork.length === 0,
+    `arm work on leg days: ${lowerDaysWithoutLowerWork.join(' | ')}`);
   console.log(`\n  SLOT CENSUS: ${deficient.length} deficient of ${laddered} laddered days (ceiling ${DEFICIENT_CEILING})`);
   for (const line of deficient) console.log(`    ${line}`);
 }

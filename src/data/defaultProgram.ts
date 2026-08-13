@@ -1104,7 +1104,30 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
   // Low-fatigue accessories / gunshow / prehab (typical G-1 slot): light
   // pump + prehab work, never main pressing — the previous fallthrough to
   // the default bench/OHP/dips block put main lifts on the day before a game.
-  if (/accessor|prehab|gunshow|pump|low-fatigue/i.test(lower)) {
+  //
+  // ── ⚠ THE TYPED INTENT OUTRANKS THE PROSE, AND THIS BRANCH PROVED WHY ────
+  //
+  // **A LEG DAY WAS SHIPPING ARM WORK BECAUSE ITS OWN DESCRIPTION SAID THE WORD
+  // "ACCESSORY".** The plan entry's focus text reads *"Lower body - squat
+  // emphasis (quad-dominant: squat, lunge, leg press; optional quad ACCESSORY:
+  // leg extension)"*, and `/accessor/i` matches inside it. This branch sat
+  // BEFORE every pattern branch, so a squat day returned
+  // `Bicep Curls · Tricep Pushdowns · Face Pulls · Calf Raises · Pallof Press`.
+  //
+  // MEASURED, bodyweight off-season, the day named `Lower Squat`:
+  //     SHIPPED   Bicep Curls · Tricep Pushdowns · Tib Raises · Pallof Press · Back Squat
+  //     THE SQUAT BRANCH WOULD HAVE GIVEN
+  //               Back Squat · RDLs · Reverse Lunges · Single Leg RDL · Leg Extension
+  //
+  // THE GUARD IS THE REPO'S OWN RULE, NOT A NEW ONE: delegate to the typed
+  // owner, never re-infer from text. `contributions` is the plan's OWN answer to
+  // "what main patterns does this day carry", so a day that names any is a
+  // main-strength day whatever prose it also carries. A true accessory day
+  // (gunshow, prehab, the G-1 slot) names NO main pattern and still lands here.
+  //
+  // The regex is kept rather than replaced: it is the only signal for the
+  // pattern-less days this branch exists to serve.
+  if (contributions.length === 0 && /accessor|prehab|gunshow|pump|low-fatigue/i.test(lower)) {
     return [
       { name: 'Bicep Curls', sets: 2, repsMin: 10, repsMax: 15 },
       { name: 'Tricep Pushdowns', sets: 2, repsMin: 10, repsMax: 15 },
