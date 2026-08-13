@@ -355,6 +355,39 @@ const SITES: DisplacementSite[] = [
       name: 'Assault Bike Intervals',
     }),
   },
+  {
+    id: 'freed_by_the_trip',
+    anchor: 'Freed by the trip',
+    // ── R-075, Sam 2026-08-13: *"Away has to replace the work it removes."* ──
+    //
+    // `applyAwayPass` -> `freedByTheTrip` builds a session on a day a live trip
+    // emptied — the vacated fixture, or a club-only night. **It cannot reach an
+    // athlete-placed day, and that is a property of its two guards rather than a
+    // courtesy it extends:**
+    //   - the fixture guard needs `source === 'game'`, `indicator === 'game'` or
+    //     `workoutType === 'Game'`. An athlete placement composes as
+    //     `date_override` -> `source: 'manual'`, so none of the three hold.
+    //   - the club guard needs `isTeamTrainingOnly`. A session the athlete put
+    //     there is not team-training-only by construction.
+    //
+    // **SO IT DISPLACES NOTHING, AND THE ROW SAYS `unreachable` FOR THE SAME
+    // REASON `freed_game_slot` DOES** — the day has to be the club's before this
+    // deriver looks at it, and a day the athlete owns never is.
+    //
+    // ⚠ IF EITHER GUARD IS EVER WIDENED — a trip clearing *any* day inside its
+    // span, say — **this row becomes `consults` and the deriver owes an
+    // athlete-placement check.** That is the whole reason this table refuses a
+    // deriver without a row.
+    answer: 'unreachable',
+    // Wednesday, carrying a Game the athlete did not place.
+    dayOfWeek: 3,
+    build: (weekStart) => ({
+      ...mondaySession(weekStart),
+      id: 'sweep-freed-by-trip',
+      planEntryId: undefined,
+      name: 'Assault Bike Intervals',
+    }),
+  },
   // THE PASS-3 ROW IS GONE WITH ITS DERIVER (2026-07-30).
   //
   // `resolveWeekWithConditioning`'s recovery fill pass put a derived recovery
