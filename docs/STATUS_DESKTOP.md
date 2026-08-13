@@ -344,3 +344,66 @@ closes one: my cells hold RULINGS, not laws.
 **SO THERE IS ONE QUESTION FOR SAM AND IT IS THE ONLY ONE** — away: the bye's two
 lifts, or his usual gym count? Everything else on my side is either finished or
 waiting on another agent.
+
+
+---
+
+## 2026-08-13 — R-077: SAM RULED, AND THE ANSWER TO ITEM 37's STRENGTH ARM WAS "DO NOTHING"
+
+***"let's go by week for that actually they will likely train less than normal and
+i think they can always add a session in if they need to"***.
+
+**R-069(2) WINS OVER R-075 ON THE STRENGTH COUNT.** An away week keeps the 2-lift
+bye shape. **The three placement attempts stay reverted and `coachingEngine.ts`
+is untouched** — the item closed on a ruling, not on code, which is the best
+possible outcome for the four hours spent proving the code was obeying him.
+
+**⚠ AND THE SCOPE MATTERS MORE THAN THE ANSWER: R-075 IS NOT OVERTURNED.** He
+ruled the STRENGTH count only. **The conditioning replacement stands and ships** —
+a freed fixture day carries a conditioning session. **Anyone reading "the bye
+shape wins" as "delete the away replacement" would undo work he asked for twice.**
+
+**THE SECOND HALF OF HIS SENTENCE IS LOAD-BEARING, SO IT IS A CELL AND NOT A
+NOTE.** He accepted training less BECAUSE he can top it up. Measured through the
+real door on a live away week: **all seven days `canAdd: true`, offering
+`strength_upper` / `strength_lower` / `strength_full` / `gunshow`.** Non-vacuity
+is the HOME game day, which is `locked: 'game_day', canAdd: false`. **His ruling
+is whole, not half true** — `test:away-flow` [17e]/[17f]/[17g], 49/0.
+
+**AND THE FREED DAY GAINED MORE THAN A SESSION:** at home that Saturday is a
+LOCKED fixture; away it is editable and takes an added session on top. **The
+freed-Saturday work did not just fill the hole, it opened it to him** — which is
+exactly the door his escape hatch depends on.
+
+### QUEUE
+
+**Archived my own finished items — 36, 37, 28, 29** — to
+`SEAT_INBOX_COMPLETED_2026-08-13.md`, verbatim, pointer updated. **AWAY IS DONE
+AND OUT OF THE QUEUE.** What is left unblocked is not mine: 38's R-076 half (face
+pull, terminal), 31, 26, 27, and standing 1 and 13.
+
+
+---
+
+## 2026-08-13 — R-004 SAID `UNENFORCED` OVER FINISHED WORK
+
+**Item 31 reads *"ALL THREE ARE BUILT — VERIFIED, NOT REBUILT. NOTHING IS OWED
+HERE."* R-004's status line still read `UNENFORCED — SEAT_INBOX item 31 part 5`.**
+
+**VERIFIED BEFORE TOUCHING IT, by opening the enforcer** — which is the registry's
+own gate rule 2 run backwards:
+- `src/rules/christmasBreakAsk.ts` exists, both halves keyed to one break year;
+- **production readers, not just a file**: `useHomeScreen.ts:79` imports
+  `decideChristmasBreakAsk` and returns it at `:1584`; `HomeScreenV2.tsx:118`
+  consumes it;
+- `test:christmas-break` **44/0**.
+
+**A ROW THAT SAYS `UNENFORCED` OVER FINISHED WORK IS WORSE THAN A MISSING ROW: it
+sends the next agent to rebuild something that already ships**, which is the exact
+waste Sam has been angriest about, and the ask gate reads these rows. Gate rule 2
+guards the other direction (*"no work starts on a BUILT row without opening the
+enforcer and finding it absent"*); **the reverse check should be just as routine
+and was not being done.**
+
+`test:ruling-registry` [2] *"the UNENFORCED ruling count only falls"* stays green
+— this is a fall, and an honest one, because the work is genuinely there.

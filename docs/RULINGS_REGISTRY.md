@@ -78,7 +78,19 @@ still reports team training.
 **R-004** · *"that way the app isn't guessing"* · The Christmas break is set by
 ASKING: ~10 Dec *"when is your last team training?"*, ~3 Jan *"when does team
 training go back?"*. The dates are defaults for WHEN TO ASK, never inferred
-answers. · `UNENFORCED` — SEAT_INBOX item 31 part 5.
+answers. · `BUILT` — `src/rules/christmasBreakAsk.ts` holds both halves keyed to
+one break year, with **production readers** (`screens/home/useHomeScreen.ts:79`
+imports `decideChristmasBreakAsk` and returns it at `:1584`;
+`screens/home/HomeScreenV2.tsx:118` consumes it), held by `test:christmas-break`
+**44/0**.
+**⚠ THIS ROW SAID `UNENFORCED` FOR HOURS AFTER THE WORK LANDED, AND THAT IS THE
+DEFECT THIS REGISTRY EXISTS TO PREVENT.** Its status still pointed at *"SEAT_INBOX
+item 31 part 5"* while item 31 read *"ALL THREE ARE BUILT — VERIFIED, NOT REBUILT.
+NOTHING IS OWED HERE."* **A row that says UNENFORCED over finished work sends the
+next agent to rebuild it** — the exact waste gate rule 2 guards in the other
+direction, and the thing Sam has been angriest about. **Corrected 2026-08-13 by
+the desktop after opening the enforcer and finding it PRESENT**, which is gate
+rule 2 run backwards and should be routine.
 
 **R-005** · *"once a session is done then it's locked in, only the rest of the
 week can change … wednesday to sunday should adjust to accomodate this"* · A
