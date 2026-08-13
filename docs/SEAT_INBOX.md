@@ -158,12 +158,17 @@ his instruction is standing authority, not history.**
       what made my first run a dead instrument) gives **`ok=true`, a pin minted
       and a week-scoped overlay written**, on the away arm and the home control
       alike. **It is neither refused nor a no-op.**
-      **⚠ ONE STEP IS STILL UNPROVEN:** my accepted-week reader shows the day
-      Rest/0 rows afterwards **including on the positive control**, so it is most
-      likely the wrong surface rather than a false-Done — **but that is not
-      measured. Do NOT read it as a defect.** The cheap next move is to find a
-      KNOWN-GOOD addition this reader does surface; if none exists the reader is
-      blind. Receipts: `docs/STATUS_PROGRESSION.md`.
+      **✅ AND THE LAST STEP IS CLOSED — THE SESSION IS REALLY WRITTEN.** The
+      overlay is keyed at the week start my reader asks for; its content lives in
+      `workoutsByDate` and I had printed a field name that does not exist, which
+      is the whole of why it read empty. Printed directly: away
+      `strength_lower` → **Lower Squat, 5 rows**; away `strength_upper` →
+      **Upper Push, 3 rows**; home the same; positive control **Hard Intervals**.
+      **The hatch works end to end — offered AND written, away as at home.**
+      **⚠ LIMIT: proven at the STORE, not on glass** — the render is a simulator
+      check nobody has run. **AND SEPARATELY:** `rebaseAcceptedEffectiveWeek` did
+      not surface a fresh overlay in my harness; that is left as its own open
+      question, not folded into this one. Receipts: `docs/STATUS_PROGRESSION.md`.
     - **ONE REAL DEFECT FOUND AND FIXED ON THE WAY:** a REFUSED coach add left an
       **active `UserRemovalConstraint` pin** on a day it had just reported
       unchanged — the rollback restored two of the three stores the add writes.

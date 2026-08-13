@@ -73,18 +73,40 @@ ANSWER FLIPS:**
 `ok=true`, mints a `UserRemovalConstraint` and writes a week-scoped overlay for
 the target date. R-077's escape hatch is not shut.
 
-**⚠ WHAT IS STILL NOT PROVEN, AND I AM NOT CLAIMING IT.** My accepted-week
-reader (`rebaseAcceptedEffectiveWeek` over `storedWorldSurfaces`) shows the day
-**still Rest, 0 rows**, after every one of those applies — INCLUDING the positive
-control. Since the store demonstrably holds the overlay, the likeliest reading is
-that this reader is the wrong surface in this harness rather than a false-Done —
-**but "likeliest" is not measured, and the last step of the athlete's own
-sentence ("the session is THERE") is the one step I have not shown.**
-**THE CHEAP NEXT MOVE:** find a KNOWN-GOOD addition this reader does surface. If
-none exists, the reader is blind and the gap is instrumentation; if one exists
-and these four do not appear, it is a false-Done and it is serious.
-**Do not read my `Rest, 0 rows` as evidence of a defect — it is evidence of an
-unvalidated reader.**
+**✅ AND THE LAST STEP IS NOW CLOSED — THE SESSION REALLY IS WRITTEN.** I had
+left this open with "my reader shows Rest / 0 rows, but do NOT read that as a
+defect". **That caution was right, and the reader was blind.**
+
+The overlay is keyed `2026-07-13` — **exactly the week start my reader asks
+for** — so the key was never the problem. Its content lives in
+`workoutsByDate`, and I had been printing a field name that does not exist
+(`workouts`), which is why it read as empty. **Also worth naming: my earlier
+"overlay mentions the date" hit was nearly a false positive — this week's
+`weekEnd` IS 2026-07-19, so a substring search for the date would have matched
+the week's own end date rather than any session.** Printing the map directly:
+
+| arm | `workoutsByDate['2026-07-19']` |
+| --- | --- |
+| positive control, home (`metcon_offlegs`) | **Hard Intervals**, 1 row |
+| home, `strength_lower` | **Lower Squat**, 5 rows |
+| **away, `strength_lower`** | **Lower Squat, 5 rows** |
+| **away, `strength_upper`** | **Upper Push, 3 rows** |
+
+**SO R-077'S ESCAPE HATCH WORKS END TO END.** The athlete's chosen strength
+session is offered on every day of an away week (the other seat's half) AND is
+written into the week the app reads from, away and home alike, with a positive
+control proving the harness can see a known-good add. **Sam accepted training
+less on a trip BECAUSE he can top it up — and he can.**
+
+**⚠ THE HONEST LIMIT: THIS IS PROVEN AT THE STORE, NOT ON GLASS.** *Done means
+the athlete can see it*, and the last inch — the session rendering on the
+phone — is a simulator check I have not run. **The write is no longer in
+doubt; the pixels are unverified.**
+
+**AND `rebaseAcceptedEffectiveWeek` NOT SURFACING IT IS LEFT AS A SEPARATE OPEN
+QUESTION, DELIBERATELY NOT ABSORBED.** Either that reader needs something my
+harness did not give it, or it genuinely does not see a fresh overlay — the
+second would matter. It is not R-077's problem and I am not folding it in.
 
 ### ⚠ AND CHASING THAT LAST STEP FOUND THE REAL HOLE: A GATE THAT DOES NOT EXIST
 
