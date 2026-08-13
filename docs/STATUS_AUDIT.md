@@ -45,6 +45,42 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ THE STRONGEST OPEN CANDIDATE OF THE DAY — `avoid_trigger_1_3` may not avoid the trigger. **NOT CONCLUDED.**
+
+**`test:injury-engine` (`injuryAdjustmentEngineTests`) is RED, 6 failures, and it
+is NOT in `test:bible`** — it has a script and the chain never runs it, so this
+has been invisible.
+
+**THE CASE:** *"hammy hurts 3/10"* over a Monday holding `RDLs` + `Back Squat`.
+The suite asserts **RDLs removed, Back Squat kept**. `fired = true` PASSES —
+the engine runs — **and no Monday change is produced.**
+
+**WHY THIS IS DIFFERENT FROM THE FIVE ALARMS I REFUTED TODAY: the band's own NAME
+is the specification.** Measured:
+
+    severity 3 -> band = 'avoid_trigger_1_3'   removesRiskyWork = false
+    severity 5 -> band = 'reduce_affected_4_5' removesRiskyWork = false
+    severity 6 -> band = 'restrict_and_refer_6_7' removesRiskyWork = TRUE
+
+**`removesRiskyWork = false` at 3 is CORRECT** — that is the GENERIC risky-work
+rule and it belongs to bands 6-10. **But the 1-3 band is literally called
+`avoid_trigger`, and the suite is asserting exactly that: avoid the TRIGGER, keep
+everything else.** Those are two different rules and only one of them is measured.
+
+**WHAT IS MEASURED:** the band is real and READ in at least five places
+(`guidedInjuryControl` ×2, `generationConstraints:464` → `'Mild'`,
+`injuryProgression`, `recoveryAddonCoverage` ×2). **It is not dead.**
+
+**WHAT IS NOT MEASURED, AND IS THE WHOLE QUESTION:** does anything act on
+`avoid_trigger_1_3` by REMOVING THE NAMED TRIGGER EXERCISE from a built week? If
+not, a mild injury changes labels and doses but leaves the offending lift in the
+session.
+
+**NEXT STEP, ONE READ:** follow `applyInjuryAdjustment` for a Mild band and see
+whether an exact-trigger exercise is dropped. **If it is not, this is the first
+genuine athlete-facing defect of the day** — and the reason it survived is that
+its suite is not in the chain.
+
 ### ✅ THE "FAILS OPEN" CONCERN IS **REFUTED** — there are TWO injury mechanisms, and the untagged 34 are covered by the other one
 
 **THE CENSUS, done properly this time.** My first attempt imported
