@@ -139,6 +139,18 @@ entirely. **Ruled out with receipts: the pool has 4 templates
 ranking does nothing. NOT GUESSED: whether the category reaches template
 selection at all, or is vetted and downgraded. One instrument answers it.**
 
+**AND I RAN THE SPLITTING INSTRUMENT RATHER THAN HANDING IT ON. `cod_decel`
+NEVER ARRIVES AT TEMPLATE SELECTION.** A probe at `selectConditioningTemplate`
+(`conditioningSelection.ts:555`) over pre-season-no-club, **with COD promoted to
+FIRST so ranking could not be the excuse**, logged eleven calls carrying THREE
+categories: `tempo` x5, `recovery_flush` x4, `vo2` x2. **`cod_decel` is absent —
+and so are `aerobic_base`, `glycolytic` and `sprint`.** So eligibility is not
+vetoing COD: the planner's category is not what reaches the selector, the loss is
+not COD-specific, and **four of seven categories are being dropped somewhere
+between `pickCondCategory` and `selectConditioningTemplate`.** That is a bigger
+fact than the item was chasing, and it is where the next seat starts. Ranking,
+the pool and `codDecelPermitted` are all measured innocent.
+
 **AND MY FINGERPRINT WAS VACUOUS ON ITS FIRST RUN** — it walked
 `microcycles[].days[].workouts[]` and returned `[]` for all six worlds, so
 "nothing moved" would have been the only answer it could give, in both arms.
