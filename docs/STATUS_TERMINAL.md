@@ -145,6 +145,37 @@ re-measured instead of believing it:**
    `applySubphaseMainLiftLoadMultiplier`. That window ends at
    `finaliseWorkoutAfterMutation`'s `main_pattern_drift`, which `9b19244f` fixed.
 
+### THE COMPOSER'S BEFORE-NUMBER — 24 of 44 days (55%). `b46d1565`.
+
+**AND MEASURING IT FOUND A BUG IN THE ORACLE FIRST, which is the whole reason to
+measure before building.** `UPPER_SPLIT_SLOTS` held ONE direction (push) and
+`slotDayKindFor` collapsed both into one kind, so **every pull-only day was
+judged against push slots and could not cover its ladder at any content.** 12 of
+the 20 misses in the sweep were phantom. Fixed: `upper_split_push` /
+`upper_split_pull`, each with its own list, mutation-checked.
+
+**THE CORRECTED SWEEP — 5 worlds x 4 weeks, 44 strength days:**
+
+| | |
+| --- | --- |
+| cover every slot | **24 (55%)** |
+| have a DOUBLED slot | **12** (was reported as 0 behind the phantom misses) |
+
+Most-missed: `arm_or_shoulder` 12 · `single_leg_knee` 8 · `single_leg_hip` 8 ·
+`squat` 4 · `hinge` 4.
+
+**THE SINGLE-LEG GAP IS THE REAL COMPOSER TARGET.** The `Lower Hinge` and
+`Lower Squat` days carry **7-8 rows** and still miss BOTH single-leg slots — so
+this is not a session-size problem, which is Sam's whole point (*"the number of
+exercises is not important"*). A day can be long and still uneven.
+
+**⚠ AND ONE MISS IS PROBABLY A TAG QUESTION, NOT A COMPOSER ONE — do not build
+against it before deciding.** The 12 pull days are `Pull-Ups + Barbell Row +
+Face Pulls`, and `Face Pulls` tags as `horizontal_pull`. That reads as
+doubled-horizontal + missing-arm/shoulder. **A face pull is rear-delt work**, so
+the honest fix may be the tag, not the session. Changing a tag changes every
+reader, so it is flagged rather than taken.
+
 **SO THE NEXT UNIT REALLY IS THE COMPOSER**, with no blocker in front of it —
 and R-014's own trace says where NOT to build it: `buildTagAwareSession` and
 `exerciseScorer` are **not on the generation path** (one production caller, the
