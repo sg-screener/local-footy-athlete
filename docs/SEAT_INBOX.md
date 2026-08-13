@@ -223,31 +223,43 @@ his instruction is standing authority, not history.**
     than from "no pattern is safe". **A cut with no proof is a defect, not a
     reduction.**
 
-    **⚠ THE MEASUREMENT SITE IS FOUND — 2026-08-13, desktop agent. This is the
-    piece the item did not have, and it is one line.**
-    `postGenerationConstraintValidation.ts:1012` runs
-    `while (workouts.filter(hasMainStrength).length < selectedMainStrength)`,
-    trying to reach the selected target by cloning main-strength rows onto days
-    that carry none — skipping fixture days and anything inside three days of a
-    fixture. **`if (!source || !targetWorkout) break;` (`:1026`) IS the moment
-    the week runs out of room, and it records NOTHING.** That break is the
-    exhaustion PROOF the ruling asks for: a day did not remain, measured, not
-    inferred. **`selectedMainStrength` (`:1008`) is the target it fell short of**,
-    so the reduced value is known at the same line.
+    **⚠⚠ THE MEASUREMENT ALREADY EXISTS AND IS ALREADY COMPUTED — CORRECTED
+    2026-08-13, SAME SESSION, AND THE FIRST ANSWER WAS WRONG.**
 
-    **AND THE INJURY PRODUCER AT `section18SafetyPolicy.ts:311` IS NOT THE ONE TO
-    REPLACE.** Its `reason` is `injury_restriction` and its comment records a
-    differential-golden defect it exists to avoid — reading an all-optional
-    early-off-season mode fact as a whole-body restriction and zeroing the
-    frequency. **These are two different reductions with two different reasons.
-    The item's "rather than" reads as a swap; it is an ADDITION.**
+    **WHAT I FIRST RECORDED (commit `fa89388b`):** *"the proof site is
+    `postGenerationConstraintValidation.ts:1026` — `if (!source ||
+    !targetWorkout) break;` is the week running out of room."*
+    **THAT BREAK IS IN `buildSection18ProductionFallbackCandidate`**, whose own
+    comment says it is *"invoked only after the primary candidate fails"*.
+    **I read a loop and attributed it to the path athletes are actually on.**
+    A-function's-second-caller-is-a-different-world, sighting on my own work,
+    inside the item that exists because a cut was INFERRED rather than proven.
 
-    **⚠ ONE QUESTION THE BUILD MUST ANSWER FIRST, AND IT IS ARCHITECTURE, NOT
-    SAM'S:** the break is in POST-GENERATION VALIDATION and the contract is built
-    upstream. **Does that seam write back to the contract, or does the exhaustion
-    status have to be measured where the contract is authored?** Answer that
-    before adding a field — a status written from a seam that does not own it is
-    how `canOverride` was written nine times and read zero.
+    **THE REAL ANSWER, AND IT IS BETTER: THE PROOF IS ALREADY THERE, GENERALLY.**
+    `section18EffectiveWeekEvaluator.ts:1020` already runs
+    `assess(contract.mainStrength.exposure, ledger.mainStrength.achievedCount)`,
+    and `assess` (`:1009-1019`) already writes **`unresolvedMinimumShortfall`**
+    and **`unresolvedPlannerSelectedShortfall`** onto the contract — *"the target
+    minus what the week actually achieved"*, on the real evaluation path, for
+    every week. **That IS measured exhaustion. Nothing needs to be measured; the
+    reduction needs to be emitted from a number that is already on the
+    contract.**
+
+    **SO THE BUILD SHRINKS, AND THE ARCHITECTURE QUESTION DISSOLVES WITH IT.**
+    No new field on the mainStrength block, no status written from a seam that
+    does not own it, no write-back from post-generation validation. **The unit is:
+    emit a typed `main_strength_frequency` reduction whose reason is EXHAUSTION
+    when `unresolvedPlannerSelectedShortfall > 0` (or the minimum one) after
+    placement, beside the injury producer rather than instead of it.**
+
+    **AND THE ITEM'S "RATHER THAN" IS STILL WRONG — IT IS AN ADDITION.**
+    `section18SafetyPolicy.ts:311` carries `reason: 'injury_restriction'` and its
+    comment records a differential-golden defect it exists to avoid: reading an
+    all-optional early-off-season mode fact as a whole-body restriction and
+    zeroing the frequency. **Two reductions, two reasons. Replacing one with the
+    other reintroduces a defect that already shipped once.**
+
+    **STAND-DOWN D RE-VERIFIED AS SPENT** before any of this was touched.
 
     **(c) BLOCKED-BY: other-agent — THE MAS BLOCK LIMIT.** The fourth clause goes
     in `conditioningSelection.ts:291-304`, and that file is `MM` in the shared
