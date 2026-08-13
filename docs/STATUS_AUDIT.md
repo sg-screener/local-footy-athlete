@@ -45,6 +45,40 @@ thing that actually bit.**
 
 ## STATUS
 
+### THREE OF THE ORPHAN REDS TEST **DEAD CODE** — their failures cannot reach an athlete
+
+**Generalised the dead-engine finding across all 21 orphan reds: for each, does
+its subject have a PRODUCTION caller?**
+
+| suite | subject | production callers |
+| --- | --- | --- |
+| `injuryAdjustmentEngine` | `applyInjuryAdjustment` | **0** |
+| `gameChangeCoachNotes` | `buildGameChangeCoachNoteConstraint` | **0** |
+| `postGenerationConstraintValidation` | `validateProgramAgainstActiveConstraints` | **0** (used by 3 test files, no product file) |
+
+**So three suites have been failing against functions the app never runs.** Their
+reds are real as statements about the code and CANNOT REACH AN ATHLETE — which is
+the single most useful thing to know before spending an hour on one, as I did.
+
+**THE REST HAVE LIVE SUBJECTS** — `buildWorkoutsFromCoach` (7 callers) under four
+suites, `buildCoachingPlan` (3) under two, `attachRecoveryAddonsToWeek` (3),
+`EXERCISE_CUES` (6). **A red there is worth reading; a red in the three above is
+archaeology.**
+
+**⚠ AND MY CENSUS TRUNCATED A NAME AT 33 CHARACTERS, which nearly produced a fake
+finding.** It printed `buildGameChangeCoachNoteConstrain`, I grepped the plural
+`…Constraints`, and got ZERO MENTIONS ANYWHERE — a "0" that meant *the symbol does
+not exist* rather than *nothing calls it*. **The real name is
+`buildGameChangeCoachNoteConstraint`, singular, and its true count is also 0** —
+so the finding survived, but only because I checked the zero instead of reporting
+it. **Eleventh instrument fault today, and the second where a truncated string
+produced a plausible number.**
+
+**WHAT THIS COMPRESSES:** the remaining orphan triage no longer needs 21 deep
+reads. **Three are dead-code archaeology, six were already classified as
+layer-mismatch candidates, and the live-subject ones are where a real defect can
+still be.**
+
 ### ✅ RESOLVED — `applyInjuryAdjustment` HAS **ZERO PRODUCTION CALLERS**. No athlete is affected, and my "confirmed defect" was wrong twice over.
 
 **MEASURED, whole-repo:**
