@@ -439,9 +439,51 @@ for (const site of SITES) {
 
 // ── The sixth deriver has nowhere to hide ─────────────────────────────────
 
+/**
+ * CODE ONLY — A COMMENT IS NOT A DERIVER.
+ *
+ * `derivedSiteCount` counted `buildDerivedSession(` over the RAW file, so PROSE
+ * mentioning the call counted as a call site. On 2026-08-13 that is exactly what
+ * happened: the away/R-075 doc block in `sessionResolver.ts` quotes
+ * `buildDerivedSession('prehab_accessories', …, 'Freed game slot', …)` while
+ * explaining which owner it reuses, and the gate read 7 sites where the file has
+ * SIX. The table has 5 rows, so the suite was red either way — but it was red by
+ * the WRONG NUMBER, and the fix it demanded was two rows, one of which would have
+ * documented a deriver that does not exist.
+ *
+ * **A row answering for a comment is worse than the missing row it hides**: the
+ * next deletion-check would then fail for the opposite reason and nobody could
+ * tell which count was the lie. This is `a-comment-is-not-a-shipped-string`, and
+ * the law's own remedy is to STRIP AT THE READER rather than to teach every
+ * writer to avoid the token.
+ */
+function codeOnly(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')     // block and JSDoc comments
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1'); // line comments, sparing `https://`
+}
+
+// THE STRIPPER IS EXERCISED, NOT TRUSTED. A green gate is a claim: if `codeOnly`
+// ever degrades to the identity, every assertion below still passes on today's
+// file and the defect returns silently. This fixture reds the moment it does.
+run('codeOnly strips commented call sites and keeps real ones', () => {
+  const fixture = [
+    "const a = buildDerivedSession('real', 1);",
+    '/** doc: buildDerivedSession(\'prose\', 2) is what this reuses */',
+    "// line: buildDerivedSession('prose', 3)",
+    "const b = 'https://example.com'; // buildDerivedSession('prose', 4)",
+  ].join('\n');
+  const stripped = codeOnly(fixture);
+  const found = stripped.split('buildDerivedSession(').length - 1;
+  assert(found === 1, `codeOnly kept ${found} call sites, expected exactly 1`);
+  assert(stripped.includes("'https://example.com'"),
+    'codeOnly ate a URL — the `[^:]` guard for `//` is not holding');
+});
+
 run('every derived-session site in the resolver has a row in this table', () => {
-  const source = readFileSync(
+  const raw = readFileSync(
     join(__dirname, '..', 'utils', 'sessionResolver.ts'), 'utf8');
+  const source = codeOnly(raw);
   const derivedSiteCount = source.split('buildDerivedSession(').length - 1;
   assert(derivedSiteCount === SITES.length,
     `the resolver builds derived sessions at ${derivedSiteCount} sites but this table `
