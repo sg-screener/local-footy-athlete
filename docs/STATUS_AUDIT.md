@@ -45,6 +45,44 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ RESOLVED — `applyInjuryAdjustment` HAS **ZERO PRODUCTION CALLERS**. No athlete is affected, and my "confirmed defect" was wrong twice over.
+
+**MEASURED, whole-repo:**
+
+    applyInjuryAdjustment mentions:  19 in injuryAdjustmentEngineTests.ts (the orphan suite)
+                                      1 in injuryAdjustmentEngine.ts (its own definition)
+                                      0 anywhere else
+
+**THE MODULE IS IMPORTED WIDELY — BUT ONLY FOR ITS HELPERS.**
+`extractBodyPart` (`coachReadinessAdapter`, `CoachScreen`), `parseSeverityNumber`
+(`injuryProgression`), the `InjuryBucket` type (`guidedInjuryControl`),
+`pendingInjuryResolver`. **The ENGINE — `applyInjuryAdjustment` — is never
+called.**
+
+**AND IT IS SUPERSEDED ON PURPOSE.** `programAdjustmentEngine.ts:35` names the
+plan in its own header: *"Wiring into CoachScreen, removal of the existing
+injuryAdjustmentEngine…"*. **A successor exists; this one's entry point is dead
+and its helpers were kept.**
+
+**SO NO ATHLETE IS AFFECTED. My "CONFIRMED ATHLETE-FACING DEFECT" WAS WRONG TWICE
+OVER:** not confirmed (the break sits in an application step the fixture itself
+stubs), **and not reachable** (nothing calls the function in the first place).
+
+**THE HONEST ACCOUNTING OF THAT MISTAKE.** I refuted five athlete-facing alarms
+today with one habit — *run the real path before reporting*. On the sixth I was
+more confident than on any of the five, and I skipped it. **Confidence was the
+tell, and it pointed the wrong way.** The five I doubted, I checked; the one I was
+sure of, I published.
+
+**WHAT IS ACTUALLY WORTH HAVING, and it is real:**
+- **A dead engine with a live orphan suite.** Six cells have failed for weeks
+  against a function nothing calls — the `deriveMas`/`sessionSlotCoverage`
+  built-and-disconnected class again, fifth costume today.
+- **Its decision layer is PROVEN GOOD** (bucket, severity, band, rating, gate,
+  the `else` branch) — so whoever finishes the successor can lift that logic
+  knowing it was measured, not assumed.
+- **The retirement its own successor already named is still owed.**
+
 ### ⚠ DOWNGRADING MY OWN "CONFIRMED DEFECT" — the break is in APPLYING the actions, and the FIXTURE STUBS THAT STEP
 
 **I published this as a CONFIRMED athlete-facing defect one commit ago. The
