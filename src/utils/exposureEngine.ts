@@ -47,6 +47,7 @@ import {
   type ProgrammingHierarchyTier,
 } from '../rules/conflictResolutionHierarchy';
 import { classifySessionImpact } from '../rules/sessionImpactBands';
+import { getExerciseTags } from '../data/exerciseTags';
 
 // ─── Exposure taxonomy ──────────────────────────────────────────────
 
@@ -242,6 +243,35 @@ export function classifyExerciseExposures(rawName: string): Exposure[] {
   if (!rawName) return [];
   const n = rawName.toLowerCase();
   const out: Set<Exposure> = new Set();
+  // ── THE REGISTRY IS ASKED BEFORE THE ERG REGEXES BELOW ───────────────────
+  //
+  // **MEASURED 2026-08-13: FIVE of the 149 registry exercises were classified
+  // as ERG WORK on the strength of a word in their name** —
+  // `Inverted Row (Bodyweight)`, `Chest Supported Row`, `Chest-Supported DB
+  // Row`, `Single-Arm DB Row` (all `horizontal_pull`) and `Side Plank Row`
+  // (`core`). The erg branches match `\brow\b` and then subtract a
+  // HAND-MAINTAINED list of strength-row phrasings (`bent|barbell|seal|cable|
+  // machine row|seated row`). **A denylist of names cannot keep up with the
+  // names, and it did not**: `Barbell Row` was excluded, `Inverted Row` was
+  // not.
+  //
+  // WHAT IT COST, AND IT REACHED THE ATHLETE'S WEEK: on the bodyweight-only
+  // off-season scenario a *"Upper Pull"* day carrying `Inverted Row
+  // (Bodyweight)` was typed `modality: 'off_feet'` — the app calling a
+  // pull-up session ROWING-MACHINE WORK **in a world with no rowing machine.**
+  //
+  // **PROOF BEFORE INFERENCE.** The registry already STATES what these
+  // movements are; the regexes are inference for names it does not hold. So a
+  // name the registry knows, and knows to be something other than
+  // conditioning, does not get an erg exposure guessed onto it. Names outside
+  // the registry keep the fallback exactly as before.
+  //
+  // ⚠ GUARDS **BOTH** ERG BRANCHES, not just the row one that bit. A bike- or
+  // ski-named strength movement would be the identical defect one line over,
+  // and "a fence that holds in one place and not the next" is a shape this
+  // repo has now paid for three times.
+  const registryMovement = getExerciseTags(rawName)?.movement;
+  const registryDeniesErg = !!registryMovement && registryMovement !== 'conditioning';
 
   // ─ Pressing
   if (/(bench\s*press|incline\s*press|incline.*db\s*press|decline\s*press|chest\s*press)/i.test(n)) {
@@ -416,12 +446,13 @@ export function classifyExerciseExposures(rawName: string): Exposure[] {
   }
 
   // ─ Conditioning ergs
-  if (/(assault\s*bike|echo\s*bike|airbike|\bbike\b|cycling)/i.test(n)) {
+  if (/(assault\s*bike|echo\s*bike|airbike|\bbike\b|cycling)/i.test(n) && !registryDeniesErg) {
     if (/(zone\s*[12]|easy|aerobic\s*base|long)/i.test(n)) out.add('easy_erg');
     else if (/(intervals?|sprint|hard|hiit|threshold)/i.test(n)) out.add('hard_erg');
     else out.add('easy_erg'); // bike default
   }
-  if (/(rower|rowing\s*erg|\brow\b)/i.test(n) && !/(bent|barbell|seal|cable|machine\s*row|seated\s*row)/i.test(n)) {
+  if (/(rower|rowing\s*erg|\brow\b)/i.test(n) && !registryDeniesErg
+    && !/(bent|barbell|seal|cable|machine\s*row|seated\s*row)/i.test(n)) {
     if (/(intervals?|sprint|hard|threshold)/i.test(n)) out.add('hard_erg');
     else out.add('easy_erg');
   }
