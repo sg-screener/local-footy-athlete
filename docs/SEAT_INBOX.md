@@ -895,8 +895,21 @@ seat was wrong.
   step (status quo, costs a seat pass), or should STANDING items 1 and 13 be
   marked so the scan walks past them and "queue clear" becomes reachable?
 
-- **⚠ NEW 2026-08-13 — R-075 AND R-069(2) CONTRADICT EACH OTHER, AND ONLY SAM CAN
-  SAY WHICH WINS. THIS IS WHY ITEM 37's STRENGTH ARM IS `BLOCKED-BY: sam`.**
+- **ANSWERED AND CLOSED 2026-08-13 ✅ — SAM RULED IT AS R-077: *"away keeps the
+  bye's 2 lifts"*. R-069(2) WINS.** An away week is not a rebuild of the three gym
+  days it replaced and the missing lifts are not chased; he accepted training less
+  BECAUSE he can add a session back.
+  **⚠ SCOPE, so nobody over-reads it: R-075 IS NOT OVERTURNED** — the conditioning
+  replacement stands and ships (`freedByTheTrip`, `c8702c56`). Away replaces the
+  club's work in KIND; it just does not chase the lifts.
+  **VERIFIED BY `pace`, NOT BELIEVED:** the answer was DO NOTHING and nothing was
+  done — no commit touches `coachingEngine.ts` for R-075/R-077, the three
+  placement attempts stay reverted, `freedByTheTrip` is still live, and the escape
+  hatch is held by `test:away-flow` [17e]/[17f]/[17g] with the suite at **49/0**.
+  **Do not re-ask.** Original below.
+
+  ~~**⚠ NEW 2026-08-13 — R-075 AND R-069(2) CONTRADICT EACH OTHER, AND ONLY SAM CAN
+  SAY WHICH WINS. THIS IS WHY ITEM 37's STRENGTH ARM IS `BLOCKED-BY: sam`.**~~
 
   **REGISTRY-GREP: R-069, R-075, R-006, R-007, R-009, R-074.** Grepped
   `RULINGS_REGISTRY.md` for *bye*, *two main*,
@@ -947,8 +960,23 @@ seat was wrong.
   of his own arithmetic already holds one-for-one. **Only the strength count waits
   on this.**
 
-- **⚠ NEW 2026-08-13, terminal — IS A FACE PULL A BACK EXERCISE OR SHOULDER
-  WORK? The app currently says BACK, and that is what spoils a session.**
+- **ANSWERED AND CLOSED 2026-08-13 ✅ — SAM RULED IT AS R-076: *"face pull is
+  shoulder work for sure"*.** It leaves the horizontal-pull pool and stops being
+  interchangeable with a row.
+  **VERIFIED BY `pace`, NOT BELIEVED** — `exercisePoolsStrength.ts`: `Face Pull`,
+  `Rear Delt Fly`, `Band Pull-Apart` and `Cable Face Pull` all sit in the
+  `isolation_upper/accessory` **Shoulder / trap block** with the ruling cited
+  inline, and `horizontal_pull/accessory` now holds only `Seated Cable Row`,
+  `Chest-Supported DB Row` and `Inverted Row` — **no face pull anywhere in it.**
+  **⚠ WHAT HIS RULING DOES NOT CLOSE, and R-076's row says so:** the lookup fix
+  is still refuted for a NEW reason — `isolation_upper/accessory` is ONE
+  undifferentiated pool holding bicep, tricep AND shoulder blocks, so rotation
+  there can still ship three bicep curls and no triceps. **Sub-grouping that pool
+  is the next unit. That is not a question for him.** **Do not re-ask the face
+  pull.** Original below.
+
+  ~~**⚠ NEW 2026-08-13, terminal — IS A FACE PULL A BACK EXERCISE OR SHOULDER
+  WORK? The app currently says BACK, and that is what spoils a session.**~~
 
   **REGISTRY-GREP:** grepped `docs/RULINGS_REGISTRY.md` for *Face Pull*,
   *rear delt*, *arm_or_shoulder*, *shoulder*, *accessory*, *tag*,
@@ -984,8 +1012,24 @@ seat was wrong.
   that keeps a pull day balanced. **NOT BLOCKING: the composer work continues
   either way; only the lookup fix waits on this.**
 
-- **⚠ NEW 2026-08-13 — THE COMMIT STAMP HE ORDERED THIS MORNING IS ALREADY
-  AMBIGUOUS: TWO SEATS ARE WRITING `Agent: audit`.**
+- **⚠ THE ACUTE HALF IS RESOLVED WITHOUT HIM — 2026-08-13. THE SECOND `audit`
+  WAS ME, AND I HAVE TAKEN MY OWN NAME.**
+  I was told to rename `STATUS_AGENT3.md`, found it already renamed to
+  `STATUS_AUDIT.md` by another seat, and **adopted that seat's name instead of
+  taking one of my own** — then wrote my findings into their status file. **That
+  is the whole of the collision this question measured.** I am now `Agent: pace`
+  with `docs/STATUS_PACE.md` (`cfbb7184`), which is the LANE-NAME shape this
+  question itself recommends and the fourth seat had already adopted
+  (`Agent: progression`). **The commits already on `main` stay mis-stamped —
+  rewriting history in a checkout three seats commit into is worse than a wrong
+  label — and `STATUS_PACE.md` names them.**
+  **SO NOTHING IS BROKEN TODAY.** What is left for him is only whether a naming
+  RULE should exist, and two seats have now taken lane names unprompted without
+  one. **If that reads as settled, close this row rather than sending it.**
+  Original below.
+
+  ~~**⚠ NEW 2026-08-13 — THE COMMIT STAMP HE ORDERED THIS MORNING IS ALREADY
+  AMBIGUOUS: TWO SEATS ARE WRITING `Agent: audit`.**~~
 
   **REGISTRY-GREP:** grepped `docs/RULINGS_REGISTRY.md` for `Agent:`, *agent
   name*, *attribution*, *stamp*, *seat name*, *one owner*, *ownership*, *naming*.
