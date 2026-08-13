@@ -15,6 +15,276 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+50. **THE THIRTEEN UNENFORCED RULINGS, ORDERED. ONE PER AGENT.**
+
+    **OWNED BY THE SEAT to write; each sub-item names its own owner.** The queue
+    emptied at 06:10 and all seven agents stopped — correctly, there was nothing
+    ordered left. **This is the next tranche.** Sam: *"yes"*, 2026-08-13.
+    **REGISTRY-GREP:** every row below is quoted FROM `RULINGS_REGISTRY.md` and
+    carries its own `UNENFORCED` reason. **Nothing here is a re-ask.**
+
+    **⚠ READ THE REASON BEFORE BUILDING. Several say the enforcer could not be
+    NAMED, not that the behaviour is absent** — R-052 was corrected once already
+    when a seat opened the file and found two suites naming it. **Open the code
+    first; if it is enforced, fix the ROW, not the app.**
+
+51. **BLOCKED-BY: other-agent — THE MEASUREMENT AND THE RATCHET ARE LANDED
+    (`7e0a68a9`); THE COMPOSER NEEDS TWO FILES ANOTHER SEAT IS HOLDING.
+    `patterns`, 2026-08-13.**
+
+    **THE HELD FILES, NAMED:** `src/data/defaultProgram.ts` and
+    `src/rules/sessionSlotCoverage.ts` are both MODIFIED in the working tree and
+    are exactly where the composer goes. The last commit to `defaultProgram.ts`
+    was another seat's 37 minutes ago. **Un-mark this the moment they are clean.**
+
+    **TWO OF THIS ITEM'S THREE CLAIMS ARE REFUTED, and the ratchet is calibrated
+    without them.** `maxExercisesPerStrengthSession` does NOT have zero readers —
+    `coachingEngine.ts:8846` reads it; the dead end is ONE HOP LATER at
+    `AIConstraints.maxExercisesPerSession`, which `sessionRowCounting.ts:309`
+    already documents in its own words. *"The prompt never mentions his ladder"*
+    I did not establish and do not claim. **"Eleven 3-row fallback branches" is
+    EXACT** — 15 branches: one 2-row, eleven 3-row, one 4-row, two 5-row.
+
+    **THE GUARD FOR THIS RULING WAS GREEN AND NARROW.** `test:slot-coverage`
+    holds 0 deficient over THREE worlds at ONE week. The same oracle over **174
+    worlds** reports **50 of 216 laddered days deficient (23%)**, and **126 of
+    216 ship THREE rows into a FIVE-slot ladder**. `test:ladder-wide` (5 cells,
+    in the chain, ratcheted at 50) now holds that number falling.
+
+    **THE COMPOSER'S FIRST JOB IS ONE SESSION KIND.** All five distinct shapes
+    are `Lower Squat`: two hinges and no single-leg hip, or a squat day with no
+    squat and its knee work doubled. **Upper days are CLEAN at HEAD**, which is
+    the opposite of what this item's head line implies. It changes generated
+    output and owes `test:scenarios` + `test:qa` either side.
+
+52. **✅ CLOSED — SHIPPED `70e91a0f`, AND IT FOUND A REAL DEFECT THAT WAS NOT
+    THE ONE THIS ITEM PREDICTED. `patterns`, 2026-08-13.**
+
+    `src/rules/mainLiftPatternLaw.ts` (the oracle), a production fence in
+    `exerciseScorer.selectExercises`, and `test:main-lift-pattern` (23 cells) in
+    the chain. R-070's row already reads `BUILT`, flipped by the seat holding
+    `RULINGS_REGISTRY.md`.
+
+    **36 breaches of 396 built sessions before the fence, 0 after** — every one
+    `Bench Press + Close Grip Bench`, two heavy HORIZONTAL PRESSES out of the
+    coach's session builder. **Not the hinge this item predicted:** `Hip Thrust`
+    is `accessory` in the app's own pools, so `RDLs + Hip Thrusts` was never a
+    breach, and `Overhead Press + Incline DB Bench` is two different patterns AND
+    two different roles. **The law was real; two of the three worked examples
+    offered for it were not.** The third — `exerciseScorer:405` saying the
+    opposite of the law — was TRUE and is now labelled at the line.
+
+    **5 mutants; the fifth refuted a claim I had written into the code** and both
+    comments were corrected in the same commit.
+
+53. **✅ CLOSED — BOTH FLOORS WERE ALREADY ENFORCED AND MERELY NEVER NAMED. THE
+    ROWS WERE WRONG, NOT THE APP. `readiness`, 2026-08-13.**
+
+    **Taken at Sam's direction while `pace` had been silent two hours and six
+    other seats had committed inside 83 minutes.** Stamped `Agent: readiness` —
+    one name, one file, one writer; I did not borrow `pace`'s stamp.
+
+    **THIS IS ITEM 50's OWN WARNING LANDING FOR THE SECOND TIME AFTER R-052:**
+    *"several say the enforcer could not be NAMED, not that the behaviour is
+    absent… if it is enforced, fix the ROW, not the app."* **Nothing was built.**
+
+    **R-046 — all four clauses had a cell in `test:rules-kernel` (122/0):**
+    the three-number split `2/3/4` (`:447`); **team training counts toward the
+    running days** (`:376` — 2 team trainings + a game = 3, off-feet flush
+    excluded so it cannot pass by counting everything); a 4th is valid and only a
+    5th breaches (`:461`/`:525`/`:472`, **both directions**); the floor of 2
+    (`:550`) with both authored exemptions.
+    **R-062 — the floor is in `test:rules-kernel` [C4]** (`:884` zero-sprint
+    breaches, `:886` early off-season exempt, **`:892` the discriminator: bye
+    recovery lifts the RUNNING floor and NOT the sprint floor**) **and the
+    typed-reason half is in `test:preseason-exposure`**
+    (`INV_EXPOSURE_REDUCTION_HAS_REASON`, with a mutation-catalogue entry).
+
+    **MUTATION-PROVEN BEFORE EITHER ROW WAS CERTIFIED**, because a row certified
+    off a green suite nobody probed is exactly how R-052 went wrong: neutering
+    the running-floor emitter reds 4 cells; `minRunningExposures` 2 -> 1 reds 3;
+    neutering the sprint-floor emitter reds 2. Restored from my own backup,
+    `git diff` clean.
+    **`UNENFORCED_CEILING` lowered 9 -> 5 in the same commit** — the ratchet
+    caught this seat on its own work, which is it working.
+    **⚠ `test:preseason-exposure` is 105/5 and was BEFORE this unit** — control
+    worktree at `ef38f5e8`, byte-identical failure names. None touch the
+    typed-reason invariant.
+
+54. **BLOCKED-BY: external — R-079's TWO REMAINDERS ARE BOTH BLOCKED ON A TYPE
+    THAT DOES NOT EXIST YET, AND THE TITLE IS LITERALLY TRUE. MEASURED, NOT
+    BUILT. `readiness`, 2026-08-13.**
+
+    **⚠ THE HEAD LINE OVERSTATES WHAT IS LEFT: the per-phase counts are BUILT,
+    not unbuilt.** R-079's own row records in-season `max: null -> 3` and late
+    off-season `-> 1` landed in `weeklyExposureContractV2`'s `policyFor`, held by
+    `test:section18-v2` (**re-run: 135/0**). **Only CHRISTMAS is outstanding of
+    the counts**, and that is the blocked half:
+
+    - **CHRISTMAS HAS NOWHERE TO HANG ITS 1/WEEK — CONFIRMED BY READING THE
+      UNION.** `Section18WeekMode` has ELEVEN members and none is a Christmas
+      break (`weeklyExposureContractV2.ts:27`). R-002 makes the break an
+      off-season inside pre-season and **R-004's dated span is still
+      `UNENFORCED`**, so there is no week identity to attach a number to.
+      **Blocked on R-004, which item 55 puts on another seat — not on effort.**
+    - **THE PRE-SEASON QUALITY RULE CANNOT BE SPELLED — CONFIRMED.**
+      `SpeedWorkKind` is `true_speed | repeated_sprint | cod`
+      (`types/domain.ts:470`). **There is no `acceleration` member**, and Sam's
+      ruling turns on exactly that distinction: `top_end_speed` on a team night
+      is permitted, `acceleration` on a team night is the duplication he is
+      avoiding. **The vocabulary cannot express the rule, so no amount of gating
+      builds it.**
+
+    **⚠ AND ADDING THE MEMBER IS THE `cod_decel` HAZARD AGAIN — 28-C1's SECOND
+    WALL, THIRD SIGHTING.** Growing a domain union here silently returns
+    `undefined` from every unextended switch over it, which is what
+    `categoryToFlavour` did when `cod_decel` joined its enum and generation
+    exited non-zero. **Whoever takes this ships the `satisfies Record<…>` in the
+    SAME commit as the member, or it breaks generation.**
+
+    **NOT STARTED DELIBERATELY:** both halves move generated output and owe
+    `test:scenarios` + `test:qa` either side, and item 34 bars starting a
+    generation change at a session tail. **Named rather than half-built.**
+
+55. **✅ MEASURED STALE — THE SPAN ALREADY SHIPPED, AND THE WALL IS 28-C1. `arms`,
+    2026-08-13.** Sam handed this to me; the `equipment` seat it names **has never
+    committed** (`git log --grep='Agent: equipment'` = 0), so nobody was walking
+    past anyone. **The premise below is false as written:** the dated
+    `no_team_training` span exists and runs `generateProgram.ts:483` →
+    `coachingEngine.ts:8943` → `teamDays` → `codDecelPermitted`, held on BOTH
+    readers by `test:christmas-break` `[11]`/`[11b]`/`[11c]` (44/0) and
+    **mutation-proven** — unhooking the span reds 7 cells while the non-vacuity
+    control stays green. R-003's row carried a `STILL PARTLY UNENFORCED` sentence
+    written before the work landed; **this item was written from that sentence**,
+    and the row is corrected in the same commit.
+    **⚠ AND COD STILL NEVER FIRES, FOR A DIFFERENT REASON.** A pre-season club
+    athlete inside his own declared break loses both club nights and gets **ZERO
+    COD** — that is **28-C1's ranking wall** (PASS 1 ranks over
+    `categoryPriority`/`zonePriority`, neither of which ever contains
+    `cod_decel`), plus the missing `categoryToFlavour` case that makes the
+    ranking fix alone break generation. **28-C1 is UNCLAIMED and is now the only
+    thing between Sam and COD work.** Not taken by me: it moves generated output,
+    owes `test:scenarios` + `test:qa` both arms, and its remaining step is a
+    DESIGN call (`CondFlavour` cannot express COD without lying).
+
+    ~~ORIGINAL ORDER BELOW~~
+    **R-003 + R-004 — THE COD WINDOW IS PROFILE-DERIVED, NOT WEEK-DERIVED. OWNED
+    BY `equipment`** (it holds the onboarding/dated-span work). Until the dated
+    no-team-training span exists, **a club athlete's December week still reads as
+    having team training**, so COD can never fire. Item 31 part 5.
+
+56. **BLOCKED-BY: other-agent — THE §18 BYE-BUILD UNIT (item 28). MEASURED BY
+    `audit`, 2026-08-13, after `terminal` handed this over.** The strength half
+    is **architecturally** blocked, and the registry has already measured BOTH
+    routes out: **the read cannot author** (`applyAwayPass` is a filter over
+    `ResolvedDay[]`; §18 tier four runs at read time on the IDENTITY resolver,
+    so it can conform a week but cannot place a session that does not exist);
+    moving the away pass BEFORE §18 was **tried and seen on glass — Saturday
+    stayed empty and WEDNESDAY GOT WORSE — and reverted**; and the deriving-lane
+    route **costs a training day and 1,220 workouts**, which is item 28's §18
+    bye-build shortfall. **That one unit is behind both, and it is not mine.**
+    **⚠ AND THE ROW ITSELF FORBIDS STARTING IT HERE:** *"IT IS GENERATION-SIDE
+    AND MUST NOT BE STARTED AT THE TAIL OF A SESSION — it owes `test:scenarios`
+    + `test:qa` either side, and half-doing a generator change late is the
+    documented way the last two nights went wrong."* **I am at that tail.**
+    **NOTHING IS RED:** `test:away-flow` is **49/0**; the conditioning half
+    [13h] holds. **I did not loosen [13h] to cover strength**, which is exactly
+    what this item warns against.
+
+    **R-075 — AWAY CONSERVATION. OWNED BY `terminal`.** The row warns: *"do not
+    loosen [13h] to cover strength; build the conservation, then"*. **A permanent
+    red and an unenforced ruling are the same thing wearing a nicer word.**
+
+57. **✅ CLOSED — ALL THREE MECHANISMS NOW GUARDED, BY TWO SEATS IN PARALLEL.
+    `patterns` (1 and 2) + `readiness` (3), 2026-08-13.**
+
+    **Mechanisms 1 and 2:** `test:fatigue-abolition`, 8 cells — a contract
+    difference test, `patterns`. **Mechanism 3:** `test:fatigue-session-collapse`,
+    14 cells, `readiness` — the arm the sibling's own NOT-COVERED line asked for.
+    **Neither re-asserts the other.** Both in the `test:bible` chain.
+
+    **⚠ THE MECHANISM IS GONE, AND WHAT KEEPS IT GONE IS AN ACCIDENT.**
+    `extractInjuryContext('im absolutely cooked 9/10')` returns
+    **`{bodyPart:'unknown', bucket:null, severity:9}`** — a pure FATIGUE
+    sentence, the verbatim name of R-038's most severe READINESS tier, entering
+    the INJURY door at the pause band on a live path (`CoachScreen.tsx:1294`).
+    **It strips nothing for one reason only: with `bucket:null` every strength
+    row rates `good`.** Nothing anywhere said so. *"No body part? be cautious
+    with everything"* reinstates mechanism 3 for fatigue instantly.
+    **The suite pins the INERTNESS and records the leak as its own cell**, so
+    closing the leak reds rather than silently invalidating the guard above it.
+    **THE LEAK IS NOT CLOSED HERE** — it is a coach-ROUTING change on a live
+    athlete path. **Fix the routing, never the fallback.** Owner: whoever holds
+    the coach door.
+    **3 mutants killed, 2 cells each.** Still not covered: a real week through
+    the session-action layer (needs the action walker).
+
+58. **✅ CLOSED — AND THE VERIFICATION FOUND A BLIND SPOT THE OWNER'S OWN
+    MUTATION MISSED. `readiness` + `patterns`, 2026-08-13.**
+
+    **`readiness` mutated the DETECTOR** (planting `const readiness = capacity;`
+    reds the sweep cell and names the file). **`patterns` mutated the WALK** —
+    making `productFiles()` `return []` left the suite **94/94 GREEN**, because
+    both sweeps standing on it read "no offenders" off an empty list.
+    **I proved the detector fires; I never proved the sweep visits a file, and
+    those are different claims.** `PRODUCT_FILE_FLOOR` now throws. Left exactly
+    as `patterns` wrote it.
+    **THE TRANSFERABLE LAW: a pass/fail cell over a COLLECTION has two failure
+    modes, and mutating the predicate only ever tests one.** This is R-041's own
+    lesson arriving a second time — the first guard said *"nothing reds if they
+    re-merge"*; the second could have said "nothing reds because nothing was
+    read".
+
+    ~~ORIGINAL~~ Its row records
+    that the previous guard read *"nothing reds if they re-merge"* — and between
+    2026-07-27 and 2026-08-13 **they re-merged in ten sites and nothing red**.
+    **Verify the new guard actually reds on a re-merge, by mutation.**
+
+59. **✅ CLOSED — NEITHER WAS LYING; THE ROW WAS ONLY HALF THE RULE. `arms`,
+    `96a6dbac`.** The counts are real and mutation-proven (the old 2+2+1+1 reds
+    three cells). **"At 2-3 sets" had never been read by any cell**, and the
+    shrink-never-pad cell builds nothing and survived a padding mutation. Both
+    closed: `test:mobility-accessory-doors` `[A4]`/`[A5]`, 30/0. **Bodyweight-only
+    ships a ZERO-ROW Gunshow** — R-083's business, item 48, not pinned anywhere.
+
+    ~~ORIGINAL ORDER BELOW~~
+    **R-052 — THE GUNSHOW ROW MAY BE WRONG, NOT THE APP. OWNED BY `arms`.**
+    Its status was corrected once when someone opened the enforcer and found two
+    suites naming the composition. **Open them, decide, and fix whichever is
+    lying.**
+
+60. **BLOCKED-BY: other-agent — ITEM 30's §18 BYE-BUILD UNIT, THE SAME ONE
+    BEHIND ITEM 56. ATTEMPTED (147 lines) AND BACKED OUT BY `audit`,
+    2026-08-13.**
+
+    **THE GATE CANNOT BE GREEN AND HONEST AT THE SAME TIME TODAY.** R-033's
+    property is *"an athlete-answered constraint changes a week that ALREADY
+    EXISTED"* — and that is **FALSE in the product right now**: the Christmas
+    golden pages into the break and 22 and 24 December still read *"Strength +
+    Team Training"* (item 30, proven on glass). **A gate asserting the law reds
+    on arrival, which `LAW-0-registry` forbids.**
+
+    **SO THE ONLY GREEN GATE IS A TEST-SHAPE RATCHET, AND I MEASURED WHY THAT
+    IS ITS OWN UNIT:** scope = *"generates a week"* catches **71 of 398**
+    suites; narrowing to `awayBlock` **silently excluded `awayFlowTests.ts`,
+    the founding case, which spells it `awayWeek`/`awayState`** — and the cell
+    went green; and my first ratchet **could never red** (one direction only —
+    deleting a real debt entry changed nothing, found by mutation). Widening
+    pulls in five more suites whose membership is a **per-suite judgement**:
+    I did that judgement — `dayFirstTimelineTests` is OUT (it is
+    `awayIconTint`, a UI affordance), the other four are constraint-related.
+    **That list is the unit, and it should be built beside the fix, not before
+    it.** Full design notes in `docs/STATUS_AUDIT.md`.
+
+    **⇒ TWO OF THE THIRTEEN UNENFORCED RULINGS (R-033 AND R-075) ARE BEHIND ONE
+    ENGINEERING UNIT.** That is worth knowing before anyone orders them apart.
+
+    **R-033 — SAM IS NEVER THE TEST RIG. OWNED BY `audit`.** *"my phone is the
+    last instrument"*. A change that alters an EXISTING week is unverified until
+    seen on a week that already existed. **Unenforced AS A GATE** — item 30.
+    **This is the one that made two days of work invisible.**
+
+
 49. **BLOCKED-BY: other-agent — FIVE SUITES WENT RED TODAY AND NOBODY HAD
     NOTICED. ALL FIVE ATTRIBUTED AND DIAGNOSED; ONE FIXED. EVERY REMAINING
     REMEDY IS IN ANOTHER SEAT'S FILE.**
@@ -1685,6 +1955,27 @@ seat was wrong.
   AND IT IS COSTING HIM MONEY EVERY CYCLE. ONE LINE, AND IT IS HIS CALL BECAUSE
   IT IS THE GOVERNOR.**
 
+  **⚠ RE-MEASURED AND IT IS WORSE THAN ONE LINE — `audit`, 2026-08-13.** The
+  scan hands me **10 live orders and NOT ONE IS MINE**: 5 `OWNED BY` other
+  agents, 3 already `✅ CLOSED`, 2 `STANDING`. **`CLAUDE.md` says "OWNED IS NOT
+  BLOCKED … you walk past it, you do NOT mark it blocked", so those are
+  correctly unmarked — and the scan only knows `BLOCKED-BY:`.** The one rule
+  that stops two agents doing one job is invisible to the mechanism that hands
+  the job out. **So the fix is THREE skips, not one:** `STANDING, EVERY STOP`,
+  `OWNED BY` (when the name is not this seat), and `✅ CLOSED`.
+
+  **REGISTRY-GREP:** re-run for THIS entry, because the gate rightly refuses a
+  grep inherited from an older one. `RULINGS_REGISTRY.md` for *owned*,
+  *OWNED BY*, *walk past*, *duplicate*, *standing*, *hook*, *exit*, *inbox*.
+  **NOTHING RULES ON AGENT OWNERSHIP OR THE SCAN.** *owned* returns **2** and
+  neither is this: `:846` is *"athlete-owned"* (a starting point, never a
+  ceiling) and `:1096` merely CITES `SEAT_INBOX item 48, OWNED BY terminal` as
+  provenance. *walk past* returns **0**. *duplicate* returns **4**, all of them
+  R-070's duplicate-PATTERN rule about SESSIONS (two heavy lifts of one
+  pattern), not about two agents doing one job. *hook* and *exit* return 0.
+  **Agent ownership is a `CLAUDE.md` rule, not a Sam ruling — a gap, not a
+  re-ask.**
+
   **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` (82 rulings) for *standing*,
   *hook*, *stop*, *exit*, *inbox*, *seat inbox*. **NOTHING RULES ON THIS.**
   *standing* returns one hit and it is the standing PROFILE in
@@ -1711,39 +2002,8 @@ seat was wrong.
   *"the terminal cannot rubber-stamp its way to silence"*. **A change that
   benefits the one making it needs the person paying for it to say yes.**
 
-  **⚠ RE-MEASURED AND IT IS WORSE THAN ONE LINE — `audit`, 2026-08-13.** The
-
-  **REGISTRY-GREP:** re-run for THIS entry, because the gate rightly refuses a
-  grep inherited from an older one. `RULINGS_REGISTRY.md` for *owned*,
-  *OWNED BY*, *walk past*, *duplicate*, *standing*, *hook*, *exit*, *inbox*.
-  **NOTHING RULES ON AGENT OWNERSHIP OR THE SCAN.** *owned* returns **2** and
-  neither is this: `:846` is *"athlete-owned"* (a starting point, never a
-  ceiling) and `:1096` merely CITES `SEAT_INBOX item 48, OWNED BY terminal` as
-  provenance. *walk past* returns **0**. *duplicate* returns **4**, all of them
-  R-070's duplicate-PATTERN rule about SESSIONS (two heavy lifts of one
-  pattern), not about two agents doing one job. *hook* and *exit* return 0.
-  **Agent ownership is a `CLAUDE.md` rule, not a Sam ruling — a gap, not a
-  re-ask.**
-  scan hands me **10 live orders and NOT ONE IS MINE.** It has **three** blind
-  spots, not one:
-
-  1. **`STANDING, EVERY STOP`** — items 1 and 13 (already known).
-  2. **`OWNED BY <another agent>`** — items 50, 51, 52, 57, 58. **`CLAUDE.md`
-     says "OWNED IS NOT BLOCKED … you walk past it, you do NOT mark it
-     blocked", so these are correctly unmarked — and the scan, which only
-     knows `BLOCKED-BY:`, reads every one as MY live order.** The one rule
-     that stops two agents doing the same job is invisible to the one
-     mechanism that hands the job out.
-  3. **`✅ CLOSED` items still sitting in `## Unprocessed`** — items 53, 55, 59.
-     Finished work reading as live.
-
-  **SO THE FIX IS THREE SKIPS, NOT ONE:** `STANDING, EVERY STOP`, `OWNED BY`
-  (when the name is not this seat), and `✅ CLOSED`. **The second is the one
-  that matters** — without it every agent is handed every other agent's work,
-  which is the duplicate-work failure the ownership rule exists to prevent.
-
-  **WHAT TO SEND:** *"yes, skip standing, owned and closed"* — or *"leave it, I
-  want the nagging"*, which is also a real answer and closes this.
+  **WHAT TO SEND:** *"yes, skip the standing orders"* — or *"leave it, I want
+  the nagging"*, which is also a real answer and closes this.
 
 
 - **⚠ NEW 2026-08-13, terminal — THE EQUIPMENT SHEETS ARE EMPTY, AND ONE LINE
