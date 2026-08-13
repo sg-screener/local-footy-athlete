@@ -214,10 +214,21 @@ end, because two fixes aimed at it changed nothing:**
    `applyTrainingAgePrescription` (`defaultProgram.ts:2536`) and the
    strength/conditioning assembly below it — **and the assembly's own branch did
    NOT run for these days**, which points at the training-age step first.
-   **ONE PROBE CLOSES THIS.** Print the row names either side of
-   `applyTrainingAgePrescription` on a `Lower Squat` day.
-   **⚠ AND IT IS NOT THE ROTATION, NOT THE FALLBACK, AND NOT `validatePairings`
-   — all three are CLEARED by measurement.**
+   **`applyTrainingAgePrescription` IS ALSO CLEARED — probed, all five rows
+   survive it** (`afterTrainingAge: Back Squat | Deadlift | Walking Lunges |
+   Single Leg RDL | Nordic Lower`).
+   **SO THE WINDOW IS NOW ONE FUNCTION.** After the training-age step the only
+   transform left before the workout ships is
+   `finaliseBuiltWorkout` -> **`finaliseWorkoutAfterMutation`**
+   (`workoutCanonicalisation.ts:581`), reached at `defaultProgram.ts:2763`.
+   Everything between the fallback and it is measured innocent.
+   **THE CLOSING PROBE IS TRIVIAL:** print `workout.exercises` in and out of
+   `finaliseWorkoutAfterMutation` on a `Lower Squat` day.
+   **⚠ CLEARED BY MEASUREMENT, SO NOBODY RE-SUSPECTS THEM:** the fallback (emits
+   the hinge), `applyPoolRotation` (RDLs -> Deadlift, pattern PRESERVED),
+   `validatePairings`, `applyPhaseRepSchemes`, the load-estimation step,
+   `applySubphaseMainLiftLoadMultiplier`, and `applyTrainingAgePrescription`.
+   **Seven stages, seven innocent.**
 6. **ALSO instrumented at BOTH fallback call sites. The
    missing-day site (`:1288`) emits the corrected five rows verbatim —
    *"Lower Squat: Back Squat | RDLs | Reverse Lunges | Single Leg RDL | Leg
