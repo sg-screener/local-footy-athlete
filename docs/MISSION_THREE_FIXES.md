@@ -11,7 +11,8 @@ four slices; nothing else.
 | --- | --- | --- |
 | 1A | Equipment probe — the pool refuses a slot no kit can fill | **DONE** — `bad0bfc1` |
 | 1B | Equipment class — every route asked, not just the pool walk | **PARTIAL** — item 5 shipped (`116bf886`); items 1–4 built and measured, not shipped |
-| 1B-completion | R-090 lands; all four routes closed | **HARD STOP AT BUDGET** — every acceptance criterion met on the six printed scenarios, but 20 kit-limited worlds in the 180-world sweep are newly REFUSED. Not shipped. |
+| 1B-completion | R-090 lands; all four routes closed | **HARD STOP AT BUDGET** — every acceptance criterion met on the six printed scenarios, but 20 kit-limited worlds in the 180-world sweep are newly REFUSED. Not shipped; parked on `slice1bc-parked` (`375f32ce`). |
+| 1B-final | Find the lost record, fix that one site | **STOP — STEP 1 INCONCLUSIVE.** Both named suspects killed with receipts. **The record is not lost anywhere.** No fix written. |
 | 2 | Authorship | NOT STARTED |
 | 3 | Close the loop | NOT STARTED |
 
@@ -459,6 +460,111 @@ I had already been wrong twice today by reasoning instead of probing.
 evaluator on the fallback/second-week path, and carry it. Everything else in this
 slice is measured and green.
 
+### Slice 1B-final — Step 1 says the premise is wrong: nothing is lost
+
+**PRESERVED FIRST, as the fence allows.** Branch **`slice1bc-parked`**, commit
+**`375f32ce`**, 9 files, 569 insertions — committed from a temporary worktree by
+explicit pathspec, stamped `Agent: kit`. The shared checkout never left `main`,
+and both temporary worktrees are removed. The branch is the artefact.
+
+**NO FIX WAS WRITTEN.** The fence's hard stop applies: *"If it is neither, stop
+and report what it actually is before writing any fix."*
+
+#### The architecture measurement you asked for: **ZERO**
+
+You asked, if the record is lost in more than one place, for the count. **It is
+lost in no places.** The slice's premise does not survive measurement.
+
+#### Step 1 verdict, with receipts
+
+World traced: **`Off-season / 4d / club / Bodyweight Only / w2`** — one of the
+newly-refused set. Executed against `slice1bc-parked` with the evaluator
+instrumented to print what it receives and what it returns; the identical world
+was run against `main@11e9eb66` as a control.
+
+**KIT RESOLUTION IS CORRECT.** `resolveEquipmentCapabilities` →
+`source = complete_selection`, `tags = ["bodyweight"]`. An exhaustive
+declaration, so the removal gate is entitled to act. **The
+`unanswered_floor` ambiguity is NOT the mechanism here** — it stays a ledger
+line, untouched, as instructed.
+
+**SUSPECT (a) — the weeks-2-4 build path never threads the record: KILLED.**
+The w2 week reaching the evaluator carries it on every session:
+
+```
+evaluator sees [ Upper Push(r4,REM) | Tempo Intervals(r1,REM)
+               | Lower Body Strength(r5,REM) | Lower Squat(r4,REM) ]
+   -> ACCEPTED
+```
+
+`REM` is a populated `equipmentRemovals`. Week 1's is fully typed, patterns
+included — `{"item":"Back Squat","requires":["barbell","rack"],"pattern":"squat"}`,
+`…"Pull-Ups"…"pattern":"pull"`, and so on. **The record is written, threaded and
+read. And the athlete's real w2 week is ACCEPTED by
+`evaluateSection18EffectiveWeek`.**
+
+**SUSPECT (b) — the gateway's fallback loses the kit or the record: KILLED AS
+STATED.** The candidates that carry no record carry no record because **they
+contain no strength rows at all** — there was nothing to remove, so nothing was
+lost. The sequence after the real week is accepted:
+
+```
+(EMPTY WEEK)                                                  -> refused
+Hard Conditioning(r2,none) x3                                 -> refused
+Hard Conditioning(r2,none) x2 / x1 / x3 …                     -> refused
+```
+
+Stack for the empty one, which names the owner:
+
+```
+evaluateSection18EffectiveWeek        (section18EffectiveWeekEvaluator.ts)
+finaliseSection18SafetyWeek           (section18SafetyFinaliser.ts:640)
+resolveCandidate                      (section18AcceptedWeekGateway.ts:1391)
+runSection18AcceptedWeekGateway       (section18AcceptedWeekGateway.ts:1678)
+section18TierFour                     (sessionResolver.ts:1023)
+resolveWeekWithConditioning           (sessionResolver.ts:1927)
+resolveFinalVisibleSection18Week      (section18AcceptedWeekGateway.ts:431)
+assess                                (section18AcceptedWeekGateway.ts:1505)
+searchWholeWeekRepairCandidates       (wholeWeekRepairEngine.ts:69)
+```
+
+These are **repair candidates being explored**, not the athlete's week, and they
+are expected to fail. **The reported `failureSignature` belongs to the LAST
+candidate tried, not to the week that actually failed.** That is why three
+slices have been chasing `pattern_restore_failure` — it is the exhaust, not the
+cause.
+
+**THE THIRD THING, characterised but NOT isolated.** With R-090 code the w2 week
+is composed *differently*, not merely stripped: `Upper Pull` is absent entirely
+(the kit cannot train pull, correctly) and a `Tempo Intervals` day takes its
+place. The control at `main` never enters repair at all — it churns ~270
+reorderings of a 4–5 session strength week that still contains `Upper Pull`, and
+succeeds. So the divergence is real and it is upstream of anything about the
+record.
+
+**WHAT I CANNOT YET NAME, AND WILL NOT GUESS:** which gate turns
+*"`evaluateSection18EffectiveWeek` accepted this week"* into *"the gateway
+refused the world"*. The evaluator is not the refuser. Until that gate is named
+with an executed receipt, any fix is a hypothesis, and this campaign has already
+paid twice for reasoning where it should have measured.
+
+**THE NEXT STEP IS ONE QUESTION, NOT A FIX:** instrument
+`runSection18AcceptedWeekGateway`'s own accept/reject decision (not the
+evaluator's) for this one world, and report which candidate it rejects and under
+which signature. That is cheap, and it converts this from "R-090 breaks 20
+worlds" into a named site.
+
+#### What fought me
+
+- **The failure signature lied for three slices.** It names the last repair
+  candidate. Every `pattern_restore_failure:strength_patterns:0` chased since
+  slice 1B came from evaluating a week that had no strength in it *by
+  construction*.
+- **The evaluator accepting is not the gateway accepting.** I had assumed one
+  verdict; there are at least two, and only the outer one throws.
+- Nothing about the record itself resisted at any point. It is written where it
+  should be, survives every pass, and reaches the evaluator intact.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -481,3 +587,7 @@ slice is measured and green.
 - `canonicalExerciseName` cannot be imported by `exercisePoolsStrength` — the selectable vocabulary reads `STRENGTH_POOLS` at module-init and the cycle leaves it undefined.
 - A second week-builder path (likely `section18AcceptedWeekGateway.ts`'s safe deterministic fallback) appears not to carry `Workout.equipmentRemovals`; unproven, and it is what blocks R-090.
 - `test:ladder-wide` swallows §18 refusals into a bare counter, so a refusal-rate regression is invisible without instrumenting the `catch`.
+- `Section18WeekAcceptanceError.failureSignature` reports the LAST repair candidate tried, not the week that failed — three slices chased findings raised against conditioning-only and empty candidate weeks.
+- `evaluateSection18EffectiveWeek` accepting a week does not mean the gateway accepts it; there are at least two verdicts and only the outer one throws.
+- `wholeWeekRepairEngine.searchWholeWeekRepairCandidates` assesses an EMPTY week as a candidate (`section18AcceptedWeekGateway.ts:1391` → `section18SafetyFinaliser.ts:640`).
+- One `Off-season/4d/club/Bodyweight Only` world takes ~270 evaluator calls at HEAD and ~51 with kit-limited composition — the repair search's cost scales with how thin the composed week is.

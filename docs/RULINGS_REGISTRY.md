@@ -1835,3 +1835,20 @@ record never reached the evaluator on those paths. **Shipping that would refuse
 `planner_selected_target_miss` — in two different functions. Whoever finishes
 this must answer all three; the third was found only by
 `test:section18-gateway`, never by `print:week`.
+**⚠ RECEIPT 2, 2026-08-14 (slice 1B-final) — THE CODE IS PARKED ON
+`slice1bc-parked` (`375f32ce`), AND THE DIAGNOSIS IN RECEIPT 1 WAS WRONG.**
+Receipt 1 said *"the removal record never reached the evaluator on those paths"*.
+**Measured, one world traced end to end (`Off-season/4d/club/Bodyweight Only/w2`):
+THE RECORD IS NOT LOST ANYWHERE.** It is written, threaded through the weeks-2-4
+build, and reaches `evaluateSection18EffectiveWeek` fully typed — and that
+evaluator **ACCEPTS** the athlete's real week. Both suspects are killed: the
+week-2 build path does thread it, and the gateway's fallback candidates carry no
+record only because they contain no strength rows to remove.
+**THE SIGNATURE WAS THE LIAR.** `Section18WeekAcceptanceError.failureSignature`
+reports the LAST repair candidate tried — an EMPTY week and three
+conditioning-only weeks explored by `wholeWeekRepairEngine` — not the week that
+failed. Every `pattern_restore_failure:strength_patterns:0` chased since slice 1B
+came from evaluating a week with no strength in it by construction.
+**STILL UNNAMED, AND DELIBERATELY NOT GUESSED:** which gate turns "the evaluator
+accepted this week" into "the gateway refused this world". Until that is named
+with an executed receipt, no fix is written.
