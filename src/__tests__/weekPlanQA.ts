@@ -1107,6 +1107,14 @@ for (const scenario of scenarios) {
         days: validatorDays,
         profile: validatorProfile,
         weekFlags: deriveWeekValidationFlags({ days: validatorDays, profile: validatorProfile }),
+        // CENSUS C4 — THE CORPUS WAS A THIRD CALLER WITH THE SAME GAP.
+        // `offseasonSubphase` is resolved 100 lines above and was never handed
+        // to the validator, so every scenario was judged with NO exemption
+        // claimed — which is why an early-off-season week appeared here nagged
+        // for a running floor Sam had already lifted. This is not loosening the
+        // corpus: it gives the harness the input the production caller
+        // (`section18CraftTier`) now passes, so the two judge alike.
+        subphase: offseasonSubphase,
       });
       validationReport = report;
       if (report.findings.length > 0) {
