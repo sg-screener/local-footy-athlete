@@ -258,6 +258,23 @@ his instruction is standing authority, not history.**
     `satisfies Record<…>` to make a BUILD failure; here the enum grew and the map
     went quietly undefined.**
 
+    **✅ AND THAT SECOND WALL IS NOW HELD — `dd73a53b`, `pace`, 2026-08-13.**
+    `LAW-every-category-has-a-flavour`, born guarded, cell `[C12]` in
+    `test:conditioning-templates` (91/91). **It is INERT ON OUTPUT** — a source
+    read, no generated week changes, no sweep owed — **and it reds the moment a
+    category joins the enum without a flavour case.** `cod_decel` is on it as
+    ONE named, dated debt entry, and the cell also reds if that entry is removed
+    while the gap is real, or kept after it is fixed. **Mutation-checked three
+    ways, one per assertion.**
+    **⚠ IT DOES NOT FIX COD — READ WHY BEFORE MAPPING IT.** `CondFlavour` is
+    `aerobic | tempo | high-intensity` and `flavourToCategory`
+    (`sessionBuilder.ts:1132`) maps `high-intensity` back to `glycolytic`, so ANY
+    mapping makes COD return as a different category — which is what the 4A
+    ruling this map already cites forbids (*"flavour/category/label/stress must
+    agree"*). **The vocabulary cannot express COD without lying. That is the
+    design decision the ranking fix has to make, and it is now impossible to
+    reach it by accident.**
+
     **SO THE FIX IS TWO CHANGES, NEVER ONE, AND SHIPPING THE RANKING ALONE
     BREAKS GENERATION.** Owner: unclaimed. **I am NOT taking it — another `audit`
     session is live in `coachingEngine.ts` right now** (its `ZZPROBE`/`ZZCANDS`

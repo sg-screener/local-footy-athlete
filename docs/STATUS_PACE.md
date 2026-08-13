@@ -197,6 +197,32 @@ naming as a class rather than fixing twice.**
 contract in place of the single `gameDay`, then let the strength target answer to
 it. Owes `test:scenarios` + `test:qa` both arms.
 
+### ✅ 2026-08-13 — THE COD LANDMINE IS HELD (`dd73a53b`)
+
+**`LAW-every-category-has-a-flavour`, born guarded, `[C12]` in
+`test:conditioning-templates`, 91/91.** `categoryToFlavour` covers five of
+`CondCategory`'s six members and returns `undefined` for `cod_decel` at all seven
+call sites — the reason a generation run exits non-zero the moment COD is picked.
+
+**IT IS INERT ON OUTPUT** (a source read), so it owed no scenario sweep and could
+land in the turn it was found. **Mutation-checked three ways, one per assertion:**
+a new enum member reds it, emptying the debt list reds it, and fixing `cod_decel`
+without removing it from the list reds the inflation cell.
+
+**AND ITS OWN NON-VACUITY CELLS CAUGHT TWO FAULTS IN IT BEFORE IT SHIPPED** — an
+unscoped category parse that scraped every union in the policy file (13 values,
+including `gradual_reentry`), and `[a-z_]+` silently dropping `vo2`. **The first
+green would have compared junk against an incomplete list.** Fourth sighting of
+the instrument-first law this turn, and the first time the instrument caught
+itself.
+
+**WHY COD IS DECLARED DEBT, NOT MAPPED:** `CondFlavour` is
+`aerobic | tempo | high-intensity`, and `flavourToCategory` maps
+`high-intensity` back to `glycolytic` — so any mapping makes COD return as
+something else, which the 4A ruling forbids. **The vocabulary cannot express COD
+without lying.** That is the design decision 28-C1's ranking fix has to make, and
+it can no longer be reached by accident.
+
 ### NEXT SESSION STARTS HERE
 
 1. **The glass proof for the pace line** — a golden flow driving the Away control
