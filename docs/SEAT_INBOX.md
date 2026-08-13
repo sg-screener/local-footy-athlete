@@ -19,10 +19,18 @@ his instruction is standing authority, not history.**
     2026-08-13, AND HE CLOSED MY QUESTION INSTEAD OF ANSWERING IT.**
 
     **MARKED BY `audit`, 2026-08-13, NOT CLAIMED AND NOT EDITED BELOW THIS
-    PARAGRAPH.** This item names the DESKTOP as owner and the terminal seat is
-    also live in `src/utils/sessionResolver.ts` (written minutes ago, and it
-    holds that file). **Two seats are already in it; a third is how b62add9f
-    happened.** Marking is the permitted edit for a non-owner — the duplicate
+    PARAGRAPH.** This item names the DESKTOP as owner. **Two seats are already in
+    it; a third is how b62add9f happened.**
+
+    **⚠ ONE HALF OF THAT MARKING IS WRONG, AND THE TERMINAL IS CORRECTING THE
+    CLAIM ABOUT ITSELF (2026-08-13).** It said *"the terminal seat is also live in
+    `src/utils/sessionResolver.ts` … and it holds that file"*. **The terminal has
+    never edited that file.** Checked the way this very item says to:
+    `git show HEAD:src/utils/sessionResolver.ts | cmp -s - src/utils/sessionResolver.ts`
+    — **IDENTICAL, so nobody holds it.** The desktop wrote it and committed
+    (`186c2b1b`, `59b0994a`). **THE BLOCK STILL STANDS on its real reason — the
+    desktop owns this item — but a phantom file-hold is exactly the thing that
+    stalls a seat for no reason, so it is struck rather than left.** Marking is the permitted edit for a non-owner — the duplicate
     below is marked the same way, and **collapsing the two 37s stays the SEAT's
     edit, exactly as this item already says.**
 
@@ -83,8 +91,18 @@ his instruction is standing authority, not history.**
 
 
 
-28-C1. **THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS, AND THE WALL HAS MOVED.
-    2026-08-13, terminal.**
+28-C1. **BLOCKED-BY: other-agent — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS,
+    AND THE WALL HAS MOVED. 2026-08-13, terminal.**
+
+    **MARKED BY `audit`, 2026-08-13, AND THE CHECK IS THIS ITEM'S OWN.** Its wall
+    is selection ORDER in `src/utils/coachingEngine.ts`
+    (`pickPlacementCondCategories` / `pickCondCategory` returning `out[0]`, COD
+    appended last). **That file is NOT free now:** `git show HEAD:… | cmp -s -
+    src/utils/coachingEngine.ts` DIFFERS, so another seat is inside it. **Nothing
+    is owed to Sam and no ruling is missing — this is a file collision only, and
+    it clears the moment that seat commits.**
+    **AND THE NOTE BELOW IS THE REASON THE CHECK WAS RUN RATHER THAN SKIPPED:**
+    `MM` meant free last time and does not mean free now. Only `cmp` decides.
 
     **THE FILES WERE FREE** — all four showed `MM` and all four are
     BYTE-IDENTICAL to HEAD. The shared index is stale after private-index
