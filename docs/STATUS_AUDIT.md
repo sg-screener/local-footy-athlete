@@ -45,7 +45,85 @@ thing that actually bit.**
 
 ## STATUS
 
-### ⚠ OPEN AND BLOCKED ON SAM — 32 FILES ARE RESTORED IN THE TREE AND CANNOT BE COMMITTED
+### 2026-08-13 — THE 32-FILE RESTORE LANDED. Verified, not assumed.
+
+**The section below it says the restore could not be committed. IT SINCE WAS**,
+in `4794a18a` (and the code half before it). Checked by `git cat-file -e HEAD:`
+rather than by reading the commit subject, which is this seat's whole point: all
+five files the restore section lists as GONE FROM `HEAD` are in `HEAD` —
+`.githooks/pre-commit`, `scripts/verify-branch-before-commit.sh`,
+`src/rules/sessionSlotCoverage.ts`, `src/__tests__/sessionSlotCoverageTests.ts`.
+**Step 1 of "NEXT SESSION STARTS HERE" is PAID. Steps 2 (full sweep) and 3
+(item 28-C1) are still open and belong to whoever takes them next.**
+
+### 2026-08-13 — CENSUS C2 IS PAID: the 2km time trial now has a reader (`8bf8548b`)
+
+**THE JOB.** `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md` C2 — the 2km time was
+collected, validated and stored, and `deriveMas` had **zero production callers**.
+An athlete ran a 2km, the app took it, and their conditioning card read the
+literal authored string `Intensity: 110% MAS`.
+
+**WHAT SHIPPED.** `src/rules/masPace.ts` — one pure function that reads the %MAS
+band out of the words already on the row and returns the speed it means for THAT
+athlete. `Your pace: 9.8-12 km/h` when they have run one; `Estimated pace: …`
+off Sam's experience ladder when they have not. Mounted on both conditioning row
+shapes in `DayWorkoutScreenV2`.
+
+**THE ONE DESIGN DECISION WORTH RE-READING: IT DERIVES AT THE READ.** The obvious
+build is to fold the pace into the row's notes inside `composeConditioningRows`,
+where the `Intensity:` line is already assembled. **That would have been a second
+representation of the athlete's pace** — the exact defect `twoKmTimeTrial.ts`'s
+own header exists to forbid — and it would have gone stale the moment they logged
+a faster run. Deriving at the read means no stored pace exists to disagree with
+anything, and generation does not import this module at all. **Store the
+decision, derive everything else.**
+
+**AND IT DELIBERATELY DOES NOT ANSWER Q-001.** Range-or-binary is an open
+question of Sam's. The pace is read off whichever percentage the card is ALREADY
+showing, so `masCopy` gains no consumer and his eventual answer moves every pace
+for free. There is a cell asserting `masCopy` still has no production consumer,
+so a later agent cannot quietly wire it and call that this unit's doing.
+
+**MEASURED, AND IT CHANGES WHO SEES THIS.** An in-season week WITH a club
+prescribes **no %MAS at all** — `generateProgramLocally` over
+`DEV_E2E_STANDARD_PROFILE` at 2026-07-13: **0** rows with a MAS band. Remove the
+club from the same profile: **8** in-season, **7** pre-season, e.g. `Bodyweight
+Conditioning Circuit / 65–80% MAS`. **The club supplies the running.** So this
+line lives on club-less weeks — off-season, pre-season without a club, a bye
+build, a trip.
+
+**⚠ NOT SEEN ON GLASS, AND THE REASON IS THE MEASUREMENT ABOVE, NOT LAZINESS.**
+`standard-in-season-week` is the only seeded world a golden flow reaches in one
+step and it **cannot** show this line — a flow over it would photograph a true
+negative and read as proof. **Three hand-driven attempts died at the same
+dev-harness cold-start gate** (*"DevE2EClock reload mismatch: clock receipt has
+no active checkpoint"*) — the app reaches `program-screen` inside a maestro flow
+and falls back to the gate the moment it is touched from outside one. **That is
+the §8 SECOND-WALL count**, so I stopped rather than take a fourth swing.
+
+**WHAT THE NEXT SEAT SHOULD DO, AND IT IS SMALL:** a golden flow that resets
+`standard-in-season-week`, drives the **Away this week** control on the week
+shape to make the week club-less, opens the conditioning component and
+photographs `Your pace:`. **OWNER: whoever next holds the away flow (the desktop
+seat owns that control today) — I did not build it because driving Away means
+entering their unit mid-flight.** Everything else is proven.
+
+**MUTATION RUN, AND ONE OF MY OWN CLAIMS DIED IN IT.** Point-before-range reds
+10 cells; deleting the literal `MAS` token reds 4; always-measured reds 3;
+disabling the point-band branch reds 1. **The comment I first wrote credited
+`\b` and case-sensitivity with refusing `95–100% maximal` — dropping `\b`,
+adding `/i`, or both leaves all 144 green.** `maximal` and `MAS` diverge at the
+third letter (`x` / `S`); the literal token was always the whole defence. The
+comment now states what was measured. **A plausible reason for a line that is
+doing nothing is still a plausible reason, and it reads exactly like a real one.**
+
+**ALSO NOTED, NOT FIXED, NOT MINE:** `cleanNotes` (`dayWorkoutHelpers.ts:78`)
+step 2 replaces every en dash with a space, so the authored `90–100% MAS` reaches
+the combined-day card as `90 100% MAS`. The pace parse reads the RAW notes and
+steps around it. **Whoever owns that cleaner should decide whether an en dash
+inside a range is really an orphan separator.**
+
+### ⚠ SUPERSEDED — 32 FILES ARE RESTORED IN THE TREE AND CANNOT BE COMMITTED
 
 **THE HEADLINE: THE "~26 FILES" THIS FILE WAS CREATED OVER IS NOT HISTORY. IT IS
 `b62add9f`, IT IS 32 FILES, AND IT IS STILL UNDONE AT `HEAD`.** The seat wrote

@@ -134,6 +134,36 @@ function that maps COD, has **no production caller**.
 phase.
 
 ### C2. The athlete's 2km time trial is collected and never used
+
+> **✅ BUILT 2026-08-13 — `8bf8548b`, `audit` seat. THE ORIGINAL FINDING BELOW IS
+> LEFT WORD FOR WORD; this block is the answer to it, not a rewrite of it.**
+>
+> `rules/masPace.ts` is the reader C2 says does not exist. A %MAS row now carries
+> **the speed it means for that athlete** — `Intensity: 65–80% MAS` gains
+> `Your pace: 9.8-12 km/h` off their own 2km, or `Estimated pace: …` off Sam's
+> default for their experience level when they have not tested. Held by
+> `LAW-mas-percent-names-a-pace` / `test:time-trial` `[23]`-`[25]`, 34 cells,
+> born guarded, mutation-checked four ways.
+>
+> **DERIVED AT THE READ, NEVER AT GENERATION** — a pace stored in a row would be
+> a second representation of the athlete's pace, which is the defect
+> `twoKmTimeTrial.ts`'s own header forbids. Nothing is stored, so logging a
+> faster 2km reprices every card with no regeneration.
+>
+> **Q-001 (%MAS: range or binary?) IS UNTOUCHED AND STAYS OPEN.** The pace is
+> read off whichever percentage the card is ALREADY showing, so `masCopy` gains
+> no consumer and his answer moves the pace for free. A cell holds that.
+>
+> **⚠ AND THE ATHLETE IMPACT BELOW HAS A LIMIT THAT WAS NOT KNOWN WHEN IT WAS
+> WRITTEN — MEASURED, NOT ASSUMED.** An in-season week **with a club** prescribes
+> **no %MAS at all**: `generateProgramLocally` over `DEV_E2E_STANDARD_PROFILE`
+> yields **0** rows carrying a MAS band, while the same profile with the club
+> removed yields **8** in-season and **7** in pre-season. The club supplies the
+> running. So this line appears on club-less weeks — off-season, pre-season
+> without a club, a bye build, a trip — and on a normal in-season week there was
+> never a percentage to translate. **That also means no seeded world can
+> photograph it in one step, which is why the glass proof is still owed.**
+
 **Ruling:** MAS = 2km average speed × 1.00; a skipped trial gets Sam's signed
 default pace by level (6:30 / 7:15 / 8:00 / 8:45), applied at derivation.
 `STAGE_C_TIME_TRIAL_RULINGS_2026-07-29.md:36-44`, `:73-88`.
