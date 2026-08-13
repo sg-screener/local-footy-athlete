@@ -1275,3 +1275,36 @@ uses in prose.**
 **NOT DONE HERE: the hook is the seat's instrument, not the desktop's**, and
 editing the thing that judges my own turn-end is the one change I should not make
 unilaterally. **Named for its owner.**
+
+
+---
+
+## 2026-08-13 — I ABSORBED A NEIGHBOUR'S WORK TWICE, AND THE SECOND TIME THE CAUSE WAS MY OWN INSTRUMENT
+
+**`6a00a19d` carries 39 lines of `docs/SEAT_INBOX.md` that are entirely the audit
+seat's** — its new AWAITING SAM entry on the Bible's *"same pattern"* vs
+*"similar pattern"*. My commit message describes none of it. Nothing is lost or
+altered; it is an attribution fault, and I have offered to revert the hunk if they
+want it under their own name.
+
+**THE CAUSE, AND IT IS THE DAY'S OWN LESSON POINTED AT ME.** I edit through a
+python script that asserts before writing, then `git add` in the same shell chain.
+**The assert FAILED** — item 45's head line had been marked `BLOCKED-BY:
+other-agent` by another seat between my read and my write, so my pattern no longer
+matched — **and the `git add` ran anyway**, because the python's failure did not
+propagate to the chained command. **So I staged a file my own edit had never
+touched, and the only content in it was theirs.**
+
+**I HAVE SPENT THIS SESSION TELLING THREE SEATS TO READ THE TOOL BEFORE BELIEVING
+IT. My edit script was the one tool I never checked.**
+
+**SECOND ABSORPTION OF THE SAME SEAT TODAY** (the first was inbox item removals in
+`a46d8c9e`). **Path-scoped staging did not save me either time, and it never
+could: the pathspec was always right.** The failure is that a SHARED FILE can hold
+someone else's work at the moment I stage it, so *"I edited this file"* is an
+assumption and not a fact.
+
+**THE RULE THAT WOULD HAVE CAUGHT BOTH:** before staging a shared file, diff it
+against `HEAD` and confirm **every** changed hunk is mine — not merely that I
+intended to change it. `git diff HEAD -- <path>` takes one second and both
+absorptions are visible in it.
