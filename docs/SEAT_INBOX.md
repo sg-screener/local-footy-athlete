@@ -43,15 +43,38 @@ his instruction is standing authority, not history.**
     **(a) THREE equipment scopes, no fourth:** PROFILE = permanent · SESSION VIEW
     = that session only (*"usually only just for that session"*) · AWAY = a dated
     span that lifts itself. **No day-screen door — verified absent, keep it that
-    way.** The open question is only: *does a temporary equipment change in the
-    session view actually swap that session's exercises?* **And rename
-    `missing_this_week` (`programControlAction.ts:253`) — three scopes, three
-    names.**
+    way.** ~~The open question is only: does a temporary equipment change in the
+    session view actually swap that session's exercises?~~ **ANSWERED IN SOURCE
+    2026-08-13: YES.** `DayWorkoutScreenV2.ts:717` executes `swap_exercise` per
+    replacement, `scope: 'today_only'`, `oneOffOnly: true`. **GLASS CHECK STILL
+    OWED — attempted and abandoned: the simulator is shared and I was
+    interleaving with the terminal's away run.**
+    **⚠ AND THE `missing_this_week` RENAME IS REFUTED ON ITS PREMISE:** the
+    session door writes NO equipment fact (zero hits in the day screen or the
+    session sheet). That payload's only two writers are in
+    `EquipmentLimitationSheet`, the PROGRAM-screen week/span door. The name is
+    imprecise there; it is not carrying "just this session".
     **(b) Census C10 — Sam: *"that sounds shit and not good"*.** The only typed
     main-strength reduction fires on `availableSafePatterns.length === 0`, an
     INFERENCE. His own 2026-08-06 ruling specifies the fix: the same
     `not_attempted | substituted | exhausted` proof equipment has; *"proof, never
     inference"*. **A cut with no proof is a defect.**
+    **⚠ FOUR MEASUREMENT PASSES, EACH ONE SHRANK IT — full detail in
+    `docs/SEAT_ORDERS_FULL_2026-08-13.md`:** (1) the break I first named is in a
+    FALLBACK builder, not the primary path; (2) the proof is already computed —
+    `assessContract` writes `unresolvedMinimumShortfall` and
+    `unresolvedPlannerSelectedShortfall` on every week; (3) the item's premise is
+    FALSE — a short week is not silent, it trips a **BLOCKING** finding, and a
+    reduction only suppresses the tier-3 advisory; (4) **the danger of "no room"
+    silencing genuine breakage is STRUCTURALLY IMPOSSIBLE** —
+    `SAFETY_REDUCTION_REASONS` (`weeklyExposureContractV2.ts:553`) is a closed
+    set of seven that alone lower the ceiling, and `insufficient_availability`
+    is not one of them, while `hasFrequencyReduction` (`:839`) accepts any
+    reduction. **So the reason word already exists and is already safe.**
+    **THE LAST QUESTION IS SEQUENCING, NOT SAFETY:** the shortfall is known only
+    after placement (`assessContract`), reductions are authorised before it
+    (`section18SafetyPolicy`). May the evaluator author one, or does this need a
+    post-placement finaliser?
     **(c) Census C11 — Sam: *"it needs to be checked"*.**
     `set_length_max_4_5_min` has five mentions and NO reader. Add the clause
     beside the three that work (`conditioningSelection.ts:291-304`). **Mutation
