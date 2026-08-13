@@ -49,6 +49,15 @@ his instruction is standing authority, not history.**
     seat fixed.** Detail, the remaining shapes and their owners:
     `docs/STATUS_COMPOSER.md`.
 
+    **⚠ AND `test:ladder-wide` IS RED AT HEAD, OWNED BY `cf77855f` — NOT BY THIS
+    ITEM'S RATCHET. BISECTED in a clean worktree, one commit apart:** `7fe7ced0`
+    is **88/318, 5/5 green**; the next commit, *"feat(equipment): LOAD IS NOT
+    AVAILABILITY"*, is **92/318, 4/5 red**, and it edits
+    `src/rules/sessionSlotCoverage.ts`. Four more days stopped covering Sam's
+    ladder. **Its author decides: fix the four, or move the ceiling in a commit
+    that says the unit changed.** `composer` will not absorb them into a number
+    it banked.
+
     **THE HELD FILES, NAMED:** `src/data/defaultProgram.ts` and
     `src/rules/sessionSlotCoverage.ts` are both MODIFIED in the working tree and
     are exactly where the composer goes. The last commit to `defaultProgram.ts`

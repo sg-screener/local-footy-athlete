@@ -148,3 +148,35 @@ a full block and dies on that mutant too.
 **EVERY NUMBER IN BOTH COMMIT MESSAGES IS A WORKTREE NUMBER.** Nothing in this
 seat's work was calibrated against the shared checkout, and a ratchet calibrated
 against a dirty tree pins a figure the chain can never reproduce.
+
+---
+
+## ⚠ `test:ladder-wide` IS RED AT HEAD AND IT IS NOT THIS SEAT'S — BISECTED
+
+**`cf77855f` — *"feat(equipment): LOAD IS NOT AVAILABILITY — R-083's second
+site"* — takes the wide census from 88 to 92 deficient of 318 and reds the
+ratchet.** Not inferred from a dirty tree; bisected in a clean worktree, one
+commit apart:
+
+| commit | result |
+| --- | --- |
+| `7fe7ced0` (this seat's last) | **88 / 318, 5/5 GREEN** |
+| `cf77855f` (next commit, another seat) | **92 / 318, 4/5 RED** |
+
+That commit also edits `src/rules/sessionSlotCoverage.ts`, adding
+`slotIsTrainableOnKit` — so it is working the EQUIPMENT class, which is exactly
+the class the remaining deficiency belongs to. **Four more days now fail to
+cover Sam's ladder than did an hour ago.**
+
+**THIS IS NOT AUTOMATICALLY A DEFECT AND THIS SEAT DOES NOT CALL IT ONE.** A
+kit-aware slot rule can legitimately move the count — a slot the athlete's
+equipment cannot train may be the right thing to judge differently. **But the
+ceiling was not moved with it, and a ratchet left behind by its own author is
+indistinguishable from a regression.** It belongs to whoever owns `cf77855f`:
+either the four days are real and get fixed, or the unit changed and the ceiling
+moves in a commit that says so.
+
+**WHAT THIS SEAT WILL NOT DO IS RAISE ITS OWN CEILING TO COVER IT.** 88 was
+measured, banked and mutation-proven at `7fe7ced0`; absorbing someone else's
+four days into that number would destroy the only evidence of when they
+appeared.
