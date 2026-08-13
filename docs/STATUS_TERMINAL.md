@@ -32,7 +32,42 @@ thing that actually bit.**
 
 ## STATUS
 
-### 2026-08-13 — R-079 BUILT (`0dc40d0c`, `ff31d40c`). AND THE APP PRESCRIBES NO SPRINT WORK AT ALL.
+### ⚠ CORRECTION — "THE APP PRESCRIBES NO SPRINT WORK AT ALL" IS WRONG. IT DOES.
+
+**I claimed that in `7739e67f` and it is overstated. Measured properly, on
+worlds I had NOT run when I said it:**
+
+| world | speed blocks |
+| --- | --- |
+| **no club, PRE-SEASON** | **1 — `true_speed` on day 1** |
+| no club, in-season | 0 |
+| no club, off-season | 0 |
+| WITH a club (pre-season 1 & 2 nights, in-season) | 0 |
+
+**My error was generalising from club worlds only.** Every world in the first
+sweep had a club; I never ran a no-club world for `speedBlock` before writing
+"never, by any route". The sprint top-up is real and it fires.
+
+**THE ACCURATE FINDING IS NARROWER AND SHARPER: the app places sprint work only
+when there is no club AND it is pre-season.** The gates are at
+`coachingEngine.ts:~5947` and they are the reason —
+`if (session.isTeamDay) return false`, then the day BEFORE or AFTER a team day,
+then game day / G-1 / G-2. **In a 2-team-night club week with a Saturday game
+every single day is excluded**, so a club athlete gets none and the anchors cover
+the requirement instead.
+
+**AND `isTeamDay` IS EXACTLY THE GATE SAM'S CLAUSE 3 OVERTURNS** — *"in pre
+season you can do flying sprints when there is team training because you will get
+accelerations at footy"*. That is one named line, and it is the buildable half of
+his ruling.
+
+**STILL A REAL GAP: no-club IN-SEASON and mid/late off-season get zero sprint
+work against `required: 1`**, and `9j` proves the week raises a BLOCKING
+shortfall it cannot clear. Why Monday and Tuesday are not eligible in that world
+— neither is a team day, a game day, G-1 or G-2 — is NOT yet explained. **Start
+there.**
+
+### 2026-08-13 — R-079 BUILT (`0dc40d0c`, `ff31d40c`). ~~AND THE APP PRESCRIBES NO SPRINT WORK AT ALL~~ — struck, see the correction above.
 
 **Sam's clause 3 — *"in pre season you can do flying sprints when there is team
 training"* — is MOOT IN PRACTICE, and that is the finding.** Measured across
