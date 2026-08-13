@@ -349,7 +349,90 @@ two failure modes, and mutating the predicate only ever tests one.**
 
 ---
 
-## 11. WHAT IS NOT MINE, AND WAS NOT TOUCHED
+## 12. ITEM 57 — MECHANISM THREE, AND A DOOR LEFT AJAR
+
+`patterns` built mechanisms 1 and 2 while I was on 53/54, and named honestly what
+its contract comparison cannot see. **This is that arm**, not a duplicate:
+`test:fatigue-session-collapse`, **14 cells**, in the `test:bible` chain.
+
+**MEASURED FIRST, as item 50 demands.** The 75% conversion still exists for
+injury (`injuryAdjustmentEngine.ts:327`) and that file contains **zero**
+occurrences of `fatigue`. The abolition is real.
+
+**⚠ THEN THE PROBE FOUND THE DOOR AJAR:**
+
+```
+extractInjuryContext('im absolutely cooked 9/10')
+  -> { bodyPart: 'unknown', bucket: null, severity: 9 }
+```
+
+**A pure FATIGUE sentence — the verbatim name of R-038's most severe READINESS
+tier — enters the INJURY door at the pause band, on a live path**
+(`CoachScreen.tsx:1294`). It gets in because "cooked" is a negative descriptor
+and body part is deliberately optional.
+
+**AND I NEARLY SHIPPED THAT AS A DEFECT.** The second probe is what stopped it:
+with `bucket:null` **every strength row rates `good`**, so `removeNames` is
+empty, the `>=50%` swap is unreachable, and **nothing is stripped**. The leak is
+real and its harm is zero.
+
+**SO THE GUARD PINS THE INERTNESS, NOT THE LEAK.** That inertness is the whole of
+the protection and nothing anywhere stated it — *"no body part? then be cautious
+with everything"* is a change a reasonable person would make, and it reinstates
+mechanism three for fatigue instantly. The leak is recorded as its own cell so
+that closing it **reds** rather than silently invalidating the guard above it.
+
+**I DID NOT CLOSE THE LEAK.** It is a coach-ROUTING change on a live athlete
+path. **Fix the routing, never the fallback** — widening the fallback is the
+mechanism; narrowing the router is the fix.
+
+**THREE MUTANTS, 2 cells each:** a removal field on `TierDirective`; the `7+`
+escalation reinstated; **the null-bucket fallback opened** — which reds the
+load-bearing cell AND the asymmetry control. Restored from my own backups,
+`git diff` clean.
+
+**⚠ AND `package.json` HAD TO BE REBUILT FROM `HEAD`.** The working tree carried
+another seat's `test:ladder-wide` wiring pointing at an **untracked** file;
+committing it as found would have put a missing suite into `test:bible` and
+broken it on any fresh checkout. Rebuilt from `HEAD` + my two lines, JSON
+re-parsed, their line restored to the tree unstaged.
+
+---
+
+## 13. TWO CORRECTIONS TO MY OWN WORK, BOTH FROM OTHER SEATS
+
+**1. HALF MY ITEM-54 BLOCK WAS STALE, AND I MADE THE EXACT MISTAKE I AVOIDED
+ELSEWHERE.** I wrote *"blocked on R-004, which item 55 puts on another seat"* —
+**quoting R-079's row instead of measuring R-004 myself.** R-004 is `BUILT`; the
+dated span ships, held by `test:christmas-break` 44/0 and mutation-proven. **A
+ruling premise is a claim too, and I applied that rule to R-041 and R-046 and
+then skipped it here.** The half I *did* measure — `Section18WeekMode` has eleven
+members and none is a Christmas break — stands, and another seat reached it
+independently. **Item 54 stays blocked, on the truth this time.**
+
+**2. MY REGISTRY EDIT LANDED UNDER SOMEONE ELSE'S STAMP.** `dde910c7`
+(`patterns`) committed `docs/RULINGS_REGISTRY.md` between my edit and my commit
+and swept my R-039 amendment in. The text is self-attributed inside the row, so
+nothing is lost — **but the commit stamp Sam asked for does not point at me for
+that hunk**, and that is worth recording rather than tidying away.
+
+---
+
+## 14. ⚠ A STANDING RISK NOBODY OWNS: THE INBOX IS 200 LINES UNCOMMITTED
+
+`docs/SEAT_INBOX.md` carries **items 50–59 plus every seat's marks — and none of
+it is in `HEAD`.** The delta has grown 164 -> 200 lines while I worked. Several
+seats are marking a file nobody is committing.
+
+**I did not commit it, twice, deliberately:** `git commit -- <path>` takes the
+whole file, and that would land six seats' unfinished queue authoring under my
+stamp — rule 2's exact failure mode. **But an uncommitted shared queue is exactly
+the "work nobody can see" risk Sam raised.** My marks on 53, 54, 57 and 58 are on
+disk and self-attributed. **This section is their durable copy.**
+
+---
+
+## 15. WHAT IS NOT MINE, AND WAS NOT TOUCHED
 
 - **`exercisePools.ts` / `equipmentAvailability.ts`** — modified in the shared
   tree by the equipment seat when this unit started. Never opened, never staged.
