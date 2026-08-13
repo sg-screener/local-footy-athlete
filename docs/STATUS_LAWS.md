@@ -164,3 +164,43 @@ retry loop against it.** Removed it; git's own error sanctions that and it
 unblocked both of us. **The second was LIVE** — `vocab` had a real
 `git commit` running — so I waited, and it cleared in 10 seconds. **The check
 is whether a git BINARY is running, not whether the file exists.**
+
+---
+
+## R-085's FORM IS NOW HELD — the fourth sighting is compressed
+
+Sam: *"build the guard"*. `test:repo-law-guards` now reds when an item
+**declares** a state its **head line** does not carry. 39 heads read, all clean.
+
+**IT GUARDS THE WRITING, NOT THE SCAN, AND THAT IS THE DESIGN.** Widening the
+scan to hunt for owners further down would let *"the seat holding
+`some-file.ts`"* count as an owner — **the rubber-stamp `arms` made the rule
+narrow to prevent.** It also **cannot DEMAND a state**: a genuinely unclaimed
+item passes untouched. It fires only on a state that is declared and then
+hidden.
+
+**⚠ ONE OF THE THREE WAS NOT ACTUALLY FIXED.** Sam said the seat had fixed all
+three so the guard would land green. **It landed RED on item 66** — 63 and 61
+were fixed, `sim`'s claim on 66 was still on line two. Moved it up; head line
+only. **Measuring the premise took one command and it was wrong.**
+
+Mutation-checked both ways: neutering the checker reds a cell, re-hiding item
+66's owner reds the real one.
+
+### ⚠ MY OWN PROCESS ERROR, AND IT IS THE ONE THIS REPO PUNISHES
+
+**I printed the index, saw two files in it that were not mine
+(`docs/SEAT_INBOX.md`, `docs/STATUS_CAP.md`), AND COMMITTED ANYWAY.** The check
+was there; **it was not a GATE.** A bare `git commit` after that would have
+swept both under my name.
+
+**What saved it was luck, not care:** the `cap` and `bible` seats committed
+during my seven retry attempts, so by the time mine ran the index held only my
+blob. **My commit contains exactly one file** (verified) and `STATUS_CAP.md`
+landed under `cap` — but **my inbox blob was swept into `bible`'s commit
+`c8c18500`**, so that content is correct and live under the wrong name.
+
+**THE FIX IS ONE LINE AND IT IS NOT A REMINDER:** the retry loop must ABORT
+when `git diff --cached --name-only` returns anything unexpected, not print it.
+**A check you read past is not a check** — which is the same lesson as the
+non-vacuity cells, one level out.
