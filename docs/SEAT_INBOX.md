@@ -99,7 +99,18 @@ his instruction is standing authority, not history.**
     THE CALENDAR WEEK"** — the exact defect. **R-034 does NOT collide** (it says
     what a deload DOES; R-035 says WHEN), so they compose: the transformation
     applies to the days inside the window. **Nothing to ask Sam, exactly as this
-    item's own first line says.** The remaining work is the per-day dose seam. The small blast
+    item's own first line says.** The remaining work is the per-day dose seam.
+    **✅ AND THAT SEAM IS NOW FOUND AND VERIFIED.** The dose is RESOLVED once per
+    week (`defaultProgram.ts:1677`) but **CONSUMED inside the per-workout loop**
+    (`:2232`, `:2562`, `:2621-2626`, `:2638-2639`, `:2667`), where `cw.dayOfWeek`
+    is in scope and `syntheticDateStr` (`:1779`) returns a REAL date via
+    `weekStartISO`. **BUILD:** thread the readiness window onto `RotationContext`
+    beside `deloadDoor` and gate those six sites on the law module's own
+    `isDateInReadinessDeloadWindow` — giving `readinessIllnessLaw` a live reader.
+    **R-034 is untouched (only WHICH DAYS change), and the gate must apply to the
+    READINESS window only — R-036's illness door is "while ACTIVE", not 7 days,
+    so a null window must mean every day.** Not started: it moves generated
+    output and owes scenarios+qa either side. The small blast
     radius at the top (`doorDeload` has two uses) is exactly what makes it read
     as a one-liner. **Next session starts at that decision, not at the wiring.**
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *deload*, *cooked*, *readiness*
@@ -186,14 +197,38 @@ his instruction is standing authority, not history.**
     red. A green suite over a defect that does not reproduce proves nothing.
 
 
-39. **BLOCKED-BY: other-agent — SAM RULED THE SPRINT CAP — THE UNIT IS NIGHTS,
-    AND IT VARIES BY PHASE. 2026-08-13. REGISTER AS R-079.**
+39. **BLOCKED-BY: sam — SAM RULED THE SPRINT CAP; MOST OF IT IS BUILT AND THE
+    REMAINDER NEEDS ONE MORE LINE FROM HIM. R-079 IS REGISTERED.**
 
-    **MARKED BY `audit`, NOT CLAIMED, NOT EDITED BELOW THIS PARAGRAPH.** The item
-    names **OWNED BY THE TERMINAL** in its own text and the terminal seat is live
-    (it has been committing continuously today). **Marking is the permitted edit
-    for a non-owner**, and a second seat entering a fresh ruling is how a ruling
-    gets registered twice under two numbers.
+    **BLOCK REASON CORRECTED BY THE TERMINAL (its owner), 2026-08-13.** `audit`
+    marked this `other-agent` to stop ITSELF entering it, which was right at the
+    time. **It is not blocked on another agent — it is blocked on Sam**, and the
+    two words mean different things to whoever reads this next: `other-agent`
+    says wait for a seat, `sam` says a question is outstanding.
+
+    **✅ BUILT AND GREEN — `0dc40d0c`, `ff31d40c`, `0d4824df`:** the unit is
+    NIGHTS (`sprintHighSpeed.achievedCount` counts distinct days, so a team night
+    carrying flying sprints is ONE, not two); in-season ceiling **`null` -> 3**
+    (his *"may mean 3"*, and it was UNCAPPED before — census A6 closed for that
+    phase); late off-season **2 -> 1**; five cells `9c`-`9g` plus `9h`-`9j`;
+    `test:section18-v2` **135/0**.
+
+    **⚠ THE QUESTION — full entry under `## AWAITING SAM`, with its
+    REGISTRY-GREP.** His clause 3 (*"in pre season you can do flying sprints when
+    there is team training"*) is BUILT and **measured INERT**, because
+    `sprintExposureGate` answers `preseason_target_met` first:
+    **the team night is already counted AS the week's sprint, so the app refuses
+    to add top-end on it.** His ruling says add; the gate says you already have
+    one. Item 39's own clause 4 says to REPORT a disagreement rather than pick a
+    side, so it is reported, not resolved.
+    **What to send: *"a team night IS my sprint"* or *"a team night EARNS a
+    sprint on top"*** — and, for the no-club athlete who gets zero sprint
+    in-season against `required: 1`, *"give them sprints"* or *"leave it"*.
+
+    **NOT BUILT, AND NAMED:** Christmas's 1/week has no mode to hang on (R-002 /
+    R-004); the pre-season QUALITY rule cannot be expressed at all because
+    `SpeedWorkKind` has no `acceleration` member; clause 4's hard-day cross-check
+    is owed.
 
     **OWNED BY THE TERMINAL.**
     **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *sprint* — nothing ruled

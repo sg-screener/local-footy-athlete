@@ -133,6 +133,37 @@ its own first line ("Nothing to ask him").**
 reason I did not. That is the mechanism working as designed, and it is worth the
 line.
 
+### ✅ AND THE SEAM IS FOUND AND VERIFIED — THE BUILD IS NOW A NAMED LINE, NOT A DESIGN
+
+**I said the dose "is resolved ONCE PER WEEK". That is true of the RESOLUTION and
+NOT of the APPLICATION, and the difference is the whole build.** `deloadPolicy`
+is resolved once (`defaultProgram.ts:1677`) but **CONSUMED INSIDE THE PER-WORKOUT
+LOOP** — `:2232`, `:2562`, `:2621-2626`, `:2638-2639`, `:2667`. The loop variable
+`cw` carries `dayOfWeek`, so **a per-day decision has somewhere to stand.**
+
+**AND THE DATE AT THAT SEAM IS A REAL CALENDAR DATE, WHICH I CHECKED RATHER THAN
+TRUSTING THE NAME.** `syntheticDateStr` (`:1779`) is only "synthetic" in that it
+is derived rather than carried: with `rotationContext.weekStartISO` present it
+returns `addDaysISO(weekStartISO, mondayBasedOffset)` — the actual date. **A
+window comparison at that seam is meaningful.**
+
+**THE BUILD, FULLY SPECIFIED:**
+1. `RotationContext` gains `readinessWindow?: ReadinessDeloadWindow | null`
+   beside the existing `deloadDoor`.
+2. Thread it `generationConstraints` → `generateProgram` (`:730`, `:932`, where
+   `deloadDoor` is already set) → `rotationContext`.
+3. At the six consumption points, gate the dose on
+   `isDateInReadinessDeloadWindow(syntheticDateStr(cw.dayOfWeek), window)` —
+   **the law module's OWN predicate**, which finally gives
+   `readinessIllnessLaw` a live reader instead of an orphan.
+
+**NOTHING IN R-034 CHANGES.** The transformation is untouched; only WHICH DAYS
+receive it. That is exactly what R-035 says and exactly what the week-shaped
+application cannot express. **The illness door must keep its week behaviour** —
+R-036 says MODERATE is deloaded *while the fact is ACTIVE*, which is not a
+7-day window — so the gate applies to the READINESS window only, and a null
+window must mean "every day", or the illness door silently stops deloading.
+
 **BUILD NOT STARTED, DELIBERATELY.** It changes generated output and owes
 `test:scenarios` + `test:qa` either side; item 34 says in as many words that
 starting a generation change at the tail of a session **"is the documented way
