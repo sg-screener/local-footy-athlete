@@ -593,7 +593,7 @@ try {
   const state: ScheduleState = {
     currentProgram: program, currentMicrocycle: microcycle,
     manualOverrides: {}, markedDays, athleteContext: DEFAULT_ATHLETE_CONTEXT,
-    seasonPhase: 'In-season', gameDay: 'Saturday', readiness: plan.readiness,
+    seasonPhase: 'In-season', gameDay: 'Saturday', capacity: plan.capacity,
   };
   const resolved = resolveWeekWithConditioning(BLOCK_START, state);
   const report = validateProgramWeek({

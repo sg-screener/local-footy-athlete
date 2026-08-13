@@ -571,9 +571,9 @@ export function classifyGenerationSession(
 }
 
 export interface CoachingPlan {
-  // Readiness
-  readiness: CapacityBand;
-  readinessFactors: string[];
+  // The athlete's STANDING CAPACITY BAND — not what he said about today.
+  capacity: CapacityBand;
+  capacityFactors: string[];
 
   // Hard exposure budget
   hardExposureCap: number;
@@ -603,7 +603,7 @@ export interface CoachingPlan {
 
 export interface AIConstraints {
   phase: SeasonPhase;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   hardExposureCap: number;
   existingHardExposures: number;
   coreSessionsToProgram: number;
@@ -739,11 +739,11 @@ function section18ModeAndSubphase(
 
 function buildParallelSection18Contract(args: {
   inputs: CoachingInputs;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   weeklyPlan: readonly SessionAllocation[];
   legacy: WeeklyExposureContract;
 }): WeeklyExposureContractV2 {
-  const { inputs, readiness, weeklyPlan, legacy } = args;
+  const { inputs, capacity, weeklyPlan, legacy } = args;
   const identity = section18ModeAndSubphase(inputs, legacy);
   const reductions = legacy.reductions.map((entry) =>
     migrateLegacyReductionV2(entry, 'live_typed_reduction'));
@@ -753,7 +753,7 @@ function buildParallelSection18Contract(args: {
   }));
   const selected = resolveSection18PhasePlannerSelection({
     mode: identity.mode,
-    readiness,
+    capacity,
     availableDayCount: inputs.selectedDays.length,
     teamTrainingCount: inputs.teamTrainingDays.length,
     weekKind: inputs.weekKind,
@@ -814,7 +814,7 @@ function buildParallelSection18Contract(args: {
       0,
       (inputs.teamTrainingDays?.length ?? 0) + (inputs.hasGame ? 1 : 0) - 3,
     ),
-    readiness,
+    capacity,
     cookedReadiness,
     plannerSelected: {
       mainStrength: identity.mode === 'early_offseason'
@@ -937,7 +937,7 @@ function testingEffectReason(
  * This function no longer decides anything. It reads two answers, asks the
  * owner, and reports. That is the point: one representation of the rubric.
  */
-export function calculateReadiness(inputs: CoachingInputs): {
+export function calculateCapacity(inputs: CoachingInputs): {
   level: CapacityBand;
   factors: string[];
 } {
@@ -1014,8 +1014,8 @@ export function calculateReadiness(inputs: CoachingInputs): {
 // ─── Step 2: Build the Full Coaching Plan ───
 
 export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
-  // Step 1: Readiness
-  const { level: readiness, factors: readinessFactors } = calculateReadiness(inputs);
+  // Step 1: the athlete's standing CAPACITY BAND — never his declaration.
+  const { level: capacity, factors: capacityFactors } = calculateCapacity(inputs);
   const trainingAgePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: inputs.seasonPhase,
@@ -1023,7 +1023,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const offseasonPolicy = offseasonSubphase
-    ? getOffseasonSubphasePolicy(offseasonSubphase, { readiness })
+    ? getOffseasonSubphasePolicy(offseasonSubphase, { capacity })
     : null;
   const preseasonSubphase = resolvePreseasonSubphase({
     seasonPhase: inputs.seasonPhase,
@@ -1032,7 +1032,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   });
   const preseasonPolicy = preseasonSubphase
     ? getPreseasonSubphasePolicy(preseasonSubphase, {
-        readiness,
+        capacity,
         teamTrainingExposures: inputs.teamTrainingDays.length,
         hasPracticeMatch: inputs.hasGame,
       })
@@ -1059,7 +1059,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // allocator, generators and validators receive the same typed object.
   let weeklyExposureContract = buildWeeklyExposureContract({
     seasonPhase: inputs.seasonPhase,
-    readiness,
+    capacity,
     selectedDayNumbers: inputs.selectedDays.map(dayNameToNumber),
     teamTrainingDayNumbers: (inputs.teamTrainingDays ?? []).map(dayNameToNumber),
     hasGame: inputs.hasGame,
@@ -1079,7 +1079,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   });
   const phasePlannerContractV2 = buildParallelSection18Contract({
     inputs,
-    readiness,
+    capacity,
     weeklyPlan: [],
     legacy: weeklyExposureContract,
   });
@@ -1160,7 +1160,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   logger.debug('[ENGINE-TRACE] selectedDays:', inputs.selectedDays);
   logger.debug('[ENGINE-TRACE] availableDays:', inputs.availableDays);
   logger.debug('[ENGINE-TRACE] teamTrainingDays:', inputs.teamTrainingDays);
-  logger.debug('[ENGINE-TRACE] readiness:', readiness);
+  logger.debug('[ENGINE-TRACE] capacity:', capacity);
   logger.debug('[ENGINE-TRACE] contract strength:',
     `target=${weeklyExposureContract.strength.targetCount}`,
     `preferred=${weeklyExposureContract.strength.preferred.min}-${weeklyExposureContract.strength.preferred.max}`,
@@ -1171,7 +1171,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     actualCore,
     optionalSessions,
     recoverySessions,
-    readiness,
+    capacity,
     programmingBias,
     weeklyExposureContract,
     phasePlannerContractV2,
@@ -1529,7 +1529,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         hasGame: inputs.hasGame,
         gOffset: off,
         isTeamDay: !!alloc.isTeamDay,
-        readiness,
+        capacity,
         // No deload input: Sam's deload law keeps power on a deload week and
         // shrinks the dose instead. The shrink is `deloadPowerDose`, applied
         // where the block is built — not a second decision here.
@@ -1584,7 +1584,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
       actualCore,
       optionalSessions,
       recoverySessions,
-      readiness,
+      capacity,
       composeProgrammingBias(roleGoalBias, neutralTestingBias),
       weeklyExposureContract,
       phasePlannerContractV2,
@@ -1654,7 +1654,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // advisory preferred ranges never create a repair target on their own.
   const weeklyExposureContractV2 = buildParallelSection18Contract({
     inputs,
-    readiness,
+    capacity,
     weeklyPlan,
     legacy: weeklyExposureContract,
   });
@@ -1678,7 +1678,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // Build AI constraints
   const constraints = buildAIConstraints(
     inputs,
-    readiness,
+    capacity,
     hardCap,
     existingHard,
     plannedCoreSessions,
@@ -1699,8 +1699,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   });
 
   return {
-    readiness,
-    readinessFactors,
+    capacity,
+    capacityFactors,
     hardExposureCap: hardCap,
     existingHardExposures: existingHard,
     remainingHardBudget: remainingBudget,
@@ -1846,8 +1846,8 @@ function buildWeeklyPlan(
   core: number,
   optional: number,
   recovery: number,
-  /** Profile-derived readiness — read by finisherEligibility (4A). */
-  readiness: CapacityBand,
+  /** Profile-derived CAPACITY BAND — read by finisherEligibility (4A). */
+  capacity: CapacityBand,
   programmingBias: ComposedProgrammingBias,
   weeklyExposureContract: WeeklyExposureContract | null,
   section18Contract: WeeklyExposureContractV2 | null,
@@ -1897,7 +1897,7 @@ function buildWeeklyPlan(
     phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const offseasonPolicy = offseasonSubphase
-    ? getOffseasonSubphasePolicy(offseasonSubphase, { readiness })
+    ? getOffseasonSubphasePolicy(offseasonSubphase, { capacity })
     : null;
   const preseasonSubphase = resolvePreseasonSubphase({
     seasonPhase: inputs.seasonPhase,
@@ -1906,7 +1906,7 @@ function buildWeeklyPlan(
   });
   const preseasonPolicy = preseasonSubphase
     ? getPreseasonSubphasePolicy(preseasonSubphase, {
-        readiness,
+        capacity,
         teamTrainingExposures: teamDayNums.length,
         hasPracticeMatch: inputs.hasGame,
       })
@@ -2729,14 +2729,14 @@ function buildWeeklyPlan(
       if (!offseasonPolicy) return false;
       if (!offseasonPolicy.running.allowedBySubphase) return true;
       if (offseasonPolicy.running.enabledByDefault) {
-        return readiness === 'low' || lowerLimbIssue(4);
+        return capacity === 'low' || lowerLimbIssue(4);
       }
       const conditioningReady =
         inputs.conditioningLevel === 'Good' || inputs.conditioningLevel === 'Elite';
       const profileLowerLimbIssue = inputs.injuries.some((injury) =>
         /hamstring|calf|achilles|knee|ankle|groin|quad|hip|shin|foot|glute/i
           .test(`${injury.bodyArea} ${injury.description}`));
-      return readiness !== 'high' || !conditioningReady || lowerLimbIssue(1) || profileLowerLimbIssue;
+      return capacity !== 'high' || !conditioningReady || lowerLimbIssue(1) || profileLowerLimbIssue;
     }
 
     function conditioningPolicyProps(category: CondCategory): Partial<SessionAllocation> {
@@ -3564,7 +3564,7 @@ function buildWeeklyPlan(
     function standaloneTempoOffFeet(forcedOffFeet: boolean): boolean {
       if (forcedOffFeet) return true;
       if (inputs.seasonPhase !== 'Pre-season') return true;
-      if (readiness === 'low') return true;
+      if (capacity === 'low') return true;
       const base = inputs.conditioningLevel;
       if (base !== 'Good' && base !== 'Elite') return true;
       const lowerLimb = inputs.injuries.some(i =>
@@ -3643,7 +3643,7 @@ function buildWeeklyPlan(
           // Sandwiched days must be genuinely low-stress — even off-feet
           // tempo backs off to easy aerobic (matches H-PRE-11).
           if (requestedCategory === 'tempo' && strengthContext === 'standalone' && !sandwiched) {
-            if (readiness === 'low') return easy(true);
+            if (capacity === 'low') return easy(true);
             return { allow: true, category: 'tempo', downgraded: false, offFeetOnly: true };
           }
           return easy(true);
@@ -3680,7 +3680,7 @@ function buildWeeklyPlan(
       // is not a hard exposure it does NOT consume weekly hard-day
       // headroom. Only gate left: low readiness backs off to easy aerobic.
       if (requestedCategory === 'tempo') {
-        if (readiness === 'low') return easy(true);
+        if (capacity === 'low') return easy(true);
         return { allow: true, category: 'tempo', downgraded: laddered };
       }
 
@@ -3690,7 +3690,7 @@ function buildWeeklyPlan(
       // not consume hard-day headroom) instead of collapsing to easy.
       // Low readiness still goes all the way down to aerobic.
       if (isHardCategory) {
-        if (readiness === 'low') return easy(true);
+        if (capacity === 'low') return easy(true);
         if (
           strengthContext !== 'standalone' &&
           inputs.seasonPhase === 'Off-season' &&
@@ -8654,7 +8654,7 @@ function getOptionalFocus(inputs: CoachingInputs): string {
 
 function buildAIConstraints(
   inputs: CoachingInputs,
-  readiness: CapacityBand,
+  capacity: CapacityBand,
   hardCap: number,
   existingHard: number,
   core: number,
@@ -8725,7 +8725,7 @@ function buildAIConstraints(
     conditioningLoading = 'light-only'; // No extra running in-season
   // A deloaded week's conditioning dose is DELOAD_LAW's ("half the total work,
   // one quality exposure at most"), not a second 'moderate' hint set here.
-  } else if (readiness === 'low') {
+  } else if (capacity === 'low') {
     conditioningLoading = 'moderate';
   }
 
@@ -8768,7 +8768,7 @@ function buildAIConstraints(
 
   // Ramp-up flag
   const rampUp =
-    readiness === 'low' ||
+    capacity === 'low' ||
     inputs.recentTrainingLoad === 'Hardly at all' ||
     inputs.recentTrainingLoad === 'A bit';
 
@@ -8831,7 +8831,7 @@ function buildAIConstraints(
 
   return {
     phase: inputs.seasonPhase,
-    readiness,
+    capacity,
     hardExposureCap: hardCap,
     existingHardExposures: existingHard,
     coreSessionsToProgram: core,

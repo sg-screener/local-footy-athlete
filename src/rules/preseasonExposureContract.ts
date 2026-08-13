@@ -15,7 +15,7 @@ import { buildPreseasonExposureContract } from './weeklyExposureContractBuilders
 
 export interface PreseasonExposureContractInput {
   seasonPhase: SeasonPhase;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   selectedDayNumbers: readonly number[];
   teamTrainingDayNumbers: readonly number[];
   hasGame: boolean;

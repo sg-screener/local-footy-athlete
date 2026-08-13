@@ -50,7 +50,13 @@ export interface RecoveryAddonCoverageContext {
   daysUntilGame?: number | null;
   availabilityDaysPerWeek?: number;
   availableTrainingDays?: readonly DayOfWeek[];
-  readiness?: CapacityBand;
+  /**
+   * THE CAPACITY BAND — the athlete's standing baseline. Renamed from
+   * `readiness` (2026-08-13): it sat directly above `readinessDeloaded`, which
+   * is the DECLARATION, so one object held both halves of the homonym under
+   * one word. See `CapacityBand` in `types/domain.ts`.
+   */
+  capacity?: CapacityBand;
   readinessDeloaded?: RecoveryAddonReadinessTier;
   activeInjuries?: readonly RecoveryAddonActiveInjury[];
 }
@@ -689,7 +695,7 @@ function isLowAvailability(context: RecoveryAddonCoverageContext): boolean {
 
 function effectiveReadinessTier(context: RecoveryAddonCoverageContext): RecoveryAddonReadinessTier {
   if (context.readinessDeloaded) return context.readinessDeloaded;
-  if (context.readiness === 'low') return true;
+  if (context.capacity === 'low') return true;
   return false;
 }
 

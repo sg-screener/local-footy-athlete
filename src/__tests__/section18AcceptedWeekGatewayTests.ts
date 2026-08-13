@@ -637,7 +637,7 @@ check('9 bodyweight/no-cardio pre-season retains C3-4 safely',
     allocation.conditioningFeasibility?.status === 'removed' &&
     (allocation.conditioningFeasibility.attemptedSubstitutionFamilies?.length ?? 0) >= 10);
   const contract = buildWeeklyExposureContract({
-    seasonPhase: 'Off-season', readiness: 'high', selectedDayNumbers: [1, 2, 3, 4],
+    seasonPhase: 'Off-season', capacity: 'high', selectedDayNumbers: [1, 2, 3, 4],
     teamTrainingDayNumbers: [], hasGame: false, gameDay: null,
     offseasonSubphase: 'mid_offseason', appConditioningFeasible: false,
     attemptedConditioningSubstitutions:

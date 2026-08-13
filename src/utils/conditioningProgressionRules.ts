@@ -40,7 +40,7 @@ export interface ConditioningAdjustment {
 
 export interface ConditioningProgressionInput {
   tier: ConditioningTierLabel;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   recentRPE: number;
   completionQuality: CompletionQuality;
   /** True when recentRPE/completion came from an athlete log instead of fallback defaults. */
@@ -149,12 +149,12 @@ export function resolveConditioningProgression(
 
   // ── Step 2: Soft deload triggers (require 2+) ──
   let softCount = 0;
-  if (input.readiness === 'low') softCount++;
+  if (input.capacity === 'low') softCount++;
   if (input.recentRPE >= 8) softCount++;
   if (input.completionQuality === 'failed') softCount++;
   if (softCount >= 2) {
     const signals: string[] = [];
-    if (input.readiness === 'low') signals.push('low readiness');
+    if (input.capacity === 'low') signals.push('low capacity');
     if (input.recentRPE >= 8) signals.push('high RPE');
     if (input.completionQuality === 'failed') signals.push('failed completion');
     return buildConditioningDeload(input, `Soft deload: ${signals.join(' + ')}`);
@@ -249,7 +249,7 @@ export function resolveConditioningProgression(
     ) {
       state = 'maintain';
       note = 'Conditioning feedback was solid - repeat';
-    } else if (input.hasRecentFeedback && input.readiness === 'low') {
+    } else if (input.hasRecentFeedback && input.capacity === 'low') {
       state = 'maintain';
       note = 'Low readiness - conditioning progression paused';
     }

@@ -380,7 +380,7 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
   }
 
   const legacy = buildWeeklyExposureContract({
-    seasonPhase: 'Pre-season', readiness: 'medium', selectedDayNumbers: [1, 2, 3, 4, 5, 6],
+    seasonPhase: 'Pre-season', capacity: 'medium', selectedDayNumbers: [1, 2, 3, 4, 5, 6],
     teamTrainingDayNumbers: [2, 4], hasGame: false, gameDay: null,
     weekKind: 'build', preseasonSubphase: 'early_preseason', appConditioningFeasible: true,
   });
@@ -474,7 +474,7 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
     detail: 'Cooked readiness reduced weekly strength.', provenance: 'live_typed_reduction',
   }];
   const c = contract('mid_offseason', {
-    readiness: 'medium', cookedReadiness: true, reductions,
+    capacity: 'medium', cookedReadiness: true, reductions,
     plannerSelected: { mainStrength: 2, coreConditioning: 1, optionalFlush: 0, sprintHighSpeed: 0, powerPrimers: 0 },
   });
   witnesses.reductionAndPower = evaluate(c, [
@@ -925,8 +925,8 @@ ok('a scheduled deload week KEEPS power',
   contract('in_season_game_week', { weekKind: 'deload' }).power.removalReason);
 
 ok('a low-readiness week KEEPS power',
-  contract('in_season_game_week', { readiness: 'low' }).power.eligible === true,
-  contract('in_season_game_week', { readiness: 'low' }).power.removalReason);
+  contract('in_season_game_week', { capacity: 'low' }).power.eligible === true,
+  contract('in_season_game_week', { capacity: 'low' }).power.removalReason);
 
 ok('a cooked-readiness week KEEPS power',
   contract('in_season_game_week', { cookedReadiness: true }).power.eligible === true,
@@ -940,7 +940,7 @@ ok('an illness_recovery week KEEPS power',
 // longer describes anything is how the old rule grows back.
 ok('no contract still cites the retired low_readiness_or_deload removal reason',
   (['in_season_game_week', 'optional_week'] as const).every((mode) =>
-    contract(mode, { weekKind: 'deload', readiness: 'low', cookedReadiness: true })
+    contract(mode, { weekKind: 'deload', capacity: 'low', cookedReadiness: true })
       .power.removalReason !== 'low_readiness_or_deload'));
 
 // A genuine SAFETY prohibition still removes power. The law retires deload as a

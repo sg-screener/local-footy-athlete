@@ -143,7 +143,7 @@ export function assembleScheduleState(
     ? acceptedContext.readinessSignalsByDate[todayISO]
     : (inputs.readinessSignalsByDate as never)[todayISO];
   // RENDER MUST NOT THROW (Sam, 2026-07-30): band or null, never a refusal.
-  const readiness = profileCapacityBandOrNull(onboardingData);
+  const capacity = profileCapacityBandOrNull(onboardingData);
 
   const preferredDays = onboardingData?.preferredTrainingDays;
   const availableDayNumbers =
@@ -199,7 +199,7 @@ export function assembleScheduleState(
     }).phase,
     usualGameDay: onboardingData?.usualGameDay,
     gameDay: onboardingData?.gameDay,
-    readiness,
+    capacity,
     blockState: (inputs.blockState as never) || null,
     sessionFeedback: (inputs.sessionFeedback as never) || {},
     weightOverrides: (inputs.weightOverrides as never) || {},

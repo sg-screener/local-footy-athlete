@@ -257,7 +257,7 @@ section('[5] One deload decider');
     resolveProgression({
       exerciseRole: 'primary_strength',
       seasonPhase,
-      readiness: 'medium',
+      capacity: 'medium',
       completionQuality: 'full',
       weeksSinceDeload,
       consecutiveBuildWeeks: 2,
@@ -301,7 +301,7 @@ section('[5] One deload decider');
   const hardTrigger = resolveProgression({
     exerciseRole: 'primary_strength',
     seasonPhase: 'In-season',
-    readiness: 'low',
+    capacity: 'low',
     completionQuality: 'partial',
     weeksSinceDeload: 1,
     consecutiveBuildWeeks: 0,

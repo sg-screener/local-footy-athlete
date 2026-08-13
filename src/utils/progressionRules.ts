@@ -44,7 +44,7 @@ export type RPEDelta = 'push' | 'none' | 'pull';
 export interface ProgressionInput {
   exerciseRole: ExerciseRole;
   seasonPhase: SeasonPhase;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   completionQuality: CompletionQuality;
   weeksSinceDeload: number;
   consecutiveBuildWeeks: number;
@@ -101,13 +101,13 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
 
   // ── Step 3: Soft deload triggers (require 2+ concurrent) ──
   let softCount = 0;
-  if (input.readiness === 'low') softCount++;
+  if (input.capacity === 'low') softCount++;
   if (rpe >= 8) softCount++;
   if (input.missedSessionsThisWeek >= 1) softCount++;
   if (input.sessionFeeling === 'Cooked') softCount++;
   if (softCount >= 2) {
     const signals: string[] = [];
-    if (input.readiness === 'low') signals.push('low readiness');
+    if (input.capacity === 'low') signals.push('low capacity');
     if (rpe >= 8) signals.push('high RPE');
     if (input.missedSessionsThisWeek >= 1) signals.push('missed sessions');
     if (input.sessionFeeling === 'Cooked') signals.push('cooked feeling');
@@ -128,7 +128,7 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
   if (scheduledDoorOpen && input.weeksSinceDeload >= deloadThreshold) {
     // Check for at least one fatigue signal
     const hasSignal =
-      input.readiness === 'low' ||
+      input.capacity === 'low' ||
       rpe >= 8 ||
       input.missedSessionsThisWeek >= 1 ||
       input.sessionFeeling === 'Cooked' ||
@@ -149,10 +149,10 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
   let note: string;
 
   if (input.seasonPhase === 'In-season') {
-    if (input.readiness === 'low') {
+    if (input.capacity === 'low') {
       state = 'hold';
       note = 'In-season, low readiness - hold';
-    } else if (input.readiness === 'medium') {
+    } else if (input.capacity === 'medium') {
       state = 'maintain';
       note = 'In-season, medium readiness - maintain';
     } else {
@@ -167,21 +167,21 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
       note = 'In-season, high readiness - maintain';
     }
   } else if (input.seasonPhase === 'Pre-season') {
-    if (input.readiness === 'low') {
+    if (input.capacity === 'low') {
       state = 'maintain';
       note = 'Pre-season, low readiness - maintain';
     } else {
       state = 'build';
-      note = `Pre-season, ${input.readiness} readiness - build`;
+      note = `Pre-season, ${input.capacity} capacity - build`;
     }
   } else {
     // Off-season
-    if (input.readiness === 'low') {
+    if (input.capacity === 'low') {
       state = 'maintain';
       note = 'Off-season, low readiness - maintain';
     } else {
       state = 'build';
-      note = `Off-season, ${input.readiness} readiness - build`;
+      note = `Off-season, ${input.capacity} capacity - build`;
     }
   }
 
@@ -202,7 +202,7 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
   if (
     state === 'build' &&
     input.seasonPhase === 'Off-season' &&
-    input.readiness === 'high' &&
+    input.capacity === 'high' &&
     input.consecutiveBuildWeeks >= 3 &&
     rpe <= 7 &&
     input.trend !== 'down'
@@ -218,7 +218,7 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
 
 function inSeasonLowerBodyGate(input: ProgressionInput): boolean {
   return (
-    input.readiness === 'high' &&
+    input.capacity === 'high' &&
     input.recentRPE <= 6 &&
     (input.daysToGame === null || input.daysToGame >= 3) &&
     !input.doubleGameWeek &&

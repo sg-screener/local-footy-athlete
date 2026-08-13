@@ -50,7 +50,7 @@ function environment(overrides: Partial<TapSwapEnvironment> = {}): TapSwapEnviro
       'kettlebell',
       'bike_or_treadmill',
     ],
-    readiness: 'high',
+    capacity: 'high',
     hasEquipmentConstraint: false,
     medicalStop: false,
     ...overrides,
@@ -196,7 +196,7 @@ console.log('\n-- Injury, readiness and equipment precedence --');
   const choices = getTapSwapChoices({
     originalExercise: 'Bench Press',
     reason: 'preference',
-    environment: environment({ readiness: 'low' }),
+    environment: environment({ capacity: 'low' }),
   });
   ok('low readiness removes high-fatigue alternatives',
     choices.filter((choice) => choice.kind === 'exercise').every((choice) =>
@@ -272,7 +272,7 @@ console.log('\n-- Recovery and rest are true fallbacks --');
       advice: [],
     }],
   });
-  eq('live environment resolves active fatigue to low readiness', resolved.readiness, 'low');
+  eq('live environment resolves active fatigue to low capacity', resolved.capacity, 'low');
   ok('live environment resolves profile equipment without barbell',
     resolved.availableEquipment.includes('dumbbell') &&
       !resolved.availableEquipment.includes('barbell'),

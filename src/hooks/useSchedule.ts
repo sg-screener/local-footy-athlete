@@ -193,7 +193,7 @@ function useScheduleState(): ScheduleState & {
   // is still what generation calls — an unscoreable profile is refused a
   // program, it is not refused a screen. `null` travels as null; see
   // rules note in utils/readiness.ts.
-  const readiness = profileCapacityBandOrNull(onboardingData);
+  const capacity = profileCapacityBandOrNull(onboardingData);
 
   return {
     currentProgram,
@@ -218,7 +218,7 @@ function useScheduleState(): ScheduleState & {
     seasonPhase,
     usualGameDay,
     gameDay,
-    readiness,
+    capacity,
     blockState,
     sessionFeedback: sessionFeedback || {},
     weightOverrides: weightOverrides || {},

@@ -88,7 +88,7 @@ function liveScheduleState(profile: Partial<OnboardingData>): ScheduleState {
     markedDays: {},
     athleteContext: { ...DEFAULT_ATHLETE_CONTEXT, onboardingData: profile as OnboardingData },
     seasonPhase: profile.seasonPhase as ScheduleState['seasonPhase'],
-    readiness: 'high',
+    capacity: 'high',
     availableDayNumbers: [1, 2, 3, 4, 5],
   };
 }

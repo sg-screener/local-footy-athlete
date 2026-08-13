@@ -203,7 +203,7 @@ function baseContract(args: {
     teamParticipation: args.teamParticipation,
     participationProvenance: 'derived_healthy_unrestricted',
     fixtureDays: [],
-    readiness: args.readiness ?? 'medium',
+    capacity: args.capacity ?? 'medium',
     cookedReadiness: args.readiness === 'low',
     plannerSelected: {
       mainStrength: mode === 'in_season_bye_recovery' ? 2 : 3,
@@ -309,7 +309,7 @@ function earlyOffseasonContract(): WeeklyExposureContractV2 {
     teamTrainingDays: [],
     participationProvenance: 'derived_healthy_unrestricted',
     fixtureDays: [],
-    readiness: 'medium',
+    capacity: 'medium',
     cookedReadiness: false,
     plannerSelected: {
       mainStrength: 0,

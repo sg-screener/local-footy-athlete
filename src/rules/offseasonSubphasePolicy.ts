@@ -28,7 +28,7 @@ export type OffseasonSpeedSprintPolicy =
   | 'existing_late_offseason_gate';
 
 export interface OffseasonSubphasePolicyContext {
-  readiness?: CapacityBand | null;
+  capacity?: CapacityBand | null;
 }
 
 export interface OffseasonSubphasePolicy {
@@ -203,7 +203,7 @@ export function getOffseasonSubphasePolicy(
   context: OffseasonSubphasePolicyContext = {},
 ): OffseasonSubphasePolicy {
   const base = BASE_POLICIES[subphase];
-  if (context.readiness !== 'low') return base;
+  if (context.capacity !== 'low') return base;
 
   return {
     ...base,

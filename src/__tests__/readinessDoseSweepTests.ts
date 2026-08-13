@@ -212,8 +212,8 @@ console.log('\n[1] Power survives low capacity as a shrunk sharp primer');
     powerGoalNudge: false,
   };
 
-  const medium = decidePowerPrimer({ ...base, readiness: 'medium' });
-  const low = decidePowerPrimer({ ...base, readiness: 'low' });
+  const medium = decidePowerPrimer({ ...base, capacity: 'medium' });
+  const low = decidePowerPrimer({ ...base, capacity: 'low' });
 
   ok('low capacity still returns a power spec', low !== null, low);
   ok('the medium-capacity spec is the reference dose', medium !== null, medium);
@@ -231,8 +231,8 @@ console.log('\n[1] Power survives low capacity as a shrunk sharp primer');
   // G-2: the WINDOW is a schedule fact and keeps its tiny dose. The readiness
   // half of that gate was a block and shrinks instead.
   const gTwo = { ...base, phase: 'In-season' as const, hasGame: true, gOffset: -2 };
-  const gTwoHigh = decidePowerPrimer({ ...gTwo, readiness: 'high' });
-  const gTwoMedium = decidePowerPrimer({ ...gTwo, readiness: 'medium' });
+  const gTwoHigh = decidePowerPrimer({ ...gTwo, capacity: 'high' });
+  const gTwoMedium = decidePowerPrimer({ ...gTwo, capacity: 'medium' });
   ok('G-2 keeps its tiny neural primer at high capacity', gTwoHigh?.kind === 'primer', gTwoHigh);
   ok('G-2 below high capacity keeps a primer rather than nothing',
     gTwoMedium !== null, gTwoMedium);
@@ -248,16 +248,16 @@ console.log('\n[1] Power survives low capacity as a shrunk sharp primer');
     offseasonSubphase: 'late_offseason' as const,
   };
   ok('contrast still needs high capacity',
-    decidePowerPrimer({ ...offseason, readiness: 'high' })?.kind === 'contrast' &&
-    decidePowerPrimer({ ...offseason, readiness: 'medium' })?.kind === 'primer');
+    decidePowerPrimer({ ...offseason, capacity: 'high' })?.kind === 'contrast' &&
+    decidePowerPrimer({ ...offseason, capacity: 'medium' })?.kind === 'primer');
 
   // Schedule and phase gates are untouched by the ruling.
   ok('game day still removes power',
-    decidePowerPrimer({ ...base, phase: 'In-season', hasGame: true, gOffset: 0, readiness: 'high' }) === null);
+    decidePowerPrimer({ ...base, phase: 'In-season', hasGame: true, gOffset: 0, capacity: 'high' }) === null);
   ok('early off-season still removes power',
-    decidePowerPrimer({ ...base, phase: 'Off-season', offseasonSubphase: 'early_offseason', readiness: 'high' }) === null);
+    decidePowerPrimer({ ...base, phase: 'Off-season', offseasonSubphase: 'early_offseason', capacity: 'high' }) === null);
   ok('a moderate same-region injury still removes power',
-    decidePowerPrimer({ ...base, readiness: 'high', injuries: [{ area: 'knee', severity: 6 }] }) === null);
+    decidePowerPrimer({ ...base, capacity: 'high', injuries: [{ area: 'knee', severity: 6 }] }) === null);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -422,7 +422,7 @@ console.log('\n[3] Nothing denies a sprint exposure for readiness');
 
   for (const subphase of ['early_preseason', 'mid_preseason', 'late_preseason'] as const) {
     const base = getPreseasonSubphasePolicy(subphase, { teamTrainingExposures: 0 });
-    const low = getPreseasonSubphasePolicy(subphase, { readiness: 'low', teamTrainingExposures: 0 });
+    const low = getPreseasonSubphasePolicy(subphase, { capacity: 'low', teamTrainingExposures: 0 });
     ok(`${subphase}: low capacity does not move the sprint target`,
       low.speedSprint.targetExposures === base.speedSprint.targetExposures,
       { base: base.speedSprint.targetExposures, low: low.speedSprint.targetExposures });
@@ -448,7 +448,7 @@ console.log('\n[4] Low capacity moves the dose fields and nothing else');
 {
   for (const subphase of ['early_offseason', 'mid_offseason', 'late_offseason'] as const) {
     const base = getOffseasonSubphasePolicy(subphase, {});
-    const low = getOffseasonSubphasePolicy(subphase, { readiness: 'low' });
+    const low = getOffseasonSubphasePolicy(subphase, { capacity: 'low' });
 
     ok(`${subphase}: the hard-session cap is unmoved`,
       low.conditioning.hardSessionCap === base.conditioning.hardSessionCap,
@@ -480,7 +480,7 @@ console.log('\n[4] Low capacity moves the dose fields and nothing else');
   for (const subphase of ['early_preseason', 'mid_preseason', 'late_preseason'] as const) {
     const context = { teamTrainingExposures: 2, hasPracticeMatch: false };
     const base = getPreseasonSubphasePolicy(subphase, context);
-    const low = getPreseasonSubphasePolicy(subphase, { ...context, readiness: 'low' });
+    const low = getPreseasonSubphasePolicy(subphase, { ...context, capacity: 'low' });
 
     ok(`${subphase}: the strength core cap is unmoved`,
       low.strength.coreSessionCap === base.strength.coreSessionCap,
@@ -513,7 +513,7 @@ console.log('\n[5] Bye recovery is schedule-triggered, and only the mode decides
 {
   const byeInput: WeeklyExposureContractInput = {
     seasonPhase: 'In-season',
-    readiness: 'high',
+    capacity: 'high',
     selectedDayNumbers: [1, 2, 3, 4, 6],
     teamTrainingDayNumbers: [2, 4],
     gameDay: null,
@@ -521,7 +521,7 @@ console.log('\n[5] Bye recovery is schedule-triggered, and only the mode decides
     weekKind: 'build',
   };
   const build = buildInSeasonExposureContract(byeInput);
-  const lowReadiness = buildInSeasonExposureContract({ ...byeInput, readiness: 'low' });
+  const lowReadiness = buildInSeasonExposureContract({ ...byeInput, capacity: 'low' });
   const injured = buildInSeasonExposureContract({
     ...byeInput,
     activeInjuries: [{ region: 'lower_body', pauseAffectedTraining: true }],
@@ -663,8 +663,8 @@ console.log('\n[7] Low capacity still shrinks the work it is allowed to shrink')
   const low = buildCoachingPlan(inputsFor({ ...shape, capacity: 'low' }));
   const high = buildCoachingPlan(inputsFor({ ...shape, capacity: 'high' }));
 
-  ok('low capacity resolves to the low readiness band', low.readiness === 'low', low.readiness);
-  ok('high capacity resolves to the high readiness band', high.readiness === 'high', high.readiness);
+  ok('low capacity resolves to the low capacity band', low.capacity === 'low', low.capacity);
+  ok('high capacity resolves to the high capacity band', high.capacity === 'high', high.capacity);
   ok('low capacity still moderates the conditioning dose',
     low.constraints.conditioningLoading === 'moderate' &&
     high.constraints.conditioningLoading === 'full',

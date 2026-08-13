@@ -171,7 +171,7 @@ export interface ScheduleState {
    * caps to modulate. Do not turn the null into a tier here (Sam, 2026-07-30):
    * that is the silent default the rubric's fail-loud exists to kill.
    */
-  readiness: CapacityBand | null;
+  capacity: CapacityBand | null;
   /** Session feedback keyed by ISO date. Used to feed feeling/patterns into progression. */
   sessionFeedback?: Record<string, SessionFeedback>;
   /** Logged strength history, newest first, when already available to the caller. */
@@ -1604,7 +1604,7 @@ export function materialiseWeekStrengthProgression(
 
       const progressionCtx = buildProgressionContext(
         state.seasonPhase!,
-        state.readiness || 'medium',
+        state.capacity || 'medium',
         gameDates,
         day.date,
         injuries,
@@ -1939,7 +1939,7 @@ export function resolveWeekWithConditioning(
   // Pass 2: progressive conditioning placement
   // Apply feedback pattern bias to conditioning readiness (one-step max)
   const conditioningReadiness = biasConditioningReadiness(
-    state.readiness || 'medium',
+    state.capacity || 'medium',
     weekPatternSummary,
   );
   const conditioningPlaced: WeekLog['sessions'] = [];
@@ -2305,7 +2305,7 @@ function freedByTheTrip(
       state.athleteContext ?? DEFAULT_ATHLETE_CONTEXT,
       state.seasonPhase,
       buildWeekLog(weekDays as ResolvedDay[], state.markedDays || {},
-        state.readiness ?? 'medium', [], 'build'),
+        state.capacity ?? 'medium', [], 'build'),
       microcycleIdForDate(date, state),
     );
     if (conditioning) return conditioning;

@@ -334,7 +334,7 @@ export function deriveWeekContract(args: {
     fixtureParticipation: storedFixture?.participation,
     teamParticipation,
     participationProvenance: stored.anchors[0]?.participationProvenance,
-    readiness: stored.safety.reasons.includes('low_readiness') ? 'low' : 'medium',
+    capacity: stored.safety.reasons.includes('low_readiness') ? 'low' : 'medium',
     cookedReadiness: stored.safety.strengthIntensityCeiling === 'Moderate' &&
       stored.identity.mode !== 'in_season_bye_recovery',
     // The builder folds the week's SELECTION KIND into where each count lands,

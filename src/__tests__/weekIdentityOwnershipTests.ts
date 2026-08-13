@@ -315,7 +315,7 @@ function patternContract() {
     teamTrainingDays: [],
     participationProvenance: 'derived_healthy_unrestricted',
     fixtureDays: [],
-    readiness: 'medium',
+    capacity: 'medium',
     plannerSelected: {
       mainStrength: 4, coreConditioning: 0, sprintHighSpeed: 0, powerPrimers: 0,
     },

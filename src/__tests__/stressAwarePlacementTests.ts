@@ -233,7 +233,7 @@ console.log('\n── 3b. Floor back-offs: severe injury + reduced availability 
   });
   const gymStrength = sorted.filter((s) => s.tier === 'core' &&
     (s.strengthPattern || /upper|lower|full body/i.test(s.focus))).length;
-  ok('severe injury: readiness degraded below high', plan.readiness !== 'high', plan.readiness);
+  ok('severe injury: capacity degraded below high', plan.capacity !== 'high', plan.capacity);
   ok('severe injury: dose does not exceed baseline (≤3 strength)', gymStrength <= 3, `got ${gymStrength}`);
 }
 {

@@ -788,7 +788,7 @@ try {
     athleteContext: DEFAULT_ATHLETE_CONTEXT,
     seasonPhase: 'In-season',
     gameDay: 'Saturday',
-    readiness: plan.readiness,
+    capacity: plan.capacity,
   };
 
   const resolved = resolveWeekWithConditioning(TEST_MONDAY, state);

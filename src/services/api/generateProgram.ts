@@ -1017,7 +1017,7 @@ export function generateProgramLocally(
   });
 
   logger.debug('[ProgramGen] Local deterministic build', {
-    readiness: plan.readiness,
+    capacity: plan.capacity,
     coreSessions: plan.coreSessions,
     gameDay: storedGameAnchor(generationProfile),
     activeConstraints: generationConstraints?.activeConstraintIds ?? [],
@@ -1096,7 +1096,7 @@ export function generateProgramLocally(
     seasonPhase: generationProfile.seasonPhase || null,
     gameDay: baseProfile.gameDay,
     usualGameDay: baseProfile.usualGameDay,
-    readiness: deriveProfileReadiness(baseProfile),
+    capacity: deriveProfileReadiness(baseProfile),
     sessionFeedback: {},
     weightOverrides: {},
     workoutHistory: [],
@@ -1313,7 +1313,7 @@ export function buildProgramGenerationRequestDiagnostics(
       },
     },
     coachingPlan: {
-      readiness: derivedPlan.readiness,
+      capacity: derivedPlan.capacity,
       weeklyPlanCount: derivedPlan.weeklyPlan.length,
       coreSessions: derivedPlan.coreSessions,
       optionalSessions: derivedPlan.optionalSessions,
@@ -1549,7 +1549,7 @@ export async function generateProgramFromProfile(
   });
 
   logger.debug('[ProgramGen] Coaching plan built', {
-    readiness: plan.readiness,
+    capacity: plan.capacity,
     coreSessions: plan.coreSessions,
     optionalSessions: plan.optionalSessions,
     recoverySessions: plan.recoverySessions,

@@ -729,7 +729,7 @@ function deriveContractlessLegacyContract(args: {
   const availableDayCount = new Set(workouts.map((workout) => workout.dayOfWeek)).size;
   const selection = resolveSection18PhasePlannerSelection({
     mode: identity.mode,
-    readiness: 'medium',
+    capacity: 'medium',
     availableDayCount,
     teamTrainingCount: new Set(teamTrainingDays).size,
     weekKind: args.phaseResolution.weekKind,
@@ -751,7 +751,7 @@ function deriveContractlessLegacyContract(args: {
     fixtureDays: fixture ? [fixture.dayOfWeek] : [],
     participationProvenance: 'legacy_unknown',
     currentProductionClaimsAnchorCredit: false,
-    readiness: 'medium',
+    capacity: 'medium',
     plannerSelected: {
       mainStrength: selection.mainStrength,
       optionalMainStrength: selection.optionalMainStrength,

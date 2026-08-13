@@ -102,7 +102,7 @@ function emptyScheduleState(program: TrainingProgram): ScheduleState {
     markedDays: {},
     athleteContext: DEFAULT_ATHLETE_CONTEXT,
     seasonPhase: null,
-    readiness: 'medium',
+    capacity: 'medium',
   };
 }
 

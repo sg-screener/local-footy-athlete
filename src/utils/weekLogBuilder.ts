@@ -49,7 +49,7 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 export function buildWeekLog(
   resolvedDays: ResolvedDay[],
   markedDays: Record<string, CalendarDayType>,
-  readiness: CapacityBand = 'medium',
+  capacity: CapacityBand = 'medium',
   conditioningPlaced: WeekLog['sessions'] = [],
   byeMode: WeekLog['byeMode'] = 'build',
 ): WeekLog {
@@ -89,7 +89,7 @@ export function buildWeekLog(
     doubleGameWeek: gamesThisWeek >= 2,
     weeksOffTraining: 0,          // Requires session history — safe default
     byeMode,
-    readiness,
+    capacity,
   };
 }
 

@@ -81,7 +81,7 @@ export function resolveRecovery(
   daysToGame: number | null,
   daysSinceGame: number | null,
   seasonPhase: SeasonPhase,
-  readiness: CapacityBand,
+  capacity: CapacityBand,
   weekRecoveryCount: number,
   recentHighTier: boolean,
 ): RecoveryResult | null {
@@ -90,11 +90,11 @@ export function resolveRecovery(
   if (weekRecoveryCount >= maxRecovery) return null;
 
   // ── Category selection based on readiness ──
-  if (readiness === 'low') {
+  if (capacity === 'low') {
     return { category: 'passive', derivedType: 'passive_recovery' };
   }
 
-  if (readiness === 'medium') {
+  if (capacity === 'medium') {
     return { category: 'active', derivedType: 'recovery' };
   }
 

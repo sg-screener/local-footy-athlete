@@ -41,7 +41,7 @@ function contract(fixture: boolean) {
     fixtureParticipation: 'normal_unrestricted',
     participationProvenance: 'explicit',
     currentProductionClaimsAnchorCredit: true,
-    readiness: 'medium',
+    capacity: 'medium',
     plannerSelected: {
       mainStrength: 3,
       coreConditioning: 3,

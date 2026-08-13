@@ -229,7 +229,7 @@ export interface StrengthProgressionContext {
    * WRITTEN by `buildProgressionContext` from the caller's phase clock.
    */
   offseasonSubphase?: OffseasonSubphase | null;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   daysToGame: number | null;
   daysSinceGame: number | null;
   doubleGameWeek: boolean;
@@ -275,7 +275,7 @@ export interface StrengthProgressionContext {
 /** Safe defaults when no history or detailed context is available. */
 export const DEFAULT_PROGRESSION_CONTEXT: StrengthProgressionContext = {
   seasonPhase: 'Off-season',
-  readiness: 'medium',
+  capacity: 'medium',
   daysToGame: null,
   daysSinceGame: null,
   doubleGameWeek: false,
@@ -713,7 +713,7 @@ export function applyStrengthProgression(
     const input: ProgressionInput = {
       exerciseRole: role,
       seasonPhase: ctx.seasonPhase,
-      readiness: ctx.readiness,
+      capacity: ctx.capacity,
       completionQuality,
       weeksSinceDeload: ctx.weeksSinceDeload,
       consecutiveBuildWeeks: ctx.consecutiveBuildWeeks,
@@ -874,7 +874,7 @@ export function buildProgressionContext(
   const baseCtx: StrengthProgressionContext = {
     seasonPhase,
     offseasonSubphase: options.blockState?.phaseResolution?.offseasonSubphase ?? null,
-    readiness: adjustedReadiness,
+    capacity: adjustedReadiness,
     daysToGame,
     daysSinceGame,
     doubleGameWeek,

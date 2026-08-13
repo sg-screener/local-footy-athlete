@@ -72,12 +72,12 @@ export function buildPreseasonExposureWitness(): PreseasonExposureWitness {
   const teamOnly = fallback.weeklyPlan.find((entry) =>
     entry.isTeamDay && !(entry.strengthIntent?.plannedPatterns.length));
   const reduced = buildPreseasonWeeklyExposureContract({
-    seasonPhase: 'Pre-season', readiness: 'low',
+    seasonPhase: 'Pre-season', capacity: 'low',
     selectedDayNumbers: [1, 2, 3, 4, 5, 6],
     teamTrainingDayNumbers: [1, 3], hasGame: false, gameDay: null,
   });
   const allTeamCredit = buildPreseasonWeeklyExposureContract({
-    seasonPhase: 'Pre-season', readiness: 'high',
+    seasonPhase: 'Pre-season', capacity: 'high',
     selectedDayNumbers: [1, 2, 3, 4, 5, 6],
     teamTrainingDayNumbers: [1, 2, 3, 5], hasGame: false, gameDay: null,
   });

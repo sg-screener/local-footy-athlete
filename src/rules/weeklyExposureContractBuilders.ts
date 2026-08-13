@@ -28,7 +28,7 @@ import {
 
 export interface WeeklyExposureContractInput {
   seasonPhase: SeasonPhase;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   selectedDayNumbers: readonly number[];
   teamTrainingDayNumbers: readonly number[];
   hasGame: boolean;
@@ -94,7 +94,7 @@ function phaseSelection(
 ): Section18PhasePlannerSelection {
   return resolveSection18PhasePlannerSelection({
     mode,
-    readiness: input.readiness,
+    capacity: input.capacity,
     availableDayCount: uniqueExposureDays(input.selectedDayNumbers).length,
     teamTrainingCount: uniqueExposureDays(input.teamTrainingDayNumbers).length,
     weekKind: input.weekKind,

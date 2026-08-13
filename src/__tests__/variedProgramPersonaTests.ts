@@ -318,7 +318,7 @@ section('8. Progression continuity on anchor swap');
   const ctx: StrengthProgressionContext = {
     ...DEFAULT_PROGRESSION_CONTEXT,
     seasonPhase: 'Pre-season',
-    readiness: 'high',
+    capacity: 'high',
     sessionFeeling: 'Good',
   };
   const progressed = applyStrengthProgression(mc2Workout, ctx, lastPerformedWeights);
@@ -393,7 +393,7 @@ section('9. Exposure history transfers across anchor swap');
   const ctx: StrengthProgressionContext = {
     ...DEFAULT_PROGRESSION_CONTEXT,
     seasonPhase: 'Pre-season',
-    readiness: 'high',
+    capacity: 'high',
     sessionFeeling: 'Good',
     workoutHistory: history as any,
   };

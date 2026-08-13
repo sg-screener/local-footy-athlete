@@ -1353,7 +1353,7 @@ export function buildConditioningSession(
   });
   const progressionInput: ConditioningProgressionInput = {
     tier: result.tier,
-    readiness: weekLog.readiness,
+    capacity: weekLog.capacity,
     recentRPE: 6, // default — no session history available at resolve time
     completionQuality: 'full', // default — assume previous session was completed
     hasRecentFeedback: false,

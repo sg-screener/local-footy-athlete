@@ -148,7 +148,7 @@ export const inseason_3exposurePriority: Invariant = ({ profile, inputs, plan })
   if (!inputs.hasGame) return null;
   if ((inputs.teamTrainingDays || []).length < 2) return null;
   if (inputs.availableDays < 5) return null;
-  if (plan.readiness === 'low') return null;
+  if (plan.capacity === 'low') return null;
   if (hasSevereInjury(profile)) return null;
 
   const ledger = strengthPatternLedger(
@@ -218,7 +218,7 @@ export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
   // Readiness is deloaded-or-not now (Sam's readiness law, 2026-07-27); the
   // three tier alternatives all meant "deloaded" at different magnitudes.
   const isLighterBye =
-    plan.readiness === 'low' ||
+    plan.capacity === 'low' ||
     inputs.weekKind === 'deload' ||
     inputs.generationConstraints?.readiness?.deloaded === true ||
     (inputs.generationConstraints?.injuries ?? []).some((injury) =>
@@ -264,7 +264,7 @@ export const preseason_4exposurePriority: Invariant = ({ profile, inputs, plan }
   if ((inputs.teamTrainingDays || []).length < 2) return null;
   if (inputs.hasGame) return null;
   if (inputs.availableDays < 5) return null;
-  if (plan.readiness === 'low') return null;
+  if (plan.capacity === 'low') return null;
   if (hasSevereInjury(profile)) return null;
 
   let lowerDedicated = 0, lowerCombined = 0, upper = 0;
@@ -460,7 +460,7 @@ export const allSessions_inSelectedDays: Invariant = ({ inputs, plan }) => {
  */
 export const preseason_conditioningFloor: Invariant = ({ profile, inputs, plan }) => {
   if (inputs.seasonPhase !== 'Pre-season') return null;
-  if (plan.readiness === 'low') return null;
+  if (plan.capacity === 'low') return null;
   if (hasSevereInjury(profile)) return null;
 
   const teamDayNames = new Set(profile.teamTrainingDays || []);
@@ -501,7 +501,7 @@ export const inseason_minOneConditioningWhenSafe: Invariant = ({ profile, inputs
   if (!inputs.hasGame || !inputs.gameDay) return null;
   if ((inputs.teamTrainingDays || []).length > 2) return null;
   if (inputs.availableDays < 5) return null;
-  if (plan.readiness !== 'high') return null;
+  if (plan.capacity !== 'high') return null;
   if (hasSevereInjury(profile)) return null;
 
   const gNum = DAY_NUM[inputs.gameDay];

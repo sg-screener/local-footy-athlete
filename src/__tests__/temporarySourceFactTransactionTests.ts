@@ -475,7 +475,7 @@ async function main(): Promise<void> {
     mode: 'early_offseason',
     anchorState: 'none',
     teamTrainingDays: [],
-    readiness: 'medium',
+    capacity: 'medium',
     plannerSelected: {
       mainStrength: 1,
       coreConditioning: 0,

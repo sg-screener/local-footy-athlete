@@ -722,7 +722,7 @@ function reResolveContractForActiveConstraints(args: {
       : null;
   return buildWeeklyExposureContract({
     seasonPhase: args.contract.identity.phase,
-    readiness,
+    capacity,
     selectedDayNumbers: Array.from(selected),
     teamTrainingDayNumbers,
     hasGame,

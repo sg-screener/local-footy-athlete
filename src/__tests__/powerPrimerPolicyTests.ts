@@ -51,7 +51,7 @@ const BASE: PowerPrimerContext = {
   hasGame: false,
   gOffset: -99,
   isTeamDay: false,
-  readiness: 'high',
+  capacity: 'high',
   isBeginner: false,
   experienced: true,
   injuries: [],
@@ -101,7 +101,7 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
   // because THIS SUITE WAS IN NO NPM SCRIPT — 54 cells nothing in the chain
   // could run, so a cell asserting a retired behaviour never had to answer for
   // it. That is why it is being fixed in the same unit that wired the suite in.
-  const lowReadiness = decidePowerPrimer(ctx({ readiness: 'low' }));
+  const lowReadiness = decidePowerPrimer(ctx({ capacity: 'low' }));
   ok('low readiness KEEPS power — capacity is a dose, not a gate (Sam 2026-07-28)',
     lowReadiness !== null, JSON.stringify(lowReadiness));
   // NON-VACUITY: "not null" alone would pass on an unreduced dose, which is the
@@ -118,7 +118,7 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
   // reduction is the only thing that can move it: medium 3 sets, low 2.
   // `a-count-taken-for-a-record` — the comparison's unit has to be the claim's
   // unit, and "any smaller number" is not "reduced by readiness".
-  const mediumPrimer = decidePowerPrimer(ctx({ readiness: 'medium' }));
+  const mediumPrimer = decidePowerPrimer(ctx({ capacity: 'medium' }));
   ok('and the low-readiness dose is REDUCED against the same-KIND medium dose',
     !!lowReadiness && !!mediumPrimer && lowReadiness.kind === mediumPrimer.kind &&
       lowReadiness.sets < mediumPrimer.sets,
@@ -146,7 +146,7 @@ function ctx(over: Partial<PowerPrimerContext> = {}): PowerPrimerContext {
   // is a DOSE, not a GATE. The two cells either side of this one — beginner and
   // non-experienced — are TRAINING-AGE gates and DO still return null, which is
   // what keeps this re-point honest rather than a blanket loosening.
-  const g2Medium = decidePowerPrimer(ctx({ ...game, gOffset: -2, readiness: 'medium' }));
+  const g2Medium = decidePowerPrimer(ctx({ ...game, gOffset: -2, capacity: 'medium' }));
   ok('G-2 medium readiness KEEPS the tiny primer — readiness is a dose, not a gate',
     g2Medium !== null && g2Medium.kind === 'primer', JSON.stringify(g2Medium));
   ok('and G-2 medium is no bigger than G-2 fresh',

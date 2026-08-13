@@ -129,7 +129,7 @@ function baseContract(reductions?: Section18AuthorisedReduction[]): WeeklyExposu
     teamTrainingDays: [2],
     participationProvenance: 'derived_healthy_unrestricted',
     fixtureDays: [],
-    readiness: 'medium',
+    capacity: 'medium',
     plannerSelected: {
       mainStrength: 3,
       coreConditioning: 1,

@@ -227,7 +227,7 @@ export function applyPatternBiases(
 
   // FATIGUE_STREAK → readiness down one step
   if (flags.includes('FATIGUE_STREAK')) {
-    biased.readiness = READINESS_DOWN[biased.readiness];
+    biased.capacity = READINESS_DOWN[biased.capacity];
   }
 
   // COOKED_REPEAT → sessionFeeling up one notch toward fatigue
@@ -245,7 +245,7 @@ export function applyPatternBiases(
   // MIXED_SIGNALS → readiness down one step (athlete hiding fatigue)
   // Only if FATIGUE_STREAK hasn't already downgraded readiness.
   if (flags.includes('MIXED_SIGNALS') && !flags.includes('FATIGUE_STREAK')) {
-    biased.readiness = READINESS_DOWN[biased.readiness];
+    biased.capacity = READINESS_DOWN[biased.capacity];
   }
 
   // EASE_STREAK + FULL_COMPLETION_RUN → consecutiveBuildWeeks +1

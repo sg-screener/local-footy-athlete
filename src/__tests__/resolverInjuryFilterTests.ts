@@ -92,7 +92,7 @@ function programState(workouts: Workout[], activeInjury: InjuryState | null = nu
     markedDays: {},
     athleteContext: {} as any,
     seasonPhase: null, // skip conditioning + recovery layering
-    readiness: 'medium',
+    capacity: 'medium',
     activeInjury,
   };
 }

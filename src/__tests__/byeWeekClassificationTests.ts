@@ -158,7 +158,7 @@ function generatedWeek(profile: Partial<OnboardingData>, options: GeneratedWeekO
     seasonPhase: (profile.seasonPhase ?? null) as ScheduleState['seasonPhase'],
     gameDay: profile.gameDay as never,
     usualGameDay: profile.usualGameDay,
-    readiness: plan.readiness,
+    capacity: plan.capacity,
     availableDayNumbers,
   };
 

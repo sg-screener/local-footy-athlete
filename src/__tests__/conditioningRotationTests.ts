@@ -616,7 +616,7 @@ section('11. running cap seeds from team training and games');
         },
       },
       seasonPhase: 'In-season',
-      readiness: 'high',
+      capacity: 'high',
       sessionFeedback: {},
       availableDayNumbers: [1, 2, 3, 4, 5, 6, 0],
     };

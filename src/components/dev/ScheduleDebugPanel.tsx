@@ -73,7 +73,7 @@ function useScheduleState(): ScheduleState {
     markedDays: markedDays || {},
     athleteContext,
     seasonPhase,
-    readiness: 'medium',
+    capacity: 'medium',
     sessionFeedback: sessionFeedback || {},
     weightOverrides: weightOverrides || {},
   };
@@ -206,8 +206,8 @@ function WeekTab({ info }: { info: WeekDebugInfo }) {
 
       {/* Engine Decisions */}
       <Text style={[styles.sectionTitle, { marginTop: 16 }]}>ENGINE DECISIONS</Text>
-      <Row label="Readiness" value={info.readiness} highlight={info.readiness === 'low' ? 'warn' : undefined} />
-      {info.readinessFactors.map((f, i) => (
+      <Row label="Capacity" value={info.capacity} highlight={info.capacity === 'low' ? 'warn' : undefined} />
+      {info.capacityFactors.map((f, i) => (
         <Text key={i} style={styles.factorText}>  {f}</Text>
       ))}
       <Row label="Hard cap" value={String(info.hardExposureCap)} />

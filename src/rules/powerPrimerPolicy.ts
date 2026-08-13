@@ -93,7 +93,7 @@ export interface PowerPrimerContext {
   gOffset: number;
   /** True when the strength session lands on a team-training day. */
   isTeamDay: boolean;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   isBeginner: boolean;
   /** Experienced enough for a G-2 neural primer (2+ years training age). */
   experienced: boolean;
@@ -155,8 +155,8 @@ function spec(
  * readiness half of that gate became a dose.
  */
 function capacityShrinksDose(ctx: PowerPrimerContext): boolean {
-  if (ctx.readiness === 'low') return true;
-  return ctx.hasGame && ctx.gOffset === -2 && ctx.readiness !== 'high';
+  if (ctx.capacity === 'low') return true;
+  return ctx.hasGame && ctx.gOffset === -2 && ctx.capacity !== 'high';
 }
 
 /** Apply the authored deload power shrink to a decided spec. */
@@ -253,7 +253,7 @@ function decideFullPowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | null 
   // `'2-5 years' || '5+ years'`, which the experience crosswalk maps to exactly
   // `consistent` and `advanced`. No new field, no second representation — the
   // input was here and the gate did not read it.
-  const contrastEligible = ctx.readiness === 'high' && !reduced && !isPreseasonTeamDay
+  const contrastEligible = ctx.capacity === 'high' && !reduced && !isPreseasonTeamDay
     && ctx.experienced;
   // Off-season is the best time to build power → contrast by default when
   // eligible. Pre-season only upgrades to contrast when the athlete's goal

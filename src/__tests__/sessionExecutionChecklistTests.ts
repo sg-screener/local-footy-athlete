@@ -378,7 +378,7 @@ const replacementPlan = buildSessionEquipmentReplacementPlan({
     primaryInjury: null,
     availableEquipment: ['bodyweight', 'barbell'],
     availableEquipmentTags: ['bodyweight', 'barbell', 'bike_or_treadmill'],
-    readiness: 'high',
+    capacity: 'high',
     hasEquipmentConstraint: false,
     medicalStop: false,
   },

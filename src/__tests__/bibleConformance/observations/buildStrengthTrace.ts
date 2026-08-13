@@ -245,7 +245,7 @@ function scheduleState(args: {
     seasonPhase: args.profile.seasonPhase,
     usualGameDay: args.profile.usualGameDay,
     gameDay: args.profile.gameDay,
-    readiness: args.plan.readiness,
+    capacity: args.plan.capacity,
     sessionFeedback: {},
     weightOverrides: {},
     blockState: { blockStartDate: args.blockStart, blockNumber: 1 },

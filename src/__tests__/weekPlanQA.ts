@@ -533,7 +533,7 @@ function buildScheduleState(
     markedDays,
     athleteContext: DEFAULT_ATHLETE_CONTEXT,
     seasonPhase: inputs.seasonPhase,
-    readiness: plan.readiness,
+    capacity: plan.capacity,
     availableDayNumbers,
   };
 }
@@ -567,7 +567,7 @@ function printScenario(
   if (scenario.editOps) {
     console.log(`  Edit: ${scenario.editOps.join(' → ')}`);
   }
-  console.log(`  Readiness: ${plan.readiness}  |  Core: ${plan.coreSessions}  Optional: ${plan.optionalSessions}  Recovery: ${plan.recoverySessions}`);
+  console.log(`  Readiness: ${plan.capacity}  |  Core: ${plan.coreSessions}  Optional: ${plan.optionalSessions}  Recovery: ${plan.recoverySessions}`);
   console.log(`${'─'.repeat(72)}`);
   console.log(renderWeekShapeSummary({
     resolvedWeek,

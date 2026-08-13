@@ -139,7 +139,7 @@ function resolveLiveWeek(mondayISO: string, seasonPhase: string, gameDay?: strin
     athleteContext: DEFAULT_ATHLETE_CONTEXT,
     seasonPhase: seasonPhase as ScheduleState['seasonPhase'],
     gameDay: gameDay as never,
-    readiness: 'high',
+    capacity: 'high',
     availableDayNumbers: [1, 2, 3, 4, 5],
   };
   return resolveWeekWithConditioning(mondayISO, state);

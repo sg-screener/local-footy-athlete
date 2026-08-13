@@ -389,11 +389,11 @@ runCase('scenario', '14 bye recovery 2 TT has exactly two lifts and no app condi
 });
 
 runCase('scenario', '15 early off-season zero sessions is valid', () => {
-  const selection = resolveSection18PhasePlannerSelection({ mode: 'early_offseason', readiness: 'high', availableDayCount: 0, teamTrainingCount: 0 });
+  const selection = resolveSection18PhasePlannerSelection({ mode: 'early_offseason', capacity: 'high', availableDayCount: 0, teamTrainingCount: 0 });
   invariant(selection.mainStrength === 0 && selection.optionalRecoveryAerobic === 0, 'zero-day early selection invented work', selection);
 });
 runCase('scenario', '16 early off-season high availability stays within S3/C3 maxima', () => {
-  const selection = resolveSection18PhasePlannerSelection({ mode: 'early_offseason', readiness: 'high', availableDayCount: 7, teamTrainingCount: 0 });
+  const selection = resolveSection18PhasePlannerSelection({ mode: 'early_offseason', capacity: 'high', availableDayCount: 7, teamTrainingCount: 0 });
   invariant(selection.mainStrength <= 3 && selection.optionalRecoveryAerobic <= 3, 'early selection exceeded maxima', selection);
 });
 runCase('scenario', '17 early optional C1-2 never becomes compulsory C5', () => {

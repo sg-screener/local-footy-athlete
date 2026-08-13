@@ -560,7 +560,7 @@ function progressionSnapshot(feedback: SessionFeedback): unknown {
   });
   const conditioningInput: ConditioningProgressionInput = {
     tier: 'B-high',
-    readiness: 'medium',
+    capacity: 'medium',
     recentRPE: 6,
     completionQuality: 'full',
     hasRecentFeedback: false,

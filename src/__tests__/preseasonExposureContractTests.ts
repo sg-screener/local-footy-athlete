@@ -102,7 +102,7 @@ console.log('\n-- Typed contract and exact six-day blueprint --');
 {
   const contract = buildPreseasonWeeklyExposureContract({
     seasonPhase: 'Pre-season',
-    readiness: 'high',
+    capacity: 'high',
     selectedDayNumbers: [1, 2, 3, 4, 5, 6],
     teamTrainingDayNumbers: [1, 3],
     hasGame: false,

@@ -5,7 +5,7 @@ import type { PreseasonSubphase } from './preseasonSubphase';
 export type PreseasonConditioningCategory = OffseasonConditioningCategory;
 
 export interface PreseasonSubphasePolicyContext {
-  readiness?: CapacityBand | null;
+  capacity?: CapacityBand | null;
   teamTrainingExposures?: number | null;
   hasPracticeMatch?: boolean;
 }
@@ -62,7 +62,7 @@ export function getPreseasonSubphasePolicy(
   const teamTrainingExposures = Math.max(0, Math.floor(context.teamTrainingExposures ?? 0));
   const hasPracticeMatch = context.hasPracticeMatch === true;
   const base = basePolicy(subphase, teamTrainingExposures, hasPracticeMatch);
-  if (context.readiness !== 'low') return base;
+  if (context.capacity !== 'low') return base;
 
   return {
     ...base,

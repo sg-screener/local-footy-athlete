@@ -208,7 +208,7 @@ function modernContract(dependencies: ProbeDependencies) {
   return buildSection18WeeklyExposureContractV2({
     seasonPhase: 'In-season', declaredSubphase: 'bye_build',
     mode: 'in_season_bye_build', weekKind: 'build', anchorState: 'bye',
-    teamTrainingDays: [2], readiness: 'medium',
+    teamTrainingDays: [2], capacity: 'medium',
     participationProvenance: 'legacy_unknown',
     currentProductionClaimsAnchorCredit: false,
     plannerSelected: {

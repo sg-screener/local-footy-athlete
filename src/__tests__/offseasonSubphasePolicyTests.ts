@@ -87,7 +87,7 @@ console.log('\n[3] late off-season build');
 console.log('\n[4] low-capacity dosing (structure untouched)');
 {
   const normal = getOffseasonSubphasePolicy('late_offseason');
-  const low = getOffseasonSubphasePolicy('late_offseason', { readiness: 'low' });
+  const low = getOffseasonSubphasePolicy('late_offseason', { capacity: 'low' });
   eq('low capacity narrows conditioning to aerobic base', low.conditioning.allowedCategories, ['aerobic_base']);
   eq('low capacity biases the modality off-feet', low.conditioning.modalityBias, 'off_feet');
   eq('low capacity caps RPE at 7', low.strength.targetRpeMax, 7);

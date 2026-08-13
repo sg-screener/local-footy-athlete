@@ -515,7 +515,13 @@ export interface Section18ContractV2Input {
   teamParticipation?: Readonly<Record<number, AnchorParticipationState>>;
   participationProvenance?: Section18AnchorContract['participationProvenance'];
   currentProductionClaimsAnchorCredit?: boolean;
-  readiness: CapacityBand;
+  /**
+   * THE CAPACITY BAND. It sits next to `cookedReadiness` — the DECLARATION —
+   * and the two were both called readiness until 2026-08-13. Sam cut the
+   * conflation between these exact two fields on 2026-07-27; the rename is what
+   * stops it being re-made.
+   */
+  capacity: CapacityBand;
   cookedReadiness?: boolean;
   plannerSelected: {
     mainStrength: number | null;
@@ -792,7 +798,7 @@ interface Section18ModePolicy {
 
 export interface Section18PhasePlannerSelectionInput {
   mode: Section18WeekMode;
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   availableDayCount: number;
   teamTrainingCount: number;
   weekKind?: WeekKind;
@@ -839,7 +845,7 @@ function underlyingModeForSubphase(
 
 function policyFor(input: Pick<
   Section18ContractV2Input,
-  'mode' | 'teamTrainingDays' | 'cookedReadiness' | 'readiness' | 'weekKind'
+  'mode' | 'teamTrainingDays' | 'cookedReadiness' | 'capacity' | 'weekKind'
 > & {
   /** Read only when recovering the week an optional stamp decorates. */
   anchorState?: Section18AnchorState;
@@ -1122,7 +1128,7 @@ export function resolveSection18PhasePlannerSelection(
   const policy = policyFor({
     mode: input.mode,
     teamTrainingDays: Array.from({ length: teamTrainingCount }, (_, index) => index),
-    readiness: input.readiness,
+    capacity: input.capacity,
     // READINESS IS A HOMONYM (Sam, 2026-07-27). `input.readiness` is the
     // CAPACITY score `calculateReadiness` computes from onboarding answers —
     // recent training load, conditioning level, sprint exposure. It changes only
@@ -1592,7 +1598,7 @@ export function migrateLegacyWeeklyExposureContractV2(
     // The legacy shape carries ONE game day and cannot express more; a list of
     // one is the honest translation, not a widening.
     fixtureDays: legacy.anchors.gameDay === null ? [] : [legacy.anchors.gameDay],
-    readiness: 'medium',
+    capacity: 'medium',
     plannerSelected: {
       mainStrength: legacy.strength.targetCount,
       coreConditioning: legacy.conditioning.targetCount,

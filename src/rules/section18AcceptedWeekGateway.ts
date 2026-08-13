@@ -401,7 +401,7 @@ export function resolveFinalVisibleSection18Week(args: {
     seasonPhase: args.contract.identity.seasonPhase,
     usualGameDay: args.profile?.usualGameDay,
     gameDay: args.profile?.gameDay,
-    readiness: args.contract.safety.reasons.includes('low_readiness') ? 'low' : 'medium',
+    capacity: args.contract.safety.reasons.includes('low_readiness') ? 'low' : 'medium',
     // The resolver's historical empty-array convention means "all days".
     // At the commit boundary, a missing profile instead falls back to the
     // candidate's allocated days; a truly empty/full-pause candidate uses a

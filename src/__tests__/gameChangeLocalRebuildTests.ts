@@ -91,7 +91,7 @@ function resolveFirstWeek(program: TrainingProgram, profile: Partial<OnboardingD
     athleteContext: DEFAULT_ATHLETE_CONTEXT,
     seasonPhase: (profile.seasonPhase ?? null) as ScheduleState['seasonPhase'],
     gameDay: gameDayName as never,
-    readiness: 'high',
+    capacity: 'high',
     availableDayNumbers: availableDayNumbers.length ? availableDayNumbers : undefined,
   };
   return resolveWeekWithConditioning(blockStart, state);
@@ -310,7 +310,7 @@ function makeAwayRestWorkout(date: string): Workout {
     currentProgram: rebuilt, currentMicrocycle: micro,
     manualOverrides: useProgramStore.getState().dateOverrides,
     markedDays, athleteContext: DEFAULT_ATHLETE_CONTEXT,
-    seasonPhase: 'Pre-season', gameDay: 'Saturday' as never, readiness: 'high',
+    seasonPhase: 'Pre-season', gameDay: 'Saturday' as never, capacity: 'high',
     availableDayNumbers: [1, 2, 3, 4, 5],
   };
   const resolved = resolveWeekWithConditioning(week2Monday, state);

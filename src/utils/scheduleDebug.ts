@@ -42,8 +42,8 @@ export interface WeekDebugInfo {
   teamTrainingIntensity: string | null;
 
   // Engine decisions
-  readiness: string;
-  readinessFactors: string[];
+  capacity: string;
+  capacityFactors: string[];
   hardExposureCap: number;
   existingHardExposures: number;
   remainingHardBudget: number;
@@ -153,8 +153,8 @@ export function buildWeekDebugInfo(
       availableDays: onboarding.trainingDaysPerWeek || 0,
       teamTrainingDays: onboarding.teamTrainingDays || [],
       teamTrainingIntensity: onboarding.teamTrainingIntensity || null,
-      readiness: '?',
-      readinessFactors: [`Engine error: ${e}`],
+      capacity: '?',
+      capacityFactors: [`Engine error: ${e}`],
       hardExposureCap: 0,
       existingHardExposures: 0,
       remainingHardBudget: 0,
@@ -183,8 +183,8 @@ export function buildWeekDebugInfo(
     teamTrainingDays: onboarding.teamTrainingDays || [],
     teamTrainingIntensity: onboarding.teamTrainingIntensity || null,
 
-    readiness: plan.readiness,
-    readinessFactors: plan.readinessFactors,
+    capacity: plan.capacity,
+    capacityFactors: plan.capacityFactors,
     hardExposureCap: plan.hardExposureCap,
     existingHardExposures: plan.existingHardExposures,
     remainingHardBudget: plan.remainingHardBudget,

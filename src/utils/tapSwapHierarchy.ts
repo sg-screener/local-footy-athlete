@@ -54,7 +54,7 @@ export interface TapSwapEnvironment {
   primaryInjury: TapSwapPrimaryInjury | null;
   availableEquipment: EquipmentClass[];
   availableEquipmentTags: EquipmentTag[];
-  readiness: CapacityBand;
+  capacity: CapacityBand;
   hasEquipmentConstraint: boolean;
   medicalStop: boolean;
 }
@@ -106,7 +106,7 @@ function injuryLevel(severity: number): 'caution' | 'avoid' {
   return severityHasModerateEffect(severity) ? 'avoid' : 'caution';
 }
 
-function lowerReadiness(
+function lowerCapacity(
   left: CapacityBand,
   right: CapacityBand,
 ): CapacityBand {
@@ -157,13 +157,13 @@ export function resolveTapSwapEnvironment(args: {
     constraints,
     args.date,
   );
-  let readiness = deriveScheduleReadiness({
+  let capacity = deriveScheduleReadiness({
     onboardingData: args.profile,
     signal: args.readinessSignal,
   });
   const fatigueConstraint = constraints.find((constraint) =>
     constraint.type === 'fatigue' && severityIsLimiting(constraint.severity));
-  if (fatigueConstraint) readiness = lowerReadiness(readiness, 'low');
+  if (fatigueConstraint) capacity = lowerCapacity(capacity, 'low');
 
   return {
     activeInjuries,
@@ -172,7 +172,7 @@ export function resolveTapSwapEnvironment(args: {
       availableEquipmentTags,
     ),
     availableEquipmentTags: [...availableEquipmentTags],
-    readiness,
+    capacity,
     hasEquipmentConstraint: constraints.some((constraint) =>
       constraint.type === 'equipment'),
     medicalStop: constraints.some((constraint) =>
@@ -272,7 +272,7 @@ export function assessTapSwapCandidateSafety(
     }
   }
 
-  if (environment.readiness === 'low' && tags?.fatigue === 'high') {
+  if (environment.capacity === 'low' && tags?.fatigue === 'high') {
     return { safe: false, reason: 'Low readiness blocks a high-fatigue replacement.' };
   }
   return { safe: true, reason: 'Replacement passes injury, readiness and equipment checks.' };

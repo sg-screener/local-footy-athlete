@@ -349,7 +349,7 @@ console.log('\n-- Deterministic next-block state and persistence --');
     },
     seasonPhase: 'In-season',
     gameDay: 'Saturday',
-    readiness: 'high',
+    capacity: 'high',
     availableDayNumbers: [1, 2, 3, 4, 5],
   } satisfies ScheduleState);
   ok('phase/team/game context remains present in generated block',

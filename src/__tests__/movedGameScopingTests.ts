@@ -124,7 +124,7 @@ function makeMovedGameState(): ScheduleState {
     } as ScheduleState['athleteContext'],
     seasonPhase: 'In-season',
     usualGameDay: 'Saturday',
-    readiness: 'medium',
+    capacity: 'medium',
   };
 }
 
@@ -172,7 +172,7 @@ function makeState(args: {
     } as ScheduleState['athleteContext'],
     seasonPhase: args.seasonPhase,
     usualGameDay: args.usualGameDay,
-    readiness: 'medium',
+    capacity: 'medium',
   };
 }
 
