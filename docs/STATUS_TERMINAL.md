@@ -32,6 +32,37 @@ thing that actually bit.**
 
 ## STATUS
 
+### STANDING ORDERS PERFORMED — and I nearly published a refuted number
+
+**Item 13, the unenforced-law count: `test:law-registry` reads 125 rows, 101
+guarded, `24 UNENFORCED`.** Down from 27 earlier today (other seats paid two).
+**Falling, which is what the standing order asks.** The instrument is the SUITE,
+not `grep -c` — the item records that grep sends every seat one high.
+
+**I THEN TRIED TO PAY `LAW-green-gate-is-a-claim` AND STOPPED — the row forbids
+the route I was taking, and it is right.** Its `wouldTake` says the cheap
+alternative is REFUTED: *"a per-suite 'does this file carry a liveness arm' scan
+is satisfied by a COMMENT: the detector reads prose, so a suite could mention the
+word and pass while asserting nothing. That gate would BE the green-and-empty
+shape this law forbids."*
+
+**MY RE-MEASURE WAS EXACTLY THAT DETECTOR.** I ran
+`grep -rlE "non-vacuit|liveness|mutation|MUTANT"` over `src/__tests__` and got
+**165 of 411**, against the row's recorded **21 of 200**, and was about to
+report the jump as progress. **It is not a measurement — it counts files that
+say the word.** Most of the difference is scope (411 counts every file, not
+"chain suites") and prose.
+
+**SO THE RECEIPT IS NOT UPDATED AND THE LAW STAYS UNENFORCED.** The row's number
+is honest for its stated unit; mine would have replaced it with a bigger, worse
+one. **The law caught me with its own text, which is the strongest evidence for
+it I have seen — and worth more than the flip would have been.**
+
+**WHAT WOULD ACTUALLY PAY IT** (unchanged, and it is infrastructure, not a cell):
+run the chain, mutate a named subject, require a named cell to die. Needs its own
+unit and a runtime budget.
+
+
 ### ⚠ THE SEAT HOOK'S AWAITING-SAM EXIT IS DEFEATED BY A NEIGHBOUR'S COMMIT
 
 **`scripts/seat-inbox-hook.sh:210` reads `git show HEAD --unified=0 -- $inbox`.**
