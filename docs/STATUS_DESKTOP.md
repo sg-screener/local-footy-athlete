@@ -686,3 +686,59 @@ golden to settle**, which is the better ending than leaving a labelled guess for
 someone else — and the label was the only thing that made it safe to leave at
 all. **A conclusion that says which one it is costs nothing to upgrade; one that
 does not is where four reverts came from on 28-C1.**
+
+
+---
+
+## 2026-08-13 — THE LAST TWO LINES ARE A DEFECT, NOT A CHANGE. DO NOT LET THE GOLDEN EAT THEM.
+
+**`taxonomy.1.modality: "none" → "off_feet"` on `scenarios.3` `weeks.2/3.days.4`
+— the only residue of the 291 — is a BUG, and it is attributed to its line.**
+
+**THE SCENARIO IS `offseason-no-equipment`: off-season, BODYWEIGHT ONLY. There is
+no rowing machine in it.** The day is *"Upper Pull"*, and its current rows are
+`Pull-Ups | Inverted Row (Bodyweight) | Face Pulls`.
+
+**MEASURED, not reasoned:**
+
+    classifyExerciseExposures('Inverted Row (Bodyweight)')  ->  ["easy_erg"]
+    classifyExerciseExposures('Chest Supported Row')        ->  ["easy_erg"]
+    classifyExerciseExposures('Barbell Row')                ->  ["horizontal_pull","heavy_pull"]
+    classifyExerciseExposures('Seated Cable Row')           ->  ["horizontal_pull"]
+
+**A BODYWEIGHT PULL IS BEING READ AS A ROWING ERG**, and `sessionTaxonomy`'s
+branch 2 then calls the whole session `off_feet`. That is how `none` became
+`off_feet`: **R-076's pool move swapped a row into that day whose NAME trips an
+erg regex.**
+
+**THE LINE, EXACTLY — `exposureEngine.ts:424`:**
+
+    if (/(rower|rowing\s*erg|\brow\b)/i.test(n) &&
+        !/(bent|barbell|seal|cable|machine\s*row|seated\s*row)/i.test(n)) {
+
+**A HAND-MAINTAINED DENYLIST OF STRENGTH-ROW PHRASINGS GUARDING A WORD MATCH.**
+`Barbell Row` and `Seated Cable Row` are excluded by name; `Inverted Row
+(Bodyweight)` and `Chest Supported Row` are not on the list, so they fall through
+as ergs. **The list goes stale the moment a new exercise name lands — which is
+exactly what R-076 caused.** Same class as `first-match-wins-hides-its-ordering`,
+and the same shape as the face pull itself: a name read for a WORD rather than
+for what it is.
+
+**THE FIX IS THE ONE THIS CODEBASE ALREADY KNOWS, and the data is already there:**
+
+    exerciseTags.ts:1793  'Inverted Row (Bodyweight)'  movement: 'horizontal_pull'
+    exerciseTags.ts:1709  'Chest Supported Row'        movement: 'horizontal_pull'
+
+**ASK THE REGISTRY BEFORE THE REGEX.** A name with a registry entry has its
+movement stated; inference is for names the registry does not know. **Proof before
+inference — R-073's principle, and the same one item 26's `role` parameter needs.**
+
+**⚠ SO THE `--update` MUST NOT ABSORB THESE TWO.** 289 of 291 are three named,
+ruled causes. **These two encode a bug, and re-recording them makes a bodyweight
+athlete's pull-up session permanently "off feet" in the golden** — the exact
+"regenerate to make a stage pass" the suite's own rule forbids.
+
+**NOT FIXED HERE, and the reason is blast radius rather than difficulty.**
+`exposureEngine` feeds exposure counting app-wide; changing what a row COUNTS AS
+moves far more than this golden and needs its own measurement either side. **Named
+to its line so the next pass builds instead of hunting.**
