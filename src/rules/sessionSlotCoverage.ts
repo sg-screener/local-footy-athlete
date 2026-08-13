@@ -139,6 +139,35 @@ export const SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]
  * `squat + push` admits the whole lower ladder and push, but NOT pull, because
  * its upper half is a split.
  */
+/**
+ * WHICH LADDER A DAY ANSWERS TO, FROM ITS PLAN'S PATTERNS.
+ *
+ * The name-based `slotDayKindFor` reads a session TITLE; this reads the typed
+ * plan intent, which is what the canonicaliser already has in hand. Same mapping,
+ * same three ladders — a second heuristic here would be a second representation
+ * of a question the plan has already answered.
+ *
+ * A MIXED day (lower AND upper patterns named) returns null: it answers to no
+ * single ladder, and guessing one would let a real defect through under the
+ * wrong rule. Callers treat null as "no ladder", which keeps the previous
+ * behaviour rather than inventing one.
+ */
+export function slotDayKindForPatterns(
+  intended: Iterable<MainStrengthPattern>,
+): SlotDayKind | null {
+  const named = new Set<MainStrengthPattern>(intended);
+  if (named.size === 0) return null;
+  const lower = named.has('squat') || named.has('hinge');
+  const push = named.has('push');
+  const pull = named.has('pull');
+  if (lower && (push || pull)) return null;
+  if (lower) return 'lower';
+  if (push && pull) return 'upper_full';
+  if (push) return 'upper_split_push';
+  if (pull) return 'upper_split_pull';
+  return null;
+}
+
 export function patternsCompletingLadder(
   intended: Iterable<MainStrengthPattern>,
 ): ReadonlySet<MainStrengthPattern> {

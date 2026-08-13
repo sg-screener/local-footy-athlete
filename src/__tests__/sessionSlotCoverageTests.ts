@@ -18,6 +18,7 @@ import {
   LOWER_SLOTS,
   UPPER_FULL_SLOTS,
   patternsCompletingLadder,
+  slotDayKindForPatterns,
   sessionSlotCoverage,
   slotDayKindFor,
   slotsFilledByRow,
@@ -296,6 +297,29 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   ok('the answer does not depend on row order',
     reversed.missing.length === 0 && reversed.duplicated.length === 0,
     `missing=${JSON.stringify(reversed.missing)} dup=${JSON.stringify(reversed.duplicated)}`);
+
+  // ── THE LADDER FROM THE PLAN'S PATTERNS, not from a session title ──────
+  // This is what lets the canonicaliser ask "does this accessory belong on THIS
+  // day" — the check that was missing when a day named `Lower Squat` shipped
+  // Bicep Curls, Tricep Pushdowns and Face Pulls alongside one Back Squat.
+  ok('a squat-led plan entry is a LOWER day',
+    slotDayKindForPatterns(['squat'] as any) === 'lower');
+  ok('a hinge-led plan entry is a LOWER day',
+    slotDayKindForPatterns(['hinge'] as any) === 'lower');
+  ok('push+pull is a FULL upper day',
+    slotDayKindForPatterns(['push', 'pull'] as any) === 'upper_full');
+  ok('pull alone is a PULL split',
+    slotDayKindForPatterns(['pull'] as any) === 'upper_split_pull');
+  // A MIXED day answers to no single ladder, and guessing one would judge a real
+  // defect under the wrong rule. null means "no ladder", which keeps the
+  // caller's previous behaviour rather than inventing one.
+  ok('a MIXED lower+upper plan entry has NO single ladder',
+    slotDayKindForPatterns(['squat', 'push'] as any) === null);
+  ok('[non-vacuity] no patterns means no ladder',
+    slotDayKindForPatterns([] as any) === null);
+  // AND THE LOWER LADDER HAS NO ARM SLOT — the fact the whole fix rests on.
+  ok('the LOWER ladder contains accessory_or_core but NOT arm_or_shoulder',
+    LOWER_SLOTS.includes('accessory_or_core') && !LOWER_SLOTS.includes('arm_or_shoulder'));
 
   // NON-VACUITY: an empty intent admits nothing, so the caller's own
   // `intendedPatterns.size > 0` check is what turns the guard on — not this.

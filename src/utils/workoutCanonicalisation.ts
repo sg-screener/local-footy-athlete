@@ -44,7 +44,13 @@ import {
   powerRows,
   withoutPowerRows,
 } from '../rules/sessionRowCounting';
-import { patternsCompletingLadder } from '../rules/sessionSlotCoverage';
+import {
+  SLOTS_FOR_KIND,
+  patternsCompletingLadder,
+  slotDayKindForPatterns,
+  slotsFilledByRow,
+  type SessionSlot,
+} from '../rules/sessionSlotCoverage';
 
 /**
  * The ONE conversion from "phase + whatever the caller resolved" into the
@@ -365,8 +371,40 @@ function buildCanonicalConditioningBlock(args: {
   };
 }
 
-function isMinorCrossPatternAccessory(classified: ClassifiedRow): boolean {
-  return classified.classification.kind === 'strength_accessory' && classified.index >= 2;
+/**
+ * A MINOR ACCESSORY THE DRIFT GUARD LETS THROUGH — BUT ONLY IF IT BELONGS TO
+ * THIS DAY'S BODY REGION.
+ *
+ * **THE EXEMPTION WAS REGION-BLIND AND THAT IS HOW ARM WORK GOT ONTO LEG DAYS.**
+ * It asked two questions — is this an accessory, and is it past position 2 — and
+ * neither of them is "does it belong here". Measured 2026-08-13, pre-season,
+ * every week: a day NAMED `Lower Squat` shipped
+ *
+ *     Bicep Curls | Tricep Pushdowns | Face Pulls | Nordic Lower | Pallof Press | Back Squat
+ *
+ * — ONE lower lift and THREE arm exercises. `Lower Hinge` was the same. C7's
+ * receipt recorded this as *"a lower day whose entire content is arm work is a
+ * separate defect, upstream of this drop"* and left it unclaimed; this is it.
+ *
+ * THE RULE IS THE LADDER, SAME AS THE MAIN-PATTERN CHECK ABOVE. An accessory is
+ * minor-and-allowed when the slot it fills is a slot THIS day's ladder contains.
+ * A lower day's ladder ends in `accessory_or_core`, so a Pallof Press and a
+ * Nordic Lower stay — they are the accessory work Sam's fill order asks for. It
+ * has no `arm_or_shoulder`, so a bicep curl is drift and goes. An upper day's
+ * ladder DOES have `arm_or_shoulder`, so the same curl stays there.
+ *
+ * A row that fills NO slot at all keeps the old behaviour and is let through:
+ * this guard exists to stop a day wandering off its plan, not to become a second
+ * vocabulary gate on rows nothing classifies.
+ */
+function isMinorCrossPatternAccessory(
+  classified: ClassifiedRow,
+  daySlots: readonly SessionSlot[],
+): boolean {
+  if (classified.classification.kind !== 'strength_accessory' || classified.index < 2) return false;
+  const slots = slotsFilledByRow(classified.row);
+  if (slots.length === 0) return true;
+  return slots.some((slot) => daySlots.includes(slot));
 }
 
 function matchingReferenceRow(
@@ -714,6 +752,10 @@ export function finaliseWorkoutAfterMutation(
   // Loop-invariant: a pure function of the plan's patterns, which do not change
   // while the rows are triaged.
   const ladderPatterns = patternsCompletingLadder(intendedPatterns);
+  // The day's own slot ladder, for the accessory exemption below. Derived from
+  // the SAME intent the drift check reads, so the two cannot disagree.
+  const dayKind = slotDayKindForPatterns(intendedPatterns);
+  const daySlots = dayKind ? SLOTS_FOR_KIND[dayKind] : [];
   for (const item of classified) {
     const name = rowName(item.row);
     const pattern = item.classification.mainPattern;
@@ -801,7 +843,7 @@ export function finaliseWorkoutAfterMutation(
     // ladder was asking for all along.
     if (
       intendedPatterns.size > 0 && pattern && !ladderPatterns.has(pattern) &&
-      !isMinorCrossPatternAccessory(item)
+      !isMinorCrossPatternAccessory(item, daySlots)
     ) {
       actions.push({
         kind: 'row_removed',
