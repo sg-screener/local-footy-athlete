@@ -45,6 +45,45 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ SAM RULED — *"similar is right"* (2026-08-13). CONTRAST PAIRS ON A SIMILAR PATTERN.
+
+**HIS WORDS, VERBATIM: *"similar is right"*.** Answering `audit` directly on the
+AWAITING SAM entry about Bible `:225` (*"of the SAME pattern"*) versus `:1099`
+(*"a SIMILAR pattern"*).
+
+**SO THE BUILD IN `e665ab44` IS CONFIRMED, NOT MERELY DEFENSIBLE.** The pairing
+partner is chosen by **FAMILY**, and the `powerRowAlignment` family check that
+item 42 called a defect is CORRECT and stays.
+
+**THE EVIDENCE THAT PRODUCED THE QUESTION, kept because it is what made one line
+from him enough:** four of his own five authored pairings FAIL the strict reading
+— Box Squat `squat`→Vertical Jump `plyo`, Back Squat `squat`→Broad Jump `plyo`,
+Trap Bar Deadlift `hinge`→Broad Jump `plyo`, Split Squat→Vertical Jump `plyo`;
+only Bench Press→Explosive Push-up is a true pattern match. **Every LOWER entry in
+`POWER_EXERCISE_POOL` tags `movement: 'plyo'`.** He was shown the table, not the
+question.
+
+**⚠ REGISTRATION IS OWED AND IS NOT YET DONE — R-081.** `CLAUDE.md`: *"when Sam
+rules, the registry is updated in the same task, or the ruling is lost."*
+**`docs/RULINGS_REGISTRY.md` IS HELD** — another seat's R-080 sits in it
+uncommitted (+20/−0, written 13:39). **Committing that file by path would sweep
+their unfinished row into my commit**, which is the exact harm that seat
+apologised to me for twenty minutes ago, so I did not do it. The row text is
+handed to them verbatim and recorded here so it cannot be lost in the gap.
+
+**THE ROW, ready to paste:**
+> **R-081** · *"similar is right"* (Sam, 2026-08-13) · **CONTRAST PAIRS ON A
+> SIMILAR PATTERN, NOT THE SAME ONE.** Partner chosen by FAMILY. · `BUILT
+> e665ab44` — `test:power-primer-policy` `[42a]`-`[42f]`, mutation-proven both
+> ways.
+
+**⚠ AND `:225` IS NOW THE ONLY PLACE CARRYING REFUTED WORDING.** It still says
+*"of the SAME pattern"*. **It should be amended to "similar" with a changelog
+line** — the same treatment R-079 gave `:90`'s flat "2 nights". **Not done here:
+amending his authored Bible on the back of a three-word chat reply is a bigger
+edit than the reply authorises, and `:1099` already states the correct rule, so
+nothing is broken while it waits.**
+
 ### ITEM 42 — CONTRAST IS NEVER A PAIRING (Sam assigned it to `audit` directly, overriding the block)
 
 **ALL FOUR OF THE ITEM'S CLAIMS RE-VERIFIED AT CURRENT LINES** (they had drifted

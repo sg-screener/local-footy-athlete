@@ -1202,7 +1202,21 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **⚠ NEW 2026-08-13, `audit` — YOUR BIBLE SAYS "SAME PATTERN" IN ONE PLACE AND
+- **✅ ANSWERED AND CLOSED 2026-08-13 — SAM RULED *"similar is right"*. REGISTER
+  AS R-081; the row text is in `docs/STATUS_AUDIT.md`.**
+
+  **HIS WORDS, VERBATIM: *"similar is right"*.** So the pairing partner is chosen
+  by **FAMILY**, `e665ab44` is CONFIRMED rather than merely defensible, and
+  **`powerRowAlignment`'s family check — which item 42 called a defect — is
+  CORRECT and stays.**
+  **⚠ TWO THINGS STILL OWED, and neither is his:** the **R-081 row**
+  (`RULINGS_REGISTRY.md` was held by another seat's uncommitted R-080, so it was
+  handed over rather than swept into a commit), and **Bible `:225`, which is now
+  the ONLY place carrying the refuted *"of the SAME pattern"* wording and should
+  be amended with a changelog line the way R-079 amended `:90`.**
+
+  ORIGINAL QUESTION BELOW.
+  - **⚠ 2026-08-13, `audit` — YOUR BIBLE SAYS "SAME PATTERN" IN ONE PLACE AND
   "SIMILAR PATTERN" IN ANOTHER, AND YOUR OWN EXAMPLES ONLY SATISFY ONE OF THEM.
   NOT BLOCKING — item 42 is BUILT on the reading below.**
 
