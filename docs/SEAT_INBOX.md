@@ -96,6 +96,30 @@ his instruction is standing authority, not history.**
     **The device check is still owed** — open a session, tick kit off, and see
     the rows change.
 
+    **⚠⚠ THE GLASS CHECK WAS ATTEMPTED 2026-08-13 AND ABANDONED — THE SIMULATOR
+    IS SHARED WITH THE TERMINAL AND I WAS INTERLEAVING WITH ITS RUN.**
+    I reached the session view and its three controls (`+`, a dumbbell, injury)
+    and got no further. **Mid-run the screen changed to a WEEK view I did not
+    navigate to**, carrying *"Got it — logged that you're away. Team training and
+    games come off as your plan updates."* and a **`SAT 18 — Training Day`** —
+    which is item 28's away rebuild, live, on the same device. **Two agents
+    driving one simulator corrupt each other's runs in both directions**, so I
+    stopped rather than keep tapping. **The check remains OWED; nothing about it
+    is claimed.**
+
+    **AND SAM'S COMPLAINT IS VISIBLE ON GLASS RIGHT NOW, WHICH IS ITEM 28's
+    RECEIPT, NOT MINE:** *"why the fuck does it read training day?"* — `Training
+    Day` is exactly what Saturday reads.
+
+    **TWO INSTRUMENT LESSONS, BOTH PAID IN TAPS:**
+    1. **The panel's tap space is 402x874 POINTS; a screenshot is 919x1919
+       PIXELS.** Four taps went nowhere because I used image coordinates. The
+       attach call states the point space — read it.
+    2. **`maestro inspect_screen` RELOADS THE APP MID-SESSION**, and the reload
+       trips the dev-harness cold-start gate (*"clock receipt has no active
+       checkpoint"*), costing a full reseed each time. **Inspect once before you
+       start, or not at all — then drive from the point space.**
+
     **(b) THE GUESSED STRENGTH CUT — SAM: *"yeah well that sounds shit and not
     good"*. THAT IS A RULING: BUILD IT.** Census C10.
     **The defect:** the only producer of a typed main-strength reduction
