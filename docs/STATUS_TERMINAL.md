@@ -145,63 +145,44 @@ re-measured instead of believing it:**
    `applySubphaseMainLiftLoadMultiplier`. That window ends at
    `finaliseWorkoutAfterMutation`'s `main_pattern_drift`, which `9b19244f` fixed.
 
-### THE COMPOSER'S BEFORE-NUMBER — 24 of 44 days (55%). `b46d1565`.
+### THE COMPOSER'S REAL TARGET — 8 PRE-SEASON LOWER DAYS. `97df35e6`.
 
-**AND MEASURING IT FOUND A BUG IN THE ORACLE FIRST, which is the whole reason to
-measure before building.** `UPPER_SPLIT_SLOTS` held ONE direction (push) and
-`slotDayKindFor` collapsed both into one kind, so **every pull-only day was
-judged against push slots and could not cover its ladder at any content.** 12 of
-the 20 misses in the sweep were phantom. Fixed: `upper_split_push` /
-`upper_split_pull`, each with its own list, mutation-checked.
+**FOUR FINDINGS IN THIS SWEEP. THREE WERE MY INSTRUMENT, NOT THE APP.** That
+ratio is the lesson; assume the next one is the oracle too until proven.
 
-**THE CORRECTED SWEEP — 5 worlds x 4 weeks, 44 strength days:**
+| | before | after |
+| --- | --- | --- |
+| days covering every slot | 24 (55%) | **36 (82%)** |
+| days with a doubled slot | 12 | **0** |
 
-| | |
-| --- | --- |
-| cover every slot | **24 (55%)** |
-| have a DOUBLED slot | **12** (was reported as 0 behind the phantom misses) |
+**THE THREE ORACLE BUGS, all found by MEASURING before building:**
+1. **`UPPER_SPLIT_SLOTS` held one direction (push).** Every pull-only day was
+   judged against push slots and could not pass at any content. Now
+   `upper_split_push` / `upper_split_pull`.
+2. **It TALLIED instead of ASSIGNING.** A row filling two slots was credited to
+   both and the overlap called a duplicate, so an accessory could never be SPENT
+   where the day needed it. Now exact augmenting-path matching — **exact, not
+   greedy, because greedy is order-dependent** and a cell feeds the same rows
+   reversed to prove the answer holds.
+3. **An upper ACCESSORY filled no accessory slot.** `Face Pull` is Sam's *"more
+   arm work"*; the pools already say it is an accessory beside `Rear Delt Fly`,
+   while `Barbell Row` is the anchor. **The tag was NOT changed** — retagging
+   would hit pools, scorer and injury filters to fix one oracle.
 
-Most-missed: `arm_or_shoulder` 12 · `single_leg_knee` 8 · `single_leg_hip` 8 ·
-`squat` 4 · `hinge` 4.
+**⚠ AND `classifyPoolSlot` STILL HAS THE SILENT-NULL DEFECT — NEXT UNIT, NAMED.**
+It is an exact-name lookup; the pool holds `Face Pull`, the generator ships
+`Face Pulls`, so it returns `null` and the row reads as "not an accessory".
+**This is the THIRD sighting of one defect in a day** — R-014 recorded it for
+`getExerciseTags` (151 rows resolving to nothing) and that one was fixed AT the
+lookup. I normalised LOCALLY in `sessionSlotCoverage` instead, on purpose:
+`classifyPoolSlot` feeds rotation and scoring, so turning its nulls into answers
+CHANGES GENERATED OUTPUT and owes a corpus measurement. **Fix it at source next,
+with scenarios + qa either side.**
 
-**THE SINGLE-LEG GAP IS THE REAL COMPOSER TARGET.** The `Lower Hinge` and
-`Lower Squat` days carry **7-8 rows** and still miss BOTH single-leg slots — so
-this is not a session-size problem, which is Sam's whole point (*"the number of
-exercises is not important"*). A day can be long and still uneven.
-
-**⚠ AND THE 12 PULL DAYS ARE AN ORACLE PROBLEM AGAIN, NOT A COMPOSER ONE.**
-They are `Pull-Ups + Barbell Row + Face Pulls`, reported as
-`missing: [arm_or_shoulder], duplicated: [horizontal_pull]`. **That day is
-fine.** A face pull is rear-delt work — Sam's own sentence for this slot is
-*"arm work or accessory work for the shoulders"* — so it should satisfy
-`arm_or_shoulder`.
-
-**REGISTRY-GREP RUN BEFORE CONCLUDING THIS (and it is why there is no question
-for Sam): grepped `RULINGS_REGISTRY.md` for *Face Pull*, *rear delt*,
-*arm_or_shoulder*, *shoulder*, *accessory*, *tag* — only R-015 hit, and it is
-about mobility supersets. NOTHING covers this. But R-014 already quotes his rule
-verbatim and it decides the case, so asking him would be the re-ask defect the
-gate exists to stop.**
-
-**THE NEXT UNIT, AND IT IS A REAL DESIGN CHANGE, NOT A TAG EDIT:**
-`sessionSlotCoverage` TALLIES — it increments every slot every row could fill.
-The module's own docstring says a row may fill more than one slot *"which is what
-lets a five-row session cover five slots"*, but a tally cannot spend a row on the
-slot the day actually needs. **It must ASSIGN, not count.** With assignment, Face
-Pulls goes to `arm_or_shoulder` (needed), Barbell Row takes `horizontal_pull`,
-and the day comes back complete with nothing doubled — which is the truth.
-
-Shape: exact bipartite matching, rows to required slots (≤8 rows, ≤5 slots, so an
-augmenting-path DFS is small and exact — do NOT greedy it, greedy is
-order-dependent and this oracle has already been wrong once). Then `missing` =
-unmatched slots; and `duplicated` needs re-deriving from the matching rather than
-from counts — a defensible reading is *a slot whose only-possible rows number
-more than one*, which is what catches "two back squats" without punishing a row
-that had somewhere else to go.
-
-**⚠ THIS INVALIDATES THE 55% ABOVE — re-measure after, and expect it to RISE for
-reasons that are the instrument, not the app.** Two of the three findings in this
-sweep have now turned out to be the oracle. Assume the third might be too.
+**WHAT IS LEFT IS REAL AND IT IS IN ONE PLACE:** 8 `single_leg_knee`, 8
+`single_leg_hip`, 4 `squat`, 4 `hinge` — **every one a PRE-SEASON lower day
+carrying SEVEN OR EIGHT rows with no single-leg work at all.** Not a size
+problem. Sam's point exactly: a long day can still be uneven.
 
 **SO THE NEXT UNIT REALLY IS THE COMPOSER**, with no blocker in front of it —
 and R-014's own trace says where NOT to build it: `buildTagAwareSession` and
