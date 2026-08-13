@@ -32,6 +32,29 @@ thing that actually bit.**
 
 ## STATUS
 
+### CLOSING STATE, VERIFIED — 2026-08-13
+
+    slot-coverage   54/54     pools           496/0
+    away-flow       49/0      section18-v2    135/0
+    section18-safety 37/0     conditioning-templates 95/0
+    typecheck gate  PASSED, 459 against baseline, no file regressed
+    scenarios       64/1 — the 1 is GAME-MOVE-SAT-TO-FRI, control-proved
+                    pre-existing (identical with my work backed out)
+
+**866 checks, 0 failures of mine.** Working tree clean of my files; no probe
+identifiers under `src/`.
+
+**LANDED TODAY, athlete-visible:** every laddered day covers `:227` (SLOT census
+1 -> 0 of 6); arm work off leg days; a lunge can no longer rotate into a squat;
+the barbell squat gone from bodyweight programs (EQUIPMENT census 5 -> 1); sprint
+counted in NIGHTS with an in-season ceiling that had never existed; R-073's lock;
+the owner ratchet; Sam's 127 equipment answers as data.
+
+**THE ONE THING LEFT is the composition unit** (`33d60b55`), and every partial of
+it has now been individually refuted — seam, removal, sentence. **Start it whole
+or not at all.**
+
+
 ### THE SHORTFALL SENTENCE IS NOT INDEPENDENTLY BUILDABLE — verified, not assumed
 
 **Three seats have now separately concluded that R-083's removal must land WITH
