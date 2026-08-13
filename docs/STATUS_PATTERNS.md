@@ -424,3 +424,75 @@ a whole-week signature, which tells "ignores the answer entirely" apart from
   is explicit: a first-run guard failure is reported the moment it appears, never
   fixed quietly and never deferred.
 - **No glass.** The proof is a suite, which is the entire point of the ruling.
+
+---
+
+## THE PARTIAL-RESTORE PREMISE IS REFUTED — NOTHING WAS DROPPED
+
+**SAM'S ORDER:** *"this was built and then destroyed … the game half came back,
+the club-nights half did not. Diff `ff885cdb`'s version of `sessionResolver.ts`
+against what is there now, put back only what the restore dropped."*
+
+**I DID THE DIFF. THERE IS NOTHING TO PUT BACK.** The symptom he describes is
+real — my gate reproduces it — but the cause is not a partial restore.
+
+| measured | then (`ff885cdb`) | now |
+| --- | --- | --- |
+| `applyAwayPass` body | 42 lines | **101** |
+| call sites | 1 | **3** |
+| club half (`isTeamTrainingOnly`, `hasTeamTraining`) | present | **present** |
+| the other 3 files it touched | +70 lines | **every line still there** |
+
+The current pass is a **SUPERSET**: it gained the rest-day fix Sam asked for
+after (*"why the fuck does it read training day?"*) and the combined-day name
+strip. **All four of `ff885cdb`'s files still carry every line it added** —
+checked line by line, not by reading the commit messages.
+
+### THE REAL CAUSE WAS ALREADY MEASURED, TWO HOURS BEFORE I STARTED
+
+`8a2f5ef2` — *"THE READ FILTER NEVER RUNS ON THE PROGRAM TAB — measured, and I
+am not closing this out"*. A probe on a real device, through the real flow:
+`applyAwayPass` **never fired once**, while a control probe elsewhere did. Its
+own conclusion: *"I HAVE BEEN FIXING THE READ IN THE WRONG READER."*
+
+**MY GATE INDEPENDENTLY CONFIRMS IT, AND ADDS THE PART THAT WAS MISSING:**
+`rebaseAcceptedEffectiveWeek` does not import `sessionResolver` **at all**. So:
+
+- the **game** disappears from a pre-existing week because `derivedWeekContract`
+  has its OWN travel filter on that path — proven by mutation, blinding it reds
+  the passing half;
+- the **club nights** survive because the only code that removes them lives in a
+  reader the athlete's week never goes through.
+
+**That is why it looks exactly like half a restore and is not one.** Two halves,
+two different mechanisms, one of them wired and one of them orphaned.
+
+### WHAT I BUILT INSTEAD OF A REBUILD
+
+Block `[4]`, three cells, **whose whole job is to stop a fourth rediscovery**:
+`applyAwayPass` still exists (do not rebuild it); it still handles the club half
+(if THAT reds, *then* it is a partial restore); and the accepted read door does
+not reach the resolver — the actual gap, now a cell instead of a device probe.
+
+**THE SUITE IS 11/13.** The 2 reds are the app.
+
+### SAM'S STANDING ORDER, AND IT PAID IMMEDIATELY
+
+*"The agents need to read through what we've already fixed and find if it's spelt
+differently or worded differently but stands for the same thing."*
+
+**Searching the log for the WORDING rather than the FILE is what found
+`8a2f5ef2`** — its subject says *"read filter"* and *"program tab"*, and it
+contains neither "away pass" nor "restore". Grepping for the thing I was about to
+build found the seat that had already proved it could not be built there. **Cost:
+one command. Saved: rebuilding a working 101-line function.**
+
+### NOT COVERED
+
+- **THE FIX IS STILL NOT MADE AND IS STILL NOT MINE.** Wiring the away pass into
+  the accepted read door is an architecture change to the one path every week is
+  drawn through, not a restore. It belongs with item 30's owner.
+- **The registry row was NOT updated with this refinement** —
+  `docs/RULINGS_REGISTRY.md` carries another seat's uncommitted R-086 and
+  committing it would sweep their work. The row as committed still points at the
+  right place; this file carries the refinement.

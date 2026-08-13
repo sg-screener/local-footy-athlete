@@ -99,11 +99,10 @@ const PROFILE = {
  * fixture could not be seen by the code under test.** A fixture is a claim too,
  * and a surviving mutation means the gate is blind OR the mutation missed.
  *
- * **BOTH ROUTES NOW DERIVE FROM THIS ONE FACT.** Route A projects it through
- * `composeTemporarySourceFactCompatibility`, which this repo names as the only
- * way a fact reaches generation; route B hands it to the read door directly. A
- * disagreement between the routes can therefore no longer be a vocabulary
- * mismatch — which is the only thing that makes the comparison meaningful.
+ * **THIS FACT FEEDS ROUTE B ONLY.** Deriving route A from it was ATTEMPT TWO and
+ * is refuted below — see `TRAVEL_CONSTRAINT`. The two doors genuinely speak two
+ * spellings, and the CONTROL cell is what stops that mismatch being read as a
+ * breach of the ruling.
  */
 const TRAVEL_FACT = [{
   id: 'source-fact:schedule:existing-week-proof',
@@ -288,6 +287,64 @@ console.log('\n[3] The gate reds when a change reaches only newly built weeks');
     `healthy=${signature(healthy.visibleWorkouts)} crippled=${signature(crippled.visibleWorkouts)} `
     + '— the read door produces the same week with and without the athlete\'s '
     + 'answer, so this suite is measuring nothing');
+}
+
+// ── [4] WHERE THE DEFECT IS NOT — AND THIS BLOCK EXISTS TO STOP A REBUILD ──
+//
+// **SAM, 2026-08-13: *"the agents need to read through what we've already fixed
+// and find if it's spelt differently or worded differently but stands for the
+// same thing."*** This block is that instruction made executable for one fact,
+// because this exact thing has now been diagnosed THREE times.
+//
+// **THE HISTORY, CHECKED BEFORE ANYTHING WAS WRITTEN:**
+//   - `ff885cdb` *"THE CLUB IS OFF HIS WEEK, INCLUDING THE WEEK HE IS ALREADY
+//     LOOKING AT"* built `applyAwayPass` — game half AND club half.
+//   - `b62add9f` deleted it from `main` under a subject that said *"comment
+//     only; no assertion changed"* while removing 3,421 lines.
+//   - `186c2b1b` restored it.
+//   - `8a2f5ef2` *"THE READ FILTER NEVER RUNS ON THE PROGRAM TAB"* then measured,
+//     with a probe on a real device, that `applyAwayPass` **never fires once** on
+//     the athlete's path: *"I HAVE BEEN FIXING THE READ IN THE WRONG READER."*
+//
+// **THE RESTORE WAS NOT PARTIAL, AND THAT WAS WORTH CHECKING RATHER THAN
+// ASSUMING.** Diffed `ff885cdb`'s `sessionResolver.ts` against today: the
+// current `applyAwayPass` is a SUPERSET — 42 lines then, 101 now, three call
+// sites where there was one, plus the rest-day fix and the combined-day name
+// strip Sam asked for afterwards. All four of `ff885cdb`'s files still carry
+// every line it added. **Nothing was dropped, so there is nothing to put back.**
+//
+// **THE CELL BELOW IS THE PART THAT KEEPS BEING RE-LEARNED**, and it is cheap:
+// the accepted-week read door does not import the resolver at all, so the pass
+// that handles club nights cannot run on it. The game still disappears because
+// `derivedWeekContract` has its OWN travel filter on that path — which is why
+// the symptom looks like "half a restore" and is not.
+console.log('\n[4] The club-night logic EXISTS — the read door just never calls it');
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('fs');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('path');
+  const src = path.join(__dirname, '..');
+  const resolver = fs.readFileSync(path.join(src, 'utils/sessionResolver.ts'), 'utf8');
+  const readDoor = fs.readFileSync(path.join(src, 'rules/acceptedEffectiveWeek.ts'), 'utf8');
+
+  // ANCHOR-FOUND FIRST. An `indexOf` that missed returns -1 and compares fine,
+  // and every claim below would then be about a function that is not there.
+  const passAt = resolver.indexOf('function applyAwayPass');
+  ok('[history] `applyAwayPass` still exists — do NOT rebuild it',
+    passAt > 0, 'if this reds, the pass was deleted AGAIN — see b62add9f before rewriting it');
+
+  const body = resolver.slice(passAt, passAt + 4000);
+  ok('[history] and it still handles the CLUB half, not only the fixture',
+    /isTeamTrainingOnly/.test(body) && /hasTeamTraining/.test(body),
+    'the club half of applyAwayPass is missing — THAT would be the partial restore');
+
+  // THE ACTUAL GAP, STATED AS A CELL SO IT IS NEVER RE-DIAGNOSED BY HAND.
+  ok('[the gap] the accepted-week read door does NOT reach the resolver',
+    !/sessionResolver/.test(readDoor),
+    'acceptedEffectiveWeek now imports the resolver — if that is deliberate, the '
+    + 'club nights should be coming off a pre-existing week and block [2] should '
+    + 'be GREEN. Re-run before assuming this cell is stale.');
 }
 
 const total = passed + failures.length;
