@@ -1129,3 +1129,46 @@ problem and both times reading the actual source fixed it in one step.** The
 finding survived — a bodyweight athlete really is prescribed a Back Squat — but
 **every intermediate explanation I offered for it was wrong**, which is worth more
 as a record than the finding is.
+
+
+---
+
+## 2026-08-13 — HANDOVER STATE, VERIFIED RATHER THAN ASSERTED
+
+**Every suite this seat touched, run at the close:**
+
+    test:away-flow               49 / 0
+    test:slot-coverage           51 / 51
+    test:day-first-timeline      48 / 0
+    test:program-control-durable 20 / 0
+    test:ruling-registry          7 / 1   ← the 1 is [3]'s false positive, pre-existing,
+                                            control-measured identical with my edit in and out
+
+**⚠ `test:compile` IS RED ON THE WORKING TREE AND IT IS NOT MINE:**
+
+    [tests] src/__tests__/repoLawGuardsTests.ts   4 error(s), baseline allows 0   ← NEW
+    [tests] src/__tests__/rulesKernelTests.ts     5 error(s), baseline allows 0   ← NEW
+
+**Both files are DIRTY** — verified by `git show HEAD:<path> | cmp`, not by
+`git status` — so another seat is live in each, and `rulesKernelTests` is the one
+`pace` named in its C4 work. **Neither appears in any commit of mine.** Flagged to
+them rather than touched: restoring a neighbour's file from HEAD to isolate the
+gate races their next write, and that is precisely what cost this checkout a
+morning.
+
+**IT PASSED ON EVERY ONE OF MY OWN COMMITS** — each was gated before landing.
+
+### WHAT THE NEXT DESKTOP SESSION SHOULD PICK UP, IN ORDER
+
+1. **THE SPLIT EQUIPMENT VOCABULARY** — the most athlete-visible defect found
+   today. A bodyweight-only athlete is prescribed a Back Squat. **One column on
+   `ExerciseTag`, populated for the lifts that need kit, carried onto the
+   generated row, plus routing the PROFILE answer (not just a temporary fact) to
+   `postGenerationConstraintValidation`.** It must be the whole unit — CLAUDE.md
+   forbids a field with no reader — which is why it was not started at the end of
+   a long session.
+2. **THE SLOT CENSUS CEILING** (`test:slot-coverage`, currently 1). It falls when
+   (1) lands, because the deficient day is deficient FOR that reason.
+3. **ITEMS 26 AND 42**, both named to their lines, both waiting only for a delta
+   measurement against the golden — **not for the golden to be clean**, which was
+   my own over-strict rule and is withdrawn.
