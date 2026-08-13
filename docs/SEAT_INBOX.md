@@ -15,8 +15,39 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-48. **BLOCKED-BY: other-agent — owned by `terminal` in its own text. SAM RULED
-    BOTH GAPS, AND BOTH ANSWERS ARE "DON'T INVENT ANYTHING". R-083, R-084.**
+48. **HALF BUILT BY THE TERMINAL (its owner). R-084 NEEDS NOTHING; R-083 IS
+    DELIVERED AT ONE SITE AND NEEDS A DIFFERENT SHAPE AT THE OTHER.**
+
+    **✅ WHAT IS BUILT — `188d6fad`, and the PROVE IT's second clause is met:**
+    the canonicaliser's restore no longer hands out a lift the athlete cannot do,
+    and **every laddered day now covers Sam's `:227` ladder — `SLOT CENSUS 1 -> 0`
+    of 6.** `EQUIPMENT CENSUS 5 -> 3 -> 1`. A leg day carries `Single-Leg RDL`
+    every week with no rotator objection, which is R-084 satisfied by doing
+    NOTHING — the pool of one is deliberate and nothing re-tags it.
+
+    **⚠ R-083's FIRST CLAUSE IS NOT MET AND THREE ATTEMPTS FAILED — full record
+    in `docs/STATUS_TERMINAL.md` (`b5a8f1d1`). Read it before attempt four.**
+    `Pull-Ups`, `Overhead Press` and `Inverted Row` still reach bodyweight
+    athletes from `completeCoachWorkoutsFromPlan`. Attempt 1 was INERT (filtering
+    rows that are discarded), attempt 2 OVER-REMOVED (built on the LOAD field, it
+    dropped `Walking Lunges` and kept `Pull-Ups`), attempt 3 BROKE THE LEG DAYS
+    (`missing=[squat,hinge]`, `Push-ups` on a lower day). **All backed out; the
+    tree is green.**
+
+    **THE DIAGNOSIS FOR WHOEVER TAKES IT:** this is not a filter. **Removing a row
+    silently re-shapes the day downstream** — the same `final_content_owns_name`
+    mechanism that renamed a prehab session to Mobility today. **The kit must be
+    known when the day is COMPOSED, not subtracted from afterwards.** Size it as
+    a composition unit, not a guard.
+    **ONE PIECE IS WORTH REBUILDING VERBATIM:** an apparatus table separating what
+    a lift REQUIRES from what it is LOADED with (`Pull-Ups` needs a bar though it
+    carries no load; `Walking Lunges` needs nothing though it is load-classed
+    `dumbbell`). Every answer was verified. **It cannot land alone** — measured,
+    it moves both ratchets the wrong way without the composition half.
+
+    **AND THE SHORTFALL SENTENCE IS UNTOUCHED:** R-083 also says the app must SAY
+    WHY a day is short (*"your kit has no way to train this"*, via R-029's
+    cause-branching). Not started.
 
     **OWNED BY `terminal`** (it asked).
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *bodyweight*, *vertical*,
