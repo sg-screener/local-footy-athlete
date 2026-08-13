@@ -133,6 +133,26 @@ its own first line ("Nothing to ask him").**
 reason I did not. That is the mechanism working as designed, and it is worth the
 line.
 
+### ⚠ NEAR-MISS TO WRITE DOWN: I REVERTED BY OVERWRITING FROM `HEAD`, IN A SHARED CHECKOUT
+
+**How I backed the build out was `git show HEAD:<path> > <path>` across five
+files. That is a BLIND OVERWRITE.** If another seat had had uncommitted work in
+any of those five at that instant, I would have destroyed it silently — the
+`b62add9f` class, arriving by a different door.
+
+**IT WAS A NEAR-MISS AND NOT A LOSS, and only because of the checks either
+side:** `cmp` said all five were byte-identical to `HEAD` BEFORE I started, and
+`cmp` said all five were clean AFTER. **Minutes later
+`src/data/exercisePoolsStrength.ts` came back dirty with another seat's R-080
+work** (a lunge/squat pool split) — theirs, written after my revert, and I have
+neither touched nor committed it. Verified by counting my own field in it: **0
+occurrences.**
+
+**THE RULE FOR NEXT TIME, AND IT COSTS NOTHING:** back out by restoring **MY OWN
+BACKUP** of the file (the `$SP/mine/` copies I already make before every control
+arm), never by piping `HEAD` over a path in a checkout three seats share. **A
+revert is a write, and every other write in this repo has to say whose it is.**
+
 ### 🛑 SECOND BUILD ATTEMPT — IT WAS WRITTEN, IT RAN, AND I REVERTED IT UNPROVEN
 
 **I got the harness working and wrote the whole change. Then the cell could not
