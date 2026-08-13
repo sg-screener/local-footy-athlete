@@ -71,9 +71,34 @@ ROW — IT IS A WHOLE SESSION CHANGING TYPE.**
 and the week's counts move with it — `recoverySessions 1 -> 2`,
 `byCategory.prehab 1 -> undefined`, `byCategory.recovery 1 -> 2`.
 
-**IT DOES NOT HAPPEN WITHOUT MY CODE (38-diff arm) AND IT STILL HAPPENS WITHOUT
-THE REGION FIX (145-diff arm), so it is `9b19244f` or the pool work, not
-`58641537`.** It may even be an IMPROVEMENT — those five rows are prehab
+**⇒ BISECTED AND ATTRIBUTED: it is `bf1681c1`, the GROUP-AWARE ROTATION.**
+Three files reverted together at each point, restore byte-verified every time:
+
+| tree | total diffs | prehab-day lines |
+| --- | --- | --- |
+| none of my code | 38 | **0** |
+| `9b19244f` (drift ladder only) | 60 | **0** |
+| `b4ec714b` (+ region fix + R-076) | 201 | **0** |
+| HEAD (+ grouping) | 201 | **11** |
+
+**⚠ AND THAT IS THE WORRYING PART, NOT A RELIEF. A ROTATION CHANGE MUST NOT BE
+ABLE TO CHANGE A SESSION'S TYPE.** `applyPoolRotation` picks WHICH VARIANT of an
+exercise a row gets. It has no business turning a `Prehab & Accessories` /
+Strength day into a `Mobility` / Recovery day, or moving the week from 1 recovery
+session to 2. That it can means something downstream classifies a session FROM
+ITS CONTENT, and a variant swap is enough to re-type the day.
+
+**WHY IT IS NOT REVERTED:** `bf1681c1` fixes measured, athlete-visible defects (a
+bicep curl as a PUSH day's accessory; `Bicep Curl | Bicep Curl | Hammer Curl`
+with no triceps), and **every guard is green** — scenarios 64/1 unchanged, pools
+479/0, slot-coverage 49/0, away-flow 49/0, conditioning-templates 91/0, typecheck
+459. Reverting reinstates known defects to hide an unexplained one.
+
+**THE REAL QUESTION FOR THE NEXT SESSION, and it is bigger than the golden:**
+find what re-types a session from its rows, and decide whether a day named
+`Prehab & Accessories` may become `Mobility` because one accessory rotated.
+**If a session's identity is derived from its content, then every rotation is a
+re-typing risk** — that is an architecture finding, not a golden update. It may even be an IMPROVEMENT — those five rows are prehab
 movements, not strength, and the day gained a row — **but I did not intend it,
 cannot yet explain it, and a golden re-record would bury it under "regenerate,
 looks routine" forever.**
