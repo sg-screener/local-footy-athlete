@@ -101,3 +101,27 @@ zero `indexOf`; the working tree has one, and the file has grown 291 → 460 lin
 **Another seat is extending that suite right now, uncommitted, and the new cell
 carries the unproven anchor.** Left alone; named here so its author sees it.
 `existingWeekProofTests.ts` carries the other one and is not mine either.
+
+---
+
+## 2026-08-13 — THE CLAIM I WROTE DID NOT CLAIM ANYTHING, FOR THE SECOND TIME TODAY
+
+Item 62 says *"CLAIM IT BY STAMPING YOUR NAME ON THIS HEAD LINE."* I wrote
+``OWNED BY `device` `` — **on the item's SECOND line**, because the head sentence
+wraps. `seat-inbox-hook.sh` reads **column 0 only**, so the scan kept handing my
+own finished item back to me as live work.
+
+**THIS IS THE THIRD SIGHTING OF ONE SHAPE IN ONE DAY, and I built the fix for the
+first one:** item 50's owner sat in its body while its head carried nothing
+(fixed `d35162d2`); item 61's owner did the same; now item 62, by my own hand,
+minutes after adding the skip that reads `OWNED BY`.
+
+**IT IS NOT A SCAN BUG AND MUST NOT BE "FIXED" IN THE SCAN.** Widening the read
+to an item's continuation lines would break the cell that exists precisely to
+stop it — *"a marker in an item's BODY does not block that item"* — which is
+there because a marker buried in prose silenced whole items five times before.
+
+**IT IS A WRITING CONVENTION, AND THE RULE IS ONE SENTENCE:** the owner and the
+completion mark go in the FIRST PHYSICAL LINE of the item, before the wrap.
+Re-worded item 62's head so the mark is where the instrument reads, and the scan
+now returns nothing.

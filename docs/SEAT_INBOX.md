@@ -14,9 +14,9 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 his instruction is standing authority, not history.**
 
 ## Unprocessed
-62. **SAM HAS SEEN ALMOST NONE OF TODAY'S WORK ON A REAL DEVICE. GET THE APP
-    RUNNABLE ON HIS PHONE AND HAND HIM ONE COMMAND. OWNED BY `device`
-    (claimed 2026-08-13). ✅ THE APP STARTS — a stranded dev-harness receipt was
+62. **✅ THE APP STARTS. OWNED BY `device`. SAM HAS SEEN ALMOST NONE OF TODAY'S WORK ON A REAL DEVICE.**
+    **GET THE APP RUNNABLE ON HIS PHONE AND HAND HIM ONE COMMAND.**
+    **(claimed 2026-08-13). A stranded dev-harness receipt was
     refusing every plain launch; `qa-start.sh` now clears it. Simulator only,
     never his phone. `docs/STATUS_DEVICE.md`.**
 
