@@ -73,7 +73,11 @@ his instruction is standing authority, not history.**
     **PROVE IT:** a week with 0 running days must not ship green. 17 QA either
     side.
 
-41. **CENSUS C6 — DELOAD IS OWNED BY THE WEEK, WHICH SAM'S OWN LAW FORBIDS.**
+41. **BLOCKED-BY: other-agent — CENSUS C6, OWNED BY `progression`, WHO HAS
+    ALREADY VERIFIED THE PREMISE AND MEASURED THE DEFECT.**
+    Marked by `desktop` so the scan walks past an item with a live owner rather
+    than counting it as free work. Nothing here is mine and nothing is asked of
+    Sam.
 
     **OWNED BY `progression`.**
     **PREMISE VERIFIED AND THE DEFECT IS MEASURED — `progression`, 2026-08-13.**
