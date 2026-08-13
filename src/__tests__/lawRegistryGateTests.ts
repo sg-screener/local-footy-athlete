@@ -407,6 +407,57 @@ run('the guards-with-no-law debt only shrinks', () => {
     `these rules gained a registry row — delete them from RULE_IDS_WITHOUT_A_ROW: ${paid.join(', ')}`);
 });
 
+// ── LAW-count-names-instrument, AND ITS FOUNDING CASE IS IN THIS REPO'S OWN
+//    STANDING ORDER ─────────────────────────────────────────────────────────
+//
+// THE LAW: *"a number names the INSTRUMENT'S unit, not the domain noun — emit
+// occurrences AND distinct."*
+//
+// THE LIVE VIOLATION IT IS BORN ON. `docs/SEAT_INBOX.md` item 13 — a STANDING
+// order, re-read at every stop — says **"the truth is `grep -c "state:
+// 'UNENFORCED'" src/rules/lawRegistry.ts`"** and adds that the terminal
+// miscounted twice, "both times one low". **The grep is one HIGH.** It emits
+// OCCURRENCES of a string; the domain noun is DISTINCT LAWS. They differ by
+// exactly the `readonly state: 'UNENFORCED';` line in the `LawGuard` union — a
+// TYPE DECLARATION, which is not a law and never was. So the two "miscounts"
+// were the data-derived instrument being right.
+//
+// WHAT THIS CELL HOLDS, and it is an IDENTITY rather than an inequality:
+//
+//     occurrences - distinct === type-declaration lines
+//
+// An inequality (`occurrences > distinct`) would pass for any wrong reason and
+// would red falsely the day the union is renamed. The identity says WHY they
+// differ and reds when a NEW non-row occurrence appears — which is the only
+// event that could make a future grep wrong in a new way.
+run('a count names its instrument: occurrences minus distinct is exactly the type declaration', () => {
+  const registrySource = fs.readFileSync(
+    path.join(repoRoot, 'src', 'rules', 'lawRegistry.ts'), 'utf8');
+
+  // The DOMAIN answer: rows, from the data.
+  const distinct = unenforcedIds(LAW_REGISTRY).length;
+  // The INSTRUMENT item 13 names: occurrences of a string in a file.
+  const occurrences = registrySource.split(/state: 'UNENFORCED'/).length - 1;
+  // The explained difference: the union member, not a law.
+  const typeDeclarations =
+    registrySource.split(/readonly state: 'UNENFORCED'/).length - 1;
+
+  assert(distinct > 0,
+    'no UNENFORCED rows at all — this cell would be vacuous; retire it with the last one');
+  assert(occurrences === distinct + typeDeclarations,
+    `the two instruments disagree by an UNEXPLAINED amount: grep sees ${occurrences} `
+    + `occurrences, the data has ${distinct} laws, and only ${typeDeclarations} type `
+    + `declaration(s) account for the gap. A NEW non-row occurrence has appeared, so any `
+    + `report quoting a grep count is now wrong in a way nobody has named.`);
+  assert(typeDeclarations >= 1,
+    'the `readonly state: \'UNENFORCED\'` union member is gone — item 13\'s grep and the '
+    + 'data would now agree by accident, and this cell is asserting a difference that no '
+    + 'longer has a cause. Re-derive the instruction before deleting this.');
+
+  console.log(`      (instrument check: grep ${occurrences} occurrences = `
+    + `${distinct} distinct laws + ${typeDeclarations} type declaration)`);
+});
+
 run('NO LAW IS UNENFORCED', () => {
   const unenforced = unenforcedIds(LAW_REGISTRY);
   assert(unenforced.length === 0,

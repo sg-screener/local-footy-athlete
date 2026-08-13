@@ -210,9 +210,10 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     // running tally, not something the ruling site records. Cite the site.
     ruledAt: 'AGENTS.md "A count names the instrument\'s unit, not the domain noun" (seat-endorsed 2026-08-07)',
     guard: {
-      state: 'UNENFORCED',
-      wouldTake: 'A lint over report-emitting suites requiring both counts wherever one is printed. The law is about how results are REPORTED, which no current gate inspects.',
-      receipt: 'test:power-counting and test:row-counting are in the chain but gate DOMAIN counting rules, not this reporting law.',
+      state: 'guarded',
+      by: 'test:law-registry',
+      chainStatus: 'in_chain',
+      receipt: 'BUILT 2026-08-13 (Agent: audit), on a live violation in this repo\'s own STANDING order. PARTIAL BY CONSTRUCTION, AND THE PRECEDENT IS LAW-no-completeness-claims: the general form — a lint over every report-emitting suite — is what `wouldTake` described and is NOT what shipped; this is the highest-value INSTANCE. THE FOUNDING CASE: docs/SEAT_INBOX.md item 13, re-read at every stop, says "the truth is `grep -c "state: \'UNENFORCED\'" src/rules/lawRegistry.ts`" and adds that the terminal miscounted twice, "both times one low". THE GREP IS ONE HIGH. It emits OCCURRENCES of a string; the domain noun is DISTINCT LAWS; they differ by exactly the `readonly state: \'UNENFORCED\'` line in the LawGuard union, which is a TYPE DECLARATION and not a law. So both "miscounts" were the data-derived instrument being RIGHT, and the standing instruction has been pointing every terminal at the wrong number. WHAT THE CELL HOLDS, and it is an IDENTITY not an inequality: occurrences - distinct === type-declaration lines (measured 28 - 27 === 1). An inequality would pass for any wrong reason and would red falsely the day the union is renamed; the identity says WHY they differ and reds the moment a NEW non-row occurrence appears, which is the only event that can make a future grep wrong in a NEW way. It also refuses to run vacuously: it asserts at least one UNENFORCED row exists, and asserts the union member still exists rather than silently asserting a difference with no cause. MUTATION-CHECKED BOTH WAYS: dropping the `+ typeDeclarations` accounting term REDS it, and adding a stray non-row `state: \'UNENFORCED\'` mention to lawRegistry.ts REDS it (that mutant restored, file verified byte-identical to HEAD). WHAT IT DOES NOT DO: it does not inspect how any OTHER suite reports its counts, so a report elsewhere printing one number without naming its instrument is still uncaught.',
     },
   },
   {
