@@ -99,11 +99,12 @@ export interface WeekLog {
    */
   byeMode: 'build' | 'recovery';
   /**
-   * Athlete readiness. DOSE ONLY: the conditioning PROGRESSION reads it (see
+   * The athlete's STANDING CAPACITY BAND, not his declaration about today.
+   * DOSE ONLY: the conditioning PROGRESSION reads it (see
    * `conditioningProgressionRules`), which is a declared dose consumer. It no
    * longer decides any tier cap in this file.
    */
-  readiness: 'low' | 'medium' | 'high';
+  capacity: 'low' | 'medium' | 'high';
 }
 
 export interface ConditioningResult {

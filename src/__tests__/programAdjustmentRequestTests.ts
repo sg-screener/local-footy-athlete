@@ -405,7 +405,7 @@ section('[3] confirmation applies and visible Monday includes conditioning');
     markedDays: {},
     athleteContext: {} as any,
     seasonPhase: null,
-    readiness: 'medium' as const,
+    capacity: 'medium' as const,
     activeInjury: null,
     activeConstraints: [],
   };
@@ -483,7 +483,7 @@ section('[3c] short bike proposal confirmation applies visible bike flush');
     markedDays: {},
     athleteContext: {} as any,
     seasonPhase: null,
-    readiness: 'medium' as const,
+    capacity: 'medium' as const,
     activeInjury: null,
     activeConstraints: [],
   };

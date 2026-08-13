@@ -96,7 +96,7 @@ let fetchCalls = 0;
     markedDays: {},
     athleteContext: {} as any,
     seasonPhase: null,
-    readiness: 'medium',
+    capacity: 'medium',
   } as ScheduleState);
 
 // Resolver mock walks the base week and substitutes overrides where present.

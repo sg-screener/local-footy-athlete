@@ -559,12 +559,12 @@ console.log('\n[5] Bye recovery is schedule-triggered, and only the mode decides
     missedTeamTraining: false,
     doubleGameWeek: false,
     weeksOffTraining: 0,
-    readiness: 'high',
+    capacity: 'high',
     byeMode: 'build',
     ...overrides,
   });
 
-  const lowOnBuildBye = getWeeklyCaps('In-season', weekLog({ readiness: 'low' }));
+  const lowOnBuildBye = getWeeklyCaps('In-season', weekLog({ capacity: 'low' }));
   const highOnBuildBye = getWeeklyCaps('In-season', weekLog({}));
   const recoveryBye = getWeeklyCaps('In-season', weekLog({ byeMode: 'recovery' }));
 
@@ -717,7 +717,7 @@ console.log('\n[A2] Contrast is gated to consistent/advanced');
     isBeginner: false,
     injuries: [],
     powerGoalNudge: false,
-    readiness: 'high' as const,
+    capacity: 'high' as const,
     offseasonSubphase: 'late_offseason' as const,
   };
   const hasContrast = (spec: unknown): boolean =>

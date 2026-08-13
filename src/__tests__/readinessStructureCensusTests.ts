@@ -44,7 +44,8 @@ import {
   STRUCTURE_DEBT_BASELINE,
   STRUCTURE_DEBT_FOUNDING_CEILING,
   SUPERSEDED_EXEMPTION_CLAIMS,
-  readinessEdgesIn,
+  capacityEdgesIn,
+  homonymBandComparisonsIn,
 } from '../data/readinessStructureCensus';
 import { stripComments } from './support/sourceText';
 
@@ -108,7 +109,7 @@ console.log('\n[2] Every declared file exists and carries the edges it claims');
     ok(`${entry.file}: exists`, fs.existsSync(filePath));
     if (!fs.existsSync(filePath)) continue;
 
-    const actual = readinessEdgesIn(fs.readFileSync(filePath, 'utf8'));
+    const actual = capacityEdgesIn(fs.readFileSync(filePath, 'utf8'));
     ok(`${entry.file}: declares its actual edge count (${actual})`,
       actual === entry.edges,
       `declared ${entry.edges}, found ${actual} — reclassify the change, do not retune the number`);
@@ -204,7 +205,7 @@ console.log('\n[5] COMPLETENESS — no readiness edge is undeclared');
   for (const rel of productFiles()) {
     if (declared.has(rel)) continue;
     if (rel === 'data/readinessStructureCensus.ts') continue; // the census itself
-    const count = readinessEdgesIn(fs.readFileSync(path.join(src, rel), 'utf8'));
+    const count = capacityEdgesIn(fs.readFileSync(path.join(src, rel), 'utf8'));
     if (count > 0) undeclared.push(`${rel} (${count})`);
   }
 
@@ -237,17 +238,58 @@ console.log('\n[7] The detector counts what it claims to count');
   // A census built on a detector nobody checked is a census of whatever the
   // regex happened to match. Pin it on both sides.
   ok('counts an equality test against a level',
-    readinessEdgesIn("if (readiness === 'low') return 1;") === 1);
+    capacityEdgesIn("if (capacity === 'low') return 1;") === 1);
   ok('counts a negated test against a level',
-    readinessEdgesIn("if (readiness !== 'high') return 2;") === 1);
+    capacityEdgesIn("if (capacity !== 'high') return 2;") === 1);
   ok('counts a qualified reference',
-    readinessEdgesIn("if (input.readiness === 'medium') return 3;") === 1);
+    capacityEdgesIn("if (input.capacity === 'medium') return 3;") === 1);
   ok('ignores comments',
-    readinessEdgesIn("// readiness === 'low' used to gate this\nconst x = 1;") === 0);
+    capacityEdgesIn("// capacity === 'low' used to gate this\nconst x = 1;") === 0);
   ok('ignores an unrelated identifier',
-    readinessEdgesIn("if (soreness === 'low') return 1;") === 0);
-  ok('ignores a readiness reference with no level comparison',
-    readinessEdgesIn('const r = deriveReadiness(profile);') === 0);
+    capacityEdgesIn("if (soreness === 'low') return 1;") === 0);
+  ok('ignores a capacity reference with no level comparison',
+    capacityEdgesIn('const c = profileCapacityBandOrNull(profile);') === 0);
+  // THE SPLIT ITSELF. After the rename the detector must be BLIND to the
+  // declaration's word — otherwise the census silently re-absorbs the homonym
+  // it was renamed to separate, and every count it reports is a count of both.
+  ok('is blind to the DECLARATION word — that is the whole rename',
+    capacityEdgesIn("if (readiness === 'low') return 1;") === 0);
+}
+
+console.log('\n[8] R-041 / R-064 — the homonym cannot re-merge');
+{
+  // Both rows read `UNENFORCED` from 2026-07-27 to 2026-08-13: "a naming
+  // hazard, not a behaviour; nothing reds if they re-merge." This is the
+  // something that reds.
+  //
+  // Pinned from both sides FIRST, so a detector that matches nothing cannot
+  // pass the sweep below by being inert — the exact way a green gate lies.
+  ok('[gate] the homonym detector catches a bare band comparison',
+    homonymBandComparisonsIn("if (readiness === 'low') return 1;") === 1);
+  ok('[gate] it catches a qualified one',
+    homonymBandComparisonsIn("if (input.readiness !== 'high') return 2;") === 1);
+  ok('[gate] it ignores comments, so a history note is not a violation',
+    homonymBandComparisonsIn("// readiness === 'low' used to gate this\nconst x = 1;") === 0);
+  ok('[gate] it ignores the DECLARATION\'s real shape',
+    homonymBandComparisonsIn('if (readiness.deloaded) return 1;') === 0);
+  ok('[gate] it ignores `low_readiness`, a §18 reduction reason',
+    homonymBandComparisonsIn("if (reasons.includes('low_readiness')) return 1;") === 0);
+  ok('[gate] it ignores the capacity band under its own name',
+    homonymBandComparisonsIn("if (capacity === 'low') return 1;") === 0);
+
+  const offenders: string[] = [];
+  for (const rel of productFiles()) {
+    if (rel === 'data/readinessStructureCensus.ts') continue; // the detector itself
+    const count = homonymBandComparisonsIn(fs.readFileSync(path.join(src, rel), 'utf8'));
+    if (count > 0) offenders.push(`${rel} (${count})`);
+  }
+  ok('no product file compares a `readiness` against a capacity level',
+    offenders.length === 0,
+    `the homonym has re-merged in: ${offenders.join(', ')}. `
+    + 'The DECLARATION is not a three-level band — it is {deloaded, sessionsOptional}, '
+    + 'a ReadinessSignal, or one of R-038\'s tiers. A three-level comparison on it is '
+    + 'the CAPACITY band wearing the wrong name. Rename it `capacity` (CapacityBand), '
+    + 'or read the declaration\'s real shape.');
 }
 
 const total = passed + failures.length;

@@ -63,7 +63,7 @@ const SCHEDULE = {
   teamTrainingDayNumbers: [2, 4],
   hasGame: true,
   gameDay: 6,
-  readiness: 'high',
+  capacity: 'high',
 } as const;
 
 function contractFor(over: Partial<WeeklyExposureContractInput>): ReturnType<typeof buildWeeklyExposureContract> {
@@ -145,7 +145,7 @@ console.log('\n[4] Contract V2 selects the same numbers for both modes');
   // owner first.
   for (const teamTrainingCount of [0, 1, 2, 3]) {
     for (const availableDayCount of [3, 4, 5, 6]) {
-      const base = { readiness: 'high' as const, availableDayCount, teamTrainingCount };
+      const base = { capacity: 'high' as const, availableDayCount, teamTrainingCount };
       const practice = resolveSection18PhasePlannerSelection({ ...base, mode: 'practice_match_week' });
       const game = resolveSection18PhasePlannerSelection({ ...base, mode: 'in_season_game_week' });
       ok(`V2 selection agrees at team=${teamTrainingCount} days=${availableDayCount}`,

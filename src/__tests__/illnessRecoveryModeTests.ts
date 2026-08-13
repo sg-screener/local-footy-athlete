@@ -192,7 +192,7 @@ function assertEverySurvivingSessionOptional(mc: GenMicro, label: string): void 
 function inSeasonContractInput(weekModeOverride?: 'optional_week') {
   return {
     seasonPhase: 'In-season' as const,
-    readiness: 'high' as const,
+    capacity: 'high' as const,
     selectedDayNumbers: [1, 2, 3, 4, 5],
     teamTrainingDayNumbers: [2, 4],
     hasGame: true,

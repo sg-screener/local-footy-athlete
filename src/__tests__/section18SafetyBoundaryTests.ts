@@ -182,7 +182,19 @@ function baseContract(args: {
   mode?: WeeklyExposureContractV2['identity']['mode'];
   weekKind?: Microcycle['weekKind'];
   teamParticipation?: Record<number, AnchorParticipationState>;
-  readiness?: 'low' | 'medium' | 'high';
+  /**
+   * THE FIXTURE HELD THE HOMONYM TOO, AND SPLITTING IT IS FREE.
+   *
+   * One `readiness` argument used to feed BOTH `capacity` (the standing band)
+   * and `cookedReadiness` (the declaration) — so a fixture asking for a
+   * detrained athlete silently also declared him wrecked, which is the exact
+   * conflation Sam cut in production on 2026-07-27.
+   *
+   * The split is behaviour-identical, not a judgement call: NO caller passes
+   * the old argument, so both arms were already `'medium'` and `false`.
+   */
+  capacity?: 'low' | 'medium' | 'high';
+  cookedReadiness?: boolean;
   reductions?: Section18AuthorisedReduction[];
 } = {}): WeeklyExposureContractV2 {
   const mode = args.mode ?? 'in_season_game_week';
@@ -204,7 +216,7 @@ function baseContract(args: {
     participationProvenance: 'derived_healthy_unrestricted',
     fixtureDays: [],
     capacity: args.capacity ?? 'medium',
-    cookedReadiness: args.readiness === 'low',
+    cookedReadiness: args.cookedReadiness ?? false,
     plannerSelected: {
       mainStrength: mode === 'in_season_bye_recovery' ? 2 : 3,
       coreConditioning: 1,

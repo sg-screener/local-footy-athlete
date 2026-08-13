@@ -706,7 +706,7 @@ function reResolveContractForActiveConstraints(args: {
   // ruling backwards: structure would be setting capacity, and the inference is
   // circular besides, since capacity is meant to be an input to the week rather
   // than a reading of it. Absent answers now reach the rubric, which refuses.
-  const readiness = deriveScheduleReadiness({ onboardingData: profile, signal: readinessSignal });
+  const capacity = deriveScheduleReadiness({ onboardingData: profile, signal: readinessSignal });
   const subphase = args.contract.identity.subphase;
   const offseasonSubphase =
     subphase === 'early_offseason' ||

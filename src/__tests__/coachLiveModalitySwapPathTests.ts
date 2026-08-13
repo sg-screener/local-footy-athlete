@@ -178,7 +178,7 @@ function emptyScheduleState(): ScheduleState {
     markedDays: {},
     athleteContext: {} as any,
     seasonPhase: null,
-    readiness: 'medium',
+    capacity: 'medium',
   } as ScheduleState;
 }
 

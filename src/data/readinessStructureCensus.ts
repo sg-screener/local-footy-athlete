@@ -58,18 +58,9 @@ export const READINESS_STRUCTURE_LAW = {
     + 'readiness and injury never set structure — injury flows through its own law family.',
 } as const;
 
-/**
- * A readiness EDGE: a comparison of a readiness value against one of its three
- * levels. That is the shape in which readiness reaches a decision — a bare
- * reference (`const r = deriveReadiness(x)`) decides nothing until it is
- * compared.
- *
- * Deliberately not a parser. It matches this repo's single idiom and is pinned
- * from both sides by `readinessStructureCensusTests` block [7], so a change in
- * what it counts fails loudly rather than silently re-baselining the census.
- */
-export function readinessEdgesIn(source: string): number {
-  const code = source
+/** Strip comments so a described edge is never counted as a live one. */
+function executableCode(source: string): string {
+  return source
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .split('\n')
     .filter((line) => {
@@ -78,7 +69,52 @@ export function readinessEdgesIn(source: string): number {
     })
     .map((line) => line.replace(/\s\/\/.*$/, ''))
     .join('\n');
-  return [...code.matchAll(/\breadiness\b[^;{}\n]{0,30}?(?:===?|!==?)\s*'(?:low|medium|high)'/gi)]
+}
+
+/**
+ * A CAPACITY EDGE: a comparison of the capacity band against one of its three
+ * levels. That is the shape in which capacity reaches a decision — a bare
+ * reference (`const c = deriveProfileReadiness(x)`) decides nothing until it is
+ * compared.
+ *
+ * RENAMED from `readinessEdgesIn` (2026-08-13) with the homonym split. It always
+ * counted the CAPACITY score — the census's own law says *"capacity/readiness
+ * affects DOSE only"* — and matching on the word `readiness` was the last thing
+ * keeping the two signals sharing an instrument. **A detector named after the
+ * wrong signal counts the wrong thing the moment the names diverge**, which is
+ * exactly what happened: the rename took every declared file to zero edges at
+ * once and this suite went 20 red.
+ *
+ * Deliberately not a parser. It matches this repo's single idiom and is pinned
+ * from both sides by `readinessStructureCensusTests` block [7], so a change in
+ * what it counts fails loudly rather than silently re-baselining the census.
+ */
+export function capacityEdgesIn(source: string): number {
+  return [...executableCode(source)
+    .matchAll(/\bcapacity\b[^;{}\n]{0,30}?(?:===?|!==?)\s*'(?:low|medium|high)'/gi)]
+    .length;
+}
+
+/**
+ * THE HOMONYM GATE — R-041 and R-064, enforced at last.
+ *
+ * Both rows have said `UNENFORCED` since 2026-07-27: *"a naming hazard, not a
+ * behaviour; **nothing reds if they re-merge**."* They re-merged. This counts
+ * the re-merge.
+ *
+ * After the split, the DECLARATION is never a three-level band — it is
+ * `{deloaded, sessionsOptional}` (`GenerationReadinessConstraint`), a
+ * `ReadinessSignal`, or one of R-038's named tiers. **So a `readiness`
+ * compared against `'low'`/`'medium'`/`'high'` can only be the capacity band
+ * wearing the declaration's name**, and the count must stay at zero.
+ *
+ * It is the same idiom as `capacityEdgesIn` pointed at the other word, so the
+ * two cannot drift apart: whatever one counts as an edge, the other counts as
+ * a violation.
+ */
+export function homonymBandComparisonsIn(source: string): number {
+  return [...executableCode(source)
+    .matchAll(/\breadiness\b[^;{}\n]{0,30}?(?:===?|!==?)\s*'(?:low|medium|high)'/gi)]
     .length;
 }
 
