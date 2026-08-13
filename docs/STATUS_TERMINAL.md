@@ -205,9 +205,11 @@ and this session has already spent three attempts on one adjacent hunt.**
 
 ### R-083's SECOND SITE: THREE ATTEMPTS, THREE DIFFERENT FAILURES, ALL BACKED OUT
 
-**The tree is green at `188d6fad` — SLOT 0/6, EQUIPMENT 1, suites 54/54. Nothing
-below is in it.** Recorded so the fourth attempt starts from the failures rather
-than repeating them.
+**⚠ SUPERSEDED — `188d6fad` AND `a55d1a6c` ARE REVERTED (see the section at the
+end of this file). SLOT 0/6 and EQUIPMENT 1 are VOID; both commits made §18
+reject the finished week.** The failure records below stand — they are why
+attempts 1-3 failed, and that is still true — but the "tree is green at
+`188d6fad`" baseline they were written against no longer exists.
 
 | attempt | result | why |
 | --- | --- | --- |
@@ -283,7 +285,8 @@ pull-up display a load estimate. **Two questions, two fields.**
 
 ### R-083's SECOND SITE — TRIED, OVER-REMOVED, BACKED OUT
 
-**The canonicaliser's restore is landed (`188d6fad`) and good.** The OTHER route
+**⚠ SUPERSEDED — the canonicaliser's restore was landed (`188d6fad`) and is now
+REVERTED; it was not good, it made §18 reject the week.** The OTHER route
 the same names arrive by — `completeCoachWorkoutsFromPlan`'s hardcoded fallback
 rows — is NOT, and the attempt is worth recording because it went one step too
 far.
