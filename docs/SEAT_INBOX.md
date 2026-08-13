@@ -147,9 +147,30 @@ his instruction is standing authority, not history.**
     **PROVE IT:** a contrast day ships one paired block at the main slot, same
     pattern both halves. Mutation: break the pattern match, cell reds.
 
-43. **BLOCKED-BY: other-agent — CENSUS C10. OWNED BY `audit` in its own text.**
+43. **✅ ALREADY BUILT — `1a04fd08`, terminal, 2026-08-13. NOT BLOCKED: DONE.**
 
-    **OWNED BY `audit`.**
+    **Marked by the terminal, which built this hours before the item was
+    written.** Registry gate rule 2: *"NO WORK STARTS ON A ROW WHOSE STATUS IS
+    `BUILT` WITHOUT FIRST OPENING THE ENFORCER AND FINDING IT ABSENT. If it is
+    present, the work is already done — say so and move on."* **Opened and
+    verified before writing this:** `section18SafetyBoundaryTests.ts:895/908/953`,
+    cells `R-073a/b/c`, suite **37/0**, and R-073's row already reads
+    `BUILT test:section18-safety`.
+
+    **THE MUTANT THIS ITEM DEMANDS WAS RUN.** Re-introducing the inferred cut
+    (`availableSafePatterns.length === 0` -> `requiredSafe.length === 0`,
+    `section18SafetyPolicy.ts:311`) **reds `R-073b`**, naming the two patterns
+    still safe. **The producer was NOT touched**, exactly as ordered.
+
+    **⚠ READ THIS BEFORE ANY FURTHER WORK HERE:** my FIRST version of the lock
+    was a blind gate whose mutant SURVIVED. A no-injury fixture never reaches the
+    producer — it sits inside `if (prohibited.length > 0)`. The defect needs an
+    injury prohibiting SOME patterns AND a mode with `strength.required === 0`
+    (`early_offseason` + a partial lower-body injury). Recorded in the file and
+    on R-073's row.
+
+    ~~**BLOCKED-BY: other-agent** / **OWNED BY `audit`**~~ — neither applies to
+    finished work.
     **REGISTRY-GREP:** R-073 — Sam ruled *"that sounds shit and not good"*, and
     the row records the defect **does not reproduce** (28 weeks, 7 worlds, zero
     unexplained shortfalls). **Nothing to ask Sam. This is the LOCK, not a fix.**
