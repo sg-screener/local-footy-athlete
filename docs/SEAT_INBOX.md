@@ -13,7 +13,43 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 **Sam's QUOTED WORDS were kept inline wherever an item still answers to them:
 his instruction is standing authority, not history.**
 
-## Unprocessed
+## Unprocessed63. **⚠ R-089's ORDERING IS CORRECT AND IT CANNOT FIX WHAT IT WAS AIMED AT.
+    NOTHING ASKS FOR SINGLE-LEG WORK ON ANY DAY. UNOWNED — STAMP THIS HEAD LINE
+    TO CLAIM IT.**
+
+    **THE RECEIPT IS THE NUMBER THAT DID NOT MOVE.** `laws` landed the ordering
+    and reported the census **byte-identical before and after: 92 deficient of
+    318, 174 worlds, 6 refused.** That is the correct result for an ordering and
+    it is also the proof that the athlete-facing defect is untouched.
+
+    **WHY, IN ONE LINE:** `coachingEngine.ts:5016` — the FB case plans
+    `['squat','hinge','push','pull']`. **Reordering four members that never
+    include a single-leg slot cannot produce single-leg work.** The union was
+    widened (`MainStrengthPattern` now carries `single_leg_knee` and
+    `single_leg_hip`) and **nothing populates them.**
+
+    **AND IT IS NOT ONLY FULL BODY.** `:5001`-`:5005` — a lower day plans
+    `['squat']`, `['hinge']`, or `['squat','hinge']`. **No archetype anywhere
+    asks for single-leg work.** Sam's five lower slots (Bible `:227`) have never
+    reached the planner; whatever single-leg work ships today arrives through
+    fallback rows, which is why it is missing wherever those do not fire.
+
+    **THE JOB: PUT THE SLOTS IN THE PLAN.** FB becomes six patterns; lower days
+    gain the two they own. **THIS IS AN ADDITION, NOT A SUBSTITUTION** — §18
+    refused twelve worlds when patterns were REMOVED; adding raises per-pattern
+    exposure counts rather than lowering them. **Measure §18 anyway and say the
+    number.** Then R-089's ordering starts doing work: it decides which slots
+    win when seven rows cannot hold everything.
+
+    **⚠ THE ROW BUDGET IS REAL. R-088 caps the app at SEVEN strength rows.**
+    Six patterns plus core is exactly seven with nothing spare — no vertical
+    push, no plyo. **If something has to give, that is a finding for Sam, NOT a
+    slot you drop quietly.** R-089 already ruled the tie-break: uncovered first,
+    then repeat, and every squat matched with a hinge, every single-leg knee
+    matched with a single-leg hip.
+
+    **DONE WHEN THE CENSUS MOVES.** 92 of 318 falls and the ratchet holds it
+    down. **A green suite with an unmoved census is not this item done.**
 62. **✅ THE APP STARTS. OWNED BY `device`. SAM HAS SEEN ALMOST NONE OF TODAY'S WORK ON A REAL DEVICE.**
     **GET THE APP RUNNABLE ON HIS PHONE AND HAND HIM ONE COMMAND.**
     **(claimed 2026-08-13). A stranded dev-harness receipt was
