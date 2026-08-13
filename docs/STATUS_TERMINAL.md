@@ -32,6 +32,60 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ DO NOT RE-RECORD `test:power-counting` YET — I FOUND A CHANGE I CANNOT EXPLAIN
+
+**The desktop refused to bless this golden and was RIGHT to.** Its diff is 201
+entries; a re-record claims all 201 are correct. **Attributed by control runs,
+uncapping the suite's own 25-diff display limit (which is what made everyone
+reason from a truncated sample):**
+
+| tree | diffs |
+| --- | --- |
+| none of my code | **38** |
+| all of mine except the region fix (`58641537`) | **145** |
+| all of mine | **201** |
+
+**MOST OF IT IS EXPLAINED AND CORRECT:**
+- `3 -> 5` strength days — `c69151d9`'s `:227` fallback, gaining `Single Leg RDL`
+  and `Leg Extension`.
+- `Bicep Curl (Barbell) -> Lateral Raise`, `Bicep Curl (Dumbbell) -> Incline Y
+  Raise`, `Hammer Curl -> Single-Arm Shrug` — the group-aware rotation
+  (`bf1681c1`) keeping shoulder work on push days.
+- `6 -> 5` days losing `Face Pulls` from a LOWER day — the region fix, correct.
+
+**AND THE `"Back Squat" -> undefined` SCARE IS AN INDEX SHIFT, NOT A LOSS.** Every
+one of those is `strengthRowNames.5` on a day that went 6 -> 5 rows: removing
+`Face Pulls` at index 2 shifts everything up one, so the squat moves 5 -> 4 and
+index 5 empties. **The squat survives. The removed row is always `Face Pulls`.**
+Answering the desktop's exact question: it is (a), not (b).
+
+**⚠ BUT ONE CHANGE IS MINE AND I CANNOT YET NAME WHICH COMMIT, AND IT IS NOT A
+ROW — IT IS A WHOLE SESSION CHANGING TYPE.**
+`scenarios.3.weeks.2.days.1`:
+
+    "Prehab & Accessories" / Strength / 5 strength rows
+      (Bird Dog, Lateral Lunge, Scap Push-Up, Single-Leg Calf Raise,
+       Swiss Ball Hamstring Curl)
+    ->  "Mobility" / Recovery / 0 strength rows, 6 total
+
+and the week's counts move with it — `recoverySessions 1 -> 2`,
+`byCategory.prehab 1 -> undefined`, `byCategory.recovery 1 -> 2`.
+
+**IT DOES NOT HAPPEN WITHOUT MY CODE (38-diff arm) AND IT STILL HAPPENS WITHOUT
+THE REGION FIX (145-diff arm), so it is `9b19244f` or the pool work, not
+`58641537`.** It may even be an IMPROVEMENT — those five rows are prehab
+movements, not strength, and the day gained a row — **but I did not intend it,
+cannot yet explain it, and a golden re-record would bury it under "regenerate,
+looks routine" forever.**
+
+**NEXT SESSION STARTS HERE, and it is cheap:** bisect all three files
+(`workoutCanonicalisation.ts`, `sessionSlotCoverage.ts`,
+`exercisePoolsStrength.ts`) across `9b19244f` / `b4ec714b` / `bf1681c1` and name
+the commit. Then decide improvement-or-defect on the merits, and only then
+re-record. **The suite's 25-diff cap hid this for two sessions — raise it while
+you work.**
+
+
 ### 2026-08-13 — R-076 LANDED (`b4ec714b`). NEXT: SUB-GROUP `isolation_upper`.
 
 **Sam ruled: *"face pull is shoulder work for sure"*.** Face Pull, Rear Delt Fly
