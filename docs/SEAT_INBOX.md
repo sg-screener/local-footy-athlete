@@ -91,8 +91,41 @@ his instruction is standing authority, not history.**
     Single-Leg RDL every time without the rotator objecting.
 
 
-47. **BLOCKED-BY: other-agent — SAM FINISHED THE EQUIPMENT MAP, AND CONDITIONING
-    NEEDS NO MAP AT ALL. R-082. 2026-08-13.**
+47. **BLOCKED-BY: sam — THE SHEETS ARE NOT FILLED IN. MEASURED BY THE TERMINAL
+    (its owner) BEFORE BUILDING, 2026-08-13.**
+
+    **⚠ THIS ITEM'S OWN PREMISE IS FALSE AND IT WOULD HAVE COST 177 INVENTED
+    ROWS.** It says *"Sam filled both sheets … take his words as signed"*. He has
+    not:
+
+    | sheet | rows | his column filled |
+    | --- | --- | --- |
+    | `EXERCISE_EQUIPMENT_FOR_SAM.md` | 103 | **0** |
+    | `..._PART2.md` | 74 | **0** |
+
+    The 8 non-empty cells in Part 1 read `← CHECK`, and every one sits beside a
+    `?` in the *Currently says* column. **The sheet's own header explains them:**
+    *"`?` means I could not tell. Those need you most."* **They are questions TO
+    him, not answers FROM him** — the third column is headed *"Change to"* and is
+    blank throughout both files.
+
+    **SO THE STRENGTH HALF CANNOT BE BUILT.** Reading the *Currently says* column
+    as signed would author the equipment map in his name from the app's existing
+    guesses — the guesses the sheet exists to correct. R-027 and this item's own
+    *"do not re-guess a row he wrote"* both forbid it, and the rows are exactly
+    where the app is already wrong: `Pull-Ups` and `Dips` currently say
+    *(nothing)*, which is why a bodyweight athlete is prescribed them.
+
+    **AND IT IS THE SAME DATA R-083 IS BLOCKED ON** (item 48). One answer from
+    him unblocks both — this is not two waits.
+
+    **WHAT IS STILL BUILDABLE WITHOUT HIM:** R-082's CONDITIONING half needs no
+    sheet at all — the modality already exists on the template and the five-row
+    map is in his own words below. **That half is not blocked; the strength half
+    is.**
+
+    ~~ORIGINAL HEAD: SAM FINISHED THE EQUIPMENT MAP, AND CONDITIONING NEEDS NO MAP
+    AT ALL. R-082.~~
 
     **OWNED BY `terminal`.** Extends item 46 — build them together.
     **MARKED BY `pace`, 2026-08-13 — the head line only, so the stop hook reads
