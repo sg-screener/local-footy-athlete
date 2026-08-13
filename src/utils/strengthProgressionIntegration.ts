@@ -29,7 +29,7 @@ import type {
   Workout,
   WorkoutExercise,
   SeasonPhase,
-  ReadinessLevel,
+  CapacityBand,
   SessionFeeling,
   LoggedWorkout,
   LoggedSet,
@@ -229,7 +229,7 @@ export interface StrengthProgressionContext {
    * WRITTEN by `buildProgressionContext` from the caller's phase clock.
    */
   offseasonSubphase?: OffseasonSubphase | null;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   daysToGame: number | null;
   daysSinceGame: number | null;
   doubleGameWeek: boolean;
@@ -802,7 +802,7 @@ export function applyStrengthProgression(
  */
 export function buildProgressionContext(
   seasonPhase: SeasonPhase,
-  readiness: ReadinessLevel,
+  readiness: CapacityBand,
   gameDates: string[],
   dateStr: string,
   injuries: Array<{ bodyArea: string; severity?: string }>,

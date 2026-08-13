@@ -1,6 +1,6 @@
 import type {
   InjurySeverity,
-  ReadinessLevel,
+  CapacityBand,
   SeasonPhase,
   WeekKind,
 } from '../types/domain';
@@ -28,7 +28,7 @@ import {
 
 export interface WeeklyExposureContractInput {
   seasonPhase: SeasonPhase;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   selectedDayNumbers: readonly number[];
   teamTrainingDayNumbers: readonly number[];
   hasGame: boolean;

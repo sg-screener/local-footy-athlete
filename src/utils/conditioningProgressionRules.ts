@@ -18,7 +18,7 @@
 
 import type {
   SeasonPhase,
-  ReadinessLevel,
+  CapacityBand,
 } from '../types/domain';
 import type { CompletionQuality } from './progressionHelpers';
 
@@ -40,7 +40,7 @@ export interface ConditioningAdjustment {
 
 export interface ConditioningProgressionInput {
   tier: ConditioningTierLabel;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   recentRPE: number;
   completionQuality: CompletionQuality;
   /** True when recentRPE/completion came from an athlete log instead of fallback defaults. */

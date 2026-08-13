@@ -31,7 +31,7 @@
  * score would just be quietly different.
  */
 
-import type { RecentTrainingLoad, ConditioningLevel, ReadinessLevel } from '../types/domain';
+import type { RecentTrainingLoad, ConditioningLevel, CapacityBand } from '../types/domain';
 
 /**
  * PROVENANCE: `bible_anchor`. The quotes below must still appear verbatim in
@@ -116,8 +116,16 @@ export function scoreCapacity(
 
 /* ══ Bands ══ */
 
-export interface CapacityBand {
-  readonly level: ReadinessLevel;
+/**
+ * One row of the rubric table: the score window that lands on a band.
+ *
+ * RENAMED from `CapacityBand` (2026-08-13) — the scalar band moved into
+ * `types/domain.ts` under that name when `ReadinessLevel` was retired, and this
+ * interface is a RANGE, not a band. Naming the row after the thing it maps to
+ * is how the collision happened.
+ */
+export interface CapacityBandRange {
+  readonly level: CapacityBand;
   readonly min: number;
   readonly max: number;
 }
@@ -127,13 +135,13 @@ export interface CapacityBand {
  * *"'A bit' + 'Average' = low is intended — show some training before we
  * build."* That case scores 2 and lands low by design, not by an off-by-one.
  */
-export const CAPACITY_BANDS: readonly CapacityBand[] = [
+export const CAPACITY_BANDS: readonly CapacityBandRange[] = [
   { level: 'low', min: 0, max: 2 },
   { level: 'medium', min: 3, max: 4 },
   { level: 'high', min: 5, max: 6 },
 ];
 
-export function capacityBandFor(score: number): ReadinessLevel {
+export function capacityBandFor(score: number): CapacityBand {
   const band = CAPACITY_BANDS.find((b) => score >= b.min && score <= b.max);
   if (!band) {
     // Unreachable while `scoreCapacity` owns the input, and loud if that ever
@@ -168,7 +176,7 @@ export function canScoreCapacity(profile: {
 export function capacityFor(
   recentTrainingLoad: RecentTrainingLoad | undefined,
   conditioningLevel: ConditioningLevel | undefined,
-): { score: number; level: ReadinessLevel } {
+): { score: number; level: CapacityBand } {
   const score = scoreCapacity(recentTrainingLoad, conditioningLevel);
   return { score, level: capacityBandFor(score) };
 }

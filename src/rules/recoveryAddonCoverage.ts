@@ -1,4 +1,4 @@
-import type { DayOfWeek, ReadinessLevel, SeasonPhase, WeekKind } from '../types/domain';
+import type { DayOfWeek, CapacityBand, SeasonPhase, WeekKind } from '../types/domain';
 import type { ExerciseCategory } from '../data/exercisePools';
 import type { InjuryKey } from '../data/exerciseTags';
 import {
@@ -50,7 +50,7 @@ export interface RecoveryAddonCoverageContext {
   daysUntilGame?: number | null;
   availabilityDaysPerWeek?: number;
   availableTrainingDays?: readonly DayOfWeek[];
-  readiness?: ReadinessLevel;
+  readiness?: CapacityBand;
   readinessDeloaded?: RecoveryAddonReadinessTier;
   activeInjuries?: readonly RecoveryAddonActiveInjury[];
 }

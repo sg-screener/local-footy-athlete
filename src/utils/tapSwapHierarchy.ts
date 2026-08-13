@@ -6,7 +6,7 @@ import {
 } from '../data/exerciseTags';
 import type { EquipmentTag } from '../data/exercisePools';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
-import type { OnboardingData, ReadinessLevel } from '../types/domain';
+import type { OnboardingData, CapacityBand } from '../types/domain';
 import {
   getReplacementChoicesForBucket,
   type SubstitutionHierarchyTier,
@@ -54,7 +54,7 @@ export interface TapSwapEnvironment {
   primaryInjury: TapSwapPrimaryInjury | null;
   availableEquipment: EquipmentClass[];
   availableEquipmentTags: EquipmentTag[];
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   hasEquipmentConstraint: boolean;
   medicalStop: boolean;
 }
@@ -107,10 +107,10 @@ function injuryLevel(severity: number): 'caution' | 'avoid' {
 }
 
 function lowerReadiness(
-  left: ReadinessLevel,
-  right: ReadinessLevel,
-): ReadinessLevel {
-  const rank: Record<ReadinessLevel, number> = { low: 0, medium: 1, high: 2 };
+  left: CapacityBand,
+  right: CapacityBand,
+): CapacityBand {
+  const rank: Record<CapacityBand, number> = { low: 0, medium: 1, high: 2 };
   return rank[left] <= rank[right] ? left : right;
 }
 

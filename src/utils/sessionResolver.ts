@@ -30,7 +30,7 @@ import type {
   Microcycle,
   TrainingProgram,
   SeasonPhase,
-  ReadinessLevel,
+  CapacityBand,
   DayOfWeek,
   WeekScopedWorkoutOverlay,
   LoggedWorkout,
@@ -171,7 +171,7 @@ export interface ScheduleState {
    * caps to modulate. Do not turn the null into a tier here (Sam, 2026-07-30):
    * that is the silent default the rubric's fail-loud exists to kill.
    */
-  readiness: ReadinessLevel | null;
+  readiness: CapacityBand | null;
   /** Session feedback keyed by ISO date. Used to feed feeling/patterns into progression. */
   sessionFeedback?: Record<string, SessionFeedback>;
   /** Logged strength history, newest first, when already available to the caller. */

@@ -1,4 +1,4 @@
-import type { OnboardingData, ReadinessLevel } from '../types/domain';
+import type { OnboardingData, CapacityBand } from '../types/domain';
 import { MissingCapacityAnswerError, capacityFor } from '../data/capacityRubric';
 import { isShortOnTime } from '../rules/timeAvailabilityPolicy';
 
@@ -42,7 +42,7 @@ export interface ReadinessSignal {
  */
 export function deriveProfileReadiness(
   onboardingData: OnboardingData | null | undefined,
-): ReadinessLevel {
+): CapacityBand {
   return capacityFor(
     onboardingData?.recentTrainingLoad,
     onboardingData?.conditioningLevel,
@@ -69,7 +69,7 @@ export function deriveProfileReadiness(
  */
 export function profileCapacityBandOrNull(
   onboardingData: OnboardingData | null | undefined,
-): ReadinessLevel | null {
+): CapacityBand | null {
   try {
     return deriveProfileReadiness(onboardingData);
   } catch (error) {
@@ -78,15 +78,15 @@ export function profileCapacityBandOrNull(
   }
 }
 
-function lowerOf(a: ReadinessLevel, b: ReadinessLevel): ReadinessLevel {
-  const rank: Record<ReadinessLevel, number> = { low: 0, medium: 1, high: 2 };
+function lowerOf(a: CapacityBand, b: CapacityBand): CapacityBand {
+  const rank: Record<CapacityBand, number> = { low: 0, medium: 1, high: 2 };
   return rank[a] <= rank[b] ? a : b;
 }
 
 export function deriveScheduleReadiness(args: {
   onboardingData?: OnboardingData | null;
   signal?: ReadinessSignal | null;
-}): ReadinessLevel {
+}): CapacityBand {
   const base = deriveProfileReadiness(args.onboardingData);
   const signal = args.signal;
   if (!signal) return base;

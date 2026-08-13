@@ -53,7 +53,7 @@
  * force an unavailable implement).
  */
 
-import type { SeasonPhase, ReadinessLevel } from '../types/domain';
+import type { SeasonPhase, CapacityBand } from '../types/domain';
 import { deloadPowerDose } from './deloadWeekRules';
 import type { OffseasonSubphase } from './offseasonSubphase';
 
@@ -93,7 +93,7 @@ export interface PowerPrimerContext {
   gOffset: number;
   /** True when the strength session lands on a team-training day. */
   isTeamDay: boolean;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   isBeginner: boolean;
   /** Experienced enough for a G-2 neural primer (2+ years training age). */
   experienced: boolean;

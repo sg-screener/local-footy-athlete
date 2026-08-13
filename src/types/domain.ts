@@ -244,8 +244,29 @@ export type ProgramPhase = 'Post-Season' | 'Early-Off-Season' | 'Base-Building' 
 
 // ─── Coaching Engine Types ───
 
-/** Readiness classification based on consistency, fitness, injuries, sprint exposure, season */
-export type ReadinessLevel = 'low' | 'medium' | 'high';
+/**
+ * THE ATHLETE'S STANDING CAPACITY BAND — "this athlete's baseline is low".
+ *
+ * RENAMED from `ReadinessLevel` (Sam, 2026-08-13) to end the homonym R-041 and
+ * R-064 have recorded, UNENFORCED, since 2026-07-27. Two unrelated signals were
+ * both called "readiness" and nothing in the repo could tell them apart:
+ *
+ *   CAPACITY (this type)   — computed from two onboarding answers by
+ *   `data/capacityRubric.ts`. Reads no facts. Changes only when the PROFILE
+ *   changes. It affects DOSE only; it never sets structure
+ *   (`data/readinessStructureCensus.ts`).
+ *
+ *   THE DECLARATION        — "tired" / "wrecked" / "absolutely cooked", said by
+ *   the athlete about TODAY (R-038). It keeps the name `readiness`:
+ *   `ReadinessSignal`, `GenerationReadinessConstraint`, `rules/readinessIllnessLaw.ts`.
+ *
+ * The two must never be assigned to one another. Sam cut that conflation once
+ * already, at `calculateReadiness`'s laundering site and at Contract v2's
+ * `cookedReadiness` — a detrained athlete was handed the safety envelope of a
+ * man who had declared himself wrecked. The rename is what makes the next
+ * attempt a COMPILE ERROR rather than a comment somebody has to read.
+ */
+export type CapacityBand = 'low' | 'medium' | 'high';
 
 /** Session tier — determines priority and skip-ability */
 export type SessionTier = 'core' | 'optional' | 'recovery';

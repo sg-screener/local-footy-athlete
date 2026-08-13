@@ -1,11 +1,11 @@
-import type { ReadinessLevel } from '../types/domain';
+import type { CapacityBand } from '../types/domain';
 import type { OffseasonConditioningCategory } from './offseasonSubphasePolicy';
 import type { PreseasonSubphase } from './preseasonSubphase';
 
 export type PreseasonConditioningCategory = OffseasonConditioningCategory;
 
 export interface PreseasonSubphasePolicyContext {
-  readiness?: ReadinessLevel | null;
+  readiness?: CapacityBand | null;
   teamTrainingExposures?: number | null;
   hasPracticeMatch?: boolean;
 }

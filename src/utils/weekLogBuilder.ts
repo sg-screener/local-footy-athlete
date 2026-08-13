@@ -22,7 +22,7 @@ import type { ResolvedDay } from './sessionResolver';
 import type { WeekLog } from './conditioningRules';
 import type { ConditioningTier } from '../data/exerciseTags';
 import type { CalendarDayType } from '../store/calendarStore';
-import type { ReadinessLevel } from '../types/domain';
+import type { CapacityBand } from '../types/domain';
 import { CONDITIONING_META } from '../data/exerciseTags';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 
@@ -49,7 +49,7 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 export function buildWeekLog(
   resolvedDays: ResolvedDay[],
   markedDays: Record<string, CalendarDayType>,
-  readiness: ReadinessLevel = 'medium',
+  readiness: CapacityBand = 'medium',
   conditioningPlaced: WeekLog['sessions'] = [],
   byeMode: WeekLog['byeMode'] = 'build',
 ): WeekLog {

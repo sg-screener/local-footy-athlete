@@ -1,4 +1,4 @@
-import type { ReadinessLevel } from '../types/domain';
+import type { CapacityBand } from '../types/domain';
 import type { OffseasonSubphase } from './offseasonSubphase';
 
 export type OffseasonConditioningCategory =
@@ -28,7 +28,7 @@ export type OffseasonSpeedSprintPolicy =
   | 'existing_late_offseason_gate';
 
 export interface OffseasonSubphasePolicyContext {
-  readiness?: ReadinessLevel | null;
+  readiness?: CapacityBand | null;
 }
 
 export interface OffseasonSubphasePolicy {

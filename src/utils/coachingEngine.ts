@@ -16,7 +16,7 @@
 
 import type {
   SeasonPhase,
-  ReadinessLevel,
+  CapacityBand,
   SessionTier,
   OnboardingData,
   OnboardingInjury,
@@ -572,7 +572,7 @@ export function classifyGenerationSession(
 
 export interface CoachingPlan {
   // Readiness
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   readinessFactors: string[];
 
   // Hard exposure budget
@@ -603,7 +603,7 @@ export interface CoachingPlan {
 
 export interface AIConstraints {
   phase: SeasonPhase;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   hardExposureCap: number;
   existingHardExposures: number;
   coreSessionsToProgram: number;
@@ -739,7 +739,7 @@ function section18ModeAndSubphase(
 
 function buildParallelSection18Contract(args: {
   inputs: CoachingInputs;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   weeklyPlan: readonly SessionAllocation[];
   legacy: WeeklyExposureContract;
 }): WeeklyExposureContractV2 {
@@ -938,7 +938,7 @@ function testingEffectReason(
  * owner, and reports. That is the point: one representation of the rubric.
  */
 export function calculateReadiness(inputs: CoachingInputs): {
-  level: ReadinessLevel;
+  level: CapacityBand;
   factors: string[];
 } {
   // Throws when either answer is missing — Sam's ruling, same law as the
@@ -1847,7 +1847,7 @@ function buildWeeklyPlan(
   optional: number,
   recovery: number,
   /** Profile-derived readiness — read by finisherEligibility (4A). */
-  readiness: ReadinessLevel,
+  readiness: CapacityBand,
   programmingBias: ComposedProgrammingBias,
   weeklyExposureContract: WeeklyExposureContract | null,
   section18Contract: WeeklyExposureContractV2 | null,
@@ -8654,7 +8654,7 @@ function getOptionalFocus(inputs: CoachingInputs): string {
 
 function buildAIConstraints(
   inputs: CoachingInputs,
-  readiness: ReadinessLevel,
+  readiness: CapacityBand,
   hardCap: number,
   existingHard: number,
   core: number,

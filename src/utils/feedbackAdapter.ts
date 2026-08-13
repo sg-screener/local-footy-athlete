@@ -24,7 +24,7 @@
  */
 
 import type { SessionFeedback, FeedbackSoreness } from '../store/programStore';
-import type { Workout, WorkoutType, SessionFeeling, ReadinessLevel } from '../types/domain';
+import type { Workout, WorkoutType, SessionFeeling, CapacityBand } from '../types/domain';
 import { feedbackComponentKindForWorkoutType } from './sessionComponents';
 import { normalizeStrengthIntent } from '../rules/strengthPatternContributions';
 
@@ -285,7 +285,7 @@ function difficultyFromFeeling(feeling?: string | null): number {
 
 // ─── Readiness Adjustment ───
 
-const READINESS_DOWN: Record<ReadinessLevel, ReadinessLevel> = {
+const READINESS_DOWN: Record<CapacityBand, CapacityBand> = {
   high: 'medium',
   medium: 'low',
   low: 'low',
@@ -296,9 +296,9 @@ const READINESS_DOWN: Record<ReadinessLevel, ReadinessLevel> = {
  * Returns adjusted readiness (or original if no bias).
  */
 export function applyReadinessBias(
-  readiness: ReadinessLevel,
+  readiness: CapacityBand,
   adaptation: AdaptationResult,
-): ReadinessLevel {
+): CapacityBand {
   if (adaptation.readinessBias === 'down') {
     return READINESS_DOWN[readiness];
   }

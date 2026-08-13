@@ -8,7 +8,7 @@
  * observational in this slice and does not replace the legacy write gate yet.
  */
 
-import type { ReadinessLevel, SeasonPhase, WeekKind } from '../types/domain';
+import type { CapacityBand, SeasonPhase, WeekKind } from '../types/domain';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import type { MainStrengthPattern } from './strengthPatternContributions';
@@ -515,7 +515,7 @@ export interface Section18ContractV2Input {
   teamParticipation?: Readonly<Record<number, AnchorParticipationState>>;
   participationProvenance?: Section18AnchorContract['participationProvenance'];
   currentProductionClaimsAnchorCredit?: boolean;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   cookedReadiness?: boolean;
   plannerSelected: {
     mainStrength: number | null;
@@ -792,7 +792,7 @@ interface Section18ModePolicy {
 
 export interface Section18PhasePlannerSelectionInput {
   mode: Section18WeekMode;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   availableDayCount: number;
   teamTrainingCount: number;
   weekKind?: WeekKind;

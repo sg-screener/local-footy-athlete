@@ -30,7 +30,7 @@
  * hard filter as recovery.
  */
 
-import type { SeasonPhase, ReadinessLevel } from '../types/domain';
+import type { SeasonPhase, CapacityBand } from '../types/domain';
 import type { ConditioningTier } from '../data/exerciseTags';
 import type { DerivedSessionType } from './sessionBuilder';
 
@@ -81,7 +81,7 @@ export function resolveRecovery(
   daysToGame: number | null,
   daysSinceGame: number | null,
   seasonPhase: SeasonPhase,
-  readiness: ReadinessLevel,
+  readiness: CapacityBand,
   weekRecoveryCount: number,
   recentHighTier: boolean,
 ): RecoveryResult | null {

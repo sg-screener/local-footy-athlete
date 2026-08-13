@@ -23,7 +23,7 @@
 import type {
   SessionFeeling,
   SeasonPhase,
-  ReadinessLevel,
+  CapacityBand,
 } from '../types/domain';
 import {
   type CompletionQuality,
@@ -44,7 +44,7 @@ export type RPEDelta = 'push' | 'none' | 'pull';
 export interface ProgressionInput {
   exerciseRole: ExerciseRole;
   seasonPhase: SeasonPhase;
-  readiness: ReadinessLevel;
+  readiness: CapacityBand;
   completionQuality: CompletionQuality;
   weeksSinceDeload: number;
   consecutiveBuildWeeks: number;

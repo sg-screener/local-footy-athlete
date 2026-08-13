@@ -19,7 +19,7 @@
 
 import type { SessionFeedback, FeedbackFeeling, FeedbackCompletion } from '../store/programStore';
 import type { StrengthProgressionContext } from './strengthProgressionIntegration';
-import type { ReadinessLevel, SessionFeeling } from '../types/domain';
+import type { CapacityBand, SessionFeeling } from '../types/domain';
 
 // ─── Types ───
 
@@ -67,7 +67,7 @@ const FEELING_SCORE: Record<FeedbackFeeling, number> = {
 
 // ─── Readiness / Feeling Step Maps ───
 
-const READINESS_DOWN: Record<ReadinessLevel, ReadinessLevel> = {
+const READINESS_DOWN: Record<CapacityBand, CapacityBand> = {
   high: 'medium',
   medium: 'low',
   low: 'low',  // floor — cannot go lower
@@ -272,9 +272,9 @@ export function applyPatternBiases(
  * Only one downgrade regardless of how many flags are active.
  */
 export function biasConditioningReadiness(
-  readiness: ReadinessLevel,
+  readiness: CapacityBand,
   summary: FeedbackPatternSummary | null,
-): ReadinessLevel {
+): CapacityBand {
   if (!summary) return readiness;
 
   const flags = summary.activeFlags;
