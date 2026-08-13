@@ -5945,7 +5945,28 @@ function buildWeeklyPlan(
           .map((session, index) => ({ session, index }))
           .filter(({ session }) => {
             if (!session.dayOfWeek) return false;
-            if (session.isTeamDay) return false;
+            // ── R-079 clause 3: A PRE-SEASON TEAM NIGHT MAY CARRY FLYING SPRINTS
+            //
+            // **Sam, 2026-08-13: *"in pre season you can do flying sprints when
+            // there is team training because you will get accelerations at
+            // footy"*.** The club supplies the accelerations; the app supplies
+            // the top end. So a team night is EXCLUDED everywhere except
+            // pre-season, where he has ruled the double-up is wanted.
+            //
+            // IT IS SAFE TO COUNT, BECAUSE THE UNIT IS NIGHTS. R-079's other
+            // half made `sprintHighSpeed.achievedCount` count DISTINCT DAYS, so
+            // a Tuesday holding both a team night and this dose is ONE night,
+            // not two. Under the old source count his own instruction would have
+            // read as a breach of the cap.
+            //
+            // THE DOSE IS `true_speed` — top-end work, which is exactly the
+            // quality he named. **What he wants avoided is ACCELERATION on a
+            // team night, and this app has no `acceleration` speed kind at all
+            // (`SpeedWorkKind` is true_speed | repeated_sprint | cod), so that
+            // half of his rule cannot yet be expressed and is recorded UNENFORCED
+            // on R-079's row rather than silently assumed.**
+            const preseasonTeamNightAllowed = inputs.seasonPhase === 'Pre-season';
+            if (session.isTeamDay && !preseasonTeamNightAllowed) return false;
             if (session.speedWorkKind) return false;
             if (!plannedPatternsForAllocation(session).some(
               (pattern) => pattern === 'push' || pattern === 'pull',
@@ -5955,7 +5976,10 @@ function buildWeeklyPlan(
 
             const dayNum = dayNameToNumber(session.dayOfWeek);
             if (dayNum < 0) return false;
-            if (teamDayNumSet.has(dayNum)) return false;
+            // Same ruling, second door: this is the day-number form of the
+            // team-night exclusion above and has to move with it, or the first
+            // relaxation is inert.
+            if (teamDayNumSet.has(dayNum) && !preseasonTeamNightAllowed) return false;
             const prevD = (dayNum + 6) % 7;
             const nextD = (dayNum + 1) % 7;
             if (teamDayNumSet.has(prevD) || teamDayNumSet.has(nextD)) return false;
