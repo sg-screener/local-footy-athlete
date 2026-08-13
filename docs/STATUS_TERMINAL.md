@@ -32,6 +32,54 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ A BODYWEIGHT-ONLY ATHLETE IS PRESCRIBED A BARBELL BACK SQUAT
+
+**The census world (`test:slot-coverage`, off-season, `equipment: ['Bodyweight
+Only']`, 5 days) ships:**
+
+    d1 Full Body Strength  Glute Bridge · Push-ups · Inverted Row · Pallof Press ·
+                           **Back Squat** · **Romanian Deadlift** · **Overhead Press** · Pull-Ups
+    d3 Lower Squat         Bicep Curls · **Tricep Pushdowns** · Tib Raises · Pallof Press · **Back Squat**
+
+**He cannot do any of the bolded lifts.** This is more athlete-facing than the
+slot gap I was chasing — a day you physically cannot perform beats a day that is
+unbalanced.
+
+**THE EQUIPMENT FILTER IS INNOCENT AND I PROVED IT BEFORE BLAMING IT.** Driven
+directly, `applyPoolRotation` substitutes correctly for every spelling of the
+kit:
+
+    ['Bodyweight Only'] -> Bodyweight Squat
+    ['Bodyweight only'] -> Bodyweight Squat
+    ['bodyweight']      -> Bodyweight Squat
+    []                  -> Back Squat        (correct: no kit stated, no filter)
+    FULL_GYM            -> Back Squat        (correct)
+
+**SO THE BARBELL ARRIVES DOWN A PATH THAT NEVER ASKS.** Rotation — and therefore
+equipment filtering — is applied at `defaultProgram.ts:2477`
+(`applyPoolRotation(ex.name, rotationContext, poolUsage, effectiveAthletePrefs)`),
+which is the EDGE-normaliser path. **`completeCoachWorkoutsFromPlan` (`:1288`)
+builds its additions straight from `fallbackExercisesForPlanEntry` — hardcoded
+names, `'Back Squat'` among them — and returns them without rotating or
+filtering.** A day the edge omits is therefore composed of literal barbell lifts
+whatever kit the athlete has.
+
+**THIS IS THE SAME FALLBACK I GREW FOR `:227`**, so the `single_leg_knee` slot it
+now emits (`Reverse Lunges`, `Single Leg RDL`) reaches a bodyweight athlete as
+names he cannot use either.
+
+**WHY IT IS NOT FIXED IN THIS TURN:** routing those additions through
+`applyPoolRotation` with prefs is a contained change but it moves generated
+output on EVERY edge-omitted day, so it owes `test:scenarios` + `test:qa` either
+side and a fresh golden read. **Named with its cost rather than started at the
+tail of a session — item 34's own rule.**
+
+**AND IT LIKELY PAYS R-080's REMAINDER FOR FREE**, which is the desktop's
+prediction and worth testing first: the census day's `single_leg_knee` is missing
+because kit-requiring lifts took the slots, not because bodyweight options were
+refused.
+
+
 ### STANDING ORDER 1a PERFORMED — NOTHING NEW TO MERGE, and the order says be quiet
 
 **72 `codex/*` branches; 42 carry commits not in `main`; ALL 42 fork from
