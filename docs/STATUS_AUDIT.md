@@ -45,6 +45,64 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅✅ 2026-08-13 — **28-C1 IS ANSWERED.** `autoPlacementCategories`' ORDER IS INERT; **PASS 1 SETS THE RANK**
+
+**This reconciles the two measurements that contradicted each other all day, and
+BOTH were right about their own arm.**
+
+**THE EXPERIMENT.** Promote `cod_decel` to FIRST in `autoPlacementCategories`
+(`return codPermitted ? ['cod_decel', ...base] : base`), instrument
+`pickPlacementCondCategories`' return, generate a pre-season no-club world:
+
+| | `placementPool` | `out` (what the consumers walk) |
+| --- | --- | --- |
+| **before** | `["vo2","aerobic_base","glycolytic","cod_decel"]` | `["vo2","glycolytic","aerobic_base","cod_decel"]` |
+| **promoted** | `["cod_decel","vo2","aerobic_base","glycolytic"]` | `["vo2","glycolytic","aerobic_base","cod_decel"]` |
+
+**THE POOL CHANGED. `out` DID NOT. COD IS STILL LAST.** Same in all 8 observed
+shapes, 189 calls.
+
+**WHY, AND IT IS THE WHOLE ANSWER.** `pickPlacementCondCategories` has three
+passes, and **PASS 1 runs first over `rankedForZone`** — which is
+`categoryPriority` (off-season / non-mid-pre-season) or `zonePriority[zone]`.
+**NEITHER LIST EVER CONTAINS `cod_decel`.** Pass 1 therefore emits every other
+uncovered category first, and `pushUniqueCategory` **appends** — so by the time
+Pass 2 walks `placementPool`, COD can only ever land at the END, wherever it sits
+in that pool.
+
+> **`autoPlacementCategories` DOES NOT SET THE ORDER. IT ONLY SETS MEMBERSHIP.**
+> The lever is `categoryPriority` / `zonePriority`, and COD is in neither.
+
+**SO BOTH PRIOR RESULTS WERE HONEST AND NEITHER WAS COMPLETE:**
+- **The other seat's rank experiment** — *"promoted to first, zero either way,
+  fingerprints byte-identical"* — is **exactly right**, and now it has a
+  mechanism instead of a mystery. It moved the wrong list.
+- **My "ranked last, never reached"** was the right MECHANISM aimed at the wrong
+  list. **I withdrew it once on their evidence; it is now re-established with a
+  correction, not restored as originally written.**
+- **28-C1h's "ZERO eligibility hits"** reproduces: `ZZELIG` fired **0 times**
+  even in the promoted arm. The candidate genuinely never arrives.
+- **28-C1's "`permitted=true` on all 108 calls"** reproduces: `codPermitted=true`,
+  `phase="Pre-season"`, `teamDays=[]`. **My own hypothesis that it was FALSE is
+  REFUTED — measured, and I was wrong.**
+
+**WHAT THIS MEANS FOR SAM'S RULING.** *"Prescribed... cut first when something
+has to give"* is implementable **without** promoting COD over ordinary aerobic
+work: it needs to enter **Pass 1's** list at all — today it is not a candidate
+for ordering, only for tie-breaking. **28-C1b's bar ("do not reorder") was aimed
+at `autoPlacementCategories`, which is inert, so the bar as written protects
+nothing.**
+
+**NOT BUILT. This is the measurement, and the build is the next unit** — it
+changes generated output and owes `test:scenarios` + `test:qa` both arms. This
+item has four reverts from building before the layer above was measured; **the
+layer is now measured.**
+
+**INSTRUMENTATION FULLY REVERTED, VERIFIED THREE WAYS:** `git checkout HEAD --
+src/utils/coachingEngine.ts`, `grep -rn 'ZZPROBE|ZZCANDS|ZZELIG|ZZMUTANT' src/`
+returns **NONE**, and the file is **byte-identical to `HEAD`** by `cmp`. The
+temporary probe under `src/__tests__/` is deleted.
+
 ### 🛑 2026-08-13 — I WITHDRAW MY OWN REFUTATION OF 28-C1. RANKING **IS** THE WALL.
 
 **READ THIS BEFORE THE ENTRY BELOW THAT SAYS `codPermitted` MIGHT BE FALSE — IT
