@@ -301,22 +301,47 @@ export function withoutPowerRows(
  * every training age… power rows never count against that cap at any training
  * age, consistent with power's exclusion from every other count."
  *
- * Deliberately the SAME predicate as the taxonomy's, because it is the same
- * fence — one ruling, one filter. It is a separate export only so the cap's
- * eventual enforcement site reads as what it is.
+ * ⚠ IT WAS "deliberately the SAME predicate as the taxonomy's". **R-088 SPLIT
+ * THEM, 2026-08-13, and this export existed for exactly that day** — its old
+ * note said it was separate "only so the cap's eventual enforcement site reads
+ * as what it is", and the two fences are now genuinely different questions.
+ *
+ * **THE CAP COUNTS STRENGTH ROWS ONLY.** Sam: *"the mobility pairings dont count
+ * at all towards the cap… there should be a mobility warm up and prehab stuff
+ * then there should be 2-3 non competing pairings of strength with mobility in
+ * the session… the mobility portion does not count"*. **A session with 7
+ * strength rows and 3 paired mobility picks is AT the cap, not over it — a
+ * counter reading session rows would read 10 and be wrong.**
+ *
+ * `mobility` was already exempt from counting (the R-015 pairing's own rule 5,
+ * *"counts toward nothing"*). **`prehab` was NOT**, and Bible `:229`'s flow is
+ * named by this ruling, so the cap's fence adds it. **The taxonomy's fence is
+ * left exactly as it was** — §18 counting is a different question and moving it
+ * here would be the counting change `ROLES_EXEMPT_FROM_COUNTING` demands a
+ * golden diff for.
+ *
+ * **AND THE CAP BINDS THE APP, NOT THE ATHLETE:** *"7 is the max the app should
+ * set and a user should be able to add as many of their own things on top of it
+ * as they choose"*. **A cap that refuses an athlete's own added exercise is a
+ * defect, not enforcement.** Nothing refuses anything today; whoever builds the
+ * enforcement owes that exemption in the same commit.
  *
  * NOTE: nothing enforces a cap today. `trainingAgePolicy`'s
  * `maxExercisesPerStrengthSession` flows into `AIConstraints.maxExercisesPerSession`
- * and is read by no prompt builder, validator or trim. The Bible sentence about
- * power not counting against the cap is therefore true by construction for now.
- * When Sam designs the per-session controls (execution-order step 5), the cap is
- * enforced by counting THIS, and no new limit is invented on the way — §11
- * abolished the beginner-only cap precisely to stop that.
+ * and is read by no prompt builder, validator or trim. When Sam designs the
+ * per-session controls (execution-order step 5), the cap is enforced by counting
+ * THIS, and no new limit is invented on the way — §11 abolished the
+ * beginner-only cap precisely to stop that.
  */
+export const ROLES_EXEMPT_FROM_THE_CAP: ReadonlySet<SessionRole> =
+  new Set<SessionRole>([...ROLES_EXEMPT_FROM_COUNTING, 'prehab']);
+
 export function exerciseBudgetRows(
   workout: Partial<Workout> | null | undefined,
 ): readonly WorkoutExercise[] {
-  return countingRows(workout);
+  return (workout?.exercises ?? []).filter(
+    (row) => !row.role || !ROLES_EXEMPT_FROM_THE_CAP.has(row.role),
+  );
 }
 
 /**

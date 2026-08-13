@@ -40,7 +40,22 @@ const NORMAL_POLICY: Omit<TrainingAgePolicy, 'level'> = {
   maxCoreSessions: null,
   maxHardExposures: null,
   maxOptionalSessions: null,
-  maxExercisesPerStrengthSession: 6,
+  /**
+   * SEVEN, ruled by Sam 2026-08-13 as **R-088**: *"7 strength exercises can be a
+   * cap… so 7 is the max the app should set"*.
+   *
+   * **IT WAS 6, AND NOBODY EVER AUTHORED THE 6.** Bible `:122` says *"6-7
+   * exercises"* and *"full body strength and 7 exercises"*; R-087 restates that
+   * size as unmoved. **The unauthored 6 is the same defect R-013 abolished the
+   * beginner's 3 for** — and it survived only because nothing enforced the cap,
+   * so the number was never wrong out loud.
+   *
+   * **WHAT IT COUNTS IS `exerciseBudgetRows`, NOT SESSION ROWS** — the mobility
+   * warm-up, the prehab flow and the mobility half of every R-015 superset are
+   * all free of it. **AND IT BINDS THE APP, NOT THE ATHLETE:** *"a user should
+   * be able to add as many of their own things on top of it as they choose"*.
+   */
+  maxExercisesPerStrengthSession: 7,
   maxSetsPerExercise: null,
   compoundRepMin: null,
   compoundRepMax: null,

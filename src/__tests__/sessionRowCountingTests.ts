@@ -173,9 +173,36 @@ ok(
       'Back Squat, Cable Curl',
     countingRows(workout).map((item) => item.exercise?.name).join(', '),
   );
+  // ⚠ THIS CELL USED TO ASSERT THE TWO FENCES WERE IDENTICAL — "one ruling, one
+  // filter". **R-088 REPEALED THAT (Sam, 2026-08-13)** and the cell survived the
+  // repeal GREEN, because this fixture holds no `prehab` row and the two fences
+  // only differ on one. **A cell that agrees with a law it no longer describes
+  // is the green-and-empty shape**, so it now asserts the split itself.
   ok(
-    'the exercise budget reads the same fence — one ruling, one filter',
+    'the two fences agree where they still agree',
     JSON.stringify(exerciseBudgetRows(workout)) === JSON.stringify(countingRows(workout)),
+  );
+}
+
+{
+  // R-088: *"there should be a mobility warm up and prehab stuff… the mobility
+  // portion does not count"*. The TAXONOMY still counts a prehab row — §18 is a
+  // different question and this ruling did not touch it — and **the CAP does
+  // not**. This is the one row where the two fences part.
+  const withPrehab = session([
+    row('Back Squat', 0),
+    row('Band Pull-Apart', 1, 'prehab'),
+  ]);
+  ok(
+    'R-088: the CAP does not count a prehab row',
+    exerciseBudgetRows(withPrehab).map((item) => item.exercise?.name).join(', ') === 'Back Squat',
+    exerciseBudgetRows(withPrehab).map((item) => item.exercise?.name).join(', '),
+  );
+  ok(
+    'R-088: and the TAXONOMY still does — the split is the cap\'s alone',
+    countingRows(withPrehab).map((item) => item.exercise?.name).join(', ')
+      === 'Back Squat, Band Pull-Apart',
+    countingRows(withPrehab).map((item) => item.exercise?.name).join(', '),
   );
 }
 
