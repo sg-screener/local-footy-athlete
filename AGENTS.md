@@ -9,6 +9,58 @@
 This repo's most important product surface is the coach chat. Treat it as an
 intelligent program-editing system, not a collection of phrase handlers.
 
+
+## THREE RULES FOR A SHARED FOLDER — READ THESE BEFORE YOUR FIRST COMMIT
+
+**Added 2026-08-13. Sam runs two or three agents in THIS ONE checkout at once.**
+Every one of these was paid for the same day: a commit that swept away 27 files
+of another agent's finished work, two agents spending eight minutes each on the
+identical job, and a third agent whose work nobody could see.
+
+**1. STAMP EVERY COMMIT.** End every commit message with `Agent: <who you are>`
+— `terminal`, `desktop`, or a name for what you do. **Without it you are
+invisible in the history and the guards cannot tell your work from anyone
+else's.**
+
+**PICK A NAME NOBODY ELSE IS USING.** On 2026-08-13 two seats both stamped
+`Agent: audit` within fourteen minutes — innocently, one read the name out of a
+status file the other had just renamed — and for a while the history could not
+say who did what. **Before your first commit: `ls docs/STATUS_*.md`. If your
+name is taken, pick another and create your own file.** One name, one file, one
+writer.
+
+**2. `git commit -- <pathspec>`, ALWAYS. NEVER a bare `git commit`.** A bare
+commit sweeps up whatever the other agents left staged. **`git status` before
+every save and read what is actually going in.** "Just my file" is not just your
+file here. Held by `test:repo-law-guards`.
+
+**3. THE INBOX IS THE SEAT'S FILE. YOUR STATUS FILE IS YOURS.**
+`docs/SEAT_INBOX.md` — you READ it, and you may MARK your item (`BLOCKED-BY:`,
+an owner line, a one-line status). **You may not rewrite, re-order, compress or
+archive it; over 150 changed lines is refused.**
+`docs/STATUS_<YOU>.md` — findings, measurements, what you tried and backed out.
+Write freely; nobody else touches it. **Read the OTHER agents' status files
+before you start anything**, so two of you never take the same item.
+
+
+**OWNED IS NOT BLOCKED. THIS ONE WORD WAS DOING TWO JOBS.** On 2026-08-13, 15 of
+19 queue items read `BLOCKED-BY: other-agent` when what they meant was *"another
+agent owns this"*. **The queue looked jammed while every one of them was
+progressing** — and the stop-check counts a blocked item as NO WORK, so a queue
+marked that way entitles every agent to stop while Sam's list is unfinished.
+
+- **`OWNED BY <name>`** — someone else is doing it. **You walk past it. You do
+  NOT mark it blocked.**
+- **`BLOCKED-BY: sam | other-agent | external`** — *you* cannot proceed, and
+  `other-agent` means **a file you need is being edited right now**, not that
+  someone else owns the item. **Name the file.** A block with no file named is
+  an ownership note wearing the wrong word.
+- **Un-mark a block the moment the file is free.** A block nobody clears is
+  indistinguishable from finished work.
+
+**AND EVERY ORDER NAMES AN OWNER.** If you write one, name who does it. There is
+a ratchet on this and it only falls.
+
 ## LAW ZERO — A LAW WITHOUT A GUARD IS NOT RECORDED, IT IS ONLY WRITTEN DOWN
 
 **Sam, 2026-08-10, verbatim:** *"how do we make sure all the laws we have written
