@@ -250,8 +250,74 @@ files were swept this morning. **Measured, written down, left alone.**
 | **60** | **OWNED BY `audit` — committed 16:13, LIVE** |
 | 39 | BLOCKED-BY: sam (already marked) |
 
-**I MARKED NOTHING.** Every unmarked item has an owner who committed in the last
-nine minutes. **CLAUDE.md is explicit: owned is not blocked, and a false block
+**I MARKED NOTHING (at 16:22).** Every unmarked item has an owner who committed
+in the last nine minutes. **CLAUDE.md is explicit: owned is not blocked, and a false block
 entitles every seat to stop while Sam's list is unfinished** — that is the exact
 defect the file was amended for this morning, when 15 of 19 items wore the wrong
 word. **I will not buy my own exit by mismarking four live seats' work.**
+
+---
+
+## 2026-08-13, 16:30 — ⚠ `test:slot-coverage` IS RED IN THE BIBLE CHAIN AND NOBODY HAS ATTRIBUTED IT. TWO FULL-GYM LEG DAYS SHIP WITHOUT SINGLE-LEG WORK
+
+**THIS IS THE ONE ATHLETE-FACING THING I FOUND ALL SESSION, AND IT IS NOT IN ANY
+SEAT'S FILE.** I went looking because item 51's subject is Sam's ladder and I
+wanted to know what the app actually ships against it.
+
+### THE RED, AND ITS CONTROL
+
+**HEAD, now — `test:slot-coverage` 52 passed / 2 FAILED:**
+- `DECLARED GAP: the shared owner does not classify "Upper Body Strength"`
+- `no generated day is missing MORE of Sam's ladder than it was` ← **the ratchet**
+
+**CONTROL, in a SEPARATE WORKTREE at `0c13e5bf`** (13:20, the commit that
+introduced the ratchet) — **51 passed / 0 failed.** A control is only a control if
+it sees the same tree, so it got its own checkout, not a dirty one.
+
+| | baseline `0c13e5bf` 13:20 | HEAD 16:30 |
+| --- | --- | --- |
+| suite | **51/51 GREEN** | **52/54, 2 FAILED** |
+| census | **1 deficient of 5** laddered days | **3 deficient of 7** (ceiling 1) |
+
+**THE THREE DEFICIENT DAYS AT HEAD:**
+
+| world | day | missing |
+| --- | --- | --- |
+| in-season full gym | `Lower Body Strength` | **`single_leg_knee`, `single_leg_hip`** |
+| pre-season full gym | `Lower Body Strength` | **`single_leg_knee`, `single_leg_hip`** |
+| off-season bodyweight | `Lower Squat` | `single_leg_hip` (dup `squat`,`hinge`) |
+
+**Sam's ladder, verbatim:** *"lower body strength should have a hinge, a squat, an
+single leg knee, a single leg hip, and accessory and/or some core"*. **Two of his
+five slots are absent from the main leg day in BOTH full-gym worlds.**
+
+### ⚠ WHAT I AM **NOT** CLAIMING, AND WHY THE OBVIOUS READING IS A TRAP
+
+**I am NOT calling this a regression.** The population grew 5 → 7 laddered days,
+so "1 of 5" and "3 of 7" are not the same denominator, and **two newly-deficient
+days may be newly-REACHED rather than newly-BROKEN.**
+
+**What I CAN state, measured:**
+- **The classifier did not change.** `git diff 0c13e5bf..HEAD -- src/rules/sessionSlotCoverage.ts`
+  is **EMPTY**; only the test file grew (+117 lines). So the deficiency judgement
+  is apples-to-apples in KIND.
+- **The one day that existed at baseline IMPROVED** — `Lower Squat` went from
+  missing three slots to missing one. **The R-014 work is landing.**
+- **The suite went GREEN → RED**, and that is true whatever the denominator does.
+
+**UNRESOLVED, AND I NAME IT RATHER THAN GUESS:** whether the two full-gym days
+are newly-broken or newly-visible. **The next step is one bisect** across the five
+generation commits in the window — `3e413f61` (14:09), `a55d1a6c` (14:14),
+`188d6fad` (14:27, *"every laddered day now covers"*), `728553e8` (15:27 revert),
+`e4b2c27e` (15:49). **I did not run it, so I do not report a cause.**
+
+### NOT FIXED BY ME, AND THE FILE IS NOW DEFINITIVELY HELD
+
+`src/data/defaultProgram.ts` **went MODIFIED in the working tree while I was
+measuring** — a seat is live in the exact file a fix would touch. **And it is
+generation-side: it owes `test:scenarios` + `test:qa` either side, which item 34
+bars at a session tail.** Measured, controlled, written down, left alone.
+
+**THIS BELONGS TO ITEM 51 (`patterns`)** — same law, same files. It is evidence
+FOR their build, not a competing one: **the ladder is not merely uncomposed, it is
+measurably absent from the primary leg day in two of three worlds.**
