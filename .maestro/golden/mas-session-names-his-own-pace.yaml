@@ -83,18 +83,45 @@ tags:
 # Monday keeps its combined day, whose conditioning is an aerobic FLUSH — and a
 # flush carries no %MAS at all, so opening today would photograph a true
 # negative and read as a failure of the reader.
+# ⚠ THE WEEK SHAPE HAS NO `view-workout-button` — MEASURED, not assumed. Its
+# tree is day ROWS only; the button that opens a session belongs to the DAY
+# shape. A `scrollUntilVisible` for it here scrolls the whole week and then
+# reports "element not found", which reads like a missing control rather than
+# the wrong shape.
 - scrollUntilVisible:
     element:
-      id: "day-row-wed"
+      id: "program-view-today"
     direction: UP
     timeout: 20000
 - tapOn:
-    id: "day-row-wed"
-- scrollUntilVisible:
-    element:
+    id: "program-view-today"
+# SATURDAY, and the seed's own card id is why. On the away week Saturday is
+# `session-card-cond-two-minute-repeats-2026-07-18` — `Two-Minute Repeats`,
+# whose authored intensity is `≈100% MAS`. Wednesday is a coach-built
+# conditioning day whose template is not named in the tree, so Saturday is the
+# one that can be asserted from what the screen itself declares.
+# ⚠⚠ THE NEXT TWO STEPS ARE UNVERIFIED, AND THIS COMMENT IS THE HONEST REASON.
+#
+# `HomeScreenV2.tsx:2441` renders the day shape's other days as
+# `week-strip-<token>` chips, and `day-row-*` full rows belong to the week
+# shape — so `week-strip-sat` is the right-looking selector. **IT HAS NOT BEEN
+# PROVEN.** Two runs reported "element not found" here, first for `day-row-sat`
+# and then for this, and BOTH conclusions ARE VOID: an inspect taken straight
+# afterwards found the app sitting on the dev-harness cold-start refusal
+# (*"DevE2EClock reload mismatch"*), so the taps ran against a DEAD APP and the
+# harness answered, not the screen.
+#
+# **A RUN WITH NO LIVE APP IS A DEAD INSTRUMENT, NOT A RESULT** — item 28's own
+# words, and this is the fourth time today that gate has eaten a run on a shared
+# simulator. The §8 second-wall count is long past, so the next seat should NOT
+# swap this selector on a hunch: run the flow on an UNCONTENDED simulator first
+# and let a live screen say which id is right.
+- tapOn:
+    id: "week-strip-sat"
+- extendedWaitUntil:
+    visible:
       id: "view-workout-button"
-    direction: DOWN
-    timeout: 20000
+    timeout: 15000
 - tapOn:
     id: "view-workout-button"
 - extendedWaitUntil:
