@@ -58,21 +58,6 @@ export const WEEK_PLAN_QA_ALLOWED_FINDINGS: readonly AllowedFindingPolicy[] = [
     status: 'temporarily-tolerated',
     reason: 'The extra sprint/COD exposure comes from team/game anchors in an overloaded club week, not app-added speed work.',
   },
-  {
-    // ADDED 2026-08-13 with S7's re-phasing (item 31). S7 was an OFF-SEASON week
-    // carrying three team trainings — a week Sam has ruled cannot exist — and
-    // moving it to Pre-season, where three club sessions are legal, surfaced this
-    // finding for the first time. It is NOT tolerated debt: five hard days is the
-    // PERMITTED maximum (Bible :118, prefer 4 / permit 5) and the validator grades
-    // it `info` for exactly that reason. Six would be a different finding and a
-    // different sentence — see planChangeRefusalCopy, ruled the same day.
-    scenarioId: 'S7',
-    ruleId: 'cap_maxHardDays_over',
-    severity: 'info',
-    status: 'expected',
-    reason: 'Six available days with three club trainings legally reaches five hard days; five is the permitted maximum, which is why the validator grades it info rather than soft.',
-    messageIncludes: 'absolute max',
-  },
 ];
 
 export function allowedFindingPolicyKey(policy: AllowedFindingPolicy): string {

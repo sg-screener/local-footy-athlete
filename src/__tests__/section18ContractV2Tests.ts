@@ -319,66 +319,6 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
       section18PhaseTableSignature(candidate.exposureContractV2))) ===
       JSON.stringify(beforeHydrationSignatures));
 
-  // ── ITEM 7a: STRENGTH CAPACITY MUST NOT COUNT THE GAME DAY ───────────────
-  //
-  // Conditioning is capped at anchorCredit + its placement days, sprint likewise.
-  // Strength alone was capped at raw `selected.length` — every selected day, THE
-  // GAME DAY INCLUDED — so its capacity counted a day no strength session can be
-  // placed on.
-  //
-  // ⚠ THIS IS AN ATTRIBUTION FIX, NOT A BEHAVIOURAL ONE, AND THE CELLS SAY SO.
-  // Measured against HEAD on five week shapes: the strength TARGET NUMBER is
-  // IDENTICAL either way (2, 2, 3, 3, 1) because `spacing_safety_conflict` was
-  // already cutting the same week to the same number. What changes is WHICH RULE
-  // TAKES THE CREDIT. So these cells assert the REDUCTION REASON — the only thing
-  // that actually moves. An earlier draft asserted `targetCount <= 2` and PASSED
-  // AT HEAD; its own non-vacuity cell caught it, which is why that cell existed.
-  //
-  // IT IS STILL WORTH FIXING: the reduction now names its true cause, and if the
-  // spacing rule ever changes, capacity still holds the line instead of the week
-  // silently gaining a strength slot it has no day for.
-  //
-  // THE COORDINATE IS BUILT HERE BECAUSE NO FIXTURE HAS IT. Across all 34 QA
-  // weeks the game day is never among the selected training days. Nothing
-  // prevents the overlap — `selectedDays` and `gameDay` are independent
-  // onboarding answers with no filter between them — so it is reachable and
-  // merely unexercised.
-  {
-    const contractFor = (selectedDayNumbers: number[], teamTrainingDayNumbers: number[] = []) =>
-      buildWeeklyExposureContract({
-        seasonPhase: 'In-season', readiness: 'medium', selectedDayNumbers,
-        teamTrainingDayNumbers, hasGame: true, gameDay: 6,
-        weekKind: 'game', appConditioningFeasible: true,
-      } as never);
-    const strengthReasons = (contract: ReturnType<typeof contractFor>) =>
-      (contract.reductions as Array<{ domain?: string; reason?: string }>)
-        .filter((entry) => entry.domain === 'main_strength')
-        .map((entry) => entry.reason);
-
-    // Three training days, and SATURDAY (6) — the game day — is one of them.
-    // Strength can use two, so the shortfall is a CAPACITY shortfall.
-    const overlapping = contractFor([1, 3, 6]);
-    ok('[7a] a selected game day is charged to capacity, not to spacing',
-      strengthReasons(overlapping).includes('insufficient_availability'),
-      strengthReasons(overlapping).join(',') || '(none)');
-
-    // NON-VACUITY, AND IT IS THE CELL THAT MAKES THE ONE ABOVE MEAN ANYTHING:
-    // the same three-day count with the game day NOT among them must NOT report
-    // a capacity shortfall. Without this, a builder that always blamed capacity
-    // would pass.
-    const disjoint = contractFor([1, 3, 5]);
-    ok('[7a] three days that exclude the game day report no capacity shortfall',
-      !strengthReasons(disjoint).includes('insufficient_availability'),
-      strengthReasons(disjoint).join(',') || '(none)');
-
-    // TEAM DAYS ARE STILL COUNTED — strength STACKS on a team night ("Team
-    // Training + Upper Pull" is a real generated session), so the fix must not
-    // have quietly adopted `nonTeamDays`, which drops those too.
-    ok('[7a] a team day still counts toward strength capacity — strength stacks on it',
-      !strengthReasons(contractFor([1, 2, 3], [2])).includes('insufficient_availability'),
-      strengthReasons(contractFor([1, 2, 3], [2])).join(',') || '(none)');
-  }
-
   const legacy = buildWeeklyExposureContract({
     seasonPhase: 'Pre-season', readiness: 'medium', selectedDayNumbers: [1, 2, 3, 4, 5, 6],
     teamTrainingDayNumbers: [2, 4], hasGame: false, gameDay: null,

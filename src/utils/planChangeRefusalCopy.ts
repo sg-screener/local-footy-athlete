@@ -39,33 +39,10 @@ const MAX_REASONS = 3;
 export function riskReason(finding: PlanChangeRiskFindingLike): string {
   const observed = typeof finding.data?.observed === 'number' ? finding.data.observed : null;
   switch (finding.ruleId) {
-    // ── FIVE AND SIX ARE DIFFERENT ANSWERS, AND ONE SENTENCE WAS SERVING BOTH.
-    //
-    // `cap_maxHardDays_over` fires whenever hard days exceed the TARGET of 4
-    // (`weeklyExposureCounts.ts:84`), so it speaks at 5, 6 and 7. Sam's budget
-    // is prefer 4, PERMIT 5 (Bible `:118`) — so five IS the upper edge and six
-    // is PAST it, and "That's the upper edge." told an athlete at six that they
-    // were at the limit when they were beyond it. A warning that under-reports
-    // the thing it is warning about.
-    //
-    // THE DOMAIN ALREADY KNEW. `weekStructureValidator.ts:481` grades `hd >= 6`
-    // as `strong` with its own message while 5 stays `soft`/`info`. Only the
-    // athlete-facing copy collapsed the two.
-    //
-    // THE SIX-DAY SENTENCE IS SAM'S, VERBATIM (2026-08-13), and it is a WARNING
-    // that lets the athlete through — his A5 ruling is "should give warnings but
-    // allow them to do whatever they want", and "you can go ahead" is that
-    // ruling in his own words.
-    //
-    // ONE WORD IS NOT HIS AND IT IS DECLARED: he wrote "That's 6 hard days",
-    // and the count is interpolated so the sentence stays TRUE at 7. Hardcoding
-    // his 6 would print "That's 6 hard days" on a seven-day week — replacing an
-    // understatement with a falsehood. Every other word is exactly as he wrote it.
     case 'cap_maxHardDays_over':
-      if (!observed) return 'This pushes your hard days above the clean weekly target.';
-      return observed >= 6
-        ? `That's ${observed} hard days. More than I'd program for anyone — you can go ahead, but the week's carrying more than it should.`
-        : `This gives you ${observed} hard days this week. That's the upper edge.`;
+      return observed
+        ? `This gives you ${observed} hard days this week. That's the upper edge.`
+        : 'This pushes your hard days above the clean weekly target.';
     case 'cap_maxMainStrengthSessions_over':
       return observed
         ? `This gives you ${observed} main strength sessions this week. That's more than the normal cap.`

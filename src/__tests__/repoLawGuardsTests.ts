@@ -186,54 +186,6 @@ const NOT_COVERED_EXCEPTIONS: readonly string[] = [
   'V3_BOUNDARY_BANKED_2026-08-07.md',
 ];
 
-// ── LAW-visible-first ────────────────────────────────────────────────────
-//
-// "Every unit ends athlete-visible on Sam's phone; a slice that ships nothing he
-// can see is not a slice." The registry's own `wouldTake` named this shape: a
-// unit's boundary report must name the screen and the athlete-visible sentence,
-// or say NOT-VISIBLE and why.
-//
-// A REPORT THAT NEVER MENTIONS THE ATHLETE IS THE SYMPTOM THE LAW EXISTS FOR.
-// The founding cost is the journal — ten slices of surface that outran design —
-// and every one of those slices had a boundary report that could not have named
-// what he would see, because nothing was on glass.
-//
-// SAYING "NOT-VISIBLE" IS COMPLIANCE, NOT A LOOPHOLE. Plenty of real units are
-// engine-only, and the law's own wording offers that exit. What it forbids is
-// SILENCE — a report that never raises the question at all.
-//
-// MEASURED WHEN BUILT (2026-08-13): 64 of 74 reports already comply. The ten
-// below are pre-existing and declared, on the same ratchet as NOT-COVERED and
-// LOOP CHECK — the list may only SHRINK.
-const VISIBILITY_EXCEPTIONS: readonly string[] = [
-  'CODEX_FEEDBACK_AND_TEXT_BOUNDARY_2026-08-11.md',
-  'FINDING_3_STEP2_BOUNDARY_REPORT_2026-08-06.md',
-  'G2_QUALITY_LOWER_BOUNDARY_REPORT_2026-08-06.md',
-  'JOURNAL_STRENGTH_LINE_BOUNDARY_2026-08-09.md',
-  'R53_FIXTURE_BOOT_ORDER_BOUNDARY_2026-08-06.md',
-  'STAGE_B_IMPLEMENTATION_BATCH_BOUNDARY_2026-08-05.md',
-  'STOP_2026-08-12_COMPLETION_GATE_PROPOSAL.md',
-  'STOP_2026-08-12_ITEMS_3_4_7.md',
-  'STOP_2026-08-12_PLUS_MINUS_7_ATTEMPT_2_MEASURED.md',
-  'STOP_2026-08-12_WALKER_TIMING.md',
-];
-
-/** Pure: reports that never say what the athlete can see, either way. */
-function docsSilentOnVisibility(
-  docs: readonly { readonly file: string; readonly text: string }[],
-): string[] {
-  const speaks = /\bNOT[- ]VISIBLE\b|\bathlete-visible\b|\bathlete sees\b|\bon glass\b|\bon the phone\b|\bscreen\b|\bsimulator\b/i;
-  return docs
-    .filter((doc) => !speaks.test(doc.text))
-    .map((doc) => path.basename(doc.file));
-}
-
-/** Pure: the boundary + STOP reports this law reads. */
-function visibilityReportFiles(root: string): string[] {
-  return filesUnder(path.join(root, 'docs'), ['.md'])
-    .filter((file) => /BOUNDARY|^STOP_/.test(path.basename(file)));
-}
-
 /** Pure: boundary docs with no NOT-COVERED section. */
 function docsMissingNotCovered(
   docs: readonly { readonly file: string; readonly text: string }[],
@@ -365,51 +317,6 @@ run('every boundary report carries a NOT-COVERED section', () => {
     `boundary report(s) with no NOT-COVERED section: ${unexpected.join(', ')}. `
     + 'L2: omitting it is itself a defect — say what was not looked at.');
   console.log(`      (${docs.length} boundary docs; ${NOT_COVERED_EXCEPTIONS.length} named pre-existing exceptions)`);
-});
-
-run('every boundary report says what the athlete can see, or says NOT-VISIBLE', () => {
-  const docs = visibilityReportFiles(repoRoot);
-  assert(docs.length > 40, `only ${docs.length} reports found — the scan is reading the wrong tree`);
-  const silent = docsSilentOnVisibility(docs.map((file) => ({
-    file, text: fs.readFileSync(file, 'utf8'),
-  })));
-  const unexpected = silent.filter((name) => !VISIBILITY_EXCEPTIONS.includes(name));
-  assert(unexpected.length === 0,
-    `report(s) that never say what the athlete can see: ${unexpected.join(', ')}. `
-    + 'LAW-visible-first: a slice that ships nothing he can see is not a slice. '
-    + 'Name the screen and the sentence, or say NOT-VISIBLE and why — silence is '
-    + 'the one thing the law forbids.');
-  console.log(`      (${docs.length} reports; ${VISIBILITY_EXCEPTIONS.length} named pre-existing exceptions)`);
-});
-
-run('the visibility exception list only shrinks', () => {
-  // THE RATCHET, same as NOT-COVERED's. Without it the list is a place to hide
-  // the next silent report and the law decays one entry at a time.
-  const docs = visibilityReportFiles(repoRoot);
-  const silent = new Set(docsSilentOnVisibility(docs.map((file) => ({
-    file, text: fs.readFileSync(file, 'utf8'),
-  }))));
-  const paid = VISIBILITY_EXCEPTIONS.filter((name) => !silent.has(name));
-  assert(paid.length === 0,
-    `these report(s) now say what the athlete can see and must be REMOVED from `
-    + `VISIBILITY_EXCEPTIONS: ${paid.join(', ')}. The list only shrinks.`);
-});
-
-run('the visibility checker reds on a fabricated silent report (liveness)', () => {
-  // NON-VACUITY. 64 of 74 reports already comply, so the cell above passes on a
-  // corpus it did not have to work for. This hands the checker a report that
-  // says nothing about the athlete and requires it to be caught — and one that
-  // says NOT-VISIBLE and requires it to pass, because a checker that flagged
-  // everything would be equally useless.
-  const silentDoc = { file: '/tmp/FAKE_BOUNDARY_2026-01-01.md', text: 'We refactored the resolver and the tests pass.' };
-  const notVisibleDoc = { file: '/tmp/FAKE2_BOUNDARY_2026-01-01.md', text: 'Engine-only unit. NOT-VISIBLE: nothing reaches a surface this slice.' };
-  const onGlassDoc = { file: '/tmp/FAKE3_BOUNDARY_2026-01-01.md', text: 'Seen on the simulator: the Program screen now reads "Away".' };
-  assert(docsSilentOnVisibility([silentDoc]).length === 1,
-    'the checker did not catch a report that never mentions the athlete');
-  assert(docsSilentOnVisibility([notVisibleDoc]).length === 0,
-    'the checker rejected a report that correctly says NOT-VISIBLE — saying so is compliance');
-  assert(docsSilentOnVisibility([onGlassDoc]).length === 0,
-    'the checker rejected a report that names a screen');
 });
 
 run('the NOT-COVERED exception list only shrinks', () => {

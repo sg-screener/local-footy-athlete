@@ -29,7 +29,6 @@
 import {
   CONDITIONING_TEMPLATES,
   LEGACY_CONDITIONING_FORMAT_MAP,
-  MODALITY_RENDERING_RULES,
   type ConditioningModality,
   type ConditioningQuality,
   type ConditioningTemplate,
@@ -308,89 +307,15 @@ function cappedErgModalities(
   return modalities.filter((modality) => !ERG_CAPPED_MODALITIES.has(modality));
 }
 
-/**
- * SAM'S CAP, READ FROM WHERE HE AUTHORED IT — not re-typed here.
- *
- * The first cut of this enforcer DID re-type it (`= 8`, and the three machines
- * as a literal set), which left `ergCapMinutes` and `excludedModalities` still
- * "read by nothing but a test" — the exact complaint census C3 was raising.
- * Two owners for one number is how a cap drifts from the sheet that authored
- * it: change `erg_interval_cap` and the enforcement would have silently kept
- * the old ceiling. The rule row is the owner; this reads it.
- *
- * `erg_interval_cap` is a required row, so its absence is a data defect and not
- * a case to degrade quietly through — a missing cap must not read as "no cap".
- */
-/**
- * THE SET/BLOCK CAP, ENFORCED AT SELECTION TIME (census C11).
- *
- * Sam: short-intermittent high-%MAS work keeps the set/block to ~4-5 minutes,
- * *"enforced at selection time, not written into the dose"*
- * (`CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:58`, `:113`, `:127`). He confirmed
- * it needed building: *"okay it needs to be checked"*.
- *
- * THE PROPERTY EXISTED AND HAD NO READER — `set_length_max_4_5_min` appeared
- * five times in the data and nothing consulted it. Same shape as `ergCapMinutes`
- * before C3: authored, shipped, inert.
- *
- * ⚠ THE UNIT IS THE BLOCK, NOT THE WORK INTERVAL, AND READING THE WRONG ONE WAS
- * THE FIRST THING I TRIED. All three templates carrying this property use
- * SECOND-scale intervals ("15 s hard", "30 s hard", "40 s hard"), so
- * `longestWorkIntervalMinutes` returns null for every one of them and a filter
- * built on it would have been permanently inert. A BLOCK is
- * rounds x (work + rest) — for "8 rounds x 2-3 blocks" at 15s/15s that is four
- * minutes, which is exactly what his cap is about.
- */
-const SET_BLOCK_CAP_MINUTES = 5;
-
-/** Seconds in an authored period string ("15 s hard", "2 min"), or null. */
-function periodSeconds(text: string | undefined): number | null {
-  if (!text) return null;
-  const sec = /(\d+)\s*s\b/.exec(text);
-  if (sec) return Number(sec[1]);
-  const min = /(\d+)\s*min/.exec(text);
-  if (min) return Number(min[1]) * 60;
-  return null;
-}
-
-/**
- * The length of ONE block, in minutes: rounds x (work + rest).
- *
- * `setsRounds` is authored prose. Two of the three templates state the answer
- * outright — "(5 min per block)" — and that stated number WINS, because a
- * derivation that disagreed with Sam's own text would be re-authoring it.
- */
-export function blockLengthMinutes(template: ConditioningTemplate): number | null {
-  const stated = /\(([\d.]+)\s*min per block\)/i.exec(template.setsRounds ?? '');
-  if (stated) return Number(stated[1]);
-  const rounds = /(\d+)\s*rounds?/i.exec(template.setsRounds ?? '');
-  const work = periodSeconds(template.workPeriod);
-  const rest = periodSeconds(template.restPeriod);
-  if (!rounds || work === null || rest === null) return null;
-  return (Number(rounds[1]) * (work + rest)) / 60;
-}
-
-const ERG_CAP_RULE = MODALITY_RENDERING_RULES.find((rule) => rule.id === 'erg_interval_cap');
-if (ERG_CAP_RULE?.ergCapMinutes === undefined || ERG_CAP_RULE.excludedModalities === undefined) {
-  throw new Error('conditioning_erg_interval_cap_rule_missing');
-}
-const ERG_CAP_MINUTES: number = ERG_CAP_RULE.ergCapMinutes;
+/** Sam's cap and the machines it binds — his numbers, not re-authored here. */
+const ERG_CAP_MINUTES = 8;
 const ERG_CAPPED_MODALITIES: ReadonlySet<ConditioningModality> =
-  new Set<ConditioningModality>(ERG_CAP_RULE.excludedModalities);
+  new Set<ConditioningModality>(['ski', 'row', 'air_bike']);
 
 export function renderableModalities(template: ConditioningTemplate): ConditioningModality[] {
   const full = template.modalityNotes.toLowerCase();
   if (/all 5 modalities|any modality/.test(full)) {
-    // CAPPED, like every other exit. This branch used to return uncapped, and
-    // it is the FIRST one — so a row authored as "all 5 modalities" with a work
-    // interval over 8 min would have shipped a ten-minute Ski block past a cap
-    // Sam wrote as HARD. The identical fallback four lines below was already
-    // capped, and its comment says exactly why; the explicit branch was missed
-    // because the enforcer was tested on its OUTPUT and not on each BRANCH.
-    // Found by moving the authored ceiling to 7 and watching this path ignore
-    // it. Latent, not shipping: no authored row today says "all 5 modalities"
-    // AND exceeds 8 minutes — which is one authored row away from a defect.
-    return cappedErgModalities(template, ['run', 'bike', 'air_bike', 'ski', 'row']);
+    return ['run', 'bike', 'air_bike', 'ski', 'row'];
   }
   // A clause like "Ski/Row use 'Steady Blocks'" or "Ski/Row/Air Bike
   // substitute ..." names modalities the row does NOT render on — it points
@@ -465,70 +390,6 @@ export interface ConditioningSelectionArgs {
   readonly role?: ConditioningRole;
 }
 
-/**
- * WHERE COD/DECEL IS ALLOWED AT ALL — SAM'S RULING, 2026-08-13, AS ONE RULE.
- *
- * HIS WORDS: *"So the athlete can only do COD work in late off season (after
- * first 4 weeks of off season), in christmas break or during pre season if no
- * team trainings (i.e some people play for cash a few hours away from home so
- * they don't train with the team). No COD required in season for anyone."*
- * And the premise underneath it: *"off season means NO team training, the
- * christmas break is essentially an off season inside pre season - there is
- * never team trainings here so these are the only times COD may be useful"*.
- *
- * WRITTEN AS ONE RULE, NOT THREE PHASE BRANCHES, BECAUSE HE ASKED FOR THAT AND
- * BECAUSE IT IS TRUE: no team training this week AND not in season AND not the
- * first four weeks of off-season. The three cases he named fall out of it —
- * late off-season, pre-season without a club, and the Christmas break, which
- * needs no case of its own precisely because it IS "pre-season with no team
- * training this week". A phase list would have needed a fourth branch and a new
- * phase; this needs neither.
- *
- * "AFTER FIRST 4 WEEKS" IS ALREADY THE CLOCK'S VOCABULARY — `early_offseason`
- * is weeks 1-2 and `mid_offseason` 3-4 (`seasonPhaseClock.ts:72-74`), so
- * `late_offseason` IS "after the first four weeks". Nothing new is minted.
- * The reason the first four weeks are excluded is RECOVERY, not team training.
- *
- * CLOSED WHEN THE PHASE IS UNKNOWN. COD is the category Sam calls "cut first";
- * offering it because we could not tell what phase an athlete is in would be
- * the least-informed state behaving as the most confident one.
- */
-/*
- * WRITTEN AS AN ALLOWLIST, AND A SURVIVING MUTANT IS WHY.
- *
- * The first cut opened with `if (seasonPhase === 'In-season') return false;` —
- * the clearest line in Sam's ruling, spelled out. Deleting that whole branch
- * changed NOTHING and no cell reddened: in-season is neither of the two
- * permitted phases, so it was already refused by the closing `return false`.
- * The branch was decoration, and a cell asserting "in season is refused" passed
- * with or without it.
- *
- * So the refusal is stated the only way that can rot: as the DEFAULT. Every
- * phase is refused unless it is named here, which means a new phase, a typo, or
- * a missing value is CLOSED rather than open — and the mutation that flips this
- * default reds immediately. "No COD required in season for anyone" is now held
- * by the shape of the function instead of by a line that could be deleted
- * without consequence.
- */
-export function codDecelPermitted(args: {
-  /** Does THIS WEEK carry team training — not "does this athlete have a club". */
-  readonly weekHasTeamTraining: boolean;
-  readonly seasonPhase: string | null | undefined;
-  readonly offseasonSubphase: string | null | undefined;
-}): boolean {
-  // The club does the change of direction. True in every phase, so it leads.
-  if (args.weekHasTeamTraining) return false;
-  // Off-season: only past the first four weeks — those are recovery, and that,
-  // not team training, is why they are excluded.
-  if (args.seasonPhase === 'Off-season') return args.offseasonSubphase === 'late_offseason';
-  // Pre-season without a club — his "some people play for cash a few hours away
-  // from home". The Christmas break arrives here too, as pre-season whose week
-  // has had its team training cleared.
-  if (args.seasonPhase === 'Pre-season') return true;
-  // IN-SEASON, AND EVERY PHASE NOBODY HAS INVENTED YET.
-  return false;
-}
-
 /** Parsed low end of the authored total session time, or null. */
 function totalMinutesLow(template: ConditioningTemplate): number | null {
   const parsed = parseConditioningDose(template.totalSessionTime);
@@ -564,13 +425,6 @@ export function selectConditioningTemplate(
       !template.properties.includes('finisher_role_only') || role === 'finisher',
     (template) =>
       !template.properties.includes('fallback_only') || args.runOnly === true,
-    // C11: a template that declares the 4-5 min set cap must actually honour it.
-    // The property was authored and read by nothing until 2026-08-13.
-    (template) => {
-      if (!template.properties.includes('set_length_max_4_5_min')) return true;
-      const block = blockLengthMinutes(template);
-      return block === null || block <= SET_BLOCK_CAP_MINUTES;
-    },
     (template) =>
       !template.properties.includes('availability_gate_no_team_training')
       || args.noTeamTrainingWeek === true,
@@ -668,16 +522,6 @@ function conditioningRow(
     // authored source: the headline carries Sam's template name verbatim, the
     // warm-up carries his signed sentence. So the owner says so, once, here.
     nameProvenance: 'authored',
-    // THE ROLE, SET AT THE ONE OWNER THAT EMITS THESE ROWS (Sam, 2026-08-13:
-    // *"yes it should be its own thing and not count as a strength exercise"*).
-    //
-    // EXEMPTING THE ROLE ALONE WOULD HAVE CHANGED NOTHING AND I PROVED THAT
-    // FIRST: `participatesInCounting` is `!row.role || !EXEMPT.has(row.role)`,
-    // so an UNTAGGED row counts whatever the exempt set says — and these rows
-    // carried no role at all. 550 of 570 generated rows are untagged, which is
-    // why the default is the real hazard. Both halves are needed; either alone
-    // is inert.
-    role: 'conditioning',
     workoutId: '',
     exerciseId: id,
     exerciseOrder: order,

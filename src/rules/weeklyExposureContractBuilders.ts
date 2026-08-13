@@ -383,28 +383,7 @@ function applyCommonSafetyReductions(
     }
   }
 
-  // STRENGTH WAS THE ONLY ALLOCATION COUNTING A DAY IT CAN NEVER USE (item 7a).
-  //
-  // Conditioning is capped at `anchorCredit + conditioningPlacementDays`, sprint
-  // at `anchorCredit + sprintPlacementDays`. Strength alone used raw
-  // `selected.length` — every selected day, THE GAME DAY INCLUDED — so its
-  // capacity counted a day no strength session can be placed on.
-  //
-  // TEAM DAYS ARE NOT THE DEFECT AND ARE DELIBERATELY STILL COUNTED: strength
-  // legitimately STACKS on a team night ("Team Training + Upper Pull" is a real
-  // generated session), which is why this uses its own set rather than the
-  // existing `nonTeamDays`, which drops both.
-  //
-  // MEASURED BEFORE AND AFTER, AND IT IS INERT TODAY: across all 34 QA weeks the
-  // game day is never among the selected training days, so this changes no
-  // shipped week. It is fixed anyway because NOTHING PREVENTS the overlap —
-  // `selectedDays` and `gameDay` are independent onboarding answers with no
-  // filter between them — so the miscount is reachable and simply unexercised.
-  // The cell for it BUILDS that coordinate rather than waiting for a fixture to.
-  const strengthCapacityDays = selected.filter(
-    (day) => !(input.hasGame && input.gameDay !== null && day === input.gameDay),
-  );
-  contract = reduceAllocationTarget(contract, 'main_strength', Math.min(contract.strength.targetCount, strengthCapacityDays.length),
+  contract = reduceAllocationTarget(contract, 'main_strength', Math.min(contract.strength.targetCount, selected.length),
     'insufficient_availability',
     'Selected-day availability cannot safely hold the original strength target.');
   const maximumConditioning = anchorCredit + conditioningPlacementDays.length;

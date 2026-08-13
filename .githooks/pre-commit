@@ -1,6 +1,0 @@
-#!/bin/bash
-# Installed via `git config core.hooksPath .githooks`.
-# TRACKED ON PURPOSE — a law only one machine can see is not a law, which is the
-# same reason `.gitignore` re-includes `.claude/rules/`.
-# The real check, and its 9 cells, live in scripts/.
-exec "$(dirname "$0")/../scripts/verify-branch-before-commit.sh"

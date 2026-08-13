@@ -2331,17 +2331,10 @@ async function walkTheScheduleDoors(): Promise<void> {
           type: 'set_schedule_modifier',
           source: { screen: 'program_tab', surface: 'away_this_week', initiatedBy: 'tap' },
           scope: 'current_week',
-          // ── THE SHAPE THE ATHLETE'S DOOR ACTUALLY SENDS, from 2026-08-13 ──
-          // This walked `planChange: { kind: 'clear_days' }`, which is the door
-          // Sam's ruling RETIRED: it marked the away dates unavailable and took
-          // the whole day, gym session included. `useHomeScreen` now sends a
-          // SPAN, and this comment's own promise — "the action `useHomeScreen`
-          // builds, field for field" — is what makes walking the retired shape
-          // a defect rather than extra coverage.
           payload: {
             date: occupied[0].date,
             todayISO,
-            awaySpan: { from: occupied[0].date, until: occupied[0].date },
+            planChange: { kind: 'clear_days', dates: [occupied[0].date] },
           },
           requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
         }
@@ -2386,18 +2379,18 @@ async function walkTheScheduleDoors(): Promise<void> {
       // and the week MUST move. Leaving this cell as it stood would have made
       // "the athlete's week never changes" the law the walker defends, which is
       // the opposite of what he asked for.
-      // PUT BACK 2026-08-13: away is on the record-only lane again, because the
-      // deriving lane made the real door REFUSE on a seeded world. The ruling is
-      // carried out at the plan instead — every week BUILT during a trip loses
-      // the club — and re-authoring a week already on screen is what is owed.
-      assert(weekFingerprint() === fingerprintBefore,
-        `${door}: a record-only away fact changed the visible week`);
+      assert(weekFingerprint() !== fingerprintBefore,
+        `${door}: the away fact left the visible week byte-identical — the ruled `
+        + 'effect never reached the week the athlete is looking at');
       const accepted = useProgramStore.getState().acceptedMaterialContext;
       assert(accepted.temporarySourceFacts.some((fact) =>
         'factKind' in fact && fact.factKind === 'schedule'),
         `${door}: the away fact did not land in the accepted context`);
-      assert(Object.keys(useProgramStore.getState().weekScopedOverlays ?? {}).length === 0,
-        `${door}: a record-only fact authored a week overlay`);
+      // AND THE OVERLAY EXISTS, because that is what a deriving fact writes and
+      // what its reversible adjustment points at. Without it there is nothing
+      // to cascade-revert when the athlete gets home.
+      assert(Object.keys(useProgramStore.getState().weekScopedOverlays ?? {}).length > 0,
+        `${door}: a deriving away fact authored no week overlay`);
     } else {
       // RULED → DERIVING. Today's session is compressed under the 35-minute
       // owner (Sam 2026-08-02: main lift kept, cut to essentials); the other

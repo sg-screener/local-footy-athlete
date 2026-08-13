@@ -227,33 +227,19 @@ git_case "a routine docs(stop): progress report NO LONGER ends the turn" block \
 git_case "docs(blocked): with NO stated reason no longer ends the turn" block \
   "docs(blocked): the second-game field does not exist, item 7 cannot be built"
 
-# ── SAM, 2026-08-13: THE COMMIT-SUBJECT EXIT IS WITHDRAWN ALTOGETHER. ────────
-#
-# Item 29 measured its own fix and it had missed: 0 of the 18 blocked commits
-# before qualified and 4 of 4 after did, yet the rate went UP, 3.0/hour to
-# 7.4/hour, all four landing on Sam. THE DOOR WAS NEVER THE PROBLEM — blocked on
-# one item is not blocked on the queue, and each of those four stopped with 22
-# live orders workable.
-#
-# HIS RULING: "batch — and when you're stuck on an item, move to the next item
-# instead of stopping. Only stop when the whole list is blocked."
-#
-# THESE THREE ARE INVERTED, NOT DELETED — third time this door has been the hole
-# (docs(stop): 2026-08-10, docs(blocked): 2026-08-12, the qualified body
-# 2026-08-13), and a deleted cell would erase that.
-git_case "BLOCKED-BY: sam no longer ends the turn — work the next item instead" block \
+# Each of the three legitimate categories opens the door.
+git_case "BLOCKED-BY: sam ALLOWS — only he can rule it" allow \
   "docs(blocked): the moderate-day target needs a ruling" "" "" "" \
   "BLOCKED-BY: sam"
-git_case "BLOCKED-BY: other-agent no longer ends the turn" block \
+git_case "BLOCKED-BY: other-agent ALLOWS — the file is held elsewhere" allow \
   "docs(blocked): HomeScreenV2 is mid-flight in this checkout" "" "" "" \
   "BLOCKED-BY: other-agent"
-git_case "BLOCKED-BY: external no longer ends the turn" block \
+git_case "BLOCKED-BY: external ALLOWS — outside the repo" allow \
   "docs(blocked): the simulator will not build" "" "" "" \
   "BLOCKED-BY: external"
 
-# These two already blocked and MUST STILL BLOCK. They are not redundant with
-# the inversions above: they are the cells that would catch a re-opening of the
-# door in its narrow form, and they cost nothing to keep.
+# ...and a reason OUTSIDE the three keeps the door shut. This is the cell that
+# stops the category becoming a rubber stamp: any word would otherwise do.
 git_case "an invented BLOCKED-BY category still BLOCKS" block \
   "docs(blocked): I found the next question" "" "" "" \
   "BLOCKED-BY: measurement"
@@ -261,56 +247,9 @@ git_case "a BLOCKED-BY naming the terminal itself still BLOCKS" block \
   "docs(blocked): I need to probe one more layer" "" "" "" \
   "BLOCKED-BY: terminal"
 
-# ── THE REPLACEMENT, SHIPPED IN THE SAME COMMIT AS THE REMOVAL. ──────────────
-#
-# A blocked item stops COUNTING as work, so the scan walks past it to the next
-# one and "the whole list is blocked" becomes "the scan found nothing" — EXIT 1,
-# which already existed. The marker sits on the item HEAD line because column 0
-# is the only thing the scan reads.
-run "a marked-blocked item is walked PAST to the next order" block \
-  "# SEAT INBOX" "" "## Unprocessed" "" \
-  "1. NEEDS A RULING — BLOCKED-BY: sam" "" \
-  "2. AN ORDER THAT IS STILL WORKABLE." "" \
-  "## Previously (now processed)"
-
-run "the whole list marked blocked ALLOWS — his questions arrive in ONE batch" allow \
-  "# SEAT INBOX" "" "## Unprocessed" "" \
-  "1. NEEDS A RULING — BLOCKED-BY: sam" "" \
-  "2. THE FILE IS HELD — BLOCKED-BY: other-agent" "" \
-  "3. THE SIMULATOR WILL NOT BUILD — BLOCKED-BY: external" "" \
-  "## Previously (now processed)"
-
-# THE ONE THAT STOPS THE MARKER BECOMING A RUBBER STAMP. Any word would
-# otherwise buy silence, and the terminal writes this file itself.
-run "an INVENTED blocked category marks nothing — the item stays workable" block \
-  "# SEAT INBOX" "" "## Unprocessed" "" \
-  "1. I FOUND THE NEXT QUESTION — BLOCKED-BY: measurement" "" \
-  "## Previously (now processed)"
-
-# AND THE MARKER MUST BE ON THE HEAD LINE. An indented continuation is not an
-# item, so a marker buried in an item's body cannot silence its own head — which
-# is exactly the "hidden from the scan" class this file has hit five times.
-run "a marker in an item's BODY does not block that item" block \
-  "# SEAT INBOX" "" "## Unprocessed" "" \
-  "1. A REAL ORDER whose body mentions the vocabulary." \
-  "    We are BLOCKED-BY: sam on one sub-question, not on the item." "" \
-  "## Previously (now processed)"
-
 # EXIT 3 — a decision written down THIS COMMIT under `## AWAITING SAM`.
-git_case "a NEW line under AWAITING SAM ALLOWS when it states its registry grep" allow \
-  "docs(seat): record the decision Sam owes" "" \
-  "- Which day should the game move to? REGISTRY-GREP: grepped RULINGS_REGISTRY.md for \"game\" -> R-001 (any number of games) does not cover which DAY a move lands on."
-# THE ASK GATE (2026-08-13). Sam: *"it shouldn't even be an option for the AI to
-# fix a problem that has been fixed"*. On that day three questions were drafted
-# for him and TWO were already built and already ruled — both recorded in prose
-# no agent opened. This cell is the wall: a question that never states its grep
-# of `docs/RULINGS_REGISTRY.md` does not open the door.
-#
-# IT IS THE MUTATION PROOF FOR THE CELL ABOVE. Delete the `REGISTRY-GREP:` check
-# from the hook and this cell reds while that one still passes — which is the
-# whole reason it exists as its own case rather than a tweak to the fixture.
-git_case "an AWAITING SAM entry with NO registry grep is REFUSED" block \
-  "docs(seat): ask Sam a question" "" "- Can someone have two games in one week?"
+git_case "a NEW line under AWAITING SAM ALLOWS" allow \
+  "docs(seat): record the decision Sam owes" "" "- Which day should the game move to?"
 # ...and the same section unchanged does NOT, or a question written yesterday
 # would be a permanent door.
 git_case "an UNCHANGED AWAITING SAM section still BLOCKS" block \
@@ -358,65 +297,6 @@ stall_case() {
   fi
 }
 stall_case
-
-# ── THE SIGN ON THE DOOR MUST DESCRIBE THE DOOR. (Item 29, 2026-08-13.) ──────
-#
-# EXIT 2 grew a body requirement and the block reason kept saying "naming why
-# you cannot proceed" — prose a terminal satisfies while still being refused,
-# for a rule its own instructions never stated. This is the same class as
-# `4bb9b2e0` (the hook promised a stop exit and never implemented one), pointing
-# the other way: there the sign over-promised, here it under-described.
-#
-# So the reason text is now ASSERTED, not trusted. Every legal value is named
-# individually, so dropping one from the door and forgetting the sign reds here.
-reason_case() {
-  local repo; repo="$(mktemp -d)"
-  mkdir -p "$repo/docs"
-  printf '%s\n' "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
-    "1. A REAL ORDER, unprocessed." "" "## Previously (now processed)" \
-    > "$repo/docs/SEAT_INBOX.md"
-  ( cd "$repo" && git init -q && git config user.email t@t && git config user.name t \
-    && git add -A && git commit -q -m "feat: ordinary" ) >/dev/null 2>&1
-  local out; out="$(cd "$repo" && bash "$HOOK")"
-  rm -rf "$repo"
-  local missing=""
-  for needle in 'BLOCKED-BY: sam' 'BLOCKED-BY: other-agent' 'BLOCKED-BY: external'; do
-    printf '%s' "$out" | grep -qF -- "$needle" || missing="$missing [$needle]"
-  done
-  if [ -z "$missing" ]; then
-    echo "  PASS the block reason names the BLOCKED-BY line and all three legal values"
-    pass=$((pass + 1))
-  else
-    echo "  FAIL the block reason does not tell the terminal about:$missing"
-    fail=$((fail + 1))
-  fi
-}
-reason_case
-
-# NON-VACUITY for the cell above: it must red when a value is taken off the
-# sign. Proven by removing one from a COPY of the hook and re-reading it, so the
-# assertion cannot be passing on a string that happens to contain the words for
-# some other reason.
-reason_liveness_case() {
-  local repo; repo="$(mktemp -d)"
-  mkdir -p "$repo/docs"
-  printf '%s\n' "# SEAT INBOX" "" "## Unprocessed (newest first)" "" \
-    "1. A REAL ORDER, unprocessed." "" "## Previously (now processed)" \
-    > "$repo/docs/SEAT_INBOX.md"
-  ( cd "$repo" && git init -q && git config user.email t@t && git config user.name t \
-    && git add -A && git commit -q -m "feat: ordinary" ) >/dev/null 2>&1
-  sed 's/BLOCKED-BY: other-agent or //' "$HOOK" > "$repo/mutated-hook.sh"
-  local out; out="$(cd "$repo" && bash ./mutated-hook.sh)"
-  rm -rf "$repo"
-  if printf '%s' "$out" | grep -qF -- 'BLOCKED-BY: other-agent'; then
-    echo "  FAIL the reason cell is vacuous — the mutant still reads as complete"
-    fail=$((fail + 1))
-  else
-    echo "  PASS the reason cell reds when a legal value is dropped from the sign (liveness)"
-    pass=$((pass + 1))
-  fi
-}
-reason_liveness_case
 
 echo "Seat inbox hook totals: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

@@ -517,10 +517,35 @@ async function main(): Promise<void> {
   //
   // **SO THE SEAT'S PROPOSED FIX — "assert a SUPERSET home→away" — IS REFUTED
   // BY THE SAME MEASUREMENT.** A superset reds instantly: eleven of his own
-  // rows are gone. **AND THE +1 NEEDS NO ARITHMETIC EXPLANATION, because it is
-  // not a shared set that grew by one** — it is an eleven-for-eleven SWAP that
-  // happens to net +1, so attributing it to a fallback that grew by two rows is
-  // not supported by the rows themselves.
+  // rows are gone — and it reds in BOTH arms, so it was never true.
+  //
+  // ── ⚠ THE +1 *DOES* HAVE AN ARITHMETIC EXPLANATION, AND IT IS `c69151d9` ──
+  //
+  // An earlier revision of this comment said the +1 was "an eleven-for-eleven
+  // SWAP that happens to net +1", not attributable to the grown fallback.
+  // **That is refuted by single-variable measurement.** Reverting ONLY
+  // `defaultProgram.ts` to `c69151d9^` and re-running both arms:
+  //
+  //   at HEAD          home 21 · away 22    ← [13d] red under the old equality
+  //   fallback reverted home 21 · away 21    ← green, home UNCHANGED
+  //
+  // **The swap and the +1 are two independent facts.** The eleven-for-eleven
+  // swap is present in BOTH arms — it is not what moved. What moved is the
+  // squat fallback (`defaultProgram.ts`), grown 3 rows → 5 by `c69151d9` for
+  // Sam's `:227` fill order. The away week reaches it because its Wednesday is
+  // synthesised whole by `completeCoachWorkoutsFromPlan` (`fallbackReason:
+  // edge_omitted_day`) as the "Lower Squat" day.
+  //
+  // AND THE FALLBACK GREW BY **TWO** WHILE THE WEEK SHOWS **ONE**, because the
+  // second new row never ships: `applyPoolRotation` turns `RDLs` into
+  // `Deadlift` (pattern preserved), and `finaliseWorkoutAfterMutation` then
+  // drops that hinge row on the floor — the open C7 defect receipted in
+  // `5d6ef5fa`. So `Single Leg RDL` lands, the hinge does not, and the week
+  // gains exactly one. **When C7 is fixed this cell stays green (the floor is
+  // one-sided) but the away total becomes 23.**
+  //
+  // ⚠ `c69151d9` IS THEREFORE NOT OUTPUT-NEUTRAL. Anything holding a recorded
+  // generation count against a golden moved with it.
   //
   // **AND THE SWAP IS THE APP OBEYING SAM, NOT DRIFTING FROM HIM:** *"consider
   // the time they are away as building a new program and their old program is

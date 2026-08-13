@@ -23,7 +23,6 @@
  *   - No useMemo for schedule data — derive on every render (trivial cost)
  */
 
-import { getTeamTrainingWorkoutState } from './teamTraining';
 import type {
   Workout,
   Exercise,
@@ -1720,13 +1719,7 @@ export function resolveWeekWithConditioning(
   const baseDays = resolveWeek(mondayStr, state);
 
   // Guard: skip conditioning + recovery if no season context
-  // ⚠ THIS IS THE RETURN THE PROGRAM TAB TAKES — measured on a device
-  // 2026-08-13 (SEAT_INBOX item 30), and it is why three filters added BELOW it
-  // over two days could never run. `state.seasonPhase` is empty in the state the
-  // screen builds, so the whole conditioning tail is skipped and the athlete's
-  // week is `resolveWeek`'s output. Probes: this function entered 61 times in
-  // one flow, the line at the bottom of it reached ZERO.
-  if (!state.seasonPhase) return applyAwayPass(baseDays, state);
+  if (!state.seasonPhase) return baseDays;
 
   // ── Availability hard-filter ──
   // Build a Set of allowed day-of-week numbers for O(1) lookup.
@@ -1891,14 +1884,7 @@ export function resolveWeekWithConditioning(
     // installing the derivation only at `acceptedEffectiveWeek.ts:102` leaves
     // tier 4 here conforming against the STORED contract and a fixture's
     // REMOVAL never reaches the conformance pass (scaffold defect 4).
-    // ⚠ THE THIRD RETURN, AND IT IS THE ONE THE ATHLETE'S WEEK TAKES —
-    // measured 2026-08-13 with a CONTROLLED probe (SEAT_INBOX item 30).
-    // `resolveWeekWithConditioning` has three exits, not two: the no-season
-    // guard, this §18 tier-four path, and the final line. A real week has a
-    // stored §18 contract, so it leaves HERE — which is why every filter added
-    // at the bottom of this function over two days never ran, and why the club
-    // kept showing on a week the athlete was already looking at.
-    return applyAwayPass(section18TierFour({
+    return section18TierFour({
       days: rested,
       storedContract: section18StoredContract,
       // The AUTHORED week, which is what the publisher relocated from. A
@@ -1907,7 +1893,7 @@ export function resolveWeekWithConditioning(
       weekStart: mondayStr,
       today,
       state,
-    }), state);
+    });
   }
 
   // Pass 2: progressive conditioning placement
@@ -2182,134 +2168,7 @@ export function resolveWeekWithConditioning(
   // the week. This catches sessions added by the conditioning + recovery
   // overlays (which call buildDay directly without the wrapper). Manual
   // overrides are preserved as-is by `applyInjuryFilterPass`.
-  return applyAwayPass(applyInjuryFilterPass(result, state), state);
-}
-
-/**
- * WHILE HE IS AWAY, THE CLUB IS NOT ON HIS WEEK — SEAT_INBOX item 30.
- *
- * **Sam, 2026-08-13, after seeing a team night and a Game Day survive a trip:**
- * *"if the person is away, consider the time they are away as building a new
- * program and their old program is gone for the time being — they won't have TT
- * commitments or games … so why should game day or TT still show up? thats
- * clunky and unprofessional"*.
- *
- * THE OTHER TWO FIXES WERE BOTH ABOUT WHAT THE WEEK *IS*: the plan stops marking
- * team days (`onboardingToCoachingInputs`) and a fixture inside the trip stops
- * anchoring it (`derivedWeekContract`). **Neither touches a week that was
- * ALREADY STORED with the club on it**, and the athlete's current week is
- * exactly that — which is why he still saw both. This is the read.
- *
- * IT IS A FILTER, NOT AN EDIT. Nothing is written: his calendar mark, his
- * accepted program and the team night all still exist and all come back the day
- * the fact expires or he clears it. What changes is what the week SHOWS while
- * the trip is live.
- */
-/** A composed day name with its "Team Training" segment removed. */
-function withoutTeamTrainingSegment(name: string | undefined): string {
-  const parts = String(name ?? '').split(/\s+\+\s+/).map((part) => part.trim());
-  const kept = parts.filter((part) => part.toLowerCase() !== 'team training');
-  return kept.length > 0 ? kept.join(' + ') : String(name ?? '');
-}
-
-function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[] {
-  const spans = (state.temporarySourceFacts ?? [])
-    .filter((fact) => 'factKind' in fact && (fact as { factKind?: string }).factKind === 'schedule' &&
-      (fact as { scheduleKind?: string }).scheduleKind === 'travel' &&
-      (fact as { status?: string }).status === 'active' &&
-      typeof (fact as { effectiveUntil?: unknown }).effectiveUntil === 'string')
-    .map((fact) => ({
-      from: String((fact as { effectiveFrom: string }).effectiveFrom).slice(0, 10),
-      until: String((fact as { effectiveUntil: string }).effectiveUntil).slice(0, 10),
-    }));
-  if (spans.length === 0) return days;
-  const isAway = (date: string): boolean =>
-    spans.some((span) => date >= span.from && date <= span.until);
-  const today = todayISOLocal();
-  return days.map((day) => {
-    if (!isAway(day.date)) return day;
-    // A FIXTURE HE IS NOT AT IS NOT A DAY ON HIS WEEK — AND THE DAY IT LEAVES
-    // BEHIND IS A REST DAY, NOT A HOLE.
-    //
-    // ── `'rest'`, NOT `'none'`, AND SAM NAMED THIS EXACT CELL ──
-    // *"why the fuck does it read training day? it should read whatever the new
-    // program is i.e. conditioning, lower body strength etc"*, looking at the
-    // Saturday his game had just been taken off.
-    //
-    // **"Training Day" WAS THIS LINE.** `'none'` means "no workout" and
-    // `dayKind` (`rules/projectVisibleWeek.ts:208`) maps every non-fixture,
-    // non-`'rest'` day to `'training'`, whose signed headline is
-    // *"Training Day"* — the app's word for a day that exists and holds
-    // nothing. So vacating a fixture to `'none'` printed a placeholder where a
-    // game used to be, on every away week, for as long as away has worked.
-    //
-    // WHY `'rest'` IS THE TRUE WORD AND NOT A NICER ONE. R-020 — *"yes clear
-    // team training and games while away"* — says the club goes and **the
-    // athlete's own sessions stay**. Nothing of his was ever on a fixture day,
-    // so once the game goes the day holds nothing and is owed nothing: he is
-    // not training that day. R-006 permits up to three full rest days in
-    // exactly this shape of week (bye-recovery), so a rest day here is inside
-    // the ruled bounds rather than an exception to them.
-    //
-    // ⚠ AND IT DOES **NOT** WIDEN `dayKind`'s REST/EMPTY DISTINCTION, which is
-    // load-bearing: *"an empty training day and a rest day must be
-    // distinguishable here"* — that conflation is what once let a deletion door
-    // write a schedule fact. This says the narrower thing, at the one seam that
-    // knows it: a day VACATED BY A LIVE TRIP is a rest day. A day that is empty
-    // for any other reason is untouched and still reads as it did.
-    //
-    // STILL A FILTER, NEVER AN EDIT — same as every other line in this pass.
-    // The mark, the fixture and the stored week are all intact and all return
-    // when the fact lifts.
-    if (day.source === 'game' || day.indicator === 'game' ||
-      day.workout?.workoutType === 'Game') {
-      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
-    }
-    if (!day.workout) return day;
-    const team = getTeamTrainingWorkoutState(day.workout);
-    if (!team.hasTeamTraining) return day;
-    // A day that was ONLY the club becomes a REST day — same word, same reason
-    // as the fixture above, and it has to be the same or the week contradicts
-    // itself: a team-only Tuesday and a vacated Saturday are both "a day whose
-    // only content was the club, and the club is shut to him this week".
-    // Reading one as *"Rest Day"* and the other as *"Training Day"* is the
-    // clunkiness Sam named, one day over. A combined day is NOT this case — it
-    // keeps its own half and loses the club's, renamed through the ONE owner of
-    // that question, below.
-    if (team.isTeamTrainingOnly) {
-      return buildDay(day.date, day.dayOfWeek, today, null, 'rest');
-    }
-    return {
-      ...day,
-      workout: {
-        ...day.workout,
-        // ── THE CLUB HALF COMES OFF A COMBINED DAY, AND IT IS THE PAIR ──
-        //
-        // MEASURED ON A REAL SEEDED WORKOUT, not a synthetic one — that was the
-        // mistake that cost two glass runs. A generated team day looks like
-        // `{ name: "Team Training + Upper Pull", workoutType: "Team Training" }`
-        // with THREE strength rows and NO `isTeamDay` flag and NO sections.
-        // `getSessionComponents` then reads the team part from BOTH the name and
-        // the type, and the strength part from the ROWS. So:
-        //   name only  -> ["team_training"]              (his gym work vanishes)
-        //   type only  -> ["strength","team_training"]   (nothing changes)
-        //   BOTH       -> ["strength"]                   ✓
-        // `getTeamTrainingWorkoutState().displayWorkoutType` cannot be used for
-        // the second half: on this shape it returns "Team Training" unchanged.
-        //
-        // LIMIT, NAMED RATHER THAN HIDDEN: the surviving type is inferred, and a
-        // club night combined with CONDITIONING rather than strength would be
-        // labelled Strength. No such day exists in any seed to measure against,
-        // so it is left as the honest simple rule instead of a guess with a
-        // branch.
-        name: withoutTeamTrainingSegment(day.workout.name),
-        workoutType: (team.displayWorkoutType && team.displayWorkoutType !== 'Team Training'
-          ? team.displayWorkoutType
-          : 'Strength') as typeof day.workout.workoutType,
-        exercises: team.renderableExercises,
-      },
-    };
-  });
+  return applyInjuryFilterPass(result, state);
 }
 
 /**
