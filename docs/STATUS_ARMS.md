@@ -458,3 +458,105 @@ byte-differs, and the difference IS this fix, four branches already moved 3 → 
 mid-landing, which is the one failure this checkout is built to prevent.
 **`patterns` owns item 51, marked it blocked on these exact two files, and named
 this as its first job.** The remaining branches are its work, in flight now.
+
+---
+
+## 2026-08-13 — ITEM 61: THE CLASS IS **93 SITES**, AND 80 OF THEM ARE ONE CAUSE
+
+**Taken at Sam's direct order; item 61 names `audit` as owner, `audit` is live
+and had no claim on it, and I marked the item before starting so we did not
+census the same thing twice.**
+
+### THE NUMBER THE ITEM ASKED FOR
+
+**`VOCABULARY CROSSWALK CENSUS: 93 unchecked of 123 crosswalks across 59
+concepts, from 459 vocabularies`** — measured at the working tree, 2026-08-13.
+
+| cause | sites |
+| --- | --- |
+| **input side is untyped `string`** — there is no word-list to check against | **80** |
+| returns `\| null` | 6 |
+| `Partial<Record<>>` | 5 |
+| returns `\| undefined` | 1 |
+| **DECLARES it is total and is not** | **1** |
+
+**THE CLASS IS NOT 93 SCATTERED PROBLEMS. IT IS ONE PROBLEM 80 TIMES:** the app
+writes a vocabulary as a TYPE on the output side and as FREE TEXT on the input
+side. `equipmentTagsForRequirement(raw: string)` is the specimen — a 20-branch
+regex chain, and `equipmentRequirementsAreAvailable` states in its own doc that
+**unknown labels PASS**. That is the silent gap the item describes, in the app's
+own words, already written down.
+
+**⚠ AND A COUNT IS NOT A VERDICT — `audit` REPLIED INSIDE ITEM 61 AND ITS FACT
+CHANGES HOW THIS NUMBER READS.** Sighting 2 is **CLOSED**: `9c0d1776` stopped
+the bridge collapsing `Rack`/`Trap Bar` onto `barbell`, seven tags became
+askable, and `test:equipment-vocabulary` (**verified 84/0**) reds in BOTH
+directions — a tag nothing requires, and a requirement nothing can answer. **The
+checklist is now DERIVED from library demand instead of authored beside it**,
+which is this item's own compression, done properly.
+
+**So `equipmentTagsForRequirement` is STRUCTURALLY unchecked and BEHAVIOURALLY
+guarded, and the census cannot tell those apart.** It counts a site for being
+uncheck**ABLE** by the compiler — that is the claim, and it is stated in the
+suite's own DEPTH line. **The 93 is the size of the surface, not a list of 93
+live defects**, and reading it as the latter would be the "count taken for a
+record" error this repo keeps paying for. What it is good for: nothing can be
+added to that surface quietly, and each one paid off must be banked.
+
+**AND THE ONE THAT DECLARES ITSELF TOTAL IS THE COD WALL I MEASURED TWO ORDERS
+AGO.** `categoryToFlavour` (`coachingEngine.ts:2382`) — *switch covers 5 of 6,
+missing: `cod_decel`*. Item 55's *"the window opens onto nothing"* and item 61's
+class are **the same defect seen from two ends**, which is exactly what a census
+is for.
+
+**THE THIRD SHAPE, and it is not a missing case:** `flavourToCategory` IS
+exhaustive on its own three members and is still half the defect — six
+categories go in as three flavours and three come back, so COD returns as
+`glycolytic`. **A LOSSY ROUND TRIP, not a gap.** Asserted as total on purpose
+(cell `[3]`) so nobody "fixes" it by adding a case; the 4A ruling forbids the
+category changing under the athlete, and that is a DESIGN call, not wiring.
+
+### BUILT: `test:vocabulary-census`, 6/0, in `test:bible`
+
+Ratcheted **both ways** — `patterns` proved on the ladder census the same day
+that a ceiling-only ratchet cannot tell *"we fixed it"* from *"we stopped
+looking"*, so a fall of more than 10 reds until the author banks it.
+
+**MUTATION-PROVEN, three ways, and the first one is the receipt for the whole
+design:**
+
+| mutant | result |
+| --- | --- |
+| **blind the parser to comments** (one line) | count reads **83, not 93 — it FALLS, looking like an improvement** — and `[4]`/`[4b]` **both stay green.** Only `[2]`/`[2b]` red, because the three known sightings vanish |
+| ceiling 93 → 92 | `[4]` **RED** |
+| ceiling 93 → 110 | `[4b]` **RED** |
+
+**THAT FIRST ROW IS WHY CELLS `[2]` AND `[2b]` EXIST.** A census whose number
+improves because the instrument went blind is worse than no census, and the
+ratchet alone cannot see it. **The gate is: re-find all three known sightings BY
+NAME, or publish no number.**
+
+### ⚠ FOUR PARSER VERSIONS MISSED ALL THREE, AND THAT IS THE FINDING ABOUT ME
+
+| version | what it could not see |
+| --- | --- |
+| 1 | line-at-a-time — **all three signatures are multi-line** |
+| 2 | comments interleaved in a union — `EquipmentTag` has prose between its members |
+| 3 | `type A = B` aliases — `CondCategory = OffseasonConditioningCategory` |
+| 4 | inline literal unions in a parameter — `flavourToCategory` writes the same three words `CondFlavour` names |
+
+**Version 4's blindness IS the class**: the same three-word vocabulary spelled
+inline in one file and named in another. **The instrument had the defect it was
+built to find.**
+
+This is the same narrow-parser hole that produced my wrong "seven" count an hour
+earlier and `gunshow`'s before mine. **The habit that saved it every time was
+refusing to publish until the known cases were re-found** — cheap, and now
+permanent as a cell rather than a habit.
+
+### NOT DONE, DELIBERATELY
+
+**No crosswalk was made total.** 93 sites is not one unit; several move
+generated output; and the sharpest one is a design call with a ruling attached.
+The item asks for the census and the count, and that is what shipped — with the
+number pinned so it can only fall.
