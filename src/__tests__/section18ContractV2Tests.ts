@@ -679,6 +679,42 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
     typeof inSeason.permittedMaximum === 'number', inSeason.permittedMaximum);
 }
 
+// 9h. R-079 FOLLOW-ON: A NO-CLUB WEEK OWES A SPRINT EXPOSURE IT NEVER GETS.
+//
+// **MEASURED 2026-08-13: the app PRESCRIBES no sprint work at all.** Across
+// pre-season and in-season worlds, `workout.speedBlock` is absent, no
+// conditioning row carries `category: 'sprint'`, and no row is named for sprint
+// work. **Every sprint credit in the ledger comes from a team-training anchor.**
+//
+// A CLUB athlete therefore meets `sprint.required: 1` from the club alone. This
+// cell asks the question that leaves: **what happens to an athlete with NO
+// club?** The contract still requires one, and nothing delivers it.
+//
+// THIS CELL DOES NOT ASSERT A FIX — it PINS the current answer, so that when
+// someone builds sprint placement the change is visible rather than silent.
+{
+  const c = contract('in_season_bye_build', {
+    teamTrainingDays: [], teamParticipation: {},
+    currentProductionClaimsAnchorCredit: false,
+    plannerSelected: { mainStrength: 3, coreConditioning: 3, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0 },
+  });
+  const noClub = evaluate(c, [
+    strength(1, ['squat', 'push']), strength(4, ['hinge', 'pull']), strength(6, ['push', 'pull']),
+  ]);
+  // NON-VACUITY: the week must genuinely require a sprint, or the cell below is
+  // asserting nothing.
+  ok('9h. [R-079] a no-club week still REQUIRES a sprint exposure',
+    c.sprintHighSpeed.exposure.requiredMinimum >= 1, c.sprintHighSpeed.exposure);
+  ok('9i. [R-079] ...and with no club and no speed block, it achieves ZERO',
+    noClub.ledger.sprintHighSpeed.achievedCount === 0, noClub.ledger.sprintHighSpeed);
+  // THE ANSWER, PINNED. The app DOES report it — the shortfall is not silent.
+  const sprintShortfall = noClub.findings.filter((f) =>
+    f.domain === 'sprint_high_speed' && f.code === 'required_minimum_shortfall');
+  ok('9j. [R-079] and the week is NOT silent about it — a blocking shortfall fires',
+    sprintShortfall.length === 1 && sprintShortfall[0].severity === 'blocking',
+    noClub.findings.map((f) => `${f.domain}/${f.code}/${f.severity}`));
+}
+
 // 10. Flush is incorrectly used while core conditioning is short.
 {
   const c = contract('mid_preseason', {
