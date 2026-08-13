@@ -890,3 +890,48 @@ all".**
 pools while the terminal is live in both, and `bf1681c1` is hours old. **The
 narrowing is the contribution: two of three candidates are eliminated by
 measurement, not by argument.**
+
+
+---
+
+## 2026-08-13 — ITEM 42 / CENSUS C8: PREMISE VERIFIED FOUR FOR FOUR, PLUS A FIFTH IT DID NOT NAME
+
+**Verified before building, because a ruling premise is a claim too. Line numbers
+in the item have DRIFTED — the files moved several times today — so each is
+re-located here rather than trusted.**
+
+| claim | verdict | where it actually is now |
+| --- | --- | --- |
+| `buildPowerRow` sets no `supersetGroup`/`supersetOrder`/`pairType` | **TRUE** | `defaultProgram.ts:1543-1556` — the returned row has none of the three |
+| canonicalisation strips `pairType === 'contrast'` | **TRUE** | `workoutCanonicalisation.ts:855`, via `withoutPairing`, action `stale_raw_contrast_pairing` |
+| power sorts ahead of the main lift | **TRUE** | `defaultProgram.ts:1549` `exerciseOrder: 0`, commented *"Power is pre-lift and must sort first"* |
+| `powerRowAlignment` checks FAMILY only | **TRUE** | `:90` `signals.filter((s) => s.family === family)` — `lower`/`upper`, never pattern |
+
+**⚠ AND A FIFTH THE ITEM DID NOT NAME — THE ROW CONTRADICTS ITSELF IN ITS OWN
+TEXT.** `buildPowerRow` writes, for a CONTRAST row:
+
+> *"Do this fresh, early in the session — before the main lifts. Contrast:
+> perform sharply straight after your heavy set…"*
+
+**and then stamps `exerciseOrder: 0`.** So the athlete is told to do it straight
+after the heavy set, on a row the app has placed before every lift. **The two
+halves of one sentence disagree, and the ordering is what ships.** That is the
+defect in a form the athlete can actually read, and it needs no rebuild to see.
+
+**SO C8's DIAGNOSIS IS SOUND AND THE BUILD IS ONE STEP FROM STARTING.** What it
+takes: give the contrast row a real `supersetGroup`/`supersetOrder` with its
+same-pattern main lift, place it AT the main slot instead of `exerciseOrder: 0`,
+stop `withoutPairing` stripping an authored contrast pair, and tighten
+`powerRowAlignment` from FAMILY to PATTERN.
+
+**⚠ NOT STARTED, AND THE BLOCK IS MEASURED RATHER THAN ASSERTED — IT IS THE SAME
+ONE AS ITEM 26.** Every one of those four edits moves `test:power-counting`'s
+golden, and **that golden currently holds an unresolved REGRESSION** (289 diffs,
+~14 of them an athlete losing three single-leg/calf rows to a zero-row mobility
+session). **Adding a fifth cause to a golden with an open regression makes none of
+them readable** — which is exactly what I told two other seats today, and it would
+be worth nothing if I exempted my own lane from it.
+
+**THE ORDER IS: settle the session flip → re-record with its four SHAs → then C8
+and item 26 land as clean single-cause diffs.** Both are named to their lines and
+neither needs re-diagnosing.
