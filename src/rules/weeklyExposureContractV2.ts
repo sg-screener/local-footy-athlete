@@ -909,7 +909,16 @@ function policyFor(input: Pick<
           // subtracts 1 for a fixture week. Only the INTENSITY side was missing.
           requiredAppHardMinimum: 0,
           permittedHardCoreMaximum: null },
-        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
+        // ── R-079 (Sam, 2026-08-13): IN SEASON, UP TO THREE SPRINT NIGHTS ──
+        // *"in season that may mean 3 sprint sessions"*. THE CEILING IS 3; THE
+        // TARGET STAYS 1 — his word is "may", so three is ACCEPTABLE, not a
+        // thing to aim for. The two team nights and the game are what get a club
+        // athlete there, so the week was over its own ceiling by construction.
+        // `max: null` meant NO CAP AT ALL — census row A6's finding — so this is
+        // the first authored in-season ceiling sprint has ever had.
+        // THE UNIT IS NIGHTS: `sprintHighSpeed.achievedCount` counts distinct
+        // days, so one evening holding a team night AND flying sprints is ONE.
+        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: 3 },
         power: { eligible: true, preferred: { min: 0, max: 2 }, removalReason: null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
@@ -920,7 +929,16 @@ function policyFor(input: Pick<
       return {
         strength: { required: 2, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 4 }, max: null, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
-        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
+        // ── R-079 (Sam, 2026-08-13): IN SEASON, UP TO THREE SPRINT NIGHTS ──
+        // *"in season that may mean 3 sprint sessions"*. THE CEILING IS 3; THE
+        // TARGET STAYS 1 — his word is "may", so three is ACCEPTABLE, not a
+        // thing to aim for. The two team nights and the game are what get a club
+        // athlete there, so the week was over its own ceiling by construction.
+        // `max: null` meant NO CAP AT ALL — census row A6's finding — so this is
+        // the first authored in-season ceiling sprint has ever had.
+        // THE UNIT IS NIGHTS: `sprintHighSpeed.achievedCount` counts distinct
+        // days, so one evening holding a team night AND flying sprints is ONE.
+        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: 3 },
         power: { eligible: true, preferred: { min: 0, max: 2 }, removalReason: null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
         hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
@@ -931,7 +949,16 @@ function policyFor(input: Pick<
       return {
         strength: { required: 2, defaultTarget: 2, preferred: { min: 2, max: 2 }, max: 2 },
         conditioning: { required: 0, defaultTarget: tt, preferred: { min: 0, max: tt }, max: null, stress: ['light'], optionalFlush: tt === 0 ? { min: 1, max: 2 } : tt === 1 ? { min: 0, max: 1 } : { min: 0, max: 0 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 0 },
-        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
+        // ── R-079 (Sam, 2026-08-13): IN SEASON, UP TO THREE SPRINT NIGHTS ──
+        // *"in season that may mean 3 sprint sessions"*. THE CEILING IS 3; THE
+        // TARGET STAYS 1 — his word is "may", so three is ACCEPTABLE, not a
+        // thing to aim for. The two team nights and the game are what get a club
+        // athlete there, so the week was over its own ceiling by construction.
+        // `max: null` meant NO CAP AT ALL — census row A6's finding — so this is
+        // the first authored in-season ceiling sprint has ever had.
+        // THE UNIT IS NIGHTS: `sprintHighSpeed.achievedCount` counts distinct
+        // days, so one evening holding a team night AND flying sprints is ONE.
+        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: 3 },
         power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'bye_recovery_mode' },
         rest: { required: 2, preferred: { min: 2, max: 3 } },
         hardDays: { preferred: { min: 2, max: 2 }, permittedMaximum: 4 },
@@ -1027,7 +1054,9 @@ function policyFor(input: Pick<
       return {
         strength: { required: 3, defaultTarget: 4, preferred: { min: 3, max: 4 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 4, preferred: { min: 4, max: 4 }, max: 5, stress: ['light', 'moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 2 },
-        sprint: { required: 1, preferred: { min: 1, max: 2 }, max: 2 },
+        // R-079: *"in later off season after first 4 weeks of off season, they
+        // can sprint once a week"*. Was preferred 1-2 / max 2; he ruled ONE.
+        sprint: { required: 1, preferred: { min: 1, max: 1 }, max: 1 },
         power: { eligible: true, preferred: { min: 1, max: 2 }, removalReason: null },
         // THE REST FLOOR IS SAM'S AND IT WAS ZERO (census C5). Bible `:128`:
         // *"Full rest days: 1-2 stands everywhere except bye-recovery weeks and

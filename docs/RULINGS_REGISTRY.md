@@ -386,8 +386,21 @@ untouched, so evidence keeps its detail and only the COUNT changes unit.
 club week with two team nights and a game was over its own ceiling by
 construction — his *"that may mean 3"* is ACCEPTABLE, not a breach); late
 off-season **1** (was 2); Christmas break **1**. ·
-`BUILT` for in-season and late off-season
-(`weeklyExposureContractBuilders.ts`). **⚠ CHRISTMAS IS NOT BUILT** — the break
+`BUILT` for in-season and late off-season in
+**`weeklyExposureContractV2.ts`'s `policyFor` — which is the table §18 actually
+reads.** In-season `max: null -> 3` on all three in-season blocks
+(`in_season_game_week`/`practice_match_week`, `bye_build`, `bye_recovery`);
+late off-season `preferred {1,2} / max 2 -> {1,1} / max 1`. **The TARGET stays 1
+in-season** — his word is *"may"*, so three is a ceiling, not something to aim
+for. **`max: null` meant NO CAP AT ALL, so this is the first authored in-season
+sprint ceiling the app has had — census row A6 closed for that phase.**
+**⚠ I FIRST EDITED THE WRONG TABLE.** The same numbers live in
+`weeklyExposureContractBuilders.ts`, which is live but feeds a DIFFERENT consumer
+(`coachingEngine`, `postGenerationConstraintValidation`, `preseasonExposureContract`),
+and cell `9f` caught it by reading `permittedMaximum` off the contract the app
+builds and finding it unchanged. **Both tables now carry the ruling; the V2 one
+is the one that binds.** This is the fourth sighting today of a fix aimed at a
+layer not in the chain. **⚠ CHRISTMAS IS NOT BUILT** — the break
 has no mode of its own yet (R-002 makes it an off-season inside pre-season) and
 R-004's dated span is still `UNENFORCED`, so there is nowhere to hang the number.
 **3. PRE-SEASON IS A QUALITY RULE, NOT A COUNT — `UNENFORCED`.** `top_end_speed`

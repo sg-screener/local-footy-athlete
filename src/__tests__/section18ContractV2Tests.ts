@@ -625,6 +625,60 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
   ok('9b. modified TT automatic claim is detected', has(witnesses.modifiedTt, 'unjustified_anchor_credit'));
 }
 
+// 9c-9f. R-079: THE SPRINT UNIT IS NIGHTS, NOT CREDIT SOURCES.
+//
+// **Sam, 2026-08-13: *"yes we do nights"*.** One evening can raise TWO sprint
+// credit sources — a team-training anchor and a typed `true_speed` block on the
+// SAME day — and `achievedCount` used to be `sprintSources.length`, so the
+// athlete was charged twice for one night out.
+//
+// AND IT IS THE PRECONDITION FOR HIS PRE-SEASON RULING: *"in pre season you can
+// do flying sprints when there is team training because you will get
+// accelerations at footy"*. That is deliberate doubling up on ONE night; under a
+// source count his own instruction reads as a breach.
+{
+  const withSpeedBlock = (dayOfWeek: number): Workout => {
+    const w = strength(dayOfWeek, ['push']);
+    (w as unknown as { speedBlock: { kind: string } }).speedBlock = { kind: 'true_speed' };
+    return w;
+  };
+  const c = () => contract('in_season_bye_build', {
+    teamTrainingDays: [2], teamParticipation: { 2: 'normal_unrestricted' },
+    currentProductionClaimsAnchorCredit: true,
+    plannerSelected: { mainStrength: 3, coreConditioning: 3, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0 },
+  });
+
+  // BOTH CREDITS LAND ON DAY 2 — the team night AND the flying sprints.
+  const sameNight = evaluate(c(), [withSpeedBlock(2), strength(4, ['hinge']), strength(6, ['pull'])]);
+  ok('9c. [R-079] a team night carrying flying sprints is ONE night, not two',
+    sameNight.ledger.sprintHighSpeed.achievedCount === 1,
+    sameNight.ledger.sprintHighSpeed);
+  // NON-VACUITY, AND IT IS THE CELL THAT MATTERS: this must be TWO sources, or
+  // 9c passes on a build that simply stopped counting the speed block at all.
+  ok('9d. [R-079] ...and both credits are still RECORDED, only the count changed unit',
+    sameNight.ledger.sprintHighSpeed.sources.length === 2
+      && sameNight.ledger.sprintHighSpeed.sources.every((source) => source.dayOfWeek === 2),
+    sameNight.ledger.sprintHighSpeed.sources);
+
+  // TWO SEPARATE NIGHTS STILL COUNT TWO — the guard against "nights" collapsing
+  // into "one".
+  const twoNights = evaluate(c(), [withSpeedBlock(4), strength(6, ['pull'])]);
+  ok('9e. [R-079] a team night and a SEPARATE sprint night are two nights',
+    twoNights.ledger.sprintHighSpeed.achievedCount === 2,
+    twoNights.ledger.sprintHighSpeed);
+
+  // HIS PER-PHASE NUMBERS, read off the contract the app actually builds.
+  // HIS PER-PHASE CEILINGS, read off the contract the app actually builds. The
+  // TARGET stays 1 — "may mean 3" is a permission, not a thing to aim for.
+  const inSeason = contract('in_season_game_week').sprintHighSpeed.exposure;
+  ok('9f. [R-079] in season CAPS at three sprint nights, and the target stays one',
+    inSeason.permittedMaximum === 3 && inSeason.defaultTarget === 1, inSeason);
+  // ⚠ AND IT IS THE FIRST CEILING IN-SEASON HAS EVER HAD — census A6 recorded
+  // sprint as uncapped in six phases, which is what `max: null` meant.
+  ok('9g. [R-079] the in-season ceiling is a real number, not null',
+    typeof inSeason.permittedMaximum === 'number', inSeason.permittedMaximum);
+}
+
 // 10. Flush is incorrectly used while core conditioning is short.
 {
   const c = contract('mid_preseason', {
