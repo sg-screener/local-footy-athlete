@@ -15,6 +15,7 @@ four slices; nothing else.
 | 1B-final | Find the lost record, fix that one site | **STOP — STEP 1 INCONCLUSIVE.** Both named suspects killed with receipts. **The record is not lost anywhere.** No fix written. |
 | 1B-final-2 | Name why the gateway refuses a week its evaluator accepts | **STOP — THE PREMISE IS FALSE AND THREE MECHANISMS CONTRIBUTE.** The evaluator never accepted it; my 1B-final receipt was wrong. Measurement only, no code. |
 | 1B-ship | Fix M1/M2/M3 and ship | **STOP — SHIP GATE NOT MET.** Sheet + M3 + M1 all built and green (8 new cells); sweep refusals unchanged at 26 vs baseline 6, a new blocking code appeared, and the census breadth floor reds. Parked at `81ba20f9`. |
+| 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 2 | Authorship | NOT STARTED |
 | 3 | Close the loop | NOT STARTED |
 
@@ -837,6 +838,154 @@ gym-access ruling.
   before, and I did it inside a worktree only by luck of where I was standing.
 - The sheet, M3 and M1 themselves resisted nothing. Every cell passed first run.
 
+### Slice 1B-ship-2a — diagnosis. The requirement set has an owner, and it is worth 6 worlds
+
+**DOCS ONLY.** Measured on `slice1bc-parked` (`81ba20f9`) and on `main`
+(`12b8242b`) as the control, both in temporary worktrees, both discarded. The
+shared checkout never left `main`. No code, no registry change, no gate, census,
+floor or ratchet touched.
+
+#### Q1 — what blocks the 26 worlds
+
+All 26 captured; none sampled. 38 blocking findings, **three kinds only**:
+
+| Blocking finding | Domain | Subject shape | Occurrences | Worlds |
+| --- | --- | --- | ---: | ---: |
+| `pattern_imbalance` | `strength_patterns` | **distribution** across the required set | 20 | 20 |
+| `pattern_restore_failure` | `strength_patterns` | **one pattern** | 18 | 12 |
+| `planner_selected_target_miss` | `main_strength` | **session count** (expected 4, actual 3) | 6 | 6 |
+
+By world family:
+
+| Phase | Kit | Refused |
+| --- | --- | ---: |
+| Pre-season | Bodyweight Only | 12 |
+| Pre-season | Dumbbells | 6 |
+| Off-season | Bodyweight Only | 6 |
+| **Pre-season** | **Full Gym** | **2** |
+
+Three whole-world shapes: 14× imbalance alone; 6× two `pattern_restore_failure`;
+6× all three together.
+
+#### Q2 — how many are genuinely kit-impossible
+
+Judged by asking the **corrected sheet oracle over the entire tagged library** —
+"does any exercise of this pattern pass for this kit" — not pools, not removal
+records.
+
+| Classification | Findings | What they are |
+| --- | ---: | --- |
+| **KIT-IMPOSSIBLE** | **6** | `pull` on Bodyweight Only — **0 legal lifts in the whole library** |
+| **ACHIEVABLE-BUT-MISSING** | **12** | `squat` ×6, `hinge` ×6 — the category a lazy fix would wrongly silence |
+| **NOT-PATTERN-SHAPED** | **26** | 20 distribution + 6 session count |
+
+Library trainability per kit, corrected sheet:
+
+| Kit | squat | hinge | push | pull |
+| --- | ---: | ---: | ---: | ---: |
+| Full Gym | 16 | 8 | 20 | 18 |
+| Dumbbells + Bands | 7 | 3 | 7 | 4 |
+| Bodyweight Only | 6 | 2 | 3 | **0** |
+
+**Only `pull` on bodyweight is impossible anywhere.** Every
+achievable-but-missing finding names `squat` or `hinge` — including on **Full
+Gym, where 16 squats and 8 hinges are legal.** Those are composition failures
+wearing an equipment costume.
+
+#### Q3 — where the requirement set is constructed
+
+**ONE CONSTRUCTOR.** `buildSection18WeeklyExposureContractV2`,
+`src/rules/weeklyExposureContractV2.ts:1262`:
+
+| What | file:line |
+| --- | --- |
+| `requiredSafePatterns` = `ALL_PATTERNS` minus `prohibited` | `weeklyExposureContractV2.ts:1268` |
+| `balanceExpectation` / `permittedCountDifference: 1` | `weeklyExposureContractV2.ts:1357-1358` |
+| `plannerSelectedTarget` (main strength) | `weeklyExposureContractV2.ts:675`, fed from `input.plannerSelected` at `:1277-1279` |
+
+**Three post-construction narrowers, all feeding from that one contract:**
+
+| Site | What it narrows | Why it matters |
+| --- | --- | --- |
+| `section18SafetyPolicy.ts:165-177` | injury `prohibitedPatterns` → recomputes `requiredSafePatterns` | the existing kit-shaped hole |
+| `userRemovalConstraints.ts:246-266` | athlete deletions → drops unachieved patterns **and sets `balanceExpectation = 'not_applicable'`** | **the exact precedent** for an achievability-relative set |
+| `reversibleAdjustmentTransaction.ts:503-509` | restores both on undo | |
+
+**Four production callers of the constructor:** `coachingEngine.ts:794`,
+`derivedWeekContract.ts:305`, `weeklyExposureContractV2.ts:1587` (legacy
+migration), `programStore.ts:737`.
+
+**EXECUTED CONFIRMATION** on the traced world
+(`Off-season/4d/club/Bodyweight Only/w2`):
+
+```
+[CONTRACT] buildSection18WeeklyExposureContractV2
+  mode=mid_offseason  prohibited=[]  requiredSafePatterns=["squat","hinge","push","pull"]
+  balance=true  strengthRequired=3  plannerSelected.mainStrength=4
+```
+
+The bodyweight athlete is required to produce a pull. `prohibited` is empty and
+is the only channel that has ever narrowed the set.
+
+#### Q4 — is there one central place? Yes. It is worth 6 worlds.
+
+**There is a single owner**, and a kit-relative requirement set would be a clean,
+small change at `weeklyExposureContractV2.ts:1268` with `userRemovalConstraints`
+as its precedent. **And it does not solve this.**
+
+Recomputed over the captured findings — dropping kit-impossible patterns from
+`requiredSafePatterns`, which also re-bases the imbalance comparison:
+
+| | Worlds |
+| --- | ---: |
+| Would CLEAR | **6** |
+| Would STILL refuse | **20** |
+
+**Attributed against the `main` control (executed, not inferred):** baseline is
+**6 refused**, and they are exactly `Pre-season/2d/club` across **all three
+kits** — `pattern_restore_failure` for squat + hinge, identical on Full Gym.
+Kit-independent: two training days cannot carry four patterns.
+
+So after a perfect requirement-set fix, the 20 survivors are:
+
+| Survivors | Cause | Pre-existing? |
+| ---: | --- | --- |
+| 6 | `pattern_restore_failure` squat + hinge, `Pre-season/2d/club`, all kits | **YES — the baseline 6** |
+| 8 | `pattern_imbalance`, `rel=[0,2,2]` / `[0,2,2,2]` — **squat count 0** on kits with 6–7 legal squats | no — introduced by this slice |
+| 6 | `planner_selected_target_miss` — 4 main-strength sessions wanted, 3 delivered | no — introduced by this slice |
+
+**MY READ.** The requirement set does have an owner, and I am not going to shade
+that into a recommendation. Changing it is worth six worlds and is the *correct*
+change for those six — `pull` on bodyweight is genuinely unrequirable, and the
+`userRemovalConstraints` precedent shows the codebase already agrees that an
+unachievable requirement should be dropped rather than failed. But **32 of 38
+blocking findings are not about kit-impossibility**, fourteen worlds would still
+be newly refused after the fix, and the survivors say plainly what they are: a
+composer that leaves `squat` at zero on a kit with seven legal squats, and a
+planner asking for four main-strength sessions from a week that composes three.
+**The gate is not the thing that is wrong.** One more gate change buys six worlds
+and leaves the campaign exactly where it is; the decision belongs to the composer.
+
+#### The fifth question, which turned out to be the real one
+
+*"Does the composer build a complete, balanced week for a kit-limited athlete?"*
+**Measured: no, and not only for kit-limited athletes.** Eight worlds compose a
+week with **zero squats** while carrying two hinges and two pushes, on kits with
+six or seven legal squat options. Six worlds — **including full gym** — cannot
+place four patterns across two training days. Neither fact involves equipment.
+
+#### What fought me
+
+- **Nothing, and that is the finding.** Every probe landed first try; the
+  baseline control reproduced 6/174 exactly; the recomputation is arithmetic over
+  captured data rather than another hypothesis. After three slices of wrong
+  guesses, the measurement that finally settled it took two sweeps and no
+  cleverness — which is an argument for measuring first, not an argument about
+  §18.
+- The one thing I nearly did wrong: my first instinct was to report "one owner,
+  therefore fixable". The recomputation is what stopped that, and it only exists
+  because the prompt asked for the achievable-but-missing count precisely.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -872,3 +1021,8 @@ gym-access ruling.
 - `planner_selected_target_miss:main_strength` asks a kit-limited week for more main-strength SESSIONS than its training days can carry once impossible patterns are removed.
 - The ex-`Upper Pull` day is replaced by a freshly composed `Hard Conditioning` day whose `equipmentRemovals` is empty, so the reason the pull vanished does not travel with its replacement.
 - `test:ladder-wide`'s breadth floor (300 laddered days) falls when worlds are refused, so a refusal regression reds the floor cell rather than the refusal counter.
+- The pre-existing 6 refusals are `Pre-season/2d/club` on ALL THREE kits including Full Gym: two training days cannot carry four required patterns, and nothing about equipment is involved.
+- Eight worlds compose a week with ZERO squats while carrying two hinges and two pushes, on kits with 6–7 legal squat options — a composer gap that `pattern_imbalance` reports as a balance failure.
+- `planner_selected_target_miss` asks for 4 main-strength sessions from Off-season bodyweight weeks that compose 3, on 4/5/6 training days alike.
+- `userRemovalConstraints.ts:246-266` already drops unachieved patterns from `requiredSafePatterns` AND sets `balanceExpectation = 'not_applicable'` — the codebase's own precedent for an achievability-relative requirement set.
+- `hinge` has only 2 legal lifts in the whole library on a bodyweight kit and 3 on dumbbells+bands, so hinge coverage is one authoring decision away from impossible for those athletes.
