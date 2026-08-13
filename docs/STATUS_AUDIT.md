@@ -45,6 +45,54 @@ thing that actually bit.**
 
 ## STATUS
 
+### ❌ 28-C1 — **OPTION A IS REFUTED. I RAN MY OWN RECOMMENDATION AND IT FAILED**
+
+**Ran it rather than argued it, and the falsifier I wrote one commit earlier
+killed it in one run. Reverted; `coachingEngine.ts` byte-identical to `HEAD`.**
+
+**THE CHANGE:** `mustCoverCategories()` returns `autoPlacementCategories()`
+unfiltered, so `cod_decel` becomes must-cover in permitted weeks only. One line.
+
+| arm | result |
+| --- | --- |
+| `test:scenarios` vs baseline | **identical** |
+| `test:qa` vs baseline | **identical** |
+| **permitted week (pre-season, no club)** | `{aerobic_base:4, tempo:5, vo2:2}` — **`cod_decel` = 0** |
+| control (pre-season, WITH club) | `{aerobic_base:4}` — `cod_decel` = 0 |
+
+**"NOTHING MOVED" WAS NOT THE SAFETY I PREDICTED — IT WAS VACUITY.** I framed the
+empty diff as *"nothing outside permitted weeks moved, so A is safe"*. **It is
+empty because A DOES NOTHING AT ALL.** Reading the corpus diff alone would have
+shipped a one-line no-op as a fix — **and the only reason it did not is the
+permitted-week probe, which is the arm the corpus does not contain.**
+
+**WHY IT FAILED, AND IT KILLS MY OPTION B FRAMING TOO.**
+`mustCoverCategories` feeds the SCORER — `uncovered * 3`, how much a slot is
+WANTED. **It does not feed `pickPlacementCondCategories`, which decides WHICH
+category takes the slot.** Raising urgency makes conditioning more attractive;
+the slot still goes to the FIRST ALLOWED candidate, and COD is still last.
+**URGENCY IS NOT SELECTION.**
+
+**SO MY "TWO AXES" WERE THE WRONG TWO.** I proposed *coverage intent vs drop
+order*. The real pair is **urgency (scorer) vs selection order (picker)**, and
+`mustCover`/`dropOrder` both sit on the urgency side. **Option B as I wrote it
+would have failed for the same reason** — that is now measured rather than
+suspected, and it saved building it.
+
+**⚠ AND IT VINDICATES ITEM 27's C1, WHICH I PARTLY CORRECTED THIS MORNING.** C1
+concluded *"COD can only enter by SUBSTITUTION"*. I marked that off-season-only,
+because its stated reason (zero rest days) is off-season-specific. **The
+CONCLUSION holds for pre-season anyway, by different arithmetic:** ~2–2.75 slots
+against 3–4 categories means something else is always uncovered, so COD is
+reachable only by **outranking** a category — i.e. substitution. **C1's reason
+was scoped; its answer was not. I was right to scope the reason and wrong to
+imply the answer travelled with it.**
+
+**WHAT IS ACTUALLY LEFT, and it is now one sentence:** the only lever is
+`pickPlacementCondCategories`' **Pass 1** ordering, and the only shape that can
+work is COD **displacing** a category in permitted weeks — not being wanted more.
+**Nobody should try urgency again; it has now been measured twice.**
+
 ### 28-C1 — **THE TWO OPTIONS, COMPARED BEFORE CODING** (`LAW-elegant-two-options`)
 
 **REGISTRY-GREP first, because a design that re-decides a ruling is the worst
