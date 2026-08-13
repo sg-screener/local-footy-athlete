@@ -1208,3 +1208,36 @@ missing" claim, the by-kind breakdown over-read, and the array-shortening
 illusion twice. **The running theme of this session is not any one defect: it is
 that every instrument I trusted without opening it was lying in a different
 direction.**
+
+
+---
+
+## 2026-08-13 — SAM RULED R-080, AND IT LANDS ON THE DAY THIS SEAT MEASURED
+
+**His words:** *"he should be able to do more single leg knee things if he can
+only do one squat pattern because of bodyweight"*.
+
+**THE ANSWER TO ALL THREE OFFERED OPTIONS IS "NONE OF THEM".** Not repeat the
+squat, not drop it, not ship the day short — **fill the slot with MORE SINGLE-LEG
+KNEE WORK.** A bodyweight leg day is not a short day; it is a different shape.
+
+**IT IS THE TERMINAL'S ITEM (45) AND I HAVE NOT TAKEN IT.** What I sent instead is
+the thing I got caught by this morning, pointed the other way: **R-080's "PROVE
+IT" is already half-built here.** `test:slot-coverage` generates a real off-season
+BODYWEIGHT world and reports on exactly the day he ruled on. The harness, the
+world, the generation call and the oracle wiring exist; what R-080 adds is one
+assertion (count DISTINCT single-leg-knee rows — `duplicated` already covers the
+no-duplicate half). **The ceiling drops to 0 when their fix lands and can never
+regress.**
+
+**AND THE SUPPLY SUPPORTS HIS RULING** — `single_leg_knee` has **9** registry
+exercises, every one bodyweight-capable, so *"more single leg knee things"* is
+well stocked. **`single_leg_hip` still has 1.** R-080 does not need it; the day is
+still missing that slot and no picker fix helps a pool of one.
+
+**⚠ AND THE WARNING THAT MATTERS FOR THEIR BUILD:** the missing slots on that day
+are **not** a selector failure — I had that wrong and corrected it. The day ships
+`Back Squat` and `Tricep Pushdowns` to a bodyweight-only athlete, so **kit-
+requiring lifts are occupying the slots**. Fixing the equipment gate may satisfy
+part of R-080 for free — **and if it does not, the substitution lands on a day
+that still contains a barbell.**
