@@ -2087,6 +2087,54 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, `cap` — THE APP'S EXERCISE CAP IS 6. YOU AUTHORED 6-7,
+  AND 7 FOR A FULL BODY DAY. NOBODY AUTHORED THE 6.**
+
+  **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *maxExercises*, *exercise cap*,
+  *6-7* — R-013 is the only hit and it rules that there is **ONE cap for every
+  training age**, abolishing the beginner's 3. **It does not rule the NUMBER.**
+  `trainingAgePolicy.ts:43` holds `maxExercisesPerStrengthSession: 6` and no
+  ruling put it there. Bible `:122` says *"6-7 exercises"* and *"full body
+  strength and 7 exercises"*; R-087 restated 7 and did not move it.
+
+  **THE QUESTION IS ONE WORD: is the cap 7?** `cap` did not change it —
+  **moving Sam's number is product law** — and banked the gap as a ratchet in
+  `test:bible` that cannot widen silently.
+
+  **WHY IT MATTERS MORE THAN IT LOOKS:** a cap of 6 against an authored 7 made
+  the census bank **three lawful seven-row days as debt**. Paying that debt down
+  would have meant breaking Sam's own prescription. Corrected to 0 of 43.
+
+- **⚠ NEW 2026-08-13, `readiness` — R-087 AND §18 ARE TWO RULES OVER ONE NUMBER,
+  AND THE WEEK REFUSES WHEN THEY DISAGREE. THIS IS THE ONLY THING BLOCKING THE
+  COMPOSER.**
+
+  **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *main-strength*, *volume*,
+  *exposure target*, *per week* — R-073 rules that a main-strength CUT needs a
+  typed reason, R-046 rules running frequency. **No row rules whether COVERAGE
+  and VOLUME are the same count.** Bible `:87`/`:94` require **4 main-strength
+  exposures** a week; `:4723` gives a session credit for a pattern only with a
+  meaningful contribution to it. **Neither says what happens when a day drops a
+  pattern the week already has.**
+
+  **MEASURED, NOT ARGUED.** `readiness` built exactly what R-087 asks — a
+  post-pass making each full-body day plan the slots the week has not covered —
+  and it **REFUSED TWELVE WORLDS** (174 -> 162 built, 6 -> 18 refused). Cause:
+  a full-body day that stops planning squat and hinge because Monday ran them
+  also stops PAYING those exposures, so weeks that exactly met their target fall
+  under it and §18 refuses the whole week. **BACKED OUT rather than forced;
+  `uncoveredMainPatternsForWeek` is kept because it is correct.**
+
+  **THE QUESTION FOR SAM, IN HIS WORDS:** *Monday is a lower day and it does
+  squat and hinge. Wednesday is a full body day. Does Wednesday still squat?*
+  If **YES**, coverage is a FLOOR and a full-body day repeats what the week has
+  to keep the volume — R-087 means "make sure nothing is missing", not "replace".
+  If **NO**, the week's main-strength TARGET must drop with the pattern, and
+  §18's count has to stop being per-pattern.
+
+  **⚠ DO NOT GUESS THIS ONE.** Both readings are defensible from the Bible and
+  they generate visibly different programs.
+
 - **⚠ NEW 2026-08-13, `cap` — THE APP'S LIMIT ON EXERCISES IN A GYM SESSION IS
   ONE LOWER THAN WHAT YOU WROTE. ONE WORD FIXES IT.**
 
