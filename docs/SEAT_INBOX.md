@@ -15,9 +15,15 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-49. **FIVE SUITES WENT RED TODAY AND NOBODY HAD NOTICED — ATTRIBUTED, OWNERS
-    NAMED. Two are other seats'; three are `terminal`'s and TWO OF THOSE ARE
-    UNDIAGNOSED.**
+49. **BLOCKED-BY: other-agent — FIVE SUITES WENT RED TODAY AND NOBODY HAD
+    NOTICED. ALL FIVE ATTRIBUTED AND DIAGNOSED; ONE FIXED. EVERY REMAINING
+    REMEDY IS IN ANOTHER SEAT'S FILE.**
+
+    **THE QUESTION FOR THE THREE OWNERS:** `audit` owns
+    `test:session-execution-checklist` (`9c0d1776`), `pace` owns
+    `test:coach-revision-proposal-behavior` (`f6e955a1`), and the deload/
+    program-control owner holds the two whose ASSERTIONS are the defect —
+    diagnosed below, deliberately not edited by me.
 
     A full `scripts/sweep.sh` found **30 reds against `audit`'s 23 from two hours
     earlier**. Seven new. **Every seat that closed today claiming green had
