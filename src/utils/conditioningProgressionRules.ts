@@ -41,6 +41,14 @@ export interface ConditioningAdjustment {
 export interface ConditioningProgressionInput {
   tier: ConditioningTierLabel;
   capacity: CapacityBand;
+  /**
+   * RECENT FATIGUE PATTERNS — the conditioning twin of
+   * `ProgressionInput.recentFatiguePattern` (Sam, 2026-08-13, the readiness
+   * homonym). `biasConditioningReadiness` used to say this by stepping
+   * `capacity` down, so a fatigue streak reached every capacity reader as
+   * "this athlete is untrained". Same intent, its own name, one vote.
+   */
+  recentFatiguePattern: boolean;
   recentRPE: number;
   completionQuality: CompletionQuality;
   /** True when recentRPE/completion came from an athlete log instead of fallback defaults. */
@@ -152,11 +160,15 @@ export function resolveConditioningProgression(
   if (input.capacity === 'low') softCount++;
   if (input.recentRPE >= 8) softCount++;
   if (input.completionQuality === 'failed') softCount++;
+  // The vote `biasConditioningReadiness` used to cast by writing 'low' into
+  // `capacity`. Same weight, its own name, counted exactly once.
+  if (input.recentFatiguePattern) softCount++;
   if (softCount >= 2) {
     const signals: string[] = [];
     if (input.capacity === 'low') signals.push('low capacity');
     if (input.recentRPE >= 8) signals.push('high RPE');
     if (input.completionQuality === 'failed') signals.push('failed completion');
+    if (input.recentFatiguePattern) signals.push('recent fatigue pattern');
     return buildConditioningDeload(input, `Soft deload: ${signals.join(' + ')}`);
   }
 

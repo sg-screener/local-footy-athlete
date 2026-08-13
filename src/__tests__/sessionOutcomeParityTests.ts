@@ -566,6 +566,7 @@ function progressionSnapshot(feedback: SessionFeedback): unknown {
   const conditioningInput: ConditioningProgressionInput = {
     tier: 'B-high',
     capacity: 'medium',
+    recentFatiguePattern: false,
     recentRPE: 6,
     completionQuality: 'full',
     hasRecentFeedback: false,

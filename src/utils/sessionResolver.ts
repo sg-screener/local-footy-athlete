@@ -62,7 +62,7 @@ import {
 } from './strengthProgressionIntegration';
 import {
   analyzeFeedbackPatterns,
-  biasConditioningReadiness,
+  conditioningReportsRecentFatigue,
   shouldPreferRest,
 } from './feedbackPatterns';
 import { findMatchingFeedback, deriveAdaptation } from './feedbackAdapter';
@@ -1937,11 +1937,12 @@ export function resolveWeekWithConditioning(
   }
 
   // Pass 2: progressive conditioning placement
-  // Apply feedback pattern bias to conditioning readiness (one-step max)
-  const conditioningReadiness = biasConditioningReadiness(
-    state.capacity || 'medium',
-    weekPatternSummary,
-  );
+  // THE CAPACITY BAND PASSES THROUGH UNTOUCHED (Sam, 2026-08-13, the readiness
+  // homonym). This used to step it down one, which reached `WeekLog.capacity`
+  // and from there every capacity reader — a fatigue streak arriving as "this
+  // athlete's baseline is low". The vote now travels under its own name.
+  const conditioningCapacity = state.capacity || 'medium';
+  const conditioningRecentFatigue = conditioningReportsRecentFatigue(weekPatternSummary);
   const conditioningPlaced: WeekLog['sessions'] = [];
   // The bye mode is the CONTRACT's, not this pass's. Conditioning used to infer
   // "fresh" from readiness and injury and cap the week's tiers on the answer,
@@ -2054,9 +2055,10 @@ export function resolveWeekWithConditioning(
     const weekLog = buildWeekLog(
       baseDays,
       state.markedDays || {},
-      conditioningReadiness,
+      conditioningCapacity,
       conditioningPlaced,
       byeMode,
+      conditioningRecentFatigue,
     );
 
     // Try conditioning placement

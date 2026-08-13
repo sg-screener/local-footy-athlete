@@ -560,6 +560,7 @@ console.log('\n[5] Bye recovery is schedule-triggered, and only the mode decides
     doubleGameWeek: false,
     weeksOffTraining: 0,
     capacity: 'high',
+    recentFatiguePattern: false,
     byeMode: 'build',
     ...overrides,
   });

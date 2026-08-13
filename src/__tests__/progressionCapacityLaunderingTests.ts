@@ -66,6 +66,7 @@ armTotalsOrRed();
 
 import {
   applyPatternBiases,
+  conditioningReportsRecentFatigue,
   type FeedbackPatternSummary,
   type PatternFlag,
 } from '../utils/feedbackPatterns';
@@ -75,6 +76,10 @@ import {
   type StrengthProgressionContext,
 } from '../utils/strengthProgressionIntegration';
 import { resolveProgression, type ProgressionInput } from '../utils/progressionRules';
+import {
+  resolveConditioningProgression,
+  type ConditioningProgressionInput,
+} from '../utils/conditioningProgressionRules';
 
 let passed = 0;
 const failures: string[] = [];
@@ -223,17 +228,71 @@ console.log('\n[5] THE DEFAULT IS THE ABSENCE OF THE SIGNAL');
     DEFAULT_PROGRESSION_CONTEXT.capacity === 'medium');
 }
 
-// ── NOT COVERED, named rather than implied ─────────────────────────────────
+console.log('\n[6] THE CONDITIONING ARM — the same cut, the third writer');
+{
+  // `biasConditioningReadiness` was the last of the three. It stepped the band
+  // down and handed the result to `buildWeekLog`, so the corrupted value became
+  // `WeekLog.capacity` and reached every reader beyond it.
+  ok('[R-041] a fatigue streak reports fatigue without touching a band',
+    conditioningReportsRecentFatigue(summary(['FATIGUE_STREAK'])) === true);
+  ok('COOKED_REPEAT reports it too', conditioningReportsRecentFatigue(summary(['COOKED_REPEAT'])) === true);
+  ok('MIXED_SIGNALS reports it too', conditioningReportsRecentFatigue(summary(['MIXED_SIGNALS'])) === true);
+  ok('[control] a clean week reports no fatigue',
+    conditioningReportsRecentFatigue(summary(['EASE_STREAK'])) === false);
+  ok('[control] no summary reports no fatigue',
+    conditioningReportsRecentFatigue(null) === false);
+  // STRUCTURAL: the replacement has no band to give back, so the old shape
+  // cannot be restored without changing the signature.
+  ok('[structural] it cannot return a capacity band at all',
+    typeof conditioningReportsRecentFatigue(summary(['FATIGUE_STREAK'])) === 'boolean');
+
+  // THE READER. Without this the conditioning field would have a writer and a
+  // test and no proof anything consumes it — the `canOverride` shape, written
+  // nine times and read zero.
+  const condInput = (over: Partial<ConditioningProgressionInput> = {}) => ({
+    tier: 'B-high', capacity: 'high', recentFatiguePattern: false,
+    recentRPE: 8,                       // exactly ONE other fatigue signal
+    completionQuality: 'full', hasAvoidInjury: false, hasModifyInjury: false,
+    seasonPhase: 'Off-season', weeklyConditioningCount: 2, daysToGame: null,
+    doubleGameWeek: false, highFatigueStrengthThisWeek: false,
+    lastSessionProgressed: false, weeklyLoad: 100, previousWeekLoad: 100,
+    currentReps: 6, currentIntervals: 6, currentDuration: 20, currentRest: 60,
+    ...over,
+  } as ConditioningProgressionInput);
+
+  const condWith = resolveConditioningProgression(condInput({ recentFatiguePattern: true }));
+  ok('[the vote counts] conditioning: one signal + a recent pattern = soft deload',
+    /Soft deload/i.test(condWith.note ?? ''), `note: ${condWith.note}`);
+  ok('and it names the pattern in the signal list',
+    /recent fatigue pattern/i.test(condWith.note ?? ''), `note: ${condWith.note}`);
+
+  const condWithout = resolveConditioningProgression(condInput({ recentFatiguePattern: false }));
+  ok('[non-vacuity] conditioning: the SAME input without the pattern does NOT deload',
+    !/Soft deload/i.test(condWithout.note ?? ''),
+    `note: ${condWithout.note} — if this deloads too, the cell above proves nothing`);
+}
+
+// ── NOT COVERED — A SURVIVING MUTANT, NAMED WITH ITS RECEIPT ───────────────
 //
-// The CONDITIONING arm is not cut. `feedbackPatterns.biasConditioningReadiness`
-// still steps the band down for conditioning tier selection
-// (`sessionResolver.ts:1941`), and `conditioningProgressionRules`' counter has
-// no feeling-equivalent to route it through — its peers are `recentRPE` and
-// `completionQuality`. It needs the same field on that input, and it moves the
-// conditioning arm of generated output, so it is a slice of its own rather than
-// a rider on this one. Recorded in docs/STATUS_READINESS.md.
-console.log('\n  NOT COVERED: the conditioning arm (biasConditioningReadiness) '
-  + '— its own slice; see docs/STATUS_READINESS.md');
+// **THIS SUITE HOLDS THE WRITERS AND THE READERS. IT DOES NOT HOLD THE WIRE
+// BETWEEN THEM, AND THAT IS MEASURED, NOT SUSPECTED.**
+//
+// Mutant M5: in `sessionResolver`, replace
+//     const conditioningRecentFatigue = conditioningReportsRecentFatigue(...)
+// with `= false`. The vote is then computed correctly, read correctly, and
+// never travels. **`test:conditioning-dose` stayed 12/0 and this suite stayed
+// green.** Four other mutants in this family were killed; that one survives.
+//
+// It survives for the same reason `test:qa` is byte-identical across this whole
+// change: **no suite in the chain generates a week from an athlete with real
+// session-feedback history**, so the flags never fire in any generated world.
+// Killing it needs a walker world carrying accumulated feedback (L13's
+// territory), which is a unit of its own.
+//
+// **Recorded here rather than in a status file because a surviving mutant that
+// only the author knows about is the same as no mutation testing at all.**
+console.log('\n  NOT COVERED: the resolver -> input WIRE (mutant M5 survives) '
+  + '— needs a walker world with feedback history; see docs/STATUS_READINESS.md');
 
 const total = passed + failures.length;
 console.log(`\nProgression capacity laundering: passed=${passed}/${total} failures=${failures.length}`);

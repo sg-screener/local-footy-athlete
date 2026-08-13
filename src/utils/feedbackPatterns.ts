@@ -272,30 +272,33 @@ export function applyPatternBiases(
   return biased;
 }
 
-// ─── Conditioning Readiness Bias ───
+// ─── Conditioning: the recent-fatigue vote ───
 
 /**
- * Downgrade readiness by one step for conditioning tier selection.
- * Applies when FATIGUE_STREAK, COOKED_REPEAT, or MIXED_SIGNALS is active.
+ * Does the week's feedback show recent fatigue, for conditioning progression?
  *
- * Only one downgrade regardless of how many flags are active.
+ * RENAMED AND RE-POINTED from `biasConditioningReadiness` (Sam, 2026-08-13, the
+ * readiness homonym). It used to take the CAPACITY band and step it down one,
+ * which reached `WeekLog.capacity` and from there every capacity reader — so a
+ * fatigue streak was reported as "this athlete's baseline is low".
+ *
+ * The intent is unchanged and now travels as
+ * `ConditioningProgressionInput.recentFatiguePattern`, a peer of `recentRPE`
+ * and `completionQuality` in the same soft-deload counter. Still one vote
+ * however many flags are active — the shape enforces it now, rather than the
+ * single-return doing so by luck.
  */
-export function biasConditioningReadiness(
-  readiness: CapacityBand,
+export function conditioningReportsRecentFatigue(
   summary: FeedbackPatternSummary | null,
-): CapacityBand {
-  if (!summary) return readiness;
+): boolean {
+  if (!summary) return false;
 
   const flags = summary.activeFlags;
-  if (
+  return (
     flags.includes('FATIGUE_STREAK') ||
     flags.includes('COOKED_REPEAT') ||
     flags.includes('MIXED_SIGNALS')
-  ) {
-    return READINESS_DOWN[readiness];
-  }
-
-  return readiness;
+  );
 }
 
 // ─── Recovery Rest Preference ───

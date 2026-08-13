@@ -105,6 +105,12 @@ export interface WeekLog {
    * longer decides any tier cap in this file.
    */
   capacity: 'low' | 'medium' | 'high';
+  /**
+   * Recent fatigue patterns for the week. Carried beside `capacity` rather than
+   * folded into it (Sam, 2026-08-13, the readiness homonym) — see
+   * `ConditioningProgressionInput.recentFatiguePattern`.
+   */
+  recentFatiguePattern: boolean;
 }
 
 export interface ConditioningResult {

@@ -52,6 +52,7 @@ export function buildWeekLog(
   capacity: CapacityBand = 'medium',
   conditioningPlaced: WeekLog['sessions'] = [],
   byeMode: WeekLog['byeMode'] = 'build',
+  recentFatiguePattern = false,
 ): WeekLog {
   // Count game days within this specific week
   const weekDates = new Set(resolvedDays.map(d => d.date));
@@ -90,6 +91,7 @@ export function buildWeekLog(
     weeksOffTraining: 0,          // Requires session history — safe default
     byeMode,
     capacity,
+    recentFatiguePattern,
   };
 }
 
