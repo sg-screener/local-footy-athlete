@@ -45,6 +45,26 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE QUEUE FROM THIS SEAT — WHAT IS LEFT AND WHY IT IS NOT MINE
+
+**Every remaining item under `## Unprocessed` is discharged, owned elsewhere, or
+standing. Measured, not asserted:**
+
+| item | state |
+| --- | --- |
+| 39 (sprint cap) | `BLOCKED-BY: other-agent` — names the TERMINAL as owner and reserves R-079 |
+| 31 (COD window / Christmas) | **verified BUILT, all three parts**, receipts in the item. Archiving is the SEAT's edit |
+| 26 (2-3 pairs) | `BLOCKED-BY: other-agent` — SEQUENCING, not a file hold; its next act moves a golden under investigation |
+| 27 (C1) | marked with the measured reconciliation; C1 and 28-C1 are one defect |
+| 1 (standing merge) | **discharged this stop** — 42 `codex/*` branches, newest merge-base 2026-07-19, nothing to merge. **Quiet, as the order says** |
+| 13 (standing, law count) | **discharged this stop** — one law paid (27 → 26) and the other 26 triaged by cost |
+
+**THE TWO STANDING ITEMS NEVER "CLEAR" — that is what standing means.** They are
+done at every stop, and they were done at this one. **A seat reading this file
+should not re-run them expecting a different answer; re-measure only when the
+tree has moved.**
+
+
 ### ✅ THE `--full` CONDITION FIRED — TWO MORE CAUSES WERE HIDING, AND MY OWN TOTAL WAS A SATURATED CELL
 
 **I wrote: *"if a third kind appears, that is the finding the cap was hiding from
