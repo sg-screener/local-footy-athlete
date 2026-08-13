@@ -14,17 +14,15 @@ npm run print:week
 
 **The app had words for everything — 0 blanks across all 6 weeks.** Every name, heading and instruction an athlete would read came out of the app. Nothing was missing and nothing was invented to cover a gap.
 
-**⚠ THE WORST THING HERE: 7 exercises the athlete has no equipment for.** An athlete who says they own nothing is still told to do them. The app's own equipment check says no to every one:
+**⚠ THE WORST THING HERE: 5 exercises the athlete has no equipment for.** An athlete who says they own nothing is still told to do them. The app's own equipment check says no to every one:
 
 - Band Pallof Press — needs bands, which this athlete does not have
 - RDLs — needs barbell, which this athlete does not have
-- Pull-Ups — needs pullup_bar, which this athlete does not have
-- Barbell Row — needs barbell, which this athlete does not have
 - Face Pull — needs cables, which this athlete does not have
+- Pull-Ups — needs pullup_bar, which this athlete does not have
 - Overhead Press — needs barbell + rack, which this athlete does not have
-- Lateral Raise — needs dumbbells, which this athlete does not have
 
-**18 problems in total** that the printer could detect by itself. Each file lists its own at the foot, under "Things wrong with this week".
+**16 problems in total** that the printer could detect by itself. Each file lists its own at the foot, under "Things wrong with this week".
 
 It cannot tell whether the training is any GOOD. That is the reading.
 
@@ -37,7 +35,7 @@ It cannot tell whether the training is any GOOD. That is the reading.
 | 3 | [In-season](3-in-season-two-team-nights.md) | Saturday game, Tuesday and Thursday at the club | 1 |
 | 4 | [In-season bye](4-bye-week.md) | no game this Saturday | 2 |
 | 5 | [In-season, away all week](5-away-trip.md) | Wednesday to Sunday | 3 |
-| 6 | [In-season with nothing but a floor](6-bodyweight-only.md) | no gym at all | 8 |
+| 6 | [In-season with nothing but a floor](6-bodyweight-only.md) | no gym at all | 6 |
 
 Read 3 first — it is the week most athletes get most weeks. Then read 3
 and 5 side by side, and 3 and 4 side by side; those pairs are the same

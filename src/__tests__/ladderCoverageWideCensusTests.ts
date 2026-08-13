@@ -63,6 +63,10 @@
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { sessionSlotCoverage, slotDayKindFor } from '../rules/sessionSlotCoverage';
+// The SAME kit resolution the generator uses (`defaultProgram`), not a second
+// one — a census judging against a kit the builder never saw would be measuring
+// a world no athlete is in.
+import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 
 armTotalsOrRed();
 
@@ -173,6 +177,9 @@ let sessionsSeen = 0;
 let ladderedDays = 0;
 const rowCounts: Record<number, number> = {};
 const deficient: string[] = [];
+/** R-083: laddered days holding a slot this athlete's KIT cannot train at all. */
+const kitBlocked: string[] = [];
+const kitBlockedSlots: Record<string, number> = {};
 
 for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
   for (const trainingDaysPerWeek of [2, 3, 4, 5, 6]) {
@@ -216,9 +223,38 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
             ladderedDays += 1;
             const rows = workout.exercises ?? [];
             rowCounts[rows.length] = (rowCounts[rows.length] ?? 0) + 1;
-            const coverage = sessionSlotCoverage(rows, kind);
+            // ── THE LADDER IS JUDGED AGAINST THE KIT-ACHIEVABLE LADDER ───────
+            //
+            // R-083: *"i can't account for everyone and if they want to train
+            // properly they'll sign up to a gym"*. A slot no legal exercise can
+            // fill on this athlete's kit is NOT OWED, so counting it as a missing
+            // rung scores the ruling's own answer as a defect. Measured: closing
+            // the equipment routes took this census 92 → 178 deficient, and the
+            // 86 new ones were bodyweight days correctly missing a vertical pull.
+            //
+            // `sessionSlotCoverage` has taken the kit and computed `unavailable`
+            // since R-084 — **this census simply never passed it.** The oracle is
+            // unchanged; only the question is now asked properly.
+            //
+            // FULL-GYM ATHLETES ARE UNTOUCHED BY CONSTRUCTION: their `unavailable`
+            // is empty, so `required` is the whole declared ladder exactly as
+            // before. That is asserted below, not assumed.
+            const kit = resolveEquipmentCapabilities(profile as any).tags;
+            const coverage = sessionSlotCoverage(rows, kind, kit);
             for (const slot of coverage.filled) {
               if (slot in weekPairs) weekPairs[slot] += 1;
+            }
+            // ⚠ NOTHING DISAPPEARS BY REDEFINITION. A slot moved out of `missing`
+            // is moved INTO this census, which is printed beside the deficient
+            // count and floored below. A number that falls because the question
+            // narrowed, with nowhere for the difference to show, is the exact
+            // move `DEFICIENT_CEILING`'s own comment calls worthless.
+            if (coverage.unavailable.length > 0) {
+              kitBlocked.push(`${label} | ${workout.name} [${kind}] `
+                + `unavailable=${JSON.stringify(coverage.unavailable)}`);
+              for (const slot of coverage.unavailable) {
+                kitBlockedSlots[slot] = (kitBlockedSlots[slot] ?? 0) + 1;
+              }
             }
             if (coverage.missing.length > 0 || coverage.duplicated.length > 0) {
               deficient.push(`${label} | ${workout.name} [${kind}] `
@@ -290,6 +326,36 @@ console.log('\n[2] Sam\'s ladder, over every world the app can build');
     `${deficient.length} deficient of ${ladderedDays} laddered days `
     + `(ceiling ${DEFICIENT_CEILING}, ${shapes.size} distinct shapes)\n     `
     + [...shapes].slice(0, 20).join('\n     '));
+
+  // ── THE R-083 CATEGORY, PRINTED BESIDE THE DEFICIENT COUNT ────────────────
+  //
+  // These days are not deficient and are not clean: the athlete's kit cannot
+  // train the slot, so by R-083 it is REMOVED, not owed and not substituted.
+  // They get their own visible number because a category with no counter is how
+  // a narrowed question passes for an improvement.
+  //
+  // THE FLOOR IS THE NON-VACUITY. If the kit ever stops being passed to the
+  // oracle — the exact defect this slice fixed — `unavailable` goes empty
+  // everywhere, this count drops to 0, and the deficient count jumps back. The
+  // floor reds first and names the cause, instead of the ceiling reddening and
+  // sending the next reader looking at the composer.
+  ok('[R-083] the kit-blocked census is LIVE — the oracle is being told the kit',
+    kitBlocked.length > 0,
+    `0 kit-blocked days across ${worldsBuilt} worlds, though one of the three kits is `
+    + 'Bodyweight Only. Either sessionSlotCoverage stopped receiving availableEquipment '
+    + 'or slotIsTrainableOnKit went blind — the deficient count above is now measuring '
+    + 'the wrong ladder.');
+  // AND IT MUST NOT SWALLOW THE FULL-GYM ATHLETE. If a full-gym kit ever
+  // reported an unavailable slot, this category would be absorbing real composer
+  // gaps under an equipment exemption — the one way this change could hide a
+  // defect rather than classify one.
+  ok('[R-083] a full-gym athlete is never kit-blocked — the exemption cannot spread',
+    kitBlocked.every((line) => !line.includes('/Full Gym/')),
+    kitBlocked.filter((line) => line.includes('/Full Gym/')).slice(0, 5).join('\n     '));
+
+  console.log(`\n  R-083 KIT-BLOCKED CENSUS: ${kitBlocked.length} laddered days hold a slot `
+    + 'their kit cannot train (removed by ruling, not owed)');
+  console.log(`    by slot: ${JSON.stringify(kitBlockedSlots)}`);
 
   console.log(`\n  WIDE LADDER CENSUS: ${deficient.length} deficient of ${ladderedDays} laddered days `
     + `(ceiling ${DEFICIENT_CEILING}) across ${worldsBuilt} worlds, ${worldsRefused} refused`);

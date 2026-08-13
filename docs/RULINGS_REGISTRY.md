@@ -1517,6 +1517,41 @@ pool, so no pool-layer change can ever reach it; only the sheet can.
 **AND THE SECOND CLAUSE IS STILL NOT DELIVERED** (the paragraph above): after
 this change the bodyweight Tuesday shows an Upper Pull of two rows the athlete
 cannot do, and says nothing about the kit.
+**⚠ RECEIPT 2, 2026-08-14 (mission slice 1B) — THE ROW STAYS `UNENFORCED`, AND
+THE REASON IS NOW A LAW COLLISION RATHER THAN MISSING WORK.**
+**COVERED — the judging side.** `test:ladder-wide` judges each laddered day
+against the KIT-ACHIEVABLE ladder: `sessionSlotCoverage` has taken
+`availableEquipment` and computed `unavailable` since R-084, and the wide census
+simply never passed it. It does now
+(`src/__tests__/ladderCoverageWideCensusTests.ts`), which takes the deficient
+count 178 → **126 of 318** with the ceiling untouched at 88, and puts the
+difference in a printed **R-083 KIT-BLOCKED CENSUS** of 86 days
+(`vertical_pull` 52, `vertical_push` 42, `horizontal_pull` 26) rather than
+letting it vanish. Two new cells hold it: the category reds if the oracle ever
+stops being told the kit, and reds if a FULL-GYM athlete is ever kit-blocked —
+the only way this exemption could hide a real composer gap.
+**STILL OPEN — AND ONE OF THEM CANNOT BE CLOSED WITHOUT SAM.**
+(1) **THE RESTORE ROUTE IS BLOCKED BY §18, NOT BY MISSING CODE.** The guard was
+built and measured: it removes `Pull-Ups`, `Overhead Press` and
+`Romanian Deadlift` and takes `row_restored` 12 → 0. **`print:week` scenario 6
+then fails to generate at all** —
+`Section18WeekAcceptanceError: pattern_restore_failure:strength_patterns:0` ×3
+plus `required_minimum_shortfall:main_strength:1`. Attributed by disabling that
+guard alone and re-running. `section18EffectiveWeekEvaluator.ts:1440` raises the
+finding for every `requiredSafePattern` with no meaningful main lift, and a
+kit-untrainable pattern is still required there. **R-083 and §18 are in direct
+contradiction for a bodyweight athlete, and §18 wins by refusing the week** —
+the athlete gets nothing, which is worse than a row they can see and skip.
+Teaching §18 the kit (the shape its injury `prohibitedPatterns` already has) is
+a change to safety acceptance behaviour and **needs Sam's ruling.** Not shipped.
+`SEAT_INBOX` item 48 records two earlier commits reverted for this same code.
+(2) **A THIRD ROUTE ADDS ROWS AFTER CANONICALISATION** — `Band Pallof Press`
+reaches a bodyweight athlete having passed neither the pool nor the canonicaliser
+triage. Unlocated.
+(3) **THE SAYING IS BUILT BUT UNSHIPPED** — `Workout.equipmentRemovals` +
+`part.detail.kit_cannot_train` + `projectVisibleWeek.partDetail` exist and are
+preserved, but they hang off the removal in (1) and could not be seen on glass
+while scenario 6 refuses to generate.
 
 **R-084** · *"single leg hip thrust is an accessory"* (2026-08-13) · **A
 SINGLE-LEG HIP THRUST IS AN ACCESSORY, NOT SINGLE-LEG HIP WORK.** Its existing

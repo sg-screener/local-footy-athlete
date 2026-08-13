@@ -35,12 +35,10 @@
 
 **Upper Pull**
 
-- Pull-Ups — 3 × 4-6  ⚠ **CANNOT BE DONE — needs pullup_bar, which this athlete does not have.**
-  - Dead hang to chin over bar, any grip is fine. Initiate with the lats, not the arms. Add weight once bodyweight sets feel easy.
-- Barbell Row — 3 × 4-6  ⚠ **CANNOT BE DONE — needs barbell, which this athlete does not have.**
-  - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
 - Face Pull — 2 × 10-20  ⚠ **CANNOT BE DONE — needs cables, which this athlete does not have.**
   - Pull to the forehead, open the hands out. Squeeze the rear delts, slow return.
+- Pull-Ups — 3 × 6-10  ⚠ **CANNOT BE DONE — needs pullup_bar, which this athlete does not have.**
+  - Dead hang to chin over bar, any grip is fine. Initiate with the lats, not the arms. Add weight once bodyweight sets feel easy.
 
 **Team Training**
 
@@ -67,12 +65,10 @@ _(the club runs this one — the app lists nothing for it)_
 
 **Upper Push**
 
-- Overhead Press — 3 × 3-5  ⚠ **CANNOT BE DONE — needs barbell + rack, which this athlete does not have.**
-  - Ribs down, bar finishes over the ears. Press hard and finish strong.
 - Push-ups — 3 × 8-15
   - Body in a straight line, elbows at 45. Chest to floor, full lockout.
-- Lateral Raise — 2 × 10-20  ⚠ **CANNOT BE DONE — needs dumbbells, which this athlete does not have.**
-  - Light weight, lead with the elbows. No momentum, strict form.
+- Overhead Press — 3 × 6-10  ⚠ **CANNOT BE DONE — needs barbell + rack, which this athlete does not have.**
+  - Ribs down, bar finishes over the ears. Press hard and finish strong.
 
 **Team Training**
 
@@ -106,17 +102,15 @@ None. Every word on this page came out of the app.
 
 ## Things wrong with this week
 
-**Every set on this page is written as a range — 15 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 6-8" should read "3 × 7"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
+**Every set on this page is written as a range — 13 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 6-8" should read "3 × 7"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
 
-**7 exercises the athlete has no equipment for:**
+**5 exercises the athlete has no equipment for:**
 
 - Monday 10 August — Band Pallof Press — needs bands, which this athlete does not have
 - Monday 10 August — RDLs — needs barbell, which this athlete does not have
-- Tuesday 11 August — Pull-Ups — needs pullup_bar, which this athlete does not have
-- Tuesday 11 August — Barbell Row — needs barbell, which this athlete does not have
 - Tuesday 11 August — Face Pull — needs cables, which this athlete does not have
+- Tuesday 11 August — Pull-Ups — needs pullup_bar, which this athlete does not have
 - Thursday 13 August — Overhead Press — needs barbell + rack, which this athlete does not have
-- Thursday 13 August — Lateral Raise — needs dumbbells, which this athlete does not have
 
 **1 line that does not say how much work to do:**
 
