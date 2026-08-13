@@ -100,23 +100,59 @@ has already moved in the working tree.
 
 ## THE TWO REMAINING SIGHTINGS
 
-### AWAY — LOCATED. ONE TRIP, TWO SPANS, TWO DOORS
+### AWAY — LOCATED, AND MY FIRST TWO CANDIDATES WERE BOTH WRONG
 
-`src/types/programControlAction.ts`. The same trip is written twice:
+**CANDIDATE 1, REFUTED: the two action payloads.** `awaySpan { from, until }` on
+`set_schedule_modifier` and `missing_for_span { from, until, tags, … }` on the
+equipment action DO both carry the trip's dates — but `HomeScreenV2` computes
+`span` ONCE and hands the same object to both doors
+(`setAwayEquipmentSpan(span)`). **Already derived. Not the sighting.**
 
-- `set_schedule_modifier` carries **`awaySpan: { from, until }`** — `until` is the
-  last day away.
-- the equipment action carries **`missing_for_span: { from, until, tags,
-  conditioningModalities }`** — the same trip's dates, authored separately.
+### ✅ THE SIGHTING, FOUND: ONE TRIP READ THROUGH TWO WORD-LISTS
 
-Each half of the app reads one. **Nothing derives either from the other**, so an
-athlete's single "I'm away 10th–20th" becomes two independently-authored spans
-that can disagree — the item's shape exactly. A third format (`planChange:
-{ kind: 'clear_days', dates }`) is the superseded door the comments describe.
+Two functions answer *"which trips are live over this week"*, and they share
+**not one field name**:
 
-**The fix in the worked example's shape:** one away decision, with the equipment
-fact's span DERIVED from it, so the two cannot drift. NOT two authored spans kept
-in sync.
+| | `awaySpansFromFacts` | `awaySpansFromConstraints` |
+| --- | --- | --- |
+| lives in | `rules/derivedWeekContract.ts:84` | `services/api/generateProgram.ts:452` |
+| reads | `TemporarySourceFact` | an active constraint |
+| discriminator | `factKind === 'schedule'` | `type === 'schedule'` |
+| start | **`effectiveFrom`** | **`startDate`** |
+| end | **`effectiveUntil`** | **`expiresAt`** |
+| liveness | **`status === 'active'`** | **`status !== 'resolved'`** |
+| input typing | typed | **`readonly any[]`** |
+
+**Each half of the app understands only one.** The derived-week contract decides
+whether a game anchors the week; generation decides whether the club comes off
+the calendar. One trip, two vocabularies, and the translation between them is a
+projection nobody type-checks.
+
+### ⚠ AND THE LIVE-DEFECT ALARM I ALMOST SENT IS REFUTED BY THE PIPELINE
+
+`TemporarySourceFactStatus` is `active | resolved | expired | superseded`. So on
+their faces the two liveness tests DISAGREE — `=== 'active'` drops `expired` and
+`superseded`; `!== 'resolved'` keeps them. An expired trip would then leave the
+derived week saying *"he is home, the game anchors"* while generation says
+*"he is away, strip the club"*.
+
+**I ran the seam before writing that up, and it does not happen.**
+`activeTemporarySourceFacts` (`rules/temporarySourceFact.ts:620`) rejects every
+fact whose `status !== 'active'` BEFORE `scheduleProjection` sees it, and the
+projection then hard-codes `status: 'active'` on every constraint it emits. **The
+constraint side is therefore incapable of holding a non-active travel span, and
+the two predicates agree in practice.**
+
+**THE DIVERGENCE IS LATENT, NOT LIVE — and that is still the finding.** The two
+halves agree *by luck of an upstream filter*, not by construction: nothing ties
+`expiresAt` to `effectiveUntil`, and the constraint side is `any[]`, so a rename
+on the projection breaks exactly one half, silently, with no compiler and no
+cell. That is item 61's sentence with the damage still in front of it rather
+than behind it.
+
+**The fix in the worked example's shape:** ONE function answering "the live away
+spans", with the constraint reading DERIVED from the fact vocabulary rather than
+re-authored beside it — not two hand-written filters kept in agreement.
 
 ### CONDITIONING — the wall is `categoryToFlavour`, and finding 3 adds a second
 
