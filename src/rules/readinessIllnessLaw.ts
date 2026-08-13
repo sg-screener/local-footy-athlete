@@ -106,6 +106,19 @@ export const READINESS_TIERS: readonly ReadinessTier[] = [
   'absolutely_cooked',
 ];
 
+/**
+ * THE SEVERITY LADDER -> TIER, OWNED HERE.
+ *
+ * This lived privately inside `generationConstraints.readinessTierFromConstraint`
+ * while only that module needed it. The READINESS DOOR needs the same answer —
+ * it has to know whether a declaration deloads before it can decide whether to
+ * attach the 7-day window — and two copies of a threshold is how a door and a
+ * generator start disagreeing about what "wrecked" means.
+ */
+export function readinessTierForSeverity(severity: number): ReadinessTier {
+  return severity >= 8 ? 'absolutely_cooked' : severity >= 4 ? 'wrecked' : 'tired';
+}
+
 export function resolveReadinessDirective(tier: ReadinessTier): TierDirective {
   return resolveTierDirective(
     tier === 'absolutely_cooked' ? 'optional' : tier === 'wrecked' ? 'deloaded' : 'noted',

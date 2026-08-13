@@ -25,6 +25,10 @@
 process.env.TZ = 'Australia/Melbourne';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import {
+  reportedLevelDeloads,
+  type TemporaryAthleteReportedLevel,
+} from '../rules/temporarySourceFact';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 import fs from 'fs';
@@ -573,10 +577,57 @@ for (const phase of ['In-season', 'Pre-season', 'Off-season'] as const) {
   // scope helper nothing calls is exactly the defect A1 names.
   const producer = readFileSync(
     join(__dirname, '..', 'utils', 'programControlActions.ts'), 'utf8');
-  ok('the cooked mint site uses the readiness window, not the open illness scope',
-    /level === 'cooked'\s*\n\s*\?\s*readinessDeloadFactScope\(/.test(producer),
-    'programControlActions still mints cooked with durableStateFactScope — the '
-    + 'open horizon that never elapses');
+  // ⚠ RE-AIMED 2026-08-13, AND NOT LOOSENED. This matched the literal
+  // `level === 'cooked'\n ? readinessDeloadFactScope(`. That literal WAS the
+  // defect one tier down: it gave the window to "absolutely cooked" and withheld
+  // it from "Wrecked", which R-038 also grants seven days. The mint site now
+  // asks the law — `reportedLevelDeloads(...)` — so the pattern this cell was
+  // pinned to is gone BECAUSE the code got strictly more correct.
+  //
+  // The cell's NAME is still exactly what is asserted: the fatigue mint uses the
+  // readiness WINDOW and never the open illness horizon. Both halves are held,
+  // and the second half is the one A1 was written for.
+  ok('the fatigue mint site uses the readiness window, not the open illness scope',
+    /reportedLevelDeloads\([^)]*\)\s*\n?\s*\?\s*readinessDeloadFactScope\(/.test(producer)
+      && !/createTemporaryFatigueFact\([\s\S]{0,400}?durableStateFactScope\(/.test(producer),
+    'programControlActions no longer guards the readiness window with the law, '
+    + 'or mints a fatigue fact with durableStateFactScope — the open horizon '
+    + 'that never elapses');
+}
+
+// ── R-038: EVERY TIER THAT DELOADS GETS THE SEVEN DAYS, NOT JUST THE TOP ONE ──
+//
+// Sam's three tiers, and the law module's own table above states them:
+//   tired              noted only
+//   wrecked            7 DAYS DELOADED
+//   absolutely_cooked  7 days deloaded + every session optional
+//
+// The readiness door (`programControlActions`) attached
+// `readinessDeloadFactScope` only when the level was literally 'cooked'; every
+// other level took a single-DATE scope. Measured through the app's own
+// projection: a `wrecked` declaration was deloaded on the declaration day and
+// had ZERO active constraints by day 3 — one easier day instead of seven.
+//
+// The severity ladder that decides the tier is `levelScore`: slight 3,
+// moderate 5, high 7, cooked 8; the threshold is >=8 cooked, >=4 wrecked.
+// So BOTH `moderate` and `high` are wrecked, and both were losing the window.
+{
+  const cases: Array<[TemporaryAthleteReportedLevel, boolean, string]> = [
+    ['slight', false, 'tired — noted only, no window'],
+    ['moderate', true, 'WRECKED — 7 days'],
+    ['high', true, 'WRECKED — 7 days'],
+    ['cooked', true, 'absolutely cooked — 7 days + optional'],
+  ];
+  for (const [level, expected, why] of cases) {
+    ok(`[R-038] "${level}" deloads=${expected} (${why})`,
+      reportedLevelDeloads(level) === expected,
+      `reportedLevelDeloads('${level}') === ${reportedLevelDeloads(level)}`);
+  }
+  // NON-VACUITY: the predicate must actually discriminate. A function that
+  // answered true for everything would pass three of the four above.
+  ok('[R-038] non-vacuity: the predicate separates tired from the rest',
+    reportedLevelDeloads('slight') !== reportedLevelDeloads('moderate'),
+    'tired and wrecked returned the same answer');
 }
 
 console.log(

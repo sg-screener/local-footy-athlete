@@ -1,3 +1,7 @@
+import {
+  readinessTierForSeverity,
+  resolveReadinessDirective,
+} from './readinessIllnessLaw';
 import type { IllnessSeverityTier } from './readinessIllnessLaw';
 import type { ActiveConstraint, ActiveFatigueConstraint, ActiveSorenessConstraint } from '../store/coachUpdatesStore';
 import type {
@@ -707,6 +711,22 @@ export function expireTemporarySourceFacts(
       ],
     };
   });
+}
+
+/**
+ * Does a declaration at this reported level open the 7-day deload window?
+ *
+ * R-038: "Tired" is noted only; "Wrecked" AND "Absolutely cooked" are both
+ * SEVEN DAYS DELOADED. The readiness door used to attach the window on the
+ * literal `level === 'cooked'`, which gave the seven days to the top tier and
+ * withheld them from the middle one — a wrecked athlete got ONE easier day.
+ *
+ * Asks the LAW rather than restating the ladder: `levelScore` here owns the
+ * level -> severity mapping, `readinessTierForSeverity` owns severity -> tier,
+ * and `resolveReadinessDirective` owns what a tier DOES.
+ */
+export function reportedLevelDeloads(level: TemporaryAthleteReportedLevel): boolean {
+  return resolveReadinessDirective(readinessTierForSeverity(levelScore(level))).deloaded;
 }
 
 function levelScore(level: TemporaryAthleteReportedLevel): number {

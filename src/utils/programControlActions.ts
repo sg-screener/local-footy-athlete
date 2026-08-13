@@ -62,6 +62,8 @@ import {
   resolveInjuryEpisode,
 } from '../store/injuryEpisodeTransaction';
 import {
+  reportedLevelDeloads,
+  type TemporaryAthleteReportedLevel,
   createTemporaryFatigueFact,
   createTemporaryIllnessFact,
   createTemporaryEquipmentFact,
@@ -1394,6 +1396,20 @@ async function executeProgramControlActionDurablyWithinTrace(
     // says otherwise and start when they are reported, not on the week's Monday.
     // The today-tier reports stay genuinely date-shaped.
     const todayISO = (action.payload.todayISO ?? context.todayISO ?? date).slice(0, 10);
+    // ONE reading of the athlete's answer, used for BOTH the reported level and
+    // the scope. They were two separate ternaries over the same `level`, which
+    // is how the scope could say "one day" while the level said "wrecked".
+    // Guarded by the action type: only `set_fatigue_status` carries a `level`;
+    // the poor-sleep variant carries a `pattern` and never reaches the fatigue
+    // mint below.
+    const reportedReadinessLevel: TemporaryAthleteReportedLevel =
+      action.type === 'set_fatigue_status'
+        ? (action.payload.level === 'cooked'
+            ? 'cooked'
+            : action.payload.level === 'worse'
+              ? 'high'
+              : action.payload.level === 'not_right' ? 'moderate' : 'slight')
+        : 'slight';
     const existingPoorSleep = action.type === 'set_poor_sleep_status'
       ? useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
           ?.find((fact) => !isInjurySourceFact(fact) && fact.factKind === 'poor_sleep' && fact.status === 'active')
@@ -1424,12 +1440,17 @@ async function executeProgramControlActionDurablyWithinTrace(
             // to take `durableStateFactScope` — illness's open horizon, which
             // never elapses — so one tap deloaded the athlete forever. Sam's
             // ruling is that readiness and illness differ in exactly this.
-            scope: action.payload.level === 'cooked'
+            // R-038: "Wrecked" IS SEVEN DAYS TOO, NOT JUST "absolutely cooked".
+            // This read `level === 'cooked'`, so the window went to the top tier
+            // and the middle one got a single DATE — a wrecked athlete was
+            // deloaded for ONE day and back at full load by the second.
+            // `reportedLevelDeloads` asks the law (level -> severity -> tier ->
+            // directive) instead of matching a literal, so a new level or a
+            // moved threshold cannot silently lose its window again.
+            scope: reportedLevelDeloads(reportedReadinessLevel)
               ? readinessDeloadFactScope({ declaredOnISO: date, todayISO })
               : temporaryFactScope({ kind: 'date', date }),
-            athleteReportedLevel: action.payload.level === 'cooked'
-              ? 'cooked'
-              : action.payload.level === 'worse' ? 'high' : action.payload.level === 'not_right' ? 'moderate' : 'slight',
+            athleteReportedLevel: reportedReadinessLevel,
             reportKind: action.payload.level === 'cooked' ? 'cooked' : 'fatigue',
             sourceSurface,
           });
