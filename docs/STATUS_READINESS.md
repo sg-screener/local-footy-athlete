@@ -493,7 +493,35 @@ cells lost.
 longer exists, and **are wired into nothing**. Red before this session, not
 mine, and left for the `audit` seat's orphan unit.
 
-### NOT CUT — THE CONDITIONING ARM
+### ✅ THE CONDITIONING ARM IS NOW CUT TOO — ALL THREE WRITERS DONE
+
+**Same cut, third writer.** `biasConditioningReadiness` ->
+`conditioningReportsRecentFatigue`; `WeekLog` and `ConditioningProgressionInput`
+carry `recentFatiguePattern` beside `capacity`; the conditioning soft-deload
+counter reads it as a peer of `recentRPE` and `completionQuality`. **25 cells.**
+
+**I ALMOST SHIPPED IT WITH NO READER CELL.** Block [6] originally tested only the
+reporter function — a field with a writer and a test and nothing proving anything
+consumes it. **That is the `canOverride` shape, written nine times and read
+zero.** Reader cells added, with their own non-vacuity control.
+
+### ⚠ AND ONE MUTANT SURVIVES — NAMED, NOT HIDDEN
+
+Severing the resolver -> input wire (compute the vote correctly, pass `false`)
+leaves `test:conditioning-dose` **12/0** and this suite **green**. Four other
+mutants in the family were killed; that one is not.
+
+**It survives for the same reason `test:qa` is byte-identical across the whole
+change: no suite in the chain generates a week from an athlete with real
+session-feedback history**, so the flags never fire in any generated world.
+Killing it needs a walker world carrying accumulated feedback — **L13's
+territory**, a unit of its own.
+
+**It is recorded in the suite's own NOT-COVERED line, with its receipt**, because
+a surviving mutant only the author knows about is the same as no mutation
+testing at all.
+
+### THE SUPERSEDED NOTE — WHAT THIS SECTION SAID BEFORE
 
 `biasConditioningReadiness` -> `sessionResolver.ts:1941` still steps the band
 down. `conditioningProgressionRules`' counter has **no feeling-equivalent** to
