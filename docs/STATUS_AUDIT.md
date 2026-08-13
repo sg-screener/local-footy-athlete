@@ -45,6 +45,49 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ "A ROW SAYS UNENFORCED OVER SHIPPED WORK" — REAL DEFECT, AND MY GATE FOR IT IS REFUTED
+
+**The terminal seat found the class and it is the best lead of the day:** a
+rulings row reading `UNENFORCED` over work that actually ships is **worse than
+the reverse**, because **the ask gate reads these rows to decide what reaches
+Sam** — so a false `UNENFORCED` sends him a question about something that already
+works. **That is this morning's defect wearing different clothes.** Two found and
+corrected (R-004, R-052); ten left, each naming a real gap on its face.
+
+**MY PROPOSED GATE: scan chain suites for `R-nnn` and red when an `UNENFORCED`
+row is named by a green suite** — the inverse of the direction rule 2 already
+guards, and the same shape `lawRegistryGateTests` uses for LAWS.
+
+**MEASURED FIRST, AND IT CANNOT FAIL:**
+
+| scan | UNENFORCED rows named by a suite |
+| --- | --- |
+| raw | **2** (R-014, R-075) |
+| **comments stripped, self-reference excluded** | **0** |
+
+**Both raw hits are PROSE** — `rulingRegistryTests.ts` discussing its own matcher
+misfiring, and comment blocks in `awayFlowTests`/`resolverDisplacementSweep`.
+**`a-comment-is-not-a-shipped-string`, caught by applying my own `b19109d4` fix to
+my own measurement.** With them stripped the count is **zero**, so the gate would
+be **a cell that cannot fail** — refused twice already in this repo, and *"worse
+than no cell"* in its own words. **NOT BUILT.**
+
+**WHY THE CLASS RESISTS A GATE, AND IT IS THE SAME CAUSE AS THE BLUNT ASK
+MATCHER.** R-004's enforcer is `test:christmas-break`; R-052's are
+`optionalTopUpTests` and `mobilityAccessoryDoorTests`. **None of them cites its
+row id anywhere in code.** So a row and its enforcer share **no machine-readable
+key**, and the only remaining signal is prose-matching the row's SUBJECT against
+cell titles — **which is exactly the ask gate's existing matcher, and exactly why
+it is blunt.** Two gates would then be guessing from the same weak signal.
+
+**THE ROUTE THAT WOULD WORK, and the precedent is already in this repo:** give
+them the key. **`lawRegistry` rows carry `by: 'test:…'`, and its gate is trivial
+because of it.** `RULINGS_REGISTRY.md` has no such field — a `BUILT` row names a
+commit, never an enforcer. **Add the field and this whole class becomes a two-line
+cell in BOTH directions**; without it, every attempt is prose-matching. **That is
+a structural unit for the seat, not a cell for a terminal, and it is the honest
+next step on the class rather than a fourth refuted scanner.**
+
 ### ❌ 28-C1 — **OPTION A IS REFUTED. I RAN MY OWN RECOMMENDATION AND IT FAILED**
 
 **Ran it rather than argued it, and the falsifier I wrote one commit earlier
