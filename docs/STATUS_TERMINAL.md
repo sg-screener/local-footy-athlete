@@ -32,6 +32,42 @@ thing that actually bit.**
 
 ## STATUS
 
+### R-083's SECOND SITE: THREE ATTEMPTS, THREE DIFFERENT FAILURES, ALL BACKED OUT
+
+**The tree is green at `188d6fad` — SLOT 0/6, EQUIPMENT 1, suites 54/54. Nothing
+below is in it.** Recorded so the fourth attempt starts from the failures rather
+than repeating them.
+
+| attempt | result | why |
+| --- | --- | --- |
+| 1 — filter the fallback rows | **INERT**, 0 lines changed | the accessory-regex defect meant a leg day never reached the pattern branches; filtering discarded rows changes nothing |
+| 2 — same, after the accessory fix | **OVER-REMOVED**, SLOT 0 -> 1 | built on the LOAD field: dropped `Walking Lunges` (needs nothing), kept `Pull-Ups` (needs a bar) |
+| 3 — same, on a new apparatus table | **BROKE THE LEG DAYS**, SLOT 0 -> 2 | `missing=[squat,hinge]` and `Push-ups` on a lower day — removal cascades into day composition in a way I did not predict |
+
+**THE APPARATUS TABLE ITSELF IS SOUND AND IS THE ONE PIECE WORTH REBUILDING.**
+Verified before use, every answer correct:
+
+    Pull-Ups / Inverted Row / Dips   bw=no   gym=YES
+    Walking Lunges / Reverse Lunges  bw=YES  gym=YES
+    Overhead Press                   bw=no   gym=YES
+
+**But it cannot land ALONE** — measured: with the table in and the removal out,
+`SLOT` goes 0 -> 1 and `EQUIPMENT` 1 -> 2, because the canonicaliser's restore
+starts refusing `Pull-Ups` and nothing handles the gap. **Table and removal are
+one unit or neither.**
+
+**WHAT ATTEMPT 4 MUST DO DIFFERENTLY:** stop treating this as a filter. Removing
+a row silently re-shapes the day downstream — that is the same
+`final_content_owns_name` mechanism that renamed a prehab session to Mobility
+earlier today. **The composition has to be decided once, with the kit known,
+rather than composed and then subtracted from.** That is a bigger unit than a
+filter and should be sized as one.
+
+**AND I SHOULD HAVE STOPPED AFTER TWO.** The third attempt was the same shape as
+the second with a better predicate, and §8's second-wall law says an alternative
+belongs on the table before attempt three. I hit the same wall three times.
+
+
 ### ⚠ R-083's SECOND SITE IS BLOCKED ON A CONFLATED FIELD — "BODYWEIGHT-LOADED" IS NOT "NEEDS NO KIT"
 
 **Measured per row, bodyweight kit, after substitution:**
