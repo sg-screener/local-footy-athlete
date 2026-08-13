@@ -79,6 +79,18 @@ const TAG_CLASSIFICATION: Record<EquipmentTag, 'asked' | 'always_available' | 'd
   machine: 'asked',
   // Sam's audit ruling 1, 2026-07-31: the 10th question.
   plyo_box: 'asked',
+  // ── ITEM 46/47, 2026-08-13 — the seven that became askable. ──
+  // Every one of these was ALREADY required by an authored row; the bridge
+  // just answered it with the wrong tick (`Rack` and `Trap Bar` collapsed onto
+  // `barbell`) or with none at all. They are asked, not derived: no other
+  // answer implies owning a rack, and nothing else can stand in for one.
+  rack: 'asked',
+  trap_bar: 'asked',
+  swiss_ball: 'asked',
+  ab_wheel: 'asked',
+  back_extension_bench: 'asked',
+  dip_bars: 'asked',
+  rings_trx: 'asked',
 };
 
 console.log('\n— library -> checklist (nothing authored can require an unaskable tag) —');
@@ -266,9 +278,16 @@ console.log('\n— location presets are seeds INSIDE the vocabulary (audit rulin
   // bar). These are equality pins, not subset checks: the lists carry his
   // signature, and a drift here is a change to it.
   const club = EQUIPMENT_LOCATION_PRESETS.find((preset) => preset.id === 'club_gym');
-  ok('the SIGNED club preset is exactly barbell, dumbbells, bands, bench, pull-up bar, plyo box + bike erg',
+  // `rack` ADDED 2026-08-13 (item 46/47) AND IT IS NOT A CHANGE TO HIS
+  // SIGNATURE — it is the same signature re-expressed after the question split.
+  // When Sam signed this list, `barbell` WAS "barbell & rack": the bridge
+  // collapsed Back Squat's `Rack` requirement onto the barbell tick, so a club
+  // athlete who ticked barbell got squats. Leaving `rack` off now would take
+  // squats away from every club-gym athlete — a behaviour change smuggled in
+  // under a pin whose job is to prevent exactly that.
+  ok('the SIGNED club preset is exactly barbell (+rack, post-split), dumbbells, bands, bench, pull-up bar, plyo box + bike erg',
     JSON.stringify([...(club?.preTickedTags ?? [])].sort()) ===
-      JSON.stringify(['bands', 'barbell', 'bench', 'dumbbells', 'plyo_box', 'pullup_bar']) &&
+      JSON.stringify(['bands', 'barbell', 'bench', 'dumbbells', 'plyo_box', 'pullup_bar', 'rack']) &&
       JSON.stringify(club?.preTickedModalities) === JSON.stringify(['bike_erg']),
     club);
   const home = EQUIPMENT_LOCATION_PRESETS.find((preset) => preset.id === 'home_gym');

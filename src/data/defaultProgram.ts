@@ -258,7 +258,10 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     description: 'Bodyweight row with an adjustable torso angle',
     exerciseType: 'Compound',
     muscleGroups: ['Back', 'Biceps'],
-    equipmentRequired: [],
+    // Item 47, 2026-08-13, from Sam's edit: an inverted row needs rings/TRX or
+    // a bar to hang under. It is NOT free bodyweight — on true bodyweight
+    // there is no horizontal pull at all, which is R-083 in his own words.
+    equipmentRequired: ['Rings/TRX'],
     difficultyLevel: 'Beginner',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -280,7 +283,10 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     description: 'Bodyweight or weighted dips',
     exerciseType: 'Compound',
     muscleGroups: ['Triceps', 'Chest', 'Shoulders'],
-    equipmentRequired: [],
+    // Item 47, 2026-08-13, from Sam's edit of the equipment sheet: dips need
+    // dip bars. Listed as needing nothing, they were reachable by a
+    // bodyweight-only athlete who has nothing to dip on.
+    equipmentRequired: ['Dip Bars'],
     difficultyLevel: 'Intermediate',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

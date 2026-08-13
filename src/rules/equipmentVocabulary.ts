@@ -92,6 +92,24 @@ const LIBRARY_MODALITY_TO_EQUIPMENT: Readonly<
   mixed: null,
 };
 
+/**
+ * STRENGTH-POOL NAMES WHOSE KIT `EquipmentClass` CANNOT SAY, item 46/47.
+ *
+ * The load-authority classifier answers a LOAD question — how to round a
+ * weight — so its vocabulary is six wide (`barbell`, `dumbbell`, `cable`,
+ * `machine`, `bodyweight`, `kettlebell`). That is the right vocabulary for
+ * load and the wrong one for availability: a 45° back extension is not a
+ * machine, and calling it `bodyweight` told the checklist nobody needs to own
+ * one. **This map is the availability answer, and it is read INSTEAD of the
+ * class — not merged with it, so there is exactly one answer per name.**
+ *
+ * It stays small on purpose. A name belongs here only when the kit it needs
+ * has no `EquipmentClass` that means it.
+ */
+const STRENGTH_NAME_TO_TAG: Readonly<Record<string, EquipmentTag>> = {
+  'Back Extension': 'back_extension_bench',
+};
+
 const EQUIPMENT_CLASS_TO_TAG: Readonly<Record<string, EquipmentTag>> = {
   barbell: 'barbell',
   dumbbell: 'dumbbells',
@@ -166,6 +184,17 @@ export function deriveEquipmentVocabulary(): DerivedEquipmentVocabulary {
   for (const [slot, pool] of Object.entries(STRENGTH_POOLS)) {
     for (const definition of [pool.anchor, pool.accessory]) {
       for (const entry of definition.entries) {
+        // The availability override outranks the load class where one exists —
+        // see STRENGTH_NAME_TO_TAG for why the two answer different questions.
+        const override = STRENGTH_NAME_TO_TAG[entry.name];
+        if (override) {
+          demandTag(override, {
+            source: 'strength_pools',
+            exercise: `${slot}/${definition.role}: ${entry.name}`,
+            requirement: override,
+          });
+          continue;
+        }
         const klass = equipmentClassFor(entry.name);
         if (klass === null) {
           unclassified.push(`${slot}/${definition.role}: ${entry.name}`);
@@ -316,6 +345,15 @@ export const EQUIPMENT_TAG_LABELS: Readonly<Record<AskableEquipmentTag, string>>
   kettlebell: 'Kettlebell',
   foam_roller: 'Foam roller',
   plyo_box: 'Plyo box',
+  // Item 46/47, 2026-08-13. `barbell` above keeps the label 'Barbell & rack'
+  // ONLY as the checklist option's name; the rack is its own question now.
+  rack: 'Squat rack',
+  trap_bar: 'Trap bar',
+  swiss_ball: 'Swiss ball',
+  ab_wheel: 'Ab wheel',
+  back_extension_bench: '45° back extension',
+  dip_bars: 'Dip bars',
+  rings_trx: 'Rings or TRX',
 };
 
 export const CONDITIONING_MODALITY_LABELS: Readonly<Record<ConditioningEquipmentModality, string>> = {

@@ -33,7 +33,26 @@ export type EquipmentTag =
   | 'machine'
   // Sam's audit ruling 1, 2026-07-31: the box joins the checklist as the 10th
   // equipment question, and Depth Jumps' requirement maps to it.
-  | 'plyo_box';
+  | 'plyo_box'
+  // ── ITEM 46/47, 2026-08-13. THE KIT AN ATHLETE COULD NOT TELL US ABOUT. ──
+  //
+  // The authored library already REQUIRED these words — `Back Squat` has said
+  // `['Barbell', 'Rack']` all along — but the bridge collapsed `Rack` and
+  // `Trap Bar` onto `barbell`, so a tick could never match the requirement.
+  // Sam, on his own edit of the equipment sheet: *"a home gym with dumbbells
+  // and a bar but no rack still gets a back squat"* — that is the defect, and
+  // it is a MISSING QUESTION, not a missing filter.
+  //
+  // Each of these is askable ONLY because an authored row demands it; the
+  // checklist is derived (`derivedEquipmentChecklistTags`) and reds in both
+  // directions, so a tag nothing requires cannot ship here.
+  | 'rack'
+  | 'trap_bar'
+  | 'swiss_ball'
+  | 'ab_wheel'
+  | 'back_extension_bench'
+  | 'dip_bars'
+  | 'rings_trx';
 
 export type InjuryTag =
   | 'shoulder'
@@ -215,7 +234,7 @@ export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
   ex('banded-dead-bug',   'Banded Dead Bug',            3, 8,  10, 30, 'Band around feet adds anti-extension challenge.', ['bands'], [],                    'low', { prescriptionType: 'reps', perSide: true }),
   ex('weighted-dead-bug', 'Weighted Dead Bug',          3, 6,  8,  45, 'Hold dumbbells overhead. Slow and controlled.', ['dumbbells'], [],                  'low', { prescriptionType: 'reps', perSide: true }),
   ex('mcgill-situp',      'McGill Sit Up',              3, 8,  10, 30, 'One knee bent, hands under low back. Lift shoulder blades only.', ['bodyweight'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
-  ex('ab-wheel',          'Ab Wheel',                   3, 6,  10, 60, 'Roll out, brace hard, no low-back sag.',      ['bodyweight'],['lower_back', 'shoulder'], 'moderate', { prescriptionType: 'reps' }),
+  ex('ab-wheel',          'Ab Wheel',                   3, 6,  10, 60, 'Roll out, brace hard, no low-back sag.',      ['ab_wheel'],['lower_back', 'shoulder'], 'moderate', { prescriptionType: 'reps' }),
   ex('hanging-leg-raise', 'Hanging Leg Raise',          3, 6,  10, 60, 'Dead hang from bar. No swing.',               ['pullup_bar'],['shoulder'],            'moderate', { prescriptionType: 'reps' }),
   ex('bird-dog',          'Bird Dog',                   2, 8,  10, 30, 'Slow and controlled.',                        ['bodyweight'],['lower_back'],         'low', { prescriptionType: 'reps', perSide: true }),
   ex('side-plank',        'Side Plank',                 2, 30, 45, 30, 'Stack hips. Breathe.',                        ['bodyweight'],['shoulder'],            'low', { prescriptionType: 'duration', perSide: true }),
@@ -248,7 +267,7 @@ export const SHOULDER_HEALTH_POOL: PoolExercise[] = [
 ];
 
 export const HAMSTRING_LIGHT_POOL: PoolExercise[] = [
-  ex('swiss-ball-curl',   'Swiss Ball Hamstring Curl',  2, 10, 12, 45, 'Hips up. Roll ball in and out.',              ['bodyweight'],['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps' }),
+  ex('swiss-ball-curl',   'Swiss Ball Hamstring Curl',  2, 10, 12, 45, 'Hips up. Roll ball in and out.',              ['swiss_ball'],['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps' }),
 ];
 
 // ═══════════════════════════════════════════════════════════════

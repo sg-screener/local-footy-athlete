@@ -43,6 +43,12 @@ export interface EquipmentLocationPreset {
 const ALL_ASKABLE_TAGS: readonly AskableEquipmentTag[] = [
   'barbell', 'dumbbells', 'cables', 'machine', 'bands',
   'bench', 'pullup_bar', 'kettlebell', 'foam_roller', 'plyo_box',
+  // Item 46/47, 2026-08-13 — the seven that became askable when `Rack` and
+  // `Trap Bar` stopped collapsing onto `barbell`. Commercial = all, so they
+  // land here; `dip_bars` and `rings_trx` are pre-ticked ONLY on this preset,
+  // which is Sam's ruling that they are commercial-gym kit.
+  'rack', 'trap_bar', 'swiss_ball', 'ab_wheel', 'back_extension_bench',
+  'dip_bars', 'rings_trx',
 ];
 
 export const EQUIPMENT_LOCATION_PRESETS: readonly EquipmentLocationPreset[] = [
@@ -59,7 +65,11 @@ export const EQUIPMENT_LOCATION_PRESETS: readonly EquipmentLocationPreset[] = [
     label: 'Club gym',
     storesLocation: 'Club gym',
     // Signed 2026-07-31 with Sam's amendment: pull-up bar joins the draft.
-    preTickedTags: ['barbell', 'dumbbells', 'bands', 'bench', 'pullup_bar', 'plyo_box'],
+    // `rack` added 2026-08-13 to PRESERVE BEHAVIOUR, not to extend it: before
+    // the split, ticking `barbell` satisfied Back Squat's `Rack` requirement.
+    // A club gym with a barbell has a rack, and without this the merge would
+    // silently take squats off every club-gym athlete.
+    preTickedTags: ['barbell', 'rack', 'dumbbells', 'bands', 'bench', 'pullup_bar', 'plyo_box'],
     preTickedModalities: ['bike_erg'],
   },
   {

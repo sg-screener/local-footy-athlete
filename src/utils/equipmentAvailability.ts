@@ -46,12 +46,23 @@ export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   'kettlebell',
   'machine',
   'plyo_box',
+  // Item 46/47, 2026-08-13: a commercial gym has the lot. `dip_bars` and
+  // `rings_trx` are pre-ticked HERE AND NOWHERE ELSE, per Sam's ruling that
+  // they are commercial-gym kit.
+  'rack',
+  'trap_bar',
+  'swiss_ball',
+  'ab_wheel',
+  'back_extension_bench',
+  'dip_bars',
+  'rings_trx',
 ];
 
 const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   'Full Gym': FULL_GYM_EQUIPMENT,
   'Home Gym': ['bodyweight', 'dumbbells', 'bands', 'foam_roller', 'kettlebell'],
-  'Barbell & Rack': ['barbell'],
+  // One tick, two capabilities — the option NAMES the rack, so it grants it.
+  'Barbell & Rack': ['barbell', 'rack'],
   'Dumbbells Only': ['dumbbells'],
   'Bodyweight Only': ['bodyweight'],
   'Resistance Bands': ['bands'],
@@ -75,7 +86,9 @@ const LEGACY_AND_ALIAS_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   'Pull-up bar': ['pullup_bar'],
   barbell: ['barbell'],
   dumbbells: ['dumbbells'],
-  squat_rack: ['barbell'],
+  // A stored `squat_rack` selection is an athlete who has BOTH; it predates
+  // the split and must not lose the barbell it used to imply.
+  squat_rack: ['barbell', 'rack'],
   pullup_bar: ['pullup_bar'],
   cable_machine: ['cables'],
   hamstring_curl: ['machine'],
@@ -107,7 +120,10 @@ function addUnique(tags: EquipmentTag[], next: readonly EquipmentTag[]): void {
 }
 
 function normalizedOptionKey(value: string): string {
-  return value.trim().toLowerCase().replace(/[\s-]+/g, '_').replace(/&/g, 'and');
+  // `/` joins alternatives in an authored requirement the way a space does —
+  // `Rings/TRX` is one piece of kit under two names, not two requirements.
+  // Without this it normalised to `rings/trx` and matched nothing.
+  return value.trim().toLowerCase().replace(/[\s\-/]+/g, '_').replace(/&/g, 'and');
 }
 
 function tagsForChecklistOption(raw: string): readonly EquipmentTag[] | null {
@@ -223,9 +239,28 @@ export function equipmentTagsForRequirement(
   if (!value) return [];
   const normalized = normalizedOptionKey(value);
 
-  if (/^(barbell|trap_bar|rack|squat_rack|barbell_and_rack)$/.test(normalized)) {
-    return ['barbell'];
+  // ── THE MERGE, ITEM 46/47, 2026-08-13. ──
+  //
+  // These five words used to collapse onto `barbell`, and that collapse WAS
+  // the bug Sam found on his own sheet: *"a home gym with dumbbells and a bar
+  // but no rack still gets a back squat"*. `Back Squat` is authored
+  // `['Barbell', 'Rack']` — two requirements — so the rack half was silently
+  // answered by the barbell tick.
+  //
+  // `Barbell & Rack` is the CHECKLIST OPTION (one tick, two capabilities) and
+  // still yields both. `Rack` and `Trap Bar` are REQUIREMENTS and now yield
+  // only themselves, so each must be ticked to be satisfied.
+  if (/^(barbell_and_rack)$/.test(normalized)) return ['barbell', 'rack'];
+  if (/^(barbell)$/.test(normalized)) return ['barbell'];
+  if (/^(rack|squat_rack|power_rack)$/.test(normalized)) return ['rack'];
+  if (/^(trap_bar|hex_bar)$/.test(normalized)) return ['trap_bar'];
+  if (/^(swiss_ball|stability_ball|physio_ball)$/.test(normalized)) return ['swiss_ball'];
+  if (/^(ab_wheel|ab_roller)$/.test(normalized)) return ['ab_wheel'];
+  if (/^(back_extension_bench|back_extension|45_deg_back_extension|ghd)$/.test(normalized)) {
+    return ['back_extension_bench'];
   }
+  if (/^(dip_bars|dip_station|parallel_bars)$/.test(normalized)) return ['dip_bars'];
+  if (/^(rings_trx|rings|trx|suspension_trainer)$/.test(normalized)) return ['rings_trx'];
   if (/^(dumbbell|dumbbells|db)$/.test(normalized)) return ['dumbbells'];
   if (/^(cable|cables|cable_machine)$/.test(normalized)) return ['cables'];
   if (/^(machine|machines|leg_press|hamstring_curl|knee_extension)$/.test(normalized)) {
