@@ -65,6 +65,11 @@ import { GAME_FEEL_OPTIONS } from '../utils/sessionFeedbackForm';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. This suite sits in test:bible; unarmed, it exits 0 on a drained loop
+// and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 declare const process: { exitCode?: number; env?: Record<string, string | undefined> };
 
@@ -1090,6 +1095,7 @@ async function main(): Promise<void> {
   await runGameFeedbackInvariants();
   await runLegacyHydrationInvariant();
   console.log(`\nSession outcome parity: ${passed} passed, ${failed} failed`);
+  totalsPrinted(failed);
   if (failed > 0) process.exitCode = 1;
 }
 

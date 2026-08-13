@@ -25,6 +25,11 @@ import {
   __resetDroppedDurableWritesForTest,
 } from '../store/ledgerReplayLatch';
 import { asyncStorageDurable } from '../store/asyncStorageCompat';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. This suite sits in test:bible; unarmed, it exits 0 on a drained loop
+// and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 let passed = 0;
 const failures: string[] = [];
@@ -65,6 +70,7 @@ async function main(): Promise<void> {
     !droppedDurableWrites().has('coach-store'));
 
   console.log(`\nDurable-write silence: ${passed} passed, ${failures.length} failed`);
+  totalsPrinted(failures.length);
   if (failures.length > 0) process.exit(1);
 }
 

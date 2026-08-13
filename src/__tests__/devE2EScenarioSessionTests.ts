@@ -50,6 +50,11 @@ import type { DevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
 import { DEV_E2E_SEED_IDS } from '../dev/e2e/devE2ESeedIds';
 import { DEV_E2E_SCENARIO_MANIFESTS } from '../dev/e2e/devE2EScenarioManifestRegistry';
 import { AthleteActionTraceCoordinator } from '../dev/e2e/AthleteActionTraceCoordinator';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. This suite sits in test:bible; unarmed, it exits 0 on a drained loop
+// and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 let passed = 0;
 const failures: string[] = [];
@@ -598,6 +603,7 @@ async function main(): Promise<void> {
   __resetDevE2EStateForTest();
 
   console.log(`\nDev E2E scenario session V2: ${passed} passed, ${failures.length} failed`);
+  totalsPrinted(failures.length);
   if (failures.length > 0) {
     failures.forEach((failure) => console.log(`  • ${failure}`));
     process.exit(1);

@@ -9,6 +9,11 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. This suite sits in test:bible; unarmed, it exits 0 on a drained loop
+// and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 const root = path.resolve(__dirname, '..');
 const read = (relative: string) => fs.readFileSync(path.join(root, relative), 'utf8');
@@ -201,4 +206,5 @@ ok('exercise editing uses the approved body, prehab, mobility and reason icons',
   && day.includes("<LfaIcon name=\"thumbs-down\""));
 
 console.log(`\napproved icon ownership totals: ${passed} passed, ${failed} failed`);
+totalsPrinted(failed);
 if (failed > 0) process.exit(1);

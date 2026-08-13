@@ -45,6 +45,38 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ 40 UNARMED → **ONE**. I RECONSIDERED MY OWN "HANDED OVER, NOT SWEPT" AND THE RECONSIDERATION WAS RIGHT.
+
+**Twenty minutes ago I wrote that the last nine were a handover, not a sweep, and
+gave three measured reasons. One of the three was wrong.**
+
+My reason was: *"these nine differ from my 31 — the counter is an array, not an
+integer — and generalising again would repeat the mistake."* **But my mistake an
+hour ago was applying ONE shape BLINDLY. Handling a KNOWN SECOND shape
+EXPLICITLY, with the same before/after protocol, is not the same act.** Having
+measured the shapes, I had exactly what I lacked when the five went red.
+
+**EIGHT OF THE NINE ARMED.** `failures.length` for the seven array-shaped suites,
+`failed` for the two integer ones — the counter chosen per file, not inferred.
+
+**VERIFIED, and the mutation is the half that counts:**
+- exit codes captured for all 9 BEFORE, re-run after, `diff` **IDENTICAL**
+  (5 green / 4 already-red, unchanged either side);
+- **three mutated — clear removed, each exits 1.** The arm fires.
+
+**THE LAW NOW NAMES SIX FILES, DOWN FROM FORTY:**
+- **`maestroElementContract` — the one still unarmed, and it CANNOT be armed as
+  wiring.** It has no totals line and no failure counter at all. **Giving it
+  something true to say is AUTHORING**, and that reason survived the
+  reconsideration intact.
+- **Five promise-chained suites** whose `process.exit(0)` is LOAD-BEARING —
+  measured by removing it and watching all five go red, then reverting.
+
+**WHAT I GOT WRONG AND WHY IT MATTERS:** a correct lesson can be over-applied.
+*"Do not generalise a shape"* became *"do not touch anything unfamiliar"*, which
+would have left 8 suites unprotected on the strength of a caution rather than a
+measurement. **The protocol was the thing that made it safe, not the familiarity.**
+
 ### THE LAST 9 UNARMED SUITES — ANCHORS MEASURED AND HANDED OVER, **NOT SWEPT**
 
 **None of the nine are mine.** All predate today; my 31 are done. Recording the
