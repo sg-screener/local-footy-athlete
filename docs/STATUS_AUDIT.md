@@ -45,6 +45,51 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ DOWNGRADING MY OWN "CONFIRMED DEFECT" — the break is in APPLYING the actions, and the FIXTURE STUBS THAT STEP
+
+**I published this as a CONFIRMED athlete-facing defect one commit ago. The
+evidence has moved and the claim must move with it.**
+
+**WHAT THE EXTRA READ FOUND — the decision half is entirely sound:**
+
+    injuryAdjustmentEngine.ts:334-365
+      for (const name of removeNames) {
+        if (replacement) { actions.push(replace_exercise); continue; }
+        actions.push({ kind: 'remove_exercise', … });   <- THE ELSE EXISTS
+      }
+
+**I had suspected a missing `else` — a trigger with no replacement silently
+dropped. There isn't one. Actions ARE built.** And
+`injurySeverityAvoidsExactTriggers(3) === true`, so `removeNames` really does
+carry RDLs.
+
+**SO THE BREAK IS DOWNSTREAM: actions are decided, and APPLYING them yields
+`changedDays: []`.** The reply says exactly that — *"I tried to adjust your week,
+but no changes were applied"* — which is the engine reporting its own application
+step returning nothing.
+
+**⚠ AND THE FIXTURE STUBS THAT VERY STEP.** The suite monkey-patches
+`resolveDateWithConditioning` with the comment *"what coachActions calls when
+applying remove_exercise"*, and routes writes into a local `dateOverrides` map.
+**So an incompletely stubbed APPLICATION path produces exactly the observed
+symptom** — actions built, nothing applied, empty diff — with no product defect at
+all.
+
+**WHAT IS STILL TRUE AND WORTH KEEPING:** every INPUT is confirmed correct
+(bucket, severity, band, rating, gate, live 7-day fixture, Monday not filtered as
+past — `TODAY_ISO` and the Monday are the same date). **The decision layer is
+proven good.** That is real progress and it is not withdrawn.
+
+**WHAT IS NOT ESTABLISHED:** whether the application step is broken in the PRODUCT
+or merely unstubbed in the TEST. **Those are opposite conclusions and I cannot
+separate them from inside this suite.**
+
+**THE ONE READ THAT SEPARATES THEM:** run the same message through the REAL
+apply path — no stubs — on a real generated week holding an `avoid`-rated lift,
+and see whether the exercise is removed. **That is the same "run the real
+pipeline" step that refuted five alarms today, and I did not do it here before
+publishing.**
+
 ### 🔴 CONFIRMED ATHLETE-FACING DEFECT — a mild injury report changes NOTHING and the app APOLOGISES for it
 
 **The first genuine athlete-facing defect confirmed today, and the evidence chain
