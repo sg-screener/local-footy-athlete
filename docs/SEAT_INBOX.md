@@ -15,6 +15,35 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+44. **⚠ FOUR GUARDS ARE RED AND ONE IS A REAL REGRESSION FROM THE LAST HOUR.**
+
+    **OWNED BY `progression` (the store writer) and `audit` (the two flows).**
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *store*, *writer*, *flow* — the
+    one-writer-per-store law is architectural, not a Sam ruling. **Nothing to
+    ask him.**
+
+    **THE ONE THAT MATTERS — A SECOND LIVE WRITER JOINED THE PROGRAM STORE.**
+    `useProgramStore <- utils/coachCommandExecutor.ts`. **This is new, from the
+    refused-add / pinned-exercise fix.** The one-writer law exists because two
+    writers on a stored shape is how state diverges silently. **Either route the
+    write through the existing owner, or declare it in the debt with a reason —
+    do not raise the allowance to make the red go away.**
+
+    **THE OTHER THREE, and two are the same cause:**
+    - **`mas-pace-absent-while-the-club-runs.yaml` and
+      `mas-session-names-his-own-pace.yaml` are unreachable AND unrun.** Two new
+      golden flows created with the MAS work that nothing links to and no receipt
+      records. **Finish wiring them or retire them — an unrun flow is a test that
+      exists and proves nothing**, which is the exact shape this repo keeps
+      finding.
+    - **3 unproven source anchors in `conditioningTemplateEqualityTests.ts`.** An
+      `indexOf` that misses returns -1 and the slice reads from the end, so the
+      cell can pass over the wrong text. **Guard the anchors.**
+
+    **NONE of these are Sam's list.** They are the cost of the last hour's work
+    and they should be paid before the next unit, not carried.
+
+
 40. **CENSUS C4 — SAM'S FLOORS DO NOTHING. BUILD THE ENFORCEMENT.**
 
     **OWNED BY `pace`.**
@@ -45,7 +74,18 @@ his instruction is standing authority, not history.**
     `docs/STATUS_PROGRESSION.md`. **The build is NOT started** — it moves
     generated output and owes scenarios+qa either side, and item 34 bars starting
     a generation change at the tail of a session. All three files verified FREE.
-    **Next session starts at the build, not the hunt.**
+    **⚠ AND THE PRESCRIBED BUILD IS NECESSARY BUT NOT SUFFICIENT — traced before
+    building against it.** *"The week mode is DERIVED from it"* still yields a
+    WEEK-shaped deload, which is the defect. The chain is week-shaped end to end:
+    `weekDeloaded` -> `doorDeload` (`generateProgram.ts:606`) -> `deloadDoor`
+    (`:730`, `:932`) -> `resolveDoorDeloadPolicy` (`defaultProgram.ts:1677`) ->
+    a `DeloadWeekPolicy`. **The DOSE is resolved once per week.** A window
+    starting on a Thursday needs the POLICY resolution moved inside the per-day
+    loop — which lands on R-034's owner, whose transformation is stated per WEEK.
+    **So this is an ARCHITECTURE call, not a wiring one**, and the escalation
+    rule says produce the reassessment before writing more code. The small blast
+    radius at the top (`doorDeload` has two uses) is exactly what makes it read
+    as a one-liner. **Next session starts at that decision, not at the wiring.**
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *deload*, *cooked*, *readiness*
     — R-017 (the 7-day rolling window) is AUTHORED and BUILT at the fact level.
     **Nothing to ask Sam.**

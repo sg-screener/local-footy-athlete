@@ -49,6 +49,36 @@ declared on Thursday. **Bible `:4960` is exact — a week-granular owner can onl
 honour a rolling window by snapping it to weeks, "the exact behaviour the law
 rules out".**
 
+**⚠ AND THE ITEM'S PRESCRIBED BUILD IS NECESSARY BUT NOT SUFFICIENT — I TRACED
+THE CHAIN BEFORE BUILDING AGAINST IT.** The item says *"the day directive
+becomes the read point; the week mode is DERIVED from it"*. **Deriving a WEEK
+mode from a day directive still yields a week-shaped deload, which is the defect
+itself.** The whole chain is week-shaped, end to end:
+
+    weekDeloaded (one bool for the week)   generationConstraints.ts:183
+      -> doorDeload                        generateProgram.ts:606
+      -> deloadDoor on rotationContext     generateProgram.ts:730, :932
+      -> resolveDoorDeloadPolicy(...)      defaultProgram.ts:1677
+      -> DeloadWeekPolicy { weekKind: 'deload', intensityMultiplier }
+
+**The DOSE is resolved ONCE PER WEEK and applied to the whole week.** So a
+rolling window that starts on a Thursday cannot be expressed by rewiring the
+read point alone — **the deload POLICY resolution has to move inside the per-day
+loop**, which lands on R-034's owner (`deloadWeekRules`, `test:deload-law`), a
+law whose transformation is stated per WEEK ("main lifts HALF the sets").
+
+**SO THIS IS AN ARCHITECTURE QUESTION, NOT A WIRING ONE, AND SAYING SO IS THE
+CONTRIBUTION.** The blast radius is deceptively small at the top — `doorDeload`
+has exactly two uses — which is precisely how this item reads as a one-line fix.
+**It is not.** Two ordered fixes on this list were refuted by measurement on
+2026-08-13; this is the same shape caught BEFORE the build rather than after.
+
+**WHAT I AM NOT DOING: guessing which way it should resolve.** Whether R-034's
+week transformation becomes per-day, or the rolling window is honoured some
+other way, is a design call that belongs with whoever owns the deload law — and
+`.claude/rules/coach-and-plan-edits.md`'s escalation rule says to produce the
+reassessment before writing more code, not to add another guard.
+
 **BUILD NOT STARTED, DELIBERATELY.** It changes generated output and owes
 `test:scenarios` + `test:qa` either side; item 34 says in as many words that
 starting a generation change at the tail of a session **"is the documented way
