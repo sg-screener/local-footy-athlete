@@ -963,6 +963,20 @@ counts.delts === 2`, 28/0). Shrink-never-pad is `pickFromPool`'s own behaviour.
 SUITES NAMED IT.** Corrected 2026-08-13 by the desktop after opening the
 enforcers and finding them PRESENT and GREEN — gate rule 2 run backwards. **The
 row was not describing the code; it was describing a search nobody had redone.**
+**⚠ AND THE COUNTS WERE NEVER THE WHOLE ROW — "AT 2-3 SETS" WAS UNHELD UNTIL
+2026-08-13, seat `arms`.** A1/A2/R1 assert the six exercises and their pools;
+**no cell in the repo had ever read `prescribedSets` on this session**, so the
+dose shipped correctly only because all sixteen signed rows happen to be authored
+at 2 or 3. **And `A3`, the cell carrying shrink-never-pad, reads POOL SIZES and
+builds nothing** — it stayed green through a mutation that padded a thin kit back
+to six rows. Both closed and mutation-proven: `test:mobility-accessory-doors`
+`[A4]` *"every Gunshow row carries Sam's AUTHORED 2-3 sets"* (band on the signed
+rows AND the built session carrying the pool's own number) and `[A5]` *"a thin
+kit really does shrink it — built, not inferred"*, **30/0**. **Measured across
+four kits: gym 6 rows, dumbbells 5, bands 2, and BODYWEIGHT-ONLY ZERO — an empty
+session card.** That last one is lawful under §20.3 alone and is what **R-083**
+(*say the kit cannot train it, do not quietly shrink*) rules against; it is
+SEAT_INBOX item 48, `OWNED BY terminal`, and is **not pinned green anywhere.**
 
 **R-053** · MOBILITY COMPOSED FROM THE POOL (§20.4), signed. **The ten
 `MOBILITY_FLOW_TEMPLATES` bundles are NOT recognised** — no ruling cited, no
@@ -970,8 +984,19 @@ changeset, no divergence report. · `BUILT` — `test:mobility-accessory-doors`,
 green (21 cells, his 2-3 pairs survive the validator).
 
 **R-054** · THE SEVEN STRENGTH SESSIONS (§20.5), signed. The athlete's own door
-could previously reach only four of the seven. · `UNENFORCED` — no suite named
-for the door's coverage of all seven.
+could previously reach only four of the seven. · `BUILT` 2026-08-13, seat `arms`
+— `test:strength-variants` `[D3]` *"THE ATHLETE'S OWN DOOR HANDS BACK ALL SEVEN
+— driven, not read"*, 16/0. **The row was right until now and the ten cells above
+it were not enough:** `D1`/`D2` ask `strengthVariantsForDoor`, which is the
+authored set answering a question about itself, so reverting
+`CATEGORY_TEMPLATE_MATCH.strength_lower` (`planChangeProducer.ts:185`) to the
+original hand-written `t.templateId === 'strength_lower'` — the Lower Body door
+reaching one of three — left **D1, D2, E2, `test:athlete-door-matrix` (433/0),
+`test:session-type-charter` (41/0) and every other suite GREEN.** D3 drives
+`pickTemplateForCategory`, the function the athlete's tap lands on, over 90
+date-seeded days, and reds on that mutation naming the door and both missing
+variants. **A partition asserted only in the file that declares it is a document,
+not a gate.**
 
 **R-055** · THE FOUR QUESTIONS (§20.6), signed. For any type the app may place,
 **"who may place it" is answered by a signed placement rule, not by the word

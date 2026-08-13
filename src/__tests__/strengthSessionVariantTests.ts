@@ -63,8 +63,10 @@ import {
   strengthVariantByTemplateId,
   strengthVariantForPatterns,
   strengthVariantsForDoor,
+  type StrengthDoorId,
   type StrengthSessionVariant,
 } from '../data/strengthSessionVariants';
+import { pickTemplateForCategory } from '../utils/planChangeProducer';
 import { canonicalStrengthLabel } from '../utils/sessionNaming';
 import {
   buildCoachRevisionTemplateWorkout,
@@ -267,6 +269,52 @@ run('D2. Lower Body now reaches all three lower sessions', () => {
   const upper = strengthVariantsForDoor('strength_upper').map((v) => v.id).sort();
   assert(JSON.stringify(upper) === JSON.stringify(['upper_combined', 'upper_pull', 'upper_push']),
     `Upper Body offers ${JSON.stringify(upper)}`);
+});
+
+run('D3. THE ATHLETE\'S OWN DOOR HANDS BACK ALL SEVEN — driven, not read', () => {
+  // R-054's row said "no suite named for the door's coverage of all seven", and
+  // it was RIGHT while D1 and D2 sat green above it. Both of those ask
+  // `strengthVariantsForDoor`, which is the authored set answering a question
+  // about itself: it cannot see the athlete's door at all.
+  //
+  // Measured, 2026-08-13 (seat `arms`): reverting `CATEGORY_TEMPLATE_MATCH`
+  // .strength_lower in `utils/planChangeProducer.ts` to the hand-written
+  // `t.templateId === 'strength_lower'` — the exact original defect, the athlete's
+  // Lower Body door able to hand back ONE of three — left D1, D2, E2 and every
+  // other suite in the repo GREEN. A partition asserted only in the file that
+  // declares it is a document, not a gate.
+  //
+  // So this cell drives `pickTemplateForCategory`, the function the athlete's tap
+  // actually lands on ("Lower body" -> add_category -> resolveTemplatePlanChange
+  // -> here), and sweeps dates because the resolution is date-seeded: the claim
+  // is REACHABILITY, that some real day hands the athlete each of the seven.
+  const reached = new Map<StrengthDoorId, Set<string>>(
+    STRENGTH_DOOR_IDS.map((door) => [door, new Set<string>()] as const),
+  );
+  for (const door of STRENGTH_DOOR_IDS) {
+    for (let day = 0; day < 90; day += 1) {
+      const date = new Date(Date.UTC(2026, 6, 13) + day * 86_400_000)
+        .toISOString().slice(0, 10);
+      const template = quiet(() => pickTemplateForCategory({
+        category: door,
+        date,
+        visibleWeek: [],
+      }));
+      if (template) reached.get(door)!.add(template.templateId);
+    }
+  }
+  for (const door of STRENGTH_DOOR_IDS) {
+    const expected = strengthVariantsForDoor(door).map((v) => v.templateId).sort();
+    const actual = [...reached.get(door)!].sort();
+    assert(JSON.stringify(actual) === JSON.stringify(expected),
+      `the "${door}" door hands back ${JSON.stringify(actual)} over 90 days, `
+      + `and the seven say it owns ${JSON.stringify(expected)}`);
+  }
+  const everything = new Set([...reached.values()].flatMap((set) => [...set]));
+  assert(everything.size === 7,
+    `${7 - everything.size} of the seven cannot be reached through any athlete door: `
+    + STRENGTH_SESSION_VARIANTS
+      .filter((v) => !everything.has(v.templateId)).map((v) => v.id).join(', '));
 });
 
 // ──────────────────────────────────────────────────────────────────────────

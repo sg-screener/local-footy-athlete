@@ -192,6 +192,93 @@ run('A3. thin equipment SHRINKS the Gunshow rather than padding it', () => {
   }
 });
 
+run('A4. every Gunshow row carries Sam\'s AUTHORED 2-3 sets', () => {
+  // THE HALF OF §20.3 NOTHING HELD. A1 and A2 assert the six exercises and where
+  // they come from; the law's other clause is the DOSE — "2 biceps + 2 triceps +
+  // 2 shoulder, 2-3 SETS EACH" — and no cell anywhere read `prescribedSets` on
+  // this session. It ships correctly today because all sixteen signed rows are
+  // authored at 2 or 3; a seventeenth authored at 4, or any writer that edits the
+  // dose on the way to the athlete, would have shipped a shape Sam did not sign
+  // and nothing would have said a word.
+  //
+  // Asserted in BOTH directions, because either alone can pass over the defect:
+  // the pools hold the band (so the source is lawful), and the BUILT session
+  // carries the pool's own number (so nothing rewrote it between the two).
+  const signedRows = [...BICEPS_POOL, ...TRICEPS_POOL, ...DELTS_POOL];
+  for (const entry of signedRows) {
+    assert(entry.sets >= 2 && entry.sets <= 3,
+      `${entry.name} is authored at ${entry.sets} sets; Sam signed 2-3`);
+  }
+  const workout = built('accessories_pump');
+  assert(workout, 'the Gunshow builds nothing');
+  const bySets = new Map(signedRows.map((entry) =>
+    [canonicalExerciseName(entry.name), entry] as const));
+  const rows = workout.exercises ?? [];
+  assert(rows.length > 0, 'the Gunshow prescribed no rows, so the dose claim is vacuous');
+  rows.forEach((row) => {
+    const name = canonicalExerciseName((row as { exercise?: { name?: string } }).exercise?.name ?? '');
+    const source = bySets.get(name);
+    assert(source, `${name} is not one of the sixteen signed rows`);
+    const sets = (row as { prescribedSets?: number }).prescribedSets;
+    assert(sets === source.sets,
+      `${name} ships ${sets} sets and Sam authored ${source.sets}`);
+    assert(sets !== undefined && sets >= 2 && sets <= 3,
+      `${name} ships ${sets} sets, outside Sam's 2-3`);
+  });
+});
+
+run('A5. a thin kit really does shrink it — built, not inferred', () => {
+  // A3 makes the shrink claim by reading POOL SIZES. It never builds anything, so
+  // it stayed green while the composition was mutated back to the old
+  // 2+2+1+1 shape — a bind that cannot fail is not holding the law. This cell
+  // drives the real door on a real thin kit and reads the session it hands back.
+  //
+  // The claim is SHRINK, NEVER PAD: fewer rows than the full kit, every row still
+  // inside the signed sixteen, and nothing repeated to reach a quota.
+  // THE KIT IS SET ON THE ATHLETE, then put back EXACTLY as the header set it —
+  // not from a captured `getState()`, which restored a shape the later ledger
+  // cells could not build a strength session from and turned D2 red.
+  const seedKit = (tags: Record<string, 'have'>): void => {
+    useProfileStore.setState({
+      onboardingData: {
+        ...samExport8Profile(),
+        equipmentAnswer: {
+          ...samExport8EquipmentAnswerThroughTheDoor(),
+          tags,
+        },
+      },
+      isOnboardingComplete: true,
+    } as never);
+  };
+  const restoreKit = (): void => {
+    useProfileStore.setState({
+      onboardingData: {
+        ...samExport8Profile(),
+        equipmentAnswer: samExport8EquipmentAnswerThroughTheDoor(),
+      },
+      isOnboardingComplete: true,
+    } as never);
+  };
+  try {
+    seedKit({ dumbbells: 'have' });
+    const thin = built('accessories_pump');
+    assert(thin, 'the Gunshow builds nothing on a dumbbells-only kit');
+    const rows = names(thin).map(canonicalExerciseName);
+    const signed = new Set([
+      ...GUNSHOW_FAMILIES.biceps, ...GUNSHOW_FAMILIES.triceps, ...GUNSHOW_FAMILIES.delts,
+    ]);
+    assert(rows.length < 6,
+      `a dumbbells-only kit still produced ${rows.length} rows — it did not shrink, `
+      + 'so either the filter is inert or the session was padded');
+    assert(rows.every((name) => signed.has(name)),
+      `the thin-kit Gunshow reaches outside the signed sixteen: ${rows.join(', ')}`);
+    assert(new Set(rows).size === rows.length,
+      `the thin-kit Gunshow repeats a row to fill its quota: ${rows.join(', ')}`);
+  } finally {
+    restoreKit();
+  }
+});
+
 // ──────────────────────────────────────────────────────────────────────────
 // B. ACCESSORIES — the prehab pools, per region.
 // ──────────────────────────────────────────────────────────────────────────

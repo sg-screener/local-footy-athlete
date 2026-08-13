@@ -310,7 +310,16 @@ run('[1c] every BUILT <commit> receipt names a commit that EXISTS', () => {
 // **NOTE THE SHAPE: three rulings arrived, ONE raised this number.** That is the
 // ratchet doing exactly its job — it does not punish new rulings, it makes the
 // unenforced ones impossible to add quietly.
-const UNENFORCED_CEILING = 13;
+//
+// **LOWERED 13 -> 10 ON 2026-08-13, seat `arms`, in the commit that paid it.**
+// R-054 (the seven strength sessions) is the one this seat built an enforcer for
+// — `test:strength-variants` [D3], the athlete's own door driven over 90 days
+// rather than the authored set asked about itself. The other two of the three
+// were already paid by the desktop's stale-`UNENFORCED` sweep the same day
+// (R-004, R-052); the count had fallen to 11 and the ceiling had not followed,
+// which is the drift the second assertion below exists to catch. **It caught it
+// on this seat's own commit, which is the instrument working.**
+const UNENFORCED_CEILING = 10;
 run('[2] the UNENFORCED ruling count only falls', () => {
   const unenforced = REGISTRY_ROWS.filter((row) => /UNENFORCED/i.test(row.status));
   assert(unenforced.length <= UNENFORCED_CEILING,
