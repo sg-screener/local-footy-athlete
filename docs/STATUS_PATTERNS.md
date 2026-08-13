@@ -245,3 +245,92 @@ names.**
 - **`stripComments` is an unused import** at `readinessStructureCensusTests.ts:50`
   and was so at HEAD. Left alone — another seat's file, and not my unit.
 - **No glass.** Both laws are refusals; their visible proof is an absence.
+
+---
+
+## ITEMS 51 AND 52 — R-014/R-013 AT SCALE, AND R-070 CLOSED
+
+**⚠ THE INBOX MARKS ARE OWED, NOT SKIPPED.** `docs/SEAT_INBOX.md` was MODIFIED
+in the working tree by another seat at commit time, and it is the one file that
+has already cost this repo 720 deleted lines and a 27-file sweep. **Marks owed:
+item 52 -> ✅ CLOSED (R-070 shipped `70e91a0f`, row already flipped by another
+seat); item 51 -> worked, ratchet landed, composer named as the remainder.**
+
+### ✅ ITEM 52 — ALREADY DONE. Shipped `70e91a0f` this session; the registry row
+reads `BUILT` and was flipped by the seat holding the file.
+
+### ITEM 51 — TWO OF ITS THREE CLAIMS WERE WRONG, AND THE THIRD IS EXACT
+
+Item 50 orders: *"open the code first; if it is enforced, fix the ROW, not the
+app."* Done, and it changed the unit.
+
+| item 51's claim | measured |
+| --- | --- |
+| *"`maxExercisesPerStrengthSession` has ZERO readers"* | **REFUTED** — one production reader, `coachingEngine.ts:8846`. The dead end is ONE HOP LATER: `AIConstraints.maxExercisesPerSession` is written and never read, **and `sessionRowCounting.ts:309` already says so in its own words**. |
+| *"the prompt never mentions his ladder"* | **NOT ESTABLISHED BY ME.** The measured fact is the cap reaching nothing; I did not read the prompt builder and am not claiming it either way. |
+| *"eleven 3-row fallback branches still ship"* | **EXACT.** 15 branches: one 2-row, **eleven 3-row**, one 4-row, two 5-row. |
+
+### THE REAL FINDING — THE R-014 GUARD IS GREEN AND NARROW
+
+`test:slot-coverage`'s SLOT CENSUS holds **0 deficient**, and its comment says
+*"zero is the floor — this may now only be held."* **True, over THREE worlds at
+ONE week.** The same oracle over **174 worlds** (3 phases x 5 training-day counts
+x club/no-club x 3 kits x 2 weeks):
+
+    DEFICIENT: 50 of 216 laddered days (23%), 5 distinct shapes
+    laddered-day row counts: {3: 126, 4: 12, 5: 50, 6: 28}
+
+**126 of 216 laddered days ship THREE rows into a FIVE-slot ladder.** Three rows
+cannot cover five slots; that is arithmetic, not tuning.
+
+**ALL FIVE SHAPES ARE THE SAME DAY** — `Lower Squat`, in two variants: two hinges
+and no single-leg hip, or a squat day with no squat and its knee work doubled.
+**Upper days are CLEAN at HEAD**, which is the opposite of what item 51 implies
+and narrows the composer's first job to one session kind.
+
+**LANDED: `test:ladder-wide`**, 5 cells, in the `test:bible` chain, ratcheted at
+50. **A SECOND CENSUS, NOT A RIVAL** — raising the narrow one's ceiling from 0 to
+50 would have destroyed a real held property to record a new finding.
+
+### ⚠ MY FIRST NUMBER WAS 148 OF 318 AND IT WAS FROM A WORLD THAT IS NOT IN GIT
+
+The shared checkout held another seat's uncommitted `defaultProgram.ts`, and that
+one file moved both the deficient count and how many days are laddered at all.
+**The mutation run is the only reason it was caught**: the RESTORED baseline in a
+clean worktree disagreed with the live tree. **A ratchet calibrated to a dirty
+tree pins a number the chain can never reproduce.** Every figure is now taken at
+HEAD, and the suite says so.
+
+**THIS IS SIGHTING FOUR TODAY of "a conclusion outlives the world it was measured
+in"** and the second time *I* have done it. **The transferable rule: a number
+that will become a CEILING is measured in a detached worktree at HEAD, never in
+the shared tree.**
+
+### FOUR MUTANTS, AND ONE SURVIVED UNTIL THE GATE WAS FIXED
+
+| mutation | result |
+| --- | --- |
+| ceiling 50 -> 49 | **RED** — the ratchet is live |
+| the world loop builds nothing | **RED**, 3 cells |
+| the corpus collapses to one kit | **RED**, 2 cells |
+| **the oracle blinded — every day reads clean** | **SURVIVED, 4/4 GREEN at "0 deficient of 216"** |
+
+**A CEILING-ONLY RATCHET CANNOT TELL "WE FIXED IT" FROM "WE STOPPED LOOKING."**
+Fixed by adding the lower bound `rulingRegistryTests` already uses: the count
+falling below the ceiling by more than 10 REDS, with a message telling the author
+to bank the win by lowering the ceiling. Re-mutated — it now dies. **Every
+ratchet in this repo with a non-zero ceiling has this hole unless it has that
+second cell.**
+
+### NOT COVERED
+
+- **THE COMPOSER IS NOT BUILT, and this suite is not it.**
+  `sessionSlotCoverage`'s header has always said *"the composer is the next unit
+  and this is its oracle."* Still true. What landed is the RATCHET that makes the
+  composer's progress visible and stops the number climbing while it is written.
+  **The first job is one session kind — `Lower Squat` — and the 11 three-row
+  fallback branches.** It changes generated output and owes `test:scenarios` +
+  `test:qa` either side.
+- **`test:bible` not run end to end**; `test:ruling-registry` [3] still RED,
+  pre-existing and untouched.
+- **The inbox marks above are owed** — the file was held.
