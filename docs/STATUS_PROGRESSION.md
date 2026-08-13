@@ -98,15 +98,45 @@ written into the week the app reads from, away and home alike, with a positive
 control proving the harness can see a known-good add. **Sam accepted training
 less on a trip BECAUSE he can top it up — and he can.**
 
-**⚠ THE HONEST LIMIT: THIS IS PROVEN AT THE STORE, NOT ON GLASS.** *Done means
-the athlete can see it*, and the last inch — the session rendering on the
-phone — is a simulator check I have not run. **The write is no longer in
-doubt; the pixels are unverified.**
+**✅✅ AND THE READ IS NOW CLOSED TOO — I RETRACT THE "SEPARATE OPEN QUESTION" I
+FILED IN `0e0e52ca`.** I wrote that `rebaseAcceptedEffectiveWeek` "did not
+surface a fresh overlay… the second would matter". **It surfaces it perfectly.
+The bug was mine, for the third time on this one question.**
 
-**AND `rebaseAcceptedEffectiveWeek` NOT SURFACING IT IS LEFT AS A SEPARATE OPEN
-QUESTION, DELIBERATELY NOT ABSORBED.** Either that reader needs something my
-harness did not give it, or it genuinely does not see a fresh overlay — the
-second would matter. It is not R-077's problem and I am not folding it in.
+**`composeDaySurfaces` stores Sunday's `dayOfWeek` as `0`** (plain `getDay()`).
+My helper computed `getDay() || 7`, which turns that `0` into `7` — **so I was
+reading a key that does not exist and calling the answer Rest.** Corrected:
+
+| arm | Sunday, through the REAL accepted-week read |
+| --- | --- |
+| positive control, home | **Hard Intervals**, 1 row |
+| home, `strength_lower` | **Lower Squat**, 5 rows |
+| **away, `strength_lower`** | **Lower Squat, 5 rows** |
+| **away, `strength_upper`** | **Upper Push, 3 rows** |
+
+**AND THE WEEK ITSELF CARRIES ITS OWN NON-VACUITY:** the home arm's key list
+contains `6:Game Day` and **the away arms do not** — the fixture is gone,
+so the world really is a trip and not a mislabelled home week.
+
+**I ALSO TESTED THE OBVIOUS CULPRIT AND IT WAS INNOCENT.** Before finding my own
+bug I suspected the pin: tier 1 of the read applies
+`applyUserRemovalConstraintsToWeek`, and the add mints a constraint on that very
+date, so "the pin eats the session it just placed" was a sharp hypothesis.
+**Single-variable test — empty ONLY that list and re-read: no change.
+Refuted.** Recorded because it is a plausible defect someone will suspect again.
+
+**SO R-077 IS PROVEN END TO END: OFFERED, WRITTEN, AND READ BACK.** The only
+remaining inch is the phone itself — *done means the athlete can see it* — and
+that is a simulator check, not a measurement gap.
+
+**THE LESSON, AND IT IS THE ONE THIS SEAT IS FOR: THREE INSTRUMENT FAULTS ON ONE
+QUESTION, ALL MINE, EVERY ONE LOOKING EXACTLY LIKE AN APP DEFECT.**
+(1) an unseeded world → "the add is refused"; (2) a field name that does not
+exist (`workouts` for `workoutsByDate`) plus a substring hit on the week's own
+`weekEnd` → "the write does not land"; (3) `|| 7` on a Sunday → "the week does
+not show it". **Each would have been a serious, wrong bug report.** What caught
+all three was the same move: a POSITIVE CONTROL, and printing the structure
+instead of searching it.
 
 ### ⚠ AND CHASING THAT LAST STEP FOUND THE REAL HOLE: A GATE THAT DOES NOT EXIST
 

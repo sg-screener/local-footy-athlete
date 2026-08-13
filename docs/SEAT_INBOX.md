@@ -15,6 +15,80 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+40. **CENSUS C4 — SAM'S FLOORS DO NOTHING. BUILD THE ENFORCEMENT.**
+
+    **OWNED BY `pace`.**
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *running*, *floor*, *minimum* —
+    the floors are AUTHORED (Bible `:4283` running 2/3/4, `weeklyExposureCounts.ts:45`
+    conditioning 3-5, sprint min 1). **Nothing to ask Sam. This is a build.**
+
+    **THE DEFECT:** the `under` findings are computed
+    (`weeklyExposureCounts.ts:323-367`) and `weekStructureValidator.ts:454-466`
+    takes the `under` branch FIRST and hardcodes `severity: 'info'`,
+    `canOverride: true`, skipping light weeks entirely. **`grep` for any repair
+    consumer of the three `_under` rule ids returns ZERO**, while the `_over`
+    twin IS consumed (`coachTurnController.ts:2261`). **His ceilings refuse; his
+    floors do nothing.**
+    **BUILD:** the floors get the same weight as the ceilings, with the
+    early-off-season and bye-recovery exemptions his text already names.
+    **PROVE IT:** a week with 0 running days must not ship green. 17 QA either
+    side.
+
+41. **CENSUS C6 — DELOAD IS OWNED BY THE WEEK, WHICH SAM'S OWN LAW FORBIDS.**
+
+    **OWNED BY `progression`.**
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *deload*, *cooked*, *readiness*
+    — R-017 (the 7-day rolling window) is AUTHORED and BUILT at the fact level.
+    **Nothing to ask Sam.**
+
+    **THE DEFECT:** `resolveDayDirective` (`readinessIllnessLaw.ts:201`), whose
+    own comment calls it *"The single read point for both doors"*, has **ZERO
+    callers** — one grep hit, the export itself. The live owner is week-granular
+    (`generationConstraints.ts:182-183` → `generateProgram.ts:551`), so a
+    Thursday "wrecked" call retro-deloads Monday to Wednesday and drops off at
+    Sunday. **Bible `:4960` says a week-granular owner can only honour a rolling
+    window by snapping it to weeks — "the exact behaviour the law rules out".**
+    **BUILD:** the day directive becomes the read point; the week mode is DERIVED
+    from it. **PROVE IT:** a Thursday declaration leaves Mon-Wed untouched and
+    reaches the following Wednesday.
+
+42. **CENSUS C8 — "CONTRAST" IS NEVER ACTUALLY A PAIRING.**
+
+    **OWNED BY `desktop`.**
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *contrast*, *superset*,
+    *pairing* — Bible `:225` defines it and R-015 covers mobility pairing only.
+    **Nothing to ask Sam.**
+
+    **THE DEFECT:** `buildPowerRow` (`defaultProgram.ts:1531-1559`) sets no
+    `supersetGroup`, no `supersetOrder`, no `pairType` — the only difference
+    contrast makes is a notes string. `workoutCanonicalisation.ts:791-796` then
+    **actively strips** any `pairType === 'contrast'`, and `:822-827` sorts power
+    rows to the top, ahead of the main lift. `powerRowAlignment.ts:99` checks
+    only same-FAMILY, so "heavy deadlift + vertical jump" passes.
+    **Sam's rule:** a heavy lift supersetted with an explosive lift **of the same
+    pattern**, at the MAIN slot. **The rendering already exists and is idle** —
+    same built-and-disconnected shape as the mobility pairing.
+    **PROVE IT:** a contrast day ships one paired block at the main slot, same
+    pattern both halves. Mutation: break the pattern match, cell reds.
+
+43. **CENSUS C10 — THE LOCK ON A GUESSED STRENGTH CUT.**
+
+    **OWNED BY `audit`.**
+    **REGISTRY-GREP:** R-073 — Sam ruled *"that sounds shit and not good"*, and
+    the row records the defect **does not reproduce** (28 weeks, 7 worlds, zero
+    unexplained shortfalls). **Nothing to ask Sam. This is the LOCK, not a fix.**
+
+    **WHAT IS MISSING:** nothing PREVENTS an inferred cut. The only producer
+    (`section18SafetyPolicy.ts:311-318`) fires on
+    `availableSafePatterns.length === 0` — an inference that never asks whether a
+    day remained. His 2026-08-06 ruling gives the shape: the same
+    `not_attempted | substituted | exhausted` proof equipment has, *"proof, never
+    inference"*. **And the number proving a week fell short is already computed
+    every week and simply not used.**
+    **PROVE IT WITH A MUTANT:** re-introduce an inferred cut and the cell must
+    red. A green suite over a defect that does not reproduce proves nothing.
+
+
 39. **BLOCKED-BY: other-agent — SAM RULED THE SPRINT CAP — THE UNIT IS NIGHTS,
     AND IT VARIES BY PHASE. 2026-08-13. REGISTER AS R-079.**
 
@@ -165,10 +239,20 @@ his instruction is standing authority, not history.**
       `strength_lower` → **Lower Squat, 5 rows**; away `strength_upper` →
       **Upper Push, 3 rows**; home the same; positive control **Hard Intervals**.
       **The hatch works end to end — offered AND written, away as at home.**
-      **⚠ LIMIT: proven at the STORE, not on glass** — the render is a simulator
-      check nobody has run. **AND SEPARATELY:** `rebaseAcceptedEffectiveWeek` did
-      not surface a fresh overlay in my harness; that is left as its own open
-      question, not folded into this one. Receipts: `docs/STATUS_PROGRESSION.md`.
+      **✅ AND THE READ IS CLOSED TOO — I RETRACT the "separate open question"
+      I filed about `rebaseAcceptedEffectiveWeek`. It surfaces the session
+      perfectly; the bug was mine.** `composeDaySurfaces` stores Sunday's
+      `dayOfWeek` as `0` and my helper did `getDay() || 7`, so I read a key that
+      does not exist. Corrected, the away week's Sunday reads **Lower Squat, 5
+      rows** / **Upper Push, 3 rows**, with the home arm carrying `Game Day` and
+      the away arms not — the week's own non-vacuity.
+      **I also tested the obvious culprit and it was INNOCENT:** the pin minted
+      by the add sits under tier 1's `applyUserRemovalConstraintsToWeek`, so
+      "the pin eats the session it just placed" was sharp — emptying only that
+      list changes nothing. **Refuted, recorded so nobody re-suspects it.**
+      **⚠ THE ONLY INCH LEFT IS THE PHONE** — offered, written and read back are
+      all proven; the render is a simulator check nobody has run.
+      Receipts: `docs/STATUS_PROGRESSION.md`.
     - **ONE REAL DEFECT FOUND AND FIXED ON THE WAY:** a REFUSED coach add left an
       **active `UserRemovalConstraint` pin** on a day it had just reported
       unchanged — the rollback restored two of the three stores the add writes.
