@@ -33,7 +33,9 @@
  * NAMES what is missing. The composer is the next unit and this is its oracle.
  */
 
-import { getExerciseTags } from '../data/exerciseTags';
+import { getExerciseTags, getAllTaggedExercises } from '../data/exerciseTags';
+import { exerciseAllowedByEquipment } from '../data/exercisePoolsStrength';
+import type { EquipmentTag } from '../data/exercisePools';
 import type { WorkoutExercise } from '../types/domain';
 import { participatesInCounting } from './sessionRowCounting';
 import type { MainStrengthPattern } from './strengthPatternContributions';
@@ -233,6 +235,21 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
   if (!participatesInCounting(row)) return [];
   const name = row.exercise?.name;
   if (!name) return [];
+  return slotsForExerciseName(name);
+}
+
+/**
+ * WHICH SLOTS THIS EXERCISE *NAME* CAN FILL — the tag half of `slotsFilledByRow`,
+ * with the row-participation guards left behind.
+ *
+ * **Extracted 2026-08-13 (R-084) rather than copied.** `slotIsTrainableOnKit`
+ * has to ask this question of a bare NAME out of the tag table, where there is
+ * no row to guard. Duplicating the switch would have made a SECOND definition of
+ * "what fills a slot", and this repo has already paid for one predicate growing
+ * uncounted copies in other modules — the two answers would drift and the oracle
+ * would disagree with its own availability test.
+ */
+export function slotsForExerciseName(name: string): readonly SessionSlot[] {
   const tag = getExerciseTags(name);
   if (!tag) return [];
   const out: SessionSlot[] = [];
@@ -308,6 +325,36 @@ export function slotsFilledByRow(row: WorkoutExercise): readonly SessionSlot[] {
   return out;
 }
 
+/**
+ * CAN THIS KIT TRAIN THIS SLOT AT ALL?
+ *
+ * **R-084 (Sam, 2026-08-13):** *"single leg hip thrust is an accessory"*, and
+ * with it — *"leave it, they need a gym for that. Stop flagging the single-leg
+ * hip slot as missing on a bodyweight kit — R-083 says that pattern is simply
+ * unavailable, not a defect. And the single-leg hip pool being one exercise is
+ * intentional: it's meant to repeat."*
+ *
+ * **DERIVED, NOT DECLARED.** It does not know the words "single leg hip". It
+ * asks whether ANY tagged exercise that fills the slot is legal on the kit, so
+ * the day Sam authors a bodyweight single-leg hip lift the exemption disappears
+ * on its own, and a kit missing a rack stops owing whatever the rack was for.
+ * **A hardcoded `if (slot === 'single_leg_hip' && bodyweight)` would have been
+ * one line and would have gone stale the moment the pool changed** — the shape
+ * this repo keeps paying for.
+ *
+ * **UNKNOWN KIT ANSWERS TRUE**, matching `exerciseAllowedByEquipment`: this
+ * excuses only what it can PROVE the athlete cannot perform.
+ */
+export function slotIsTrainableOnKit(
+  slot: SessionSlot,
+  availableEquipment: readonly EquipmentTag[] | undefined,
+): boolean {
+  if (!availableEquipment) return true;
+  return getAllTaggedExercises().some((name) =>
+    slotsForExerciseName(name).includes(slot)
+    && exerciseAllowedByEquipment(name, availableEquipment));
+}
+
 export interface SlotCoverage {
   readonly kind: SlotDayKind;
   readonly required: readonly SessionSlot[];
@@ -316,14 +363,35 @@ export interface SlotCoverage {
   /** Slots filled by MORE THAN ONE row — his "better served by a squat and a
    *  hinge than by two squats" is exactly a duplicate in one slot. */
   readonly duplicated: readonly SessionSlot[];
+  /**
+   * Slots this athlete's KIT cannot train at all (R-084 / R-083). Empty unless
+   * `availableEquipment` is supplied.
+   *
+   * **NAMED, NOT SILENTLY DROPPED.** Sam's answer is *"they need a gym for
+   * that"* — an honest "unavailable" and a quiet zero are the same number and
+   * very different facts, and a slot that vanished without a word is how a real
+   * composer gap would hide behind this exemption.
+   */
+  readonly unavailable: readonly SessionSlot[];
 }
 
-/** Which of the day's slots are covered, which are missing, which are doubled. */
+/**
+ * Which of the day's slots are covered, which are missing, which are doubled.
+ *
+ * `availableEquipment` is OPTIONAL and omitting it preserves the previous
+ * answer exactly — every existing caller passes two arguments.
+ */
 export function sessionSlotCoverage(
   rows: readonly WorkoutExercise[],
   kind: SlotDayKind,
+  availableEquipment?: readonly EquipmentTag[],
 ): SlotCoverage {
-  const required = SLOTS_FOR_KIND[kind];
+  const declared = SLOTS_FOR_KIND[kind];
+  // R-084: a slot the kit cannot train is not owed, so it is removed from the
+  // requirement BEFORE assignment rather than subtracted from `missing` after —
+  // otherwise it would still soak up a row in the matching step.
+  const unavailable = declared.filter((slot) => !slotIsTrainableOnKit(slot, availableEquipment));
+  const required = declared.filter((slot) => !unavailable.includes(slot));
 
   // ── IT ASSIGNS, IT DOES NOT TALLY ────────────────────────────────────────
   //
@@ -376,7 +444,7 @@ export function sessionSlotCoverage(
   const duplicated = required.filter((slot) =>
     slot !== 'accessory_or_core' && slot !== 'arm_or_shoulder'
     && (onlySlotCounts.get(slot) ?? 0) > 1);
-  return { kind, required, filled, missing, duplicated };
+  return { kind, required, filled, missing, duplicated, unavailable };
 }
 
 /**

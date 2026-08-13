@@ -22,8 +22,10 @@ import {
   sessionSlotCoverage,
   slotDayKindFor,
   slotsFilledByRow,
+  slotIsTrainableOnKit,
 } from '../rules/sessionSlotCoverage';
 import type { WorkoutExercise } from '../types/domain';
+import type { EquipmentTag } from '../data/exercisePools';
 
 armTotalsOrRed();
 
@@ -630,6 +632,102 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
     `${violations.length} violations (ceiling ${KIT_VIOLATION_CEILING})\n     ${violations.join('\n     ')}`);
   console.log(`\n  EQUIPMENT CENSUS: ${violations.length} kit-requiring lifts prescribed to a BODYWEIGHT athlete (ceiling ${KIT_VIOLATION_CEILING})`);
   for (const line of violations) console.log(`    ${line}`);
+}
+
+// ── R-084 / R-083: A SLOT THE KIT CANNOT TRAIN IS NOT A COVERAGE DEFECT ─────
+//
+// **Sam, 2026-08-13, ruling R-084:** *"single leg hip thrust is an accessory"* —
+// and with it: **"leave it, they need a gym for that. Stop flagging the
+// single-leg hip slot as missing on a bodyweight kit — R-083 says that pattern
+// is simply unavailable, not a defect. And the single-leg hip pool being one
+// exercise is intentional: it's meant to repeat."**
+//
+// THE SLOT IS ONE EXERCISE DEEP BY DESIGN. `single_leg_hip` is filled only by
+// `Single-Leg RDL` (the only `hinge` + `unilateral` tag in the table), and his
+// own equipment sheet answers `['barbell']` for it. So a no-kit athlete cannot
+// fill it — **and that is the kit's answer, not a hole in the composer.**
+//
+// THIS IS DERIVED, NEVER A SPECIAL CASE FOR ONE SLOT. The oracle asks, for each
+// required slot, whether ANY tagged exercise that fills it is legal on the kit.
+// Name a bodyweight single-leg hip lift tomorrow and this stops firing on its
+// own; take the barbell away from a squat and the squat slot goes the same way.
+console.log('\n[R-084] a slot the kit cannot train is UNAVAILABLE, not MISSING');
+{
+  const BODYWEIGHT: readonly EquipmentTag[] = ['bodyweight'];
+  const FULL_GYM: readonly EquipmentTag[] = [
+    'bodyweight', 'dumbbells', 'barbell', 'rack', 'bench', 'cables', 'machine', 'bands',
+  ];
+  // A no-kit lower day built as well as a no-kit athlete CAN build one.
+  const noKitLowerDay = [
+    row('Bodyweight Squat'), row('Single-Leg Squat (to Box)'),
+    row('Nordic Lower'), row('Pallof Press'),
+  ];
+
+  // NON-VACUITY FIRST — if `single_leg_hip` were not required on a lower day at
+  // all, every assertion below would pass on nothing.
+  ok('[non-vacuity] the lower ladder really does require single_leg_hip',
+    LOWER_SLOTS.includes('single_leg_hip'), JSON.stringify(LOWER_SLOTS));
+
+  // ⚠ AND THIS IS THE CELL THAT CAUGHT ME. I asked Sam to rule on the premise
+  // that a no-kit athlete CANNOT fill `single_leg_hip`, reading `['barbell']`
+  // off his equipment sheet. **The sheet answers "what does it USE", and the
+  // availability question is "can they PERFORM it" — the exact conflation that
+  // file's own docstring warns about at length.** He had already ruled the
+  // second question, and the opposite way:
+  //
+  //   *"Pull-Ups must read illegal, Walking Lunges and Single Leg RDL must read
+  //   legal"* — on a bodyweight kit (`exerciseEquipmentRequirement.ts:29-35`).
+  //
+  // **So a no-kit athlete CAN do a Single-Leg RDL, and the slot IS trainable.**
+  // Suppressing it would have hidden a REAL composer gap behind a kit excuse.
+  ok('single_leg_hip IS trainable on bodyweight — Sam ruled the Single-Leg RDL legal unloaded',
+    slotIsTrainableOnKit('single_leg_hip', BODYWEIGHT));
+  const bw = sessionSlotCoverage(noKitLowerDay, 'lower', BODYWEIGHT);
+  ok('so it is still reported MISSING on a no-kit lower day that lacks it',
+    bw.missing.includes('single_leg_hip') && !bw.unavailable.includes('single_leg_hip'),
+    `missing=${JSON.stringify(bw.missing)} unavailable=${JSON.stringify(bw.unavailable)}`);
+
+  // ── WHAT THE MECHANISM DOES CATCH, AND IT IS R-083's OWN SENTENCE ─────────
+  //
+  // *"ya can't do much with overhead pushing or pull or even horizontal pulling
+  // without equipment - i can't account for everyone and if they want to train
+  // properly they'll sign up to a gym"* (R-083). **Derived independently, the
+  // oracle names those three and only those three.** Nothing in the code spells
+  // them; it asks the tag table and his sheet.
+  const upperBw = sessionSlotCoverage([row('Push-Ups')], 'upper_full', BODYWEIGHT);
+  ok('R-083: horizontal_pull, vertical_push and vertical_pull are UNAVAILABLE on a bodyweight kit',
+    ['horizontal_pull', 'vertical_push', 'vertical_pull']
+      .every((slot) => upperBw.unavailable.includes(slot as never)),
+    `unavailable=${JSON.stringify(upperBw.unavailable)}`);
+  ok('R-083: and they are NOT also reported missing — one answer, not two',
+    ['horizontal_pull', 'vertical_push', 'vertical_pull']
+      .every((slot) => !upperBw.missing.includes(slot as never)),
+    `missing=${JSON.stringify(upperBw.missing)}`);
+  ok('R-083: horizontal_push is still OWED — press-ups need nothing, so it is not excused',
+    upperBw.filled.includes('horizontal_push') && !upperBw.unavailable.includes('horizontal_push'),
+    `filled=${JSON.stringify(upperBw.filled)} unavailable=${JSON.stringify(upperBw.unavailable)}`);
+
+  // THE EXEMPTION NARROWS EXACTLY ONE THING. A slot the kit CAN train is still a
+  // defect when it is absent — otherwise this would excuse every gap.
+  const bwNoSquat = sessionSlotCoverage(
+    [row('Nordic Lower'), row('Pallof Press')], 'lower', BODYWEIGHT);
+  ok('a slot the kit CAN train is still MISSING when absent',
+    bwNoSquat.missing.includes('squat') && !bwNoSquat.unavailable.includes('squat'),
+    `missing=${JSON.stringify(bwNoSquat.missing)} unavailable=${JSON.stringify(bwNoSquat.unavailable)}`);
+
+  // AND A FULL-GYM ATHLETE IS UNCHANGED — the exemption is the kit's, not a
+  // blanket amnesty. This is the cell that fails if the fix over-reaches.
+  const gym = sessionSlotCoverage([row('Push-Ups')], 'upper_full', FULL_GYM);
+  ok('a FULL-GYM athlete is excused NOTHING',
+    gym.unavailable.length === 0 && gym.missing.includes('vertical_pull'),
+    `missing=${JSON.stringify(gym.missing)} unavailable=${JSON.stringify(gym.unavailable)}`);
+
+  // NO KIT SUPPLIED = OLD BEHAVIOUR, EXACTLY. Every existing caller passes two
+  // arguments and must not shift underneath this change.
+  const legacy = sessionSlotCoverage(noKitLowerDay, 'lower');
+  ok('with no kit supplied the answer is unchanged from before',
+    legacy.missing.includes('single_leg_hip') && legacy.unavailable.length === 0,
+    `missing=${JSON.stringify(legacy.missing)}`);
 }
 
 console.log(
