@@ -45,6 +45,46 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE LAST TWO DIFFS — **NOT MINE**, and scenario 3 was the LONE OUTLIER
+
+**The residue after everything else is attributed is two lines:**
+`taxonomy.1.modality "none" → "off_feet"`, `weeks.2.days.4` and `weeks.3.days.4`.
+
+**I SUSPECTED MY OWN RESTORE AND MEASURED IT. REFUTED, TWO WAYS.** The C11
+block-cap filter (`set_length_max_4_5_min`) came back in this morning's
+32-file restore, so it was the obvious candidate. **It excludes NOTHING:**
+
+| template | block | verdict |
+| --- | --- | --- |
+| MAS 15:15 Blocks | 4.00 min | kept |
+| 30:30 Hard Intermittent | 5.00 min | kept |
+| Erg EMOM | 5.00 min | kept |
+
+All three sit at or under the 5-minute cap, **so the filter is an inert LOCK, not
+a live change** — which is exactly what item 35 already measured (*"ZERO
+unexplained shortfalls, so this is a missing LOCK, not a live defect"*), now
+confirmed from the other side. **And all three are `aerobic_power`**, while the
+days in question are `tempo_conditioning`. **Two independent reasons it cannot be
+the cause.**
+
+**WHAT IS MEASURED AND IS THE USEFUL HALF: SCENARIO 3 WAS THE ONLY ONE SAYING
+`none`.** Read across the golden, on that same `Upper Pull` day of weeks 2 and 3:
+
+    scenario 0  off_feet      scenario 3  none   ← the outlier, and the one that moved
+    scenario 1  off_feet      scenario 4  off_feet
+    scenario 2  off_feet      scenario 5  off_feet
+
+**Five of six scenarios ALREADY render that day off-feet. The change makes the
+sixth agree with them.** That is evidence of a defect being CORRECTED, not one
+arriving — **but it is evidence of DIRECTION, not of cause, and I have not
+attributed it.** Saying "it looks right" is not the same as knowing what did it,
+and this is the suite where a positional diff has fooled two readers today.
+
+**SO THE HONEST STATE FOR THE `--update`: 289 of 291 diffs resolve to three named
+causes; 2 move a lone outlier into line with five siblings and have no named
+cause.** Whoever signs it should say exactly that rather than rounding it to
+"all attributed".
+
 ### ✅ THE POWER-PROBE LINK IS **PROVEN**, NOT INFERRED — the bisect is 4 causes, and 3 are named
 
 **The terminal seat withdrew its own alarm and said plainly that it had NOT run
