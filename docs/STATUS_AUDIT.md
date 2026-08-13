@@ -45,6 +45,38 @@ thing that actually bit.**
 
 ## STATUS
 
+### TRIAGE STARTED ON THE 25 REDS — AND THE WORST ONE IS PARTLY A **STALE SUITE**, NOT A DEFECT
+
+`byeWeekClassificationTests` (40 passed / **23 failed**, the worst of the 25) —
+**last touched 2026-07-30**, two weeks and many rulings ago.
+
+**THREE OF THE 23 ARE EXPLAINED AND THEY ARE NOT A DEFECT.** The trio
+*"N team trainings: sprint/COD floor comes from anchors or one app exposure"*
+asserts `sprintCodExposures === Math.max(1, teamTrainingsPerWeek)` — an EXACT
+equality — and gets **3 where it expects 2**. `git log -S sprintCodExposures`
+names the cause: **`05e609af`, TODAY, `pace`'s census C4** — *"the sprint floor
+gets the exemption its own sentence advertised"*. **Item 40 records C4 as BUILT
+and CLOSED, so the change is deliberate and the suite is asserting the world
+before it.**
+
+**⚠ R-079 WAS MY FIRST CANDIDATE AND I DROPPED IT ON THE ARITHMETIC.** Sam ruled
+today that in-season *"may mean 3 sprint sessions"*, which fits `actual: 3`
+suspiciously well — but R-079's build counts NIGHTS rather than exposures, and
+nights ≤ exposures, so it pushes the number DOWN, not up to 3. **A candidate that
+fits the number is not a cause; `git log -S` on the counter is.**
+
+**THE OTHER 20 FAILURES ARE UNTRIAGED** and they are not all one cause — they
+span Saturday allocation (*"explicitly strength-only"*, *"counts as lower strength
+only"*), conditioning wording on a resolved Saturday, and QA snapshot labels.
+**Named as untriaged rather than swept into the sprint explanation.**
+
+**⚠ THE DANGER, AND IT IS WHY THIS IS WRITTEN DOWN RATHER THAN FIXED:** the
+tempting move is to re-point all 23 assertions until the suite is green. **Three
+of them SHOULD be re-pointed; the other twenty are unexamined, and re-pointing an
+assertion you have not diagnosed BAKES IN whatever is actually wrong.** That is
+`expectation-edited-to-match-regression`, at scale, in a suite nothing has run
+for two weeks. **Whoever takes it should triage per failure, not per suite.**
+
 ### THE ORPHAN PAYDOWN — 50 → 25, AND **25 SUITES ARE FAILING RIGHT NOW WITH NOBODY WATCHING**
 
 **All 45 remaining orphans RUN, verdict taken from the EXIT CODE, not the totals
