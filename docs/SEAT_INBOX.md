@@ -130,6 +130,54 @@ his instruction is standing authority, not history.**
     eligibility — and that is the one instrument still owed. Full table:
     `docs/STATUS_AUDIT.md`.
 
+    **🛑 STOP — READ THIS BEFORE THE BLOCK BELOW IT. `audit` WITHDRAWS ITS OWN
+    REFUTATION, 2026-08-13, SAME TURN, AND THE ITEM'S ORIGINAL DIAGNOSIS IS
+    RIGHT AFTER ALL.**
+
+    **MY EXPERIMENT WAS BOTCHED AND THE CONCLUSION BELOW IS FALSE.** I promoted
+    `cod_decel` in `autoPlacementCategories` and reported *"ranked first, places
+    zero, ranking is innocent"*. **`autoPlacementCategories` feeds passes 2 and 3
+    ONLY.** Pass 1 iterates `rankedForZone` — `categoryPriority` (which is
+    `CATEGORY_PRIORITY_PRE` / `_OFF`) or `zonePriority[zone]` — and **`cod_decel`
+    is in NEITHER of those lists.** `out[0]` is filled from pass 1 whenever any
+    zone category is uncovered, which is nearly every slot. **So my change never
+    ranked COD first; it reordered a list that had already lost the race.**
+
+    **THE CORRECT EXPERIMENT — prepend `cod_decel` to PASS 1's list — and COD is
+    picked FOURTEEN TIMES in one pre-season no-club generation** (probe on the
+    one map every picked category passes through; `cod_decel` x14,
+    `aerobic_base` x10).
+
+    **TWO THINGS FOLLOW, AND THEY SETTLE TWO OPEN CLAIMS:**
+    1. **`codPermitted` IS TRUE in the real run** — the branch executed, or COD
+       could not have been prepended. **The hypothesis in `STATUS_AUDIT` that it
+       is FALSE is REFUTED, and 28-C1's *"permitted=true on all 108 calls"* is
+       CONFIRMED.** Do not spend the probe that was queued for it.
+    2. **RANKING IS THE WALL, exactly as item 27 and 28-C1 said** —
+       *"ranked last, never reached"*. **The fix is pass 1's list, NOT the
+       placement pool.**
+
+    **⚠ AND A SECOND WALL SITS RIGHT BEHIND IT — the run EXITED NON-ZERO the
+    moment COD was actually picked.** `categoryToFlavour`
+    (`coachingEngine.ts:2633`) declares `: CondFlavour` and its switch covers
+    **five** of `CondCategory`'s **six** members — `aerobic_base`, `tempo`,
+    `vo2`, `sprint`, `glycolytic`. **There is no `cod_decel` case, so it returns
+    `undefined`**, at all seven of its call sites. `cod_decel` was added to
+    `OffseasonConditioningCategory` on 2026-08-13 and this switch was never
+    extended. **This is the exact hazard `TWO_KM_TIME_TRIAL_DEFAULTS` uses
+    `satisfies Record<…>` to make a BUILD failure; here the enum grew and the map
+    went quietly undefined.**
+
+    **SO THE FIX IS TWO CHANGES, NEVER ONE, AND SHIPPING THE RANKING ALONE
+    BREAKS GENERATION.** Owner: unclaimed. **I am NOT taking it — another `audit`
+    session is live in `coachingEngine.ts` right now** (its `ZZPROBE`/`ZZCANDS`
+    lines and `src/__tests__/codGateProbeTemp.ts` are in the tree), **and I
+    restored that file from a backup mid-run, so that seat should re-check its
+    own working copy before trusting it.**
+
+    ── everything below this line is the WITHDRAWN report, kept so the mistake is
+    readable rather than tidied away ──
+
     **⚠⚠ THE ORDERED NEXT STEP IS REFUTED. MEASURED BY `audit`, 2026-08-13, AND
     THIS IS THE THIRD DIAGNOSIS THIS ITEM HAS HAD KILLED BY ITS OWN
     MEASUREMENT.** The wall was named as selection ORDER —
@@ -873,6 +921,54 @@ shared data-shape change its readers correctly followed. Sam was right and the
 seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
+
+- **⚠ NEW 2026-08-13 — R-075 AND R-069(2) CONTRADICT EACH OTHER, AND ONLY SAM CAN
+  SAY WHICH WINS. THIS IS WHY ITEM 37's STRENGTH ARM IS `BLOCKED-BY: sam`.**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *bye*, *two main*,
+  *strength exposure*, *main strength*, then re-grepped for every row the ask
+  gate flagged. Returned **R-069** — the five locked decisions of 14 July 2026,
+  whose clause (2) is ***"bye recovery is exactly 2 lighter lifts"*** — plus
+  **R-006**, **R-007**, **R-074** and R-075 itself. **R-069(2) is the ruling the
+  code is obeying**, so this is not a defect and not a re-ask: it is two of his
+  own rulings pulling opposite ways.
+
+  **THE THREE THAT DO NOT SURVIVE THE OPEN, said rather than skipped:**
+  - **R-007** (*"4 hard days plus 1 moderate/easy day is prefered but 5 hard days
+    is okay"*) — **NOT BREACHED, and this is the one that could have been.** The
+    replacement is the Gunshow: an OPTIONAL arms/pump day carrying
+    `isHardExposure: false`. **It adds a SESSION, never a hard day**, so the 4+1
+    shape is untouched whichever way he rules.
+  - **R-074** (the 4-5 min set/block cap) — conditioning selection only. Nothing
+    here touches a dose or a work interval; the phrase overlap is *"block"*.
+  - **R-006** (1-2 full rest days, 3 permitted on bye-recovery weeks) — **permits
+    the room rather than blocking it.** The away week achieves 3 rest days against
+    a required 1, so spending one is inside his own bounds. It is not what stops
+    the replacement; the 2-lift bye shape is.
+
+  **THE CONFLICT, in one line each:**
+  - **R-069(2):** a bye week is **exactly 2** main strength exposures.
+  - **R-075:** *"Away has to replace the work it removes, not just delete it."*
+
+  **AND AWAY IS BUILT AS A BYE ON HIS OWN INSTRUCTION** — *"the period you're away
+  should almost look like a bye week build"*. So a trip inherits the 2-lift bye
+  shape, while the week it replaced had 3 gym days plus the Gunshow.
+
+  **MEASURED, NOT ASSERTED:** across a block, home 20 strength sessions vs away
+  16. The bye allocator places 2 by design (its own comment: *"Healthy bye: two
+  main strength exposures"*), the contract asks 3, and a repair stage covers the
+  third by **consuming any optional session it finds** — which is why three
+  separate attempts to hand back the Gunshow were each eaten. Full trail in
+  `docs/STATUS_DESKTOP.md`.
+
+  **THE QUESTION FOR HIM, and it is a product ruling, not a bug report:** *when
+  he is away, does the week keep the BYE's 2 lifts, or does it owe him the same
+  number of gym sessions he would have had at home?*
+
+  **NOT BLOCKING THE REST OF ITEM 37** — the day half is built and on glass (a
+  vacated Saturday reads *"Conditioning — 2 exercises"*), and the conditioning arm
+  of his own arithmetic already holds one-for-one. **Only the strength count waits
+  on this.**
 
 - **⚠ NEW 2026-08-13, terminal — IS A FACE PULL A BACK EXERCISE OR SHOULDER
   WORK? The app currently says BACK, and that is what spoils a session.**

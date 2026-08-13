@@ -45,6 +45,50 @@ thing that actually bit.**
 
 ## STATUS
 
+### 🛑 2026-08-13 — I WITHDRAW MY OWN REFUTATION OF 28-C1. RANKING **IS** THE WALL.
+
+**READ THIS BEFORE THE ENTRY BELOW THAT SAYS `codPermitted` MIGHT BE FALSE — IT
+IS TRUE, AND THAT PROBE IS NOT WORTH SPENDING.**
+
+**WHAT I GOT WRONG.** I promoted `cod_decel` inside `autoPlacementCategories`,
+saw zero COD and byte-identical weeks, and reported *"ranking is measured
+innocent"* — in a commit, in the inbox, and to Sam. **`autoPlacementCategories`
+feeds passes 2 and 3 only.** Pass 1 iterates `rankedForZone` (`categoryPriority`
+or `zonePriority[zone]`) and **`cod_decel` appears in neither list**, so `out[0]`
+is decided before the pool ordering is ever consulted. **My experiment reordered
+a list that had already lost the race, and "nothing changed" was the only answer
+it could return.**
+
+**THE CORRECT EXPERIMENT:** prepend `cod_decel` to PASS 1's list →
+**`cod_decel` picked 14 times** in one pre-season no-club generation
+(`aerobic_base` 10). So:
+
+- **`codPermitted` IS TRUE in the real run.** The hypothesis below it is
+  REFUTED and 28-C1's *"permitted=true on all 108 calls"* is CONFIRMED.
+- **RANKING IS THE WALL — item 27 and 28-C1 were right all along.** The fix is
+  pass 1's list, not the placement pool.
+- **AND A SECOND WALL IS BEHIND IT: the run EXITED NON-ZERO the moment COD was
+  picked.** `categoryToFlavour` (`coachingEngine.ts:2633`) declares
+  `: CondFlavour` and covers 5 of `CondCategory`'s 6 members — **no `cod_decel`
+  case, so it returns `undefined`** at all seven call sites. The enum gained
+  `cod_decel` on 2026-08-13; the map never followed. **Fixing ranking alone
+  breaks generation.**
+
+**THE LESSON, AND IT IS THIS SEAT'S OWN LAW TURNED ON ITSELF.** I ran a
+mutation, got a null result, and published it as a refutation **without ever
+checking that my mutation reached the code path it was supposed to test.** I had
+caught exactly this shape twice in the same turn — a vacuous fingerprint, a
+phantom file-hold — and then shipped it a third time in the one place it
+mattered most. **A NULL RESULT IS A CLAIM ABOUT THE INSTRUMENT FIRST. Before
+reporting "X changes nothing", prove the change EXECUTED** — the positive
+control here (COD picked 14x) took one edit and would have caught it instantly.
+
+**NOT TAKING THE FIX.** Another `audit` session is live in `coachingEngine.ts`
+(its `ZZPROBE`/`ZZCANDS` lines and `src/__tests__/codGateProbeTemp.ts` are in the
+tree). **I restored that file from a backup mid-run while their probe was in it —
+that seat must re-check its working copy before trusting it.** My own mutations
+are all reverted and byte-compared; no probe of mine remains.
+
 ### ✅ 2026-08-13 — 28-C1's LAST INSTRUMENT IS RUN. THE REFUSAL IS **NOT** IN `conditioningSelection.ts`
 
 **The one thing the QUEUE PASS entry said was still owed — *"does the category
