@@ -62,6 +62,27 @@ function ok(name: string, condition: unknown, detail?: string): void {
 }
 
 /** Every product file under src/, tests and node_modules excluded. */
+/**
+ * ⚠ IT REFUSES TO RETURN A THIN LIST, AND THAT REFUSAL IS THE POINT.
+ *
+ * **MEASURED BY MUTATION, 2026-08-13 (inbox item 58, seat `patterns`).** Making
+ * this function `return []` left the whole suite **94/94 GREEN**. Both sweeps
+ * that stand on it — [5]'s undeclared-edge census and [8]'s homonym gate — read
+ * "no offenders" off an empty list and reported perfect health.
+ *
+ * **THAT IS THE EXACT SHAPE R-041's OWN HISTORY IS ABOUT.** Its row records a
+ * guard that said *"nothing reds if they re-merge"* while the homonym re-merged
+ * in ten sites over seventeen days. A gate that cannot tell NO VIOLATIONS from
+ * NO FILES LOOKED AT is not a weaker version of a gate; it is the same silence
+ * wearing a green badge.
+ *
+ * THROWN, NOT ASSERTED, because two blocks depend on it and a cell in one of
+ * them would leave the other still standing on sand. The floor is deliberately
+ * far below the real count (549 product files on 2026-08-13) — it is a tripwire
+ * for a broken walk, not a ratchet on how big the app is.
+ */
+const PRODUCT_FILE_FLOOR = 200;
+
 function productFiles(): string[] {
   const out: string[] = [];
   const walk = (dir: string): void => {
@@ -76,6 +97,12 @@ function productFiles(): string[] {
     }
   };
   walk(src);
+  if (out.length < PRODUCT_FILE_FLOOR) {
+    throw new Error(
+      `productFiles() found ${out.length} files under ${src}, below the floor of `
+      + `${PRODUCT_FILE_FLOOR}. Every sweep in this suite would pass over nothing and `
+      + 'report health. Fix the walk — do not lower this.');
+  }
   return out;
 }
 
@@ -261,6 +288,30 @@ console.log('\n[8] R-041 / R-064 — the homonym cannot re-merge');
   // Both rows read `UNENFORCED` from 2026-07-27 to 2026-08-13: "a naming
   // hazard, not a behaviour; nothing reds if they re-merge." This is the
   // something that reds.
+  //
+  // ── IT HAS NOW BEEN SEEN RED, WHICH IT HAD NOT BEEN WHEN IT SHIPPED ──────
+  //
+  // Inbox item 58 asked for exactly that: *"verify the new guard actually reds
+  // on a re-merge, by mutation."* Done 2026-08-13 by seat `patterns`, in a
+  // detached worktree, four real re-merges injected into real product files:
+  //
+  //   | mutation                                                  | result |
+  //   | a `capacity === 'low'` renamed back in progressionRules   | RED    |
+  //   | the NEGATED form `readiness !== 'high'`, a rules file      | RED    |
+  //   | a QUALIFIED `athlete.readiness === 'medium'`               | RED    |
+  //   | a `.tsx` navigation file, not a rules file                 | RED    |
+  //
+  // Each named the offending file and count in its own failure text. Two
+  // further attempts MISSED — their injected code did not match the file they
+  // were aimed at — and are recorded as missed rather than as survivors,
+  // because "the gate is blind" and "the mutation missed" are different
+  // findings and only one of them is about the gate.
+  //
+  // **AND A FIFTH MUTATION SURVIVED, WHICH IS WHY `productFiles` NOW THROWS.**
+  // Making the walk return an empty list left this suite 94/94 GREEN — the
+  // sweep below reported no offenders because it read no files. That is the
+  // silence R-041's own row is a history of, and it is fixed at the walk rather
+  // than here, because block [5] stands on the same list.
   //
   // Pinned from both sides FIRST, so a detector that matches nothing cannot
   // pass the sweep below by being inert — the exact way a green gate lies.

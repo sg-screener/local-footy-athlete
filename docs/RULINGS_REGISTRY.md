@@ -904,8 +904,32 @@ READINESS DOOR, THREE TIERS. His labels, verbatim. ·
 
 **R-039** · Fatigue EXPOSURE-BLOCKING **abolished**. A severity-7 signal blocked
 nine exposure types and collapsed strength sessions to Rest — a count reduction
-by SIDE EFFECT. · `UNENFORCED` — no suite named for it; the abolition is recorded
-in the Bible and I could not name an enforcer.
+by SIDE EFFECT. · `BUILT` — `npm run test:main-lift-pattern`'s sibling
+`npm run test:fatigue-abolition` (`src/__tests__/fatigueAbolitionLawTests.ts`,
+8 cells), in the `test:bible` chain. Seat `patterns`, 2026-08-13, inbox item 57.
+**IT IS A DIFFERENCE TEST, NOT A SOURCE SCAN, AND THAT IS THE LOAD-BEARING
+CHOICE.** The abolition survives as DELIBERATE NO-OPS — `void
+input.readinessDeloaded;` at two sites in `weeklyExposureContractBuilders`, each
+with a comment saying what was removed. **A comment is not a gate**: reinstating
+a reduction there means deleting a `void` and writing ordinary-looking code. So
+the assertion is the observable consequence instead — **the weekly exposure
+contract must be byte-identical with the deload flag on and off**, across 30
+worlds (3 phases x 3 sub-phases x 3 capacity bands, plus bye build/recovery and
+club/no-club). That does not decay when the three sites are refactored.
+**THE CONTROL IS HALF THE GUARD.** A difference test that passes because the
+instrument is inert is the emptiest green there is, so a cell proves the SAME
+comparison does move for an active severe injury — which also pins the other
+half of Sam's sentence, *"injury is untouched — a medical restriction may still
+block and pause"*. The two signals are asserted ASYMMETRIC in one cell, so it
+reds in both directions.
+**THREE MUTANTS KILLED:** reinstating the count reduction reds 2 cells;
+reinstating an exposure removal reds 3; blinding the injury control reds 3.
+**WHAT IT DOES NOT HOLD — MECHANISM THREE.** Bible `:4962` names three sites;
+the first two are exposure-contract shapes and this holds them. The third — *"a
+session-action rule converting a session to recovery once 75% of its rows were
+stripped"* — lives BELOW this builder and a contract comparison cannot see it.
+It needs the action walker, is named in the suite's own NOT-COVERED line and in
+`docs/STATUS_PATTERNS.md`, and is **not** claimed here.
 
 **R-040** · RAW SEVERITY IS PRIVATE TO THE DOOR. No module outside the minting
 door may read a readiness/fatigue severity, tier or magnitude; downstream

@@ -105,13 +105,12 @@ worlds built, and heavy lifts seen.
 
 ### WHAT IS NOT COVERED
 
-- **The registry flip is OWED, and it is a real block.** R-070 still reads
-  `UNENFORCED` in `docs/RULINGS_REGISTRY.md`, and `UNENFORCED_CEILING` in
-  `src/__tests__/rulingRegistryTests.ts` still reads 13. **BLOCKED-BY:
-  other-agent — both files were modified in the working tree at commit time**, so
-  committing them would have swept another seat's work. Next session: flip the
-  row to `guarded: test:main-lift-pattern` and drop the ceiling 13 -> 12, in one
-  commit, by pathspec.
+- ~~**The registry flip is OWED.**~~ **✅ CLEARED, AND NOT BY ME.** Another seat
+  flipped R-070 to `BUILT 70e91a0f` within the hour, citing this commit and
+  carrying the two refutations across accurately. The ceiling had meanwhile been
+  paid 13 -> 5 by `readiness`. **The debt I recorded as blocked was paid by the
+  seat that held the file** — which is the block working as intended rather than
+  a queue jam, and is why `BLOCKED-BY` must name the FILE.
 - **`test:bible` has not been run end to end**, and cannot be while the shared
   tree throws `capacity is not defined`. `test:main-lift-pattern` passes 23/23 on
   a clean HEAD worktree; the chain wiring is asserted only by the script existing
@@ -142,3 +141,107 @@ the gate read the SAME two functions — so the composer cannot obey a rule the
 gate is measuring differently. Any future law in this vocabulary should be built
 on `mainLiftSlot`/`slotsFilledByRow` rather than on `tag.movement`, and a second
 pattern vocabulary appearing anywhere is the thing to red on.
+
+---
+
+## ITEMS 57 AND 58 — ordered as `readiness`, worked as `patterns`
+
+**WHY THE NAME DID NOT CHANGE.** Sam addressed these to `readiness`.
+`docs/STATUS_READINESS.md` has another writer, whose last commit was 75 minutes
+before I picked this up, and the stamping law exists because two sessions behind
+one name is how a day's history became unreadable. **Stamping `readiness` would
+have re-created exactly that.** So the items are worked and the seat is
+unchanged; this file records them.
+
+### ✅ ITEM 58 — THE HOMONYM GUARD REDS. AND IT HAD ONE BLIND SPOT.
+
+**The ask:** *"verify the new guard actually reds on a re-merge, by mutation."*
+Done in a detached worktree, four real re-merges injected into real product
+files:
+
+| mutation | result |
+| --- | --- |
+| a `capacity === 'low'` renamed back in `progressionRules` | **RED** |
+| the NEGATED form `readiness !== 'high'`, a rules file | **RED** |
+| a QUALIFIED `athlete.readiness === 'medium'` | **RED** |
+| a `.tsx` navigation file, not a rules file | **RED** |
+
+Each named the offending file and its count in its own failure text. **The guard
+works.**
+
+**TWO ATTEMPTS MISSED** — the injected code did not match the file it was aimed
+at, and both are recorded as MISSED rather than SURVIVED. A surviving mutant
+means *"the gate is blind OR the mutation missed"*, and only one of those is a
+finding about the gate.
+
+**AND A FIFTH MUTATION SURVIVED — `productFiles()` returning `[]` left the suite
+94/94 GREEN.** Both sweeps standing on it — block [5]'s undeclared-edge census
+and block [8]'s homonym gate — read "no offenders" off an empty list and reported
+perfect health. **That is R-041's own history repeating**: its row records a
+guard that said *"nothing reds if they re-merge"* while the homonym re-merged in
+ten sites over seventeen days. A gate that cannot tell NO VIOLATIONS from NO
+FILES LOOKED AT is the same silence wearing a green badge.
+
+**FIXED AT THE WALK, NOT AT THE CELL:** `productFiles()` now THROWS below 200
+files (549 today). A cell in one block would have left the other still standing
+on sand. Re-mutated after the fix: the empty walk now exits 1.
+
+**THIRD SIGHTING OF THIS SHAPE IN ONE SESSION** — my own R-070 census reported
+"0 breaches of 0 sessions" earlier today for the same reason, and the `terminal`
+seat's SLOT census has the same structure. **COMPRESSION, offered rather than a
+fourth run: any suite that sweeps a FILE LIST or a GENERATED CORPUS states the
+size of what it swept, and reds on a floor.** Two of the three already do; this
+is cheap to make standing.
+
+### ✅ ITEM 57 — R-039 IS GUARDED
+
+**The ask:** *"the three mechanisms are gone from production; no suite stops them
+coming back."*
+
+`test:fatigue-abolition`, 8 cells, in the `test:bible` chain. R-039 moves
+`UNENFORCED` -> `BUILT`; `UNENFORCED_CEILING` 5 -> 4 in the same commit.
+
+**IT IS A DIFFERENCE TEST, AND THAT IS THE DECISION WORTH DEFENDING.** The
+abolition survives as `void input.readinessDeloaded;` at two sites, each with a
+comment saying what was removed. **A comment is not a gate** — reinstating a
+reduction means deleting a `void` and writing ordinary-looking code. So the
+assertion is the observable consequence: **the exposure contract is
+byte-identical with the deload flag on and off**, across 30 worlds (3 phases x 3
+sub-phases x 3 capacity bands, plus bye build/recovery and club/no-club). That
+survives a refactor of all three sites.
+
+**THE CONTROL IS HALF THE GUARD.** A difference test passing because the
+instrument is inert is the emptiest green there is. One cell proves the same
+comparison DOES move for an active severe injury — which also pins Sam's own
+exception, *"injury is untouched"* — and one asserts the two signals are
+ASYMMETRIC, so it reds in both directions.
+
+**THREE MUTANTS KILLED:** reinstating the count reduction reds 2; reinstating an
+exposure removal reds 3; blinding the injury control reds 3.
+
+**THE COMPILER CAUGHT A VACUITY THE SUITE DID NOT.** My first cut passed
+`'early'`/`'mid'`/`'late'` as sub-phases and went **8/8 GREEN**; the canonical
+spellings are `early_offseason` etc., and `test:compile` was the only thing that
+objected. Twenty of the thirty worlds were silently falling back to one default,
+so a sweep advertising sub-phase coverage was covering one. With it fixed the
+census moved 30/30 -> 27/30 demanding strength, which is the proof the worlds
+now differ. **A green suite is not evidence that its own inputs are the ones it
+names.**
+
+### NOT COVERED
+
+- **MECHANISM THREE IS NOT HELD.** Bible `:4962` names three sites; blocks [2]
+  and [3] hold the first two, which are exposure-contract shapes. The third —
+  *"a session-action rule converting a session to recovery once 75% of its rows
+  were stripped"* — lives BELOW the builder and a contract comparison cannot see
+  it. **What would hold it:** drive a real generated week through the
+  session-action layer with the deload flag set, strip past 75%, assert the
+  session's TYPE and TIER are unchanged. That needs the action walker, not a
+  pure builder. **Named in the suite's own NOT-COVERED line and not claimed in
+  the registry row.**
+- **`test:bible` end-to-end not run**, and `test:ruling-registry` block [3] is
+  RED — pre-existing, present before my edits, about a question elsewhere in the
+  queue citing no row. Not mine and not touched.
+- **`stripComments` is an unused import** at `readinessStructureCensusTests.ts:50`
+  and was so at HEAD. Left alone — another seat's file, and not my unit.
+- **No glass.** Both laws are refusals; their visible proof is an absence.

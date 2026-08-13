@@ -335,7 +335,12 @@ run('[1c] every BUILT <commit> receipt names a commit that EXISTS', () => {
 // **The ratchet caught this seat on its own commit and that is the instrument
 // working**: paying two rows without lowering the ceiling reds the assertion
 // below, exactly as it did for `patterns` on the line above.
-const UNENFORCED_CEILING = 5;
+// **LOWERED 5 -> 4 ON 2026-08-13, seat `patterns`, in the commit that paid it.**
+// R-039 (fatigue exposure-blocking abolished) flipped to `BUILT` —
+// `test:fatigue-abolition`, a difference test over 30 worlds with an injury
+// control, because the abolition was living as `void input.readinessDeloaded;`
+// and a comment. **Remaining: R-013, R-014, R-075, R-033.**
+const UNENFORCED_CEILING = 4;
 run('[2] the UNENFORCED ruling count only falls', () => {
   const unenforced = REGISTRY_ROWS.filter((row) => /UNENFORCED/i.test(row.status));
   assert(unenforced.length <= UNENFORCED_CEILING,
