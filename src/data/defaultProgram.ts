@@ -1208,7 +1208,13 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
       { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
       { name: 'Back Squat', sets: 3, repsMin: 8, repsMax: 10 },
       { name: 'Bulgarian Split Squats', sets: 3, repsMin: 8, repsMax: 12 },
-      { name: 'Single Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
+      // `Single-Leg RDL`, HYPHENATED — the spelling every other table uses.
+      // `defaultProgram` was the ONLY site emitting `Single Leg RDL`, and a row
+      // under that spelling is invisible to `loadEstimation`, `exercisePoolsStrength`,
+      // `exerciseSubstitutes`, `injurySessionClassifier` AND Sam's signed
+      // `exerciseEquipmentRequirement` — all five key on the hyphen. R-014's
+      // exact-name class. Not a new name: it is the one already in his sheet.
+      { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
       { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12 },
     ];
   }
@@ -1221,7 +1227,13 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
       { name: 'Back Squat', sets: 3, repsMin: 8, repsMax: 10 },
       { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
       { name: 'Reverse Lunges', sets: 3, repsMin: 8, repsMax: 12 },
-      { name: 'Single Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
+      // `Single-Leg RDL`, HYPHENATED — the spelling every other table uses.
+      // `defaultProgram` was the ONLY site emitting `Single Leg RDL`, and a row
+      // under that spelling is invisible to `loadEstimation`, `exercisePoolsStrength`,
+      // `exerciseSubstitutes`, `injurySessionClassifier` AND Sam's signed
+      // `exerciseEquipmentRequirement` — all five key on the hyphen. R-014's
+      // exact-name class. Not a new name: it is the one already in his sheet.
+      { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
       { name: 'Leg Extension', sets: 2, repsMin: 10, repsMax: 12 },
     ];
   }
