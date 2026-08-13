@@ -284,6 +284,75 @@ console.log('\n[onboarding generation] transient failures get exactly one automa
       `threw: ${(undefinedLocationThrew as any)?.message}`);
   }
 
+  // ── R-091: NO SHADOW PATH — THE AI CANNOT BUILD A WEEK ────────────────────
+  //
+  // Sam, 2026-08-14: *"it makes sense to just remove the ai from building week 1
+  // or doing a complete rebuild in the app (never going to happen for an
+  // athlete)"*.
+  //
+  // `generateProgramFromProfile` is the ONE door every production caller uses —
+  // onboarding's `CompleteScreen`, `useProgramRebuild`, `coachTurnController`
+  // and `coachProgramEdit`'s injected generator. This drives that door with the
+  // NETWORK REMOVED: `fetch` is replaced by a throw for the duration. If any
+  // route still reached the edge function, this cell would reject.
+  //
+  // ⚠ IT ALSO ASSERTS THE OUTPUT IS THE DETERMINISTIC BUILDER'S, byte for byte.
+  // "It did not call the network" alone would pass on a function that returned
+  // an empty program; the equality is what says the athlete gets the real week.
+  {
+    const { generateProgramFromProfile, generateProgramLocally } =
+      require('../services/api/generateProgram');
+    const profile = {
+      seasonPhase: 'In-season', trainingDaysPerWeek: 4,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      teamTrainingDays: ['Tuesday', 'Thursday'], gameDay: 'Saturday',
+      trainingLocation: 'Commercial gym', equipment: ['Full Gym'],
+      equipmentSelectionCompleteness: 'complete',
+      recentTrainingLoad: 'Pretty consistent', conditioningLevel: 'Average',
+    } as any;
+    const opts = { todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1 };
+
+    const realFetch = (globalThis as any).fetch;
+    let networkTouched = false;
+    (globalThis as any).fetch = (...args: unknown[]) => {
+      networkTouched = true;
+      throw new Error(`R-091: program generation reached the network: ${String(args[0])}`);
+    };
+    let built: any = null;
+    let threw: any = null;
+    try {
+      built = await generateProgramFromProfile(profile, opts);
+    } catch (error) {
+      threw = error;
+    } finally {
+      (globalThis as any).fetch = realFetch;
+    }
+
+    ok('[R-091] the one generation door builds a week with the network removed',
+      !!built && !threw, `threw: ${(threw as any)?.message}`);
+    ok('[R-091] ...and nothing reached the edge function',
+      !networkTouched);
+    const local = generateProgramLocally(profile, opts);
+    // CONTENT, NOT IDENTITY. Row ids and `createdAt` stamps are minted per call
+    // and differ between any two builds — comparing raw JSON would fail on a
+    // timestamp and say nothing about the week. This compares what the athlete
+    // is handed: the days, their names and types, and every prescribed row.
+    const shape = (program: any) => JSON.stringify((program?.microcycles ?? []).map((mc: any) =>
+      (mc.workouts ?? []).map((w: any) => ({
+        d: w.dayOfWeek, n: w.name, t: w.workoutType, tier: w.sessionTier,
+        rows: (w.exercises ?? []).map((r: any) => [
+          r.exercise?.name, r.prescribedSets, r.prescribedRepsMin, r.prescribedRepsMax,
+        ]),
+      }))));
+    ok('[R-091] ...and the week it returns IS the deterministic builder\'s week',
+      shape(built) === shape(local),
+      `built=${shape(built).slice(0, 200)}\n      local=${shape(local).slice(0, 200)}`);
+    // NON-VACUITY: a builder that returned nothing would satisfy all three above.
+    ok('[R-091 non-vacuity] the week it built is a real week',
+      (built?.microcycles?.[0]?.workouts ?? []).length > 0,
+      `workouts: ${(built?.microcycles?.[0]?.workouts ?? []).length}`);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
 totalsPrinted(failures.length);
   if (failures.length > 0) process.exit(1);

@@ -16,6 +16,7 @@ four slices; nothing else.
 | 1B-final-2 | Name why the gateway refuses a week its evaluator accepts | **STOP — THE PREMISE IS FALSE AND THREE MECHANISMS CONTRIBUTE.** The evaluator never accepted it; my 1B-final receipt was wrong. Measurement only, no code. |
 | 1B-ship | Fix M1/M2/M3 and ship | **STOP — SHIP GATE NOT MET.** Sheet + M3 + M1 all built and green (8 new cells); sweep refusals unchanged at 26 vs baseline 6, a new blocking code appeared, and the census breadth floor reds. Parked at `81ba20f9`. |
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
+| 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | 2 | Authorship | NOT STARTED |
 | 3 | Close the loop | NOT STARTED |
 
@@ -986,6 +987,130 @@ place four patterns across two training days. Neither fact involves equipment.
   therefore fixable". The recomputation is what stopped that, and it only exists
   because the prompt asked for the achievable-but-missing count precisely.
 
+### Slice 1C-A — the AI no longer builds anything. Nothing else moved.
+
+**SHIPPED.** Three files: `src/services/api/generateProgram.ts` (−523/+31),
+`src/__tests__/onboardingGenerationOutcomeTests.ts` (+69),
+`docs/RULINGS_REGISTRY.md` (+37). Built in a worktree off `1202ca5c`; all git run
+from inside it; worktree discarded.
+
+#### 1. Severed sites
+
+**ONE DOOR, NOT FOUR.** Every production caller arrives at the same function, so
+reachability is removed there rather than argued at each site:
+
+| Caller | file:line | Now lands on |
+| --- | --- | --- |
+| Onboarding — `CompleteScreen` | `screens/onboarding/CompleteScreen.tsx:302` | deterministic builder |
+| Rebuild — `useProgramRebuild` | `hooks/useProgramRebuild.ts:118` | deterministic builder |
+| Coach — `coachTurnController` | `utils/coachTurnController.ts:3460` | deterministic builder |
+| Coach — `coachProgramEdit` (injected) | `utils/coachProgramEdit.ts:1881` | deterministic builder |
+| **The door** | **`services/api/generateProgram.ts:1505`** | `return generateProgramLocally(...)` |
+
+`useHomeScreen.ts` and `CoachScreen.tsx` import the same symbol; both are covered
+by the same severance. **Grep receipt:** zero production `fetch` to the coach
+endpoint remains in `generateProgram.ts`.
+
+#### 2. Deleted vs reported
+
+**DELETED — 528 lines, proven exclusive:** the body of
+`generateProgramFromProfile` from "Step 2: Build AI prompt" onward — prompt
+construction, the generate-mode payload post, and the response parsing that built
+a week out of the reply. Nothing else called it.
+
+**⚠ THE ENDPOINT IS SHARED AND WAS NOT TOUCHED.** Generation posted to
+`env.coachChatEndpoint` — the same edge function `CoachScreen.tsx:1856` uses for
+conversation. **Only the generation MODE is gone.** Coach chat keeps its
+endpoint, its plumbing and its own caller.
+
+**REPORTED, NOT CHASED** (ledger lines below): `buildGenerationPrompt` and
+`buildProgramGenerationEdgePayload` are now reachable only from
+`buildProgramGenerationRequestDiagnostics`, which **`CompleteScreen` still uses
+for failure diagnostics** — shared, therefore ambiguous, therefore not deleted.
+
+#### 3. The no-shadow-path guard
+
+`test:onboarding-generation-outcome`, **49 passed / 0 failed**. It drives the one
+door with `fetch` replaced by a throw, and asserts four things:
+
+- a week is built with the network removed;
+- **nothing reached the edge function** (a flag the stub would have set);
+- the week **IS** `generateProgramLocally`'s — compared on days, names, types and
+  every prescribed row, **not** on raw JSON, because ids and `createdAt` stamps
+  are minted per call and comparing them fails on a timestamp while saying
+  nothing about the week;
+- non-vacuity: the week is not empty. Without it, a builder returning nothing
+  would satisfy all three above.
+
+#### 4. Identity table — the acceptance
+
+| Instrument | Before | After | |
+| --- | --- | --- | --- |
+| `print:week` corpus digest | `0cca0f63` | **`0cca0f63`** | **byte-for-byte identical** |
+| `print:week` findings | 16 | **16** | identical |
+| 180-world sweep | 174 built / **6 refused** | 174 built / **6 refused** | identical |
+| `test:ladder-wide` | 126 deficient / 318, kit-blocked 86, 10/11 | **identical** | unmoved |
+| `test:qa` | 168 / 10 | **168 / 10** | unmoved |
+| `test:scenarios` | 1 failed | **1 failed** | unmoved |
+| `test:compile` | 459 PASSED | **459 PASSED** | unmoved |
+| `test:pools` | 504 / 0 | **504 / 0** | unmoved |
+| `test:ruling-registry` | 6 pass / 2 fail | **6 pass / 2 fail** | unmoved; R-091 lands BUILT |
+
+**THE SAME SIX WORLDS, NAME FOR NAME, BEFORE AND AFTER:**
+
+```
+Pre-season/2d/club/Full Gym/w1          Pre-season/2d/club/Full Gym/w2
+Pre-season/2d/club/Bodyweight Only/w1   Pre-season/2d/club/Bodyweight Only/w2
+Pre-season/2d/club/Dumbbells/w1         Pre-season/2d/club/Dumbbells/w2
+```
+
+**NOTHING WAS RE-BASELINED.** No gate, ceiling, floor, census, contract, pool or
+sheet was touched. The sole builder's defects are the evidence base for the
+composer and every one of them is still visible.
+
+#### 5. Onboarding receipt, and the week it now produces
+
+`CompleteScreen.tsx:302` calls `generateProgramFromProfile`, which is now the
+deterministic builder. Driven with `fetch` throwing — a full-gym in-season
+athlete, 4 training days, Tuesday/Thursday club, Saturday game:
+
+> **Mon — Lower Body Strength** · Back Squat 3×2-4 · Deadlift 3×2-4 · Walking
+> Lunges 3×6-8 · Single-Leg RDL 2×6-8 · Pallof Press 2×8-12 · Short Flush
+> **Tue — Team Training + Upper Pull** · Pull-Ups 3×4-6 · Barbell Row 3×4-6 ·
+> Face Pulls 2×10-20
+> **Thu — Team Training + Upper Push** · Overhead Press 3×3-5 · DB Bench Press
+> 3×8-15 · Lateral Raise 2×10-20
+> **Fri — Gunshow** *(optional)* · Concentration Curl · Chin-Up Negative ·
+> Dumbbell Kickback · Banded Tricep Pushdown · Single-Arm Shrug · Lateral Raise
+
+**⚠ THE BEFORE/AFTER CONTENT DIFFERENCE IS NOT ESTABLISHED AND I DID NOT
+MANUFACTURE ONE.** The old path's output came from a model over the network and
+was nondeterministic; no frozen baseline of it exists. What is established is
+that onboarding now reaches the deterministic builder and what that builder
+hands the athlete. I did not call the network to invent a comparison.
+
+#### 6. Coach conversation still works
+
+| Suite | Result |
+| --- | --- |
+| `test:coach-plan` | 9 pass / 0 fail |
+| `test:coach-tab-slice2` | 76 / 76, 0 failures |
+| `test:coach-clarifier-advance` | 12 pass / 0 fail |
+
+#### 7. What fought me
+
+- **The equality assertion failed first run, and it was right to.** Comparing
+  `JSON.stringify(built) === JSON.stringify(local)` reds on `createdAt` stamps
+  and row ids minted per call. The fix was to compare the *week* — days, names,
+  types, prescriptions — not the object. A weaker cell would have compared
+  microcycle counts and passed while proving nothing.
+- **The endpoint turned out to be the chat endpoint.** Generation posted to
+  `env.coachChatEndpoint`. Had I deleted the endpoint or its plumbing as "AI
+  generation machinery", coach chat would have gone with it. The fence's warning
+  was load-bearing, not decorative.
+- Nothing else. The severance was one function and the corpus digest was
+  unchanged on the first measurement.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -1026,3 +1151,7 @@ place four patterns across two training days. Neither fact involves equipment.
 - `planner_selected_target_miss` asks for 4 main-strength sessions from Off-season bodyweight weeks that compose 3, on 4/5/6 training days alike.
 - `userRemovalConstraints.ts:246-266` already drops unachieved patterns from `requiredSafePatterns` AND sets `balanceExpectation = 'not_applicable'` — the codebase's own precedent for an achievability-relative requirement set.
 - `hinge` has only 2 legal lifts in the whole library on a bodyweight kit and 3 on dumbbells+bands, so hinge coverage is one authoring decision away from impossible for those athletes.
+- `buildGenerationPrompt` and `buildProgramGenerationEdgePayload` are now reachable only from `buildProgramGenerationRequestDiagnostics`, which `CompleteScreen` still uses for failure diagnostics — shared, so not deleted.
+- `generateProgramFromProfile` stays `async` purely so four screens keep their signature; it now does no asynchronous work at all.
+- Program generation and coach chat post to the same edge function (`env.coachChatEndpoint`), distinguished only by payload shape — one endpoint serving two products.
+- `getProgramGenerationProfileFieldDiagnostics` still reports "profile fields missing for program generation" in onboarding failure diagnostics, though generation no longer consumes a profile the way the prompt did.

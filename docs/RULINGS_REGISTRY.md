@@ -1871,3 +1871,40 @@ and a defect in the PARKED code — it removes `Chest Supported Row`,
 `Romanian Deadlift` and `Pallof Press`, whose sheet entry is `[]` meaning
 *needs nothing*. **The parked implementation removes work this athlete can do.**
 Full table and the composed week in `docs/MISSION_THREE_FIXES.md`.
+
+**R-091** · *"it makes sense to just remove the ai from building week 1 or doing
+a complete rebuild in the app (never going to happen for an athlete) - so i think
+it's more elegant that the code just builds the first block, then updates for the
+second block based on what they did etc"* (Sam, 2026-08-14) · **THE AI BUILDS
+NOTHING.** No exercises, sessions, sets, structure or placement — not for week 1,
+not for a rebuild. **The AI may still converse and explain**; it may not compose.
+**THE ENDPOINT IS SHARED AND IS NOT THE SUBJECT.** Program generation posted to
+`env.coachChatEndpoint`, the same edge function coach CHAT uses. Only the
+generation MODE is removed; the endpoint, its plumbing and every conversational
+route are untouched, and `test:coach-plan`, `test:coach-tab-slice2` and
+`test:coach-clarifier-advance` are the evidence they still work.
+**Search words:** ai generation, remove the ai, edge function, week 1, first
+block, rebuild, generateProgramFromProfile, generateProgramLocally, deterministic
+builder, coach chat, generation mode.
+· `BUILT src/services/api/generateProgram.ts:1505` for sole deterministic builder
+ownership. The history-responsive clause of this quote is NOT claimed by this
+receipt and remains governed by the later progression slice.
+**ONE DOOR, NOT FOUR.** `generateProgramFromProfile` is what onboarding's
+`CompleteScreen`, `useProgramRebuild`, `coachTurnController` and
+`coachProgramEdit`'s injected generator all call; it now returns
+`generateProgramLocally` and the 528 lines that built a prompt, posted a payload
+and parsed a week back out are deleted. **Reachability is removed, not guarded**
+— there is no flag or argument that reaches the old path, because the path is
+gone. Zero production `fetch` to the coach endpoint remains in
+`generateProgram.ts`.
+**GUARDED:** `test:onboarding-generation-outcome` (49/0) drives that one door
+with `fetch` replaced by a throw and asserts three things — a week is built, the
+network was never touched, and the week IS `generateProgramLocally`'s, compared
+on days, names, types and every prescribed row rather than on ids and timestamps
+that are minted per call. A non-vacuity cell asserts the week is not empty.
+**IDENTITY, NOT IMPROVEMENT — MEASURED.** The `print:week` corpus is
+byte-for-byte unchanged (digest `0cca0f63`), the 180-world sweep is 174 built /
+6 refused before AND after with **the same six worlds named**, and `test:qa`,
+`test:scenarios`, `test:ladder-wide`, `test:compile` and `test:pools` are
+unmoved. **Nothing was re-baselined:** the sole builder's defects are the
+evidence base for the composer, and this slice hid none of them.
