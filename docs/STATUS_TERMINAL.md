@@ -32,6 +32,31 @@ thing that actually bit.**
 
 ## STATUS
 
+### AUDIT OF MY OWN DAY'S COMMITS — applying the rule `ceb6993b` taught me
+
+**`git show <sha> --stat` over all eleven substantive commits I made today,
+asking one question: does each commit CONTAIN the work its message describes?**
+That check is the habit I did not have this morning and it is the only reason the
+R-080 hole was found.
+
+| commit | verdict |
+| --- | --- |
+| `ceb6993b` | **MESSAGE WITH NONE OF ITS WORK** — two other seats' doc files instead. Fixed by `a1296a87`. |
+| `b62add9f` | **37 files, 25 under `src/`** — the sweep of other seats' work. Restored in `df380518`. |
+| `b4ec714b` (R-076) | **work IS present**, and it also carried 3 doc files belonging to other seats. Absorption, not a mismatch. |
+| the other eight | **clean** — 1-3 files each, matching their messages. |
+
+**SO TODAY'S SCORE ON MY OWN DISCIPLINE IS 8 CLEAN, 1 ABSORBING, 2 WRONG.** All
+three faults are the same mechanism — the shared index moving between my
+inspection and my commit — and none of them were caught by inspecting first.
+**Only the after-check catches it.**
+
+**NOTHING IS OUTSTANDING FROM THE AUDIT.** The two wrong ones are already
+repaired and both repairs are verified in the tree. `b4ec714b`'s extra docs were
+other seats' own edits committed a few minutes early, not reverted work — I
+checked the diff direction rather than assuming.
+
+
 ### ⚠ A BODYWEIGHT-ONLY ATHLETE IS PRESCRIBED A BARBELL BACK SQUAT
 
 **The census world (`test:slot-coverage`, off-season, `equipment: ['Bodyweight
