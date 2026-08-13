@@ -935,6 +935,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   // A6 moved the reason copy to its pure owner; assert it there, not in the view.
   ok('[9] tap warning copy is readable and coach-like',
     /This gives you \$\{observed\} hard days this week\. That's the upper edge\./.test(refusalCopySrc)
+      && /More than I'd program for anyone/.test(refusalCopySrc)
       && /This puts hard work one day before your game/.test(refusalCopySrc)
       && !/program invalid/i.test(confirmWarningBlock));
   ok('[9] one risky tap edit renders one Continue and one Cancel action',
@@ -977,9 +978,10 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 // sheet's reason mapping hands to the view — no rewrite, no truncation.
 {
   console.log('\n[9b] A6 — the domain owns the refusal copy end to end');
-  const { riskReason, riskReasons } = require('../utils/planChangeRefusalCopy') as {
+  const { riskReason, riskReasons, athleteSafeRefusal } = require('../utils/planChangeRefusalCopy') as {
     riskReason: (finding: { ruleId: string; message: string; data?: Record<string, unknown> }) => string;
     riskReasons: (findings: Array<{ ruleId: string; message: string }>) => string[];
+    athleteSafeRefusal: (reason?: string | null) => string;
   };
   const domainMessage =
     "That day is kept light around your game, so a session can't be moved onto it. The plan is untouched.";
@@ -1001,6 +1003,45 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       { ruleId: 'game_proximity_day_locked', message: domainMessage },
       { ruleId: 'game_proximity_day_locked', message: domainMessage },
     ])[0] === domainMessage);
+
+  // ── SAM'S 6-HARD-DAY SENTENCE, ASSERTED BEHAVIOURALLY (ruled 2026-08-13) ───
+  //
+  // The source-literal cell above pins that his words EXIST in the file. These
+  // pin that the athlete READS them, and — the half a literal can never hold —
+  // that FIVE and SIX get DIFFERENT sentences. `cap_maxHardDays_over` fires from
+  // 5 upward (target 4), his budget permits 5, so "the upper edge" is true at 5
+  // and false at 6. One string served both until he ruled.
+  const hardDays = (observed: number) =>
+    riskReason({ ruleId: 'cap_maxHardDays_over', message: 'ignored', data: { observed } });
+
+  ok('[9b] FIVE still reads as the upper edge — five is permitted',
+    hardDays(5) === "This gives you 5 hard days this week. That's the upper edge.",
+    hardDays(5));
+  ok('[9b] SIX reads Sam\'s sentence, verbatim',
+    hardDays(6) === "That's 6 hard days. More than I'd program for anyone — you can go ahead, but the week's carrying more than it should.",
+    hardDays(6));
+  // THE CELL THAT MAKES THE SPLIT MEAN SOMETHING: same rule, two numbers, two
+  // sentences. Without it, a copy owner that returned Sam's line for EVERY count
+  // would pass both cells above.
+  ok('[9b] five and six do not share a sentence',
+    hardDays(5) !== hardDays(6));
+  // SEVEN: the count is interpolated, so his sentence stays TRUE past six.
+  // Hardcoding his literal "6" would print "That's 6 hard days" on a seven-day
+  // week — an understatement replaced by a falsehood.
+  ok('[9b] SEVEN carries seven, not a frozen six',
+    hardDays(7).startsWith("That's 7 hard days.") && !hardDays(7).includes('6 hard days'),
+    hardDays(7));
+  // FOUR is at target and never reaches this copy, but the finding carries no
+  // count in some paths — that fallback must not claim a number it does not have.
+  ok('[9b] a countless finding falls back without inventing a number',
+    riskReason({ ruleId: 'cap_maxHardDays_over', message: 'ignored' })
+      === 'This pushes your hard days above the clean weekly target.');
+  // HIS RULING IS WARN-AND-ALLOW (A5), so the sentence must not read as a
+  // refusal — and it must survive the athlete-safe filter unchanged.
+  ok('[9b] the six-day sentence lets the athlete through and is athlete-safe',
+    /you can go ahead/.test(hardDays(6))
+      && !/can't be applied|cannot be applied/i.test(hardDays(6))
+      && athleteSafeRefusal(hardDays(6)) === hardDays(6));
 }
 
 {

@@ -337,35 +337,6 @@ trip"* · The away equipment answer is a subtraction from the existing list. ·
 **R-020** · *"yes clear team training and games while away"* · Away removes team
 training and games; the athlete's own sessions stay. · `BUILT`.
 
-**R-075** · *"Away has to replace the work it removes, not just delete it - your
-Saturday Rest Day is the wrong case."* (Sam, 2026-08-13, unprompted, closing the
-AWAITING SAM question rather than answering it) · **AWAY IS A SUBSTITUTION, NEVER
-A SUBTRACTION.** A day the trip empties — a vacated fixture, a team-only night —
-must carry REPLACEMENT WORK. **Both *"Training Day"* (the empty-day placeholder)
-and *"Rest Day"* are wrong answers to the same question**, and he ruled out the
-second one the same day it shipped. This is the read-side statement of R-018
-(*"the plan should change until their return date"*) and it is what R-020's
-*"the athlete's own sessions stay"* means when the club's work is what left. ·
-`UNENFORCED` — and the blocker is ARCHITECTURAL, measured 2026-08-13, not a
-missing rule:
-**THE READ CANNOT AUTHOR.** `applyAwayPass` is a filter over `ResolvedDay[]`;
-§18 tier four runs at read time with `resolveVisibleWorkouts: (w) => [...w]` —
-the IDENTITY — so it can conform a week but has no generator and cannot place a
-session that does not exist. **Moving the away pass BEFORE §18 was tried and
-measured on glass: Saturday stayed empty and WEDNESDAY GOT WORSE** (core
-`Conditioning` became optional `Accessories`). Reverted.
-**AND THE AUTHORING ROUTE IS ALSO MEASURED AND ALSO FAILS TODAY:** putting travel
-on the deriving lane re-authors the week but costs a training day (Thu
-`Strength` -> `Rest Day`), takes ~1 minute, and generates 1,220 workouts — §18's
-48-candidate repair search on a club-less bye-build (SEAT_INBOX item 28).
-**SO R-075 IS BLOCKED ON THE SAME §18 BYE-BUILD SHORTFALL AS ITEM 28, AND THAT
-IS NOW THE ONE UNIT BEHIND BOTH.**
-**THE MECHANISM HE IS ASKING FOR ALREADY EXISTS AND IS NAMED:**
-`sessionResolver.ts` `_resolveDateRaw` already answers *"a game slot was freed"*
-with `buildDerivedSession('prehab_accessories', …, 'Freed game slot', …)` — but
-only for a TEMPLATE game with no calendar mark, so an away-vacated MARKED fixture
-never reaches it. **Start there, not from scratch.**
-
 **R-021** · *"i've taken out time caps for now"* · No time-cap row renders. **A
 DISPLAY ruling, not a deletion order — the `time_limit` kind stays in the type.**
 · `BUILT`.

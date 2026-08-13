@@ -3437,7 +3437,47 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
 
 /** Get tags for an exercise. Returns undefined if not tagged. */
 export function getExerciseTags(name: string): ExerciseTag | undefined {
-  return EXERCISE_TAGS[name];
+  // CANONICALISE FIRST — the app already knows these are the same exercise.
+  //
+  // THE DEFECT THIS CLOSES (measured 2026-08-13): this was a bare exact-name
+  // lookup, and the generator ships names the map does not hold. 151 GYM ROWS
+  // across 5 worlds resolved to NOTHING — `Face Pulls` x37, `Pallof Press` x28,
+  // `Bicep Curls` x20, `Tricep Pushdowns` x20, `Romanian Deadlift` x10.
+  //
+  // NONE OF THEM WERE MISSING DATA. Every one resolves through the normaliser
+  // the app already trusts: Face Pulls -> Face Pull (horizontal_pull),
+  // Pallof Press -> Band Pallof Press (core), Bicep Curls -> Bicep Curl
+  // (Dumbbell), Tricep Pushdowns -> Tricep Pushdown, Romanian Deadlift -> RDLs
+  // (hinge). `hardcodedExerciseNameLockTests` has ALWAYS canonicalised before
+  // asking whether a name is legal — which is why that gate is green while this
+  // lookup was blind. One vocabulary, two readers, only one of them normalising.
+  //
+  // PURELY ADDITIVE, AND PROVEN SO BEFORE THE CHANGE: all 149 keys in this map
+  // are already canonical (`canonicalExerciseName(key) === key` for every one),
+  // so no existing hit can move and no tag can be lost. It can only turn an
+  // `undefined` into the answer that was always there.
+  //
+  // WHY IT MATTERS BEYOND TIDINESS: a miss reads as "this row has no pattern",
+  // which is indistinguishable from "this row is not strength work". Sam's slot
+  // ruling (R-014) is composed of patterns — "a lower day with no hinge is RED"
+  // would have fired on a Romanian Deadlift.
+  // ⚠ LAZY require, NOT a top-level import, AND THE CYCLE IS REAL — I shipped it
+  // and it crashed on module load. `exerciseCanonicalisation` pulls
+  // `selectableExerciseVocabulary`, which reads `CONDITIONING_META` back out of
+  // THIS file; at import time that binding is still undefined and
+  // `Object.keys(undefined)` throws before a single test runs. Deferring the
+  // resolve to CALL time breaks the cycle — this module is fully initialised by
+  // the time anyone asks for a tag.
+  //
+  // TYPECHECK PASSED ON THE BROKEN VERSION. A circular import is not a type
+  // error; only running it found this.
+  const direct = EXERCISE_TAGS[name];
+  if (direct) return direct;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { canonicalExerciseName } = require('../utils/exerciseCanonicalisation') as {
+    canonicalExerciseName: (raw: string) => string;
+  };
+  return EXERCISE_TAGS[canonicalExerciseName(name)];
 }
 
 /** Get all tagged exercise names. */

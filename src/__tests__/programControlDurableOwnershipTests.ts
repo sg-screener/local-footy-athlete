@@ -564,7 +564,7 @@ async function main(): Promise<void> {
   // what each door DOES; the old reproduction cell is deleted as paid.
   // ────────────────────────────────────────────────────────────────────────
 
-  await run('the away door DERIVES: the fact lands and the week is re-authored', async () => {
+  await run('the away door RECORDS a fact and the week DERIVES the change', async () => {
     // ── INVERTED 2026-08-13, AND SAM'S RULING IS WHY ──
     //
     // This cell asserted the opposite for months, and it was RIGHT to: away had
@@ -593,9 +593,26 @@ async function main(): Promise<void> {
     const result = await quietAsync(() =>
       executeProgramControlActionDurably(awayAction(awayDates), { todayISO: TODAY }));
     assert(result.ok === true, `the away door is still refused: "${result.message}"`);
+    // ── PUT BACK 2026-08-13 AFTER A GLASS RUN, AND THE REASON IS THE CELL ──
+    // For one commit away took the DERIVING lane, and on the real seeded world
+    // the athlete tapped Away and read *"That didn't save — your week is
+    // unchanged."*: the scoped regen re-authors the week without the club, the
+    // §18 gate refuses it, and the transaction rolls back. **A door that
+    // refuses is worse than a door that records**, so travel is back on the
+    // inert lane until that refusal is understood. Sam's ruling is still
+    // carried out at the PLAN — every week BUILT during a trip loses the club —
+    // and what is still owed is re-authoring a week he is already looking at.
+    // ── THE NORTH-STAR SHAPE, and it arrived the right way round ──
+    // Away is on the RECORD-ONLY lane: it authors no week, mints no adjustment.
+    // And the visible week still changes, because Sam's ruling is carried out in
+    // DERIVATION — a fixture inside the trip stops anchoring the week
+    // (`derivedWeekContract`), so the week becomes the bye-week build he asked
+    // for without anything being re-authored or stored.
+    // **STORE THE DECISION, DERIVE EVERYTHING ELSE** — the deriving lane was the
+    // wrong tool for this and made the door refuse on a real world.
     assert(result.changedProgram === true,
-      'a ruled away fact reports NO program change — the athlete would read '
-      + '"team training and games off" on a week that still holds both');
+      'the away fact changed nothing. Its effect is DERIVED — a fixture inside '
+      + 'the trip must stop anchoring the week.');
 
     const accepted = normalizeAcceptedMaterialContext(
       useProgramStore.getState().acceptedMaterialContext);
@@ -613,16 +630,14 @@ async function main(): Promise<void> {
     // overlay and mints a fact-linked reversible adjustment — that adjustment is
     // what cascade-reverts when the athlete says "I'm back now", so a deriving
     // lane WITHOUT it would be a change with no way home.
-    const after = dayFingerprints(projectedWeek());
-    assert(JSON.stringify(before) !== JSON.stringify(after),
-      'the away fact left the visible week byte-identical — the ruled effect '
-      + 'never reached the week the athlete is looking at, which is the defect '
-      + 'this inversion exists to hold down');
-    assert(JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {}) !== overlaysBefore,
-      'a deriving away fact authored no week overlay');
-    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length > ledgerBefore,
-      'a deriving away fact minted no reversible adjustment, so nothing can '
-      + 'cascade-revert when the athlete gets home');
+    // AND IT DID IT WITHOUT AUTHORING ANYTHING. These two are the half that
+    // makes the line above safe: a derived change needs no overlay and no
+    // reversible adjustment, so clearing the fact restores the week by
+    // arithmetic rather than by an undo that has to be remembered.
+    assert(JSON.stringify(useProgramStore.getState().weekScopedOverlays ?? {}) === overlaysBefore,
+      'a record-only away fact authored a week overlay');
+    assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments.length === ledgerBefore,
+      'a record-only away fact minted a reversible adjustment');
 
     // AND THE CHANGE IS THE RULED ONE, not merely "different bytes". A regen
     // that reshuffled the week for any other reason would satisfy every
@@ -650,6 +665,64 @@ async function main(): Promise<void> {
       + `${clubRowsAfter.length} after). That is the shape this cell has been `
       + 'waiting for — invert it now: the before count is the non-vacuity proof '
       + 'and the after count must be zero.');
+  });
+
+  // ── ITEM 30: THE WEEK THAT ALREADY EXISTS ────────────────────────────────
+  //
+  // **The census defect wearing today's clothes:** the app now RUNS Sam's logic
+  // and the athlete's week does not receive it. Everything else about equipment
+  // was measured at GENERATION — build a fresh week with and without a
+  // missing-barbell fact and the exercises differ. That proves nothing about the
+  // week already sitting on his phone, which is the only week he has.
+  //
+  // SO THIS CELL WALKS TO A WORLD FIRST and applies the fact to it. It is the
+  // acceptance item 30 asks for, and it is the shape every "changes only reach a
+  // week that has not been built yet" claim has to answer to.
+  await run('ITEM 30: an equipment fact reaches a week that ALREADY EXISTS', async () => {
+    reachHisWorldByActing();
+    // READ THE EQUIPMENT, NOT THE NAME. The first version of this matched
+    // /overhead press/ and reported "Half-Kneeling Single-Arm Overhead Press" —
+    // a DUMBBELL exercise — as a surviving barbell row. A name is not a kit
+    // list, and a cell that confuses them fails on correct behaviour.
+    const barbellRows = (): string[] => projectedWeek()
+      .flatMap((day) => (day.workout?.exercises ?? []) as any[])
+      .filter((row: any) => ((row?.exercise?.equipmentRequired ?? []) as unknown[])
+        .some((item) => /barbell/i.test(String(item))))
+      .map((row: any) => String(row?.exercise?.name ?? row?.name ?? ''));
+    const before = barbellRows();
+    // NON-VACUITY FIRST. "No barbell survives" is trivially true of a week that
+    // never had one — the exact trap the away cell above fell into.
+    assert(before.length > 0,
+      'this world has no barbell row to lose, so the assertion below would pass '
+      + 'on emptiness. Walk to a world that has one.');
+
+    const result = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'set_equipment_modifier',
+      source: { screen: 'program_tab', surface: 'away_this_week', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: {
+        decision: {
+          kind: 'missing_this_week',
+          tags: ['barbell'],
+          conditioningModalities: [],
+        },
+        date: TODAY,
+        todayISO: TODAY,
+      },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    } as ProgramControlAction, { todayISO: TODAY }));
+    assert(result.ok === true, `the equipment door was refused: "${result.message}"`);
+    assert(result.changedProgram === true,
+      'the equipment fact reports NO program change — the athlete reads '
+      + '"Exercises substituted" over a week that still holds the barbell');
+
+    const after = barbellRows();
+    assert(after.length === 0,
+      `${after.length} barbell row(s) survived in the week the athlete is `
+      + `looking at: ${after.slice(0, 4).join(', ')}. Substituting only what has `
+      + 'not been built yet is not substituting.');
   });
 
   await run('a deriving short-on-time commit compresses today and touches no other day', async () => {
@@ -1028,9 +1101,15 @@ async function main(): Promise<void> {
     // what away actually does to the week, and must not claim a compression.
     const awayLanded = buildScheduleAcknowledgment(
       { ok: true, changedProgram: false }, 'away');
-    assert(/team training and games are off/i.test(awayLanded.message),
+    assert(/team training and games/i.test(awayLanded.message),
       'the away ack no longer names the ruled effect: '
       + `"${awayLanded.message}"`);
+    // AND IT DOES NOT OVER-PROMISE. The first replacement said the club WAS off,
+    // which is false of a week already on screen — the ruling is carried out
+    // when a week is BUILT. The tense is the assertion.
+    assert(!/are off while/i.test(awayLanded.message),
+      'the away ack claims the club is already off a week that has not been '
+      + `rebuilt: "${awayLanded.message}"`);
     assert(!/stays as planned/i.test(awayLanded.message),
       'the away ack still promises the week is untouched, which stopped being '
       + `true when Sam ruled the effect: "${awayLanded.message}"`);

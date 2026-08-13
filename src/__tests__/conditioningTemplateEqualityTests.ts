@@ -49,6 +49,9 @@ import {
   poolForCategoryPublic,
   renderableModalities,
   longestWorkIntervalMinutes,
+  blockLengthMinutes,
+  selectConditioningTemplate,
+  codDecelPermitted,
 } from '../rules/conditioningSelection';
 
 let passed = 0;
@@ -618,6 +621,221 @@ ok(
   // Second-scale rows are out of reach of a minutes cap.
   ok('a seconds-based row yields no minute figure',
     longestWorkIntervalMinutes({ workPeriod: '10 s hard' } as never) === null);
+
+  // ── THE ENFORCER READS THE AUTHORED RULE, IT DOES NOT AGREE WITH IT ───────
+  //
+  // C3's own complaint was that `ergCapMinutes` and `excludedModalities` were
+  // "read by nothing but a test". The first enforcer re-typed both as literals,
+  // which satisfied the behaviour and left the complaint TRUE — two owners for
+  // one of Sam's numbers, free to drift apart silently.
+  //
+  // Asserting `ERG_CAP_MINUTES === 8` would be worthless: a hardcoded 8 passes
+  // it. So this MOVES THE AUTHORED NUMBER and requires the behaviour to follow.
+  // A row at exactly 8 minutes is legal under the real cap; drop the ceiling to
+  // 7 and that same row must lose its ergs. Only a reader can do that.
+  {
+    const capRule = MODALITY_RENDERING_RULES.find((r) => r.id === 'erg_interval_cap');
+    ok('the erg cap rule is authored in the sheet, with both fields',
+      capRule?.ergCapMinutes === 8 && capRule?.excludedModalities?.join(',') === 'ski,row,air_bike',
+      JSON.stringify(capRule ?? null));
+
+    const eightMinuteErgRow = CONDITIONING_TEMPLATES.find((t) =>
+      longestWorkIntervalMinutes(t) === 8
+      && renderableModalities(t).some((m) => m === 'ski' || m === 'row' || m === 'air_bike'));
+    ok('an 8-minute row that DOES offer an erg exists — the probe below is not vacuous',
+      eightMinuteErgRow !== undefined, String(eightMinuteErgRow?.name));
+
+    // The probe: re-read the module with the authored ceiling lowered to 7.
+    let lowered: string[] = [];
+    let probeRan = false;
+    if (eightMinuteErgRow) {
+      const original = capRule!.ergCapMinutes;
+      try {
+        (capRule as { ergCapMinutes?: number }).ergCapMinutes = 7;
+        delete require.cache[require.resolve('../rules/conditioningSelection')];
+        const reloaded = require('../rules/conditioningSelection');
+        lowered = reloaded.renderableModalities(eightMinuteErgRow);
+        probeRan = true;
+      } finally {
+        (capRule as { ergCapMinutes?: number }).ergCapMinutes = original;
+        delete require.cache[require.resolve('../rules/conditioningSelection')];
+      }
+    }
+    ok('lowering the AUTHORED cap to 7 strips the ergs off an 8-minute row',
+      probeRan && !lowered.some((m) => m === 'ski' || m === 'row' || m === 'air_bike'),
+      `probeRan=${probeRan} modalities=${lowered.join(',')}`);
+
+    // EVERY BRANCH, NOT THE OUTPUT. The probe above found the "all 5
+    // modalities" branch returning BEFORE the cap was applied — the first exit
+    // of five, and the only uncapped one. It survived because the cap was only
+    // ever asserted over the authored rows, and no authored row today combines
+    // that phrase with a >8 min interval. These are SYNTHETIC, so the guard
+    // does not depend on which rows happen to exist.
+    for (const phrase of ['All 5 modalities.', 'Any modality.']) {
+      ok(`a synthetic 10-minute "${phrase}" row is still capped`,
+        !renderableModalities({
+          modalityNotes: phrase, workPeriod: '10 min continuous',
+        } as never).some((m) => m === 'ski' || m === 'row' || m === 'air_bike'),
+        renderableModalities({
+          modalityNotes: phrase, workPeriod: '10 min continuous',
+        } as never).join(','));
+    }
+    // ...and the same row at 8 minutes keeps all five, so the cell above is
+    // asserting the CAP and not simply that the branch returns nothing.
+    ok('a synthetic 8-minute "All 5 modalities" row keeps all five',
+      renderableModalities({
+        modalityNotes: 'All 5 modalities.', workPeriod: '8 min continuous',
+      } as never).length === 5);
+  }
+}
+
+// ── SAM'S COD WINDOW, RULED 2026-08-13 (item 31) ────────────────────────────
+//
+// "So the athlete can only do COD work in late off season (after first 4 weeks
+// of off season), in christmas break or during pre season if no team trainings
+// ... No COD required in season for anyone."
+//
+// He asked for ONE RULE rather than three phase branches, so these assert the
+// rule and then assert his three named cases FALL OUT of it.
+{
+  const permitted = (
+    weekHasTeamTraining: boolean,
+    seasonPhase: string | null | undefined,
+    offseasonSubphase: string | null | undefined,
+  ) => codDecelPermitted({ weekHasTeamTraining, seasonPhase, offseasonSubphase });
+
+  ok('[COD] late off-season with no team training is PERMITTED',
+    permitted(false, 'Off-season', 'late_offseason') === true);
+  ok('[COD] pre-season with no team training is PERMITTED — "some people play for cash"',
+    permitted(false, 'Pre-season', null) === true);
+  // The Christmas break needs no case of its own: it IS pre-season with the
+  // week's team training cleared. That is the whole reason the rule beats a
+  // phase list, so it is asserted rather than assumed.
+  ok('[COD] the Christmas break falls out — pre-season, team training cleared for the week',
+    permitted(false, 'Pre-season', null) === true
+      && permitted(true, 'Pre-season', null) === false);
+
+  // NEVER IN SEASON, FOR ANYONE — including a week with no team training, which
+  // is exactly the case a "no team training" gate alone would have let through.
+  ok('[COD] in season is REFUSED even when the week has no team training',
+    permitted(false, 'In-season', null) === false);
+
+  // THE FIRST FOUR WEEKS ARE RECOVERY. early = weeks 1-2, mid = 3-4.
+  ok('[COD] early off-season is REFUSED', permitted(false, 'Off-season', 'early_offseason') === false);
+  ok('[COD] mid off-season is REFUSED', permitted(false, 'Off-season', 'mid_offseason') === false);
+
+  // TEAM TRAINING SHUTS IT IN EVERY PHASE — the club does the change of
+  // direction. Without this the phase half could pass while the week half rots.
+  ok('[COD] team training this week REFUSES in every phase',
+    permitted(true, 'Off-season', 'late_offseason') === false
+      && permitted(true, 'Pre-season', null) === false
+      && permitted(true, 'In-season', null) === false);
+
+  // CLOSED WHEN THE PHASE IS UNKNOWN. COD is the "cut first" category; the
+  // least-informed state must not be the most permissive one.
+  ok('[COD] an unknown phase is REFUSED, not assumed permissive',
+    permitted(false, undefined, null) === false && permitted(false, null, null) === false);
+
+  // NON-VACUITY: the rule must say YES to something, or every cell above passes
+  // on a function that returns false forever.
+  ok('[COD] the rule is not a constant false',
+    permitted(false, 'Off-season', 'late_offseason') === true);
+}
+
+// ── C11: THE SET/BLOCK CAP IS ENFORCED, NOT JUST DECLARED ──────────────────
+//
+// Sam: short-intermittent high-%MAS work keeps the set/block to ~4-5 min,
+// "enforced at selection time, not written into the dose". He confirmed it
+// needed building — "okay it needs to be checked". `set_length_max_4_5_min`
+// appeared five times in the data and NOTHING read it.
+{
+  const capped = CONDITIONING_TEMPLATES.filter((t) =>
+    t.properties.includes('set_length_max_4_5_min'));
+  ok('[C11] templates DO carry the set-cap property — the cell is not vacuous',
+    capped.length === 3, String(capped.length));
+
+  // ⚠ THE UNIT IS THE BLOCK, NOT THE WORK INTERVAL. Every one of these uses
+  // second-scale intervals, so a filter built on longestWorkIntervalMinutes
+  // would be permanently inert — that was my first attempt.
+  ok('[C11] the work-interval reader is BLIND to these templates — wrong unit',
+    capped.every((t) => longestWorkIntervalMinutes(t) === null));
+
+  ok('[C11] every authored capped template is within the 5 min block cap',
+    capped.every((t) => (blockLengthMinutes(t) ?? 0) <= 5),
+    capped.map((t) => `${t.name}=${blockLengthMinutes(t)}`).join('; '));
+
+  // The derivation, and the stated number winning over it.
+  ok('[C11] a block is rounds x (work + rest) — 8 x (15s+15s) = 4 min',
+    blockLengthMinutes({
+      setsRounds: '8 rounds × 2–3 blocks, 2 min between blocks',
+      workPeriod: '15 s hard', restPeriod: '15 s easy',
+    } as never) === 4);
+  ok('[C11] an authored "(N min per block)" WINS over the derivation — his words rule',
+    blockLengthMinutes({
+      setsRounds: '2 blocks × 5 rounds (5 min per block)',
+      workPeriod: '30 s hard', restPeriod: '30 s easy',
+    } as never) === 5);
+
+  // THE BREACH, SYNTHETIC ON PURPOSE: no authored row breaches the cap today, so
+  // a cell waiting for one would certify the sheet rather than the rule.
+  const overCap = {
+    name: 'Synthetic Over-Cap', quality: 'aerobic_power',
+    setsRounds: '12 rounds', workPeriod: '30 s hard', restPeriod: '30 s easy',
+    totalSessionTime: '≈20 min', intensity: '110% MAS', workToRest: '1:1',
+    properties: ['set_length_max_4_5_min'], modalityNotes: 'All 5 modalities.',
+    baseUnit: 'time', effortCue: 'x',
+  } as never;
+  // 12 x (30s + 30s) = 720s = TWELVE minutes. My first draft of this cell said
+  // six — the code was right and my arithmetic was not, which is the correct
+  // direction for a cell to fail in.
+  ok('[C11] a 12-round 30:30 block is TWELVE minutes — well over his cap',
+    blockLengthMinutes(overCap) === 12, String(blockLengthMinutes(overCap)));
+  // And a template WITHOUT the property is untouched by the cap.
+  // ── THE SELECTION CLAUSE ITSELF, DRIVEN THROUGH THE REAL SELECTOR ───────
+  //
+  // The item's order: "delete the clause and a cell must red on a block that
+  // runs past five minutes." MY FIRST DRAFT RE-IMPLEMENTED THE FILTER INLINE
+  // and the mutation SURVIVED — it was testing my copy of the rule, not the
+  // rule. This one pushes a breaching template into the real pool and asks
+  // `selectConditioningTemplate` for that category, so only the real clause can
+  // keep it out.
+  {
+    const overCapTemplate = {
+      ...overCap as unknown as typeof CONDITIONING_TEMPLATES[number],
+      name: 'ZZZ Synthetic Over-Cap Block',
+      quality: 'aerobic_power',
+    } as typeof CONDITIONING_TEMPLATES[number];
+    const pool = CONDITIONING_TEMPLATES as unknown as Array<typeof CONDITIONING_TEMPLATES[number]>;
+    pool.push(overCapTemplate);
+    let everSelected = false;
+    let selectedSomething = false;
+    try {
+      for (let day = 1; day <= 40; day++) {
+        const picked = selectConditioningTemplate({
+          category: 'vo2' as never,
+          dateStr: `2026-03-${String(day % 28 + 1).padStart(2, '0')}`,
+        } as never);
+        selectedSomething = true;
+        if (picked.name === overCapTemplate.name) everSelected = true;
+      }
+    } finally {
+      const at = pool.indexOf(overCapTemplate);
+      if (at >= 0) pool.splice(at, 1);
+    }
+    // NON-VACUITY FIRST: if the selector never returned anything, "never chose
+    // the bad one" would be trivially true.
+    ok('[C11] the selector actually ran and returned templates',
+      selectedSomething);
+    ok('[C11] the real selector NEVER chooses an over-cap template that declares the cap',
+      !everSelected);
+    ok('[C11] and the synthetic template was removed from the shared pool',
+      !CONDITIONING_TEMPLATES.some((tpl) => tpl.name === overCapTemplate.name));
+  }
+
+  // The reader measures any template; the CAP only binds the ones declaring it.
+  ok('[C11] the reader measures a template that does not declare the cap',
+    blockLengthMinutes({ setsRounds: '12 rounds', workPeriod: '30 s hard',
+      restPeriod: '30 s easy' } as never) === 12);
 }
 
 console.log(

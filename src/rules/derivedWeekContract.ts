@@ -74,19 +74,65 @@ export const lastTierFourDerivation: {
  * LEG (iii) — the week's contract DERIVED from current fixture facts
  * ──────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * THE TRIPS LIVE OVER THIS WEEK — SEAT_INBOX item 30, Sam 2026-08-13.
+ *
+ * A `travel` fact IS a span: `effectiveFrom` to `effectiveUntil`. An OPEN
+ * horizon is not a trip and is skipped — it would take the athlete's fixtures
+ * off the calendar for ever.
+ */
+function awaySpansFromFacts(
+  facts: readonly TemporarySourceFact[] | undefined,
+): { from: string; until: string }[] {
+  return (facts ?? [])
+    .filter((fact): fact is Extract<TemporarySourceFact, { factKind: 'schedule' }> =>
+      'factKind' in fact && fact.factKind === 'schedule' &&
+      (fact as { scheduleKind?: string }).scheduleKind === 'travel' &&
+      fact.status === 'active' && typeof fact.effectiveUntil === 'string')
+    .map((fact) => ({
+      from: String(fact.effectiveFrom).slice(0, 10),
+      until: String(fact.effectiveUntil).slice(0, 10),
+    }));
+}
+
 function fixtureIdentityForWeek(args: {
   profile: OnboardingData;
   weekStart: string;
   markedDays?: Readonly<Record<string, CalendarDayType>>;
   storedMode: Section18WeekMode;
+  temporarySourceFacts?: readonly TemporarySourceFact[];
 }): { anchorState: Section18AnchorState; fixtureDays: number[]; mode: Section18WeekMode } {
   const ownedPhase = ownSeasonPhaseForGeneration(args.profile);
-  const fixtures = targetWeekFixtures({
+  const allFixtures = targetWeekFixtures({
     profile: args.profile,
     weekStart: args.weekStart,
     markedDays: args.markedDays,
     ownedPhase,
   });
+  // ── A GAME HE IS AWAY FOR DOES NOT ANCHOR HIS WEEK ──
+  //
+  // **Sam, 2026-08-13:** *"If you're away, you're not playing, so a taper and a
+  // recovery day would be training for a match you're not at … the game on the
+  // 15th should be removed or at least blanked out, but the next saturday the
+  // 22nd game is still alive"*, and the shape he named for the trip itself:
+  // *"almost look like a bye week build or an off season block"*.
+  //
+  // ONE FILTER GIVES ALL OF THAT, because this is the seam where a week decides
+  // what it IS. Drop the fixtures inside the trip and the week falls through to
+  // the no-fixture branch below — `anchorState: 'bye'`, mode
+  // `in_season_bye_build`, which is the bye-week build in his own words. A
+  // fixture OUTSIDE the span is untouched, so the Saturday after he lands still
+  // anchors and still tapers back across the days he is travelling: *"there
+  // training on wednesday thursday friday the following week needs to not kill
+  // them for that return"*.
+  //
+  // IT FILTERS THE READ, NOT THE STORE. His calendar mark is his record and is
+  // not edited here.
+  const awaySpans = awaySpansFromFacts(args.temporarySourceFacts);
+  const fixtures = awaySpans.length === 0
+    ? allFixtures
+    : allFixtures.filter((candidate) => !awaySpans.some((span) =>
+      candidate.date >= span.from && candidate.date <= span.until));
   const fixture = fixtures[0] ?? null;
   if (!fixture) {
     // No fixture: an in-season week becomes a bye, a pre-season week keeps its
@@ -352,3 +398,13 @@ export function deriveWeekContract(args: {
   });
   return withRemovalLedger(rebuilt, args);
 }
+
+
+/**
+ * THE WEEK'S IDENTITY, EXPOSED FOR ONE SUITE — SEAT_INBOX item 30.
+ *
+ * `test:away-flow` walks Sam's worked example (leave Thu 13 Aug, home Fri 21st)
+ * against this seam directly, because the property he ruled is about what a week
+ * IS — bye or game — and that is decided here, not in a rendered card.
+ */
+export const weekIdentityForWeekForTest = weekIdentityForWeek;

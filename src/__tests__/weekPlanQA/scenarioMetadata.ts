@@ -51,11 +51,15 @@ export const WEEK_PLAN_QA_SCENARIO_METADATA: WeekPlanQAScenarioMetadata[] = [
   },
   {
     id: 'S5',
-    humanName: 'Off-season, five days, team Tuesday/Thursday',
+    humanName: 'Off-season, five days, no team training',
     phase: 'Off-season',
-    scenarioIntent: 'Guards off-season structure when club training still anchors two days.',
+    // CORRECTED 2026-08-13 (item 31). Was 'Off-season, five days, team
+    // Tuesday/Thursday', guarding "off-season structure when club training still
+    // anchors two days" — a week Sam has ruled cannot exist: "off season means NO
+    // team training". The harness had been reporting the contradiction itself.
+    scenarioIntent: 'Guards off-season structure across five available days with no club anchors.',
     gameDay: 'none',
-    teamTrainingDays: ['Tuesday', 'Thursday'],
+    teamTrainingDays: [],
     availabilitySummary: '5 available days: Monday-Friday',
   },
   {
@@ -70,9 +74,11 @@ export const WEEK_PLAN_QA_SCENARIO_METADATA: WeekPlanQAScenarioMetadata[] = [
   },
   {
     id: 'S7',
-    humanName: 'Off-season six days with three team trainings',
-    phase: 'Off-season',
-    scenarioIntent: 'Guards off-season load distribution around Monday/Wednesday/Friday team training.',
+    humanName: 'Pre-season six days with three team trainings',
+    // RE-PHASED 2026-08-13 (item 31), same reason as S5. The three-team-day
+    // shape is the scenario's value and pre-season carries it legally.
+    phase: 'Pre-season',
+    scenarioIntent: 'Guards load distribution around Monday/Wednesday/Friday team training.',
     gameDay: 'none',
     teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     availabilitySummary: '6 available days: Monday-Saturday',

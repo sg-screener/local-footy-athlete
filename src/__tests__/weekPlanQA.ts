@@ -698,10 +698,24 @@ function preSeasonStandardAthlete(overrides: Partial<OnboardingData> = {}): Part
   });
 }
 
+// TEAM TRAINING CLEARED 2026-08-13 (item 31, and this scenario was NOT the one
+// the item named). It inherited `buildAthlete`'s Tue+Thu team days, so S5 was a
+// second impossible week — "off season means NO team training" (Sam) — and it
+// was producing the SAME harness violation as S7: "Tuesday is a team day but
+// isTeamDay=false". Generation was right and the fixture was wrong, twice.
+//
+// KEPT IN OFF-SEASON rather than re-phased like S7, because S5 is the ONLY
+// five-day off-season scenario (S6 is a four-day early-off-season week). Moving
+// it would have traded one contradiction for a coverage hole. Nothing is lost by
+// dropping the team days: the shape they provided — off-season WITH a club — is
+// a week that cannot exist, and every real team-training combination is covered
+// by S7 through S10.
 function offSeasonStandardAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
   return buildAthlete({
     seasonPhase: 'Off-season',
     gameDay: undefined,
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
     ...overrides,
   });
 }
@@ -722,9 +736,20 @@ function offSeasonLowAvailabilityAthlete(overrides: Partial<OnboardingData> = {}
   };
 }
 
-function offSeasonThreeTeamDaysAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+// RENAMED AND RE-PHASED 2026-08-13 (item 31). This built an OFF-SEASON athlete
+// with three team trainings, and Sam has ruled that week cannot exist: "off
+// season means NO team training". The harness had been flagging the
+// contradiction on its own for as long as it existed — "Monday is a team day but
+// isTeamDay=false" — because generation correctly refuses to place club work in
+// off-season while the config insisted on it. Nobody read the flag.
+//
+// FIXED RATHER THAN RETIRED, because the scenario's VALUE is the three-team-day
+// shape, not the phase: it is the week that proves finishers stay off
+// team-adjacent days. Pre-season carries three team trainings legally, so the
+// coverage survives. Off-season six-day coverage is unaffected — S6 is that week.
+function preSeasonThreeTeamDaysAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
   return {
-    seasonPhase: 'Off-season',
+    seasonPhase: 'Pre-season',
     trainingDaysPerWeek: 6,
     preferredTrainingDays: [...SIX_DAY_AVAILABLE_DAYS],
     teamTrainingDaysPerWeek: 3,
@@ -811,7 +836,7 @@ const scenarios: Scenario[] = [
   // ── Off-season ──
   {
     id: 'S5',
-    name: 'S5: Off-season, 5 days, team Tue+Thu',
+    name: 'S5: Off-season, 5 days, no team training',
     onboarding: offSeasonStandardAthlete(),
   },
   {
@@ -827,8 +852,8 @@ const scenarios: Scenario[] = [
   },
   {
     id: 'S7',
-    name: 'S7: Off-season, 6 days, team Mon+Wed+Fri',
-    onboarding: offSeasonThreeTeamDaysAthlete(),
+    name: 'S7: Pre-season, 6 days, team Mon+Wed+Fri',
+    onboarding: preSeasonThreeTeamDaysAthlete(),
   },
 
   // ── Team training combos ──

@@ -851,9 +851,18 @@ run('Away is a week-shape control, and it asks leave, return, then equipment', (
     'the away sheet no longer asks Sam\'s three questions in his words');
   assert(/date >= todayISO/.test(sheet) && /weekDays/.test(sheet),
     'the leave date is no longer bounded to the week on screen');
-  assert(/home-away-return-calendar/.test(home),
+  // READ THE COMPONENT, NOT THE LITERAL. This matched the composed testID
+  // `home-away-return-calendar`, and reddened the day a neighbour parameterised
+  // the prefix so a second sheet could reuse the same month grid — correct work,
+  // and reusing it is better than a second calendar with a second set of bugs.
+  // What this cell actually cares about is that the return date is picked from an
+  // UNBOUNDED month grid, which is the component's identity.
+  assert(/function AwayReturnCalendar/.test(home) && /<AwayReturnCalendar/.test(home),
     'the unbounded return-date calendar is gone — a bounded picker is the exact '
     + 'defect item 28 exists to remove ("away for ten days" was unsayable)');
+  assert(/testIDPrefix = 'home-away-return'/.test(home),
+    'the away calendar no longer answers to its own testID prefix, so the flows '
+    + 'and the explorer cannot find it');
 
   // THE OLD SHEET MUST NOT SURVIVE BESIDE THE NEW ONE.
   assert(!/Which days are you away\?/.test(home) && !/AwayDaysSheet/.test(home),
