@@ -284,6 +284,17 @@ export function selectExercises(
 
   const selected: string[] = [];
   const usedMovements = new Map<MovementPattern, number>(); // movement → count
+  // ── R-070 — the patterns this session has ALREADY SPENT A HEAVY LIFT ON ──
+  //
+  // Sam's Bible `:226`: *"ONE MAIN PER PATTERN PER SESSION … A second heavy lift
+  // in a session must be a different pattern."* This is the fence, and it is a
+  // SET rather than a count because the law admits exactly one.
+  //
+  // It is deliberately NOT the same thing as `usedMovements`: that counts every
+  // pick of a movement, accessories included, and its cap says the OPPOSITE of
+  // the law (see `findBestForSlot`). Two hinges are fine when one of them is a
+  // back extension; two heavy hinges never are.
+  const usedMainSlots = new Set<string>();
   let highLoadCount = 0;
   let highFatigueCount = 0;
   let highDomsCount = 0;
@@ -291,7 +302,7 @@ export function selectExercises(
   // ── Fill slots in order ──
   for (const slot of intent.slots) {
     const pick = findBestForSlot(
-      ranked, selected, slot, usedMovements,
+      ranked, selected, slot, usedMovements, usedMainSlots,
       highLoadCount, highFatigueCount, highDomsCount,
     );
     if (!pick) continue;
@@ -302,6 +313,8 @@ export function selectExercises(
     // Update session-wide counters
     const mv = tags.movement;
     usedMovements.set(mv, (usedMovements.get(mv) || 0) + 1);
+    const mainSlot = mainSlotSpentBy(pick);
+    if (mainSlot) usedMainSlots.add(mainSlot);
     if (tags.load === 'high') highLoadCount++;
     if (tags.fatigue === 'high') highFatigueCount++;
     if (tags.doms === 'high') highDomsCount++;
@@ -364,6 +377,35 @@ export function selectExercises(
 }
 
 /**
+ * WHICH PATTERN A PICK SPENDS, IF IT IS A HEAVY LIFT — null for everything else.
+ *
+ * BOTH ANSWERS ARE BORROWED, NEITHER IS INVENTED HERE. `mainLiftPatternLaw` owns
+ * R-070; it reads the exercise pools for "is this an anchor" and
+ * `sessionSlotCoverage` for "which pattern is it", which are the same two
+ * authorities the gate checking this law afterwards reads. A local heaviness
+ * test here would let the composer and its gate disagree, which is how a rule
+ * ends up enforced in one direction only.
+ */
+function mainSlotSpentBy(exerciseName: string): string | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { isMainLift, mainLiftSlot } = require('../rules/mainLiftPatternLaw') as {
+    isMainLift: (row: { role?: string; exercise?: { name?: string } }) => boolean;
+    mainLiftSlot: (name: string) => string | null;
+  };
+  if (!isMainLift({ exercise: { name: exerciseName } })) return null;
+  return mainLiftSlot(exerciseName);
+}
+
+/** Would picking this name put a SECOND heavy lift on a pattern already spent? */
+function breachesOneMainPerPattern(
+  exerciseName: string,
+  usedMainSlots: Set<string>,
+): boolean {
+  const slot = mainSlotSpentBy(exerciseName);
+  return slot !== null && usedMainSlots.has(slot);
+}
+
+/**
  * Find the best candidate for a specific slot.
  *
  * Returns the exercise name, or null if nothing fits.
@@ -373,6 +415,7 @@ function findBestForSlot(
   alreadySelected: string[],
   slot: SlotDef,
   usedMovements: Map<MovementPattern, number>,
+  usedMainSlots: Set<string>,
   highLoadCount: number,
   highFatigueCount: number,
   highDomsCount: number,
@@ -382,6 +425,9 @@ function findBestForSlot(
 
     const tags = EXERCISE_TAGS[name];
     if (!tags) continue;
+
+    // ── R-070: never a second heavy lift of a pattern already spent ──
+    if (breachesOneMainPerPattern(name, usedMainSlots)) continue;
 
     // ── Slot constraint: max load ──
     if (slot.maxLoad && !levelAtMost(tags.load, slot.maxLoad)) continue;
@@ -401,8 +447,15 @@ function findBestForSlot(
     // ── Movement stacking prevention ──
     // Prefer slot's preferred movements, but don't hard-require them.
     // If a movement is already used 2+ times, skip unless no other option.
+    // ⚠ THIS CAP IS NOT R-070 AND MUST NOT BE READ AS IT. It counts every pick
+    // of a movement, accessories included, and it PERMITS two — census A4 named
+    // it as "the only stacking cap in the repo, and it says the OPPOSITE" of
+    // *"never two heavy lifts of the same movement pattern"*. The law is held by
+    // `breachesOneMainPerPattern` above, which fences HEAVY lifts only. This
+    // stays because it is still doing its own, weaker job: keeping a session
+    // from becoming three of anything.
     const currentCount = usedMovements.get(tags.movement) || 0;
-    if (currentCount >= 2) continue; // hard cap: never 3 of same pattern
+    if (currentCount >= 2) continue; // volume cap: never 3 of one movement
 
     // ── Prefer slot's preferred movements ──
     // This is soft — handled by the ranked order + the bonus below.
@@ -417,11 +470,31 @@ function findBestForSlot(
     return name;
   }
 
-  // Fallback: relax movement stacking to find anything
+  // Fallback: relax movement stacking to find anything.
+  //
+  // ⚠ IT RELAXES THE PREFERENCE, NEVER THE LAW. A law a fallback path may waive
+  // is a preference, so R-070 is re-checked here.
+  //
+  // ⚠ AND THIS LINE IS UNEXERCISED TODAY — SAID PLAINLY BECAUSE THE MUTATION
+  // REFUTED WHAT I FIRST WROTE HERE. This comment claimed all 36 breaches
+  // arrived through this fallback. Measured 2026-08-13: deleting the check from
+  // THIS loop leaves the guard suite 23/23 GREEN, while deleting it from the
+  // preferred loop above reds it with all 36 back. Every breach came through the
+  // PREFERRED pass — `Upper Push`'s accessory slot names `horizontal_push` as a
+  // preferred movement, so a second moderate-load bench was never the reluctant
+  // choice this fallback exists to make. The check stays because the law admits
+  // no path, but it is a fence on a door nothing currently walks through, and
+  // calling it load-bearing would be a claim no cell holds.
+  //
+  // WHAT IT COSTS WHEN NOTHING LEGAL EXISTS: the slot goes unfilled and the
+  // session is shorter. That is the ruled trade — R-014, *"the number of
+  // exercises is not important the total work being done evenly across the body
+  // is"* — and one press is a better answer than two of the same press.
   for (const { name } of ranked) {
     if (alreadySelected.includes(name)) continue;
     const tags = EXERCISE_TAGS[name];
     if (!tags) continue;
+    if (breachesOneMainPerPattern(name, usedMainSlots)) continue;
     if (slot.maxLoad && !levelAtMost(tags.load, slot.maxLoad)) continue;
     if (slot.maxFatigue && !levelAtMost(tags.fatigue, slot.maxFatigue)) continue;
     if (slot.requireUnilateral === true && !tags.unilateral) continue;
