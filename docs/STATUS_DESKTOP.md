@@ -141,3 +141,37 @@ is both. Counting EXPOSURES is what turned a confusing tally into two clean arms
   SEED_ID=standard-in-season-week <flow>`. 14 steps. **It should live in
   `.maestro/`.**
 
+
+
+---
+
+## 2026-08-13 — STANDING STOP-CHECKS (items 1 and 13), performed not skipped
+
+**1a — MERGE `codex/*`: QUIET, and measured by merge-base AGE as the order
+requires, never by commit count.** Every local `codex/*` branch with commits not
+in `main` forks from **2026-07-19** and is **1,371 commits behind**. Merging any
+of them reverts a month of work — the item already ruled that, and this is the
+re-measurement rather than a re-ask. `program-week-navigation-bounds` (the one
+fresh branch, merged `e231a6bc` on 2026-08-12) is fully in. **NOTHING OF SAM'S UI
+WORK IS WAITING OUTSIDE `main`.**
+
+**⚠ AND ONE BROKEN REF, found by that sweep and not by looking for it:**
+`refs/heads/codex/ui-tweaks.lock.stale-seat` is a null ref —
+`git show-ref` exits `fatal: bad ref … (000000…)` and every branch walk prints a
+warning. The file exists at `.git/refs/heads/codex/ui-tweaks.lock.stale-seat`.
+**Left in place: deleting a ref is not my call and it is harmless noise**, but it
+makes every `git branch` sweep emit a warning that a future agent may read as its
+own error. Named so nobody spends time on it twice.
+
+**13 — UNENFORCED LAW COUNT: 28, counted the way the item insists
+(`grep -c "state: 'UNENFORCED'" src/rules/lawRegistry.ts`), out of 123 law rows.
+NOT LOWERED TODAY, and I am not going to pretend otherwise.**
+The item names FOUR laws as "remaining", which reads as four unenforced rows and
+is not what the file says — **the four are the ones with a PRICED route; the
+other 24 have none.** That is exactly the miscount shape the item itself warns
+about ("the terminal has miscounted this twice, both times one low"), so the
+number is stated with its command beside it.
+**Nothing I built today honestly closes one.** My cells hold RULINGS (R-075), not
+laws; the mutation-proving I did was per-change, and `LAW-green-gate-is-a-claim`
+needs it STANDING. **Claiming a law is enforced because a related cell exists is
+the failure this registry was built to stop.**
