@@ -172,6 +172,11 @@ type ClassifiedRow = {
 const FALLBACK_PATTERN_EXERCISE: Record<MainStrengthPattern, string> = {
   squat: 'Back Squat',
   hinge: 'Romanian Deadlift',
+  // The authored fills, not a choice made here: R-086 closes the
+  // bodyweight-capable set at these two, and R-084 closes the single-leg HIP
+  // pool at `Single-Leg RDL` alone — *"Sam is not adding more"*.
+  single_leg_knee: 'Walking Lunges',
+  single_leg_hip: 'Single-Leg RDL',
   push: 'Overhead Press',
   pull: 'Pull-Ups',
 };

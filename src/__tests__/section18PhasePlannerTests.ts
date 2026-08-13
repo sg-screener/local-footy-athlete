@@ -230,8 +230,32 @@ function removeStrength(entry: SessionAllocation): void {
   entry.strengthPatternContributions = undefined;
 }
 
-function balanced(patterns: Record<MainStrengthPattern, number>): boolean {
-  const values = Object.values(patterns);
+/**
+ * BALANCE IS JUDGED OVER THE PATTERNS THE CONTRACT REQUIRES, NOT OVER EVERY
+ * MEMBER OF THE UNION — which is what the production rule does
+ * (`section18EffectiveWeekEvaluator` reads
+ * `contract.strengthPatterns.requiredSafePatterns`).
+ *
+ * **THIS HELPER USED TO DO `Object.values(patterns)`**, and R-087's widening of
+ * `MainStrengthPattern` broke it on the spot: two new members that no planner
+ * yet produces sat at 0, so `every(v => v > 0)` failed and three cells reddened
+ * over a ledger that had not changed. **A test that enumerates a union instead
+ * of asking the contract fails the day the union grows** — the same shape as
+ * the four other hand-copied vocabularies this unit found.
+ */
+/** The patterns the WEEK is required to balance, straight off Contract v2. */
+function requiredFor(snap: PlannerSnapshot): readonly MainStrengthPattern[] {
+  return snap.plan.weeklyExposureContractV2?.strengthPatterns.requiredSafePatterns ?? [];
+}
+
+function balanced(
+  patterns: Record<MainStrengthPattern, number>,
+  required: readonly MainStrengthPattern[],
+): boolean {
+  // A required list of 0 or 1 makes "balanced" vacuous — say so rather than
+  // return a green.
+  if (required.length < 2) return false;
+  const values = required.map((pattern) => patterns[pattern]);
   return values.every((value) => value > 0) && Math.max(...values) - Math.min(...values) <= 1;
 }
 
@@ -324,7 +348,8 @@ runCase('scenario', '4 game: optional G-2 flush remains non-core', () => {
   invariant(ledger.achieved.conditioning === 3 && ledger.additionalConditioningCount === 1, 'optional flush changed core credit', ledger);
 });
 runCase('scenario', '5 game: later repair restores all weekly patterns', () => {
-  invariant(balanced(game1.patterns), 'game pattern ledger is not balanced', game1.patterns);
+  invariant(balanced(game1.patterns, requiredFor(game1)),
+    'game pattern ledger is not balanced', game1.patterns);
 });
 
 runCase('scenario', '6 bye build 0 TT selects S3/C3 app/sprint1', () => {
@@ -547,7 +572,7 @@ runCase('property', 'P8 practice-match app conditioning follows approved table',
   invariant(pm2.appCore.length === 0 && pm1.appCore.length === 1 && pm0.appCore.length === 2, 'practice-match app formula drifted');
 });
 runCase('property', 'P9 meaningful pattern counts remain equal or near-equal', () => {
-  invariant([game1, bye0, midNormal, late, pre0, pm0].every((value) => balanced(value.patterns)), 'unjustified pattern imbalance', [game1, bye0, midNormal, late, pre0, pm0].map((value) => value.patterns));
+  invariant([game1, bye0, midNormal, late, pre0, pm0].every((value) => balanced(value.patterns, requiredFor(value))), 'unjustified pattern imbalance', [game1, bye0, midNormal, late, pre0, pm0].map((value) => value.patterns));
   const sundayPracticeMatch = profileFor({
     phase: 'Pre-season', teamTrainingCount: 2, game: true, phaseWeek: 1,
   });
@@ -556,18 +581,22 @@ runCase('property', 'P9 meaningful pattern counts remain equal or near-equal', (
   sundayPracticeMatch.usualGameDay = 'Sunday';
   const generated = generateProgramLocally(sundayPracticeMatch, { todayISO: '2026-07-13' });
   const canonicalPatterns = generated.microcycles.map((week) => {
-    const counts: Record<MainStrengthPattern, number> = { squat: 0, hinge: 0, push: 0, pull: 0 };
+    const counts: Record<MainStrengthPattern, number> = { squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0, push: 0, pull: 0 };
     for (const row of week.workouts.flatMap((workout) => workout.exercises)) {
       const pattern = row.section18Evidence?.mainStrengthPattern;
       if (row.section18Evidence?.role === 'main_strength' && pattern) counts[pattern] += 1;
     }
-    return counts;
+    // Carry the week's OWN required list with its counts. Balance is judged
+    // against what that week was asked to cover, never against every member of
+    // the union — see `balanced`.
+    return { counts, required: week.exposureContractV2?.strengthPatterns.requiredSafePatterns ?? [] };
   });
   invariant(generated.microcycles.every((week) =>
     week.exposureContractV2?.identity.declaredSubphase === 'practice_match_week' &&
     week.exposureContractV2.identity.expectedSubphase === 'practice_match_week'),
   'canonical practice-match identity disagreed with the phase-owned mode');
-  invariant(canonicalPatterns.every(balanced), 'canonical evidence inflated a same-pattern main-lift contribution', canonicalPatterns);
+  invariant(canonicalPatterns.every((entry) => balanced(entry.counts, entry.required)),
+    'canonical evidence inflated a same-pattern main-lift contribution', canonicalPatterns);
 });
 
 console.log('\n-- 10 Section 18 phase-planner mutations --');
@@ -633,7 +662,8 @@ runCase('mutation', 'M10 drop pattern-balance repair', () => {
     entry.strengthIntent.plannedPatterns = entry.strengthIntent.plannedPatterns.filter((pattern) => pattern !== 'hinge');
     entry.strengthIntent.effectivePatterns = entry.strengthIntent.effectivePatterns.filter((pattern) => pattern !== 'hinge');
   }
-  invariant(!balanced(strengthPatternLedger(mutant)), 'dropped pattern-balance mutation survived');
+  invariant(!balanced(strengthPatternLedger(mutant), requiredFor(game1)),
+    'dropped pattern-balance mutation survived');
 });
 
 console.log('\n-- Cross-path canonical generation --');

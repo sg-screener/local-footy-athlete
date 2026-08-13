@@ -69,7 +69,7 @@ const week = (weekStart: string, conditioningSRPE: number): JournalLoadWeekTotal
   sessionsRecorded: 1,
   liftsUnmeasured: 0,
   regions: {},
-  patternTonnageKg: { squat: 0, hinge: 0, push: 0, pull: 0 },
+  patternTonnageKg: { squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0, push: 0, pull: 0 },
   upperLowerTonnageKg: { upper: 0, lower: 0 },
 });
 

@@ -426,7 +426,7 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
 
   eq('early six-day plan owns the exact weekly main-pattern ledger',
     strengthPatternLedger(earlyPlan.weeklyPlan),
-    { squat: 1, hinge: 1, push: 1, pull: 1 });
+    { squat: 1, hinge: 1, single_leg_knee: 0, single_leg_hip: 0, push: 1, pull: 1 });
   eq('Full Body label carries canonical Lower Hinge + Upper Pull intent',
     monday.strengthPatternContributions,
     ['hinge', 'pull']);

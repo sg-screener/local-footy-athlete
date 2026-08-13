@@ -4,6 +4,7 @@
  */
 
 import type {
+  MainStrengthPattern,
   StrengthIntent,
   StrengthIntentDiagnostic,
 } from '../rules/strengthPatternContributions';
@@ -925,8 +926,16 @@ export interface Workout {
   strengthVariant?: 'standard' | 'quality_low_volume';
   /** Development/audit proof for planned patterns absent after final filtering. */
   strengthIntentDiagnostics?: StrengthIntentDiagnostic[];
-  /** @deprecated Compatibility projection of strengthIntent.plannedPatterns. */
-  strengthPatternContributions?: Array<'squat' | 'hinge' | 'push' | 'pull'>;
+  /**
+   * @deprecated Compatibility projection of strengthIntent.plannedPatterns.
+   *
+   * **WAS A HAND-COPIED `Array<'squat'|'hinge'|'push'|'pull'>` UNTIL 2026-08-13
+   * (R-087).** It is a projection of `MainStrengthPattern` and said so in its
+   * own comment, while spelling the union out again — so widening the real type
+   * left this one behind and the new slots could not travel through it. **The
+   * fourth copy of one vocabulary found in this concept.** It now IS the type.
+   */
+  strengthPatternContributions?: MainStrengthPattern[];
 
   // Combined S+C metadata — set when session pairs strength + conditioning
   /** True when this day has a conditioning block appended after the strength block. */

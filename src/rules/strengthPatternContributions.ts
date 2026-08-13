@@ -1,7 +1,58 @@
 import type { MovementPattern as ExerciseMovementPattern } from '../data/exerciseTags';
 
-/** Canonical weekly main-strength ledger. Accessories never add entries here. */
-export type MainStrengthPattern = 'squat' | 'hinge' | 'push' | 'pull';
+/**
+ * Canonical weekly main-strength ledger. Accessories never add entries here.
+ *
+ * **WIDENED 2026-08-13 (R-087). Sam: *"each week should contain all the main
+ * lifts i.e. squat, hinge, single leg knee, single leg hip, push pull in both
+ * horizontal and vertical then accessories for uppers and lowers and some
+ * core"*.** His sentence draws the line this type needs: the MAIN LIFTS are
+ * named first, and *"then accessories… and some core"* is a separate clause.
+ * **So the single-leg slots belong here and accessories still do not** — the
+ * comment above stays true.
+ *
+ * **WHY IT HAD TO WIDEN AT ALL.** Measured over 174 worlds: all 102
+ * `Full Body Strength` days ship no single-leg knee work and 68 no single-leg
+ * hip either. They were never ASKED for it — a full-body day plans
+ * `['squat','hinge','push','pull']` because those were the only four words this
+ * type had. R-087: *"the composer's job is not to add two rows to a template.
+ * It is to make a full body day ASK the week what is still open."* A day cannot
+ * ask for a slot the vocabulary cannot name.
+ *
+ * **⚠ THE PLANE SPLIT IS NOT BUILT AND THAT IS DELIBERATE.** R-087 also names
+ * *"push pull in both horizontal and vertical"*, which would take `push`/`pull`
+ * to four members. **No measured defect stands behind that half**, and it
+ * changes §18 exposure counting granularity — a week owing "a push" would start
+ * owing two distinct ones. Splitting it is its own slice with its own
+ * before/after. **This widening is the two slots the census actually found
+ * empty**, and `ALL_MAIN_STRENGTH_PATTERNS` below is what stops the next member
+ * arriving unhandled.
+ */
+export type MainStrengthPattern =
+  | 'squat'
+  | 'hinge'
+  | 'single_leg_knee'
+  | 'single_leg_hip'
+  | 'push'
+  | 'pull';
+
+/**
+ * THE TOTAL LIST, AND EVERY MAP OVER THE UNION IS BUILT FROM IT.
+ *
+ * **This exists because of `cod_decel`** — a category joined
+ * `OffseasonConditioningCategory` on 2026-08-13, `categoryToFlavour`'s switch
+ * was never extended, and it returned `undefined` at all seven call sites until
+ * generation exited non-zero. Four sightings of that class in one day.
+ * `satisfies` makes the next member a BUILD failure instead.
+ */
+export const ALL_MAIN_STRENGTH_PATTERNS = [
+  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'push', 'pull',
+] as const satisfies readonly MainStrengthPattern[];
+
+/** A zeroed ledger over every member — the one place new members land. */
+export function emptyMainStrengthLedger(): Record<MainStrengthPattern, number> {
+  return { squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0, push: 0, pull: 0 };
+}
 
 export type StrengthArchetype = 'lower' | 'upper' | 'full_body';
 
@@ -378,12 +429,7 @@ export function strengthPatternLedger(
   }>,
   source: 'planned' | 'effective' = 'planned',
 ): Record<MainStrengthPattern, number> {
-  const ledger: Record<MainStrengthPattern, number> = {
-    squat: 0,
-    hinge: 0,
-    push: 0,
-    pull: 0,
-  };
+  const ledger: Record<MainStrengthPattern, number> = emptyMainStrengthLedger();
   for (const session of sessions) {
     const patterns = session.strengthIntent
       ? normalizeStrengthIntent(session.strengthIntent)[source === 'planned' ? 'plannedPatterns' : 'effectivePatterns']

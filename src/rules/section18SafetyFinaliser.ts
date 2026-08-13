@@ -111,6 +111,11 @@ function reduceStrengthDose(
 const SAFE_PATTERN_FALLBACK: Record<MainStrengthPattern, string> = {
   squat: 'Back Squat',
   hinge: 'Romanian Deadlift',
+  // R-086 closes the bodyweight-capable set at exactly these two, and R-084
+  // closes the single-leg HIP pool at `Single-Leg RDL` alone — so these are the
+  // authored fills, not a choice made here.
+  single_leg_knee: 'Walking Lunges',
+  single_leg_hip: 'Single-Leg RDL',
   push: 'Bench Press',
   pull: 'Pull-Ups',
 };

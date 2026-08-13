@@ -37,6 +37,7 @@ import {
   normalizeStrengthIntent,
   resolveLegacyStrengthIntent,
   shouldUseLegacyStrengthInference,
+  type MainStrengthPattern,
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 import {
@@ -44,7 +45,20 @@ import {
   strengthVariantForPatterns,
 } from '../data/strengthSessionVariants';
 
-export type MovementPattern = 'squat' | 'hinge' | 'push' | 'pull';
+/**
+ * THE MAIN-LIFT PATTERNS, AND THIS IS AN ALIAS BECAUSE IT WAS A COPY.
+ *
+ * **Until 2026-08-13 (R-087) this was its own hand-written
+ * `'squat'|'hinge'|'push'|'pull'`** — the same concept as
+ * `MainStrengthPattern`, spelled again, under a name that ALSO belongs to a
+ * different 13-member type in `data/exerciseTags`. **One concept, two
+ * word-lists, plus a homonym on top.** Widening the real union left this behind
+ * and every naming call site stopped type-checking, which is how it was found.
+ *
+ * It is an alias rather than a deletion because the exported name has callers;
+ * aliasing makes them all speak the one vocabulary in a single line.
+ */
+export type MovementPattern = MainStrengthPattern;
 
 export type StrengthPatternMetadata =
   | 'lower'

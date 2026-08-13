@@ -14,7 +14,11 @@ import type {
 } from '../types';
 
 const PATTERN_EXERCISES: Record<StrengthPattern, string> = {
-  squat: 'Back Squat', hinge: 'Romanian Deadlift', push: 'Bench Press', pull: 'Chest Supported Row',
+  squat: 'Back Squat', hinge: 'Romanian Deadlift',
+  // R-086 / R-084 name these two; the harness uses the authored fills so its
+  // witnesses match what the app would actually place.
+  single_leg_knee: 'Walking Lunges', single_leg_hip: 'Single-Leg RDL',
+  push: 'Bench Press', pull: 'Chest Supported Row',
 };
 
 function semantic(value: HarnessCanonicalWorkoutLedger): string {

@@ -8,7 +8,11 @@
 
 import type { Workout } from '../types/domain';
 import { classifyVisibleSession } from './sessionClassificationAdapter';
-import { normalizeStrengthIntent, type MainStrengthPattern } from './strengthPatternContributions';
+import {
+  emptyMainStrengthLedger,
+  normalizeStrengthIntent,
+  type MainStrengthPattern,
+} from './strengthPatternContributions';
 import { anchorAttendanceClaimsConditioning } from './weeklyExposureContractV2';
 import type {
   AnchorParticipationState,
@@ -249,7 +253,7 @@ function rowPatternCounts(workout: Workout): {
   accessory: boolean;
   legacyFallback: boolean;
 } {
-  const counts: Record<MainStrengthPattern, number> = { squat: 0, hinge: 0, push: 0, pull: 0 };
+  const counts: Record<MainStrengthPattern, number> = emptyMainStrengthLedger();
   let accessory = false;
   let sawTypedMain = false;
   let sawUnknown = false;
@@ -484,8 +488,10 @@ function attendedAnchor(anchor: { participation: AnchorParticipationState }): bo
 }
 
 function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeekLedger {
-  const patterns: Record<MainStrengthPattern, number> = { squat: 0, hinge: 0, push: 0, pull: 0 };
-  const patternDays: Record<MainStrengthPattern, number[]> = { squat: [], hinge: [], push: [], pull: [] };
+  const patterns: Record<MainStrengthPattern, number> = emptyMainStrengthLedger();
+  const patternDays: Record<MainStrengthPattern, number[]> = {
+    squat: [], hinge: [], single_leg_knee: [], single_leg_hip: [], push: [], pull: [],
+  };
   const conditioningByStress: Record<Section18ConditioningStress, number> = {
     light: 0, moderate: 0, hard: 0, unknown: 0,
   };
@@ -790,6 +796,8 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       sessionDaysByPattern: {
         squat: uniq(patternDays.squat),
         hinge: uniq(patternDays.hinge),
+        single_leg_knee: uniq(patternDays.single_leg_knee),
+        single_leg_hip: uniq(patternDays.single_leg_hip),
         push: uniq(patternDays.push),
         pull: uniq(patternDays.pull),
       },

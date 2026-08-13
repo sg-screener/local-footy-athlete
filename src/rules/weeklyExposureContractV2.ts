@@ -1350,7 +1350,10 @@ export function buildSection18WeeklyExposureContractV2(
       prohibitedPatternProvenance: input.prohibitedPatternProvenance ?? (
         prohibited.length > 0 ? 'active_constraints' : 'explicit_none'
       ),
-      achievedMeaningfulMainLifts: { squat: null, hinge: null, push: null, pull: null },
+      achievedMeaningfulMainLifts: {
+        squat: null, hinge: null, single_leg_knee: null, single_leg_hip: null,
+        push: null, pull: null,
+      },
       balanceExpectation: policy.balance ? 'equal_or_near_equal' : 'not_applicable',
       permittedCountDifference: 1,
       intentionalImbalanceReason: input.intentionalImbalanceReason ?? null,

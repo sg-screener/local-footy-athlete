@@ -1,3 +1,5 @@
+import type { MainStrengthPattern } from '../../rules/strengthPatternContributions';
+
 export type BibleRuleId =
   | 'ALL-STR-BLOCK-01'
   | 'ALL-FULLBODY-01'
@@ -125,7 +127,16 @@ export type Slice4RuleId =
   | 'ALL-COND-MODALITY-INDEPENDENT-01'
   | 'ALL-COND-DOSE-DESCRIPTOR-01';
 
-export type StrengthPattern = 'squat' | 'hinge' | 'push' | 'pull';
+/**
+ * THE FIFTH COPY OF ONE VOCABULARY, now an alias (R-087, 2026-08-13).
+ *
+ * The harness had its own `'squat'|'hinge'|'push'|'pull'` while the app's
+ * `MainStrengthPattern` widened to carry Sam's single-leg slots — so the
+ * conformance ledger could not record a pattern the app can now produce, and a
+ * harness that cannot express the app's output silently observes less than it
+ * claims to. Aliased rather than restated.
+ */
+export type StrengthPattern = MainStrengthPattern;
 export type StrengthArchetype = 'lower' | 'upper' | 'full_body';
 
 export type HarnessSessionComponent =

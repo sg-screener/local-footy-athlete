@@ -57,6 +57,7 @@ import {
   STRENGTH_PATTERN_ORDER,
   mainPatternForExerciseMovement,
   type MainStrengthPattern,
+  emptyMainStrengthLedger,
 } from './strengthPatternContributions';
 import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
 import type { GameSessionOutcome, TeamTrainingSessionOutcome } from '../types/sessionOutcome';
@@ -668,7 +669,7 @@ function modalityForMuscleLookup(
 // ─── Layer 4: the pattern ledger ─────────────────────────────────────────
 
 function emptyPatternLedger(): Record<MainStrengthPattern, number> {
-  return { squat: 0, hinge: 0, push: 0, pull: 0 };
+  return emptyMainStrengthLedger();
 }
 
 /**

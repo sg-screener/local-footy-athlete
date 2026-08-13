@@ -7871,6 +7871,11 @@ export function classifyGenerationAdjacencyRegion(
 type StrengthSequenceKind =
   | 'squat'
   | 'hinge'
+  // R-087 widened `MainStrengthPattern`, and `intent.primaryPattern` flows
+  // straight into this union — so the two single-leg slots arrive here whether
+  // or not the sequencer has an opinion about them. Listed rather than cast.
+  | 'single_leg_knee'
+  | 'single_leg_hip'
   | 'push'
   | 'pull'
   | 'lower_combined'
