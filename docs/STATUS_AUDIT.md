@@ -45,6 +45,45 @@ thing that actually bit.**
 
 ## STATUS
 
+### 🔴 CONFIRMED ATHLETE-FACING DEFECT — a mild injury report changes NOTHING and the app APOLOGISES for it
+
+**The first genuine athlete-facing defect confirmed today, and the evidence chain
+is complete. Every link measured, not inferred.**
+
+An athlete types **"hammy hurts 3/10"** on a week whose Monday holds `RDLs` and
+`Back Squat`:
+
+| link | measured | verdict |
+| --- | --- | --- |
+| parse | `bucket: 'hamstring'`, `severity: 3` | ✅ correct |
+| band | `avoid_trigger_1_3` | ✅ correct |
+| engine rule | band 1-3 removes `avoidNames` (`injuryAdjustmentEngine.ts:327-332`) | ✅ present |
+| rating | `classifyExerciseRiskForBucket('RDLs','hamstring',3)` → **`avoid`** | ✅ correct |
+| control | `Back Squat` → `caution` (must REMAIN) | ✅ correct |
+| fixture | stub called, **7 days**, RDLs present | ✅ live, not a dead fixture |
+| **result** | **`changedDays: []`** | 🔴 **nothing removed** |
+
+**AND THE ATHLETE IS TOLD SO:**
+
+> *"I tried to adjust your week, but no changes were applied. Check the Program
+> tab and try again."*
+
+**So it is not silent — it is an apology.** An athlete reporting a sore hamstring
+gets an error message and an unchanged week with the exact lift that hurts still
+in it.
+
+**WHY IT SURVIVED: `test:injury-engine` HAS AN NPM SCRIPT AND IS NOT IN
+`test:bible`.** Six cells have been failing on this, unrun, for weeks. **Same
+disease as the 50 orphans — this is what the orphan census was for.**
+
+**NOT FIXED TONIGHT AND DELIBERATELY SO.** The break is between "the rule says
+remove RDLs" and "the diff is empty", inside `applyInjuryAdjustment` — every
+input is confirmed good, so the fault is in the action-building or diff step. That
+is a real change to an engine I did not write, at the end of a very long session,
+and today has twice shown what forcing one costs. **The chain above is the
+handover: the next session starts at `injuryAdjustmentEngine.ts:334` (the
+`removeNames` loop) with every precondition already proven.**
+
 ### ⚠ THE STRONGEST OPEN CANDIDATE OF THE DAY — `avoid_trigger_1_3` may not avoid the trigger. **NOT CONCLUDED.**
 
 **`test:injury-engine` (`injuryAdjustmentEngineTests`) is RED, 6 failures, and it
