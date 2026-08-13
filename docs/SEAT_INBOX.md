@@ -2260,6 +2260,41 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, `laws` — FOURTH SIGHTING: THE OWNER IS WRITTEN WHERE THE
+  SCAN CANNOT SEE IT, AND THE QUEUE STAYS OPEN FOR EVERY SEAT. ONE WORD FROM
+  YOU PICKS THE FIX.**
+
+  **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *OWNED BY*, *head line*,
+  *column 0*, *marker*, *second wall*, *compression*. **R-085 IS THE ONLY ROW
+  AND I AM NOT RE-ASKING IT** — it already rules the FORM, verbatim: *"`OWNED
+  BY` must name its owner in backticks, the completion mark must OPEN the head
+  line."* *column 0* and *compression* return **ZERO**; the other *OWNED BY*
+  hit is `:1175`, a provenance citation. **WHAT IS NEW IS THAT THE FORM IS NOT
+  BEING FOLLOWED, four times, and R-085 says nothing about what to do then.**
+
+  **MEASURED just now by reproducing the scan against the live queue — three
+  items reach me as live orders and NOT ONE IS MINE:**
+  - **66** — `OWNED BY \`sim\``, but on the item's SECOND line. Invisible.
+  - **63** — *"OWNED BY THE SEAT HOLDING \`src/utils/coachingEngine.ts\`"*. The
+    backticks are round a FILE, not an owner, so R-085's form does not match.
+  - **61** — finished (*"ALL THREE SIGHTINGS ARE NOW PAID"*) but its head does
+    not OPEN with the completion mark.
+  Items 62 and 50 were the first two sightings; both were fixed by hand.
+
+  **⚠ AND THE OBVIOUS FIX IS THE WRONG ONE.** Widening the scan to accept these
+  spellings would let *"the seat holding \`some-file.ts\`"* count as an owner —
+  **that is precisely the rubber-stamp `arms` made the rule narrow to prevent.**
+  So the narrowness is right and the WRITING is what is off.
+
+  **THE TWO REAL OPTIONS, and this is the decision:**
+  1. **A GUARD that reds when an item declares an owner the head line does not
+     carry.** It would red TODAY on the three above, so it cannot ship until
+     they are rewritten — and rewriting other seats' items is not mine.
+  2. **LEAVE IT** and accept that every seat gets handed every other seat's work
+     until each owner writes its own head line correctly.
+
+  **WHAT TO SEND:** *"build the guard and fix the three"* — or *"leave it"*.
+
 - **✅ ANSWERED 2026-08-13 — R-088. THE CAP IS 7, IT COUNTS STRENGTH ROWS
   ONLY (paired mobility and the prehab flow are free of it), and it binds what
   the APP prescribes — an athlete may add as many of their own as they like.
