@@ -1291,7 +1291,12 @@ his instruction is standing authority, not history.**
     leak on the path a suite can reach, and its scoped-regen behaviour is
     UNMEASURED, exactly as away's is.** One fix here serves both facts.
 
-1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
+1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.**
+   **✅ PERFORMED THIS STOP (terminal, 2026-08-13): 1a — 72 `codex/*` branches,
+   42 with a delta, ALL forked 2026-07-19, none after 2026-08-10; nothing of
+   Sam's is waiting to reach his phone. 1b — audited my own status file and
+   struck the one real "done". NOT marked BLOCKED-BY, because it is not blocked
+   — see the note under item 13.** These are
    always in force; they are not work items to clear.
 
    **1a. MERGE `codex/*`.** For every `codex/*` branch with commits not in
@@ -1347,7 +1352,26 @@ his instruction is standing authority, not history.**
    snapshot. **Three priced routes; none started, because the two section18
    files they touch are mid-flight with another agent.**
 
-13. **STANDING, EVERY STOP — KEEP THE UNENFORCED LAW COUNT FALLING.** Full
+13. **STANDING, EVERY STOP — KEEP THE UNENFORCED LAW COUNT FALLING.**
+    **✅ PERFORMED THIS STOP (terminal, 2026-08-13): `LAW REGISTRY: 125 rows, 101
+    guarded, 24 UNENFORCED` — down from 27. Measured with the SUITE, not
+    `grep -c`, which this item records as sending every seat one high.**
+
+    **⚠ AND THESE TWO ITEMS HOLD THE STOP HOOK OPEN FOREVER — A DEFECT, NOT A
+    BACKLOG. Measured 2026-08-13:** `seat-inbox-hook.sh:105` skips a head line
+    carrying `BLOCKED-BY: sam|other-agent|external` and takes the first without
+    one as the live order. **18 of 20 items are marked; the 2 that are not are
+    THESE, whose own text says *"they are not work items to clear"*.** So they
+    are neither clearable nor blocked — the only two states the scan knows — and
+    `EXIT 1` is unreachable while a standing order exists.
+    **THE TERMINAL DELIBERATELY DID NOT MARK THEM `BLOCKED-BY`.** They are not
+    blocked on anyone, and the hook's own comment names that move: *"an invented
+    category is not a marker, so … the terminal cannot rubber-stamp its way to
+    silence."* **Writing a false marker to buy my own exit is exactly that.**
+    **THE FIX IS THE SEAT'S AND IT IS ONE LINE:** give the scan a `STANDING:`
+    marker to skip, or have it skip a head line containing `STANDING, EVERY
+    STOP`, which is already their own wording. Full measurement in
+    `docs/STATUS_TERMINAL.md` (`987fb0fc`). Full
     text, the priced routes and the refutations:
     `docs/SEAT_ORDERS_PARKED_FULL_2026-08-13.md`.
     ~~**The truth is `grep -c "state: 'UNENFORCED'" src/rules/lawRegistry.ts`**~~
