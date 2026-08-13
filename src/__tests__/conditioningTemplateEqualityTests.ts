@@ -49,6 +49,8 @@ import {
   poolForCategoryPublic,
   renderableModalities,
   longestWorkIntervalMinutes,
+  blockLengthMinutes,
+  selectConditioningTemplate,
   codDecelPermitted,
 } from '../rules/conditioningSelection';
 
@@ -738,6 +740,102 @@ ok(
   // on a function that returns false forever.
   ok('[COD] the rule is not a constant false',
     permitted(false, 'Off-season', 'late_offseason') === true);
+}
+
+// ── C11: THE SET/BLOCK CAP IS ENFORCED, NOT JUST DECLARED ──────────────────
+//
+// Sam: short-intermittent high-%MAS work keeps the set/block to ~4-5 min,
+// "enforced at selection time, not written into the dose". He confirmed it
+// needed building — "okay it needs to be checked". `set_length_max_4_5_min`
+// appeared five times in the data and NOTHING read it.
+{
+  const capped = CONDITIONING_TEMPLATES.filter((t) =>
+    t.properties.includes('set_length_max_4_5_min'));
+  ok('[C11] templates DO carry the set-cap property — the cell is not vacuous',
+    capped.length === 3, String(capped.length));
+
+  // ⚠ THE UNIT IS THE BLOCK, NOT THE WORK INTERVAL. Every one of these uses
+  // second-scale intervals, so a filter built on longestWorkIntervalMinutes
+  // would be permanently inert — that was my first attempt.
+  ok('[C11] the work-interval reader is BLIND to these templates — wrong unit',
+    capped.every((t) => longestWorkIntervalMinutes(t) === null));
+
+  ok('[C11] every authored capped template is within the 5 min block cap',
+    capped.every((t) => (blockLengthMinutes(t) ?? 0) <= 5),
+    capped.map((t) => `${t.name}=${blockLengthMinutes(t)}`).join('; '));
+
+  // The derivation, and the stated number winning over it.
+  ok('[C11] a block is rounds x (work + rest) — 8 x (15s+15s) = 4 min',
+    blockLengthMinutes({
+      setsRounds: '8 rounds × 2–3 blocks, 2 min between blocks',
+      workPeriod: '15 s hard', restPeriod: '15 s easy',
+    } as never) === 4);
+  ok('[C11] an authored "(N min per block)" WINS over the derivation — his words rule',
+    blockLengthMinutes({
+      setsRounds: '2 blocks × 5 rounds (5 min per block)',
+      workPeriod: '30 s hard', restPeriod: '30 s easy',
+    } as never) === 5);
+
+  // THE BREACH, SYNTHETIC ON PURPOSE: no authored row breaches the cap today, so
+  // a cell waiting for one would certify the sheet rather than the rule.
+  const overCap = {
+    name: 'Synthetic Over-Cap', quality: 'aerobic_power',
+    setsRounds: '12 rounds', workPeriod: '30 s hard', restPeriod: '30 s easy',
+    totalSessionTime: '≈20 min', intensity: '110% MAS', workToRest: '1:1',
+    properties: ['set_length_max_4_5_min'], modalityNotes: 'All 5 modalities.',
+    baseUnit: 'time', effortCue: 'x',
+  } as never;
+  // 12 x (30s + 30s) = 720s = TWELVE minutes. My first draft of this cell said
+  // six — the code was right and my arithmetic was not, which is the correct
+  // direction for a cell to fail in.
+  ok('[C11] a 12-round 30:30 block is TWELVE minutes — well over his cap',
+    blockLengthMinutes(overCap) === 12, String(blockLengthMinutes(overCap)));
+  // And a template WITHOUT the property is untouched by the cap.
+  // ── THE SELECTION CLAUSE ITSELF, DRIVEN THROUGH THE REAL SELECTOR ───────
+  //
+  // The item's order: "delete the clause and a cell must red on a block that
+  // runs past five minutes." MY FIRST DRAFT RE-IMPLEMENTED THE FILTER INLINE
+  // and the mutation SURVIVED — it was testing my copy of the rule, not the
+  // rule. This one pushes a breaching template into the real pool and asks
+  // `selectConditioningTemplate` for that category, so only the real clause can
+  // keep it out.
+  {
+    const overCapTemplate = {
+      ...overCap as unknown as typeof CONDITIONING_TEMPLATES[number],
+      name: 'ZZZ Synthetic Over-Cap Block',
+      quality: 'aerobic_power',
+    } as typeof CONDITIONING_TEMPLATES[number];
+    const pool = CONDITIONING_TEMPLATES as unknown as Array<typeof CONDITIONING_TEMPLATES[number]>;
+    pool.push(overCapTemplate);
+    let everSelected = false;
+    let selectedSomething = false;
+    try {
+      for (let day = 1; day <= 40; day++) {
+        const picked = selectConditioningTemplate({
+          category: 'vo2' as never,
+          dateStr: `2026-03-${String(day % 28 + 1).padStart(2, '0')}`,
+        } as never);
+        selectedSomething = true;
+        if (picked.name === overCapTemplate.name) everSelected = true;
+      }
+    } finally {
+      const at = pool.indexOf(overCapTemplate);
+      if (at >= 0) pool.splice(at, 1);
+    }
+    // NON-VACUITY FIRST: if the selector never returned anything, "never chose
+    // the bad one" would be trivially true.
+    ok('[C11] the selector actually ran and returned templates',
+      selectedSomething);
+    ok('[C11] the real selector NEVER chooses an over-cap template that declares the cap',
+      !everSelected);
+    ok('[C11] and the synthetic template was removed from the shared pool',
+      !CONDITIONING_TEMPLATES.some((tpl) => tpl.name === overCapTemplate.name));
+  }
+
+  // The reader measures any template; the CAP only binds the ones declaring it.
+  ok('[C11] the reader measures a template that does not declare the cap',
+    blockLengthMinutes({ setsRounds: '12 rounds', workPeriod: '30 s hard',
+      restPeriod: '30 s easy' } as never) === 12);
 }
 
 console.log(

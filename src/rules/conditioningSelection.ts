@@ -321,6 +321,55 @@ function cappedErgModalities(
  * `erg_interval_cap` is a required row, so its absence is a data defect and not
  * a case to degrade quietly through — a missing cap must not read as "no cap".
  */
+/**
+ * THE SET/BLOCK CAP, ENFORCED AT SELECTION TIME (census C11).
+ *
+ * Sam: short-intermittent high-%MAS work keeps the set/block to ~4-5 minutes,
+ * *"enforced at selection time, not written into the dose"*
+ * (`CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:58`, `:113`, `:127`). He confirmed
+ * it needed building: *"okay it needs to be checked"*.
+ *
+ * THE PROPERTY EXISTED AND HAD NO READER — `set_length_max_4_5_min` appeared
+ * five times in the data and nothing consulted it. Same shape as `ergCapMinutes`
+ * before C3: authored, shipped, inert.
+ *
+ * ⚠ THE UNIT IS THE BLOCK, NOT THE WORK INTERVAL, AND READING THE WRONG ONE WAS
+ * THE FIRST THING I TRIED. All three templates carrying this property use
+ * SECOND-scale intervals ("15 s hard", "30 s hard", "40 s hard"), so
+ * `longestWorkIntervalMinutes` returns null for every one of them and a filter
+ * built on it would have been permanently inert. A BLOCK is
+ * rounds x (work + rest) — for "8 rounds x 2-3 blocks" at 15s/15s that is four
+ * minutes, which is exactly what his cap is about.
+ */
+const SET_BLOCK_CAP_MINUTES = 5;
+
+/** Seconds in an authored period string ("15 s hard", "2 min"), or null. */
+function periodSeconds(text: string | undefined): number | null {
+  if (!text) return null;
+  const sec = /(\d+)\s*s\b/.exec(text);
+  if (sec) return Number(sec[1]);
+  const min = /(\d+)\s*min/.exec(text);
+  if (min) return Number(min[1]) * 60;
+  return null;
+}
+
+/**
+ * The length of ONE block, in minutes: rounds x (work + rest).
+ *
+ * `setsRounds` is authored prose. Two of the three templates state the answer
+ * outright — "(5 min per block)" — and that stated number WINS, because a
+ * derivation that disagreed with Sam's own text would be re-authoring it.
+ */
+export function blockLengthMinutes(template: ConditioningTemplate): number | null {
+  const stated = /\(([\d.]+)\s*min per block\)/i.exec(template.setsRounds ?? '');
+  if (stated) return Number(stated[1]);
+  const rounds = /(\d+)\s*rounds?/i.exec(template.setsRounds ?? '');
+  const work = periodSeconds(template.workPeriod);
+  const rest = periodSeconds(template.restPeriod);
+  if (!rounds || work === null || rest === null) return null;
+  return (Number(rounds[1]) * (work + rest)) / 60;
+}
+
 const ERG_CAP_RULE = MODALITY_RENDERING_RULES.find((rule) => rule.id === 'erg_interval_cap');
 if (ERG_CAP_RULE?.ergCapMinutes === undefined || ERG_CAP_RULE.excludedModalities === undefined) {
   throw new Error('conditioning_erg_interval_cap_rule_missing');
@@ -515,6 +564,13 @@ export function selectConditioningTemplate(
       !template.properties.includes('finisher_role_only') || role === 'finisher',
     (template) =>
       !template.properties.includes('fallback_only') || args.runOnly === true,
+    // C11: a template that declares the 4-5 min set cap must actually honour it.
+    // The property was authored and read by nothing until 2026-08-13.
+    (template) => {
+      if (!template.properties.includes('set_length_max_4_5_min')) return true;
+      const block = blockLengthMinutes(template);
+      return block === null || block <= SET_BLOCK_CAP_MINUTES;
+    },
     (template) =>
       !template.properties.includes('availability_gate_no_team_training')
       || args.noTeamTrainingWeek === true,
