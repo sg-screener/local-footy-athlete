@@ -1,5 +1,5 @@
 {
-  "count": 24,
+  "count": 22,
   "files": [
     "beginnerDeterministicProgramTests.ts",
     "byeWeekClassificationTests.ts",
@@ -22,8 +22,6 @@
     "recoveryContentIntegrityTests.ts",
     "sprintExposureGateTests.ts",
     "teamTrainingRenderingTests.ts",
-    "weekPlanQAAllowedFindingsTests.ts",
-    "weekPlanQAWeekShapeDiffTests.ts",
-    "weekPlanQAWeekShapeSummaryTests.ts"
+    "weekPlanQAAllowedFindingsTests.ts"
   ]
 }

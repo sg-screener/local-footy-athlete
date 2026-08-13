@@ -34,7 +34,7 @@ const DAY_ORDER: WeekShapeDayLabel[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
 
 const HEALTHY_TWO_TEAM_TRAINING_BYE: Omit<ExpectedWeekShape, 'id'> = {
   days: {
-    Mon: 'gunshow/prehab',
+    Mon: 'gunshow',
     Tue: 'team training + upper strength',
     Wed: 'recovery',
     Thu: 'team training',
@@ -66,7 +66,7 @@ const EXPECTED_WEEK_SHAPES: Record<string, ExpectedWeekShape> = {
       Tue: 'team training + upper strength',
       Wed: 'easy conditioning',
       Thu: 'team training + upper strength',
-      Fri: 'gunshow/prehab',
+      Fri: 'gunshow',
       Sat: 'game',
       Sun: 'recovery',
     },

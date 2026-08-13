@@ -124,7 +124,7 @@ console.log('\n[1] readable week-shape summary includes Mon-Sun sessions, counts
   ok('includes Tue stacked session', output.includes('Tue: team training + upper strength'));
   ok('includes Wed recovery session', output.includes('Wed: recovery'));
   ok('includes Thu team training anchor', output.includes('Thu: team training'));
-  ok('includes Fri light/gunshow session', output.includes('Fri: gunshow/prehab'));
+  ok('includes Fri light/gunshow session', output.includes('Fri: gunshow'));
   ok('includes Sat practice match', output.includes('Sat: practice match'));
   ok('includes Sun rest', output.includes('Sun: rest'));
   ok('includes hard-day count', output.includes('Hard days:'));

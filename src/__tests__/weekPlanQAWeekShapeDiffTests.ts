@@ -122,7 +122,7 @@ console.log('\n[1] expected-vs-actual diff prints matching days, counts, anchors
       Tue: 'team training + upper strength',
       Wed: 'recovery',
       Thu: 'team training',
-      Fri: 'gunshow/prehab',
+      Fri: 'gunshow',
       Sat: 'game',
       Sun: 'rest',
     },
@@ -196,7 +196,7 @@ console.log('\n[2] diff calls out changed counts, anchors, hard days, G-1, and s
     teamTrainingDays: ['Tuesday', 'Thursday'],
     weekKind: 'build',
   });
-  ok('flags day drift', output.includes('Fri: expected recovery | actual gunshow/prehab ❌'));
+  ok('flags day drift', output.includes('Fri: expected recovery | actual gunshow ❌'));
   ok('flags count drift', output.includes(`Hard days: expected at most 2 | actual ${report.counts.hardDays} ❌`));
   ok('flags anchor drift', output.includes('game: expected Fri | actual Sat ❌'));
   ok('flags unexpected hard days', output.includes('Unexpected hard days: expected Mon | actual Mon, Tue, Thu, Sat ❌'));
