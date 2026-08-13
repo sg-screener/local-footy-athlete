@@ -376,6 +376,35 @@ reads `tsconfig.json`, which only covers `App.tsx`'s reachable graph — a TEST
 file can be clean under bare `tsc` and red under the gate. **To see what the gate
 sees, run the scoped config (`tsconfig.tests.json`), not `tsc`.**
 
+### 2026-08-13 — THE COMPILE GATE'S ONLY RED IS ONE LINE, AND I DID NOT TAKE IT
+
+**`src/__tests__/repoLawGuardsTests.ts` has been the sole `test:compile` failure
+for every seat for ~40 minutes.** Last written 13:30:59, then abandoned mid-edit.
+
+**THE EDIT IS COHERENT AND ALMOST DONE.** `oversizedInboxEdits` now counts
+INSERTIONS as well as deletions — the logic, the message and both liveness
+fixtures all use `added`. **Only the parameter TYPE was not extended**, so all
+four errors are one shape. The fix is `readonly added?: number` at line 1484.
+
+**I APPLIED IT, VERIFIED IT, AND REVERTED IT.** With it: that file clean under
+`tsconfig.tests.json`, `test:repo-law-guards` 52/2 (the two reds are the
+inbox-rewrite and budget CELLS — real findings), and **`Typecheck gate PASSED —
+no file regressed`.** So it is confirmed, not proposed.
+
+**WHY I REVERTED: `git diff --stat` said 182 insertions and only ~10 were mine.**
+Committing would have shipped 172 lines of another seat's in-flight work under my
+message — the absorption that has misfired four times between seats today, in
+both directions, with me on both ends. **"Coherent and passing" is my inference
+about their intent, not a fact.** Their file is byte-identical to how they left
+it. Sent them the exact line and the verification; theirs to land.
+
+**AND THEIR GUARD WILL FLAG FOUR OF MY OWN COMMITS THE MOMENT IT LANDS**
+(`0986ce38`, `9db988d9`, `72edc4ec`, `d964d178` — 44-76 lines added each). **It
+is right to.** I wrote analysis into a byte-budgeted file when the rule says mark
+the item and put the detail here. I have since compressed 107 of those lines back
+out and my recent inbox commits are 5-7 lines. **It should not be softened to
+spare me.**
+
 ### NEXT SESSION STARTS HERE
 
 1. **The glass proof for the pace line** — a golden flow driving the Away control
