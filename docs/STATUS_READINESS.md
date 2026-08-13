@@ -265,7 +265,91 @@ in this file rather than half-built.**
 
 ---
 
-## 9. WHAT IS NOT MINE, AND WAS NOT TOUCHED
+## 9. ITEMS 53 AND 54 — TAKEN AT SAM'S DIRECTION, AND ITEM 50's WARNING WAS RIGHT
+
+**Both items read `OWNED BY pace`, and I am `readiness`.** Taken because Sam
+directed me to them and **`pace` had been silent two hours while six other seats
+committed inside 83 minutes.** Stamped `Agent: readiness` throughout — one name,
+one file, one writer. **I did not borrow `pace`'s stamp**; that is the collision
+that cost this repo an afternoon on 2026-08-13.
+
+### ITEM 53 — CLOSED. NOTHING WAS BUILT, BECAUSE NOTHING NEEDED BUILDING.
+
+Item 50: *"several say the enforcer could not be NAMED, not that the behaviour is
+absent… **if it is enforced, fix the ROW, not the app**."* **This is that case,
+for the second time today after R-052.**
+
+| ruling clause | already asserted at |
+| --- | --- |
+| R-046 three numbers `2/3/4` are DIFFERENT | `rulesKernelTests.ts:447` |
+| R-046 team training counts toward running days | `:376` — 2 TT + game = 3, off-feet flush excluded |
+| R-046 a 4th is valid, only a 5th breaches | `:461` / `:525` / `:472`, both directions |
+| R-046 floor of 2 | `:550`, plus both authored exemptions |
+| R-062 one sprint/week, year-round | `:884` |
+| R-062 except early off-season | `:886` |
+| R-062 the exemptions do not bleed | `:892` — **bye recovery lifts RUNNING and NOT sprint** |
+| R-062 a reduction needs a typed reason | `INV_EXPOSURE_REDUCTION_HAS_REASON`, `test:preseason-exposure` |
+
+**MUTATION-PROVEN BEFORE CERTIFYING EITHER ROW**, because certifying off a green
+suite nobody probed is how R-052 went wrong in the first place:
+
+| mutation | result |
+| --- | --- |
+| neuter the running-floor emitter | **4 cells red** |
+| `minRunningExposures` 2 -> 1 | **3 cells red** |
+| neuter the sprint-floor emitter | **2 cells red** |
+
+Restored from my own backup; `git diff` clean. `UNENFORCED_CEILING` lowered
+**9 -> 5** in the same commit — **the ratchet caught this seat on its own work.**
+
+### ITEM 54 — MEASURED, BLOCKED, NOT STARTED. AND ITS HEAD LINE OVERSTATES IT.
+
+**The per-phase counts are BUILT, not unbuilt** — in-season `max: null -> 3` and
+late off-season `-> 1` are live in `policyFor`, `test:section18-v2` **135/0**
+re-run. Only Christmas is outstanding of the counts, and both remainders are
+blocked on vocabulary that does not exist:
+
+- **`Section18WeekMode` has ELEVEN members and none is a Christmas break.**
+  R-002 makes the break an off-season inside pre-season and R-004's dated span is
+  still `UNENFORCED`. **There is no week identity to hang 1/week on.**
+- **`SpeedWorkKind` is `true_speed | repeated_sprint | cod` — no `acceleration`.**
+  Sam's ruling turns on precisely that distinction. **The vocabulary cannot
+  express the rule, so no amount of gating builds it.**
+
+**⚠ AND ADDING THE MEMBER IS THE `cod_decel` HAZARD, THIRD SIGHTING TODAY.**
+Growing a domain union makes every unextended switch return `undefined` —
+`categoryToFlavour` did exactly this and generation exited non-zero (28-C1).
+**Whoever takes it ships the `satisfies Record<…>` in the same commit.**
+
+### ⚠ WHAT I DID NOT COMMIT, AND WHY
+
+**`docs/SEAT_INBOX.md` carries my marks on 53 and 54 but I did NOT commit it.**
+Items **50–59 do not exist in `HEAD` at all** — they are another seat's
+uncommitted tranche sitting in the shared tree, and `git commit -- <path>` takes
+the whole file. Committing would have landed ~106 lines of their unfinished queue
+authoring under my stamp: **rule 2's exact failure mode.** The inbox is committed
+every few minutes by whoever owns it; my marks are self-attributed inside the
+text, so nothing is lost by waiting. **This section is the durable record.**
+
+---
+
+## 10. A MISS OF MINE, CAUGHT BY ANOTHER SEAT — WORTH MORE THAN THE GATE
+
+**`patterns` mutation-tested my §6 homonym gate the way I did not**, under item
+58, and found real vacuity: making `productFiles()` `return []` left the suite
+**94/94 GREEN**. Both sweeps standing on it — the undeclared-edge census and my
+homonym gate — read "no offenders" off an empty list and reported perfect health.
+
+**I proved the DETECTOR fires; I never proved the SWEEP visits any file.** Those
+are different claims and I collapsed them. They added `PRODUCT_FILE_FLOOR` and it
+throws rather than asserting. **Left exactly as they wrote it.**
+
+**The lesson generalises past this gate: a pass/fail cell over a COLLECTION has
+two failure modes, and mutating the predicate only ever tests one.**
+
+---
+
+## 11. WHAT IS NOT MINE, AND WAS NOT TOUCHED
 
 - **`exercisePools.ts` / `equipmentAvailability.ts`** — modified in the shared
   tree by the equipment seat when this unit started. Never opened, never staged.

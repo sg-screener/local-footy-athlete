@@ -71,9 +71,29 @@ in `conditioningSelection.ts` is the one rule, read by BOTH gates. The wrong
 input was in TWO places, not the one this row named: `defaultProgram.ts:1978`
 and `coachingEngine.ts:4126` both read the standing profile. 9 cells in
 `test:conditioning-templates`, every line mutation-killed.
-**STILL PARTLY UNENFORCED:** the week fact is profile-derived until the dated
-no-team-training span exists (item 31 part 5), so a club athlete's December week
-still reports team training.
+**⚠ THIS ROW READ `STILL PARTLY UNENFORCED — the week fact is profile-derived
+until the dated no-team-training span exists (item 31 part 5)` AFTER THAT SPAN
+HAD SHIPPED.** Corrected 2026-08-13 by seat `arms`, which was sent to build it —
+**that sentence is what SEAT_INBOX item 55 was written from, and item 55 is
+therefore stale too.** The span exists (`no_team_training` schedule fact) and is
+threaded end to end: `noTeamTrainingSpansFromConstraints`
+(`services/api/generateProgram.ts:483`) → `clubClosedSpans`
+(`utils/coachingEngine.ts:8943`, joined with away because *"the club is shut to
+him this week"* is ONE question) → `teamDays` → `codDecelPermitted`. **Held by
+`test:christmas-break` `[11]`/`[11b]`/`[11c]`, 44/0, on BOTH readers** (the
+engine's `inputs.teamTrainingDays` and the plan's `isTeamDay`), with `[11]` as
+the non-vacuity control. **Mutation-proven, not read:** deleting
+`...(options.noTeamTrainingSpans ?? [])` from `clubClosedSpans` reds 7 cells
+including `[11b]` and `[11c]` while `[11]` stays green.
+**⚠ AND THE WINDOW OPENS ONTO NOTHING — MEASURED, NOT INFERRED.** A pre-season
+club athlete in a week wholly inside his declared break loses both club nights
+(control: *Team Training + Upper Push/Pull*; break week: none) and still gets
+**ZERO COD sessions and ZERO COD rows.** That is **not** this row: it is
+SEAT_INBOX **28-C1** — `pickPlacementCondCategories` PASS 1 ranks over
+`categoryPriority`/`zonePriority` and **neither list ever contains `cod_decel`**,
+and `categoryToFlavour` has no `cod_decel` case, so the ranking fix alone breaks
+generation (`LAW-every-category-has-a-flavour`, `dd73a53b`, is the guard). **The
+gate is no longer the wall. The ranking is.**
 
 **R-004** · *"that way the app isn't guessing"* · The Christmas break is set by
 ASKING: ~10 Dec *"when is your last team training?"*, ~3 Jan *"when does team
@@ -938,7 +958,23 @@ to the AI prompt. Eight sessions ship SEVEN counted rows (SEAT_INBOX item 25).**
 training counts toward the running days. The app programs 3 by default."* ·
 THE RUNNING LAW. **THREE numbers, not one** — floor 2, preferred 3, hard max 4.
 A 4th running day is VALID everywhere and merely unusual; only a 5th breaches. ·
-`UNENFORCED` — no suite named for the three-number split.
+`BUILT` — `test:rules-kernel`, 122/0, 2026-08-13, seat `readiness` (item 53).
+**⚠ THE ROW WAS WRONG, NOT THE APP. The enforcer was never NAMED, and every one
+of the ruling's four clauses already had a cell:**
+- *three DIFFERENT numbers* — `rulesKernelTests.ts:447` pins `min/preferred/max`
+  as `2/3/4` and would red if any two collapsed.
+- *team training counts toward the running days* — `:376`, two team trainings
+  plus a game = **3** running exposures, with the off-feet flush excluded so the
+  cell cannot pass by counting everything.
+- *a 4th is valid, only a 5th breaches* — `:461` counts 4, `:525` asserts 4 is
+  NOT over, `:472` asserts 5 IS over. Both directions, which is what makes it a
+  three-number law rather than a cap.
+- *floor 2* — `:550`, a 1-running-day week breaches, and `:557`/`:560` honour the
+  two authored exemptions.
+**MUTATION-PROVEN BEFORE THIS ROW WAS CHANGED, because a row certified off a
+green suite nobody probed is how R-052 went wrong:** neutering the running-floor
+emitter reds 4 cells; moving `minRunningExposures` 2 -> 1 reds 3. Restored from
+backup, `git diff` clean.
 
 **R-047** · Muscle/experience sheet reconciliation. **MetCon DELETED** — the
 conditioning ruling retiring the name wins over the muscle sheet. ·
@@ -1060,9 +1096,28 @@ about this before."* · The coach is a TAB and the athlete talks to it. ·
 exposure per week except early off-season… Any reduction below the floor
 requires an explicit typed authorised reason."* · THE SPRINT FLOOR — one per
 week, year-round, early off-season excepted, and a reduction must carry a typed
-reason. · `UNENFORCED` — no suite named for the floor; the typed-reason
-machinery exists (`WeeklyExposureReductionReason`) but nothing was found
-asserting the floor itself.
+reason. ·
+`BUILT` — `test:rules-kernel` [C4] + `test:preseason-exposure`, 2026-08-13, seat
+`readiness` (item 53). **⚠ THE ROW WAS WRONG, NOT THE APP — and it was wrong in
+the specific way it warned about: the floor IS asserted, in a suite nobody had
+named, and the two halves live in two different suites.**
+- *one per week, year-round* — `rulesKernelTests.ts:884`, a zero-sprint week
+  raises `cap_sprintCodExposures_under`.
+- *except early off-season* — `:886` suppresses it for that subphase, and `:892`
+  is the discriminator that keeps the two exemption vocabularies apart:
+  **bye recovery lifts the RUNNING floor and NOT the sprint floor.** Without that
+  cell the exemption could be widened to any light week and stay green.
+- *a reduction requires an explicit typed reason* —
+  `INV_EXPOSURE_REDUCTION_HAS_REASON` in `test:preseason-exposure`, with a
+  matching entry in the mutation catalogue
+  (`exposure_reduction_loses_typed_reason`), plus *"no-anchor deload preserves
+  the sprint/COD exposure floor"*.
+**MUTATION-PROVEN:** neutering the sprint-floor emitter reds 2 cells. Restored
+from backup, `git diff` clean.
+**⚠ `test:preseason-exposure` is 105/5 and has been since before this unit** —
+verified against a control worktree at `ef38f5e8`, byte-identical failure names.
+The five are Thursday-recovery placement and a low-readiness contract
+adjustment; **none touch the typed-reason invariant, which passes.**
 
 **R-063** · *"counts are STRUCTURE, and the deload law holds structure constant
 while the work inside shrinks"* · A deload does NOT cut session COUNTS; it cuts
@@ -1078,11 +1133,29 @@ refuses. The boundary is a compile error and a red cell, not a sentence.
 
 **R-070** · **"One main per pattern; Deadlift + RDL is illegal."**
 (`LFA_PROGRAMMING_BIBLE.md:226`) · Two heavy lifts of the SAME pattern may not
-share a session. · `UNENFORCED` — **no duplicate-pattern validator exists.** The
-production fallback at `defaultProgram.ts:1172-1177` emits RDLs + Hip Thrusts,
-both `movement: 'hinge'`; again at `:1194-1196`, Overhead Press + Incline DB
-Bench, both `push`. The only stacking cap in the repo says the OPPOSITE —
-`exerciseScorer.ts:405` allows two of a pattern and bars only three.
+share a session. · `BUILT 70e91a0f` — the oracle is
+`src/rules/mainLiftPatternLaw.ts`, the production fence is in
+`src/utils/exerciseScorer.ts:429`, and the guard is `npm run
+test:main-lift-pattern` (23 cells), in the `test:bible` chain beside
+`test:slot-coverage`. **36 breaches of 396 built sessions before the fence, 0
+after** — every one of them `Bench Press + Close Grip Bench` out of
+`selectExercises`, two heavy HORIZONTAL PRESSES, not the hinge this row
+predicted. The law borrows both of its answers — `classifyExerciseRole` for
+*"is this heavy"* and `slotsFilledByRow` for *"which pattern"* — so the composer
+cannot obey a rule the gate measures differently.
+**⚠ TWO OF THIS ROW'S OWN THREE EXAMPLES WERE REFUTED BY THE BUILD, and are
+struck here rather than deleted so nobody re-derives them.** RDLs + Hip Thrusts
+is one heavy hinge and one ACCESSORY hinge — `Hip Thrust` is `accessory` in the
+app's own pools, and one of each is not what `:226` forbids. Overhead Press +
+Incline DB Bench is `vertical_push` main + `horizontal_push` accessory; reading
+both as *"push"* is the coarse vocabulary that would make Sam's own upper ladder
+illegal. **THE THIRD STANDS:** `src/utils/exerciseScorer.ts:458` does permit two
+of a movement and bar only three — it counts every pick, accessories included,
+so it is a VOLUME cap and not this law. It is now labelled at the line and left
+doing its own weaker job.
+**⚠ WHAT IS STILL NOT FENCED: the coach's own edit doors.** The law is held at
+generation and at the gate; a coach command that inserts a second heavy lift
+into an existing session by another route is not refused today.
 **⚠ THIS ROW EXISTS BECAUSE THE GATE CAUGHT ME.** I was carrying "the double
 hinge — allowed or not?" to Sam as an open question **for four batches**. It is
 RULED, in his own Bible, and has been since before the census wrote it down as

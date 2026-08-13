@@ -319,7 +319,23 @@ run('[1c] every BUILT <commit> receipt names a commit that EXISTS', () => {
 // (R-004, R-052); the count had fallen to 11 and the ceiling had not followed,
 // which is the drift the second assertion below exists to catch. **It caught it
 // on this seat's own commit, which is the instrument working.**
-const UNENFORCED_CEILING = 10;
+//
+// **LOWERED 10 -> 9 ON 2026-08-13, seat `patterns`, in the commit that paid it.**
+// R-070 ("one main per pattern") flips to `BUILT 70e91a0f` — the enforcer is
+// `src/rules/mainLiftPatternLaw.ts` + the fence in `exerciseScorer`, guarded by
+// `test:main-lift-pattern` (23 cells) in the chain. **The count was already AT
+// the lower bound (8, ceiling 10), so paying this debt without lowering the
+// ceiling would have reddened the second assertion below** — which is the
+// ratchet working, not fighting.
+// **LOWERED 9 -> 5 ON 2026-08-13, seat `readiness`, in the commit that paid it.**
+// Four rows flipped to `BUILT` in one day: R-041 + R-064 (the readiness homonym,
+// gated by `test:readiness-structure-law` [8]) and R-046 + R-062 (the running and
+// sprint floors — **already enforced by `test:rules-kernel` and merely never
+// NAMED**, which is item 50's warning landing for the second time after R-052).
+// **The ratchet caught this seat on its own commit and that is the instrument
+// working**: paying two rows without lowering the ceiling reds the assertion
+// below, exactly as it did for `patterns` on the line above.
+const UNENFORCED_CEILING = 5;
 run('[2] the UNENFORCED ruling count only falls', () => {
   const unenforced = REGISTRY_ROWS.filter((row) => /UNENFORCED/i.test(row.status));
   assert(unenforced.length <= UNENFORCED_CEILING,
