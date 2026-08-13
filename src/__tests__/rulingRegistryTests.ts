@@ -270,8 +270,8 @@ run('[2] the UNENFORCED ruling count only falls', () => {
  * inbox's own legend of legal values. A gate that cannot tell a marker from a
  * mention of one reds on the records that prove it worked.
  */
-function questionSites(): { label: string; text: string }[] {
-  const lines = fs.readFileSync(INBOX, 'utf8').split('\n');
+function questionSites(source?: string): { label: string; text: string }[] {
+  const lines = (source ?? fs.readFileSync(INBOX, 'utf8')).split('\n');
   const sites: { label: string; text: string }[] = [];
   const itemHead = /^[0-9][0-9A-Za-z-]*\.\s+\*\*/;
   for (let i = 0; i < lines.length; i += 1) {
@@ -304,10 +304,14 @@ const sites = questionSites();
 
 // ── [3] THE GATE GREPS. IT DOES NOT ASK WHETHER YOU GREPPED. ───────────────
 run('[3] no question to Sam re-asks a ruling without citing its row', () => {
-  // NON-VACUITY: no question sites means a broken scanner, not a clean queue —
-  // and this gate is worthless the moment it stops finding them.
-  assert(sites.length > 0,
-    'the scanner found NO question sites at all. That is a broken scanner.');
+  // **ZERO QUESTION SITES IS THE SUCCESS STATE, NOT A BROKEN SCANNER — AND THE
+  // TWO ARE INDISTINGUISHABLE FROM THIS NUMBER ALONE.** That is the
+  // a-zero-is-the-most-dangerous-number law, and it fired on this cell: the
+  // first version asserted `sites.length > 0`, which was right while questions
+  // existed and became WRONG the moment the queue was cleared — it reddened on
+  // the exact outcome item 33 exists to produce ("he stops seeing questions he
+  // has already answered"). **The scanner's liveness is proven against a
+  // SYNTHETIC inbox in [3b] instead, so the live count is free to be zero.**
   const offences: string[] = [];
   for (const site of sites) {
     const uncited = rulingsMatching(site.text).filter((row) => !site.text.includes(row.id));
@@ -318,6 +322,33 @@ run('[3] no question to Sam re-asks a ruling without citing its row', () => {
   assert(offences.length === 0,
     `${offences.length} question(s) re-ask a ruling on the registry: ${offences.join('; ')}. `
     + 'Open the row. If the question survives it, cite the R-nnn and say what is new.');
+});
+
+// ── [3b] AND THE SCANNER STILL FINDS A QUESTION WHEN THERE IS ONE ──────────
+// The half that makes a live count of zero trustworthy. Fed a synthetic inbox,
+// the scanner must find the blocked item and must NOT find the two shapes that
+// fooled its first version: a paragraph QUOTING the marker, and a legend line
+// listing the legal values.
+run('[3b] the scanner finds a real question, and only a real one (liveness)', () => {
+  const synthetic = [
+    '## Unprocessed',
+    '',
+    '9. **BLOCKED-BY: sam — a genuine open question.**',
+    '    Something only he can rule.',
+    '',
+    '10. **NOT BLOCKED — withdrawn.**',
+    '    I marked this item `BLOCKED-BY: sam` and was wrong to.',
+    '',
+    '**`BLOCKED-BY: sam`**, **`BLOCKED-BY: other-agent`** or **`BLOCKED-BY: external`**',
+    'are the three legal values.',
+  ].join('\n');
+  const found = questionSites(synthetic);
+  assert(found.length === 1,
+    `the scanner found ${found.length} sites in a fragment holding exactly ONE `
+    + `question: ${JSON.stringify(found.map((f) => f.label))}. It is either blind `
+    + 'to the marker or fooled by a mention of it.');
+  assert(found[0].text.includes('a genuine open question'),
+    'the scanner found a site, but not the one that is actually a question');
 });
 
 // ── [3c] THE MATCHER IS PINNED AT BOTH ENDS, AGAINST THE REAL CASE ─────────

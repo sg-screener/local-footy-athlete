@@ -145,6 +145,79 @@ his instruction is standing authority, not history.**
        verdict on why five of six reverts happened.
 
 
+35. **SAM RULED THREE THINGS IN ONE MESSAGE, 2026-08-13: THE EQUIPMENT SCOPES,
+    THE GUESSED SESSION CUT, AND THE MAS BLOCK CHECK.**
+
+    **REGISTRY-GREP:** grepped `docs/RULINGS_REGISTRY.md` for *equipment*, *MAS*
+    and *exhaustion* before writing — R-018/R-019 cover AWAY equipment only,
+    nothing covers the profile/session split, and nothing covers C10 or C11.
+    **These are new rulings. Add R-071, R-072, R-073 in the same commit.**
+
+    **(a) THE EQUIPMENT SCOPES — THERE ARE EXACTLY THREE. Sam, verbatim:**
+    > *"equipment is usually only just for that session - there is no longer a
+    > button on the day screen that allows you to edit equipment. you can make
+    > permanant changes inside the profile section, or temporary changes to
+    > equipment in a session view"*
+
+    **THE THREE, and no fourth may be invented:**
+    1. **PROFILE — permanent.** The athlete's standing kit.
+    2. **SESSION VIEW — this session only.** The default case: *"usually only
+       just for that session"*.
+    3. **AWAY — a dated span that lifts itself on the return date** (R-018,
+       built today). His own words: *"the plan should change until their return
+       date"*.
+    **NO DAY-SCREEN DOOR. VERIFIED, not taken on trust:** no equipment control
+    exists in `DayWorkoutScreenV2.tsx`. **It is gone and must stay gone.**
+
+    **WHAT THIS SETTLES:** census row about the equipment change "not reaching an
+    existing week" was measured against the WRONG SCOPE. A session-scoped change
+    is not supposed to rewrite the week — **it is supposed to change THAT
+    SESSION, and that is what must be verified on glass.** Restate the open
+    question as: *does a temporary equipment change in the session view actually
+    swap the exercises in that session?* **Nothing else about equipment is owed.**
+    **⚠ AND CHECK THE SPAN DID NOT SWALLOW THE SESSION CASE.**
+    `programControlAction.ts:253` still calls the decision `missing_this_week`,
+    and the file's own comment already flags that *"this week" is a CLAIM*.
+    **Three scopes, three names.** A payload named for a week cannot honestly
+    carry "just this session".
+
+    **(b) THE GUESSED STRENGTH CUT — SAM: *"yeah well that sounds shit and not
+    good"*. THAT IS A RULING: BUILD IT.** Census C10.
+    **The defect:** the only producer of a typed main-strength reduction
+    (`section18SafetyPolicy.ts:311-318`) fires on
+    `availableSafePatterns.length === 0` — an INFERENCE from which patterns are
+    injury-safe. **It never asks whether a day remained.** So a week that
+    genuinely ran out of room records NO typed reduction at all and degrades to
+    an advisory nobody surfaces — **and the Coach Note owes the athlete a reason
+    it cannot give.**
+    **His own earlier ruling already specifies the fix** —
+    `INJURY_AUTHORITY_EXHAUSTION_RULING_2026-08-06.md:22-27`, kept by V2: main
+    strength gains the SAME exhaustion proof equipment has
+    (`not_attempted | substituted | exhausted`), and **MEASURED exhaustion —
+    *"proof, never inference"* — is what emits the reduction.**
+    **BUILD:** the status on the main-strength contract block
+    (`weeklyExposureContractV2.ts:373-378`, which has no exhaustion field today),
+    the measurement that fills it, and the reduction emitted from THAT rather
+    than from "no pattern is safe". **A cut with no proof is a defect, not a
+    reduction.**
+
+    **(c) THE MAS BLOCK LIMIT — SAM: *"okay it needs to be checked"*. BUILD THE
+    CHECK.** Census C11.
+    **His rule:** short-intermittent high-%MAS work keeps the set/block to
+    **≤ ~4-5 min**, *"enforced at selection time, not written into the dose"*
+    (`CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:58`, `:113`, `:127`).
+    **The property EXISTS and has NO READER:** `set_length_max_4_5_min` appears
+    five times — one union member, one source string, three template assignments
+    (`conditioningTemplates.ts:69,93,918,935,1003`) — **and nothing reads it.**
+    **BUILD:** a clause in the selection filter beside the three that already
+    work (`conditioningSelection.ts:291-304` gates `warmup_rider_only`,
+    `finisher_role_only`, `fallback_only`). **Same place, same shape — this is
+    not new machinery, it is the fourth clause in an existing list.**
+    **PROVE IT WITH A MUTATION:** delete the clause and a cell must red on a
+    block that runs past five minutes. **The erg cap (C3) was closed the same way
+    today — copy that unit exactly.**
+
+
 34. **⚠ SAM HAS RULED HOW A SESSION IS BUILT, AND IT IS NOT A NUMBER. THE
     SESSION-FLOOR QUESTION IS VOID. 2026-08-13.**
 
@@ -261,9 +334,24 @@ his instruction is standing authority, not history.**
     **MUTATION-CHECKED SIX WAYS**, including both ratchet directions, a
     fabricated commit receipt, an uncited re-ask, and gutting the matcher.
 
-    **THE COUNT THIS ITEM ASKS FOR: 3 question sites currently point at Sam, and
-    the gate refuses 0 of them** — all three cite the rows they hit. **The first
-    run refused two**, both this seat's, and one of those was the founding case.
+    **THE COUNT THIS ITEM ASKS FOR: ZERO questions now point at Sam.** It was 5
+    when the gate was built. **The first run refused two** — both this seat's,
+    one of them the founding case. **The last two were voided by R-014 arriving**:
+    items 21 and 25 were both blocked on the session FLOOR, and R-014 now ends
+    *"DO NOT SEND HIM A FLOOR NUMBER QUESTION"* because *"the number of exercises
+    is not important the total work being done evenly across the body is"*.
+    **Neither needed him; both needed the registry to be read.** That is the
+    test this item said was Sam's rather than a suite's.
+
+    **AND CLEARING THE QUEUE BROKE A CELL, WHICH IS THE FINDING.** `[3]` asserted
+    `sites.length > 0` as its non-vacuity guard — correct while questions
+    existed, **and WRONG the moment the queue emptied: it reddened on the exact
+    outcome this item exists to produce.** A zero is equally produced by "no
+    questions" and "the scanner is blind", so the liveness moved to `[3b]`, which
+    feeds the scanner a SYNTHETIC inbox holding one real question, one paragraph
+    QUOTING the marker, and the legend line — and requires exactly one hit.
+    Mutation-checked both ways: blinding the scanner reds it, and so does letting
+    it match a mention of the marker again.
 
     **WHAT IS LEFT IS THE SEEDING, AND IT IS THE TERMINAL'S:** the Bible
     changelog, the ~70 `*_RULING*.md` docs and `LFA_PROGRAMMING_POLICY_DECISIONS.md`.
@@ -969,15 +1057,22 @@ his instruction is standing authority, not history.**
 
 
 
-21. **BLOCKED-BY: sam — SAME NUMBER AS ITEM 25, AND HIS RULING IS BEING BROKEN
-    TODAY. MEASURED 2026-08-13.**
+21. **NOT BLOCKED — THE NUMBER IT SHARED WITH ITEM 25 IS VOID, AND WHAT IS LEFT
+    NEEDS NO RULING.**
 
-    **REGISTRY-GREP: R-010, R-014 — and neither closes this.** R-010
-    (*"just keep sessions for gym the same before footy training"*) is the ruling
-    being BROKEN here, which is the opposite of a prior answer. R-014 records
-    that the FLOOR has never been ruled and bars a bare number; what follows is
-    the shape it permits — the distribution from his own signed weeks, ONE
-    recommendation, veto in a word.
+    **REGISTRY-GREP: R-010 and R-014.** R-010 (*"just keep sessions for gym the
+    same before footy training"*) is the ruling being BROKEN here — the opposite
+    of a prior answer, so it does not close this. **R-014 DOES close the half
+    that was pointed at Sam:** it now ends **"DO NOT SEND HIM A FLOOR NUMBER
+    QUESTION"**, because *"the number of exercises is not important the total
+    work being done evenly across the body is"*.
+
+    **SO THE ASK IS WITHDRAWN AND THE MEASUREMENT BELOW IS RE-AIMED.** "The gym
+    half of a team night averages 2.93 rows against 4.68" is still a real
+    finding — **but 2.93 is not the defect, an unfilled pattern is.** R-010 says
+    the gym session is the same whatever else is on that day; R-014 says "the
+    same" is measured in SLOTS, not rows. **Both point at the same build and
+    neither needs him.**
 
     **THE OLD BLOCK IS STALE:** it said the fix sits in files "the terminal holds
     uncommitted". The terminal holds nothing — `sessionBuilder.ts` and
@@ -1192,18 +1287,32 @@ his instruction is standing authority, not history.**
     (a) and (b) are BUILT and on glass (`5ff77758`).
 
 
-25. **BLOCKED-BY: sam** — for ONE number only: the FLOOR. Everything else is
-    measured and buildable, and the measurement found a defect nobody had named.
+25. **NOT BLOCKED — SAM RULED IT AND THE QUESTION IS VOID. THE FLOOR DOES NOT
+    EXIST BECAUSE SIZE WAS NEVER THE RULE.**
 
-    **REGISTRY-GREP: R-014, R-010, R-012, R-024, R-050 — none closes this, and
-    the last three are the matcher being broad, not four prior answers.** R-014
-    is the one that governs: the FLOOR has never been ruled, and a bare "give me
-    a number" is barred. **This item is already in the shape R-014 permits** —
-    his own signed weeks' distribution, ONE recommendation (FLOOR = 4) with its
-    reasoning, and a veto in a word. R-010 is the CEILING-side ruling on the same
-    subject; R-012 (team training is its own component), R-024 (a game's load
-    counts in full) and R-050 (optional placement) share this item's vocabulary
-    and answer none of it.
+    **REGISTRY-GREP: R-014 — and it CLOSES this item, which it did not two hours
+    ago.** The row said "UNRULED, and the question may only reach him in the
+    item-25 shape". **It now reads:** *"because the number of exercises is not
+    important the total work being done evenly across the body is"*, and ends
+    **"DO NOT SEND HIM A FLOOR NUMBER QUESTION."**
+
+    **SO THE RECOMMENDATION THIS ITEM WAS ABOUT TO SEND — "FLOOR = 4, veto in a
+    word" — IS WITHDRAWN.** It was the permitted SHAPE of a question whose
+    SUBJECT he has now abolished. **A count was always a proxy: a session is the
+    right size when its PATTERN SLOTS are filled** — hinge, squat, single-leg
+    knee, single-leg hip, accessory/core on a lower day; horizontal and vertical
+    push/pull then arms or shoulders on an upper day. **He had already written
+    that in his Bible at `:227`**, which is why he said *"i thought this would
+    have been explained by now"*.
+
+    **WHAT REMAINS IS REAL AND IS NOT A QUESTION:** R-014 is `UNENFORCED` —
+    **nothing composes a session by pattern**, the generator's strength selection
+    is the model's and the prompt never mentions the ladder. Census C7. **That is
+    the work, and it needs no ruling.**
+
+    **THE 3-ROW SESSIONS THIS ITEM MEASURED ARE STILL A DEFECT** — but the defect
+    is now "its slots are not filled", not "it is under four". Re-state the
+    measurement in slots before building anything.
 
     **⚠⚠⚠ THREE STATEMENTS ON ONE NUMBER. THE THIRD IS THE TRUE ONE AND THE
     BREACH IS REAL — MY WITHDRAWAL WAS ITSELF OVER-CORRECTED.**
@@ -1350,8 +1459,18 @@ his instruction is standing authority, not history.**
 27. **A1 AND B1 ARE FIXED (`0cb3f771`, `c3f3410e`). C1 IS SCOPED AND STOPPED —
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 27).**
 
-28. **THE AWAY FLOW IS BUILT — AND AWAY STOPPED DELETING THE ATHLETE'S WEEK.**
-   **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28).**
+28. **THE AWAY FLOW IS BUILT — full report in
+    `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.**
+    **WORKING, seen on glass:** the week-shape control, the leave date, the
+    unbounded return date, the equipment question and its dated span, the GAME
+    coming off the week during a trip, and a fixture inside the trip no longer
+    anchoring its week.
+    **STILL SHOWING: the team night on a combined day.** The card's words come
+    from `getSessionComponents`, and the two-field fix for it measured WORSE on
+    the real day — it took his gym session off the card. The exact next place is
+    named in the boundary report.
+    **Held by `test:away-flow` (36 cells), `test:day-first-timeline`,
+    `test:program-control-durable`.**
 
 ## SAFE FOR A PARALLEL AGENT — context, not orders
 
@@ -1507,76 +1626,19 @@ seat was wrong.
   edit would compile, the flow would run, and the new stamp would not appear
   while older stamps in the same file did. **Two conclusions were drawn from that
   silence and both were wrong.**
-  **THE INSTRUMENT WAS FIXED AND IT FOUND THE REAL LINE. 2026-08-13.**
-  **THE INSTRUMENT FAULT WAS THREE ORPHANED METRO PROCESSES ON ONE PORT** — the
-  app connected to one holding an old cache, so edits compiled and never landed.
-  `pkill -f "expo start --dev-client"`, ONE fresh `--clear` start, then a CONTROL
-  (change an existing log's text) and the TEST in the same edit: control 18 hits,
-  so the bundle is fresh. **Every "it never fired" conclusion taken before that
-  is void.**
-  **AND THE REAL DEFECT: `resolveWeekWithConditioning` HAS THREE EXITS, NOT TWO.**
-  The no-season guard, **`return section18TierFour({...})` at `:1894`**, and the
-  final line. **A real week has a stored §18 contract, so it leaves at the middle
-  one** — which is why every filter added at the BOTTOM of that function over two
-  days never ran. Wrapped: `return applyAwayPass(section18TierFour({...}), state)`.
-  **SEEN ON GLASS, and it is the first athlete-visible win of this item: the
-  Saturday card changed from "Game Day" to "Training Day".**
-  **STILL SHOWING: the team night.** "Strength + Team Training" survives, because
-  the card's words come from the visible projection's PARTS and a team part is
-  emitted by `getSessionComponents` from `teamState.hasTeamTraining ||
-  workoutNameHasTeamTraining(workout)` — the club is in the NAME, and
-  `getTeamTrainingWorkoutState().displayName` does NOT rewrite a composed name
-  when the day carries no team-training ROWS (measured: it returns
-  "Strength + Team Training" unchanged).
-  **TWO BLIND FIXES FOR THAT WERE TRIED AND REVERTED** — setting `isTeamDay:
-  false` and stripping the name segment — and together they made it WORSE on
-  glass: the day lost its strength half and read "Team Training" alone. **Do not
-  patch the name. The next act is to make the away pass remove the team PART at
-  the component owner (`getSessionComponents`), which is where the card's words
-  actually come from.**
-  **THE PASS IS KEPT** — it is correct, tested and live for the resolver's other
-  callers — but **the athlete's week is unchanged by it, and the screenshots
-  still show the club.**
-- **ANSWERED 2026-08-13 — a game inside the trip DISAPPEARS.** Sam: ***"yes it
-  should disappear OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***. **Built the same
-  day** — the fixture is dropped at the plan, so the week loses its taper and
-  its G+1 with it. **Do not re-ask.**
-- **ANSWERED 2026-08-13, NOW PART OF ITEM 28 — away and the club.** Sam:
-  ***"yes clear team training and games while away"***. **Do not re-ask.** Built
-  the same day; see item 28 for what is WORKING and what is only BUILT.
-- **ANSWERED 2026-08-13, NOW ITEM 21 — the team-night size question is
-  CLOSED and its premise refused.** Sam: a team night's strength session is
-  **a normal strength session**; the only difference is ORDER (prefer not to
-  put lower body or sprint work before training, but allow it when that is
-  the only room). **No team-night floor, in either direction. Do not
-  re-ask.**
-- **RULINGS-CHECKED: NONE — and this is not a question, it is a waiting-list.**
-  Nothing here asks Sam anything; it records what is built and needs his phone.
-  The Wednesday game-day check (`06401d92`), the Renee UI pass, and the craft
-  tier's hydration relocation are all **BUILT, awaiting device acceptance**.
-  When he rebuilds, the white screen after a refused dev launch is expected and
-  now names its own cause (`docs/WHITE_SCREEN_BOUNDARY_2026-08-10.md`).
-- **⚠ STALE, CORRECTED 2026-08-13 — THE FILES ARE CLEAR AND ITEM 3 IS CLOSED.**
-  This entry said item 9's four-answer collapse and item 3's remaining step were
-  waiting on files another agent held. **`section18CraftTier.ts` and
-  `projectVisibleWeek.ts` are both clean, unedited since 2026-08-12.** Item 3
-  owed nothing — both its laws are `guarded` and green — and is archived.
-  **Item 9 is workable whenever someone picks it up; it is not blocked.**
-- **ANSWERED 2026-08-12, NOW ITEM 16 — the day/week modifier indicator.**
-  Sam: *"yes — one line on week, small card on day, read-only both"*. Moved
-  out of this section into the queue. **Do not re-ask.**
-- **ANSWERED 2026-08-13 — BUILT. Sam: *"add the popup"*.** `ModifiersSheet` now
-  stands between the notice and My Status on both Program shapes, with his
-  prototype's five strings signed verbatim. **Do not re-ask.** One follow-up
-  question it raised is the entry directly below.
-- **ANSWERED 2026-08-13, NOW ITEM 23 — the short phrase per modifier kind is
-  SIGNED and the column question is closed with it.** Sam: *"i'd rather them
-  shortened"*, then ***"signed"*** on the four phrases in item 23. **It was FOUR,
-  not the three every doc said** — excluded and pinned are opposites sharing one
-  builder. The rows become two columns for every kind that HAS a phrase; soreness
-  and the generated programme-effect notes keep their own sentence on purpose and
-  stay one column. **Do not re-ask.**
-   ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 22).
+  **THE INSTRUMENT FAULT WAS THREE ORPHANED METRO PROCESSES ON ONE PORT.** Kill
+  them all, start ONE `--clear`, and put a CONTROL (change an existing log's
+  text) in the same edit as the test. **Every "it never fired" conclusion taken
+  before that is void.**
+  **THE REAL DEFECT: `resolveWeekWithConditioning` HAS THREE EXITS** — the
+  no-season guard, `return section18TierFour({...})` at `:1894`, and the final
+  line. A real week has a stored §18 contract and leaves at the MIDDLE one, so
+  every filter added at the bottom over two days never ran. Wrapped.
+  **GAME: OFF ON GLASS** — Saturday reads "Training Day". **TEAM NIGHT: STILL
+  SHOWING**, and the two-field fix for it was measured WORSE on the real day (it
+  took his gym session off the card). **Full account, and the exact next place —
+  the team identity the real workout carries in its `sections` — is in
+  `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.**
 
 ## Previously (now processed)
 
