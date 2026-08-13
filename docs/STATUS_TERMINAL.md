@@ -450,7 +450,9 @@ the message. If the file count is not what you intended, stop.
 Sam's "don't overwrite disk" rule blocked my restore route. **It has since been
 restored to 13 by someone else** and `[2]` passes — but R-073 is now BUILT (see
 below), so the honest count is 12 and the ceiling should fall in the commit that
-paid it. **Not yet done. Small.**
+paid it. **NOT BUILT — no code and no cell moves the ceiling; the honest word is
+the one the standing order allows, and "done" was the wrong one to reach for.**
+Small.
 
 ---
 
