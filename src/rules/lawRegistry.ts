@@ -1249,8 +1249,8 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     ruledAt: 'docs/COWORK_SEAT_HANDOFF_2026-08-06_REBUILD_ERA.md §1 ("well der - thats the whole point of a fkn bible")',
     guard: {
       state: 'UNENFORCED',
-      wouldTake: 'THE REGISTRY ITSELF IS THE ANSWER TO THIS LAW, one axis over: Bible-first told the reader to GO LOOK; a registry with a chain gate makes looking automatic. Guardable once every Bible-answerable rule has a row — which is what the sweep is for.',
-      receipt: 'AGENTS.md LAW ZERO names this law\'s failure as its own founding case (sighting 3 of law-rediscovered-instead-of-enforced). No script reads it.',
+      wouldTake: 'HALF OF THIS IS NOW BUILT AND THE ROW MUST STOP SAYING OTHERWISE (desktop, 2026-08-13). The old text read "guardable ONCE a registry with a chain gate exists" — it exists: docs/RULINGS_REGISTRY.md, 77 rows, gated by test:ruling-registry [3], in chain, which GREPS the registry and reds when a question to Sam hits a ruling whose R-nnn it does not cite. STILL UNENFORCED, and the remaining gap is NARROWER AND DIFFERENT from what this row used to describe: the gate covers the RULING DOCS half only. The BIBLE half has no reader, and the registry\'s own header says its seeding is incomplete — so a Bible-answerable question with no row still reaches him unchallenged. What is left: extend the same matcher over the Bible, or finish the seeding so every Bible-answerable rule has a row.',
+      receipt: 'AGENTS.md LAW ZERO names this law\'s failure as its own founding case (sighting 3 of law-rediscovered-instead-of-enforced). THE "no script reads it" HALF IS NOW FALSE: test:ruling-registry [3] reads it and BITES — measured first-hand on 2026-08-13, when it caught the desktop twice, once on a question left open under AWAITING SAM after Sam had already ruled it (R-075), and once on a matcher fault the desktop\'s own ruling had introduced. A gate that has caught its own author is a live gate, not a claim.',
     },
   },
   {

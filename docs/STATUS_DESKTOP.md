@@ -478,3 +478,44 @@ lock — but my figure carried the +1 either way.
 file. **The durable fix is a cell** — pin the row count as ROWS, so no one can
 miscount it again — and `test:law-registry` is the place, but it is RED BY RULING
 while any law is UNENFORCED and it is not my suite. **Named for whoever owns it.**
+
+
+---
+
+## 2026-08-13 — THE TRUE COUNT IS PRINTED BY THE SUITE, SO NOBODY NEEDS THE GREP
+
+`npm run test:law-registry` ends with:
+
+    LAW REGISTRY: 125 rows, 99 guarded, 26 UNENFORCED
+
+**26 — the same number parsing the rows gives, and one BELOW the grep item 13
+prescribes.** The honest instrument already existed and prints itself; the
+standing order points at a `grep -c` that also counts the TYPE DEFINITION at
+`lawRegistry.ts:108`. **Whoever owns item 13 should point it at the suite line.**
+
+### AND I DID NOT LOWER THE COUNT, WHICH IS THE POINT OF SAYING SO
+
+I swept all 26 for the shape that made two RULINGS rows wrong — a row claiming
+`UNENFORCED` over a guard that already exists. **In the rulings registry that
+found two. In the law registry it found ZERO fully-guarded laws**, so nothing was
+reclassified. **A fall bought by relabelling a law whose guard I could not open
+would be the same defect I spent the afternoon correcting, pointing the other
+way.**
+
+**ONE ROW WAS STALE IN ITS TEXT THOUGH, AND THAT IS FIXED — `LAW-bible-first`.**
+Its `wouldTake` read *"guardable ONCE a registry with a chain gate exists"*. **It
+exists**: `docs/RULINGS_REGISTRY.md`, 77 rows, gated by `test:ruling-registry` [3],
+in chain, which greps the registry and reds when a question to Sam cites no row.
+Its `receipt` said *"no script reads it"* — **now false.**
+
+**THE STATE STAYS `UNENFORCED`, AND THE REASON IS THE HONEST HALF:** the gate
+covers the RULING DOCS only. **The BIBLE half has no reader**, and the registry's
+own header says its seeding is incomplete — so a Bible-answerable question with no
+row still reaches Sam unchallenged. **The gap is now narrower and different from
+what the row described, which is worth more to the next agent than a status
+change would have been.**
+
+**THE RECEIPT IS FIRST-HAND:** that gate caught ME twice today — once on a
+question left open under `## AWAITING SAM` after Sam had already ruled it (R-075),
+and once on a matcher fault my own ruling's wording introduced. **A gate that has
+caught its own author is a live gate, not a claim.**
