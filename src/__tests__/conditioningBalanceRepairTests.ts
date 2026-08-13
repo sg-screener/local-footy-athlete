@@ -265,4 +265,8 @@ console.log('\n[3] valid conditioning removal re-checks game-week floor');
 console.log(`\nconditioningBalanceRepairTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 if (failures.length) console.error(failures.map((failure) => `  - ${failure}`).join('\n'));
-process.exit(fail > 0 ? 1 : 0);
+// ⚠ NO `process.exit(fail > 0 ? 1 : 0)` — the law names this form "especially
+// seductive" and it is right: it LOOKS like careful reporting and it writes the
+// exit code DIRECTLY, hard-overriding the arm. A crash before this line would
+// still have exited 0. `totalsPrinted(fail)` above already set the code from
+// the report, which is the one act that means "I have something true to say".
