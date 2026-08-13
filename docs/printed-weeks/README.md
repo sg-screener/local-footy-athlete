@@ -1,37 +1,51 @@
 # Six real weeks, printed
 
-These are not mock-ups. Every word came out of the app's own program generator
-and the one projection the Program tab reads. Nothing was written by hand.
-
-Regenerate them any time:
+These are not mock-ups. Every word came out of the app's own program
+generator and the one projection the Program tab reads. Nothing was written
+by hand.
 
 ```
 npm run print:week
 ```
 
+## What the run found
+
+**6 weeks printed.**
+
+**The app had words for everything — 0 blanks across all 6 weeks.** Every name, heading and instruction an athlete would read came out of the app. Nothing was missing and nothing was invented to cover a gap.
+
+**⚠ THE WORST THING HERE: 7 exercises the athlete has no equipment for.** An athlete who says they own nothing is still told to do them. The app's own equipment check says no to every one:
+
+- Band Pallof Press — needs bands, which this athlete does not have
+- RDLs — needs barbell, which this athlete does not have
+- Pull-Ups — needs pullup_bar, which this athlete does not have
+- Barbell Row — needs barbell, which this athlete does not have
+- Face Pull — needs cables, which this athlete does not have
+- Overhead Press — needs barbell + rack, which this athlete does not have
+- Lateral Raise — needs dumbbells, which this athlete does not have
+
+**18 problems in total** that the printer could detect by itself. Each file lists its own at the foot, under "Things wrong with this week".
+
+It cannot tell whether the training is any GOOD. That is the reading.
+
 ## The six
 
-| | Week | What it is testing |
-| --- | --- | --- |
-| 1 | [Early off-season](1-early-off-season.md) | First week back, no club, full gym |
-| 2 | [Deep pre-season](2-deep-pre-season.md) | Six weeks in, three club nights |
-| 3 | [In-season](3-in-season-two-team-nights.md) | Saturday game, two club nights — the ordinary week |
-| 4 | [Bye week](4-bye-week.md) | Same athlete as 3, game taken off |
-| 5 | [Away trip](5-away-trip.md) | Same athlete as 3, away Wednesday to Sunday |
-| 6 | [Bodyweight only](6-bodyweight-only.md) | Owns no equipment at all |
+| | Week | What it is testing | Problems |
+| --- | --- | --- | --- |
+| 1 | [Early off-season](1-early-off-season.md) | week 1 back, no club, full gym | 2 |
+| 2 | [Deep pre-season](2-deep-pre-season.md) | six weeks in, three club nights, full gym | 2 |
+| 3 | [In-season](3-in-season-two-team-nights.md) | Saturday game, Tuesday and Thursday at the club | 1 |
+| 4 | [In-season bye](4-bye-week.md) | no game this Saturday | 2 |
+| 5 | [In-season, away all week](5-away-trip.md) | Wednesday to Sunday | 3 |
+| 6 | [In-season with nothing but a floor](6-bodyweight-only.md) | no gym at all | 8 |
 
-Read 3 first — it is the week most athletes get most weeks. Then read 3 and 5
-side by side, and 3 and 4 side by side; those pairs are the same athlete with
-one thing changed.
+Read 3 first — it is the week most athletes get most weeks. Then read 3
+and 5 side by side, and 3 and 4 side by side; those pairs are the same
+athlete with one thing changed.
 
-## What the two sections at the foot of each page mean
+## ⚠ What these six weeks CANNOT tell you
 
-**"Words the app does not have"** — every athlete-facing string in this app has
-to come from an authored source or a ruling of yours; the app refuses to invent
-one. Where there is no wording, the page prints `[NO COPY — the app has no words
-here]` instead of making something up, and lists what is missing at the foot.
-
-**"Things wrong with this week"** — things the printer could detect on its own:
-an exercise the athlete has no equipment for, a line that does not say how much
-work to do, a block with a name and nothing in it. It cannot detect whether the
-training is any good. That is what you are reading for.
+Every week here is freshly generated for an athlete with NO history. So
+none of it passes through progression, feedback or weight logging, and
+nothing here says whether the app responds to an athlete over time.
+That question is answered in `docs/simulated-changeover/`.

@@ -813,6 +813,124 @@ export function renderWeekAsPlainEnglish(args: {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// THE INDEX
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * THE FRONT PAGE, AND EVERY NUMBER ON IT IS DERIVED.
+ *
+ * ⚠ THIS EXISTS BECAUSE THE DELIVERABLE DID NOT CARRY ITS OWN HEADLINE. The
+ * index was hand-written and listed the six files and nothing else, so *"0 [NO
+ * COPY] across six weeks"* and *"seven exercises a bodyweight athlete cannot
+ * do"* lived only in a status file, a commit message and the console — none of
+ * which Sam opens. The most important thing the run found was reachable only by
+ * opening file 6 and scrolling to its foot.
+ *
+ * Seat `sim` hit the identical defect on item 66 the same afternoon: their
+ * cross-athlete headline could not be stated by any single per-athlete file, and
+ * Sam had already been sent two of those files. **The class is: a finding that
+ * lives beside the deliverable instead of inside it.**
+ *
+ * SO NOTHING HERE IS PROSE. Every count is computed from the run that just
+ * happened, which is also why the blind-instrument arm below is worth having: a
+ * hand-typed total stays confident after the thing it counted stops working.
+ */
+function renderIndex(printed: readonly {
+  scenario: PrintScenario;
+  noCopyCount: number;
+  findings: readonly PrintFinding[];
+}[]): string {
+  const lines: string[] = [];
+  const sessions = printed.length;
+  const totalNoCopy = printed.reduce((n, p) => n + p.noCopyCount, 0);
+  const all = printed.flatMap((p) => [...p.findings]);
+  const impossible = all.filter((f) => f.kind === 'impossible_without_kit');
+
+  lines.push('# Six real weeks, printed');
+  lines.push('');
+  lines.push('These are not mock-ups. Every word came out of the app\'s own program');
+  lines.push('generator and the one projection the Program tab reads. Nothing was written');
+  lines.push('by hand.');
+  lines.push('');
+  lines.push('```');
+  lines.push('npm run print:week');
+  lines.push('```');
+  lines.push('');
+
+  // THE BLIND-INSTRUMENT ARM. A zero here means the run produced nothing, and
+  // every other number on the page would be a confident zero about nothing.
+  if (sessions === 0) {
+    lines.push('## ⚠ THE PRINTER PRODUCED NO WEEKS AT ALL');
+    lines.push('');
+    lines.push('Nothing below can be trusted. The run failed — do not read the');
+    lines.push('counts as findings.');
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  lines.push('## What the run found');
+  lines.push('');
+  lines.push(`**${sessions} weeks printed.**`);
+  lines.push('');
+  if (totalNoCopy === 0) {
+    lines.push(
+      '**The app had words for everything — 0 blanks across all '
+      + `${sessions} weeks.** Every name, heading and instruction an athlete `
+      + 'would read came out of the app. Nothing was missing and nothing was '
+      + 'invented to cover a gap.',
+    );
+  } else {
+    lines.push(
+      `**${totalNoCopy} places across ${sessions} weeks where the app has no `
+      + 'wording yet.** Each one is marked in its own file and listed at the '
+      + 'foot of that page.',
+    );
+  }
+  lines.push('');
+  if (impossible.length > 0) {
+    lines.push(
+      `**⚠ THE WORST THING HERE: ${impossible.length} exercises the athlete has no `
+      + 'equipment for.** An athlete who says they own nothing is still told to '
+      + 'do them. The app\'s own equipment check says no to every one:',
+    );
+    lines.push('');
+    for (const f of impossible) lines.push(`- ${f.line}`);
+    lines.push('');
+  }
+  lines.push(
+    `**${all.length} problems in total** that the printer could detect by itself. `
+    + 'Each file lists its own at the foot, under "Things wrong with this week".',
+  );
+  lines.push('');
+  lines.push('It cannot tell whether the training is any GOOD. That is the reading.');
+  lines.push('');
+
+  lines.push('## The six');
+  lines.push('');
+  lines.push('| | Week | What it is testing | Problems |');
+  lines.push('| --- | --- | --- | --- |');
+  printed.forEach((p, i) => {
+    lines.push(
+      `| ${i + 1} | [${p.scenario.title.split(' — ')[0]}](${p.scenario.slug}.md) `
+      + `| ${p.scenario.title.split(' — ')[1] ?? ''} | ${p.findings.length} |`,
+    );
+  });
+  lines.push('');
+  lines.push('Read 3 first — it is the week most athletes get most weeks. Then read 3');
+  lines.push('and 5 side by side, and 3 and 4 side by side; those pairs are the same');
+  lines.push('athlete with one thing changed.');
+  lines.push('');
+  lines.push('## ⚠ What these six weeks CANNOT tell you');
+  lines.push('');
+  lines.push('Every week here is freshly generated for an athlete with NO history. So');
+  lines.push('none of it passes through progression, feedback or weight logging, and');
+  lines.push('nothing here says whether the app responds to an athlete over time.');
+  lines.push('That question is answered in `docs/simulated-changeover/`.');
+  lines.push('');
+  return lines.join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -824,6 +942,11 @@ function main(): void {
   const failures: { slug: string; error: string }[] = [];
 
   let totalFindings = 0;
+  const forIndex: {
+    scenario: PrintScenario;
+    noCopyCount: number;
+    findings: readonly PrintFinding[];
+  }[] = [];
   for (const scenario of SCENARIOS) {
     try {
       const result = runScenario(scenario);
@@ -836,6 +959,11 @@ function main(): void {
         equipmentTags: result.equipmentTags,
       });
       totalFindings += rendered.findings.length;
+      forIndex.push({
+        scenario,
+        noCopyCount: rendered.noCopyCount,
+        findings: rendered.findings,
+      });
       writeFileSync(resolve(OUT_DIR, `${scenario.slug}.md`), rendered.markdown, 'utf8');
       console.log(
         `  wrote ${scenario.slug}.md — ${result.visibleWeek.days.length} days, `
@@ -848,6 +976,8 @@ function main(): void {
       console.error(`  FAILED ${scenario.slug} — ${error}`);
     }
   }
+
+  writeFileSync(resolve(OUT_DIR, 'README.md'), renderIndex(forIndex), 'utf8');
 
   const totalGaps = printed.reduce((sum, p) => sum + p.gapIds.length, 0);
   const allIds = new Set(printed.flatMap((p) => [...p.gapIds]));
