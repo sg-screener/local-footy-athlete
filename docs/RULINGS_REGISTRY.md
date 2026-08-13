@@ -241,6 +241,53 @@ opposites.** · `BUILT`.
 **R-023** · *"yes — one line on week, small card on day, read-only both"* · The
 modifier indicator's shape. · `BUILT`.
 
+**R-072** · *"equipment is usually only just for that session - there is no
+longer a button on the day screen that allows you to edit equipment. you can
+make permanant changes inside the profile section, or temporary changes to
+equipment in a session view"* · **THERE ARE EXACTLY THREE EQUIPMENT SCOPES AND
+NO FOURTH MAY BE INVENTED:** (1) **PROFILE** — permanent; (2) **SESSION VIEW** —
+this session only, and this is the DEFAULT case (*"usually only just for that
+session"*); (3) **AWAY** — a dated span that lifts itself on the return date
+(R-018). **NO DAY-SCREEN DOOR** — verified absent from `DayWorkoutScreenV2.tsx`
+and it must stay absent. · `BUILT` — the session door is
+`DayWorkoutScreenV2.tsx:717` (`applySessionEquipment`), executing `swap_exercise`
+with `scope: 'today_only'`, `oneOffOnly: true`, one action per exercise, refusing
+by name when no safe replacement exists. It writes NO equipment fact:
+`missing_this_week` has exactly two writers, both in `EquipmentLimitationSheet.tsx`,
+the PROGRAM-screen span door. **⚠ SOURCE-READ, NOT GLASS — the device check is
+owed:** open a session, tick kit off, see the rows change.
+**WHAT THIS SETTLES:** the census row about an equipment change "not reaching an
+existing week" was measured against the WRONG SCOPE. A session-scoped change is
+not supposed to rewrite the week.
+
+**R-073** · *"yeah well that sounds shit and not good"* — on a main-strength cut
+made without proof · **A CUT MUST BE PROVEN, NEVER INFERRED.** The only producer
+of a typed main-strength reduction (`section18SafetyPolicy.ts:311-318`) fires on
+`availableSafePatterns.length === 0`, an inference about injury-safe patterns,
+and **never asks whether a day remained.** A week that genuinely ran out of room
+records NO typed reduction and the Coach Note owes the athlete a reason it cannot
+give. His earlier ruling gives the shape
+(`INJURY_AUTHORITY_EXHAUSTION_RULING_2026-08-06.md:22-27`): **measured
+exhaustion, "proof, never inference".** · `UNENFORCED` — **and the build is
+SMALLER than first stated.** The proof already exists:
+`section18EffectiveWeekEvaluator.ts:1020` writes `unresolvedMinimumShortfall`
+and `unresolvedPlannerSelectedShortfall` onto the contract, on the real
+evaluation path, every week. **Nothing needs measuring; the reduction needs
+emitting from a number already there** — typed `main_strength_frequency`, reason
+EXHAUSTION, **BESIDE the injury producer and never instead of it.** Census C10.
+
+**R-074** · *"okay it needs to be checked"* · **THE SET/BLOCK CAP — short
+intermittent high-%MAS work keeps the set to ~4-5 min, "enforced at selection
+time, not written into the dose"** (`CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:58`,
+`:113`, `:127`). · `BUILT 97c8d41b` (2026-08-13) — `set_length_max_4_5_min` had
+five occurrences in the data and NO reader; it is now the fourth clause in the
+selection filter. **THE UNIT IS THE BLOCK, NOT THE WORK INTERVAL** — all three
+capped templates use second-scale intervals, so a filter on
+`longestWorkIntervalMinutes` would have been permanently inert. A block is
+rounds x (work + rest), and an authored *"(N min per block)"* WINS over the
+derivation. All three are within cap at 4, 5 and 5 min. Two mutants killed
+through the REAL selector. Census C11.
+
 ## LOAD AND THE JOURNAL
 
 **R-024** · **A game's load counts in FULL** (effort x minutes), same unit as
@@ -562,7 +609,7 @@ minimum.** · `BUILT` — §18 phase planner; `test:section18-phase-planner`
 
 ## SEEDING IS INCOMPLETE AND THAT IS STATED, NOT HIDDEN
 
-**70 rows, plus two OPEN questions.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
+**74 rows, plus two OPEN questions.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
 "RULINGS MADE TODAY", `SEAT_INBOX.md`'s answered `## AWAITING SAM` entries, the
 stand-downs, `SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md`, and
 `RULINGS_NOT_IN_THE_APP_2026-08-13.md`.
