@@ -150,6 +150,33 @@ accessories. An athlete is better served by a squat and a hinge than by two
 squats."* — which is why he said *"i thought this would have been explained by
 now"*. Census C7. **DO NOT SEND HIM A FLOOR NUMBER QUESTION.**
 
+**⚠ AND THE PATTERN LOOKUP IS BROKEN, WHICH BLOCKS BUILDING THIS. MEASURED
+2026-08-13.** A session cannot be composed by PATTERN while the app cannot tell
+what pattern its own rows are. Over 5 worlds, counting only GYM rows (post-R-071):
+**60 distinct names resolve to a pattern; 20 distinct names — 151 rows — resolve
+to NOTHING.**
+`getExerciseTags` is an EXACT-NAME lookup over a 149-entry map, and the generator
+ships names that miss it:
+
+| shipped | in the map? |
+| --- | --- |
+| `Face Pulls` x37 | **NO** — but `Face Pull` (singular) IS tagged |
+| `Pallof Press` x28 | NO |
+| `Bicep Curls` x20 | NO |
+| `Tricep Pushdowns` x20 | NO |
+| `Romanian Deadlift` x10 | **NO** — but `RDLs` IS tagged, same lift |
+
+**TWO OF THE FIVE ARE THE SAME EXERCISE UNDER A SECOND NAME**, and the lookup
+fails SILENTLY — `undefined` reads as "this row has no pattern", which is
+indistinguishable from "this row is not strength work". **That is the same
+default-means-nothing shape as `!row.role` meaning COUNT.**
+**IT ALSO CORRECTED ME MID-MEASUREMENT:** a day named *"Lower Hinge"* appeared to
+contain NO hinge. It contains a Romanian Deadlift. **The day was fine and my
+instrument was not** — the exact reason a name-keyed lookup must not be trusted
+to report absence.
+**SO THE FIRST STEP OF C7 IS NOT THE COMPOSER — IT IS MAKING THE PATTERN
+KNOWABLE.**
+
 **R-071** · *"yes it should be its own thing and not count as a strength exercise
 - thats stupid"* · **CONDITIONING IS NOT A STRENGTH EXERCISE** and does not count
 against the per-session cap. · `BUILT 01ef5863` (2026-08-13) — `conditioning`
