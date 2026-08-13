@@ -133,7 +133,53 @@ its own first line ("Nothing to ask him").**
 reason I did not. That is the mechanism working as designed, and it is worth the
 line.
 
-### 🛑 I ATTEMPTED THE BUILD AND STOPPED AT THE HARNESS — THE NON-VACUITY GUARD EARNED ITS PLACE
+### 🛑 SECOND BUILD ATTEMPT — IT WAS WRITTEN, IT RAN, AND I REVERTED IT UNPROVEN
+
+**I got the harness working and wrote the whole change. Then the cell could not
+tell me whether it worked, so it came out.** Reverted to `HEAD`, five files,
+`cmp`-verified; `test:deload-week` back to 41/0.
+
+**THE HARNESS GAP FROM THE FIRST ATTEMPT IS SOLVED, and this is the reusable
+part.** A cooked FACT reaches generation through
+**`composeTemporarySourceFactCompatibility({ temporarySourceFacts, onDate })`**
+— the same projection `awayFlowTests`, `christmasBreakTests` and
+`illnessRecoveryModeTests` already use — whose `activeConstraints` go to
+`generateProgramLocally`. With that, **non-vacuity PASSED and the real cell
+RED**: a Thursday declaration retro-deloads Mon-Wed at generation. **The defect
+is now reproducible in a suite, which it was not this morning.**
+
+**AND THE CONSTRAINT ALREADY CARRIES THE WINDOW — nothing needs deriving.**
+Printed: `type=fatigue severity=8 startDate=2026-07-09 expiresAt=2026-07-15`,
+exactly the rolling 7 days. `strongestReadinessConstraint` drops both dates.
+**`buildGenerationConstraintContext` with those two carried through returns
+`readinessDeloadWindow: { startISO: '2026-07-09', endISO: '2026-07-15' }`** —
+measured, not assumed.
+
+**WHY IT CAME OUT ANYWAY, AND THIS IS THE FINDING THE NEXT ATTEMPT NEEDS:**
+the probe also printed **`sessionsOptional: true`**. *"Absolutely cooked"* is
+R-038's THIRD tier — 7 days deloaded **AND every session optional** — so a
+cooked declaration legitimately flips the week to `optional_week` and changes
+which sessions exist at all. **My cell compared per-day strength SETS, so it was
+measuring a structural change on top of the dose change and could not attribute
+either.** A cell that cannot attribute its own red cannot prove a fix green.
+
+**WHAT THE NEXT ATTEMPT MUST DO FIRST:** drive a declaration that deloads
+WITHOUT lifting minimums — R-038's *"Wrecked"* tier — so the week MODE is held
+constant and only the dose moves. **⚠ And check its window survives:
+`programControlActions:1428` attaches `readinessDeloadFactScope` only when
+`level === 'cooked'`; if "wrecked" carries no window, that is the real first
+defect and it sits one layer above everything traced here.**
+
+**THE CHANGE ITSELF, for whoever picks it up — it was written and it compiles:**
+carry `windowStartISO`/`windowEndISO` on `GenerationReadinessConstraint`, expose
+`readinessDeloadWindow` on the constraints context (ONLY when readiness deloaded
+and illness did not), add it to `RotationContext`, thread it at
+`generateProgram.ts:731` and `:934`, and gate the five dose sites in
+`defaultProgram.ts` behind one `deloadPolicyForDayOfWeek()` helper using
+`isDateInReadinessDeloadWindow` and the existing `PLAN_DAY_MAP`. **A null window
+must mean EVERY day** or the illness and scheduled doors stop deloading.
+
+### 🛑 FIRST BUILD ATTEMPT — STOPPED AT THE HARNESS; THE NON-VACUITY GUARD EARNED ITS PLACE
 
 **I wrote the cell first, as R-035's proof: a Thursday declaration must leave
 Mon-Wed of that week untouched.** With it I wrote a non-vacuity guard — *"the
