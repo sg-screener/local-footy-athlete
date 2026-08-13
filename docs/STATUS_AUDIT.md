@@ -45,6 +45,52 @@ thing that actually bit.**
 
 ## STATUS
 
+### ITEM 13 — ONE LAW PAID (27 → 26), AND THE REMAINING 26 ARE NOW TRIAGED
+
+**PAID: `LAW-count-names-instrument` (`55cf3420`)**, whose founding case was item
+13's own instruction. Details in the commit; the short version is that the
+standing order names `grep -c` as *"the truth"*, the grep emits **occurrences**
+(28) where the domain noun is **distinct laws** (27), and the difference is a
+**type declaration**. The cell holds an IDENTITY — `occurrences − distinct ===
+type-declaration lines` — so it reds on a NEW unexplained occurrence rather than
+on any renaming. Mutation-checked both ways.
+
+**⚠ ITEM 13'S OWN SUMMARY IS STALE: it says *"four laws remain priced"*. There
+are 26, and all 26 carry a `wouldTake` line.** Triaged below so the next seat
+picks by cost instead of re-reading the registry.
+
+**THE TWO CHEAPEST HAVE AN EXISTING SHAPE TO COPY — AND BOTH LAND IN A HELD FILE:**
+- **`LAW-elegant-two-options`** — *"a boundary-report field ('options compared')
+  checked by `test:repo-law-guards`, **the same shape as the LOOP CHECK cell
+  already in that suite**"*.
+- **`LAW-doc-truth`** — *"a gate that resolves doc claims to named receipts, **the
+  same shape as `test:copy-rulings-binding`**"*, which already does exactly this
+  for copy.
+**`src/__tests__/repoLawGuardsTests.ts` is HELD by another seat right now**
+(cmp-verified against `HEAD`, not `git status`). `copyRulingsBindingTests.ts` is
+FREE, so `LAW-doc-truth` is the one to take when its author has a clear run.
+
+**⚠ ONE PROPOSED GATE IS ALREADY REFUTED — DO NOT BUILD IT.**
+`LAW-no-completeness-claims`' `wouldTake` describes *"a vocabulary gate over
+reports forbidding 'last', 'final', 'no more'"*. **That was measured and
+REJECTED**, and the refutation is recorded in a neighbouring row's receipt:
+*"the whole of `docs/` yields two hits and both use 'exhaustive' descriptively,
+and a cell that cannot fail is worse than no cell."* **The `wouldTake` line still
+advertises it, so the next seat will price it as cheap and rediscover the
+refutation.**
+
+**HONESTLY NOT CELLS, AND THE ROWS SAY SO** — `LAW-coach-escalation`
+(*"not mechanisable… should be marked PROCESS"*), `LAW-L16-vertical-slice`,
+`LAW-L12-verification-reviewed`, `LAW-L1-whole-app-scope` (*"nothing mechanical
+scopes a sweep"*). **These will never fall to a cell, and counting them in a
+"keep the count falling" target guarantees the target is never met.** Whether
+`PROCESS` becomes a third state is Sam's or the seat's call, not this seat's —
+the registry's header argues hard for exactly two states.
+
+**BLOCKED BY THE SIMULATOR, NOT BY DESIGN:** `LAW-L3-cold-start` — *"a Maestro
+flow that kills and relaunches… blocked today by the same simulator-binary
+blocker as everything else"*.
+
 ### ✅✅ 2026-08-13 — **28-C1 IS ANSWERED.** `autoPlacementCategories`' ORDER IS INERT; **PASS 1 SETS THE RANK**
 
 **This reconciles the two measurements that contradicted each other all day, and
