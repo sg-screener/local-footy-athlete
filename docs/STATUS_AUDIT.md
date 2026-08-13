@@ -91,6 +91,36 @@ the registry's header argues hard for exactly two states.
 flow that kills and relaunches… blocked today by the same simulator-binary
 blocker as everything else"*.
 
+**⚠ AND `LAW-doc-truth`'s PRESCRIBED SHAPE IS REFUTED TOO — MEASURED BEFORE
+BUILDING, WHICH IS THE ONLY REASON IT COST TEN MINUTES.** Its `wouldTake` says
+*"the same shape as `test:copy-rulings-binding`"*. **The shape does not carry
+over, and the reason is the UNIT.**
+
+| over all of `docs/**.md` | lines |
+| --- | --- |
+| lines containing `BUILT`/`FIXED`/`LANDED`/`WORKING` | **688** |
+| …with a receipt on the SAME line (sha, `test:`, `file.ts:NN`) | 122 |
+| **…without** | **566** |
+
+**A GATE THAT REDS 566 TIMES ON ARRIVAL IS NOT A GATE**, and the samples show
+most are not even claims: *"**MEASURED, NOT BUILT**"* is a NEGATIVE claim,
+*"a session is **BUILT** by pattern coverage"* is a statement of LAW, and
+*"the off-season zeros are the gate **WORKING**"* is prose.
+
+**WHY THE COPY GATE WORKS AND THIS CANNOT.** `test:copy-rulings-binding` reads a
+**TABLE with rows** — a structured surface where every row is, by construction, a
+claim. **`docs/` prose has no rows.** Scanning it line-by-line takes a count in
+the instrument's unit (lines matching a word) and reports it as the domain noun
+(claims lacking receipts). **That is `LAW-count-names-instrument` again, one day
+after guarding it, in the very next law I picked up.**
+
+**WHAT WOULD ACTUALLY WORK, and the precedent is already in the registry:** the
+guarded `⚠`-blocks-in `docs/NOW.md` cell scoped itself to ONE structured surface
+and said so — *"PARTIAL by construction… it reads NOW.md only"*. **`LAW-doc-truth`
+needs the same move: pick one structured surface, not all prose.** **Do not build
+the whole-`docs/` scanner; it has now been measured and refused twice over,
+counting the completeness-word gate.**
+
 ### ✅✅ 2026-08-13 — **28-C1 IS ANSWERED.** `autoPlacementCategories`' ORDER IS INERT; **PASS 1 SETS THE RANK**
 
 **This reconciles the two measurements that contradicted each other all day, and
