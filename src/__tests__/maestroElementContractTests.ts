@@ -41,6 +41,11 @@
 
 import fs from 'fs';
 import path from 'path';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// report. This suite reports by COUNT of orphans rather than pass/fail tallies,
+// so the clear takes `orphans.length` — the same number its own exit uses.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const flowRoot = path.join(repoRoot, '.maestro');
@@ -192,6 +197,7 @@ for (const flow of flowFiles) {
 console.log(`Maestro element contract: ${flowFiles.length} flows, ${checked} named ids checked,`
   + ` ${unnameable} runner-variable ids NOT checkable,`
   + ` ${literals.size} product literals, ${patterns.length} product templates`);
+totalsPrinted(orphans.length);
 
 if (orphans.length > 0) {
   console.log('\n  ✗ flow ids no product source can produce:');
