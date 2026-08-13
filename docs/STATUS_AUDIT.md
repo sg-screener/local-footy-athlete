@@ -45,6 +45,40 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ THE SUBPHASE CONCERN IS **REFUTED** — the real generator walks Sam's ladder exactly
+
+**The probe I named one commit ago, run:**
+
+    week 1: Back Squat 3x8-12   <- early
+    week 2: Back Squat 3x8-12   <- early
+    week 3: Back Squat 3x6-10   <- MID, the bridge
+    week 4: Back Squat 4x6-10   <- mid
+
+**Weeks 1-2 early, weeks 3-4 the 6-10 bridge. That is Sam's ladder
+(`early_offseason` 1-2, `mid_offseason` 3-4) working end to end.** No athlete is
+getting early dosing in mid off-season, and the load multiplier question is void
+with it.
+
+**SO `phaseRepPrescription`'s 9 failures are a MIS-AIMED CELL, not a defect.** It
+calls `buildWorkoutsFromCoach` DIRECTLY with `{ miniCycleNumber: 1,
+weekInBlock: 3 }` and no `offseasonSubphase`; **the real generator supplies it,
+and the direct caller does not.** The suite is asserting a pipeline property
+against one builder — the same shape as the conditioning-floor cell, and the
+THIRD time today that distinction has been the whole answer.
+
+**AND THIS IS THE POINT OF NOT CLAIMING IT.** One commit ago I had every
+ingredient of a confident, athlete-facing bug report: the rules module measured
+correct, the observed output measured wrong, and a real cost to name. **I wrote it
+up as unproven and named the one probe that would settle it.** The probe settled
+it the other way in under a minute. **Had I reported it as a defect — as I did
+this afternoon with the conditioning floor — that would have been the second
+retraction of the day.**
+
+**LEFT AS FOUND.** The cell is mis-aimed and it is not mine to re-point: fixing it
+means threading `offseasonSubphase` into a direct-call fixture in a suite I did
+not write, and the honest repair is the same one the conditioning cell got —
+assert what the BUILDER owns, and leave the ladder to the pipeline that owns it.
+
 ### `phaseRepPrescription` 12/9 — THE RULES ARE CORRECT; THE SUBPHASE IS NOT REACHING THEM. **ATHLETE-FACING IF IT REPRODUCES, AND I HAVE NOT PROVEN THAT.**
 
 **MEASURED DIRECTLY — `OFFSEASON_SUBPHASE_MAIN_LIFT_REP_SCHEMES` is right:**
