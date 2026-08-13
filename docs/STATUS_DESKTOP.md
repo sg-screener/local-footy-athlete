@@ -1439,3 +1439,52 @@ the rule than any of our three apologies:
 
 **`audit` asked instead of committing, which is the behaviour that worked** — the
 premise had expired but the caution had not.
+
+
+---
+
+## 2026-08-13 — ⚠ I BROKE THE FIRST SHARED-FOLDER RULE ALL DAY: NOT ONE OF MY COMMITS IS STAMPED
+
+**`CLAUDE.md`, rule 1 of the three that open the file:**
+
+> **STAMP EVERY COMMIT.** End every commit message with `Agent: <who you are>` …
+> **Without it you are invisible in the history and the guards cannot tell your
+> work from anyone else's.**
+
+**Measured:**
+
+    commits in the repo today carrying `Agent:`     291
+    commits of MINE carrying `Agent:`                 0
+
+**Checked across seven of my own landings** — `186c2b1b`, `a46d8c9e`, `dba1e400`,
+`589fc590`, `2a0f63d5`, `984a49ab`, `0eae591d` — **zero `Agent:` lines.** I have
+used `Co-Authored-By: Claude Opus 5` throughout and mistook it for the stamp. It
+is not: it names the MODEL, not the SEAT.
+
+**AND THE RULE'S OWN STATED COST LANDED ON ME ONE COMMAND BEFORE I FOUND IT.**
+Running the 1b audit I tried to list my own commits and could not — every seat
+commits as `sg-screener`, so **the `Agent:` line is the only thing that separates
+us, and mine has been absent since the first commit of the session.** I fell back
+to naming SHAs from memory. **The rule says "invisible in the history"; I was, and
+it cost me the audit.**
+
+**IT ALSO EXPLAINS THE THIRD ABSORPTION FROM THE OTHER SIDE.** Three seats
+absorbed each other's work today and every post-mortem asked *"whose is this?"* —
+**a question the stamp exists to answer and which my commits could not.**
+
+**NOT RETROSPECTIVELY FIXED, DELIBERATELY.** Rewriting ~40 commit messages on a
+shared `main` with three live agents committing into it would be far worse than
+the fault. **From this commit forward every one of mine carries `Agent: desktop`**
+— demonstrated in this commit's own trailer rather than promised.
+
+### 1b, AUDITED ON MYSELF, SINCE THAT IS WHAT THE STANDING ITEM ASKS
+
+**Two genuine violations**, both status claims in subjects:
+- `fe97872d` *"AWAY IS **DONE** AND OUT OF THE QUEUE"* — should have been
+  **WORKING**, naming `test:away-flow` as the cell that fails if it breaks.
+- `89eb0a7d` *"a row says unenforced over **SHIPPED** work"*.
+
+**Two false positives**, both naming the banned word rather than claiming a state
+(`64c2bde6` applying 1b, `14a1f838` on a done item not clearing itself) — **a
+vocabulary gate has to permit talking ABOUT the word**, which is the same
+distinction the copy-binding gate draws.
