@@ -91,8 +91,20 @@ his instruction is standing authority, not history.**
     Single-Leg RDL every time without the rotator objecting.
 
 
-47. **BLOCKED-BY: sam — THE SHEETS ARE NOT FILLED IN. MEASURED BY THE TERMINAL
-    (its owner) BEFORE BUILDING, 2026-08-13.**
+47. **UNBLOCKED AND MOSTLY BUILT — THE SHEETS ARE FILLED IN AND COMMITTED, AND
+    THEY RATIFY THE BUILD. `audit`, 2026-08-13.**
+
+    **THE BLOCK IS CLEARED, NOT INHERITED.** Sam's answers are now in git and
+    every `?` is resolved; the blank draft is gone. His rows AGREE with what
+    shipped in `9c0d1776` on every point it turned on (Back Squat → barbell &
+    rack, Trap Bar Deadlift → trap_bar, Dips → dip_bars, Inverted Row →
+    rings_trx). **BUILT:** the vocabulary merge, 7 of the 8 tags, the derived
+    checklist, the pre-ticks, and the equipment filter on the fallback
+    templates. **SANDBAG IS THE 8TH AND IS CORRECTLY UNBUILT** — his sheet puts
+    it in the vocabulary line and on NO exercise row, so nothing requires one.
+    **STILL OWED:** re-run `test:slot-coverage` (ceiling 1 → 0) once the tree is
+    green; and pool selection classifies by NAME, so it does not yet see the
+    authored requirements on Dips / Inverted Row.
 
     **⚠ THIS ITEM'S OWN PREMISE IS FALSE AND IT WOULD HAVE COST 177 INVENTED
     ROWS.** It says *"Sam filled both sheets … take his words as signed"*. He has
@@ -268,9 +280,24 @@ his instruction is standing authority, not history.**
     one-row fix.**
 
 
-44. **BLOCKED-BY: other-agent — ⚠ FOUR GUARDS ARE RED. THE STORE-WRITER HALF IS
-    PAID BY `progression`; THE REMAINDER IS `audit`'s PER THIS ITEM'S OWN OWNER
-    LINE.**
+44. **BLOCKED-BY: other-agent — THE SIMULATOR. Only ONE flow step remains and it
+    needs an uncontended device. RE-MEASURED BY `audit`, 2026-08-13.**
+
+    **⚠ THREE QUARTERS OF THIS ITEM IS ALREADY PAID AND THE HEAD WAS STALE.**
+    Measured, not assumed: the store-writer half is done (`progression`); the
+    anchor half is GREEN — `test:repo-law-guards` now passes *"no source-reading
+    cell gains an unproven anchor"* and *"the unguarded-anchor debt only
+    shrinks"*; and the two MAS flows are NEITHER unreachable NOR unrun — both
+    are in `docs/GOLDEN_FLOW_RUN_RECEIPT.md`, one **PASS** with a screenshot,
+    one **PARTIAL**. **The remaining reds on that suite are the inbox rewrite
+    and budget cells, which belong to the inbox, not to this item.**
+    **WHAT IS ACTUALLY LEFT:** the final read of
+    `mas-session-names-his-own-pace.yaml`. Its own receipt says *"the next run
+    needs nothing rewritten, only an uncontended simulator"*. **THE FILE NAMING
+    THE BLOCK IS THE DEVICE:** one simulator is booted (`LFA Explorer 4c8535f`)
+    and the receipt records TWO void runs today from another seat driving it.
+    **I did not start a sixth run into that collision — a run with no live app
+    is a dead instrument, and this item already paid for that lesson twice.**
 
     **OWNED BY `progression` (the store writer) and `audit` (the two flows).**
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *store*, *writer*, *flow* — the
