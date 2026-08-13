@@ -1,3 +1,17 @@
+# SEAT INBOX — ARCHIVE, 2026-08-13
+
+**This is `docs/SEAT_INBOX.md` COPIED WHOLE at 2026-08-13, 220KB, before the
+seat collapsed its finished items.** Nothing here is reworded, reordered or
+dropped. **The live file keeps every unfinished and every blocked item in
+full; only items that were FINISHED were collapsed to a one-line pointer, and
+each pointer names this file.**
+
+**Three earlier scripted attempts to shrink the live file destroyed live
+orders.** This one does not edit any surviving block: it replaces whole
+finished blocks with a pointer and leaves every other byte untouched.
+
+---
+
 # SEAT INBOX — the review seat writes here; the terminal reads at every stop
 
 **REWRITTEN 2026-08-12 after Sam asked the seat to audit it.** It had grown to
@@ -160,7 +174,96 @@ his instruction is standing authority, not history.**
     **Pairs with item 65 — reuse its printer, do not write a second one.**
 
 64. **✅ BOTH STEPS LANDED. OWNED BY `bible`. 1,003 RULE LINES · 8 HELD · DEBT 995 · COVERAGE 0.8%.**
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    **`1074f181` the measurement alone as ordered, `91f1417d` the ratchet. Mutation-proven three ways —**
+    **deleting one enforcer name reds two cells; NARROWING the rule definition "improves" the debt**
+    **995 → 838 with ZERO rules enforced and reds two others, because `:227` stops being seen as a**
+    **rule the instant it narrows. `test:bible-coverage` 5/5, in `test:bible`. Nothing fixed, per the**
+    **item. Worst-first: `:227` is still unheld — five slots authored, four planned, single-leg never**
+    **requested. Detail: `docs/STATUS_BIBLE.md`. ORIGINAL ORDER BELOW.**
+    **THE BIBLE HAS NO COVERAGE CHECK, WHICH IS WHY A RULE SAM WROTE DOWN CAN**
+    **SIT IN THE APP UNBUILT FOR MONTHS AND NOTHING GOES RED. BUILD ONE.**
+
+    **THE SIGHTING THAT ORDERED THIS.** Bible `:227` gives a lower day five
+    slots. `sessionSlotCoverage.ts` CHECKS five. `coachingEngine.ts:5001-5016`
+    PLANS four and has never once asked for a single-leg slot. **Both files are
+    correct on their own. Nothing ever compared them.** The app has been marking
+    itself against a standard it never tried to meet, and every suite was green
+    the whole time. Sam: *"if everything is written down in the bible, why can
+    the app not even program single leg work?"*
+
+    **⚠ THIS IS NOT ITEM 61 AND MUST NOT MERGE WITH IT.** Item 61 (`vocab`) is
+    CODE-to-CODE drift — one concept, two word-lists inside the app. **This item
+    is BIBLE-to-CODE: a rule that exists in prose and has no enforcer at all.**
+    Different corpus, different owner, different number. Say so in your first
+    commit so the two censuses do not double-count each other.
+
+    **STEP ONE IS A MEASUREMENT AND YOU COMMIT NOTHING ELSE UNTIL IT LANDS.**
+    How many RULE lines does the Bible carry, by a stated definition of "rule
+    line" that a script applies — not a judgement you make per line? Print the
+    number, print the definition, print twenty sampled lines the definition
+    caught and five it deliberately did not. **If the number is in the
+    thousands, say so; do not quietly narrow the definition until it is
+    comfortable.**
+
+    **THEN THE RATCHET, AND IT IS THE SAME SHAPE THAT TOOK THE LAWS 25 -> 21.**
+    Every rule line either NAMES the enforcer that holds it — a suite, a cell, a
+    source anchor — or is counted as debt. **The debt may only fall.** The
+    mapping is machine-held in a file, never in a commit message, and derived
+    where derivation is possible rather than hand-typed.
+
+    **⚠ MUTATION-CHECK IT OR IT IS WORTHLESS.** Delete one enforcer name from
+    the mapping and the cell must RED. A coverage check that cannot fail reads
+    exactly like one that passes, and this repo has seven recorded sightings of
+    that class. **A green first run with no mutation proof is not this item
+    done.**
+
+    **DO NOT FIX WHAT YOU FIND.** The census is the deliverable. Order the
+    findings by what an athlete would notice, not by how easy they are — the
+    single-leg case sat behind a green suite for months precisely because
+    nobody was ranking by harm.
+
+    **AND DO NOT ASK SAM ANYTHING WITHOUT GREPPING `docs/RULINGS_REGISTRY.md`
+    FIRST** and saying in the question what the grep returned. 89 rulings are
+    already made; a re-ask is the one failure he has named more than any other.
+
+    ### ⚠ SAM'S ANSWER TO "WHAT DO WE DO ABOUT 995?" — DO NOT CHASE COVERAGE.
+    TRIAGE. 2026-08-13.
+
+    **0.8% IS NOT "THE APP IS 0.8% BUILT" AND NOBODY SHOULD READ IT THAT WAY.**
+    It says 8 lines have been MAPPED to an enforcer. The mapping is the
+    bottleneck, not the building. **Driving this number to 100% by hand-writing
+    995 mappings is weeks of work and most of it is worthless.**
+
+    **SPLIT THE 995 INTO THREE BUCKETS. ONLY ONE OF THEM MATTERS:**
+    **(a) NOT ACTUALLY A RULE** — a definition, an example, a heading, a
+    restatement. The corpus definition was deliberately over-inclusive; this
+    bucket is expected to be large and finding it is not failure.
+    **(b) A RULE THAT IS ENFORCED, JUST NOT MAPPED.** Cheap to test: search the
+    code for the rule's own words. If a suite or a source anchor holds it, map
+    it and move on.
+    **(c) A RULE WITH GENUINELY NOTHING ENFORCING IT.** **THIS IS THE ONLY
+    BUCKET THAT MATTERS AND IT IS THE ONE SINGLE-LEG CAME FROM.** Expected to be
+    tens, not hundreds — but nobody knows, which is the whole point.
+
+    **THE CHEAP TEST FOR (c), AND IT IS WHY THIS IS TRACTABLE:** take the rule's
+    distinctive words and grep the codebase. **If the concept appears NOWHERE —
+    not in a suite, not in a source file, not in a comment — that is a real gap
+    and it is findable in seconds per line.** A concept the code has never heard
+    of cannot be enforced by accident.
+
+    **THEN RANK BUCKET (c) BY WHAT AN ATHLETE WOULD NOTICE, NOT BY EFFORT.**
+    Single-leg sat behind a green suite for months precisely because nobody was
+    ranking by harm.
+
+    **⚠ THE RATCHET STAYS ON THE MAPPED COUNT, NOT ON BUCKET (a).** Do not
+    "improve coverage" by narrowing the definition of a rule line until the
+    percentage looks better. **If the definition changes, the old number and the
+    new number are both printed, with the reason.** That move is the single
+    easiest way to make this whole instrument lie.
+
+    **THIS TRIAGE IS PARALLELISABLE AND SHOULD BE PARALLEL** — the corpus splits
+    cleanly by line range and the buckets are independent. It is the one place
+    fan-out helps before item 67 unparks.
 
 63. **OWNED BY `vocab` — RESTAMPED BY `seat`; the previous head named a FILE, not a person. CLAIMED
     THIS AND IS RELEASING IT, 2026-08-13. ⚠ R-089's ORDERING IS CORRECT AND IT
@@ -216,10 +319,103 @@ his instruction is standing authority, not history.**
     **DONE WHEN THE CENSUS MOVES.** 92 of 318 falls and the ratchet holds it
     down. **A green suite with an unmoved census is not this item done.**
 62. **✅ THE APP STARTS. OWNED BY `device`. SAM HAS SEEN ALMOST NONE OF TODAY'S WORK ON A REAL DEVICE.**
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    **GET THE APP RUNNABLE ON HIS PHONE AND HAND HIM ONE COMMAND.**
+    **(claimed 2026-08-13). A stranded dev-harness receipt was
+    refusing every plain launch; `qa-start.sh` now clears it. Simulator only,
+    never his phone. `docs/STATUS_DEVICE.md`.**
 
+    **THIS IS NOT A TEST-WRITING JOB AND IT IS NOT A FEATURE.** Every ruling
+    landed today was verified by a suite, not by an athlete looking at a screen.
+    **Sam is never the test rig and his phone is the last instrument** — so the
+    job is to remove every obstacle between him and a running build, then give
+    him ONE line to paste and ONE thing to look at.
+
+    **DELIVERABLE, IN THIS ORDER:**
+    1. **Make it start.** Whatever is stale — lockfile, pods, Metro cache, an
+       expired dev build — fix it and say what was broken. Report the failures
+       you hit; they are the finding, not noise.
+    2. **ONE command** he pastes into a fresh terminal in the repo root. Not a
+       sequence. Not "then open Xcode". If it cannot be one line, wrap it in a
+       script and give him the script.
+    3. **ONE screen to look at, named**, with what he should see there and what
+       would be wrong. Pick the screen today's work most changed.
+
+    **⚠ DO NOT ASK HIM TO RUN ANYTHING TO DIAGNOSE IT.** You have the repo. If
+    you need a device log you cannot get, say so and stop — do not make him the
+    instrument to find out why the instrument is broken.
+
+    **REPORT WHAT YOU COULD NOT REACH.** A simulator is not his phone. If the
+    furthest you can get is a simulator build, say that plainly and hand him the
+    one command anyway.
 61. **✅ CLOSED — OWNED BY `vocab`. ALL THREE SIGHTINGS ARE NOW PAID, 2026-08-13.** Equipment
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    `9c0d1776`; away `4087d998` (`test:away-span-ownership` 8/0); conditioning
+    `fd070884` (total `Record<>`, output-inert). **The 93 was checked and is a
+    LOWER BOUND** — 6 sites are structurally invisible to the census and its
+    definition of "total" admits a `default:`, which is this item's own defect.
+    Detail in `docs/STATUS_VOCAB.md`. **No question for Sam** (R-078).
+    **OWNED BY `vocab` — RESTAMPED 2026-08-13 AT SAM'S DIRECT ORDER. `arms` HAS
+    GONE QUIET AND THE `terminal` SEAT IS GONE; `arms` LANDED THE CENSUS AND THE
+    COUNT (`27d4be3f`) AND EXPLICITLY LEFT THE TWO REMAINING SIGHTINGS —
+    CONDITIONING AND AWAY — UNBUILT. NOTHING BELOW THIS LINE IS RE-SCOPED. AND
+    ONE OF THE THREE IS ALREADY BUILT, SO THE CENSUS STARTS AT TWO.**
+    **⚠ THIRD SIGHTING OF ONE CLASS: THE SAME FACT WRITTEN IN TWO VOCABULARIES,
+    AND EACH HALF OF THE APP UNDERSTANDS ONLY ONE.**
+
+    **THE HEAD CARRIES THE OWNER NOW, WHICH IS THE ONLY REASON THIS MARK
+    EXISTS.** The body has said `OWNED BY audit` since it was written, and
+    **column 0 is all `seat-inbox-hook.sh` reads**, so the scan kept handing it
+    to me as live work. Same fix `arms` applied to item 50's head.
+    **I AM NOT OVERRULING — I AM CONFIRMING.** The item invites me to overrule
+    "if you are already in it"; I am not, my status file shows no claim, and
+    `arms` has Sam's direct order. **It is theirs.**
+
+    **⚠ ITEM 2 OF THE THREE IS DONE — DO NOT RE-MEASURE IT.** *"the code says
+    `Cable Machine`, `Trap Bar`, `Rack` capitalised; an athlete ticks `cables`,
+    `machine`, `barbell` lowercase"* — **that is closed.** `9c0d1776` (`audit`):
+    the bridge stopped collapsing `Rack`/`Trap Bar` onto `barbell`, seven tags
+    became askable, and `test:equipment-vocabulary` (84/0) reds in BOTH
+    directions — a tag nothing requires, and a requirement nothing can answer.
+    **AND IT IS A WORKED EXAMPLE OF THIS ITEM'S OWN COMPRESSION:** the checklist
+    is DERIVED from library demand rather than authored beside it, so the two
+    lists cannot drift apart again. **The remaining two are conditioning and
+    away.**
+
+    **OWNED BY `audit`** (it holds the census laws).
+    **⚠ TAKEN BY `arms` AT SAM'S DIRECT ORDER, 2026-08-13 — one-line status, the
+    item is not re-scoped and its owner line is untouched.** `audit` is live and
+    its status file shows no claim on this item; posting this before starting so
+    two seats do not census the same thing. **`audit`: if you are already in it,
+    this mark is yours to overrule.**
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *vocabulary*, *two formats*,
+    *crosswalk* — nothing. **A class, not a ruling. No question for Sam.**
+
+    **THE THREE, all found 2026-08-13:**
+    1. **Conditioning** — 8 authored qualities → 6 selector categories → 5 domain
+       slots. COD had no category and could not be asked for. Fixed by an
+       explicit total `Record<>`, which immediately exposed a THIRD narrowing
+       nobody had written down.
+    2. **Equipment** — the code says `Cable Machine`, `Trap Bar`, `Rack`
+       capitalised; an athlete ticks `cables`, `machine`, `barbell` lowercase.
+       **A tick does not match a requirement.**
+    3. **Away** — *"I'm away"* is stored in TWO formats and **each half of the
+       app understands only one** (found by the R-033 gate's own author, twice,
+       while its sanity check caught it both times).
+
+    **THE SHAPE IS ALWAYS THE SAME:** one concept, two word-lists, no total
+    mapping, and the gap is SILENT — an unmapped value becomes an empty result
+    or a plausible neighbour instead of an error.
+
+    **THE COMPRESSION, and it is already proven here:** a total
+    `Record<TypeA, TypeB>` makes the compiler the enforcer, and asserting the map
+    rather than trusting it is what found the third conditioning narrowing.
+    **A `switch` with a default does not do this. Neither does a lookup that
+    returns `undefined`.**
+
+    **BUILD: census every place two vocabularies describe one concept**, and for
+    each, either merge them or make the translation total and compile-checked.
+    **Report the count — that number is the size of this class, and nobody knows
+    it yet.**
+
 
 50. **THE THIRTEEN UNENFORCED RULINGS, ORDERED. ONE PER AGENT. OWNED BY `seat`.**
 
@@ -332,10 +528,58 @@ his instruction is standing authority, not history.**
     *full body*, *what are the 7*, *template*, *weekly coverage*, *main lifts*,
     *rest of the week*, *MainStrengthPattern*, *plannedPatterns*, *item 51*.
 52. **✅ CLOSED — SHIPPED `70e91a0f`, AND IT FOUND A REAL DEFECT THAT WAS NOT
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    THE ONE THIS ITEM PREDICTED. `patterns`, 2026-08-13.**
+
+    `src/rules/mainLiftPatternLaw.ts` (the oracle), a production fence in
+    `exerciseScorer.selectExercises`, and `test:main-lift-pattern` (23 cells) in
+    the chain. R-070's row already reads `BUILT`, flipped by the seat holding
+    `RULINGS_REGISTRY.md`.
+
+    **36 breaches of 396 built sessions before the fence, 0 after** — every one
+    `Bench Press + Close Grip Bench`, two heavy HORIZONTAL PRESSES out of the
+    coach's session builder. **Not the hinge this item predicted:** `Hip Thrust`
+    is `accessory` in the app's own pools, so `RDLs + Hip Thrusts` was never a
+    breach, and `Overhead Press + Incline DB Bench` is two different patterns AND
+    two different roles. **The law was real; two of the three worked examples
+    offered for it were not.** The third — `exerciseScorer:405` saying the
+    opposite of the law — was TRUE and is now labelled at the line.
+
+    **5 mutants; the fifth refuted a claim I had written into the code** and both
+    comments were corrected in the same commit.
 
 53. **✅ CLOSED — BOTH FLOORS WERE ALREADY ENFORCED AND MERELY NEVER NAMED. THE
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    ROWS WERE WRONG, NOT THE APP. `readiness`, 2026-08-13.**
+
+    **Taken at Sam's direction while `pace` had been silent two hours and six
+    other seats had committed inside 83 minutes.** Stamped `Agent: readiness` —
+    one name, one file, one writer; I did not borrow `pace`'s stamp.
+
+    **THIS IS ITEM 50's OWN WARNING LANDING FOR THE SECOND TIME AFTER R-052:**
+    *"several say the enforcer could not be NAMED, not that the behaviour is
+    absent… if it is enforced, fix the ROW, not the app."* **Nothing was built.**
+
+    **R-046 — all four clauses had a cell in `test:rules-kernel` (122/0):**
+    the three-number split `2/3/4` (`:447`); **team training counts toward the
+    running days** (`:376` — 2 team trainings + a game = 3, off-feet flush
+    excluded so it cannot pass by counting everything); a 4th is valid and only a
+    5th breaches (`:461`/`:525`/`:472`, **both directions**); the floor of 2
+    (`:550`) with both authored exemptions.
+    **R-062 — the floor is in `test:rules-kernel` [C4]** (`:884` zero-sprint
+    breaches, `:886` early off-season exempt, **`:892` the discriminator: bye
+    recovery lifts the RUNNING floor and NOT the sprint floor**) **and the
+    typed-reason half is in `test:preseason-exposure`**
+    (`INV_EXPOSURE_REDUCTION_HAS_REASON`, with a mutation-catalogue entry).
+
+    **MUTATION-PROVEN BEFORE EITHER ROW WAS CERTIFIED**, because a row certified
+    off a green suite nobody probed is exactly how R-052 went wrong: neutering
+    the running-floor emitter reds 4 cells; `minRunningExposures` 2 -> 1 reds 3;
+    neutering the sprint-floor emitter reds 2. Restored from my own backup,
+    `git diff` clean.
+    **`UNENFORCED_CEILING` lowered 9 -> 5 in the same commit** — the ratchet
+    caught this seat on its own work, which is it working.
+    **⚠ `test:preseason-exposure` is 105/5 and was BEFORE this unit** — control
+    worktree at `ef38f5e8`, byte-identical failure names. None touch the
+    typed-reason invariant.
 
 54. **BLOCKED-BY: external — R-079's TWO REMAINDERS ARE BOTH BLOCKED ON A TYPE
     THAT DOES NOT EXIST YET, AND THE TITLE IS LITERALLY TRUE. MEASURED, NOT
@@ -373,7 +617,31 @@ his instruction is standing authority, not history.**
     generation change at a session tail. **Named rather than half-built.**
 
 55. **✅ MEASURED STALE — THE SPAN ALREADY SHIPPED, AND THE WALL IS 28-C1. `arms`,
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    2026-08-13.** Sam handed this to me; the `equipment` seat it names **has never
+    committed** (`git log --grep='Agent: equipment'` = 0), so nobody was walking
+    past anyone. **The premise below is false as written:** the dated
+    `no_team_training` span exists and runs `generateProgram.ts:483` →
+    `coachingEngine.ts:8943` → `teamDays` → `codDecelPermitted`, held on BOTH
+    readers by `test:christmas-break` `[11]`/`[11b]`/`[11c]` (44/0) and
+    **mutation-proven** — unhooking the span reds 7 cells while the non-vacuity
+    control stays green. R-003's row carried a `STILL PARTLY UNENFORCED` sentence
+    written before the work landed; **this item was written from that sentence**,
+    and the row is corrected in the same commit.
+    **⚠ AND COD STILL NEVER FIRES, FOR A DIFFERENT REASON.** A pre-season club
+    athlete inside his own declared break loses both club nights and gets **ZERO
+    COD** — that is **28-C1's ranking wall** (PASS 1 ranks over
+    `categoryPriority`/`zonePriority`, neither of which ever contains
+    `cod_decel`), plus the missing `categoryToFlavour` case that makes the
+    ranking fix alone break generation. **28-C1 is UNCLAIMED and is now the only
+    thing between Sam and COD work.** Not taken by me: it moves generated output,
+    owes `test:scenarios` + `test:qa` both arms, and its remaining step is a
+    DESIGN call (`CondFlavour` cannot express COD without lying).
+
+    ~~ORIGINAL ORDER BELOW~~
+    **R-003 + R-004 — THE COD WINDOW IS PROFILE-DERIVED, NOT WEEK-DERIVED. OWNED
+    BY `equipment`** (it holds the onboarding/dated-span work). Until the dated
+    no-team-training span exists, **a club athlete's December week still reads as
+    having team training**, so COD can never fire. Item 31 part 5.
 
 56. **BLOCKED-BY: other-agent — THE §18 BYE-BUILD UNIT (item 28). MEASURED BY
     `audit`, 2026-08-13, after `terminal` handed this over.** The strength half
@@ -398,13 +666,62 @@ his instruction is standing authority, not history.**
     red and an unenforced ruling are the same thing wearing a nicer word.**
 
 57. **✅ CLOSED — ALL THREE MECHANISMS NOW GUARDED, BY TWO SEATS IN PARALLEL.
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    `patterns` (1 and 2) + `readiness` (3), 2026-08-13.**
+
+    **Mechanisms 1 and 2:** `test:fatigue-abolition`, 8 cells — a contract
+    difference test, `patterns`. **Mechanism 3:** `test:fatigue-session-collapse`,
+    14 cells, `readiness` — the arm the sibling's own NOT-COVERED line asked for.
+    **Neither re-asserts the other.** Both in the `test:bible` chain.
+
+    **⚠ THE MECHANISM IS GONE, AND WHAT KEEPS IT GONE IS AN ACCIDENT.**
+    `extractInjuryContext('im absolutely cooked 9/10')` returns
+    **`{bodyPart:'unknown', bucket:null, severity:9}`** — a pure FATIGUE
+    sentence, the verbatim name of R-038's most severe READINESS tier, entering
+    the INJURY door at the pause band on a live path (`CoachScreen.tsx:1294`).
+    **It strips nothing for one reason only: with `bucket:null` every strength
+    row rates `good`.** Nothing anywhere said so. *"No body part? be cautious
+    with everything"* reinstates mechanism 3 for fatigue instantly.
+    **The suite pins the INERTNESS and records the leak as its own cell**, so
+    closing the leak reds rather than silently invalidating the guard above it.
+    **THE LEAK IS NOT CLOSED HERE** — it is a coach-ROUTING change on a live
+    athlete path. **Fix the routing, never the fallback.** Owner: whoever holds
+    the coach door.
+    **3 mutants killed, 2 cells each.** Still not covered: a real week through
+    the session-action layer (needs the action walker).
 
 58. **✅ CLOSED — AND THE VERIFICATION FOUND A BLIND SPOT THE OWNER'S OWN
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    MUTATION MISSED. `readiness` + `patterns`, 2026-08-13.**
+
+    **`readiness` mutated the DETECTOR** (planting `const readiness = capacity;`
+    reds the sweep cell and names the file). **`patterns` mutated the WALK** —
+    making `productFiles()` `return []` left the suite **94/94 GREEN**, because
+    both sweeps standing on it read "no offenders" off an empty list.
+    **I proved the detector fires; I never proved the sweep visits a file, and
+    those are different claims.** `PRODUCT_FILE_FLOOR` now throws. Left exactly
+    as `patterns` wrote it.
+    **THE TRANSFERABLE LAW: a pass/fail cell over a COLLECTION has two failure
+    modes, and mutating the predicate only ever tests one.** This is R-041's own
+    lesson arriving a second time — the first guard said *"nothing reds if they
+    re-merge"*; the second could have said "nothing reds because nothing was
+    read".
+
+    ~~ORIGINAL~~ Its row records
+    that the previous guard read *"nothing reds if they re-merge"* — and between
+    2026-07-27 and 2026-08-13 **they re-merged in ten sites and nothing red**.
+    **Verify the new guard actually reds on a re-merge, by mutation.**
 
 59. **✅ CLOSED — NEITHER WAS LYING; THE ROW WAS ONLY HALF THE RULE. `arms`,
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    `96a6dbac`.** The counts are real and mutation-proven (the old 2+2+1+1 reds
+    three cells). **"At 2-3 sets" had never been read by any cell**, and the
+    shrink-never-pad cell builds nothing and survived a padding mutation. Both
+    closed: `test:mobility-accessory-doors` `[A4]`/`[A5]`, 30/0. **Bodyweight-only
+    ships a ZERO-ROW Gunshow** — R-083's business, item 48, not pinned anywhere.
+
+    ~~ORIGINAL ORDER BELOW~~
+    **R-052 — THE GUNSHOW ROW MAY BE WRONG, NOT THE APP. OWNED BY `arms`.**
+    Its status was corrected once when someone opened the enforcer and found two
+    suites naming the composition. **Open them, decide, and fix whichever is
+    lying.**
 
 60. **BLOCKED-BY: other-agent — ITEM 30's §18 BYE-BUILD UNIT, THE SAME ONE
     BEHIND ITEM 56. ATTEMPTED (147 lines) AND BACKED OUT BY `audit`,
@@ -873,10 +1190,207 @@ his instruction is standing authority, not history.**
 
 
 40. **BLOCKED-BY: other-agent — CLOSED, AND ONLY ARCHIVAL REMAINS, WHICH IS THE
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    SEAT'S EDIT. CENSUS C4 IS BUILT. `pace`, 2026-08-13.**
+
+    **MARKED BY `audit`, not re-worked.** ⚠ **AND THE MARKER IS THE ONLY THING A
+    TERMINAL CAN DO HERE — a `✅ CLOSED` head is still WORKABLE to the stop hook**
+    (`scripts/seat-inbox-hook.sh` skips only `BLOCKED-BY:`, *parked* and
+    empty-queue markers), so a finished item keeps the queue non-empty until the
+    SEAT archives it. Same structural trap named on item 31.
+
+    **`f6808ed7` → `4d24be47` → `05e609af` → `f6e955a1`.** Sam's floors now carry
+    his ceilings' weight. **168/11 → 168/10 on the QA corpus, nothing added**,
+    and the three findings that went were all early-off-season weeks told they
+    breached floors their own messages lift for them: S5 running, S5 sprint,
+    S6 running.
+
+    **⚠ THE ORDERED STEP WAS THE LAST ONE, NOT THE FIRST.** "Give the floors the
+    same weight as the ceilings" first would have made S5 and S6 UNBUILDABLE —
+    `maxRunningExposures` is `'strong'` and `section18CraftTier.ts:123` blocks on
+    `strong`. Built it, measured 10 → 13, backed it out, fixed what was
+    underneath, then did it. **An ordered step is a claim too.**
+
+    | step | what | result |
+    | --- | --- | --- |
+    | 1 | running-floor exemption reaches the validator | S5+S6 running nags gone |
+    | 1b | the QA corpus was a THIRD caller with the same gap | corpus can see it |
+    | 2 | the sprint floor gets the exemption its own sentence advertises | S5 sprint gone |
+    | 3 | floors take the ceilings' `capSeverity` map | S5 conditioning `info`→`soft` |
+
+    **AND ONE ARTEFACT WORTH THE NEXT SEAT'S TIME.** An allowed-findings row read
+    *"Early off-season low-availability scenario intentionally has no sprint/COD
+    anchor"* — **Sam's exemption, living in a TEST POLICY because the code could
+    not express it.** Retiring that row is what made the rule real. Two other
+    rows were RE-KEYED `info` → `soft`, the opposite operation, and the file says
+    which is which so neither can be mistaken for the other.
+
+    Held by `test:rules-kernel` [C4], 9 cells, 122/0, non-vacuity first on both
+    floors and a discriminator keeping the two exemption vocabularies apart —
+    bye recovery lifts the RUNNING floor and NOT the sprint floor. Mutation-
+    checked both directions. **Pre-existing and not mine: the "S3 …_under no
+    longer matched" orphan was in the baseline before any of this, twice.**
+
+    ~~ORIGINAL ORDER BELOW~~
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *running*, *floor*, *minimum* —
+    the floors are AUTHORED (Bible `:4283` running 2/3/4, `weeklyExposureCounts.ts:45`
+    conditioning 3-5, sprint min 1). **Nothing to ask Sam. This is a build.**
+
+    **THE DEFECT:** the `under` findings are computed
+    (`weeklyExposureCounts.ts:323-367`) and `weekStructureValidator.ts:454-466`
+    takes the `under` branch FIRST and hardcodes `severity: 'info'`,
+    `canOverride: true`, skipping light weeks entirely. **`grep` for any repair
+    consumer of the three `_under` rule ids returns ZERO**, while the `_over`
+    twin IS consumed (`coachTurnController.ts:2261`). **His ceilings refuse; his
+    floors do nothing.**
+    **BUILD:** the floors get the same weight as the ceilings, with the
+    early-off-season and bye-recovery exemptions his text already names.
+    **PROVE IT:** a week with 0 running days must not ship green. 17 QA either
+    side.
+
+    **⚠ MEASURED BY `pace` BEFORE BUILDING, AND THE ORDER OF WORK IS THE
+    OPPOSITE OF THE ONE ABOVE. 2026-08-13.**
+
+    **THE PREMISE IS CONFIRMED EXACTLY:** `cap_*_under` has **ZERO** production
+    consumers; the `_over` twins have **EIGHT** — four in
+    `coachTurnController.ts:2255-2264` and four more in
+    `planChangeRefusalCopy.ts:64-75`. **Ceilings refuse in words the athlete
+    reads; floors emit an `info` nothing consumes.**
+
+    **BUT RAISING SEVERITY FIRST WOULD REFUSE WEEKS THE GENERATOR LEGITIMATELY
+    PRODUCES.** `section18CraftTier.ts:123` — `blocksBySeverity` is
+    `severity === 'strong' || 'hard_stop'`. The QA corpus TODAY ships **S5 and
+    S6 with 0 running days as `[info]`**. Make running `strong` with nothing else
+    changed and those two weeks stop being buildable at all.
+
+    **AND THE EXEMPTION THAT WOULD KEEP THEM LEGAL ALREADY EXISTS, FULLY TYPED
+    AND FULLY TESTED, AND NO PRODUCTION CALLER PASSES IT:**
+    - `auditWeekAgainstCaps(counts, context: CapAuditContext = {})`
+      (`weeklyExposureCounts.ts:299`) takes
+      `runningFloorExemption?: 'early_off_season_weeks_1_2' | 'bye_recovery'`.
+    - `rulesKernelTests.ts:556-561` proves BOTH exemptions suppress the finding.
+    - **BOTH production call sites pass NOTHING** —
+      `weeklyExposureCounts.ts:382` and `weekStructureValidator.ts:454` are
+      `auditWeekAgainstCaps(counts)`.
+    - The athlete-facing detail string already PROMISES the exemption —
+      *"lifted in early off-season weeks 1-2 and bye recovery"*
+      (`weeklyExposureCounts.ts:330`) — **so the app is telling the athlete about
+      a lift it has no way to apply.**
+    - `weekStructureValidator.ts` has **no knowledge of the off-season subphase
+      at all** (zero matches for `subphase`/`offseason`); its only light-week
+      escapes are `reducedLoadActive` and `byeWeek`.
+
+    **SO THE BUILD IS TWO STEPS AND THIS IS THE ORDER:**
+    1. **Thread the subphase to the validator and PASS `runningFloorExemption`.**
+       Small, and it should silence S6 (early off-season) on its own — measure
+       that rather than assume it.
+    2. **THEN severity parity**, once the legitimate 0-running weeks have stopped
+       producing findings. Only then does `strong` refuse the right weeks.
+
+    **THIS IS CENSUS C2's SHAPE FOR THE THIRD TIME TODAY** — a mechanism that
+    exists, is typed, is tested, and has no reader on the path that matters
+    (`deriveMas`; the second game at the exposure contract; now this). **Worth
+    naming as a class rather than paying three times.**
+    **BASELINE CAPTURED BEFORE ANY CHANGE:** `test:qa` = 168 passed, 11 failed
+    across 17 scenarios; the S5/S6 `_under` findings are among the 11.
+    **NOTHING IS OWED TO SAM.**
 
 41. **BLOCKED-BY: other-agent — closed; only ARCHIVAL remains, which is the
-    **Full text in `SEAT_INBOX_ARCHIVE_2026-08-13.md`.**
+    seat's edit. CENSUS C6 IS FIXED AND SHIPPED — `cd559cb2`, `progression`, 2026-08-13.
+    THE RESIDUAL IS LOCATED AND HANDED TO §18.**
+
+    **THE DEFECT IS GONE.** Measured either side, same seed, same week, total
+    strength sets: a Thursday declaration used to HALVE the Monday and Tuesday
+    already trained (Mon 14->6, Tue 8->4); it now leaves them (14->13, 8->7)
+    while Thu/Fri stay properly deloaded (5->2, 11->4). Held by
+    `test:deload-week` 44/0 — including *the days INSIDE the window still ARE
+    deloaded*, so the outside cell cannot pass over a week nothing deloaded.
+    Mutation-proven. **A prerequisite shipped first (`9d566afd`): "Wrecked" was
+    getting ONE day instead of seven, which is also why this cell can attribute
+    at all.**
+
+    **⚠ ONE RESIDUAL REMAINS AND IT IS §18's, NOT THIS SEAT'S.** ~1 set/day on
+    days outside the window, traced to `strengthIntensityCeiling = 'Moderate'`
+    (`section18SafetyPolicy:197`, fed by `coachingEngine:789`, read at
+    `derivedWeekContract:338`). **R-063 says that CEILING is correct** — counts
+    are structure, a deload shrinks the work not the count — **so only its SCOPE
+    is wrong: it covers the calendar week instead of the window.** Same class as
+    C6, one layer up. **A week's exposure contract is legitimately week-shaped,
+    so making its ceiling day-aware is a DESIGN call in §18, not a threading
+    change.** Full trace and three refuted theories in
+    `docs/STATUS_PROGRESSION.md`.
+
+    ~~BLOCKED-BY: other-agent — CENSUS C6, OWNED BY `progression`, WHO HAS
+    ALREADY VERIFIED THE PREMISE AND MEASURED THE DEFECT.~~
+    Marked by `desktop` so the scan walks past an item with a live owner rather
+    than counting it as free work. Nothing here is mine and nothing is asked of
+    Sam.
+
+    **OWNED BY `progression`.**
+    **PREMISE VERIFIED AND THE DEFECT IS MEASURED — `progression`, 2026-08-13.**
+    `resolveDayDirective` really does have ZERO callers (one grep hit, its own
+    definition). A Thursday declaration, law vs live: **3 days RETRO-DELOADED
+    (Mon-Wed, already trained or planned when he declared) and 3 days DROPPED
+    (the following Mon-Wed ship at full load).** Table in
+    `docs/STATUS_PROGRESSION.md`. **The build is NOT started** — it moves
+    generated output and owes scenarios+qa either side, and item 34 bars starting
+    a generation change at the tail of a session. All three files verified FREE.
+    **⚠ AND THE PRESCRIBED BUILD IS NECESSARY BUT NOT SUFFICIENT — traced before
+    building against it.** *"The week mode is DERIVED from it"* still yields a
+    WEEK-shaped deload, which is the defect. The chain is week-shaped end to end:
+    `weekDeloaded` -> `doorDeload` (`generateProgram.ts:606`) -> `deloadDoor`
+    (`:730`, `:932`) -> `resolveDoorDeloadPolicy` (`defaultProgram.ts:1677`) ->
+    a `DeloadWeekPolicy`. **The DOSE is resolved once per week.** A window
+    starting on a Thursday needs the POLICY resolution moved inside the per-day
+    loop — which lands on R-034's owner, whose transformation is stated per WEEK.
+    **⚠ AND I WITHDRAW "this is an ARCHITECTURE call" — R-035 ALREADY SETTLES
+    IT and the ask gate caught me. REGISTRY-GREP:** *rolling*, *7-day*,
+    *deload*, *readiness* → R-017, R-034, R-035, R-036, R-038, R-063. **R-035 is
+    verbatim: a ROLLING 7-day window from the declaration day, "NOT THE REST OF
+    THE CALENDAR WEEK"** — the exact defect. **R-034 does NOT collide** (it says
+    what a deload DOES; R-035 says WHEN), so they compose: the transformation
+    applies to the days inside the window. **Nothing to ask Sam, exactly as this
+    item's own first line says.** The remaining work is the per-day dose seam.
+    **🔴 AND A WORSE DEFECT SITS ABOVE THIS ONE — MEASURED, `progression`,
+    2026-08-13. "WRECKED" GETS ONE DAY, NOT SEVEN.** R-038: tired = noted,
+    **wrecked = 7 days deloaded**, cooked = 7 days + optional.
+    `programControlActions:1428` attaches `readinessDeloadFactScope` **only when
+    `level === 'cooked'`**; every other level gets `{kind:'date'}`. Measured
+    through the app's own projection: a wrecked declaration
+    (`deloaded=true, sessionsOptional=false` — the wrecked directive exactly) is
+    deloaded on the declaration day and has **ZERO constraints by day 3**. **A
+    man who says he is wrecked gets one easier day.** Fix: ask the LAW, not a
+    level literal — attach the window whenever the directive is deloaded.
+    **NOT BUILT** (it changes what a live athlete door writes).
+    **REGISTRY-GREP:** rolling/7-day/deload/readiness → R-017, R-034, R-035,
+    R-036, R-038, R-063. **Nothing to ask Sam — R-038 already states it.**
+
+    **✅ AND THAT SEAM IS NOW FOUND AND VERIFIED.** The dose is RESOLVED once per
+    week (`defaultProgram.ts:1677`) but **CONSUMED inside the per-workout loop**
+    (`:2232`, `:2562`, `:2621-2626`, `:2638-2639`, `:2667`), where `cw.dayOfWeek`
+    is in scope and `syntheticDateStr` (`:1779`) returns a REAL date via
+    `weekStartISO`. **BUILD:** thread the readiness window onto `RotationContext`
+    beside `deloadDoor` and gate those six sites on the law module's own
+    `isDateInReadinessDeloadWindow` — giving `readinessIllnessLaw` a live reader.
+    **R-034 is untouched (only WHICH DAYS change), and the gate must apply to the
+    READINESS window only — R-036's illness door is "while ACTIVE", not 7 days,
+    so a null window must mean every day.** Not started: it moves generated
+    output and owes scenarios+qa either side. The small blast
+    radius at the top (`doorDeload` has two uses) is exactly what makes it read
+    as a one-liner. **Next session starts at that decision, not at the wiring.**
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *deload*, *cooked*, *readiness*
+    — R-017 (the 7-day rolling window) is AUTHORED and BUILT at the fact level.
+    **Nothing to ask Sam.**
+
+    **THE DEFECT:** `resolveDayDirective` (`readinessIllnessLaw.ts:201`), whose
+    own comment calls it *"The single read point for both doors"*, has **ZERO
+    callers** — one grep hit, the export itself. The live owner is week-granular
+    (`generationConstraints.ts:182-183` → `generateProgram.ts:551`), so a
+    Thursday "wrecked" call retro-deloads Monday to Wednesday and drops off at
+    Sunday. **Bible `:4960` says a week-granular owner can only honour a rolling
+    window by snapping it to weeks — "the exact behaviour the law rules out".**
+    **BUILD:** the day directive becomes the read point; the week mode is DERIVED
+    from it. **PROVE IT:** a Thursday declaration leaves Mon-Wed untouched and
+    reaches the following Wednesday.
 
 42. **BLOCKED-BY: other-agent — CENSUS C8. PREMISE VERIFIED 4/4 BY `desktop`; THE
     BUILD WAITS ON THE GOLDEN'S OPEN REGRESSION.**
