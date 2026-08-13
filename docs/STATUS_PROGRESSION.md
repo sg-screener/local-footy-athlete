@@ -19,6 +19,51 @@ write** and was left alone.
 
 ## STATUS
 
+### ITEM 41 / CENSUS C6 — ASSIGNED TO THIS SEAT. PREMISE VERIFIED, DEFECT MEASURED, BUILD NOT STARTED
+
+**THE ITEM'S PREMISE IS TRUE AND I CHECKED IT RATHER THAN TAKING IT.**
+`resolveDayDirective` (`rules/readinessIllnessLaw.ts:201`) — whose own comment
+calls it *"The single read point for both doors"* — has **exactly one grep hit
+in the whole repo: its own definition. ZERO callers.** It is a fully written,
+correct-looking owner that nothing asks. The live owner is week-granular
+(`generationConstraints.ts` `weekDeloaded` / `weekMode`).
+
+**THE DEFECT IS NOW A TABLE, NOT A SENTENCE.** A Thursday low-readiness call,
+law (R-017/R-035: a rolling 7 days from the declaration day) against the live
+week-granular owner:
+
+| date | day | law (rolling 7d) | live (week) | |
+| --- | --- | --- | --- | --- |
+| 2026-07-13 | Mon | false | **true** | ⚠ retro-deloaded |
+| 2026-07-14 | Tue | false | **true** | ⚠ retro-deloaded |
+| 2026-07-15 | Wed | false | **true** | ⚠ retro-deloaded |
+| 16–19 | Thu–Sun | true | true | agree |
+| 2026-07-20 | Mon | **true** | false | ⚠ dropped |
+| 2026-07-21 | Tue | **true** | false | ⚠ dropped |
+| 2026-07-22 | Wed | **true** | false | ⚠ dropped |
+
+**THREE DAYS DELOADED THAT THE LAW DOES NOT TOUCH, AND THREE DAYS THE LAW
+DELOADS THAT SHIP AT FULL LOAD.** The retro half is the worse one for the
+athlete: Monday to Wednesday were already trained or already planned when he
+declared on Thursday. **Bible `:4960` is exact — a week-granular owner can only
+honour a rolling window by snapping it to weeks, "the exact behaviour the law
+rules out".**
+
+**BUILD NOT STARTED, DELIBERATELY.** It changes generated output and owes
+`test:scenarios` + `test:qa` either side; item 34 says in as many words that
+starting a generation change at the tail of a session **"is the documented way
+the last two nights went wrong"**, and this turn is long. **The expensive half —
+verifying the premise and pricing the defect — is done and is above.** The three
+files are FREE (`readinessIllnessLaw.ts`, `generationConstraints.ts`,
+`generateProgram.ts`, all `cmp`-verified against `HEAD`).
+
+**NEXT SESSION STARTS AT THE BUILD, NOT THE HUNT:** make `resolveDayDirective`
+the read point and DERIVE the week mode from it. **Its proof is already written
+in the item** — a Thursday declaration leaves Mon–Wed untouched and reaches the
+following Wednesday — and the probe above is the shape of the cell.
+**NOTHING IS OWED TO SAM:** R-017 is authored and built at the fact level; this
+is engineering.
+
 ### ITEM 38 / R-077's ESCAPE HATCH — one defect FIXED, one measurement VOID
 
 **THE ORDER (item 38, part 3):** *"Verify the athlete CAN add a strength session

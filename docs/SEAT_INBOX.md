@@ -37,6 +37,15 @@ his instruction is standing authority, not history.**
 41. **CENSUS C6 — DELOAD IS OWNED BY THE WEEK, WHICH SAM'S OWN LAW FORBIDS.**
 
     **OWNED BY `progression`.**
+    **PREMISE VERIFIED AND THE DEFECT IS MEASURED — `progression`, 2026-08-13.**
+    `resolveDayDirective` really does have ZERO callers (one grep hit, its own
+    definition). A Thursday declaration, law vs live: **3 days RETRO-DELOADED
+    (Mon-Wed, already trained or planned when he declared) and 3 days DROPPED
+    (the following Mon-Wed ship at full load).** Table in
+    `docs/STATUS_PROGRESSION.md`. **The build is NOT started** — it moves
+    generated output and owes scenarios+qa either side, and item 34 bars starting
+    a generation change at the tail of a session. All three files verified FREE.
+    **Next session starts at the build, not the hunt.**
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *deload*, *cooked*, *readiness*
     — R-017 (the 7-day rolling window) is AUTHORED and BUILT at the fact level.
     **Nothing to ask Sam.**
