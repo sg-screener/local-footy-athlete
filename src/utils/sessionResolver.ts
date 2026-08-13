@@ -2240,6 +2240,16 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
       ...day,
       workout: {
         ...day.workout,
+        // ⚠ THE CLUB HALF OF A COMBINED DAY IS NOT REMOVED HERE, AND THAT IS
+        // DELIBERATE AFTER TWO MEASURED FAILURES. The card's words come from
+        // `getSessionComponents`, which reads the team part from the NAME and
+        // the strength part from `isTeamDay`. On a SYNTHETIC day, clearing both
+        // gives ["strength"] — the right answer, and `test:away-flow` [16]-[16d]
+        // pins that mechanism. **On the REAL day it does not:** the card came
+        // back reading "Team Training" alone, his gym work gone, which is the
+        // name-only outcome — so the real workout carries its team identity
+        // somewhere these two fields do not reach (its `sections`, most likely).
+        // **Shipping it would take his session off the card to hide a label.**
         name: team.displayName ?? day.workout.name,
         workoutType: (team.displayWorkoutType ?? day.workout.workoutType) as typeof day.workout.workoutType,
         exercises: team.renderableExercises,

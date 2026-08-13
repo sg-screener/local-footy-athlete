@@ -597,6 +597,45 @@ async function main(): Promise<void> {
     { source: gameAway?.source, indicator: gameAway?.indicator,
       type: gameAway?.workout?.workoutType });
 
+  // ── [16] THE CARD'S WORDS — Sam: *"it shouldn't show + team training"* ──
+  //
+  // THE CARD DOES NOT READ `workout.name`. It renders the visible projection's
+  // PARTS, and `getSessionComponents` decides those: the TEAM part comes from
+  // `hasTeamTraining || the NAME`, the STRENGTH part from `isTeamDay`. **So
+  // clearing one alone is worse than clearing neither** — measured on glass
+  // twice — and this cell holds the pair rather than either half.
+  const { getSessionComponents } = require('../utils/sessionComponents') as any;
+  const clubDay: any = {
+    id: 'w-club', name: 'Strength + Team Training', workoutType: 'Strength',
+    isTeamDay: true,
+    exercises: [
+      { exercise: { name: 'Back Squat' }, prescribedSets: 3 },
+      { exercise: { name: 'Bench Press' }, prescribedSets: 3 },
+    ],
+  };
+  const kindsOf = (workout: any): string[] =>
+    (getSessionComponents(workout) ?? []).map((component: any) => String(component.kind));
+  run('[16] a club day shows BOTH parts when he is home',
+    JSON.stringify(kindsOf(clubDay)) === JSON.stringify(['strength', 'team_training']),
+    kindsOf(clubDay));
+  const awayDay = {
+    ...clubDay,
+    isTeamDay: false,
+    name: 'Strength',
+  };
+  run('[16b] and only his own half while he is away',
+    JSON.stringify(kindsOf(awayDay)) === JSON.stringify(['strength']),
+    kindsOf(awayDay));
+  // THE TWO NEAR-MISSES, PINNED SO NOBODY SHIPS EITHER ONE ALONE.
+  run('[16c] clearing the flag alone changes nothing',
+    JSON.stringify(kindsOf({ ...clubDay, isTeamDay: false }))
+      === JSON.stringify(['strength', 'team_training']),
+    kindsOf({ ...clubDay, isTeamDay: false }));
+  run('[16d] clearing the name alone LOSES his gym work',
+    JSON.stringify(kindsOf({ ...clubDay, name: 'Strength' }))
+      === JSON.stringify(['team_training']),
+    kindsOf({ ...clubDay, name: 'Strength' }));
+
   console.log(`\naway flow: ${passed} passed, ${failed} failed`);
   if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }
   totalsPrinted(failures.length);
