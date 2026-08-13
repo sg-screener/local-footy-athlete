@@ -15,6 +15,51 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+48. **SAM RULED BOTH GAPS, AND BOTH ANSWERS ARE "DON'T INVENT ANYTHING".
+    R-083, R-084. 2026-08-13.**
+
+    **OWNED BY `terminal`** (it asked).
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *bodyweight*, *vertical*,
+    *single leg hip*, *accessory* — R-014 (coverage), R-080 (single-leg knee
+    substitution). **Neither covers a pattern that CANNOT be filled. New.**
+
+    **R-083 — A BODYWEIGHT ATHLETE SIMPLY DOES NOT GET SOME PATTERNS. HIS
+    WORDS:**
+    > *"ya can't do much with overhead pushing or pull or even horizontal pulling
+    > without equipment - i can't account for everyone and if they want to train
+    > properly they'll sign up to a gym"*
+
+    **SO: DO NOT AUTHOR A BODYWEIGHT VERTICAL PUSH OR PULL. DO NOT SUBSTITUTE
+    ONE EITHER.** The remaining impossible lifts (Overhead Press, Pull-Ups on a
+    kit with no bar — 18 of an original 33) are **REMOVED, not replaced.** A
+    bodyweight-only athlete gets a shorter upper day and that is the honest
+    answer.
+    **⚠ AND THE APP MUST SAY SO RATHER THAN QUIETLY SHRINK.** This is the one
+    case where R-014's *"a short session is a session missing a pattern"* is NOT
+    a defect — it is the kit. **Name the cause in the athlete's own words**
+    (the shortfall sentence already branches by cause, R-029) — *"your kit has no
+    way to train this"*, not silence and not a filler exercise.
+    **THIS ALSO CLOSES THE HORIZONTAL PULL** — he names it in the same breath.
+    Inverted Row needs rings/TRX or a bar; on true bodyweight there is no
+    horizontal pull either.
+
+    **R-084 — A SINGLE-LEG HIP THRUST IS AN ACCESSORY. HIS WORDS:** *"single leg
+    hip thrust is an accessory"*.
+    **SO THE EXISTING TAG IS CORRECT** (`isolation_lower`, unilateral) — **do not
+    re-tag it to `hinge` as the seat suggested.** That suggestion is withdrawn.
+    **THE SINGLE-LEG HIP POOL IS ONE EXERCISE — Single-Leg RDL — AND SAM IS NOT
+    ADDING MORE.**
+    **CONSEQUENCE THE BUILD MUST HANDLE:** the slot checker must NOT report a
+    one-exercise pool as a coverage defect, and the variety-rotator must not
+    treat "the same exercise every leg day" as a fault here. **There is one
+    right answer for that slot and it is meant to repeat.** Anything that tries
+    to rotate it will reach for a squat again — the exact failure R-080 fixed.
+
+    **PROVE IT:** a bodyweight-only upper day contains no vertical push, no
+    vertical pull and no horizontal pull, **and says why**; a leg day carries
+    Single-Leg RDL every time without the rotator objecting.
+
+
 47. **BLOCKED-BY: other-agent — SAM FINISHED THE EQUIPMENT MAP, AND CONDITIONING
     NEEDS NO MAP AT ALL. R-082. 2026-08-13.**
 
