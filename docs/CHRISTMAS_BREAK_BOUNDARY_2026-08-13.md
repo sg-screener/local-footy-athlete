@@ -147,8 +147,21 @@ and no rule about which wins.
    floor IS the month it wants. Fixed with `initialMonthISO`, re-verified on
    glass (it opens on December), held by `[10h]`.
    **STILL NOT SEEN: the club actually COMING OFF a week inside the break.**
-   Paging to 21-27 December tripped the dev-harness cold-start gate. The
-   behaviour is held by `[7b]`, `[9]` and `[11c]`; the pixel is owed.
+   The behaviour is held by `[7b]`, `[9]` and `[11c]`; the pixel is owed.
+   **⚠ §8 SECOND-WALL LAW — THIS WALL HAS NOW BEEN HIT THREE TIMES AND I HAVE
+   STOPPED HAND-DRIVING IT.** Every attempt dies the same way: seed, answer the
+   question, tap the week-forward arrow, and the dev-harness cold-start gate
+   fires (*"DevE2EClock reload mismatch: clock receipt has no active
+   checkpoint"*). **The shape is identical each time — a reload after a
+   COMMITTED answer, on the navigation that follows it** — so a fourth manual
+   attempt is the thing the law forbids.
+   **THE ALTERNATIVE, NAMED RATHER THAN ATTEMPTED AT THE END OF A LONG TURN:** a
+   Maestro flow under `.maestro/`, run through `scripts/dev-e2e/run-maestro-ios.sh`,
+   that seeds `christmas-break-ask`, answers the December question and asserts
+   the club is absent from the week of the 21st. **A flow does not interleave
+   with a human's taps, does not depend on my point arithmetic, and leaves a
+   REPEATABLE receipt instead of a screenshot** — which is what this pixel should
+   have been from the start.
    **ALSO STILL OWED: the January question**, which needs a second seed anchored
    in the new year.
 2. **THE SCOPED-REGEN PATH.** `[10e]`-`[10g]` prove the break does not drag a
