@@ -247,16 +247,38 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       ],
     },
     accessory: {
+      // ── R-080: A LUNGE MAY NOT ROTATE INTO A SQUAT ──────────────────────
+      //
+      // **Sam, 2026-08-13, on a bodyweight leg day printing the same squat
+      // twice: *"Bodyweight leg day gets more single-leg knee work"*.**
+      //
+      // THIS SLOT MIXED TWO OF HIS OWN LADDER SLOTS. `:227` names `squat` and
+      // `single_leg_knee` as SEPARATE things a lower day owes, and this one pool
+      // held both — so `applyPoolRotation` turned single-leg work into a
+      // bilateral squat. Measured, bodyweight off-season:
+      //
+      //     ROT Reverse Lunges -> Bodyweight Squat  [squat/accessory]
+      //     ROT Back Squat     -> Bodyweight Squat  [squat/accessory]
+      //
+      // **Two rows became the SAME squat, and one of them had been a lunge.**
+      // The day shipped `Bodyweight Squat · … · Bodyweight Squat · … · Back
+      // Squat` — three squat-pattern rows, no single-leg knee work, which is the
+      // exact slot his own ladder was missing most (8 of 44 days in the sweep).
+      //
+      // THE GROUPS ARE HIS LADDER, NOT A NEW OPINION, and they reuse the
+      // `PoolEntry.group` rule already built for the arm/shoulder pool: rotation
+      // varies WITHIN a group and never across one. A lunge now rotates to
+      // another single-leg knee movement, and the squat stays a squat.
       slot: 'squat', role: 'accessory', entries: [
-        { name: 'Walking Lunges',         loadRatio: 0.45 },
-        { name: 'Bulgarian Split Squats', loadRatio: 0.40 },
-        { name: 'Reverse Lunges',         loadRatio: 0.45 },
-        { name: 'Step Ups',               loadRatio: 0.40 },
-        { name: 'Goblet Squat',           loadRatio: 0.35 },
-        { name: 'Leg Press',             loadRatio: 0.90 },
-        { name: 'Single-Leg Leg Press',   loadRatio: 0.50 },
-        { name: 'Single-Leg Squat (to Box)', loadRatio: 0.30 },
-        { name: 'Bodyweight Squat',       loadRatio: 0.00 },
+        { name: 'Walking Lunges',         loadRatio: 0.45, group: 'single_leg_knee' },
+        { name: 'Bulgarian Split Squats', loadRatio: 0.40, group: 'single_leg_knee' },
+        { name: 'Reverse Lunges',         loadRatio: 0.45, group: 'single_leg_knee' },
+        { name: 'Step Ups',               loadRatio: 0.40, group: 'single_leg_knee' },
+        { name: 'Single-Leg Leg Press',   loadRatio: 0.50, group: 'single_leg_knee' },
+        { name: 'Single-Leg Squat (to Box)', loadRatio: 0.30, group: 'single_leg_knee' },
+        { name: 'Goblet Squat',           loadRatio: 0.35, group: 'bilateral_squat' },
+        { name: 'Leg Press',             loadRatio: 0.90, group: 'bilateral_squat' },
+        { name: 'Bodyweight Squat',       loadRatio: 0.00, group: 'bilateral_squat' },
       ],
     },
   },

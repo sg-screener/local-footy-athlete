@@ -412,6 +412,26 @@ two qualities on a team night.
 carrying flying sprints stays ONE hard day against R-007 and Bible `:118`.
 Reported as owed rather than assumed.
 
+**R-080** · *"Bodyweight leg day gets more single-leg knee work"* (2026-08-13) ·
+**A LUNGE MAY NOT ROTATE INTO A SQUAT.** Asked whether a bodyweight leg day
+should repeat the row, drop it, or ship short, **he refused all three and named
+the slot instead** — the day was missing single-leg knee work and that is what
+belongs there. · `BUILT test:pools` — `exercisePoolsStrength.ts`
+`squat/accessory` held BOTH of his `:227` ladder slots in one list (bilateral
+squats AND single-leg knee work), so `applyPoolRotation` swapped freely between
+them. Measured, bodyweight off-season: `ROT Reverse Lunges -> Bodyweight Squat`
+and `ROT Back Squat -> Bodyweight Squat` — **two rows became the SAME squat and
+one of them had been a lunge.** Split into `single_leg_knee` /
+`bilateral_squat` using the `PoolEntry.group` rule already built for the
+arm/shoulder pool; rotation varies within a group and never across one.
+**ATHLETE-VISIBLE, MEASURED EITHER SIDE:**
+`Bodyweight Squat · Glute Bridge · **Bodyweight Squat** · Single Leg RDL · Leg
+Extension · Back Squat` -> `Bodyweight Squat · Glute Bridge · **Walking Lunges** ·
+Single Leg RDL · Leg Extension · Back Squat`. The duplicate is gone and the day
+gains the single-leg knee slot — **the slot the coverage sweep measured as
+most-missed (8 of 44 days).** `test:pools` 496/0, cells assert a lunge never
+leaves its group across 12 cycles and that a bilateral squat never enters it.
+
 **R-015** · *"On strength days, 2-3 accessory exercises are paired with mobility
 exercises as SUPERSETS by default"* (+ 6 further clauses,
 `MOBILITY_PAIRING_RULINGS_2026-07-31.md`) · Main lifts are NEVER paired; the

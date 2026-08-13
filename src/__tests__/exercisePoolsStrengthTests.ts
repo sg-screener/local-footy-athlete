@@ -1106,6 +1106,36 @@ section('Rotation stays inside its muscle group');
   assert(seen.size > 1,
     `grouping froze rotation — Bicep Curl (Barbell) never moved across 12 cycles (${JSON.stringify([...seen])})`);
 
+  // ── R-080: A LUNGE MAY NOT ROTATE INTO A SQUAT ─────────────────────────
+  //
+  // **Sam, 2026-08-13, on a bodyweight leg day printing the same squat twice:
+  // *"Bodyweight leg day gets more single-leg knee work"*.** `squat/accessory`
+  // held BOTH of his ladder slots — bilateral squats and single-leg knee work —
+  // so rotation turned a lunge into a squat. Measured before the fix:
+  //   ROT Reverse Lunges -> Bodyweight Squat   and   ROT Back Squat -> Bodyweight Squat
+  // Two rows became the SAME squat, one of them from a lunge.
+  for (const lunge of ['Reverse Lunges', 'Walking Lunges', 'Bulgarian Split Squats', 'Step Ups']) {
+    assert(groupOf(lunge) === 'single_leg_knee',
+      `${lunge} should be group 'single_leg_knee', got ${String(groupOf(lunge))}`);
+    let crossed: string | null = null;
+    for (let cycle = 1; cycle <= 12 && !crossed; cycle += 1) {
+      for (const weekInBlock of [1, 2, 3, 4]) {
+        const out = applyPoolRotation(lunge, { miniCycleNumber: cycle, weekInBlock } as RotationContext);
+        if (groupOf(out) !== 'single_leg_knee') { crossed = `${lunge} -> ${out}`; break; }
+      }
+    }
+    assert(crossed === null, `R-080: single-leg knee work rotated into a squat: ${crossed ?? ''}`);
+  }
+  // AND THE BILATERAL SIDE HOLDS ITS OWN — the non-vacuity. If everything were
+  // one group the loop above would pass while proving nothing.
+  assert(groupOf('Bodyweight Squat') === 'bilateral_squat',
+    `Bodyweight Squat should be 'bilateral_squat', got ${String(groupOf('Bodyweight Squat'))}`);
+  for (let cycle = 1; cycle <= 8; cycle += 1) {
+    const out = applyPoolRotation('Bodyweight Squat', { miniCycleNumber: cycle, weekInBlock: 1 } as RotationContext);
+    assert(groupOf(out) === 'bilateral_squat',
+      `R-080: a bilateral squat rotated into single-leg work: Bodyweight Squat -> ${out}`);
+  }
+
   // AN UNGROUPED SLOT IS UNTOUCHED — every squat anchor is a squat, so it needs
   // no groups and must keep whole-slot rotation.
   assert(groupOf('Back Squat') === undefined,
