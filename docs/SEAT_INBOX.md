@@ -875,8 +875,26 @@ his instruction is standing authority, not history.**
    own regression.** Unblocks the moment that golden is attributed.
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 26).**
 
-27. **C1's MECHANISM IS NOW EXACT, AND ONE OF ITS CONCLUSIONS IS OFF-SEASON-ONLY
-   — `audit`, 2026-08-13 (`9d871c20`, `769d1922`). C1 AND 28-C1 ARE ONE DEFECT.**
+27. **CLOSED BY R-078 — SAM RULED *"leave it"*. THE "CAN FIRE" PARAGRAPH BELOW IS
+   NOT PERMISSION AND MUST NOT BE READ AS ONE. C1's MECHANISM IS NOW EXACT, AND
+   ONE OF ITS CONCLUSIONS IS OFF-SEASON-ONLY — `audit`, 2026-08-13 (`9d871c20`,
+   `769d1922`). C1 AND 28-C1 ARE ONE DEFECT.**
+
+   **CITES R-078**, registered `5105b634`. **I wrote the analysis below and I am
+   closing it, because it is the fifth attempt waiting to happen.** It ends by
+   observing that in pre-season with no club there ARE empty days, so Sam's
+   literal *"place if there is room"* **could** fire. **He was then shown that
+   exact arithmetic — 2.0-2.75 conditioning slots against 3-4 categories — and
+   the cost of the alternative, and he answered *"leave it"*.**
+
+   **SO THE MEASUREMENT STANDS AND THE INVITATION IS WITHDRAWN.** Everything
+   below is still true: the rank is not settable from the pool, and
+   substitution-only was off-season-only. **None of it is a reason to build.**
+   **HELD BY A CELL, NOT BY THIS PARAGRAPH** —
+   `test:standalone-conditioning-ownership` carries 4 R-078 cells, non-vacuity
+   first, and forcing `cod_decel` to the front of the candidate list reds it at
+   `cod: 6`. **A fifth attempt now goes red in thirty seconds instead of being
+   reverted in a day.**
    **CONFIRMED, INDEPENDENTLY:** C1's *"COD appears every time… on day 3 ranked
    SECOND"* reproduces exactly — I measured `out=["aerobic_base","cod_decel",
    "tempo"]` among 8 shapes over 189 calls. **`first-match-wins` + an
