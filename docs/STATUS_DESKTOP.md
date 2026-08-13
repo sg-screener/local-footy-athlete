@@ -88,9 +88,44 @@ path in ONE command.**
   *"your Saturday Rest Day is the wrong case"*. **`'none'` and `'rest'` are two
   wordings of one hole.**
 
+### R-075 — WHERE IT ACTUALLY LANDED (later, same session)
+
+**THE DAY HALF IS DONE AND ON GLASS.** A vacated Saturday reads *"Conditioning —
+2 exercises"* (`400 m Repeats`, CORE); Sunday held nothing and correctly stays
+*"Rest Day"*. **No new machinery** — `_resolveDateRaw` already answered *"a game
+slot was freed"*; it was gated to a TEMPLATE game with no calendar mark, and an
+away-vacated fixture is a MARKED one.
+
+**MY FIRST BUILD PASSED ITS OWN CELL AND WAS STILL WRONG.** It filled the day with
+`prehab_accessories` — a substitution in SHAPE, not in KIND: it replaced his
+running with arm work. **A cell about "carries work" cannot catch a wrong-kind
+fill; [15e] now asserts `workoutType`.** Same lesson as the row-count cell, one
+day later: assert the property he actually named.
+
+**THE BLOCK ARITHMETIC IS MEASURED AND IT SPLITS CLEANLY** (2 weeks, 8 club
+nights, `test:away-flow` [13g]/[13h]):
+
+| | home | away |
+| --- | --- | --- |
+| club sessions | 8 | **0** |
+| conditioning | 4 | **12** |
+| strength sessions | 20 | **16** |
+| strength rows | 79 | **72** |
+
+**CONDITIONING HOLDS EXACTLY — 8 removed, 8 back, one for one**, and nobody built
+it for this case; it falls out of the plan-side club filter. **STRENGTH IS
+BREACHED — 20 -> 16.** Eight COMBINED club days were removed and only four of
+their gym halves came back. **That is the whole remaining unit of R-075.**
+**The first version of that measurement was WRONG-UNIT** — it tallied
+`workoutType`, which reads *"Mixed"* as neither strength nor conditioning when it
+is both. Counting EXPOSURES is what turned a confusing tally into two clean arms.
+
 ### START HERE NEXT
 
-- **THE ONE UNIT BEHIND BOTH ITEM 28 AND R-075:** a club-less week's §18 contract
+- **R-075's STRENGTH CONSERVATION — the first thing to build.** Generation-side:
+  the plan must keep the strength count when club days go. Owes `test:scenarios`
+  + `test:qa` either side. **Do not loosen [13h] to cover it.**
+- **THE ONE UNIT BEHIND BOTH ITEM 28 AND R-075's WEEK HALF:** a club-less week's §18 contract
   declares more core conditioning than a bye-build delivers, and the 48-candidate
   repair search cannot close it. **Both away routes dead-end there.** R-075 is
   filled at the DAY, not the WEEK.
