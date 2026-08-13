@@ -110,7 +110,35 @@ paid it. **Not yet done. Small.**
   `lawRegistry.ts:1277` had been claiming as `guarded` while the cells themselves
   were uncommitted.
 
-### ITEM 34 — THE BEFORE-MEASUREMENT IS TAKEN. Start at the build, not the probe.
+### ITEM 34 — THE DRIFT HALF IS BUILT (`9b19244f`). THE COMPOSER HALF IS NOT.
+
+**WHAT LANDED:** `patternsCompletingLadder` in `sessionSlotCoverage.ts`, read by
+`main_pattern_drift`. Drift is now measured against **the day's ladder**, not its
+main lift, so the fallback's hinge survives on a squat-led day. Away drift drops
+**1 -> 0**; `test:scenarios` 64/1 in BOTH arms (control-run, pre-existing
+`GAME-MOVE-SAT-TO-FRI`); typecheck 459, no regression. Mutation: strip the ladder
+expansion and 3 cells red.
+
+**⚠ THE AWAY SUITE DOES NOT HOLD THIS FIX.** Under the mutant `test:away-flow`
+stays GREEN at 46/0, because `[13d]` is a one-sided floor and losing the hinge
+does not push the away week below the home week. **`test:slot-coverage` is the
+only suite that reds.** Do not read away's green as coverage of this.
+
+**R-014 STAYS `UNENFORCED`, HONESTLY.** It asks that a session be COMPOSED by
+pattern; nothing composes yet. This removed the thing that was DESTROYING
+coverage — a step toward the law, not the law. **The composer is the next unit**,
+and R-014's own row names its blocker: the pattern lookup is an exact-name map
+and 20 distinct shipped names (151 rows) resolve to NOTHING, so a composer cannot
+be built on an oracle that cannot see its own rows. **Fix the lookup first.**
+
+**I ALSO WROTE A SECOND COPY OF SAM'S THREE REDS AND DELETED IT.** Section `[2]`
+of `sessionSlotCoverageTests.ts` already held all three from the earlier R-014
+work. Caught by reading the file header instead of the diff — one-predicate-many-
+copies, avoided by inches.
+
+---
+
+### ITEM 34 — THE BEFORE-MEASUREMENT (kept; it is what made the fix cheap)
 
 **THE DRIFT BRANCH FIRES ZERO TIMES ACROSS THE WHOLE QA CORPUS.** Instrumented
 `main_pattern_drift` in `workoutCanonicalisation.ts` and ran `test:qa`:
