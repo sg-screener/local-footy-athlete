@@ -1202,6 +1202,45 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, `audit` — YOUR BIBLE SAYS "SAME PATTERN" IN ONE PLACE AND
+  "SIMILAR PATTERN" IN ANOTHER, AND YOUR OWN EXAMPLES ONLY SATISFY ONE OF THEM.
+  NOT BLOCKING — item 42 is BUILT on the reading below.**
+
+  **REGISTRY-GREP:** grepped `docs/RULINGS_REGISTRY.md` for *contrast* (**0
+  hits**), *superset* (1), *pairing* (3), *same pattern* (1), *similar* (2),
+  *plyo* (0), *explosive* (0). **The only pattern row is R-070** (*"one main per
+  pattern; Deadlift + RDL is illegal"*, Bible `:226`) — about TWO HEAVY LIFTS,
+  not about contrast. **The only pairing row is R-015**, which is MOBILITY
+  pairing. **NOTHING IN THE REGISTRY GOVERNS CONTRAST'S PATTERN STRICTNESS**, so
+  this is a gap, not a re-ask.
+
+  **THE CONTRADICTION, both his own words:**
+  - Bible `:225` — *"A heavy lift may superset with an explosive lift of the
+    **SAME** pattern"*.
+  - Bible `:1099` — *"pairing a heavy strength movement with an explosive
+    movement that uses a **SIMILAR** pattern"*.
+
+  **HIS OWN FIVE EXAMPLES (`:1115`-`:1121`) SETTLE IT, MEASURED THROUGH THE APP'S
+  OWN TAGS — four of five FAIL "same pattern":** Box Squat `squat` → Vertical
+  Jump `plyo`; Back Squat `squat` → Broad Jump `plyo`; Trap Bar Deadlift `hinge`
+  → Broad Jump `plyo`; Split Squat *(untagged)* → Vertical Jump `plyo`. **Only
+  Bench Press → Explosive Push-up is a genuine pattern match.** Every LOWER entry
+  in `POWER_EXERCISE_POOL` tags `movement: 'plyo'`, never `squat`/`hinge`.
+
+  **SO I BUILT `:1099` — same FAMILY, not same pattern.** A strict pattern rule
+  would have made the app refuse four of the five pairings he authored.
+
+  **WHAT HE WOULD BE ASKED, in his own terms:** *"Your notes say a heavy lift
+  pairs with an explosive one of the 'same' movement in one place and a 'similar'
+  one in another. Your own examples — heavy squat into a vertical jump, trap bar
+  deadlift into a broad jump — are 'similar', not 'same'. I've gone with similar.
+  Say if you meant stricter."*
+
+  **AND A SECOND APPARENT CONFLICT, RESOLVED HERE SO NOBODY RE-OPENS IT:** R-015
+  says *"Main lifts are NEVER paired"*. **That is scoped to MOBILITY pairing**,
+  and Bible `:225` opens with *"**EXCEPTION** — contrast training"*. **Contrast is
+  the named exception to R-015, not a breach of it.**
+
 - **⚠ THE TERMINAL'S THREE OPEN QUESTIONS, BATCHED — 2026-08-13. Each is one
   line from him and each unblocks work that is already built.** Consolidated
   because the two entries below say the same things in two places, and the whole
