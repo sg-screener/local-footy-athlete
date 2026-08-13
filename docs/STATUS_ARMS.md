@@ -206,3 +206,80 @@ different category**, which the 4A ruling forbids.
 
 **SO THE ONE-LINE STATE OF COD: the gate is right, the window is open, and the
 placement ranking never reaches it.**
+
+---
+
+## 2026-08-13 — STANDING ITEM 13, PERFORMED THIS STOP
+
+**`LAW REGISTRY: 125 rows, 101 guarded, 24 UNENFORCED`** — measured with
+`npm run test:law-registry`, which counts ROWS, **not** `grep -c`, which item 13
+records as sending every seat one high. **The count FELL: 27 → 26 → 24.**
+
+**AND THE OTHER RATCHET WAS PAID IN THE SAME TURN:** `UNENFORCED_CEILING`
+13 → 10 in `rulingRegistryTests.ts`, in the commit that paid it (`96a6dbac`),
+because R-054 stopped being unenforced and `[2]`'s second assertion — *a ceiling
+that outlived its debt is a lie the other way* — **caught me on my own commit.**
+That is the instrument working, and it is worth saying so rather than quietly
+editing the number.
+
+**I did NOT re-derive `LAW-doc-truth`**, which is the row this turn's findings
+point at. It is already PRICED and **refuted by scope** by whoever did it (item
+13): restricted to living docs the obvious gate is green and empty, every real
+violation is in archived docs where the citation was true when written, and what
+is actually wanted is a RENAME MAP over 6 script names. **Reading that before
+building saved the unit.**
+
+---
+
+## ⚠ 2026-08-13 — FOURTH SIGHTING IN ONE DAY: A ROW THAT SAYS `UNENFORCED` OVER SHIPPED WORK
+
+**This is a loop, not four accidents, and it has now cost or nearly cost four
+agents an hour each.**
+
+| # | row | what it sent an agent to do | found by |
+| --- | --- | --- | --- |
+| 1 | R-004 | rebuild the Christmas ask | `desktop` |
+| 2 | R-052 | rebuild the Gunshow composition | `desktop` |
+| 3 | R-003 | build a dated span that already shipped | **me, this turn** (item 55) |
+| 4 | R-052 again | a second seat, `gunshow`, was assigned my item 59 **87 minutes after I closed it** and nearly rebuilt it | `gunshow`, who controlled first |
+
+**THE DESKTOP NAMED THE HOLE AND IT IS STILL OPEN:** gate rule 2 guards ONE
+direction — *no work starts on a `BUILT` row without opening the enforcer and
+finding it ABSENT.* **Nothing guards the other.** A row saying `UNENFORCED` over
+finished work is worse than a missing row: **it is an ORDER to redo the work**,
+and the ask gate reads these rows to decide what reaches Sam.
+
+**THE PRICED ROUTE, AND I AM NOT TAKING IT — OWNER: THE SEAT** (it owns the
+registry's format, and 24 rows would have to gain a field):
+**every `UNENFORCED` row carries a dated `LAST-VERIFIED:` stamp, and
+`test:ruling-registry` reds on any that has none.** That forces the reverse check
+to be RE-DONE and DATED rather than inherited from whoever wrote the row. It is
+mechanical, non-vacuous and mutation-provable, unlike the semantic version.
+
+**WHY NOT NOW, AND IT IS NOT reluctance:** it edits 24 rows of
+`RULINGS_REGISTRY.md` while **four seats are writing rows into that exact file
+this hour** (`readiness` committed two rows minutes ago and carried my R-003
+correction into `1891ff29` with them). **A broad shared-file edit at a session
+tail is the documented way the last two nights went wrong.**
+
+**AND THE CHEAP HALF IS ALREADY DONE BY ACCIDENT:** the `gunshow` seat did not
+rebuild my work, because it opened `96a6dbac` and `docs/STATUS_ARMS.md` first.
+**The control cost it two minutes and saved it an hour.** Until the gate exists,
+that habit is the whole defence.
+
+---
+
+## THE QUEUE, AT MY STOP — AND WHY I AM NOT MARKING TWO ITEMS BLOCKED
+
+Every item under `## Unprocessed` is CLOSED, BLOCKED, or **OWNED BY A LIVE
+SEAT**: 50 is the seat's own index; 51 + 52 are `patterns`, which committed two
+hours ago and has `src/__scratch_patterns__/` in the tree right now; 53 closed
+(`readiness`); 54 blocked-external; 55 + 59 closed by me this turn; 56 blocked;
+57 + 58 are `readiness`; 60 is `audit`; 49 blocked.
+
+**I did not write `BLOCKED-BY:` on 51 or 52.** They are not blocked — another
+seat is doing them, and **OWNED IS NOT BLOCKED** is the rule added to `CLAUDE.md`
+this morning precisely because 15 of 19 items wore the wrong word. The terminal
+faced the identical trap on items 1 and 13 and refused for the same reason:
+*"writing a false marker to buy my own exit is exactly that."* **I walked past
+them instead, which is what the rule says to do.**
