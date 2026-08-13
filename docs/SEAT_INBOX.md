@@ -1896,6 +1896,23 @@ his instruction is standing authority, not history.**
    files they touch are mid-flight with another agent.**
 
 13. **STANDING, EVERY STOP — KEEP THE UNENFORCED LAW COUNT FALLING.**
+    **✅ PERFORMED AGAIN THIS STOP (`laws`, 2026-08-13): `LAW REGISTRY: 125 rows,
+    103 guarded, 22 UNENFORCED` — down from 24. Two rows flipped, each to the
+    gate the row ITSELF prescribed; both mutation-checked with a liveness cell.**
+    **⚠ A THIRD GUARD WAS BUILT AND ITS ROW DELIBERATELY NOT FLIPPED.**
+    `test:law-registry` now checks that every commit a receipt CITES exists —
+    nothing read the `receipt` field before. But `LAW-doc-truth` reasons in its
+    own text that a partial doc gate is refuted by scope, and 125 receipts is
+    not 451 docs, so counting it would be the failure that row predicted.
+    **THE REMAINING 22 SORT INTO THREE KINDS, and only the first is worth a
+    cell:** rows whose prescription nobody has built yet (`LAW-mock-first`,
+    `LAW-L8-reporting-calibration`, `LAW-judgment-ledger` — the last blocked
+    because the ledger doc does not exist); rows whose cheap gate is **refuted
+    IN WRITING** (`LAW-green-gate-is-a-claim`, `LAW-doc-truth`,
+    `LAW-L9-checkpoint-discipline`) — **do not re-derive these**; and genuinely
+    human-judgement laws, which are waiting on the `terminal` seat's own
+    AWAITING SAM question about marking them held-by-a-person. Full reasoning in
+    `docs/STATUS_LAWS.md`.
     **✅ PERFORMED THIS STOP (terminal, 2026-08-13): `LAW REGISTRY: 125 rows, 101
     guarded, 24 UNENFORCED` — down from 27. Measured with the SUITE, not
     `grep -c`, which this item records as sending every seat one high.**
