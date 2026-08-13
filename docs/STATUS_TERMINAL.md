@@ -56,12 +56,34 @@ IMPROVEMENTS**, which is the useful half of the control:
 | d2 Upper Push | `Banded Bicep Curl` | **`Band Pull-Apart`** — shoulder work on a push day |
 | d4 Lower Squat | `Nordic Lower` (hamstring) | **`Leg Extension`** (quad) — the quad stays a quad |
 
-**WHERE TO START:** the duplicate is a ROW-LEVEL repeat, not a rotation pick —
-rotation swaps a name, it does not add a second row. Two different slots resolved
-to the same exercise and nothing de-duplicated the session. **`sessionSlotCoverage`
-would call this `duplicated: ['squat']`, so the ORACLE already names it; nothing
-consumes that answer at build time.** That is the same gap as the composer: the
-app can SEE the fault and does not act on it.
+**⇒ CAUSE FOUND, AND IT IS EQUIPMENT, NOT GROUPING.** Instrumented every
+rotation rewrite in that week:
+
+    ROT Reverse Lunges -> Bodyweight Squat  [squat/accessory]
+    ROT Back Squat     -> Bodyweight Squat  [squat/accessory]
+
+**Two different source rows rotate to the SAME name, in the same (slot, role),
+on the same day.** `Back Squat` is an ANCHOR — it lands in the accessory pool via
+the `[pool-equipment-role-fallback]` path, because bodyweight-only equipment
+filters the squat anchor pool to zero legal entries.
+
+**SO WITH RESTRICTIVE EQUIPMENT THE POOL COLLAPSES TO ONE LEGAL OPTION AND
+WITHIN-SESSION AVOIDANCE HAS NOWHERE TO GO.** `selectPoolEntryAvoiding` falls
+back to the rotation-indexed entry when every candidate is avoided or filtered —
+which is the right behaviour for "no alternative exists" and the WRONG behaviour
+for "so print it twice". **Nothing downstream de-duplicates the session.**
+
+**THIS PROBABLY UNIFIES BOTH REPORTS.** The desktop's two leg days carrying
+IDENTICAL accessories is the same shape one level out: when equipment leaves few
+legal entries, every day converges on the same handful. **Not proven across their
+world — stated as the hypothesis to test first, not as a conclusion.**
+
+**THE FIX IS A DECISION, NOT A PATCH:** when a session has no distinct legal
+alternative, is the honest answer to REPEAT the row, DROP it, or SHIP SHORT?
+Sam's `:227` says a day is judged by pattern coverage, and `sessionSlotCoverage`
+already returns `duplicated: ['squat']` for exactly this — **the oracle names the
+fault and nothing consumes it at build time.** Same gap as the composer: the app
+can SEE this and does not act.
 
 **⚠ AND THIS IS ADJACENT TO, NOT THE SAME AS, THE DESKTOP'S REPORT.** They found
 both leg days carrying IDENTICAL four accessories in golden scenario 3; I could
