@@ -15,6 +15,47 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+69. **OWNED BY `seat` — BLOCKED-BY: sam — THE ELEGANCE AUDIT WAS INDEPENDENTLY
+    VERIFIED AND ITS VERDICT HOLDS. ONE STANDING HYPOTHESIS IS REFUTED. NOBODY
+    STARTS WORK OFF THIS ITEM.**
+
+    Sam, 2026-08-13: *"i'm just hoping you can run a full audit through the app
+    and come back to me with the biggest factors WHY it aint elegant yet"*.
+    Seven read-only verifiers, one question each, `file:line` required, run
+    BEFORE `docs/ELEGANCE_AUDIT_2026-08-14.md` was read. Receipts:
+    **`docs/ELEGANCE_AUDIT_VERIFICATION_2026-08-13.md`**.
+
+    **AGREES with item 68** from independent measurements — including the same
+    16 reader-less `contract.*` fields, name for name. Item 68's decision is
+    unchanged and is still Sam's to make.
+
+    **ADDS, with receipts (see the doc):** the ~20 ordered passes that mutate an
+    already-generated week; the restore-ON/restore-OFF pair where a deleted
+    exercise is put back and the athlete is then told *"That removal would break
+    the programmed session"*; the row-level passes never reading
+    `athletePlacement`/`authorship` though the type exists; four writers of
+    sets/reps that disagree; three deciders of "which days are training days"
+    that disagree; `g1` raised as overridable by one module and `hard_stop` by
+    another on the same fact; the weekday table redeclared 20 times; **no
+    archetype anywhere asks for a single-leg slot**; weeks 2-4 never see coach
+    output; `maxExercisesPerStrengthSession: 7` has no enforcer anywhere.
+
+    **REFUTED — STOP REPEATING IT.** The 2026-08-14 handoff §8 hypothesis
+    ("rules bolted on as referees rather than wired in as inputs") is false by
+    every measure taken: 127/135 rules modules have runtime consumers, 44 are
+    imported directly by the code that decides content vs 24 by post-build
+    checkers, the generation closure is 44% of production code, and the
+    test:production code ratio is 0.996:1. **What IS a pure test artifact is the
+    LAW layer** — `src/rules/lawRegistry.ts` has no production importer and 0 of
+    125 rows name a runtime mechanism.
+
+    **CORRECTION TO A PUBLISHED RECEIPT:** `canOverride` is no longer a
+    zero-reader value — `src/rules/blockOverride.ts:59` reads it.
+    `docs/HOW_TO_BUILD_THIS_APP_2026-08-12.md` should strike it from the nine.
+
+    **DO NOT QUOTE** the raw sweeps (462 exported symbols / 994 property names)
+    — hand-verification put their false-positive rate at 60%.
+
 68. **OWNED BY `elegance` — BLOCKED-BY: sam — THE ELEGANCE AUDIT IS COMPLETE;
     DO NOT START ANOTHER EDGE FIX OR ARCHITECTURE BUILD UNTIL SAM CHOOSES THE
     DIRECTION.**
