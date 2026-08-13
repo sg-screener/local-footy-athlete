@@ -30,13 +30,22 @@ export const WEEK_PLAN_QA_ALLOWED_FINDINGS: readonly AllowedFindingPolicy[] = [
     status: 'info-only',
     reason: 'Friday game week compresses conditioning room; the week still protects game freshness and keeps team/game anchors.',
   },
-  {
-    scenarioId: 'S6',
-    ruleId: 'cap_sprintCodExposures_under',
-    severity: 'info',
-    status: 'expected',
-    reason: 'Early off-season low-availability scenario intentionally has no sprint/COD anchor or app-added speed.',
-  },
+  // RETIRED 2026-08-13 (census C4). This row said the quiet part: *"Early
+  // off-season low-availability scenario intentionally has no sprint/COD
+  // anchor or app-added speed."* — which is Sam's own exemption, written into a
+  // TEST POLICY because the code had no way to express it. The finding's own
+  // shipped sentence has always read *"zero is valid only in early off-season
+  // or with an authorised reduction"*, and `auditWeekAgainstCaps` now takes a
+  // typed `sprintFloorExemption` for exactly that case, so the week no longer
+  // produces the finding at all.
+  //
+  // **THIS FILE WAS THE FOURTH PLACE THE EXEMPTION LIVED WITHOUT BEING
+  // EXECUTABLE** — after the athlete's sentence, the row comment, and the
+  // untested intent. Removing the row is what makes the rule real; leaving it
+  // would keep a stale allowance that could later excuse a finding the app is
+  // no longer entitled to make. The S6 CONDITIONING row below stays: the
+  // conditioning floor has no such exemption, and inventing one is not this
+  // unit's business.
   {
     scenarioId: 'S6',
     ruleId: 'cap_conditioningExposures_under',

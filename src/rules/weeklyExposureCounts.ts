@@ -96,6 +96,29 @@ export const BIBLE_WEEKLY_CAPS = {
  */
 export type RunningFloorExemption = 'early_off_season_weeks_1_2' | 'bye_recovery';
 
+/**
+ * THE SPRINT FLOOR'S OWN EXEMPTION, WHICH ITS SENTENCE HAS ALWAYS ADVERTISED
+ * AND THE CODE HAS NEVER HAD.
+ *
+ * The shipped detail reads *"zero is valid only in early off-season or with an
+ * authorised reduction"* — two named cases, in the athlete's own message, with
+ * no parameter behind them. Found 2026-08-13 while measuring census C4's step 2:
+ * raising the floor's severity would have nagged an early-off-season week for a
+ * rule that same week's message says does not apply to it.
+ *
+ * Typed rather than boolean for the reason `RunningFloorExemption` already
+ * gives: a caller must say WHICH case it is claiming, so the build can check the
+ * reason still holds. The two vocabularies are deliberately NOT merged — the
+ * running floor is lifted by bye recovery and this one is not, and one shared
+ * type would quietly grant each the other's escapes.
+ */
+export type SprintFloorExemption = 'early_off_season' | 'authorised_reduction';
+
+export const SPRINT_FLOOR_EXEMPTIONS: readonly SprintFloorExemption[] = [
+  'early_off_season',
+  'authorised_reduction',
+];
+
 export const RUNNING_FLOOR_EXEMPTIONS: readonly RunningFloorExemption[] = [
   'early_off_season_weeks_1_2',
   'bye_recovery',
@@ -158,6 +181,12 @@ export interface CapAuditContext {
    * applies. Absent means the floor is enforced.
    */
   runningFloorExemption?: RunningFloorExemption | null;
+  /**
+   * The authored case exempting this week from the SPRINT floor, when one
+   * applies. Absent means the floor is enforced — the safe direction, and the
+   * state every caller was in until 2026-08-13.
+   */
+  sprintFloorExemption?: SprintFloorExemption | null;
 }
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -358,7 +387,13 @@ export function auditWeekAgainstCaps(
       detail: `${counts.conditioningExposures} conditioning exposures (Bible target ≥ ${caps.conditioningExposures.min}; fine for deload/away weeks)`,
     });
   }
-  if (counts.sprintCodExposures < caps.sprintCodExposures.min) {
+  // Scoped exactly like the running floor above, and for the same reason: the
+  // sentence this finding ships already names its escapes, so the check has to
+  // be able to honour them.
+  if (
+    !context.sprintFloorExemption &&
+    counts.sprintCodExposures < caps.sprintCodExposures.min
+  ) {
     findings.push({
       cap: 'sprintCodExposures', kind: 'under',
       observed: counts.sprintCodExposures, limit: caps.sprintCodExposures.min,

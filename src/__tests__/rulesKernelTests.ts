@@ -870,6 +870,29 @@ try {
   ok('[C4] nor does a game week',
     runningUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'game_week' })));
 
+  // ── THE SPRINT FLOOR'S OWN ESCAPE, AND IT IS NARROWER ────────────────
+  //
+  // Its shipped sentence says *"zero is valid only in early off-season or with
+  // an authorised reduction"* — and until 2026-08-13 there was NO parameter
+  // behind either case. Found while measuring C4's severity step: raising the
+  // floor's weight would have nagged an early-off-season week for a rule that
+  // week's own message says does not apply to it.
+  const sprintUnder = (report: { findings: Array<{ ruleId: string }> }) =>
+    report.findings.some((f: { ruleId: string }) => f.ruleId === 'cap_sprintCodExposures_under');
+
+  ok('[C4] a 0-sprint week is flagged when no exemption is claimed',
+    sprintUnder(validateProgramWeek({ days: zeroRunningWeek })));
+  ok('[C4] early off-season lifts the SPRINT floor too',
+    !sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'early_offseason' })));
+
+  // THE TWO FLOORS DO NOT SHARE ESCAPES. Sam lifts the RUNNING floor in bye
+  // recovery; his sprint sentence names early off-season only. One shared type
+  // would quietly grant each the other's exemptions, so this cell is the
+  // discriminator that keeps them apart.
+  ok('[C4] bye recovery lifts the RUNNING floor but NOT the sprint floor',
+    !runningUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'bye_recovery' }))
+    && sprintUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'bye_recovery' })));
+
   // ⚠ THE WRITER IS SOURCE-PINNED, AND THIS CELL SAYS SO RATHER THAN IMPLYING
   // COVERAGE IT DOES NOT HAVE. The cells above drive `validateProgramWeek`
   // directly, so they hold the READER. The production writer is
