@@ -13,7 +13,55 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 **Sam's QUOTED WORDS were kept inline wherever an item still answers to them:
 his instruction is standing authority, not history.**
 
-## Unprocessed63. **OWNED BY `vocab` — CLAIMED 2026-08-13, head line stamped, nothing below
+## Unprocessed
+64. **THE BIBLE HAS NO COVERAGE CHECK, WHICH IS WHY A RULE SAM WROTE DOWN CAN
+    SIT IN THE APP UNBUILT FOR MONTHS AND NOTHING GOES RED. BUILD ONE. UNOWNED —
+    STAMP THIS HEAD LINE TO CLAIM IT.**
+
+    **THE SIGHTING THAT ORDERED THIS.** Bible `:227` gives a lower day five
+    slots. `sessionSlotCoverage.ts` CHECKS five. `coachingEngine.ts:5001-5016`
+    PLANS four and has never once asked for a single-leg slot. **Both files are
+    correct on their own. Nothing ever compared them.** The app has been marking
+    itself against a standard it never tried to meet, and every suite was green
+    the whole time. Sam: *"if everything is written down in the bible, why can
+    the app not even program single leg work?"*
+
+    **⚠ THIS IS NOT ITEM 61 AND MUST NOT MERGE WITH IT.** Item 61 (`vocab`) is
+    CODE-to-CODE drift — one concept, two word-lists inside the app. **This item
+    is BIBLE-to-CODE: a rule that exists in prose and has no enforcer at all.**
+    Different corpus, different owner, different number. Say so in your first
+    commit so the two censuses do not double-count each other.
+
+    **STEP ONE IS A MEASUREMENT AND YOU COMMIT NOTHING ELSE UNTIL IT LANDS.**
+    How many RULE lines does the Bible carry, by a stated definition of "rule
+    line" that a script applies — not a judgement you make per line? Print the
+    number, print the definition, print twenty sampled lines the definition
+    caught and five it deliberately did not. **If the number is in the
+    thousands, say so; do not quietly narrow the definition until it is
+    comfortable.**
+
+    **THEN THE RATCHET, AND IT IS THE SAME SHAPE THAT TOOK THE LAWS 25 -> 21.**
+    Every rule line either NAMES the enforcer that holds it — a suite, a cell, a
+    source anchor — or is counted as debt. **The debt may only fall.** The
+    mapping is machine-held in a file, never in a commit message, and derived
+    where derivation is possible rather than hand-typed.
+
+    **⚠ MUTATION-CHECK IT OR IT IS WORTHLESS.** Delete one enforcer name from
+    the mapping and the cell must RED. A coverage check that cannot fail reads
+    exactly like one that passes, and this repo has seven recorded sightings of
+    that class. **A green first run with no mutation proof is not this item
+    done.**
+
+    **DO NOT FIX WHAT YOU FIND.** The census is the deliverable. Order the
+    findings by what an athlete would notice, not by how easy they are — the
+    single-leg case sat behind a green suite for months precisely because
+    nobody was ranking by harm.
+
+    **AND DO NOT ASK SAM ANYTHING WITHOUT GREPPING `docs/RULINGS_REGISTRY.md`
+    FIRST** and saying in the question what the grep returned. 89 rulings are
+    already made; a re-ask is the one failure he has named more than any other.
+
+63. **OWNED BY `vocab` — CLAIMED 2026-08-13, head line stamped, nothing below
     it touched. ⚠ R-089's ORDERING IS CORRECT AND IT CANNOT FIX WHAT IT WAS
     AIMED AT. NOTHING ASKS FOR SINGLE-LEG WORK ON ANY DAY.**
 
