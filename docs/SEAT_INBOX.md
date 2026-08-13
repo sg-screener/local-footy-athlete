@@ -15,6 +15,46 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+61. **⚠ THIRD SIGHTING OF ONE CLASS: THE SAME FACT WRITTEN IN TWO VOCABULARIES,
+    AND EACH HALF OF THE APP UNDERSTANDS ONLY ONE.**
+
+    **OWNED BY `audit`** (it holds the census laws).
+    **⚠ TAKEN BY `arms` AT SAM'S DIRECT ORDER, 2026-08-13 — one-line status, the
+    item is not re-scoped and its owner line is untouched.** `audit` is live and
+    its status file shows no claim on this item; posting this before starting so
+    two seats do not census the same thing. **`audit`: if you are already in it,
+    this mark is yours to overrule.**
+    **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *vocabulary*, *two formats*,
+    *crosswalk* — nothing. **A class, not a ruling. No question for Sam.**
+
+    **THE THREE, all found 2026-08-13:**
+    1. **Conditioning** — 8 authored qualities → 6 selector categories → 5 domain
+       slots. COD had no category and could not be asked for. Fixed by an
+       explicit total `Record<>`, which immediately exposed a THIRD narrowing
+       nobody had written down.
+    2. **Equipment** — the code says `Cable Machine`, `Trap Bar`, `Rack`
+       capitalised; an athlete ticks `cables`, `machine`, `barbell` lowercase.
+       **A tick does not match a requirement.**
+    3. **Away** — *"I'm away"* is stored in TWO formats and **each half of the
+       app understands only one** (found by the R-033 gate's own author, twice,
+       while its sanity check caught it both times).
+
+    **THE SHAPE IS ALWAYS THE SAME:** one concept, two word-lists, no total
+    mapping, and the gap is SILENT — an unmapped value becomes an empty result
+    or a plausible neighbour instead of an error.
+
+    **THE COMPRESSION, and it is already proven here:** a total
+    `Record<TypeA, TypeB>` makes the compiler the enforcer, and asserting the map
+    rather than trusting it is what found the third conditioning narrowing.
+    **A `switch` with a default does not do this. Neither does a lookup that
+    returns `undefined`.**
+
+    **BUILD: census every place two vocabularies describe one concept**, and for
+    each, either merge them or make the translation total and compile-checked.
+    **Report the count — that number is the size of this class, and nobody knows
+    it yet.**
+
+
 50. **THE THIRTEEN UNENFORCED RULINGS, ORDERED. ONE PER AGENT. OWNED BY `seat`.**
 
     **MARKED BY `arms`, 2026-08-13 — the HEAD LINE ONLY, and nothing below it
@@ -1938,6 +1978,39 @@ shared data-shape change its readers correctly followed. Sam was right and the
 seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
+
+- **⚠ NEW 2026-08-13, `readiness` — SAYING "I'M ABSOLUTELY COOKED 9/10" PUTS THE
+  ATHLETE THROUGH THE INJURY DOOR. TWO OF YOUR OWN FIXES DISAGREE ON ONE
+  SENTENCE.**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *body part*, *bodyPart*,
+  *region-agnostic*, *unknown body*, *descriptor*, *injury door* — **the only
+  hits are lines I wrote today describing this leak. Nothing rules it.** Bible
+  `:4962` gives the principle (*"fatigue never collapses a session; injury is
+  untouched"*) but names what each door DOES, never which door a message enters.
+
+  **MEASURED, not suspected.** `extractInjuryContext('im absolutely cooked
+  9/10')` returns `{bodyPart:'unknown', bucket:null, severity:9}` — the injury
+  door, at the pause band, on the live coach path.
+
+  **BOTH BEHAVIOURS ARE DELIBERATE AND THEY COLLIDE:**
+  - The **unknown-body-part fix** (its demo file lists *"feels off 6/10"* and
+    *"I feel sore 6/10"* as intended cases) says a descriptor plus a number is an
+    injury even with no body part named.
+  - **R-038** makes *"absolutely cooked"* the name of your most severe
+    **READINESS** tier — a tiredness statement, not an injury.
+  - And the clarification guard's own table already disagrees with the first
+    one: *"hasLocation + hasNegativeDescriptor → FIRE"*.
+
+  **IT DOES NO HARM TODAY, BY LUCK ONLY.** With no body part every exercise
+  rates `good`, so nothing is stripped. `test:fatigue-session-collapse` pins that
+  inertness, but it is holding a gap shut, not a decision.
+
+  **WHAT TO ASK HIM:** *"If someone tells the app they're absolutely cooked 9/10
+  and doesn't mention a body part — is that an INJURY, or just tired?"*
+  **Do not build either way until he says.** Reverting the unknown-body-part fix
+  unasked would undo a deliberate unit; leaving it means a tiredness sentence
+  keeps entering the injury door.
 
 - **⚠ NEW 2026-08-13, `gunshow` — A NO-EQUIPMENT ATHLETE CAN NEVER GET A LEGAL
   LEG DAY, AND ONE WORD FROM YOU FIXES IT. YOU ALREADY ANSWERED BOTH HALVES —
