@@ -10,6 +10,7 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import { getSessionComponentRows, getSessionComponents } from '../utils/sessionComponents';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
+import { codDecelPermitted, poolForCategoryPublic } from '../rules/conditioningSelection';
 
 let pass = 0;
 let fail = 0;
@@ -243,6 +244,55 @@ const rebuilt = finaliseWorkoutAfterMutation(modernSki, {
 }).workout;
 assertConditioningOnly('canonically rebuilt standalone tempo', rebuilt);
 ok('canonical standalone rebuild is idempotent', JSON.stringify(rebuilt) === JSON.stringify(modernSki));
+
+// ── R-078 — ZERO COD IN A TIGHT PERMITTED WEEK IS SAM'S RULING, NOT A DEFECT ──
+//
+// **Sam, 2026-08-13, asked directly and answered "leave it":** in a week with no
+// team training, change-of-direction work is *"LOW selection priority"* (his own
+// Bible line) and there is only room for 2-3 conditioning sessions against 3-4
+// categories — so it is never reached. **He was shown that number and ruled the
+// app correct as it stands.**
+//
+// **THIS CELL EXISTS BECAUSE THAT ITEM HAS BEEN "FIXED" FOUR TIMES.** Every
+// attempt was honest, every one was reverted, and the fifth is now cheap to
+// start and expensive to finish. **A ruling with no gate is a ruling that gets
+// re-litigated**, and re-fixing settled work is the single thing Sam has been
+// angriest about this month. So the ruling is held by a cell, not by a doc.
+//
+// **NON-VACUITY IS THE POINT AND IS ASSERTED FIRST.** "Zero COD" would pass on a
+// world where COD was never permitted at all, which proves nothing. So the cell
+// pins the two facts that make the zero MEANINGFUL — the gate SAYS YES, and the
+// week really is a no-club pre-season week — before asserting the zero.
+{
+  const permittedWorld: OnboardingData = {
+    ...profile,
+    seasonPhase: 'Pre-season',
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+  } as OnboardingData;
+  const permitted = codDecelPermitted({
+    weekHasTeamTraining: false,
+    seasonPhase: 'Pre-season',
+    offseasonSubphase: null,
+  });
+  ok('R-078 non-vacuity: the COD gate PERMITS this world', permitted === true, permitted);
+  ok('R-078 non-vacuity: the COD pool is not empty',
+    poolForCategoryPublic('cod_decel').length > 0,
+    poolForCategoryPublic('cod_decel').length);
+
+  const codWorld = generateProgramLocally(permittedWorld, { todayISO: '2026-07-13' });
+  const conditioning = codWorld.microcycles.flatMap((microcycle) =>
+    microcycle.workouts.filter((workout) => !!workout.conditioningCategory));
+  const cod = conditioning.filter((workout) => workout.conditioningCategory === 'cod_decel');
+
+  ok('R-078 non-vacuity: the week really does place conditioning',
+    conditioning.length > 0, conditioning.length);
+  ok('R-078 zero COD in a tight permitted week is RULED CORRECT (Sam: "leave it")',
+    cod.length === 0,
+    { cod: cod.length, categories: conditioning.map((w) => w.conditioningCategory) });
+}
 
 console.log(`\nstandaloneConditioningOwnershipTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);

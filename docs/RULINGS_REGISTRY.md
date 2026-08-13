@@ -558,6 +558,26 @@ false`, which proves the door is live.
 **AND THE FREED DAY GAINED MORE THAN A SESSION:** at home that Saturday is a
 LOCKED fixture; away it is editable and takes an added session on top. The
 freed-Saturday work did not just fill the hole, it opened it to him.
+**R-078** · *"leave it"* (Sam, 2026-08-13, asked directly with the number in front
+of him) · **ZERO COD/DECEL IN A TIGHT NO-TEAM-TRAINING WEEK IS CORRECT, NOT A
+DEFECT.** His Bible already rules the COD/Decel row *"LOW selection priority"*,
+and a permitted week has only **2.0-2.75 conditioning slots against 3-4
+categories** — so a last-ranked category is unreachable by ARITHMETIC and is
+placed ZERO times. He was shown that number and the cost of the alternative (one
+`tempo` session would have to give up its slot) and ruled the app correct as it
+stands. **"Low selection priority" and "prescribed" cancel, and he chose LOW.**
+· `BUILT` — **the answer was DO NOTHING, and nothing was done**: `coachingEngine.ts`
+is byte-identical to `HEAD` and both attempted fixes are reverted. Held by
+`test:standalone-conditioning-ownership` (4 cells, R-078): the gate PERMITS the
+world, the pool is non-empty, the week really does place conditioning, and COD is
+still zero. **Mutation-proven** — forcing `cod_decel` to the front of the
+candidate list reds it at `cod: 6`.
+**⚠ THIS ROW EXISTS TO STOP A FIFTH ATTEMPT.** The item was "fixed" and reverted
+FOUR times; every attempt was honest and every one aimed at RANK. **Urgency is
+refuted (`mustCoverCategories` feeds the scorer, not the picker) and rank is
+refuted (Pass 1 orders from `categoryPriority`/`zonePriority`, which never contain
+`cod_decel`).** Do not re-open without a new ruling from Sam.
+
 
 **R-021** · *"i've taken out time caps for now"* · No time-cap row renders. **A
 DISPLAY ruling, not a deletion order — the `time_limit` kind stays in the type.**

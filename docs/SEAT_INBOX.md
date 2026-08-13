@@ -789,7 +789,24 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **⚠ NEW 2026-08-13 — COD/DECEL CAN ONLY APPEAR BY TAKING ANOTHER SESSION'S
+- **✅ ANSWERED AND CLOSED 2026-08-13 — SAM RULED *"leave it"*. REGISTERED AS
+  R-078 AND HELD BY A CELL IN THE SAME COMMIT.**
+
+  **CITES R-078** (this question's own answer). **He chose option 1: zero COD in a
+  tight no-team-training week is CORRECT, not a defect** — *"low selection
+  priority"* is his own Bible line and he kept it, knowing the alternative was one
+  `tempo` session giving up its slot. **Nothing was built, because the answer was
+  DO NOTHING** — `coachingEngine.ts` is byte-identical to `HEAD` and both attempted
+  fixes are reverted.
+  **THE CELL IS THE POINT, NOT THE ROW.** `test:standalone-conditioning-ownership`
+  now carries 4 R-078 cells — the gate PERMITS the world, the pool is non-empty,
+  the week really does place conditioning, and COD is still zero — because this
+  item was "fixed" and reverted FOUR times and a ruling with no gate gets
+  re-litigated. **Mutation-proven: forcing `cod_decel` to the front of the
+  candidate list reds it at `cod: 6`.**
+
+  ORIGINAL QUESTION BELOW.
+  - **⚠ 2026-08-13 — COD/DECEL CAN ONLY APPEAR BY TAKING ANOTHER SESSION'S
   SLOT. WHICH ONE IS PROGRAMMING CONTENT, AND `LAW-L7` MAKES THAT SAM'S.**
 
   **REGISTRY-GREP:** `docs/RULINGS_REGISTRY.md` for *displac* (**0**), *which
@@ -832,8 +849,16 @@ seat was wrong.
   the word and I'll leave it as is."*
   **NOT BLOCKING** — the app is defensible either way; option 1 closes the item.
 
-- **⚠ NEW 2026-08-13 — A FINISHED ITEM KEEPS THE QUEUE ALIVE, AND THAT COST HIM
-  MOST OF A TURN TODAY. ONE SMALL PROCESS RULING.**
+- **ANSWERED AND CLOSED 2026-08-13 ✅ — SAM RULED IT: *"finished items are being
+  filed by the seat"*.** The status quo option wins: the seat files a finished
+  item out as a routine step, and items 1 and 13 are NOT marked. **Do not re-ask,
+  and do not add a "done" escape to the hook — he chose the other answer.**
+  Verified rather than assumed: items 7, 28, 29, 33, 36 and one 37 are out of the
+  queue and present in `docs/SEAT_INBOX_COMPLETED_2026-08-13.md`.
+  Original below.
+
+  ~~**⚠ NEW 2026-08-13 — A FINISHED ITEM KEEPS THE QUEUE ALIVE, AND THAT COST HIM
+  MOST OF A TURN TODAY. ONE SMALL PROCESS RULING.**~~
 
   **REGISTRY-GREP: no row governs this.** Grepped `RULINGS_REGISTRY.md` for
   *inbox*, *queue*, *hook*, *processed*, *done*, *stop*. Every hit is a ruling
