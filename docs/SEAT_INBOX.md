@@ -1353,6 +1353,40 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, terminal — TWO EXERCISE-LIST GAPS I AM FORBIDDEN TO FILL
+  MYSELF. Both are one line of exercise names from him.**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *locked list*,
+  *vocabulary*, *invent*, *exercise name*, *single leg*, *pull-up*, *overhead*.
+  **Only *invent* hit — R-027: *"Athlete-facing words are NEVER invented by an
+  agent."*** Nothing rules what a bodyweight athlete does instead of a pull-up,
+  and nothing rules the single-leg-hip supply. **R-027 is precisely why this is
+  his and not mine: an exercise name IS an athlete-facing word.** Gaps, not
+  re-asks.
+
+  **1. A BODYWEIGHT ATHLETE STILL GETS `Overhead Press` AND `Pull-Ups`.**
+  Measured after today's fix (`a55d1a6c`), kit-impossible lifts fell 33 -> 18 and
+  every `Back Squat` is gone. **These two remain because their pools contain NO
+  bodyweight-legal sibling to substitute to** — the app looked, correctly, and
+  found nothing. It is a supply gap, not a picker bug.
+  **What to send: a bodyweight vertical PUSH and a bodyweight vertical PULL.**
+  (The app already ships `Push-ups` and `Inverted Row (Bodyweight)` for the
+  HORIZONTAL planes, so the shape of the answer is known — the vertical ones are
+  simply absent.)
+
+  **2. `single_leg_hip` HAS EXACTLY ONE EXERCISE IN THE WHOLE REGISTRY** —
+  `Single-Leg RDL`. Measured by the desktop across all 149 entries. **No picker,
+  rotation or substitution can ever fill a pool of one**, and that slot is one
+  of the two his `:227` ladder asks for on every lower day. `single_leg_knee` has
+  NINE by comparison, which is why R-080 was buildable and this is not.
+  **What to send: two or three more single-leg hip movements.**
+
+  **NOT BLOCKING ANYTHING.** Today's equipment and ladder work is landed and
+  green; these two decide how much FURTHER those numbers can fall. **And I will
+  not draft candidate names for a one-word veto here** — R-027 allows that route,
+  but naming a lift is programming, and every name I would reach for would be
+  copied from a website rather than from him.
+
 - **ANSWERED AND CLOSED 2026-08-13 ✅ — SAM RULED *"similar is right"*. REGISTERED
   AS R-081.**
 
