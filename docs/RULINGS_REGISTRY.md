@@ -176,6 +176,19 @@ instrument was not** — the exact reason a name-keyed lookup must not be truste
 to report absence.
 **SO THE FIRST STEP OF C7 IS NOT THE COMPOSER — IT IS MAKING THE PATTERN
 KNOWABLE.**
+**BOTH FOUNDATIONS ARE NOW BUILT (2026-08-13):** the pattern lookup canonicalises
+(`f5fc1898`, gym rows resolving 61% -> 91%), and Sam's slots are a real rule with
+his own acceptance criteria (`cc6ef611`, `test:slot-coverage`, 20 cells).
+**MEASURED: 70 strength days, only 19 cover every slot he named.** Most-missed:
+single-leg hip 30, single-leg knee 22, arm/shoulder 21, horizontal push 20,
+vertical push 20, hinge 12, squat 12. **That is the composer's before-number.**
+**⚠ AND ONE GAP BELONGS TO A SHARED OWNER, NOT TO THIS RULE.**
+`sessionNaming.inferStrengthMovementPatterns` — the app's ONE answer to "what
+movement is this session about" — returns **NOTHING** for *"Upper Body Strength"*
+and *"Full Body Strength"*, **two of Sam's seven signed strength sessions**
+(Bible §20.5). Those days get no slot list and are currently unjudged. **The fix
+belongs in that owner; a local regex would restore the second representation the
+delegation exists to remove.** Two cells assert the gap so it cannot be forgotten.
 
 **R-071** · *"yes it should be its own thing and not count as a strength exercise
 - thats stupid"* · **CONDITIONING IS NOT A STRENGTH EXERCISE** and does not count

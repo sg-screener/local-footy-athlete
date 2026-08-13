@@ -18,6 +18,7 @@ import {
   LOWER_SLOTS,
   UPPER_FULL_SLOTS,
   sessionSlotCoverage,
+  slotDayKindFor,
   slotsFilledByRow,
 } from '../rules/sessionSlotCoverage';
 import type { WorkoutExercise } from '../types/domain';
@@ -139,6 +140,32 @@ console.log('\n[4] Power and conditioning ride on top — they fill NO slot');
   const powerHeavy = [row('Trap Bar Jump', 'power'), row('Lateral Bounds', 'power'), row('Back Squat')];
   ok('a day of power plus one squat is still missing its hinge',
     sessionSlotCoverage(powerHeavy, 'lower').missing.includes('hinge'));
+}
+
+console.log('\n[5] The day kind is DELEGATED to the one owner, not re-inferred');
+{
+  // sessionNaming.inferStrengthMovementPatterns already answers "what movement
+  // is this session about". A second regex here would be a second
+  // representation of a question the app has already answered once.
+  ok('a squat day and a hinge day are both LOWER',
+    slotDayKindFor('Lower Squat') === 'lower' && slotDayKindFor('Lower Hinge') === 'lower');
+  ok('a push-only or pull-only day is a SPLIT day',
+    slotDayKindFor('Upper Push') === 'upper_split' && slotDayKindFor('Upper Pull') === 'upper_split');
+  ok('a team night carrying a lift is still judged on the lift',
+    slotDayKindFor('Team Training + Upper Pull') === 'upper_split');
+  ok('a conditioning day answers to NO slot list',
+    slotDayKindFor('Continuous Aerobic') === null);
+
+  // ⚠ THE OWNER'S GAP, ASSERTED SO IT CANNOT BE FORGOTTEN — not patched here.
+  // "Upper Body Strength" and "Full Body Strength" are two of Sam's seven signed
+  // strength sessions (Bible §20.5) and the shared inference returns NOTHING for
+  // them, so those days are currently unjudged. Catching them with a local regex
+  // would restore the second representation this delegation exists to remove.
+  ok('DECLARED GAP: the shared owner does not classify "Upper Body Strength"',
+    slotDayKindFor('Upper Body Strength') === null,
+    'if this now resolves, the owner was fixed — delete this cell and celebrate');
+  ok('DECLARED GAP: the shared owner does not classify "Full Body Strength"',
+    slotDayKindFor('Full Body Strength') === null);
 }
 
 console.log(

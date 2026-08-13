@@ -156,3 +156,40 @@ export function sessionSlotCoverage(
     slot !== 'accessory_or_core' && slot !== 'arm_or_shoulder' && (counts.get(slot) ?? 0) > 1);
   return { kind, required, filled, missing, duplicated };
 }
+
+/**
+ * WHICH SLOT LIST A DAY ANSWERS TO — DELEGATED, NEVER RE-INFERRED.
+ *
+ * `sessionNaming.inferStrengthMovementPatterns` is this app's ONE owner of
+ * "what movement is this session about". The first cut of this module matched
+ * `/lower/` and `/upper/` in the test itself, which would have been a SECOND
+ * representation of a question already answered — the exact defect the coach
+ * rules call out ("how many representations of the user request exist?").
+ *
+ * THE MAPPING IS HIS SENTENCE, NOT A HEURISTIC:
+ *   squat or hinge          -> a LOWER day, and his five lower slots apply
+ *   push AND pull           -> a FULL upper day, both planes both directions
+ *   push XOR pull           -> a SPLIT day; *"if you upper body pull or upper
+ *                              body push then it just becomes horizontal
+ *                              movement, vertical movement, more arm work"*
+ *
+ * ⚠ AND THE OWNER HAS A GAP I AM NOT PAPERING OVER. It returns NOTHING for
+ * "Upper Body Strength" and "Full Body Strength" — two of Sam's own seven signed
+ * strength sessions (Bible §20.5). Those days therefore get NO slot list and are
+ * not judged. Adding a regex here to catch them would put the second
+ * representation back; the fix belongs in the owner, and it is named in the
+ * registry rather than hidden behind a local patch.
+ */
+export function slotDayKindFor(sessionText: string | undefined): SlotDayKind | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { inferStrengthMovementPatterns } = require('../utils/sessionNaming') as {
+    inferStrengthMovementPatterns: (text: string | undefined) => readonly string[];
+  };
+  const patterns = inferStrengthMovementPatterns(sessionText);
+  if (patterns.includes('squat') || patterns.includes('hinge')) return 'lower';
+  const push = patterns.includes('push');
+  const pull = patterns.includes('pull');
+  if (push && pull) return 'upper_full';
+  if (push || pull) return 'upper_split';
+  return null;
+}
