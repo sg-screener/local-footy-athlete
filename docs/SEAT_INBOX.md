@@ -874,6 +874,43 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, terminal — IS A FACE PULL A BACK EXERCISE OR SHOULDER
+  WORK? The app currently says BACK, and that is what spoils a session.**
+
+  **REGISTRY-GREP:** grepped `docs/RULINGS_REGISTRY.md` for *Face Pull*,
+  *rear delt*, *arm_or_shoulder*, *shoulder*, *accessory*, *tag*,
+  *interchangeable*, *swap*. **Only `accessory` hit, once — R-015, which is the
+  mobility-superset ruling and says nothing about which exercises may substitute
+  for each other.** R-014 quotes his ladder (*"arm work or accessory work for the
+  shoulders"*) and that DID settle which SLOT a face pull fills — already built,
+  not being re-asked. **What is unruled is INTERCHANGEABILITY, and no row covers
+  it.**
+
+  **WHY IT IS NOT A NAMING NICETY — MEASURED, 3 worlds x 3 weeks.** The pools
+  file `Face Pull` as `horizontal_pull/accessory`, in the same list as
+  `Seated Cable Row`, so the app treats them as swappable. It also cannot match
+  the name the generator ships (`Face Pulls`), and that MISS is currently the
+  only thing stopping the swap. Close the miss — which is otherwise plainly
+  correct — and rotation immediately ships:
+
+  | before | after |
+  | --- | --- |
+  | `Pull-Ups \| Barbell Row \| Face Pulls` | `Pull-Ups \| Barbell Row \| Seated Cable Row` |
+  | `… Bicep Curls \| Tricep Pushdowns …` | `… Bicep Curl (Barbell) \| Bicep Curl (Dumbbell)` |
+
+  **The pull day loses its shoulder work for a second row; the arm work becomes
+  two bicep curls and no tricep** — his own "two squats" shape in arm form. **The
+  fix is REFUTED and backed out (`faa69c2f`); the lookup miss is load-bearing
+  until the pool membership is decided.**
+
+  **WHAT TO SEND — one line, either is actionable:** *"face pull is shoulder
+  work"* (it moves out of the horizontal-pull pool and stops being swappable with
+  a row), or *"face pull is a back exercise"* (it stays, and the arm/shoulder slot
+  must be filled by something else). **If he does not care, the terminal will take
+  shoulder work** — it is the reading his own ladder sentence supports and the one
+  that keeps a pull day balanced. **NOT BLOCKING: the composer work continues
+  either way; only the lookup fix waits on this.**
+
 - **⚠ NEW 2026-08-13 — THE COMMIT STAMP HE ORDERED THIS MORNING IS ALREADY
   AMBIGUOUS: TWO SEATS ARE WRITING `Agent: audit`.**
 
