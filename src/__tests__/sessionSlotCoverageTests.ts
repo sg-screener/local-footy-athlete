@@ -385,7 +385,15 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   const lowerDaysWithoutLowerWork: string[] = [];
 
   /** Measured 2026-08-13. Lower it when a day is fixed; never raise it. */
-  const DEFICIENT_CEILING = 1;
+  /**
+   * **0 as of 2026-08-13 — EVERY LADDERED DAY COVERS SAM'S LADDER.**
+   * Was 1 (the bodyweight `Lower Squat`, missing hinge + both single-leg slots,
+   * then carrying a duplicate squat). Closed by three commits in order: the
+   * accessory-regex guard so a leg day stops being arm work, the equipment
+   * substitution at the canonicaliser's restore, and R-083's removal of patterns
+   * the kit cannot train. **Zero is the floor — this may now only be held.**
+   */
+  const DEFICIENT_CEILING = 0;
   let laddered = 0;
   const deficient: string[] = [];
   for (const [label, profile] of CENSUS_WORLDS) {
@@ -490,7 +498,7 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
    * spelling (`RDLs` is), so nothing can reach it; that is the exact-name lookup
    * miss recorded on R-014, whose source fix is REFUTED and deliberately unbuilt.
    */
-  const KIT_VIOLATION_CEILING = 3;
+  const KIT_VIOLATION_CEILING = 1;
   const bodyweightProfile = {
     trainingLocation: 'Commercial gym', equipment: ['Bodyweight Only'],
     equipmentSelectionCompleteness: 'complete', trainingDaysPerWeek: 5,

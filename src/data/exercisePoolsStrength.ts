@@ -830,9 +830,32 @@ function entryAllowedByEquipment(
   entry: PoolEntry,
   availableEquipment: readonly EquipmentTag[] | undefined,
 ): boolean {
+  return exerciseAllowedByEquipment(entry.name, availableEquipment);
+}
+
+/**
+ * CAN THIS ATHLETE PERFORM THIS LIFT AT ALL?
+ *
+ * Extracted from `entryAllowedByEquipment` (which now calls it) so callers
+ * OUTSIDE the pools can ask the same question of a bare NAME — the canonicaliser
+ * restores rows from a hardcoded table and had no way to ask it.
+ *
+ * **R-083 (Sam, 2026-08-13) is why it is public:** *"ya can't do much with
+ * overhead pushing or pull or even horizontal pulling without equipment - i
+ * can't account for everyone and if they want to train properly they'll sign up
+ * to a gym"*. A pattern a kit cannot train is REMOVED, not substituted — and
+ * removing needs a legality test, where substituting only needed a pool.
+ *
+ * Unknown equipment class and unknown kit both answer TRUE: this refuses only
+ * what it can prove is impossible.
+ */
+export function exerciseAllowedByEquipment(
+  name: string,
+  availableEquipment: readonly EquipmentTag[] | undefined,
+): boolean {
   const allowed = equipmentClassesForTags(availableEquipment);
   if (!allowed) return true;
-  const klass = equipmentClassFor(entry.name);
+  const klass = equipmentClassFor(name);
   if (!klass) return true;
   return klass === 'bodyweight' || allowed.has(klass);
 }
