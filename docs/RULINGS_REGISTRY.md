@@ -369,6 +369,36 @@ groups.** The file's own comments name them — `// Bicep block`,
 `// Tricep block`, `// Shoulder / trap block` — and rotation ignores all three.
 **Sub-grouping that pool is the next unit, and the lookup fix waits on it.**
 
+**R-079** · *"yes we do nights - in season that may mean 3 sprint sessions"* ·
+*"in later off season after first 4 weeks of off season, they can sprint once a
+week - in pre season christmas break they can sprint once a week as well"* ·
+*"in pre season you can do flying sprints when there is team training because you
+will get accelerations at footy"* (2026-08-13) ·
+**1. THE UNIT IS NIGHTS.** Settles the Bible's own clash between `:90` (nights)
+and `:129` (exposures) — `:90` wins. **A night is a night whether it holds one
+sprint effort or twenty.** · `BUILT` —
+`section18EffectiveWeekEvaluator.ts` `sprintHighSpeed.achievedCount` was
+`sprintSources.length`, and one evening can raise TWO sources (a team-training
+anchor and a typed true-speed block on the same day), so an athlete was charged
+twice for one night out. Now counts DISTINCT `dayOfWeek`. The sources list is
+untouched, so evidence keeps its detail and only the COUNT changes unit.
+**2. THE PER-PHASE NUMBERS.** In season **up to 3** (was capped at 1, so a normal
+club week with two team nights and a game was over its own ceiling by
+construction — his *"that may mean 3"* is ACCEPTABLE, not a breach); late
+off-season **1** (was 2); Christmas break **1**. ·
+`BUILT` for in-season and late off-season
+(`weeklyExposureContractBuilders.ts`). **⚠ CHRISTMAS IS NOT BUILT** — the break
+has no mode of its own yet (R-002 makes it an off-season inside pre-season) and
+R-004's dated span is still `UNENFORCED`, so there is nowhere to hang the number.
+**3. PRE-SEASON IS A QUALITY RULE, NOT A COUNT — `UNENFORCED`.** `top_end_speed`
+on a team night is his ruling; `acceleration` on a team night is the duplication
+he is avoiding. **The nights unit is the PRECONDITION for it** — under a source
+count his own instruction read as a breach — but nothing yet distinguishes the
+two qualities on a team night.
+**4. THE CROSS-CHECK HE ASKED FOR IS NOT DONE:** whether a pre-season team night
+carrying flying sprints stays ONE hard day against R-007 and Bible `:118`.
+Reported as owed rather than assumed.
+
 **R-015** · *"On strength days, 2-3 accessory exercises are paired with mobility
 exercises as SUPERSETS by default"* (+ 6 further clauses,
 `MOBILITY_PAIRING_RULINGS_2026-07-31.md`) · Main lifts are NEVER paired; the

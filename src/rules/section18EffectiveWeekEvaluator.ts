@@ -808,7 +808,28 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       split: conditioningSplit,
     },
     sprintHighSpeed: {
-      achievedCount: sprintSources.length,
+      // ── R-079: THE UNIT IS NIGHTS, NOT SOURCES ──────────────────────────
+      //
+      // **Sam, 2026-08-13: *"yes we do nights"*.** This settles the clash the
+      // Bible carried between `:90` (nights) and `:129` (exposures, "2-3 the
+      // usual maximum"). `:90` wins on the unit, and **a night is a night
+      // whether it holds one sprint effort or twenty.**
+      //
+      // WHAT IT WAS: `sprintSources.length` counts CREDIT SOURCES, and a single
+      // evening can raise more than one — a team-training anchor pushes a source
+      // and a typed true-speed block on the same day pushes another. So one
+      // Tuesday night reading "team training plus flying sprints" scored TWO
+      // against the cap, and the athlete was charged twice for one night out.
+      //
+      // AND IT IS WHAT MAKES HIS PRE-SEASON RULING EXPRESSIBLE AT ALL:
+      // *"in pre season you can do flying sprints when there is team training
+      // because you will get accelerations at footy"* — that is DELIBERATE
+      // doubling up on one night, and a source-count reads his own instruction
+      // as a breach.
+      //
+      // The SOURCES are untouched and still list every credit with its day, so
+      // nothing that reports evidence loses detail; only the COUNT changes unit.
+      achievedCount: new Set(sprintSources.map((source) => source.dayOfWeek)).size,
       sources: sprintSources,
       split: sprintSplit,
     },

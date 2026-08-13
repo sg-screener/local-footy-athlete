@@ -541,7 +541,16 @@ function byeRecoveryMode(input: WeeklyExposureContractInput): boolean {
 const GAME_WEEK_TARGETS = {
   strength: { required: 2, preferredMin: 2, preferredMax: 3 },
   // The game/team anchors satisfy the shared floor without inflating it.
-  sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
+  //
+  // ── R-079: IN SEASON, UP TO THREE SPRINT NIGHTS ─────────────────────────
+  // **Sam, 2026-08-13: *"in season that may mean 3 sprint sessions"*.** The
+  // team trainings and the game are what get it there, and **that is ACCEPTABLE,
+  // not a breach** — the cap was 1, so a normal club week with two team nights
+  // and a game was over its own ceiling by construction. His `:90` "2 nights"
+  // is corrected by this ruling. The unit is NIGHTS (see the ledger's
+  // `achievedCount`), so one evening carrying both a team night and a sprint
+  // block is ONE.
+  sprintCod: { required: 1, preferredMin: 1, preferredMax: 3 },
   fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
   allowCombined: true,
   preferredHardDays: 4,
@@ -799,7 +808,9 @@ export function buildLateOffseasonExposureContract(
     mode: 'late_offseason', subphase: 'late_offseason',
     strength: { required: 3, preferredMin: 3, preferredMax: 4, selectedTarget: selected.mainStrength },
     conditioning: { required: 3, preferredMin: 3, preferredMax: 4, selectedTarget: selected.coreConditioning },
-    sprintCod: { required: 1, preferredMin: 1, preferredMax: 2, selectedTarget: selected.sprintHighSpeed },
+    // R-079: *"in later off season after first 4 weeks of off season, they can
+    // sprint once a week"*. Was 2; he ruled ONE.
+    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1, selectedTarget: selected.sprintHighSpeed },
     fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
     allowCombined: true,
     preferredHardDays: 4,
