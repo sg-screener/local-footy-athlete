@@ -32,6 +32,43 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ A LEG DAY SHIPS THREE SQUATS, TWO OF THEM THE SAME ROW — PRE-EXISTING
+
+**Bodyweight off-season, 4-day, `2026-07-13`:**
+
+    d4 "Lower Squat"  Bodyweight Squat · Glute Bridge · Bodyweight Squat ·
+                      Single Leg RDL · Leg Extension · Back Squat
+
+**`Bodyweight Squat` appears TWICE in one session, alongside `Back Squat`.** That
+is three squat-pattern rows on one day and a literal duplicate row, against
+`:227` — *"an athlete is better served by a squat and a hinge than by two
+squats."*
+
+**CONTROL-RUN, AND IT IS NOT MINE:** reverting `exercisePoolsStrength.ts` to
+`bf1681c1^` (before the muscle-group rule) produces **the same duplicate**. It
+predates today's pool work entirely.
+
+**AND THE TWO THINGS MY GROUPING DOES CHANGE IN THIS WORLD ARE BOTH
+IMPROVEMENTS**, which is the useful half of the control:
+
+| day | before grouping | after |
+| --- | --- | --- |
+| d2 Upper Push | `Banded Bicep Curl` | **`Band Pull-Apart`** — shoulder work on a push day |
+| d4 Lower Squat | `Nordic Lower` (hamstring) | **`Leg Extension`** (quad) — the quad stays a quad |
+
+**WHERE TO START:** the duplicate is a ROW-LEVEL repeat, not a rotation pick —
+rotation swaps a name, it does not add a second row. Two different slots resolved
+to the same exercise and nothing de-duplicated the session. **`sessionSlotCoverage`
+would call this `duplicated: ['squat']`, so the ORACLE already names it; nothing
+consumes that answer at build time.** That is the same gap as the composer: the
+app can SEE the fault and does not act on it.
+
+**⚠ AND THIS IS ADJACENT TO, NOT THE SAME AS, THE DESKTOP'S REPORT.** They found
+both leg days carrying IDENTICAL four accessories in golden scenario 3; I could
+not reproduce that world from a profile and measured a different one. **Two
+findings, both real, and I have not shown they share a cause.**
+
+
 ### ⚠ CORRECTION — "THE APP PRESCRIBES NO SPRINT WORK AT ALL" IS WRONG. IT DOES.
 
 **I claimed that in `7739e67f` and it is overstated. Measured properly, on
