@@ -201,6 +201,22 @@ end, because two fixes aimed at it changed nothing:**
    THE ONE UNKNOWN LEFT, and it is the whole remaining unit.** Do not rebuild the
    composer until that row's disappearance is measured; two fixes have already
    been spent on layers that turned out not to be in the chain.
+5. **NARROWED FURTHER:** instrumented at BOTH fallback call sites. The
+   missing-day site (`:1288`) emits the corrected five rows verbatim —
+   *"Lower Squat: Back Squat | RDLs | Reverse Lunges | Single Leg RDL | Leg
+   Extension"* — and the AI-had-no-strength site (`:2461`) never fired in that
+   world. **So the hinge is present when the day is handed on, and is gone by
+   the time it ships. The drop is strictly downstream of
+   `fallbackExercisesForPlanEntry`.**
+
+**⚠ AND CENSUS A4 IS OVER-CALLED ON ITS SECOND EXAMPLE.** It names
+*"Overhead Press + Incline DB Bench, both `push`"* as a duplicate-pattern breach.
+**Judged by Sam's own split-day slots it is CORRECT and COMPLETE:** Overhead
+Press = vertical push, Incline DB Bench = horizontal push, Lateral Raise =
+arm/shoulder — `missing: []`, `duplicated: []`. His ruling separates the two
+PLANES, so two presses in different planes is the shape he asked for, not a
+breach. **The A4 finding stands for the LOWER example (two hinges) and is
+withdrawn for the upper one.**
 **BOTH FOUNDATIONS ARE NOW BUILT (2026-08-13):** the pattern lookup canonicalises
 (`f5fc1898`, gym rows resolving 61% -> 91%), and Sam's slots are a real rule with
 his own acceptance criteria (`cc6ef611`, `test:slot-coverage`, 20 cells).
