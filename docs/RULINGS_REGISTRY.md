@@ -1684,6 +1684,29 @@ push-pull-style balance of the lower body, not a limb thing.
 week, two squats, squat hinge balance, matched with a hinge, single leg knee,
 single leg hip, coverage versus volume, section 18, main-strength target,
 uncoveredMainPatternsForWeek, priority order, R-087.
-· `UNENFORCED` — `uncoveredMainPatternsForWeek` exists but nothing orders the
-planner by it, and **NOTHING ANYWHERE CHECKS THE SQUAT:HINGE OR KNEE:HIP
-BALANCE.**
+· `BUILT 2026-08-13` (`laws`) — **BOTH HALVES.**
+**THE ORDERING:** a post-pass over the FINISHED week reorders each full-body
+day's `plannedPatterns` uncovered-first (`orderPlannedByUncoveredFirst`,
+`coachingEngine.ts` before `logAllocationWeekValidation`). **It returns an
+IDENTICAL MULTISET**, which is why it refuses ZERO worlds where the earlier
+REPLACEMENT refused twelve: volume, §18 and the main-strength target cannot
+move if nothing is removed. Census byte-identical before and after —
+92 deficient / 318 laddered / 174 worlds / 6 refused.
+**THE PAIRING:** `test:ladder-wide` now counts squat/hinge and
+single-leg-knee/single-leg-hip **per WEEK** across all 174 worlds and reds when
+either is unmatched. **Directional, not an equality** — his wording bounds
+squats by hinges, and 74 worlds are legitimately `sq0/hi1`, which an equality
+would have failed. Mutation-proven: injecting one extra squat reds the squat
+cell and leaves the knee cell green. **Non-vacuity asserts BOTH COUNTERS ARE
+LIVE** (a week carrying a squat AND a hinge, and one carrying both single-leg
+slots) rather than a shape count — the first draft demanded 3 distinct shapes,
+failed at 2, and the THRESHOLD was the thing that was wrong.
+**⚠ TWO LIMITS, MEASURED:** (1) the ordering delivers points 2 and 3 but NOT
+the example in point 1 — a week where only the single-leg slots are open is
+UNCHANGED, because the full-body template is `['squat','hinge','push','pull']`
+and an ordering cannot introduce a member the list does not have; putting
+single leg on the Wednesday needs the template to WIDEN, which is the
+substitution class that refused twelve worlds. (2) This corpus never produces
+two squats in one week, so the exact `2 squats / 1 hinge` shape he named is
+currently UNREACHABLE here — the guard is green and mutation-proven, not
+green-because-exercised.

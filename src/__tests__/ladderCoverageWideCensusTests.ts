@@ -150,6 +150,23 @@ const KITS: string[][] = [['Full Gym'], ['Bodyweight Only'], ['Dumbbells', 'Band
  */
 const DEFICIENT_CEILING = 88;
 
+// ── R-089: THE LOWER PATTERNS MOVE IN PAIRS, ACROSS THE WEEK ──────────────
+//
+// Sam, 2026-08-13: *"every squat should be matched with a hinge and every
+// single leg knee should be matched with a single leg hip / it doesnt matter
+// if you have two squats, two hinges, 1 single leg knee and 1 single leg hip /
+// thats fiiine"*. **What is wrong is 2 squats and 1 hinge.**
+//
+// IT IS DIRECTIONAL, NOT AN EQUALITY, AND THAT IS HIS WORDING. "Every squat is
+// MATCHED WITH a hinge" bounds squats by hinges; a hinge with no squat is not
+// what he objected to, and 28 worlds in this very sweep are `sq0/hi1` — a
+// legitimate hinge-led week that an equality would have failed.
+//
+// THE UNIT IS THE WEEK, NOT THE DAY. R-089 exists because a full-body Wednesday
+// is judged by what the rest of the week already did.
+const unmatchedSquats: string[] = [];
+const unmatchedKnees: string[] = [];
+const pairShapes = new Map<string, number>();
 let worldsBuilt = 0;
 let worldsRefused = 0;
 let sessionsSeen = 0;
@@ -188,6 +205,10 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
           worldsBuilt += 1;
           const label = `${seasonPhase}/${trainingDaysPerWeek}d/${club ? 'club' : 'noclub'}`
             + `/${equipment[0]}/w${week}`;
+          // R-089: the lower patterns move in PAIRS, and the unit is the WEEK.
+          const weekPairs: Record<string, number> = {
+            squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0,
+          };
           for (const workout of (program?.microcycles?.[week - 1]?.workouts ?? [])) {
             sessionsSeen += 1;
             const kind = slotDayKindFor(String(workout.name ?? ''));
@@ -196,11 +217,26 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
             const rows = workout.exercises ?? [];
             rowCounts[rows.length] = (rowCounts[rows.length] ?? 0) + 1;
             const coverage = sessionSlotCoverage(rows, kind);
+            for (const slot of coverage.filled) {
+              if (slot in weekPairs) weekPairs[slot] += 1;
+            }
             if (coverage.missing.length > 0 || coverage.duplicated.length > 0) {
               deficient.push(`${label} | ${workout.name} [${kind}] `
                 + `missing=${JSON.stringify(coverage.missing)} `
                 + `dup=${JSON.stringify(coverage.duplicated)} rows=${rows.length}`);
             }
+          }
+          const shape = `sq${weekPairs.squat}/hi${weekPairs.hinge}`
+            + ` slk${weekPairs.single_leg_knee}/slh${weekPairs.single_leg_hip}`;
+          if (weekPairs.squat + weekPairs.hinge
+            + weekPairs.single_leg_knee + weekPairs.single_leg_hip > 0) {
+            pairShapes.set(shape, (pairShapes.get(shape) ?? 0) + 1);
+          }
+          if (weekPairs.squat > weekPairs.hinge) {
+            unmatchedSquats.push(`${label} | ${shape}`);
+          }
+          if (weekPairs.single_leg_knee > weekPairs.single_leg_hip) {
+            unmatchedKnees.push(`${label} | ${shape}`);
           }
         }
       }
@@ -260,6 +296,52 @@ console.log('\n[2] Sam\'s ladder, over every world the app can build');
   console.log(`  laddered-day row counts: ${JSON.stringify(rowCounts)}`);
   console.log(`  ${shapes.size} DISTINCT SHAPES:`);
   for (const shape of shapes) console.log(`    ${shape}`);
+}
+
+// ── R-089 — EVERY SQUAT MATCHED WITH A HINGE, EVERY SINGLE-LEG KNEE WITH A
+//    SINGLE-LEG HIP. Measured over the same 174 worlds. ────────────────────
+//
+// NOTHING ANYWHERE CHECKED THIS BEFORE — the ruling row said so in as many
+// words. It could not be checked at ROW level either:
+// `mainPatternForExerciseMovement` maps `lunge` -> `squat` and has no
+// single-leg member at all, so the pairing is invisible to it. The SLOT
+// vocabulary is the only one that can express it, which is why the count is
+// taken from `coverage.filled`.
+{
+  const shapes = [...pairShapes.entries()].sort((a, b) => b[1] - a[1]);
+  // NON-VACUITY BEFORE THE VERDICT. A sweep where no week contains a squat or
+  // a hinge reports ZERO unmatched and reads as perfect balance — the exact
+  // green-and-empty shape this suite already guards three other ways.
+  //
+  // ⚠ THE FIRST VERSION ASKED FOR >= 3 DISTINCT SHAPES AND FAILED AT 2, AND THE
+  // THRESHOLD WAS THE THING THAT WAS WRONG. Shape VARIETY is not what makes
+  // this cell mean something — BOTH COUNTERS REGISTERING is. If nothing ever
+  // counted a squat, "0 unmatched squats" would be true and worthless. So the
+  // assertion is that a week exists carrying a squat AND a hinge, and another
+  // carrying both single-leg slots: that proves each counter is live and could
+  // have diverged. Weakening a threshold to fit the data would have been
+  // fitting the gate to the answer; this replaces it with the property the
+  // cell actually needs.
+  const sawSquatAndHinge = shapes.some(([shape]) => /sq[1-9]/.test(shape) && /hi[1-9]/.test(shape));
+  const sawBothSingleLeg = shapes.some(([shape]) => /slk[1-9]/.test(shape) && /slh[1-9]/.test(shape));
+  ok('[R-089 non-vacuity] a week carrying BOTH a squat and a hinge was seen — the counters are live',
+    sawSquatAndHinge,
+    `shapes seen: ${shapes.map(([s, n]) => `${n}x ${s}`).join(' | ')}`);
+  ok('[R-089 non-vacuity] a week carrying BOTH single-leg slots was seen',
+    sawBothSingleLeg,
+    `shapes seen: ${shapes.map(([s, n]) => `${n}x ${s}`).join(' | ')}`);
+
+  ok('R-089: no week has more squats than hinges',
+    unmatchedSquats.length === 0,
+    `${unmatchedSquats.length} week(s) with an unmatched squat: ${unmatchedSquats.slice(0, 5).join(' ; ')}`);
+
+  ok('R-089: no week has more single-leg knee than single-leg hip',
+    unmatchedKnees.length === 0,
+    `${unmatchedKnees.length} week(s) with an unmatched single-leg knee: ${unmatchedKnees.slice(0, 5).join(' ; ')}`);
+
+  console.log(`  R-089 PAIR CENSUS: ${shapes.length} distinct week shapes, `
+    + `${unmatchedSquats.length} unmatched squat, ${unmatchedKnees.length} unmatched single-leg knee`);
+  for (const [shape, n] of shapes.slice(0, 6)) console.log(`    ${String(n).padStart(3)}x  ${shape}`);
 }
 
 const total = passed + failures.length;
