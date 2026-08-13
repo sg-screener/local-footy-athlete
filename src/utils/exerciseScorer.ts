@@ -584,14 +584,41 @@ export function buildIntent(
       ? intent.effectivePatterns
       : intent.plannedPatterns;
     if (patterns.length > 0) {
-      const preferred = (pattern: MainStrengthPattern): MovementPattern[] => {
-        switch (pattern) {
-          case 'squat': return ['squat'];
-          case 'hinge': return ['hinge'];
-          case 'push': return ['horizontal_push', 'vertical_push'];
-          case 'pull': return ['horizontal_pull', 'vertical_pull'];
-        }
+      // ── ONE TOTAL MAP, AND IT IS TOTAL ON PURPOSE (item 63) ────────────────
+      //
+      // **THIS SWITCH IS WHERE THE SINGLE-LEG SLOTS DIED.** `MainStrengthPattern`
+      // was widened with `single_leg_knee` and `single_leg_hip`, and this switch
+      // was not extended — so a plan asking for them fell through to `undefined`
+      // and the slots were never built. **That is the `cod_decel` hazard the
+      // registry has now recorded three times: growing a domain union silently
+      // returns `undefined` from every unextended switch over it.**
+      //
+      // **A `Record<MainStrengthPattern, …>` INSTEAD OF A `switch`, so the
+      // COMPILER is the enforcer.** The next member added to the union fails to
+      // typecheck here rather than quietly producing an empty slot list. That is
+      // the compression item 61's census prescribes, applied at the site that
+      // just proved it was needed.
+      //
+      // **THE UNILATERAL FLAG IS PART OF THE ANSWER, NOT A DETAIL.** A `hinge`
+      // preference alone would happily fill `single_leg_hip` with a bilateral
+      // RDL — `sessionSlotCoverage` only credits the single-leg slot when the
+      // lift is tagged unilateral, so the slot must REQUIRE it or the ladder
+      // reads the same as it did before.
+      const PATTERN_SLOT_SHAPE: Record<
+        MainStrengthPattern,
+        { movements: MovementPattern[]; unilateral: boolean }
+      > = {
+        squat: { movements: ['squat'], unilateral: false },
+        hinge: { movements: ['hinge'], unilateral: false },
+        single_leg_knee: { movements: ['lunge', 'squat'], unilateral: true },
+        single_leg_hip: { movements: ['hinge'], unilateral: true },
+        push: { movements: ['horizontal_push', 'vertical_push'], unilateral: false },
+        pull: { movements: ['horizontal_pull', 'vertical_pull'], unilateral: false },
       };
+      const preferred = (pattern: MainStrengthPattern): MovementPattern[] =>
+        PATTERN_SLOT_SHAPE[pattern].movements;
+      const needsUnilateral = (pattern: MainStrengthPattern): boolean =>
+        PATTERN_SLOT_SHAPE[pattern].unilateral;
       const targetMovements = Array.from(new Set([
         ...patterns.flatMap(preferred),
         ...(patterns.includes('squat') ? ['lunge' as MovementPattern] : []),
@@ -604,18 +631,26 @@ export function buildIntent(
         preferredMovements: preferred(primary),
         maxLoad: null,
         maxFatigue: null,
-        requireUnilateral: false,
+        requireUnilateral: needsUnilateral(primary),
       }];
       for (const pattern of patterns.filter((pattern) => pattern !== primary)) {
         slots.push({
-          role: 'secondary',
+          role: needsUnilateral(pattern) ? 'unilateral' : 'secondary',
           preferredMovements: preferred(pattern),
           maxLoad: 'moderate',
           maxFatigue: null,
-          requireUnilateral: null,
+          // A SINGLE-LEG PATTERN DEMANDS A UNILATERAL LIFT. `null` here means
+          // "no opinion", which is what let a bilateral RDL answer a single-leg
+          // hip slot and leave the ladder reading exactly as it did before.
+          requireUnilateral: needsUnilateral(pattern) ? true : null,
         });
       }
-      if (patterns.includes('squat') && slots.length < exerciseCount) {
+      // LEGACY: a squat day used to imply a lunge slot, because single-leg work
+      // had no way to be ASKED for. It still fires for plans that name `squat`
+      // without the single-leg patterns; when the plan names them explicitly the
+      // slot above already exists and this would be a second one.
+      if (patterns.includes('squat') && !patterns.includes('single_leg_knee')
+        && slots.length < exerciseCount) {
         slots.push({
           role: 'unilateral',
           preferredMovements: ['lunge', 'squat'],
