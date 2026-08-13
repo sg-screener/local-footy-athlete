@@ -53,10 +53,32 @@ wrecked-window fix shipped hours earlier is what made this one measurable.**
 (which HALVES), not a session-count change, and not the plan shape — it is a
 single-set reduction on the day's FIRST main lift, on days outside the window.
 
-**WHERE IT IS NOT:** `applyGenerationConstraintsToProfile` (injuries only),
-`mergeAthletePrefsWithGenerationConstraints` (injuries only), and nothing in
-`defaultProgram` matches a `sets - 1` or readiness-driven volume cut. **It is
-upstream of the builder — the weekly plan or the readiness bias that feeds it.**
+**WHERE IT IS NOT — SIX EXCLUSIONS, EACH CHECKED, SO NOBODY RE-WALKS THEM:**
+1. `applyGenerationConstraintsToProfile` — **injuries only**, returns the
+   profile untouched when `context.injuries` is empty.
+2. `mergeAthletePrefsWithGenerationConstraints` — **injuries only**, same shape.
+3. **No readiness-driven set cut exists in `defaultProgram`** — no `sets - 1`,
+   no volume reduction keyed to readiness anywhere in the file.
+4. **It is not an ungated deload site.** Every `deloadPolicy` use in
+   `defaultProgram` now runs through `deloadPolicyForDayOfWeek`; a grep for a
+   raw one returns only the helper's own two lines.
+5. **It is not the OTHER deload applier.** `g1LandingAsk.deloadedSession` also
+   calls `applyStrengthDeloadToExercises`, but its only consumer is
+   `planChangeProducer` — **the tap door, never generation.**
+6. **It is not the training-age cap.** `policy.maxSetsPerExercise` is 3 for
+   beginners and **null** for the NORMAL policy this Advanced profile takes.
+
+**⚠ AND THAT RULES OUT "IT IS A DELOAD" ALTOGETHER, WHICH IS THE USEFUL PART.**
+A deload on a 3-set lift gives `round(3 × 0.5) = 2` — a one-set drop, so the
+numbers LOOK like a deload and that was my first theory. Exclusions 4 and 5 kill
+it: no deload applier can reach that row on that day. **The reduction is
+something else that happens to land on the same number**, and the session is
+otherwise byte-identical (same exercises, same order), so it is not a plan-shape
+or session-type change either.
+
+**WHAT IS LEFT TO CHECK:** whatever authors the day's FIRST main lift's set
+count — the plan entry's tier or the scheme selection feeding `baseSetsFromScheme`
+— under a live readiness constraint.
 
 **WHY THE CELL ASSERTS A RATIO AND NOT EQUALITY.** Loosening it to "unchanged"
 would have hidden this; asserting equality would have red-flagged a defect the
