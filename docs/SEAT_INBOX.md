@@ -49,6 +49,40 @@ his instruction is standing authority, not history.**
     phone and say *"that week is wrong because X"*. Put them where the seat can
     send them to him. **Then say the [NO COPY] count and the ugliest thing you
     saw.**
+67. **BLOCKED-BY: sam — PARKED DELIBERATELY UNTIL 64, 65 AND 66 HAVE LANDED.
+    SCALE THE CORPUS AND FAN AGENTS ACROSS IT. SAM'S IDEA, 2026-08-13, RECORDED
+    SO IT SURVIVES THE NIGHT.**
+
+    **HIS WORDS:** *"instead of doing the 17 test harnesses or whatever we do 100
+    or even 1000 and have claude go through it with multiple agents smashing out
+    tests and reporting back — once all the other stuff is in — to see where gaps
+    are in the programming based on unique scenarios of athletes and how they
+    interact with the app."*
+
+    **THE GENERATION HALF IS ALREADY THERE AND HE SHOULD KNOW IT.** The ladder
+    census runs **174 worlds / 318 laddered days** offline today. The 17 is the
+    hand-authored QA set, not the ceiling. Going to 1000 is cheap.
+
+    **⚠ THE TRAP, AND IT IS THE WHOLE REASON THIS IS PARKED.** Agents auditing
+    1000 programs find violations of rules WE ALREADY WROTE. **They cannot find
+    the rule nobody wrote** — which is the entire class that has hurt this app
+    (single-leg sat behind a green suite for months). Run this before item 64
+    and you get 1000 copies of the same known defects and a false sense of
+    coverage.
+
+    **WHAT FAN-OUT IS ACTUALLY GOOD FOR HERE, AND IT IS NOT RULE-CHECKING:**
+    **outliers and disagreement.** Generate at scale, cluster the weeks, and
+    surface the ones UNLIKE the others — the athlete whose week is strange in a
+    way no rule names. That finds unwritten rules, which is the thing we cannot
+    otherwise get at. Have independent agents judge the same week and surface
+    where they DISAGREE; disagreement marks the places the rules are silent.
+
+    **AND THE COMBINATORICS LIVE IN THE INTERACTIONS, NOT THE PROFILES.** Item
+    66's synthetic athlete crossed with 1000 profiles is where nonsense and
+    crashes actually are — away in week 3 AND sore in week 2 AND a bye. Static
+    generation is the easy half.
+
+    **DO NOT START THIS ITEM. Sam parked it himself.**
 
 66. **THE SYNTHETIC ATHLETE — SIMULATE FOUR WEEKS OF USE IN SECONDS INSTEAD OF
     WAITING FOUR WEEKS. OWNED BY `sim` (claimed 2026-08-13).**
@@ -2294,6 +2328,7 @@ seat was wrong.
      until each owner writes its own head line correctly.
 
   **WHAT TO SEND:** *"build the guard and fix the three"* — or *"leave it"*.
+
 
 - **✅ ANSWERED 2026-08-13 — R-088. THE CAP IS 7, IT COUNTS STRENGTH ROWS
   ONLY (paired mobility and the prehab flow are free of it), and it binds what
