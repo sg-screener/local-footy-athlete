@@ -1070,3 +1070,51 @@ because the plan entry intends only `squat`. My own probe reached the same
 function independently before that commit was read (`5d6ef5fa` is load-bearing
 for it). **When C7 is fixed, away-flow `[13d]` stays green — the floor is
 one-sided — but the away total becomes 23.**
+
+---
+
+## THE CLOSING CLAIM WAS FALSE — I BROKE TWO OTHER SEATS' SUITES (2026-08-13, after 15:08)
+
+**I wrote "866 checks, 0 failures of mine" and it was wrong.** It was measured on
+the six suites I already owned. A full `scripts/sweep.sh` found **30 reds against
+audit's 23** from two hours earlier. Seven were new; **two are mine.**
+
+**Both causes were my own commits**, found by binary search over 223 commits (8
+suite runs per search) in a **detached worktree**, so the shared checkout was
+never disturbed:
+
+| commit | verdict |
+| --- | --- |
+| `308b0358` | GREEN |
+| **`a55d1a6c`** | **RED — first cause (mine)** |
+| `4ca47082` | GREEN *(with the first cause neutralised)* |
+| **`188d6fad`** | **RED — second cause (mine)** |
+
+**ONE BISECT WAS NOT ENOUGH.** The first cause MASKS the second: disabling
+`equipmentSafeFallbackName` at HEAD does **not** restore green, and reading that
+as "not mine" is the trap. The second search re-ran with the substitution
+neutralised at every step.
+
+**The break:** §18 rejects the finished week —
+`pattern_restore_failure:strength_patterns:0|planner_selected_target_miss:main_strength:3`
+— reddening `test:section18-gateway` and `test:athlete-session-deletion`.
+
+**MY DIAGNOSIS WAS WRONG TWICE BEFORE THE PROBE.** I theorised the substitute
+stopped classifying as the pattern (built the guard — did not go green), then a
+throw. The probe printed `[PROBE-OK] Back Squat -> Back Squat`: the name comes
+back **unchanged**. The guard was inert and was **not** shipped.
+
+**REVERTED**, both commits, and the census ceiling with them. A kit-impossible
+lift is visible and survivable; **a week §18 refuses is not**. R-083's real
+remedy is the composition unit.
+
+### HANDED OVER — four new reds that are NOT mine
+
+Already red at `308b0358`, so they entered the window before my work and belong
+to whoever owns them:
+
+`test:coach-revision-proposal-behavior` · `test:deload-week` ·
+`test:program-control-durable` · `test:session-list-combinations`
+
+`test:session-execution-checklist` was GREEN at both `308b0358` and `a55d1a6c`
+and is red at HEAD — **its cause is later than mine and unattributed.**
