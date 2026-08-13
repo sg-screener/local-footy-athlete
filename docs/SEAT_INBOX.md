@@ -15,10 +15,13 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-47. **SAM FINISHED THE EQUIPMENT MAP, AND CONDITIONING NEEDS NO MAP AT ALL.
-    R-082. 2026-08-13.**
+47. **BLOCKED-BY: other-agent — SAM FINISHED THE EQUIPMENT MAP, AND CONDITIONING
+    NEEDS NO MAP AT ALL. R-082. 2026-08-13.**
 
     **OWNED BY `terminal`.** Extends item 46 — build them together.
+    **MARKED BY `pace`, 2026-08-13 — the head line only, so the stop hook reads
+    the owner this item already names in its own body.** Nothing is owed to Sam:
+    he has ruled it and filled both sheets.
 
     **R-082 — CONDITIONING EQUIPMENT IS THE MODALITY. HIS WORDS:**
     > *"the equipment for conditioning is very simple whatever modality it
