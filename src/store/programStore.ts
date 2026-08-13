@@ -2722,6 +2722,33 @@ export function applyProgramOverrideSliceWrite(args: {
 }
 
 /**
+ * ROLLBACK-ONLY: put the pin list back exactly as a snapshot found it.
+ *
+ * WHY IT LIVES HERE AND NOT AT THE CALLER. The coach executor's `add_session`
+ * rollback has to restore three stores, and `userRemovalConstraints` is the
+ * third — the pin minted by `commitAthleteSessionAdditionTransaction`. It was
+ * restoring that one with a direct `useProgramStore.setState`, which made
+ * `coachCommandExecutor` a SECOND LIVE WRITER of a persisted shape and reddened
+ * `test:repo-law-guards` ("every persisted store has ONE live writer"). The
+ * guard was right: the fix is to write through the store's own module, exactly
+ * as `applyProgramOverrideWrite` below already does for overrides — not to
+ * raise the debt allowance.
+ *
+ * DELIBERATELY NOT A GENERAL SETTER. It restores a list the caller captured
+ * BEFORE its own failed write, so it cannot be used to author constraints —
+ * only to un-author them. `writer` is required so the restore is attributable
+ * in the same way every other sanctioned write is.
+ */
+export function restoreUserRemovalConstraintsWrite(args: {
+  constraints: readonly UserRemovalConstraint[];
+  writer: ProgramOverrideWriterId;
+}): void {
+  useProgramStore.setState({
+    userRemovalConstraints: [...args.constraints],
+  } as Partial<ProgramState> as never);
+}
+
+/**
  * The single-date write — what every caller of the retired raw primitive
  * wants, with the writer named. The body is the primitive's own, unchanged:
  * the final active-constraint validation still runs here so no producer can

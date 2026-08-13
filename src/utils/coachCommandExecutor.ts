@@ -78,7 +78,7 @@ import {
   type ApplyUndoPlanDeps,
 } from './coachUndoEngine';
 import type { ModalityPreference } from '../store/coachPreferencesStore';
-import { applyProgramOverrideWrite, liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
+import { applyProgramOverrideWrite, liveOffseasonSubphaseForDate, restoreUserRemovalConstraintsWrite, useProgramStore } from '../store/programStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useProfileStore } from '../store/profileStore';
 import type { Workout, OverrideContext, UserRemovalConstraint } from '../types/domain';
@@ -4243,9 +4243,10 @@ function restoreRemoveSessionStores(snapshot: RemoveSessionRollbackSnapshot): vo
   // Put the pin list back BEFORE the override work below, so no reader can
   // observe the restored week while an abandoned transaction's pin is still
   // standing over it.
-  useProgramStore.setState({
-    userRemovalConstraints: [...snapshot.userRemovalConstraints],
-  } as never);
+  restoreUserRemovalConstraintsWrite({
+    constraints: snapshot.userRemovalConstraints,
+    writer: 'coach_executor',
+  });
   const store = useProgramStore.getState();
   if (snapshot.overrideWorkout) {
     applyProgramOverrideWrite({

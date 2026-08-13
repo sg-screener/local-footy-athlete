@@ -22,6 +22,14 @@ his instruction is standing authority, not history.**
     one-writer-per-store law is architectural, not a Sam ruling. **Nothing to
     ask him.**
 
+    **✅ THE STORE-WRITER HALF IS PAID — `progression`, 2026-08-13.** It was my
+    regression (`8f4ba364`) and the guard was right. Rerouted through the store's
+    own module: `restoreUserRemovalConstraintsWrite` in `programStore.ts`, the
+    sibling of `applyProgramOverrideWrite` the executor already imports. **The
+    debt allowance was NOT raised.** `test:repo-law-guards` one-writer cell back
+    to PASS; ownership suite 5/0; mutation-proven (neutering the new writer reds
+    both pin cells). **The two MAS flows and the other reds are `audit`'s.**
+
     **THE ONE THAT MATTERS — A SECOND LIVE WRITER JOINED THE PROGRAM STORE.**
     `useProgramStore <- utils/coachCommandExecutor.ts`. **This is new, from the
     refused-add / pinned-exercise fix.** The one-writer law exists because two

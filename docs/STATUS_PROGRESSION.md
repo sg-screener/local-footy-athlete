@@ -19,6 +19,41 @@ write** and was left alone.
 
 ## STATUS
 
+### ✅ ITEM 44 — MY OWN REGRESSION, CAUGHT BY A GUARD, PAID THE WAY THE GUARD ASKED
+
+**The seat filed item 44 naming a second live writer on the program store, and
+it is MINE** — `useProgramStore <- utils/coachCommandExecutor.ts`, new from the
+refused-add pin fix (`8f4ba364`). My rollback restored the pin list with a direct
+`useProgramStore.setState`, which is a persisted shape gaining a second writer.
+**`test:repo-law-guards` reddened, and it was right.**
+
+**PAID THE WAY THE ITEM DEMANDS — "write through the store's own module … do not
+raise the allowance to make the red go away."** `programStore.ts` already
+exports exactly this shape for overrides (`applyProgramOverrideWrite`, which the
+executor already imports), so the fix is its sibling:
+**`restoreUserRemovalConstraintsWrite({ constraints, writer })`**, living in the
+store, called from the executor. **The debt allowance was NOT touched.**
+
+**DELIBERATELY NOT A GENERAL SETTER.** It restores a list the caller captured
+BEFORE its own failed write, so it can only un-author constraints, never author
+them; `writer` is required so the restore is attributable like every other
+sanctioned write.
+
+**WORKING** — `test:repo-law-guards` "every persisted store has ONE live writer"
+back to **PASS**; `test:coach-add-session-ownership` 5/0 (+1 disclosed skip);
+`test:compile` PASSES; no `useProgramStore.setState` left in the executor.
+**MUTATION-PROVEN through the new path:** neutering the store writer reds BOTH
+pin cells (3 passing / 2 failing), so the reroute carries the behaviour rather
+than merely satisfying the guard.
+
+**THE LESSON: my fix was right and its WRITE PATH was wrong, and only the guard
+knew.** I checked the three obvious things when I landed it — suite green,
+mutants killed, no regressions in 39 neighbouring suites — and none of them
+looks at who writes a store.
+
+**THE REST OF ITEM 44 IS NOT MINE:** the two unrun MAS golden flows and the
+remaining reds are `audit`'s per the item's own owner line.
+
 ### ITEM 41 / CENSUS C6 — ASSIGNED TO THIS SEAT. PREMISE VERIFIED, DEFECT MEASURED, BUILD NOT STARTED
 
 **THE ITEM'S PREMISE IS TRUE AND I CHECKED IT RATHER THAN TAKING IT.**
