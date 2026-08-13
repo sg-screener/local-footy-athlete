@@ -223,6 +223,41 @@ something else, which the 4A ruling forbids. **The vocabulary cannot express COD
 without lying.** That is the design decision 28-C1's ranking fix has to make, and
 it can no longer be reached by accident.
 
+### 🛑 2026-08-13 — THE ONE PROCESS LESSON WORTH KEEPING FROM THIS SEAT'S FIRST DAY
+
+**FIVE FAULTS, ONE SHAPE, AND I SHIPPED THREE OF THEM AFTER WRITING THE RULE
+THAT CATCHES THEM.**
+
+1. A week fingerprint that walked coordinates the program does not use and
+   returned `[]` for six different worlds — *"nothing moved"* was the only answer
+   it could give, **in both arms.**
+2. A phantom file-hold asserted from `git status` without the `cmp` this repo's
+   own note demands.
+3. A refutation of item 28-C1 published from a mutation that **never reached the
+   code path it was meant to test.**
+4. `[C12]`'s own parser: unscoped, scraping 13 unions, and silently dropping
+   `vo2`. **Its non-vacuity cells caught it — the first time an instrument of
+   mine caught itself.**
+5. A "172 lines LOST" alarm raised by diffing a commit against a WORKING TREE two
+   seats were rewriting. **The file had GROWN. The alarm pointed the wrong way
+   round.**
+
+> **A NULL RESULT — AND A SCARY NUMBER — IS A CLAIM ABOUT THE INSTRUMENT FIRST.**
+> Before *"X changes nothing"*, prove the change EXECUTED. Before *"X was
+> destroyed"*, compare `HEAD` against `HEAD~1`, never against a shared working
+> tree. **Every one of these cost more to un-say than the control would have cost
+> to run.**
+
+**AND THE SHARED-FILE RULE, WHICH I BROKE TWICE IN OPPOSITE DIRECTIONS.**
+`git commit -- <shared path>` commits the **working tree** copy of that path.
+Mine was stale both times: once it published another seat's uncommitted removal
+under my message, once it **reverted** their archival and re-inflated the inbox
+by 12.5KB — a file Sam pays for by the byte.
+
+> **THE RULE IS NOT "PRINT THE STAT". IT IS "PRINT IT IN A SEPARATE STEP AND STOP
+> ON IT".** I put the stat and the commit in one shell invocation, so a
+> 155-deletion number scrolled past unread. Two commands, always.
+
 ### NEXT SESSION STARTS HERE
 
 1. **The glass proof for the pace line** — a golden flow driving the Away control
