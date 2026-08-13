@@ -268,13 +268,33 @@ and **never asks whether a day remained.** A week that genuinely ran out of room
 records NO typed reduction and the Coach Note owes the athlete a reason it cannot
 give. His earlier ruling gives the shape
 (`INJURY_AUTHORITY_EXHAUSTION_RULING_2026-08-06.md:22-27`): **measured
-exhaustion, "proof, never inference".** · `UNENFORCED` — **and the build is
-SMALLER than first stated.** The proof already exists:
-`section18EffectiveWeekEvaluator.ts:1020` writes `unresolvedMinimumShortfall`
-and `unresolvedPlannerSelectedShortfall` onto the contract, on the real
-evaluation path, every week. **Nothing needs measuring; the reduction needs
-emitting from a number already there** — typed `main_strength_frequency`, reason
-EXHAUSTION, **BESIDE the injury producer and never instead of it.** Census C10.
+exhaustion, "proof, never inference".** · `UNENFORCED` — **the LAW has no gate (nothing
+PREVENTS an inferred cut), but the DEFECT does not reproduce. Measured
+2026-08-13 before building against it.**
+**28 weeks, 7 worlds — 4 injury-free and 3 with a SEVERE injury (knee, lower
+back, shoulder), including 3-day weeks and game weeks:**
+- **weeks with an unexplained main-strength shortfall: ZERO.** Every week met
+  its target or carried a typed reduction.
+- **every main-strength reduction carries a PROVEN reason** —
+  `insufficient_availability` x2 (*"Selected-day availability cannot safely hold
+  the original strength target"*, on 3-day weeks) and
+  `spacing_safety_conflict` x4 (*"Game-day, G-1 and G+1 protection leave fewer
+  safe gym placements"*).
+- **`injury_restriction` fired ZERO times** — the
+  `availableSafePatterns.length === 0` inference producer never ran, not even
+  with a Severe injury.
+**SO THE ITEM'S PREMISE — *"a week that genuinely ran out of room records NO
+typed reduction at all"* — IS FALSE AS MEASURED.** A 3-day week records
+`insufficient_availability` with a detail an athlete could read.
+**WHAT I DID NOT REACH:** `availableSafePatterns.length === 0` needs NO main
+pattern to be safe, and three single-area injuries do not achieve that. **A
+multi-area severe injury might, and that is the only state where the inferred
+cut could still appear.** Build only after producing that state.
+**The proof machinery is ready if it ever is needed:**
+`section18EffectiveWeekEvaluator.ts:1020` already writes
+`unresolvedMinimumShortfall` / `unresolvedPlannerSelectedShortfall` every week,
+and `conditioning` already has the exact reduction shape to copy
+(`section18AcceptedWeekGateway.ts:1193`). Census C10.
 
 **R-074** · *"okay it needs to be checked"* · **THE SET/BLOCK CAP — short
 intermittent high-%MAS work keeps the set to ~4-5 min, "enforced at selection
