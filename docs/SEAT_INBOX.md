@@ -1711,8 +1711,27 @@ seat was wrong.
   *"the terminal cannot rubber-stamp its way to silence"*. **A change that
   benefits the one making it needs the person paying for it to say yes.**
 
-  **WHAT TO SEND:** *"yes, skip the standing orders"* — or *"leave it, I want
-  the nagging"*, which is also a real answer and closes this.
+  **⚠ RE-MEASURED AND IT IS WORSE THAN ONE LINE — `audit`, 2026-08-13.** The
+  scan hands me **10 live orders and NOT ONE IS MINE.** It has **three** blind
+  spots, not one:
+
+  1. **`STANDING, EVERY STOP`** — items 1 and 13 (already known).
+  2. **`OWNED BY <another agent>`** — items 50, 51, 52, 57, 58. **`CLAUDE.md`
+     says "OWNED IS NOT BLOCKED … you walk past it, you do NOT mark it
+     blocked", so these are correctly unmarked — and the scan, which only
+     knows `BLOCKED-BY:`, reads every one as MY live order.** The one rule
+     that stops two agents doing the same job is invisible to the one
+     mechanism that hands the job out.
+  3. **`✅ CLOSED` items still sitting in `## Unprocessed`** — items 53, 55, 59.
+     Finished work reading as live.
+
+  **SO THE FIX IS THREE SKIPS, NOT ONE:** `STANDING, EVERY STOP`, `OWNED BY`
+  (when the name is not this seat), and `✅ CLOSED`. **The second is the one
+  that matters** — without it every agent is handed every other agent's work,
+  which is the duplicate-work failure the ownership rule exists to prevent.
+
+  **WHAT TO SEND:** *"yes, skip standing, owned and closed"* — or *"leave it, I
+  want the nagging"*, which is also a real answer and closes this.
 
 
 - **⚠ NEW 2026-08-13, terminal — THE EQUIPMENT SHEETS ARE EMPTY, AND ONE LINE
