@@ -712,6 +712,10 @@ import {
   type ScheduleState,
 } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
+// [C4] the join between the authored exemption and the validator that needs it.
+import fs from 'fs';
+import path from 'path';
+import { validateProgramWeek } from '../rules/weekStructureValidator';
 import type { Microcycle, OnboardingData, TrainingProgram } from '../types/domain';
 
 const BLOCK_START = '2026-03-23';
@@ -828,6 +832,62 @@ try {
     `other=${liveCounts.byCategory.other}; days: ${liveCounts.days.map((d) => `${d.date}:${d.units.map((u) => u.category).join('+') || 'rest'}`).join(' | ')}`);
 } catch (e) {
   ok('live sample ran without throwing', false, String(e));
+}
+
+// ─── THE RUNNING-FLOOR EXEMPTION REACHES THE VALIDATOR (census C4) ────
+//
+// The cells at the top of this file already prove `auditWeekAgainstCaps`
+// honours both authored exemptions. They passed for months while **no
+// production caller passed one** — `weekStructureValidator.ts` and
+// `weeklyExposureCounts.ts:382` both called it bare, so an early-off-season
+// week was nagged for a floor Sam had already lifted, and the athlete-facing
+// string promised the lift (`weeklyExposureCounts.ts:330`) while nothing could
+// apply it. **A tested mechanism with no caller is the same defect as an
+// untested one; these cells hold the JOIN rather than the mechanism.**
+{
+  const zeroRunningWeek = ['2026-06-01', '2026-06-02', '2026-06-03']
+    .map((date) => ({ date, workouts: [] as Workout[] }));
+  const runningUnder = (report: { findings: Array<{ ruleId: string }> }) =>
+    report.findings.some((f: { ruleId: string }) => f.ruleId === 'cap_maxRunningExposures_under');
+
+  // NON-VACUITY FIRST. With no exemption claimed the floor MUST fire, or every
+  // assertion below is a comparison of two silences.
+  const enforced = validateProgramWeek({ days: zeroRunningWeek });
+  ok('[C4] a 0-running week is flagged when no exemption is claimed',
+    runningUnder(enforced),
+    enforced.findings.map((f: { ruleId: string }) => f.ruleId).join(', ') || '<no findings at all>');
+
+  ok('[C4] the early-off-season subphase reaches the floor and lifts it',
+    !runningUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'early_offseason' })));
+  ok('[C4] and so does bye recovery',
+    !runningUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'bye_recovery' })));
+
+  // THE EXEMPTION IS NAMED, NOT GENERAL. A subphase Sam did not name must not
+  // silence the floor — otherwise threading the field would quietly disable it
+  // for every week that carries one.
+  ok('[C4] an unnamed subphase does NOT lift the floor',
+    runningUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'late_offseason' })));
+  ok('[C4] nor does a game week',
+    runningUnder(validateProgramWeek({ days: zeroRunningWeek, subphase: 'game_week' })));
+
+  // ⚠ THE WRITER IS SOURCE-PINNED, AND THIS CELL SAYS SO RATHER THAN IMPLYING
+  // COVERAGE IT DOES NOT HAVE. The cells above drive `validateProgramWeek`
+  // directly, so they hold the READER. The production writer is
+  // `section18CraftTier.craftValidatorInput`, and standing a full craft-tier
+  // week up here would duplicate `test:craft-tier`'s fixtures for one field.
+  // A source pin cannot prove the value is right — it proves the JOIN still
+  // exists, which is the thing that was missing for months.
+  //
+  // AND THE QA CORPUS CANNOT SEE THIS AT ALL: `weekPlanQA.ts:1106` calls
+  // `validateProgramWeek` itself and passes no subphase, which is why
+  // `test:qa` is byte-identical either side of this change (168/11 both arms).
+  // Measured, not assumed — and stated so nobody reads that green as coverage.
+  const craftSource = fs.readFileSync(
+    path.join(__dirname, '..', 'rules', 'section18CraftTier.ts'), 'utf8');
+  ok('[C4] the craft tier still hands the validator the contract\'s subphase',
+    /subphase:\s*args\.contract\.identity\.declaredSubphase/.test(craftSource),
+    'section18CraftTier.craftValidatorInput stopped passing `subphase` — the '
+    + 'exemption is unreachable again and no behavioural cell here would notice.');
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────

@@ -50,7 +50,9 @@ import {
   auditWeekAgainstCaps,
   type WeekDayInput,
   type WeeklyExposureCounts,
+  type RunningFloorExemption,
 } from './weeklyExposureCounts';
+import type { Section18Subphase } from './weeklyExposureContractV2';
 import { resolveWeekContext } from './weekContext';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -99,6 +101,23 @@ export interface ValidateProgramWeekInput {
     /** Bye week — suppress under-training nags, soften small overshoots. */
     byeWeek?: boolean;
   };
+  /**
+   * THE WEEK'S §18 SUBPHASE, AND IT EXISTS TO CLAIM A RUNNING-FLOOR EXEMPTION.
+   *
+   * Sam's floor sentence names its own two escapes — the shipped detail string
+   * says *"lifted in early off-season weeks 1-2 and bye recovery"*
+   * (`weeklyExposureCounts.ts:330`). `auditWeekAgainstCaps` has taken a TYPED
+   * `runningFloorExemption` for exactly those two cases since it was written,
+   * and `rulesKernelTests` proves both suppress the finding.
+   *
+   * **BOTH PRODUCTION CALLERS PASSED NOTHING.** So the app told the athlete
+   * about a lift it had no way to apply, and an early-off-season week was nagged
+   * for a floor Sam had already lifted. Census C4, measured 2026-08-13.
+   *
+   * Optional because one caller (`programEditRiskAssessment`) does not hold a
+   * contract; absent means the floor is enforced, which is the safe direction.
+   */
+  subphase?: Section18Subphase | null;
 }
 
 export interface WeekValidationReport {
@@ -451,7 +470,16 @@ export function validateProgramWeek(input: ValidateProgramWeekInput): WeekValida
     conditioningExposures: 'soft',
     sprintCodExposures: 'soft',
   };
-  for (const cf of auditWeekAgainstCaps(counts)) {
+  // THE EXEMPTION IS CLAIMED BY NAME, NEVER BY A BOOLEAN — that is why
+  // `RunningFloorExemption` is a typed pair and not a flag. A week says WHICH of
+  // Sam's two authored cases it is standing on, and the build can check the
+  // reason still holds.
+  const runningFloorExemption: RunningFloorExemption | null =
+    input.subphase === 'early_offseason' ? 'early_off_season_weeks_1_2'
+    : input.subphase === 'bye_recovery' ? 'bye_recovery'
+    : flags.byeWeek ? 'bye_recovery'
+    : null;
+  for (const cf of auditWeekAgainstCaps(counts, { runningFloorExemption })) {
     if (cf.kind === 'under') {
       if (flags.reducedLoadActive || flags.byeWeek) continue; // never punish light weeks
       push({

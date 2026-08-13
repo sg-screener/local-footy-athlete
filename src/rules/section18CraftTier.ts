@@ -237,6 +237,14 @@ function craftValidatorInput(args: WeekCraftInput): ValidateProgramWeekInput {
     anchors,
     profile,
     weekFlags: deriveWeekValidationFlags({ days, anchors, profile, weekFlags: explicitFlags }),
+    // THE WRITER FOR THE RUNNING-FLOOR EXEMPTION (census C4, 2026-08-13).
+    // The contract has always carried the week's declared subphase, and the
+    // validator has always been able to claim `runningFloorExemption` — but
+    // nothing joined the two, so Sam's own "lifted in early off-season weeks
+    // 1-2 and bye recovery" was promised in the athlete's sentence and applied
+    // nowhere. Declared, never expected: the DECLARED subphase is what this
+    // week says it is, which is what a finding about this week must answer to.
+    subphase: args.contract.identity.declaredSubphase,
   };
 }
 
