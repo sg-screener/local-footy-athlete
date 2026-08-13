@@ -15,8 +15,8 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-48. **SAM RULED BOTH GAPS, AND BOTH ANSWERS ARE "DON'T INVENT ANYTHING".
-    R-083, R-084. 2026-08-13.**
+48. **BLOCKED-BY: other-agent — owned by `terminal` in its own text. SAM RULED
+    BOTH GAPS, AND BOTH ANSWERS ARE "DON'T INVENT ANYTHING". R-083, R-084.**
 
     **OWNED BY `terminal`** (it asked).
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *bodyweight*, *vertical*,
@@ -337,7 +337,8 @@ his instruction is standing authority, not history.**
     across 17 scenarios; the S5/S6 `_under` findings are among the 11.
     **NOTHING IS OWED TO SAM.**
 
-41. **✅ CENSUS C6 IS FIXED AND SHIPPED — `cd559cb2`, `progression`, 2026-08-13.
+41. **BLOCKED-BY: other-agent — closed; only ARCHIVAL remains, which is the
+    seat's edit. CENSUS C6 IS FIXED AND SHIPPED — `cd559cb2`, `progression`, 2026-08-13.
     THE RESIDUAL IS LOCATED AND HANDED TO §18.**
 
     **THE DEFECT IS GONE.** Measured either side, same seed, same week, total
