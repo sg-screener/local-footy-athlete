@@ -845,3 +845,48 @@ IDENTICAL.** The terminal saw this shape in the golden earlier and named it; it
 is still there, on both days, in the CURRENT tree. **That is a bigger athlete-
 facing problem than the session flip that led me to it**, and it belongs to the
 pool/rotation work rather than to the top-up.
+
+
+---
+
+## 2026-08-13 — ARMS ON LEG DAYS: TWO CANDIDATES ELIMINATED, ONE LEFT, AND IT IS NOT MINE
+
+**The symptom, in the CURRENT tree, on a bodyweight off-season week:**
+
+    day 3  "Lower Hinge"  Bicep Curls · Tricep Pushdowns · Tib Raises · Pallof Press · Romanian Deadlift
+    day 6  "Lower Squat"  Bicep Curls · Tricep Pushdowns · Tib Raises · Pallof Press · Back Squat
+
+**Both leg days three-quarters arm work, and their four accessories IDENTICAL.**
+
+**ELIMINATED 1 — THE SLOT SPEC IS INNOCENT.** `exerciseScorer.ts`'s lower
+specs never ask for arms: `hinge`, `squat|plyo`, `lunge|squat` (unilateral),
+`hinge` accessory, `squat|hinge` finisher. **`isolation_upper` appears in the
+UPPER, ARMS and FULL-BODY specs and in no lower one.** So nothing in the intended
+design puts a bicep curl on a leg day.
+
+**ELIMINATED 2 — IT IS NOT THE ONE LITERAL BLOCK THAT NAMES THEM.**
+`defaultProgram.ts:1105` is the only place `'Bicep Curls'` appears in production,
+and it returns `Bicep Curls · Tricep Pushdowns · Face Pulls · Calf Raises ·
+Pallof Press`. **The days carry `Tib Raises`, not Face Pulls or Calf Raises**, so
+the list has been REWRITTEN after that block ran — the literal source is not the
+shipping source.
+
+**⚠ BUT THAT BLOCK IS STILL WORTH A LOOK BY WHOEVER OWNS IT.** It is keyed
+`/accessor|prehab|gunshow|pump|low-fatigue/i.test(lower)` where `lower` is the
+plan entry's FOCUS TEXT. Its own comment calls it *"the typical G-1 slot"* — a
+pre-game light day. **A text regex deciding a day's exercise list is the same
+class as the erg regex I fixed today and the face pull before it**, and a lower
+day whose focus text happens to contain "accessory" would take it.
+
+**WHAT IS LEFT, AND IT IS THE POOL ROTATION:** `Tib Raises` and `Pallof Press`
+are prehab-pool movements, and both leg days got the SAME four. That points at
+`selectPoolEntry` / `PoolEntry.group` — **the terminal's ground, landed today as
+`bf1681c1` ("rotation may no longer cross a muscle group")**. Their own note says
+avoidance may still cross groups. **This is the same defect one layer out: not
+"which entry inside a group", but "which GROUP a lower day may draw from at
+all".**
+
+**HANDED OVER RATHER THAN TAKEN.** I am not editing `defaultProgram.ts` or the
+pools while the terminal is live in both, and `bf1681c1` is hours old. **The
+narrowing is the contribution: two of three candidates are eliminated by
+measurement, not by argument.**
