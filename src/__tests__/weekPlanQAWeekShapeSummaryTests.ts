@@ -7,6 +7,11 @@ import {
   validatorDaysFromResolvedWeek,
 } from '../rules/weekStructureValidator';
 import { renderWeekShapeSummary } from './weekPlanQA/weekShapeSummary';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 let pass = 0;
 let fail = 0;
@@ -159,6 +164,7 @@ console.log('\n[3] scenario count stays fixed');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log('\nFailures:');
   for (const failure of failures) console.log(`  - ${failure}`);

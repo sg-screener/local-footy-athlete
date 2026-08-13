@@ -12,6 +12,11 @@ import {
 } from '../utils/missedSessions';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { SessionFeedback } from '../store/programStore';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 let pass = 0;
 let fail = 0;
@@ -99,4 +104,5 @@ console.log('[5] skipped prompt response records attendance without invented eff
 }
 
 console.log(`\nmissedSessionsTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) process.exit(1);

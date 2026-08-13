@@ -16,6 +16,11 @@ import {
 import type { CoachTargetFrame } from '../utils/coachTargetFrame';
 import type { ProgramEditDraft } from '../utils/coachProgramEditDraft';
 import type { ResolvedDay } from '../utils/sessionResolver';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 import {
   SEMANTIC_PROGRAM_EDIT_DRAFT_SCHEMA,
   SEMANTIC_PROGRAM_EDIT_DRAFT_SCHEMA_VERSION,
@@ -351,6 +356,7 @@ run()
     failures.push(`test runner threw\n      ${detail}`);
     console.log(`\n- Summary -`);
     console.log(`  Pass: ${pass}`);
+    totalsPrinted(fail);
     console.log(`  Fail: ${fail}`);
     console.log(`\n- Failures -`);
     for (const f of failures) console.log(`  - ${f}`);

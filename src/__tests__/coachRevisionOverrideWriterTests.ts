@@ -24,6 +24,11 @@ import {
   applyCoachRevisionDateOverrides,
 } from '../utils/coachRevisionOverrideWriter';
 import { powerRows } from '../rules/sessionRowCounting';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 const MON = '2026-07-06';
 const TUE = '2026-07-07';
@@ -613,6 +618,7 @@ section('[10] multi-day apply is all-or-nothing');
 }
 
 console.log(`\ncoachRevisionOverrideWriterTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.error(failures.join('\n'));
   process.exit(1);

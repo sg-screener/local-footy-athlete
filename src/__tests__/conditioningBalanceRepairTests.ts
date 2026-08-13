@@ -11,6 +11,11 @@ import {
   type SessionAllocation,
 } from '../utils/coachingEngine';
 import type { OnboardingData } from '../types/domain';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 let pass = 0;
 let fail = 0;
@@ -258,5 +263,6 @@ console.log('\n[3] valid conditioning removal re-checks game-week floor');
 }
 
 console.log(`\nconditioningBalanceRepairTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (failures.length) console.error(failures.map((failure) => `  - ${failure}`).join('\n'));
 process.exit(fail > 0 ? 1 : 0);

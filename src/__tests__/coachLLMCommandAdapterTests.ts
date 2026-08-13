@@ -4,6 +4,11 @@ import {
 } from '../utils/coachLLMCommandAdapter';
 import type { CoachContextPacket, CoachIntent } from '../utils/coachIntent';
 import type { CoachCommand } from '../utils/coachCommandRouter';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 let pass = 0;
 let fail = 0;
@@ -377,6 +382,7 @@ if (missingActivity.kind === 'clarify') {
 }
 
 console.log(`\n— Summary —\n  Pass: ${pass}\n  Fail: ${fail}`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log('\n— Failures —');
   for (const f of failures) console.log(`  • ${f}`);

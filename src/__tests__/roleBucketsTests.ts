@@ -13,6 +13,11 @@ import {
 } from '../utils/roleBuckets';
 import { buildProgramGenerationRequestDiagnostics } from '../services/api/generateProgram';
 import type { OnboardingData } from '../types/domain';
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing, cleared only by the printed
+// totals. Added when this suite was wired into test:bible — an unarmed suite
+// in the chain exits 0 on a drained loop and the chain calls that green.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
 
 const fs = require('fs');
 const path = require('path');
@@ -185,6 +190,7 @@ section('[7] onboarding role screen layout is a 5-item vertical list');
 }
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log('\nFailures:');
   failures.forEach((name) => console.log(`  - ${name}`));

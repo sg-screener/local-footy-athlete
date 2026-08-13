@@ -108,8 +108,10 @@ if (process.argv.includes('--update')) {
   fs.writeFileSync(BASELINE, `${JSON.stringify(current, null, 2)}\n`);
   console.log(`  WROTE baseline: ${Object.keys(current).length} files, ` +
     `${Object.values(current).reduce((a, b) => a + b, 0)} branches`);
-  process.exit(0);
-}
+  // NO `process.exit(0)` — see the note in unrunnableSuiteRatchetTests. It
+  // hard-overrides the arm, so a crash before this line would still exit 0.
+  totalsPrinted(0);
+} else {
 
 // ── NON-VACUITY FIRST ────────────────────────────────────────────────────────
 // A scan that silently found nothing would make every ratchet cell below pass
@@ -164,6 +166,7 @@ if (!fs.existsSync(BASELINE)) {
     `baseline ${before}. Falling is free; growth needs --update and a reason.)`);
 }
 
+}
 console.log(`\ncoachPhraseHandlerRatchetTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 if (fail > 0) {

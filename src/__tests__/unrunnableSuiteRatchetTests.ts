@@ -115,8 +115,14 @@ const total = fs.readdirSync(TEST_DIR).filter((f) => /Tests\.ts$/.test(f)).lengt
 if (process.argv.includes('--update')) {
   fs.writeFileSync(BASELINE, `${JSON.stringify({ count: current.length, files: current }, null, 2)}\n`);
   console.log(`  WROTE baseline: ${current.length} unrunnable of ${total}`);
-  process.exit(0);
-}
+  // ⚠ NO `process.exit(0)` HERE, AND THE LAW IS RIGHT TO BAN IT.
+  // `process.exit(0)` writes the code DIRECTLY and hard-overrides the arm, so a
+  // suite that crashed on the way to this line would still exit 0. I wrote that
+  // bypass into this file this morning and `test:totals-or-red-law` named it —
+  // my own guard, catching my own suite. `totalsPrinted(0)` clears through the
+  // OWNER instead, which is the one act that means "I have something true to say".
+  totalsPrinted(0);
+} else {
 
 // ── NON-VACUITY FIRST ────────────────────────────────────────────────────────
 ok('the scan finds the test directory at all', total > 100, total);
@@ -141,6 +147,7 @@ if (!fs.existsSync(BASELINE)) {
     `${fixed.length ? ` WIRED IN SINCE: ${fixed.join(', ')}.` : ''} Falling is free.)`);
 }
 
+}
 console.log(`\nunrunnableSuiteRatchetTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);
 if (fail > 0) {

@@ -45,6 +45,42 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE TOTALS-OR-RED DEBT IS PAID DOWN — 40 UNARMED → 13, AND MY OWN GUARD CAUGHT MY OWN BYPASS
+
+**27 suites armed** (`armTotalsOrRed()` + `totalsPrinted(fail)`), every one of them
+a suite I wired into the chain today and therefore my debt.
+
+**THE PROTOCOL, because a 27-file mechanical edit is how I deleted six orders this
+morning:** exit code captured for all 29 BEFORE, the edit applied with a
+per-file assert that refused to write if the anchor was missing (4 files skipped
+and NAMED rather than guessed at), then all 29 re-run and `diff`ed.
+**Identical, 29 green before and after.**
+
+**MUTATION-PROVEN ON THREE OF THEM:** delete the `totalsPrinted` clear and each
+exits **1**. The arm fires on exactly its founding case — a suite that reaches the
+end without reporting.
+
+**⚠ AND THE LAW THEN CAUGHT ME ON A SECOND CELL I HAD NOT LOOKED AT.** *"No suite
+can un-arm itself with `process.exit(0)`"* — and it named
+**`unrunnableSuiteRatchetTests` and `coachPhraseHandlerRatchetTests`, both written
+by me this morning.** Both had `process.exit(0)` in their `--update` branch.
+**That call writes the exit code DIRECTLY and hard-overrides the arm, so a crash
+on the way to that line would still have exited 0** — the exact defect the law
+exists for, inside the two guards I built to enforce discipline. Restructured to
+an `else` branch clearing through `totalsPrinted(0)`; `--update` still works and
+both are clear.
+
+**WHAT REMAINS, and the split is honest:**
+- **13 unarmed.** FOUR are mine to finish — `coachInterpretationReceipt`,
+  `coachPlan`, `coachWeekDiff` (no top-level import anchor) and
+  `injuryReintroduction` (no `fail` variable). **Skipped by the assert, not missed.**
+- **NINE ARE NOT MINE** and predate today: `approvedIconOwnership`, the five
+  `devE2E*`, `durableWriteNeverSilent`, `maestroElementContract`,
+  `sessionOutcomeParity`.
+- **NINE `process.exit(0)` BYPASSES REMAIN**, all in suites I WIRED but did not
+  write. **My wiring brought them into the law's scope** — the debt is mine to
+  report even where the code is not.
+
 ### ⚠ MY ORPHAN PAYDOWN MADE ANOTHER LAW'S RED **BIGGER** — 24 unarmed suites, and I own them
 
 **`test:totals-or-red-law` is IN THE CHAIN and RED (1 passed, 3 failed).** It
