@@ -564,3 +564,12 @@ size budget Sam pays for in dollars.
     is an injectable prop with the onboarding navigate as its DEFAULT, so
     onboarding behaves exactly as before and the away flow can reuse the door.
     That is the shape this item specified, one line, no second caller to regress.
+
+22. **CLOSED — the popup phrases and the away-equipment flow. Full report
+    archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md`
+    (item 22).** (a) the signed short phrases and (b) time caps out of the popup
+    shipped `5ff77758`. **(c) was closed by item 28's away build, verified line
+    by line** — the question, the routing, the `missing_for_span` write and the
+    copy all exist, and its "three ways out" question was answered by Sam
+    unprompted: *"the athlete just removes the equipment they don't have while
+    on the trip"*.

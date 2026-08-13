@@ -16,8 +16,41 @@ his instruction is standing authority, not history.**
 ## Unprocessed
 
 
-28-C1. **BLOCKED-BY: other-agent — ITS QUESTION IS VOID AND ITS REMAINING WORK
-    IS THE TERMINAL'S, WHOSE FILES ARE OPEN RIGHT NOW.**
+28-C1. **THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS, AND THE WALL HAS MOVED.
+    2026-08-13, terminal.**
+
+    **THE FILES WERE FREE.** All four showed `MM`, and all four are BYTE-IDENTICAL
+    to HEAD — the shared `.git/index` is stale after private-index commits and
+    `git status` lies about it. Compared with `cmp` against `git show HEAD:<path>`,
+    not with `git diff`. **Nobody held them.**
+
+    **MEASURED ON THE WEEKS SAM'S WINDOW ACTUALLY PERMITS**, 5 worlds, 20 weeks,
+    56 conditioning pieces, **all with NO club** (so every one is a week
+    off-season can legally have):
+
+    | world | COD |
+    | --- | --- |
+    | off-season 4d / 5d / 6d, no club | 0 |
+    | pre-season 4d / 5d, no club | 0 |
+
+    **THE OFF-SEASON ZEROS ARE THE GATE WORKING, NOT A DEFECT.** Generation
+    starts at week 1, so those weeks are `early_offseason` / `mid_offseason`, and
+    `codDecelPermitted` REFUSES them — Sam's *"after first 4 weeks"*. Reporting
+    them as failures would have been my instrument, not the app.
+
+    **THE LIVE CASE IS PRE-SEASON WITH NO CLUB, and it is a different wall from
+    the one this item spent six attempts on.** Instrumented: the gate answers
+    `permitted=true` on **all 108 calls**, so COD IS in the placement pool — and
+    **the cut probe never fires once.** COD is not placed and then removed; **it
+    is never placed at all.**
+    **SO THE FIELD-LOAD STREAK CAP IS NO LONGER THE WALL** on a permitted week.
+    The wall is selection order: `pickPlacementCondCategories` reaches COD only
+    at pass 2/3, and `pickStandaloneCondDecision` returns on the FIRST allowed
+    category — which is always something earlier. **That is item 27's "ranked
+    last, never reached", now the only thing left.**
+
+    **NOTHING IS OWED TO SAM.** ORIGINAL BELOW.
+    **ITS QUESTION IS VOID AND ITS REMAINING WORK IS THE TERMINAL'S.**
 
     **NOTHING IS OWED TO SAM HERE.** Item 31 part 6 dissolved the pending
     question in his own words — the five-day field-load streak came from a week
@@ -1223,14 +1256,6 @@ his instruction is standing authority, not history.**
 
     ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 21).
 
-22. **CLOSED — the popup phrases and the away-equipment flow. Full report
-    archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md`
-    (item 22).** (a) the signed short phrases and (b) time caps out of the popup
-    shipped `5ff77758`. **(c) was closed by item 28's away build, verified line
-    by line** — the question, the routing, the `missing_for_span` write and the
-    copy all exist, and its "three ways out" question was answered by Sam
-    unprompted: *"the athlete just removes the equipment they don't have while
-    on the trip"*.
 
 25. **CLOSED BY R-014 — there is no session floor, because size was never the
     rule. Measurement archived verbatim to
