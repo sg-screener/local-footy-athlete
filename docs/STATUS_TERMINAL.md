@@ -32,6 +32,20 @@ thing that actually bit.**
 
 ## STATUS
 
+### STANDING ORDER 1a PERFORMED — NOTHING NEW TO MERGE, and the order says be quiet
+
+**72 `codex/*` branches; 42 carry commits not in `main`; ALL 42 fork from
+`2026-07-19` and sit ~1505 commits behind.** Checked by merge-base AGE, never by
+commit count, exactly as the order insists — `git rev-list --count main..branch`
+reads "1 commit" for a branch a month stale.
+
+**Zero branches forked after 2026-08-10, so nothing is mergeable.** The one that
+was (`program-week-navigation-bounds`) is already in via `e231a6bc`. **No UI
+change of Sam's is waiting to reach his phone.**
+
+Recorded rather than left silent so the next seat does not re-run the sweep; the
+order's "quiet if nothing is new" governs the REPORT TO SAM, not the log.
+
 ### STANDING ORDERS PERFORMED — and I nearly published a refuted number
 
 **Item 13, the unenforced-law count: `test:law-registry` reads 125 rows, 101
