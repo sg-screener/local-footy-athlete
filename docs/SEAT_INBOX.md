@@ -18,10 +18,13 @@ his instruction is standing authority, not history.**
 37. **AWAY MUST REPLACE THE WORK IT REMOVES — SAM, 2026-08-13, AND HE CLOSED MY
     QUESTION INSTEAD OF ANSWERING IT.**
 
-    **OWNED BY THE TERMINAL** — named 2026-08-13 because the owner ratchet
-    (`test:repo-law-guards`) went 16 -> 17 the moment this item arrived, which is
-    the guard doing exactly what it was built for on the day it was built. The
-    desktop handed the queue back the same afternoon, so this is the terminal's.
+    **OWNED BY THE DESKTOP** — corrected 2026-08-13. The terminal claimed this
+    for ninety minutes on a wrong inference (the desktop's handoff said it was
+    going back to Sam; Sam's reply is what pulled it straight back in). **Sam
+    assigned this one directly in chat**, and the desktop wrote both the item and
+    R-075 from that message. The owner ratchet (`test:repo-law-guards`) went
+    16 -> 17 the moment this item arrived and is what surfaced the collision at
+    all — on the day it was built.
 
     **His words:** *"Away has to replace the work it removes, not just delete it
     - your Saturday Rest Day is the wrong case. Don't ask me about it."*
