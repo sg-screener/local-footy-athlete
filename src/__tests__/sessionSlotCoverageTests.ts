@@ -393,6 +393,78 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   for (const line of deficient) console.log(`    ${line}`);
 }
 
+// ── AND THE SAME CENSUS ASKS THE OTHER QUESTION: CAN HE ACTUALLY DO IT? ────
+//
+// **A BODYWEIGHT-ONLY ATHLETE IS PRESCRIBED A BARBELL BACK SQUAT.** Measured
+// 2026-08-13, not inferred, on a generated off-season week for a profile whose
+// equipment answer is `['Bodyweight Only']`.
+//
+// **WHY NOTHING CATCHES IT — TWO REASONS, EITHER ALONE ENOUGH:**
+//   1. `postGenerationConstraintValidation` filters rows by
+//      `row.exercise?.equipmentRequired`, and **every production site sets that
+//      to `[]`** (`workoutCanonicalisation.ts:449`, `coachActions.ts:617`/`:760`,
+//      `applyAdjustmentEvents.ts:739`). An empty list passes unconditionally.
+//   2. That filter only runs when a **temporary** equipment FACT is live. The
+//      athlete's standing profile answer is not a constraint, so on an ordinary
+//      week the branch is skipped before the empty data even matters.
+//
+// **THE DATA IS NOT MISSING — THE VOCABULARY IS SPLIT.** `exercisePools.ts` has
+// 91 entries and **90 carry `equipment: EquipmentTag[]`**. But `Back Squat`,
+// `Tricep Pushdowns` and the rest of the main lifts are **in no pool** — they
+// live in `exerciseTags.ts`, which has no equipment column. **The half that needs
+// gating least is the half carrying the gate.**
+//
+// ⚠ THE LIST BELOW IS TEST FIXTURE DATA AND IS DELIBERATELY SMALL AND OBVIOUS.
+// It is NOT a substitute for the missing column and must not become one — every
+// entry is a lift whose equipment is not arguable (a Back Squat needs a barbell).
+// **When `ExerciseTag` gains its column, this list should be DELETED and the
+// cell should read the real requirement.**
+{
+  const { generateProgramLocally } = require('../services/api/generateProgram') as any;
+  const NEEDS_KIT: Readonly<Record<string, string>> = {
+    'Back Squat': 'barbell', 'Front Squat': 'barbell', 'Deadlift': 'barbell',
+    'Romanian Deadlift': 'barbell', 'RDLs': 'barbell', 'Bench Press': 'barbell',
+    'Overhead Press': 'barbell', 'Barbell Row': 'barbell',
+    'Trap Bar Deadlift': 'barbell', 'Hip Thrusts': 'barbell', 'Power Clean': 'barbell',
+    'Tricep Pushdowns': 'cables', 'Face Pulls': 'cables', 'Cable Face Pull': 'cables',
+    'Seated Cable Row': 'cables', 'Lat Pulldown': 'cables',
+    'Leg Extension': 'machine', 'Hamstring Curl': 'machine', 'Leg Press': 'machine',
+  };
+  /** Measured 2026-08-13. Lower it as the gap closes; never raise it. */
+  const KIT_VIOLATION_CEILING = 5;
+  const bodyweightProfile = {
+    trainingLocation: 'Commercial gym', equipment: ['Bodyweight Only'],
+    equipmentSelectionCompleteness: 'complete', trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    teamTrainingDays: [], gameDay: 'Saturday', seasonPhase: 'Off-season',
+    recentTrainingLoad: 'Pretty consistent', conditioningLevel: 'Average',
+  };
+  const program = generateProgramLocally(bodyweightProfile as never, {
+    todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 1,
+  });
+  const workouts = program?.microcycles?.[0]?.workouts ?? [];
+  const violations: string[] = [];
+  let rowsSeen = 0;
+  for (const workout of workouts) {
+    for (const row of (workout.exercises ?? [])) {
+      rowsSeen += 1;
+      const rowName = String(row?.exercise?.name ?? '');
+      if (NEEDS_KIT[rowName]) {
+        violations.push(`${workout.name} | ${rowName} (needs ${NEEDS_KIT[rowName]})`);
+      }
+    }
+  }
+  // NON-VACUITY: a week that generated no rows would report ZERO violations and
+  // look like perfect health — the same trap the slot census guards against.
+  ok('[non-vacuity] the equipment census actually saw prescribed rows',
+    rowsSeen >= 10, `rows seen: ${rowsSeen}`);
+  ok('a bodyweight athlete is prescribed no MORE kit-requiring lifts than before',
+    violations.length <= KIT_VIOLATION_CEILING,
+    `${violations.length} violations (ceiling ${KIT_VIOLATION_CEILING})\n     ${violations.join('\n     ')}`);
+  console.log(`\n  EQUIPMENT CENSUS: ${violations.length} kit-requiring lifts prescribed to a BODYWEIGHT athlete (ceiling ${KIT_VIOLATION_CEILING})`);
+  for (const line of violations) console.log(`    ${line}`);
+}
+
 console.log(
   `\nSession slot coverage: passed=${passed}/${passed + failures.length} failures=${failures.length}`,
 );
