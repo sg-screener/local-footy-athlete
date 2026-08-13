@@ -432,6 +432,37 @@ gains the single-leg knee slot — **the slot the coverage sweep measured as
 most-missed (8 of 44 days).** `test:pools` 496/0, cells assert a lunge never
 leaves its group across 12 cycles and that a bilateral squat never enters it.
 
+**R-081** · *"similar is right"* (Sam, 2026-08-13, answering `audit` directly) ·
+**CONTRAST PAIRS ON A SIMILAR PATTERN, NOT THE SAME ONE — the partner is chosen
+by FAMILY.** Bible `:225` says *"an explosive lift of the SAME pattern"* and
+`:1099` says *"an explosive movement that uses a SIMILAR pattern"*. **His own five
+examples settle it and FOUR FAIL the strict reading**, measured through the app's
+own tags: Box Squat `squat`→Vertical Jump `plyo`, Back Squat `squat`→Broad Jump
+`plyo`, Trap Bar Deadlift `hinge`→Broad Jump `plyo`, Split Squat→Vertical Jump
+`plyo`; only Bench Press→Explosive Push-up is a true pattern match. **Every LOWER
+entry in `POWER_EXERCISE_POOL` tags `movement: 'plyo'`, never `squat`/`hinge`.**
+· `BUILT e665ab44` — `powerRowAlignment` forms the pairing (heavy lift
+`supersetOrder` 1, explosive movement 2) and `workoutCanonicalisation` stops
+stripping a COMPLETE pairing and splices it at the main slot.
+`test:power-primer-policy` `[42a]`-`[42f]`, non-vacuity first, mutation-proven
+both ways (reverting the source reds `[42a]`-`[42d]`; pairing every row reds
+`[42e]`).
+**⚠ SEAT_INBOX ITEM 42 ASKED FOR THE OPPOSITE AND WAS REFUTED BEFORE BUILDING.**
+Its acceptance test was *"same pattern both halves"* and it called
+`powerRowAlignment`'s family check a defect. **Building it as written would have
+made the app refuse four of the five pairings Sam authored.** The family check is
+CORRECT and stays. **A ruling premise is a claim too — `:225` was trusted without
+opening `:1099` or the pool.**
+**⚠ AND `:225` IS NOW THE ONLY PLACE CARRYING THE REFUTED WORDING.** It should be
+amended to *"similar"* with a changelog line, the way R-079 amended `:90`'s flat
+*"2 nights"*. **Not done on the back of a three-word reply; `:1099` already states
+the correct rule, so nothing is broken while it waits — but a Bible line that
+contradicts a registered ruling is the same disease as a rule that lives in words
+and not in code.**
+**NOT A BREACH OF R-015.** That row's *"main lifts are NEVER paired"* is scoped to
+MOBILITY pairing; `:225` opens *"**EXCEPTION** — contrast training"*. Contrast is
+the named exception, and this was checked before the pairing shipped.
+
 **R-015** · *"On strength days, 2-3 accessory exercises are paired with mobility
 exercises as SUPERSETS by default"* (+ 6 further clauses,
 `MOBILITY_PAIRING_RULINGS_2026-07-31.md`) · Main lifts are NEVER paired; the
