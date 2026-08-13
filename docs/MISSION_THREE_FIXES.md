@@ -1155,3 +1155,5 @@ hands the athlete. I did not call the network to invent a comparison.
 - `generateProgramFromProfile` stays `async` purely so four screens keep their signature; it now does no asynchronous work at all.
 - Program generation and coach chat post to the same edge function (`env.coachChatEndpoint`), distinguished only by payload shape — one endpoint serving two products.
 - `getProgramGenerationProfileFieldDiagnostics` still reports "profile fields missing for program generation" in onboarding failure diagnostics, though generation no longer consumes a profile the way the prompt did.
+
+**SLICE 1C-BASELINE — what the sole deterministic builder actually produces, re-measured at `1fce185f` across all seven dimensions, with the printed weeks and the composer-owned defect list: [`docs/SOLE_BUILDER_BASELINE_2026-08-14.md`](SOLE_BUILDER_BASELINE_2026-08-14.md).**
