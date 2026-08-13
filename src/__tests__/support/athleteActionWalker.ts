@@ -95,8 +95,11 @@ export interface WalkerViolation {
    *
    * Declared rather than left implicit because a capped shrink and a converged
    * shrink return the same shape, and a non-minimal history presented as minimal
-   * is a claim with no receipt. The reporter prints it; `shrinkBudgetTests`
-   * proves both arms.
+   * is a claim with no receipt. The reporter prints it; `athleteActionWalkerTests`
+   * proves both arms — `shrinkBudgetSpent === true` on a walk that exhausts the
+   * budget and `=== false` on one that converges, each guarded against vacuity.
+   * (This cited `shrinkBudgetTests` until 2026-08-13, a suite that does not
+   * exist. Both arms really are proven; the name was wrong.)
    */
   shrinkBudgetSpent?: boolean;
 }

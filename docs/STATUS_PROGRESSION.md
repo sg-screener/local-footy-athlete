@@ -141,6 +141,47 @@ missing ingredient the old cell never had, and it is where that gate should be
 built. Building it needs the reader question settled first, which is the same
 open step.
 
+### THE CLASS, SWEPT — AND IT IS MUCH SMALLER THAN THE FIRST ONE SUGGESTED
+
+**Having found one "covered over there" claim pointing at fiction, I swept for
+the class rather than stopping at the case.** Every `*Tests` name cited anywhere
+in `src`, checked against every filename in the repo.
+
+**⚠ MY FIRST SWEEP RETURNED 77 AND WAS GARBAGE — the instrument, not the repo.**
+The pattern matched after a literal `\n` inside strings (`nJournalWeekTests` and
+~60 siblings), and it walked only `src` for existing files while some suites live
+in `scripts/`. **Reported here because a 77-item "finding" handed to anyone would
+have been a week of chasing nothing.** Corrected pattern
+(`(?<![\\A-Za-z0-9_])`), repo-wide filename set, and function-name exclusions →
+**6 real candidates.**
+
+**AND THE VERDICT ON THE 6 FLIPPED ONCE I ASKED WHETHER THE COVERAGE EXISTS
+UNDER ANOTHER NAME.** It mostly does:
+
+| cited name | verdict |
+| --- | --- |
+| `sectionOwnershipInvariantTests` | **THE ONLY REAL HOLE** — nothing anywhere covers it (`ac505f52`) |
+| `keyboardConventionTests` | **STALE NAME** — the guard is `keyboardConventionContractTests`, 43/43 green |
+| `profileMirrorProvenanceTests` | **STALE NAME** — `profileMirrorNarrowingTests` really does pin the fixture↔default identity |
+| `shrinkBudgetTests` | **STALE NAME** — `athleteActionWalkerTests` proves BOTH arms, each guarded against vacuity |
+| `legacyPowerBlockMigrationTests` | **CORRECTLY ABSENT** — a cell asserts the file is GONE; the absence IS the assertion |
+| `thingTests` | **CORRECTLY ABSENT** — a placeholder inside a guard's own fixture data |
+
+**SO: one missing gate, three stale names, two false positives.** The three stale
+names now cite the suite that really does the work. **A wrong name is the worse
+half of the two to leave** — a reader who greps it finds nothing and concludes
+the thing is unenforced, which is exactly the wrong conclusion in all three.
+
+**A GUARD FOR THE CLASS IS THE RIGHT ANSWER AND I COULD NOT LAND IT.**
+`repoLawGuardsTests.ts` already holds this exact shape
+(`retiredShapesNamingNoGuard` — *"a retirement naming no guard … the claim would
+be prose"*), so the citation check belongs beside it. **That file is HELD by
+another seat** (`cmp` vs `HEAD`), so it is not mine to enter.
+**ONE RULE THE BUILDER WILL NEED, or it will red on my own corrections:** the
+three fixes deliberately still NAME the dead suites in their history notes, so
+the guard must exempt a mention that sits next to the words *"does not exist"*.
+Without that exemption the sweep still returns all six — I re-ran it and it does.
+
 ### ✅ WHAT I DID FIND AND FIX: A REFUSED ADD LEFT AN ACTIVE PIN BEHIND
 
 **This one was measured on a LIVE instrument** — the real coach pipeline over a

@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 // THE KEYBOARD CONVENTION: no screen renders a raw TextInput
-// (`keyboardConventionTests`). The shared owner handles avoidance and
+// (`keyboardConventionContractTests`, `npm run test:keyboard-convention`).
+// The name here read `keyboardConventionTests` until 2026-08-13 — a suite that
+// does not exist. The GUARD is real; only the citation was wrong, which is the
+// worse half of the two to leave: a reader who greps it finds nothing and
+// concludes the convention is unenforced. The shared owner handles avoidance and
 // dismissal, so a screen that rolls its own is a screen the keyboard can
 // cover. Caught by the full chain on this slice's first run.
 import { AppTextInput } from '../../components/keyboard/AppTextInput';

@@ -150,9 +150,12 @@ export function seedArmedMirrorDevice(options: {
  * built from the in-memory default, at a hydration where the persisted profile
  * blob was not readable and a program WAS present.
  *
- * `profileMirrorProvenanceTests` pins the identity, so if `initialOnboardingData`
- * changes and this fixture stops matching it, the drift is visible rather than
- * quietly making the fixture a fiction again.
+ * `profileMirrorNarrowingTests` pins the identity — the cell *"the fixture is the
+ * HISTORICAL default, and the live default is honestly empty"* — so if
+ * `initialOnboardingData` changes and this fixture stops matching it, the drift
+ * is visible rather than quietly making the fixture a fiction again.
+ * (This line cited `profileMirrorProvenanceTests` until 2026-08-13, a suite that
+ * does not exist. The pin is real; the name was not.)
  */
 export const IMPOVERISHED_SNAPSHOT: Partial<OnboardingData> = {
   trainingLocation: 'Commercial gym',
