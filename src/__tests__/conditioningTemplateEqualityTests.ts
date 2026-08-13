@@ -912,6 +912,29 @@ ok(
   const DECLARED_GAPS = ['cod_decel'];
   const unmapped = categories.filter((c: string) => !mapped.includes(c));
 
+  // ⚠ THE ARITHMETIC IS ASSERTED POSITIVELY, BECAUSE `every` OVER AN EMPTY LIST
+  // IS TRUE. Caught in this cell's own mutation run: renaming the enum made
+  // `categories` empty, so `unmapped` was empty and this assertion passed —
+  // vacuously — while the suite only failed because OTHER cells reddened. A
+  // cell that cannot fail when its input vanishes is the exact shape [C12]
+  // exists to catch, and it was sitting inside [C12].
+  //
+  // The count identity is the fix: every category is either MAPPED or a
+  // DECLARED gap, and nothing else. It cannot be satisfied by an empty read,
+  // because `categories.length` is separately asserted >= 5 above.
+  const declaredAndReal = DECLARED_GAPS.filter((c: string) => categories.includes(c));
+  // AND THE NON-VACUITY IS INSIDE THE ASSERTION, NOT BESIDE IT. My first attempt
+  // at this cell used the count identity alone and STILL passed under the empty
+  // read — `0 + 0 === 0`. Asserting the floor in a NEIGHBOURING cell is not
+  // enough: it makes the SUITE fail while leaving THIS claim unfalsifiable, and
+  // an unfalsifiable claim is what the whole [C12] block is about.
+  ok('[C12] every category is accounted for — mapped, or a declared gap, and nothing else',
+    categories.length >= 5
+      && mapped.filter((c: string) => categories.includes(c)).length + declaredAndReal.length
+        === categories.length,
+    `categories=${categories.length} mapped=${mapped.filter((c: string) => categories.includes(c)).length}`
+    + ` declaredGaps=${declaredAndReal.length}`);
+
   ok('[C12] no NEW conditioning category is missing from the flavour map',
     unmapped.every((c: string) => DECLARED_GAPS.includes(c)),
     `unmapped and undeclared: ${unmapped.filter((c: string) => !DECLARED_GAPS.includes(c)).join(', ')}`
