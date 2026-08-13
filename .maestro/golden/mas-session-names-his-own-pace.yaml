@@ -83,45 +83,46 @@ tags:
 # Monday keeps its combined day, whose conditioning is an aerobic FLUSH — and a
 # flush carries no %MAS at all, so opening today would photograph a true
 # negative and read as a failure of the reader.
-# ⚠ THE WEEK SHAPE HAS NO `view-workout-button` — MEASURED, not assumed. Its
-# tree is day ROWS only; the button that opens a session belongs to the DAY
-# shape. A `scrollUntilVisible` for it here scrolls the whole week and then
-# reports "element not found", which reads like a missing control rather than
-# the wrong shape.
+# ── HOW A NON-TODAY SESSION IS OPENED, SETTLED FROM SOURCE ──
+#
+# Three selectors were tried here and two are now RULED OUT BY READING THE CODE
+# rather than by another device run:
+#
+#   `week-strip-sat`  — DEAD. `WeekStrip` renders `week-strip-<token>` chips, and
+#                       `HomeScreenV2.tsx:704` says in its own words that the
+#                       component "STAYS IN THIS FILE, unreferenced by this
+#                       shape", kept only so a removal is not two changes. **It
+#                       is never mounted, so that id can never match.**
+#   `program-view-today` then a day tap — WRONG ORDER, and worse than useless.
+#                       In WEEK shape a day-row press only
+#                       `setExpandedWeekIdx` (`:449-451`) — it expands the row IN
+#                       PLACE and does NOT change which day the DAY shape shows.
+#                       Switching shapes afterwards lands on today, losing
+#                       Saturday.
+#
+# SO THE ROUTE IS: STAY IN THE WEEK SHAPE, EXPAND THE DAY, AND USE THAT ROW'S OWN
+# `onViewWorkout` (`:455`). Saturday, because on the away week it is
+# `session-card-cond-two-minute-repeats-2026-07-18` — `Two-Minute Repeats`,
+# authored `≈100% MAS` — so it is the day whose %MAS the screen itself declares.
+#
+# ⚠ STILL UNVERIFIED ON A DEVICE. One live-app run reached exactly here and did
+# not find `view-workout-button` after the expand; two later runs are VOID
+# (the app was already on the dev-harness refusal). **The next seat runs this on
+# an UNCONTENDED simulator and reads the tree at this point** — the remaining
+# question is only whether the expanded row's button needs a scroll or a
+# different id, and one live inspect answers it.
 - scrollUntilVisible:
     element:
-      id: "program-view-today"
-    direction: UP
+      id: "day-row-sat"
+    direction: DOWN
     timeout: 20000
 - tapOn:
-    id: "program-view-today"
-# SATURDAY, and the seed's own card id is why. On the away week Saturday is
-# `session-card-cond-two-minute-repeats-2026-07-18` — `Two-Minute Repeats`,
-# whose authored intensity is `≈100% MAS`. Wednesday is a coach-built
-# conditioning day whose template is not named in the tree, so Saturday is the
-# one that can be asserted from what the screen itself declares.
-# ⚠⚠ THE NEXT TWO STEPS ARE UNVERIFIED, AND THIS COMMENT IS THE HONEST REASON.
-#
-# `HomeScreenV2.tsx:2441` renders the day shape's other days as
-# `week-strip-<token>` chips, and `day-row-*` full rows belong to the week
-# shape — so `week-strip-sat` is the right-looking selector. **IT HAS NOT BEEN
-# PROVEN.** Two runs reported "element not found" here, first for `day-row-sat`
-# and then for this, and BOTH conclusions ARE VOID: an inspect taken straight
-# afterwards found the app sitting on the dev-harness cold-start refusal
-# (*"DevE2EClock reload mismatch"*), so the taps ran against a DEAD APP and the
-# harness answered, not the screen.
-#
-# **A RUN WITH NO LIVE APP IS A DEAD INSTRUMENT, NOT A RESULT** — item 28's own
-# words, and this is the fourth time today that gate has eaten a run on a shared
-# simulator. The §8 second-wall count is long past, so the next seat should NOT
-# swap this selector on a hunch: run the flow on an UNCONTENDED simulator first
-# and let a live screen say which id is right.
-- tapOn:
-    id: "week-strip-sat"
-- extendedWaitUntil:
-    visible:
+    id: "day-row-sat"
+- scrollUntilVisible:
+    element:
       id: "view-workout-button"
-    timeout: 15000
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "view-workout-button"
 - extendedWaitUntil:
