@@ -225,9 +225,16 @@ export function applyPatternBiases(
   const biased = { ...ctx };
   const flags = summary.activeFlags;
 
-  // FATIGUE_STREAK → readiness down one step
+  // FATIGUE_STREAK → the recent-fatigue vote.
+  //
+  // IT USED TO WRITE `capacity` (Sam, 2026-08-13, the readiness homonym). A
+  // fatigue streak is not a detrained baseline: `capacity` comes from two
+  // onboarding answers and moves only when the PROFILE moves, so a bad
+  // fortnight was being reported to every other reader as "this athlete is
+  // untrained" — including the athlete-visible note "low capacity - build".
+  // Same intent, its own field, one vote.
   if (flags.includes('FATIGUE_STREAK')) {
-    biased.capacity = READINESS_DOWN[biased.capacity];
+    biased.recentFatiguePattern = true;
   }
 
   // COOKED_REPEAT → sessionFeeling up one notch toward fatigue
@@ -242,10 +249,12 @@ export function applyPatternBiases(
     // Don't also push feeling — one bias per dimension.
   }
 
-  // MIXED_SIGNALS → readiness down one step (athlete hiding fatigue)
-  // Only if FATIGUE_STREAK hasn't already downgraded readiness.
+  // MIXED_SIGNALS → the same vote (athlete hiding fatigue).
+  // The FATIGUE_STREAK guard is kept for exactly the reason it was written —
+  // one bias per dimension — and it now costs nothing, because the field is a
+  // boolean and cannot be pushed twice.
   if (flags.includes('MIXED_SIGNALS') && !flags.includes('FATIGUE_STREAK')) {
-    biased.capacity = READINESS_DOWN[biased.capacity];
+    biased.recentFatiguePattern = true;
   }
 
   // EASE_STREAK + FULL_COMPLETION_RUN → consecutiveBuildWeeks +1

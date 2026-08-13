@@ -57,6 +57,27 @@ export interface ProgressionInput {
   recentDeloadTrigger: 'overreach' | null;
   missedSessionsThisWeek: number;
   sessionFeeling: SessionFeeling;
+  /**
+   * RECENT FATIGUE PATTERNS — a fatigue streak, or mixed signals suggesting the
+   * athlete is hiding fatigue. Written by `feedbackPatterns.applyPatternBiases`
+   * and by the adaptation's `readinessBias`; read by the soft-deload counter
+   * below; held by `progressionCapacityLaunderingTests`.
+   *
+   * IT EXISTS BECAUSE THOSE WRITERS USED TO SAY THIS BY LOWERING `capacity`
+   * (Sam, 2026-08-13, the readiness homonym). That is the laundering site he
+   * had already deleted once, at `calculateCapacity`: *"it converted the law's
+   * boolean straight back into a magnitude, and every `readiness === 'low'`
+   * branch in this engine then read it."* Three more survived the sweep.
+   *
+   * **A fatigue streak is not a detrained baseline.** `capacity` is computed
+   * from two onboarding answers and moves only when the PROFILE moves; writing
+   * a bad fortnight into it told every other reader — the phase build/hold
+   * branches, the high-capacity gates, and the athlete-visible note string
+   * *"Pre-season, low capacity - build"* — that a fit athlete was untrained.
+   * The fatigue vote it was really casting is this field, and it is one vote,
+   * counted once, beside the three that were already here.
+   */
+  recentFatiguePattern: boolean;
   trend: TrendSignal;
   /** Whether this is a lower body exercise (for in-season micro-progression). */
   isLowerBody: boolean;
@@ -105,12 +126,16 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
   if (rpe >= 8) softCount++;
   if (input.missedSessionsThisWeek >= 1) softCount++;
   if (input.sessionFeeling === 'Cooked') softCount++;
+  // The vote the feedback biases used to cast by writing 'low' into `capacity`.
+  // Same weight, its own name, counted exactly once.
+  if (input.recentFatiguePattern) softCount++;
   if (softCount >= 2) {
     const signals: string[] = [];
     if (input.capacity === 'low') signals.push('low capacity');
     if (rpe >= 8) signals.push('high RPE');
     if (input.missedSessionsThisWeek >= 1) signals.push('missed sessions');
     if (input.sessionFeeling === 'Cooked') signals.push('cooked feeling');
+    if (input.recentFatiguePattern) signals.push('recent fatigue pattern');
     return buildDeload(`Soft deload: ${signals.join(' + ')}`);
   }
 
@@ -132,7 +157,8 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
       rpe >= 8 ||
       input.missedSessionsThisWeek >= 1 ||
       input.sessionFeeling === 'Cooked' ||
-      input.sessionFeeling === 'Sore';
+      input.sessionFeeling === 'Sore' ||
+      input.recentFatiguePattern;
     if (hasSignal) {
       return buildDeload(`Scheduled deload cycle (${input.weeksSinceDeload} weeks) with fatigue signal`);
     }

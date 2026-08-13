@@ -55,7 +55,7 @@ import {
 } from './progressionHelpers';
 import type { FeedbackCompletion, FeedbackFeeling, SessionFeedback } from '../store/programStore';
 import { analyzeFeedbackPatterns, applyPatternBiases } from './feedbackPatterns';
-import { type AdaptationResult, applyReadinessBias } from './feedbackAdapter';
+import { type AdaptationResult, adaptationReportsFatigue } from './feedbackAdapter';
 import type { ProgramBlockState } from './programBlockState';
 import { participatesInCounting } from '../rules/sessionRowCounting';
 import { mainLiftSchemeForSlot, type RepScheme } from '../rules/phaseRepSchemes';
@@ -230,6 +230,12 @@ export interface StrengthProgressionContext {
    */
   offseasonSubphase?: OffseasonSubphase | null;
   capacity: CapacityBand;
+  /**
+   * Recent fatigue patterns — the vote the feedback biases used to cast by
+   * writing 'low' into `capacity` above. See `ProgressionInput` for why it has
+   * its own name (Sam, 2026-08-13, the readiness homonym).
+   */
+  recentFatiguePattern: boolean;
   daysToGame: number | null;
   daysSinceGame: number | null;
   doubleGameWeek: boolean;
@@ -276,6 +282,10 @@ export interface StrengthProgressionContext {
 export const DEFAULT_PROGRESSION_CONTEXT: StrengthProgressionContext = {
   seasonPhase: 'Off-season',
   capacity: 'medium',
+  // No history means no fatigue evidence — NOT "assume fatigued". The default
+  // must be the absence of the signal, or every historyless athlete carries a
+  // free soft-deload vote.
+  recentFatiguePattern: false,
   daysToGame: null,
   daysSinceGame: null,
   doubleGameWeek: false,
@@ -714,6 +724,7 @@ export function applyStrengthProgression(
       exerciseRole: role,
       seasonPhase: ctx.seasonPhase,
       capacity: ctx.capacity,
+      recentFatiguePattern: ctx.recentFatiguePattern,
       completionQuality,
       weeksSinceDeload: ctx.weeksSinceDeload,
       consecutiveBuildWeeks: ctx.consecutiveBuildWeeks,
@@ -802,7 +813,7 @@ export function applyStrengthProgression(
  */
 export function buildProgressionContext(
   seasonPhase: SeasonPhase,
-  readiness: CapacityBand,
+  capacity: CapacityBand,
   gameDates: string[],
   dateStr: string,
   injuries: Array<{ bodyArea: string; severity?: string }>,
@@ -856,11 +867,12 @@ export function buildProgressionContext(
     sessionFeeling = feedbackFeelingToSessionFeeling(feedbackFeeling);
   }
 
-  // Determine readiness: start with passed-in, apply adaptation bias
-  let adjustedReadiness = readiness;
-  if (adaptation) {
-    adjustedReadiness = applyReadinessBias(adjustedReadiness, adaptation);
-  }
+  // THE CAPACITY BAND PASSES THROUGH UNTOUCHED (Sam, 2026-08-13). It used to be
+  // stepped down here by `applyReadinessBias` — an adaptation, which is evidence
+  // about the last few sessions, rewriting the athlete's standing baseline. The
+  // adaptation's intent now travels as `recentFatiguePattern`, a peer of the
+  // fatigue signals the soft-deload counter already had.
+  const recentFatiguePattern = adaptation ? adaptationReportsFatigue(adaptation) : false;
 
   const historyWeeksSinceDeload = estimateWeeksSinceDeload(workoutHistory);
   const historyBuildWeeks = countConsecutiveBuildWeeks(workoutHistory);
@@ -874,7 +886,8 @@ export function buildProgressionContext(
   const baseCtx: StrengthProgressionContext = {
     seasonPhase,
     offseasonSubphase: options.blockState?.phaseResolution?.offseasonSubphase ?? null,
-    capacity: adjustedReadiness,
+    capacity,
+    recentFatiguePattern,
     daysToGame,
     daysSinceGame,
     doubleGameWeek,

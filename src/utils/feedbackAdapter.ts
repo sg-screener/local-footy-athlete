@@ -292,15 +292,22 @@ const READINESS_DOWN: Record<CapacityBand, CapacityBand> = {
 };
 
 /**
- * Apply adaptation result to a readiness level.
- * Returns adjusted readiness (or original if no bias).
+ * Does this adaptation report RECENT FATIGUE?
+ *
+ * RENAMED AND RE-POINTED from `applyReadinessBias` (Sam, 2026-08-13, the
+ * readiness homonym). It used to take the CAPACITY band and step it down —
+ * `READINESS_DOWN[readiness]` — which is the laundering site Sam had already
+ * deleted once at `calculateCapacity`, surviving here under a second name.
+ *
+ * **Capacity is the athlete's standing baseline, computed from two onboarding
+ * answers; it moves when the PROFILE moves and at no other time.** An
+ * adaptation is evidence about the last few sessions. Writing one into the
+ * other told every downstream reader that a fit athlete was untrained.
+ *
+ * The adaptation's intent — "be more conservative" — is unchanged and now
+ * travels as `ProgressionInput.recentFatiguePattern`, which is a peer of the
+ * three fatigue signals the soft-deload counter already had.
  */
-export function applyReadinessBias(
-  readiness: CapacityBand,
-  adaptation: AdaptationResult,
-): CapacityBand {
-  if (adaptation.readinessBias === 'down') {
-    return READINESS_DOWN[readiness];
-  }
-  return readiness;
+export function adaptationReportsFatigue(adaptation: AdaptationResult): boolean {
+  return adaptation.readinessBias === 'down';
 }

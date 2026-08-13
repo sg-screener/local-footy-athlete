@@ -143,7 +143,7 @@ function makeState(overrides = {}) {
       trainingLocation: 'Commercial gym',
     },
     seasonPhase: 'Off-season',
-    readiness: 'medium',
+    capacity: 'medium',
     ...overrides,
   };
 }
@@ -199,7 +199,7 @@ const ctx1 = buildProgressionContext(
   [],
 );
 assert(ctx1.seasonPhase === 'In-season', 'Context season phase');
-assert(ctx1.readiness === 'high', 'Context readiness');
+assert(ctx1.capacity === 'high', 'Context capacity');
 assert(ctx1.daysToGame === 3, 'Context daysToGame = 3');
 assert(ctx1.injuryAvoidFlag === true, 'Moderate injury → avoid flag true');
 assert(ctx1.doubleGameWeek === false, 'Single game → not double');
@@ -245,7 +245,7 @@ assert(result._progressionResults['Back Squat'] != null, 'Back Squat got progres
 assert(result._progressionResults['RDLs'] != null, 'RDLs got progression');
 assert(result._progressionResults['Band Pallof Press'] === undefined, 'Band Pallof Press excluded (core)');
 
-// Default context (off-season, medium readiness) → build
+// Default context (off-season, medium capacity) → build
 assert(result._progressionResults['Back Squat'].state === 'build', 'Back Squat state = build');
 assert(result._progressionResults['RDLs'].state === 'build', 'RDLs state = build');
 
@@ -285,7 +285,7 @@ section('6. Prescription Adjustments — Build');
 const buildResult = applyStrengthProgression(lowerWorkout, {
   ...DEFAULT_PROGRESSION_CONTEXT,
   seasonPhase: 'Off-season',
-  readiness: 'medium',
+  capacity: 'medium',
 });
 
 const squat = buildResult.exercises.find(e => e.exercise?.name === 'Back Squat');
@@ -336,7 +336,7 @@ section('8. In-Season Hold/Maintain');
 const inSeasonResult = applyStrengthProgression(upperWorkout, {
   ...DEFAULT_PROGRESSION_CONTEXT,
   seasonPhase: 'In-season',
-  readiness: 'medium',
+  capacity: 'medium',
   daysToGame: 5,
 });
 
@@ -356,13 +356,13 @@ section('9. In-Season Lower Body Micro-Progression');
 const inSeasonLB = applyStrengthProgression(lowerWorkout, {
   ...DEFAULT_PROGRESSION_CONTEXT,
   seasonPhase: 'In-season',
-  readiness: 'high',
+  capacity: 'high',
   daysToGame: 5,
 });
 
 const lbSquat = inSeasonLB.exercises.find(e => e.exercise?.name === 'Back Squat');
 assert(inSeasonLB._progressionResults['Back Squat'].state === 'build',
-  'In-season high readiness lower body → build');
+  'In-season high capacity lower body → build');
 assert(lbSquat.prescribedWeightKg === 102.5,
   `In-season LB micro-up: 100 → ${lbSquat.prescribedWeightKg} (expect 102.5)`);
 // No set changes for in-season LB
@@ -378,7 +378,7 @@ section('10. Game Proximity Hold');
 const gameProxResult = applyStrengthProgression(lowerWorkout, {
   ...DEFAULT_PROGRESSION_CONTEXT,
   seasonPhase: 'In-season',
-  readiness: 'high',
+  capacity: 'high',
   daysToGame: 2,
 });
 
@@ -471,7 +471,7 @@ section('13. In-Season Live Resolution');
 
 const inSeasonState = makeState({
   seasonPhase: 'In-season',
-  readiness: 'medium',
+  capacity: 'medium',
 });
 const inSeasonWeek = resolveWeekWithConditioning('2026-04-06', inSeasonState);
 
@@ -479,8 +479,8 @@ const isMonday = inSeasonWeek[0];
 assert(isMonday.workout != null, 'In-season Monday has workout');
 const isSquat = isMonday.workout.exercises.find(e => e.exercise?.name === 'Back Squat');
 // In-season medium → maintain for upper, but lower body check depends on gate
-// readiness=medium → hold for in-season low readiness doesn't apply
-// In-season + medium readiness → maintain
+// capacity=medium → hold for in-season low capacity doesn't apply
+// In-season + medium capacity → maintain
 assert(isSquat != null, 'In-season workout has Back Squat');
 
 // ═══════════════════════════════════════════════════════════════
@@ -498,7 +498,7 @@ const dgwWorkout = makeStrengthWorkout(1, 'Lower Body', 'High', [
 const dgwDirectResult = applyStrengthProgression(dgwWorkout, {
   ...DEFAULT_PROGRESSION_CONTEXT,
   seasonPhase: 'In-season',
-  readiness: 'medium',
+  capacity: 'medium',
   doubleGameWeek: true,
 });
 const dgwSquat = dgwDirectResult.exercises.find(e => e.exercise?.name === 'Back Squat');
@@ -512,7 +512,7 @@ assert(dgwSquat.prescribedSets === 2,
 // on days near games, which is the correct combined behavior.
 const dgwState = makeState({
   seasonPhase: 'In-season',
-  readiness: 'medium',
+  capacity: 'medium',
   markedDays: {
     '2026-04-08': 'game',
     '2026-04-11': 'game',
@@ -764,7 +764,7 @@ const earlyOffCtx = {
   ...DEFAULT_PROGRESSION_CONTEXT,
   seasonPhase: 'Off-season',
   offseasonSubphase: 'early_offseason',
-  readiness: 'high',
+  capacity: 'high',
   sessionFeeling: 'Strong',
   consecutiveBuildWeeks: 1,
   workoutHistory: cleanSessions(3, 'tag-back-squat', earlyOffAuthoredSets, EARLY_OFF_BAND.repsMax, 100),
@@ -788,7 +788,7 @@ const preAuthoredSets = preWorkout.exercises[0].prescribedSets;
 const preResult = applyStrengthProgression(preWorkout, {
   ...DEFAULT_PROGRESSION_CONTEXT,
   seasonPhase: 'Pre-season',
-  readiness: 'high',
+  capacity: 'high',
   sessionFeeling: 'Strong',
   workoutHistory: cleanSessions(3, 'tag-back-squat', preAuthoredSets, PRE_BAND.repsMax, 100),
 });
@@ -832,7 +832,7 @@ const belowBandWorkout = makeStrengthWorkout(1, 'Lower Body Strength', 'High', [
 const belowBandResult = applyStrengthProgression(belowBandWorkout, {
   ...DEFAULT_PROGRESSION_CONTEXT,
   seasonPhase: 'Off-season', // band is 6-8 reps — well above this row
-  readiness: 'high',
+  capacity: 'high',
   sessionFeeling: 'Strong',
   workoutHistory: cleanSessions(3, 'tag-back-squat', 2, 3, 100),
 });
