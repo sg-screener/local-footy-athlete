@@ -1191,6 +1191,39 @@ seat was wrong.
   go and returns the same name again. **Not caused by anything built today — it
   is older, and control-proven.**
 
+  **⚠ EVIDENCE ADDED BY `desktop`, 2026-08-13 — AND IT PUTS A FOURTH OPTION ON
+  THE TABLE, SO PLEASE READ IT BEFORE ANSWERING.**
+  **A SLOT SAM NAMES IN R-014 HAS EXACTLY ONE EXERCISE IN THE WHOLE REGISTRY.**
+  Counted across all 149 entries by asking `slotsFilledByRow` which of his ladder
+  slots each one can fill:
+
+      hinge             7   Deadlift · Trap Bar · RDLs · Hip Thrusts · Glute Bridge · KB Swings · Speed Trap Bar
+      single_leg_knee   9   Bulgarian Split Squat · Walking/Reverse Lunge · Step Ups · Cossack Squat · Lateral Lunge …
+      single_leg_hip    1   Single-Leg RDL — THE ENTIRE SUPPLY
+
+  **So the starvation above is not only the equipment filter narrowing a pool —
+  one slot is ONE DEEP IN THE SOURCE DATA before any filter runs.** Anything that
+  excludes that single exercise makes the slot unfillable by construction, and
+  nothing says so.
+  **THE FOURTH OPTION: STOCK THE POOL.** Single-leg glute bridge, single-leg hip
+  thrust and B-stance RDL are standard, need no equipment, and would take that
+  slot from 1 to 4 — **which makes the repeat/drop/short question moot for it
+  rather than answered.** It is authored DATA, not code, so it is his call
+  whether those three are exercises he would program.
+  **INDEPENDENT MEASUREMENT ON A 5-DAY WORLD** (`test:slot-coverage`, census
+  ratchet, `0c13e5bf`): an off-season bodyweight *"Lower Squat"* day ships
+  **missing `hinge`, `single_leg_knee` AND `single_leg_hip`** — three of five —
+  while every full-gym world passes. **Same defect, different face: theirs
+  repeats a row, mine omits three slots.**
+  **REGISTRY-GREP (desktop's own, over `docs/RULINGS_REGISTRY.md`):** scanned all
+  77 rows for *single.leg*, *hinge*, *exercise* — 18 rows mention them. The four
+  closest: **R-014** (his slot language — REQUIRES the slot filled, silent on an
+  empty pool, which is precisely this gap), **R-070** (one main per pattern —
+  adjacent, about duplicates across patterns not an empty one), **R-013**
+  (exercise CAP, the opposite direction) and **R-071** (conditioning is not a
+  strength exercise). **Nothing rules the supply floor. Not a re-ask, and NOT a
+  second question — it is evidence for the one above.**
+
   **WHY IT IS YOURS AND NOT MINE:** all three answers are defensible and they
   give the athlete different weeks.
   1. **REPEAT** — he gets the volume, and two sets of bodyweight squats is not
