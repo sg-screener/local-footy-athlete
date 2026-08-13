@@ -26,7 +26,12 @@ export const WEEK_PLAN_QA_ALLOWED_FINDINGS: readonly AllowedFindingPolicy[] = [
   {
     scenarioId: 'S3',
     ruleId: 'cap_conditioningExposures_under',
-    severity: 'info',
+    // SEVERITY RE-KEYED 'info' -> 'soft', census C4 step 3. The FINDING and
+    // its reason are unchanged; only the weight is, because the floors now
+    // carry their ceilings' severity instead of a hardcoded 'info'. This row
+    // is keyed by severity, so leaving it at 'info' would orphan a real
+    // allowance and read as a new failure.
+    severity: 'soft',
     status: 'info-only',
     reason: 'Friday game week compresses conditioning room; the week still protects game freshness and keeps team/game anchors.',
   },
@@ -49,7 +54,12 @@ export const WEEK_PLAN_QA_ALLOWED_FINDINGS: readonly AllowedFindingPolicy[] = [
   {
     scenarioId: 'S6',
     ruleId: 'cap_conditioningExposures_under',
-    severity: 'info',
+    // SEVERITY RE-KEYED 'info' -> 'soft', census C4 step 3. The FINDING and
+    // its reason are unchanged; only the weight is, because the floors now
+    // carry their ceilings' severity instead of a hardcoded 'info'. This row
+    // is keyed by severity, so leaving it at 'info' would orphan a real
+    // allowance and read as a new failure.
+    severity: 'soft',
     status: 'expected',
     reason: 'Early off-season keeps one optional off-feet aerobic-base session instead of compressing extra conditioning into four available days.',
   },

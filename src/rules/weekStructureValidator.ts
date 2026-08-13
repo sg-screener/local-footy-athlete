@@ -493,7 +493,19 @@ export function validateProgramWeek(input: ValidateProgramWeekInput): WeekValida
       if (flags.reducedLoadActive || flags.byeWeek) continue; // never punish light weeks
       push({
         ruleId: `cap_${cf.cap}_under`,
-        severity: 'info',
+        // STEP 3 OF CENSUS C4 — A FLOOR CARRIES ITS CEILING'S WEIGHT.
+        //
+        // This was hardcoded `'info'`, which is the whole of C4: `grep` for a
+        // repair consumer of the three `_under` ids returned ZERO while the
+        // `_over` twins had EIGHT. Sam's ceilings refused; his floors did
+        // nothing. Same map as the ceilings, so neither can drift from the
+        // other.
+        //
+        // SAFE ONLY BECAUSE STEPS 1-2 LANDED FIRST. `maxRunningExposures` is
+        // `'strong'`, and `section18CraftTier.ts` BLOCKS on `strong` — so doing
+        // this before the exemptions reached the validator would have made S5
+        // and S6 unbuildable. Measured, backed out, and re-ordered (87299547).
+        severity: capSeverity[cf.cap] ?? 'info',
         message: cf.detail,
         dates: [], sessions: [], canOverride: true,
         bibleRef: 'Section 17.B / 17.J',
