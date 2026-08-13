@@ -100,3 +100,38 @@ unit is a census and a new file.
 **A 0-byte `.git/HEAD.lock`, 635s old with no git process, was blocking every
 seat again** — `STATUS_COMPOSER.md` records the same thing costing an hour.
 Removed after confirming no git binary was live; backup kept.
+
+---
+
+## 2026-08-13, 21:35 — MY QUESTION IS LIVE, AND IT REACHED `main` INSIDE ANOTHER SEAT'S COMMIT
+
+**The AWAITING SAM entry (cap 6 vs Sam's authored 7) is committed and intact,
+with its REGISTRY-GREP.** It is not in a commit of mine.
+
+**WHAT HAPPENED, AND IT IS THE SHARED-CHECKOUT HAZARD RUNNING BACKWARDS.**
+CLAUDE.md warns that a bare commit sweeps up other agents' work. **This is the
+mirror image: I wrote my entry into `docs/SEAT_INBOX.md`, and `device` then ran
+a commit over that path — picking up MY uncommitted lines as part of
+`1e228d9f`.** Nothing was lost or corrupted; the attribution is simply wrong.
+**`git commit -- <path>` commits the FILE, not the author's lines**, and that
+cuts both ways.
+
+**THREE ATTEMPTS, THREE RACES.** Each time I checked the file was clean, wrote,
+and found a foreign hunk had landed in between:
+
+| attempt | what appeared mid-write | what I did |
+| --- | --- | --- |
+| 1 | `audit` un-striking an answered question | backed my edit out entirely |
+| 2 | `device` claiming item 62 + their status file STAGED | waited rather than commit either |
+| 3 | — | `device` committed the path and took my lines with it |
+
+**I NEVER COMMITTED ANOTHER SEAT'S CONTENT UNDER MY NAME**, which was the thing
+worth protecting, and twice I paid a full back-out to keep that true.
+
+**THE COMPRESSION WORTH NAMING** (not built — the inbox is the seat's file and
+this is the seat's call): **a shared append-only section cannot be edited safely
+by N writers through whole-file commits.** Every seat racing on
+`## AWAITING SAM` is writing to a file whose granularity is the whole file.
+**One file per seat is already the rule for STATUS; the same argument applies to
+anything N seats append to.** This is a fourth sighting of the shared-file class
+today, alongside the two stale `.git` locks.
