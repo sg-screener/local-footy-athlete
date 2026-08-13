@@ -51,7 +51,7 @@ his instruction is standing authority, not history.**
     saw.**
 
 66. **THE SYNTHETIC ATHLETE — SIMULATE FOUR WEEKS OF USE IN SECONDS INSTEAD OF
-    WAITING FOUR WEEKS. UNOWNED — STAMP THE HEAD LINE.**
+    WAITING FOUR WEEKS. OWNED BY `sim` (claimed 2026-08-13).**
 
     **SAM ASKED FOR THIS DIRECTLY:** *"is there a way to simulate the 4 week
     change over for the new program? there has to be a better way to test it
