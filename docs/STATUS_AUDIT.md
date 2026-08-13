@@ -1853,3 +1853,31 @@ kit, Push-ups / Plank / Reverse Lunges / Bodyweight Squat still allowed, all
 allowed on a gym kit. **Backed out for the SAME reason as above:** it deepens
 the shrink, and the disclosure half is not built. **It is a 20-line change and
 the hard part — his data — is already in the tree.**
+
+### STANDING ORDERS, PERFORMED THIS STOP BY THIS SEAT
+
+**1b — audited this file for completeness claims.** 20 hits on the banned
+words; **every one is legitimate** — Sam quoted (*"what you've done"*),
+NEGATIONS (*"NOT done"*, *"NOT wired into `test:bible`"*), or a measured
+statement carrying its receipt. **Nothing struck.**
+
+**1a — NOT re-run, deliberately.** `terminal` performed it this stop (72
+`codex/*` branches, 42 with a delta, none forked after 2026-08-10, nothing of
+Sam's waiting). **Re-auditing it would be the duplicate-work trap this file was
+created to stop.**
+
+**13 — the count FELL this stop: 27 → 24 UNENFORCED** (`terminal`). **I did not
+add a 25th guard, and that is a decision rather than a shortfall.** I read the
+three most tractable rows — `LAW-green-gate-is-a-claim`,
+`LAW-attributed-content-change`, `LAW-no-completeness-claims` — and **each one
+already REFUTES its own cheap mechanisation in writing.** The first says
+outright that a per-suite liveness *scan* would *"BE the green-and-empty shape
+this law forbids, which makes it the one guard this law may not have"*.
+**Bolting one on at the end of a long turn is exactly the rubber-stamp those
+rows exist to refuse.** Each remaining law needs its own unit.
+
+**⚠ AND THE HOOK CANNOT EXIT WHILE THESE TWO EXIST — item 13 measured it and it
+is a SEAT-OWNED ONE-LINE FIX** (`seat-inbox-hook.sh:105` skips only
+`BLOCKED-BY:`; a standing order is neither clearable nor blocked). **I did NOT
+write a false `BLOCKED-BY` on a standing order to buy an exit** — item 13 names
+that move and the hook's own comment forbids it.
