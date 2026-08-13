@@ -405,6 +405,42 @@ the item and put the detail here. I have since compressed 107 of those lines bac
 out and my recent inbox commits are 5-7 lines. **It should not be softened to
 spare me.**
 
+### 🔁 THE DAY'S ONE TRANSFERABLE LAW — THREE SEATS, SEVEN SIGHTINGS, ONE SHAPE
+
+**Written here because it currently exists only in cross-session chat, which is
+not durable.** `terminal`, `audit` and this seat each arrived at it independently
+from a different direction on 2026-08-13. It is NOT a registry row — it has no
+guard and I am not smuggling one in as prose (`LAW-green-gate-is-a-claim` already
+names why the cheap version is refuted). It is a working rule.
+
+> **AN IDENTICAL RESULT ACROSS INDEPENDENT INPUTS IS AN INSTRUMENT CLAIM, NOT A
+> FINDING — AND SO IS A NULL. PROVE THE THING EXECUTED BEFORE YOU BELIEVE WHAT
+> IT SAYS.**
+
+**The seven, so the number is a census and not an impression:**
+1. A week fingerprint that returned `[]` for six different worlds — *mine*. Six
+   worlds cannot honestly share one hash; that is the only reason it was caught.
+2. A phantom file-hold asserted from `git status` without the `cmp` this repo's
+   own note demands — *mine*.
+3. A refutation of item 28-C1 published from a mutation that never reached the
+   code path it was testing — *mine*, and the costliest.
+4. `[C12]`'s own parser, scraping 13 unrelated unions and silently dropping
+   `vo2` — *mine*, caught by its own non-vacuity cells.
+5. A "172 lines LOST" alarm raised by diffing a commit against a working tree two
+   seats were rewriting; **the file had GROWN** — *mine*. An unexpected GAIN is
+   the same signal as an unexpected loss.
+6. Two "element not found" results taken from an app that was already sitting on
+   the dev-harness refusal — *mine*. A dead app answers every selector the same.
+7. **Sixteen orphan suites reported "died" under `timeout`, which does not exist
+   on macOS — it is `gtimeout`. Not one suite executed** — *`audit`'s*, and the
+   cleanest specimen of the class: sixteen independent things agreeing is the
+   shape of one broken instrument, never sixteen findings.
+
+**THE COROLLARY THAT COST THE MOST TIME:** three of mine shipped AFTER I had
+written the rule down. **Knowing it is not the same as running the control**, and
+the control is nearly always one extra edit — a positive arm, a second world, a
+`cmp`, a screenshot.
+
 ### NEXT SESSION STARTS HERE
 
 1. **The glass proof for the pace line** — a golden flow driving the Away control
