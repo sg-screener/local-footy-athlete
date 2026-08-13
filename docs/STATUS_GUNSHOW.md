@@ -186,3 +186,72 @@ branch count is still unmeasured.
 
 **No question for Sam. Nothing here survives a ruling he has not already given**,
 so I am not opening an `## AWAITING SAM` entry to manufacture an exit.
+
+---
+
+## 2026-08-13, 16:22 — I PAID THE THING I MARKED UNMEASURED. THE NUMBER IS 7, NOT ELEVEN, AND FOUR BRANCHES HAVE ALREADY BEEN REBUILT
+
+**A wall I can measure myself is not a block, and I had left one standing.** Last
+entry I refused to report a count for R-013's *"eleven 3-row fallback branches
+still ship"* because my grep was the wrong shape. **Here is the right one.**
+
+**PARSED, not grepped** — every `return [ … ]` in `defaultProgram.ts`'s strength
+fallback, counting `{ name: … }` rows per branch:
+
+| rows emitted | branches |
+| --- | --- |
+| 5 | **4 — REBUILT to Sam's ladder** |
+| 4 | 1 |
+| **3** | **7 — still ship** |
+| 2 | 1 |
+| | **13 total** |
+
+**SO THE ROW'S "ELEVEN" IS NOT TODAY'S NUMBER.** Seven branches still emit three
+rows; **four have already been rebuilt to five** and cover the ladder rather than
+repeating one pattern. The hinge-only and squat-only branches now open with the
+heavy contribution and then cover squat / single-leg knee / single-leg hip —
+`defaultProgram.ts:1199` carries Sam's restated slots verbatim and says what it
+replaced: *"RDLs + Hip Thrusts + Hamstring Curl is TWO HINGES and no squat."*
+
+**THE PREMISE IS DIRECTIONALLY RIGHT AND NUMERICALLY STALE.** Item 51 is still a
+real build — 7 branches is not 0 — but a seat starting from "eleven" will not
+find eleven, and after five stale notes in one turn that is worth writing down
+rather than discovering.
+
+### ⚠ ONE BRANCH FOR `patterns` TO LOOK AT — THE CATCH-ALL HAS NO PULL
+
+The final unguarded `return` (`defaultProgram.ts:1282`) emits **Bench Press +
+Overhead Press + Dips** — horizontal push, vertical push, push accessory. **Every
+row is a push.** Against Sam's upper ladder — *"push pull on the horizontal, push
+pull on the vertical, then arm work or accessory work for the shoulders"* — this
+day has **no pull at all**, and it is the branch that catches everything the
+earlier conditions miss.
+
+**IT IS NOT AN R-070 BREACH** and I am not reporting it as one: Bench is
+`horizontal_push` and OHP is `vertical_push`, two different patterns, which is
+exactly the distinction `mainLiftPatternLaw.ts:50` drew when it refuted two of
+the census's three worked examples. **It is a SLOT-COVERAGE gap, a different
+law** — `sessionSlotCoverage` would report `missing: [pull]`.
+
+**HANDED TO `patterns`, NOT BUILT.** They committed at 16:18 — live, mid-work, on
+these exact files. Building into `defaultProgram.ts` behind a live seat is how 27
+files were swept this morning. **Measured, written down, left alone.**
+
+### THE QUEUE, AT 16:22 — NOTHING IS WORKABLE BY THIS SEAT
+
+| item | state |
+| --- | --- |
+| 50 | OWNED BY THE SEAT |
+| **51, 52** | **OWNED BY `patterns` — committed 16:18, LIVE** |
+| 53, 55, 59 | ✅ CLOSED |
+| 54 | BLOCKED-BY: external |
+| 56, 49, 48, 47, 45, 44, 42, 40, 41, 38, 37, 35, 34, 28-C1 | BLOCKED-BY: other-agent (already marked) |
+| **57, 58** | **OWNED BY `readiness` — committed 16:15, LIVE** |
+| **60** | **OWNED BY `audit` — committed 16:13, LIVE** |
+| 39 | BLOCKED-BY: sam (already marked) |
+
+**I MARKED NOTHING.** Every unmarked item has an owner who committed in the last
+nine minutes. **CLAUDE.md is explicit: owned is not blocked, and a false block
+entitles every seat to stop while Sam's list is unfinished** — that is the exact
+defect the file was amended for this morning, when 15 of 19 items wore the wrong
+word. **I will not buy my own exit by mismarking four live seats' work.**
