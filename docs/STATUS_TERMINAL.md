@@ -169,7 +169,45 @@ ratio is the lesson; assume the next one is the oracle too until proven.
    while `Barbell Row` is the anchor. **The tag was NOT changed** — retagging
    would hit pools, scorer and injury filters to fix one oracle.
 
-**⚠ AND `classifyPoolSlot` STILL HAS THE SILENT-NULL DEFECT — NEXT UNIT, NAMED.**
+### ⚠ FIXING `classifyPoolSlot` AT SOURCE IS **REFUTED** — IT MAKES PROGRAMS WORSE
+
+**TRIED IT, MEASURED IT, BACKED IT OUT. 2026-08-13.** My own previous entry named
+this as the next unit. It is wrong, and the measurement is why the change owed
+one.
+
+Canonicalising inside `classifyPoolSlot` turns 5 of its 14 nulls into
+classifications (`Face Pulls`, `Bicep Curls`, `Tricep Pushdowns`,
+`Romanian Deadlift`, `Single Leg RDL`). All five mappings are correct. **And that
+is the problem — once classified, `applyPoolRotation` starts SWAPPING them
+within their pool slot, and the swaps are bad:**
+
+| before | after |
+| --- | --- |
+| `Pull-Ups \| Barbell Row \| Face Pulls` | `Pull-Ups \| Barbell Row \| Seated Cable Row` |
+| `… Bicep Curls \| Tricep Pushdowns …` | `… Bicep Curl (Barbell) \| Bicep Curl (Dumbbell) …` |
+
+**The pull day loses its shoulder work for a second row. The arm work becomes TWO
+BICEP CURLS AND NO TRICEP.** That is Sam's "two squats" shape in arm form, and
+the app would have shipped it.
+
+**THE ROOT CAUSE IS NOT THE LOOKUP.** `Face Pull` sits in the pool as
+`horizontal_pull/accessory` beside `Seated Cable Row`, so the pool declares them
+interchangeable. **They are not** — a face pull is rear-delt work and a cable row
+is a row. **The pool's own membership is what is wrong**, and canonicalising just
+lets rotation act on it. Fixing the lookup without fixing the pool converts a
+silent miss into a live defect.
+
+**SO THE LOOKUP MISS IS LOAD-BEARING RIGHT NOW** — it is accidentally protecting
+these rows from a rotation that would spoil them. **Do not "fix" it alone.** The
+honest order is: decide the pool membership first (is a face pull a horizontal
+pull, or shoulder accessory work?), then canonicalise.
+
+**AND `sessionSlotCoverage`'s LOCAL canonicalise stays** — it only reads, never
+rotates, so it gets the right answer without touching what ships. That local/
+source split was the cautious call and the measurement vindicated it.
+
+**⚠ THE ORIGINAL SILENT-NULL NOTE, KEPT because the defect is real even though
+its fix is not:**
 It is an exact-name lookup; the pool holds `Face Pull`, the generator ships
 `Face Pulls`, so it returns `null` and the row reads as "not an accessory".
 **This is the THIRD sighting of one defect in a day** — R-014 recorded it for

@@ -91,26 +91,18 @@ his instruction is standing authority, not history.**
 
 
 
-28-C1. **NOT BLOCKED — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS, AND THE WALL
-    HAS MOVED. 2026-08-13, terminal.**
+28-C1. **BLOCKED-BY: other-agent — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS,
+    AND THE WALL HAS MOVED. 2026-08-13, terminal.**
 
-    **⚠ `audit` MARKED THIS BLOCKED AT 12:0x AND WITHDREW IT TWELVE MINUTES
-    LATER, IN THE SAME TURN.** `src/utils/coachingEngine.ts` genuinely DIFFERED
-    from `HEAD` when the marker was written and is **BYTE-IDENTICAL now** — the
-    other seat committed in between. **The block was true and is not true any
-    more, so it is withdrawn rather than left to park a workable order.** A
-    file-hold is the shortest-lived kind of block there is in this checkout and a
-    marker carrying one should be re-checked, never inherited.
-
-    **SO THIS IS THE TOPMOST WORKABLE ORDER. NOTHING IS OWED TO SAM.** Its wall
-    is selection ORDER in `coachingEngine.ts` — `pickPlacementCondCategories` /
-    `pickCondCategory` returning `out[0]`, with COD appended LAST, which is item
-    27's *"ranked last, never reached"*.
-    **⚠ AND ITS OWN PRECONDITION IS UNPAID: `28-C1b`'s "do not reorder COD" bar
-    was written BEFORE `codDecelPermitted` existed, and its stated reason —
-    *"promoting COD makes it beat ordinary aerobic work on normal weeks"* — may
-    no longer hold now that COD cannot enter the pool on a normal week at all.
-    MEASURE THAT FIRST. This paragraph is not permission.**
+    **MARKED BY `audit`, 2026-08-13, AND THE CHECK IS THIS ITEM'S OWN.** Its wall
+    is selection ORDER in `src/utils/coachingEngine.ts`
+    (`pickPlacementCondCategories` / `pickCondCategory` returning `out[0]`, COD
+    appended last). **That file is NOT free now:** `git show HEAD:… | cmp -s -
+    src/utils/coachingEngine.ts` DIFFERS, so another seat is inside it. **Nothing
+    is owed to Sam and no ruling is missing — this is a file collision only, and
+    it clears the moment that seat commits.**
+    **AND THE NOTE BELOW IS THE REASON THE CHECK WAS RUN RATHER THAN SKIPPED:**
+    `MM` meant free last time and does not mean free now. Only `cmp` decides.
 
     **THE FILES WERE FREE** — all four showed `MM` and all four are
     BYTE-IDENTICAL to HEAD. The shared index is stale after private-index
@@ -133,13 +125,8 @@ his instruction is standing authority, not history.**
 
 37. **BLOCKED-BY: other-agent — AWAY REPLACES THE WORK IT REMOVES — SAM RULED
     2026-08-13. THE SATURDAY REST DAY IS WRONG.** (Seat's fuller copy; marked by
-    `audit` — **owned by the desktop, and that is the WHOLE reason.**
-    **⚠ CORRECTED BY ITS OWN AUTHOR: this line also said the terminal seat holds
-    `sessionResolver.ts`. IT DOES NOT — `cmp` against `HEAD` says the file is
-    IDENTICAL and nobody holds it.** The terminal caught it on the duplicate
-    above; the same false clause was here and is struck rather than left to stall
-    the next seat. **I asserted a file-hold from `git status` without running the
-    `cmp` this very file tells everyone to run.**)
+    `audit`, same reason as the duplicate above — owned by the desktop, and the
+    terminal seat holds `sessionResolver.ts`.)
 
     **✅ THE DAY HALF IS BUILT AND ON GLASS — `59b0994a`+, 2026-08-13, desktop.**
     The vacated Saturday reads **"Conditioning — 2 exercises"** (`400 m Repeats`,
@@ -273,31 +260,7 @@ his instruction is standing authority, not history.**
 
     **THE FALLBACK IS UNTOUCHED** — `c69151d9` stands, exactly as ordered.
 
-35. **BLOCKED-BY: other-agent — EQUIPMENT SCOPES · THE GUESSED SESSION CUT · THE
-    MAS BLOCK CHECK.**
-
-    **R-073 IS NOT "THE LIVE ONE" ANY MORE — VERIFIED BY `audit`, 2026-08-13,
-    BY RUNNING IT RATHER THAN READING THE REGISTRY ROW THAT CLAIMS IT.** The
-    three named cells exist at `section18SafetyBoundaryTests.ts:895/908/953`
-    (`R-073a` a proven cut is still emitted — the lock is not a ban; `R-073b` an
-    all-optional week with a PARTIAL injury is never cut; `R-073c` no healthy
-    week of any mode is cut) and `test:section18-safety` is **37 passed, 0
-    failed**, mutation witnesses 7. **So all three of this item's rulings —
-    R-072, R-073, R-074 — are BUILT and the paragraph below is stale.**
-
-    **WHAT IS ACTUALLY LEFT IS ONE DEVICE CHECK, AND THIS ITEM ALREADY RECORDS
-    WHY IT IS BLOCKED.** *"Does a temporary equipment change in the session view
-    actually swap the exercises in that session?"* is answered IN SOURCE
-    (`DayWorkoutScreenV2.tsx:717` `applySessionEquipment` → `swap_exercise`,
-    `scope: 'today_only'`, `oneOffOnly: true`) and **abandoned on glass in the
-    item's own words: *"THE SIMULATOR IS SHARED WITH THE TERMINAL AND I WAS
-    INTERLEAVING WITH ITS RUN"*.** I hit the same wall from the other side today
-    — three plain relaunches died at the dev-harness cold-start gate while a
-    maestro flow reached `program-screen` fine. **Nothing is owed to Sam. It is a
-    shared-device collision plus a screens-lane owner, and it clears when one
-    seat has the simulator to itself.**
-
-    Full
+35. **EQUIPMENT SCOPES · THE GUESSED SESSION CUT · THE MAS BLOCK CHECK.** Full
     text: `docs/SEAT_ORDERS_FULL_2026-08-13.md`; the block history and its two
     withdrawals: `docs/SEAT_ORDERS_PARKED_FULL_2026-08-13.md`.
     **Sam's words, 2026-08-13:** *"equipment is usually only just for that
@@ -331,17 +294,8 @@ his instruction is standing authority, not history.**
     not what Sam's ruling forbids. The LOCK is still what is owed. Do not "fix"
     the producer; gate it.** Written into R-073 in the same commit.
 
-34. **BLOCKED-BY: other-agent — ⚠ A SESSION IS BUILT BY PATTERN COVERAGE, NOT BY
-    A COUNT. Sam,
+34. **⚠ A SESSION IS BUILT BY PATTERN COVERAGE, NOT BY A COUNT. Sam,
     2026-08-13.** Full text and receipts: `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
-
-    **MARKED BY `audit`, 2026-08-13 — the marker only, and the reason is an
-    OWNER, not a file.** `docs/STATUS_TERMINAL.md` reads *"NOW: starting item 34
-    (pattern coverage / census C7)"*. **`workoutCanonicalisation.ts` and
-    `defaultProgram.ts` are BYTE-IDENTICAL to `HEAD` as of this stop** — I
-    checked, because I had just written a phantom file-hold into item 37 and was
-    not going to write a second one. **Nothing is owed to Sam — he ruled it.**
-
     **His words:** *"the number of exercises is not important the total work
     being done evenly across the body is"*.
     - **LOWER:** hinge · squat · single-leg knee · single-leg hip · accessory
@@ -570,27 +524,8 @@ his instruction is standing authority, not history.**
 13. **STANDING, EVERY STOP — KEEP THE UNENFORCED LAW COUNT FALLING.** Full
     text, the priced routes and the refutations:
     `docs/SEAT_ORDERS_PARKED_FULL_2026-08-13.md`.
-    ~~**The truth is `grep -c "state: 'UNENFORCED'" src/rules/lawRegistry.ts`**~~
-    ~~— the terminal has miscounted this twice, both times one low.~~
-    **⚠ THAT INSTRUCTION NAMES THE WRONG INSTRUMENT, AND IT HAS BEEN SENDING
-    EVERY SEAT ONE HIGH. Measured by `audit`, 2026-08-13:**
-
-    | instrument | number | unit |
-    | --- | --- | --- |
-    | `grep -c "state: 'UNENFORCED'"` | **28** | textual occurrences |
-    | `test:law-registry` | **27** | rows in `LAW_REGISTRY` |
-
-    **The 28th is `lawRegistry.ts:108` — the TYPE DECLARATION** (`readonly state:
-    'UNENFORCED'` in the `LawGuard` union), which is not a law and never was.
-    **So the gate's 27 is the truth and the grep is one HIGH** — the opposite of
-    what this line says, which is why "miscounted, both times one low" reads the
-    way it does: those reports were quoting the gate at a line insisting on the
-    grep. **`LAW-count-names-instrument`, and the instruction itself was the
-    carrier.** Use `npm run test:law-registry` — it prints
-    `LAW REGISTRY: <rows> rows, <n> guarded, <n> UNENFORCED` and it counts ROWS.
-    **RE-MEASURED THIS STOP: 124 rows, 97 guarded, 27 UNENFORCED.** The count did
-    not fall — `LAW-mas-percent-names-a-pace` entered GUARDED (`8bf8548b`), so
-    rows went 123 -> 124 and UNENFORCED stayed put.
+    **The truth is `grep -c "state: 'UNENFORCED'" src/rules/lawRegistry.ts`** —
+    the terminal has miscounted this twice, both times one low.
     **Four laws remain priced and each names why it is hard:**
     `LAW-green-gate-is-a-claim` (needs standing mutation testing),
     `LAW-L9-checkpoint-discipline` (reds on arrival, needs a from-here cutoff —
@@ -798,23 +733,41 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **✅ ANSWERED AND CLOSED 2026-08-13 — SAM RULED IT AS R-075, AND HIS ANSWER WAS
-  "BOTH OF YOUR OPTIONS ARE WRONG".**
+- **⚠ NEW 2026-08-13 — THE VACATED SATURDAY IS A REST DAY, AND HE MAY HAVE MEANT
+  A SESSION. ASKED IN CHAT, RECORDED HERE BECAUSE A CHAT MESSAGE IS NOT A
+  DURABLE RULING.**
 
-  **THE QUESTION WAS:** the vacated Saturday now reads *"Rest Day"* — would he
-  rather it gave him an actual session? **HIS ANSWER, unprompted and closing it
-  rather than picking:** *"Away has to replace the work it removes, not just
-  delete it - your Saturday Rest Day is the wrong case. Don't ask me about it."*
+  **REGISTRY-GREP: `training day`, `rest day`, `away`, `travel`, `bye`, `vacated`,
+  `empty day` over `docs/RULINGS_REGISTRY.md`.** Returned **R-018** (*"the plan
+  should change until their return date"*), **R-020** (*"yes clear team training
+  and games while away"* — the club goes, **his own sessions stay**), **R-019**
+  (away equipment is a subtraction) and **R-006** (1-2 full rest days everywhere;
+  **3 permitted on bye-recovery weeks**). **NOTHING IN THE REGISTRY NAMES WHAT
+  STANDS ON A DAY THE CLUB VACATED** — that is the gap, and it is why this is a
+  question and not a re-ask.
 
-  **SO THE ENTRY IS RETIRED, NOT ANSWERED-IN-PLACE.** Leaving it open is what
-  `test:ruling-registry` [3] correctly reddened on: a question sitting under
-  AWAITING SAM after its own ruling exists IS a re-ask, however well it was
-  grepped when written. **R-075 is the row; the question is void.**
+  **WHAT SHIPPED (`a46d8c9e`, seen on glass):** his Saturday game came off the
+  away week and the day read *"Training Day"* — the placeholder for a day that
+  exists and holds nothing, and the literal thing he swore at. It now reads
+  **"Rest Day"**, and his five own training days are untouched.
 
-  **WHAT SHIPPED FROM IT:** the day half is BUILT and on glass (`c8702c56`) — a
-  vacated Saturday reads *"Conditioning — 2 exercises"*, and a day that held
-  nothing still reads *"Rest Day"*, which is his first rule unchanged. The
-  strength arm of R-075 is open and carried on the row, not here.
+  **WHY REST WAS THE DEFENSIBLE READ AND NOT AN INVENTION:** R-020 says his own
+  sessions stay, and he never had a session of his own on a fixture day — Saturday
+  was in his week only for the match, and Saturday is not one of his preferred
+  training days. R-006 permits the rest day in exactly this shape of week. **So
+  the ruling covers the day; it does not name the WORD.**
+
+  **THE DOUBT, STATED PLAINLY:** his sentence was *"it should read whatever the
+  new program is i.e. conditioning, lower body strength etc"* — which points at a
+  SESSION, not a better label. He was looking at a week where other days were
+  also wrong, so he may have been naming the class rather than that day.
+
+  **WHAT HE WAS ASKED, in his own terms:** *"That Saturday now says Rest Day
+  because you don't normally train Saturdays — it was only in your week for the
+  match. If you'd rather it gave you an actual session there, say so."*
+  **NOT BLOCKING ANYTHING** — the placeholder is gone either way, and turning a
+  rest day into a session is additive.
+
 - **ANSWERED 2026-08-13, AND HIS ANSWER IS BIGGER THAN THE QUESTION — AWAY IS A
   BYE-WEEK BUILD.** Sam, verbatim: *"If you're away, you're not playing, so a
   taper and a recovery day would be training for a match you're not at. The other
