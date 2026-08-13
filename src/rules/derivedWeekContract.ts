@@ -26,6 +26,7 @@ import {
   type WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
 import { targetWeekFixtures } from './fixtureConditionedAvailability';
+import { awaySpansFromFacts, dateIsInsideAwaySpan } from './awaySpans';
 import { ownSeasonPhaseForGeneration } from './seasonPhaseOwner';
 import { applyAthleteRemovalTypedReduction } from './userRemovalConstraints';
 import { deriveIllnessRecoveryWeekMode } from './illnessRecoveryWeekMode';
@@ -77,24 +78,13 @@ export const lastTierFourDerivation: {
 /**
  * THE TRIPS LIVE OVER THIS WEEK — SEAT_INBOX item 30, Sam 2026-08-13.
  *
- * A `travel` fact IS a span: `effectiveFrom` to `effectiveUntil`. An OPEN
- * horizon is not a trip and is skipped — it would take the athlete's fixtures
- * off the calendar for ever.
+ * MOVED TO `rules/awaySpans.ts` ON 2026-08-13 (item 61, sighting 3, seat
+ * `vocab`). It stood here as a local reader of `factKind`/`effectiveFrom`/
+ * `effectiveUntil` while generation kept its OWN reader of
+ * `type`/`startDate`/`expiresAt` over an `any[]` — one trip, two word-lists,
+ * sharing not one field name. **Both halves now call one owner**, and a
+ * round-trip cell pins them to each other through the real projection.
  */
-function awaySpansFromFacts(
-  facts: readonly TemporarySourceFact[] | undefined,
-): { from: string; until: string }[] {
-  return (facts ?? [])
-    .filter((fact): fact is Extract<TemporarySourceFact, { factKind: 'schedule' }> =>
-      'factKind' in fact && fact.factKind === 'schedule' &&
-      (fact as { scheduleKind?: string }).scheduleKind === 'travel' &&
-      fact.status === 'active' && typeof fact.effectiveUntil === 'string')
-    .map((fact) => ({
-      from: String(fact.effectiveFrom).slice(0, 10),
-      until: String(fact.effectiveUntil).slice(0, 10),
-    }));
-}
-
 function fixtureIdentityForWeek(args: {
   profile: OnboardingData;
   weekStart: string;
@@ -131,8 +121,7 @@ function fixtureIdentityForWeek(args: {
   const awaySpans = awaySpansFromFacts(args.temporarySourceFacts);
   const fixtures = awaySpans.length === 0
     ? allFixtures
-    : allFixtures.filter((candidate) => !awaySpans.some((span) =>
-      candidate.date >= span.from && candidate.date <= span.until));
+    : allFixtures.filter((candidate) => !dateIsInsideAwaySpan(candidate.date, awaySpans));
   const fixture = fixtures[0] ?? null;
   if (!fixture) {
     // No fixture: an in-season week becomes a bye, a pre-season week keeps its

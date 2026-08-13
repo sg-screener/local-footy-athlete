@@ -56,6 +56,7 @@ import {
 } from '../../rules/conditioningFeasibility';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
+import { awaySpansFromConstraints } from '../../rules/awaySpans';
 import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
 import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
 import { freshGenerationSurfaces } from '../../utils/liveEvaluationSurfaces';
@@ -448,21 +449,15 @@ export function buildInitialGeneratedCoachingPlan(args: {
  * span: `startDate` to `expiresAt`, both already published by
  * `scheduleProjection`. A constraint with no end is not a trip and is skipped —
  * an open horizon would take the club off the calendar forever.
+ *
+ * MOVED TO `rules/awaySpans.ts` ON 2026-08-13 (item 61, sighting 3, seat
+ * `vocab`), AND ITS `any[]` WENT WITH IT. This read
+ * `type`/`startDate`/`expiresAt` off an untyped array while the derived-week
+ * contract read `factKind`/`effectiveFrom`/`effectiveUntil` off the typed fact
+ * — one trip, two word-lists, no field name in common, and nothing that could
+ * notice if a rename broke one of them. The owner's parameter is now
+ * `ActiveConstraint`, so those field names are compiler-checked.
  */
-function awaySpansFromConstraints(
-  constraints: readonly any[] | undefined,
-): { from: string; until: string }[] {
-  return (constraints ?? [])
-    .filter((constraint) => constraint?.type === 'schedule' &&
-      constraint?.scheduleKind === 'travel' &&
-      constraint?.status !== 'resolved' &&
-      typeof constraint?.startDate === 'string' &&
-      typeof constraint?.expiresAt === 'string')
-    .map((constraint) => ({
-      from: String(constraint.startDate).slice(0, 10),
-      until: String(constraint.expiresAt).slice(0, 10),
-    }));
-}
 
 /**
  * THE SPANS WHERE THE CLUB IS SHUT — SEAT_INBOX item 31 part 5.
