@@ -1650,3 +1650,100 @@ it moves anything — the patch belongs in a scratchpad, as `28-C1b`'s did.
    makes it beat ordinary aerobic work on normal weeks"* — may no longer hold
    now that COD cannot enter the pool on a normal week at all. **MEASURE that
    before touching the order; do not treat this paragraph as permission.**
+
+---
+
+## ITEMS 46/47 — THE EQUIPMENT MERGE. BUILT IN THREE COMMITS, AND THE SHEETS THEY REST ON ARE EMPTY
+
+**Sam handed me 46 and 47 directly, 2026-08-13.** Three commits:
+`9c0d1776` (vocabulary merge + 7 tags), `e0a52d4b` (icons), `ddebf7ed` (the
+picker filter).
+
+### ⚠ THE PREMISE IS FALSE AND I CHECKED IT BEFORE BUILDING ON IT
+
+Item 47 says *"Sam filled both sheets — take his words as signed; do not
+re-guess a row he wrote."* **HE DID NOT, OR IT WAS OVERWRITTEN.** Measured:
+
+- `docs/EXERCISE_EQUIPMENT_FOR_SAM.md` — the `Needs` column is the AGENT's
+  autofill, and **8 rows still read `?` / `← CHECK`**.
+- `PART2.md` §A — the `Change to` column is **blank in all 26 rows**.
+- `PART2.md` §B — the `Needs` column is **blank in all 44 rows**.
+- **But PART2's footer DESCRIBES his answers** (*"your answers used six pieces
+  of kit…"*). So he answered, and the sheets were REGENERATED over the top.
+
+**Neither sheet is in git** (both untracked), so there is no history to splice
+from. **The only surviving record of his per-exercise answers is the prose of
+items 46/47 themselves.** Item 46 is ALSO GONE — not in the inbox, not in the
+completed file, and not in any of the last 60 commits of `SEAT_INBOX.md`.
+
+**WHAT I BUILT FROM, THEREFORE:** only pairings item 47 states outright
+(`dip_bars`→Dips, `rings_trx`→Inverted Row), plus requirements **already
+authored in the library before today** (`Back Squat` → `['Barbell','Rack']`,
+`Trap Bar Deadlift` → `['Trap Bar']`). **I re-guessed no row.**
+
+### THE DEFECT WAS A MISSING QUESTION, NOT A MISSING FILTER
+
+`equipmentTagsForRequirement` collapsed `Rack`, `Trap Bar` and `squat_rack`
+onto `barbell`. So Back Squat's `Rack` requirement was **satisfied by the
+barbell tick** — his own words, *"a home gym with dumbbells and a bar but no
+rack still gets a back squat"*.
+
+**BEHAVIOUR-PRESERVATION IS THE SUBTLE HALF.** Splitting `rack` out of
+`barbell` would silently REMOVE squats from every club-gym athlete, because
+before today `barbell` MEANT "barbell & rack". So `club_gym` gains `rack` and
+the `Barbell & Rack` option grants both. **I updated the SIGNED club pin rather
+than loosening it, and said why in the test.** A split that quietly deletes
+work is worse than the bug it fixes.
+
+### SANDBAG IS THE 8TH TAG AND IT IS NOT BUILT — ON PURPOSE
+
+**No exercise in the library requires a sandbag or dead ball.** The checklist
+is DERIVED and `equipmentVocabularyTests` reds in both directions, so adding
+the question would ship an asked tag nothing demands. **It needs the exercise
+first. This is the one piece of 46/47 I did not build.**
+
+### ⚠ A LIVE DEFECT ITEM 47 ONLY SUSPECTED — CONFIRMED IN CODE, NOT JUST ON THE SHEET
+
+Item 47 warns the sheet's conditioning section swept in six STRENGTH rows by
+matching the word `Row`. **The same mistake is in the PRODUCT.** Measured
+through `deriveSessionEquipmentRequirements`:
+
+| row | with a structured row | **with no structured row** |
+| --- | --- | --- |
+| Barbell Row | `tag:barbell` ✅ | `tag:barbell` + **`modality:row`** ❌ |
+| Seated Cable Row | `tag:cables` ✅ | `tag:cables` + **`modality:row`** ❌ |
+| Side Plank Row | `(none)` ✅ | **`modality:row`** ❌ |
+
+`conditioningEquipmentForExercise`'s guard — *"so strength movement names such
+as Barbell Row cannot become a Row erg"* — **only fires when the row carries a
+structured `raw.exercise`.** Bare rows fall through to name inference and a
+**Side Plank Row tells the athlete he needs a rowing machine.**
+**NOT FIXED BY ME — I did not establish whether bare rows reach a live surface,
+and a guess either way is worse than the measurement. Next seat: start there.**
+
+### R-082 IS ALREADY BUILT — DO NOT AUTHOR THE TABLE
+
+**0 conditioning sessions carry a hand-written equipment list.**
+`LIBRARY_MODALITY_TO_EQUIPMENT` already IS Sam's five rows (run→null,
+bike→bike_erg, air_bike→air_bike, ski→ski, row→row). **Item 47's conditioning
+half needs no build.** Its two behavioural claims (no erg → running only; erg
+only → erg work) are UNVERIFIED — see the block below.
+
+### WHAT I COULD NOT MEASURE, AND WHY
+
+**`test:slot-coverage` cannot run.** Another seat's uncommitted rename in
+`src/utils/coachingEngine.ts` throws `ReferenceError: readiness is not defined`
+through every generation path. That suite holds the ceiling this unit is aimed
+at — **1 kit-requiring lift prescribed to a bodyweight athlete (`Leg
+Extension`)** — and it should now fall to 0.
+
+**BLOCKED-BY: other-agent — `src/utils/coachingEngine.ts`.**
+**THE OWED MEASUREMENT: re-run `test:slot-coverage` once that tree is
+committed.** What I *did* prove: `exerciseAllowedByEquipment` refuses Leg
+Extension, Back Squat, RDLs, Reverse Lunges and Bench Press on a bodyweight
+kit, and `test:compile` put **none of my seven files** in the regression list.
+
+**⚠ AND A SEAM I LEFT OPEN:** the pool filter classifies by NAME
+(`equipmentClassFor`), so it does **not** see the authored `equipmentRequired`
+I added to Dips and Inverted Row. Those two are gated in the vocabulary and the
+checklist, **not yet in pool selection.**
