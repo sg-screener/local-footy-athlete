@@ -45,6 +45,47 @@ thing that actually bit.**
 
 ## STATUS
 
+### `programmingBiasTests` 40/2 — TWO PERSONALISATION FEATURES PRODUCE IDENTICAL OUTPUT. **UNRESOLVED, AND SAID SO.**
+
+**THE FAILURES, through the REAL path** (`planFor` → `onboardingToCoachingInputs`
+→ `buildCoachingPlan`):
+
+    inside midfielder vs outside runner   inside=vo2,aerobic_base,aerobic_base,aerobic_base
+                                          outside=vo2,aerobic_base,aerobic_base,aerobic_base
+    neutral vs strength/size nudge        neutral=primer,primer,primer,primer
+                                          size=primer,primer,primer,primer
+
+**Byte-identical both times. Two features that personalise nothing.**
+
+**WHAT IS MEASURED AND HOLDS:**
+- The producer DOES populate `conditioningCategoryPreference`
+  (`programmingBias.ts:308-320`, goal-driven).
+- The engine DOES read it, and ONLY when the week has no team days
+  (`coachingEngine.ts:2775`) — *"a profile preference must not reshuffle the
+  fragile gym structure"* around an anchor.
+- **The fixture sets `teamTrainingDaysPerWeek: 0` and `teamTrainingDays: []`**,
+  so that guard is satisfied and the bias SHOULD reach `categoryPriority`.
+
+**SO IT SHOULD DIFFER AND DOES NOT, AND I HAVE NOT FOUND WHY.** Untested next
+candidates, in order: `useCategoryPlanner` false for this phase (the bias is only
+applied inside that branch), or `applyConditioningCategoryBias` re-ordering
+nothing because the preference is empty for these particular profiles.
+
+**⚠ AND MY OWN PROBE WAS WRONG — ITS RESULT PROVES NOTHING AND IS DISCARDED.**
+I called `computeProgrammingBias({ position })` and got `pref={}` for both roles,
+which looked like a smoking gun. **The function takes `role`, not `position`**
+(`:249` destructures `{ role, goals, phase, isBeginner }`), so `role` was
+`undefined` and the empty result is an artefact of my input, not a finding. The
+real path maps position → role through `roleBuckets`. **A probe that passes the
+wrong field returns a confident answer about nothing** — fourth instrument fault
+of the session, and the second where the wrongness was invisible in the output.
+
+**NOT FIXED, NOT WIRED, NOT RE-POINTED.** The cells are asserting a real product
+claim (two positions should train differently) and there is no evidence yet that
+the claim is retired. **Re-pointing them would be the wholesale move I refused on
+`byeWeekClassification` an hour ago.** Next session starts at
+`useCategoryPlanner`.
+
 ### TRIAGE STARTED ON THE 25 REDS — AND THE WORST ONE IS PARTLY A **STALE SUITE**, NOT A DEFECT
 
 `byeWeekClassificationTests` (40 passed / **23 failed**, the worst of the 25) —
