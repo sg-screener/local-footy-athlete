@@ -362,86 +362,6 @@ his instruction is standing authority, not history.**
     that was already empty is still rest. Run the 17 QA scenarios either side.
 
 
-36. **THE `[13d]` RED IS PAID — AND THE PRESCRIBED FIX WAS REFUTED BY THE SAME
-    MEASUREMENT THAT PAID IT. `test:away-flow` IS 44/0.**
-
-    **REGISTRY-GREP: R-018, R-020, R-006, R-070/`:227`.** R-020 (*"yes clear team
-    training and games while away"* — the club goes, his own sessions stay) and
-    R-018 (*"the plan should change until their return date"*) are the two that
-    bite. **Neither is breached. No question for Sam.**
-
-    **THE ORDER SAID: "assert the athlete's own rows are a SUPERSET home→away,
-    not equal", and "state the +1 honestly — the fallback grew by TWO rows and
-    the week shows ONE". BOTH HALVES ARE ANSWERED BY DUMPING THE ROWS INSTEAD OF
-    THE TOTALS:**
-
-    | | rows |
-    | --- | --- |
-    | HOME | Lower Body Strength [4] · Team+Upper Pull [3] · Team+Upper Push [3] · Gunshow [6] · Prehab [5] = **21** |
-    | AWAY | Lower Body Strength [7] · Lower Squat [5] · Upper Body Strength [5] · Prehab [5] = **22** |
-
-    **ELEVEN ROWS LOST, ELEVEN GAINED.** Gone: Short Flush, Pull-Ups, Overhead
-    Press, DB Bench Press, Bicep Curl, and the entire six-row Gunshow arm day.
-    Arrived: Vertical Jump, 20 m Acceleration Reps, Continuous Aerobic Run,
-    Walking Lunges, Single Leg RDL, Nordic Lower, Explosive Push-up, Bench Press,
-    Classic 4x4.
-
-    **SO A SUPERSET REDS INSTANTLY — eleven of his own rows are not there**, and
-    it reds in BOTH arms, so it was never true.
-
-    **⚠ CORRECTED `b62add9f` — THE +1 *DOES* HAVE AN ARITHMETIC EXPLANATION, AND
-    IT IS `c69151d9`.** This item first said the +1 was "an eleven-for-eleven
-    SWAP that nets one" and not attributable to the grown fallback. **Refuted by
-    single-variable measurement** — revert ONLY `defaultProgram.ts` to
-    `c69151d9^` and re-run both arms:
-
-    | | home | away |
-    | --- | --- | --- |
-    | at HEAD | 21 | **22** |
-    | fallback reverted | 21 | **21** |
-
-    **Home is fixed across the revert, so the fallback is the whole of the +1.**
-    The swap and the growth are two INDEPENDENT facts: the swap is present in
-    both arms, so it is not what moved. The superset refutation stands either
-    way. The away week reaches the grown fallback because its Wednesday is
-    synthesised whole by `completeCoachWorkoutsFromPlan` (`fallbackReason:
-    edge_omitted_day`) as the "Lower Squat" day.
-
-    **AND THE ORDER'S "+2 AUTHORED, +1 SHIPPED" IS EXPLAINED, NOT WAVED AWAY:**
-    `applyPoolRotation` turns `RDLs` into `Deadlift` (pattern preserved), then
-    `finaliseWorkoutAfterMutation` drops that hinge — **the open C7 defect
-    receipted in `5d6ef5fa`**, reached here by probe before that commit was read.
-    So `Single Leg RDL` lands, the hinge does not. **When C7 is fixed `[13d]`
-    stays green (the floor is one-sided) but away becomes 23.**
-
-    **CONSEQUENCE FOR A NEIGHBOUR: `c69151d9` IS NOT OUTPUT-NEUTRAL.**
-    `test:power-counting`'s moved golden is this same cause, not a second defect.
-
-    **AND THE OLD CELL WAS PASSING BY COINCIDENCE — 21 == 21 over two completely
-    different weeks.** Its name claimed *"every row of his own training survives
-    the trip"*, which has never been true of this app. **The operator was not the
-    defect; the premise was.** Same shape as item 28's step 1, twice in one day:
-    an ordered fix aimed at a mechanism that measurement then said was not there.
-
-    **THE SWAP IS THE APP OBEYING SAM, NOT DRIFTING FROM HIM** — *"consider the
-    time they are away as building a new program and their old program is gone
-    for the time being"*. The club was carrying his conditioning and half his
-    upper volume; take it away and a REAL upper day has to appear (Friday's
-    optional arm day became core Upper Body Strength) and the app has to supply
-    the running the club used to (sprints, an aerobic run, a 4x4). **A week that
-    merely deleted the club would be the defect.**
-
-    **WHAT LANDED, and neither is a count range:**
-    - **`[13d]` the trip does not COST him training — his volume never falls.**
-      A one-sided floor. It still reds the day a trip starts eating his work,
-      which is the only reason the cell has ever existed.
-    - **`[13f]` the away week is RE-AUTHORED, not the home week minus the club.**
-      This is `[13d]`'s non-vacuity AND a pin: without it the floor sits green
-      over a week that merely subtracted two club nights — which is what
-      everyone believed was happening, for as long as the totals matched.
-
-    **THE FALLBACK IS UNTOUCHED** — `c69151d9` stands, exactly as ordered.
-
 35. **BLOCKED-BY: other-agent — EQUIPMENT SCOPES · THE GUESSED SESSION CUT · THE
     MAS BLOCK CHECK.**
 
@@ -792,11 +712,34 @@ his instruction is standing authority, not history.**
    has no representation at this layer. **Two independent reasons, both now
    numbers rather than adjectives.**
 
-   **SO: both named sub-builds landed, and the item's own title survives them.
-   What is left is ONE unit — let the strength target reach 1, and give the
-   contract input more than one game.** It changes generated output, so it owes
-   `test:scenarios` + `test:qa` both arms. **NOTHING IS OWED TO SAM: he already
-   ruled the behaviour in the quote at the top of this item. OWNER: unclaimed.**
+   **⚠ AND I AM SCOPING MY OWN TABLE BEFORE ANYONE BUILDS ON IT — IT MEASURES
+   ONE LAYER, NOT THE PIPELINE.** Single-variable, holding days fixed and
+   toggling only the game: **strength = 3 with no game, 3 with a game, 3 with
+   zero team days, 3 with three team days.** Conditioning moves (3 -> 4);
+   **strength never does.** So at the CONTRACT layer club load costs strength
+   nothing, and only the selected-day count can reduce it.
+
+   **BUT THE CONTRACT IS NOT WHERE THE GAME'S COST LANDS, AND R-073's OWN
+   MEASUREMENT SAYS SO** — it counted `spacing_safety_conflict` **x4** across 28
+   weeks, *"Game-day, G-1 and G+1 protection leave fewer safe gym placements"*.
+   **That is a fixture reducing strength, downstream, in the §18 evaluator.**
+   **So "a game never costs strength" is TRUE OF THE LAYER I PROBED AND FALSE OF
+   THE APP, and I am not repeating this turn's earlier mistake of publishing a
+   null result without checking it reached the right code.**
+
+   **WHAT IS ACTUALLY ESTABLISHED, AND IT IS ONE STRUCTURAL FACT:**
+   `WeeklyExposureContractInput.gameDay` is `number | null`
+   (`weeklyExposureContractBuilders.ts:35`) — **at this seam a week has at most
+   ONE game**, so Sam's *"2 games and 2 team trainings"* cannot even be posed
+   here. (Item 32 records many-games-per-week as BUILT `3f62ad62` — **that is the
+   CALENDAR; this seam did not follow.**)
+
+   **SO WHAT IS LEFT IS A MEASUREMENT BEFORE ANY BUILD, and it is the honest
+   next step:** drive the FULL pipeline — not this builder — with a two-game
+   week and read what strength actually comes out. **Only that says whether Sam's
+   sentence is unreachable or merely rare.** It changes nothing until it is
+   known, so it owes no sweep. **NOTHING IS OWED TO SAM — he ruled the behaviour
+   in the quote at the top of this item. OWNER: unclaimed.**
 
    ── original below ──
 
@@ -1345,7 +1288,7 @@ seat was wrong.
 ## Previously (now processed)
 
 `docs/SEAT_INBOX_COMPLETED_2026-08-13.md` — items 0, 0a-0f, 4, 5, 8, 10, 11, 12,
-15, 16, 19 and 23, moved out of the queue 2026-08-13 **verbatim, byte-identical,
+15, 16, 19, 23 **and 36**, moved out of the queue 2026-08-13 **verbatim, byte-identical,
 nothing reworded**. Each was a BUILT stub with no open sub-order.
 
 `docs/SEAT_INBOX_ARCHIVE_TO_2026-08-10.md` — most recently the craft validator,
