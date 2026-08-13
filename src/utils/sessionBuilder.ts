@@ -404,7 +404,19 @@ function filterPool(
   equipmentTags: Set<EquipmentTag>,
 ): PoolExercise[] {
   return pool.filter(ex => {
-    // Exclude if any contraindication matches an active injury
+    // Exclude if any contraindication matches an active injury.
+    //
+    // ⚠ THIS IS ONE OF **TWO** INJURY MECHANISMS, AND IT IS THE ONE THAT COVERS
+    // THE POOLS. The other is `classifyExerciseRiskForBucket`
+    // (`rules/injuryExerciseRisk.ts`), which reads `EXERCISE_TAGS` and FILTERS an
+    // already-built week. **34 of 90 pooled exercises have NO `EXERCISE_TAGS`
+    // entry** (measured 2026-08-13), so that filter returns `unknown` for them
+    // and lets them through — and they are safe anyway because THIS line refuses
+    // them at selection, from `PoolExercise.contraindications`.
+    //
+    // So the two are not redundant: this one guards WHAT IS CHOSEN, the other
+    // guards WHAT SURVIVED. **Deleting either leaves a real hole**, and reading
+    // only one of them is how a reader concludes the app fails open on injuries.
     if (ex.contraindications.some(c => injuryTags.has(c))) return false;
     // Exclude if requires equipment the athlete doesn't have
     // (bodyweight exercises always pass — equipment array is empty or contains 'bodyweight')
