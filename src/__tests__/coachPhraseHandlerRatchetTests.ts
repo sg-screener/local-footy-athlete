@@ -43,6 +43,13 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
+// TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the printed totals clears
+// it. I wired 24 suites into the chain today and every one of them was UNARMED,
+// which made `test:totals-or-red-law`'s red BIGGER. These two are mine by
+// authorship, so they are armed first.
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+armTotalsOrRed();
+
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -158,6 +165,7 @@ if (!fs.existsSync(BASELINE)) {
 }
 
 console.log(`\ncoachPhraseHandlerRatchetTests: ${pass} passed, ${fail} failed`);
+totalsPrinted(fail);
 if (fail > 0) {
   console.log(`Failures:\n${failures.map((name) => `  - ${name}`).join('\n')}`);
   process.exit(1);

@@ -45,6 +45,39 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ MY ORPHAN PAYDOWN MADE ANOTHER LAW'S RED **BIGGER** — 24 unarmed suites, and I own them
+
+**`test:totals-or-red-law` is IN THE CHAIN and RED (1 passed, 3 failed).** It
+names **40 suites in `test:bible` with no arm** — *"they exit 0 on a drained loop
+and the chain calls that green"*. **TWENTY-FOUR OF THE 40 ARE SUITES I WIRED IN
+TODAY.**
+
+**SO THE PAYDOWN HAS A COST I DID NOT PRICE.** Every suite I moved from
+"unrunnable" to "in the chain" arrived UNARMED, and an unarmed suite in the chain
+is the exact defect this law exists for: `onboardingReliabilityTests` exited 0
+half-run for three days inside `test:bible` while a registry pin ran on no branch
+at all. **I reduced one debt by 29 and increased another by 24, and only noticed
+because I ran the law that measures it.**
+
+**PAID SO FAR: the two suites I AUTHORED** — `coachPhraseHandlerRatchetTests` and
+`unrunnableSuiteRatchetTests`. Two lines each (`armTotalsOrRed()` at module top,
+`totalsPrinted(fail)` after the totals line). **MUTATION-PROVEN: made the suite
+drain early without printing totals and the process exits 1** — the arm fires on
+exactly the founding case. Both still green, restored byte-identical after.
+
+**OWED: the other 22 I wired.** The recipe is mechanical and is in
+`src/__tests__/support/totalsOrRed.ts`. **NOT done in one bulk pass, deliberately
+— four different totals formats exist in this repo** (`N passed, N failed`,
+`Pass: N`, `— Summary —`, `… tests failed: N`), so a scripted insert would have to
+infer the failure variable per file. **A 22-file bulk edit at the end of a long
+session is precisely the condition under which I deleted six orders this
+morning.** One at a time, each verified, next session.
+
+**AND THE FOUR FORMATS ARE THEMSELVES THE FINDING.** They are why my batch runner
+reported "no totals" three separate times today on suites that were reporting
+fine. **The exit code is the only dependable verdict in this repo**, which is
+exactly what this law is trying to make true.
+
 ### ⚠ THE WORKING TREE IS TRANSIENTLY BROKEN BY A LIVE `readiness` → `capacity` RENAME. **`main` IS SAFE.**
 
 **MEASURED, and the distinction is the whole point:**
