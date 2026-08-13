@@ -371,3 +371,63 @@ standard: *"A green suite with an unmoved census is not this item done."*
 **THE NEXT SEAT STARTS AT `defaultProgram`'s composer, not at the plan and not at
 the scorer** — three layers are now measured and eliminated, which is the one
 thing this turn is worth.
+
+---
+
+## 2026-08-13 — ⚠ I CORRECT MY OWN CLAIM. SAM CHALLENGED IT AND HE WAS RIGHT
+
+**I wrote: *"the slot-based composition engine is not on the generation path at
+all."* THAT IS TOO BROAD AND PARTLY FALSE.** Sam pushed back: the module is
+imported by the generation side. **Proven with markers, 12 real generations:**
+
+| function | calls during generation |
+| --- | --- |
+| `buildIntent` | **0** |
+| `selectExercises` | **0** |
+| `buildTagAwareSession` | **0** |
+| `sessionSlotCoverage` | **0** |
+| `slotsFilledByRow` | **0** |
+| **`patternsCompletingLadder`** | **44 — LIVE** |
+| **`slotDayKindForPatterns`** | **44 — LIVE** |
+
+**THE MODULE IS LIVE IN GENERATION. THE COMPOSING FUNCTIONS ARE NOT.** The two
+that fire are the ladder-ADMISSION helpers, used by `workoutCanonicalisation`'s
+drift guard to decide which rows to KEEP. **The correct sentence names functions,
+not the module:** generation never calls `buildIntent`, `selectExercises`,
+`buildTagAwareSession` or `sessionSlotCoverage`.
+
+**AND SAM'S OWN PREMISE HAD THE SAME BUG AS MINE.** He said `defaultProgram.ts`
+and `exerciseScorer.ts` both import it. **Neither does** — both merely MENTION it
+in a comment, which is exactly the grep-hit-is-not-a-reader trap that has now
+caught three of us today. The real importer is `workoutCanonicalisation.ts`.
+
+### THE BUILDER, NAMED AND PROVEN
+
+For the deficient world (In-season / 2 days / bodyweight):
+`buildWorkoutsFromCoach` = 1 call, **`fallbackExercisesForPlanEntry` = 2 calls.**
+**That is the builder.**
+
+### AND HERE I STOP, BECAUSE THAT IS THE ORDER
+
+The day ships `Walking Lunges · Single-Leg RDL · Reverse Lunges · Glute Bridge ·
+Pallof Press · Romanian Deadlift` — but **no fallback branch emits that list.**
+The branches emit `Back Squat`/`RDLs`; what ships has neither, and carries
+`Romanian Deadlift`, **a barbell lift, to a bodyweight athlete.** So the rows are
+being rewritten AFTER the builder, by equipment substitution — **a fourth
+layer.**
+
+**Sam's instruction was explicit: *"if it doesn't move, stop and say so rather
+than fixing a fourth layer."*** **92 of 318 has not moved. I am stopping.**
+
+**EVERY FILE I TOUCHED IS BACK AT HEAD** — `coachingEngine`, `exerciseScorer`,
+`sessionBuilder`, `sessionSlotCoverage`, `defaultProgram`, all verified clean.
+**⚠ AND I BROKE ONE OF MY OWN RULES GETTING HERE:** I regex-rewrote `return [`
+statements across `defaultProgram.ts` to install a recorder and **broke the
+file's syntax** — the never-regex-a-shared-file lesson, committed by me, ignored
+by me an hour later. Restored from my own backup; nothing shipped.
+
+**FOR THE NEXT SEAT:** the composing engine is eliminated (0 calls, proven). The
+builder is `fallbackExercisesForPlanEntry`. **The squat is being lost after the
+builder runs, in equipment substitution** — that is the fifth layer and it also
+owns the `Romanian Deadlift`-to-a-bodyweight-athlete defect, which already has a
+census and a ceiling of 5.
