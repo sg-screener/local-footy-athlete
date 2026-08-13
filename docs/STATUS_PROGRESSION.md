@@ -133,6 +133,43 @@ its own first line ("Nothing to ask him").**
 reason I did not. That is the mechanism working as designed, and it is worth the
 line.
 
+### 🛑 I ATTEMPTED THE BUILD AND STOPPED AT THE HARNESS — THE NON-VACUITY GUARD EARNED ITS PLACE
+
+**I wrote the cell first, as R-035's proof: a Thursday declaration must leave
+Mon-Wed of that week untouched.** With it I wrote a non-vacuity guard — *"the
+cooked declaration reaches generation AT ALL"* — comparing per-day strength sets
+against a no-declaration control.
+
+**THE NON-VACUITY GUARD FAILED AND THE REAL CELL PASSED.** That pairing is the
+whole lesson: driving `generateProgramLocally` with a cooked
+`createTemporaryFatigueFact` (scoped by `readinessDeloadFactScope`) changed
+**NOTHING on any day** — so "Mon-Wed untouched" was true of a world where the
+declaration was never read. **Without the guard I would have committed a green
+cell over a dead harness**, which is this repo's most expensive recurring shape
+and the fourth time this session an instrument of mine looked like a result.
+
+**WHY IT DID NOT REACH GENERATION, as far as I traced it before stopping:**
+`generationConstraints` reads `temporarySourceFacts` **only** through
+`deriveIllnessWeekDirective`. The readiness path runs off `activeConstraints`
+(`strongestReadinessConstraint`), and `generateProgram` builds those from a
+`ReadinessSignal` via `buildReadinessActiveConstraints` — which **returns []
+when the signal carries `temporarySourceFactIds`**, because "canonical source
+facts already publish their one composed constraint". **So a cooked FACT reaches
+generation only through a fact→constraint projection I had not yet located, and
+severity <4 is inert (`readinessTierFromConstraint`), so a plain `flatToday`
+signal cannot stand in for it.**
+
+**THE RED CELL WAS REVERTED, NOT LEFT.** It was red for a HARNESS reason, not
+for the defect, and a permanent red is the same thing wearing a nicer word.
+`test:deload-week` is back to 41 passed / 0 failed.
+
+**WHAT THE NEXT SESSION NEEDS FIRST, AND IT IS ONE QUESTION:** find the
+fact→ActiveConstraint projection for a cooked readiness fact and confirm
+`generateProgramLocally` runs it. **Until a cooked declaration demonstrably
+moves ONE day's dose in a harness, no cell here can tell the fix from the
+world.** Everything else — the seam, the trap, the layer trace — is already
+below and unchanged.
+
 ### ✅ THE WINDOW IS TRACED END TO END — IT SURVIVES TO THE FACT AND IS THROWN AWAY AT GENERATION
 
 **The item opened with "`resolveDayDirective` has ZERO callers". The orphan is
