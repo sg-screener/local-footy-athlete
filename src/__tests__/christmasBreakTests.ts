@@ -607,6 +607,18 @@ async function main(): Promise<void> {
     /from: addDaysISO\(dateISO, 1\), until: null/.test(screen) &&
     /until: addDaysISO\(dateISO, -1\)/.test(screen));
 
+  // ── [10h] AND IT OPENS ON THE MONTH THE ANSWER IS IN ─────────────────────
+  // FOUND ON GLASS, not by reading. The first device run of this ask (10
+  // December) opened the grid on NOVEMBER, because the calendar anchored its
+  // month on `minISO` and this question's floor is 30 days BACK. The athlete had
+  // to page forward to reach his own answer. **The floor and the opening month
+  // are two different questions**, and away never exposed it because its floor
+  // IS the month it wants.
+  run('[10h] the calendar opens on the answer\'s month, not the floor\'s',
+    /initialMonthISO=\{asking \? todayISOLocal\(\) : ask\.breakFromISO\}/.test(screen) &&
+    /useState\(initialMonthISO \?\? minISO\)/.test(screen),
+    'the month anchor is back on minISO, so December opens on November');
+
   console.log(`\nchristmas break: ${passed} passed, ${failed} failed`);
   if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }
   totalsPrinted(failures.length);

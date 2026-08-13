@@ -3314,9 +3314,22 @@ function AwayReturnCalendar({
   minISO,
   onPick,
   testIDPrefix = 'home-away-return',
+  initialMonthISO,
 }: {
   minISO: string;
   onPick: (dateISO: string) => void;
+  /**
+   * WHICH MONTH IT OPENS ON, when that is not the month of `minISO`.
+   *
+   * **FOUND ON GLASS 2026-08-13, on the first device run of the Christmas ask.**
+   * The grid anchored on `minISO` and nothing else. For AWAY that is right —
+   * the earliest return is the day after leaving, so it opens on the month the
+   * athlete is about to pick in. **For the Christmas question the floor is 30
+   * days BACK, so on 10 December it opened on NOVEMBER** and the athlete had to
+   * page forward to reach the answer. The floor and the opening month are two
+   * different questions and this is the second one.
+   */
+  initialMonthISO?: string;
   /**
    * IT HAS A SECOND DOOR NOW (item 31 part 5) — the Christmas-break sheet asks
    * for two unbounded dates and this is already the app's only month grid.
@@ -3325,7 +3338,7 @@ function AwayReturnCalendar({
    */
   testIDPrefix?: string;
 }) {
-  const [monthAnchorISO, setMonthAnchorISO] = useState(minISO);
+  const [monthAnchorISO, setMonthAnchorISO] = useState(initialMonthISO ?? minISO);
   const anchor = monthAnchorISO.slice(0, 10);
   const year = Number(anchor.slice(0, 4));
   const month = Number(anchor.slice(5, 7));
@@ -3456,6 +3469,10 @@ function ChristmasBreakSheet({ visible, ask, onClose, onDone }: ChristmasBreakSh
         </Text>
         <AwayReturnCalendar
           minISO={minISO}
+          // OPEN ON THE MONTH THE ANSWER IS IN, not on the floor's month.
+          // December's answer is a day this month; January's is on or after the
+          // break began.
+          initialMonthISO={asking ? todayISOLocal() : ask.breakFromISO}
           testIDPrefix="home-christmas-break"
           onPick={(dateISO) => onDone(asking
             // HE IS AT TRAINING ON THE DAY HE PICKED, so the break starts the
