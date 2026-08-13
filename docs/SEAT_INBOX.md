@@ -1324,6 +1324,19 @@ his instruction is standing authority, not history.**
        `[temporary-source-fact] refused` line.
     3. Fix what it names.
 
+    **STEP 1 WAS APPLIED ONCE AND BACKED OUT AGAIN — 2026-08-13, and the reason
+    is a warning rather than a result.** Travel was added to
+    `isRuledDerivingConstraint`, a clean `--clear` Metro was started and the flow
+    run — and the run stopped 12 steps in instead of 14, the app sitting on the
+    DAY screen, with NO `[temporary-source-fact] refused` line logged. **So the
+    away door did not even complete, and nothing was learned.** The change was
+    reverted rather than left in the tree: it is the same edit that once made the
+    athlete's tap fail outright, and an unverified deriving-lane change is not
+    something to hand over. **The tree is clean and identical to HEAD.**
+    **START BY MAKING THE FLOW ITSELF PASS 14/14 AGAIN** (it did all day) before
+    reading anything into a missing log — a half-run flow proves nothing, and
+    that is the same mistake as trusting a stale bundle.
+
     **⚠ INSTRUMENT DISCIPLINE FIRST, OR THE WHOLE THING WASTES A DAY AGAIN.**
     `pkill -f "expo start --dev-client"`, then ONE `npx expo start --dev-client
     --port 8082 --clear`, and put a CONTROL in the same edit as the test — change
