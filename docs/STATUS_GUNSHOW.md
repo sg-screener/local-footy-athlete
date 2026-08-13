@@ -104,3 +104,85 @@ registry belongs to the seat.** Recorded so it is not re-found from scratch a
 fourth time.
 
 **Probe files: none. Nothing in `src/` was left changed by this seat.**
+
+---
+
+## 2026-08-13, 16:20 — THE QUEUE AFTER 59: EVERY ITEM IS OWNED-AND-LIVE, BLOCKED, OR CLOSED. TWO MORE STALE NOTES, AND ONE PREMISE I EXPECTED TO BE STALE AND IS NOT
+
+**I walked the whole `## Unprocessed` section rather than stopping at 59.**
+
+### WHO IS ACTUALLY LIVE (`git log --grep='Agent: <seat>'`, 16:15)
+
+| seat | commits | last |
+| --- | --- | --- |
+| `readiness` | 5 | **16:15 — LIVE** |
+| `arms` | 2 | **16:15 — LIVE** |
+| `audit` | 117 | **16:13 — LIVE** |
+| `terminal` | 181 | 15:58 |
+| `patterns` | 1 | 14:46 — quiet 89 min |
+| `pace` | 24 | 14:19 |
+| `equipment` | **0 — NEVER** | — |
+
+**Items 57, 58 (`readiness`) and 60 (`audit`) have owners who committed in the
+last two minutes. I walked past them and did NOT mark them** — owned is not
+blocked, and a false block entitles every seat to stop.
+
+### TWO MORE STALE NOTES, BOTH ALREADY PAID BY SOMEONE ELSE
+
+`docs/STATUS_PATTERNS.md` closes with an OWED block: *"R-070 still reads
+`UNENFORCED`… `UNENFORCED_CEILING` still reads 13… Next session: flip the row and
+drop the ceiling 13 -> 12."* **Both are already done:**
+
+- R-070's row now reads **`BUILT 70e91a0f`**, guarded by `test:main-lift-pattern`.
+- `UNENFORCED_CEILING` is **5**, not 13 — `readiness` took it 9 -> 5 on item 53.
+
+**Nothing for me to clear.** `rulingRegistryTests.ts` is committed and clean;
+`docs/RULINGS_REGISTRY.md` is STILL dirty in the working tree, so a live seat is
+in it and I stayed out.
+
+### ⚠ ITEM 51's PREMISE IS TRUE — I WENT LOOKING FOR A FIFTH STALE ROW AND DID NOT FIND ONE
+
+**This is the correction that matters, because after four stale notes in one turn
+the cheap move is to assume the fifth.** R-013's row says
+*"`maxExercisesPerStrengthSession` has ZERO readers"*, and a first grep appears to
+refute it — `coachingEngine.ts:8846` names the field.
+
+**The second hop refutes the refutation.** `:8846` is a **WRITE**, not a read:
+
+```
+trainingAgePolicy.maxExercisesPerStrengthSession
+  -> AIConstraints.maxExercisesPerSession   (declared :618, written :8846)
+  -> READ BY NOTHING
+```
+
+The only other hit in `src/` outside tests is a **comment** in
+`sessionRowCounting.ts:309` describing the flow. **The field is written and never
+read — the `canOverride` shape CLAUDE.md names, "written nine times and read
+zero."** **R-013's row is accurate and item 51 is a real build, not a row fix.**
+
+**Recorded so the next seat does not re-run my first grep and "correct" a row
+that is right.** A grep hit on a field name is a MENTION; only following it to a
+reader says which.
+
+### WHAT I DID NOT VERIFY, AND WILL NOT CLAIM
+
+R-013's row also says **"eleven 3-row fallback branches still ship."** My grep for
+it (`slice(0, 3)` across `utils/`, `rules/`, `services/`) returned **8 hits, all
+of them coach-message and weekday-name truncations** — the wrong shape entirely.
+**I am not reporting a count I cannot stand behind**; a bad grep is how findings
+get manufactured. **That half of the premise is UNMEASURED by me.**
+
+### ITEM 51 IS NOT MINE TO BUILD, AND I DID NOT START IT
+
+**OWNED BY `patterns`, who committed 89 minutes ago and whose own file says
+"next session"** — that is a seat mid-work, not the never-committed `equipment`
+(item 55) or the two-hours-silent `pace` (item 53) that today's precedent allowed
+taking over. **And it is a GENERATION change**: it owes `test:scenarios` +
+`test:qa` either side, and item 34 bars starting one at a session tail.
+
+**HANDED TO `patterns`, not built over:** the zero-reader half of your premise is
+CONFIRMED by me at 16:20; your OWED registry flip is already paid; the 3-row
+branch count is still unmeasured.
+
+**No question for Sam. Nothing here survives a ruling he has not already given**,
+so I am not opening an `## AWAITING SAM` entry to manufacture an exit.
