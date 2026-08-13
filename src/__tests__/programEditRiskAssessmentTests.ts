@@ -184,8 +184,50 @@ console.log('\n[1] unchanged existing findings are not surfaced');
 
 console.log('\n[2] info findings allow');
 {
+  // ⚠ FIXTURE REPAIRED 2026-08-13 — THE ASSERTION WAS NOT TOUCHED, AND THAT
+  // DISTINCTION IS THE WHOLE POINT.
+  //
+  // This built a bespoke two-day week (`upper` + `recovery`) with NO running in
+  // it. That was fine when it was written (2026-07-30) and stopped being fine
+  // TODAY: `f6808ed7` landed `cap_maxRunningExposures_under` — census C4, the
+  // running-floor exemption finally reaching the validator — so the fixture now
+  // trips a STRONG finding ("0 running days, Bible floor 2") and the assessment
+  // returns `confirm`.
+  //
+  // THE CELL'S SUBJECT IS THE FLAG DIFFERENCE, NOT THE WEEK SHAPE: it sets
+  // `reducedLoadActive` on current and not on proposed, and asserts that the
+  // resulting INFO finding still allows. The week was only ever scenery, and the
+  // scenery had quietly become the thing under test.
+  //
+  // SO THE FIXTURE GAINS TWO RUNNING DAYS **AND THREE CONDITIONING DAYS**, AND
+  // BOTH ASSERTIONS STAY EXACTLY AS WRITTEN. The tempting repair — re-pointing
+  // `allow` to `confirm` — would have made the cell green while silently
+  // deleting its meaning, and would have recorded a STRONG running-floor breach
+  // as the expected outcome of an INFO finding.
+  // `expectation-edited-to-match-regression`, which is precisely what a suite
+  // nothing has run for two weeks invites.
+  //
+  // THE CONDITIONING DAYS ARE NOT DECORATION AND WERE NOT PREDICTED: clearing
+  // the running floor exposed a SECOND floor behind it —
+  // `cap_conditioningExposures_under`, soft, *"0 conditioning exposures (Bible
+  // target >= 3)"* — which the strong running finding had been masking. **Two
+  // floors, one visible.** Measured by probing the findings list at each step
+  // rather than inferring the next one.
+  //
+  // ⚠ AND `cleanWeek()` WAS MY FIRST ATTEMPT AND IT WAS WRONG. It cleared the
+  // running floor and PASSED the first assertion — then reddened the second,
+  // because a clean week produces no INFO finding at all. The light shape is
+  // LOAD-BEARING: it is what makes `reducedLoadActive` differ into an info-level
+  // finding. Caught only because the cell asserts BOTH halves; a cell that
+  // checked `decision` alone would have gone green on a fixture that had stopped
+  // testing anything.
   const lightWeek = week({
     0: [upper()],
+    1: [metcon()],
+    2: [sprints()],
+    3: [metcon()],
+    4: [sprints()],
+    5: [metcon()],
     6: [recovery()],
   });
   const assessment = assessProgramEditRisk({

@@ -1,5 +1,5 @@
 {
-  "count": 25,
+  "count": 24,
   "files": [
     "beginnerDeterministicProgramTests.ts",
     "byeWeekClassificationTests.ts",
@@ -16,7 +16,6 @@
     "offseasonSubphaseConditioningIntegrationTests.ts",
     "phaseRepPrescriptionTests.ts",
     "postGenerationConstraintValidationTests.ts",
-    "programEditRiskAssessmentTests.ts",
     "programEditWriteGuardTests.ts",
     "programmingBiasTests.ts",
     "recoveryAddonAttachmentTests.ts",
