@@ -15,8 +15,12 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-45. **HALF BUILT BY THE TERMINAL (its owner) — THE NO-DUPLICATE HALF IS DONE,
-    THE "TWO OR MORE" HALF IS NOT, AND IT IS GATED ON THE EQUIPMENT FIX.**
+45. **BLOCKED-BY: other-agent — HALF BUILT BY THE TERMINAL (its owner) — THE
+    NO-DUPLICATE HALF IS DONE, THE "TWO OR MORE" HALF IS NOT, AND IT IS GATED ON
+    THE EQUIPMENT FIX.**
+
+    **MARKED BY `audit`, not claimed, nothing below this paragraph edited.** The
+    item names the TERMINAL as its owner in its own text and that seat is live.
 
     **⚠ `ceb6993b` DID NOT CONTAIN THE WORK — its message described R-080 and its
     contents were two other seats' doc files.** The shared index moved between
@@ -182,11 +186,51 @@ his instruction is standing authority, not history.**
     **PROVE IT:** a week with 0 running days must not ship green. 17 QA either
     side.
 
-    **⚠ THE 46-LINE MEASUREMENT THAT WAS HERE IS NOW SUPERSEDED BY THE CLOSURE
-    ABOVE — compressed by its own author, `pace`, 2026-08-13.** It is verbatim in
-    `9db988d9` and in `docs/STATUS_PACE.md`. **I wrote it into a file with a byte
-    budget when the rule says mark the item and put the detail in my own status
-    file; `test:repo-law-guards` names four of my commits for exactly that.**
+    **⚠ MEASURED BY `pace` BEFORE BUILDING, AND THE ORDER OF WORK IS THE
+    OPPOSITE OF THE ONE ABOVE. 2026-08-13.**
+
+    **THE PREMISE IS CONFIRMED EXACTLY:** `cap_*_under` has **ZERO** production
+    consumers; the `_over` twins have **EIGHT** — four in
+    `coachTurnController.ts:2255-2264` and four more in
+    `planChangeRefusalCopy.ts:64-75`. **Ceilings refuse in words the athlete
+    reads; floors emit an `info` nothing consumes.**
+
+    **BUT RAISING SEVERITY FIRST WOULD REFUSE WEEKS THE GENERATOR LEGITIMATELY
+    PRODUCES.** `section18CraftTier.ts:123` — `blocksBySeverity` is
+    `severity === 'strong' || 'hard_stop'`. The QA corpus TODAY ships **S5 and
+    S6 with 0 running days as `[info]`**. Make running `strong` with nothing else
+    changed and those two weeks stop being buildable at all.
+
+    **AND THE EXEMPTION THAT WOULD KEEP THEM LEGAL ALREADY EXISTS, FULLY TYPED
+    AND FULLY TESTED, AND NO PRODUCTION CALLER PASSES IT:**
+    - `auditWeekAgainstCaps(counts, context: CapAuditContext = {})`
+      (`weeklyExposureCounts.ts:299`) takes
+      `runningFloorExemption?: 'early_off_season_weeks_1_2' | 'bye_recovery'`.
+    - `rulesKernelTests.ts:556-561` proves BOTH exemptions suppress the finding.
+    - **BOTH production call sites pass NOTHING** —
+      `weeklyExposureCounts.ts:382` and `weekStructureValidator.ts:454` are
+      `auditWeekAgainstCaps(counts)`.
+    - The athlete-facing detail string already PROMISES the exemption —
+      *"lifted in early off-season weeks 1-2 and bye recovery"*
+      (`weeklyExposureCounts.ts:330`) — **so the app is telling the athlete about
+      a lift it has no way to apply.**
+    - `weekStructureValidator.ts` has **no knowledge of the off-season subphase
+      at all** (zero matches for `subphase`/`offseason`); its only light-week
+      escapes are `reducedLoadActive` and `byeWeek`.
+
+    **SO THE BUILD IS TWO STEPS AND THIS IS THE ORDER:**
+    1. **Thread the subphase to the validator and PASS `runningFloorExemption`.**
+       Small, and it should silence S6 (early off-season) on its own — measure
+       that rather than assume it.
+    2. **THEN severity parity**, once the legitimate 0-running weeks have stopped
+       producing findings. Only then does `strong` refuse the right weeks.
+
+    **THIS IS CENSUS C2's SHAPE FOR THE THIRD TIME TODAY** — a mechanism that
+    exists, is typed, is tested, and has no reader on the path that matters
+    (`deriveMas`; the second game at the exposure contract; now this). **Worth
+    naming as a class rather than paying three times.**
+    **BASELINE CAPTURED BEFORE ANY CHANGE:** `test:qa` = 168 passed, 11 failed
+    across 17 scenarios; the S5/S6 `_under` findings are among the 11.
     **NOTHING IS OWED TO SAM.**
 
 41. **BLOCKED-BY: other-agent — CENSUS C6, OWNED BY `progression`, WHO HAS
@@ -618,13 +662,66 @@ his instruction is standing authority, not history.**
     restored that file from a backup mid-run, so that seat should re-check its
     own working copy before trusting it.**
 
-    ── **MY WITHDRAWN REPORT WAS HERE AND IS NOW A POINTER — compressed by its
-    own author, `pace`, 2026-08-13.** 61 lines of superseded text, in a file
-    6KB over a budget Sam pays for. **Nothing is lost:** the report, its
-    six-world table and the mutation runs are verbatim in `1229ef0b` /
-    `b0e8e599`, and the withdrawal in `8e8aaf92`. The LIVE conclusion is the
-    block above this line; the answer that superseded it is `audit`'s, in
-    `docs/STATUS_AUDIT.md`. ──
+    ── everything below this line is the WITHDRAWN report, kept so the mistake is
+    readable rather than tidied away ──
+
+    **⚠⚠ THE ORDERED NEXT STEP IS REFUTED. MEASURED BY `audit`, 2026-08-13, AND
+    THIS IS THE THIRD DIAGNOSIS THIS ITEM HAS HAD KILLED BY ITS OWN
+    MEASUREMENT.** The wall was named as selection ORDER —
+    `pickPlacementCondCategories` / `pickCondCategory` returning `out[0]` with
+    COD appended LAST, i.e. item 27's *"ranked last, never reached"*.
+
+    **SO I PROMOTED IT TO FIRST** — `autoPlacementCategories`, one character of
+    intent: `codPermitted ? ['cod_decel', ...base] : base` — and generated six
+    worlds either side (three club, three club-less; in-season, pre-season,
+    off-season):
+
+    | | COD sessions | week fingerprint |
+    | --- | --- | --- |
+    | HEAD (COD last) | **0 in all six** | 6 distinct |
+    | COD promoted to FIRST | **0 in all six** | **byte-identical, all six** |
+
+    **NOT ONE EXERCISE NAME MOVED, INCLUDING ON THE WORLDS WHERE COD IS
+    PERMITTED.** So ranking is not the wall: a category ranked first that still
+    places nothing is not losing a race.
+
+    **AND `28-C1b`'s "do not reorder COD" BAR IS VOID BY THE SAME RUN** — its
+    stated fear was *"promoting COD makes it beat ordinary aerobic work on normal
+    weeks"*, and the three normal weeks are byte-identical across the change.
+    `codDecelPermitted` keeps it out of their pool entirely.
+
+    **WHAT IS RULED OUT, WITH RECEIPTS, SO NOBODY RE-WALKS IT:**
+    - **The pool is NOT empty.** `poolForCategoryPublic('cod_decel')` returns
+      **4** templates — `Up-Back Shuttle`, `Low-Intensity Deceleration Drills`,
+      `Deceleration and Landing Work`, `45-Degree Cut Reps`. **Census C1's
+      receipt — *"`poolForCategory` has six `case` branches and no `cod_decel`
+      branch at all"* — IS STALE. The branch is at
+      `conditioningSelection.ts:211-212`.**
+    - **The gate is NOT refusing.** `codDecelPermitted` returns `true` for
+      pre-season with no club and for late off-season, `false` in season.
+    - **Ranking is not it** (the table above).
+
+    **AND THAT ONE INSTRUMENT WAS RUN RATHER THAN HANDED ON. THE ANSWER IS: IT
+    NEVER ARRIVES.** A probe at `selectConditioningTemplate`
+    (`conditioningSelection.ts:555`, the ONE place a category becomes a template)
+    over pre-season-no-club, **with COD promoted to FIRST so ranking could not be
+    the excuse**:
+
+        5 x category=tempo     4 x category=recovery_flush     2 x category=vo2
+
+    **Eleven calls, THREE categories. `cod_decel` is not among them — and neither
+    are `aerobic_base`, `glycolytic` or `sprint`.** So eligibility is NOT vetoing
+    COD; the planner's chosen category is not what reaches the selector at all.
+    **The wall is UPSTREAM of template selection, it is not COD-specific, and it
+    is losing four of the seven categories — which is a much bigger fact than
+    this item was chasing.**
+
+    **THE NEXT STEP, NAMED AND NOT GUESSED:** find what sits between
+    `pickCondCategory` and `selectConditioningTemplate` and collapses seven
+    categories into three. **Do NOT touch ranking, the pool, or
+    `codDecelPermitted` — all three are measured innocent above.**
+    **OWNER: unclaimed — `coachingEngine.ts` is free (`cmp` vs `HEAD`, this
+    stop). NOTHING IS OWED TO SAM.**
 
     **THE FILES WERE FREE** — all four showed `MM` and all four are
     BYTE-IDENTICAL to HEAD. The shared index is stale after private-index
@@ -1235,29 +1332,14 @@ seat was wrong.
 
 - **ANSWERED AND CLOSED 2026-08-13 ✅ — ALL THREE. R-080 answered the first;
   he closed the other two himself.** Terminal's own entry, closed by its owner.
-
   **CITED: R-080** (*"he should be able to do more single leg knee things if he
-  can only do one squat pattern because of bodyweight"*) — **he refused all
-  three options I offered (repeat / drop / ship short) and named the SLOT
-  instead.** BUILT `a1296a87`, `test:pools` 496/0; the no-duplicate half is
-  proven and the "two or more" half is measured NOT met and gated on the
-  equipment fix (item 45 carries the numbers). **R-079** covers the sprint pair:
-  *"Other two are closed"*, his words.
-
-  **CARRIED OUT OF THE ENTRY BEFORE CLOSING IT, because it outlives the
-  question:** the desktop measured `single_leg_hip` at **ONE exercise in the
-  whole registry** (`Single-Leg RDL`). R-080 does not need that slot, so it is
-  no reason to hold the entry open — but **no picker, rotation or substitution
-  can ever fill a pool of one**, and that slot is missing on the same days. That
-  is a vocabulary question for Sam, recorded in `docs/STATUS_TERMINAL.md`.
-
-  **⚠ FORMAT NOTE FOR WHOEVER CLOSES THE NEXT ONE:**
-  `rulingRegistryTests.ts:356` only skips a site when `**` is IMMEDIATELY
-  followed by `ANSWERED` — `- **✅ ANSWERED` does NOT match and reads as still
-  open. The tick goes AFTER the word. Found by `audit` (`154125a2`), which
-  conformed rather than loosening the regex.
-
-  ~~ORIGINAL — the three questions, kept for the record:~~
+  can only do one squat pattern because of bodyweight"*) — he refused all three
+  options I offered and named the SLOT instead. BUILT `a1296a87`, `test:pools`
+  496/0. **R-079** covers the sprint pair: *"Other two are closed"*, his words.
+  **CARRIED OUT BEFORE CLOSING:** the desktop measured `single_leg_hip` at ONE
+  exercise in the whole registry — no picker can fill a pool of one, and that
+  slot is missing on the same days. A vocabulary question for Sam.
+  ~~ORIGINAL:~~
 
   **REGISTRY-GREP:** all three topics, run together — grepped
   `RULINGS_REGISTRY.md` for *duplicate*, *bodyweight*, *substitut*, *sprint*,
@@ -1299,14 +1381,10 @@ seat was wrong.
   green; these three decide what gets built next, not whether today's work
   stands.
 
-- **ANSWERED AND CLOSED 2026-08-13 ✅ — SUPERSEDED BY THE BATCHED ENTRY ABOVE
-  AND ANSWERED BY R-080.** Sam refused all three options this entry offered
-  (repeat / drop / ship short) and named the slot instead: *"he should be able to
-  do more single leg knee things if he can only do one squat pattern because of
-  bodyweight"*. **CITED: R-080** (built `a1296a87`), and **R-081** is unrelated
-  (*"similar is right"*, `audit`'s substitution question) — named because the
-  gate reads both off this text. Left in place rather than deleted; the original
-  question follows.
+- **ANSWERED AND CLOSED 2026-08-13 ✅ — SUPERSEDED, AND ANSWERED BY R-080.**
+  Sam refused all three options this entry offered and named the slot instead.
+  **CITED: R-080** (built `a1296a87`); **R-081** is unrelated (*"similar is
+  right"*) and is named only because the gate reads it off this text.
   ~~ORIGINAL:~~ **⚠ A BODYWEIGHT LEG DAY SHIPS THE SAME SQUAT
   TWICE. When there is no other legal exercise, does the app REPEAT it, DROP it,
   or SHIP THE DAY SHORT?**
@@ -1381,10 +1459,9 @@ seat was wrong.
   on.
 
 - **ANSWERED AND CLOSED 2026-08-13 ✅ — SAM CLOSED IT HIMSELF: *"Other two are
-  closed"*.** Superseded by the batched entry above. **CITED: R-079**, which
-  rules the sprint unit and the per-phase numbers; the team-night gate and the
-  no-club in-season hole are **not to be built**, and the inert clause-3
-  relaxation (`0d4824df`) stays harmless and is recorded as such on item 39.
+  closed"*.** Superseded. **CITED: R-079.** The team-night gate and the no-club
+  in-season hole are NOT to be built; the inert clause-3 relaxation
+  (`0d4824df`) stays harmless and is recorded on item 39.
   ~~ORIGINAL:~~ **⚠ DOES A TEAM NIGHT *COUNT AS* YOUR SPRINT, OR
   DOES IT *EARN* ONE ON TOP? Your R-079 and the app disagree, and both readings
   are defensible.**
