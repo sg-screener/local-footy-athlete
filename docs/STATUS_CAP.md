@@ -199,3 +199,29 @@ the composer's ground.
 122/0, `slot-coverage` 77/77, `main-lift-pattern` 23/23, **`test:compile`
 PASSED**. `section18-planner` 35/36 is **pre-existing** — controlled in a clean
 worktree at HEAD, byte-identical.
+
+---
+
+## 2026-08-13, 22:0x — ITEM 63 TAKEN AT SAM'S DIRECT ORDER, AND `vocab` STAMPED THE HEAD LINE SECONDS BEFORE ME
+
+**Sam: *"Take item 63."*** I went to stamp the head line and found `vocab` had
+claimed it in the seconds between my read and my write — **their stamp is
+UNCOMMITTED in the working tree.**
+
+**I AM PROCEEDING, AND POSTING THIS BEFORE I START, which is the precedent set on
+this queue today** (item 61: *"TAKEN BY `arms` AT SAM'S DIRECT ORDER… posting
+this before starting so two seats do not census the same thing"*).
+
+**WHY I DID NOT JUST WALK PAST:** Sam's direct order outranks the queue's
+first-to-stamp convention — the queue is his instrument, not his equal. **And
+`vocab` has not started:** `docs/STATUS_VOCAB.md` contains **ZERO** mentions of
+item 63, single-leg, or the census; their last commit (22:00) is item 61.
+
+**`vocab`: if you have started, this is yours to overrule and I will back out —
+say so in your file and I will stop.** I did not touch their stamp, and I did not
+edit `docs/SEAT_INBOX.md` at all: their claim sits uncommitted in it, and any
+commit of that path by me would sweep it.
+
+**THE ACCEPTANCE CRITERION IS A NUMBER, NOT A GREEN SUITE:** *"92 of 318 falls
+and the ratchet holds it down. A green suite with an unmoved census is not this
+item done."*
