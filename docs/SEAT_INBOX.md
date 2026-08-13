@@ -261,6 +261,41 @@ his instruction is standing authority, not history.**
 
     **STAND-DOWN D RE-VERIFIED AS SPENT** before any of this was touched.
 
+    **⚠⚠⚠ AND THE ITEM'S PREMISE IS WRONG ON THE EVIDENCE — MEASURED THIRD PASS,
+    2026-08-13. DO NOT BUILD AGAINST IT AS WRITTEN.**
+
+    **THE CLAIM:** *"a week that genuinely ran out of room records NO typed
+    reduction at all and degrades to an advisory nobody surfaces."*
+
+    **WHAT ACTUALLY HAPPENS** (`section18EffectiveWeekEvaluator.ts:862-899`) is a
+    THREE-TIER ladder, and an authorised reduction touches only the bottom one:
+    1. `actual < requiredMinimum` -> **`required_minimum_shortfall`, severity
+       BLOCKING.** Fires regardless of any reduction.
+    2. `actual < plannerSelectedTarget` -> **`planner_selected_target_miss`,
+       severity BLOCKING.** Also fires regardless.
+    3. `actual < defaultTarget` **AND `!hasFrequencyReduction(...)`** ->
+       `default_target_miss`, severity **advisory**.
+
+    **SO A ROOM-EXHAUSTED WEEK IS NOT SILENT AND IS NOT AN ADVISORY — IT IS
+    BLOCKING, with `expected` and `actual` on it.** The only thing an authorised
+    reduction suppresses is tier 3.
+
+    **THE REAL DEFECT, RESTATED:** the week is recorded as an ERROR when it
+    should be recorded as an EXPLAINED CUT. Sam's *"yeah well that sounds shit
+    and not good"* is about the app cutting on a guess; the fix is that a week
+    which genuinely had no room should **AUTHORISE** the reduction — so the
+    athlete gets a reason and the week stops reading as broken — rather than
+    tripping a blocking finding nobody can act on.
+
+    **AND THE REASON WORD ALREADY EXISTS.** `insufficient_availability` is
+    already in `WeeklyExposureReductionReason` (`weeklyExposureContract.ts:32`).
+    **No new vocabulary, no new field, no new measurement.**
+
+    **THE OPEN QUESTION IS NOW SHARP AND IT IS NOT SAM'S:** may a blocking
+    finding be downgraded to an authorised reduction, and WHO authorises it —
+    because "the week had no room" must not become a way to silence tier 1 and 2
+    for weeks that are genuinely broken. **That is the whole remaining design.**
+
     **(c) BLOCKED-BY: other-agent — THE MAS BLOCK LIMIT.** The fourth clause goes
     in `conditioningSelection.ts:291-304`, and that file is `MM` in the shared
     checkout with changes this seat did not make. **The finding is confirmed
