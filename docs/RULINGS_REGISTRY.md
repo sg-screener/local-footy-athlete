@@ -338,9 +338,27 @@ trip"* · The away equipment answer is a subtraction from the existing list. ·
 training and games; the athlete's own sessions stay. · `BUILT`.
 
 **R-075** · *"Away has to replace the work it removes, not just delete it - your
-Saturday Rest Day is the wrong case."* (Sam, 2026-08-13, unprompted, closing the
-AWAITING SAM question rather than answering it) · **AWAY IS A SUBSTITUTION, NEVER
-A SUBTRACTION.** A day the trip empties — a vacated fixture, a team-only night —
+Saturday Rest Day is the wrong case."* · and, verbatim: *"If nothing was on that
+day then it's probably worth just leaving as rest - if something was on that day
+then it should be substited with a new similar session to keep the program
+flowing - it really is common sense"* · *"if I go away for 2 weeks and I was
+going to miss 4 team trainings 1 game and 5 strength sessions, then the 2 weeks
+should aim to fill those with 5 conditionings and 5 strength ya know"* ·
+**AWAY IS A SUBSTITUTION, NEVER A SUBTRACTION.**
+**HIS EXAMPLE IS THE SPECIFICATION:** a day that held NOTHING stays REST; a day
+that held SOMETHING gets a SIMILAR session; **the unit is the AWAY BLOCK, not the
+day** — 4 team trainings + 1 game = 5 removed -> **5 CONDITIONING**, 5 strength ->
+**5 STRENGTH**. Team training and fixtures map to CONDITIONING because that is the
+quality they supplied — the same crosswalk the exposure counts already use.
+***"AIM to fill"*** is a target, not a hard floor; a shortfall must SAY SO.
+· **THE DAY HALF IS `BUILT 59b0994a`+ (2026-08-13), SEEN ON GLASS:** a vacated
+Saturday reads *"Conditioning — 2 exercises"* (`400 m Repeats`), Sunday held
+nothing and correctly stays *"Rest Day"*. `sessionResolver.ts` `freedByTheTrip`,
+held by `test:away-flow` [15d]/[15e] — and [15e] asserts the KIND, because the
+first build filled the day with `prehab_accessories` and that is a substitution in
+SHAPE, not in KIND.
+**THE BLOCK HALF IS UNENFORCED:** nothing counts what a trip removes across its
+weeks and aims a matching total back. A day the trip empties — a vacated fixture, a team-only night —
 must carry REPLACEMENT WORK. **Both *"Training Day"* (the empty-day placeholder)
 and *"Rest Day"* are wrong answers to the same question**, and he ruled out the
 second one the same day it shipped. This is the read-side statement of R-018

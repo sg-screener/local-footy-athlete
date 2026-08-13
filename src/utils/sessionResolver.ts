@@ -2270,7 +2270,50 @@ function withoutTeamTrainingSegment(name: string | undefined): string {
  * with SEAT_INBOX item 28. **This is the day the athlete was looking at, not the
  * whole ruling.**
  */
-function freedByTheTrip(date: string, state: ScheduleState): Workout {
+function freedByTheTrip(
+  date: string,
+  state: ScheduleState,
+  weekDays: readonly ResolvedDay[],
+): Workout {
+  // ── THE QUALITY IS CONDITIONING, AND SAM'S OWN ARITHMETIC IS WHY ──
+  //
+  // ***"if I go away for 2 weeks and I was going to miss 4 team trainings 1 game
+  // and 5 strength sessions, then the 2 weeks should aim to fill those with 5
+  // conditionings and 5 strength ya know"***.
+  //
+  // **4 team trainings + 1 game = 5 removed -> 5 CONDITIONING.** Team training
+  // and a fixture are the athlete's FIELD work; that is the quality they
+  // supplied and the quality that has to come back. **The first version of this
+  // gave `prehab_accessories`, which filled the day but replaced running with
+  // arm work** — a substitution in shape and not in kind, and his sentence is
+  // explicitly about kind: *"substituted with a new similar session to keep the
+  // program flowing"*.
+  //
+  // The same crosswalk the exposure counts already use
+  // (`sessionClassificationAdapter` credits an anchor as sprint/COD) — so this
+  // is not a new mapping, it is the one the app already reasons with.
+  //
+  // ⚠ NO GAME DATES ARE PASSED, AND THAT IS DELIBERATE. He is away, so the week
+  // has no fixture — `derivedWeekContract` has already made it a bye build.
+  // Handing the conditioning builder the game he is not attending would taper
+  // this session for a match he is not at, which is the exact reasoning he gave
+  // when he ruled the fixture off the week in the first place.
+  if (state.seasonPhase) {
+    const conditioning = buildConditioningSession(
+      date,
+      [],
+      state.athleteContext ?? DEFAULT_ATHLETE_CONTEXT,
+      state.seasonPhase,
+      buildWeekLog(weekDays as ResolvedDay[], state.markedDays || {},
+        state.readiness ?? 'medium', [], 'build'),
+      microcycleIdForDate(date, state),
+    );
+    if (conditioning) return conditioning;
+  }
+  // ***"AIM to fill"*** — a target, not a hard floor. When conditioning cannot be
+  // built (no season phase, or the builder declines the day) the day still gets
+  // WORK rather than a hole, because a hole is the one answer he has now ruled
+  // out twice. **This is the shortfall arm and it is named, not silent.**
   return buildDerivedSession(
     'prehab_accessories',
     date,
@@ -2339,7 +2382,7 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
     if (day.source === 'game' || day.indicator === 'game' ||
       day.workout?.workoutType === 'Game') {
       return buildDay(day.date, day.dayOfWeek, today,
-        freedByTheTrip(day.date, state), 'gameProximity');
+        freedByTheTrip(day.date, state, days), 'gameProximity');
     }
     if (!day.workout) return day;
     const team = getTeamTrainingWorkoutState(day.workout);
@@ -2354,7 +2397,7 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
     // that question, below.
     if (team.isTeamTrainingOnly) {
       return buildDay(day.date, day.dayOfWeek, today,
-        freedByTheTrip(day.date, state), 'gameProximity');
+        freedByTheTrip(day.date, state, days), 'gameProximity');
     }
     return {
       ...day,

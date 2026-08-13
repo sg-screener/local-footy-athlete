@@ -744,13 +744,25 @@ async function main(): Promise<void> {
       headlineOn(awayState, '2026-08-15') !== gameWord,
     { rows: awaySat.rows, headline: headlineOn(awayState, '2026-08-15'),
       forbidden: [restWord, trainingWord, gameWord] });
-  // AND IT IS A REAL SESSION, NOT A NAMED EMPTY ONE. The half that stops [15d]
-  // passing on a workout object with no rows in it — which is exactly the
-  // green-and-empty shape this flow has already hit twice.
-  run('[15e] and it is a real session, not an empty shell',
+  // AND THE QUALITY IS CONDITIONING, WHICH IS THE HALF THAT MATTERS.
+  //
+  // ***"if I go away for 2 weeks and I was going to miss 4 team trainings 1 game
+  // and 5 strength sessions, then the 2 weeks should aim to fill those with 5
+  // conditionings and 5 strength ya know"*** — 4 team trainings + 1 game = 5
+  // removed -> 5 CONDITIONING. **A game is FIELD work, so field work is what
+  // owes back.**
+  //
+  // **THIS CELL EXISTS BECAUSE THE FIRST BUILD PASSED [15d] AND WAS STILL
+  // WRONG:** it filled the day with `prehab_accessories`, which is a
+  // substitution in SHAPE and not in KIND — it replaced his running with arm
+  // work. *"A similar session to keep the program flowing"* is a claim about
+  // kind, so the cell has to be about kind too. It also stops [15d] passing on
+  // an empty shell.
+  run('[15e] and the work is CONDITIONING — the quality the club supplied',
     !!awaySat.day?.workout && awaySat.rows >= 2 &&
-      awaySat.day.source !== 'rest' && awaySat.day.source !== 'none',
-    { source: awaySat.day?.source, indicator: awaySat.day?.indicator,
+      awaySat.day.source !== 'rest' && awaySat.day.source !== 'none' &&
+      String(awaySat.day.workout.workoutType) === 'Conditioning',
+    { source: awaySat.day?.source, type: awaySat.day?.workout?.workoutType,
       rows: awaySat.rows, name: awaySat.day?.workout?.name });
 
   // ── [16] THE CARD'S WORDS — Sam: *"it shouldn't show + team training"* ──

@@ -18,6 +18,15 @@ his instruction is standing authority, not history.**
 37. **AWAY MUST REPLACE THE WORK IT REMOVES — SAM, 2026-08-13, AND HE CLOSED MY
     QUESTION INSTEAD OF ANSWERING IT.**
 
+    **⚠ DUPLICATE — THE SEAT'S FULLER COPY OF THIS ITEM IS BELOW AND IT CARRIES
+    MORE OF SAM'S WORDS THAN THIS ONE DOES. READ THAT ONE.** Two 37s exist
+    because the desktop wrote one from his chat message and the seat wrote one
+    from the same message with more of it quoted. **Collapsing them is the SEAT's
+    edit, not mine** (one writer per file). Marked rather than merged.
+
+    **THE DAY HALF IS BUILT — `59b0994a`+, seen on glass:** the vacated Saturday
+    reads *"Conditioning — 2 exercises"*. **The BLOCK half is not built.**
+
     **OWNED BY THE DESKTOP** — corrected 2026-08-13. The terminal claimed this
     for ninety minutes on a wrong inference (the desktop's handoff said it was
     going back to Sam; Sam's reply is what pulled it straight back in). **Sam
@@ -90,6 +99,20 @@ his instruction is standing authority, not history.**
 
 37. **AWAY REPLACES THE WORK IT REMOVES — SAM RULED 2026-08-13. THE SATURDAY
     REST DAY IS WRONG.**
+
+    **✅ THE DAY HALF IS BUILT AND ON GLASS — `59b0994a`+, 2026-08-13, desktop.**
+    The vacated Saturday reads **"Conditioning — 2 exercises"** (`400 m Repeats`,
+    CORE), and Sunday — which held nothing — correctly stays *"Rest Day"*. **Both
+    of your first two rules are satisfied.** `sessionResolver.ts` `freedByTheTrip`
+    reuses the app's own *"a game slot was freed"* answer; `test:away-flow`
+    [15d]/[15e] hold it, and **[15e] asserts the KIND** — the first build filled
+    the day with `prehab_accessories`, which is a substitution in SHAPE and not in
+    kind, and it passed [15d] while still being wrong.
+    **⚠ STILL OPEN — THE BLOCK HALF, which is the harder one and is your third
+    rule:** nothing counts what the trip removes ACROSS its weeks and aims a
+    matching total back (*"5 conditionings and 5 strength"*). The per-day
+    substitution does not add up to that on its own, and the 17 QA scenarios have
+    not been run either side because no scenario carries a travel fact.
 
     **OWNED BY THE DESKTOP AGENT** (it owns the away flow).
     **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *away* — R-018 (away
