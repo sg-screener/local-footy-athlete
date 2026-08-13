@@ -45,6 +45,31 @@ thing that actually bit.**
 
 ## STATUS
 
+### `teamTrainingRenderingTests` 28/3 — ONE CANDIDATE ELIMINATED, TRIAGE OPEN
+
+Three failures: *"combined fallback keeps strength rows"* (a
+`Team Training + Upper Push` day builds **zero** exercises), *"team training still
+exposes explicit log button"*, and *"startFinished is ignored for Team Training"*.
+
+**THE OBVIOUS CANDIDATE IS ELIMINATED, AND ONLY BY READING ITS CODE RATHER THAN
+ITS TITLE.** `ddebf7ed` landed an equipment filter on the authored fallback
+templates TODAY, which would explain an empty day. It does not:
+- its own code is `if (!availableEquipment?.length) return authored;` — **an
+  athlete with no kit recorded gets the UNFILTERED list**, and this fixture
+  declares none;
+- and it was **REVERTED an hour later by its own author** (`acdb1871`,
+  *"MY OWN FILTER TRADED ONE DEFECT FOR TWO"*). `authoredFallbackExercisesForPlanEntry`
+  is not at `HEAD` and not in the tree.
+
+**So the empty combined day is NOT today's equipment work.** Triage is open, and
+the three failures may not share a cause — the other two are about a log button
+and `startFinished`, which is a rendering/interaction concern, not generation.
+
+**NOT FIXED, AND THAT IS A DELIBERATE STOP.** Half an hour ago I removed a line
+the law told me to remove, in eight files, and five went red. **The lesson landed:
+at the end of a long session, an unforced diagnosis beats a forced fix.** This one
+gets a clean starting position instead of a guess.
+
 ### THE `process.exit(0)` BYPASS — 3 REMOVED, **5 REVERTED**, AND THE LAW'S OWN REMEDY IS WRONG FOR ASYNC SUITES
 
 `test:totals-or-red-law` says of the bypass: *"Delete the call — `totalsPrinted()`
