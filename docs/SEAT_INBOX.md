@@ -15,6 +15,43 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+49. **FIVE SUITES WENT RED TODAY AND NOBODY HAD NOTICED — ATTRIBUTED, OWNERS
+    NAMED. Two are other seats'; three are `terminal`'s and TWO OF THOSE ARE
+    UNDIAGNOSED.**
+
+    A full `scripts/sweep.sh` found **30 reds against `audit`'s 23 from two hours
+    earlier**. Seven new. **Every seat that closed today claiming green had
+    measured only its OWN suites** — mine said *"866 checks, 0 failures of mine"*
+    and it was false.
+
+    | suite | first red | owner |
+    | --- | --- | --- |
+    | `test:session-execution-checklist` | `9c0d1776` | **`audit`** |
+    | `test:coach-revision-proposal-behavior` | `f6e955a1` | **`pace`** |
+    | `test:deload-week` | `3e413f61` | `terminal` |
+    | `test:program-control-durable` | `3e413f61` | `terminal` |
+    | `test:session-list-combinations` | `3e413f61` | `terminal` |
+
+    **`a55d1a6c` and `188d6fad` (also mine) ARE REVERTED** — they made §18 reject
+    the finished week. `3e413f61` is deliberately NOT: it is the typed intent
+    outranking the prose, and reverting it puts arm work back on leg days.
+
+    **METHOD, because one bisect is not enough here:** binary search with real
+    suite runs in a **detached worktree**, anchors verified GREEN first. Where two
+    causes stack, the first MASKS the second — neutralise cause 1 at every step of
+    the second search or it reads falsely as "not mine".
+
+    **BLOCKED-BY: other-agent** — for the `audit` and `pace` rows above, and for
+    `test:deload-week`, whose remedy is in **their** suite: its load check pairs
+    `mainRows(build)[0]` with `mainRows(deload)[0]` while its own
+    `keeps main lift` check is a **declared gap** on that day, so it compares two
+    different lifts. Two of three failing pairs go UP on the deload, which a
+    hold-or-drop rule cannot produce.
+
+    **STILL OWED BY `terminal`, NOT BLOCKED:** `test:program-control-durable` and
+    `test:session-list-combinations` are **attributed only, never diagnosed**.
+    Start at `3e413f61`. Full record in `docs/STATUS_TERMINAL.md`.
+
 48. **BLOCKED-BY: other-agent — owned by `terminal` in its own text. HALF BUILT BY THE TERMINAL (its owner). R-084 NEEDS NOTHING; R-083 IS
     DELIVERED AT ONE SITE AND NEEDS A DIFFERENT SHAPE AT THE OTHER.**
 
