@@ -278,3 +278,88 @@ one**, and that is worth Sam knowing before he answers.
 
 **FIFTH SIGHTING OF THE SAME SHAPE IN ONE DAY** — 50, 62 (mine, as `device`), 61,
 63, 66. The convention is right and the writing keeps missing it.
+
+---
+
+## 2026-08-13 — STEP THREE: THE TRIAGE. **BUCKET 3 IS EMPTY, AND THAT IS THE FINDING**
+
+**Sam's order:** *"triage the 995 into three buckets and only report the third.
+Grep each rule's distinctive words; if the concept appears nowhere in the
+codebase, that's a real gap. Rank by what an athlete would notice. Don't narrow
+the rule-line definition to improve the percentage."*
+
+**The rule-line definition was imported unchanged. This script only SORTS the
+995; it cannot change how many there are.**
+
+| bucket | lines |
+| --- | --- |
+| 1. **BUILT** — distinctive words present in production code | **950** |
+| 2. **TEST/DOC ONLY** — no production code knows the word | **0** |
+| 3. **ABSENT — the codebase has never heard of it** | **1** |
+| unjudgeable — no distinctive term to grep | 44 |
+
+### BUCKET 3, IN FULL. IT IS ONE LINE AND IT IS SPURIOUS
+
+```
+:4861  7. Allocate required main strength, `required_core` conditioning and
+       required sprint/high-speed work
+       nowhere in the codebase: allocate
+```
+
+**The missing word is the verb `allocate`.** The concepts — main strength,
+required core, sprint/high-speed — are all in the code. **So the honest answer
+to "how many rules describe a concept the codebase has never heard of" is
+ZERO.**
+
+### ⚠ AND THAT IS A RESULT ABOUT THE METHOD, NOT A CLEAN BILL OF HEALTH
+
+**`:227` — the founding unbuilt rule — scores 100%.** Every one of its
+distinctive terms is in production code:
+
+```
+:227  distinctive: slot, ladder, fill, order, pattern, hinge, single, knee,
+                   dominant, accessories, better, served, squats, present, think
+      missing from code: (none)
+```
+
+`single_leg_knee` **is** a real `SessionSlot`. The word is there. **The planner
+still never asks for it.** The rule Sam ordered this whole item over is,
+by word-presence, perfectly covered.
+
+**The distribution says the same thing across the corpus:**
+
+| terms the code knows | lines |
+| --- | --- |
+| **100%** | **815** |
+| 90% | 49 |
+| 80% | 41 |
+| 70% | 19 |
+| 60% | 13 |
+| 50% | 13 |
+| below 50% | **0** |
+
+and the lowest-coverage lines are missing only ordinary English — `secret`,
+`necessary`, `interfere`, `punished`, `aggravate`. **Not one is a concept.**
+
+## **THE APP HAS THE WORDS. IT DOES NOT DO THE THINGS.**
+
+**You cannot find an unbuilt rule by grepping vocabulary**, and this is now
+measured rather than argued. A codebase this size contains almost every football
+word Sam has written, so word-presence separates nothing. The gap is not
+vocabulary — **it is that nothing compares what the prose DEMANDS against what
+the planner REQUESTS.** That comparison is the next instrument, and `:227` is its
+worked example: checker asks five, planner asks four, both correct alone.
+
+### THE INSTRUMENT WAS WRONG ONCE AND THE CONTROLS CAUGHT IT
+
+My first matcher flattened the codebase to one string and used `includes()`.
+**`tuba` matched. So did `ncil`, `tion`, `rate`, `oral`** — any four letters
+falling inside an identifier. It reported 953 BUILT, which was a fact about
+substring collisions and nothing about the app. Rebuilt on TOKEN boundaries
+(camelCase/snake_case/hyphen split, 9,412 distinct production tokens):
+**0 of 10 nonsense controls match.** The answer barely moved — 953 → 950 — which
+means the first number was right by luck, and I would not have known.
+
+**Ranking by athlete-notice was built and is not shown, because a one-line
+bucket does not need a ranking.** Reporting a ranked list of 25 near-misses when
+the honest count is one would be the padding this item exists to prevent.
