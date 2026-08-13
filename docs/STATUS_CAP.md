@@ -135,3 +135,67 @@ by N writers through whole-file commits.** Every seat racing on
 **One file per seat is already the rule for STATUS; the same argument applies to
 anything N seats append to.** This is a fourth sighting of the shared-file class
 today, alongside the two stale `.git` locks.
+
+---
+
+## 2026-08-13 — R-088 RULED AND BUILT. TWO CLAUSES LANDED, ONE DELIBERATELY NOT
+
+**Sam ruled `3e5bd0c6`'s subject in answer to this seat:** *"7 strength exercises
+can be a cap - but the mobility pairings dont count at all towards the cap… the
+mobility portion does not count so 7 is the max the app should set and a user
+should be able to add as many of their own things on top of it as they choose"*.
+
+| clause | state |
+| --- | --- |
+| **1. The number is 7** | **BUILT** — `trainingAgePolicy` 6 → 7. The census gap cell is an EQUALITY now, ceiling 0. |
+| **2. It counts STRENGTH rows only** | **BUILT** — `exerciseBudgetRows` stops delegating to `countingRows` and excludes `prehab`. `mobility` was already exempt via R-015's own rule 5. |
+| **3. It binds the app, not the athlete** | **NOT BUILT, DELIBERATELY** — see below. |
+
+**CLAUSE 3 IS NOT A GAP I LEFT, IT IS ONE I REFUSED TO FILL WRONG.** Nothing
+enforces a cap anywhere, so **there is no refusal to exempt**; and no row carries
+an athlete-added marker, so **there is nothing to exempt it BY.** Building a
+provenance field before its reader exists is the dead-weight this repo bans —
+`canOverride` written nine times, read zero. **The obligation is written into
+`sessionRowCounting`'s docstring, where whoever builds the enforcement will be
+standing.**
+
+**R-015 NOT REBUILT**, as ordered. The pairing exists; R-088 only says it is free
+of the cap.
+
+### THE TWO FENCES SPLIT, AND THE OLD EXPORT HAD PREDICTED THE DAY
+
+`exerciseBudgetRows` was documented as *"deliberately the SAME predicate as the
+taxonomy's… a separate export only so the cap's eventual enforcement site reads
+as what it is."* **R-088 made them different questions and that separate export
+is why it cost one function.** §18's fence is untouched — moving
+`ROLES_EXEMPT_FROM_COUNTING` is the counting change its own comment demands a
+golden diff for.
+
+### ⚠ TWO THINGS CAUGHT ME, BOTH BY GUARDS I DID NOT WRITE
+
+1. **My constant name tripped a law.** `ROLES_EXEMPT_FROM_THE_EXERCISE_CAP`
+   matched the `EXERCISE_` regex in *"the choke point classifies nothing"* — a
+   guard that stops name-based classification creeping into the row fence.
+   **RENAMED to `ROLES_EXEMPT_FROM_THE_CAP` rather than weaken the guard.** The
+   guard was right and my name was noise.
+2. **A cell survived the repeal GREEN.** `sessionRowCountingTests` asserted the
+   two fences were identical. R-088 repealed that, and the cell stayed green
+   **because its fixture holds no `prehab` row** — the green-and-empty shape this
+   repo keeps finding. Re-aimed, plus two cells asserting the split itself.
+
+### WHY CLAUSE 2's FIXTURE IS SYNTHETIC
+
+**Measured, same 5 worlds x 3 weeks: role histogram `UNSET 178, conditioning 19,
+power 4` — ZERO `prehab`, ZERO `mobility`.** Generation stamps almost no roles,
+so the real corpus **cannot** exercise this rule. A cell waiting for it would be
+green and empty forever. **That is also a finding in its own right: the pairing
+R-015 built does not appear in this generated corpus at all.** Not chased — it is
+the composer's ground.
+
+**MUTATION-PROVEN:** fence stops excluding `prehab` → 3 cells FAIL; cap back to 6
+→ 2 cells FAIL and the drift banner fires. Backups restored from my own copies.
+
+**BLAST RADIUS:** `exercise-cap` 12/12, `row-counting` 45/45, `rules-kernel`
+122/0, `slot-coverage` 77/77, `main-lift-pattern` 23/23, **`test:compile`
+PASSED**. `section18-planner` 35/36 is **pre-existing** — controlled in a clean
+worktree at HEAD, byte-identical.
