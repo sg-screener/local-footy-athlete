@@ -45,6 +45,53 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ I OVER-CLAIMED THE CONDITIONING DEFECT — MEASURED IN THE FULL PIPELINE, THE ATHLETE DOES **NOT** LOSE IT
+
+**CORRECTING MYSELF BEFORE ANYONE BUILDS ON IT.** I reported
+`enforceInSeasonPushPullBalance` as *"a real athlete-facing defect — it removes
+the athlete's only conditioning session on a game week"*, on the strength of an
+orphan suite's failing cell. **I had measured ONE FUNCTION and described a
+PIPELINE.**
+
+**MEASURED, full generation, in-season, Saturday game, Elite conditioning, team
+Tue/Thu, 5 training days:**
+
+    week 1: 1 conditioning (aerobic_base)
+    week 2: 1 conditioning
+    week 3: 1 conditioning
+    week 4: 1 conditioning
+
+**The floor holds. Nothing downstream is broken and no athlete is losing a
+session.** The probe threw twice first (missing `equipment`, wrong profile
+shape); each throw was READ before it was trusted, which is the only reason the
+third run counts.
+
+**WHAT IS ACTUALLY TRUE, AND IT IS SMALLER BUT REAL:**
+
+1. **`recheckConditioningFloor` IS A DOCUMENTED NO-OP.** Its body is
+   `void removedConditioning;`. The caller's comment (`coachingEngine.ts:6395`)
+   says *"any valid conditioning removal re-checks the floor"* — **it does not.**
+   The protection is real but lives in a DIFFERENT LAYER (§18, downstream), so
+   the comment names a safety net that does not exist where it says it does. **A
+   future refactor that moved §18 would remove the floor and this comment would
+   still claim it was covered.**
+2. **THE FAILING CELL IS MIS-AIMED, NOT WRONG-HEADED.** It calls
+   `enforceInSeasonPushPullBalance` directly and asserts a PIPELINE property
+   (`conditioningCount >= 1`) against a SINGLE FUNCTION that does not own it. The
+   function's own contract is *"repair push/pull, and it may consume a finisher
+   or standalone conditioning slot"* — which is exactly what it did.
+
+**SO: NOT AN ATHLETE-FACING DEFECT. A lying comment and a cell aimed one layer
+too low.** Left as found, named here; the fix is either to re-point the cell at
+the pipeline or to make the no-op real, and that is a decision for whoever owns
+`coachingEngine.ts` next — I have not touched it.
+
+**THE LESSON IS THE DAY'S, FOR THE FOURTH TIME AND THIS ONE IS MINE:**
+**a conclusion travelled past its evidence.** One function measured, a pipeline
+claimed, and it reached Sam before it was checked. The orphan-suite finding that
+produced it is still good — running those suites was right — but *"a suite reds"*
+and *"an athlete is harmed"* are two different claims and I collapsed them.
+
 ### ⚠ A REAL ATHLETE-FACING DEFECT, HIDDEN BY A SUITE NOTHING RAN — IN-SEASON BALANCE REPAIR STRIPS THE WEEK'S ONLY CONDITIONING
 
 **Found by running the 50 unrunnable suites instead of just counting them.**
