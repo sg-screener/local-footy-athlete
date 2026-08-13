@@ -176,6 +176,31 @@ instrument was not** — the exact reason a name-keyed lookup must not be truste
 to report absence.
 **SO THE FIRST STEP OF C7 IS NOT THE COMPOSER — IT IS MAKING THE PATTERN
 KNOWABLE.**
+
+**⚠ AND THE COMPOSER IS NOT WHERE ANYONE WOULD LOOK. TRACED 2026-08-13, end to
+end, because two fixes aimed at it changed nothing:**
+1. **`buildTagAwareSession` / `exerciseScorer` ARE NOT ON THE GENERATION PATH.**
+   `buildTagAwareSession` has exactly ONE production caller —
+   `coachRevisionTemplates.ts:575`, the COACH-REVISION path. The weekly
+   generator never calls it. **That is why enforcing the exercise ceiling at
+   `sessionBuilder.ts:718` was inert: that file is not in the weekly chain.**
+   The scorer's whole slot-shaped apparatus — `MIN_SESSION_SIZE`,
+   `FILLER_REGIONS`, the ladder at `exerciseScorer.ts:597-601` — is unreachable
+   from generation. **Probed: the top-up block fires ZERO times in five worlds.**
+2. **THE REAL CHAIN IS:** plan entry -> `fallbackExercisesForPlanEntry`
+   (`defaultProgram.ts:1070`, used at `:1288` for a missing day and at `:2461`
+   when the AI payload has NO strength content) -> `applyPoolRotation`
+   (`:2489`) -> `findOrCreateExercise`.
+3. **THE ROTATION PRESERVES THE PATTERN — it is NOT the thief.** Measured:
+   `RDLs -> Deadlift` (still hinge), `Reverse Lunges -> Walking Lunges` (still
+   single-leg knee), `Leg Extension -> Nordic Lower`, `Back Squat -> Back Squat`,
+   `Single Leg RDL -> Single Leg RDL`. It swaps VARIANTS inside a pool slot.
+4. **SO THE HINGE IS DROPPED, NOT SWAPPED.** The fixed fallback emits FIVE rows
+   and the shipped day has FOUR — Back Squat, Walking Lunges, Single Leg RDL,
+   Nordic Lower — with the rotated `Deadlift` absent. **WHICH STEP DROPS IT IS
+   THE ONE UNKNOWN LEFT, and it is the whole remaining unit.** Do not rebuild the
+   composer until that row's disappearance is measured; two fixes have already
+   been spent on layers that turned out not to be in the chain.
 **BOTH FOUNDATIONS ARE NOW BUILT (2026-08-13):** the pattern lookup canonicalises
 (`f5fc1898`, gym rows resolving 61% -> 91%), and Sam's slots are a real rule with
 his own acceptance criteria (`cc6ef611`, `test:slot-coverage`, 20 cells).
