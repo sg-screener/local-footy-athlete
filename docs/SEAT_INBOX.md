@@ -13,7 +13,75 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 **Sam's QUOTED WORDS were kept inline wherever an item still answers to them:
 his instruction is standing authority, not history.**
 
-## Unprocessed
+## Unprocessed65. **THE PAPER PHONE — PRINT REAL GENERATED WEEKS AS PLAIN ENGLISH SO SAM CAN
+    READ THEM ON HIS PHONE WITHOUT A BUILD. THIS IS THE FIRST GATE TO RELEASE
+    AND NOTHING ELSE ON THIS LIST OUTRANKS IT. UNOWNED — STAMP THE HEAD LINE.**
+
+    **WHY IT EXISTS.** Every ruling landed today was verified by a suite. **Not
+    one generated week has ever been READ by the person whose rules they are.**
+    A suite can tell Sam a slot is empty. It cannot tell him a week is shit.
+    Sam, tonight: *"whether the program is good is still the open question."*
+
+    **THE DELIVERABLE IS A SCRIPT AND SIX FILES.** `scripts/print-week.ts` (or
+    the repo's existing convention — do NOT invent a second harness) that runs
+    the REAL generator and writes plain-English markdown. **Six scenarios,
+    chosen because they are where it most likely breaks:**
+    early off-season · deep pre-season · in-season with two team nights ·
+    a bye week · an away trip · a bodyweight-only kit.
+
+    **WHAT "PLAIN ENGLISH" MEANS, AND IT IS THE WHOLE ITEM.** A phone screen.
+    Day name, session name, then the exercises as an athlete reads them — name,
+    sets, reps. **No IDs, no enum values, no snake_case, no pattern codes, no
+    JSON.** Mark the mobility pairings as pairings and the prehab flow as
+    optional, because R-088 says they are not lifts. Conditioning sessions get
+    the same treatment. **If a value cannot be rendered in words an athlete
+    would use, THAT IS A FINDING — print it loudly rather than prettifying it.**
+
+    **⚠ ATHLETE-FACING WORDS ARE NEVER INVENTED BY AN AGENT** (SignedCopy law).
+    Print what the app would show. **If the app shows nothing, print
+    `[NO COPY — the app has no words here]` and count how many times you had
+    to.** That count is one of the most valuable numbers you will produce.
+
+    **NOT A SCREEN, NOT A FEATURE, NOT A TEST.** Read-only, offline, no app
+    changes. It must run from a clean checkout with one command.
+
+    **DONE WHEN** six markdown files exist that Sam can read end to end on a
+    phone and say *"that week is wrong because X"*. Put them where the seat can
+    send them to him. **Then say the [NO COPY] count and the ugliest thing you
+    saw.**
+
+66. **THE SYNTHETIC ATHLETE — SIMULATE FOUR WEEKS OF USE IN SECONDS INSTEAD OF
+    WAITING FOUR WEEKS. UNOWNED — STAMP THE HEAD LINE.**
+
+    **SAM ASKED FOR THIS DIRECTLY:** *"is there a way to simulate the 4 week
+    change over for the new program? there has to be a better way to test it
+    without having to just wait 4 weeks?"*
+
+    **HALF OF IT ALREADY EXISTS AND YOU MUST USE IT RATHER THAN BUILD A SECOND
+    ONE.** `src/dev/e2e/DevE2EClock.ts` already sets the app's today
+    (`setDevE2EClock`), and `appDate.ts` is the single source of now. **The
+    clock is solved. Do not write another one.**
+
+    **WHAT IS MISSING IS HISTORY.** Jumping the clock four weeks gives you an
+    athlete who did NOTHING for four weeks — which is not a changeover, it is
+    an abandonment. Nothing in this repo completes sessions in bulk (grepped:
+    no `markComplete`/`simulateWeek`/`advanceWeek` anywhere).
+
+    **BUILD THAT.** A script that walks the clock forward a day at a time and
+    completes sessions **through the app's REAL completion path**, to a profile:
+    - does everything
+    - misses every Friday
+    - away for week 3
+    - declares sore in week 2
+    **⚠ WRITING COMPLETED-SESSION RECORDS DIRECTLY INTO STORAGE IS THE WRONG
+    ANSWER** and will produce a history the app would never have created. If the
+    real path cannot be driven headlessly, say so and say exactly what blocks it
+    — that blocker is the finding, and it is worth more than a fake history.
+
+    **DONE WHEN** you can print week 1 and week 5 of the same athlete side by
+    side for each profile, and say what changed and whether it should have.
+    **Pairs with item 65 — reuse its printer, do not write a second one.**
+
 64. **OWNED BY `bible` (claimed 2026-08-13). THE BIBLE HAS NO COVERAGE CHECK, WHICH IS WHY A RULE SAM WROTE DOWN CAN**
     **SIT IN THE APP UNBUILT FOR MONTHS AND NOTHING GOES RED. BUILD ONE.**
 
