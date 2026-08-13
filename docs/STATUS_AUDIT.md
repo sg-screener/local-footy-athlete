@@ -45,6 +45,35 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE SWEEP I OWE SAM — WHAT IT WILL AND WILL NOT MEASURE
+
+**A number has to say what it measured, so this is written BEFORE the number
+arrives rather than after it is convenient.**
+
+- **The running sweep (`audit-final`) enumerated 209 suites AT START.**
+  `scripts/sweep.sh:74` reads `package.json`'s `test:bible` once, at launch.
+- **The chain is 212 suites NOW** — my two (`test:census-hook`,
+  `test:coach-phrase-ratchet`) plus one from another seat, all landed after it
+  began. **So this run cannot see them.** Both of mine were run directly and are
+  green (14/0 and 7/0), and both are verified REACHABLE from `test:bible` — not
+  merely present in the string, which is the distinction that has been wrong here
+  before.
+- **The earlier run (`audit-restore`, HEAD `db22226e`) reported 21 of 209.**
+  That HEAD is now hours and many commits behind, **so 21 is not a baseline, it
+  is a different world's number.** Comparing the two totals would be
+  `a-red-count-is-a-claim` exactly: **diff the failure SETS, never the totals.**
+  The prior set is saved at `scratchpad/fail-before.txt`.
+- **AND AT LEAST THREE OF THE REDS ARE KNOWN AND OWNED, not news:**
+  `test:law-registry` is **RED BY RULING** while any law is `UNENFORCED` (do not
+  "fix" it); `test:ruling-registry` is the desktop seat's blunt-matcher defect,
+  named by them; `test:power-counting` is the golden under active investigation,
+  4 causes, 289 of 291 diffs attributed.
+
+**SO THE HONEST DELIVERABLE IS A SET DIFF WITH THE KNOWN REDS NAMED — not "N
+failures".** A bare total here would be the same defect this seat has spent the
+day catching in other people's numbers.
+
+
 ### THE LAST TWO DIFFS — **NOT MINE**, and scenario 3 was the LONE OUTLIER
 
 **The residue after everything else is attributed is two lines:**
