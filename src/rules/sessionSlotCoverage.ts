@@ -36,6 +36,7 @@
 import { getExerciseTags } from '../data/exerciseTags';
 import type { WorkoutExercise } from '../types/domain';
 import { participatesInCounting } from './sessionRowCounting';
+import type { MainStrengthPattern } from './strengthPatternContributions';
 
 /** The slots Sam named, in his fill order. */
 export type SessionSlot =
@@ -77,6 +78,68 @@ export const SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]
   upper_full: UPPER_FULL_SLOTS,
   upper_split: UPPER_SPLIT_SLOTS,
 };
+
+/**
+ * THE PATTERNS A DAY'S OWN LADDER ADMITS, given the patterns its PLAN named.
+ *
+ * **`intendedPatterns` names the day's MAIN LIFT, never its whole content.** A
+ * plan entry that says `squat` is naming what the day is BUILT AROUND; Sam's
+ * ladder for that same day then asks for a hinge, a single-leg knee, a single-leg
+ * hip and an accessory. **So a row whose pattern COMPLETES the day's ladder is
+ * not drift — it is the ladder.**
+ *
+ * WHY THIS EXISTS: `workoutCanonicalisation`'s `main_pattern_drift` guard
+ * removed any main row whose pattern the plan had not named, which deleted the
+ * hinge out of every fallback-built lower day — measured, exactly one line in the
+ * away suite: `DRIFT-DROP "Deadlift" pattern=hinge intended=[squat]
+ * workout="Lower Squat"`. `:227` and the drift guard were in direct
+ * contradiction and the guard was winning, against *"an athlete is better served
+ * by a squat and a hinge than by two squats."*
+ *
+ * **THIS IS NOT A SQUAT/HINGE SPECIAL CASE, and it was ordered not to be.** It
+ * reads the SAME three ladders above that everything else in this file reads, so
+ * the day kind decides:
+ *
+ * | day kind | derived from the plan's patterns | admits |
+ * | --- | --- | --- |
+ * | lower      | any of squat/hinge   | squat + hinge |
+ * | upper full | BOTH push and pull   | push + pull |
+ * | upper split| exactly one of them  | that direction ONLY |
+ *
+ * Only the lower row changes any behaviour today — the two upper rows already
+ * admit exactly what they intend. That is the general rule landing on the one
+ * place the census said it bites, and if Sam ever rules an upper ladder that
+ * admits both directions, this follows him without another edit.
+ *
+ * **THE GUARD IS NOT WEAKENED WHERE IT EARNS ITS KEEP.** A bench press on a
+ * squat day is still drift and still removed: `push` is in neither the lower
+ * ladder nor a lower day's admission. What stops being drift is only work that
+ * the day's own ladder was always asking for.
+ *
+ * A MIXED DAY takes the union of the halves it names — a day intending
+ * `squat + push` admits the whole lower ladder and push, but NOT pull, because
+ * its upper half is a split.
+ */
+export function patternsCompletingLadder(
+  intended: Iterable<MainStrengthPattern>,
+): ReadonlySet<MainStrengthPattern> {
+  const named = new Set<MainStrengthPattern>(intended);
+  const admitted = new Set<MainStrengthPattern>(named);
+  if (named.size === 0) return admitted;
+  // THE LOWER LADDER IS INDIVISIBLE. `LOWER_SLOTS` opens with squat AND hinge,
+  // and its two single-leg slots are filled by rows that classify as one or the
+  // other, so naming either half of a lower day names the whole ladder.
+  if (named.has('squat') || named.has('hinge')) {
+    admitted.add('squat');
+    admitted.add('hinge');
+  }
+  // THE UPPER LADDER SPLITS, AND THAT IS SAM'S WORDING, NOT A SIMPLIFICATION:
+  // *"if you upper body pull or upper body push then it just becomes horizontal
+  // movement, vertical movement, more arm work"* — the DIRECTION collapses and
+  // only the planes remain. So a push-only day never admits a pull, and the full
+  // upper day needs no help because it already names both.
+  return admitted;
+}
 
 /**
  * Which slots one row can fill. A row may fill MORE THAN ONE — a single-leg RDL

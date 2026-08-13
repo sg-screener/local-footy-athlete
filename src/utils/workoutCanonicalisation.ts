@@ -44,6 +44,7 @@ import {
   powerRows,
   withoutPowerRows,
 } from '../rules/sessionRowCounting';
+import { patternsCompletingLadder } from '../rules/sessionSlotCoverage';
 
 /**
  * The ONE conversion from "phase + whatever the caller resolved" into the
@@ -710,6 +711,9 @@ export function finaliseWorkoutAfterMutation(
   const authoredPowerRows: ClassifiedRow[] = [];
   const recoveryAddonRows: ClassifiedRow[] = [];
   const sourceIsRecovery = workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery';
+  // Loop-invariant: a pure function of the plan's patterns, which do not change
+  // while the rows are triaged.
+  const ladderPatterns = patternsCompletingLadder(intendedPatterns);
   for (const item of classified) {
     const name = rowName(item.row);
     const pattern = item.classification.mainPattern;
@@ -777,8 +781,26 @@ export function finaliseWorkoutAfterMutation(
       });
       continue;
     }
+    // ── DRIFT IS MEASURED AGAINST THE DAY'S LADDER, NOT ITS MAIN LIFT ────────
+    //
+    // `intendedPatterns` is what the PLAN named, and a plan entry names the lift
+    // the day is BUILT AROUND — not its whole content. Sam's `:227` ladder then
+    // asks that same day for a hinge, a single-leg knee, a single-leg hip and an
+    // accessory. Comparing rows against `intendedPatterns` therefore deleted the
+    // hinge out of every fallback-built lower day: measured, exactly one line in
+    // the away suite and ZERO across the whole QA corpus —
+    // `DRIFT-DROP "Deadlift" pattern=hinge intended=[squat] workout="Lower Squat"`.
+    // `:227` and this guard were in direct contradiction and the guard was
+    // winning, against *"an athlete is better served by a squat and a hinge than
+    // by two squats."*
+    //
+    // THE GUARD IS NOT DELETED AND IS NOT WEAKENED WHERE IT EARNS ITS KEEP. It
+    // exists to stop a day wandering off its plan, and it still does: a bench
+    // press on a squat day is `push`, which no lower ladder admits, so it is
+    // still removed. What stops counting as drift is only work the day's own
+    // ladder was asking for all along.
     if (
-      intendedPatterns.size > 0 && pattern && !intendedPatterns.has(pattern) &&
+      intendedPatterns.size > 0 && pattern && !ladderPatterns.has(pattern) &&
       !isMinorCrossPatternAccessory(item)
     ) {
       actions.push({

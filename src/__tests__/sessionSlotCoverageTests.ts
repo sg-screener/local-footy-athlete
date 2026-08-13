@@ -17,6 +17,7 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
   LOWER_SLOTS,
   UPPER_FULL_SLOTS,
+  patternsCompletingLadder,
   sessionSlotCoverage,
   slotDayKindFor,
   slotsFilledByRow,
@@ -210,6 +211,49 @@ console.log('\n[7] THE TWO PRODUCTION FALLBACKS, judged by his own rule');
   ok('[:227] the hinge-led fallback now covers every slot, none doubled',
     newHinge.missing.length === 0 && newHinge.duplicated.length === 0,
     `missing=${JSON.stringify(newHinge.missing)} dup=${JSON.stringify(newHinge.duplicated)}`);
+}
+
+// ── THE LADDER ADMISSION RULE — what stopped `main_pattern_drift` eating it ──
+//
+// `intendedPatterns` names the day's MAIN LIFT, never its whole content. These
+// cells hold the rule that lets a hinge stand on a squat-led day WITHOUT
+// weakening the guard that keeps a day on its plan.
+console.log('\n[8] A row that completes the day\'s ladder is not drift');
+{
+  const admits = (intended: string[], pattern: string) =>
+    patternsCompletingLadder(intended as any).has(pattern as any);
+
+  // THE FIX ITSELF. Measured before it: `DRIFT-DROP "Deadlift" pattern=hinge
+  // intended=[squat] workout="Lower Squat"` — one line in the away suite, zero
+  // across the whole QA corpus. After it, that line is gone.
+  ok('a squat-led day ADMITS a hinge — :227, "a squat and a hinge, not two squats"',
+    admits(['squat'], 'hinge'));
+  ok('a hinge-led day ADMITS a squat — the ladder is indivisible in both directions',
+    admits(['hinge'], 'squat'));
+
+  // AND THE GUARD IS NOT WEAKENED, which is the half that makes this safe. The
+  // order was explicit: do not delete the drift guard.
+  ok('a squat-led day still REFUSES a push — a bench press on leg day is drift',
+    !admits(['squat'], 'push'));
+  ok('a squat-led day still REFUSES a pull',
+    !admits(['squat'], 'pull'));
+
+  // THE UPPER SPLIT DOES NOT COLLAPSE. Sam: *"if you upper body pull or upper
+  // body push then it just becomes horizontal movement, vertical movement, more
+  // arm work"* — the DIRECTION collapses, so a push day never admits a pull.
+  ok('a push-only day REFUSES a pull — the split is a direction, not a region',
+    !admits(['push'], 'pull'));
+  ok('a full upper day admits both directions', admits(['push', 'pull'], 'pull'));
+
+  // A MIXED DAY TAKES THE UNION OF THE HALVES IT NAMES, and the pull answer is
+  // what proves it is a union rather than "anything goes once two are named".
+  ok('a squat+push day admits a hinge', admits(['squat', 'push'], 'hinge'));
+  ok('a squat+push day still refuses a pull', !admits(['squat', 'push'], 'pull'));
+
+  // NON-VACUITY: an empty intent admits nothing, so the caller's own
+  // `intendedPatterns.size > 0` check is what turns the guard on — not this.
+  ok('[non-vacuity] no plan patterns means no admissions',
+    patternsCompletingLadder([]).size === 0);
 }
 
 console.log(
