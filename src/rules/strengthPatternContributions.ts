@@ -84,6 +84,43 @@ export function uncoveredMainPatternsForWeek(
   return ALL_MAIN_STRENGTH_PATTERNS.filter((pattern) => ledger[pattern] === 0);
 }
 
+/**
+ * R-089 — COVERAGE IS A PRIORITY ORDER, NOT A REPLACEMENT.
+ *
+ * **Sam, 2026-08-13:** *"if the lower day didnt have the single leg hip or
+ * single leg knee then i'd rather put them on the wednesday but if it did then
+ * yes squatting and hinging again is fine."*
+ *
+ * **THIS IS THE FIX FOR THE PASS THAT REFUSED TWELVE WORLDS.** `readiness`
+ * built the same question as a REPLACEMENT — a full-body day's planned
+ * patterns BECAME the uncovered set — and §18 refused twelve weeks, because it
+ * counts main-strength exposures PER PATTERN and a day that stops planning
+ * squat/hinge stops paying them. **Coverage and volume were two rules over one
+ * number.**
+ *
+ * **AN ORDERING CANNOT HAVE THAT FAILURE, AND THAT IS THE WHOLE POINT.** The
+ * multiset returned here is IDENTICAL to the one passed in — same members, same
+ * count, every time. **Volume is untouched, §18 does not change, and the
+ * main-strength target cannot drop**, because nothing is removed. Only the
+ * order changes, so the slots the week has not covered are composed FIRST and
+ * the rest repeat freely.
+ *
+ * **THE MULTISET IDENTITY IS THE LOAD-BEARING PROPERTY**, not a nicety — it is
+ * the reason this can land where the replacement could not, so it is asserted
+ * directly rather than trusted.
+ */
+export function orderPlannedByUncoveredFirst(
+  planned: readonly MainStrengthPattern[],
+  uncovered: readonly MainStrengthPattern[],
+): MainStrengthPattern[] {
+  const open = new Set(uncovered);
+  // Stable partition: uncovered keep their relative order, so do the rest.
+  return [
+    ...planned.filter((pattern) => open.has(pattern)),
+    ...planned.filter((pattern) => !open.has(pattern)),
+  ];
+}
+
 export type StrengthArchetype = 'lower' | 'upper' | 'full_body';
 
 /**

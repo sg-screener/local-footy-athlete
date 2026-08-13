@@ -139,6 +139,9 @@ import {
   createStrengthIntent,
   mainPatternsForLegacyStrengthPattern,
   normalizeStrengthIntent,
+  // R-089: coverage is a priority ORDER over the finished week, not a template.
+  orderPlannedByUncoveredFirst,
+  uncoveredMainPatternsForWeek,
   stablePlanEntryId,
   strengthRegionsForPatterns,
   strengthPatternLedger,
@@ -1686,6 +1689,31 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     plannedRecoverySessions,
     weeklyExposureContract,
   );
+
+  // ── R-089 — UNCOVERED SLOTS ARE COMPOSED FIRST, THEN REPEAT FREELY ───────
+  //
+  // Sam: *"if the lower day didnt have the single leg hip or single leg knee
+  // then i'd rather put them on the wednesday but if it did then yes squatting
+  // and hinging again is fine."*
+  //
+  // A POST-PASS OVER THE FINISHED WEEK, because the producer
+  // (`buildStrengthIntent`'s FB case) is a pure candidate-code -> intent mapper
+  // with NO WEEK IN SCOPE. Threading a half-built week through it would answer
+  // a different question — a half-built week has not covered anything yet.
+  //
+  // ⚠ THIS IS AN ORDERING, AND THE PREVIOUS ATTEMPT AT A REPLACEMENT REFUSED
+  // TWELVE WORLDS. §18 counts main-strength exposures PER PATTERN, so a day
+  // that STOPS planning squat/hinge stops paying them and weeks that exactly
+  // met their target fell under it. Reordering cannot do that: the multiset is
+  // identical, so volume, §18 and the main-strength target are all untouched.
+  for (const entry of weeklyPlan) {
+    const intent = entry.strengthIntent;
+    if (!intent || intent.archetype !== 'full_body') continue;
+    intent.plannedPatterns = orderPlannedByUncoveredFirst(
+      intent.plannedPatterns,
+      uncoveredMainPatternsForWeek(weeklyPlan, entry),
+    );
+  }
 
   // Phase 2 rules kernel — LOG-ONLY Bible weekly-structure validation of
   // the generated plan. Throw-proof; findings never change this plan.
