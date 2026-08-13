@@ -357,8 +357,29 @@ nothing and correctly stays *"Rest Day"*. `sessionResolver.ts` `freedByTheTrip`,
 held by `test:away-flow` [15d]/[15e] — and [15e] asserts the KIND, because the
 first build filled the day with `prehab_accessories` and that is a substitution in
 SHAPE, not in KIND.
-**THE BLOCK HALF IS UNENFORCED:** nothing counts what a trip removes across its
-weeks and aims a matching total back. A day the trip empties — a vacated fixture, a team-only night —
+**THE BLOCK HALF IS HALF BUILT, AND IT IS MEASURED ON HIS OWN EXAMPLE** (2 weeks,
+8 club nights — `test:away-flow` [13g]/[13h], non-vacuity first):
+
+| | home | away |
+| --- | --- | --- |
+| club sessions | 8 | **0** |
+| conditioning sessions | 4 | **12** |
+| strength sessions | 20 | **16** |
+| strength rows | 79 | **72** |
+
+**THE CONDITIONING ARM HOLDS EXACTLY — 8 club nights removed, 8 conditioning
+sessions added, one for one.** His ratio, on his own shape, and nobody had built
+it for this case; it falls out of the plan-side club filter. `BUILT`, pinned by
+[13h].
+**⚠ THE STRENGTH ARM IS BREACHED: 20 -> 16 sessions, 79 -> 72 rows.** His rule
+says 5 strength stays 5 strength. **Eight COMBINED club days were removed and only
+four of their gym halves came back** — the other four went with the club night
+that was carrying them. **THAT IS THE WHOLE REMAINING UNIT**, and it is
+generation-side (the plan must keep the strength count when club days go), so it
+owes `test:scenarios` + `test:qa` either side.
+**It is deliberately NOT carried as a red cell** — `LAW-0-registry` forbids a law
+entering as UNENFORCED and a permanent red is the same thing wearing a nicer word.
+**Do not loosen [13h] to cover strength; build the conservation, then assert it.** A day the trip empties — a vacated fixture, a team-only night —
 must carry REPLACEMENT WORK. **Both *"Training Day"* (the empty-day placeholder)
 and *"Rest Day"* are wrong answers to the same question**, and he ruled out the
 second one the same day it shipped. This is the read-side statement of R-018

@@ -642,6 +642,69 @@ async function main(): Promise<void> {
       || awayWeekOf22.anchorState === 'game',
     { away22: awayWeekOf22.fixtureDays });
 
+  // ── [13g] THE BLOCK ARITHMETIC — SAM'S OWN EXAMPLE, R-075 ──────────────────
+  //
+  // ***"if I go away for 2 weeks and I was going to miss 4 team trainings 1 game
+  // and 5 strength sessions, then the 2 weeks should aim to fill those with 5
+  // conditionings and 5 strength ya know"***.
+  //
+  // **THE UNIT IS THE BLOCK, NOT THE DAY** — which is why this cell generates TWO
+  // weeks and not one. [15d]/[15e] hold the per-day substitution; nothing held
+  // the total until now, and a per-day fix does not add up to a block total on
+  // its own.
+  //
+  // MEASURED OVER HIS OWN SHAPE (2 weeks, 8 club nights):
+  //
+  // | | home | away |
+  // | --- | --- | --- |
+  // | club sessions | 8 | **0** |
+  // | conditioning sessions | 4 | **12** |
+  // | strength sessions | 20 | 16 |
+  //
+  // **THE CONDITIONING ARM HOLDS EXACTLY AND THAT IS WHAT THIS CELL PINS:
+  // 8 club nights removed -> 8 conditioning sessions added, one for one.** His
+  // ratio, on his own example, without anyone having built it for this case.
+  //
+  // ⚠ THE STRENGTH ARM IS BREACHED AND IS **NOT** ASSERTED HERE — 20 -> 16
+  // sessions and 79 -> 72 rows. His rule says 5 strength stays 5 strength. Eight
+  // combined club days were removed and only four of their gym halves came back.
+  // **It is left un-asserted ON PURPOSE: a red cell in the chain is not how this
+  // repo carries an unbuilt law** (`LAW-0-registry` — nothing enters as
+  // UNENFORCED), so the gap is carried in R-075 and item 37 with these numbers
+  // rather than as a permanent red. **Do not "fix" this by loosening the cell
+  // below to cover strength — build the conservation, then assert it.**
+  const twoWeek = (facts: any) => {
+    const program = generateProgramLocally(genProfile, {
+      todayISO: GEN_WEEK, blockNumber: 1, microcycleLimit: 2,
+      ...(facts ? { activeConstraints: facts } : {}),
+    } as any);
+    let club = 0, conditioning = 0;
+    for (const microcycle of (program as any)?.microcycles ?? []) {
+      for (const workout of microcycle.workouts ?? []) {
+        const rows = (workout.exercises ?? []) as any[];
+        if (String(workout.workoutType) === 'Game') continue;
+        if (getTeamTrainingWorkoutState(workout).hasTeamTraining) club += 1;
+        if (workout.conditioningBlock || String(workout.workoutType) === 'Conditioning' ||
+          rows.some((row: any) => row.role === 'conditioning' || row.linkedConditioning)) {
+          conditioning += 1;
+        }
+      }
+    }
+    return { club, conditioning };
+  };
+  const blockHome = twoWeek(null);
+  const blockAway = twoWeek(genTravel);
+  // NON-VACUITY FIRST: the home block must actually HAVE club nights, or
+  // "the club was replaced" is a claim about a block that never had any.
+  run('[13g] the home block HAS club nights, so the cell below can fail',
+    blockHome.club > 0, blockHome);
+  run('[13h] every club night the trip removes comes back as CONDITIONING, one for one',
+    blockAway.club === 0 &&
+      blockAway.conditioning - blockHome.conditioning === blockHome.club,
+    { homeClub: blockHome.club, awayClub: blockAway.club,
+      homeConditioning: blockHome.conditioning, awayConditioning: blockAway.conditioning,
+      gained: blockAway.conditioning - blockHome.conditioning });
+
   // ── [15] THE WEEK ON HIS SCREEN — Sam, 2026-08-13 ──────────────────────────
   //
   // *"if the person is away, consider the time they are away as building a new
