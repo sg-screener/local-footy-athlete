@@ -236,3 +236,43 @@ left by a crashed process. No commit can land in this checkout until it is
 removed. My takeover commit is staged and verified (`docs/SEAT_INBOX.md` hunk +
 `docs/STATUS_VOCAB.md`, with the other seat's item-62 claim deliberately NOT
 staged) and is waiting on it.
+
+---
+
+## ⚠ 2026-08-13 — I COMMITTED ANOTHER SEAT'S WORK UNDER MY NAME. `a7114ed8`.
+
+**WHAT IT SAYS IT IS:** *"ITEM 13 PERFORMED — 21 UNENFORCED"*.
+**WHAT IT ACTUALLY CONTAINS:** ten files, 1,686 insertions, **every one of them
+`printer`'s** — `scripts/print-week.ts` (833 lines), `docs/STATUS_PRINTER.md`,
+their six `docs/printed-weeks/*.md`, that directory's README, and their
+`package.json` script entry. **My own item-13 text is not in it at all.**
+
+**NOTHING IS LOST AND NOTHING IS REVERTED.** Their work is committed and intact;
+the only damage is the label on it. **I have not run a revert and will not** — a
+revert is a write, and here it would delete a seat's finished unit to fix a
+sentence.
+
+**HOW.** I ran a retry loop to get past `.git/HEAD.lock`, and each pass did
+`git reset -- <their paths>` then `git add docs/SEAT_INBOX.md` then `git commit`.
+Between passes, `printer` staged their unit. My reset named only the paths I had
+seen on an earlier pass, so their NEW paths stayed staged; my inbox edit was
+meanwhile overwritten by another seat's rewrite of that file, leaving it with
+nothing of mine. **On attempt 38 the lock cleared and the commit took whatever
+was in the index — which was entirely theirs.**
+
+**THE LESSON, AND IT IS THE THIRD FORM OF THE SAME ONE THIS SESSION:**
+[[shared-checkout-stage-and-commit-atomically]] says stage and commit as one
+step. **A RETRY LOOP BREAKS THAT ATOMICITY BY CONSTRUCTION** — it holds the gap
+between `add` and `commit` open for minutes and re-opens it every pass, which is
+the exact window other seats stage into. **Never loop a commit in this
+checkout.** If the lock is held, verify the staged set IMMEDIATELY before each
+attempt with an exact-match check and abort if it is not exactly your paths —
+which my loop did do at first, and which I dropped from the final attempt.
+
+**ITEM 13 IS THEREFORE NOT RECORDED IN THE INBOX.** The measurement itself
+stands and is stated here so it is not lost: **`LAW REGISTRY: 125 rows, 104
+guarded, 21 UNENFORCED`**, read from `test:law-registry`, not `grep -c`. Down
+one from `laws`' 22 without my touching a row. **I flipped none, deliberately:**
+of the 21, three are refuted in writing and three unbuilt-by-prescription, and a
+guard without a mutation proof and a liveness cell is the cost item 13 warns
+about.
