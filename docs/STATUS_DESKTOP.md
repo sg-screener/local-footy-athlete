@@ -647,3 +647,42 @@ golden whose subject is power counting"* was true and sounded like a power defec
 change stands — without the by-kind breakdown none of this was visible at all —
 but the conclusion I hung on it needed the values, not the counts. **`a-count-
 taken-for-a-record`, and this time I was the one who did it.**
+
+
+---
+
+## 2026-08-13 — THE LINK IS NOW PROVEN, NOT INFERRED (I said I had not run it; I ran it)
+
+**Read straight out of `snapshot.golden.json`, scenario 3:**
+
+    powerDaysBefore   [1, 2, 3, 5, 6]
+    powerDaysKept     [1, 2]
+    keptFamilies      [{dayOfWeek: 1, family: 'lower'}, {dayOfWeek: 2, family: 'lower'}]
+    weeks[2].days[1]  dayOfWeek: 2 · "Prehab & Accessories" · Strength · ['strength'] · prehab
+
+**And the live diff:** `weeks.2.days.1.workoutType: "Strength" → "Recovery"`,
+`powerDaysBefore.1: 2 → 3` … `.4: 6 → undefined`, `powerDaysKept.1: 2 → 3`,
+`keptFamilies.1: dayOfWeek 2 → 3, family "lower" → "upper"`.
+
+**`weeks[2].days[1]` IS `dayOfWeek: 2`. THE DAY THAT FLIPPED TO RECOVERY IS
+EXACTLY THE VALUE THAT LEFT `powerDaysBefore`.** Current is golden **minus the
+element `2`**, with every later index sliding down one — `[1,2,3,5,6]` becomes
+`[1,3,5,6]`. `powerDaysKept` `[1,2]` becomes `[1,3]` and `keptFamilies` follows
+it. **Nothing about power changed. A Strength day that carried power became a
+Recovery day that does not.**
+
+**SO ALL ~14 ARE ONE CAUSE AND IT IS MEASURED.** The four "classes" my by-kind
+breakdown surfaced — power-probe, power-families, taxonomy.category, the
+recovery/prehab counts — are one session flip and its bookkeeping.
+
+**WHAT REMAINS GENUINELY UNEXPLAINED IS TWO LINES**, and they are not in that
+scenario's flipped day:
+
+    weeks.2.days.4.taxonomy.1.modality  "none" → "off_feet"
+    weeks.3.days.4.taxonomy.1.modality  "none" → "off_feet"
+
+**I RECORDED THIS AS INFERENCE AN HOUR AGO AND SAID SO. It took one read of the
+golden to settle**, which is the better ending than leaving a labelled guess for
+someone else — and the label was the only thing that made it safe to leave at
+all. **A conclusion that says which one it is costs nothing to upgrade; one that
+does not is where four reverts came from on 28-C1.**
