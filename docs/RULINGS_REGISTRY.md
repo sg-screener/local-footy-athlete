@@ -1463,7 +1463,10 @@ silently — this is the one case where a short session is not a defect.
 **Search words:** bodyweight, no equipment, no kit, pull-up, dip, inverted row,
 vertical push, vertical pull, horizontal pull, missing pattern, short day, gym
 membership, sign up to a gym. ·
-`BUILT cf77855f` — **THE BLOCKER NAMED IN THIS ROW IS CLEARED.** *"one site
+`UNENFORCED` (was `BUILT cf77855f`; corrected 2026-08-14 — see the receipt at
+the foot of this row. By gate rule 4 a ruling enforced on ONE route of several
+is UNENFORCED, and the pool is one route of at least three.)
+**THE BLOCKER NAMED IN THIS ROW IS CLEARED.** *"one site
 delivered, the second blocked on the load/availability conflation"* was true when
 written; `cf77855f` separated the two questions. `equipmentClassFor` answers
 *"what does this lift LOAD with"* and was being asked *"can this athlete DO it
@@ -1488,6 +1491,32 @@ dropped slots and **has NO reader outside the rule module.** Nothing athlete-
 facing says *"you'd need a gym for this"*; the day just comes out shorter. **The
 removal is BUILT and the SAYING is not**, and by "done means the athlete can see
 it" that half is still owed. It is the one piece of this row left.
+**⚠ RECEIPT, 2026-08-14 (mission slice 1A) — ONE ROUTE COVERED, AT LEAST THREE
+STILL OPEN, SO THE ROW STAYS `UNENFORCED`.**
+**COVERED — the pool walk.** `selectPoolEntryAvoiding`
+(`src/data/exercisePoolsStrength.ts:1049`) no longer falls through to the raw
+pool when the athlete's KIT is what emptied it; it returns a typed refusal
+(`PoolSelection`, `:964`) which `applyPoolRotation` (`:1120`) propagates and
+`src/data/defaultProgram.ts:2569` turns into a removed row. Held by
+`exercisePoolsStrengthTests` cell 14.15 (504/0), which asserts the refusal AND
+that `[pool-override-fallback]` does not fire — the old fallback is the mutant
+it kills. Exclusion and injury still fall through, unchanged and out of scope.
+Measured: `[pool-override-fallback]` 16 → **0**, and scenario 6's
+`impossible_without_kit` findings 7 → **5**.
+**STILL OPEN — and each one was measured putting an impossible lift back.**
+(1) **CANONICALISER RESTORATION**, `src/utils/workoutCanonicalisation.ts:885`,
+sourcing `FALLBACK_PATTERN_EXERCISE` (`:172`, `push: 'Overhead Press'`,
+`pull: 'Pull-Ups'`) and building rows with a hardcoded `equipmentRequired: []`.
+It asks the sheet nothing and runs LAST: `row_restored` went 4 → 12 across six
+weeks, the eight new ones being exactly the `Pull-Ups` and `Overhead Press` the
+pool had just refused. (2) **TEMPLATE COMPLETION** — `RDLs` reaches the athlete
+unrewritten though the pool answers `Single-Leg RDL`, so that row never passed
+through rotation at all; `Face Pull` likewise survives a refused
+`isolation_upper`. (3) **NON-POOL ROWS** — `Band Pallof Press` classifies to no
+pool, so no pool-layer change can ever reach it; only the sheet can.
+**AND THE SECOND CLAUSE IS STILL NOT DELIVERED** (the paragraph above): after
+this change the bodyweight Tuesday shows an Upper Pull of two rows the athlete
+cannot do, and says nothing about the kit.
 
 **R-084** · *"single leg hip thrust is an accessory"* (2026-08-13) · **A
 SINGLE-LEG HIP THRUST IS AN ACCESSORY, NOT SINGLE-LEG HIP WORK.** Its existing

@@ -325,12 +325,26 @@ console.log('\n[7b] A single-leg hip lift may not rotate into a bilateral hinge'
   // athlete is handed. This drives the real rotation over a full block.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { applyPoolRotation } = require('../data/exercisePoolsStrength') as {
-    applyPoolRotation: (name: string, ctx: { miniCycleNumber: number; weekInBlock?: number }) => string;
+    applyPoolRotation: (
+      name: string,
+      ctx: { miniCycleNumber: number; weekInBlock?: number },
+    ) => { kind: 'name'; name: string } | { kind: 'refused'; slot: string; cause: string };
+  };
+  // R-083 — the rotation may now answer "this kit can do none of these". No kit
+  // is passed here, so it cannot fire; a refusal would mean the outcome shape
+  // changed under this cell, and the empty name reddens the non-vacuity check
+  // one line below rather than passing silently.
+  const rotatePoolName = (
+    name: string,
+    ctx: { miniCycleNumber: number; weekInBlock?: number },
+  ): string => {
+    const outcome = applyPoolRotation(name, ctx);
+    return outcome.kind === 'name' ? outcome.name : '';
   };
   const rotated: string[] = [];
   for (let cycle = 1; cycle <= 4; cycle += 1) {
     for (let week = 1; week <= 4; week += 1) {
-      rotated.push(applyPoolRotation('Single-Leg RDL', { miniCycleNumber: cycle, weekInBlock: week }));
+      rotated.push(rotatePoolName('Single-Leg RDL', { miniCycleNumber: cycle, weekInBlock: week }));
     }
   }
   ok('[non-vacuity] rotation was actually exercised over a whole block',

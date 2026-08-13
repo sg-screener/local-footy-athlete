@@ -30,6 +30,19 @@ import {
   type PoolSlotKey,
   type RotationContext,
 } from '../data/exercisePoolsStrength';
+
+// R-083 — the rotation answers with an OUTCOME now, because a slot this
+// athlete's kit cannot fill has to be representable. No kit is passed anywhere
+// in this persona harness, so a refusal is impossible here; it throws rather
+// than capturing an empty name into the variety census, which would read as
+// "the pool repeated itself" and blame the wrong thing.
+function rotatePoolName(...args: Parameters<typeof applyPoolRotation>): string {
+  const outcome = applyPoolRotation(...args);
+  if (outcome.kind === 'refused') {
+    throw new Error(`applyPoolRotation refused ${outcome.slot} (${outcome.cause})`);
+  }
+  return outcome.name;
+}
 import {
   buildWorkoutsFromCoach,
   findOrCreateExercise,
@@ -137,8 +150,8 @@ function simulateMultiBlock(blocks: number): Capture {
       for (let i = 0; i < SLOTS.length; i++) {
         const slot = SLOTS[i];
         const usage = new Map<string, Set<string>>();
-        const anchorName = applyPoolRotation(sessions[i].exercises[0].name, ctx, usage);
-        const accessoryName = applyPoolRotation(sessions[i].exercises[1].name, ctx, usage);
+        const anchorName = rotatePoolName(sessions[i].exercises[0].name, ctx, usage);
+        const accessoryName = rotatePoolName(sessions[i].exercises[1].name, ctx, usage);
         capture[slot][mc - 1].push({ anchor: anchorName, accessory: accessoryName });
       }
     }

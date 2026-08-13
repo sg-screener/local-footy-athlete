@@ -2566,20 +2566,42 @@ export function buildWorkoutsFromCoach(
       });
     }
 
-    const aiExercises: WorkoutExercise[] = sourceAiExercises.map((ex, index) => {
-      // Cross-cycle variation: rewrite AI-suggested name to the
-      // rotation-selected pool variant when applicable. Non-pool exercises
-      // (carry, core, isolation, anything untagged) pass through unchanged.
+    // ── A REFUSED SLOT IS A REMOVED ROW (R-083) ────────────────────────────
+    //
+    // `applyPoolRotation` returns an OUTCOME, and "there is no legal exercise
+    // for this athlete" is one of its answers. Sam: *"i can't account for
+    // everyone and if they want to train properly they'll sign up to a gym"* —
+    // so the row is dropped here rather than written from the unfiltered pool.
+    // Dropping BEFORE the row is built is what keeps `index` off the row ids of
+    // work that never existed.
+    const rotatedAiExercises = sourceAiExercises.flatMap((ex) => {
+      if (!rotationContext || !poolUsage || planEntry?.strengthVariant === 'quality_low_volume') {
+        return [{ ex, resolvedName: ex.name }];
+      }
+      const outcome = applyPoolRotation(ex.name, rotationContext, poolUsage, effectiveAthletePrefs);
+      if (outcome.kind === 'refused') {
+        logger.warn('[ProgramGen] slot refused — no exercise this athlete can do', {
+          dayOfWeek: cw.dayOfWeek,
+          suggested: outcome.suggestedName,
+          slot: outcome.slot,
+          role: outcome.role,
+          cause: outcome.cause,
+        });
+        return [];
+      }
+      return [{ ex, resolvedName: outcome.name }];
+    });
+
+    const aiExercises: WorkoutExercise[] = rotatedAiExercises.map(({ ex, resolvedName }, index) => {
+      // Cross-cycle variation happened above, in `rotatedAiExercises`.
+      // Non-pool exercises (carry, core, isolation, anything untagged) pass
+      // through unchanged.
       // THE AUTHORED G-2 EXCEPTION NAMES ITS OWN MOVEMENT. Rotation is the
       // cross-cycle VARIATION system for ordinary main lifts; here the movement
       // is the ruling — "box squats to HIGH BOX" is the low-range-of-motion half
       // of `lower_strength_g3`'s state 2, and rotating it to a Front or Back
       // Squat would put a full-range squat two days before a game while still
       // reading as the exception. BIBLE_ANCHOR: lower_strength_g3
-      const resolvedName = rotationContext && poolUsage &&
-        planEntry?.strengthVariant !== 'quality_low_volume'
-        ? applyPoolRotation(ex.name, rotationContext, poolUsage, effectiveAthletePrefs)
-        : ex.name;
       const exercise = findOrCreateExercise(resolvedName);
       return {
         id: `we-${workoutId}-${index}`,

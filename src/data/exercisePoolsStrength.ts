@@ -947,6 +947,45 @@ function trainingAgePoolForSlot(
 }
 
 /**
+ * WHY A SLOT CAME BACK EMPTY.
+ *
+ * ONE MEMBER TODAY, AND THAT IS DELIBERATE. Only the EQUIPMENT cause refuses
+ * (R-083); exclusion and injury still fall through to the raw pool, which is the
+ * pre-existing "Option 2" policy and is NOT in this change's scope. The type is
+ * a union of one so that adding the other two later is a widening the compiler
+ * walks the callers through, rather than a boolean quietly changing meaning.
+ */
+export type PoolRefusalCause = 'equipment';
+
+/**
+ * THE ANSWER A POOL MAY GIVE, AND "NOTHING" IS ONE OF THEM.
+ *
+ * R-083 (Sam, 2026-08-13): *"ya can't do much with overhead pushing or pull or
+ * even horizontal pulling without equipment - i can't account for everyone and
+ * if they want to train properly they'll sign up to a gym"*. **A pattern a kit
+ * cannot train is REMOVED, not substituted** — so "no legal entry" has to be
+ * REPRESENTABLE. It was not: the filter emptied the pool, a warning was logged,
+ * and the RAW pool was walked anyway, which is how a bodyweight-only athlete was
+ * handed Pull-Ups, Barbell Row, Face Pull, Overhead Press and Lateral Raise.
+ *
+ * A union rather than `null` because the caller has to say WHY the row is gone,
+ * and because the compiler then refuses to let a caller ignore the refusal.
+ */
+export type PoolSelection =
+  | { readonly kind: 'entry'; readonly entry: PoolEntry }
+  | {
+      readonly kind: 'refused';
+      readonly slot: PoolSlotKey;
+      readonly role: PoolRole;
+      readonly cause: PoolRefusalCause;
+      readonly counts: {
+        readonly excluded: number;
+        readonly injury: number;
+        readonly equipment: number;
+      };
+    };
+
+/**
  * Same as selectPoolEntry, but skips entries whose names appear in `avoid`.
  * Used to prevent duplicate picks when multiple AI-suggested exercises in a
  * single session all map to the same (slot, role).
@@ -958,23 +997,57 @@ function trainingAgePoolForSlot(
  *
  * `prefs` (optional): athlete overrides. When present, the pool is
  * filtered/biased by `applyPrefsToPool` before the rotation walk.
- * When the filter empties the pool, logs a structured line and falls
- * through to the raw pool (Option 2 from the design doc).
+ *
+ * ── WHEN THE KIT EMPTIES THE POOL, THE SLOT IS REFUSED (R-083) ─────────────
+ *
+ * It used to fall through to the RAW pool ("Option 2" in
+ * `docs/pool-refinements-design.md`, written before R-083 existed). For the
+ * EQUIPMENT filter that policy prescribes a lift the athlete physically cannot
+ * do, which is the whole of Sam's ruling: *"i can't account for everyone and if
+ * they want to train properly they'll sign up to a gym"* — a pattern the kit
+ * cannot train is REMOVED, not substituted.
+ *
+ * THE TEST IS "COULD THE KIT ALONE HAVE EMPTIED IT", NOT "WAS THE POOL EMPTY".
+ * Asking whether the equipment COUNT is non-zero would refuse a slot that an
+ * exclusion emptied and equipment merely trimmed — a different fact with a
+ * different owner. Asked this way the refusal is exactly the impossible case.
+ *
+ * EXCLUSION AND INJURY STILL FALL THROUGH, unchanged, log and all. Neither is
+ * in this change's scope: both re-prescribe something the athlete asked not to
+ * have rather than something they cannot do, and neither has a ruling behind a
+ * refusal yet.
  */
 export function selectPoolEntryAvoiding(
   pool: PoolDefinition,
   ctx: RotationContext,
   avoid: ReadonlySet<string>,
   prefs?: AthletePoolPrefs,
-): PoolEntry {
+): PoolSelection {
   if (pool.entries.length === 0) {
     throw new Error(`Pool ${pool.slot}/${pool.role} has no entries`);
   }
-  if (pool.entries.length === 1) return pool.entries[0];
+  if (pool.entries.length === 1) return { kind: 'entry', entry: pool.entries[0] };
 
   if (prefs) {
     const { effective, excludedCount, injuryCount, equipmentCount } = applyPrefsToPool(pool, prefs);
     if (effective.length === 0) {
+      const kitCanTrainNothingHere = pool.entries.every(
+        (entry) => !entryAllowedByEquipment(entry, prefs.availableEquipment),
+      );
+      if (kitCanTrainNothingHere) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[pool-slot-refused] slot=${pool.slot} role=${pool.role} cause=equipment ` +
+            `— no exercise in this pool is possible on this athlete's kit`,
+        );
+        return {
+          kind: 'refused',
+          slot: pool.slot,
+          role: pool.role,
+          cause: 'equipment',
+          counts: { excluded: excludedCount, injury: injuryCount, equipment: equipmentCount },
+        };
+      }
       // Fall through to raw pool; surface why via structured log so an
       // operator can see which prefs collapsed the slot.
       // eslint-disable-next-line no-console
@@ -982,12 +1055,12 @@ export function selectPoolEntryAvoiding(
         `[pool-override-fallback] slot=${pool.slot} filtered=0 → using raw pool ` +
           `(excluded=${excludedCount}, injury=${injuryCount}, equipment=${equipmentCount})`,
       );
-    } else {
-      return walkEntries(effective, pool.role, ctx, avoid);
+      return { kind: 'entry', entry: walkEntries(pool.entries, pool.role, ctx, avoid) };
     }
+    return { kind: 'entry', entry: walkEntries(effective, pool.role, ctx, avoid) };
   }
 
-  return walkEntries(pool.entries, pool.role, ctx, avoid);
+  return { kind: 'entry', entry: walkEntries(pool.entries, pool.role, ctx, avoid) };
 }
 
 /**
@@ -1011,15 +1084,31 @@ export function selectPoolEntryAvoiding(
  * itself, the rotation walk still picks a valid sibling from the
  * filtered pool — excluded names can't be returned because they were
  * dropped before the walk.
+ *
+ * **RETURNS AN OUTCOME, NOT A NAME (R-083).** When every entry the athlete's
+ * kit, exclusions or live injuries leave is gone, there IS no name, and the
+ * caller must remove the row rather than write one. See `PoolSelection`.
  */
+export type PoolRotationOutcome =
+  | { readonly kind: 'name'; readonly name: string }
+  | {
+      readonly kind: 'refused';
+      /** What the producer asked for, so the removal can name it. */
+      readonly suggestedName: string;
+      readonly slot: PoolSlotKey;
+      readonly role: PoolRole;
+      readonly cause: PoolRefusalCause;
+    };
+
 export function applyPoolRotation(
   suggestedName: string,
   ctx: RotationContext,
   usedInSession?: Map<string, Set<string>>,
   prefs?: AthletePoolPrefs,
-): string {
+): PoolRotationOutcome {
+  const unchanged: PoolRotationOutcome = { kind: 'name', name: suggestedName };
   const classification = classifyPoolSlot(suggestedName);
-  if (!classification) return suggestedName;
+  if (!classification) return unchanged;
 
   const { slot, role } = classification;
   let selectedRole = role;
@@ -1033,7 +1122,7 @@ export function applyPoolRotation(
   // (e.g. isolation_lower.anchor is []). classifyPoolSlot's guards should
   // prevent routing here, but fall through untouched if we ever do land
   // on an empty pool rather than throwing.
-  if (pool.entries.length === 0) return suggestedName;
+  if (pool.entries.length === 0) return unchanged;
 
   // ── ROTATION MAY NOT CROSS A MUSCLE GROUP ────────────────────────────────
   //
@@ -1099,10 +1188,28 @@ export function applyPoolRotation(
   // when every in-group candidate is already used in this session. A cell holds
   // each half — rotation never leaves its group across 12 cycles, and three
   // Nordic Lower suggestions still resolve to three distinct picks.
-  let pick = selectPoolEntryAvoiding(pool, ctx, avoid, prefs);
-  if (suggestedGroup && avoid.has(pick.name) && fullPool.entries.length > pool.entries.length) {
-    pick = selectPoolEntryAvoiding(fullPool, ctx, avoid, prefs);
+  let selection = selectPoolEntryAvoiding(pool, ctx, avoid, prefs);
+  // A GROUP-NARROWED POOL THAT REFUSES IS NOT THE SLOT REFUSING. The narrowing
+  // is this function's own doing (one muscle group out of a mixed slot), so a
+  // refusal there must re-ask the whole slot before it becomes the athlete's
+  // answer — otherwise "no legal tricep row" would delete a legal bicep row too.
+  if (
+    (selection.kind === 'refused' || avoid.has(selection.entry.name)) &&
+    suggestedGroup &&
+    fullPool.entries.length > pool.entries.length
+  ) {
+    selection = selectPoolEntryAvoiding(fullPool, ctx, avoid, prefs);
   }
+  if (selection.kind === 'refused') {
+    return {
+      kind: 'refused',
+      suggestedName,
+      slot: selection.slot,
+      role: selection.role,
+      cause: selection.cause,
+    };
+  }
+  const pick = selection.entry;
 
   if (usedInSession) {
     const existing = usedInSession.get(key);
@@ -1113,7 +1220,7 @@ export function applyPoolRotation(
     }
   }
 
-  return pick.name;
+  return { kind: 'name', name: pick.name };
 }
 
 // ─── Load Ratio Normalization (progression transfer) ───
