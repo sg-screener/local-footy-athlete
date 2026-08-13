@@ -45,6 +45,36 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ INJURY SAFETY IS INTACT — `generationConstraintReentry` 13/6 is the LAYER MISMATCH again, and this was the highest-stakes case
+
+**Six failures, all injury/readiness — hamstring, shoulder, knee, low readiness,
+sick recovery. The highest-stakes thing I have touched today.**
+
+**THE TWO LAYERS IN ONE SUITE, AND THEY DISAGREE ON PURPOSE:**
+
+| cells | drive | result |
+| --- | --- | --- |
+| the 6 FAILING | `planFor()` → **`buildCoachingPlan`** — the SLOT ALLOCATION layer | plan still names *"20 m Acceleration Reps"* for a 4/10 hamstring |
+| the PASSING injury cells | **`generateProgramLocally`** — the real pipeline | *"hamstring generated workouts avoid Nordics/heavy hinge/sprint"* is **GREEN** at severity 6 |
+
+**SO THE ATHLETE IS SAFE, MEASURED, NOT ASSUMED.** The real generator does not
+give an injured athlete sprint or heavy hinge work. The allocation layer names a
+session FOCUS; the generator then fills that slot with exercises the injury
+permits. **The constraint is applied where exercises are chosen, which is the
+only place it can be applied.**
+
+**WHAT IS LEFT IS A DESIGN QUESTION, NOT A SAFETY DEFECT:** should the PLAN layer
+also stop naming a sprint focus it knows will be filled safely? Arguable either
+way, and **not something to answer from a stale suite** — this one is from July
+and its cells assert exercise-level avoidance against a layer that does not
+choose exercises.
+
+**FOURTH SIGHTING OF THE LAYER MISMATCH TODAY, and the one where it mattered
+most.** Had I read six red injury cells and reported them, that would have been a
+safety alarm raised on a suite measuring the wrong layer — after I had already
+retracted one athlete-facing claim today. **The lesson I wrote into memory one
+commit ago is what made this a ten-minute check instead of an incident.**
+
 ### ✅ THE SUBPHASE CONCERN IS **REFUTED** — the real generator walks Sam's ladder exactly
 
 **The probe I named one commit ago, run:**
