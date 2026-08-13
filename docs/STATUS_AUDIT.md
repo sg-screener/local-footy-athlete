@@ -45,6 +45,50 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅✅ 28-C1's BUILD IS NOW DESIGNABLE — **RANK CAN NEVER SATISFY "PRESCRIBED", BY ARITHMETIC**
+
+**The last thing this item needed before anyone builds: does a ranking change
+even have the headroom to work? No, and the numbers are not close.**
+
+| world | conditioning slots per week | categories in the pool | COD's rank |
+| --- | --- | --- | --- |
+| pre-season no club, 5d | **2.75** (11 / 4 weeks) | 4 | **last** |
+| pre-season no club, 6d | **2.75** | 4 | **last** |
+| pre-season no club, 4d | **2.00** (8 / 4 weeks) | 3–4 | **last** |
+
+**A slot is consumed by the FIRST ALLOWED candidate.** With **~2–2.75 slots** and
+**3–4 categories**, at least one non-COD category is **still uncovered when the
+last slot is filled**. **So a last-ranked category is unreachable BY ARITHMETIC,
+not by policy** — no reordering *within* "rank it last" can ever place it,
+because the week runs out of slots first.
+
+**THIS IS WHY FOUR ATTEMPTS FAILED, AND ALL FOUR WERE AIMED AT RANK.** Item 27's
+C1 (*"the fix is placement, not rank"*) reached the right conclusion; this is the
+number that proves it, and it also kills the *promote-it-one-place* idea I floated
+this morning — **there is no place to promote it to that is still "last".**
+
+**⚠ SO THE BUILD IS A REAL DESIGN DECISION AND IT HAS A GENUINE TENSION IN SAM'S
+OWN WORDS — I AM NOT PATCHING PAST IT.**
+- ***"prescribed"*** in these weeks means the week should AIM to include it →
+  that is `mustCoverCategories`.
+- ***"cut first when something has to give"*** means it must NOT create urgency →
+  which is **exactly why `mustCoverCategories` deliberately excludes it today**,
+  and the code says so: *"a missing COD session is not a gap the planner should
+  push to fill."*
+
+**BOTH READINGS ARE HIS AND THEY PULL OPPOSITE WAYS AT 2.75 SLOTS.** The
+resolution is almost certainly *"must-cover, but LAST to be defended when the
+week is trimmed"* — a **two-axis** model (coverage intent vs drop order), which
+today's single ranked list cannot express. **That is a real unit, not a patch,
+and `LAW-elegant-two-options` says the incremental fix and the ownership redesign
+get compared before either is coded.**
+
+**NOT BUILT, AND THE REASON IS NOT TIMIDITY:** it changes athlete-visible output,
+owes `test:scenarios` + `test:qa` both arms (**baseline for both is already
+captured** in this session's scratchpad), and the two-axis split touches the
+scorer. **The layer beneath it is now fully measured, which is the one thing all
+four reverts lacked.**
+
 ### ⚠ THE REPEATING SHAPE BEHIND TODAY — **A CONCLUSION OUTLIVES THE WORLD IT WAS MEASURED IN**
 
 **THREE SIGHTINGS IN ONE DAY, ALL ON ONE ITEM, AND IT IS WHY THAT ITEM HAS FOUR
