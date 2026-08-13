@@ -357,8 +357,11 @@ nothing and correctly stays *"Rest Day"*. `sessionResolver.ts` `freedByTheTrip`,
 held by `test:away-flow` [15d]/[15e] — and [15e] asserts the KIND, because the
 first build filled the day with `prehab_accessories` and that is a substitution in
 SHAPE, not in KIND.
-**THE BLOCK HALF IS HALF BUILT, AND IT IS MEASURED ON HIS OWN EXAMPLE** (2 weeks,
-8 club nights — `test:away-flow` [13g]/[13h], non-vacuity first):
+**THE BLOCK HALF IS HALF BUILT, AND IT IS MEASURED ON HIS OWN EXAMPLE** (a 4-week
+block, 8 club nights — `test:away-flow` [13g]/[13h], non-vacuity first. **An
+earlier version of this row said "2 weeks" and was wrong**: `microcycleLimit: 2`
+is a request and the generator returned four. The ratios are per-block and
+unaffected):
 
 | | home | away |
 | --- | --- | --- |
@@ -371,12 +374,30 @@ SHAPE, not in KIND.
 sessions added, one for one.** His ratio, on his own shape, and nobody had built
 it for this case; it falls out of the plan-side club filter. `BUILT`, pinned by
 [13h].
-**⚠ THE STRENGTH ARM IS BREACHED: 20 -> 16 sessions, 79 -> 72 rows.** His rule
-says 5 strength stays 5 strength. **Eight COMBINED club days were removed and only
-four of their gym halves came back** — the other four went with the club night
-that was carrying them. **THAT IS THE WHOLE REMAINING UNIT**, and it is
-generation-side (the plan must keep the strength count when club days go), so it
-owes `test:scenarios` + `test:qa` either side.
+**⚠ THE STRENGTH ARM IS BREACHED: 20 -> 16 sessions, 79 -> 72 rows — AND THE LOSS
+IS ONE EXACT DAY, NOT A DIFFUSE SHORTFALL.** Traced week by week:
+
+| | home week | away week |
+| --- | --- | --- |
+| Mon | Lower Body Strength (core, 3) | Lower Body Strength (core, 4) |
+| Tue | **Team Training + Upper Pull** (core, 3) | Lower Squat (core, 5) |
+| Wed | Prehab & Accessories (opt, 5) | Prehab & Accessories (opt, 5) |
+| Thu | **Team Training + Upper Push** (core, 3) | *(nothing)* |
+| Fri | **Gunshow** (opt, 6) | Upper Body Strength (core, 4) |
+
+**HE LOSES THE FRIDAY GUNSHOW — AN OPTIONAL DAY THE TRIP NEVER TOOK.** Core work
+GROWS (9 -> 13 strength rows) because the club's upper volume comes back as real
+sessions; what disappears is one OPTIONAL strength day per week, which is why the
+count falls by exactly 4 over a 4-week block.
+**THE LEVER IS NAMED AND BOTH ARMS ARE MEASURED: it is NOT the day set.**
+`onboardingToCoachingInputs` returns `selectedDays` = Mon-Fri and
+`availableDays` = 5 in **both** arms; only `teamTrainingDays` ([] vs [Tue,Thu])
+and `hasGame` (false vs true) differ. **So `buildCoachingPlan` allocates one
+fewer OPTIONAL session when the club anchors are gone, despite the same five
+available days.** That is the whole remaining unit.
+**IT IS GENERATION-SIDE AND MUST NOT BE STARTED AT THE TAIL OF A SESSION** — it
+owes `test:scenarios` + `test:qa` either side, and half-doing a generator change
+late is the documented way the last two nights went wrong.
 **It is deliberately NOT carried as a red cell** — `LAW-0-registry` forbids a law
 entering as UNENFORCED and a permanent red is the same thing wearing a nicer word.
 **Do not loosen [13h] to cover strength; build the conservation, then assert it.** A day the trip empties — a vacated fixture, a team-only night —

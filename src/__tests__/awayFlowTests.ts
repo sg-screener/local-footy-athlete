@@ -648,12 +648,14 @@ async function main(): Promise<void> {
   // and 5 strength sessions, then the 2 weeks should aim to fill those with 5
   // conditionings and 5 strength ya know"***.
   //
-  // **THE UNIT IS THE BLOCK, NOT THE DAY** — which is why this cell generates TWO
-  // weeks and not one. [15d]/[15e] hold the per-day substitution; nothing held
+  // **THE UNIT IS THE BLOCK, NOT THE DAY** — which is why this cell generates a
+  // BLOCK and not one week. (`microcycleLimit: 2` is a request, not a promise:
+  // the generator returns FOUR weeks here. The ratios below are per-block and
+  // hold; an earlier version of this comment said "2 weeks" and was wrong.) [15d]/[15e] hold the per-day substitution; nothing held
   // the total until now, and a per-day fix does not add up to a block total on
   // its own.
   //
-  // MEASURED OVER HIS OWN SHAPE (2 weeks, 8 club nights):
+  // MEASURED OVER HIS OWN SHAPE (a 4-week block, 8 club nights):
   //
   // | | home | away |
   // | --- | --- | --- |
