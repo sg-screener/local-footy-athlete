@@ -91,10 +91,22 @@ his instruction is standing authority, not history.**
     Single-Leg RDL every time without the rotator objecting.
 
 
-47. **UNBLOCKED AND MOSTLY BUILT — THE SHEETS ARE FILLED IN AND COMMITTED, AND
-    THEY RATIFY THE BUILD. `audit`, 2026-08-13.**
+47. **BLOCKED-BY: other-agent — ITEM 48'S SHORTFALL SENTENCE, OWNED BY
+    `terminal`. THE SHEET HALF IS BUILT; THE REMOVAL HALF CANNOT SHIP WITHOUT
+    IT. `audit`, 2026-08-13.**
 
-    **THE BLOCK IS CLEARED, NOT INHERITED.** Sam's answers are now in git and
+    **⚠ AND THE PREVIOUS MARK WAS MY OWN DEFECT, CORRECTED HERE.** I re-headed
+    this item `UNBLOCKED` and left NO marker the stop scan recognises. It was
+    then **the only one of 20 items neither blocked nor standing**, so the hook
+    read it as the live order and re-fired on it three times. **A head with no
+    marker is not "open", it is the queue's only exit held shut.**
+    **THE BLOCK IS REAL, NOT A STAMP TO BUY SILENCE:** what remains is the
+    equipment cut, and R-083 forbids shipping it without the sentence naming
+    the cause — that sentence is item 48, which its own text OWNS BY `terminal`,
+    so I walk past it rather than build it twice.
+
+    **THE SHEET HALF IS DONE AND IS NOT BLOCKED ON ANYONE.** Sam's answers are
+    now in git and
     every `?` is resolved; the blank draft is gone. His rows AGREE with what
     shipped in `9c0d1776` on every point it turned on (Back Squat → barbell &
     rack, Trap Bar Deadlift → trap_bar, Dips → dip_bars, Inverted Row →
