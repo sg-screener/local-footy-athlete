@@ -791,3 +791,57 @@ correct, re-record it" at different points today. It took reading the VALUES of
 one day to find that it is holding a real loss of the athlete's work. **A golden
 whose diff nobody has read is not evidence that nothing broke — it is the place
 the break is hiding.**
+
+
+---
+
+## 2026-08-13 — THE FLIP IS PROVEN TO ITS LINE: COVERAGE-BY-ACCIDENT, AND IT LANDS ON EXACTLY 3
+
+**I said the bisect was the terminal's. It was measurable here, so I measured it.
+The chain is complete and every step has a number.**
+
+**THE OWNER IS `rules/optionalTopUp.ts`, and the mechanism is placement ORDER.**
+`computeOptionalTopUps` runs N1 (accessory coverage) then N2 (off-season
+mobility), and `take()` always grabs **the first free day**. So when N1 stops
+firing, **mobility inherits N1's day** — which is exactly what the diff shows.
+
+**WHY N1 STOPPED FIRING, MEASURED BOTH WAYS:**
+
+    ACCESSORY_REGION_THRESHOLD                        3
+    GOLDEN week, top-up day removed     midline, shoulder_health          = 2  -> N1 FIRES
+    CURRENT week                        lower_prehab, midline, shoulder_health = 3  -> N1 SILENT
+
+**IT LANDS ON THE THRESHOLD EXACTLY.** One region fewer and the athlete's session
+comes back.
+
+**AND THE THREE REGIONS ARE COVERED BY ACCIDENT, NOT BY DESIGN** — a `Tib Raise`,
+a `Pallof Press` and a `Band Pull-Apart` scattered through three different main
+sessions. `Band Pull-Apart` is there because **R-076 moved it into the accessory
+pool today**. So the ruling did not cause a defect; it tipped a threshold that was
+sitting one region from the edge.
+
+**WHAT THE ATHLETE LOSES:** `Lateral Lunge`, `Single-Leg Calf Raise`, `Swiss Ball
+Hamstring Curl` — single-leg knee, single-leg hip, calf — replaced by a mobility
+session with **zero counted rows**, on a BODYWEIGHT-ONLY off-season week.
+
+**SO IT IS LAWFUL AND PRODUCT-QUESTIONABLE, WHICH IS THE HONEST VERDICT.** The
+rule says *"3 regions covered = the week does not lack accessory work"* and 3 ARE
+covered. **Whether a tib raise in a hinge session substitutes for a structured
+single-leg session is a PRODUCT question, not a code one.**
+**REGISTRY-GREP over `docs/RULINGS_REGISTRY.md` for `accessor|prehab|mobility|
+region` returns exactly TWO rows — R-015 and R-053.** R-015 governs PAIRING
+(*"2-3 accessory exercises paired with mobility as supersets"*) and R-053 is not
+this. **Neither says whether scattered coverage discharges the accessory need.
+The question is genuinely unruled** — but it is a QUALITY call, not a blocker, and
+it is recorded here rather than sent while a larger one is already with him.
+
+**⚠ AND A SEPARATE DEFECT IS VISIBLE IN THE SAME DUMP, WORTH MORE THAN THE FLIP:**
+
+    day 3  "Lower Hinge"  Bicep Curls · Tricep Pushdowns · Tib Raises · Pallof Press · Romanian Deadlift
+    day 6  "Lower Squat"  Bicep Curls · Tricep Pushdowns · Tib Raises · Pallof Press · Back Squat
+
+**BOTH LEG DAYS ARE THREE-QUARTERS ARM WORK, AND THEIR ACCESSORIES ARE
+IDENTICAL.** The terminal saw this shape in the golden earlier and named it; it
+is still there, on both days, in the CURRENT tree. **That is a bigger athlete-
+facing problem than the session flip that led me to it**, and it belongs to the
+pool/rotation work rather than to the top-up.
