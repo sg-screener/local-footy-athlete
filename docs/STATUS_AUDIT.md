@@ -45,6 +45,38 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ THE INJURY FILTER FAILS **OPEN** ON AN UNTAGGED EXERCISE — traced end to end, and the population is UNMEASURED
+
+**Traced from the one real red to the behaviour, three hops, each read not
+inferred:**
+
+    injuryExerciseRisk.ts:21     if (!tags) return 'unknown';
+    injuryWorkoutFilter.ts:187   return r === 'avoid' || r === 'caution';
+    injuryWorkoutFilter.ts:223   isRisky = r === 'avoid' || (removeCaution && r === 'caution');
+
+**`'unknown'` IS NOT RISKY, SO AN UNTAGGED EXERCISE IS ALLOWED THROUGH THE INJURY
+FILTER — for every injury, at every severity.** The gap is not in the filter's
+logic; it is that a MISSING TAG and a SAFE TAG are indistinguishable to it.
+
+**THIS IS A DEFENSIBLE DESIGN, AND THAT IS EXACTLY WHY IT IS WORTH NAMING.**
+*"Refuse only what you can PROVE is impossible"* is the same doctrine the
+equipment filter states in its own comment, and it is right there — it stops the
+app inventing restrictions from ignorance. **The cost is that a DATA GAP becomes a
+SILENT SAFETY GAP: nothing reds, nothing warns, the exercise simply passes.**
+
+**ONE CONFIRMED CASE: `Adductor Rockback`** — prescribed by
+`recoveryAddonCoverage.ts:171`, carried in `exercisePools.ts:294`, and
+`getExerciseTags` returns `undefined` for it. **For this exercise the effect is
+probably harmless or correct** — it is a groin OPENER prescribed FOR groin
+recovery — **but it reaches the athlete through a filter that never looked.**
+
+**⚠ HOW MANY OTHERS: UNMEASURED, AND MY ATTEMPT WAS VOID.** My census walked
+`EXERCISE_POOLS` and returned ZERO names — wrong shape — so *"0 untagged"* was a
+statement about a set that excluded the very exercise that prompted it.
+**A correct census is the one thing owed here**, and it is worth more than the
+single case: **the question is not "is Adductor Rockback safe", it is "how many
+prescribed exercises does the injury filter never look at".**
+
 ### `recoveryContentIntegrity` 3 reds — TWO ARE COSMETIC, ONE IS A REAL DATA GAP, and my census of it was a DEAD INSTRUMENT
 
 **Followed my own map to the pure-unit suites, where a genuine defect was most
