@@ -140,3 +140,69 @@ removing whether or not it was the cause.
 `git checkout` — `sessionBuilder.ts`, `exercisePools.ts` and
 `planChangeProducer.ts` each verified byte-identical to their backup afterwards.
 Probe file `src/__scratch__/armsSeatGunshowProbe.ts` deleted after measuring.
+
+---
+
+## 2026-08-13 — ITEM 55, THE COD WINDOW: THE THIRD STALE ROW OF THE DAY, AND THE WALL IS SOMEWHERE ELSE
+
+**Sam's words:** *"equipment → Item 55. The COD window reads your profile, not
+the week."* Item 55 names `equipment` as its owner. **That seat has never
+committed** — `git log --grep='Agent: equipment'` returns **0**, against
+terminal 180 / audit 113 / desktop 66 / progression 25 / pace 24 / readiness 4 /
+patterns 1 / arms 1 — so there was no live owner to collide with. Taken as
+`arms`.
+
+### THE PREMISE IS FALSE AS WRITTEN, AND I MUTATION-PROVED IT RATHER THAN READING IT
+
+Item 55: *"Until the dated no-team-training span exists, a club athlete's
+December week still reads as having team training, so COD can never fire."*
+
+**THE SPAN EXISTS AND IS LIVE END TO END.** It is a `no_team_training` schedule
+fact on `temporarySourceFacts`, and the chain is unbroken:
+
+| step | site |
+| --- | --- |
+| constraint → span | `noTeamTrainingSpansFromConstraints` (`services/api/generateProgram.ts:483`) |
+| span → the week's closed days | `clubClosedSpans` (`utils/coachingEngine.ts:8943`) — **joined with away**, because *"the club is shut to him this week"* is ONE question however it came to be true |
+| closed days → the week fact | `teamDays = teamDaysForPhase.filter(...weekdayIsAway...)` (`:8947`) |
+| week fact → the gate | `codDecelPermitted({ weekHasTeamTraining })`, whose own comment reads *"Does THIS WEEK carry team training — not 'does this athlete have a club'"* |
+
+**HELD, ON BOTH READERS, WITH ITS OWN NON-VACUITY:** `test:christmas-break`
+`[11]` (a club athlete with no break is REFUSED), `[11b]` (the same athlete
+inside the break is PERMITTED), `[11c]` (the plan reader agrees), **44/0**.
+**MUTATION-PROVEN, not read:** deleting `...(options.noTeamTrainingSpans ?? [])`
+from `clubClosedSpans` reds **7 cells** including `[11b]` and `[11c]`, while
+`[11]` stays green. Engine restored from my own backup, verified byte-identical.
+
+**WHERE THE STALE ORDER CAME FROM.** R-003's row carried a sentence —
+*"STILL PARTLY UNENFORCED: the week fact is profile-derived until the dated
+no-team-training span exists (item 31 part 5)"* — written before that work
+landed. **Item 55 was written from that sentence, not from the code.** Corrected
+in the same commit. **This is the THIRD row today** describing a search nobody
+had redone (R-004 and R-052 were the desktop's), and the second one that sent an
+agent to rebuild working code. **The reverse of gate rule 2 is not optional.**
+
+### ⚠ AND THE WINDOW OPENS ONTO NOTHING — WHICH IS THE ANSWER SAM ACTUALLY WANTS
+
+**Measured, not inferred.** A pre-season club athlete, week wholly inside his own
+declared break (`2026-12-28`, break `2026-12-19` → `2027-01-10`):
+
+| world | sessions | COD sessions | COD rows |
+| --- | --- | --- | --- |
+| no break (control) | Lower Body Strength · **Team Training + Upper Push** · Recovery · **Team Training + Upper Pull** | 0 | 0 |
+| inside the break | Full Body Strength · Lower Squat · Upper Push · Prehab & Accessories | **0** | **0** |
+
+**The break bites — both club nights are gone. COD still never appears.** That is
+**not** item 55: it is **28-C1**, unclaimed. `pickPlacementCondCategories` PASS 1
+ranks over `categoryPriority`/`zonePriority` and **neither list ever contains
+`cod_decel`**, so `pushUniqueCategory` can only ever append it last; and
+`categoryToFlavour` has no `cod_decel` case, so **shipping the ranking fix alone
+breaks generation** (`LAW-every-category-has-a-flavour`, `dd73a53b`, now reds on
+that). **I did not take it:** it moves generated output, owes `test:scenarios` +
+`test:qa` on both arms, and its remaining step is a DESIGN call —
+`CondFlavour` is `aerobic | tempo | high-intensity` and `flavourToCategory` maps
+`high-intensity` back to `glycolytic`, so **any mapping makes COD return as a
+different category**, which the 4A ruling forbids.
+
+**SO THE ONE-LINE STATE OF COD: the gate is right, the window is open, and the
+placement ranking never reaches it.**
