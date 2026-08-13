@@ -1056,6 +1056,103 @@ function changeSummary(run: RunResult): string {
   return out.join('\n');
 }
 
+/**
+ * THE CROSS-PROFILE COMPARISON — the actual finding, and it does not exist in
+ * any single profile's report.
+ *
+ * Each profile file can only say "this athlete's week 5 differs from their week
+ * 1". The question Sam asked is whether the app RESPONDS to the athlete, and
+ * that is only visible by putting five different athletes side by side. Without
+ * this file the headline lived nowhere a reader would find it.
+ *
+ * BOTH CONTROLS ARE STATED NEXT TO THE CLAIM, NOT IN A METHODS NOTE. A
+ * byte-identical result has exactly two boring explanations — the instrument
+ * cannot see differences, or the histories never really differed — and each is
+ * answered here, in the same breath, or the claim does not survive contact.
+ */
+function renderCrossProfile(runs: readonly RunResult[]): string {
+  const structuralSignature = (snapshot: WeekSnapshot): string => snapshot.days
+    .map((day) => `${day.weekday}=${day.sessionName ?? 'rest'}[` + day.exercises
+      .map((exercise) => `${exercise.name}/${exercise.sets}/${exercise.reps}/`
+        + `${exercise.weightKg}`).join(',') + ']').join(';');
+
+  const reference = runs[0];
+  const referenceWeek5 = structuralSignature(reference.week5);
+  const referenceWords = reference.week5.plainEnglish;
+  const identical = runs.slice(1).filter((run) =>
+    structuralSignature(run.week5) === referenceWeek5
+    && run.week5.plainEnglish === referenceWords);
+
+  const out: string[] = [];
+  out.push('# Four weeks of training, five different athletes');
+  out.push('');
+  out.push('Same starting answers, same start date. The only difference is what each one '
+    + 'DID over the next four weeks. Every session was recorded the way the app records '
+    + 'one when you tap it on your phone — nothing was written into storage directly.');
+  out.push('');
+
+  out.push('## The finding');
+  out.push('');
+  if (identical.length === runs.length - 1) {
+    out.push(`**All ${runs.length} athletes get the same week 5.** Not similar — identical, `
+      + 'word for word in plain English and number for number underneath. The one who did '
+      + 'every session and wrote down every weight gets the same week as the one who missed '
+      + 'every Friday.');
+  } else {
+    out.push(`**${identical.length + 1} of ${runs.length} athletes get an identical week 5**; `
+      + 'the rest differ. Per-athlete detail below.');
+  }
+  out.push('');
+
+  out.push('### Why that is not just a broken measurement');
+  out.push('');
+  out.push('Two things would explain an identical result without meaning anything, so both '
+    + 'are checked here rather than assumed:');
+  out.push('');
+  const week1Differs = structuralSignature(reference.week1) !== referenceWeek5;
+  out.push(`1. **Can this even see a difference?** Week 1 and week 5 of the same athlete `
+    + `${week1Differs ? 'DO differ' : 'do NOT differ'} — `
+    + `${week1Differs
+      ? 'so the comparison is capable of reporting a change when there is one.'
+      : '⚠ THE INSTRUMENT IS BLIND AND NOTHING ELSE HERE CAN BE TRUSTED.'}`);
+  const logger = runs.find((run) => run.census.weightOverrideEntries > 0);
+  out.push(`2. **Did the training actually get recorded?** `
+    + (logger
+      ? `The athlete who logs weights wrote **${logger.census.weightOverrideEntries} loads `
+        + `across ${logger.census.weightOverrideDays} days**, and every athlete stored `
+        + 'their sessions (table below). So this is "the training changed nothing", NOT '
+        + '"no training was recorded".'
+      : '⚠ NO PROFILE LOGGED ANY LOADS — this comparison cannot support the claim.'));
+  out.push('');
+
+  out.push('## What each athlete did, and what they got');
+  out.push('');
+  out.push('| athlete | sessions recorded | days of feedback stored | loads typed in | '
+    + 'soreness reported | week 5 |');
+  out.push('| --- | --- | --- | --- | --- | --- |');
+  for (const run of runs) {
+    const recorded = run.log.filter((entry) => entry.result === 'recorded').length;
+    const same = run === reference
+      ? '—'
+      : (structuralSignature(run.week5) === referenceWeek5
+        && run.week5.plainEnglish === referenceWords ? '**identical**' : 'differs');
+    out.push(`| ${run.profile.title} | ${recorded} | ${run.census.storedFeedbackDays} | `
+      + `${run.census.weightOverrideEntries} | ${run.census.storedSorenessAnswers} | ${same} |`);
+  }
+  out.push('');
+
+  out.push('## What DOES change between week 1 and week 5');
+  out.push('');
+  out.push('The week is not frozen — it is rebuilt. But it is rebuilt from the athlete\'s '
+    + 'original answers, not from what they have been doing.');
+  out.push('');
+  out.push(changeSummary(reference).split('\n').slice(2).join('\n'));
+  out.push('');
+  out.push('Read one athlete end to end in the files beside this one. Each shows week 1 and '
+    + 'week 5 in full, in the app\'s own words.');
+  return out.join('\n');
+}
+
 // ── Entry ─────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -1074,9 +1171,11 @@ async function main(): Promise<void> {
   mkdirSync(outDir, { recursive: true });
 
   const summaries: string[] = [];
+  const runs: RunResult[] = [];
   for (const profile of selected) {
     process.stdout.write(`\n── ${profile.title} ──\n`);
     const run = await runProfile(profile);
+    runs.push(run);
     const markdown = renderRun(run);
     const file = resolve(outDir, `${profile.id}.md`);
     writeFileSync(file, `${markdown}\n`, 'utf8');
@@ -1087,6 +1186,15 @@ async function main(): Promise<void> {
       + `rollover_problems=${run.rolloverProblems.length}\n`);
     process.stdout.write(`   wrote ${file}\n`);
     summaries.push(`${profile.title}: recorded=${recorded} refused=${refused} threw=${threw}`);
+  }
+
+  if (runs.length > 1) {
+    const file = resolve(outDir, 'README.md');
+    writeFileSync(file, `${renderCrossProfile(runs)}\n`, 'utf8');
+    process.stdout.write(`\n   wrote ${file}\n`);
+  } else {
+    process.stdout.write('\n   (one profile only — the cross-profile comparison, which is '
+      + 'the actual finding, needs all of them; run with no --profile)\n');
   }
 
   process.stdout.write('\n── summary ──\n');
