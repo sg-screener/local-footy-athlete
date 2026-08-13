@@ -281,6 +281,46 @@ function wholeBodyInjuryContext(): GenerationConstraintContext {
 
 // Readiness is deloaded-or-not (Sam, 2026-07-27). The tiers and their four
 // behavioural flags are retired; severity survives for display only.
+/**
+ * THE ALL-OPTIONAL WEEK — the world the R-073 lock below is built to defend.
+ *
+ * `early_offseason` is the ONE mode whose `policy.strength.required` is 0 (Sam,
+ * 2026-07-28: *"weeks 1-2 are the optional block and zero completed sessions is
+ * a valid honest week"*). Because `weeklyExposureContractV2` builds
+ * `requiredSafePatterns` as `policy.balance && policy.strength.required > 0 ? … : []`,
+ * this week's required-safe set is EMPTY **for reasons that have nothing to do
+ * with safety, and with no injury anywhere in the world.**
+ *
+ * That is precisely the shape that once zeroed the frequency, and it is why the
+ * lock needs an off-season fixture: every in-season mode has `required > 0`, so
+ * an in-season-only lock could not tell the two emptiness reasons apart and
+ * would pass over the defect it exists to catch.
+ */
+function earlyOffseasonContract(): WeeklyExposureContractV2 {
+  return buildSection18WeeklyExposureContractV2({
+    seasonPhase: 'Off-season',
+    declaredSubphase: 'early_offseason',
+    mode: 'early_offseason',
+    blockNumber: 1,
+    weekInBlock: 2,
+    globalWeek: 2,
+    weekKind: 'build',
+    anchorState: 'none',
+    teamTrainingDays: [],
+    participationProvenance: 'derived_healthy_unrestricted',
+    fixtureDays: [],
+    readiness: 'medium',
+    cookedReadiness: false,
+    plannerSelected: {
+      mainStrength: 0,
+      coreConditioning: 0,
+      sprintHighSpeed: 0,
+      powerPrimers: 0,
+    },
+    currentProductionClaimsAnchorCredit: true,
+  });
+}
+
 function readinessContext(severity = 6): GenerationConstraintContext {
   const readiness: GenerationReadinessConstraint = {
     id: `readiness-deloaded-${severity}`,
@@ -817,6 +857,123 @@ run('property', 'P9 an early off-season safety transformation still removes powe
     !hasPowerRow(result.workouts.find((candidate) => candidate.id === 'early-off')!),
     'early off-season power survived, so the subphase is not being read at all',
   );
+});
+
+// ── R-073 · A CUT MUST BE PROVEN, NEVER INFERRED ──────────────────────────
+//
+// **Sam, 2026-08-13, on a main-strength cut made without proof: *"yeah well that
+// sounds shit and not good"*.** That is the ruling. `R-073` carried `UNENFORCED`
+// with the note **"the LAW has no gate (nothing PREVENTS an inferred cut), but
+// the DEFECT does not reproduce"** — 28 weeks over 7 worlds, zero unexplained
+// shortfalls. **So what is owed here is a LOCK, not a repair, and these cells
+// are that lock.** The producer is left exactly as it is; nothing below changes
+// behaviour.
+//
+// WHY A LOCK IS WORTH BUILDING OVER A DEFECT THAT DOES NOT REPRODUCE: the cut it
+// forbids ALREADY SHIPPED ONCE. `section18SafetyPolicy.ts:299-310` records it —
+// the producer once tested `requiredSafe`, which is `[]` whenever the MODE needs
+// no strength, and read that mode fact as a whole-body restriction. Measured at
+// the time, the restricted early-off-season week's strength exposures went
+// 1 -> 0 while the healthy control kept 3. It was caught by a differential
+// golden, by luck of what that golden happened to cover, and nothing has stood
+// between the repo and its return since.
+//
+// AND THE STATE THE PRODUCER *DOES* FIRE IN IS PROVEN, NOT GUESSED — measured
+// 2026-08-13 by calling `resolveRestrictedMainStrengthPatterns` directly:
+//   three SEVERE single-area (knee + back_midline + shoulder) -> ["pull"] safe
+//   lower_body + upper_body WITH pauseAffectedTraining        -> []   <- fires
+//   one multi-area severe injury + pause, alone               -> ["squat","hinge"]
+//   profileInjuries only, every area, all Severe              -> ["pull"] safe
+// `pull` is restricted by EXACTLY ONE condition in the whole map
+// (`weeklyExposureContractBuilders.ts:244-246`, `region === 'upper_body' &&
+// pauseAffectedTraining`). **It takes TWO active injuries to empty the set, and
+// no number of profile injuries can ever empty it at any severity** — which is
+// why 28 weeks never saw it, and why more of the same worlds never would. In
+// that state all four patterns are named by a live injury, so the reason is
+// PROVEN and it is NOT what Sam's ruling forbids. **Gate the producer; do not
+// "fix" it.**
+run('property', 'R-073a a proven cut is still emitted — the lock is not a ban', () => {
+  // NON-VACUITY FIRST. A lock whose subject never appears forbids nothing, and
+  // this arm is what stops R-073b below from passing over a producer that has
+  // simply stopped producing.
+  const contract = withSafety(baseContract(), wholeBodyInjuryContext());
+  const cut = contract.authorisedReductions.find((entry) =>
+    entry.metric === 'main_strength_frequency');
+  assert(!!cut, 'the proven world emitted NO main-strength cut, so R-073b guards nothing');
+  assert(cut.reason === 'injury_restriction',
+    `a proven cut must name its proof; got reason ${cut.reason}`);
+  assert(cut.reducedTarget === 0, `expected the proven cut to zero the target, got ${cut.reducedTarget}`);
+});
+
+run('mutation', 'R-073b an all-optional week with a PARTIAL injury is never cut', () => {
+  // ── THE LOCK, AND THE FIXTURE IS THE WHOLE OF IT ────────────────────────
+  //
+  // **THE FIRST VERSION OF THIS CELL WAS A BLIND GATE AND ITS MUTANT SURVIVED.**
+  // It fed an all-optional week with NO injury at all and asserted no cut. That
+  // passes, and it proves nothing: the producer sits inside
+  // `if (prohibited.length > 0)` (`section18SafetyPolicy.ts:269`), so a world
+  // with no prohibition never reaches the line the ruling is about. Reinstating
+  // the historical defect left it GREEN. Recorded rather than quietly corrected,
+  // because "the mutant survived" is the only reason the fixture below looks the
+  // way it does.
+  //
+  // **THE DEFECT NEEDS BOTH HALVES AT ONCE**, which is why it was hard to see:
+  //   - an injury that prohibits SOME patterns, so the producer is entered;
+  //   - a mode whose `strength.required` is 0, so `requiredSafe` collapses to
+  //     `[]` for reasons that have nothing to do with safety.
+  // A lower-body injury takes squat and hinge. **Push and pull are still safe**,
+  // so the honest answer is NO CUT — the week substitutes. The mutant reads the
+  // empty `requiredSafe` as "nothing is safe" and zeroes the frequency instead.
+  const partial = withSafety(earlyOffseasonContract(), injuryContext('lower_body'));
+
+  // NON-VACUITY, BOTH SIDES — without these the assertion below could pass on a
+  // world that never entered the producer (the first version's exact failure) or
+  // on one where a cut really would be correct.
+  assert((partial.strengthPatterns.prohibitedPatterns ?? []).length > 0,
+    'nothing is prohibited, so the producer is never entered and this cell is blind — '
+    + 'the precise way the first version of it passed over the defect');
+  const stillSafe = ['squat', 'hinge', 'push', 'pull'].filter((pattern) =>
+    !(partial.strengthPatterns.prohibitedPatterns ?? []).includes(pattern as MainStrengthPattern));
+  assert(stillSafe.length > 0,
+    `every pattern is prohibited, so a cut would be PROVEN here and the lock would be `
+    + `asserting the wrong thing; safe patterns: ${JSON.stringify(stillSafe)}`);
+
+  const inferred = partial.authorisedReductions.filter((entry) =>
+    entry.metric === 'main_strength_frequency');
+  assert(inferred.length === 0,
+    'AN INFERRED CUT. An all-optional early-off-season week with a PARTIAL '
+    + `lower-body injury carries a main_strength_frequency reduction: ${JSON.stringify(inferred)}. `
+    + `But ${JSON.stringify(stillSafe)} remain safe, so there IS work to substitute and `
+    + 'nothing proves a cut. R-073 — a cut must be PROVEN, never inferred. This is the '
+    + 'defect that shipped once already: the producer read `requiredSafe`, which is empty '
+    + 'whenever the MODE needs no strength, as a whole-body restriction. Fix the producer, '
+    + 'never this cell — and never by lowering the contract to match.');
+});
+
+run('property', 'R-073c the outer arm — no healthy week of any mode is cut', () => {
+  // THE WEAKER, WIDER ARM, AND ITS LIMIT IS STATED RATHER THAN LEFT TO BE FOUND:
+  // no injury means the producer is never entered, so this CANNOT kill the
+  // `requiredSafe` mutant — R-073b is what does that. It is kept because it
+  // catches a different and cruder regression: a cut appearing on a week with no
+  // constraint in it at all, from any future producer that does not sit behind
+  // the prohibition check.
+  const modes = [
+    'in_season_game_week', 'in_season_bye_build', 'in_season_bye_recovery',
+  ] as const;
+  const worlds: [string, WeeklyExposureContractV2][] = [
+    ...modes.map((mode) => [mode, withSafety(baseContract({ mode }), {
+      activeConstraintIds: [], injuries: [], activeInjuryKeys: [],
+    })] as [string, WeeklyExposureContractV2]),
+    ['early_offseason', withSafety(earlyOffseasonContract(), {
+      activeConstraintIds: [], injuries: [], activeInjuryKeys: [],
+    })],
+  ];
+  for (const [label, healthy] of worlds) {
+    const inferred = healthy.authorisedReductions.filter((entry) =>
+      entry.metric === 'main_strength_frequency');
+    assert(inferred.length === 0,
+      `a healthy ${label} week carries a main-strength cut: ${JSON.stringify(inferred)}`);
+  }
 });
 
 console.log(`\nsection18SafetyBoundaryTests: ${passed} passed, ${failed} failed`);

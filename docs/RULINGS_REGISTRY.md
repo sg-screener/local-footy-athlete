@@ -150,6 +150,154 @@ accessories. An athlete is better served by a squat and a hinge than by two
 squats."* — which is why he said *"i thought this would have been explained by
 now"*. Census C7. **DO NOT SEND HIM A FLOOR NUMBER QUESTION.**
 
+**⚠ AND THE PATTERN LOOKUP IS BROKEN, WHICH BLOCKS BUILDING THIS. MEASURED
+2026-08-13.** A session cannot be composed by PATTERN while the app cannot tell
+what pattern its own rows are. Over 5 worlds, counting only GYM rows (post-R-071):
+**60 distinct names resolve to a pattern; 20 distinct names — 151 rows — resolve
+to NOTHING.**
+`getExerciseTags` is an EXACT-NAME lookup over a 149-entry map, and the generator
+ships names that miss it:
+
+| shipped | in the map? |
+| --- | --- |
+| `Face Pulls` x37 | **NO** — but `Face Pull` (singular) IS tagged |
+| `Pallof Press` x28 | NO |
+| `Bicep Curls` x20 | NO |
+| `Tricep Pushdowns` x20 | NO |
+| `Romanian Deadlift` x10 | **NO** — but `RDLs` IS tagged, same lift |
+
+**TWO OF THE FIVE ARE THE SAME EXERCISE UNDER A SECOND NAME**, and the lookup
+fails SILENTLY — `undefined` reads as "this row has no pattern", which is
+indistinguishable from "this row is not strength work". **That is the same
+default-means-nothing shape as `!row.role` meaning COUNT.**
+**IT ALSO CORRECTED ME MID-MEASUREMENT:** a day named *"Lower Hinge"* appeared to
+contain NO hinge. It contains a Romanian Deadlift. **The day was fine and my
+instrument was not** — the exact reason a name-keyed lookup must not be trusted
+to report absence.
+**SO THE FIRST STEP OF C7 IS NOT THE COMPOSER — IT IS MAKING THE PATTERN
+KNOWABLE.**
+
+**⚠ AND THE COMPOSER IS NOT WHERE ANYONE WOULD LOOK. TRACED 2026-08-13, end to
+end, because two fixes aimed at it changed nothing:**
+1. **`buildTagAwareSession` / `exerciseScorer` ARE NOT ON THE GENERATION PATH.**
+   `buildTagAwareSession` has exactly ONE production caller —
+   `coachRevisionTemplates.ts:575`, the COACH-REVISION path. The weekly
+   generator never calls it. **That is why enforcing the exercise ceiling at
+   `sessionBuilder.ts:718` was inert: that file is not in the weekly chain.**
+   The scorer's whole slot-shaped apparatus — `MIN_SESSION_SIZE`,
+   `FILLER_REGIONS`, the ladder at `exerciseScorer.ts:597-601` — is unreachable
+   from generation. **Probed: the top-up block fires ZERO times in five worlds.**
+2. **THE REAL CHAIN IS:** plan entry -> `fallbackExercisesForPlanEntry`
+   (`defaultProgram.ts:1070`, used at `:1288` for a missing day and at `:2461`
+   when the AI payload has NO strength content) -> `applyPoolRotation`
+   (`:2489`) -> `findOrCreateExercise`.
+3. **THE ROTATION PRESERVES THE PATTERN — it is NOT the thief.** Measured:
+   `RDLs -> Deadlift` (still hinge), `Reverse Lunges -> Walking Lunges` (still
+   single-leg knee), `Leg Extension -> Nordic Lower`, `Back Squat -> Back Squat`,
+   `Single Leg RDL -> Single Leg RDL`. It swaps VARIANTS inside a pool slot.
+4. **SO THE HINGE IS DROPPED, NOT SWAPPED.** The fixed fallback emits FIVE rows
+   and the shipped day has FOUR — Back Squat, Walking Lunges, Single Leg RDL,
+   Nordic Lower — with the rotated `Deadlift` absent. **WHICH STEP DROPS IT IS
+   THE ONE UNKNOWN LEFT, and it is the whole remaining unit.** Do not rebuild the
+   composer until that row's disappearance is measured; two fixes have already
+   been spent on layers that turned out not to be in the chain.
+5. **NARROWED TO A THREE-STEP WINDOW — instrumented stage by stage.** The
+   corrected fallback's hinge SURVIVES: `aiExercises` = *"Back Squat | Deadlift |
+   Walking Lunges | Single Leg RDL | Nordic Lower"* (RDLs rotated to Deadlift,
+   still a hinge), and it is **still all five rows** after `validatePairings`,
+   after `applyPhaseRepSchemesToWorkoutExercises`, after the load-estimation
+   step, and after `applySubphaseMainLiftLoadMultiplier`.
+   **THE SHIPPED DAY IS FOUR ROWS — *"Back Squat, Walking Lunges, Single Leg RDL,
+   Nordic Lower"*, `missing: [hinge]`.**
+   **SO THE DROP IS AFTER `applySubphaseMainLiftLoadMultiplier` AND BEFORE THE
+   WORKOUT IS RETURNED.** The remaining candidates are exactly:
+   `applyTrainingAgePrescription` (`defaultProgram.ts:2536`) and the
+   strength/conditioning assembly below it — **and the assembly's own branch did
+   NOT run for these days**, which points at the training-age step first.
+   **`applyTrainingAgePrescription` IS ALSO CLEARED — probed, all five rows
+   survive it** (`afterTrainingAge: Back Squat | Deadlift | Walking Lunges |
+   Single Leg RDL | Nordic Lower`).
+   **SO THE WINDOW IS NOW ONE FUNCTION.** After the training-age step the only
+   transform left before the workout ships is
+   `finaliseBuiltWorkout` -> **`finaliseWorkoutAfterMutation`**
+   (`workoutCanonicalisation.ts:581`), reached at `defaultProgram.ts:2763`.
+   Everything between the fallback and it is measured innocent.
+   **✅ CONFIRMED 2026-08-13 — `finaliseWorkoutAfterMutation` IS THE DROP SITE.**
+   Probed at its entry: it RECEIVES *"Back Squat | Deadlift | Walking Lunges |
+   Single Leg RDL | Nordic Lower"* — five rows, hinge present — and the shipped
+   day is the same four rows minus `Deadlift`. **The hinge goes in and does not
+   come out.** `workoutCanonicalisation.ts:581`, reached from
+   `defaultProgram.ts:2763` via `finaliseBuiltWorkout`.
+   **WHAT IS LEFT IS WHICH LINE INSIDE IT** — the function is long and classifies
+   rows by domain (`domainPatterns`, `:635`) before rebuilding `finalRows`
+   (`:955`). **The unit is now bounded to one file and one function.**
+   **✅ THE LINE IS NAMED, 2026-08-13. IT IS THE `main_pattern_drift` BRANCH**
+   (`workoutCanonicalisation.ts`, the `strengthAndSupportRows` loop —
+   `intendedPatterns.size > 0 && pattern && !intendedPatterns.has(pattern) && !isMinorCrossPatternAccessory(item)`).
+   Probed at that branch through the REAL generator, it printed exactly one line
+   in the whole away suite and it is exactly the missing row:
+
+       DRIFT-DROP "Deadlift" pattern=hinge intended=[squat] workout="Lower Squat"
+
+   **SO NOTHING IS LOSING THE HINGE BY ACCIDENT — THE APP IS DELETING IT ON
+   PURPOSE, AND THE GUARD DOING IT IS THE ONE THAT ENFORCES THE PLAN.** The plan
+   entry names the day's MAIN lift (`squat`), the fallback correctly emits Sam's
+   ladder (squat AND hinge, per `:227`), and the canonicaliser then removes the
+   hinge as drift *from the plan*. **`:227` and `main_pattern_drift` are in
+   direct contradiction, and the guard is currently winning:** *"An athlete is
+   better served by a squat and a hinge than by two squats."*
+   **THE FIX IS ONE SENTENCE AND IT EXPLAINS THE CLASS, NOT THE CASE:
+   `intendedPatterns` names the day's MAIN LIFT, never its whole content, so a
+   row whose pattern COMPLETES that day's own ladder is not drift.** Do not
+   special-case squat/hinge; do not delete the drift guard, which exists to stop
+   a day wandering off its plan.
+   **WHAT IT COSTS TO LAND, stated so it is not started blind:** it changes
+   generated output, so it needs `test:scenarios` and `test:qa` either side, and
+   the drift branch's firing rate across the corpus — one probe, already written.
+   **AND IT CANNOT ENTER THE LAW REGISTRY UNTIL IT IS FIXED:** `LAW-0-registry`
+   forbids a new row entering as `UNENFORCED` (Sam withdrew that clause
+   2026-08-10), so the guard and the fix are ONE commit, never two.
+   **⚠ AND A SECOND FINDING FELL OUT OF THE SAME PROBE:** two other days NAMED
+   *"Lower Squat"* arrive carrying **only upper-body accessories** — *"Bicep
+   Curls | Tricep Pushdowns | Face Pulls | Leg Extension | Pallof Press"* and one
+   with `Lateral Bounds` leading. **A lower day whose entire content is arm work
+   is a naming/selection defect of its own**, and it is upstream of this drop —
+   those days never had a squat or a hinge to lose.
+   **⚠ CLEARED BY MEASUREMENT, SO NOBODY RE-SUSPECTS THEM:** the fallback (emits
+   the hinge), `applyPoolRotation` (RDLs -> Deadlift, pattern PRESERVED),
+   `validatePairings`, `applyPhaseRepSchemes`, the load-estimation step,
+   `applySubphaseMainLiftLoadMultiplier`, and `applyTrainingAgePrescription`.
+   **Seven stages, seven innocent.**
+6. **ALSO instrumented at BOTH fallback call sites. The
+   missing-day site (`:1288`) emits the corrected five rows verbatim —
+   *"Lower Squat: Back Squat | RDLs | Reverse Lunges | Single Leg RDL | Leg
+   Extension"* — and the AI-had-no-strength site (`:2461`) never fired in that
+   world. **So the hinge is present when the day is handed on, and is gone by
+   the time it ships. The drop is strictly downstream of
+   `fallbackExercisesForPlanEntry`.**
+
+**⚠ AND CENSUS A4 IS OVER-CALLED ON ITS SECOND EXAMPLE.** It names
+*"Overhead Press + Incline DB Bench, both `push`"* as a duplicate-pattern breach.
+**Judged by Sam's own split-day slots it is CORRECT and COMPLETE:** Overhead
+Press = vertical push, Incline DB Bench = horizontal push, Lateral Raise =
+arm/shoulder — `missing: []`, `duplicated: []`. His ruling separates the two
+PLANES, so two presses in different planes is the shape he asked for, not a
+breach. **The A4 finding stands for the LOWER example (two hinges) and is
+withdrawn for the upper one.**
+**BOTH FOUNDATIONS ARE NOW BUILT (2026-08-13):** the pattern lookup canonicalises
+(`f5fc1898`, gym rows resolving 61% -> 91%), and Sam's slots are a real rule with
+his own acceptance criteria (`cc6ef611`, `test:slot-coverage`, 20 cells).
+**MEASURED: 70 strength days, only 19 cover every slot he named.** Most-missed:
+single-leg hip 30, single-leg knee 22, arm/shoulder 21, horizontal push 20,
+vertical push 20, hinge 12, squat 12. **That is the composer's before-number.**
+**⚠ AND ONE GAP BELONGS TO A SHARED OWNER, NOT TO THIS RULE.**
+`sessionNaming.inferStrengthMovementPatterns` — the app's ONE answer to "what
+movement is this session about" — returns **NOTHING** for *"Upper Body Strength"*
+and *"Full Body Strength"*, **two of Sam's seven signed strength sessions**
+(Bible §20.5). Those days get no slot list and are currently unjudged. **The fix
+belongs in that owner; a local regex would restore the second representation the
+delegation exists to remove.** Two cells assert the gap so it cannot be forgotten.
+
 **R-071** · *"yes it should be its own thing and not count as a strength exercise
 - thats stupid"* · **CONDITIONING IS NOT A STRENGTH EXERCISE** and does not count
 against the per-session cap. · `BUILT 01ef5863` (2026-08-13) — `conditioning`
@@ -200,6 +348,120 @@ opposites.** · `BUILT`.
 
 **R-023** · *"yes — one line on week, small card on day, read-only both"* · The
 modifier indicator's shape. · `BUILT`.
+
+**R-072** · *"equipment is usually only just for that session - there is no
+longer a button on the day screen that allows you to edit equipment. you can
+make permanant changes inside the profile section, or temporary changes to
+equipment in a session view"* · **THERE ARE EXACTLY THREE EQUIPMENT SCOPES AND
+NO FOURTH MAY BE INVENTED:** (1) **PROFILE** — permanent; (2) **SESSION VIEW** —
+this session only, and this is the DEFAULT case (*"usually only just for that
+session"*); (3) **AWAY** — a dated span that lifts itself on the return date
+(R-018). **NO DAY-SCREEN DOOR** — verified absent from `DayWorkoutScreenV2.tsx`
+and it must stay absent. · `BUILT` — the session door is
+`DayWorkoutScreenV2.tsx:717` (`applySessionEquipment`), executing `swap_exercise`
+with `scope: 'today_only'`, `oneOffOnly: true`, one action per exercise, refusing
+by name when no safe replacement exists. It writes NO equipment fact:
+`missing_this_week` has exactly two writers, both in `EquipmentLimitationSheet.tsx`,
+the PROGRAM-screen span door. **⚠ SOURCE-READ, NOT GLASS — the device check is
+owed:** open a session, tick kit off, see the rows change.
+**WHAT THIS SETTLES:** the census row about an equipment change "not reaching an
+existing week" was measured against the WRONG SCOPE. A session-scoped change is
+not supposed to rewrite the week.
+
+**R-073** · *"yeah well that sounds shit and not good"* — on a main-strength cut
+made without proof · **A CUT MUST BE PROVEN, NEVER INFERRED.** The only producer
+of a typed main-strength reduction (`section18SafetyPolicy.ts:311-318`) fires on
+`availableSafePatterns.length === 0`, an inference about injury-safe patterns,
+and **never asks whether a day remained.** A week that genuinely ran out of room
+records NO typed reduction and the Coach Note owes the athlete a reason it cannot
+give. His earlier ruling gives the shape
+(`INJURY_AUTHORITY_EXHAUSTION_RULING_2026-08-06.md:22-27`): **measured
+exhaustion, "proof, never inference".** · `BUILT test:section18-safety` — the
+LOCK, 2026-08-13, cells `R-073a/b/c`. **Mutation-proven; receipt at the end of
+this row.** The DEFECT never reproduced. Measured
+2026-08-13 before building against it.**
+**28 weeks, 7 worlds — 4 injury-free and 3 with a SEVERE injury (knee, lower
+back, shoulder), including 3-day weeks and game weeks:**
+- **weeks with an unexplained main-strength shortfall: ZERO.** Every week met
+  its target or carried a typed reduction.
+- **every main-strength reduction carries a PROVEN reason** —
+  `insufficient_availability` x2 (*"Selected-day availability cannot safely hold
+  the original strength target"*, on 3-day weeks) and
+  `spacing_safety_conflict` x4 (*"Game-day, G-1 and G+1 protection leave fewer
+  safe gym placements"*).
+- **`injury_restriction` fired ZERO times** — the
+  `availableSafePatterns.length === 0` inference producer never ran, not even
+  with a Severe injury.
+**SO THE ITEM'S PREMISE — *"a week that genuinely ran out of room records NO
+typed reduction at all"* — IS FALSE AS MEASURED.** A 3-day week records
+`insufficient_availability` with a detail an athlete could read.
+**WHAT I DID NOT REACH:** `availableSafePatterns.length === 0` needs NO main
+pattern to be safe, and three single-area injuries do not achieve that. **A
+multi-area severe injury might, and that is the only state where the inferred
+cut could still appear.** Build only after producing that state.
+**PRODUCED, 2026-08-13 — AND THE SHAPE IS NOT THE ONE THIS LINE GUESSED.** The
+map was called directly (`resolveRestrictedMainStrengthPatterns`) rather than
+reasoned about:
+
+| injuries | patterns left safe |
+| --- | --- |
+| three SEVERE single-area (knee + back_midline + shoulder) | `["pull"]` |
+| **lower_body + upper_body with `pauseAffectedTraining`** | **`[]` ← the state** |
+| ONE multi-area severe injury (upper_body + pause) alone | `["squat","hinge"]` |
+| `profileInjuries` only — every area, all Severe | `["pull"]` |
+
+**`pull` IS RESTRICTED BY EXACTLY ONE CONDITION IN THE WHOLE MAP**
+(`weeklyExposureContractBuilders.ts:244-246`): `region === 'upper_body' && injury.pauseAffectedTraining`.
+Nothing else, anywhere, ever touches it. **So a MULTI-AREA injury is not what
+does it — it takes TWO active injuries, one of them upper-body AND pausing.**
+And **`profileInjuries` can NEVER empty the set** at any severity, because that
+half of the map has no `pull` clause at all — which is why three severe
+single-area injuries could not reach it and no amount of them would.
+**THE STATE IS REACHABLE, SO THE PRODUCER IS LIVE CODE, NOT DEAD CODE.** But in
+that state the reason is PROVEN, not inferred — all four patterns are named by a
+live injury — so the producer is not what Sam's ruling forbids. **What is still
+owed is the LOCK (nothing PREVENTS an inferred cut), never a fix to this
+branch.** Do not "fix" the producer; gate it.
+**The proof machinery is ready if it ever is needed:**
+`section18EffectiveWeekEvaluator.ts:1020` already writes
+`unresolvedMinimumShortfall` / `unresolvedPlannerSelectedShortfall` every week,
+and `conditioning` already has the exact reduction shape to copy
+(`section18AcceptedWeekGateway.ts:1193`). Census C10.
+
+**⇒ THE LOCK IS BUILT 2026-08-13** — `test:section18-safety` cells
+`R-073a/b/c`, suite 37/0, mutation witnesses 6 -> 7.
+**The producer was NOT touched**, exactly as the line above orders — the ruling
+gained a gate, the code gained nothing.
+
+**THE MUTATION WITNESS, AND IT IS THE WHOLE VALUE OF THE CELL:** reinstate the
+historical defect — `availableSafePatterns.length === 0` -> `requiredSafe.length
+=== 0` at `section18SafetyPolicy.ts:311` — and **`R-073b` reds** naming the two
+patterns that were still safe. Restored and byte-compared to HEAD after.
+
+**⚠ AND THE FIRST VERSION OF THE LOCK WAS A BLIND GATE — ITS MUTANT SURVIVED.**
+It fed an all-optional week with NO injury and asserted no cut. Green, and
+worthless: the producer sits inside `if (prohibited.length > 0)`
+(`section18SafetyPolicy.ts:269`), so a world with no prohibition **never reaches
+the line the ruling is about.** The defect needs BOTH halves at once — an injury
+that prohibits SOME patterns (so the producer is entered) AND a mode whose
+`strength.required` is 0 (so `requiredSafe` collapses for reasons that are not
+about safety). The fixture is therefore `early_offseason` + a PARTIAL lower-body
+injury: squat and hinge go, **push and pull remain safe, so the honest answer is
+NO CUT.** `R-073c` keeps the wider healthy-week arm but **states in the file that
+it cannot kill this mutant** — sighting of `a-green-gate-is-a-claim`, caught by
+mutating rather than by reading.
+
+**R-074** · *"okay it needs to be checked"* · **THE SET/BLOCK CAP — short
+intermittent high-%MAS work keeps the set to ~4-5 min, "enforced at selection
+time, not written into the dose"** (`CONDITIONING_FRAMEWORK_SAM_2026-07-25.md:58`,
+`:113`, `:127`). · `BUILT 97c8d41b` (2026-08-13) — `set_length_max_4_5_min` had
+five occurrences in the data and NO reader; it is now the fourth clause in the
+selection filter. **THE UNIT IS THE BLOCK, NOT THE WORK INTERVAL** — all three
+capped templates use second-scale intervals, so a filter on
+`longestWorkIntervalMinutes` would have been permanently inert. A block is
+rounds x (work + rest), and an authored *"(N min per block)"* WINS over the
+derivation. All three are within cap at 4, 5 and 5 min. Two mutants killed
+through the REAL selector. Census C11.
 
 ## LOAD AND THE JOURNAL
 
@@ -522,7 +784,7 @@ minimum.** · `BUILT` — §18 phase planner; `test:section18-phase-planner`
 
 ## SEEDING IS INCOMPLETE AND THAT IS STATED, NOT HIDDEN
 
-**70 rows, plus two OPEN questions.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
+**74 rows, plus two OPEN questions.** Seeded from `COWORK_SEAT_HANDOFF_2026-08-13.md`'s
 "RULINGS MADE TODAY", `SEAT_INBOX.md`'s answered `## AWAITING SAM` entries, the
 stand-downs, `SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md`, and
 `RULINGS_NOT_IN_THE_APP_2026-08-13.md`.
