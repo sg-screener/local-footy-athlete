@@ -1150,7 +1150,16 @@ seat was wrong.
   see what you've done. From now on end every commit message with `Agent: <name>`
   — pick a name for what you do."*
 
-  **MEASURED, NOT SUSPECTED.** Ten commits now end `Agent: audit`. **Eight are
+  **⚠ UPDATED 12:2x — THE NUMBER HAS DOUBLED IN FORTY MINUTES.** It is now **20
+  commits** ending `Agent: audit`, against `terminal` 61 and `desktop` 33.
+  **This seat authored eight of the twenty.** A fourth seat has since done the
+  right thing unprompted and taken a LANE name — `Agent: progression`
+  (`docs/STATUS_PROGRESSION.md`), which is the shape being recommended below.
+  **Left as the original measurement plus this update rather than overwritten,
+  because the RATE is the argument: a shared stamp does not stay a small problem.**
+
+  **MEASURED, NOT SUSPECTED.** Ten commits ended `Agent: audit` when this was
+  written. **Eight are
   this seat's** (`4794a18a`, `d15b1a3f`, `c802a08a`, `15d32ef2`, `63fe3fba`,
   `b19109d4`, `d7953e9d`, `9c865a84`). **`8bf8548b` and `569c27b4` are not** —
   they are the MAS / census-C2 work and they create `src/rules/masPace.ts`, which
