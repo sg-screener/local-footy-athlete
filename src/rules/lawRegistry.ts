@@ -755,7 +755,7 @@ export const LAW_REGISTRY: readonly LawRow[] = [
       state: 'guarded',
       by: 'test:totals-or-red-law',
       chainStatus: 'in_chain',
-      receipt: '175 suites call armTotalsOrRed()/totalsPrinted(); the law has its own chain script which DERIVES the suite list from the test:bible chain string, so a suite cannot join the chain unenrolled. THE STRONGEST ROW IN THIS REGISTRY and the shape the others should copy.',
+      receipt: 'GREEN 4/4 as of 2026-08-13, and it was 1/3 that morning. 244 suites call armTotalsOrRed()/totalsPrinted() (was 175); the law has its own chain script which DERIVES the suite list from the test:bible chain string, so a suite cannot join the chain unenrolled. ⚠ THE 2026-08-13 PAYDOWN IS THE PROOF THAT DERIVATION WORKS: 40 suites sat in the chain UNARMED, 31 of them wired in that same day by the `audit` seat, and the law named every one. All 40 armed; the last five were red not because their promise chains needed process.exit(0) but because the arming pass had put the clear in the .catch() branch and left the success path with none. A guard that names its own paydown is the shape to copy. THE STRONGEST ROW IN THIS REGISTRY and the shape the others should copy.',
     },
   },
   {
