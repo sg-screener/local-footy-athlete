@@ -1474,6 +1474,40 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, terminal — THE EQUIPMENT SHEETS ARE EMPTY, AND ONE LINE
+  FROM HIM UNBLOCKS TWO ITEMS. The single most valuable answer: DOES A PULL-UP
+  NEED A BAR?**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *pullup_bar*, *apparatus*,
+  *requires*, *equipment*, *checklist*, *bar*. **R-019 and R-072 are the
+  equipment SCOPES** (a change is permanent / this-session / a dated away span)
+  and **say nothing about what a given exercise REQUIRES**; R-075 is the away
+  replacement rule. *pullup_bar*, *apparatus*, *checklist* and *bar* return
+  **NOTHING**. **A gap, not a re-ask** — and R-083 settles the PRODUCT question
+  (bodyweight means no bar) while leaving the per-exercise data unwritten.
+
+  **MEASURED BEFORE ASKING:** `docs/EXERCISE_EQUIPMENT_FOR_SAM.md` (103 rows) and
+  `..._PART2.md` (74 rows) both have his *"Change to"* column **blank in every
+  row**. The 8 cells that look filled read `← CHECK` beside a `?`, and the
+  sheet's own header says *"`?` means I could not tell. Those need you most."*
+  **They are questions to him, not answers from him.** An inbox item claimed the
+  sheets were filled and signed; building on that would have authored 177 rows of
+  his exercise library out of the app's existing guesses.
+
+  **WHY THE PULL-UP IS THE ONE THAT MATTERS:** the app currently records
+  `Pull-Ups`, `Dips` and `Inverted Row (Bodyweight)` as needing **nothing** —
+  true of their LOAD, false of their APPARATUS — **which is exactly why a
+  bodyweight-only athlete is still prescribed them.** His R-083 already says they
+  should not be; the app has no field that can express it.
+
+  **WHAT TO SEND — one line is enough to start:** *"a pull-up needs a bar"* (and
+  the same for dips and inverted rows), or the fuller sheet when he has time.
+  **IT UNBLOCKS TWO ITEMS AT ONCE** — 47's strength half and 48's R-083 remainder
+  are the SAME data, not two waits.
+
+  **NOT BLOCKING TODAY'S WORK.** Every leg day now covers his `:227` ladder and
+  kit-impossible lifts are down from 9 to 1; this decides how the last one goes.
+
 - **⚠ NEW 2026-08-13, terminal — TWO EXERCISE-LIST GAPS I AM FORBIDDEN TO FILL
   MYSELF. Both are one line of exercise names from him.**
 
