@@ -169,12 +169,39 @@ Most-missed: `arm_or_shoulder` 12 · `single_leg_knee` 8 · `single_leg_hip` 8 �
 this is not a session-size problem, which is Sam's whole point (*"the number of
 exercises is not important"*). A day can be long and still uneven.
 
-**⚠ AND ONE MISS IS PROBABLY A TAG QUESTION, NOT A COMPOSER ONE — do not build
-against it before deciding.** The 12 pull days are `Pull-Ups + Barbell Row +
-Face Pulls`, and `Face Pulls` tags as `horizontal_pull`. That reads as
-doubled-horizontal + missing-arm/shoulder. **A face pull is rear-delt work**, so
-the honest fix may be the tag, not the session. Changing a tag changes every
-reader, so it is flagged rather than taken.
+**⚠ AND THE 12 PULL DAYS ARE AN ORACLE PROBLEM AGAIN, NOT A COMPOSER ONE.**
+They are `Pull-Ups + Barbell Row + Face Pulls`, reported as
+`missing: [arm_or_shoulder], duplicated: [horizontal_pull]`. **That day is
+fine.** A face pull is rear-delt work — Sam's own sentence for this slot is
+*"arm work or accessory work for the shoulders"* — so it should satisfy
+`arm_or_shoulder`.
+
+**REGISTRY-GREP RUN BEFORE CONCLUDING THIS (and it is why there is no question
+for Sam): grepped `RULINGS_REGISTRY.md` for *Face Pull*, *rear delt*,
+*arm_or_shoulder*, *shoulder*, *accessory*, *tag* — only R-015 hit, and it is
+about mobility supersets. NOTHING covers this. But R-014 already quotes his rule
+verbatim and it decides the case, so asking him would be the re-ask defect the
+gate exists to stop.**
+
+**THE NEXT UNIT, AND IT IS A REAL DESIGN CHANGE, NOT A TAG EDIT:**
+`sessionSlotCoverage` TALLIES — it increments every slot every row could fill.
+The module's own docstring says a row may fill more than one slot *"which is what
+lets a five-row session cover five slots"*, but a tally cannot spend a row on the
+slot the day actually needs. **It must ASSIGN, not count.** With assignment, Face
+Pulls goes to `arm_or_shoulder` (needed), Barbell Row takes `horizontal_pull`,
+and the day comes back complete with nothing doubled — which is the truth.
+
+Shape: exact bipartite matching, rows to required slots (≤8 rows, ≤5 slots, so an
+augmenting-path DFS is small and exact — do NOT greedy it, greedy is
+order-dependent and this oracle has already been wrong once). Then `missing` =
+unmatched slots; and `duplicated` needs re-deriving from the matching rather than
+from counts — a defensible reading is *a slot whose only-possible rows number
+more than one*, which is what catches "two back squats" without punishing a row
+that had somewhere else to go.
+
+**⚠ THIS INVALIDATES THE 55% ABOVE — re-measure after, and expect it to RISE for
+reasons that are the instrument, not the app.** Two of the three findings in this
+sweep have now turned out to be the oracle. Assume the third might be too.
 
 **SO THE NEXT UNIT REALLY IS THE COMPOSER**, with no blocker in front of it —
 and R-014's own trace says where NOT to build it: `buildTagAwareSession` and
