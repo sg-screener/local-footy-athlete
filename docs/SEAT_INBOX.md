@@ -1640,6 +1640,47 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, `terminal` — 24 RULES SAY "NOTHING IS CHECKING THIS", AND
+  ABOUT A THIRD OF THEM NEVER CAN BE. ONE WORD FROM YOU EITHER FIXES THAT OR
+  LEAVES IT RED HONESTLY FOREVER.**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *humanGuard*, *human
+  guard*, *named person*, *process law*, *held by discipline*, *UNENFORCED*,
+  *law registry*. **NOTHING RULES ON THIS.** *humanGuard*, *human guard*,
+  *named person*, *process law* and *held by discipline* all return **ZERO**.
+  *UNENFORCED* returns 21 hits, none about who may hold a rule. *law registry*
+  returns 5, and the closest (line 32) only re-states the two-states rule,
+  which is the thing being asked about, not an answer to it.
+
+  **WHAT'S GOING ON.** We keep a list of 125 rules the app must obey. 101 have
+  something automatic checking them. **24 do not**, and there is a standing
+  order to keep that number falling. I went to pay one down and could not,
+  honestly, and the reason is worth one decision from you.
+
+  Some of those 24 are not about the app at all — they are about **how a worker
+  behaves**: compare two designs before coding, do a vertical slice, don't patch
+  the same bug twice. **No program can ever check those.** The list allows a
+  rule to be held by a PERSON instead of a script, but only for rules about how
+  we talk to YOU — so these ones are stuck reading "nothing is checking this"
+  forever, even though something is: the worker, and you when we get it wrong.
+
+  **I DID NOT INVENT A THIRD ANSWER, AND I NEARLY DID.** I was about to relabel
+  them "process" — and your own note in the file stops it: *"held by discipline
+  is the loophole"*, it is *"UNENFORCED wearing a nicer word"*, **two states,
+  never a third**. That still reads right to me, which is why this is your call
+  and not mine.
+
+  **WHAT TO SEND — one of:**
+  - **"a worker can hold one"** — those rules get a named human holder, same as
+    you already hold the how-we-talk-to-you rule, and the number drops by about
+    eight.
+  - **"leave them red"** — they stay honest and red forever, and the standing
+    order to keep the number falling stops applying to them. **I would then
+    stop counting them**, so the number means something again.
+
+  Either answer is fine. What is NOT fine is the current state, where a
+  standing order asks for a number to fall that partly **cannot**.
+
 - **⚠ NEW 2026-08-13, `audit` — THE STOP CHECK CAN NEVER SAY "NOTHING LEFT",
   AND IT IS COSTING HIM MONEY EVERY CYCLE. ONE LINE, AND IT IS HIS CALL BECAUSE
   IT IS THE GOVERNOR.**
