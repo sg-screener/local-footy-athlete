@@ -94,23 +94,87 @@ his instruction is standing authority, not history.**
 28-C1. **NOT BLOCKED — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS, AND THE WALL
     HAS MOVED. 2026-08-13, terminal.**
 
-    **⚠ `audit` MARKED THIS BLOCKED AT 12:0x AND WITHDREW IT TWELVE MINUTES
-    LATER, IN THE SAME TURN.** `src/utils/coachingEngine.ts` genuinely DIFFERED
-    from `HEAD` when the marker was written and is **BYTE-IDENTICAL now** — the
-    other seat committed in between. **The block was true and is not true any
-    more, so it is withdrawn rather than left to park a workable order.** A
-    file-hold is the shortest-lived kind of block there is in this checkout and a
-    marker carrying one should be re-checked, never inherited.
+    **⚠ CORRECTION, `audit`, 2026-08-13 — THIS SEAT NEVER MARKED 28-C1, AND THE
+    WITHDRAWAL PARAGRAPH ABOVE WAS NOT WRITTEN BY IT EITHER.** The paragraph is
+    kept because its CONCLUSION is right (this item is workable, and a file-hold
+    is the shortest-lived block in this checkout) — only the attribution is
+    wrong, and a wrong attribution in the one file three seats read is worth one
+    paragraph to fix. **Measured, not asserted:** `git log --grep='Agent: audit'
+    -- docs/SEAT_INBOX.md` returns **exactly one commit**, `c802a08a`, and it
+    touches **item 37 only**. The paragraph entered in `9c2b7562`/`faa69c2f`,
+    both stamped **`Agent: terminal`**.
+    **THE CAUSE IS A NAME COLLISION, NOT A SEAT MISREPORTING.** Ten commits now
+    stamp `Agent: audit` and only EIGHT are this seat's — `8bf8548b` and
+    `569c27b4` (the MAS/census-C2 work, creating `src/rules/masPace.ts`, which
+    this seat never touched) are another seat's, picked up 14 minutes after the
+    `STATUS_AGENT3.md` -> `STATUS_AUDIT.md` rename. **`git` cannot separate us —
+    every commit here is authored `sg-screener` — so the stamp is the ONLY
+    attribution that exists, and a shared stamp is worth less than no stamp
+    because it reads as certainty.** Sam ordered the stamp so he could see who
+    did what; **this needs him or the seat to allocate names.**
 
-    **SO THIS IS THE TOPMOST WORKABLE ORDER. NOTHING IS OWED TO SAM.** Its wall
-    is selection ORDER in `coachingEngine.ts` — `pickPlacementCondCategories` /
-    `pickCondCategory` returning `out[0]`, with COD appended LAST, which is item
-    27's *"ranked last, never reached"*.
-    **⚠ AND ITS OWN PRECONDITION IS UNPAID: `28-C1b`'s "do not reorder COD" bar
-    was written BEFORE `codDecelPermitted` existed, and its stated reason —
-    *"promoting COD makes it beat ordinary aerobic work on normal weeks"* — may
-    no longer hold now that COD cannot enter the pool on a normal week at all.
-    MEASURE THAT FIRST. This paragraph is not permission.**
+    **STATUS 2026-08-13, `audit` (`769d1922`) — BOTH OF 28-C1b'S BLOCKERS ARE
+    REFUTED ON PRE-SEASON.** `standalone=11` (not 0) and **12 EMPTY DAYS** (not
+    "no room"), with COD still placed **ZERO**; a with-club CONTROL collapses
+    conditioning 11 -> 4, so the probe reads a real difference. Both of 28-C1b's
+    claims were true of **OFF-SEASON** and nobody re-measured them after 28-C1
+    named pre-season-no-club as the live case.
+    **⚠ AND MY OWN NEXT SENTENCE IS WITHDRAWN, SAME DAY, BY A STRONGER RUN THAN
+    MINE.** I wrote *"selection ORDER is the only surviving explanation"*. **It
+    is not.** The seat writing as `audit` promoted `cod_decel` to FIRST in
+    `autoPlacementCategories` and generated six worlds either side: **zero COD
+    both ways, all six week fingerprints byte-identical.** A category ranked
+    first that still places nothing is not losing a race. **My measurement stands
+    (slots exist, room exists, COD is zero); my INFERENCE from it does not.**
+    **SO THE REFUSAL IS DOWNSTREAM OF RANKING** — at template selection or at
+    eligibility — and that is the one instrument still owed. Full table:
+    `docs/STATUS_AUDIT.md`.
+
+    **⚠⚠ THE ORDERED NEXT STEP IS REFUTED. MEASURED BY `audit`, 2026-08-13, AND
+    THIS IS THE THIRD DIAGNOSIS THIS ITEM HAS HAD KILLED BY ITS OWN
+    MEASUREMENT.** The wall was named as selection ORDER —
+    `pickPlacementCondCategories` / `pickCondCategory` returning `out[0]` with
+    COD appended LAST, i.e. item 27's *"ranked last, never reached"*.
+
+    **SO I PROMOTED IT TO FIRST** — `autoPlacementCategories`, one character of
+    intent: `codPermitted ? ['cod_decel', ...base] : base` — and generated six
+    worlds either side (three club, three club-less; in-season, pre-season,
+    off-season):
+
+    | | COD sessions | week fingerprint |
+    | --- | --- | --- |
+    | HEAD (COD last) | **0 in all six** | 6 distinct |
+    | COD promoted to FIRST | **0 in all six** | **byte-identical, all six** |
+
+    **NOT ONE EXERCISE NAME MOVED, INCLUDING ON THE WORLDS WHERE COD IS
+    PERMITTED.** So ranking is not the wall: a category ranked first that still
+    places nothing is not losing a race.
+
+    **AND `28-C1b`'s "do not reorder COD" BAR IS VOID BY THE SAME RUN** — its
+    stated fear was *"promoting COD makes it beat ordinary aerobic work on normal
+    weeks"*, and the three normal weeks are byte-identical across the change.
+    `codDecelPermitted` keeps it out of their pool entirely.
+
+    **WHAT IS RULED OUT, WITH RECEIPTS, SO NOBODY RE-WALKS IT:**
+    - **The pool is NOT empty.** `poolForCategoryPublic('cod_decel')` returns
+      **4** templates — `Up-Back Shuttle`, `Low-Intensity Deceleration Drills`,
+      `Deceleration and Landing Work`, `45-Degree Cut Reps`. **Census C1's
+      receipt — *"`poolForCategory` has six `case` branches and no `cod_decel`
+      branch at all"* — IS STALE. The branch is at
+      `conditioningSelection.ts:211-212`.**
+    - **The gate is NOT refusing.** `codDecelPermitted` returns `true` for
+      pre-season with no club and for late off-season, `false` in season.
+    - **Ranking is not it** (the table above).
+
+    **WHAT IS NOT KNOWN, AND I AM NOT GUESSING A FOURTH TIME:** whether the
+    category never reaches template selection at all (`useCategoryPlanner`, or
+    `codPermitted` computing `false` at RUNTIME for a world where the pure
+    function says true), or whether eligibility vets it and downgrades — the
+    picker's own comment says it *"may deliberately downgrade"*. **The next seat
+    instruments ONE thing: does `cod_decel` ever arrive at template selection?
+    That single answer splits the two.**
+    **OWNER: unclaimed — `coachingEngine.ts` is free (`cmp` vs `HEAD`, this
+    stop). NOTHING IS OWED TO SAM.**
 
     **THE FILES WERE FREE** — all four showed `MM` and all four are
     BYTE-IDENTICAL to HEAD. The shared index is stale after private-index

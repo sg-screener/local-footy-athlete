@@ -123,6 +123,56 @@ the combined-day card as `90 100% MAS`. The pace parse reads the RAW notes and
 steps around it. **Whoever owns that cleaner should decide whether an en dash
 inside a range is really an orphan separator.**
 
+### 2026-08-13 — QUEUE PASS: three claims measured, three of them wrong
+
+**All three were claims THIS repo was steering by, and none needed a ruling.**
+
+**1. ITEM 28-C1's ORDERED NEXT STEP IS REFUTED.** Its wall was named as selection
+ORDER — COD appended last, `pickCondCategory` returns `out[0]`. I promoted
+`cod_decel` to FIRST in `autoPlacementCategories` and generated six worlds either
+side. **Zero COD sessions both ways, and all six week fingerprints
+byte-identical.** A category ranked first that still places nothing is not losing
+a race. `28-C1b`'s "do not reorder COD" bar dies in the same run — the three
+normal weeks do not move, because `codDecelPermitted` keeps COD out of their pool
+entirely. **Ruled out with receipts: the pool has 4 templates
+(`conditioningSelection.ts:211`), the gate returns `true` where it should, and
+ranking does nothing. NOT GUESSED: whether the category reaches template
+selection at all, or is vetted and downgraded. One instrument answers it.**
+
+**AND MY FINGERPRINT WAS VACUOUS ON ITS FIRST RUN** — it walked
+`microcycles[].days[].workouts[]` and returned `[]` for all six worlds, so
+"nothing moved" would have been the only answer it could give, in both arms.
+Caught because six different worlds cannot honestly share one hash. **The
+comparison above stands on the corrected instrument only.**
+
+**2. CENSUS C1's RECEIPT IS STALE.** It says `poolForCategory` has *"no
+`cod_decel` branch at all"* and that the four authored COD templates *"can never
+enter a candidate pool"*. **The branch exists and the pool returns all four.**
+Recorded in the inbox so the next seat does not build the branch twice.
+
+**3. ITEM 13's STANDING INSTRUCTION NAMES THE WRONG INSTRUMENT.** It says *"the
+truth is `grep -c "state: 'UNENFORCED'"`"* and that the terminal miscounted twice,
+**both times one low**. The grep says **28**, the gate says **27**, and the 28th
+is `lawRegistry.ts:108` — the TYPE DECLARATION in the `LawGuard` union. **So the
+grep is one HIGH and the "miscounts" were the gate being right.**
+`LAW-count-names-instrument`, carried by the instruction itself.
+
+**ALSO: I WROTE A PHANTOM FILE-HOLD AND THE TERMINAL CAUGHT IT.** I marked item
+37 blocked partly on *"the terminal holds `sessionResolver.ts`"*, from `git
+status`, without running the `cmp` this repo's own note demands. It never held
+it. **Then I did the same thing again on 28-C1 — that one WAS true when written
+and false twelve minutes later, and I withdrew it myself.** A file-hold is the
+shortest-lived block in this checkout; re-check it, never inherit it.
+
+**MARKED THIS STOP (all `BLOCKED-BY: other-agent`, none owed to Sam):** both 37s
+and 34 — live owners, not file collisions. **28-C1 is NOT blocked and is the
+topmost workable order.**
+
+**ITEM 1a, STANDING MERGE ORDER — QUIET, and re-measured rather than inherited:**
+42 `codex/*` branches carry a delta, the NEWEST merge-base across all of them is
+**2026-07-19** (1,389 commits behind), and `codex/program-week-navigation-bounds`
+— the only August fork — is **fully an ancestor of `main`**. Nothing to merge.
+
 ### ⚠ SUPERSEDED — 32 FILES ARE RESTORED IN THE TREE AND CANNOT BE COMMITTED
 
 **THE HEADLINE: THE "~26 FILES" THIS FILE WAS CREATED OVER IS NOT HISTORY. IT IS
@@ -380,11 +430,27 @@ off-season week producing *"SIX workouts and ZERO rest days"* and concluded
 *"place if there is room can never fire"*. **Pre-season no-club leaves 12 EMPTY
 DAYS across 4 weeks.** There is room.
 
-**SO THE ONLY SURVIVING EXPLANATION IS SELECTION ORDER, WHICH IS WHAT 28-C1
-SAID.** 11 standalone slots, 12 empty days, COD permitted on every call, and it
-is placed ZERO times — because it sits last in the pool and `aerobic_base`,
-`tempo` and `vo2` above it are always eligible, and both consumers take the
-FIRST allowed.
+**⚠ MY CONCLUSION FROM THIS IS WITHDRAWN — REFUTED THE SAME DAY BY A STRONGER
+RUN THAN MINE, AND THE REFUTATION IS IN THIS FILE ABOVE (QUEUE PASS, claim 1).**
+I wrote *"the only surviving explanation is selection ORDER"*. **It is not.**
+`cod_decel` was promoted to **FIRST** in `autoPlacementCategories` and six worlds
+generated either side: **zero COD both ways, all six week fingerprints
+byte-identical.** A category ranked first that still places nothing is not losing
+a race.
+
+**WHAT SURVIVES AND WHAT DIES, kept separate on purpose:**
+- **SURVIVES — the measurement.** 11 standalone slots, 12 empty days, COD
+  permitted, placed zero; the with-club control collapses 11 -> 4. **28-C1b's two
+  blockers are still refuted for pre-season**, and that is this entry's value.
+- **DIES — the inference.** "Last in the pool + first-allowed consumer =
+  never reached" is a mechanism I read off the code and did not test. **The rank
+  experiment tests it directly and kills it.** Reading a plausible mechanism and
+  calling it the cause is the same error this item has made four times.
+
+**SO THE REFUSAL IS DOWNSTREAM OF RANKING** — at template selection or at
+eligibility. **That single instrument is what 28-C1 still owes**, and it is
+named in the QUEUE PASS entry above: does the category reach template selection
+at all, or is it vetted and downgraded?
 
 **⚠ AND THIS UNBLOCKS THE SHAPE SAM ACTUALLY AUTHORISED, WITHOUT REORDERING.**
 28-C1b reverted its placement pass because it *"buys nothing while COD is
