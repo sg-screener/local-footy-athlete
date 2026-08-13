@@ -32,6 +32,46 @@ thing that actually bit.**
 
 ## STATUS
 
+### R-083's SECOND SITE — TRIED, OVER-REMOVED, BACKED OUT
+
+**The canonicaliser's restore is landed (`188d6fad`) and good.** The OTHER route
+the same names arrive by — `completeCoachWorkoutsFromPlan`'s hardcoded fallback
+rows — is NOT, and the attempt is worth recording because it went one step too
+far.
+
+**MEASURED WITH IT IN:**
+
+| ratchet | before | with the change |
+| --- | --- | --- |
+| EQUIPMENT CENSUS | 1 | **0** ✅ |
+| SLOT CENSUS | 0 | **1** ❌ |
+
+    off-season bodyweight | Lower Squat missing=[single_leg_knee, single_leg_hip, accessory_or_core]
+
+**IT REMOVED MORE THAN SAM RULED.** His R-083 names three patterns a bodyweight
+athlete loses — vertical push, vertical pull, horizontal pull. **Single-leg knee
+and single-leg hip are NOT among them**, and R-080 says the opposite: lunges and
+the single-leg RDL are exactly what a bodyweight leg day should GAIN. My filter
+dropped them anyway, because after substitution their equipment CLASS still reads
+as kit-requiring — so the day lost the single-leg work R-080 had just won.
+
+**TRADING A PULL-UP FOR THE SINGLE-LEG SLOT IS A BAD TRADE**, and the SLOT ratchet
+said so within one run. Backed out; both ratchets are back at 0 and 1.
+
+**WHAT THE NEXT ATTEMPT MUST DO DIFFERENTLY:** substitution has to be given a
+proper chance BEFORE legality is judged — pick within the row's own muscle group
+(`PoolEntry.group` already exists) and only drop a row when that group has no
+bodyweight-legal member at all. The current code asks `applyPoolRotation` once
+and treats its answer as final; for `Walking Lunges` that answer is not the best
+available one.
+
+**AND THE CENSUS ITSELF MAY NEED SAM'S EXEMPTION.** He ruled that a bodyweight
+athlete missing those three patterns is NOT a defect — *"it is the kit"*. The
+SLOT census does not know that yet, so once the second site lands correctly, a
+legitimately short upper day will read as deficient. **That exemption is part of
+R-083 and is not built.**
+
+
 ### ⚠ THE EQUIPMENT FIX IS REFUTED — BOTH SEATS DIAGNOSED THE WRONG PATH
 
 **I built it, measured it, and backed it out. Zero lines changed across 5 worlds
