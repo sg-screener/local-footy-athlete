@@ -1555,6 +1555,40 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, `audit` — THE STOP CHECK CAN NEVER SAY "NOTHING LEFT",
+  AND IT IS COSTING HIM MONEY EVERY CYCLE. ONE LINE, AND IT IS HIS CALL BECAUSE
+  IT IS THE GOVERNOR.**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` (82 rulings) for *standing*,
+  *hook*, *stop*, *exit*, *inbox*, *seat inbox*. **NOTHING RULES ON THIS.**
+  *standing* returns one hit and it is the standing PROFILE in
+  `coachingEngine.ts`, not a standing order. *hook* and *exit* return nothing.
+  **R-030** (*"stop worrying about adding complexity"*) is the only *stop* hit
+  and is about exercise dose. The *inbox* hits are items 25, 28, 42 and the
+  write-it-down rule — **none about the scan's exits.** **A gap, not a re-ask.**
+
+  **MEASURED FROM THE SCRIPT, NOT INFERRED.** I reproduced
+  `seat-inbox-hook.sh`'s own head-extraction and its
+  `BLOCKED-BY:[[:space:]]*(other-agent|external|sam)` skip against the live
+  file: **it correctly skips all 18 blocked items and lands on standing order
+  1.** Standing orders 1 and 13 say in their own text *"they are not work items
+  to clear"*, and they carry no marker the scan knows — **so `EXIT 1` is
+  unreachable by construction, whatever any agent does.** Item 13 measured the
+  same thing independently and assigns the fix to the seat.
+
+  **THE ONE LINE:** have the scan skip a head containing `STANDING, EVERY STOP`
+  — already their own wording — or give standing orders a `STANDING:` marker.
+
+  **WHY I DID NOT JUST DO IT, THOUGH I COULD HAVE IN A MINUTE:** it is the
+  script that governs this seat, and an agent editing its own governor so that
+  it stops governing it is precisely what that script's comment forbids —
+  *"the terminal cannot rubber-stamp its way to silence"*. **A change that
+  benefits the one making it needs the person paying for it to say yes.**
+
+  **WHAT TO SEND:** *"yes, skip the standing orders"* — or *"leave it, I want
+  the nagging"*, which is also a real answer and closes this.
+
+
 - **⚠ NEW 2026-08-13, terminal — THE EQUIPMENT SHEETS ARE EMPTY, AND ONE LINE
   FROM HIM UNBLOCKS TWO ITEMS. The single most valuable answer: DOES A PULL-UP
   NEED A BAR?**
