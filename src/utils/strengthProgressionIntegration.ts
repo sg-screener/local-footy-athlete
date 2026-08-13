@@ -58,6 +58,8 @@ import { analyzeFeedbackPatterns, applyPatternBiases } from './feedbackPatterns'
 import { type AdaptationResult, applyReadinessBias } from './feedbackAdapter';
 import type { ProgramBlockState } from './programBlockState';
 import { participatesInCounting } from '../rules/sessionRowCounting';
+import { mainLiftSchemeForSlot, type RepScheme } from '../rules/phaseRepSchemes';
+import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 
 // ─── Feedback → Domain Feeling Bridge ───
 
@@ -216,6 +218,17 @@ export function buildStrengthWorkoutHistoryFromFeedback(
 
 export interface StrengthProgressionContext {
   seasonPhase: SeasonPhase;
+  /**
+   * The off-season subphase, when the phase clock has resolved one.
+   *
+   * READ for one purpose: to resolve the same authored dose band generation
+   * used, so progression is bounded by the row's own band rather than by the
+   * generic off-season one. It matters — `early_offseason` authors a maximum
+   * of THREE sets where plain off-season allows four, and it is the default
+   * the subphase resolver falls back to when phase-clock context is missing.
+   * WRITTEN by `buildProgressionContext` from the caller's phase clock.
+   */
+  offseasonSubphase?: OffseasonSubphase | null;
   readiness: ReadinessLevel;
   daysToGame: number | null;
   daysSinceGame: number | null;
@@ -278,10 +291,17 @@ export const DEFAULT_PROGRESSION_CONTEXT: StrengthProgressionContext = {
 };
 
 export interface BuildProgressionContextOptions {
-  blockState?: Pick<
-    ProgramBlockState,
-    'weekInBlock' | 'weeksSinceDeload' | 'consecutiveBuildWeeks'
-  >;
+  blockState?:
+    & Pick<ProgramBlockState, 'weekInBlock' | 'weeksSinceDeload' | 'consecutiveBuildWeeks'>
+    // `phaseResolution` is read for its `offseasonSubphase` alone — the
+    // authored dose band differs inside off-season, and the phase CLOCK is the
+    // ruled owner of that answer. Both live producers
+    // (`getProgramBlockStateForDate`, `getStoredBlockStateForDate`) already
+    // return it, so progression reads the clock's answer rather than deriving
+    // a second one. OPTIONAL, because a caller assembling a partial block
+    // state is not obliged to answer a question about the season clock — it
+    // then falls back to the phase's own band, which is what shipped before.
+    & Partial<Pick<ProgramBlockState, 'phaseResolution'>>;
   missedSessionsThisWeek?: number;
   weeksOffTraining?: number;
   recentDeloadTrigger?: 'overreach' | null;
@@ -394,6 +414,34 @@ function resolveSiblingPerformedWeight(
   return undefined;
 }
 
+/**
+ * The authored band this row was dosed from, or null if it was not dosed from
+ * the main-lift table at all.
+ *
+ * The condition MIRRORS GENERATION's, deliberately and line for line:
+ * `defaultProgram.applyPhaseRepSchemeToExercise` writes the main-lift scheme
+ * only for an `anchor` in a main-lift slot, and dispatches everything else to
+ * the accessory guidelines. Asking a different question here would produce a
+ * band the row was never authored from — which is how a lunge ends up bounded
+ * by the squat's numbers.
+ *
+ * Uses require() for the same reason `resolveSiblingPerformedWeight` does: a
+ * top-level import of the pool module reintroduces the circular dependency
+ * with defaultProgram.ts that this file already works around.
+ */
+function authoredBandForRow(
+  exerciseName: string,
+  seasonPhase: SeasonPhase,
+  offseasonSubphase?: OffseasonSubphase | null,
+): RepScheme | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const pools = require('../data/exercisePoolsStrength') as typeof import('../data/exercisePoolsStrength');
+  const classification = pools.classifyPoolSlot(exerciseName);
+  if (!classification) return null;
+  if (classification.role !== 'anchor') return null;
+  return mainLiftSchemeForSlot(classification.slot, seasonPhase, offseasonSubphase);
+}
+
 // ─── Load Rounding ───
 
 /** Default load increment (standard Olympic barbell plates: 1.25kg per side). */
@@ -483,7 +531,43 @@ function outputToPrescriptionDelta(output: ProgressionOutput): PrescriptionDelta
 /**
  * Apply a prescription delta to a WorkoutExercise.
  * Returns a new WorkoutExercise with adjusted prescription.
- * Enforces minimum floors (1 set, 3 reps, 0kg, 30s rest).
+ *
+ * THE AUTHORED BAND IS THE BOUNDARY, AND `band` CARRIES IT.
+ * Sam's sets/reps sentences (Bible §5) are the dose; generation writes them
+ * and this function used to spend them. It enforced FLOORS ONLY — 1 set, 3
+ * reps — two numbers nobody authored, and NO CEILING at all, so three clean
+ * sessions carried an early off-season lift to four sets against an authored
+ * maximum of three, and a deload cut a 4-6 rep pre-season lift to 3 reps.
+ *
+ * Two rules, and they are deliberately not symmetric:
+ *
+ *   • SETS have a CEILING and no band floor. Nothing in the Bible authorises
+ *     more sets than the phase allows. Going BELOW the minimum is authored —
+ *     R-034, the deload law, HALVES the sets — so clamping up to `setsMin`
+ *     would put this function in the deload law's way. The 1-set floor stays.
+ *   • REPS are held inside the band in BOTH directions. A deload moves sets
+ *     and load, not reps; `deloadWeekRules.deloadPowerDose` already says so in
+ *     as many words ("it is the volume that drops").
+ *
+ * Where a row is ALREADY outside its band — `quality_low_volume`'s 2x3 is
+ * exempt from the phase scheme by ruling — the bound widens to admit it. The
+ * band bounds what progression may DO; it does not overwrite another owner's
+ * authored dose.
+ *
+ * `band` is null for any row generation did not dose from this table
+ * (accessories, isolation, an unclassified name), and then the old floors are
+ * all there is — the honest answer, rather than a band borrowed from a
+ * neighbouring slot.
+ *
+ * ⚠ WHAT THIS DOES **NOT** FIX, NAMED SO IT IS NOT MISTAKEN FOR CLOSED.
+ * A deload still pulls `repsMax` DOWN to the band's floor (a 4-6 pre-season
+ * lift deloads to 4-4, shown as "4" rather than "5"), because `big_down` keeps
+ * its own rep term. That term, `drop_two`, and the flat 0.7 load multiplier
+ * are this module dosing a deload SECOND — `DELOAD_LAW` already owns that
+ * transformation and disagrees with all three (it halves sets, so a 3-set day
+ * is 2 and not 1, and it HOLDS load unless the athlete is beat up). Bounding
+ * the band does not settle who owns a deload's numbers, and that question is
+ * bigger than this unit.
  *
  * NOTE: Progression state is NOT appended to exercise.notes.
  * It lives on _progressionResults metadata (per-exercise) for any
@@ -494,10 +578,30 @@ function applyDelta(
   exercise: WorkoutExercise,
   delta: PrescriptionDelta,
   loadIncrementKg: number = DEFAULT_LOAD_INCREMENT_KG,
+  band?: RepScheme | null,
 ): WorkoutExercise {
-  const newSets = Math.max(1, exercise.prescribedSets + delta.setsChange);
-  const newRepsMin = Math.max(3, exercise.prescribedRepsMin + delta.repsMinChange);
-  const newRepsMax = Math.max(3, exercise.prescribedRepsMax + delta.repsMaxChange);
+  const setsCeiling = band
+    ? Math.max(band.setsMax, exercise.prescribedSets)
+    : Number.POSITIVE_INFINITY;
+  const repsFloor = band
+    ? Math.min(band.repsMin, exercise.prescribedRepsMin)
+    : 3;
+  const repsCeiling = band
+    ? Math.max(band.repsMax, exercise.prescribedRepsMax)
+    : Number.POSITIVE_INFINITY;
+
+  const newSets = Math.min(
+    setsCeiling,
+    Math.max(1, exercise.prescribedSets + delta.setsChange),
+  );
+  const newRepsMin = Math.min(
+    repsCeiling,
+    Math.max(repsFloor, exercise.prescribedRepsMin + delta.repsMinChange),
+  );
+  const newRepsMax = Math.min(
+    repsCeiling,
+    Math.max(repsFloor, exercise.prescribedRepsMax + delta.repsMaxChange),
+  );
   const newRest = Math.max(30, exercise.restSeconds + delta.restChange);
 
   // Weight: apply multiplier if prescribed weight exists, round to load increment
@@ -670,7 +774,8 @@ export function applyStrengthProgression(
     }
 
     const increment = ctx.loadIncrementKg ?? DEFAULT_LOAD_INCREMENT_KG;
-    return applyDelta(baseEx, delta, increment);
+    const band = authoredBandForRow(name, ctx.seasonPhase, ctx.offseasonSubphase);
+    return applyDelta(baseEx, delta, increment, band);
   });
 
   return {
@@ -768,6 +873,7 @@ export function buildProgressionContext(
 
   const baseCtx: StrengthProgressionContext = {
     seasonPhase,
+    offseasonSubphase: options.blockState?.phaseResolution?.offseasonSubphase ?? null,
     readiness: adjustedReadiness,
     daysToGame,
     daysSinceGame,

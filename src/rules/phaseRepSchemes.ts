@@ -20,6 +20,7 @@ import {
   getOffseasonSubphasePolicy,
 } from './offseasonSubphasePolicy';
 import type { OffseasonSubphase } from './offseasonSubphase';
+import type { PoolSlotKey } from '../data/exercisePoolsStrength';
 
 export interface RepScheme {
   setsMin: number;
@@ -130,6 +131,31 @@ export function resolveMainLiftRepSchemes(
     return OFFSEASON_SUBPHASE_MAIN_LIFT_REP_SCHEMES[offseasonSubphase];
   }
   return MAIN_LIFT_REP_SCHEMES[seasonPhase];
+}
+
+/**
+ * The authored band for a main-lift pool slot, or null when the slot is not a
+ * main lift (accessories and isolation are dosed by `ACCESSORY_REP_GUIDELINES`
+ * and `LOWER_SECONDARY_REP_GUIDELINES`, not by this table).
+ *
+ * ONE OWNER, TWO READERS. Generation reads it to WRITE the prescription
+ * (`defaultProgram.applyPhaseRepSchemeToExercise`); strength progression reads
+ * it to know the boundary it may not carry that prescription past
+ * (`strengthProgressionIntegration.applyDelta`). It lived privately inside
+ * `defaultProgram.ts` while only generation needed it; a second copy next to
+ * the second reader is how two answers to "what is the authored dose" start
+ * drifting apart, so it moved here — to the table itself — instead.
+ */
+export function mainLiftSchemeForSlot(
+  slot: PoolSlotKey,
+  seasonPhase: SeasonPhase,
+  offseasonSubphase?: OffseasonSubphase | null,
+): RepScheme | null {
+  const schemes = resolveMainLiftRepSchemes(seasonPhase, offseasonSubphase);
+  if (slot === 'squat' || slot === 'hinge') return schemes.lower;
+  if (slot === 'horizontal_push' || slot === 'vertical_push') return schemes.upperPush;
+  if (slot === 'horizontal_pull' || slot === 'vertical_pull') return schemes.upperPull;
+  return null;
 }
 
 export interface AccessoryGuideline {

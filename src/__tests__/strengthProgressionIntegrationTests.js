@@ -21,7 +21,7 @@
 // ─── Imports ───
 
 const {
-  classifyExerciseRole,
+  classifyProgressionEligibility,
   isLowerBodyExercise,
   applyStrengthProgression,
   buildProgressionContext,
@@ -155,23 +155,23 @@ function makeState(overrides = {}) {
 section('1. Exercise Role Classification');
 
 // Primary strength: compound movements with moderate/high load
-assert(classifyExerciseRole('Back Squat') === 'primary_strength', 'Back Squat → primary');
-assert(classifyExerciseRole('Deadlift') === 'primary_strength', 'Deadlift → primary');
-assert(classifyExerciseRole('Bench Press') === 'primary_strength', 'Bench Press → primary');
-assert(classifyExerciseRole('Barbell Row') === 'primary_strength', 'Barbell Row → primary');
-assert(classifyExerciseRole('RDLs') === 'primary_strength', 'RDLs → primary');
-assert(classifyExerciseRole('Overhead Press') === 'primary_strength', 'Overhead Press → primary');
+assert(classifyProgressionEligibility('Back Squat') === 'primary_strength', 'Back Squat → primary');
+assert(classifyProgressionEligibility('Deadlift') === 'primary_strength', 'Deadlift → primary');
+assert(classifyProgressionEligibility('Bench Press') === 'primary_strength', 'Bench Press → primary');
+assert(classifyProgressionEligibility('Barbell Row') === 'primary_strength', 'Barbell Row → primary');
+assert(classifyProgressionEligibility('RDLs') === 'primary_strength', 'RDLs → primary');
+assert(classifyProgressionEligibility('Overhead Press') === 'primary_strength', 'Overhead Press → primary');
 
 // Secondary strength: lunges, or primary patterns with low load
-assert(classifyExerciseRole('Walking Lunges') === 'secondary_strength', 'Walking Lunges → secondary');
-assert(classifyExerciseRole('Bulgarian Split Squats') === 'secondary_strength', 'Bulgarian Split Squats → secondary');
-assert(classifyExerciseRole('Goblet Squat') === 'secondary_strength', 'Goblet Squat → secondary (low load)');
+assert(classifyProgressionEligibility('Walking Lunges') === 'secondary_strength', 'Walking Lunges → secondary');
+assert(classifyProgressionEligibility('Bulgarian Split Squats') === 'secondary_strength', 'Bulgarian Split Squats → secondary');
+assert(classifyProgressionEligibility('Goblet Squat') === 'secondary_strength', 'Goblet Squat → secondary (low load)');
 
 // Excluded: isolation, core, conditioning
-assert(classifyExerciseRole('Band Pallof Press') === null, 'Band Pallof Press (core) → null');
-assert(classifyExerciseRole('Bicep Curl (Dumbbell)') === null, 'Bicep Curl → null (isolation)');
-assert(classifyExerciseRole('Sprint Intervals') === null, 'Sprint Intervals → null (conditioning)');
-assert(classifyExerciseRole('Nonexistent Exercise') === null, 'Unknown exercise → null');
+assert(classifyProgressionEligibility('Band Pallof Press') === null, 'Band Pallof Press (core) → null');
+assert(classifyProgressionEligibility('Bicep Curl (Dumbbell)') === null, 'Bicep Curl → null (isolation)');
+assert(classifyProgressionEligibility('Sprint Intervals') === null, 'Sprint Intervals → null (conditioning)');
+assert(classifyProgressionEligibility('Nonexistent Exercise') === null, 'Unknown exercise → null');
 
 // ═══════════════════════════════════════════════════════════════
 // SECTION 2: Lower Body Detection
@@ -312,8 +312,18 @@ assert(deloadSquat.prescribedWeightKg === 70, `Deload big_down: 100 → ${deload
 assert(deloadSquat.prescribedSets === 2, `Deload drop_two: 4 → ${deloadSquat.prescribedSets} (expect 2)`);
 // pull: rest + 15
 assert(deloadSquat.restSeconds === 195, `Deload pull: 180 → ${deloadSquat.restSeconds} (expect 195)`);
-// reps reduced
-assert(deloadSquat.prescribedRepsMin === 3, `Deload reps min: 5 → ${deloadSquat.prescribedRepsMin} (expect 3)`);
+// ⚠ THIS CELL WAS OVERTURNED, 2026-08-13, AND THE OLD EXPECTATION IS NOT
+// SIMPLY RELAXED — IT IS REPLACED BY THE OPPOSITE CLAIM, WITH ITS AUTHORITY.
+// It read `prescribedRepsMin === 3`: a deload cuts main-lift reps by two.
+// `DELOAD_LAW` (`rules/deloadWeekRules.ts:35`, R-034, held by `test:deload-law`)
+// is the signed transformation and it HAS NO REP TERM — sets halve, RPE falls
+// to 5-6, weight holds unless the athlete is beat up. A rep cut is a reduction
+// no door authored, which is the exact class that law was written to end, and
+// `deloadPowerDose` says so in as many words: "it is the volume that drops".
+// The cell had not run since 2026-07-28 — the suite crashed at import — so it
+// was never a guard holding this behaviour in place.
+assert(deloadSquat.prescribedRepsMin === 5,
+  `Deload holds main-lift reps (R-034 has no rep term): 5 → ${deloadSquat.prescribedRepsMin} (expect 5)`);
 
 assert(deloadResult._progressionResults['Back Squat'].state === 'deload', 'DGW → deload state');
 
@@ -676,6 +686,203 @@ const historyResult = applyStrengthProgression(lowerWorkout, historyContext);
 const histSquat = historyResult._progressionResults['Back Squat'];
 // With full completion history, completion quality should be 'full'
 assert(histSquat.state === 'build', 'With full history → build');
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 21: The authored dose band bounds progression
+// ═══════════════════════════════════════════════════════════════
+//
+// Sam's sets/reps sentences (Bible §5, `:767`-`:769`) are the authored dose,
+// and `phaseRepSchemes.ts` is that table as data. Generation writes it. This
+// section holds the other half: progression moves WITHIN the band it was
+// authored from. It may not carry a row above the authored maximum, and where
+// a row already sits outside the band it may not push it further out.
+//
+// Section 18 above holds the invented floors (1 set, 3 reps). Those are not
+// the athlete's dose — they are the last stop before nonsense. The band is.
+
+section('21. The authored dose band bounds progression');
+
+const {
+  resolveMainLiftRepSchemes,
+} = require('../rules/phaseRepSchemes');
+
+/** N prior sessions in which every prescribed set was completed at the load. */
+function cleanSessions(n, exerciseId, sets, reps, weightKg) {
+  const out = [];
+  for (let w = 0; w < n; w++) {
+    const date = `2026-07-${String(20 - w).padStart(2, '0')}`;
+    out.push({
+      id: `clean-${w}`,
+      userId: 'local',
+      workoutId: `clean-${w}`,
+      loggedDate: date,
+      completedAt: `${date}T12:00:00.000Z`,
+      sessionFeeling: 'Strong',
+      completed: true,
+      synced: true,
+      createdAt: `${date}T12:00:00.000Z`,
+      updatedAt: `${date}T12:00:00.000Z`,
+      sets: Array.from({ length: sets }, (_, i) => ({
+        id: `clean-${w}-s${i + 1}`,
+        loggedWorkoutId: `clean-${w}`,
+        workoutExerciseId: exerciseId,
+        setNumber: i + 1,
+        actualReps: reps,
+        actualWeightKg: weightKg,
+        createdAt: `${date}T12:00:00.000Z`,
+        updatedAt: `${date}T12:00:00.000Z`,
+      })),
+    });
+  }
+  return out;
+}
+
+/** A lower main lift authored exactly as generation would for this band. */
+function authoredLowerLift(scheme) {
+  const match = /^(\d+)x/i.exec(scheme.base);
+  const sets = Math.min(scheme.setsMax, Math.max(scheme.setsMin, Number(match[1]) || 3));
+  return makeStrengthWorkout(1, 'Lower Body Strength', 'High', [
+    makeExercise('Back Squat', 1, {
+      sets,
+      repsMin: scheme.repsMin,
+      repsMax: scheme.repsMax,
+      weight: 100,
+      rest: 180,
+    }),
+  ]);
+}
+
+const EARLY_OFF_BAND = resolveMainLiftRepSchemes('Off-season', 'early_offseason').lower;
+const PRE_BAND = resolveMainLiftRepSchemes('Pre-season', null).lower;
+
+// ── [21a] NON-VACUITY: the branch that breaches is actually driven here. ──
+// Without this, every ceiling cell below could pass over a row that never
+// tried to progress at all.
+const earlyOffWorkout = authoredLowerLift(EARLY_OFF_BAND);
+const earlyOffAuthoredSets = earlyOffWorkout.exercises[0].prescribedSets;
+const earlyOffCtx = {
+  ...DEFAULT_PROGRESSION_CONTEXT,
+  seasonPhase: 'Off-season',
+  offseasonSubphase: 'early_offseason',
+  readiness: 'high',
+  sessionFeeling: 'Strong',
+  consecutiveBuildWeeks: 1,
+  workoutHistory: cleanSessions(3, 'tag-back-squat', earlyOffAuthoredSets, EARLY_OFF_BAND.repsMax, 100),
+};
+const earlyOffResult = applyStrengthProgression(earlyOffWorkout, earlyOffCtx);
+const earlyOffOutput = earlyOffResult._progressionResults['Back Squat'];
+assert(earlyOffOutput.state === 'build' && earlyOffOutput.setsDelta === 'add_one',
+  `[21a] non-vacuity: three clean sessions ask for a set (state=${earlyOffOutput.state}, setsDelta=${earlyOffOutput.setsDelta})`);
+
+// ── [21b] THE CEILING: the ask is honoured only up to the authored maximum. ──
+const earlyOffSquat = earlyOffResult.exercises.find(e => e.exercise?.name === 'Back Squat');
+assert(earlyOffSquat.prescribedSets <= EARLY_OFF_BAND.setsMax,
+  `[21b] sets stay within the authored maximum: ${earlyOffSquat.prescribedSets} <= ${EARLY_OFF_BAND.setsMax}`);
+
+// ── [21c] AND THE CEILING IS NOT A FREEZE — a band with room still progresses. ──
+// Pre-season authors 3 sets against a maximum of 4, so the same three clean
+// sessions must still earn the fourth set. A fix that simply stopped adding
+// sets would pass [21b] and red here.
+const preWorkout = authoredLowerLift(PRE_BAND);
+const preAuthoredSets = preWorkout.exercises[0].prescribedSets;
+const preResult = applyStrengthProgression(preWorkout, {
+  ...DEFAULT_PROGRESSION_CONTEXT,
+  seasonPhase: 'Pre-season',
+  readiness: 'high',
+  sessionFeeling: 'Strong',
+  workoutHistory: cleanSessions(3, 'tag-back-squat', preAuthoredSets, PRE_BAND.repsMax, 100),
+});
+const preSquat = preResult.exercises.find(e => e.exercise?.name === 'Back Squat');
+assert(preSquat.prescribedSets === preAuthoredSets + 1 && preSquat.prescribedSets <= PRE_BAND.setsMax,
+  `[21c] a band with room still progresses: ${preAuthoredSets} → ${preSquat.prescribedSets} (max ${PRE_BAND.setsMax})`);
+
+// ── [21d] THE ADAPTATION OVERRIDE CANNOT CROSS THE CEILING EITHER. ──
+// It is applied after progression resolves and used to be added with no
+// bound at all, so a clean block plus a volume nudge reached 5 sets.
+const overrideResult = applyStrengthProgression(authoredLowerLift(EARLY_OFF_BAND), {
+  ...earlyOffCtx,
+  adaptationVolumeAdjustment: 1,
+});
+const overrideSquat = overrideResult.exercises.find(e => e.exercise?.name === 'Back Squat');
+assert(overrideSquat.prescribedSets <= EARLY_OFF_BAND.setsMax,
+  `[21d] the volume override respects the ceiling: ${overrideSquat.prescribedSets} <= ${EARLY_OFF_BAND.setsMax}`);
+
+// ── [21e] THE REP FLOOR IS SAM'S NUMBER, NOT AN INVENTED 3. ──
+// A deload cuts sets and load. Reps are the phase's prescription and stay in
+// their band — the app already says exactly this for power work
+// (`deloadWeekRules.deloadPowerDose`: "it is the volume that drops").
+const preDeloadResult = applyStrengthProgression(authoredLowerLift(PRE_BAND), {
+  ...DEFAULT_PROGRESSION_CONTEXT,
+  seasonPhase: 'Pre-season',
+  doubleGameWeek: true, // hard deload trigger
+});
+const preDeloadSquat = preDeloadResult.exercises.find(e => e.exercise?.name === 'Back Squat');
+assert(preDeloadResult._progressionResults['Back Squat'].state === 'deload',
+  `[21e] non-vacuity: the row really is on a deload (state=${preDeloadResult._progressionResults['Back Squat'].state})`);
+assert(preDeloadSquat.prescribedRepsMin >= PRE_BAND.repsMin,
+  `[21e] reps hold Sam's authored minimum: ${preDeloadSquat.prescribedRepsMin} >= ${PRE_BAND.repsMin}`);
+
+// ── [21f] A ROW AUTHORED OUTSIDE THE BAND IS NOT DRAGGED INTO IT. ──
+// The band bounds progression; it does not overwrite another owner's dose.
+// `quality_low_volume` (2x3) is exempt from the phase scheme by ruling, and a
+// clamp that "corrected" it would be a second owner rewriting the exception.
+const belowBandWorkout = makeStrengthWorkout(1, 'Lower Body Strength', 'High', [
+  makeExercise('Back Squat', 1, { sets: 2, repsMin: 3, repsMax: 3, weight: 100, rest: 180 }),
+]);
+const belowBandResult = applyStrengthProgression(belowBandWorkout, {
+  ...DEFAULT_PROGRESSION_CONTEXT,
+  seasonPhase: 'Off-season', // band is 6-8 reps — well above this row
+  readiness: 'high',
+  sessionFeeling: 'Strong',
+  workoutHistory: cleanSessions(3, 'tag-back-squat', 2, 3, 100),
+});
+const belowBandSquat = belowBandResult.exercises.find(e => e.exercise?.name === 'Back Squat');
+assert(belowBandSquat.prescribedRepsMin === 3,
+  `[21f] a row below the band keeps its own reps: ${belowBandSquat.prescribedRepsMin} (band min ${resolveMainLiftRepSchemes('Off-season', null).lower.repsMin})`);
+
+// ── [21g] THE DELOAD LAW IS NOT BROKEN BY THE BAND. ──
+// R-034: a deload HALVES the sets. The authored minimum is 2, and half of a
+// three-set day is below that — so the band's floor must not be applied to
+// sets. This cell reds if a future edit clamps sets up to `setsMin`.
+assert(preDeloadSquat.prescribedSets < PRE_BAND.setsMin,
+  `[21g] a deload still cuts sets below the authored minimum: ${preDeloadSquat.prescribedSets} < ${PRE_BAND.setsMin}`);
+
+// ── [21h] THE BAND REACHES THE LIVE PATH, NOT JUST A HAND-BUILT CONTEXT. ──
+// [21b] proves the clamp; it would still pass if nothing in the app ever told
+// progression which subphase it is in. This cell runs the REAL producers:
+// `getProgramBlockStateForDate` resolves the phase clock, `buildProgressionContext`
+// assembles the context from it, and the ceiling has to survive both.
+const { getProgramBlockStateForDate } = require('../utils/programBlockState');
+
+const liveBlockState = getProgramBlockStateForDate({
+  dateISO: '2026-07-20',
+  programStartISO: '2026-07-20', // week 1 of the phase → early off-season
+  seasonPhase: 'Off-season',
+  seasonPhaseClock: undefined,
+});
+assert(liveBlockState.phaseResolution.offseasonSubphase === 'early_offseason',
+  `[21h] non-vacuity: the clock really resolves early off-season (got ${liveBlockState.phaseResolution.offseasonSubphase})`);
+
+const liveCtx = buildProgressionContext(
+  'Off-season',
+  'high',
+  [],            // gameDates
+  '2026-07-20',  // dateStr
+  [],            // injuries
+  {},            // markedDays
+  cleanSessions(3, 'tag-back-squat', earlyOffAuthoredSets, EARLY_OFF_BAND.repsMax, 100),
+  null,          // feedbackFeeling
+  [],            // recentFeedback
+  null,          // adaptation
+  { blockState: liveBlockState },
+);
+assert(liveCtx.offseasonSubphase === 'early_offseason',
+  `[21h] the assembled context carries the subphase (got ${liveCtx.offseasonSubphase})`);
+
+const liveResult = applyStrengthProgression(authoredLowerLift(EARLY_OFF_BAND), liveCtx);
+const liveSquat = liveResult.exercises.find(e => e.exercise?.name === 'Back Squat');
+assert(liveSquat.prescribedSets <= EARLY_OFF_BAND.setsMax,
+  `[21h] the ceiling holds through the live context assembler: ${liveSquat.prescribedSets} <= ${EARLY_OFF_BAND.setsMax}`);
 
 // ═══════════════════════════════════════════════════════════════
 // RESULTS

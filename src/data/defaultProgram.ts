@@ -72,7 +72,7 @@ import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
 import {
   ACCESSORY_REP_GUIDELINES,
   LOWER_SECONDARY_REP_GUIDELINES,
-  resolveMainLiftRepSchemes,
+  mainLiftSchemeForSlot,
   type AccessoryGuideline,
   type RepScheme,
 } from '../rules/phaseRepSchemes';
@@ -741,18 +741,6 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return fallback;
   return Math.min(max, Math.max(min, Math.round(n)));
-}
-
-function mainLiftSchemeForSlot(
-  slot: PoolSlotKey,
-  seasonPhase: SeasonPhase,
-  offseasonSubphase?: OffseasonSubphase | null,
-): RepScheme | null {
-  const schemes = resolveMainLiftRepSchemes(seasonPhase, offseasonSubphase);
-  if (slot === 'squat' || slot === 'hinge') return schemes.lower;
-  if (slot === 'horizontal_push' || slot === 'vertical_push') return schemes.upperPush;
-  if (slot === 'horizontal_pull' || slot === 'vertical_pull') return schemes.upperPull;
-  return null;
 }
 
 function appendRepSchemeIntent(
