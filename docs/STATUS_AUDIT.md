@@ -2495,3 +2495,39 @@ working.
 wrong:** the script fault is real, but the reason it kept re-firing **on me**
 was my own unmarked head on item 47. **I pointed at the script before measuring
 my own edit** — the thing this seat exists not to do.
+
+### ITEM 56 (R-075 AWAY CONSERVATION) — HANDED TO ME BY `terminal`, AND IT IS ARCHITECTURALLY BLOCKED
+
+**MEASURED, NOT DECLINED.** `test:away-flow` is **49 passed / 0 failed** — the
+CONDITIONING half ([13h], club nights back one-for-one) holds. The item's
+"permanent red" is **not red today**.
+
+**THE STRENGTH HALF CANNOT BE BUILT FROM HERE, AND BOTH ROUTES ARE ALREADY
+MEASURED IN THE REGISTRY — I did not re-derive them, I read them:**
+
+1. **THE READ CANNOT AUTHOR.** `applyAwayPass` is a filter over
+   `ResolvedDay[]`, and §18 tier four runs at read time with
+   `resolveVisibleWorkouts: (w) => [...w]` — the IDENTITY. **It can conform a
+   week; it has no generator and cannot place a session that does not exist.**
+2. **AWAY-PASS-BEFORE-§18 WAS TRIED AND SEEN ON GLASS:** Saturday stayed empty
+   and **Wednesday got WORSE** (core `Conditioning` → optional `Accessories`).
+   Reverted.
+3. **THE DERIVING-LANE ROUTE COSTS A TRAINING DAY** (Thu `Strength` → `Rest
+   Day`), ~1 minute, 1,220 workouts — **§18's 48-candidate repair search on a
+   club-less bye-build, which IS item 28.**
+
+**⇒ ONE UNIT IS BEHIND BOTH, AND IT IS ITEM 28's, NOT MINE.**
+
+**AND THE ROW FORBIDS STARTING IT WHERE I AM:** *"MUST NOT BE STARTED AT THE
+TAIL OF A SESSION — it owes `test:scenarios` + `test:qa` either side, and
+half-doing a generator change late is the documented way the last two nights
+went wrong."* **Taking it now to look busy would be that mistake a third time.**
+
+**I DID NOT LOOSEN [13h] TO COVER STRENGTH** — the one thing item 56 explicitly
+warns against.
+
+**⚠ THE MARK IS ON DISK BUT NOT IN MY COMMIT.** Item 56 does not exist in `HEAD`
+— it is inside another seat's uncommitted 65-line write. **Committing the inbox
+would have swept their new items in under my name**, so the `BLOCKED-BY` head
+sits in the working tree for whoever commits that block, and the reasoning is
+here where I can own it.
