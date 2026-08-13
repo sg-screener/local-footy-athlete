@@ -110,6 +110,54 @@ paid it. **Not yet done. Small.**
   `lawRegistry.ts:1277` had been claiming as `guarded` while the cells themselves
   were uncommitted.
 
+### ITEM 34 — THE BEFORE-MEASUREMENT IS TAKEN. Start at the build, not the probe.
+
+**THE DRIFT BRANCH FIRES ZERO TIMES ACROSS THE WHOLE QA CORPUS.** Instrumented
+`main_pattern_drift` in `workoutCanonicalisation.ts` and ran `test:qa`:
+
+| corpus | drift drops |
+| --- | --- |
+| `test:qa` (full scenario report) | **0** |
+| `test:away-flow` (control) | **1** — `Deadlift`, `intended=[squat]`, `"Lower Squat"` |
+
+**THE CONTROL IS THE POINT — a bare 0 is exactly the shape that means "the probe
+never ran".** The away arm printing precisely the one line C7 predicted is what
+makes the zero trustworthy rather than vacuous.
+
+**WHAT THE ZERO MEANS, and it cuts both ways:**
+- **The blast radius of the fix is SMALL.** This is not a change rippling through
+  every generated week.
+- **AND `test:qa` CANNOT DETECT A REGRESSION IN IT.** A green corpus either side
+  proves nothing about this branch, so "scenarios + qa unchanged" must NOT be
+  written up as evidence the fix is safe. The evidence has to be a cell that
+  exercises the branch directly.
+- **WHY it is zero:** drift only bites when a day's rows carry a pattern the plan
+  did not name, and that happens when the DETERMINISTIC FALLBACK fills a day
+  (`completeCoachWorkoutsFromPlan`, `fallbackReason: edge_omitted_day`) — because
+  the fallback emits Sam's whole `:227` ladder while the plan entry names one
+  main lift. In `test:qa` the edge supplies the days, so the fallback never runs.
+
+**THE FIX IS EXPRESSIBLE WITHOUT SPECIAL-CASING, which is what the order
+demands.** `sessionSlotCoverage.ts` already holds Sam's three ladders
+(`LOWER_SLOTS`, `UPPER_FULL_SLOTS`, `UPPER_SPLIT_SLOTS`) and `SLOTS_FOR_KIND`.
+Derive the day's kind from `intendedPatterns`, then admit any row whose pattern
+fills a slot in THAT day's ladder:
+
+| day kind | derived from intended | admits |
+| --- | --- | --- |
+| lower | intended ⊆ {squat, hinge} | squat + hinge |
+| upper_full | intended ⊇ {push, pull} | push + pull |
+| upper_split | intended is exactly one of push/pull | that direction only |
+
+**Only the lower row changes behaviour** — upper_full and upper_split already
+admit exactly what they intend. That is the general rule landing on the one place
+the census said it bites, NOT a squat/hinge special case, and if Sam later rules
+an upper ladder that admits both directions the same code follows him.
+
+**STILL OWED BEFORE IT SHIPS:** the law row + its guard in the SAME commit
+(`LAW-0-registry` forbids a new row entering `UNENFORCED`), asserting his three
+reds — a lower day with no hinge, two squats, an upper day missing vertical.
+
 ### FOR WHOEVER STARTS ITEM 34
 
 The C7 drop site is named with a receipt in `482e0cb6`: the `main_pattern_drift`
