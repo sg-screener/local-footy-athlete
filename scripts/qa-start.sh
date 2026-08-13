@@ -136,6 +136,50 @@ else
   done
 fi
 
+# 4b. CLEAR A STRANDED DEV-HARNESS RECEIPT — item 62, 2026-08-13, seat `device`.
+#
+# THE FAILURE THIS REMOVES, REPRODUCED AND THEN FIXED THE SAME PASS. Sam pastes
+# the one command and the app opens on **"The app did not start —
+# DevE2EClock reload mismatch: clock receipt has no active checkpoint"**, not on
+# his program. It is not a product bug and it is not his to diagnose: a Maestro
+# run writes a DURABLE clock receipt, its checkpoint is cleared at the end of the
+# run, and `restoreDevE2EClockBeforeHydration` (`devE2EClockPersistence.ts:108`)
+# throws on exactly `receipt && !checkpoint && !scenarioSession`.
+#
+# MEASURED, NOT INFERRED — the simulator's own AsyncStorage manifest held
+# `dev-e2e-clock-receipt-v1` and NO `dev-e2e-checkpoint-v2`, which is that
+# condition character for character. The law registry already records this as the
+# white screen Sam hit at 19:22 after a rebuild; the refusal surface made it
+# speak, and this makes it stop happening.
+#
+# ⚠ IT REMOVES ONLY `dev-e2e-*` KEYS, AND ONLY WHEN THEY ARE STRANDED. The
+# athlete's world — `program-store`, `profile-store`, `calendar-storage` and the
+# rest — is never touched, because wiping a week to fix a harness is how a
+# "reset" becomes the thing nobody dares run. A coherent harness state (both
+# halves present, i.e. a real seeded session) is left ALONE.
+CONTAINER="$(xcrun simctl get_app_container "$SIM_UDID" "$BUNDLE_ID" data 2>/dev/null || true)"
+MANIFEST="$CONTAINER/Library/Application Support/$BUNDLE_ID/RCTAsyncLocalStorage_V1/manifest.json"
+if [[ -n "$CONTAINER" && -f "$MANIFEST" ]]; then
+  CLEARED="$(node -e "
+    const fs = require('fs');
+    const p = process.argv[1];
+    let m; try { m = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { process.exit(0); }
+    const receipt = 'dev-e2e-clock-receipt-v1' in m;
+    const checkpoint = 'dev-e2e-checkpoint-v2' in m;
+    if (!receipt || checkpoint) process.exit(0);
+    const dead = Object.keys(m).filter((k) => k.startsWith('dev-e2e-'));
+    for (const k of dead) delete m[k];
+    fs.writeFileSync(p, JSON.stringify(m));
+    process.stdout.write(dead.join(', '));
+  " "$MANIFEST" 2>/dev/null || true)"
+  if [[ -n "$CLEARED" ]]; then
+    xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+    echo "[lfa:dev] Cleared a STRANDED dev-harness receipt (a Maestro run left it behind):"
+    echo "[lfa:dev]   $CLEARED"
+    echo "[lfa:dev] Your training data was not touched."
+  fi
+fi
+
 # 5. Launch the app. This is the step that makes the command's name true.
 echo "[lfa:dev] Launching $BUNDLE_ID..."
 xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"

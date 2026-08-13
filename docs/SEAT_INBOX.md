@@ -15,8 +15,10 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 62. **SAM HAS SEEN ALMOST NONE OF TODAY'S WORK ON A REAL DEVICE. GET THE APP
-    RUNNABLE ON HIS PHONE AND HAND HIM ONE COMMAND. UNOWNED — CLAIM IT BY
-    STAMPING YOUR NAME ON THIS HEAD LINE.**
+    RUNNABLE ON HIS PHONE AND HAND HIM ONE COMMAND. OWNED BY `device`
+    (claimed 2026-08-13). ✅ THE APP STARTS — a stranded dev-harness receipt was
+    refusing every plain launch; `qa-start.sh` now clears it. Simulator only,
+    never his phone. `docs/STATUS_DEVICE.md`.**
 
     **THIS IS NOT A TEST-WRITING JOB AND IT IS NOT A FEATURE.** Every ruling
     landed today was verified by a suite, not by an athlete looking at a screen.
@@ -2084,6 +2086,50 @@ shared data-shape change its readers correctly followed. Sam was right and the
 seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
+
+- **⚠ NEW 2026-08-13, `cap` — THE APP'S LIMIT ON EXERCISES IN A GYM SESSION IS
+  ONE LOWER THAN WHAT YOU WROTE. ONE WORD FIXES IT.**
+
+  **REGISTRY-GREP** (newlines flattened first — a plain grep gave me a FALSE ZERO
+  earlier today because the phrase was line-wrapped): `RULINGS_REGISTRY.md` for
+  *maxExercisesPerStrengthSession* → **3**, *exercise cap* → **3**, *7 exercises*
+  → **1**, *seven exercises* → **1**, and **`cap of 6` → ZERO**, *6-7 exercises*
+  → **ZERO**, *session size* → **ZERO**.
+  **What the hits ARE:** **R-013** rules there is ONE cap for every training age
+  and abolishes the beginner's 3; **R-087** states *"Bible :122 sets the SIZE at
+  7 and Sam has not moved it"*. **NEITHER rules that the number should be 6.**
+  R-013 settles WHO the cap applies to, never WHAT it is. **Nothing rules this.**
+
+  **WHAT'S GOING ON.** The app caps a gym session at **6 exercises**. Your own
+  notes say **6-7, and 7 for a full body day** — your words, Bible `:122`:
+
+  > *"I wouldn't stack lower body strength (say 6-7 exercises) with upper body
+  > strength (6-7 exercises)… I'd prefer to just make that a full body day i.e.
+  > full body strength and 7 exercises."*
+
+  **So the app's number is one too low.** Nobody caught it because nothing was
+  ever checking the limit — **an unenforced number never gets told it is wrong**,
+  which is R-013's own sentence landing on R-013's own value.
+
+  **AND THE 6 WAS NEVER AUTHORED EITHER.** That is exactly why the beginner's 3
+  was abolished under this same ruling. **The same defect, in the number that
+  replaced it.**
+
+  **THE CHECK IS BUILT AND GREEN** (`test:exercise-cap`, 6/6, in `test:bible`):
+  measured over 5 worlds x 3 weeks, **0 of 43 sessions exceed the 7 you wrote**.
+  The mismatch is pinned as a ratchet that prints a banner every run and **cannot
+  widen silently** — deliberately not a red, because reddening every seat's chain
+  over a one-word decision costs more than it buys.
+
+  **⚠ I ALSO GOT THIS WRONG ONCE AND FIXED IT.** My first version judged against
+  the app's 6 and flagged three SEVEN-row sessions as too big — **three sessions
+  that match your notes exactly.** That would have banked three lawful workouts
+  as debt, and "paying it down" would have meant breaking your own prescription.
+
+  **WHAT TO SEND — one of:**
+  - **"make it 7"** — the app's limit matches your notes and the mismatch closes.
+  - **"6 is right, fix my notes"** — the app stays, and the Bible sentence is
+    flagged as the stale one instead.
 
 - **✅ ANSWERED 2026-08-13 — R-087. THE WEEK IS THE UNIT OF COVERAGE, NOT THE
   DAY. Sam: _"depends what's in the rest of the week / each week should contain
