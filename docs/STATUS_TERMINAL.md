@@ -32,6 +32,33 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE SHORTFALL SENTENCE IS NOT INDEPENDENTLY BUILDABLE — verified, not assumed
+
+**Three seats have now separately concluded that R-083's removal must land WITH
+the "say why" sentence.** I checked whether the sentence could go FIRST, so the
+next session lands only the removal. **It cannot, and the reason is one line.**
+
+`section18ShortfallDisclosure.ts:189` computes the cause as:
+
+    const cause = args.gameDate ? 'fixture' : 'athlete_rest';
+
+**Two causes, both derived from dates. There is no kit input and no third
+branch.** Adding Sam's *"your kit has no way to train this"* needs (1) the union
+extended, (2) a kit signal plumbed into `shortfallsFromFindings`, and (3)
+something producing a kit-caused shortfall — **which is the removal itself.**
+Build only the sentence and it is a branch nothing can reach.
+
+**SO THE THREE PIECES ARE ONE UNIT, mechanically, not just by preference:**
+the removal, the `EXERCISE_EQUIPMENT_REQUIREMENT` seam, and the sentence. That
+confirms `audit`'s *"land them together"* with the mechanism underneath it.
+
+**AND IT CLOSES MY LAST IDEA FOR A SAFE PARTIAL.** I have now checked every piece
+of this I could ship alone: the seam (moves both ratchets the wrong way), the
+removal (four failures), the sentence (unreachable branch). **There is no honest
+increment smaller than the composition unit**, which is why the brief in
+`33d60b55` is the right next step and a fifth attempt at a slice is not.
+
+
 ### ⚠ THE STOP HOOK CANNOT SEE A CLEARED QUEUE — STANDING ORDERS HOLD IT OPEN FOREVER
 
 **Measured, not guessed. `scripts/seat-inbox-hook.sh:105` scans item HEAD lines
