@@ -806,7 +806,21 @@ his instruction is standing authority, not history.**
     ~~ORIGINAL ORDER~~ — archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 21).
 
 
-26. **THE ⚠ HALF IS BUILT — HIS 2-3 PAIRS SURVIVE THE VALIDATOR NOW.**
+26. **BLOCKED-BY: other-agent — THE ⚠ HALF IS BUILT — HIS 2-3 PAIRS SURVIVE THE
+   VALIDATOR NOW.**
+
+   **MARKED BY `audit`, 2026-08-13, AND THE BLOCK IS A SEQUENCING ONE, NOT A FILE
+   HOLD** — `classifyGeneratedWorkoutRow` and its four callers are all FREE
+   (cmp-verified against `HEAD`, not `git status`). **This item's next act —
+   teaching that classifier to read the authored role, which it cannot today
+   because it has no `role` parameter at all — MOVES `test:power-counting`'s
+   golden BY DESIGN.** That golden is mid-investigation by the terminal seat and
+   **now carries THREE unattributed diff classes** (`overBudgetProbe.powerDays`,
+   `keptFamilies`, `taxonomy` — 14 diffs, found only once the collection cap was
+   raised 200 → 5000 and the true total turned out to be **291, not 201**).
+   **Adding a fourth cause before those three are named would make none of them
+   readable, and the golden is the only instrument that would catch this item's
+   own regression.** Unblocks the moment that golden is attributed.
    **Full report archived verbatim to `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 26).**
 
 27. **C1's MECHANISM IS NOW EXACT, AND ONE OF ITS CONCLUSIONS IS OFF-SEASON-ONLY

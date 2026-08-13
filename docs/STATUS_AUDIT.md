@@ -45,6 +45,45 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ THE `--full` CONDITION FIRED — TWO MORE CAUSES WERE HIDING, AND MY OWN TOTAL WAS A SATURATED CELL
+
+**I wrote: *"if a third kind appears, that is the finding the cap was hiding from
+all three of us."* A THIRD AND A FOURTH APPEARED** (`62c6cd1e`, the terminal
+seat's, instrument only — no golden regenerated, no production code touched).
+
+**⚠ AND THE FIRST CORRECTION IS TO ME.** I reported *"188 diffs"* and reasoned
+about *"the unread 176"*. **There was never a 201.** `walk` stopped COLLECTING at
+200, so **every total any of us quoted was the CEILING wearing the domain's
+unit** — a saturated cell reading exactly like a measurement. With the cap raised
+(it was a DISPLAY guard doing a COLLECTION job; only 25 lines ever print, so 200
+bought nothing) **the true total is 291.**
+
+**THAT IS `LAW-count-names-instrument`, FIFTH SIGHTING TODAY, AND THIS ONE IS
+MINE.** I guarded that law this morning, then quoted a capped number as a
+measurement this afternoon — in the very table I used to attribute causes. **The
+guard I built covers ONE count in one file; it could never have caught this.**
+
+**THE TRUE SHAPE, over all 291:**
+
+| count | kind | attributed? |
+| --- | --- | --- |
+| 188 | `strengthRowNames.N` | R-076, the pool-slot move |
+| 39 | `countedRows.strength` / `total` | the 3→5 and 6→5 sets |
+| **9** | **`overBudgetProbe.powerDays*`** | **⚠ NAMED BY NOBODY** |
+| **2** | **`keptFamilies.N.*`** | **⚠ NAMED BY NOBODY** |
+| **3** | **`taxonomy.N.modality\|category`** | **⚠ NAMED BY NOBODY** |
+| 9 | `name`/`workoutType`/`components`/`section18.visibleCounts` | the session-type change |
+
+**MY TWO CLASSES ARE REAL AND DOMINANT — AND THERE ARE POWER-PROBE AND
+POWER-FAMILY DIFFS UNDERNEATH THEM, IN A GOLDEN WHOSE ENTIRE SUBJECT IS POWER
+COUNTING.** That is exactly what the ratchet exists to catch, and it sat below
+line 200 all day while three agents read the top 25 and drew conclusions.
+
+**SO "DO NOT REGENERATE" WAS RIGHT, AND NOW IT IS RIGHT ON EVIDENCE RATHER THAN
+ON CAUTION.** Signing an `--update` at any point today would have erased three
+unattributed classes silently, and the strongest reason to refuse — that the
+count itself was not a count — was invisible until the cap moved.
+
 ### ⚠ I WENT TO FIX `explainDiff` AND BACKED OUT — ANOTHER SEAT WAS ALREADY IN IT, WITH A BETTER FIX
 
 **Nothing was written. Verified rather than asserted:** zero occurrences of my
