@@ -469,6 +469,33 @@ with `buildDerivedSession('prehab_accessories', …, 'Freed game slot', …)` �
 only for a TEMPLATE game with no calendar mark, so an away-vacated MARKED fixture
 never reaches it. **Start there, not from scratch.**
 
+**⚠ THIS ROW IS INTERNALLY INCONSISTENT AND NEEDS A SEAT TIDY — 2026-08-13.**
+Concurrent edits interleaved it. It still says *"THE READ CANNOT AUTHOR"* and
+*"start there, not from scratch"*, **both of which are superseded**: the read DOES
+author now (`freedByTheTrip` in `sessionResolver.ts`, shipped `c8702c56`, seen on
+glass), and the day half is BUILT. Read the newest paragraphs, not the oldest.
+
+**⚠ THE STRENGTH ARM WAS ATTEMPTED AND BACKED OUT — §8 SECOND WALL, 2026-08-13,
+and the attempt is worth more than the code was.** A `fixtureRemovedByTrip` input
+was added (writer: `onboardingToCoachingInputs`, from `resolvedFixtureDay`
+surviving vs `targetFixtureDay` not) and a replacement placement tried at TWO
+sites:
+1. **The game branch's remaining-days loop — DEAD CODE.** Measured: the away arm
+   never enters it (`hasGameThisWeek=false, isByeWeek=true,
+   kind=in_season_bye_week`). Removed rather than left sitting.
+2. **The bye branch's final assembly — FIRES, AND THE SESSION STILL DOES NOT
+   SHIP.** Probed: *"placing trip gunshow on Tuesday"* prints, and the next probe
+   reads `weeklyPlan n=3 :: Monday[core] Tuesday[core] Friday[core]`. **The
+   allocation is made on a day the loop believes is UNALLOCATED, and the plan
+   comes out with that day CORE and the optional gone.**
+
+**SO `allocations` AND THE FINAL PLAN DISAGREE ABOUT TUESDAY — the bye allocator
+has a second writer the final loop cannot see. THAT DISAGREEMENT IS THE UNIT, not
+the placement.** Do not attempt a third site before it is explained: the flag is
+proven live (`true` away, `false` home) and the branch is proven correct, so a
+third guess is the third wall of the same shape. `coachingEngine.ts` was restored
+byte-identical to HEAD.
+
 **R-021** · *"i've taken out time caps for now"* · No time-cap row renders. **A
 DISPLAY ruling, not a deletion order — the `time_limit` kind stays in the type.**
 · `BUILT`.
