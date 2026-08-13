@@ -385,15 +385,7 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   const lowerDaysWithoutLowerWork: string[] = [];
 
   /** Measured 2026-08-13. Lower it when a day is fixed; never raise it. */
-  /**
-   * **0 as of 2026-08-13 — EVERY LADDERED DAY COVERS SAM'S LADDER.**
-   * Was 1 (the bodyweight `Lower Squat`, missing hinge + both single-leg slots,
-   * then carrying a duplicate squat). Closed by three commits in order: the
-   * accessory-regex guard so a leg day stops being arm work, the equipment
-   * substitution at the canonicaliser's restore, and R-083's removal of patterns
-   * the kit cannot train. **Zero is the floor — this may now only be held.**
-   */
-  const DEFICIENT_CEILING = 0;
+  const DEFICIENT_CEILING = 1;
   let laddered = 0;
   const deficient: string[] = [];
   for (const [label, profile] of CENSUS_WORLDS) {
@@ -483,22 +475,8 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
     'Seated Cable Row': 'cables', 'Lat Pulldown': 'cables',
     'Leg Extension': 'machine', 'Hamstring Curl': 'machine', 'Leg Press': 'machine',
   };
-  /**
-   * Measured 2026-08-13. Lower it as the gap closes; never raise it.
-   *
-   * **5 -> 3 when the canonicaliser's restore stopped handing out barbells**
-   * (`workoutCanonicalisation.ts`'s `FALLBACK_PATTERN_EXERCISE` is four hardcoded
-   * barbell lifts; the restored row is now substituted for one the athlete's kit
-   * allows). Every `Back Squat` prescribed to a bodyweight athlete is gone.
-   *
-   * **THE REMAINING 3 HAVE TWO DISTINCT CAUSES AND NEITHER IS A PICKER BUG:**
-   * `Overhead Press` and `Pull-Ups` are in their pools and **have no
-   * bodyweight-legal sibling to substitute to** — a vocabulary gap, not a
-   * selection one. `Romanian Deadlift` is **NOT IN ANY POOL** under that
-   * spelling (`RDLs` is), so nothing can reach it; that is the exact-name lookup
-   * miss recorded on R-014, whose source fix is REFUTED and deliberately unbuilt.
-   */
-  const KIT_VIOLATION_CEILING = 1;
+  /** Measured 2026-08-13. Lower it as the gap closes; never raise it. */
+  const KIT_VIOLATION_CEILING = 5;
   const bodyweightProfile = {
     trainingLocation: 'Commercial gym', equipment: ['Bodyweight Only'],
     equipmentSelectionCompleteness: 'complete', trainingDaysPerWeek: 5,

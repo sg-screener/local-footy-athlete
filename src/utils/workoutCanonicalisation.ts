@@ -420,99 +420,13 @@ function matchingReferenceRow(
   return null;
 }
 
-/**
- * THE RESTORED ROW MUST BE ONE THE ATHLETE CAN ACTUALLY PERFORM.
- *
- * **`FALLBACK_PATTERN_EXERCISE` is four hardcoded BARBELL lifts — `Back Squat`,
- * `Romanian Deadlift`, `Overhead Press`, `Pull-Ups` — and this is where a
- * BODYWEIGHT-ONLY athlete was getting them.** Measured across 5 worlds x 3
- * weeks, the kit-impossible lifts prescribed to bodyweight athletes were exactly
- * those four names and no others: 9 Back Squat, 6 Romanian Deadlift, 6
- * Pull-Ups, 6 Overhead Press.
- *
- * **TWO EARLIER FIXES AIMED AT THIS AND BOTH MEASURED INERT** — the
- * equipment-blind fallback in `defaultProgram` is real but its rows are
- * discarded, and the accessory-regex defect meant a leg day never reached the
- * squat branch. **This is the third site and the one the names actually come
- * from.** Recorded so the next reader does not spend the same two attempts.
- *
- * THE SUBSTITUTION IS DELEGATED, NOT INVENTED: `applyPoolRotation` already owns
- * "what can this athlete do instead", already filters by equipment, and already
- * returns the name unchanged when the kit allows it — verified for full-gym.
- * A fixed rotation context is used deliberately: this is a REPAIR, not variety,
- * so the same gap must resolve the same way every week.
- */
-/** Swap an authored fallback name for one the athlete's kit allows. */
-function equipmentSafeFallbackName(
-  authored: string,
-  profile: OnboardingData | null | undefined,
-): string {
-  if (!profile) return authored;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { resolveEquipmentCapabilities } = require('./equipmentAvailability') as {
-    resolveEquipmentCapabilities: (p: OnboardingData) => { tags: string[] };
-  };
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { applyPoolRotation } = require('../data/exercisePoolsStrength') as {
-    applyPoolRotation: (n: string, ctx: unknown, used?: unknown, prefs?: unknown) => string;
-  };
-  const tags = resolveEquipmentCapabilities(profile)?.tags;
-  if (!tags?.length) return authored;
-  return applyPoolRotation(
-    authored,
-    { miniCycleNumber: 1, weekInBlock: 1 },
-    undefined,
-    { availableEquipment: tags },
-  );
-}
-
-/**
- * R-083: A PATTERN THE KIT CANNOT TRAIN IS REMOVED, NOT SUBSTITUTED.
- *
- * **Sam, 2026-08-13:** *"ya can't do much with overhead pushing or pull or even
- * horizontal pulling without equipment - i can't account for everyone and if
- * they want to train properly they'll sign up to a gym"*.
- *
- * So when the restore has nothing legal to offer, **it offers nothing.** A
- * bodyweight-only athlete gets a SHORTER upper day, which is the honest answer —
- * not a barbell he cannot lift, and not a filler exercise invented to fill the
- * slot.
- *
- * THIS IS THE ONE CASE WHERE A MISSING PATTERN IS NOT A DEFECT, and R-014's
- * *"a session is judged by pattern coverage"* still holds everywhere else: the
- * pattern is absent because the KIT cannot train it, not because the composer
- * failed.
- */
-function restoreIsPossible(
-  authored: string,
-  substituted: string,
-  profile: OnboardingData | null | undefined,
-): boolean {
-  if (!profile) return true;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { resolveEquipmentCapabilities } = require('./equipmentAvailability') as {
-    resolveEquipmentCapabilities: (p: OnboardingData) => { tags: string[] };
-  };
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { exerciseAllowedByEquipment } = require('../data/exercisePoolsStrength') as {
-    exerciseAllowedByEquipment: (n: string, kit: readonly string[] | undefined) => boolean;
-  };
-  const tags = resolveEquipmentCapabilities(profile)?.tags;
-  if (!tags?.length) return true;
-  // The substitute is what would actually ship; the authored name only matters
-  // when nothing replaced it.
-  return exerciseAllowedByEquipment(substituted || authored, tags as never);
-}
-
 function fallbackPatternRow(
   workout: Workout,
   pattern: MainStrengthPattern,
   index: number,
   earlyOffseason: boolean,
-  profile?: OnboardingData | null,
 ): WorkoutExercise {
-  const authored = FALLBACK_PATTERN_EXERCISE[pattern];
-  const name = equipmentSafeFallbackName(authored, profile);
+  const name = FALLBACK_PATTERN_EXERCISE[pattern];
   const now = new Date().toISOString();
   const id = `canonical-${workout.id}-${pattern}`;
   return {
@@ -967,35 +881,8 @@ export function finaliseWorkoutAfterMutation(
     const represented = new Set(domainPatterns(strengthAndSupportRows));
     for (const pattern of intendedPatterns) {
       if (represented.has(pattern)) continue;
-      const authoredName = FALLBACK_PATTERN_EXERCISE[pattern];
-      const reference = matchingReferenceRow(context.referenceWorkout, pattern);
-      const fallback = reference ?? fallbackPatternRow(
-        workout, pattern, strengthAndSupportRows.length, earlyOffseason, context.profile,
-      );
-      // ⚠ R-080 GUARD ON MY OWN R-083 FIX. Substituting the restored row can
-      // land on a name the day ALREADY HAS — a bodyweight day restored
-      // `Back Squat` -> `Bodyweight Squat` beside the `Bodyweight Squat` it was
-      // already carrying, which is precisely the duplicate Sam ruled against.
-      // Measured on the first run of this change; caught before it shipped.
-      const substitutedName = rowName(fallback);
-      if (strengthAndSupportRows.some((existing) => rowName(existing.row) === substitutedName)) {
-        actions.push({
-          kind: 'row_removed',
-          item: substitutedName,
-          reason: `restore_would_duplicate:${pattern}`,
-        });
-        continue;
-      }
-      // R-083: if the kit cannot train this pattern, the day goes WITHOUT it.
-      if (!restoreIsPossible(authoredName, substitutedName, context.profile)) {
-        actions.push({
-          kind: 'row_removed',
-          item: authoredName,
-          reason: `pattern_not_trainable_with_kit:${pattern}`,
-        });
-        continue;
-      }
-      const restored = fallback;
+      const restored = matchingReferenceRow(context.referenceWorkout, pattern) ??
+        fallbackPatternRow(workout, pattern, strengthAndSupportRows.length, earlyOffseason);
       strengthAndSupportRows.push({
         row: restored,
         index: strengthAndSupportRows.length,
