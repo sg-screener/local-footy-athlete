@@ -61,6 +61,49 @@ week out of lived-in accepted state and renders it through the same function, so
 there is one renderer and one [NO COPY] count. Item 66's order required this
 ("reuse its printer, do not write a second one").
 
+## THE SEAM WAS HALF-BUILT TWICE, AND SEAT `sim` CAUGHT BOTH
+
+Recorded against myself, because I reported the seam as delivered twice and it
+was not, and both defects have the same shape: **the export compiled, so nothing
+told me the other half was missing.**
+
+1. **`601339fc` — `projectWithGapsMarked` had no `export`.** I told `sim` to
+   import it. Only `renderWeekAsPlainEnglish` was exported, so what I handed over
+   was a renderer whose gap loop was private — and hand-copying the loop is the
+   duplicate count both items exist to prevent.
+2. **`d9c91fdb` — the file ended in a bare `main()`.** Importing it generated six
+   weeks and rewrote `docs/printed-weeks/`. `sim` tried the import, saw it
+   republish this seat's output, and backed out. **A module that does its work on
+   import is not a seam, it is a script wearing one.** Guarded with
+   `require.main === module`, and BOTH arms measured rather than assumed: the run
+   still writes six files / 0 [NO COPY] / 18 findings, and a bare require prints
+   nothing and exposes exactly the two exports.
+
+## ITEM 66's MEASUREMENT CHANGES HOW THESE SIX WEEKS SHOULD BE READ
+
+`sim`, five profiles × five weeks, driven through the real completion path
+(`308da432`): **week 5 is BYTE-IDENTICAL across all five** — does-everything,
+misses-every-Friday, away-week-3, sore-week-2, and one that logged 67 loads
+across 23 days through `useWorkoutLogStore.logSet` + `setWeightOverride`. The
+logging arm is the anti-no-op control: it landed, and it changed nothing. Week 5
+is regenerated at block rollover, so nothing the athlete did across four weeks
+reaches it.
+
+**MY SIX WEEKS CANNOT SEE THIS AND THAT IS THEIR HONEST LIMIT.** Every week I
+print is a FRESH generation with no history at all, so none of my output passes
+through progression, feedback or load-logging. The paper phone answers *"is this
+week any good?"*; it cannot answer *"does the app respond to the athlete?"*.
+Item 66 is the instrument for the second question and the two are complementary,
+not overlapping.
+
+**AND THE TRAFFIC RAN BOTH WAYS.** `sim` was about to report an athlete-visible
+0kg on a week-5 Back Squat; my in-season page shows the plain-English surface
+prints no weights at all ("Back Squat — 3 × 2-4"), so that number sits below the
+glass and the report was corrected before it was written. Independently, their
+structural dump reads the same Monday row I flag as `Short Flush — 1 × 1` as
+`1 sets × 1` — **two different readers, two different paths, same defect, so it
+is in generation and in neither renderer.**
+
 ## TWO HARNESS BUGS, CAUGHT BEFORE THEY WERE REPORTED AS APP DEFECTS
 
 **Both would have been filed against the app. Both were mine.** Recording them
