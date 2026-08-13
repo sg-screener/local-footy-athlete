@@ -147,6 +147,45 @@ his instruction is standing authority, not history.**
     the opposite of what this item's head line implies. It changes generated
     output and owes `test:scenarios` + `test:qa` either side.
 
+    ### ⚠ SAM HAS ANSWERED — R-087, 2026-08-13, AND IT DISSOLVES THE QUESTION
+    RATHER THAN ANSWERING IT. `readiness`'s AWAITING SAM ENTRY IS DISCHARGED.
+
+    **His words, verbatim:** *"depends what's in the rest of the week / each week
+    should contain all the main lifts i.e. squat, hinge, single leg knee, single
+    leg hip, push pull in both horizontal and vertical then accessories for
+    uppers and lowers and some core"*.
+
+    **THE WEEK IS THE UNIT OF COVERAGE, NOT THE DAY.** `readiness` asked which
+    two of the current seven come out to make room for single-leg knee and
+    single-leg hip. **Sam's answer is that the seven are not a list to be
+    edited.** A full body day placed after a lower day that already ran squat and
+    hinge is a DIFFERENT SEVEN from a full body day that is the week's first
+    strength session. **ANY FIX THAT HARDCODES A FULL-BODY ROW LIST, HOWEVER
+    CAREFULLY CHOSEN, CONTRADICTS THIS RULING ON THE DAY IT LANDS.**
+
+    **THE COMPLETE WEEKLY SET, IN HIS WORDS:** squat · hinge · single-leg knee ·
+    single-leg hip · horizontal push · horizontal pull · vertical push · vertical
+    pull · upper accessory · lower accessory · core.
+
+    **SO THE UNION-WIDENING `readiness` MEASURED IS STILL THE JOB — WITH A
+    STATED PURPOSE INSTEAD OF A GUESSED ROW LIST.** The 102 full body days are
+    missing single-leg work because they never ASK for it:
+    `plannedPatterns:["squat","hinge","push","pull"]` and `MainStrengthPattern`
+    cannot say the single-leg slots, while `SessionSlot` can. **Widen the union
+    so a full body day can ask the WEEK what is still open, then fill from that.**
+    The 15 non-test files `readiness` named — including `weeklyExposureContractV2`
+    and `section18SafetyPolicy` — are unchanged, and so is the `cod_decel`
+    undefined-switch hazard at each site.
+
+    **SIZE IS STILL SEVEN AND SAM HAS NOT MOVED IT** (Bible `:122`). Eleven slots
+    into seven rows means a full body day CANNOT be a week's only strength day
+    and still cover everything. **That is not a template to pad — it is a real
+    weekly deficiency to REPORT.** Where the week's structure cannot pay the
+    coverage, say so; do not quietly drop a slot to make the arithmetic work.
+
+    **DO NOT RE-ASK ANY PART OF THIS.** R-087 carries `Search words:` covering
+    *full body*, *what are the 7*, *template*, *weekly coverage*, *main lifts*,
+    *rest of the week*, *MainStrengthPattern*, *plannedPatterns*, *item 51*.
 52. **✅ CLOSED — SHIPPED `70e91a0f`, AND IT FOUND A REAL DEFECT THAT WAS NOT
     THE ONE THIS ITEM PREDICTED. `patterns`, 2026-08-13.**
 
@@ -2000,8 +2039,13 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **⚠ NEW 2026-08-13, `readiness` — YOUR FULL BODY DAY HAS NO SINGLE-LEG WORK AT
-  ALL (102 DAYS), AND FIXING IT MEANS DROPPING SOMETHING YOU CURRENTLY GET.**
+- **✅ ANSWERED 2026-08-13 — R-087. THE WEEK IS THE UNIT OF COVERAGE, NOT THE
+  DAY. Sam: _"depends what's in the rest of the week / each week should contain
+  all the main lifts..."_. The full ruling is in `RULINGS_REGISTRY.md` and the
+  order is in item 51. THIS ENTRY IS DISCHARGED — do not re-put it to him.**
+
+  ~~⚠ NEW 2026-08-13, `readiness` — YOUR FULL BODY DAY HAS NO SINGLE-LEG WORK AT
+  ALL (102 DAYS), AND FIXING IT MEANS DROPPING SOMETHING YOU CURRENTLY GET.~~
 
   **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *full body*, *mixed day*,
   *ladder* — **one hit and it is not an answer** (line 376 merely lists
