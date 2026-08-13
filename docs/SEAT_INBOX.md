@@ -15,8 +15,22 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-37. **BLOCKED-BY: other-agent — AWAY MUST REPLACE THE WORK IT REMOVES — SAM,
-    2026-08-13, AND HE CLOSED MY QUESTION INSTEAD OF ANSWERING IT.**
+37. **BLOCKED-BY: sam (STRENGTH ARM ONLY) — AWAY MUST REPLACE THE WORK IT
+    REMOVES. THE DAY HALF IS BUILT AND ON GLASS.**
+
+    **RE-MARKED BY the desktop, 2026-08-13, from `other-agent` to `sam`:** the
+    desktop owns this and is no longer holding it. **What remains is a
+    contradiction between two of his own rulings** — R-069(2) (*"bye recovery is
+    exactly 2 lighter lifts"*, locked 14 July) against R-075 (*"replace the work
+    it removes"*). Away is built as a bye on his own instruction, so it inherits
+    the 2-lift shape, and **the code is OBEYING R-069(2)** — three attempts to
+    hand the session back were each consumed by the strength repair. Question and
+    full `REGISTRY-GREP` under `## AWAITING SAM` (`9822ddea`); measurement trail
+    in `docs/STATUS_DESKTOP.md`.
+
+    **EXPLICITLY NOT BLOCKED, AND DONE:** the day half (`c8702c56`) — a vacated
+    Saturday reads *"Conditioning — 2 exercises"* — and the conditioning arm of
+    his own arithmetic, one-for-one (`test:away-flow` [13g]/[13h], 46/0).
 
     **MARKED BY `audit`, 2026-08-13, NOT CLAIMED AND NOT EDITED BELOW THIS
     PARAGRAPH.** This item names the DESKTOP as owner. **Two seats are already in
@@ -714,7 +728,40 @@ his instruction is standing authority, not history.**
    snapshot. **Three priced routes; none started, because the two section18
    files they touch are mid-flight with another agent.**
 
-7. **NOT BLOCKED — SAM'S OWN CASE IS NOT REPRESENTABLE TODAY.** Full text:
+7. **✅ BOTH NAMED BUILDS EXIST — RE-MEASURED BY `audit`, 2026-08-13, WHICH IS
+   WHAT THIS ITEM'S LAST LINE ASKS FOR. NOTHING IS OWED TO SAM.**
+
+   This item names exactly two things and **both are in the tree now:**
+
+   1. **THE CAPACITY HALF — BUILT, and it is labelled with this item's own
+      number.** `weeklyExposureContractBuilders.ts:406` carries *"STRENGTH WAS
+      THE ONLY ALLOCATION COUNTING A DAY IT CAN NEVER USE (item 7a)"* and now
+      caps strength at `strengthCapacityDays` — selected days minus the game
+      day — reducing with `insufficient_availability`. **⚠ AND IT IS NOT WHAT
+      THIS ITEM ASKED FOR: it drops the GAME day, not the TEAM days.** The
+      comment refuses the team-day half ON PURPOSE and says why — *"strength
+      legitimately STACKS on a team night ('Team Training + Upper Pull' is a real
+      generated session)"* — which is R-010's territory, not a miscount.
+      **Its own honesty note: INERT across all 34 QA weeks, because the game day
+      is never among the selected training days; fixed because nothing PREVENTS
+      the overlap.**
+   2. **THE COPY HALF — BUILT.** The one-sentence-for-two-causes defect is gone:
+      `section18ShortfallDisclosure.ts:84` is `cause: 'fixture' | 'athlete_rest'`
+      with a sentence each, and the day named now belongs to the cause. **The
+      renderer had a second live defect this item never knew about — the one
+      production call site passed `weekStart`, so every Monday-start week said
+      "Resting Monday" whichever day was rested, and whether or not one was.**
+      **Sam ruled fixture-only on 2026-08-13.**
+
+   **SO THE OPEN QUESTION IS NARROWER THAN THE ITEM AND IT IS NOT A RULING:** is
+   Sam's *"only 1 strength session … 2 games and 2 team trainings"* week
+   reachable now? **Unmeasured — the capacity fix drops one day (the game), and
+   his case needs the arithmetic to reach 1.** That is a measurement, and it is
+   the whole of what is left here. **OWNER: unclaimed.**
+
+   ── original below ──
+
+   **NOT BLOCKED — SAM'S OWN CASE IS NOT REPRESENTABLE TODAY.** Full text:
    `docs/SEAT_ORDERS_PARKED_FULL_2026-08-13.md`.
    The two questions this item put to Sam were withdrawn — the answers were
    already in the code and in his rulings. **Sam, 2026-08-13, on being asked
