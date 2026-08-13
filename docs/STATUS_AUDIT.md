@@ -219,7 +219,23 @@ The control is `.sweep/fails-item28-away-rest.txt`, **10:55 today — before
 `b62add9f` landed at 11:05**, so it is the last measurement of this repo taken
 before the deletion. It carried **20 failing suites**.
 
-**PARTIAL RESULT, 7 reds so far, and only ONE is not in the control:**
+**✅ FINAL RESULT — 21 reds against the control's 20. THE RESTORE BROKE NOTHING.**
+**NEW:** `test:displacement-sweep`, `test:ruling-registry`. **NEWLY GREEN:**
+`test:away-flow` (item 37's day half). The other 19 all pre-date `b62add9f`.
+- **`test:ruling-registry` is the DESKTOP's**, already named by them — their ask
+  matcher flags a legitimate `AWAITING SAM` entry. Not mine, not the restore's.
+- **`test:displacement-sweep` was HALF instrument and HALF real** — see the
+  entry below; the instrument half is fixed in `b19109d4`, the real half is one
+  table row owed by item 37's owner.
+- **AND MY OWN ATTRIBUTION IS CLOSED:** all three doc commits are markdown only,
+  so no red can be this seat's.
+
+**THE PARTIAL READING BELOW IS KEPT ON PURPOSE, because it was WRONG in the
+direction that matters and the correction is the lesson.** At 7 reds it looked
+like 15 control suites had gone green; they had simply not run yet. **A partial
+fails-file read as a final one is the harness-lies shape.**
+
+**PARTIAL RESULT AS IT STOOD MID-RUN, 7 reds, and only ONE not in the control:**
 
 | suite | in the 10:55 control? |
 | --- | --- |
@@ -272,6 +288,38 @@ territory ("make the chain cheap"), which is `BLOCKED-BY: other-agent`, so it is
 RECORDED here rather than fixed.** The one-line shape is
 `> "$OUT_DIR/log-$suite.txt"`; it is not built, because the two section18 files
 item 2 names are mid-flight with another seat.
+
+### ✅ `test:displacement-sweep` — A COMMENT WAS COUNTING AS A DERIVER (`b19109d4`)
+
+**THE GATE READ 7 SITES WHERE THE RESOLVER HAS 6.** `derivedSiteCount` split the
+RAW file on `buildDerivedSession(`, so **prose counted as a call site** —
+`sessionResolver.ts:2255`, inside the away/R-075 JSDoc block, quotes the call
+while naming which owner the freed-slot answer reuses.
+
+**WHY IT WAS NOT COSMETIC, THOUGH THE SUITE WAS RED EITHER WAY.** The fix the
+gate DEMANDED was **two** rows, and one would have documented **a deriver that
+does not exist**. The same table is deletion-checked in the other direction, so
+that phantom row would later fail for the opposite reason with **nobody able to
+tell which count was the lie.**
+
+| | count |
+| --- | --- |
+| raw | **7** — the comment counted |
+| `codeOnly` | **6** — what the file actually does |
+| table | **5** rows |
+
+**⚠ STILL RED, AND CORRECTLY SO. Six against five: there IS one genuine
+undeclared deriver, and it is `59b0994a`'s** — item 37's day half, when the
+freed Saturday learned to carry work. **That row is the OWNER'S to write** (it
+answers "what does this deriver do with an athlete-placed day", an away-flow
+ruling), item 37 is `BLOCKED-BY: other-agent`, and the owner has been told.
+**Nothing here hides it — the number in the failure is now the honest one.**
+
+**MUTATION-PROVEN, because a green stripper is a claim.** `codeOnly` has its own
+fixture — a real call, a JSDoc mention, a line-comment mention, and a URL that
+must survive the `//` rule. Replacing its body with `return source`: **the
+fixture cell REDS ("kept 4, expected 1") AND the count REVERTS to 7.** Restored
+and re-run after.
 
 ### ITEM 28-C1 — THE WALL IS NAMED TO THE LINE, AND THE STANDING BAR MAY HAVE EXPIRED
 
