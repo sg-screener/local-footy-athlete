@@ -99,9 +99,41 @@ his instruction is standing authority, not history.**
     and they should be paid before the next unit, not carried.
 
 
-40. **BLOCKED-BY: other-agent — CENSUS C4. OWNED BY `pace` in its own text.**
+40. **✅ CLOSED — CENSUS C4 IS BUILT. `pace`, 2026-08-13.**
 
-    **OWNED BY `pace`.**
+    **`f6808ed7` → `4d24be47` → `05e609af` → `f6e955a1`.** Sam's floors now carry
+    his ceilings' weight. **168/11 → 168/10 on the QA corpus, nothing added**,
+    and the three findings that went were all early-off-season weeks told they
+    breached floors their own messages lift for them: S5 running, S5 sprint,
+    S6 running.
+
+    **⚠ THE ORDERED STEP WAS THE LAST ONE, NOT THE FIRST.** "Give the floors the
+    same weight as the ceilings" first would have made S5 and S6 UNBUILDABLE —
+    `maxRunningExposures` is `'strong'` and `section18CraftTier.ts:123` blocks on
+    `strong`. Built it, measured 10 → 13, backed it out, fixed what was
+    underneath, then did it. **An ordered step is a claim too.**
+
+    | step | what | result |
+    | --- | --- | --- |
+    | 1 | running-floor exemption reaches the validator | S5+S6 running nags gone |
+    | 1b | the QA corpus was a THIRD caller with the same gap | corpus can see it |
+    | 2 | the sprint floor gets the exemption its own sentence advertises | S5 sprint gone |
+    | 3 | floors take the ceilings' `capSeverity` map | S5 conditioning `info`→`soft` |
+
+    **AND ONE ARTEFACT WORTH THE NEXT SEAT'S TIME.** An allowed-findings row read
+    *"Early off-season low-availability scenario intentionally has no sprint/COD
+    anchor"* — **Sam's exemption, living in a TEST POLICY because the code could
+    not express it.** Retiring that row is what made the rule real. Two other
+    rows were RE-KEYED `info` → `soft`, the opposite operation, and the file says
+    which is which so neither can be mistaken for the other.
+
+    Held by `test:rules-kernel` [C4], 9 cells, 122/0, non-vacuity first on both
+    floors and a discriminator keeping the two exemption vocabularies apart —
+    bye recovery lifts the RUNNING floor and NOT the sprint floor. Mutation-
+    checked both directions. **Pre-existing and not mine: the "S3 …_under no
+    longer matched" orphan was in the baseline before any of this, twice.**
+
+    ~~ORIGINAL ORDER BELOW~~
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *running*, *floor*, *minimum* —
     the floors are AUTHORED (Bible `:4283` running 2/3/4, `weeklyExposureCounts.ts:45`
     conditioning 3-5, sprint min 1). **Nothing to ask Sam. This is a build.**
@@ -1202,8 +1234,15 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **✅ ANSWERED AND CLOSED 2026-08-13 — SAM RULED *"similar is right"*. REGISTER
-  AS R-081; the row text is in `docs/STATUS_AUDIT.md`.**
+- **ANSWERED AND CLOSED 2026-08-13 ✅ — SAM RULED *"similar is right"*. REGISTERED
+  AS R-081.**
+
+  **CITES R-081** — this question's own answer, now a row in
+  `docs/RULINGS_REGISTRY.md`. **CITES R-080 AND IT DOES NOT APPLY:** the ask gate
+  matches it here, but R-080 is the lunge/squat pool-rotation split
+  (*"a lunge may not rotate into a squat"*) and has nothing to do with contrast
+  pairing. Named rather than left to be re-derived, since the matcher is known
+  blunt on long questions.
 
   **HIS WORDS, VERBATIM: *"similar is right"*.** So the pairing partner is chosen
   by **FAMILY**, `e665ab44` is CONFIRMED rather than merely defensible, and
@@ -1410,7 +1449,7 @@ seat was wrong.
   **NOT BLOCKING.** The unit, the numbers and the cells are built and green;
   only these two doors wait.
 
-- **✅ ANSWERED AND CLOSED 2026-08-13 — SAM RULED *"leave it"*. REGISTERED AS
+- **ANSWERED AND CLOSED 2026-08-13 ✅ — SAM RULED *"leave it"*. REGISTERED AS
   R-078 AND HELD BY A CELL IN THE SAME COMMIT.**
 
   **CITES R-078** (this question's own answer). **He chose option 1: zero COD in a
