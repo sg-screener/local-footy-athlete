@@ -742,3 +742,52 @@ athlete's pull-up session permanently "off feet" in the golden** — the exact
 `exposureEngine` feeds exposure counting app-wide; changing what a row COUNTS AS
 moves far more than this golden and needs its own measurement either side. **Named
 to its line so the next pass builds instead of hunting.**
+
+
+---
+
+## 2026-08-13 — THE SESSION FLIP IS A REGRESSION. THE GOLDEN IS RIGHT AND MUST NOT BE RE-RECORDED.
+
+**The last open question on the 289 is answered, with VALUES:**
+
+    GOLDEN   scenarios.3 weeks[2].days[1]
+      "Prehab & Accessories" · Strength · components ['strength']
+      countedRows { strength: 5, total: 5 }
+      Bird Dog · Lateral Lunge · Scap Push-Up · Single-Leg Calf Raise ·
+      Swiss Ball Hamstring Curl
+
+    CURRENT
+      "Mobility" · Recovery · components ['recovery']
+      countedRows { strength: 0, total: 6 }
+      strengthRowNames: []
+
+**THE ATHLETE LOSES FIVE COUNTED ROWS AND GAINS A MOBILITY SESSION.** This is not
+a retyping — `SESSION_META.prehab_accessories.workoutType` is still `'Strength'`
+and untouched. **A DIFFERENT SESSION IS BEING BUILT ON THAT DAY.**
+
+**AND IT IS THE WORST ATHLETE FOR IT TO HAPPEN TO.** `scenarios.3` is
+`offseason-no-equipment` — off-season, BODYWEIGHT ONLY. The rows that vanished
+are `Lateral Lunge`, `Single-Leg Calf Raise`, `Swiss Ball Hamstring Curl`: single-
+leg knee, single-leg hip and calf work. **R-014's slot language names exactly
+those** — *"a single leg knee, a single leg hip, and accessory and/or some
+core"*. An athlete with no implements has the fewest ways to replace them, and
+mobility does not.
+
+**SO THE GOLDEN IS DOING ITS JOB AND `--update` WOULD BURY A REAL DEFECT.** Of
+the 289: 188 + 39 are two ruled causes (R-076, `c69151d9`) and are legitimate;
+**~14 encode this regression.** The two I fixed today were also a defect
+(`dba1e400`). **The correct end state is not a re-record — it is finding why that
+day stopped building `prehab_accessories`.**
+
+**WHAT I DID NOT DO: NAME THE CAUSE.** Ruled OUT: the builder's meta (unchanged),
+and R-076 (its three moved exercises — `Face Pull`, `Rear Delt Fly`, `Band
+Pull-Apart` — appear nowhere in the lost five). **`8d79e1d1 feat(charter): the
+Mobility door the Bible always granted` is the obvious suspect and I have not
+tested it.** That is a bisect over the terminal's own landings, and they hold the
+control arms already.
+
+**THE ORDER OF EVENTS IS THE LESSON.** Three readers called this golden "probably
+correct, re-record it" at different points today. It took reading the VALUES of
+one day to find that it is holding a real loss of the athlete's work. **A golden
+whose diff nobody has read is not evidence that nothing broke — it is the place
+the break is hiding.**
