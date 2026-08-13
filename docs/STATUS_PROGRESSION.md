@@ -19,6 +19,54 @@ write** and was left alone.
 
 ## STATUS
 
+### ✅ C6 IS FIXED AND SHIPPED (`cd559cb2`) — AND THE RESIDUAL IS NAMED TO THE ROW
+
+**MEASURED EITHER SIDE, same seed, same week, same cell — total strength sets:**
+
+| | Mon | Tue | Wed | Thu | Fri |
+| --- | --- | --- | --- | --- | --- |
+| **before** | 14 → **6** | 8 → **4** | 13 → 13 | 5 → 2 | 11 → 4 |
+| **after** | 14 → **13** | 8 → **7** | 13 → 13 | 5 → 2 | 11 → 4 |
+
+**A Thursday declaration was HALVING the Monday and Tuesday already trained.**
+Now the halving lands only inside the window, and Thu/Fri are untouched by the
+change — still properly deloaded. Held by `test:deload-week` 44/0 with the
+second half asserted too (*the days INSIDE the window still ARE deloaded*), so
+"not deloaded outside" cannot pass over a world where nothing deloaded.
+**Mutation-proven:** making the gate ignore the window reds the outside cell and
+nothing else.
+
+**THE CELL USES "WRECKED" AND THAT IS WHY IT CAN ATTRIBUTE.** My earlier attempt
+used "cooked", which also lifts the minimums (R-038) and flips the week to
+`optional_week` — two changes at once, and I reverted it unproven. **The
+wrecked-window fix shipped hours earlier is what made this one measurable.**
+
+### ⚠ THE RESIDUAL, NARROWED FROM "~1 set/day" TO AN EXACT ROW
+
+**It is ONE MAIN LIFT PER DAY LOSING EXACTLY ONE SET, and nothing else moves:**
+
+    Mon  control : … Romanian Deadlift:3 … | declared: … Romanian Deadlift:2 …
+    Tue  control : Overhead Press:3 | DB Bench Press:3 | Lateral Raise:2
+         declared: Overhead Press:2 | DB Bench Press:3 | Lateral Raise:2
+
+**Every other row on both days is byte-identical.** So it is not the deload
+(which HALVES), not a session-count change, and not the plan shape — it is a
+single-set reduction on the day's FIRST main lift, on days outside the window.
+
+**WHERE IT IS NOT:** `applyGenerationConstraintsToProfile` (injuries only),
+`mergeAthletePrefsWithGenerationConstraints` (injuries only), and nothing in
+`defaultProgram` matches a `sets - 1` or readiness-driven volume cut. **It is
+upstream of the builder — the weekly plan or the readiness bias that feeds it.**
+
+**WHY THE CELL ASSERTS A RATIO AND NOT EQUALITY.** Loosening it to "unchanged"
+would have hidden this; asserting equality would have red-flagged a defect the
+C6 change does not claim to fix. **The ratio holds the halving out while leaving
+the residual visible and named.**
+
+**NEXT: find the one-set reduction.** It is a smaller defect than the one just
+fixed but it is the same law — R-035 says the days outside the window are not
+deloaded, and losing a set is still losing a set.
+
 ### ✅ ITEM 44 — MY OWN REGRESSION, CAUGHT BY A GUARD, PAID THE WAY THE GUARD ASKED
 
 **The seat filed item 44 naming a second live writer on the program store, and
