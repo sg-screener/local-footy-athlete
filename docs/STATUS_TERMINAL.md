@@ -1121,3 +1121,57 @@ to whoever owns them:
 
 `test:session-execution-checklist` was GREEN at both `308b0358` and `a55d1a6c`
 and is red at HEAD — **its cause is later than mine and unattributed.**
+
+---
+
+## ALL FIVE REMAINING NEW REDS ARE ATTRIBUTED — THREE MORE ARE MINE (2026-08-13)
+
+Same rig: binary search, real suite runs, detached worktree. **Anchors verified
+GREEN before each search**, because a search from a red anchor returns its first
+commit and looks like an answer.
+
+| suite | first red | owner |
+| --- | --- | --- |
+| `test:session-execution-checklist` | `9c0d1776` 14:36 | **audit** |
+| `test:coach-revision-proposal-behavior` | `f6e955a1` 13:48 | **pace** |
+| `test:deload-week` | `3e413f61` 14:09 | **terminal (mine)** |
+| `test:program-control-durable` | `3e413f61` 14:09 | **terminal (mine)** |
+| `test:session-list-combinations` | `3e413f61` 14:09 | **terminal (mine)** |
+
+**MY TOTAL FOR TODAY IS FIVE SUITES ACROSS THREE COMMITS** — `a55d1a6c` and
+`188d6fad` (reverted) and `3e413f61` (NOT reverted, see below).
+
+### `3e413f61` IS NOT REVERTED, AND THE REASON IS NOT "IT IS MINE"
+
+It is the one-condition narrowing `contributions.length === 0 &&` on the
+accessory branch — **the typed intent outranking the prose**, which is the repo's
+own rule, and it is what gives a leg day Sam's `:227` ladder instead of bicep
+curls. Reverting it puts arm work back on leg days.
+
+**THE ASSERTION IT REDS IS COMPARING TWO DIFFERENT LIFTS.** `deloadWeekGenerationTests.ts:315`
+pairs `mainRows(build)[0]` with `mainRows(deload)[0]` and asserts Sam's law that
+main load is HELD. The reported pairs:
+
+    Off-season day 2   build 42.5 -> deload 77.5
+    Pre-season day 1   build 65   -> deload 70
+    Pre-season day 5   build 70   -> deload 65
+
+**A DELOAD THAT HOLDS OR DROPS LOAD CANNOT PRODUCE A HIGHER NUMBER.** Two of the
+three go UP, so the pair cannot be the same lift — no instrumentation needed, the
+numbers refute it on their own. The suite already knows this: its own
+`keeps main lift` check is a **declared gap** on that day
+(`offseason_block2_deload_week_restructures_the_days` — *"the deload week
+restructures the days"*), and for Pre-season it is **not asserted at all**. The
+load check then runs on the pairing the suite has just declared unreliable.
+
+**SO MY CHANGE DID NOT BREAK SAM'S DELOAD LAW — IT CHANGED WHICH LIFT LANDS
+FIRST AND EXPOSED AN UNGUARDED COMPARISON.** The remedy is to guard the load
+check the way `keeps main lift` is already guarded. **HANDED TO THE DELOAD OWNER,
+not taken**, because it is their suite and their gap vocabulary.
+
+**⚠ WHAT I DID NOT PROVE:** I did not print the two exercise NAMES. Three
+instrumentation attempts failed in the worktree and I stopped rather than ship a
+fourth. The argument above rests on the arithmetic and the declared gap, which is
+why it is stated as an argument and not as a measurement. **`test:program-control-durable`
+and `test:session-list-combinations` were NOT diagnosed at all** — only
+attributed. Whoever takes them starts at `3e413f61`.
