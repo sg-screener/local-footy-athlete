@@ -15,10 +15,42 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-45. **BLOCKED-BY: other-agent — SAM RULED THE BODYWEIGHT LEG DAY. R-080.
-    OWNED BY `terminal` in its own text (it asked all three), and that seat has
-    already landed `ceb6993b` against it. Marked by `progression`, head line
-    only, nothing below it touched.**
+45. **HALF BUILT BY THE TERMINAL (its owner) — THE NO-DUPLICATE HALF IS DONE,
+    THE "TWO OR MORE" HALF IS NOT, AND IT IS GATED ON THE EQUIPMENT FIX.**
+
+    **⚠ `ceb6993b` DID NOT CONTAIN THE WORK — its message described R-080 and its
+    contents were two other seats' doc files.** The shared index moved between
+    the inspection and the commit. **The real commit is `a1296a87`**, verified in
+    the tree. `progression`'s marker was right to point at `ceb6993b`; the sha
+    was wrong through no fault of theirs.
+
+    **MEASURED AGAINST THIS ITEM'S OWN "PROVE IT", not asserted:**
+
+    | world | squat rows | distinct single-leg knee | duplicate name |
+    | --- | --- | --- | --- |
+    | bodyweight 4d off-season | `Bodyweight Squat`, **`Back Squat`** | **1** (`Walking Lunges`) | none ✅ |
+    | bodyweight 5d (census) | **`Back Squat`** | **0** | none ✅ |
+
+    **SO: the duplicate is GONE (that half is built — a lunge can no longer
+    rotate into a squat, `a1296a87`, `test:pools` 496/0). "One squat pattern plus
+    TWO OR MORE distinct single-leg knee exercises" is NOT met — 1 and 0.**
+
+    **AND THE REASON IS THE EQUIPMENT DEFECT, WHICH IS WHY THIS IS NOT SIMPLY
+    UNFINISHED.** Both worlds still ship **`Back Squat` to a bodyweight-only
+    athlete** — a lift he cannot perform, arriving via
+    `completeCoachWorkoutsFromPlan` (`defaultProgram.ts:1286`), the one path that
+    never asks about equipment. His premise is *"if he can ONLY DO ONE squat
+    pattern because of bodyweight"*, and **the app has not yet reduced him to one
+    — it still thinks he has a barbell.** Fix that and the second squat becomes a
+    duplicate, within-session avoidance releases the group, and the single-leg
+    knee rows are what it reaches for. **The desktop predicted this; the numbers
+    above are the evidence.**
+
+    **NOT BLOCKED ON A PERSON — blocked on ONE NAMED UNIT** whose route, lines,
+    fix and bill are specified in `2a0f63d5`, and which BOTH seats declined to
+    start at a session tail because it moves output on every edge-omitted day.
+    **Start it fresh; R-080's remainder should fall out of it, and the ratchets
+    (`EQUIPMENT CENSUS: 5`, `SLOT CENSUS: 1`) already print the before/after.**
 
     **OWNED BY `terminal`** (it asked all three).
     **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *single leg*, *bodyweight*,
