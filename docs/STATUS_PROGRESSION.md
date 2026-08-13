@@ -133,6 +133,37 @@ its own first line ("Nothing to ask him").**
 reason I did not. That is the mechanism working as designed, and it is worth the
 line.
 
+### ✅ THE WINDOW IS TRACED END TO END — IT SURVIVES TO THE FACT AND IS THROWN AWAY AT GENERATION
+
+**The item opened with "`resolveDayDirective` has ZERO callers". The orphan is
+wider than that, and the exact layer where the window dies is now named.**
+
+| layer | carries the rolling window? |
+| --- | --- |
+| the LAW (`resolveReadinessDeload`) | **YES** — `declaredOn .. +6` |
+| the FACT (`durableFactHorizon.readinessDeloadFactScope`) | **YES** — scopes the fact `{kind:'window', from, until}` |
+| the CONSTRAINT (`strongestReadinessConstraint`) | **NO — the dates are dropped**; it returns `{deloaded: boolean}` |
+| generation (`weekDeloaded` → `deloadDoor`) | **NO** — one bool for the week |
+| the DOSE (`applyStrengthDeloadToExercises`) | **NO** — applied to every day |
+
+**`isDateInReadinessDeloadWindow` — the law's own predicate for "is THIS day in
+the window" — has ZERO live callers. Only tests.** `ReadinessDeloadWindow` as a
+type appears in exactly two files: the law and its suite.
+
+**SO THE WINDOW IS BUILT, CORRECT, CARRIED AS FAR AS THE FACT, AND THEN
+DISCARDED AT THE GENERATION BOUNDARY.** That is mechanically why R-035 is marked
+`BUILT` on `test:readiness-illness-law` and the athlete still gets a snapped
+calendar week: **the registry row is true of the layer its suite tests, and
+false of the layer that doses him.**
+
+**AND `durableFactHorizon`'s OWN COMMENT IS THE PRECEDENT FOR THIS FIX** — it
+was written when someone found the same orphan one layer up: *"`resolveReadinessDeload`
+[has] existed since that ruling and had NO CALLER anywhere in `src/` — the law
+was built, correct, and disconnected. This function is the missing joint."*
+**This item is the NEXT missing joint, one layer down, and it should be built
+the same way: the window stays owned by `readinessIllnessLaw`, and nothing
+re-derives seven.**
+
 ### ✅ AND THE SEAM IS FOUND AND VERIFIED — THE BUILD IS NOW A NAMED LINE, NOT A DESIGN
 
 **I said the dose "is resolved ONCE PER WEEK". That is true of the RESOLUTION and
