@@ -38,14 +38,24 @@ his instruction is standing authority, not history.**
     when a seat opened the file and found two suites naming it. **Open the code
     first; if it is enforced, fix the ROW, not the app.**
 
-51. **BLOCKED-BY: other-agent — THE MEASUREMENT AND THE RATCHET ARE LANDED
-    (`7e0a68a9`); THE COMPOSER NEEDS TWO FILES ANOTHER SEAT IS HOLDING.
-    `patterns`, 2026-08-13.**
+51. **THE BLOCK IS CLEARED AND THE COMPOSER IS LANDED. OWNED BY `composer`.
+    `da733e30` + `4c22d4cf`, 2026-08-13.** The two files `patterns` was waiting
+    on were this seat's uncommitted work; both are in. Ladder deficiency
+    **50 -> 36 of the same 216 laddered days** (composer + the hinge-pool split
+    that was undoing it), then the corpus widens **216 -> 318** because
+    `Lower Body Strength` — the commonest strength day in the app — had never
+    been judged at all. **STILL OPEN, and it is the biggest piece: 126 of the
+    216 laddered days ship THREE rows and do not come through the branches this
+    seat fixed.** Detail, the remaining shapes and their owners:
+    `docs/STATUS_COMPOSER.md`.
 
     **THE HELD FILES, NAMED:** `src/data/defaultProgram.ts` and
     `src/rules/sessionSlotCoverage.ts` are both MODIFIED in the working tree and
     are exactly where the composer goes. The last commit to `defaultProgram.ts`
     was another seat's 37 minutes ago. **Un-mark this the moment they are clean.**
+    — **BOTH CLEAN AND COMMITTED, `composer`, 2026-08-13. This block is
+    discharged; the holder was the seat that has now landed the composer in
+    them.**
 
     **TWO OF THIS ITEM'S THREE CLAIMS ARE REFUTED, and the ratchet is calibrated
     without them.** `maxExercisesPerStrengthSession` does NOT have zero readers —
