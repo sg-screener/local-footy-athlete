@@ -32,6 +32,53 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE COMPOSITION UNIT — the design brief, written after four failures
+
+**Sam's data is in (`448b79da`, 127 rows). The consumer is not, and four attempts
+today prove why. This is the brief so a fifth attempt starts from the design
+rather than the instinct.**
+
+**THE INSTINCT THAT KEEPS FAILING:** compose a week, then remove what the kit
+cannot do. Tried four ways — filter the fallback rows, filter after the accessory
+fix, filter on an apparatus table, filter on Sam's real data. **Results: inert,
+over-removed, broke the leg days, gutted the week to one exercise.** The fourth
+had CORRECT data and still failed, which is what makes it conclusive: **the
+mechanism is wrong, not the inputs.**
+
+**WHY FILTERING CANNOT WORK HERE, mechanically:** a day's identity is DERIVED
+from its rows (`workoutCanonicalisation.ts`, `final_component_structure_owns_type`
+/ `final_content_owns_name`). Remove a row and the day re-types itself
+downstream — that is how a prehab session became a Mobility session earlier
+today. **Subtraction is never local.** And removal leaves a hole nothing fills,
+because the thing that would fill it already ran.
+
+**WHAT THE UNIT ACTUALLY IS:** the athlete's kit is an INPUT to composition, not
+a filter over its output. Concretely — the pattern ladder is chosen first
+(`:227`, unchanged), and each slot is then filled from the exercises that kit can
+perform. A slot with no legal exercise is left EMPTY AND NAMED, which is R-083's
+*"removed, not substituted"* arriving as a decision rather than a deletion.
+
+**THE PIECES THAT ALREADY EXIST — do not rebuild them:**
+- `EXERCISE_EQUIPMENT_REQUIREMENT` — Sam's 127 answers (`448b79da`).
+- `exerciseAllowedByEquipment` — the legality test, already public.
+- `PoolEntry.group` — muscle sub-groups, so a substitute stays in its family.
+- `sessionSlotCoverage` + `SLOT`/`EQUIPMENT` censuses — the oracle and the
+  before/after, already printing their offenders every run.
+
+**THE TWO THINGS STILL MISSING:**
+1. **The composer that reads the kit.** Nothing today chooses an exercise knowing
+   the athlete's equipment; the pools filter AFTER selection.
+2. **R-083's second half — THE APP SAYING WHY.** *"Name the cause in the
+   athlete's own words"*, via R-029's cause-branching shortfall sentence. **A
+   short day with no explanation is the defect he called out, not the fix.**
+
+**AND THE CENSUS NEEDS HIS EXEMPTION:** he ruled a bodyweight athlete missing
+those three patterns is NOT a defect — *"it is the kit"*. `SLOT CENSUS` does not
+know that, so a correctly-short upper day will read as deficient the moment the
+composer lands. **Build the exemption in the same commit or the ratchet will
+punish the fix.**
+
+
 ### R-082's CONDITIONING HALF IS ALREADY BUILT — verified before building, per registry rule 2
 
 **Item 47 orders a modality-derived conditioning equipment map. It exists.**
