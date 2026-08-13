@@ -222,8 +222,21 @@ end, because two fixes aimed at it changed nothing:**
    `finaliseBuiltWorkout` -> **`finaliseWorkoutAfterMutation`**
    (`workoutCanonicalisation.ts:581`), reached at `defaultProgram.ts:2763`.
    Everything between the fallback and it is measured innocent.
-   **THE CLOSING PROBE IS TRIVIAL:** print `workout.exercises` in and out of
-   `finaliseWorkoutAfterMutation` on a `Lower Squat` day.
+   **✅ CONFIRMED 2026-08-13 — `finaliseWorkoutAfterMutation` IS THE DROP SITE.**
+   Probed at its entry: it RECEIVES *"Back Squat | Deadlift | Walking Lunges |
+   Single Leg RDL | Nordic Lower"* — five rows, hinge present — and the shipped
+   day is the same four rows minus `Deadlift`. **The hinge goes in and does not
+   come out.** `workoutCanonicalisation.ts:581`, reached from
+   `defaultProgram.ts:2763` via `finaliseBuiltWorkout`.
+   **WHAT IS LEFT IS WHICH LINE INSIDE IT** — the function is long and classifies
+   rows by domain (`domainPatterns`, `:635`) before rebuilding `finalRows`
+   (`:955`). **The unit is now bounded to one file and one function.**
+   **⚠ AND A SECOND FINDING FELL OUT OF THE SAME PROBE:** two other days NAMED
+   *"Lower Squat"* arrive carrying **only upper-body accessories** — *"Bicep
+   Curls | Tricep Pushdowns | Face Pulls | Leg Extension | Pallof Press"* and one
+   with `Lateral Bounds` leading. **A lower day whose entire content is arm work
+   is a naming/selection defect of its own**, and it is upstream of this drop —
+   those days never had a squat or a hinge to lose.
    **⚠ CLEARED BY MEASUREMENT, SO NOBODY RE-SUSPECTS THEM:** the fallback (emits
    the hinge), `applyPoolRotation` (RDLs -> Deadlift, pattern PRESERVED),
    `validatePairings`, `applyPhaseRepSchemes`, the load-estimation step,
