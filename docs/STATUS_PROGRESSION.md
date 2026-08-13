@@ -100,10 +100,30 @@ and a non-hard day then authors one fewer set on its main lift.
 applied week-wide; this is the PLAN's hard-exposure flag applied week-wide. The
 fix I shipped bounded the dose; the plan layer still has no window.
 
-**WHERE IT LIVES:** `coachingEngine`'s plan construction, which sets
-`isHardExposure` — not `defaultProgram`, which only reads it. **That is a plan-
-layer change and its own unit**, and it needs the same treatment: the readiness
-window decides WHICH DAYS lose their hard exposure, not the calendar week.
+**✅ AND IT IS NOW NAMED TO THE FIELD, WITH THE RULING THAT GOVERNS IT.**
+
+`coachingEngine:789` reads `cookedReadiness = generationConstraints.readiness.deloaded`
+and feeds it to **`buildSection18WeeklyExposureContractV2`** — the WEEK's
+exposure contract. Inside §18 it becomes
+**`safety.strengthIntensityCeiling === 'Moderate'`**
+(`section18SafetyPolicy:197`, read back at `derivedWeekContract:338`).
+
+**⚠ AND R-063 SAYS THAT SHAPE IS CORRECT, WHICH KILLED MY SECOND THEORY.**
+*"counts are STRUCTURE, and the deload law holds structure constant while the
+work inside shrinks"* — a deload must NOT cut session counts. **The app is not
+cutting counts; it is capping INTENSITY, which is exactly what R-063 asks for.**
+So `isHardExposure` flipping is a CONSEQUENCE of a legitimate ceiling, not a
+count cut, and "the plan is dropping a hard day" was wrong.
+
+**WHAT IS ACTUALLY WRONG IS THE SCOPE, AND ONLY THE SCOPE.** The ceiling is
+applied to the **whole calendar week** rather than to the days in the readiness
+window — **the same defect class as C6, at the §18 safety layer instead of the
+dose layer.** R-035 governs it and says the seven days, not the week.
+
+**WHOSE IT IS:** `section18SafetyPolicy` / the week's exposure contract — §18
+territory, and a contract is legitimately a week-shaped object, so making its
+ceiling day-aware is a real design question rather than a threading change.
+**Not this seat's lane and not a one-liner.** Recorded here rather than started.
 
 **WHY THE CELL ASSERTS A RATIO AND NOT EQUALITY.** Loosening it to "unchanged"
 would have hidden this; asserting equality would have red-flagged a defect the
