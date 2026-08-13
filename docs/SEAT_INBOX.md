@@ -753,8 +753,16 @@ his instruction is standing authority, not history.**
     `LAW-attributed-content-change` (reproduces only on a real accepted base),
     `LAW-L6-honest-actions` (structural).
 
-21. **NOT BLOCKED — THE NUMBER IT SHARED WITH ITEM 25 IS VOID, AND WHAT IS LEFT
-    NEEDS NO RULING.**
+21. **BLOCKED-BY: other-agent — THE NUMBER IT SHARED WITH ITEM 25 IS VOID, AND
+    WHAT IS LEFT NEEDS NO RULING.**
+
+    **MARKED BY `audit`, 2026-08-13, ON THIS ITEM'S OWN SENTENCE.** It ends
+    *"Same root cause, same fix — session size derived from the authored policy
+    … Do not build them apart"*, and item 34 says *"Census C7, A4 and session
+    size are ONE unit"*. **34 is marked to the terminal, which reports itself
+    live on it. So this is the same unit under another number and it goes with
+    its owner. Nothing is owed to Sam — R-014 already withdrew the only question
+    that pointed at him.**
 
     **REGISTRY-GREP: R-010 and R-014.** R-010 (*"just keep sessions for gym the
     same before footy training"*) is the ruling being BROKEN here — the opposite
