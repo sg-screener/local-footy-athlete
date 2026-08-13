@@ -150,10 +150,14 @@ console.log('\n[5] The day kind is DELEGATED to the one owner, not re-inferred')
   // representation of a question the app has already answered once.
   ok('a squat day and a hinge day are both LOWER',
     slotDayKindFor('Lower Squat') === 'lower' && slotDayKindFor('Lower Hinge') === 'lower');
-  ok('a push-only or pull-only day is a SPLIT day',
-    slotDayKindFor('Upper Push') === 'upper_split' && slotDayKindFor('Upper Pull') === 'upper_split');
+  // AND THE SPLIT CARRIES ITS DIRECTION. Judging a pull day against push slots
+  // made every Upper Pull day unsatisfiable — 12 of 20 misses in a 5-world sweep
+  // were this oracle, not the app.
+  ok('a push-only day is a PUSH split, a pull-only day is a PULL split',
+    slotDayKindFor('Upper Push') === 'upper_split_push'
+      && slotDayKindFor('Upper Pull') === 'upper_split_pull');
   ok('a team night carrying a lift is still judged on the lift',
-    slotDayKindFor('Team Training + Upper Pull') === 'upper_split');
+    slotDayKindFor('Team Training + Upper Pull') === 'upper_split_pull');
   ok('a conditioning day answers to NO slot list',
     slotDayKindFor('Continuous Aerobic') === null);
 
@@ -249,6 +253,24 @@ console.log('\n[8] A row that completes the day\'s ladder is not drift');
   // what proves it is a union rather than "anything goes once two are named".
   ok('a squat+push day admits a hinge', admits(['squat', 'push'], 'hinge'));
   ok('a squat+push day still refuses a pull', !admits(['squat', 'push'], 'pull'));
+
+  // A PULL DAY CAN NOW COVER ITS LADDER AT ALL — the cell that would have caught
+  // the one-direction constant, and which did not exist when it shipped.
+  const pullDay = sessionSlotCoverage(
+    [row('Barbell Row'), row('Pull-Ups'), row('Bicep Curls')], 'upper_split_pull');
+  ok('a pull day covered by pull work reports NOTHING missing',
+    pullDay.missing.length === 0, JSON.stringify(pullDay.missing));
+  const pushDay = sessionSlotCoverage(
+    [row('Bench Press'), row('Overhead Press'), row('Lateral Raise')], 'upper_split_push');
+  ok('a push day covered by push work reports NOTHING missing',
+    pushDay.missing.length === 0, JSON.stringify(pushDay.missing));
+  // AND THE DIRECTIONS DO NOT SATISFY EACH OTHER — the non-vacuity for the pair
+  // above, without which both could pass on an oracle that reports nothing ever.
+  const pullJudgedAsPush = sessionSlotCoverage(
+    [row('Barbell Row'), row('Pull-Ups'), row('Bicep Curls')], 'upper_split_push');
+  ok('pull work does NOT satisfy a push day',
+    pullJudgedAsPush.missing.includes('horizontal_push'),
+    JSON.stringify(pullJudgedAsPush.missing));
 
   // NON-VACUITY: an empty intent admits nothing, so the caller's own
   // `intendedPatterns.size > 0` check is what turns the guard on — not this.

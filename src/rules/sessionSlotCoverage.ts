@@ -52,7 +52,7 @@ export type SessionSlot =
   | 'arm_or_shoulder';
 
 /** Which slot list a day answers to. Power is never a slot — it rides on top. */
-export type SlotDayKind = 'lower' | 'upper_full' | 'upper_split';
+export type SlotDayKind = 'lower' | 'upper_full' | 'upper_split_push' | 'upper_split_pull';
 
 export const LOWER_SLOTS: readonly SessionSlot[] = [
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'accessory_or_core',
@@ -68,15 +68,34 @@ export const UPPER_FULL_SLOTS: readonly SessionSlot[] = [
  * body push then it just becomes horizontal movement, vertical movement, more
  * arm work, more accessory work"* — so the DIRECTION collapses and the two
  * PLANES remain. Expressed as "a horizontal and a vertical of that direction".
+ *
+ * **⚠ THERE ARE TWO OF THESE, AND HAVING ONE WAS A DEFECT IN THIS ORACLE.**
+ * `UPPER_SPLIT_SLOTS` used to be a single constant holding the PUSH direction,
+ * so a pull-only day was judged against push slots and **could never cover its
+ * ladder**. Measured 2026-08-13 over 5 worlds x 4 weeks: every single
+ * `Upper Pull` day reported `missing: [horizontal_push, vertical_push,
+ * arm_or_shoulder]` — 12 of the 20 misses in the whole sweep were this bug, not
+ * the app.
+ *
+ * **THE DOCSTRING ABOVE WAS ALREADY RIGHT — *"of that direction"* — and the
+ * constant did not implement it.** R-014's own row records the same shape once
+ * already: *"a day named 'Lower Hinge' appeared to contain NO hinge … the day
+ * was fine and my instrument was not."* An oracle is a claim too, and a composer
+ * built on this one would have tried to add bench press to a pull day.
  */
-export const UPPER_SPLIT_SLOTS: readonly SessionSlot[] = [
+export const UPPER_SPLIT_PUSH_SLOTS: readonly SessionSlot[] = [
   'horizontal_push', 'vertical_push', 'arm_or_shoulder',
+];
+
+export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
+  'horizontal_pull', 'vertical_pull', 'arm_or_shoulder',
 ];
 
 export const SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]>> = {
   lower: LOWER_SLOTS,
   upper_full: UPPER_FULL_SLOTS,
-  upper_split: UPPER_SPLIT_SLOTS,
+  upper_split_push: UPPER_SPLIT_PUSH_SLOTS,
+  upper_split_pull: UPPER_SPLIT_PULL_SLOTS,
 };
 
 /**
@@ -265,6 +284,9 @@ export function slotDayKindFor(sessionText: string | undefined): SlotDayKind | n
   const push = patterns.includes('push');
   const pull = patterns.includes('pull');
   if (push && pull) return 'upper_full';
-  if (push || pull) return 'upper_split';
+  // THE DIRECTION IS CARRIED, NOT DISCARDED. It was already known here and
+  // thrown away, which is what made every pull day unsatisfiable.
+  if (push) return 'upper_split_push';
+  if (pull) return 'upper_split_pull';
   return null;
 }
