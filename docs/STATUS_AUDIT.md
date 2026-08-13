@@ -45,6 +45,51 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ `test:power-counting` — THE QUESTION IS ANSWERED: **NO LIFT IS LOST**, AND ITEM 36's "ONE CAUSE" IS WRONG
+
+**The terminal seat's open question was:** *"on the days that went 6 → 5, is the
+removed row one `main_pattern_drift` names, and does the day still cover squat
+AND hinge after? If a squat is being lost, the golden is doing its job."*
+
+**ANSWER: NO ROW `main_pattern_drift` NAMES IS REMOVED, AND NOTHING IS LOST.**
+Reconstructed from the golden plus the diff rather than inferred from the counts:
+
+| | week 3, day 2 |
+| --- | --- |
+| **golden (6)** | Bicep Curls · Tricep Pushdowns · **Face Pulls** · **Leg Extension** · Pallof Press · **Romanian Deadlift** |
+| **now (5)** | Bicep Curls · Tricep Pushdowns · **Calf Raises** · Pallof Press · **Romanian Deadlift** |
+
+**THE ROMANIAN DEADLIFT SURVIVES** — it moved index 5 → 4, which is why a
+count-only read makes it look like the hinge went. **What actually left is
+`Face Pulls` and `Leg Extension`; `Calf Raises` arrived.** All three are
+accessories. **The day is an arms/accessory day — no squat was ever on it.**
+
+**THE CAUSE IS R-076 — SAM'S OWN RULING FROM TODAY**, *"face pull is shoulder
+work for sure"*, which moved `Face Pull`, `Rear Delt Fly` and `Band Pull-Apart`
+out of `horizontal_pull/accessory` into the `isolation_upper/accessory` shoulder
+block. **The pool re-rotated underneath, exactly as it should.**
+
+**⚠ SO ITEM 36 AND THE REGISTRY NOTE ARE WRONG ON THIS.** They say
+*"`test:power-counting`'s moved golden is this same cause"* — meaning
+`c69151d9`, the grown squat fallback. **There are TWO causes, and both are Sam
+rulings:**
+- **`3 → 5` (4 diffs)** — `c69151d9`, the squat fallback grown 3 → 5. Item 36 is
+  right about these; `undefined → "Single Leg RDL"` is its signature.
+- **`6 → 5` / `7 → 6` (4 diffs)** — **R-076**, the pool-slot move. **Not
+  `c69151d9`, and not a defect.**
+
+**⚠ AND I AM NOT REGENERATING THE GOLDEN, THOUGH IT WOULD BE JUSTIFIED.** The
+ratchet's own rule is *"regenerate only when a diff has been read and understood,
+and never as a way to make a stage pass."* **The harness prints 12 diffs and then
+`… and 176 more`.** I have read 25 lines of 188. **Two clean causes over the
+visible set is a strong prior, not "understood"** — and this is the day a
+conclusion travelling past its evidence cost four reverts.
+
+**WHAT IT WOULD TAKE, and it is small:** a full diff dump (the harness truncates
+and has no verbose flag that changes it), then confirm every remaining line falls
+into those two classes. **A third cause hiding in the unread 176 is exactly what
+this ratchet exists to catch, and regenerating now would erase it silently.**
+
 ### ⚠ "A ROW SAYS UNENFORCED OVER SHIPPED WORK" — REAL DEFECT, AND MY GATE FOR IT IS REFUTED
 
 **The terminal seat found the class and it is the best lead of the day:** a
