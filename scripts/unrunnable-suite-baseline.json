@@ -1,5 +1,5 @@
 {
-  "count": 22,
+  "count": 21,
   "files": [
     "beginnerDeterministicProgramTests.ts",
     "byeWeekClassificationTests.ts",
@@ -7,7 +7,6 @@
     "coachProgramEditDraftTests.ts",
     "coachRevisionProposalControllerTests.ts",
     "coachRevisionProposalTests.ts",
-    "conditioningBalanceRepairTests.ts",
     "explorerChainShrinkerTests.ts",
     "explorerGeneratorTests.ts",
     "gameChangeCoachNotesTests.ts",
