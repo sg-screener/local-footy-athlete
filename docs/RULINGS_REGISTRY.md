@@ -1603,3 +1603,87 @@ lifts, all the main lifts, rest of the week, squat hinge single leg, MainStrengt
 plannedPatterns, composer, R-014, item 51.
 · `UNENFORCED` — no reader asks the week what is open before composing a full
 body day; `MainStrengthPattern` is still `squat|hinge|push|pull`.
+
+---
+
+**R-088** · *"7 strength exercises can be a cap - but the mobility pairings dont
+count at all towards the cap... there should be a mobility warm up and prehab
+stuff then there should be 2-3 non competing pairings of strength with mobility
+in the session, i.e. lower body strength upper body mobility - the mobility
+portion does not count so 7 is the max the app should set and a user should be
+able to add as many of their own things on top of it as they choose"*
+(2026-08-13, answering `cap`) · **THE CAP IS SEVEN AND IT COUNTS STRENGTH ONLY.**
+
+**THREE THINGS ARE RULED HERE AND THEY ARE OFTEN CONFLATED:**
+
+**1. THE NUMBER IS 7, NOT 6.** `trainingAgePolicy.ts` holds
+`maxExercisesPerStrengthSession: 6` and **nobody authored the 6** — it is the
+same unauthored-number defect R-013 abolished the beginner's 3 for. Bible `:122`
+says *"6-7 exercises"* and *"full body strength and 7 exercises"*.
+
+**2. WHAT THE CAP COUNTS IS STRENGTH ROWS ONLY.** The mobility/prehab flow at
+the top of the session (Bible `:229`) and **the mobility half of every
+strength+mobility superset do NOT count.** A session with 7 strength rows and 3
+paired mobility picks is at the cap, not over it. **A counter that counts session
+rows rather than strength rows will read 10 and be wrong.**
+**⚠ THE PAIRING ITSELF IS ALREADY RULED AND ALREADY BUILT — see [[R-015]].**
+Sam said *"i put in there somewhere"* and he did: 2-3 accessory exercises paired
+with non-competing mobility as supersets, main lifts NEVER paired. **Do not
+rebuild it. This ruling only says it is free of the cap.**
+
+**3. THE CAP BINDS THE APP, NOT THE ATHLETE.** *"7 is the max the app should
+set and a user should be able to add as many of their own things on top of it as
+they choose."* **A cap that refuses an athlete's own added exercise is a defect,
+not enforcement.** The number is a ceiling on what the app PRESCRIBES.
+
+**Search words:** exercise cap, maxExercisesPerStrengthSession, how many
+exercises, 6 or 7, seven exercises, mobility pairing, superset, does mobility
+count, row count, user added, athlete added, add their own, over the cap.
+· `UNENFORCED` — the constant is still 6; no reader distinguishes strength rows
+from paired mobility; nothing exempts athlete-added rows.
+
+---
+
+**R-089** · *"wednesday can squat but it depends on the rest of the week!!! if
+the lower day didnt have the single leg hip or single leg knee then i'd rather
+put them on the wednesday but if it did then yes squatting and hinging again is
+fine... every squat should be matched with a hinge and every single leg knee
+should be matched with a single leg hip / it doesnt matter if you have two
+squats, two hinges, 1 single leg knee and 1 single leg hip / thats fiiine"*
+(2026-08-13, answering `readiness`'s §18 collision) · **COVERAGE IS A PRIORITY
+ORDER, NOT A REPLACEMENT — AND THE LOWER PATTERNS MOVE IN PAIRS.**
+
+**THIS RESOLVES THE COLLISION `readiness` MEASURED, AND IT RESOLVES IT IN §18's
+FAVOUR.** Building R-087 as REPLACEMENT refused twelve worlds because a
+full-body day that stopped planning squat and hinge stopped paying those
+exposures. **Sam's answer is that it never stops planning them.** It plans the
+UNCOVERED slots FIRST, and then keeps going — *"squatting and hinging again is
+fine"*. **VOLUME IS UNTOUCHED. §18 does not change. The main-strength target does
+not drop.**
+
+**THE ORDER, IN HIS WORDS:**
+1. **Slots the week has not covered go first** — *"if the lower day didnt have
+   the single leg hip or single leg knee then i'd rather put them on the
+   wednesday"*.
+2. **Then repeat freely** — *"if it did then yes squatting and hinging again is
+   fine"*.
+3. **Later sessions balance the remainder** — *"there is probably another lowers
+   or full body session later in the week and it can be balanced out as well as
+   possible there"*. **As well as possible — this is a BEST-EFFORT target, not a
+   refusal condition. A week that cannot balance is not an invalid week.**
+
+**⚠ AND THE NEW LAW, WHICH IS THE PART NOTHING IN THE APP HOLDS:
+EVERY SQUAT IS MATCHED WITH A HINGE. EVERY SINGLE-LEG KNEE IS MATCHED WITH A
+SINGLE-LEG HIP.** Counts move in pairs across the week. **2 squats / 2 hinges /
+1 single-leg knee / 1 single-leg hip is EXPLICITLY FINE** — he said so in
+as many words. **What is wrong is 2 squats and 1 hinge.**
+**THE PAIRING IS KNEE-TO-HIP, NOT LEFT-TO-RIGHT.** It is a
+push-pull-style balance of the lower body, not a limb thing.
+
+**Search words:** does wednesday squat, full body day, repeat pattern, twice a
+week, two squats, squat hinge balance, matched with a hinge, single leg knee,
+single leg hip, coverage versus volume, section 18, main-strength target,
+uncoveredMainPatternsForWeek, priority order, R-087.
+· `UNENFORCED` — `uncoveredMainPatternsForWeek` exists but nothing orders the
+planner by it, and **NOTHING ANYWHERE CHECKS THE SQUAT:HINGE OR KNEE:HIP
+BALANCE.**
