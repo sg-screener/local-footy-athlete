@@ -45,6 +45,56 @@ thing that actually bit.**
 
 ## STATUS
 
+### 28-C1 — **THE TWO OPTIONS, COMPARED BEFORE CODING** (`LAW-elegant-two-options`)
+
+**REGISTRY-GREP first, because a design that re-decides a ruling is the worst
+outcome available here:** `docs/RULINGS_REGISTRY.md` for *cut first* (**0**),
+*must-cover* (**0**), *must cover* (**0**), *prescribed* (**1** — R-016, rep
+ranges, unrelated), *change of direction* (1), *cod* (15, all the WINDOW ruling —
+R-072/R-073/R-074 and item 31's phases). **Nothing rules HOW it is placed.** So
+placement is the terminal's to build — *"where the derivation installs… is the
+terminal's"* — and **nothing is owed to Sam.**
+
+**THE PROBLEM, restated in one line:** at **2–2.75 slots** against **3–4
+categories**, a last-ranked category is unreachable, so *"prescribed"* and
+*"cut first"* cannot both be expressed by one ranked list.
+
+**OPTION A — INCREMENTAL: put `cod_decel` in `mustCoverCategories()`, but ONLY
+when `codPermitted`.**
+- **Cost: one line.** Everything else already exists.
+- **Effect:** COD becomes a gap the planner fills, so it gets a slot.
+- **THE OBJECTION, AND IT IS ON THE RECORD:** the scorer adds `uncovered * 3` to
+  every conditioning slot, so pool size is a term in every decision — and the
+  code's own comment records that adding COD *"moved FOUR passing phase checks
+  while placing zero COD sessions"*.
+- **⚠ BUT THAT OBJECTION IS FROM BEFORE THE GATE EXISTED.** That measurement was
+  taken when COD entered the pool on EVERY week. `codDecelPermitted` (item 31)
+  now confines it to no-team-training, not-in-season, not-early-off-season weeks.
+  **A normal week cannot see it, so it cannot move one.** The containment that
+  was missing is now built.
+- **Tension with *"cut first"*:** real. Must-cover creates urgency, which is what
+  *"cut first"* says COD must not do. **A is the weaker reading of his sentence.**
+
+**OPTION B — OWNERSHIP REDESIGN: split the single ranked list into TWO AXES —
+coverage intent and drop order.**
+- COD: `mustCover = true` (in permitted weeks), `dropOrder = first`.
+- **This is the only shape that says BOTH of his words**, and it retires a
+  conflation the planner has carried since the category planner was written.
+- **Cost:** a new concept, the scorer, and every trim/repair path that decides
+  what goes when a week is over-full.
+
+**RECOMMENDATION — A FIRST, AND B ONLY ON A's EVIDENCE.** Not because A is
+better: **because A is FALSIFIABLE IN ONE RUN and B is not yet justified.** Run A
+against `test:scenarios` + `test:qa` both arms (**baselines already captured**).
+**THE FALSIFIER IS EXACT: if any week WITHOUT the COD gate moves, A is dead and
+B is justified with evidence instead of by argument.** If nothing outside
+permitted weeks moves, A delivers *"prescribed"* at one line and the residual
+*"cut first"* question becomes a real, narrow question about trim order — which
+is B's actual subject, priced honestly instead of assumed.
+
+**Building B first would be inventing a concept to solve a problem A may already
+solve** — and this item has four reverts from building ahead of measurement.
+
 ### ✅✅ 28-C1's BUILD IS NOW DESIGNABLE — **RANK CAN NEVER SATISFY "PRESCRIBED", BY ARITHMETIC**
 
 **The last thing this item needed before anyone builds: does a ranking change
