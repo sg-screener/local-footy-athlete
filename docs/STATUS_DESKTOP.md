@@ -554,3 +554,96 @@ existed.** That is `pin-the-already-covered-claim` — the same shape as the two
 stale `UNENFORCED` rows I had just spent the afternoon correcting, one axis over.
 **Three sightings of the count class today, and one of the "already built" class,
 which is me.**
+
+
+---
+
+## 2026-08-13 — ITEM 26's "NEXT ACT" IS NAMED TO THE SIGNATURE: THE CLASSIFIER HAS NO `role` PARAMETER
+
+Item 26 ends: *"a paired mobility row must be non-counting at BOTH … that
+reconciliation is the next act — it is a counting-ownership question, not a
+pairing one."* **It is, and the reason is one line of signature.**
+
+| counter | the question it asks |
+| --- | --- |
+| `sessionRowCounting.ts:106` | `!row.role \|\| !ROLES_EXEMPT_FROM_COUNTING.has(row.role)` — **reads the AUTHORED role** |
+| `classifyGeneratedWorkoutRow` (`generatedWorkoutRowClassification.ts:46`) | takes `{ name, sets, repsMax, index }` — **there is no `role` parameter at all** |
+
+**SO THE SECOND COUNTER CANNOT HONOUR AN EXEMPTION IT IS NEVER TOLD ABOUT.** It
+classifies by NAME and shape (`getExerciseTags`, `CONDITIONING_META`, regex
+fallbacks), which is why a paired mobility pick (*"Cat-Cow"*) surfaced in
+`strengthRowNames` and moved `countedRows.strength 5 -> 6` when the pairing
+producer was wired. **The role exemption is authored TRUTH; the classifier is
+INFERENCE** — the same proof-versus-inference split Sam ruled on in R-073.
+
+**THE FIX SHAPE:** give `classifyGeneratedWorkoutRow` the authored role and let it
+return early when the role is exempt. **Six production call sites**
+(`deterministicCoachNoteFactory:107`, `sessionBuilder:722`,
+`workoutCanonicalisation:184`, `defaultProgram:1734/:2041/:2432`) each already
+hold the row, so the role is in hand at every one.
+
+**⚠ NOT STARTED, AND THE ORDERING IS THE REASON — this is a sequencing block, not
+a mystery.** It moves `test:power-counting`'s golden **by design** (that is what
+"non-counting at both" means), **and that golden is ALREADY red from a different
+cause** — the 6 -> 5 losses I handed to the terminal. **Changing a counter while
+its golden is red for someone else's reason makes both diffs unreadable**, and a
+golden re-record that mixes two causes is a claim nobody can check afterwards.
+**Settle the existing red first, then this becomes a clean single-cause diff.**
+
+`ROLES_EXEMPT_FROM_COUNTING`'s own header already says it: *"Adding a role here is
+a counting change and must come with a golden diff."* **The same is true of
+teaching the other counter to read roles at all.**
+
+
+---
+
+## 2026-08-13 — THE POWER AND TAXONOMY DIFFS COLLAPSE TO ONE SESSION FLIP
+
+**I raised the alarm on "two whole classes nobody named". Having read their
+VALUES, most of that collapses — and the way it collapses is the same optical
+illusion for the second time today.**
+
+**EVERY ONE OF THEM IS IN `scenarios.3`:**
+
+    weeks.2.days.1.workoutType        "Strength" → "Recovery"
+    weeks.2.days.1.taxonomy.0.category "prehab"  → "recovery"
+    weeks.2.days.1.components.0        "strength" → "recovery"
+    weeks.2.counts.recoverySessions    1 → 2
+    weeks.2.counts.byCategory.prehab   1 → undefined
+    overBudgetProbe.powerDaysBefore    [_,2,3,5,6] → [_,3,5,6]
+    overBudgetProbe.powerDaysStripped  [3,5,6]     → [5,6]
+    overBudgetProbe.keptFamilies.1     dayOfWeek 2 → 3, family "lower" → "upper"
+
+**THE POWER PROBE DID NOT CHANGE ITS MIND ABOUT POWER. A DAY LEFT THE LIST AND
+EVERY INDEX SHIFTED UP** — `2` drops out of `powerDaysBefore` and `3,5,6` slide
+down one; `keptFamilies.1` "changes" because index 0's neighbour moved. **Exactly
+the shape that made a reader think a Romanian Deadlift was being lost this
+morning: an ARRAY SHORTENING reading as a value change**, in a positional diff.
+
+**SO ~14 DIFFS ARE ONE CAUSE, NOT THREE CLASSES:** the session at
+`scenarios.3.weeks.2.days.1` flipping Strength/prehab → Recovery/recovery. It
+carried power; as a Recovery day it does not; the probe lists shorten and shift.
+**That is the SAME unattributed session flip the terminal already flagged** — it
+just had three innocent-looking dependants.
+
+**WHAT IS ACTUALLY STILL SEPARATE, and it is two lines:**
+
+    weeks.2.days.4.taxonomy.1.modality  "none" → "off_feet"
+    weeks.3.days.4.taxonomy.1.modality  "none" → "off_feet"
+
+A conditioning MODALITY gaining a value where it had none. Small, real, and not
+explained by the session flip.
+
+**SO THE BISECT SHRINKS FROM "four classes" TO "one session flip + one modality
+change".** Confirming the link would take one probe: assert that the day dropping
+out of `powerDaysBefore` IS `weeks.2.days.1`. I have NOT run it — the shape is
+consistent across all fourteen and all of them sit in `scenarios.3`, which is
+strong, but it is inference from shape and it is labelled as such rather than
+claimed.
+
+**AND I WITHDRAW THE ALARMING HALF OF MY OWN HEADLINE.** *"Power-probe diffs in a
+golden whose subject is power counting"* was true and sounded like a power defect.
+**It is a bookkeeping shadow of a session that changed type.** The instrument
+change stands — without the by-kind breakdown none of this was visible at all —
+but the conclusion I hung on it needed the values, not the counts. **`a-count-
+taken-for-a-record`, and this time I was the one who did it.**
