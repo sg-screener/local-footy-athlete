@@ -15,6 +15,21 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
+68. **OWNED BY `elegance` — BLOCKED-BY: sam — THE ELEGANCE AUDIT IS COMPLETE;
+    DO NOT START ANOTHER EDGE FIX OR ARCHITECTURE BUILD UNTIL SAM CHOOSES THE
+    DIRECTION.**
+
+    `docs/ELEGANCE_AUDIT_2026-08-14.md` measures the root problem: the app has no
+    single composition owner, its generator/rules/stores sit in a 232-file
+    circular group, and its judging system grew much faster than the product
+    brain. The current printed-week and four-week-history probes reproduce the
+    athlete-visible failures.
+
+    **THE DECISION:** keep paying down defects inside the current repair stack,
+    or approve the recommended vertical source-of-truth composer and retire the
+    old paths one slice at a time. No terminal takes either route until Sam says
+    which.
+
 65. **OWNED BY `printer` (marked by `vocab`, 2026-08-13 — see below). THE PAPER
     PHONE — PRINT REAL GENERATED WEEKS AS PLAIN ENGLISH SO SAM CAN
     READ THEM ON HIS PHONE WITHOUT A BUILD. THIS IS THE FIRST GATE TO RELEASE
