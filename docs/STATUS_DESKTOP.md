@@ -175,3 +175,36 @@ number is stated with its command beside it.
 laws; the mutation-proving I did was per-change, and `LAW-green-gate-is-a-claim`
 needs it STANDING. **Claiming a law is enforced because a related cell exists is
 the failure this registry was built to stop.**
+
+
+---
+
+## 2026-08-13 — MY STANDING RULE: I DO NOT WRITE `docs/SEAT_INBOX.md` ANY MORE
+
+**THIRD INSTANCE TODAY, SO IT GETS A RULE INSTEAD OF A THIRD APOLOGY.** Three of
+my commits carried another agent's uncommitted inbox edits: `a46d8c9e` (items 35,
+2, 7, 13 removals), `44066a92` (781 changed lines), `9c2b7562` (151 changed lines,
+items 34 and 35). **Nothing was lost in any of them — I checked the archives each
+time and every removal pointed at content already committed elsewhere — but that
+is luck, not method.**
+
+**THE CAUSE IS NOT CARELESSNESS AND THAT IS WHY IT KEPT HAPPENING.** I commit
+through a private index by explicit path, which is the documented protection —
+and **it does not protect a SHARED FILE.** `git add docs/SEAT_INBOX.md` stages
+whatever that file currently holds, including edits a neighbour has not committed
+yet. The private index stops me staging their *other* files; it cannot stop me
+staging their lines in *my* file. **Two agents editing one file is the whole
+defect, which is exactly what Sam's one-writer rule says.**
+
+**SO: I READ THE INBOX AND I DO NOT WRITE IT.** Item status, blockers, findings
+and handoffs go HERE, in my own file, which nobody else edits. If an item needs a
+marking the seat has not made, I write the marking here and name the item. **The
+one exception I will still take is retiring a question I myself put under
+`## AWAITING SAM`** — leaving it there after Sam has ruled makes
+`test:ruling-registry` red, and it is my line to remove.
+
+**AND THE ONE-WRITER RULE IS NOT HOLDING ELSEWHERE EITHER:** `docs/STATUS_AUDIT.md`
+has commits from the terminal (`569c27b4`, the MAS census C2 work). Almost
+certainly innocent — that file was `STATUS_AGENT3.md` until the audit seat renamed
+it, so anyone holding the old name lands in it. **Worth telling them the name
+moved rather than that they trespassed.**
