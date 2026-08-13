@@ -35,6 +35,28 @@
  *
  * READ-ONLY AND OFFLINE. It generates, projects and writes markdown. It touches
  * no store, no network and no app file.
+ *
+ * ## ⚠ IF YOU ARE IMPORTING THIS MODULE, READ THIS FIRST
+ *
+ * `renderWeekAsPlainEnglish` and `projectWithGapsMarked` are exported for reuse
+ * (item 66 uses both). Two things happen to the PROCESS when you import them,
+ * and neither is visible to the compiler:
+ *
+ *   1. **`__DEV__` IS SET TO `false`**, below, at module scope — so it happens
+ *      during your import and OVERWRITES an importer that set it `true`. That is
+ *      correct for this script's own run and it is what the node suites do, but
+ *      it is not correct for everyone: seat `sim` needs `__DEV__` true because
+ *      `isDevE2EClockAvailable()` gates on it, and with it false `setDevE2EClock`
+ *      returns null SILENTLY and every door reads the wall clock instead of the
+ *      simulated one. **If you need it true, re-assert it after importing.**
+ *   2. Nothing else. `main()` is guarded by `require.main === module`, so the
+ *      import writes no files — see the guard at the foot for why that had to be
+ *      said out loud.
+ *
+ * Both of those, and the missing `export` before them, were found by a SECOND
+ * CALLER rather than by this file's own run or by the type system. That is the
+ * standing hazard of a script that becomes a seam, and it is why this note is
+ * here rather than in a status file.
  */
 
 /* eslint-disable import/first */
@@ -42,6 +64,8 @@ declare global {
   // eslint-disable-next-line no-var
   var __DEV__: boolean;
 }
+// See the header: this WINS over an importer's own assignment. Deliberate for
+// this script's run; re-assert on your side if you need it true.
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { mkdirSync, writeFileSync } from 'fs';
