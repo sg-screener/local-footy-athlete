@@ -159,6 +159,34 @@ failure — worth copying here in the same commit.**
   edit was ~25 lines and the commit was 29 insertions and 86 deletions, a number
   I printed and did not read.
 
+### ✅ 2026-08-13 — ITEM 7's LAST MEASUREMENT: THE SECOND GAME NEVER REACHES THE STRENGTH TARGET
+
+**Structural, not statistical, and every seam was read rather than assumed:**
+
+| seam | games it can carry |
+| --- | --- |
+| `OnboardingData.gameDay` (`types/domain.ts:192`) | **one** |
+| `WeeklyExposureContractInput.gameDay` (`weeklyExposureContractBuilders.ts:35`) | **one** |
+| `coachingEngine.ts:1066` — `inputs.gameDay ? dayNameToNumber(...) : null` | **one** |
+| `postGenerationConstraintValidation.ts:845/1955` | **one** |
+| `generateProgramLocally` bake (`generateProgram.ts:1088`) | **`markedDays: {}` — none** |
+
+**The plural owner EXISTS and serves a different path.** `targetWeekFixtures`
+(`fixtureConditionedAvailability.ts:141`) returns a LIST straight off
+`markedDays`, so two games in a week really are representable — item 32's
+*"many games per week"* (`3f62ad62`) is real. **It feeds the READ/derive side,
+never the strength contract.**
+
+**SO SAM'S *"2 games and 2 team trainings → 1 strength"* IS NOT REFUSED BY THE
+ARITHMETIC. THE ARITHMETIC IS NEVER TOLD ABOUT THE SECOND GAME.** That is census
+C2's shape one layer up: the fact exists and the code that would act on it has no
+reader for it. **Same seat, same day, second sighting of one pattern — worth
+naming as a class rather than fixing twice.**
+
+**THE BUILD, NAMED, NOT TAKEN:** thread the fixture LIST into the exposure
+contract in place of the single `gameDay`, then let the strength target answer to
+it. Owes `test:scenarios` + `test:qa` both arms.
+
 ### NEXT SESSION STARTS HERE
 
 1. **The glass proof for the pace line** — a golden flow driving the Away control

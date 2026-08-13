@@ -734,12 +734,38 @@ his instruction is standing authority, not history.**
    here. (Item 32 records many-games-per-week as BUILT `3f62ad62` — **that is the
    CALENDAR; this seam did not follow.**)
 
-   **SO WHAT IS LEFT IS A MEASUREMENT BEFORE ANY BUILD, and it is the honest
-   next step:** drive the FULL pipeline — not this builder — with a two-game
-   week and read what strength actually comes out. **Only that says whether Sam's
-   sentence is unreachable or merely rare.** It changes nothing until it is
-   known, so it owes no sweep. **NOTHING IS OWED TO SAM — he ruled the behaviour
-   in the quote at the top of this item. OWNER: unclaimed.**
+   **✅ THAT MEASUREMENT IS NOW DONE, 2026-08-13 (`pace`), AND IT IS STRUCTURAL
+   RATHER THAN STATISTICAL — THE SECOND GAME NEVER REACHES THE LAYER THAT SETS
+   THE STRENGTH TARGET. Four seams, each read rather than assumed:**
+   - `OnboardingData.gameDay?: DayOfWeek` (`types/domain.ts:192`) — **ONE.**
+   - `WeeklyExposureContractInput.gameDay: number | null`
+     (`weeklyExposureContractBuilders.ts:35`) — **ONE.**
+   - **BOTH production callers pass one and there is no fixture LIST on the
+     path:** `coachingEngine.ts:1066`
+     `gameDay: inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null`, and
+     `postGenerationConstraintValidation.ts:845/1955` `resolvedGameDay` /
+     `targetGameDay`.
+   - **`generateProgramLocally` hardcodes `markedDays: {}`**
+     (`services/api/generateProgram.ts:1088`) when it bakes the block, so a
+     second game entered on the CALENDAR never reaches generation at all.
+
+   **THE PLURAL OWNER EXISTS AND SERVES A DIFFERENT PATH.**
+   `targetWeekFixtures` (`fixtureConditionedAvailability.ts:141`) returns a LIST
+   straight off `markedDays`, so two games in a week ARE representable — item
+   32's *"many games per week"* (`3f62ad62`) is real. **It feeds the READ/derive
+   side (`derivedWeekContract`), never the strength contract.**
+
+   **SO THIS ITEM'S TITLE IS EXACT AND NOW HAS A MECHANISM: Sam's *"2 games and 2
+   team trainings"* week is not unreachable because the arithmetic refuses it —
+   it is unreachable because the arithmetic is never told about the second game.**
+   **It is census C2's shape one layer up: the fact exists, and the code that
+   would act on it has no reader for it.**
+
+   **THE BUILD, NAMED:** thread the fixture LIST (`targetWeekFixtures`) into the
+   exposure contract in place of the single `gameDay`, then let the strength
+   target answer to it. **It changes generated output, so it owes
+   `test:scenarios` + `test:qa` both arms.** **NOTHING IS OWED TO SAM — the
+   quote at the top of this item IS the ruling. OWNER: unclaimed.**
 
    ── original below ──
 
