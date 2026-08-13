@@ -87,7 +87,18 @@ export interface AthleteContext {
 /** Default context when no profile data is available. */
 export const DEFAULT_ATHLETE_CONTEXT: AthleteContext = {
   injuries: [],
-  equipmentTags: ['bodyweight', 'dumbbells', 'cables', 'bands', 'bench', 'foam_roller', 'bike_or_treadmill', 'machine'],
+  // `swiss_ball` and `ab_wheel` ADDED 2026-08-13 (item 46/47) TO PRESERVE
+  // BEHAVIOUR, NOT TO EXTEND IT. This list was written when both exercises
+  // were tagged `bodyweight`, so this athlete could always draw them. Sam's
+  // own sheet then answered `Swiss Ball Hamstring Curl -> swiss_ball` and
+  // `Ab Wheel -> ab_wheel`, and without these two tags this context — which
+  // already owns machines, cables and a bench — silently lost them.
+  //
+  // IT EMPTIED A SLOT: `hamstring_prehab` resolved to ZERO candidates, because
+  // the Swiss Ball curl is its only one. That is a real one-deep pool worth
+  // knowing about (recorded in docs/STATUS_AUDIT.md), but a default fixture
+  // not knowing about a new tag is not the way to discover it.
+  equipmentTags: ['bodyweight', 'dumbbells', 'cables', 'bands', 'bench', 'foam_roller', 'bike_or_treadmill', 'machine', 'swiss_ball', 'ab_wheel'],
 };
 
 // ─── Derived Session Types ───
