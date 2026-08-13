@@ -573,3 +573,95 @@ size budget Sam pays for in dollars.
     copy all exist, and its "three ways out" question was answered by Sam
     unprompted: *"the athlete just removes the equipment they don't have while
     on the trip"*.
+
+---
+
+36. **THE `[13d]` RED IS PAID — AND THE PRESCRIBED FIX WAS REFUTED BY THE SAME
+    MEASUREMENT THAT PAID IT. `test:away-flow` IS 44/0.**
+
+    **REGISTRY-GREP: R-018, R-020, R-006, R-070/`:227`.** R-020 (*"yes clear team
+    training and games while away"* — the club goes, his own sessions stay) and
+    R-018 (*"the plan should change until their return date"*) are the two that
+    bite. **Neither is breached. No question for Sam.**
+
+    **THE ORDER SAID: "assert the athlete's own rows are a SUPERSET home→away,
+    not equal", and "state the +1 honestly — the fallback grew by TWO rows and
+    the week shows ONE". BOTH HALVES ARE ANSWERED BY DUMPING THE ROWS INSTEAD OF
+    THE TOTALS:**
+
+    | | rows |
+    | --- | --- |
+    | HOME | Lower Body Strength [4] · Team+Upper Pull [3] · Team+Upper Push [3] · Gunshow [6] · Prehab [5] = **21** |
+    | AWAY | Lower Body Strength [7] · Lower Squat [5] · Upper Body Strength [5] · Prehab [5] = **22** |
+
+    **ELEVEN ROWS LOST, ELEVEN GAINED.** Gone: Short Flush, Pull-Ups, Overhead
+    Press, DB Bench Press, Bicep Curl, and the entire six-row Gunshow arm day.
+    Arrived: Vertical Jump, 20 m Acceleration Reps, Continuous Aerobic Run,
+    Walking Lunges, Single Leg RDL, Nordic Lower, Explosive Push-up, Bench Press,
+    Classic 4x4.
+
+    **SO A SUPERSET REDS INSTANTLY — eleven of his own rows are not there**, and
+    it reds in BOTH arms, so it was never true.
+
+    **⚠ CORRECTED `b62add9f` — THE +1 *DOES* HAVE AN ARITHMETIC EXPLANATION, AND
+    IT IS `c69151d9`.** This item first said the +1 was "an eleven-for-eleven
+    SWAP that nets one" and not attributable to the grown fallback. **Refuted by
+    single-variable measurement** — revert ONLY `defaultProgram.ts` to
+    `c69151d9^` and re-run both arms:
+
+    | | home | away |
+    | --- | --- | --- |
+    | at HEAD | 21 | **22** |
+    | fallback reverted | 21 | **21** |
+
+    **Home is fixed across the revert, so the fallback is the whole of the +1.**
+    The swap and the growth are two INDEPENDENT facts: the swap is present in
+    both arms, so it is not what moved. The superset refutation stands either
+    way. The away week reaches the grown fallback because its Wednesday is
+    synthesised whole by `completeCoachWorkoutsFromPlan` (`fallbackReason:
+    edge_omitted_day`) as the "Lower Squat" day.
+
+    **AND THE ORDER'S "+2 AUTHORED, +1 SHIPPED" IS EXPLAINED, NOT WAVED AWAY:**
+    `applyPoolRotation` turns `RDLs` into `Deadlift` (pattern preserved), then
+    `finaliseWorkoutAfterMutation` drops that hinge — **the open C7 defect
+    receipted in `5d6ef5fa`**, reached here by probe before that commit was read.
+    So `Single Leg RDL` lands, the hinge does not. **When C7 is fixed `[13d]`
+    stays green (the floor is one-sided) but away becomes 23.**
+
+    **CONSEQUENCE FOR A NEIGHBOUR: `c69151d9` IS NOT OUTPUT-NEUTRAL.**
+    `test:power-counting`'s moved golden is this same cause, not a second defect.
+
+    **AND THE OLD CELL WAS PASSING BY COINCIDENCE — 21 == 21 over two completely
+    different weeks.** Its name claimed *"every row of his own training survives
+    the trip"*, which has never been true of this app. **The operator was not the
+    defect; the premise was.** Same shape as item 28's step 1, twice in one day:
+    an ordered fix aimed at a mechanism that measurement then said was not there.
+
+    **THE SWAP IS THE APP OBEYING SAM, NOT DRIFTING FROM HIM** — *"consider the
+    time they are away as building a new program and their old program is gone
+    for the time being"*. The club was carrying his conditioning and half his
+    upper volume; take it away and a REAL upper day has to appear (Friday's
+    optional arm day became core Upper Body Strength) and the app has to supply
+    the running the club used to (sprints, an aerobic run, a 4x4). **A week that
+    merely deleted the club would be the defect.**
+
+    **WHAT LANDED, and neither is a count range:**
+    - **`[13d]` the trip does not COST him training — his volume never falls.**
+      A one-sided floor. It still reds the day a trip starts eating his work,
+      which is the only reason the cell has ever existed.
+    - **`[13f]` the away week is RE-AUTHORED, not the home week minus the club.**
+      This is `[13d]`'s non-vacuity AND a pin: without it the floor sits green
+      over a week that merely subtracted two club nights — which is what
+      everyone believed was happening, for as long as the totals matched.
+
+    **THE FALLBACK IS UNTOUCHED** — `c69151d9` stands, exactly as ordered.
+
+**MOVED OUT OF THE QUEUE 2026-08-13 BY THE DESKTOP, VERBATIM AND BYTE-IDENTICAL.**
+It was PAID and had no open sub-order: `[13d]` was rewritten, the prescribed
+"superset" fix was refuted by measurement, and `test:away-flow` is 46/0. **It was
+still sitting under `## Unprocessed`, where the seat hook counts it as a live
+order** — the hook's vocabulary has `BLOCKED-BY:` and `parked` and no way to say
+DONE, so a finished item keeps the queue alive until it is physically moved.
+**Moving it is the sanctioned mechanism; adding a "done" escape to the hook is
+the rubber-stamp hole its own comments say was closed on purpose.**
+

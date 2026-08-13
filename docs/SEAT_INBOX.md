@@ -990,6 +990,44 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13 — A FINISHED ITEM KEEPS THE QUEUE ALIVE, AND THAT COST HIM
+  MOST OF A TURN TODAY. ONE SMALL PROCESS RULING.**
+
+  **REGISTRY-GREP: no row governs this.** Grepped `RULINGS_REGISTRY.md` for
+  *inbox*, *queue*, *hook*, *processed*, *done*, *stop*. Every hit is a ruling
+  ABOUT something (R-005 session lock, R-008 the parked moderate day, R-030
+  complexity) or a mention of `SEAT_INBOX` inside another row's receipt. **There
+  is no ruling on queue hygiene at all**, which is why this is a question and not
+  a re-ask.
+
+  **THE MEASUREMENT, taken by running the hook's own scan by hand:** the seat hook
+  reads item HEAD lines under `## Unprocessed` and walks past only two things —
+  `BLOCKED-BY: {sam|other-agent|external}` and the word *parked*. **It has no way
+  to say DONE.** So a finished item keeps counting as a live order until someone
+  physically moves it out of the file. Today the scan landed on **item 36 — mine,
+  paid, `test:away-flow` 46/0** — and then on **33 (BUILT)**, with **32, 31, 25,
+  26, 27, 28, 29 and 7 all finished and all still in the queue behind it.**
+
+  **AND EXIT 1 IS STRUCTURALLY UNREACHABLE ANYWAY:** items 1 and 13 say of
+  themselves *"STANDING, EVERY STOP … they are not work items to clear"*. They
+  carry no marker, so the scan will always find them. **The queue can never be
+  empty by design.**
+
+  **I MOVED ONLY MY OWN (item 36 → `SEAT_INBOX_COMPLETED_2026-08-13.md`, verbatim)
+  and left the rest alone**, because moving another agent's item is a seat edit
+  and the one-writer rule is what stopped three of my commits swallowing other
+  people's work today.
+
+  **⚠ AND I DELIBERATELY DID NOT ADD A "DONE" ESCAPE TO THE HOOK**, though it is
+  four lines. The hook's own comments record that exact door being opened and
+  closed twice (`docs(stop):`, then `docs(blocked):`) because it became the hole.
+  **A terminal widening the gate that governs it is the rubber-stamp shape those
+  comments warn about, so it is his call and not mine.**
+
+  **THE QUESTION:** should finished items be moved out by the seat as a routine
+  step (status quo, costs a seat pass), or should STANDING items 1 and 13 be
+  marked so the scan walks past them and "queue clear" becomes reachable?
+
 - **⚠ NEW 2026-08-13 — R-075 AND R-069(2) CONTRADICT EACH OTHER, AND ONLY SAM CAN
   SAY WHICH WINS. THIS IS WHY ITEM 37's STRENGTH ARM IS `BLOCKED-BY: sam`.**
 
