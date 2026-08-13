@@ -121,13 +121,19 @@ his instruction is standing authority, not history.**
     - **THE OFFER IS VERIFIED AND R-077 IS ALREADY A REGISTRY ROW** — another
       seat got there first; `test:away-flow` `[17e]`-`[17g]` read as claimed.
       **Do not re-do it.**
-    - **THE OUTCOME IS STILL OPEN.** Those cells assert `canAdd: true` and the
-      option ids — the OFFER. Whether a chosen strength option APPLIES on an away
-      week is unproven. **My attempt to measure it produced a DEAD INSTRUMENT and
-      the result is VOID, not negative:** a `resolveWeek`-built world refuses
-      every apply including the positive control (`metcon_offlegs`, which
-      `planChangeProducerTests` [7] applies with one write). **Start from that
-      suite's world, not from `resolveWeek`.** Receipts: `docs/STATUS_PROGRESSION.md`.
+    - **THE OUTCOME IS MEASURED NOW, AND THE HATCH IS NOT SHUT.** Those cells
+      assert `canAdd: true` and the option ids — the OFFER. Driving the apply on
+      a **seeded** world (accepted program + profile; without them the writer
+      refuses everything with `athlete_addition_publication_failed`, which is
+      what made my first run a dead instrument) gives **`ok=true`, a pin minted
+      and a week-scoped overlay written**, on the away arm and the home control
+      alike. **It is neither refused nor a no-op.**
+      **⚠ ONE STEP IS STILL UNPROVEN:** my accepted-week reader shows the day
+      Rest/0 rows afterwards **including on the positive control**, so it is most
+      likely the wrong surface rather than a false-Done — **but that is not
+      measured. Do NOT read it as a defect.** The cheap next move is to find a
+      KNOWN-GOOD addition this reader does surface; if none exists the reader is
+      blind. Receipts: `docs/STATUS_PROGRESSION.md`.
     - **ONE REAL DEFECT FOUND AND FIXED ON THE WAY:** a REFUSED coach add left an
       **active `UserRemovalConstraint` pin** on a day it had just reported
       unchanged — the rollback restored two of the three stores the add writes.

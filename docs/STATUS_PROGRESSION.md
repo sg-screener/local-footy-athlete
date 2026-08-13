@@ -43,17 +43,48 @@ offered option *"validates and APPLIES through the same writer as the chat
 door"*, but on ITS OWN worlds. **The composition — does an offered strength add
 actually apply on an AWAY week — is the gap, and it is still open.**
 
-**🛑 I TRIED TO CLOSE IT AND MY INSTRUMENT WAS DEAD. THE RESULT IS VOID, NOT
-NEGATIVE.** Driving `buildPlanChangeProposal` + `applyPlanChange` over a
-`resolveWeek`-built away week returned `ok=false` ("I couldn't safely make that
-change") on every strength add — **and identically on the HOME arm**. A both-arms
-refusal is the shape that demands a positive control, so I ran one:
-**`metcon_offlegs`, the template `planChangeProducerTests` [7] applies with one
-write, ALSO refused here, as did `mobility_flow`.** Nothing applies in that
-harness, so it cannot tell a refusal from a missing world. **Every apply result I
-took is withdrawn.** The harness lacks the store/accepted-context setup the
-producer suite builds; whoever closes this should start from
-`planChangeProducerTests`' world, not from `resolveWeek`.
+**🛑 MY FIRST ATTEMPT WAS A DEAD INSTRUMENT — AND THEN I FOUND OUT EXACTLY WHY,
+SO THE THREAD IS NOT LEFT AT "VOID".** Driving `buildPlanChangeProposal` +
+`applyPlanChange` over a `resolveWeek`-built away week returned `ok=false` on
+every strength add — **and identically on the HOME arm**. A both-arms refusal is
+the shape that demands a positive control, so I ran one: **`metcon_offlegs`, the
+template `planChangeProducerTests` [7] applies with one write, ALSO refused, as
+did `mobility_flow`.** Nothing applied, so the harness could not tell a refusal
+from a missing world.
+
+**THE CAUSE IS NAMED, NOT GUESSED.** The refusal message is generic; the reason
+is in `result.rejected[]`, and it reads
+**`athlete_addition_publication_failed: "Athlete addition requires an accepted
+program and profile"`.** My world had no seeded stores. **The app was never
+refusing — my instrument was.** Both arms and the positive control were
+explained by one missing precondition.
+
+**RE-RUN ON A SEEDED WORLD (accepted program + profile in the stores), AND THE
+ANSWER FLIPS:**
+
+| | ok | pin minted | overlay written for the date |
+| --- | --- | --- | --- |
+| positive control, home (`metcon_offlegs`) | **true** | 1 | 1 |
+| home, `strength_lower_squat` | **true** | 1 | 1 |
+| **away, `strength_lower_squat`** | **true** | 1 | 1 |
+| **away, `strength_upper_push`** | **true** | 1 | 1 |
+
+**SO THE ADD IS NOT REFUSED ON AN AWAY WEEK AND IT IS NOT A NO-OP** — it returns
+`ok=true`, mints a `UserRemovalConstraint` and writes a week-scoped overlay for
+the target date. R-077's escape hatch is not shut.
+
+**⚠ WHAT IS STILL NOT PROVEN, AND I AM NOT CLAIMING IT.** My accepted-week
+reader (`rebaseAcceptedEffectiveWeek` over `storedWorldSurfaces`) shows the day
+**still Rest, 0 rows**, after every one of those applies — INCLUDING the positive
+control. Since the store demonstrably holds the overlay, the likeliest reading is
+that this reader is the wrong surface in this harness rather than a false-Done —
+**but "likeliest" is not measured, and the last step of the athlete's own
+sentence ("the session is THERE") is the one step I have not shown.**
+**THE CHEAP NEXT MOVE:** find a KNOWN-GOOD addition this reader does surface. If
+none exists, the reader is blind and the gap is instrumentation; if one exists
+and these four do not appear, it is a false-Done and it is serious.
+**Do not read my `Rest, 0 rows` as evidence of a defect — it is evidence of an
+unvalidated reader.**
 
 ### ✅ WHAT I DID FIND AND FIX: A REFUSED ADD LEFT AN ACTIVE PIN BEHIND
 
