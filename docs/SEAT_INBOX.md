@@ -559,6 +559,41 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13 — THE VACATED SATURDAY IS A REST DAY, AND HE MAY HAVE MEANT
+  A SESSION. ASKED IN CHAT, RECORDED HERE BECAUSE A CHAT MESSAGE IS NOT A
+  DURABLE RULING.**
+
+  **REGISTRY-GREP: `training day`, `rest day`, `away`, `travel`, `bye`, `vacated`,
+  `empty day` over `docs/RULINGS_REGISTRY.md`.** Returned **R-018** (*"the plan
+  should change until their return date"*), **R-020** (*"yes clear team training
+  and games while away"* — the club goes, **his own sessions stay**), **R-019**
+  (away equipment is a subtraction) and **R-006** (1-2 full rest days everywhere;
+  **3 permitted on bye-recovery weeks**). **NOTHING IN THE REGISTRY NAMES WHAT
+  STANDS ON A DAY THE CLUB VACATED** — that is the gap, and it is why this is a
+  question and not a re-ask.
+
+  **WHAT SHIPPED (`a46d8c9e`, seen on glass):** his Saturday game came off the
+  away week and the day read *"Training Day"* — the placeholder for a day that
+  exists and holds nothing, and the literal thing he swore at. It now reads
+  **"Rest Day"**, and his five own training days are untouched.
+
+  **WHY REST WAS THE DEFENSIBLE READ AND NOT AN INVENTION:** R-020 says his own
+  sessions stay, and he never had a session of his own on a fixture day — Saturday
+  was in his week only for the match, and Saturday is not one of his preferred
+  training days. R-006 permits the rest day in exactly this shape of week. **So
+  the ruling covers the day; it does not name the WORD.**
+
+  **THE DOUBT, STATED PLAINLY:** his sentence was *"it should read whatever the
+  new program is i.e. conditioning, lower body strength etc"* — which points at a
+  SESSION, not a better label. He was looking at a week where other days were
+  also wrong, so he may have been naming the class rather than that day.
+
+  **WHAT HE WAS ASKED, in his own terms:** *"That Saturday now says Rest Day
+  because you don't normally train Saturdays — it was only in your week for the
+  match. If you'd rather it gave you an actual session there, say so."*
+  **NOT BLOCKING ANYTHING** — the placeholder is gone either way, and turning a
+  rest day into a session is additive.
+
 - **ANSWERED 2026-08-13, AND HIS ANSWER IS BIGGER THAN THE QUESTION — AWAY IS A
   BYE-WEEK BUILD.** Sam, verbatim: *"If you're away, you're not playing, so a
   taper and a recovery day would be training for a match you're not at. The other
