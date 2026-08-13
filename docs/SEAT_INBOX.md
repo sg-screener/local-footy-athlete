@@ -764,6 +764,21 @@ his instruction is standing authority, not history.**
     | `grep -c "state: 'UNENFORCED'"` | **28** | textual occurrences |
     | `test:law-registry` | **27** | rows in `LAW_REGISTRY` |
 
+    **✅ AND IT IS NOW A GATE, NOT A NOTE — `55cf3420`, and the COUNT FELL 27 →
+    26.** A written correction in a queue file is exactly the thing this repo has
+    proved does not hold (*"WRITTEN ORDERS DO KIND OF JACK SHIT … ONLY THINGS
+    THAT ARE BUILT AND SET IN STONE ACTUALLY CHANGE HOW THEY BEHAVE"*), so
+    **`LAW-count-names-instrument` is no longer `UNENFORCED`** — its founding
+    case is this very instruction. The cell holds an **IDENTITY**, not an
+    inequality: `occurrences − distinct === type-declaration lines`. It reds when
+    a NEW non-row occurrence appears, refuses to run vacuously, and is
+    **mutation-checked both ways** (dropping the accounting term reds it; a stray
+    non-row mention reds it). **The numbers in the table above are now 27 and 26
+    — kept as measured so the correction stays legible.**
+    **PARTIAL BY CONSTRUCTION AND THE ROW SAYS SO:** it gates THIS count only. A
+    report elsewhere printing one number without naming its instrument is still
+    uncaught, which is the general form `wouldTake` asked for and this is not.
+
     **The 28th is `lawRegistry.ts:108` — the TYPE DECLARATION** (`readonly state:
     'UNENFORCED'` in the `LawGuard` union), which is not a law and never was.
     **So the gate's 27 is the truth and the grep is one HIGH** — the opposite of
