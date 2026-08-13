@@ -111,3 +111,56 @@ thing and it maps SCREENSHOTS OF BUILT SURFACES — the opposite end of the law.
 **A gate over a convention nobody follows is either red on arrival or vacuous**,
 and inventing the convention is authoring process, which is the seat's call.
 `LAW-judgment-ledger` is blocked the same way: **the ledger doc does not exist.**
+
+---
+
+## R-089 — BOTH HALVES BUILT
+
+### THE ORDERING — 0 WORLDS REFUSED, WHERE THE REPLACEMENT REFUSED 12
+
+`readiness` built this as a REPLACEMENT and §18 refused twelve weeks: it counts
+main-strength exposures PER PATTERN, so a full-body day that stops planning
+squat/hinge stops paying them. **An ordering cannot have that failure, and that
+is the whole design** — `orderPlannedByUncoveredFirst` returns an **IDENTICAL
+MULTISET**, so volume, §18 and the target cannot move.
+
+**Census byte-identical before and after:** 92 deficient / 318 laddered /
+174 worlds / 6 refused. The replacement moved it to 162 / 18.
+
+**⚠ THE LIMIT, PROBED NOT ASSUMED.** It delivers R-089 points 2 and 3. It does
+**NOT** deliver the example in point 1: a week where only the single-leg slots
+are open comes back **UNCHANGED**, because the full-body template is
+`['squat','hinge','push','pull']` and **an ordering cannot introduce a member
+the list does not have.** Single leg on the Wednesday needs the template to
+WIDEN — which is the substitution class that refused twelve worlds. **Reported,
+not smuggled in under an ordering.**
+
+### THE PAIRING — THE HALF NOTHING HELD
+
+**It could not be checked at ROW level, which is why nobody had:**
+`mainPatternForExerciseMovement` maps `lunge` → `squat` and has **no single-leg
+member at all.** The SLOT vocabulary is the only one that can express it.
+
+**Directional, not an equality** — "every squat is MATCHED WITH a hinge" bounds
+squats by hinges. **74 worlds are legitimately `sq0/hi1`** and an equality would
+have failed every one.
+
+**⚠ MY FIRST NON-VACUITY CELL WAS WRONG, AND THE THRESHOLD WAS THE WRONG
+THING.** It demanded ≥3 distinct week shapes and failed at 2. **Shape variety
+is not what makes the cell mean something — both counters registering is.**
+Lowering it to 2 would have been fitting the gate to the answer; it now asserts
+a week exists carrying a squat AND a hinge, and another carrying both
+single-leg slots.
+
+**⚠ AND THE HONEST LIMIT: this corpus never produces two squats in one week**,
+so the exact `2 squats / 1 hinge` shape Sam named is **currently unreachable
+here.** The guard is green and mutation-proven, **not green-because-exercised.**
+
+### A NOTE ON THE SHARED CHECKOUT
+
+Hit `HEAD.lock` twice. **The first was 10 minutes old, ZERO BYTES, with no git
+binary running — stale from a crash, and another seat was spinning a 45-attempt
+retry loop against it.** Removed it; git's own error sanctions that and it
+unblocked both of us. **The second was LIVE** — `vocab` had a real
+`git commit` running — so I waited, and it cleared in 10 seconds. **The check
+is whether a git BINARY is running, not whether the file exists.**
