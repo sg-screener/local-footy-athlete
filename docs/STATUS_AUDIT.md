@@ -45,6 +45,70 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ 2026-08-13 — 28-C1's LAST INSTRUMENT IS RUN. THE REFUSAL IS **NOT** IN `conditioningSelection.ts`
+
+**The one thing the QUEUE PASS entry said was still owed — *"does the category
+reach template selection at all, or is it vetted and downgraded?"* — is now
+measured.** Probe written into `src/__tests__/`, run, **DELETED**; `src/`
+verified clean of it. **No source file was modified.**
+
+**1. THE POOL IS NON-EMPTY — 4 templates**, confirming the census-C1 correction:
+`Up-Back Shuttle`, `Low-Intensity Deceleration Drills`, `Deceleration and Landing
+Work`, `45-Degree Cut Reps`. All four are run-only and **all four carry
+`availability_gate_no_team_training`.**
+
+**2. `codDecelPermitted` IS EXACTLY SAM'S RULING — all five cases correct:**
+
+| week | verdict |
+| --- | --- |
+| pre-season, no club | **true** |
+| pre-season, WITH club | false |
+| off-season, `late_offseason` | **true** |
+| off-season, `early_offseason` | false |
+| in-season | false |
+
+**3. ⚠ SELECTION ALWAYS RETURNS A COD TEMPLATE — INCLUDING WHERE IT MUST NOT.**
+Every case returned `Up-Back Shuttle`, **including `noTeamTrainingWeek=false`**
+(which the availability filter is written to refuse) **and `offFeet=true`** (all
+four are run-only). **The cause is `conditioningSelection.ts:600`:**
+
+    if (candidates.length === 0) candidates = pool;   // ← unfiltered
+
+**A blanket fallback to the UNFILTERED pool.** The comment above it justifies
+that for a *role cap* — *"a preference, not a wall"* — but it applies to **every**
+filter. **And for `cod_decel` the availability filter can ONLY ever empty the
+pool, because all four templates carry the property** — so that gate is
+**structurally inert at selection**, 100% of the time.
+
+**HONEST SCOPE, AND IT IS NOT A SHIPPING DEFECT TODAY:** the real gate is
+upstream — `codDecelPermitted` in `coachingEngine` decides whether COD is offered
+at all, and it is correct (2 above). This is defence-in-depth that is **not
+defending**, the same shape as `ergCapMinutes` before C3 and
+`set_length_max_4_5_min` before C11: **authored, shipped, read by nothing.**
+**The off-feet arm is the one with teeth** — an athlete under a run cap who is
+ever offered COD would receive a run-only template — **and it is unreachable only
+because COD is never offered at all.**
+
+**4. SO THE REFUSAL IS UPSTREAM OF SELECTION.** Pool ✓, gate ✓, selection ✓,
+ranking irrelevant (the rank experiment). **Combined, the surviving candidate is
+that `codPermitted` is FALSE inside the real generation run** — which would ALSO
+explain why promoting COD to first changed nothing, because
+`autoPlacementCategories` reads `return codPermitted ? [...base, 'cod_decel'] :
+base`. **A promotion inside a branch that never executes is a no-op, and that is
+consistent with every measurement on this item.**
+
+**⚠ STATED AS THE NEXT HYPOTHESIS, NOT AS A FINDING.** 28-C1 reports
+*"`permitted=true` on all 108 calls"*, which contradicts it. **One of those two
+is wrong and I have not determined which.**
+
+**THE NEXT PROBE, and it is one line of instrumentation:** print `codPermitted`,
+`inputs.seasonPhase` and `inputs.teamTrainingDays` at `coachingEngine.ts:4155`
+during a pre-season no-club generation. **If it is `true`, the refusal is between
+`pickPlacementCondCategories` and `finisherEligibility` (28-C1h measured ZERO
+eligibility hits, so the candidate never arrives). If it is `false`, 28-C1's
+108-call measurement was reading a different world and the whole item collapses
+to one wrong input.**
+
 ### 2026-08-13 — THE 32-FILE RESTORE LANDED. Verified, not assumed.
 
 **The section below it says the restore could not be committed. IT SINCE WAS**,
