@@ -122,6 +122,12 @@ export interface RotationContext {
    * scheduled door (or no deload at all).
    */
   deloadDoor?: 'readiness' | 'illness';
+  /**
+   * The READINESS deload's rolling window (R-035), when that is the door.
+   * ABSENT MEANS EVERY DAY — the illness door deloads while the fact is active
+   * (R-036), not for seven days, so a missing window must never narrow a week.
+   */
+  readinessDeloadWindow?: { startISO: string; endISO: string };
   /** Canonical phase-clock identity; never inferred from mini-cycle fields. */
   offseasonSubphase?: OffseasonSubphase;
 }

@@ -100,6 +100,15 @@ export interface GenerationReadinessConstraint {
   deloaded: boolean;
   /** "Absolutely cooked" — minimums lifted. Still not a removal. */
   sessionsOptional: boolean;
+  /**
+   * THE ROLLING WINDOW, CARRIED RATHER THAN DROPPED (R-035).
+   * The constraint has always held these two dates — `constraintAppliesOnDate`
+   * already reads them to decide whether it is live — and this projection used
+   * to hand generation a bare boolean. A boolean can only be applied to a whole
+   * week, which is how a Thursday declaration retro-deloaded Mon-Wed.
+   */
+  windowStartISO?: string;
+  windowEndISO?: string;
 }
 
 export interface GenerationConstraintContext {
@@ -124,6 +133,13 @@ export interface GenerationConstraintContext {
    * illness door, which has no phase gate (D16).
    */
   weekDeloaded?: boolean;
+  /**
+   * The readiness deload's ROLLING WINDOW, when readiness is what opened it.
+   * ABSENT MEANS EVERY DAY, and that is load-bearing: the illness door deloads
+   * while the fact is ACTIVE (R-036) and the scheduled door deloads an authored
+   * week, so neither carries a window and neither may be narrowed by this.
+   */
+  readinessDeloadWindow?: { startISO: string; endISO: string };
 }
 
 /** Schedule-history notes describe an accepted mutation; they are not load/readiness inputs. */
@@ -190,6 +206,17 @@ export function buildGenerationConstraintContext(args: {
     activeInjuryKeys,
     weekMode,
     weekDeloaded,
+    // ONLY when readiness is what deloaded. If illness also deloads, the week
+    // stays whole — the narrower door must not shrink the wider one.
+    ...(readiness?.deloaded && !illness.deloaded
+      && readiness.windowStartISO && readiness.windowEndISO
+      ? {
+          readinessDeloadWindow: {
+            startISO: readiness.windowStartISO,
+            endISO: readiness.windowEndISO,
+          },
+        }
+      : {}),
   };
 }
 
@@ -356,6 +383,9 @@ function strongestReadinessConstraint(
     label: c.reasonLabel,
     deloaded: directive.deloaded,
     sessionsOptional: directive.sessionsOptional,
+    // Carried, never re-derived: readinessIllnessLaw stays the owner of "seven".
+    ...(typeof c.startDate === 'string' ? { windowStartISO: c.startDate.slice(0, 10) } : {}),
+    ...(typeof c.expiresAt === 'string' ? { windowEndISO: c.expiresAt.slice(0, 10) } : {}),
   };
 }
 

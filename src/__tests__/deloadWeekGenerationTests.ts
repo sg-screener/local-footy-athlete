@@ -22,6 +22,11 @@ import {
   resolveWeekKind,
 } from '../rules/deloadWeekRules';
 import { buildBlockWeekStates } from '../utils/programBlockState';
+import {
+  composeTemporarySourceFactCompatibility,
+  createTemporaryFatigueFact,
+} from '../rules/temporarySourceFact';
+import { readinessDeloadFactScope } from '../rules/durableFactHorizon';
 
 let pass = 0;
 let fail = 0;
@@ -403,6 +408,95 @@ assertCalendarDeload('Pre-season', 0.9);
   ok('halving clamps at the 1-set floor, never to zero',
     deloaded.prescribedSets === 1,
     JSON.stringify({ sets: deloaded.prescribedSets }));
+}
+
+// ── R-035: THE DELOAD LANDS ON THE WINDOW'S DAYS, NOT ON THE CALENDAR WEEK ──
+//
+// Sam, R-035: "the next 7 days are deloaded — a ROLLING 7-day window from the
+// declaration day, NOT THE REST OF THE CALENDAR WEEK."
+//
+// The window is built by readinessIllnessLaw, carried onto the fact by
+// readinessDeloadFactScope, and honoured by the compatibility projection's own
+// `onDate` filter — then generation asks that projection ONCE for the week and
+// applies the answer to every day. A Thursday declaration therefore deloads the
+// Monday, Tuesday and Wednesday that were already trained or already planned.
+//
+// THE TIER IS "WRECKED" ON PURPOSE. "Absolutely cooked" also lifts the minimums
+// (R-038), flipping the week to optional_week and changing which sessions exist
+// — a per-day dose comparison could not then attribute its own result. Wrecked
+// deloads WITHOUT touching the week's mode, so only the dose moves.
+{
+  const MON = '2026-07-06';
+  const THU = '2026-07-09';   // declaration day; window runs THU..2026-07-15
+
+  const wrecked = createTemporaryFatigueFact({
+    observedDate: THU,
+    scope: readinessDeloadFactScope({ declaredOnISO: THU, todayISO: THU }),
+    athleteReportedLevel: 'high',        // levelScore 7 -> tier `wrecked`
+    reportKind: 'fatigue',
+    sourceSurface: 'program_tab',
+  });
+  const compat = composeTemporarySourceFactCompatibility({
+    temporarySourceFacts: [wrecked],
+    onDate: THU,
+  });
+
+  const control = generateProgramLocally(profileFor('Pre-season'), {
+    todayISO: THU, previousProgram: null,
+  }).microcycles[0];
+  const declared = generateProgramLocally(profileFor('Pre-season'), {
+    todayISO: THU,
+    previousProgram: null,
+    temporarySourceFacts: [wrecked],
+    activeConstraints: compat.activeConstraints,
+  }).microcycles[0];
+
+  const setsOn = (micro: Microcycle, dow: number): number =>
+    (micro?.workouts ?? [])
+      .filter((w) => w.dayOfWeek === dow)
+      .flatMap((w) => strengthRows(w))
+      .reduce((sum, row) => sum + (row.prescribedSets ?? 0), 0);
+  const BEFORE = [1, 2, 3];          // Mon 6, Tue 7, Wed 8 — outside the window
+  const INSIDE = [4, 5, 6, 0];       // Thu 9 .. Sun 12 — inside it
+
+  // NON-VACUITY FIRST: without this, "Mon-Wed untouched" is trivially true of a
+  // world where the declaration was never read — which is exactly what the first
+  // attempt at this cell measured, and it passed.
+  ok('[R-035] non-vacuity: the wrecked declaration reaches generation at all',
+    [...BEFORE, ...INSIDE].some((d) => setsOn(declared, d) !== setsOn(control, d)),
+    `control=${[...BEFORE, ...INSIDE].map((d) => setsOn(control, d)).join(',')} `
+      + `declared=${[...BEFORE, ...INSIDE].map((d) => setsOn(declared, d)).join(',')} `
+      + `constraints=${compat.activeConstraints.length}`);
+
+  // THE PAIR IS THE PROOF, AND BOTH HALVES ARE NEEDED.
+  //
+  // Measured either side of the fix, same seed, same week:
+  //            Mon      Tue     Wed      Thu     Fri
+  //   before   14->6    8->4    13->13   5->2    11->4      Mon/Tue HALVED
+  //   after    14->13   8->7    13->13   5->2    11->4      Mon/Tue intact
+  //
+  // Before the fix the deload halved days that were already trained. After it,
+  // the halving lands only inside the window. Asserting a RATIO rather than
+  // equality is deliberate: a small week-level readiness effect (~1 set/day,
+  // NOT the deload) still touches days outside the window, and it is a
+  // different mechanism — named in the report rather than hidden by loosening
+  // this cell to "unchanged".
+  const ratio = (d: number): number =>
+    setsOn(control, d) === 0 ? 1 : setsOn(declared, d) / setsOn(control, d);
+
+  const halvedOutside = BEFORE.filter((d) => ratio(d) <= 0.6);
+  ok('[R-035] days BEFORE the declaration are not deloaded',
+    halvedOutside.length === 0,
+    `deloaded outside the window: ${halvedOutside
+      .map((d) => `dow ${d} (${setsOn(control, d)} -> ${setsOn(declared, d)})`).join('; ')}`);
+
+  // NON-VACUITY, THE SECOND HALF: the deload must still LAND inside the window,
+  // or "not deloaded outside" is true of a world where nothing deloaded at all.
+  const deloadedInside = INSIDE.filter((d) => setsOn(control, d) > 0 && ratio(d) <= 0.6);
+  ok('[R-035] and the days INSIDE the window still ARE deloaded',
+    deloadedInside.length > 0,
+    `inside-window days: ${INSIDE
+      .map((d) => `dow ${d} (${setsOn(control, d)} -> ${setsOn(declared, d)})`).join('; ')}`);
 }
 
 // Property 2 of the mechanism: a declaration cannot outlive its defect.

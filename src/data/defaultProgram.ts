@@ -69,6 +69,7 @@ import {
   applyConditioningDeloadToExercises,
 } from '../rules/deloadWeekRules';
 import { ladderLevelForProfile } from '../rules/experienceCrosswalk';
+import { isDateInReadinessDeloadWindow } from '../rules/readinessIllnessLaw';
 import {
   ACCESSORY_REP_GUIDELINES,
   LOWER_SECONDARY_REP_GUIDELINES,
@@ -1683,6 +1684,33 @@ export function buildWorkoutsFromCoach(
         onboardingData?.seasonPhase,
         rotationContext?.weekKind,
       );
+  /**
+   * R-035: THE DELOAD APPLIES TO THE DAYS IN THE WINDOW, NOT TO THE WEEK.
+   *
+   * `deloadPolicy` above is RESOLVED once for the week, which is correct — the
+   * TRANSFORMATION is week-shaped by R-034 and is untouched here. What was wrong
+   * is that it was then APPLIED to every day, so a Thursday declaration
+   * retro-deloaded Monday to Wednesday and stopped at Sunday instead of reaching
+   * the following Wednesday.
+   *
+   * ABSENT WINDOW MEANS EVERY DAY, and that is load-bearing: the illness door
+   * deloads while the fact is ACTIVE (R-036) and the scheduled door deloads a
+   * whole authored week, so neither carries a window and neither may be narrowed.
+   *
+   * The predicate is readinessIllnessLaw's own — nothing here re-derives seven.
+   */
+  const readinessWindow = rotationContext?.readinessDeloadWindow ?? null;
+  function deloadPolicyForDayOfWeek(dayOfWeek: number | undefined): DeloadWeekPolicy | null {
+    if (!deloadPolicy) return null;
+    if (!readinessWindow || dayOfWeek === undefined) return deloadPolicy;
+    return isDateInReadinessDeloadWindow(syntheticDateStr(dayOfWeek), {
+      startISO: readinessWindow.startISO,
+      endISO: readinessWindow.endISO,
+    })
+      ? deloadPolicy
+      : null;
+  }
+
   const profileEquipment = resolveEquipmentCapabilities(onboardingData);
   const availableEquipment = effectiveAthletePrefs?.availableEquipment ?? profileEquipment.tags;
   const conditioningModalities = effectiveAthletePrefs?.conditioningModalities ?? (
@@ -1707,7 +1735,10 @@ export function buildWorkoutsFromCoach(
       Array<'bike' | 'air_bike' | 'row' | 'ski'>;
   const effectiveWeeklyPlan = weeklyPlan
     ? resolveWeeklyConditioningFeasibility(
-        weeklyPlan.map((entry) => deloadPlanEntry(entry, deloadPolicy)),
+        weeklyPlan.map((entry) => deloadPlanEntry(
+          entry,
+          deloadPolicyForDayOfWeek(entry.dayOfWeek ? PLAN_DAY_MAP[entry.dayOfWeek] : undefined),
+        )),
         {
           phase: onboardingData?.seasonPhase,
           offseasonSubphase,
@@ -2229,7 +2260,7 @@ export function buildWorkoutsFromCoach(
       canonicalTier = aiTier;
     }
 
-    if (deloadPolicy && canonicalIntensity === 'High') {
+    if (deloadPolicyForDayOfWeek(cw.dayOfWeek) && canonicalIntensity === 'High') {
       canonicalIntensity = 'Moderate';
     }
 
@@ -2559,8 +2590,9 @@ export function buildWorkoutsFromCoach(
           repsMax: exercise.prescribedRepsMax,
           index,
         }).kind !== 'conditioning');
-      const strengthBlock = deloadPolicy
-        ? applyStrengthDeloadToExercises(rawStrengthBlock, deloadPolicy)
+      const dayDeloadPolicy = deloadPolicyForDayOfWeek(cw.dayOfWeek);
+      const strengthBlock = dayDeloadPolicy
+        ? applyStrengthDeloadToExercises(rawStrengthBlock, dayDeloadPolicy)
         : rawStrengthBlock;
 
       // Build deterministic conditioning block and append. The block was
@@ -2617,13 +2649,14 @@ export function buildWorkoutsFromCoach(
 
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} COMBINED S+C — strength=${strengthBlock.length} exercises (AI) + conditioning="${condExName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (template, ${condBlock.length} exercises)`);
     } else {
+      const dayStrengthDeload = deloadPolicyForDayOfWeek(cw.dayOfWeek);
       if (
-        deloadPolicy &&
+        dayStrengthDeload &&
         normalizedWorkoutType !== 'Conditioning' &&
         normalizedWorkoutType !== 'Recovery' &&
         normalizedWorkoutType !== 'Game'
       ) {
-        finalExercises = applyStrengthDeloadToExercises(finalExercises, deloadPolicy);
+        finalExercises = applyStrengthDeloadToExercises(finalExercises, dayStrengthDeload);
       }
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} aiName="${cw.name}" aiType="${cw.workoutType}" aiTier="${cw.sessionTier}" → canonicalTier="${canonicalTier}" intensity="${canonicalIntensity}" planEntry=${planEntry ? `"${planEntry.tier} / ${planEntry.focus?.substring(0, 40)}"` : 'NONE'}`);
     }
@@ -2635,8 +2668,9 @@ export function buildWorkoutsFromCoach(
     // Conditioning days — so without this, the half never happened on exactly
     // the days that are mostly conditioning. Games are left alone: a game is
     // not ours to shrink.
-    if (deloadPolicy && normalizedWorkoutType !== 'Game') {
-      finalExercises = applyConditioningDeloadToExercises(finalExercises, deloadPolicy);
+    const dayConditioningDeload = deloadPolicyForDayOfWeek(cw.dayOfWeek);
+    if (dayConditioningDeload && normalizedWorkoutType !== 'Game') {
+      finalExercises = applyConditioningDeloadToExercises(finalExercises, dayConditioningDeload);
     }
 
     let resolvedSpeedBlock: SpeedBlock | undefined;
@@ -2664,7 +2698,7 @@ export function buildWorkoutsFromCoach(
     // a deload is not a reason to lose sharpness. The dose shrinks instead.
     let resolvedPowerRow: WorkoutExercise | undefined;
     if (planEntry?.powerPrimer) {
-      const powerSpec = deloadPolicy
+      const powerSpec = deloadPolicyForDayOfWeek(cw.dayOfWeek)
         ? (() => {
             const shrunk = deloadPowerDose({
               sets: planEntry.powerPrimer.sets,

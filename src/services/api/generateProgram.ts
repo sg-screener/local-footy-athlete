@@ -728,6 +728,7 @@ export function buildGeneratedMicrocycles(args: {
             intensityMultiplier: blockState.intensityMultiplier,
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
             deloadDoor: doorDeload ? 'illness' : undefined,
+            readinessDeloadWindow: generationConstraints?.readinessDeloadWindow,
           },
           {
             ...mergeAthletePrefsWithGenerationConstraints(args.athletePrefs, generationConstraints),
@@ -930,6 +931,7 @@ export function buildGeneratedMicrocycles(args: {
       miniCycleNumber: blockState.miniCycleNumber,
       weekKind: effectiveWeekKind,
       deloadDoor: doorDeload ? 'illness' : undefined,
+            readinessDeloadWindow: generationConstraints?.readinessDeloadWindow,
       exposureContract,
       exposureContractV2,
       intensityMultiplier: blockState.intensityMultiplier,
