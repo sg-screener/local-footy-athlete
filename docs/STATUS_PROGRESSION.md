@@ -163,6 +163,54 @@ missing ingredient the old cell never had, and it is where that gate should be
 built. Building it needs the reader question settled first, which is the same
 open step.
 
+### ✅ STANDING ORDERS PERFORMED THIS STOP, AND ONE REPO FAULT REMOVED
+
+**1a — MERGE `codex/*`: QUIET, measured myself by merge-base AGE rather than
+taken from another seat's report.** Every `codex/*` branch carrying commits not
+in `main` forks from **2026-07-19** and is **~1,472 behind**; merging any reverts
+a month. **Nothing of Sam's UI work is waiting outside `main`.**
+
+**13 — THE UNENFORCED COUNT IS FALLING, AND I MEASURED IT WITH THE INSTRUMENT
+THE ITEM ITSELF CORRECTS.** `npm run test:law-registry` (ROWS, never the grep):
+**125 rows, 100 guarded, 25 UNENFORCED** — down from the 27 the item records.
+**The standing order is being satisfied, by the seats collectively rather than
+by me this stop.**
+
+**I DID NOT START A LAW, AND THE REASON IS NOT SHYNESS.** `audit` holds this
+item and has triaged all of them; its two cheapest (`LAW-elegant-two-options`,
+`LAW-doc-truth`) both land in **`repoLawGuardsTests.ts`, which is HELD** — the
+same wall that stopped my citation guard. Reading the remaining `wouldTake`
+lines, most of the mechanisable ones are repo-doc gates that belong in that same
+held suite. **Starting a multi-file gate at the tail of a long session is the
+documented way the last two nights went wrong** (item 34 says it in as many
+words), and duplicating a seat that has already triaged the list is the
+eight-minutes-each waste this checkout created status files to stop.
+
+**AND THE BROKEN REF IS GONE — it had already cost two seats.**
+`refs/heads/codex/ui-tweaks.lock.stale-seat` was a **ZERO-BYTE file** in
+`refs/heads` (a leftover `.lock` artifact from 2026-08-12 09:15, same minute as
+the real `ui-tweaks` ref beside it). It named no object, so **there was nothing
+behind it to lose** — but git treated it as a broken ref and **aborted every
+`--all` walk**. The desktop recorded it; **it then bit me directly**, killing the
+history check I needed for the missing-suite finding and forcing me onto a
+`HEAD`-only walk.
+
+**Removed** (moved to this session's scratchpad rather than deleted, though a
+0-byte file is nothing to keep), after checking `ps` for a neighbour mid-git —
+the same rule as a stale `index.lock`. **Verified: `git log --all` walks again,
+`git show-ref` reports no broken refs, and `codex/ui-tweaks` still points at
+`5f60a41f`, untouched.**
+
+**IT ALSO STRENGTHENED A CLAIM I HAD ALREADY MADE.** The
+`sectionOwnershipInvariantTests` finding was hedged to *"never on this branch's
+history"* because `--all` was unusable. Re-run across **every ref**: still zero.
+**That suite has never existed ANYWHERE, not merely never on `main`.**
+
+**⚠ THIS FIX CANNOT BE COMMITTED — it is a `.git` internal, not a tracked file.**
+This paragraph is the only durable record, which is precisely why it is written
+here rather than left as a shell command someone ran once. **If it reappears,
+the cause is a `.lock` rename during a ref update, not a real branch.**
+
 ### THE CLASS, SWEPT — AND IT IS MUCH SMALLER THAN THE FIRST ONE SUGGESTED
 
 **Having found one "covered over there" claim pointing at fiction, I swept for
