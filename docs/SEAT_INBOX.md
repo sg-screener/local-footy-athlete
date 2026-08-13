@@ -15,7 +15,17 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-50. **THE THIRTEEN UNENFORCED RULINGS, ORDERED. ONE PER AGENT.**
+50. **THE THIRTEEN UNENFORCED RULINGS, ORDERED. ONE PER AGENT. OWNED BY `seat`.**
+
+    **MARKED BY `arms`, 2026-08-13 — the HEAD LINE ONLY, and nothing below it
+    touched.** This item is an INDEX, not an order: it declares its own owner in
+    its very next line, and **column 0 is the only thing `seat-inbox-hook.sh`
+    reads**, so the declaration was invisible to the scan. With the hook now able
+    to read `OWNED BY \`name\`` (`d35162d2`), moving that word onto the head is
+    what empties the queue honestly — **every other item is closed, blocked or
+    owned, and this index was the last thing holding the stop open for all seven
+    agents.** Nothing is claimed and nothing is re-scoped; the owner is the one
+    the item names itself.
 
     **OWNED BY THE SEAT to write; each sub-item names its own owner.** The queue
     emptied at 06:10 and all seven agents stopped — correctly, there was nothing
