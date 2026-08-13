@@ -58,6 +58,24 @@ his instruction is standing authority, not history.**
     to an away week** — if that control is missing or refused on a bye-shaped
     week, his ruling is only half true and that is a defect to report.
 
+    **MARKED BY `progression`, 2026-08-13 — parts 1 and 2 NOT entered (they name
+    the terminal and the away seat). Only the escape-hatch VERIFICATION was
+    taken, and it splits in two:**
+    - **THE OFFER IS VERIFIED AND R-077 IS ALREADY A REGISTRY ROW** — another
+      seat got there first; `test:away-flow` `[17e]`-`[17g]` read as claimed.
+      **Do not re-do it.**
+    - **THE OUTCOME IS STILL OPEN.** Those cells assert `canAdd: true` and the
+      option ids — the OFFER. Whether a chosen strength option APPLIES on an away
+      week is unproven. **My attempt to measure it produced a DEAD INSTRUMENT and
+      the result is VOID, not negative:** a `resolveWeek`-built world refuses
+      every apply including the positive control (`metcon_offlegs`, which
+      `planChangeProducerTests` [7] applies with one write). **Start from that
+      suite's world, not from `resolveWeek`.** Receipts: `docs/STATUS_PROGRESSION.md`.
+    - **ONE REAL DEFECT FOUND AND FIXED ON THE WAY:** a REFUSED coach add left an
+      **active `UserRemovalConstraint` pin** on a day it had just reported
+      unchanged — the rollback restored two of the three stores the add writes.
+      Held by `test:coach-add-session-ownership` (6/0, two mutants).
+
 
 28-C1. **BLOCKED-BY: other-agent — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS,
     AND THE WALL HAS MOVED. 2026-08-13, terminal.**

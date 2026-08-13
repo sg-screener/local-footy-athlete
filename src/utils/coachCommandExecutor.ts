@@ -81,7 +81,7 @@ import type { ModalityPreference } from '../store/coachPreferencesStore';
 import { applyProgramOverrideWrite, liveOffseasonSubphaseForDate, useProgramStore } from '../store/programStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useProfileStore } from '../store/profileStore';
-import type { Workout, OverrideContext } from '../types/domain';
+import type { Workout, OverrideContext, UserRemovalConstraint } from '../types/domain';
 import { logger } from './logger';
 import {
   buildConditioningPrescription,
@@ -3118,6 +3118,22 @@ interface RemoveSessionRollbackSnapshot {
   overrideContext: OverrideContext | null;
   calendarMark: CalendarDayType | null;
   visibleWorkout: ResolvedDay['workout'] | null;
+  /**
+   * THE THIRD STORE THE ADD WRITES, AND THE ONE THE ROLLBACK USED TO MISS.
+   *
+   * This snapshot was written for `remove_session`, which touches an override
+   * and a calendar mark. `add_session` reuses it — and it also mints a
+   * `UserRemovalConstraint` pin through
+   * `commitAthleteSessionAdditionTransaction`. Restoring two of the three left
+   * an ACTIVE pin on a day the app had just reported it did not change
+   * (measured 2026-08-13: a refused strength add on the rest day returned
+   * `applied: false` and left `constraints 0 -> 1`).
+   *
+   * The whole list is captured rather than the pins for `date` alone: a
+   * transaction may reconcile constraints elsewhere, and "put the store back as
+   * it was" is the only definition of rollback that cannot half-succeed.
+   */
+  userRemovalConstraints: readonly UserRemovalConstraint[];
 }
 
 function runAddSession(
@@ -3243,6 +3259,7 @@ function runAddSession(
     overrideContext: beforeOverride.context,
     calendarMark: beforeCalendarMark,
     visibleWorkout: beforeWorkout,
+    userRemovalConstraints: snapshotUserRemovalConstraints(),
   };
   const proposedAddedWorkout = buildAddedSessionWorkout(
     sourceWorkout,
@@ -3468,6 +3485,7 @@ function runRemoveSession(
     overrideContext: beforeOverride.context,
     calendarMark: beforeCalendarMark,
     visibleWorkout: beforeWorkout,
+    userRemovalConstraints: snapshotUserRemovalConstraints(),
   };
   // A valid athlete deletion cannot introduce unsafe training content. CORE
   // shortfalls belong to rolling repair/typed reduction, not this write gate;
@@ -4215,8 +4233,19 @@ function rollbackRemoveSession(
   }
 }
 
+/** The pin list as it stands, so a rolled-back write can put it back exactly. */
+function snapshotUserRemovalConstraints(): readonly UserRemovalConstraint[] {
+  return [...(useProgramStore.getState().userRemovalConstraints ?? [])];
+}
+
 function restoreRemoveSessionStores(snapshot: RemoveSessionRollbackSnapshot): void {
   restoreCalendarMark(snapshot.date, snapshot.calendarMark);
+  // Put the pin list back BEFORE the override work below, so no reader can
+  // observe the restored week while an abandoned transaction's pin is still
+  // standing over it.
+  useProgramStore.setState({
+    userRemovalConstraints: [...snapshot.userRemovalConstraints],
+  } as never);
   const store = useProgramStore.getState();
   if (snapshot.overrideWorkout) {
     applyProgramOverrideWrite({

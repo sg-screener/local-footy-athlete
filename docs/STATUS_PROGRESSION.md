@@ -19,6 +19,92 @@ write** and was left alone.
 
 ## STATUS
 
+### ITEM 38 / R-077's ESCAPE HATCH — one defect FIXED, one measurement VOID
+
+**THE ORDER (item 38, part 3):** *"Verify the athlete CAN add a strength session
+to an away week — if that control is missing or refused on a bye-shaped week, his
+ruling is only half true and that is a defect to report."*
+
+**PARTS 1 AND 2 ARE NOT MINE AND I DID NOT ENTER THEM.** R-076 (face pull leaves
+the horizontal-pull pool) is the TERMINAL's, which reports itself live on item
+34. R-077's strength arm is the AWAY seat's and its answer is *do nothing*.
+
+**⚠ AND THE OFFER HALF WAS ALREADY VERIFIED WHILE I WORKED — I DID NOT RE-DO IT.**
+`R-077` is already a registry row, and another seat measured the hatch through
+`listPlanChangeOptionsForDay`: **all seven days of an away week return
+`canAdd: true` and offer `strength_upper`/`strength_lower`/`strength_full`**, held
+by `test:away-flow` `[17e]`/`[17f]`/`[17g]` with the home game day
+(`locked: 'game_day'`) as non-vacuity. **I read those cells rather than trusting
+the row, and they say what the row says.**
+
+**WHAT THEY ASSERT IS THE OFFER, NOT THE OUTCOME** — `canAdd: true` and the
+option ids. `planChangeProducerTests` carries the general invariant that every
+offered option *"validates and APPLIES through the same writer as the chat
+door"*, but on ITS OWN worlds. **The composition — does an offered strength add
+actually apply on an AWAY week — is the gap, and it is still open.**
+
+**🛑 I TRIED TO CLOSE IT AND MY INSTRUMENT WAS DEAD. THE RESULT IS VOID, NOT
+NEGATIVE.** Driving `buildPlanChangeProposal` + `applyPlanChange` over a
+`resolveWeek`-built away week returned `ok=false` ("I couldn't safely make that
+change") on every strength add — **and identically on the HOME arm**. A both-arms
+refusal is the shape that demands a positive control, so I ran one:
+**`metcon_offlegs`, the template `planChangeProducerTests` [7] applies with one
+write, ALSO refused here, as did `mobility_flow`.** Nothing applies in that
+harness, so it cannot tell a refusal from a missing world. **Every apply result I
+took is withdrawn.** The harness lacks the store/accepted-context setup the
+producer suite builds; whoever closes this should start from
+`planChangeProducerTests`' world, not from `resolveWeek`.
+
+### ✅ WHAT I DID FIND AND FIX: A REFUSED ADD LEFT AN ACTIVE PIN BEHIND
+
+**This one was measured on a LIVE instrument** — the real coach pipeline over a
+store-backed seed, where the executor demonstrably ran (it minted a pin, wrote,
+verified, and rolled back with a named drift).
+
+Asking the coach for a strength session on the week's rest day is **refused** —
+`verification_failed:add_session:other_days_changed:2026-07-13` — because the add
+cannot be made without deleting Monday's conditioning row
+(`cond-2026-07-13-main`, printed by diffing the cells, not inferred from the
+route name). **The executor is behaving well there: it rolls back and reports
+`applied: false` rather than silently damaging Monday.**
+
+**BUT THE ROLLBACK WAS INCOMPLETE, AND THAT IS THE DEFECT.**
+`RemoveSessionRollbackSnapshot` was written for `remove_session` (an override + a
+calendar mark) and is REUSED by `add_session`, which writes a THIRD thing — the
+`UserRemovalConstraint` pin minted by
+`commitAthleteSessionAdditionTransaction`. `restoreRemoveSessionStores` never
+touched it. **Measured: `constraints 0 -> 1`, an ACTIVE pin on a day the app had
+just reported it did not change.** Same shape as *a decision is not the only
+thing a decision writes*.
+
+**FIXED** — the snapshot captures the pin list and the rollback restores it,
+before the override work so no reader sees a restored week under an abandoned
+transaction's pin.
+
+**WORKING** — `test:coach-add-session-ownership`, **6 passing / 0 failing** (4
+pre-existing + 2 new), non-vacuity first in both new cells.
+
+| cell | holds |
+| --- | --- |
+| a refused add leaves no pin behind | the residue itself |
+| a refused add RESTORES the pin list rather than clearing it | the over-correction |
+
+**MUTATION-PROVEN, and the second mutant is why the second cell exists:**
+
+| mutant | result |
+| --- | --- |
+| rollback no longer restores the pin list | **killed** by cell 1 |
+| snapshot captures `[]` instead of the real list | **SURVIVED cell 1** — then killed by cell 2 |
+
+**THE SURVIVOR WAS THE MORE DANGEROUS BUG.** With an empty snapshot the rollback
+would not just drop its own pin, it would **wipe every pin the athlete had
+already earned on other days** — and cell 1 could not see it, because the seed
+starts with no pins. Cell 2 gives the world a pin to lose.
+
+**NO REGRESSIONS.** All 39 coach/away/program-control/adjustment suites run in
+both arms back to back: **13 fail, identically, in BOTH** — pre-existing, named,
+not absorbed. `npm run test:compile` PASSES.
+
 ### THE UNIT: the authored dose is spent by a layer that had floors and no ceiling
 
 **THE ORDER.** The authored dose is enforced at generation, then

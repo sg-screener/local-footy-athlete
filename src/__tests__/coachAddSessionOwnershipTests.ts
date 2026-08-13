@@ -34,7 +34,7 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
 import fs from 'fs';
 import path from 'path';
-import type { OnboardingData, TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
+import type { OnboardingData, TrainingProgram, UserRemovalConstraint, Workout, WorkoutExercise } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
@@ -52,6 +52,7 @@ import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 const WEEK = '2026-07-13';       // Monday — Lower Body Strength
 const WEDNESDAY = '2026-07-15';  // empty / Rest
 const SATURDAY = '2026-07-18';   // Game
+const SUNDAY = '2026-07-19';     // Rest — the only day an add can target here
 
 let passes = 0;
 const failures: string[] = [];
@@ -304,6 +305,106 @@ run('defaultApplyAddSession writes through the addition-transaction owner (censu
     'defaultApplyAddSession must not write via a raw applyOverride (the census #1 bypass)');
   assert(/finaliseWorkoutAfterMutation\(/.test(body),
     'the added workout must be finalised before the owner (its input contract)');
+});
+
+// ── A REFUSED ADD MUST LEAVE NOTHING BEHIND ──
+//
+// Found 2026-08-13 while verifying R-077's escape hatch (*"they can always add a
+// session in if they need to"*). Asking for a STRENGTH session on the week's
+// rest day is REFUSED — `verification_failed:add_session:other_days_changed`,
+// because the add cannot be made without deleting Monday's conditioning row, so
+// the executor rolls back and honestly reports `applied: false`.
+//
+// BUT THE ROLLBACK IS INCOMPLETE. `restoreRemoveSessionStores` restores the
+// calendar mark and the date override — and never touches
+// `userRemovalConstraints`, which `RemoveSessionRollbackSnapshot` does not even
+// carry. So the pin minted by `commitAthleteSessionAdditionTransaction` OUTLIVES
+// the operation the app says it did not perform: an active
+// `UserRemovalConstraint` on a day that was left as Rest.
+//
+// That is the same shape as "a decision is not the only thing a decision
+// writes" — a rollback that restores two of the three things the add wrote.
+function coachAddStrengthToSunday() {
+  const command: CoachCommand = {
+    mode: 'mutate',
+    operation: 'add_session',
+    target: { kind: 'date', date: SUNDAY },
+    payload: {
+      operation: 'add_session',
+      sourceSessionName: 'Lower Body Strength',
+      reason: 'athlete adds a strength session',
+    },
+    scope: 'one_off',
+    confidence: 0.95,
+    needsClarification: false,
+    reason: 'R-077 escape hatch',
+  } as CoachCommand;
+  try {
+    return quiet(() => executeCoachCommand({
+      command,
+      todayISO: WEEK,
+      referenceResolution: null,
+      userMessage: 'add a lower body strength session on Sunday',
+    }));
+  } catch (error) {
+    return { kind: 'error', applied: false, route: 'threw', reply: (error as Error).message } as ReturnType<typeof executeCoachCommand>;
+  }
+}
+
+function activePinsOn(date: string) {
+  return useProgramStore.getState().userRemovalConstraints
+    .filter((c) => c.targetDate === date && c.status === 'active');
+}
+
+run('a refused add leaves no pin behind (rollback restores every store it wrote)', () => {
+  seed();
+  // NON-VACUITY: the seed must start with no pin, or "no pin after" is trivially
+  // true and this cell would pass over a store that never had one.
+  assert(activePinsOn(SUNDAY).length === 0, 'seed already had a pin on SUNDAY');
+  const result = coachAddStrengthToSunday();
+  // NON-VACUITY: this cell is about a REFUSED add. If the door ever starts
+  // accepting this (which is what R-077 actually wants), the pin is correct and
+  // this cell must stop asserting rather than silently invert.
+  if (result.applied) return;
+  const dayAfter = acceptedByDay().get(7);
+  assert(!dayAfter || (dayAfter.exercises ?? []).length === 0,
+    'refused add still left a session on SUNDAY');
+  assert(activePinsOn(SUNDAY).length === 0,
+    `a refused add (route=${result.route}) left ${activePinsOn(SUNDAY).length} active pin(s) on ${SUNDAY}: `
+      + JSON.stringify(activePinsOn(SUNDAY).map((c) => ({ date: c.targetDate, status: c.status }))));
+});
+
+// ── AND ROLLBACK RESTORES THE LIST, IT DOES NOT CLEAR IT ──
+//
+// The cell above cannot tell those two apart: the seed starts with no pins, so
+// "snapshot the real list" and "snapshot an empty list" both leave zero pins
+// behind. A mutant that captured `[]` survived it — and that mutant is a WORSE
+// defect than the one it hides, because a rolled-back add would then delete
+// every pin the athlete had already earned on other days.
+//
+// So this cell gives the world a pin to lose.
+run('a refused add restores the pin list rather than clearing it', () => {
+  seed();
+  const preExisting = {
+    id: 'test-pin-unrelated',
+    targetDate: WEDNESDAY,
+    status: 'active',
+    scope: 'date',
+    createdAt: `${WEEK}T12:00:00.000Z`,
+  } as unknown as UserRemovalConstraint;
+  useProgramStore.setState({ userRemovalConstraints: [preExisting] } as never);
+  // NON-VACUITY: the pin has to be there before the add, or its survival is
+  // trivially true.
+  assert(activePinsOn(WEDNESDAY).length === 1, 'the pre-existing pin was not seeded');
+
+  const result = coachAddStrengthToSunday();
+  if (result.applied) return; // accepted — this cell is about the refused path
+
+  assert(activePinsOn(WEDNESDAY).length === 1,
+    `a refused add destroyed an unrelated pre-existing pin (route=${result.route}); `
+      + `WEDNESDAY pins now ${activePinsOn(WEDNESDAY).length}`);
+  assert(activePinsOn(SUNDAY).length === 0,
+    'the refused add still left its own pin behind');
 });
 
 console.log(`\ncoach add_session ownership: ${passes} passing, ${failures.length} failing`);
