@@ -244,6 +244,26 @@ section('[6] architectural wiring guards');
   // asserting one thing twice.
   ok('[avail] the table asserts BOTH directions (the old field was wrong both ways)',
     ROWS.some((r) => r.legalOnBodyweight) && ROWS.some((r) => !r.legalOnBodyweight));
+
+  /* ── R-086 SIGNED-CONTENT PIN — THE SET IS CLOSED AT TWO ─────────────────
+   *
+   * Sam, 2026-08-13, asked whether Deadlift and Goblet Squat should join:
+   * **"leave it at two"**. This is an EQUALITY pin, not a subset check, for
+   * the same reason the signed location presets are: the list carries his
+   * signature, and drift here IS a change to it.
+   *
+   * IT GUARDS AGAINST A SPECIFIC, TEMPTING MISTAKE. The generalisation "a
+   * missing LOADING implement is survivable, a missing APPARATUS is not"
+   * reproduces both of these rows — and then legalises Deadlift, Goblet Squat
+   * and Banded Bicep Curl on a bodyweight kit. It would pass the table above
+   * and be wrong. A third entry needs a new ruling and a new registry row.
+   */
+  const { BODYWEIGHT_CAPABLE } =
+    require('../data/exerciseEquipmentRequirement') as typeof import('../data/exerciseEquipmentRequirement');
+  const capable = [...BODYWEIGHT_CAPABLE].sort();
+  ok('[avail] R-086: BODYWEIGHT_CAPABLE is EXACTLY Walking Lunges + Single-Leg RDL ("leave it at two")',
+    JSON.stringify(capable) === JSON.stringify(['Single-Leg RDL', 'Walking Lunges']),
+    capable);
 }
 
 console.log(`\nedgeGenerationEquipmentTests: ${pass} passed, ${fail} failed`);

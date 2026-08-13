@@ -1474,6 +1474,31 @@ queue, which now finds nothing. **`audit` raised it and did NOT build it: an
 agent editing the script that governs it needs the person paying for it to say
 yes, and this row is that yes.**
 
+---
+
+**R-086** · *"leave it at two"* (2026-08-13, answering `audit` on whether
+Deadlift and Goblet Squat should join) · **THE `BODYWEIGHT_CAPABLE` SET IS
+CLOSED AT TWO: `Walking Lunges` AND `Single-Leg RDL`.** These are the movements
+whose authored kit only LOADS them and which survive losing that load, so a
+bodyweight athlete may still be prescribed them. **EVERY OTHER EXERCISE FOLLOWS
+THE AUTHORED SHEET VERBATIM** — if its kit is missing, it is refused.
+**⚠ THIS IS A CLOSURE, NOT A BACKLOG. Do not add a third by inference, and do
+not "complete" the list.** The obvious generalisation — *a missing LOADING
+implement (barbell/dumbbell/kettlebell) is survivable, a missing APPARATUS is
+not* — reproduces both of these rows and then silently legalises `Deadlift`,
+`Goblet Squat` and `Banded Bicep Curl` on a bodyweight kit. **A band curl
+without the band is not a curl; a goblet squat is DEFINED by the thing you
+hold.** A tag cannot say whether a movement survives losing its load — only Sam
+can, and he has said it twice and stopped.
+**A THIRD ENTRY REQUIRES A NEW SAM RULING AND A NEW ROW HERE.**
+**Search words:** bodyweight capable, unloaded, without weights, deadlift,
+goblet squat, banded, walking lunges, single leg rdl, availability, load is not
+availability, loading implement, apparatus, third entry, add to the list.
+· `BUILT 2026-08-13` — `BODYWEIGHT_CAPABLE` in
+`src/data/exerciseEquipmentRequirement.ts` holds exactly these two, and
+`test:edge-generation-equipment` carries a SIGNED-CONTENT PIN (equality, not a
+subset) so a third entry reds on arrival rather than shipping quietly.
+
 **⚠ WHY THESE THREE ARRIVED LATE, AND IT IS A DEFECT IN THIS FILE'S PROCESS.**
 All three were ruled by Sam on 2026-08-13 and written into `SEAT_INBOX.md`
 items 47 and 48 with instructions to register them. **Nobody did, and the seat

@@ -195,10 +195,16 @@ export function equipmentRequiredFor(name: string): readonly string[] | null {
  * whether a movement survives losing its load; only the movement can, and only
  * Sam can say so.**
  *
- * **IT HOLDS EXACTLY THE TWO HE HAS RULED.** Anything not here follows the
- * sheet verbatim. **Adding a row is a Sam ruling, never an inference** — the
- * moment it grows by guess it becomes the conflated field this unit exists to
- * delete.
+ * **IT HOLDS EXACTLY THE TWO HE HAS RULED, AND R-086 CLOSED IT THERE.** Asked
+ * directly whether `Deadlift` and `Goblet Squat` should join, Sam said
+ * **"leave it at two"** (2026-08-13). **THIS IS A CLOSURE, NOT A BACKLOG —
+ * do not add a third by inference and do not "complete" the list.** Anything
+ * not here follows the sheet verbatim: kit missing, exercise refused.
+ *
+ * A third entry needs a new ruling and a new registry row. The equality is
+ * pinned in `test:edge-generation-equipment`, so a quiet addition reds on
+ * arrival rather than shipping — the moment this grows by guess it becomes the
+ * conflated field the unit exists to delete.
  */
 export const BODYWEIGHT_CAPABLE: ReadonlySet<string> = new Set([
   // Sam, 2026-08-13, setting this unit's acceptance test: *"Walking Lunges is
