@@ -39,6 +39,9 @@ import {
   type TemplateProperty,
 } from '../data/conditioningTemplates';
 import { readSheetRecords, readXlsx } from './support/xlsxReader';
+// [C12] reads two source files to hold a map against the enum it serves.
+import fs from 'fs';
+import { stripComments } from './support/sourceText';
 
 const repoRoot = path.resolve(__dirname, '../..');
 const SHEET = path.join(repoRoot, 'docs/CONDITIONING_TEMPLATES_FINAL_2026-07-25.xlsx');
@@ -836,6 +839,76 @@ ok(
   ok('[C11] the reader measures a template that does not declare the cap',
     blockLengthMinutes({ setsRounds: '12 rounds', workPeriod: '30 s hard',
       restPeriod: '30 s easy' } as never) === 12);
+}
+
+// ── [C12] A CATEGORY THE FLAVOUR MAP HAS NEVER HEARD OF RETURNS `undefined` ──
+//
+// FOUNDING CASE, 2026-08-13. `cod_decel` joined `OffseasonConditioningCategory`
+// (`offseasonSubphasePolicy.ts`) that same day. `categoryToFlavour`
+// (`coachingEngine.ts`) declares `: CondFlavour` and its switch covers FIVE of
+// the SIX members — no `cod_decel` case — so it falls off the end and returns
+// `undefined` at all seven of its call sites. Measured: forcing COD to be picked
+// makes the generation run EXIT NON-ZERO.
+//
+// WHY THIS IS A SOURCE SCAN AND NOT A CALL. `categoryToFlavour` is a closure
+// inside `buildWeeklyPlan`; nothing can import it. The alternative was to leave
+// the hazard unheld, and `computedMustBeConsumed` already establishes the
+// source-scan-with-declared-debt shape in this chain.
+//
+// WHY `cod_decel` IS DECLARED DEBT RATHER THAN FIXED HERE. Picking its flavour
+// is not a one-liner: `CondFlavour` is `aerobic | tempo | high-intensity`, and
+// the return trip `flavourToCategory` (`sessionBuilder.ts:1132`) maps
+// `high-intensity` back to `glycolytic`. So ANY mapping makes COD come back as a
+// different category — which is exactly what this file's 4A note forbids
+// ("flavour/category/label/stress must agree"). **The vocabulary cannot express
+// COD without lying, and that is a design decision, not a missing case.** This
+// cell holds the line where it is: one known gap, named and dated, and the
+// ratchet reds the moment a SECOND category goes unmapped.
+//
+// THE PAIR THAT MAKES THIS A RATCHET AND NOT A RUBBER STAMP: the declared gap
+// must STILL be absent. Fix `cod_decel` without removing it from this list and
+// the cell reds too, so the debt can never read as bigger than it is.
+{
+  const engine = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/utils/coachingEngine.ts'), 'utf8'));
+  const policy = stripComments(fs.readFileSync(
+    path.join(repoRoot, 'src/rules/offseasonSubphasePolicy.ts'), 'utf8'));
+
+  // SCOPED TO THE ONE DECLARATION, AND `[a-z0-9_]` BECAUSE OF `vo2`.
+  // Both halves are first-draft faults this cell's own output caught: an
+  // unscoped match scraped EVERY union in the file (13 values including
+  // `gradual_reentry` and `cautious`), and `[a-z_]+` silently dropped `vo2`
+  // from the map side — so the comparison was junk against incomplete.
+  const declStart = policy.indexOf('export type OffseasonConditioningCategory');
+  const declEnd = policy.indexOf(';', declStart);
+  const categories = (policy.slice(declStart, declEnd).match(/'([a-z0-9_]+)'/g) ?? [])
+    .map((m: string) => m.replace(/'/g, ''));
+  // A FIXED WINDOW, NOT A BRACE SCAN. The first draft cut the body at the first
+  // `}` + newline and read ZERO cases — and the non-vacuity cell below is the
+  // only reason that was caught instead of shipping as "nothing is unmapped".
+  const mapStart = engine.indexOf('function categoryToFlavour');
+  const mapped = (engine.slice(mapStart, mapStart + 600).match(/case '([a-z0-9_]+)'/g) ?? [])
+    .map((m: string) => m.replace(/case '|'/g, ''));
+
+  // NON-VACUITY FIRST — both reads must have found something, or every
+  // assertion below is a comparison of two empty lists.
+  ok('[C12] the category vocabulary was read',
+    categories.length >= 5, `parsed ${categories.length}: ${categories.join(',')}`);
+  ok('[C12] the flavour map was read',
+    mapped.length >= 5, `parsed ${mapped.length}: ${mapped.join(',')}`);
+
+  const DECLARED_GAPS = ['cod_decel'];
+  const unmapped = categories.filter((c: string) => !mapped.includes(c));
+
+  ok('[C12] no NEW conditioning category is missing from the flavour map',
+    unmapped.every((c: string) => DECLARED_GAPS.includes(c)),
+    `unmapped and undeclared: ${unmapped.filter((c: string) => !DECLARED_GAPS.includes(c)).join(', ')}`
+    + ' — categoryToFlavour returns undefined for it at all seven call sites.');
+
+  ok('[C12] and every declared gap is still a real gap (the debt cannot inflate)',
+    DECLARED_GAPS.every((c: string) => unmapped.includes(c)),
+    `declared but actually mapped: ${DECLARED_GAPS.filter((c: string) => !unmapped.includes(c)).join(', ')}`
+    + ' — fixed, so remove it from DECLARED_GAPS in the same commit.');
 }
 
 console.log(
