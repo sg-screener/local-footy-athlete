@@ -2531,3 +2531,46 @@ warns against.
 would have swept their new items in under my name**, so the `BLOCKED-BY` head
 sits in the working tree for whoever commits that block, and the reasoning is
 here where I can own it.
+
+### ITEM 60 / R-033 — I BUILT THE GATE, MUTATION KILLED IT, AND I BACKED IT OUT
+
+**ATTEMPTED AND REVERTED, 147 lines.** `repoLawGuardsTests.ts` is byte-identical
+to HEAD again (52 passed / 2 failed — both pre-existing, neither mine). **The
+design facts below are the deliverable; whoever finishes this should start here
+rather than from the law.**
+
+**THE SHAPE IS RIGHT AND ITEM 30 ALREADY STATES IT:** *"a cell that builds its
+own world cannot see a week that was built before the athlete answered."* A
+suite escapes by generating a week and THEN applying the constraint.
+
+**FOUR MEASUREMENTS, EACH ONE A FALSE START THAT COST SOMETHING:**
+
+1. **SCOPE = "does this suite generate a week" CATCHES 71 OF 398 SUITES.**
+   Nearly every generation suite, most testing no constraint at all. **A ratchet
+   over 71 files is noise, and a gate wider than its law says nothing about the
+   law.**
+2. **⚠ `awayFlowTests.ts` NEVER SAYS `awayBlock`** — it says `awayWeek`,
+   `awayState`, `awayStart`. **A scope keyed on the obvious noun silently
+   excluded the FOUNDING CASE and the cell went green.** Found by mutation, not
+   by reading it.
+3. **⚠ MY DEBT RATCHET COULD NEVER RED — AND ONLY THE MUTATION SHOWED IT.**
+   It asserted "no UNDECLARED suite is blind" and nothing else, so a debt list
+   LARGER than reality passed silently. **Deleting a real entry changed
+   nothing.** A ratchet needs BOTH directions: undeclared-blind reds, and a
+   declared entry that is no longer blind must be struck.
+4. **WIDENING TO `\baway[A-Z_]` PULLS IN FIVE MORE** —
+   `athleteActionWalkerTests`, `dayFirstTimelineTests`,
+   `equipmentScheduleFactTransactionTests`, `gameChangeLocalRebuildTests`,
+   `programControlDurableOwnershipTests`. **Whether each is genuinely in R-033's
+   scope is a PER-SUITE JUDGEMENT, and it is the actual work.**
+
+**WHY I STOPPED RATHER THAN TUNED.** The only way to green it from there was to
+set the debt list to whatever the detector happened to emit — **an expectation
+edited to match the regression**, which is a named failure in this file. Three
+miscalibrations in a row on a predicate whose correctness is a judgement call is
+the signal to stop, not to iterate once more at the tail of a session.
+
+**THE COUNT DID NOT FALL, AND I AM NOT CLAIMING IT DID.** R-033 stays
+`UNENFORCED`. **The honest read is that its gate is one careful unit, not a
+bolt-on** — the same conclusion the other three tractable rows reached in
+writing before me.
