@@ -15,7 +15,7 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-48. **HALF BUILT BY THE TERMINAL (its owner). R-084 NEEDS NOTHING; R-083 IS
+48. **BLOCKED-BY: other-agent — owned by `terminal` in its own text. HALF BUILT BY THE TERMINAL (its owner). R-084 NEEDS NOTHING; R-083 IS
     DELIVERED AT ONE SITE AND NEEDS A DIFFERENT SHAPE AT THE OTHER.**
 
     **✅ WHAT IS BUILT — `188d6fad`, and the PROVE IT's second clause is met:**
