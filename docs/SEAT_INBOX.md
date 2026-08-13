@@ -1219,7 +1219,7 @@ seat was wrong.
   because the two entries below say the same things in two places, and the whole
   point of this section is that his questions reach him ONCE.
 
-  **REGISTRY-GREP (all three topics, run together):** grepped
+  **REGISTRY-GREP:** all three topics, run together — grepped
   `RULINGS_REGISTRY.md` for *duplicate*, *bodyweight*, *substitut*, *sprint*,
   *team night*, *anchor credit*, *no club*, *target met*.
   **Returned: R-002/R-003 (duplicate — off-season team training and the COD
