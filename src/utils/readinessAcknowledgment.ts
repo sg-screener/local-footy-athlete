@@ -71,7 +71,15 @@ export function buildReadinessAcknowledgment(
 
 /** Which schedule door is speaking. Both write the same fact kind; they promise
  *  the athlete different things, so they acknowledge differently. */
-export type ScheduleDoor = 'short_on_time' | 'away' | 'away_equipment';
+export type ScheduleDoor = 'short_on_time' | 'away' | 'away_equipment'
+  /**
+   * THE TWO CHRISTMAS-BREAK ANSWERS — item 31 part 5. They write ONE fact
+   * between them, and they are two doors here for the same reason `away` and
+   * `away_equipment` are: they promise the athlete opposite things. One says
+   * the club is going away, the other says it is back, and a single sentence
+   * covering both would have to be vague enough to be true of neither.
+   */
+  | 'christmas_break_start' | 'christmas_break_end';
 
 /**
  * Build an acknowledgment from a schedule-door result. Never null — a tap that
@@ -122,6 +130,23 @@ export function buildScheduleAcknowledgment(
       return {
         tone: 'success',
         message: "Got it — your sessions will work around the gear you're without until you're back.",
+      };
+    }
+    // ── ITEM 31 PART 5: THE BREAK OPENS, THEN IT CLOSES ──
+    // PROPOSED (copy sheet batch 35, 2026-08-13). The first sentence PROMISES
+    // THE SECOND QUESTION, and that is the point of it rather than politeness:
+    // the athlete has just handed the app an open-ended fact, and the honest
+    // thing to tell him is that the app knows it is not finished with him.
+    if (door === 'christmas_break_start') {
+      return {
+        tone: 'success',
+        message: "Got it — team training comes off your weeks from then. We'll ask you in January when it's back.",
+      };
+    }
+    if (door === 'christmas_break_end') {
+      return {
+        tone: 'success',
+        message: 'Got it — team training is back in your weeks from that day.',
       };
     }
     if (result.inertReason === 'fixture_day') {

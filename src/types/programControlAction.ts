@@ -314,6 +314,26 @@ export type ProgramControlAction =
        * known, so this payload states the SPAN and nothing else.
        */
       awaySpan?: { from: string; until: string };
+      /**
+       * THE CHRISTMAS BREAK — SEAT_INBOX item 31 part 5, Sam 2026-08-13:
+       * *"an athlete can select when their last team training is, and then
+       * around the 3rd of Jan they should be ask when does team training go
+       * back? that way the app isn't guessing"*.
+       *
+       * `from` is the FIRST DAY WITH NO CLUB (the day after his last session)
+       * and `until` is the LAST — the day before it goes back — exactly the
+       * off-by-one the away span already states, so the two doors cannot drift.
+       *
+       * **`until: null` IS THE DECEMBER ANSWER AND IT IS COMPLETE.** He knows
+       * when the club stops; nobody knows when it restarts. The January answer
+       * arrives as a SECOND action carrying the same `from`, which lands on the
+       * same fact id and replaces the open end with the real one.
+       *
+       * IT IS NOT `awaySpan`. Away deletes the fixture as well
+       * (*"OBVIOUSLY YOU'RE NOT GOING TO BE THERE"*); over the break he is
+       * home, so a game he entered himself survives.
+       */
+      noTeamTrainingSpan?: { from: string; until: string | null };
       /** Away / holiday dates. The durable executor stores them as schedule
        *  facts; it never creates fact-owned Rest overrides. */
       planChange?: PlanChange;

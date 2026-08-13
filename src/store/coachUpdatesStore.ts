@@ -317,7 +317,7 @@ export interface ActiveScheduleConstraint extends ActiveConstraintModifierMetada
   maxSessionsThisWeek?: number;
   /** Canonical compatibility projection of an exact temporary schedule fact. */
   scheduleKind?: 'unavailable_dates' | 'unavailable_weekdays' | 'busy_week' |
-    'travel' | 'max_sessions' | 'time_cap' | 'team_night_move';
+    'travel' | 'max_sessions' | 'time_cap' | 'team_night_move' | 'no_team_training';
   unavailableDates?: string[];
   unavailableWeekdays?: import('../types/domain').DayOfWeek[];
   /** `team_night_move` only: the dated pair the owning fact states. */

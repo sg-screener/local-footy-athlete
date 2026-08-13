@@ -258,6 +258,18 @@ export interface OnboardingToCoachingInputsOptions {
    * live travel constraint is byte-identical.
    */
   awaySpans?: readonly { from: string; until: string }[];
+  /**
+   * THE SPANS WHERE THE CLUB IS SHUT AND HE IS HOME — item 31 part 5.
+   *
+   * SEPARATE FROM `awaySpans` BECAUSE THE FIXTURE FILTER IS. It joins the trip
+   * spans for the team-night question and is deliberately not read by the
+   * fixture question below: a game inside the Christmas break is one the
+   * athlete entered himself, and *"the app isn't guessing"* cuts both ways.
+   *
+   * `until: null` is legal here and only here — the December question states a
+   * start, and the January question is what states the end.
+   */
+  noTeamTrainingSpans?: readonly { from: string; until: string | null }[];
   weekNumber?: number;
   miniCycleNumber?: number;
   weekInBlock?: number;
@@ -8896,8 +8908,20 @@ export function onboardingToCoachingInputs(
   // weekday is dropped only when ITS OWN DATE in the week being planned falls
   // inside the span — a Tuesday team night is off for the Tuesday he is away
   // and untouched for the Tuesday he is home.
+  // ── AND SO DOES THE CHRISTMAS BREAK — Sam, 2026-08-13, item 31 part 5 ──
+  // *"off season means NO team training, the christmas break is essentially an
+  // off season inside pre season - there is never team trainings here"*.
+  //
+  // THE TWO SPANS JOIN HERE AND NOWHERE ELSE, because "the club is shut to him
+  // this week" is ONE question however it came to be true. What they do NOT
+  // share is the fixture filter below: away deletes the game because he is not
+  // there, and a break at home deletes nothing he typed in himself.
+  const clubClosedSpans = [
+    ...(options.awaySpans ?? []),
+    ...(options.noTeamTrainingSpans ?? []),
+  ];
   const teamDays = teamDaysForPhase.filter((day) =>
-    !weekdayIsAway(options.availabilityDateISO, day, options.awaySpans));
+    !weekdayIsAway(options.availabilityDateISO, day, clubClosedSpans));
   const selectedDays: string[] = [...prefDays];
   for (const td of teamDays) {
     if (!selectedDays.includes(td)) selectedDays.push(td);

@@ -152,7 +152,29 @@ export type TemporaryScheduleFactKind =
    * within its week (doubling law: the anchor lands COMBINED on an occupied
    * day; the vacated day re-derives) and resolving it cascade-reverts clean.
    */
-  | 'team_night_move';
+  | 'team_night_move'
+  /**
+   * "There is no team training between these dates" — SEAT_INBOX item 31 part
+   * 5, Sam 2026-08-13: *"it may be helpful to add a button for Christmas break
+   * and removing team training sessions from the app … an athlete can select
+   * when their last team training is, and then around the 3rd of Jan they
+   * should be ask when does team training go back? that way the app isn't
+   * guessing"*.
+   *
+   * **IT IS NOT `travel`, AND THE DIFFERENCE IS A FIXTURE.** Away removes the
+   * club night AND the game, because the athlete is not there —
+   * ***"OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***. Over the Christmas break he
+   * is HOME; the club is shut. A fixture he typed in himself inside that span
+   * is a fact about his own calendar and stays. Reusing `travel` would have
+   * deleted it, which is why this is its own kind rather than a second surface
+   * writing the same word.
+   *
+   * **ITS `until` IS ALLOWED TO BE OPEN, and that is the ruling rather than an
+   * oversight.** The December question knows when the break STARTS and nothing
+   * else; the January question is what closes it. An invented end date is the
+   * one thing Sam ruled out.
+   */
+  | 'no_team_training';
 
 export interface TemporaryScheduleFact extends TemporarySourceFactBase<'schedule'> {
   scheduleKind: TemporaryScheduleFactKind;
@@ -464,7 +486,8 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
       value.scheduleKind === 'busy_week' ||
       value.scheduleKind === 'travel' ||
       value.scheduleKind === 'max_sessions' ||
-      value.scheduleKind === 'team_night_move'
+      value.scheduleKind === 'team_night_move' ||
+      value.scheduleKind === 'no_team_training'
         ? value.scheduleKind
         : 'unavailable_dates';
     const rawMax = typeof value.maxSessions === 'number' && Number.isFinite(value.maxSessions)
@@ -953,7 +976,9 @@ function scheduleProjection(
         ? (scheduleFactIsSingleDay(fact) ? 'Short on time' : 'Busy week')
         : fact.scheduleKind === 'team_night_move'
           ? 'Team training moved'
-          : 'Temporary availability',
+          : fact.scheduleKind === 'no_team_training'
+            ? 'No team training'
+            : 'Temporary availability',
     source: fact.sourceActor === 'coach' ? 'coach' :
       fact.sourceActor === 'system' ? 'system' : 'tap',
     temporarySourceFactIds: [fact.factId],
@@ -971,7 +996,9 @@ function scheduleProjection(
         ? (scheduleFactIsSingleDay(fact) ? 'Short on time today' : 'Busy week active')
         : fact.scheduleKind === 'team_night_move'
           ? 'Team training moved this week'
-          : 'Temporary availability active',
+          : fact.scheduleKind === 'no_team_training'
+            ? 'Team training is off'
+            : 'Temporary availability active',
     // ── ITEM 28, 2026-08-13: THE SENTENCE FOLLOWS THE BEHAVIOUR ──
     // It read "Your program is avoiding the dates you are away", which was true
     // of the door that MARKED THOSE DATES UNAVAILABLE and deleted the whole
@@ -988,7 +1015,12 @@ function scheduleProjection(
           // PROPOSED (Batch 10 prose; parked §8): the modifier names the fact's
           // own dated pair; clearing the fact is the undo.
           ? `Team training is on ${weekdayNameFor(fact.teamNightToDate ?? fact.effectiveFrom)} instead of ${weekdayNameFor(fact.teamNightFromDate ?? fact.effectiveFrom)} this week only.`
-          : 'Your program is avoiding the dates or weekdays you marked unavailable.',
+          // ── ITEM 31 PART 5: WHAT THE BREAK DOES, AND WHAT IT LEAVES ALONE ──
+          // Two sentences because the athlete has to be able to tell this apart
+          // from Away at a glance. Away takes the games too; this does not.
+          : fact.scheduleKind === 'no_team_training'
+            ? 'Team training is off until you tell us it is back. Your own sessions and any games you added keep running.'
+            : 'Your program is avoiding the dates or weekdays you marked unavailable.',
     modifierAffects: ['current_week', 'future_generation'],
     rules: [
       ...(fact.unavailableDates.length > 0
@@ -1139,12 +1171,22 @@ function addDays(dateISO: string, count: number): string {
 }
 
 export function temporaryFactScope(args: {
-  kind: 'date' | 'week' | 'window';
+  kind: 'date' | 'week' | 'window' | 'open';
   date?: string;
   from?: string;
   until?: string;
 }): TemporarySourceFactScope {
   const anchor = (args.date ?? args.from ?? new Date().toISOString()).slice(0, 10);
+  // AN OPEN SCOPE WITH A CALLER-GIVEN START — item 31 part 5. `durableFactHorizon`
+  // already owns the OTHER open scope (`durableStateFactScope`), and it pins the
+  // start to today because a body report cannot be about a day that has not
+  // happened. The Christmas break can: on the 10th the athlete states that his
+  // last session is on the 18th, so the break starts on the 19th and today is
+  // not a bound on it. Same open end, different start rule, so it cannot borrow
+  // that function.
+  if (args.kind === 'open') {
+    return { kind: 'open', from: (args.from ?? anchor).slice(0, 10), until: null };
+  }
   if (args.kind === 'week') {
     const weekStart = mondayFor(anchor);
     return { kind: 'week', weekStart, from: weekStart, until: addDays(weekStart, 6) };
@@ -1587,7 +1629,12 @@ export function migrateLegacyTemporarySourceFacts(args: {
             scope,
             scheduleKind: constraint.scheduleKind === 'travel'
               ? 'travel'
-              : constraint.maxSessionsThisWeek !== undefined
+              // THE BREAK SURVIVES ITS OWN ROUND TRIP. Without this arm a
+              // hydrated no-team-training constraint came back as `busy_week`
+              // — the club would return mid-break and nothing would say why.
+              : constraint.scheduleKind === 'no_team_training'
+                ? 'no_team_training'
+                : constraint.maxSessionsThisWeek !== undefined
                 ? 'max_sessions'
                 : (constraint.unavailableDates?.length ?? 0) > 0
                   ? 'unavailable_dates'

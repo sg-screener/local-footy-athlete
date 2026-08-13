@@ -2307,3 +2307,51 @@ the app lying about a change it just made.
 only its SURFACE moved. The Day-screen sentence "Away this week?" is
 WITHDRAWN in batch 12-b, because a control that can now describe a fortnight
 cannot keep a label that says "this week".
+
+## Batch 35 — the Christmas break (2026-08-13): PROPOSED
+
+**STATUS: PROPOSED, AWAITING SAM.** He ruled the two QUESTIONS verbatim —
+*"an athlete can select when their last team training is, and then around the 3rd
+of Jan they should be ask when does team training go back?"* (SEAT_INBOX item 31
+part 5) — so the two headings below are HIS WORDS, lifted straight out. **What is
+proposed is the rest**: the two body sentences, the three buttons, the modifier's
+sentence and the two answers.
+
+| Where | PROPOSED string |
+| --- | --- |
+| The December question | "When is your last team training?" |
+| The January question | "When does team training go back?" |
+| December card body | "Christmas is coming. Tell us when your club stops and team training comes off your weeks until you say it is back." |
+| January card body | "Team training has been off since the break. Tell us the day it starts again and your weeks go back to normal." |
+| December card button | "Pick the date" |
+| January card button | "Pick the day it is back" |
+| The December "no" | "We train through Christmas" |
+| December sheet body | "Pick the last night your club trains. Everything after it comes off until you tell us it is back." |
+| January sheet body | "Pick the first night your club trains again. It can be a day that has already passed." |
+| The break's title, on My Status | "Team training is off" |
+| The break's sentence, on My Status | "Team training is off until you tell us it is back. Your own sessions and any games you added keep running." |
+| The break's reason label | "No team training" |
+| The answer to the December question | "Got it — team training comes off your weeks from then. We'll ask you in January when it's back." |
+| The answer to the January question | "Got it — team training is back in your weeks from that day." |
+
+**35-a. THE FIRST ANSWER PROMISES THE SECOND QUESTION, and that is the point of
+it rather than politeness.** The athlete has just handed the app a fact with no
+end on it. Telling him the app will come back and ask is the only honest thing to
+say about a span that is deliberately open — and it is what stops the January
+prompt reading as the app having lost track of him.
+
+**35-b. THE BREAK'S SENTENCE NAMES WHAT IT DOES *NOT* TOUCH, and no other
+modifier sentence in this app does that.** The away sentence is "Team training
+and games are off while you are away"; this one has to be told apart from it at a
+glance, on a screen where both could sit. **"and any games you added keep
+running" is the whole difference between the two facts** — Sam ruled the fixture
+off for a TRIP because ***"OBVIOUSLY YOU'RE NOT GOING TO BE THERE"***, and over
+Christmas he is home.
+
+**35-c. NOTHING IS REPLACED AND NOTHING IS WITHDRAWN.** Every string here is new;
+no existing sentence became false. "No team training" as a reason label is
+adjacent to batch 34's "Away / travel" and deliberately does not borrow it.
+
+**35-d. THE TWO QUESTIONS ARE HEADINGS, NOT SENTENCES ASSEMBLED IN CODE.** The
+file's own terminal note warns against signing fragments; both are whole strings
+with no interpolation, and the dates the athlete picks never appear inside them.

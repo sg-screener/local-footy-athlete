@@ -464,6 +464,38 @@ function awaySpansFromConstraints(
     }));
 }
 
+/**
+ * THE SPANS WHERE THE CLUB IS SHUT — SEAT_INBOX item 31 part 5.
+ *
+ * Same reading as the trip above, DIFFERENT REACH, and the difference is the
+ * whole reason it is a second function rather than a second `scheduleKind` in
+ * the same filter. Away drops the team night AND the fixture; the Christmas
+ * break drops the team night ONLY — the athlete is home, and a game he typed in
+ * himself over the break is his own fact.
+ *
+ * AN OPEN END IS KEPT, NOT SKIPPED. `awaySpansFromConstraints` requires an
+ * `expiresAt` because an endless trip would take the club off forever. Here the
+ * open end is the ANSWER: on 10 December the athlete knows when his last
+ * session is and nobody knows when the club reopens — Sam: *"that way the app
+ * isn't guessing"*. The January question is what closes it, and until then
+ * `until: null` is exactly true.
+ */
+function noTeamTrainingSpansFromConstraints(
+  constraints: readonly any[] | undefined,
+): { from: string; until: string | null }[] {
+  return (constraints ?? [])
+    .filter((constraint) => constraint?.type === 'schedule' &&
+      constraint?.scheduleKind === 'no_team_training' &&
+      constraint?.status !== 'resolved' &&
+      typeof constraint?.startDate === 'string')
+    .map((constraint) => ({
+      from: String(constraint.startDate).slice(0, 10),
+      until: typeof constraint.expiresAt === 'string'
+        ? String(constraint.expiresAt).slice(0, 10)
+        : null,
+    }));
+}
+
 function collectActiveConstraintsForGeneration(
   options: GenerateProgramFromProfileOptions,
   todayISO: string,
@@ -972,6 +1004,7 @@ export function generateProgramLocally(
     targetWeekAvailability: options.targetWeekAvailability,
     targetFixtureDay: options.targetFixtureDay,
     awaySpans: awaySpansFromConstraints(options.activeConstraints),
+    noTeamTrainingSpans: noTeamTrainingSpansFromConstraints(options.activeConstraints),
   });
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,
@@ -1503,6 +1536,7 @@ export async function generateProgramFromProfile(
     targetWeekAvailability: options.targetWeekAvailability,
     targetFixtureDay: options.targetFixtureDay,
     awaySpans: awaySpansFromConstraints(options.activeConstraints),
+    noTeamTrainingSpans: noTeamTrainingSpansFromConstraints(options.activeConstraints),
   });
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,

@@ -116,10 +116,27 @@ console.log('\n── 1. No sprint/COD finishers anywhere; no hidden sprint expo
 {
   const personas: Array<[string, Partial<OnboardingData>]> = [
     ['off-season S6', OFF_SEASON_BASE],
+    // ── S7 STATED A WEEK THAT CANNOT EXIST — SEAT_INBOX item 31, part 2 ──
+    // It was `OFF_SEASON_BASE` plus `teamTrainingDays: [Mon, Wed, Fri]`, and
+    // **off-season means NO team training** (Sam, 2026-08-13: *"off season means
+    // NO team training"*). Part 2 fixed the QA scenario of the same name; the
+    // contradiction survived here, in the fixture that shares its persona.
+    //
+    // **THE TEAM DAYS COME OFF, THE PHASE STAYS — and the choice was measured,
+    // not preferred.** Re-phasing to Pre-season would have changed what these
+    // cells ASSERT (sprint eligibility is phase-dependent, which is section 1's
+    // whole subject); removing the impossible half leaves a legal six-day
+    // off-season persona, which is what the name always claimed.
+    //
+    // **AND IT IS BEHAVIOURALLY INERT, WHICH IS THE POINT RATHER THAN A CAVEAT.**
+    // `clubTrainingDaysForPhase` already refuses to read team days in
+    // off-season, so derivation never saw these three. The fixture was not
+    // testing a club night; it was stating one. **A fixture whose input could
+    // never have existed proves something false** — measured either side: 73
+    // passed / 2 failed before and after, the same two pre-existing failures.
     ['off-season S7', {
       ...OFF_SEASON_BASE, trainingDaysPerWeek: 6,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-      teamTrainingDaysPerWeek: 3, teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
       recentTrainingLoad: 'Very consistent',
     }],
     ['pre-season S11 (game)', {

@@ -18,6 +18,18 @@ speak in code or anything. just tell me what happened, what we need to do next,
 if i need to answer something then tell me what to send."* And the same evening:
 *"stop sending me these fucking seat inboxes."*
 
+**BEFORE ANY QUESTION REACHES HIM — GREP `docs/RULINGS_REGISTRY.md`.**
+Ordered by Sam on 2026-08-13 after he was handed three questions, **two of which
+he had already ruled and which were already built and shipped**: *"why the fuck
+is someone still saying shit like this WE HAVE FUCKING FIXED THESE ISSUES"*.
+**`test:ruling-registry` does not ask whether you grepped — IT GREPS**, and reds
+when a question hits a row whose `R-nnn` it does not cite. State the grep anyway
+(`REGISTRY-GREP: R-014, ...`), because the seat hook requires it and because a
+question that survives a ruling must say what is new. **`docs/RULINGS_REGISTRY.md`
+is the ONE list** — the prose "do not re-ask" sections are history and must not
+grow, and **a second registry is the defect, not a convenience.**
+**Re-asking a settled ruling is the single thing that has made him angriest.**
+
 **THE SHAPE — three parts, nothing else:**
 
 1. **WHAT HAPPENED** — a sentence or two.

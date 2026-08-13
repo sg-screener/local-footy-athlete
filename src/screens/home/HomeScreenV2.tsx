@@ -27,6 +27,7 @@ import type { VisibleDay, VisibleWeek, VisiblePartKind } from '../../rules/visib
 import { visibleDayLeadBucket, visibleDayLeadHeadline } from '../../rules/visibleDayDetail';
 import { dayTimeline, type DayTimelineEntry } from '../../rules/dayTimeline';
 import { signedCopy } from '../../rules/signedCopy';
+import type { ChristmasBreakAsk } from '../../rules/christmasBreakAsk';
 import {
   mobilityFlowMovementDose,
   selectMobilityPrehabFlow,
@@ -114,6 +115,9 @@ export default function HomeScreenV2() {
     handleApplyGuidedInjury,
     handleApplyAwaySpan,
     handleApplyAwayEquipment,
+    christmasBreakAsk,
+    handleApplyChristmasBreak,
+    handleDismissChristmasBreakAsk,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
     missedSessionPrompt,
@@ -278,6 +282,12 @@ export default function HomeScreenV2() {
   // forget to set. Rendered under the rows for the sheet-less door and inside
   // the sheet for the other, so the answer appears where the tap happened.
   const [scheduleAck, setScheduleAck] = useState<ReadinessAcknowledgment | null>(null);
+  // ── ITEM 31 PART 5: THE CHRISTMAS-BREAK SHEET IS OPENED BY A QUESTION ──
+  // There is no permanent entry beside "Away" for this one, and that is the
+  // ruling rather than an omission: Sam asked for the app to ASK, on two dates
+  // — *"they should be ask when does team training go back?"*. A control the
+  // athlete has to go and find in December is the guess he was removing.
+  const [christmasSheetVisible, setChristmasSheetVisible] = useState(false);
 
   // One typed entry owns both visibility and the first readiness question.
   // Tired and Sick share the same saved modifier pathway without forcing the
@@ -1127,6 +1137,58 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
+        {/* ── ITEM 31 PART 5: THE APP ASKS ABOUT THE CHRISTMAS BREAK ──
+            Sam, 2026-08-13: *"maybe around the 10th of December … an athlete
+            can select when their last team training is, and then around the 3rd
+            of Jan they should be ask when does team training go back? that way
+            the app isn't guessing"*.
+
+            A QUESTION, NOT A BUTTON, and the difference is the whole item. Away
+            sits there permanently because only the athlete knows a trip is
+            coming. The club shutting for Christmas is something the CALENDAR
+            knows is due; what it does not know is the dates, and those are the
+            two things being asked for.
+
+            WHICH QUESTION IS LIVE IS NOT DECIDED HERE. `decideChristmasBreakAsk`
+            owns that — the December ask, the January ask, and the "nothing to
+            ask" that is true for eleven months of the year.
+
+            THE JANUARY CARD HAS NO DISMISS. Its question is the only thing that
+            can end a break the athlete already declared, so a way to make it go
+            away unanswered would be a way to lose the club for good. */}
+        {isNormal && !dayFirst && christmasBreakAsk && (
+          <View style={styles.phaseSkewCard} testID="home-christmas-break-ask">
+            <Text style={styles.phaseSkewTitle}>
+              {christmasBreakAsk.kind === 'last_team_training'
+                ? 'When is your last team training?'
+                : 'When does team training go back?'}
+            </Text>
+            <Text style={styles.phaseSkewBody}>
+              {christmasBreakAsk.kind === 'last_team_training'
+                ? 'Christmas is coming. Tell us when your club stops and team training comes off your weeks until you say it is back.'
+                : 'Team training has been off since the break. Tell us the day it starts again and your weeks go back to normal.'}
+            </Text>
+            <Button
+              label={christmasBreakAsk.kind === 'last_team_training'
+                ? 'Pick the date'
+                : 'Pick the day it is back'}
+              size="md"
+              testID="home-christmas-break-open"
+              onPress={() => { setScheduleAck(null); setChristmasSheetVisible(true); }}
+            />
+            {christmasBreakAsk.kind === 'last_team_training' && (
+              <Button
+                label="We train through Christmas"
+                variant="secondary"
+                size="md"
+                testID="home-christmas-break-dismiss"
+                onPress={() => handleDismissChristmasBreakAsk(christmasBreakAsk.dismissId)}
+                style={{ marginTop: spacing.sm }}
+              />
+            )}
+          </View>
+        )}
+
         {/* ── Block-rollover honest refusal (Sam's interim ruling, 2026-07-31) ──
             NOT gated on isNormal: a program that stopped must say so whatever
             mode the screen is in. The sentence is the ack owner's
@@ -1287,6 +1349,30 @@ export default function HomeScreenV2() {
           setAwayEquipmentSpan(span);
         }}
       />
+
+      {/* ── ITEM 31 PART 5: THE CHRISTMAS-BREAK ANSWER ──
+          ONE SHEET FOR BOTH QUESTIONS, because they are one span answered in
+          two sittings. The sheet is told which half it is asking and turns the
+          athlete's date into the span's edge; nothing about the break's shape
+          is decided in here. */}
+      {christmasBreakAsk && (
+        <ChristmasBreakSheet
+          visible={christmasSheetVisible}
+          ask={christmasBreakAsk}
+          onClose={() => setChristmasSheetVisible(false)}
+          onDone={async (span) => {
+            setChristmasSheetVisible(false);
+            const result = await handleApplyChristmasBreak(span);
+            const ack = buildScheduleAcknowledgment(result, span.until === null
+              ? 'christmas_break_start'
+              : 'christmas_break_end');
+            recordScheduleAckPresented({
+              traceId: result?.traceId, surface: 'christmas_break', tone: ack.tone,
+            });
+            setScheduleAck(ack);
+          }}
+        />
+      )}
 
       {/* ── ITEM 28 STEP 4: THE EQUIPMENT QUESTION IS THE DOOR THAT ALREADY
           EXISTS ── Sam: *"the athlete just removes the equipment they don't
@@ -3227,9 +3313,17 @@ function AwaySheet({ visible, weekDays, onClose, onDone }: AwaySheetProps) {
 function AwayReturnCalendar({
   minISO,
   onPick,
+  testIDPrefix = 'home-away-return',
 }: {
   minISO: string;
   onPick: (dateISO: string) => void;
+  /**
+   * IT HAS A SECOND DOOR NOW (item 31 part 5) — the Christmas-break sheet asks
+   * for two unbounded dates and this is already the app's only month grid.
+   * The prefix defaults to the away one so every existing testID is unchanged
+   * byte for byte; a second calendar would have been a second set of bugs.
+   */
+  testIDPrefix?: string;
 }) {
   const [monthAnchorISO, setMonthAnchorISO] = useState(minISO);
   const anchor = monthAnchorISO.slice(0, 10);
@@ -3246,11 +3340,11 @@ function AwayReturnCalendar({
   ];
 
   return (
-    <View testID="home-away-return-calendar">
+    <View testID={`${testIDPrefix}-calendar`}>
       <View style={styles.awayCalendarHead}>
         <Pressable
           onPress={() => setMonthAnchorISO(addDaysISO(firstOfMonth, -1))}
-          testID="home-away-return-prev-month"
+          testID={`${testIDPrefix}-prev-month`}
           accessibilityRole="button"
           accessibilityLabel="Previous month"
           style={({ pressed }) => [styles.awayCalendarNav, pressed && { opacity: 0.6 }]}
@@ -3262,7 +3356,7 @@ function AwayReturnCalendar({
         </Text>
         <Pressable
           onPress={() => setMonthAnchorISO(addDaysISO(`${anchor.slice(0, 7)}-${String(daysInMonth).padStart(2, '0')}`, 1))}
-          testID="home-away-return-next-month"
+          testID={`${testIDPrefix}-next-month`}
           accessibilityRole="button"
           accessibilityLabel="Next month"
           style={({ pressed }) => [styles.awayCalendarNav, pressed && { opacity: 0.6 }]}
@@ -3286,7 +3380,7 @@ function AwayReturnCalendar({
               key={dateISO}
               disabled={!selectable}
               onPress={() => onPick(dateISO)}
-              testID={`home-away-return-${dateISO}`}
+              testID={`${testIDPrefix}-${dateISO}`}
               accessibilityRole="button"
               accessibilityLabel={shortDayMonthLabel(dateISO)}
               style={({ pressed }) => [
@@ -3305,6 +3399,83 @@ function AwayReturnCalendar({
         })}
       </View>
     </View>
+  );
+}
+
+/**
+ * THE CHRISTMAS-BREAK SHEET — SEAT_INBOX item 31 part 5, Sam 2026-08-13.
+ *
+ * **HIS SHAPE, VERBATIM:** *"an athlete can select when their last team
+ * training is, and then around the 3rd of Jan they should be ask when does team
+ * training go back? that way the app isn't guessing"*.
+ *
+ * **ONE DATE PER SITTING, AND THE SHEET NEVER ASKS BOTH.** In December nobody
+ * knows the second date — that is the entire reason there are two questions
+ * instead of one range picker. The sheet is told which half is live and asks
+ * exactly that.
+ *
+ * **THE OFF-BY-ONE IS DONE HERE, ONCE, AND IT IS THE SAME ONE AWAY DOES.** The
+ * athlete names a day the CLUB IS ON; the span is the days it is not. So the
+ * last-training answer becomes `from = that day + 1`, and the return answer
+ * becomes `until = that day - 1`. Doing this in the sheet rather than the
+ * executor keeps the payload literal: `from`/`until` mean days with no club,
+ * everywhere, with no arm that means something else.
+ *
+ * **NEITHER DATE IS BOUNDED TO A WEEK.** The away sheet bounds its LEAVE date to
+ * the week on screen because Sam ruled it there. Nothing here is a "this week"
+ * question: in December he is naming a date up to three weeks out, and in
+ * January he may be naming one that has already passed.
+ */
+interface ChristmasBreakSheetProps {
+  visible: boolean;
+  ask: ChristmasBreakAsk;
+  onClose: () => void;
+  onDone: (span: { from: string; until: string | null }) => void;
+}
+function ChristmasBreakSheet({ visible, ask, onClose, onDone }: ChristmasBreakSheetProps) {
+  const asking = ask.kind === 'last_team_training';
+  // THE EARLIEST DATE EACH QUESTION WILL TAKE.
+  //  · December: 30 days back, because "when is your last team training" can be
+  //    answered on the 27th about the 18th. It is not bounded forward at all.
+  //  · January: the day AFTER the break began — the club cannot come back on a
+  //    day it was already shut for, and it cannot come back before it stopped.
+  const minISO = asking
+    ? addDaysISO(todayISOLocal(), -30)
+    : addDaysISO(ask.breakFromISO, 1);
+
+  return (
+    <Sheet visible={visible} onClose={onClose} testID="home-christmas-break-sheet">
+      <View>
+        <Text style={styles.sheetTitle}>
+          {asking ? 'When is your last team training?' : 'When does team training go back?'}
+        </Text>
+        <Text style={styles.busyAwayEmpty}>
+          {asking
+            ? 'Pick the last night your club trains. Everything after it comes off until you tell us it is back.'
+            : 'Pick the first night your club trains again. It can be a day that has already passed.'}
+        </Text>
+        <AwayReturnCalendar
+          minISO={minISO}
+          testIDPrefix="home-christmas-break"
+          onPick={(dateISO) => onDone(asking
+            // HE IS AT TRAINING ON THE DAY HE PICKED, so the break starts the
+            // next morning — and its end is genuinely unknown, which `null`
+            // states and a placeholder date would have hidden.
+            ? { from: addDaysISO(dateISO, 1), until: null }
+            // AND HE IS BACK AT THE CLUB ON THIS ONE, so the last day without it
+            // is the day before. Same subtraction the away sheet makes on its
+            // return date, for the same reason.
+            : { from: ask.breakFromISO, until: addDaysISO(dateISO, -1) })}
+        />
+        <Button
+          label="Cancel"
+          variant="secondary"
+          size="md"
+          onPress={onClose}
+          style={{ marginTop: spacing.sm }}
+        />
+      </View>
+    </Sheet>
   );
 }
 

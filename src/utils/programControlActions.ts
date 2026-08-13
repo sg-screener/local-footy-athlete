@@ -968,6 +968,20 @@ export function scheduleFactScopeForAction(
       until: span.until.slice(0, 10),
     });
   }
+  // THE BREAK IS THE HORIZON TOO (item 31 part 5) — with one difference the
+  // trip never has: an END THE ATHLETE HAS NOT BEEN ASKED FOR YET. `until:
+  // null` is the open window `durableFactHorizon` already understands, so the
+  // December answer needs no placeholder date and no second representation.
+  const breakSpan = action.payload.noTeamTrainingSpan;
+  if (breakSpan) {
+    return breakSpan.until === null
+      ? temporaryFactScope({ kind: 'open', from: breakSpan.from.slice(0, 10) })
+      : temporaryFactScope({
+          kind: 'window',
+          from: breakSpan.from.slice(0, 10),
+          until: breakSpan.until.slice(0, 10),
+        });
+  }
   const awayDates = scheduleModifierAwayDates(action);
   // Away names its own dates, so the window IS the answer — a scope word cannot
   // improve on the days the athlete ticked.
@@ -1263,7 +1277,8 @@ async function executeProgramControlActionDurablyWithinTrace(
     // essentials). Away and max-sessions requests stay UNRULED schedule facts
     // and commit record-only through the inert lane.
     const awaySpan = action.payload.awaySpan;
-    const shortOnTimeToday = awayDates.length === 0 && !awaySpan &&
+    const breakSpan = action.payload.noTeamTrainingSpan;
+    const shortOnTimeToday = awayDates.length === 0 && !awaySpan && !breakSpan &&
       action.payload.maxSessionsThisWeek === undefined &&
       action.scope === 'today_only';
     const fact = shortOnTimeToday
@@ -1279,16 +1294,28 @@ async function executeProgramControlActionDurablyWithinTrace(
       : createTemporaryScheduleFact({
           observedDate: date,
           scope: scheduleFactScopeForAction(action),
-          scheduleKind: awayDates.length > 0 || awaySpan
-            ? 'travel'
-            : action.payload.maxSessionsThisWeek !== undefined ? 'max_sessions' : 'busy_week',
+          // ONE FACT ID FOR BOTH ANSWERS (item 31 part 5). The stable id is
+          // derived from the day the club stops and NOTHING ELSE, so when the
+          // January answer arrives with the same `from` and a real `until`, the
+          // transaction matches the December fact and REPLACES it rather than
+          // laying a second break beside the first. The default id includes the
+          // scope, which changes the moment the end date is known — that would
+          // have left two overlapping breaks and no way to tell which one won.
+          ...(breakSpan
+            ? { factId: `temporary-source-fact:v1:no-team-training:${breakSpan.from.slice(0, 10)}` }
+            : {}),
+          scheduleKind: breakSpan
+            ? 'no_team_training'
+            : awayDates.length > 0 || awaySpan
+              ? 'travel'
+              : action.payload.maxSessionsThisWeek !== undefined ? 'max_sessions' : 'busy_week',
           // A SPAN-SHAPED TRIP MARKS NO DATE UNAVAILABLE, and that is the whole
           // difference between it and the door it replaced. `unavailableDates`
           // means "there is no training on this day at all", which collapsed
           // the athlete's own gym session along with the club's night. What
           // being away DOES is decided at the deriving seam, from the day's
           // PARTS: club-bound work goes, solo work stays.
-          unavailableDates: awaySpan ? [] : awayDates,
+          unavailableDates: awaySpan || breakSpan ? [] : awayDates,
           maxSessions: action.payload.maxSessionsThisWeek,
           sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
           sourceSurface,

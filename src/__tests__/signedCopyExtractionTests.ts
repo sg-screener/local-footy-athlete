@@ -586,7 +586,30 @@ function extract(): ExtractedString[] {
  * PROPOSED. Three readers, because the usual one — a person looking at a screen
  * — does not exist for a lock screen.
  */
-const ATHLETE_VISIBLE_GAP_CEILING = 576;
+/**
+ * 576 -> 580 (the Christmas break, same commit that earned it): NINE genuinely
+ * new strings on two files, and the ceiling moves FOUR because the extractor
+ * counts distinct-per-file.
+ *
+ *   IN — the December and January questions (Sam's own words, item 31 part 5),
+ *   the two card bodies, the two sheet bodies, the three buttons ("Pick the
+ *   date", "Pick the day it is back", "We train through Christmas"), and the
+ *   break's three modifier strings ("Team training is off", its sentence, and
+ *   the reason label "No team training").
+ *
+ * **THE NUMBER WAS ATTRIBUTED, NOT ASSUMED, AND THAT MATTERED HERE.** This
+ * checkout is shared with another agent who was editing copy files in the same
+ * hours. Measured in a detached worktree at HEAD (571), then again with ONLY
+ * this unit's two clean files copied in: 580. The other agent's copy work
+ * contributes ZERO to this count, so all nine belong to this commit and none of
+ * their words are being waved through under this justification.
+ *
+ * ALL NINE ARE PROPOSED IN COPY SHEET BATCH 35 and bound by
+ * `copyRulingsBindingTests`, which asserts each one is actually on the surface.
+ * Two of them are Sam's verbatim; the other seven are drafts awaiting him. The
+ * ceiling rises because the words are NEW, not because they are approved.
+ */
+const ATHLETE_VISIBLE_GAP_CEILING = 580;
 
 console.log('\n-- Signed copy extraction (Sam ruling 2: sheet and gaps) --');
 

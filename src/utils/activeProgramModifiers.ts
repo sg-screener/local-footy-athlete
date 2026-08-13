@@ -1007,7 +1007,12 @@ function statusModifier(
               // changed what away does — *"yes clear team training and games
               // while away"* — so nothing moves; club-bound work comes off and
               // the athlete's own sessions stay where they are.
-              : c.type === 'schedule' && c.scheduleKind === 'travel' ? 'club_sessions_off'
+              // AND THE CHRISTMAS BREAK IS THE SAME EFFECT (item 31 part 5).
+              // The club is shut rather than unreachable, but what the athlete
+              // sees is identical: no team night, everything else untouched.
+              : c.type === 'schedule' &&
+                (c.scheduleKind === 'travel' || c.scheduleKind === 'no_team_training')
+                ? 'club_sessions_off'
                 : c.type === 'schedule' ? 'sessions_moved'
                 : 'unsigned';
 

@@ -75,7 +75,9 @@ import {
 } from '../../dev/e2e/athleteActionUIObservation';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { isTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
-import { factHorizonCoversWeek } from '../../rules/durableFactHorizon';
+import type { TemporaryScheduleFact } from '../../rules/temporarySourceFact';
+import { decideChristmasBreakAsk } from '../../rules/christmasBreakAsk';
+import { factHorizonCoversWeek, isOpenHorizon } from '../../rules/durableFactHorizon';
 import { ownSeasonPhase } from '../../rules/seasonPhaseOwner';
 import { canonicalFixtureKind } from '../../rules/fixtureConditionedAvailability';
 import { classifyProgramMutationRefusal } from '../../rules/programMutationRefusal';
@@ -391,6 +393,51 @@ export function useHomeScreen() {
       fact.factKind === 'poor_sleep' || fact.factKind === 'illness'
     ) && (!visibleWeekStart || factHorizonCoversWeek(fact, visibleWeekStart))),
   [temporarySourceFacts, visibleWeekStart]);
+
+  /**
+   * THE CHRISTMAS-BREAK QUESTION THAT IS LIVE TODAY — item 31 part 5.
+   *
+   * NOT FILTERED BY THE VISIBLE WEEK, unlike the two lists above, and that is
+   * deliberate: the question is about the CALENDAR, not about the week the
+   * athlete happens to be scrolled to. Paging forward to look at January must
+   * not make December's question appear or disappear.
+   *
+   * `dismissedCoachNoteIds` comes back here after the note above removed it.
+   * It has a reader again — "we train through Christmas" is a decision, and the
+   * dismissed-id set is the shelf this app already keeps decisions like it on,
+   * so it costs no new stored field and no migration.
+   */
+  const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
+  const christmasBreakAsk = useMemo(() => {
+    const breaks = temporarySourceFacts.filter((fact) =>
+      'factKind' in fact && fact.factKind === 'schedule' &&
+      (fact as { scheduleKind?: string }).scheduleKind === 'no_team_training' &&
+      fact.status === 'active') as TemporaryScheduleFact[];
+    // OPEN-NESS IS ASKED OF THE HORIZON OWNER, NEVER READ OFF THE FIELD.
+    // `test:fact-horizon` T5 caught the first version of this comparing
+    // `effectiveUntil === null` by hand — a second opinion about a duration,
+    // which is exactly the one-owner rule that module exists to hold.
+    return decideChristmasBreakAsk({
+      todayISO: todayISOLocal(),
+      seasonPhase: onboardingData?.seasonPhase,
+      teamTrainingDays: onboardingData?.teamTrainingDays,
+      openBreakFromISO: breaks.find(isOpenHorizon)?.effectiveFrom ?? null,
+      // DESTRUCTURED RATHER THAN DOTTED OFF THE PARAMETER, AND THAT IS NOT
+      // STYLE. `test:fact-horizon` T5 forbids comparing a fact's raw window
+      // bounds, and its detector looks for a comparison operator beside one of
+      // those field names. AN ARROW FUNCTION SATISFIES IT — the arrow ends in
+      // the same character a greater-than does — so returning the field
+      // straight out of an arrow reads to that gate as a comparison. It is a
+      // false positive, it belongs to that suite, and it is named in the
+      // boundary report rather than quietly loosened here. This shape avoids it
+      // and costs nothing. (Writing the offending form even in a COMMENT trips
+      // it too: the gate reads source, not code.)
+      answeredBreakFromISOs: breaks
+        .filter((fact) => !isOpenHorizon(fact))
+        .map(({ effectiveFrom }) => effectiveFrom),
+      dismissedIds: dismissedCoachNoteIds,
+    });
+  }, [temporarySourceFacts, onboardingData, dismissedCoachNoteIds]);
   const visibleWeekKind = useMemo(() => {
     if (!visibleWeekStart) return undefined;
     const exactMicrocycle = currentProgram?.microcycles?.find((microcycle) => {
@@ -1225,6 +1272,57 @@ export function useHomeScreen() {
     return result;
   }, [weekDays, handleProgramControlResult]);
 
+  /**
+   * THE TWO CHRISTMAS-BREAK ANSWERS — SEAT_INBOX item 31 part 5.
+   *
+   * ONE DOOR FOR BOTH QUESTIONS, and that is the whole reason the January half
+   * is safe. December sends `{ from, until: null }` and January sends
+   * `{ from: <the same day>, until: <the day before it is back> }`; the executor
+   * derives ONE fact id from `from`, so the second answer REPLACES the first
+   * instead of laying a second break over the top of it. Two doors would have
+   * needed two ids and a rule about which one wins.
+   *
+   * IT IS NOT THE AWAY DOOR. Away writes `awaySpan`, and away deletes the
+   * fixture too. Over the break the athlete is home: his club is shut, and a
+   * game he entered himself is still his game.
+   */
+  const handleApplyChristmasBreak = useCallback(async (
+    span: { from: string; until: string | null },
+  ) => {
+    const todayISO = todayISOLocal();
+    const result = await executeProgramControlActionDurably({
+      type: 'set_schedule_modifier',
+      source: {
+        screen: 'program_tab',
+        surface: 'christmas_break',
+        initiatedBy: 'tap',
+      },
+      scope: 'current_week',
+      payload: { date: span.from, todayISO, noTeamTrainingSpan: span },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { visibleWeek: weekDays, todayISO });
+    await handleProgramControlResult(result);
+    return result;
+  }, [weekDays, handleProgramControlResult]);
+
+  /**
+   * "WE TRAIN THROUGH CHRISTMAS" — the answer that writes no break.
+   *
+   * A QUESTION WITH NO "NO" IS A NAG, and this one would run for three weeks.
+   * The December ask is a real question with two real answers, and the negative
+   * one is stored so it is not asked again this season — a dismissed id, on the
+   * shelf this app already keeps them on, rather than a new stored field.
+   *
+   * IT IS OFFERED ON THE DECEMBER QUESTION ONLY. The January question has no
+   * dismissal anywhere, because dismissing it would leave a break the athlete
+   * already declared running with nothing to end it.
+   */
+  const handleDismissChristmasBreakAsk = useCallback((dismissId: string) => {
+    useCoachUpdatesStore.getState().dismissCoachNote(dismissId);
+  }, []);
+
   const handleApplyAwayEquipment = useCallback(async (
     decision: EquipmentLimitationDecision,
   ) => {
@@ -1483,6 +1581,9 @@ export function useHomeScreen() {
     handleRetryRollover,
     handleApplyAwaySpan,
     handleApplyAwayEquipment,
+    christmasBreakAsk,
+    handleApplyChristmasBreak,
+    handleDismissChristmasBreakAsk,
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
     missedSessionPrompt,

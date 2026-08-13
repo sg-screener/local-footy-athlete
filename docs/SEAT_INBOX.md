@@ -232,54 +232,58 @@ his instruction is standing authority, not history.**
     sentence is the assertion — nothing else needs authoring.
 
 
-33. **THE RULINGS REGISTRY EXISTS — `docs/RULINGS_REGISTRY.md`, 33 ROWS. WIRE
-    THE GATE. THIS IS THE TOP OF THE QUEUE AND NOTHING GOES TO SAM UNTIL IT IS
-    DONE.**
+33. **BLOCKED-BY: other-agent — ALL THREE GATE CELLS ARE BUILT; THE SEEDING HALF
+    IS THE TERMINAL'S AND IT IS INSIDE THE FILE RIGHT NOW.**
 
-    **OWNED BY THE TERMINAL.**
+    **NOTHING IS OWED TO SAM HERE.**
 
-    **Sam, 2026-08-13:** *"I SHOULD NOT HAVE TO FIX THE SAME PROBLEMS OVER AND
-    OVER AGAIN - MORE IMPORTANTLY - IT SHOULDN'T EVEN BE AN OPTION FOR THE AI TO
-    FIX A PROBLEM THAT HAS BEEN FIXED"*.
-    **"Shouldn't be an option" is a MECHANISM requirement, not an aspiration.
-    The seat has now written the list rather than another order about the list.**
+    **THE GATE IS `WORKING` — `test:ruling-registry`, 7 cells, armed in
+    `test:bible`.** The three this item ordered, in its own numbering:
+    1. **Every row has an id, a quote and a status** — `[1]`. **It reads the row
+       FORMAT rather than a list of allowed words**, because the header's *"two
+       states only"* is out of date: the rows use `PARKED BY SAM` (R-008),
+       `UNRULED` (R-014) and `BINDING` (R-030), **and all three are right** — a
+       gate enumerating them reds once per new word its own author invents.
+       `[1b]` opens every `file:line`; `[1c]` resolves every `BUILT <commit>`,
+       whose founding case is this registry's own seeding commit — *"I caught
+       myself fabricating a citation"*.
+    2. **The UNENFORCED count falls and never rises silently** — `[2]`, ceiling
+       **11 of 70 rows**, and it reds in BOTH directions: debt rising past the
+       ceiling, and a ceiling left standing after the debt was paid.
+    3. **The ask gate** — `[3]`. **Sam chose between the two that got built:**
+       *"if you built a gate that runs the search itself, keep that one over the
+       state-your-grep version."* The hook's `REGISTRY-GREP:` line catches "I
+       never checked"; `[3]` greps the registry ITSELF and catches "I checked and
+       was wrong", which is what actually happened. `[3c]` pins the matcher at
+       both ends so it can neither rot into a rubber stamp nor refuse every
+       question.
 
-    **THE FILE IS SEEDED AND IN THE REPO.** 33 rows, each carrying Sam's words
-    VERBATIM, what they mean, and either an enforcer or `UNENFORCED`. Two states
-    only, exactly like the law registry — Sam's 2026-08-10 ruling that *laws must
-    be machine-held, not remembered* applied to rulings.
+    **MUTATION-CHECKED SIX WAYS**, including both ratchet directions, a
+    fabricated commit receipt, an uncited re-ask, and gutting the matcher.
 
-    **BUILD THE GATE — three cells, and the third is the one that matters:**
-    1. **`test:rulings-registry`** — every row has an id, a verbatim quote, and a
-       status that is `BUILT <receipt>` or `UNENFORCED`. No third state. Red on
-       a row with a receipt that does not resolve.
-    2. **The UNENFORCED count falls and never rises silently** — same ratchet as
-       `test:law-registry`.
-    3. **⚠ THE ASK GATE.** A question may not be put to Sam unless the message
-       states the grep of `RULINGS_REGISTRY.md` that was run and what it
-       returned. **Enforce it where questions actually leave: the
-       `## AWAITING SAM` exit in `scripts/seat-inbox-hook.sh`. A new AWAITING
-       SAM entry with no stated grep is refused.** That turns "don't re-ask"
-       from a habit into a wall — which is what he asked for.
+    **THE COUNT THIS ITEM ASKS FOR: 3 question sites currently point at Sam, and
+    the gate refuses 0 of them** — all three cite the rows they hit. **The first
+    run refused two**, both this seat's, and one of those was the founding case.
 
-    **THEN FINISH THE SEEDING, and it is the bigger half:** the Bible's changelog
-    (~4890-5010 — every ADDED/ABOLISHED/CORRECTED line is a ruling), the 70
-    `*_RULING*.md` docs, and `LFA_PROGRAMMING_POLICY_DECISIONS.md`. **Until that
-    is done, an empty grep is NOT proof he never decided — say so in the question
-    instead of claiming he never ruled.**
+    **WHAT IS LEFT IS THE SEEDING, AND IT IS THE TERMINAL'S:** the Bible
+    changelog, the ~70 `*_RULING*.md` docs and `LFA_PROGRAMMING_POLICY_DECISIONS.md`.
+    **MEASURED: it is mid-flight — 33 rows at `aa16cdfe`, 56, 69 and now 70
+    across three commits in the last hour.** Two agents seeding one file is how
+    rows get lost.
 
-    **AND RETIRE THE HIDING PLACES AS YOU SEED.** Rulings currently live in the
-    handoff's "do not re-ask" section, an archived orders file, and `## AWAITING
-    SAM`. **Three places is why this failed. Leave ONE.** Replace each with a
-    pointer to the registry in the same pass.
+    **⚠⚠ AND A HAZARD TO THE REGISTRY ITSELF, MEASURED NOT ASSUMED.**
+    `docs/RULINGS_REGISTRY.md` is **STAGED FOR DELETION** in the shared index
+    while an untracked copy carrying the live rows sits on disk. **A commit taken
+    with that index removes the registry from the repo**, leaving it one
+    `git clean` from gone. **Not touched by this seat — it is the terminal's
+    index and it may be mid-rename.** Named loudly instead.
 
-    **THE TEST THAT THIS WORKED IS SAM'S, NOT A SUITE'S:** he stops seeing
-    questions he has already answered. **Report the count of AWAITING SAM entries
-    refused by the gate — every one is a night he did not lose.**
+    ~~ORIGINAL ORDER~~ — archived verbatim to
+    `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 33).
 
 
 32. **THE ASK GATE IS BUILT AND IT GREPS — `WORKING`, `test:ruling-registry`,
-    5 cells, armed in `test:bible`. THE REGISTRY IS THE TERMINAL'S
+    7 cells, armed in `test:bible`. THE REGISTRY IS THE TERMINAL'S
     `docs/RULINGS_REGISTRY.md` AND THERE IS ONLY ONE.**
 
     **TWO GATES GOT BUILT IN PARALLEL AND SAM CHOSE BETWEEN THEM:** *"if you

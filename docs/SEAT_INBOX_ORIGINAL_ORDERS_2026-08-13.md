@@ -2692,3 +2692,138 @@ phone.** State device items as PARKED in a stop report, never as a request.
     **PROVE IT:** the 120-session distribution AND the 17 QA scenarios either
     side. Team nights join the 4-6 band; **strength days and mixed days must not
     move by a single row.** Report all four numbers.
+
+
+---
+
+## ITEM 32 — the original order, verbatim
+
+**Archived 2026-08-13 by the desktop agent.** The order was carried out: the
+ask gate is `test:ruling-registry` and the registry is `docs/RULINGS_REGISTRY.md`.
+Moved here because `docs/SEAT_INBOX.md` went over its 96KB stop budget and the
+gate's own instruction is to archive the PROCESSED part verbatim, never to delete
+it and never to raise the budget.
+
+    **⚠ STOP — ALL THREE QUESTIONS ABOUT TO REACH SAM ARE RE-ASKS. TWO ARE OF
+    THINGS ALREADY BUILT AND ALREADY ON A DO-NOT-RE-ASK LIST. DO NOT SEND THEM.**
+
+    **OWNED BY THE TERMINAL, and it is the top of the queue.**
+
+    **Sam, 2026-08-13, on being shown them:** *"why the fuck is someone still
+    saying shit like this WE HAVE FUCKING FIXED THESE ISSUES"*. **He is right on
+    two of three, and the third is the wrong SHAPE of question. Receipts:**
+
+    **Q1 — "Can someone have two games in one week? The app only has room for
+    one." RULED AND BUILT. TWICE OVER.**
+    - **RULED:** *"as many games as needed"*
+      (`SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md:764`, marked **"No cap"**), and
+      the same day: **the profile does NOT grow a second game field — the
+      CALENDAR holds fixtures; `gameDay` is only a DEFAULT.**
+    - **BUILT:** `3f62ad62`, 2026-08-12 — *"A WEEK MAY HOLD MORE THAN ONE
+      FIXTURE — the waist named in §5.4 is unpinched, and a split round no
+      longer loses its second game."*
+    - **WHY THE TERMINAL CONCLUDED OTHERWISE:** it looked at `domain.ts:192`
+      `gameDay?: DayOfWeek` — ONE field — and read "room for one". **That single
+      field is exactly what Sam ruled is NOT the mechanism.** Reading the profile
+      and reporting on the calendar is the same category error as reading a
+      category count and reporting sessions.
+
+    **Q2 — "the app needs a sentence for when a fixture causes the miss."
+    SHIPPED 12 HOURS AGO.** `section18ShortfallDisclosure.ts:158` returns
+    `` `With a game ${day}, there's only room for ` `` — landed in `1dc52caf`,
+    *"THE SENTENCE NAMES ITS CAUSE AND ITS DAY"*, with `test:shortfall-copy`
+    holding it against the signed record **in both directions**. **The claim
+    that it "only knows how to say Resting Tuesday…" is false; that is the OTHER
+    branch, and both exist.**
+
+    **Q3 — the session floor. NOT a re-ask of a ruling, but the WRONG SHAPE, and
+    Sam refused this exact question this morning.** He was asked for the number
+    cold and answered: *"i've answered this type of shit so many times"*. **Item
+    25 already states the only permitted shape: derive a candidate from what his
+    own signed weeks do, bring him the DISTRIBUTION and ONE recommendation with
+    its reasoning, and let him veto in a word.** A bare "give me one number" is
+    barred.
+
+    **⚠ AND THE ROOT CAUSE IS STRUCTURAL, NOT CARELESSNESS. FIX THAT, NOT THE
+    THREE ROWS.** Both re-asked rulings are recorded in
+    `docs/COWORK_SEAT_HANDOFF_2026-08-13.md` under **"RULINGS MADE TODAY — do not
+    re-ask"** and in an ARCHIVED orders file. **The terminal reads neither.**
+    There is no machine-held list of what Sam has already decided, so
+    "already ruled" survives only in prose an agent may never open. **This is
+    precisely the defect Sam's own LAW REGISTRY ruling (2026-08-10) exists to
+    prevent: *laws must be machine-held, not remembered.* Rulings are not.**
+
+    **BUILD — THE RULINGS REGISTRY, and it is the compression this whole session
+    has been paying for:**
+    - **One machine-readable file. One row per ruling:** Sam's words verbatim,
+      the date, the enforcing `file:line` (or `UNENFORCED`), and a stable id.
+    - **Seed it from the three places rulings already hide:** the handoff's
+      "do not re-ask" section, `## AWAITING SAM`'s answered entries, and
+      `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md`.
+    - **THE GATE, and it is the point: no question may be put to Sam without a
+      grep of that registry first, and the question must state what the grep
+      returned.** A question with no stated grep is refused the same way an
+      unenforced law is refused.
+    - **The registry is the ONE list.** Do not add a fourth place a ruling can
+      hide — retire the prose sections into it as they are seeded.
+
+    **WHAT TO ACTUALLY SEND SAM FROM THAT BATCH: NOTHING.** Q1 and Q2 are
+    answered and built; Q3 comes back only in the item-25 shape. **The nine
+    Christmas-break sentences ARE legitimately his** — seven are the agent's
+    words and athlete copy is never invented. Send those alone, as one list, with
+    the two that are already his marked so he does not re-read his own words.
+
+
+---
+
+## ITEM 33 — the original order, verbatim
+
+**Archived 2026-08-13 by the desktop agent.** All three gate cells it ordered
+are built (`test:ruling-registry`); the seeding half is the terminal's and is
+mid-flight. Moved here because `docs/SEAT_INBOX.md` went back over its 96KB stop
+budget — the gate's instruction is to archive the PROCESSED part verbatim.
+
+    **THE RULINGS REGISTRY EXISTS — `docs/RULINGS_REGISTRY.md`, 33 ROWS. WIRE
+    THE GATE. THIS IS THE TOP OF THE QUEUE AND NOTHING GOES TO SAM UNTIL IT IS
+    DONE.**
+
+    **OWNED BY THE TERMINAL.**
+
+    **Sam, 2026-08-13:** *"I SHOULD NOT HAVE TO FIX THE SAME PROBLEMS OVER AND
+    OVER AGAIN - MORE IMPORTANTLY - IT SHOULDN'T EVEN BE AN OPTION FOR THE AI TO
+    FIX A PROBLEM THAT HAS BEEN FIXED"*.
+    **"Shouldn't be an option" is a MECHANISM requirement, not an aspiration.
+    The seat has now written the list rather than another order about the list.**
+
+    **THE FILE IS SEEDED AND IN THE REPO.** 33 rows, each carrying Sam's words
+    VERBATIM, what they mean, and either an enforcer or `UNENFORCED`. Two states
+    only, exactly like the law registry — Sam's 2026-08-10 ruling that *laws must
+    be machine-held, not remembered* applied to rulings.
+
+    **BUILD THE GATE — three cells, and the third is the one that matters:**
+    1. **`test:rulings-registry`** — every row has an id, a verbatim quote, and a
+       status that is `BUILT <receipt>` or `UNENFORCED`. No third state. Red on
+       a row with a receipt that does not resolve.
+    2. **The UNENFORCED count falls and never rises silently** — same ratchet as
+       `test:law-registry`.
+    3. **⚠ THE ASK GATE.** A question may not be put to Sam unless the message
+       states the grep of `RULINGS_REGISTRY.md` that was run and what it
+       returned. **Enforce it where questions actually leave: the
+       `## AWAITING SAM` exit in `scripts/seat-inbox-hook.sh`. A new AWAITING
+       SAM entry with no stated grep is refused.** That turns "don't re-ask"
+       from a habit into a wall — which is what he asked for.
+
+    **THEN FINISH THE SEEDING, and it is the bigger half:** the Bible's changelog
+    (~4890-5010 — every ADDED/ABOLISHED/CORRECTED line is a ruling), the 70
+    `*_RULING*.md` docs, and `LFA_PROGRAMMING_POLICY_DECISIONS.md`. **Until that
+    is done, an empty grep is NOT proof he never decided — say so in the question
+    instead of claiming he never ruled.**
+
+    **AND RETIRE THE HIDING PLACES AS YOU SEED.** Rulings currently live in the
+    handoff's "do not re-ask" section, an archived orders file, and `## AWAITING
+    SAM`. **Three places is why this failed. Leave ONE.** Replace each with a
+    pointer to the registry in the same pass.
+
+    **THE TEST THAT THIS WORKED IS SAM'S, NOT A SUITE'S:** he stops seeing
+    questions he has already answered. **Report the count of AWAITING SAM entries
+    refused by the gate — every one is a night he did not lose.**

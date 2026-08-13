@@ -1,0 +1,349 @@
+/**
+ * THE ASK GATE THAT RUNS THE SEARCH ITSELF — SEAT_INBOX item 32.
+ *
+ * **SAM, 2026-08-13, choosing between the two gates that got built:** *"if you
+ * built a gate that runs the search itself, keep that one over the state-your-grep
+ * version."*
+ *
+ * **THE REGISTRY IS `docs/RULINGS_REGISTRY.md` AND THERE IS ONLY ONE.** This
+ * seat briefly built a second one in TypeScript, 14 rows, while the terminal was
+ * committing the real one — **and a second list of rulings is the exact defect
+ * item 32 exists to end.** The duplicate is deleted; this suite reads the ONE
+ * file. **CHECK THE ROW COUNT BEFORE ADDING OR TRIMMING** — Sam had to say so,
+ * because the duplicate was built without looking.
+ *
+ * ## WHY THIS GATE AND NOT THE DECLARATION
+ *
+ * `scripts/seat-inbox-hook.sh` requires a `REGISTRY-GREP:` line on an AWAITING
+ * SAM entry, and its own comment states the limit honestly: *"It cannot verify
+ * the grep was honest. It CAN make 'I never checked' a thing you have to lie
+ * about."* **A gate satisfied by typing a line is satisfied by typing a false
+ * line, and it would have passed all three of the re-asks that caused this
+ * item.**
+ *
+ * So this suite does not ask whether an agent SAYS it grepped. **It greps.** It
+ * reads every question pointed at Sam, searches the registry itself, and reds
+ * when a question hits a ruling whose `R-nnn` it does not cite. The declaration
+ * hook is left alone and unduplicated — it catches "I never checked"; this
+ * catches "I checked and was wrong", which is what actually happened.
+ *
+ * ## THE MATCHER IS THE WHOLE SUITE, SO IT IS PINNED IN BOTH DIRECTIONS
+ *
+ * A matcher that hits nothing passes every re-ask; a matcher that hits
+ * everything refuses every question. **[3c] pins both ends against the real
+ * case**: the two questions Sam was actually handed must be caught, and an
+ * unrelated question must not be.
+ *
+ * Run: npm run test:ruling-registry
+ */
+
+(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { execFileSync } from 'child_process';
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+
+armTotalsOrRed();
+
+let passed = 0;
+let failed = 0;
+const failures: string[] = [];
+function run(name: string, body: () => void): void {
+  try { body(); passed += 1; console.log(`  PASS ${name}`); }
+  catch (error) {
+    failed += 1;
+    failures.push(name);
+    console.log(`  FAIL ${name}\n      ${error instanceof Error ? error.message : error}`);
+  }
+}
+function assert(condition: unknown, detail: string): asserts condition {
+  if (!condition) throw new Error(detail);
+}
+
+const ROOT = path.join(__dirname, '..', '..');
+const REGISTRY = path.join(ROOT, 'docs', 'RULINGS_REGISTRY.md');
+const INBOX = path.join(ROOT, 'docs', 'SEAT_INBOX.md');
+
+console.log('\n-- The ask gate: it runs the grep itself (SEAT_INBOX item 32) --');
+
+interface Row { id: string; text: string; status: string }
+
+function rows(): Row[] {
+  const src = fs.readFileSync(REGISTRY, 'utf8');
+  const out: Row[] = [];
+  // A row opens with `**R-nnn**` and runs to the next row or heading.
+  const lines = src.split('\n');
+  let current: { id: string; body: string[] } | null = null;
+  const flush = () => {
+    if (!current) return;
+    const body = current.body.join(' ');
+    // **DO NOT ENUMERATE THE STATUS VOCABULARY — READ THE ROW'S SHAPE.**
+    // The header says "two states only" (BUILT / UNENFORCED). The rows use at
+    // least five: R-008 is `PARKED BY SAM`, R-014 is `UNRULED`, R-030 is
+    // `BINDING`. **Every one of those is RIGHT** — "he parked it", "he has
+    // never ruled it" and "this binds every reply" are real states the two
+    // cannot express — and the list is still growing as the terminal writes.
+    // **A gate that enumerates them reds once per new word its author invents**,
+    // which is a gate fighting its own registry. So this reads the FORMAT the
+    // rows actually share: `R-nnn · ruling · meaning · `STATUS``, status last
+    // and in backticks. That catches a row with no status at all, which is the
+    // only thing worth catching, and never argues about vocabulary.
+    const tail = body.split('·').pop() ?? '';
+    const status = (/`([^`]+)`/.exec(tail)?.[1] ?? '').trim();
+    out.push({ id: current.id, text: body, status });
+    current = null;
+  };
+  for (const line of lines) {
+    const head = /^\*\*(R-\d+)\*\*/.exec(line);
+    if (head) { flush(); current = { id: head[1], body: [line] }; continue; }
+    if (/^#{1,3} /.test(line)) { flush(); continue; }
+    if (current) current.body.push(line);
+  }
+  flush();
+  return out;
+}
+
+const REGISTRY_ROWS = rows();
+
+// ── THE MATCHER ────────────────────────────────────────────────────────────
+/**
+ * Distinctive multi-word phrases from a row. Two consecutive non-stopword
+ * words is the unit: single words ("game", "training") fire on everything, and
+ * whole sentences never fire at all.
+ */
+const STOP = new Set([
+  'the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'is', 'it', 'that', 'this',
+  'for', 'on', 'at', 'as', 'be', 'are', 'was', 'not', 'no', 'do', 'does', 'if',
+  'they', 'their', 'them', 'you', 'your', 'he', 'his', 'i', 'we', 'so', 'but',
+  'with', 'from', 'by', 'has', 'have', 'had', 'can', 'will', 'just', 'only',
+  'more', 'than', 'when', 'what', 'which', 'who', 'how', 'any', 'all', 'one',
+  'its', 'there', 'here', 'now', 'then', 'been', 'were', 'up', 'out', 'about',
+]);
+
+function phrases(text: string): string[] {
+  const words = text.toLowerCase()
+    .replace(/`[^`]*`/g, ' ')          // code spans are enforcement sites, not ruling words
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  const out = new Set<string>();
+  for (let i = 0; i < words.length - 1; i += 1) {
+    if (STOP.has(words[i]) || STOP.has(words[i + 1])) continue;
+    if (words[i].length < 3 || words[i + 1].length < 3) continue;
+    out.add(`${words[i]} ${words[i + 1]}`);
+  }
+  return [...out];
+}
+
+/**
+ * Only the RULING half of a row feeds the matcher — the verbatim quote and the
+ * plain-English meaning beside it — never its receipt prose. A row's receipt
+ * names commits, files and the story of the re-ask, and matching on that makes
+ * every question about any file collide with every ruling ever recorded.
+ */
+function rulingHalf(row: Row): string {
+  const cut = row.text.search(/`?(BUILT|UNENFORCED)/);
+  return cut > 0 ? row.text.slice(0, cut) : row.text;
+}
+
+const ROW_PHRASES = new Map(REGISTRY_ROWS.map((r) => [r.id, phrases(rulingHalf(r))]));
+
+/**
+ * HOW MANY ROWS EACH PHRASE APPEARS IN — the whole precision of this matcher.
+ *
+ * **A FLAT "TWO PHRASES" THRESHOLD FAILED THE FOUNDING CASE, MEASURED.** The
+ * two-games re-ask shares exactly ONE phrase with R-001 ("second game"), so a
+ * count-only rule dropped it — the gate would have been green on the very
+ * question that caused this item. **Rarity is what carries the signal:**
+ * "team training" is the vocabulary of the whole app and appears in many rows;
+ * "second game" appears in one, and a question containing it is about that row.
+ */
+const PHRASE_ROWS = new Map<string, number>();
+for (const list of ROW_PHRASES.values()) {
+  for (const p of new Set(list)) PHRASE_ROWS.set(p, (PHRASE_ROWS.get(p) ?? 0) + 1);
+}
+
+export function rulingsMatching(questionText: string): Row[] {
+  const hay = ` ${questionText.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ')} `;
+  return REGISTRY_ROWS.filter((row) => {
+    const hits = (ROW_PHRASES.get(row.id) ?? []).filter((p) => hay.includes(` ${p} `));
+    // ONE phrase unique to a single row is a subject; otherwise TWO are needed.
+    const distinctive = hits.filter((p) => (PHRASE_ROWS.get(p) ?? 0) === 1);
+    return distinctive.length >= 1 || hits.length >= 2;
+  });
+}
+
+// ── [1] THE ONE REGISTRY IS THERE AND PARSES ───────────────────────────────
+run('[1] the registry exists and every row has an id and a status', () => {
+  assert(fs.existsSync(REGISTRY), `${REGISTRY} is gone — the ONE list must exist`);
+  assert(REGISTRY_ROWS.length > 0, 'no R-nnn rows parsed; the shape changed under this gate');
+  const ids = new Set<string>();
+  for (const row of REGISTRY_ROWS) {
+    assert(!ids.has(row.id), `duplicate row id ${row.id}`);
+    ids.add(row.id);
+    assert(row.status.length > 0,
+      `${row.id} ends with no backticked status. Every row is `
+      + '`R-nnn · ruling · meaning · `STATUS``, and a ruling whose state cannot be '
+      + 'read is one no agent can act on.');
+  }
+});
+
+// ── [1b] A BUILT ROW NAMES A SITE THAT EXISTS ──────────────────────────────
+// A ruling whose enforcer cannot be opened is a ruling nobody can check, and
+// "BUILT" on a file that has been renamed is worse than UNENFORCED — it stops
+// the next agent looking.
+run('[1b] every BUILT row naming a file:line names one that EXISTS', () => {
+  const broken: string[] = [];
+  for (const row of REGISTRY_ROWS) {
+    for (const m of row.text.matchAll(/`((?:src|scripts|docs)\/[A-Za-z0-9_./-]+\.(?:tsx|ts|md|sh)):(\d+)`/g)) {
+      const full = path.join(ROOT, m[1]);
+      if (!fs.existsSync(full)) { broken.push(`${row.id} -> ${m[1]} (no such file)`); continue; }
+      const count = fs.readFileSync(full, 'utf8').split('\n').length;
+      if (Number(m[2]) > count) broken.push(`${row.id} -> ${m[1]}:${m[2]} (file has ${count} lines)`);
+    }
+  }
+  assert(broken.length === 0, `unopenable enforcement site(s): ${broken.join(', ')}`);
+});
+
+// ── [1c] A COMMIT RECEIPT THAT DOES NOT RESOLVE IS A FABRICATION ───────────
+// Item 33: "Red on a row with a receipt that does not resolve." **THE FOUNDING
+// CASE IS THE REGISTRY AUTHOR'S OWN**, recorded in its seeding commit: *"I
+// caught myself fabricating a citation"*. A plausible-looking SHA is the easiest
+// false receipt in this repo to write and the hardest to notice.
+run('[1c] every BUILT <commit> receipt names a commit that EXISTS', () => {
+  const shas = new Set<string>();
+  for (const row of REGISTRY_ROWS) {
+    for (const m of row.text.matchAll(/BUILT\s+`?([0-9a-f]{7,40})`?/g)) shas.add(m[1]);
+  }
+  // NON-VACUITY: zero receipts would pass this trivially, and "no commits cited"
+  // is equally produced by "none exist" and "the regex stopped matching".
+  assert(shas.size > 0,
+    'no commit receipts found at all. Either the registry stopped citing commits '
+    + 'or this cell stopped seeing them — both are worth knowing.');
+  const missing: string[] = [];
+  for (const sha of shas) {
+    try { execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], { stdio: 'ignore' }); }
+    catch { missing.push(sha); }
+  }
+  assert(missing.length === 0,
+    `commit receipt(s) that do not resolve: ${missing.join(', ')}. A ruling `
+    + 'pointing at a commit that does not exist is a fabricated receipt.');
+});
+
+// ── [2] THE UNENFORCED COUNT FALLS AND NEVER RISES SILENTLY ────────────────
+// Item 33 cell 2, the same ratchet `test:law-registry` runs. **A ruling Sam made
+// that the app does not carry out is the honest state to be IN and the wrong
+// state to STAY in.** Raising this number is allowed — new rulings arrive
+// unenforced — but only deliberately, in the commit that earns it, so the trend
+// cannot drift the wrong way while every individual pass looks reasonable.
+const UNENFORCED_CEILING = 11;
+run('[2] the UNENFORCED ruling count only falls', () => {
+  const unenforced = REGISTRY_ROWS.filter((row) => /UNENFORCED/i.test(row.status));
+  assert(unenforced.length <= UNENFORCED_CEILING,
+    `${unenforced.length} rulings are UNENFORCED, above the ceiling of `
+    + `${UNENFORCED_CEILING}: ${unenforced.map((r) => r.id).join(', ')}. Build the `
+    + 'enforcer, or raise the ceiling deliberately in the commit that adds the row '
+    + '— never let it drift.');
+  // AND A CEILING THAT OUTLIVED ITS DEBT IS A LIE THE OTHER WAY. If the count
+  // has fallen, the ceiling comes down with it in the same commit, exactly like
+  // the typecheck and signed-copy ratchets.
+  assert(unenforced.length >= UNENFORCED_CEILING - 2,
+    `only ${unenforced.length} rulings are UNENFORCED but the ceiling is still `
+    + `${UNENFORCED_CEILING}. Lower it in the commit that paid the debt, or the `
+    + 'ratchet stops ratcheting.');
+});
+
+// ── THE QUESTIONS CURRENTLY POINTED AT SAM ─────────────────────────────────
+/**
+ * THE MARKER IS READ ON THE ITEM HEAD LINE, NEVER WHEREVER THE WORDS APPEAR.
+ * The first version of this scanner matched the phrase anywhere and flagged two
+ * non-questions: a paragraph QUOTING the marker while withdrawing it, and the
+ * inbox's own legend of legal values. A gate that cannot tell a marker from a
+ * mention of one reds on the records that prove it worked.
+ */
+function questionSites(): { label: string; text: string }[] {
+  const lines = fs.readFileSync(INBOX, 'utf8').split('\n');
+  const sites: { label: string; text: string }[] = [];
+  const itemHead = /^[0-9][0-9A-Za-z-]*\.\s+\*\*/;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!itemHead.test(lines[i]) || !/BLOCKED-BY:\s*sam/i.test(lines[i])) continue;
+    let end = i + 1;
+    while (end < lines.length && !itemHead.test(lines[end])) end += 1;
+    sites.push({ label: `inbox:${i + 1}`, text: lines.slice(i, end).join('\n') });
+  }
+  const start = lines.findIndex((line) => /^## AWAITING SAM/.test(line));
+  if (start >= 0) {
+    let end = start + 1;
+    while (end < lines.length && !/^## /.test(lines[end])) end += 1;
+    let current: string[] | null = null;
+    const flush = () => {
+      if (!current) return;
+      const text = current.join('\n');
+      if (!/^-\s*\*\*(ANSWERED|⚠ STALE|STALE)/.test(text)) sites.push({ label: 'awaiting-sam', text });
+      current = null;
+    };
+    for (let i = start + 1; i < end; i += 1) {
+      if (/^- /.test(lines[i])) { flush(); current = [lines[i]]; }
+      else if (current) current.push(lines[i]);
+    }
+    flush();
+  }
+  return sites;
+}
+
+const sites = questionSites();
+
+// ── [3] THE GATE GREPS. IT DOES NOT ASK WHETHER YOU GREPPED. ───────────────
+run('[3] no question to Sam re-asks a ruling without citing its row', () => {
+  // NON-VACUITY: no question sites means a broken scanner, not a clean queue —
+  // and this gate is worthless the moment it stops finding them.
+  assert(sites.length > 0,
+    'the scanner found NO question sites at all. That is a broken scanner.');
+  const offences: string[] = [];
+  for (const site of sites) {
+    const uncited = rulingsMatching(site.text).filter((row) => !site.text.includes(row.id));
+    if (uncited.length > 0) {
+      offences.push(`${site.label} hits ${uncited.map((r) => r.id).join(' + ')} uncited`);
+    }
+  }
+  assert(offences.length === 0,
+    `${offences.length} question(s) re-ask a ruling on the registry: ${offences.join('; ')}. `
+    + 'Open the row. If the question survives it, cite the R-nnn and say what is new.');
+});
+
+// ── [3c] THE MATCHER IS PINNED AT BOTH ENDS, AGAINST THE REAL CASE ─────────
+run('[3c] it catches the re-asks Sam was handed, and not an unrelated question', () => {
+  const q1 = 'Can someone have two games in one week? The app only has room for one game, '
+    + 'so a second game has nowhere to live.';
+  const q2 = 'The smallest a gym session is allowed to be — one number. Keep sessions for gym '
+    + 'the same before footy training is being broken.';
+  const ids = (t: string) => rulingsMatching(t).map((r) => r.id);
+  assert(ids(q1).length > 0,
+    `the two-games re-ask is not caught at all; matched ${JSON.stringify(ids(q1))}`);
+  assert(ids(q2).length > 0,
+    `the session-size re-ask is not caught at all; matched ${JSON.stringify(ids(q2))}`);
+  // AND IT MUST NOT FIRE ON EVERYTHING — a matcher that refuses every question
+  // is the same uselessness wearing a red.
+  const unrelated = ids('what colour should the rest day icon be on the profile screen');
+  assert(unrelated.length === 0,
+    `the matcher fires on an unrelated question (${JSON.stringify(unrelated)}) — it would `
+    + 'refuse every question ever asked');
+});
+
+// ── [4] AND THE SECOND LIST STAYS DEAD ─────────────────────────────────────
+// This seat built a rival 14-row registry in TypeScript on 2026-08-13 while the
+// real one was being committed. Sam: "The registry has 33 rows, not 14 — check
+// before you add or trim." A second list is the defect item 32 exists to end,
+// so its absence is now a cell rather than a memory.
+run('[4] there is no second rulings registry', () => {
+  assert(!fs.existsSync(path.join(ROOT, 'src', 'rules', 'rulingRegistry.ts')),
+    'src/rules/rulingRegistry.ts is back. There is ONE registry and it is '
+    + 'docs/RULINGS_REGISTRY.md — a rival list is the defect, not a convenience.');
+});
+
+console.log(`\nask gate: ${passed} passed, ${failed} failed`);
+console.log(`  ${REGISTRY_ROWS.length} rulings on the registry, ${sites.length} question site(s) to Sam`);
+if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }
+totalsPrinted(failures.length);
+process.exit(failed === 0 ? 0 : 1);

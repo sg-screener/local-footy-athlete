@@ -270,7 +270,7 @@ export function currentAthleteActionTrace(): AthleteActionTraceContext | undefin
  */
 export function recordScheduleAckPresented(args: {
   traceId?: string | null;
-  surface: 'short_on_time_today' | 'away_this_week';
+  surface: 'short_on_time_today' | 'away_this_week' | 'christmas_break';
   tone: 'success' | 'error';
 }): void {
   emitAthleteActionEvent({

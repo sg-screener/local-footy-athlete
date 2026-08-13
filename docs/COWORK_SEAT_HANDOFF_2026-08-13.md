@@ -108,6 +108,19 @@ Twice, same direction. **The truth is `grep -c "state: 'UNENFORCED'"` — 31 tod
 
 ## RULINGS MADE TODAY — do not re-ask
 
+> **⚠ THIS LIST IS RETIRED. THE MACHINE-HELD ONE IS `src/rules/rulingRegistry.ts`,
+> GATED BY `npm run test:ruling-registry`.**
+>
+> **Why, in Sam's words (2026-08-13):** *"why the fuck is someone still saying
+> shit like this WE HAVE FUCKING FIXED THESE ISSUES"* — said on being handed
+> three questions, two of which were ruled AND built, and **both of which were
+> already written down here.** Prose an agent may never open is not a record.
+> **The bullets below are kept as HISTORY, not as the list**; they are seeded
+> into the registry with an enforcing `file:line` each, and the gate refuses any
+> question to Sam that has not grepped it. Do not add a bullet here — add a row
+> there, or there will be two lists again and this is how that ends.
+
+
 - A game's load counts **in full** (effort x minutes), same unit as everything else.
 - Strength now asks **how long it took**; all four session kinds have real load.
 - **As many games per week as needed.** The profile does NOT grow a second game

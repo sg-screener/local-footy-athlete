@@ -622,6 +622,10 @@ const DIRECT_PROFILE_WRITE_DEBT = [
   'bibleConformance/observations/buildSlice4Trace.ts',
   'capacityRenderSafetyTests.ts',
   'chainedMutationContinuityTests.ts',
+  // Item 31 part 5. Seeds a pre-season club athlete so the Christmas break has
+  // team nights to take off; the two ANSWERS it measures both go through the
+  // real durable door. Same debt shape as its away sibling.
+  'christmasBreakTests.ts',
   'coachAddSessionOwnershipTests.ts',
   'coachClarifierAdvanceTests.ts',
   'dayPrecedenceOwnershipTests.ts',
