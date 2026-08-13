@@ -2,5 +2,17 @@
 # Installed via `git config core.hooksPath .githooks`.
 # TRACKED ON PURPOSE — a law only one machine can see is not a law, which is the
 # same reason `.gitignore` re-includes `.claude/rules/`.
-# The real check, and its 9 cells, live in scripts/.
+# The real checks, and their cells, live in scripts/.
+#
+# TWO CHECKS NOW, AND THE ORDER IS DELIBERATE. The deletion census runs FIRST so
+# it is visible even when the branch line is the last thing on screen; the branch
+# check runs LAST because it owns the only refusal in this hook (detached HEAD)
+# and a refusal should be the final word.
+#
+# `exec` WAS REPLACED BY A PLAIN CALL, AND THAT IS THE WHOLE CHANGE. `exec`
+# replaces this process, so anything added after it would never run — a second
+# hook appended below `exec` would be silently dead. That is the same class as
+# the deletions this census exists to catch: present in the file, absent in
+# effect.
+"$(dirname "$0")/../scripts/announce-deletions-before-commit.sh" || true
 exec "$(dirname "$0")/../scripts/verify-branch-before-commit.sh"
