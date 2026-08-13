@@ -119,10 +119,21 @@ his instruction is standing authority, not history.**
     **AND IT IS THE SAME DATA R-083 IS BLOCKED ON** (item 48). One answer from
     him unblocks both — this is not two waits.
 
-    **WHAT IS STILL BUILDABLE WITHOUT HIM:** R-082's CONDITIONING half needs no
-    sheet at all — the modality already exists on the template and the five-row
-    map is in his own words below. **That half is not blocked; the strength half
-    is.**
+    **✅ AND R-082's CONDITIONING HALF IS ALREADY BUILT — CHECKED, NOT REBUILT.**
+    `sessionEquipment.ts:87` `conditioningEquipmentForModality` reads
+    `CONDITIONING_META[name].modality` and returns exactly his five rows:
+    running -> `null` (needs nothing), ski/bike/air bike/row -> their ergs.
+    **There is no 44-row per-session table to collapse — the collapse has already
+    happened.** Registry gate rule 2 is why this was opened before being built.
+    One extra beyond his five: `treadmill`, inferred from the NAME. Worth his
+    eye, not a defect.
+
+    **⚠ ONE PROVE-IT CLAUSE FAILS AND IT IS A DIFFERENT UNIT.** *"An athlete with
+    no erg and no treadmill still gets RUNNING conditioning"* — measured,
+    off-season 4-day: the no-erg athlete gets `Bodyweight Conditioning Circuit`,
+    **not running**. The equipment MAP is right (running needs nothing);
+    something upstream is not CHOOSING running. **That is conditioning selection,
+    not the equipment map, and it wants its own item.**
 
     ~~ORIGINAL HEAD: SAM FINISHED THE EQUIPMENT MAP, AND CONDITIONING NEEDS NO MAP
     AT ALL. R-082.~~
