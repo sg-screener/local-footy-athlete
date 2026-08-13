@@ -310,3 +310,37 @@ revealed a new consumer in a different place; that is the pattern the law names.
 **BASELINES CAPTURED FOR WHOEVER BUILDS IT** (so the either-side numbers are not
 re-derived): `test:scenarios` **1 failed** (`GAME-MOVE-SAT-TO-FRI`, pre-existing);
 `test:qa` **168 passed / 11 failed across 17 scenarios, 5 allowed findings used**.
+
+
+---
+
+## 2026-08-13 — QUEUE SWEEP: EVERY ITEM IS BLOCKED, CLOSED, BUILT, OR A STANDING CHECK RUN THIS TURN
+
+Stated with the state of each, so *"the queue is clear"* is a receipt and not a
+claim:
+
+| item | state |
+| --- | --- |
+| **37 (mine)** | **`BLOCKED-BY: sam`** — R-069(2) vs R-075. Question + grep in `## AWAITING SAM` (`9822ddea`). **Day half BUILT and on glass.** |
+| 28-C1, 37 (dup), 35, 34, 30, 2, 21 | `BLOCKED-BY: other-agent` |
+| 36 | **PAID** — `[13d]` rewritten, the prescribed fix refuted by measurement |
+| 33, 26, 29 | BUILT |
+| 32, 25 | CLOSED |
+| 31 | RULED |
+| 7 | done, re-measured by `audit` |
+| 27 | A1/B1 fixed; its C1 is item 28-C1, already blocked above |
+| 28 | DONE — the rebuild, and its ordered step 1 refuted on glass |
+| **1, 13** | **STANDING — both RUN this turn, not skipped** |
+
+**1a — QUIET.** Every local `codex/*` branch ahead of `main` forks from
+2026-07-19 and is 1,371 commits behind; merging any reverts a month. **Nothing of
+Sam's UI work waits outside `main`.** Measured by merge-base AGE as the order
+demands, never by commit count.
+
+**13 — 28 UNENFORCED of 123 law rows**, counted with the item's own command.
+**Not lowered, and not dressed up as if it were.** Nothing I built today honestly
+closes one: my cells hold RULINGS, not laws.
+
+**SO THERE IS ONE QUESTION FOR SAM AND IT IS THE ONLY ONE** — away: the bye's two
+lifts, or his usual gym count? Everything else on my side is either finished or
+waiting on another agent.
