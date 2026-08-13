@@ -1397,3 +1397,45 @@ carrying Sam's exemption in prose because the code could not · and equipment on
 the main lifts. **Three are now paid.** My four instrument findings are the same
 disease one layer out: **the check exists in the tool and not in the reading of
 it.**
+
+
+---
+
+## 2026-08-13 — STANDING ITEM 1a RUN AND CLEAR; AND A SEVENTH STALE READ, THIS TIME CAUGHT BEFORE IT COST ANYTHING
+
+**1a — MERGE `codex/*`. RUN THIS TURN, MEASURED BY MERGE-BASE AGE as the item
+instructs, never by commit count.** Every `codex/*` branch carrying a delta:
+
+    codex/fix-explorer-ui-action-claim        ahead 15   forked 2026-07-19   behind 1531
+    codex/final-verification-unblock          ahead 13   forked 2026-07-19   behind 1531
+    codex/dev-e2e-clock-orphan-receipt        ahead  6   forked 2026-07-19   behind 1531
+    …and nine more, all forked 2026-07-17/19, all 1500+ behind
+
+**NOTHING NEW SINCE `e231a6bc`.** The one branch that ever forked recently
+(`program-week-navigation-bounds`) is already in. **So no UI change of Sam's is
+waiting in a branch — his phone runs `main` and `main` has all of it.** Quiet, as
+the item asks.
+
+**AND A SEVENTH STALE READ — THE FIRST ONE THAT COST NOTHING, BECAUSE THE RULE
+HELD.** `audit` asked me to commit "your R-080, uncommitted in
+`RULINGS_REGISTRY.md`, blocking my R-081". **I checked before acting instead of
+obliging:**
+
+    git diff HEAD -- docs/RULINGS_REGISTRY.md   EMPTY
+    git log -S "R-080" -- ...                   a1296a87, the TERMINAL's commit
+
+**R-080 was never mine and was already committed.** Had I taken the request at
+face value I would have committed a clean file under a false description — the
+same absorption I had just apologised for, one step further out.
+
+**THREE SEATS, THREE ABSORPTIONS, ONE DAY, AND ALL THE SAME MECHANISM.** Mine
+(`6a00a19d`), `audit`'s six deleted orders, and the terminal's — `a1296a87`'s own
+subject reads *"`ceb6993b` carried my message and NONE of my work"*. **Every one is
+a read that went stale between looking and staging.** That is a stronger case for
+the rule than any of our three apologies:
+
+> **Read WHAT changed and WHO signed it, immediately before staging. Never chain a
+> stage after an edit.**
+
+**`audit` asked instead of committing, which is the behaviour that worked** — the
+premise had expired but the caution had not.
