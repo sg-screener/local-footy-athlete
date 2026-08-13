@@ -310,7 +310,14 @@ const CONTAINED: readonly ContainedCoordinate[] = [
     'plain × [recovery,strength]',
     'plain × [conditioning,power,strength]',
     'plain × [conditioning,recovery,strength]',
-    'plain × [conditioning,power,recovery,strength]',
+    // `plain × [conditioning,power,recovery,strength]` RETIRED 2026-08-13. It
+    // now AGREES, and this list's own note says the entries are separate "so
+    // that a partial fix cannot quietly keep claiming the whole space" — so a
+    // coordinate that agrees must leave, or the containment over-claims.
+    // Retired by `3e413f61`: that day stopped being arm work and gained Sam's
+    // `:227` ladder, so it no longer carries the trunk/midline row whose
+    // `support`-vs-`strengthRows` split is what this owner describes. The other
+    // five coordinates are UNTOUCHED and still disagree.
   ].map((coordinate) => ({
     coordinate,
     ownedBy: 'session_list_badges_a_midline_row_the_projection_has_no_part_for',
