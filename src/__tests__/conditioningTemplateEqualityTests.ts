@@ -879,14 +879,26 @@ ok(
   // unscoped match scraped EVERY union in the file (13 values including
   // `gradual_reentry` and `cautious`), and `[a-z_]+` silently dropped `vo2`
   // from the map side — so the comparison was junk against incomplete.
-  const declStart = policy.indexOf('export type OffseasonConditioningCategory');
-  const declEnd = policy.indexOf(';', declStart);
+  // ⚠ EVERY ANCHOR IS ASSERTED BEFORE IT IS USED, AND THAT IS NOT PEDANTRY.
+  // `indexOf` returns -1 on a miss, and `slice(-1, n)` reads from the END of the
+  // file rather than failing — so a renamed type or function would leave this
+  // cell reading unrelated text and reporting a confident, wrong answer. That is
+  // the exact shape this suite exists to catch, and the first draft of [C12] had
+  // it in three places.
+  const anchored = (label: string, at: number): number => {
+    ok(`[C12] the ${label} anchor was found`, at >= 0,
+      'the source moved or was renamed — every assertion below would read the '
+      + 'wrong text and could still pass');
+    return at;
+  };
+  const declStart = anchored('category enum', policy.indexOf('export type OffseasonConditioningCategory'));
+  const declEnd = anchored('category enum terminator', policy.indexOf(';', declStart));
   const categories = (policy.slice(declStart, declEnd).match(/'([a-z0-9_]+)'/g) ?? [])
     .map((m: string) => m.replace(/'/g, ''));
   // A FIXED WINDOW, NOT A BRACE SCAN. The first draft cut the body at the first
   // `}` + newline and read ZERO cases — and the non-vacuity cell below is the
   // only reason that was caught instead of shipping as "nothing is unmapped".
-  const mapStart = engine.indexOf('function categoryToFlavour');
+  const mapStart = anchored('flavour map', engine.indexOf('function categoryToFlavour'));
   const mapped = (engine.slice(mapStart, mapStart + 600).match(/case '([a-z0-9_]+)'/g) ?? [])
     .map((m: string) => m.replace(/case '|'/g, ''));
 
