@@ -45,6 +45,44 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ THE REPEATING SHAPE BEHIND TODAY — **A CONCLUSION OUTLIVES THE WORLD IT WAS MEASURED IN**
+
+**THREE SIGHTINGS IN ONE DAY, ALL ON ONE ITEM, AND IT IS WHY THAT ITEM HAS FOUR
+REVERTS.** Recorded here and in cross-session memory because §8's second-wall law
+says an alternative goes on the table before attempt three, and this is past it.
+
+**THE SHAPE:** someone measures honestly and states a conclusion. **The
+measurement was true of ONE WORLD.** The conclusion then travels, because *a
+conclusion carries no metadata about the world that produced it* — it stops
+looking like a measurement and starts looking like a fact.
+
+| the conclusion | true of | the live case |
+| --- | --- | --- |
+| *"conditioning is entirely COMBINED, `standalone=0`"* | off-season | pre-season: **`standalone=11`, `combined=0`** — the exact opposite |
+| *"SPARE ROOM: NONE — six workouts, ZERO rest days"* | off-season | pre-season: **12 EMPTY DAYS** over 4 weeks |
+| *"COD can only enter by SUBSTITUTION"* | inherits row 2's scope | never re-checked after the live case moved |
+
+**THE TRIGGER WAS A LIVE-CASE CHANGE NOBODY SWEPT BEHIND.** `28-C1` named
+pre-season-no-club as the case that matters; **three conclusions taken before
+that were never re-aimed**, and each one sent the next attempt somewhere true but
+irrelevant.
+
+**THE PRACTICE, and it is one sentence:** **quote a prior measurement's WORLD in
+the same sentence you quote its number.** Not *"there is no spare room"* —
+*"there is no spare room IN OFF-SEASON"*. And when an item's live case changes,
+**list every conclusion taken before the change and re-aim each**; that list is
+short and the re-runs are minutes, which is what four reverts bought instead.
+
+**AND ITS COROLLARY, seen twice today:** *a conclusion that contradicts yours may
+be honest and about a different arm.* The rank experiment and my code-read
+disagreed all day and **both were right about their own arm**.
+
+**NOT WRITTEN AS A LAW ROW, ON PURPOSE.** `LAW-0` forbids a new row entering
+`UNENFORCED`, and a prose-scanning gate over reports was measured and refused
+**twice today** (566 of 688 doc lines would red). **A row claiming a guard it
+does not have is the thing this registry exists to prevent**, so this lives where
+it will actually be read instead.
+
 ### ITEM 13 — ONE LAW PAID (27 → 26), AND THE REMAINING 26 ARE NOW TRIAGED
 
 **PAID: `LAW-count-names-instrument` (`55cf3420`)**, whose founding case was item
