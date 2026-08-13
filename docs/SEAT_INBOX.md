@@ -48,9 +48,38 @@ his instruction is standing authority, not history.**
     different lifts. Two of three failing pairs go UP on the deload, which a
     hold-or-drop rule cannot produce.
 
-    **STILL OWED BY `terminal`, NOT BLOCKED:** `test:program-control-durable` and
-    `test:session-list-combinations` are **attributed only, never diagnosed**.
-    Start at `3e413f61`. Full record in `docs/STATUS_TERMINAL.md`.
+    **UPDATE — THE TWO I OWED ARE NOW WORKED. `BLOCKED-BY: other-agent` applies
+    to the WHOLE item.**
+
+    **✅ `test:session-list-combinations` IS GREEN.** It was red because a
+    coordinate the matrix declares KNOWN-DISAGREEING **started agreeing**, and the
+    suite refuses a containment that over-claims. Retiring it is the suite's own
+    design — its note says the six are separate *"so that a partial fix cannot
+    quietly keep claiming the whole space"*. One coordinate removed, five
+    untouched. **Not an expectation edited to match a regression.**
+
+    **🔎 `test:program-control-durable` IS DIAGNOSED, REMEDY IN ITS OWN SUITE.**
+    Its `mainLiftBefore` is **`exercises[0]` — the first row, not a classified
+    main lift**. That proxy held only while the day was arm work. **The sibling
+    cell that tests the compression law properly, at its owner, PASSES**, and the
+    suite's own comment beside it says *"a regenerated week can differ from the
+    base for its own reasons"* — which is precisely what happened. The law is not
+    broken; the end-to-end proxy is.
+
+    **⚠ I DID NOT EDIT EITHER FAILING ASSERTION IN THAT SUITE.** Removing an
+    assertion my own change reddened is how an expectation gets edited to match a
+    regression. Its owner decides.
+
+    **ALSO FOUND AND FIXED WHILE DIAGNOSING (does NOT fix the reds):**
+    `defaultProgram` was the only site spelling it `Single Leg RDL`. Five tables
+    key on the hyphenated `Single-Leg RDL` — pools, load estimation, substitutes,
+    injury classification and **Sam's own signed equipment sheet** — so those rows
+    were invisible to all five. **It is not cosmetic:** the row now filters on
+    equipment, so a bodyweight athlete's becomes `Glute Bridge` instead of
+    slipping through as a barbell lift. Measured, `test:scenarios` 64/1 unchanged.
+
+    **`test:action-walker` is red too and is NOT in this table** — it was already
+    red in `audit`'s 13:14 sweep, so it predates every commit here.
 
 48. **BLOCKED-BY: other-agent — owned by `terminal` in its own text. HALF BUILT BY THE TERMINAL (its owner). R-084 NEEDS NOTHING; R-083 IS
     DELIVERED AT ONE SITE AND NEEDS A DIFFERENT SHAPE AT THE OTHER.**
