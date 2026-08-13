@@ -1881,3 +1881,31 @@ is a SEAT-OWNED ONE-LINE FIX** (`seat-inbox-hook.sh:105` skips only
 `BLOCKED-BY:`; a standing order is neither clearable nor blocked). **I did NOT
 write a false `BLOCKED-BY` on a standing order to buy an exit** — item 13 names
 that move and the hook's own comment forbids it.
+
+### THE HOOK LOOP, CONFIRMED FROM ITS OWN SOURCE — AND MY 18 MARKS ALL PARSE
+
+**Reproduced `seat-inbox-hook.sh`'s scan verbatim** (its `awk` head extraction
+plus its `BLOCKED-BY:[[:space:]]*(other-agent|external|sam)` skip) against the
+live file. Result: **it skips all 18 blocked items and lands on standing order
+1.**
+
+**TWO THINGS THIS MEASURES, AND THE FIRST IS THE ONE WORTH HAVING.**
+
+1. **ALL 18 `BLOCKED-BY:` MARKS PARSE UNDER THE HOOK'S OWN REGEX.** A
+   mis-formatted marker would silently fail to match and read as live work,
+   which is the failure I caused on item 47 and could not have found by eye.
+   **The queue's marking is sound.**
+2. **EXIT 1 IS UNREACHABLE BY CONSTRUCTION** — independent confirmation of item
+   13's measurement, from the script rather than from its write-up.
+
+**I DID NOT PATCH THE HOOK, AND THAT IS THE POINT.** The fix is one line and
+item 13 OWNS IT TO THE SEAT. **An agent editing the script that governs it, so
+that it stops governing it, is the exact move the script's own comment
+forbids** — *"an invented category is not a marker … the terminal cannot
+rubber-stamp its way to silence"*. Walking past an owned item is the rule
+working.
+
+**⚠ AND I OWE A CORRECTION.** I told Sam the loop was a script fault. **Half
+wrong:** the script fault is real, but the reason it kept re-firing **on me**
+was my own unmarked head on item 47. **I pointed at the script before measuring
+my own edit** — the thing this seat exists not to do.
