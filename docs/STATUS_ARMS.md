@@ -560,3 +560,56 @@ permanent as a cell rather than a habit.
 generated output; and the sharpest one is a design call with a ruling attached.
 The item asks for the census and the count, and that is what shipped — with the
 number pinned so it can only fall.
+
+---
+
+## 2026-08-13 — R-013 RE-MEASURED AFTER THE COMPOSER LANDED: THE SAME SENTENCE WAS FALSE, THEN TRUE, IN SIXTY MINUTES
+
+**Sam re-issued the R-013 order verbatim.** I had measured it an hour earlier
+(`ea4d79ae`) and could have replied *"already answered"* — **and I would have
+been wrong, because one of the three numbers has moved since.** Re-measured
+rather than quoted.
+
+| clause | an hour ago | NOW |
+| --- | --- | --- |
+| the abolition is enforced | 122/0, mutation-proven | **unchanged**, re-run 122/0 |
+| `maxExercisesPerStrengthSession` has zero readers | REFUTED — one reader, dead end one hop later | **unchanged**, re-greped |
+| N 3-row fallback branches | **HEAD 11**, tree 7 | **HEAD 7** — and the tree is CLEAN, so both worlds agree |
+
+**`da733e30` — the composer — landed 27 minutes ago and paid four of the eleven.
+So Sam's "seven" is now EXACT on committed HEAD.** An hour ago the same word was
+a number about another seat's uncommitted work; today it is the repo's own
+truth. **Eleven was right then. Seven is right now. Neither means anything
+without its world** — and this is the cleanest demonstration of that I have had:
+the sentence did not change, the world did.
+
+**R-013's row said "eleven … still ship" and was stale in the OPPOSITE
+direction** — overstating what is left, which sends an agent to fix four things
+that are already fixed. Corrected on the head line and in the body, both dated,
+both stating the world.
+
+**THE FILE HOLD THAT BLOCKED ME LAST TIME IS DISCHARGED.** `defaultProgram.ts`
+is now byte-identical to HEAD; `composer` landed in it and said so on item 51.
+
+### WHAT IS ACTUALLY LEFT, AND IT IS NOT THESE SEVEN
+
+Item 51, `OWNED BY composer`: ***"STILL OPEN, and it is the biggest piece: 126 of
+the 216 laddered days ship THREE rows and DO NOT come through the branches this
+seat fixed."*** So the remaining three-row days come from somewhere else
+entirely, and the seven branches are not the lever. **Detail is in
+`docs/STATUS_COMPOSER.md` and the work is theirs.**
+
+### ⚠ AND A GATE IS RED AT HEAD, WITH A NAMED OWNER WHO IS NOT ME
+
+`test:ladder-wide` — **92 deficient of 318, ceiling 88, 4/5 cells.** `composer`
+bisected it in a clean worktree, one commit apart: `7fe7ced0` is 88/318 green;
+the next commit, *"feat(equipment): LOAD IS NOT AVAILABILITY"* (`cf77855f`,
+**`Agent: audit`**), is 92/318 red, and it edits `sessionSlotCoverage.ts`. **Four
+more days stopped covering Sam's ladder.**
+
+**I did not touch it, and `composer`'s reason is the right one, quoted:**
+*"Its author decides: fix the four, or move the ceiling in a commit that says the
+unit changed. `composer` will not absorb them into a number it banked."*
+**Absorbing another seat's regression into someone else's banked number is how a
+ratchet stops meaning anything.** Named here so it is not lost: **`audit` owns
+four deficient days, and `test:bible` is red until they are answered.**

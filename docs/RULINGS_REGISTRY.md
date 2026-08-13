@@ -160,7 +160,8 @@ training is its own component, held BY ROLE, not by name. · `BUILT e8521b79`.
 **R-013** · **ONE exercise cap for every training age; the beginner cap of 3 was
 never authored** (Bible `:3149`, `:4969`) · One cap, all training ages. The
 number 3 is abolished. · `UNENFORCED` — nothing enforces a cap anywhere;
-eleven 3-row fallback branches still ship. SEAT_INBOX item 25.
+**SEVEN** 3-row fallback branches still ship (was eleven; `da733e30` paid four,
+re-measured on clean HEAD 2026-08-13 by `arms`). SEAT_INBOX item 25.
 **⚠ TWO OF THIS ROW'S THREE CLAUSES WERE WRONG ABOUT WHICH PART IS MISSING —
 CORRECTED 2026-08-13, seat `arms`, code opened first.**
 - **THE RULING ITSELF IS ENFORCED AND MUTATION-PROVEN.** `test:rules-kernel`
@@ -175,13 +176,18 @@ CORRECTED 2026-08-13, seat `arms`, code opened first.**
   LATER** — that field has zero consumers — and the code already says so in its
   own words at `sessionRowCounting.ts:309`: *"read by no prompt builder,
   validator or trim."* `patterns` reached the same refutation independently.
-- **"ELEVEN" IS EXACT — ON COMMITTED HEAD, AND THAT QUALIFIER IS THE WHOLE
-  POINT.** Brace-matched over `fallbackExercisesForPlanEntry`:
-  **HEAD** `3x1, 1x2, **11x3**, 1x4, 4x5` · **working tree** `3x1, 1x2, **7x3**,
-  1x4, 8x5`, because the live seat is mid-landing the fix. **TWO SEATS PUBLISHED
-  "SEVEN" WITHIN ONE HOUR AND BOTH WERE WRONG THE SAME WAY** — a count read off
-  an uncommitted tree and reported as a fact about the repo. **A count with no
-  WORLD is not a measurement.**
+- **THE COUNT IS NOW `SEVEN` ON COMMITTED HEAD — RE-MEASURED 2026-08-13 AFTER
+  THE COMPOSER LANDED (`da733e30`), seat `arms`.** Brace-matched over
+  `fallbackExercisesForPlanEntry`, and the file is CLEAN (working tree ==
+  HEAD, so both worlds agree for the first time):
+  **`3x1, 1x2, 7x3, 1x4, 8x5`.** **The head line above still says "eleven" and
+  is now stale in the OPPOSITE direction** — it overstates what is left.
+  **HISTORY, KEPT BECAUSE IT IS THE LESSON:** an hour earlier this read
+  **HEAD `11x3` · working tree `7x3`**, and **TWO SEATS PUBLISHED "SEVEN" INSIDE
+  ONE HOUR AND BOTH WERE WRONG** — a count taken off another seat's uncommitted
+  tree and reported as a fact about the repo. Eleven was right then; seven is
+  right now; **neither statement means anything without its world.** The same
+  sentence was false, then true, in sixty minutes.
 
 **R-014** · **⚠ RULED 2026-08-13, AND THE QUESTION IS VOID — THERE IS NO FLOOR
 BECAUSE SIZE IS NOT THE RULE.** *"because the number of exercises is not
