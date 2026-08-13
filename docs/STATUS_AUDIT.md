@@ -321,6 +321,39 @@ must survive the `//` rule. Replacing its body with `return source`: **the
 fixture cell REDS ("kept 4, expected 1") AND the count REVERTS to 7.** Restored
 and re-run after.
 
+### ⚠ MY 28-C1 PROBE FAILED TO RUN, AND THE REASON IS A NAMED TRAP — NOT A RESULT
+
+**I tried to answer 28-C1b's open question — *"why does a no-team-training week
+produce NO standalone conditioning slot?"*, unmeasured for PRE-SEASON — WITHOUT
+mutating the generator**, by calling `generateProgramLocally` from a scratchpad
+script and counting the OUTPUT (categories, standalone vs combined days). **That
+is the right shape: nothing to revert, no probe left in `src/`.**
+
+**IT DIED AT IMPORT, AND IT NEVER MEASURED ANYTHING:**
+
+    selectableExerciseVocabulary.ts:266
+    TypeError: Cannot read properties of undefined (reading 'squat')
+      at strengthPoolNames -> selectableVocabularyGroups -> selectableExerciseNames
+      -> curatedNameRegistry (exerciseCanonicalisation.ts:66, at MODULE LOAD)
+
+**`_exercisePoolsStrength.STRENGTH_POOLS` is undefined at module-init time — a
+circular-import ordering problem, and it is `harness-enters-below-the-door`
+exactly.** The suites under `src/__tests__/` do not hit it because of the order
+their imports establish. **A scratchpad script entering the graph at
+`generateProgram` is entering below the door.**
+
+**RECORDED AS ZERO EVIDENCE, DELIBERATELY.** No number came out of this, so
+nothing about pre-season standalone slots is now known that was not known
+before. **An import crash is not a measurement**, and the temptation on this item
+has always been to treat a silent or broken instrument as a result — which is
+how three of its four reverts happened.
+
+**THE FIX FOR THE NEXT ATTEMPT, one line:** put the probe **inside
+`src/__tests__/`** so it enters through the same door the working suites do, or
+import a suite's `support/` prelude first. **Do not add it to `src/` permanently
+— run it, read it, delete it**, and note that a stray `.ts` at the repo root is
+one `git add -A` from another seat's commit (mine was removed within the minute).
+
 ### ITEM 28-C1 — THE WALL IS NAMED TO THE LINE, AND THE STANDING BAR MAY HAVE EXPIRED
 
 **READ-ONLY THIS SESSION. NOTHING IN `coachingEngine.ts` WAS TOUCHED** — a sweep
