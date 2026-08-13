@@ -32,6 +32,49 @@ thing that actually bit.**
 
 ## STATUS
 
+### ⚠ THE EQUIPMENT FIX IS REFUTED — BOTH SEATS DIAGNOSED THE WRONG PATH
+
+**I built it, measured it, and backed it out. Zero lines changed across 5 worlds
+x 3 weeks; both censuses unmoved (`SLOT 1`, `EQUIPMENT 5`).**
+
+**THE DIAGNOSIS BOTH SEATS AGREED ON WAS WRONG.** The desktop verified my finding
+independently rather than taking my word (`2a0f63d5`) and reached the same
+conclusion — *"two paths put exercises on a day and only one asks about
+equipment"* — and **we were both wrong in the same way: the path IS entered, and
+its output is DISCARDED.**
+
+Probed at the fallback itself:
+
+    FB entry="Lower body - squat emphasis …" rows=5 ctx=YES kit=["bodyweight"]
+
+**So it runs, with a rotation context, with the right kit.** And then:
+
+    SHIPPED  Lower Squat: Bicep Curls · Tricep Pushdowns · Tib Raises · Pallof Press · Back Squat
+    FALLBACK would be:    Back Squat · RDLs · Reverse Lunges · Single Leg RDL · Leg Extension
+
+**Not one row of the fallback survives to the athlete.** Filtering its output can
+never change what ships, which is exactly why the change measured inert.
+
+**BACKED OUT RATHER THAN KEPT.** It is not a prerequisite like R-076 — that had a
+named unblocker and would fire once it moved. This one operates on rows that are
+thrown away, so keeping it would be a code path that does nothing and that a
+later reader would trust. Sam's own law: *a field with no reader is dead weight
+that later code will trust.*
+
+**WHAT THE NEXT SESSION SHOULD DO INSTEAD — and it is a different question:**
+find what REPLACES a synthesised day's rows between
+`completeCoachWorkoutsFromPlan` and the shipped week. `Bicep Curls · Tricep
+Pushdowns` is the arm block the desktop traced to a FOCUS-TEXT REGEX
+(`/accessor|prehab|gunshow|pump|low-fatigue/i`), and `Back Squat` arrives beside
+it from somewhere neither of us has named. **The barbell and the arm work on a
+leg day are almost certainly the same defect, and it is upstream of both paths we
+looked at.**
+
+**COST OF THE ATTEMPT, STATED:** one build, one backout, ~4 measured runs. Cheap,
+and it removes a wrong answer that two seats had independently agreed on — which
+is worth more than the fix would have been.
+
+
 ### AUDIT OF MY OWN DAY'S COMMITS — applying the rule `ceb6993b` taught me
 
 **`git show <sha> --stat` over all eleven substantive commits I made today,
