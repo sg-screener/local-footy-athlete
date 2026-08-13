@@ -175,11 +175,33 @@ his instruction is standing authority, not history.**
     SESSION, and that is what must be verified on glass.** Restate the open
     question as: *does a temporary equipment change in the session view actually
     swap the exercises in that session?* **Nothing else about equipment is owed.**
-    **⚠ AND CHECK THE SPAN DID NOT SWALLOW THE SESSION CASE.**
-    `programControlAction.ts:253` still calls the decision `missing_this_week`,
-    and the file's own comment already flags that *"this week" is a CLAIM*.
-    **Three scopes, three names.** A payload named for a week cannot honestly
-    carry "just this session".
+    ~~**⚠ AND CHECK THE SPAN DID NOT SWALLOW THE SESSION CASE.**~~
+    **CHECKED 2026-08-13 — REFUTED, AND (a)'s OPEN QUESTION IS ANSWERED WITH IT.**
+
+    **THE QUESTION — *"does a temporary equipment change in the session view
+    actually swap the exercises in that session?"* — YES.** Measured at
+    `DayWorkoutScreenV2.tsx:717` (`applySessionEquipment`): it builds a
+    replacement plan from the session's requirements and the kit the athlete
+    ticked off, then for each replacement executes **`swap_exercise` with
+    `scope: 'today_only'` and `oneOffOnly: true`** — one action per exercise,
+    refusing honestly and naming the exercise when no safe replacement exists.
+    **It changes THAT SESSION and nothing else, which is exactly the scope Sam
+    ruled.**
+
+    **AND THE ⚠ IS BASED ON A PREMISE THAT IS NOT TRUE.** The session door
+    **writes no equipment fact at all** — zero occurrences of
+    `set_equipment_modifier` or `missing_this_week` in either
+    `DayWorkoutScreenV2.tsx` or `SessionEquipmentSheet.tsx`. `missing_this_week`
+    has exactly TWO writers, both in `EquipmentLimitationSheet.tsx` (:102, :184),
+    which is the PROGRAM-screen week/span door. **So a payload named for a week
+    is never asked to carry "just this session" — the session scope does not use
+    it.** The name is still imprecise for the door that DOES use it, but that is
+    a naming question about scope 1-vs-3, not the defect this ⚠ describes.
+
+    **⚠ MEASURED IN SOURCE, NOT ON GLASS.** The item says the swap "must be
+    verified on glass" and this is not that: it is the code path read end to end.
+    **The device check is still owed** — open a session, tick kit off, and see
+    the rows change.
 
     **(b) THE GUESSED STRENGTH CUT — SAM: *"yeah well that sounds shit and not
     good"*. THAT IS A RULING: BUILD IT.** Census C10.
@@ -201,7 +223,13 @@ his instruction is standing authority, not history.**
     than from "no pattern is safe". **A cut with no proof is a defect, not a
     reduction.**
 
-    **(c) THE MAS BLOCK LIMIT — SAM: *"okay it needs to be checked"*. BUILD THE
+    **(c) BLOCKED-BY: other-agent — THE MAS BLOCK LIMIT.** The fourth clause goes
+    in `conditioningSelection.ts:291-304`, and that file is `MM` in the shared
+    checkout with changes this seat did not make. **The finding is confirmed
+    though: `set_length_max_4_5_min` appears five times — one union member, one
+    source string, three template assignments — and NOTHING reads it.** Nothing
+    is owed to Sam; he already said *"okay it needs to be checked"*.
+    ORIGINAL: **SAM: *"okay it needs to be checked"*. BUILD THE
     CHECK.** Census C11.
     **His rule:** short-intermittent high-%MAS work keeps the set/block to
     **≤ ~4-5 min**, *"enforced at selection time, not written into the dose"*
