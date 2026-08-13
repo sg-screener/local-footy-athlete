@@ -334,3 +334,93 @@ second cell.**
 - **`test:bible` not run end to end**; `test:ruling-registry` [3] still RED,
   pre-existing and untouched.
 - **The inbox marks above are owed** — the file was held.
+
+---
+
+## R-033 — THE EXISTING-WEEK GATE. IT IS RED, AND THE RED IS THE POINT.
+
+**SAM'S ORDER, direct:** *"he is never the test rig, his phone is the last
+instrument. A change that alters an EXISTING week is unverified until it has been
+seen on a week that already existed — not a freshly generated one. That is
+unenforced as a gate today, and it is why two days of away-flow work looked done
+and was invisible. Build the gate. Prove it with a mutation."*
+
+**LANDED:** `test:existing-week-proof`, 10 cells, in the `test:bible` chain.
+R-033 moves `UNENFORCED as a gate` -> `BUILT`.
+
+### THE GATE IS A TWO-ROUTE AGREEMENT
+
+| route | what it is | who proved it before |
+| --- | --- | --- |
+| **A — BUILT WITH** | generate the week with the fact already live | every existing suite |
+| **B — BUILT BEFORE** | generate with NO fact, accept it, THEN land the fact | **nothing** |
+
+Route B is the athlete. It goes through `rebaseAcceptedEffectiveWeek` — this
+repo's *"sole precedence owner for a currently accepted athlete-visible week"*.
+**The assertion is that A and B agree.** A change reaching only newly built weeks
+makes them disagree, which is Sam's mutation criterion stated as a cell.
+
+### THE DEFECT, REPRODUCED IN A TEST FOR THE FIRST TIME
+
+    route A (built with the answer):  team=[] game=[]        ✅
+    route B (the week he already had): team=["Team Training + Upper Pull",
+                                             "Team Training + Upper Push"]
+                                       game=[]               ❌
+
+**A pre-existing away week LOSES ITS FIXTURE AND KEEPS ITS CLUB NIGHTS.** That is
+item 30's glass evidence word for word (*"Tuesday the 22nd and Thursday the 24th
+still read Strength + Team Training"*), now in a suite instead of a screenshot.
+**8 of 10 cells pass; the 2 that fail are the app, not the gate.**
+
+### THE FIX SITE IS NAMED BY MUTATION, NOT BY READING
+
+Blinding `derivedWeekContract.ts:85`'s travel filter reds the half that currently
+PASSES (the fixture) plus the liveness cell. **So that filter is what takes the
+game off a pre-existing week, and there is no equivalent for team days.** The
+fix belongs to whoever holds `coachingEngine.ts` — item 30 records it HELD, and I
+did not enter it.
+
+### ⚠ I MANUFACTURED THIS DEFECT TWICE BEFORE MEASURING IT
+
+Both are written into the suite so nobody repeats them.
+
+1. **WRONG VOCABULARY.** I copied the travel fixture from `awayFlowTests`, which
+   builds the LEGACY `ActiveConstraint` shape (`type`/`startDate`/`expiresAt`)
+   because it feeds generation. The READ door filters on `factKind: 'schedule'`
+   with `effectiveFrom`/`effectiveUntil`. **My object matched nothing and route B
+   looked totally inert** — I would have reported "the away answer never reaches
+   an existing week", which is worse than the truth.
+2. **A PROJECTION SUBSTITUTED FOR THE REAL INPUT.** Fixing (1), I fed both routes
+   one fact via `composeTemporarySourceFactCompatibility`. **The CONTROL then
+   failed**: the projected constraint does not clear club nights at generation,
+   though the hand-built one does. I would have been measuring my projection.
+
+**THE CONTROL CELL CAUGHT BOTH.** Route A must pass before route B's failure
+means anything — otherwise "the feature is absent" reads as "R-033 is breached".
+
+**AND A REAL FINDING FELL OUT:** the two doors speak TWO SPELLINGS of one athlete
+answer. Generation reads `type`/`startDate`/`expiresAt`; the read door reads
+`factKind`/`effectiveFrom`/`effectiveUntil`. One answer, two shapes, each
+understood at only one end — that is a defect waiting to happen again.
+
+### AND MY OWN LIVENESS CELL WAS WRONG FIRST
+
+It compared TEAM DAYS ONLY and failed for the wrong reason: the answer DOES reach
+the pre-existing week — it removes the fixture — so comparing the one field the
+defect lives in made a WORKING half of the read door look inert. It now compares
+a whole-week signature, which tells "ignores the answer entirely" apart from
+"half-applies it".
+
+### NOT COVERED
+
+- **THE FIX IS NOT MINE AND IS NOT MADE.** `coachingEngine.ts` is held per item
+  30. The gate names the site; the repair is the holder's.
+- **ONE DOOR, ONE FACT.** Only the travel/away fact is driven. Christmas break,
+  equipment and illness are the same shape and are one row each in this suite —
+  **not added blind**, because each needs its own control cell proving the fact
+  bites on a fresh week first.
+- **`test:bible` is now RED for a true reason.** It was already red
+  (`test:ruling-registry` [3], another seat's). This adds a second, and LAW ZERO
+  is explicit: a first-run guard failure is reported the moment it appears, never
+  fixed quietly and never deferred.
+- **No glass.** The proof is a suite, which is the entire point of the ruling.

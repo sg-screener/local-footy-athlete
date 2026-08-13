@@ -898,7 +898,33 @@ words. · `BINDING`.
 **R-033** · *"There has to be a better way than me hand-testing"* / *"my phone is
 the last instrument"* · Sam is never the test rig. A change that alters an
 EXISTING week is unverified until seen on a week that already existed. ·
-`UNENFORCED as a gate` — SEAT_INBOX item 30.
+`BUILT` — `npm run test:existing-week-proof`
+(`src/__tests__/existingWeekProofTests.ts`, 10 cells), in the `test:bible`
+chain. Seat `patterns`, 2026-08-13, at Sam's direct order.
+**⚠ THE GATE IS RED ON ARRIVAL AND THAT IS THE FINDING, NOT A DEFECT IN IT.**
+It is a TWO-ROUTE AGREEMENT: route A generates the week with the fact live —
+what every existing suite proves — and route B generates the week with NO fact,
+accepts it, then lands the fact on that already-accepted week through
+`rebaseAcceptedEffectiveWeek`, *"sole precedence owner for a currently accepted
+athlete-visible week"*. **The routes must agree; they do not.**
+**MEASURED: a pre-existing away week LOSES ITS FIXTURE AND KEEPS ITS CLUB
+NIGHTS** — `["Team Training + Upper Pull", "Team Training + Upper Push"]` survive
+a live travel fact. That is item 30's glass evidence (*"Tuesday the 22nd and
+Thursday the 24th still read Strength + Team Training"*) **reproduced in a test
+for the first time**, and it is why two days of away work read as done.
+**THE FIX SITE IS NAMED BY MUTATION, not by reading:** blinding
+`derivedWeekContract.ts:85`'s travel filter reds the half that PASSES, so that
+filter is what takes the fixture off a pre-existing week and **there is no
+equivalent for team days.** Fix belongs to whoever holds `coachingEngine.ts`
+(item 30 records it HELD).
+**TWO FIXTURE MISTAKES WERE MADE AND BOTH ARE RECORDED IN THE SUITE**, because
+each would have manufactured a defect: the legacy `ActiveConstraint` spelling
+fed to a read door that filters on `factKind`, and a compatibility PROJECTION
+substituted for the constraint generation is proven to accept. **The control
+cell caught both** — route A must pass before route B's failure means anything.
+**AND THE TWO DOORS GENUINELY SPEAK TWO SPELLINGS** of one athlete answer:
+generation reads `type`/`startDate`/`expiresAt`, the read door reads
+`factKind`/`effectiveFrom`/`effectiveUntil`. That divergence is its own finding.
 
 ---
 
@@ -1359,3 +1385,50 @@ never decided".**
 
 **Until seeding is complete, a grep that returns NOTHING is not proof a ruling
 does not exist** — say so in the question rather than claiming he never decided.
+
+**R-082** · *"the equipment for conditioning is very simple whatever modality it
+chooses - thats the equipment needed and there's only 5 - running = bodyweight,
+ski = skiErg, bike = bikeErg, row = Rower and air bike = air bike"*
+(2026-08-13) · **CONDITIONING EQUIPMENT IS DERIVED FROM THE MODALITY, NOT A
+PER-SESSION TABLE.** running → nothing · ski → SkiErg · bike → BikeErg · row →
+Rower · air bike → Air Bike. **44 rows collapse to 5. Do not author a
+session-by-session list** — the modality is already on the template.
+**Search words:** conditioning equipment, erg, treadmill, modality, machine,
+which machine, rower, no erg. · `UNENFORCED` — the derivation is not built; the
+sheets record it and nothing reads it.
+
+**R-083** · *"ya can't do much with overhead pushing or pull or even horizontal
+pulling without equipment - i can't account for everyone and if they want to
+train properly they'll sign up to a gym"* (2026-08-13) · **A BODYWEIGHT-ONLY
+ATHLETE SIMPLY DOES NOT GET SOME PATTERNS.** Vertical push, vertical pull and
+horizontal pull are **REMOVED, not substituted**, when the kit cannot do them.
+Do not author a bodyweight vertical push or pull; do not fill the slot with
+something else. **The app must SAY the kit is the cause** rather than shrink
+silently — this is the one case where a short session is not a defect.
+**Search words:** bodyweight, no equipment, no kit, pull-up, dip, inverted row,
+vertical push, vertical pull, horizontal pull, missing pattern, short day, gym
+membership, sign up to a gym. · `UNENFORCED` — one site delivered, the second
+blocked on the load/availability conflation.
+
+**R-084** · *"single leg hip thrust is an accessory"* (2026-08-13) · **A
+SINGLE-LEG HIP THRUST IS AN ACCESSORY, NOT SINGLE-LEG HIP WORK.** Its existing
+`isolation_lower` tag is CORRECT — **do not re-file it as `hinge`.** **The
+single-leg hip pool is ONE exercise, the Single-Leg RDL, and Sam is not adding
+more.** Consequences: the slot checker must not report a one-exercise pool as a
+coverage defect, and the variety-rotator must not treat "the same exercise every
+leg day" as a fault — it is meant to repeat. **A bodyweight athlete therefore
+cannot fill the single-leg hip slot, and by R-083 that is the kit's answer, not
+a defect to solve.**
+**Search words:** single leg hip thrust, hip thrust, single-leg hip, accessory,
+isolation, one exercise pool, re-tag, refile, empty slot, bodyweight leg day.
+· `BUILT` — the tag already carries `isolation_lower`; nothing to change.
+
+**⚠ WHY THESE THREE ARRIVED LATE, AND IT IS A DEFECT IN THIS FILE'S PROCESS.**
+All three were ruled by Sam on 2026-08-13 and written into `SEAT_INBOX.md`
+items 47 and 48 with instructions to register them. **Nobody did, and the seat
+never checked.** On 2026-08-13 an agent then re-asked R-084 verbatim — it could
+not find a ruling that was not here. **The ask gate greps THIS file: a ruling
+that is not in it is, mechanically, a ruling that does not exist.**
+**Each row above now carries a `Search words:` line** — the second half of the
+same lesson, learnt when R-079 was re-asked because it did not contain the words
+"team night" or "no club".
