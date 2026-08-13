@@ -73,6 +73,53 @@ his instruction is standing authority, not history.**
     **PROVE IT:** a week with 0 running days must not ship green. 17 QA either
     side.
 
+    **⚠ MEASURED BY `pace` BEFORE BUILDING, AND THE ORDER OF WORK IS THE
+    OPPOSITE OF THE ONE ABOVE. 2026-08-13.**
+
+    **THE PREMISE IS CONFIRMED EXACTLY:** `cap_*_under` has **ZERO** production
+    consumers; the `_over` twins have **EIGHT** — four in
+    `coachTurnController.ts:2255-2264` and four more in
+    `planChangeRefusalCopy.ts:64-75`. **Ceilings refuse in words the athlete
+    reads; floors emit an `info` nothing consumes.**
+
+    **BUT RAISING SEVERITY FIRST WOULD REFUSE WEEKS THE GENERATOR LEGITIMATELY
+    PRODUCES.** `section18CraftTier.ts:123` — `blocksBySeverity` is
+    `severity === 'strong' || 'hard_stop'`. The QA corpus TODAY ships **S5 and
+    S6 with 0 running days as `[info]`**. Make running `strong` with nothing else
+    changed and those two weeks stop being buildable at all.
+
+    **AND THE EXEMPTION THAT WOULD KEEP THEM LEGAL ALREADY EXISTS, FULLY TYPED
+    AND FULLY TESTED, AND NO PRODUCTION CALLER PASSES IT:**
+    - `auditWeekAgainstCaps(counts, context: CapAuditContext = {})`
+      (`weeklyExposureCounts.ts:299`) takes
+      `runningFloorExemption?: 'early_off_season_weeks_1_2' | 'bye_recovery'`.
+    - `rulesKernelTests.ts:556-561` proves BOTH exemptions suppress the finding.
+    - **BOTH production call sites pass NOTHING** —
+      `weeklyExposureCounts.ts:382` and `weekStructureValidator.ts:454` are
+      `auditWeekAgainstCaps(counts)`.
+    - The athlete-facing detail string already PROMISES the exemption —
+      *"lifted in early off-season weeks 1-2 and bye recovery"*
+      (`weeklyExposureCounts.ts:330`) — **so the app is telling the athlete about
+      a lift it has no way to apply.**
+    - `weekStructureValidator.ts` has **no knowledge of the off-season subphase
+      at all** (zero matches for `subphase`/`offseason`); its only light-week
+      escapes are `reducedLoadActive` and `byeWeek`.
+
+    **SO THE BUILD IS TWO STEPS AND THIS IS THE ORDER:**
+    1. **Thread the subphase to the validator and PASS `runningFloorExemption`.**
+       Small, and it should silence S6 (early off-season) on its own — measure
+       that rather than assume it.
+    2. **THEN severity parity**, once the legitimate 0-running weeks have stopped
+       producing findings. Only then does `strong` refuse the right weeks.
+
+    **THIS IS CENSUS C2's SHAPE FOR THE THIRD TIME TODAY** — a mechanism that
+    exists, is typed, is tested, and has no reader on the path that matters
+    (`deriveMas`; the second game at the exposure contract; now this). **Worth
+    naming as a class rather than paying three times.**
+    **BASELINE CAPTURED BEFORE ANY CHANGE:** `test:qa` = 168 passed, 11 failed
+    across 17 scenarios; the S5/S6 `_under` findings are among the 11.
+    **NOTHING IS OWED TO SAM.**
+
 41. **BLOCKED-BY: other-agent — CENSUS C6, OWNED BY `progression`, WHO HAS
     ALREADY VERIFIED THE PREMISE AND MEASURED THE DEFECT.**
     Marked by `desktop` so the scan walks past an item with a live owner rather
