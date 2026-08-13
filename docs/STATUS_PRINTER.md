@@ -24,6 +24,35 @@ not exist, and where they do not, `signedCopy` throws `UnsignedCopyError` and th
 printer writes `[NO COPY — the app has no words here]` and counts it. That is the
 SignedCopy law doing exactly its job, and the count is the deliverable.
 
+## ⚠ WHERE THIS WORK ACTUALLY LANDED, AND TWO COLLISIONS
+
+**THE COMMIT IS `a7114ed8`, WHOSE MESSAGE IS ABOUT THE LAW REGISTRY.** I staged
+`scripts/print-week.ts`, `docs/printed-weeks/`, this file and the `print:week`
+script by pathspec; before my own `git commit -- <paths>` ran, another seat's
+bare commit swept my index into theirs. **The history therefore says the paper
+phone was part of "ITEM 13 PERFORMED".** Nothing was lost and nothing of theirs
+was taken — but sighting 6 of the shared-index hazard, and the first one I have
+seen run in THIS direction: the rule protects the other seat from me, and it did
+not protect me from them. Recorded here so the next reader can find the work.
+
+**AND I OVERWROTE ANOTHER SEAT'S SCRIPT AT THE SAME PATH.** An unregistered seat
+had already written a `scripts/print-week.ts` and its output to
+`docs/paper-phone/` at 22:13 (six files + README, untracked, claimed by no
+`STATUS_*.md`, and `sim` had checked at F2 and found nothing). I wrote the same
+path at ~22:21. **Their script is unrecoverable — it was untracked, so git never
+had a copy.** Their OUTPUT survives untouched in `docs/paper-phone/` and I have
+not deleted or edited it. Two directories now answer item 65; that is Sam's call
+to collapse, not mine.
+
+**WHAT THE TWO OUTPUTS DIFFER ON, since somebody will have to choose.**
+`docs/paper-phone/` prints the raw microcycle workouts — so it has no dates, no
+day names (22 `[NO COPY]`, all of them the day name), no game day, no rest days,
+and 3 sessions on the bodyweight week. It does carry the conditioning session's
+work/rest/intensity text, which mine loses. `docs/printed-weeks/` goes through
+the app's real read path, so it has real days, the fixture, rest days and team
+training — and it is the one that caught the seven impossible exercises, which
+`docs/paper-phone/` lists unflagged while reporting "0 an athlete would not say".
+
 ## The seam item 66 asked for
 
 `renderWeekAsPlainEnglish({ projected, heading, intro?, noCopyIds?, equipmentTags? })`
