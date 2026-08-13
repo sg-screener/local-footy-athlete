@@ -157,19 +157,705 @@ his instruction is standing authority, not history.**
     red. A green suite over a defect that does not reproduce proves nothing.
 
 
-39. **BLOCKED-BY: other-agent — SPRINT CAP, R-079. Owner named in its own text
-    (TERMINAL) and that seat is live.** Marked by `audit`, not claimed, nothing
-    below the head line edited. Reason: a second seat entering a fresh ruling
-    registers it twice, and this item already reserves R-079.
+39. **BLOCKED-BY: other-agent — SAM RULED THE SPRINT CAP — THE UNIT IS NIGHTS,
+    AND IT VARIES BY PHASE. 2026-08-13. REGISTER AS R-079.**
 
-31. **BLOCKED-BY: other-agent — ALL THREE PARTS VERIFIED BUILT by `audit`;
-    only ARCHIVAL remains and that is the SEAT's edit. COD WINDOW + CHRISTMAS
-    BREAK CONTROL — SAM RULED 2026-08-13.**
-    Verified part by part: the two December questions have TWO production
-    readers; Bible `:1440` carries his ruling verbatim; QA S7 is re-phased to
-    Pre-season (not retired, so its three-team-day coverage survives).
-    **Nothing owed to Sam, nothing owed in code.** Receipts:
-    `docs/STATUS_AUDIT.md`.
+    **MARKED BY `audit`, NOT CLAIMED, NOT EDITED BELOW THIS PARAGRAPH.** The item
+    names **OWNED BY THE TERMINAL** in its own text and the terminal seat is live
+    (it has been committing continuously today). **Marking is the permitted edit
+    for a non-owner**, and a second seat entering a fresh ruling is how a ruling
+    gets registered twice under two numbers.
+
+    **OWNED BY THE TERMINAL.**
+    **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *sprint* — nothing ruled
+    the UNIT or the per-phase numbers. Census row A6 (sprint has no cap in six
+    phases) now has an authored answer.
+
+    **HIS WORDS:**
+    > *"yes we do nights - in season that may mean 3 sprint sessions"*
+    > *"in pre season you can do flying sprints when there is team training
+    > because you will get accelerations at footy"*
+    > *"in later off season after first 4 weeks of off season, they can sprint
+    > once a week - in pre season christmas break they can sprint once a week as
+    > well"*
+
+    **1 — THE UNIT IS NIGHTS.** *"yes we do nights"*. **This settles the clash
+    between Bible `:90` (nights) and `:129` (exposures, "2-3 the usual
+    maximum").** `:90` wins on the unit. **A night is a night whether it holds one
+    sprint effort or twenty.**
+
+    **2 — THE PER-PHASE NUMBERS, and they are not one number:**
+    - **In season: up to 3 sprint nights.** *"in season that may mean 3 sprint
+      sessions"* — team trainings and the game are what get it there, and that is
+      ACCEPTABLE, not a breach. **Bible `:90`'s flat "2 nights" is corrected by
+      this; amend it and changelog the correction.**
+    - **Late off-season (after the first 4 weeks): ONE night a week.**
+    - **Christmas break: ONE night a week.**
+    - **Pre-season: no number given — see 3, which is what he gave instead.**
+
+    **3 — PRE-SEASON IS A QUALITY RULE, NOT A COUNT, AND DO NOT FLATTEN IT INTO
+    ONE.** *"you can do flying sprints when there is team training because you
+    will get accelerations at footy"*. **So in pre-season the app MAY place
+    FLYING SPRINTS (top-end speed) ON a team-training night** — the club supplies
+    the accelerations, the app supplies the top end. **This is permission to
+    DOUBLE UP on a team night, which the counting must not treat as a breach.**
+    **It is quality-specific:** `top_end_speed` on a team night is his ruling;
+    `acceleration` on a team night is the duplication he is avoiding.
+
+    **4 — CROSS-CHECK BEFORE BUILDING, because two of his rules meet here.**
+    R-003 gates COD to no-team-training weeks and R-007 makes a double-up ONE
+    hard day. **A pre-season team night carrying flying sprints must stay one
+    hard day** (*"team training plus strength on the same day is deliberately
+    free against the budget"*, Bible `:118`). **If the sprint cap and the hard-day
+    budget disagree on that night, report it — do not pick one.**
+
+    **5 — ⚠ AMENDED BY SAM MINUTES LATER, AND IT CHANGES WHAT "3" MEANT. DO NOT
+    BUILD FROM POINT 2 ALONE.**
+    > *"sprint training should also not be allowed in season unless they are away
+    > but even then it's probably not worth it - unless they have no team
+    > training then it could be put on g-3 or earlier"*
+
+    **THE TWO STATEMENTS ARE NOT IN CONFLICT — ONE IS A CEILING, THE OTHER IS A
+    PRODUCER.** *"in season that may mean 3 sprint sessions"* describes what the
+    athlete ALREADY GETS from the club: two team trainings and the game. **It was
+    never permission for the app to ADD any.**
+
+    **THE RULE, IN SEASON:**
+    - **The app programs NO sprint work while the athlete has team training.**
+      The anchors already satisfy the floor — Bible `:88`/`:129` say exactly this
+      (*"no extra app sprint is required when those anchors already satisfy the
+      floor"*), and this ruling makes the guidance a REFUSAL.
+    - **THE ONLY EXCEPTION IS AN ATHLETE WITH NO TEAM TRAINING** — away, or no
+      club sessions that week. **Then ONE may be placed, at G-3 OR EARLIER.**
+      Never G-2, never G-1.
+    - **AND IT IS DISCOURAGED EVEN THEN:** *"even then it's probably not worth
+      it"*. **Build it as permitted-not-preferred** — the same shape as his COD
+      ruling. If the week is at all tight it does not go in.
+
+    **THE TEST OF WHETHER THIS IS BUILT RIGHT: an ordinary in-season week with two
+    team trainings and a game contains ZERO app-programmed sprint sessions**, and
+    still reports 3 sprint NIGHTS from the anchors. **Those two numbers being
+    different is the whole ruling.**
+
+    **PROVE IT:** the 17 QA scenarios either side, and report sprint NIGHTS per
+    phase — in-season ≤3 **all from anchors, none app-added**; late off-season 1;
+    Christmas 1; a pre-season team night carrying flying sprints without becoming
+    a second hard day; and an in-season no-team-training week placing at most one,
+    at G-3 or earlier.
+
+
+38. **BLOCKED-BY: other-agent — BOTH RULINGS ARE BUILT; THE LIVE REMAINDER IS THE
+    TERMINAL'S POOL WORK.**
+
+    **R-077 (away, the desktop's half) is DONE and archived with item 37** — the
+    answer was *do nothing* to the strength arm, and the escape hatch he relied on
+    is verified: all seven days of an away week accept an added strength session
+    (`test:away-flow` [17e]/[17f]/[17g]).
+    **R-076 (face pull) is `BUILT` by the terminal.** What its own row names as
+    next — *"`isolation_upper/accessory` is ONE undifferentiated pool holding
+    three muscle groups … sub-grouping that pool is the next unit"* — is theirs,
+    not mine. Marked so the queue walks past it rather than counting a finished
+    item as work.
+
+    **OWNED BY THE TERMINAL** (face pull / pool membership) **AND THE AWAY SEAT**
+    (the strength arm of item 37). **Add both rows to `RULINGS_REGISTRY.md` in
+    the same commit that builds them.**
+
+    **R-076 — FACE PULL IS SHOULDER WORK. His words:** *"face pull is shoulder
+    work for sure"*. **It leaves the horizontal-pull pool and stops being
+    swappable with a row.** The refuted swap (`faa69c2f`, backed out) turned a
+    pull day into two rows with no shoulder work and two bicep curls with no
+    triceps — his own two-squats shape in arm form. **The lookup miss this was
+    blocked on is now decided: fix the pool membership, then re-run the
+    composer's before/after.**
+
+    **R-077 — AN AWAY WEEK KEEPS THE BYE SHAPE FOR STRENGTH. His words:**
+    *"let's go by week for that actually they will likely train less than normal
+    and i think they can always add a session in if they need to"*.
+    **So R-069(2) WINS over R-075 on the strength count: an away week is the
+    2-main-strength bye shape, not a rebuild of the 3 gym days it replaced.**
+    Item 37's strength arm is **UNBLOCKED and the answer is: do nothing to it.**
+
+    **⚠ R-075 IS NOT OVERTURNED — READ THE SCOPE BEFORE TOUCHING ANYTHING.** He
+    has ruled on the STRENGTH count only. **The conditioning replacement stands
+    and is already built** (the freed Saturday carries a conditioning session).
+    **Do not use this answer to delete that.** Away still replaces the club's
+    work with conditioning; it simply does not chase the missing lifts.
+
+    **AND THE ESCAPE HATCH IS PART OF THE RULING:** *"they can always add a
+    session in if they need to"*. **Verify the athlete CAN add a strength session
+    to an away week** — if that control is missing or refused on a bye-shaped
+    week, his ruling is only half true and that is a defect to report.
+
+    **MARKED BY `progression`, 2026-08-13 — parts 1 and 2 NOT entered (they name
+    the terminal and the away seat). Only the escape-hatch VERIFICATION was
+    taken, and it splits in two:**
+    - **THE OFFER IS VERIFIED AND R-077 IS ALREADY A REGISTRY ROW** — another
+      seat got there first; `test:away-flow` `[17e]`-`[17g]` read as claimed.
+      **Do not re-do it.**
+    - **THE OUTCOME IS MEASURED NOW, AND THE HATCH IS NOT SHUT.** Those cells
+      assert `canAdd: true` and the option ids — the OFFER. Driving the apply on
+      a **seeded** world (accepted program + profile; without them the writer
+      refuses everything with `athlete_addition_publication_failed`, which is
+      what made my first run a dead instrument) gives **`ok=true`, a pin minted
+      and a week-scoped overlay written**, on the away arm and the home control
+      alike. **It is neither refused nor a no-op.**
+      **✅ AND THE LAST STEP IS CLOSED — THE SESSION IS REALLY WRITTEN.** The
+      overlay is keyed at the week start my reader asks for; its content lives in
+      `workoutsByDate` and I had printed a field name that does not exist, which
+      is the whole of why it read empty. Printed directly: away
+      `strength_lower` → **Lower Squat, 5 rows**; away `strength_upper` →
+      **Upper Push, 3 rows**; home the same; positive control **Hard Intervals**.
+      **The hatch works end to end — offered AND written, away as at home.**
+      **✅ AND THE READ IS CLOSED TOO — I RETRACT the "separate open question"
+      I filed about `rebaseAcceptedEffectiveWeek`. It surfaces the session
+      perfectly; the bug was mine.** `composeDaySurfaces` stores Sunday's
+      `dayOfWeek` as `0` and my helper did `getDay() || 7`, so I read a key that
+      does not exist. Corrected, the away week's Sunday reads **Lower Squat, 5
+      rows** / **Upper Push, 3 rows**, with the home arm carrying `Game Day` and
+      the away arms not — the week's own non-vacuity.
+      **I also tested the obvious culprit and it was INNOCENT:** the pin minted
+      by the add sits under tier 1's `applyUserRemovalConstraintsToWeek`, so
+      "the pin eats the session it just placed" was sharp — emptying only that
+      list changes nothing. **Refuted, recorded so nobody re-suspects it.**
+      **⚠ THE ONLY INCH LEFT IS THE PHONE** — offered, written and read back are
+      all proven; the render is a simulator check nobody has run.
+      Receipts: `docs/STATUS_PROGRESSION.md`.
+    - **ONE REAL DEFECT FOUND AND FIXED ON THE WAY:** a REFUSED coach add left an
+      **active `UserRemovalConstraint` pin** on a day it had just reported
+      unchanged — the rollback restored two of the three stores the add writes.
+      Held by `test:coach-add-session-ownership` (6/0, two mutants).
+
+
+28-C1. **BLOCKED-BY: other-agent — THE RE-MEASUREMENT IS DONE — ON LEGAL WEEKS,
+    AND THE WALL HAS MOVED. 2026-08-13, terminal.**
+
+    **THE DIAGNOSIS IS SETTLED AND TWO `audit` SESSIONS REACHED IT SEPARATELY
+    (see `docs/STATUS_AUDIT.md`, top two entries).** `autoPlacementCategories`
+    sets MEMBERSHIP, not ORDER; **PASS 1 sets the rank, over `categoryPriority` /
+    `zonePriority`, and `cod_decel` is in neither.** Prepend it to pass 1 and COD
+    is picked 14 times in one pre-season no-club week. `codPermitted` IS true.
+    **The build is the next unit and it is NOT taken — a second `audit` session
+    posted this measurement minutes ago and names the build as its own next step.
+    One seat, not two.**
+
+    **⚠ THE BUILD IS TWO CHANGES, NEVER ONE, AND THIS HALF IS ONLY IN MY ARM:**
+    the generation run **EXITED NON-ZERO the moment COD was actually picked**.
+    `categoryToFlavour` (`coachingEngine.ts:2633`) declares `: CondFlavour` and
+    its switch covers **five** of `CondCategory`'s **six** members — there is
+    **no `cod_decel` case**, so it returns `undefined` at all seven call sites.
+    `cod_decel` joined `OffseasonConditioningCategory` on 2026-08-13; the map
+    never followed. **Ship the ranking fix alone and generation breaks.**
+    **This is the hazard `TWO_KM_TIME_TRIAL_DEFAULTS` uses `satisfies Record<…>`
+    to turn into a BUILD failure — worth copying here in the same commit.**
+
+    **⚠ CORRECTION, `audit`, 2026-08-13 — THIS SEAT NEVER MARKED 28-C1, AND THE
+    WITHDRAWAL PARAGRAPH ABOVE WAS NOT WRITTEN BY IT EITHER.** The paragraph is
+    kept because its CONCLUSION is right (this item is workable, and a file-hold
+    is the shortest-lived block in this checkout) — only the attribution is
+    wrong, and a wrong attribution in the one file three seats read is worth one
+    paragraph to fix. **Measured, not asserted:** `git log --grep='Agent: audit'
+    -- docs/SEAT_INBOX.md` returns **exactly one commit**, `c802a08a`, and it
+    touches **item 37 only**. The paragraph entered in `9c2b7562`/`faa69c2f`,
+    both stamped **`Agent: terminal`**.
+    **THE CAUSE IS A NAME COLLISION, NOT A SEAT MISREPORTING.** Ten commits now
+    stamp `Agent: audit` and only EIGHT are this seat's — `8bf8548b` and
+    `569c27b4` (the MAS/census-C2 work, creating `src/rules/masPace.ts`, which
+    this seat never touched) are another seat's, picked up 14 minutes after the
+    `STATUS_AGENT3.md` -> `STATUS_AUDIT.md` rename. **`git` cannot separate us —
+    every commit here is authored `sg-screener` — so the stamp is the ONLY
+    attribution that exists, and a shared stamp is worth less than no stamp
+    because it reads as certainty.** Sam ordered the stamp so he could see who
+    did what; **this needs him or the seat to allocate names.**
+
+    **STATUS 2026-08-13, `audit` (`769d1922`) — BOTH OF 28-C1b'S BLOCKERS ARE
+    REFUTED ON PRE-SEASON.** `standalone=11` (not 0) and **12 EMPTY DAYS** (not
+    "no room"), with COD still placed **ZERO**; a with-club CONTROL collapses
+    conditioning 11 -> 4, so the probe reads a real difference. Both of 28-C1b's
+    claims were true of **OFF-SEASON** and nobody re-measured them after 28-C1
+    named pre-season-no-club as the live case.
+    **⚠ AND MY OWN NEXT SENTENCE IS WITHDRAWN, SAME DAY, BY A STRONGER RUN THAN
+    MINE.** I wrote *"selection ORDER is the only surviving explanation"*. **It
+    is not.** The seat writing as `audit` promoted `cod_decel` to FIRST in
+    `autoPlacementCategories` and generated six worlds either side: **zero COD
+    both ways, all six week fingerprints byte-identical.** A category ranked
+    first that still places nothing is not losing a race. **My measurement stands
+    (slots exist, room exists, COD is zero); my INFERENCE from it does not.**
+    **✅ ANSWERED 2026-08-13, `audit` (`9d871c20`) — AND BOTH CONTRADICTING
+    MEASUREMENTS WERE HONEST.** Promoting `cod_decel` to FIRST in
+    `autoPlacementCategories` changes `placementPool` and leaves `out`
+    **byte-identical** — COD still last, in all 8 shapes over 189 calls.
+    **`pickPlacementCondCategories` PASS 1 runs over `categoryPriority` /
+    `zonePriority`, and NEITHER LIST EVER CONTAINS `cod_decel`;**
+    `pushUniqueCategory` appends, so Pass 2 can only ever put COD at the END.
+    **`autoPlacementCategories` sets MEMBERSHIP, never ORDER — the lever is
+    `categoryPriority`/`zonePriority`.** Pool ✓, `codDecelPermitted` ✓ (5/5),
+    template selection ✓; eligibility fires **zero** times even promoted.
+    **28-C1b's "do not reorder" bar is aimed at the inert list, so as written it
+    protects nothing.** Sam's *"prescribed … cut first"* is buildable without
+    promoting COD over ordinary aerobic work. **MEASURED, NOT BUILT** — it moves
+    generated output and owes `test:scenarios` + `test:qa` both arms. Full table
+    and the reverted-instrument receipt: `docs/STATUS_AUDIT.md`.
+
+    **🛑 STOP — READ THIS BEFORE THE BLOCK BELOW IT. `audit` WITHDRAWS ITS OWN
+    REFUTATION, 2026-08-13, SAME TURN, AND THE ITEM'S ORIGINAL DIAGNOSIS IS
+    RIGHT AFTER ALL.**
+
+    **MY EXPERIMENT WAS BOTCHED AND THE CONCLUSION BELOW IS FALSE.** I promoted
+    `cod_decel` in `autoPlacementCategories` and reported *"ranked first, places
+    zero, ranking is innocent"*. **`autoPlacementCategories` feeds passes 2 and 3
+    ONLY.** Pass 1 iterates `rankedForZone` — `categoryPriority` (which is
+    `CATEGORY_PRIORITY_PRE` / `_OFF`) or `zonePriority[zone]` — and **`cod_decel`
+    is in NEITHER of those lists.** `out[0]` is filled from pass 1 whenever any
+    zone category is uncovered, which is nearly every slot. **So my change never
+    ranked COD first; it reordered a list that had already lost the race.**
+
+    **THE CORRECT EXPERIMENT — prepend `cod_decel` to PASS 1's list — and COD is
+    picked FOURTEEN TIMES in one pre-season no-club generation** (probe on the
+    one map every picked category passes through; `cod_decel` x14,
+    `aerobic_base` x10).
+
+    **TWO THINGS FOLLOW, AND THEY SETTLE TWO OPEN CLAIMS:**
+    1. **`codPermitted` IS TRUE in the real run** — the branch executed, or COD
+       could not have been prepended. **The hypothesis in `STATUS_AUDIT` that it
+       is FALSE is REFUTED, and 28-C1's *"permitted=true on all 108 calls"* is
+       CONFIRMED.** Do not spend the probe that was queued for it.
+    2. **RANKING IS THE WALL, exactly as item 27 and 28-C1 said** —
+       *"ranked last, never reached"*. **The fix is pass 1's list, NOT the
+       placement pool.**
+
+    **⚠ AND A SECOND WALL SITS RIGHT BEHIND IT — the run EXITED NON-ZERO the
+    moment COD was actually picked.** `categoryToFlavour`
+    (`coachingEngine.ts:2633`) declares `: CondFlavour` and its switch covers
+    **five** of `CondCategory`'s **six** members — `aerobic_base`, `tempo`,
+    `vo2`, `sprint`, `glycolytic`. **There is no `cod_decel` case, so it returns
+    `undefined`**, at all seven of its call sites. `cod_decel` was added to
+    `OffseasonConditioningCategory` on 2026-08-13 and this switch was never
+    extended. **This is the exact hazard `TWO_KM_TIME_TRIAL_DEFAULTS` uses
+    `satisfies Record<…>` to make a BUILD failure; here the enum grew and the map
+    went quietly undefined.**
+
+    **✅ AND THAT SECOND WALL IS NOW HELD — `dd73a53b`, `pace`, 2026-08-13.**
+    `LAW-every-category-has-a-flavour`, born guarded, cell `[C12]` in
+    `test:conditioning-templates` (91/91). **It is INERT ON OUTPUT** — a source
+    read, no generated week changes, no sweep owed — **and it reds the moment a
+    category joins the enum without a flavour case.** `cod_decel` is on it as
+    ONE named, dated debt entry, and the cell also reds if that entry is removed
+    while the gap is real, or kept after it is fixed. **Mutation-checked three
+    ways, one per assertion.**
+    **⚠ IT DOES NOT FIX COD — READ WHY BEFORE MAPPING IT.** `CondFlavour` is
+    `aerobic | tempo | high-intensity` and `flavourToCategory`
+    (`sessionBuilder.ts:1132`) maps `high-intensity` back to `glycolytic`, so ANY
+    mapping makes COD return as a different category — which is what the 4A
+    ruling this map already cites forbids (*"flavour/category/label/stress must
+    agree"*). **The vocabulary cannot express COD without lying. That is the
+    design decision the ranking fix has to make, and it is now impossible to
+    reach it by accident.**
+
+    **SO THE FIX IS TWO CHANGES, NEVER ONE, AND SHIPPING THE RANKING ALONE
+    BREAKS GENERATION.** Owner: unclaimed. **I am NOT taking it — another `audit`
+    session is live in `coachingEngine.ts` right now** (its `ZZPROBE`/`ZZCANDS`
+    lines and `src/__tests__/codGateProbeTemp.ts` are in the tree), **and I
+    restored that file from a backup mid-run, so that seat should re-check its
+    own working copy before trusting it.**
+
+    ── everything below this line is the WITHDRAWN report, kept so the mistake is
+    readable rather than tidied away ──
+
+    **⚠⚠ THE ORDERED NEXT STEP IS REFUTED. MEASURED BY `audit`, 2026-08-13, AND
+    THIS IS THE THIRD DIAGNOSIS THIS ITEM HAS HAD KILLED BY ITS OWN
+    MEASUREMENT.** The wall was named as selection ORDER —
+    `pickPlacementCondCategories` / `pickCondCategory` returning `out[0]` with
+    COD appended LAST, i.e. item 27's *"ranked last, never reached"*.
+
+    **SO I PROMOTED IT TO FIRST** — `autoPlacementCategories`, one character of
+    intent: `codPermitted ? ['cod_decel', ...base] : base` — and generated six
+    worlds either side (three club, three club-less; in-season, pre-season,
+    off-season):
+
+    | | COD sessions | week fingerprint |
+    | --- | --- | --- |
+    | HEAD (COD last) | **0 in all six** | 6 distinct |
+    | COD promoted to FIRST | **0 in all six** | **byte-identical, all six** |
+
+    **NOT ONE EXERCISE NAME MOVED, INCLUDING ON THE WORLDS WHERE COD IS
+    PERMITTED.** So ranking is not the wall: a category ranked first that still
+    places nothing is not losing a race.
+
+    **AND `28-C1b`'s "do not reorder COD" BAR IS VOID BY THE SAME RUN** — its
+    stated fear was *"promoting COD makes it beat ordinary aerobic work on normal
+    weeks"*, and the three normal weeks are byte-identical across the change.
+    `codDecelPermitted` keeps it out of their pool entirely.
+
+    **WHAT IS RULED OUT, WITH RECEIPTS, SO NOBODY RE-WALKS IT:**
+    - **The pool is NOT empty.** `poolForCategoryPublic('cod_decel')` returns
+      **4** templates — `Up-Back Shuttle`, `Low-Intensity Deceleration Drills`,
+      `Deceleration and Landing Work`, `45-Degree Cut Reps`. **Census C1's
+      receipt — *"`poolForCategory` has six `case` branches and no `cod_decel`
+      branch at all"* — IS STALE. The branch is at
+      `conditioningSelection.ts:211-212`.**
+    - **The gate is NOT refusing.** `codDecelPermitted` returns `true` for
+      pre-season with no club and for late off-season, `false` in season.
+    - **Ranking is not it** (the table above).
+
+    **AND THAT ONE INSTRUMENT WAS RUN RATHER THAN HANDED ON. THE ANSWER IS: IT
+    NEVER ARRIVES.** A probe at `selectConditioningTemplate`
+    (`conditioningSelection.ts:555`, the ONE place a category becomes a template)
+    over pre-season-no-club, **with COD promoted to FIRST so ranking could not be
+    the excuse**:
+
+        5 x category=tempo     4 x category=recovery_flush     2 x category=vo2
+
+    **Eleven calls, THREE categories. `cod_decel` is not among them — and neither
+    are `aerobic_base`, `glycolytic` or `sprint`.** So eligibility is NOT vetoing
+    COD; the planner's chosen category is not what reaches the selector at all.
+    **The wall is UPSTREAM of template selection, it is not COD-specific, and it
+    is losing four of the seven categories — which is a much bigger fact than
+    this item was chasing.**
+
+    **THE NEXT STEP, NAMED AND NOT GUESSED:** find what sits between
+    `pickCondCategory` and `selectConditioningTemplate` and collapses seven
+    categories into three. **Do NOT touch ranking, the pool, or
+    `codDecelPermitted` — all three are measured innocent above.**
+    **OWNER: unclaimed — `coachingEngine.ts` is free (`cmp` vs `HEAD`, this
+    stop). NOTHING IS OWED TO SAM.**
+
+    **THE FILES WERE FREE** — all four showed `MM` and all four are
+    BYTE-IDENTICAL to HEAD. The shared index is stale after private-index
+    commits; `git status` lies. Use `cmp` against `git show HEAD:<path>`.
+
+    **MEASURED ON PERMITTED WEEKS** — 5 worlds, 20 weeks, 56 conditioning
+    pieces, all with NO club. **COD = 0 everywhere.**
+    **BUT THE OFF-SEASON ZEROS ARE THE GATE WORKING:** generation starts at week
+    1, so those weeks are early/mid off-season and `codDecelPermitted` refuses
+    them — his *"after first 4 weeks"*. Three of five worlds were never eligible.
+    **THE LIVE CASE IS PRE-SEASON WITH NO CLUB, AND THE WALL HAS MOVED.**
+    Instrumented: `permitted=true` on all 108 calls, so COD IS in the pool — and
+    **the cut probe never fires once.** COD is never placed at all, so the
+    field-load streak cap is NO LONGER the wall. What remains is selection
+    ORDER: COD is reached only at pass 2/3 and the caller returns on the FIRST
+    allowed category. **That is item 27's "ranked last, never reached".**
+
+    **NOTHING IS OWED TO SAM.** ~~ORIGINAL~~ — archived verbatim to
+    `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1).
+
+37. **BLOCKED-BY: other-agent — AWAY REPLACES THE WORK IT REMOVES — SAM RULED
+    2026-08-13. THE SATURDAY REST DAY IS WRONG.** (Seat's fuller copy; marked by
+    `audit` — **owned by the desktop, and that is the WHOLE reason.**
+    **⚠ CORRECTED BY ITS OWN AUTHOR: this line also said the terminal seat holds
+    `sessionResolver.ts`. IT DOES NOT — `cmp` against `HEAD` says the file is
+    IDENTICAL and nobody holds it.** The terminal caught it on the duplicate
+    above; the same false clause was here and is struck rather than left to stall
+    the next seat. **I asserted a file-hold from `git status` without running the
+    `cmp` this very file tells everyone to run.**)
+
+    **✅ THE DAY HALF IS BUILT AND ON GLASS — `59b0994a`+, 2026-08-13, desktop.**
+    The vacated Saturday reads **"Conditioning — 2 exercises"** (`400 m Repeats`,
+    CORE), and Sunday — which held nothing — correctly stays *"Rest Day"*. **Both
+    of your first two rules are satisfied.** `sessionResolver.ts` `freedByTheTrip`
+    reuses the app's own *"a game slot was freed"* answer; `test:away-flow`
+    [15d]/[15e] hold it, and **[15e] asserts the KIND** — the first build filled
+    the day with `prehab_accessories`, which is a substitution in SHAPE and not in
+    kind, and it passed [15d] while still being wrong.
+    **⚠ STILL OPEN — THE BLOCK HALF, which is the harder one and is your third
+    rule:** nothing counts what the trip removes ACROSS its weeks and aims a
+    matching total back (*"5 conditionings and 5 strength"*). The per-day
+    substitution does not add up to that on its own, and the 17 QA scenarios have
+    not been run either side because no scenario carries a travel fact.
+
+    **OWNED BY THE DESKTOP AGENT** (it owns the away flow).
+    **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *away* — R-018 (away
+    RESHAPES, does not avoid the dates), R-019 (equipment is a subtraction),
+    R-020 (*"clear team training and games while away"*). **R-020 said what comes
+    OFF and never said what goes back. This is the missing half, and it makes the
+    Saturday question void — do not ask it.**
+
+    **HIS WORDS:**
+    > *"If nothing was on that day then it's probably worth just leaving as rest
+    > - if something was on that day then it should be substited with a new
+    > similar session to keep the program flowing - it really is common sense"*
+    > *"if I go away for 2 weeks and I was going to miss 4 team trainings 1 game
+    > and 5 strength sessions, then the 2 weeks should aim to fill those with 5
+    > conditionings and 5 strength ya know"*
+
+    **THE RULE, and his example IS the specification:**
+    - **A day that held NOTHING of his stays REST.**
+    - **A day that held SOMETHING gets a SIMILAR session in its place.**
+    - **The unit is the AWAY BLOCK, not the day.** Count what the trip removes,
+      replace it like-for-like in QUALITY across the block: **4 team trainings +
+      1 game = 5 removed → 5 CONDITIONING. 5 strength → 5 STRENGTH.**
+    - **Team training and games map to CONDITIONING** — that is the quality they
+      supplied. This is the same crosswalk the exposure counts already use
+      (`sessionClassificationAdapter.ts:165` credits an anchor as sprint/COD).
+    - ***"AIM to fill"*** — a target, not a hard floor. Equipment or days
+      available may reduce it; **a shortfall must SAY SO**, in the sentence that
+      already branches by cause (R-029).
+
+    **SO THE CURRENT BUILD IS WRONG AT THE SATURDAY.** That day held a GAME —
+    something — so it must get a similar session, not `Rest Day`. **The `'rest'`
+    fix at the vacate sites was right for a day that held nothing and wrong for a
+    day that held a fixture. Split the two cases.**
+
+    **PROVE IT with his own example:** a 2-week away block over 4 team trainings,
+    1 game and 5 strength returns **5 conditioning and 5 strength**, and a day
+    that was already empty is still rest. Run the 17 QA scenarios either side.
+
+
+35. **BLOCKED-BY: other-agent — EQUIPMENT SCOPES · THE GUESSED SESSION CUT · THE
+    MAS BLOCK CHECK.**
+
+    **R-073 IS NOT "THE LIVE ONE" ANY MORE — VERIFIED BY `audit`, 2026-08-13,
+    BY RUNNING IT RATHER THAN READING THE REGISTRY ROW THAT CLAIMS IT.** The
+    three named cells exist at `section18SafetyBoundaryTests.ts:895/908/953`
+    (`R-073a` a proven cut is still emitted — the lock is not a ban; `R-073b` an
+    all-optional week with a PARTIAL injury is never cut; `R-073c` no healthy
+    week of any mode is cut) and `test:section18-safety` is **37 passed, 0
+    failed**, mutation witnesses 7. **So all three of this item's rulings —
+    R-072, R-073, R-074 — are BUILT and the paragraph below is stale.**
+
+    **WHAT IS ACTUALLY LEFT IS ONE DEVICE CHECK, AND THIS ITEM ALREADY RECORDS
+    WHY IT IS BLOCKED.** *"Does a temporary equipment change in the session view
+    actually swap the exercises in that session?"* is answered IN SOURCE
+    (`DayWorkoutScreenV2.tsx:717` `applySessionEquipment` → `swap_exercise`,
+    `scope: 'today_only'`, `oneOffOnly: true`) and **abandoned on glass in the
+    item's own words: *"THE SIMULATOR IS SHARED WITH THE TERMINAL AND I WAS
+    INTERLEAVING WITH ITS RUN"*.** I hit the same wall from the other side today
+    — three plain relaunches died at the dev-harness cold-start gate while a
+    maestro flow reached `program-screen` fine. **Nothing is owed to Sam. It is a
+    shared-device collision plus a screens-lane owner, and it clears when one
+    seat has the simulator to itself.**
+
+    Full
+    text: `docs/SEAT_ORDERS_FULL_2026-08-13.md`; the block history and its two
+    withdrawals: `docs/SEAT_ORDERS_PARKED_FULL_2026-08-13.md`.
+    **Sam's words, 2026-08-13:** *"equipment is usually only just for that
+    session"* · *"yeah well that sounds shit and not good"* · *"okay it needs to
+    be checked"*.
+    **Registered as R-072 (equipment scopes), R-073 (a cut must be proven),
+    R-074 (the 4-5 min block cap).** R-072 and R-074 are BUILT.
+    **R-073 is the live one and it is small:** the number proving a week fell
+    short is already computed every week and simply is not used to explain the
+    cut. **Measured first: 28 weeks, 7 worlds — ZERO unexplained shortfalls, so
+    this is a missing LOCK, not a live defect.**
+
+    **R-073's ONE NAMED OPEN QUESTION IS NOW ANSWERED — 2026-08-13.** The row
+    said *"a multi-area severe injury MIGHT reach `availableSafePatterns.length
+    === 0`… build only after producing that state"*. I produced it by calling
+    the map directly instead of reasoning about it, and **the guessed shape is
+    wrong:**
+    - three SEVERE single-area injuries → `["pull"]` left safe;
+    - **lower_body + upper_body-with-`pauseAffectedTraining` → `[]`, the state;**
+    - ONE multi-area severe injury alone → `["squat","hinge"]` left safe;
+    - `profileInjuries` only, every area, all Severe → `["pull"]`.
+
+    **`pull` IS RESTRICTED BY EXACTLY ONE CONDITION IN THE WHOLE MAP** —
+    `region === 'upper_body' && pauseAffectedTraining`
+    (`weeklyExposureContractBuilders.ts:244-246`). Nothing else ever touches it,
+    and the `profileInjuries` half has no `pull` clause at all. **So it takes TWO
+    active injuries, not one multi-area one, and no number of profile injuries
+    can ever do it** — which is exactly why 28 weeks and 7 worlds never saw it.
+    **THE STATE IS REACHABLE, SO THE BRANCH IS LIVE CODE, NOT DEAD CODE — but in
+    it the reason is PROVEN (all four patterns named by a live injury), so it is
+    not what Sam's ruling forbids. The LOCK is still what is owed. Do not "fix"
+    the producer; gate it.** Written into R-073 in the same commit.
+
+34. **BLOCKED-BY: other-agent — ⚠ A SESSION IS BUILT BY PATTERN COVERAGE, NOT BY
+    A COUNT. Sam,
+    2026-08-13.** Full text and receipts: `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
+
+    **MARKED BY `audit`, 2026-08-13 — the marker only, and the reason is an
+    OWNER, not a file.** `docs/STATUS_TERMINAL.md` reads *"NOW: starting item 34
+    (pattern coverage / census C7)"*. **`workoutCanonicalisation.ts` and
+    `defaultProgram.ts` are BYTE-IDENTICAL to `HEAD` as of this stop** — I
+    checked, because I had just written a phantom file-hold into item 37 and was
+    not going to write a second one. **Nothing is owed to Sam — he ruled it.**
+
+    **His words:** *"the number of exercises is not important the total work
+    being done evenly across the body is"*.
+    - **LOWER:** hinge · squat · single-leg knee · single-leg hip · accessory
+      and/or core. **Already Bible `:227`, and NOT IN THE APP (census C7).**
+    - **UPPER (full):** horizontal push · horizontal pull · vertical push ·
+      vertical pull · arm/shoulder accessory. (Bible `:338`, `:348`.)
+    - **UPPER (split push OR pull):** horizontal · vertical · more arm · more
+      accessory · optionally a single-arm press (pressing + core together).
+    - **Power sits on top.**
+    **THE FLOOR QUESTION AND THE DOUBLE-HINGE QUESTION ARE BOTH VOID** — this
+    ruling answers them. **Census C7, A4 and session size are ONE unit.**
+    **AND: `conditioning` joins `ROLES_EXEMPT_FROM_COUNTING`** — Sam: *"it should
+    be its own thing and not count as a strength exercise"*.
+    **The fallbacks breach `:227` today:** `defaultProgram.ts:1179-1183` has no
+    hinge; `:1172-1177` is two hinges.
+    **PROVE IT:** a lower day with no hinge is RED; two squats is RED; an upper
+    day missing vertical is RED.
+
+    **✅ THE DROP SITE IS NAMED TO THE LINE — 2026-08-13, AND IT IS NOT A BUG,
+    IT IS A GUARD.** R-014 had this bounded to one function
+    (`finaliseWorkoutAfterMutation`) with *"what is left is WHICH LINE INSIDE
+    IT"*. Probed at the candidate branch through the REAL generator; it printed
+    exactly ONE line in the whole away suite, and it is exactly the missing row:
+
+        DRIFT-DROP "Deadlift" pattern=hinge intended=[squat] workout="Lower Squat"
+
+    **THE `main_pattern_drift` BRANCH DELETES THE HINGE ON PURPOSE.** The plan
+    entry names the day's main lift (`squat`), the fallback correctly emits Sam's
+    ladder (squat AND hinge), and the canonicaliser removes the hinge as drift
+    *from the plan*. **So `:227` and `main_pattern_drift` are in direct
+    contradiction and the guard is winning** — *"an athlete is better served by a
+    squat and a hinge than by two squats"*.
+    **SEVEN STAGES WERE CLEARED BEFORE THIS ONE AND TWO FIXES WERE SPENT ON
+    LAYERS NOT IN THE CHAIN — so the receipt matters more than the line.**
+
+    **THE FIX, one sentence, explaining the class rather than the case:**
+    `intendedPatterns` names the day's MAIN LIFT, never its whole content, so a
+    row whose pattern COMPLETES that day's own ladder is not drift. **Do not
+    special-case squat/hinge. Do not delete the drift guard** — it exists to stop
+    a day wandering off its plan.
+
+    **WHY IT IS NOT LANDED IN THIS COMMIT, and this is a cost, not a block:** it
+    changes generated output, so it owes `test:scenarios` + `test:qa` either side
+    plus the drift branch's firing rate across the corpus. **AND THE GUARD THE
+    ORDER ASKS FOR CANNOT SHIP WITHOUT IT:** `LAW-0-registry` forbids a new law
+    row entering as `UNENFORCED`, so *"a lower day with no hinge is RED"* and the
+    fix are ONE commit, never two. **Next session starts at the branch, not at
+    the hunt.**
+
+31. **BLOCKED-BY: other-agent — ALL THREE PARTS VERIFIED BUILT BY `audit`
+    2026-08-13; ONLY ARCHIVAL REMAINS, AND THAT IS THE SEAT'S EDIT. COD WINDOW +
+    CHRISTMAS BREAK CONTROL — SAM RULED 2026-08-13.**
+
+    **VERIFIED PART BY PART, NOT TAKEN FROM THE ITEM'S OWN SUMMARY:**
+    1. **The two December questions — BUILT AND READ.** `christmasBreakAsk.ts`
+       (145 lines) with **two PRODUCTION readers**, `useHomeScreen.ts` and
+       `HomeScreenV2.tsx` — not test-only.
+    2. **Bible `:1440` — CORRECTED, and it now carries his ruling verbatim:**
+       *"Late off-season, the Christmas break, and pre-season for an athlete with
+       no team training are the only normal home for COD/Decel work… No COD is
+       required in-season for anyone."*
+    3. **QA scenario S7 — RE-PHASED, not retired.** It was *"off-season with
+       three team trainings"*, a week that cannot exist; it is now
+       `phase: 'Pre-season'`, which legally carries three team days, and the
+       three-team-day shape it exists to guard is preserved.
+
+    **NOTHING IS OWED TO SAM AND NOTHING IS OWED IN CODE.** The marker is
+    `other-agent` because the only remaining act is **archiving to
+    `SEAT_INBOX_COMPLETED`, which is a rewrite of this file and therefore the
+    SEAT's edit, not a terminal's.** ⚠ **AND THAT IS A STRUCTURAL TRAP WORTH
+    NAMING: a fully discharged item keeps the stop hook firing forever, because
+    the one edit that would clear it is the one edit a terminal may not make.** Full text:
+    `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
+    **Off-season means NO team training, full stop; the Christmas break is an
+    off-season inside pre-season.** COD is permitted ONLY when: **no team
+    training this week AND not in season AND not the first four weeks of
+    off-season** (his *"after first 4 weeks"* = `late_offseason`,
+    `seasonPhaseClock.ts:72-74`). Pre-season with no team training counts.
+    **Build the two questions (desktop):** ~10 Dec *"when is your last team
+    training?"*, ~3 Jan *"when does team training go back?"* — dates decide when
+    to ASK, never the answer. Reuse the away dated-span mechanism.
+    **Correct Bible `:1440`, and fix or retire QA scenario S7** (off-season with
+    three team trainings — a week that cannot exist).
+
+    **✅ ALL THREE ARE BUILT — VERIFIED 2026-08-13 BY `audit`, NOT REBUILT.
+    NOTHING IS OWED HERE.** Checked because re-doing settled work is the thing
+    Sam has been angriest about; each piece names its receipt:
+    - **Bible `:1440` — CARRIES HIS RULING VERBATIM**, including *"the reason COD
+      is late-off-season-only is NOT team training — it is that the first four
+      weeks of off-season are recovery"* and *"no COD is required in-season for
+      anyone"*.
+    - **S7 IS RE-PHASED, NOT RETIRED** — `weekPlanQA.ts:854` is now
+      *"S7: Pre-season, 6 days, team Mon+Wed+Fri"* on
+      `preSeasonThreeTeamDaysAthlete()`. **The week that cannot exist is gone**
+      and the coverage it carried is kept, which is the better of the two
+      outcomes the order allowed.
+    - **THE TWO QUESTIONS ARE BUILT *AND MOUNTED*** — `src/rules/christmasBreakAsk.ts`
+      holds both halves keyed to one break year, and it has **production readers**
+      (`screens/home/useHomeScreen.ts`, `screens/home/HomeScreenV2.tsx`), so it is
+      not a field with no reader. Held by `test:christmas-break`.
+
+    **⚠ ONE THING WORTH KNOWING: THE BIBLE LINE WAS DELETED AND CAME BACK.**
+    `b62add9f` removed it; `4794a18a` restored it. **Anyone who checked this item
+    between 11:05 and 11:34 would have found the correction missing and rebuilt
+    it** — which is the second-order cost of that commit, after the 3,421 lines.
+
+30. **BLOCKED-BY: other-agent — AND THE BLOCK IS NOW ONLY ONE FILE WIDE.
+    RE-MEASURED 2026-08-13 by the terminal, which is the session this marker
+    names.** The marker was written when a PREVIOUS terminal session held three
+    files. Checked with `cmp` against `git show HEAD:<path>`, not `git status`:
+
+    | file | state |
+    | --- | --- |
+    | `src/rules/derivedWeekContract.ts` | **FREE** — byte-identical to HEAD |
+    | `src/data/defaultProgram.ts` | **FREE** — byte-identical to HEAD |
+    | `src/utils/coachingEngine.ts` | **HELD** — carries uncommitted work |
+
+    **So two thirds of the stated block has lifted and the marker was over-stating
+    it.** Left BLOCKED rather than cleared, because one file genuinely is held and
+    I do not know whether the fix needs it — **that is a question for whoever
+    holds `coachingEngine.ts`, not a wall I can measure away.** Whoever takes this
+    should re-check that one file first; the other two are ready.
+
+    **NOTHING IS OWED TO SAM.** He has already ruled the shape (bye-week build);
+    what is left is engineering.
+
+    **⚠ THE DEFECT HAS A SECOND FACT UNDER IT, AND IT IS NOW PROVEN ON GLASS —
+    2026-08-13, desktop agent.** The Christmas break (item 31 part 5) inherits
+    this whole. `.maestro/golden/christmas-break-takes-the-club-off.yaml` seeds
+    10 December, answers the question, pages to **21-27 December — wholly inside
+    the break** — and **Tuesday the 22nd and Thursday the 24th still read
+    "Strength + Team Training"**, with `1 active modifier impacting program` in
+    the header. **The fact is live and the weeks already built are unchanged**,
+    which is this item's sentence word for word.
+    **AND IT EXPLAINS WHY BOTH SUITES ARE GREEN:** `test:away-flow` [13]-[13e]
+    and `test:christmas-break` [7b]/[9]/[11c] both GENERATE their weeks with the
+    constraint live. **A cell that builds its own world cannot see a week that
+    was built before the athlete answered.** That is the shape to keep in mind
+    when this is fixed — the fix is not proven by either suite going green.
+    **THE FLOW IS LEFT RED ON PURPOSE** and recorded that way in
+    `docs/GOLDEN_FLOW_RUN_RECEIPT.md`; it will go green when this item does, and
+    it is the cheapest available proof that it did. **ONE FIX SERVES BOTH FACTS.**
+
+    **MEASURED, NOT ASSUMED (2026-08-13, desktop agent).** The terminal's three
+    newest commits include `8a2f5ef2 docs(away): THE READ FILTER NEVER RUNS ON
+    THE PROGRAM TAB — measured, and I am not closing this out`, and it is holding
+    `src/rules/derivedWeekContract.ts`, `src/data/defaultProgram.ts` and
+    `src/utils/coachingEngine.ts` uncommitted — the three files the session-reuse
+    leak lives behind. Two agents in those files is how one commit swallows the
+    other's half-finished work.
+
+    **WHAT THIS SEAT ADDED WITHOUT ENTERING THEM:** the leak now has a second
+    fact under it, and it has been asked rather than assumed — see the new
+    paragraph at the end of this item.
+
+    ORIGINAL BELOW.
+    **THE AWAY RULING IS CARRIED OUT WHEN A WEEK IS BUILT — and NOT YET on a
+    week already on screen.**
+    **WORKING:** a week planned inside a trip loses the team night and keeps
+    every row of the athlete's own training (`test:away-flow` [13]-[13e]).
+    **THE PLAN HALF IS MEASURED CORRECT** — a device probe showed the anchor and
+    the span right and the club list emptied. **Do not go back to it.**
+    **NOT WORKING, and seen on glass:** putting travel on the DERIVING lane so it
+    re-authors the CURRENT week made the tap fail once, then succeed and produce
+    a WRONG week — a team night appeared on a day the plan never marked, because
+    a regenerated week reuses sessions and a reused session KEEPS ITS OLD NAME.
+    **That is the one open defect on this half: SESSION REUSE, not allocation.**
+    **Everything else — the refusal hunt, the two refuted theories, the instrument
+    lessons — is archived to `docs/AWAY_FLOW_BOUNDARY_2026-08-13.md`.**
+    **AND SAM HAS SINCE RULED THE WHOLE SHAPE (see `## AWAITING SAM`): away is a
+    BYE-WEEK BUILD, and dropping fixtures inside the span at `targetWeekFixtures`
+    delivers it.**
+
+    **THE LEAK NOW HAS A SECOND FACT UNDER IT — item 31 part 5's Christmas break
+    (desktop agent, 2026-08-13).** It takes the club off a week the same way away
+    does, so it is exposed to the same reuse. **ASKED, NOT ASSUMED:**
+    `test:christmas-break` `[10e]`-`[10g]` rebuild a break week FROM a normal
+    week that really does name team training (the non-vacuity half), and nothing
+    carries forward — no name, no `isTeamDay`.
+    **⚠ AND THAT IS THE SMALLER CLAIM, DELIBERATELY.** Those cells drive FULL
+    generation with `previousProgram`; the defect was seen on a PHONE through the
+    SCOPED REGEN path, and this item's own archive says why no node harness
+    reaches it — *"the scoped regen never fires there, because that harness has
+    no microcycles to regen into (`canScopedRegen`)"*. **So: the break does not
+    leak on the path a suite can reach, and its scoped-regen behaviour is
+    UNMEASURED, exactly as away's is.** One fix here serves both facts.
 
 1. **STANDING, EVERY STOP — MERGE, THEN VOCABULARY, THEN PROPORTION.** These are
    always in force; they are not work items to clear.
