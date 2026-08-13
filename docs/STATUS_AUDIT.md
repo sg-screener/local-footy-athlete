@@ -45,6 +45,46 @@ thing that actually bit.**
 
 ## STATUS
 
+### THE ORPHAN PAYDOWN — 50 → 25, AND **25 SUITES ARE FAILING RIGHT NOW WITH NOBODY WATCHING**
+
+**All 45 remaining orphans RUN, verdict taken from the EXIT CODE, not the totals
+line** — `harness-lies-tail-not-exit-line` is a memory entry in this repo and it
+earned itself again today: three of these suites print **no totals at all**, and
+several print `Pass: N` rather than `N passed, N failed`, so a totals-grep called
+them dead. **The exit code is the verdict.**
+
+| | |
+| --- | --- |
+| **GREEN, now wired into `test:bible`** | **20** |
+| **RED — real failures nobody can see** | **25** |
+
+**~600 cells that could not fail the chain this morning can fail it now.**
+
+**⚠ AND 25 SUITES ARE RED. That is the finding, not the paydown.** Worst first:
+`byeWeekClassificationTests` **40 passed / 23 FAILED**; `generationConstraintReentry`
+13/6; `beginnerDeterministicProgram` 34/5; `phaseRepPrescription` 17/4;
+`teamTrainingRendering` 28/3; `programmingBias` 40/2; plus `coachRevisionProposalController`,
+`coachProgramEditDraft`, `postGenerationConstraintValidation`, `programEditWriteGuard`,
+`sprintExposureGate`, `recoveryContentIntegrity` and others.
+
+**NONE ARE WIRED IN, deliberately** — a red suite would red the chain on arrival,
+so each one's wiring belongs in the same commit as its fix. **The ratchet keeps
+the count honest: 25 declared, and it may only fall.**
+
+**⚠ THREE INSTRUMENT FAULTS IN ONE HOUR, ALL MINE, ALL CAUGHT BY THE ANSWER
+LOOKING WRONG RATHER THAN BY CARE:**
+1. **`timeout` does not exist on macOS** — 16 suites reported "died"; not one had
+   executed.
+2. **A totals-grep too narrow** — `Pass: 9` and `— Summary —` formats read as
+   "no totals", i.e. as dead.
+3. **zsh does not word-split an unquoted variable** — a 20-name list ran as ONE
+   command name and reported "1 red".
+**Every one produced a confident, wrong number, and every one was caught because
+the shape of the answer was implausible — sixteen identical results, one red out
+of twenty with a name 400 characters long.** That is the day's standing lesson in
+its sharpest form: **identical or impossible results across independent inputs
+are an instrument claim, never a finding.**
+
 ### ⚠ I OVER-CLAIMED THE CONDITIONING DEFECT — MEASURED IN THE FULL PIPELINE, THE ATHLETE DOES **NOT** LOSE IT
 
 **CORRECTING MYSELF BEFORE ANYONE BUILDS ON IT.** I reported
