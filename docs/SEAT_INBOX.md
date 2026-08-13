@@ -1712,6 +1712,18 @@ seat was wrong.
   benefits the one making it needs the person paying for it to say yes.**
 
   **⚠ RE-MEASURED AND IT IS WORSE THAN ONE LINE — `audit`, 2026-08-13.** The
+
+  **REGISTRY-GREP:** re-run for THIS entry, because the gate rightly refuses a
+  grep inherited from an older one. `RULINGS_REGISTRY.md` for *owned*,
+  *OWNED BY*, *walk past*, *duplicate*, *standing*, *hook*, *exit*, *inbox*.
+  **NOTHING RULES ON AGENT OWNERSHIP OR THE SCAN.** *owned* returns **2** and
+  neither is this: `:846` is *"athlete-owned"* (a starting point, never a
+  ceiling) and `:1096` merely CITES `SEAT_INBOX item 48, OWNED BY terminal` as
+  provenance. *walk past* returns **0**. *duplicate* returns **4**, all of them
+  R-070's duplicate-PATTERN rule about SESSIONS (two heavy lifts of one
+  pattern), not about two agents doing one job. *hook* and *exit* return 0.
+  **Agent ownership is a `CLAUDE.md` rule, not a Sam ruling — a gap, not a
+  re-ask.**
   scan hands me **10 live orders and NOT ONE IS MINE.** It has **three** blind
   spots, not one:
 
