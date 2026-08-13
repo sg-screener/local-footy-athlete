@@ -54,6 +54,36 @@ export function emptyMainStrengthLedger(): Record<MainStrengthPattern, number> {
   return { squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0, push: 0, pull: 0 };
 }
 
+/**
+ * WHAT THE WEEK HAS NOT COVERED YET — R-087's question, asked in one place.
+ *
+ * **Sam, 2026-08-13:** *"depends what's in the rest of the week / each week
+ * should contain all the main lifts."* **THE WEEK IS THE UNIT OF COVERAGE, NOT
+ * THE DAY**, so a full-body day has no fixed template: *"a full body day placed
+ * after a lower day that already ran squat and hinge is a DIFFERENT SEVEN from
+ * a full body day that is the week's first strength session."*
+ *
+ * `exclude` is the day being composed — it must not count its own current plan
+ * as coverage, or it would ask what is open and be told "nothing, you have it".
+ *
+ * **IT CAN RETURN AN EMPTY LIST AND THAT IS INFORMATION, NOT A BUG.** An empty
+ * result means the rest of the week already covers every main lift; the caller
+ * decides what a day does with that, and R-087 is explicit that a week which
+ * CANNOT pay its coverage is *"a real deficiency to report, not a template to
+ * pad"*.
+ */
+export function uncoveredMainPatternsForWeek(
+  weeklyPlan: ReadonlyArray<{
+    strengthIntent?: StrengthIntent | null;
+    strengthPatternContributions?: readonly MainStrengthPattern[];
+  }>,
+  exclude?: unknown,
+): MainStrengthPattern[] {
+  const others = weeklyPlan.filter((entry) => entry !== exclude);
+  const ledger = strengthPatternLedger(others);
+  return ALL_MAIN_STRENGTH_PATTERNS.filter((pattern) => ledger[pattern] === 0);
+}
+
 export type StrengthArchetype = 'lower' | 'upper' | 'full_body';
 
 /**

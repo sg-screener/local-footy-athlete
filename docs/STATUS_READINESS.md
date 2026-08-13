@@ -635,7 +635,78 @@ parked question from the other side.
 
 ---
 
-## 21. WHAT IS NOT MINE, AND WAS NOT TOUCHED
+## 22. R-087 — THE UNION IS WIDENED; THE ASKING IS MEASURED, BUILT, AND BACKED OUT
+
+**Sam's ruling:** the week is the unit of coverage, a full body day has no fixed
+template, *"widen the union so a full body day can ask the week what's open,
+then fill from that. Do not hardcode a row list."*
+
+### LANDED — THE VOCABULARY (output-inert, verified)
+
+`MainStrengthPattern` now carries `single_leg_knee` and `single_leg_hip`. His
+sentence draws the line: *"all the main lifts i.e. squat, hinge, single leg
+knee, single leg hip, push pull in both horizontal and vertical"* and **then**
+*"accessories … and some core"* — so the single-leg slots are main lifts and
+accessories are still excluded, which that type's comment always claimed.
+
+**FIVE HAND-COPIED COPIES OF ONE VOCABULARY, all found by the compiler:**
+`domain.ts`'s inline array; `sessionNaming.ts`'s own `MovementPattern` (also a
+homonym of a 13-member type of the same name); the conformance harness's
+`StrengthPattern`; and two exercise-fallback maps. All now alias the one type.
+
+**AND THE WIDENING BROKE A TEST THAT ENUMERATED THE UNION** —
+`section18PhasePlannerTests.balanced()` did `Object.values(patterns)`, so two
+members no planner yet produces sat at 0 and **three cells reddened over a
+ledger that had not changed.** Production never had that bug: it reads
+`requiredSafePatterns`. The test now asks the contract too.
+
+**Output-inert, measured:** ladder census byte-identical at 92/318, same row
+counts, 174 worlds / 6 refused.
+
+### ⚠ THE ASKING — BUILT, MEASURED, AND BACKED OUT. THIS IS THE FINDING.
+
+**THE PRODUCER WAS FOUND BY INSTRUMENTATION, NOT BY READING.** Six sites compose
+a full-body intent; markers on all six show **exactly one fires in generation** —
+`buildStrengthIntent`'s `FB` case (`coachingEngine.ts:~4988`), 8 times in one
+world. **The other five are validation fallbacks that never run here**, and
+fixing one of those would have been the "layer not in the chain" error again.
+
+That site is a pure candidate-code -> intent mapper with **no week in scope**, so
+the faithful shape is a POST-PASS over the finished week rather than threading a
+half-built week through ten call sites. I built exactly that: for each full-body
+day, `plannedPatterns` becomes the slots the rest of the week has not covered.
+
+**AND IT REFUSED TWELVE WORLDS.** Worlds built **174 -> 162**, refused
+**6 -> 18**, with the deficient count and row histogram otherwise unchanged.
+
+**WHY, AND IT IS A REAL INTERACTION, NOT A BUG IN THE PASS.** R-087 says the
+seven *"are not a list to be edited — they are whatever the week has not covered
+yet"*, which means REPLACEMENT. But §18 counts **main-strength exposures per
+pattern**, and a full-body day that stops planning `squat`/`hinge` because a
+lower day already ran them **removes those exposures from the week's totals** —
+so weeks that were exactly meeting their main-strength target now fall under it
+and §18 refuses the week outright.
+
+**So "ask the week what is open" and "meet the week's main-strength counts" are
+two rules over one number, and they disagree.** Sam's ruling is about COVERAGE
+(each slot appears once); §18's targets are about VOLUME (how many main-lift
+exposures the week owes). A full-body day currently pays into both with the same
+four patterns.
+
+**BACKED OUT rather than forced:** census returns to 174 worlds / 6 refused /
+92 deficient, `test:compile` green, `coachingEngine.ts` byte-identical to `HEAD`.
+`uncoveredMainPatternsForWeek` is KEPT — it is the mechanism R-087 asks for, it
+is correct, and the next slice is what to do when it and §18 disagree.
+
+**WHAT THE NEXT SEAT NEEDS TO DECIDE** (and it may be Sam's): when a full-body
+day drops a pattern the week already covered, does the week's main-strength
+TARGET drop with it, or must the day keep paying volume it no longer needs for
+coverage? **Until that is answered, replacing the pattern list makes twelve
+worlds ungenerable.**
+
+---
+
+## 23. WHAT IS NOT MINE, AND WAS NOT TOUCHED
 
 - **`exercisePools.ts` / `equipmentAvailability.ts`** — modified in the shared
   tree by the equipment seat when this unit started. Never opened, never staged.
