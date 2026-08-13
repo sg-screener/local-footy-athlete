@@ -38,7 +38,14 @@ his instruction is standing authority, not history.**
     **NOTHING IS OWED TO SAM.** ~~ORIGINAL~~ — archived verbatim to
     `docs/SEAT_INBOX_ORIGINAL_ORDERS_2026-08-13.md` (item 28-C1).
 
-35. **EQUIPMENT SCOPES · THE GUESSED SESSION CUT · THE MAS BLOCK CHECK — Sam,
+35. **BLOCKED-BY: other-agent — (a)'s GLASS CHECK NEEDS THE SHARED SIMULATOR AND
+    (c)'s FILE IS HELD. (b) IS SPECIFIED TO THE LINE AND NOT BUILT.**
+    **Nothing is owed to Sam on any of the three.** (a) answered in source, glass
+    owed — the simulator is the terminal's away run. (b) five measurement passes,
+    build specified, needs the full scenario report. (c) `conditioningSelection.ts`
+    is `MM` with changes this seat did not make.
+    ORIGINAL BELOW.
+    **EQUIPMENT SCOPES · THE GUESSED SESSION CUT · THE MAS BLOCK CHECK — Sam,
     2026-08-13.** Full text: `docs/SEAT_ORDERS_FULL_2026-08-13.md`.
     **(a) THREE equipment scopes, no fourth:** PROFILE = permanent · SESSION VIEW
     = that session only (*"usually only just for that session"*) · AWAY = a dated
@@ -92,10 +99,22 @@ his instruction is standing authority, not history.**
     set of seven that alone lower the ceiling, and `insufficient_availability`
     is not one of them, while `hasFrequencyReduction` (`:839`) accepts any
     reduction. **So the reason word already exists and is already safe.**
-    **THE LAST QUESTION IS SEQUENCING, NOT SAFETY:** the shortfall is known only
-    after placement (`assessContract`), reductions are authorised before it
-    (`section18SafetyPolicy`). May the evaluator author one, or does this need a
-    post-placement finaliser?
+    **THE LAST QUESTION WAS SEQUENCING, AND IT IS MEASURED TOO (pass 5).**
+    `applyGenerationSafetyToSection18Contract` DOES run post-placement —
+    `postGenerationConstraintValidation.ts:1241` and `:1640`, on a microcycle
+    whose workouts already exist — **but it is handed `contract` and
+    `generationConstraints` only, never a ledger, so it cannot see the achieved
+    count.** The one place that can is `assessContract`, which already CLONES AND
+    WRITES the contract (`unresolvedMinimumShortfall` is its write). **Authoring
+    a reduction from the shortfall it just computed is the same act at the same
+    seam.**
+    **NOT BUILT, AND HERE IS THE HONEST REASON:** `assessContract` runs inside
+    `evaluateSection18EffectiveWeek`, which acceptance gates call to compare
+    before/after. **A new reduction there changes contracts everywhere the
+    evaluator runs**, so it needs the full scenario report against the committed
+    baseline — not a tail-end edit. **Everything else is specified: the reason
+    word (`insufficient_availability`), the number (the shortfall), the seam
+    (`assessContract`), and the proof that it cannot silence a broken week.**
     **(c) Census C11 — Sam: *"it needs to be checked"*.**
     `set_length_max_4_5_min` has five mentions and NO reader. Add the clause
     beside the three that work (`conditioningSelection.ts:291-304`). **Mutation
