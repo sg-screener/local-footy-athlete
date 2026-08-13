@@ -307,3 +307,67 @@ this item done."*
 **`vocab` stamped this item's head line seconds before me and has not touched it
 since; my claim note stands and the code is back to HEAD, so nothing is half-built
 in their way.**
+
+---
+
+## 2026-08-13 — ⚠ THE SLOT ENGINE IS NOT ON THE GENERATION PATH. THAT IS WHY ITEM 63 CANNOT BE FIXED WHERE IT SAYS
+
+**I chased item 63's fix through THREE layers. Each one was inert, and the third
+explains all three.**
+
+| attempt | change | census |
+| --- | --- | --- |
+| 1 | the plan asks for the slots (`buildStrengthIntent`) | **92 → 92, byte-identical** |
+| 2 | + `buildIntent`'s pattern map extended, slots require unilateral | **92 → 92** |
+| 3 | scorer fix alone | **92 → 92** |
+
+### THE REASON, AND IT IS ONE GREP
+
+```
+grep -rn "selectExercises(\|buildIntent(" src --include=*.ts | grep -v __tests__
+  -> src/utils/sessionBuilder.ts  (buildTagAwareSession)
+grep -rn "buildTagAwareSession("  -> src/utils/coachRevisionTemplates.ts:597
+```
+
+**`buildIntent` → `selectExercises` → `buildTagAwareSession` has exactly ONE
+production caller, and it is the COACH's revision templates.** The whole
+slot-based composition engine — the one whose header describes preventing *"two
+squats"* and *"movement pattern stacking"* — **never runs during program
+generation.**
+
+**SO ITEM 63's ONE-LINE DIAGNOSIS CANNOT BE RIGHT, AND NEITHER COULD MINE.** The
+plan can ask for six patterns and the scorer can build perfect unilateral slots;
+**generation reads neither.** The 92 deficient days are composed somewhere else
+entirely — the `defaultProgram` / composer path, which is where `composer`'s item
+51 work landed.
+
+### WHAT THE 92 ACTUALLY ARE, MEASURED AND UNCHANGED
+
+Every sampled deficient day is the **bodyweight** athlete's `Lower Body Strength`:
+`Walking Lunges · Single-Leg RDL · Reverse Lunges · Glute Bridge · Pallof Press ·
+Romanian Deadlift` — **two single-leg knees, two hinges, NO squat**, six counted
+rows against a cap of seven (room to spare), and `"Bodyweight Squat": []` on
+Sam's own sheet, so it needed nothing and was available throughout.
+
+**THE DEFECT IS A COMPOSER SPENDING ITS ROWS ON DUPLICATES BEFORE UNCOVERED
+SLOTS** — R-089's *"uncovered first, then repeat"* is the right rule and it has
+never been applied at the place the rows are actually chosen.
+
+### WHAT I SHIPPED, AND WHAT I DID NOT
+
+- **SHIPPED `ee3c94af`** — the widened-union landmine in `buildIntent`, now a
+  total `Record` so the compiler refuses the next silent drop. **Explicitly NOT
+  claimed as item 63 progress**; it is a live defect found while measuring, on
+  the coach path, green there (`strength-variants` 16/0,
+  `athlete-door-matrix` 433/0, gate PASSED).
+- **BACKED OUT** both `coachingEngine` attempts, byte-identical to HEAD
+  (md5 `3c8ddd40…`). Inert, and attempt 1 would also have stopped the
+  `contributions.length === 1` fallback branches firing — a silent behaviour
+  change bought for nothing.
+
+**ITEM 63 IS NOT DONE. 92 of 318 HAS NOT MOVED**, and its own sentence is the
+standard: *"A green suite with an unmoved census is not this item done."*
+
+**THE NEXT SEAT STARTS AT `defaultProgram`'s composer, not at the plan and not at
+the scorer** — three layers are now measured and eliminated, which is the one
+thing this turn is worth.
