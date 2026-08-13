@@ -1,6 +1,6 @@
-# Does everything
+# Does everything AND writes down every weight
 
-Records every session the app puts in front of them, full completion, feeling good, no soreness. The control run: anything that changes between week 1 and week 5 here is the program progressing, not the athlete pushing it around.
+The same athlete as above, except they also type in what they lifted on every set. This profile exists because the two are NOT the same athlete to the app: progression reads loads out of what was logged, so ticking a session complete and logging it are different amounts of information. Comparing this week 5 against the one above is what shows how much the logging is worth.
 
 ## What the athlete actually did
 
@@ -18,7 +18,7 @@ If the last number here is 0 while the first is not, the app cannot see this ath
 - Days of feedback stored: **30**
 - Of those, carrying a per-exercise strength log: **7**
 - Soreness answers stored above "none": **0**
-- Days the athlete typed in a load: **0** (**0** loads in all)
+- Days the athlete typed in a load: **23** (**67** loads in all)
 - Entries the progression reader actually SEES: **5**
 
 ## Week 1 and week 5, in the athlete's own words

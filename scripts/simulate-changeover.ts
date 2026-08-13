@@ -87,6 +87,22 @@ import { rolloverProgramBlock } from '../src/utils/programBlockRollover';
 import { buildRolloverAcknowledgment } from '../src/utils/readinessAcknowledgment';
 import { resolveWeekWithConditioning } from '../src/utils/sessionResolver';
 import { buildScheduleStateImperative } from '../src/utils/coachWeekDiff';
+import { buildProgramTabProjectedWeek } from '../src/utils/visibleProgramReadModel';
+import { resolveEquipmentAvailability } from '../src/utils/equipmentAvailability';
+// ── ITEM 65'S PRINTER, JOINED RATHER THAN COPIED ─────────────────────────
+//
+// The order said reuse it and do not write a second one. `projectWithGapsMarked`
+// is why that matters beyond tidiness: `project()` throws on the FIRST unsigned
+// copy id, so a plain try/catch surfaces one gap and hides the rest. Seat
+// `printer` owns the loop that registers each id and retries until it
+// converges, so their [NO COPY] count and mine come out of the same code and
+// are comparable. Two renderers would have produced two counts that disagree
+// with no way to tell which was right.
+//
+// Importing this was unsafe until `d9c91fdb` — the file ended in a bare
+// `main();`, so any import reran their six-week generation and rewrote
+// `docs/printed-weeks/`. It is `require.main === module` guarded now.
+import { projectWithGapsMarked, renderWeekAsPlainEnglish } from './print-week';
 import { executeProgramControlActionDurably } from '../src/utils/programControlActions';
 import {
   commitSessionOutcomeTransaction,
@@ -94,7 +110,8 @@ import {
   resolveSessionOutcomeTarget,
 } from '../src/store/sessionOutcomeTransaction';
 import { flushPendingStorageWrites } from '../src/store/asyncStorageCompat';
-import { buildStrengthPerformanceLogs } from '../src/utils/strengthLogging';
+import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../src/utils/strengthLogging';
+import { useWorkoutLogStore } from '../src/store/workoutLogStore';
 import { buildSessionFeedbackPayload } from '../src/utils/sessionFeedbackForm';
 import { getSessionComponents } from '../src/utils/sessionComponents';
 import { buildStrengthWorkoutHistoryFromFeedback } from '../src/utils/strengthProgressionIntegration';
@@ -178,7 +195,8 @@ function syntheticProfile(): OnboardingData {
 
 // ── The four behaviour profiles ───────────────────────────────────────────
 
-type ProfileId = 'does_everything' | 'misses_fridays' | 'away_week_3' | 'sore_week_2';
+type ProfileId = 'does_everything' | 'logs_every_weight' | 'misses_fridays'
+  | 'away_week_3' | 'sore_week_2';
 
 interface DayIntent {
   /** Does the athlete open the app and record this session at all? */
@@ -200,6 +218,18 @@ interface DayIntent {
   difficulty: number;
   /** Why the day was not recorded — reported, never silently dropped. */
   absenceReason?: string;
+  /**
+   * DID THE ATHLETE ENTER WHAT THEY LIFTED?
+   *
+   * The difference between ticking a session complete and logging the sets, and
+   * it is not cosmetic: `lastPerformedWeights` comes from the `weightOverrides`
+   * store, which is written by `setWeightOverride` when the athlete types a
+   * weight. An athlete who only ticks sessions gives progression a history with
+   * no loads in it, so there is nothing for it to progress FROM. This flag is
+   * what lets the report show both athletes side by side instead of assuming
+   * which one Sam meant by "does everything".
+   */
+  logWeights?: boolean;
 }
 
 interface BehaviourProfile {
@@ -234,6 +264,16 @@ const PROFILES: readonly BehaviourProfile[] = [
       + 'feeling good, no soreness. The control run: anything that changes between week 1 '
       + 'and week 5 here is the program progressing, not the athlete pushing it around.',
     intentForDay: () => NORMAL_DAY,
+  },
+  {
+    id: 'logs_every_weight',
+    title: 'Does everything AND writes down every weight',
+    description: 'The same athlete as above, except they also type in what they lifted on '
+      + 'every set. This profile exists because the two are NOT the same athlete to the app: '
+      + 'progression reads loads out of what was logged, so ticking a session complete and '
+      + 'logging it are different amounts of information. Comparing this week 5 against the '
+      + 'one above is what shows how much the logging is worth.',
+    intentForDay: () => ({ ...NORMAL_DAY, logWeights: true }),
   },
   {
     id: 'misses_fridays',
@@ -276,6 +316,14 @@ const PROFILES: readonly BehaviourProfile[] = [
 // ── The clock, and the assertion that it is really driving the app ────────
 
 function setClockTo(dateISO: string): void {
+  // ⚠ RE-ASSERTED HERE BECAUSE AN IMPORT TOOK IT AWAY. `scripts/print-week.ts`
+  // sets `__DEV__ = false` at module scope (as the walker does, deliberately —
+  // both want the wall clock inert), and that assignment wins over this file's
+  // own `__DEV__ = true` at the top. The first run after joining item 65's
+  // renderer failed on exactly the guard below, which is what the guard is for:
+  // without it the clock would have silently stopped setting and all five
+  // profiles would have walked the REAL today while reporting simulated dates.
+  (global as unknown as { __DEV__: boolean }).__DEV__ = true;
   const applied = setDevE2EClock(createDevE2EClockReceipt({
     seedId: 'standard-in-season-week',
     anchorInstant: devE2EAnchorInstantForDate(dateISO, DEV_E2E_CAMPAIGN_TIME_ZONE),
@@ -322,6 +370,10 @@ interface RunLogEntry {
 interface WeekSnapshot {
   weekStart: string;
   weekIndex: number;
+  /** Item 65's renderer output — the words the athlete would actually read. */
+  plainEnglish: string;
+  noCopyCount: number;
+  printFindings: string[];
   days: {
     dateISO: string;
     weekday: string;
@@ -344,11 +396,61 @@ function visibleWeek(weekStart: string, todayISO: string): ResolvedDay[] {
     .map((day) => ({ ...day, asOf: todayISO } as ResolvedDay));
 }
 
+/**
+ * THE ATHLETE'S OWN WORDS FOR THIS WEEK, through item 65's renderer.
+ *
+ * MUST BE CALLED WHILE THE STORE IS IN THIS WEEK'S STATE. Both the projection
+ * and the equipment resolution read live store state, so rendering week 1 after
+ * the walk has reached week 5 would print week 5 twice under two headings — a
+ * side-by-side comparison that is secretly a comparison of one thing with
+ * itself. That is why this is called from inside `snapshotWeek` rather than at
+ * report time.
+ */
+function renderPlainEnglish(args: {
+  weekStart: string; todayISO: string; heading: string; intro: string;
+}): { markdown: string; noCopyCount: number; findings: readonly { message?: string }[] } {
+  const resolved = quiet(() => buildProgramTabProjectedWeek({
+    mondayISO: args.weekStart,
+    todayISO: args.todayISO,
+    state: buildScheduleStateImperative(),
+    overrideContexts: useProgramStore.getState().overrideContexts ?? {},
+  }));
+  const { visibleWeek: projected, gapIds } = quiet(() => projectWithGapsMarked({
+    week: resolved as never, weekStart: args.weekStart,
+  }));
+  const equipmentTags = quiet(() => resolveEquipmentAvailability(
+    useProfileStore.getState().onboardingData,
+    useProgramStore.getState().acceptedMaterialContext.activeConstraints as never,
+    args.todayISO,
+  ));
+  return quiet(() => renderWeekAsPlainEnglish({
+    projected,
+    heading: args.heading,
+    intro: args.intro,
+    noCopyIds: gapIds,
+    equipmentTags: equipmentTags as never,
+  })) as never;
+}
+
 function snapshotWeek(weekStart: string, weekIndex: number, todayISO: string): WeekSnapshot {
   const week = visibleWeek(weekStart, todayISO);
+  const printed = renderPlainEnglish({
+    weekStart,
+    todayISO,
+    heading: `Week ${weekIndex} — starting ${weekStart}`,
+    intro: weekIndex === 1
+      ? 'This is the week the athlete STARTED on, before any training was recorded.'
+      : 'This is the same athlete four weeks later, after everything below was '
+        + 'recorded. Read it against week 1 and ask whether four weeks of work '
+        + 'should have left it looking like this.',
+  });
   return {
     weekStart,
     weekIndex,
+    plainEnglish: printed.markdown,
+    noCopyCount: printed.noCopyCount,
+    printFindings: printed.findings.map((finding) => String(
+      (finding as { message?: string }).message ?? JSON.stringify(finding))),
     days: week.map((day) => {
       const workout = day.workout as Workout | null | undefined;
       return {
@@ -533,6 +635,46 @@ async function recordDay(dateISO: string, intent: DayIntent): Promise<{
   }
 
   const components = getSessionComponents(target.workout as never);
+
+  // ── THE ATHLETE TYPES IN WHAT THEY LIFTED, through the real doors ────────
+  //
+  // `logSet` is the workout logger's own action and `setWeightOverride` is the
+  // one writer of `weightOverrides` (`programStore.ts:2227`), which is where
+  // `lastPerformedWeights` comes from. Logging the PRESCRIBED load is the honest
+  // "did exactly what it said on the card" case — not a performance claim this
+  // script invents, but the athlete confirming the prescription.
+  let loggedSets: Record<string, unknown[]> | undefined;
+  if (intent.logWeights) {
+    const logStore = useWorkoutLogStore.getState();
+    const programStore = useProgramStore.getState() as unknown as {
+      setWeightOverride: (date: string, exerciseId: string, weightKg: number) => void;
+    };
+    for (const row of (target.workout.exercises ?? []) as unknown as {
+      id: string; exerciseId: string; prescribedSets?: number;
+      prescribedRepsMax?: number; prescribedWeightKg?: number;
+    }[]) {
+      const weight = Number(row.prescribedWeightKg);
+      if (!Number.isFinite(weight) || weight <= 0) continue;
+      const sets = Math.max(1, Number(row.prescribedSets) || 1);
+      for (let setNumber = 1; setNumber <= sets; setNumber += 1) {
+        logStore.logSet(row.id, {
+          id: `sim:${dateISO}:${row.id}:${setNumber}`,
+          loggedWorkoutId: `sim:${dateISO}`,
+          workoutExerciseId: row.id,
+          setNumber,
+          actualReps: Number(row.prescribedRepsMax) || undefined,
+          actualWeightKg: weight,
+          createdAt: `${dateISO}T12:00:00.000Z`,
+          updatedAt: `${dateISO}T12:00:00.000Z`,
+        } as never);
+      }
+      programStore.setWeightOverride(dateISO, row.exerciseId, weight);
+    }
+    loggedSets = quiet(() => collectLoggedStrengthSets(
+      target!.workout, useWorkoutLogStore.getState().loggedSets as never, undefined,
+    )) as Record<string, unknown[]> | undefined;
+  }
+
   // `weightOverrides` is keyed BY DATE first, then by exercise
   // (`programStore.ts:1940`), and the panel reads `weightOverrides[date]`
   // (`SessionFeedbackPanel.tsx:474`). Handing the whole map to a function
@@ -541,6 +683,7 @@ async function recordDay(dateISO: string, intent: DayIntent): Promise<{
     target!.workout,
     useProgramStore.getState().weightOverrides?.[dateISO] ?? {},
     intent.completion,
+    loggedSets as never,
   ));
   // Every component answered explicitly: `canSaveFeedbackDraft` refuses a draft
   // holding a null component answer, and a half-answered form is not a thing an
@@ -628,6 +771,17 @@ interface HistoryCensus {
   feedbackWithStrengthLogs: number;
   progressionHistoryEntries: number;
   storedSorenessAnswers: number;
+  /**
+   * Days carrying at least one athlete-entered load, and how many loads in all.
+   *
+   * WITHOUT THIS THE `logs_every_weight` PROFILE COULD BE A SILENT NO-OP and the
+   * comparison it exists to make would be a comparison of one athlete with
+   * themselves. `weightOverrides` is what `lastPerformedWeights` reads, so these
+   * two numbers are the difference between "logging changed nothing" and "no
+   * logging happened".
+   */
+  weightOverrideDays: number;
+  weightOverrideEntries: number;
 }
 
 function takeCensus(beforeDate: string): HistoryCensus {
@@ -635,7 +789,13 @@ function takeCensus(beforeDate: string): HistoryCensus {
     sessionFeedback: Record<string, { strength?: unknown[]; soreness?: string | null }>;
   }).sessionFeedback ?? {};
   const entries = Object.values(feedbackMap);
+  const overrides = (useProgramStore.getState() as unknown as {
+    weightOverrides: Record<string, Record<string, number | null>>;
+  }).weightOverrides ?? {};
   return {
+    weightOverrideDays: Object.keys(overrides).length,
+    weightOverrideEntries: Object.values(overrides)
+      .reduce((total, day) => total + Object.keys(day ?? {}).length, 0),
     storedFeedbackDays: entries.length,
     feedbackWithStrengthLogs: entries.filter((entry) => (entry.strength?.length ?? 0) > 0).length,
     progressionHistoryEntries: quiet(() => buildStrengthWorkoutHistoryFromFeedback(
@@ -759,6 +919,8 @@ function renderRun(run: RunResult): string {
   out.push(`- Of those, carrying a per-exercise strength log: **${
     run.census.feedbackWithStrengthLogs}**`);
   out.push(`- Soreness answers stored above "none": **${run.census.storedSorenessAnswers}**`);
+  out.push(`- Days the athlete typed in a load: **${run.census.weightOverrideDays}** `
+    + `(**${run.census.weightOverrideEntries}** loads in all)`);
   out.push(`- Entries the progression reader actually SEES: **${
     run.census.progressionHistoryEntries}**`);
   out.push('');
@@ -787,7 +949,36 @@ function renderRun(run: RunResult): string {
     out.push('');
   }
 
-  out.push('## Week 1 and week 5, same athlete');
+  // ── THE PART SAM READS ─────────────────────────────────────────────────
+  //
+  // Item 65's renderer, so these words are the app's own signed copy and the
+  // [NO COPY] counting is the same code that produced the paper-phone weeks.
+  out.push('## Week 1 and week 5, in the athlete\'s own words');
+  out.push('');
+  out.push('Rendered by item 65\'s printer, not by this script — so every word below is '
+    + 'the app\'s, and the two reports\' [NO COPY] counts are produced by the same code.');
+  out.push('');
+  out.push(`[NO COPY] in week 1: **${run.week1.noCopyCount}** · in week 5: `
+    + `**${run.week5.noCopyCount}**`);
+  out.push('');
+  out.push(run.week1.plainEnglish);
+  out.push('');
+  out.push(run.week5.plainEnglish);
+  out.push('');
+  if (run.week1.printFindings.length > 0 || run.week5.printFindings.length > 0) {
+    out.push('### What the printer flagged in these two weeks');
+    out.push('');
+    for (const finding of run.week1.printFindings) out.push(`- week 1 — ${finding}`);
+    out.push('');
+    for (const finding of run.week5.printFindings) out.push(`- week 5 — ${finding}`);
+    out.push('');
+  }
+
+  out.push('## The same two weeks, structurally');
+  out.push('');
+  out.push('Sets, reps and the loads underneath — including `prescribedWeightKg`, which the '
+    + 'athlete-facing surface above does NOT show. This is where progression actually '
+    + 'lands, so it is the only place a load change is visible.');
   out.push('');
   out.push(`### Week 1 — starting ${run.week1.weekStart}`);
   out.push('');
