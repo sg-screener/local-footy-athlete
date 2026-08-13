@@ -2604,3 +2604,68 @@ AUTHOR replacement work; R-033 needs it so the property it gates is TRUE. **Two
 of the thirteen unenforced rulings, one unit.** Item 50 hands them out as two
 orders to two agents; **they are one job, and doing them apart is how the same
 wall gets paid for twice.**
+
+---
+
+## LOAD IS NOT AVAILABILITY — R-083's SECOND SITE, BUILT AND PROVEN PER ROW
+
+**Sam's order, 2026-08-13.** `9f1a…` (see `git log --grep "LOAD IS NOT
+AVAILABILITY"`).
+
+### ⚠ HIS OWN ACCEPTANCE TEST CONTRADICTED HIS OWN SHEET, AND I DID NOT RESOLVE IT SILENTLY
+
+He said *"treat every row as signed"* AND *"Walking Lunges and Single Leg RDL
+must read legal"* on a bodyweight kit. **His sheet says `Walking Lunges →
+dumbbells` and `Single-Leg RDL → barbell`, so read verbatim BOTH of those rows
+come out ILLEGAL and his own test fails.**
+
+**THE SHEET IS NOT WRONG — IT ANSWERS THE OTHER QUESTION.** There are THREE
+facts here, not two, and the whole defect was one field holding two of them:
+
+| fact | owner | state |
+| --- | --- | --- |
+| **LOAD** — carries external load? | `TRUE_BODYWEIGHT_EXERCISES` | correct, **untouched** |
+| **KIT USED** — what it uses | Sam's sheet | signed, now the availability source |
+| **PERFORMABLE UNLOADED** | `BODYWEIGHT_CAPABLE` | **new** |
+
+**THE THIRD SET HOLDS EXACTLY THE TWO HE RULED IN THAT MESSAGE.** Nothing
+inferred. Adding a row is a Sam ruling.
+
+### THE SHORTCUT I REFUSED, AND WHY IT MATTERS
+
+*"A missing LOADING implement is survivable; a missing APPARATUS is not"*
+reproduces **every row he named** — and then quietly legalises `Deadlift`,
+`Goblet Squat` and `Banded Bicep Curl` on a bodyweight kit. **A band curl
+without the band is not a curl; a goblet squat is DEFINED by the thing you
+hold.** A tag cannot say whether a movement survives losing its load. **It
+would have passed his test and been wrong**, which is the most dangerous shape
+there is.
+
+### PROOF, AS HE ASKED — PER ROW
+
+11 rows, each with a **full-gym control** so the table cannot pass on a filter
+that refuses everything. `Pull-Ups`, `Dips`, `Inverted Row`, `Overhead Press`,
+`Leg Extension`, `Back Squat` **ILLEGAL** on bodyweight; `Walking Lunges`,
+`Single-Leg RDL`, `Reverse Lunges`, `Push-ups`, `Bodyweight Squat` **LEGAL**;
+**all 11 legal on a full gym.**
+
+**MUTATION-CHECKED BOTH ARMS:** removing the availability wiring reds **6**
+cells; ignoring `BODYWEIGHT_CAPABLE` reds **exactly 2** — the two he named —
+and nothing else.
+
+### ONE STALE EXPECTATION, AND THE KIT MOVED RATHER THAN THE ASSERTION
+
+`exercisePoolsStrengthTests` asserted a dumbbells-only athlete rotates Bench
+Press → DB Bench Press **on a kit with NO BENCH**. Sam's sheet says DB Bench
+Press needs `['bench','dumbbells']`, so refusing it is CORRECT. The cell's
+intent needs an athlete who can do the DB accessory, so **the kit gained a
+bench and the no-bench case is asserted beside it** rather than lost.
+
+### AND I DID NOT BUILD THE HOOK FIX SAM APPROVED — `arms` ALREADY HAD
+
+He answered my question with *"yes, skip standing, owned and closed"*. **I
+opened the script before touching it and found all three skips already
+implemented and committed by `arms`.** Reproducing the scan against the live
+queue now finds NOTHING. **Recorded as R-085 instead** — the ruling was in chat
+only, and a chat message is not durable. **Walking past it is the ownership
+rule working, and it is the same rule R-085 is about.**
