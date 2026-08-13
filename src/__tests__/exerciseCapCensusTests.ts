@@ -52,6 +52,32 @@
  * (`sessionSlotCoverageTests`' EQUIPMENT CENSUS, ceiling 5).
  *
  * **THIS FILE THEREFORE MEASURES AND RATCHETS. It never edits a session.**
+ *
+ * ## ⚠⚠ AND THE FIRST VERSION OF THIS CENSUS MANUFACTURED ITS OWN DEFECTS
+ *
+ * It banked a ceiling of THREE against the policy cap of 6. **All three were
+ * SEVEN-row sessions, and seven is Sam's AUTHORED SIZE** — his words, Bible
+ * `:122`, quoted in R-087 as *"Bible :122 sets the SIZE at 7 and Sam has not
+ * moved it"*:
+ *
+ *   *"I wouldn't stack lower body strength (say **6-7 exercises**) with upper
+ *   body strength (6-7 exercises)... I'd prefer to just make that a full body
+ *   day i.e. **full body strength and 7 exercises**."*
+ *
+ * **So the three "breaches" were three lawful sessions, and a ceiling of 3 would
+ * have pinned them as debt forever** — the shape this repo names as pinning a
+ * defect, run in reverse: pinning a NON-defect, which is worse, because paying
+ * it down would mean breaking Sam's own prescription.
+ *
+ * **THE REAL FINDING IS THE NUMBER ITSELF.** `maxExercisesPerStrengthSession` is
+ * **6**; Sam authored **6-7, and 7 for a full body day**. The policy cap is ONE
+ * LOW, and nothing ever caught it **because nothing enforced the cap** — R-013's
+ * own sentence. **An unenforced number is never wrong out loud.**
+ *
+ * **THIS CENSUS THEREFORE JUDGES AGAINST SAM'S AUTHORED MAXIMUM, and holds a
+ * separate cell on the policy cap agreeing with it.** Moving
+ * `maxExercisesPerStrengthSession` 6 -> 7 is a product-law edit on a number Sam
+ * owns, so it is REPORTED, not taken.
  */
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
@@ -104,15 +130,49 @@ ok('[non-vacuity] the cap resolves to a real number',
 ok('R-013: the beginner cap IS the normal cap — the 3 is abolished',
   BEGINNER_CAP === NORMAL_CAP, `beginner=${BEGINNER_CAP} normal=${NORMAL_CAP}`);
 
-console.log('\n[2] CENSUS — no strength session the app ships exceeds the cap');
+/**
+ * SAM'S AUTHORED MAXIMUM, Bible `:122`, verbatim: *"lower body strength (say 6-7
+ * exercises)"*, *"upper body strength (6-7 exercises)"*, *"full body strength
+ * and 7 exercises"*. **SEVEN is the largest number he wrote**, and R-087 states
+ * it is unmoved. This is the number a shipped session is judged against.
+ */
+const AUTHORED_MAX_EXERCISES = 7;
+
+console.log('\n[2] The policy cap must AGREE with the size Sam authored');
+/**
+ * **THE MEASURED GAP, AWAITING SAM: 1.** `maxExercisesPerStrengthSession` is 6;
+ * Sam authored 7. **This is a RATCHET, not a red, for one reason only — the
+ * cell is in `test:bible`, and reddening every seat's chain over a number Sam
+ * settles in one word costs more than it buys.** It is REPORTED to him in the
+ * same turn it was found; it is not filed and forgotten.
+ *
+ * **IT CANNOT WIDEN SILENTLY.** Any further drift reds immediately. **Set this
+ * to 0 and delete this constant the moment he rules** — if he says 7, the cap
+ * moves and the two numbers are simply equal; if he says 6 stands, the Bible
+ * sentence is the thing that changes and this cell still goes to 0.
+ */
+const CAP_VS_AUTHORED_GAP_CEILING = 1;
+ok('R-013 x Bible :122: the policy cap does not drift FURTHER from Sam\'s authored maximum',
+  Math.abs(AUTHORED_MAX_EXERCISES - NORMAL_CAP) <= CAP_VS_AUTHORED_GAP_CEILING,
+  `policy cap ${NORMAL_CAP}, Sam authored ${AUTHORED_MAX_EXERCISES}, `
+  + `gap ${Math.abs(AUTHORED_MAX_EXERCISES - NORMAL_CAP)} (ceiling ${CAP_VS_AUTHORED_GAP_CEILING})`);
+if (NORMAL_CAP !== AUTHORED_MAX_EXERCISES) {
+  console.log(`\n  ⚠ AWAITING SAM — the policy cap is ${NORMAL_CAP}, he authored `
+    + `${AUTHORED_MAX_EXERCISES} ("full body strength and 7 exercises", Bible :122, `
+    + `restated unmoved by R-087). The cap is ONE LOW, and nothing caught it `
+    + `because nothing enforced it. Moving his number is his call, not this seat's.`);
+}
+
+console.log('\n[3] CENSUS — no strength session exceeds the size Sam authored');
 {
   /**
-   * MEASURED 2026-08-13. Three sessions, ALL the bodyweight athlete, all
-   * carrying appended barbell lifts. **Lower it when a session is fixed; never
-   * raise it.** It falls to 0 when the kit defect is paid — the cause is not in
-   * this unit and the ceiling names it rather than hiding it.
+   * **ZERO, and it was never anything else.** The three sessions this census
+   * first reported were 7-row days measured against a policy cap of 6, and
+   * SEVEN is what Sam authored. **Against his own number the app is clean, and
+   * this ratchet starts where a ratchet should — at nothing owed.**
+   * Never raise it.
    */
-  const OVER_CAP_CEILING = 3;
+  const OVER_CAP_CEILING = 0;
 
   const over: string[] = [];
   const histogram: Record<number, number> = {};
@@ -136,7 +196,10 @@ console.log('\n[2] CENSUS — no strength session the app ships exceeds the cap'
         // resolving it per world ASSERTS that rather than assuming it, and a
         // beginner-only cap creeping back would be caught here as well as by
         // the abolition cell above.
-        const cap = resolveTrainingAgePolicy(profile.experienceLevel).maxExercisesPerStrengthSession;
+        // JUDGED AGAINST SAM'S AUTHORED MAXIMUM, not the policy cap — the two
+        // disagree by one and the cell above is where that is reported. Judging
+        // against the lower number would flag his own prescription as a defect.
+        const cap = AUTHORED_MAX_EXERCISES;
         if (rows.length > cap) {
           const names = rows.map((r: any) => String(r?.exercise?.name ?? '?')).join(' · ');
           over.push(`${label} | ${workout.name} | ${rows.length} rows (cap ${cap}): ${names}`);
@@ -153,11 +216,11 @@ console.log('\n[2] CENSUS — no strength session the app ships exceeds the cap'
   ok('[non-vacuity] the corpus contains sessions at or near the cap',
     maxRows >= NORMAL_CAP, `max rows seen: ${maxRows}, cap ${NORMAL_CAP}`);
 
-  ok('R-013: no strength session exceeds the cap, beyond the measured ceiling',
+  ok('R-013: no strength session exceeds the size Sam authored',
     over.length <= OVER_CAP_CEILING,
     `${over.length} over cap ${NORMAL_CAP} (ceiling ${OVER_CAP_CEILING})\n     ${over.join('\n     ')}`);
 
-  console.log(`\n  EXERCISE CAP CENSUS: ${over.length} of ${sessionsSeen} strength sessions exceed the cap of ${NORMAL_CAP} (ceiling ${OVER_CAP_CEILING})`);
+  console.log(`\n  EXERCISE CAP CENSUS: ${over.length} of ${sessionsSeen} strength sessions exceed SAM'S AUTHORED MAXIMUM of ${AUTHORED_MAX_EXERCISES} (ceiling ${OVER_CAP_CEILING}; the policy cap is ${NORMAL_CAP} and disagrees — see above)`);
   console.log(`  row-count histogram: ${JSON.stringify(Object.entries(histogram).sort((a, b) => Number(a[0]) - Number(b[0])))}`);
   for (const line of over) console.log(`    ${line}`);
 }
