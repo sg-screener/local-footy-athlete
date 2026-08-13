@@ -1780,3 +1780,40 @@ kit, and `test:compile` put **none of my seven files** in the regression list.
 (`equipmentClassFor`), so it does **not** see the authored `equipmentRequired`
 I added to Dips and Inverted Row. Those two are gated in the vocabulary and the
 checklist, **not yet in pool selection.**
+
+### ⚠ I REVERTED MY OWN FILTER, AND THE MUTATION IS WHY
+
+`ddebf7ed` (the equipment filter on the authored fallback templates) is
+**reverted**. Both arms measured on `test:slot-coverage`:
+
+| | equipment census | laddered days deficient | rows seen (floor 10) | |
+| --- | --- | --- | --- | --- |
+| filter **ON** | **0** ✅ | **2 of 6** ❌ | **8** ❌ | 52/54 |
+| filter **OFF** | 1 ❌ | 0 of 6 ✅ | — | **54/54** |
+
+**IT WORKED, AND THAT IS NOT ENOUGH.** The census fell 1 → 0 — the illegal
+`Leg Extension` is gone — but a bodyweight week thinned to **8 prescribed rows
+against a floor of 10**, the floor that exists so a census cannot report
+perfect health on an empty week. **A zero I cannot distinguish from an empty
+week is not a result.**
+
+**I DID NOT TOUCH EITHER GUARD.** Both exist to catch this exact shape.
+
+**AND R-083 ITSELF SAYS WHY IT CANNOT SHIP ALONE:** removal is half his ruling;
+the other half is that the app *"MUST SAY SO RATHER THAN QUIETLY SHRINK"*.
+Without the shortfall sentence this IS the quiet shrink he ruled against —
+**and it would have left `main` red for five other seats.**
+
+**HANDED TO ITEM 48** (R-083's disclosure half, owned by `terminal`). Land the
+filter in the SAME change as the sentence, and reconcile the ladder guard with
+his own words: **a kit-caused shortfall is not a coverage defect.**
+
+### THE SEAM IS ALSO MEASURED AND ALSO NOT SHIPPED
+
+`EXERCISE_EQUIPMENT_REQUIREMENT` (Sam's transcribed sheet) has **no importer**.
+I wired it into `exerciseAllowedByEquipment` and it behaves exactly right —
+Dips, Pull-Ups, Inverted Row and Walking Lunges **refused** on a bodyweight
+kit, Push-ups / Plank / Reverse Lunges / Bodyweight Squat still allowed, all
+allowed on a gym kit. **Backed out for the SAME reason as above:** it deepens
+the shrink, and the disclosure half is not built. **It is a 20-line change and
+the hard part — his data — is already in the tree.**
