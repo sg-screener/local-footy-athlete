@@ -41,6 +41,40 @@
 
 git rev-parse --git-dir >/dev/null 2>&1 || exit 0
 
+# ── THE SECOND ANNOUNCEMENT: MASS LINE LOSS INSIDE A FILE THAT SURVIVES ──────
+#
+# ADDED 2026-08-13, THE SAME DAY, AFTER THE FIRST VERSION FAILED TO COVER THE
+# SECOND INCIDENT. The deleted-FILE census below would not have caught either of
+# the day's two worst events, because in both the file survived and only its
+# CONTENTS died:
+#
+#   b62add9f  "Comment only; no assertion changed."   -3,421 lines, 37 files
+#   (mine)    a regex lookahead ran to the NEXT ITEM HEAD instead of the end of
+#             my own marking, and deleted SIX ORDERS — 720 lines — out of
+#             docs/SEAT_INBOX.md. I never committed it; ANOTHER SEAT'S commit
+#             swept it up, under a subject about something else.
+#
+# THREE SEATS HAD AN ABSORPTION INCIDENT ON ONE DAY, every one from a read that
+# went stale between looking and staging. The common shape is not "deletion" —
+# it is A COMMIT WHOSE SIZE ITS AUTHOR WOULD NOT RECOGNISE. So the announcement
+# is the SIZE, printed where the author still has a second to react.
+#
+# THE THRESHOLD IS DELIBERATELY HIGH. Archiving a doc, retiring a suite and
+# splitting a module all remove hundreds of lines legitimately and often. A
+# number low enough to catch every accident is a number people learn to scroll
+# past, and a hook that is scrolled past is UNENFORCED wearing a green badge.
+# 200 is above ordinary editing and below every incident this repo has recorded.
+LOSS_FLOOR=${LFA_CENSUS_LINE_FLOOR:-200}
+big_losses=$(git diff --cached --numstat --diff-filter=M 2>/dev/null \
+  | awk -v floor="$LOSS_FLOOR" '$2 ~ /^[0-9]+$/ && $2 >= floor { print $3 " (-" $2 " lines)" }')
+if [ -n "$big_losses" ]; then
+  echo "census: ⚠ THIS COMMIT REMOVES A LOT OF CONTENT FROM FILES THAT SURVIVE:"
+  printf '%s\n' "$big_losses" | sed 's/^/  - /'
+  echo "  If that is a surprise, STOP — you may be committing work that is not yours."
+  echo "  On 2026-08-13 a \"comment only\" commit removed 3,421 lines, and a second"
+  echo "  commit swept up 720 lines of another seat's uncommitted damage."
+fi
+
 # --- The staged deletions, which is what the law is about --------------------
 #
 # `--cached` is the STAGED tree, not the working tree: this runs as a

@@ -121,5 +121,52 @@ ok "lines removed sums ACROSS files (5+1+1=7)" \
   "$(echo "$out" | grep -q '7 line(s) removed' && echo 1 || echo 0)" "out=$out"
 rm -rf "$repo"
 
+# ── 6. MASS LINE LOSS INSIDE A FILE THAT SURVIVES ───────────────────────────
+#
+# THE FIRST VERSION OF THIS HOOK WOULD NOT HAVE CAUGHT EITHER OF THE DAY'S TWO
+# WORST INCIDENTS, because in both the file SURVIVED and only its contents died:
+# b62add9f removed 3,421 lines under "comment only", and a regex of mine deleted
+# six orders (720 lines) out of SEAT_INBOX.md, which another seat's commit then
+# swept up. A deleted-FILE census is blind to both.
+big_repo() {
+  local repo; repo="$(mktemp -d)"
+  ( cd "$repo" \
+    && git init -q \
+    && git config user.email t@t && git config user.name t \
+    && seq 1 400 > big.txt \
+    && git add -A && git commit -q -m first ) >/dev/null 2>&1
+  echo "$repo"
+}
+
+repo="$(big_repo)"
+( cd "$repo" && seq 1 100 > big.txt && git add big.txt ) >/dev/null 2>&1   # -300 lines
+out="$(cd "$repo" && bash "$HOOK" 2>&1)"; code=$?
+ok "a MODIFY that removes 300 lines is ANNOUNCED even though no file is deleted" \
+  "$(echo "$out" | grep -q 'REMOVES A LOT OF CONTENT' && echo 1 || echo 0)" "out=$out"
+ok "the announcement names the file and the count" \
+  "$(echo "$out" | grep -q 'big.txt (-300 lines)' && echo 1 || echo 0)" "out=$out"
+ok "mass line loss still NEVER refuses the commit" \
+  "$([ $code -eq 0 ] && echo 1 || echo 0)" "exit=$code"
+rm -rf "$repo"
+
+# THE MUST-STAY-QUIET HALF, and it is the one that keeps the hook installed:
+# ordinary editing removes lines constantly.
+repo="$(big_repo)"
+( cd "$repo" && seq 1 380 > big.txt && git add big.txt ) >/dev/null 2>&1   # -20 lines
+out="$(cd "$repo" && bash "$HOOK" 2>&1)"
+ok "an ordinary edit removing 20 lines says NOTHING" \
+  "$([ -z "$out" ] && echo 1 || echo 0)" "out=$out"
+rm -rf "$repo"
+
+# The floor is overridable, so a unit that wants a tighter watch can set one
+# without editing the hook — and so this cell can prove the floor is READ rather
+# than hard-coded.
+repo="$(big_repo)"
+( cd "$repo" && seq 1 380 > big.txt && git add big.txt ) >/dev/null 2>&1   # -20 lines
+out="$(cd "$repo" && LFA_CENSUS_LINE_FLOOR=10 bash "$HOOK" 2>&1)"
+ok "the floor is READ from the environment, not hard-coded" \
+  "$(echo "$out" | grep -q 'big.txt (-20 lines)' && echo 1 || echo 0)" "out=$out"
+rm -rf "$repo"
+
 echo "announce-deletions hook totals: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
