@@ -170,6 +170,36 @@ export function strengthVariantByTemplateId(templateId: string): StrengthSession
 }
 
 /**
+ * WHICH VARIANT IS THIS SESSION NAME? The label side of the same lookup.
+ *
+ * **WHY IT EXISTS: A NAME THAT IS A REGION IS NOT A NAME THAT IS A PATTERN, AND
+ * HALF THE APP'S STRENGTH DAYS ARE NAMED THE FIRST WAY.** `sessionNaming`'s
+ * `inferStrengthMovementPatterns` reads pattern WORDS out of prose — "squat",
+ * "hinge", "bench", "row" — which is right for a focus string and returns
+ * NOTHING for `Lower Body Strength`, `Upper Body Strength` and
+ * `Full Body Strength`. Those three are not vague: they are three of the seven
+ * rows in the table above, and each one states its `plannedPatterns` outright.
+ *
+ * **MEASURED 2026-08-13, 6 generated worlds x 4 weeks: 46 of 94 strength days
+ * answered to NO ladder, and 24 of those 46 were exact labels from this table** —
+ * `Lower Body Strength` x20 and `Full Body Strength` x4. They were invisible to
+ * every slot-coverage cell in the repo. R-014's own row under-reported the gap:
+ * it names the two upper labels and not the lower one, which is the commonest.
+ *
+ * Exact-match only, and deliberately so — including NO trimming, because
+ * `isCanonicalStrengthSessionLabel` delegates here and widening it by even a
+ * space would change what the naming owner calls canonical. `splitSessionName` —
+ * the parser that pulled components out of composed day names like *"Team
+ * Training + Upper Push"* — was DELETED on purpose (Task 11), and re-growing one
+ * here would be the same defect wearing a new function name. A composed name
+ * falls through to the text probes, which already read it correctly.
+ */
+export function strengthVariantByLabel(label: string | undefined): StrengthSessionVariant | null {
+  if (!label) return null;
+  return STRENGTH_SESSION_VARIANTS.find((variant) => variant.label === label) ?? null;
+}
+
+/**
  * Which variant does this set of movement patterns describe?
  *
  * THE ONE ANSWER to "what is this session called". `canonicalStrengthLabel`

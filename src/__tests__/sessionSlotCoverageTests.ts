@@ -162,26 +162,39 @@ console.log('\n[5] The day kind is DELEGATED to the one owner, not re-inferred')
   ok('a conditioning day answers to NO slot list',
     slotDayKindFor('Continuous Aerobic') === null);
 
-  // ⚠ THE OWNER'S GAP, ASSERTED SO IT CANNOT BE FORGOTTEN — not patched here.
-  // "Upper Body Strength" and "Full Body Strength" are two of Sam's seven signed
-  // strength sessions (Bible §20.5) and the shared inference returns NOTHING for
-  // them, so those days are currently unjudged. Catching them with a local regex
-  // would restore the second representation this delegation exists to remove.
+  // ── THE DECLARED GAP IS CLOSED, AND IT UNDER-COUNTED ITSELF ──────────────
   //
-  // ⚠ AND THE GAP IS BIGGER THAN THIS DECLARATION SAYS. Measured 2026-08-13 over
-  // 6 generated worlds x 4 weeks: 46 of 94 strength days answer to NO ladder, and
-  // the commonest unjudged name is `Lower Body Strength` — 20 days — which these
-  // two cells never mentioned. **A declared gap is a claim too.** Closing it is
-  // its own unit and its own commit: the authored set in
-  // `data/strengthSessionVariants.ts` already states each label's
-  // `plannedPatterns`, so the fix is a delegation and not the regex refused here.
-  // It is separated deliberately — it GROWS the judged corpus, and a commit that
-  // widens the denominator must not ride in on one that lowers the numerator.
-  ok('DECLARED GAP: the shared owner does not classify "Upper Body Strength"',
-    slotDayKindFor('Upper Body Strength') === null,
-    'if this now resolves, the owner was fixed — delete this cell and celebrate');
-  ok('DECLARED GAP: the shared owner does not classify "Full Body Strength"',
-    slotDayKindFor('Full Body Strength') === null);
+  // Two cells here used to assert that the owner classifies NOTHING for
+  // "Upper Body Strength" and "Full Body Strength", carrying the note *"if this
+  // now resolves, the owner was fixed — delete this cell and celebrate"*.
+  //
+  // **THE DECLARATION MISSED THE COMMONEST NAME IN THE APP.** Measured
+  // 2026-08-13 over 6 generated worlds x 4 weeks: 46 of 94 strength days
+  // answered to no ladder, and the biggest single unjudged name was
+  // `Lower Body Strength` — 20 days — which the declaration never mentioned.
+  // A declared gap is a claim too.
+  //
+  // THE FIX IS A DELEGATION, NOT THE REGEX THE DECLARATION REFUSED. Those
+  // strings are rows in `data/strengthSessionVariants.ts`, the authored set, and
+  // each states its own `plannedPatterns`. The authored set answers first; the
+  // text probes keep the names it does not hold.
+  ok('the authored set classifies "Lower Body Strength" — 20 days, previously unjudged',
+    slotDayKindFor('Lower Body Strength') === 'lower');
+  ok('the authored set classifies "Upper Body Strength" as a FULL upper day',
+    slotDayKindFor('Upper Body Strength') === 'upper_full');
+  // NON-VACUITY IN THE OTHER DIRECTION: the authored lookup must not start
+  // answering for names it does not hold, or it becomes the regex it replaced.
+  ok('a name the authored set does not hold still falls to the text probes',
+    slotDayKindFor('Team Training + Upper Push') === 'upper_split_push'
+      && slotDayKindFor('Made Up Session') === null);
+  // ⚠ STILL UNJUDGED, AND DELIBERATELY. `Full Body Strength` plans squat + push
+  // + pull, which is a MIXED day, and `slotDayKindForPatterns` returns null for
+  // mixed by rule. **Sam ruled a lower ladder and an upper ladder; he has never
+  // ruled a full-body one.** Filling one in here would be this seat writing
+  // product law. 4 of the 94 days are in this state.
+  ok('OPEN QUESTION: "Full Body Strength" answers to no ladder Sam has ruled',
+    slotDayKindFor('Full Body Strength') === null,
+    'if this resolves, a full-body ladder was authored — say who ruled it');
 }
 
 console.log('\n[6] A unilateral lift fills its SINGLE-LEG slot, not the bilateral one');

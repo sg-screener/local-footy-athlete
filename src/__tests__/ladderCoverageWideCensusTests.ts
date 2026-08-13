@@ -118,15 +118,37 @@ const KITS: string[][] = [['Full Gym'], ['Bodyweight Only'], ['Dumbbells', 'Band
  * (`missing: [squat]` with a doubled `single_leg_knee`, and a doubled `squat`),
  * which belongs to the kit fallback and not to this ladder.
  *
- * **⚠ THE CORPUS IS STILL 216 AND THAT IS NOT THE TRUE BREADTH.** Measured the
- * same day: `slotDayKindFor` returns NOTHING for `Lower Body Strength` — the
- * app's commonest strength day — so ~102 more laddered days are invisible to
- * this census. Judging them takes the count to 88 of 318. **That is a
- * denominator change, not a regression, and it is deliberately NOT in this
- * commit**: a widening must not ride in on a narrowing, or neither number can be
- * read afterwards.
+ * **RAISED 36 -> 88 ON 2026-08-13, AND THE DENOMINATOR IS WHY.** This is the
+ * one thing a ratchet is never allowed to do, so it is stated in full and paired
+ * with a floor that banks what bought it.
+ *
+ * `slotDayKindFor` returned NOTHING for `Lower Body Strength` — the app's
+ * COMMONEST strength day — because the text owner reads pattern words out of
+ * prose and that name is a REGION. **102 laddered days were invisible to this
+ * census and to every other cell in the repo.** The authored set now answers
+ * first, and the corpus goes 216 -> 318 laddered days.
+ *
+ * **THE THREE NUMBERS, ALL TAKEN IN A FRESH WORKTREE AT HEAD:**
+ *
+ * | tree | deficient / laddered |
+ * | --- | --- |
+ * | before the composer   | 50 / 216 |
+ * | after the composer    | 36 / 216 |
+ * | after this widening   | 88 / 318 |
+ *
+ * **52 of the 102 newly-visible days are deficient, and they were ALWAYS
+ * deficient** — nothing regressed, the census simply stopped being blind to
+ * them. Their shape is the equipment class (a `Glute Bridge` and a
+ * `Romanian Deadlift` on one day = two bilateral hinges), which is the same
+ * remainder the composer commit named as not covered.
+ *
+ * **WHAT BANKS IT: `LADDERED_FLOOR` below rises with the ceiling.** A ceiling
+ * raised on the promise of a wider corpus is worthless if the corpus can quietly
+ * shrink back — the count would fall, the ceiling would stay, and the suite
+ * would read as healthy while looking at less. The floor makes the widening a
+ * property this suite HOLDS, not an excuse it was given once.
  */
-const DEFICIENT_CEILING = 36;
+const DEFICIENT_CEILING = 88;
 
 let worldsBuilt = 0;
 let worldsRefused = 0;
@@ -196,8 +218,15 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
 console.log('\n[1] The sweep is as wide as it claims — non-vacuity first');
 {
   ok('most worlds actually built', worldsBuilt >= 150, `built ${worldsBuilt}, refused ${worldsRefused}`);
+  // ⚠ THIS FLOOR IS WHAT PAID FOR THE CEILING BEING RAISED, so it moves with it.
+  // **RAISED 180 -> 300 ON 2026-08-13**, when the authored set closed
+  // `slotDayKindFor`'s blind spot and 102 `Lower Body Strength` days entered the
+  // corpus (216 -> 318 laddered). A ceiling raised on the promise of a wider
+  // corpus is worthless if the corpus can shrink back afterwards: the count
+  // would fall, the ceiling would stay, and the suite would read healthy while
+  // looking at less. **Breadth is now a property this suite HOLDS.**
   ok('the sweep reached laddered days in quantity',
-    ladderedDays >= 180, `laddered days: ${ladderedDays} of ${sessionsSeen} sessions`);
+    ladderedDays >= 300, `laddered days: ${ladderedDays} of ${sessionsSeen} sessions`);
   // AND THE CORPUS IS NOT ONE WORLD REPEATED. If every world produced the same
   // week, the count above would be met by 174 copies of one answer.
   ok('the corpus is varied — laddered days come in at least four sizes',

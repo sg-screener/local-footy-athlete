@@ -395,14 +395,38 @@ export function sessionSlotCoverage(
  *                              body push then it just becomes horizontal
  *                              movement, vertical movement, more arm work"*
  *
- * ⚠ AND THE OWNER HAS A GAP I AM NOT PAPERING OVER. It returns NOTHING for
- * "Upper Body Strength" and "Full Body Strength" — two of Sam's own seven signed
- * strength sessions (Bible §20.5). Those days therefore get NO slot list and are
- * not judged. Adding a regex here to catch them would put the second
- * representation back; the fix belongs in the owner, and it is named in the
- * registry rather than hidden behind a local patch.
+ * ⚠ THE GAP THAT WAS DECLARED HERE IS NOW CLOSED, AND IT WAS BIGGER THAN THE
+ * DECLARATION SAID. This docstring recorded that the text owner returns NOTHING
+ * for "Upper Body Strength" and "Full Body Strength". **Measured 2026-08-13 over
+ * 6 generated worlds x 4 weeks: 46 of 94 strength days answered to no ladder,
+ * and the commonest unjudged name was `Lower Body Strength` — 20 days — which
+ * the declaration never mentioned.** A declared gap is a claim too, and this one
+ * under-counted itself by the largest single name.
+ *
+ * THE FIX IS A DELEGATION, NOT THE REGEX THIS DOCSTRING REFUSED. Those three
+ * strings are not vague prose: they are three of the seven rows in
+ * `data/strengthSessionVariants.ts`, the authored set, and each states its own
+ * `plannedPatterns`. So the AUTHORED SET ANSWERS FIRST and the text probes serve
+ * only the names it does not hold (`Team Training + Upper Push`, engine focus
+ * strings). No second representation is created: one owner answers for canonical
+ * labels, the other for prose, and neither guesses at the other's job.
+ *
+ * ⚠ `Full Body Strength` IS STILL NOT JUDGED, AND THAT IS HONEST. Its authored
+ * patterns are squat + push + pull, which is a MIXED day, and
+ * `slotDayKindForPatterns` returns null for mixed by rule. **Sam has ruled a
+ * lower ladder and an upper ladder; he has never ruled a full-body one**, and
+ * inventing one here would be this seat writing product law. It stays unjudged
+ * and is named as a question, not filled in.
  */
 export function slotDayKindFor(sessionText: string | undefined): SlotDayKind | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { strengthVariantByLabel } = require('../data/strengthSessionVariants') as {
+    strengthVariantByLabel: (label: string | undefined) => { plannedPatterns: readonly string[] } | null;
+  };
+  const authored = strengthVariantByLabel(sessionText?.trim());
+  if (authored) {
+    return slotDayKindForPatterns(authored.plannedPatterns as Iterable<MainStrengthPattern>);
+  }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { inferStrengthMovementPatterns } = require('../utils/sessionNaming') as {
     inferStrengthMovementPatterns: (text: string | undefined) => readonly string[];

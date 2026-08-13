@@ -40,7 +40,7 @@ import {
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 import {
-  STRENGTH_SESSION_VARIANTS,
+  strengthVariantByLabel,
   strengthVariantForPatterns,
 } from '../data/strengthSessionVariants';
 
@@ -574,5 +574,5 @@ export function strengthComponentDisplayName(args: {
  * variant is now automatically recognised here.
  */
 export function isCanonicalStrengthSessionLabel(name: string): boolean {
-  return STRENGTH_SESSION_VARIANTS.some((variant) => variant.label === name);
+  return strengthVariantByLabel(name) !== null;
 }
