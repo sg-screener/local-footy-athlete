@@ -154,7 +154,73 @@ than behind it.
 spans", with the constraint reading DERIVED from the fact vocabulary rather than
 re-authored beside it — not two hand-written filters kept in agreement.
 
-### CONDITIONING — the wall is `categoryToFlavour`, and finding 3 adds a second
+### ✅ AWAY — CLOSED, `4087d998`
+
+`rules/awaySpans.ts` is the one owner; both halves call it; the constraint
+reader's parameter is `ActiveConstraint` instead of `any[]`, so the field names
+are compiler-checked. `test:away-span-ownership` 8/0, in `test:bible`.
+Mutation-proven three ways, each redding a different cell (field-name drift →
+[2]; open-horizon rule dropped → [3]; liveness loosened → [4:expired],
+[4:superseded]). Non-vacuity leads, because every other cell is an equality
+between two readings and two empty readings are equal.
+
+### ✅ CONDITIONING — THE HALF THAT COULD BE PAID WITHOUT INVENTING LAW, `fd070884`
+
+`conditioningStress` is now a total `Readonly<Record<>>` instead of a switch
+with a `default`. **Output-inert — every answer is what the switch already
+returned, `cod_decel`'s `'unknown'` included.** The key type is DERIVED from
+`Workout['conditioningCategory']` rather than re-typed, so the table cannot
+drift from the field it reads.
+
+**MUTATION-PROVEN, AND THE MUTATION EXPOSED AN INSTRUMENT FAULT OF MINE FIRST.**
+Deleting the `cod_decel` row produced NO error under `tsconfig.json` — because
+that project **does not include the file at all** (`--listFiles`: 0 hits).
+Under `tsconfig.compile.json`, the real gate, it reds with `TS2741: Property
+'cod_decel' is missing`. **A green compiler run against the wrong project is
+not evidence**, and for a few minutes it had me believing my own enforcement
+did not work.
+
+### ⚠ WHAT IS DELIBERATELY NOT BUILT, AND WHY NO QUESTION GOES TO SAM
+
+**`cod_decel`'s stress value, and `categoryToFlavour`.** Both are RULINGS, not
+wiring:
+
+- **REGISTRY-GREP** — `RULINGS_REGISTRY.md` for *cod*, *cod_decel*, *decel*,
+  *change of direction*: **R-003** (the COD window), **R-028**, **R-056**, and
+  **R-078** — *"leave it"*, Sam 2026-08-13, asked directly with the number in
+  front of him, carrying **"do not re-open without a new ruling from Sam"**
+  after FOUR reverted attempts.
+- Sam's own authored `TIER_FOR_QUALITY` puts `cod_decel` at tier `A`, which
+  would argue `'hard'` — **which is exactly why this seat does not get to pick
+  it.**
+- **AND IT IS NOT WORTH HIS TIME EITHER WAY.** R-078 establishes COD is placed
+  **zero** times by slot arithmetic, so the stress label is currently
+  unreachable. Handing him a question about a session that never gets placed is
+  the re-ask trap this repo has already paid for. **The gap is named in the code
+  and stays open. No question raised.**
+- `categoryToFlavour` stays untouched for the reason `arms` already recorded:
+  R-4A forbids the category changing under the athlete, so any flavour chosen
+  for `cod_decel` invents law.
+
+---
+
+## SHARED-CHECKOUT HAZARDS PAID THIS SESSION
+
+- **`git stash` IS A WHOLE-TREE WRITE, AND I USED IT FOR A CONTROL RUN.** It
+  swept six other seats' uncommitted files for the duration. It popped clean and
+  nothing was lost — verified against `git log`, they had committed — **but that
+  was luck, and the cost was unbounded.** The right control is a
+  backup-and-swap of the ONE file (`cp` to scratchpad, restore from my own
+  backup), which is what the later two control runs used.
+- **`git commit -- <path>` COMMITS THE WORKING TREE, NOT THE INDEX.** With
+  another seat's claim sitting uncommitted in `docs/SEAT_INBOX.md`, that would
+  have swept their line into my name. Staged the single hunk with
+  `git apply --cached` and committed the INDEX instead.
+- **`.git/HEAD.lock` stalled every commit twice**, ~10 minutes each, with no git
+  process alive. A retry loop is what landed the work; moving the lock aside was
+  refused by the sandbox.
+
+### THE OLD CONDITIONING NOTE (superseded by the two sections above)
 
 Not yet built. `arms` correctly did not touch `categoryToFlavour`: R-4A forbids
 the category changing under the athlete, so any flavour chosen for `cod_decel`

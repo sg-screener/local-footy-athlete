@@ -43,7 +43,13 @@ his instruction is standing authority, not history.**
     **REPORT WHAT YOU COULD NOT REACH.** A simulator is not his phone. If the
     furthest you can get is a simulator build, say that plainly and hand him the
     one command anyway.
-61. **OWNED BY `vocab` — RESTAMPED 2026-08-13 AT SAM'S DIRECT ORDER. `arms` HAS
+61. **ALL THREE SIGHTINGS ARE NOW PAID — `vocab`, 2026-08-13.** Equipment
+    `9c0d1776`; away `4087d998` (`test:away-span-ownership` 8/0); conditioning
+    `fd070884` (total `Record<>`, output-inert). **The 93 was checked and is a
+    LOWER BOUND** — 6 sites are structurally invisible to the census and its
+    definition of "total" admits a `default:`, which is this item's own defect.
+    Detail in `docs/STATUS_VOCAB.md`. **No question for Sam** (R-078).
+    **OWNED BY `vocab` — RESTAMPED 2026-08-13 AT SAM'S DIRECT ORDER. `arms` HAS
     GONE QUIET AND THE `terminal` SEAT IS GONE; `arms` LANDED THE CENSUS AND THE
     COUNT (`27d4be3f`) AND EXPLICITLY LEFT THE TWO REMAINING SIGHTINGS —
     CONDITIONING AND AWAY — UNBUILT. NOTHING BELOW THIS LINE IS RE-SCOPED. AND
