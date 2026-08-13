@@ -1308,3 +1308,52 @@ assumption and not a fact.
 against `HEAD` and confirm **every** changed hunk is mine — not merely that I
 intended to change it. `git diff HEAD -- <path>` takes one second and both
 absorptions are visible in it.
+
+
+---
+
+## 2026-08-13 — THE BARBELL'S ROUTE IS FOUND, VERIFIED, AND SPECIFIED. I AM NOT TAKING IT, AND THE REASON IS THE LAW.
+
+**The terminal located it and offered it to me; I verified it rather than taking
+their word, and it is exact.** There are TWO paths that put exercises on a day and
+only one of them asks about equipment:
+
+    defaultProgram.ts:2477   THE EDGE PATH — rotates and filters:
+      applyPoolRotation(ex.name, rotationContext, poolUsage, effectiveAthletePrefs)
+
+    defaultProgram.ts:1286   completeCoachWorkoutsFromPlan — DOES NOT:
+      return [...coachWorkouts, ...additions].sort(...)
+
+**`additions` come straight from `fallbackExercisesForPlanEntry` — HARDCODED
+NAMES, `'Back Squat'` among them — and are returned without rotation and without
+prefs.** So **a day the edge omits ships literal barbell lifts whatever kit the
+athlete has.** That is `EQUIPMENT CENSUS: 5`, and rotation is INNOCENT: driven
+directly it substitutes correctly for every spelling of the answer
+(`['Bodyweight Only']`, `['Bodyweight only']`, `['bodyweight']` all give
+`Bodyweight Squat`).
+
+**AND IT COMPOUNDS WITH THIS MORNING'S `:227` WORK.** The terminal grew that same
+fallback for the hinge; the `single_leg_knee` rows it now emits reach a bodyweight
+athlete as names he cannot use either. **The fallback got better and no more
+reachable.**
+
+**THE FIX, SPECIFIED:** route `completeCoachWorkoutsFromPlan`'s additions through
+`applyPoolRotation` with the athlete's prefs, exactly as `:2477` already does.
+
+**⚠ AND THE COST, WHICH IS WHY IT IS NOT STARTED HERE.** It moves output on EVERY
+edge-omitted day — not only bodyweight ones — so it owes `test:scenarios` and
+`test:qa` either side plus a fresh golden read, on a golden that still holds an
+unresolved regression. **Item 34's law bars starting that at the tail of a
+session, and CLAUDE.md's is blunter: *"Start it fresh, not at the end of a
+session — half-doing this is how the last two nights went wrong."***
+
+**BOTH SEATS DECLINED IT FOR THE SAME REASON AND NEITHER SAT ON IT.** The terminal
+recorded its cost in `docs/STATUS_TERMINAL.md` (`3f167998`) and undertook not to
+touch `:1288` without saying so; this is the matching note. **Nothing about it
+needs re-deriving — the route, the two line numbers, the fix and the bill are all
+here.**
+
+**THE MEASUREMENT IS ALREADY WIRED FOR WHOEVER TAKES IT:** `EQUIPMENT CENSUS: 5`
+prints the offending lifts every run, and `SLOT CENSUS: 1` prints the deficient
+day. **Both are ratchets — land the fix and lower the ceilings in the same
+commit.**
