@@ -133,6 +133,82 @@ and it withdrew.** Both directions of that exchange are the point: *I* was also
 stale, on the same file, in the opposite direction. **Two agents, one file, two
 stale reads, ten minutes apart.**
 
+### THE SWEEP — AND THE CONTROL THAT MAKES ITS NUMBER MEAN ANYTHING
+
+**`scripts/sweep.sh audit-restore`, still running at the time of writing.**
+**A RED COUNT IS A CLAIM, so it is stated against a CONTROL, never as a total.**
+The control is `.sweep/fails-item28-away-rest.txt`, **10:55 today — before
+`b62add9f` landed at 11:05**, so it is the last measurement of this repo taken
+before the deletion. It carried **20 failing suites**.
+
+**PARTIAL RESULT, 7 reds so far, and only ONE is not in the control:**
+
+| suite | in the 10:55 control? |
+| --- | --- |
+| `test:phase-shift-atomicity` | yes |
+| `test:power-counting` | yes — **and item 36 already names it** (`c69151d9` is not output-neutral; the moved golden is that cause, not a second defect) |
+| `test:profile-mirror-narrowing` | yes |
+| `test:legacy-census` | yes |
+| `test:totals-or-red-law` | yes |
+| `test:onboarding-field-influence` | yes |
+| **`test:displacement-sweep`** | **NO — the only new one so far** |
+
+**⚠ THE "FIXED SINCE" LIST IS NOT YET READABLE AND MUST NOT BE QUOTED.** 15
+suites in the control are absent from my set **because the sweep has not reached
+them**, not because they went green. A partial fails-file read as a final one is
+the harness-lies shape this runner exists to prevent. **Wait for the exit.**
+
+**`test:displacement-sweep` IS `resolverDisplacementSweepTests.ts` AND IT IS NOT
+MINE — it is almost certainly the LIVE item-37 work.** It exercises the
+resolver; `src/utils/sessionResolver.ts` was restored by `186c2b1b` and is being
+written right now by the terminal seat, whose `59b0994a` changed what a vacated
+away day carries. **Attribute it there before anywhere else.**
+
+**AND THE ATTRIBUTION IS CLOSED ON MY SIDE, MEASURED NOT ASSERTED: ALL THREE OF
+MY COMMITS ARE MARKDOWN ONLY.** `4794a18a`, `d15b1a3f`, `c802a08a` — every path
+in all three ends `.md`, verified by listing them and filtering. **No suite red
+can be attributed to this seat.** The code half of the restore is `df380518`,
+the terminal seat's, so **this sweep is measuring THAT commit** — which is
+exactly the verification it needed and did not have.
+
+### ITEM 28-C1 — THE WALL IS NAMED TO THE LINE, AND THE STANDING BAR MAY HAVE EXPIRED
+
+**READ-ONLY THIS SESSION. NOTHING IN `coachingEngine.ts` WAS TOUCHED** — a sweep
+was running, and editing source under a running sweep makes the sweep measure a
+tree that never existed.
+
+**THE MECHANISM, EXACT** (`src/utils/coachingEngine.ts`):
+- `autoPlacementCategories()` (`:4161`) appends `cod_decel` **LAST**, and only
+  when `codPermitted`.
+- `pickPlacementCondCategories()` (`:4201`) builds its list in three passes; COD
+  can only enter at pass 2 or 3, **after every other uncovered category**.
+- **BOTH consumers walk that list and return the FIRST allowed** —
+  `pickStandaloneCondDecision` (`:3815`) and `shouldAttachBestFinisher`
+  (`:3780`). `aerobic_base` sits above COD and is essentially always eligible.
+- **So COD is reachable only if every category above it is DENIED.** That is
+  item 27's *"ranked last, never reached"*, confirmed at the line rather than
+  inferred, and it is why 28-C1 measured `permitted=true` on all 108 calls with
+  zero sessions placed.
+
+**⚠ THE BAR IN 28-C1b — *"Do not reorder"* — RESTS ON A PREMISE THAT THE CODE NO
+LONGER MATCHES, AND THIS IS A LEAD, NOT PERMISSION.** Its stated reason is
+*"promoting COD up the order makes it beat ordinary aerobic work on NORMAL
+WEEKS"*. **That bar was written BEFORE `codDecelPermitted` existed** (item 31's
+ruling). Today `cod_decel` is not in the pool at all on a normal week — it needs
+no team training AND not in-season AND, off-season, `late_offseason`. **A normal
+week cannot see it, so promoting it cannot move one.**
+
+**THIS IS EXACTLY THE CLASS 28-C1b WARNS ABOUT — *"three of the four reverts on
+this item came from changing code before measuring the layer above it"* — SO IT
+IS WRITTEN DOWN AND NOT ACTED ON.** The premise change is a CODE READ; the
+behavioural claim is UNMEASURED.
+
+**THE EXPERIMENT THAT SETTLES IT, single-variable:** move `cod_decel` up one
+place in `autoPlacementCategories()` and run `test:scenarios` + `test:qa` **both
+arms**. **The claim is falsified the moment ANY week without the COD gate moves.**
+Report the drift-branch firing rate across the corpus either way, and revert if
+it moves anything — the patch belongs in a scratchpad, as `28-C1b`'s did.
+
 ### NEXT SESSION STARTS HERE
 
 1. **Land the 32-file restore** (paths + message are in the scratchpad; re-stamp
