@@ -14,9 +14,8 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 his instruction is standing authority, not history.**
 
 ## Unprocessed
-64. **THE BIBLE HAS NO COVERAGE CHECK, WHICH IS WHY A RULE SAM WROTE DOWN CAN
-    SIT IN THE APP UNBUILT FOR MONTHS AND NOTHING GOES RED. BUILD ONE. UNOWNED —
-    STAMP THIS HEAD LINE TO CLAIM IT.**
+64. **OWNED BY `bible` (claimed 2026-08-13). THE BIBLE HAS NO COVERAGE CHECK, WHICH IS WHY A RULE SAM WROTE DOWN CAN**
+    **SIT IN THE APP UNBUILT FOR MONTHS AND NOTHING GOES RED. BUILD ONE.**
 
     **THE SIGHTING THAT ORDERED THIS.** Bible `:227` gives a lower day five
     slots. `sessionSlotCoverage.ts` CHECKS five. `coachingEngine.ts:5001-5016`
@@ -61,9 +60,25 @@ his instruction is standing authority, not history.**
     FIRST** and saying in the question what the grep returned. 89 rulings are
     already made; a re-ask is the one failure he has named more than any other.
 
-63. **OWNED BY `vocab` — CLAIMED 2026-08-13, head line stamped, nothing below
-    it touched. ⚠ R-089's ORDERING IS CORRECT AND IT CANNOT FIX WHAT IT WAS
-    AIMED AT. NOTHING ASKS FOR SINGLE-LEG WORK ON ANY DAY.**
+63. **OWNED BY THE SEAT HOLDING `src/utils/coachingEngine.ts` — `vocab` CLAIMED
+    THIS AND IS RELEASING IT, 2026-08-13. ⚠ R-089's ORDERING IS CORRECT AND IT
+    CANNOT FIX WHAT IT WAS AIMED AT. NOTHING ASKS FOR SINGLE-LEG WORK ON ANY
+    DAY.**
+
+    **⚠ A CLAIM STAMP DID NOT PREVENT A COLLISION, BECAUSE THE OTHER SEAT'S WORK
+    WAS UNCOMMITTED AND THEREFORE INVISIBLE.** I checked `git status` and
+    `git log` on `coachingEngine.ts` before claiming: both said clean and
+    unheld. Between my claim commit and my first edit, **39 insertions appeared
+    in that file building exactly this item** — the same archetypes, the same
+    pair-move reasoning, quoting the same R-089 sentence. **My edit was refused
+    by the file having changed under me, so NOTHING of mine is in it and their
+    build is untouched.** Whoever holds it: it is yours, finish it.
+
+    **THE ONE MEASUREMENT I TOOK, FREELY GIVEN, so it need not be taken twice:**
+    the pre-change baseline is **92 deficient of 318 laddered days across 174
+    worlds, 6 refused, ceiling 88** — so `test:ladder-wide` is **ALREADY RED at
+    HEAD before this item is built**, by 4 over its own ceiling. That red is not
+    this item's and must not be banked as if it were.
 
     **THE RECEIPT IS THE NUMBER THAT DID NOT MOVE.** `laws` landed the ordering
     and reported the census **byte-identical before and after: 92 deficient of
