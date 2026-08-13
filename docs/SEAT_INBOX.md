@@ -2087,7 +2087,12 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
-- **⚠ NEW 2026-08-13, `cap` — THE APP'S EXERCISE CAP IS 6. YOU AUTHORED 6-7,
+- **✅ ANSWERED 2026-08-13 — R-088. THE CAP IS 7, IT COUNTS STRENGTH ROWS
+  ONLY (paired mobility and the prehab flow are free of it), and it binds what
+  the APP prescribes — an athlete may add as many of their own as they like.
+  THE PAIRING IS R-015 AND IS ALREADY BUILT; DO NOT REBUILD IT. DISCHARGED.**
+
+  ~~⚠ 2026-08-13, `cap` — THE APP'S EXERCISE CAP IS 6. YOU AUTHORED 6-7,
   AND 7 FOR A FULL BODY DAY. NOBODY AUTHORED THE 6.**
 
   **REGISTRY-GREP:** `RULINGS_REGISTRY.md` for *maxExercises*, *exercise cap*,
@@ -2105,7 +2110,14 @@ seat was wrong.
   the census bank **three lawful seven-row days as debt**. Paying that debt down
   would have meant breaking Sam's own prescription. Corrected to 0 of 43.
 
-- **⚠ NEW 2026-08-13, `readiness` — R-087 AND §18 ARE TWO RULES OVER ONE NUMBER,
+- **✅ ANSWERED 2026-08-13 — R-089. COVERAGE IS A PRIORITY ORDER, NOT A
+  REPLACEMENT: a full body day plans the UNCOVERED slots FIRST and then repeats
+  freely. VOLUME IS UNTOUCHED AND §18 DOES NOT CHANGE — the collision dissolves
+  in §18's favour, so `readiness` can re-land the pass as an ORDERING rather
+  than a substitution. AND A NEW LAW: every squat matched with a hinge, every
+  single-leg knee matched with a single-leg hip. DISCHARGED.**
+
+  ~~⚠ 2026-08-13, `readiness` — R-087 AND §18 ARE TWO RULES OVER ONE NUMBER,
   AND THE WEEK REFUSES WHEN THEY DISAGREE. THIS IS THE ONLY THING BLOCKING THE
   COMPOSER.**
 
