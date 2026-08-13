@@ -13,9 +13,9 @@ reworded or dropped**, with a pointer left at each site. 96KB -> 66KB.
 **Sam's QUOTED WORDS were kept inline wherever an item still answers to them:
 his instruction is standing authority, not history.**
 
-## Unprocessed63. **⚠ R-089's ORDERING IS CORRECT AND IT CANNOT FIX WHAT IT WAS AIMED AT.
-    NOTHING ASKS FOR SINGLE-LEG WORK ON ANY DAY. UNOWNED — STAMP THIS HEAD LINE
-    TO CLAIM IT.**
+## Unprocessed63. **OWNED BY `vocab` — CLAIMED 2026-08-13, head line stamped, nothing below
+    it touched. ⚠ R-089's ORDERING IS CORRECT AND IT CANNOT FIX WHAT IT WAS
+    AIMED AT. NOTHING ASKS FOR SINGLE-LEG WORK ON ANY DAY.**
 
     **THE RECEIPT IS THE NUMBER THAT DID NOT MOVE.** `laws` landed the ordering
     and reported the census **byte-identical before and after: 92 deficient of
