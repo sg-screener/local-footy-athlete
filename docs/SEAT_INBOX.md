@@ -789,6 +789,49 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13 — COD/DECEL CAN ONLY APPEAR BY TAKING ANOTHER SESSION'S
+  SLOT. WHICH ONE IS PROGRAMMING CONTENT, AND `LAW-L7` MAKES THAT SAM'S.**
+
+  **REGISTRY-GREP:** `docs/RULINGS_REGISTRY.md` for *displac* (**0**), *which
+  category* (**0**), *aerobic base* (**0**), *must-cover* (**0**), *cut first*
+  (**0**), *substitut* (3), *swap* (6), *replaces* (2). **The 11 hits were read,
+  not counted** — every one is exercise-pool variant swapping (`Face Pulls`,
+  `Single Leg RDL`) or the AWAY substitution ruling. **NOTHING rules what a COD
+  session displaces.** Not a re-ask.
+
+  **HIS OWN WORDS ALREADY IN THE BIBLE:** *"AVAILABILITY GATE, no-team-training
+  weeks only, **LOW selection priority** — the whole COD/Decel row."* **The app
+  obeys that exactly, and that is the problem.**
+
+  **THE MEASUREMENT THAT MAKES IT A QUESTION** (pre-season, no club, 4 weeks):
+  **2.0–2.75 conditioning slots per week** against **3–4 categories**. A slot goes
+  to the first allowed candidate, so with COD ranked last **something else is
+  always still uncovered when the last slot is filled.** **"Low priority" and
+  "prescribed" cancel exactly: COD is placed ZERO times, and no reordering that
+  keeps it last can change that.** Measured, and both cheap fixes are refuted —
+  raising its urgency changes nothing, because urgency is not selection.
+
+  **SO THERE ARE ONLY TWO HONEST ANSWERS, and both are his:**
+  1. **LEAVE IT.** *"Low priority"* means it genuinely does not appear when the
+     week is this tight. **Then the app is already correct and this item closes.**
+  2. **IT MUST APPEAR** in those weeks — which means **one session of something
+     else loses its slot.**
+
+  **RECOMMENDATION, WITH THE NUMBERS RATHER THAN A BARE QUESTION: option 2,
+  taking ONE `tempo` session.** Measured split in a permitted week is
+  **`aerobic_base` 4 · `tempo` 5 · `vo2` 2** across 4 weeks. **Tempo is the
+  largest block, so it is the smallest relative loss**, and it leaves the aerobic
+  base and the two hard `vo2` sessions untouched — which matches his off-season
+  guidance (*"aerobic capacity as the base… a mix of stimulus… not all aerobic
+  base"*).
+
+  **WHAT HE WAS ASKED, in his own terms:** *"In weeks with no team training, the
+  change-of-direction work never actually gets scheduled — there's only room for
+  about 2-3 conditioning sessions and it's always last in the queue. To make it
+  show up, something else has to give up a spot. I'd take it off tempo. Or say
+  the word and I'll leave it as is."*
+  **NOT BLOCKING** — the app is defensible either way; option 1 closes the item.
+
 - **⚠ NEW 2026-08-13 — A FINISHED ITEM KEEPS THE QUEUE ALIVE, AND THAT COST HIM
   MOST OF A TURN TODAY. ONE SMALL PROCESS RULING.**
 
