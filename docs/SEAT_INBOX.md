@@ -15,7 +15,18 @@ his instruction is standing authority, not history.**
 
 ## Unprocessed
 
-38. **SAM ANSWERED BOTH OPEN QUESTIONS, 2026-08-13. R-076 AND R-077.**
+38. **BLOCKED-BY: other-agent — BOTH RULINGS ARE BUILT; THE LIVE REMAINDER IS THE
+    TERMINAL'S POOL WORK.**
+
+    **R-077 (away, the desktop's half) is DONE and archived with item 37** — the
+    answer was *do nothing* to the strength arm, and the escape hatch he relied on
+    is verified: all seven days of an away week accept an added strength session
+    (`test:away-flow` [17e]/[17f]/[17g]).
+    **R-076 (face pull) is `BUILT` by the terminal.** What its own row names as
+    next — *"`isolation_upper/accessory` is ONE undifferentiated pool holding
+    three muscle groups … sub-grouping that pool is the next unit"* — is theirs,
+    not mine. Marked so the queue walks past it rather than counting a finished
+    item as work.
 
     **OWNED BY THE TERMINAL** (face pull / pool membership) **AND THE AWAY SEAT**
     (the strength arm of item 37). **Add both rows to `RULINGS_REGISTRY.md` in
