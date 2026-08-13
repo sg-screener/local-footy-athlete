@@ -1,0 +1,129 @@
+appId: com.localfootyathlete.app
+name: Golden - a %MAS session names the athlete's own pace
+tags:
+  - e2e
+  - golden
+  - program
+  - conditioning
+---
+# CENSUS C2, ON GLASS. `docs/RULINGS_NOT_IN_THE_APP_2026-08-13.md` C2: the 2km
+# time trial was collected, validated and stored, and `deriveMas` had ZERO
+# production callers — so a card read the literal authored string
+# `Intensity: 110% MAS` and never said 110% of WHAT. `rules/masPace.ts` is the
+# reader and `test:time-trial` [23]-[25] holds the derivation. **THIS FILE IS THE
+# ONLY THING THAT PROVES AN ATHLETE CAN SEE IT.**
+#
+# ── ITS NON-VACUITY LIVES IN A SIBLING, AND IS NOT OPTIONAL ──
+#
+# `mas-pace-absent-while-the-club-runs.yaml` asserts the pace is ABSENT on the
+# same seed before any trip. Run them as a pair. That file explains why they are
+# two files: a second clear-state launch inside one run never comes ready, and
+# `- back` backgrounds the app rather than returning to the program screen.
+#
+# ── WHY IT TAKES A TRIP TO PHOTOGRAPH A PACE ──
+#
+# MEASURED, NOT ASSUMED: an in-season week WITH A CLUB prescribes NO %MAS at all
+# — `generateProgramLocally` over `DEV_E2E_STANDARD_PROFILE` yields ZERO rows
+# carrying a MAS band, and the same profile with the club removed yields 8.
+# **The club supplies the running.** Every seeded world in this repo is
+# club-carrying, so no seed shows this line standing still — which is why three
+# hand-driven attempts produced nothing, and why this is a FLOW. Sam's Away
+# control is the cheapest thing that makes a week club-less.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+
+# The Away control lives on the WEEK shape — a span is not a day question.
+- runFlow:
+    file: ../common/show-week-shape.yaml
+# THE WEEK SHAPE DRAWS ALL SEVEN DAYS AT FULL SIZE, so the change card that
+# holds the Away control sits well below the fold — a bare `tapOn` reports
+# "element not found" and reads like a missing control rather than a missing
+# scroll. (`HomeScreenV2` renders it under `isNormal && !dayFirst`, so the week
+# shape is also the only place it exists at all.)
+- scrollUntilVisible:
+    element:
+      id: "home-away-entry"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "home-away-entry"
+- extendedWaitUntil:
+    visible:
+      id: "home-away-sheet"
+    timeout: 10000
+# Leave Tuesday. The seed is anchored Monday 2026-07-13, so Tuesday the 14th is
+# inside the week already on screen.
+- tapOn:
+    id: "home-away-leave-tue"
+# Return a fortnight out, so the whole anchored week sits inside the trip.
+- tapOn:
+    id: "home-away-return-2026-07-27"
+# "Yes, same as usual" — the equipment answer must NOT narrow the week, or a
+# missing pace could be an equipment substitution rather than the reader.
+- tapOn:
+    id: "home-away-equipment-yes"
+# THE TRIP IS APPLIED — the week now reads "Got it — logged that you're away.
+# Team training and games come off as your plan updates", Tuesday and Thursday
+# have lost "+ Team Training", and Saturday's GAME has become a CORE
+# Conditioning day (R-075's replacement, and this frame is its receipt too).
+#
+# ⚠ DO NOT WAIT ON `program-view-toggle` HERE. Reaching the Away control needed a
+# scroll, so the toggle is above the fold and the assertion fails on a screen
+# that is completely correct — measured, 2026-08-13.
+- extendedWaitUntil:
+    visible:
+      id: "day-row-wed"
+    timeout: 15000
+- takeScreenshot: artifacts/ui-walk/pace-away-week-applied
+
+# WEDNESDAY, NOT TODAY. Measured offline and confirmed on this frame: the
+# club-less week puts standalone CORE Conditioning on Wednesday and Saturday.
+# Monday keeps its combined day, whose conditioning is an aerobic FLUSH — and a
+# flush carries no %MAS at all, so opening today would photograph a true
+# negative and read as a failure of the reader.
+- scrollUntilVisible:
+    element:
+      id: "day-row-wed"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "day-row-wed"
+- scrollUntilVisible:
+    element:
+      id: "view-workout-button"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "day-workout-title"
+    timeout: 10000
+
+# THE CONDITIONING SECTION STARTS COLLAPSED — `SessionExecutionSection` is
+# `useState(false)` — so its rows are not in the tree until it is opened. The
+# sibling non-vacuity flow asserted "no pace" without this tap and passed over an
+# unopened section; the screenshot is what exposed it.
+- assertVisible:
+    id: "session-execution-section-conditioning"
+- tapOn:
+    id: "session-execution-toggle-conditioning"
+
+# THE ASSERTION. The pace rides the conditioning row of a combined
+# strength+conditioning day — measured offline: the club-less week puts a
+# `Bodyweight Conditioning Circuit` (`Intensity: 65-80% MAS`) on the Lower Body
+# Strength and Upper Pull days, which renders `Your pace: 9.8-12 km/h` off the
+# seed's own 8:00 2km.
+- scrollUntilVisible:
+    element:
+      id: "workout-exercise-pace-.*"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "workout-exercise-pace-.*"
+# THE WORDS, NOT JUST THE ELEMENT — a testID survives an empty string, and an
+# empty pace line is exactly the failure this whole unit exists to end.
+- assertVisible: "Your pace:.*km/h"
+- takeScreenshot: artifacts/ui-walk/pace-named-on-a-mas-session

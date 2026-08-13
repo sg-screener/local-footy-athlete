@@ -405,6 +405,46 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, terminal — A BODYWEIGHT LEG DAY SHIPS THE SAME SQUAT
+  TWICE. When there is no other legal exercise, does the app REPEAT it, DROP it,
+  or SHIP THE DAY SHORT?**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *duplicate*, *two squats*,
+  *equipment*, *bodyweight*, *substitut*, *repeat*. **R-019 and R-072 are the
+  equipment SCOPES (what a change applies to) and say nothing about what happens
+  when a substitution runs out of options. *"two squats"*, *"bodyweight"*,
+  *"substitut"* and *"repeat"* return NOTHING.** R-014 rules that a session is
+  judged by PATTERN COVERAGE, which is what makes this a defect at all — but it
+  does not say which of the three answers is right. **A gap, not a re-ask.**
+
+  **WHAT SHIPS TODAY** (bodyweight only, off-season, 4 days):
+
+      "Lower Squat"  Bodyweight Squat · Glute Bridge · Bodyweight Squat ·
+                     Single Leg RDL · Leg Extension · Back Squat
+
+  **The same exercise printed twice, and three squat-pattern rows on one leg
+  day.** Traced: with bodyweight equipment the squat pool filters to almost
+  nothing, so `Reverse Lunges` and `Back Squat` BOTH rotate to `Bodyweight
+  Squat`. The app's within-session "don't repeat" rule then has nowhere else to
+  go and returns the same name again. **Not caused by anything built today — it
+  is older, and control-proven.**
+
+  **WHY IT IS YOURS AND NOT MINE:** all three answers are defensible and they
+  give the athlete different weeks.
+  1. **REPEAT** — he gets the volume, and two sets of bodyweight squats is not
+     absurd for a home week.
+  2. **DROP** — a shorter, cleaner day. Matches *"the number of exercises is not
+     important the total work being done evenly across the body is"*.
+  3. **SHIP SHORT AND SAY SO** — the day is short because his kit cannot fill it,
+     and the app tells him rather than padding.
+
+  **WHAT TO SEND — one line:** *"repeat it"*, *"drop it"*, or *"tell me the day
+  is short"*.
+
+  **NOT BLOCKING.** The oracle already detects this (`sessionSlotCoverage`
+  returns `duplicated: ['squat']`); what is missing is the ANSWER it should act
+  on.
+
 - **⚠ NEW 2026-08-13, terminal — DOES A TEAM NIGHT *COUNT AS* YOUR SPRINT, OR
   DOES IT *EARN* ONE ON TOP? Your R-079 and the app disagree, and both readings
   are defensible.**
