@@ -171,6 +171,30 @@ can be attributed to this seat.** The code half of the restore is `df380518`,
 the terminal seat's, so **this sweep is measuring THAT commit** — which is
 exactly the verification it needed and did not have.
 
+### ⚠ INSTRUMENT FINDING — A SWEEP RECORDS *WHICH* SUITE FAILED AND NEVER *WHY*
+
+**`scripts/sweep.sh:86` writes every suite's output to the SAME file:**
+
+    if ! env "$@" npm run "$suite" > "$OUT_DIR/last.log" 2>&1; then
+
+**So `last.log` is overwritten once per suite and only the LAST one survives.**
+What persists is `fails-<label>.txt` — **a list of suite NAMES with no failure
+text behind any of them.**
+
+**WHY THAT MATTERS MORE THAN IT LOOKS.** This repo's own standing law is
+**"diff the failure TEXT, never the totals"** (`a-red-count-is-a-claim`). The
+sweep runner is the instrument that law is usually applied to, **and it does not
+retain the text the law requires.** Every attribution made from a sweep alone —
+including mine above — is therefore a claim about NAMES, and the honest next
+step for any red is to **re-run that one suite alone** and read it.
+
+**COST, so nobody re-derives it:** a 20-red sweep tells you nothing about 19 of
+them, and each answer costs a second full run of that suite. **This is item 2's
+territory ("make the chain cheap"), which is `BLOCKED-BY: other-agent`, so it is
+RECORDED here rather than fixed.** The one-line shape is
+`> "$OUT_DIR/log-$suite.txt"`; it is not built, because the two section18 files
+item 2 names are mid-flight with another seat.
+
 ### ITEM 28-C1 — THE WALL IS NAMED TO THE LINE, AND THE STANDING BAR MAY HAVE EXPIRED
 
 **READ-ONLY THIS SESSION. NOTHING IN `coachingEngine.ts` WAS TOUCHED** — a sweep
