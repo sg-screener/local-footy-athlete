@@ -1910,6 +1910,57 @@ seat was wrong.
 
 ## AWAITING SAM — parked behind his phone rebuild, never a request
 
+- **⚠ NEW 2026-08-13, `gunshow` — A NO-EQUIPMENT ATHLETE CAN NEVER GET A LEGAL
+  LEG DAY, AND ONE WORD FROM YOU FIXES IT. YOU ALREADY ANSWERED BOTH HALVES —
+  THEY JUST DISAGREE.**
+
+  **REGISTRY-GREP:** grepped `RULINGS_REGISTRY.md` for *single_leg_hip*,
+  *single leg hip*, *Single-Leg Hip Thrust*, *Single-Leg RDL*, *isolation_lower*,
+  *unilateral*, *movement tag*. **Only ONE hit, and it is the thing being asked
+  about, not an answer to it:** **R-014** (line 170) quotes his ladder verbatim —
+  *"lower body strength should have a hinge, a squat, an single leg knee, a
+  single leg hip, and accessory and/or some core"*. **R-014 says the slot must be
+  filled. NOTHING rules WHAT fills it**, and no row mentions either exercise.
+  *(My first pass reported 0 hits for "single leg hip"; the phrase is
+  line-wrapped in the file and the grep missed it. Corrected before shipping.)*
+
+  **WHAT'S GOING ON — and both facts below are HIS OWN ANSWERS, not ours.**
+
+  A leg day is supposed to include a **single-leg hip** exercise. **Exactly one
+  exercise in the whole app counts as one: the Single-Leg RDL** — and on his own
+  equipment sheet he wrote that it **needs a barbell**
+  (`exerciseEquipmentRequirement.ts:136`).
+
+  **So an athlete with no equipment can never have a legal leg day.** Not "rarely"
+  — never. It is the last remaining short leg day in the census
+  (`off-season bodyweight | Lower Squat`, `missing: [single_leg_hip]`).
+
+  **AND HE ALREADY OWNS THE EXERCISE THAT WOULD FIX IT.** The **Single-Leg Hip
+  Thrust** is on the same sheet, in his handwriting, marked **needs nothing**
+  (`:134`). But it is filed under *isolation* rather than *hinge*
+  (`exerciseTags.ts`), and the slot only counts hinges — **so it does not fill
+  the slot it is named after.**
+
+  **⚠ THIS ALSO WARNS THE SEAT DOING THE WORK RIGHT NOW.** `patterns`' in-flight
+  fix adds **Single-Leg RDL** rows to the lower branches. **That fixes the
+  full-gym worlds and CANNOT fix the bodyweight one** — it is the barbell lift.
+
+  **WHY THIS IS HIS CALL AND NOT OURS.** Re-filing an exercise's movement type is
+  product law: the same tag feeds the "no two heavy lifts of one pattern" rule
+  (R-070). **We do not re-file his exercises on our own judgement.**
+
+  **WHAT TO SEND — one of:**
+  - **"a single-leg hip thrust counts as a single-leg hip"** — we re-file it, and
+    a no-kit athlete gets a complete leg day. **One-line change.**
+  - **"leave it, they need a gym for that"** — consistent with his R-083 words
+    (*"if they want to train properly they'll sign up to a gym"*), and we then
+    stop counting that slot as missing for no-kit athletes so the number is
+    honest.
+
+  **NOT BUILT EITHER WAY.** `exerciseTags.ts` is free, but the census this would
+  move is being calibrated by `patterns` this minute, and re-tagging under a live
+  measurement is how a control run stops being a control.
+
 - **⚠ NEW 2026-08-13, `terminal` — 24 RULES SAY "NOTHING IS CHECKING THIS", AND
   ABOUT A THIRD OF THEM NEVER CAN BE. ONE WORD FROM YOU EITHER FIXES THAT OR
   LEAVES IT RED HONESTLY FOREVER.**
