@@ -321,3 +321,67 @@ bars at a session tail.** Measured, controlled, written down, left alone.
 **THIS BELONGS TO ITEM 51 (`patterns`)** — same law, same files. It is evidence
 FOR their build, not a competing one: **the ladder is not merely uncomposed, it is
 measurably absent from the primary leg day in two of three worlds.**
+
+---
+
+## 2026-08-13, 16:32 — ⚠ I MUST CORRECT MY OWN REPORT FROM SEVEN MINUTES AGO. THE LEG DAYS WERE FIXED WHILE I WAS WRITING IT UP
+
+**Sam replied *"fix the leg days first"*. By the time it reached me, two of the
+three were already fixed — by the seat that owns them, in the three minutes
+between my measurement and my report.** Recording it against myself because a
+conclusion that outlives the world it was measured in is this repo's most
+expensive shape, and I have now been the one to ship one.
+
+### THE BISECT I OWED, RUN — AND IT CHANGED THE STORY TWICE
+
+**Separate worktree, each commit checked out clean:**
+
+| commit | time | census |
+| --- | --- | --- |
+| `0c13e5bf` | 13:20 | 1 deficient of 5 (ceiling 1) — **51/51 GREEN** |
+| **`188d6fad`** | **14:27** | **0 deficient of 6 (ceiling 0) — 54/54 GREEN** ← best state |
+| `728553e8` | 15:27 | 1 of 5 (ceiling 1) — the equipment revert gave a day back |
+| `e4b2c27e`, `b2815e5e` | 15:49 | 1 of 5 (ceiling 1) |
+| my measurement | 16:23 | **3 of 7 (ceiling 1) — RED** |
+| **HEAD `ce4e949e`** | **16:26** | **1 deficient of 7 (ceiling 1)** ← **FIXED** |
+
+**SO IT WAS A REAL REGRESSION — and it lasted about half an hour.** It landed
+after `b2815e5e` (the session-start HEAD) and was gone by 16:26. **`patterns`
+committed `7e0a68a9` — *"THE LADDER GUARD WAS GREEN AND NARROW — 50 of 216
+laddered days miss it"* — one minute after my report.** They were on it the whole
+time; my snapshot caught the trough.
+
+**WHAT IS STILL TRUE:** **one** leg day is still short —
+`off-season bodyweight | Lower Squat`, **missing `single_leg_hip`, duplicating
+`squat` and `hinge`**. A bodyweight athlete's leg day repeats two patterns and
+skips one of Sam's five. **That is the remaining leg day, and it is the honest
+version of what I told him.**
+
+**WHAT IS NO LONGER TRUE, and I said it to Sam:** *"two full-gym leg days ship
+with no single-leg work"*. **Both are covered at HEAD.** The claim was accurate
+at 16:23 and wrong by 16:26.
+
+### ⚠ BLOCKED-BY: other-agent — AND THIS ONE IS THE REAL WORD, WITH THE FILES NAMED
+
+**I cannot take Sam's *"fix the leg days first"* without destroying live work.**
+The three files a leg-day fix touches hold **190 uncommitted lines** right now:
+
+| file | uncommitted |
+| --- | --- |
+| `src/__tests__/sessionSlotCoverageTests.ts` | +141 |
+| `src/rules/sessionSlotCoverage.ts` | +36 |
+| `src/data/defaultProgram.ts` | +29 |
+
+**The suite's two current failures are IN that unsaved work** —
+`Single-Leg RDL is NOT interchangeable with Hip Thrusts` sits at
+`sessionSlotCoverageTests.ts:304`, inside the modified region. **They are a seat
+mid-write, not a defect I should report as one.**
+
+**AND I CANNOT MARK ITEM 51 IN THE INBOX EITHER, FOR A REASON WORTH WRITING
+DOWN:** `docs/SEAT_INBOX.md` is itself modified. **`git commit -- <path>` commits
+the FILE, not my lines** — marking the item would sweep another seat's
+uncommitted inbox edits into my commit. **That is the 27-file failure exactly.**
+Recorded here instead, which is the only surface I own.
+
+**WHAT I DID NOT DO: edit a single held file.** Sam's order is real and it is
+answered by the seat already holding those files, three minutes ahead of me.
