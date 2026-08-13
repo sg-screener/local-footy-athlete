@@ -159,8 +159,29 @@ training is its own component, held BY ROLE, not by name. · `BUILT e8521b79`.
 
 **R-013** · **ONE exercise cap for every training age; the beginner cap of 3 was
 never authored** (Bible `:3149`, `:4969`) · One cap, all training ages. The
-number 3 is abolished. · `UNENFORCED` — `maxExercisesPerStrengthSession` has
-ZERO readers; eleven 3-row fallback branches still ship. SEAT_INBOX item 25.
+number 3 is abolished. · `UNENFORCED` — nothing enforces a cap anywhere;
+eleven 3-row fallback branches still ship. SEAT_INBOX item 25.
+**⚠ TWO OF THIS ROW'S THREE CLAUSES WERE WRONG ABOUT WHICH PART IS MISSING —
+CORRECTED 2026-08-13, seat `arms`, code opened first.**
+- **THE RULING ITSELF IS ENFORCED AND MUTATION-PROVEN.** `test:rules-kernel`
+  carries a cell named *"ONE exercise cap for every training age"* asserting
+  `beginner.maxExercisesPerStrengthSession === normal.…`, plus three siblings
+  killing the other beginner-only caps; 122/0. **Mutant: put
+  `maxExercisesPerStrengthSession: 3` back on `NEW_ATHLETE_POLICY` → that cell
+  and two others RED.** The abolition is held; it is the CAP'S ENFORCEMENT that
+  is missing, which is a different sentence.
+- **"ZERO readers" IS REFUTED.** `coachingEngine.ts:8846` reads it into
+  `AIConstraints.maxExercisesPerSession` (`:618`). **The dead end is ONE HOP
+  LATER** — that field has zero consumers — and the code already says so in its
+  own words at `sessionRowCounting.ts:309`: *"read by no prompt builder,
+  validator or trim."* `patterns` reached the same refutation independently.
+- **"ELEVEN" IS EXACT — ON COMMITTED HEAD, AND THAT QUALIFIER IS THE WHOLE
+  POINT.** Brace-matched over `fallbackExercisesForPlanEntry`:
+  **HEAD** `3x1, 1x2, **11x3**, 1x4, 4x5` · **working tree** `3x1, 1x2, **7x3**,
+  1x4, 8x5`, because the live seat is mid-landing the fix. **TWO SEATS PUBLISHED
+  "SEVEN" WITHIN ONE HOUR AND BOTH WERE WRONG THE SAME WAY** — a count read off
+  an uncommitted tree and reported as a fact about the repo. **A count with no
+  WORLD is not a measurement.**
 
 **R-014** · **⚠ RULED 2026-08-13, AND THE QUESTION IS VOID — THERE IS NO FLOOR
 BECAUSE SIZE IS NOT THE RULE.** *"because the number of exercises is not

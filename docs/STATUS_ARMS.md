@@ -374,3 +374,87 @@ queue honestly. **It is the seat's line, in the seat's file, and I did not write
 it** — the same boundary I have kept all session.
 
 **SO THE QUEUE IS: ten items closed, blocked or owned, and one index header.**
+
+---
+
+## 2026-08-13 — R-013: THE RULING IS ENFORCED, THE CAP IS NOT, AND I NEARLY PUBLISHED A COUNT WITH NO WORLD
+
+**Sam's order:** *"Sam ruled ONE exercise cap for every training age and
+abolished the beginner cap of 3… It is still unenforced:
+`maxExercisesPerStrengthSession` has zero readers, and seven fallback branches
+in `defaultProgram.ts` still hand out three-exercise sessions."* With his own
+warning attached: *"Open the code before building."* I did, and **two of the
+three clauses were wrong about which part is missing.**
+
+| clause | state, measured |
+| --- | --- |
+| the beginner cap of 3 is abolished; ONE cap for every training age | **ENFORCED and MUTATION-PROVEN** |
+| `maxExercisesPerStrengthSession` has ZERO readers | **REFUTED** — it has one; the dead end is one hop later |
+| N 3-row fallback branches still ship | **REAL** — and the number depends on which tree you read |
+
+### THE RULING IS HELD, AND IT IS NOT VACUOUS
+
+`test:rules-kernel` has a cell called, in these words, *"ONE exercise cap for
+every training age"* — `beginner.maxExercisesPerStrengthSession === normal.…` —
+with three siblings killing the other beginner-only caps. **122/0.**
+**Mutant:** put `maxExercisesPerStrengthSession: 3` back on
+`NEW_ATHLETE_POLICY` → **that cell and two others RED.** Restored from my own
+backup, verified byte-identical.
+
+**So "R-013 is unenforced" is true of the CAP'S ENFORCEMENT and false of the
+ABOLITION**, and those are different sentences. Nothing counts rows against the
+cap anywhere — `sessionRowCounting.ts:309` says so itself and adds that the
+enforcement site waits on Sam's per-session controls (execution-order step 5).
+
+### "ZERO READERS" IS OFF BY ONE HOP
+
+`coachingEngine.ts:8846` reads it into `AIConstraints.maxExercisesPerSession`
+(declared `:618`). **That** field has zero consumers. The code already documents
+the dead end in its own words. `patterns` reached the same refutation
+independently and recorded it on item 51.
+
+### ⚠ AND THE PART WORTH KEEPING: I MEASURED SEVEN, AND SEVEN WAS A NUMBER ABOUT SOMEBODY ELSE'S UNCOMMITTED WORK
+
+My first count of the 3-row branches came back **7**, matching Sam's number
+exactly, and I was one step from telling him *"your number is right and the
+registry is stale."*
+
+**It was not.** Brace-matched over `fallbackExercisesForPlanEntry`:
+
+| tree | branches |
+| --- | --- |
+| **committed HEAD** | `3x1, 1x2, ` **`11x3`** `, 1x4, 4x5` |
+| **working tree** (live seat's +29 uncommitted lines) | `3x1, 1x2, ` **`7x3`** `, 1x4, 8x5` |
+
+**R-013's "eleven" is EXACT on HEAD. The seven is the fix half-landed.**
+
+**AND THE SEAT NEXT TO ME MADE THE IDENTICAL MISTAKE 81 SECONDS EARLIER.**
+`gunshow` published "the number is 7, not eleven", then retracted it
+(`c3895bb1`) — its parser matched only `return [` at end of line and never saw
+array-opens behind a ternary, **and my first awk had exactly that hole too.**
+Two seats, one hour, one number, wrong the same way twice.
+
+**THE LESSON IS NOT "USE A BETTER PARSER".** Both of us produced a number and
+neither stated the WORLD it was taken in. `git show HEAD:<path>` beside the
+working copy is one extra line and it is the difference between a measurement
+and a rumour. This is [[a-conclusion-outlives-the-world-it-was-measured-in]] and
+my own `a-control-run-must-see-the-same-tree` note, arriving a third time in one
+session.
+
+### THE BASELINE SAM ASKED FOR, CAPTURED BEFORE ANY BUILD
+
+| instrument | before |
+| --- | --- |
+| `test:qa` — the 17 scenarios | **168 passed, 10 failed** |
+| `test:scenarios` | **1 failure** — `[G+1_RECOVERY] GAME-MOVE-SAT-TO-FRI`, G+1 ships `Prehab & Accessories` |
+| `test:ladder-wide` — the wide census | **36 deficient of 216 laddered days** (ceiling 36), 174 worlds, 6 refused |
+
+### WHY I DID NOT BUILD, AND IT IS A FILE HOLD, NOT A PREFERENCE
+
+**`src/data/defaultProgram.ts` is HELD** — `git show HEAD:… | cmp` says it
+byte-differs, and the difference IS this fix, four branches already moved 3 → 5.
+`src/rules/sessionSlotCoverage.ts` was held when `patterns` blocked item 51 and
+**is now FREE**; `defaultProgram.ts` is not. Writing there would clobber a seat
+mid-landing, which is the one failure this checkout is built to prevent.
+**`patterns` owns item 51, marked it blocked on these exact two files, and named
+this as its first job.** The remaining branches are its work, in flight now.
