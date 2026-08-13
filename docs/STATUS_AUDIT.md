@@ -45,6 +45,50 @@ thing that actually bit.**
 
 ## STATUS
 
+### ✅ THE POWER-PROBE LINK IS **PROVEN**, NOT INFERRED — the bisect is 4 causes, and 3 are named
+
+**The terminal seat withdrew its own alarm and said plainly that it had NOT run
+the probe that would prove the link — it labelled the reading "inference from
+shape". I ran it. The link holds, from the golden's own values.**
+
+**GOLDEN `scenarios.3`:**
+
+    overBudgetProbe.powerDaysBefore   [1, 2, 3, 5, 6]
+    overBudgetProbe.powerDaysStripped [3, 5, 6]
+    keptFamilies                      [{dow 1, lower}, {dow 2, lower}]
+
+    weeks[2].days[1]   dayOfWeek 2 · workoutType "Strength" · taxonomy prehab/none
+
+**THE DAY THAT FLIPS `Strength → Recovery` IS `dayOfWeek` 2. `2` IS IN
+`powerDaysBefore`. `2` IS EXACTLY THE VALUE THE DIFF REMOVES.** A day that
+becomes Recovery is no longer a power day — so it leaves the list, and
+`powerDaysStripped` and `keptFamilies.1` shift because their neighbour left.
+**Every one of the 14 follows from one flip. No power decision changed.**
+
+**SO IT IS THE ARRAY-SHORTENING ILLUSION FOR THE SECOND TIME TODAY, IN THE SAME
+SUITE.** This morning it made a Romanian Deadlift look lost; this afternoon it
+made a power probe look like it had changed its mind. **Both times a POSITIONAL
+diff manufactured a scary finding, and both times the fix was to read VALUES
+instead of counting lines.**
+
+**THE BISECT, and it is now small:**
+
+| cause | diffs | named? |
+| --- | --- | --- |
+| R-076 pool-slot move | 188 | ✅ |
+| `c69151d9` squat fallback 3→5 | 39 | ✅ |
+| one `Strength → Recovery` session flip | ~14 | ✅ |
+| **`taxonomy.1.modality "none" → "off_feet"`** | **2** | **⚠ NOT EXPLAINED** |
+
+**TWO LINES ARE ALL THAT STAND BETWEEN THIS GOLDEN AND A JUSTIFIED `--update`** —
+`weeks.2.days.4` and `weeks.3.days.4`, a conditioning modality gaining a value
+where it had none.
+
+**AND THE CREDIT IS THEIRS, NOT MINE:** none of this was visible before they
+raised the collection cap. **A breakdown answers *"what shapes are here"*; it
+never answers *"what happened"* — they said that of themselves before I could.**
+
+
 ### THE QUEUE FROM THIS SEAT — WHAT IS LEFT AND WHY IT IS NOT MINE
 
 **Every remaining item under `## Unprocessed` is discharged, owned elsewhere, or
