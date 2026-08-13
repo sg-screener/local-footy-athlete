@@ -86,6 +86,61 @@ and these four do not appear, it is a false-Done and it is serious.
 **Do not read my `Rest, 0 rows` as evidence of a defect — it is evidence of an
 unvalidated reader.**
 
+### ⚠ AND CHASING THAT LAST STEP FOUND THE REAL HOLE: A GATE THAT DOES NOT EXIST
+
+**The cheap next move I named was "find a KNOWN-GOOD addition this reader
+surfaces". THERE ISN'T ONE, AND THE REASON IS WORSE THAN THE QUESTION.**
+
+`coachAddSessionOwnershipTests` declines to prove that an accepted athlete
+addition survives a §18 repair, and justifies that FOUR TIMES by deferring to
+**`sectionOwnershipInvariantTests #10`**:
+
+> *"Survival of an accepted add is otherwise pinned by the owner's own gate,
+> sectionOwnershipInvariantTests #10."*
+> *"Survival of an accepted add is proven by the owner's own gate."*
+
+**THAT SUITE DOES NOT EXIST AND NEVER HAS.**
+`git log --pretty=format: --name-only --diff-filter=A HEAD | grep -i sectionOwnership`
+returns **nothing** over the branch's whole history, and the only four
+references to the name anywhere in the repo were the ones inside that file.
+**Every "covered over there" claim in it pointed at fiction.**
+
+*(`git log --all` cannot be used here — it dies on the broken ref
+`refs/heads/codex/ui-tweaks.lock.stale-seat` the desktop already recorded. The
+`HEAD` walk is the working instrument.)*
+
+**SO NOTHING PINS CENSUS #1's OWN DEFECT CLASS** — *"a 'Done' the athlete sees,
+then loses when a later §18 repair canonicalises the day back to Rest"*. That is
+the exact thing the suite is named for.
+
+**AND THE SURVIVAL CELL HAD BEEN REPORTING `PASS` WHILE ASSERTING NOTHING.** It
+bails with a bare `return` when §18 refuses the add — and in this seed §18
+ALWAYS refuses — and a bare `return` inside `run()` **increments `passes`**. The
+suite read *"4 passing, 0 failing"* with its central property never exercised.
+**A green gate is a claim, and this one was empty.**
+
+**WHAT I DID — DISCLOSE IT, DO NOT DELETE IT.** A `skip()` path now separates
+"asserted nothing" from "passed", the totals line carries
+`N SKIPPED (asserted nothing)` and names each one, and the three bail-outs use
+it. The cell is kept so it fires the day a seed reaches an owned add; until then
+it says so out loud:
+
+    coach add_session ownership: 5 passing, 0 failing, 1 SKIPPED (asserted nothing)
+      cells that asserted nothing this run:
+        - an owned coach add survives a §18 repair pass byte-intact — §18 refused
+          the add in this seed, so survival was never exercised — and no other
+          suite pins it
+
+**The four false citations are corrected in place rather than quietly dropped**,
+so the next reader sees what was claimed and what is true.
+
+**STILL OWED, AND IT IS NOT MINE TO SMUGGLE IN:** a real gate that an accepted
+athlete addition survives a §18 repair. **I now know a world where the add DOES
+land** (the seeded tap-door run above: `ok=true`, pin, overlay) — that is the
+missing ingredient the old cell never had, and it is where that gate should be
+built. Building it needs the reader question settled first, which is the same
+open step.
+
 ### ✅ WHAT I DID FIND AND FIX: A REFUSED ADD LEFT AN ACTIVE PIN BEHIND
 
 **This one was measured on a LIVE instrument** — the real coach pipeline over a

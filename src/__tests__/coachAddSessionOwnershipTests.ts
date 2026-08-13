@@ -9,9 +9,13 @@
  * accepted-state transaction, so a later §18 repair pass silently canonicalises
  * it back to Rest: a false-Done / silent-content-loss shape (Process Law L6).
  *
- * This mirrors sectionOwnershipInvariantTests #10 (empty-day add), but driven
- * through the coach chat pipeline (`executeCoachCommand`) rather than the tap
- * door. RED before the migration; GREEN once the coach path routes through the
+ * This was written as a mirror of "sectionOwnershipInvariantTests #10
+ * (empty-day add)", driven through the coach chat pipeline
+ * (`executeCoachCommand`) rather than the tap door.
+ * **⚠ THAT SUITE DOES NOT EXIST AND NEVER HAS — see the survival cell below.**
+ * The four references to it in this file were the only ones in the repo, so
+ * every "covered over there" claim in this file was pointing at nothing.
+ * RED before the migration; GREEN once the coach path routes through the
  * addition transaction owner.
  *
  * Run: npm run test:coach-add-session-ownership
@@ -56,9 +60,26 @@ const SUNDAY = '2026-07-19';     // Rest — the only day an add can target here
 
 let passes = 0;
 const failures: string[] = [];
+const skipped: string[] = [];
 
 function assert(condition: unknown, detail: string): asserts condition {
   if (!condition) throw new Error(detail);
+}
+
+/**
+ * A CELL THAT ASSERTED NOTHING MUST NOT REPORT `PASS`.
+ *
+ * Three cells here bail out when the world does not reach the state they test
+ * (§18 refuses the add in this seed). They did it with a bare `return`, and a
+ * bare `return` inside `run` INCREMENTS `passes` — so the report read
+ * "4 passing, 0 failing" while the central survival property asserted nothing
+ * at all. That is the green-and-empty shape this repo keeps paying for.
+ *
+ * `skip()` makes the vacuity land in the totals line where it cannot be missed.
+ */
+class Skipped extends Error {}
+function skip(reason: string): never {
+  throw new Skipped(reason);
 }
 
 function run(name: string, body: () => void): void {
@@ -67,6 +88,11 @@ function run(name: string, body: () => void): void {
     passes += 1;
     console.log(`  PASS ${name}`);
   } catch (error) {
+    if (error instanceof Skipped) {
+      skipped.push(`${name} — ${error.message}`);
+      console.log(`  SKIP ${name} — asserted nothing: ${error.message}`);
+      return;
+    }
     failures.push(name);
     console.error(`  FAIL ${name}: ${(error as Error).message}`);
   }
@@ -179,9 +205,10 @@ function exerciseCells(workout: Workout | undefined | null): string[] {
 
 /**
  * Drive a coach-chat "add an easy conditioning session Wednesday" through the
- * real pipeline. Mirrors sectionOwnershipInvariantTests #10 (a §18-valid light
- * add on the empty day) so the test isolates OWNERSHIP, not §18 content validity
- * — a hard strength add on the week's only rest day is a legitimate §18 refusal.
+ * real pipeline. A §18-valid LIGHT add on the empty day, so the test isolates
+ * OWNERSHIP, not §18 content validity — a hard strength add on the week's only
+ * rest day is a legitimate §18 refusal. (This paragraph also cited
+ * `sectionOwnershipInvariantTests #10`; that suite does not exist.)
  */
 function coachAddConditioningToWednesday() {
   const command: CoachCommand = {
@@ -261,13 +288,29 @@ run('coach add is never applied without §18 ownership (no false-Done)', () => {
 
 // When the owner DOES accept a coach add, it must survive a §18 repair byte-intact.
 // In this sole-rest-day seed §18 correctly refuses an add_session (it cannot
-// relocate the lost rest day), so this exercises the survival property only when
-// an add is genuinely owned. Survival of an accepted add is otherwise pinned by
-// the owner's own gate, sectionOwnershipInvariantTests #10.
+// relocate the lost rest day), so this cell reaches its assertions only when an
+// add is genuinely owned.
+//
+// ⚠ AND IN THIS SEED IT NEVER DOES. IT HAS BEEN SKIPPING, REPORTING `PASS`.
+//
+// The comment here used to say survival was "otherwise pinned by the owner's
+// own gate, sectionOwnershipInvariantTests #10". **THAT SUITE DOES NOT EXIST
+// AND NEVER HAS** — `git log --diff-filter=A` over this branch's whole history
+// returns nothing for that name, and the only four references to it in the repo
+// are the ones that were in this file. So the deferral was to fiction, and
+// NOTHING pins that an accepted athlete addition survives a §18 repair — which
+// is census #1's defect class exactly (a "Done" the athlete sees and then
+// loses).
+//
+// The cell is kept and made HONEST rather than deleted: it still fires the day
+// a seed reaches an owned add, and until then it says so out loud.
 run('an owned coach add survives a §18 repair pass byte-intact', () => {
   seed();
   const result = coachAddConditioningToWednesday();
-  if (!result.applied || !wedPinned()) return; // refused — nothing applied to survive
+  if (!result.applied || !wedPinned()) {
+    skip(`§18 refused the add in this seed (applied=${result.applied}, pinned=${wedPinned()}), `
+      + 'so survival was never exercised — and no other suite pins it');
+  }
   const addedCells = exerciseCells(acceptedByDay().get(3));
   assert(addedCells.length > 0, 'an applied coach add left no session on WED');
   unrelatedSection18RepairPass();
@@ -292,8 +335,11 @@ run('a coach add refusal never leaks a raw internal reason', () => {
 // seed the pre-apply §18 guard refuses an add to the sole rest day before
 // `applyAdd` runs, so the behavioural tests above cannot reach the writer; this
 // pins that the writer, when it does run, uses the transaction owner rather than
-// a raw override. Survival of an accepted add is proven by the owner's own gate
-// (sectionOwnershipInvariantTests #10), which the coach path now shares.
+// a raw override.
+// **⚠ THIS PARAGRAPH USED TO END "Survival of an accepted add is proven by the
+// owner's own gate (sectionOwnershipInvariantTests #10)". IT IS NOT PROVEN BY
+// ANYTHING.** That suite has never existed. This cell is a SOURCE-CONTRACT check
+// — it greps the writer's body — so it proves the wiring and not the behaviour.
 run('defaultApplyAddSession writes through the addition-transaction owner (census #1)', () => {
   const src = fs.readFileSync(path.join(__dirname, '../utils/coachCommandExecutor.ts'), 'utf8');
   const start = src.indexOf('function defaultApplyAddSession');
@@ -365,7 +411,10 @@ run('a refused add leaves no pin behind (rollback restores every store it wrote)
   // NON-VACUITY: this cell is about a REFUSED add. If the door ever starts
   // accepting this (which is what R-077 actually wants), the pin is correct and
   // this cell must stop asserting rather than silently invert.
-  if (result.applied) return;
+  if (result.applied) {
+    skip('the door ACCEPTED this add, so there is no refused path to check — '
+      + 'if this starts skipping, R-077\'s hatch got wired and the cell must be re-aimed');
+  }
   const dayAfter = acceptedByDay().get(7);
   assert(!dayAfter || (dayAfter.exercises ?? []).length === 0,
     'refused add still left a session on SUNDAY');
@@ -398,7 +447,9 @@ run('a refused add restores the pin list rather than clearing it', () => {
   assert(activePinsOn(WEDNESDAY).length === 1, 'the pre-existing pin was not seeded');
 
   const result = coachAddStrengthToSunday();
-  if (result.applied) return; // accepted — this cell is about the refused path
+  if (result.applied) {
+    skip('the door ACCEPTED this add — this cell is about the refused path');
+  }
 
   assert(activePinsOn(WEDNESDAY).length === 1,
     `a refused add destroyed an unrelated pre-existing pin (route=${result.route}); `
@@ -407,7 +458,14 @@ run('a refused add restores the pin list rather than clearing it', () => {
     'the refused add still left its own pin behind');
 });
 
-console.log(`\ncoach add_session ownership: ${passes} passing, ${failures.length} failing`);
+console.log(`\ncoach add_session ownership: ${passes} passing, ${failures.length} failing`
+  + `, ${skipped.length} SKIPPED (asserted nothing)`);
+if (skipped.length > 0) {
+  // Loud on purpose. A skipped cell used to be indistinguishable from a passing
+  // one in this report, and the cell it hid is the central survival property.
+  console.log('  cells that asserted nothing this run:');
+  for (const entry of skipped) console.log(`    - ${entry}`);
+}
 totalsPrinted(failures.length);
 // TOTALS-OR-RED (Sam, 2026-08-03): the explicit exit is GONE, not moved.
 // `process.exit(0)` hard-overrides `process.exitCode`, so it silently
