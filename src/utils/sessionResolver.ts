@@ -2205,6 +2205,13 @@ export function resolveWeekWithConditioning(
  * the fact expires or he clears it. What changes is what the week SHOWS while
  * the trip is live.
  */
+/** A composed day name with its "Team Training" segment removed. */
+function withoutTeamTrainingSegment(name: string | undefined): string {
+  const parts = String(name ?? '').split(/\s+\+\s+/).map((part) => part.trim());
+  const kept = parts.filter((part) => part.toLowerCase() !== 'team training');
+  return kept.length > 0 ? kept.join(' + ') : String(name ?? '');
+}
+
 function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[] {
   const spans = (state.temporarySourceFacts ?? [])
     .filter((fact) => 'factKind' in fact && (fact as { factKind?: string }).factKind === 'schedule' &&
@@ -2240,18 +2247,29 @@ function applyAwayPass(days: ResolvedDay[], state: ScheduleState): ResolvedDay[]
       ...day,
       workout: {
         ...day.workout,
-        // ⚠ THE CLUB HALF OF A COMBINED DAY IS NOT REMOVED HERE, AND THAT IS
-        // DELIBERATE AFTER TWO MEASURED FAILURES. The card's words come from
-        // `getSessionComponents`, which reads the team part from the NAME and
-        // the strength part from `isTeamDay`. On a SYNTHETIC day, clearing both
-        // gives ["strength"] — the right answer, and `test:away-flow` [16]-[16d]
-        // pins that mechanism. **On the REAL day it does not:** the card came
-        // back reading "Team Training" alone, his gym work gone, which is the
-        // name-only outcome — so the real workout carries its team identity
-        // somewhere these two fields do not reach (its `sections`, most likely).
-        // **Shipping it would take his session off the card to hide a label.**
-        name: team.displayName ?? day.workout.name,
-        workoutType: (team.displayWorkoutType ?? day.workout.workoutType) as typeof day.workout.workoutType,
+        // ── THE CLUB HALF COMES OFF A COMBINED DAY, AND IT IS THE PAIR ──
+        //
+        // MEASURED ON A REAL SEEDED WORKOUT, not a synthetic one — that was the
+        // mistake that cost two glass runs. A generated team day looks like
+        // `{ name: "Team Training + Upper Pull", workoutType: "Team Training" }`
+        // with THREE strength rows and NO `isTeamDay` flag and NO sections.
+        // `getSessionComponents` then reads the team part from BOTH the name and
+        // the type, and the strength part from the ROWS. So:
+        //   name only  -> ["team_training"]              (his gym work vanishes)
+        //   type only  -> ["strength","team_training"]   (nothing changes)
+        //   BOTH       -> ["strength"]                   ✓
+        // `getTeamTrainingWorkoutState().displayWorkoutType` cannot be used for
+        // the second half: on this shape it returns "Team Training" unchanged.
+        //
+        // LIMIT, NAMED RATHER THAN HIDDEN: the surviving type is inferred, and a
+        // club night combined with CONDITIONING rather than strength would be
+        // labelled Strength. No such day exists in any seed to measure against,
+        // so it is left as the honest simple rule instead of a guess with a
+        // branch.
+        name: withoutTeamTrainingSegment(day.workout.name),
+        workoutType: (team.displayWorkoutType && team.displayWorkoutType !== 'Team Training'
+          ? team.displayWorkoutType
+          : 'Strength') as typeof day.workout.workoutType,
         exercises: team.renderableExercises,
       },
     };

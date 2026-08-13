@@ -636,6 +636,42 @@ async function main(): Promise<void> {
       === JSON.stringify(['team_training']),
     kindsOf({ ...clubDay, name: 'Strength' }));
 
+  // ── [17] THE REAL SHAPE, not a synthetic one ─────────────────────────────
+  //
+  // [16] used a made-up day and its answer did NOT transfer: the fix passed
+  // there and made the card WORSE on the phone. A generated team day is
+  // `{ name: "Team Training + Upper Pull", workoutType: "Team Training" }` with
+  // strength ROWS, NO `isTeamDay` and NO sections — so the team part comes from
+  // the name AND the type, and the strength part from the rows.
+  const realClubDay: any = {
+    id: 'w-real', name: 'Team Training + Upper Pull', workoutType: 'Team Training',
+    exercises: [
+      { exercise: { name: 'Pull-Ups' }, prescribedSets: 3 },
+      { exercise: { name: 'Barbell Row' }, prescribedSets: 3 },
+      { exercise: { name: 'Face Pulls' }, prescribedSets: 3 },
+    ],
+  };
+  const strip = (name: string): string => name.split(/\s+\+\s+/)
+    .map((part) => part.trim())
+    .filter((part) => part.toLowerCase() !== 'team training').join(' + ') || name;
+  run('[17] the real club day shows both parts when he is home',
+    JSON.stringify(kindsOf(realClubDay)) === JSON.stringify(['strength', 'team_training']),
+    kindsOf(realClubDay));
+  run('[17b] name AND type together leave only his own half',
+    JSON.stringify(kindsOf({ ...realClubDay, name: strip(realClubDay.name), workoutType: 'Strength' }))
+      === JSON.stringify(['strength']),
+    kindsOf({ ...realClubDay, name: strip(realClubDay.name), workoutType: 'Strength' }));
+  // THE TWO NEAR-MISSES ON THE REAL SHAPE — the second is the one that shipped
+  // to glass and took his session off the card.
+  run('[17c] type alone changes nothing',
+    JSON.stringify(kindsOf({ ...realClubDay, workoutType: 'Strength' }))
+      === JSON.stringify(['strength', 'team_training']),
+    kindsOf({ ...realClubDay, workoutType: 'Strength' }));
+  run('[17d] name alone LOSES his gym work',
+    JSON.stringify(kindsOf({ ...realClubDay, name: strip(realClubDay.name) }))
+      === JSON.stringify(['team_training']),
+    kindsOf({ ...realClubDay, name: strip(realClubDay.name) }));
+
   console.log(`\naway flow: ${passed} passed, ${failed} failed`);
   if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }
   totalsPrinted(failures.length);
