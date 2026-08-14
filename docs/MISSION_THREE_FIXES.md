@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-PIVOT | Sever the legacy strength-content builder | **SEVERED.** Composer is the only production strength-content builder for every world. 401 production lines deleted, 1 file. Sweep **173/7 -> 61/119**, an honest red day. |
 | B1 CP2 | The other five worlds + the ruled full-body shape | **HARD STOP — A LATER PASS MUTATES COMPOSED ROWS.** Three post-composition sites found, one of them publishing a LEGACY week under an `accepted` verdict. CP1's zero-mutation receipt was too weak. Not landed as acceptance. |
 | B1 CP1 | The composer, first proving slice | **ACCEPTANCE MET, BUDGET BREACHED.** Sweep 174/6 -> **175/5**, one world changed, zero post-composition mutation. **710 production lines against a 600 fence — CP2 needs a new authorisation.** |
 | 2 | Authorship | NOT STARTED |
@@ -1539,6 +1540,226 @@ status file or plan. **R-093 and R-094 are recorded `UNENFORCED` with no
 route-scoped receipt**, because a composed week does not yet reach an athlete
 intact and a guard claiming otherwise would be false.
 
+---
+
+## Slice B1-PIVOT — the legacy strength builder is severed, and it is a red day
+
+**Seat `baseline`, 2026-08-14.** Sam: *"isn't this like the ai? we just realise
+it's going to suck for a bit and then build a better one with all the info in
+there? because right now it just seems like we're fixing shit thats going to be
+deleted anyway? the app is not out yet so its not going to effect any real
+person"*.
+
+**Base:** branch `slice-b1-cp2`, commit **`943e030b`**.
+**Preserved legacy-capable state:** branch **`legacy-strength-builder-preserved`**
+@ **`943e030b`** — preservation only; nothing reaches it from production.
+**Worked in:** worktree `scratchpad/wt-pivot`, branch `slice-b1-pivot`. The
+shared checkout never left `main`.
+
+### 1. BEFORE vs AFTER — the honest tables
+
+| instrument | BEFORE (`943e030b`) | AFTER (severed) | |
+| --- | --- | --- | --- |
+| **180-world sweep** | **173 built / 7 refused** | **61 built / 119 refused** | ⬇ the red day |
+| ladder deficient | 118 of 319 laddered days | **6 of 117** | ⬆ **composed weeks are far better when they build** |
+| kit-blocked census | 86 days | 30 days | |
+| `print:week` | 6 weeks, 16 findings | **3 weeks written, 3 refused**, 6 findings | ⬇ |
+| `test:compile` | 459 PASSED | **459 PASSED** | held |
+| `test:pools` | 504 / 0 | **498 / 6** | ⬇ six cells assert the SEVERED route |
+| `test:qa` | 168 / 10 | **168 / 10** | held |
+| `test:scenarios` | 1 failed | **1 failed** | held |
+| `test:composer-b1` | 46 / 2 | **46 / 0** | ⬆ |
+| `test:section18-v2` | 135 / 0 | *not re-run — see NOT COVERED* | |
+
+**NOTHING WAS REBASELINED.** No ratchet, ceiling, allow-list or expected-failure
+count was touched. The six red `test:pools` cells are listed in §7 for Sam's
+decision; I did not edit their expectations.
+
+**Per phase, so the hard stop can be checked:** In-season **8 built / 52**,
+Pre-season **11 / 49**, Off-season **42 / 18**. **Every phase still builds
+worlds**, so *"cannot build any world in an entire season phase"* did not fire.
+
+### 2. THE REFUSAL MAP, GROUPED BY TYPED CAUSE
+
+| worlds | typed cause | phases | kits |
+| --- | --- | --- | --- |
+| **48** | **`composer_did_not_cover_a_planned_day`** — my own loud severance error | In-season | all three |
+| 20 | `pattern_restore_failure:strength_patterns` | all three | all three |
+| 16 | `pattern_imbalance` + `pattern_restore_failure` | Pre-season | Full Gym, Dumbbells |
+| 10 | `pattern_restore_failure` + `required_minimum_shortfall:main_strength` | In-season, Pre-season | Bodyweight |
+| 10 | `planner_selected_target_miss:main_strength` | Off-season, Pre-season | Bodyweight, Dumbbells |
+| 7 | `pattern_restore_failure` + `planner_selected_target_miss` | Pre-season | Bodyweight, Dumbbells |
+| 6 | `reduction_contradiction:main_strength` | Pre-season | all three |
+| 2 | + `required_minimum_shortfall:sprint_high_speed` | Off-season | Bodyweight |
+
+**THE BIGGEST CAUSE IS THE SEVERANCE WORKING AS DESIGNED.** 48 worlds refuse
+because the planner asks for a day — usually `…:friday:none:optional`, the
+gunshow/optional slot — that **`composeWeek` does not compose**. Under the old
+architecture that day was silently filled by the hardcoded template. It now
+throws by name. **That is not 48 new defects; it is one uncomposed session kind,
+counted 48 times.**
+
+### 3. WHAT WAS SEVERED, AND WHAT WAS DELETED
+
+| | |
+| --- | --- |
+| **production lines deleted** | **401** |
+| production lines added | 167 (net **−234**) |
+| **files deleted** | **1** — `src/rules/composedRouteAdmission.ts`, the migration allowlist |
+| **branches/arms retired** | the 15-branch strength body of `fallbackExercisesForPlanEntry`; the generation-time `applyPoolRotation` block and its `poolUsage` tracker; the gateway's `regenerate`/`safeFallback` legacy rebuild; the canonicaliser's drift and restore branches at generation time; `requiresStrengthContent`'s template substitution |
+
+**PHYSICALLY DELETED:** the migration gate (whole file), the fifteen hardcoded
+strength branches, and the rotation block. **`fallbackExercisesForPlanEntry`
+still exists as a 20-line stub** holding only its two NON-strength branches — a
+mobility label and a conditioning label, whose content belongs to the retained
+conditioning/mobility adapters — and **it throws by name for any strength entry**.
+
+**SHARED CODE RETAINED, WITH ITS NAMED CONSUMER:**
+
+| retained | why it is not deleted |
+| --- | --- |
+| `applyPoolRotation` + `selectPoolEntryAvoiding` (`exercisePoolsStrength.ts`) | **`coachProgramEdit` and the athlete's swap flow** are separate consumers. Only the GENERATION-time invocation is removed. |
+| `finaliseWorkoutAfterMutation` drift/restore branches | **edit-time canonicalisation** is a different consumer and keeps both. Generation now passes `composed: true` for every workout, which stands them down there and only there. |
+| §18 gateway repair machinery | retained surface; its arms now rebuild the COMPOSED week, so it can refuse but never answer with a different week. |
+
+### 4. THE REACHABILITY PROOF
+
+`composeWeek` → `composedWeekToCoachInputs` (`composed: true`, and each row
+carrying `composedRole`/`composedPattern`) → `buildWorkoutsFromCoach` → rows
+stamped `section18Evidence.provenance = 'composer_declaration'` → dose owners
+only (phase rep scheme, load estimate, training age) → `finaliseWorkoutAfterMutation`
+with `composed: true` → `acceptSection18Week` whose arms rebuild the same source
+→ storage.
+
+**No legacy content owner sits on that path.** The three that did are gone
+(rotation block deleted; template substitution guarded then made unreachable for
+strength; gateway arms repointed), and `fallbackExercisesForPlanEntry` **cannot**
+answer a strength entry — it throws, which is why 48 worlds now refuse loudly
+instead of silently receiving template content.
+
+**MEASURED:** `test:composer-b1` 46/0, including *"generation-time pool rotation
+is DELETED, not guarded"* and *"the legacy strength templates are DELETED"*, both
+asserted against the builder's own source.
+
+### 5. THE COMPOSER→VALIDATOR CONTRACT
+
+`WorkoutExerciseSection18Evidence.provenance` gained **`composer_declaration`**,
+and `withSection18WorkoutEvidence` returns such a row untouched — no re-inference,
+no demotion. **Both halves mattered:** the classifier reads the exercise NAME, so
+`Bodyweight Squat` and `Single-Arm DB Row` came back `strength_accessory` and
+every athlete without a barbell had zero main lifts; and the demotion under it
+asks the PLAN which patterns the day carries, which would have demoted every
+lower lift of the full-body shape Sam ruled (R-093).
+
+**Live receipt, dumbbell in-season:** `Goblet Squat` → `main_strength / squat`,
+`Band Pull-Apart` → `main_strength / pull`. Both are rows the classifier calls
+accessories.
+
+**Sam's weighted preference is applied** — *"yes i'd prefer weighted exercises"*.
+Expressed through `PoolEntry.loadRatio` (`0` = unloaded), which is already the
+authored answer, so no new list and no new judgement. **The dumbbell control now
+selects `Goblet Squat`, not `Bodyweight Squat`.**
+
+### 6. SIX REPRESENTATIVE WEEKS, INCLUDING THE WORST AND A REFUSAL
+
+> **FULL GYM, IN-SEASON, two nights, both at the club**
+> **Tue — Team Training + Lower Body Strength:** Back Squat 3×2-4 *(main, squat)* · Single-Leg RDL 3×6-8 *(main, single-leg hip)* · Ab Wheel 2×10-15
+> **Thu — Team Training + Upper Body Strength:** Deadlift 3×2-4 *(main, hinge)* · Bulgarian Split Squats 3×6-8 *(main, single-leg knee)* · Overhead Press 3×3-5 *(main, push)* · Barbell Row 3×4-6 *(main, pull)* · Band Pallof Press 2×10-15
+
+> **DUMBBELLS + BANDS, IN-SEASON, two club nights**
+> **Tue:** Goblet Squat 3×6-8 · Single-Leg RDL 3×6-8 · Band Pallof Press 2×10-15
+> **Thu:** RDLs 3×2-4 · Cossack Squat 3×6-8 · DB Shoulder Press 3×8-15 · Band Pull-Apart 3×10-20 · Banded Dead Bug 2×10-15
+
+> **FULL GYM, OFF-SEASON, three nights, no club**
+> **Mon — Lower Body Strength:** Back Squat 3×8-12 · Deadlift 3×8-12 · Bulgarian Split Squats 3×8-15 · Single-Leg RDL 2×8-15 · Ab Wheel 2×8-12
+> **Wed — Lower Squat:** Front Squat 3×8-12 · Hip Thrusts 2×8-15 · Cossack Squat 3×8-15 · Single-Leg RDL 2×8-15 · Band Pallof Press 2×8-12
+
+> **BODYWEEIGHT / AWAY, OFF-SEASON — and this is THE WORST WEEK THAT BUILDS**
+> **Tue — Full Body Strength:** Bodyweight Squat 3×8-15 · Glute Bridge 2×8-15 · Cossack Squat 3×8-15 · Single-Leg RDL 2×8-15 · Bird Dog 2×8-12
+> **Thu — Upper Push:** Scap Push-Up 3×8-15
+> **⚠ Thursday is ONE ROW.** It is honest — a bodyweight athlete has no vertical
+> push and no pull at all — but it is a session in name only, and it is shown
+> rather than improved because this slice does not chase quality.
+
+> **TWO-DAY PRE-SEASON, CLUB, FULL GYM — REFUSED.**
+> `reduction_contradiction:main_strength:3`. In plain language: **the app's own
+> plan cut this athlete to two strength sessions because both his nights are
+> club nights, then a second part of the app checked the week against three and
+> refused it. Two parts of the app disagreeing about a number only one of them
+> chose.** The athlete gets nothing. This is the same class as the CP1 defect and
+> is not fixed here.
+
+> **IN-SEASON, THREE NIGHTS, CLUB, FULL GYM — REFUSED, and this is the big one.**
+> `B1-PIVOT: … a strength plan entry (w1:friday:none:optional) reached
+> fallbackExercisesForPlanEntry`. **The planner asks for a Friday optional
+> session and the composer has no shape for it.** 48 of the 119 refusals are
+> this one uncomposed session kind.
+
+### 7. THRESHOLDS THAT WOULD NEED RECONSIDERATION — Sam's call, not mine
+
+**I changed none of these.**
+
+| threshold | old expectation | composer-era value | architectural reason |
+| --- | --- | --- | --- |
+| `ladderCoverageWideCensus` DEFICIENT_CEILING | 88 | **6** (of 117 days) | composed days cover Sam's ladder; the corpus is also 3× smaller because 119 worlds refuse |
+| same suite's laddered-day FLOOR | 300 | **117** | the breadth floor now fails: fewer worlds build |
+| `test:pools` — 6 rotation cells | rotation rewrites a generated row | **severed** | they assert the generation-time route this slice deleted; all six drive `buildWorkoutsFromCoach` |
+| `print:week` scenarios | 6 written | **3 written, 3 refused** | the Friday optional day is uncomposed |
+| 180-world sweep | 173 built | **61 built** | the honest progress meter |
+
+### 8. WHAT FOUGHT ME, VERBATIM
+
+- **The three mutation sites CP2 found were not three bugs — they were one
+  architecture.** Every fix I wrote in CP2 was a guard around a builder we were
+  going to delete. Sam saw that before I did, and he was right: the guards
+  disappeared in this slice and the code got smaller, not bigger.
+- **Deleting the templates made the app honest about something else.** 48 worlds
+  refuse on a Friday optional session nobody had noticed the composer never
+  built, because the template had been quietly answering for it since before the
+  AI was severed. **The severance did not create that gap; it revealed it.**
+- **`test:pools` went red on cells that are correct.** Six of them assert that
+  generation rewrites a row through the rotation system. They are not wrong — they
+  are about a route that no longer exists. Editing them would be editing an
+  expectation to match a change, which is the move this repo has a law against,
+  so they are listed for Sam instead.
+- **A pool entry is not a ladder-slot candidate.** Ordering main-lift picks by
+  pool order offered `Walking Lunges` — a single-leg knee lift — for the `squat`
+  slot, because it sits on the squat pool's accessory bench. `slotsForExerciseName`
+  had to stay the filter.
+
+### 9. NOT COVERED
+
+- **The five required guard cells (a)–(e) are NOT written.** (a) is demonstrated
+  live in §5 and (d) by the away weeks' typed gaps, but neither is a cell, and
+  the mutation testing in (e) was not run. **This is the largest gap in the
+  slice and it should be the next thing done** — the contract it guards is the
+  one thing standing between a composed week and §18.
+- Kit-relative required patterns were plumbed at the contract's single owner in
+  CP1 and are unchanged here; **I did not re-verify that a full-gym missing
+  pattern still fails** (cell b).
+- `test:section18-v2`, `test:section18-gateway`, `test:workout-canonicalisation`
+  and `test:exercise-canonicalisation` were not re-run after the severance.
+- No registry row was added. R-093/R-094 remain `UNENFORCED`; the route scope
+  they name has changed from "one world" to "every world", and **that is a
+  status change I did not make without the guard cells to back it.**
+
+### 10. WHAT WOULD CATCH THE NEXT LEGACY ROUTE
+
+Three checks, in order of strength:
+
+1. **The throw itself.** `fallbackExercisesForPlanEntry` throws by name for any
+   strength entry. Any future route that reconnects it fails loudly in the sweep
+   rather than silently producing content — this is what turned 48 silent
+   substitutions into 48 visible refusals.
+2. **Source-level cells** in `test:composer-b1`: the builder source must contain
+   no `applyPoolRotation(` call and no hardcoded strength template. A reconnection
+   reds them without needing a world to reproduce it.
+3. **What is still missing:** an end-to-end cell that composes a week, drives it
+   through production, and asserts the stored rows are identical in identity,
+   order and role to the composer's output — **per world, not per fixture.** CP1's
+   receipt failed precisely because it was per-fixture. That cell is the one that
+   would have caught all three CP2 mutation sites on the day they were written.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -1547,6 +1768,8 @@ intact and a guard claiming otherwise would be false.
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- The planner asks for a `…:friday:none:optional` session (gunshow/accessory day) that `composeWeek` has no shape for; the legacy template had been answering for it silently, and severing it refuses 48 of 180 worlds on this one uncomposed session kind.
+- `reduction_contradiction:main_strength:3` refuses every two-day club pre-season world: the planner cuts to two strength sessions and §18 judges against three.
 - LEGACY TEAM-NIGHT LOAD-CAP MIRRORS, grouped: `utils/coachingEngine.ts:2226-2251` writes an in-season push slot on a team day as `'moderate intensity, low fatigue'` with `isHardExposure: false` — the only mirror found, legacy-path only, unchanged by R-094.
 - `slotDayKindFor` returns `null` for the compound name `"Team Training + Upper Body Strength"`, so a five-slot composed upper day is invisible to the ladder oracle — the oracle reads a NAME where the composer reads typed intent.
 - `test:ladder-wide` counts a slot the kit cannot train as a deficient day, which scores R-083's own answer as a defect; `slotIsTrainableOnKit` already computes the exemption and the census does not read it.

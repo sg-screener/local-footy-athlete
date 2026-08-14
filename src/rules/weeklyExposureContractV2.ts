@@ -143,7 +143,15 @@ export interface WorkoutExerciseSection18Evidence {
   strengthPattern: MainStrengthPattern | null;
   /** Meaningful main-lift credit; accessories remain null. */
   mainStrengthPattern: MainStrengthPattern | null;
-  provenance: 'canonical_row_classifier' | 'legacy_unknown';
+  /**
+   * `composer_declaration` (B1-PIVOT) — the row's role and pattern were DECIDED
+   * by `composeWeek`, not inferred from its name. The classifier answers
+   * `strength_accessory` for every unloaded and dumbbell lift, so re-inferring a
+   * composed row erased the main lifts of every athlete without a barbell and
+   * refused their week. **A declaration is evidence; an inference about a
+   * declaration is not.** R-092 is Sam's ruling that those rows carry the role.
+   */
+  provenance: 'canonical_row_classifier' | 'legacy_unknown' | 'composer_declaration';
 }
 
 /** Workout-level component identity consumed by the independent evaluator. */

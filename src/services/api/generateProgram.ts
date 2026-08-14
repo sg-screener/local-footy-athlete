@@ -57,7 +57,6 @@ import {
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
-import { composedRouteAdmits } from '../../rules/composedRouteAdmission';
 import {
   composedPlannedDaysFrom,
   composedWeekToCoachInputs,
@@ -638,27 +637,22 @@ export function buildGeneratedMicrocycles(args: {
       profile,
       generationConstraints,
     });
-    // ── SLICE B1: THE COMPOSED ROUTE ────────────────────────────────────────
+    // ── B1-PIVOT: THE COMPOSER IS THE ONLY STRENGTH-CONTENT BUILDER ─────────
     //
-    // ONE configuration, named in `composedRouteAdmission` and nowhere else — the
-    // composer itself never asks which world it is in. When it admits, the
-    // composer authors this week's strength content and `fallbackExercisesForPlanEntry`
-    // never runs for it. Every other world takes the legacy route unchanged.
-    const composedRoute = composedRouteAdmits({
-      seasonPhase: profile.seasonPhase,
-      trainingDayCount: (profile.preferredTrainingDays ?? []).length,
-      teamTrainingDayCount: (profile.teamTrainingDays ?? []).length,
-      kit: equipment.tags,
-      weekNumber: blockState.weekNumber,
-    });
+    // Sam, 2026-08-14: *"isn't this like the ai? we just realise it's going to
+    // suck for a bit and then build a better one with all the info in there?
+    // because right now it just seems like we're fixing shit thats going to be
+    // deleted anyway"*. **The migration allowlist is deleted, not widened.**
+    // Every world's strength content is composed; the planner still owns the
+    // skeleton (days, counts, planned patterns) and conditioning is untouched.
+    // A world the composer cannot build now FAILS LOUDLY. It is never answered
+    // by the legacy builder.
     const allocatedWeekPlan = args.coachingInputs
       ? buildCoachingPlan({
           ...args.coachingInputs,
           // Clause (a), route-scoped: the contract derives its required-pattern
           // set from the planner's own answer and this kit, not from ALL_PATTERNS.
-          ...(composedRoute
-            ? { composedRoute: { kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags) } }
-            : {}),
+          composedRoute: { kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags) },
           generationConstraints,
           injuries: profile.injuries ?? [],
           appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
@@ -692,8 +686,7 @@ export function buildGeneratedMicrocycles(args: {
     // An edge response describes exactly the block state sent in its prompt:
     // week 1. Never replay that single array against week 2-4 allocations.
     // Later weeks use their own deterministic plan/fallback content.
-    const composedWeek = composedRoute
-      ? composeWeek({
+    const composedWeek = composeWeek({
           profile,
           phaseClock: { weekNumber: blockState.weekNumber },
           plannedDays: composedPlannedDaysFrom(weekPlan.weeklyPlan),
@@ -704,12 +697,9 @@ export function buildGeneratedMicrocycles(args: {
               weekPlan.weeklyExposureContractV2?.strengthPatterns.prohibitedPatterns ?? [],
             excludedIdentities: args.athletePrefs?.excluded ?? [],
           },
-          todayISO: blockState.weekStart,
-        })
-      : null;
-    const sourceCoachWorkouts = composedWeek
-      ? composedWeekToCoachInputs(composedWeek)
-      : stateIndex === 0 ? args.coachWorkouts : [];
+      todayISO: blockState.weekStart,
+    });
+    const sourceCoachWorkouts = composedWeekToCoachInputs(composedWeek);
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     // The governed boundary, when it falls inside THIS week. Days before it are
     // history: the contract is stamped, pre-boundary anchors keep settled
@@ -834,13 +824,19 @@ export function buildGeneratedMicrocycles(args: {
         // acceptance: §18 still judges the week and still refuses it if it is
         // unlawful. It removes only the gateway's ability to answer a composed
         // week with a different week.
+        // ⚠ BOTH ARMS REBUILD THE COMPOSED WEEK, AND THAT IS THE WHOLE POINT.
+        // They used to call `buildCanonicalCandidate([])`, which rebuilds from
+        // `fallbackExercisesForPlanEntry` — measured 2026-08-14 publishing a
+        // LEGACY week for four of seven worlds while the gateway's own verdict
+        // read `accepted`. §18 may refuse a composed week; it may not answer
+        // with a different one.
         regenerate: () => ({
           contract: exposureContractV2!,
-          workouts: buildCanonicalCandidate(composedWeek ? sourceCoachWorkouts : []),
+          workouts: buildCanonicalCandidate(sourceCoachWorkouts),
         }),
         safeFallback: () => ({
           contract: exposureContractV2!,
-          workouts: buildCanonicalCandidate(composedWeek ? sourceCoachWorkouts : []),
+          workouts: buildCanonicalCandidate(sourceCoachWorkouts),
         }),
       });
       workouts = rebindDerivedSessionProvenance({

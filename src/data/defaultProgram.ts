@@ -115,6 +115,7 @@ import { enforceCuratedCueContract } from '../rules/curatedCueContract';
 import {
   mainPatternsForLegacyStrengthPattern,
   normalizeStrengthIntent,
+  type MainStrengthPattern,
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
@@ -714,6 +715,9 @@ export type CoachGeneratedWorkoutInput = {
     supersetGroup?: string;
     supersetOrder?: number;
     pairType?: string;
+    /** B1-PIVOT: the composer's DECLARED role and pattern, carried to §18. */
+    composedRole?: 'main_strength' | 'strength_accessory';
+    composedPattern?: MainStrengthPattern | null;
   }>;
 };
 
@@ -1069,269 +1073,37 @@ function fallbackNameForPlanEntry(entry: SessionAllocation): string {
   return 'Strength Session';
 }
 
+/**
+ * ⚠ THE STRENGTH BRANCHES OF THIS FUNCTION ARE DELETED (B1-PIVOT, 2026-08-14).
+ *
+ * It held fifteen hardcoded branches, eleven of them returning exactly three
+ * rows into a five-slot ladder, and with the AI severed (R-091) it had become
+ * the sole author of every composed strength row. **`composeWeek` is now the
+ * only production strength-content builder**, so a strength plan entry reaching
+ * here is a reachability defect, not a case to be served — it throws rather than
+ * quietly answering with the builder this slice retired.
+ *
+ * WHAT SURVIVES, AND WHY. Two branches author no strength at all: a mobility
+ * day and a conditioning day, whose content belongs to the retained conditioning
+ * and mobility adapters. They are a LABEL for a day the composer does not fill,
+ * not a strength template.
+ */
 function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGeneratedWorkoutInput['exercises'] {
-  const strengthText = strengthFocusForPlanEntry(entry);
-  const lower = strengthText.toLowerCase();
-  const contributions = entry.strengthIntent?.plannedPatterns ?? entry.strengthPatternContributions ??
-    mainPatternsForLegacyStrengthPattern(entry.strengthPattern);
-
-  if (entry.isTeamDay && contributions.length === 0) return [];
-  if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(lower)) {
-    return [{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15, notes: 'Easy mobility and recovery work' }];
+  const lower = `${entry.focus ?? ''}`.toLowerCase();
+  if (entry.tier === 'recovery' || /mobility|recovery|foam|flush/i.test(lower)) {
+    return [{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15,
+      notes: 'Easy mobility and recovery work' }];
   }
-  if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) {
-    return [{ name: entry.speedBlock?.title ?? SPEED_FALLBACK_TEMPLATE, sets: 1, repsMin: 1, repsMax: 1 }];
-  }
-  if (entry.conditioningFlavour && !entry.hasCombinedConditioning) {
+  if (entry.conditioningFlavour || /conditioning|aerobic|tempo|sprint|interval/i.test(lower)) {
     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
   }
-  // ── THE AUTHORED G-2 EXCEPTION, verbatim (BIBLE_ANCHOR: lower_strength_g3) ──
-  //
-  // Sam, Section 3: "g-2 if it's low range of motion, low reps, high quality
-  // i.e. 2x3 box squats to high box + 2x3 vertical jumps - low volume, not many
-  // exercises". These two rows ARE that sentence, and they are the same two
-  // rows `weekStructureValidatorTests` has been using as its neural-primer
-  // example since 2026-07-08.
-  //
-  // This branch sits ahead of every pattern branch on purpose: the planned
-  // pattern here is `squat`, so the generic single-squat block below (Back
-  // Squat 3x8-10 + Reverse Lunges + Leg Extension) would otherwise claim it and
-  // put a full hard lower session two days before a game.
-  //
-  // Row count, sets and reps are all load-bearing — `looksLikeNeuralPrimer`
-  // reads exactly them (≤2 lower/power exercises, ≤3 sets, ≤3 reps) and the
-  // injury-authority suite asserts the produced session still satisfies it.
-  // COPY: SIGNED by Sam 2026-08-06, shipped verbatim.
-  // `docs/G2_SIGNING_AND_LAST_RESORT_RULING_2026-08-06.md` §"Signed copy".
-  // Both sentences are quoted character-for-character, INCLUDING the en dash in
-  // the first — a signed sentence is signed as written, and silently
-  // normalising its punctuation is the same class of edit as rewording it.
-  if (entry.strengthVariant === 'quality_low_volume') {
-    return [
-      { name: 'High Box Squat', sets: 2, repsMin: 3, repsMax: 3,
-        notes: 'Low range of motion, high quality – stop well short of failure' },
-      { name: 'Vertical Jump', sets: 2, repsMin: 3, repsMax: 3,
-        notes: 'Quality reps, full recovery between sets' },
-    ];
-  }
-  // Low-fatigue accessories / gunshow / prehab (typical G-1 slot): light
-  // pump + prehab work, never main pressing — the previous fallthrough to
-  // the default bench/OHP/dips block put main lifts on the day before a game.
-  //
-  // ── ⚠ THE TYPED INTENT OUTRANKS THE PROSE, AND THIS BRANCH PROVED WHY ────
-  //
-  // **A LEG DAY WAS SHIPPING ARM WORK BECAUSE ITS OWN DESCRIPTION SAID THE WORD
-  // "ACCESSORY".** The plan entry's focus text reads *"Lower body - squat
-  // emphasis (quad-dominant: squat, lunge, leg press; optional quad ACCESSORY:
-  // leg extension)"*, and `/accessor/i` matches inside it. This branch sat
-  // BEFORE every pattern branch, so a squat day returned
-  // `Bicep Curls · Tricep Pushdowns · Face Pulls · Calf Raises · Pallof Press`.
-  //
-  // MEASURED, bodyweight off-season, the day named `Lower Squat`:
-  //     SHIPPED   Bicep Curls · Tricep Pushdowns · Tib Raises · Pallof Press · Back Squat
-  //     THE SQUAT BRANCH WOULD HAVE GIVEN
-  //               Back Squat · RDLs · Reverse Lunges · Single Leg RDL · Leg Extension
-  //
-  // THE GUARD IS THE REPO'S OWN RULE, NOT A NEW ONE: delegate to the typed
-  // owner, never re-infer from text. `contributions` is the plan's OWN answer to
-  // "what main patterns does this day carry", so a day that names any is a
-  // main-strength day whatever prose it also carries. A true accessory day
-  // (gunshow, prehab, the G-1 slot) names NO main pattern and still lands here.
-  //
-  // The regex is kept rather than replaced: it is the only signal for the
-  // pattern-less days this branch exists to serve.
-  if (contributions.length === 0 && /accessor|prehab|gunshow|pump|low-fatigue/i.test(lower)) {
-    return [
-      { name: 'Bicep Curls', sets: 2, repsMin: 10, repsMax: 15 },
-      { name: 'Tricep Pushdowns', sets: 2, repsMin: 10, repsMax: 15 },
-      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
-      { name: 'Calf Raises', sets: 2, repsMin: 10, repsMax: 15 },
-      { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
-    ];
-  }
-  if (contributions.length === 2 && contributions.includes('hinge') && contributions.includes('pull')) {
-    return [
-      { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Pull-Ups', sets: 3, repsMin: 8, repsMax: 12 },
-      { name: 'Hamstring Curl', sets: 2, repsMin: 10, repsMax: 12 },
-      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
-      { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12 },
-    ];
-  }
-  if (entry.strengthIntent?.archetype === 'full_body') {
-    const lowerName = contributions.includes('hinge') ? 'RDLs' : 'Back Squat';
-    return [
-      { name: lowerName, sets: 3, repsMin: 5, repsMax: 8 },
-      { name: 'Bench Press', sets: 3, repsMin: 6, repsMax: 8 },
-      { name: 'Single-Arm DB Row', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
-    ];
-  }
-  // ── THE COMBINED DAYS ANSWER TO THE SAME LADDER AS THE LED DAYS ──────────
-  //
-  // **THESE TWO BRANCHES WERE THE LAST 3-ROW LOWER/UPPER FALLBACKS, AND THE
-  // COMMONEST DAY IN THE APP CAME OUT OF THE FIRST ONE.** Measured 2026-08-13,
-  // 6 generated worlds x 4 weeks: `Lower Body Strength` is 20 of 94 strength
-  // days, every one of them shipping `Back Squat | Deadlift | Pallof Press` —
-  // a squat, a hinge and a core row, with **no single-leg work of either kind.**
-  // Against Sam's own sentence — *"lower body strength should have a hinge, a
-  // squat, an single leg knee, a single leg hip, and accessory and/or some
-  // core"* — that is 3 of his 5 slots, on the day named after the rule.
-  //
-  // **THE CLASS, NOT THE CASE.** The squat-led and hinge-led branches below were
-  // already brought to his five slots; naming BOTH patterns was somehow taken as
-  // licence to ship fewer rows than naming one. A combined lower day is a lower
-  // day: it answers to `LOWER_SLOTS`, and a combined upper day answers to
-  // `UPPER_FULL_SLOTS` (*"push pull on the horizontal, push pull on the vertical
-  // then … arm work"*). The fill order below is `:227`'s, in his order.
-  //
-  // **THE EXISTING ROWS AND THEIR DOSES ARE UNTOUCHED — only the missing slots
-  // are added.** A combined day leads heavier (3x5-8) and carries a secondary
-  // maintenance dose, and that distinction is authored; rewriting it to match the
-  // led-day ladder would be a dose change nobody ordered, and the authored dose
-  // now bounds progression.
-  if (contributions.includes('squat') && contributions.includes('hinge')) {
-    const squatPrimary = entry.strengthIntent?.primaryPattern !== 'hinge';
-    return squatPrimary
-      ? [
-          { name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 8 },
-          { name: 'RDLs', sets: 2, repsMin: 8, repsMax: 10, notes: 'Secondary maintenance dose' },
-          { name: 'Reverse Lunges', sets: 3, repsMin: 8, repsMax: 12 },
-          // `Single-Leg RDL`, HYPHENATED — the spelling every other table keys on.
-          { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
-          { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
-        ]
-      : [
-          { name: 'RDLs', sets: 3, repsMin: 5, repsMax: 8 },
-          { name: 'Goblet Squat', sets: 2, repsMin: 8, repsMax: 10, notes: 'Secondary maintenance dose' },
-          { name: 'Bulgarian Split Squats', sets: 3, repsMin: 8, repsMax: 12 },
-          { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
-          { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
-        ];
-  }
-  if (contributions.includes('push') && contributions.includes('pull')) {
-    const pushPrimary = entry.strengthIntent?.primaryPattern !== 'pull';
-    return pushPrimary
-      ? [
-          { name: 'Bench Press', sets: 3, repsMin: 5, repsMax: 8 },
-          { name: 'Chest Supported Row', sets: 3, repsMin: 8, repsMax: 10 },
-          { name: 'Overhead Press', sets: 2, repsMin: 8, repsMax: 10 },
-          { name: 'Pull-Ups', sets: 2, repsMin: 8, repsMax: 12 },
-          { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
-        ]
-      : [
-          { name: 'Pull-Ups', sets: 3, repsMin: 5, repsMax: 8 },
-          { name: 'Incline DB Bench', sets: 3, repsMin: 8, repsMax: 10 },
-          { name: 'Barbell Row', sets: 2, repsMin: 8, repsMax: 10 },
-          { name: 'Overhead Press', sets: 2, repsMin: 8, repsMax: 10 },
-          { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
-        ];
-  }
-  // ── SAM'S FILL ORDER, Bible `:227` — NOT a list of same-pattern lifts ─────
-  //
-  // *"heavy squat pattern -> heavy hinge pattern -> single-leg knee-dominant ->
-  // single-leg hip-dominant -> accessories. An athlete is better served by a
-  // squat and a hinge than by two squats."* Restated by him 2026-08-13:
-  // *"lower body strength should have a hinge, a squat, an single leg knee, a
-  // single leg hip, and accessory and/or some core"*.
-  //
-  // WHAT THIS REPLACED, AND HIS OWN RULE CONVICTED IT: RDLs + Hip Thrusts +
-  // Hamstring Curl is TWO HINGES and no squat — `sessionSlotCoverage` reports
-  // `duplicated: [hinge]`, `missing: [squat, single_leg_knee, single_leg_hip]`.
-  // That is the exact shape `:227` names as the thing to avoid, in hinge form.
-  //
-  // The CONTRIBUTION still leads — a hinge day opens with the heavy hinge — but
-  // the day covers the body instead of repeating one pattern.
-  if (contributions.length === 1 && contributions[0] === 'hinge') {
-    return [
-      { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Back Squat', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Bulgarian Split Squats', sets: 3, repsMin: 8, repsMax: 12 },
-      // `Single-Leg RDL`, HYPHENATED — the spelling every other table uses.
-      // `defaultProgram` was the ONLY site emitting `Single Leg RDL`, and a row
-      // under that spelling is invisible to `loadEstimation`, `exercisePoolsStrength`,
-      // `exerciseSubstitutes`, `injurySessionClassifier` AND Sam's signed
-      // `exerciseEquipmentRequirement` — all five key on the hyphen. R-014's
-      // exact-name class. Not a new name: it is the one already in his sheet.
-      { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
-      { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12 },
-    ];
-  }
-  // THE SAME FILL ORDER, SQUAT-LED. This branch is LIVE — measured firing 6
-  // times across 5 generated worlds — and it shipped Back Squat + Reverse Lunges
-  // + Leg Extension: `missing: [hinge, single_leg_hip]`. A lower day with no
-  // hinge at all, which is `:227`'s first requirement after the squat.
-  if (contributions.length === 1 && contributions[0] === 'squat') {
-    return [
-      { name: 'Back Squat', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Reverse Lunges', sets: 3, repsMin: 8, repsMax: 12 },
-      // `Single-Leg RDL`, HYPHENATED — the spelling every other table uses.
-      // `defaultProgram` was the ONLY site emitting `Single Leg RDL`, and a row
-      // under that spelling is invisible to `loadEstimation`, `exercisePoolsStrength`,
-      // `exerciseSubstitutes`, `injurySessionClassifier` AND Sam's signed
-      // `exerciseEquipmentRequirement` — all five key on the hyphen. R-014's
-      // exact-name class. Not a new name: it is the one already in his sheet.
-      { name: 'Single-Leg RDL', sets: 2, repsMin: 8, repsMax: 12 },
-      { name: 'Leg Extension', sets: 2, repsMin: 10, repsMax: 12 },
-    ];
-  }
-  if (contributions.length === 1 && contributions[0] === 'pull') {
-    return [
-      { name: 'Pull-Ups', sets: 3, repsMin: 8, repsMax: 12 },
-      { name: 'Chest Supported Row', sets: 3, repsMin: 8, repsMax: 12 },
-      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
-    ];
-  }
-  if (contributions.length === 1 && contributions[0] === 'push') {
-    return [
-      { name: 'Overhead Press', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Incline DB Bench', sets: 3, repsMin: 8, repsMax: 12 },
-      { name: 'Lateral Raise', sets: 2, repsMin: 12, repsMax: 15 },
-    ];
-  }
-  if (/hip-dominant|hinge|rdl|hamstring/i.test(lower)) {
-    return [
-      { name: 'RDLs', sets: 3, repsMin: 6, repsMax: 8 },
-      { name: 'Hip Thrusts', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Nordic Lower', sets: 2, repsMin: 3, repsMax: 5 },
-    ];
-  }
-  if (/squat|quad|lower body/i.test(lower)) {
-    return [
-      { name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 8 },
-      { name: 'Bulgarian Split Squats', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Leg Extension', sets: 2, repsMin: 10, repsMax: 12 },
-    ];
-  }
-  if (/pull|row|pull-up/i.test(lower)) {
-    return [
-      { name: 'Pull-Ups', sets: 3, repsMin: 5, repsMax: 8 },
-      { name: 'Barbell Row', sets: 3, repsMin: 6, repsMax: 10 },
-      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
-    ];
-  }
-  if (/full body/i.test(lower)) {
-    return [
-      { name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 8 },
-      { name: 'Bench Press', sets: 3, repsMin: 5, repsMax: 8 },
-      { name: 'Single-Arm DB Row', sets: 3, repsMin: 8, repsMax: 10 },
-    ];
-  }
-  return [
-    { name: 'Bench Press', sets: 3, repsMin: 5, repsMax: 8 },
-    { name: 'Overhead Press', sets: 3, repsMin: 6, repsMax: 8 },
-    { name: 'Dips', sets: 2, repsMin: 8, repsMax: 12 },
-  ];
-}
-
-function strengthFocusForPlanEntry(entry: SessionAllocation): string {
-  const parts = String(entry.focus ?? '')
-    .split('+')
-    .map((part) => part.trim())
-    .filter((part) => part && !/^team training\b/i.test(part));
-  if (parts.length > 0) return parts[0];
-  return entry.isTeamDay ? '' : String(entry.focus ?? '');
+  throw new Error(
+    'B1-PIVOT: the legacy strength-content builder is severed. A strength plan '
+    + `entry (${entry.planEntryId ?? entry.dayOfWeek ?? 'unknown'}) reached `
+    + 'fallbackExercisesForPlanEntry, which means composeWeek did not cover a day '
+    + 'the planner asked for. Fix the composer or the skeleton — never reconnect '
+    + 'this builder.',
+  );
 }
 
 function completeCoachWorkoutsFromPlan(
@@ -1853,9 +1625,6 @@ export function buildWorkoutsFromCoach(
     return [withoutUnselectedConditioning];
   });
   const edgeProvidedDays = new Set(feasibleCoachWorkouts.map((workout) => workout.dayOfWeek));
-  /** Clause (f): the days the composer authored, so later passes stand down. */
-  const composedDays = new Set(
-    coachWorkouts.filter((workout) => workout.composed).map((workout) => workout.dayOfWeek));
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(
     feasibleCoachWorkouts,
     effectiveWeeklyPlan,
@@ -1872,7 +1641,10 @@ export function buildWorkoutsFromCoach(
       profile: onboardingData,
       planIntentValid: !!planEntry?.planEntryId &&
         workout.planEntryId === planEntry.planEntryId,
-      composed: composedDays.has(workout.dayOfWeek),
+      // B1-PIVOT: EVERY generation-built workout is composed content now, so the
+      // canonicaliser's drift and restore branches stand down for all of them.
+      // Edit-time canonicalisation is a different consumer and keeps both.
+      composed: true,
     });
     if (result.actions.length > 0) {
       logger.warn('[WorkoutCanonicalisation] Generated workout finalised', {
@@ -2584,37 +2356,16 @@ export function buildWorkoutsFromCoach(
       });
     }
 
-    // ── A REFUSED SLOT IS A REMOVED ROW (R-083) ────────────────────────────
+    // ── B1-PIVOT: GENERATION-TIME ROTATION IS DELETED ──────────────────────
     //
-    // `applyPoolRotation` returns an OUTCOME, and "there is no legal exercise
-    // for this athlete" is one of its answers. Sam: *"i can't account for
-    // everyone and if they want to train properly they'll sign up to a gym"* —
-    // so the row is dropped here rather than written from the unfiltered pool.
-    // Dropping BEFORE the row is built is what keeps `index` off the row ids of
-    // work that never existed.
-    const rotatedAiExercises = sourceAiExercises.flatMap((ex) => {
-      // A COMPOSED ROW IS NOT A SUGGESTION TO BE REWRITTEN (clause f). Rotation
-      // exists to vary names an AI or a hardcoded template proposed; the
-      // composer already selected from the authorised pools under the one
-      // legality owner, and rewriting its choice here would be the post-hoc
-      // mutation this slice exists to remove.
-      if (cw.composed) return [{ ex, resolvedName: ex.name }];
-      if (!rotationContext || !poolUsage || planEntry?.strengthVariant === 'quality_low_volume') {
-        return [{ ex, resolvedName: ex.name }];
-      }
-      const outcome = applyPoolRotation(ex.name, rotationContext, poolUsage, effectiveAthletePrefs);
-      if (outcome.kind === 'refused') {
-        logger.warn('[ProgramGen] slot refused — no exercise this athlete can do', {
-          dayOfWeek: cw.dayOfWeek,
-          suggested: outcome.suggestedName,
-          slot: outcome.slot,
-          role: outcome.role,
-          cause: outcome.cause,
-        });
-        return [];
-      }
-      return [{ ex, resolvedName: outcome.name }];
-    });
+    // `applyPoolRotation` existed to rewrite names an AI or a hardcoded template
+    // proposed. **Nothing proposes a strength name any more** — the composer
+    // selects from the authorised pools under one legality owner, and rewriting
+    // its choice here was one of the three post-composition mutations measured
+    // on 2026-08-14 (`Bodyweight Squat` -> `Walking Lunges`). The function
+    // itself REMAINS: `coachProgramEdit` and the athlete's own swap flow are
+    // separate consumers and are untouched.
+    const rotatedAiExercises = sourceAiExercises.map((ex) => ({ ex, resolvedName: ex.name }));
 
     const aiExercises: WorkoutExercise[] = rotatedAiExercises.map(({ ex, resolvedName }, index) => {
       // Cross-cycle variation happened above, in `rotatedAiExercises`.
@@ -2641,6 +2392,22 @@ export function buildWorkoutsFromCoach(
         ...(ex.supersetGroup ? { supersetGroup: ex.supersetGroup } : {}),
         ...(ex.supersetOrder ? { supersetOrder: ex.supersetOrder } : {}),
         ...(ex.pairType ? { pairType: ex.pairType as any } : {}),
+        // A COMPOSED ROW ARRIVES WITH ITS ROLE ALREADY DECIDED (R-092). Stamped
+        // here so `withSection18WorkoutEvidence` finds a declaration instead of
+        // a bare row to guess about.
+        ...(ex.composedRole
+          ? {
+              section18Evidence: {
+                protocolVersion: 1 as const,
+                role: ex.composedRole,
+                strengthPattern: ex.composedPattern ?? null,
+                mainStrengthPattern: ex.composedRole === 'main_strength'
+                  ? ex.composedPattern ?? null
+                  : null,
+                provenance: 'composer_declaration' as const,
+              },
+            }
+          : {}),
         exercise,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

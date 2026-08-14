@@ -48,6 +48,10 @@ export function composedWeekToCoachInputs(week: ComposedWeek): CoachGeneratedWor
       sets: row.sets,
       repsMin: row.repsMin,
       repsMax: row.repsMax,
+      // The composer DECIDES the role (R-092); §18 reads this rather than
+      // re-inferring it from the exercise name.
+      composedRole: row.role,
+      composedPattern: row.mainStrengthPattern,
     })),
   }));
 }

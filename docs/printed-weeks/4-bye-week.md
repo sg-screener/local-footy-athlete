@@ -20,8 +20,8 @@ _(no exercises listed)_  ⚠ **THIS BLOCK HAS A NAME AND NOTHING IN IT.**
   - Sit into the hips, chest up. Own the bottom position.
 - Deadlift — 3 × 2-4
   - Keep bar close, get tight through the lats. Flat back from start to lockout.
-- Walking Lunges — 3 × 6-8
-  - Long stride, tall through the midline. Steady and deliberate.
+- Bulgarian Split Squats — 3 × 6-8
+  - Slight lean forward. Control the descent, no bouncing.
 - Single-Leg RDL — 2 × 6-8
   - Hinge at the hip, soft knee. Balance and control over speed.
 - Band Pallof Press — 2 × 8-12
@@ -42,12 +42,12 @@ _(no exercises listed)_  ⚠ **THIS BLOCK HAS A NAME AND NOTHING IN IT.**
   - Shoulder blades pinched, bend bar like snapping a twig, feet planted. Bar to chest, press hard to lockout.
 - Barbell Row — 3 × 4-6
   - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
-- Overhead Press — 3 × 3-5
-  - Ribs down, bar finishes over the ears. Press hard and finish strong.
-- Pull-Ups — 3 × 4-6
-  - Dead hang to chin over bar, any grip is fine. Initiate with the lats, not the arms. Add weight once bodyweight sets feel easy.
-- Face Pull — 2 × 10-20
-  - Pull to the forehead, open the hands out. Squeeze the rear delts, slow return.
+- DB Shoulder Press — 2 × 8-15
+  - Start at the shoulders, press to lockout. No arching through the lower back.
+- Lat Pulldown — 2 × 8-15
+  - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
+- Band Pull-Apart — 2 × 10-20
+  - Squeeze the shoulder blades together. Elbows straight, controlled return.
 
 **Team Training**
 
@@ -59,16 +59,16 @@ _(the club runs this one — the app lists nothing for it)_
 
 **Lower Squat**
 
-- Back Squat — 3 × 2-4
-  - Sit into the hips, chest up. Own the bottom position.
-- Deadlift — 3 × 2-4
-  - Keep bar close, get tight through the lats. Flat back from start to lockout.
-- Walking Lunges — 3 × 6-8
-  - Long stride, tall through the midline. Steady and deliberate.
+- Front Squat — 3 × 2-4
+  - Elbows high, sit between the heels. Stay tall through the midline.
+- Hip Thrusts — 2 × 6-8
+  - Drive through the heels, squeeze at the top. Ribs down, no overextending.
+- Cossack Squat — 3 × 6-8
+  - Wide stance, sit onto one leg, other leg straight. Heel down, chest up, push back through. Hold rack if needed.
 - Single-Leg RDL — 2 × 6-8
   - Hinge at the hip, soft knee. Balance and control over speed.
-- Leg Extension — 2 × 8-15
-  - Drive feet to ceiling, lean back slightly if possible.
+- Banded Dead Bug — 2 × 8-12
+  - Band behind head, pull band with straight arms toward knees, ribs down. Lower back stays glued to the floor.
 
 ## Thursday 13 August
 

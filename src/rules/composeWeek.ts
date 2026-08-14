@@ -198,33 +198,79 @@ const POOL_SLOT_FOR_LADDER_SLOT: Partial<Record<SessionSlot, PoolSlotKey>> = {
  * when the kit allows"*. Anchors are the weighted ones and they come first; the
  * rest of the slot follows and is only reached when no anchor is legal.
  */
+/**
+ * ⚠ SAM'S WEIGHTED PREFERENCE, EXPRESSED THROUGH THE POOL'S OWN FIELD.
+ *
+ * *"yes i'd prefer weighted exercises"* (2026-08-14). `PoolEntry.loadRatio` is
+ * already the authored answer to "does this carry external load" — `0` means it
+ * does not — so the preference needs no new list and no new judgement here.
+ * Within each tier the authored order is preserved; only the unloaded entries
+ * move to the back. Measured: this is what puts `Goblet Squat` ahead of
+ * `Bodyweight Squat` for a dumbbell athlete.
+ */
+const UNLOADED_POOL_IDENTITIES: ReadonlySet<ComposedExerciseIdentity> = new Set(
+  (Object.keys(STRENGTH_POOLS) as PoolSlotKey[]).flatMap((poolSlot) =>
+    [...STRENGTH_POOLS[poolSlot].anchor.entries, ...STRENGTH_POOLS[poolSlot].accessory.entries]
+      .filter((entry) => entry.loadRatio === 0)
+      .map((entry) => composedIdentityFor(entry.name))));
+
+function weightedFirst(
+  identities: readonly ComposedExerciseIdentity[],
+): ComposedExerciseIdentity[] {
+  return [
+    ...identities.filter((id) => !UNLOADED_POOL_IDENTITIES.has(id)),
+    ...identities.filter((id) => UNLOADED_POOL_IDENTITIES.has(id)),
+  ];
+}
+
+/**
+ * ⚠ A POOL ENTRY IS NOT AUTOMATICALLY A LADDER-SLOT CANDIDATE. The squat pool's
+ * accessory bench holds `Walking Lunges`, which fills `single_leg_knee` and not
+ * `squat`; taking pool order without this filter offered a lunge as a squat.
+ * `slotsForExerciseName` stays the single owner of what fills a slot.
+ */
+function poolOrderedFor(
+  slot: SessionSlot,
+  entries: readonly { name: string }[],
+): ComposedExerciseIdentity[] {
+  const eligible = new Set(slotCandidates(slot));
+  return entries.map((entry) => composedIdentityFor(entry.name))
+    .filter((id) => eligible.has(id));
+}
+
+/**
+ * ANCHORS FIRST, THEN THE POOL'S ACCESSORY BENCH, THEN THE REST — and weighted
+ * before unloaded inside each. An anchor list is not the pattern: every squat
+ * anchor is a barbell lift, so returning anchors alone made the composer call
+ * `squat` KIT-UNACHIEVABLE for a dumbbell athlete who can Goblet Squat.
+ */
 function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[] {
   const poolSlot = POOL_SLOT_FOR_LADDER_SLOT[slot];
-  if (!poolSlot) return slotCandidates(slot);
+  if (!poolSlot) return weightedFirst(slotCandidates(slot));
   const pool = STRENGTH_POOLS[poolSlot];
-  const anchors = pool.anchor.entries.map((entry) => composedIdentityFor(entry.name));
-  // The pool's OWN accessory bench comes next, in its authored order, so a
-  // dumbbell athlete falls to `Single-Arm DB Floor Press` before `Push-ups`.
-  // Falling straight to the census join sorted the loaded option BELOW the
-  // unloaded one, which reads as the app forgetting he owns dumbbells.
-  const ordered = [...anchors,
-    ...pool.accessory.entries.map((entry) => composedIdentityFor(entry.name))];
+  const ordered = [
+    ...poolOrderedFor(slot, pool.anchor.entries),
+    ...poolOrderedFor(slot, pool.accessory.entries),
+  ];
   const rest = slotCandidates(slot).filter((id) => !ordered.includes(id));
-  return [...ordered, ...rest];
+  return weightedFirst([...ordered, ...rest]);
 }
 
 /**
  * A SUPPORTING ROW COMES OFF THE ACCESSORY BENCH FIRST. Same reason the main
  * lift comes off the anchors: the pools already carry the distinction, and
  * ignoring it made a full-gym vertical push open on a `Bottoms-Up KB Press`.
- * The four ladder slots with no pool slot fall back to the census join.
  */
 function supportCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[] {
   const poolSlot = POOL_SLOT_FOR_LADDER_SLOT[slot];
-  if (!poolSlot) return slotCandidates(slot);
+  if (!poolSlot) return weightedFirst(slotCandidates(slot));
   const pool = STRENGTH_POOLS[poolSlot];
-  return [...pool.accessory.entries, ...pool.anchor.entries]
-    .map((entry) => composedIdentityFor(entry.name));
+  const ordered = [
+    ...poolOrderedFor(slot, pool.accessory.entries),
+    ...poolOrderedFor(slot, pool.anchor.entries),
+  ];
+  const rest = slotCandidates(slot).filter((id) => !ordered.includes(id));
+  return weightedFirst([...ordered, ...rest]);
 }
 
 /**

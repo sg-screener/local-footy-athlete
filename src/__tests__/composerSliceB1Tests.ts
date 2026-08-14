@@ -8,7 +8,7 @@
  * rows for R-090 and the main-lift-role ruling are globally UNENFORCED until all
  * program-building routes migrate or are deleted.
  */
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
@@ -19,7 +19,6 @@ import {
   type ComposerInputs,
   type ComposerPlannedDay,
 } from '../rules/composeWeek';
-import { composedRouteAdmits } from '../rules/composedRouteAdmission';
 import { composedIdentityFor, composedRowIsLegal } from '../rules/composedRowLegality';
 import { buildSection18WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
@@ -293,20 +292,12 @@ console.log('\n[f] The composer cannot ask which world it is in, and nothing rew
   ok('[anti-overfit] the composer names no world, kit label, phase or day count',
     !/Full Gym|Bodyweight Only|'Pre-season'|trainingDaysPerWeek|weekNumber === /.test(composerSource),
     'a branch keyed to the control fixture would appear here');
-  // The gate is the ONLY place a configuration is named, and it admits ONE.
-  const world = {
-    seasonPhase: 'Pre-season', trainingDayCount: 2, teamTrainingDayCount: 2,
-    kit: FULL_GYM, weekNumber: 1,
-  };
-  ok('the migration gate admits the one CP1 configuration', composedRouteAdmits(world));
-  ok('the gate refuses week 2 — CP2 has not landed',
-    !composedRouteAdmits({ ...world, weekNumber: 2 }));
-  ok('the gate refuses the dumbbell and bodyweight family members',
-    !composedRouteAdmits({ ...world, kit: DB_BANDS })
-    && !composedRouteAdmits({ ...world, kit: AWAY_BODYWEIGHT }));
-  ok('the gate refuses a three-day week and a club-less week',
-    !composedRouteAdmits({ ...world, trainingDayCount: 3 })
-    && !composedRouteAdmits({ ...world, teamTrainingDayCount: 0 }));
+  // ⚠ THE MIGRATION GATE IS DELETED (B1-PIVOT). These four cells asserted that
+  // it admitted exactly one configuration; there is no gate to admit anything
+  // now, and its file is gone. The property that replaces them is the
+  // reachability proof below and in `composerSeveranceTests`.
+  ok('[pivot] the migration allowlist file is deleted',
+    !existsSync(resolve(__dirname, '../rules/composedRouteAdmission.ts')));
   // The canonicaliser's two rewriting branches are gated on `composed`.
   const canonSource = readFileSync(resolve(__dirname, '../utils/workoutCanonicalisation.ts'), 'utf8');
   ok('[f] the canonicaliser\'s drift branch stands down for a composed workout',
@@ -314,8 +305,13 @@ console.log('\n[f] The composer cannot ask which world it is in, and nothing rew
   ok('[f] the canonicaliser\'s restore branch stands down for a composed workout',
     canonSource.includes('&& !context.composed'));
   const builderSource = readFileSync(resolve(__dirname, '../data/defaultProgram.ts'), 'utf8');
-  ok('[f] applyPoolRotation does not rewrite a composed row',
-    builderSource.includes('if (cw.composed) return [{ ex, resolvedName: ex.name }];'));
+  // STRONGER THAN THE GUARD IT REPLACES: the generation builder does not call
+  // the rewriter at all any more, so there is no branch to get wrong.
+  ok('[pivot] generation-time pool rotation is DELETED, not guarded',
+    !/applyPoolRotation\s*\(/.test(builderSource));
+  ok('[pivot] the legacy strength templates are DELETED',
+    !builderSource.includes("name: 'Back Squat', sets: 3")
+    && builderSource.includes('B1-PIVOT: the legacy strength-content builder is severed'));
 }
 
 // ── PURITY AND DETERMINISM ─────────────────────────────────────────────────
