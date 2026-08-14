@@ -691,6 +691,13 @@ export function findOrCreateExercise(name: string): Exercise {
 }
 
 export type CoachGeneratedWorkoutInput = {
+  /**
+   * SLICE B1 clause (f): this day's content was COMPOSED, so no later pass may
+   * rewrite it. Written by `composedWeekToCoachInputs`; read here to skip
+   * `applyPoolRotation` and by `finaliseWorkoutAfterMutation` to skip the drift
+   * and restore branches. Held by the zero-mutation cell.
+   */
+  composed?: boolean;
   planEntryId?: string;
   strengthIntent?: StrengthIntent;
   dayOfWeek: number;
@@ -1846,6 +1853,9 @@ export function buildWorkoutsFromCoach(
     return [withoutUnselectedConditioning];
   });
   const edgeProvidedDays = new Set(feasibleCoachWorkouts.map((workout) => workout.dayOfWeek));
+  /** Clause (f): the days the composer authored, so later passes stand down. */
+  const composedDays = new Set(
+    coachWorkouts.filter((workout) => workout.composed).map((workout) => workout.dayOfWeek));
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(
     feasibleCoachWorkouts,
     effectiveWeeklyPlan,
@@ -1862,6 +1872,7 @@ export function buildWorkoutsFromCoach(
       profile: onboardingData,
       planIntentValid: !!planEntry?.planEntryId &&
         workout.planEntryId === planEntry.planEntryId,
+      composed: composedDays.has(workout.dayOfWeek),
     });
     if (result.actions.length > 0) {
       logger.warn('[WorkoutCanonicalisation] Generated workout finalised', {
@@ -2575,6 +2586,12 @@ export function buildWorkoutsFromCoach(
     // Dropping BEFORE the row is built is what keeps `index` off the row ids of
     // work that never existed.
     const rotatedAiExercises = sourceAiExercises.flatMap((ex) => {
+      // A COMPOSED ROW IS NOT A SUGGESTION TO BE REWRITTEN (clause f). Rotation
+      // exists to vary names an AI or a hardcoded template proposed; the
+      // composer already selected from the authorised pools under the one
+      // legality owner, and rewriting its choice here would be the post-hoc
+      // mutation this slice exists to remove.
+      if (cw.composed) return [{ ex, resolvedName: ex.name }];
       if (!rotationContext || !poolUsage || planEntry?.strengthVariant === 'quality_low_volume') {
         return [{ ex, resolvedName: ex.name }];
       }

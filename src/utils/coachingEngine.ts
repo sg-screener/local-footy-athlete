@@ -236,6 +236,14 @@ export interface CoachingInputs {
    * row). Undefined => no guard applied (treated as fresh start).
    */
   previousWeekSprintVariant?: 'standard' | 'reduced' | 'micro_dose';
+  /**
+   * SET ONLY BY THE COMPOSED ROUTE (slice B1). Its presence is what makes the
+   * §18 contract derive its required-pattern set from the planner's own answer
+   * and this athlete's kit instead of from `ALL_PATTERNS` — see
+   * `Section18ContractV2Input.declaredRequiredPatterns`. Absent on every other
+   * route, which is why no non-migrated world moves.
+   */
+  composedRoute?: { readonly kitUnachievablePatterns: readonly MainStrengthPattern[] };
 }
 
 export interface OnboardingToCoachingInputsOptions {
@@ -819,6 +827,16 @@ function buildParallelSection18Contract(args: {
     ),
     capacity,
     cookedReadiness,
+    // CLAUSE (a), ROUTE-SCOPED. `legacy.strength.requiredPatterns` is the V1
+    // contract's OWN narrowed answer (`['push','pull']` when every available day
+    // is a team anchor); passing it stops the V2 builder re-deriving a wider set
+    // and then rejecting the week for not covering it.
+    ...(inputs.composedRoute
+      ? {
+          declaredRequiredPatterns: legacy.strength.requiredPatterns,
+          kitUnachievablePatterns: inputs.composedRoute.kitUnachievablePatterns,
+        }
+      : {}),
     plannerSelected: {
       mainStrength: identity.mode === 'early_offseason'
         ? selected.mainStrength

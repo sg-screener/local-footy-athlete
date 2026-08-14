@@ -56,6 +56,12 @@ import {
 } from '../../rules/conditioningFeasibility';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
+import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
+import { composedRouteAdmits } from '../../rules/composedRouteAdmission';
+import {
+  composedPlannedDaysFrom,
+  composedWeekToCoachInputs,
+} from '../../rules/composedWeekToWorkouts';
 import { awaySpansFromConstraints } from '../../rules/awaySpans';
 import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
 import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
@@ -632,9 +638,27 @@ export function buildGeneratedMicrocycles(args: {
       profile,
       generationConstraints,
     });
+    // ── SLICE B1: THE COMPOSED ROUTE ────────────────────────────────────────
+    //
+    // ONE configuration, named in `composedRouteAdmission` and nowhere else — the
+    // composer itself never asks which world it is in. When it admits, the
+    // composer authors this week's strength content and `fallbackExercisesForPlanEntry`
+    // never runs for it. Every other world takes the legacy route unchanged.
+    const composedRoute = composedRouteAdmits({
+      seasonPhase: profile.seasonPhase,
+      trainingDayCount: (profile.preferredTrainingDays ?? []).length,
+      teamTrainingDayCount: (profile.teamTrainingDays ?? []).length,
+      kit: equipment.tags,
+      weekNumber: blockState.weekNumber,
+    });
     const allocatedWeekPlan = args.coachingInputs
       ? buildCoachingPlan({
           ...args.coachingInputs,
+          // Clause (a), route-scoped: the contract derives its required-pattern
+          // set from the planner's own answer and this kit, not from ALL_PATTERNS.
+          ...(composedRoute
+            ? { composedRoute: { kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags) } }
+            : {}),
           generationConstraints,
           injuries: profile.injuries ?? [],
           appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
@@ -668,7 +692,24 @@ export function buildGeneratedMicrocycles(args: {
     // An edge response describes exactly the block state sent in its prompt:
     // week 1. Never replay that single array against week 2-4 allocations.
     // Later weeks use their own deterministic plan/fallback content.
-    const sourceCoachWorkouts = stateIndex === 0 ? args.coachWorkouts : [];
+    const composedWeek = composedRoute
+      ? composeWeek({
+          profile,
+          phaseClock: { weekNumber: blockState.weekNumber },
+          plannedDays: composedPlannedDaysFrom(weekPlan.weeklyPlan),
+          kit: equipment.tags,
+          injuries: {
+            // §18's OWN safety answer, not a second injury reading.
+            prohibitedPatterns:
+              weekPlan.weeklyExposureContractV2?.strengthPatterns.prohibitedPatterns ?? [],
+            excludedIdentities: args.athletePrefs?.excluded ?? [],
+          },
+          todayISO: blockState.weekStart,
+        })
+      : null;
+    const sourceCoachWorkouts = composedWeek
+      ? composedWeekToCoachInputs(composedWeek)
+      : stateIndex === 0 ? args.coachWorkouts : [];
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     // The governed boundary, when it falls inside THIS week. Days before it are
     // history: the contract is stamped, pre-boundary anchors keep settled

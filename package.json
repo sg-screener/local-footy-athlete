@@ -429,7 +429,8 @@
     "test:feature-registry": "TZ=Australia/Melbourne sucrase-node src/__tests__/featureRegistryGateTests.ts",
     "test:ui-picture-manifest": "TZ=Australia/Melbourne sucrase-node src/__tests__/uiPictureManifestTests.ts",
     "test:dead-affordances": "TZ=Australia/Melbourne sucrase-node src/__tests__/deadAffordanceTests.ts",
-    "test:off-feet-walking": "TZ=Australia/Melbourne sucrase-node src/__tests__/offFeetWalkingGateTests.ts"
+    "test:off-feet-walking": "TZ=Australia/Melbourne sucrase-node src/__tests__/offFeetWalkingGateTests.ts",
+    "test:composer-b1": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSliceB1Tests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

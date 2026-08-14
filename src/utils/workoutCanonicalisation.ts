@@ -146,6 +146,15 @@ export interface WorkoutCanonicalisationContext {
   referenceWorkout?: Workout | null;
   /** False for a final safety pass after constraints intentionally removed work. */
   restoreMissingPlanPatterns?: boolean;
+  /**
+   * SLICE B1 clause (f): this workout was COMPOSED, so the drift and restore
+   * branches stand down. They exist to rescue a week an AI or a hardcoded
+   * template proposed — a composed day was built slot by slot against Sam's own
+   * ladder under one legality owner, and a restore pass adding a row it
+   * deliberately left out would put back exactly the kit-illegal work R-083
+   * removes. Zero post-composition mutation is the slice's own kill criterion.
+   */
+  composed?: boolean;
   /** Legacy hydration preserves missing evidence as unknown; modern paths infer it canonically. */
   section18EvidenceMode?: Section18EvidenceMode;
   /** Safety-owned patterns can never be restored from plan/default identity. */
@@ -847,6 +856,7 @@ export function finaliseWorkoutAfterMutation(
     // still removed. What stops counting as drift is only work the day's own
     // ladder was asking for all along.
     if (
+      !context.composed &&
       intendedPatterns.size > 0 && pattern && !ladderPatterns.has(pattern) &&
       !isMinorCrossPatternAccessory(item, daySlots)
     ) {
@@ -882,7 +892,8 @@ export function finaliseWorkoutAfterMutation(
     strengthAndSupportRows.push({ ...item, row: plain });
   }
 
-  if (intendedPatterns.size > 0 && context.restoreMissingPlanPatterns !== false) {
+  if (intendedPatterns.size > 0 && context.restoreMissingPlanPatterns !== false
+    && !context.composed) {
     const represented = new Set(domainPatterns(strengthAndSupportRows));
     for (const pattern of intendedPatterns) {
       if (represented.has(pattern)) continue;

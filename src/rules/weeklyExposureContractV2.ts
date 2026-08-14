@@ -532,6 +532,31 @@ export interface Section18ContractV2Input {
     sprintHighSpeed: number | null;
     powerPrimers: number | null;
   };
+  /**
+   * CLAUSE (a) — THE REQUIRED-PATTERN SET, DERIVED AT CONSTRUCTION.
+   *
+   * **The defect this closes, measured 2026-08-14 on the B1 control world.** The
+   * V1 contract already narrows its own `strength.requiredPatterns` to
+   * `['push','pull']` when every available day is a team-training anchor
+   * (`weeklyExposureContractBuilders.ts:369`, reason `spacing_safety_conflict`)
+   * and records the reduction. **This builder ignored that answer and re-derived
+   * the set from `ALL_PATTERNS`**, so §18 then demanded squat and hinge coverage
+   * the planner had deliberately excluded and rejected the week with
+   * `pattern_restore_failure` on both. Two representations of one decision.
+   *
+   * `kitUnachievablePatterns` is the same clause for equipment: a pattern no
+   * legal exercise on this kit can train is not owed (R-083), and R-090 says the
+   * gap is disclosed rather than refused.
+   *
+   * **ROUTE-SCOPED ON PURPOSE.** Only the composed route passes either field;
+   * every other caller omits both and gets `ALL_PATTERNS` exactly as before, so
+   * no non-migrated world moves. The narrowing follows `userRemovalConstraints.ts:246`'s
+   * precedent — drop the patterns, then set `balanceExpectation` to
+   * `not_applicable` and stop demanding later-session restoration, because
+   * leaving the balance selector armed expands the reduced set straight back.
+   */
+  declaredRequiredPatterns?: readonly MainStrengthPattern[];
+  kitUnachievablePatterns?: readonly MainStrengthPattern[];
   prohibitedPatterns?: readonly MainStrengthPattern[];
   prohibitedPatternProvenance?: WeeklyExposureContractV2['strengthPatterns']['prohibitedPatternProvenance'];
   intentionalImbalanceReason?: string | null;
@@ -1265,9 +1290,17 @@ export function buildSection18WeeklyExposureContractV2(
   const policy = policyFor(input);
   const reductions = [...(input.reductions ?? [])];
   const prohibited = ALL_PATTERNS.filter((pattern) => input.prohibitedPatterns?.includes(pattern));
+  const declaredRequired = input.declaredRequiredPatterns ?? ALL_PATTERNS;
+  const kitUnachievable = input.kitUnachievablePatterns ?? [];
   const requiredSafePatterns = policy.balance && policy.strength.required > 0
-    ? ALL_PATTERNS.filter((pattern) => !prohibited.includes(pattern))
+    ? declaredRequired.filter((pattern) =>
+        !prohibited.includes(pattern) && !kitUnachievable.includes(pattern))
     : [];
+  // The set was narrowed by a typed authority, so the balance selector must
+  // stand down — see the field docs above and `userRemovalConstraints.ts:246`.
+  const patternSetNarrowed = policy.balance && policy.strength.required > 0
+    && requiredSafePatterns.length
+      < ALL_PATTERNS.filter((pattern) => !prohibited.includes(pattern)).length;
   const anchors = anchorsFor(input);
   const strengthRequired = reducedTarget(reductions, 'main_strength_frequency', policy.strength.required);
   const conditioningRequired = reducedTarget(reductions, 'conditioning_core_frequency', policy.conditioning.required);
@@ -1354,10 +1387,12 @@ export function buildSection18WeeklyExposureContractV2(
         squat: null, hinge: null, single_leg_knee: null, single_leg_hip: null,
         push: null, pull: null,
       },
-      balanceExpectation: policy.balance ? 'equal_or_near_equal' : 'not_applicable',
+      balanceExpectation: policy.balance && !patternSetNarrowed
+        ? 'equal_or_near_equal'
+        : 'not_applicable',
       permittedCountDifference: 1,
       intentionalImbalanceReason: input.intentionalImbalanceReason ?? null,
-      laterSessionRestorationRequired: policy.balance,
+      laterSessionRestorationRequired: policy.balance && !patternSetNarrowed,
     },
     conditioning: {
       core: numericPolicy({
