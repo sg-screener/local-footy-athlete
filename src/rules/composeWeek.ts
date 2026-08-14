@@ -125,7 +125,14 @@ export interface ComposedGap {
   readonly repeatedPlaneInstead?: SessionSlot;
 }
 
-export type ComposedDayShape = SlotDayKind | 'full_body_a' | 'full_body_b';
+/**
+ * The shape a composed day answers to — **the LADDER OWNER'S own vocabulary, not
+ * a second one beside it.** This was `SlotDayKind | 'full_body_a' | 'full_body_b'`
+ * while the composer held the full-body lists privately; the two extra members
+ * are now `SlotDayKind` members, so `SLOTS_FOR_KIND[kind]` answers for every
+ * shape the composer can build and the union cannot drift from the table again.
+ */
+export type ComposedDayShape = SlotDayKind;
 
 export interface ComposedDay {
   readonly dayOfWeek: number;
@@ -350,13 +357,15 @@ export function kitUnachievablePatterns(
  * because every night is a team night and a squat day cannot be placed. Sam has
  * overruled that: the two sessions become full body, and the lower work rides
  * on the club nights with them.
+ *
+ * **THE TWO SLOT LISTS MOVED TO `sessionSlotCoverage` ON 2026-08-14 AND THIS
+ * FILE NOW IMPORTS THEM.** They lived here, privately, which meant the composer
+ * knew a ladder the LADDER OWNER did not — so every instrument that asks "which
+ * slots does this day owe" judged a composed full-body day against a lower or
+ * upper ladder it was never built to satisfy. Measured: 24 of the 28 deficient
+ * laddered days in the 180-world sweep were that, and none of them was a missing
+ * exercise. Sam's sentence is quoted at the new home, once.
  */
-const FULL_BODY_A_SLOTS: readonly SessionSlot[] = [
-  'squat', 'single_leg_hip', 'horizontal_push', 'vertical_pull', 'accessory_or_core',
-];
-const FULL_BODY_B_SLOTS: readonly SessionSlot[] = [
-  'hinge', 'single_leg_knee', 'vertical_push', 'horizontal_pull', 'accessory_or_core',
-];
 
 /** The other plane of the same pattern. Used only for the kit-relative fallback. */
 const OPPOSITE_PLANE: Partial<Record<SessionSlot, SessionSlot>> = {
@@ -512,9 +521,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // this case was upper-only and Sam has overruled it, so asking the plan
     // which patterns the day carries would re-impose the ruling he replaced —
     // and every lower row would come out an accessory.
-    const shapeSlots = kind === 'full_body_a' ? FULL_BODY_A_SLOTS
-      : kind === 'full_body_b' ? FULL_BODY_B_SLOTS
-      : SLOTS_FOR_KIND[kind];
+    // ONE TABLE ANSWERS FOR EVERY SHAPE. This was a three-arm conditional over
+    // two private constants plus the table; both constants now live IN the table.
+    const shapeSlots = SLOTS_FOR_KIND[kind];
     const plannedPatterns = new Set(
       fullBody
         ? shapeSlots.map((slot) => PATTERN_FOR_SLOT[slot]).filter(Boolean) as MainStrengthPattern[]

@@ -53,8 +53,31 @@ export type SessionSlot =
   | 'vertical_pull'
   | 'arm_or_shoulder';
 
-/** Which slot list a day answers to. Power is never a slot — it rides on top. */
-export type SlotDayKind = 'lower' | 'upper_full' | 'upper_split_push' | 'upper_split_pull';
+/**
+ * Which slot list a day answers to. Power is never a slot — it rides on top.
+ *
+ * **THE TWO FULL-BODY KINDS ARRIVED 2026-08-14 AND THEY CLOSE THIS FILE'S OWN
+ * DECLARED GAP.** `slotDayKindFor`'s docstring recorded, honestly, that
+ * `Full Body Strength` was unjudged because *"Sam has ruled a lower ladder and an
+ * upper ladder; he has never ruled a full-body one"*. **He has now ruled one**
+ * (2026-08-14, quoted verbatim on `FULL_BODY_A_SLOTS` below), so the gap closes
+ * by transcribing his sentence rather than by this seat inventing a ladder.
+ *
+ * **AND THE LADDER WAS ALREADY IN THE APP — IN THE WRONG FILE.** `composeWeek`
+ * held both lists privately, so the COMPOSER knew a ladder the LADDER OWNER did
+ * not. Two representations of one decision, and the visible cost was exact: 24
+ * composed full-body days were judged against a lower-or-upper ladder they were
+ * never built to satisfy, every one of them scored deficient, and R-089's
+ * week-level pair counter could not see a hinge that was on the day in front of
+ * it. `composeWeek` now imports these.
+ */
+export type SlotDayKind =
+  | 'lower'
+  | 'upper_full'
+  | 'upper_split_push'
+  | 'upper_split_pull'
+  | 'full_body_a'
+  | 'full_body_b';
 
 export const LOWER_SLOTS: readonly SessionSlot[] = [
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'accessory_or_core',
@@ -93,11 +116,39 @@ export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull', 'arm_or_shoulder',
 ];
 
+/**
+ * ── SAM'S FULL-BODY SHAPE, 2026-08-14, verbatim ───────────────────────────
+ *
+ * *"either way i'd make them full body sessions. Squat and single leg hip with
+ * push and pull + accessories then hinge and single leg knee with push and pull
+ * (in opposite plane to earlier in week) + accessories - but the ideal would be
+ * to do full body strength on different nights"*
+ *
+ * **TWO SESSIONS, NOT ONE, AND THAT IS WHY A NAME CANNOT JUDGE THEM.** A and B
+ * are different ladders — A leads with a squat, B with a hinge — and both are
+ * called the same thing by any naming owner in this app. So a day's full-body
+ * shape can only arrive as the composer's TYPED DECLARATION; inferring it from
+ * prose is not a heuristic that needs improving, it is a question the text does
+ * not contain the answer to.
+ *
+ * **THESE LISTS MOVED HERE FROM `composeWeek` — THEY WERE NOT COPIED.** The
+ * composer imports them, so there is exactly one statement of Sam's sentence.
+ */
+export const FULL_BODY_A_SLOTS: readonly SessionSlot[] = [
+  'squat', 'single_leg_hip', 'horizontal_push', 'vertical_pull', 'accessory_or_core',
+];
+
+export const FULL_BODY_B_SLOTS: readonly SessionSlot[] = [
+  'hinge', 'single_leg_knee', 'vertical_push', 'horizontal_pull', 'accessory_or_core',
+];
+
 export const SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]>> = {
   lower: LOWER_SLOTS,
   upper_full: UPPER_FULL_SLOTS,
   upper_split_push: UPPER_SPLIT_PUSH_SLOTS,
   upper_split_pull: UPPER_SPLIT_PULL_SLOTS,
+  full_body_a: FULL_BODY_A_SLOTS,
+  full_body_b: FULL_BODY_B_SLOTS,
 };
 
 /**

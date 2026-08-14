@@ -193,6 +193,67 @@ console.log('\n[a] Composer-declared main-lift roles survive into §18 evidence'
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// (shape) THE COMPOSER'S DECLARED DAY SHAPE SURVIVES, AND THE WEEK PAIRS UP
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// **THE READER FOR `composedDayShape`.** The field is written by
+// `materialiseComposedWeek`; this and `ladderCoverageWideCensus` are the two
+// readers, and all three landed together. A written-and-never-read field is the
+// `canOverride` shape — nine writes, zero reads — and this repo has paid for it.
+//
+// WHY IT MATTERS, MEASURED. Before the field was carried, every reader recovered
+// the day's shape from the planner's session TITLE. For Sam's full-body shape that
+// is unrecoverable in principle: A leads with a squat, B with a hinge, and every
+// naming owner in this app calls both `Full Body Strength`. The 180-world sweep
+// scored 24 composed full-body days deficient with nothing missing from them and
+// reported 6 worlds as squat-without-hinge whose weeks are `sq1/hi1`.
+//
+// R-089 IS ASSERTED HERE ON CONTENT, ACROSS ALL THREE KITS. Sam, 2026-08-13:
+// *"every squat should be matched with a hinge"*. It is counted from what the rows
+// ARE — `slotsForExerciseName` — so no shape declaration can talk it round.
+console.log('\n[shape] The composed day declares its shape, and the week pairs squat with hinge');
+{
+  for (const target of [FULL_GYM, DB_BANDS, AWAY]) {
+    const built = build(target);
+    ok(`[${target.id}] builds at all — non-vacuity before any verdict`,
+      built.kind === 'built', built.kind === 'refused' ? built.signature : '');
+    if (built.kind !== 'built') continue;
+    const workouts = built.program.microcycles[0].workouts as Workout[];
+    const composed = workouts.filter((workout) =>
+      (workout.exercises ?? []).some((row) =>
+        row.section18Evidence?.provenance === 'composer_declaration'));
+    ok(`[${target.id}] every composed day carries its declared shape`,
+      composed.length > 0 && composed.every((workout) =>
+        typeof (workout as { composedDayShape?: string }).composedDayShape === 'string'),
+      `${composed.length} composed days, shapes=`
+      + JSON.stringify(composed.map((w) => (w as { composedDayShape?: string }).composedDayShape)));
+
+    // THE PAIR COUNT, FROM THE ROWS. Ladders and declarations ignored; a row is
+    // spent on ONE pair slot so a single lift can never match itself.
+    const pairSlots = ['squat', 'hinge', 'single_leg_knee', 'single_leg_hip'] as const;
+    const pairs: Record<string, number> = {
+      squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0 };
+    for (const workout of workouts) {
+      for (const row of (workout.exercises ?? [])) {
+        const filled = slotsForExerciseName(String(row.exercise?.name ?? '')) ?? [];
+        const hit = pairSlots.find((slot) => filled.includes(slot));
+        if (hit) pairs[hit] += 1;
+      }
+    }
+    const shape = `sq${pairs.squat}/hi${pairs.hinge} `
+      + `slk${pairs.single_leg_knee}/slh${pairs.single_leg_hip}`;
+    // NON-VACUITY: a week with no lower work at all would satisfy the ruling and
+    // prove nothing about it.
+    ok(`[${target.id}] the week trains the lower patterns at all — ${shape}`,
+      pairs.squat + pairs.hinge + pairs.single_leg_knee + pairs.single_leg_hip > 0, shape);
+    ok(`[${target.id}] R-089: every squat is matched with a hinge — ${shape}`,
+      pairs.squat <= pairs.hinge, shape);
+    ok(`[${target.id}] R-089: every single-leg knee is matched with a hip — ${shape}`,
+      pairs.single_leg_knee <= pairs.single_leg_hip, shape);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // (e) THE CLASSIFIER MAY NOT OVERRIDE A DECLARATION — the link itself
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n[e] Classifier re-inference never overrides a composed declaration');
