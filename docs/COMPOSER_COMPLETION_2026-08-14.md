@@ -513,9 +513,22 @@ Deadlift on Thursday.**
 
 ## 9. NOT COVERED
 
-- **The 24 remaining refusals are not fixed** — one non-composer family, §6.
-- **`R-089 [CONTENT] single-leg knee` is red, 2 occurrences.** Non-composer owner
-  (§5c), left to it. Named as a cell-level regression in §1.
+- **The 38 remaining refusal OCCURRENCES are not fixed** — 25 distinct profiles in
+  TWO families: 14 occ / 10 profiles blocked on the scheduling capability, and
+  24 occ / 15 profiles planner-owned. Per-profile tables in §6. *(An earlier issue
+  of this section said "24 remaining refusals" — that was the planner family alone,
+  written before the R-014 correction restored the other 14 to an honest refusal.)*
+- **`R-089 [CONTENT] single-leg knee` is RESOLVED at zero**, both arms clean. The
+  2-occurrence regression the R-087 build introduced is gone: the two worlds now
+  refuse honestly instead of publishing a week whose top-up added a third knee.
+  *(This bullet previously said "is red, 2 occurrences" and was stale.)*
+- **⚠ THE 142 BUILT WEEKS ARE NOT COACH-APPROVED, AND THIS REPORT DOES NOT CLAIM
+  THEY ARE.** What is established is narrower and exact: **the family Sam rejected
+  now refuses honestly instead of publishing a bad week.** Sam has read and
+  approved exactly ONE printed week — the In-season/2d/club pair — and rejected
+  one. The other 140 have been measured against the ladder, R-089 and kit legality;
+  **none of that is a judgement that the training is good.** The census can tell you
+  a slot is filled; it cannot tell you a week is worth doing.
 - **The registry row for R-087 was NOT edited**, and this report does not mark it
   built. No registry row was touched by this mission; whether the row may now
   claim a guard is the registry's own owner's call, not this seat's.
@@ -535,11 +548,13 @@ Deadlift on Thursday.**
 - **R-080's re-homing is a PREFERENCE, not a veto.** If every remaining candidate
   for a repeated slot shares a muscle group, the row is still authored. Measured to
   be sufficient across the 180-world corpus; not proved sufficient in general.
-- **The R-083 kit-blocked census fell 128 → 30** once the day began declaring the
-  RESOLVED plane rather than the preferred one: a slot that falls back is no longer
-  counted as blocked, because the day does train that pattern. The removal is still
-  disclosed through `composedGaps` (232 across 92 worlds). The number means
-  something different than it did and is not comparable across that change.
+- **The R-083 kit-blocked census reads 28** (`{vertical_pull: 22, vertical_push: 8,
+  horizontal_pull: 2}`), down from 58 at baseline. The fall is a DEFINITION change,
+  not an improvement: once a day declares the RESOLVED plane rather than the
+  preferred one, a slot that falls back to its opposite is no longer counted as
+  blocked, because the day does train that pattern. The removal is still disclosed
+  through `composedGaps` — **202 across 84 worlds**. **The number is not comparable
+  across that change.**
 - **`test:slot-coverage` dies at import** on `applyPoolRotation`, deleted in the
   base merge. Pre-existing, in the baseline red set, not mine, not fixed.
 - **Bodyweight pools repeat.** `Bodyweight Squat` and `Glute Bridge` recur across
