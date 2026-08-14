@@ -3,21 +3,23 @@
 Branch `slice-composer-completion`. **Base commit `459d6bf9`** (`git merge-base`
 against `main`). Worktree-isolated throughout; the shared checkout was never edited.
 
-**COMMITS — SIX.**
+**COMMITS THAT CHANGED BEHAVIOUR OR EVIDENCE**
 
-| | | |
-| --- | --- | --- |
-| `55af1e65` | R-089 — the declared shape is carried instead of guessed | |
-| `32f408b2` | the `full_body -> lower` collapse | |
-| `75fc0c4e` | this report and the printed weeks | |
-| `06b21b98` | the two acceptance criteria, measured | ← **branch head when Sam reviewed** |
-| `27776930` | **R-087 — a general full-body day asks the week what is open** | ordered by Sam after that review |
-| *(this one)* | this table, carrying `27776930`'s hash | |
+| | |
+| --- | --- |
+| `55af1e65` | R-089 — the declared shape is carried instead of guessed |
+| `32f408b2` | the `full_body -> lower` collapse — **the 142-world checkpoint** |
+| `75fc0c4e` | the first issue of this report and the printed weeks |
+| `06b21b98` | the two acceptance criteria, measured ← *branch head at Sam's first review* |
+| `27776930` | R-087 built — **the version that printed the week Sam rejected** |
+| `3e5667e4` | R-087's hash recorded |
+| `ea0c8d42` | **R-014 correction — the week-wide gap, the gate, the honest refusal** |
 
-**SIX, not five, and the sixth exists only because of the fifth.** A commit cannot
-state its own hash, so `27776930`'s number is recorded here and this correction is
-the commit that carries it. Counting it as five would repeat exactly the undercount
-Sam corrected.
+**THE COUNT IS NOT STATED AS A NUMBER HERE, DELIBERATELY.** A commit cannot state
+its own hash, so every attempt to fix a total in this file creates one more commit
+and a fresh under-count — which is exactly the mistake Sam corrected once already.
+**`git log 459d6bf9..HEAD` is the authority; this table is the map of what each
+one did.**
 
 ### ⚠ RECEIPT CORRECTIONS, ORDERED BY SAM 2026-08-14
 
