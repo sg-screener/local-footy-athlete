@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-M1 | Direct authorship boundary | **HARD STOP AT THE PRECONDITION.** Two output-affecting dose policies have no citable authority and one CONTRADICTS the Bible. No production code touched. MUT-8's replacement guard written and seen red. Two questions for Sam. |
 | B1-E2E-SEMANTIC | Finish the boundary measurement | **MEASURED.** Two fingerprints separated; **176 typed gaps lost at materialisation across 86 worlds**; 569 dose movements attributed; 18 composer rows never reach storage. Sweep unmoved. Boot regeneration NOT COVERED. |
 | B1-E2E-EXTEND | Make the end-to-end claim true at full width | **DONE.** 36 → **192 worlds** (the sweep's 180 + 12 answered-bodyweight). One real failure found at an unmeasured day count. Sweep unmoved at 61/119. |
 | B1-PIVOT-VERIFY | Close the verification debt | **DONE.** 7 guards written and every one seen RED; per-world end-to-end cell green on both outcomes; 5 pool cells retired with replacements, 1 left red as a declared regression. **NOT merge-ready — 119 of 180 worlds refuse.** |
@@ -2179,6 +2180,112 @@ part no cell can hold.
   changed a stored set count. It is now labelled a declared-state cell, with a
   boundary guard beside it that actually reds.
 
+---
+
+## Slice B1-M1 — HARD STOP at the authority census, before any production edit
+
+**Seat `baseline`, 2026-08-14. Base: branch `slice-b1-pivot` @ `7f6edf35`.**
+**No production file was changed.** The working tree carries one modified test
+file; `git status` is the receipt.
+
+### 0. THE STOP
+
+The slice's own precondition fired: **two output-affecting dose policies that
+would have moved into authorship have no citable Bible or ruling authority, and
+one of them CONTRADICTS the Bible clause that does exist.** Per the fence I did
+not preserve them as "legacy compatibility", did not adopt them because they are
+systematic, did not partially implement the materialiser, and did not invent a
+replacement.
+
+### 1. DOSE AUTHORITY CENSUS
+
+**RULED — safe to rehome when the slice resumes:**
+
+| policy | before → after | occ | exercises | worlds | authority |
+| --- | --- | --- | --- | --- | --- |
+| **Main-lift phase scheme** (`mainLiftSchemeForSlot`) — In-season lower 2-4×2-4, upper push 2-4×3-5, upper pull 2-4×4-6 | `Back Squat` 3×5-8 → **3×2-4** | \~340 | 40 | 67 | **Bible `:767`** *"2-4 sets of 2-4 reps in season. 3x3 is generally pretty good… Upper body could be closer to that 3x5. And even 3x6 for pulling"* · `:839-841` |
+| same, Pre-season lower/push 2-4×4-6, pull 2-4×4-8 | `Back Squat` 3×5-8 → **3×4-6** | | | | **Bible `:768`** *"2-4 sets of 4-6 reps here, 3x5 is generally good"* |
+| same, Off-season lower 2-4×6-8, push 6-10, pull 6-12 | `Back Squat` 3×5-8 → **3×8-12** | | | | **Bible `:769`** *"2-4 sets of 6-8 reps here is good. 3 x 8 is a good base. Some exercises can go up to 12 reps especially for… pull ups, lat pull downs and row variations"* |
+| **Accessory guidelines** — general 2-3×8-15, pump 2-3×10-20, nordics 2-3×3-5, timed 2-3×30-60s, carries 2-4×20-60m | `Band Pallof Press` 2×10-15 → 2×10-20 | | | | **Bible `:818`** *"2-3 sets of 10-20 reps works well on most things… carries and planks would be timed i.e. 2-3 sets of 30-60 seconds, nordics… 3-5 reps max"*; `:930`, `:961`, `:981` for the 8-15 rows |
+| **Early off-season reps 8-12, mid 6-8** | | | | | **Bible `:109`** *"slightly more bodybuilderr style programming - sets of 8-12 to add some body armour. Then 6-8 reps as move toward end of off-season"* |
+
+**⚠ UNRULED — THE STOP:**
+
+| # | policy | what it does | occ | exercises | worlds | authority found |
+| --- | --- | --- | --- | --- | --- | --- |
+| **U-1** | **`LOWER_SECONDARY_REP_GUIDELINES`** (`phaseRepSchemes.ts:181-200`) | squat/hinge work used as SECONDARY is dosed **In-season 2-3×6-8**, **Pre-season 2-3×6-10** instead of the accessory band | measured on `Single-Leg RDL` 3×8-12 → **3×6-8** in-season, 2×8-12 → **2×6-10** pre-season, plus every squat/hinge accessory row | ≥2 identities confirmed, more within the 40 | in-season + pre-season built worlds | **NONE. And it contradicts the Bible.** `:818` says secondary work is *"2-3 sets of 10-20 reps"*; `:889` says single-leg used as a secondary/accessory lift *"can be slightly higher rep"*. **6-8 is LOWER, not higher.** The table's own note — *"Low-soreness lower secondary work"* — cites nothing. Greps: Bible for *secondary* → `:223 :815 :818 :889 :978 :1008 :1036`, none giving 6-8/6-10; `RULINGS_REGISTRY.md` for *secondary* → **zero hits**. |
+| **U-2** | **Off-season subphase `loadMultiplier`** (`phaseRepSchemes.ts:86, 99`) | main-lift prescribed **LOAD cut to 0.75×** in early off-season and **0.9×** in mid off-season | applies to every off-season main lift with a non-zero load | all off-season anchors | off-season worlds | **NONE for the LOAD.** Bible `:109` rules the **REPS** for those subphases and says nothing about cutting the weight. Greps: Bible for *early off-season + load/lighter/%* → only `:109`; registry for *early off-season / body armour / offseason subphase* → four hits, all about rest days and sprint exposure, **none about load**. |
+
+### 2. PLANNED-POWER CENSUS
+
+| | |
+| --- | --- |
+| planner field that requests it | `SessionAllocation.powerPrimer`, set at `coachingEngine.ts:1546` |
+| counted into the contract as | `plannerSelected.powerPrimers` (`coachingEngine.ts:875`) |
+| selector and dose | `decidePowerPrimer` (`powerPrimerPolicy.ts:183`) → `decideFullPowerPrimer`, with `capacityShrinksDose` producing a shrunk "sharp" primer |
+| authority | **`test:power-primer-policy` exists and R-079 is cited inside the selector.** Not fully traced in this slice — see NOT COVERED. |
+| old pre-gateway identity and dose | **NOT ESTABLISHED.** The semantic slice measured **26 power rows disappearing after final authorship** and **5 surviving**; which identity/dose the pre-gateway row carried was not captured. |
+
+**Power was NOT rehomed**, both because the slice stops and because its
+pre-gateway identity is not established. Nothing about power changed.
+
+### 3. THE QUESTIONS FOR SAM — two, grouped
+
+Both are in `docs/SEAT_INBOX.md`-free plain English in the report to him; the
+receipts are §1 above.
+
+1. **Lower-body secondary work — 6-8 reps or 10-20?** The Bible says secondary
+   and accessory work is 2-3 sets of 10-20, and that single-leg work used as an
+   accessory can go *slightly higher* rep. The app does the opposite for squat and
+   hinge accessories in-season (2-3×6-8) and pre-season (2-3×6-10). One of the two
+   is wrong.
+2. **Early and mid off-season — is the WEIGHT cut too, or only the reps?** The
+   Bible says early off-season goes to sets of 8-12 and mid moves to 6-8. The app
+   also cuts the prescribed weight by 25% early and 10% mid. Nothing authorises
+   the weight cut.
+
+### 4. WHAT WAS DONE — MUT-8's replacement, written and seen red
+
+**Step 1 of the slice is a TEST change and was completed before the stop.**
+
+The old cell asserted `moved > 0` and could not fail, because the dose already
+moves. **A preservation guard cannot exist while preservation is false**, so the
+replacement guards ATTRIBUTION: every main-lift dose at authorship must land
+exactly on `mainLiftSchemeForSlot`'s authored band. A movement that is not the
+phase table's is an owner nobody named.
+
+| mutation | result |
+| --- | --- |
+| **MUT-8′** add 3 to the authored set count (the mutation that survived before) | ✅ **RED** |
+| **MUT-8″** shift the authored `repsMin` by 1 | ✅ **RED** |
+
+`npm run test:composer-severance` — **45 passed, 0 failures.** Sweep unmoved,
+`test:pools` 498/1 with pinning red, no ratchet or baseline touched.
+
+### 5. NOT COVERED
+
+Everything after the precondition: the materialiser, `assembleAuthoredWeek`, dose
+rehoming, power rehoming, the gap carrier, both fingerprints against §18 input,
+the post-§18 M2 target table and the deletion count. **None was started** —
+partially implementing the materialiser while awaiting an answer is named in the
+fence as a thing not to do.
+
+Also not traced: planned power's full ruling chain and its pre-gateway identity
+and dose (§2).
+
+### 6. WHAT FOUGHT ME
+
+- **The docstring said "Bible source: Section 5" and that was not a receipt.**
+  The main-lift tables do check out against `:767-769` word for word. The
+  accessory table checks out against `:818`. **The lower-secondary table sits in
+  the same file, under the same header, and contradicts `:818`.** Reading the
+  file's own claim of authority instead of grepping the Bible would have carried
+  an unruled policy straight into the new architecture — where it would have
+  looked authored.
+- **The load multiplier hides behind a ruled neighbour.** `:109` genuinely rules
+  the early-off-season REPS, so the subphase scheme looks sourced. The
+  `loadMultiplier: 0.75` sits in the same object literal and nothing rules it.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -2187,6 +2294,8 @@ part no cell can hold.
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- `LOWER_SECONDARY_REP_GUIDELINES` doses squat/hinge secondary work at 2-3x6-8 in-season and 2-3x6-10 pre-season with no citable authority, contradicting Bible `:818` (secondary work is 2-3x10-20) and `:889` (single-leg accessory work goes slightly HIGHER rep).
+- Off-season subphase `loadMultiplier` cuts main-lift prescribed load to 0.75x early and 0.9x mid; Bible `:109` rules those subphases' REPS and says nothing about the weight.
 - 176 typed `ComposedGap` records across 86 worlds are composed and none survives `composedWeekToCoachInputs`, which has no carrier field; the athlete is never told why a kit-impossible pattern is missing.
 - 18 composer-authored strength rows across 14 worlds never reach storage — 11 `Explosive Push-up` lost inside `buildWorkoutsFromCoach`, 7 others lost after final authorship.
 - 2 `strength_main` rows appear AFTER final authorship carrying `canonical_row_classifier` provenance — main-lift content entering the week from a non-composer owner.

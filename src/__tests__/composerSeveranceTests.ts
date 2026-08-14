@@ -24,6 +24,8 @@ import { buildSection18WeeklyExposureContractV2 } from '../rules/weeklyExposureC
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { EQUIPMENT_TAG_LABELS } from '../rules/equipmentVocabulary';
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
+import { classifyPoolSlot } from '../data/exercisePoolsStrength';
+import { mainLiftSchemeForSlot } from '../rules/phaseRepSchemes';
 import { slotsForExerciseName } from '../rules/sessionSlotCoverage';
 import type { Workout } from '../types/domain';
 
@@ -631,6 +633,38 @@ console.log('\n[semantic] Composer dose and typed gaps, measured at their bounda
       // product question; this cell only refuses to let it become invisible.
       ok('[semantic] MEASURED: the stored dose is NOT the composer\'s authored dose',
         moved > 0, `${moved} of ${compared} rows moved — if 0, the dose owner changed`);
+
+      // ── THE MUT-8 REPLACEMENT (B1-M1 step 1) ────────────────────────────
+      //
+      // The cell above cannot fail: the dose already moves, so one more movement
+      // cannot flip `moved > 0`. **A preservation guard cannot exist while
+      // preservation is false** — so this guards ATTRIBUTION instead, which is
+      // true today: every main-lift dose movement at authorship must land
+      // exactly on `mainLiftSchemeForSlot`'s authored band (Bible `:767-769`,
+      // `:839-841`). A movement that is NOT the phase table's is an owner nobody
+      // named, and that is the thing worth catching.
+      let attributed = 0; let unattributed = 0;
+      for (const day of composedWeek.days) {
+        for (const row of day.rows) {
+          if (row.role !== 'main_strength') continue;
+          const match = stored.get(`${day.dayOfWeek}:${row.identity}`);
+          if (!match) continue;
+          const poolSlot = classifyPoolSlot(row.identity);
+          if (!poolSlot || poolSlot.role !== 'anchor') continue;
+          const scheme = mainLiftSchemeForSlot(poolSlot.slot, 'In-season', null);
+          if (!scheme) continue;
+          const onBand = match.prescribedRepsMin === scheme.repsMin
+            && match.prescribedRepsMax === scheme.repsMax
+            && match.prescribedSets >= scheme.setsMin
+            && match.prescribedSets <= scheme.setsMax;
+          if (onBand) attributed += 1; else unattributed += 1;
+        }
+      }
+      ok('[semantic] the attribution check reached main lifts',
+        attributed + unattributed > 0, `${attributed + unattributed} main lifts`);
+      ok('[MUT-8 replacement] every main-lift dose at authorship is the phase table\'s',
+        unattributed === 0,
+        `${unattributed} main lifts carry a dose no authored scheme explains`);
 
       // ⚠ THE GUARD THAT CAN ACTUALLY GO RED, and why the one above cannot.
       //
