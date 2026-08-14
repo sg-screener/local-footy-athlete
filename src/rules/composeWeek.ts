@@ -43,9 +43,9 @@ import {
   type ComposedDoseCategory,
   type PoolSlotKey,
 } from '../data/exercisePoolsStrength';
-import { applyOffseasonMainLiftLoad, resolveComposedDose } from './composedDose';
+import { resolveComposedDose, resolveComposedLoad } from './composedDose';
 import type { OffseasonSubphase } from './offseasonSubphase';
-import type { SeasonPhase } from '../types/domain';
+import type { OnboardingData, SeasonPhase } from '../types/domain';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
@@ -69,8 +69,12 @@ export interface ComposerInjuryInput {
 }
 
 export interface ComposerInputs {
-  /** The athlete's answers. Read for season phase and experience level. */
-  readonly profile: { readonly seasonPhase?: string; readonly experienceLevel?: string };
+  /**
+   * The athlete's answers. Read for season phase, experience level AND — since
+   * B1-M1-COMPLETION — the base working load, which `estimateStartingWeight`
+   * derives from his own strength answers and bodyweight.
+   */
+  readonly profile: OnboardingData;
   /** Read for the week number that moves selection along the authored order. */
   readonly phaseClock: { readonly weekNumber: number };
   /** B1-M1: the phase the DOSE is resolved against, before authorship. */
@@ -586,12 +590,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         repsMax: dose.repsMax,
         // U-2 applies exactly once, here, before authorship. The composer emits
         // no starting load of its own, so the cut has nothing to stack onto.
-        load: applyOffseasonMainLiftLoad({
-          load: 0,
+        // THE FINAL LOAD, DERIVED FROM THE BASE — base working load x one
+        // governed multiplier, recomputed from the base rather than adjusted in
+        // place, so the derivation is naturally non-stacking.
+        load: resolveComposedLoad({
+          identity,
           isMainLift,
           poolSlot: POOL_SLOT_FOR_LADDER_SLOT[slot] ?? null,
           seasonPhase: inputs.seasonPhase,
           offseasonSubphase: inputs.offseasonSubphase,
+          profile: inputs.profile,
         }),
         ...(dose.qualityLimit ? { qualityLimit: dose.qualityLimit } : {}),
       });

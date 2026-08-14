@@ -25,7 +25,11 @@ import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { EQUIPMENT_TAG_LABELS } from '../rules/equipmentVocabulary';
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
-import { applyOffseasonMainLiftLoad, resolveComposedDose } from '../rules/composedDose';
+import {
+  applyOffseasonMainLiftLoad,
+  resolveComposedDose,
+  resolveComposedLoad,
+} from '../rules/composedDose';
 import { mainLiftSchemeForSlot } from '../rules/phaseRepSchemes';
 import { slotsForExerciseName } from '../rules/sessionSlotCoverage';
 import type { Workout } from '../types/domain';
@@ -102,7 +106,7 @@ function composedFor(spec: WorldSpec) {
 
 function inputs(over: Record<string, unknown> = {}): never {
   return {
-    profile: { seasonPhase: 'Off-season' },
+    profile: { seasonPhase: 'Off-season' } as never,
     phaseClock: { weekNumber: 1 },
     seasonPhase: 'Off-season',
     offseasonSubphase: null,
@@ -342,7 +346,7 @@ console.log('\n[d] A kit-impossible pattern is disclosed, and does not veto the 
 
   // THE DISCLOSURE ITSELF — a typed gap, derived from kit + sheet.
   const composed = composeWeek({
-    profile: { seasonPhase: 'Off-season' },
+    profile: { seasonPhase: 'Off-season' } as never,
     phaseClock: { weekNumber: 1 },
     seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,
@@ -542,7 +546,7 @@ console.log('\n[retire] Behaviour the deleted rotation cells guarded, held again
   const fullGymTags = resolveEquipmentCapabilities({
     equipment: ['Full Gym'], equipmentSelectionCompleteness: 'complete' } as never).tags as string[];
   const compose = (weekNumber: number, excluded: string[] = []) => composeWeek({
-    profile: { seasonPhase: 'Off-season' }, phaseClock: { weekNumber },
+    profile: { seasonPhase: 'Off-season' } as never, phaseClock: { weekNumber },
     seasonPhase: 'Off-season' as never, offseasonSubphase: null,
     plannedDays: [day], kit: fullGymTags,
     injuries: { prohibitedPatterns: [], excludedIdentities: excluded },
@@ -783,6 +787,16 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
       authoredFallback: [9, 99, 99] as readonly [number, number, number],
     }).category === 'main_lift');
 
+  // NO SILENT FALLTHROUGH — an unruled identity DECLARES that it is unruled.
+  ok('[passthrough] an identity with no ruled policy is declared, not relabelled',
+    dose('Cossack Squat', 'In-season').category === 'composer_authored_passthrough'
+    && dose('Scap Push-Up', 'Off-season').category === 'composer_authored_passthrough',
+    `${dose('Cossack Squat', 'In-season').category} / ${dose('Scap Push-Up', 'Off-season').category}`);
+  ok('[passthrough] and it preserves the composer\'s own authored band untouched',
+    dose('Cossack Squat', 'In-season').repsMin === 99
+    && dose('Cossack Squat', 'In-season').sets === 9,
+    JSON.stringify(dose('Cossack Squat', 'In-season')));
+
   // U-2 — the cut, its governed role, and SINGLE APPLICATION.
   const cut = (load: number, isMainLift: boolean, sub: string | null) =>
     applyOffseasonMainLiftLoad({
@@ -803,26 +817,40 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
   // uncut load are the same number to it. So the guard asserts the two things
   // that ARE true: the function's non-idempotence is DECLARED so nobody assumes
   // otherwise, and the composed path calls it exactly ONCE per row.
-  ok('[U-2] the multiplier is NOT idempotent — declared, so no caller assumes it is',
-    cut(cut(100, true, 'early_offseason'), true, 'early_offseason') !== 75,
-    'if this passes by accident the arithmetic changed');
+  // ⚠ THE SUBJECT MOVED, AND THE CALL-COUNT GUARD MOVED WITH IT.
+  //
+  // The raw multiplier is pure arithmetic — 100 -> 75 -> 55 — and cannot be
+  // idempotent, because a cut load and an uncut load are the same number to it.
+  // A call-count test was the first answer and the resumed prompt is right that
+  // it is insufficient. **The final load is now DERIVED from the base rather
+  // than adjusted in place**, so running the derivation on its own output gives
+  // the same number: the base it reads has not moved.
+  ok('[U-2] the raw multiplier is NOT idempotent — declared, so no caller assumes it',
+    cut(cut(100, true, 'early_offseason'), true, 'early_offseason') !== 75);
   {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const doseModule = require('../rules/composedDose');
-    const realApply = doseModule.applyOffseasonMainLiftLoad;
-    let calls = 0;
-    doseModule.applyOffseasonMainLiftLoad = (args: never) => { calls += 1; return realApply(args); };
-    try {
-      const composed = composeWeek(inputs({
+    const athlete = {
+      seasonPhase: 'Off-season', weightKg: 80,
+      squatStrength: 'Around bodyweight', benchStrength: 'Around bodyweight',
+      experienceLevel: '2-5 years',
+    } as never;
+    const derive = (sub: string | null) => resolveComposedLoad({
+      identity: 'Back Squat', isMainLift: true, poolSlot: 'squat' as never,
+      seasonPhase: 'Off-season' as never, offseasonSubphase: sub as never, profile: athlete,
+    });
+    const full = derive('late_offseason');
+    const early = derive('early_offseason');
+    ok('[base load] the composer resolves a real base working load',
+      full > 0, `base=${full}`);
+    ok('[U-2] early off-season derives 75% OF THE BASE, not of a previous answer',
+      early === Math.round((full * 0.75) / 2.5) * 2.5, `base=${full} early=${early}`);
+    ok('[U-2] the DERIVATION is naturally non-stacking — same inputs, same answer',
+      derive('early_offseason') === early && derive('early_offseason') === early);
+    ok('[U-2] an unloaded identity stays at zero and is never cut',
+      resolveComposedLoad({
+        identity: 'Bodyweight Squat', isMainLift: true, poolSlot: 'squat' as never,
         seasonPhase: 'Off-season' as never, offseasonSubphase: 'early_offseason' as never,
-        plannedDays: [LOWER_DAY_FIXTURE],
-      }));
-      const rowCount = composed.days.reduce((n, day) => n + day.rows.length, 0);
-      ok('[U-2] the composed path applies the multiplier exactly once per row',
-        rowCount > 0 && calls === rowCount, `${calls} calls for ${rowCount} rows`);
-    } finally {
-      doseModule.applyOffseasonMainLiftLoad = realApply;
-    }
+        profile: athlete,
+      }) === 0);
   }
 }
 

@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-M1-C | Completion attempt — the handover | **STOPPED AT A NAMED SUB-BOUNDARY.** Registry corrected (11 -> 9, no new UNENFORCED). Base-load authority ESTABLISHED. Load now resolved and non-stacking BY DERIVATION. Silent fallthrough removed. **The materialiser and assembler still did not land.** |
 | B1-M1-F | Final resumption — dose rehoming | **PARTIAL, DECLARED.** Sam's four dose rulings are BUILT in the composer with 16 guards and 5 mutation red-proofs. **The materialiser and assembler did NOT land** — composed rows are still re-dosed downstream, so no athlete receives the new dose yet. |
 | B1-M1-R | Resumed after Sam's dose rulings | **HARD STOP AGAIN, ONE CLASS SHORT.** Power precondition CLEARS (`Vertical Jump`, 2x3 / 3x3). U-1 census classifies 18 of 20 rows; **unloaded lower compounds and Kettlebell Swings have no ruled band.** No production file changed. |
 | B1-M1 | Direct authorship boundary | **HARD STOP AT THE PRECONDITION.** Two output-affecting dose policies have no citable authority and one CONTRADICTS the Bible. No production code touched. MUT-8's replacement guard written and seen red. Two questions for Sam. |
@@ -2558,6 +2559,129 @@ row.**
   stop cleanly rather than half-wire the materialiser.** Everything that landed is
   guarded; nothing is dangling; the sweep did not move.
 
+---
+
+## Slice B1-M1-COMPLETION — three preconditions paid, the handover still unbuilt
+
+**Seat `baseline`, 2026-08-14. Base: branch `slice-b1-pivot` @ `1574a84f`.**
+
+### 0. THE NAMED SUB-BOUNDARY REACHED
+
+**"The composer authors the final dose AND the final load, and every composed row
+carries an explicit typed category."** That is where this session stops.
+
+**`materialiseComposedWeek`, `assembleAuthoredWeek`, the gap carrier and the power
+rehoming did not land.** M1's acceptance — `final authored candidate == §18 input`
+— is **NOT met**, and composed rows are still re-dosed downstream. **No athlete
+receives any of this yet.** Nothing is half-connected: 73 new production lines,
+all behind guards, sweep unmoved.
+
+### 1. REGISTRY AND BIBLE CORRECTED
+
+R-095 and R-096 had landed reading globally `UNENFORCED`, taking the count 9 → 11.
+**Both rows and both global Bible amendments are WITHDRAWN**, and the count is
+back to **9** — the pre-slice state. **No ceiling was touched, and nothing was
+relabelled `BUILT` to make a number green.** Sam's verbatim U-1/U-2 words and the
+U-3/U-4 approved wording are preserved in the M1 reports above; they return to
+the registry in M2, when validator and store enforcement make a global claim
+true. **A global Bible claim that downstream behaviour still breaks does not
+belong in the Bible.**
+
+### 2. BASE-LOAD AUTHORITY — ESTABLISHED, no hard stop
+
+| | |
+| --- | --- |
+| resolver | `applyLoadEstimates` → `estimateStartingWeight` (`utils/loadEstimation.ts:1064`) |
+| execution site (old path) | inside `buildWorkoutsFromCoach`, after the phase rep-scheme pass |
+| inputs | exercise identity · `weightKg` · `squatStrength` · `benchStrength` · experience level |
+| derivation | `anchor 1RM = weightKg × anchor multiplier` → `working weight = anchor 1RM × EXERCISE_LOAD_MAP ratio` |
+| **authority** | **`ANCHOR_MULTIPLIER_RULING`** — Sam-authored **2026-07-28**, recorded in `docs/PROVENANCE_INVENTORY_2026-07-28.md`, with the verbatim ladders in the file; the 77 exercise ratios carry their own rulings |
+| **guards** | `test:anchor-multipliers` **38/38** · `test:load-ratio-rulings` **47/47** — both assert the ruling sentences are still present AND still state the shipped numbers |
+
+**The final authored load is now:** `resolved base working load × ONE governed
+phase multiplier`. **It is naturally non-stacking because it is DERIVED, not
+adjusted** — recomputed from the base every time, so running it on its own output
+returns the same number. The raw multiplier remains non-idempotent and is
+declared as such; **the call-count guard is retired**, exactly as the resumed
+prompt required.
+
+Measured: a dumbbell athlete's `RDLs` now authors at **52.5 kg**, `Single-Arm DB
+Row` at **22.5 kg**, `Goblet Squat` at **17.5 kg**. The multiplier is no longer
+inert.
+
+### 3. SILENT DOSE FALLTHROUGH REMOVED
+
+Every composed strength row now carries an explicit category. Rows with no ruled
+phase policy take **`composer_authored_passthrough`** — *"nothing overrode me"*,
+which is a reportable fact rather than a silence. **The previous version called
+them `isolation_accessory`, which was a programming claim nobody made about a
+`Cossack Squat`.**
+
+| category | identities seen in the two printed worlds |
+| --- | --- |
+| `main_lift` | Goblet Squat · Single-Arm DB Floor Press · Single-Arm DB Row · RDLs · DB Shoulder Press · Band Pull-Apart · Bodyweight Squat · Glute Bridge · Explosive Push-up |
+| `loaded_lower_secondary_compound` | Single-Leg RDL (as a support row) |
+| **`composer_authored_passthrough`** | **Band Pallof Press · Cossack Squat · Banded Dead Bug · Bird Dog · Scap Push-Up** |
+
+### 4. THE TWO PRINTED CANDIDATES — composer output, NOT §18 input
+
+**⚠ THESE ARE NOT THE FINAL AUTHORED CANDIDATE.** The boundary that would make
+them the same thing did not land.
+
+> **DUMBBELLS + BANDS, IN-SEASON**
+> **Tue:** Goblet Squat 3×2-4 @17.5kg *(main_lift)* · Single-Leg RDL 3×6-8 @10kg
+> *(loaded_lower_secondary_compound)* · Single-Arm DB Floor Press 3×3-5 @17.5kg
+> *(main_lift)* · Single-Arm DB Row 3×4-6 @22.5kg *(main_lift)* · Band Pallof
+> Press 2×10-15 *(passthrough)*
+> **Thu:** RDLs 3×2-4 @52.5kg · Cossack Squat 3×8-12 *(passthrough)* · DB
+> Shoulder Press 3×3-5 @15kg · Band Pull-Apart 3×4-6 · Banded Dead Bug 2×10-15
+> **Kit gap:** `vertical_pull` needs a `pullup_bar` → repeated `horizontal_pull`.
+
+> **AWAY / BODYWEIGHT, OFF-SEASON**
+> **Tue:** Bodyweight Squat 3×8-12 · Glute Bridge 3×8-12 · Cossack Squat 3×8-12
+> *(passthrough)* · **Single-Leg RDL 3×8-10 @10kg** · Bird Dog 2×8-12
+> **Thu:** Explosive Push-up 3×8-12 · Scap Push-Up 3×8-10 *(passthrough)*
+> **Kit gap:** `vertical_push` needs `dumbbells`.
+
+**⚠ THAT `@10kg` ON AN ATHLETE WITH NO EQUIPMENT IS A REAL FINDING.**
+`estimateStartingWeight` does not consult the kit, so a bodyweight athlete is
+authored a loaded `Single-Leg RDL`. **Ledgered, not fixed** — it is load-policy
+work and this slice may not do it.
+
+**The kit-gap note is still NOT athlete-visible.** No measured surface renders
+it; the carrier did not land.
+
+### 5. GUARDS — 66 passed, 0 failed, four new red-proofs
+
+| mutation | went red |
+| --- | --- |
+| **MUT-F** passthrough relabelled `isolation_accessory` | ✅ |
+| **MUT-G** load adjusted in place instead of derived from the base | ✅ |
+| **MUT-A…E** (prior slice) | preserved |
+| **MUT-8′ / MUT-8″** | preserved |
+
+### 6. NOT COVERED
+
+`materialiseComposedWeek`, `assembleAuthoredWeek`, the typed gap carrier, the
+planned-power rehoming (its policy is established: `Vertical Jump`, 2×3 / 3×3),
+both §18-input fingerprints, the post-§18 M2 table, and the deletion count. **M1
+is not complete.**
+
+### 7. WHAT FOUGHT ME
+
+- **I destroyed my own uncommitted work with `git checkout -- <path>` while
+  restoring a mutation**, and the sweep went to **0 built / 180 refused** before I
+  noticed. It restores from HEAD, not from the backup — the exact lesson this repo
+  already records. Recovered by rewriting; every later mutation restored from a
+  scratchpad copy instead.
+- **A guard I had just written became the wrong guard as soon as the code
+  improved.** The call-count test was valid while the multiplier was applied in
+  place; the moment the load was derived, the count went to zero and the cell went
+  red for a *good* change. Replaced with the derivation guard.
+- **The base-load estimator ignores the kit**, which only became visible once the
+  composer started authoring real weights. It was invisible while every row read
+  `@0kg`.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -2566,6 +2690,7 @@ row.**
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- `estimateStartingWeight` does not consult the athlete's kit, so a bodyweight/away athlete is authored a loaded `Single-Leg RDL` at 10kg.
 - `applyOffseasonMainLiftLoad` is not idempotent — 100 -> 75 -> 55 on a second call — so single application is a property of the call site, not of the function.
 - Rows outside the 20-row lower-body census (`Cossack Squat`, `Scap Push-Up`, upper accessories) have no authored `doseCategory` and fall through to the composer's own band, reported as `isolation_accessory`.
 - The composer emits no starting load, so U-2's off-season cut is implemented, guarded and inert until load resolution moves before authorship.

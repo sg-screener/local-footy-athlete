@@ -31,7 +31,8 @@ import {
 import { mainLiftSchemeForSlot } from './phaseRepSchemes';
 import { composedIdentityFor } from './composedRowLegality';
 import type { OffseasonSubphase } from './offseasonSubphase';
-import type { SeasonPhase } from '../types/domain';
+import { estimateStartingWeight } from '../utils/loadEstimation';
+import type { OnboardingData, SeasonPhase } from '../types/domain';
 
 export interface ComposedDose {
   readonly sets: number;
@@ -136,8 +137,15 @@ export function resolveComposedDose(input: ComposedDoseInput): ComposedDose {
   // row is declared an isolation accessory only for reporting. A SPECIAL row —
   // Nordics, carries, timed holds — keeps its existing governed policy because
   // nothing here overrides a band the composer already authored for it.
+  // ⚠ NO SILENT FALLTHROUGH. Nothing ruled overrides this identity, so the
+  // composer's own authored band stands AND SAYS SO. Calling it an
+  // `isolation_accessory` — which the first version did — was a programming
+  // claim nobody made about `Cossack Squat` or `Scap Push-Up`. A SPECIAL row
+  // (Nordics, carries, timed holds) also lands here and keeps its existing
+  // governed policy, because nothing in this module overrides a band the
+  // composer already authored for it.
   const [sets, min, max] = input.authoredFallback;
-  return { sets, repsMin: min, repsMax: max, category: 'isolation_accessory' };
+  return { sets, repsMin: min, repsMax: max, category: 'composer_authored_passthrough' };
 }
 
 /**
@@ -164,4 +172,45 @@ export function applyOffseasonMainLiftLoad(args: {
   const multiplier = scheme?.loadMultiplier ?? 1;
   if (multiplier >= 1) return args.load;
   return Math.round((args.load * multiplier) / 2.5) * 2.5;
+}
+
+/**
+ * THE COMPOSED ROW'S FINAL LOAD — derived, and therefore naturally non-stacking.
+ *
+ *     resolved base working load  x  ONE governed phase multiplier  =  final load
+ *
+ * **THE DERIVATION IS THE GUARANTEE, NOT A CALL COUNT.** `applyOffseasonMainLiftLoad`
+ * is pure arithmetic and cannot tell a cut load from an uncut one; asking it
+ * twice cuts twice. So the final load is always recomputed FROM THE BASE — the
+ * estimator's answer for this athlete and this exercise — rather than adjusted
+ * in place. Running this on its own output gives the same number, because the
+ * base it reads has not moved.
+ *
+ * **BASE-LOAD AUTHORITY, established 2026-08-14 before this was built:**
+ * `estimateStartingWeight` -> `EXERCISE_LOAD_MAP` x the anchor 1RM, where the
+ * anchor is `weightKg x ANCHOR_MULTIPLIER_RULING`'s ladder — Sam-authored
+ * 2026-07-28, recorded in `docs/PROVENANCE_INVENTORY_2026-07-28.md`, held by
+ * `test:anchor-multipliers` (38/38) and `test:load-ratio-rulings` (47/47), both
+ * of which assert the ruling sentences still state the shipped numbers.
+ *
+ * A row the estimator calls TRUE BODYWEIGHT resolves to 0 and is never cut.
+ */
+export function resolveComposedLoad(args: {
+  readonly identity: string;
+  readonly isMainLift: boolean;
+  readonly poolSlot: PoolSlotKey | null;
+  readonly seasonPhase: SeasonPhase;
+  readonly offseasonSubphase: OffseasonSubphase | null;
+  readonly profile: OnboardingData | null;
+}): number {
+  if (!args.profile) return 0;
+  const base = estimateStartingWeight(composedIdentityFor(args.identity), args.profile);
+  if (base === null || !(base > 0)) return 0;
+  return applyOffseasonMainLiftLoad({
+    load: base,
+    isMainLift: args.isMainLift,
+    poolSlot: args.poolSlot,
+    seasonPhase: args.seasonPhase,
+    offseasonSubphase: args.offseasonSubphase,
+  });
 }

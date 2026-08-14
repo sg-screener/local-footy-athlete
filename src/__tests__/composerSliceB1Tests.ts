@@ -78,7 +78,7 @@ const LOWER_DAY: ComposerPlannedDay = {
 
 function inputs(over: Partial<ComposerInputs> = {}): ComposerInputs {
   return {
-    profile: { seasonPhase: 'Pre-season', experienceLevel: 'Intermediate' },
+    profile: { seasonPhase: 'Pre-season', experienceLevel: 'Intermediate' } as never,
     phaseClock: { weekNumber: 1 },
     seasonPhase: 'Off-season' as never,
     offseasonSubphase: null,

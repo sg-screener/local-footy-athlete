@@ -70,7 +70,14 @@ export type ComposedDoseCategory =
   | 'loaded_lower_secondary_compound'
   | 'isolation_accessory'
   | 'unloaded_lower_compound'
-  | 'ballistic_strength';
+  | 'ballistic_strength'
+  /**
+   * NO RULED PHASE POLICY APPLIES — the composer's own authored band stands.
+   * **This is a declaration, not a fallback.** Every composed row carries a
+   * category; a row that reaches this one is saying "nothing overrode me",
+   * which is a reportable fact rather than a silence.
+   */
+  | 'composer_authored_passthrough';
 
 export interface PoolEntry {
   /** Must match an EXERCISE_TAGS key (or be resolvable by findOrCreateExercise). */
