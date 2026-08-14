@@ -30,6 +30,7 @@ import {
 } from '../data/exercisePoolsStrength';
 import { mainLiftSchemeForSlot } from './phaseRepSchemes';
 import { composedIdentityFor } from './composedRowLegality';
+import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import { estimateStartingWeight } from '../utils/loadEstimation';
 import type { OnboardingData, SeasonPhase } from '../types/domain';
@@ -175,6 +176,23 @@ export function applyOffseasonMainLiftLoad(args: {
 }
 
 /**
+ * CAN THIS ATHLETE ACTUALLY LOAD THIS MOVEMENT?
+ *
+ * Asked of the ONE equipment owner and its corrected sheet — never a second
+ * lookup. A movement whose authored kit the athlete HAS is loadable; a movement
+ * that is legal only because it survives losing its load is not, and takes 0kg.
+ */
+function composedLoadIsReachable(identity: string, kit: readonly string[]): boolean {
+  const required = equipmentRequiredFor(composedIdentityFor(identity));
+  if (required === null) return true;          // unknown to the sheet — unchanged
+  if (required.length === 0) return false;     // his convention: needs nothing
+  const owned = new Set(kit);
+  const satisfied = (entry: unknown): boolean =>
+    Array.isArray(entry) ? entry.some((tag) => owned.has(tag)) : owned.has(entry as string);
+  return required.every(satisfied);
+}
+
+/**
  * THE COMPOSED ROW'S FINAL LOAD — derived, and therefore naturally non-stacking.
  *
  *     resolved base working load  x  ONE governed phase multiplier  =  final load
@@ -202,8 +220,25 @@ export function resolveComposedLoad(args: {
   readonly seasonPhase: SeasonPhase;
   readonly offseasonSubphase: OffseasonSubphase | null;
   readonly profile: OnboardingData | null;
+  /** The athlete's resolved kit. R-083 decides whether a load is reachable. */
+  readonly kit: readonly string[];
 }): number {
   if (!args.profile) return 0;
+  // ── R-083: A LOAD THE ATHLETE CANNOT REACH IS NOT A PRESCRIPTION ─────────
+  //
+  // **MEASURED 2026-08-14: an away athlete was authored `Single-Leg RDL @10kg`
+  // while owning nothing.** `estimateStartingWeight` derives a working weight
+  // from his strength answers and never asks what he owns, which was invisible
+  // while every composed row read `@0kg`.
+  //
+  // The row's IDENTITY is already legal here — `composeWeek` selects only
+  // through `composedRowIsLegal`, the one equipment owner — so this is about
+  // the LOAD alone: a movement that is legal because it survives losing its
+  // load (R-086's `BODYWEIGHT_CAPABLE`) is prescribed at **0kg** rather than at
+  // a weight he has no way to hold. **An identity that intrinsically needs kit
+  // he lacks never reaches this function**; if one ever did, the legality owner
+  // — not this one — is what failed, and the composed row is refused upstream.
+  if (!composedLoadIsReachable(args.identity, args.kit)) return 0;
   const base = estimateStartingWeight(composedIdentityFor(args.identity), args.profile);
   if (base === null || !(base > 0)) return 0;
   return applyOffseasonMainLiftLoad({

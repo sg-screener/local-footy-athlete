@@ -1097,6 +1097,13 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
   if (entry.conditioningFlavour || /conditioning|aerobic|tempo|sprint|interval/i.test(lower)) {
     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
   }
+  // ── A COMBINED DAY IS TWO OWNERS (B1-M1-HANDOVER) ────────────────────────
+  // Its STRENGTH half is the composer's and never comes from here; its
+  // CONDITIONING half belongs to the retained adapter, which needs the day to
+  // exist to attach its block. Measured: 16 of 143 composed strength days.
+  if (entry.hasCombinedConditioning) {
+    return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
+  }
   throw new Error(
     'B1-PIVOT: the legacy strength-content builder is severed. A strength plan '
     + `entry (${entry.planEntryId ?? entry.dayOfWeek ?? 'unknown'}) reached `

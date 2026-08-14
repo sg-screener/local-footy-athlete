@@ -7,7 +7,10 @@ import {
   type Workout,
   type WeekKind,
 } from '../../types/domain';
-import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
+import {
+  buildWorkoutsFromCoach,
+  type CoachGeneratedWorkoutInput,
+} from '../../data/defaultProgram';
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
@@ -57,10 +60,9 @@ import {
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
-import {
-  composedPlannedDaysFrom,
-  composedWeekToCoachInputs,
-} from '../../rules/composedWeekToWorkouts';
+import { composedPlannedDaysFrom } from '../../rules/composedWeekToWorkouts';
+import { materialiseComposedWeek } from '../../rules/materialiseComposedWeek';
+import { assembleAuthoredWeek } from '../../rules/assembleAuthoredWeek';
 import { awaySpansFromConstraints } from '../../rules/awaySpans';
 import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
 import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
@@ -702,7 +704,12 @@ export function buildGeneratedMicrocycles(args: {
           },
       todayISO: blockState.weekStart,
     });
-    const sourceCoachWorkouts = composedWeekToCoachInputs(composedWeek);
+    // ⚠ THE HANDOVER. Composer rows are MATERIALISED directly and never enter
+    // `buildWorkoutsFromCoach`; the retained adapters are asked only for the
+    // days the composer does not author, plus the conditioning blocks of
+    // combined days. `assembleAuthoredWeek` merges the two by day.
+    const composedDayNumbers = new Set(composedWeek.days.map((day) => day.dayOfWeek));
+    const sourceCoachWorkouts: CoachGeneratedWorkoutInput[] = [];
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     // The governed boundary, when it falls inside THIS week. Days before it are
     // history: the contract is stamped, pre-boundary anchors keep settled
@@ -744,7 +751,7 @@ export function buildGeneratedMicrocycles(args: {
       // removal from §18-verified stored surfaces is its own unit (recorded in
       // the fix-round boundary notes, with `dropRetiredWeekOverlaysAtHydration`
       // as the pattern to follow).
-      const built = buildWorkoutsFromCoach(
+      const adapterWorkouts = buildWorkoutsFromCoach(
           source,
           microcycleId,
           weekPlan.weeklyPlan,
@@ -765,6 +772,14 @@ export function buildGeneratedMicrocycles(args: {
             conditioningModalities: equipment.conditioningModalities,
           },
         );
+      const built = assembleAuthoredWeek({
+        composerWorkouts: materialiseComposedWeek(composedWeek, {
+          microcycleId,
+          weekStartISO: blockState.weekStart,
+        }),
+        adapterWorkouts,
+      }).workouts as Workout[];
+      void composedDayNumbers;
       const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
         constraint.type === 'equipment' ||
         (constraint.type === 'schedule' &&

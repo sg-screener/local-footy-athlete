@@ -833,9 +833,12 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
       squatStrength: 'Around bodyweight', benchStrength: 'Around bodyweight',
       experienceLevel: '2-5 years',
     } as never;
+    const FULL_KIT = resolveEquipmentCapabilities({
+      equipment: ['Full Gym'], equipmentSelectionCompleteness: 'complete' } as never).tags as string[];
     const derive = (sub: string | null) => resolveComposedLoad({
       identity: 'Back Squat', isMainLift: true, poolSlot: 'squat' as never,
-      seasonPhase: 'Off-season' as never, offseasonSubphase: sub as never, profile: athlete,
+      seasonPhase: 'Off-season' as never, offseasonSubphase: sub as never,
+      profile: athlete, kit: FULL_KIT,
     });
     const full = derive('late_offseason');
     const early = derive('early_offseason');
@@ -849,8 +852,30 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
       resolveComposedLoad({
         identity: 'Bodyweight Squat', isMainLift: true, poolSlot: 'squat' as never,
         seasonPhase: 'Off-season' as never, offseasonSubphase: 'early_offseason' as never,
-        profile: athlete,
+        profile: athlete, kit: FULL_KIT,
       }) === 0);
+
+    // ── R-083 LOAD LEGALITY — the away athlete's 10 kg Single-Leg RDL ────────
+    const AWAY_KIT = resolveEquipmentCapabilities({
+      equipmentAnswer: AWAY_ANSWER } as never).tags as string[];
+    const DB_KIT = resolveEquipmentCapabilities({
+      equipment: ['Dumbbells', 'Bands'], equipmentSelectionCompleteness: 'complete' } as never)
+      .tags as string[];
+    const load = (identity: string, kit: string[]) => resolveComposedLoad({
+      identity, isMainLift: false, poolSlot: null,
+      seasonPhase: 'In-season' as never, offseasonSubphase: null,
+      profile: athlete, kit,
+    });
+    ok('[R-083 load] an AWAY athlete gets 0kg on a legal unloaded row',
+      load('Single-Leg RDL', AWAY_KIT) === 0,
+      `away Single-Leg RDL = ${load('Single-Leg RDL', AWAY_KIT)}kg`);
+    ok('[R-083 load] a DUMBBELL athlete keeps a real dumbbell load',
+      load('Goblet Squat', DB_KIT) > 0, `${load('Goblet Squat', DB_KIT)}kg`);
+    ok('[R-083 load] a FULL-GYM athlete keeps a real barbell load',
+      load('Back Squat', FULL_KIT) > 0, `${load('Back Squat', FULL_KIT)}kg`);
+    ok('[R-083 load] the same movement loads on the kit that can hold it',
+      load('Single-Leg RDL', FULL_KIT) > 0
+      && load('Single-Leg RDL', AWAY_KIT) === 0);
   }
 }
 

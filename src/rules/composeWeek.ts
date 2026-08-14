@@ -600,6 +600,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           seasonPhase: inputs.seasonPhase,
           offseasonSubphase: inputs.offseasonSubphase,
           profile: inputs.profile,
+          kit: inputs.kit,
         }),
         ...(dose.qualityLimit ? { qualityLimit: dose.qualityLimit } : {}),
       });
