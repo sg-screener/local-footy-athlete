@@ -432,7 +432,8 @@
     "test:composer-b1": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSliceB1Tests.ts",
     "test:generated-week-assembly": "TZ=Australia/Melbourne sucrase-node src/__tests__/generatedWeekAssemblyTests.ts",
     "test:generated-week": "TZ=Australia/Melbourne sucrase-node src/__tests__/generatedWeekContractTests.ts",
-    "test:composer-severance": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSeveranceTests.ts"
+    "test:composer-severance": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSeveranceTests.ts",
+    "test:weekly-scheduler": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklySchedulerTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
