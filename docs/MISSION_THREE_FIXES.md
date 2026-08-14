@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-M1-FINAL | Final M1 authorisation, two sessions | **HARD STOP.** The plan split, session identity and provenance merge are all FIXED. The week's CONTENT now matches the baseline byte for byte and §18 still refuses it: the accepting difference is a day-level envelope the legacy builder produces as a BY-PRODUCT, not a field. Three attempts to reproduce it moved the sweep 49 -> 42 -> 32. |
 | B1-M1-CT | Counting attribution | **ATTRIBUTED, NOT FIXED.** The break is MY plan split, not the exposure counter: `adapterPlan` came out **0 entries**, so the adapter produced no conditioning at all. Load guards now red-proven. Route fully reversed, 61/119. |
 | B1-M1-H | The handover | **STOPPED AND REVERTED THE WIRING.** Materialiser + assembler BUILT and tested; wiring them regressed the sweep 61/119 -> 49/131, so it is REVERSED and preserved as a patch. R-083 load legality FIXED: the away athlete's 10 kg is gone. |
 | B1-M1-C | Completion attempt — the handover | **STOPPED AT A NAMED SUB-BOUNDARY.** Registry corrected (11 -> 9, no new UNENFORCED). Base-load authority ESTABLISHED. Load now resolved and non-stacking BY DERIVATION. Silent fallthrough removed. **The materialiser and assembler still did not land.** |
@@ -2911,6 +2912,105 @@ the planned-power rehoming, the M2 target table, and deletion of
   mutation caught it — the same shape as the guard debt this slice was opened to
   close.
 
+---
+
+## Slice B1-M1-FINAL — HARD STOP: the week is right and §18 still refuses it
+
+**Seat `baseline`, 2026-08-14. Base: `slice-b1-pivot` @ `6b5314ae`. Two sessions,
+as authorised.**
+
+**THE SHIPPING ROUTE IS UNTOUCHED AND GREEN: `slice-b1-pivot` @ `6b5314ae`,
+61 / 119, `test:composer-severance` 71/0, `test:pools` 498/1 with pinning red,
+`test:compile` 459 PASSED.** Every experiment lives on `slice-b1-m1-final`
+(`9f284730`), which is not merged anywhere. Nothing is half-connected.
+
+### 1. WHAT WAS FIXED — the previous defects are all closed
+
+| defect | fix | evidence |
+| --- | --- | --- |
+| the day-level `adapterPlan` filter emptied the planner set | **DELETED, not reapplied.** The adapter receives the COMPLETE week again | adapterPlan 0 entries → full plan |
+| the adapter had no way to know which days the composer owns | `RotationContext.composedStrengthDays` — the adapter keeps the DAY and authors no lifts on it | adapter returns the days again |
+| a composed day collapsed to `Rest` on the adapter's side | a composed day carrying conditioning keeps its conditioning seed | adapter days no longer `Rest`-collapsed |
+| the merge retyped a composed strength day as `Rest` | **the composer's session identity wins** | assembled days read `Strength` |
+| ownership decided by name or title | **merge is by TYPED PROVENANCE** (`composer_declaration`), and `retainedStrengthRows` counts any adapter strength row reaching a composed day | measured **0** |
+
+### 2. THE HARD STOP — the content is identical and the verdict is not
+
+Traced `Off-season/4d/noclub/Full Gym/w2`:
+
+```
+BASELINE (builds)   d1 Strength 3 rows · d2 Strength 5 rows · d4 Strength 5 rows
+COMPOSED (refuses)  d1 Strength 3 rows · d2 Strength 5 rows · d4 Strength 5 rows
+                    same identities, same order, same roles, same doses
+refusal             required_minimum_shortfall:sprint_high_speed:0
+```
+
+**The weeks are the same. The verdict is not.** The only measured difference is
+the day-level envelope:
+
+```
+baseline  workout.section18Evidence =
+  { conditioningRole: 'none', conditioningStress: 'unknown',
+    provenance: 'planner_and_canonical_content' }
+composed  workout.section18Evidence = null
+```
+
+**A missing evidence object is not the same statement as a role of `none`.**
+
+### 3. WHY THE ARCHITECTURE IS STILL RESISTING — three attempts, each worse
+
+| attempt | sweep |
+| --- | --- |
+| no day-level stamp | **49 / 131** |
+| `withSection18WorkoutEvidence(workout, 'infer')` on the assembled week | **42 / 138** |
+| `finaliseWorkoutAfterMutation(workout, { composed: true })` — the app's own stamper, content branches down | **32 / 148** |
+
+**THE ENVELOPE IS NOT A FIELD. IT IS AN ACCUMULATION OF SIDE EFFECTS.** The
+legacy builder does not *stamp* a week and hand it over — it produces the
+acceptance envelope as a by-product of building: evidence stamping, planner-derived
+session provenance, conditioning promotion, power alignment, pairing
+resolution and tier/type normalisation, each touching the workout on the way
+past. Calling any one of them in isolation reproduces part of the envelope and
+disturbs another part, which is why every attempt moved the number further away
+rather than closer.
+
+**So the real blocker is not the handover.** It is that **§18's input contract is
+undeclared**: nothing states what a week must carry to be judged, so the only
+way to produce an acceptable week today is to have been built by the legacy
+builder. **A composer cannot hand a week to a door whose requirements exist only
+as the residue of another builder's execution.**
+
+**That is the architectural finding, and it is M2's subject, not M1's** — naming
+§18's input contract is validator work, which this slice's fence forbids.
+
+### 4. NOT COVERED
+
+- The live handover. `composedWeekToCoachInputs` and its generation caller are
+  **not deleted**, because the route that would make them unreachable is not live.
+- Both fingerprints against §18 input, gap counts at §18 input, the planned-power
+  rehoming, and the post-§18 M2 table.
+- The four mutation proofs required of the live handover — an empty planner set,
+  a dropped conditioning half, an admitted adapter strength row, a dropped gap —
+  **were not run, because there is no live handover to mutate.** The
+  `retainedStrengthRows` counter exists and reads 0, but a counter that has never
+  been seen non-zero is not yet a guard.
+- No registry row, no Bible supersession, no ceiling or baseline change.
+
+### 5. WHAT FOUGHT ME, VERBATIM
+
+- **Every defect I was sent to fix was real and none of them was the blocker.**
+  The plan split, the `Rest` retyping, the provenance merge — all fixed, all
+  measured, and the sweep still would not move, because the thing that decides
+  acceptance was never in the content.
+- **The app's own stamper made it worse, twice.** `withSection18WorkoutEvidence`
+  and `finaliseWorkoutAfterMutation` are the right functions by name and the
+  wrong ones by effect: run outside the builder's sequence they reproduce a
+  different envelope, not the same one.
+- **I could not find a place to stand.** There is no function that answers
+  *"what must a week carry to be acceptable"* — only a builder whose output
+  happens to satisfy it. Four sessions have now ended at that same wall from
+  different directions, and this is the first time I can name it.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -2919,6 +3019,7 @@ the planned-power rehoming, the M2 target table, and deletion of
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- §18's input contract is undeclared: a composed week identical in content to an accepted baseline is refused because it lacks the day-level evidence envelope the legacy builder produces as a by-product of building.
 - CORRECTED: the handover regression is 22 worlds lost and 10 gained, not 12 refused; the earlier report quoted the net.
 - Splitting the generation plan between the composer and the retained adapters stops conditioning and sprint credit being counted from combined strength days: 14 worlds refuse `required_minimum_shortfall:sprint_high_speed` and 10 refuse on conditioning.
 - `estimateStartingWeight` does not consult the athlete's kit, so a bodyweight/away athlete is authored a loaded `Single-Leg RDL` at 10kg.
