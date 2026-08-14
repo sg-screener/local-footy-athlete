@@ -155,8 +155,12 @@ byte-identical — which is exactly the control the mission asked for.
   `generationConstraints`, and every deload world reported 0 rows re-dosed —
   because `buildGeneratedMicrocycles` REBUILDS the context per week whenever
   `args.activeConstraints` is set, and it is ALWAYS set (an array that is merely
-  empty). **A caller-supplied constraint context is discarded before `doorDeload`
-  reads it.** (b) It passed illness as a generation option without seeding the
+  empty). **CORRECTED 2026-08-14: that rebuild is deliberate and correct** — a
+  week's constraint context is a function of that week's dates — and **no
+  production caller supplies `options.generationConstraints`** (measured: only
+  `generateProgram.ts` itself and a scratch probe). Nothing is discarded in
+  practice; the fixture was wrong, not the app. The unused input is ledgered as
+  a deletion candidate, not a defect. (b) It passed illness as a generation option without seeding the
   store, so the relaunch regenerated for an athlete who was no longer ill and
   read as a boot difference. Seeding the fact turned both worlds IDENTICAL,
   which is what confirmed the diagnosis rather than assuming it.
@@ -172,10 +176,16 @@ byte-identical — which is exactly the control the mission asked for.
 
 ## 5. NOT ESTABLISHED
 
-- **Whether a caller-supplied `generationConstraints` is meant to survive the
-  per-week rebuild.** Measured that it does not; not judged. It is reachable
-  from authoring callers mid-transaction, which is exactly when a caller would
-  supply one.
+- ~~Whether a caller-supplied `generationConstraints` is meant to survive the
+  per-week rebuild.~~ **CORRECTED 2026-08-14 (verification pass): this is NOT a
+  reachable authoring defect.** No production caller supplies
+  `generationConstraints` directly — production supplies RAW FACTS and the
+  per-week rebuild is deliberate, because a week's constraint context is a
+  function of that week's dates. The original wording called it "a real plumbing
+  asymmetry", which overstated a fixture's mistake into a product finding. **The
+  unused `options.generationConstraints` input is ledgered as a DELETION
+  CANDIDATE for a later slice** — it is an input nothing supplies, which is the
+  same class as the dead code this campaign has been removing. Not deleted here.
 - Whether `SCHED-CONSTRAINT` and `READINESS` produced *no* change because the
   constraint legitimately does not move strength dose, or because the fact did
   not reach the surface that would move it. Both built and both boot identically;
@@ -207,9 +217,14 @@ world, and every new guard has been seen red. The one refusal is
 contract-named, kit-correct in its disclosure, and of a class already declared
 out of scope.
 
-**Two things a reviewer should read before merging rather than after:** the
-`generationConstraints` discard in §4 (a real plumbing asymmetry this slice
-found but did not fix), and §5's three open questions — none of which block the
-route, all of which are cheaper to answer now than after the next slice.
+**Read before merging rather than after:** §5's open questions — none block the
+route, all are cheaper to answer now than after the next slice.
+
+**⚠ THREE OF THIS DOCUMENT'S ROWS WERE CORRECTED ON 2026-08-14.** READINESS,
+SCHED-CONSTRAINT and DELOAD-SCHED were reported from fixtures that never
+delivered their constraint, and one of them described a world that cannot
+exist. See [`CONSTRAINED_WORLD_VERIFICATION_CORRECTION_2026-08-14.md`](CONSTRAINED_WORLD_VERIFICATION_CORRECTION_2026-08-14.md).
+**The standing rule that came out of it: a constrained world's result counts
+only with a positive liveness receipt.**
 
 *Agent: core, 2026-08-14.*
