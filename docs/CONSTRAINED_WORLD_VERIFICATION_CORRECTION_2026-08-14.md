@@ -169,16 +169,13 @@ mechanism works when the input is a persisted fact.
 
 ## 6. NOT ESTABLISHED
 
-- **An observation I could not isolate, and am therefore NOT calling a defect.**
-  A probe that persisted a schedule fact, committed, relaunched and re-derived
-  showed `activeConstraints: 1` after boot while the regenerated Friday was
-  `Gunshow` again — i.e. the constraint present but not honoured.
-  `collectActiveConstraintsForGeneration` reads `accepted.activeConstraints`
-  when `revision > 0` and falls back to the coach-updates store otherwise, and
-  **my probe had manually seeded `acceptedMaterialContext`, manufacturing a
-  state production does not produce.** Whether a real relaunch re-derives a
-  schedule constraint from its persisted fact is **UNVERIFIED**. It needs a
-  fact-only run through the real door, not a seeded one.
+- ~~An observation I could not isolate…~~ **ANSWERED 2026-08-14 by the final
+  boot check** ([`B3_BOOT_CHECK_2026-08-14.md`](B3_BOOT_CHECK_2026-08-14.md)).
+  Driven through the real durable door with **nothing seeded**, a persisted
+  schedule fact **does** re-derive its constraint across a relaunch
+  (`{count:1, kinds:['schedule']}` before and after), and a readiness fact does
+  the same. The earlier observation was the seeded probe, exactly as suspected.
+  **The persistence-to-generation handoff is proven for both inputs.**
 - Why day 4's main lift holds 3 sets in the deload week (§3).
 
 ## 7. NOT COVERED
