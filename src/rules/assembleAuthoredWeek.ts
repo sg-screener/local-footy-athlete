@@ -55,81 +55,166 @@ function rowRole(row: unknown): string | null {
 }
 
 /**
- * ⚠ A COMBINED DAY IS TWO OWNERS, NOT ONE — AND THE ADAPTER'S HALF IS MORE THAN
- * A CONDITIONING BLOCK.
+ * ⚠ THE COMPOSER DAY IS THE BASE. THE ADAPTER CONTRIBUTES, IT DOES NOT HOST.
  *
- * **THIS FUNCTION USED TO COPY ONE FIELD, AND THAT COST THREE SESSIONS.** It
- * took `conditioningBlock` from the adapter's day and threw the rest of that
- * day away — including **`speedBlock`, which is the app's ONLY source of sprint
- * credit** (`section18EffectiveWeekEvaluator.ts:670`). A composed week
- * therefore lost its sprint night and was refused
- * `required_minimum_shortfall:sprint_high_speed:0`, and because the refusal
- * arrived with a null `section18Evidence` on the same day, the envelope got the
- * blame. Measured 2026-08-14: that envelope is inert — `null` and
- * `{conditioningRole:'none'}` are the same statement at
- * `section18EffectiveWeekEvaluator.ts:317-318`, and its `provenance` field has
- * no reader anywhere in the repo.
+ * **THIS IS THE THIRD STRIPPED-ADAPTER SIGHTING AND THE LAST ONE THIS SHAPE CAN
+ * PRODUCE.** The history is worth keeping because each fix was narrower than the
+ * defect:
  *
- * **SO THE MERGE IS THE OTHER WAY UP.** The adapter's day is the BASE — it
- * carries the whole non-strength envelope it always built — and the composer
- * overlays what it owns: the strength rows, and the session's identity.
- * Nothing about a composed row is reinterpreted; nothing the adapter authored
- * for that day is silently dropped.
+ *   1. the merge copied ONE field (`conditioningBlock`) and threw the rest of
+ *      the adapter's day away — losing `speedBlock`, the app's only source of
+ *      app sprint credit, and costing a refusal that got blamed on an inert
+ *      envelope for three sessions;
+ *   2. so the merge took the adapter's WHOLE day as the base — and a day
+ *      stripped of its lifts describes itself as `Conditioning` /
+ *      `optional_flush`, costing 12 worlds;
+ *   3. and even after identity was pinned back, `...adapter` still silently
+ *      decided which composer fields survived. **`composedGaps` — the typed
+ *      record of what this athlete's kit cannot train — was dropped on every
+ *      day that had an adapter counterpart**, because it was simply not in the
+ *      list of fields copied back.
+ *
+ * **A SPREAD IS THE DEFECT.** Each round fixed the field that had just been
+ * noticed while leaving the mechanism that loses fields intact. So the merge no
+ * longer spreads an adapter workout at all: the adapter's contribution is a
+ * TYPED, ENUMERATED object, and anything not named in it cannot travel.
+ *
+ * LAW-generated-week-assembly (Sam, 2026-08-14): *"Adapter contributions are
+ * typed and enumerated. The composer day is always the base. No adapter field
+ * may overwrite a composer-owned field."*
  */
-function mergeOntoAdapterDay(composed: Workout, adapter: Workout | undefined): Workout {
-  if (!adapter) return composed;
-  const adapterRows = (adapter.exercises ?? []).filter(
-    (row) => !COMPOSER_OWNED_ROLES.has(rowRole(row) ?? ''));
+
+/** Fields the COMPOSER owns. An adapter contribution may never carry these. */
+export const COMPOSER_OWNED_FIELDS: readonly string[] = [
+  'id', 'microcycleId', 'dayOfWeek',
+  'name', 'description', 'sessionTier', 'intensity', 'planEntryId',
+  'exercises', 'composedGaps',
+];
+
+/**
+ * EVERYTHING THE RETAINED ADAPTER IS ALLOWED TO CONTRIBUTE, named one by one.
+ *
+ * Adding a field here is a deliberate act with a reviewer; a field that is not
+ * here cannot reach a composed day by accident, which is precisely what the
+ * three sightings above each did.
+ */
+export interface AdapterContribution {
+  /** Conditioning the adapter hung on this day. */
+  readonly conditioningBlock?: unknown;
+  readonly conditioningCategory?: unknown;
+  readonly conditioningFlavour?: unknown;
+  readonly attachedConditioningKind?: unknown;
+  readonly conditioningFeasibility?: unknown;
+  readonly hasCombinedConditioning?: boolean;
+  /** THE SPRINT NIGHT. The field whose loss started this whole history. */
+  readonly speedBlock?: unknown;
+  /** The team-training anchor fact about the day. */
+  readonly isTeamDay?: boolean;
+  /** Typed lifecycle ownership for derived sessions. */
+  readonly derivedSessionProvenance?: unknown;
+  /** The PLANNER's declared strength intent; the composer emits none. */
+  readonly strengthIntent?: unknown;
+  /** The conditioning envelope — carried only when conditioning was contributed. */
+  readonly section18Evidence?: unknown;
+  /** Adapter-authored duration; the composer does not compute one. */
+  readonly durationMinutes?: number;
+  /** Non-strength rows (power, conditioning, mobility) in the adapter's order. */
+  readonly rows: readonly unknown[];
+}
+
+/** THE ONLY FIELDS AN ADAPTER CONTRIBUTION MAY NAME. */
+const ADAPTER_CONTRIBUTED_FIELDS: readonly string[] = [
+  'conditioningBlock', 'conditioningCategory', 'conditioningFlavour',
+  'attachedConditioningKind', 'conditioningFeasibility', 'hasCombinedConditioning',
+  'speedBlock', 'isTeamDay', 'derivedSessionProvenance', 'strengthIntent',
+  'section18Evidence', 'durationMinutes',
+];
+
+/**
+ * Read the adapter's day down to what it is ALLOWED to give. Everything else
+ * about that day — its identity, its type, its tier — stays behind.
+ */
+export function adapterContributionFrom(adapter: Workout | undefined): AdapterContribution {
+  if (!adapter) return { rows: [] };
+  const source = adapter as unknown as Record<string, unknown>;
+  const contribution: Record<string, unknown> = {};
+  for (const field of ADAPTER_CONTRIBUTED_FIELDS) {
+    if (source[field] !== undefined) contribution[field] = source[field];
+  }
+  // The envelope describes the adapter's CONDITIONING. With no conditioning
+  // contributed it is a statement about nothing, and a stale `optional_flush`
+  // on a strength day is a false one — `null` and `conditioningRole: 'none'`
+  // are the same statement anyway (`section18EffectiveWeekEvaluator.ts:317-318`).
+  if (!source.conditioningBlock) {
+    delete contribution.section18Evidence;
+    delete contribution.conditioningCategory;
+    contribution.hasCombinedConditioning = false;
+  }
+  return {
+    ...contribution,
+    rows: (adapter.exercises ?? []).filter(
+      (row) => !COMPOSER_OWNED_ROLES.has(rowRole(row) ?? '')),
+  } as AdapterContribution;
+}
+
+/** Thrown when a contribution reaches for a field the composer owns. */
+export class AdapterOverreachError extends Error {
+  readonly code = 'adapter_contribution_overreach';
+
+  constructor(fields: readonly string[]) {
+    super('LAW-generated-week-assembly: an adapter contribution named '
+      + `composer-owned field(s) [${fields.join(', ')}]. The composer day is `
+      + 'always the base and no adapter field may overwrite a composer-owned one.');
+    this.name = 'AdapterOverreachError';
+  }
+}
+
+function applyContribution(composed: Workout, contribution: AdapterContribution): Workout {
+  // ⚠ THE GUARD THAT MAKES A FOURTH SIGHTING IMPOSSIBLE. It is not a check on
+  // one field; it refuses the whole CLASS by refusing any contribution that
+  // names a composer-owned key at all.
+  const overreach = Object.keys(contribution)
+    .filter((key) => key !== 'rows')
+    .filter((key) => COMPOSER_OWNED_FIELDS.includes(key));
+  if (overreach.length > 0) throw new AdapterOverreachError(overreach);
+
+  const { rows: adapterRows, ...fields } = contribution;
   const composerRows = composed.exercises ?? [];
-  // Power leads, then the lifts, then everything else the day carries. That is
-  // the order the app already renders and the order the counting fence expects.
+  // Power leads, then the lifts, then everything else the day carries — the
+  // order the app renders and the counting fence expects.
   const power = adapterRows.filter((row) => rowRole(row) === 'power');
   const rest = adapterRows.filter((row) => rowRole(row) !== 'power');
   const exercises = [...power, ...composerRows, ...rest]
-    .map((row, index) => ({ ...row, exerciseOrder: index + 1 }));
-  const adapterAny = adapter as unknown as Record<string, unknown>;
-  const carriedConditioning = adapterAny.conditioningBlock;
+    .map((row, index) => ({ ...(row as object), exerciseOrder: index + 1 }));
+
   return {
-    // THE ADAPTER'S DAY IS THE BASE, so every non-strength thing it built —
-    // `speedBlock` above all — survives by NOT being enumerated away.
-    ...adapter,
-    // ── BUT IDENTITY IS THE COMPOSER'S, AND THIS IS NOT COSMETIC ────────────
-    //
-    // **MEASURED 2026-08-14: taking the adapter's identity too cost 12 worlds.**
-    // Deprived of its lifts, the adapter types a composed lower-body day as
-    // `workoutType: 'Conditioning'` with `conditioningRole: 'optional_flush'` —
-    // it is describing the seed it was left with, not the session that exists.
-    // §18 then reads a strength day as a flush and refuses the week for missing
-    // main strength. The composer knows what it built; the adapter no longer
-    // does.
-    name: composed.name,
-    description: composed.description,
-    // ⚠ A DAY THAT CARRIES BOTH IS `Mixed`, AND THE BOOT ALREADY KNEW THAT.
-    //
-    // The composer types its day `Strength` because strength is all it authors.
-    // When the adapter has hung conditioning on the same day, the day is not a
-    // strength day any more — and `programHydrationProjection` retypes it
-    // `Mixed` at the store boundary regardless. Measured by the boot receipt:
-    // leaving the composer's type here made generation and relaunch disagree on
-    // exactly one field, which is two owners for one fact.
-    workoutType: carriedConditioning ? 'Mixed' : composed.workoutType,
-    sessionTier: composed.sessionTier,
-    intensity: composed.intensity,
-    planEntryId: composed.planEntryId ?? adapter.planEntryId,
-    // ── AND THE ENVELOPE ONLY SPEAKS WHERE IT HAS SOMETHING TO SAY ──────────
-    //
-    // The adapter's workout-level `section18Evidence` describes ITS content. It
-    // is kept only when the adapter actually contributed conditioning to this
-    // day; otherwise it is dropped, because an absent envelope and
-    // `conditioningRole: 'none'` are the same statement
-    // (`section18EffectiveWeekEvaluator.ts:317-318`) and keeping a stale
-    // `optional_flush` is a false one.
-    ...(carriedConditioning
-      ? {}
-      : { section18Evidence: undefined, conditioningCategory: undefined,
-          hasCombinedConditioning: false }),
+    // THE COMPOSER DAY IS THE BASE. `composedGaps`, identity, tier, intensity
+    // and the strength rows survive because nothing overwrites them — not
+    // because they were remembered in a copy list.
+    ...composed,
+    ...fields,
+    // ⚠ A DAY CARRYING BOTH IS `Mixed`, AND THE BOOT ALREADY KNEW THAT. This is
+    // a DERIVED consequence of the contribution, not the adapter overwriting an
+    // identity: `programHydrationProjection` retypes such a day at the store
+    // boundary regardless, and leaving the composer's `Strength` here made
+    // generation and relaunch disagree on exactly one field.
+    workoutType: fields.conditioningBlock ? 'Mixed' : composed.workoutType,
     exercises,
   } as Workout;
+}
+
+
+/**
+ * THE GUARD'S OWN DOOR. `applyContribution` is private because callers must go
+ * through `assembleAuthoredWeek`; the assembly guard has to be reachable to be
+ * mutation-proven against EVERY composer-owned field, and a guard nobody can
+ * aim at is a guard nobody has checked.
+ */
+export function __applyContributionForTest(
+  composed: Workout,
+  contribution: AdapterContribution,
+): Workout {
+  return applyContribution(composed, contribution);
 }
 
 export function assembleAuthoredWeek(input: AssembleAuthoredWeekInput): AuthoredWeek {
@@ -139,7 +224,7 @@ export function assembleAuthoredWeek(input: AssembleAuthoredWeekInput): Authored
   );
 
   const merged = input.composerWorkouts.map((workout) =>
-    mergeOntoAdapterDay(workout, adapterByDay.get(workout.dayOfWeek)));
+    applyContribution(workout, adapterContributionFrom(adapterByDay.get(workout.dayOfWeek))));
   // Days the composer does not author — conditioning, team training, the
   // fixture, mobility — arrive from the retained adapters unchanged.
   const adapterOnly = input.adapterWorkouts.filter(

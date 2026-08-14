@@ -55,6 +55,28 @@ export type FeatureProof =
       readonly receipt: string;
     }
   | {
+      /**
+       * THE FEATURE IS GONE, AND THIS ROW IS ITS HEADSTONE.
+       *
+       * **Added 2026-08-14 because the registry had no way to say "deleted",
+       * and the silence lied.** `FEAT-legacy-program-migration` sat as
+       * `built_unreachable` naming a guard suite that had itself been deleted —
+       * so the gate reported a feature as PROVEN by a script that did not
+       * exist. A roster whose only options are "held" and "unproven" forces a
+       * deleted feature to keep claiming one of them.
+       *
+       * `wentWhere` is not optional prose: `AGENTS.md` requires every removal
+       * to name where the behaviour went, and this is where that sentence lives
+       * for a FEATURE. A deleted row may never name a guard — there is nothing
+       * left to guard — and the gate enforces that.
+       */
+      readonly state: 'deleted';
+      /** The commit that removed it. */
+      readonly deletedIn: string;
+      /** Where the behaviour went — or why it needed to go nowhere. */
+      readonly wentWhere: string;
+    }
+  | {
       readonly state: 'UNPROVEN';
       /**
        * Which of the three words this row honestly is. `WRITTEN` means a doc
@@ -77,7 +99,12 @@ export type FeatureProof =
  * - `internal` — deliberately not athlete-facing (a gate, a store owner, a
  *   diagnostic). Not a lesser state; it is the honest answer for machinery.
  */
-export type FeatureReach = 'athlete_reachable' | 'built_unreachable' | 'internal';
+export type FeatureReach =
+  | 'athlete_reachable'
+  | 'built_unreachable'
+  | 'internal'
+  /** The code is deleted. Not "unreachable" — absent. Pairs with `state: 'deleted'`. */
+  | 'deleted';
 
 export interface FeatureRow {
   /** Stable id. Never renumbered — rows are retired, not reused. */
@@ -205,12 +232,11 @@ export const FEATURE_REGISTRY: readonly FeatureRow[] = [
     id: 'FEAT-legacy-program-migration',
     feature: 'A program saved in an older format is migrated when the app opens it.',
     askedFor: 'programStore.canonicaliseHydratedState / Section 18 Contract v2 migration',
-    reachable: 'built_unreachable',
+    reachable: 'deleted',
     proof: {
-      state: 'held',
-      by: 'test:legacy-migration-unreachable',
-      chainStatus: 'in_chain',
-      receipt: 'Commit `ae4bea88`, and the row is `built_unreachable` ON PURPOSE — this is a feature proven NOT to run. `canonicaliseHydratedState` has no production caller and `programStore.partialize` persists inputs only, so no launch reads a stored program back. That is what keeps a measured 20.4s canonicalisation off the athlete\'s launch; the cell reds if either protection goes.',
+      state: 'deleted',
+      deletedIn: '`b89abfbe` (B2-CORE)',
+      wentWhere: 'NOWHERE, AND NOTHING NEEDED IT TO. The whole structural-migration pipeline ran only under `structuralMigrationRequired: true`; exactly one function set that flag (`canonicaliseHydratedState`) and it had no production caller. `programStore.partialize` persists INPUTS ONLY, so no launch has ever read a stored program back — the week is regenerated at every boot from the stored decisions. There was no older format on disk to migrate. The row previously read `built_unreachable` and named `test:legacy-migration-unreachable` as its guard; that suite was deleted with its subject, so the registry was claiming a feature was PROVEN by a script that no longer existed. A stored world the current code cannot read is RESET CLEAN at `store/unreadableWorldResetDoor.ts` — never migrated.',
     },
   },
 ];

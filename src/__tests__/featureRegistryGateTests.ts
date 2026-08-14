@@ -75,9 +75,30 @@ export function rowFaults(row: FeatureRow): string[] {
   if (row.proof.state === 'held') {
     if (!row.proof.by.trim()) faults.push('held with no named guard');
     if (row.proof.receipt.trim().length < 40) faults.push('held with no real receipt');
+  } else if (row.proof.state === 'deleted') {
+    // ⚠ A DELETED FEATURE MAY NOT CLAIM A GUARD, AND MUST SAY WHERE IT WENT.
+    //
+    // This arm exists because the registry had no way to say "deleted", so
+    // `FEAT-legacy-program-migration` stayed `held` while naming a suite that
+    // had been deleted with its subject — the gate reported a feature PROVEN by
+    // a script that did not exist. `AGENTS.md` requires every removal to name
+    // where the behaviour went; for a feature, that sentence lives here.
+    if (!row.proof.deletedIn.trim()) faults.push('deleted without naming the commit');
+    if (row.proof.wentWhere.trim().length < 40) {
+      faults.push('deleted without saying where the behaviour went');
+    }
+    if (row.reachable !== 'deleted') {
+      faults.push('proof says deleted but `reachable` still claims the code is there');
+    }
+    if ((row.proof as unknown as { by?: string }).by) {
+      faults.push('a deleted feature names a guard — there is nothing left to guard');
+    }
   } else {
     if (!row.proof.wouldTake.trim()) faults.push('UNPROVEN without saying what a proof would take');
     if (row.proof.receipt.trim().length < 40) faults.push('UNPROVEN with no receipt for the absence');
+  }
+  if (row.reachable === 'deleted' && row.proof.state !== 'deleted') {
+    faults.push('`reachable: deleted` with a proof that still claims the feature exists');
   }
   return faults;
 }
@@ -192,9 +213,13 @@ run('the checkers red on fabricated bad rows (liveness)', () => {
 const held = FEATURE_REGISTRY.filter((row) => row.proof.state === 'held').length;
 const unreachable = FEATURE_REGISTRY
   .filter((row) => row.reachable === 'built_unreachable').length;
+// A DELETED ROW IS NOT AN UNPROVEN ONE. Counting it as UNPROVEN made the
+// roster overstate its own debt and understate the deletion.
+const deleted = FEATURE_REGISTRY.filter((row) => row.proof.state === 'deleted').length;
 console.log(
   `\nFEATURE REGISTRY: ${FEATURE_REGISTRY.length} rows, ${held} held, `
-  + `${FEATURE_REGISTRY.length - held} UNPROVEN, ${unreachable} built but unreachable`,
+  + `${FEATURE_REGISTRY.length - held - deleted} UNPROVEN, `
+  + `${unreachable} built but unreachable, ${deleted} DELETED`,
 );
 console.log(`feature registry gate totals: ${passed} passed, ${failed} failed`);
 if (failures.length) {
