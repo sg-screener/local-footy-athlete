@@ -401,8 +401,13 @@ export function validateGeneratedWeek(
         `this athlete's equipment cannot train ${pattern}`, 1, 0);
       continue;
     }
+    // NAME THE PATTERN IN THE SIGNATURE, not only in the prose. A refusal
+    // reading `required_safe_patterns_present:0` says a pattern is missing and
+    // not WHICH — and the constrained matrix hit exactly that: an equipment-
+    // constrained athlete refused for an ACHIEVABLE pattern while `pull` was
+    // correctly disclosed, and the two were indistinguishable from the outside.
     block('required_safe_patterns_present',
-      `the week trains no ${pattern}`, 1, 0);
+      `the week trains no ${pattern}`, 1, pattern);
   }
 
   if (targets.balanceExpected) {

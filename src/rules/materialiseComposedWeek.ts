@@ -13,6 +13,10 @@
  * not composition.
  */
 import { findOrCreateExercise } from '../data/defaultProgram';
+import {
+  applyStrengthDeloadToExercises,
+  type DeloadWeekPolicy,
+} from './deloadWeekRules';
 import type { ComposedDay, ComposedGap, ComposedWeek } from './composeWeek';
 import type { Workout, WorkoutExercise } from '../types/domain';
 
@@ -20,6 +24,25 @@ export interface MaterialisationContext {
   readonly microcycleId: string;
   /** Plan tiers/names arrive on the composed day; nothing is renamed here. */
   readonly weekStartISO: string;
+  /**
+   * THE GOVERNED DOSE INSTRUCTION FOR THIS DAY — deload, readiness or illness.
+   *
+   * **This exists because the resolved policy reached only the retained
+   * adapter.** `buildWorkoutsFromCoach` applied `applyStrengthDeloadToExercises`
+   * to the rows it built; composer rows never enter that builder, so a composed
+   * week was the ONLY week in the app whose strength ignored an active deload,
+   * an illness reduction or a readiness window. An athlete told the app they
+   * were ill and their lifts did not move.
+   *
+   * **IT IS A FUNCTION OF THE DAY, NOT THE WEEK — R-035.** A readiness
+   * declaration governs its dated window; a Thursday declaration must not
+   * retro-deload Monday. The caller resolves that with the existing owner's own
+   * predicate and hands the answer down; nothing here re-derives a window.
+   *
+   * Null for a day the instruction does not govern. Absent for an ordinary week,
+   * which is why an ordinary week is byte-identical.
+   */
+  readonly deloadPolicyForDay?: (dayOfWeek: number) => DeloadWeekPolicy | null;
 }
 
 /** The composer's own provenance, carried onto every row it authored. */
@@ -82,18 +105,39 @@ export function materialiseComposedWeek(
   return week.days.map((day) => {
     const workoutId = `w-composed-${context.microcycleId}-${day.dayOfWeek}`;
     const gaps = gapsForDay(week, day.dayOfWeek);
+    const composedRows = day.rows.map((row, index) => materialiseRow(row, workoutId, index));
+    // ── THE GOVERNED DOSE, APPLIED ONCE, BY THE EXISTING OWNER ──────────────
+    //
+    // **`applyStrengthDeloadToExercises` is the app's ONE deload arithmetic and
+    // it is called here rather than reimplemented inside the composer.** The
+    // mission forbids a second deload table, and re-deriving "half the sets,
+    // keep 2-3 accessories or half whichever is less, hold the weight unless
+    // the athlete is beat up" in a second place is exactly that table.
+    //
+    // ONCE: composer rows never enter `buildWorkoutsFromCoach`, so this is the
+    // only place the law reaches them. The adapter's own rows are deloaded on
+    // its side, as they always were.
+    //
+    // A day the instruction does not govern gets `null` and is untouched —
+    // which is what keeps an ordinary week byte-identical.
+    const policy = context.deloadPolicyForDay?.(day.dayOfWeek) ?? null;
+    const exercises = policy
+      ? applyStrengthDeloadToExercises(composedRows, policy)
+      : composedRows;
     return {
       id: workoutId,
       microcycleId: context.microcycleId,
       dayOfWeek: day.dayOfWeek,
       name: day.name,
       description: '',
-      intensity: 'High',
+      // A deloaded day is not a High-intensity day. The intensity ceiling is
+      // the policy's, not the composer's optimism.
+      intensity: policy ? 'Moderate' : 'High',
       workoutType: day.workoutType,
       sessionTier: day.sessionTier,
       planEntryId: day.planEntryId,
       durationMinutes: 0,
-      exercises: day.rows.map((row, index) => materialiseRow(row, workoutId, index)),
+      exercises,
       ...(gaps.length > 0 ? { composedGaps: gaps } : {}),
     } as unknown as Workout;
   });

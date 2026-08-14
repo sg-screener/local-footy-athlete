@@ -61,6 +61,15 @@ import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContra
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
+// THE DELOAD OWNER, READ NOT REIMPLEMENTED — the same two resolvers the
+// retained adapter uses, so a composed week answers to one table and not a
+// second copy of it.
+import {
+  resolveDeloadWeekPolicy,
+  resolveDoorDeloadPolicy,
+  type DeloadWeekPolicy,
+} from '../../rules/deloadWeekRules';
+import { isDateInReadinessDeloadWindow } from '../../rules/readinessIllnessLaw';
 import { generatedWeekContractFrom } from '../../rules/generatedWeekContract';
 import {
   generatedWeekFailureSignature,
@@ -799,10 +808,38 @@ export function buildGeneratedMicrocycles(args: {
       // The composer's own rows, materialised directly. No re-dosing, no
       // rotation, no identity rewrite — `assembleAuthoredWeek` lays them onto
       // the adapter's day, which keeps everything non-strength it built.
+      // ── THE GOVERNED DOSE INSTRUCTION, RESOLVED ONCE BY THE EXISTING OWNER ──
+      //
+      // Same two resolvers `buildWorkoutsFromCoach` uses, in the same order and
+      // for the same reason: the readiness and illness doors are not
+      // phase-gated, so routing them through the scheduled resolver would
+      // silently return null and drop the deload. Nothing here is a second
+      // table — this READS the owner and hands its answer to the composer,
+      // which had been the only week-builder the instruction never reached.
+      const composedDeloadPolicy = doorDeload
+        ? resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: profile.seasonPhase })
+        : resolveDeloadWeekPolicy(profile.seasonPhase, effectiveWeekKind);
+      const composedReadinessWindow = generationConstraints?.readinessDeloadWindow ?? null;
+      const deloadPolicyForDay = (dayOfWeek: number): DeloadWeekPolicy | null => {
+        if (!composedDeloadPolicy) return null;
+        // R-035: the deload applies to the DAYS IN THE WINDOW, not to the week.
+        // An absent window means every day, and that is load-bearing — the
+        // illness door governs while the fact is active and the scheduled door
+        // governs a whole authored week; neither carries a window.
+        if (!composedReadinessWindow) return composedDeloadPolicy;
+        return isDateInReadinessDeloadWindow(
+          isoDateForWeekday(blockState.weekStart, dayOfWeek),
+          { startISO: composedReadinessWindow.startISO,
+            endISO: composedReadinessWindow.endISO },
+        )
+          ? composedDeloadPolicy
+          : null;
+      };
       const authored = assembleAuthoredWeek({
         composerWorkouts: materialiseComposedWeek(composedWeek, {
           microcycleId,
           weekStartISO: blockState.weekStart,
+          deloadPolicyForDay,
         }),
         adapterWorkouts,
       });
