@@ -402,16 +402,54 @@ function resolvePlane(
 }
 
 /**
- * The shape a composed day takes. The full-body case is decided by the WEEK — it
- * is a property of the plan, not of one day — so it is resolved once and handed
- * in, and `composedDayKind` keeps answering the ordinary question.
+ * IS THIS PLANNED DAY A STRENGTH DAY THE COMPOSER OWNS?
+ *
+ * **The question `composedDayKind !== null` used to answer, and can no longer.**
+ * A `full_body` day now returns null there — because A-versus-B is the WEEK's
+ * choice, not the day's — so using that null as "not a strength day" silently
+ * dropped every full-body day out of the week AND out of
+ * `sessionCount.requested`. The two questions were always different; only the
+ * full-body case made the difference visible.
+ */
+function composedDayIsStrength(intent: StrengthIntent): boolean {
+  return intent.archetype === 'full_body' || composedDayKind(intent) !== null;
+}
+
+/** The planner's strength days, in order. One definition, three readers below. */
+function composedStrengthDays(
+  plannedDays: readonly ComposerPlannedDay[],
+): readonly ComposerPlannedDay[] {
+  return plannedDays.filter((day) => composedDayIsStrength(day.strengthIntent));
+}
+
+/**
+ * DOES THIS WEEK TAKE SAM'S FULL-BODY A/B SHAPE? Decided once for the WEEK,
+ * because A and B alternate and a day cannot know which it is.
+ *
+ * **THERE ARE TWO RULINGS BEHIND THIS AND IT USED TO ENFORCE ONLY ONE.**
+ *
+ *  1. **Every strength night is a club night** (Sam, 2026-08-14): *"either way
+ *     i'd make them full body sessions"*. The athlete has no free night, so the
+ *     lower work rides on the club nights.
+ *  2. **THE WEEK HAS ONLY TWO STRENGTH SESSIONS** — Bible `:94`, verbatim: *"if
+ *     can only do 2 strength sessions should be 2 x full body and those sessions
+ *     should be pretty solid"*. **This one was missing**, and it is not
+ *     conditional on the club: a two-session athlete with two FREE nights got
+ *     whatever split the planner happened to name, which is the case `:94`
+ *     answers directly.
+ *
+ * THE UNION, NOT A REPLACEMENT. Restricting to (2) would regress a three-session
+ * week whose every night is a club night, which (1) already covers; enforcing
+ * only (1) is what left `:94` unread. Both are Sam's and both are cited.
  */
 export function composedWeekIsFullBodyOnClubNights(
   plannedDays: readonly ComposerPlannedDay[],
 ): boolean {
-  const strengthDays = plannedDays.filter(
-    (day) => composedDayKind(day.strengthIntent) !== null);
-  return strengthDays.length > 0 && strengthDays.every((day) => day.isTeamDay);
+  const strengthDays = composedStrengthDays(plannedDays);
+  if (strengthDays.length === 0) return false;
+  // Bible `:94` — two strength sessions are two full-body sessions.
+  if (strengthDays.length === 2) return true;
+  return strengthDays.every((day) => day.isTeamDay);
 }
 
 // ─── THE AUTHORED DOSE — transcribed, not invented ─────────────────────────
@@ -467,10 +505,28 @@ function doseFor(
  * A day's ladder comes from the plan's TYPED intent, never from its NAME.
  * `slotDayKindFor` reads a name, which is right for an oracle judging weeks it
  * did not build; the composer has the plan's own answer in hand.
+ *
+ * ⚠ **IT NO LONGER ANSWERS FOR `full_body`, AND THAT LINE WAS 44 OF THE 60
+ * REFUSALS.** `archetype === 'full_body'` returned `'lower'` — so a day the
+ * planner had explicitly asked to cover **squat, hinge, push AND pull** was given
+ * the five-slot LOWER ladder, and the push and pull it asked for were never
+ * selected. Nothing repaired it and nothing had to: the week then genuinely
+ * trained no push or no pull, and `validateGeneratedWeek` refused it correctly.
+ *
+ * Executed receipt, `Pre-season/3d/club/Full Gym/w1`: two planner days, both
+ * `archetype=full_body plannedPatterns=[squat,hinge,push,pull]`, both composed
+ * `kind=lower`, week refused
+ * `required_safe_patterns_present:push|required_safe_patterns_present:pull|pattern_balance:2`
+ * on a FULL GYM — Bench Press and Pull-Ups legal and unselected.
+ *
+ * A full-body day's shape is a decision about the WEEK (A or B, and they
+ * alternate), so it cannot be answered by a function looking at one day's
+ * intent. `composeWeek` owns that choice; this returns null and says why.
  */
 export function composedDayKind(intent: StrengthIntent): SlotDayKind | null {
   const planned = intent.plannedPatterns ?? [];
-  if (intent.archetype === 'lower' || intent.archetype === 'full_body') return 'lower';
+  if (intent.archetype === 'full_body') return null;   // the WEEK decides A vs B
+  if (intent.archetype === 'lower') return 'lower';
   if (intent.archetype !== 'upper') return null;
   const hasPush = planned.includes('push');
   const hasPull = planned.includes('pull');
@@ -501,15 +557,76 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   const step = Math.max(0, inputs.phaseClock.weekNumber - 1);
   // Sam's full-body shape, decided once for the WEEK — see its own docstring.
   const fullBody = composedWeekIsFullBodyOnClubNights(inputs.plannedDays);
+  // ── WHICH SHAPE THE WEEK'S FIRST FULL-BODY DAY TAKES — R-089, AND IT IS
+  //    DECIDED BY PARITY ──────────────────────────────────────────────────────
+  //
+  // A leads with a SQUAT, B with the matching HINGE, and they alternate. So over
+  // F full-body days, starting at A gives `ceil(F/2)` squats and `floor(F/2)`
+  // hinges — **lawful only when F is EVEN.** An ODD number of full-body days
+  // starting at A always ends the week one squat ahead of its hinges, and every
+  // ordinary `lower` day contributes one of each, so it cannot absorb the excess.
+  //
+  // MEASURED, and this arm is here because the fix above CAUSED it: teaching the
+  // composer to honour a planner-declared `full_body` day took R-089 from 0 to 10
+  // unmatched-squat weeks — `Off-season/4d`, one lower day (`sq1/hi1`) plus ONE
+  // full-body day, which took A and made the week `sq2/hi1`. Both census arms,
+  // including the content arm that reads only the rows, caught it.
+  //
+  // ⚠ SAM'S ORDER IS PRESERVED WHERE HE STATED IT. His sentence is *"Squat and
+  // single leg hip … THEN hinge and single leg knee"* — A first — and he stated it
+  // for the TWO-session athlete. F=2 is even, so that case still opens on A. The
+  // odd case is one he never enumerated, and starting it on B is R-089 (a ruling
+  // he DID make) deciding it, not this composer inventing a preference.
+  // ⚠ **AND AN ODD COUNT CANNOT SATISFY R-089 AT ALL — PROVED, NOT ASSUMED.**
+  //
+  // A adds `squat + single_leg_hip`; B adds `hinge + single_leg_knee`. R-089 is
+  // TWO directional rules (`squat <= hinge` AND `single_leg_knee <=
+  // single_leg_hip`) and Sam's shapes CROSS the pairs — A takes the squat with the
+  // single-leg HIP, B the hinge with the single-leg KNEE. So over an odd number of
+  // full-body days, starting on A leaves a squat unmatched and starting on B
+  // leaves a single-leg knee unmatched. **Enumerated over lower-day counts 0-2 and
+  // full-body counts 1-3: every odd case violates under BOTH starting shapes, and
+  // ordinary `lower` days cannot absorb it because each contributes one of all
+  // four.** Measured live, both ways: starting odd weeks on A gave 10 unmatched
+  // squats; starting them on B gave 22 unmatched single-leg knees.
+  //
+  // A LONE FULL-BODY DAY IS A CASE SAM HAS NOT RULED. His sentence is about the
+  // athlete with TWO sessions — it names a PAIR that covers the lower ladder
+  // between them, and five slots cannot cover it alone. Picking a third shape here
+  // would be this composer writing product law, so the week keeps the planner's
+  // ordinary answer and **refuses with its exact typed blocker** instead. The
+  // question is in the boundary report, for Sam, with the two candidate answers.
+  const fullBodyDayCount = composedStrengthDays(inputs.plannedDays).filter(
+    (day) => fullBody || day.strengthIntent.archetype === 'full_body').length;
+  const fullBodyPairsUp = fullBodyDayCount > 0 && fullBodyDayCount % 2 === 0;
   let fullBodyIndex = 0;
 
   for (const planned of inputs.plannedDays) {
-    const ordinaryKind = composedDayKind(planned.strengthIntent);
-    if (!ordinaryKind) continue;
-    const kind: ComposedDayShape = fullBody
+    if (!composedDayIsStrength(planned.strengthIntent)) continue;
+    // ── WHICH LADDER THIS DAY OWES ──────────────────────────────────────────
+    //
+    // A day is full body when the WEEK takes Sam's A/B shape, **or when the
+    // planner declared that day `full_body` itself.** The second arm is the one
+    // that was missing: `composedDayKind` answered `'lower'` for a `full_body`
+    // archetype, so a day asked to cover squat, hinge, push AND pull got the
+    // five-slot lower ladder and its push and pull were never selected. 44 of
+    // the 60 refusals in the 180-world sweep were that one line.
+    //
+    // A AND B ALTERNATE ACROSS THE WEEK'S FULL-BODY DAYS, which is what keeps
+    // R-089 whole: A leads with a squat, B with the matching hinge. The index
+    // therefore advances on full-body days ONLY — advancing it on every strength
+    // day would let a lower day between two full-body days flip both to A.
+    const isFullBodyDay = fullBodyPairsUp
+      && (fullBody || planned.strengthIntent.archetype === 'full_body');
+    // An UNPAIRED full-body day keeps the ladder it had before this unit — the
+    // lower five — because no shape it could take satisfies R-089 (see above).
+    // That is the honest answer and it is why those worlds still refuse: the
+    // refusal names the missing push or pull, which is exactly the open question.
+    const ordinaryKind = composedDayKind(planned.strengthIntent) ?? 'lower';
+    const kind: ComposedDayShape = isFullBodyDay
       ? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b')
       : ordinaryKind;
-    if (fullBody) fullBodyIndex += 1;
+    if (isFullBodyDay) fullBodyIndex += 1;
     const required: SessionSlot[] = [];
     const rows: ComposedRow[] = [];
     // A pattern is main-lifted ONCE per day. Sam: "any push pull hinge squat
@@ -524,14 +641,19 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // ONE TABLE ANSWERS FOR EVERY SHAPE. This was a three-arm conditional over
     // two private constants plus the table; both constants now live IN the table.
     const shapeSlots = SLOTS_FOR_KIND[kind];
+    // ⚠ THE TEST IS THE DAY, NOT THE WEEK. Both of these read `fullBody` — the
+    // WEEK-level flag — so a day the PLANNER declared `full_body` in an otherwise
+    // ordinary week took the else arm: its lower rows came out accessories
+    // (no main lift for squat or hinge) and its planes never fell back on the
+    // kit. `isFullBodyDay` is the answer to the question both were asking.
     const plannedPatterns = new Set(
-      fullBody
+      isFullBodyDay
         ? shapeSlots.map((slot) => PATTERN_FOR_SLOT[slot]).filter(Boolean) as MainStrengthPattern[]
         : planned.strengthIntent.plannedPatterns ?? []);
 
     for (const declaredSlot of shapeSlots) {
       // The kit outranks the plane preference, and Sam ruled the fallback.
-      const planeChoice = fullBody && OPPOSITE_PLANE[declaredSlot]
+      const planeChoice = isFullBodyDay && OPPOSITE_PLANE[declaredSlot]
         ? resolvePlane(declaredSlot, inputs.kit, excluded)
         : null;
       if (planeChoice) {
@@ -638,8 +760,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     days,
     gaps,
     sessionCount: {
-      requested: inputs.plannedDays.filter(
-        (planned) => composedDayKind(planned.strengthIntent) !== null).length,
+      // Clause (d) counts what the PLANNER asked for. `composedDayKind !== null`
+      // stopped being that question when `full_body` started returning null.
+      requested: composedStrengthDays(inputs.plannedDays).length,
       composed: days.length,
       adjustment: adjustment.length > 0 ? adjustment : null,
     },
