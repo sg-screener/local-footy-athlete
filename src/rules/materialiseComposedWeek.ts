@@ -165,6 +165,21 @@ export function materialiseComposedWeek(
       // the same commit as this line — a field with no reader is the `canOverride`
       // shape and this repo has paid for it once already.
       composedDayShape: day.kind,
+      // ── AND THE DAY'S OWN LADDER, FOR R-087's COVERAGE DAY (2026-08-14) ─────
+      //
+      // The SHAPE alone stopped being enough the moment a full-body day's slots
+      // became *"whatever the week has not covered yet"*. `full_body_coverage` has
+      // no row in `SLOTS_FOR_KIND` that states this day's seven — the table holds
+      // the whole ten-slot weekly set it draws FROM — so a judge with only the kind
+      // would score the day against all ten and invent three misses.
+      //
+      // It is the DECLARED set, before the kit dropped anything, and deliberately
+      // not `requiredSlots` (the filled set), which a judge could only ever find
+      // complete.
+      //
+      // WRITER: here. READER: `ladderCoverageWideCensus`, and the `[shape]` block
+      // in `composerSeveranceTests`. Same commit, as the law requires.
+      composedDeclaredSlots: day.declaredSlots,
       durationMinutes: 0,
       exercises,
       ...(gaps.length > 0 ? { composedGaps: gaps } : {}),

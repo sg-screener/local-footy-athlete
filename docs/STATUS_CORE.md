@@ -264,3 +264,65 @@ to 7, a volume change touching `doseFor`, the exercise cap and §18 counting.
   athlete's day title, but it reaches `CoachScreen`'s LLM context — the coach is
   told a day is "Lower body strength (squat + hinge)" while it holds a bench press
   and pull-ups. The authored label is Sam's to sign.
+
+---
+
+# R-087 BUILT — 2026-08-14, ordered by Sam after he approved the two-day week
+
+**120/180 -> 156/180.** A general full-body day now ASKS THE WEEK what is still
+open (`coverageSlotsForFullBodyDay`): uncovered slots first, in Sam's own
+enumeration order, sized to Bible `:122`'s seven, then R-089's *"squatting and
+hinging again is fine"* for the remainder. R-093's fixed A/B shapes stay, and ONLY
+for their case. **Sam's approved two-day week is byte-identical.**
+
+    worlds built    142 -> 156     refused 38 -> 24     laddered days 338 -> 376
+    deficient         0 -> 0       R-089 squat 0 -> 0 (both arms)
+    bible:parallel   71 -> 65 red, NO NEW RED, 6 newly green (all verified non-vacuous)
+    kit legality     1626 composed rows, 0 illegal; 232 typed gaps across 92 worlds
+
+## THE LESSON, AND IT IS THE ONE WORTH KEEPING
+
+**A NUMBER MOVING THE RIGHT WAY IS NOT EVIDENCE THAT NOTHING ELSE MOVED.** The
+refusal count went exactly where I wanted it — and R-087 had simultaneously broken
+two other rulings that the refusal count could not see:
+
+- **R-080** (muscle-group narrowing) had been safe only because no slot was ever
+  filled twice: *you cannot collide with yourself.* **R-087's coverage day is the
+  first thing in this app that can owe the same slot twice** — R-093's kit fallback
+  repeats an achievable plane — and R-080's only enforcer, `applyPoolRotation`, was
+  deleted in the B2 rebuild. Two days shipped `Band Pull-Apart | Rear Delt Fly`,
+  both `isolation_upper`. Fixed by reading `PoolEntry.group` at selection.
+- **The judge scored 8 days deficient FOR OBEYING R-093.** A ruled plane-repeat
+  looked like a duplicate. Fixed at both ends: the day declares the RESOLVED plane
+  (so a repeat is declared twice — the truth), and `sessionSlotCoverage` compares
+  against declared MULTIPLICITY instead of a flat `> 1`.
+
+**A new capability re-opens rulings that were only ever true by accident.** Before
+adding one, ask which existing law was safe because the old shape made it
+unreachable.
+
+## AND MY OWN PROBES LIED TO ME
+
+`probe-world-detail` indexes composer CALLS by `week - 1`; that is not
+`microcycles[week - 1]`, so its `w2` output is week 1's composition under a w2
+label. `probe-validator-input` prints the LAST validator call — a third week again.
+**I diagnosed one world off the wrong one before noticing.**
+`scripts/probe-census-offenders.ts` exists to replicate the census EXACTLY, and its
+header says so. **When two instruments disagree, build the one that is the gate.**
+
+## STILL RED, NOT MINE, LEFT TO ITS OWNER
+
+`R-089 [CONTENT] single-leg knee` — **2 occurrences, `Pre-season/{5d,6d}/noclub/
+Full Gym/w2`, both `sq2/hi2 slk3/slh2`.** The composer's rows are `slk2/slh2`; the
+third knee is a `Lateral Lunge` written by `canonical_row_classifier` (the optional
+top-up) on a day the composer does not own. **Both worlds REFUSED at baseline**, so
+this is pre-existing behaviour made visible by them building at all — the same
+shape as this mission's opening finding. It is a CELL regression inside an
+already-red suite, so no suite total shows it; stated explicitly in §1 of the
+report.
+
+## REMAINING REFUSALS — 24 occurrences / 15 distinct profiles, ALL Bodyweight Only
+
+The planner selects an `upper pull emphasis` session for an athlete with nothing to
+pull on, so that day carries no main lift and the main-strength count is short.
+Planner-owned. Untouched, per Sam.

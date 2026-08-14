@@ -352,7 +352,14 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
             // is empty, so `required` is the whole declared ladder exactly as
             // before. That is asserted below, not assumed.
             const kit = resolveEquipmentCapabilities(profile as any).tags;
-            const coverage = sessionSlotCoverage(rows, kind, kit);
+            // R-087: a `full_body_coverage` day carries its OWN ladder, because its
+            // slots are whatever the week had not covered when it was composed —
+            // the same kind of day is a different seven at a different position.
+            // `SLOTS_FOR_KIND` holds the ten-slot set it draws from, so judging by
+            // kind alone would invent three misses on every one of them.
+            const declaredSlots = (workout as { composedDeclaredSlots?: string[] })
+              .composedDeclaredSlots;
+            const coverage = sessionSlotCoverage(rows, kind, kit, declaredSlots as never);
             for (const slot of coverage.filled) {
               if (slot in weekPairs) weekPairs[slot] += 1;
             }

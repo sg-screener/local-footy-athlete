@@ -26,7 +26,9 @@
  * reader is the `canOverride` shape: written nine times, read zero.
  */
 import {
+  FULL_BODY_DAY_SIZE,
   SLOTS_FOR_KIND,
+  WEEKLY_COVERAGE_SET,
   slotsForExerciseName,
   type SessionSlot,
   type SlotDayKind,
@@ -141,7 +143,19 @@ export interface ComposedDay {
   readonly workoutType: string;
   readonly sessionTier: string;
   readonly kind: ComposedDayShape;
+  /** The slots this day FILLED. */
   readonly requiredSlots: readonly SessionSlot[];
+  /**
+   * The slots this day DECLARED it owed, before the kit dropped any — R-087.
+   *
+   * **`requiredSlots` cannot serve the judge and this can.** `requiredSlots` is
+   * the filled set, so a judge reading it is satisfied by construction. And a
+   * `full_body_coverage` day has no static table to be judged against at all: its
+   * ladder is *"whatever the week has not covered yet"*, a different seven
+   * depending on where in the week it sits, so the declaration has to travel with
+   * the day or be lost.
+   */
+  readonly declaredSlots: readonly SessionSlot[];
   readonly rows: readonly ComposedRow[];
 }
 
@@ -234,6 +248,27 @@ const POOL_SLOT_FOR_LADDER_SLOT: Partial<Record<SessionSlot, PoolSlotKey>> = {
  * move to the back. Measured: this is what puts `Goblet Squat` ahead of
  * `Bodyweight Squat` for a dumbbell athlete.
  */
+/**
+ * ⚠ R-080's MUSCLE GROUP, READ FROM THE POOL ENTRY THAT AUTHORS IT.
+ *
+ * *"rotation is variety WITHIN a muscle group, never across one"* — the rule whose
+ * only enforcer, `applyPoolRotation`, was deleted in the B2 rebuild. The composer
+ * did not need it while every ladder slot took exactly ONE row: you cannot collide
+ * with yourself.
+ *
+ * **R-087's coverage day broke that assumption on 2026-08-14.** When a plane is
+ * kit-impossible, R-093's *"yes repeat achievable pull plane"* makes the day owe
+ * the SAME slot twice — and on a dumbbell kit the first two horizontal-pull
+ * accessories are `Band Pull-Apart` and `Rear Delt Fly`, **both `isolation_upper`**.
+ * Measured: 2 days across 2 worlds took two rows from one slot AND one group,
+ * which is exactly the `Bicep Curl | Hammer Curl` shape R-080 exists to stop.
+ */
+const POOL_GROUP_OF: ReadonlyMap<ComposedExerciseIdentity, string> = new Map(
+  (Object.keys(STRENGTH_POOLS) as PoolSlotKey[]).flatMap((poolSlot) =>
+    [...STRENGTH_POOLS[poolSlot].anchor.entries, ...STRENGTH_POOLS[poolSlot].accessory.entries]
+      .filter((entry) => typeof entry.group === 'string')
+      .map((entry) => [composedIdentityFor(entry.name), entry.group as string] as const)));
+
 const UNLOADED_POOL_IDENTITIES: ReadonlySet<ComposedExerciseIdentity> = new Set(
   (Object.keys(STRENGTH_POOLS) as PoolSlotKey[]).flatMap((poolSlot) =>
     [...STRENGTH_POOLS[poolSlot].anchor.entries, ...STRENGTH_POOLS[poolSlot].accessory.entries]
@@ -366,6 +401,95 @@ export function kitUnachievablePatterns(
  * laddered days in the 180-world sweep were that, and none of them was a missing
  * exercise. Sam's sentence is quoted at the new home, once.
  */
+
+/**
+ * ── R-087: WHAT A GENERAL FULL-BODY DAY OWES — IT ASKS THE WEEK ─────────────
+ *
+ * Sam, 2026-08-13, ruling on which slots a full-body day carries:
+ * *"depends what's in the rest of the week / each week should contain all the main
+ * lifts i.e. squat, hinge, single leg knee, single leg hip, push pull in both
+ * horizontal and vertical then accessories for uppers and lowers and some core"* ·
+ * **THE WEEK IS THE UNIT OF COVERAGE, NOT THE DAY. A FULL BODY DAY HAS NO FIXED
+ * TEMPLATE.**
+ *
+ * And the part that decides the shape of this function rather than its numbers:
+ * *"A full body day placed after a lower day that already ran squat and hinge is a
+ * DIFFERENT SEVEN from a full body day that is the week's first strength
+ * session … Any fix that hardcodes a full-body row list, however carefully chosen,
+ * contradicts this ruling on the day it lands."*
+ *
+ * **SO THIS TAKES `covered` AND RETURNS A DIFFERENT ANSWER FOR THE SAME DAY.**
+ * It is the difference between R-093's two fixed shapes — which stay, because they
+ * are Sam's specific answer for the athlete whose every gym night is a club night
+ * — and the general case, which had no answer at all and fell back to the lower
+ * ladder.
+ *
+ * ## UNCOVERED FIRST, THEN REPEAT — HIS PRIORITY ORDER, NOT A NEW ONE
+ *
+ * R-089 gives the order outright: *"if the lower day didnt have the single leg hip
+ * or single leg knee then i'd rather put them on the wednesday"* (uncovered first)
+ * *"but if it did then yes squatting and hinging again is fine"* (then repeat).
+ * So a week whose set is already covered does not shrink the day — it fills the
+ * remaining rows by walking the same order again.
+ *
+ * ## WHY R-089 SURVIVES THIS WITHOUT A SPECIAL CASE
+ *
+ * `WEEKLY_COVERAGE_SET` puts `hinge` immediately after `squat` and
+ * `single_leg_hip` immediately after `single_leg_knee`. Walking it in order can
+ * therefore only ever leave a pattern unmatched by stopping BETWEEN a pair — so
+ * the one guard needed is that the day does not end mid-pair. That is checked
+ * against the WEEK's running counts, because R-089's unit is the week: a second
+ * squat is lawful when the week already owes it a second hinge.
+ */
+const R089_PARTNER: Partial<Record<SessionSlot, SessionSlot>> = {
+  squat: 'hinge',
+  hinge: 'squat',
+  single_leg_knee: 'single_leg_hip',
+  single_leg_hip: 'single_leg_knee',
+};
+
+export function coverageSlotsForFullBodyDay(args: {
+  /** Slots the week's earlier composed days already filled. */
+  readonly covered: ReadonlySet<SessionSlot>;
+  /** The week's running pair counts, for the R-089 check. */
+  readonly pairCounts: Readonly<Record<string, number>>;
+  readonly size?: number;
+}): readonly SessionSlot[] {
+  const size = args.size ?? FULL_BODY_DAY_SIZE;
+  const chosen: SessionSlot[] = [];
+  // Pass 1 — the slots the week has not covered, in Sam's order.
+  // Pass 2 — R-089's "squatting and hinging again is fine": walk the same order
+  //          again for whatever rows are left, so a covered week still gets a
+  //          full-sized session rather than a short one.
+  for (const pass of [0, 1]) {
+    for (const slot of WEEKLY_COVERAGE_SET) {
+      if (chosen.length >= size) break;
+      if (pass === 0 && args.covered.has(slot)) continue;
+      if (chosen.includes(slot)) continue;
+      chosen.push(slot);
+    }
+  }
+  // ── THE ONE GUARD: NEVER END MID-PAIR (R-089) ────────────────────────────
+  //
+  // Walking a paired order can only unbalance a pattern by stopping between a
+  // squat and its hinge. Judged against the WEEK's totals, not the day's, because
+  // a second squat is lawful exactly when the week already owes a second hinge.
+  const projected: Record<string, number> = { ...args.pairCounts };
+  for (const slot of chosen) {
+    if (slot in R089_PARTNER) projected[slot] = (projected[slot] ?? 0) + 1;
+  }
+  return chosen.filter((slot) => {
+    const partner = R089_PARTNER[slot];
+    if (!partner) return true;
+    // Directional, exactly as Sam stated it: squats are bounded by hinges and
+    // single-leg knees by single-leg hips, never the other way round.
+    const bounded = slot === 'squat' || slot === 'single_leg_knee';
+    if (!bounded) return true;
+    if ((projected[slot] ?? 0) <= (projected[partner] ?? 0)) return true;
+    projected[slot] -= 1;
+    return false;
+  });
+}
 
 /** The other plane of the same pattern. Used only for the kit-relative fallback. */
 const OPPOSITE_PLANE: Partial<Record<SessionSlot, SessionSlot>> = {
@@ -506,8 +630,13 @@ function doseFor(
  * `slotDayKindFor` reads a name, which is right for an oracle judging weeks it
  * did not build; the composer has the plan's own answer in hand.
  *
- * ⚠ **IT NO LONGER ANSWERS FOR `full_body`, AND THAT LINE WAS 44 OF THE 60
- * REFUSALS.** `archetype === 'full_body'` returned `'lower'` — so a day the
+ * ⚠ **IT NO LONGER ANSWERS FOR `full_body`. MEASURED, IN THE UNITS THE CENSUS
+ * ACTUALLY REPORTS: that line's refusal family was 36 OCCURRENCES ACROSS 24
+ * DISTINCT PROFILES of the 60 baseline refusals; fixing it and R-087 together
+ * resolved all 36 and took the corpus 120/180 -> 156/180.** (An earlier draft of
+ * this comment said "44 of the 60" — a number no run produced. Occurrences and
+ * distinct profiles are different units and both are stated here on purpose.)
+ * `archetype === 'full_body'` returned `'lower'` — so a day the
  * planner had explicitly asked to cover **squat, hinge, push AND pull** was given
  * the five-slot LOWER ladder, and the push and pull it asked for were never
  * selected. Nothing repaired it and nothing had to: the week then genuinely
@@ -557,77 +686,72 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   const step = Math.max(0, inputs.phaseClock.weekNumber - 1);
   // Sam's full-body shape, decided once for the WEEK — see its own docstring.
   const fullBody = composedWeekIsFullBodyOnClubNights(inputs.plannedDays);
-  // ── WHICH SHAPE THE WEEK'S FIRST FULL-BODY DAY TAKES — R-089, AND IT IS
-  //    DECIDED BY PARITY ──────────────────────────────────────────────────────
+  // ── R-093's TWO FIXED SHAPES, AND R-087's GENERAL RULE — THEY ARE DIFFERENT
+  //    RULINGS AND THEY ANSWER DIFFERENT ATHLETES ─────────────────────────────
   //
-  // A leads with a SQUAT, B with the matching HINGE, and they alternate. So over
-  // F full-body days, starting at A gives `ceil(F/2)` squats and `floor(F/2)`
-  // hinges — **lawful only when F is EVEN.** An ODD number of full-body days
-  // starting at A always ends the week one squat ahead of its hinges, and every
-  // ordinary `lower` day contributes one of each, so it cannot absorb the excess.
+  // R-093 (Sam, 2026-08-14) names TWO shapes, A and B, for the athlete whose every
+  // gym night is a club night — or who has only two strength sessions (Bible `:94`).
+  // They alternate, A leads with a squat and B with the matching hinge, so the PAIR
+  // covers the lower ladder between them and R-089 comes out whole.
   //
-  // MEASURED, and this arm is here because the fix above CAUSED it: teaching the
-  // composer to honour a planner-declared `full_body` day took R-089 from 0 to 10
-  // unmatched-squat weeks — `Off-season/4d`, one lower day (`sq1/hi1`) plus ONE
-  // full-body day, which took A and made the week `sq2/hi1`. Both census arms,
-  // including the content arm that reads only the rows, caught it.
+  // R-087 (Sam, 2026-08-13) governs every OTHER full-body day: *"THE WEEK IS THE
+  // UNIT OF COVERAGE, NOT THE DAY. A FULL BODY DAY HAS NO FIXED TEMPLATE"*, and it
+  // pre-refuses exactly the mistake of extending A/B to cover the general case —
+  // *"Any fix that hardcodes a full-body row list, however carefully chosen,
+  // contradicts this ruling on the day it lands."*
   //
-  // ⚠ SAM'S ORDER IS PRESERVED WHERE HE STATED IT. His sentence is *"Squat and
-  // single leg hip … THEN hinge and single leg knee"* — A first — and he stated it
-  // for the TWO-session athlete. F=2 is even, so that case still opens on A. The
-  // odd case is one he never enumerated, and starting it on B is R-089 (a ruling
-  // he DID make) deciding it, not this composer inventing a preference.
-  // ⚠ **AND AN ODD COUNT CANNOT SATISFY R-089 AT ALL — PROVED, NOT ASSUMED.**
+  // **SO A GENERAL FULL-BODY DAY ASKS THE WEEK WHAT IS STILL OPEN**, via
+  // `coverageSlotsForFullBodyDay`, and gets a different seven depending on where in
+  // the week it sits. That is R-087's own example, implemented rather than quoted.
   //
-  // A adds `squat + single_leg_hip`; B adds `hinge + single_leg_knee`. R-089 is
-  // TWO directional rules (`squat <= hinge` AND `single_leg_knee <=
-  // single_leg_hip`) and Sam's shapes CROSS the pairs — A takes the squat with the
-  // single-leg HIP, B the hinge with the single-leg KNEE. So over an odd number of
-  // full-body days, starting on A leaves a squat unmatched and starting on B
-  // leaves a single-leg knee unmatched. **Enumerated over lower-day counts 0-2 and
-  // full-body counts 1-3: every odd case violates under BOTH starting shapes, and
-  // ordinary `lower` days cannot absorb it because each contributes one of all
-  // four.** Measured live, both ways: starting odd weeks on A gave 10 unmatched
-  // squats; starting them on B gave 22 unmatched single-leg knees.
-  //
-  // A LONE FULL-BODY DAY IS A CASE SAM HAS NOT RULED. His sentence is about the
-  // athlete with TWO sessions — it names a PAIR that covers the lower ladder
-  // between them, and five slots cannot cover it alone. Picking a third shape here
-  // would be this composer writing product law, so the week keeps the planner's
-  // ordinary answer and **refuses with its exact typed blocker** instead. The
-  // question is in the boundary report, for Sam, with the two candidate answers.
-  const fullBodyDayCount = composedStrengthDays(inputs.plannedDays).filter(
-    (day) => fullBody || day.strengthIntent.archetype === 'full_body').length;
-  const fullBodyPairsUp = fullBodyDayCount > 0 && fullBodyDayCount % 2 === 0;
+  // ⚠ THIS REPLACED A PARITY GATE, AND THE GATE EXISTED BECAUSE A/B CANNOT DO THIS
+  // JOB. A adds `squat + single_leg_hip`, B adds `hinge + single_leg_knee` — the two
+  // shapes CROSS R-089's two pairs — so an ODD number of A/B days leaves either a
+  // squat or a single-leg knee unmatched, for any number of lower days. Measured
+  // both ways when this seat tried it: 10 unmatched squats starting odd weeks on A,
+  // 22 unmatched single-leg knees starting them on B. Coverage selection has no such
+  // failure mode because it walks a PAIRED order and never ends mid-pair.
   let fullBodyIndex = 0;
+  // What the week has covered SO FAR — R-087's input, accumulated in plan order,
+  // because *"a full body day placed after a lower day that already ran squat and
+  // hinge is a DIFFERENT SEVEN from a full body day that is the week's first
+  // strength session."*
+  const coveredThisWeek = new Set<SessionSlot>();
+  const weekPairCounts: Record<string, number> = {
+    squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0 };
 
   for (const planned of inputs.plannedDays) {
     if (!composedDayIsStrength(planned.strengthIntent)) continue;
     // ── WHICH LADDER THIS DAY OWES ──────────────────────────────────────────
     //
-    // A day is full body when the WEEK takes Sam's A/B shape, **or when the
-    // planner declared that day `full_body` itself.** The second arm is the one
-    // that was missing: `composedDayKind` answered `'lower'` for a `full_body`
-    // archetype, so a day asked to cover squat, hinge, push AND pull got the
-    // five-slot lower ladder and its push and pull were never selected. 44 of
-    // the 60 refusals in the 180-world sweep were that one line.
-    //
-    // A AND B ALTERNATE ACROSS THE WEEK'S FULL-BODY DAYS, which is what keeps
-    // R-089 whole: A leads with a squat, B with the matching hinge. The index
-    // therefore advances on full-body days ONLY — advancing it on every strength
-    // day would let a lower day between two full-body days flip both to A.
-    const isFullBodyDay = fullBodyPairsUp
-      && (fullBody || planned.strengthIntent.archetype === 'full_body');
-    // An UNPAIRED full-body day keeps the ladder it had before this unit — the
-    // lower five — because no shape it could take satisfies R-089 (see above).
-    // That is the honest answer and it is why those worlds still refuse: the
-    // refusal names the missing push or pull, which is exactly the open question.
-    const ordinaryKind = composedDayKind(planned.strengthIntent) ?? 'lower';
-    const kind: ComposedDayShape = isFullBodyDay
+    // Three cases, in this order: R-093's fixed pair, then R-087's coverage day,
+    // then the planner's ordinary ladder. `composedDayKind` used to answer `'lower'`
+    // for a `full_body` archetype — a day asked to cover squat, hinge, push AND
+    // pull got the five-slot lower ladder and its push and pull were never
+    // selected. That family was 36 OCCURRENCES across 24 DISTINCT PROFILES, of
+    // the 60 baseline refusals in the 180-world sweep.
+    const isR093Shape = fullBody;
+    const isCoverageDay = !fullBody
+      && planned.strengthIntent.archetype === 'full_body';
+    const isFullBodyDay = isR093Shape || isCoverageDay;
+    const kind: ComposedDayShape = isR093Shape
       ? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b')
-      : ordinaryKind;
-    if (isFullBodyDay) fullBodyIndex += 1;
+      : isCoverageDay
+        ? 'full_body_coverage'
+        : composedDayKind(planned.strengthIntent) ?? 'lower';
+    if (isR093Shape) fullBodyIndex += 1;
     const required: SessionSlot[] = [];
+    // ── WHAT THE DAY DECLARES IT OWES, AFTER THE KIT HAS HAD ITS SAY ────────
+    //
+    // The RESOLVED slot, one entry per row the day owes — so **a plane repeated
+    // under R-093's *"yes repeat achievable pull plane"* is declared TWICE**, which
+    // is the truth: a bodyweight full-body day owes two horizontal pushes because
+    // its vertical push cannot be trained at all. Handing the judge the PREFERRED
+    // slots instead made every one of those days read `dup: [horizontal_push]` — 8
+    // laddered days across 4 worlds scored deficient for obeying a ruling.
+    const declaredForJudge: SessionSlot[] = [];
+    /** R-080, per DAY and per SLOT — see `POOL_GROUP_OF`. */
+    const groupsUsedBySlot = new Map<SessionSlot, Set<string>>();
     const rows: ComposedRow[] = [];
     // A pattern is main-lifted ONCE per day. Sam: "any push pull hinge squat
     // single leg knee single leg hip get the main lift role there" — with guard
@@ -638,9 +762,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // this case was upper-only and Sam has overruled it, so asking the plan
     // which patterns the day carries would re-impose the ruling he replaced —
     // and every lower row would come out an accessory.
-    // ONE TABLE ANSWERS FOR EVERY SHAPE. This was a three-arm conditional over
-    // two private constants plus the table; both constants now live IN the table.
-    const shapeSlots = SLOTS_FOR_KIND[kind];
+    // THE TABLE ANSWERS FOR EVERY FIXED SHAPE; R-087's COVERAGE DAY ANSWERS FOR
+    // ITSELF. `SLOTS_FOR_KIND['full_body_coverage']` is deliberately the whole
+    // ten-slot weekly set — the ladder the day draws FROM — so it must never be
+    // used as the day's own seven. That is what this branch exists to prevent.
+    const shapeSlots = isCoverageDay
+      ? coverageSlotsForFullBodyDay({
+        covered: coveredThisWeek,
+        pairCounts: weekPairCounts,
+      })
+      : SLOTS_FOR_KIND[kind];
     // ⚠ THE TEST IS THE DAY, NOT THE WEEK. Both of these read `fullBody` — the
     // WEEK-level flag — so a day the PLANNER declared `full_body` in an otherwise
     // ordinary week took the else arm: its lower rows came out accessories
@@ -669,6 +800,11 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           });
         }
         if (!planeChoice.slot) continue;
+        // The plane the day will actually train — the preferred one, or the
+        // repeat. Declared here so the judge counts the repeat as owed.
+        declaredForJudge.push(planeChoice.slot);
+      } else {
+        declaredForJudge.push(declaredSlot);
       }
       const slot = planeChoice?.slot ?? declaredSlot;
       const pattern = PATTERN_FOR_SLOT[slot] ?? null;
@@ -694,8 +830,25 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       required.push(slot);
       const fresh = legal.filter((id) => !usedThisWeek.has(id));
       const choices = fresh.length > 0 ? fresh : legal;
-      const identity = choices[step % choices.length];
+      // ── R-080: A REPEATED SLOT MAY NOT REPEAT ITS MUSCLE GROUP ────────────
+      //
+      // Only reachable when the day owes the SAME slot twice — R-093's kit
+      // fallback. Preference, not a veto: if every remaining candidate shares the
+      // group, the row is still authored, because R-083 disclosing a gap is one
+      // thing and leaving a declared slot silently empty is another.
+      const groupsUsedHere = groupsUsedBySlot.get(slot) ?? new Set<string>();
+      const differentGroup = choices.filter((id) => {
+        const group = POOL_GROUP_OF.get(id);
+        return !group || !groupsUsedHere.has(group);
+      });
+      const preferred = differentGroup.length > 0 ? differentGroup : choices;
+      const identity = preferred[step % preferred.length];
       usedThisWeek.add(identity);
+      const chosenGroup = POOL_GROUP_OF.get(identity);
+      if (chosenGroup) {
+        groupsUsedHere.add(chosenGroup);
+        groupsUsedBySlot.set(slot, groupsUsedHere);
+      }
       // ── B1-M1: THE DOSE IS RESOLVED HERE, NOT DOWNSTREAM ────────────────
       // `doseFor` is the composer's authored fallback band; where a ruling
       // owns the row — a main lift's phase scheme, U-1's loaded band, U-3's
@@ -743,6 +896,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       adjustment.push({ reason: 'no_trainable_slot_on_this_kit', dayOfWeek: planned.dayOfWeek });
       continue;
     }
+    // ── R-087's ACCUMULATOR, UPDATED FROM WHAT THIS DAY ACTUALLY FILLED ──────
+    //
+    // `required` — not `shapeSlots` — because a slot the kit could not fill was
+    // never trained and must stay OPEN for a later day. Crediting a declared-but-
+    // empty slot as covered is how a bodyweight week would talk itself out of ever
+    // training a pattern it can reach on another day.
+    for (const slot of required) {
+      coveredThisWeek.add(slot);
+      if (slot in weekPairCounts) weekPairCounts[slot] += 1;
+    }
     days.push({
       dayOfWeek: planned.dayOfWeek,
       planEntryId: planned.planEntryId,
@@ -751,6 +914,12 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       sessionTier: planned.sessionTier,
       kind,
       requiredSlots: required,
+      // The day's OWN ladder as DECLARED, before the kit dropped anything. The
+      // judge needs this and not `requiredSlots`: `requiredSlots` is what was
+      // filled, so judging against it would be satisfied by construction and could
+      // never report a miss. R-087's coverage day has no static table to fall back
+      // on, which is why it travels with the day.
+      declaredSlots: declaredForJudge,
       rows,
     });
   }
