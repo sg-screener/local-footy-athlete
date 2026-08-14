@@ -439,6 +439,27 @@ console.log('\n[e2e] Composer output == stored == hydrated, per world; and a ref
   const mismatches: string[] = [];
   const leaked: string[] = [];
   const rewritten: string[] = [];
+  const groupCollisions: string[] = [];
+  // The muscle-group table, read from the pools themselves so the guard cannot
+  // drift from the data it is about.
+  const poolGroupOf = new Map<string, string>();
+  const mixedGroupSlots = new Set<string>();
+  {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { STRENGTH_POOLS } = require('../data/exercisePoolsStrength');
+    for (const slotKey of Object.keys(STRENGTH_POOLS)) {
+      for (const role of ['anchor', 'accessory']) {
+        const entries = STRENGTH_POOLS[slotKey][role]?.entries ?? [];
+        const groups = new Set<string>();
+        for (const entry of entries) {
+          if (!entry.group) continue;
+          poolGroupOf.set(entry.name, entry.group);
+          groups.add(entry.group);
+        }
+        if (groups.size > 1) mixedGroupSlots.add(`${slotKey}:${role}`);
+      }
+    }
+  }
   const byPhase: Record<string, { built: number; refused: number }> = {};
   for (const spec of WORLDS) {
     const phaseKey = spec.id.split('/')[0];
@@ -463,6 +484,42 @@ console.log('\n[e2e] Composer output == stored == hydrated, per world; and a ref
     const hydrated = semanticShape(
       JSON.parse(JSON.stringify(microcycle.workouts)) as Workout[]);
     if (stored !== hydrated) mismatches.push(`${spec.id}: stored != hydrated`);
+    // ── R-080's MUSCLE-GROUP RULE, RE-HOMED (2026-08-14) ────────────────────
+    //
+    // **`PoolEntry.group` lost its only reader when `applyPoolRotation` was
+    // deleted**, and that function was the enforcement point for Sam's
+    // narrowing: rotation is variety WITHIN a muscle group, never across one.
+    // The measured defect it prevented was a day getting
+    // `Bicep Curl | Bicep Curl (DB) | Hammer Curl` — three biceps, no triceps.
+    //
+    // **MEASURED 2026-08-14 across 120 built worlds / 378 days: the shape does
+    // not occur.** 200 days take two composer rows from one (slot, role), and
+    // NOT ONE takes both from the same group — the composer selects one row per
+    // ladder slot off an ordered bench rather than rotating a list, so the
+    // defect is unreachable by construction. **But unreachable-by-construction
+    // is not recorded until something checks it** (LAW ZERO), so the property
+    // is asserted here rather than left to be re-discovered.
+    for (const workout of microcycle.workouts as Workout[]) {
+      const composedBySlot = new Map<string, string[]>();
+      for (const row of workout.exercises ?? []) {
+        if (row.section18Evidence?.provenance !== 'composer_declaration') continue;
+        const name = String(row.exercise?.name ?? '');
+        const cls = classifyPoolSlot(name);
+        if (!cls) continue;
+        const key = `${cls.slot}:${cls.role}`;
+        composedBySlot.set(key, [...(composedBySlot.get(key) ?? []), name]);
+      }
+      for (const [key, names] of composedBySlot) {
+        if (names.length < 2) continue;
+        const groups = new Set(names.map((name) => poolGroupOf.get(name) ?? null));
+        // Only a slot that MIXES groups can break the rule; a slot whose entries
+        // are all one thing (every squat anchor is a squat) needs no narrowing.
+        if (!mixedGroupSlots.has(key)) continue;
+        if (groups.size === 1 && !groups.has(null)) {
+          groupCollisions.push(`${spec.id} d${workout.dayOfWeek} ${key}: ${names.join(' | ')}`);
+        }
+      }
+    }
     for (const workout of microcycle.workouts as Workout[]) {
       (workout.exercises ?? []).forEach((row, index) => {
         const kind = classifyGeneratedWorkoutRow({
@@ -536,6 +593,13 @@ console.log('\n[e2e] Composer output == stored == hydrated, per world; and a ref
         .map((line) => line.split(': ')[1]?.split(' [')[0]))]));
   ok('[BUILT] no stored row was rewritten after composition — declared pattern agrees with the lift',
     rewritten.length === 0, rewritten.slice(0, 5).join('\n      '));
+  ok('[R-080] the muscle-group narrowing still holds, now that its only enforcer is deleted',
+    groupCollisions.length === 0,
+    `${groupCollisions.length} day(s) took two rows from one slot AND one group:\n      `
+    + groupCollisions.slice(0, 5).join('\n      '));
+  ok('[R-080] the guard is non-vacuous — the pools really do mix groups',
+    mixedGroupSlots.size > 0 && poolGroupOf.size > 0,
+    `${mixedGroupSlots.size} mixed slots, ${poolGroupOf.size} grouped entries`);
   ok('[REFUSED] every refusal carried a typed signature and stored nothing',
     leaked.filter((line) => line.includes('refusal')).length === 0,
     leaked.filter((line) => line.includes('refusal')).slice(0, 5).join('\n      '));

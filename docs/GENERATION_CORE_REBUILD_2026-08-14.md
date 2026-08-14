@@ -231,6 +231,38 @@ agree instead of disagreeing on one field forever.
    deleted) and its npm script; cells across 9 suites whose subject was the
    deleted pipeline.
 
+### ⚠ A RULING LOST ITS ENFORCER WHEN `applyPoolRotation` WENT — MEASURED, THEN RE-HOMED
+
+`PoolEntry.group` carries Sam's narrowing: **rotation is variety WITHIN a muscle
+group, never across one** (R-080; the measured defect was a day getting
+`Bicep Curl | Bicep Curl (DB) | Hammer Curl` — three biceps, no triceps).
+**`applyPoolRotation` was its only reader**, so deleting the rotation engine left
+the ruling enforced by nothing. `selectPoolEntry` / `selectPoolEntryAvoiding`
+index straight across a slot and do not narrow.
+
+**MEASURED before deciding anything — 120 built worlds, 378 days:**
+
+| | |
+| --- | ---: |
+| pool entries declaring a group | 40 |
+| slots that MIX groups | 4 (`squat`/`hinge`/`isolation_upper`/`isolation_lower` accessory) |
+| max composer rows from ONE (slot, role) on a day | 2 |
+| days taking 2 rows from one slot | 200 |
+| **days taking both from the SAME group (the R-080 shape)** | **0** |
+
+The composer selects one row per ladder slot off an ordered bench instead of
+rotating a list, so the defect is unreachable by construction. **But
+unreachable-by-construction is not RECORDED until something checks it (LAW
+ZERO)**, so the property is now asserted over the severance suite's own
+192-world corpus, with a non-vacuity cell beside it. **Mutation-proven:**
+widening the detection to `groups.size >= 1` reds it (72/1), restoring returns
+73/0.
+
+**Still gone and reported, not papered over:** the anchor→accessory equipment
+role fallback that lived inside `applyPoolRotation` is a CAPABILITY that went
+with it, not merely a test. Nothing in the measured worlds needed it, and
+nothing now provides it.
+
 ### ⚠ ONE THING I DELETED AND HAD TO PUT BACK — CAUGHT BY `test:compile`
 
 `legacyMigrationFallbackProfile` looked like a pipeline member and is not.

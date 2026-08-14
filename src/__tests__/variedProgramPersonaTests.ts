@@ -56,7 +56,7 @@ import {
 // anywhere in this persona harness, so a refusal is impossible here; it throws
 // rather than capturing an empty name into the variety census, which would read
 // as "the pool repeated itself" and blame the wrong thing.
-function rotatePoolName(
+function resolveFromPool(
   suggestedName: string,
   ctx: RotationContext,
   usedInSession: Map<string, Set<string>>,
@@ -186,8 +186,8 @@ function simulateMultiBlock(blocks: number): Capture {
       for (let i = 0; i < SLOTS.length; i++) {
         const slot = SLOTS[i];
         const usage = new Map<string, Set<string>>();
-        const anchorName = rotatePoolName(sessions[i].exercises[0].name, ctx, usage);
-        const accessoryName = rotatePoolName(sessions[i].exercises[1].name, ctx, usage);
+        const anchorName = resolveFromPool(sessions[i].exercises[0].name, ctx, usage);
+        const accessoryName = resolveFromPool(sessions[i].exercises[1].name, ctx, usage);
         capture[slot][mc - 1].push({ anchor: anchorName, accessory: accessoryName });
       }
     }
@@ -329,6 +329,19 @@ section('7. Slots rotate independently');
 // At mc=2, anchor rotates to the next pool entry. The progression
 // engine should pull the mc=1 performance forward — not reset to
 // bodyweight — via load-ratio normalisation.
+//
+// ⚠ RED SINCE B1-PIVOT (2026-08-14), AND NOT BY THE REWIRE ABOVE. Sections 8
+// and 9 ask `buildWorkoutsFromCoach`, not the pools, and generation-time
+// rotation was deleted from it — `rotatedAiExercises` is now an identity map,
+// so an mc=2 squat session prescribes Back Squat and never reaches Front Squat.
+//
+// LEFT RED ON PURPOSE. Their subject (`buildWorkoutsFromCoach`) is still live,
+// so they are not exclusively-associated with the deleted `applyPoolRotation`
+// and may not be retired here; and the behaviour they guard — a rotated anchor
+// inherits the previous anchor's load instead of resetting the athlete to
+// bodyweight — has no replacement cell anywhere yet. Retiring them would turn a
+// capability regression into silence. Whoever gives the composer an anchor-swap
+// load carry-over owns replacing them.
 // ─────────────────────────────────────────────────────────────────
 section('8. Progression continuity on anchor swap');
 {
