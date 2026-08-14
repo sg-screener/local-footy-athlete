@@ -38,9 +38,13 @@
  *
  * ## ⚠ IF YOU ARE IMPORTING THIS MODULE, READ THIS FIRST
  *
- * `renderWeekAsPlainEnglish` and `projectWithGapsMarked` are exported for reuse
- * (item 66 uses both). Two things happen to the PROCESS when you import them,
- * and neither is visible to the compiler:
+ * `renderWeekAsPlainEnglish`, `projectWithGapsMarked` and `scheduleStateFor` are
+ * exported for reuse (item 66 uses the first two;
+ * `scripts/print-composer-completion-weeks.ts` — seat `core`, 2026-08-14 — uses
+ * all three, and `scheduleStateFor` was made public FOR it rather than copied,
+ * because a second hand-built `ScheduleState` is how the two harness bugs in the
+ * docstring below were born the first time). Two things happen to the PROCESS
+ * when you import them, and neither is visible to the compiler:
  *
  *   1. **`__DEV__` IS SET TO `false`**, below, at module scope — so it happens
  *      during your import and OVERWRITES an importer that set it `true`. That is
@@ -261,7 +265,7 @@ const DAY_NAME_TO_NUMBER: Readonly<Record<string, number>> = {
  * `profileCapacityBandOrNull`, the equipment from `resolveEquipmentAvailability`
  * — so nothing in the output is this script's idea of a default.
  */
-function scheduleStateFor(args: {
+export function scheduleStateFor(args: {
   profile: OnboardingData;
   program: TrainingProgram;
   todayISO: string;
