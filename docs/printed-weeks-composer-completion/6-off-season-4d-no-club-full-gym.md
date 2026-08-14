@@ -48,20 +48,16 @@ _(nothing on this day)_
 
 **Strength**
 
-- Barbell Row — 3 × 8-12
-  - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
-- Lat Pulldown — 3 × 8-10
-  - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
 - Front Squat — 3 × 8-12
   - Elbows high, sit between the heels. Stay tall through the midline.
 - Deadlift — 3 × 8-12
   - Keep bar close, get tight through the lats. Flat back from start to lockout.
-- Cossack Squat — 2 × 12-15
+- Cossack Squat — 3 × 8-12
   - Wide stance, sit onto one leg, other leg straight. Heel down, chest up, push back through. Hold rack if needed.
 - Single-Leg RDL — 3 × 8-10
   - Hinge at the hip, soft knee. Balance and control over speed.
-- Incline Bench — 3 × 8-12
-  - Set the blades on the incline. Press through the palms.
+- Band Pallof Press — 2 × 8-12
+  - Press out, resist the pull. Hips stay square, slight knee and hip bend.
 
 ## Friday 17 July
 
@@ -89,4 +85,4 @@ None. Every word on this page came out of the app.
 
 ## Things wrong with this week
 
-**Every set on this page is written as a range — 15 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 8-12" should read "3 × 10"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
+**Every set on this page is written as a range — 13 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 8-12" should read "3 × 10"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.

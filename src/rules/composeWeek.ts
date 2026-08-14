@@ -403,43 +403,36 @@ export function kitUnachievablePatterns(
  */
 
 /**
- * ── R-087: WHAT A GENERAL FULL-BODY DAY OWES — IT ASKS THE WEEK ─────────────
+ * ── R-087: WHAT A GENERAL FULL-BODY DAY OWES — IT ASKS THE WHOLE WEEK ───────
  *
- * Sam, 2026-08-13, ruling on which slots a full-body day carries:
- * *"depends what's in the rest of the week / each week should contain all the main
- * lifts i.e. squat, hinge, single leg knee, single leg hip, push pull in both
- * horizontal and vertical then accessories for uppers and lowers and some core"* ·
- * **THE WEEK IS THE UNIT OF COVERAGE, NOT THE DAY. A FULL BODY DAY HAS NO FIXED
- * TEMPLATE.**
+ * Sam, 2026-08-13: *"depends what's in the rest of the week / each week should
+ * contain all the main lifts i.e. squat, hinge, single leg knee, single leg hip,
+ * push pull in both horizontal and vertical then accessories for uppers and lowers
+ * and some core"* · **THE WEEK IS THE UNIT OF COVERAGE, NOT THE DAY. A FULL BODY
+ * DAY HAS NO FIXED TEMPLATE.**
  *
- * And the part that decides the shape of this function rather than its numbers:
- * *"A full body day placed after a lower day that already ran squat and hinge is a
- * DIFFERENT SEVEN from a full body day that is the week's first strength
- * session … Any fix that hardcodes a full-body row list, however carefully chosen,
- * contradicts this ruling on the day it lands."*
+ * ## ⚠ THE FIRST BUILD READ "THE REST OF THE WEEK" AS "THE DAYS BEFORE IT", AND
+ *    SAM REJECTED THE WEEK IT PRINTED
  *
- * **SO THIS TAKES `covered` AND RETURNS A DIFFERENT ANSWER FOR THE SAME DAY.**
- * It is the difference between R-093's two fixed shapes — which stay, because they
- * are Sam's specific answer for the athlete whose every gym night is a club night
- * — and the general case, which had no answer at all and fell back to the lower
- * ladder.
+ * *"that's a terrible program — there's no spacing and the volume is way too big
+ * on Monday"* (2026-08-14, on `Pre-season/5d/noclub/Full Gym`).
  *
- * ## UNCOVERED FIRST, THEN REPEAT — HIS PRIORITY ORDER, NOT A NEW ONE
+ * The full-body day was MONDAY, so the accumulated-so-far set was EMPTY, so every
+ * slot read as missing and the day greedily took the first seven of the weekly
+ * ladder — **squat, deadlift, both single-leg compounds, a press and a pull, plus
+ * conditioning, immediately before Tuesday's full lower session.** Tuesday and
+ * Wednesday already covered most of what Monday had just claimed was missing.
  *
- * R-089 gives the order outright: *"if the lower day didnt have the single leg hip
- * or single leg knee then i'd rather put them on the wednesday"* (uncovered first)
- * *"but if it did then yes squatting and hinging again is fine"* (then repeat).
- * So a week whose set is already covered does not shrink the day — it fills the
- * remaining rows by walking the same order again.
+ * **"The rest of the week" INCLUDES THE DAYS AFTER.** A chronological prefix is
+ * not the week, and R-087's own example — *"a full body day placed AFTER a lower
+ * day"* — was an illustration of order mattering, not a licence to ignore
+ * everything downstream.
  *
- * ## WHY R-089 SURVIVES THIS WITHOUT A SPECIAL CASE
- *
- * `WEEKLY_COVERAGE_SET` puts `hinge` immediately after `squat` and
- * `single_leg_hip` immediately after `single_leg_knee`. Walking it in order can
- * therefore only ever leave a pattern unmatched by stopping BETWEEN a pair — so
- * the one guard needed is that the day does not end mid-pair. That is checked
- * against the WEEK's running counts, because R-089's unit is the week: a second
- * squat is lawful when the week already owes it a second hinge.
+ * **AND R-014 GOVERNS THE SIZE:** *"the number of exercises is not important the
+ * total work being done evenly across the body is"*. Bible `:122`'s seven is an
+ * EXAMPLE of a full-body day, not a quota to fill regardless of its neighbours.
+ * So there is no top-up pass any more: the day fills the week's GENUINE gaps and
+ * stops. `FULL_BODY_DAY_SIZE` remains a ceiling, never a target.
  */
 const R089_PARTNER: Partial<Record<SessionSlot, SessionSlot>> = {
   squat: 'hinge',
@@ -448,26 +441,67 @@ const R089_PARTNER: Partial<Record<SessionSlot, SessionSlot>> = {
   single_leg_hip: 'single_leg_knee',
 };
 
+/**
+ * ⚠ **DOES THIS DAY'S GAP SET STILL MAKE A FULL-BODY SESSION?**
+ *
+ * **THE TEST IS DEFINITIONAL, NOT A COUNT.** Sam forbade inventing an exercise or
+ * set cap, and R-014 forbids counting exercises as the measure — *"the number of
+ * exercises is not important the total work being done evenly across the body
+ * is"*. So the question asked here is the only one the name itself answers: **a
+ * FULL BODY day trains the lower body and the upper body.** A gap set that is
+ * upper-only is not a small full-body day, it is not a full-body day.
+ *
+ * **WHY IT IS NEEDED, MEASURED 2026-08-14.** Once the day correctly stopped
+ * over-filling, `Pre-season/5d/noclub/Full Gym`'s genuine week-wide gap was
+ * `{horizontal_pull, vertical_pull}` — Tuesday supplies the whole lower ladder and
+ * Wednesday the presses. Composing that as the planned full-body session publishes
+ * **a "Full body — cover all movement patterns" day containing two rows**, and on
+ * bodyweight a single `Push-ups`. Across the corpus: 10 such days, 8 of two rows
+ * and 2 of one.
+ *
+ * That is a different bad week, not a fix, so the day is NOT composed and the week
+ * keeps its honest typed refusal — Sam's own instruction: *"If this week cannot
+ * become acceptable without that capability, restore its honest refusal rather
+ * than publishing a bad week."* **The missing Thursday-Sunday spacing that would
+ * make these weeks work belongs to the scheduling capability, not the composer.**
+ */
+const LOWER_BODY_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
+  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
+]);
+
+export function coverageGapsMakeAFullBodySession(
+  gaps: readonly SessionSlot[],
+): boolean {
+  const lower = gaps.some((slot) => LOWER_BODY_SLOTS.has(slot));
+  const upper = gaps.some((slot) => slot !== 'accessory_or_core'
+    && !LOWER_BODY_SLOTS.has(slot));
+  return lower && upper;
+}
+
 export function coverageSlotsForFullBodyDay(args: {
-  /** Slots the week's earlier composed days already filled. */
-  readonly covered: ReadonlySet<SessionSlot>;
-  /** The week's running pair counts, for the R-089 check. */
+  /**
+   * Slots the REST OF THE WEEK supplies — every other planned strength day,
+   * before AND after this one, kit-filtered. Not a chronological prefix.
+   */
+  readonly suppliedByOtherDays: ReadonlySet<SessionSlot>;
+  /** Slots an EARLIER coverage day in this same week already took. */
+  readonly takenByEarlierCoverageDays: ReadonlySet<SessionSlot>;
+  /** The week's projected pair counts, for the R-089 check. */
   readonly pairCounts: Readonly<Record<string, number>>;
+  /** A CEILING, never a target — R-014. */
   readonly size?: number;
 }): readonly SessionSlot[] {
   const size = args.size ?? FULL_BODY_DAY_SIZE;
   const chosen: SessionSlot[] = [];
-  // Pass 1 — the slots the week has not covered, in Sam's order.
-  // Pass 2 — R-089's "squatting and hinging again is fine": walk the same order
-  //          again for whatever rows are left, so a covered week still gets a
-  //          full-sized session rather than a short one.
-  for (const pass of [0, 1]) {
-    for (const slot of WEEKLY_COVERAGE_SET) {
-      if (chosen.length >= size) break;
-      if (pass === 0 && args.covered.has(slot)) continue;
-      if (chosen.includes(slot)) continue;
-      chosen.push(slot);
-    }
+  // ONE PASS, AND ONLY THE GENUINE GAPS. The removed second pass walked the
+  // ladder again to pad the day out to seven — which is precisely how Monday came
+  // to carry a squat, a deadlift and both single-leg compounds on top of a week
+  // that already had them on Tuesday.
+  for (const slot of WEEKLY_COVERAGE_SET) {
+    if (chosen.length >= size) break;
+    if (args.suppliedByOtherDays.has(slot)) continue;
+    if (args.takenByEarlierCoverageDays.has(slot)) continue;
+    chosen.push(slot);
   }
   // ── THE ONE GUARD: NEVER END MID-PAIR (R-089) ────────────────────────────
   //
@@ -481,8 +515,6 @@ export function coverageSlotsForFullBodyDay(args: {
   return chosen.filter((slot) => {
     const partner = R089_PARTNER[slot];
     if (!partner) return true;
-    // Directional, exactly as Sam stated it: squats are bounded by hinges and
-    // single-leg knees by single-leg hips, never the other way round.
     const bounded = slot === 'squat' || slot === 'single_leg_knee';
     if (!bounded) return true;
     if ((projected[slot] ?? 0) <= (projected[partner] ?? 0)) return true;
@@ -712,13 +744,45 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // 22 unmatched single-leg knees starting them on B. Coverage selection has no such
   // failure mode because it walks a PAIRED order and never ends mid-pair.
   let fullBodyIndex = 0;
-  // What the week has covered SO FAR — R-087's input, accumulated in plan order,
-  // because *"a full body day placed after a lower day that already ran squat and
-  // hinge is a DIFFERENT SEVEN from a full body day that is the week's first
-  // strength session."*
-  const coveredThisWeek = new Set<SessionSlot>();
   const weekPairCounts: Record<string, number> = {
     squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0 };
+
+  // ── WHAT THE REST OF THE WEEK SUPPLIES — COMPUTED BEFORE ANY DAY IS BUILT ──
+  //
+  // **R-087's "the rest of the week" INCLUDES THE DAYS AFTER, and reading it as a
+  // chronological prefix is what Sam rejected.** With the full-body day on Monday
+  // the prefix is empty, so every slot read as missing and the day took seven —
+  // squat, deadlift, both single-leg compounds and a press and pull — the night
+  // before Tuesday's full lower session, which supplies most of them.
+  //
+  // ACHIEVABLE, NOT DECLARED: a slot an ordinary day names but the athlete's kit
+  // cannot train is NOT supplied, so it stays a genuine gap the full-body day may
+  // fill on a plane the kit CAN reach.
+  const suppliedByDay = new Map<ComposerPlannedDay, ReadonlySet<SessionSlot>>();
+  for (const planned of inputs.plannedDays) {
+    if (!composedDayIsStrength(planned.strengthIntent)) continue;
+    // A coverage day supplies nothing to the others — it is the one ASKING.
+    if (!fullBody && planned.strengthIntent.archetype === 'full_body') continue;
+    const ordinary: ComposedDayShape = fullBody
+      ? 'full_body_a'   // an R-093 week: both shapes together supply the whole ladder
+      : composedDayKind(planned.strengthIntent) ?? 'lower';
+    const declared = fullBody
+      ? [...SLOTS_FOR_KIND.full_body_a, ...SLOTS_FOR_KIND.full_body_b]
+      : SLOTS_FOR_KIND[ordinary];
+    suppliedByDay.set(planned, new Set(declared.filter((slot) =>
+      slotCandidates(slot).some((id) =>
+        !excluded.has(id) && composedRowIsLegal(id, inputs.kit)))));
+  }
+  const suppliedByOtherDays = (self: ComposerPlannedDay): ReadonlySet<SessionSlot> => {
+    const out = new Set<SessionSlot>();
+    for (const [day, slots] of suppliedByDay) {
+      if (day === self) continue;
+      for (const slot of slots) out.add(slot);
+    }
+    return out;
+  };
+  // Two coverage days in one week must not both claim the same gap.
+  const takenByCoverageDays = new Set<SessionSlot>();
 
   for (const planned of inputs.plannedDays) {
     if (!composedDayIsStrength(planned.strengthIntent)) continue;
@@ -731,8 +795,24 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // selected. That family was 36 OCCURRENCES across 24 DISTINCT PROFILES, of
     // the 60 baseline refusals in the 180-world sweep.
     const isR093Shape = fullBody;
-    const isCoverageDay = !fullBody
-      && planned.strengthIntent.archetype === 'full_body';
+    // ── R-087's COVERAGE DAY, AND THE GATE THAT DECIDES IF IT IS ONE ────────
+    //
+    // The gaps are resolved BEFORE the day's role is fixed, because the answer
+    // decides whether this is a full-body day at all. If the week's genuine
+    // week-wide gaps no longer span the body, composing them under a full-body
+    // heading publishes a two-row "Full body" session — so the day keeps the
+    // planner's ordinary ladder and the week refuses honestly instead. See
+    // `coverageGapsMakeAFullBodySession`.
+    const plannedCoverageGaps = !fullBody
+      && planned.strengthIntent.archetype === 'full_body'
+      ? coverageSlotsForFullBodyDay({
+        suppliedByOtherDays: suppliedByOtherDays(planned),
+        takenByEarlierCoverageDays: takenByCoverageDays,
+        pairCounts: weekPairCounts,
+      })
+      : null;
+    const isCoverageDay = plannedCoverageGaps !== null
+      && coverageGapsMakeAFullBodySession(plannedCoverageGaps);
     const isFullBodyDay = isR093Shape || isCoverageDay;
     const kind: ComposedDayShape = isR093Shape
       ? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b')
@@ -766,11 +846,8 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // ITSELF. `SLOTS_FOR_KIND['full_body_coverage']` is deliberately the whole
     // ten-slot weekly set — the ladder the day draws FROM — so it must never be
     // used as the day's own seven. That is what this branch exists to prevent.
-    const shapeSlots = isCoverageDay
-      ? coverageSlotsForFullBodyDay({
-        covered: coveredThisWeek,
-        pairCounts: weekPairCounts,
-      })
+    const shapeSlots = isCoverageDay && plannedCoverageGaps
+      ? plannedCoverageGaps
       : SLOTS_FOR_KIND[kind];
     // ⚠ THE TEST IS THE DAY, NOT THE WEEK. Both of these read `fullBody` — the
     // WEEK-level flag — so a day the PLANNER declared `full_body` in an otherwise
@@ -903,7 +980,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // empty slot as covered is how a bodyweight week would talk itself out of ever
     // training a pattern it can reach on another day.
     for (const slot of required) {
-      coveredThisWeek.add(slot);
+      if (isCoverageDay) takenByCoverageDays.add(slot);
       if (slot in weekPairCounts) weekPairCounts[slot] += 1;
     }
     days.push({

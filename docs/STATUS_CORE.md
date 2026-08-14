@@ -326,3 +326,63 @@ report.
 The planner selects an `upper pull emphasis` session for an athlete with nothing to
 pull on, so that day carries no main lift and the main-strength count is short.
 Planner-owned. Untouched, per Sam.
+
+---
+
+# R-087 CORRECTED — Sam rejected the week, and he was right
+
+*"that's a terrible program — there's no spacing and the volume is way too big on
+Monday."*
+
+**THE BUG WAS ONE WORD OF HIS OWN RULING.** R-087 says a full-body day depends on
+*"the rest of the week"*. I implemented that as **the days BEFORE it**. The
+full-body day was MONDAY, so the accumulated set was empty, every slot read as
+missing, and the day took the first seven of the ladder — squat, deadlift, both
+single-leg compounds, a press and a pull — the night before Tuesday's full lower
+session, which supplies most of them.
+
+**R-014 governs the size and I had it backwards:** *"the number of exercises is not
+important the total work being done evenly across the body is."* Bible `:122`'s
+seven is an EXAMPLE, never a quota.
+
+## THE DISTRIBUTION, BEFORE AND AFTER — `Pre-season/5d/noclub/Full Gym/w1`
+
+    BEFORE  Mon 7 lifts + conditioning | Tue 5 (full lower again) | Wed 3 | Thu-Sun empty
+    AFTER   Mon 2 (Barbell Row, Lat Pulldown) | Tue 5 | Wed 3 | Thu-Sun empty
+    SHIPPED no week — honest refusal
+
+## AND THE CORRECTED ANSWER WAS ALSO NOT SHIPPABLE
+
+A two-row day under a *"Full body — cover all movement patterns"* heading is a
+different bad week. Measured: **10 such days, 8 of two rows and 2 of a single
+`Push-ups`**, and it cost 4 worlds against the checkpoint while gaining none.
+
+So a gate declines them — **definitional, not a count**, because Sam forbade
+inventing a cap and R-014 forbids counting exercises: *does this gap set train the
+lower body AND the upper body?* An upper-only gap set is not a small full-body day.
+
+**ZERO `full_body_coverage` DAYS ARE COMPOSED ACROSS ALL 180 WORLDS.** R-087's
+premise — that such a day has genuine week-wide gaps worth a session — **does not
+hold for any week this planner builds**, because the planner always pairs it with a
+lower day and an upper day that supply the ladder. The blocker is the
+**session-count/scheduling capability**. The 142-world checkpoint is restored
+exactly.
+
+## THE LESSON
+
+**A DORMANT BRANCH STILL NEEDS ITS GUARD.** An unreachable branch with no test is
+what later code trusts. Both functions are called DIRECTLY in
+`composerSeveranceTests` (8 cells, suite 88 -> 96), including a cell that reproduces
+Sam's rejected input and asserts the day comes back pull-only and **does not re-take
+a slot the rest of the week already trains**. That cell would have caught the
+original defect.
+
+**AND: the correction fixed the R-089 single-leg-knee regression for free** (2 -> 0),
+because the two offending worlds now refuse instead of publishing a week whose
+top-up added a third knee.
+
+## FLAKE, RECORDED
+
+`test:census-hook` went red once under the parallel runner; green 3/3 standalone,
+green in both earlier rosters, green on a clean re-run of the full roster. It shells
+to `git` in a temp repo. **Recorded, not counted as a result, not hand-waved.**

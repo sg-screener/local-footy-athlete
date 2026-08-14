@@ -102,13 +102,12 @@ const TARGETS: Target[] = [
     world: 'Pre-season/2d/club/Full Gym/w1',
   },
   {
-    slug: '4-pre-season-5d-no-club-full-gym',
-    title: 'Pre-season, five days, no club — full gym',
+    slug: '4-pre-season-5d-no-club-full-gym-REFUSES',
+    title: 'Pre-season, five days, no club — full gym (REFUSES, and that is the point)',
     whatToLookFor:
-      'This week would not build at all until the full-body day was taught to '
-      + 'ask what the rest of the week is missing. Look at the first day: it is '
-      + 'the one carrying squat, deadlift, single-leg work, a press and a pull. '
-      + 'Is that too much for one session?',
+      'You rejected the version of this week the app printed before: too much on '
+      + 'Monday and no spacing. The app now refuses to build it at all rather '
+      + 'than hand you that week. The reason it gives is printed below.',
     world: 'Pre-season/5d/noclub/Full Gym/w1',
   },
   {

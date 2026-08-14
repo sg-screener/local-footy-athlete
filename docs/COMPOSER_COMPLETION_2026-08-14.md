@@ -56,7 +56,8 @@ archetype to `'lower'`**, so a day explicitly asked to cover squat, hinge, push
 AND pull got the five-slot lower ladder and its push and pull were never
 selected. **That line's refusal family was 36 OCCURRENCES across 24 DISTINCT
 PROFILES of the 60 baseline refusals.** Fixing it, and then building R-087 as Sam
-ordered, resolved all 36 and took the corpus **120/180 → 156/180**.
+ordered, resolved 22 of them and took the corpus **120/180 → 142/180**. The other
+14 are an honest refusal, blocked on the scheduling capability — §5.
 
 ---
 
@@ -66,38 +67,48 @@ Every baseline figure was taken in a **separate clean worktree at `459d6bf9`**
 (`scratchpad/wt-base`), not recalled and not read off the live tree — a control
 run must see the same tree.
 
-| instrument | baseline @ `459d6bf9` | after R-089 + refusals | **FINAL, after R-087** | |
+| instrument | baseline @ `459d6bf9` | over-filling R-087 *(rejected)* | **FINAL — corrected** | |
 | --- | --- | --- | --- | --- |
-| worlds built (of 180) | **120** | 142 | **156** | **+36** |
-| worlds refused | **60** | 38 | **24** | −36 |
-| deficient laddered days | **28** of 294 | 0 of 338 | **0** of 376 | see §7 — circular for composed days |
-| laddered days (breadth) | **294** | 338 | **376** | floor 300 **PASSES** |
-| R-089 unmatched squat (slot arm) | **6** | 0 | **0** | |
-| R-089 unmatched squat (content arm) | *did not exist* | 0 | **0** | new, non-circular |
-| R-089 unmatched single-leg knee (content) | *did not exist* | 0 | **2** | ⚠ **the one cell-level regression — §5** |
+| worlds built (of 180) | **120** | 156 | **142** | **+22** |
+| worlds refused | **60** | 24 | **38** | −22 |
+| deficient laddered days | **28** of 294 | 0 of 376 | **0** of 338 | see §7 — circular for composed days |
+| laddered days (breadth) | **294** | 376 | **338** | floor 300 **PASSES** |
+| R-089 unmatched squat — slot arm | **6** | 0 | **0** | |
+| R-089 unmatched squat — content arm | *did not exist* | 0 | **0** | non-circular |
+| R-089 unmatched single-leg knee — content | *did not exist* | **2** | **0** | the rejected build's regression is gone |
 | `test:ladder-wide` cells | 7/11 | 13/14 | **13/14** | |
-| `test:composer-severance` | 73 / 0 fail | 88 / 0 fail | **88 / 0 fail** | +15 = exactly the new cells |
-| `test:generated-week` | 36 / 0 fail | 36 / 0 fail | **36 / 0 fail** | unchanged |
+| `test:composer-severance` | 73 / 0 fail | 88 / 0 fail | **96 / 0 fail** | +23 cells, all new |
+| `test:generated-week` | 36 / 0 fail | 36 / 0 | **36 / 0 fail** | unchanged |
 | `test:qa` | 168 pass, 10 allowed, 1 policy fail | identical | **identical** | |
 | `test:scenarios` | 1 failed (`G+1_RECOVERY`) | identical | **identical** | |
 | `test:compile` | PASSED, 459 total | PASSED | **PASSED, 459 total** | no file regressed |
-| `test:bible:parallel` (253 suites) | **71 red** | 70 red | **65 red** | **no new red**, **6 newly green** |
+| composed rows legal for kit | — | 1626 / 0 illegal | **1422 / 0 illegal** | 202 typed gaps / 84 worlds |
+| `test:bible:parallel` (253 suites) | **71 red** | 65 red | **70 red** | **no new red**, 1 newly green |
 
-**The six newly-green suites** — `week-identity`, `work-bill`, `projection-ownership`,
-`door-ledger-append`, `g1-landing-ask-flow`, `device-pass-2026-08-05-evening` —
-all assert real cells (6, 13, 29, 5 … passes respectively; checked, because a
-suite that goes green by asserting nothing is this repo's oldest trap).
-`week-identity`'s cause was traced: cell `W6` failed at base with
-`Section 18 final-week rejection (pattern_restore_failure:strength_patterns:0)`,
-a week with no strength patterns at all, which the `full_body` fix supplies.
+**`test:week-identity` is the newly-green suite, and it is attributable.** Cell
+`W6` failed at base with
+`Section 18 final-week rejection (pattern_restore_failure:strength_patterns:0)` —
+a week with no strength patterns at all — which the `full_body` fix supplies.
+8 pass/1 fail → 9 pass/0 fail, verified in both trees.
+
+### ⚠ ONE SUITE FLAKED, AND IT IS NOT COUNTED AS A RESULT
+
+The first roster run after this correction reported `test:census-hook` red. It is
+green **3/3 standalone**, was green in both earlier full rosters, and came back
+green on a clean re-run of the complete roster. The suite shells out to `git` in a
+temporary repo, and the parallel runner runs many git-invoking suites at once.
+**Recorded rather than quietly dropped** — but a one-off under a parallel runner is
+not a result, and the settled comparison above is the clean re-run.
+
+### THE CELL-LEVEL REGRESSION FROM THE PREVIOUS ISSUE IS RESOLVED
 
 ### ⚠ ONE CELL REGRESSED, AND THE SUITE TOTAL HIDES IT
 
-`test:ladder-wide` is red at baseline and red now, so **no suite-level comparison
-would ever show this** — which is why the cells are diffed and not the totals.
-**`R-089 [CONTENT]: no week has more single-leg knee than single-leg hip` went
-PASS → FAIL: 0 → 2 unmatched weeks.** Fully attributed in §5. It is not a
-composer defect and it is not silently absorbed.
+The previous issue reported `R-089 [CONTENT] single-leg knee` going PASS → FAIL
+(0 → 2) inside an already-red suite, where no suite total would show it. **It is
+back to 0.** The two worlds now refuse honestly rather than publishing a week whose
+top-up pass added a third knee — the same correction that answered Sam's rejection.
+The cells are still diffed rather than the totals, which is how it was caught.
 
 ---
 
@@ -255,117 +266,125 @@ circular. It earned its keep inside one commit.
 
 ---
 
-## 5. R-087 — BUILT. A FULL-BODY DAY NOW ASKS THE WEEK WHAT IS OPEN
+## 5. R-087 — CORRECTED AFTER SAM REJECTED THE WEEK IT PRINTED
 
-**REGISTRY-GREP: R-087, R-089, R-080, R-093, R-094.**
+**REGISTRY-GREP: R-087, R-089, R-080, R-014, R-093, R-094.**
 
-The first issue of this report left 14 occurrences refusing and named R-087 as the
-specified-but-unbuilt fix. **Sam ordered it built. It is built.**
+### What he said
 
-> R-087, verbatim: *"depends what's in the rest of the week / each week should
-> contain all the main lifts i.e. squat, hinge, single leg knee, single leg hip,
-> push pull in both horizontal and vertical then accessories for uppers and lowers
-> and some core"* · **THE WEEK IS THE UNIT OF COVERAGE, NOT THE DAY. A FULL BODY
-> DAY HAS NO FIXED TEMPLATE.** … *"The composer's job is not to add two rows to a
-> template. It is to make a full body day ASK the week what is still open."*
+> *"that's a terrible program — there's no spacing and the volume is way too big
+> on Monday."*
 
-### What was built
+**He was right, and the bug was one word of his own ruling.** R-087 says a
+full-body day depends on *"the rest of the week"*. I implemented "the rest of the
+week" as **the days before it**. The full-body day was MONDAY, so the
+accumulated-so-far set was EMPTY, every slot read as missing, and the day greedily
+took the first seven of the weekly ladder — the night before Tuesday's full lower
+session, which supplies most of them.
 
-`coverageSlotsForFullBodyDay` takes the slots the week has already filled and
-returns this day's ladder: **uncovered slots first, in Sam's own enumeration
-order, sized to Bible `:122`'s seven**, then — R-089's *"squatting and hinging
-again is fine"* — walking the same order again for whatever rows remain.
+**R-014 governs the size and I had it backwards:** *"the number of exercises is not
+important the total work being done evenly across the body is."* Bible `:122`'s
+seven is an EXAMPLE of a full-body day, never a quota to fill regardless of
+neighbours.
 
-**IT IS ORDER-DEPENDENT ON PURPOSE**, which is R-087's own example: a full-body day
-placed after a lower day is a different seven from one that opens the week. The
-accumulator is fed from `requiredSlots` (what the day FILLED), never from what it
-declared — crediting a kit-emptied slot as covered would let a bodyweight week talk
-itself out of ever training a pattern it could reach on a later day.
+### The correction, in three parts
 
-**R-093's TWO FIXED SHAPES STAY, AND ONLY FOR THEIR CASE.** A and B remain the
-answer for the athlete whose every gym night is a club night, or who has two
-strength sessions (Bible `:94`). R-087 governs every other full-body day. This is
-also what let the parity gate go: A and B CROSS R-089's two pairs, so an odd number
-of them cannot satisfy it — coverage selection walks a PAIRED order and so cannot
-end a pattern unmatched, which is the one guard the function needs.
+1. **The whole planned week is costed before any day is built.** `suppliedByDay`
+   maps every OTHER strength day — before AND after — to the slots it will
+   achievably supply (kit-filtered: a slot the kit cannot train is not supplied,
+   so it stays a genuine gap).
+2. **The top-up pass is gone.** It walked the ladder a second time to pad the day
+   out to seven. That is exactly what put a squat, a deadlift and both single-leg
+   compounds on Monday. `FULL_BODY_DAY_SIZE` is now a ceiling, never a target.
+3. **A gate, definitional and not a count** (Sam forbade inventing a cap, R-014
+   forbids counting exercises): `coverageGapsMakeAFullBodySession` asks the only
+   question the name answers — **does this gap set train the lower body AND the
+   upper body?** An upper-only gap set is not a small full-body day; it is not one.
 
-**Sam's approved two-day week is byte-identical** — files 1, 2, 3, 5 and 7 of the
-printed set are unchanged by R-087, verified by `git diff`.
+### THE DISTRIBUTION, BEFORE AND AFTER — `Pre-season/5d/noclub/Full Gym/w1`
 
-### Measured
+| | Mon | Tue | Wed | Thu–Sun |
+| --- | --- | --- | --- | --- |
+| **BEFORE — the week Sam rejected** | **7 lifts + conditioning** — Back Squat, Deadlift, Bulgarian Split Squats, Single-Leg RDL, Bench Press, Barbell Row, DB Shoulder Press | 5 — full lower again | 3 — push | empty |
+| **AFTER — week-wide gaps** | **2** — Barbell Row, Lat Pulldown | 5 — full lower | 3 — push | empty |
+| **SHIPPED** | *(no week — honest refusal)* | | | |
 
-    worlds built    142 -> 156      refused 38 -> 24
-    laddered days   338 -> 376      deficient 0 -> 0
-    R-089 squat       0 -> 0        both arms
+The corrected day asks for the week's genuine gap, which is **pull and nothing
+else**: Tuesday supplies the entire lower ladder and Wednesday the presses. Sam's
+point 4 is satisfied — squat, deadlift and both single-leg compounds no longer sit
+the night before a full lower session.
 
-All 14 previously-blocked occurrences build. The printed week 4 shows the day the
-athlete gets: **Back Squat · Deadlift · Bulgarian Split Squats · Single-Leg RDL ·
-Bench Press · Barbell Row · DB Shoulder Press** — Sam's fill order, seven rows.
+### ⚠ AND THEN THE CORRECTED ANSWER WAS ALSO NOT SHIPPABLE
 
-### TWO THINGS THE BUILD BROKE, BOTH CAUGHT BY GUARDS, ONE FIXED
+A two-row day under a heading that reads *"Full body — cover all movement
+patterns"* is a different bad week, not a fix. **Measured across the corpus: 10
+such days — 8 of two rows, 2 of a single `Push-ups`.** And it cost four worlds
+against the checkpoint while gaining none.
 
-**(a) R-080, FIXED.** `[R-080] the muscle-group narrowing still holds` went RED: 2
-days took two rows from one slot AND one muscle group —
-`isolation_upper: Band Pull-Apart | Rear Delt Fly`. Cause: R-087's coverage day is
-the FIRST day that can owe the same slot twice (R-093's *"repeat achievable pull
-plane"* on a kit that cannot train vertical pull), and *"you cannot collide with
-yourself"* had been true while every slot took exactly one row.
-`applyPoolRotation` — R-080's only enforcer — was deleted in the B2 rebuild, so
-nothing was left holding it. The composer now reads `PoolEntry.group` and prefers a
-different group for a repeated slot. Preference, not veto: if every remaining
-candidate shares the group the row is still authored, because a silently empty
-declared slot is worse than a group repeat. `test:composer-severance` back to 88/0.
+So the gate declines them, and Sam's own instruction is what it obeys:
 
-**(b) THE JUDGE COULD NOT SEE THE RULED REPEAT — FIXED.** 8 laddered days across 4
-worlds scored `dup: [horizontal_push]` / `dup: [horizontal_pull]` **for obeying
-R-093**. Two fixes, together: the day now declares the RESOLVED plane (so a repeat
-is declared twice, which is the truth — a bodyweight full-body day owes two
-horizontal pushes because its vertical push cannot be trained), and
-`sessionSlotCoverage` compares row counts against **declared multiplicity** instead
-of a flat `> 1`. Deficient back to 0 of 376.
+> *"If this week cannot become acceptable without that capability, restore its
+> honest refusal rather than publishing a bad week. State that plainly and preserve
+> the earlier 142-world checkpoint."*
 
-### ⚠ (c) THE ONE THING STILL RED, AND IT IS NOT THE COMPOSER'S
+**STATED PLAINLY: across all 180 worlds, ZERO `full_body_coverage` days are
+composed.** Every general full-body day this planner places sits beside a lower day
+and an upper day that between them already supply the ladder. **R-087's premise —
+that such a day has genuine week-wide gaps worth a session — does not hold for any
+week this planner builds.** The missing Thursday–Sunday spacing that would make
+these weeks work belongs to the session-count/scheduling capability, which this
+mission does not own.
 
-**`R-089 [CONTENT]: single-leg knee` — 2 occurrences, 2 distinct profiles:**
-`Pre-season/5d/noclub/Full Gym/w2` and `Pre-season/6d/noclub/Full Gym/w2`, both
-`sq2/hi2 slk3/slh2`.
+**THE 142-WORLD CHECKPOINT IS PRESERVED AND RESTORED**: `142 built / 38 refused`,
+`0 deficient of 338`, identical to `32f408b2`, and the refusal families are the
+same three rows.
 
-**The composer's own rows are balanced.** Every pair row, with its writer:
+### The dormant branch has a guard, because dead weight is trusted later
 
-```
-day 1  Front Squat        -> squat            prov=composer_declaration
-day 1  Trap Bar Deadlift  -> hinge            prov=composer_declaration
-day 1  Cossack Squat      -> single_leg_knee  prov=composer_declaration
-day 1  Single-Leg RDL     -> single_leg_hip   prov=composer_declaration
-day 2  Box Squat          -> squat            prov=composer_declaration
-day 2  Kettlebell Swings  -> hinge            prov=composer_declaration
-day 2  Lateral Lunge      -> single_leg_knee  prov=composer_declaration
-day 2  Single-Leg RDL     -> single_leg_hip   prov=composer_declaration
-day 4  Lateral Lunge      -> single_leg_knee  prov=canonical_row_classifier   <- THE THIRD KNEE
-```
+An unreachable branch with no test is exactly what later code believes. Both
+functions are therefore called DIRECTLY in `composerSeveranceTests`
+(`[R-087]`, 8 cells, suite 88 → 96): the wide-open case returns Sam's fill order
+capped at seven and is R-089-balanced; **the case Sam rejected returns pull-only and
+is asserted NOT to re-take a slot the rest of the week already trains**; and the
+gate is proved both ways (upper-only rejected, lower-only rejected, spanning
+accepted).
 
-**The third knee is authored by `canonical_row_classifier` — the optional top-up
-pass — on a day the composer does not own.** Composer rows are `slk2/slh2`.
+### What this correction also fixed for free
 
-**AND BOTH WORLDS REFUSED AT BASELINE**, so this is not behaviour this mission
-created: it is pre-existing top-up behaviour that was invisible while the world
-produced no week at all. The same shape as this mission's opening finding — a
-refusing world contributes nothing to a census, so its defects read as zero.
-
-**NOT FIXED, deliberately.** The owner is the top-up pass, not the composer, and
-the standing boundary is that non-composer families are diagnosed and reported. It
-is stated as a cell-level regression in §1 rather than hidden behind a suite total.
+**The R-089 single-leg-knee regression is GONE — 2 → 0 unmatched weeks, both arms
+clean.** The two offending worlds (`Pre-season/{5d,6d}/noclub/Full Gym/w2`) now
+refuse honestly instead of publishing a week whose top-up added a third knee. The
+cell-level regression reported in the previous issue no longer exists.
 
 ## 6. THE REMAINING REFUSALS — BY OCCURRENCE AND BY DISTINCT PROFILE
 
-**24 occurrences across 15 distinct profiles. One family. Every one Bodyweight
-Only.** Diagnosed and, per the standing boundary and Sam's explicit instruction,
-**not touched.** No follow-up job was dispatched, no session-count policy changed,
-no planner capacity edited, and nothing was patched around inside the composer.
+**38 occurrences across 25 distinct profiles, in two families.** Every figure from
+`scripts/probe-refusal-census.ts` → `scratchpad/census-gated.json`.
 
-`scripts/probe-refusal-census.ts` → `scratchpad/census-final.json`.
+### Family A — the lone full-body day. 14 occ / 10 distinct profiles. HONEST REFUSAL.
 
-| occ | distinct profile (phase / days / club / kit) |
+| occ | distinct profile | typed finding |
+| --- | --- | --- |
+| 2 | Pre-season / 5d / noclub / Full Gym | `pattern_balance` + `required_safe_patterns_present:pull` |
+| 2 | Pre-season / 5d / noclub / Dumbbells | same |
+| 2 | Pre-season / 6d / noclub / Full Gym | same |
+| 2 | Pre-season / 6d / noclub / Dumbbells | same |
+| 1 | Off-season / 3d / club / Full Gym | same |
+| 1 | Off-season / 3d / club / Dumbbells | same |
+| 1 | Off-season / 3d / noclub / Full Gym | same |
+| 1 | Off-season / 3d / noclub / Dumbbells | same |
+| 1 | Pre-season / 5d / noclub / Bodyweight Only | `required_safe_patterns_present:push` |
+| 1 | Pre-season / 6d / noclub / Bodyweight Only | `required_safe_patterns_present:push` |
+| **14** | **10 distinct profiles** | |
+
+**These are the weeks §5 declines to publish.** The composer CAN compose their
+full-body day; what it composes is a two-row session under a full-body heading, and
+the honest answer is the typed refusal. **Blocked on the session-count/scheduling
+capability** — the Thursday–Sunday spacing — which this mission does not own.
+
+### Family B — kit-blind planner session selection. 24 occ / 15 distinct profiles. UNTOUCHED.
+
+| occ | distinct profile |
 | --- | --- |
 | 2 | In-season / 4d / club / Bodyweight Only |
 | 2 | In-season / 4d / noclub / Bodyweight Only |
@@ -382,22 +401,16 @@ no planner capacity edited, and nothing was patched around inside the composer.
 | 2 | Pre-season / 4d / club / Bodyweight Only |
 | 2 | Pre-season / 5d / club / Bodyweight Only |
 | 2 | Pre-season / 6d / club / Bodyweight Only |
-| **24** | **15 distinct profiles** |
+| **24** | **15 distinct profiles — every one Bodyweight Only** |
 
-**Occurrences are profile × week**, which is why the two units differ: an
-Off-season profile refuses in week 2 only, while an In-season one refuses in both.
-By week: **w1 9, w2 15.** By training days: **4d 8, 5d 8, 6d 8** — flat. By phase:
-In-season 12, Pre-season 6, Off-season 6. By kit: **Bodyweight Only 24, Full Gym 0,
-Dumbbells 0.**
+**Occurrences are profile × week**, which is why the units differ: an Off-season
+profile refuses in week 2 only, an In-season one in both. By week: w1 9, w2 15.
 
-### The single cause, and its owner
+**Typed finding, identical on all 24:** `main_strength_planner_selected_target —
+the planner's own selected main-strength target is not met` (expected 3, actual 2).
 
-**Typed finding, identical on all 24:**
-`main_strength_planner_selected_target — the planner's own selected main-strength
-target is not met` (expected 3, actual 2).
-
-**Owner: the planner's session-pattern selection, not the composer.** Executed
-receipt, `In-season/4d/club/Bodyweight Only/w1`:
+**Owner: the planner's session-pattern selection.** Executed receipt,
+`In-season/4d/club/Bodyweight Only/w1`:
 
 ```
 planner day 2  archetype=upper  plannedPatterns=["pull"]   "Team training + Upper body - pull emphasis"
@@ -408,23 +421,19 @@ GAPS  day 2 horizontal_pull cause=kit wouldNeed=barbell
 REFUSED  main_strength_planner_selected_target  (expected 3, actual 2)
 ```
 
-**Why it is not the composer's.** `kitUnachievablePatterns` correctly reports
-`["pull"]`. R-083 REMOVES a pattern the kit cannot train rather than substituting
-one, and R-093's fallback (*"yes repeat achievable pull plane"*) is about PLANES
-WITHIN a pattern, not about swapping the pattern the planner chose. Turning that
-day from pull into push is **re-planning, not composing** — the composer's contract
-is that it never renames or re-tasks a day.
-
-**The exact capability required:** the planner must not select a session whose ONLY
-planned pattern is one the athlete's kit cannot train. It is a planner-side
-kit-awareness gap, and it is stated here as the boundary — not queued.
+`kitUnachievablePatterns` correctly reports `["pull"]`. R-083 REMOVES an
+untrainable pattern rather than substituting one, and R-093's fallback is about
+PLANES WITHIN a pattern. Turning that day from pull into push is **re-planning, not
+composing**. **The exact capability required:** the planner must not select a
+session whose ONLY planned pattern is one the athlete's kit cannot train.
+**Untouched, per Sam. Not queued.**
 
 ## 7. SCORECARD STATUS
 
 | score | value | action |
 | --- | --- | --- |
-| built-world floor **150** | **156** — now **PASSES** | not moved; earned, not lowered |
-| laddered-day breadth floor **300** | **376** — now PASSES | not moved |
+| built-world floor **150** | **142** — honestly RED | **NOT lowered.** The one remaining `test:ladder-wide` failure. |
+| laddered-day breadth floor **300** | **338** — PASSES | not moved |
 | deficient ceiling, was **88** | **0** | **banked to 0 in `55af1e65`, the commit that earned it** |
 
 ### ⚠ THE DEFICIENT CEILING IS NOW CIRCULAR AND THE CONSTANT SAYS SO IN FULL
@@ -454,14 +463,14 @@ Every row is an executed measurement, not an inspection of the diff.
 | required | result | instrument |
 | --- | --- | --- |
 | R-089 `sq1/hi0`: **0** | **0**, on two independent counters | `test:ladder-wide`, both arms |
-| R-089 single-leg knee | **2 unmatched**, both non-composer (§5c) | `test:ladder-wide` content arm |
-| no previously built world lost | **0 lost**, **36 gained**, label-by-label over 180 | census set-compare |
+| R-089 single-leg knee | **0 unmatched** — the rejected build's regression is resolved | `test:ladder-wide` content arm |
+| no previously built world lost | **0 lost**, **22 gained**, label-by-label over 180 | census set-compare |
 | all content changes attributed | yes — per world, per commit | §4c, commit bodies |
-| composer-owned refusal families resolved | **all 36 occurrences resolved** — R-087 built | §5 |
+| composer-owned refusal families resolved or honestly red with the exact blocker | 22 resolved; **14 honestly red**, blocker named (scheduling capability) | §5, §6A |
 | non-composer families unchanged, one grouped report section | **24 occ / 15 distinct profiles, untouched** | §6 |
 | **zero** repair / regenerate / fallback execution | none added, restored or called — diff over `src/` contains no such symbol on an added line, only a comment | `git diff 459d6bf9..HEAD -- src/`, `test:composer-severance` 88/0 |
-| **every composed row legal for its kit** | **1626 rows checked, 0 illegal** | `scripts/probe-kit-legality.ts`, asked of `exerciseIsAvailableWith` |
-| typed equipment gaps survive storage | **232 gaps across 92 worlds** survive onto the workout | same probe |
+| **every composed row legal for its kit** | **1422 rows checked, 0 illegal** | `scripts/probe-kit-legality.ts`, asked of `exerciseIsAvailableWith` |
+| typed equipment gaps survive storage | **202 gaps across 84 worlds** survive onto the workout | same probe |
 | no legacy generation path restored | none | same diff scan |
 
 **The kit-legality probe carries its own non-vacuity arm**: it exits non-zero if it
@@ -481,7 +490,7 @@ mission. Stated again in §9.
 It **reuses `print-week.ts`'s renderer** rather than writing a second one (two
 renderers give two `[NO COPY]` counts and neither is worth reading), and builds
 every world from the **census's own profile shape**, so a printed week is the same
-week this report's counts describe. **6 of 7 built, 1 prints its typed refusal
+week this report's counts describe. **5 of 7 built, 2 print their typed refusal
 instead of an invented week.**
 
 | file | world | built | problems |
@@ -489,12 +498,12 @@ instead of an invented week.**
 | 1 | In-season/2d/club/Full Gym — **the former R-089 family** | yes | 0 |
 | 2 | In-season/2d/club/Dumbbells | yes | 0 |
 | 3 | Pre-season/2d/club/Full Gym — **refused at base, builds now** | yes | 0 |
-| 4 | Pre-season/5d/noclub/Full Gym — **the R-087 day; refused before this work** | yes | 1 |
+| 4 | Pre-season/5d/noclub/Full Gym — **the week Sam rejected; now REFUSES** | **no** | typed refusal printed |
 | 5 | In-season/4d/club/Full Gym | yes | 1 |
 | 6 | Off-season/4d/noclub/Full Gym | yes | 0 |
 | 7 | In-season/4d/club/Bodyweight Only — the §6 batch | **no** | typed refusal printed |
 
-**0 `[NO COPY]` across all six built weeks** — every athlete-facing word came out
+**0 `[NO COPY]` across all five built weeks** — every athlete-facing word came out
 of the app. File 1 is the proof of §2 in plain English: **Back Squat on Tuesday,
 Deadlift on Thursday.**
 
@@ -589,34 +598,34 @@ Deadlift on Thursday.**
 
 **MERGE.**
 
-- **No new red** across the complete 253-suite roster: **71 → 65**, and **six
-  suites newly green**, each verified to assert real cells.
+- **No new red** across the complete 253-suite roster: **71 → 70**, one suite newly
+  green with a traced cause. (`test:census-hook` flaked once under the parallel
+  runner and came back green on a clean re-run — recorded in §1, not counted.)
 - `test:compile` PASSED, 459 errors, **no file regressed**.
 - `test:qa` and `test:scenarios` byte-identical to baseline.
-- **+36 worlds build (120 → 156); ZERO previously built world lost.** Both floors
-  the mission forbade lowering — built-world 150 and breadth 300 — are now **met by
-  the product** at 156 and 376, not by moving them.
-- 1626 composed rows checked, **0 illegal for their athlete's kit**; 232 typed
+- **+22 worlds build (120 → 142); ZERO previously built world lost.**
+- **R-089 clean on two independent counters, both rules.** The single-leg-knee
+  regression the previous issue reported is resolved.
+- 1422 composed rows checked, **0 illegal for their athlete's kit**; 202 typed
   equipment gaps still disclosed.
 - Zero repair, regenerate, fallback or legacy path added, restored or called.
-- Sam's approved two-day week is **byte-identical** after R-087.
+- **Sam's approved two-day week is byte-identical** across every round of this work.
 
-### Two things a merger must read, not skim
+### What a merger is agreeing to, stated plainly
 
-1. **`DEFICIENT_CEILING` is banked at 0 and is CIRCULAR for composed days.** The
-   constant, the commit message and §7 all say so. The honest measure is the
-   `[CONTENT]` R-089 arms, which consult no ladder and no declaration.
-2. **One cell regressed and no suite total shows it.** `R-089 [CONTENT]
-   single-leg knee` went 0 → 2 unmatched weeks, inside a suite that was already
-   red. Both are `Pre-season/{5d,6d}/noclub/Full Gym/w2`, **both worlds refused at
-   baseline**, and the offending third knee is written by
-   `canonical_row_classifier` — the optional top-up pass — on a day the composer
-   does not own. Composer rows are `slk2/slh2`. It is pre-existing behaviour made
-   visible by those worlds building at all, and it is left to its owner.
+1. **The corpus is 142, not 156.** The 156 came from a full-body day that
+   over-filled; Sam rejected the week it printed. **142 is the honest number** and
+   it is the checkpoint he asked to have preserved.
+2. **R-087's compose branch is currently unreachable — zero coverage days across
+   180 worlds.** It is correct, directly guarded (8 cells), and dormant. Its
+   premise does not hold for any week this planner builds, and the blocker is the
+   **session-count/scheduling capability**, not the composer.
+3. **`DEFICIENT_CEILING` is banked at 0 and is CIRCULAR for composed days.** The
+   honest measure is the `[CONTENT]` R-089 arms, which consult no ladder.
+4. **The built-world floor (150) stays honestly RED at 142.** Not lowered.
 
-**Composer Completion is closed.** R-089, the `full_body → lower` collapse and
-R-087 are all built and guarded. What remains is **one non-composer family: 24
-occurrences across 15 distinct profiles, every one Bodyweight Only**, diagnosed
-with an executed receipt and deliberately untouched.
+**Composer Completion is closed on everything the composer owns.** What remains is
+**38 occurrences across 25 distinct profiles in two families** — 14 blocked on
+scheduling, 24 planner-owned — each with an executed receipt and neither queued.
 
 Agent: core
