@@ -1157,7 +1157,11 @@ hands the athlete. I did not call the network to invent a comparison.
 - `getProgramGenerationProfileFieldDiagnostics` still reports "profile fields missing for program generation" in onboarding failure diagnostics, though generation no longer consumes a profile the way the prompt did.
 - `Bear Carry`'s sheet requirement is the tag `sandbag`, which is not in the askable equipment vocabulary (`EQUIPMENT_TAG_LABELS`), so no athlete can ever answer that they own one and the row is illegal on every kit tier including Full Gym.
 - `exerciseAllowedByEquipment` and `exerciseIsAvailableWith` disagree on 4 (exercise x kit) pairs — `Chest Supported Row`, `Chest-Supported DB Row`, `Seated Cable Row` — where the name is absent from the sheet so one owner falls back to the load classifier and the other answers "unknown, allow".
+- A row whose identity the app does not recognise survives commit and relaunch untouched but is silently dropped at projection — the athlete never sees it and nothing says so (mutant-proven at `943e030b`, tracer audit §4.5).
+- A Pre-season athlete with zero team-training days cannot complete onboarding (`onboardingSteps.ts:127` requires `teamTrainingDays` for pre/in-season), so the quiescent boot refuses to regenerate that world at all.
 
 **SLICE 1C-BASELINE — what the sole deterministic builder actually produces, re-measured at `1fce185f` across all seven dimensions, with the printed weeks and the composer-owned defect list: [`docs/SOLE_BUILDER_BASELINE_2026-08-14.md`](SOLE_BUILDER_BASELINE_2026-08-14.md).**
 
 **SLICE B0 — POOL CENSUS: the authorised pool universe settled ahead of composer slice B1, with the four-layer cross-reference on canonical identities, the three exact kit tiers and the pattern x kit-tier coverage table: [`docs/POOL_CENSUS_2026-08-14.md`](POOL_CENSUS_2026-08-14.md). No blocking questions for Sam.**
+
+**LEGACY GENERATION INTERFERENCE AUDIT — every mechanism that can still rewrite composer output, fingerprinted across six lifecycle boundaries at `943e030b` with liveness-proven detection, four-bucket classification (13 executed / 10 reachable / 4 dead / 8 shared) plus the ALREADY-SEVERED receipts, and a dependency-only severance order: [`docs/LEGACY_GENERATION_INTERFERENCE_AUDIT_2026-08-14.md`](LEGACY_GENERATION_INTERFERENCE_AUDIT_2026-08-14.md).**
