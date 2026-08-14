@@ -38,7 +38,14 @@ import {
   type ComposedExerciseIdentity,
 } from './composedRowLegality';
 import type { MainStrengthPattern, StrengthIntent } from './strengthPatternContributions';
-import { STRENGTH_POOLS, type PoolSlotKey } from '../data/exercisePoolsStrength';
+import {
+  STRENGTH_POOLS,
+  type ComposedDoseCategory,
+  type PoolSlotKey,
+} from '../data/exercisePoolsStrength';
+import { applyOffseasonMainLiftLoad, resolveComposedDose } from './composedDose';
+import type { OffseasonSubphase } from './offseasonSubphase';
+import type { SeasonPhase } from '../types/domain';
 import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 
 // ─── INPUTS. Every field has a reader in CP1, or it does not exist yet. ─────
@@ -66,6 +73,9 @@ export interface ComposerInputs {
   readonly profile: { readonly seasonPhase?: string; readonly experienceLevel?: string };
   /** Read for the week number that moves selection along the authored order. */
   readonly phaseClock: { readonly weekNumber: number };
+  /** B1-M1: the phase the DOSE is resolved against, before authorship. */
+  readonly seasonPhase: SeasonPhase;
+  readonly offseasonSubphase: OffseasonSubphase | null;
   /** Calendar/fixtures, as the planner resolved them onto days. */
   readonly plannedDays: readonly ComposerPlannedDay[];
   /** Resolved kit tags — the corrected sheet is the oracle, this is its input. */
@@ -85,9 +95,14 @@ export interface ComposedRow {
   readonly slot: SessionSlot;
   readonly role: ComposedRowRole;
   readonly mainStrengthPattern: MainStrengthPattern | null;
+  /** B1-M1: the typed dose owner (Sam's U-1/U-3/U-4), authored on the pool entry. */
+  readonly doseCategory: ComposedDoseCategory;
   readonly sets: number;
   readonly repsMin: number;
   readonly repsMax: number;
+  /** Resolved before authorship; U-2's off-season cut is already inside it. */
+  readonly load: number;
+  readonly qualityLimit?: 'stop_when_speed_or_technique_drops';
 }
 
 /** Clause (e): a kit-caused gap — derived from kit + sheet, never from records. */
@@ -546,16 +561,39 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       const choices = fresh.length > 0 ? fresh : legal;
       const identity = choices[step % choices.length];
       usedThisWeek.add(identity);
-      const [sets, repsMin, repsMax] = doseFor(kind, slot, rows.length);
+      // ── B1-M1: THE DOSE IS RESOLVED HERE, NOT DOWNSTREAM ────────────────
+      // `doseFor` is the composer's authored fallback band; where a ruling
+      // owns the row — a main lift's phase scheme, U-1's loaded band, U-3's
+      // unloaded compounds, U-4's ballistic swings — the ruling wins.
+      const authoredFallback = doseFor(kind, slot, rows.length);
+      const dose = resolveComposedDose({
+        identity,
+        isMainLift,
+        poolSlot: POOL_SLOT_FOR_LADDER_SLOT[slot] ?? null,
+        seasonPhase: inputs.seasonPhase,
+        offseasonSubphase: inputs.offseasonSubphase,
+        authoredFallback,
+      });
       if (isMainLift && pattern) patternHasItsMainLift.add(pattern);
       rows.push({
         identity,
         slot,
         role: isMainLift ? 'main_strength' : 'strength_accessory',
         mainStrengthPattern: isMainLift ? pattern : null,
-        sets,
-        repsMin,
-        repsMax,
+        doseCategory: dose.category,
+        sets: dose.sets,
+        repsMin: dose.repsMin,
+        repsMax: dose.repsMax,
+        // U-2 applies exactly once, here, before authorship. The composer emits
+        // no starting load of its own, so the cut has nothing to stack onto.
+        load: applyOffseasonMainLiftLoad({
+          load: 0,
+          isMainLift,
+          poolSlot: POOL_SLOT_FOR_LADDER_SLOT[slot] ?? null,
+          seasonPhase: inputs.seasonPhase,
+          offseasonSubphase: inputs.offseasonSubphase,
+        }),
+        ...(dose.qualityLimit ? { qualityLimit: dose.qualityLimit } : {}),
       });
     }
 

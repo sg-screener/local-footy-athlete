@@ -25,6 +25,7 @@ import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { EQUIPMENT_TAG_LABELS } from '../rules/equipmentVocabulary';
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
+import { applyOffseasonMainLiftLoad, resolveComposedDose } from '../rules/composedDose';
 import { mainLiftSchemeForSlot } from '../rules/phaseRepSchemes';
 import { slotsForExerciseName } from '../rules/sessionSlotCoverage';
 import type { Workout } from '../types/domain';
@@ -99,6 +100,21 @@ function composedFor(spec: WorldSpec) {
   return { kit };
 }
 
+function inputs(over: Record<string, unknown> = {}): never {
+  return {
+    profile: { seasonPhase: 'Off-season' },
+    phaseClock: { weekNumber: 1 },
+    seasonPhase: 'Off-season',
+    offseasonSubphase: null,
+    plannedDays: [LOWER_DAY_FIXTURE],
+    kit: resolveEquipmentCapabilities({
+      equipment: ['Full Gym'], equipmentSelectionCompleteness: 'complete' } as never).tags,
+    injuries: { prohibitedPatterns: [], excludedIdentities: [] },
+    todayISO: '2026-07-13',
+    ...over,
+  } as never;
+}
+
 function rowsByDayAndIdentity(workouts: readonly Workout[]): Map<string, any> {
   const out = new Map<string, any>();
   for (const workout of workouts) {
@@ -120,6 +136,14 @@ function semanticShape(workouts: readonly Workout[]): string {
       .join('|'))
     .join(' || ');
 }
+
+const LOWER_DAY_FIXTURE = {
+  dayOfWeek: 1, isTeamDay: false, planEntryId: 'p', name: 'Lower Body Strength',
+  workoutType: 'Strength', sessionTier: 'core',
+  strengthIntent: { archetype: 'lower' as const, primaryPattern: 'squat' as const,
+    plannedPatterns: ['squat' as const, 'hinge' as const],
+    effectivePatterns: ['squat' as const, 'hinge' as const] },
+};
 
 const FULL_GYM = world('full-gym in-season 2d club', {
   seasonPhase: 'In-season', equipment: ['Full Gym'],
@@ -320,6 +344,8 @@ console.log('\n[d] A kit-impossible pattern is disclosed, and does not veto the 
   const composed = composeWeek({
     profile: { seasonPhase: 'Off-season' },
     phaseClock: { weekNumber: 1 },
+    seasonPhase: 'Off-season' as never,
+    offseasonSubphase: null,
     plannedDays: [{
       dayOfWeek: 2, isTeamDay: false, planEntryId: 'p', name: 'Upper Body Strength',
       workoutType: 'Strength', sessionTier: 'core',
@@ -517,6 +543,7 @@ console.log('\n[retire] Behaviour the deleted rotation cells guarded, held again
     equipment: ['Full Gym'], equipmentSelectionCompleteness: 'complete' } as never).tags as string[];
   const compose = (weekNumber: number, excluded: string[] = []) => composeWeek({
     profile: { seasonPhase: 'Off-season' }, phaseClock: { weekNumber },
+    seasonPhase: 'Off-season' as never, offseasonSubphase: null,
     plannedDays: [day], kit: fullGymTags,
     injuries: { prohibitedPatterns: [], excludedIdentities: excluded },
     todayISO: '2026-07-13',
@@ -700,6 +727,102 @@ console.log('\n[semantic] Composer dose and typed gaps, measured at their bounda
     composeModule.composeWeek = realCompose;
     adapterModule.composedWeekToCoachInputs = realAdapt;
     builderModule.buildWorkoutsFromCoach = realBuild;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE RULED DOSE CATEGORIES (B1-M1) — U-1 verbatim, U-2 verbatim, U-3/U-4 approved
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship');
+{
+  const inSeason = (phase: string, sub: string | null) => ({
+    identity: '', isMainLift: false, poolSlot: null as never,
+    seasonPhase: phase as never, offseasonSubphase: sub as never,
+    authoredFallback: [9, 99, 99] as readonly [number, number, number],
+  });
+  const dose = (identity: string, phase: string, sub: string | null = null) =>
+    resolveComposedDose({ ...inSeason(phase, sub), identity });
+
+  // U-1 — the loaded band, and its OFF-SEASON CORRECTION.
+  ok('[U-1] loaded lower secondary: in-season 6-8',
+    JSON.stringify(dose('Single-Leg RDL', 'In-season')).includes('"repsMin":6')
+    && dose('Single-Leg RDL', 'In-season').repsMax === 8);
+  ok('[U-1] loaded lower secondary: pre-season 6-10',
+    dose('Single-Leg RDL', 'Pre-season').repsMax === 10);
+  ok('[U-1] loaded lower secondary: OFF-SEASON CAPPED AT 10, not the old 15',
+    dose('Single-Leg RDL', 'Off-season').repsMin === 8
+    && dose('Single-Leg RDL', 'Off-season').repsMax === 10,
+    JSON.stringify(dose('Single-Leg RDL', 'Off-season')));
+  ok('[U-1] the category is typed, not a name match',
+    dose('Goblet Squat', 'In-season').category === 'loaded_lower_secondary_compound'
+    && dose('Hip Thrusts', 'In-season').category === 'loaded_lower_secondary_compound');
+
+  // U-3 — unloaded compounds share the range but NOT the category.
+  ok('[U-3] Bodyweight Squat is an unloaded lower compound at 2-3 x 10-20',
+    dose('Bodyweight Squat', 'In-season').category === 'unloaded_lower_compound'
+    && dose('Bodyweight Squat', 'In-season').repsMin === 10
+    && dose('Bodyweight Squat', 'In-season').repsMax === 20);
+  ok('[U-3] Glute Bridge likewise, and it is NOT reclassified as isolation',
+    dose('Glute Bridge', 'Off-season').category === 'unloaded_lower_compound');
+
+  // U-4 — ballistic strength, 2-3 sets and quality-limited.
+  ok('[U-4] Kettlebell Swings are ballistic strength at 6-10, not hypertrophy',
+    dose('Kettlebell Swings', 'In-season').category === 'ballistic_strength'
+    && dose('Kettlebell Swings', 'In-season').repsMin === 6
+    && dose('Kettlebell Swings', 'In-season').repsMax === 10);
+  ok('[U-4] and it is quality-limited, not set-count-limited (Sam approved 2-3)',
+    dose('Kettlebell Swings', 'In-season').sets <= 3
+    && dose('Kettlebell Swings', 'In-season').qualityLimit
+      === 'stop_when_speed_or_technique_drops');
+
+  // THE MAIN-LIFT ROLE OUTRANKS THE CATEGORY.
+  ok('[U-1] the same movement leading a day takes the main-lift phase scheme',
+    resolveComposedDose({
+      identity: 'Single-Leg RDL', isMainLift: true, poolSlot: 'hinge' as never,
+      seasonPhase: 'In-season' as never, offseasonSubphase: null,
+      authoredFallback: [9, 99, 99] as readonly [number, number, number],
+    }).category === 'main_lift');
+
+  // U-2 — the cut, its governed role, and SINGLE APPLICATION.
+  const cut = (load: number, isMainLift: boolean, sub: string | null) =>
+    applyOffseasonMainLiftLoad({
+      load, isMainLift, poolSlot: 'squat' as never,
+      seasonPhase: 'Off-season' as never, offseasonSubphase: sub as never,
+    });
+  ok('[U-2] early off-season cuts a main lift to 75%', cut(100, true, 'early_offseason') === 75);
+  ok('[U-2] mid off-season cuts to 90%', cut(100, true, 'mid_offseason') === 90);
+  ok('[U-2] late off-season does not cut', cut(100, true, 'late_offseason') === 100);
+  ok('[U-2] an ACCESSORY is never cut', cut(100, false, 'early_offseason') === 100);
+  ok('[U-2] an UNLOADED row is never cut', cut(0, true, 'early_offseason') === 0);
+  // ⚠ SINGLE APPLICATION IS A PROPERTY OF THE CALL SITE, NOT OF THE FUNCTION,
+  // and the first version of this cell asserted the wrong one.
+  //
+  // I wrote *"applying it to an already-cut load does not stack"* and it went
+  // RED, correctly: the function is pure arithmetic and 100 -> 75 -> 55 if you
+  // call it twice. **It is not idempotent and it cannot be** — a cut load and an
+  // uncut load are the same number to it. So the guard asserts the two things
+  // that ARE true: the function's non-idempotence is DECLARED so nobody assumes
+  // otherwise, and the composed path calls it exactly ONCE per row.
+  ok('[U-2] the multiplier is NOT idempotent — declared, so no caller assumes it is',
+    cut(cut(100, true, 'early_offseason'), true, 'early_offseason') !== 75,
+    'if this passes by accident the arithmetic changed');
+  {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const doseModule = require('../rules/composedDose');
+    const realApply = doseModule.applyOffseasonMainLiftLoad;
+    let calls = 0;
+    doseModule.applyOffseasonMainLiftLoad = (args: never) => { calls += 1; return realApply(args); };
+    try {
+      const composed = composeWeek(inputs({
+        seasonPhase: 'Off-season' as never, offseasonSubphase: 'early_offseason' as never,
+        plannedDays: [LOWER_DAY_FIXTURE],
+      }));
+      const rowCount = composed.days.reduce((n, day) => n + day.rows.length, 0);
+      ok('[U-2] the composed path applies the multiplier exactly once per row',
+        rowCount > 0 && calls === rowCount, `${calls} calls for ${rowCount} rows`);
+    } finally {
+      doseModule.applyOffseasonMainLiftLoad = realApply;
+    }
   }
 }
 

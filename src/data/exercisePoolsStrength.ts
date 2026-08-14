@@ -60,6 +60,18 @@ export type PoolSlotKey =
   | 'plyo';
 export type PoolRole = 'anchor' | 'accessory';
 
+/**
+ * THE TYPED DOSE CATEGORIES. Sam's U-1 (verbatim, 2026-08-14) split isolation
+ * accessories from single-leg/compound work; U-3 and U-4 are seat-drafted
+ * wording he approved, covering unloaded compounds and ballistic strength work.
+ */
+export type ComposedDoseCategory =
+  | 'main_lift'
+  | 'loaded_lower_secondary_compound'
+  | 'isolation_accessory'
+  | 'unloaded_lower_compound'
+  | 'ballistic_strength';
+
 export interface PoolEntry {
   /** Must match an EXERCISE_TAGS key (or be resolvable by findOrCreateExercise). */
   name: string;
@@ -83,6 +95,21 @@ export interface PoolEntry {
    * existing whole-slot rotation. Only slots that MIX muscle groups need it.
    */
   group?: string;
+  /**
+   * ⚠ THE PRESCRIPTION'S OWNER — Sam's U-1/U-3/U-4 rulings, 2026-08-14.
+   *
+   * **`group` + `loadRatio` are NOT sufficient and the census proved it.**
+   * `Kettlebell Swings` shares `bilateral_hinge` with `Hip Thrusts` and is
+   * ballistic; `loadRatio: 0` says a row carries no external load but says
+   * nothing about its programming intent; and pool role `accessory` conflates
+   * secondary compounds, unloaded compounds and special movements. So the
+   * category is AUTHORED here, on the entry, where the rest of the exercise's
+   * authored meaning already lives.
+   *
+   * Omitted = the entry is a main lift when used as one and otherwise takes its
+   * slot's ordinary secondary band; `resolveComposedDose` is the single reader.
+   */
+  doseCategory?: ComposedDoseCategory;
   /**
    * Load ratio relative to the slot's reference exercise.
    *   squat            ref: Back Squat       → 1.00
@@ -281,15 +308,15 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       // varies WITHIN a group and never across one. A lunge now rotates to
       // another single-leg knee movement, and the squat stays a squat.
       slot: 'squat', role: 'accessory', entries: [
-        { name: 'Walking Lunges',         loadRatio: 0.45, group: 'single_leg_knee' },
-        { name: 'Bulgarian Split Squats', loadRatio: 0.40, group: 'single_leg_knee' },
-        { name: 'Reverse Lunges',         loadRatio: 0.45, group: 'single_leg_knee' },
-        { name: 'Step Ups',               loadRatio: 0.40, group: 'single_leg_knee' },
-        { name: 'Single-Leg Leg Press',   loadRatio: 0.50, group: 'single_leg_knee' },
-        { name: 'Single-Leg Squat (to Box)', loadRatio: 0.30, group: 'single_leg_knee' },
-        { name: 'Goblet Squat',           loadRatio: 0.35, group: 'bilateral_squat' },
-        { name: 'Leg Press',             loadRatio: 0.90, group: 'bilateral_squat' },
-        { name: 'Bodyweight Squat',       loadRatio: 0.00, group: 'bilateral_squat' },
+        { name: 'Walking Lunges', doseCategory: 'loaded_lower_secondary_compound',         loadRatio: 0.45, group: 'single_leg_knee' },
+        { name: 'Bulgarian Split Squats', doseCategory: 'loaded_lower_secondary_compound', loadRatio: 0.40, group: 'single_leg_knee' },
+        { name: 'Reverse Lunges', doseCategory: 'loaded_lower_secondary_compound',         loadRatio: 0.45, group: 'single_leg_knee' },
+        { name: 'Step Ups', doseCategory: 'loaded_lower_secondary_compound',               loadRatio: 0.40, group: 'single_leg_knee' },
+        { name: 'Single-Leg Leg Press', doseCategory: 'loaded_lower_secondary_compound',   loadRatio: 0.50, group: 'single_leg_knee' },
+        { name: 'Single-Leg Squat (to Box)', doseCategory: 'loaded_lower_secondary_compound', loadRatio: 0.30, group: 'single_leg_knee' },
+        { name: 'Goblet Squat', doseCategory: 'loaded_lower_secondary_compound',           loadRatio: 0.35, group: 'bilateral_squat' },
+        { name: 'Leg Press', doseCategory: 'loaded_lower_secondary_compound',             loadRatio: 0.90, group: 'bilateral_squat' },
+        { name: 'Bodyweight Squat', doseCategory: 'unloaded_lower_compound',       loadRatio: 0.00, group: 'bilateral_squat' },
       ],
     },
   },
@@ -331,13 +358,13 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       // sees, which is R-076's mistake. A repeated Single-Leg RDL is a smaller
       // wrong than a lost slot; more variety is a content unit, not this one.
       slot: 'hinge', role: 'accessory', entries: [
-        { name: 'Single-Leg RDL',    loadRatio: 0.45, group: 'single_leg_hip' },
-        { name: 'Hip Thrusts',       loadRatio: 1.10, group: 'bilateral_hinge' },
-        { name: 'Kettlebell Swings', loadRatio: 0.35, group: 'bilateral_hinge' },
+        { name: 'Single-Leg RDL', doseCategory: 'loaded_lower_secondary_compound',    loadRatio: 0.45, group: 'single_leg_hip' },
+        { name: 'Hip Thrusts', doseCategory: 'loaded_lower_secondary_compound',       loadRatio: 1.10, group: 'bilateral_hinge' },
+        { name: 'Kettlebell Swings', doseCategory: 'ballistic_strength', loadRatio: 0.35, group: 'bilateral_hinge' },
         // Sam ruled 2026-07-25: bodyweight-with-optional. loadRatio 0 means no
         // progression transfer to or from its hinge siblings, which is the
         // honest reading of a lift with no prescribed load.
-        { name: 'Glute Bridge',      loadRatio: 0.00, group: 'bilateral_hinge' },
+        { name: 'Glute Bridge', doseCategory: 'unloaded_lower_compound',      loadRatio: 0.00, group: 'bilateral_hinge' },
       ],
     },
   },

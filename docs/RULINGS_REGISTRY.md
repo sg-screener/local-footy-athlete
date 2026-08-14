@@ -2032,3 +2032,64 @@ composed week does not currently reach storage intact, so there is no
 athlete-visible receipt and this row may not claim one. The legacy mirror at
 `coachingEngine.ts:2226-2251` is **unchanged and still live** on every
 non-composed route.
+
+---
+
+**R-095** · *"App wins because accessories are differnt to single leg work - for
+example calf raises are accessories and would fit the 10-20 rep range - but
+single leg rdl's are better in the 5-10 rep range."* (Sam, 2026-08-14, verbatim)
+· **LOWER-BODY SECONDARY WORK IS TWO CATEGORIES, NOT ONE.** A loaded lower-body
+secondary COMPOUND — single-leg or bilateral — takes **In-season 2-3x6-8,
+Pre-season 2-3x6-10, Off-season 2-3x8-10**, all inside his 5-10. A TRUE ISOLATION
+accessory keeps **2-3x10-20** (Bible `:818`, his own calf-raise example).
+**A row used as a MAIN LIFT follows the main-lift phase scheme regardless**, so
+the same `Single-Leg RDL` is dosed one way leading a day and another supporting
+one.
+**⚠ THE OLD CONSTANT IS NOT BLESSED.** Its in-season 6-8 and pre-season 6-10 sit
+inside his band and survive; **its off-season 8-15 exceeded it and is corrected
+to 8-10**; and the special and unloaded rows leave the category entirely.
+**SEAT-DRAFTED AND APPROVED, NOT HIS WORDS — U-3 and U-4:** an **unloaded lower
+compound** (`Bodyweight Squat`, unloaded `Glute Bridge`) is its own category at
+**2-3x10-20**, sharing a range with isolation without being reclassified as it;
+and **`Kettlebell Swings` used as strength-side ballistic work** take **2-3x6-10**
+fast crisp reps, quality-limited — **2-3 sets, not 3-5** — while the conditioning
+route still owns the dose when swings are used as conditioning.
+**THE OWNER IS A TYPED CATEGORY ON THE AUTHORED POOL ENTRY**
+(`PoolEntry.doseCategory`), never a name match. `group` + `loadRatio` were
+measured insufficient: swings share `bilateral_hinge` with `Hip Thrusts`, and
+`loadRatio: 0` says a row is unloaded without saying what it is for.
+**Search words:** lower secondary, single leg, calf raise, 5-10, 10-20, goblet
+squat, hip thrust, bodyweight squat, glute bridge, kettlebell swing, ballistic,
+dose category, accessory band.
+· **`UNENFORCED` GLOBALLY, `BUILT` ON THE COMPOSED PATH ONLY — and the row says
+which.** `resolveComposedDose` (`src/rules/composedDose.ts`) resolves it before
+authorship and `test:composer-severance` holds it with **nine cells, five of them
+mutation-proven red** (off-season max returned to 15; unloaded range narrowed to
+5-10; swings set to 3-5 sets; the multiplier value changed; the typed category
+deleted from an entry). **It is UNENFORCED globally because the composed row is
+still re-dosed downstream by `buildWorkoutsFromCoach` — the athlete does not yet
+receive this dose, and B1-M1's materialiser, which would close that, did not
+land.**
+
+---
+
+**R-096** · *"Keep the cut (75% / 90%)."* (Sam, 2026-08-14, verbatim) ·
+**OFF-SEASON MAIN-LIFT LOAD IS CUT: 75% early, 90% mid, full late.**
+**SEAT-DRAFTED AND APPROVED:** the cut applies **exactly once**, **only to
+main-lift anchors**, is relative to the normally resolved working load, and
+touches neither accessories nor unloaded rows.
+**⚠ THE FUNCTION IS NOT IDEMPOTENT AND THE ROW SAYS SO.** `applyOffseasonMainLiftLoad`
+is pure arithmetic: 100 -> 75 -> 55 if called twice, because a cut load and an
+uncut load are the same number to it. **Single application is a property of the
+CALL SITE**, and the composed path calls it exactly once per row, before
+authorship. A guard asserting idempotence was written, went red, and was
+replaced — the non-idempotence is now DECLARED so no future caller assumes
+otherwise.
+**Search words:** off-season load, 75%, 90%, early offseason, mid offseason,
+load multiplier, main lift anchor, double application, stacking.
+· **`UNENFORCED` GLOBALLY, `BUILT` ON THE COMPOSED PATH ONLY.**
+`applyOffseasonMainLiftLoad` (`src/rules/composedDose.ts`), held by seven cells
+in `test:composer-severance` including the call-count guard and a red-proof at
+the multiplier value. **The composer emits no starting load, so the cut is inert
+in composition today** — load resolution still happens downstream, and that is
+stated rather than implied.

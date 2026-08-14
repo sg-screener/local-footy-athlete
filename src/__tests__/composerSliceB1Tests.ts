@@ -80,6 +80,8 @@ function inputs(over: Partial<ComposerInputs> = {}): ComposerInputs {
   return {
     profile: { seasonPhase: 'Pre-season', experienceLevel: 'Intermediate' },
     phaseClock: { weekNumber: 1 },
+    seasonPhase: 'Off-season' as never,
+    offseasonSubphase: null,
     plannedDays: [UPPER_FULL_DAY],
     kit: FULL_GYM,
     injuries: { prohibitedPatterns: [], excludedIdentities: [] },

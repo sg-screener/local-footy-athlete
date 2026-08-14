@@ -689,6 +689,9 @@ export function buildGeneratedMicrocycles(args: {
     const composedWeek = composeWeek({
           profile,
           phaseClock: { weekNumber: blockState.weekNumber },
+          // B1-M1: the phase the DOSE is resolved against, before authorship.
+          seasonPhase: profile.seasonPhase as never,
+          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
           plannedDays: composedPlannedDaysFrom(weekPlan.weeklyPlan),
           kit: equipment.tags,
           injuries: {
