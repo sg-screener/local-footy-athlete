@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-M1-H | The handover | **STOPPED AND REVERTED THE WIRING.** Materialiser + assembler BUILT and tested; wiring them regressed the sweep 61/119 -> 49/131, so it is REVERSED and preserved as a patch. R-083 load legality FIXED: the away athlete's 10 kg is gone. |
 | B1-M1-C | Completion attempt — the handover | **STOPPED AT A NAMED SUB-BOUNDARY.** Registry corrected (11 -> 9, no new UNENFORCED). Base-load authority ESTABLISHED. Load now resolved and non-stacking BY DERIVATION. Silent fallthrough removed. **The materialiser and assembler still did not land.** |
 | B1-M1-F | Final resumption — dose rehoming | **PARTIAL, DECLARED.** Sam's four dose rulings are BUILT in the composer with 16 guards and 5 mutation red-proofs. **The materialiser and assembler did NOT land** — composed rows are still re-dosed downstream, so no athlete receives the new dose yet. |
 | B1-M1-R | Resumed after Sam's dose rulings | **HARD STOP AGAIN, ONE CLASS SHORT.** Power precondition CLEARS (`Vertical Jump`, 2x3 / 3x3). U-1 census classifies 18 of 20 rows; **unloaded lower compounds and Kettlebell Swings have no ruled band.** No production file changed. |
@@ -2682,6 +2683,108 @@ is not complete.**
   composer started authoring real weights. It was invisible while every row read
   `@0kg`.
 
+---
+
+## Slice B1-M1-HANDOVER — the boundary exists, the wiring does not hold yet
+
+**Seat `baseline`, 2026-08-14. Base: branch `slice-b1-pivot` @ `8d9454fc`.**
+
+### 0. WHERE THIS STOPS, AND WHY THE WIRING WAS REVERSED
+
+**`materialiseComposedWeek` and `assembleAuthoredWeek` are BUILT** — 179
+production lines, pure, tested. **Wiring them into generation regressed the
+180-world sweep from 61/119 to 49/131**, so the wiring is **reversed by a
+path-scoped patch and preserved at `docs/B1_M1_HANDOVER_WIRING.patch`**.
+
+The fence says do not leave a half-connected production path, and a handover that
+takes twelve working weeks away from athletes is exactly that. **The sweep is
+back to 61/119** and the modules sit ready with their regression diagnosed.
+
+**This is the fourth session this handover has not landed, and the reason is now
+specific rather than "ran out of time".** It is written below.
+
+### 1. THE ONE PRODUCT CORRECTION THAT DID LAND — R-083 load legality
+
+**The away athlete's `Single-Leg RDL @10kg` is gone.**
+
+`estimateStartingWeight` derives a working weight from the athlete's strength
+answers and **never asks what he owns**, which was invisible while every composed
+row read `@0kg`. `resolveComposedLoad` now asks the ONE equipment owner and its
+corrected sheet — no second lookup — before it derives anything:
+
+| control | result |
+| --- | --- |
+| away/bodyweight athlete, legal unloaded row | **0 kg** ✅ |
+| dumbbell athlete, `Goblet Squat` | real dumbbell load retained ✅ |
+| full-gym athlete, `Back Squat` | real barbell load retained ✅ |
+| same movement, two kits | loads on the kit that can hold it, 0 kg on the kit that cannot ✅ |
+
+**The identity is never disguised.** `composeWeek` already selects only through
+`composedRowIsLegal`, so an intrinsically-illegal identity cannot reach the load
+resolver at all — the row is refused upstream rather than kept at 0 kg. That is
+enforcement of R-083, not a new ruling.
+
+### 2. THE HANDOVER, AND EXACTLY WHY IT REGRESSED
+
+| | |
+| --- | --- |
+| `materialiseComposedWeek` | 100 lines. `ComposedWeek` → domain `Workout` rows. Copies identity, order, role, pattern, dose category, sets, reps, load and provenance; mints only ids and timestamps. **Carries the typed gaps on the WORKOUT** — one owner, matching the day the gap names. |
+| `assembleAuthoredWeek` | 79 lines. Composer workouts + retained adapter output, merged by day, with a provenance census per day. |
+| combined days | The stub returns the conditioning label for a `hasCombinedConditioning` entry so the adapter can still attach its block; **the strength half is never taken from there.** |
+| warm-up | **Zero composed strength days carry a warm-up row — measured, and no abstraction was built to represent nothing.** |
+
+**THE REGRESSION, ATTRIBUTED.** Wiring it moved the sweep 61/119 → **49/131**, and
+the new refusal causes are **not** strength-side:
+
+| new cause | worlds |
+| --- | --- |
+| `required_minimum_shortfall:sprint_high_speed` | **14** |
+| `conditioning_intensity_mismatch` + `required_minimum_shortfall:conditioning` | **10** |
+
+**Splitting the plan between the composer and the adapters is what did it.** The
+adapter is now handed only the days the composer does not author, and the
+conditioning and sprint ACCOUNTING is computed over the plan it receives — so
+credit that used to come from a combined strength day stops being counted. **The
+composed rows themselves are fine; the week's conditioning ledger is not.**
+
+**That is the next session's first job, and it is now a named defect rather than
+an unknown.** It is also squarely inside "do not redesign conditioning", which is
+why it was not chased here.
+
+### 3. WHAT IS MEASURABLY TRUE TODAY
+
+| | |
+| --- | --- |
+| `test:composer-severance` | **70 passed / 0 failed** |
+| sweep | **61 / 119**, restored |
+| `test:pools` | **498 / 1**, pinning honestly red |
+| `test:compile` | **459 PASSED** |
+| production added this slice | **215 lines** (100 materialiser + 79 assembler + 35 load legality + 1) |
+| deleted | 0 files, 0 callers — `composedWeekToCoachInputs` still has its generation caller because the wiring is reversed |
+
+### 4. NOT COVERED
+
+- **The handover is not live.** Composer rows still travel through
+  `composedWeekToCoachInputs` → `buildWorkoutsFromCoach` and are still re-dosed.
+- Both fingerprints against §18 input, the gap counts at §18 input, the planned-power
+  rehoming, the post-§18 M2 table and the deletion count — all wait on the wiring.
+- **No registry row or Bible supersession landed**, and none may until the
+  boundary holds. The withdrawn R-095/R-096 wording stays in the earlier reports.
+
+### 5. WHAT FOUGHT ME
+
+- **The handover works and the week's ACCOUNTING does not.** I expected the
+  composer's rows to be the risk. They were not: every composed row materialised
+  correctly. What broke is that the conditioning and sprint ledgers are computed
+  over the plan the adapter sees, and I changed what it sees.
+- **Reverting correctly took more care than the build.** `git checkout -- <path>`
+  destroyed uncommitted work in the previous session; this time the wiring was
+  committed first, extracted as a patch, and reversed with `git apply -R`, so the
+  work is recoverable and the tree is clean.
+- **I could have left it wired and called the 12 worlds "attributed".** The
+  attribution is real, but twelve athletes losing a week to buy a boundary that
+  is not finished is not a trade I should make on Sam's behalf.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -2690,6 +2793,7 @@ is not complete.**
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- Splitting the generation plan between the composer and the retained adapters stops conditioning and sprint credit being counted from combined strength days: 14 worlds refuse `required_minimum_shortfall:sprint_high_speed` and 10 refuse on conditioning.
 - `estimateStartingWeight` does not consult the athlete's kit, so a bodyweight/away athlete is authored a loaded `Single-Leg RDL` at 10kg.
 - `applyOffseasonMainLiftLoad` is not idempotent — 100 -> 75 -> 55 on a second call — so single application is a property of the call site, not of the function.
 - Rows outside the 20-row lower-body census (`Cossack Squat`, `Scap Push-Up`, upper accessories) have no authored `doseCategory` and fall through to the composer's own band, reported as `isolation_accessory`.

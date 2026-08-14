@@ -7,10 +7,7 @@ import {
   type Workout,
   type WeekKind,
 } from '../../types/domain';
-import {
-  buildWorkoutsFromCoach,
-  type CoachGeneratedWorkoutInput,
-} from '../../data/defaultProgram';
+import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
@@ -60,14 +57,10 @@ import {
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
-import { composedPlannedDaysFrom } from '../../rules/composedWeekToWorkouts';
-import { materialiseComposedWeek } from '../../rules/materialiseComposedWeek';
-import { assembleAuthoredWeek } from '../../rules/assembleAuthoredWeek';
-
-/** Day-name to number, for splitting the plan between composer and adapters. */
-const DAY_NAME_TO_NUMBER_FOR_ADAPTER: Record<string, number> = {
-  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
-};
+import {
+  composedPlannedDaysFrom,
+  composedWeekToCoachInputs,
+} from '../../rules/composedWeekToWorkouts';
 import { awaySpansFromConstraints } from '../../rules/awaySpans';
 import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
 import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
@@ -709,12 +702,7 @@ export function buildGeneratedMicrocycles(args: {
           },
       todayISO: blockState.weekStart,
     });
-    // ⚠ THE HANDOVER. Composer rows are MATERIALISED directly and never enter
-    // `buildWorkoutsFromCoach`; the retained adapters are asked only for the
-    // days the composer does not author, plus the conditioning blocks of
-    // combined days. `assembleAuthoredWeek` merges the two by day.
-    const composedDayNumbers = new Set(composedWeek.days.map((day) => day.dayOfWeek));
-    const sourceCoachWorkouts: CoachGeneratedWorkoutInput[] = [];
+    const sourceCoachWorkouts = composedWeekToCoachInputs(composedWeek);
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     // The governed boundary, when it falls inside THIS week. Days before it are
     // history: the contract is stamped, pre-boundary anchors keep settled
@@ -756,20 +744,10 @@ export function buildGeneratedMicrocycles(args: {
       // removal from §18-verified stored surfaces is its own unit (recorded in
       // the fix-round boundary notes, with `dropRetiredWeekOverlaysAtHydration`
       // as the pattern to follow).
-      // ⚠ THE ADAPTER IS ASKED ONLY FOR THE DAYS THE COMPOSER DOES NOT AUTHOR.
-      // Handing it the whole plan made it complete every strength day from the
-      // severed builder, which now throws by name — measured: 0 built / 180
-      // refused. A COMBINED day stays in the list because its conditioning half
-      // is the adapter's; its strength half is never taken from here.
-      const adapterPlan = weekPlan.weeklyPlan.filter((entry) => {
-        const dayNumber = DAY_NAME_TO_NUMBER_FOR_ADAPTER[String(entry.dayOfWeek ?? '')];
-        if (dayNumber === undefined) return true;
-        return !composedDayNumbers.has(dayNumber) || entry.hasCombinedConditioning === true;
-      });
-      const adapterWorkouts = buildWorkoutsFromCoach(
+      const built = buildWorkoutsFromCoach(
           source,
           microcycleId,
-          adapterPlan,
+          weekPlan.weeklyPlan,
           profile,
           {
             miniCycleNumber: blockState.miniCycleNumber,
@@ -787,14 +765,6 @@ export function buildGeneratedMicrocycles(args: {
             conditioningModalities: equipment.conditioningModalities,
           },
         );
-      const built = assembleAuthoredWeek({
-        composerWorkouts: materialiseComposedWeek(composedWeek, {
-          microcycleId,
-          weekStartISO: blockState.weekStart,
-        }),
-        adapterWorkouts,
-      }).workouts as Workout[];
-      void composedDayNumbers;
       const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
         constraint.type === 'equipment' ||
         (constraint.type === 'schedule' &&

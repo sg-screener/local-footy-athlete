@@ -1,0 +1,105 @@
+diff --git a/src/data/defaultProgram.ts b/src/data/defaultProgram.ts
+index 15016502..3b24d53a 100644
+--- a/src/data/defaultProgram.ts
++++ b/src/data/defaultProgram.ts
+@@ -1097,6 +1097,13 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
+   if (entry.conditioningFlavour || /conditioning|aerobic|tempo|sprint|interval/i.test(lower)) {
+     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
+   }
++  // ── A COMBINED DAY IS TWO OWNERS (B1-M1-HANDOVER) ────────────────────────
++  // Its STRENGTH half is the composer's and never comes from here; its
++  // CONDITIONING half belongs to the retained adapter, which needs the day to
++  // exist to attach its block. Measured: 16 of 143 composed strength days.
++  if (entry.hasCombinedConditioning) {
++    return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
++  }
+   throw new Error(
+     'B1-PIVOT: the legacy strength-content builder is severed. A strength plan '
+     + `entry (${entry.planEntryId ?? entry.dayOfWeek ?? 'unknown'}) reached `
+diff --git a/src/services/api/generateProgram.ts b/src/services/api/generateProgram.ts
+index 6d330416..885823a1 100644
+--- a/src/services/api/generateProgram.ts
++++ b/src/services/api/generateProgram.ts
+@@ -7,7 +7,10 @@ import {
+   type Workout,
+   type WeekKind,
+ } from '../../types/domain';
+-import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
++import {
++  buildWorkoutsFromCoach,
++  type CoachGeneratedWorkoutInput,
++} from '../../data/defaultProgram';
+ import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
+ import { deriveProfileReadiness } from '../../utils/readiness';
+ import {
+@@ -57,10 +60,14 @@ import {
+ import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
+ import { storedGameAnchor } from '../../rules/gameAnchor';
+ import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
+-import {
+-  composedPlannedDaysFrom,
+-  composedWeekToCoachInputs,
+-} from '../../rules/composedWeekToWorkouts';
++import { composedPlannedDaysFrom } from '../../rules/composedWeekToWorkouts';
++import { materialiseComposedWeek } from '../../rules/materialiseComposedWeek';
++import { assembleAuthoredWeek } from '../../rules/assembleAuthoredWeek';
++
++/** Day-name to number, for splitting the plan between composer and adapters. */
++const DAY_NAME_TO_NUMBER_FOR_ADAPTER: Record<string, number> = {
++  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
++};
+ import { awaySpansFromConstraints } from '../../rules/awaySpans';
+ import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
+ import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
+@@ -702,7 +709,12 @@ export function buildGeneratedMicrocycles(args: {
+           },
+       todayISO: blockState.weekStart,
+     });
+-    const sourceCoachWorkouts = composedWeekToCoachInputs(composedWeek);
++    // ⚠ THE HANDOVER. Composer rows are MATERIALISED directly and never enter
++    // `buildWorkoutsFromCoach`; the retained adapters are asked only for the
++    // days the composer does not author, plus the conditioning blocks of
++    // combined days. `assembleAuthoredWeek` merges the two by day.
++    const composedDayNumbers = new Set(composedWeek.days.map((day) => day.dayOfWeek));
++    const sourceCoachWorkouts: CoachGeneratedWorkoutInput[] = [];
+     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
+     // The governed boundary, when it falls inside THIS week. Days before it are
+     // history: the contract is stamped, pre-boundary anchors keep settled
+@@ -744,10 +756,20 @@ export function buildGeneratedMicrocycles(args: {
+       // removal from §18-verified stored surfaces is its own unit (recorded in
+       // the fix-round boundary notes, with `dropRetiredWeekOverlaysAtHydration`
+       // as the pattern to follow).
+-      const built = buildWorkoutsFromCoach(
++      // ⚠ THE ADAPTER IS ASKED ONLY FOR THE DAYS THE COMPOSER DOES NOT AUTHOR.
++      // Handing it the whole plan made it complete every strength day from the
++      // severed builder, which now throws by name — measured: 0 built / 180
++      // refused. A COMBINED day stays in the list because its conditioning half
++      // is the adapter's; its strength half is never taken from here.
++      const adapterPlan = weekPlan.weeklyPlan.filter((entry) => {
++        const dayNumber = DAY_NAME_TO_NUMBER_FOR_ADAPTER[String(entry.dayOfWeek ?? '')];
++        if (dayNumber === undefined) return true;
++        return !composedDayNumbers.has(dayNumber) || entry.hasCombinedConditioning === true;
++      });
++      const adapterWorkouts = buildWorkoutsFromCoach(
+           source,
+           microcycleId,
+-          weekPlan.weeklyPlan,
++          adapterPlan,
+           profile,
+           {
+             miniCycleNumber: blockState.miniCycleNumber,
+@@ -765,6 +787,14 @@ export function buildGeneratedMicrocycles(args: {
+             conditioningModalities: equipment.conditioningModalities,
+           },
+         );
++      const built = assembleAuthoredWeek({
++        composerWorkouts: materialiseComposedWeek(composedWeek, {
++          microcycleId,
++          weekStartISO: blockState.weekStart,
++        }),
++        adapterWorkouts,
++      }).workouts as Workout[];
++      void composedDayNumbers;
+       const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
+         constraint.type === 'equipment' ||
+         (constraint.type === 'schedule' &&
