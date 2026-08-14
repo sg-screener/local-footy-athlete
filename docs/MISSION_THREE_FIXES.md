@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-M1-R | Resumed after Sam's dose rulings | **HARD STOP AGAIN, ONE CLASS SHORT.** Power precondition CLEARS (`Vertical Jump`, 2x3 / 3x3). U-1 census classifies 18 of 20 rows; **unloaded lower compounds and Kettlebell Swings have no ruled band.** No production file changed. |
 | B1-M1 | Direct authorship boundary | **HARD STOP AT THE PRECONDITION.** Two output-affecting dose policies have no citable authority and one CONTRADICTS the Bible. No production code touched. MUT-8's replacement guard written and seen red. Two questions for Sam. |
 | B1-E2E-SEMANTIC | Finish the boundary measurement | **MEASURED.** Two fingerprints separated; **176 typed gaps lost at materialisation across 86 worlds**; 569 dose movements attributed; 18 composer rows never reach storage. Sweep unmoved. Boot regeneration NOT COVERED. |
 | B1-E2E-EXTEND | Make the end-to-end claim true at full width | **DONE.** 36 → **192 worlds** (the sweep's 180 + 12 answered-bodyweight). One real failure found at an unmeasured day count. Sweep unmoved at 61/119. |
@@ -2286,6 +2287,136 @@ and dose (§2).
   the early-off-season REPS, so the subphase scheme looks sourced. The
   `loadMultiplier: 0.75` sits in the same object literal and nothing rules it.
 
+---
+
+## Slice B1-M1 RESUMED — the census classifies 18 of 20, and stops on the last two
+
+**Seat `baseline`, 2026-08-14. Base: branch `slice-b1-pivot` @ `2a9d87fe`.**
+**No production file changed.** Working tree carries no `src` modification;
+`git status` is the receipt. The previous hard-stop receipt is untouched.
+
+### 1. SAM'S RULINGS, VERBATIM (2026-08-14) — recorded as written
+
+> **U-1:** *"App wins because accessories are differnt to single leg work - for
+> example calf raises are accessories and would fit the 10-20 rep range - but
+> single leg rdl's are better in the 5-10 rep range."*
+
+> **U-2:** *"Keep the cut (75% / 90%)."*
+
+Everything below labelled "category" is **seat-drafted implementation
+interpretation approved through the resumed prompt** — never his wording.
+
+### 2. U-1 CATEGORY CENSUS — every row `LOWER_SECONDARY_REP_GUIDELINES` reaches
+
+**The classifier is a TYPED FIELD, not a name regex.** `PoolEntry.group`
+(`single_leg_knee` · `bilateral_squat` · `single_leg_hip` · `bilateral_hinge`)
+plus `PoolEntry.loadRatio`, whose own docstring says **`0` = bodyweight, no
+external load**. Both are authored fields already in the pool.
+
+| exercise | slot | role | group | loadRatio | proposed category | bands (In / Pre / Off) | authority |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Back Squat · Front Squat · Box Squat · High Box Squat | squat | anchor | — | 1 / .85 / .95 / 1.14 | **MAIN LIFT** | phase scheme | Bible `:767-769`, `:839-841` |
+| Deadlift · Trap Bar Deadlift · RDLs | hinge | anchor | — | 1 / 1.05 / .8 | **MAIN LIFT** | phase scheme | same |
+| Walking Lunges | squat | accessory | single_leg_knee | 0.45 | **LOADED LOWER SECONDARY** | 2-3×6-8 / 6-10 / 8-10 | U-1 (*"single leg rdl's are better in the 5-10 rep range"*) |
+| Bulgarian Split Squats | squat | accessory | single_leg_knee | 0.40 | **LOADED LOWER SECONDARY** | same | U-1 |
+| Reverse Lunges | squat | accessory | single_leg_knee | 0.45 | **LOADED LOWER SECONDARY** | same | U-1 |
+| Step Ups | squat | accessory | single_leg_knee | 0.40 | **LOADED LOWER SECONDARY** | same | U-1 |
+| Single-Leg Leg Press | squat | accessory | single_leg_knee | 0.50 | **LOADED LOWER SECONDARY** | same | U-1 |
+| Single-Leg Squat (to Box) | squat | accessory | single_leg_knee | 0.30 | **LOADED LOWER SECONDARY** | same | U-1 |
+| Goblet Squat | squat | accessory | bilateral_squat | 0.35 | **LOADED LOWER SECONDARY** | same | U-1 (loaded compound) |
+| Leg Press | squat | accessory | bilateral_squat | 0.90 | **LOADED LOWER SECONDARY** | same | U-1 |
+| Single-Leg RDL | hinge | accessory | single_leg_hip | 0.45 | **LOADED LOWER SECONDARY** | same | U-1, **his own example** |
+| Hip Thrusts | hinge | accessory | bilateral_hinge | 1.10 | **LOADED LOWER SECONDARY** | same | U-1 |
+| Calf Raises · Tib Raises · Hamstring Curl · Leg Extension · Back Extension · Nordic Lower | **not in these pools** | — | — | — | **TRUE ISOLATION / SPECIAL** — already dosed by `ACCESSORY_REP_GUIDELINES` | 2-3×10-20; Nordics 2-3×3-5 | Bible `:818`, `:919`, **U-1's own calf-raise example** |
+| **Bodyweight Squat** | squat | accessory | bilateral_squat | **0** | **⚠ UNRESOLVED** | — | **none found** |
+| **Glute Bridge** | hinge | accessory | bilateral_hinge | **0** | **⚠ UNRESOLVED** | — | **none found** |
+| **Kettlebell Swings** | hinge | accessory | bilateral_hinge | 0.35 | **⚠ UNRESOLVED** | — | **ambiguous** |
+
+**18 of 20 classify from existing authored meaning. Two classes do not.**
+
+**⚠ THE OLD CONSTANT IS NOT BLESSED.** Its in-season 6-8 and pre-season 6-10 sit
+inside Sam's 5-10 band and survive; its **off-season 8-15 exceeds it and is
+corrected to 8-10**; its category was broader than his example and the special
+and unloaded rows come out of it.
+
+### 3. THE HARD STOP — one grouped question
+
+**⚠ I DID NOT PLACE THESE IN THE NEAREST CATEGORY.** The fence names both traps
+by name, and the honest answer is that neither has a ruled band.
+
+**Unloaded lower compounds — `Bodyweight Squat` (loadRatio 0) and `Glute Bridge`
+(loadRatio 0).** Sam's ruling splits *isolation accessories* (10-20) from
+*single-leg / compound work* (5-10). An unloaded bilateral squat or bridge is
+neither: it is a compound movement carrying no external load, where 5-10 reps of
+bodyweight is close to nothing. **These are not edge cases — they are the squat
+and hinge picks the composer makes for dumbbell and away athletes**, i.e. the
+athletes with the least kit.
+
+**`Kettlebell Swings` (loadRatio 0.35).** Ballistic, and it sits in the hinge
+accessory pool. Bible `:823` and `:858` list it among secondary/hip-extension
+accessories, whose `:818` dose is 2-3×10-20; `:2244` and `:2257` treat it as an
+injury substitute and as CONDITIONING. Under the new split it is neither
+isolation nor a single-leg compound, so **both readings are available and I will
+not choose between them.**
+
+**THE QUESTION FOR SAM, in one:** what rep range do bodyweight-only lower lifts
+(bodyweight squat, glute bridge) and kettlebell swings get — the 10-20
+accessory range, the 5-10 compound range, or something of their own?
+
+### 4. POWER PRECONDITION — CLEARED
+
+Executed against the real planner and selector.
+
+| | |
+| --- | --- |
+| planner field | `SessionAllocation.powerPrimer`, set at `coachingEngine.ts:1546` via `decidePowerPrimer` |
+| contract count | `plannerSelected.powerPrimers` (`coachingEngine.ts:875`) |
+| **dose, measured** | **In-season `2 × 3`** (*"In-season small familiar power primer"*) · **Pre-season `3 × 3`** (*"Pre-season power primer"*) · **Off-season: no power requested** — identical across Full Gym, Dumbbells and Bodyweight |
+| days requesting it | exactly 1 per week in-season and pre-season, on the Tuesday strength day |
+| **identity, measured** | **`Vertical Jump`** — `family: lower`, across both phases, all three kits, blocks 1 and 2 |
+| selector | `selectPowerExercise` (`powerExercisePool.ts:284`); `Pogo Hops` is the reduced-niggle takeover; rotation is seeded on block identity |
+| authority | `POWER_EXERCISE_POOL` names `docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md` as its source of truth; `decidePowerPrimer` cites R-079; guarded by `test:power-primer-policy` |
+
+**Power is established and would have been safe to rehome.** It was not rehomed,
+because the U-1 stop lands first and partially implementing the materialiser
+while awaiting an answer is named in the fence as a thing not to do.
+
+### 5. WHAT WAS DONE — the MUT-8 replacement guards, rerun
+
+| | |
+| --- | --- |
+| `[semantic] the attribution check reached main lifts` | ✅ |
+| `[MUT-8 replacement] every main-lift dose at authorship is the phase table's` | ✅ |
+| existing red-proofs (MUT-8′ set count +3, MUT-8″ repsMin +1) | preserved, not redesigned |
+| `test:composer-severance` | **45 passed / 0 failed** |
+| sweep | **61 / 119**, unmoved |
+| `test:pools` | **498 / 1**, pinning still red |
+
+### 6. NOT COVERED
+
+Everything after the precondition, again and for the same reason: the
+materialiser, `assembleAuthoredWeek`, dose and power rehoming, the gap carrier,
+both fingerprints against §18 input, the post-§18 M2 table, the deletion count,
+and the U-1/U-2 registry rows and Bible supersessions — **which must land in the
+same commit as their enforcement guards, so they cannot land now.**
+
+### 7. WHAT FOUGHT ME
+
+- **`loadRatio` turned out to be the classifier the ruling needed, and it was
+  already authored.** I expected to need a new typed field; the pool has carried
+  "does this lift carry external load" as a number since it was written. Using it
+  meant no name regex and no new authority — and it is also what exposed the two
+  unresolved classes, because it is the field that says `Bodyweight Squat` and
+  `Glute Bridge` are **0**.
+- **`Reverse Lunges` looked like a third trap and was not.** Its equipment row
+  says *needs nothing*, which reads unloaded — but its `loadRatio` is 0.45, so
+  the pool's own answer is that it is a loaded lift that can also be done light.
+  Two fields, two questions, and only one of them is about dose.
+- **Kettlebell Swings has too MUCH authority, not too little.** The Bible files it
+  as a secondary accessory, as an injury substitute and as conditioning, in three
+  places. That is exactly the shape where picking the nearest category feels
+  reasonable and is a guess.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -2294,6 +2425,8 @@ and dose (§2).
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- `Bodyweight Squat` and `Glute Bridge` carry `loadRatio: 0` and are the composer's squat/hinge picks for dumbbell and away athletes; no authored dose band covers an unloaded lower compound.
+- `Kettlebell Swings` is filed by the Bible as a secondary accessory (`:823`, `:858`), an injury substitute (`:2244`) and conditioning (`:2257`); the new isolation/compound split leaves it in none of them.
 - `LOWER_SECONDARY_REP_GUIDELINES` doses squat/hinge secondary work at 2-3x6-8 in-season and 2-3x6-10 pre-season with no citable authority, contradicting Bible `:818` (secondary work is 2-3x10-20) and `:889` (single-leg accessory work goes slightly HIGHER rep).
 - Off-season subphase `loadMultiplier` cuts main-lift prescribed load to 0.75x early and 0.9x mid; Bible `:109` rules those subphases' REPS and says nothing about the weight.
 - 176 typed `ComposedGap` records across 86 worlds are composed and none survives `composedWeekToCoachInputs`, which has no carrier field; the athlete is never told why a kit-impossible pattern is missing.
