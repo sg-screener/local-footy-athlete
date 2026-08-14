@@ -62,7 +62,12 @@
  */
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
-import { sessionSlotCoverage, slotDayKindFor } from '../rules/sessionSlotCoverage';
+import {
+  sessionSlotCoverage,
+  slotDayKindFor,
+  slotsForExerciseName,
+  type SessionSlot,
+} from '../rules/sessionSlotCoverage';
 // The SAME kit resolution the generator uses (`defaultProgram`), not a second
 // one — a census judging against a kit the builder never saw would be measuring
 // a world no athlete is in.
@@ -152,7 +157,44 @@ const KITS: string[][] = [['Full Gym'], ['Bodyweight Only'], ['Dumbbells', 'Band
  * would read as healthy while looking at less. The floor makes the widening a
  * property this suite HOLDS, not an excuse it was given once.
  */
-const DEFICIENT_CEILING = 88;
+/**
+ * **LOWERED 88 -> 0 ON 2026-08-14, IN THE COMMIT THAT EARNED IT — AND THE NUMBER
+ * IS NOT THE ACHIEVEMENT IT LOOKS LIKE. READ THE SECOND HALF OF THIS NOTE.**
+ *
+ * WHAT ACTUALLY CHANGED. Nothing was added to any week. 24 of the 28 deficient
+ * days were composed FULL-BODY days being judged against a lower-or-upper ladder,
+ * because this census re-derived the day's shape from the planner's session TITLE
+ * while the composer had already DECLARED it; the other 4 were a composed
+ * push-only day whose title promised "combined push + pull". The declaration is
+ * now carried (`materialiseComposedWeek`) and read (above). Same 294 laddered
+ * days, same row-count histogram `{2:22, 3:78, 4:16, 5:106, 6:72}` either side —
+ * **no day left the corpus, and no exercise entered a week.**
+ *
+ * ⚠ **AND FOR A COMPOSED DAY THIS METRIC IS NOW CIRCULAR.** `composeWeek` fills
+ * `SLOTS_FOR_KIND[kind]`; this census judges the same day against
+ * `SLOTS_FOR_KIND[kind]`. For composed days those are the SAME LIST, so `missing`
+ * is empty **by construction** and a ceiling of 0 is a statement about the wiring,
+ * not about the training. It is banked because the mission requires a measured
+ * improvement to be banked where it was earned, and because it still guards two
+ * things that are NOT tautological:
+ *
+ *   - **days nobody composed** — the adapter's own days are still title-judged;
+ *   - **the kit and injury interactions** — a slot the kit CAN train but the
+ *     composer left unfilled (an injury-prohibited pattern, an exhausted pool)
+ *     survives in `required` and still reports `missing`.
+ *
+ * **THE HONEST MEASURE OF COMPOSER CORRECTNESS MOVED TO THE `[CONTENT]` R-089
+ * ARMS**, which count squat/hinge and single-leg exposures from what the rows ARE
+ * and consult no ladder and no declaration. Mutation-proved 2026-08-14: dropping
+ * `hinge` from `FULL_BODY_B_SLOTS` — a change that moves the composer and the
+ * judge together, so a circular cell would stay green — reds the content arm and
+ * takes pair exposures 640 -> 610.
+ *
+ * **DO NOT read a future "0 deficient" as health.** If this reaches zero while
+ * the content arms are also green and `LADDERED_FLOOR` holds, that is the wiring
+ * working. The number that means something here is 294.
+ */
+const DEFICIENT_CEILING = 0;
 
 // ── R-089: THE LOWER PATTERNS MOVE IN PAIRS, ACROSS THE WEEK ──────────────
 //
@@ -171,6 +213,35 @@ const DEFICIENT_CEILING = 88;
 const unmatchedSquats: string[] = [];
 const unmatchedKnees: string[] = [];
 const pairShapes = new Map<string, number>();
+
+/**
+ * ── R-089 COUNTED A SECOND WAY, FROM THE CONTENT, AND IT IS THE ARM THAT CANNOT
+ *    BE SATISFIED BY CONSTRUCTION ──────────────────────────────────────────────
+ *
+ * **THE SLOT-BASED COUNT ABOVE WENT CIRCULAR ON 2026-08-14 AND SAYING SO IS THE
+ * POINT.** The composer fills `SLOTS_FOR_KIND[kind]`; since the declaration is
+ * now read, this census judges the same day against `SLOTS_FOR_KIND[kind]`. For a
+ * composed day the two are the SAME LIST, so `missing` is empty by construction
+ * and "0 deficient" is a statement about the wiring, not about the training. That
+ * is honest and it is a real loss of independence — a ceiling that can only ever
+ * read zero has stopped being a measurement.
+ *
+ * So R-089 is counted again HERE, from what the week's rows ARE:
+ * `slotsForExerciseName` over every exercise, day ladders and declared shapes
+ * ignored entirely. A `Back Squat` is a squat exposure because of what it is, and
+ * no shape declaration can talk this counter out of it. **A composer that shipped
+ * a squat with no hinge would pass the slot arm and fail this one**, which is the
+ * whole reason it exists — proved by mutation, not asserted.
+ *
+ * ONE ROW IS SPENT ONCE. A lift filling two pair slots is counted in the first,
+ * in Sam's authored order, so a single exercise can never match itself.
+ */
+const PAIR_SLOTS: readonly SessionSlot[] = [
+  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
+];
+const contentUnmatchedSquats: string[] = [];
+const contentUnmatchedKnees: string[] = [];
+let contentPairExposures = 0;
 let worldsBuilt = 0;
 let worldsRefused = 0;
 let sessionsSeen = 0;
@@ -216,9 +287,50 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
           const weekPairs: Record<string, number> = {
             squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0,
           };
+          // The independent count — see PAIR_SLOTS. Every row in the week, no
+          // ladder and no declared shape consulted.
+          const contentPairs: Record<string, number> = {
+            squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0,
+          };
           for (const workout of (program?.microcycles?.[week - 1]?.workouts ?? [])) {
             sessionsSeen += 1;
-            const kind = slotDayKindFor(String(workout.name ?? ''));
+            for (const row of (workout.exercises ?? [])) {
+              const name = String((row as { exercise?: { name?: string } }).exercise?.name ?? '');
+              if (!name) continue;
+              const filled = slotsForExerciseName(name) ?? [];
+              const hit = PAIR_SLOTS.find((slot) => filled.includes(slot));
+              if (hit) { contentPairs[hit] += 1; contentPairExposures += 1; }
+            }
+            // ── THE DECLARATION ANSWERS FIRST, THE NAME ONLY FOR DAYS NOBODY
+            //    COMPOSED (2026-08-14) ─────────────────────────────────────────
+            //
+            // `slotDayKindFor` reads a session TITLE. That is the right owner for
+            // a day this census did not build, and it was the ONLY owner here —
+            // so a composed day was judged against a ladder re-guessed out of the
+            // planner's prose rather than the one the composer declared.
+            //
+            // **IT IS NOT A HEURISTIC THAT NEEDED IMPROVING.** Sam's full-body A
+            // and B are DIFFERENT ladders (A leads with a squat, B with a hinge)
+            // and every naming owner in this app calls both `Full Body Strength`.
+            // The title does not contain the answer, so no text probe could ever
+            // have got it right.
+            //
+            // MEASURED BEFORE THIS LINE: 24 composed full-body days scored
+            // deficient with NOTHING missing from them, and R-089 reported 6
+            // squat-without-hinge weeks whose real content is `sq1/hi1` — the
+            // hinge was on the day, in the slot, and invisible because `hinge` is
+            // not a member of the upper ladder the NAME selected.
+            //
+            // ⚠ THIS MAY NOT SHRINK THE CORPUS. A day that stops being laddered
+            // is a day that stopped being looked at, which is the move
+            // `DEFICIENT_CEILING`'s own comment calls worthless — so
+            // `LADDERED_FLOOR` below is the arm that reds if this narrows the
+            // question instead of correcting it. Measured either side: 294 both
+            // ways, no day left the corpus.
+            const declaredShape = (workout as { composedDayShape?: string })
+              .composedDayShape;
+            const kind = (declaredShape as ReturnType<typeof slotDayKindFor>)
+              ?? slotDayKindFor(String(workout.name ?? ''));
             if (!kind) continue;
             ladderedDays += 1;
             const rows = workout.exercises ?? [];
@@ -240,7 +352,14 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
             // is empty, so `required` is the whole declared ladder exactly as
             // before. That is asserted below, not assumed.
             const kit = resolveEquipmentCapabilities(profile as any).tags;
-            const coverage = sessionSlotCoverage(rows, kind, kit);
+            // R-087: a `full_body_coverage` day carries its OWN ladder, because its
+            // slots are whatever the week had not covered when it was composed —
+            // the same kind of day is a different seven at a different position.
+            // `SLOTS_FOR_KIND` holds the ten-slot set it draws from, so judging by
+            // kind alone would invent three misses on every one of them.
+            const declaredSlots = (workout as { composedDeclaredSlots?: string[] })
+              .composedDeclaredSlots;
+            const coverage = sessionSlotCoverage(rows, kind, kit, declaredSlots as never);
             for (const slot of coverage.filled) {
               if (slot in weekPairs) weekPairs[slot] += 1;
             }
@@ -273,6 +392,14 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
           }
           if (weekPairs.single_leg_knee > weekPairs.single_leg_hip) {
             unmatchedKnees.push(`${label} | ${shape}`);
+          }
+          const contentShape = `sq${contentPairs.squat}/hi${contentPairs.hinge}`
+            + ` slk${contentPairs.single_leg_knee}/slh${contentPairs.single_leg_hip}`;
+          if (contentPairs.squat > contentPairs.hinge) {
+            contentUnmatchedSquats.push(`${label} | ${contentShape}`);
+          }
+          if (contentPairs.single_leg_knee > contentPairs.single_leg_hip) {
+            contentUnmatchedKnees.push(`${label} | ${contentShape}`);
           }
         }
       }
@@ -405,9 +532,33 @@ console.log('\n[2] Sam\'s ladder, over every world the app can build');
     unmatchedKnees.length === 0,
     `${unmatchedKnees.length} week(s) with an unmatched single-leg knee: ${unmatchedKnees.slice(0, 5).join(' ; ')}`);
 
+  // ── AND THE SAME RULING, FROM THE CONTENT. See PAIR_SLOTS for why. ─────────
+  //
+  // THE NON-VACUITY FIRST, AND IT IS NOT THE SAME ARM AS THE ONE ABOVE. That one
+  // proves the SLOT counters are live; this proves rows were read at all. If
+  // `slotsForExerciseName` ever stopped answering for the app's own exercise
+  // names, every content count would be 0, "no unmatched squat" would be true,
+  // and it would mean nothing.
+  ok('[R-089 content non-vacuity] pair-slot exposures were counted from the rows',
+    contentPairExposures > 0,
+    `0 pair-slot exposures across ${worldsBuilt} worlds — slotsForExerciseName has `
+    + 'stopped recognising the app\'s own lifts, so the two content cells below are '
+    + 'confident zeros about nothing.');
+
+  ok('R-089 [CONTENT]: no week has more squats than hinges, counted from the rows',
+    contentUnmatchedSquats.length === 0,
+    `${contentUnmatchedSquats.length} week(s): ${contentUnmatchedSquats.slice(0, 5).join(' ; ')}`);
+
+  ok('R-089 [CONTENT]: no week has more single-leg knee than single-leg hip, from the rows',
+    contentUnmatchedKnees.length === 0,
+    `${contentUnmatchedKnees.length} week(s): ${contentUnmatchedKnees.slice(0, 5).join(' ; ')}`);
+
   console.log(`  R-089 PAIR CENSUS: ${shapes.length} distinct week shapes, `
     + `${unmatchedSquats.length} unmatched squat, ${unmatchedKnees.length} unmatched single-leg knee`);
   for (const [shape, n] of shapes.slice(0, 6)) console.log(`    ${String(n).padStart(3)}x  ${shape}`);
+  console.log(`  R-089 CONTENT CENSUS: ${contentPairExposures} pair-slot exposures read from rows, `
+    + `${contentUnmatchedSquats.length} unmatched squat, `
+    + `${contentUnmatchedKnees.length} unmatched single-leg knee`);
 }
 
 const total = passed + failures.length;

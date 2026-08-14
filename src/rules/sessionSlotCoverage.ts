@@ -53,8 +53,39 @@ export type SessionSlot =
   | 'vertical_pull'
   | 'arm_or_shoulder';
 
-/** Which slot list a day answers to. Power is never a slot — it rides on top. */
-export type SlotDayKind = 'lower' | 'upper_full' | 'upper_split_push' | 'upper_split_pull';
+/**
+ * Which slot list a day answers to. Power is never a slot — it rides on top.
+ *
+ * **THE TWO FULL-BODY KINDS ARRIVED 2026-08-14 AND THEY CLOSE THIS FILE'S OWN
+ * DECLARED GAP.** `slotDayKindFor`'s docstring recorded, honestly, that
+ * `Full Body Strength` was unjudged because *"Sam has ruled a lower ladder and an
+ * upper ladder; he has never ruled a full-body one"*. **He has now ruled one**
+ * (2026-08-14, quoted verbatim on `FULL_BODY_A_SLOTS` below), so the gap closes
+ * by transcribing his sentence rather than by this seat inventing a ladder.
+ *
+ * **AND THE LADDER WAS ALREADY IN THE APP — IN THE WRONG FILE.** `composeWeek`
+ * held both lists privately, so the COMPOSER knew a ladder the LADDER OWNER did
+ * not. Two representations of one decision, and the visible cost was exact: 24
+ * composed full-body days were judged against a lower-or-upper ladder they were
+ * never built to satisfy, every one of them scored deficient, and R-089's
+ * week-level pair counter could not see a hinge that was on the day in front of
+ * it. `composeWeek` now imports these.
+ */
+export type SlotDayKind =
+  | 'lower'
+  | 'upper_full'
+  | 'upper_split_push'
+  | 'upper_split_pull'
+  | 'full_body_a'
+  | 'full_body_b'
+  /**
+   * R-087's general full-body day: the slots it owes are **whatever the week has
+   * not covered yet**, so its ladder is a per-day answer carried as
+   * `composedDeclaredSlots` and not a row in `SLOTS_FOR_KIND`. Distinct from
+   * `full_body_a`/`full_body_b`, which are R-093's two FIXED shapes for the
+   * athlete whose every gym night is a club night.
+   */
+  | 'full_body_coverage';
 
 export const LOWER_SLOTS: readonly SessionSlot[] = [
   'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'accessory_or_core',
@@ -93,11 +124,82 @@ export const UPPER_SPLIT_PULL_SLOTS: readonly SessionSlot[] = [
   'horizontal_pull', 'vertical_pull', 'arm_or_shoulder',
 ];
 
+/**
+ * ── SAM'S FULL-BODY SHAPE, 2026-08-14, verbatim ───────────────────────────
+ *
+ * *"either way i'd make them full body sessions. Squat and single leg hip with
+ * push and pull + accessories then hinge and single leg knee with push and pull
+ * (in opposite plane to earlier in week) + accessories - but the ideal would be
+ * to do full body strength on different nights"*
+ *
+ * **TWO SESSIONS, NOT ONE, AND THAT IS WHY A NAME CANNOT JUDGE THEM.** A and B
+ * are different ladders — A leads with a squat, B with a hinge — and both are
+ * called the same thing by any naming owner in this app. So a day's full-body
+ * shape can only arrive as the composer's TYPED DECLARATION; inferring it from
+ * prose is not a heuristic that needs improving, it is a question the text does
+ * not contain the answer to.
+ *
+ * **THESE LISTS MOVED HERE FROM `composeWeek` — THEY WERE NOT COPIED.** The
+ * composer imports them, so there is exactly one statement of Sam's sentence.
+ */
+export const FULL_BODY_A_SLOTS: readonly SessionSlot[] = [
+  'squat', 'single_leg_hip', 'horizontal_push', 'vertical_pull', 'accessory_or_core',
+];
+
+export const FULL_BODY_B_SLOTS: readonly SessionSlot[] = [
+  'hinge', 'single_leg_knee', 'vertical_push', 'horizontal_pull', 'accessory_or_core',
+];
+
+/**
+ * ── R-087: THE WEEK'S COMPLETE SET, IN SAM'S OWN ENUMERATION ORDER ──────────
+ *
+ * *"each week should contain all the main lifts i.e. squat, hinge, single leg
+ * knee, single leg hip, push pull in both horizontal and vertical then
+ * accessories for uppers and lowers and some core"* (2026-08-13) ·
+ * **THE WEEK IS THE UNIT OF COVERAGE, NOT THE DAY.**
+ *
+ * His eleven names land on TEN slots because this vocabulary already collapses
+ * *"accessories for lowers and some core"* into `accessory_or_core`; the split he
+ * makes is upper-accessory (`arm_or_shoulder`) versus lower-accessory-and-core.
+ * **That collapse is this file's, it predates R-087, and widening the vocabulary
+ * to match his sentence word-for-word would be a second slot taxonomy.**
+ *
+ * ⚠ THE ORDER IS LOAD-BEARING AND IT IS WHY R-089 SURVIVES THIS. Bible `:227`
+ * gives the lower fill order — *"heavy squat pattern -> heavy hinge pattern ->
+ * single-leg knee-dominant -> single-leg hip-dominant -> accessories"* — so
+ * `squat` is immediately followed by `hinge`, and `single_leg_knee` by
+ * `single_leg_hip`. **A prefix of this list of any even length inside each pair is
+ * automatically R-089-balanced**, which is the property that makes coverage-driven
+ * selection safe rather than lucky. Alphabetising it would break the pairing law.
+ */
+export const WEEKLY_COVERAGE_SET: readonly SessionSlot[] = [
+  'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
+  'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull',
+  'arm_or_shoulder', 'accessory_or_core',
+];
+
+/**
+ * **Bible `:122` SETS THE SIZE AT SEVEN AND SAM HAS NOT MOVED IT.** R-087 says so
+ * in as many words, and draws the consequence itself: *"Eleven slots into seven
+ * rows means a full body day cannot be the only strength day in a week and still
+ * cover everything — which is exactly why the answer depends on the rest of the
+ * week."*
+ */
+export const FULL_BODY_DAY_SIZE = 7;
+
 export const SLOTS_FOR_KIND: Readonly<Record<SlotDayKind, readonly SessionSlot[]>> = {
   lower: LOWER_SLOTS,
   upper_full: UPPER_FULL_SLOTS,
   upper_split_push: UPPER_SPLIT_PUSH_SLOTS,
   upper_split_pull: UPPER_SPLIT_PULL_SLOTS,
+  full_body_a: FULL_BODY_A_SLOTS,
+  full_body_b: FULL_BODY_B_SLOTS,
+  // ⚠ THE WHOLE SET, DELIBERATELY — NOT THIS DAY'S SEVEN. A coverage day's seven
+  // depend on what the week has already covered, so they are a per-day answer and
+  // travel as `composedDeclaredSlots`. What the KIND can honestly say is which
+  // ladder the day draws FROM, and that is all ten. A reader holding only the kind
+  // must not be handed a plausible-looking seven that is not this day's.
+  full_body_coverage: WEEKLY_COVERAGE_SET,
 };
 
 /**
@@ -385,8 +487,21 @@ export function sessionSlotCoverage(
   rows: readonly WorkoutExercise[],
   kind: SlotDayKind,
   availableEquipment?: readonly EquipmentTag[],
+  /**
+   * THE DAY'S OWN LADDER, WHEN THE DAY HAS ONE — R-087.
+   *
+   * A `full_body_coverage` day's slots are *"whatever the week has not covered
+   * yet"*, so no static table can state them: the same kind of day is a DIFFERENT
+   * seven depending on where in the week it sits, which is R-087's central point.
+   * When the composer declares the list, judging against `SLOTS_FOR_KIND[kind]`
+   * would score the day against all ten and report three phantom misses.
+   *
+   * **OMITTING IT PRESERVES THE PREVIOUS ANSWER EXACTLY** — every pre-existing
+   * caller passes at most three arguments and keeps the table.
+   */
+  declaredSlots?: readonly SessionSlot[],
 ): SlotCoverage {
-  const declared = SLOTS_FOR_KIND[kind];
+  const declared = declaredSlots ?? SLOTS_FOR_KIND[kind];
   // R-084: a slot the kit cannot train is not owed, so it is removed from the
   // requirement BEFORE assignment rather than subtracted from `missing` after —
   // otherwise it would still soak up a row in the matching step.
@@ -441,9 +556,27 @@ export function sessionSlotCoverage(
     if (slots.length !== 1) continue;
     onlySlotCounts.set(slots[0], (onlySlotCounts.get(slots[0]) ?? 0) + 1);
   }
-  const duplicated = required.filter((slot) =>
+  // ── A SLOT MAY BE OWED TWICE, AND THEN TWO ROWS ARE NOT A DUPLICATE ───────
+  //
+  // **R-093's kit fallback is Sam's own: *"yes repeat achievable pull plane"*.**
+  // When a day's preferred plane is impossible on the kit, the composer trains the
+  // achievable plane AGAIN — so a bodyweight full-body day legitimately owes TWO
+  // horizontal pushes, because its vertical push cannot be trained at all.
+  //
+  // Comparing row counts against a flat `> 1` called every one of those a defect:
+  // measured 2026-08-14, 8 laddered days across 4 worlds reported
+  // `dup: [horizontal_push]` or `dup: [horizontal_pull]` on days that were
+  // obeying a ruling. **The day declares the repeat** — `declaredSlots` lists the
+  // resolved slot once per row it owes — so the honest test is against how many
+  // times the slot was DECLARED, not against one.
+  //
+  // A caller that passes no `declaredSlots` gets multiplicity 1 for every slot from
+  // the static table, which is the previous behaviour exactly.
+  const declaredCounts = new Map<SessionSlot, number>();
+  for (const slot of required) declaredCounts.set(slot, (declaredCounts.get(slot) ?? 0) + 1);
+  const duplicated = [...new Set(required)].filter((slot) =>
     slot !== 'accessory_or_core' && slot !== 'arm_or_shoulder'
-    && (onlySlotCounts.get(slot) ?? 0) > 1);
+    && (onlySlotCounts.get(slot) ?? 0) > (declaredCounts.get(slot) ?? 1));
   return { kind, required, filled, missing, duplicated, unavailable };
 }
 

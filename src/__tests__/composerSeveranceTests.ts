@@ -16,7 +16,12 @@
  * not claimed by this file.
  */
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
-import { composeWeek, kitUnachievablePatterns } from '../rules/composeWeek';
+import {
+  composeWeek,
+  coverageGapsMakeAFullBodySession,
+  coverageSlotsForFullBodyDay,
+  kitUnachievablePatterns,
+} from '../rules/composeWeek';
 import { composedIdentityFor, composedRowIsLegal } from '../rules/composedRowLegality';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import { withSection18WorkoutEvidence } from '../rules/section18WorkoutEvidence';
@@ -189,6 +194,139 @@ console.log('\n[a] Composer-declared main-lift roles survive into §18 evidence'
         .test(String(row.exercise?.name)));
     ok('rows the classifier would demote are still main lifts', unloadedMains.length >= 2,
       JSON.stringify(mains.map((row) => row.exercise?.name)));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (R-087) THE COVERAGE DAY — ASKED DIRECTLY, BECAUSE NO WORLD REACHES IT
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// ⚠ **THIS BLOCK EXISTS BECAUSE THE COMPOSE BRANCH IS CURRENTLY UNREACHABLE.**
+// Measured 2026-08-14 over all 180 worlds: **zero `full_body_coverage` days are
+// composed.** Every general full-body day the planner places sits beside a lower
+// day and an upper day that between them already supply the ladder, so its genuine
+// week-wide gaps never span the body and the gate below declines it — which is the
+// correct answer (see `coverageGapsMakeAFullBodySession`) and leaves the week its
+// honest refusal.
+//
+// **AN UNREACHABLE BRANCH WITH NO TEST IS DEAD WEIGHT LATER CODE WILL TRUST.** So
+// both functions are called DIRECTLY here, on inputs that state their own
+// preconditions, rather than left to be re-discovered when the scheduling
+// capability finally makes them reachable.
+console.log('\n[R-087] The coverage day, asked directly — the compose branch no world reaches');
+{
+  const WEEKLY = [
+    'squat', 'hinge', 'single_leg_knee', 'single_leg_hip',
+    'horizontal_push', 'horizontal_pull', 'vertical_push', 'vertical_pull',
+    'arm_or_shoulder', 'accessory_or_core',
+  ] as const;
+  const none = new Set<never>();
+  const zero = { squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0 };
+
+  // (1) THE WHOLE WEEK OPEN — the day takes Sam's fill order, capped at seven.
+  const wideOpen = coverageSlotsForFullBodyDay({
+    suppliedByOtherDays: none, takenByEarlierCoverageDays: none, pairCounts: zero,
+  });
+  ok('[R-087] with nothing supplied, the day takes Sam\'s fill order and stops at seven',
+    wideOpen.length === 7 && wideOpen[0] === 'squat' && wideOpen[1] === 'hinge',
+    JSON.stringify(wideOpen));
+  ok('[R-087] and that set is R-089-balanced — squat with hinge, knee with hip',
+    wideOpen.filter((s) => s === 'squat').length
+      <= wideOpen.filter((s) => s === 'hinge').length
+    && wideOpen.filter((s) => s === 'single_leg_knee').length
+      <= wideOpen.filter((s) => s === 'single_leg_hip').length,
+    JSON.stringify(wideOpen));
+
+  // (2) THE REST OF THE WEEK SUPPLIES THE LOWER LADDER AND THE PRESSES — this is
+  //     the shape Sam rejected, and the day must now come back PULL-ONLY.
+  const supplied = new Set<any>([
+    'squat', 'hinge', 'single_leg_knee', 'single_leg_hip', 'accessory_or_core',
+    'horizontal_push', 'vertical_push', 'arm_or_shoulder',
+  ]);
+  const narrow = coverageSlotsForFullBodyDay({
+    suppliedByOtherDays: supplied, takenByEarlierCoverageDays: none, pairCounts: zero,
+  });
+  ok('[R-087] a week that already supplies the lower ladder leaves only the pull gap',
+    narrow.length === 2 && narrow.includes('horizontal_pull' as never)
+      && narrow.includes('vertical_pull' as never),
+    JSON.stringify(narrow));
+  // ⚠ THE CELL THAT WOULD HAVE CAUGHT SAM'S REJECTED WEEK. Before the fix this
+  // returned SEVEN — squat, deadlift, both single-leg compounds and a press —
+  // because it was asked only about the days BEFORE it and Monday had none.
+  ok('[R-087] ...and it does NOT re-take a slot the rest of the week already trains',
+    !narrow.some((slot) => supplied.has(slot)), JSON.stringify(narrow));
+
+  // (3) THE GATE. An upper-only gap set is not a small full-body day; it is not
+  //     one, so the week keeps its honest refusal.
+  ok('[R-087 gate] an upper-only gap set is NOT a full-body session',
+    !coverageGapsMakeAFullBodySession(narrow), JSON.stringify(narrow));
+  ok('[R-087 gate] a gap set spanning lower and upper IS one',
+    coverageGapsMakeAFullBodySession(wideOpen), JSON.stringify(wideOpen));
+  ok('[R-087 gate] a lower-only gap set is NOT one either — the test is both ways',
+    !coverageGapsMakeAFullBodySession(['squat', 'hinge'] as never));
+  // NON-VACUITY: if the weekly set were empty every answer above would be trivial.
+  ok('[R-087 non-vacuity] the weekly coverage set is the ten slots it claims to be',
+    WEEKLY.length === 10);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (shape) THE COMPOSER'S DECLARED DAY SHAPE SURVIVES, AND THE WEEK PAIRS UP
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// **THE READER FOR `composedDayShape`.** The field is written by
+// `materialiseComposedWeek`; this and `ladderCoverageWideCensus` are the two
+// readers, and all three landed together. A written-and-never-read field is the
+// `canOverride` shape — nine writes, zero reads — and this repo has paid for it.
+//
+// WHY IT MATTERS, MEASURED. Before the field was carried, every reader recovered
+// the day's shape from the planner's session TITLE. For Sam's full-body shape that
+// is unrecoverable in principle: A leads with a squat, B with a hinge, and every
+// naming owner in this app calls both `Full Body Strength`. The 180-world sweep
+// scored 24 composed full-body days deficient with nothing missing from them and
+// reported 6 worlds as squat-without-hinge whose weeks are `sq1/hi1`.
+//
+// R-089 IS ASSERTED HERE ON CONTENT, ACROSS ALL THREE KITS. Sam, 2026-08-13:
+// *"every squat should be matched with a hinge"*. It is counted from what the rows
+// ARE — `slotsForExerciseName` — so no shape declaration can talk it round.
+console.log('\n[shape] The composed day declares its shape, and the week pairs squat with hinge');
+{
+  for (const target of [FULL_GYM, DB_BANDS, AWAY]) {
+    const built = build(target);
+    ok(`[${target.id}] builds at all — non-vacuity before any verdict`,
+      built.kind === 'built', built.kind === 'refused' ? built.signature : '');
+    if (built.kind !== 'built') continue;
+    const workouts = built.program.microcycles[0].workouts as Workout[];
+    const composed = workouts.filter((workout) =>
+      (workout.exercises ?? []).some((row) =>
+        row.section18Evidence?.provenance === 'composer_declaration'));
+    ok(`[${target.id}] every composed day carries its declared shape`,
+      composed.length > 0 && composed.every((workout) =>
+        typeof (workout as { composedDayShape?: string }).composedDayShape === 'string'),
+      `${composed.length} composed days, shapes=`
+      + JSON.stringify(composed.map((w) => (w as { composedDayShape?: string }).composedDayShape)));
+
+    // THE PAIR COUNT, FROM THE ROWS. Ladders and declarations ignored; a row is
+    // spent on ONE pair slot so a single lift can never match itself.
+    const pairSlots = ['squat', 'hinge', 'single_leg_knee', 'single_leg_hip'] as const;
+    const pairs: Record<string, number> = {
+      squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0 };
+    for (const workout of workouts) {
+      for (const row of (workout.exercises ?? [])) {
+        const filled = slotsForExerciseName(String(row.exercise?.name ?? '')) ?? [];
+        const hit = pairSlots.find((slot) => filled.includes(slot));
+        if (hit) pairs[hit] += 1;
+      }
+    }
+    const shape = `sq${pairs.squat}/hi${pairs.hinge} `
+      + `slk${pairs.single_leg_knee}/slh${pairs.single_leg_hip}`;
+    // NON-VACUITY: a week with no lower work at all would satisfy the ruling and
+    // prove nothing about it.
+    ok(`[${target.id}] the week trains the lower patterns at all — ${shape}`,
+      pairs.squat + pairs.hinge + pairs.single_leg_knee + pairs.single_leg_hip > 0, shape);
+    ok(`[${target.id}] R-089: every squat is matched with a hinge — ${shape}`,
+      pairs.squat <= pairs.hinge, shape);
+    ok(`[${target.id}] R-089: every single-leg knee is matched with a hip — ${shape}`,
+      pairs.single_leg_knee <= pairs.single_leg_hip, shape);
   }
 }
 

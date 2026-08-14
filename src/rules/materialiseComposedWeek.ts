@@ -136,6 +136,50 @@ export function materialiseComposedWeek(
       workoutType: day.workoutType,
       sessionTier: day.sessionTier,
       planEntryId: day.planEntryId,
+      // ── THE COMPOSER'S DECLARED SHAPE, CARRIED (2026-08-14) ────────────────
+      //
+      // **IT WAS COMPUTED AND THROWN AWAY, AND EVERY READER GUESSED IT BACK OUT
+      // OF PROSE.** `ComposedDay.kind` is the composer's own answer to "which of
+      // Sam's ladders does this day owe", decided from the plan's TYPED intent —
+      // and it stopped here. Downstream, `slotDayKindFor(workout.name)` re-derived
+      // it from the planner's session title, which for the full-body shape cannot
+      // be right in principle: Sam's A and B are DIFFERENT ladders and every
+      // naming owner in this app calls them the same thing.
+      //
+      // Measured cost of the guess, 180-world sweep: 24 composed full-body days
+      // judged against a lower-or-upper ladder, all 24 scored deficient with
+      // nothing missing from them, and R-089's week-level pair counter blind to a
+      // hinge sitting on the day in front of it — 6 worlds reported as
+      // squat-without-hinge whose weeks are `sq1/hi1`.
+      //
+      // **THIS IS A DECISION, NOT A DERIVATION** — `NORTH_STAR.md`'s test for
+      // whether state may be stored. The composer DECIDED full body where the
+      // planner had said upper-only (Sam overruled the planner for this athlete),
+      // so the shape is an input to every later judgement and cannot be recovered
+      // from the week's content. Exactly the precedent `section18Evidence.role`
+      // set: *"the composer DECIDES the role (R-092); §18 reads this rather than
+      // re-inferring it from the exercise name."*
+      //
+      // WRITER: here, and nowhere else. READER: `ladderCoverageWideCensus` and
+      // `composedDayShapeIsDeclared` in `composerSeveranceTests`. Both landed in
+      // the same commit as this line — a field with no reader is the `canOverride`
+      // shape and this repo has paid for it once already.
+      composedDayShape: day.kind,
+      // ── AND THE DAY'S OWN LADDER, FOR R-087's COVERAGE DAY (2026-08-14) ─────
+      //
+      // The SHAPE alone stopped being enough the moment a full-body day's slots
+      // became *"whatever the week has not covered yet"*. `full_body_coverage` has
+      // no row in `SLOTS_FOR_KIND` that states this day's seven — the table holds
+      // the whole ten-slot weekly set it draws FROM — so a judge with only the kind
+      // would score the day against all ten and invent three misses.
+      //
+      // It is the DECLARED set, before the kit dropped anything, and deliberately
+      // not `requiredSlots` (the filled set), which a judge could only ever find
+      // complete.
+      //
+      // WRITER: here. READER: `ladderCoverageWideCensus`, and the `[shape]` block
+      // in `composerSeveranceTests`. Same commit, as the law requires.
+      composedDeclaredSlots: day.declaredSlots,
       durationMinutes: 0,
       exercises,
       ...(gaps.length > 0 ? { composedGaps: gaps } : {}),
