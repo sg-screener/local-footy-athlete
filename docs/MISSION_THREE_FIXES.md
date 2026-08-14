@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-E2E-EXTEND | Make the end-to-end claim true at full width | **DONE.** 36 → **192 worlds** (the sweep's 180 + 12 answered-bodyweight). One real failure found at an unmeasured day count. Sweep unmoved at 61/119. |
 | B1-PIVOT-VERIFY | Close the verification debt | **DONE.** 7 guards written and every one seen RED; per-world end-to-end cell green on both outcomes; 5 pool cells retired with replacements, 1 left red as a declared regression. **NOT merge-ready — 119 of 180 worlds refuse.** |
 | B1-PIVOT | Sever the legacy strength-content builder | **SEVERED.** Composer is the only production strength-content builder for every world. 401 production lines deleted, 1 file. Sweep **173/7 -> 61/119**, an honest red day. |
 | B1 CP2 | The other five worlds + the ruled full-body shape | **HARD STOP — A LATER PASS MUTATES COMPOSED ROWS.** Three post-composition sites found, one of them publishing a LEGACY week under an `accepted` verdict. CP1's zero-mutation receipt was too weak. Not landed as acceptance. |
@@ -1807,6 +1808,16 @@ have caught all three CP2 mutation sites on the day they were written.**
 
 36 worlds (3 phases × club/no-club × 3 kits × 2 weeks): **14 built, 22 refused.**
 
+> **⚠ CORRECTION, 2026-08-14 (slice B1-E2E-EXTEND). THIS SECTION OVER-CLAIMED AND
+> THE ORIGINAL WORDS ARE LEFT AS WRITTEN.** The table below says *"every world"*
+> and the report's plain-English summary said *"every athlete"*. **The
+> measurement was 36 worlds, with the TRAINING-DAY COUNT FIXED AT TWO** — a whole
+> route-distinguishing dimension unmeasured. It is now **192 worlds**: the
+> sweep's own 180, profile field for profile field, plus 12 explicit
+> answered-bodyweight worlds the sweep's checklist cannot express. **The wider
+> run found a real failure the 36 could not see** — see slice B1-E2E-EXTEND
+> below. Read *"every world"* here as *"each of the 36 measured"*.
+
 | property | result |
 | --- | --- |
 | **[BUILT]** stored == hydrated on identity, order, role and pattern, every world | ✅ |
@@ -1894,6 +1905,91 @@ named as missing now exists and has been seen red.
   repo has already been bitten by, and the only reason I caught it is that the
   totals line was missing rather than wrong.
 
+---
+
+## Slice B1-E2E-EXTEND — the end-to-end property at full width, and what the 36 hid
+
+**Seat `baseline`, 2026-08-14. Branch `slice-b1-pivot`.** Verification only.
+**The sweep did not move: 61 built / 119 refused, before and after.**
+
+### 1. OPTION TAKEN — run it wide, not argue it narrow
+
+**OPTION 1: run the property across every world.** Option 2 asked me to prove the
+36 were exhaustive route-equivalence classes. **I could not have proved that
+honestly, because they were not** — the 36 fixed `trainingDaysPerWeek` at two, and
+the training-day count is the dimension the planner varies most: it decides how
+many strength days exist, which archetypes they take, and whether an optional day
+is placed at all. A class proof would have had to assert that dimension does not
+change the route, which is false. Running it was also cheaper than arguing it.
+
+**THE CORPUS: 192 worlds.**
+- **The sweep's own 180**, enumerated field for field from
+  `ladderCoverageWideCensusTests` — 3 phases × 5 training-day counts × club/no-club
+  × 3 kits × 2 weeks — so *"every athlete"* now means the same 180 the sweep counts.
+- **Plus 12 explicit answered-bodyweight worlds.** The sweep cannot express them:
+  its `['Bodyweight Only']` checklist resolves `complete_selection`, and Sam's away
+  ruling is about an **exhaustive answer** (`athlete_answer`). Both resolve to the
+  same tags and are distinguishable only by source, which is exactly why the
+  answered case needs its own representative.
+
+### 2. THE FULL-WIDTH RESULT
+
+`npm run test:composer-severance` — **35 passed, 0 failures.**
+
+| | |
+| --- | --- |
+| worlds measured | **192** (sweep 180 + 12 answered-bodyweight) |
+| outcomes | **64 built · 128 refused** |
+| per phase | In-season 9b/55r · Pre-season 11b/53r · Off-season 44b/20r |
+| **[BUILT]** stored == hydrated on identity, order, role, pattern | ✅ **64 of 64** |
+| **[BUILT]** no stored strength row from a legacy content owner | ✅ 64 of 64 *(after the finding below)* |
+| **[BUILT]** no row rewritten after composition | ✅ 64 of 64 |
+| **[REFUSED]** typed refusal survives, nothing stored | ✅ **128 of 128** |
+
+The 192-world totals differ from the sweep's 61/119 by exactly the 12 extra
+answered-bodyweight worlds (3 built, 9 refused). **The sweep's own 180 are
+unchanged at 61/119.**
+
+### 3. THE FAILURE THE 36 COULD NOT SEE — this is the headline
+
+**16 stored rows, one distinct name: `Warm-up`**, on **Off-season 5-day Full Gym**
+days — a training-day count the 36-world run never reached.
+
+**WHAT IT IS, AND WHAT IT IS NOT.** It is **not** the legacy strength builder
+leaking: `Warm-up` is placed by the retained warm-up/conditioning adapter and the
+composer never authored it. It slipped past the cell because
+**`classifyGeneratedWorkoutRow` classifies `Warm-up` as `strength_accessory`**,
+so the kind filter — which skips `power`, `conditioning` and `recovery_addon` —
+did not skip it.
+
+**THE RESOLUTION, AND WHY IT IS NOT AN ASSERTION EDITED INTO AGREEMENT.** The cell
+now skips rows that fill **no ladder slot**, asked of `slotsForExerciseName` —
+**the same owner the composer selects with**. `Warm-up` fills none; every genuine
+strength row fills one (`Back Squat` → `squat`, `Bird Dog` → `accessory_or_core`).
+That is a derived exemption, not a name whitelist, which is the shape this repo
+has watched rot before. **The classification defect is ledgered, not fixed** —
+fixing it would be capability work this slice forbids.
+
+**WHAT IT COST TO FIND:** nothing but width. The property, the code and the
+guards were all unchanged; only the corpus grew, and the defect was sitting in a
+day count nobody had run.
+
+### 4. WHAT FOUGHT ME, VERBATIM
+
+- **My own correction was still an over-claim until I ran it.** The previous
+  report said the end-to-end cell was *"per world"*. It was per world **of a
+  sample I had chosen**, and I had not noticed the sample froze a dimension.
+  Nothing about the cell was wrong; the corpus was.
+- **The first full-width run failed, and my instinct was to look for a leak in
+  the severance.** There is none. The row that broke the cell is misfiled by a
+  classifier the composer does not own, on a surface the scope fence protects.
+  **Reading the failure as a severance breach would have sent me editing
+  production code inside a verification-only slice.**
+- **A kind filter is not a subject.** I had skipped three classification kinds
+  and assumed the remainder was strength. `Warm-up` is the counter-example, and
+  the slot vocabulary — not the classifier — is what actually answers *"is this
+  strength content"*.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -1902,6 +1998,7 @@ named as missing now exists and has been seen red.
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- `classifyGeneratedWorkoutRow` classifies `Warm-up` as `strength_accessory` although it fills no ladder slot, so a retained-adapter row reads as strength content on Off-season 5-day Full Gym days (16 rows measured).
 - `Walking Lunges` sits on the SQUAT pool's accessory bench but fills `single_leg_knee`, so pool-ordered selection offered it for the `squat` slot until `slotsForExerciseName` was made the filter; other pool slots may carry the same mismatch and were not swept.
 - The composer has no reader for `AthletePoolPrefs.pinned`, so an athlete's pinned exercise is no longer selected first; `test:pools`'s pinning cell is left RED rather than retired.
 - The away/bodyweight contract excludes `pull` for a second, unpinned reason as well as the kit narrowing — found because mutation-2 left a world-level assertion green.

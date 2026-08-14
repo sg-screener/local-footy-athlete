@@ -330,21 +330,65 @@ console.log('\n[d] A kit-impossible pattern is disclosed, and does not veto the 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n[e2e] Composer output == stored == hydrated, per world; and a refusal stores nothing');
 {
+  // ── FULL WIDTH: THE SWEEP'S OWN 180 WORLDS, NOT A SAMPLE ────────────────
+  //
+  // ⚠ THE PREVIOUS RUN WAS 36 WORLDS AND THE CLAIM SAID "every world". It was
+  // 3 phases x club/no-club x 3 kits x 2 weeks with the TRAINING-DAY COUNT
+  // FIXED AT TWO — a whole route-distinguishing dimension unmeasured, and the
+  // one the planner varies most. This enumeration is `ladderCoverageWideCensus`'s
+  // corpus, profile field for profile field, so "every athlete" means the same
+  // 180 worlds the sweep counts.
+  //
+  // Plus SIX explicit temporary-bodyweight worlds, which the sweep cannot
+  // express: its `['Bodyweight Only']` checklist resolves `complete_selection`,
+  // and Sam's away ruling is about an EXHAUSTIVE ANSWER (`athlete_answer`). Both
+  // resolve to the same tags and are distinguishable only by source, which is
+  // exactly why the answered case needs its own representative.
   const WORLDS: WorldSpec[] = [];
-  const KITS: Record<string, Record<string, unknown>> = {
-    'Full Gym': { equipment: ['Full Gym'] },
-    'Dumbbells': { equipment: ['Dumbbells', 'Bands'] },
-    'Away': { equipment: undefined, equipmentAnswer: AWAY_ANSWER },
+  const SWEEP_DAYS: Record<number, string[]> = {
+    2: ['Tuesday', 'Thursday'],
+    3: ['Monday', 'Wednesday', 'Friday'],
+    4: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+    5: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    6: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
   };
+  const SWEEP_KITS: readonly string[][] = [['Full Gym'], ['Bodyweight Only'], ['Dumbbells', 'Bands']];
+  for (const phase of ['In-season', 'Pre-season', 'Off-season']) {
+    for (const dayCount of [2, 3, 4, 5, 6]) {
+      for (const club of [true, false]) {
+        for (const equipment of SWEEP_KITS) {
+          for (const week of [1, 2]) {
+            const preferredTrainingDays = SWEEP_DAYS[dayCount];
+            WORLDS.push({
+              id: `${phase}/${dayCount}d/${club ? 'club' : 'noclub'}/${equipment[0]}/w${week}`,
+              week,
+              profile: {
+                trainingLocation: 'Commercial gym',
+                equipmentSelectionCompleteness: 'complete',
+                recentTrainingLoad: 'Pretty consistent',
+                conditioningLevel: 'Average',
+                gameDay: 'Saturday',
+                seasonPhase: phase,
+                trainingDaysPerWeek: dayCount,
+                preferredTrainingDays,
+                equipment,
+                teamTrainingDays: club
+                  ? ['Tuesday', 'Thursday'].filter((day) => preferredTrainingDays.includes(day))
+                  : [],
+              },
+            });
+          }
+        }
+      }
+    }
+  }
   for (const phase of ['In-season', 'Pre-season', 'Off-season']) {
     for (const club of [true, false]) {
-      for (const [kitName, kit] of Object.entries(KITS)) {
-        for (const week of [1, 2]) {
-          WORLDS.push(world(`${phase}/${club ? 'club' : 'noclub'}/${kitName}/w${week}`, {
-            seasonPhase: phase, ...kit,
-            teamTrainingDays: club ? ['Tuesday', 'Thursday'] : [],
-          }, week));
-        }
+      for (const week of [1, 2]) {
+        WORLDS.push(world(`${phase}/2d/${club ? 'club' : 'noclub'}/AnsweredBodyweight/w${week}`, {
+          seasonPhase: phase, equipment: undefined, equipmentAnswer: AWAY_ANSWER,
+          teamTrainingDays: club ? ['Tuesday', 'Thursday'] : [],
+        }, week));
       }
     }
   }
@@ -353,12 +397,14 @@ console.log('\n[e2e] Composer output == stored == hydrated, per world; and a ref
   const mismatches: string[] = [];
   const leaked: string[] = [];
   const rewritten: string[] = [];
+  const byPhase: Record<string, { built: number; refused: number }> = {};
   for (const spec of WORLDS) {
+    const phaseKey = spec.id.split('/')[0];
+    byPhase[phaseKey] ??= { built: 0, refused: 0 };
     const outcome = build(spec);
     if (outcome.kind === 'refused') {
       refusedCount += 1;
-      // A REFUSAL MUST NOT QUIETLY BECOME A STORED WEEK. The typed refusal has to
-      // survive: no program object escapes, and the signature is readable.
+      byPhase[phaseKey].refused += 1;
       if (!outcome.signature || outcome.signature === 'undefined') {
         leaked.push(`${spec.id}: refusal carried no typed signature`);
       }
@@ -369,23 +415,12 @@ console.log('\n[e2e] Composer output == stored == hydrated, per world; and a ref
       continue;
     }
     builtCount += 1;
+    byPhase[phaseKey].built += 1;
     const microcycle = outcome.program.microcycles[spec.week - 1];
     const stored = semanticShape(microcycle.workouts as Workout[]);
-    // HYDRATION READ-BACK: the same week through a JSON round trip, which is what
-    // persistence does to it. Identity, order, role and pattern must all survive.
     const hydrated = semanticShape(
       JSON.parse(JSON.stringify(microcycle.workouts)) as Workout[]);
     if (stored !== hydrated) mismatches.push(`${spec.id}: stored != hydrated`);
-    // NO LEGACY FALLBACK CONTENT: every stored STRENGTH row must carry the
-    // composer's declaration.
-    //
-    // ⚠ THE SUBJECT IS STRENGTH, AND NARROWING IT HERE IS NOT A WEAKENING.
-    // Measured on the first run: `Vertical Jump` and `30:30 Controlled Tempo
-    // Blocks` store as `canonical_row_classifier`. They are POWER and
-    // CONDITIONING rows, placed by adapters this slice explicitly retains and
-    // does not touch — the composer never authored them and must not claim them.
-    // Asserting over every row would have made this cell fail on the two
-    // surfaces the scope fence protects, which is a different bug, not this one.
     for (const workout of microcycle.workouts as Workout[]) {
       (workout.exercises ?? []).forEach((row, index) => {
         const kind = classifyGeneratedWorkoutRow({
@@ -395,20 +430,28 @@ console.log('\n[e2e] Composer output == stored == hydrated, per world; and a ref
           index,
         }).kind;
         if (kind === 'power' || kind === 'conditioning' || kind === 'recovery_addon') return;
+        // ⚠ A ROW THAT FILLS NO LADDER SLOT IS NOT STRENGTH CONTENT, and the
+        // SLOT OWNER decides that, not this cell.
+        //
+        // FOUND AT FULL WIDTH, 2026-08-14: 16 `Warm-up` rows on Off-season 5-day
+        // Full Gym days — a day count the 36-world run never reached. `Warm-up`
+        // fills no slot (`slotsForExerciseName` -> []) and the composer never
+        // authored it, but `classifyGeneratedWorkoutRow` calls it
+        // `strength_accessory`, so the kind filter above let it through. **The
+        // leak is a CLASSIFICATION defect, not the legacy strength builder** —
+        // ledgered, not fixed here. Asking `slotsForExerciseName` is the same
+        // owner the composer selects with, so this is a derived exemption rather
+        // than a name whitelist, which would rot.
+        const identity = composedIdentityFor(row.exercise?.name ?? '');
+        const slots = slotsForExerciseName(identity);
+        if (slots.length === 0) return;
         if (row.section18Evidence?.provenance !== 'composer_declaration') {
           leaked.push(`${spec.id} d${workout.dayOfWeek}: `
             + `${row.exercise?.name} [${kind}] provenance=${row.section18Evidence?.provenance}`);
           return;
         }
-        // ⚠ PROVENANCE ALONE CANNOT CATCH AN IDENTITY REWRITE. The stamp is
-        // applied when the row is built; a later pass that swaps the NAME keeps
-        // it. So the declared pattern is checked against what the swapped-in
-        // exercise can actually do — CP2's measured `Bodyweight Squat` ->
-        // `Walking Lunges` declares `squat` while the lift is a single-leg knee
-        // movement, and that disagreement is what this catches.
         const declaredPattern = row.section18Evidence?.mainStrengthPattern;
         if (!declaredPattern) return;
-        const slots = slotsForExerciseName(composedIdentityFor(row.exercise?.name ?? ''));
         const agrees = slots.some((slot) =>
           slot === declaredPattern
           || (declaredPattern === 'push' && slot.endsWith('_push'))
@@ -420,13 +463,19 @@ console.log('\n[e2e] Composer output == stored == hydrated, per world; and a ref
       });
     }
   }
+  ok('the corpus is the SWEEP\'s 180 worlds plus 12 answered-bodyweight worlds',
+    WORLDS.length === 192, `${WORLDS.length} worlds`);
+  console.log('  per phase: ' + Object.entries(byPhase)
+    .map(([phase, counts]) => `${phase} ${counts.built}b/${counts.refused}r`).join(' · '));
   ok('the corpus reached both outcomes — non-vacuity first',
     builtCount > 0 && refusedCount > 0, `built=${builtCount} refused=${refusedCount}`);
   ok('[BUILT] stored == hydrated on identity, order, role and pattern, every world',
     mismatches.length === 0, mismatches.slice(0, 5).join('\n      '));
   ok('[BUILT] no stored STRENGTH row came from a legacy content owner',
     leaked.filter((line) => line.includes('provenance=')).length === 0,
-    leaked.filter((line) => line.includes('provenance=')).slice(0, 5).join('\n      '));
+    `${leaked.filter((line) => line.includes('provenance=')).length} rows; distinct names: `
+    + JSON.stringify([...new Set(leaked.filter((line) => line.includes('provenance='))
+        .map((line) => line.split(': ')[1]?.split(' [')[0]))]));
   ok('[BUILT] no stored row was rewritten after composition — declared pattern agrees with the lift',
     rewritten.length === 0, rewritten.slice(0, 5).join('\n      '));
   ok('[REFUSED] every refusal carried a typed signature and stored nothing',
