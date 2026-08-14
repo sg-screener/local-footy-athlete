@@ -17,7 +17,7 @@ npm run print:week
 **⚠ THE WORST THING HERE: 5 exercises the athlete has no equipment for.** An athlete who says they own nothing is still told to do them. The app's own equipment check says no to every one:
 
 - Band Pallof Press — needs bands, which this athlete does not have
-- RDLs — needs barbell, which this athlete does not have
+- RDLs — needs barbell or dumbbells, which this athlete does not have
 - Face Pull — needs cables, which this athlete does not have
 - Pull-Ups — needs pullup_bar, which this athlete does not have
 - Overhead Press — needs barbell + rack, which this athlete does not have

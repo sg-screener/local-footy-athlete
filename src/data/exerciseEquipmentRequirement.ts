@@ -28,11 +28,29 @@
  * **TWO QUESTIONS, TWO FIELDS. Do not merge this with the load list** — moving
  * `Pull-Ups` out of that one would make a pull-up display a load estimate.
  */
-export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly string[]>> = {
+/**
+ * ONE ROW OF SAM'S SHEET.
+ *
+ * A bare tag is REQUIRED. A nested array is an OR-GROUP — any one of them will
+ * do. Added 2026-08-14 for his answer *"Romanian Deadlift needs barbell or
+ * dumbbells"*, which the flat list could not say: written flat it reads as
+ * needing BOTH, and a dumbbell-only athlete loses a hinge they can perform.
+ *
+ * The OR lives in the SHEET, not in a second lookup beside it — a rule that
+ * knew "barbell and dumbbells are interchangeable for hinges" would be a second
+ * authority on Sam's answers, and the first exercise where that is false would
+ * split them.
+ */
+export type EquipmentRequirement = string | readonly string[];
+
+export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly EquipmentRequirement[]>> = {
   "Ab Wheel": ['ab_wheel'],
   "Back Extension": ['back_extension_bench'],
   "Back Squat": ['barbell', 'rack'],
   "Band Pallof Press": ['bands'],
+  // Sam, 2026-08-14: *"Pallof Press needs a band."* The unbanded spelling was
+  // absent and read UNKNOWN; it is the same movement as the row above.
+  "Pallof Press": ['bands'],
   "Band Pull-Apart": ['bands'],
   "Banded Bicep Curl": ['bands'],
   "Banded Dead Bug": ['bands'],
@@ -56,6 +74,9 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly st
   "Calf Raises": [],
   "Chin-Up Negative (Slow)": ['pullup_bar'],
   "Chin-Ups": ['pullup_bar'],
+  // Sam, 2026-08-14: *"Chest Supported Row, needs a bench and dumbbels"*. It was
+  // absent from the sheet entirely, so it read UNKNOWN and passed every kit.
+  "Chest Supported Row": ['bench', 'dumbbells'],
   "Close Grip Bench": ['barbell', 'bench'],
   "Concentration Curl": ['dumbbells'],
   "Copenhagen Plank (Half)": [],
@@ -114,7 +135,11 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly st
   "Pogo Hops": [],
   "Pull-Ups": ['pullup_bar'],
   "Push-ups": [],
-  "RDLs": ['barbell'],
+  // Sam, 2026-08-14: *"Romanian Deadlift needs barbell or dumbbells"*. The two
+  // spellings are ONE exercise — `resolveExerciseName` maps `Romanian Deadlift`
+  // here — so they carry one answer or the oracle contradicts itself by spelling.
+  "RDLs": [['barbell', 'dumbbells']],
+  "Romanian Deadlift": [['barbell', 'dumbbells']],
   "RFE Split Squat Jump": [],
   "Rear Delt Fly": ['dumbbells'],
   "Reverse Lunges": [],
@@ -159,8 +184,27 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly st
 };
 
 /** Sam's sheet convention: absent from the table is UNKNOWN, not bodyweight. */
-export function equipmentRequiredFor(name: string): readonly string[] | null {
+export function equipmentRequiredFor(name: string): readonly EquipmentRequirement[] | null {
   return EXERCISE_EQUIPMENT_REQUIREMENT[name] ?? null;
+}
+
+/**
+ * THE REQUIREMENT IN WORDS, and the reason it is a function rather than a
+ * `join` at each caller.
+ *
+ * `null` means the sheet does not know this exercise — which is NOT the same as
+ * "needs nothing", and printing an empty string for both is exactly the
+ * confusion that shipped a removal record reading `requires: []` for
+ * `Romanian Deadlift`. An unknown exercise is never refused, so it should never
+ * be described as if it were.
+ */
+export function equipmentRequirementLabel(name: string): string | null {
+  const required = equipmentRequiredFor(name);
+  if (required === null) return null;
+  if (required.length === 0) return 'nothing';
+  return required
+    .map((entry) => (Array.isArray(entry) ? entry.join(' or ') : String(entry)))
+    .join(' + ');
 }
 
 /**
@@ -231,7 +275,10 @@ export function exerciseIsAvailableWith(
   if (required === null) return true;        // not on his sheet — unknown, allow
   if (required.length === 0) return true;    // his convention: needs nothing
   const kit = new Set(availableEquipment);
-  if (required.every((tag) => kit.has(tag))) return true;
+  // A bare tag is required; an OR-group is satisfied by any one of its members.
+  const satisfied = (entry: EquipmentRequirement): boolean =>
+    Array.isArray(entry) ? entry.some((tag) => kit.has(tag)) : kit.has(entry as string);
+  if (required.every(satisfied)) return true;
   // Missing something — but the movement may survive losing its LOAD.
   return BODYWEIGHT_CAPABLE.has(name);
 }
