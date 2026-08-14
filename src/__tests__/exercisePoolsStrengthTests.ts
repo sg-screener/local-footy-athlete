@@ -10,10 +10,14 @@
  *   - Classification prefers explicit pool membership over tag heuristics
  *   - Load normalization translates across siblings via loadRatio
  *   - Within-session avoidance prevents duplicate picks
- *   - applyPoolRotation rewrites AI-suggested names and is a pass-through
- *     for non-pool exercises
  *   - buildWorkoutsFromCoach integrates the rotation when rotationContext
  *     is passed (and leaves names untouched when it isn't)
+ *
+ * B1-PIVOT (2026-08-14): `applyPoolRotation` was DELETED from
+ * `src/data/exercisePoolsStrength.ts` — the composer authors every strength row
+ * directly and nothing rewrites a suggested name any more. Cells whose subject
+ * was that function are gone; cells that merely used it as a convenience
+ * wrapper now call the live `selectPoolEntry` / `selectPoolEntryAvoiding`.
  */
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
@@ -25,9 +29,10 @@ import {
   findPoolEntry,
   selectPoolEntry,
   selectPoolEntryAvoiding,
-  applyPoolRotation,
+  exerciseAllowedByEquipment,
   normalizeLoadAcrossSiblings,
   type PoolEntry,
+  type PoolSelection,
   type RotationContext,
   type AthletePoolPrefs,
 } from '../data/exercisePoolsStrength';
@@ -36,23 +41,12 @@ import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 
 // ── R-083: A POOL MAY NOW ANSWER "NOTHING THIS KIT CAN DO" ─────────────────
 //
-// Both functions return an OUTCOME rather than a name/entry, because a slot the
-// athlete's equipment cannot fill has to be REPRESENTABLE — that is the whole
-// of the ruling. Every cell below this line is about a slot that CAN be filled,
-// so these two shims unwrap the outcome and make a refusal a loud failure
-// instead of a silently-undefined name. The refusal itself is asserted in its
-// own cell (14.15), against the outcome directly.
-function rotatePoolName(...args: Parameters<typeof applyPoolRotation>): string {
-  const outcome = applyPoolRotation(...args);
-  if (outcome.kind === 'refused') {
-    throw new Error(
-      `applyPoolRotation refused ${outcome.slot}/${outcome.role} (${outcome.cause}) `
-      + `for "${outcome.suggestedName}" — this cell expected a fillable slot`,
-    );
-  }
-  return outcome.name;
-}
-
+// `selectPoolEntryAvoiding` returns an OUTCOME rather than an entry, because a
+// slot the athlete's equipment cannot fill has to be REPRESENTABLE — that is
+// the whole of the ruling. Every cell below this line is about a slot that CAN
+// be filled, so this shim unwraps the outcome and makes a refusal a loud
+// failure instead of a silently-undefined entry. The refusal itself is asserted
+// in its own cell (14.15), against the outcome directly.
 function pickPoolEntry(...args: Parameters<typeof selectPoolEntryAvoiding>): PoolEntry {
   const selection = selectPoolEntryAvoiding(...args);
   if (selection.kind === 'refused') {
@@ -383,35 +377,16 @@ section('6. Within-session avoidance');
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Section 7: applyPoolRotation
+// Section 7: DELETED (B1-PIVOT, 2026-08-14)
+//
+// Every cell here had `applyPoolRotation` as its SUBJECT — name rewriting,
+// pass-through for unmanaged names, and the `${slot}:${role}` within-session
+// tracker. The function is deleted and nothing rewrites a suggested name, so
+// these are exclusively-associated tests with nothing left to describe.
+// The surviving halves are asserted elsewhere against live functions:
+// classification in section 1, rotation cadence in sections 3/4, within-session
+// avoidance in section 6 (against `selectPoolEntryAvoiding` directly).
 // ─────────────────────────────────────────────────────────────────
-section('7. applyPoolRotation');
-{
-  // Managed exercise is rewritten
-  const squatMc2 = rotatePoolName('Back Squat', { miniCycleNumber: 2 });
-  assert(squatMc2 === STRENGTH_POOLS.squat.anchor.entries[1].name,
-    `AI-suggested "Back Squat" in mc=2 → "${squatMc2}"`);
-
-  // Suggesting any anchor-slot name in the same mc picks the same rotation entry
-  const squatMc2AltInput = rotatePoolName('Front Squat', { miniCycleNumber: 2 });
-  assert(squatMc2AltInput === squatMc2,
-    `AI-suggested "Front Squat" also rewrites to ${squatMc2} in mc=2`);
-
-  // Unmanaged exercise is pass-through
-  const plank = rotatePoolName('Plank', { miniCycleNumber: 2 });
-  assert(plank === 'Plank', `Non-pool exercise passes through (${plank})`);
-
-  // Unknown name is pass-through
-  const unknown = rotatePoolName('Made-Up Exercise 42', { miniCycleNumber: 1 });
-  assert(unknown === 'Made-Up Exercise 42', `Unknown exercise passes through (${unknown})`);
-
-  // Within-session tracker prevents duplicate picks
-  const used = new Map<string, Set<string>>();
-  const first = rotatePoolName('Walking Lunges', { miniCycleNumber: 1, weekInBlock: 1 }, used);
-  const second = rotatePoolName('Walking Lunges', { miniCycleNumber: 1, weekInBlock: 1 }, used);
-  assert(first !== second,
-    `Two AI-suggested squat/accessory in same session → different picks (${first} / ${second})`);
-}
 
 // ─────────────────────────────────────────────────────────────────
 // Section 8: buildWorkoutsFromCoach integration
@@ -464,7 +439,9 @@ section('8. buildWorkoutsFromCoach integration');
   // a row through `applyPoolRotation`, an invocation this slice deleted.
   // REPLACED BY: `test:composer-severance` "the main lift varies across blocks"
   // + "and it is deterministic per block", mutation-proven red (MUT-6).
-  // `applyPoolRotation` ITSELF is untouched and its own cells below still pass.
+  // `applyPoolRotation` ITSELF has since been DELETED (2026-08-14) — it had no
+  // production caller left once this invocation went — so its own cells are
+  // gone too. See the header note.
   void expectedAnchor; void expectedAccessory;
 
   // Side Plank (unmanaged) passes through regardless of context
@@ -587,38 +564,18 @@ section('10. Expansion slot rotation');
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Section 11: applyPoolRotation for expansion slots
+// Section 11: DELETED (B1-PIVOT, 2026-08-14)
+//
+// Its subject was `applyPoolRotation` applied to the expansion slots — name
+// rewriting for carry / plyo / isolation_upper, plus that function's own
+// `${slot}:${role}` session tracker. The function is deleted.
+//
+// NOTHING LIVE WAS LOST. Section 10 above already asserts expansion-slot anchor
+// stability, cross-mini-cycle rotation and the full-pool walk against
+// `selectPoolEntry` itself; section 6 asserts within-session avoidance against
+// `selectPoolEntryAvoiding` itself, and section 12 does so again on a deeper
+// pool.
 // ─────────────────────────────────────────────────────────────────
-section('11. applyPoolRotation for expansion slots');
-{
-  // Carry: rotation rewrites any carry-anchor input to the mc=2 anchor pick
-  const carryMc2 = rotatePoolName('Farmer Carry', { miniCycleNumber: 2 });
-  assert(carryMc2 === STRENGTH_POOLS.carry.anchor.entries[1].name,
-    `Farmer Carry mc=2 → ${carryMc2} (expected ${STRENGTH_POOLS.carry.anchor.entries[1].name})`);
-
-  // Plyo: rotation rewrites Box Jumps at mc=3 to entries[2]
-  const plyoMc3 = rotatePoolName('Box Jumps', { miniCycleNumber: 3 });
-  assert(plyoMc3 === STRENGTH_POOLS.plyo.anchor.entries[2].name,
-    `Box Jumps mc=3 → ${plyoMc3} (expected ${STRENGTH_POOLS.plyo.anchor.entries[2].name})`);
-
-  // Isolation_upper: Shrugs mc=2 → entries[1] (Skull Crushers)
-  const isoMc2 = rotatePoolName('Shrugs', { miniCycleNumber: 2 });
-  assert(isoMc2 === STRENGTH_POOLS.isolation_upper.anchor.entries[1].name,
-    `Shrugs mc=2 → ${isoMc2} (expected ${STRENGTH_POOLS.isolation_upper.anchor.entries[1].name})`);
-
-  // Within-session avoidance works for the large isolation accessory pool —
-  // two Bicep Curl suggestions in the same session should produce distinct
-  // picks even though the pool is 11 entries deep.
-  const used = new Map<string, Set<string>>();
-  const firstIso = rotatePoolName(
-    'Bicep Curl (Dumbbell)', { miniCycleNumber: 1, weekInBlock: 1 }, used);
-  const secondIso = rotatePoolName(
-    'Bicep Curl (Dumbbell)', { miniCycleNumber: 1, weekInBlock: 1 }, used);
-  const thirdIso = rotatePoolName(
-    'Bicep Curl (Dumbbell)', { miniCycleNumber: 1, weekInBlock: 1 }, used);
-  assert(firstIso !== secondIso && secondIso !== thirdIso && firstIso !== thirdIso,
-    `Three isolation_upper accessory suggestions in same session → 3 distinct picks (${firstIso} / ${secondIso} / ${thirdIso})`);
-}
 
 // ─────────────────────────────────────────────────────────────────
 // Section 12: Isolation_lower (accessory-only slot)
@@ -675,14 +632,23 @@ section('12. Isolation_lower (accessory-only slot)');
   assert(blockWalk.size === 4,
     `isolation_lower/accessory: 4 distinct picks across weeks 1-4 of a block (got ${blockWalk.size}: ${Array.from(blockWalk).join(', ')})`);
 
-  // Within-session avoidance: 3 AI-suggested iso_lower items in one session
-  // resolve to 3 distinct rotation picks (pool is 5 deep → plenty of room).
-  const used = new Map<string, Set<string>>();
-  const pick1 = rotatePoolName('Nordic Lower', { miniCycleNumber: 1, weekInBlock: 1 }, used);
-  const pick2 = rotatePoolName('Nordic Lower', { miniCycleNumber: 1, weekInBlock: 1 }, used);
-  const pick3 = rotatePoolName('Nordic Lower', { miniCycleNumber: 1, weekInBlock: 1 }, used);
+  // Within-session avoidance: 3 iso_lower rows in one session resolve to 3
+  // distinct picks (pool is 7 deep → plenty of room).
+  //
+  // REWIRED (B1-PIVOT, 2026-08-14) — this asked `applyPoolRotation` three times
+  // with a shared session tracker. That function is deleted; the AVOIDANCE it
+  // was exercising belongs to `selectPoolEntryAvoiding`, which is asked directly
+  // now with the caller accumulating what it has already used. The assertion is
+  // unchanged: 3 rows out of one (slot, role) must be 3 different exercises.
+  const isoCtx: RotationContext = { miniCycleNumber: 1, weekInBlock: 1 };
+  const isoUsed = new Set<string>();
+  const pick1 = pickPoolEntry(accessory, isoCtx, isoUsed).name;
+  isoUsed.add(pick1);
+  const pick2 = pickPoolEntry(accessory, isoCtx, isoUsed).name;
+  isoUsed.add(pick2);
+  const pick3 = pickPoolEntry(accessory, isoCtx, isoUsed).name;
   assert(pick1 !== pick2 && pick2 !== pick3 && pick1 !== pick3,
-    `3 iso_lower suggestions in same session → 3 distinct picks (${pick1} / ${pick2} / ${pick3})`);
+    `3 iso_lower rows in same session → 3 distinct picks (${pick1} / ${pick2} / ${pick3})`);
 
   // Load normalization: all loadRatio=0 (plyo-style bodyweight guard) →
   // any cross-sibling translation returns input unchanged.
@@ -695,30 +661,24 @@ section('12. Isolation_lower (accessory-only slot)');
   assert(crossToIso === 100,
     `Cross-slot (squat → isolation_lower) unchanged (${crossToIso})`);
 
-  // applyPoolRotation for iso_lower rewrites within the accessory pool — AND
-  // WITHIN THE MUSCLE GROUP.
+  // ⚠ THE MUSCLE-GROUP ROTATION CELL IS DELETED (B1-PIVOT, 2026-08-14) — AND
+  // WHAT IT GUARDED NOW HAS NOBODY.
   //
-  // ⚠ THIS EXPECTATION CHANGED 2026-08-13, AND IT IS NOT A REGRESSION BEING
-  // PAPERED OVER. It used to assert `entries[4]` — flat index arithmetic over
-  // the whole 7-deep pool — which at mc=2 resolves to `Tib Raises`. **That is a
-  // HAMSTRING exercise rotating into a CALF raise.** The slot's own docstring
-  // has always claimed rotation order groups (hamstring → quad → calf/ankle);
-  // they were comments, and `selectPoolEntry` picked `cycleIndex % entries.length`
-  // straight across them. So the old cell was pinning the defect, not the rule.
-  // `PoolEntry.group` makes those blocks real, and the measured shipping case
-  // was worse in the upper pool: `Bicep Curl | Bicep Curl | Hammer Curl` — three
-  // curls, no triceps.
+  // It asserted that rotating `Nordic Lower` at mc=2 lands on another HAMSTRING
+  // rather than crossing into a calf raise. **That narrowing lived entirely
+  // inside `applyPoolRotation`** (`suggestedGroup` → filter the pool to the same
+  // `PoolEntry.group` → release it only when every in-group candidate is already
+  // used). `selectPoolEntry` and `selectPoolEntryAvoiding` have never read
+  // `group` at all — they pick `cycleIndex % entries.length` straight across the
+  // slot, which is the exact defect the narrowing was built to stop. So there is
+  // no live function to re-point this cell at, and re-pointing it would assert
+  // the DEFECT.
   //
-  // WHAT IS ASSERTED NOW IS STRONGER THAN AN INDEX: the pick is a HAMSTRING
-  // exercise, whatever the arithmetic happens to land on. An index assertion
-  // silently changes meaning when an entry is added; this one cannot.
-  const nordicMc2 = rotatePoolName('Nordic Lower', { miniCycleNumber: 2, weekInBlock: 1 });
+  // The group DATA is still asserted below (section "Muscle-group data"), so a
+  // future reader inherits a correct table.
   const hamstrings = accessory.entries.filter((e) => e.group === 'hamstring').map((e) => e.name);
   assert(hamstrings.length >= 2,
-    `fixture needs >=2 hamstring entries or the cell below cannot fail (got ${hamstrings.length})`);
-  assert(hamstrings.includes(nordicMc2),
-    `Nordic Lower mc=2/w=1 → ${nordicMc2}, which is not a hamstring. Rotation may not `
-    + `cross a muscle group; hamstring entries are ${JSON.stringify(hamstrings)}.`);
+    `isolation_lower/accessory carries >=2 'hamstring' entries (got ${hamstrings.length})`);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -770,44 +730,70 @@ section('13. Upper sub-slot split (h_push / v_push / h_pull / v_pull)');
       `${slot}/accessory ${expectedDistinct} distinct picks across 4 weeks (got ${new Set(weekPicks).size}: ${weekPicks.join(', ')})`);
   }
 
-  // Option A routing contract: an AI push session naming Bench Press + DB
-  // Shoulder Press routes to (h_push, anchor) + (v_push, accessory). These
-  // are different slots, so within-session avoidance tracks them
-  // independently — no cross-axis collision.
-  const used = new Map<string, Set<string>>();
-  const rotatedBench = rotatePoolName(
-    'Bench Press', { miniCycleNumber: 2, weekInBlock: 1 }, used);
-  const rotatedShoulder = rotatePoolName(
-    'DB Shoulder Press', { miniCycleNumber: 2, weekInBlock: 1 }, used);
+  // Option A routing contract: a push session naming Bench Press + DB Shoulder
+  // Press routes to (h_push, anchor) + (v_push, accessory) — the rotation never
+  // crosses the horizontal/vertical axis.
+  //
+  // REWIRED (B1-PIVOT, 2026-08-14) — these four asked `applyPoolRotation`, which
+  // is deleted. The routing they assert is `classifyPoolSlot` + `selectPoolEntry`,
+  // both live, so each is asked in two steps instead of one: WHICH pool does this
+  // name belong to, and WHAT does that pool select for this context. The
+  // classification half is the part that could regress (an OHP leaking into
+  // h_push), and it is still asserted, name by name.
+  //
+  // DROPPED WITH THE FUNCTION: the `usedInSession` cell asserting the tracker
+  // keyed `'horizontal_push:anchor'` / `'vertical_push:accessory'` separately.
+  // That map was `applyPoolRotation`'s own bookkeeping and has no live owner —
+  // `selectPoolEntryAvoiding` takes a plain avoid-set and never keys by slot.
+  const routeAndSelect = (name: string, ctx: RotationContext) => {
+    const routed = classifyPoolSlot(name);
+    if (!routed) throw new Error(`${name} classified to nothing — fixture is wrong`);
+    return {
+      slot: routed.slot,
+      role: routed.role,
+      pick: selectPoolEntry(STRENGTH_POOLS[routed.slot][routed.role], ctx).name,
+    };
+  };
+  const mc2w1: RotationContext = { miniCycleNumber: 2, weekInBlock: 1 };
 
-  // Bench Press rotates within h_push/anchor to entries[1] = Incline Bench
+  // Bench Press stays on the horizontal axis and rotates within h_push/anchor
+  // to entries[1] = Incline Bench.
+  const benchRoute = routeAndSelect('Bench Press', mc2w1);
+  assert(benchRoute.slot === 'horizontal_push' && benchRoute.role === 'anchor',
+    `Bench Press routes to h_push/anchor (got ${benchRoute.slot}/${benchRoute.role})`);
   const expectedHPushAnchor = STRENGTH_POOLS.horizontal_push.anchor.entries[1].name;
-  assert(rotatedBench === expectedHPushAnchor,
-    `Bench Press in mc=2 routes to h_push/anchor entries[1] (got ${rotatedBench}, expected ${expectedHPushAnchor})`);
+  assert(benchRoute.pick === expectedHPushAnchor,
+    `Bench Press in mc=2 selects h_push/anchor entries[1] (got ${benchRoute.pick}, expected ${expectedHPushAnchor})`);
 
-  // DB Shoulder Press (v_push/accessory) at mc=2/w=1: base = (2-1)*4 + 0 = 4
-  // → 4 mod poolLen → entries[4 % poolLen]
+  // DB Shoulder Press stays on the vertical axis. v_push/accessory at mc=2/w=1:
+  // base = (2-1)*4 + 0 = 4 → entries[4 % poolLen].
+  const shoulderRoute = routeAndSelect('DB Shoulder Press', mc2w1);
+  assert(shoulderRoute.slot === 'vertical_push' && shoulderRoute.role === 'accessory',
+    `DB Shoulder Press routes to v_push/accessory (got ${shoulderRoute.slot}/${shoulderRoute.role})`);
   const vPushAccLen = STRENGTH_POOLS.vertical_push.accessory.entries.length;
   const expectedVPushIdx = 4 % vPushAccLen;
   const expectedVPushAccessory = STRENGTH_POOLS.vertical_push.accessory.entries[expectedVPushIdx].name;
-  assert(rotatedShoulder === expectedVPushAccessory,
-    `DB Shoulder Press in mc=2 w=1 routes to v_push/accessory entries[${expectedVPushIdx}] (got ${rotatedShoulder}, expected ${expectedVPushAccessory})`);
+  assert(shoulderRoute.pick === expectedVPushAccessory,
+    `DB Shoulder Press in mc=2 w=1 selects v_push/accessory entries[${expectedVPushIdx}] (got ${shoulderRoute.pick}, expected ${expectedVPushAccessory})`);
 
-  // Two different sub-slots — tracker has independent keys
-  assert(used.has('horizontal_push:anchor') && used.has('vertical_push:accessory'),
-    `usedInSession tracks h_push and v_push separately (keys: ${Array.from(used.keys()).join(', ')})`);
+  // The two names land in DIFFERENT slots — this is the no-cross-axis claim, and
+  // it is what the old tracker-key assertion was really standing in for.
+  assert(benchRoute.slot !== shoulderRoute.slot,
+    `Bench Press and DB Shoulder Press route to different slots (both ${benchRoute.slot})`);
 
   // Same for pull: Barbell Row + Pull-Ups in one session → h_pull + v_pull
-  const pullUsed = new Map<string, Set<string>>();
-  const rotatedRow = rotatePoolName(
-    'Barbell Row', { miniCycleNumber: 1, weekInBlock: 1 }, pullUsed);
-  const rotatedPullup = rotatePoolName(
-    'Pull-Ups', { miniCycleNumber: 1, weekInBlock: 1 }, pullUsed);
+  const mc1w1: RotationContext = { miniCycleNumber: 1, weekInBlock: 1 };
+  const rowRoute = routeAndSelect('Barbell Row', mc1w1);
+  const pullupRoute = routeAndSelect('Pull-Ups', mc1w1);
+  assert(rowRoute.slot === 'horizontal_pull' && rowRoute.role === 'anchor',
+    `Barbell Row routes to h_pull/anchor (got ${rowRoute.slot}/${rowRoute.role})`);
+  assert(pullupRoute.slot === 'vertical_pull' && pullupRoute.role === 'anchor',
+    `Pull-Ups routes to v_pull/anchor (got ${pullupRoute.slot}/${pullupRoute.role})`);
   // mc=1 anchor → entries[0]
-  assert(rotatedRow === STRENGTH_POOLS.horizontal_pull.anchor.entries[0].name,
-    `Barbell Row mc=1 → h_pull/anchor entries[0] (got ${rotatedRow})`);
-  assert(rotatedPullup === STRENGTH_POOLS.vertical_pull.anchor.entries[0].name,
-    `Pull-Ups mc=1 → v_pull/anchor entries[0] (got ${rotatedPullup})`);
+  assert(rowRoute.pick === STRENGTH_POOLS.horizontal_pull.anchor.entries[0].name,
+    `Barbell Row mc=1 → h_pull/anchor entries[0] (got ${rowRoute.pick})`);
+  assert(pullupRoute.pick === STRENGTH_POOLS.vertical_pull.anchor.entries[0].name,
+    `Pull-Ups mc=1 → v_pull/anchor entries[0] (got ${pullupRoute.pick})`);
 
   // Within-sub-pattern load transfer still works (Bench Press 100kg → Incline
   // Bench 85kg is the classic case for the h_push slot).
@@ -1035,87 +1021,69 @@ section('14. Athlete overrides (prefs filter / bias)');
     `buildWorkoutsFromCoach with pinned=['Box Squat'] picks Box Squat first (got "${pinnedNames[0]}")`);
 
   // ── 14.11 Within-session avoidance still works with prefs ──
-  // Two AI-suggested squats in same session + pinned entry — second should
-  // NOT be the pinned one (first pick already consumed it).
-  const usedInSession = new Map<string, Set<string>>();
-  const first = rotatePoolName(
-    'Back Squat', ctx, usedInSession, { excluded: [], pinned: ['Box Squat'] });
-  const second = rotatePoolName(
-    'Back Squat', ctx, usedInSession, { excluded: [], pinned: ['Box Squat'] });
+  // Two squat rows in the same session + a pinned entry — the second must NOT
+  // be the pinned one (the first pick already consumed it).
+  //
+  // REWIRED (B1-PIVOT, 2026-08-14) from `applyPoolRotation` to
+  // `selectPoolEntryAvoiding`, which is where BOTH halves actually live: the
+  // pin-bias (`applyPrefsToPool` step 4) and the avoid-walk. The deleted
+  // function only carried the used-name set between the two calls, which the
+  // caller does here instead. Assertions unchanged.
+  const sessionAvoid = new Set<string>();
+  const pinPrefs: AthletePoolPrefs = { excluded: [], pinned: ['Box Squat'] };
+  const first = pickPoolEntry(squatAnchor, ctx, sessionAvoid, pinPrefs).name;
+  sessionAvoid.add(first);
+  const second = pickPoolEntry(squatAnchor, ctx, sessionAvoid, pinPrefs).name;
   assert(first === 'Box Squat',
-    `Prefs + session avoid: first AI squat → pinned Box Squat (got "${first}")`);
+    `Prefs + session avoid: first squat row → pinned Box Squat (got "${first}")`);
   assert(second !== first,
-    `Prefs + session avoid: second AI squat ≠ first (got both "${first}")`);
+    `Prefs + session avoid: second squat row ≠ first (got both "${first}")`);
 
   // ── 14.12 Equipment filter: full gym leaves barbell anchor unchanged ──
-  const fullGymBench = rotatePoolName(
-    'Bench Press',
+  // REWIRED (B1-PIVOT) — the equipment filter is `selectPoolEntryAvoiding`'s,
+  // via `applyPrefsToPool`. `applyPoolRotation` only chose which pool to hand
+  // it, which this cell now states outright (h_push/anchor).
+  const fullGymBench = pickPoolEntry(
+    STRENGTH_POOLS.horizontal_push.anchor,
     ctx,
-    undefined,
+    emptyAvoid,
     { excluded: [], pinned: [], availableEquipment: FULL_GYM_EQUIPMENT },
-  );
+  ).name;
   assert(fullGymBench === 'Bench Press',
     `Full gym availableEquipment preserves Bench Press anchor (got "${fullGymBench}")`);
 
-  // ── 14.13 Equipment filter: dumbbells-only falls to same-slot DB accessory ──
-  const dbWarnings: string[] = [];
-  console.warn = (msg: string) => { dbWarnings.push(msg); };
-  try {
-    // ⚠ THE KIT GAINED A BENCH, 2026-08-13, AND THE EXPECTATION DID NOT MOVE.
-    //
-    // This cell used to pass `['bodyweight', 'dumbbells']` and expect
-    // `DB Bench Press`. Sam's authored sheet says `DB Bench Press ->
-    // ['bench', 'dumbbells']`, so on that kit the DB variant is genuinely
-    // ILLEGAL — you cannot bench press without a bench — and the rotation
-    // correctly fell to `Push-ups` instead.
-    //
-    // The cell's INTENT is "no barbell ⇒ rotate to the same-slot DB
-    // accessory", and that intent needs an athlete who can actually do the DB
-    // accessory. So the KIT is corrected rather than the assertion: this is
-    // the intent it always meant, now stated against a kit that can express
-    // it. The no-bench case is asserted immediately below rather than lost.
-    const dbOnlyBench = rotatePoolName(
-      'Bench Press',
-      ctx,
-      undefined,
-      { excluded: [], pinned: [], availableEquipment: ['bodyweight', 'dumbbells', 'bench'] },
-    );
-    assert(dbOnlyBench === 'DB Bench Press',
-      `Dumbbells-only Bench Press rotates to DB Bench Press (got "${dbOnlyBench}")`);
-
-    // AND THE ROW THE SHEET ADDED: no bench, no bench press of any kind. The
-    // honest answer is the horizontal push the athlete CAN do.
-    const noBench = rotatePoolName(
-      'Bench Press',
-      ctx,
-      undefined,
-      { excluded: [], pinned: [], availableEquipment: ['bodyweight', 'dumbbells'] },
-    );
-    assert(noBench !== 'Bench Press' && noBench !== 'DB Bench Press',
-      `Without a bench, neither bench press may be prescribed (got "${noBench}")`);
-    assert(dbWarnings.some((w) => w.includes('[pool-equipment-role-fallback]')),
-      `Dumbbells-only role fallback logs structured warning (got ${JSON.stringify(dbWarnings)})`);
-  } finally {
-    console.warn = originalWarn;
-  }
-
-  // ── 14.14 Equipment filter: bodyweight-only avoids barbell where sibling pool can cover ──
-  const bwWarnings: string[] = [];
-  console.warn = (msg: string) => { bwWarnings.push(msg); };
-  try {
-    const bwOnlyBench = rotatePoolName(
-      'Bench Press',
-      ctx,
-      undefined,
-      { excluded: [], pinned: [], availableEquipment: ['bodyweight'] },
-    );
-    assert(bwOnlyBench !== 'Bench Press' && bwOnlyBench !== 'Incline Bench' && bwOnlyBench !== 'Close Grip Bench',
-      `Bodyweight-only Bench Press avoids barbell anchor when fallback exists (got "${bwOnlyBench}")`);
-    assert(bwWarnings.some((w) => w.includes('[pool-equipment-role-fallback]')),
-      `Bodyweight-only role fallback logs structured warning (got ${JSON.stringify(bwWarnings)})`);
-  } finally {
-    console.warn = originalWarn;
-  }
+  // ── 14.13 / 14.14 THE ANCHOR→ACCESSORY ROLE FALLBACK IS GONE WITH ITS OWNER ──
+  //
+  // Both cells asserted that a kit which empties the ANCHOR pool makes the
+  // rotation drop to the SIBLING ACCESSORY pool of the same slot, logging
+  // `[pool-equipment-role-fallback]` on the way. **That whole mechanism was
+  // `applyPoolRotation`'s** — it read `siblingRole(role)`, re-asked
+  // `getPool(slot, fallbackRole)` and emitted the log itself.
+  // `selectPoolEntryAvoiding` is handed ONE pool and never reaches for another,
+  // so there is no live function that can be asked this question, and no
+  // `[pool-equipment-role-fallback]` line is emitted by anything any more.
+  // Deleted rather than weakened: pointing them at a single pool would quietly
+  // change what they claim.
+  //
+  // ⚠ THE CAPABILITY IS GONE, NOT JUST THE TEST. If an athlete's kit empties an
+  // anchor pool, whoever composes that row now owns choosing the accessory —
+  // the pool layer will not do it for them.
+  //
+  // KEPT, BECAUSE ITS SUBJECT IS LIVE: Sam's authored sheet says
+  // `DB Bench Press -> ['bench', 'dumbbells']`, so on a bench-less kit NEITHER
+  // bench press is legal. That is `exerciseAllowedByEquipment`, which is
+  // exported, has production callers (`sessionSlotCoverage`), and is the
+  // legality test R-083 rests on.
+  assert(exerciseAllowedByEquipment('Bench Press', ['bodyweight', 'dumbbells']) === false,
+    'Without a bench, Bench Press is not a legal prescription');
+  assert(exerciseAllowedByEquipment('DB Bench Press', ['bodyweight', 'dumbbells']) === false,
+    'Without a bench, DB Bench Press is not a legal prescription either');
+  // NON-VACUITY: add the bench and the DB variant becomes legal, so the two
+  // above are refusing on the BENCH and not refusing everything.
+  assert(exerciseAllowedByEquipment('DB Bench Press', ['bodyweight', 'dumbbells', 'bench']) === true,
+    'With a bench and dumbbells, DB Bench Press is legal');
+  assert(exerciseAllowedByEquipment('Bench Press', ['bodyweight', 'dumbbells', 'bench']) === false,
+    'A bench without a barbell still cannot support a barbell Bench Press');
 
   // ── 14.15 R-083: A SLOT NO KIT CAN FILL IS REFUSED, NEVER SERVED RAW ──────
   //
@@ -1130,14 +1098,26 @@ section('14. Athlete overrides (prefs filter / bias)');
   // reached an athlete who owns nothing. Both halves are asserted — the outcome
   // is a refusal, AND the fallback line does not fire — because either one alone
   // stays green while the other regresses.
+  //
+  // REWIRED (B1-PIVOT, 2026-08-14) — this asked `applyPoolRotation` and read a
+  // `PoolRotationOutcome`. **THE REFUSAL ITSELF NEVER LIVED THERE**: R-083 is
+  // implemented inside `selectPoolEntryAvoiding`, which decides
+  // `kitCanTrainNothingHere`, emits `[pool-slot-refused]` and returns the
+  // `refused` branch of `PoolSelection`; the deleted function only re-wrapped
+  // that answer. So the cell is asked one layer down, at the owner, and every
+  // assertion survives — refusal, cause, no raw-pool fallback, and the
+  // structured line. The one assertion that could NOT survive is
+  // `suggestedName`: that field was `PoolRotationOutcome`'s alone (the name a
+  // producer had asked for), and `PoolSelection` names the SLOT instead, which
+  // is asserted in its place.
   const refusalWarnings: string[] = [];
   console.warn = (msg: string) => { refusalWarnings.push(msg); };
-  let bwPullOutcome: ReturnType<typeof applyPoolRotation>;
+  let bwPullOutcome: PoolSelection;
   try {
-    bwPullOutcome = applyPoolRotation(
-      'Pull-Ups',
+    bwPullOutcome = selectPoolEntryAvoiding(
+      STRENGTH_POOLS.vertical_pull.anchor,
       ctx,
-      undefined,
+      emptyAvoid,
       { excluded: [], pinned: [], availableEquipment: ['bodyweight'] },
     );
   } finally {
@@ -1148,8 +1128,9 @@ section('14. Athlete overrides (prefs filter / bias)');
   if (bwPullOutcome.kind === 'refused') {
     assert(bwPullOutcome.cause === 'equipment',
       `Refusal names the kit as the cause (got "${bwPullOutcome.cause}")`);
-    assert(bwPullOutcome.suggestedName === 'Pull-Ups',
-      `Refusal carries what was asked for, so the caller can name the removal (got "${bwPullOutcome.suggestedName}")`);
+    assert(bwPullOutcome.slot === 'vertical_pull' && bwPullOutcome.role === 'anchor',
+      `Refusal names the slot it emptied, so the caller can name the removal `
+      + `(got "${bwPullOutcome.slot}/${bwPullOutcome.role}")`);
   }
   assert(!refusalWarnings.some((w) => w.includes('[pool-override-fallback]')),
     `An equipment refusal never logs the raw-pool fallback (got ${JSON.stringify(refusalWarnings)})`);
@@ -1162,36 +1143,56 @@ section('14. Athlete overrides (prefs filter / bias)');
   // deleting work the athlete merely asked to vary.
   const exclusionWarnings: string[] = [];
   console.warn = (msg: string) => { exclusionWarnings.push(msg); };
-  let allExcludedOutcome: ReturnType<typeof applyPoolRotation>;
+  let allExcludedOutcome: PoolSelection;
   try {
-    allExcludedOutcome = applyPoolRotation('Back Squat', ctx, undefined, {
+    allExcludedOutcome = selectPoolEntryAvoiding(squatAnchor, ctx, emptyAvoid, {
       excluded: ['Back Squat', 'Front Squat', 'Box Squat', 'High Box Squat'],
       pinned: [],
     });
   } finally {
     console.warn = originalWarn;
   }
-  assert(allExcludedOutcome.kind === 'name',
+  assert(allExcludedOutcome.kind === 'entry',
     `An all-excluded pool still falls through — exclusion is not the kit (got ${JSON.stringify(allExcludedOutcome)})`);
   assert(exclusionWarnings.some((w) => w.includes('[pool-override-fallback]')),
     `The exclusion fallback keeps its original log (got ${JSON.stringify(exclusionWarnings)})`);
 }
 
 // ─────────────────────────────────────────────────────────────────
-// ROTATION MAY NOT CROSS A MUSCLE GROUP (PoolEntry.group)
+// MUSCLE-GROUP DATA (PoolEntry.group)
+//
+// ⚠ WHAT THIS SECTION USED TO BE, AND WHY IT IS SMALLER (B1-PIVOT, 2026-08-14).
+//
+// It was headed "Rotation stays inside its muscle group" and its behavioural
+// cells rotated Tricep Pushdown / Bicep Curl / Lateral Raise / Face Pull /
+// Nordic Lower / Calf Raises and the four single-leg lunges across 12 cycles
+// × 4 weeks, asserting the pick never left its `group` (R-080, and the measured
+// `Bicep Curl | Bicep Curl | Hammer Curl` defect of 2026-08-13).
+//
+// **THAT NARROWING WAS `applyPoolRotation`'S ALONE.** It read
+// `findPoolEntry(suggestedName)?.entry.group`, filtered the pool to that group
+// before the walk, and released the filter only when every in-group candidate
+// was already used. `selectPoolEntry` and `selectPoolEntryAvoiding` have never
+// looked at `group` — they index `cycleIndex % entries.length` straight across
+// the slot. So every rotation cell here is exclusively associated with the
+// deleted function, and there is no live function to re-point them at.
+//
+// ⚠⚠ `PoolEntry.group` NOW HAS NO READER ANYWHERE IN THE APP. Grepped
+// 2026-08-14: the only remaining mentions are this file, the field's own
+// declaration and a comment in `STRENGTH_POOLS`. R-080 and the arm-rotation
+// ruling are, at this moment, enforced by NOTHING — whoever composes strength
+// rows now owns not printing three curls in a row. That is reported, not
+// papered over.
+//
+// WHAT SURVIVES BELOW is the DATA: the table still carries correct groups, and
+// `findPoolEntry` still serves them. These cells need no rewiring — their
+// subject was always the pool table — so they are kept, and they are what a
+// future group-aware composer will build on.
 // ─────────────────────────────────────────────────────────────────
-section('Rotation stays inside its muscle group');
+section('Muscle-group data on pool entries');
 {
-  // THE DEFECT THESE HOLD, measured 2026-08-13: `isolation_upper/accessory`
-  // mixes biceps, triceps and shoulders in one list, and `selectPoolEntry`
-  // picked by `cycleIndex % entries.length` across all of it. The "// Bicep
-  // block" comments were decoration. It shipped `Bicep Curl (Barbell) | Bicep
-  // Curl (Dumbbell) | Hammer Curl` — three curls, no triceps — and a PUSH day
-  // whose accessory rotated from Lateral Raise into a bicep curl.
   const groupOf = (name: string): string | undefined => findPoolEntry(name)?.entry.group;
 
-  // NON-VACUITY FIRST: if the groups are not actually on the entries, every
-  // assertion below passes for the wrong reason.
   assert(groupOf('Tricep Pushdown') === 'tricep',
     `Tricep Pushdown should be group 'tricep', got ${String(groupOf('Tricep Pushdown'))}`);
   assert(groupOf('Bicep Curl (Barbell)') === 'bicep',
@@ -1201,78 +1202,27 @@ section('Rotation stays inside its muscle group');
   // R-076: Sam ruled the face pull is shoulder work, so it sits with the delts.
   assert(groupOf('Face Pull') === 'shoulder',
     `R-076: Face Pull should be group 'shoulder', got ${String(groupOf('Face Pull'))}`);
+  assert(groupOf('Nordic Lower') === 'hamstring',
+    `Nordic Lower should be group 'hamstring', got ${String(groupOf('Nordic Lower'))}`);
+  assert(groupOf('Calf Raises') === 'calf',
+    `Calf Raises should be group 'calf', got ${String(groupOf('Calf Raises'))}`);
 
-  // THE RULE. Rotate each one across many cycles; it must never leave its group.
-  for (const [name, expected] of [
-    ['Tricep Pushdown', 'tricep'],
-    ['Bicep Curl (Barbell)', 'bicep'],
-    ['Lateral Raise', 'shoulder'],
-    ['Face Pull', 'shoulder'],
-    ['Nordic Lower', 'hamstring'],
-    ['Calf Raises', 'calf'],
-  ] as const) {
-    let crossed: string | null = null;
-    for (let cycle = 1; cycle <= 12; cycle += 1) {
-      for (const weekInBlock of [1, 2, 3, 4]) {
-        const out = rotatePoolName(name, { miniCycleNumber: cycle, weekInBlock } as RotationContext);
-        const outGroup = groupOf(out);
-        if (outGroup !== expected) { crossed = `${name} -> ${out} (group ${String(outGroup)})`; break; }
-      }
-      if (crossed) break;
-    }
-    assert(crossed === null,
-      `rotation crossed a muscle group: ${crossed ?? ''} — expected to stay in '${expected}'`);
-  }
-
-  // AND IT STILL ROTATES. A guard that froze every exercise would pass the cells
-  // above and destroy the variety system, so at least one grouped exercise must
-  // actually MOVE across cycles.
-  const seen = new Set<string>();
-  for (let cycle = 1; cycle <= 12; cycle += 1) {
-    seen.add(rotatePoolName('Bicep Curl (Barbell)', { miniCycleNumber: cycle, weekInBlock: 1 } as RotationContext));
-  }
-  assert(seen.size > 1,
-    `grouping froze rotation — Bicep Curl (Barbell) never moved across 12 cycles (${JSON.stringify([...seen])})`);
-
-  // ── R-080: A LUNGE MAY NOT ROTATE INTO A SQUAT ─────────────────────────
-  //
-  // **Sam, 2026-08-13, on a bodyweight leg day printing the same squat twice:
-  // *"Bodyweight leg day gets more single-leg knee work"*.** `squat/accessory`
-  // held BOTH of his ladder slots — bilateral squats and single-leg knee work —
-  // so rotation turned a lunge into a squat. Measured before the fix:
-  //   ROT Reverse Lunges -> Bodyweight Squat   and   ROT Back Squat -> Bodyweight Squat
-  // Two rows became the SAME squat, one of them from a lunge.
+  // R-080's TABLE half: single-leg knee work is labelled apart from bilateral
+  // squatting, which is the distinction the ruling rests on. (Its BEHAVIOURAL
+  // half — that rotation may not cross the two — is the part with no owner.)
   for (const lunge of ['Reverse Lunges', 'Walking Lunges', 'Bulgarian Split Squats', 'Step Ups']) {
     assert(groupOf(lunge) === 'single_leg_knee',
-      `${lunge} should be group 'single_leg_knee', got ${String(groupOf(lunge))}`);
-    let crossed: string | null = null;
-    for (let cycle = 1; cycle <= 12 && !crossed; cycle += 1) {
-      for (const weekInBlock of [1, 2, 3, 4]) {
-        const out = rotatePoolName(lunge, { miniCycleNumber: cycle, weekInBlock } as RotationContext);
-        if (groupOf(out) !== 'single_leg_knee') { crossed = `${lunge} -> ${out}`; break; }
-      }
-    }
-    assert(crossed === null, `R-080: single-leg knee work rotated into a squat: ${crossed ?? ''}`);
+      `R-080: ${lunge} should be group 'single_leg_knee', got ${String(groupOf(lunge))}`);
   }
-  // AND THE BILATERAL SIDE HOLDS ITS OWN — the non-vacuity. If everything were
-  // one group the loop above would pass while proving nothing.
+  // NON-VACUITY: if everything carried one group the loop above would pass while
+  // proving nothing.
   assert(groupOf('Bodyweight Squat') === 'bilateral_squat',
-    `Bodyweight Squat should be 'bilateral_squat', got ${String(groupOf('Bodyweight Squat'))}`);
-  for (let cycle = 1; cycle <= 8; cycle += 1) {
-    const out = rotatePoolName('Bodyweight Squat', { miniCycleNumber: cycle, weekInBlock: 1 } as RotationContext);
-    assert(groupOf(out) === 'bilateral_squat',
-      `R-080: a bilateral squat rotated into single-leg work: Bodyweight Squat -> ${out}`);
-  }
+    `R-080: Bodyweight Squat should be 'bilateral_squat', got ${String(groupOf('Bodyweight Squat'))}`);
 
-  // AN UNGROUPED SLOT IS UNTOUCHED — every squat anchor is a squat, so it needs
-  // no groups and must keep whole-slot rotation.
+  // AN UNGROUPED SLOT IS DELIBERATELY UNGROUPED — every squat anchor is a squat,
+  // so grouping a uniform slot would be noise.
   assert(groupOf('Back Squat') === undefined,
     'squat anchors should carry no group — grouping a uniform slot is noise');
-  const squatSeen = new Set<string>();
-  for (let cycle = 1; cycle <= 6; cycle += 1) {
-    squatSeen.add(rotatePoolName('Back Squat', { miniCycleNumber: cycle, weekInBlock: 1 } as RotationContext));
-  }
-  assert(squatSeen.size > 1, 'ungrouped slot stopped rotating');
 }
 
 // ─────────────────────────────────────────────────────────────────

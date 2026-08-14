@@ -282,14 +282,25 @@ async function run(scenarioId: string) {
   if (useProgramStore.getState().currentProgram !== null) {
     throw new Error('R1.3 boot law broken: an old envelope resurrected outputs through rehydrate');
   }
-  const { canonicaliseHydratedState } = require('../../../store/programStore') as
-    typeof import('../../../store/programStore');
-  const canonicalisationOptions = {
-    ingressKind: (legacy ? 'legacy_precanonical' : 'accepted_canonical') as never,
-    profile: PATH_PROFILE as never,
-  };
-  const canonicalOnce = canonicaliseHydratedState(
-    envelope.state as never, canonicalisationOptions as never);
+  // RE-POINTED (2026-08-14), and it is the SAME CODE, not a lighter one.
+  // `canonicaliseHydratedState` was deleted with the legacy structural
+  // migration. On the `accepted_canonical` ingress — the only classification a
+  // program can now arrive under, because nothing reads a stored program back
+  // at all (`partialize` persists inputs only) — that function's ENTIRE body
+  // was these two calls, in this order, and then an early return. So the probe
+  // observes exactly what it observed before, with the unreachable branch gone.
+  const { dropRetiredWeekOverlaysAtHydration } =
+    require('../../../store/programHydrationIngress') as
+      typeof import('../../../store/programHydrationIngress');
+  const { projectHydratedStateDerivedFields } =
+    require('../../../store/programHydrationProjection') as
+      typeof import('../../../store/programHydrationProjection');
+  const canonicaliseAtReadBoundary = (state: Record<string, unknown>) =>
+    projectHydratedStateDerivedFields(
+      dropRetiredWeekOverlaysAtHydration(state as never) as Record<string, unknown>,
+    ) as { currentProgram?: { microcycles?: { workouts?: Workout[] }[] } };
+  void legacy;
+  const canonicalOnce = canonicaliseAtReadBoundary(envelope.state as never);
   const hydratedWorkouts =
     (canonicalOnce.currentProgram?.microcycles?.[0]?.workouts ?? []) as Workout[];
   const first = canonicalWeekLedger(hydratedWorkouts);
@@ -297,9 +308,7 @@ async function run(scenarioId: string) {
   // The first pass canonicalises; its output IS canonical, which is what the
   // old second rehydrate reclassified it as. Idempotence means pass two
   // changes nothing.
-  const canonicalTwice = canonicaliseHydratedState(
-    canonicalOnce as never,
-    { ...canonicalisationOptions, ingressKind: 'accepted_canonical' } as never);
+  const canonicalTwice = canonicaliseAtReadBoundary(canonicalOnce as never);
   const hydratedTwiceWorkouts =
     (canonicalTwice.currentProgram?.microcycles?.[0]?.workouts ?? []) as Workout[];
   const twice = canonicalWeekLedger(hydratedTwiceWorkouts);

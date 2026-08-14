@@ -144,6 +144,18 @@ export interface PoolDefinition {
 }
 
 export interface RotationContext {
+  /**
+   * The days whose STRENGTH content the composer owns.
+   *
+   * **The retained adapter still receives the WHOLE planner week.** This app
+   * hangs conditioning, running and sprint work off the strength days, so
+   * removing a day removes everything else it carries — measured on the first
+   * wiring attempt, which filtered the plan down to non-composed days, emptied
+   * the adapter and cost 22 worlds. The adapter simply authors no LIFTS on
+   * these days; `assembleAuthoredWeek` merges the composer's strength onto the
+   * day the adapter still builds.
+   */
+  composedStrengthDays?: readonly number[];
   /** 1-based mini-cycle / 3-4 week block index. */
   miniCycleNumber: number;
   /** 1-based week-within-block (1..4). Optional; only drives accessory rotation. */
@@ -1134,128 +1146,6 @@ export type PoolRotationOutcome =
       readonly cause: PoolRefusalCause;
     };
 
-export function applyPoolRotation(
-  suggestedName: string,
-  ctx: RotationContext,
-  usedInSession?: Map<string, Set<string>>,
-  prefs?: AthletePoolPrefs,
-): PoolRotationOutcome {
-  const unchanged: PoolRotationOutcome = { kind: 'name', name: suggestedName };
-  const classification = classifyPoolSlot(suggestedName);
-  if (!classification) return unchanged;
-
-  const { slot, role } = classification;
-  let selectedRole = role;
-  let pool = getPool(slot, role);
-  const trainingAgePool = trainingAgePoolForSlot(slot, prefs);
-  if (trainingAgePool) {
-    pool = trainingAgePool;
-    selectedRole = trainingAgePool.role;
-  }
-  // Defensive: pool shape allows empty entries for accessory-only slots
-  // (e.g. isolation_lower.anchor is []). classifyPoolSlot's guards should
-  // prevent routing here, but fall through untouched if we ever do land
-  // on an empty pool rather than throwing.
-  if (pool.entries.length === 0) return unchanged;
-
-  // ── ROTATION MAY NOT CROSS A MUSCLE GROUP ────────────────────────────────
-  //
-  // A slot says what MOVEMENT this is; `PoolEntry.group` says what it TRAINS.
-  // `isolation_upper/accessory` holds biceps, triceps and shoulders in one list,
-  // and `selectPoolEntry` picks by `cycleIndex % entries.length` across all of
-  // it — so a tricep pushdown could rotate into a bicep curl. Measured shipping
-  // `Bicep Curl (Barbell) | Bicep Curl (Dumbbell) | Hammer Curl`: three curls,
-  // no triceps, which is `:227`'s "two squats" in arm form.
-  //
-  // NARROW BY DESIGN. Only entries that DECLARE a group are constrained, and
-  // only when the suggested exercise has one — a slot whose entries are all the
-  // same thing (every squat anchor is a squat) is untouched, and an exercise
-  // that is not in any pool still rotates exactly as before.
-  const suggestedGroup = findPoolEntry(suggestedName)?.entry.group;
-  const fullPool = pool;
-  if (suggestedGroup) {
-    const sameGroup = pool.entries.filter((entry) => entry.group === suggestedGroup);
-    if (sameGroup.length > 0) pool = { ...pool, entries: sameGroup };
-  }
-  if (
-    prefs?.availableEquipment?.length &&
-    entriesAllowedByEquipment(pool, prefs).length === 0
-  ) {
-    const fallbackRole = siblingRole(role);
-    const fallbackPool = getPool(slot, fallbackRole);
-    if (
-      fallbackPool.entries.length > 0 &&
-      entriesAllowedByEquipment(fallbackPool, prefs).length > 0
-    ) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[pool-equipment-role-fallback] slot=${slot} role=${role} filtered=0 by equipment ` +
-          `→ using ${fallbackRole}`,
-      );
-      pool = fallbackPool;
-      selectedRole = fallbackRole;
-    }
-  }
-
-  const key = `${slot}:${selectedRole}`;
-
-  let avoid: Set<string>;
-  if (usedInSession) {
-    avoid = usedInSession.get(key) ?? new Set<string>();
-  } else {
-    avoid = new Set<string>();
-  }
-
-  // ── ROTATION STAYS IN ITS GROUP; AVOIDANCE MAY LEAVE IT ──────────────────
-  //
-  // TWO DIFFERENT JOBS SHARE THIS FUNCTION AND THEY WANT OPPOSITE THINGS, which
-  // is why the first version of the group rule broke a real behaviour:
-  //
-  //   ROTATION — vary ONE exercise across cycles. Crossing a group here is the
-  //     defect: a tricep pushdown must not become a bicep curl.
-  //   AVOIDANCE — a session suggested the same exercise more than once, and the
-  //     picks must differ. Crossing a group here is the FEATURE: three
-  //     `isolation_lower` rows should come back hamstring / quad / calf, not the
-  //     same muscle twice.
-  //
-  // So the group narrows the pool for the ordinary pick, and is RELEASED only
-  // when every in-group candidate is already used in this session. A cell holds
-  // each half — rotation never leaves its group across 12 cycles, and three
-  // Nordic Lower suggestions still resolve to three distinct picks.
-  let selection = selectPoolEntryAvoiding(pool, ctx, avoid, prefs);
-  // A GROUP-NARROWED POOL THAT REFUSES IS NOT THE SLOT REFUSING. The narrowing
-  // is this function's own doing (one muscle group out of a mixed slot), so a
-  // refusal there must re-ask the whole slot before it becomes the athlete's
-  // answer — otherwise "no legal tricep row" would delete a legal bicep row too.
-  if (
-    (selection.kind === 'refused' || avoid.has(selection.entry.name)) &&
-    suggestedGroup &&
-    fullPool.entries.length > pool.entries.length
-  ) {
-    selection = selectPoolEntryAvoiding(fullPool, ctx, avoid, prefs);
-  }
-  if (selection.kind === 'refused') {
-    return {
-      kind: 'refused',
-      suggestedName,
-      slot: selection.slot,
-      role: selection.role,
-      cause: selection.cause,
-    };
-  }
-  const pick = selection.entry;
-
-  if (usedInSession) {
-    const existing = usedInSession.get(key);
-    if (existing) {
-      existing.add(pick.name);
-    } else {
-      usedInSession.set(key, new Set([pick.name]));
-    }
-  }
-
-  return { kind: 'name', name: pick.name };
-}
 
 // ─── Load Ratio Normalization (progression transfer) ───
 

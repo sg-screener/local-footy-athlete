@@ -2,10 +2,15 @@
  * Accepted-state transaction ownership — Section 18 systemic regressions.
  *
  * This suite deliberately drives the production stores/coordinators. It keeps
- * the 23 requested fixed regressions (originally 25 — regressions 18-19,
- * Repeat Week's own publish/rollback behaviour, retired with the feature
- * under HOME_SCREEN_REDESIGN ruling 1) separate from broader properties and
+ * the requested fixed regressions separate from broader properties and
  * source-boundary mutation witnesses so the completion total cannot drift.
+ *
+ * THE COUNT IS 17 / 7 / 8, and every step down is recorded rather than absorbed:
+ * originally 25 regressions; 18-19 (Repeat Week's own publish/rollback
+ * behaviour) retired with the feature under HOME_SCREEN_REDESIGN ruling 1,
+ * leaving 23; then 10-15 deleted on 2026-08-14 with the legacy hydration
+ * migration that was their only subject, along with 3 properties and 2 mutation
+ * witnesses. The deleted cells are named where they stood.
  *
  * Run: npm run test:accepted-state-transactions
  */
@@ -40,9 +45,6 @@ import type {
 } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import {
-  canonicaliseHydratedProgram,
-  canonicaliseHydratedState,
-  Section18LegacyMigrationError,
   useProgramStore,
 } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
@@ -416,21 +418,20 @@ async function withGatewayFailureAsync(body: () => Promise<void>): Promise<boole
   }
 }
 
-function stripContracts(program: TrainingProgram): TrainingProgram {
-  return {
-    ...clone(program),
-    microcycles: program.microcycles.map((microcycle) => ({
-      ...clone(microcycle),
-      exposureContract: undefined,
-      exposureContractV2: undefined,
-    })),
-  };
-}
-
-function migrated(value: OnboardingData): TrainingProgram {
-  resetStores();
-  return canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
-}
+/**
+ * `stripContracts` AND `migrated` STOOD HERE AND ARE DELETED (2026-08-14).
+ *
+ * They existed only to feed the legacy contract-derivation path: strip a
+ * generated program's Contract v2 down to nothing, hand it to
+ * `canonicaliseHydratedProgram`, and watch `deriveContractlessLegacyContract`
+ * mint a `source: 'legacy_migration'` contract back. That whole pipeline is
+ * gone, and it is gone because no launch could reach it —
+ * `programStore.partialize` persists INPUTS only, so a stored program is never
+ * read back and a contractless stored week cannot exist to be repaired. The
+ * seven cells that used these helpers went with them; the accept path's own
+ * refusal of a contractless week (`AcceptedProgramContractMissingError`) is a
+ * different, live subject with its own owner.
+ */
 
 function placeholderOverlay(weekStart: string): WeekScopedWorkoutOverlay {
   return {
@@ -613,77 +614,36 @@ run('regression', '9 canonical readiness projection retains persisted accepted-l
   resetStores();
 });
 
-run('regression', '10 contractless legacy in-season derives a conservative v2 contract', () => {
-  const result = migrated(profile('In-season', {
-    usualGameDay: 'Saturday',
-    gameDay: 'Saturday',
-    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    trainingDaysPerWeek: 5,
-  }));
-  const week = result.microcycles[0];
-  assert(week.exposureContractV2?.source === 'legacy_migration', 'legacy v2 source missing');
-  const evaluation = evaluateSection18EffectiveWeek({
-    contract: week.exposureContractV2!, workouts: week.workouts, weekStart: WEEK_START,
-  });
-  assert(evaluation.blockingViolations.length === 0, 'migrated in-season week is not accepted');
-});
-
-run('regression', '11 contractless legacy off-season week is gated', () => {
-  const week = migrated(profile('Off-season')).microcycles[0];
-  const evaluation = evaluateSection18EffectiveWeek({
-    contract: week.exposureContractV2!, workouts: week.workouts, weekStart: WEEK_START,
-  });
-  assert(week.exposureContractV2?.source === 'legacy_migration', 'off-season migration missing');
-  assert(evaluation.blockingViolations.length === 0, 'off-season migration bypassed acceptance');
-});
-
-run('regression', '12 contractless legacy pre-season week is gated', () => {
-  const week = migrated(profile('Pre-season')).microcycles[0];
-  const evaluation = evaluateSection18EffectiveWeek({
-    contract: week.exposureContractV2!, workouts: week.workouts, weekStart: WEEK_START,
-  });
-  assert(week.exposureContractV2?.source === 'legacy_migration', 'pre-season migration missing');
-  assert(evaluation.blockingViolations.length === 0, 'pre-season migration bypassed acceptance');
-});
-
-run('regression', '13 legacy unknown anchors remain uncredited', () => {
-  const value = profile('In-season', {
-    usualGameDay: 'Saturday',
-    gameDay: 'Saturday',
-    teamTrainingDaysPerWeek: 1,
-    teamTrainingDays: ['Tuesday'],
-  });
-  const week = migrated(value).microcycles[0];
-  const contract = week.exposureContractV2!;
-  const evaluation = evaluateSection18EffectiveWeek({ contract, workouts: week.workouts, weekStart: WEEK_START });
-  assert(contract.anchors.length > 0, 'legacy anchor example did not contain anchors');
-  assert(contract.anchors.every((anchor) => anchor.participation === 'unknown'),
-    'migration invented unrestricted participation');
-  assert(evaluation.ledger.conditioning.anchorCoreCount === 0, 'unknown anchor gained core credit');
-});
-
-run('regression', '14 an unrepairable legacy week returns a typed migration failure', () => {
-  const source = stripContracts(generate(profile('Off-season'))).microcycles[0];
-  let error: unknown;
-  try {
-    canonicaliseHydratedState(
-      { currentMicrocycle: source },
-      { ingressKind: 'migration_required' },
-    );
-  } catch (caught) {
-    error = caught;
-  }
-  assert(error instanceof Section18LegacyMigrationError, 'typed migration error was not returned');
-  assert((error as Section18LegacyMigrationError).code === 'section18_legacy_migration_failed',
-    'migration error code changed');
-});
-
-run('regression', '15 repeated hydration is deterministic and idempotent', () => {
-  const value = profile('Off-season');
-  const once = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
-  const twice = canonicaliseHydratedProgram(clone(once), emptyEvaluationSurfaces(), value);
-  assert(JSON.stringify(once) === JSON.stringify(twice), 'repeated hydration changed accepted state');
-});
+/**
+ * REGRESSIONS 10-15 STOOD HERE AND ARE DELETED (2026-08-14), NOT WEAKENED.
+ *
+ *   10 contractless legacy in-season derives a conservative v2 contract
+ *   11 contractless legacy off-season week is gated
+ *   12 contractless legacy pre-season week is gated
+ *   13 legacy unknown anchors remain uncredited
+ *   14 an unrepairable legacy week returns a typed migration failure
+ *   15 repeated hydration is deterministic and idempotent
+ *
+ * ALL SIX HAD THE SAME SUBJECT: the legacy structural migration that ran when a
+ * STORED program was read back — `canonicaliseHydratedState` /
+ * `canonicaliseHydratedProgram`, `deriveContractlessLegacyContract`, and the
+ * typed `Section18LegacyMigrationError` it threw. That pipeline was deleted
+ * because it was provably unreachable: `programStore.partialize` persists INPUTS
+ * only, `currentProgram` and `currentMicrocycle` are never written to disk, and
+ * every boot regenerates the week through `quiescentBoot`. There is no stored
+ * program to migrate, so there is nothing these four could observe.
+ *
+ * WHY NOT REWIRE THEM. Each one asserted a PROPERTY OF THE MIGRATION — that it
+ * minted a contract, that the contract it minted carried `unknown`
+ * participation, that it failed typed rather than silently, that running it
+ * twice changed nothing. Re-pointing those at the live accept boundary would not
+ * have been the same claim: that boundary REFUSES a contractless week by name
+ * (`AcceptedProgramContractMissingError`) rather than repairing it, which is a
+ * different ruling with its own cells. Writing new claims under old names is how
+ * a suite comes to describe a build nobody has.
+ *
+ * The regression count drops 23 -> 17 in the totals line, stated there too.
+ */
 
 run('regression', '16 rebuild publishes calendar, program and overlays once', () => {
   const value = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
@@ -924,13 +884,11 @@ run('property', 'no structural readiness change can bypass the gateway', async (
   }
 });
 
-run('property', 'no contractless material week persists without accepted Contract v2', () => {
-  for (const phase of ['In-season', 'Off-season', 'Pre-season'] as const) {
-    const value = profile(phase);
-    const result = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
-    assert(result.microcycles.every((week) => !!week.exposureContractV2), `${phase} retained contractless week`);
-  }
-});
+// PROPERTY DELETED (2026-08-14): 'no contractless material week persists
+// without accepted Contract v2'. Its only mechanism was the legacy migration
+// minting a contract for a stripped week at hydration. That pipeline is gone —
+// nothing reads a stored program back — and the live boundary REFUSES a
+// contractless week rather than minting one, which is a different claim.
 
 run('property', 'multi-store operations publish complete old or complete new state', () => {
   seed(profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' }));
@@ -978,30 +936,14 @@ run('property', 'visible projection is ledger-equivalent to gateway acceptance',
   }
 });
 
-run('property', 'unknown legacy participation never gains anchor credit', () => {
-  const value = profile('In-season', {
-    usualGameDay: 'Saturday', gameDay: 'Saturday',
-    teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
-  });
-  for (const week of migrated(value).microcycles) {
-    const contract = week.exposureContractV2!;
-    assert(contract.anchors.every((anchor) => anchor.participation === 'unknown'),
-      'unknown participation was promoted');
-    const evaluation = evaluateSection18EffectiveWeek({
-      contract, workouts: week.workouts, weekStart: week.startDate.slice(0, 10),
-    });
-    assert(evaluation.ledger.conditioning.anchorCoreCount === 0, 'unknown anchor gained credit');
-  }
-});
-
-run('property', 'hydration remains deterministic and idempotent', () => {
-  for (const phase of ['In-season', 'Off-season', 'Pre-season'] as const) {
-    const value = profile(phase);
-    const once = canonicaliseHydratedProgram(stripContracts(generate(value)), emptyEvaluationSurfaces(), value);
-    const twice = canonicaliseHydratedProgram(clone(once), emptyEvaluationSurfaces(), value);
-    assert(JSON.stringify(once) === JSON.stringify(twice), `${phase} hydration drifted`);
-  }
-});
+// TWO MORE PROPERTIES DELETED (2026-08-14), for the same reason and no other:
+//   'unknown legacy participation never gains anchor credit'
+//   'hydration remains deterministic and idempotent'
+// Both drove `migrated()` — strip a week's contract, let the legacy migration
+// rebuild it — and both were assertions ABOUT that migration. It is deleted and
+// unreachable, so they have no subject. The surviving half of the first claim,
+// that an `unknown` anchor earns no core credit, is owned by the evaluator and
+// is still held in `section18AcceptedWeekGatewayTests` (P14, M14).
 
 /**
  * THE RULING MOVED, AND THIS CELL MOVED WITH IT — stated out loud rather than
@@ -1145,16 +1087,15 @@ run('mutation', 'readiness cannot exist only in the visible read model', () => {
     'accepted visible source-fact fence removed');
 });
 
-run('mutation', 'contract derivation cannot be skipped for contractless legacy weeks', () => {
-  assert(programSource.includes('deriveContractlessLegacyContract'), 'contractless derivation removed');
-  assert(programSource.includes("source: 'legacy_migration'"), 'migration provenance removed');
-});
-
-run('mutation', 'contractless workouts cannot be canonicalised without weekly validation', () => {
-  const derive = programSource.indexOf('deriveContractlessLegacyContract');
-  const gateway = programSource.indexOf('requireSection18AcceptedWeek', derive);
-  assert(derive >= 0 && gateway > derive, 'weekly migration gateway removed or reordered');
-});
+// TWO MUTATION WITNESSES DELETED (2026-08-14):
+//   'contract derivation cannot be skipped for contractless legacy weeks'
+//   'contractless workouts cannot be canonicalised without weekly validation'
+// Both were SOURCE GREPS demanding `deriveContractlessLegacyContract` still be
+// present in `store/programStore.ts`, one of them also demanding it precede the
+// gateway call. That function is deleted along with the pipeline that called it,
+// so these two now assert the presence of code that must not come back. A
+// witness that reds the moment its subject is correctly removed is not a
+// witness — it is the ratchet pointing the wrong way.
 
 run('mutation', 'program and constraints cannot publish sequential material state', () => {
   const coordinator = coachSource.indexOf("reason: 'constraint:update'");
@@ -1212,11 +1153,15 @@ async function main(): Promise<void> {
   let previousKind: 'regression' | 'property' | 'mutation' | null = null;
   for (const test of tests) {
     if (test.kind !== previousKind) {
+      // 17 / 7 / 8, DOWN FROM 23 / 10 / 10 ON 2026-08-14. Eleven cells were
+      // deleted in one commit, all nine with the same subject: the legacy
+      // structural migration a stored program used to be read back through.
+      // Nothing was rewired to a different claim to keep the numbers up.
       const heading = test.kind === 'regression'
-        ? 'Required fixed regressions (23)'
+        ? 'Required fixed regressions (17)'
         : test.kind === 'property'
-          ? 'Properties (10 distinct invariants)'
-          : 'Mutation witnesses (10)';
+          ? 'Properties (7 distinct invariants)'
+          : 'Mutation witnesses (8)';
       console.log(`\n-- ${heading} --`);
       previousKind = test.kind;
     }
@@ -1232,9 +1177,9 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/23 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
+  console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/17 properties=${propertyPass}/7 mutations=${mutationPass}/8 failures=${failures.length}`);
 totalsPrinted(failures.length);
-  if (regressionPass !== 23 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
+  if (regressionPass !== 17 || propertyPass !== 7 || mutationPass !== 8 || failures.length > 0) {
     console.error(`Failures: ${failures.join(', ')}`);
     process.exit(1);
   }

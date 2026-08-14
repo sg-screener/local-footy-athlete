@@ -97,7 +97,6 @@ import {
   resolveSessionDisplayName,
 } from '../utils/sessionNaming';
 import {
-  applyPoolRotation,
   classifyPoolSlot,
   findPoolEntry,
   type RotationContext,
@@ -1097,6 +1096,23 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
   if (entry.conditioningFlavour || /conditioning|aerobic|tempo|sprint|interval/i.test(lower)) {
     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
   }
+  // ── A COMPOSED-OPTIONAL DAY IS NOT A STRENGTH TEMPLATE (2026-08-14) ───────
+  //
+  // **MEASURED: 48 of the 180 worlds refused here, and not one of them was a
+  // strength day.** Every one named `…:optional` carrying
+  // `composedOptionalKind: 'gunshow'` — Sam's optional arms/pump session, whose
+  // content comes from the SIGNED POOLS through `buildDerivedSession` a few
+  // hundred lines below (his class ruling, 2026-07-30: *"REAL COMPOSED SESSIONS
+  // ONLY"*). The builder DISCARDS whatever it is seeded with for these days, so
+  // this row is a placeholder that keeps the DAY alive until its real owner
+  // composes it — exactly what the conditioning branch above does.
+  //
+  // The severance throw was right to exist and wrong to catch this: the
+  // composer never owned an arms day, so a composed week not covering one is
+  // not a hole in the composer.
+  if (entry.composedOptionalKind) {
+    return [{ name: 'Optional', sets: 1, repsMin: 1, repsMax: 1 }];
+  }
   throw new Error(
     'B1-PIVOT: the legacy strength-content builder is severed. A strength plan '
     + `entry (${entry.planEntryId ?? entry.dayOfWeek ?? 'unknown'}) reached `
@@ -1109,6 +1125,7 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
 function completeCoachWorkoutsFromPlan(
   coachWorkouts: CoachGeneratedWorkoutInput[],
   weeklyPlan?: SessionAllocation[],
+  composedStrengthDays?: readonly number[],
 ): CoachGeneratedWorkoutInput[] {
   if (!weeklyPlan?.length) return coachWorkouts;
 
@@ -1119,6 +1136,11 @@ function completeCoachWorkoutsFromPlan(
     if (!entry.dayOfWeek) continue;
     const dayOfWeek = PLAN_DAY_MAP[entry.dayOfWeek];
     if (dayOfWeek === undefined || existingDows.has(dayOfWeek)) continue;
+    // ⚠ THE COMPOSER OWNS THE STRENGTH OF THIS DAY, SO THE ADAPTER AUTHORS NONE.
+    // The DAY still exists here — that is the whole point — so its conditioning,
+    // running and sprint work is built exactly as before, and
+    // `assembleAuthoredWeek` merges the composer's lifts onto it.
+    const composerOwnsStrength = composedStrengthDays?.includes(dayOfWeek) === true;
     additions.push({
       planEntryId: entry.planEntryId,
       strengthIntent: entry.strengthIntent,
@@ -1126,7 +1148,17 @@ function completeCoachWorkoutsFromPlan(
       name: fallbackNameForPlanEntry(entry),
       workoutType: fallbackWorkoutTypeForPlanEntry(entry),
       sessionTier: entry.tier,
-      exercises: fallbackExercisesForPlanEntry(entry),
+      // ⚠ NOT SIMPLY EMPTY. A day with no content at all collapses to REST on
+      // the adapter's side and its conditioning resolution never runs —
+      // measured on the first attempt: three composed days came back `Rest`,
+      // rows 0, block false, and §18 then reported zero sprint exposure. A
+      // composed day the plan gave conditioning keeps the conditioning SEED and
+      // nothing else; its lifts are the composer's.
+      exercises: composerOwnsStrength
+        ? (entry.conditioningFlavour || entry.hasCombinedConditioning
+            ? [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }]
+            : [])
+        : fallbackExercisesForPlanEntry(entry),
     });
     existingDows.add(dayOfWeek);
   }
@@ -1628,6 +1660,7 @@ export function buildWorkoutsFromCoach(
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(
     feasibleCoachWorkouts,
     effectiveWeeklyPlan,
+    rotationContext?.composedStrengthDays,
   );
 
   const finaliseBuiltWorkout = (

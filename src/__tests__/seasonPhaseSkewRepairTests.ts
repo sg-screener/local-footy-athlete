@@ -39,7 +39,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
-import { canonicaliseHydratedProgram, useProgramStore } from '../store/programStore';
+import { canonicaliseAcceptedStateCandidate, useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
@@ -49,8 +49,28 @@ import {
   profileSetupBlockCopy,
 } from '../rules/profileSetupChange';
 import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
-import { resolveSeasonPhaseWeekKind } from '../rules/seasonPhaseClock';
-import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
+import { ensureProgramSeasonPhaseClock, resolveSeasonPhaseWeekKind } from '../rules/seasonPhaseClock';
+
+/**
+ * A PROGRAM COMING BACK IN THROUGH THE LIVE INSTALL BOUNDARY.
+ *
+ * These cells used `canonicaliseHydratedProgram`, deleted 2026-08-14 with the
+ * legacy hydration-migration pipeline — `programStore.partialize` persists
+ * INPUTS only, so no launch reads a stored program back and nothing could
+ * reach it.
+ *
+ * THE SUBJECTS BELOW ARE ALL LIVE — who owns the season phase, whether the
+ * clock survives a re-read, whether a week loses sessions or tonnage. Only the
+ * door changed. `setCurrentProgram` is the live one, and it is exactly these
+ * two steps: `ensureProgramSeasonPhaseClock`, then
+ * `canonicaliseAcceptedStateCandidate` with the athlete's profile.
+ */
+function rehydrate(program: TrainingProgram, storedProfile: OnboardingData): TrainingProgram {
+  const clocked = ensureProgramSeasonPhaseClock(program);
+  return canonicaliseAcceptedStateCandidate({ currentProgram: clocked }, {
+    profile: storedProfile,
+  }).currentProgram as TrainingProgram;
+}
 
 // ─── Harness ─────────────────────────────────────────────────────────
 let pass = 0;
@@ -182,7 +202,7 @@ section('[1] A skewed device is told, not quietly corrected');
   // rebuild failed after that write.
   const stored = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
   const preSeasonProgram = generate(profile('Pre-season'));
-  const hydrated = quiet(() => canonicaliseHydratedProgram(preSeasonProgram, emptyEvaluationSurfaces(), stored));
+  const hydrated = quiet(() => rehydrate(preSeasonProgram, stored));
 
   const owned = ownSeasonPhase({ program: hydrated, profile: stored });
   ok('the clock still owns the phase after hydration', owned.phase === 'Pre-season',
@@ -321,7 +341,7 @@ section('[3] A hydrated In-season week is never a scheduled deload');
   const scaledWeeks: string[] = [];
   for (const entry of entryWeeks) {
     const program = generate(stored, entry, WEEK_START);
-    const hydrated = quiet(() => canonicaliseHydratedProgram(program, emptyEvaluationSurfaces(), stored));
+    const hydrated = quiet(() => rehydrate(program, stored));
     for (const microcycle of hydrated.microcycles ?? []) {
       if (microcycle.weekKind === 'deload') deloadWeeks.push(`${entry}:${microcycle.startDate}`);
       if ((microcycle.intensityMultiplier ?? 1) !== 1) {
@@ -343,7 +363,7 @@ section('[3] A hydrated In-season week is never a scheduled deload');
     start: microcycle.startDate,
     workouts: (microcycle.workouts ?? []).length,
   }));
-  const hydrated = quiet(() => canonicaliseHydratedProgram(program, emptyEvaluationSurfaces(), stored));
+  const hydrated = quiet(() => rehydrate(program, stored));
   const after = (hydrated.microcycles ?? []).map((microcycle) => ({
     start: microcycle.startDate,
     workouts: (microcycle.workouts ?? []).length,
@@ -394,7 +414,7 @@ section('[3] A hydrated In-season week is never a scheduled deload');
     // which covers both deload rules and the build weeks between them.
     for (const entry of ['2026-07-13', '2026-06-22', '2026-05-25', '2026-04-27']) {
       const program = generate(stored, entry, WEEK_START);
-      const hydrated = quiet(() => canonicaliseHydratedProgram(program, emptyEvaluationSurfaces(), stored));
+      const hydrated = quiet(() => rehydrate(program, stored));
       for (const microcycle of hydrated.microcycles ?? []) {
         const expected = resolveWeekIntensityMultiplier(phase, microcycle.weekKind);
         checked.push(`${phase}/${microcycle.weekKind}`);

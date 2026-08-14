@@ -25,11 +25,31 @@ import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import {
-  canonicaliseHydratedProgram,
+  canonicaliseAcceptedStateCandidate,
   useProgramStore,
 } from '../store/programStore';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
-import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
+
+/**
+ * A PROGRAM COMING BACK IN THROUGH THE LIVE INSTALL BOUNDARY.
+ *
+ * This used to be `canonicaliseHydratedProgram`, which was deleted on
+ * 2026-08-14 with the rest of the legacy hydration-migration pipeline — no
+ * launch reads a stored program back (`partialize` persists inputs only), so
+ * nothing could reach it.
+ *
+ * WHAT REPLACES IT IS NOT A STUB. `setCurrentProgram` is the one door a program
+ * passes through to be installed, and it is exactly these two steps:
+ * `ensureProgramSeasonPhaseClock` then `canonicaliseAcceptedStateCandidate`.
+ * The cells below ask what happens to the phase clock when a program goes back
+ * through that door, which is a live question with a live owner — so the helper
+ * mirrors the live door, field for field, rather than round-tripping JSON.
+ */
+function reinstall(program: TrainingProgram): TrainingProgram {
+  const clocked = ensureProgramSeasonPhaseClock(program);
+  return canonicaliseAcceptedStateCandidate({ currentProgram: clocked }, {})
+    .currentProgram as TrainingProgram;
+}
 
 let fixedPass = 0;
 let fixedFail = 0;
@@ -242,8 +262,8 @@ check('17 legacy migration is deterministic and idempotent',
     migratedOnce.seasonPhaseClock.originProvenance === 'deterministic_legacy_migration' &&
     JSON.stringify(migratedOnce.seasonPhaseClock) === JSON.stringify(migratedTwice.seasonPhaseClock));
 
-const hydratedOnce = withoutRoutineLogs(() => canonicaliseHydratedProgram(legacyProgram, emptyEvaluationSurfaces()));
-const hydratedTwice = withoutRoutineLogs(() => canonicaliseHydratedProgram(hydratedOnce, emptyEvaluationSurfaces()));
+const hydratedOnce = withoutRoutineLogs(() => reinstall(legacyProgram));
+const hydratedTwice = withoutRoutineLogs(() => reinstall(hydratedOnce));
 check('18 repeated rehydration does not move phase entry',
   hydratedOnce.seasonPhaseClock?.phaseEntryWeekStartISO ===
     hydratedTwice.seasonPhaseClock?.phaseEntryWeekStartISO);
@@ -292,7 +312,7 @@ const generatedLate = withoutRoutineLogs(() => generateProgramLocally(OFF_PROFIL
   blockNumber: 99,
   previousProgram: firstOffProgram,
 }));
-const hydratedLate = withoutRoutineLogs(() => canonicaliseHydratedProgram(generatedLate, emptyEvaluationSurfaces()));
+const hydratedLate = withoutRoutineLogs(() => reinstall(generatedLate));
 const pathIdentities = [
   generatedLate.microcycles[0].exposureContractV2?.identity,
   rolled.program?.microcycles[0].exposureContractV2?.identity,

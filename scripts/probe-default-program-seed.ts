@@ -78,28 +78,22 @@ try {
   console.log('  code :', (error as any)?.code ?? '(none)');
 }
 
-// 2b) Is the fallback salvageable? The HYDRATION path mints a contract for a
-// contractless microcycle (canonicaliseHydratedMicrocycle ->
-// deriveContractlessLegacyContract). The accepted-state candidate path does
-// not. Run DEFAULT_PROGRAM through the hydration canonicaliser and re-seed.
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { canonicaliseHydratedProgram } = require('../src/store/programStore');
-  const canonical = canonicaliseHydratedProgram(DEFAULT_PROGRAM, DEV_E2E_STANDARD_PROFILE);
-  console.log('\nCanonicalised DEFAULT_PROGRAM microcycles:',
-    (canonical?.microcycles ?? []).map((m: any) => ({
-      startDate: m.startDate?.slice(0, 10),
-      hasExposureContractV2: !!m.exposureContractV2,
-    })));
-  seedOnboardingProgram({
-    onboardingData: DEV_E2E_STANDARD_PROFILE,
-    program: canonical,
-    todayISO: TODAY,
-  });
-  console.log('SEED (canonicalised DEFAULT_PROGRAM): OK');
-} catch (error) {
-  console.log('SEED (canonicalised DEFAULT_PROGRAM): THREW —', (error as any)?.message);
-}
+// 2b) RETIRED 2026-08-14 — THE QUESTION NO LONGER HAS A SUBJECT.
+//
+// This branch asked whether a contractless `DEFAULT_PROGRAM` could be salvaged
+// by running it through the hydration canonicaliser, which used to mint a
+// contract for a contractless microcycle
+// (`canonicaliseHydratedMicrocycle` → `deriveContractlessLegacyContract`).
+// **That whole structural-migration pipeline is deleted**: it ran only under
+// `structuralMigrationRequired: true`, exactly one function set that flag, and
+// that function had no production caller — `partialize` persists inputs only,
+// so no launch ever reads a stored program back.
+//
+// The probe would have thrown through `require()`, invisibly to the compiler.
+// It is removed rather than repointed because there is no live door that mints
+// a contract for a contractless week: the accepted boundary REFUSES one by name
+// (`AcceptedProgramContractMissingError`), which is a different ruling with its
+// own cells.
 
 // 3) What did §18 acceptance actually install?
 // eslint-disable-next-line @typescript-eslint/no-var-requires

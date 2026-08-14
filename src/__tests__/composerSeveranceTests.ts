@@ -487,6 +487,22 @@ console.log('\n[e2e] Composer output == stored == hydrated, per world; and a ref
         const identity = composedIdentityFor(row.exercise?.name ?? '');
         const slots = slotsForExerciseName(identity);
         if (slots.length === 0) return;
+        // ⚠ THE OPTIONAL SIGNED-POOL SESSION HAS ITS OWN OWNER, AND IT IS NOT
+        // THE COMPOSER (2026-08-14).
+        //
+        // Sam's class ruling, 2026-07-30 — *"REAL COMPOSED SESSIONS ONLY"* — puts
+        // the optional arms/pump and prehab days' content in `buildDerivedSession`,
+        // reading the SIGNED POOLS through the same builder the athlete's own
+        // doors use. The composer never authored an arms day and never will, so
+        // its rows carry the canonical classifier's provenance by design.
+        //
+        // **This cell could not see that until now**: every world carrying such a
+        // day was REFUSED at baseline (48 of 180) because the severed strength
+        // fallback threw on it. With those worlds building, 236 legitimate
+        // signed-pool rows appeared and read as leaks. The exemption is TYPED —
+        // `composedOptionalKind` is the marker the planner sets and the builder
+        // reads — not a name whitelist, which would rot.
+        if ((workout as { composedOptionalKind?: string }).composedOptionalKind) return;
         if (row.section18Evidence?.provenance !== 'composer_declaration') {
           leaked.push(`${spec.id} d${workout.dayOfWeek}: `
             + `${row.exercise?.name} [${kind}] provenance=${row.section18Evidence?.provenance}`);
@@ -593,27 +609,42 @@ console.log('\n[semantic] Composer dose and typed gaps, measured at their bounda
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const composeModule = require('../rules/composeWeek');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const adapterModule = require('../rules/composedWeekToWorkouts');
+  // REPOINTED 2026-08-14: the handover no longer flattens the composed week
+  // back into `CoachGeneratedWorkoutInput` for the legacy builder to rebuild —
+  // `composedWeekToCoachInputs` is DELETED. Composer rows are materialised
+  // straight into domain workouts, so the gap-loss question is asked of the
+  // live door instead of a deleted one.
+  const adapterModule = require('../rules/materialiseComposedWeek');
   const realCompose = composeModule.composeWeek;
-  const realAdapt = adapterModule.composedWeekToCoachInputs;
+  const realAdapt = adapterModule.materialiseComposedWeek;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const builderModule = require('../data/defaultProgram');
-  const realBuild = builderModule.buildWorkoutsFromCoach;
+  // REPOINTED 2026-08-14: the authored candidate is now the ASSEMBLED week
+  // (composer strength + retained adapter non-strength), not the legacy
+  // builder's output. `buildWorkoutsFromCoach` no longer sees a composer row at
+  // all, so spying on it captured a week with no lifts in it and the
+  // comparison below reached zero rows.
+  const builderModule = require('../rules/assembleAuthoredWeek');
+  const realBuild = builderModule.assembleAuthoredWeek;
   const composedRuns: any[] = [];
   const materialisedRuns: any[] = [];
   const authoredRuns: any[] = [];
   // Keyed by microcycleId: the gateway calls the builder once per candidate ARM
   // and once per week, so an index compares one week against another's repair.
-  builderModule.buildWorkoutsFromCoach = (...args: any[]) => {
+  builderModule.assembleAuthoredWeek = (...args: any[]) => {
     const output = realBuild(...args);
-    authoredRuns.push({ microcycleId: args[1], workouts: output });
+    authoredRuns.push({
+      microcycleId: output.workouts[0]?.microcycleId,
+      workouts: output.workouts,
+    });
     return output;
   };
   composeModule.composeWeek = (inputs: any) => {
     const output = realCompose(inputs); composedRuns.push(output); return output;
   };
-  adapterModule.composedWeekToCoachInputs = (week: any) => {
-    const output = realAdapt(week); materialisedRuns.push({ week, output }); return output;
+  adapterModule.materialiseComposedWeek = (week: any, context: any) => {
+    const output = realAdapt(week, context);
+    materialisedRuns.push({ week, output });
+    return output;
   };
   try {
     // A kit-limited world, so the composer certainly emits gaps.
@@ -632,15 +663,17 @@ console.log('\n[semantic] Composer dose and typed gaps, measured at their bounda
     const materialised = materialisedRuns[0]?.output ?? [];
     const carriesGaps = materialised.some((day: any) =>
       Object.keys(day).some((field) => /gap|disclos/i.test(field)));
-    // ⚠ THIS IS A DECLARED CURRENT STATE, NOT AN APPROVAL. Measured 2026-08-14:
-    // 176 typed gaps across 86 worlds are composed and NONE survives
-    // materialisation, because `CoachGeneratedWorkoutInput` has no carrier
-    // field. The athlete is never told why a pattern is missing. **Adding the
-    // carrier is product work this slice forbids** — when it lands, this cell
-    // reds and is rewritten deliberately rather than drifting.
-    ok('[semantic] MEASURED DEFECT: typed gaps do NOT survive materialisation',
-      carriesGaps === false,
-      'a carrier appeared — the gap-loss finding is fixed; rewrite this cell');
+    // ⚠ REWRITTEN 2026-08-14, EXACTLY AS THE OLD CELL INSTRUCTED. It read
+    // "MEASURED DEFECT: typed gaps do NOT survive materialisation", because the
+    // composed week was flattened into `CoachGeneratedWorkoutInput`, which has
+    // no carrier field — 176 typed gaps across 86 worlds died there. **That
+    // round trip is deleted.** `materialiseComposedWeek` emits the composer's
+    // gaps onto the day it materialises, so the carrier now exists and the
+    // finding is closed. The cell flips from recording a loss to guarding the
+    // carrier.
+    ok('[semantic] typed kit gaps SURVIVE materialisation — the loss is closed',
+      carriesGaps === true,
+      'the composer emitted gaps but no materialised day carries them');
 
     // ── DOSE: the composer authors one, and it is not what is stored ────────
     if (outcome.kind === 'built') {
@@ -657,13 +690,15 @@ console.log('\n[semantic] Composer dose and typed gaps, measured at their bounda
         }
       }
       ok('[semantic] the dose comparison reached rows at all', compared > 0, `${compared} rows`);
-      // ⚠ ALSO A DECLARED CURRENT STATE. The phase rep-scheme owner rewrites the
-      // composer's authored dose inside `buildWorkoutsFromCoach` — measured
-      // phase-keyed (`Back Squat` 3x5-8 -> 3x2-4 in-season, 3x8-12 off-season,
-      // 3x4-6 pre-season). Whether that owner should outrank the composer is a
-      // product question; this cell only refuses to let it become invisible.
-      ok('[semantic] MEASURED: the stored dose is NOT the composer\'s authored dose',
-        moved > 0, `${moved} of ${compared} rows moved — if 0, the dose owner changed`);
+      // ⚠ REWRITTEN 2026-08-14, AND THIS IS THE WHOLE POINT OF THE SLICE. The
+      // old cell recorded that the stored dose was NOT the composer's, because
+      // the phase rep-scheme owner rewrote every row inside
+      // `buildWorkoutsFromCoach` (`Back Squat` 3x5-8 → 3x2-4 in-season). **No
+      // composer row enters that builder any more.** The composer's authored
+      // dose is what is stored, so the cell now guards preservation — the guard
+      // its predecessor said could not exist while preservation was false.
+      ok('[semantic] the stored dose IS the composer\'s authored dose',
+        moved === 0, `${moved} of ${compared} rows were re-dosed after composition`);
 
       // ── THE MUT-8 REPLACEMENT (B1-M1 step 1) ────────────────────────────
       //
