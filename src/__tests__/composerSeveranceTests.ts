@@ -17,7 +17,7 @@
  */
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import { composeWeek, kitUnachievablePatterns } from '../rules/composeWeek';
-import { composedIdentityFor } from '../rules/composedRowLegality';
+import { composedIdentityFor, composedRowIsLegal } from '../rules/composedRowLegality';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import { withSection18WorkoutEvidence } from '../rules/section18WorkoutEvidence';
 import { buildSection18WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
@@ -873,6 +873,28 @@ console.log('\n[dose] Sam\'s typed dose categories, resolved before authorship')
       load('Goblet Squat', DB_KIT) > 0, `${load('Goblet Squat', DB_KIT)}kg`);
     ok('[R-083 load] a FULL-GYM athlete keeps a real barbell load',
       load('Back Squat', FULL_KIT) > 0, `${load('Back Squat', FULL_KIT)}kg`);
+    // ⚠ THE CONTROL THAT MATTERS MOST: an identity the athlete CANNOT PERFORM is
+    // refused by the legality owner upstream — it is never kept in the week with
+    // its weight quietly set to zero, which would read as a prescription he can
+    // do. `composeWeek` selects only through `composedRowIsLegal`, so the row
+    // never reaches the load resolver at all.
+    ok('[R-083 load] an equipment-ILLEGAL identity is refused upstream, not zeroed',
+      composedRowIsLegal('Pull-Ups', AWAY_KIT) === false
+      && !composeWeek(inputs({
+        kit: AWAY_KIT,
+        // ⚠ AN UPPER-PULL DAY, DELIBERATELY. The first version used the lower-day
+        // fixture, where no pull slot exists — so dropping legality from
+        // selection could not put `Pull-Ups` in the week and the cell passed
+        // while its subject was switched off. The mutation caught it.
+        plannedDays: [{
+          dayOfWeek: 2, isTeamDay: false, planEntryId: 'p', name: 'Upper Pull',
+          workoutType: 'Strength', sessionTier: 'core',
+          strengthIntent: { archetype: 'upper', primaryPattern: 'pull',
+            plannedPatterns: ['pull'], effectivePatterns: ['pull'] },
+        }],
+      }) as never).days
+        .some((day) => day.rows.some((row) => !composedRowIsLegal(row.identity, AWAY_KIT))),
+      'a bodyweight athlete must not carry an illegal row at any weight');
     ok('[R-083 load] the same movement loads on the kit that can hold it',
       load('Single-Leg RDL', FULL_KIT) > 0
       && load('Single-Leg RDL', AWAY_KIT) === 0);
