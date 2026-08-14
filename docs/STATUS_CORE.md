@@ -178,3 +178,89 @@ invisible. A grep that hides the subject file cannot prove a symbol dead.**
   one-field disagreement (`Strength` vs `Mixed` on a combined day) which is
   fixed, so generation and relaunch now agree.
 - Sweep re-run after every deletion: **120/60 unchanged.**
+
+---
+
+# COMPOSER COMPLETION — 2026-08-14, base `459d6bf9`, branch `slice-composer-completion`
+
+Full report: `docs/COMPOSER_COMPLETION_2026-08-14.md`. Commits `55af1e65`,
+`32f408b2`, `75fc0c4e`. **MERGE RECOMMENDED. Not merged.**
+
+## THE TWO THINGS WORTH CARRYING FORWARD
+
+**1. THE ORDER'S PREMISE WAS FALSE AND THREE COUNTERS WERE NEEDED TO KNOW IT.**
+"Six built worlds ship a squat with no hinge" — they all train a hinge, on the
+second night. The composer built `full_body_a` (squat) and `full_body_b` (hinge);
+the census inferred the day's ladder from the PLANNER'S TITLE, which still said
+"Lower body strength" / "Upper body", and `hinge` is not a member of the upper
+ladder so the deadlift was never assigned. **Building what was ordered would have
+put a second hinge into a balanced week.**
+
+**A DAY'S SHAPE CANNOT BE RECOVERED FROM ITS NAME, EVEN IN PRINCIPLE.** Sam's
+full-body A and B are DIFFERENT ladders and every naming owner in this app calls
+both `Full Body Strength`. No text probe could ever have been right. The composer
+now carries `composedDayShape` and readers read it.
+
+**2. `archetype:'full_body'` WAS MAPPED TO `'lower'` — ONE LINE, 22 REFUSALS.**
+A day the planner asked to cover squat+hinge+push+pull got the five-slot lower
+ladder on a FULL GYM, so the week trained no push or no pull and was refused
+correctly. **The composer was the liar, not the judge.** 120/180 -> 142/180.
+
+## MEASUREMENTS (clean control worktree at base for every baseline figure)
+
+    worlds built             120 -> 142      refused 60 -> 38
+    laddered days            294 -> 338      breadth floor 300 now PASSES
+    deficient                 28 -> 0        (CIRCULAR for composed days — see below)
+    R-089 unmatched squat      6 -> 0        two independent counters
+    composed rows legal for kit          1422 checked, 0 illegal
+    typed equipment gaps surviving        202 across 84 worlds
+    bible:parallel (253)      71 red -> 70 red, NO NEW RED, week-identity newly green
+    compile / qa / scenarios  identical to baseline
+
+## FOUR TRAPS THIS SEAT HIT, FOR THE NEXT ONE
+
+- **A RATCHET CAN GO CIRCULAR WHEN YOU FIX THE WIRING.** `composeWeek` fills
+  `SLOTS_FOR_KIND[kind]`; teaching the census to read the declared `kind` made it
+  judge against the SAME LIST, so "0 deficient" is now true by construction.
+  Banked to 0 as ordered, with that stated at the constant. **The honest measure
+  moved to a CONTENT arm** that counts squat/hinge from `slotsForExerciseName` and
+  consults no ladder. It caught my own regression within one commit.
+- **MY FIX CAUSED A FRESH R-089 BREAK, TWICE.** 10 unmatched squats one way, 22
+  unmatched single-leg knees the other. A adds `squat+single_leg_hip`, B adds
+  `hinge+single_leg_knee` — Sam's shapes CROSS R-089's two pairs, so an ODD
+  full-body-day count violates under BOTH starting shapes, for any number of lower
+  days. Enumerated, not assumed.
+- **I DIFFED GATE OUTPUT THAT CARRIED TIMINGS.** All 71 baseline reds read as
+  "newly green" and all 69 as "new red" at once. Extract on suite NAME.
+- **A SUITE REPORTED THE SAME PASS COUNT BEFORE AND AFTER 15 NEW CELLS.** Sucrase
+  does not typecheck, so `target.label` (the field is `id`) was silently undefined
+  and the cells had already run under `[undefined]` names. **Only a clean control
+  worktree at base gave the true 73.**
+
+## AND THE ONE THAT MATTERS MOST
+
+**R-087 HAD ALREADY ANSWERED THE QUESTION I HAD TYPED OUT FOR SAM.** I was about
+to ask what a lone full-body day owes, with two candidate answers. R-087
+(2026-08-13): *"THE WEEK IS THE UNIT OF COVERAGE, NOT THE DAY. A FULL BODY DAY HAS
+NO FIXED TEMPLATE … Any fix that hardcodes a full-body row list, however carefully
+chosen, contradicts this ruling on the day it lands."* It even pre-refuses the
+shape I was going to propose. **The registry grep is the only thing that stopped
+it reaching him.** Nothing is owed by Sam out of this mission.
+
+**The 14 still-refusing worlds have a specified, already-ruled fix** — a full-body
+day's slots are what the WEEK has not covered, sized to Bible `:122`'s seven — and
+R-087 is `UNENFORCED`. Not built here because it moves a full-body day from 5 rows
+to 7, a volume change touching `doseFor`, the exercise cap and §18 counting.
+
+## STILL OPEN, NOT MINE, NOT TOUCHED
+
+- **24 occ / 15 worlds, all Bodyweight**: the planner selects an `upper pull
+  emphasis` session for an athlete with nothing to pull on, so that day carries no
+  main lift and the main-strength count is short. Planner-owned.
+- **`declaredKitGaps` is never passed** to `validateGeneratedWeek` at its
+  production call site, though the input type declares it. Did not affect any
+  finding measured here. An unread input on a live seam.
+- **`workout.name` still describes the session the composer replaced.** Not the
+  athlete's day title, but it reaches `CoachScreen`'s LLM context — the coach is
+  told a day is "Lower body strength (squat + hinge)" while it holds a bench press
+  and pull-ups. The authored label is Sam's to sign.

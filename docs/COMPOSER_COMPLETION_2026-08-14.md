@@ -167,20 +167,22 @@ which is why `sessionCount.requested` had to change with it.
 nights got whatever split the planner happened to name. Now the **union**, so a
 three-session all-club-night week (covered by R-093 alone) does not regress.
 
-### 4c. Worlds gained, by identity — 22 occurrences / 14 distinct worlds
+### 4c. Worlds gained, by identity — 22, and ZERO LOST
+
+**Set-compared label by label** across the two census runs (180 worlds, identical
+label set). **Built-at-base-and-now-refused: 0. Refused-at-base-and-now-built: 22.**
 
 ```
-Pre-season/2d/noclub/{Full Gym, Dumbbells}          w1 w2
-Pre-season/3d/{club, noclub}/{Full Gym, Dumbbells}  w1 w2
-Pre-season/3d/{club, noclub}/Bodyweight Only        w1 w2
-Off-season/2d/{club, noclub}/{Full Gym, Dumbbells}  w1 w2
-Off-season/2d/{club, noclub}/Bodyweight Only        w1 w2
-Off-season/3d/{club, noclub}/{Full Gym, Dumbbells}  w1   (w2 still refuses — §5)
+Off-season/2d/club/{Full Gym, Dumbbells, Bodyweight Only}/w2
+Off-season/2d/noclub/{Full Gym, Dumbbells, Bodyweight Only}/w2
+Pre-season/2d/noclub/{Full Gym, Dumbbells}/w1 w2
+Pre-season/3d/club/{Full Gym, Dumbbells, Bodyweight Only}/w1 w2
+Pre-season/3d/noclub/{Full Gym, Dumbbells, Bodyweight Only}/w1 w2
 ```
 
-**No previously built world was lost.** Built went 120 → 142 monotonically; the
-row-count histogram and every previously-built world label were compared across
-`scratchpad/census-baseline.json` and `census-after2.json`.
+The Off-season/2d gains are w2 only because those worlds' w1 already built at
+base. **This list is the measured set, not a hand-derived one** — an earlier draft
+of this section reconstructed it by hand from the family table and got it wrong.
 
 **Zero post-composition repair executed.** No repair, regenerate, fallback or
 legacy-builder path was added, restored or called. `test:composer-severance`'s
@@ -329,6 +331,33 @@ exposures read from rows, 0 unmatched, no ladder and no declaration consulted, a
 mutation-proved to red under a change that keeps composer and judge in agreement.
 **A future reader must not read "0 deficient" as health. The number that means
 something is 338.**
+
+---
+
+## 7b. FINAL ACCEPTANCE, ITEM BY ITEM
+
+Every row is an executed measurement, not an inspection of the diff.
+
+| required | result | instrument |
+| --- | --- | --- |
+| R-089 `sq1/hi0`: **0** | **0**, on two independent counters | `test:ladder-wide`, both arms |
+| no previously built world lost | **0 lost**, 22 gained, label-by-label over 180 | census set-compare, §4c |
+| all content changes attributed | yes — per world, per commit | §4c, commit bodies |
+| composer-owned refusal families resolved or honestly red with the exact blocker | 22 resolved; **14 honestly red**, blocker named (R-087) | §5 |
+| non-composer families unchanged, one grouped report section | **24 occ / 15 worlds, untouched** | §6 |
+| **zero** repair / regenerate / fallback execution | none added, restored or called — diff over `src/` contains no such symbol on an added line, only a comment | `git diff 459d6bf9..HEAD -- src/`, `test:composer-severance` 88/0 |
+| **every composed row legal for its kit** | **1422 rows checked, 0 illegal** | `scripts/probe-kit-legality.ts`, asked of `exerciseIsAvailableWith` |
+| typed equipment gaps survive storage | **202 gaps across 84 worlds** survive onto the workout | same probe |
+| no legacy generation path restored | none | same diff scan |
+
+**The kit-legality probe carries its own non-vacuity arm**: it exits non-zero if it
+checks zero rows, because "0 illegal" over nothing is the confident-zero shape this
+repo has already paid for.
+
+**Typed gaps survive STORAGE; BOOT was not re-tested.** The program is regenerated
+at boot rather than persisted whole, so the gaps are recomputed each launch —
+but no relaunch tape was run for `composedDayShape` or for `composedGaps` in this
+mission. Stated again in §9.
 
 ---
 
