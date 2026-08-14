@@ -196,6 +196,26 @@ export function isConditioningExerciseRow(exercise: WorkoutExercise): boolean {
 
 export function isMainStrengthRow(exercise: WorkoutExercise): boolean {
   if (isConditioningExerciseRow(exercise)) return false;
+  // ── A DECLARATION OUTRANKS AN INFERENCE ABOUT IT (R-092) ─────────────────
+  //
+  // **MEASURED 2026-08-14: without this, the deload trim DELETED the declared
+  // main lift of every kit-limited athlete.** The name test below asks the pool
+  // whether a lift is an ANCHOR, and on a dumbbell or bodyweight kit no anchor
+  // is legal — the composer deliberately puts a pool ACCESSORY in the main-lift
+  // role, which is the anchor→accessory rule. So `isMainStrengthRow` answered
+  // false for the day's actual main lift, `isAccessoryStrengthRow` answered
+  // true, and the trim removed it. Two Pre-season worlds lost their required
+  // pattern and refused `required_safe_patterns_present`.
+  //
+  // Sam's R-092 is that those rows CARRY the role. A row that states its own
+  // role is not a question for the pool table; the table is asked only about
+  // rows that never declared anything (legacy and adapter-built rows), which is
+  // exactly what it was written for.
+  const declared = (exercise as unknown as {
+    section18Evidence?: { role?: string };
+  }).section18Evidence?.role;
+  if (declared === 'main_strength') return true;
+  if (declared === 'strength_accessory') return false;
   // The pool registry is keyed by CANONICAL names, and the generator writes
   // display names — "Romanian Deadlift" for the pool's "RDLs". Asking the
   // registry with the raw name returned null for those rows, so this test

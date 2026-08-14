@@ -78,7 +78,7 @@ import { ownSeasonPhase } from '../src/rules/seasonPhaseOwner';
 import { profileCapacityBandOrNull } from '../src/utils/readiness';
 import { resolveEquipmentAvailability } from '../src/utils/equipmentAvailability';
 import {
-  equipmentRequiredFor,
+  equipmentRequirementLabel,
   exerciseIsAvailableWith,
 } from '../src/data/exerciseEquipmentRequirement';
 import { displayReps } from '../src/rules/prescriptionDisplay';
@@ -574,9 +574,11 @@ const PARTS_THAT_MAY_BE_EMPTY: ReadonlySet<string> = new Set(['team_training', '
 function impossibleWithKit(name: string, equipmentTags: readonly string[]): string | null {
   if (equipmentTags.length === 0) return null;
   if (exerciseIsAvailableWith(name, equipmentTags as string[])) return null;
-  const required = equipmentRequiredFor(name);
-  return required && required.length > 0
-    ? `needs ${required.join(' + ')}, which this athlete does not have`
+  // `equipmentRequirementLabel` and not a `join` here: the sheet now carries
+  // OR-groups (Sam, 2026-08-14), and a raw join renders one as `barbell,dumbbells`.
+  const label = equipmentRequirementLabel(name);
+  return label && label !== 'nothing'
+    ? `needs ${label}, which this athlete does not have`
     : 'the app says this athlete cannot do it with their equipment';
 }
 

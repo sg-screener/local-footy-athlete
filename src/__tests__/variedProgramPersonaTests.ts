@@ -26,22 +26,58 @@
 
 import {
   STRENGTH_POOLS,
-  applyPoolRotation,
+  classifyPoolSlot,
+  selectPoolEntryAvoiding,
   type PoolSlotKey,
   type RotationContext,
 } from '../data/exercisePoolsStrength';
 
-// R-083 — the rotation answers with an OUTCOME now, because a slot this
-// athlete's kit cannot fill has to be representable. No kit is passed anywhere
-// in this persona harness, so a refusal is impossible here; it throws rather
-// than capturing an empty name into the variety census, which would read as
-// "the pool repeated itself" and blame the wrong thing.
-function rotatePoolName(...args: Parameters<typeof applyPoolRotation>): string {
-  const outcome = applyPoolRotation(...args);
-  if (outcome.kind === 'refused') {
-    throw new Error(`applyPoolRotation refused ${outcome.slot} (${outcome.cause})`);
+// ── REWIRED (B1-PIVOT, 2026-08-14) ─────────────────────────────────────────
+//
+// This harness used to resolve each proposed name through `applyPoolRotation`,
+// which is DELETED — the composer authors strength rows directly and nothing
+// rewrites a suggested name any more.
+//
+// EVERY ASSERTION IN THIS FILE IS ABOUT ROTATION CADENCE — anchor stable within
+// a block, anchor walking its pool across blocks, accessories distinct within a
+// block, no repeat over a block boundary — and **that cadence is owned by
+// `selectPoolEntry` / `selectPoolEntryAvoiding`**, not by the deleted wrapper.
+// The wrapper contributed exactly two things this harness used: routing a NAME
+// to its (slot, role) pool — that is `classifyPoolSlot`, still live — and
+// carrying a used-name set between the two picks of one session. Both are done
+// here, explicitly, so the pools are asked the same question the same way.
+//
+// NOT REPRODUCED, DELIBERATELY: the deleted function also narrowed a pool to
+// the suggested exercise's `PoolEntry.group` before walking it. Nothing live
+// does that, so re-implementing it here would make this harness assert a rule
+// the app no longer has. It asks the pools exactly what the pools now do.
+//
+// R-083 — a pool may answer "nothing this kit can do". No kit is passed
+// anywhere in this persona harness, so a refusal is impossible here; it throws
+// rather than capturing an empty name into the variety census, which would read
+// as "the pool repeated itself" and blame the wrong thing.
+function resolveFromPool(
+  suggestedName: string,
+  ctx: RotationContext,
+  usedInSession: Map<string, Set<string>>,
+): string {
+  const classified = classifyPoolSlot(suggestedName);
+  if (!classified) return suggestedName;
+  const pool = STRENGTH_POOLS[classified.slot][classified.role];
+  if (pool.entries.length === 0) return suggestedName;
+
+  const key = `${classified.slot}:${classified.role}`;
+  const avoid = usedInSession.get(key) ?? new Set<string>();
+  const selection = selectPoolEntryAvoiding(pool, ctx, avoid);
+  if (selection.kind === 'refused') {
+    throw new Error(
+      `pool refused ${selection.slot}/${selection.role} (${selection.cause}) — `
+      + 'this harness passes no kit, so a refusal cannot be legitimate',
+    );
   }
-  return outcome.name;
+  avoid.add(selection.entry.name);
+  usedInSession.set(key, avoid);
+  return selection.entry.name;
 }
 import {
   buildWorkoutsFromCoach,
@@ -150,8 +186,8 @@ function simulateMultiBlock(blocks: number): Capture {
       for (let i = 0; i < SLOTS.length; i++) {
         const slot = SLOTS[i];
         const usage = new Map<string, Set<string>>();
-        const anchorName = rotatePoolName(sessions[i].exercises[0].name, ctx, usage);
-        const accessoryName = rotatePoolName(sessions[i].exercises[1].name, ctx, usage);
+        const anchorName = resolveFromPool(sessions[i].exercises[0].name, ctx, usage);
+        const accessoryName = resolveFromPool(sessions[i].exercises[1].name, ctx, usage);
         capture[slot][mc - 1].push({ anchor: anchorName, accessory: accessoryName });
       }
     }
@@ -293,6 +329,19 @@ section('7. Slots rotate independently');
 // At mc=2, anchor rotates to the next pool entry. The progression
 // engine should pull the mc=1 performance forward — not reset to
 // bodyweight — via load-ratio normalisation.
+//
+// ⚠ RED SINCE B1-PIVOT (2026-08-14), AND NOT BY THE REWIRE ABOVE. Sections 8
+// and 9 ask `buildWorkoutsFromCoach`, not the pools, and generation-time
+// rotation was deleted from it — `rotatedAiExercises` is now an identity map,
+// so an mc=2 squat session prescribes Back Squat and never reaches Front Squat.
+//
+// LEFT RED ON PURPOSE. Their subject (`buildWorkoutsFromCoach`) is still live,
+// so they are not exclusively-associated with the deleted `applyPoolRotation`
+// and may not be retired here; and the behaviour they guard — a rotated anchor
+// inherits the previous anchor's load instead of resetting the athlete to
+// bodyweight — has no replacement cell anywhere yet. Retiring them would turn a
+// capability regression into silence. Whoever gives the composer an anchor-swap
+// load carry-over owns replacing them.
 // ─────────────────────────────────────────────────────────────────
 section('8. Progression continuity on anchor swap');
 {

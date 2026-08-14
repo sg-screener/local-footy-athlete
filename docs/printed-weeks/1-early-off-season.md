@@ -10,17 +10,17 @@
 
 ### Training Day
 
-**Full Body Strength**
+**Lower Hinge**
 
+- Goblet Squat — 3 × 10-20
+  - Elbows inside the knees at the bottom. Smooth tempo, no rushing.
 - Deadlift — 3 × 8-12
   - Keep bar close, get tight through the lats. Flat back from start to lockout.
-- Pull-Ups — 3 × 8-12
-  - Dead hang to chin over bar, any grip is fine. Initiate with the lats, not the arms. Add weight once bodyweight sets feel easy.
-- Nordic Lower — 2 × 3-5
-  - Lower as slow as you can. Fight gravity the whole way down.
-- Face Pull — 2 × 10-20
-  - Pull to the forehead, open the hands out. Squeeze the rear delts, slow return.
-- Band Pallof Press — 2 × 10-12
+- Bulgarian Split Squats — 3 × 10-20
+  - Slight lean forward. Control the descent, no bouncing.
+- Single-Leg RDL — 2 × 10-20
+  - Hinge at the hip, soft knee. Balance and control over speed.
+- Band Pallof Press — 2 × 8-12
   - Press out, resist the pull. Hips stay square, slight knee and hip bend.
 
 ## Tuesday 11 August
@@ -29,12 +29,12 @@
 
 **Upper Push**
 
-- Overhead Press — 3 × 8-12
-  - Ribs down, bar finishes over the ears. Press hard and finish strong.
-- DB Bench Press — 3 × 10-20
-  - Shoulder blades set on the bench. Control the dumbbells down and drive.
-- Lateral Raise — 2 × 10-20
-  - Light weight, lead with the elbows. No momentum, strict form.
+- Bench Press — 3 × 8-12
+  - Shoulder blades pinched, bend bar like snapping a twig, feet planted. Bar to chest, press hard to lockout.
+- DB Shoulder Press — 3 × 10-20
+  - Start at the shoulders, press to lockout. No arching through the lower back.
+- Band Pull-Apart — 2 × 10-20
+  - Squeeze the shoulder blades together. Elbows straight, controlled return.
 
 ## Wednesday 12 August
 
@@ -50,14 +50,14 @@ _(nothing on this day)_
 
 - Back Squat — 3 × 8-12
   - Sit into the hips, chest up. Own the bottom position.
-- Deadlift — 3 × 8-12
-  - Keep bar close, get tight through the lats. Flat back from start to lockout.
-- Walking Lunges — 3 × 10-20
-  - Long stride, tall through the midline. Steady and deliberate.
+- Hip Thrusts — 2 × 10-20
+  - Drive through the heels, squeeze at the top. Ribs down, no overextending.
+- Cossack Squat — 3 × 10-20
+  - Wide stance, sit onto one leg, other leg straight. Heel down, chest up, push back through. Hold rack if needed.
 - Single-Leg RDL — 2 × 10-20
   - Hinge at the hip, soft knee. Balance and control over speed.
-- Leg Extension — 2 × 10-20
-  - Drive feet to ceiling, lean back slightly if possible.
+- Banded Dead Bug — 2 × 8-12
+  - Band behind head, pull band with straight arms toward knees, ribs down. Lower back stays glued to the floor.
 
 ## Friday 14 August
 
@@ -89,7 +89,7 @@ None. Every word on this page came out of the app.
 
 ## Things wrong with this week
 
-**Every set on this page is written as a range — 13 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 8-12" should read "3 × 10"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
+**Every set on this page is written as a range — 13 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 10-20" should read "3 × 15"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
 
 **2 lines that does not say how much work to do:**
 

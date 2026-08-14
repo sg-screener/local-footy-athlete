@@ -41,10 +41,34 @@ import {
   validateWeekOverlayAgainstActiveConstraints,
 } from '../utils/postGenerationConstraintValidation';
 import {
-  canonicaliseHydratedProgram,
-  canonicaliseHydratedState,
+  canonicaliseAcceptedStateCandidate,
   useProgramStore,
 } from '../store/programStore';
+import { ensureProgramSeasonPhaseClock } from '../rules/seasonPhaseClock';
+
+/**
+ * A PROGRAM COMING BACK IN THROUGH THE LIVE INSTALL BOUNDARY.
+ *
+ * `canonicaliseHydratedProgram` and `canonicaliseHydratedState` were deleted on
+ * 2026-08-14 with the legacy hydration-migration pipeline: `partialize`
+ * persists INPUTS only, so no launch reads a stored program back and nothing
+ * could reach them.
+ *
+ * WHAT THE CELLS BELOW ASK IS UNCHANGED AND STILL LIVE — a re-entering week
+ * cannot gain primers, cannot lose the athlete's own override, and cannot move
+ * its accepted-week semantics on a second pass. `setCurrentProgram` is the door
+ * that asks it now, and it is exactly these two steps.
+ */
+function reenterProgram(
+  program: TrainingProgram,
+  candidate: Partial<Parameters<typeof canonicaliseAcceptedStateCandidate>[0]> = {},
+): ReturnType<typeof canonicaliseAcceptedStateCandidate> {
+  const clocked = ensureProgramSeasonPhaseClock(program);
+  return canonicaliseAcceptedStateCandidate({ ...candidate, currentProgram: clocked }, {
+    validateWeekStarts: (clocked.microcycles ?? []).map((microcycle) =>
+      microcycle.startDate.slice(0, 10)),
+  });
+}
 import { useProfileStore } from '../store/profileStore';
 import {
   useCoachUpdatesStore,
@@ -578,7 +602,7 @@ check('5 in-season bye build KEEPS its primers, within budget', (() => {
     ...workout,
     powerBlock: workout.powerBlock ?? mid.program.microcycles[0].workouts.find((candidate) => candidate.powerBlock)?.powerBlock,
   }));
-  const canonical = canonicaliseHydratedProgram(hydrated, emptyEvaluationSurfaces());
+  const canonical = reenterProgram(hydrated).currentProgram as TrainingProgram;
   hydrationRepairObserved = canonical.microcycles[0].workouts.filter((workout) => !!workout.powerBlock).length <= 2;
   check('7 rollover/Repeat-style canonicalisation cannot restore excess primers',
     hydrationRepairObserved);
@@ -840,7 +864,7 @@ check('21 generation cannot store a blocking final-visible violation',
   hydrated.microcycles[0].workouts = hydrated.microcycles[0].workouts.map((workout) => ({
     ...workout, ...(primer ? { powerBlock: primer } : {}),
   }));
-  const canonical = canonicaliseHydratedProgram(hydrated, emptyEvaluationSurfaces());
+  const canonical = reenterProgram(hydrated).currentProgram as TrainingProgram;
   hydrationRepairObserved = hydrationRepairObserved &&
     canonical.microcycles[0].workouts.filter((workout) => !!workout.powerBlock).length <= 2;
   const restDay = gameEvaluation.ledger.restStress.trueFullRestDays[0];
@@ -857,27 +881,27 @@ check('21 generation cannot store a blocking final-visible violation',
     ...buildCoachRevisionTemplateWorkout('recovery_flow', restDate)!,
     dayOfWeek: restDay,
   };
-  const hydratedState = canonicaliseHydratedState({
-    currentProgram: clone(game.program),
+  const hydratedState = reenterProgram(clone(game.program), {
     dateOverrides: {
       [restDate]: {
         ...clone(activeRecovery), id: 'hydrated-optional-recovery', dayOfWeek: restDay,
       },
     },
-  }, { ingressKind: 'migration_required' });
-  // THE OVERRIDE IS THE ATHLETE'S, AND HYDRATION MUST NOT TAKE IT.
+  });
+  // THE OVERRIDE IS THE ATHLETE'S, AND THE READ BOUNDARY MUST NOT TAKE IT.
   //
   // This cell used to require hydration to REWRITE a recovery session sitting in
   // `dateOverrides` into a Rest stub — the app deleting the athlete's own chosen
   // session to make its rest count work. `dateOverrides` is an athlete-owned
   // surface, and Sam's ruling (2026-07-30) is that athlete-added optional
   // sessions never break rest, so there is nothing to repair and nothing that may
-  // be taken. The read-ingress lift deliberately never visits this surface
-  // (`rules/generatorRecoveryRestLift.ts`).
+  // be taken.
   //
-  // The cell keeps its real subject — hydration DOES repair before persistence —
-  // through the powerBlock migration, which is a lift of a retired format (L15)
-  // rather than a deletion of an athlete decision.
+  // The lift that used to run above every ingress branch was deleted on
+  // 2026-08-14 with the rest of the legacy hydration migration — it visited the
+  // PLAN only and never this surface, so its going changes nothing this cell
+  // asserts. What remains is the live accepted-state boundary, which is the
+  // thing that could take the override and must not.
   const repairedOverride = hydratedState.dateOverrides?.[restDate];
   const overrideSurvived = !!repairedOverride && repairedOverride.workoutType !== 'Rest';
   hydrationRepairObserved = hydrationRepairObserved && overrideSurvived;
@@ -955,7 +979,8 @@ console.log('\n-- Cross-path equivalence --');
   const rebuilt = validateMicrocycleAgainstActiveConstraints({
     microcycle: clone(base), todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
   });
-  const hydrated = canonicaliseHydratedProgram(clone(mid.program), emptyEvaluationSurfaces()).microcycles[0];
+  const hydrated = (reenterProgram(clone(mid.program)).currentProgram as TrainingProgram)
+    .microcycles[0];
   const signature = (contract: NonNullable<Microcycle['exposureContractV2']>, workouts: Workout[]) => {
     const evaluation = evaluateSection18EffectiveWeek({ contract, workouts, weekStart: WEEK_START });
     return JSON.stringify({
@@ -1478,8 +1503,8 @@ check('51 fallback and repair terminate deterministically', fallbackDeterministi
   const existingIndex = week.workouts.findIndex((workout) => workout.dayOfWeek === unknownAnchor.dayOfWeek);
   if (existingIndex >= 0) week.workouts[existingIndex] = anchorWorkout;
   else week.workouts.push(anchorWorkout);
-  const hydratedOnce = canonicaliseHydratedProgram(persisted, emptyEvaluationSurfaces());
-  const hydratedTwice = canonicaliseHydratedProgram(clone(hydratedOnce), emptyEvaluationSurfaces());
+  const hydratedOnce = reenterProgram(persisted).currentProgram as TrainingProgram;
+  const hydratedTwice = reenterProgram(clone(hydratedOnce)).currentProgram as TrainingProgram;
   const onceWeek = hydratedOnce.microcycles[0];
   const twiceWeek = hydratedTwice.microcycles[0];
   const onceEvaluation = evaluateSection18EffectiveWeek({

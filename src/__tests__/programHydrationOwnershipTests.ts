@@ -322,6 +322,22 @@ async function main(): Promise<void> {
   const programStore = require('../store/programStore') as typeof import('../store/programStore');
   const ingress = require('../store/programHydrationIngress') as
     typeof import('../store/programHydrationIngress');
+  const projection = require('../store/programHydrationProjection') as
+    typeof import('../store/programHydrationProjection');
+  /**
+   * THE READ BOUNDARY, AS IT NOW STANDS.
+   *
+   * These cells called `programStore.canonicaliseHydratedState(state, { ingressKind:
+   * 'accepted_canonical' })`. That function was deleted on 2026-08-14 with the
+   * legacy structural-migration pipeline. ON THE `accepted_canonical` INGRESS ITS
+   * WHOLE BODY WAS THESE TWO CALLS AND AN EARLY RETURN — the migration branch was
+   * the only thing below it — so this is the same code under its own names, not a
+   * lighter substitute, and the assertions below are unchanged.
+   */
+  const canonicaliseAtReadBoundary = (state: Record<string, unknown>): any =>
+    projection.projectHydratedStateDerivedFields(
+      ingress.dropRetiredWeekOverlaysAtHydration(state as never) as Record<string, unknown>,
+    );
   const temporaryFacts = require('../rules/temporarySourceFact') as
     typeof import('../rules/temporarySourceFact');
   const reversible = require('../rules/reversibleAdjustmentLedger') as
@@ -333,9 +349,7 @@ async function main(): Promise<void> {
   });
 
   await run('2 accepted mixed workout repairs stale workoutType without semantic mutation', () => {
-    const projected = programStore.canonicaliseHydratedState(clone(fixture) as any, {
-      ingressKind: 'accepted_canonical',
-    }) as any;
+    const projected = canonicaliseAtReadBoundary(clone(fixture) as any);
     const mixed = projected.currentProgram.microcycles[0].workouts[0];
     assert(mixed.workoutType === 'Mixed', `type=${mixed.workoutType}`);
     assert(componentFingerprint(mixed) === beforeComponent, 'component/exercise fingerprint changed');
@@ -446,48 +460,31 @@ async function main(): Promise<void> {
     strengthPatternContributions: ['squat'],
     workoutType: 'Strength',
   };
-  await run('13 legacy scalar and contribution-owned workout migrates to typed Mixed', () => {
-    const migrated = programStore.canonicaliseHydratedState({
-      dateOverrides: { [WEEK]: clone(legacyMixed) },
-      userRemovalConstraints: [],
-    } as any, { ingressKind: 'migration_required' }) as any;
-    const workout = migrated.dateOverrides[WEEK];
-    assert(workout.workoutType === 'Mixed', `legacy type=${workout.workoutType}`);
-    assert(workout.strengthIntent?.effectivePatterns.includes('squat'),
-      'legacy scalar ownership did not become typed intent');
-    const scalarOnly = clone(legacyMixed) as any;
-    scalarOnly.planEntryId = undefined;
-    scalarOnly.strengthPatternContributions = undefined;
-    scalarOnly.exercises.forEach((exercise: any) => { exercise.section18Evidence = undefined; });
-    const scalarMigrated = programStore.canonicaliseHydratedState({
-      dateOverrides: { [WEEK]: scalarOnly }, userRemovalConstraints: [],
-    } as any, { ingressKind: 'migration_required' }) as any;
-    assert(scalarMigrated.dateOverrides[WEEK].strengthIntent?.effectivePatterns.includes('squat'),
-      'legacy scalar/exercise ownership did not migrate to typed intent');
-  });
-
-  await run('14 legacy typed-intent compatibility representation migrates idempotently', () => {
-    const oldTyped = {
-      ...simpleWorkout('legacy-upper', 2, 'Strength'),
-      strengthIntent: undefined,
-      strengthPatternContributions: ['pull', 'push', 'pull'],
-      exercises: [row('legacy-upper', 'strength', 'Bench Press', 'main_strength')],
-    };
-    const once = programStore.canonicaliseHydratedState({
-      dateOverrides: { '2026-07-14': oldTyped }, userRemovalConstraints: [],
-    } as any, { ingressKind: 'migration_required' }) as any;
-    const twice = programStore.canonicaliseHydratedState(once, {
-      ingressKind: 'migration_required',
-    }) as any;
+  /**
+   * TWO CELLS STOOD HERE AND ARE DELETED (2026-08-14), NOT WEAKENED.
+   *
+   * "13 legacy scalar and contribution-owned workout migrates to typed Mixed"
+   * and "14 legacy typed-intent compatibility representation migrates
+   * idempotently" both drove `canonicaliseHydratedState` on the
+   * `migration_required` ingress — the legacy STRUCTURAL migration, which is
+   * gone. It is gone because it was unreachable: `programStore.partialize`
+   * persists INPUTS only, `currentProgram`/`currentMicrocycle`/`dateOverrides`
+   * are never written to disk, and every boot regenerates the week through
+   * `quiescentBoot`. A cell whose subject cannot be reached passes for the wrong
+   * reason, and rewiring these to a live door would have been inventing a new
+   * claim rather than keeping an old one.
+   *
+   * WHAT DID NOT GO WITH THEM is cell 14's incidental claim about the CLASSIFIER,
+   * which is live and has its own owner (`programHydrationIngress`). It is kept
+   * below, under its own name, saying only what it actually proves.
+   */
+  await run('13 an envelope missing typed intent still classifies as migration_required', () => {
     const legacyEnvelope = clone(fixture) as any;
     legacyEnvelope.currentProgram.microcycles[0].workouts[0].strengthIntent = undefined;
     legacyEnvelope.currentMicrocycle.workouts[0].strengthIntent = undefined;
     legacyEnvelope.todayWorkout.strengthIntent = undefined;
     const classified = ingress.requireProgramHydrationIngress(legacyEnvelope, 0);
     assert(classified.kind === 'migration_required', JSON.stringify(classified));
-    assert(once.dateOverrides['2026-07-14'].strengthIntent,
-      'old typed representation was not migrated');
-    assert(JSON.stringify(once) === JSON.stringify(twice), 'typed-intent migration was not idempotent');
   });
 
   const legacyEquipmentConstraint = {
@@ -559,13 +556,13 @@ async function main(): Promise<void> {
   await run('17 scalar fields never override typed components or exercises', () => {
     const mutant = mixedWorkout('scalar-mutant');
     mutant.workoutType = 'Recovery' as any;
-    const protectedRecovery = programStore.canonicaliseHydratedState({
+    const protectedRecovery = canonicaliseAtReadBoundary({
       dateOverrides: { [WEEK]: clone(mutant) }, userRemovalConstraints: [],
-    } as any, { ingressKind: 'accepted_canonical' }) as any;
+    } as any);
     mutant.workoutType = 'Conditioning' as any;
-    const projected = programStore.canonicaliseHydratedState({
+    const projected = canonicaliseAtReadBoundary({
       dateOverrides: { [WEEK]: mutant }, userRemovalConstraints: [],
-    } as any, { ingressKind: 'accepted_canonical' }) as any;
+    } as any);
     assert(protectedRecovery.dateOverrides[WEEK].workoutType === 'Mixed',
       'recovery scalar overrode typed mixed components');
     assert(projected.dateOverrides[WEEK].workoutType === 'Mixed',
@@ -596,7 +593,13 @@ async function main(): Promise<void> {
       `unexpected accepted-base reason=${reason}`);
   });
 
-  console.log(`\nProgram hydration ownership totals: passed=${passed}/18 failures=${failures.length}`);
+  // 17, NOT 18, SINCE 2026-08-14 — and the number is stated rather than left to
+  // drift. Old cell 14 ("legacy typed-intent … migrates idempotently") is gone
+  // because the legacy structural migration it drove is gone; old cell 13 was
+  // re-formed into the classifier claim that survived it. The cell NUMBERS are
+  // deliberately left alone: 14 is absent, and a silent renumber would make the
+  // history of this file unreadable against its own commits.
+  console.log(`\nProgram hydration ownership totals: passed=${passed}/17 failures=${failures.length}`);
   if (failures.length > 0) process.exit(1);
 }
 

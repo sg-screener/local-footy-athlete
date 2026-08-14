@@ -7,7 +7,10 @@ import {
   type Workout,
   type WeekKind,
 } from '../../types/domain';
-import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
+import {
+  buildWorkoutsFromCoach,
+  type CoachGeneratedWorkoutInput,
+} from '../../data/defaultProgram';
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
@@ -56,15 +59,31 @@ import {
 } from '../../rules/conditioningFeasibility';
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
+import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
+import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
+// THE DELOAD OWNER, READ NOT REIMPLEMENTED — the same two resolvers the
+// retained adapter uses, so a composed week answers to one table and not a
+// second copy of it.
+import {
+  resolveDeloadWeekPolicy,
+  resolveDoorDeloadPolicy,
+  type DeloadWeekPolicy,
+} from '../../rules/deloadWeekRules';
+import { isDateInReadinessDeloadWindow } from '../../rules/readinessIllnessLaw';
+import { generatedWeekContractFrom } from '../../rules/generatedWeekContract';
+import {
+  generatedWeekFailureSignature,
+  validateGeneratedWeek,
+  type GeneratedWeekFinding,
+} from '../../rules/validateGeneratedWeek';
+import { materialiseComposedWeek } from '../../rules/materialiseComposedWeek';
+import { assembleAuthoredWeek } from '../../rules/assembleAuthoredWeek';
 import { awaySpansFromConstraints } from '../../rules/awaySpans';
-import { acceptSection18Week } from '../../rules/section18AcceptedWeekGateway';
 import { withCraftSafeTopUps } from '../../rules/section18CraftTier';
-import { freshGenerationSurfaces } from '../../utils/liveEvaluationSurfaces';
 import type { AcceptedStateOperationKind } from '../../store/acceptedStateTransaction';
 import { applyOptionalTopUps } from '../../utils/optionalTopUpPlacement';
 import { weakPointFocusFor } from '../../rules/weakPointFocus';
 import {
-  rebindDerivedSessionProvenance,
   stampPlannerDerivedSessionProvenance,
 } from '../../rules/derivedSessionProvenance';
 import {
@@ -529,6 +548,24 @@ function resolveGenerationConstraints(
   });
 }
 
+/**
+ * A generated week that does not satisfy `GeneratedWeekContract`.
+ *
+ * It carries the clause findings verbatim, so the refusal names WHICH rule the
+ * week broke and by how much — never a builder-shaped signature.
+ */
+export class GeneratedWeekRefusedError extends Error {
+  readonly code = 'generated_week_refused';
+
+  readonly findings: readonly GeneratedWeekFinding[];
+
+  constructor(signature: string, findings: readonly GeneratedWeekFinding[]) {
+    super(`Generated week refused (${signature})`);
+    this.name = 'GeneratedWeekRefusedError';
+    this.findings = findings;
+  }
+}
+
 export function buildGeneratedMicrocycles(args: {
   coachWorkouts: CoachGeneratedWorkouts;
   plan: CoachingPlan;
@@ -632,9 +669,22 @@ export function buildGeneratedMicrocycles(args: {
       profile,
       generationConstraints,
     });
+    // ── B1-PIVOT: THE COMPOSER IS THE ONLY STRENGTH-CONTENT BUILDER ─────────
+    //
+    // Sam, 2026-08-14: *"isn't this like the ai? we just realise it's going to
+    // suck for a bit and then build a better one with all the info in there?
+    // because right now it just seems like we're fixing shit thats going to be
+    // deleted anyway"*. **The migration allowlist is deleted, not widened.**
+    // Every world's strength content is composed; the planner still owns the
+    // skeleton (days, counts, planned patterns) and conditioning is untouched.
+    // A world the composer cannot build now FAILS LOUDLY. It is never answered
+    // by the legacy builder.
     const allocatedWeekPlan = args.coachingInputs
       ? buildCoachingPlan({
           ...args.coachingInputs,
+          // Clause (a), route-scoped: the contract derives its required-pattern
+          // set from the planner's own answer and this kit, not from ALL_PATTERNS.
+          composedRoute: { kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags) },
           generationConstraints,
           injuries: profile.injuries ?? [],
           appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
@@ -668,7 +718,29 @@ export function buildGeneratedMicrocycles(args: {
     // An edge response describes exactly the block state sent in its prompt:
     // week 1. Never replay that single array against week 2-4 allocations.
     // Later weeks use their own deterministic plan/fallback content.
-    const sourceCoachWorkouts = stateIndex === 0 ? args.coachWorkouts : [];
+    const composedWeek = composeWeek({
+          profile,
+          phaseClock: { weekNumber: blockState.weekNumber },
+          // B1-M1: the phase the DOSE is resolved against, before authorship.
+          seasonPhase: profile.seasonPhase as never,
+          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+          plannedDays: composedPlannedDaysFrom(weekPlan.weeklyPlan),
+          kit: equipment.tags,
+          injuries: {
+            // §18's OWN safety answer, not a second injury reading.
+            prohibitedPatterns:
+              weekPlan.weeklyExposureContractV2?.strengthPatterns.prohibitedPatterns ?? [],
+            excludedIdentities: args.athletePrefs?.excluded ?? [],
+          },
+      todayISO: blockState.weekStart,
+    });
+    // ⚠ THE HANDOVER. Composer rows are MATERIALISED straight into domain
+    // workouts and NEVER enter `buildWorkoutsFromCoach`. The retained adapter
+    // still receives the COMPLETE planner week — this app hangs conditioning,
+    // running and sprint work off the strength days — and is simply told which
+    // days' STRENGTH the composer owns, so it authors no lifts there.
+    const composedStrengthDays = composedWeek.days.map((day) => day.dayOfWeek);
+    const sourceCoachWorkouts: CoachGeneratedWorkoutInput[] = [];
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     // The governed boundary, when it falls inside THIS week. Days before it are
     // history: the contract is stamped, pre-boundary anchors keep settled
@@ -710,7 +782,8 @@ export function buildGeneratedMicrocycles(args: {
       // removal from §18-verified stored surfaces is its own unit (recorded in
       // the fix-round boundary notes, with `dropRetiredWeekOverlaysAtHydration`
       // as the pattern to follow).
-      const built = buildWorkoutsFromCoach(
+      // ⚠ THE ADAPTER GETS THE WHOLE WEEK, AND AUTHORS NO LIFTS ON COMPOSED DAYS.
+      const adapterWorkouts = buildWorkoutsFromCoach(
           source,
           microcycleId,
           weekPlan.weeklyPlan,
@@ -723,6 +796,7 @@ export function buildGeneratedMicrocycles(args: {
             intensityMultiplier: blockState.intensityMultiplier,
             offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
             deloadDoor: doorDeload ? 'illness' : undefined,
+            composedStrengthDays,
             readinessDeloadWindow: generationConstraints?.readinessDeloadWindow,
           },
           {
@@ -731,6 +805,45 @@ export function buildGeneratedMicrocycles(args: {
             conditioningModalities: equipment.conditioningModalities,
           },
         );
+      // The composer's own rows, materialised directly. No re-dosing, no
+      // rotation, no identity rewrite — `assembleAuthoredWeek` lays them onto
+      // the adapter's day, which keeps everything non-strength it built.
+      // ── THE GOVERNED DOSE INSTRUCTION, RESOLVED ONCE BY THE EXISTING OWNER ──
+      //
+      // Same two resolvers `buildWorkoutsFromCoach` uses, in the same order and
+      // for the same reason: the readiness and illness doors are not
+      // phase-gated, so routing them through the scheduled resolver would
+      // silently return null and drop the deload. Nothing here is a second
+      // table — this READS the owner and hands its answer to the composer,
+      // which had been the only week-builder the instruction never reached.
+      const composedDeloadPolicy = doorDeload
+        ? resolveDoorDeloadPolicy({ door: 'illness', seasonPhase: profile.seasonPhase })
+        : resolveDeloadWeekPolicy(profile.seasonPhase, effectiveWeekKind);
+      const composedReadinessWindow = generationConstraints?.readinessDeloadWindow ?? null;
+      const deloadPolicyForDay = (dayOfWeek: number): DeloadWeekPolicy | null => {
+        if (!composedDeloadPolicy) return null;
+        // R-035: the deload applies to the DAYS IN THE WINDOW, not to the week.
+        // An absent window means every day, and that is load-bearing — the
+        // illness door governs while the fact is active and the scheduled door
+        // governs a whole authored week; neither carries a window.
+        if (!composedReadinessWindow) return composedDeloadPolicy;
+        return isDateInReadinessDeloadWindow(
+          isoDateForWeekday(blockState.weekStart, dayOfWeek),
+          { startISO: composedReadinessWindow.startISO,
+            endISO: composedReadinessWindow.endISO },
+        )
+          ? composedDeloadPolicy
+          : null;
+      };
+      const authored = assembleAuthoredWeek({
+        composerWorkouts: materialiseComposedWeek(composedWeek, {
+          microcycleId,
+          weekStartISO: blockState.weekStart,
+          deloadPolicyForDay,
+        }),
+        adapterWorkouts,
+      });
+      const built = authored.workouts as Workout[];
       const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
         constraint.type === 'equipment' ||
         (constraint.type === 'schedule' &&
@@ -757,41 +870,41 @@ export function buildGeneratedMicrocycles(args: {
     };
     let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
     if (exposureContractV2) {
-      // THE GATE INFORMS; IT DOES NOT VETO A FACT (§18 ownership reassessment
-      // 2026-08-05, D3; approved by Sam). This threw unconditionally, so a week
-      // derived from an athlete's own stated fact could refuse the fact itself —
-      // the transaction rolled back and the report died. Callers carrying a
-      // forward athlete decision now say so and get the best achievable week;
-      // `assertAcceptedVisibleLedgerEquivalence` discloses the shortfall it
-      // already owns. Restorations are unchanged and still throw.
-      const accepted = acceptSection18Week({
-        operation: args.weekAcceptance ?? 'restoration',
-        contract: exposureContractV2,
+      // ── THE GENERATED WEEK IS JUDGED, NOT REPAIRED ───────────────────────
+      //
+      // This was `acceptSection18Week`, which could answer a week with a
+      // DIFFERENT week: a regenerate arm, a safe-fallback arm, a whole-week
+      // repair search, offer placement and a safety finaliser that inserted
+      // fallback rows. **That is why a composer could never tell whether its
+      // week was accepted or quietly replaced**, and why acceptance depended on
+      // residue the legacy builder left behind rather than on what the week
+      // contained.
+      //
+      // Generation now answers to `GeneratedWeekContract` alone. The validator
+      // accepts, refuses with typed findings, or accepts while disclosing a
+      // typed gap — and it never rewrites a row. **The editing route keeps the
+      // gateway unchanged**; nothing here is deleted from under an edit.
+      const generatedContract = generatedWeekContractFrom(
+        exposureContractV2,
+        kitUnachievablePatterns(equipment.tags),
+      );
+      const validation = validateGeneratedWeek({
         workouts,
-        weekStart: blockState.weekStart,
-        profile,
-        // GENERATION MEANS THE WORLD IT IS BUILDING, and now says so rather
-        // than saying nothing (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`).
-        // Wiring this door to the live world was measured and refuted — see
-        // `freshGenerationSurfaces` for the cell that paid for it.
-        surfaces: freshGenerationSurfaces(),
-        // Edge-authored and deterministic candidates both regenerate from the
-        // same phase-owned plan before the final safe fallback is considered.
-        regenerate: () => ({
-          contract: exposureContractV2!,
-          workouts: buildCanonicalCandidate([]),
-        }),
-        safeFallback: () => ({
-          contract: exposureContractV2!,
-          workouts: buildCanonicalCandidate([]),
-        }),
+        contract: generatedContract,
+        anchors: (exposureContractV2.anchors ?? []).map((anchor) => ({
+          dayOfWeek: anchor.dayOfWeek,
+          participation: String(anchor.participation ?? ''),
+          // "Was the athlete there?" — the two states that mean no.
+          attended: anchor.participation !== 'did_not_participate'
+            && anchor.participation !== 'unknown',
+        })),
       });
-      workouts = rebindDerivedSessionProvenance({
-        workouts: accepted.canonicalWorkouts,
-        contract: accepted.contract,
-        weekStart: blockState.weekStart,
-      });
-      exposureContractV2 = accepted.contract;
+      if (validation.verdict === 'refused') {
+        throw new GeneratedWeekRefusedError(
+          generatedWeekFailureSignature(validation),
+          validation.findings,
+        );
+      }
     }
     // ── THE NEED-BASED TOP-UP PASS ──
     //

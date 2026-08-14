@@ -97,8 +97,40 @@ import type { TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import { PART_COUNTS_TOWARD_LOAD } from '../rules/visibleProjection';
-import { isGeneratorPlacedRecovery } from '../rules/generatorRecoveryRestLift';
 import { samExport8Profile } from './support/samDeviceExport8Fixture';
+
+/**
+ * IS THIS A RECOVERY SESSION THE GENERATOR PLACED?
+ *
+ * It used to live in `rules/generatorRecoveryRestLift.ts` next to the
+ * read-ingress lift that took such sessions back off already-shipped phones.
+ * That whole file was DELETED (2026-08-14) with the legacy hydration-migration
+ * pipeline: `programStore.partialize` persists INPUTS only, so no launch ever
+ * reads a stored program back and the lift had nothing left to lift.
+ *
+ * THE PREDICATE IS NOT THE LIFT, AND IT IS NOT DEAD. This cell asks a question
+ * about what the GENERATOR does right now, which is a live subject and the one
+ * half of that file that was never about stored worlds. It is inlined here, at
+ * full strength, rather than deleted with its former neighbour.
+ *
+ * Every clause is a reason to say NO — there is no clause that makes a
+ * borderline workout count as generator-placed, because a session an athlete
+ * door put there must never be attributed to the generator.
+ */
+function isGeneratorPlacedRecovery(workout: Workout | null | undefined): boolean {
+  if (!workout) return false;
+  if (workout.workoutType !== 'Recovery' && workout.sessionTier !== 'recovery') return false;
+  if (workout.athletePlacement) return false;
+  // Registry templates stamp every row `template:<templateId>:<key>`, and the
+  // recovery door is the only way one of those reaches a program.
+  if ((workout.exercises ?? []).some((row) =>
+    typeof row?.id === 'string' && row.id.startsWith('template:'))) return false;
+  const provenance = workout.derivedSessionProvenance ?? [];
+  if (provenance.some((record) => record?.origin && String(record.origin).includes('athlete'))) {
+    return false;
+  }
+  return true;
+}
 
 let passed = 0; let failed = 0; const failures: string[] = [];
 function assert(c: unknown, d: string): asserts c { if (!c) throw new Error(d); }

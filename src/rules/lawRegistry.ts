@@ -919,6 +919,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-generated-week-assembly',
+    law: 'Adapter contributions are typed and enumerated. The composer day is always the base. No adapter field may overwrite a composer-owned field.',
+    ruledAt: 'Sam, 2026-08-14, seat-drafted wording approved in the constrained-world authorisation; third sighting of the stripped-adapter class (docs/GENERATION_CORE_REBUILD_2026-08-14.md)',
+    guard: {
+      state: 'guarded',
+      by: 'test:generated-week-assembly',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-14, AND IT IS THE THIRD SIGHTING OF ONE CLASS — which is why the guard is about the CLASS and not the field. The assembly step lost a different field each round and each fix was the field just noticed: (1) it copied ONE field and lost `speedBlock`, the app\'s only source of app sprint credit, and three sessions blamed an inert `section18Evidence` envelope for the resulting refusal; (2) it then took the adapter\'s WHOLE day as the base, and a day stripped of its lifts described itself as `Conditioning`/`optional_flush` — 12 worlds; (3) with identity pinned back the spread STILL decided which composer fields survived, so `composedGaps` — the typed record of what the athlete\'s kit cannot train — was dropped on every day that had an adapter counterpart. A SPREAD IS THE DEFECT: `adapterContributionFrom` now reads the adapter day down to 12 enumerated non-strength fields plus its non-strength rows, and `applyContribution` THROWS `AdapterOverreachError` if a contribution names any composer-owned key at all. MUTATION A: every one of the 10 composer-owned fields is attempted individually and all 10 are refused — catching `composedGaps` alone would have produced a fourth sighting with a fourth field. MUTATION B: dropping the adapter\'s `speedBlock` is visible in the assembled day, with a control asserting it IS carried when given, because without both halves the cell passes on a merge that never carried it. END-TO-END: typed kit gaps are traced composer -> materialiser -> assembly -> validated program -> BOOT REGENERATION and survive all five; the previous test stopped at materialisation, which is precisely the boundary where the loss did not happen. The 180-world sweep is unchanged at 120/60 with zero content differences, because this is a mechanism change and not a behaviour change.',
+    },
+  },
+  {
     id: 'LAW-canonical-athlete-flows',
     law: 'There is a small permanent set of athlete flows — move a session, delete a session, preview and approve a repaired week, relaunch and prove persistence, clear or reverse an adjustment. A bug earns an assertion inside one of them, never a new throwaway flow.',
     ruledAt: 'docs/SEAT_INBOX.md item 0e(i), Sam 2026-08-12: "You do not need a brand-new temporary Maestro flow for every bug. Keep a handful of canonical athlete flows."',

@@ -249,18 +249,30 @@ function read(file: string): string {
     );
   }
 
-  // AND THE RULING THAT RODE INSIDE IT SURVIVED. This is the censused risk: the
-  // deleted function also carried `liftGeneratorRecoveryToRest`, and a deletion
-  // that read as "remove the power migration" would have taken a second,
-  // unrelated ruling with it in silence.
-  ok(
-    '[6] the generator-recovery lift survived the deletion',
-    /liftGeneratorRecoveryToRest\s*\(/.test(store),
-  );
-  ok(
-    '[6] and it still runs above the ingress branch',
-    /liftGeneratorRecoveryAtHydration\(rawPersistedState\)/.test(store),
-  );
+  // TWO CELLS STOOD HERE AND ARE DELETED (2026-08-14).
+  //
+  //   [6] the generator-recovery lift survived the deletion
+  //   [6] and it still runs above the ingress branch
+  //
+  // They were written in 2026-08-10 as a censused risk: the power migration
+  // being deleted also CARRIED `liftGeneratorRecoveryToRest`, and a commit that
+  // read as "remove the power migration" would have taken a second, unrelated
+  // ruling with it in silence. They did their job — they made that deletion say
+  // out loud what it was taking.
+  //
+  // THE LIFT IS NOW DELETED ON PURPOSE, WITH ITS OWN REASONING, so these two
+  // have flipped from a guard into a blocker: they assert the CONTINUED
+  // PRESENCE of source that has been deliberately removed. It is removed because
+  // it could not run — `programStore.partialize` persists INPUTS only, so no
+  // launch reads a stored program back and there was never a stored recovery
+  // session to lift — and because the generator no longer places recovery at
+  // all, so there was nothing to lift even in principle.
+  //
+  // THE RULING ITSELF DID NOT GO WITH THE CODE. "The generator never places
+  // recovery uninvited" is now asserted where it can actually be observed — by
+  // RUNNING the generator — in `section18RecoveryNeutralityTests`, cell "THE
+  // UPSTREAM HALF — no optional work is placed authorless", which carries the
+  // predicate inline.
 
   // The read door is wired. A door nobody calls is the thing the previous stop
   // report caught the hook doing: an exit described and never cut.

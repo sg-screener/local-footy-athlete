@@ -30,8 +30,8 @@ import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuil
 import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
-import { canonicaliseHydratedProgram } from '../store/programStore';
-import { emptyEvaluationSurfaces } from './evaluationSurfacesTestSupport';
+import { canonicaliseAcceptedStateCandidate } from '../store/programStore';
+import { ensureProgramSeasonPhaseClock } from '../rules/seasonPhaseClock';
 
 let pass = 0;
 let fail = 0;
@@ -313,7 +313,17 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
 
   const beforeHydrationSignatures = generated.microcycles.map((candidate) =>
     section18PhaseTableSignature(candidate.exposureContractV2));
-  const rehydrated = canonicaliseHydratedProgram(JSON.parse(JSON.stringify(generated)) as typeof generated, emptyEvaluationSurfaces());
+  // THE LIVE RE-ENTRY DOOR. This was `canonicaliseHydratedProgram`, deleted
+  // 2026-08-14 with the legacy hydration-migration pipeline (nothing reads a
+  // stored program back — `partialize` persists inputs only). The SUBJECT is
+  // unchanged and still live: a program that goes back through the install
+  // boundary must come out with the same phase-owned Contract v2 signature.
+  // `setCurrentProgram` is that boundary, and it is these two steps.
+  const roundTripped = ensureProgramSeasonPhaseClock(
+    JSON.parse(JSON.stringify(generated)) as typeof generated);
+  const rehydrated = canonicaliseAcceptedStateCandidate({ currentProgram: roundTripped }, {
+    profile,
+  }).currentProgram as typeof generated;
   ok('rehydration preserves every phase-owned Contract v2 selected-target signature',
     JSON.stringify(rehydrated.microcycles.map((candidate) =>
       section18PhaseTableSignature(candidate.exposureContractV2))) ===

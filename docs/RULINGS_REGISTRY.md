@@ -1584,6 +1584,26 @@ a defect to solve.**
 isolation, one exercise pool, re-tag, refile, empty slot, bodyweight leg day.
 · `BUILT` — the tag already carries `isolation_lower`; nothing to change.
 
+**⚠ CORRECTION RECEIPT, 2026-08-14 (slice B1 CP1) — ONE CLAUSE OF THIS ROW IS
+SUPERSEDED. THE ROW'S OWN WORDS ARE UNCHANGED AND STAY AS WRITTEN.**
+The clause *"A bodyweight athlete therefore cannot fill the single-leg hip
+slot"* is **no longer the app's answer.** `R-086`, ruled the SAME DAY, put
+`Single-Leg RDL` into `BODYWEIGHT_CAPABLE`, which makes it legal on a bodyweight
+kit; the two rows have contradicted each other since 2026-08-13 and the code has
+always implemented R-086. `docs/POOL_CENSUS_2026-08-14.md` measured the
+contradiction and reported it as NOT ESTABLISHED rather than choosing.
+**SAM RULED IT, 2026-08-14, via the B1 seat question:** for a temporary
+bodyweight/away athlete an **unloaded `Single-Leg RDL` COUNTS as a valid
+single-leg-hip exercise**, and weighted versions remain preferable when the kit
+allows. **R-086 stands.** The preference is expressed by the authored pool ORDER
+the composer selects in — a weighted option is simply earlier in the list where
+it is legal — never by widening `BODYWEIGHT_CAPABLE`, which R-086 closed at two.
+**Everything else in this row is untouched:** the single-leg hip pool is still
+ONE exercise, it is still meant to repeat, and a one-exercise pool is still not a
+coverage defect.
+**GUARDED:** `test:composer-b1` — two cells, *"an unloaded Single-Leg RDL is a
+legal single-leg-hip row"* and *"the away lower day actually carries it"*.
+
 ---
 
 **R-085** · *"yes, skip standing, owned and closed"* (2026-08-13, answering
@@ -1908,3 +1928,107 @@ byte-for-byte unchanged (digest `0cca0f63`), the 180-world sweep is 174 built /
 `test:scenarios`, `test:ladder-wide`, `test:compile` and `test:pools` are
 unmoved. **Nothing was re-baselined:** the sole builder's defects are the
 evidence base for the composer, and this slice hid none of them.
+
+---
+
+**R-092** · *"i think any push pull hinge squat single leg knee single leg hip
+get the main lift role there."* (Sam, 2026-08-14) · **A DAY'S PLANNED PATTERN
+GETS THE MAIN-LIFT ROLE ON THAT DAY.** The row that fills a planned pattern's
+slot is `main_strength` for that pattern — it is not an accessory because the day
+also carries other work, and it is not demoted because a different day already
+covered the pattern.
+**⚠ THE GUARD IS PART OF THE RULING, and without it the ruling doubles a
+pattern.** A day carrying TWO rows of one pattern — a horizontal push and a
+vertical push — gets **ONE** main lift: the day's FIRST row of that pattern takes
+the role and the supplementary row stays `strength_accessory`. Reading his
+sentence without that guard credits both, which inflates the week's main-lift
+count and makes a five-row upper day look like four main lifts.
+**Search words:** main lift role, main_strength, strength_accessory, push pull
+hinge squat, single leg knee, single leg hip, role assignment, supplementary,
+second push, composer, section18Evidence.
+· **`UNENFORCED` GLOBALLY — and this row states that rather than implying
+otherwise.** The ruling holds on the COMPOSED route only, which is one
+configuration of 180. By gate rule 4 a ruling enforced on one route of several is
+UNENFORCED, exactly as `R-090` records for the same reason. It becomes `BUILT`
+when every program-building route is migrated or deleted (slice B1 CP2/CP3).
+**GUARDED, ROUTE-SCOPED:** `test:composer-b1` (48 cells, 0 failures) —
+*"each PLANNED pattern gets exactly one main lift"*, *"[guard d] a supplementary
+same-pattern row stays an accessory"*, and *"an unplanned pattern never takes the
+main-lift role"*. The composed control world's stored week is the live receipt:
+`Bench Press` and `Barbell Row` carry `role=main_strength`, and `DB Shoulder
+Press` — the day's second push — carries `strength_accessory`.
+
+---
+
+**⚠ R-090 — ROUTE-SCOPED ENFORCEMENT RECEIPT, 2026-08-14 (slice B1 CP1). THE ROW
+ABOVE STAYS `UNENFORCED` AND THIS RECEIPT DOES NOT CHANGE THAT.**
+R-090's first half is now BUILT on the composed route: required patterns are
+judged against the kit-achievable set at **contract construction**
+(`buildSection18WeeklyExposureContractV2`'s `kitUnachievablePatterns` input,
+`weeklyExposureContractV2.ts:1262`), and a kit-caused gap is a typed
+`ComposedGap` carrying what the kit would need in the sheet's own words, derived
+from kit + sheet rather than from any record.
+**WHAT IS STILL OWED, AND THE ROW MUST NOT PRETEND OTHERWISE.** (1) The
+composed route is **ONE configuration of 180** — full gym, two-day pre-season
+with a club night, week 1 — so by gate rule 4 the ruling is UNENFORCED globally.
+(2) **The gap is TYPED but not yet SAID:** `ComposedGap` has no athlete-facing
+reader, so the day still just comes out shorter. That is the same half of R-083
+this registry already records as owed, and B1 CP1 did not pay it.
+**GUARDED, ROUTE-SCOPED:** `test:composer-b1` — *"a kit-unachievable pattern is
+not owed (R-083)"*, *"a bodyweight athlete gets typed gaps, not substitutes"*,
+*"the gap names what the kit would need, in the sheet's own words"*, and the
+full-gym control *"a full-gym athlete has no kit gap at all"*.
+**MEASURED:** the 180-world sweep moves **174 built / 6 refused -> 175 built / 5
+refused**, the world that stops being refused is exactly the migrated one, and
+**every one of the other 179 worlds is byte-identical.**
+
+---
+
+**R-093** · *"either way i'd make them full body sessions. Squat and single leg
+hip with push and pull + accessories then hinge and single leg knee with push and
+pull (in opposite plane to earlier in week) + accessories - but the ideal would be
+to do full body strength on different nights"*, and on the impossible plane:
+*"yes repeat achievable pull plane"* (Sam, 2026-08-14) · **WHERE EVERY AVAILABLE
+GYM NIGHT IS A CLUB NIGHT, THE TWO SESSIONS ARE FULL BODY.**
+**SEAT-DRAFTED WORDING, APPROVED BY SAM — NOT his verbatim words:** session A is
+squat + single-leg hip + push + pull + accessories; session B is hinge +
+single-leg knee + push + pull in the OPPOSITE planes where those planes are
+kit-achievable. **The kit outranks the plane preference** — R-083/R-090 govern, an
+impossible plane repeats the achievable one, and where no plane of a pattern is
+achievable the pattern is removed and disclosed. **An illegal exercise is never
+authored to manufacture plane variety.**
+**HIS STATED IDEAL — full-body strength on DIFFERENT nights — IS APPROVED
+DIRECTION AND IS NOT BUILT. It must not be marked built by this row.**
+**Search words:** full body, club night, team night, both nights, squat single
+leg hip, hinge single leg knee, opposite plane, repeat pull plane, two strength
+sessions, composed shape.
+· **`UNENFORCED`.** **B1 CP2 STOPPED before this could carry a receipt.** The
+composer builds the shape correctly — measured, and printed in
+`docs/MISSION_THREE_FIXES.md` — but the composed week does not survive to
+storage: three post-composition sites still rewrite or discard composed rows.
+**No guard may claim this row until a composed week reaches an athlete unchanged.**
+
+---
+
+**R-094** · *"no just make it regular loads forget what i said or delet that
+section of bible"* (Sam, 2026-08-14) · **NO AUTOMATIC LOAD REDUCTION SOLELY
+BECAUSE GYM WORK SHARES A DAY WITH CLUB TRAINING.**
+**SEAT-DRAFTED WORDING, APPROVED BY SAM — NOT his verbatim words:** full-body gym
+work on a club-training day receives the normal load and prescription it would
+receive off a club night. **Injury, readiness, deload and every other
+independently ruled safety constraint still apply in full** — this ruling removes
+one automatic reduction, not the safety envelope.
+**⚠ THE CLAUSE HE IS DELETING WAS NEVER IN THE BIBLE.** Searched: the nearest
+clauses (`:266`, `:736`, `:77`) are about hard LOWER work near a GAME, and `:94`
+already says *"if can only do 2 strength sessions should be 2 x full body and
+those sessions should be pretty solid"*. The reduction exists in CODE ONLY and is
+recorded in the findings ledger. The Bible carries a dated amendment stating
+exactly this rather than deleting text that does not exist.
+**Search words:** regular loads, team night, club night, moderate intensity, low
+fatigue, keep CNS sharp, isHardExposure, load reduction, same day as training.
+· **`UNENFORCED`.** **B1 CP2 STOPPED.** The composed path applies no team-night
+reduction — nothing in `composeWeek` asks whether the day is a club night — but a
+composed week does not currently reach storage intact, so there is no
+athlete-visible receipt and this row may not claim one. The legacy mirror at
+`coachingEngine.ts:2226-2251` is **unchanged and still live** on every
+non-composed route.

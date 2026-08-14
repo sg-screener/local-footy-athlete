@@ -38,24 +38,15 @@ import type {
 import { appDateNow, dayOfWeekForISODate, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
-  buildSection18WeeklyExposureContractV2,
   contractOffseasonSubphase,
   migrateLegacyWeeklyExposureContractV2,
-  resolveSection18PhasePlannerSelection,
-  type Section18Subphase,
-  type Section18WeekMode,
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
-import {
-  isGeneratorPlacedRecovery,
-  liftGeneratorRecoveryToRest,
-} from '../rules/generatorRecoveryRestLift';
 import { readStoredWorldOrResetClean } from './unreadableWorldResetDoor';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import {
-  finaliseSection18SafetyWeek,
   finaliseSection18SafetyWorkout,
 } from '../rules/section18SafetyFinaliser';
 import {
@@ -63,33 +54,25 @@ import {
   resolveSeasonPhaseClock,
   type SeasonPhaseClock,
 } from '../rules/seasonPhaseClock';
-import { resolveWeekIntensityMultiplier } from '../rules/deloadWeekRules';
-import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { composeAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import type { AcceptedEffectiveWeekSurfaces } from '../rules/acceptedEffectiveWeek';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
-import { acceptedProfileSnapshotMintRefusal } from '../rules/profileMirrorNarrowing';
 import {
   athleteActionDiagnosticHash,
   beginAthleteActionTrace,
-  clearProgramHydrationTrace,
   currentAthleteActionTrace,
   emitAthleteActionEvent,
   programHydrationTrace,
-  runWithAthleteActionTrace,
 } from '../utils/athleteActionDiagnostics';
 import {
-  ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
-  ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
   acceptedProfileForContext,
   createEmptyAcceptedMaterialContext,
   normalizeAcceptedMaterialContext,
   normalizeAcceptedProgramSurfaces,
   type AcceptedMaterialContext,
-  type AcceptedProfileSnapshotV1,
 } from './acceptedStateColdStart';
 import {
   migrateLegacyTemporarySourceFacts,
@@ -101,22 +84,15 @@ import {
 } from '../rules/acceptedProfileProjection';
 import {
   createEmptyReversibleAdjustmentLedger,
-  normalizeReversibleAdjustmentLedger,
   type ReversibleAdjustmentLedger,
 } from '../rules/reversibleAdjustmentLedger';
 import {
   PROGRAM_STORE_PERSISTENCE_VERSION,
-  ProgramHydrationIngressError,
-  dropRetiredWeekOverlaysAtHydration,
-  requireProgramHydrationIngress,
   type ProgramHydrationIngressClassification,
-  type ProgramHydrationIngressKind,
 } from './programHydrationIngress';
 import {
-  projectAcceptedMaterialContextDerivedFields,
   projectHydratedStateDerivedFields,
 } from './programHydrationProjection';
-import { hasPowerRow } from '../rules/sessionRowCounting';
 import {
   microcycleCoversWeek,
   selectStoredWeekDeclaration,
@@ -250,18 +226,6 @@ async function writeProgramStoreEnvelopeRaw(value: string): Promise<void> {
   }
 }
 
-async function persistCanonicalHydratedEnvelopeReadback(): Promise<void> {
-  if (activeProgramPersistenceStage) return;
-  const canonicalEnvelope = serializeProgramStoreEnvelope(useProgramStore.getState());
-  const persistedEnvelope = await programStorageGetItem(PROGRAM_STORE_PERSISTENCE_KEY);
-  if (persistedEnvelope !== canonicalEnvelope) {
-    await writeProgramStoreEnvelopeRaw(canonicalEnvelope);
-  }
-  const acknowledgedEnvelope = await programStorageGetItem(PROGRAM_STORE_PERSISTENCE_KEY);
-  if (acknowledgedEnvelope !== canonicalEnvelope) {
-    throw new Error('program_hydration_normalization_readback_mismatch');
-  }
-}
 
 /**
  * THE PROGRAM STORE'S WRITER BOUNDARY, declared once.
@@ -569,13 +533,6 @@ function resolveDateMutationExposureContract(
     .resolveLiveDateMutationExposureContract(date, workout);
 }
 
-function resolveEditedWeekExposureContract(
-  weekStart: string,
-): { weekStart: string; contract: WeeklyExposureContract } | null {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .resolveLiveEditedWeekExposureContract(weekStart);
-}
 
 function mondayForDate(date: string): string {
   const value = new Date(`${date.slice(0, 10)}T12:00:00`);
@@ -648,124 +605,6 @@ function canonicaliseHydratedWorkout(
   }).workout;
 }
 
-function hydratedWorkoutNeedsIngressCanonicalisation(workout: Workout): boolean {
-  const hasStrength = !!workout.strengthIntent?.effectivePatterns.length ||
-    !!workout.strengthPatternContributions?.length ||
-    workout.exercises.some((row) => row.section18Evidence?.role === 'main_strength');
-  const conditioningRole = workout.section18Evidence?.conditioningRole;
-  const hasConditioning = !!workout.conditioningBlock ||
-    (conditioningRole !== undefined && conditioningRole !== 'none' && conditioningRole !== 'legacy_unknown') ||
-    workout.hasCombinedConditioning === true;
-  return (
-    (!!workout.strengthPatternContributions?.length && !workout.strengthIntent) ||
-    (hasStrength && hasConditioning && workout.workoutType !== 'Mixed')
-  );
-}
-
-export class Section18LegacyMigrationError extends Error {
-  readonly code = 'section18_legacy_migration_failed';
-
-  constructor(message: string) {
-    super(message);
-    this.name = 'Section18LegacyMigrationError';
-  }
-}
-
-function legacyModeFor(args: {
-  phase: 'In-season' | 'Off-season' | 'Pre-season';
-  subphase: Section18Subphase | null;
-  hasFixture: boolean;
-}): { mode: Section18WeekMode; anchorState: 'game' | 'bye' | 'practice_match' | 'none'; declaredSubphase: Section18Subphase } {
-  if (args.phase === 'In-season') {
-    return args.hasFixture
-      ? { mode: 'in_season_game_week', anchorState: 'game', declaredSubphase: 'game_week' }
-      : { mode: 'in_season_bye_build', anchorState: 'bye', declaredSubphase: 'bye_build' };
-  }
-  if (args.phase === 'Off-season') {
-    if (
-      args.subphase !== 'early_offseason' &&
-      args.subphase !== 'mid_offseason' &&
-      args.subphase !== 'late_offseason'
-    ) {
-      throw new Section18LegacyMigrationError('Contractless Off-season week has no trustworthy phase-clock subphase.');
-    }
-    return { mode: args.subphase, anchorState: 'none', declaredSubphase: args.subphase };
-  }
-  if (args.hasFixture) {
-    return {
-      mode: 'practice_match_week',
-      anchorState: 'practice_match',
-      declaredSubphase: 'practice_match_week',
-    };
-  }
-  if (
-    args.subphase !== 'early_preseason' &&
-    args.subphase !== 'mid_preseason' &&
-    args.subphase !== 'late_preseason'
-  ) {
-    throw new Section18LegacyMigrationError('Contractless Pre-season week has no trustworthy phase-clock subphase.');
-  }
-  return { mode: args.subphase, anchorState: 'none', declaredSubphase: args.subphase };
-}
-
-function deriveContractlessLegacyContract(args: {
-  microcycle: Microcycle;
-  selectedPhase: 'In-season' | 'Off-season' | 'Pre-season' | null;
-  phaseResolution: ReturnType<typeof resolveSeasonPhaseClock> | null;
-}): WeeklyExposureContractV2 {
-  if (!args.selectedPhase || !args.phaseResolution) {
-    throw new Section18LegacyMigrationError('Contractless week has no trustworthy persisted phase clock.');
-  }
-  const workouts = args.microcycle.workouts ?? [];
-  const teamTrainingDays = workouts
-    .filter((workout) => classifyVisibleSession(workout).anchors.teamTraining)
-    .map((workout) => workout.dayOfWeek);
-  const fixture = workouts.find((workout) => classifyVisibleSession(workout).anchors.game);
-  const identity = legacyModeFor({
-    phase: args.selectedPhase,
-    subphase: args.phaseResolution.subphase,
-    hasFixture: !!fixture,
-  });
-  const availableDayCount = new Set(workouts.map((workout) => workout.dayOfWeek)).size;
-  const selection = resolveSection18PhasePlannerSelection({
-    mode: identity.mode,
-    capacity: 'medium',
-    availableDayCount,
-    teamTrainingCount: new Set(teamTrainingDays).size,
-    weekKind: args.phaseResolution.weekKind,
-  });
-  return buildSection18WeeklyExposureContractV2({
-    seasonPhase: args.selectedPhase,
-    declaredSubphase: identity.declaredSubphase,
-    mode: identity.mode,
-    blockNumber: args.microcycle.miniCycleNumber,
-    weekInBlock: ((Math.max(1, args.microcycle.weekNumber) - 1) % 4) + 1,
-    globalWeek: args.microcycle.weekNumber,
-    phaseWeek: args.phaseResolution.phaseWeekNumber,
-    phaseEntryWeekStartISO: args.phaseResolution.clock.phaseEntryWeekStartISO,
-    phaseClockSelectedPhase: args.phaseResolution.clock.selectedPhase,
-    phaseWeekProvenance: 'preserved_persisted_state',
-    weekKind: args.phaseResolution.weekKind,
-    anchorState: identity.anchorState,
-    teamTrainingDays,
-    fixtureDays: fixture ? [fixture.dayOfWeek] : [],
-    participationProvenance: 'legacy_unknown',
-    currentProductionClaimsAnchorCredit: false,
-    capacity: 'medium',
-    plannerSelected: {
-      mainStrength: selection.mainStrength,
-      optionalMainStrength: selection.optionalMainStrength,
-      coreConditioning: selection.coreConditioning,
-      optionalFlush: selection.optionalFlush,
-      optionalRecoveryAerobic: selection.optionalRecoveryAerobic,
-      sprintHighSpeed: selection.sprintHighSpeed,
-      powerPrimers: workouts.filter(hasPowerRow).length,
-    },
-    prohibitedPatternProvenance: 'legacy_missing',
-    source: 'legacy_migration',
-  });
-}
-
 const LEGACY_DAY_NAMES: DayOfWeek[] = [
   'Sunday',
   'Monday',
@@ -777,11 +616,21 @@ const LEGACY_DAY_NAMES: DayOfWeek[] = [
 ];
 
 /**
- * ProgramStore and ProfileStore hydrate independently. A contractless program
+ * ProgramStore and ProfileStore hydrate independently. A v1-contract program
  * therefore cannot assume the profile has already supplied its scheduling
  * geometry when the accepted-week migration runs. The persisted workout days
  * are trustworthy evidence that those days belonged to the old program; they
  * are not anchor-participation evidence and never create reductions or credit.
+ *
+ * **STILL LIVE AFTER THE 2026-08-14 HYDRATION-PIPELINE DELETION, and this note
+ * is why it survived the cut.** The structural migration pipeline that used to
+ * sit beside it is gone, but `contract.source === 'legacy_migration'` is NOT
+ * produced by that pipeline — it comes from
+ * `migrateLegacyWeeklyExposureContractV2`, which lifts a v1 `exposureContract`
+ * to v2 and has ~10 live production callers (`weekRebuild`,
+ * `postGenerationConstraintValidation`, `section18ProgramObservation`, this
+ * store). A first pass deleted this function as part of the pipeline and
+ * `test:compile` caught it.
  */
 function legacyMigrationFallbackProfile(args: {
   profile?: OnboardingData | null;
@@ -807,198 +656,12 @@ function legacyMigrationFallbackProfile(args: {
       : persistedDayNames,
     // RETIRED (Sam, 2026-07-28). These were `?? 'Pretty consistent'` and
     // `?? 'Good'` — a missing answer scored 2 + 2 = 4, landing the athlete in
-    // the medium band. The old comment called them "generation-only defaults
-    // ... never written back as athlete answers", and that was true and beside
-    // the point: they were never STORED as answers, they were SCORED as them,
-    // and the athlete received the resulting progression tier.
-    //
-    // Bible Section 9: there is no default and no unknown tier. Passing the
-    // absent value through lets the rubric refuse, which is the whole ruling.
+    // the medium band. Bible Section 9: there is no default and no unknown
+    // tier. Passing the absent value through lets the rubric refuse, which is
+    // the whole ruling.
     recentTrainingLoad: args.profile?.recentTrainingLoad,
     conditioningLevel: args.profile?.conditioningLevel,
     injuries: args.profile?.injuries ?? [],
-  };
-}
-
-function canonicaliseHydratedMicrocycle(
-  microcycle: Microcycle,
-  /**
-   * THE WORLD BEING HYDRATED, not the live one
-   * (`docs/SURFACES_CONTEXT_RULING_2026-08-06.md`, condition 3).
-   *
-   * This door was the one the entry census could never price — it never met a
-   * non-empty store in the witness set, and now it is clear why that was the
-   * wrong question. During hydration the live store still holds the PREVIOUS
-   * world; the truth is the snapshot arriving. Reading the store here would
-   * judge the incoming week against the outgoing one, which is the PROPOSAL
-   * defect wearing a different hat.
-   */
-  surfaces: AcceptedEffectiveWeekSurfaces,
-  phase?: string,
-  phaseClock?: SeasonPhaseClock,
-  profile?: OnboardingData | null,
-): Microcycle {
-  const contractWasMissing = !microcycle.exposureContractV2 && !microcycle.exposureContract;
-  const selectedPhase = phaseClock?.selectedPhase ?? (
-    /pre/i.test(phase ?? '') ? 'Pre-season' :
-      /off|base/i.test(phase ?? '') ? 'Off-season' :
-        /in/i.test(phase ?? '') ? 'In-season' : null
-  );
-  const phaseResolution = selectedPhase && phaseClock
-    ? resolveSeasonPhaseClock({
-        selectedPhase,
-        targetWeekStartISO: microcycle.startDate,
-        persistedClock: phaseClock,
-      })
-    : null;
-  let exposureContractV2 = microcycle.exposureContractV2 ?? (
-    microcycle.exposureContract
-      ? migrateLegacyWeeklyExposureContractV2(microcycle.exposureContract, {
-          blockNumber: microcycle.miniCycleNumber,
-          weekInBlock: ((Math.max(1, microcycle.weekNumber) - 1) % 4) + 1,
-          globalWeek: microcycle.weekNumber,
-        })
-      : undefined
-  );
-  if (!exposureContractV2) {
-    exposureContractV2 = deriveContractlessLegacyContract({
-      microcycle,
-      selectedPhase,
-      phaseResolution,
-    });
-  }
-  if (exposureContractV2 && phaseResolution) {
-    const expectedSubphase = exposureContractV2.identity.anchorState === 'practice_match'
-      ? 'practice_match_week'
-      : phaseResolution.subphase ?? exposureContractV2.identity.expectedSubphase;
-    exposureContractV2 = {
-      ...exposureContractV2,
-      identity: {
-        ...exposureContractV2.identity,
-        seasonPhase: phaseClock!.selectedPhase,
-        expectedSubphase,
-        phaseWeek: phaseResolution.phaseWeekNumber,
-        phaseEntryWeekStartISO: phaseClock!.phaseEntryWeekStartISO,
-        phaseClockSelectedPhase: phaseClock!.selectedPhase,
-        phaseWeekProvenance: 'preserved_persisted_state',
-        weekKind: phaseResolution.weekKind,
-      },
-    };
-  }
-  // Legacy row/contribution ownership must be translated before the weekly
-  // evaluator can count it, but this is only ingress normalisation: the
-  // complete resulting week still has to pass safety and the accepted-week
-  // gateway below before any hydrated state can publish.
-  let workouts = (microcycle.workouts ?? []).map((workout) =>
-    contractWasMissing || hydratedWorkoutNeedsIngressCanonicalisation(workout)
-      ? canonicaliseHydratedWorkout(
-          workout,
-          selectedPhase ?? phase,
-          phaseResolution?.weekKind ?? microcycle.weekKind,
-          phaseResolution?.offseasonSubphase ??
-            (exposureContractV2 ? contractOffseasonSubphase(exposureContractV2) : null),
-        )
-      : workout);
-  if (exposureContractV2) {
-    exposureContractV2 = applyGenerationSafetyToSection18Contract({
-      contract: exposureContractV2,
-    });
-    const safety = finaliseSection18SafetyWeek({
-      contract: exposureContractV2,
-      workouts,
-      weekStart: microcycle.startDate.slice(0, 10),
-      canonicalContext: {
-        phase: exposureContractV2.identity.seasonPhase,
-        offseasonSubphase: canonicalContextSubphase(
-          exposureContractV2.identity.seasonPhase,
-          phaseResolution?.offseasonSubphase ??
-            contractOffseasonSubphase(exposureContractV2),
-        ),
-        weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
-        section18EvidenceMode: 'preserve_legacy_unknown',
-      },
-    });
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const fallbackProfile = exposureContractV2.source === 'legacy_migration'
-      ? legacyMigrationFallbackProfile({
-          profile,
-          microcycle,
-          contract: safety.contract,
-        })
-      : profile;
-    const accepted = require('../rules/section18AcceptedWeekGateway')
-      .requireSection18AcceptedWeek({
-        contract: safety.contract,
-        workouts: safety.workouts,
-        weekStart: microcycle.startDate.slice(0, 10),
-        profile,
-        surfaces,
-        regenerate: fallbackProfile
-          ? () => require('../utils/postGenerationConstraintValidation')
-              .buildSection18ProductionFallbackCandidate({
-                contract: safety.contract,
-                weekStart: microcycle.startDate.slice(0, 10),
-                profile: fallbackProfile,
-              })
-          : undefined,
-        safeFallback: fallbackProfile
-          ? () => require('../utils/postGenerationConstraintValidation')
-              .buildSection18ProductionFallbackCandidate({
-                contract: safety.contract,
-                weekStart: microcycle.startDate.slice(0, 10),
-                profile: fallbackProfile,
-              })
-          : undefined,
-      });
-    workouts = accepted.canonicalWorkouts;
-    exposureContractV2 = accepted.contract;
-  }
-  // ── ROOT 1a — ONE OWNER FOR WORKOUT ORDER.
-  // The same seven sessions in two orders are two different byte-worlds, and
-  // no layer owned the order: the shortfall placer appends, regeneration
-  // day-orders, and JSON is order-sensitive, so hydration was not idempotent.
-  // Hydration is the composition owner, so it canonicalises the order exactly
-  // once — Monday-first week position, stable within a day.
-  const weekPosition = (day: number): number => (day === 0 ? 7 : day);
-  workouts = [...workouts].sort((a, b) =>
-    weekPosition(a.dayOfWeek) - weekPosition(b.dayOfWeek));
-  return {
-    ...microcycle,
-    weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
-    // One intensity owner. This used to be a second table reading
-    // `Off-season ? 0.85 : 0.9`. Its in-season branch was DORMANT rather than
-    // harmful — `resolveSeasonPhaseWeekKind` never mints a deload week
-    // in-season, so nothing reached the 0.9 — but a second table free to
-    // drift from the owner is the defect, whether or not it has fired yet.
-    intensityMultiplier: phaseResolution
-      ? resolveWeekIntensityMultiplier(selectedPhase, phaseResolution.weekKind)
-      : microcycle.intensityMultiplier,
-    workouts,
-    exposureContractV2,
-  };
-}
-
-export function canonicaliseHydratedProgram(
-  program: TrainingProgram,
-  /** The world being hydrated — see `canonicaliseHydratedMicrocycle`. */
-  surfaces: AcceptedEffectiveWeekSurfaces,
-  profile?: OnboardingData | null,
-): TrainingProgram {
-  // The legacy power-block lift used to run here as defence in depth. DELETED
-  // 2026-08-10 on Sam's "kill it": a stored world the current code cannot read
-  // is reset clean at the read door (`unreadableWorldResetDoor`), never
-  // migrated. Nothing lifts a stored shape into a current one any more.
-  const clockedProgram = ensureProgramSeasonPhaseClock(program);
-  return {
-    ...clockedProgram,
-    microcycles: (clockedProgram.microcycles ?? []).map((microcycle) =>
-      canonicaliseHydratedMicrocycle(
-        microcycle,
-        surfaces,
-        clockedProgram.programPhase,
-        clockedProgram.seasonPhaseClock,
-        profile,
-      )),
   };
 }
 
@@ -1076,7 +739,6 @@ export function assertAcceptedProgramInstallable(
 function canonicaliseAcceptedBoundaryState(
   persistedState: Partial<ProgramState>,
   options: {
-    structuralMigrationRequired: boolean;
     activeConstraints?: readonly import('./coachUpdatesStore').ActiveConstraint[];
     profile?: OnboardingData | null;
     markedDays?: Readonly<Record<string, CalendarDayType>>;
@@ -1098,13 +760,7 @@ function canonicaliseAcceptedBoundaryState(
       // record and the application input are the same list.
       removalDecisions: persistedState.userRemovalConstraints ?? [],
     });
-  let currentProgram = persistedState.currentProgram && options.structuralMigrationRequired
-    ? canonicaliseHydratedProgram(
-        persistedState.currentProgram,
-        hydratingSurfaces,
-        options.profile,
-      )
-    : persistedState.currentProgram;
+  let currentProgram = persistedState.currentProgram ?? null;
   const overlayOwnedWeekStarts = new Set(Object.keys(persistedState.weekScopedOverlays ?? {}));
   if (currentProgram && options.activeConstraints) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -1141,15 +797,7 @@ function canonicaliseAcceptedBoundaryState(
         targetWeekStartISO: mondayForDate(effectiveTodayISO),
       }).offseasonSubphase
     : null;
-  let currentMicrocycle = persistedState.currentMicrocycle && options.structuralMigrationRequired
-    ? canonicaliseHydratedMicrocycle(
-        persistedState.currentMicrocycle,
-        hydratingSurfaces,
-        phase,
-        currentProgram?.seasonPhaseClock,
-        options.profile,
-      )
-    : persistedState.currentMicrocycle;
+  let currentMicrocycle = persistedState.currentMicrocycle;
   if (currentMicrocycle && options.activeConstraints &&
     !overlayOwnedWeekStarts.has(currentMicrocycle.startDate.slice(0, 10))) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -1203,7 +851,7 @@ function canonicaliseAcceptedBoundaryState(
               Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
                 date,
                   workout
-                  ? !options.structuralMigrationRequired && !exposureContractV2
+                  ? !exposureContractV2
                     ? workout
                     : canonicaliseHydratedSafetyWorkout(
                         workout, exposureContractV2, phase, hydratedOffseasonSubphase)
@@ -1234,7 +882,7 @@ function canonicaliseAcceptedBoundaryState(
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
         date,
         {
-          ...(!options.structuralMigrationRequired && !safetyContractForDate(date)
+          ...(!safetyContractForDate(date)
             ? workout
             : canonicaliseHydratedSafetyWorkout(
                 workout, safetyContractForDate(date), phase, hydratedOffseasonSubphase)),
@@ -1545,7 +1193,7 @@ function canonicaliseAcceptedBoundaryState(
     currentProgram,
     currentMicrocycle,
     todayWorkout: hydratedTodayWorkout
-      ? !options.structuralMigrationRequired && !safetyContractForDate(effectiveTodayISO)
+      ? !safetyContractForDate(effectiveTodayISO)
         ? hydratedTodayWorkout
         : canonicaliseHydratedSafetyWorkout(
             hydratedTodayWorkout,
@@ -1634,109 +1282,11 @@ export function canonicaliseAcceptedStateCandidate(
   candidate: Partial<ProgramState>,
   options: AcceptedStateCandidateCanonicalisationOptions = {},
 ): Partial<ProgramState> {
-  const accepted = canonicaliseAcceptedBoundaryState(candidate, {
-    ...options,
-    structuralMigrationRequired: false,
-  });
+  const accepted = canonicaliseAcceptedBoundaryState(candidate, options);
   return projectHydratedStateDerivedFields(accepted as Record<string, unknown>) as
     Partial<ProgramState>;
 }
 
-export interface HydratedStateCanonicalisationOptions {
-  ingressKind: Exclude<ProgramHydrationIngressKind, 'invalid_or_ambiguous'>;
-  profile?: OnboardingData | null;
-}
-
-/**
- * Hydration dispatch has one owner: the typed ingress classification.
- * Accepted envelopes receive only the safe derived projection; supported
- * legacy envelopes additionally receive the structural migration pipeline.
- */
-/**
- * THE LEGACY POWER-BLOCK MIGRATION LIVED HERE AND IS DELETED (2026-08-10).
- *
- * Sam: ***"kill it"***. What went: `migrateHydratedStatePowerBlocks` (the
- * hydration-surface lift) and `assertNoUnmigratedPowerBlock` (the write-side
- * refusal), plus `rules/legacyPowerBlockMigration.ts` and its six throw sites.
- *
- * **Why the whole shape went and not just the throws.** Every one of those
- * sites existed to keep faith with programs saved before the 2026-07-28
- * rebuild. The app has no real users (memory `lfa-not-live-no-reminders`), so
- * that compatibility was worth nothing and cost a boot-time crash: a stored
- * world the migration could not map took the app down rather than letting the
- * athlete in. **The rule that replaces it: a stored world the current code
- * cannot read is RESET CLEAN and the athlete is told once — never migrated,
- * never silently served by an older set of rules.** The door is
- * `store/unreadableWorldResetDoor.ts`; the reset is honest where a fallback
- * that quietly undercounts a week is not.
- *
- * **WHAT DID NOT GO WITH IT, and this was the censused risk.** The deleted
- * function also carried `liftGeneratorRecoveryToRest` — a second, unrelated
- * ruling that would have died silently inside a deletion that read as "remove
- * the power migration". It is preserved below, on the same surfaces, in
- * `liftGeneratorRecoveryAtHydration`.
- */
-
-/**
- * The generator-recovery lift, ALONE — the ruling that used to ride inside the
- * deleted power migration and would have died silently with it.
- *
- * It runs on the PLAN only. `dateOverrides` and `weekScopedOverlays` are
- * athlete-owned surfaces and are deliberately not visited — the power migration
- * did visit them, and those two branches went with it, because touching an
- * athlete's own decision to lift a GENERATOR artefact was never this ruling's
- * business. See `rules/generatorRecoveryRestLift.ts`.
- */
-function liftGeneratorRecoveryAtHydration(
-  state: Partial<ProgramState>,
-): Partial<ProgramState> {
-  const next: Partial<ProgramState> = { ...state };
-
-  if (next.currentProgram) {
-    next.currentProgram = {
-      ...next.currentProgram,
-      microcycles: (next.currentProgram.microcycles ?? []).map((microcycle) => ({
-        ...microcycle,
-        workouts: liftGeneratorRecoveryToRest(microcycle.workouts ?? []),
-      })),
-    };
-  }
-  if (next.currentMicrocycle) {
-    next.currentMicrocycle = {
-      ...next.currentMicrocycle,
-      workouts: liftGeneratorRecoveryToRest(next.currentMicrocycle.workouts ?? []),
-    };
-  }
-  if (next.todayWorkout && isGeneratorPlacedRecovery(next.todayWorkout)) {
-    next.todayWorkout = null;
-  }
-  return next;
-}
-
-export function canonicaliseHydratedState(
-  rawPersistedState: Partial<ProgramState>,
-  options: HydratedStateCanonicalisationOptions,
-): Partial<ProgramState> {
-  // FIRST, and above every branch below — an `accepted_canonical` program takes
-  // an early return that skips the whole boundary canonicalisation, so a lift
-  // placed inside it would miss exactly the worlds that need it.
-  const persistedState = liftGeneratorRecoveryAtHydration(rawPersistedState);
-  // ALSO above every branch below. See `dropRetiredWeekOverlaysAtHydration`
-  // (L15, HOME_SCREEN_REDESIGN ruling 1) — runs unconditionally, regardless of
-  // ingress classification.
-  const liftedState = dropRetiredWeekOverlaysAtHydration(persistedState);
-  if (options.ingressKind === 'accepted_canonical') {
-    return projectHydratedStateDerivedFields(
-      liftedState as Record<string, unknown>,
-    ) as Partial<ProgramState>;
-  }
-  const migrated = canonicaliseAcceptedBoundaryState(liftedState, {
-    structuralMigrationRequired: true,
-    profile: options.profile,
-  });
-  return projectHydratedStateDerivedFields(migrated as Record<string, unknown>) as
-    Partial<ProgramState>;
-}
 
 // ─── Session Feedback ───
 
@@ -1991,9 +1541,6 @@ export interface ProgramState {
   clear: () => void;
 }
 
-let programHydrationAcceptancePromise: Promise<void> = Promise.resolve();
-let programHydrationAccepted = false;
-let programHydrationIngressForAcceptance: ProgramHydrationIngressClassification | null = null;
 
 export const useProgramStore = create<ProgramState>()(
   persist(

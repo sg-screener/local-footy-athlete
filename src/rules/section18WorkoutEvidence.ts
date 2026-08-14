@@ -188,6 +188,19 @@ export function withSection18WorkoutEvidence(
   return {
     ...workout,
     exercises: (workout.exercises ?? []).map((row, index) => {
+      // ⚠ A COMPOSED DECLARATION IS NEVER RE-INFERRED AND NEVER DEMOTED.
+      //
+      // Both halves below are wrong for a composed row. `inferredRowEvidence`
+      // reads the exercise NAME, so `Bodyweight Squat` and `Single-Arm DB Row`
+      // come back `strength_accessory` and a dumbbell or bodyweight athlete
+      // ends up with zero main lifts and a refused week. The demotion under it
+      // then asks the PLAN which patterns the day carries — and the composer's
+      // full-body shape (R-093) deliberately carries patterns the plan's own
+      // upper-only answer never named, so every lower lift would be demoted by
+      // the very decision Sam overruled.
+      if (row.section18Evidence?.provenance === 'composer_declaration') {
+        return row;
+      }
       let evidence = inferredRowEvidence(row, evidenceIndices[index]);
       if (plannedPatterns && evidence.role === 'main_strength') {
         const pattern = evidence.mainStrengthPattern;

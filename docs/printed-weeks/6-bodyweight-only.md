@@ -22,7 +22,7 @@
   - Keep spine neutral, don’t arch low back, lift hips, squeeze glutes, add weight to hips if you can.
 - Band Pallof Press — 2 × 8-12  ⚠ **CANNOT BE DONE — needs bands, which this athlete does not have.**
   - Press out, resist the pull. Hips stay square, slight knee and hip bend.
-- RDLs — 3 × 6-10  ⚠ **CANNOT BE DONE — needs barbell, which this athlete does not have.**
+- RDLs — 3 × 6-10  ⚠ **CANNOT BE DONE — needs barbell or dumbbells, which this athlete does not have.**
   - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
 
 **Conditioning**
@@ -107,7 +107,7 @@ None. Every word on this page came out of the app.
 **5 exercises the athlete has no equipment for:**
 
 - Monday 10 August — Band Pallof Press — needs bands, which this athlete does not have
-- Monday 10 August — RDLs — needs barbell, which this athlete does not have
+- Monday 10 August — RDLs — needs barbell or dumbbells, which this athlete does not have
 - Tuesday 11 August — Face Pull — needs cables, which this athlete does not have
 - Tuesday 11 August — Pull-Ups — needs pullup_bar, which this athlete does not have
 - Thursday 13 August — Overhead Press — needs barbell + rack, which this athlete does not have
