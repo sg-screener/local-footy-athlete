@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-M1-CT | Counting attribution | **ATTRIBUTED, NOT FIXED.** The break is MY plan split, not the exposure counter: `adapterPlan` came out **0 entries**, so the adapter produced no conditioning at all. Load guards now red-proven. Route fully reversed, 61/119. |
 | B1-M1-H | The handover | **STOPPED AND REVERTED THE WIRING.** Materialiser + assembler BUILT and tested; wiring them regressed the sweep 61/119 -> 49/131, so it is REVERSED and preserved as a patch. R-083 load legality FIXED: the away athlete's 10 kg is gone. |
 | B1-M1-C | Completion attempt — the handover | **STOPPED AT A NAMED SUB-BOUNDARY.** Registry corrected (11 -> 9, no new UNENFORCED). Base-load authority ESTABLISHED. Load now resolved and non-stacking BY DERIVATION. Silent fallthrough removed. **The materialiser and assembler still did not land.** |
 | B1-M1-F | Final resumption — dose rehoming | **PARTIAL, DECLARED.** Sam's four dose rulings are BUILT in the composer with 16 guards and 5 mutation red-proofs. **The materialiser and assembler did NOT land** — composed rows are still re-dosed downstream, so no athlete receives the new dose yet. |
@@ -2785,6 +2786,131 @@ why it was not chased here.
   attribution is real, but twelve athletes losing a week to buy a boundary that
   is not finished is not a trade I should make on Sam's behalf.
 
+---
+
+## Slice B1-M1-COUNTING — the counter was innocent; my plan split was not
+
+**Seat `baseline`, 2026-08-14. Base: branch `slice-b1-pivot` @ `60c0dc7b`.**
+**The production route is FULLY REVERSED and green at 61/119.** Nothing is
+half-connected.
+
+### 1. THE PRESERVED PATCH — identified exactly
+
+| | |
+| --- | --- |
+| path | `docs/B1_M1_HANDOVER_WIRING.patch` |
+| bytes | 5,610 |
+| **sha256** | `f97e907a14a5f28438b6873923fad848ce13cd78c76764152285feceef51d8a0` |
+| files | `src/data/defaultProgram.ts` · `src/services/api/generateProgram.ts` |
+| applies cleanly to `60c0dc7b` | **yes** — `git apply --check` clean, applied, reproduced, reversed |
+
+### 2. LOAD-GUARD DEBT CLOSED — all four subjects red-proven
+
+| mutation | reds |
+| --- | --- |
+| **LOAD-MUT-a** kit reachability ignored | away-0kg cell · cross-kit cell |
+| **LOAD-MUT-b** every load forced to zero | dumbbell cell · full-gym cell · base-load cell |
+| **LOAD-MUT-c** legality dropped from selection | the illegal-identity control |
+
+**⚠ THE ILLEGAL-IDENTITY CELL WAS WRONG TWICE BEFORE IT WAS A GUARD.** It first
+ran on a LOWER-day fixture, where no pull slot exists — so dropping legality
+could not put an illegal row in the week and the cell passed with its subject
+switched off. Rewritten to a pull day, it then named `Pull-Ups` specifically and
+selection picked a *different* illegal row. **It now asserts that NO composed row
+is illegal on the kit**, which is the property, and LOAD-MUT-c reds it.
+
+### 3. THE REGRESSION REPRODUCED — and my own previous number was wrong
+
+Applying the patch gives **49 built / 131 refused**, as reported. But the
+per-world sets say something the totals hid:
+
+| | |
+| --- | --- |
+| **worlds LOST** | **22** |
+| **worlds GAINED** | **10** |
+| net | −12 |
+
+**My previous report said "12 worlds refuse" because I quoted the net.** Twenty-two
+athletes lost a week and ten different athletes gained one. Named in full below.
+
+| cause | worlds |
+| --- | --- |
+| `required_minimum_shortfall:sprint_high_speed:0` | **12** — every Off-season 4/5/6-day w2 world, Full Gym and Dumbbells |
+| `reduction_contradiction:main_strength` | 5 — Pre-season 2d club, all three kits |
+| `pattern_restore_failure:strength_patterns:0` | 3 — Pre-season 4/5/6-day club Full Gym w2 |
+| `conditioning_intensity_mismatch` + conditioning shortfall | 2 — Pre-season 4d noclub Full Gym |
+
+### 4. THE ATTRIBUTION — answer A, and the owner is mine
+
+**Question A or B, decided by measurement, not assumption.** Traced
+`Off-season/4d/noclub/Full Gym/w2` at every boundary:
+
+```
+adapterPlan entries ............ 0
+adapter workouts out ........... 0
+composer output ................ 3 strength days (Mon, Tue, Thu)
+assembled week ................. the same 3 strength days, nothing else
+```
+
+**THE ADAPTER PRODUCED NOTHING, BECAUSE IT WAS HANDED NOTHING.** The plan split I
+added in the wiring —
+
+```
+generateProgram.ts, adapterPlan = weekPlan.weeklyPlan.filter(...)
+```
+
+— removed **every** planner entry for this world, so no conditioning day, no
+sprint day and no conditioning block reached `assembleAuthoredWeek` at all. §18
+then correctly reported zero sprint exposure and a conditioning mismatch.
+
+**ANSWER: A — canonical conditioning data was never carried, and the earliest
+broken owner is my plan split in the wiring.** It is **not** the exposure counter,
+which was reading an honestly empty week. **No counter was touched, no second
+counter was created, and no legacy-shape recognition was added.**
+
+**THE FIX, NAMED FOR THE NEXT SLICE:** the adapter must receive the FULL planner
+week and be prevented from authoring STRENGTH CONTENT for composed days — not be
+handed a filtered list of days. Excluding the day excludes everything else the
+day carries.
+
+### 5. WHY THE FIX WAS NOT MADE HERE
+
+The correct fix changes which plan entries reach `buildWorkoutsFromCoach` and how
+that builder is prevented from authoring strength for a composed day. That is a
+change to the retained adapter's contract, and getting it wrong silently is
+exactly how the last two sessions ended. **The route is reversed rather than left
+part-fixed**, per the fence: *never leave a half-connected handover.*
+
+### 6. STATE, MEASURED
+
+| | |
+| --- | --- |
+| sweep | **61 / 119**, restored by identity — all 61 original worlds build |
+| `test:composer-severance` | **71 passed / 0 failed** |
+| `test:compile` | **459 PASSED** |
+| `test:pools` | **498 / 1**, pinning honestly red |
+| production added this slice | **0** — the only changes are test cells |
+| deleted | 0 |
+| registry / Bible | untouched; no new rows, no ceiling change |
+
+### 7. NOT COVERED
+
+The live handover, both fingerprints against §18 input, gap counts at §18 input,
+the planned-power rehoming, the M2 target table, and deletion of
+`composedWeekToCoachInputs`. All wait on the plan-split fix named in §4.
+
+### 8. WHAT FOUGHT ME
+
+- **I blamed the counter last session and the counter was innocent.** The
+  attribution this session took one traced world and two spies; the guess took a
+  paragraph. **"Conditioning accounting broke" was true and useless; "adapterPlan
+  came out zero entries" is actionable.**
+- **My own regression number was wrong and the per-world sets found it.** 22 lost
+  and 10 gained is not 12 refused. A net figure hid twenty-two athletes.
+- **A guard I wrote passed twice with its subject switched off**, and only the
+  mutation caught it — the same shape as the guard debt this slice was opened to
+  close.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -2793,6 +2919,7 @@ why it was not chased here.
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- CORRECTED: the handover regression is 22 worlds lost and 10 gained, not 12 refused; the earlier report quoted the net.
 - Splitting the generation plan between the composer and the retained adapters stops conditioning and sprint credit being counted from combined strength days: 14 worlds refuse `required_minimum_shortfall:sprint_high_speed` and 10 refuse on conditioning.
 - `estimateStartingWeight` does not consult the athlete's kit, so a bodyweight/away athlete is authored a loaded `Single-Leg RDL` at 10kg.
 - `applyOffseasonMainLiftLoad` is not idempotent — 100 -> 75 -> 55 on a second call — so single application is a property of the call site, not of the function.
