@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-PIVOT-VERIFY | Close the verification debt | **DONE.** 7 guards written and every one seen RED; per-world end-to-end cell green on both outcomes; 5 pool cells retired with replacements, 1 left red as a declared regression. **NOT merge-ready — 119 of 180 worlds refuse.** |
 | B1-PIVOT | Sever the legacy strength-content builder | **SEVERED.** Composer is the only production strength-content builder for every world. 401 production lines deleted, 1 file. Sweep **173/7 -> 61/119**, an honest red day. |
 | B1 CP2 | The other five worlds + the ruled full-body shape | **HARD STOP — A LATER PASS MUTATES COMPOSED ROWS.** Three post-composition sites found, one of them publishing a LEGACY week under an `accepted` verdict. CP1's zero-mutation receipt was too weak. Not landed as acceptance. |
 | B1 CP1 | The composer, first proving slice | **ACCEPTANCE MET, BUDGET BREACHED.** Sweep 174/6 -> **175/5**, one world changed, zero post-composition mutation. **710 production lines against a 600 fence — CP2 needs a new authorisation.** |
@@ -1760,6 +1761,139 @@ Three checks, in order of strength:
    receipt failed precisely because it was per-fixture. That cell is the one that
    would have caught all three CP2 mutation sites on the day they were written.
 
+---
+
+## Slice B1-PIVOT-VERIFY — the guards exist, and every one has been seen red
+
+**Seat `baseline`, 2026-08-14. Branch `slice-b1-pivot` @ `c56fa0cf` (base).**
+Verification only: **no new composition capability, and the sweep did not move.**
+
+**Scope claim, stated exactly:** legacy generation is severed **on the routes
+measured here** — `generateProgramLocally` and the hydration read-back. Whether a
+legacy content owner survives on some other route is the independent audit's
+question and is not claimed by this slice.
+
+### 1. THE SEVEN GUARDS, AND THE RED-PROOF FOR EACH
+
+`npm run test:composer-severance` — **34 passed, 0 failures.** Every mutation was
+applied, observed, and restored; the tree is clean.
+
+| guard | subject | mutation applied | what went RED |
+| --- | --- | --- | --- |
+| **(a)** composer-declared `main_strength` roles survive into §18 evidence | the declaration link | **MUT-1** — deleted the `provenance === 'composer_declaration'` early-return in `withSection18WorkoutEvidence` | 6 cells, including *"the dumbbell world builds at all"* — **removing the link stops worlds building**, because §18 loses every main lift |
+| **(e)** classifier re-inference never overrides a declaration | the same link, other direction | **MUT-1** | *"a `Back Squat` DECLARED an accessory stays an accessory"*, *"the declaration keeps its provenance"* |
+| **(b)** full-gym achievable-but-missing pattern still fails | §18 still bites | **MUT-1** | *"[full-gym] the world builds so a pattern can be removed from it"* |
+| **(c)** partial-kit achievable-but-missing pattern still fails | §18 still bites on a limited kit | **MUT-1** | *"[db+bands] …"* |
+| **(d)** a kit-impossible pattern is disclosed and does not veto | the contract's kit narrowing | **MUT-2** — emptied `kitUnachievablePatterns` inside the contract builder | *"the kit input REMOVES the impossible pattern at the contract owner"*, *"and stands the balance selector down"* |
+| **(d′)** the disclosure itself | the typed gap | **MUT-4** — made `composeWeek` stop pushing gaps | *"the impossible pattern is DISCLOSED as a typed kit gap"* |
+| **(leak)** no stored strength row came from a legacy content owner | the severance | **MUT-3** — dropped `composedRole` from one composed row | *"every stored strength row carries the composer's declaration"* + the e2e leak cell |
+| **(rewrite)** no stored row was rewritten after composition | identity, not just provenance | **MUT-5** — rewrote `Bodyweight Squat` → `Walking Lunges` after composition | *"declared pattern agrees with the lift"*, reproducing CP2's exact defect text: `Walking Lunges declares squat but fills [single_leg_knee]` |
+
+**⚠ GUARD (d) WAS NOT A GUARD UNTIL MUT-2 SAID SO, AND THAT IS THE POINT OF THIS
+SLICE.** Written first as a world-level assertion — *"the away world's contract
+does not require pull"* — it stayed **GREEN under MUT-2**. The away contract
+excludes `pull` for a second, unpinned reason as well, so the assertion passed
+without the kit narrowing doing any work. A cell that cannot tell whether its
+subject is switched on is not a guard. It was rewritten to assert the mechanism
+at its owner, and now reds.
+
+**⚠ PROVENANCE ALONE COULD NOT CATCH AN IDENTITY REWRITE.** The stamp is applied
+when the row is built, so a later pass that swaps the NAME keeps it. MUT-5
+exposed that and the `(rewrite)` cell was added — it checks the declared pattern
+against what the swapped-in lift can actually do. **It is the cell that would
+have caught all three CP2 mutation sites on the day they were written.**
+
+### 2. THE END-TO-END CELL — per world, both outcomes
+
+36 worlds (3 phases × club/no-club × 3 kits × 2 weeks): **14 built, 22 refused.**
+
+| property | result |
+| --- | --- |
+| **[BUILT]** stored == hydrated on identity, order, role and pattern, every world | ✅ |
+| **[BUILT]** no stored **strength** row came from a legacy content owner | ✅ |
+| **[BUILT]** no stored row rewritten after composition | ✅ |
+| **[REFUSED]** every refusal carried a typed signature and stored nothing | ✅ |
+| non-vacuity: the corpus reached both outcomes | ✅ |
+
+**⚠ ONE NARROWING, DECLARED RATHER THAN QUIET.** The leak cell first asserted over
+EVERY stored row and failed on `Vertical Jump` and `30:30 Controlled Tempo
+Blocks`, which store as `canonical_row_classifier`. **They are POWER and
+CONDITIONING rows** placed by adapters this slice explicitly retains and does not
+touch. The subject was narrowed to strength rows — the composer never authored
+those two and must not claim them. Asserting over all rows would have failed on
+the surfaces the scope fence protects, which is a different bug.
+
+### 3. THE THREE SUITES, RE-RUN AGAINST THE SEVERED TREE
+
+| suite | before pivot | after severance | explanation |
+| --- | --- | --- | --- |
+| `test:section18-v2` | 135 / 0 | **135 / 0** | unmoved |
+| `test:workout-canonicalisation` | 41 / 0 | **41 / 0** | unmoved — the drift/restore branches are gated at generation, not deleted, and this suite drives them at edit time |
+| `test:section18-gateway` | 91 / 0 | **CANNOT RUN** | it dies at FIXTURE CONSTRUCTION, not in an assertion: one fixture is an in-season game world whose planner asks for `w1:friday:none:optional`, the uncomposed session kind, so the severance throws. **Reported as "cannot run", never as a pass count** — a suite that dies at module scope reports zero failures, which is exactly the trap this repo has already paid for. Same single root cause as 48 of the 119 sweep refusals. |
+
+### 4. THE SIX RED `test:pools` CELLS — resolved under the retirement rule
+
+**All six drove `buildWorkoutsFromCoach`, the generation-time invocation this
+slice deleted.** None tests the retained `applyPoolRotation` module directly —
+those cells (lines 533, 549, 760) still pass, which is why only 6 of 504 moved.
+
+| # | cell | verdict | replacement guarantee |
+| --- | --- | --- | --- |
+| 1 | `mc=2 anchor rotates` | **RETIRED** | composer *"the main lift varies across blocks"* — red under **MUT-6** (week number ignored) |
+| 2 | `mc=2 w=1 accessory rotates` | **RETIRED** | same pair, plus *"deterministic per block"* |
+| 3 | `Accessory rotated across 4 weeks` | **RETIRED** | same pair |
+| 4 | `excluded=['Back Squat'] never outputs Back Squat` | **RETIRED** | composer *"an excluded lift is never selected"* — red under **MUT-7** (exclusion ignored) |
+| 5 | `excluded=['Back Squat'] picks Front Squat` | **RETIRED** | composer *"and the slot is still filled by another lift"* |
+| 6 | `pinned=['Box Squat'] picks Box Squat first` | **NOT RETIRED — LEFT RED** | **none.** `AthletePoolPrefs.pinned` has NO reader in `composeWeek`. Retiring it would convert a capability regression into silence. |
+
+`test:pools` is now **498 passed / 1 failed**, and that one failure is the
+declared pinning regression. A cell in `test:composer-severance` asserts the
+composer has no pinning reader, so the regression is held in two places rather
+than remembered.
+
+### 5. THE CONTROL — this slice added no capability
+
+**180-world sweep: 61 built / 119 refused, before and after.** Ladder census
+unchanged at 6 deficient of 117. `test:compile` 459 PASSED. Nothing leaked in.
+
+### 6. MERGE-READINESS VERDICT
+
+**NOT MERGE-READY. The verification debt is closed; the capability debt is not.**
+
+What blocks merging `slice-b1-pivot` to `main`, in order:
+
+1. **119 of 180 worlds refuse.** Merging would ship an app that cannot build a
+   week for two thirds of its athletes. **This is the blocker**, and 48 of those
+   119 are one uncomposed session kind (`friday:none:optional`).
+2. **`test:section18-gateway` cannot run** — same root cause. A chain suite that
+   cannot execute is not a passing suite.
+3. **`print:week` writes 3 of 6 scenarios**, the other three refusing on the same
+   day.
+4. **The pinning regression** — one red cell, no composer reader.
+5. **Two thresholds await Sam's rebaselining decision** (the ladder census
+   ceiling 88 → observed 6, and its breadth floor 300 → observed 117). **I
+   changed neither.**
+
+**Nothing on that list is a verification gap.** Every guard the previous report
+named as missing now exists and has been seen red.
+
+### 7. WHAT FOUGHT ME, VERBATIM
+
+- **My first version of guard (d) passed while its subject was switched off.** It
+  asserted a world-level outcome that had two possible causes, and the mutation
+  proved it was measuring the wrong one. **Writing the cell was not the work;
+  breaking it was.**
+- **Provenance is a stamp, not a fingerprint.** The leak cell looked complete
+  until MUT-5 renamed a row and it stayed green — the rewritten row still carried
+  the composer's stamp. The pattern-agreement cell exists because of that.
+- **The leak cell's first failure was my cell being wrong, not the code.** Power
+  and conditioning rows legitimately are not composed. I narrowed the subject and
+  said so, rather than deleting the two names from the assertion.
+- **The gateway suite does not fail — it dies.** It reports no failure count at
+  all, and I nearly recorded a number for it. That is the module-scope death this
+  repo has already been bitten by, and the only reason I caught it is that the
+  totals line was missing rather than wrong.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -1768,6 +1902,9 @@ Three checks, in order of strength:
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- `Walking Lunges` sits on the SQUAT pool's accessory bench but fills `single_leg_knee`, so pool-ordered selection offered it for the `squat` slot until `slotsForExerciseName` was made the filter; other pool slots may carry the same mismatch and were not swept.
+- The composer has no reader for `AthletePoolPrefs.pinned`, so an athlete's pinned exercise is no longer selected first; `test:pools`'s pinning cell is left RED rather than retired.
+- The away/bodyweight contract excludes `pull` for a second, unpinned reason as well as the kit narrowing — found because mutation-2 left a world-level assertion green.
 - The planner asks for a `…:friday:none:optional` session (gunshow/accessory day) that `composeWeek` has no shape for; the legacy template had been answering for it silently, and severing it refuses 48 of 180 worlds on this one uncomposed session kind.
 - `reduction_contradiction:main_strength:3` refuses every two-day club pre-season world: the planner cuts to two strength sessions and §18 judges against three.
 - LEGACY TEAM-NIGHT LOAD-CAP MIRRORS, grouped: `utils/coachingEngine.ts:2226-2251` writes an in-season push slot on a team day as `'moderate intensity, low fatigue'` with `isHardExposure: false` — the only mirror found, legacy-path only, unchanged by R-094.

@@ -460,10 +460,12 @@ section('8. buildWorkoutsFromCoach integration');
   // were added, which is a property of the test, not of the rotation.
   const squatAccessories = STRENGTH_POOLS.squat.accessory.entries;
   const expectedAccessory = squatAccessories[4 % squatAccessories.length].name;
-  assert(rotatedNames[0] === expectedAnchor,
-    `mc=2 anchor rotates: got ${rotatedNames[0]}, expected ${expectedAnchor}`);
-  assert(rotatedNames[1] === expectedAccessory,
-    `mc=2 w=1 accessory rotates: got ${rotatedNames[1]}, expected ${expectedAccessory}`);
+  // RETIRED (B1-PIVOT, 2026-08-14) — these two asserted that GENERATION rewrites
+  // a row through `applyPoolRotation`, an invocation this slice deleted.
+  // REPLACED BY: `test:composer-severance` "the main lift varies across blocks"
+  // + "and it is deterministic per block", mutation-proven red (MUT-6).
+  // `applyPoolRotation` ITSELF is untouched and its own cells below still pass.
+  void expectedAnchor; void expectedAccessory;
 
   // Side Plank (unmanaged) passes through regardless of context
   assert(rotatedNames[2] === 'Side Plank',
@@ -502,8 +504,9 @@ section('9. Anchor stable across block weeks; accessory varies');
   }
   assert(anchorsSeen.size === 1,
     `Anchor stable across 4 weeks of block mc=3 (saw ${anchorsSeen.size} distinct)`);
-  assert(new Set(accessoriesSeen).size === 4,
-    `Accessory rotated across 4 weeks (saw ${new Set(accessoriesSeen).size} distinct: ${accessoriesSeen.join(', ')})`);
+  // RETIRED (B1-PIVOT) — same deleted invocation. REPLACED BY the same two
+  // composer variety cells, mutation-proven red (MUT-6).
+  void accessoriesSeen;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -996,10 +999,12 @@ section('14. Athlete overrides (prefs filter / bias)');
     { excluded: ['Back Squat'], pinned: [] },
   );
   const integrationNames = workouts[0].exercises.map((e: any) => e.exercise?.name);
-  assert(!integrationNames.includes('Back Squat'),
-    `buildWorkoutsFromCoach with excluded=['Back Squat'] never outputs Back Squat (got ${JSON.stringify(integrationNames)})`);
-  assert(integrationNames[0] === 'Front Squat',
-    `buildWorkoutsFromCoach with excluded=['Back Squat'] picks Front Squat (got "${integrationNames[0]}")`);
+  // RETIRED (B1-PIVOT) — both asserted exclusion through the DELETED
+  // generation-time rotation call. The BEHAVIOUR is retained and now belongs to
+  // the composer, which reads `excludedIdentities`.
+  // REPLACED BY: `test:composer-severance` "an excluded lift is never selected"
+  // + "and the slot is still filled by another lift", mutation-proven red (MUT-7).
+  void integrationNames;
 
   // ── 14.10 Integration: pinned name floats to first pick ──
   const pinned = buildWorkoutsFromCoach(
@@ -1017,6 +1022,15 @@ section('14. Athlete overrides (prefs filter / bias)');
     { excluded: [], pinned: ['Box Squat'] },
   );
   const pinnedNames = pinned[0].exercises.map((e: any) => e.exercise?.name);
+  // ⚠ NOT RETIRED, AND DELIBERATELY LEFT RED (B1-PIVOT, 2026-08-14).
+  //
+  // This one does NOT meet the retirement rule. It guards a BEHAVIOUR — the
+  // athlete's PINNED exercise is selected first — and **the composer has no
+  // pinning reader at all**: `AthletePoolPrefs.pinned` reaches `composeWeek`
+  // nowhere. There is nothing to replace it with, so retiring it would convert a
+  // capability regression into silence. It stays red until the composer reads
+  // pinning, and `test:composer-severance` carries the declaration that it does
+  // not.
   assert(pinnedNames[0] === 'Box Squat',
     `buildWorkoutsFromCoach with pinned=['Box Squat'] picks Box Squat first (got "${pinnedNames[0]}")`);
 

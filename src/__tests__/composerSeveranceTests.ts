@@ -1,0 +1,495 @@
+/**
+ * B1-PIVOT-VERIFY — the composer → §18 → storage link, guarded.
+ *
+ *   npm run test:composer-severance
+ *
+ * **WHY THIS FILE EXISTS.** CP1 shipped a zero-mutation receipt that was true
+ * about two doors and silent about three others, because it measured a fixture
+ * rather than a property. CP2 then found the gateway publishing a LEGACY week
+ * under an `accepted` verdict. **Every cell here is written against the
+ * production path and every one has been seen RED** — the mutation proofs are
+ * recorded beside each guard in `docs/MISSION_THREE_FIXES.md`.
+ *
+ * Scope claim, stated exactly: these guards hold on the routes measured here —
+ * `generateProgramLocally` and the hydration read-back. Whether a legacy content
+ * owner survives on some other route is the independent audit's question and is
+ * not claimed by this file.
+ */
+import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { composeWeek, kitUnachievablePatterns } from '../rules/composeWeek';
+import { composedIdentityFor } from '../rules/composedRowLegality';
+import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
+import { withSection18WorkoutEvidence } from '../rules/section18WorkoutEvidence';
+import { buildSection18WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
+import { EQUIPMENT_TAG_LABELS } from '../rules/equipmentVocabulary';
+import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
+import { slotsForExerciseName } from '../rules/sessionSlotCoverage';
+import type { Workout } from '../types/domain';
+
+armTotalsOrRed();
+
+let passed = 0;
+const failures: string[] = [];
+function ok(name: string, condition: unknown, detail?: string): void {
+  if (condition) { passed += 1; console.log(`  PASS ${name}`); return; }
+  failures.push(name);
+  console.error(`  FAIL ${name}${detail ? `\n      ${detail}` : ''}`);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { generateProgramLocally } = require('../services/api/generateProgram');
+
+const BASE = {
+  trainingLocation: 'Commercial gym',
+  equipmentSelectionCompleteness: 'complete',
+  recentTrainingLoad: 'Pretty consistent',
+  conditioningLevel: 'Average',
+  gameDay: 'Saturday',
+  trainingDaysPerWeek: 2,
+  preferredTrainingDays: ['Tuesday', 'Thursday'],
+};
+/** EXHAUSTIVE answer resolving to bodyweight — never `tags: {}`, which also means unanswered. */
+const AWAY_ANSWER = {
+  tags: Object.fromEntries(Object.keys(EQUIPMENT_TAG_LABELS).map((tag) => [tag, 'do_not_have'])),
+  modalities: Object.fromEntries(
+    ['bike_erg', 'air_bike', 'row', 'ski', 'treadmill'].map((m) => [m, 'do_not_have'])),
+};
+
+interface WorldSpec {
+  readonly id: string;
+  readonly profile: Record<string, unknown>;
+  readonly week: number;
+}
+
+function world(id: string, over: Record<string, unknown>, week = 1): WorldSpec {
+  return { id, profile: { ...BASE, ...over }, week };
+}
+
+/** Silence the generator's own logging; a suite that prints its subject's noise hides its own. */
+function quietly<T>(run: () => T): T {
+  const realLog = console.log; const realWarn = console.warn;
+  console.log = () => undefined; console.warn = () => undefined;
+  try { return run(); } finally { console.log = realLog; console.warn = realWarn; }
+}
+
+type BuildOutcome =
+  | { readonly kind: 'built'; readonly program: any }
+  | { readonly kind: 'refused'; readonly signature: string; readonly error: unknown };
+
+function build(spec: WorldSpec): BuildOutcome {
+  try {
+    const program = quietly(() => generateProgramLocally(spec.profile, {
+      todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: spec.week,
+    }));
+    return { kind: 'built', program };
+  } catch (error: any) {
+    return {
+      kind: 'refused',
+      signature: String(error?.result?.failureSignature ?? error?.message ?? error),
+      error,
+    };
+  }
+}
+
+function composedFor(spec: WorldSpec) {
+  const kit = resolveEquipmentCapabilities(spec.profile as never).tags as string[];
+  return { kit };
+}
+
+/** Identity · order · role · pattern — the four things composition owns. */
+function semanticShape(workouts: readonly Workout[]): string {
+  return [...workouts]
+    .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+    .map((workout) => `${workout.dayOfWeek}:` + (workout.exercises ?? [])
+      .map((row) => `${composedIdentityFor(row.exercise?.name ?? '')}`
+        + `/${row.section18Evidence?.role ?? '-'}`
+        + `/${row.section18Evidence?.mainStrengthPattern ?? '-'}`)
+      .join('|'))
+    .join(' || ');
+}
+
+const FULL_GYM = world('full-gym in-season 2d club', {
+  seasonPhase: 'In-season', equipment: ['Full Gym'],
+  teamTrainingDays: ['Tuesday', 'Thursday'],
+});
+const DB_BANDS = world('dumbbells+bands in-season 2d club', {
+  seasonPhase: 'In-season', equipment: ['Dumbbells', 'Bands'],
+  teamTrainingDays: ['Tuesday', 'Thursday'],
+});
+const AWAY = world('away bodyweight off-season 2d', {
+  seasonPhase: 'Off-season', equipment: undefined, equipmentAnswer: AWAY_ANSWER,
+  teamTrainingDays: [],
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (a) COMPOSER-DECLARED main_strength ROLES SURVIVE INTO §18 EVIDENCE
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[a] Composer-declared main-lift roles survive into §18 evidence');
+{
+  const built = build(DB_BANDS);
+  ok('the dumbbell world builds at all — non-vacuity first', built.kind === 'built',
+    built.kind === 'refused' ? built.signature : '');
+  if (built.kind === 'built') {
+    const rows = (built.program.microcycles[0].workouts as Workout[])
+      .flatMap((workout) => workout.exercises ?? []);
+    const declared = rows.filter((row) =>
+      row.section18Evidence?.provenance === 'composer_declaration');
+    ok('every stored strength row carries the composer\'s declaration',
+      declared.length === rows.length && rows.length > 0,
+      `${declared.length} of ${rows.length}`);
+    const mains = declared.filter((row) => row.section18Evidence?.role === 'main_strength');
+    ok('the declared main lifts survived as main_strength', mains.length >= 4,
+      JSON.stringify(mains.map((row) => `${row.exercise?.name}:${row.section18Evidence?.mainStrengthPattern}`)));
+    ok('every main lift carries its pattern',
+      mains.every((row) => !!row.section18Evidence?.mainStrengthPattern));
+    // ⚠ THE SUBJECT: these are rows the NAME classifier calls accessories.
+    const unloadedMains = mains.filter((row) =>
+      /Goblet Squat|Band Pull-Apart|Single-Arm DB Row|DB Shoulder Press|Bodyweight Squat|Glute Bridge/
+        .test(String(row.exercise?.name)));
+    ok('rows the classifier would demote are still main lifts', unloadedMains.length >= 2,
+      JSON.stringify(mains.map((row) => row.exercise?.name)));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (e) THE CLASSIFIER MAY NOT OVERRIDE A DECLARATION — the link itself
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[e] Classifier re-inference never overrides a composed declaration');
+{
+  // A row the name-classifier is certain about, declared the OTHER way. If the
+  // guard is removed the inference wins and this flips.
+  const declaredAccessory: Workout = {
+    id: 'w-guard-e', microcycleId: 'mc-guard', dayOfWeek: 2,
+    name: 'Lower Body Strength', description: '', intensity: 'High',
+    workoutType: 'Strength', sessionTier: 'core',
+    strengthIntent: { archetype: 'lower', primaryPattern: 'squat',
+      plannedPatterns: ['squat'], effectivePatterns: ['squat'] },
+    exercises: [{
+      id: 'r1', workoutId: 'w-guard-e', exerciseId: 'ex-back-squat', exerciseOrder: 1,
+      prescribedSets: 3, prescribedRepsMin: 5, prescribedRepsMax: 8, prescribedWeightKg: 0,
+      restSeconds: 0,
+      exercise: { id: 'ex-back-squat', name: 'Back Squat', description: '',
+        exerciseType: 'Compound', muscleGroups: [], equipmentRequired: [],
+        difficultyLevel: 'Intermediate', createdAt: '', updatedAt: '' },
+      createdAt: '', updatedAt: '',
+      section18Evidence: {
+        protocolVersion: 1, role: 'strength_accessory',
+        strengthPattern: 'squat', mainStrengthPattern: null,
+        provenance: 'composer_declaration',
+      },
+    }],
+  } as unknown as Workout;
+  const stamped = withSection18WorkoutEvidence(declaredAccessory, 'infer');
+  const row = (stamped.exercises ?? [])[0];
+  ok('a `Back Squat` DECLARED an accessory stays an accessory',
+    row.section18Evidence?.role === 'strength_accessory'
+    && row.section18Evidence?.mainStrengthPattern === null,
+    JSON.stringify(row.section18Evidence));
+  ok('the declaration keeps its provenance through the evidence pass',
+    row.section18Evidence?.provenance === 'composer_declaration');
+  // THE CONTROL, so the cell cannot pass by the pass doing nothing at all:
+  // an UNDECLARED Back Squat must still be inferred a main lift.
+  const undeclared = {
+    ...declaredAccessory,
+    exercises: [{ ...(declaredAccessory.exercises ?? [])[0], section18Evidence: undefined }],
+  } as unknown as Workout;
+  const inferred = (withSection18WorkoutEvidence(undeclared, 'infer').exercises ?? [])[0];
+  ok('[control] an UNDECLARED Back Squat is still inferred a main lift',
+    inferred.section18Evidence?.role === 'main_strength'
+    && inferred.section18Evidence?.mainStrengthPattern === 'squat',
+    JSON.stringify(inferred.section18Evidence));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (b) FULL GYM — an ACHIEVABLE but MISSING pattern still fails
+// (c) PARTIAL KIT — same, on dumbbells + bands
+// ═══════════════════════════════════════════════════════════════════════════
+function achievableButMissingStillFails(spec: WorldSpec, label: string, pattern: string): void {
+  const built = build(spec);
+  if (built.kind !== 'built') {
+    ok(`[${label}] the world builds so a pattern can be removed from it`, false, built.signature);
+    return;
+  }
+  const microcycle = built.program.microcycles[0];
+  const contract = microcycle.exposureContractV2;
+  ok(`[${label}] the contract still REQUIRES ${pattern} — it is achievable on this kit`,
+    !!contract && contract.strengthPatterns.requiredSafePatterns.includes(pattern)
+    && !kitUnachievablePatterns(
+      resolveEquipmentCapabilities(spec.profile as never).tags as string[]).includes(pattern as never),
+    JSON.stringify(contract?.strengthPatterns?.requiredSafePatterns));
+  // Remove every main lift of that pattern — the week is now missing work it owes.
+  const stripped: Workout[] = (microcycle.workouts as Workout[]).map((workout) => ({
+    ...workout,
+    exercises: (workout.exercises ?? []).filter((row) =>
+      row.section18Evidence?.mainStrengthPattern !== pattern),
+  }));
+  const before = evaluateSection18EffectiveWeek({
+    contract, workouts: microcycle.workouts, weekStart: microcycle.startDate,
+  });
+  const after = evaluateSection18EffectiveWeek({
+    contract, workouts: stripped, weekStart: microcycle.startDate,
+  });
+  ok(`[${label}] the week as built is not blocked on ${pattern}`,
+    !before.blockingViolations.some((finding: any) =>
+      String(finding.detail ?? '').toLowerCase().includes(pattern)),
+    JSON.stringify(before.blockingViolations.map((f: any) => f.code)));
+  ok(`[${label}] removing the achievable ${pattern} STILL FAILS`,
+    after.blockingViolations.length > before.blockingViolations.length,
+    `before=${before.blockingViolations.length} after=${after.blockingViolations.length}`);
+}
+
+console.log('\n[b] Full gym — an achievable-but-missing pattern still fails');
+achievableButMissingStillFails(FULL_GYM, 'full-gym', 'hinge');
+
+console.log('\n[c] Dumbbells + bands — an achievable-but-missing pattern still fails');
+achievableButMissingStillFails(DB_BANDS, 'db+bands', 'hinge');
+
+// ═══════════════════════════════════════════════════════════════════════════
+// (d) A GENUINELY KIT-IMPOSSIBLE PATTERN IS DISCLOSED AND DOES NOT VETO
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[d] A kit-impossible pattern is disclosed, and does not veto the week');
+{
+  const { kit } = composedFor(AWAY);
+  const unachievable = kitUnachievablePatterns(kit);
+  ok('a bodyweight kit genuinely cannot train pull', unachievable.includes('pull' as never),
+    JSON.stringify(unachievable));
+  const built = build(AWAY);
+  ok('the away world still BUILDS despite the impossible pattern', built.kind === 'built',
+    built.kind === 'refused' ? built.signature : '');
+  if (built.kind === 'built') {
+    const contract = built.program.microcycles[0].exposureContractV2;
+    ok('the contract does not require what the kit cannot train (R-083/R-090)',
+      !contract.strengthPatterns.requiredSafePatterns.includes('pull'),
+      JSON.stringify(contract.strengthPatterns.requiredSafePatterns));
+    const evaluation = evaluateSection18EffectiveWeek({
+      contract,
+      workouts: built.program.microcycles[0].workouts,
+      weekStart: built.program.microcycles[0].startDate,
+    });
+    ok('no blocking violation names the impossible pattern',
+      !evaluation.blockingViolations.some((finding: any) =>
+        String(finding.detail ?? '').toLowerCase().includes('pull')),
+      JSON.stringify(evaluation.blockingViolations.map((f: any) => f.detail)));
+  }
+  // ⚠ THE MECHANISM, ASSERTED AT ITS OWNER — and this half was ADDED because
+  // the world-level cells above did not need it.
+  //
+  // Mutation-2 emptied `kitUnachievablePatterns` inside the contract builder and
+  // **every cell stayed green**: the away world's contract excludes `pull` for a
+  // second, unpinned reason as well, so the behavioural assertion passed without
+  // the narrowing doing any work. A guard that cannot tell whether its subject
+  // is switched on is not a guard.
+  const wide = buildSection18WeeklyExposureContractV2({
+    seasonPhase: 'In-season', declaredSubphase: 'in_season', mode: 'standard',
+    anchorState: { teamTrainingDays: [], fixtureDays: [] },
+    teamTrainingDays: [], capacity: 'moderate',
+    plannerSelected: { mainStrength: 2, coreConditioning: 3, sprintHighSpeed: 1, powerPrimers: 0 },
+  } as never);
+  const narrowed = buildSection18WeeklyExposureContractV2({
+    seasonPhase: 'In-season', declaredSubphase: 'in_season', mode: 'standard',
+    anchorState: { teamTrainingDays: [], fixtureDays: [] },
+    teamTrainingDays: [], capacity: 'moderate',
+    plannerSelected: { mainStrength: 2, coreConditioning: 3, sprintHighSpeed: 1, powerPrimers: 0 },
+    kitUnachievablePatterns: ['pull'],
+  } as never);
+  ok('[control] without the kit input the contract requires all four patterns',
+    wide.strengthPatterns.requiredSafePatterns.length === 4,
+    JSON.stringify(wide.strengthPatterns.requiredSafePatterns));
+  ok('the kit input REMOVES the impossible pattern at the contract owner',
+    !narrowed.strengthPatterns.requiredSafePatterns.includes('pull')
+    && narrowed.strengthPatterns.requiredSafePatterns.length === 3,
+    JSON.stringify(narrowed.strengthPatterns.requiredSafePatterns));
+  ok('and stands the balance selector down, so nothing expands it back',
+    narrowed.strengthPatterns.balanceExpectation === 'not_applicable'
+    && narrowed.strengthPatterns.laterSessionRestorationRequired === false);
+
+  // THE DISCLOSURE ITSELF — a typed gap, derived from kit + sheet.
+  const composed = composeWeek({
+    profile: { seasonPhase: 'Off-season' },
+    phaseClock: { weekNumber: 1 },
+    plannedDays: [{
+      dayOfWeek: 2, isTeamDay: false, planEntryId: 'p', name: 'Upper Body Strength',
+      workoutType: 'Strength', sessionTier: 'core',
+      strengthIntent: { archetype: 'upper', primaryPattern: 'pull',
+        plannedPatterns: ['pull'], effectivePatterns: ['pull'] },
+    }],
+    kit, injuries: { prohibitedPatterns: [], excludedIdentities: [] }, todayISO: '2026-07-13',
+  });
+  ok('the impossible pattern is DISCLOSED as a typed kit gap',
+    composed.gaps.some((gap) => gap.slot.includes('pull') && gap.cause === 'kit'),
+    JSON.stringify(composed.gaps));
+  ok('and nothing illegal was substituted for it',
+    composed.days.every((day) => day.rows.every((row) => !/Pull-Up|Chin-Up|Pulldown|Row/i
+      .test(row.identity))),
+    JSON.stringify(composed.days.flatMap((day) => day.rows.map((row) => row.identity))));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE END-TO-END CELL — per world, BOTH outcomes
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[e2e] Composer output == stored == hydrated, per world; and a refusal stores nothing');
+{
+  const WORLDS: WorldSpec[] = [];
+  const KITS: Record<string, Record<string, unknown>> = {
+    'Full Gym': { equipment: ['Full Gym'] },
+    'Dumbbells': { equipment: ['Dumbbells', 'Bands'] },
+    'Away': { equipment: undefined, equipmentAnswer: AWAY_ANSWER },
+  };
+  for (const phase of ['In-season', 'Pre-season', 'Off-season']) {
+    for (const club of [true, false]) {
+      for (const [kitName, kit] of Object.entries(KITS)) {
+        for (const week of [1, 2]) {
+          WORLDS.push(world(`${phase}/${club ? 'club' : 'noclub'}/${kitName}/w${week}`, {
+            seasonPhase: phase, ...kit,
+            teamTrainingDays: club ? ['Tuesday', 'Thursday'] : [],
+          }, week));
+        }
+      }
+    }
+  }
+  let builtCount = 0;
+  let refusedCount = 0;
+  const mismatches: string[] = [];
+  const leaked: string[] = [];
+  const rewritten: string[] = [];
+  for (const spec of WORLDS) {
+    const outcome = build(spec);
+    if (outcome.kind === 'refused') {
+      refusedCount += 1;
+      // A REFUSAL MUST NOT QUIETLY BECOME A STORED WEEK. The typed refusal has to
+      // survive: no program object escapes, and the signature is readable.
+      if (!outcome.signature || outcome.signature === 'undefined') {
+        leaked.push(`${spec.id}: refusal carried no typed signature`);
+      }
+      if ((outcome.error as any)?.result?.canonicalWorkouts?.length
+        && !(outcome.error as any)?.result?.status) {
+        leaked.push(`${spec.id}: refusal carried workouts with no status`);
+      }
+      continue;
+    }
+    builtCount += 1;
+    const microcycle = outcome.program.microcycles[spec.week - 1];
+    const stored = semanticShape(microcycle.workouts as Workout[]);
+    // HYDRATION READ-BACK: the same week through a JSON round trip, which is what
+    // persistence does to it. Identity, order, role and pattern must all survive.
+    const hydrated = semanticShape(
+      JSON.parse(JSON.stringify(microcycle.workouts)) as Workout[]);
+    if (stored !== hydrated) mismatches.push(`${spec.id}: stored != hydrated`);
+    // NO LEGACY FALLBACK CONTENT: every stored STRENGTH row must carry the
+    // composer's declaration.
+    //
+    // ⚠ THE SUBJECT IS STRENGTH, AND NARROWING IT HERE IS NOT A WEAKENING.
+    // Measured on the first run: `Vertical Jump` and `30:30 Controlled Tempo
+    // Blocks` store as `canonical_row_classifier`. They are POWER and
+    // CONDITIONING rows, placed by adapters this slice explicitly retains and
+    // does not touch — the composer never authored them and must not claim them.
+    // Asserting over every row would have made this cell fail on the two
+    // surfaces the scope fence protects, which is a different bug, not this one.
+    for (const workout of microcycle.workouts as Workout[]) {
+      (workout.exercises ?? []).forEach((row, index) => {
+        const kind = classifyGeneratedWorkoutRow({
+          name: row.exercise?.name ?? '',
+          sets: row.prescribedSets,
+          repsMax: row.prescribedRepsMax,
+          index,
+        }).kind;
+        if (kind === 'power' || kind === 'conditioning' || kind === 'recovery_addon') return;
+        if (row.section18Evidence?.provenance !== 'composer_declaration') {
+          leaked.push(`${spec.id} d${workout.dayOfWeek}: `
+            + `${row.exercise?.name} [${kind}] provenance=${row.section18Evidence?.provenance}`);
+          return;
+        }
+        // ⚠ PROVENANCE ALONE CANNOT CATCH AN IDENTITY REWRITE. The stamp is
+        // applied when the row is built; a later pass that swaps the NAME keeps
+        // it. So the declared pattern is checked against what the swapped-in
+        // exercise can actually do — CP2's measured `Bodyweight Squat` ->
+        // `Walking Lunges` declares `squat` while the lift is a single-leg knee
+        // movement, and that disagreement is what this catches.
+        const declaredPattern = row.section18Evidence?.mainStrengthPattern;
+        if (!declaredPattern) return;
+        const slots = slotsForExerciseName(composedIdentityFor(row.exercise?.name ?? ''));
+        const agrees = slots.some((slot) =>
+          slot === declaredPattern
+          || (declaredPattern === 'push' && slot.endsWith('_push'))
+          || (declaredPattern === 'pull' && slot.endsWith('_pull')));
+        if (!agrees) {
+          rewritten.push(`${spec.id} d${workout.dayOfWeek}: ${row.exercise?.name} `
+            + `declares ${declaredPattern} but fills [${slots.join(',')}]`);
+        }
+      });
+    }
+  }
+  ok('the corpus reached both outcomes — non-vacuity first',
+    builtCount > 0 && refusedCount > 0, `built=${builtCount} refused=${refusedCount}`);
+  ok('[BUILT] stored == hydrated on identity, order, role and pattern, every world',
+    mismatches.length === 0, mismatches.slice(0, 5).join('\n      '));
+  ok('[BUILT] no stored STRENGTH row came from a legacy content owner',
+    leaked.filter((line) => line.includes('provenance=')).length === 0,
+    leaked.filter((line) => line.includes('provenance=')).slice(0, 5).join('\n      '));
+  ok('[BUILT] no stored row was rewritten after composition — declared pattern agrees with the lift',
+    rewritten.length === 0, rewritten.slice(0, 5).join('\n      '));
+  ok('[REFUSED] every refusal carried a typed signature and stored nothing',
+    leaked.filter((line) => line.includes('refusal')).length === 0,
+    leaked.filter((line) => line.includes('refusal')).slice(0, 5).join('\n      '));
+  console.log(`  e2e corpus: ${builtCount} built, ${refusedCount} refused`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE BEHAVIOUR THE RETIRED `test:pools` CELLS GUARDED, RE-EXPRESSED
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Six cells in `test:pools` went red when generation-time rotation was deleted.
+// Three guarded CROSS-BLOCK VARIETY and two guarded ATHLETE EXCLUSION — real
+// behaviour, so it is re-expressed here against the composer BEFORE those cells
+// retire. The sixth guarded PINNING, which the composer does not implement; it
+// is NOT retired and is reported as a capability regression.
+console.log('\n[retire] Behaviour the deleted rotation cells guarded, held against the composer');
+{
+  const day = {
+    dayOfWeek: 1, isTeamDay: false, planEntryId: 'p', name: 'Lower Body Strength',
+    workoutType: 'Strength', sessionTier: 'core',
+    strengthIntent: { archetype: 'lower' as const, primaryPattern: 'squat' as const,
+      plannedPatterns: ['squat' as const], effectivePatterns: ['squat' as const] },
+  };
+  const fullGymTags = resolveEquipmentCapabilities({
+    equipment: ['Full Gym'], equipmentSelectionCompleteness: 'complete' } as never).tags as string[];
+  const compose = (weekNumber: number, excluded: string[] = []) => composeWeek({
+    profile: { seasonPhase: 'Off-season' }, phaseClock: { weekNumber },
+    plannedDays: [day], kit: fullGymTags,
+    injuries: { prohibitedPatterns: [], excludedIdentities: excluded },
+    todayISO: '2026-07-13',
+  }).days[0].rows.map((row) => row.identity);
+
+  // REPLACES: "mc=2 anchor rotates" and "accessory rotated across 4 weeks".
+  const acrossBlocks = [1, 2, 3, 4].map((week) => compose(week)[0]);
+  ok('[replaces pool rotation cells 1-3] the main lift varies across blocks',
+    new Set(acrossBlocks).size >= 2, JSON.stringify(acrossBlocks));
+  ok('[replaces pool rotation cells 1-3] and it is deterministic per block',
+    JSON.stringify(compose(2)) === JSON.stringify(compose(2)));
+
+  // REPLACES: the two `excluded=['Back Squat']` cells.
+  const plain = compose(1);
+  ok('[control] the unexcluded week does select Back Squat', plain.includes('Back Squat'),
+    JSON.stringify(plain));
+  const withoutBackSquat = compose(1, ['Back Squat']);
+  ok('[replaces pool exclusion cells 4-5] an excluded lift is never selected',
+    !withoutBackSquat.includes('Back Squat'), JSON.stringify(withoutBackSquat));
+  ok('[replaces pool exclusion cells 4-5] and the slot is still filled by another lift',
+    withoutBackSquat.length === plain.length, JSON.stringify(withoutBackSquat));
+
+  // ⚠ NOT RETIRED, AND THIS CELL SAYS SO. `test:pools`'s pinning cell guards a
+  // behaviour the composer does NOT have: `AthletePoolPrefs.pinned` has no
+  // reader in `composeWeek`. Recorded as a regression rather than replaced.
+  ok('[REGRESSION, declared] the composer has no pinning reader — the pool cell may not retire',
+    !/pinned/.test(require('fs').readFileSync(
+      require('path').resolve(__dirname, '../rules/composeWeek.ts'), 'utf8')));
+}
+
+console.log(`\nComposer severance: passed=${passed} failures=${failures.length}`);
+if (failures.length > 0) {
+  console.error('\nFAILURES:');
+  for (const failure of failures) console.error(`  - ${failure}`);
+}
+totalsPrinted(failures.length);
+if (failures.length > 0) process.exit(1);
