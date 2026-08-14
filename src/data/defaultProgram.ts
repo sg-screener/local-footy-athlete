@@ -2551,7 +2551,14 @@ export function buildWorkoutsFromCoach(
         index,
       }),
     }));
+    // ⚠ A COMPOSED DAY IS NEVER REPLACED BY THE FALLBACK TEMPLATE (clause f).
+    // This guard exists for an AI payload that arrived without the strength work
+    // the plan asked for. A composed day's content IS the plan's answer, built
+    // slot by slot under one legality owner — and measured 2026-08-14, letting
+    // this fire on one put the template's `Overhead Press` and `Pull-Ups` back
+    // in front of a bodyweight athlete, which is the exact defect R-083 removes.
     const requiresStrengthContent =
+      !cw.composed &&
       edgeProvidedDays.has(cw.dayOfWeek) &&
       !!planEntry?.strengthPattern &&
       !/\b(gunshow|prehab|pump|accessor|low-fatigue)\b/i.test(`${cw.name} ${planEntry?.focus ?? ''}`);

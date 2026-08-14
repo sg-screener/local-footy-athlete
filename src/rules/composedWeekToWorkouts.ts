@@ -23,6 +23,7 @@ export function composedPlannedDaysFrom(
     if (dayOfWeek < 0 || !entry.strengthIntent?.plannedPatterns?.length) continue;
     out.push({
       dayOfWeek,
+      isTeamDay: entry.isTeamDay === true,
       planEntryId: entry.planEntryId ?? '',
       strengthIntent: entry.strengthIntent,
       name: String(entry.focus ?? ''),

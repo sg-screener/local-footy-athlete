@@ -45,6 +45,8 @@ import { selectableExerciseNames } from '../data/selectableExerciseVocabulary';
 
 export interface ComposerPlannedDay {
   readonly dayOfWeek: number;
+  /** Is the club running a session on this day? Read by the full-body shape. */
+  readonly isTeamDay: boolean;
   readonly planEntryId: string;
   readonly strengthIntent: StrengthIntent;
   /** The planner's own name and tier. Composition never renames a day. */
@@ -94,7 +96,17 @@ export interface ComposedGap {
   readonly slot: SessionSlot;
   readonly cause: 'kit';
   readonly wouldNeed: string | null;
+  /**
+   * SET WHEN THE SLOT WAS DROPPED BUT ITS PATTERN SURVIVED IN THE OTHER PLANE.
+   * Sam, 2026-08-14, asked what to do when the opposite pull plane is
+   * impossible: *"yes repeat achievable pull plane"*. The repeat is the answer;
+   * this field is the disclosure that goes with it, so a repeated plane is never
+   * mistaken for the app forgetting the other one.
+   */
+  readonly repeatedPlaneInstead?: SessionSlot;
 }
+
+export type ComposedDayShape = SlotDayKind | 'full_body_a' | 'full_body_b';
 
 export interface ComposedDay {
   readonly dayOfWeek: number;
@@ -102,7 +114,7 @@ export interface ComposedDay {
   readonly name: string;
   readonly workoutType: string;
   readonly sessionTier: string;
-  readonly kind: SlotDayKind;
+  readonly kind: ComposedDayShape;
   readonly requiredSlots: readonly SessionSlot[];
   readonly rows: readonly ComposedRow[];
 }
@@ -172,12 +184,33 @@ const POOL_SLOT_FOR_LADDER_SLOT: Partial<Record<SessionSlot, PoolSlotKey>> = {
   vertical_pull: 'vertical_pull',
 };
 
+/**
+ * ⚠ ANCHORS FIRST, THEN THE REST — AND THE FALLBACK IS THE WHOLE POINT.
+ *
+ * A main lift comes off the slot's ANCHOR bench because that is where Sam put
+ * the lift a day is built around. **But an anchor list is not the pattern.**
+ * Every squat anchor is a barbell lift, so returning anchors alone made the
+ * composer declare `squat` KIT-UNACHIEVABLE for a dumbbell athlete who can do a
+ * `Goblet Squat`, and for an away athlete who can do a `Bodyweight Squat` —
+ * removing a pattern R-083 never removed, and inventing a gap that is not one.
+ *
+ * The order IS the preference Sam ruled: *"weighted versions remain preferable
+ * when the kit allows"*. Anchors are the weighted ones and they come first; the
+ * rest of the slot follows and is only reached when no anchor is legal.
+ */
 function anchorCandidates(slot: SessionSlot): readonly ComposedExerciseIdentity[] {
   const poolSlot = POOL_SLOT_FOR_LADDER_SLOT[slot];
   if (!poolSlot) return slotCandidates(slot);
-  const anchors = STRENGTH_POOLS[poolSlot].anchor.entries
-    .map((entry) => composedIdentityFor(entry.name));
-  return anchors.length > 0 ? anchors : slotCandidates(slot);
+  const pool = STRENGTH_POOLS[poolSlot];
+  const anchors = pool.anchor.entries.map((entry) => composedIdentityFor(entry.name));
+  // The pool's OWN accessory bench comes next, in its authored order, so a
+  // dumbbell athlete falls to `Single-Arm DB Floor Press` before `Push-ups`.
+  // Falling straight to the census join sorted the loaded option BELOW the
+  // unloaded one, which reads as the app forgetting he owns dumbbells.
+  const ordered = [...anchors,
+    ...pool.accessory.entries.map((entry) => composedIdentityFor(entry.name))];
+  const rest = slotCandidates(slot).filter((id) => !ordered.includes(id));
+  return [...ordered, ...rest];
 }
 
 /**
@@ -234,6 +267,79 @@ export function kitUnachievablePatterns(
   return out;
 }
 
+/**
+ * ── SAM'S FULL-BODY SHAPE, 2026-08-14, verbatim ───────────────────────────
+ *
+ * *"either way i'd make them full body sessions. Squat and single leg hip with
+ * push and pull + accessories then hinge and single leg knee with push and pull
+ * (in opposite plane to earlier in week) + accessories - but the ideal would be
+ * to do full body strength on different nights"*
+ *
+ * **IT APPLIES WHERE THE ATHLETE HAS NO OTHER NIGHT.** The trigger is a TYPED
+ * FACT about the plan — every strength day the planner placed is also a club
+ * night — not a world, a kit or a phase. An athlete with a free night is not in
+ * this case, and his stated ideal (full-body strength on different nights) is
+ * approved direction that CP2 does not implement and does not claim.
+ *
+ * **WHAT IT OVERRULES.** The planner's own answer for this case was upper-only,
+ * because every night is a team night and a squat day cannot be placed. Sam has
+ * overruled that: the two sessions become full body, and the lower work rides
+ * on the club nights with them.
+ */
+const FULL_BODY_A_SLOTS: readonly SessionSlot[] = [
+  'squat', 'single_leg_hip', 'horizontal_push', 'vertical_pull', 'accessory_or_core',
+];
+const FULL_BODY_B_SLOTS: readonly SessionSlot[] = [
+  'hinge', 'single_leg_knee', 'vertical_push', 'horizontal_pull', 'accessory_or_core',
+];
+
+/** The other plane of the same pattern. Used only for the kit-relative fallback. */
+const OPPOSITE_PLANE: Partial<Record<SessionSlot, SessionSlot>> = {
+  horizontal_push: 'vertical_push',
+  vertical_push: 'horizontal_push',
+  horizontal_pull: 'vertical_pull',
+  vertical_pull: 'horizontal_pull',
+};
+
+/**
+ * ⚠ THE KIT OUTRANKS THE PLANE PREFERENCE, AND SAM RULED THE FALLBACK HIMSELF.
+ *
+ * Asked what session B should do when its opposite pull plane cannot be trained
+ * on the athlete's kit, he said: *"yes repeat achievable pull plane"*. So the
+ * order is: the session's preferred plane if the kit can train it; otherwise the
+ * OTHER plane, repeating what the week already used; otherwise nothing, and the
+ * pattern is removed and disclosed under R-083/R-090.
+ *
+ * **NEVER AUTHOR AN ILLEGAL ROW TO MANUFACTURE PLANE VARIETY.** R-083 removes a
+ * pattern the kit cannot train; a "variety" that ships a Pull-Up to a bodyweight
+ * athlete is the exact defect that ruling exists to stop.
+ */
+function resolvePlane(
+  preferred: SessionSlot,
+  kit: readonly string[],
+  excluded: ReadonlySet<string>,
+): { readonly slot: SessionSlot | null; readonly dropped: readonly SessionSlot[] } {
+  const hasLegal = (slot: SessionSlot): boolean =>
+    slotCandidates(slot).some((id) => !excluded.has(id) && composedRowIsLegal(id, kit));
+  if (hasLegal(preferred)) return { slot: preferred, dropped: [] };
+  const other = OPPOSITE_PLANE[preferred];
+  if (other && hasLegal(other)) return { slot: other, dropped: [preferred] };
+  return { slot: null, dropped: other ? [preferred, other] : [preferred] };
+}
+
+/**
+ * The shape a composed day takes. The full-body case is decided by the WEEK — it
+ * is a property of the plan, not of one day — so it is resolved once and handed
+ * in, and `composedDayKind` keeps answering the ordinary question.
+ */
+export function composedWeekIsFullBodyOnClubNights(
+  plannedDays: readonly ComposerPlannedDay[],
+): boolean {
+  const strengthDays = plannedDays.filter(
+    (day) => composedDayKind(day.strengthIntent) !== null);
+  return strengthDays.length > 0 && strengthDays.every((day) => day.isTeamDay);
+}
+
 // ─── THE AUTHORED DOSE — transcribed, not invented ─────────────────────────
 
 /**
@@ -246,7 +352,39 @@ export function kitUnachievablePatterns(
 const LOWER_DOSE = [[3, 5, 8], [2, 8, 10], [3, 8, 12], [2, 8, 12], [2, 8, 12]] as const;
 const UPPER_DOSE = [[3, 5, 8], [3, 8, 10], [2, 8, 10], [2, 8, 12], [2, 12, 15]] as const;
 
-function doseFor(kind: SlotDayKind, position: number): readonly [number, number, number] {
+/**
+ * ⚠ THE FULL-BODY DOSE IS BY SLOT, NOT BY POSITION, because this shape carries
+ * FOUR main lifts and a position ladder would taper the fourth into an
+ * accessory. Bible `:94` on exactly this athlete: *"if can only do 2 strength
+ * sessions should be 2 x full body and those sessions should be pretty solid"* —
+ * so the main lifts open at the same 3 x 5-8 every other composed main lift gets.
+ *
+ * **REGULAR LOADS (Sam, 2026-08-14: "no just make it regular loads").** Nothing
+ * here asks whether the day is a club night. The dose a full-body session gets
+ * on a team night is the dose it would get on any other night, and the cell
+ * `regular loads: a club night does not reduce the dose` holds that by
+ * composing the same day both ways and comparing.
+ */
+const FULL_BODY_DOSE: Partial<Record<SessionSlot, readonly [number, number, number]>> = {
+  squat: [3, 5, 8],
+  hinge: [3, 5, 8],
+  single_leg_hip: [3, 8, 12],
+  single_leg_knee: [3, 8, 12],
+  horizontal_push: [3, 8, 10],
+  vertical_push: [3, 8, 10],
+  horizontal_pull: [3, 8, 10],
+  vertical_pull: [3, 8, 10],
+  accessory_or_core: [2, 10, 15],
+};
+
+function doseFor(
+  kind: ComposedDayShape,
+  slot: SessionSlot,
+  position: number,
+): readonly [number, number, number] {
+  if (kind === 'full_body_a' || kind === 'full_body_b') {
+    return FULL_BODY_DOSE[slot] ?? [2, 10, 15];
+  }
   const ladder = kind === 'lower' ? LOWER_DOSE : UPPER_DOSE;
   return ladder[Math.min(position, ladder.length - 1)];
 }
@@ -287,10 +425,17 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   const usedThisWeek = new Set<ComposedExerciseIdentity>();
   // Week 1 takes the authored first choice; later weeks walk the same order.
   const step = Math.max(0, inputs.phaseClock.weekNumber - 1);
+  // Sam's full-body shape, decided once for the WEEK — see its own docstring.
+  const fullBody = composedWeekIsFullBodyOnClubNights(inputs.plannedDays);
+  let fullBodyIndex = 0;
 
   for (const planned of inputs.plannedDays) {
-    const kind = composedDayKind(planned.strengthIntent);
-    if (!kind) continue;
+    const ordinaryKind = composedDayKind(planned.strengthIntent);
+    if (!ordinaryKind) continue;
+    const kind: ComposedDayShape = fullBody
+      ? (fullBodyIndex % 2 === 0 ? 'full_body_a' : 'full_body_b')
+      : ordinaryKind;
+    if (fullBody) fullBodyIndex += 1;
     const required: SessionSlot[] = [];
     const rows: ComposedRow[] = [];
     // A pattern is main-lifted ONCE per day. Sam: "any push pull hinge squat
@@ -298,9 +443,38 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // (d): the day's FIRST row of a planned pattern takes the role, and a
     // supplementary row of the same pattern stays an accessory.
     const patternHasItsMainLift = new Set<MainStrengthPattern>();
-    const plannedPatterns = new Set(planned.strengthIntent.plannedPatterns ?? []);
+    // ⚠ THE FULL-BODY SHAPE DECLARES ITS OWN PATTERNS. The plan's answer for
+    // this case was upper-only and Sam has overruled it, so asking the plan
+    // which patterns the day carries would re-impose the ruling he replaced —
+    // and every lower row would come out an accessory.
+    const shapeSlots = kind === 'full_body_a' ? FULL_BODY_A_SLOTS
+      : kind === 'full_body_b' ? FULL_BODY_B_SLOTS
+      : SLOTS_FOR_KIND[kind];
+    const plannedPatterns = new Set(
+      fullBody
+        ? shapeSlots.map((slot) => PATTERN_FOR_SLOT[slot]).filter(Boolean) as MainStrengthPattern[]
+        : planned.strengthIntent.plannedPatterns ?? []);
 
-    for (const slot of SLOTS_FOR_KIND[kind]) {
+    for (const declaredSlot of shapeSlots) {
+      // The kit outranks the plane preference, and Sam ruled the fallback.
+      const planeChoice = fullBody && OPPOSITE_PLANE[declaredSlot]
+        ? resolvePlane(declaredSlot, inputs.kit, excluded)
+        : null;
+      if (planeChoice) {
+        for (const droppedSlot of planeChoice.dropped) {
+          gaps.push({
+            dayOfWeek: planned.dayOfWeek,
+            slot: droppedSlot,
+            cause: 'kit',
+            wouldNeed: slotCandidates(droppedSlot).length > 0
+              ? composedRowGapReason(slotCandidates(droppedSlot)[0], inputs.kit)
+              : null,
+            ...(planeChoice.slot ? { repeatedPlaneInstead: planeChoice.slot } : {}),
+          });
+        }
+        if (!planeChoice.slot) continue;
+      }
+      const slot = planeChoice?.slot ?? declaredSlot;
       const pattern = PATTERN_FOR_SLOT[slot] ?? null;
       if (pattern && prohibited.has(pattern)) continue;   // safety, not kit
       const isMainLift = !!pattern
@@ -309,12 +483,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       const pool = isMainLift ? anchorCandidates(slot) : supportCandidates(slot);
       const legal = pool.filter((id) => !excluded.has(id) && composedRowIsLegal(id, inputs.kit));
       if (legal.length === 0) {
-        gaps.push({
-          dayOfWeek: planned.dayOfWeek,
-          slot,
-          cause: 'kit',
-          wouldNeed: pool.length > 0 ? composedRowGapReason(pool[0], inputs.kit) : null,
-        });
+        // `resolvePlane` has already disclosed a plane it could not fill, so a
+        // second gap for the same slot would double-count the same fact.
+        if (!planeChoice) {
+          gaps.push({
+            dayOfWeek: planned.dayOfWeek,
+            slot,
+            cause: 'kit',
+            wouldNeed: pool.length > 0 ? composedRowGapReason(pool[0], inputs.kit) : null,
+          });
+        }
         continue;
       }
       required.push(slot);
@@ -322,7 +500,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       const choices = fresh.length > 0 ? fresh : legal;
       const identity = choices[step % choices.length];
       usedThisWeek.add(identity);
-      const [sets, repsMin, repsMax] = doseFor(kind, rows.length);
+      const [sets, repsMin, repsMax] = doseFor(kind, slot, rows.length);
       if (isMainLift && pattern) patternHasItsMainLift.add(pattern);
       rows.push({
         identity,

@@ -77,6 +77,10 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   // Sam, 2026-08-14: *"Chest Supported Row, needs a bench and dumbbels"*. It was
   // absent from the sheet entirely, so it read UNKNOWN and passed every kit.
   "Chest Supported Row": ['bench', 'dumbbells'],
+  // Sam, 2026-08-14: *"Chest-Supported DB Row needs — bench and dumbbells"*.
+  // It was absent, so it read UNKNOWN and passed a bodyweight kit — one of the
+  // two silences `docs/POOL_CENSUS_2026-08-14.md` measured and B1 CP1 reported.
+  "Chest-Supported DB Row": ['bench', 'dumbbells'],
   "Close Grip Bench": ['barbell', 'bench'],
   "Concentration Curl": ['dumbbells'],
   "Copenhagen Plank (Half)": [],
@@ -146,6 +150,10 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Scap Pull Ups": ['pullup_bar'],
   "Scap Push-Up": [],
   "Seated Calf Raise": ['dumbbells'],
+  // Sam, 2026-08-14: *"Seated Cable Row needs — cable machine"*. The second
+  // sheet silence CP1 reported: absent from the table, so it read LEGAL on a
+  // bodyweight kit and on dumbbells+bands.
+  "Seated Cable Row": ['cables'],
   "Seated DB Press": ['dumbbells'],
   "Shrugs": ['dumbbells'],
   "Side Plank": [],

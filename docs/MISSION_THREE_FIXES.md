@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1 CP2 | The other five worlds + the ruled full-body shape | **HARD STOP — A LATER PASS MUTATES COMPOSED ROWS.** Three post-composition sites found, one of them publishing a LEGACY week under an `accepted` verdict. CP1's zero-mutation receipt was too weak. Not landed as acceptance. |
 | B1 CP1 | The composer, first proving slice | **ACCEPTANCE MET, BUDGET BREACHED.** Sweep 174/6 -> **175/5**, one world changed, zero post-composition mutation. **710 production lines against a 600 fence — CP2 needs a new authorisation.** |
 | 2 | Authorship | NOT STARTED |
 | 3 | Close the loop | NOT STARTED |
@@ -1377,6 +1378,167 @@ and restore branches, the gateway's repair arms and both top-up passes are all
 **bypassed for composed worlds and still present** — deleting them is CP3, and
 the subtraction is the progress metric.
 
+---
+
+## Slice B1 CP2 — HARD STOP: the composed week does not reach the athlete
+
+**Seat `baseline`, 2026-08-14. Base: branch `slice-b1-composer`, commit
+`1c827674`. Worked in a fresh worktree on branch `slice-b1-cp2`. The shared
+checkout was never moved off `main`.**
+
+### 0. THE HEADLINE
+
+**I stopped on a hard stop the order names explicitly: *"any later pass mutates a
+composed row"*. It does — in THREE places, and one of them publishes a LEGACY
+week while the gateway's own verdict reads `accepted`.**
+
+**CP1's zero-mutation receipt was not wrong; it was too weak.** It measured
+canonicalisation actions and pool-rotation lines, both zero, and CP1's single
+full-gym world never reached the other three sites. Widening to the other five
+worlds reached all of them on the first run.
+
+**Nothing here is landed as acceptance.** The sweep at the stop is **173 built /
+7 refused** — WORSE than CP1's 175/5 — and that is the honest number: pointing
+the gateway's repair arms at the composed week converts a silent legacy
+substitution into an honest refusal. I did not restore the silent version to make
+a number look better.
+
+### 1. THE THREE MUTATION SITES, MEASURED
+
+Instrumented on the four CP2 worlds by printing the composer's output, the
+candidate after the builder, and the gateway's published week.
+
+| # | site | what it did | evidence |
+| --- | --- | --- | --- |
+| **1** | **`section18AcceptedWeekGateway`'s `regenerate` arm** — `generateProgram.ts` passed `buildCanonicalCandidate([])`, which rebuilds from `fallbackExercisesForPlanEntry` | **Published a LEGACY week for four of seven worlds.** `status=regenerated`, and the stored week carried `Overhead Press`, `Face Pulls` and `Pull-Ups` **to a dumbbell and a bodyweight athlete** — the exact rows R-083 removes | composed away week = `Bodyweight Squat, Single-Leg RDL, Explosive Push-up, Bird Dog`; stored = `Push-ups, Face Pulls, Overhead Press, Pull-Ups` |
+| **2** | **the gateway's repair path**, full-gym world, `status=repaired` | **Stripped `Back Squat` and `Single-Leg RDL`** out of a composed team-night day | candidate after build = `…Back Squat\|Single-Leg RDL\|Bench Press\|Pull-Ups\|Ab Wheel`; published = `Bench Press\|Pull-Ups\|Ab Wheel` |
+| **3** | **inside `buildWorkoutsFromCoach`, before the gateway** | **Rewrote composed identities and inserted a row the composer never chose.** `Bodyweight Squat` → `Walking Lunges`, `Explosive Push-up` → `Push-ups`, and a power `Explosive Push-up` prepended; on the away world `Push-ups` was dropped outright | composed DB week vs `candidate-after-build`, printed side by side |
+
+**⚠ SITE 1 IS THE ONE THAT MATTERS MOST, AND IT IS INVISIBLE FROM THE OUTSIDE.**
+The gateway returns `accepted` with `blocking: []`, because the week it accepted
+is not the week that was composed. Every instrument CP1 used — canonicalisation
+actions, rotation lines, identity/order/role comparison against storage — reads
+*healthy* while the athlete is handed the legacy week. **A composed week can be
+replaced wholesale and the receipt still says zero mutation.**
+
+### 2. WHAT I FIXED BEFORE STOPPING, AND WHAT IT REVEALED
+
+Four changes are on the branch. They are correct and they are what exposed the
+stop; none of them is claimed as acceptance.
+
+| change | why |
+| --- | --- |
+| **Sam's two sheet rows** — `Chest-Supported DB Row: bench + dumbbells`, `Seated Cable Row: cables`, his verbatim words cited in the file | closes the two sheet silences CP1 reported. Self-contained and correct. |
+| **The ruled full-body shape** (`full_body_a` / `full_body_b`), triggered by a TYPED fact — every strength day the planner placed is a club night — never by a world name | Sam's ruling. Composes correctly; see §3. |
+| **Plane resolution** — preferred plane, else the other plane (his *"yes repeat achievable pull plane"*), else remove and disclose | the kit outranks the plane preference; R-083/R-090 |
+| **Anchor fallback** — a main-lift slot falls to the pool's accessory bench before declaring a gap | **a real composer defect CP1 shipped:** every squat anchor is a barbell lift, so the composer was calling `squat` KIT-UNACHIEVABLE for a dumbbell athlete who can Goblet Squat and an away athlete who can Bodyweight Squat. It was inventing a gap that is not one. |
+
+**The template-replacement guard and the repair-arm guard are also on the branch**
+(`!cw.composed` on `requiresStrengthContent`; both gateway arms rebuilding from
+the composed source). They are correct and insufficient: site 2 and site 3
+survive them.
+
+### 3. THE COMPOSER'S OWN OUTPUT — Sam's shape, and it is right
+
+**This is what `composeWeek` produced. It is NOT what the athlete gets** — see
+§1. Printed so the shape itself can be judged.
+
+> **FULL GYM.** **A (Tue):** Back Squat · Single-Leg RDL · Bench Press ·
+> Pull-Ups · Ab Wheel — **B (Thu):** Deadlift · Bulgarian Split Squats ·
+> Overhead Press · Barbell Row · Back Extension
+> *Both planes opposite, both directions. No gaps.*
+>
+> **DUMBBELLS + BANDS.** **A:** Bodyweight Squat · Single-Leg RDL · Explosive
+> Push-up · Single-Arm DB Row · Band Pallof Press — **B:** RDLs · Cossack Squat ·
+> DB Shoulder Press · Band Pull-Apart · Banded Dead Bug
+> *Gap: vertical pull impossible → **repeated the achievable pull plane**, his ruling, disclosed.*
+>
+> **AWAY / BODYWEIGHT** (explicit exhaustive answer — resolver source
+> `athlete_answer`, tags `bodyweight` only, never `tags: {}`). **A:** Bodyweight
+> Squat · Single-Leg RDL · Explosive Push-up · Bird Dog — **B:** Glute Bridge ·
+> Cossack Squat · Push-ups · Bosch Hold
+> *Gaps: both pull planes impossible → **pull omitted and disclosed**, never substituted. Vertical push impossible → horizontal push repeated. The unloaded `Single-Leg RDL` carries the single-leg-hip slot, per Sam's ruling.*
+
+**Every composed row is legal under the one legality owner in all three kits, on
+every world.** The shape, the planes, the repeats, the omissions and the
+disclosures are all as ruled.
+
+### 4. THE SECOND FINDING — §18 CANNOT SEE A COMPOSED MAIN LIFT
+
+With the repair arms pointed at the composed week, three worlds refuse:
+
+```
+db w1          pattern_restore_failure:strength_patterns:0 | required_minimum_shortfall:main_strength:1
+away w1        pattern_restore_failure:strength_patterns:0 | required_minimum_shortfall:main_strength:0
+db in-season   pattern_restore_failure ... x3              | required_minimum_shortfall:main_strength:1
+```
+
+**The composer declares `role: main_strength` and the pattern for every main
+lift, and that declaration never reaches the stored row.** `section18Evidence` is
+re-derived by the row classifier, which answers `strength_accessory` /
+`mainStrengthPattern: null` for `Bodyweight Squat`, `Push-ups`, `Single-Arm DB
+Row` and every other unloaded or dumbbell lift — the property already recorded in
+slice 1B-final-2. CP1 never met it because `Bench Press` and `Barbell Row`
+classify as main lifts on their own.
+
+**R-092 is Sam's ruling that these rows DO take the main-lift role, and it is not
+carried.** Making §18 read the composer's declaration instead of re-inferring it
+is the missing seam. It is a real design change, it is CP2-shaped work, and I did
+not start it after hitting the stop.
+
+### 5. THE BIBLE AMENDMENT, AND A COLLISION THAT IS NOT ONE
+
+Both rulings are recorded in the Bible changelog with his verbatim words, the
+approved interpretation labelled as seat-drafted, and no history deleted.
+
+**⚠ THE CLAUSE SAM ASKED ME TO DELETE IS NOT IN THE BIBLE.** He said *"forget
+what i said or delet that section of bible"*. Searched: no team-night
+light/moderate-load rule exists there. The nearest clauses (`:266`, `:736`,
+`:77`) are about hard LOWER work near a GAME and are untouched; `:94` already
+says the opposite — *"if can only do 2 strength sessions should be 2 x full body
+and those sessions should be pretty solid"*. **The reduction lives in CODE
+ONLY.** So the Bible carries a dated amendment stating the new rule rather than a
+deletion of text that does not exist. **This is not a collision between his
+rulings** — it is the clause having been in the wrong place all along.
+
+### 6. LEGACY LOAD-CAP MIRRORS — one grouped line, unchanged
+
+`utils/coachingEngine.ts:2226-2251` — an in-season push slot landing on a team
+day is written `'Upper body - push emphasis (moderate intensity, low fatigue -
+maintain strength, keep CNS sharp)'` with `isHardExposure: false`. **This is the
+only mirror found, it is legacy-path only, and it is unchanged.** The composed
+path asks nothing about club nights: nothing in `composeWeek` reads `isTeamDay`
+for dose purposes, and its dose table is the same table off a club night as on
+one.
+
+### 7. WHAT FOUGHT ME, VERBATIM
+
+- **The gateway's `accepted` verdict is not a statement about the week you gave
+  it.** I spent the first pass believing the composer was producing thin weeks,
+  because storage showed three rows where five were composed. The composer was
+  right every time. **A verdict on a substituted week is worth nothing, and
+  nothing in the return value says which week was judged.**
+- **My own CP1 receipt taught me the wrong thing.** Zero canonicalisation actions
+  and zero rotation lines felt like proof. They are proof about two sites out of
+  five, and the two I had checked were the two I had fixed. **The instrument
+  measured the fixes, not the property.**
+- **The anchor bench is not the pattern.** Returning only anchors for a main lift
+  made the composer declare `squat` unachievable for a dumbbell athlete. That is
+  a composer defect CP1 shipped, and it would have read as R-083 doing its job.
+- **Two CP1 cells are now red** — *"the gate refuses week 2"* and *"the gate
+  refuses the dumbbell and bodyweight family members"*. Both are CP1 statements
+  that CP2 was authorised to replace. They are left red rather than edited,
+  because editing an expectation to match a change is the move this repo has a
+  law against.
+
+### 8. WHAT CP2 DID NOT DO
+
+No conditioning change. No `1 x 1` fix. U1/Friday untouched. No sandbag tag. No
+legacy-path behaviour changed. `slice1bc-parked` not merged. No new queue item,
+status file or plan. **R-093 and R-094 are recorded `UNENFORCED` with no
+route-scoped receipt**, because a composed week does not yet reach an athlete
+intact and a guard claiming otherwise would be false.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -1385,6 +1547,7 @@ the subtraction is the progress metric.
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- LEGACY TEAM-NIGHT LOAD-CAP MIRRORS, grouped: `utils/coachingEngine.ts:2226-2251` writes an in-season push slot on a team day as `'moderate intensity, low fatigue'` with `isHardExposure: false` — the only mirror found, legacy-path only, unchanged by R-094.
 - `slotDayKindFor` returns `null` for the compound name `"Team Training + Upper Body Strength"`, so a five-slot composed upper day is invisible to the ladder oracle — the oracle reads a NAME where the composer reads typed intent.
 - `test:ladder-wide` counts a slot the kit cannot train as a deficient day, which scores R-083's own answer as a defect; `slotIsTrainableOnKit` already computes the exemption and the census does not read it.
 - `test:scenarios` exits 0 while reporting a failed scenario.

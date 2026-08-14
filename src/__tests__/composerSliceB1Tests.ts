@@ -54,6 +54,7 @@ const AWAY_BODYWEIGHT = resolveEquipmentCapabilities({
 
 const UPPER_FULL_DAY: ComposerPlannedDay = {
   dayOfWeek: 2,
+  isTeamDay: false,
   planEntryId: 'w1:tuesday:none:team',
   strengthIntent: {
     archetype: 'upper', primaryPattern: 'push',
@@ -65,6 +66,7 @@ const UPPER_FULL_DAY: ComposerPlannedDay = {
 };
 const LOWER_DAY: ComposerPlannedDay = {
   dayOfWeek: 1,
+  isTeamDay: false,
   planEntryId: 'w1:monday:none:strength',
   strengthIntent: {
     archetype: 'lower', primaryPattern: 'squat',

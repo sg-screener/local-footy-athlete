@@ -818,13 +818,29 @@ export function buildGeneratedMicrocycles(args: {
         surfaces: freshGenerationSurfaces(),
         // Edge-authored and deterministic candidates both regenerate from the
         // same phase-owned plan before the final safe fallback is considered.
+        // ⚠ A COMPOSED WEEK'S REPAIR ARMS REBUILD THE COMPOSED WEEK (clause f).
+        //
+        // `buildCanonicalCandidate([])` rebuilds from `fallbackExercisesForPlanEntry`
+        // — the legacy templates. **MEASURED 2026-08-14: with a composed source
+        // this published a legacy week for four of the seven CP2 worlds**
+        // (`status=regenerated`), putting `Overhead Press`, `Face Pulls` and
+        // `Pull-Ups` back in front of a dumbbell and a bodyweight athlete, and it
+        // stripped `Back Squat` and `Single-Leg RDL` out of the full-gym week
+        // under `status=repaired`. Both are exactly the post-composition mutation
+        // this slice forbids, and both were invisible because the gateway's own
+        // verdict reads `accepted`.
+        //
+        // Pointing both arms at the SAME composed source is not a way of forcing
+        // acceptance: §18 still judges the week and still refuses it if it is
+        // unlawful. It removes only the gateway's ability to answer a composed
+        // week with a different week.
         regenerate: () => ({
           contract: exposureContractV2!,
-          workouts: buildCanonicalCandidate([]),
+          workouts: buildCanonicalCandidate(composedWeek ? sourceCoachWorkouts : []),
         }),
         safeFallback: () => ({
           contract: exposureContractV2!,
-          workouts: buildCanonicalCandidate([]),
+          workouts: buildCanonicalCandidate(composedWeek ? sourceCoachWorkouts : []),
         }),
       });
       workouts = rebindDerivedSessionProvenance({

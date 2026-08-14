@@ -1981,3 +1981,54 @@ full-gym control *"a full-gym athlete has no kit gap at all"*.
 **MEASURED:** the 180-world sweep moves **174 built / 6 refused -> 175 built / 5
 refused**, the world that stops being refused is exactly the migrated one, and
 **every one of the other 179 worlds is byte-identical.**
+
+---
+
+**R-093** · *"either way i'd make them full body sessions. Squat and single leg
+hip with push and pull + accessories then hinge and single leg knee with push and
+pull (in opposite plane to earlier in week) + accessories - but the ideal would be
+to do full body strength on different nights"*, and on the impossible plane:
+*"yes repeat achievable pull plane"* (Sam, 2026-08-14) · **WHERE EVERY AVAILABLE
+GYM NIGHT IS A CLUB NIGHT, THE TWO SESSIONS ARE FULL BODY.**
+**SEAT-DRAFTED WORDING, APPROVED BY SAM — NOT his verbatim words:** session A is
+squat + single-leg hip + push + pull + accessories; session B is hinge +
+single-leg knee + push + pull in the OPPOSITE planes where those planes are
+kit-achievable. **The kit outranks the plane preference** — R-083/R-090 govern, an
+impossible plane repeats the achievable one, and where no plane of a pattern is
+achievable the pattern is removed and disclosed. **An illegal exercise is never
+authored to manufacture plane variety.**
+**HIS STATED IDEAL — full-body strength on DIFFERENT nights — IS APPROVED
+DIRECTION AND IS NOT BUILT. It must not be marked built by this row.**
+**Search words:** full body, club night, team night, both nights, squat single
+leg hip, hinge single leg knee, opposite plane, repeat pull plane, two strength
+sessions, composed shape.
+· **`UNENFORCED`.** **B1 CP2 STOPPED before this could carry a receipt.** The
+composer builds the shape correctly — measured, and printed in
+`docs/MISSION_THREE_FIXES.md` — but the composed week does not survive to
+storage: three post-composition sites still rewrite or discard composed rows.
+**No guard may claim this row until a composed week reaches an athlete unchanged.**
+
+---
+
+**R-094** · *"no just make it regular loads forget what i said or delet that
+section of bible"* (Sam, 2026-08-14) · **NO AUTOMATIC LOAD REDUCTION SOLELY
+BECAUSE GYM WORK SHARES A DAY WITH CLUB TRAINING.**
+**SEAT-DRAFTED WORDING, APPROVED BY SAM — NOT his verbatim words:** full-body gym
+work on a club-training day receives the normal load and prescription it would
+receive off a club night. **Injury, readiness, deload and every other
+independently ruled safety constraint still apply in full** — this ruling removes
+one automatic reduction, not the safety envelope.
+**⚠ THE CLAUSE HE IS DELETING WAS NEVER IN THE BIBLE.** Searched: the nearest
+clauses (`:266`, `:736`, `:77`) are about hard LOWER work near a GAME, and `:94`
+already says *"if can only do 2 strength sessions should be 2 x full body and
+those sessions should be pretty solid"*. The reduction exists in CODE ONLY and is
+recorded in the findings ledger. The Bible carries a dated amendment stating
+exactly this rather than deleting text that does not exist.
+**Search words:** regular loads, team night, club night, moderate intensity, low
+fatigue, keep CNS sharp, isHardExposure, load reduction, same day as training.
+· **`UNENFORCED`.** **B1 CP2 STOPPED.** The composed path applies no team-night
+reduction — nothing in `composeWeek` asks whether the day is a club night — but a
+composed week does not currently reach storage intact, so there is no
+athlete-visible receipt and this row may not claim one. The legacy mirror at
+`coachingEngine.ts:2226-2251` is **unchanged and still live** on every
+non-composed route.
