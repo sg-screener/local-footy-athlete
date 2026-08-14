@@ -18,6 +18,7 @@ four slices; nothing else.
 | 1B-ship-2a | Diagnosis: what blocks the 26 | **ANSWERED. The requirement set HAS one owner — and changing it clears 6 of 26.** 32 of 38 blocking findings are not about kit-impossibility. Docs only. |
 | 1C-A | Remove the AI from program construction (R-091) | **SHIPPED.** One door severed, 528 lines deleted, corpus byte-identical, same six worlds refused. |
 | B0 | Pool census — the authorised option set settled | **DONE.** Zero pool gaps in 30 cells; no question for Sam. `docs/POOL_CENSUS_2026-08-14.md` |
+| B1-E2E-SEMANTIC | Finish the boundary measurement | **MEASURED.** Two fingerprints separated; **176 typed gaps lost at materialisation across 86 worlds**; 569 dose movements attributed; 18 composer rows never reach storage. Sweep unmoved. Boot regeneration NOT COVERED. |
 | B1-E2E-EXTEND | Make the end-to-end claim true at full width | **DONE.** 36 → **192 worlds** (the sweep's 180 + 12 answered-bodyweight). One real failure found at an unmeasured day count. Sweep unmoved at 61/119. |
 | B1-PIVOT-VERIFY | Close the verification debt | **DONE.** 7 guards written and every one seen RED; per-world end-to-end cell green on both outcomes; 5 pool cells retired with replacements, 1 left red as a declared regression. **NOT merge-ready — 119 of 180 worlds refuse.** |
 | B1-PIVOT | Sever the legacy strength-content builder | **SEVERED.** Composer is the only production strength-content builder for every world. 401 production lines deleted, 1 file. Sweep **173/7 -> 61/119**, an honest red day. |
@@ -1990,6 +1991,194 @@ day count nobody had run.
   the slot vocabulary — not the classifier — is what actually answers *"is this
   strength content"*.
 
+---
+
+## Slice B1-E2E-SEMANTIC-COMPLETION — what the boundaries actually preserve
+
+**Seat `baseline`, 2026-08-14. Branch `slice-b1-pivot` @ `829fcb31`.**
+Measurement and permanent guards only. **Sweep unmoved at 61/119; `test:pools`
+498/1 with pinning still red; no ratchet, floor, ceiling, allow-list or registry
+touched.** No production code changed — the working tree carries one modified
+test file.
+
+**HOW THE BOUNDARIES WERE REACHED WITHOUT TOUCHING PRODUCTION.** Sucrase compiles
+`import { x }` to `_mod.x(...)`, so replacing an export on the required module
+object intercepts the real production call. `composeWeek`,
+`composedWeekToCoachInputs` and `buildWorkoutsFromCoach` were each wrapped from
+the test side and restored afterwards. **No hook, flag or seal was added.**
+
+### 1. CORPUS — 197 worlds
+
+| | |
+| --- | --- |
+| the sweep's own 180 | 3 phases × 5 training-day counts × club/no-club × 3 kits × 2 weeks |
+| answered-bodyweight | 12 — `athlete_answer`, which the sweep's checklist cannot express |
+| **named additional cases** | **5** — active injury · active equipment constraint · week 3 · week 4 · later block (`blockNumber: 2`) |
+| **total** | **197** · **67 built · 130 refused** · authored candidate matched for **67 of 67** |
+
+**⚠ THE ADDED CASES WERE RUN TWICE, AND THE FIRST RUN WAS MINE BEING WRONG.** I
+based all five on an in-season 4-day full-gym profile, which refuses on its own —
+so all five came back "cannot reach the boundary" for a reason that had nothing
+to do with their dimension. Rebased on an off-season 2-day full-gym profile that
+builds: **injury BUILT, equipment constraint BUILT, later block BUILT; weeks 3 and
+4 REFUSED** with a typed §18 refusal (`pattern_restore_failure:strength_patterns`),
+not the severance error.
+
+### 2. COMPOSER-STRENGTH BOUNDARY — the composer's own output as the subject
+
+**No `slotsForExerciseName` narrowing.** Every row `composeWeek` emitted was
+followed to storage.
+
+| | |
+| --- | --- |
+| composer rows followed | all rows of all 67 built worlds |
+| **rows that never reach storage** | **18, across 14 distinct worlds** |
+| lost BEFORE final authorship | **11** — all `Explosive Push-up` (`horizontal_push`), gone inside `buildWorkoutsFromCoach` |
+| lost AFTER final authorship | **7** — `Bench Press`, `Pull-Ups`, `Incline Bench`, `Chin-Ups`, `Single-Arm DB Floor Press`, `Single-Arm DB Row`, `Band Pull-Apart` |
+| role or pattern drift on a surviving row | **0** |
+
+**The 192-world property in the previous slice could not see any of these**,
+because it matched stored rows against the vocabulary rather than against the
+composer's own output. **The composer is the subject now, and 18 of its rows are
+being dropped.**
+
+### 3. FINALISED WHOLE-WEEK BOUNDARY — every row, with its owner named
+
+Fingerprinted at the final authoring boundary (`buildWorkoutsFromCoach`'s return,
+keyed by `microcycleId` so a week is never compared against another week's repair
+arm) and again at the stored program.
+
+| movement | rows | classification | provenance |
+| --- | --- | --- | --- |
+| **DISAPPEARED** after final authorship | **26** | `power` | `canonical_row_classifier` (power adapter — retained) |
+| **DISAPPEARED** after final authorship | **5** | `strength_main` | **`composer_declaration`** |
+| **DISAPPEARED** after final authorship | **2** | `strength_accessory` | **`composer_declaration`** |
+| **APPEARED** after final authorship | **2** | `strength_main` | **`canonical_row_classifier`** |
+| total | **35** across **18 distinct worlds** | | |
+
+**⚠ THE LAST ROW IS THE MOST SERIOUS.** Two `strength_main` rows **appear after
+final authorship carrying a non-composer provenance** — new main-lift content
+entering the week from an owner that is not the composer, after the authoring
+boundary. That is the shape of the CP2 defect on a surface the previous property
+did not watch.
+
+**PROVENANCE CENSUS of every stored row**, so nothing is ignored for filling no
+ladder slot:
+
+| rows | classification | owner |
+| --- | --- | --- |
+| 372 | `strength_accessory` | composer |
+| 176 | `strength_main` | composer |
+| 89 | `trunk_support` | composer |
+| 80 | `conditioning` | conditioning adapter (retained) |
+| 16 | `strength_accessory` | **`Warm-up`, warm-up adapter (retained)** — the ledgered misclassification |
+| 5 | `power` | power adapter (retained) |
+| 4 | `recovery_addon` | recovery adapter (retained) |
+
+### 4. DOSE MOVEMENT — fully attributed
+
+| boundary | occurrences | distinct rows | distinct worlds |
+| --- | --- | --- | --- |
+| **composer → final authorship** (inside `buildWorkoutsFromCoach`) | **569** | 40 | **67 — every built world** |
+| final authorship → stored | **0** | 0 | 0 |
+| load (composer emits none; a non-zero load appeared) | 1 | 1 | 1 |
+
+**THE OWNER IS PHASE-KEYED, DEMONSTRATED RATHER THAN ASSERTED.** The same composer
+row takes a different stored dose in each phase:
+
+| row | composer | In-season | Pre-season | Off-season |
+| --- | --- | --- | --- | --- |
+| `Back Squat` | 3×5-8 | **3×2-4** | **3×4-6** | **3×8-12** |
+| `Single-Leg RDL` | 3×8-12 / 2×8-12 | **3×6-8** | **2×6-10** | **2×8-15** |
+
+That is `applyPhaseRepSchemesToWorkoutExercises`'s signature. **Whether the phase
+owner should outrank the composer's authored dose is a product question and this
+slice does not answer it** — it only refuses to let the movement stay invisible.
+
+### 5. TYPED GAP RECORDS — the expected headline, confirmed
+
+| | |
+| --- | --- |
+| boundary where they stop | **`composedWeekToCoachInputs`** (`composedWeekToWorkouts.ts`) |
+| mechanism | `CoachGeneratedWorkoutInput` has **no carrier field**; the adapter maps rows and nothing else |
+| **gaps composed** | **176** |
+| **gaps carried past materialisation** | **0** |
+| **distinct worlds affected** | **86** |
+
+**One concrete gap, before and after.** `In-season/2d/club/Bodyweight Only/w1`,
+composed:
+
+```
+{ dayOfWeek: 2, slot: 'vertical_pull', cause: 'kit', wouldNeed: 'pullup_bar' }
+```
+
+After materialisation: **absent.** Nothing downstream carries it, so **the athlete
+is never told why the pull work is missing** — they simply get a shorter day. That
+is R-083's second clause and R-090's disclosure half, both still owed, now with an
+exact boundary and a count. **The carrier is not added here.**
+
+### 6. REAL BOOT REGENERATION — NOT COVERED
+
+**Not executed, and not faked.** The acceptance asks for the real inputs-only
+envelope persisted, `currentProgram` confirmed absent from it, in-memory derived
+state discarded, and the production quiescent-boot door run. I ran out of slice
+before building that harness, and **hydrating a hand-built persisted-program
+fixture would have been exactly the thing the order forbids**, so I did not
+substitute one. The boundary chain measured here therefore stops at the in-memory
+committed program.
+
+### 7. REFUSED WORLDS — the no-fallback property
+
+**130 of 130 refusals** carried a typed signature and stored nothing: no program
+object escaped, no selected replacement week, no store write. The store-side
+regenerate/safe-fallback substitution and the boot-side check are **NOT COVERED**
+for the same reason as §6.
+
+### 8. MUTATION PROOFS
+
+| mutation | result |
+| --- | --- |
+| **MUT-9** drop one typed gap | ✅ RED — 2 cells |
+| **MUT-12** mutate one set count AFTER final authorship | ✅ RED |
+| **MUT-13** mutate one load AFTER final authorship | ✅ RED |
+| **MUT-8** mutate one set count AT authoring | ❌ **SURVIVED** |
+
+**⚠ MUT-8 SURVIVED AND THE MUTATION IS RIGHT — THE GUARD IS WEAK, AND IT CANNOT BE
+STRONGER YET.** The dose cell asserts `moved > 0`, so one more movement cannot
+flip it. **A set-count PRESERVATION guard cannot exist while preservation is
+false.** What is true and guardable is the BOUNDARY — the dose moves once, at
+authoring, and never again — so that is what the new guard asserts, and MUT-12/13
+prove it red. The 569-movement attribution table above is the deliverable for the
+part no cell can hold.
+
+`npm run test:composer-severance` — **43 passed, 0 failures.**
+
+### 9. NOT COVERED
+
+- **Real inputs-envelope → quiescent-boot regeneration** (§6), and with it the
+  store-side substitution and boot-side no-legacy-replacement checks.
+- **The 35 appear/disappear rows are MEASURED, NOT GUARDED.** No permanent cell
+  holds them yet; a cell pinning today's count would red on any legitimate change
+  to the power adapter.
+- **Weeks 3 and 4 reached the boundary but REFUSED**, so no fingerprint exists for
+  them — the refusal is typed and reported rather than bypassed.
+- Whether the phase dose owner should outrank the composer — product question,
+  deliberately unanswered.
+
+### 10. WHAT FOUGHT THE MEASUREMENT
+
+- **My first added-case base refused on its own**, so all five named dimensions
+  came back uncovered for a reason that had nothing to do with them. Rebasing on a
+  world that builds turned 5 uncovered into 3 measured and 2 honestly refused.
+- **Indexing the authored candidates was wrong and looked plausible.** The gateway
+  calls the builder once per candidate ARM and once per week, so comparing by
+  index measured week N against another week's repair arm — **454 phantom
+  appear/disappear rows**. Keying on `microcycleId` cut it to 35 real ones.
+- **A guard that cannot fail is not a guard, and I nearly shipped one.** The dose
+  cell was green, looked like a preservation check, and survived a mutation that
+  changed a stored set count. It is now labelled a declared-state cell, with a
+  boundary guard beside it that actually reds.
+
 ## FINDINGS LEDGER
 
 *One-liners only. Nobody acts on these without a prompt from Sam.*
@@ -1998,6 +2187,10 @@ day count nobody had run.
 - Some route into a generated week never calls `applyPoolRotation` — `RDLs` arrives unrewritten though the pool answers `Single-Leg RDL`.
 - `Band Pallof Press` is in no pool at all, so no pool-layer fix can ever reach it; only the equipment sheet can.
 - `Chest-Supported DB Row` and `Seated Cable Row` have no row on Sam's equipment sheet, so the one legality owner answers "unknown, allow" and both read LEGAL on a bodyweight kit; the composer selects them for `arm_or_shoulder` on the away tier.
+- 176 typed `ComposedGap` records across 86 worlds are composed and none survives `composedWeekToCoachInputs`, which has no carrier field; the athlete is never told why a kit-impossible pattern is missing.
+- 18 composer-authored strength rows across 14 worlds never reach storage — 11 `Explosive Push-up` lost inside `buildWorkoutsFromCoach`, 7 others lost after final authorship.
+- 2 `strength_main` rows appear AFTER final authorship carrying `canonical_row_classifier` provenance — main-lift content entering the week from a non-composer owner.
+- The composer's authored dose is rewritten for 40 distinct rows in all 67 built worlds by the phase rep-scheme owner inside `buildWorkoutsFromCoach`; it is stable from there to storage.
 - `classifyGeneratedWorkoutRow` classifies `Warm-up` as `strength_accessory` although it fills no ladder slot, so a retained-adapter row reads as strength content on Off-season 5-day Full Gym days (16 rows measured).
 - `Walking Lunges` sits on the SQUAT pool's accessory bench but fills `single_leg_knee`, so pool-ordered selection offered it for the `squat` slot until `slotsForExerciseName` was made the filter; other pool slots may carry the same mismatch and were not swept.
 - The composer has no reader for `AthletePoolPrefs.pinned`, so an athlete's pinned exercise is no longer selected first; `test:pools`'s pinning cell is left RED rather than retired.

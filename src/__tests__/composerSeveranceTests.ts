@@ -97,6 +97,16 @@ function composedFor(spec: WorldSpec) {
   return { kit };
 }
 
+function rowsByDayAndIdentity(workouts: readonly Workout[]): Map<string, any> {
+  const out = new Map<string, any>();
+  for (const workout of workouts) {
+    for (const row of workout.exercises ?? []) {
+      out.set(`${workout.dayOfWeek}:${composedIdentityFor(row.exercise?.name ?? '')}`, row);
+    }
+  }
+  return out;
+}
+
 /** Identity · order · role · pattern — the four things composition owns. */
 function semanticShape(workouts: readonly Workout[]): string {
   return [...workouts]
@@ -533,6 +543,130 @@ console.log('\n[retire] Behaviour the deleted rotation cells guarded, held again
   ok('[REGRESSION, declared] the composer has no pinning reader — the pool cell may not retire',
     !/pinned/.test(require('fs').readFileSync(
       require('path').resolve(__dirname, '../rules/composeWeek.ts'), 'utf8')));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE SEMANTIC BOUNDARY GUARDS (B1-E2E-SEMANTIC-COMPLETION)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// The 192-world property above proves identity/order/role/pattern. These prove
+// the two things it did NOT: the composer's own DOSE, and where its typed GAP
+// records stop travelling. **They are written against the composer's own output
+// as the subject — no `slotsForExerciseName` narrowing** — because a composer row
+// cannot stop being the composer's merely because another vocabulary does not
+// recognise its slot.
+console.log('\n[semantic] Composer dose and typed gaps, measured at their boundaries');
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const composeModule = require('../rules/composeWeek');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const adapterModule = require('../rules/composedWeekToWorkouts');
+  const realCompose = composeModule.composeWeek;
+  const realAdapt = adapterModule.composedWeekToCoachInputs;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const builderModule = require('../data/defaultProgram');
+  const realBuild = builderModule.buildWorkoutsFromCoach;
+  const composedRuns: any[] = [];
+  const materialisedRuns: any[] = [];
+  const authoredRuns: any[] = [];
+  // Keyed by microcycleId: the gateway calls the builder once per candidate ARM
+  // and once per week, so an index compares one week against another's repair.
+  builderModule.buildWorkoutsFromCoach = (...args: any[]) => {
+    const output = realBuild(...args);
+    authoredRuns.push({ microcycleId: args[1], workouts: output });
+    return output;
+  };
+  composeModule.composeWeek = (inputs: any) => {
+    const output = realCompose(inputs); composedRuns.push(output); return output;
+  };
+  adapterModule.composedWeekToCoachInputs = (week: any) => {
+    const output = realAdapt(week); materialisedRuns.push({ week, output }); return output;
+  };
+  try {
+    // A kit-limited world, so the composer certainly emits gaps.
+    const outcome = build(world('semantic/db-in-season', {
+      seasonPhase: 'In-season', equipment: ['Dumbbells', 'Bands'],
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+    }));
+    ok('[semantic] the probe world builds — non-vacuity first', outcome.kind === 'built');
+    const composedWeek = composedRuns[0];
+    ok('[semantic] the composer was reached through the production door',
+      !!composedWeek && composedWeek.days.length > 0);
+
+    // ── TYPED GAPS: composed, and where they stop ───────────────────────────
+    ok('[semantic] the composer emits typed kit gaps for this world',
+      composedWeek.gaps.length > 0, JSON.stringify(composedWeek.gaps));
+    const materialised = materialisedRuns[0]?.output ?? [];
+    const carriesGaps = materialised.some((day: any) =>
+      Object.keys(day).some((field) => /gap|disclos/i.test(field)));
+    // ⚠ THIS IS A DECLARED CURRENT STATE, NOT AN APPROVAL. Measured 2026-08-14:
+    // 176 typed gaps across 86 worlds are composed and NONE survives
+    // materialisation, because `CoachGeneratedWorkoutInput` has no carrier
+    // field. The athlete is never told why a pattern is missing. **Adding the
+    // carrier is product work this slice forbids** — when it lands, this cell
+    // reds and is rewritten deliberately rather than drifting.
+    ok('[semantic] MEASURED DEFECT: typed gaps do NOT survive materialisation',
+      carriesGaps === false,
+      'a carrier appeared — the gap-loss finding is fixed; rewrite this cell');
+
+    // ── DOSE: the composer authors one, and it is not what is stored ────────
+    if (outcome.kind === 'built') {
+      const stored = rowsByDayAndIdentity(outcome.program.microcycles[0].workouts as Workout[]);
+      let compared = 0; let moved = 0;
+      for (const day of composedWeek.days) {
+        for (const row of day.rows) {
+          const match = stored.get(`${day.dayOfWeek}:${row.identity}`);
+          if (!match) continue;
+          compared += 1;
+          if (match.prescribedSets !== row.sets
+            || match.prescribedRepsMin !== row.repsMin
+            || match.prescribedRepsMax !== row.repsMax) moved += 1;
+        }
+      }
+      ok('[semantic] the dose comparison reached rows at all', compared > 0, `${compared} rows`);
+      // ⚠ ALSO A DECLARED CURRENT STATE. The phase rep-scheme owner rewrites the
+      // composer's authored dose inside `buildWorkoutsFromCoach` — measured
+      // phase-keyed (`Back Squat` 3x5-8 -> 3x2-4 in-season, 3x8-12 off-season,
+      // 3x4-6 pre-season). Whether that owner should outrank the composer is a
+      // product question; this cell only refuses to let it become invisible.
+      ok('[semantic] MEASURED: the stored dose is NOT the composer\'s authored dose',
+        moved > 0, `${moved} of ${compared} rows moved — if 0, the dose owner changed`);
+
+      // ⚠ THE GUARD THAT CAN ACTUALLY GO RED, and why the one above cannot.
+      //
+      // Mutation-8 added a set to a stored row and **every cell stayed green**:
+      // the dose already moves, so one more movement cannot flip `moved > 0`.
+      // A set-count PRESERVATION guard cannot exist while preservation is false.
+      // What IS true and guardable is the BOUNDARY: the dose moves once, inside
+      // `buildWorkoutsFromCoach`, and never again. Measured across all 67 built
+      // worlds — 569 movements composer->authoring, **zero** authoring->stored.
+      const authoredCandidate = authoredRuns.find((run: any) =>
+        run.microcycleId === outcome.program.microcycles[0].id);
+      let afterAuthoring = 0; let checkedAfter = 0;
+      if (authoredCandidate) {
+        const authoredRows = rowsByDayAndIdentity(authoredCandidate.workouts as Workout[]);
+        for (const [key, storedRow] of stored) {
+          const authoredRow = authoredRows.get(key);
+          if (!authoredRow) continue;
+          checkedAfter += 1;
+          if (authoredRow.prescribedSets !== storedRow.prescribedSets
+            || authoredRow.prescribedRepsMin !== storedRow.prescribedRepsMin
+            || authoredRow.prescribedRepsMax !== storedRow.prescribedRepsMax
+            || (authoredRow.prescribedWeightKg ?? 0) !== (storedRow.prescribedWeightKg ?? 0)) {
+            afterAuthoring += 1;
+          }
+        }
+      }
+      ok('[semantic] the after-authoring dose comparison reached rows',
+        checkedAfter > 0, `${checkedAfter} rows`);
+      ok('[semantic] NO dose moves after final authorship — sets, reps or load',
+        afterAuthoring === 0, `${afterAuthoring} of ${checkedAfter} rows moved after authoring`);
+    }
+  } finally {
+    composeModule.composeWeek = realCompose;
+    adapterModule.composedWeekToCoachInputs = realAdapt;
+    builderModule.buildWorkoutsFromCoach = realBuild;
+  }
 }
 
 console.log(`\nComposer severance: passed=${passed} failures=${failures.length}`);
