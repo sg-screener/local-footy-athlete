@@ -386,3 +386,41 @@ top-up added a third knee.
 `test:census-hook` went red once under the parallel runner; green 3/3 standalone,
 green in both earlier rosters, green on a clean re-run of the full roster. It shells
 to `git` in a temp repo. **Recorded, not counted as a result, not hand-waved.**
+
+---
+
+# MERGED TO MAIN — 2026-08-14
+
+Merge commit `a3138e17`, two parents (`459d6bf9` + `38560c0d`), `--no-ff`.
+**Restore point: tag `pre-composer-completion-merge` -> `459d6bf9`**, the same
+process as `pre-burn-the-boats-merge`.
+
+## THE COMPLETE ROSTER, RERUN ON MAIN AFTER THE MERGE
+
+    test:bible:parallel (253)  71 red -> 70 red   NO NEW RED
+                               test:week-identity newly green (W6, traced cause)
+    test:compile               PASSED — no file regressed
+    test:composer-severance    96 / 0
+    test:generated-week        36 / 0
+    test:ladder-wide           13/14 — 142 built / 38 refused, 0 deficient of 338,
+                               R-089 0/0 on BOTH arms
+    test:qa                    168 passed, 10 allowed, 1 policy fail — identical to baseline
+    test:scenarios             1 failed (G+1_RECOVERY) — identical to baseline
+
+Every figure matches the branch measurement exactly. The one remaining
+`ladder-wide` failure is the built-world floor (142 < 150), **not lowered**.
+
+## WHAT THIS MERGE DOES NOT CLAIM
+
+**THE 142 BUILT WEEKS ARE NOT COACH-APPROVED.** Sam has read and approved exactly
+ONE printed week (In-season/2d/club) and rejected one (Pre-season/5d/noclub/Full
+Gym). The other 140 are measured against the ladder, R-089 and kit legality — none
+of which is a judgement that the training is good. **The claim is narrow: the
+family Sam rejected now refuses honestly instead of publishing a bad week.**
+
+## NEXT — NOT STARTED, AND NOT TO BE STARTED
+
+**Sam is defining the base weekly programming and spacing layouts tomorrow, and
+those become the specification.** The 14 refusals blocked on the
+session-count/scheduling capability wait for it. **No scheduling work has begun and
+none is queued.** Nothing in this mission should be read as a design for it.
