@@ -3,7 +3,7 @@
 Branch `slice-composer-completion`. **Base commit `459d6bf9`** (`git merge-base`
 against `main`). Worktree-isolated throughout; the shared checkout was never edited.
 
-**COMMITS — FIVE.**
+**COMMITS — SIX.**
 
 | | | |
 | --- | --- | --- |
@@ -11,7 +11,13 @@ against `main`). Worktree-isolated throughout; the shared checkout was never edi
 | `32f408b2` | the `full_body -> lower` collapse | |
 | `75fc0c4e` | this report and the printed weeks | |
 | `06b21b98` | the two acceptance criteria, measured | ← **branch head when Sam reviewed** |
-| *(this one)* | **R-087 — a general full-body day asks the week what is open** | ordered by Sam after that review |
+| `27776930` | **R-087 — a general full-body day asks the week what is open** | ordered by Sam after that review |
+| *(this one)* | this table, carrying `27776930`'s hash | |
+
+**SIX, not five, and the sixth exists only because of the fifth.** A commit cannot
+state its own hash, so `27776930`'s number is recorded here and this correction is
+the commit that carries it. Counting it as five would repeat exactly the undercount
+Sam corrected.
 
 ### ⚠ RECEIPT CORRECTIONS, ORDERED BY SAM 2026-08-14
 
@@ -21,7 +27,7 @@ rather than quietly overwritten:
 1. **`459b6bf9` was never a commit in this repo.** The base is **`459d6bf9`**.
    A transposed digit, repeated in the header and the baseline table.
 2. **"Two commits" undercounted.** It was **four** at the moment Sam reviewed,
-   head `06b21b98`; the R-087 commit above makes **five**. The original line was
+   head `06b21b98`; the R-087 commit and this correction make **six**. The original line was
    written before the last three existed and was never re-checked.
 3. **"44 of the 60 refusals" was a number no run produced.** It appeared in a code
    comment in `composeWeek.ts`. The measured figure, in the units the census
