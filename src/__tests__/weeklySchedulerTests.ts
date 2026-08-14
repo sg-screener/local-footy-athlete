@@ -343,7 +343,11 @@ console.log('\n[anchors] Real club nights and real game days — never assumed')
 // ═══════════════════════════════════════════════════════════════════════════
 {
   // ⚠ NOT Tuesday/Thursday/Saturday. The mission required real weekdays.
-  const week = built({ phase: 'In-season', gymAccessDays: [MON, TUE, WED, THU, FRI],
+  // ⚠ SATURDAY IS IN THE GYM SET ON PURPOSE. It is G-1 for the Sunday game, so
+  // if the proximity rule stopped excluding it the scheduler COULD place strength
+  // there. Without Saturday in the set the cell is unfalsifiable — the mutation
+  // harness proved it by removing the rule and reddening nothing.
+  const week = built({ phase: 'In-season', gymAccessDays: [MON, TUE, WED, THU, FRI, SAT],
     clubNights: [WED, FRI], gameDay: SUN, age: 24 });
   // ⚠ READ THE FLAG, NOT THE OWNER. A club night that is also a gym day is BOTH,
   // and the contract's own reference week pairs an upper session with each club
@@ -489,6 +493,16 @@ console.log('\n[patterns] Weekly movement coverage and paired balance');
     && week.intendedPatterns.includes('single_leg_knee')
     && week.intendedPatterns.includes('single_leg_hip'),
     JSON.stringify(week.intendedPatterns));
+  // ⚠ AND A WEEK THAT ACTUALLY CONTAINS A FULL-BODY SESSION. The cell above uses
+  // Upper x2 + Lower x2, so gutting `full_body`'s pattern list changed nothing in
+  // it — the harness found the blind spot.
+  const withFullBody = built({ phase: 'Off-season', offseasonBlock: 'normal_build',
+    gymAccessDays: [MON, WED, FRI] });
+  ok('[WC-023] a full-body session intends the lower patterns too', ['WC-023'],
+    withFullBody.days.filter((d) => d.purpose === 'full_body')
+      .every((d) => d.movementIntention.includes('squat')
+        && d.movementIntention.includes('hinge')),
+    JSON.stringify(withFullBody.days.map((d) => [d.purpose, d.movementIntention])));
   ok('[WC-047] and 2-3 upper exposures', ['WC-047'],
     strengthDays(week).filter((d) => !PURPOSE_IS_LOWER[d.purpose as SessionPurpose])
       .length >= GLOBAL_RULES.upperExposures.min);
@@ -508,10 +522,14 @@ console.log('\n[refusal] A schedule that cannot be built stays a TYPED refusal')
   const impossible = scheduleWeek(inputs({
     phase: 'Pre-season', gymAccessDays: [MON, FRI, SAT, SUN], gameDay: SAT, age: 24,
   }));
-  ok('[WC-142] an unbuildable week REFUSES with a typed finding and a clause id',
+  // ⚠ THE FINDING IS NAMED, NOT JUST ITS EXISTENCE. Asserting only "it refused"
+  // passed even when the not-enough-days branch was skipped entirely and a
+  // DIFFERENT refusal answered — the harness caught that by removing the branch
+  // and reddening nothing.
+  ok('[WC-142] an unbuildable week REFUSES with the RIGHT typed finding',
     ['WC-142'],
     scheduleRefused(impossible)
-    && typeof (impossible as any).finding === 'string'
+    && (impossible as any).finding === 'not_enough_legal_gym_days'
     && typeof (impossible as any).clauseId === 'string',
     JSON.stringify(impossible));
   ok('[WC-142] ...and it is never silently repaired into a smaller week',
