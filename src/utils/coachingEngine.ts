@@ -15,6 +15,7 @@
  */
 
 import type {
+  AuthoredDayIdentity,
   SeasonPhase,
   CapacityBand,
   SessionTier,
@@ -301,11 +302,24 @@ export interface OnboardingToCoachingInputsOptions {
 
 // ─── Output Types ───
 
+/**
+ * Re-exported from the domain, where it lives because it TRAVELS: the scheduler
+ * states it, the connector carries it, the adapter stamps it onto the workout
+ * and the assembler defends it. See `AuthoredDayIdentity` in `types/domain`.
+ */
+export type { AuthoredDayIdentity };
+
 export interface SessionAllocation {
   tier: SessionTier;
   focus: string;
   dayOfWeek?: string;
   isHardExposure: boolean;
+  /**
+   * The scheduler's typed day identity. **Read this before inferring anything.**
+   * Absent on plans from older producers, which is why every reader falls back
+   * to the historical inference rather than assuming.
+   */
+  authoredDay?: AuthoredDayIdentity;
   /**
    * THIS DAY'S CONTENT IS A COMPOSED SESSION, not a sentence to be interpreted.
    *

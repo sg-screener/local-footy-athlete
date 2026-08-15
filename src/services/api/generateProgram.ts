@@ -1119,13 +1119,45 @@ export function buildGeneratedMicrocycles(args: {
       const validation = validateGeneratedWeek({
         workouts,
         contract: generatedContract,
-        anchors: (exposureContractV2.anchors ?? []).map((anchor) => ({
-          dayOfWeek: anchor.dayOfWeek,
-          participation: String(anchor.participation ?? ''),
-          // "Was the athlete there?" — the two states that mean no.
-          attended: anchor.participation !== 'did_not_participate'
-            && anchor.participation !== 'unknown',
-        })),
+        // ── WHAT AN ANCHOR IS WORTH BEFORE IT HAS HAPPENED ─────────────────
+        //
+        // **Sam, 2026-08-15:** *"conditioning/sprint credit supplied by those
+        // visible anchors"*.
+        //
+        // A club night or a fixture the athlete has not attended yet carries
+        // `participation: 'unknown'` — nobody has reported anything, because the
+        // week is being AUTHORED. Read literally that means no credit, so a week
+        // whose high-speed running is entirely supplied by two club nights and a
+        // game was refused for having no sprint in it. The app's own contract
+        // then had no legal way to satisfy the minimum either: the approved
+        // source forbids ADDING sprint work on a club-training week.
+        //
+        // The contract already records what generation knows, on the anchor
+        // itself: `participationProvenance: 'derived_healthy_unrestricted'` —
+        // *"we derived that this athlete is healthy and unrestricted"*. That is
+        // the plan's stated assumption, and a plan is authored on it. So a
+        // DERIVED-healthy anchor participates normally for the purposes of
+        // judging the week we are about to hand over.
+        //
+        // ⚠ It is not promoted to `explicit`, and nothing here is written back.
+        // `explicit` means the ATHLETE said so, and the safety boundary treats
+        // it very differently; a derived assumption that laundered itself into a
+        // reported fact would be the worse defect by far. The moment a real
+        // participation fact exists it is not derived any more, and it wins.
+        anchors: (exposureContractV2.anchors ?? []).map((anchor) => {
+          const derivedHealthy = anchor.participation === 'unknown'
+            && anchor.participationProvenance === 'derived_healthy_unrestricted';
+          const participation = derivedHealthy
+            ? 'normal_unrestricted'
+            : String(anchor.participation ?? '');
+          return {
+            dayOfWeek: anchor.dayOfWeek,
+            participation,
+            // "Was the athlete there?" — the two states that mean no.
+            attended: participation !== 'did_not_participate'
+              && participation !== 'unknown',
+          };
+        }),
       });
       if (validation.verdict === 'refused') {
         throw new GeneratedWeekRefusedError(

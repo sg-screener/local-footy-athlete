@@ -35,7 +35,7 @@ import type { MaterialisedSession } from './materialiseAuthoredSessions';
 import type { WeeklySchedule } from './weeklyScheduler';
 import type { CapacityBand, DeterministicCoachNoteEffectSeed } from '../types/domain';
 import type {
-  AIConstraints, CoachingInputs, CoachingPlan, SessionAllocation,
+  AIConstraints, AuthoredDayIdentity, CoachingInputs, CoachingPlan, SessionAllocation,
 } from '../utils/coachingEngine';
 import type { Section18ContractV2Input } from './weeklyExposureContractV2';
 
@@ -121,10 +121,27 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
       });
     }
 
+    // ── THE TYPED DAY IDENTITY, CARRIED WHOLE ──────────────────────────────
+    //
+    // Copied off the scheduler's own day. **The connector decides nothing here
+    // either** — `anchor` is its `game`/`clubTraining` flags and `components` is
+    // what it authorised the day to hold. This is the field that stops the
+    // reader downstream from rebuilding the day out of hints.
+    const components: AuthoredDayIdentity['components'] = [
+      ...(isStrength ? ['strength' as const] : []),
+      ...(template ? ['conditioning' as const] : []),
+      ...(session.owner === 'rest_or_recovery' ? ['recovery' as const] : []),
+    ];
+    const authoredDay: AuthoredDayIdentity = {
+      anchor: session.game ? 'game' : session.clubTraining ? 'club_training' : null,
+      components,
+    };
+
     const allocation: SessionAllocation = {
       tier: (session.optional ? 'optional' : 'core') as SessionAllocation['tier'],
       focus: intention?.purpose ?? session.owner,
       dayOfWeek: DAY_NAMES[session.dayOfWeek],
+      authoredDay,
       // Hard/rest classification is the SCHEDULER's (Sam's boundary), read off
       // the day it authored rather than recomputed here.
       isHardExposure: session.owner === 'strength' || session.game

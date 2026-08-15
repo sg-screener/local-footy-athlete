@@ -845,6 +845,28 @@ export interface DerivedSessionProvenance {
  * Workout
  * Represents a single training session
  */
+/**
+ * WHAT THE SCHEDULER AUTHORED FOR A DAY — typed, and never inferred.
+ *
+ * **Sam, 2026-08-15:** *"merge by typed day/component identity, never names"*
+ * and *"no layer replaces an entire scheduler-authored day"*.
+ *
+ * It lives in the domain rather than beside the scheduler because the whole
+ * point is that it TRAVELS: the scheduler states it, the connector carries it,
+ * the adapter stamps it onto the workout and the assembler defends it. A reader
+ * consults it and stops — it does not re-derive, and it may not overrule.
+ */
+export interface AuthoredDayIdentity {
+  /** Immovable and scheduler-owned. No component may displace it. */
+  readonly anchor: 'game' | 'club_training' | null;
+  /**
+   * Every part the scheduler authorised, so a multi-part day survives as a
+   * multi-part day. An empty list is an authored REST day — a decision, not the
+   * absence of one.
+   */
+  readonly components: readonly ('strength' | 'conditioning' | 'recovery')[];
+}
+
 export interface Workout {
   id: string;
   microcycleId: string;
@@ -875,6 +897,24 @@ export interface Workout {
    * `splitAcceptedSessionForAthleteMove`.
    */
   isTeamDay?: boolean;
+  /**
+   * WHAT THE SCHEDULER AUTHORED FOR THIS DAY, carried onto the built workout.
+   *
+   * **WRITER:** the generation adapter (`buildWorkoutsFromCoach`), which copies
+   * it off the day's `SessionAllocation`.
+   * **READER:** `assembleAuthoredWeek`, which must not let a merged component
+   * overwrite an anchor's identity.
+   * **BEHAVIOURAL TEST:** `npm run test:anchor-survival`.
+   *
+   * `isTeamDay` above is the same idea, discovered one anchor at a time: it is
+   * the single typed day-fact the pipeline carried, and it is the single anchor
+   * that used to survive to the athlete. Everything else — the fixture, and
+   * whether a day holds strength as well as conditioning — was re-derived by
+   * each reader from loose hints, so the fixture became "Rest" and a
+   * strength+conditioning day became "Conditioning". This field is the general
+   * form, so the next anchor does not need its own boolean.
+   */
+  authoredDay?: AuthoredDayIdentity;
   /**
    * WHICH WORD THIS FIXTURE WEARS. Stamped by the resolver's game-stub
    * factories from the season phase (`canonicalFixtureKind`,
