@@ -129,6 +129,11 @@ export function weeklySchedulerInputsFrom(args: {
     gymAccessDays: dayNumbers(profile.preferredTrainingDays),
     clubNights: dayNumbers(profile.teamTrainingDays),
     gameDay: dayNumber(profile.gameDay),
+    // **ALWAYS RECURRING FROM ONBOARDING.** The athlete names a usual game day,
+    // which by definition means there was one last week too. Nothing in the
+    // profile can say "first fixture ever", so nothing here may claim it — and
+    // claiming it is precisely how Lower landed on G+1.
+    fixtureRecurrence: 'recurring' as const,
     age: ageFromRange(profile.ageRange),
     readiness,
     unavailableDays: [...unavailableDays],

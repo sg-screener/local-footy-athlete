@@ -134,6 +134,13 @@ export interface AdapterContribution {
 /** THE ONLY FIELDS AN ADAPTER CONTRIBUTION MAY NAME. */
 const ADAPTER_CONTRIBUTED_FIELDS: readonly string[] = [
   'conditioningBlock', 'conditioningCategory', 'conditioningFlavour',
+  // ⚠ `conditioningOffFeet` was ABSENT from this list, so the merge silently
+  // dropped it on every composer day: the scheduler typed `off_leg` (WC-115,
+  // lower + conditioning), the adapter stamped it, and the athlete's week said
+  // `undefined`. The other conditioning fields were all here — it is the one
+  // that says the block is deliberately OFF THE LEGS, which on a lower day is
+  // the whole point of pairing it.
+  'conditioningOffFeet',
   'attachedConditioningKind', 'conditioningFeasibility', 'hasCombinedConditioning',
   'speedBlock', 'isTeamDay', 'derivedSessionProvenance', 'strengthIntent',
   'section18Evidence', 'durationMinutes', 'authoredDay',

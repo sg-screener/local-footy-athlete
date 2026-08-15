@@ -69,6 +69,13 @@ export interface WeeklySchedulerInputs {
   /** The athlete's REAL club nights. Never assumed (WC-062). */
   readonly clubNights: readonly number[];
   readonly gameDay: number | null;
+  /**
+   * Whether a PREVIOUS fixture exists. **Defaults to `'recurring'` at every
+   * caller** — a fixture falling outside the printed week is not evidence that
+   * there was no game, and assuming otherwise is the G+1 defect itself. Only an
+   * explicit first fixture may say `'first_fixture_no_previous'`.
+   */
+  readonly fixtureRecurrence: FixtureRecurrence;
   readonly age: number | null;
   readonly readiness: SchedulerReadiness;
   /** Days the athlete explicitly marked unavailable. Never used (WC-061). */
@@ -212,6 +219,82 @@ function areConsecutive(a: number, b: number): boolean {
   return Math.abs(orderIndex(a) - orderIndex(b)) === 1;
 }
 
+/**
+ * HOW FAR THIS DAY IS FROM A GAME — **ACROSS THE WEEK BOUNDARY.**
+ *
+ * ## THE DEFECT THIS REPLACES
+ *
+ * Proximity was `orderIndex(day) - orderIndex(gameDay)` inside one Monday→Sunday
+ * array. For a **Sunday** fixture that makes Monday `-6`: six days *before* the
+ * game, wide open. **Monday is one day AFTER last Sunday's game.** The week is a
+ * printing convention; the athlete's body is not reset by it. So a recurring
+ * Sunday fixture put Lower plus 30–50 minutes of conditioning on G+1, which
+ * WC-050 reserves for rest or recovery — and every G-rule was silently
+ * unreachable for a fixture on the last day of the array.
+ *
+ * ## THE DISTINCTION THAT MAKES IT SAFE
+ *
+ * A cyclic offset assumes a game last week. That is right for a **recurring**
+ * fixture and wrong for a genuine **first** fixture — so the caller must say
+ * which, and the two are separate answers rather than one number:
+ *
+ *   - `daysSincePreviousGame` — the recovery side. Real when the fixture recurs,
+ *     or when the day simply falls after the game inside this same week.
+ *   - `daysUntilNextGame` — the taper side. Real when the fixture recurs, or when
+ *     the day falls before the game inside this same week.
+ *
+ * `null` means **"there is no such fixture"**, not "far away". A caller that
+ * treats `null` as a large number reintroduces the bug.
+ *
+ * ⚠ **`'recurring'` IS THE DEFAULT EVERYWHERE.** Never infer "no previous game"
+ * from a fixture being outside the printed week — that inference is exactly what
+ * was wrong. Only an explicit `first_fixture_no_previous` says so.
+ */
+export type FixtureRecurrence = 'recurring' | 'first_fixture_no_previous';
+
+export interface GameProximity {
+  readonly daysSincePreviousGame: number | null;
+  readonly daysUntilNextGame: number | null;
+}
+
+export function gameProximity(
+  day: number,
+  gameDay: number | null,
+  recurrence: FixtureRecurrence,
+): GameProximity {
+  if (gameDay === null) {
+    return { daysSincePreviousGame: null, daysUntilNextGame: null };
+  }
+  const since = ((orderIndex(day) - orderIndex(gameDay)) + 7) % 7;
+  const until = ((orderIndex(gameDay) - orderIndex(day)) + 7) % 7;
+  const recurring = recurrence === 'recurring';
+  // On the game day itself both are 0, and that is true in either direction.
+  const afterInWeek = orderIndex(day) > orderIndex(gameDay);
+  const beforeInWeek = orderIndex(day) < orderIndex(gameDay);
+  return {
+    daysSincePreviousGame: recurring || afterInWeek ? since : null,
+    daysUntilNextGame: recurring || beforeInWeek ? until : null,
+  };
+}
+
+/** G+1: the day after a game. WC-050 reserves it for rest or recovery. */
+function isGamePlusOne(day: number, inputs: WeeklySchedulerInputs): boolean {
+  return gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence)
+    .daysSincePreviousGame === 1;
+}
+
+/** G-1: the day before a game. WC-050 forbids heavy lifting. */
+function isGameMinusOne(day: number, inputs: WeeklySchedulerInputs): boolean {
+  return gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence)
+    .daysUntilNextGame === 1;
+}
+
+/** G-2: two days out. No heavy LOWER work, and no added lower-body power. */
+function isGameMinusTwo(day: number, inputs: WeeklySchedulerInputs): boolean {
+  return gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence)
+    .daysUntilNextGame === 2;
+}
+
 // ─── LEGALITY ──────────────────────────────────────────────────────────────
 
 /**
@@ -223,11 +306,10 @@ function dayIsUsableForStrength(day: number, inputs: WeeklySchedulerInputs): boo
   if (inputs.unavailableDays.includes(day)) return false;
   if (inputs.gameDay === day) return false;
   if (!inputs.gymAccessDays.includes(day)) return false;
-  if (inputs.gameDay !== null) {
-    const gap = orderIndex(day) - orderIndex(inputs.gameDay);
-    // G-1: no heavy lifting (WC-050). G+1: rest or recovery only (WC-050).
-    if (gap === -1 || gap === 1) return false;
-  }
+  // G-1: no heavy lifting (WC-050). G+1: rest or recovery only (WC-050).
+  // **Cyclic**: a Sunday fixture makes Monday G+1, which the old in-week
+  // subtraction read as G-6 and let through.
+  if (isGameMinusOne(day, inputs) || isGamePlusOne(day, inputs)) return false;
   return true;
 }
 
@@ -344,8 +426,7 @@ function scoreAssignment(
   // WC-050 — keep the two days before the game clear of heavy lower work.
   if (inputs.gameDay !== null) {
     for (const slot of byOrder) {
-      const gap = orderIndex(slot.day) - orderIndex(inputs.gameDay);
-      if (gap === -2 && PURPOSE_IS_LOWER[slot.purpose]) score -= 25;
+      if (isGameMinusTwo(slot.day, inputs) && PURPOSE_IS_LOWER[slot.purpose]) score -= 25;
     }
   }
   return score;
@@ -513,12 +594,12 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         // no primer.
         powerEligible: (() => {
           if (inputs.gameDay === null) return true;
-          const gap = orderIndex(day) - orderIndex(inputs.gameDay);
-          if (Math.abs(gap) <= 1) return false;              // game day, G-1, G+1
+          if (inputs.gameDay === day) return false;          // the game itself
+          if (isGameMinusOne(day, inputs) || isGamePlusOne(day, inputs)) return false;
           // WC-051: G-2 bars LOWER-body power only. An upper day keeps its
           // eligibility — *"should not rule out upper body power"* (Sam,
           // 2026-08-15) — and the primer rides the strength session already there.
-          if (gap === -2 && PURPOSE_IS_LOWER[purpose]) return false;
+          if (isGameMinusTwo(day, inputs) && PURPOSE_IS_LOWER[purpose]) return false;
           return true;
         })(),
         optional: overlayOptional, clauseId: layout.clauseId,
@@ -569,10 +650,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       if (inputs.unavailableDays.includes(day)) continue;      // WC-061
       if (inputs.gameDay === day) continue;
       if (purposeByDay.has(day)) continue;                      // already a gym day
-      if (inputs.gameDay !== null) {
-        const gap = orderIndex(day) - orderIndex(inputs.gameDay);
-        if (gap === -1 || gap === 1) continue;                  // WC-050
-      }
+      // WC-050, cyclic — G-1 and G+1 take no app running either.
+      if (isGameMinusOne(day, inputs) || isGamePlusOne(day, inputs)) continue;
       // WC-044 — no more than three running days consecutively.
       const wouldRun = new Set([...runningDays, day]);
       let run = 0; let longest = 0;
@@ -697,13 +776,24 @@ export function inSeasonSprintDay(
   if (!INSEASON_SPRINT_RULE.addOnlyWhenNoClubTraining) return null;
   if (inputs.clubNights.length > 0) return null;
   if (inputs.gameDay === null) return null;
-  const gameIndex = orderIndex(inputs.gameDay);
   // LATEST legal day first: a sprint sits as close to G-3 as the week allows, so
   // it does not crowd the start of the week away from the game.
+  //
+  // "G-3 or earlier" is a distance from the NEXT game, so it is cyclic like the
+  // rest: `daysUntilNextGame >= 3`. The old form compared raw week positions,
+  // which for a Sunday fixture called every day eligible — including G+1.
+  const untilGame = (day: number) =>
+    gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence).daysUntilNextGame;
   const eligible = WEEK_ORDER
     .filter((day) => !inputs.unavailableDays.includes(day))
     .filter((day) => !occupiedDays.has(day))
-    .filter((day) => orderIndex(day) <= gameIndex + INSEASON_SPRINT_RULE.earliestGameOffset);
+    .filter((day) => !isGamePlusOne(day, inputs))
+    .filter((day) => {
+      const until = untilGame(day);
+      return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
+    })
+    // Closest to the game last, so `eligible[last]` is still the latest legal day.
+    .sort((a, b) => (untilGame(b) ?? 0) - (untilGame(a) ?? 0));
   if (eligible.length === 0) return null;
   return eligible[eligible.length - 1];
 }

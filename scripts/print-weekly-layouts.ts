@@ -32,7 +32,8 @@ const FRI = 5; const SAT = 6; const SUN = 0;
 function base(over: Partial<WeeklySchedulerInputs>): WeeklySchedulerInputs {
   return {
     weekStartISO: '2026-07-13', phase: 'In-season', offseasonBlock: null,
-    gymAccessDays: [MON, WED], clubNights: [], gameDay: null, age: 30,
+    gymAccessDays: [MON, WED], clubNights: [], gameDay: null,
+  fixtureRecurrence: 'recurring', age: 30,
     readiness: { lowReadiness: false, highReadiness: false, lowFatigue: false,
       consistentlyCompletesThree: false },
     unavailableDays: [], ...over,

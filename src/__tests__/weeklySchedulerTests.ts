@@ -71,6 +71,7 @@ function inputs(over: Partial<WeeklySchedulerInputs> = {}): WeeklySchedulerInput
     gymAccessDays: [MON, WED],
     clubNights: [],
     gameDay: null,
+  fixtureRecurrence: 'recurring',
     age: 30,
     readiness: {
       lowReadiness: false, highReadiness: false,

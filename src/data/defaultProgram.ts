@@ -2748,6 +2748,15 @@ export function buildWorkoutsFromCoach(
       isTeamDay: planEntry?.authoredDay
         ? planEntry.authoredDay.anchor === 'club_training'
         : planEntry?.isTeamDay,
+      // THE SCHEDULER'S OFF-LEG REQUEST, CARRIED. It types `off_leg` whenever
+      // conditioning pairs with a lower session (WC-115), the specialist duly
+      // resolved a bike — and the flag then reached the workout as `undefined`,
+      // so nothing downstream could tell that this aerobic block is deliberately
+      // off the legs rather than a run someone happened to pick. Measured on the
+      // Sunday-fixture world: `modality=bike`, `conditioningOffFeet=undefined`.
+      ...(planEntry?.conditioningOffFeet !== undefined
+        ? { conditioningOffFeet: planEntry.conditioningOffFeet }
+        : {}),
       sessionTier: canonicalTier,
       ...(planEntry?.planEntryId ? { planEntryId: planEntry.planEntryId } : {}),
       ...(canonicalStrengthIntent
