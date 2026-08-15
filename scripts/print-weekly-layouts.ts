@@ -23,6 +23,7 @@ import {
   scheduleWeek,
   type WeeklySchedulerInputs,
 } from '../src/rules/weeklyScheduler';
+import { materialiseAuthoredSessions } from '../src/rules/materialiseAuthoredSessions';
 
 const DAY_LABEL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MON = 1; const TUE = 2; const WED = 3; const THU = 4;
@@ -158,18 +159,43 @@ for (const scenario of SCENARIOS) {
   }
   lines.push(`Layout \`${result.layoutClauseId}\` · **${result.requiredStrengthSessions} required strength sessions**`);
   lines.push('');
-  lines.push('| Day | Session | Owner | Conditioning | Sets | Club | Game |');
+  // ⚠ THE SPECIALIST CONTENT IS SHOWN BESIDE THE SCHEDULER'S DECISION, so the
+  // boundary is visible on the page: the left columns are the scheduler's, the
+  // right two are the specialists'.
+  const materialised = materialiseAuthoredSessions({
+    schedule: result,
+    facts: {
+      weekStartISO: result.weekStartISO, miniCycleNumber: 1,
+      capacity: 'moderate' as never, isBeginner: false, experienced: true,
+      powerGoalNudge: false, injuries: [] as never, runOnly: false,
+      phase: (scenario.over.phase ?? 'In-season') as never,
+      offseasonSubphase: null,
+    },
+    gameDay: scenario.over.gameDay ?? null,
+  });
+  lines.push('| Day | SCHEDULER: session | purpose/category | Sets | Club/Game '
+    + '| SPECIALIST: conditioning template | SPECIALIST: power |');
   lines.push('| --- | --- | --- | --- | --- | --- | --- |');
-  for (const day of result.days) {
+  result.days.forEach((day, index) => {
     const sets = day.setBudget
       ? (day.setBudget.preferredMin === day.setBudget.preferredMax
         ? `${day.setBudget.preferredMin}`
         : `${day.setBudget.preferredMin}-${day.setBudget.preferredMax}`)
       : '—';
-    lines.push(`| ${DAY_LABEL[day.dayOfWeek]} | ${day.purpose ?? '—'}${day.optional ? ' _(optional)_' : ''} `
-      + `| ${day.owner} | ${day.conditioning ?? '—'} | ${sets} `
-      + `| ${day.clubTraining ? 'yes' : ''} | ${day.game ? 'yes' : ''} |`);
-  }
+    const m = materialised[index];
+    const anchor = [day.clubTraining ? 'club' : '', day.game ? 'GAME' : '']
+      .filter(Boolean).join(' + ') || '';
+    lines.push(`| ${DAY_LABEL[day.dayOfWeek]} `
+      + `| ${day.purpose ?? day.owner}${day.optional ? ' _(optional)_' : ''} `
+      + `| ${day.conditioningCategory ?? '—'}${day.conditioningRole ? ` (${day.conditioningRole})` : ''} `
+      + `| ${sets} | ${anchor} `
+      + `| ${m?.conditioningTemplate?.name ?? (m?.unmaterialised ? `_${m.unmaterialised}_` : '—')} `
+      + `| ${m?.powerPrimer
+        ? `${m.powerPrimer.kind}/${m.powerPrimer.family} `
+          + `${m.powerPrimer.sets}x${m.powerPrimer.repsMin}-${m.powerPrimer.repsMax}`
+          + `${m.powerPrimer.reduced ? ' _(reduced)_' : ''}`
+        : '—'} |`);
+  });
   lines.push('');
   lines.push(`Patterns intended this week: ${result.intendedPatterns.join(', ')}`);
   lines.push('');

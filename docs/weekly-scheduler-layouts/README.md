@@ -47,15 +47,15 @@ _Two sessions — Full Body x2._
 
 Layout `WC-100` · **2 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | full_body | strength | off_leg | 12-15 |  |  |
-| Tue | — | club | — | — | yes |  |
-| Wed | full_body | strength | off_leg | 12-15 |  |  |
-| Thu | — | club | — | — | yes |  |
-| Fri | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sat | — | game | — | — |  | yes |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | full_body | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 2x3-3 |
+| Tue | club | — | — | club | — | — |
+| Wed | full_body | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 2x3-3 |
+| Thu | club | — | — | club | — | — |
+| Fri | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sat | game | — | — | GAME | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, hinge, horizontal_push, horizontal_pull, single_leg_knee, single_leg_hip
 
@@ -65,15 +65,15 @@ _The contract's own reference week: an upper session paired with each club night
 
 Layout `WC-101` · **3 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | lower | strength | off_leg | 12-15 |  |  |
-| Tue | upper_pull | strength | running | 12-15 | yes |  |
-| Wed | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Thu | upper_push | strength | running | 12-15 | yes |  |
-| Fri | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sat | — | game | — | — |  | yes |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | lower | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 2x3-3 |
+| Tue | upper_pull | tempo (component) | 12-15 | club | 30:30 Controlled Tempo Blocks | primer/upper 2x3-3 |
+| Wed | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Thu | upper_push | tempo (component) | 12-15 | club | 30:30 Controlled Tempo Blocks | primer/upper 1x3-3 |
+| Fri | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sat | game | — | — | GAME | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, hinge, single_leg_knee, single_leg_hip, horizontal_pull, vertical_pull, horizontal_push, vertical_push
 
@@ -83,15 +83,15 @@ _Selector met — four sessions, split Lower Squat / Lower Hinge at 10 sets._
 
 Layout `WC-103` · **4 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | lower_squat | strength | off_leg | 10 |  |  |
-| Tue | upper_pull | strength | running | 10 | yes |  |
-| Wed | lower_hinge | strength | off_leg | 10 |  |  |
-| Thu | upper_push | strength | running | 10 | yes |  |
-| Fri | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sat | — | game | — | — |  | yes |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | lower_squat | aerobic_base (component) | 10 |  | Continuous Aerobic Run | primer/lower 2x3-3 |
+| Tue | upper_pull | tempo (component) | 10 | club | 30:30 Controlled Tempo Blocks | primer/upper 2x3-3 |
+| Wed | lower_hinge | aerobic_base (component) | 10 |  | Continuous Aerobic Run | primer/lower 2x3-3 |
+| Thu | upper_push | tempo (component) | 10 | club | 30:30 Controlled Tempo Blocks | primer/upper 1x3-3 |
+| Fri | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sat | game | — | — | GAME | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, single_leg_knee, horizontal_pull, vertical_pull, hinge, single_leg_hip, horizontal_push, vertical_push
 
@@ -101,15 +101,15 @@ _Selector not met — the three-session layout is retained._
 
 Layout `WC-102` · **3 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | lower | strength | off_leg | 12-15 |  |  |
-| Tue | upper_pull | strength | running | 12-15 | yes |  |
-| Wed | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Thu | upper_push | strength | running | 12-15 | yes |  |
-| Fri | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sat | — | game | — | — |  | yes |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | lower | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 2x3-3 |
+| Tue | upper_pull | tempo (component) | 12-15 | club | 30:30 Controlled Tempo Blocks | primer/upper 2x3-3 |
+| Wed | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Thu | upper_push | tempo (component) | 12-15 | club | 30:30 Controlled Tempo Blocks | primer/upper 1x3-3 |
+| Fri | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sat | game | — | — | GAME | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, hinge, single_leg_knee, single_leg_hip, horizontal_pull, vertical_pull, horizontal_push, vertical_push
 
@@ -119,15 +119,15 @@ _Full Body x2, and required running leaves the gym days._
 
 Layout `WC-110` · **2 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | full_body | strength | off_leg | 12-15 |  |  |
-| Tue | — | conditioning | running | — |  |  |
-| Wed | full_body | strength | off_leg | 12-15 |  |  |
-| Thu | — | conditioning | running | — |  |  |
-| Fri | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sat | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | full_body | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 3x3-3 |
+| Tue | conditioning | tempo (standalone) | — |  | 30:30 Controlled Tempo Blocks | — |
+| Wed | full_body | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 3x3-3 |
+| Thu | conditioning | tempo (standalone) | — |  | 30:30 Controlled Tempo Blocks | — |
+| Fri | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sat | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, hinge, horizontal_push, horizontal_pull, single_leg_knee, single_leg_hip
 
@@ -137,15 +137,15 @@ _Lower + Upper + Full Body._
 
 Layout `WC-111` · **3 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | lower | strength | off_leg | 12-15 |  |  |
-| Tue | — | conditioning | running | — |  |  |
-| Wed | upper | strength | running | 12-15 |  |  |
-| Thu | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Fri | full_body | strength | off_leg | 12-15 |  |  |
-| Sat | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | lower | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 3x3-3 |
+| Tue | conditioning | tempo (standalone) | — |  | 30:30 Controlled Tempo Blocks | — |
+| Wed | upper | tempo (component) | 12-15 |  | 30:30 Controlled Tempo Blocks | primer/upper 3x3-3 |
+| Thu | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Fri | full_body | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 3x3-3 |
+| Sat | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, hinge, single_leg_knee, single_leg_hip, horizontal_push, horizontal_pull, vertical_push, vertical_pull
 
@@ -155,15 +155,15 @@ _Four required sessions; the fifth day does not create a fifth session._
 
 Layout `WC-113` · **4 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | upper_pull | strength | running | 12-15 |  |  |
-| Tue | lower_squat | strength | off_leg | 12-15 |  |  |
-| Wed | upper_push | strength | running | 12-15 |  |  |
-| Thu | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Fri | lower_hinge | strength | off_leg | 12-15 |  |  |
-| Sat | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | upper_pull | tempo (component) | 12-15 |  | 30:30 Controlled Tempo Blocks | primer/upper 3x3-3 |
+| Tue | lower_squat | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 3x3-3 |
+| Wed | upper_push | tempo (component) | 12-15 |  | 30:30 Controlled Tempo Blocks | primer/upper 3x3-3 |
+| Thu | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Fri | lower_hinge | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 3x3-3 |
+| Sat | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: horizontal_pull, vertical_pull, squat, single_leg_knee, horizontal_push, vertical_push, hinge, single_leg_hip
 
@@ -173,15 +173,15 @@ _Every session OPTIONAL — zero completed is a valid week._
 
 Layout `WC-120` · **2 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | full_body _(optional)_ | strength | off_leg | 12-15 |  |  |
-| Tue | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Wed | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Thu | full_body _(optional)_ | strength | off_leg | 12-15 |  |  |
-| Fri | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sat | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | full_body _(optional)_ | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | — |
+| Tue | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Wed | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Thu | full_body _(optional)_ | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | — |
+| Fri | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sat | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, hinge, horizontal_push, horizontal_pull, single_leg_knee, single_leg_hip
 
@@ -191,15 +191,15 @@ _The skeleton is required again at 90% load._
 
 Layout `WC-121` · **3 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | lower | strength | off_leg | 12-15 |  |  |
-| Tue | — | conditioning | running | — |  |  |
-| Wed | upper | strength | running | 12-15 |  |  |
-| Thu | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Fri | full_body | strength | off_leg | 12-15 |  |  |
-| Sat | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | lower | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | — |
+| Tue | conditioning | tempo (standalone) | — |  | 30:30 Controlled Tempo Blocks | — |
+| Wed | upper | tempo (component) | 12-15 |  | 30:30 Controlled Tempo Blocks | — |
+| Thu | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Fri | full_body | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | — |
+| Sat | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, hinge, single_leg_knee, single_leg_hip, horizontal_push, horizontal_pull, vertical_push, vertical_pull
 
@@ -209,15 +209,15 @@ _Lower x2 + Upper x2 on the best-spaced days._
 
 Layout `WC-122` · **4 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | lower_squat | strength | off_leg | 12-15 |  |  |
-| Tue | upper_pull | strength | running | 12-15 |  |  |
-| Wed | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Thu | lower_hinge | strength | off_leg | 12-15 |  |  |
-| Fri | upper_push | strength | running | 12-15 |  |  |
-| Sat | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sun | — _(optional)_ | rest_or_recovery | — | — |  |  |
+| Mon | lower_squat | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | — |
+| Tue | upper_pull | tempo (component) | 12-15 |  | 30:30 Controlled Tempo Blocks | — |
+| Wed | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Thu | lower_hinge | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | — |
+| Fri | upper_push | tempo (component) | 12-15 |  | 30:30 Controlled Tempo Blocks | — |
+| Sat | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sun | rest_or_recovery _(optional)_ | — | — |  | — | — |
 
 Patterns intended this week: squat, single_leg_knee, horizontal_pull, vertical_pull, hinge, single_leg_hip, horizontal_push, vertical_push
 
@@ -227,15 +227,15 @@ _Anchors follow the athlete, and Saturday (G-1) holds no strength._
 
 Layout `WC-103` · **4 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | lower_squat | strength | off_leg | 10 |  |  |
-| Tue | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Wed | upper_pull | strength | running | 10 | yes |  |
-| Thu | lower_hinge | strength | off_leg | 10 |  |  |
-| Fri | upper_push | strength | running | 10 | yes |  |
-| Sat | — _(optional)_ | rest_or_recovery | — | — |  |  |
-| Sun | — | game | — | — |  | yes |
+| Mon | lower_squat | aerobic_base (component) | 10 |  | Continuous Aerobic Run | primer/lower 2x3-3 |
+| Tue | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Wed | upper_pull | tempo (component) | 10 | club | 30:30 Controlled Tempo Blocks | primer/upper 2x3-3 |
+| Thu | lower_hinge | aerobic_base (component) | 10 |  | Continuous Aerobic Run | primer/lower 2x3-3 |
+| Fri | upper_push | tempo (component) | 10 | club | 30:30 Controlled Tempo Blocks | primer/upper 1x3-3 |
+| Sat | rest_or_recovery _(optional)_ | — | — |  | — | — |
+| Sun | game | — | — | GAME | — | — |
 
 Patterns intended this week: squat, single_leg_knee, horizontal_pull, vertical_pull, hinge, single_leg_hip, horizontal_push, vertical_push
 
@@ -245,11 +245,11 @@ _Those days never appear in the week at all._
 
 Layout `WC-113` · **4 required strength sessions**
 
-| Day | Session | Owner | Conditioning | Sets | Club | Game |
+| Day | SCHEDULER: session | purpose/category | Sets | Club/Game | SPECIALIST: conditioning template | SPECIALIST: power |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mon | upper_pull | strength | running | 12-15 |  |  |
-| Tue | lower_squat | strength | off_leg | 12-15 |  |  |
-| Thu | upper_push | strength | running | 12-15 |  |  |
-| Fri | lower_hinge | strength | off_leg | 12-15 |  |  |
+| Mon | upper_pull | tempo (component) | 12-15 |  | 30:30 Controlled Tempo Blocks | primer/upper 3x3-3 |
+| Tue | lower_squat | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 3x3-3 |
+| Thu | upper_push | tempo (component) | 12-15 |  | 30:30 Controlled Tempo Blocks | primer/upper 3x3-3 |
+| Fri | lower_hinge | aerobic_base (component) | 12-15 |  | Continuous Aerobic Run | primer/lower 3x3-3 |
 
 Patterns intended this week: horizontal_pull, vertical_pull, squat, single_leg_knee, horizontal_push, vertical_push, hinge, single_leg_hip
