@@ -60,6 +60,47 @@ export type MovementPattern =
 /** Conditioning that does not load the legs — §3 "Lower + conditioning". */
 export type ConditioningKind = 'off_leg' | 'running' | 'sprint_high_speed' | 'aerobic';
 
+/**
+ * ── WC-070: THE CONDITIONING CATEGORY IS THE SCHEDULER'S, THE TEMPLATE IS NOT ──
+ *
+ * **Sam's boundary, 2026-08-15:** the scheduler owns *"whether conditioning,
+ * sprint or power is required; its purpose/category; standalone versus combined
+ * role; its weekday"*. The specialists own *"exact conditioning template … work,
+ * rest, rounds, distance, modality and dose"*.
+ *
+ * So this maps the contract's own conditioning INTENT onto the app's existing
+ * `AthleteConditioningCategory` vocabulary. It names a purpose; it never names a
+ * template, and `conditioningSelection` is left as the single authority on which
+ * template serves a purpose.
+ *
+ * §3's rows are the source: *"Lower + conditioning: prefer off-leg work"*,
+ * *"Upper + running: hard running/top-end work belongs with upper days"*, and the
+ * sprint row's *"at least 1 except early off-season"*.
+ */
+export type ContractConditioningCategory =
+  | 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic'
+  | 'recovery_flush' | 'cod_decel';
+
+/** Standalone, or riding on a strength session (§3 "Compatible doubles"). */
+export type ContractConditioningRole = 'standalone' | 'finisher' | 'component';
+
+/**
+ * WC-071. Which category a scheduled conditioning slot asks for.
+ *
+ * **OFF-LEG PAIRS WITH LOWER, RUNNING WITH UPPER** — §3, verbatim: *"Lower +
+ * conditioning: Prefer off-leg work: bike, ski, rower or assault bike"* and
+ * *"Upper + running: Hard running/top-end work belongs with upper days where
+ * possible."*
+ */
+export const CATEGORY_FOR_CONDITIONING: Readonly<
+  Record<ConditioningKind, ContractConditioningCategory>
+> = {
+  off_leg: 'aerobic_base',
+  running: 'tempo',
+  aerobic: 'aerobic_base',
+  sprint_high_speed: 'sprint',
+};
+
 export interface ContractClause {
   readonly id: string;
   /** Where in the approved document this clause comes from. */

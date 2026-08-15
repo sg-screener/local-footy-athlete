@@ -37,6 +37,7 @@ import {
   type ContractPhase,
   type SessionPurpose,
 } from '../rules/weeklyProgrammingContract';
+import { materialiseAuthoredSessions } from '../rules/materialiseAuthoredSessions';
 import {
   scheduleRefused,
   scheduleWeek,
@@ -548,6 +549,86 @@ console.log('\n[refusal] A schedule that cannot be built stays a TYPED refusal')
     scheduleRefused(oneDay)
     && (oneDay as any).finding === 'not_enough_legal_gym_days',
     JSON.stringify(oneDay));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[boundary] Specialists materialise; they never redesign the week');
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Sam's boundary, 2026-08-15: a specialist *"may never add, remove, move or
+// repurpose a session."* Those are four separate properties and each gets a cell,
+// asserted against the REAL specialists over every world the matrix builds.
+{
+  const facts = {
+    weekStartISO: WEEK_START, miniCycleNumber: 1, capacity: 'moderate' as never,
+    isBeginner: false, experienced: true, powerGoalNudge: false,
+    injuries: [] as never, runOnly: false,
+    phase: 'In-season' as never, offseasonSubphase: null,
+  };
+  const cases: { label: string; over: Partial<WeeklySchedulerInputs> }[] = [
+    { label: 'in-season 3d club', over: { phase: 'In-season',
+      gymAccessDays: [MON, TUE, THU], clubNights: [TUE, THU], gameDay: SAT, age: 30 } },
+    { label: 'in-season 4d young', over: { phase: 'In-season',
+      gymAccessDays: [MON, TUE, WED, THU], clubNights: [TUE, THU], gameDay: SAT, age: 24 } },
+    { label: 'pre-season 5d no club', over: { phase: 'Pre-season',
+      gymAccessDays: [MON, TUE, WED, THU, FRI], age: 24 } },
+    { label: 'off-season early 2d', over: { phase: 'Off-season',
+      offseasonBlock: 'early_optional', gymAccessDays: [MON, THU], age: 24 } },
+  ];
+  let checked = 0;
+  const violations: string[] = [];
+  for (const c of cases) {
+    const week = built(c.over);
+    const out = materialiseAuthoredSessions({
+      schedule: week,
+      facts: { ...facts, phase: (c.over.phase ?? 'In-season') as never },
+      gameDay: c.over.gameDay ?? null,
+    });
+    checked += out.length;
+    // ADD / REMOVE — exactly one entry per authorised day, same count.
+    if (out.length !== week.days.length) violations.push(`${c.label}: count ${week.days.length} -> ${out.length}`);
+    // MOVE — same weekdays, same order.
+    const before = week.days.map((d) => d.dayOfWeek).join(',');
+    const after = out.map((d) => d.dayOfWeek).join(',');
+    if (before !== after) violations.push(`${c.label}: days ${before} -> ${after}`);
+    // REPURPOSE — same purpose and owner on every day.
+    week.days.forEach((d, i) => {
+      if (out[i].purpose !== d.purpose) violations.push(`${c.label}: purpose ${d.purpose} -> ${out[i].purpose}`);
+      if (out[i].owner !== d.owner) violations.push(`${c.label}: owner ${d.owner} -> ${out[i].owner}`);
+    });
+  }
+  ok('[boundary non-vacuity] the materialiser actually produced sessions', [],
+    checked >= 20, `${checked} sessions materialised`);
+  ok('[boundary] a specialist can neither ADD nor REMOVE a session', [],
+    !violations.some((v) => v.includes('count')), violations.join(' | '));
+  ok('[boundary] a specialist can never MOVE a session', [],
+    !violations.some((v) => v.includes('days')), violations.join(' | '));
+  ok('[boundary] a specialist can never REPURPOSE a session', [],
+    !violations.some((v) => v.includes('purpose') || v.includes('owner')),
+    violations.join(' | '));
+
+  // ⚠ POWER IS STRENGTH-SIDE AND NEVER CONDITIONING (Sam, 2026-08-15).
+  const inSeason = built({ phase: 'In-season', gymAccessDays: [MON, TUE, WED, THU],
+    clubNights: [TUE, THU], gameDay: SAT, age: 24 });
+  const materialised = materialiseAuthoredSessions({
+    schedule: inSeason, facts, gameDay: SAT });
+  ok('[boundary] power is only ever attached to a strength session', [],
+    materialised.filter((session) => session.powerPrimer !== null)
+      .every((session) => session.owner === 'strength'),
+    JSON.stringify(materialised.map((s) => [s.owner, s.powerPrimer !== null])));
+  ok('[boundary] power never appears on the game day or G-1', [],
+    !materialised.some((session) => session.powerPrimer !== null
+      && (session.game || session.dayOfWeek === FRI)),
+    JSON.stringify(materialised.filter((s) => s.powerPrimer).map((s) => s.dayOfWeek)));
+  ok('[boundary] power does not change the week\'s conditioning count', [],
+    inSeason.demand.coreConditioning
+      === built({ phase: 'In-season', gymAccessDays: [MON, TUE, WED, THU],
+        clubNights: [TUE, THU], gameDay: SAT, age: 24 }).demand.coreConditioning);
+
+  // A refusal is TYPED and the day survives it.
+  ok('[boundary] an unmaterialised session is typed, and its day still exists', [],
+    materialised.every((session) => session.unmaterialised === null
+      || typeof session.unmaterialised === 'string'));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

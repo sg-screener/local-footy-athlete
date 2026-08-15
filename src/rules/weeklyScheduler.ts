@@ -28,6 +28,7 @@
  * the same week, and the answer is optimal rather than merely feasible.**
  */
 import {
+  CATEGORY_FOR_CONDITIONING,
   DEFAULT_SET_BUDGET,
   GLOBAL_RULES,
   INSEASON_SPRINT_RULE,
@@ -36,6 +37,8 @@ import {
   PURPOSE_IS_LOWER,
   baseLayoutFor,
   type ConditioningKind,
+  type ContractConditioningCategory,
+  type ContractConditioningRole,
   type ContractPhase,
   type MovementPattern,
   type OffseasonBlock,
@@ -101,6 +104,24 @@ export interface SessionIntention {
   /** Main/secondary working sets. Null when the day owns no strength. */
   readonly setBudget: SetBudget | null;
   readonly conditioning: ConditioningKind | null;
+  /**
+   * The PURPOSE the specialist must serve. Scheduler-owned (Sam, 2026-08-15);
+   * `conditioningSelection` remains the only authority on which TEMPLATE serves
+   * it. Null when the day carries no conditioning.
+   */
+  readonly conditioningCategory: ContractConditioningCategory | null;
+  /** Standalone, or riding on this day's strength session (§3 doubles). */
+  readonly conditioningRole: ContractConditioningRole | null;
+  /**
+   * ⚠ **POWER IS STRENGTH-SIDE CONTENT, NEVER A SESSION** (Sam, 2026-08-15).
+   *
+   * The scheduler says only whether THIS ALREADY-AUTHORED STRENGTH DAY is
+   * eligible; `powerPrimerPolicy` picks the movement and dose. **Power never
+   * creates, moves or repurposes a day, and it never counts as conditioning** —
+   * which is why this is a flag on a strength day and not a `ConditioningKind`
+   * member, and why `WeeklyDemand.coreConditioning` cannot see it.
+   */
+  readonly powerEligible: boolean;
   /** True when the athlete may skip it — the early off-season block. */
   readonly optional: boolean;
   /** Which contract clause put this here. */
@@ -456,7 +477,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     if (inputs.gameDay === day) {
       days.push({
         dateISO, dayOfWeek: day, purpose: null, owner: 'game', movementIntention: [],
-        setBudget: null, conditioning: null, optional: false, clauseId: 'WC-050',
+        setBudget: null, conditioning: null, conditioningCategory: null,
+        conditioningRole: null, powerEligible: false,
+        optional: false, clauseId: 'WC-050',
         clubTraining: inputs.clubNights.includes(day), game: true,
       });
       continue;
@@ -468,6 +491,15 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         setBudget: layout.setBudget,
         // WC-115 — off-leg conditioning pairs with lower, running with upper.
         conditioning: PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running',
+        conditioningCategory: CATEGORY_FOR_CONDITIONING[
+          PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running'],
+        // Riding on a strength session, never a session of its own.
+        conditioningRole: 'component',
+        // WC-050: never on the game day, and G-1 is "no heavy lifting" so a
+        // primer there is not eligible either. Otherwise the day is offered to
+        // `powerPrimerPolicy`, which may still decline.
+        powerEligible: inputs.gameDay === null
+          || Math.abs(orderIndex(day) - orderIndex(inputs.gameDay)) > 1,
         optional: overlayOptional, clauseId: layout.clauseId,
         clubTraining: inputs.clubNights.includes(day), game: false,
       });
@@ -476,14 +508,16 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     if (inputs.clubNights.includes(day)) {
       days.push({
         dateISO, dayOfWeek: day, purpose: null, owner: 'club', movementIntention: [],
-        setBudget: null, conditioning: null, optional: false, clauseId: 'WC-062',
-        clubTraining: true, game: false,
+        setBudget: null, conditioning: null, conditioningCategory: null,
+        conditioningRole: null, powerEligible: false,
+        optional: false, clauseId: 'WC-062', clubTraining: true, game: false,
       });
       continue;
     }
     days.push({
       dateISO, dayOfWeek: day, purpose: null, owner: 'rest_or_recovery',
       movementIntention: [], setBudget: null, conditioning: null,
+      conditioningCategory: null, conditioningRole: null, powerEligible: false,
       optional: true, clauseId: 'WC-042', clubTraining: false, game: false,
     });
   }
@@ -530,7 +564,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       runningTopUps.push({
         dateISO: dateForDayOfWeek(inputs.weekStartISO, day), dayOfWeek: day,
         purpose: null, owner: 'conditioning', movementIntention: [], setBudget: null,
-        conditioning: 'running', optional: false, clauseId: 'WC-060',
+        conditioning: 'running', conditioningCategory: CATEGORY_FOR_CONDITIONING.running,
+        // A day of its own — nothing else is authorised here.
+        conditioningRole: 'standalone', powerEligible: false,
+        optional: false, clauseId: 'WC-060',
         clubTraining: inputs.clubNights.includes(day), game: false,
       });
     }
@@ -546,7 +583,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const withSprint = sprintDay === null ? days : days.map((entry) =>
     (entry.dayOfWeek === sprintDay && entry.owner === 'rest_or_recovery'
       ? { ...entry, owner: 'conditioning' as const,
-        conditioning: 'sprint_high_speed' as const, optional: false,
+        conditioning: 'sprint_high_speed' as const,
+        conditioningCategory: CATEGORY_FOR_CONDITIONING.sprint_high_speed,
+        conditioningRole: 'standalone' as const, optional: false,
         clauseId: 'WC-135' }
       : entry));
 

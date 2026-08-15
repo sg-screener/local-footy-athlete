@@ -1,0 +1,195 @@
+/**
+ * THE MATERIALISATION BOUNDARY — scheduler-authored intentions in, content out.
+ *
+ * **Sam's boundary, 2026-08-15, verbatim.**
+ *
+ *   The SCHEDULER owns: whether conditioning, sprint or power is required · its
+ *   purpose/category · standalone versus combined role · its weekday · hard/rest
+ *   classification · weekly count and spacing.
+ *
+ *   The SPECIALISTS own: the exact conditioning template · the exact sprint
+ *   template within the scheduler's requested quality · the exact power
+ *   exercise/primer · work, rest, rounds, distance, modality and dose.
+ *
+ *   *"A specialist may refuse an impossible request with a typed reason. It may
+ *   never add, remove, move or repurpose a session."*
+ *
+ * ## THIS FILE IS A BOUNDARY, NOT AN ORCHESTRATOR
+ *
+ * It was explicitly ordered not to become one: *"Do not copy the old planner's
+ * orchestration into a new large file."* So every decision below is DELEGATED to
+ * an authority that already exists —
+ *
+ *   - `conditioningSelection.selectConditioningTemplate` — which template
+ *   - `conditioningSelection.speedTemplateByName` — which sprint template
+ *   - `powerPrimerPolicy.decidePowerPrimer` — which primer, and whether any
+ *
+ * — and this module contributes exactly one thing: **the guarantee that a
+ * specialist's answer can only fill in a day the scheduler already authorised.**
+ *
+ * ## THE STRUCTURAL GUARANTEE
+ *
+ * `materialiseAuthoredSessions` maps over `schedule.days` and returns **exactly
+ * one entry per scheduler-authored day, in the scheduler's order**. A specialist
+ * cannot add a day (nothing appends), cannot remove one (a refusal yields a typed
+ * `unmaterialised` reason and the day survives), cannot move one (`dayOfWeek` is
+ * copied, never computed) and cannot repurpose one (`purpose` and `owner` are
+ * copied). **Those four properties are guarded behaviourally, not asserted here.**
+ */
+import {
+  selectConditioningTemplate,
+  speedTemplateByName,
+  type AthleteConditioningCategory,
+  type ConditioningRole,
+} from './conditioningSelection';
+import { decidePowerPrimer, type PowerPrimerSpec } from './powerPrimerPolicy';
+import type { ConditioningModality, ConditioningTemplate } from '../data/conditioningTemplates';
+import type { CapacityBand } from '../types/domain';
+import type { SessionIntention, WeeklySchedule } from './weeklyScheduler';
+import type { SessionPurpose } from './weeklyProgrammingContract';
+
+/** Why a specialist could not serve an authorised request. Typed, never silent. */
+export type UnmaterialisedReason =
+  | 'no_template_for_category_on_this_equipment'
+  | 'power_primer_declined_by_policy';
+
+export interface MaterialisedSession {
+  /** Copied from the intention. Never recomputed — the day is not ours to move. */
+  readonly dateISO: string;
+  readonly dayOfWeek: number;
+  readonly purpose: SessionPurpose | null;
+  readonly owner: SessionIntention['owner'];
+  readonly clubTraining: boolean;
+  readonly game: boolean;
+  readonly optional: boolean;
+  /** The scheduler's clause, carried so a session can name who authorised it. */
+  readonly clauseId: string;
+  /** Specialist content. Null when the day authorises none. */
+  readonly conditioningTemplate: ConditioningTemplate | null;
+  readonly conditioningRole: ConditioningRole | null;
+  /** Strength-side only, and only where the scheduler marked the day eligible. */
+  readonly powerPrimer: PowerPrimerSpec | null;
+  /** Set when a specialist refused something the scheduler authorised. */
+  readonly unmaterialised: UnmaterialisedReason | null;
+}
+
+export interface MaterialisationFacts {
+  readonly weekStartISO: string;
+  readonly miniCycleNumber?: number;
+  readonly capacity: CapacityBand;
+  readonly isBeginner: boolean;
+  readonly experienced: boolean;
+  readonly powerGoalNudge: boolean;
+  readonly injuries: Parameters<typeof decidePowerPrimer>[0]['injuries'];
+  readonly availableMachines?: readonly ConditioningModality[];
+  /** No erg access — the template must render on run or bodyweight. */
+  readonly runOnly?: boolean;
+  readonly phase: Parameters<typeof decidePowerPrimer>[0]['phase'];
+  readonly offseasonSubphase?: Parameters<typeof decidePowerPrimer>[0]['offseasonSubphase'];
+}
+
+/** The power specialist's own vocabulary for what a strength day trains. */
+const POWER_PATTERN_FOR_PURPOSE: Readonly<
+  Record<SessionPurpose, NonNullable<Parameters<typeof decidePowerPrimer>[0]['strengthPattern']>>
+> = {
+  full_body: 'full_body',
+  lower: 'lower_combined',
+  lower_squat: 'lower',
+  lower_hinge: 'lower',
+  upper: 'upper_combined',
+  upper_push: 'push',
+  upper_pull: 'pull',
+};
+
+const WEEK_ORDER: readonly number[] = [1, 2, 3, 4, 5, 6, 0];
+const orderIndex = (day: number): number => WEEK_ORDER.indexOf(day);
+
+export function materialiseAuthoredSessions(args: {
+  readonly schedule: WeeklySchedule;
+  readonly facts: MaterialisationFacts;
+  readonly gameDay: number | null;
+}): MaterialisedSession[] {
+  const { schedule, facts } = args;
+  const hasGame = args.gameDay !== null;
+
+  // ⚠ ONE ENTRY PER AUTHORISED DAY, IN THE SCHEDULER'S ORDER. `map`, never
+  // `flatMap`, never `filter`, never a push into the result — the specialists
+  // physically cannot change the shape of the week from in here.
+  return schedule.days.map((intention): MaterialisedSession => {
+    const base = {
+      dateISO: intention.dateISO,
+      dayOfWeek: intention.dayOfWeek,
+      purpose: intention.purpose,
+      owner: intention.owner,
+      clubTraining: intention.clubTraining,
+      game: intention.game,
+      optional: intention.optional,
+      clauseId: intention.clauseId,
+    };
+
+    // ── CONDITIONING: the scheduler named the category, the specialist picks ──
+    let conditioningTemplate: ConditioningTemplate | null = null;
+    let unmaterialised: UnmaterialisedReason | null = null;
+    if (intention.conditioningCategory && intention.conditioningRole) {
+      try {
+        conditioningTemplate = selectConditioningTemplate({
+          category: intention.conditioningCategory as AthleteConditioningCategory,
+          dateStr: intention.dateISO,
+          miniCycleNumber: facts.miniCycleNumber,
+          // §3 "Lower + conditioning: prefer off-leg work" — the scheduler already
+          // decided that by choosing the category; this passes the same fact on.
+          offFeet: intention.conditioning === 'off_leg',
+          runOnly: facts.runOnly,
+          availableMachines: facts.availableMachines,
+          noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
+          role: intention.conditioningRole as ConditioningRole,
+        });
+      } catch {
+        // A SPECIALIST MAY REFUSE, AND THE DAY SURVIVES THE REFUSAL. It is
+        // recorded with a typed reason rather than the session quietly vanishing,
+        // which would be the specialist removing a session it does not own.
+        unmaterialised = 'no_template_for_category_on_this_equipment';
+      }
+    }
+    if (intention.conditioning === 'sprint_high_speed' && !conditioningTemplate) {
+      // The scheduler asked for sprint QUALITY; the specialist names the template.
+      conditioningTemplate = speedTemplateByName('Flying 30s');
+      unmaterialised = null;
+    }
+
+    // ── POWER: strength-side only, on a day the scheduler marked eligible ──
+    //
+    // **Sam, 2026-08-15: power is strength-side content, not a standalone
+    // scheduling category.** It attaches to an already-authored strength session,
+    // never creates or moves a day, and never counts as conditioning — which is
+    // why this is gated on `owner === 'strength'` AND `powerEligible`, and why a
+    // declined primer changes nothing about the day.
+    let powerPrimer: PowerPrimerSpec | null = null;
+    if (intention.owner === 'strength' && intention.powerEligible && intention.purpose) {
+      powerPrimer = decidePowerPrimer({
+        phase: facts.phase,
+        offseasonSubphase: facts.offseasonSubphase,
+        strengthPattern: POWER_PATTERN_FOR_PURPOSE[intention.purpose],
+        hasGame,
+        gOffset: args.gameDay === null
+          ? -99
+          : orderIndex(intention.dayOfWeek) - orderIndex(args.gameDay),
+        isTeamDay: intention.clubTraining,
+        capacity: facts.capacity,
+        isBeginner: facts.isBeginner,
+        experienced: facts.experienced,
+        injuries: facts.injuries,
+        powerGoalNudge: facts.powerGoalNudge,
+      });
+    }
+
+    return {
+      ...base,
+      conditioningTemplate,
+      conditioningRole: conditioningTemplate
+        ? (intention.conditioningRole as ConditioningRole) : null,
+      powerPrimer,
+      unmaterialised,
+    };
+  });
+}
