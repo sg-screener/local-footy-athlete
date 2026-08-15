@@ -626,23 +626,30 @@ console.log('\n[boundary] Specialists materialise; they never redesign the week'
   // defences left it green. **A cell aimed at a rule needs a world where the rule
   // can be broken.** This world puts a FULL BODY day (a lower purpose) on the
   // Thursday before a Saturday game.
-  const g2World = built({ phase: 'In-season', gymAccessDays: [MON, THU],
-    clubNights: [], gameDay: SAT, age: 24 });
-  const g2Materialised = materialiseAuthoredSessions({
-    schedule: g2World, facts, gameDay: SAT });
-  const g2Day = g2Materialised.find((session) => session.dayOfWeek === THU);
-  ok('[boundary non-vacuity] a LOWER strength day really does sit on G-2', [],
-    !!g2Day && g2Day.owner === 'strength' && g2Day.purpose === 'full_body',
-    JSON.stringify(g2Materialised.map((m) => [m.dayOfWeek, m.owner, m.purpose])));
-  ok('[WC-050] no LOWER-BODY power primer on G-2, at any dose', ['WC-050'],
-    !g2Materialised.some((session) =>
-      session.dayOfWeek === THU && session.powerPrimer?.family === 'lower'),
-    JSON.stringify(g2Materialised.map((m) => [m.dayOfWeek, m.powerPrimer?.family ?? null])));
-  ok('[WC-050] the G-2 day keeps its strength session — power is OMITTED, not moved',
-    ['WC-050'],
-    !!g2Day && g2Day.purpose === 'full_body' && g2Day.owner === 'strength'
-    && g2Day.powerPrimer === null,
-    JSON.stringify([g2Day?.purpose, g2Day?.owner, g2Day?.powerPrimer]));
+  // ⚠⚠⚠ **2026-08-16: THIS WORLD NO LONGER EXISTS, AND THAT IS THE FIX.**
+  //
+  // §3 G-2 says "**No** heavy lower-body work". That was only SCORED (-25), so a
+  // week short of legal days simply paid the penalty and placed the lower session
+  // anyway — measured on a recurring-Sunday athlete who was handed Deadlift and
+  // Bulgarian Split Squats two days before the game. It is LEGALITY now.
+  //
+  // So a lower purpose can no longer REACH G-2, and this world — which existed
+  // purely to put one there — is refused. **The guarantee got stronger: the
+  // question "is a lower-body primer offered on a G-2 lower day?" can no longer
+  // arise, because the day cannot exist.** The cell asserts the stronger fact
+  // rather than being deleted or re-fixtured onto something weaker.
+  const g2Attempt = scheduleWeek(inputs({ phase: 'In-season', gymAccessDays: [MON, THU],
+    clubNights: [], gameDay: SAT, age: 24 }));
+  ok('[WC-050] a LOWER purpose cannot be scheduled on G-2 AT ALL', ['WC-050'],
+    scheduleRefused(g2Attempt)
+      || !g2Attempt.days.some((d) => d.dayOfWeek === THU
+        && d.owner === 'strength' && PURPOSE_IS_LOWER[d.purpose as never]),
+    JSON.stringify(g2Attempt));
+  // The specialist's own typed refusal is retained in `materialiseAuthoredSessions`
+  // as defence in depth. It is now unreachable from the scheduler by construction,
+  // which is why it is no longer asserted through one — a cell that routes through
+  // an impossible world proves nothing, which is exactly what the FIRST version of
+  // this cell did.
   // ── THE POSITIVE CONTROL — WC-051 ────────────────────────────────────────
   //
   // **Sam, 2026-08-15: *"should not rule out upper body power"*.** The lower-body
@@ -665,10 +672,10 @@ console.log('\n[boundary] Specialists materialise; they never redesign the week'
     !!g2Upper && g2Upper.owner === 'strength' && g2Upper.purpose !== null,
     JSON.stringify([g2Upper?.owner, g2Upper?.purpose]));
 
-  ok('[WC-050] ...and no OTHER day gained a primer in its place', ['WC-050'],
-    g2Materialised.filter((m) => m.powerPrimer !== null).length
-      <= g2Materialised.filter((m) => m.owner === 'strength' && m.dayOfWeek !== THU).length,
-    JSON.stringify(g2Materialised.map((m) => [m.dayOfWeek, !!m.powerPrimer])));
+  // The "no other day gained a primer in its place" cell went with the world it
+  // was measured in: a lower purpose cannot reach G-2 now, so there is no
+  // omission to displace. The displacement question is still asked, on the UPPER
+  // G-2 world above, by the WC-051 pair.
 
   ok('[boundary] power never appears on the game day or G-1', [],
     !materialised.some((session) => session.powerPrimer !== null

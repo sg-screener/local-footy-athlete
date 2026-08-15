@@ -335,6 +335,22 @@ function assignmentIsLegal(
   //
   // **THE UNIT IS DAYS, NOT SESSIONS** (§3 "Count days, not sessions"), so a gym
   // session sharing a club night is ONE hard day and the set below de-duplicates.
+  // ── G-2 IS A PROHIBITION, NOT A PREFERENCE ──────────────────────────────
+  //
+  // §3, G-2: *"**No** heavy lower-body or added speed work."* That was only ever
+  // SCORED here (−25), so when a week ran short of legal days the scorer simply
+  // paid the penalty and placed the lower session anyway. **Measured on the
+  // recurring-Sunday world: Friday is G-2 and it was handed Deadlift and
+  // Bulgarian Split Squats** — the two heaviest lower lifts in the week, two days
+  // before the game. A rule a placement can buy its way past is a preference, and
+  // the contract does not word this one as a preference.
+  //
+  // Same distinction WC-040/041 needed below, for the same reason.
+  if (assignment.some((slot) =>
+    isGameMinusTwo(slot.day, inputs) && PURPOSE_IS_LOWER[slot.purpose])) {
+    return false;
+  }
+
   const hardDays = new Set<number>([
     ...assignment.map((slot) => slot.day),
     ...inputs.clubNights,

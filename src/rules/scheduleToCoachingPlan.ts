@@ -180,7 +180,20 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     return allocation;
   });
 
-  const coreSessions = weeklyPlan.filter((entry) => entry.tier === 'core').length;
+  // ── `coreSessions` IS A STRENGTH COUNT, AND I HAD IT COUNTING DAYS ───────
+  //
+  // Every consumer compares this against §18's main-strength target, which the
+  // contract states as a number of STRENGTH sessions ("three strength sessions",
+  // "Four required strength sessions"). I filtered on `tier === 'core'`, and the
+  // connector marks every non-optional day core — **including authored REST days,
+  // the fixture and club nights** — so a plain in-season week reported `core=4`
+  // against a target of 2. Measured on 12 worlds in `test:weekly-dose-ownership`.
+  //
+  // A rest day is not a core session. Counted off the typed identity, so the
+  // count means what its readers already assume it means.
+  const coreSessions = weeklyPlan.filter((entry) =>
+    entry.tier === 'core'
+    && entry.authoredDay?.components.includes('strength') === true).length;
   const optionalSessions = weeklyPlan.filter((entry) => entry.tier === 'optional').length;
 
   const constraints: AIConstraints = {

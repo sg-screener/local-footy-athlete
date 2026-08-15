@@ -43,7 +43,16 @@ const { generateProgramLocally } = require('../services/api/generateProgram');
  * template, not an ownership rule.
  */
 const CLUB_DAY_NAMES = ['Wednesday', 'Friday'] as const;
-const GAME_DAY_NAME = 'Sunday' as const;
+// **MOVED Sunday -> Monday on 2026-08-16, and the reason matters.** With a
+// recurring SUNDAY fixture this athlete's Monday is G+1 and Saturday is G-1, so
+// only Wednesday and Friday stay legal — and Friday is G-2, which may not hold a
+// Full Body session. That world now returns a TYPED REFUSAL, correctly. Anchors
+// are this suite's subject, so it needs a world that BUILDS; the G-2 refusal is
+// asserted deliberately in `test:cyclic-proximity` instead of silently
+// disabling nine anchor cells here.
+//
+// Still NOT the app's historical defaults: club stays Wednesday/Friday.
+const GAME_DAY_NAME = 'Monday' as const;
 const DAY_NUMBER: Readonly<Record<string, number>> = {
   Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
 };
@@ -62,7 +71,7 @@ function buildAnchorWeek(): { workouts: any[]; refusal: string | null } {
       trainingDaysPerWeek: 4,
       // Gym access DELIBERATELY overlaps both club nights, so the same-day
       // gym + club case is exercised rather than assumed away.
-      preferredTrainingDays: ['Monday', 'Wednesday', 'Friday', 'Saturday'],
+      preferredTrainingDays: ['Wednesday', 'Thursday', 'Friday', 'Saturday'],
       equipment: ['Full Gym'],
       teamTrainingDays: [...CLUB_DAY_NAMES],
     } as never, {
