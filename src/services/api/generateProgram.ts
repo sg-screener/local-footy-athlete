@@ -61,6 +61,9 @@ import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContra
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
+import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
+import { scheduleRefused, scheduleWeek } from '../../rules/weeklyScheduler';
+import { WeeklyScheduleRefusedError, weeklySchedulerInputsFrom } from '../../rules/weeklySchedulerInputs';
 // THE DELOAD OWNER, READ NOT REIMPLEMENTED — the same two resolvers the
 // retained adapter uses, so a composed week answers to one table and not a
 // second copy of it.
@@ -718,13 +721,57 @@ export function buildGeneratedMicrocycles(args: {
     // An edge response describes exactly the block state sent in its prompt:
     // week 1. Never replay that single array against week 2-4 allocations.
     // Later weeks use their own deterministic plan/fallback content.
+    // ── THE CUTOVER: THE APPROVED CONTRACT OWNS COUNT, PURPOSE AND WEEKDAY ──
+    //
+    // `composedPlannedDaysFrom(weekPlan.weeklyPlan)` read the LEGACY PLANNER's
+    // allocation. The contract's §1 target is one owner — *"ONE approved weekly
+    // contract -> ONE weekly scheduler -> composition"* — so the composer's
+    // planned days now come from `scheduleWeek`, and no later layer may change
+    // the session count, purpose or weekday it chose.
+    //
+    // **THE PLANNER STILL RUNS, AND STILL OWNS WHAT THE CONTRACT DOES NOT.**
+    // Conditioning content, warm-ups and the §18 exposure contract are its work;
+    // the contract explicitly does not own exercise selection or dose. What it
+    // no longer owns is WHICH DAYS carry strength and WHAT THOSE SESSIONS ARE.
+    const schedulerInputs = weeklySchedulerInputsFrom({
+      profile,
+      weekStartISO: blockState.weekStart,
+      offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+      generationConstraints,
+      activeConstraints: args.activeConstraints ?? [],
+      exposureContract: weekPlan.weeklyExposureContractV2 ?? null,
+    });
+    const scheduled = scheduleWeek(schedulerInputs);
+    if (scheduleRefused(scheduled)) {
+      // A schedule that cannot be built is a TYPED REFUSAL, never a quietly
+      // smaller week. It is thrown here so the same acceptance path that handles
+      // a refused generated week handles this one.
+      throw new WeeklyScheduleRefusedError(scheduled);
+    }
+    // The planner's own names and tiers, by weekday, so a composed day keeps the
+    // athlete-facing label it already had where the two agree on the day.
+    const plannerNameByDay: Record<number, string> = {};
+    const plannerTierByDay: Record<number, string> = {};
+    for (const entry of weekPlan.weeklyPlan) {
+      const dayNumber = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+        'Friday', 'Saturday'].indexOf(String(entry.dayOfWeek ?? ''));
+      if (dayNumber < 0) continue;
+      if (entry.focus) plannerNameByDay[dayNumber] = String(entry.focus);
+      if (entry.tier) plannerTierByDay[dayNumber] = String(entry.tier);
+    }
+    const schedulerOwnedPlannedDays = schedulerPlannedDays({
+      weekStartISO: blockState.weekStart,
+      days: scheduled.days,
+      nameByDayOfWeek: plannerNameByDay,
+      tierByDayOfWeek: plannerTierByDay,
+    });
     const composedWeek = composeWeek({
           profile,
           phaseClock: { weekNumber: blockState.weekNumber },
           // B1-M1: the phase the DOSE is resolved against, before authorship.
           seasonPhase: profile.seasonPhase as never,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
-          plannedDays: composedPlannedDaysFrom(weekPlan.weeklyPlan),
+          plannedDays: schedulerOwnedPlannedDays,
           kit: equipment.tags,
           injuries: {
             // §18's OWN safety answer, not a second injury reading.
@@ -739,7 +786,25 @@ export function buildGeneratedMicrocycles(args: {
     // still receives the COMPLETE planner week — this app hangs conditioning,
     // running and sprint work off the strength days — and is simply told which
     // days' STRENGTH the composer owns, so it authors no lifts there.
-    const composedStrengthDays = composedWeek.days.map((day) => day.dayOfWeek);
+    // ── EVERY STRENGTH DAY THE LEGACY BUILDER MUST STAND DOWN ON ────────────
+    //
+    // The composer's OWN days, **plus every day the planner still marks as
+    // strength.** Once the scheduler owns the weekday, the planner's allocation
+    // can name a day the scheduler did not choose — and that orphaned entry fell
+    // through to the severed legacy builder, which throws by design.
+    //
+    // Measured: 6 worlds died exactly that way
+    // (`B1-PIVOT: the legacy strength-content builder is severed`). **Strength is
+    // the composer's, on every day, so the stand-down list is the union** — not
+    // a fallback, not a repair: the legacy builder authors no lifts anywhere.
+    const plannerStrengthDays = weekPlan.weeklyPlan
+      .map((entry) => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+        'Friday', 'Saturday'].indexOf(String(entry.dayOfWeek ?? '')))
+      .filter((day) => day >= 0);
+    const composedStrengthDays = [...new Set([
+      ...composedWeek.days.map((day) => day.dayOfWeek),
+      ...plannerStrengthDays,
+    ])];
     const sourceCoachWorkouts: CoachGeneratedWorkoutInput[] = [];
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     // The governed boundary, when it falls inside THIS week. Days before it are

@@ -330,15 +330,45 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // access set itself rather than asked for twice (WC-111 / WC-112).
   const weekendAvailable = inputs.gymAccessDays.some((day) => day === 6 || day === 0);
 
+  // ── HOW MANY SESSIONS THIS WEEK CAN ACTUALLY HOLD ────────────────────────
+  //
+  // Availability chooses the layout, but **game proximity can leave fewer LEGAL
+  // days than the athlete has gym access on** — a Mon/Wed/Fri athlete with a
+  // Saturday game loses Friday to G-1 and has two.
+  //
+  // **THE CONTRACT SAYS SCALE, NOT REFUSE.** §8 Pre-season: *"Scale honestly to
+  // two or three strength sessions when that is all the athlete can do."* §6's
+  // in-season rows are *"the two-, three- or four-session reference structure"*, a
+  // ladder the scheduler picks from. So the layout is chosen by the number of days
+  // that are actually usable, floored at the smallest approved layout.
+  //
+  // MEASURED: refusing instead cost 60 occurrences across 30 worlds — every
+  // three-day athlete with a weekend game — for a week the contract has a stated
+  // answer for.
+  // Below the smallest approved layout there is nothing to scale TO, and that is
+  // a different fact from "no layout exists for this phase" — so it gets its own
+  // typed finding rather than falling through to the layout lookup.
+  const SMALLEST_APPROVED_LAYOUT = 2;
+  if (usableGymDays.length < SMALLEST_APPROVED_LAYOUT) {
+    return {
+      refused: true, finding: 'not_enough_legal_gym_days', clauseId: 'WC-142',
+      detail: `only ${usableGymDays.length} legal gym day(s) remain after game `
+        + 'proximity and explicit unavailability — below the smallest approved '
+        + `layout of ${SMALLEST_APPROVED_LAYOUT}`,
+    };
+  }
+
+  const effectiveGymDays = Math.min(
+    Math.max(inputs.gymAccessDays.length, 0),
+    Math.max(usableGymDays.length, 0),
+    6);
+
   const layout = baseLayoutFor({
     phase: inputs.phase,
-    // The LAYOUT is chosen by declared availability — the contract's "available
-    // LFA gym days" — not by how many survive game proximity. A Saturday-game
-    // athlete does not drop to a smaller layout because G-1 is unusable.
-    gymDayCount: Math.min(inputs.gymAccessDays.length, 6),
+    gymDayCount: effectiveGymDays,
     weekendAvailable,
     fourthSession: {
-      gymDayCount: inputs.gymAccessDays.length,
+      gymDayCount: effectiveGymDays,
       age: inputs.age,
       consistentlyCompletesThree: inputs.readiness.consistentlyCompletesThree,
       highReadiness: inputs.readiness.highReadiness,

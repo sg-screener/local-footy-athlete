@@ -517,10 +517,14 @@ console.log('\n[patterns] Weekly movement coverage and paired balance');
 console.log('\n[refusal] A schedule that cannot be built stays a TYPED refusal');
 // ═══════════════════════════════════════════════════════════════════════════
 {
-  // Four required pre-season sessions, but a Saturday game and only three legal
-  // days once G-1/G+1 come off.
+  // ⚠ GENUINELY UNBUILDABLE, NOT MERELY REDUCED. The contract SCALES a week that
+  // has fewer legal days than its layout wants (§8: *"Scale honestly to two or
+  // three strength sessions when that is all the athlete can do"*), so a fixture
+  // that only loses a day now correctly builds a smaller week. This athlete has
+  // Friday and Saturday only, with a Saturday game: Friday is G-1 and Saturday is
+  // the game, leaving ZERO legal days and nothing to scale to.
   const impossible = scheduleWeek(inputs({
-    phase: 'Pre-season', gymAccessDays: [MON, FRI, SAT, SUN], gameDay: SAT, age: 24,
+    phase: 'Pre-season', gymAccessDays: [FRI, SAT], gameDay: SAT, age: 24,
   }));
   // ⚠ THE FINDING IS NAMED, NOT JUST ITS EXISTENCE. Asserting only "it refused"
   // passed even when the not-enough-days branch was skipped entirely and a
@@ -536,11 +540,14 @@ console.log('\n[refusal] A schedule that cannot be built stays a TYPED refusal')
     ['WC-142'],
     scheduleRefused(impossible) && !('days' in impossible));
 
-  const noLayout = scheduleWeek(inputs({ gymAccessDays: [MON] }));
-  ok('[WC-142] one gym day has no approved layout and refuses', ['WC-142'],
-    scheduleRefused(noLayout)
-    && (noLayout as any).finding === 'no_layout_for_phase_and_availability',
-    JSON.stringify(noLayout));
+  // One gym day is BELOW the smallest approved layout, and the contract has
+  // nothing to scale to — a different fact from "this phase has no layout", so it
+  // carries its own finding.
+  const oneDay = scheduleWeek(inputs({ gymAccessDays: [MON] }));
+  ok('[WC-142] one gym day is below every approved layout and refuses', ['WC-142'],
+    scheduleRefused(oneDay)
+    && (oneDay as any).finding === 'not_enough_legal_gym_days',
+    JSON.stringify(oneDay));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
