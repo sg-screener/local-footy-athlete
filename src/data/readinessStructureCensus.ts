@@ -186,6 +186,17 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
 
   /* ── Dose: the sweep's survivors, each with the reason it survived ── */
   {
+    file: 'rules/scheduleToCoachingPlan.ts',
+    edges: 2,
+    verdict: 'dose',
+    what: 'Low capacity moderates the conditioning loading and asks for a ramp-up.',
+    disposition: 'These are the SAME two edges deleted from `buildAIConstraints` with the '
+      + 'legacy planner — re-homed onto the connector, not new. They were hardcoded to '
+      + '`full`/`false` when the connector was written, which silently dropped both; '
+      + '`test:readiness-dose-sweep` found it once it was re-pointed at the live '
+      + 'producer. Dose only: capacity changes the loading, never the week\'s shape.',
+  },
+  {
     file: 'utils/coachingEngine.ts',
     // 8 -> 6 on 2026-08-16. **Reclassified, not retuned**, which is what the
     // guard demands: the two that went were the `conditioningLoading: 'moderate'`

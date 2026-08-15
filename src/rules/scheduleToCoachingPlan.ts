@@ -195,10 +195,21 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     // contract rather than re-decided here.
     lowerBodyLoading: 'normal',
     sprintLoading: demand.sprintHighSpeed > 0 ? 'allowed' : 'do-not-add',
-    conditioningLoading: 'full',
+    // ── TWO READINESS DOSE EDGES, RESTORED ─────────────────────────────────
+    //
+    // These were hardcoded `'full'` and `false` when I wrote this connector, and
+    // that quietly deleted two behaviours that lived in `buildAIConstraints`: a
+    // low-capacity athlete's conditioning is MODERATED, and their week asks for
+    // a RAMP-UP. Both went out with the legacy planner and neither was noticed,
+    // because the suite that owns them died at import on the deleted symbol.
+    //
+    // Found by re-pointing `test:readiness-dose-sweep` at the live producer —
+    // the same two edges the readiness census had to be reclassified for. They
+    // are DOSE, never structure: the week's shape does not change with capacity.
+    conditioningLoading: capacity === 'low' ? 'moderate' : 'full',
     injuryRestrictions: [],
     priorities: [],
-    rampUp: false,
+    rampUp: capacity === 'low',
     maxExercisesPerSession: GLOBAL_RULES.dailyMovementCeiling,
     notes: [],
     weeklyExposureContract: legacy,
