@@ -1,6 +1,6 @@
 # Weekly Programming Source — Sam Review Draft
 
-**Status:** Consolidated review. All coaching questions in this draft have been answered. It does not become executable law until Sam gives final approval, and the app does not read it yet.
+**Status:** Consolidated review. **AMENDED 2026-08-15** with Sam's G-2 upper-body-power ruling (§3, G-2 row). All coaching questions in this draft have been answered. It does not become executable law until Sam gives final approval, and the app does not read it yet.
 
 **Goal:** approve one simple source for weekly scheduling, spacing and workload. After approval, encode it once and remove every other independent scheduling owner.
 
@@ -114,7 +114,7 @@ Equipment, injury or another authorised constraint may make a pattern impossible
 | Upper + running | Hard running/top-end work belongs with upper days where possible. |
 | Lower + conditioning | Prefer off-leg work: bike, ski, rower or assault bike. |
 | Club-day gym | Gym may share a club-training day. Use regular loads; do not reduce solely because club training is later. Exercise selection may still avoid needless soreness. |
-| G-2 | No heavy lower-body or added speed work. |
+| G-2 | No heavy lower-body or added speed work. **Sam, 2026-08-15: *"should not rule out upper body power"*** — G-2 prohibits added LOWER-BODY sprint, jumping, plyometric and power work. **Upper-body power is permitted as a COMPONENT of an already authorised upper-body strength session.** It never creates a session, moves a day, or counts as conditioning. |
 | G-1 | No heavy lifting or conditioning. Optional Gunshow, accessories or recovery are acceptable. |
 | G+1 | Rest or recovery. |
 | Lower frequency | Two lower exposures is a good year-round target when availability and phase allow it. In-season may consolidate the weekly lower patterns into one lower session or two full-body sessions. |

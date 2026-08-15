@@ -515,7 +515,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           if (inputs.gameDay === null) return true;
           const gap = orderIndex(day) - orderIndex(inputs.gameDay);
           if (Math.abs(gap) <= 1) return false;              // game day, G-1, G+1
-          if (gap === -2 && PURPOSE_IS_LOWER[purpose]) return false;   // G-2 lower
+          // WC-051: G-2 bars LOWER-body power only. An upper day keeps its
+          // eligibility — *"should not rule out upper body power"* (Sam,
+          // 2026-08-15) — and the primer rides the strength session already there.
+          if (gap === -2 && PURPOSE_IS_LOWER[purpose]) return false;
           return true;
         })(),
         optional: overlayOptional, clauseId: layout.clauseId,

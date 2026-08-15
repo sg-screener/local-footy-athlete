@@ -192,6 +192,10 @@ export function materialiseAuthoredSessions(args: {
     // it again. §3 G-2: *"No heavy lower-body or added speed work."* A jump primer
     // is explosive lower-body work at ANY dose, so it is OMITTED — not moved to
     // another day, not converted to an upper primer.
+    // ⚠ **LOWER ONLY** — Sam, 2026-08-15: *"should not rule out upper body
+    // power"*. An upper primer on G-2 is legal as a component of the upper
+    // strength session already authorised there, so the family check is the whole
+    // rule and must not be widened to all power.
     if (powerPrimer && gOffset === -2 && powerPrimer.family === 'lower') {
       powerPrimer = null;
       unmaterialised = unmaterialised ?? 'power_refused_lower_body_on_g2';

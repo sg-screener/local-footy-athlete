@@ -242,8 +242,29 @@ export const GLOBAL_RULES = {
  * on** — the game is an anchor the athlete gives us.
  */
 export const GAME_PROXIMITY = {
-  /** *"G-2: No heavy lower-body or added speed work."* */
-  minusTwo: { noHeavyLower: true, noAddedSpeedWork: true },
+  /**
+   * *"G-2: No heavy lower-body or added speed work."*
+   *
+   * ⚠ **AND THE DISTINCTION SAM RULED ON 2026-08-15, verbatim: *"should not rule
+   * out upper body power"*.**
+   *
+   * So G-2 prohibits added **LOWER-BODY** sprint, jumping, plyometric and power
+   * work. **Upper-body power is PERMITTED**, and only as a COMPONENT of an
+   * already-authorised upper-body strength session — it never creates a session,
+   * never moves a day and never counts as conditioning.
+   *
+   * The ruling exists because this seat shipped a G-2 lower-body jump primer
+   * reduced to one set and reported the reduction as correct. The fix was right;
+   * **the first draft of it would have banned legal upper power too**, which is
+   * what Sam corrected.
+   */
+  minusTwo: {
+    noHeavyLower: true,
+    /** LOWER-body speed work only — see the docstring. */
+    noAddedLowerBodySpeedWork: true,
+    upperBodyPowerPermitted: true,
+    upperBodyPowerComponentOnly: true,
+  },
   /** *"G-1: No heavy lifting or conditioning. Optional Gunshow, accessories or recovery."* */
   minusOne: { noHeavyLifting: true, noConditioning: true, optionalOnly: true },
   /** *"G+1: Rest or recovery."* */
@@ -553,6 +574,11 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
       + 'target. Mobility does not count.' },
   { id: 'WC-050', provenance: '§3 G-2 / G-1 / G+1',
     statement: 'Game proximity constrains the days around the fixture.' },
+  { id: 'WC-051', provenance: '§3 G-2 (amended 2026-08-15)',
+    statement: 'G-2 prohibits added LOWER-BODY sprint, jumping, plyometric and '
+      + 'power work. Upper-body power is permitted as a component of an already '
+      + 'authorised upper-body strength session; it never creates a session, '
+      + 'moves a day, or counts as conditioning.' },
   { id: 'WC-060', provenance: '§2 Available LFA gym days',
     statement: 'Required strength work is never placed outside gym-access days. '
       + 'Equipment-free running or conditioning may use other legal days.' },
@@ -594,6 +620,13 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
 /** The source document this contract encodes, pinned by hash. */
 export const CONTRACT_SOURCE = {
   path: 'docs/WEEKLY_PROGRAMMING_SOURCE_REVIEW_2026-08-14.md',
-  sha256: '0d34e288c23f0654d0163d41dff1a73050697d54219ecf6facd84ef1eb68c190',
+  /**
+   * ⚠ **THE HASH MOVED WHEN THE DOCUMENT WAS AMENDED, AND BOTH ARE RECORDED.**
+   * A pinned hash that is silently re-pinned proves nothing; the previous value is
+   * kept so the amendment is auditable rather than invisible.
+   */
+  sha256: 'eb914afadde6b201b426113b1e82e0e1f47b5a58ce19bba5afc851e193f4b514',
+  supersededSha256: '0d34e288c23f0654d0163d41dff1a73050697d54219ecf6facd84ef1eb68c190',
   approvedBy: 'Sam, 2026-08-15: "okay i approve it"',
+  amendedBy: 'Sam, 2026-08-15: "should not rule out upper body power" (§3 G-2)',
 } as const;

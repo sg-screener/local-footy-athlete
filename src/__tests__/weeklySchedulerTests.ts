@@ -642,6 +642,28 @@ console.log('\n[boundary] Specialists materialise; they never redesign the week'
     !!g2Day && g2Day.purpose === 'full_body' && g2Day.owner === 'strength'
     && g2Day.powerPrimer === null,
     JSON.stringify([g2Day?.purpose, g2Day?.owner, g2Day?.powerPrimer]));
+  // ── THE POSITIVE CONTROL — WC-051 ────────────────────────────────────────
+  //
+  // **Sam, 2026-08-15: *"should not rule out upper body power"*.** The lower-body
+  // ban above is only half the ruling; without this cell a future tightening that
+  // banned ALL G-2 power would pass every test in this file. The four-day world's
+  // G-2 Thursday IS an upper day, which is exactly why it could not host the
+  // negative case — and exactly what makes it the right positive one.
+  const g2Upper = materialised.find((session) => session.dayOfWeek === THU);
+  ok('[WC-051 non-vacuity] the four-day G-2 Thursday is an UPPER strength day',
+    ['WC-051'],
+    !!g2Upper && g2Upper.owner === 'strength'
+    && g2Upper.purpose === 'upper_push',
+    JSON.stringify([g2Upper?.purpose, g2Upper?.owner]));
+  ok('[WC-051] UPPER-body power SURVIVES on G-2 — it is not ruled out',
+    ['WC-051'],
+    !!g2Upper?.powerPrimer && g2Upper.powerPrimer.family === 'upper',
+    JSON.stringify(g2Upper?.powerPrimer ?? null));
+  ok('[WC-051] ...and it rides the strength session already authorised there',
+    ['WC-051'],
+    !!g2Upper && g2Upper.owner === 'strength' && g2Upper.purpose !== null,
+    JSON.stringify([g2Upper?.owner, g2Upper?.purpose]));
+
   ok('[WC-050] ...and no OTHER day gained a primer in its place', ['WC-050'],
     g2Materialised.filter((m) => m.powerPrimer !== null).length
       <= g2Materialised.filter((m) => m.owner === 'strength' && m.dayOfWeek !== THU).length,
