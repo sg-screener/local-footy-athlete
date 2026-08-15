@@ -436,7 +436,8 @@
     "test:weekly-scheduler": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklySchedulerTests.ts",
     "test:anchor-survival": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekAnchorSurvivalTests.ts",
     "test:weekday-index": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekdayIndexOwnershipTests.ts",
-    "test:cyclic-proximity": "TZ=Australia/Melbourne sucrase-node src/__tests__/cyclicGameProximityTests.ts"
+    "test:cyclic-proximity": "TZ=Australia/Melbourne sucrase-node src/__tests__/cyclicGameProximityTests.ts",
+    "test:clause-enforcement": "TZ=Australia/Melbourne sucrase-node src/__tests__/clauseEnforcementTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

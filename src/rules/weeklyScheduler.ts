@@ -45,6 +45,7 @@ import {
   type SessionPurpose,
   type SetBudget,
 } from './weeklyProgrammingContract';
+import { firstLegalityViolation } from './weeklyLegality';
 
 // ─── INPUTS ────────────────────────────────────────────────────────────────
 
@@ -325,68 +326,34 @@ function assignmentIsLegal(
   assignment: readonly { day: number; purpose: SessionPurpose }[],
   inputs: WeeklySchedulerInputs,
 ): boolean {
-  // ── WC-040 / WC-041 ARE HARD LIMITS, NOT PREFERENCES ────────────────────
-  //
-  // *"The app does not program 6 [hard days]"* and *"Five [consecutive] is allowed
-  // only when followed by two complete rest days."* An earlier draft only SCORED
-  // these, so a five-gym-day athlete with two club nights and a game was handed
-  // six and seven hard days — caught by the WC-040/WC-041 guards, which is the
-  // difference between a preference and a law.
-  //
-  // **THE UNIT IS DAYS, NOT SESSIONS** (§3 "Count days, not sessions"), so a gym
-  // session sharing a club night is ONE hard day and the set below de-duplicates.
-  // ── G-2 IS A PROHIBITION, NOT A PREFERENCE ──────────────────────────────
-  //
-  // §3, G-2: *"**No** heavy lower-body or added speed work."* That was only ever
-  // SCORED here (−25), so when a week ran short of legal days the scorer simply
-  // paid the penalty and placed the lower session anyway. **Measured on the
-  // recurring-Sunday world: Friday is G-2 and it was handed Deadlift and
-  // Bulgarian Split Squats** — the two heaviest lower lifts in the week, two days
-  // before the game. A rule a placement can buy its way past is a preference, and
-  // the contract does not word this one as a preference.
-  //
-  // Same distinction WC-040/041 needed below, for the same reason.
-  if (assignment.some((slot) =>
-    isGameMinusTwo(slot.day, inputs) && PURPOSE_IS_LOWER[slot.purpose])) {
-    return false;
-  }
+  return legalityViolation(assignment, inputs) === null;
+}
 
-  const hardDays = new Set<number>([
-    ...assignment.map((slot) => slot.day),
-    ...inputs.clubNights,
-    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
-  ]);
-  if (hardDays.size >= GLOBAL_RULES.hardDays.neverProgrammed) return false;
-  let run = 0;
-  let longestRun = 0;
-  for (const day of WEEK_ORDER) {
-    run = hardDays.has(day) ? run + 1 : 0;
-    longestRun = Math.max(longestRun, run);
-  }
-  if (longestRun > GLOBAL_RULES.consecutiveHardDays.fiveRequiresTwoFullRestDays) return false;
-  if (longestRun === GLOBAL_RULES.consecutiveHardDays.fiveRequiresTwoFullRestDays) {
-    // The five-day run is legal ONLY when two complete rest days remain — the
-    // contract's own example is Monday-Friday training with the weekend off.
-    const restDays = WEEK_ORDER.filter((day) => !hardDays.has(day)
-      && !inputs.unavailableDays.includes(day));
-    if (restDays.length < 2) return false;
-  }
-
-  const byOrder = [...assignment].sort((a, b) => orderIndex(a.day) - orderIndex(b.day));
-  for (let i = 1; i < byOrder.length; i += 1) {
-    const prev = byOrder[i - 1];
-    const cur = byOrder[i];
-    if (!areConsecutive(prev.day, cur.day)) continue;
-    // WC-043 — lower sessions are NEVER on consecutive days.
-    if (PURPOSE_IS_LOWER[prev.purpose] && PURPOSE_IS_LOWER[cur.purpose]) return false;
-    // WC-022 — the same plane must not repeat on consecutive days.
-    const prevPlanes = new Set(PATTERNS_FOR_PURPOSE[prev.purpose]
-      .map((pattern) => PATTERN_PLANE[pattern]));
-    const shared = PATTERNS_FOR_PURPOSE[cur.purpose]
-      .some((pattern) => prevPlanes.has(PATTERN_PLANE[pattern]));
-    if (shared) return false;
-  }
-  return true;
+/**
+ * THE SINGLE DOOR TO EVERY PROHIBITION. Delegates to `weeklyLegality`, which owns
+ * them all as one enumerable table keyed by clause id.
+ *
+ * These checks used to live inline here, beside `scoreAssignment`, and that
+ * proximity was the defect: G-2 was written as a −25 penalty rather than a ban,
+ * so a week short of legal days bought its way past it and put Deadlift two days
+ * before a game. **The legality owner cannot see a score, so nothing can be
+ * bought.** Proximity is passed IN rather than re-derived there — one owner for
+ * the cyclic-week question, which has already cost an athlete a recovery day.
+ */
+function legalityViolation(
+  assignment: readonly { day: number; purpose: SessionPurpose }[],
+  inputs: WeeklySchedulerInputs,
+): { clauseId: string; reason: string } | null {
+  return firstLegalityViolation({
+    assignment,
+    gymAccessDays: inputs.gymAccessDays,
+    unavailableDays: inputs.unavailableDays,
+    clubNights: inputs.clubNights,
+    gameDay: inputs.gameDay,
+    isGameMinusOne: (day) => isGameMinusOne(day, inputs),
+    isGameMinusTwo: (day) => isGameMinusTwo(day, inputs),
+    isGamePlusOne: (day) => isGamePlusOne(day, inputs),
+  });
 }
 
 /**

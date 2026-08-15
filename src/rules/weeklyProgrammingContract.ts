@@ -630,3 +630,113 @@ export const CONTRACT_SOURCE = {
   approvedBy: 'Sam, 2026-08-15: "okay i approve it"',
   amendedBy: 'Sam, 2026-08-15: "should not rule out upper body power" (§3 G-2)',
 } as const;
+
+// ─── WHAT KIND OF RULE EACH CLAUSE IS ──────────────────────────────────────
+
+/**
+ * **THE MODALITY OF EVERY CLAUSE, AUTHORED FROM THE APPROVED WORDING.**
+ *
+ * Sam, 2026-08-16, after G-2 reached an athlete's Friday: *"A prohibition
+ * represented only by scoring is RED. A requirement with no
+ * completeness/validation check is RED. A preference implemented as refusal is
+ * RED."*
+ *
+ * G-2 was the first: *"**No** heavy lower-body"* was worth −25 points, so a week
+ * short of legal days paid the penalty and placed Deadlift two days before the
+ * game. **The defect was not the rule — it was that nothing recorded what KIND of
+ * rule it is**, so each clause was implemented by whoever reached it first.
+ *
+ * ## THE THREE FLAGS ARE INDEPENDENT, ON PURPOSE
+ *
+ * Several clauses carry more than one obligation and collapsing them loses one.
+ * WC-045 is the clearest: *"Aim for 3-5 conditioning exposures … total cap 5"* is
+ * a floor (`requires`) AND a ceiling (`prohibits`) AND a target (`prefers`).
+ * Forcing a single verdict would have silently dropped the floor — the exact
+ * shape of defect this table exists to stop.
+ *
+ * `definition` clauses assert no obligation at all: they name a vocabulary or an
+ * entry point. They must own NO legality and NO completeness rule, and saying so
+ * is what stops a definition being quietly enforced as a ban.
+ *
+ * **A clause here that owns no rule of the kind it declares reds
+ * `test:clause-enforcement`.** The table is the specification; the two owner
+ * modules are checked against it, never the other way round.
+ */
+export interface ClauseModality {
+  /** A hard limit, ban or ceiling. MUST be a legality rule, never a score. */
+  readonly prohibits: boolean;
+  /** A floor or coverage obligation. MUST have a completeness check. */
+  readonly requires: boolean;
+  /** A soft target. MUST NOT be able to refuse a week on its own. */
+  readonly prefers: boolean;
+  /** The canonical scheduler input this clause reads. Never re-derived later. */
+  readonly fact: string;
+}
+
+const P = (fact: string): ClauseModality =>
+  ({ prohibits: true, requires: false, prefers: false, fact });
+const R = (fact: string): ClauseModality =>
+  ({ prohibits: false, requires: true, prefers: false, fact });
+const S = (fact: string): ClauseModality =>
+  ({ prohibits: false, requires: false, prefers: true, fact });
+const D = (fact: string): ClauseModality =>
+  ({ prohibits: false, requires: false, prefers: false, fact });
+const PR = (fact: string): ClauseModality =>
+  ({ prohibits: true, requires: true, prefers: true, fact });
+const PS = (fact: string): ClauseModality =>
+  ({ prohibits: true, requires: false, prefers: true, fact });
+
+export const CLAUSE_MODALITY: Readonly<Record<string, ClauseModality>> = {
+  WC_020: R('intendedPatterns across the week'),
+  WC_021: S('pattern partner balance'),
+  WC_022: P('purpose plane, consecutive days'),
+  WC_023: D('PATTERNS_FOR_PURPOSE'),
+  WC_024: D('PURPOSE_IS_LOWER'),
+  WC_030: PS('setBudget per session'),
+  WC_031: D('split in-season set budget'),
+  WC_040: PS('hard days across the week'),
+  WC_041: PS('consecutive hard days'),
+  WC_042: S('full rest day count'),
+  WC_043: P('lower session spacing'),
+  WC_044: P('consecutive running days'),
+  WC_045: PR('conditioning exposures incl. anchors'),
+  WC_046: PR('running day count'),
+  WC_047: S('upper exposures per week'),
+  WC_048: P('daily movement ceiling'),
+  // MISCLASSIFIED BY ME AS A DEFINITION, AND `test:clause-enforcement` caught it
+  // on its first run. The wording — "game proximity constrains the days around
+  // the fixture" — reads like vocabulary, but this clause is the CARRIER of the
+  // G-1/G+1 ban: no strength on the fixture, the day before, or the day after.
+  // A ban whose clause is filed as a definition is a ban nothing has to enforce.
+  WC_050: P('gameDay + fixtureRecurrence'),
+  WC_051: P('G-2 lower power / speed work'),
+  WC_060: P('gymAccessDays'),
+  WC_061: P('unavailableDays'),
+  WC_062: P('clubNights (declared, never assumed)'),
+  WC_063: P('availability is not a quota'),
+  WC_100: D('layout: In-season 2 days'),
+  WC_101: D('layout: In-season 3 days'),
+  WC_102: D('layout: In-season 4, selector unmet'),
+  WC_103: D('layout: In-season 4, selector met'),
+  WC_110: P('layout: Pre-season 2, never back-to-back'),
+  WC_111: D('layout: Pre-season 3, no weekend'),
+  WC_112: D('layout: Pre-season 3, weekend'),
+  WC_113: P('layout: Pre-season 4+, no fifth'),
+  WC_120: D('layout: Off-season 2'),
+  WC_121: D('layout: Off-season 3'),
+  WC_122: P('layout: Off-season 4+, no fifth'),
+  WC_130: S('off-season weeks 1-2 overlay'),
+  WC_131: R('off-season weeks 3-4 overlay'),
+  WC_132: R('off-season week 5+ overlay'),
+  WC_133: PR('pre-season overlay, max two lower'),
+  WC_134: D('in-season overlay'),
+  WC_135: P('in-season sprint placement'),
+  WC_140: D('FOURTH_SESSION_AGE_CEILING'),
+  WC_141: D('inSeasonUsesFourSessions selector'),
+  WC_142: D('baseLayoutFor entry point'),
+};
+
+/** `WC-043` -> the modality record key. Ids are stable; the underscore is not. */
+export function modalityFor(clauseId: string): ClauseModality | undefined {
+  return CLAUSE_MODALITY[clauseId.replace('-', '_')];
+}
