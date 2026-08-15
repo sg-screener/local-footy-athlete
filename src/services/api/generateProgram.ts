@@ -548,6 +548,10 @@ function coachingInputsToSchedulerInputs(
     gymAccessDays: nums(inputs.selectedDays),
     clubNights: nums(inputs.teamTrainingDays),
     gameDay: inputs.hasGame ? toNumber(inputs.gameDay) : null,
+    // **ALWAYS RECURRING.** `hasGame` + a usual game day means there was a
+    // fixture last week too, so a Sunday game makes Monday G+1. Nothing in
+    // `CoachingInputs` can say "first fixture ever", so nothing here claims it.
+    fixtureRecurrence: 'recurring' as const,
     age: ageFromRange((inputs as { ageRange?: never }).ageRange),
     readiness: {
       lowReadiness: inputs.generationConstraints?.readiness?.deloaded === true,
