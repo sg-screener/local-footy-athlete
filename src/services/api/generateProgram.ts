@@ -14,7 +14,6 @@ import {
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingInputs,
   type CoachingPlan,

@@ -19,6 +19,18 @@ const engine = require('../src/utils/coachingEngine');
 const callers = new Map<string, number>();
 let executions = 0;
 
+// ⚠ **A ZERO FROM A MISSING SYMBOL IS NOT A MEASUREMENT.** Once the planner is
+// deleted this wrapper never installs, and the probe would report "0 executions"
+// while observing nothing at all — the green-and-empty shape this repo has been
+// bitten by repeatedly. So the absence is reported as ABSENCE, which is a
+// strictly stronger fact than zero executions, and never dressed as a count.
+if (typeof engine.buildCoachingPlan !== 'function') {
+  console.log('\nbuildCoachingPlan IS NOT EXPORTED — the legacy planner is DELETED.');
+  console.log('Nothing can call it. This is stronger than a zero-execution count,');
+  console.log('and it is reported as deletion rather than as a measurement of 0.');
+  process.exit(0);
+}
+
 const realBuild = engine.buildCoachingPlan;
 engine.buildCoachingPlan = function wrapped(...args: unknown[]) {
   executions += 1;
