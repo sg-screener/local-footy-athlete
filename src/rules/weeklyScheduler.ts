@@ -495,11 +495,29 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
           PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running'],
         // Riding on a strength session, never a session of its own.
         conditioningRole: 'component',
-        // WC-050: never on the game day, and G-1 is "no heavy lifting" so a
-        // primer there is not eligible either. Otherwise the day is offered to
-        // `powerPrimerPolicy`, which may still decline.
-        powerEligible: inputs.gameDay === null
-          || Math.abs(orderIndex(day) - orderIndex(inputs.gameDay)) > 1,
+        // ── WC-050: WHICH DAYS MAY BE OFFERED A POWER PRIMER AT ALL ────────
+        //
+        // Never the game day. Never G-1 (*"no heavy lifting or conditioning"*).
+        // **AND NEVER LOWER-BODY POWER ON G-2** — §3 G-2 is *"No heavy
+        // lower-body or added speed work"*, and a jump primer is explosive
+        // lower-body work whether or not its dose is reduced.
+        //
+        // ⚠ THIS WAS A REAL DEFECT AND I PRINTED IT AS A SUCCESS. The G-2
+        // Thursday of the in-season four-day week came back with a Vertical Jump
+        // primer cut to one set, and I reported the reduction as the boundary
+        // working. **A reduced violation is a violation** — the contract does not
+        // permit less speed work on G-2, it permits none.
+        //
+        // It is OMITTED here, never moved to another day and never converted to
+        // something else: the day keeps its strength session and simply carries
+        // no primer.
+        powerEligible: (() => {
+          if (inputs.gameDay === null) return true;
+          const gap = orderIndex(day) - orderIndex(inputs.gameDay);
+          if (Math.abs(gap) <= 1) return false;              // game day, G-1, G+1
+          if (gap === -2 && PURPOSE_IS_LOWER[purpose]) return false;   // G-2 lower
+          return true;
+        })(),
         optional: overlayOptional, clauseId: layout.clauseId,
         clubTraining: inputs.clubNights.includes(day), game: false,
       });

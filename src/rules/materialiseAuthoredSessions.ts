@@ -51,7 +51,9 @@ import type { SessionPurpose } from './weeklyProgrammingContract';
 /** Why a specialist could not serve an authorised request. Typed, never silent. */
 export type UnmaterialisedReason =
   | 'no_template_for_category_on_this_equipment'
-  | 'power_primer_declined_by_policy';
+  | 'power_primer_declined_by_policy'
+  /** §3 G-2: "No heavy lower-body or added speed work." Omitted, never moved. */
+  | 'power_refused_lower_body_on_g2';
 
 export interface MaterialisedSession {
   /** Copied from the intention. Never recomputed — the day is not ours to move. */
@@ -165,15 +167,16 @@ export function materialiseAuthoredSessions(args: {
     // why this is gated on `owner === 'strength'` AND `powerEligible`, and why a
     // declined primer changes nothing about the day.
     let powerPrimer: PowerPrimerSpec | null = null;
+    const gOffset = args.gameDay === null
+      ? -99
+      : orderIndex(intention.dayOfWeek) - orderIndex(args.gameDay);
     if (intention.owner === 'strength' && intention.powerEligible && intention.purpose) {
       powerPrimer = decidePowerPrimer({
         phase: facts.phase,
         offseasonSubphase: facts.offseasonSubphase,
         strengthPattern: POWER_PATTERN_FOR_PURPOSE[intention.purpose],
         hasGame,
-        gOffset: args.gameDay === null
-          ? -99
-          : orderIndex(intention.dayOfWeek) - orderIndex(args.gameDay),
+        gOffset,
         isTeamDay: intention.clubTraining,
         capacity: facts.capacity,
         isBeginner: facts.isBeginner,
@@ -181,6 +184,17 @@ export function materialiseAuthoredSessions(args: {
         injuries: facts.injuries,
         powerGoalNudge: facts.powerGoalNudge,
       });
+    }
+    // ⚠ THE SPECIALIST REFUSES IT TOO, EVEN IF ASKED — defence in depth.
+    //
+    // The scheduler no longer requests lower-body power on G-2, but a specialist
+    // that would happily serve an illegal request is one caller away from serving
+    // it again. §3 G-2: *"No heavy lower-body or added speed work."* A jump primer
+    // is explosive lower-body work at ANY dose, so it is OMITTED — not moved to
+    // another day, not converted to an upper primer.
+    if (powerPrimer && gOffset === -2 && powerPrimer.family === 'lower') {
+      powerPrimer = null;
+      unmaterialised = unmaterialised ?? 'power_refused_lower_body_on_g2';
     }
 
     return {

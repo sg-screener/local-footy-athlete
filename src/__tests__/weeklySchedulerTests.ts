@@ -616,6 +616,37 @@ console.log('\n[boundary] Specialists materialise; they never redesign the week'
     materialised.filter((session) => session.powerPrimer !== null)
       .every((session) => session.owner === 'strength'),
     JSON.stringify(materialised.map((s) => [s.owner, s.powerPrimer !== null])));
+  // ⚠ §3 G-2: "No heavy lower-body or added speed work." A jump primer is
+  // explosive lower-body work AT ANY DOSE.
+  //
+  // ⚠⚠ THE FIRST VERSION OF THIS CELL COULD NOT FAIL, AND THE MUTATION FOUND IT.
+  // It reused the four-day world above, whose G-2 Thursday is an UPPER day — so
+  // there was never a lower-body primer there to forbid. Removing BOTH G-2
+  // defences left it green. **A cell aimed at a rule needs a world where the rule
+  // can be broken.** This world puts a FULL BODY day (a lower purpose) on the
+  // Thursday before a Saturday game.
+  const g2World = built({ phase: 'In-season', gymAccessDays: [MON, THU],
+    clubNights: [], gameDay: SAT, age: 24 });
+  const g2Materialised = materialiseAuthoredSessions({
+    schedule: g2World, facts, gameDay: SAT });
+  const g2Day = g2Materialised.find((session) => session.dayOfWeek === THU);
+  ok('[boundary non-vacuity] a LOWER strength day really does sit on G-2', [],
+    !!g2Day && g2Day.owner === 'strength' && g2Day.purpose === 'full_body',
+    JSON.stringify(g2Materialised.map((m) => [m.dayOfWeek, m.owner, m.purpose])));
+  ok('[WC-050] no LOWER-BODY power primer on G-2, at any dose', ['WC-050'],
+    !g2Materialised.some((session) =>
+      session.dayOfWeek === THU && session.powerPrimer?.family === 'lower'),
+    JSON.stringify(g2Materialised.map((m) => [m.dayOfWeek, m.powerPrimer?.family ?? null])));
+  ok('[WC-050] the G-2 day keeps its strength session — power is OMITTED, not moved',
+    ['WC-050'],
+    !!g2Day && g2Day.purpose === 'full_body' && g2Day.owner === 'strength'
+    && g2Day.powerPrimer === null,
+    JSON.stringify([g2Day?.purpose, g2Day?.owner, g2Day?.powerPrimer]));
+  ok('[WC-050] ...and no OTHER day gained a primer in its place', ['WC-050'],
+    g2Materialised.filter((m) => m.powerPrimer !== null).length
+      <= g2Materialised.filter((m) => m.owner === 'strength' && m.dayOfWeek !== THU).length,
+    JSON.stringify(g2Materialised.map((m) => [m.dayOfWeek, !!m.powerPrimer])));
+
   ok('[boundary] power never appears on the game day or G-1', [],
     !materialised.some((session) => session.powerPrimer !== null
       && (session.game || session.dayOfWeek === FRI)),
