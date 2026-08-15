@@ -95,11 +95,20 @@ console.log('\n[1] The game survives as a Game');
 
 console.log('\n[2] Every club night survives as Team Training');
 {
+  // ⚠ These were originally written as `type === 'Team Training' || isTeamDay`,
+  // and the OR made them USELESS: `isTeamDay` is set by a path that pre-dates
+  // this work, so removing the assembler's anchor defence — which is what
+  // actually stops a club night being retyped once gym work is merged onto it —
+  // left all four cells green. **A hedge in an assertion is a hole in it.** The
+  // two facts are asserted separately, so each has something that can kill it.
   for (const name of CLUB_DAY_NAMES) {
     const day = DAY_NUMBER[name];
     ok(`club night ${name} carries the TEAM TRAINING type`,
-      typeOf(day) === 'Team Training' || dayOf(day)?.isTeamDay === true,
+      typeOf(day) === 'Team Training',
       `${name} is "${typeOf(day)}"`);
+    ok(`club night ${name} declares itself a team day`,
+      dayOf(day)?.isTeamDay === true,
+      `${name} isTeamDay=${String(dayOf(day)?.isTeamDay)}`);
   }
   ok('every club night the athlete declared is present',
     CLUB_DAYS.every((day) => dayOf(day) !== undefined),
