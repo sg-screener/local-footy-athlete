@@ -240,6 +240,12 @@ function applyContribution(composed: Workout, contribution: AdapterContribution)
     // days that happen to be spelled that way.
     workoutType: anchorWorkoutType(contribution.authoredDay)
       ?? (fields.conditioningBlock ? 'Mixed' : composed.workoutType),
+    // THE NAME IS PART OF THE IDENTITY, and it was being lost separately: the
+    // fixture reached the athlete typed `Game` and NAMED "Strength Session",
+    // and a club night was named with the composer's raw purpose token. The
+    // athlete reads the name, so an anchor whose name says something else is
+    // still a lost anchor. Same typed source, so the two cannot disagree.
+    name: anchorWorkoutType(contribution.authoredDay) ?? composed.name,
     // Carried so the same defence still has something to read after assembly.
     ...(contribution.authoredDay ? { authoredDay: contribution.authoredDay } : {}),
     exercises,

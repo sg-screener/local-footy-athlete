@@ -1085,6 +1085,12 @@ function fallbackWorkoutTypeForPlanEntry(entry: SessionAllocation): string {
 }
 
 function fallbackNameForPlanEntry(entry: SessionAllocation): string {
+  // An anchor names itself. The fixture used to fall through every test here and
+  // land on the strength label, so it reached the athlete typed `Game` and named
+  // "Strength Session" — **the athlete reads the name**, so that is still a lost
+  // anchor. Same resolver as the type, so the two cannot disagree.
+  const anchorName = authoredWorkoutType(entry);
+  if (anchorName === 'Game' || anchorName === 'Team Training') return anchorName;
   if (entry.isTeamDay) return 'Team Training';
   if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) {
     return entry.speedBlock?.title ?? SPEED_FALLBACK_TEMPLATE;
