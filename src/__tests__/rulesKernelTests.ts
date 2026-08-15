@@ -702,9 +702,9 @@ ok('other roles map to themselves',
 console.log('\n── 8. Live sample — generated in-season week (read-only count) ──');
 
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   resolveWeekWithConditioning,
   computeGameDatesForBlock,
@@ -739,7 +739,7 @@ const IN_SEASON_PROFILE: Partial<OnboardingData> = {
 
 try {
   const inputs = onboardingToCoachingInputs(IN_SEASON_PROFILE as OnboardingData);
-  const plan = buildCoachingPlan(inputs);
+  const plan = coachingPlanForTests(inputs);
 
   // Mirror the weekPlanQA harness: plan → workouts → ScheduleState.
   // isTeamDay + conditioning metadata are carried so classification sees

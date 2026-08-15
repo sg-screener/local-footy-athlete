@@ -44,7 +44,8 @@ import type {
 } from '../types/domain';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import type { PreseasonSubphase } from '../rules/preseasonSubphase';
-import { buildCoachingPlan, type CoachingInputs } from '../utils/coachingEngine';
+import { type CoachingInputs } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 
 let passed = 0;
 const failures: string[] = [];
@@ -163,7 +164,7 @@ function buildMatrix(): Combination[] {
 }
 
 const MATRIX = buildMatrix();
-const PLANS = MATRIX.map((c) => ({ combination: c, label: label(c), plan: buildCoachingPlan(inputsFor(c)) }));
+const PLANS = MATRIX.map((c) => ({ combination: c, label: label(c), plan: coachingPlanForTests(inputsFor(c)) }));
 
 /* ══════════════════════════════════════════════════════════════════════════
    [1] Single-authority lock
@@ -253,7 +254,7 @@ console.log('\n[3] No path reduces the week by assignment');
   const unexplained: string[] = [];
   for (const { combination, label: name, plan } of PLANS) {
     if (combination.availableDays >= 6) continue;
-    const roomy = buildCoachingPlan(inputsFor({ ...combination, availableDays: 7 }));
+    const roomy = coachingPlanForTests(inputsFor({ ...combination, availableDays: 7 }));
     const constrained = plan.weeklyExposureContract.strength.targetCount;
     const spacious = roomy.weeklyExposureContract.strength.targetCount;
     if (constrained >= spacious) continue;
@@ -305,7 +306,7 @@ console.log('\n[4] The weeks the deleted floors existed to protect are unchanged
     },
   ];
   for (const { name, combination, strength } of scenarios) {
-    const plan = buildCoachingPlan(inputsFor(combination));
+    const plan = coachingPlanForTests(inputsFor(combination));
     ok(`${name} -> ${strength} strength`, plan.coreSessions === strength,
       { planned: plan.coreSessions, contractTarget: plan.weeklyExposureContract.strength.targetCount });
   }
@@ -360,7 +361,7 @@ console.log('\n[5] The engine builds against the number Section 18 judges agains
     },
   ];
   for (const { name, inputs } of EDGE_CASES) {
-    const plan = buildCoachingPlan(inputs);
+    const plan = coachingPlanForTests(inputs);
     const anchors = plan.weeklyExposureContract.anchors;
     const expected = anchors.teamTrainingDays.length + anchors.gameOrPracticeMatchCredit;
     const raw = inputs.teamTrainingDaysPerWeek + (inputs.hasGame ? 1 : 0);

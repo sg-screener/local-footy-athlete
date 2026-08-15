@@ -42,7 +42,8 @@ import type {
 } from '../types/domain';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import type { PreseasonSubphase } from '../rules/preseasonSubphase';
-import { buildCoachingPlan, type CoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
+import { type CoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { decidePowerPrimer } from '../rules/powerPrimerPolicy';
 import { DELOAD_LAW, deloadPowerDose } from '../rules/deloadWeekRules';
 import { getOffseasonSubphasePolicy } from '../rules/offseasonSubphasePolicy';
@@ -594,9 +595,9 @@ console.log('\n[6] The same week at low capacity has the same structure');
 {
   const differences: string[] = [];
   for (const shape of weekShapes()) {
-    const reference = structureOf(buildCoachingPlan(inputsFor({ ...shape, capacity: 'medium' })));
+    const reference = structureOf(coachingPlanForTests(inputsFor({ ...shape, capacity: 'medium' })));
     for (const capacity of ['low', 'high'] as const) {
-      const actual = structureOf(buildCoachingPlan(inputsFor({ ...shape, capacity })));
+      const actual = structureOf(coachingPlanForTests(inputsFor({ ...shape, capacity })));
       for (const key of Object.keys(reference)) {
         if (reference[key] !== actual[key]) {
           differences.push(`${label(shape as Combination)} @${capacity}: ${key} ${reference[key]} -> ${actual[key]}`);
@@ -661,8 +662,8 @@ console.log('\n[7] Low capacity still shrinks the work it is allowed to shrink')
     availableDays: 5,
     hasGame: false,
   };
-  const low = buildCoachingPlan(inputsFor({ ...shape, capacity: 'low' }));
-  const high = buildCoachingPlan(inputsFor({ ...shape, capacity: 'high' }));
+  const low = coachingPlanForTests(inputsFor({ ...shape, capacity: 'low' }));
+  const high = coachingPlanForTests(inputsFor({ ...shape, capacity: 'high' }));
 
   ok('low capacity resolves to the low capacity band', low.capacity === 'low', low.capacity);
   ok('high capacity resolves to the high capacity band', high.capacity === 'high', high.capacity);

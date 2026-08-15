@@ -187,11 +187,18 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
   /* ── Dose: the sweep's survivors, each with the reason it survived ── */
   {
     file: 'utils/coachingEngine.ts',
-    edges: 8,
+    // 8 -> 6 on 2026-08-16. **Reclassified, not retuned**, which is what the
+    // guard demands: the two that went were the `conditioningLoading: 'moderate'`
+    // prompt hint and the ramp-up note, and BOTH lived inside `buildAIConstraints`
+    // — deleted whole with the legacy weekly planner. Neither was moved, reworded
+    // or re-homed; the AI-constraints surface they wrote to no longer exists.
+    // The six that remain are unchanged and still dose-only.
+    edges: 6,
     verdict: 'dose',
-    what: 'Off-feet modality forcing for aerobic and standalone tempo (x3), intensity '
-      + 'back-off to easy aerobic for tempo and hard conditioning (x3), the '
-      + '`conditioningLoading: \'moderate\'` prompt hint, and the ramp-up note.',
+    what: 'Off-feet modality forcing for aerobic and standalone tempo (x3) and intensity '
+      + 'back-off to easy aerobic for tempo and hard conditioning (x3). The '
+      + '`conditioningLoading: \'moderate\'` prompt hint and the ramp-up note were '
+      + 'deleted with `buildAIConstraints`.',
     disposition: 'Every one of these keeps the session and changes its size, intensity or '
       + 'modality. The ten structure edges that stood beside them are gone: three sprint '
       + 'blocks, the early off-season conditioning target and its floor, the combined-day '
