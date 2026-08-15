@@ -631,8 +631,23 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   ]).size;
   const appConditioningDays = withRunning.filter((day) => day.conditioning !== null).length;
   const runningDayCount = withRunning.filter((day) => day.conditioning === 'running').length;
-  const sprintCount = withRunning.filter(
+  // ── WC-124: ANCHORS SUPPLY SPRINT CREDIT ────────────────────────────────
+  //
+  // §3, Sprint/high-speed: *"At least 1 except early off-season. **Games and club
+  // training can supply it.** In-season, only add sprint work when there is no
+  // club training."*
+  //
+  // ⚠ COUNTING ONLY APP-AUTHORED SPRINTS WAS THE SINGLE BIGGEST DEFECT OF THE
+  // CUTOVER. The scheduler deliberately does NOT add a sprint when club training
+  // exists (WC-135) — so a club athlete's app-sprint count is correctly zero, and
+  // reporting zero SPRINT CREDIT told §18 the week trained no high speed at all.
+  // Measured: 88 occurrences of `sprint_high_speed_required_minimum` across 44
+  // worlds, the dominant refusal at zero legacy executions.
+  //
+  // The game and every club night carry the credit the contract says they carry.
+  const appSprintDays = withRunning.filter(
     (day) => day.conditioning === 'sprint_high_speed').length;
+  const sprintCount = appSprintDays + anchorConditioning;
   const hardDaySet = new Set<number>([
     ...withRunning.filter((day) => day.owner === 'strength').map((day) => day.dayOfWeek),
     ...inputs.clubNights,

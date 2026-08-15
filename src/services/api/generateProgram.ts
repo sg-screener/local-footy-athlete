@@ -62,8 +62,13 @@ import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
+import { scheduleToCoachingPlan } from '../../rules/scheduleToCoachingPlan';
+import { materialiseAuthoredSessions } from '../../rules/materialiseAuthoredSessions';
+import { calculateCapacity } from '../../utils/coachingEngine';
+import { resolveTrainingAgePolicy } from '../../rules/trainingAgePolicy';
+import type { OffseasonSubphase } from '../../rules/offseasonSubphase';
 import { scheduleRefused, scheduleWeek } from '../../rules/weeklyScheduler';
-import { WeeklyScheduleRefusedError, weeklySchedulerInputsFrom } from '../../rules/weeklySchedulerInputs';
+import { WeeklyScheduleRefusedError, ageFromRange, offseasonBlockFrom, weeklySchedulerInputsFrom } from '../../rules/weeklySchedulerInputs';
 // THE DELOAD OWNER, READ NOT REIMPLEMENTED — the same two resolvers the
 // retained adapter uses, so a composed week answers to one table and not a
 // second copy of it.
@@ -448,20 +453,109 @@ export function buildInitialGeneratedCoachingPlan(args: {
     seasonPhase: args.profile.seasonPhase,
     seasonPhaseClock: args.seasonPhaseClock,
   });
-  if (!firstState) return buildCoachingPlan(args.coachingInputs);
-  return buildCoachingPlan({
-    ...args.coachingInputs,
-    miniCycleNumber: firstState.miniCycleNumber,
-    weekInBlock: firstState.weekInBlock,
-    weekNumber: firstState.weekNumber,
-    weekKind: firstState.weekKind,
-    phaseWeekNumber: firstState.phaseWeekNumber,
-    phaseEntryWeekStartISO: firstState.phaseClock.phaseEntryWeekStartISO,
-    phaseClockSelectedPhase: firstState.phaseClock.selectedPhase,
-    phaseClockProvenance: firstState.phaseResolution.provenance,
-    offseasonSubphase: firstState.phaseResolution.offseasonSubphase ?? undefined,
-    preseasonSubphase: firstState.phaseResolution.preseasonSubphase ?? undefined,
+  // ── THE SECOND PRODUCER CUTOVER ─────────────────────────────────────────
+  //
+  // This built the plan with `buildCoachingPlan` and was **180 of the corpus's 572
+  // legacy-planner executions** — one per generated world. It now builds the same
+  // `CoachingPlan` shape from the scheduler, the specialists and the connector,
+  // exactly as `buildGeneratedMicrocycles` does.
+  const inputs = args.coachingInputs;
+  const weekStartISO = firstState?.weekStart ?? blockStart;
+  const schedInputs = coachingInputsToSchedulerInputs(inputs, {
+    weekStartISO,
+    offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
   });
+  const sched = scheduleWeek(schedInputs);
+  if (scheduleRefused(sched)) throw new WeeklyScheduleRefusedError(sched);
+  const { level: capacity, factors } = calculateCapacity(inputs);
+  const agePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
+  const materialised = materialiseAuthoredSessions({
+    schedule: sched,
+    facts: {
+      weekStartISO,
+      miniCycleNumber: firstState?.miniCycleNumber,
+      capacity,
+      isBeginner: agePolicy.level === 'new',
+      experienced: agePolicy.level !== 'new',
+      powerGoalNudge: false,
+      injuries: (inputs.injuries ?? []) as never,
+      runOnly: false,
+      phase: inputs.seasonPhase as never,
+      offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
+    },
+    gameDay: schedInputs.gameDay,
+  });
+  return scheduleToCoachingPlan({
+    schedule: sched,
+    materialised,
+    coachingInputs: inputs,
+    capacity,
+    capacityFactors: factors,
+    offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? undefined,
+    preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? undefined,
+    section18Identity: {
+      seasonPhase: inputs.seasonPhase,
+      blockNumber: firstState?.miniCycleNumber ?? null,
+      weekInBlock: firstState?.weekInBlock ?? null,
+      globalWeek: firstState?.weekNumber ?? null,
+      phaseWeek: firstState?.phaseWeekNumber ?? null,
+      phaseEntryWeekStartISO: firstState?.phaseClock.phaseEntryWeekStartISO ?? null,
+      phaseClockSelectedPhase: firstState?.phaseClock.selectedPhase ?? null,
+      phaseWeekProvenance: firstState?.phaseResolution.provenance ?? 'legacy_unknown',
+      weekKind: firstState?.weekKind,
+      participationProvenance: 'derived_healthy_unrestricted',
+      currentProductionClaimsAnchorCredit: true,
+    } as never,
+    clubNights: schedInputs.clubNights,
+    gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
+    v1Input: {
+      seasonPhase: inputs.seasonPhase,
+      capacity,
+      selectedDayNumbers: [...schedInputs.gymAccessDays],
+      teamTrainingDayNumbers: [...schedInputs.clubNights],
+      hasGame: schedInputs.gameDay !== null,
+      gameDay: schedInputs.gameDay,
+      weekKind: firstState?.weekKind,
+      offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
+      preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? null,
+      readinessDeloaded: inputs.generationConstraints?.readiness?.deloaded === true,
+      maxStrengthSessions: agePolicy.maxCoreSessions,
+      profileInjuries: inputs.injuries ?? [],
+      activeInjuries: inputs.generationConstraints?.injuries,
+      byeMode: inputs.byeMode,
+      weekModeOverride: inputs.generationConstraints?.weekMode,
+    } as never,
+  });
+}
+
+const SCHED_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+  'Friday', 'Saturday'];
+
+/** `CoachingInputs` → scheduler inputs. Translation only, no decisions. */
+function coachingInputsToSchedulerInputs(
+  inputs: CoachingInputs,
+  args: { weekStartISO: string; offseasonSubphase: OffseasonSubphase | null },
+) {
+  const toNumber = (name: unknown): number | null => {
+    const index = SCHED_DAY_NAMES.indexOf(String(name ?? ''));
+    return index < 0 ? null : index;
+  };
+  const nums = (list: readonly unknown[] | undefined): number[] =>
+    (list ?? []).map(toNumber).filter((n): n is number => n !== null);
+  return {
+    weekStartISO: args.weekStartISO,
+    phase: inputs.seasonPhase as never,
+    offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
+    gymAccessDays: nums(inputs.selectedDays),
+    clubNights: nums(inputs.teamTrainingDays),
+    gameDay: inputs.hasGame ? toNumber(inputs.gameDay) : null,
+    age: ageFromRange((inputs as { ageRange?: never }).ageRange),
+    readiness: {
+      lowReadiness: inputs.generationConstraints?.readiness?.deloaded === true,
+      highReadiness: false, lowFatigue: false, consistentlyCompletesThree: false,
+    },
+    unavailableDays: [] as number[],
+  };
 }
 
 /**
@@ -682,28 +776,98 @@ export function buildGeneratedMicrocycles(args: {
     // skeleton (days, counts, planned patterns) and conditioning is untouched.
     // A world the composer cannot build now FAILS LOUDLY. It is never answered
     // by the legacy builder.
-    const allocatedWeekPlan = args.coachingInputs
-      ? buildCoachingPlan({
-          ...args.coachingInputs,
-          // Clause (a), route-scoped: the contract derives its required-pattern
-          // set from the planner's own answer and this kit, not from ALL_PATTERNS.
-          composedRoute: { kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags) },
-          generationConstraints,
-          injuries: profile.injuries ?? [],
-          appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
-          conditioningSubstitutionPolicy: substitutionPolicy,
+    // ══ THE PRODUCER CUTOVER ═══════════════════════════════════════════════
+    //
+    // `buildCoachingPlan` used to fill `CoachingPlan` here. **The scheduler and
+    // the specialists fill it now**, through the pure connector. The SHAPE is
+    // unchanged — the adapter, the §18 gateway, the store and the coach all read
+    // it and none of them moved.
+    //
+    // Order matters and is the whole point: SCHEDULE first (it owns existence,
+    // count, purpose, weekday, hard/rest and spacing), then MATERIALISE (the
+    // specialists fill content into days they cannot change), then CONNECT
+    // (translation only). The old order asked the planner first and let the
+    // scheduler disagree with it afterwards.
+    const cutoverInputs = args.coachingInputs;
+    let allocatedWeekPlan: CoachingPlan;
+    if (cutoverInputs) {
+      const schedInputs = weeklySchedulerInputsFrom({
+        profile,
+        weekStartISO: blockState.weekStart,
+        offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+        generationConstraints,
+        activeConstraints: args.activeConstraints ?? [],
+        exposureContract: null,
+      });
+      const sched = scheduleWeek(schedInputs);
+      if (scheduleRefused(sched)) throw new WeeklyScheduleRefusedError(sched);
+      const { level: cutoverCapacity, factors: cutoverFactors } =
+        calculateCapacity(cutoverInputs);
+      const materialised = materialiseAuthoredSessions({
+        schedule: sched,
+        facts: {
+          weekStartISO: blockState.weekStart,
           miniCycleNumber: blockState.miniCycleNumber,
-          weekInBlock: blockState.weekInBlock,
-          weekNumber: blockState.weekNumber,
+          capacity: cutoverCapacity,
+          isBeginner: resolveTrainingAgePolicy(cutoverInputs.experienceLevel).level === 'new',
+          experienced: resolveTrainingAgePolicy(cutoverInputs.experienceLevel).level !== 'new',
+          powerGoalNudge: false,
+          injuries: (profile.injuries ?? []) as never,
+          availableMachines: undefined,
+          runOnly: false,
+          phase: profile.seasonPhase as never,
+          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+        },
+        gameDay: schedInputs.gameDay,
+      });
+      allocatedWeekPlan = scheduleToCoachingPlan({
+        schedule: sched,
+        materialised,
+        coachingInputs: cutoverInputs,
+        capacity: cutoverCapacity,
+        capacityFactors: cutoverFactors,
+        offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
+        preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
+        section18Identity: {
+          seasonPhase: profile.seasonPhase as never,
+          blockNumber: blockState.miniCycleNumber ?? null,
+          weekInBlock: blockState.weekInBlock ?? null,
+          globalWeek: blockState.weekNumber ?? null,
+          phaseWeek: blockState.phaseWeekNumber ?? null,
+          phaseEntryWeekStartISO: blockState.phaseClock.phaseEntryWeekStartISO ?? null,
+          phaseClockSelectedPhase: blockState.phaseClock.selectedPhase ?? null,
+          phaseWeekProvenance: blockState.phaseResolution.provenance ?? 'legacy_unknown',
           weekKind: effectiveWeekKind,
-          phaseWeekNumber: blockState.phaseWeekNumber,
-          phaseEntryWeekStartISO: blockState.phaseClock.phaseEntryWeekStartISO,
-          phaseClockSelectedPhase: blockState.phaseClock.selectedPhase,
-          phaseClockProvenance: blockState.phaseResolution.provenance,
-          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
-          preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
-        })
-      : args.plan;
+          participationProvenance: 'derived_healthy_unrestricted',
+          currentProductionClaimsAnchorCredit: true,
+          kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags),
+        } as never,
+        clubNights: schedInputs.clubNights,
+        gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
+        v1Input: {
+          seasonPhase: profile.seasonPhase,
+          capacity: cutoverCapacity,
+          selectedDayNumbers: [...schedInputs.gymAccessDays],
+          teamTrainingDayNumbers: [...schedInputs.clubNights],
+          hasGame: schedInputs.gameDay !== null,
+          gameDay: schedInputs.gameDay,
+          weekKind: effectiveWeekKind,
+          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+          preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? null,
+          readinessDeloaded: generationConstraints?.readiness?.deloaded === true,
+          maxStrengthSessions:
+            resolveTrainingAgePolicy(cutoverInputs.experienceLevel).maxCoreSessions,
+          appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
+          attemptedConditioningSubstitutions: substitutionPolicy.consideredSubstitutions,
+          profileInjuries: profile.injuries ?? [],
+          activeInjuries: generationConstraints?.injuries,
+          byeMode: cutoverInputs.byeMode,
+          weekModeOverride: generationConstraints?.weekMode,
+        } as never,
+      });
+    } else {
+      allocatedWeekPlan = args.plan;
+    }
     const weekPlan: CoachingPlan = {
       ...allocatedWeekPlan,
       weeklyPlan: resolveWeeklyConditioningFeasibility(
