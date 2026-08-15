@@ -107,6 +107,34 @@ export interface SessionIntention {
   readonly clauseId: string;
 }
 
+/**
+ * ── WHAT THE WEEK REQUIRES, DECIDED BY THE SCHEDULER ───────────────────────
+ *
+ * **Sam's boundary, 2026-08-15:** the scheduler owns *"existence, requiredness,
+ * count, purpose, weekday, hard/rest classification and weekly spacing"*.
+ * Conditioning, sprint, power and rest are inside that boundary — narrow
+ * specialist modules may materialise the CONTENT of a session this authorises
+ * (interval prescription, distance, pace, dose) but **may never add, remove, move
+ * or repurpose one.**
+ *
+ * §18 derives its acceptance contract from this. It is not an independent planner.
+ */
+export interface WeeklyDemand {
+  /** Required strength sessions — the layout's count. */
+  readonly mainStrength: number;
+  /** Core conditioning exposures. Club training and the game COUNT (WC-045). */
+  readonly coreConditioning: number;
+  /** Anchor-supplied conditioning credit, of the above. */
+  readonly anchorConditioning: number;
+  readonly sprintHighSpeed: number;
+  /** Days carrying app running (WC-046). */
+  readonly running: number;
+  /** Days with no app work and no anchor (WC-042). */
+  readonly fullRestDays: number;
+  /** Calendar days holding any hard exposure — DAYS, not sessions (WC-040). */
+  readonly hardDays: number;
+}
+
 export interface WeeklySchedule {
   readonly weekStartISO: string;
   readonly layoutClauseId: string;
@@ -114,6 +142,8 @@ export interface WeeklySchedule {
   readonly days: readonly SessionIntention[];
   /** Patterns the week intends to cover at least once. */
   readonly intendedPatterns: readonly MovementPattern[];
+  /** What §18 derives its acceptance contract from. */
+  readonly demand: WeeklyDemand;
 }
 
 export type SchedulerFinding =
@@ -530,12 +560,45 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     for (const pattern of PATTERNS_FOR_PURPOSE[slot.purpose]) intended.add(pattern);
   }
 
+  // ── THE WEEK'S DEMAND, COUNTED FROM WHAT WAS ACTUALLY PLACED ─────────────
+  //
+  // Counted from the DATED DAYS, never re-derived from the layout — a demand that
+  // disagrees with the week it describes is the exact defect that made §18 judge a
+  // composer week against a count nobody built.
+  const anchorConditioning = new Set<number>([
+    ...inputs.clubNights,
+    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+  ]).size;
+  const appConditioningDays = withRunning.filter((day) => day.conditioning !== null).length;
+  const runningDayCount = withRunning.filter((day) => day.conditioning === 'running').length;
+  const sprintCount = withRunning.filter(
+    (day) => day.conditioning === 'sprint_high_speed').length;
+  const hardDaySet = new Set<number>([
+    ...withRunning.filter((day) => day.owner === 'strength').map((day) => day.dayOfWeek),
+    ...inputs.clubNights,
+    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+  ]);
+  const fullRestDays = withRunning.filter((day) =>
+    day.owner === 'rest_or_recovery' && !day.clubTraining && !day.game).length;
+
   return {
     weekStartISO: inputs.weekStartISO,
     layoutClauseId: layout.clauseId,
     requiredStrengthSessions: needed,
     days: withRunning,
     intendedPatterns: [...intended],
+    demand: {
+      mainStrength: needed,
+      // WC-045 caps the total at 5; anchors count toward it.
+      coreConditioning: Math.min(
+        anchorConditioning + appConditioningDays,
+        GLOBAL_RULES.conditioning.max),
+      anchorConditioning,
+      sprintHighSpeed: sprintCount,
+      running: runningDayCount,
+      fullRestDays,
+      hardDays: hardDaySet.size,
+    },
   };
 }
 
