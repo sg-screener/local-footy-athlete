@@ -1,6 +1,6 @@
 /**
  * AcceptedCompositionBase + InjuryEpisodeTransaction permanent invariants.
- * Run: npm run test:injury-episode-transactions
+ * Run: npm run diag:injury-episode-transactions
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;

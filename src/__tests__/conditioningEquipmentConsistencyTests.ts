@@ -2,10 +2,10 @@
 
 import type { OnboardingData, Workout } from '../types/domain';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   buildGeneratedMicrocycles,
   buildGenerationPrompt,
@@ -68,7 +68,7 @@ function allocation(profileData: OnboardingData): {
   const { blockStart } = computeBlockBounds(new Date(`${REFERENCE_DATE}T12:00:00`));
   const inputs = onboardingToCoachingInputs(profileData, { availabilityDateISO: REFERENCE_DATE });
   const state = buildBlockWeekStates({ blockStartISO: blockStart, blockNumber: 1, seasonPhase: 'Off-season' })[0];
-  const plan = buildCoachingPlan({
+  const plan = coachingPlanForTests({
     ...inputs, miniCycleNumber: state.miniCycleNumber, weekInBlock: state.weekInBlock,
     weekNumber: state.weekNumber, weekKind: state.weekKind,
   });

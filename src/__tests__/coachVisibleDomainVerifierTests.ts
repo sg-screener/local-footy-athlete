@@ -1,6 +1,6 @@
 /**
  * Protected-domain verifier invariants for stacked mixed sessions.
- * Run: npm run test:coach-visible-domain-verifier
+ * Run: npm run diag:coach-visible-domain-verifier
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;

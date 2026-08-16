@@ -5,7 +5,8 @@
  */
 
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
-import { buildCoachingPlan, type CoachingInputs, type SessionAllocation } from '../utils/coachingEngine';
+import { type CoachingInputs, type SessionAllocation } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 
 let pass = 0;
 let fail = 0;
@@ -41,7 +42,7 @@ const tueThuSatInputs: CoachingInputs = {
 };
 
 section('1. Tue/Thu team + Saturday game does not invent compulsory conditioning');
-const plan = buildCoachingPlan(tueThuSatInputs);
+const plan = coachingPlanForTests(tueThuSatInputs);
 const wedPlan = plan.weeklyPlan.find((s) => s.dayOfWeek === 'Wednesday');
 const appCore = plan.weeklyPlan.filter((session) =>
   !session.isTeamDay &&

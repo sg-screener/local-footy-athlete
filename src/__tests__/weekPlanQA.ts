@@ -20,7 +20,6 @@ declare global {
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import {
-  buildCoachingPlan,
   classifyGenerationSession,
   onboardingToCoachingInputs,
   type CoachingInputs,
@@ -28,6 +27,7 @@ import {
   type OnboardingToCoachingInputsOptions,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   resolveWeekWithConditioning,
   type ScheduleState,
@@ -985,7 +985,7 @@ for (const scenario of scenarios) {
     scenario.onboarding as OnboardingData,
     scenario.coachingOptions,
   );
-  const plan = buildCoachingPlan(inputs);
+  const plan = coachingPlanForTests(inputs);
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: inputs.seasonPhase,
     explicitSubphase: inputs.offseasonSubphase,
@@ -1320,7 +1320,7 @@ if (totalFailed > 0) {
   // Re-run assertions just for failures
   for (const scenario of scenarios) {
     const inputs = onboardingToCoachingInputs(scenario.onboarding as OnboardingData);
-    const plan = buildCoachingPlan(inputs);
+    const plan = coachingPlanForTests(inputs);
     let resolvedWeek: ResolvedDay[] | null = null;
     try {
       const schedState = buildScheduleState(inputs, plan, undefined, scenario.calendarOverrides, scenario.onboarding.preferredTrainingDays);

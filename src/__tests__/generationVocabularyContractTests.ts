@@ -33,7 +33,8 @@ import path from 'path';
 import type { OnboardingData } from '../types/domain';
 import { EXERCISE_CUES } from '../data/exerciseCues';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   buildGenerationPrompt,
   programGenErrorForCuelessCards,
@@ -77,7 +78,7 @@ const PROFILE: OnboardingData = {
   conditioningLevel: 'Good',
 } as unknown as OnboardingData;
 
-const plan = buildCoachingPlan(onboardingToCoachingInputs(PROFILE, {
+const plan = coachingPlanForTests(onboardingToCoachingInputs(PROFILE, {
   miniCycleNumber: 1,
   weekInBlock: 1,
   weekNumber: 1,

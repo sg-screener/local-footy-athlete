@@ -35,11 +35,11 @@
 };
 
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type OnboardingToCoachingInputsOptions,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
 import type { OnboardingData } from '../types/domain';
@@ -61,7 +61,7 @@ function planFor(
   profile: Partial<OnboardingData>,
   options: Partial<OnboardingToCoachingInputsOptions> = {},
 ): SessionAllocation[] {
-  return buildCoachingPlan(onboardingToCoachingInputs(profile as OnboardingData, options)).weeklyPlan;
+  return coachingPlanForTests(onboardingToCoachingInputs(profile as OnboardingData, options)).weeklyPlan;
 }
 
 const isLowerish = (s: SessionAllocation) =>

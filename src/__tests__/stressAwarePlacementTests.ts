@@ -18,10 +18,10 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { validateProgramWeek, type ValidatorDayInput } from '../rules/weekStructureValidator';
 import type { OnboardingData, Workout } from '../types/domain';
 
@@ -47,7 +47,7 @@ const DATE_OF: Record<string, string> = {
 };
 
 function planFor(onboarding: Partial<OnboardingData>) {
-  const plan = buildCoachingPlan(onboardingToCoachingInputs(onboarding as OnboardingData));
+  const plan = coachingPlanForTests(onboardingToCoachingInputs(onboarding as OnboardingData));
   const sorted = [...plan.weeklyPlan].sort(
     (a, b) => ORDER.indexOf(a.dayOfWeek || '') - ORDER.indexOf(b.dayOfWeek || ''),
   );

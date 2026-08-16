@@ -10,12 +10,12 @@ import type {
   ActiveInjuryConstraint,
 } from '../store/coachUpdatesStore';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
   type OnboardingToCoachingInputsOptions,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   applyGenerationConstraintsToProfile,
   buildGenerationConstraintContext,
@@ -126,7 +126,7 @@ function planFor(
     todayISO: TODAY,
   });
   const constrainedProfile = applyGenerationConstraintsToProfile(profileData, context);
-  return buildCoachingPlan(onboardingToCoachingInputs(constrainedProfile, {
+  return coachingPlanForTests(onboardingToCoachingInputs(constrainedProfile, {
     ...inputOptions,
     availabilityDateISO: TODAY,
     generationConstraints: context,

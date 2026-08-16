@@ -1,6 +1,7 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../../../utils/coachingEngine';
+import { onboardingToCoachingInputs } from '../../../utils/coachingEngine';
+import { coachingPlanForTests } from '../support/coachingPlanForTests';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
 import { canonicalWorkoutLedger, pathExercise, pathWorkout } from './buildCanonicalPathLedger';
 import { buildSlice4ScenarioTrace } from './buildSlice4Trace';
@@ -63,7 +64,7 @@ function plannedFor(args: { game?: 'Saturday' | 'Sunday'; days: number; week?: n
     ...BASE_PROFILE, seasonPhase: args.phase ?? 'In-season', preferredTrainingDays: days,
     trainingDaysPerWeek: args.days, usualGameDay: args.game, gameDay: args.game,
   }, { weekInBlock: args.week ?? 1, weekNumber: args.week ?? 1, miniCycleNumber: args.week ?? 1, weekKind: args.week === 4 ? 'deload' : 'build' });
-  const plan = buildCoachingPlan(inputs);
+  const plan = coachingPlanForTests(inputs);
   return {
     patterns: Array.from(new Set(plan.weeklyPlan.flatMap((entry) => entry.strengthIntent?.plannedPatterns ?? []))).sort(),
     useful: plan.weeklyPlan.filter((entry) => (entry.strengthIntent?.plannedPatterns.length ?? 0) > 0).length,
@@ -146,8 +147,8 @@ export function evaluateMetamorphicRelation(spec: MetamorphicRelationSpec): Gene
     return pass(spec, reduced.every((entry) => entry.passed) && expanded.every((entry) => entry.passed), 'both equipment states preserve a canonical safe contract', { reduced, expanded });
   }
   if (spec.id === 'low-readiness-no-hard-increase') {
-    const high = buildCoachingPlan(onboardingToCoachingInputs({ ...BASE_PROFILE } as any));
-    const low = buildCoachingPlan(onboardingToCoachingInputs({
+    const high = coachingPlanForTests(onboardingToCoachingInputs({ ...BASE_PROFILE } as any));
+    const low = coachingPlanForTests(onboardingToCoachingInputs({
       ...BASE_PROFILE, recentTrainingLoad: 'Hardly at all', conditioningLevel: 'Poor',
       teamTrainingIntensity: 'Hard',
       sprintExposure: 'No sprint training',

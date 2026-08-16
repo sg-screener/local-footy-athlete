@@ -10,9 +10,9 @@ import {
   buildPrescriptionEffectEvidence,
 } from '../utils/deterministicCoachNoteFactory';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { attachRecoveryAddonsToWeek } from '../utils/recoveryAddonBuilder';
 
 let pass = 0;
@@ -184,7 +184,7 @@ console.log('\n[3] testing notes require an actual generated-plan difference');
     preferredTrainingDays: ['Monday', 'Tuesday'],
     conditioningLevel: 'Poor',
   };
-  const biasedPlan = buildCoachingPlan(onboardingToCoachingInputs(poorAerobicProfile, {
+  const biasedPlan = coachingPlanForTests(onboardingToCoachingInputs(poorAerobicProfile, {
     weekInBlock: 4,
   }));
   const biasedWorkouts = buildWorkoutsFromCoach(
@@ -198,7 +198,7 @@ console.log('\n[3] testing notes require an actual generated-plan difference');
     biasedNotes.some((note) => note.title === 'Testing focus active' && /Aerobic or tempo/i.test(note.body)),
     biasedNotes);
 
-  const neutralPlan = buildCoachingPlan(onboardingToCoachingInputs({
+  const neutralPlan = coachingPlanForTests(onboardingToCoachingInputs({
     ...poorAerobicProfile,
     conditioningLevel: 'Good',
   }, { weekInBlock: 4 }));
@@ -238,7 +238,7 @@ console.log('\n[4] testing robustness note follows actual safe add-on ordering')
 
 console.log('\n[5] subphase notes require typed visible dose evidence');
 {
-  const plan = buildCoachingPlan(onboardingToCoachingInputs(BASE_PROFILE, { weekInBlock: 1 }));
+  const plan = coachingPlanForTests(onboardingToCoachingInputs(BASE_PROFILE, { weekInBlock: 1 }));
   const workouts = buildWorkoutsFromCoach([], 'subphase-note', plan.weeklyPlan, BASE_PROFILE);
   const notes = notesFor(workouts);
   ok('early off-season note appears when off-feet/lighter policy shapes a session',
@@ -261,7 +261,7 @@ console.log('\n[6] bye notes are derived only from the dedicated bye shape');
     teamTrainingDaysPerWeek: 1,
     teamTrainingDays: ['Tuesday'],
   };
-  const byePlan = buildCoachingPlan(onboardingToCoachingInputs(byeProfile));
+  const byePlan = coachingPlanForTests(onboardingToCoachingInputs(byeProfile));
   const byeWorkouts = buildWorkoutsFromCoach([], 'bye-note', byePlan.weeklyPlan, byeProfile);
   const byeNotes = notesFor(byeWorkouts);
   ok('bye context that changes week shape creates one bye note',
@@ -269,7 +269,7 @@ console.log('\n[6] bye notes are derived only from the dedicated bye shape');
     byeNotes);
 
   const gameProfile: OnboardingData = { ...byeProfile, usualGameDay: 'Saturday' };
-  const gamePlan = buildCoachingPlan(onboardingToCoachingInputs(gameProfile));
+  const gamePlan = coachingPlanForTests(onboardingToCoachingInputs(gameProfile));
   const gameWorkouts = buildWorkoutsFromCoach([], 'game-note', gamePlan.weeklyPlan, gameProfile);
   ok('normal game week creates no bye note',
     !notesFor(gameWorkouts).some((note) => /Bye-week/i.test(note.title)),

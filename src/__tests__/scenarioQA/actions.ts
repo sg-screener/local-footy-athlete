@@ -11,9 +11,9 @@
  */
 
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
 } from '../../utils/coachingEngine';
+import { coachingPlanForTests } from '../support/coachingPlanForTests';
 import {
   applyGameDayChange,
   applyPhaseShift,
@@ -31,7 +31,7 @@ export function runScenario(
   for (const action of scenario.actions) {
     currentProfile = applyAction(currentProfile, action);
     const inputs = onboardingToCoachingInputs(currentProfile);
-    const plan = buildCoachingPlan(inputs);
+    const plan = coachingPlanForTests(inputs);
 
     const invariantResults = invariants
       .map((inv) => inv({ profile: currentProfile, inputs, plan }))

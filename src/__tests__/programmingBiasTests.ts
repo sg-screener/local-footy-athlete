@@ -21,10 +21,10 @@ import {
   type BiasConditioningCategory,
 } from '../rules/programmingBias';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 
 let pass = 0;
 let fail = 0;
@@ -244,7 +244,7 @@ function planFor(
   data: OnboardingData,
   options: { weekInBlock?: number } = {},
 ): SessionAllocation[] {
-  return buildCoachingPlan(
+  return coachingPlanForTests(
     onboardingToCoachingInputs(data, {
       availabilityDateISO: '2026-07-06',
       weekInBlock: options.weekInBlock,

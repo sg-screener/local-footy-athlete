@@ -16,11 +16,11 @@ import {
 } from '../rules/weeklyExposureContract';
 import { resolveSection18PhasePlannerSelection } from '../rules/weeklyExposureContractV2';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 
 const DAYS: OnboardingData['preferredTrainingDays'] = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
@@ -140,7 +140,7 @@ function snapshot(options: PlannerOptions): PlannerSnapshot {
     offseasonSubphase: options.offseasonSubphase,
     preseasonSubphase: options.preseasonSubphase,
   });
-  const plan = buildCoachingPlan({ ...inputs, byeMode: options.byeMode });
+  const plan = coachingPlanForTests({ ...inputs, byeMode: options.byeMode });
   invariant(plan.weeklyExposureContract, 'planner omitted the allocation contract');
   invariant(plan.weeklyExposureContractV2, 'planner omitted Contract v2');
   const validation = evaluateAllocationExposureContract(plan.weeklyExposureContract, plan.weeklyPlan);

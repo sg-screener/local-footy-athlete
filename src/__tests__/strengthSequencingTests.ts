@@ -7,11 +7,11 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import {
-  buildCoachingPlan,
   scoreStrengthSequence,
   type CoachingInputs,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { DEFAULT_PROGRAM } from '../data/defaultProgram';
 import { inferMovementPatterns, type MovementPattern } from '../utils/sessionNaming';
 import type { Workout } from '../types/domain';
@@ -284,7 +284,7 @@ function fakeSession(dayOfWeek: string, focus: string, pattern: SessionAllocatio
 
 section('[1] Early off-season Mon-Fri uses hinge+pull/push/squat body-armour ledger');
 {
-  const plan = buildCoachingPlan(baseInputs('Off-season')).weeklyPlan;
+  const plan = coachingPlanForTests(baseInputs('Off-season')).weeklyPlan;
   eq(
     'early off-season default sequence',
     strengthKindsByDay(plan),
@@ -303,7 +303,7 @@ section('[1] Early off-season Mon-Fri uses hinge+pull/push/squat body-armour led
 
 section('[2] Pre-season no-game uses the same posterior-chain guard');
 {
-  const plan = buildCoachingPlan(baseInputs('Pre-season')).weeklyPlan;
+  const plan = coachingPlanForTests(baseInputs('Pre-season')).weeklyPlan;
   assertNoAdjacentStrengthRegionPairs('pre-season no-game has no adjacent same-region strength pair', plan);
   assertLowerStrengthSpacing('pre-season no-game lower strength days are separated', plan);
   assertNoPullHingeAdjacency('pre-season no-game has no pull/hinge adjacency', plan);
@@ -312,7 +312,7 @@ section('[2] Pre-season no-game uses the same posterior-chain guard');
 
 section('[3] In-season keeps game-day constraints ahead of sequencing preference');
 {
-  const plan = buildCoachingPlan({
+  const plan = coachingPlanForTests({
     ...baseInputs('In-season'),
     hasGame: true,
     gameDay: 'Saturday',
@@ -326,7 +326,7 @@ section('[3] In-season keeps game-day constraints ahead of sequencing preference
 
 section('[4] Pre-season team weeks prefer 3-on / 1-off / 2-on rhythm');
 {
-  const plan = buildCoachingPlan({
+  const plan = coachingPlanForTests({
     ...baseInputs('Pre-season'),
     availableDays: 6,
     selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -342,7 +342,7 @@ section('[4] Pre-season team weeks prefer 3-on / 1-off / 2-on rhythm');
   assertNoAdjacentStrengthRegionPairs('pre-season team week avoids same-body back-to-back where possible', plan);
   assertNoPullHingeAdjacency('pre-season team week avoids pull/hinge adjacency where possible', plan);
 
-  const fullWeek = buildCoachingPlan({
+  const fullWeek = coachingPlanForTests({
     ...baseInputs('Pre-season'),
     availableDays: 7,
     selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
@@ -358,7 +358,7 @@ section('[4] Pre-season team weeks prefer 3-on / 1-off / 2-on rhythm');
 
 section('[5] Six-day no-game weeks use Saturday to spread the load');
 {
-  const preSeason = buildCoachingPlan({
+  const preSeason = coachingPlanForTests({
     ...baseInputs('Pre-season'),
     availableDays: 6,
     selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -371,7 +371,7 @@ section('[5] Six-day no-game weeks use Saturday to spread the load');
   ok('six-day pre-season week includes Saturday', !!preSaturday, shape(preSeason));
   ok('six-day pre-season week does not cram all work Monday-Friday', preSaturday?.tier === 'core' || preSaturday?.tier === 'optional', shape(preSeason));
 
-  const offSeason = buildCoachingPlan({
+  const offSeason = coachingPlanForTests({
     ...baseInputs('Off-season'),
     availableDays: 6,
     selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],

@@ -9,9 +9,9 @@ import { classifyPoolSlot } from '../data/exercisePoolsStrength';
 import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 import { EXERCISE_LOAD_MAP, estimateStartingWeight } from '../utils/loadEstimation';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import type { OnboardingData, SeasonPhase, Workout } from '../types/domain';
 
@@ -117,7 +117,7 @@ function buildOutageWeek(
   data: OnboardingData,
   availableEquipment = FULL_GYM_EQUIPMENT,
 ): Workout[] {
-  const plan = buildCoachingPlan(onboardingToCoachingInputs(data));
+  const plan = coachingPlanForTests(onboardingToCoachingInputs(data));
   return buildWorkoutsFromCoach(
     [],
     `mc-outage-${data.experienceLevel}-${data.seasonPhase}`,
@@ -245,8 +245,8 @@ console.log('\n[4] beginner weekly dose and combined-day guard');
  */
 for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season'] as const) {
   const data = profile(seasonPhase, 'Complete beginner');
-  const plan = buildCoachingPlan(onboardingToCoachingInputs(data));
-  const experienced = buildCoachingPlan(onboardingToCoachingInputs(
+  const plan = coachingPlanForTests(onboardingToCoachingInputs(data));
+  const experienced = coachingPlanForTests(onboardingToCoachingInputs(
     profile(seasonPhase, '5+ years')));
 
   ok(`${seasonPhase} beginner gets the same weekly STRUCTURE as an experienced athlete`,

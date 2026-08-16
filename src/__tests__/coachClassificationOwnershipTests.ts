@@ -1,7 +1,7 @@
 /**
  * Permanent invariants for Single Classified Intent Ownership.
  *
- * Run: npm run test:coach-classification-ownership
+ * Run: npm run diag:coach-classification-ownership
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;

@@ -3,11 +3,11 @@ import path from 'node:path';
 import type { OnboardingData } from '../../types/domain';
 import type { ActiveConstraint } from '../../store/coachUpdatesStore';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingInputs,
   type CoachingPlan,
 } from '../../utils/coachingEngine';
+import { coachingPlanForTests } from '../support/coachingPlanForTests';
 import { generateProgramLocally } from '../../services/api/generateProgram';
 import {
   evaluateAllocationExposureContract,
@@ -65,7 +65,7 @@ function planFor(
     generationConstraints: overrides.generationConstraints,
     appConditioningFeasible: overrides.appConditioningFeasible ?? true,
   });
-  return buildCoachingPlan({ ...inputs, ...overrides });
+  return coachingPlanForTests({ ...inputs, ...overrides });
 }
 
 function requireAcceptedAllocation(name: string, plan: CoachingPlan): void {

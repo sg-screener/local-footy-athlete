@@ -15,10 +15,10 @@ import {
 } from '../utils/readinessConstraints';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { executeProgramControlAction } from '../utils/programControlActions';
 import { getActiveProgramModifiers } from '../utils/activeProgramModifiers';
 import { selectActiveCoachNotes } from '../utils/activeCoachNotes';
@@ -94,7 +94,7 @@ function planFor(pattern: 'single_night' | 'repeated'): CoachingPlan {
     activeConstraints: [constraint],
     todayISO: TODAY,
   });
-  return buildCoachingPlan(onboardingToCoachingInputs(PROFILE, {
+  return coachingPlanForTests(onboardingToCoachingInputs(PROFILE, {
     availabilityDateISO: TODAY,
     generationConstraints,
   }));

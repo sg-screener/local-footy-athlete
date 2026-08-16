@@ -51,7 +51,9 @@ import {
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { useProfileStore } from '../store/profileStore';
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
+import { generateProgramLocally } from '../services/api/generateProgram';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { looksLikeNeuralPrimer } from '../rules/weekStructureValidator';
 import { getSessionComponents } from '../utils/sessionComponents';
@@ -156,6 +158,16 @@ function matrixProfile(
   overrides: Partial<OnboardingData> = {},
 ): Partial<OnboardingData> {
   return {
+    // ── FIELDS THE REAL GENERATOR REQUIRES AND THE OLD TWO-STEP DID NOT ─────
+    //
+    // `buildWorkoutsFromCoach` never asked where the athlete trains, so the
+    // fixture never said. `generateProgramLocally` refuses without it — "I still
+    // need to know what equipment you can train with" — which is correct product
+    // behaviour and was simply unreachable from the old harness. **Adding the
+    // fixture's missing facts is instrument repair; no expectation moves.**
+    trainingLocation: 'Commercial gym',
+    equipmentSelectionCompleteness: 'complete',
+    equipment: ['Full Gym'],
     seasonPhase: 'In-season',
     trainingDaysPerWeek: 5,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday', 'Saturday'],
@@ -207,13 +219,30 @@ function matrixWorld(args: {
       ? injuryConstraints(args.restricted)
       : undefined,
   });
-  const plan = buildCoachingPlan(inputs);
-  const workouts = buildWorkoutsFromCoach(
-    [], 'mc-g2-matrix', plan.weeklyPlan, profile as OnboardingData,
-    // A rotation context IS supplied: the authored G-2 movement must survive
-    // cross-cycle rotation, and a world without one could not prove it.
-    { miniCycleNumber: 1, weekStartISO: '2026-07-20', weekKind: 'normal' } as never,
-  );
+  const plan = coachingPlanForTests(inputs);
+  // ── THE HARNESS DROVE A PIPELINE THAT NO LONGER EXISTS ──────────────────
+  //
+  // It went plan -> `buildWorkoutsFromCoach` with NO `composeWeek` in between.
+  // That was the shape of generation once; production is now composer + adapter
+  // + assembly, and the adapter alone throws by design:
+  //
+  //   "B1-PIVOT: the legacy strength-content builder is severed. A strength plan
+  //    entry reached fallbackExercisesForPlanEntry, which means composeWeek did
+  //    not cover a day the planner asked for."
+  //
+  // **The subject of this suite — injury authority over the G-2 day — is a live
+  // product rule**, so the instrument is repaired rather than the suite deleted.
+  // It now drives the REAL generator, which runs every stage in the order
+  // production runs them. No expectation is rebased and no product code changes.
+  const program = generateProgramLocally(profile as OnboardingData, {
+    todayISO: '2026-07-20',
+    blockNumber: 1,
+    microcycleLimit: 1,
+    ...(args.restricted.length > 0
+      ? { generationConstraints: injuryConstraints(args.restricted) }
+      : {}),
+  } as never);
+  const workouts = program.microcycles[0].workouts;
   return {
     plan,
     workouts,

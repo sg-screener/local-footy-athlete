@@ -4,10 +4,10 @@
 
 import type { Microcycle, TrainingProgram, Workout, WorkoutExercise } from '../types/domain';
 import {
-  buildCoachingPlan,
   classifyGenerationAdjacencyRegion,
   type CoachingInputs,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   createStrengthIntent,
   normalizeStrengthIntent,
@@ -183,7 +183,7 @@ ok('free-text inference remains available only to genuinely unowned legacy data'
 
 console.log('\n[2] Allocation and four-microcycle ledgers');
 for (let week = 1; week <= 4; week++) {
-  const plan = buildCoachingPlan(healthyInSeason(week)).weeklyPlan;
+  const plan = coachingPlanForTests(healthyInSeason(week)).weeklyPlan;
   const ledger = strengthPatternLedger(plan, 'planned');
   ok(`healthy in-season week ${week} owns squat+hinge+push+pull`,
     ledger.squat >= 1 && ledger.hinge >= 1 && ledger.push >= 1 && ledger.pull >= 1,
@@ -198,7 +198,7 @@ for (let week = 1; week <= 4; week++) {
     plan.map((session) => session.planEntryId));
 }
 
-const lowPlan = buildCoachingPlan(healthyInSeason(1, true)).weeklyPlan;
+const lowPlan = coachingPlanForTests(healthyInSeason(1, true)).weeklyPlan;
 ok('two-core structure carries a typed balanced upper contract', lowPlan.some((session) =>
   session.strengthIntent?.archetype === 'upper' &&
   session.strengthIntent.plannedPatterns.includes('push') &&
@@ -206,7 +206,7 @@ ok('two-core structure carries a typed balanced upper contract', lowPlan.some((s
 lowPlan);
 ok('normal full-body allocations never gain both lower patterns implicitly',
   [1, 2, 3, 4].every((week) =>
-    buildCoachingPlan({ ...healthyInSeason(week, true), availableDays: 3 }).weeklyPlan
+    coachingPlanForTests({ ...healthyInSeason(week, true), availableDays: 3 }).weeklyPlan
       .filter((session) => session.strengthIntent?.archetype === 'full_body')
       .every((session) => !(
         session.strengthIntent!.plannedPatterns.includes('squat') &&
@@ -214,7 +214,7 @@ ok('normal full-body allocations never gain both lower patterns implicitly',
       ))));
 
 const goodInputs = healthyInSeason(1);
-const goodPlan = buildCoachingPlan(goodInputs);
+const goodPlan = coachingPlanForTests(goodInputs);
 const missingSquatPlan = {
   ...goodPlan,
   weeklyPlan: goodPlan.weeklyPlan.map((session) =>

@@ -9,10 +9,10 @@
 import type { DayOfWeek, OnboardingData, Workout } from '../types/domain';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   buildGeneratedMicrocycles,
   buildGenerationPrompt,
@@ -154,7 +154,7 @@ section('[1] Edge prompt and first client microcycle share one block-state plan'
       targetWeekStartISO: '2026-07-06',
     }).clock,
   });
-  const firstMicrocyclePlan = buildCoachingPlan({
+  const firstMicrocyclePlan = coachingPlanForTests({
     ...inputs,
     miniCycleNumber: 1,
     weekInBlock: 1,
@@ -171,7 +171,7 @@ section('[1] Edge prompt and first client microcycle share one block-state plan'
 }
 
 section('[2] Edge-style mixed sessions retain strength plus typed conditioning');
-const midPlan = buildCoachingPlan({
+const midPlan = coachingPlanForTests({
   ...inputs,
   miniCycleNumber: 2,
   weekInBlock: 2,
@@ -313,7 +313,7 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
     phaseWeekNumber: 1,
     availabilityDateISO: '2026-07-06',
   });
-  const earlyPlan = buildCoachingPlan(earlyInputs);
+  const earlyPlan = coachingPlanForTests(earlyInputs);
   const earlyPrompt = buildGenerationPrompt(earlyProfile, earlyPlan, FULL_GYM_EQUIPMENT);
   const planByDay = new Map(
     earlyPlan.weeklyPlan.map((entry) => [DAY_NUMBER[entry.dayOfWeek!], entry]),
@@ -549,7 +549,7 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
           workout.exercises.every((row) => !row.notes?.includes('EDGE-WEEK-1-SENTINEL')))));
   ok('each microcycle workout matches its own stable plan-entry identity',
     microcycles.every((microcycle) => {
-      const weekPlan = buildCoachingPlan({
+      const weekPlan = coachingPlanForTests({
         ...earlyInputs,
         miniCycleNumber: microcycle.miniCycleNumber,
         weekInBlock: ((microcycle.weekNumber - 1) % 4) + 1,

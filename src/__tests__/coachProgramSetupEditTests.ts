@@ -11,7 +11,8 @@ import {
   interpretCoachMessageToProgramEdit,
   isProgramSetupEdit,
 } from '../utils/coachProgramEdit';
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { getProgramGenerationProfileFieldDiagnostics } from '../services/api/generateProgram';
 import {
@@ -216,7 +217,7 @@ async function main() {
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as DayOfWeek[],
       trainingDaysPerWeek: 6,
     };
-    const plan = buildCoachingPlan(onboardingToCoachingInputs(profileWithSaturday));
+    const plan = coachingPlanForTests(onboardingToCoachingInputs(profileWithSaturday));
     const aiWorkouts = plan.weeklyPlan
       .filter((session) => session.dayOfWeek !== 'Saturday')
       .map((session) => ({

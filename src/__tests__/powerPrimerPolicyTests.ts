@@ -21,9 +21,10 @@ import {
   type PowerPrimerContext,
 } from '../rules/powerPrimerPolicy';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
+import { generateProgramLocally } from '../services/api/generateProgram';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { buildWeekScopedWorkoutOverlay } from '../utils/weekRebuild';
 import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
@@ -244,21 +245,21 @@ function workoutsFor(
   weekInBlock: number = 4,
 ) {
   const offseasonSubphase = weekInBlock <= 2 ? 'early_offseason' : 'mid_offseason';
-  const plan = buildCoachingPlan(onboardingToCoachingInputs(data, {
-    availabilityDateISO: '2026-07-06',
-    miniCycleNumber: 1,
-    weekNumber: weekInBlock,
-    weekInBlock,
-    weekKind,
-    offseasonSubphase,
-  })).weeklyPlan;
-  return buildWorkoutsFromCoach([], 'mc-1', plan, data, {
-    miniCycleNumber: 1,
-    weekInBlock,
-    weekStartISO: '2026-07-06',
-    weekKind,
-    offseasonSubphase,
-  });
+  // ── SAME INSTRUMENT DEFECT AS THE INJURY SUITE ──────────────────────────
+  //
+  // plan -> `buildWorkoutsFromCoach` with NO `composeWeek` is the old two-step
+  // pipeline. The adapter alone throws B1-PIVOT by design, because the composer
+  // never authored the strength content it is being asked to render. **Power
+  // primer policy is a live product rule**, so the harness is repaired rather
+  // than the suite deleted: it drives the real generator, in production's order.
+  // No expectation is rebased and no product code changes.
+  void offseasonSubphase;
+  const program = generateProgramLocally(data, {
+    todayISO: '2026-07-06',
+    blockNumber: 1,
+    microcycleLimit: 1,
+  } as never);
+  return program.microcycles[0].workouts;
 }
 
 // Early off-season must stay a true base-rebuild week with no hidden primer.

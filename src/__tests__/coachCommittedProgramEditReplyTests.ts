@@ -1,6 +1,6 @@
 /**
  * Typed ProgramEdit ownership of committed reply category.
- * Run: npm run test:coach-committed-program-edit-reply
+ * Run: npm run diag:coach-committed-program-edit-reply
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;

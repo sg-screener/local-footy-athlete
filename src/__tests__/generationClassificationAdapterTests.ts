@@ -5,13 +5,13 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import {
-  buildCoachingPlan,
   classifyGenerationAdjacencyRegion,
   classifyGenerationSession,
   onboardingToCoachingInputs,
   type GenerationSessionClassificationInput,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import type {
   OnboardingData,
   RecoveryAddonBlock,
@@ -285,7 +285,7 @@ const profiles: Array<[string, Partial<OnboardingData>]> = [
 
 for (const [label, profile] of profiles) {
   const inputs = onboardingToCoachingInputs(profile as OnboardingData);
-  const plan = buildCoachingPlan(inputs).weeklyPlan;
+  const plan = coachingPlanForTests(inputs).weeklyPlan;
   const context = {
     experienceLevel: inputs.experienceLevel,
     conditioningLevel: inputs.conditioningLevel,

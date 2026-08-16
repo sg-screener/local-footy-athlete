@@ -3,10 +3,10 @@
 import type { OnboardingData, Workout } from '../types/domain';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
 
 const WEEK_START = '2026-07-06';
@@ -58,7 +58,7 @@ function planFor(
   weekNumber: number,
   profileData: OnboardingData = BASE_PROFILE,
 ): CoachingPlan {
-  return buildCoachingPlan(onboardingToCoachingInputs(profileData, {
+  return coachingPlanForTests(onboardingToCoachingInputs(profileData, {
     miniCycleNumber: 1,
     weekInBlock: weekNumber,
     weekNumber,

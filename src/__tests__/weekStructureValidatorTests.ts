@@ -537,7 +537,8 @@ console.log('\n── 9. Severity policy ──');
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 10. Live sample — generated in-season week ──');
 
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { onboardingToCoachingInputs } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   resolveWeekWithConditioning,
   computeGameDatesForBlock,
@@ -561,7 +562,7 @@ try {
     experienceLevel: '2-5 years', injuries: [],
   };
   const inputs = onboardingToCoachingInputs(profileData as OnboardingData);
-  const plan = buildCoachingPlan(inputs);
+  const plan = coachingPlanForTests(inputs);
   const workouts: Workout[] = plan.weeklyPlan.map((s, idx) => {
     const dayNum = DAY_NAMES.indexOf(s.dayOfWeek || '');
     const w = mkWorkout({

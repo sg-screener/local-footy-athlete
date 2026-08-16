@@ -1,6 +1,6 @@
 /**
  * Canonical domain-local semantic projection invariants.
- * Run: npm run test:program-semantic-snapshot
+ * Run: npm run diag:program-semantic-snapshot
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;

@@ -8,10 +8,10 @@
 
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import {
-  buildCoachingPlan,
   type CoachingInputs,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   inferMeaningfulExerciseMovementPatterns,
   inferStrengthMovementPatterns,
@@ -351,7 +351,7 @@ eq(
 section('[3] Early off-season 4-day display labels match structural plan');
 
 {
-  const plan = buildCoachingPlan(offSeasonFourDayInputs()).weeklyPlan;
+  const plan = coachingPlanForTests(offSeasonFourDayInputs()).weeklyPlan;
   const labels = [...plan]
     .filter((session) => session.strengthPattern)
     .sort((a, b) => DAY_ORDER[a.dayOfWeek || ''] - DAY_ORDER[b.dayOfWeek || ''])
@@ -375,7 +375,7 @@ section('[3] Early off-season 4-day display labels match structural plan');
 section('[4] Program builder names engine-built sessions from typed metadata');
 
 {
-  const plan = buildCoachingPlan(offSeasonFourDayInputs()).weeklyPlan;
+  const plan = coachingPlanForTests(offSeasonFourDayInputs()).weeklyPlan;
   const workouts = buildWorkoutsFromCoach([], 'mc-session-naming', plan);
   const labels = workouts
     .sort((a, b) => a.dayOfWeek - b.dayOfWeek)

@@ -1,6 +1,6 @@
 /**
  * Canonical equipment/schedule/time-cap facts + ProfileProgramTransaction.
- * Run: npm run test:equipment-schedule-facts
+ * Run: npm run diag:equipment-schedule-facts
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;

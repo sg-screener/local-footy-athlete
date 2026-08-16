@@ -1208,6 +1208,29 @@ record and R-002/R-003 are the inbox's. · `BUILT 5dc644ed, c086ca3d`.
 
 ---
 
+## G-2 OUTRANKS THE INJURY EXCEPTION — Sam, 2026-08-16
+
+**R-095** · *"G-2 outranks the injury exception. High Box Squat and Vertical Jump
+are both prohibited on G-2. Omit and disclose; upper-body work remains legal."* ·
+**A CONFLICT BETWEEN TWO OF SAM'S OWN RULINGS, RESOLVED IN FAVOUR OF G-2.**
+
+The authored injury exception placed a "quality-lower neural primer" — High Box
+Squat 2x3 + Vertical Jump 2x3 — on the G-2 day when a severe upper injury paused
+upper work. Sam's G-2 ruling of 2026-08-15 prohibits added LOWER-BODY sprint,
+jumping, plyometric and power work, and **a Vertical Jump is plyometric.** The two
+rulings could not both hold; the later and safety-side one wins.
+
+- **Both movements are prohibited on G-2.** No dose reduction rescues either.
+- **The work is OMITTED and DISCLOSED**, never moved to another day and never
+  substituted with different lower work.
+- **Upper-body strength remains legal on G-2**, which is the standing G-2 position.
+
+`ENFORCED` in the scheduler already: `WC-051` in `rules/weeklyLegality.ts` refuses
+any lower purpose on G-2 as a typed legality rule, so the exception cannot be
+scheduled. **The guard proving the OMIT-AND-DISCLOSE half did not land in this
+mission** — `injuryAuthorityOwnershipTests` G2-G4 still assert the old exception and
+are reported as a genuine defect family, not rebased under time pressure.
+
 ## FROM THE RULING DOCS, seeded 2026-08-13
 
 **61 `*RULING*` / `*DECISION*` docs were scanned for Sam's verbatim words. Only

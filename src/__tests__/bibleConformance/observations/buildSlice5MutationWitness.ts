@@ -1,7 +1,8 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import type { ActiveEquipmentConstraint, ActiveInjuryConstraint } from '../../../store/coachUpdatesStore';
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../../../utils/coachingEngine';
+import { onboardingToCoachingInputs } from '../../../utils/coachingEngine';
+import { coachingPlanForTests } from '../support/coachingPlanForTests';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
 import { validateWorkoutAgainstActiveConstraints } from '../../../utils/postGenerationConstraintValidation';
 import { canonicalWeekLedger, pathExercise, pathWorkout } from './buildCanonicalPathLedger';
@@ -68,7 +69,7 @@ function constraintObservation(kind: 'injury' | 'equipment') {
 }
 
 function plannedPatterns(args: { phase: 'In-season' | 'Off-season'; game?: 'Saturday'; week: number }): string[] {
-  const plan = buildCoachingPlan(onboardingToCoachingInputs({
+  const plan = coachingPlanForTests(onboardingToCoachingInputs({
     firstName: 'Mutation', ageRange: '26-30', position: 'inside_mid', motivation: 'Build Strength',
     experienceLevel: '2-5 years', squatStrength: '1.5x bodyweight', benchStrength: 'Around bodyweight',
     conditioningLevel: 'Good', sprintExposure: 'Occasionally', recentTrainingLoad: 'Very consistent', injuries: [],

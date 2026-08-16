@@ -13,11 +13,11 @@
 
 import type { OnboardingData } from '../types/domain';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type OnboardingToCoachingInputsOptions,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   resolvePreseasonSubphase,
   type PreseasonSubphase,
@@ -70,7 +70,7 @@ function planFor(
   data: OnboardingData,
   options: Partial<OnboardingToCoachingInputsOptions>,
 ): SessionAllocation[] {
-  return buildCoachingPlan(onboardingToCoachingInputs(data, {
+  return coachingPlanForTests(onboardingToCoachingInputs(data, {
     availabilityDateISO: '2026-07-06',
     ...options,
   })).weeklyPlan;

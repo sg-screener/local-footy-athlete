@@ -3,7 +3,8 @@
 import { performance } from 'node:perf_hooks';
 import type { OnboardingData, Workout } from '../../../types/domain';
 import { buildGeneratedMicrocycles } from '../../../services/api/generateProgram';
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../../../utils/coachingEngine';
+import { onboardingToCoachingInputs } from '../../../utils/coachingEngine';
+import { coachingPlanForTests } from '../support/coachingPlanForTests';
 import { buildBlockWeekStates, computeBlockBounds } from '../../../utils/programBlockState';
 import { resolveEquipmentCapabilities } from '../../../utils/equipmentAvailability';
 import { buildDeterministicCoachNoteDescriptors } from '../../../utils/deterministicCoachNoteFactory';
@@ -54,7 +55,7 @@ function profileFor(scenario: Slice3GoldenScenario): OnboardingData {
   } as OnboardingData;
 }
 
-function edgeWeek(plan: ReturnType<typeof buildCoachingPlan>): any[] {
+function edgeWeek(plan: ReturnType<typeof coachingPlanForTests>): any[] {
   const byDay = new Map(plan.weeklyPlan.map((entry) => [entry.dayOfWeek, entry]));
   const row = (day: 'Monday' | 'Wednesday' | 'Friday', name: string, strength: string) => ({
     dayOfWeek: DAY_NUMBER[day], planEntryId: byDay.get(day)?.planEntryId,
@@ -158,7 +159,7 @@ export function buildConditioningEquipmentTrace(scenario: Slice3GoldenScenario):
   const { blockStart } = computeBlockBounds(new Date(`${scenario.referenceDate}T12:00:00`));
   const inputs = onboardingToCoachingInputs(profile, { availabilityDateISO: scenario.referenceDate });
   const state = buildBlockWeekStates({ blockStartISO: blockStart, blockNumber: 1, seasonPhase: 'Off-season' })[0];
-  const plan = buildCoachingPlan({
+  const plan = coachingPlanForTests({
     ...inputs, miniCycleNumber: state.miniCycleNumber, weekInBlock: state.weekInBlock,
     weekNumber: state.weekNumber, weekKind: state.weekKind,
   });

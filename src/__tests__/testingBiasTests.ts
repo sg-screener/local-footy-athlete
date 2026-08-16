@@ -24,11 +24,11 @@ import {
   type BiasConditioningCategory,
 } from '../rules/programmingBias';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import type { GenerationConstraintContext } from '../utils/generationConstraints';
 import { attachRecoveryAddonsToWeek } from '../utils/recoveryAddonBuilder';
 import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
@@ -89,7 +89,7 @@ function planFor(
   generationConstraints?: GenerationConstraintContext,
   options: { weekInBlock?: number } = {},
 ): CoachingPlan {
-  return buildCoachingPlan(onboardingToCoachingInputs(data, {
+  return coachingPlanForTests(onboardingToCoachingInputs(data, {
     availabilityDateISO: TODAY,
     generationConstraints,
     weekInBlock: options.weekInBlock,

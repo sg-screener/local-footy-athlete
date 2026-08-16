@@ -3,11 +3,11 @@ process.env.TZ = 'Australia/Melbourne';
 
 import type { OnboardingData } from '../types/domain';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import {
   buildPreseasonExposureBlueprint,
   buildPreseasonWeeklyExposureContract,
@@ -72,7 +72,7 @@ function planFor(
     weekKind,
     phaseWeekNumber: weekNumber,
   });
-  return buildCoachingPlan(inputs);
+  return coachingPlanForTests(inputs);
 }
 
 function byDay(plan: CoachingPlan, day: string): SessionAllocation | undefined {

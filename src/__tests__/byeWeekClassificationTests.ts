@@ -1,9 +1,9 @@
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import type { OnboardingData, TrainingProgram, Microcycle, WeekKind } from '../types/domain';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import type { GenerationConstraintContext } from '../utils/generationConstraints';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import {
@@ -84,9 +84,9 @@ interface GeneratedWeek {
   resolvedWeek: ResolvedDay[];
   report: WeekValidationReport;
   flags: ReturnType<typeof deriveWeekValidationFlags>;
-  weeklyPlan: ReturnType<typeof buildCoachingPlan>['weeklyPlan'];
+  weeklyPlan: ReturnType<typeof coachingPlanForTests>['weeklyPlan'];
   workouts: Microcycle['workouts'];
-  exposureContract: ReturnType<typeof buildCoachingPlan>['weeklyExposureContract'];
+  exposureContract: ReturnType<typeof coachingPlanForTests>['weeklyExposureContract'];
 }
 
 interface GeneratedWeekOptions {
@@ -100,7 +100,7 @@ function generatedWeek(profile: Partial<OnboardingData>, options: GeneratedWeekO
     weekKind: options.weekKind,
     generationConstraints: options.generationConstraints,
   });
-  const plan = buildCoachingPlan(inputs);
+  const plan = coachingPlanForTests(inputs);
   const workouts = buildWorkoutsFromCoach(
     [],
     'mc-bye-context',

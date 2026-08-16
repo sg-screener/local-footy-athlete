@@ -1,9 +1,9 @@
 import type { OnboardingData } from '../../../types/domain';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
 } from '../../../utils/coachingEngine';
+import { coachingPlanForTests } from '../support/coachingPlanForTests';
 import {
   buildPreseasonWeeklyExposureContract,
   evaluatePreseasonExposureContract,
@@ -48,7 +48,7 @@ export function buildPreseasonExposureWitness(): PreseasonExposureWitness {
     phaseWeekNumber: 1,
     preseasonSubphase: 'early_preseason',
   });
-  const fallback = buildCoachingPlan(inputs);
+  const fallback = coachingPlanForTests(inputs);
   const edge = buildInitialGeneratedCoachingPlan({
     coachingInputs: inputs,
     profile: PROFILE,

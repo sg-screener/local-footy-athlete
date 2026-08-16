@@ -1,6 +1,7 @@
 import type { OnboardingData } from '../../../types/domain';
 import { buildWorkoutsFromCoach } from '../../../data/defaultProgram';
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../../../utils/coachingEngine';
+import { onboardingToCoachingInputs } from '../../../utils/coachingEngine';
+import { coachingPlanForTests } from '../support/coachingPlanForTests';
 import { resolveEquipmentAvailability } from '../../../utils/equipmentAvailability';
 import { canonicalWeekLedger } from './buildCanonicalPathLedger';
 import type { GeneratedCheckResult, PairwiseScenario } from '../types';
@@ -71,7 +72,7 @@ export function evaluatePairwiseScenario(scenario: PairwiseScenario): GeneratedC
     preseasonSubphase: scenario.phase === 'early_preseason' ? 'early_preseason'
       : scenario.phase === 'later_preseason' ? 'late_preseason' : undefined,
   });
-  const plan = buildCoachingPlan(inputs);
+  const plan = coachingPlanForTests(inputs);
   const workouts = buildWorkoutsFromCoach(
     [], `pairwise:${scenario.id}`, plan.weeklyPlan, profile,
     { miniCycleNumber: week, weekInBlock: week, weekStartISO: scenario.referenceDate, weekKind: week === 4 ? 'deload' : 'build' },

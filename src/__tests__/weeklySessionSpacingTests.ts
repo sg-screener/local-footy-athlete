@@ -7,11 +7,11 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import {
-  buildCoachingPlan,
   classifyGenerationSession,
   type CoachingInputs,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 
 let pass = 0;
 let fail = 0;
@@ -126,7 +126,7 @@ function minimumGap(days: number[]): number {
 
 section('[1] Seven-day early off-season distributes useful work');
 {
-  const plan = buildCoachingPlan(baseInputs()).weeklyPlan;
+  const plan = coachingPlanForTests(baseInputs()).weeklyPlan;
   const strengthDays = dayNumbers(plan, isMainStrength);
   const usefulDays = dayNumbers(plan, isUsefulTraining);
 
@@ -155,7 +155,7 @@ section('[1] Seven-day early off-season distributes useful work');
 
 section('[2] Low-readiness early off-season stays light and spaced');
 {
-  const plan = buildCoachingPlan(baseInputs(ALL_DAYS, 'low')).weeklyPlan;
+  const plan = coachingPlanForTests(baseInputs(ALL_DAYS, 'low')).weeklyPlan;
   const strengthDays = dayNumbers(plan, isMainStrength);
   const aerobicDays = dayNumbers(plan, isStandaloneAerobic);
   const usefulDays = dayNumbers(plan, isUsefulTraining);
@@ -174,8 +174,8 @@ section('[2] Low-readiness early off-season stays light and spaced');
 
 section('[3] Six-day and Monday-Friday availability use the full window');
 {
-  const sixDayPlan = buildCoachingPlan(baseInputs(ALL_DAYS.slice(0, 6))).weeklyPlan;
-  const fiveDayPlan = buildCoachingPlan(baseInputs(ALL_DAYS.slice(0, 5))).weeklyPlan;
+  const sixDayPlan = coachingPlanForTests(baseInputs(ALL_DAYS.slice(0, 6))).weeklyPlan;
+  const fiveDayPlan = coachingPlanForTests(baseInputs(ALL_DAYS.slice(0, 5))).weeklyPlan;
 
   eq(
     'Monday-Saturday availability spreads strength Monday/Wednesday/Friday',
@@ -195,7 +195,7 @@ section('[3] Six-day and Monday-Friday availability use the full window');
 
 section('[4] Team/game anchors and pre-season team rhythm remain protected');
 {
-  const inSeason = buildCoachingPlan({
+  const inSeason = coachingPlanForTests({
     ...baseInputs(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']),
     seasonPhase: 'In-season',
     teamTrainingDaysPerWeek: 2,
@@ -217,7 +217,7 @@ section('[4] Team/game anchors and pre-season team rhythm remain protected');
       !session.strengthPattern),
   );
 
-  const preSeason = buildCoachingPlan({
+  const preSeason = coachingPlanForTests({
     ...baseInputs(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']),
     seasonPhase: 'Pre-season',
     teamTrainingDaysPerWeek: 2,
@@ -242,7 +242,7 @@ section('[4] Team/game anchors and pre-season team rhythm remain protected');
 
 section('[5] Beginner policy remains conservative and spaced');
 {
-  const beginner = buildCoachingPlan({
+  const beginner = coachingPlanForTests({
     ...baseInputs(),
     experienceLevel: 'Complete beginner',
     goals: ['Get stronger'],

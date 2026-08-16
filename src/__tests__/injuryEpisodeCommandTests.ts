@@ -1,6 +1,6 @@
 /**
  * Permanent invariants for the canonical Coach InjuryEpisodeCommand boundary.
- * Run: npm run test:injury-episode-commands
+ * Run: npm run diag:injury-episode-commands
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;

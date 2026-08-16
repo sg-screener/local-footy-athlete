@@ -7,11 +7,11 @@ import type {
 } from '../../../types/domain';
 import { buildWorkoutsFromCoach } from '../../../data/defaultProgram';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
   type SessionAllocation,
 } from '../../../utils/coachingEngine';
+import { coachingPlanForTests } from '../support/coachingPlanForTests';
 import {
   buildBlockWeekStates,
   computeBlockBounds,
@@ -284,7 +284,7 @@ export function buildStrengthScenarioTrace(
   const generatedFallback: ObservedStrengthSession[] = [];
 
   for (const state of states) {
-    const plan = buildCoachingPlan({
+    const plan = coachingPlanForTests({
       ...inputs,
       miniCycleNumber: state.miniCycleNumber,
       weekInBlock: state.weekInBlock,
@@ -436,7 +436,7 @@ export function buildSingleWorkoutFixtureTrace(args: {
     blockNumber: 1,
     seasonPhase: profile.seasonPhase,
   })[0];
-  const plan = buildCoachingPlan({
+  const plan = coachingPlanForTests({
     ...onboardingToCoachingInputs(profile, { availabilityDateISO: scenario.referenceDate }),
     miniCycleNumber: state.miniCycleNumber,
     weekInBlock: state.weekInBlock,
