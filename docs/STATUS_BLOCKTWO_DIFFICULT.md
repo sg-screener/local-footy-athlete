@@ -283,3 +283,63 @@ defect. The two seeds went with it — incomplete and unverified.
 `test:dev-e2e-seeds` throws on `stacked-team-training-upper-pull` at `a0ac856d`
 BEFORE reaching any new seed — confirmed by a control run at HEAD. Pre-existing;
 not repaired here.
+
+---
+
+# BOOT COMPLETION — THE TWO QUESTIONS, SEPARATED
+
+## Q1 — DOES PRODUCTION BOOT LOSE BLOCK TWO? **YES. FIXED AND GUARDED.**
+
+Driven headless through the real `rebuildDerivedWorld()`, production-style
+persisted inputs only.
+
+| | before boot | after boot (was) | after boot (now) |
+| --- | --- | --- | --- |
+| Deadlift, own recorded 100 kg | 100 kg | **75 kg** (block-1 estimate) | 100 kg |
+| Bicep Curl, restored 17.5 kg | 17.5 kg | **row gone** | 17.5 kg |
+| very-hard set reduction | applied | **undone** | applied |
+| stored explanation rows | present | **gone** | identical |
+| the notice | visible | **gone** | visible |
+| acknowledged notice | hidden | hidden | hidden |
+| missed-session question | asked | **not asked** | asked |
+| confirmed smaller program | silent | silent | silent |
+
+**⚠ THE POSITION OF THE CAPTURE IS THE FIX, NOT THE ARGUMENTS.** The previous
+session's attempt read the inputs at the `generateProgramLocally` call and DID
+NOTHING — boot's clean slate sets `blockState: null` a few lines earlier, so it
+read the value boot had just erased. `sessionFeedback` and `weightOverrides` are
+not in the slate and survive it; `blockState` is not. Mutation **BM3** reproduces
+that mistake exactly and returns 75 kg.
+
+## Q2 — WHY DOES THE DEV SEED REFUSE? **PROVEN, AND IT IS NOT Q1.**
+
+Complete typed refusal, captured:
+
+```
+Section18SafetyContradictionError: unjustified_anchor_credit
+severity: blocking · domain: anchor_credit
+actual:  { participation: 'unknown',
+           claim: { conditioning: true, sprintHighSpeed: true, hardDay: true } }
+detail:  'team_training production credit is not justified by participation state.'
+evidence: day=2 anchor=tt-2 · day=4 anchor=tt-4
+```
+
+Boot's clean slate empties `acceptedMaterialContext`, participation included, so
+every team-training anchor claims credit with no participation evidence and §18
+safety blocks the rebuild. **PRE-EXISTING, NOT BLOCK TWO** — the same signature is
+red **13 times** in `test:readiness-ownership` at `6117a9fd`.
+
+**Consequence: no club-night world can boot today.** That is why the preservation
+suite's athlete is clubless — it is the only world in which Q1 could be asked.
+
+## SCREENSHOTS — STILL NOT OBTAINED
+
+Seeds were re-landed with a clubless off-season profile and **build correctly
+headless** (4 microcycles, 41 explanation rows, reduction present). Metro was
+restarted from this worktree; the app was terminated, relaunched, harness state
+cleared and re-seeded. **It still lands on
+`dev_e2e_app_hydration_failed:derived-world`.** Reverted again, unverified.
+
+The remaining suspect is the persisted world the app rebuilds BEFORE the seed is
+applied — clearing harness state does not appear to clear it. That is the next
+thread, and it is seed-route work, not block-two work.
