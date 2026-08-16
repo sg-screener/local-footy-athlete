@@ -4908,212 +4908,31 @@ function buildWeeklyPlan(
       }
     }
 
-    // ── Post-validation: sprint-rescue ──
-    // A no-anchor week with an unresolved typed sprint floor may need an
-    // explicit app exposure. If the main loop plus H5a/H5b left it uncovered,
-    // retrofit it using Sam's fallback chain:
-    //   1. Slide earlier — pick the EARLIEST conditioning slot whose
-    //      chronological predecessor (if any) isn't vo2/glycolytic, and
-    //      swap its category to sprint.
-    //   2. Reduce volume — if every candidate slot is adjacent to a
-    //      vo2/glyco day, still pick the earliest but mark the variant as
-    //      'reduced' so the builder produces ~50% volume.
-    //   3. Micro-dose — if the slot has no room at all (e.g. standalone
-    //      conditioning with a blocking predecessor), convert it to a
-    //      3–4×10s flying-sprint micro-dose that's low enough volume to
-    //      ignore sprint-protection safely.
-    // Anchor-loaded weeks and authorised reductions are resolved by the gate;
-    // sprint is never hidden inside a finisher.
-    if (useCategoryPlanner &&
-        !plan.some((session) => session.conditioningCategory === 'sprint' || session.speedWorkKind === 'true_speed') &&
-        sprintExposureGate(0).allowStandaloneSprint) {
-      // Gather conditioning slots in chronological order. Use the original
-      // slot positions (daySlots index == plan index at this point because
-      // the sort-by-day happens later, below).
-      type CondSlot = {
-        planIdx: number;
-        slotPos: number;
-        prevCat: CondCategory | null;
-        prevPos: number;
-      };
-      const condSlots: CondSlot[] = [];
-      for (let i = 0; i < plan.length; i++) {
-        const s = plan[i];
-        if (!s.conditioningCategory) continue;
-        if (i >= daySlots.length) continue;
-        const slotPos = trainingOrder(daySlots[i].num);
-        // Find chronologically-preceding conditioning slot.
-        let prevCat: CondCategory | null = null;
-        let prevPos = -99;
-        for (const c of condSlots) {
-          if (c.slotPos < slotPos && c.slotPos > prevPos) {
-            prevPos = c.slotPos;
-            prevCat = plan[c.planIdx].conditioningCategory as CondCategory;
-          }
-        }
-        condSlots.push({ planIdx: i, slotPos, prevCat, prevPos });
-      }
-
-      // 4A: the rescue passes the shared eligibility law like every other
-      // path, with two extra v1 rules:
-      //   • it may only retarget STANDALONE conditioning slots — sprint is
-      //     never hidden inside a strength-day finisher;
-      //   • if no slot passes, the shared contract repair either finds a safe
-      //     placement or rejects the unresolved week.
-      const rescueEligible = condSlots.filter(cs => {
-        const session = plan[cs.planIdx];
-        if (session.hasCombinedConditioning) return false; // finishers are off-limits
-        if (plannedPatternsForAllocation(session).length > 0) return false;
-        const dayNum = cs.slotPos === 7 ? 0 : cs.slotPos;
-        const decision = finisherEligibility({
-          dayNum,
-          requestedCategory: 'sprint',
-          strengthContext: 'standalone',
-        });
-        return decision.allow && decision.category === 'sprint';
-      });
-
-      const attachPreLiftSpeedMicroDose = (): boolean => {
-        const ordered = plan
-          .map((session, index) => ({ session, index }))
-          .filter(({ session }) => {
-            if (!session.dayOfWeek) return false;
-            // ── R-079 clause 3: A PRE-SEASON TEAM NIGHT MAY CARRY FLYING SPRINTS
-            //
-            // **Sam, 2026-08-13: *"in pre season you can do flying sprints when
-            // there is team training because you will get accelerations at
-            // footy"*.** The club supplies the accelerations; the app supplies
-            // the top end. So a team night is EXCLUDED everywhere except
-            // pre-season, where he has ruled the double-up is wanted.
-            //
-            // IT IS SAFE TO COUNT, BECAUSE THE UNIT IS NIGHTS. R-079's other
-            // half made `sprintHighSpeed.achievedCount` count DISTINCT DAYS, so
-            // a Tuesday holding both a team night and this dose is ONE night,
-            // not two. Under the old source count his own instruction would have
-            // read as a breach of the cap.
-            //
-            // THE DOSE IS `true_speed` — top-end work, which is exactly the
-            // quality he named. **What he wants avoided is ACCELERATION on a
-            // team night, and this app has no `acceleration` speed kind at all
-            // (`SpeedWorkKind` is true_speed | repeated_sprint | cod), so that
-            // half of his rule cannot yet be expressed and is recorded UNENFORCED
-            // on R-079's row rather than silently assumed.**
-            const preseasonTeamNightAllowed = inputs.seasonPhase === 'Pre-season';
-            if (session.isTeamDay && !preseasonTeamNightAllowed) return false;
-            if (session.speedWorkKind) return false;
-            if (!plannedPatternsForAllocation(session).some(
-              (pattern) => pattern === 'push' || pattern === 'pull',
-            )) {
-              return false;
-            }
-
-            const dayNum = dayNameToNumber(session.dayOfWeek);
-            if (dayNum < 0) return false;
-            // Same ruling, second door: this is the day-number form of the
-            // team-night exclusion above and has to move with it, or the first
-            // relaxation is inert.
-            if (teamDayNumSet.has(dayNum) && !preseasonTeamNightAllowed) return false;
-            const prevD = (dayNum + 6) % 7;
-            const nextD = (dayNum + 1) % 7;
-            if (teamDayNumSet.has(prevD) || teamDayNumSet.has(nextD)) return false;
-            if (isGameWeek && gameDayNum !== null) {
-              const offset = gOffset(dayNum, gameDayNum);
-              if (offset === 0 || offset === -1 || offset === -2) return false;
-            }
-            const previousSession = plan.find((other) =>
-              other.dayOfWeek && dayNameToNumber(other.dayOfWeek) === prevD);
-            if (previousSession && plannedPatternsForAllocation(previousSession).some(
-              (pattern) => pattern === 'squat' || pattern === 'hinge',
-            )) {
-              return false;
-            }
-            return true;
-          })
-          .sort((a, b) => {
-            const da = dayNameToNumber(a.session.dayOfWeek ?? '');
-            const db = dayNameToNumber(b.session.dayOfWeek ?? '');
-            return trainingOrder(da) - trainingOrder(db) || a.index - b.index;
-          });
-
-        const target = ordered[0]?.session;
-        if (!target) return false;
-        const preserveContractComponent = !!weeklyExposureContract &&
-          target.attachedConditioningKind === 'component';
-        const previousCategory = target.conditioningCategory as CondCategory | undefined;
-        if (!preserveContractComponent) {
-          if (previousCategory && st.condCategories[previousCategory] > 0) {
-            st.condCategories[previousCategory]--;
-          }
-          if (target.conditioningFlavour && st.condFlavours[target.conditioningFlavour as CondFlavour] > 0) {
-            st.condFlavours[target.conditioningFlavour as CondFlavour]--;
-          }
-          if (target.hasCombinedConditioning) {
-            st.condCount = Math.max(
-              0,
-              st.condCount - attachedConditioningCredit(target.attachedConditioningKind ?? 'finisher'),
-            );
-          }
-          target.hasCombinedConditioning = false;
-          target.attachedConditioningKind = undefined;
-          target.conditioningFlavour = undefined;
-          target.conditioningCategory = undefined;
-          target.conditioningVariant = undefined;
-          target.conditioningFeel = undefined;
-          target.conditioningOffFeet = undefined;
-          target.ergModality = undefined;
-        }
-        const strengthFocus = preserveContractComponent
-          ? target.focus
-          : target.focus.split(' + ')[0] || target.focus;
-        target.speedWorkKind = 'true_speed';
-        target.speedPlacement = 'pre_lift';
-        const speedBlock = createSpeedTopUpBlock('pre_lift', inputs, offseasonSubphase);
-        target.speedBlock = speedBlock;
-        target.isHardExposure = true;
-        target.stressLevel = 'high';
-        target.focus = `${speedBlock.title} + ${strengthFocus}`;
-        st.condCategories.sprint++;
-        return true;
-      };
-
-      if (rescueEligible.length > 0) {
-        // SP-2: every app-added pre-season sprint top-up is a tiny
-        // true-speed micro-dose. We still prefer the first slot that is
-        // not chronologically glued to vo2/glycolytic work, but we no
-        // longer upgrade the dose into "reduced sprint conditioning".
-        const chosen = rescueEligible.find(cs => {
-          const adjacent = cs.slotPos === cs.prevPos + 1;
-          const blocking = cs.prevCat === 'vo2' || cs.prevCat === 'glycolytic';
-          return !(adjacent && blocking);
-        }) ?? rescueEligible[0];
-        const variant: 'micro_dose' = 'micro_dose';
-
-        const target = plan[chosen.planIdx];
-        const prevCat = target.conditioningCategory as CondCategory;
-        // Convert: decrement previous cat, increment sprint.
-        if (prevCat && st.condCategories[prevCat] > 0) {
-          st.condCategories[prevCat]--;
-        }
-        st.condCategories.sprint++;
-        target.conditioningCategory = 'sprint';
-        // Sprint is always high-intensity flavour; keep flavour in sync.
-        if (target.conditioningFlavour && target.conditioningFlavour !== 'high-intensity') {
-          // Adjust flavour counts
-          const fprev = target.conditioningFlavour as CondFlavour;
-          if (st.condFlavours[fprev] > 0) st.condFlavours[fprev]--;
-          st.condFlavours['high-intensity']++;
-          target.conditioningFlavour = 'high-intensity';
-        }
-        target.conditioningVariant = variant;
-        target.speedWorkKind = 'true_speed';
-        target.speedPlacement = 'standalone';
-        const speedBlock = createSpeedTopUpBlock('standalone', inputs, offseasonSubphase);
-        target.speedBlock = speedBlock;
-        target.focus = `${speedBlock.title} - ${speedBlock.prescription}`;
-      } else {
-        attachPreLiftSpeedMicroDose();
-      }
-    }
+    // ── DELETED 2026-08-17: THE SPRINT-RESCUE POST-VALIDATION (206 lines) ──
+    //
+    // **BURN THE BOATS.** This block executed on the real athlete flow and
+    // REWROTE the weekly scheduler's authored conditioning. Given a day the
+    // scheduler had authored as `vo2` (Sam's aerobic-power tab), it took that
+    // slot, cleared `conditioningCategory`, `conditioningFlavour`,
+    // `hasCombinedConditioning`, `attachedConditioningKind`, `conditioningVariant`,
+    // `conditioningFeel`, `conditioningOffFeet` and `ergModality`, and hung a
+    // speed block on the wreckage. The authored session did not survive to the
+    // athlete, and the week silently lost a required conditioning exposure.
+    //
+    // MEASURED: `Pre-season/2d/noclub`, week 2 — the scheduler authorised three
+    // exposures, the specialist materialised `Classic 4x4` with no refusal, and
+    // the day reached the gate carrying nothing at all. It happened in every
+    // world; only the two-gym-day week had no spare exposure to absorb it.
+    //
+    // ITS JOB NOW HAS A REAL OWNER. `weeklyScheduler.appSprintDay` places the
+    // sprint on a FREE day in every phase the overlay marks
+    // `sprintExposureRequired`, before any conditioning is authored — so there
+    // is nothing left to retrofit and nothing to overwrite. The three fallback
+    // rungs (slide-earlier, reduce-volume, micro-dose) went with it: they were
+    // ways of squeezing a sprint into a week that had already been filled, and
+    // the sprint is no longer placed last.
+    //
+    // NOT replaced by a shim, a fallback or a compensating exposure count.
 
     // ── Post-validation: weekly feel balance + feel/region pairing ──
     // Assigns `conditioningFeel` to every slot that has a category, honouring:

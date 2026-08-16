@@ -21,12 +21,15 @@ import {
   applyBlockBoundaryVolume,
   buildBlockBoundaryExplanation,
   buildBlockBoundaryReductionExplanation,
+  applyBlockBoundaryConditioningAdvance,
   decideBlockBoundaryConditioning,
+  decideBlockBoundaryConditioningAdvance,
   decideBlockBoundaryLoads,
   decideBlockBoundarySetAdditions,
   decideBlockBoundaryVolume,
   readBlockHistory,
   snapshotAuthoredSets,
+  type BlockBoundaryConditioningAdvance,
   type BlockBoundaryConditioningDecision,
   type BlockBoundaryLiftDecision,
   type BlockBoundaryVolumeDecision,
@@ -866,6 +869,8 @@ export function buildGeneratedMicrocycles(args: {
         generationConstraints,
         activeConstraints: args.activeConstraints ?? [],
         exposureContract: null,
+        miniCycleNumber: blockState.miniCycleNumber ?? null,
+        weekKind: effectiveWeekKind,
       });
       const sched = scheduleWeek(schedInputs);
       if (scheduleRefused(sched)) throw new WeeklyScheduleRefusedError(sched);
@@ -972,6 +977,8 @@ export function buildGeneratedMicrocycles(args: {
       generationConstraints,
       activeConstraints: args.activeConstraints ?? [],
       exposureContract: weekPlan.weeklyExposureContractV2 ?? null,
+      miniCycleNumber: blockState.miniCycleNumber ?? null,
+      weekKind: effectiveWeekKind,
     });
     const scheduled = scheduleWeek(schedulerInputs);
     if (scheduleRefused(scheduled)) {
@@ -1604,6 +1611,7 @@ export function generateProgramLocally(
   const authoringBlockNumber = options.blockNumber ?? 1;
   if (authoringBlockNumber > 1) {
     const allDecisions: BlockBoundaryLiftDecision[] = [];
+    const allConditioningAdvances: BlockBoundaryConditioningAdvance[] = [];
     const previousBlock = previousBlockBoundsISO(blockStart);
     const history = readBlockHistory({
       feedbackByDate: progressionSessionFeedback,
@@ -1676,6 +1684,25 @@ export function generateProgramLocally(
         miniCycleNumber: weekIndex + 1,
       });
       for (const decision of conditioningDecisions) allConditioningDecisions.push(decision);
+
+      // ── WC-137: THE OTHER DIRECTION, AT THE SAME BOUNDARY ────────────────
+      //
+      // Conditioning easy while strength was difficult -> exactly one authored
+      // step. It runs AFTER the reduce pass on purpose: `reduces` and
+      // `conditioningEasy` can both be true of one block, and reduce outranks
+      // advance. The decider refuses that combination itself, so this ordering
+      // is belt to that braces rather than the only thing stopping it.
+      const conditioningAdvances = decideBlockBoundaryConditioningAdvance({
+        history,
+        nextBlockWorkouts: microcycle.workouts,
+        weekIndex,
+        phase: onboardingData.seasonPhase,
+      });
+      microcycle.workouts = applyBlockBoundaryConditioningAdvance({
+        workouts: microcycle.workouts,
+        advances: conditioningAdvances,
+      });
+      for (const advance of conditioningAdvances) allConditioningAdvances.push(advance);
 
       const volumeDecisions = decideBlockBoundaryVolume({
         history,

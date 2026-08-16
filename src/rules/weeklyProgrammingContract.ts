@@ -376,6 +376,70 @@ export const BASE_LAYOUTS: readonly BaseLayout[] = [
 
 export type OffseasonBlock = 'early_optional' | 'transition' | 'normal_build';
 
+/**
+ * WC-136 — **HOW MUCH OF THE PHASE'S CONDITIONING IS HARD, AND WHICH QUALITY.**
+ *
+ * The overlays already stated HOW MANY conditioning exposures a phase wants.
+ * They never stated what any of them should BE, so the scheduler chose the
+ * category from upper/lower alone and could only ever name `aerobic_base` or
+ * `tempo`. Every app-authored conditioning session in the corpus was
+ * `aerobic_capacity` — the 9 authored aerobic-power templates and the 9
+ * authored anaerobic templates were unreachable by any route.
+ *
+ * **`count` IS AN ALLOWANCE, NOT A QUOTA.** It is the maximum number of the
+ * phase's exposures that may be hard. Placement legality (game proximity, club
+ * nights, running streaks) can and does deliver fewer, and delivering fewer is
+ * never a violation. Nothing here creates an exposure: the hard allowance is
+ * spent INSIDE `conditioningTarget`, never on top of it.
+ *
+ * **`qualities` IS ORDERED AND ROTATES BY MINI-CYCLE.** Off-season normal build
+ * is the one overlay the approved source asks to *"progressively introduce
+ * aerobic capacity, aerobic power and approved hard work"*, so it names two and
+ * alternates. Everywhere else the list has one member and the rotation is a
+ * no-op.
+ *
+ * ⚠ **IN-SEASON IS NOT A BLANKET NO.** An earlier draft of this field set
+ * in-season to `count: 0` outright, and that is wrong: it reads §8's
+ * *"maintain strength and conditioning while arriving fresh for the game"* as
+ * if every in-season week had a game in it. The freshness rule is about the
+ * GAME, so it is `requiresNoGameWeek` that expresses it, not a zero count.
+ * The three in-season shapes the approved source actually distinguishes:
+ *
+ *   - **normal game week** — no extra app-authored hard conditioning. The club
+ *     and the fixture supply the hard running.
+ *   - **no-club game week** — the required SPRINT is added at G-3 or earlier
+ *     (WC-135); every other app exposure stays easy/controlled. Still no hard
+ *     aerobic work, because the game is still the week's priority.
+ *   - **healthy bye / no-game week** — hard conditioning IS permitted, and it
+ *     may take the place of the exposure the game would have supplied. This is
+ *     the week the bye exists to use.
+ *
+ * `requiresNoGameWeek` delivers all three from one field, because a bye week is
+ * exactly a week with no game day.
+ *
+ * ⚠ **`glycolytic` IS NAMED ONLY IN LATE OFF-SEASON.** Sam's framework:
+ * *"Anaerobic power and RSA are usually MORE valuable than large amounts of
+ * brutal lactate work — team training and matches already provide glycolytic
+ * stress."* Late off-season is the one block with neither, which is why it is
+ * the one block that may author it.
+ */
+export interface HardConditioningAllowance {
+  /** Maximum exposures of this phase's target that may be hard. Never additive. */
+  readonly count: number;
+  /**
+   * Ordered authored qualities, rotated by mini-cycle. EMPTY when the phase
+   * authors no hard conditioning — which must be expressed as an empty list and
+   * `count: 0` together, so neither field alone can be misread.
+   */
+  readonly qualities: readonly ContractConditioningCategory[];
+  /**
+   * When true, the hard exposure is authored ONLY in a week with no game.
+   * In-season's freshness rule; false everywhere else, where the 48-hour
+   * game-proximity exclusion is the whole of the protection.
+   */
+  readonly requiresNoGameWeek: boolean;
+}
+
 export interface PhaseOverlay {
   readonly clauseId: string;
   /** Are the base layout's strength sessions REQUIRED, or all optional? */
@@ -386,6 +450,8 @@ export interface PhaseOverlay {
   readonly sprintExposureRequired: boolean;
   readonly maxRestDays: number;
   readonly conditioningTarget: { readonly min: number; readonly max: number };
+  /** WC-136. How much of `conditioningTarget` may be hard, and as which quality. */
+  readonly hardConditioning: HardConditioningAllowance;
   readonly statement: string;
 }
 
@@ -399,6 +465,9 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
     clauseId: 'WC-130', sessionsRequired: false, loadAdjustment: 0.75,
     runningRequired: false, sprintExposureRequired: false, maxRestDays: 3,
     conditioningTarget: { min: 0, max: 3 },
+    // §8: *"No running is required. Conditioning is light aerobic/off-leg work
+    // only."* The one overlay where a hard session is forbidden outright.
+    hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
     statement: 'Off-season weeks 1-2: every session optional, zero completed is '
       + 'valid, 75% load, no required running, light aerobic/off-leg only, up to '
       + 'three full rest days.',
@@ -407,6 +476,9 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
     clauseId: 'WC-131', sessionsRequired: true, loadAdjustment: 0.90,
     runningRequired: true, sprintExposureRequired: false, maxRestDays: 2,
     conditioningTarget: { min: 3, max: 4 },
+    // §8: *"Conditioning returns progressively through aerobic-base and
+    // controlled capacity work."* Capacity, named as capacity — not yet hard.
+    hardConditioning: { count: 0, qualities: [], requiresNoGameWeek: false },
     statement: 'Off-season weeks 3-4: the normal strength skeleton becomes '
       + 'required again, 90% load, conditioning returns progressively. Week 4 is '
       + 'not automatically a deload.',
@@ -415,6 +487,11 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
     clauseId: 'WC-132', sessionsRequired: true, loadAdjustment: null,
     runningRequired: true, sprintExposureRequired: true, maxRestDays: 2,
     conditioningTarget: { min: 3, max: 5 },
+    // §8 week 5 onward, and Sam's framework: *"Capacity earlier in preseason;
+    // aerobic power intervals + footy shuttles as the season approaches."* The
+    // one block with neither club training nor matches, so the one block that
+    // may author glycolytic work — alternated with aerobic power by mini-cycle.
+    hardConditioning: { count: 1, qualities: ['vo2', 'glycolytic'], requiresNoGameWeek: false },
     statement: 'Off-season week 5 onward: normal loading, 2-4 required strength '
       + 'sessions by availability, conditioning builds to 3-5, at least one '
       + 'genuine sprint/high-speed exposure.',
@@ -426,6 +503,11 @@ export const PRESEASON_OVERLAY: PhaseOverlay = {
   clauseId: 'WC-133', sessionsRequired: true, loadAdjustment: null,
   runningRequired: true, sprintExposureRequired: true, maxRestDays: 2,
   conditioningTarget: { min: 4, max: 4 },
+  // Sam's framework: *"aerobic power intervals + footy shuttles as the season
+  // approaches"* — both live on the authored `aerobic_power` tab, which `vo2`
+  // resolves to. Glycolytic is NOT named: *"team training and matches already
+  // provide glycolytic stress"*, and pre-season has both.
+  hardConditioning: { count: 1, qualities: ['vo2'], requiresNoGameWeek: false },
   statement: 'Pre-season: prefer four strength sessions when availability '
     + 'permits, scale honestly to two or three, four total conditioning exposures '
     + '(club training counts), no more than two lower sessions.',
@@ -434,12 +516,66 @@ export const PRESEASON_OVERLAY: PhaseOverlay = {
 /** WC-134. §8 In-season. **No scheduled calendar deload.** */
 export const INSEASON_OVERLAY: PhaseOverlay = {
   clauseId: 'WC-134', sessionsRequired: true, loadAdjustment: null,
-  runningRequired: true, sprintExposureRequired: false, maxRestDays: 2,
+  // ⚠ `sprintExposureRequired` WAS `false` HERE AND CONTRADICTED WC-135, which
+  // the repo had already built and shipped: the app DOES add an in-season
+  // sprint when club training is absent. §3's sprint row is explicit —
+  // *"At least 1 except early off-season … In-season, only add sprint work when
+  // there is no club training, and place it G-3 or earlier."* The phase
+  // REQUIRES the exposure; the club merely usually supplies it. `false` said
+  // the phase did not want one at all, which is why nothing could read this
+  // field to decide placement and WC-135 had to restate the rule itself.
+  runningRequired: true, sprintExposureRequired: true, maxRestDays: 2,
   conditioningTarget: { min: 3, max: 5 },
+  // NOT ZERO — GATED ON THE WEEK HAVING NO GAME. A game week (club or not)
+  // authors no hard aerobic work; a healthy bye week may, and it replaces the
+  // exposure the fixture would have supplied. See the three shapes above.
+  hardConditioning: { count: 1, qualities: ['vo2'], requiresNoGameWeek: true },
   statement: 'In-season: maintain strength and conditioning while arriving fresh '
     + 'for the game. No scheduled calendar deload. Game, club training, readiness '
     + 'and injury drive reductions.',
 };
+
+/**
+ * **THE ONE RESOLVER FROM A WEEK'S PHASE TO ITS OVERLAY.**
+ *
+ * ⚠ Until this existed the three overlay constants above had **zero importers**
+ * anywhere in `src/`. `conditioningTarget`, `sprintExposureRequired`,
+ * `runningRequired` and `maxRestDays` were written five times each and read
+ * never, while `weeklyScheduler` budgeted conditioning from the single
+ * phase-blind `GLOBAL_RULES.conditioning.min`. That is the `canOverride` shape
+ * this repo has paid for before: a field with a writer and no reader is not
+ * half-built, it is weight that later code will trust.
+ *
+ * `offseasonBlock` is only consulted for Off-season. A null block off-season
+ * means the phase clock has not resolved a subphase yet; `normal_build` is the
+ * safe read because it is the ordinary steady state, and because the two blocks
+ * it could instead be (`early_optional`, `transition`) are the ones that REDUCE
+ * work — defaulting into a reduction would silently under-program an athlete
+ * whose subphase merely failed to resolve.
+ */
+export function overlayForPhase(
+  phase: ContractPhase,
+  offseasonBlock: OffseasonBlock | null,
+): PhaseOverlay {
+  if (phase === 'Pre-season') return PRESEASON_OVERLAY;
+  if (phase === 'In-season') return INSEASON_OVERLAY;
+  return OFFSEASON_OVERLAYS[offseasonBlock ?? 'normal_build'];
+}
+
+/**
+ * WC-136. Which hard quality this week authors, or null when the phase authors
+ * none. Block-stable: it rotates at the mini-cycle boundary and never inside a
+ * week, so a week re-generated on a different weekday cannot change quality.
+ */
+export function hardConditioningQualityFor(
+  overlay: PhaseOverlay,
+  miniCycleNumber: number | null | undefined,
+): ContractConditioningCategory | null {
+  const { count, qualities } = overlay.hardConditioning;
+  if (count <= 0 || qualities.length === 0) return null;
+  const cycle = Math.max(0, (miniCycleNumber ?? 1) - 1);
+  return qualities[cycle % qualities.length];
+}
 
 /** WC-135. §8: *"Only add a sprint when club training is absent, at G-3 or earlier."* */
 export const INSEASON_SPRINT_RULE = {
@@ -601,6 +737,11 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
   { id: 'WC-135', provenance: '§3 Sprint/high-speed / §8 In-season',
     statement: 'In-season, only add sprint work when there is no club training, and '
       + 'place it G-3 or earlier.' },
+  { id: 'WC-136', provenance: '§8 phase overlays / conditioning framework',
+    statement: 'The phase owns how many conditioning exposures the app supplies and '
+      + 'how many of them may be hard, and as which authored quality. Hard work is '
+      + 'never within 48 hours of a game, never on a club night, never added in low '
+      + 'readiness, and in-season only in a week with no game.' },
   // Layout rows, derived from BASE_LAYOUTS so the two cannot drift.
   ...BASE_LAYOUTS.map((row) => ({
     id: row.clauseId,

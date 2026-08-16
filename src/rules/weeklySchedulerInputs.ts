@@ -88,6 +88,10 @@ export function weeklySchedulerInputsFrom(args: {
   } | null;
   readonly activeConstraints?: readonly unknown[];
   readonly exposureContract?: { readonly anchors?: unknown } | null;
+  /** WC-136. Rotates the authored hard conditioning quality at the block boundary. */
+  readonly miniCycleNumber?: number | null;
+  /** WC-136. A scheduled deload week is never authored hard conditioning. */
+  readonly weekKind?: 'build' | 'deload' | null;
 }): WeeklySchedulerInputs {
   const profile = args.profile as OnboardingData & {
     preferredTrainingDays?: readonly string[];
@@ -137,5 +141,7 @@ export function weeklySchedulerInputsFrom(args: {
     age: ageFromRange(profile.ageRange),
     readiness,
     unavailableDays: [...unavailableDays],
+    miniCycleNumber: args.miniCycleNumber ?? null,
+    weekKind: args.weekKind ?? null,
   };
 }

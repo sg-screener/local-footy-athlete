@@ -435,6 +435,62 @@ const SCENARIOS: PrintScenario[] = [
     }),
     phaseWeek: 8,
   },
+  // ── WC-136: the three weeks the conditioning-completion mission owes Sam ──
+  {
+    slug: '7-no-club-pre-season',
+    title: 'Pre-season, NO club training — the app supplies all four exposures',
+    whatToLookFor:
+      'Nobody is running this athlete but us. Four conditioning exposures is '
+      + 'the target and the game counts as one, so we owe three. One of them is '
+      + 'meant to be genuinely HARD and to sit on an upper-body day, well clear '
+      + 'of Saturday. Is the hard session hard enough, is it on the right day, '
+      + 'and is the rest of the week easy enough to let you do it properly?',
+    profile: athlete({
+      seasonPhase: 'Pre-season',
+      gameDay: 'Saturday',
+      trainingDaysPerWeek: 4,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      teamTrainingDaysPerWeek: 0,
+      teamTrainingDays: [],
+    }),
+    phaseWeek: 6,
+  },
+  {
+    slug: '8-no-club-in-season',
+    title: 'In-season, NO club training — sprint at G-3, nothing hard near the game',
+    whatToLookFor:
+      'Same athlete in-season. Because there is no club night, we owe the '
+      + 'sprint ourselves, and it has to be Wednesday or earlier. Everything '
+      + 'else stays easy — no hard running in a game week at all. Is Saturday '
+      + 'still a day you would arrive fresh for?',
+    profile: athlete({
+      seasonPhase: 'In-season',
+      gameDay: 'Saturday',
+      trainingDaysPerWeek: 4,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      teamTrainingDaysPerWeek: 0,
+      teamTrainingDays: [],
+    }),
+    phaseWeek: 6,
+  },
+  {
+    slug: '9-later-off-season',
+    title: 'Later off-season — the hard running comes back',
+    whatToLookFor:
+      'Week six of the off-season, no fixture. This is where real hard '
+      + 'conditioning is supposed to reappear after the easy first fortnight. '
+      + 'Is there a genuine hard session in here, is it the right kind of hard '
+      + 'for this time of year, and is the rest of the week aerobic?',
+    profile: athlete({
+      seasonPhase: 'Off-season',
+      gameDay: undefined,
+      trainingDaysPerWeek: 4,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+      teamTrainingDaysPerWeek: 1,
+      teamTrainingDays: ['Tuesday'],
+    }),
+    phaseWeek: 6,
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
