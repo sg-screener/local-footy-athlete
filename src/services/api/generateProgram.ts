@@ -12,7 +12,7 @@ import {
   type CoachGeneratedWorkoutInput,
 } from '../../data/defaultProgram';
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
-import { WEEKS_PER_BLOCK } from '../../utils/programBlockState';
+import { previousBlockBoundsISO, WEEKS_PER_BLOCK } from '../../utils/programBlockState';
 import {
   applyBlockBoundaryConditioning,
   applyBlockBoundaryProgression,
@@ -1565,7 +1565,7 @@ export function generateProgramLocally(
   const authoringBlockNumber = options.blockNumber ?? 1;
   if (authoringBlockNumber > 1) {
     const allDecisions: BlockBoundaryLiftDecision[] = [];
-    const previousBlock = previousBlockBoundsFor(blockStart);
+    const previousBlock = previousBlockBoundsISO(blockStart);
     const history = readBlockHistory({
       feedbackByDate: progressionSessionFeedback,
       blockStartISO: previousBlock.startISO,
@@ -1663,24 +1663,6 @@ function microcycleStartISO(
   const start = new Date(`${blockStartISO}T12:00:00`);
   start.setDate(start.getDate() + weekIndex * 7);
   return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
-}
-
-/**
- * The four-week window immediately before `blockStartISO`.
- *
- * The block a boundary decision reads is the one that just ENDED, never the
- * athlete's whole life — otherwise a load recorded three blocks ago would keep
- * seeding a lift the athlete has not touched since.
- */
-function previousBlockBoundsFor(blockStartISO: string): { startISO: string; endISO: string } {
-  const start = new Date(`${blockStartISO}T12:00:00`);
-  const previousEnd = new Date(start);
-  previousEnd.setDate(previousEnd.getDate() - 1);
-  const previousStart = new Date(previousEnd);
-  previousStart.setDate(previousStart.getDate() - (WEEKS_PER_BLOCK * 7 - 1));
-  const iso = (d: Date): string =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  return { startISO: iso(previousStart), endISO: iso(previousEnd) };
 }
 
 /** Is a response body HTML (Cloudflare/Supabase proxy page etc.)? */

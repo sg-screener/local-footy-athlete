@@ -113,3 +113,21 @@ export function declineWeeklyCommitment(args: { forBlockNumber: number }): void 
     writer: 'weekly_commitment_door',
   });
 }
+
+/**
+ * The athlete has read the block-boundary notice.
+ *
+ * ⚠ **NO PROGRAM WRITE, AND NO WAY TO MAKE ONE.** *"Dismissing it does not alter
+ * the program"* is held by this function importing nothing that can write one —
+ * the same construction the decline above uses.
+ */
+export function acknowledgeBlockBoundaryNotice(args: { forBlockNumber: number }): void {
+  appendDecisionEntry({
+    decision: {
+      kind: 'block_boundary_notice_acknowledged',
+      forBlockNumber: args.forBlockNumber,
+    },
+    provenance: 'athlete_tap',
+    writer: 'weekly_commitment_door',
+  });
+}

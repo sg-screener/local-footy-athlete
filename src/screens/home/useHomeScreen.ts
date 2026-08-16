@@ -12,6 +12,14 @@ import {
 } from '../../store/rebuildNoticeStore';
 import { getCurrentBlockNumberForGeneration, useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
+import { useDecisionLedgerStore } from '../../store/decisionLedgerStore';
+import {
+  acknowledgeBlockBoundaryNotice,
+  confirmWeeklyCommitment,
+  declineWeeklyCommitment,
+} from '../../store/weeklyCommitmentAnswer';
+import { useBlockBoundaryPrompts } from './useBlockBoundaryPrompts';
+import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { generateProgramFromProfile } from '../../services/api/generateProgram';
@@ -681,6 +689,50 @@ export function useHomeScreen() {
     [weekDays, sessionFeedback, currentProgram?.createdAt],
   );
 
+
+  // ── THE TWO BLOCK-BOUNDARY PROMPTS ──
+  //
+  // Both are DERIVED (`useBlockBoundaryPrompts`) from the stored program, the
+  // logged sessions and the decision ledger. Nothing here writes; the answers
+  // below go through `store/weeklyCommitmentAnswer.ts`, the only writer.
+  const ledgerEntries = useDecisionLedgerStore((s) => s.entries);
+  const blockBoundaryPrompts = useBlockBoundaryPrompts({
+    currentProgram,
+    blockNumber: blockState?.blockNumber ?? null,
+    blockStartISO: blockState?.blockStartDate ?? null,
+    sessionFeedback,
+    onboardingData,
+    ledgerEntries,
+    weekOrder: DAYS_OF_WEEK,
+  });
+  const blockBoundaryNotice = blockBoundaryPrompts.notice;
+  const weeklyCommitmentPrompt = blockBoundaryPrompts.commitment;
+
+  /** Dismiss the reduced-block notice. Records the read; touches no program. */
+  const handleAcknowledgeBlockBoundaryNotice = useCallback(() => {
+    if (!blockBoundaryNotice) return;
+    acknowledgeBlockBoundaryNotice({ forBlockNumber: blockBoundaryNotice.forBlockNumber });
+  }, [blockBoundaryNotice]);
+
+  /** Confirm a smaller weekly commitment: one canonical fact, then a rebuild. */
+  const handleConfirmWeeklyCommitment = useCallback(async (sessionsPerWeek: number) => {
+    if (!weeklyCommitmentPrompt || !onboardingData) return;
+    await confirmWeeklyCommitment({
+      forBlockNumber: weeklyCommitmentPrompt.question.forBlockNumber,
+      sessionsPerWeek,
+      profile: onboardingData,
+      todayISO: todayISOLocal(),
+      weekOrder: DAYS_OF_WEEK,
+    });
+  }, [weeklyCommitmentPrompt, onboardingData]);
+
+  /** Decline. Records the answer so it is not re-asked; changes nothing else. */
+  const handleDeclineWeeklyCommitment = useCallback(() => {
+    if (!weeklyCommitmentPrompt) return;
+    declineWeeklyCommitment({
+      forBlockNumber: weeklyCommitmentPrompt.question.forBlockNumber,
+    });
+  }, [weeklyCommitmentPrompt]);
 
   // ───────── Error helpers ─────────
 
@@ -1587,6 +1639,11 @@ export function useHomeScreen() {
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
     missedSessionPrompt,
+    blockBoundaryNotice,
+    weeklyCommitmentPrompt,
+    handleAcknowledgeBlockBoundaryNotice,
+    handleConfirmWeeklyCommitment,
+    handleDeclineWeeklyCommitment,
     handleLogMissedSession,
     handleSkipMissedSession,
 

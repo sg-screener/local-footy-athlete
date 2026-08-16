@@ -107,7 +107,21 @@ export type AthleteDecision =
     answer:
       | { kind: 'confirmed'; sessionsPerWeek: number; trainingDays: DayOfWeek[] }
       | { kind: 'declined' };
-  };
+  }
+  /**
+   * THE ATHLETE HAS READ WHAT CHANGED AT THIS BLOCK BOUNDARY.
+   *
+   * The notice explaining a reduced block *"survives reload until
+   * acknowledged"*, so the acknowledgement has to be durable — and it is a
+   * durable ANSWER FROM THE ATHLETE, which is what this ledger holds.
+   *
+   * ⚠ **IT CHANGES NOTHING ABOUT THE PROGRAM AND HAS NO REPLAY ARM.** Dismissing
+   * the notice is not an edit; it stops a card being drawn. `quiescentBoot`
+   * returns immediately for this kind, and the card's own derivation reads the
+   * ledger. That is the whole mechanism — there is no dismissed-notices list on
+   * any store, because a list would be a second place the same fact lives.
+   */
+  | { kind: 'block_boundary_notice_acknowledged'; forBlockNumber: number };
 
 export interface DecisionLedgerEntry {
   /** Ledger-scoped unique id, assigned by the appender. */

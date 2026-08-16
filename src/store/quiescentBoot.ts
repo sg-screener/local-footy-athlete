@@ -124,6 +124,7 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
     }
     case 'reversal':
       return [];
+    case 'block_boundary_notice_acknowledged':
     case 'weekly_commitment_answer':
       // NO DATE COORDINATE, BECAUSE IT IS NOT A DAY-SCOPED EDIT. The answer's
       // whole effect is the canonical commitment fact on the PROFILE, which is
@@ -145,6 +146,12 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     // effect is the ENTRY IT REMOVES from the replay set. Deleting this arm
     // would make the switch non-exhaustive; making it throw would turn a
     // filter regression into a bricked boot.
+    return;
+  }
+  if (decision.kind === 'block_boundary_notice_acknowledged') {
+    // NOTHING TO REPLAY. Dismissing a notice is not an edit — it stops a card
+    // being drawn, and the card's own derivation reads this entry back off the
+    // ledger. Replaying it would have nothing to apply.
     return;
   }
   if (decision.kind === 'weekly_commitment_answer') {
