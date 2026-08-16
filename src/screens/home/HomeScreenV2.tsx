@@ -35,10 +35,10 @@ import {
 } from '../../utils/mobilityPrehabFlow';
 import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
-import type {
-  BlockBoundaryNoticeModel,
-  WeeklyCommitmentPromptModel,
-} from './useBlockBoundaryPrompts';
+import {
+  BlockBoundaryNoticeCard,
+  WeeklyCommitmentPromptCard,
+} from './BlockBoundaryCards';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import {
   MONTH_NAMES,
@@ -2928,95 +2928,6 @@ function MissedSessionPrompt({ missed, onRespond }: MissedSessionPromptProps) {
         <MissedChip testID="missed-session-did-it" label="Did it" primary onPress={() => onRespond('did_it')} />
         <MissedChip testID="missed-session-skipped-it" label="Skipped it" onPress={() => onRespond('skipped_it')} />
         <MissedChip testID="missed-session-move-forward" label="Move it forward" onPress={() => onRespond('move_forward')} />
-      </View>
-    </Card>
-  );
-}
-
-/**
- * THE REDUCED-BLOCK NOTICE.
- *
- * ⚠ **EVERY WORD IS SIGNED AND EVERY NUMBER IS STORED.** The headline is Sam's
- * approved sentence, rendered by `blockBoundaryReducedSentence` from the stored
- * `hard_block_reduced` row — this component receives it already rendered and
- * cannot reword it. The lines beneath are the row's own `setsReduced` entries,
- * so what the athlete reads and what the block stores are the same decision.
- */
-export function BlockBoundaryNoticeCard({ notice, onAcknowledge }: {
-  notice: BlockBoundaryNoticeModel;
-  onAcknowledge: () => void;
-}) {
-  return (
-    <Card
-      tone="outline"
-      padding="md"
-      radius="lg"
-      style={styles.missedCard}
-      testID="home-block-boundary-notice"
-    >
-      <Text style={styles.missedBody} testID="home-block-boundary-notice-sentence">
-        {String(notice.sentence)}
-      </Text>
-      {notice.row.setsReduced.map((change) => (
-        <Text
-          key={change.exerciseName}
-          style={styles.missedBody}
-          testID={`home-block-boundary-change-${change.exerciseName}`}
-        >
-          {change.exerciseName}: {change.previousSets} sets → {change.nextSets} sets
-        </Text>
-      ))}
-      <View style={styles.missedActions}>
-        <MissedChip
-          testID="home-block-boundary-notice-dismiss"
-          label="Got it"
-          primary
-          onPress={onAcknowledge}
-        />
-      </View>
-    </Card>
-  );
-}
-
-/**
- * THE MISSED-SESSION COMMITMENT QUESTION.
- *
- * ⚠ **THE OPTIONS ARE THE DERIVATION'S, NOT THIS COMPONENT'S.** Every count
- * shown has been proven buildable for this athlete by the scheduler, and every
- * label is signed copy. A component that offered "how about 2?" on its own would
- * be offering a week the app may then refuse to build.
- */
-export function WeeklyCommitmentPromptCard({ prompt, onConfirm, onDecline }: {
-  prompt: WeeklyCommitmentPromptModel;
-  onConfirm: (sessionsPerWeek: number) => void | Promise<void>;
-  onDecline: () => void;
-}) {
-  return (
-    <Card
-      tone="outline"
-      padding="md"
-      radius="lg"
-      style={styles.missedCard}
-      testID="home-weekly-commitment-prompt"
-    >
-      <Text style={styles.missedBody} testID="home-weekly-commitment-question">
-        {String(prompt.sentence)}
-      </Text>
-      <View style={styles.missedActions}>
-        {prompt.options.map((option) => (
-          <MissedChip
-            key={option.sessionsPerWeek}
-            testID={`home-weekly-commitment-option-${option.sessionsPerWeek}`}
-            label={String(option.label)}
-            primary
-            onPress={() => { void onConfirm(option.sessionsPerWeek); }}
-          />
-        ))}
-        <MissedChip
-          testID="home-weekly-commitment-decline"
-          label="Keep it as is"
-          onPress={onDecline}
-        />
       </View>
     </Card>
   );

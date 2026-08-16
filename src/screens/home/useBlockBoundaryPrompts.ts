@@ -34,7 +34,6 @@ import {
   type BlockBoundaryReductionExplanationRow,
 } from '../../rules/blockBoundaryProgression';
 import {
-  answerForBlock,
   decideWeeklyCommitmentQuestion,
   readBlockAttendance,
   type WeeklyCommitmentQuestion,
@@ -157,11 +156,16 @@ function deriveCommitment(args: {
     weeks: WEEKS_PER_BLOCK,
   });
   const forBlockNumber = blockNumber - 1;
-  // Cheap gates BEFORE the probe: it builds a programme per candidate count, and
-  // an athlete who attended fine must not pay for that.
-  if (!attendance.belowThreshold) return null;
-  if (answerForBlock(ledgerEntries, forBlockNumber) !== null) return null;
 
+  // ⚠ NO PRE-FILTER HERE, AND A MUTATION RUN IS WHY.
+  // This function used to short-circuit on `attendance.belowThreshold` and on an
+  // existing answer, "so the athlete does not pay for the legality probe".
+  // **Both lines were decoration.** `decideWeeklyCommitmentQuestion` owns both
+  // gates and returns before it ever CALLS the probe — constructing the probe is
+  // a closure, not a build — so deleting them changed no answer and no cost, and
+  // two mutations survived unnoticed. A branch that can be deleted with no
+  // consequence is the defect this repo names outright, so it is deleted. The
+  // gates are guarded where they live, in `test:block-two-difficult-missed`.
   const outcome = decideWeeklyCommitmentQuestion({
     attendance,
     forBlockNumber,

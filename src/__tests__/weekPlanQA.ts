@@ -13,9 +13,14 @@
 
 // Node harness: define __DEV__ like every other suite. Some resolver
 // branches (reached once availability filtering is active) reference it.
-declare global {
-  var __DEV__: boolean;
-}
+//
+// ⚠ THE `declare global { var __DEV__: boolean }` THAT USED TO SIT HERE IS
+// GONE. React Native's own types declare `__DEV__` globally, and the moment ANY
+// suite in this project imports a module that imports `react-native` — which
+// `blockTwoScreenDeliveryTests` is the first to do — the two declarations
+// collide and this file goes over its typecheck baseline. The assignment below
+// is a cast and never needed the declaration; nothing else in this file names
+// `__DEV__` bare.
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
