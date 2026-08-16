@@ -12,10 +12,11 @@
  */
 /* eslint-disable @typescript-eslint/no-var-requires */
 const c = require('../src/rules/weeklyProgrammingContract');
-const { LEGALITY_RULES } = require('../src/rules/weeklyLegality');
+const { LEGALITY_RULES, WEEK_LEGALITY_RULES } = require('../src/rules/weeklyLegality');
 const { COMPLETENESS_CHECKS } = require('../src/rules/weeklyCompleteness');
 
 const legality = new Map(LEGALITY_RULES.map((r: any) => [r.clauseId, r]));
+const weekLegality = new Map(WEEK_LEGALITY_RULES.map((r: any) => [r.clauseId, r]));
 const complete = new Map(COMPLETENESS_CHECKS.map((r: any) => [r.clauseId, r]));
 
 const rows = c.WEEKLY_CONTRACT_CLAUSES.map((clause: any) => {
@@ -24,8 +25,11 @@ const rows = c.WEEKLY_CONTRACT_CLAUSES.map((clause: any) => {
     m.prefers && 'preference'].filter(Boolean).join('+') || 'definition';
   const l = legality.get(clause.id) as any;
   const cp = complete.get(clause.id) as any;
-  const enforcement = !l ? '—'
-    : l.violated ? 'LEGALITY (typed rule)' : `-> ${l.enforcedElsewhere}`;
+  const wl = weekLegality.get(clause.id) as any;
+  const enforcement = wl ? 'LEGALITY owner — week-time'
+    : !l ? '—'
+    : l.violated ? 'LEGALITY owner — candidate-time'
+    : `delegated -> ${l.enforcedElsewhere}`;
   const validation = !cp ? '—'
     : cp.gap ? 'COMPLETENESS (typed check)' : `-> ${cp.validatedElsewhere}`;
   return { id: clause.id, kinds, fact: m.fact, enforcement, validation,

@@ -136,10 +136,48 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
   // offered as upper because game proximity and lower spacing left no legal
   // placement. `withExposureTarget` only ever reduces, which is exactly correct
   // here — this path can never raise anything.
-  const reduced = schedule.reductionDisclosure === null ? legacy : withExposureTarget(
-    legacy, 'main_strength', requiredStrengthCount,
-    'spacing_safety_conflict', schedule.reductionDisclosure,
+  //
+  // ⚠ **`withExposureTarget` ALONE WAS NOT ENOUGH, AND ITS SILENCE LOOKED LIKE
+  // SUCCESS.** It early-returns when `target >= required`, and for these weeks
+  // `required` was ALREADY at or below the delivered count — so it recorded
+  // nothing and the reduced target stood unexplained. The reduction is a
+  // statement about the TARGET (authored -> delivered); it is not a statement
+  // about the floor, and reading it off the floor is what lost it.
+  //
+  // So the call is kept — it keeps `required` in step on the weeks where the
+  // floor genuinely does exceed what was delivered — and the ledger entry is
+  // written from the AUTHORED count regardless.
+  const disclosure = schedule.reductionDisclosure;
+  const withFloor = disclosure === null ? legacy : withExposureTarget(
+    legacy, 'main_strength', disclosure.deliveredStrengthCount,
+    'spacing_safety_conflict', disclosure.reason,
   );
+  // ⚠ **THE ENTRY IS WRITTEN EVEN WHEN THE COUNT DID NOT MOVE.** The Sunday
+  // fixture week delivers the same 2 sessions it authored and still gives
+  // something up: a lower session is served as upper because G-2 may not hold
+  // heavy lower. A ledger keyed only on counts calls that "no reduction" — so the
+  // omitted PURPOSE is carried in the detail and the entry is written regardless.
+  //
+  // Deduped against the V1 builder's own entries so a week does not disclose the
+  // same fact twice in different words.
+  const already = withFloor.reductions.some((entry) =>
+    entry.domain === 'main_strength'
+    && entry.metric === 'weekly_exposure_count'
+    && entry.to === disclosure?.deliveredStrengthCount
+    && entry.from === disclosure?.intendedStrengthCount);
+  const reduced: typeof withFloor = disclosure === null || already ? withFloor : {
+    ...withFloor,
+    reductions: [...withFloor.reductions, {
+      domain: 'main_strength' as const,
+      reason: 'spacing_safety_conflict' as const,
+      metric: 'weekly_exposure_count' as const,
+      from: disclosure.intendedStrengthCount,
+      to: disclosure.deliveredStrengthCount,
+      detail: disclosure.omittedPurpose === null
+        ? disclosure.reason
+        : `${disclosure.reason} (omitted as authored: ${disclosure.omittedPurpose})`,
+    }],
+  };
 
   const identity = section18ModeAndSubphase(coachingInputs, reduced);
 

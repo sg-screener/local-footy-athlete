@@ -164,6 +164,15 @@ export interface WeeklyDemand {
   readonly hardDays: number;
 }
 
+/** The four facts a reduced or substituted week owes its reader. */
+export interface WeeklyReductionRecord {
+  readonly intendedStrengthCount: number;
+  readonly deliveredStrengthCount: number;
+  /** The purpose the week could not deliver as authored. Null when only the count moved. */
+  readonly omittedPurpose: SessionPurpose | null;
+  readonly reason: string;
+}
+
 export interface WeeklySchedule {
   readonly weekStartISO: string;
   readonly layoutClauseId: string;
@@ -175,13 +184,19 @@ export interface WeeklySchedule {
   readonly authoredStrengthSessions: number;
   /**
    * **Set when the week is a REDUCED one**, naming what was given up and why.
-   * Sam, 2026-08-16: *"disclose any preferred work omitted."*
+   * Sam, 2026-08-16: *"intended strength count -> delivered count -> omitted
+   * purpose -> exact reason."*
    *
-   * Null means nothing was omitted — **not** "we did not check". A reduced week
-   * that reported nothing would be indistinguishable from a full one, which is
-   * the whole reason this is a field and not a log line.
+   * ⚠ It was a bare string first, and a string could not say the one thing the
+   * Sunday-fixture week actually gives up. That week delivers the SAME COUNT it
+   * authored — nothing is dropped — but a lower session is offered as upper
+   * because G-2 may not hold heavy lower. **A count-only disclosure records that
+   * as "no reduction", which is exactly the silent omission this field exists to
+   * prevent.** All four facts travel, and the omitted purpose is its own field.
+   *
+   * Null means nothing was omitted — **not** "we did not check".
    */
-  readonly reductionDisclosure: string | null;
+  readonly reductionDisclosure: WeeklyReductionRecord | null;
   readonly days: readonly SessionIntention[];
   /** Patterns the week intends to cover at least once. */
   readonly intendedPatterns: readonly MovementPattern[];
@@ -540,8 +555,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // `assignmentIsLegal`, so heavy lower still cannot touch G-2 and G-1/G+1 remain
   // closed. The ladder only changes WHAT is offered, never WHERE it may go.
   const lowerish = (purpose: SessionPurpose): boolean => PURPOSE_IS_LOWER[purpose];
-  const rungs: { purposes: SessionPurpose[]; reduction: string | null }[] = [];
-  rungs.push({ purposes: [...layout.purposes], reduction: null });
+  const rungs: { purposes: SessionPurpose[]; omitted: SessionPurpose | null;
+    reason: string | null }[] = [];
+  rungs.push({ purposes: [...layout.purposes], omitted: null, reason: null });
   // Rung 1 — substitute lower-ish purposes with upper, fewest swaps first.
   const lowerIdx = layout.purposes
     .map((purpose, index) => (lowerish(purpose) ? index : -1))
@@ -552,8 +568,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       for (const index of chosen) purposes[index] = 'upper';
       rungs.push({
         purposes,
-        reduction: `${swaps} lower session(s) offered as upper — the remaining legal `
-          + 'day(s) may not hold heavy lower work (G-2)',
+        omitted: layout.purposes[chosen[0]],
+        reason: `${swaps} lower session(s) offered as upper instead — the remaining `
+          + 'legal day(s) may not hold heavy lower work two days before the game',
       });
     }
   }
@@ -561,8 +578,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   for (let count = authored - 1; count >= 1; count -= 1) {
     rungs.push({
       purposes: layout.purposes.slice(0, count),
-      reduction: `reduced from ${authored} to ${count} strength session(s) — `
-        + 'game freshness and availability leave no legal placement for the rest',
+      omitted: layout.purposes[count],
+      reason: `reduced from ${authored} to ${count} strength session(s) — game `
+        + 'freshness and availability leave no legal placement for the rest',
     });
     const reducedLower = layout.purposes.slice(0, count)
       .map((purpose, index) => (lowerish(purpose) ? index : -1))
@@ -572,14 +590,15 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       purposes[index] = 'upper';
       rungs.push({
         purposes,
-        reduction: `reduced from ${authored} to ${count} strength session(s), one `
+        omitted: layout.purposes[count],
+        reason: `reduced from ${authored} to ${count} strength session(s), one `
           + 'offered as upper — the legal day(s) may not hold heavy lower work',
       });
     }
   }
 
   let best: { assignment: { day: number; purpose: SessionPurpose }[]; score: number } | null = null;
-  let reductionDisclosure: string | null = null;
+  let reductionDisclosure: WeeklyReductionRecord | null = null;
   for (const rung of rungs) {
     const needed = rung.purposes.length;
     if (usableGymDays.length < needed) continue;
@@ -593,7 +612,15 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     }
     // FIRST rung that produces anything wins: the ladder is ordered by
     // preference, so a later rung is by construction a worse week.
-    if (best) { reductionDisclosure = rung.reduction; break; }
+    if (best) {
+      reductionDisclosure = rung.reason === null ? null : {
+        intendedStrengthCount: authored,
+        deliveredStrengthCount: best.assignment.length,
+        omittedPurpose: rung.omitted,
+        reason: rung.reason,
+      };
+      break;
+    }
   }
   if (!best) {
     // A TRUE hard minimum failure: not even ONE strength session fits.
