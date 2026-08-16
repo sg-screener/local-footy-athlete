@@ -69,6 +69,8 @@ import {
 } from '../../utils/programControlActions';
 import type { ProgramControlScreen } from '../../types/programControlAction';
 import { dismissActiveCoachNote } from '../../utils/activeCoachNotes';
+import type { ExerciseExclusionScope } from '../../rules/exerciseExclusions';
+import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
 import {
   buildGuidedInjuryConstraint,
   guidedInjuryResultFromConstraint,
@@ -467,7 +469,8 @@ export type CoachNoteActionRoute =
   | 'injury_flow'
   | 'dismiss'
   | 'clear_sheet'
-  | 'update_sheet';
+  | 'update_sheet'
+  | 'exclusion_scope_sheet';
 
 export function coachNoteActionRoute(
   action: ActiveCoachNoteAction,
@@ -477,6 +480,22 @@ export function coachNoteActionRoute(
       return 'injury_flow';
     case 'dismiss_note':
       return 'dismiss';
+    /**
+     * ── THE TWO EXCLUSION CONTROLS (Block Two, Sam's approved contract) ─────
+     *
+     * "Change scope" gets its OWN route because the update sheet it would
+     * otherwise share asks *"How are you feeling now?"* with five readiness
+     * answers — the wrong question, with none of Sam's three scopes on it.
+     *
+     * "Restore exercise" IS a clear, and takes the clear route deliberately —
+     * the same reasoning `restore_adjustment` already carries a line above.
+     * `clearActiveProgramModifier` routes an `athlete_preferences` clear
+     * through `restoreExcludedExercise`, the canonical owner, so this control
+     * is live rather than merely routed.
+     */
+    case 'change_exclusion_scope':
+      return 'exclusion_scope_sheet';
+    case 'restore_exclusion':
     case 'clear_injury':
     case 'clear_status':
     case 'clear_adjustment':
@@ -496,7 +515,7 @@ export function coachNoteActionRoute(
 
 /** What a confirmation sheet is currently asking about, on either screen. */
 export interface CoachNoteSheetState {
-  readonly mode: 'clear' | 'update';
+  readonly mode: 'clear' | 'update' | 'exclusion_scope';
   readonly note: ActiveCoachNote;
 }
 
@@ -516,6 +535,8 @@ export interface CoachNoteActionsHook extends CoachNoteActions {
   readonly closeSheet: () => void;
   readonly confirmClear: () => void;
   readonly updateStatus: (status: ProgramControlStatusUpdate) => void;
+  /** Sam's scope question, answered from My Status. */
+  readonly changeExclusionScope: (scope: ExerciseExclusionScope) => void;
   /** The note whose injury the guided flow is currently editing. */
   readonly injuryNote: ActiveCoachNote | null;
   readonly closeInjuryFlow: () => void;
@@ -556,6 +577,7 @@ export function useCoachNoteActions(input: CoachNoteActionsInput): CoachNoteActi
       case 'dismiss': return actions.dismissCoachNote(note.id);
       case 'clear_sheet': return setSheet({ mode: 'clear', note });
       case 'update_sheet': return setSheet({ mode: 'update', note });
+      case 'exclusion_scope_sheet': return setSheet({ mode: 'exclusion_scope', note });
       // A kind with no route does NOTHING here, visibly and on purpose. The
       // alternative — a fallback sheet — would open a confirmation for an action
       // this screen cannot perform, and the athlete would tap yes on it.
@@ -575,6 +597,21 @@ export function useCoachNoteActions(input: CoachNoteActionsInput): CoachNoteActi
     setSheet(null);
   }, [actions, sheet]);
 
+  /**
+   * "CHANGE SCOPE", THROUGH THE ONE CANONICAL TRANSACTION OWNER.
+   *
+   * The exercise comes off the ROW rather than out of a second lookup: the
+   * modifier's payload carries the canonical identity its builder stamped, and
+   * a re-derivation here would be a second answer to "which exercise is this
+   * row about".
+   */
+  const changeExclusionScope = useCallback((scope: ExerciseExclusionScope) => {
+    const exercise = sheet?.note.excludedExercise;
+    setSheet(null);
+    if (typeof exercise !== 'string' || !exercise) return;
+    applyExerciseExclusionDecision({ exercise, scope });
+  }, [sheet]);
+
   return {
     ...actions,
     injuryConstraint,
@@ -583,6 +620,7 @@ export function useCoachNoteActions(input: CoachNoteActionsInput): CoachNoteActi
     closeSheet: useCallback(() => setSheet(null), []),
     confirmClear,
     updateStatus,
+    changeExclusionScope,
     injuryNote,
     closeInjuryFlow: useCallback(() => setInjuryNote(null), []),
     onAction,

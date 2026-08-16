@@ -218,8 +218,23 @@ export interface RotationContext {
  *     writes to the separate `athletePreferencesStore`.
  */
 export interface AthletePoolPrefs {
-  /** Exercises the athlete never wants to see. Hard exclude. */
+  /**
+   * Exercises to keep out, as bare names, for ONE date.
+   *
+   * ⚠ **DERIVED SINCE BLOCK TWO — NO LONGER A STORED FIELD.** The athlete's
+   * decision is `exclusions` below, which carries the scope and the expiry Sam's
+   * approved contract requires; this array is that decision projected onto a
+   * single date by `store/athletePreferencesStore.getAthletePrefs`. Writing it
+   * directly re-creates the scope-less, never-expiring exclusion the contract
+   * replaced.
+   */
   excluded: readonly string[];
+  /**
+   * THE ATHLETE'S ACTUAL EXCLUSION DECISIONS — scope, expiry, reason and all.
+   * The one stored fact; `excluded` above is a projection of it.
+   * See `rules/exerciseExclusions.ts`.
+   */
+  exclusions?: readonly import('../rules/exerciseExclusions').ExerciseExclusion[];
   /** Exercises the athlete prefers — bias rotation to pick them when the slot comes up. */
   pinned: readonly string[];
   /**

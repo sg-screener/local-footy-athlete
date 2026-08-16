@@ -36,6 +36,20 @@ export interface ActiveCoachNote {
   injuryEpisodeId?: string;
   temporarySourceFactIds?: string[];
   presentationOnlyDismiss?: boolean;
+  /**
+   * WHICH EXERCISE THIS EXCLUSION ROW IS ABOUT — the canonical identity the
+   * builder stamped, carried rather than re-derived from the title.
+   *
+   * WRITER: `activeProgramModifiers.athleteExclusionModifier`, through the
+   * projection below. READER: `useCoachNoteActions.changeExclusionScope`, which
+   * needs it to address the canonical transaction owner. TEST:
+   * `exerciseExclusionScopeTests` §Status.
+   *
+   * Undefined on every other kind of row — this is not a general "what is this
+   * about" field, and giving it one would invite a second identity for notes
+   * that already have `constraintId`.
+   */
+  excludedExercise?: string;
 }
 
 export interface ClearActiveCoachNoteResult {
@@ -89,6 +103,10 @@ export function buildCoachNotesFromModifiers(
       ? modifier.payload.temporarySourceFactIds.filter((value): value is string => typeof value === 'string')
       : undefined,
     presentationOnlyDismiss: modifier.payload?.presentationOnlyDismiss === true,
+    excludedExercise: modifier.payload?.kind === 'excluded'
+      && typeof modifier.payload?.exercise === 'string'
+      ? modifier.payload.exercise
+      : undefined,
   })).filter((note) => !dismissed.has(note.id));
 }
 

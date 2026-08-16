@@ -67,7 +67,19 @@ export interface ComposerPlannedDay {
 /** Injury as FACTS, not as an outcome. */
 export interface ComposerInjuryInput {
   readonly prohibitedPatterns: readonly MainStrengthPattern[];
+  /** Out for EVERY day of this week. Injury exclusions and week-spanning athlete answers. */
   readonly excludedIdentities: readonly string[];
+  /**
+   * OUT ON PARTICULAR DAYS ONLY — the athlete's "Today only" answer, and any
+   * scoped exclusion whose span ends inside this week.
+   *
+   * It exists because the composer authors a WEEK in one call and Sam's approved
+   * contract gives the athlete's answer three different spans. Folding a
+   * one-day answer into `excludedIdentities` would take the exercise out of
+   * Thursday as well — the athlete said *today*, and the contract's first proof
+   * case is that it "returns later". Keyed by ISO date.
+   */
+  readonly excludedIdentitiesByDate?: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface ComposerInputs {
@@ -111,12 +123,37 @@ export interface ComposedRow {
   readonly qualityLimit?: 'stop_when_speed_or_technique_drops';
 }
 
-/** Clause (e): a kit-caused gap — derived from kit + sheet, never from records. */
+/**
+ * Clause (e): a gap the athlete is TOLD about — derived from kit, the sheet and
+ * the athlete's own exclusions, never from records.
+ *
+ * ── `cause` GREW A SECOND MEMBER, AND THE REASON IS A CONTRACT CLAUSE ──────
+ *
+ * Sam's approved Block Two contract: *"If the exclusion makes the pattern
+ * impossible, disclose the gap rather than restoring the exercise."* Before this
+ * change every gap was stamped `'kit'`, including the ones an EXCLUSION had
+ * caused — so the app told an athlete who had banned every legal row in a slot
+ * that their equipment was the problem. That is not a wording nit: the two
+ * causes have different answers. A kit gap is fixed by buying or booking
+ * equipment; an exclusion gap is fixed by the athlete restoring the exercise,
+ * and only the athlete can do it.
+ *
+ * `'kit'` remains the answer whenever the kit ALONE would have emptied the slot,
+ * so an athlete who both lacks the bar and banned the bodyweight option is told
+ * about the kit — the thing they cannot train at all outranks the thing they
+ * chose.
+ */
 export interface ComposedGap {
   readonly dayOfWeek: number;
   readonly slot: SessionSlot;
-  readonly cause: 'kit';
+  readonly cause: 'kit' | 'exclusion';
   readonly wouldNeed: string | null;
+  /**
+   * The exercises the athlete left out that emptied this slot. Set only on an
+   * `'exclusion'` gap, so Status and the day screen can name them rather than
+   * report an anonymous hole.
+   */
+  readonly excludedHere?: readonly string[];
   /**
    * SET WHEN THE SLOT WAS DROPPED BUT ITS PATTERN SURVIVED IN THE OTHER PLANE.
    * Sam, 2026-08-14, asked what to do when the opposite pull plane is
@@ -703,10 +740,71 @@ function mondayISO(dateISO: string): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * WHOSE FAULT IS THIS EMPTY SLOT — THE KIT, OR THE ATHLETE'S OWN EXCLUSION?
+ *
+ * Sam's contract requires the exclusion gap be DISCLOSED rather than papered
+ * over by restoring the exercise, and a gap that blames the kit for a ban is not
+ * a disclosure — it sends the athlete to a shop for a problem only they can fix.
+ *
+ * **THE TEST IS "WOULD THE KIT ALONE HAVE EMPTIED IT", not "was anything
+ * excluded".** It is the same question `selectPoolEntryAvoiding` asks for R-083
+ * and it is asked this way for the same reason: an athlete who both lacks the
+ * bar and banned the bodyweight option is told about the bar, because the thing
+ * they cannot train at all outranks the thing they chose. Only when the kit
+ * could have filled the slot and the exclusion emptied it is the exclusion named.
+ */
+function attributeGap(args: {
+  candidates: readonly ComposedExerciseIdentity[];
+  kit: readonly string[];
+  excluded: ReadonlySet<string>;
+}): Pick<ComposedGap, 'cause' | 'wouldNeed' | 'excludedHere'> {
+  const kitLegal = args.candidates.filter((id) => composedRowIsLegal(id, args.kit));
+  if (kitLegal.length === 0) {
+    return {
+      cause: 'kit',
+      wouldNeed: args.candidates.length > 0
+        ? composedRowGapReason(args.candidates[0], args.kit)
+        : null,
+    };
+  }
+  return {
+    cause: 'exclusion',
+    // There is nothing to BUY for an exclusion gap; the athlete restores it.
+    wouldNeed: null,
+    excludedHere: kitLegal.filter((id) => args.excluded.has(id)),
+  };
+}
+
+/** Local-noon day step. `toISOString` on a noon date is safe for every UK/AU offset. */
+function addComposerDaysISO(dateISO: string, days: number): string {
+  const date = new Date(`${dateISO}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // ─── COMPOSE ───────────────────────────────────────────────────────────────
 
 export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   const excluded = new Set(inputs.injuries.excludedIdentities.map(composedIdentityFor));
+  /**
+   * THE DAY'S OWN EXCLUSION SET — week-wide answers PLUS whatever this one day
+   * carries. Built per day, from the week Monday and the day's own weekday, so a
+   * "Today only" answer lands on exactly one date and no other.
+   */
+  const excludedOn = (dayOfWeek: number): ReadonlySet<string> => {
+    const byDate = inputs.injuries.excludedIdentitiesByDate;
+    if (!byDate) return excluded;
+    const monday = mondayISO(inputs.todayISO);
+    // The composer's weekdays are 0=Sunday; the week runs Monday..Sunday.
+    const dateISO = addComposerDaysISO(monday, (dayOfWeek + 6) % 7);
+    const dated = byDate[dateISO];
+    if (!dated?.length) return excluded;
+    return new Set([...excluded, ...dated.map(composedIdentityFor)]);
+  };
   const prohibited = new Set(inputs.injuries.prohibitedPatterns);
   const days: ComposedDay[] = [];
   const gaps: ComposedGap[] = [];
@@ -783,9 +881,13 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     const declared = fullBody
       ? [...SLOTS_FOR_KIND.full_body_a, ...SLOTS_FOR_KIND.full_body_b]
       : SLOTS_FOR_KIND[ordinary];
+    // The DAY's own exclusion set, not the week's: a slot a Tuesday-only
+    // exclusion empties is still supplied by Thursday, and telling the coverage
+    // day otherwise would make it claim a slot the week already covers.
+    const excludedHere = excludedOn(planned.dayOfWeek);
     suppliedByDay.set(planned, new Set(declared.filter((slot) =>
       slotCandidates(slot).some((id) =>
-        !excluded.has(id) && composedRowIsLegal(id, inputs.kit)))));
+        !excludedHere.has(id) && composedRowIsLegal(id, inputs.kit)))));
   }
   const suppliedByOtherDays = (self: ComposerPlannedDay): ReadonlySet<SessionSlot> => {
     const out = new Set<SessionSlot>();
@@ -800,6 +902,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
 
   for (const planned of inputs.plannedDays) {
     if (!composedDayIsStrength(planned.strengthIntent)) continue;
+    // Every legality question below asks the DAY's set, never the week's, so a
+    // dated exclusion applies to its own day and to no other.
+    const excludedToday = excludedOn(planned.dayOfWeek);
     // ── WHICH LADDER THIS DAY OWES ──────────────────────────────────────────
     //
     // Three cases, in this order: R-093's fixed pair, then R-087's coverage day,
@@ -895,17 +1000,18 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     for (const declaredSlot of shapeSlots) {
       // The kit outranks the plane preference, and Sam ruled the fallback.
       const planeChoice = isFullBodyDay && OPPOSITE_PLANE[declaredSlot]
-        ? resolvePlane(declaredSlot, inputs.kit, excluded)
+        ? resolvePlane(declaredSlot, inputs.kit, excludedToday)
         : null;
       if (planeChoice) {
         for (const droppedSlot of planeChoice.dropped) {
           gaps.push({
+            ...attributeGap({
+              candidates: slotCandidates(droppedSlot),
+              kit: inputs.kit,
+              excluded: excludedToday,
+            }),
             dayOfWeek: planned.dayOfWeek,
             slot: droppedSlot,
-            cause: 'kit',
-            wouldNeed: slotCandidates(droppedSlot).length > 0
-              ? composedRowGapReason(slotCandidates(droppedSlot)[0], inputs.kit)
-              : null,
             ...(planeChoice.slot ? { repeatedPlaneInstead: planeChoice.slot } : {}),
           });
         }
@@ -923,16 +1029,15 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         && plannedPatterns.has(pattern)
         && !patternHasItsMainLift.has(pattern);
       const pool = isMainLift ? anchorCandidates(slot) : supportCandidates(slot);
-      const legal = pool.filter((id) => !excluded.has(id) && composedRowIsLegal(id, inputs.kit));
+      const legal = pool.filter((id) => !excludedToday.has(id) && composedRowIsLegal(id, inputs.kit));
       if (legal.length === 0) {
         // `resolvePlane` has already disclosed a plane it could not fill, so a
         // second gap for the same slot would double-count the same fact.
         if (!planeChoice) {
           gaps.push({
+            ...attributeGap({ candidates: pool, kit: inputs.kit, excluded: excludedToday }),
             dayOfWeek: planned.dayOfWeek,
             slot,
-            cause: 'kit',
-            wouldNeed: pool.length > 0 ? composedRowGapReason(pool[0], inputs.kit) : null,
           });
         }
         continue;

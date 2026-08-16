@@ -65,13 +65,27 @@ export const explorerTestId = {
     `component-delete-action-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
   componentDeleteConfirm: (sessionId: string, componentId: string) =>
     `component-delete-confirm-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
+  /**
+   * `'block'` JOINED THE TWO ON 2026-08-16 — Sam's approved Block Two contract
+   * gives the removal question THREE answers, not two. `'today'` and `'future'`
+   * keep their exact spellings so every id the accessibility walk and the
+   * component-deletion trace already address stays addressable: `'today'` is
+   * still "Today only", and `'future'` is now "Until I change it", the answer
+   * that replaced "Future weeks too".
+   */
   componentDeleteScope: (
     sessionId: string,
     componentId: string,
-    scope: 'today' | 'future',
+    scope: 'today' | 'block' | 'future',
   ) => `component-delete-scope-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}-${scope}`,
   componentDeleteResult: (sessionId: string, componentId: string) =>
     `component-delete-result-${stableTestIdToken(sessionId)}-${stableTestIdToken(componentId)}`,
+
+  /** My Status's "Change scope" answers. Keyed by the exclusion's own row id. */
+  exclusionScopeOption: (
+    constraintId: string,
+    scope: 'today' | 'block' | 'future',
+  ) => `exclusion-scope-${stableTestIdToken(constraintId)}-${scope}`,
 
   injuryIngress: (mode: 'set' | 'update', episodeId?: string) =>
     `injury-${mode}-action-${stableTestIdToken(episodeId ?? 'new')}`,

@@ -21,6 +21,16 @@ import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel, todayISOLocal } from '../../utils/appDate';
+import type { ComposedGap } from '../../rules/composeWeek';
+import {
+  EXERCISE_EXCLUSION_QUESTION,
+  EXERCISE_EXCLUSION_SCOPES,
+  EXERCISE_EXCLUSION_SCOPE_DETAIL,
+  EXERCISE_EXCLUSION_SCOPE_LABEL,
+  exclusionExpiryLabel,
+  type ExerciseExclusionScope,
+} from '../../rules/exerciseExclusions';
+import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
 import {
   executeProgramControlAction,
   executeProgramControlActionDurably,
@@ -172,8 +182,22 @@ type InjuryArea =
   | 'Other';
 type InjurySeverity = 'Mild' | 'Moderate' | 'Severe';
 
+/**
+ * REMOVAL LEFT `future_scope` ON 2026-08-16 — SAM'S APPROVED BLOCK TWO CONTRACT.
+ *
+ * The removal arm used to land here and ask *"Apply this change to future
+ * weeks?"* with two answers, "Today only" and "Future weeks too". The contract
+ * asks a different question with three answers — *"How long should we leave this
+ * exercise out?"* / Today only / This block / Until I change it — so removal now
+ * lands on `exclusion_scope` below and this union covers swap and add alone.
+ *
+ * The two-answer question could not express "this block" at all, and its
+ * "Future weeks too" answer wrote a preference constraint that GENERATION NEVER
+ * READ (`composeWeek` is fed from `prefs.excluded`, and that branch wrote to
+ * `coachUpdatesStore` instead) — so an athlete who chose it saw the exercise
+ * come straight back the following week.
+ */
 type FutureScopeStep =
-  | { kind: 'future_scope'; action: 'remove'; exercise: EditableExercise }
   | {
       kind: 'future_scope';
       action: 'swap';
@@ -196,6 +220,16 @@ type ExerciseEditStep =
   | { kind: 'swap_reason'; exercise: EditableExercise }
   | { kind: 'add_kind' }
   | { kind: 'confirm_remove'; exercise: EditableExercise }
+  /**
+   * SAM'S SCOPE QUESTION, ASKED AFTER THE EXERCISE IS ALREADY OUT OF TODAY.
+   *
+   * The order matters and it is the order the contract implies: the athlete
+   * tapped Remove, so it comes out of today's session first, and only then are
+   * they asked how long to leave it out. Asking first would leave a live
+   * question standing between them and a session they have already decided
+   * about.
+   */
+  | { kind: 'exclusion_scope'; exercise: EditableExercise }
   | {
       kind: 'confirm_swap';
       exercise: EditableExercise;
@@ -212,6 +246,19 @@ type ExerciseEditStep =
   | FutureScopeStep
   | { kind: 'coach_fallback'; title: string; message: string; prefill: string }
   | { kind: 'result'; ok: boolean; title: string; message: string };
+
+/**
+ * SAM'S THREE ANSWERS → THE EXPLORER'S THREE SCOPE IDS.
+ *
+ * A `Record` over the closed scope union, so a fourth scope cannot be added
+ * without deciding what the accessibility walk should call it. `'today'` and
+ * `'future'` keep the spellings the walk already knows.
+ */
+const EXCLUSION_SCOPE_TEST_ID: Record<ExerciseExclusionScope, 'today' | 'block' | 'future'> = {
+  today_only: 'today',
+  this_block: 'block',
+  until_changed: 'future',
+};
 
 const SWAP_REASONS: SwapReason[] = [
   'No equipment',
@@ -869,11 +916,9 @@ export default function DayWorkoutScreenV2() {
           });
       if (result.ok) {
         if (step.suggestion.kind === 'rest') {
-          setExerciseEditStep({
-            kind: 'future_scope',
-            action: 'remove',
-            exercise: step.exercise,
-          });
+          // A swap with no safe replacement IS a removal — the row came out and
+          // nothing went in — so it asks the removal question, not the swap one.
+          setExerciseEditStep({ kind: 'exclusion_scope', exercise: step.exercise });
           return;
         }
         setExerciseEditStep({
@@ -931,39 +976,49 @@ export default function DayWorkoutScreenV2() {
     [date],
   );
 
-  const saveFutureExerciseAdjustment = React.useCallback(
-    (step: FutureScopeStep) => {
-      if (step.action === 'remove') {
-        const result = executeProgramControlAction({
-          type: 'add_exercise_preference',
-          source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
-          scope: 'future_weeks',
-          payload: {
-            exercise: step.exercise.name,
-            preferenceKind: 'avoid_exercise',
-          },
-          requiresRebuild: false,
-          createsActiveModifier: true,
-          oneOffOnly: false,
-        });
-        if (!result.ok) {
-          setExerciseEditStep({
-            kind: 'result',
-            ok: false,
-            title: 'Could not save future change',
-            message: result.message ?? 'Today’s session is still updated.',
-          });
-          return;
-        }
+  /**
+   * THE ATHLETE'S ANSWER TO SAM'S SCOPE QUESTION, THROUGH THE ONE OWNER.
+   *
+   * `applyExerciseExclusionDecision` is the canonical transaction — the same one
+   * My Status's "Change scope" and the coach path use — so an answer given here
+   * and an answer given there are the same fact, not two rows that disagree.
+   *
+   * Today's session is already updated by the time this runs: `removeExerciseToday`
+   * applied the day override before the question was asked. So a `today_only`
+   * answer has nothing further to change in the program and simply records why
+   * the row is gone, which is what puts it on Status for the day and in history
+   * after it.
+   */
+  const applyExclusionScope = React.useCallback(
+    (exercise: EditableExercise, scope: ExerciseExclusionScope) => {
+      const result = applyExerciseExclusionDecision({
+        exercise: exercise.name,
+        scope,
+        decidedOnISO: date ?? todayISOLocal(),
+      });
+      if (!result.ok || !result.exclusion) {
         setExerciseEditStep({
           kind: 'result',
-          ok: true,
-          title: 'Future adjustment saved',
-          message: `Avoid ${displayExerciseName(step.exercise.name)} in similar sessions.`,
+          ok: false,
+          title: 'Could not save that',
+          message: 'Today’s session is still updated.',
         });
         return;
       }
+      setExerciseEditStep({
+        kind: 'result',
+        ok: true,
+        title: 'Saved',
+        message: `${displayExerciseName(exercise.name)} — ${
+          EXERCISE_EXCLUSION_SCOPE_LABEL[scope].toLowerCase()
+        }. ${exclusionExpiryLabel(result.exclusion)}. You can change or undo this in My Status.`,
+      });
+    },
+    [date],
+  );
 
+  const saveFutureExerciseAdjustment = React.useCallback(
+    (step: FutureScopeStep) => {
       if (step.action === 'swap') {
         const result = executeProgramControlAction({
           type: 'add_exercise_preference',
@@ -1076,7 +1131,7 @@ export default function DayWorkoutScreenV2() {
             exerciseKey: exercise.key,
           });
         }
-        setExerciseEditStep({ kind: 'future_scope', action: 'remove', exercise });
+        setExerciseEditStep({ kind: 'exclusion_scope', exercise });
         return;
       }
       setExerciseEditStep({
@@ -1344,6 +1399,17 @@ export default function DayWorkoutScreenV2() {
           workoutType={workout.workoutType}
         />
 
+        {/* ── THE TYPED GAP, ON GLASS ────────────────────────────────────────
+            Sam's approved Block Two contract: *"If the exclusion makes the
+            pattern impossible, disclose the gap rather than restoring the
+            exercise."* `composedGaps` has been carried from the composer to
+            the workout, through assembly, and through boot regeneration since
+            2026-08-14 — and NOTHING RENDERED IT, so a slot the athlete's own
+            exclusion emptied simply came out of the session with no account of
+            itself. That is the "carry" half done and the "display" half
+            missing. */}
+        <ComposedGapNotice gaps={workout.composedGaps ?? []} />
+
         {/* Session description (rare — usually null) */}
         {workout.description ? (
           <Text
@@ -1514,6 +1580,7 @@ export default function DayWorkoutScreenV2() {
         onRemoveToday={removeExerciseToday}
         onFutureScope={saveFutureExerciseAdjustment}
         onTodayOnly={closeFutureScopeTodayOnly}
+        onExclusionScope={applyExclusionScope}
       />
       <SessionEquipmentSheet
         visible={sessionEquipmentVisible}
@@ -1624,6 +1691,65 @@ function renderDayWorkoutSmokeContractMarkers(
  *   toggle for the curious athlete or QA — they're not removed, just
  *   hidden by default.
  */
+/**
+ * THE TYPED GAP THE ATHLETE ACTUALLY READS.
+ *
+ * Sam's approved Block Two contract, on an exclusion with no legal replacement:
+ * *"If the exclusion makes the pattern impossible, disclose the gap rather than
+ * restoring the exercise."* The composer has been producing that disclosure for
+ * weeks and it reached the workout, survived assembly and survived boot — and
+ * then stopped, because nothing rendered it.
+ *
+ * ⚠ **IT SPEAKS FOR BOTH CAUSES, AND THAT IS DELIBERATE.** Filtering to
+ * `cause === 'exclusion'` would leave a kit-caused hole exactly as silent as
+ * this one was, which is the same defect with a different owner. One renderer,
+ * one disclosure, and the SENTENCE branches on the cause — because the two have
+ * different answers: a kit gap is fixed by equipment, an exclusion gap only by
+ * the athlete restoring what they took out.
+ *
+ * No new colour token and no new font size — it borrows the coach-note banner's
+ * own styles, which are already on this screen.
+ */
+function ComposedGapNotice({ gaps }: { gaps: readonly ComposedGap[] }) {
+  if (gaps.length === 0) return null;
+  const excluded = gaps.filter((gap) => gap.cause === 'exclusion');
+  const kit = gaps.filter((gap) => gap.cause === 'kit');
+  const lines: string[] = [];
+  for (const gap of excluded) {
+    // NOT a bare `.map(displayExerciseName)` — `map` passes the INDEX as its
+    // second argument and that helper's second parameter is a fallback string.
+    const names = (gap.excludedHere ?? []).map((name) => displayExerciseName(name));
+    lines.push(names.length > 0
+      ? `No ${slotWordFor(gap.slot)} today — you've left ${listWords(names)} out. Restore it in My Status to get this back.`
+      : `No ${slotWordFor(gap.slot)} today — everything that trains it is currently left out.`);
+  }
+  for (const gap of kit) {
+    lines.push(gap.wouldNeed
+      ? `No ${slotWordFor(gap.slot)} today — that would need ${gap.wouldNeed}.`
+      : `No ${slotWordFor(gap.slot)} today — your kit can't train it.`);
+  }
+  return (
+    <View style={styles.coachNotesBanner} testID="composed-gap-notice">
+      <Text style={styles.coachNotesEyebrow}>WHAT'S MISSING</Text>
+      {lines.map((line) => (
+        <Text key={line} style={styles.coachNotesText} testID="composed-gap-line">
+          {line}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+/** A slot id in the athlete's words. Unknown slots fall back to their own id. */
+function slotWordFor(slot: string): string {
+  return String(slot).replace(/_/g, ' ');
+}
+
+function listWords(values: readonly string[]): string {
+  if (values.length === 1) return values[0];
+  return `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
+}
+
 function CoachNoteBanner({
   notes,
   workoutName,
@@ -2917,6 +3043,8 @@ interface ExerciseEditSheetProps {
   onRemoveToday: (exercise: EditableExercise) => void;
   onFutureScope: (step: FutureScopeStep) => void;
   onTodayOnly: () => void;
+  /** Sam's scope question, answered. Routed to the ONE exclusion transaction owner. */
+  onExclusionScope: (exercise: EditableExercise, scope: ExerciseExclusionScope) => void;
 }
 
 function ExerciseEditSheet({
@@ -2934,6 +3062,7 @@ function ExerciseEditSheet({
   onRemoveToday,
   onFutureScope,
   onTodayOnly,
+  onExclusionScope,
 }: ExerciseEditSheetProps) {
   if (!visible || step.kind === 'closed') return null;
 
@@ -2958,7 +3087,11 @@ function ExerciseEditSheet({
     onClose();
   };
 
-  const showBack = step.kind !== 'result';
+  // `exclusion_scope` HAS NO BACK, AND THAT IS NOT AN OVERSIGHT. Behind it is
+  // `confirm_remove` for a removal that has ALREADY HAPPENED — going "back"
+  // would offer to remove an exercise that is no longer in the session. The
+  // athlete leaves by answering, and every answer is reversible from My Status.
+  const showBack = step.kind !== 'result' && step.kind !== 'exclusion_scope';
 
   // TASK 8: the only door left in front of this picker starts from the
   // TOP of the page, where there is no exercise context yet — the injury
@@ -3119,14 +3252,6 @@ function ExerciseEditSheet({
       case 'future_scope':
         return (
           <>
-            {step.action === 'remove' ? (
-              <ExplorerRenderWitness
-                testID={explorerTestId.componentDeleteResult(
-                  sessionId,
-                  step.exercise.targetId ?? step.exercise.key,
-                )}
-              />
-            ) : null}
             <Text style={styles.exerciseEditBody}>{futureScopeBody(step)}</Text>
             <Text style={styles.exerciseEditQuestion}>
               Apply this change to future weeks?
@@ -3135,28 +3260,58 @@ function ExerciseEditSheet({
               label="Today only"
               sub="Keep this as a one-off change"
               icon={todayOnlyIcon(OPTION_ICON_ACCENT)}
-              testID={step.action === 'remove'
-                ? explorerTestId.componentDeleteScope(
-                    sessionId,
-                    step.exercise.targetId ?? step.exercise.key,
-                    'today',
-                  )
-                : undefined}
               onPress={onTodayOnly}
             />
             <ExerciseSheetOption
               label="Future weeks too"
               sub="Save this as an ongoing adjustment"
               icon={futureWeeksIcon(OPTION_ICON_ACCENT)}
-              testID={step.action === 'remove'
-                ? explorerTestId.componentDeleteScope(
-                    sessionId,
-                    step.exercise.targetId ?? step.exercise.key,
-                    'future',
-                  )
-                : undefined}
               onPress={() => onFutureScope(step)}
             />
+          </>
+        );
+      /* ── SAM'S SCOPE QUESTION, RENDERED FROM THE ONE VOCABULARY OWNER ──────
+       *
+       * The question, the three labels and the three explanations all come from
+       * `rules/exerciseExclusions`, which My Status reads too — a question
+       * worded two ways is two questions to the person answering it.
+       *
+       * The explorer test ids are the SAME ones the two-answer step carried, so
+       * the accessibility walk and the component-deletion trace keep addressing
+       * this control by the identity they already know. `'today'` still means
+       * "today only"; `'future'` is claimed by `until_changed`, the answer that
+       * replaced "Future weeks too"; and `'block'` is the new third id. */
+      case 'exclusion_scope':
+        return (
+          <>
+            <ExplorerRenderWitness
+              testID={explorerTestId.componentDeleteResult(
+                sessionId,
+                step.exercise.targetId ?? step.exercise.key,
+              )}
+            />
+            <Text style={styles.exerciseEditBody}>
+              {displayExerciseName(step.exercise.name)} was removed from today’s session.
+            </Text>
+            <Text style={styles.exerciseEditQuestion}>
+              {EXERCISE_EXCLUSION_QUESTION}
+            </Text>
+            {EXERCISE_EXCLUSION_SCOPES.map((scope) => (
+              <ExerciseSheetOption
+                key={scope}
+                label={EXERCISE_EXCLUSION_SCOPE_LABEL[scope]}
+                sub={EXERCISE_EXCLUSION_SCOPE_DETAIL[scope]}
+                icon={scope === 'today_only'
+                  ? todayOnlyIcon(OPTION_ICON_ACCENT)
+                  : futureWeeksIcon(OPTION_ICON_ACCENT)}
+                testID={explorerTestId.componentDeleteScope(
+                  sessionId,
+                  step.exercise.targetId ?? step.exercise.key,
+                  EXCLUSION_SCOPE_TEST_ID[scope],
+                )}
+                onPress={() => onExclusionScope(step.exercise, scope)}
+              />
+            ))}
           </>
         );
       case 'coach_fallback':
@@ -3239,8 +3394,9 @@ function exerciseEditTitle(step: ExerciseEditStep): string {
       return 'Swap exercise?';
     case 'confirm_add':
       return 'Add exercise?';
+    case 'exclusion_scope':
+      return 'Exercise removed';
     case 'future_scope':
-      if (step.action === 'remove') return 'Exercise removed';
       if (step.action === 'swap') return 'Exercise swapped';
       return 'Exercise added';
     case 'coach_fallback':
@@ -3267,6 +3423,8 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
       return step.addKind;
     case 'add_kind':
       return 'Add one exercise or small block, not another full session.';
+    case 'exclusion_scope':
+      return displayExerciseName(step.exercise.name);
     case 'future_scope':
       return 'Default is today only.';
     case 'coach_fallback':
@@ -3277,9 +3435,6 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
 }
 
 function futureScopeBody(step: FutureScopeStep): string {
-  if (step.action === 'remove') {
-    return `${displayExerciseName(step.exercise.name)} was removed from today’s session.`;
-  }
   if (step.action === 'swap') {
     return `${displayExerciseName(step.exercise.name)} was replaced with ${displayExerciseName(step.suggestion.name)} in today’s session.`;
   }

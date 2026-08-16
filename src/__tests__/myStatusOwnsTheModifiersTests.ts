@@ -102,8 +102,11 @@ function read(relative: string): string {
 // ── [1] EVERY KIND REACHES A DOOR ──────────────────────────────────────────
 
 run('My Status offers no dead controls — every modifier action has a route', () => {
-  assert(ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS.length === 8,
-    `the action vocabulary is ${ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS.length} kinds, not 8 — `
+  // 8 → 10 on 2026-08-16: Sam's approved Block Two contract adds "Change scope"
+  // and "Restore exercise" to My Status. The number stays hard-coded so a kind
+  // cannot be added without a reader coming back to this cell.
+  assert(ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS.length === 10,
+    `the action vocabulary is ${ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS.length} kinds, not 10 — `
     + 'a kind was added or removed and this cell has not been re-read');
   const dead: string[] = [];
   for (const kind of ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS) {
@@ -132,6 +135,13 @@ run('the routes are the day screen\'s own, not a second opinion', () => {
     restore_adjustment: 'clear_sheet',
     update_status: 'update_sheet',
     update_adjustment: 'update_sheet',
+    // BLOCK TWO. "Restore exercise" IS a clear — the same reading
+    // `restore_adjustment` above already carries. "Change scope" is the one
+    // kind that could NOT reuse an existing sheet: the update sheet asks "How
+    // are you feeling now?" with five readiness answers, and none of Sam's
+    // three exclusion scopes is on it.
+    restore_exclusion: 'clear_sheet',
+    change_exclusion_scope: 'exclusion_scope_sheet',
   };
   for (const kind of ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS) {
     const actual = coachNoteActionRoute({ kind, label: kind });

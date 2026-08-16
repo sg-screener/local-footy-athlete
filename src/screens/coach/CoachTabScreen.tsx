@@ -508,6 +508,7 @@ export default function CoachTabScreen({ route, navigation }: CoachTabScreenProp
         onClose={coachNoteActions.closeSheet}
         onConfirmClear={coachNoteActions.confirmClear}
         onUpdateStatus={coachNoteActions.updateStatus}
+        onChangeExclusionScope={coachNoteActions.changeExclusionScope}
       />
       <GuidedInjuryFlowSheet
         visible={coachNoteActions.injuryNote !== null}

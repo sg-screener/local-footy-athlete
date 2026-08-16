@@ -31,6 +31,19 @@ import { spacing } from '../theme/spacing';
 import type { ActiveCoachNote } from '../utils/activeCoachNotes';
 import type { ProgramControlStatusUpdate } from '../utils/programControlActions';
 import type { CoachNoteSheetState } from '../screens/coach/useCoachNoteActions';
+import {
+  EXERCISE_EXCLUSION_QUESTION,
+  EXERCISE_EXCLUSION_SCOPES,
+  EXERCISE_EXCLUSION_SCOPE_LABEL,
+  type ExerciseExclusionScope,
+} from '../rules/exerciseExclusions';
+
+/** Sam's three answers → the explorer's three ids. Same map the day screen uses. */
+const EXCLUSION_SCOPE_TEST_ID: Record<ExerciseExclusionScope, 'today' | 'block' | 'future'> = {
+  today_only: 'today',
+  this_block: 'block',
+  until_changed: 'future',
+};
 
 function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
   if (note.reversibleAdjustmentId) {
@@ -89,6 +102,14 @@ export interface CoachNoteSheetProps {
   onClose: () => void;
   onConfirmClear: () => void;
   onUpdateStatus: (status: ProgramControlStatusUpdate) => void;
+  /**
+   * SAM'S SCOPE QUESTION, ANSWERED FROM MY STATUS.
+   *
+   * Its answer goes to the SAME canonical transaction owner the day screen's
+   * removal flow uses, which is what makes "Change scope" update the one
+   * existing decision rather than mint a second exclusion beside it.
+   */
+  onChangeExclusionScope: (scope: ExerciseExclusionScope) => void;
 }
 
 export function CoachNoteSheet({
@@ -97,12 +118,20 @@ export function CoachNoteSheet({
   onClose,
   onConfirmClear,
   onUpdateStatus,
+  onChangeExclusionScope,
 }: CoachNoteSheetProps) {
   if (!state) return null;
 
   const copy = state.mode === 'clear'
     ? clearCopyForNote(state.note)
-    : updateCopyForNote(state.note);
+    : state.mode === 'exclusion_scope'
+      ? {
+          title: EXERCISE_EXCLUSION_QUESTION,
+          // The row's own sentence already says which exercise and what the
+          // current answer is; repeating it here would be a second, drifting copy.
+          body: state.note.body,
+        }
+      : updateCopyForNote(state.note);
   const clearAction = state.note.actions.find((action) => action.kind.startsWith('clear'));
   const isStatusUpdate = state.mode === 'update' && state.note.type === 'temporary_status';
   const injuryEpisodeId = state.note.injuryEpisodeId;
@@ -138,6 +167,34 @@ export function CoachNoteSheet({
                   ? explorerTestId.equipmentClear(sourceFactId)
                   : explorerTestId.readinessClearAction(sourceFactId)}
           />
+          <Button
+            label="Cancel"
+            variant="secondary"
+            size="md"
+            onPress={onClose}
+            style={{ marginTop: spacing.md }}
+          />
+        </>
+      ) : state.mode === 'exclusion_scope' ? (
+        <>
+          {/* THE THREE ANSWERS, FROM THE ONE VOCABULARY OWNER
+              (`rules/exerciseExclusions`) — the same constants the day screen's
+              removal sheet renders. Sam's contract asks one question in one
+              wording; two surfaces asking it differently is two questions. */}
+          {EXERCISE_EXCLUSION_SCOPES.map((scope, index) => (
+            <Button
+              key={scope}
+              label={EXERCISE_EXCLUSION_SCOPE_LABEL[scope]}
+              variant={index === 0 ? 'primary' : 'secondary'}
+              size={index === 0 ? 'lg' : 'md'}
+              onPress={() => onChangeExclusionScope(scope)}
+              testID={explorerTestId.exclusionScopeOption(
+                state.note.excludedExercise ?? state.note.constraintId,
+                EXCLUSION_SCOPE_TEST_ID[scope],
+              )}
+              style={index === 0 ? undefined : { marginTop: spacing.sm }}
+            />
+          ))}
           <Button
             label="Cancel"
             variant="secondary"

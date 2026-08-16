@@ -76,6 +76,7 @@ import {
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
+import { resolveWeekExclusions } from '../../rules/exerciseExclusions';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
 import { scheduleToCoachingPlan } from '../../rules/scheduleToCoachingPlan';
@@ -706,6 +707,28 @@ export class GeneratedWeekRefusedError extends Error {
   }
 }
 
+/**
+ * WHAT THE COMPOSER IS TOLD ABOUT EXCLUSIONS, BUILT IN ONE PLACE.
+ *
+ * The scoped decisions are the truth (`prefs.exclusions`). The legacy flat
+ * `excluded` array is still unioned in as a WEEK-WIDE set, because a caller may
+ * hand-build `athletePrefs` and never go near the store — tests, dev seeds and
+ * the coach path all do — and a hand-built list has always meant "out, full
+ * stop". Dropping it here would silently un-ban those athletes' exercises.
+ */
+function composerExclusionInput(
+  prefs: AthletePoolPrefsArg,
+  weekStartISO: string,
+): { excludedIdentities: readonly string[]; excludedIdentitiesByDate: Readonly<Record<string, readonly string[]>> } {
+  const resolved = resolveWeekExclusions(prefs?.exclusions, weekStartISO);
+  return {
+    excludedIdentities: [
+      ...new Set([...(prefs?.excluded ?? []), ...resolved.wholeWeek]),
+    ],
+    excludedIdentitiesByDate: resolved.byDate,
+  };
+}
+
 export function buildGeneratedMicrocycles(args: {
   coachWorkouts: CoachGeneratedWorkouts;
   plan: CoachingPlan;
@@ -984,7 +1007,18 @@ export function buildGeneratedMicrocycles(args: {
             // §18's OWN safety answer, not a second injury reading.
             prohibitedPatterns:
               weekPlan.weeklyExposureContractV2?.strengthPatterns.prohibitedPatterns ?? [],
-            excludedIdentities: args.athletePrefs?.excluded ?? [],
+            /* ── THE ATHLETE'S EXCLUSIONS, RESOLVED AGAINST THE WEEK BEING BUILT ──
+             *
+             * It used to be `args.athletePrefs?.excluded` — a flat list of names
+             * with no scope, applied to every week forever. Sam's approved
+             * contract gives the answer THREE spans and only one of them is
+             * week-wide, so a flat list can be right for at most one of them.
+             *
+             * `resolveWeekExclusions` splits the one predicate two ways: names
+             * out for the WHOLE week, and names out on PARTICULAR DAYS. A "today
+             * only" answer must not take the exercise out of Thursday's session
+             * as well, and this seam is where that stops happening. */
+            ...composerExclusionInput(args.athletePrefs, blockState.weekStart),
           },
       todayISO: blockState.weekStart,
     });
