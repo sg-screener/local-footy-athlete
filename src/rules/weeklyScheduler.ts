@@ -44,6 +44,7 @@ import {
   type ContractPhase,
   type MovementPattern,
   type OffseasonBlock,
+  type PhaseOverlay,
   type SessionPurpose,
   type SetBudget,
 } from './weeklyProgrammingContract';
@@ -677,8 +678,21 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // and neither was read by anything. A healthy no-club pre-season athlete was
   // authored two app exposures against the approved source's four.
   const overlay = overlayForPhase(inputs.phase, inputs.offseasonBlock);
+
+  // ⚠ **THE SPRINT IS DECIDED FIRST, AND IT IS SPENT FROM THE SAME BUDGET.**
+  // A sprint night IS a conditioning exposure — `demand.coreConditioning`
+  // counts it, and so does §18. Placing it after the budget had already been
+  // spent made it ADDITIVE: a no-club pre-season athlete with a fixture was
+  // authored three component exposures plus a standalone sprint plus the game,
+  // which is five against the overlay's target of four. The app is only ever
+  // meant to supply *"the remaining shortfall"*.
+  const plannedSprintDay = appSprintDay(inputs, overlay, new Set(purposeByDay.keys()));
   let appConditioningBudget = Math.max(
-    0, overlay.conditioningTarget.min - anchorConditioningDays);
+    0,
+    overlay.conditioningTarget.min
+      - anchorConditioningDays
+      - (plannedSprintDay === null ? 0 : 1),
+  );
 
   // ── WHICH DAYS MAY CARRY APP CONDITIONING AT ALL, DECIDED BEFORE THE LOOP ─
   //
@@ -710,7 +724,24 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // is chosen first and a lower day only if no upper day is legal. On a lower
   // day the exposure stays `off_leg`, which keeps *"prefer off-leg bike/row/ski/
   // air-bike conditioning with lower-body days"* true of the hard session too.
-  const hardQuality = hardConditioningQualityFor(overlay, inputs.miniCycleNumber);
+  // ── WC-136: THE THREE IN-SEASON SHAPES, AND THE READINESS FLOOR ──────────
+  //
+  // `requiresNoGameWeek` is what makes in-season *"maintain strength and
+  // conditioning while arriving fresh for the game"* into a rule rather than a
+  // blanket refusal. A normal in-season game week and a no-club game week both
+  // author no hard aerobic work (the no-club week still gets its SPRINT below);
+  // a healthy bye week does, and it stands in for the exposure the fixture
+  // would have supplied.
+  //
+  // **AND HARD WORK IS NEVER ADDED IN LOW READINESS, IN ANY PHASE.** The Block
+  // Two contract: *"Do not add sessions or load in this state."* Reducing the
+  // week is the readiness owner's job; this is only the refusal to ADD.
+  const weekAllowsHard =
+    (!overlay.hardConditioning.requiresNoGameWeek || inputs.gameDay === null)
+    && !inputs.readiness.lowReadiness;
+  const hardQuality = weekAllowsHard
+    ? hardConditioningQualityFor(overlay, inputs.miniCycleNumber)
+    : null;
   const hardEligible = conditioningDays.filter((day) => {
     if (inputs.gameDay === null) return true;
     if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
@@ -856,14 +887,20 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       });
     }
   }
-  // ── WC-135: THE IN-SEASON SPRINT, PLACED RATHER THAN ONLY DESCRIBED ──────
+  // ── WC-135/WC-124: THE APP SPRINT, IN EVERY PHASE THAT REQUIRES ONE ──────
   //
-  // *"In-season, only add sprint work when there is no club training, and place it
-  // G-3 or earlier."* **`inSeasonSprintDay` existed and nothing called it**, so the
-  // scheduler emitted no sprint under ANY conditions and the WC-135 guard was green
-  // because the thing it forbids could not happen. The mutation harness found it:
-  // flipping `addOnlyWhenNoClubTraining` to false reddened nothing.
-  const sprintDay = inSeasonSprintDay(inputs, new Set(purposeByDay.keys()));
+  // *"At least 1 except early off-season. Games and club training can supply it.
+  // In-season, only add sprint work when there is no club training, and place it
+  // G-3 or earlier."*
+  //
+  // The in-season half was placed here already; **pre-season and off-season were
+  // not, and `coachingEngine`'s post-validation "sprint rescue" was covering for
+  // them by OVERWRITING a conditioning slot this scheduler had authored.** That
+  // legacy authority is deleted in the same commit, so this call has to answer
+  // for every phase the overlay marks `sprintExposureRequired`.
+  // Decided above, before the conditioning budget was spent, so the sprint sits
+  // INSIDE the phase target rather than on top of it.
+  const sprintDay = plannedSprintDay;
   const withSprint = sprintDay === null ? days : days.map((entry) =>
     (entry.dayOfWeek === sprintDay && entry.owner === 'rest_or_recovery'
       ? { ...entry, owner: 'conditioning' as const,
@@ -982,8 +1019,9 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
  * G-3 or earlier."* Exported so the conditioning owner reads the contract rather
  * than restating it.
  */
-export function inSeasonSprintDay(
+export function appSprintDay(
   inputs: WeeklySchedulerInputs,
+  overlay: PhaseOverlay,
   /**
    * Days already holding app work. **A sprint must land on a FREE day** — the
    * first draft returned the first eligible weekday without asking, which was
@@ -992,10 +1030,26 @@ export function inSeasonSprintDay(
    */
   occupiedDays: ReadonlySet<number> = new Set(),
 ): number | null {
-  if (inputs.phase !== 'In-season') return null;
-  if (!INSEASON_SPRINT_RULE.addOnlyWhenNoClubTraining) return null;
+  // ── WC-124/WC-135, GENERALISED TO EVERY PHASE ────────────────────────────
+  //
+  // §3's sprint row is ONE rule, not an in-season one: *"At least 1 except
+  // early off-season. **Games and club training can supply it.** In-season,
+  // only add sprint work when there is no club training, and place it G-3 or
+  // earlier."*
+  //
+  // ⚠ **THIS FUNCTION USED TO REFUSE EVERY PHASE BUT IN-SEASON**, so the
+  // pre-season and off-season sprint had no owner here — and the thing that
+  // actually placed them was `coachingEngine`'s post-validation "sprint
+  // rescue", which took a conditioning slot the scheduler had already authored
+  // and OVERWROTE it. That is the legacy authority this mission removes, and
+  // it cannot be removed until this owner covers the phases it was covering.
+  //
+  // The club-training gate is the whole of the anchor test, deliberately: a
+  // GAME does not suppress the app sprint. Sam's approved source adds the
+  // in-season sprint on a no-club week that still has a fixture, and the
+  // placement rule below (G-3 or earlier) is what keeps that safe.
+  if (!overlay.sprintExposureRequired) return null;
   if (inputs.clubNights.length > 0) return null;
-  if (inputs.gameDay === null) return null;
   // LATEST legal day first: a sprint sits as close to G-3 as the week allows, so
   // it does not crowd the start of the week away from the game.
   //
@@ -1007,8 +1061,15 @@ export function inSeasonSprintDay(
   const eligible = WEEK_ORDER
     .filter((day) => !inputs.unavailableDays.includes(day))
     .filter((day) => !occupiedDays.has(day))
-    .filter((day) => !isGamePlusOne(day, inputs))
+    .filter((day) => inputs.gameDay !== day)
+    .filter((day) => !inputs.clubNights.includes(day))
+    // A NO-GAME WEEK HAS NO PROXIMITY TO RESPECT, so every free day is legal and
+    // the ordering below is a no-op. Guarding the whole function on a fixture —
+    // which the in-season-only version did — is what left a bye week, and every
+    // off-season week, with no sprint owner at all.
+    .filter((day) => (inputs.gameDay === null ? true : !isGamePlusOne(day, inputs)))
     .filter((day) => {
+      if (inputs.gameDay === null) return true;
       const until = untilGame(day);
       return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
     })

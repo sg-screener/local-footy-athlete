@@ -178,7 +178,7 @@ export const LEGALITY_RULES: readonly LegalityRule[] = [
   { clauseId: 'WC-048', enforcedElsewhere: 'composer daily movement ceiling' },
   { clauseId: 'WC-062', enforcedElsewhere: 'coachingInputsToSchedulerInputs — declared club nights only' },
   { clauseId: 'WC-110', enforcedElsewhere: 'WC-043 spacing above' },
-  { clauseId: 'WC-135', enforcedElsewhere: 'inSeasonSprintDay placement' },
+  { clauseId: 'WC-135', enforcedElsewhere: 'appSprintDay placement' },
 ];
 
 /**
