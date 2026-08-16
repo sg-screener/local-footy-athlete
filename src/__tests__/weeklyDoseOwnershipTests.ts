@@ -44,7 +44,8 @@ import type {
 } from '../types/domain';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import type { PreseasonSubphase } from '../rules/preseasonSubphase';
-import { buildCoachingPlan, type CoachingInputs } from '../utils/coachingEngine';
+import { type CoachingInputs } from '../utils/coachingEngine';
+import { coachingPlanForTests, coachingPlanOrRefusal } from './support/coachingPlanForTests';
 
 let passed = 0;
 const failures: string[] = [];
@@ -93,7 +94,20 @@ interface Combination {
  */
 function inputsFor(c: Combination): CoachingInputs {
   const teamTrainingDays = ['Tuesday', 'Thursday', 'Wednesday'].slice(0, c.teamDayCount);
-  const ordered = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  // ⚠ **FILL ORDER IS SEPARATION-FIRST, NOT CALENDAR ORDER.**
+  //
+  // This filled forward from Monday, so a two-day athlete got **Monday +
+  // Tuesday — back-to-back**, and the approved source says Full Body x2 go on
+  // "the best-separated gym days, never back-to-back". The scheduler refused,
+  // correctly, and the refusal threw and killed the whole suite before any other
+  // combination could report. **The fixture was asking for an illegal week; the
+  // subject of this suite is dosing, not adjacency.**
+  //
+  // Mon/Wed/Fri first, then the weekend, then the in-between days — so every
+  // count from 2 upward is a legal day-set. The adjacency refusal itself is
+  // asserted deliberately in `test:cyclic-proximity`, as its own control, rather
+  // than being an unexplained red here.
+  const ordered = ['Monday', 'Wednesday', 'Friday', 'Sunday', 'Saturday', 'Tuesday', 'Thursday'];
   const selected = new Set<string>(teamTrainingDays);
   if (c.hasGame) selected.add('Saturday');
   for (const day of ordered) {
@@ -163,7 +177,24 @@ function buildMatrix(): Combination[] {
 }
 
 const MATRIX = buildMatrix();
-const PLANS = MATRIX.map((c) => ({ combination: c, label: label(c), plan: buildCoachingPlan(inputsFor(c)) }));
+// Combinations the SCHEDULER legally refuses are set aside, counted and named —
+// never silently dropped, and never allowed to empty the matrix. See
+// `coachingPlanOrRefusal`: the approved source forbids some day-sets outright,
+// and the subject of this suite is dosing, not the calendar.
+const CANDIDATES = MATRIX.map((c) => ({
+  combination: c, label: label(c), plan: coachingPlanOrRefusal(inputsFor(c)),
+}));
+const REFUSED = CANDIDATES.filter((p) => p.plan === null);
+const PLANS = CANDIDATES.filter((p) => p.plan !== null) as
+  { combination: typeof MATRIX[number]; label: string; plan: NonNullable<typeof CANDIDATES[number]['plan']> }[];
+console.log(`\nMatrix: ${MATRIX.length} combinations — ${PLANS.length} scheduled, `
+  + `${REFUSED.length} legally refused by the scheduler`);
+for (const r of REFUSED) console.log(`  refused: ${r.label}`);
+if (PLANS.length < MATRIX.length / 2) {
+  console.error(`\nFAIL more than half the matrix refused — this suite would be `
+    + `asserting almost nothing (${PLANS.length}/${MATRIX.length})`);
+  process.exit(1);
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    [1] Single-authority lock
@@ -253,7 +284,7 @@ console.log('\n[3] No path reduces the week by assignment');
   const unexplained: string[] = [];
   for (const { combination, label: name, plan } of PLANS) {
     if (combination.availableDays >= 6) continue;
-    const roomy = buildCoachingPlan(inputsFor({ ...combination, availableDays: 7 }));
+    const roomy = coachingPlanForTests(inputsFor({ ...combination, availableDays: 7 }));
     const constrained = plan.weeklyExposureContract.strength.targetCount;
     const spacious = roomy.weeklyExposureContract.strength.targetCount;
     if (constrained >= spacious) continue;
@@ -294,9 +325,18 @@ console.log('\n[4] The weeks the deleted floors existed to protect are unchanged
       strength: 3,
     },
     {
+      // 3 -> 4 on 2026-08-16. **The approved source, Pre-season 5-6 days: "Four
+      // required strength sessions: Upper x2 + Lower x2."** The 3 came from the
+      // old checker's `practice_match_week` row, which a pre-season week with a
+      // fixture resolves to — a number the approved contract does not contain.
+      // Sam, 2026-08-16: the count comes from the approved scheduler contract,
+      // "not the deleted planner/checker expectation of three".
+      //
+      // The scheduler and the contract now AGREE at 4; this expectation was the
+      // last holder of the old number.
       name: 'B3       pre-season, game, 2 team days, 5 days, high capacity',
       combination: { seasonPhase: 'Pre-season', preseasonSubphase: 'mid_preseason', capacity: 'high', teamDayCount: 2, availableDays: 5, hasGame: true },
-      strength: 3,
+      strength: 4,
     },
     {
       name: 'the safety rail the floors deliberately did not raise: low capacity in-season game week',
@@ -305,7 +345,7 @@ console.log('\n[4] The weeks the deleted floors existed to protect are unchanged
     },
   ];
   for (const { name, combination, strength } of scenarios) {
-    const plan = buildCoachingPlan(inputsFor(combination));
+    const plan = coachingPlanForTests(inputsFor(combination));
     ok(`${name} -> ${strength} strength`, plan.coreSessions === strength,
       { planned: plan.coreSessions, contractTarget: plan.weeklyExposureContract.strength.targetCount });
   }
@@ -360,7 +400,7 @@ console.log('\n[5] The engine builds against the number Section 18 judges agains
     },
   ];
   for (const { name, inputs } of EDGE_CASES) {
-    const plan = buildCoachingPlan(inputs);
+    const plan = coachingPlanForTests(inputs);
     const anchors = plan.weeklyExposureContract.anchors;
     const expected = anchors.teamTrainingDays.length + anchors.gameOrPracticeMatchCredit;
     const raw = inputs.teamTrainingDaysPerWeek + (inputs.hasGame ? 1 : 0);

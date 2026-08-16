@@ -14,7 +14,7 @@
  * the composed day, and **no warm-up abstraction is built to represent nothing** —
  * the zero is measured and reported instead.
  */
-import type { Workout } from '../types/domain';
+import type { AuthoredDayIdentity, Workout } from '../types/domain';
 
 /** Where a non-composer row or block came from. Never "it fills no ladder slot". */
 export type RetainedAdapterOwner = 'conditioning_adapter' | 'warmup_adapter' | 'planner_day';
@@ -110,6 +110,15 @@ export interface AdapterContribution {
   readonly speedBlock?: unknown;
   /** The team-training anchor fact about the day. */
   readonly isTeamDay?: boolean;
+  /**
+   * THE SCHEDULER'S TYPED DAY IDENTITY, as the adapter stamped it.
+   *
+   * It is a contribution rather than something read off the composer's day
+   * because **the composer only ever authors the strength half** — it does not
+   * know the day is a club night or the fixture. The adapter does, and this is
+   * the channel by which it says so without also handing over the whole day.
+   */
+  readonly authoredDay?: AuthoredDayIdentity;
   /** Typed lifecycle ownership for derived sessions. */
   readonly derivedSessionProvenance?: unknown;
   /** The PLANNER's declared strength intent; the composer emits none. */
@@ -125,10 +134,32 @@ export interface AdapterContribution {
 /** THE ONLY FIELDS AN ADAPTER CONTRIBUTION MAY NAME. */
 const ADAPTER_CONTRIBUTED_FIELDS: readonly string[] = [
   'conditioningBlock', 'conditioningCategory', 'conditioningFlavour',
+  // ⚠ `conditioningOffFeet` was ABSENT from this list, so the merge silently
+  // dropped it on every composer day: the scheduler typed `off_leg` (WC-115,
+  // lower + conditioning), the adapter stamped it, and the athlete's week said
+  // `undefined`. The other conditioning fields were all here — it is the one
+  // that says the block is deliberately OFF THE LEGS, which on a lower day is
+  // the whole point of pairing it.
+  'conditioningOffFeet',
   'attachedConditioningKind', 'conditioningFeasibility', 'hasCombinedConditioning',
   'speedBlock', 'isTeamDay', 'derivedSessionProvenance', 'strengthIntent',
-  'section18Evidence', 'durationMinutes',
+  'section18Evidence', 'durationMinutes', 'authoredDay',
 ];
+
+/**
+ * The workout type an ANCHOR forces, or null when the day carries no anchor.
+ *
+ * Only the anchor is answered here. What a non-anchor day should be called
+ * depends on what got merged onto it, and that is the merge's business — this
+ * function exists solely to say "not yours to rename".
+ */
+function anchorWorkoutType(
+  authored: AuthoredDayIdentity | undefined,
+): 'Game' | 'Team Training' | null {
+  if (authored?.anchor === 'game') return 'Game';
+  if (authored?.anchor === 'club_training') return 'Team Training';
+  return null;
+}
 
 /**
  * Read the adapter's day down to what it is ALLOWED to give. Everything else
@@ -198,7 +229,32 @@ function applyContribution(composed: Workout, contribution: AdapterContribution)
     // identity: `programHydrationProjection` retypes such a day at the store
     // boundary regardless, and leaving the composer's `Strength` here made
     // generation and relaunch disagree on exactly one field.
-    workoutType: fields.conditioningBlock ? 'Mixed' : composed.workoutType,
+    // ── AN ANCHOR'S IDENTITY IS NOT THE MERGE'S TO CHANGE ──────────────────
+    //
+    // **Sam, 2026-08-15:** *"anchors pass through unchanged"* / *"no layer
+    // replaces an entire scheduler-authored day"*.
+    //
+    // The line below used to be the whole answer, and it is the reason a club
+    // night reached the athlete as "Mixed": the composer had authored strength
+    // on the same day, the adapter had correctly built it as the club anchor,
+    // and the merge — knowing only that the day now held two things — retyped
+    // it. **Adding gym work to a club night does not stop it being a club
+    // night.** So when the day's owner declared an anchor, that answer stands
+    // and the combined typing applies only below it.
+    //
+    // Read off the TYPED identity the adapter stamped, never off the workout's
+    // name or type string — matching on "Team Training" would fix exactly the
+    // days that happen to be spelled that way.
+    workoutType: anchorWorkoutType(contribution.authoredDay)
+      ?? (fields.conditioningBlock ? 'Mixed' : composed.workoutType),
+    // THE NAME IS PART OF THE IDENTITY, and it was being lost separately: the
+    // fixture reached the athlete typed `Game` and NAMED "Strength Session",
+    // and a club night was named with the composer's raw purpose token. The
+    // athlete reads the name, so an anchor whose name says something else is
+    // still a lost anchor. Same typed source, so the two cannot disagree.
+    name: anchorWorkoutType(contribution.authoredDay) ?? composed.name,
+    // Carried so the same defence still has something to read after assembly.
+    ...(contribution.authoredDay ? { authoredDay: contribution.authoredDay } : {}),
     exercises,
   } as Workout;
 }

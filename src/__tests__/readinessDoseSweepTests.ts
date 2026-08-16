@@ -42,7 +42,8 @@ import type {
 } from '../types/domain';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import type { PreseasonSubphase } from '../rules/preseasonSubphase';
-import { buildCoachingPlan, type CoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
+import { type CoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
+import { coachingPlanForTests, coachingPlanOrRefusal } from './support/coachingPlanForTests';
 import { decidePowerPrimer } from '../rules/powerPrimerPolicy';
 import { DELOAD_LAW, deloadPowerDose } from '../rules/deloadWeekRules';
 import { getOffseasonSubphasePolicy } from '../rules/offseasonSubphasePolicy';
@@ -95,7 +96,20 @@ interface Combination {
 
 function inputsFor(c: Combination): CoachingInputs {
   const teamTrainingDays = ['Tuesday', 'Thursday', 'Wednesday'].slice(0, c.teamDayCount);
-  const ordered = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  // ⚠ **FILL ORDER IS SEPARATION-FIRST, NOT CALENDAR ORDER.**
+  //
+  // This filled forward from Monday, so a two-day athlete got **Monday +
+  // Tuesday — back-to-back**, and the approved source says Full Body x2 go on
+  // "the best-separated gym days, never back-to-back". The scheduler refused,
+  // correctly, and the refusal threw and killed the whole suite before any other
+  // combination could report. **The fixture was asking for an illegal week; the
+  // subject of this suite is dosing, not adjacency.**
+  //
+  // Mon/Wed/Fri first, then the weekend, then the in-between days — so every
+  // count from 2 upward is a legal day-set. The adjacency refusal itself is
+  // asserted deliberately in `test:cyclic-proximity`, as its own control, rather
+  // than being an unexplained red here.
+  const ordered = ['Monday', 'Wednesday', 'Friday', 'Sunday', 'Saturday', 'Tuesday', 'Thursday'];
   const selected = new Set<string>(teamTrainingDays);
   if (c.hasGame) selected.add('Saturday');
   for (const day of ordered) {
@@ -593,10 +607,20 @@ console.log('\n[5] Bye recovery is schedule-triggered, and only the mode decides
 console.log('\n[6] The same week at low capacity has the same structure');
 {
   const differences: string[] = [];
+  // A shape the scheduler legally refuses at one capacity cannot be compared
+  // across capacities — there is no week on that arm. Skipped, counted, and
+  // floored below so the comparison cannot quietly become vacuous.
+  let comparedShapes = 0;
+  let refusedShapes = 0;
   for (const shape of weekShapes()) {
-    const reference = structureOf(buildCoachingPlan(inputsFor({ ...shape, capacity: 'medium' })));
+    const referencePlan = coachingPlanOrRefusal(inputsFor({ ...shape, capacity: 'medium' }));
+    if (referencePlan === null) { refusedShapes += 1; continue; }
+    const reference = structureOf(referencePlan);
+    comparedShapes += 1;
     for (const capacity of ['low', 'high'] as const) {
-      const actual = structureOf(buildCoachingPlan(inputsFor({ ...shape, capacity })));
+      const actualPlan = coachingPlanOrRefusal(inputsFor({ ...shape, capacity }));
+      if (actualPlan === null) { refusedShapes += 1; continue; }
+      const actual = structureOf(actualPlan);
       for (const key of Object.keys(reference)) {
         if (reference[key] !== actual[key]) {
           differences.push(`${label(shape as Combination)} @${capacity}: ${key} ${reference[key]} -> ${actual[key]}`);
@@ -661,8 +685,13 @@ console.log('\n[7] Low capacity still shrinks the work it is allowed to shrink')
     availableDays: 5,
     hasGame: false,
   };
-  const low = buildCoachingPlan(inputsFor({ ...shape, capacity: 'low' }));
-  const high = buildCoachingPlan(inputsFor({ ...shape, capacity: 'high' }));
+  const low = coachingPlanOrRefusal(inputsFor({ ...shape, capacity: 'low' }));
+  const high = coachingPlanOrRefusal(inputsFor({ ...shape, capacity: 'high' }));
+  // This named shape is the point of the section; a refusal here is a FAILURE,
+  // not something to skip past.
+  ok('the off-season reference shape schedules at both capacities',
+    low !== null && high !== null, { low: low === null, high: high === null });
+  if (low === null || high === null) throw new Error('reference shape refused');
 
   ok('low capacity resolves to the low capacity band', low.capacity === 'low', low.capacity);
   ok('high capacity resolves to the high capacity band', high.capacity === 'high', high.capacity);

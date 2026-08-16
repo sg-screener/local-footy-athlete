@@ -186,12 +186,30 @@ export const READINESS_EDGE_CENSUS: readonly ReadinessEdgeSite[] = [
 
   /* ── Dose: the sweep's survivors, each with the reason it survived ── */
   {
-    file: 'utils/coachingEngine.ts',
-    edges: 8,
+    file: 'rules/scheduleToCoachingPlan.ts',
+    edges: 2,
     verdict: 'dose',
-    what: 'Off-feet modality forcing for aerobic and standalone tempo (x3), intensity '
-      + 'back-off to easy aerobic for tempo and hard conditioning (x3), the '
-      + '`conditioningLoading: \'moderate\'` prompt hint, and the ramp-up note.',
+    what: 'Low capacity moderates the conditioning loading and asks for a ramp-up.',
+    disposition: 'These are the SAME two edges deleted from `buildAIConstraints` with the '
+      + 'legacy planner — re-homed onto the connector, not new. They were hardcoded to '
+      + '`full`/`false` when the connector was written, which silently dropped both; '
+      + '`test:readiness-dose-sweep` found it once it was re-pointed at the live '
+      + 'producer. Dose only: capacity changes the loading, never the week\'s shape.',
+  },
+  {
+    file: 'utils/coachingEngine.ts',
+    // 8 -> 6 on 2026-08-16. **Reclassified, not retuned**, which is what the
+    // guard demands: the two that went were the `conditioningLoading: 'moderate'`
+    // prompt hint and the ramp-up note, and BOTH lived inside `buildAIConstraints`
+    // — deleted whole with the legacy weekly planner. Neither was moved, reworded
+    // or re-homed; the AI-constraints surface they wrote to no longer exists.
+    // The six that remain are unchanged and still dose-only.
+    edges: 6,
+    verdict: 'dose',
+    what: 'Off-feet modality forcing for aerobic and standalone tempo (x3) and intensity '
+      + 'back-off to easy aerobic for tempo and hard conditioning (x3). The '
+      + '`conditioningLoading: \'moderate\'` prompt hint and the ramp-up note were '
+      + 'deleted with `buildAIConstraints`.',
     disposition: 'Every one of these keeps the session and changes its size, intensity or '
       + 'modality. The ten structure edges that stood beside them are gone: three sprint '
       + 'blocks, the early off-season conditioning target and its floor, the combined-day '

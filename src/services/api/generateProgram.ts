@@ -14,7 +14,6 @@ import {
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingInputs,
   type CoachingPlan,
@@ -61,6 +60,14 @@ import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContra
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
+import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
+import { scheduleToCoachingPlan } from '../../rules/scheduleToCoachingPlan';
+import { materialiseAuthoredSessions } from '../../rules/materialiseAuthoredSessions';
+import { calculateCapacity } from '../../utils/coachingEngine';
+import { resolveTrainingAgePolicy } from '../../rules/trainingAgePolicy';
+import type { OffseasonSubphase } from '../../rules/offseasonSubphase';
+import { scheduleRefused, scheduleWeek } from '../../rules/weeklyScheduler';
+import { WeeklyScheduleRefusedError, ageFromRange, offseasonBlockFrom, weeklySchedulerInputsFrom } from '../../rules/weeklySchedulerInputs';
 // THE DELOAD OWNER, READ NOT REIMPLEMENTED — the same two resolvers the
 // retained adapter uses, so a composed week answers to one table and not a
 // second copy of it.
@@ -445,20 +452,113 @@ export function buildInitialGeneratedCoachingPlan(args: {
     seasonPhase: args.profile.seasonPhase,
     seasonPhaseClock: args.seasonPhaseClock,
   });
-  if (!firstState) return buildCoachingPlan(args.coachingInputs);
-  return buildCoachingPlan({
-    ...args.coachingInputs,
-    miniCycleNumber: firstState.miniCycleNumber,
-    weekInBlock: firstState.weekInBlock,
-    weekNumber: firstState.weekNumber,
-    weekKind: firstState.weekKind,
-    phaseWeekNumber: firstState.phaseWeekNumber,
-    phaseEntryWeekStartISO: firstState.phaseClock.phaseEntryWeekStartISO,
-    phaseClockSelectedPhase: firstState.phaseClock.selectedPhase,
-    phaseClockProvenance: firstState.phaseResolution.provenance,
-    offseasonSubphase: firstState.phaseResolution.offseasonSubphase ?? undefined,
-    preseasonSubphase: firstState.phaseResolution.preseasonSubphase ?? undefined,
+  // ── THE SECOND PRODUCER CUTOVER ─────────────────────────────────────────
+  //
+  // This built the plan with `buildCoachingPlan` and was **180 of the corpus's 572
+  // legacy-planner executions** — one per generated world. It now builds the same
+  // `CoachingPlan` shape from the scheduler, the specialists and the connector,
+  // exactly as `buildGeneratedMicrocycles` does.
+  const inputs = args.coachingInputs;
+  const weekStartISO = firstState?.weekStart ?? blockStart;
+  const schedInputs = coachingInputsToSchedulerInputs(inputs, {
+    weekStartISO,
+    offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
   });
+  const sched = scheduleWeek(schedInputs);
+  if (scheduleRefused(sched)) throw new WeeklyScheduleRefusedError(sched);
+  const { level: capacity, factors } = calculateCapacity(inputs);
+  const agePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
+  const materialised = materialiseAuthoredSessions({
+    schedule: sched,
+    facts: {
+      weekStartISO,
+      miniCycleNumber: firstState?.miniCycleNumber,
+      capacity,
+      isBeginner: agePolicy.level === 'new',
+      experienced: agePolicy.level !== 'new',
+      powerGoalNudge: false,
+      injuries: (inputs.injuries ?? []) as never,
+      runOnly: false,
+      phase: inputs.seasonPhase as never,
+      offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
+    },
+    gameDay: schedInputs.gameDay,
+  });
+  return scheduleToCoachingPlan({
+    schedule: sched,
+    materialised,
+    coachingInputs: inputs,
+    capacity,
+    capacityFactors: factors,
+    offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? undefined,
+    preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? undefined,
+    section18Identity: {
+      seasonPhase: inputs.seasonPhase,
+      blockNumber: firstState?.miniCycleNumber ?? null,
+      weekInBlock: firstState?.weekInBlock ?? null,
+      globalWeek: firstState?.weekNumber ?? null,
+      phaseWeek: firstState?.phaseWeekNumber ?? null,
+      phaseEntryWeekStartISO: firstState?.phaseClock.phaseEntryWeekStartISO ?? null,
+      phaseClockSelectedPhase: firstState?.phaseClock.selectedPhase ?? null,
+      phaseWeekProvenance: firstState?.phaseResolution.provenance ?? 'legacy_unknown',
+      weekKind: firstState?.weekKind,
+      participationProvenance: 'derived_healthy_unrestricted',
+      currentProductionClaimsAnchorCredit: true,
+    } as never,
+    clubNights: schedInputs.clubNights,
+    gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
+    v1Input: {
+      seasonPhase: inputs.seasonPhase,
+      capacity,
+      selectedDayNumbers: [...schedInputs.gymAccessDays],
+      teamTrainingDayNumbers: [...schedInputs.clubNights],
+      hasGame: schedInputs.gameDay !== null,
+      gameDay: schedInputs.gameDay,
+      weekKind: firstState?.weekKind,
+      offseasonSubphase: firstState?.phaseResolution.offseasonSubphase ?? null,
+      preseasonSubphase: firstState?.phaseResolution.preseasonSubphase ?? null,
+      readinessDeloaded: inputs.generationConstraints?.readiness?.deloaded === true,
+      maxStrengthSessions: agePolicy.maxCoreSessions,
+      profileInjuries: inputs.injuries ?? [],
+      activeInjuries: inputs.generationConstraints?.injuries,
+      byeMode: inputs.byeMode,
+      weekModeOverride: inputs.generationConstraints?.weekMode,
+    } as never,
+  });
+}
+
+const SCHED_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+  'Friday', 'Saturday'];
+
+/** `CoachingInputs` → scheduler inputs. Translation only, no decisions. */
+function coachingInputsToSchedulerInputs(
+  inputs: CoachingInputs,
+  args: { weekStartISO: string; offseasonSubphase: OffseasonSubphase | null },
+) {
+  const toNumber = (name: unknown): number | null => {
+    const index = SCHED_DAY_NAMES.indexOf(String(name ?? ''));
+    return index < 0 ? null : index;
+  };
+  const nums = (list: readonly unknown[] | undefined): number[] =>
+    (list ?? []).map(toNumber).filter((n): n is number => n !== null);
+  return {
+    weekStartISO: args.weekStartISO,
+    phase: inputs.seasonPhase as never,
+    offseasonBlock: offseasonBlockFrom(args.offseasonSubphase),
+    gymAccessDays: nums(inputs.selectedDays),
+    clubNights: nums(inputs.teamTrainingDays),
+    gameDay: inputs.hasGame ? toNumber(inputs.gameDay) : null,
+    // **ALWAYS RECURRING.** `hasGame` + a usual game day means there was a
+    // fixture last week too, so a Sunday game makes Monday G+1. Nothing in
+    // `CoachingInputs` can say "first fixture ever", so nothing here claims it.
+    fixtureRecurrence: 'recurring' as const,
+    age: ageFromRange((inputs as { ageRange?: never }).ageRange),
+    readiness: {
+      lowReadiness: inputs.generationConstraints?.readiness?.deloaded === true,
+      highReadiness: false, lowFatigue: false, consistentlyCompletesThree: false,
+    },
+    unavailableDays: [] as number[],
+  };
 }
 
 /**
@@ -679,28 +779,98 @@ export function buildGeneratedMicrocycles(args: {
     // skeleton (days, counts, planned patterns) and conditioning is untouched.
     // A world the composer cannot build now FAILS LOUDLY. It is never answered
     // by the legacy builder.
-    const allocatedWeekPlan = args.coachingInputs
-      ? buildCoachingPlan({
-          ...args.coachingInputs,
-          // Clause (a), route-scoped: the contract derives its required-pattern
-          // set from the planner's own answer and this kit, not from ALL_PATTERNS.
-          composedRoute: { kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags) },
-          generationConstraints,
-          injuries: profile.injuries ?? [],
-          appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
-          conditioningSubstitutionPolicy: substitutionPolicy,
+    // ══ THE PRODUCER CUTOVER ═══════════════════════════════════════════════
+    //
+    // `buildCoachingPlan` used to fill `CoachingPlan` here. **The scheduler and
+    // the specialists fill it now**, through the pure connector. The SHAPE is
+    // unchanged — the adapter, the §18 gateway, the store and the coach all read
+    // it and none of them moved.
+    //
+    // Order matters and is the whole point: SCHEDULE first (it owns existence,
+    // count, purpose, weekday, hard/rest and spacing), then MATERIALISE (the
+    // specialists fill content into days they cannot change), then CONNECT
+    // (translation only). The old order asked the planner first and let the
+    // scheduler disagree with it afterwards.
+    const cutoverInputs = args.coachingInputs;
+    let allocatedWeekPlan: CoachingPlan;
+    if (cutoverInputs) {
+      const schedInputs = weeklySchedulerInputsFrom({
+        profile,
+        weekStartISO: blockState.weekStart,
+        offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+        generationConstraints,
+        activeConstraints: args.activeConstraints ?? [],
+        exposureContract: null,
+      });
+      const sched = scheduleWeek(schedInputs);
+      if (scheduleRefused(sched)) throw new WeeklyScheduleRefusedError(sched);
+      const { level: cutoverCapacity, factors: cutoverFactors } =
+        calculateCapacity(cutoverInputs);
+      const materialised = materialiseAuthoredSessions({
+        schedule: sched,
+        facts: {
+          weekStartISO: blockState.weekStart,
           miniCycleNumber: blockState.miniCycleNumber,
-          weekInBlock: blockState.weekInBlock,
-          weekNumber: blockState.weekNumber,
+          capacity: cutoverCapacity,
+          isBeginner: resolveTrainingAgePolicy(cutoverInputs.experienceLevel).level === 'new',
+          experienced: resolveTrainingAgePolicy(cutoverInputs.experienceLevel).level !== 'new',
+          powerGoalNudge: false,
+          injuries: (profile.injuries ?? []) as never,
+          availableMachines: undefined,
+          runOnly: false,
+          phase: profile.seasonPhase as never,
+          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+        },
+        gameDay: schedInputs.gameDay,
+      });
+      allocatedWeekPlan = scheduleToCoachingPlan({
+        schedule: sched,
+        materialised,
+        coachingInputs: cutoverInputs,
+        capacity: cutoverCapacity,
+        capacityFactors: cutoverFactors,
+        offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
+        preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
+        section18Identity: {
+          seasonPhase: profile.seasonPhase as never,
+          blockNumber: blockState.miniCycleNumber ?? null,
+          weekInBlock: blockState.weekInBlock ?? null,
+          globalWeek: blockState.weekNumber ?? null,
+          phaseWeek: blockState.phaseWeekNumber ?? null,
+          phaseEntryWeekStartISO: blockState.phaseClock.phaseEntryWeekStartISO ?? null,
+          phaseClockSelectedPhase: blockState.phaseClock.selectedPhase ?? null,
+          phaseWeekProvenance: blockState.phaseResolution.provenance ?? 'legacy_unknown',
           weekKind: effectiveWeekKind,
-          phaseWeekNumber: blockState.phaseWeekNumber,
-          phaseEntryWeekStartISO: blockState.phaseClock.phaseEntryWeekStartISO,
-          phaseClockSelectedPhase: blockState.phaseClock.selectedPhase,
-          phaseClockProvenance: blockState.phaseResolution.provenance,
-          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
-          preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
-        })
-      : args.plan;
+          participationProvenance: 'derived_healthy_unrestricted',
+          currentProductionClaimsAnchorCredit: true,
+          kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags),
+        } as never,
+        clubNights: schedInputs.clubNights,
+        gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
+        v1Input: {
+          seasonPhase: profile.seasonPhase,
+          capacity: cutoverCapacity,
+          selectedDayNumbers: [...schedInputs.gymAccessDays],
+          teamTrainingDayNumbers: [...schedInputs.clubNights],
+          hasGame: schedInputs.gameDay !== null,
+          gameDay: schedInputs.gameDay,
+          weekKind: effectiveWeekKind,
+          offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+          preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? null,
+          readinessDeloaded: generationConstraints?.readiness?.deloaded === true,
+          maxStrengthSessions:
+            resolveTrainingAgePolicy(cutoverInputs.experienceLevel).maxCoreSessions,
+          appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
+          attemptedConditioningSubstitutions: substitutionPolicy.consideredSubstitutions,
+          profileInjuries: profile.injuries ?? [],
+          activeInjuries: generationConstraints?.injuries,
+          byeMode: cutoverInputs.byeMode,
+          weekModeOverride: generationConstraints?.weekMode,
+        } as never,
+      });
+    } else {
+      allocatedWeekPlan = args.plan;
+    }
     const weekPlan: CoachingPlan = {
       ...allocatedWeekPlan,
       weeklyPlan: resolveWeeklyConditioningFeasibility(
@@ -718,13 +888,57 @@ export function buildGeneratedMicrocycles(args: {
     // An edge response describes exactly the block state sent in its prompt:
     // week 1. Never replay that single array against week 2-4 allocations.
     // Later weeks use their own deterministic plan/fallback content.
+    // ── THE CUTOVER: THE APPROVED CONTRACT OWNS COUNT, PURPOSE AND WEEKDAY ──
+    //
+    // `composedPlannedDaysFrom(weekPlan.weeklyPlan)` read the LEGACY PLANNER's
+    // allocation. The contract's §1 target is one owner — *"ONE approved weekly
+    // contract -> ONE weekly scheduler -> composition"* — so the composer's
+    // planned days now come from `scheduleWeek`, and no later layer may change
+    // the session count, purpose or weekday it chose.
+    //
+    // **THE PLANNER STILL RUNS, AND STILL OWNS WHAT THE CONTRACT DOES NOT.**
+    // Conditioning content, warm-ups and the §18 exposure contract are its work;
+    // the contract explicitly does not own exercise selection or dose. What it
+    // no longer owns is WHICH DAYS carry strength and WHAT THOSE SESSIONS ARE.
+    const schedulerInputs = weeklySchedulerInputsFrom({
+      profile,
+      weekStartISO: blockState.weekStart,
+      offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
+      generationConstraints,
+      activeConstraints: args.activeConstraints ?? [],
+      exposureContract: weekPlan.weeklyExposureContractV2 ?? null,
+    });
+    const scheduled = scheduleWeek(schedulerInputs);
+    if (scheduleRefused(scheduled)) {
+      // A schedule that cannot be built is a TYPED REFUSAL, never a quietly
+      // smaller week. It is thrown here so the same acceptance path that handles
+      // a refused generated week handles this one.
+      throw new WeeklyScheduleRefusedError(scheduled);
+    }
+    // The planner's own names and tiers, by weekday, so a composed day keeps the
+    // athlete-facing label it already had where the two agree on the day.
+    const plannerNameByDay: Record<number, string> = {};
+    const plannerTierByDay: Record<number, string> = {};
+    for (const entry of weekPlan.weeklyPlan) {
+      const dayNumber = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+        'Friday', 'Saturday'].indexOf(String(entry.dayOfWeek ?? ''));
+      if (dayNumber < 0) continue;
+      if (entry.focus) plannerNameByDay[dayNumber] = String(entry.focus);
+      if (entry.tier) plannerTierByDay[dayNumber] = String(entry.tier);
+    }
+    const schedulerOwnedPlannedDays = schedulerPlannedDays({
+      weekStartISO: blockState.weekStart,
+      days: scheduled.days,
+      nameByDayOfWeek: plannerNameByDay,
+      tierByDayOfWeek: plannerTierByDay,
+    });
     const composedWeek = composeWeek({
           profile,
           phaseClock: { weekNumber: blockState.weekNumber },
           // B1-M1: the phase the DOSE is resolved against, before authorship.
           seasonPhase: profile.seasonPhase as never,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
-          plannedDays: composedPlannedDaysFrom(weekPlan.weeklyPlan),
+          plannedDays: schedulerOwnedPlannedDays,
           kit: equipment.tags,
           injuries: {
             // §18's OWN safety answer, not a second injury reading.
@@ -739,7 +953,25 @@ export function buildGeneratedMicrocycles(args: {
     // still receives the COMPLETE planner week — this app hangs conditioning,
     // running and sprint work off the strength days — and is simply told which
     // days' STRENGTH the composer owns, so it authors no lifts there.
-    const composedStrengthDays = composedWeek.days.map((day) => day.dayOfWeek);
+    // ── EVERY STRENGTH DAY THE LEGACY BUILDER MUST STAND DOWN ON ────────────
+    //
+    // The composer's OWN days, **plus every day the planner still marks as
+    // strength.** Once the scheduler owns the weekday, the planner's allocation
+    // can name a day the scheduler did not choose — and that orphaned entry fell
+    // through to the severed legacy builder, which throws by design.
+    //
+    // Measured: 6 worlds died exactly that way
+    // (`B1-PIVOT: the legacy strength-content builder is severed`). **Strength is
+    // the composer's, on every day, so the stand-down list is the union** — not
+    // a fallback, not a repair: the legacy builder authors no lifts anywhere.
+    const plannerStrengthDays = weekPlan.weeklyPlan
+      .map((entry) => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+        'Friday', 'Saturday'].indexOf(String(entry.dayOfWeek ?? '')))
+      .filter((day) => day >= 0);
+    const composedStrengthDays = [...new Set([
+      ...composedWeek.days.map((day) => day.dayOfWeek),
+      ...plannerStrengthDays,
+    ])];
     const sourceCoachWorkouts: CoachGeneratedWorkoutInput[] = [];
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     // The governed boundary, when it falls inside THIS week. Days before it are
@@ -891,13 +1123,45 @@ export function buildGeneratedMicrocycles(args: {
       const validation = validateGeneratedWeek({
         workouts,
         contract: generatedContract,
-        anchors: (exposureContractV2.anchors ?? []).map((anchor) => ({
-          dayOfWeek: anchor.dayOfWeek,
-          participation: String(anchor.participation ?? ''),
-          // "Was the athlete there?" — the two states that mean no.
-          attended: anchor.participation !== 'did_not_participate'
-            && anchor.participation !== 'unknown',
-        })),
+        // ── WHAT AN ANCHOR IS WORTH BEFORE IT HAS HAPPENED ─────────────────
+        //
+        // **Sam, 2026-08-15:** *"conditioning/sprint credit supplied by those
+        // visible anchors"*.
+        //
+        // A club night or a fixture the athlete has not attended yet carries
+        // `participation: 'unknown'` — nobody has reported anything, because the
+        // week is being AUTHORED. Read literally that means no credit, so a week
+        // whose high-speed running is entirely supplied by two club nights and a
+        // game was refused for having no sprint in it. The app's own contract
+        // then had no legal way to satisfy the minimum either: the approved
+        // source forbids ADDING sprint work on a club-training week.
+        //
+        // The contract already records what generation knows, on the anchor
+        // itself: `participationProvenance: 'derived_healthy_unrestricted'` —
+        // *"we derived that this athlete is healthy and unrestricted"*. That is
+        // the plan's stated assumption, and a plan is authored on it. So a
+        // DERIVED-healthy anchor participates normally for the purposes of
+        // judging the week we are about to hand over.
+        //
+        // ⚠ It is not promoted to `explicit`, and nothing here is written back.
+        // `explicit` means the ATHLETE said so, and the safety boundary treats
+        // it very differently; a derived assumption that laundered itself into a
+        // reported fact would be the worse defect by far. The moment a real
+        // participation fact exists it is not derived any more, and it wins.
+        anchors: (exposureContractV2.anchors ?? []).map((anchor) => {
+          const derivedHealthy = anchor.participation === 'unknown'
+            && anchor.participationProvenance === 'derived_healthy_unrestricted';
+          const participation = derivedHealthy
+            ? 'normal_unrestricted'
+            : String(anchor.participation ?? '');
+          return {
+            dayOfWeek: anchor.dayOfWeek,
+            participation,
+            // "Was the athlete there?" — the two states that mean no.
+            attended: participation !== 'did_not_participate'
+              && participation !== 'unknown',
+          };
+        }),
       });
       if (validation.verdict === 'refused') {
         throw new GeneratedWeekRefusedError(

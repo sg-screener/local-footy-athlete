@@ -1040,7 +1040,40 @@ function resolveGeneratedPlanEntry(
   return planLookup?.get(workout.dayOfWeek) ?? null;
 }
 
+/**
+ * THE SCHEDULER'S TYPED DAY IDENTITY → the app's workout type. **One owner.**
+ *
+ * There were TWO copies of the day-identity inference in this file — this
+ * fallback, which labels a synthesized day, and `normalizeGeneratedWorkoutType`,
+ * which labels a built one. Both guessed from the same loose hints in the same
+ * wrong precedence, and both were missing any carrier for the fixture. Fixing
+ * one would have left the other, which is how this survived: **the same wall
+ * twice.** So the typed answer is resolved HERE, once, and both readers call it.
+ *
+ * Returns null when the producer carried no identity — older producers still get
+ * the historical inference rather than a fabricated answer.
+ */
+function authoredWorkoutType(entry: SessionAllocation | null): WorkoutType | null {
+  const authored = entry?.authoredDay;
+  if (!authored) return null;
+  // Anchors are immovable and outrank every component on the day.
+  if (authored.anchor === 'game') return 'Game';
+  if (authored.anchor === 'club_training') return 'Team Training';
+  const strength = authored.components.includes('strength');
+  const conditioning = authored.components.includes('conditioning');
+  // A multi-part day stays multi-part instead of collapsing to whichever
+  // component the precedence happened to test first.
+  if (strength && conditioning) return 'Mixed';
+  if (strength) return 'Strength';
+  if (conditioning) return 'Conditioning';
+  return 'Recovery';
+}
+
 function fallbackWorkoutTypeForPlanEntry(entry: SessionAllocation): string {
+  // The day's owner has stated what the day IS; a reader that keeps guessing
+  // past that is the defect this whole change is about.
+  const authored = authoredWorkoutType(entry);
+  if (authored) return authored;
   if (entry.isTeamDay) return 'Team Training';
   if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) return 'Sprint-Intervals';
   if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(entry.focus)) {
@@ -1052,6 +1085,12 @@ function fallbackWorkoutTypeForPlanEntry(entry: SessionAllocation): string {
 }
 
 function fallbackNameForPlanEntry(entry: SessionAllocation): string {
+  // An anchor names itself. The fixture used to fall through every test here and
+  // land on the strength label, so it reached the athlete typed `Game` and named
+  // "Strength Session" — **the athlete reads the name**, so that is still a lost
+  // anchor. Same resolver as the type, so the two cannot disagree.
+  const anchorName = authoredWorkoutType(entry);
+  if (anchorName === 'Game' || anchorName === 'Team Training') return anchorName;
   if (entry.isTeamDay) return 'Team Training';
   if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) {
     return entry.speedBlock?.title ?? SPEED_FALLBACK_TEMPLATE;
@@ -1723,6 +1762,22 @@ export function buildWorkoutsFromCoach(
     const raw = String(cw.workoutType || '').trim().toLowerCase();
     const text = `${cw.name || ''} ${planEntry?.focus || ''}`.toLowerCase();
 
+    // ── THE SCHEDULER'S TYPED DAY IDENTITY WINS, AND NOTHING BELOW RUNS ─────
+    //
+    // **Sam, 2026-08-15:** *"merge by typed day/component identity, never
+    // names"* / *"no layer replaces an entire scheduler-authored day"*.
+    //
+    // Everything after this block is INFERENCE — a fixed precedence over loose
+    // hints, kept for producers that do not carry an identity. Inference is what
+    // renamed an authored strength-plus-conditioning day to "Conditioning" (the
+    // flavour test sat above the pattern test) and turned the fixture into
+    // "Rest" (nothing typed carried a game at all). **When the day's owner has
+    // stated what the day IS, a reader that keeps guessing is the defect**, so
+    // this returns and does not fall through. Shared with the synthesized-day
+    // labeller, so the two readers cannot drift apart again.
+    const authored = authoredWorkoutType(planEntry);
+    if (authored) return authored;
+
     // The deterministic plan owns structure. Resolve typed anchors/components
     // before considering the edge-provided label so a Mixed session cannot be
     // downgraded to Conditioning merely because the model chose that enum.
@@ -2156,10 +2211,25 @@ export function buildWorkoutsFromCoach(
     // ──────────────────────────────────────────────────────────────────────
     // STANDALONE CONDITIONING / TRUE SPEED - deterministic, AI exercises ignored
     // ──────────────────────────────────────────────────────────────────────
-    const isStandaloneSpeed = planEntry?.speedWorkKind === 'true_speed' && !planEntry.strengthPattern;
+    // ⚠ **THIS BRANCH BUILDS A WHOLE DAY BY ITSELF** — it constructs the Workout
+    // inline and never reaches `normalizeGeneratedWorkoutType`, so the typed
+    // identity resolved there cannot save a day that gets in here. **Sam,
+    // 2026-08-15: *"no layer replaces an entire scheduler-authored day"*.**
+    //
+    // Entry was decided by inference — "has a conditioning flavour and is not
+    // flagged combined" — which is true of an authored strength day that also
+    // carries conditioning. Measured: the scheduler authored Monday as
+    // strength + conditioning and it arrived at the athlete as a standalone
+    // "Conditioning" day, its lifts gone. A day whose OWNER says it holds a
+    // strength component is a combined day, and this branch may not claim it.
+    const authoredComponents = planEntry?.authoredDay?.components;
+    const authoredHasStrength = authoredComponents?.includes('strength') === true;
+    const isStandaloneSpeed = planEntry?.speedWorkKind === 'true_speed'
+      && !planEntry.strengthPattern && !authoredHasStrength;
     const isStandaloneConditioning = planEntry
       && planEntry.conditioningFlavour
-      && !planEntry.hasCombinedConditioning;
+      && !planEntry.hasCombinedConditioning
+      && !authoredHasStrength;
 
     if (isStandaloneConditioning || isStandaloneSpeed) {
       const resolved = conditioningByDow.get(cw.dayOfWeek);
@@ -2665,6 +2735,28 @@ export function buildWorkoutsFromCoach(
       description: '',
       intensity: canonicalIntensity,
       workoutType: normalizedWorkoutType,
+      // The day's typed identity travels ONTO the workout, because the layer
+      // that merges composer strength onto this day is downstream of here and
+      // otherwise has nothing but names to go on. Reader: `assembleAuthoredWeek`.
+      ...(planEntry?.authoredDay ? { authoredDay: planEntry.authoredDay } : {}),
+      // ⚠ **THE ANCHOR FACT ITSELF WAS NEVER WRITTEN HERE.** `builtWorkout` set
+      // neither `isTeamDay` nor anything equivalent — it passed the flag to the
+      // NAME resolver and dropped it — so a club night reached §18 as a day with
+      // no club training on it, and the credit those anchors supply went with
+      // it. Measured on the anchor world: both club nights came out `undefined`.
+      // Derived from the typed identity so the two cannot disagree.
+      isTeamDay: planEntry?.authoredDay
+        ? planEntry.authoredDay.anchor === 'club_training'
+        : planEntry?.isTeamDay,
+      // THE SCHEDULER'S OFF-LEG REQUEST, CARRIED. It types `off_leg` whenever
+      // conditioning pairs with a lower session (WC-115), the specialist duly
+      // resolved a bike — and the flag then reached the workout as `undefined`,
+      // so nothing downstream could tell that this aerobic block is deliberately
+      // off the legs rather than a run someone happened to pick. Measured on the
+      // Sunday-fixture world: `modality=bike`, `conditioningOffFeet=undefined`.
+      ...(planEntry?.conditioningOffFeet !== undefined
+        ? { conditioningOffFeet: planEntry.conditioningOffFeet }
+        : {}),
       sessionTier: canonicalTier,
       ...(planEntry?.planEntryId ? { planEntryId: planEntry.planEntryId } : {}),
       ...(canonicalStrengthIntent

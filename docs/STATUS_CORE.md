@@ -424,3 +424,65 @@ family Sam rejected now refuses honestly instead of publishing a bad week.**
 those become the specification.** The 14 refusals blocked on the
 session-count/scheduling capability wait for it. **No scheduling work has begun and
 none is queued.** Nothing in this mission should be read as a design for it.
+
+---
+
+# WEEKLY SCHEDULER CONTRACT — 2026-08-15, branch `slice-weekly-scheduler`
+
+Report: `docs/WEEKLY_SCHEDULER_CONTRACT_2026-08-15.md`. Commits `8ee2c9fa`,
+`1be27696`, `da15a415`. **DO NOT MERGE — 4 suites red, 22 worlds lost.**
+
+## WHAT IS SOLID
+
+The typed contract (41 clauses, stable ids, §-provenance, mechanically derived
+registry) and the deterministic scheduler. **72 guard cells, 0 failures, 41/41
+clauses guarded, and ALL 72 SEEN RED by a 43-mutation harness.**
+
+## THE LESSON — A GUARD I WROTE COULD NOT FAIL, AND ONLY MUTATION FOUND IT
+
+`inSeasonSprintDay` had **no caller**. I wrote the function, wrote its guard,
+watched it pass — and it passed because the scheduler could not emit a sprint under
+ANY conditions. The cell forbade something impossible. **Three more cells were the
+same shape**: a G-1 cell whose world had no Saturday in the gym set, a refusal cell
+that asserted only THAT it refused, and a pattern cell run on a week with no
+full-body session.
+
+**Writing the guard and watching it go green proves nothing. Breaking the subject
+is the only proof.**
+
+## AND A LESSON ABOUT MUTATIONS THEMSELVES
+
+**Eight of twenty single-edit mutations reddened nothing** — because lower spacing,
+hard-day limits and explicit unavailability are each enforced in TWO OR THREE
+places, so removing one check leaves the scorer still preferring the legal
+arrangement. **A rule held twice needs breaking twice.** Mutations are multi-edit,
+and "killed" means *was passing and is not passing*, not *printed FAIL* — the
+FAIL-count version credited nothing when a mutation crashed the suite.
+
+## THE CUTOVER IS WIRED AND IT REGRESSES
+
+    BEFORE 142 built / 38 refused      AFTER 136 built / 44 refused
+    LOST 22 worlds                     GAINED 16 worlds
+
+**ALL 44 refusals are ONE cause: §18's exposure contract still takes its
+main-strength target from the PLANNER, and is built BEFORE the scheduler runs.**
+The judge measures the scheduler's week against a count the scheduler did not
+choose. The fix is named and small; I did not half-land it inside the cap.
+
+**`test:bible:parallel` went 71 red -> 70 red WHILE FOUR SUITES BROKE** (five
+others went green). A total that improves is not evidence nothing regressed —
+diff the suite NAMES.
+
+## THE ONE PLACE I EXTENDED THE SOURCE
+
+The contract does not say what to do when game proximity leaves fewer legal days
+than the chosen layout wants. §8's *"scale honestly to two or three"* answers it
+for pre-season; **I applied it across all three phases. That is an inference, not
+a quotation**, and it is flagged in the report rather than buried.
+
+## NOT DELETED, AND WHY
+
+**Zero legacy owners deleted.** `buildCoachingPlan` (9,074 lines) still runs and
+still owns conditioning, warm-ups, dose and the §18 contract. The mission gates
+deletion on evidence of unreachability and that evidence does not exist. Deleting
+on assumption is the opposite of what was asked.

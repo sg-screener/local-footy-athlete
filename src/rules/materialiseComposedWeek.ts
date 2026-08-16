@@ -75,6 +75,19 @@ function materialiseRow(
       role: row.role,
       strengthPattern: row.mainStrengthPattern,
       mainStrengthPattern: row.role === 'main_strength' ? row.mainStrengthPattern : null,
+      // ⚠ **THE SLOT IS WHAT MAKES A SET COUNTABLE, AND IT WAS BEING DROPPED.**
+      //
+      // Sam, 2026-08-16: Wednesday is *12* main/secondary sets, not 14 — *"Ab
+      // Wheel is outside that ceiling"*; Friday is *10*, not 12 — *"Band
+      // Pull-Apart is accessory work outside that count"*.
+      //
+      // Every non-main row arrived as a bare `strength_accessory`, so nothing
+      // downstream could tell a secondary COMPOUND that occupies a movement slot
+      // (Bulgarian Split Squats, Lat Pulldown) from core or band isolation that
+      // occupies none (Ab Wheel, Band Pull-Apart). **Counting them alike inflated
+      // every session's set total against the WC-030 ceiling.** The composer knew
+      // the slot all along; it simply never travelled.
+      slot: row.slot ?? null,
       provenance: COMPOSER_ROW_PROVENANCE,
     },
     ...(row.qualityLimit ? { notes: 'Stop when speed or technique drops.' } : {}),

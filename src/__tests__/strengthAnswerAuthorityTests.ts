@@ -48,7 +48,8 @@ import type {
   Workout,
 } from '../types/domain';
 import { computeTestingBias } from '../rules/testingBias';
-import { buildCoachingPlan, onboardingToCoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
+import { onboardingToCoachingInputs, type CoachingPlan } from '../utils/coachingEngine';
+import { coachingPlanForTests } from './support/coachingPlanForTests';
 import { attachRecoveryAddonsToWeek } from '../utils/recoveryAddonBuilder';
 import { estimateAnchors } from '../utils/loadEstimation';
 import { readFileSync } from 'fs';
@@ -109,7 +110,7 @@ const BASE_PROFILE: OnboardingData = {
 } as OnboardingData;
 
 function planFor(data: OnboardingData): CoachingPlan {
-  return buildCoachingPlan(onboardingToCoachingInputs(data, { availabilityDateISO: TODAY }));
+  return coachingPlanForTests(onboardingToCoachingInputs(data, { availabilityDateISO: TODAY }));
 }
 
 function stubWorkout(dayOfWeek: number, name: string, workoutType: Workout['workoutType']): Workout {

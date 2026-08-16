@@ -432,7 +432,12 @@
     "test:composer-b1": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSliceB1Tests.ts",
     "test:generated-week-assembly": "TZ=Australia/Melbourne sucrase-node src/__tests__/generatedWeekAssemblyTests.ts",
     "test:generated-week": "TZ=Australia/Melbourne sucrase-node src/__tests__/generatedWeekContractTests.ts",
-    "test:composer-severance": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSeveranceTests.ts"
+    "test:composer-severance": "TZ=Australia/Melbourne sucrase-node src/__tests__/composerSeveranceTests.ts",
+    "test:weekly-scheduler": "TZ=Australia/Melbourne sucrase-node src/__tests__/weeklySchedulerTests.ts",
+    "test:anchor-survival": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekAnchorSurvivalTests.ts",
+    "test:weekday-index": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekdayIndexOwnershipTests.ts",
+    "test:cyclic-proximity": "TZ=Australia/Melbourne sucrase-node src/__tests__/cyclicGameProximityTests.ts",
+    "test:clause-enforcement": "TZ=Australia/Melbourne sucrase-node src/__tests__/clauseEnforcementTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

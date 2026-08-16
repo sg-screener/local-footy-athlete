@@ -99,7 +99,21 @@ for (const seasonPhase of ['In-season', 'Pre-season', 'Off-season']) {
 
 const built = rows.filter((r) => r.built).length;
 const refused = rows.filter((r) => !r.built);
-console.log(`\nCORPUS: ${rows.length} worlds — ${built} built, ${refused.length} refused\n`);
+// ── WHAT A "WORLD" IS, STATED RATHER THAN ASSUMED ───────────────────────────
+//
+// The corpus enumerates seasonPhase(3) x daysPerWeek(5) x club(2) x kit(3) x
+// microcycleLimit(2) = 180 GENERATION OCCURRENCES. The last dimension is not a
+// different athlete — it is the SAME athlete generated for one week and then for
+// two — so an occurrence count and a setup count are different numbers, and
+// quoting one while calling it the other has been a live source of confusion.
+const SETUP_KEY = (r: typeof rows[number]) =>
+  `${r.seasonPhase}/${r.days}d/${r.club ? 'club' : 'noclub'}/${r.kit}`;
+const allSetups = new Set(rows.map(SETUP_KEY));
+const refusedSetups = new Set(refused.map(SETUP_KEY));
+console.log(`\nCORPUS: ${rows.length} generation occurrences — ${built} built, ${refused.length} refused`);
+console.log(`        ${allSetups.size} distinct athlete setups; ${refusedSetups.size} of them refuse`);
+console.log('        DEDUPLICATION KEY: seasonPhase/daysPerWeek/club|noclub/kit');
+console.log('        (microcycleLimit 1|2 is EXCLUDED from the key: same athlete, two run lengths)\n');
 
 // ── FAMILY GROUPING: by the exact typed clause set, not by world ─────────────
 const families = new Map<string, Row[]>();

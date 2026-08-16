@@ -61,7 +61,9 @@ import {
   type VisibleProgramItem,
 } from './visibleProgramReadModel';
 import { buildScheduleStateImperative } from './coachWeekDiff';
-import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
+import { onboardingToCoachingInputs } from './coachingEngine';
+import { buildInitialGeneratedCoachingPlan } from '../services/api/generateProgram';
+import { resolveSeasonPhaseClock } from '../rules/seasonPhaseClock';
 import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { logger } from './logger';
 import { clearManualOverridesPreservingActiveModifiers } from './activeProgramModifiers';
@@ -2064,9 +2066,23 @@ function verifyProgramSetupRebuild(args: {
 }): { ok: true } | { ok: false; reason: string; reply: string } {
   const { edit, nextProfile, program, todayISO } = args;
   const workouts = program.microcycles?.[0]?.workouts ?? [];
-  const deterministicPlan = buildCoachingPlan(onboardingToCoachingInputs(nextProfile, {
-    availabilityDateISO: todayISO,
-  }));
+  // ── REPOINTED OFF THE DELETED PLANNER ───────────────────────────────────
+  //
+  // This wants the deterministic week the app WOULD build, to diff a coach edit
+  // against. That is now the scheduler's answer, produced through the connector by
+  // `buildInitialGeneratedCoachingPlan` — the same producer generation uses, so the
+  // edit is diffed against the week the athlete would actually receive.
+  const deterministicPlan = buildInitialGeneratedCoachingPlan({
+    coachingInputs: onboardingToCoachingInputs(nextProfile, {
+      availabilityDateISO: todayISO,
+    }),
+    profile: nextProfile,
+    todayISO,
+    seasonPhaseClock: resolveSeasonPhaseClock({
+      selectedPhase: nextProfile.seasonPhase ?? 'Pre-season',
+      targetWeekStartISO: todayISO,
+    }).clock,
+  });
   const expectedPlanDows = new Set(
     deterministicPlan.weeklyPlan
       .map((session) => session.dayOfWeek ? dayOfWeekNumber(session.dayOfWeek as DayOfWeek) : -1)

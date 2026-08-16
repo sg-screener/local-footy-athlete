@@ -8,10 +8,12 @@
 import type { ResolvedDay, ScheduleState } from './sessionResolver';
 import { addDays, getMondayForDate } from './sessionResolver';
 import {
-  buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
 } from './coachingEngine';
+import { buildInitialGeneratedCoachingPlan } from '../services/api/generateProgram';
+import { resolveSeasonPhaseClock } from '../rules/seasonPhaseClock';
+import { todayISOLocal } from './appDate';
 import type { OnboardingData, Workout } from '../types/domain';
 
 // ═══════════════════════════════════════════════
@@ -141,8 +143,17 @@ export function buildWeekDebugInfo(
   // Run the coaching engine with current onboarding data
   let plan: CoachingPlan;
   try {
+    // Repointed off the deleted planner — the debug view shows the week the app
+    // would actually build, which is now the scheduler's through the connector.
     const inputs = onboardingToCoachingInputs(onboarding);
-    plan = buildCoachingPlan(inputs);
+    plan = buildInitialGeneratedCoachingPlan({
+      coachingInputs: inputs,
+      profile: onboarding,
+      seasonPhaseClock: resolveSeasonPhaseClock({
+        selectedPhase: onboarding.seasonPhase ?? 'Pre-season',
+        targetWeekStartISO: todayISOLocal(),
+      }).clock,
+    });
   } catch (e) {
     // Engine might fail if onboarding incomplete — return partial info
     return {
