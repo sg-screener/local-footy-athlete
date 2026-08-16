@@ -214,3 +214,72 @@ them"* — the same position these two cards are in. Two seeds are owed in
 Then drive `home-block-boundary-notice-dismiss`,
 `home-weekly-commitment-option-2` and `home-weekly-commitment-decline` with
 Maestro, and relaunch to prove the acknowledgement and the decline survive.
+
+---
+
+# VISUAL PASS — NOT OBTAINED. THE BLOCKER IS A REAL DEFECT.
+
+Attempted at `a0ac856d`. **No screenshot of either card was taken.** What follows
+is what the attempt found, and the branch is back at exactly `a0ac856d`.
+
+## WHAT WAS TRIED
+
+The app was started from THIS worktree (`QA_SIM_UDID=0B4DEE36…`,
+`QA_METRO_PORT=8083`) onto the booted `LFA Explorer 4c8535f`; it launched. Two
+dev seeds (`hard-block-two-notice`, `missed-block-commitment-ask`) were written
+following the `christmas-break-ask` precedent, and **both build correctly
+headless** — 4 microcycles, 21 explanation rows, `hard_block_reduced` present.
+
+Deep-linking to either seed lands on **`dev_e2e_app_hydration_failed:derived-world`**
+— *"The app did not start"*. Clearing harness state and re-seeding reproduces it.
+
+## ⚠ THE FINDING — BOOT DOES NOT FEED THE BLOCK BOUNDARY
+
+`store/quiescentBoot.ts`, the derived-world rebuild:
+
+```
+const program = generateProgramLocally(profile, {
+  weekAcceptance: 'restoration',
+  todayISO: generationISO,
+  previousProgram: null,
+  ...(clock ? { seasonPhaseClock: clock } : {}),
+});
+```
+
+**No `blockNumber` and no `progressionHistory`.** Both defaults are documented in
+`generateProgram.ts` and were written by this seat in mission 1: absent
+`blockNumber` means **block 1**, and *"ABSENT NOW MEANS EMPTY, NOT 'GO AND
+LOOK'"* for the history.
+
+So every relaunch regenerates at block 1 against an explicitly empty history.
+**The whole block-boundary layer is erased on boot** — the load progression that
+merged at `6117a9fd`, the very-hard reduction, and the stored
+`blockBoundaryExplanation` the notice renders from. `weekRebuild.ts` passes these
+at the rollover; boot does not.
+
+**CONFIDENCE.** The missing arguments are a code fact. That they erase the layer
+follows from generation's stated contract. **That this is the CAUSE of the
+hydration refusal is an inference I did not confirm** — the refusal's own message
+was never read, and other causes (the seeds' `blockState`, the anchor) are not
+excluded.
+
+## WHAT WAS REVERTED, AND WHY
+
+The one-line boot fix (pass `blockNumber` + `progressionHistory` from the
+persisted inputs) was written, and **backed out**. It did not clear the refusal
+on device, `test:quiescent-boot` is already RED at baseline so it could not
+report on it, and an unverified change to the boot path is worse than a reported
+defect. The two seeds went with it — incomplete and unverified.
+
+## THE NEXT STEP, IN ORDER
+
+1. **Read the refusal.** `[boot][hydration] the derived-world rebuild…` is
+   truncated on screen and absent from `/tmp/qa-metro.log`. Get the full text
+   before changing anything.
+2. Fix the boot inputs, and **guard it**: a cell that generates a block-2
+   programme, boots, and asserts the explanation row survives.
+3. Re-land the two seeds and take the screenshots.
+
+`test:dev-e2e-seeds` throws on `stacked-team-training-upper-pull` at `a0ac856d`
+BEFORE reaching any new seed — confirmed by a control run at HEAD. Pre-existing;
+not repaired here.
