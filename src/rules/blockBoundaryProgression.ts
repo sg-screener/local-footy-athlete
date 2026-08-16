@@ -333,19 +333,45 @@ export function readBlockHistory(args: {
   };
 }
 
-function progressableStrengthRows(workouts: readonly Workout[]): WorkoutExercise[] {
+/**
+ * EVERY STRENGTH ROW IS SEEDABLE. NOT every strength row may be INCREASED.
+ *
+ * Sam, 2026-08-16 (product close): *"Every strength exercise may restore its own
+ * exact-exercise recorded load or receive its authored initial estimate,
+ * including accessories and bodyweight exercises with athlete-added load.
+ * Automatic load INCREASES remain limited to the approved progressable main and
+ * secondary lifts."*
+ *
+ * ⚠ **THESE WERE ONE SCOPE UNTIL NOW, AND THAT WAS THE DEFECT.** The row filter
+ * used `classifyProgressionEligibility` — the MAIN/SECONDARY test — to decide
+ * what this module looked at, so an accessory was invisible to seeding as well
+ * as to progression. Measured consequence: a Bicep Curl the athlete had loaded
+ * came back at `0`, and an unseen one showed `0` instead of the authored
+ * estimate that exists for it. **Two different questions were sharing one
+ * predicate.**
+ */
+function seedableStrengthRows(workouts: readonly Workout[]): WorkoutExercise[] {
   const rows: WorkoutExercise[] = [];
   for (const workout of workouts) {
     if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') continue;
     for (const exercise of workout.exercises ?? []) {
       if (!participatesInCounting(exercise)) continue;
-      const name = exercise.exercise?.name ?? '';
-      if (!name) continue;
-      if (!classifyProgressionEligibility(name)) continue;
+      if (!(exercise.exercise?.name ?? '')) continue;
       rows.push(exercise);
     }
   }
   return rows;
+}
+
+/**
+ * MAY THIS EXERCISE'S LOAD RISE ON ITS OWN?
+ *
+ * Main and secondary lifts only. An accessory restores and seeds an editable
+ * load and then STAYS THERE until Sam separately rules an increment for it —
+ * *"do not automatically increase unless separately ruled."*
+ */
+function mayAutomaticallyIncrease(exerciseName: string): boolean {
+  return classifyProgressionEligibility(exerciseName) !== null;
 }
 
 /**
@@ -370,7 +396,7 @@ export function decideBlockBoundaryLoads(args: {
   const seen = new Set<string>();
   const decisions: BlockBoundaryLiftDecision[] = [];
 
-  for (const row of progressableStrengthRows(nextBlockWorkouts)) {
+  for (const row of seedableStrengthRows(nextBlockWorkouts)) {
     const exerciseName = row.exercise?.name ?? '';
     if (seen.has(exerciseName)) continue;
     seen.add(exerciseName);
@@ -397,7 +423,9 @@ export function decideBlockBoundaryLoads(args: {
       // 'correct' the athlete's recorded number; their number remains the
       // base."* The increment is added to what they lifted, not to a
       // lattice-tidied version of it.
-      const increment = smallestPracticalIncrementKg(exerciseName, previousLoadKg);
+      const increment = mayAutomaticallyIncrease(exerciseName)
+        ? smallestPracticalIncrementKg(exerciseName, previousLoadKg)
+        : null;
       if (history.qualifies && increment !== null) {
         decisions.push({
           ...base,

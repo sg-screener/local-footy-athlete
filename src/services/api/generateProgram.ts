@@ -15,8 +15,10 @@ import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
 import { WEEKS_PER_BLOCK } from '../../utils/programBlockState';
 import {
   applyBlockBoundaryProgression,
+  buildBlockBoundaryExplanation,
   decideBlockBoundaryLoads,
   readBlockHistory,
+  type BlockBoundaryLiftDecision,
 } from '../../rules/blockBoundaryProgression';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
@@ -1492,15 +1494,22 @@ export function generateProgramLocally(
   // was correct and starved: it baked a history-free load into storage, and the
   // screen — reading the live store — could derive a different one. Feeding it
   // is what makes stored == visible == reloaded true rather than lucky.
-  const liveStore = require('../../store/programStore').useProgramStore.getState();
-  const progressionSessionFeedback =
-    options.progressionHistory?.sessionFeedback ?? liveStore.sessionFeedback ?? {};
-  const progressionWeightOverrides =
-    options.progressionHistory?.weightOverrides ?? liveStore.weightOverrides ?? {};
-  const progressionBlockState =
-    options.progressionHistory?.blockState !== undefined
-      ? options.progressionHistory.blockState
-      : liveStore.blockState ?? null;
+  // ⚠ NO STORE READ HERE. This used to be
+  // `require('../../store/programStore').useProgramStore.getState()`, and Sam
+  // ordered it out at product close: *"Same explicit inputs must always produce
+  // the same stored block."* A hidden read makes generation a function of
+  // ambient app state, so the SAME arguments could author two different blocks
+  // depending on what happened to be in the store — which is exactly the class
+  // of thing that cannot be tested and cannot be reproduced from a bug report.
+  //
+  // **ABSENT NOW MEANS EMPTY, NOT "GO AND LOOK".** The rollover caller
+  // (`utils/weekRebuild.ts`) passes the athlete's real history, overrides and
+  // block state explicitly; fresh onboarding passes nothing and therefore
+  // authors against an explicitly empty history, which is the truthful input
+  // for an athlete who has not trained yet.
+  const progressionSessionFeedback = options.progressionHistory?.sessionFeedback ?? {};
+  const progressionWeightOverrides = options.progressionHistory?.weightOverrides ?? {};
+  const progressionBlockState = options.progressionHistory?.blockState ?? null;
 
   bakeMicrocycleStrengthProgression(program, {
     manualOverrides: {},
@@ -1538,6 +1547,7 @@ export function generateProgramLocally(
   // legitimately produced.
   const authoringBlockNumber = options.blockNumber ?? 1;
   if (authoringBlockNumber > 1) {
+    const allDecisions: BlockBoundaryLiftDecision[] = [];
     const previousBlock = previousBlockBoundsFor(blockStart);
     const history = readBlockHistory({
       feedbackByDate: progressionSessionFeedback,
@@ -1558,7 +1568,10 @@ export function generateProgramLocally(
         workouts: microcycle.workouts,
         decisions,
       });
+      for (const decision of decisions) allDecisions.push(decision);
     }
+    // Stored beside the prescriptions it explains, so the two cannot drift.
+    program.blockBoundaryExplanation = buildBlockBoundaryExplanation(allDecisions);
   }
 
   return program;

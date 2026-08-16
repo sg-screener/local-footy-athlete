@@ -340,6 +340,61 @@ ok(
   'no unmapped row present — the cell above asserted nothing',
 );
 
+console.log('\n[10] SEEDING IS WIDER THAN AUTOMATIC PROGRESSION');
+
+/**
+ * Sam, product close: every strength exercise may RESTORE its own recorded load
+ * or receive its authored estimate — accessories included — while automatic
+ * INCREASES stay limited to main/secondary lifts.
+ *
+ * The accessory tracked here is a real block-2 row measured in this fixture.
+ */
+const ACCESSORY = 'Bicep Curl (Barbell)';
+const ACCESSORY_RECORDED_KG = 17.5;
+
+const accessoryHistory = historyFor({ [ACCESSORY]: ACCESSORY_RECORDED_KG });
+const accessoryStored = storedLoadOf(build(2, BLOCK_2_START, accessoryHistory), ACCESSORY);
+ok(
+  `${ACCESSORY} is programmed in block 2 (liveness)`,
+  accessoryStored !== 'ABSENT_ROW',
+  'the accessory cells below would assert nothing',
+);
+ok(
+  `a recorded ${ACCESSORY} load RETURNS (seeding covers accessories)`,
+  accessoryStored === ACCESSORY_RECORDED_KG,
+  `expected ${ACCESSORY_RECORDED_KG}, got ${JSON.stringify(accessoryStored)} — accessory seeding is missing`,
+);
+ok(
+  `${ACCESSORY} does NOT automatically increase (not a main/secondary lift)`,
+  accessoryStored === ACCESSORY_RECORDED_KG,
+  `it rose to ${JSON.stringify(accessoryStored)} — accessories may not auto-increase`,
+);
+
+const accessoryUnseen = storedLoadOf(build(2, BLOCK_2_START, {}), ACCESSORY);
+const accessoryAuthored = startingWeightForAthlete(ACCESSORY, athlete());
+ok(
+  `an unseen ${ACCESSORY} uses its AUTHORED estimate, not 0`,
+  accessoryUnseen !== 0 && accessoryUnseen === accessoryAuthored,
+  `authored says ${JSON.stringify(accessoryAuthored)}, stored ${JSON.stringify(accessoryUnseen)}`,
+);
+
+const bwAccessory = 'Copenhagen Plank (Half)';
+const bwAccessoryAdded = 7.5;
+const bwAccStored = storedLoadOf(
+  build(2, BLOCK_2_START, historyFor({ [bwAccessory]: bwAccessoryAdded })),
+  bwAccessory,
+);
+ok(
+  `${bwAccessory} is programmed in block 2 (liveness)`,
+  bwAccStored !== 'ABSENT_ROW',
+  'the bodyweight-accessory cell would assert nothing',
+);
+ok(
+  `${bwAccessory} restores the athlete's added +${bwAccessoryAdded}kg`,
+  bwAccStored === bwAccessoryAdded,
+  `expected ${bwAccessoryAdded}, got ${JSON.stringify(bwAccStored)} — added load on a bodyweight accessory was lost`,
+);
+
 console.log('\n[8b] THE INCREMENT COMES FROM THE AUTHORED LATTICE, AND HOLDS WHEN IT CANNOT SAY');
 
 // Unit-level, and it says so: these assert the lattice READ, not the pipeline.
@@ -400,6 +455,35 @@ ok(
   `${BW_EXERCISE}'s recorded number is never rounded away`,
   bwWithHistory !== 0 && bwWithHistory !== undefined,
   `the athlete's ${BW_ADDED_KG}kg was discarded — got ${JSON.stringify(bwWithHistory)}`,
+);
+
+console.log('\n[11] THE ATHLETE-FACING EXPLANATION IS STORED AND SURVIVES RELOAD');
+
+const explained = build(2, BLOCK_2_START, aHistory);
+const explanation = explained.blockBoundaryExplanation ?? [];
+ok(
+  'the stored program carries a block-boundary explanation',
+  explanation.length > 0,
+  'no explanation was stored — the typed result has no reader',
+);
+const deadliftRow = explanation.find((row) => row.exerciseName === TRACKED);
+ok(
+  `the explanation names ${TRACKED}'s ACTUAL change (${TRACKED_RECORDED_KG} → ${EXPECTED_PROGRESSED_KG})`,
+  deadliftRow?.kind === 'history_progressed' &&
+    deadliftRow.previousLoadKg === TRACKED_RECORDED_KG &&
+    deadliftRow.nextLoadKg === EXPECTED_PROGRESSED_KG,
+  `got ${JSON.stringify(deadliftRow)}`,
+);
+const reloadedExplained = JSON.parse(JSON.stringify(explained)) as TrainingProgram;
+ok(
+  'the explanation survives a reload byte-for-byte',
+  JSON.stringify(reloadedExplained.blockBoundaryExplanation) === JSON.stringify(explanation),
+  'the explanation did not round-trip',
+);
+ok(
+  'the explanation agrees with the stored prescription it explains',
+  deadliftRow?.nextLoadKg === storedLoadOf(explained, TRACKED),
+  `explanation says ${JSON.stringify(deadliftRow?.nextLoadKg)}, prescription says ${JSON.stringify(storedLoadOf(explained, TRACKED))}`,
 );
 
 console.log('\n[8] STORED = VISIBLE = RELOADED');
