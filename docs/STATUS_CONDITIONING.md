@@ -188,9 +188,141 @@ symptom field for field. If it is the site, the question is whether the
 composer or the adapter owns conditioning on a combined day — and that is a
 BURN-THE-BOATS decision, not a shim.
 
+---
+
+## SESSION 2 — THE LEGACY AUTHORITY IS GONE, AND ONE RED IS OPEN
+
+### The disappearing session, traced to its owner
+
+The assembly boundary was INNOCENT. Instrumented, the `vo2` day reaches
+`adapterContributionFrom` intact on weeks 1–3 and arrives **already empty** on
+week 2 of the two-day world. The owner is `coachingEngine`'s post-validation
+**sprint-rescue**: it took a conditioning slot the scheduler had authored,
+cleared eight conditioning fields, and hung a speed block on the wreckage.
+
+**DELETED — 206 lines, no shim, no fallback, no compensating count.** Its job
+moved to `weeklyScheduler.appSprintDay`, which places the sprint in every phase
+the overlay marks `sprintExposureRequired`, on a FREE day, before conditioning
+is authored — so there is nothing left to retrofit.
+
+### World table — LOST AND GAINED SEPARATELY
+
+| corpus | base `1248be77` | after | lost | gained |
+| --- | ---: | ---: | ---: | ---: |
+| refusal census, 180 worlds | 140 built | **140** | **0** | 0 |
+| conditioning census, 198 worlds | 157 built | **157** | **0** | 0 |
+
+Refusal reasons among the still-refused are **byte-identical** to base.
+
+The three worlds lost in session 1 are recovered. A further 8 were lost and
+recovered inside session 2 (`2 gym days that are BOTH club nights, no
+fixture`), in a no-game shape the 180-world refusal census cannot see because
+that corpus always carries a Saturday fixture — **found by my own non-vacuity
+cells, not by the census.**
+
+### What the athlete now receives
+
+| | base | after |
+| --- | --- | --- |
+| authored categories reaching the athlete with no session | 0 | 0 |
+| pre-season worlds with a HARD session | **0 of 17** | **15 of 17** |
+| in-season GAME weeks with hard | 0 | **0** (correct) |
+| in-season BYE weeks with hard | 0 | **1 of 1 per shape** |
+| late off-season worlds with hard | **0 of 17** | **13 of 17** |
+| qualities delivered | `aerobic_base, sprint, tempo` | `+ vo2` |
+
+### Mutation receipts — `test:conditioning-phase-authorship`, 42 cells
+
+| mutation | result |
+| --- | --- |
+| M1 `requiresNoGameWeek` → false | 40/42, 2 red |
+| M2 conditioning allowed onto club nights | 40/42, 2 red |
+| M3 the 48-hour gate removed | 41/42, 1 red |
+| M4 budget → phase-blind global minimum | 41/42, 1 red |
+| M5 late off-season authors no hard quality | 39/42, 3 red |
+| M6 the app sprint never placed | 41/42, 1 red |
+| **M7 the readiness floor removed** | **42/42, 0 red — SURVIVES** |
+| M8 shortfall may not leave the gym days | 39/42, 3 red |
+
+**M7 IS REPORTED, NOT HIDDEN.** Sweeping 47 built low-readiness worlds on the
+mutated tree produced **0 carrying hard conditioning** — the readiness owner
+upstream already strips it, so no cell can red on that line. The clause is kept
+as deliberate defence in depth, on the same argument
+`materialiseAuthoredSessions` makes for re-refusing G-2 lower power, and the
+code says so rather than claiming a receipt it does not have.
+
+**Three guards were VACUOUS in the first pass** and the mutations said so —
+M2, M3 and M7 all reddened nothing. Each was "a gate no world can reach":
+a zero-budget world for the club-night rule, an earliest-first day order that
+never enters the 48-hour window with a Saturday fixture, and an upstream owner
+already doing the readiness job.
+
+### Gates
+
+| gate | base | after |
+| --- | --- | --- |
+| `test:compile` | product 35 | **product 35, identical** |
+| `test:weekly-scheduler` | 84/84 | **89/89**, registry 43/43 guarded |
+| `test:conditioning-phase-authorship` | — | **42/42** (new) |
+| `test:conditioning-templates` | — | 95/95 |
+| `test:conditioning-dose` | — | 12/0 |
+| `test:conditioning-balance-repair` | — | 11/0 |
+| `test:conditioning-progression-inputs` | — | 8/0 |
+| `test:block-two-progression` | — | 37/0 |
+| `test:block-two-difficult-missed` | — | 88/0 |
+| `test:block-two-boot-preservation` | — | 20/0 |
+| `test:block-two-screen-delivery` | — | 35/0 |
+| `test:quiescent-boot` | — | 5/0 |
+| `test:conditioning-rotation` | **178/58** | 178/58 — unchanged |
+| `test:ladder-wide` | **13/14** | 13/14 — unchanged |
+| `test:worn-world-boot` | **0/5** | 0/5 — unchanged |
+| **`test:section18-v2`** | **134 pass / 1 fail** | **133 pass / 2 fail — ONE NEW RED, MINE** |
+
+### ⚠ THE OPEN RED — BLOCKS MERGE
+
+`test:section18-v2`, cell *"generated Contract v2 independently satisfies every
+planner-selected core target"*. Base fails 1 cell (*"healthy generated TT
+resolves to normal unrestricted participation"*); this branch fails that one
+**and** the core-target cell.
+
+World: **Pre-season, 6 gym days, club Tue/Thu, no fixture, Elite conditioning.**
+Not yet diagnosed. The most likely mechanism, stated as a hypothesis and NOT as
+a finding: §18's `deriveConditioningRoles` may not count a `vo2` day toward
+`conditioning.core` the way it counts an `aerobic_base` day, so authoring the
+hard quality moves an exposure out of the core tally. **Measure
+`observation.contract.conditioning.core` for that profile before changing
+anything** — and if the hypothesis holds, the owner is §18's role derivation,
+not the scheduler.
+
+### NOT COVERED in session 2
+
+- **The three printed weeks are NOT produced yet.** `scripts/print-week.ts`
+  exports what is needed; the three worlds are chosen and measured, but the
+  markdown is unwritten.
+- **Block Two conditioning progression** — *"conditioning easy → progress by
+  exactly one authored template step"* is NOT built. The recovery half
+  (*"reduce/remove hard conditioning first"*, *"never add in low recovery"*) is
+  built and guarded; the progression half is not.
+- Persistence/relaunch identity of the new prescriptions is **not** re-proven.
+- Suites `test:conditioning-identity`, `test:conditioning-equipment-consistency`,
+  `test:standalone-conditioning-ownership`, `test:block-two-ladder`,
+  `test:block-two-extra-session`, `test:section18-planner` produce **no totals
+  line on base either** — they die at import. Not run, not mine, not fixed.
+
 ## LEDGER — outside this mission, untouched
 
 - **`test:compile` is RED on `main` at `1248be77`**, identically: 6 file/scope
   pairs in `src/__tests__/bibleConformance/observations/*`, all rooted in a
   missing `../support/coachingPlanForTests` module that is absent at HEAD.
   Product scope is 35 errors before and after this change. Not mine, not fixed.
+- **A hand-built `generationConstraints` argument to `generateProgramLocally`
+  is SILENTLY DISCARDED.** `buildGeneratedMicrocycles` branches on
+  `args.activeConstraints` being truthy and the entry point defaults it to
+  `[]`, which is truthy. Measured: passing a `readiness: { deloaded: true }`
+  constraint yields `lowReadiness=false, gcReadiness=null` at the scheduler.
+  Any suite driving readiness that way is testing a healthy athlete.
+  `src/__tests__/section18ContractV2Tests.ts:428` does exactly this.
+- **An athlete with NO club night AND NO fixture refuses at base in every
+  phase**, and four off-season gym days trip `main_strength_permitted_maximum`
+  at base. Both cost me three red cells before I control-ran on a second
+  worktree at `1248be77`. Pre-existing, unrelated to conditioning.
