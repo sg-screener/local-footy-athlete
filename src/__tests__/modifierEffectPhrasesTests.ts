@@ -108,11 +108,25 @@ run('hiding a row also removes it from the count', () => {
 // So this cell drives the REAL builder with both preferences present and
 // asserts the two outcomes differ.
 run('an excluded exercise and a pinned one do not share a phrase', () => {
+  // THE EXCLUDED SIDE IS A SCOPED DECISION NOW (Block Two, 2026-08-16), not a
+  // bare name: `prefs.excluded` is a DERIVED projection and the builder reads
+  // `prefs.exclusions`. The fixture is built the way the STORE holds it, so this
+  // cell keeps driving the real builder instead of a shape nothing produces.
+  // The claim itself is untouched — excluded and pinned are OPPOSITES and must
+  // not share a phrase.
   const modifiers = selectActiveProgramModifiers({
     athletePrefs: {
-      excluded: ['Back Squat'],
+      excluded: [],
       pinned: ['Chin-Up'],
+      exclusions: [{
+        exercise: 'Back Squat',
+        scope: 'until_changed',
+        decidedOnISO: '2026-08-16',
+        activeThroughISO: null,
+        blockNumber: null,
+      }],
     } as never,
+    todayISO: '2026-08-16',
   });
   const effects = modifiers
     .filter((m) => m.source === 'athlete_preferences')

@@ -41,6 +41,7 @@ import {
   endAthletePrefsResetAction,
   INITIAL_ATHLETE_PREFS,
   athletePrefsGuardedStorage,
+  getAthletePrefs,
 } from '../store/athletePreferencesStore';
 import {
   clearAllQuarantines,
@@ -122,8 +123,15 @@ run('a stale reset id is refused', () => {
   });
   assert(!outcome.ok && outcome.reason === 'reset_action_not_in_flight',
     `a finished reset's id still erased the prefs: ${JSON.stringify(outcome)}`);
-  assert(useAthletePreferencesStore.getState().prefs.excluded.length > 0,
+  // THE ANSWER MOVED FIELD, NOT PLACE (Block Two, 2026-08-16). `prefs.excluded`
+  // is a DERIVED projection now and is empty on the stored object; the athlete's
+  // decision lives in `prefs.exclusions` with its scope and its expiry. BOTH
+  // halves are asserted, so this cannot pass on a store that kept the decision
+  // and stopped projecting it, nor on the reverse.
+  assert((useAthletePreferencesStore.getState().prefs.exclusions ?? []).length > 0,
     'the stale-reset write emptied the store');
+  assert(getAthletePrefs().excluded.length > 0,
+    'the decision survived the refusal but the projection no longer names it');
 });
 
 run('an in-flight reset erases, and says so', () => {
