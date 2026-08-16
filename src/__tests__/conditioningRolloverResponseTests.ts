@@ -25,7 +25,8 @@ import { HARD_CONDITIONING_CATEGORIES } from '../rules/blockBoundaryProgression'
 import { nextAuthoredDose } from '../rules/conditioningDoseStep';
 import { parseConditioningDose } from '../rules/conditioningDose';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
-import type { SessionFeedback, TrainingProgram } from '../types/domain';
+import type { TrainingProgram } from '../types/domain';
+import type { SessionFeedback } from '../store/programStore';
 
 let passed = 0;
 const failures: string[] = [];

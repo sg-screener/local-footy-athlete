@@ -398,10 +398,104 @@ deletion and invents doses.
 | refusal census, 180 worlds | 140 built | **140** | **0** | 0 | **0** |
 | conditioning census, 198 worlds | 157 built | **157** | **0** | 0 | **0** |
 
-### MERGE RECOMMENDATION — **DO NOT MERGE**
+### ~~MERGE RECOMMENDATION — DO NOT MERGE~~ — SUPERSEDED, see session 4.
 
-Items 2 and 3 do not hold. The branch is a strict improvement and costs nothing
-measurable, but the mission's bar is all four items.
+---
+
+## SESSION 4 — WC-137, BOTH ROLLOVERS PROVEN. **MERGE.**
+
+### Sam's ruling on what "one step harder" means — built as stated
+
+`src/rules/conditioningDoseStep.ts`. A step stays INSIDE the quality and inside
+the sheet's own numbers: `nextAuthoredDose` reads the authored `setsRounds`,
+`workPeriod` and `restPeriod` ranges through `parseConditioningDose` and
+returns the next authored value, smallest first.
+
+| rule | where it lives |
+| --- | --- |
+| 1 — in-season may hold | `decideBlockBoundaryConditioningAdvance` refuses In-season |
+| 2 — smallest authored increase, same quality | `nextAuthoredDose`, sets → duration → rest |
+| 3 — easy aerobic → tempo after REPEATED easy | **NOT BUILT — see below** |
+| 4 — aerobic power never auto-becomes anaerobic | **structural** — the stepper is handed the session's own template and can only return a bigger dose OF THAT TEMPLATE |
+| 5 — no valid next dose → hold and report | three typed reasons; `applyBlockBoundaryConditioningAdvance` changes nothing |
+
+**Rule 3 is deliberately unbuilt, and says so at the code that would host it.**
+*"Repeated"* is the blocker: the app records whether THIS block was easy and
+nothing records whether the one before it was. Building it on a single easy
+block would be a different rule from the one ruled. It is a *"may"*, so leaving
+it costs the athlete a permission and never a required exposure.
+
+⚠ **The app already prescribes the MIDPOINT of an authored range**
+(`headlineSets` uses `doseMidpoint`), so Sam's *"low-end → normal dose"* rung is
+spent before feedback exists. Stated in the module rather than left as a trap.
+
+### The two rollover proofs — `test:conditioning-rollover`, 21 cells
+
+Every cell generates block 1, writes the athlete's feedback about THAT block,
+generates block 2 and reads it. **Block 1 genuinely containing a hard session is
+asserted before any response is** — that precondition is what this whole mission
+created, and without it both proofs are vacuous.
+
+| proof | result |
+| --- | --- |
+| hard + poor recovery → no hard survives, exposure RETAINED, authored replacement, strength load NOT raised | PASS |
+| conditioning easy + strength difficult → exactly the next authored dose, never beyond the authored max, strength does not progress | PASS |
+| in-season holds for freshness | PASS |
+| everything-easy does NOT reach this ladder | PASS |
+| reduce outranks advance, and nothing is stepped on a brutal block | PASS |
+
+### Mutation receipts — all six red
+
+| mutation | result |
+| --- | --- |
+| N1 reduce never fires | 19/21, 2 red |
+| N2 advance never fires | 20/21, 1 red |
+| N3 in-season hold removed | 20/21, 1 red |
+| N4 `strengthEasy` gate removed | 20/21, 1 red |
+| N5 authored maximum uncapped | 20/21, 1 red |
+| N6 reduce no longer outranks advance | 20/21, 1 red |
+
+**Three were vacuous first and the FIXTURE was the fault, not the code.**
+N4: the strength verdict is only read on a day carrying no conditioning answer,
+and the fixture put a conditioning RPE on every date — `strengthEasy` could
+never be true. N5: the cell compared applied sets against the stepper's own
+answer, so uncapping moved both sides together. N6: *"nothing hard survives"*
+missed the advance quietly stepping the EASED session.
+
+### Gates at merge
+
+| gate | base `1248be77` | branch |
+| --- | --- | --- |
+| `test:compile` | product 35, 6 pairs worse | **identical** |
+| `test:section18-v2` | 134 / 1 | **134 / 1 — identical** |
+| `test:ladder-wide` | 13/14 | 13/14 — identical |
+| `test:block-state`, `test:block-rollover` | no totals (die at import) | identical — not run, not mine |
+| `test:weekly-scheduler` | 84/84 | **89/89** |
+| `test:conditioning-rollover` | — | **21/21** (new) |
+| `test:conditioning-phase-authorship` | — | **42/42** (new) |
+| `test:conditioning-templates` | — | 95/95 |
+| `test:conditioning-dose` · `-balance-repair` · `-progression-inputs` | — | 12/0 · 11/0 · 8/0 |
+| `test:section18-safety` | — | 37/0 |
+| `test:block-two-progression` · `-difficult-missed` · `-boot-preservation` · `-screen-delivery` | — | 37/0 · 88/0 · 20/0 · 35/0 |
+| `test:quiescent-boot` | — | 5/0 |
+
+### World tables — final
+
+| corpus | base | branch | LOST | GAINED | reason changes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| refusal census, 180 worlds | 140 built | **140** | **0** | 0 | **0** |
+| conditioning census, 198 worlds | 157 built | **157** | **0** | 0 | **0** |
+
+No baseline, ratchet or allow-list was reset.
+
+### MERGE RECOMMENDATION — **MERGE**
+
+All four items hold. Two knowingly-unfinished things, neither a blocker and
+both Sam's call, not a defect to hide:
+
+1. **Rule 3** needs a repeated-easy signal the app does not record.
+2. **The printed weeks still show `1 × 1`** instead of the authored work/rest.
+   Sam ruled this to projection cleanup and out of scope here.
 
 ## LEDGER — outside this mission, untouched
 
