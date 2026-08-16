@@ -655,6 +655,16 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
     previousProgram: persistedProgram,
     targetWeekAvailability,
     targetFixtureDay: targetFixture ? dayNameForDate(targetFixture.date) : null,
+    // THE BLOCK-BOUNDARY OWNER'S INPUTS, STATED HERE RATHER THAN FETCHED THERE.
+    // This is the caller that crosses a block boundary, so it is the caller that
+    // must hand generation the athlete's recorded history. Generation no longer
+    // reaches into the store for it (Sam, product close) — same explicit inputs,
+    // same stored block, every time.
+    progressionHistory: {
+      sessionFeedback: persistedState.sessionFeedback,
+      weightOverrides: persistedState.weightOverrides,
+      blockState: persistedState.blockState,
+    },
   });
 
   // 2. Canonical context + pure sweep decision.

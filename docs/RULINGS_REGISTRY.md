@@ -2055,3 +2055,77 @@ composed week does not currently reach storage intact, so there is no
 athlete-visible receipt and this row may not claim one. The legacy mirror at
 `coachingEngine.ts:2226-2251` is **unchanged and still live** on every
 non-composed route.
+
+---
+
+**R-096** · *"DO NOT INVENT OR RE-RULE LOAD BEHAVIOUR. Sam has already authored
+it... The missing work is integration, not policy."* (Sam, 2026-08-16, FINAL) ·
+**THE CANONICAL LOAD PRIORITY. EVERY NUMBER COMES FROM AN AUTHORED SOURCE;
+THE APP ONLY DECIDES WHICH SOURCE ANSWERS.**
+**1. EXACT-EXERCISE HISTORY WINS** — a valid recorded load from a COMPLETED
+exposure is the base, *"even if the exercise disappeared for one or more blocks
+and later returns"*. Then the approved progression/readiness rules: successful
+training + good recovery → smallest practical progression; very hard or low
+readiness → **hold load and reduce volume first**; the athlete may always edit.
+**2. UNSEEN → SAM'S OWN ESTIMATE** — `EXERCISE_LOAD_MAP`'s squat/bench anchor,
+conservatively rounded through the existing equipment lattice.
+**⚠ NO SECOND RATIO TABLE AND NO SECOND ESTIMATION FUNCTION MAY BE CREATED.**
+**3. BODYWEIGHT IS A DEFAULT, NOT A PROHIBITION** — initial display is BW / zero
+additional external load; **the athlete may always add and record external load**
+(shown as BW + X kg); when the exact exercise returns its recorded added-load
+history WINS. **`loadRatio 0` means no automatic estimate or cross-exercise
+transfer. It NEVER means the athlete is forbidden from adding weight, and no
+existing weight control may be removed, hidden or disabled.**
+**4. NO VALID HISTORY OR ESTIMATE** — no exact history, no valid authored
+mapping, or missing anchor inputs → **leave the suggestion blank**.
+**5. NO REPLACEMENT CONTAMINATION** — never seed a rotated exercise from the
+OUTGOING exercise's weight merely because they share a slot, role or movement
+pattern.
+**INCREMENTS COME FROM THE AUTHORED EQUIPMENT LATTICE.** *"Never round, rewrite
+or 'correct' the athlete's recorded number; their number remains the base. If
+the equipment required for an optional external load is unknown, preserve the
+recorded load and leave the next choice editable rather than guessing."*
+**⚠ THIS SUPERSEDES EVERY EARLIER LOAD CLARIFICATION OF 2026-08-16**, including
+two interpretations that were briefly BUILT on this branch and are now removed
+from the code, the guards and this registry: *"rotated exercises are always
+blank"* (wrong — clause 2 gives an unseen mapped exercise the authored estimate)
+and *"bodyweight has no weight field"* (wrong, and the more damaging: it
+short-circuited authored-unloaded rows before reading history and would have
+discarded an athlete's recorded weighted Pull-Up). **Clause 5 is the only one
+that survived all three revisions unchanged.**
+**Search words:** load authority, exact exercise, canonical exercise, recorded
+load, anchor estimate, EXERCISE_LOAD_MAP, anchorMultipliers, equipmentLattice,
+squat anchor, bench anchor, rotated load, sibling transfer, loadRatio, returning
+exercise, unset load, blank load, bodyweight, BW plus, added load, weighted
+pull-up, outgoing exercise, contamination, smallest practical increment.
+· **`BUILT rules/blockBoundaryProgression.ts` — `decideBlockBoundaryLoads` and
+`smallestPracticalIncrementKg`, guarded by `test:block-two-progression`
+(21 cells).** Ten mutations seen RED before this row was written: unknown
+equipment guessing 2.5; the lattice step doubled; history windowed to the
+previous block; `partial` counted as successful; the authored estimate
+outranking own history; an unseen mapped exercise falling to blank; a rotated
+row seeded from any recorded load; **bodyweight short-circuited before history
+(the interpretation this ruling retired)**; the athlete's recorded number
+rounded; and projection's authority to re-derive restored.
+
+**R-097** · *"Real history, overrides and block state enter the single
+generation-time Block Two owner. The final prescription is stored. Projection
+only displays the stored prescription and may not recalculate it."* (Sam,
+2026-08-16) · **ONE OWNER, AT GENERATION TIME, AND THE SCREEN OBEYS IT.**
+**⚠ THE AUTHORING-TIME FREEZE ALREADY EXISTED** —
+`bakeMicrocycleStrengthProgression`, at the end of `generateProgramLocally` —
+**and was fed `sessionFeedback: {}`, `weightOverrides: {}`, `workoutHistory: []`,
+`blockState: null`.** It baked a history-free load into storage while the
+screen, reading the live store, could derive a different one. **The defect was
+four empty arguments, not a missing layer.**
+**A MATCHING PAIR OF NUMBERS IS NOT EVIDENCE HERE.** "Stored == visible" is
+equally produced by *"projection obeys"* and by *"both passes happened to
+agree"*, so the guard hands projection a history that CONTRADICTS the one
+generation saw and requires it not to move.
+**Search words:** stored visible reloaded, projection authority, read-time
+progression, authoring freeze, bake, materialise, prescription identity,
+relaunch, four empty arguments, single owner.
+· **`BUILT services/api/generateProgram.ts` — the `progressionHistory` option
+and the fed `bakeMicrocycleStrengthProgression` call, guarded by
+`test:block-two-progression` cell [8] plus its contradictory-history control.**
+The mutation that restores projection's authority reddens it.

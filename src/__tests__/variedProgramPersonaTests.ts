@@ -386,19 +386,34 @@ section('8. Progression continuity on anchor swap');
   const progressed = applyStrengthProgression(mc2Workout, ctx, lastPerformedWeights);
   const frontSquatPrescribed = progressed.exercises[0].prescribedWeightKg;
 
-  // Expected baseline from sibling transfer: 100 * (0.85 / 1.00) = 85kg.
-  // Progression delta may bump up/down a small amount — tolerance ±10%.
-  const expectedBase = 85;
-  assert(typeof frontSquatPrescribed === 'number',
-    `Front Squat prescribed weight populated (got ${frontSquatPrescribed})`);
-  const delta = Math.abs((frontSquatPrescribed ?? 0) - expectedBase);
-  assert(delta <= expectedBase * 0.10,
-    `Front Squat prescribed ${frontSquatPrescribed}kg within ±10% of sibling-normalised baseline ${expectedBase}kg (delta ${delta.toFixed(1)}kg)`);
-
-  // Sanity: the prescribed weight must NOT be bodyweight/zero — rotation must
-  // never reset an experienced athlete.
-  assert((frontSquatPrescribed ?? 0) > 50,
-    `Front Squat prescribed ${frontSquatPrescribed}kg is not a reset (> 50kg)`);
+  // ── RETIRED 2026-08-16 — THESE ASSERTED THE OPPOSITE OF SAM'S RULING ──
+  //
+  // Two cells lived here and both are now WRONG, not merely stale:
+  //
+  //   1. `Front Squat prescribed within ±10% of sibling-normalised baseline
+  //      85kg` — i.e. Back Squat's 100kg carried across the pool's loadRatio.
+  //   2. `Front Squat prescribed ... is not a reset (> 50kg)`, commented
+  //      "rotation must never reset an experienced athlete".
+  //
+  // Sam's FINAL LOAD-AUTHORITY CLARIFICATION, 2026-08-16: *"Never seed a
+  // rotated exercise from the outgoing exercise's weight merely because they
+  // share a slot or movement pattern."* Cell 1 REQUIRED exactly that seeding.
+  // Cell 2 forbade the blank that his priority 3 now mandates when nothing
+  // authored covers the movement.
+  //
+  // They are removed rather than rewritten because their subject — sibling
+  // load transfer — is retired, not relocated. **Their replacements ship in the
+  // same commit**, as he required, and assert the rule that replaced them:
+  // `src/__tests__/blockTwoProgressionTests.ts` (`npm run test:block-two-progression`)
+  //   · [1] a retained exercise uses its OWN history (100kg → 102.5kg)
+  //   · [5] no row inherits the outgoing exercise's load
+  //   · [6] a genuinely unseen exercise takes the AUTHORED anchor estimate
+  //   · [7] an unseen, unmapped exercise stays blank
+  // Each was seen RED under mutation before this deletion was made.
+  //
+  // `frontSquatPrescribed` is still read above so the rotation half of this
+  // section keeps its subject; only the LOAD claims are gone.
+  void frontSquatPrescribed;
 }
 
 // ─────────────────────────────────────────────────────────────────

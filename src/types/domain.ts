@@ -683,6 +683,24 @@ export interface TrainingProgram {
    * what actually ran. Persisted as an input; the quiescent boot regenerates
    * with exactly this day.
    */
+  /**
+   * WHAT CHANGED AT THIS BLOCK BOUNDARY, AND WHY — the athlete's answer.
+   *
+   * Sam, 2026-08-16 (product close): the explanation must be *"carried into the
+   * stored program"* and survive reload. Stored beside the prescriptions it
+   * explains so the two cannot drift: a load and its reason regenerated
+   * separately are two facts about one decision.
+   *
+   * WRITER: `generateProgramLocally`, from
+   * `rules/blockBoundaryProgression.buildBlockBoundaryExplanation`, once per
+   * authored block. READER: the program/status explanation surface.
+   * BEHAVIOURAL TEST: `test:block-two-progression`, the reload-survival cell.
+   *
+   * Typed ROWS, never a sentence — rendering is the surface's job, and copy has
+   * its own signed-extraction gate.
+   */
+  blockBoundaryExplanation?: import('../rules/blockBoundaryProgression').BlockBoundaryExplanationRow[];
+
   generationAnchorISO?: string;
 
   // Duration
