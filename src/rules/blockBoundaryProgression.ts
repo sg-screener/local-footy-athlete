@@ -110,6 +110,10 @@ import {
   workoutTypeForTemplate,
 } from './conditioningSelection';
 import type { ConditioningModality } from '../data/conditioningTemplates';
+import { isEffortRating } from './effortScale';
+import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
+import { SET_CEILING } from './weeklyLegality';
+import type { WeekKind } from '../types/domain';
 
 /**
  * THE SMALLEST PRACTICAL INCREMENT FOR THIS EXERCISE, from SAM'S OWN LATTICE.
@@ -242,6 +246,21 @@ export interface BlockHistorySignal {
    * and it is the only place block 1's four-set main lift survives into block 2.
    */
   lastRecordedPrescribedSetsByExercise: Readonly<Record<string, number>>;
+  /**
+   * THE SAME QUESTION, ASKED SEPARATELY OF EACH QUALITY.
+   *
+   * The contract's "High readiness and low soreness" section gives three
+   * different answers depending on WHICH quality the athlete is tolerating —
+   * *"strength easy, conditioning difficult"*, *"conditioning easy, strength
+   * difficult"*, *"everything consistently easy"* — and one block-level verdict
+   * cannot tell them apart. See `QualityRecoveryVerdicts` for what each half is
+   * allowed to read.
+   *
+   * ⚠ **IT DOES NOT REPLACE `recoveryVerdict` AND MUST NOT.** That verdict is
+   * R-098's reduction trigger and is deliberately left exactly as it was; this
+   * is an ADDITIONAL, narrower read that only the ladder consults.
+   */
+  byQuality: QualityRecoveryVerdicts;
   /** True when there is enough completed, well-recovered work to progress on. */
   qualifies: boolean;
   /**
@@ -273,11 +292,80 @@ export type BlockRecoveryVerdict =
   /** No recovery answer at all, or answers outside the good band but not the hard band. */
   | 'unknown';
 
+/**
+ * WHAT THE ATHLETE SAID ABOUT EACH QUALITY, SEPARATELY — and the two recorded
+ * fields that are allowed to answer.
+ *
+ * ## ⚠ THE SESSION FEELING CANNOT ANSWER THIS ON ITS OWN
+ *
+ * Measured at `3b5b59d0` over 24 athlete worlds (16 built): a generated week has
+ * **144 strength-only days, 64 combined days and ZERO conditioning-only days** —
+ * conditioning always rides a strength day as an attached component. So on a
+ * combined day `feeling` answers *"how was the session"* and there is no honest
+ * way to split that between the squats and the intervals.
+ *
+ * ## THE TWO FIELDS
+ *
+ * **CONDITIONING → `SessionFeedback.conditioning.rpe`.** It is the CONDITIONING
+ * RPE input on the feedback panel (`SessionFeedbackPanel.tsx:1412`, written at
+ * `:850`) and is never written from a strength answer. Measured: the
+ * `aerobic_base` component generation actually emits returns
+ * `getConditioningLoggingConfig → level 'trackable'` with `rpe` among its
+ * fields, so the input is on the screen for the work the athlete is given.
+ *
+ * **STRENGTH → `feeling` / `soreness`, on a date carrying strength logs and NO
+ * conditioning log.** That is the only date whose session answer is
+ * unambiguously about lifting, and there are plenty of them.
+ *
+ * ⚠ **`SessionFeedback.difficulty` IS DELIBERATELY NOT READ.**
+ * `SessionFeedbackPanel.tsx:911` writes it as
+ * `executionSummary ? sessionRpeValue : conditioningRpeValue` — the field does
+ * not say which question it answered, so using it would be inventing a signal
+ * out of two.
+ *
+ * ## AND NO SECOND SCALE IS MINTED
+ *
+ * `HARD_EFFORT_RATING` maps the 1-10 RPE onto the SAME words the feeling bands
+ * already use. See its own note.
+ */
+export interface QualityRecoveryVerdicts {
+  strength: BlockRecoveryVerdict;
+  conditioning: BlockRecoveryVerdict;
+  /**
+   * How many dates actually carried an answer for each quality. Returned
+   * because "unknown" has two causes — no answer, or answers outside both
+   * bands — and a caller reporting on the athlete must be able to say which.
+   */
+  strengthAnswerDays: number;
+  conditioningAnswerDays: number;
+}
+
+/**
+ * THE RPE THAT MEANS *"very hard"* — 8, AND IT IS NOT A NEW POLICY NUMBER.
+ *
+ * `rules/effortScale.ts` is Sam's signed 1-10 vocabulary (2026-08-12) and it
+ * names `7 — hard` and `8 — very hard`. The feeling bands above already put
+ * `hard` in the GOOD set and `very_hard` in the HARD set. So 8 is where the
+ * effort scale's own word crosses into the band this module already treats as
+ * hard — the two vocabularies are joined by the WORD, not by a threshold
+ * somebody chose here.
+ *
+ * A second, differently-drawn RPE band would be exactly the two-owners defect
+ * the effort scale was written to end.
+ */
+export const HARD_EFFORT_RATING = 8;
+
 export const EMPTY_BLOCK_HISTORY: BlockHistorySignal = {
   completedStrengthSessions: 0,
   recordedStrengthSessions: 0,
   recoveryGood: false,
   recoveryVerdict: 'unknown',
+  byQuality: {
+    strength: 'unknown',
+    conditioning: 'unknown',
+    strengthAnswerDays: 0,
+    conditioningAnswerDays: 0,
+  },
   lastRecordedLoadByExercise: {},
   lastRecordedPrescribedSetsByExercise: {},
   qualifies: false,
@@ -358,6 +446,53 @@ export function readBlockHistory(args: {
   const lastRecordedLoadByExercise: Record<string, number> = {};
   const lastRecordedPrescribedSetsByExercise: Record<string, number> = {};
 
+  // ── THE PER-QUALITY READ, RUN OVER THE SAME WINDOW ──
+  // Separate accumulators, on purpose: the block-level verdict below counts a
+  // combined day's feeling and this one does not, and folding them would make
+  // one of the two answers wrong.
+  let strengthQualityGood = true;
+  let sawStrengthQualityAnswer = false;
+  let sawStrengthQualityHard = false;
+  let strengthAnswerDays = 0;
+  let conditioningQualityGood = true;
+  let sawConditioningQualityAnswer = false;
+  let sawConditioningQualityHard = false;
+  let conditioningAnswerDays = 0;
+
+  for (const [, feedback] of inBlock) {
+    // CONDITIONING — its own input, on any date that carries one.
+    const conditioningRpe = feedback.conditioning?.rpe;
+    if (isEffortRating(conditioningRpe)) {
+      conditioningAnswerDays++;
+      sawConditioningQualityAnswer = true;
+      if (conditioningRpe >= HARD_EFFORT_RATING) {
+        conditioningQualityGood = false;
+        sawConditioningQualityHard = true;
+      }
+    }
+
+    // STRENGTH — only where the session answer can mean nothing else.
+    const carriesStrength = (feedback.strength ?? []).length > 0;
+    const carriesConditioning = feedback.conditioning !== undefined;
+    if (carriesStrength && !carriesConditioning) {
+      let answered = false;
+      if (feedback.feeling !== undefined) {
+        answered = true;
+        if (!GOOD_RECOVERY_FEELINGS.has(feedback.feeling)) strengthQualityGood = false;
+        if (HARD_BLOCK_FEELINGS.has(feedback.feeling)) sawStrengthQualityHard = true;
+      }
+      if (feedback.soreness !== undefined) {
+        answered = true;
+        if (!GOOD_RECOVERY_SORENESS.has(feedback.soreness)) strengthQualityGood = false;
+        if (HARD_BLOCK_SORENESS.has(feedback.soreness)) sawStrengthQualityHard = true;
+      }
+      if (answered) {
+        strengthAnswerDays++;
+        sawStrengthQualityAnswer = true;
+      }
+    }
+  }
+
   for (const [, feedback] of inBlock) {
     const strengthLogs = feedback.strength ?? [];
     if (strengthLogs.length === 0) continue;
@@ -430,11 +565,24 @@ export function readBlockHistory(args: {
     requiredStrengthSessions > 0 &&
     completedStrengthSessions >= Math.ceil(requiredStrengthSessions * QUALIFYING_COMPLETION_RATIO);
 
+  // THE SAME THREE-WAY SHAPE AS THE BLOCK VERDICT, FOR THE SAME REASON:
+  // silence must not read as "it went well" for either quality.
+  const verdictOf = (hard: boolean, answered: boolean, good: boolean): BlockRecoveryVerdict =>
+    (hard ? 'very_hard' : (answered && good ? 'good' : 'unknown'));
+
   return {
     completedStrengthSessions,
     recordedStrengthSessions,
     recoveryGood: resolvedRecoveryGood,
     recoveryVerdict,
+    byQuality: {
+      strength: verdictOf(sawStrengthQualityHard, sawStrengthQualityAnswer, strengthQualityGood),
+      conditioning: verdictOf(
+        sawConditioningQualityHard, sawConditioningQualityAnswer, conditioningQualityGood,
+      ),
+      strengthAnswerDays,
+      conditioningAnswerDays,
+    },
     lastRecordedLoadByExercise,
     lastRecordedPrescribedSetsByExercise,
     qualifies: enoughCompleted && recoveryVerdict === 'good',
@@ -865,6 +1013,281 @@ export function snapshotAuthoredSets(
     }
   }
   return snapshot;
+}
+
+/* ═══ THE LADDER'S SECOND RUNG — ONE SET, WHEN LOAD DID NOT MOVE ═══════════ */
+
+/**
+ * THE PROGRESSION ORDER, AND WHY A SECOND RUNG HAD TO EXIST AT THE BOUNDARY.
+ *
+ * The approved contract: *"1. Increase load by the smallest practical
+ * increment. 2. Add one set when more volume is appropriate and the session
+ * remains inside its approved cap. 3. Add another session only when phase,
+ * schedule and gym availability permit it, and after athlete confirmation."*
+ *
+ * ⚠ **THE IN-BLOCK FREEZE ALREADY ADDS SETS, AND IT ADDS THEM IN THE WRONG
+ * ORDER.** `utils/progressionRules.ts` `buildBuildOutput` returns
+ * `loadDelta: 'up'` **and** `setsDelta: 'add_one'` on the SAME lift in the SAME
+ * rollover once there are three consecutive full completions, and
+ * `buildOverreach` does the same. That is both rungs at once on one exercise,
+ * which the contract's order forbids, and it is applied with no session set
+ * ceiling anywhere in the path. **This module is the boundary's last word on a
+ * set count exactly as `decideBlockBoundaryVolume` is** — R-098 gave the
+ * boundary that authority for the reduction, and the addition answers to the
+ * same owner rather than to a second one.
+ *
+ * ## WHAT IT WILL NOT DO
+ *
+ *   - **It never runs when the athlete is beaten up.** `history.reduces` returns
+ *     an empty list before anything else is read: the contract's *"Do not add
+ *     sessions or load in this state"*, applied to volume as well.
+ *   - **It never runs on a quality the athlete found hard.** The strength half
+ *     of `byQuality` must read `good`; that is *"strength easy, conditioning
+ *     difficult: progress strength"* and its mirror image in one gate.
+ *   - **It never touches a lift whose load this same rollover raised.**
+ *     *"Do not increase load and sets on the same exercise in the same
+ *     rollover"* — keyed by exercise NAME, because that is what "the same
+ *     exercise" means across the sessions of one block.
+ *   - **It never touches reps.** *"Do not add repetitions merely to manufacture
+ *     progression."* Only `prescribedSets` moves, exactly as the reduction does.
+ *   - **It never raises a deload week.** `weekKind === 'deload'` returns empty;
+ *     R-034 owns that week's dose and this module does not get a vote.
+ */
+
+/** *"Add at most one set"* — the contract's own number, and the only one. */
+export const LADDER_SET_ADDITION = 1;
+
+/**
+ * The ceiling the addition must respect, taken from the WEEK CONTRACT'S OWN
+ * constant rather than re-declared here.
+ *
+ * WC-030, `rules/weeklyLegality.ts`: *"Prefer 12-15 main/secondary working sets;
+ * 16 is a hard ceiling."*
+ *
+ * ⚠ **AND WC-030's WEEK-TIME CHECK DOES NOT MEASURE THIS.** It compares the
+ * LAYOUT's declared ceiling against the contract's — `w.setsPerSession >
+ * SET_CEILING` where `setsPerSession` is the layout's number — so no owner in
+ * the app has ever counted an actual session's main/secondary sets. The ladder
+ * is the first thing that can push a real session over the line, so it counts.
+ */
+export const LADDER_SESSION_SET_CEILING = SET_CEILING;
+
+export interface BlockBoundarySetAdditionDecision {
+  /** 0-based index of the microcycle the session sits in. */
+  weekIndex: number;
+  workoutId: string;
+  /** THE ROW, not the name — see `BlockBoundaryVolumeDecision.rowId`. */
+  rowId: string;
+  exerciseName: string;
+  role: ExerciseRole;
+  fromSets: number;
+  toSets: number;
+  /** Counting sets in this session before and after. Stored so the ceiling is auditable. */
+  sessionCountingSetsBefore: number;
+  sessionCountingSetsAfter: number;
+}
+
+/**
+ * The main/secondary working sets in one session, counted the way WC-030 counts
+ * them.
+ *
+ * ⚠ **THE SLOT DECIDES, NEVER THE ROLE.** `slotCountsTowardSetBudget` is Sam's
+ * own rule (*"Ab Wheel is outside that ceiling"*, *"Band Pull-Apart is accessory
+ * work outside that count"*), and its input is the composer's declared slot,
+ * which `materialiseComposedWeek` writes onto every row. A row with no slot —
+ * legacy, or non-composed — counts for nothing, which is what
+ * `slotCountsTowardSetBudget(undefined)` already answers.
+ *
+ * Exported so a guard can assert the ceiling directly rather than inferring it
+ * from whether an addition happened.
+ */
+export function countMainSecondarySets(workout: Workout): number {
+  let total = 0;
+  for (const row of workout.exercises ?? []) {
+    if (!slotCountsTowardSetBudget(row.section18Evidence?.slot)) continue;
+    const sets = row.prescribedSets;
+    if (typeof sets === 'number' && Number.isFinite(sets) && sets > 0) total += sets;
+  }
+  return total;
+}
+
+/**
+ * Decide the ONE set this session may gain, or nothing.
+ *
+ * Pure, and split from its application for the same reason the load and volume
+ * decisions are.
+ *
+ * ⚠ **ONE SET PER SESSION, NOT ONE PER ELIGIBLE LIFT.** The contract's rung is
+ * *"add one set"* — singular — and a session with four eligible lifts gaining
+ * four sets is a jump of four, not the smallest next step. The lift that gets it
+ * is the session's first eligible MAIN lift in exercise order, and only if no
+ * main lift is eligible does a secondary take it: the same priority the rest of
+ * this module already gives `primary_strength` over `secondary_strength`.
+ */
+export function decideBlockBoundarySetAdditions(args: {
+  history: BlockHistorySignal;
+  nextBlockWorkouts: readonly Workout[];
+  weekIndex: number;
+  /** The block plan's statement about this week. A deload gets nothing. */
+  weekKind?: WeekKind;
+  /**
+   * The LOAD decisions this same rollover already made. A lift that took the
+   * first rung does not also take the second.
+   */
+  loadDecisions: readonly BlockBoundaryLiftDecision[];
+  /**
+   * ⚠ **THE AUTHORED DOSE, READ BEFORE THE FREEZE SPENT IT — AND IT IS LOAD-
+   * BEARING HERE FOR A DIFFERENT REASON THAN IN `decideBlockBoundaryVolume`.**
+   *
+   * `utils/progressionRules.buildBuildOutput` ALREADY hands the authoring-time
+   * freeze `setsDelta: 'add_one'` after three consecutive full completions. By
+   * the time the boundary runs, that set is on the row. Adding to
+   * `row.prescribedSets` would therefore hand a well-training athlete **two**
+   * sets in one rollover while every comment in this file said one, and no cell
+   * comparing against a silent control could see it — the control never got
+   * either set.
+   */
+  authoredSetsByRowId: Readonly<Record<string, number>>;
+}): BlockBoundarySetAdditionDecision[] {
+  const {
+    history, nextBlockWorkouts, weekIndex, weekKind, loadDecisions, authoredSetsByRowId,
+  } = args;
+
+  // ── THE THREE STATE GATES, IN THE CONTRACT'S OWN ORDER ──
+  //
+  // *"When training is being completed and recovery is good"* — the same gate
+  // the load rung answers to, and the same 75%.
+  //
+  // ⚠ **AND IT IS ALSO THE LOW-READINESS GATE. A SEPARATE `history.reduces`
+  // CHECK STOOD HERE AND WAS DECORATION.** `reduces` is
+  // `recoveryVerdict === 'very_hard'` and `qualifies` requires
+  // `recoveryVerdict === 'good'`, so `reduces` STRICTLY IMPLIES `!qualifies` and
+  // no world can reach the second check with the first one false. Mutation M1
+  // deleted the `reduces` line and **all 41 cells stayed green** — three gates
+  // were catching one fixture, which is the "two doors, one fixture" shape R-098
+  // already paid for. The contract's *"Do not add sessions or load in this
+  // state"* is enforced here, once, and the very-hard cell proves it.
+  if (!history.qualifies) return [];
+  // *"progress the quality the athlete is tolerating well"*. Sets are strength
+  // volume, so the STRENGTH half must be the one reading good — not the block.
+  if (history.byQuality.strength !== 'good') return [];
+  // R-034 owns a deload's dose. Adding to it would be this module overruling a
+  // signed law from outside its subject.
+  if (weekKind === 'deload') return [];
+
+  // "THE SAME EXERCISE", KEYED BY NAME. A block runs one exercise across several
+  // sessions and the load decision is per exercise, not per row, so the ban has
+  // to be per exercise too — otherwise Monday's Deadlift takes the load and
+  // Friday's takes the set, which is both rungs on one lift in one rollover.
+  const loadRaisedNames = new Set(
+    loadDecisions
+      .filter((decision) => decision.kind === 'history_progressed')
+      .map((decision) => decision.exerciseName),
+  );
+
+  const decisions: BlockBoundarySetAdditionDecision[] = [];
+
+  for (const workout of nextBlockWorkouts) {
+    if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') continue;
+
+    const before = countMainSecondarySets(workout);
+
+    const eligible: { row: WorkoutExercise; role: ExerciseRole }[] = [];
+    for (const row of workout.exercises ?? []) {
+      if (!participatesInCounting(row)) continue;
+      // The ceiling counts it, so the ladder may add to it — and nothing else.
+      // An accessory or core row is outside the count and outside the rung.
+      if (!slotCountsTowardSetBudget(row.section18Evidence?.slot)) continue;
+      const exerciseName = row.exercise?.name ?? '';
+      if (!exerciseName) continue;
+      const role = classifyProgressionEligibility(exerciseName);
+      if (role === null) continue;
+      if (loadRaisedNames.has(exerciseName)) continue;
+      eligible.push({ row, role });
+    }
+    if (eligible.length === 0) continue;
+
+    const chosen = eligible.find((candidate) => candidate.role === 'primary_strength')
+      ?? eligible[0];
+    const exerciseName = chosen.row.exercise?.name ?? '';
+    const currentSets = chosen.row.prescribedSets;
+    if (typeof currentSets !== 'number' || !Number.isFinite(currentSets) || currentSets <= 0) {
+      continue;
+    }
+
+    // ── WHAT "ONE MORE" IS ONE MORE THAN ──
+    //
+    // The SAME `previousSets` the reduction uses: the athlete's own recorded
+    // prescription for this exact exercise in the block that just ended, and the
+    // week's AUTHORED dose when there is none. Two owners of "how many sets was
+    // this lift on" would be free to disagree about the same lift in the same
+    // rollover, one adding and one reducing from different bases.
+    //
+    // It is also what lets the rung COMPOUND across blocks — the composer
+    // re-authors three sets every block, so an athlete who earned four last block
+    // would be handed three again and "progress" to four forever. Reading the
+    // recorded prescription is what makes block 4 five sets, and it is a program
+    // fact (what the app ASKED for), never a claim about what was completed.
+    const authoredSets = authoredSetsByRowId[chosen.row.id];
+    const recordedSets = history.lastRecordedPrescribedSetsByExercise[exerciseName];
+    const previousSets = typeof recordedSets === 'number'
+      ? recordedSets
+      : (typeof authoredSets === 'number' ? authoredSets : currentSets);
+    const toSets = previousSets + LADDER_SET_ADDITION;
+
+    // NOTHING TO ADD IS NOT AN ADDITION. If the freeze already put the row at or
+    // above the rung, the rung has been spent and this module writes nothing —
+    // it must never REDUCE a row on the way to "adding" to it.
+    if (toSets <= currentSets) continue;
+
+    // ── THE CEILING, MEASURED ON THE RESULT ──
+    // A session at 16 may not go to 17; a session at 15 may land exactly on 16.
+    const after = before - currentSets + toSets;
+    if (after > LADDER_SESSION_SET_CEILING) continue;
+
+    decisions.push({
+      weekIndex,
+      workoutId: workout.id,
+      rowId: chosen.row.id,
+      exerciseName,
+      role: chosen.role,
+      fromSets: currentSets,
+      toSets,
+      sessionCountingSetsBefore: before,
+      sessionCountingSetsAfter: after,
+    });
+  }
+
+  return decisions;
+}
+
+/**
+ * Write the set additions onto the workouts about to be stored.
+ *
+ * REPS, LOAD AND REST ARE UNTOUCHED — only `prescribedSets` moves, the mirror
+ * image of `applyBlockBoundaryVolume`. *"Do not add repetitions merely to
+ * manufacture progression"* is enforced by there being nothing here that could.
+ */
+export function applyBlockBoundarySetAdditions(args: {
+  workouts: readonly Workout[];
+  decisions: readonly BlockBoundarySetAdditionDecision[];
+}): Workout[] {
+  const { workouts, decisions } = args;
+  const byRowId = new Map(decisions.map((decision) => [decision.rowId, decision]));
+  if (byRowId.size === 0) return [...workouts];
+
+  return workouts.map((workout) => {
+    if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') return workout;
+    let touched = false;
+    const exercises = (workout.exercises ?? []).map((exercise) => {
+      const decision = byRowId.get(exercise.id);
+      if (!decision) return exercise;
+      if (exercise.prescribedSets === decision.toSets) return exercise;
+      touched = true;
+      return { ...exercise, prescribedSets: decision.toSets };
+    });
+    return touched ? { ...workout, exercises } : workout;
+  });
 }
 
 /* ── HARD CONDITIONING FALLS FIRST, AND IS REPLACED RATHER THAN REMOVED ── */

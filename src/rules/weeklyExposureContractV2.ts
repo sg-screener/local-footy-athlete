@@ -12,6 +12,7 @@ import type { CapacityBand, SeasonPhase, WeekKind } from '../types/domain';
 import type { OffseasonSubphase } from './offseasonSubphase';
 import type { PreseasonSubphase } from './preseasonSubphase';
 import type { MainStrengthPattern } from './strengthPatternContributions';
+import type { SessionSlot } from './sessionSlotCoverage';
 import type {
   WeeklyExposureContract,
   WeeklyExposureReduction,
@@ -202,6 +203,22 @@ export interface WorkoutExerciseSection18Evidence {
   strengthPattern: MainStrengthPattern | null;
   /** Meaningful main-lift credit; accessories remain null. */
   mainStrengthPattern: MainStrengthPattern | null;
+  /**
+   * THE MOVEMENT SLOT THE COMPOSER FILLED WITH THIS ROW — and the only field
+   * that can say whether the row's sets count toward the WC-030 ceiling.
+   *
+   * ⚠ **IT HAS BEEN WRITTEN SINCE 2026-08-16 AND HAD NO TYPE.**
+   * `materialiseComposedWeek.ts:90` sets `slot: row.slot ?? null` and casts the
+   * whole row through `as unknown as WorkoutExercise`, so every reader had to
+   * guess at it. `slotCountsTowardSetBudget` is the rule that consumes it —
+   * Sam's *"Ab Wheel is outside that ceiling"* — and a rule reading an untyped
+   * field is one rename away from silently counting nothing.
+   *
+   * Optional because legacy and non-composed rows genuinely do not have one;
+   * `null` and absent both mean "no slot", which `slotCountsTowardSetBudget`
+   * already answers `false` for.
+   */
+  slot?: SessionSlot | null;
   /**
    * `composer_declaration` (B1-PIVOT) — the row's role and pattern were DECIDED
    * by `composeWeek`, not inferred from its name. The classifier answers

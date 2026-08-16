@@ -17,11 +17,13 @@ import { effectiveAnchorParticipation } from '../../rules/weeklyExposureContract
 import {
   applyBlockBoundaryConditioning,
   applyBlockBoundaryProgression,
+  applyBlockBoundarySetAdditions,
   applyBlockBoundaryVolume,
   buildBlockBoundaryExplanation,
   buildBlockBoundaryReductionExplanation,
   decideBlockBoundaryConditioning,
   decideBlockBoundaryLoads,
+  decideBlockBoundarySetAdditions,
   decideBlockBoundaryVolume,
   readBlockHistory,
   snapshotAuthoredSets,
@@ -1626,6 +1628,29 @@ export function generateProgramLocally(
       });
       for (const decision of decisions) allDecisions.push(decision);
 
+      // ── THE LADDER'S SECOND RUNG — ONE SET, ONLY WHERE LOAD DID NOT MOVE ──
+      //
+      // ORDER IS THE CONTRACT'S: *"1. Increase load... 2. Add one set when more
+      // volume is appropriate and the session remains inside its approved cap."*
+      // It runs AFTER the load pass because it is fed that pass's decisions —
+      // *"do not increase load and sets on the same exercise in the same
+      // rollover"* is only answerable once the load rung has been decided.
+      //
+      // It is a no-op on every block that is not well-completed AND
+      // well-recovered AND tolerated in the strength quality, so the ordinary
+      // and the beaten-up athlete both reach the reduction below unchanged.
+      const setAdditions = decideBlockBoundarySetAdditions({
+        history,
+        nextBlockWorkouts: microcycle.workouts,
+        weekIndex,
+        ...(microcycle.weekKind !== undefined ? { weekKind: microcycle.weekKind } : {}),
+        loadDecisions: decisions,
+        authoredSetsByRowId,
+      });
+      microcycle.workouts = applyBlockBoundarySetAdditions({
+        workouts: microcycle.workouts,
+        decisions: setAdditions,
+      });
       // ── THE REDUCTION, ON A BLOCK THE ATHLETE SAID WAS VERY HARD ──
       //
       // ORDER IS THE CONTRACT'S, NOT AN IMPLEMENTATION CONVENIENCE. Its "Low
