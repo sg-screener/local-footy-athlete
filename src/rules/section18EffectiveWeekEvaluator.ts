@@ -13,7 +13,10 @@ import {
   normalizeStrengthIntent,
   type MainStrengthPattern,
 } from './strengthPatternContributions';
-import { anchorAttendanceClaimsConditioning } from './weeklyExposureContractV2';
+import {
+  anchorAttendanceClaimsConditioning,
+  effectiveAnchorParticipation,
+} from './weeklyExposureContractV2';
 import type {
   AnchorParticipationState,
   Section18AnchorContract,
@@ -464,7 +467,7 @@ function workoutConditioning(
 }
 
 function normalParticipation(anchor: Section18AnchorContract): boolean {
-  return anchor.participation === 'normal_unrestricted';
+  return effectiveAnchorParticipation(anchor) === 'normal_unrestricted';
 }
 
 /**
@@ -483,8 +486,11 @@ function normalParticipation(anchor: Section18AnchorContract): boolean {
  * contract builder, the safety policy and this evaluator all have to give the
  * same answer, and a second copy here is how they would drift apart again.
  */
-function attendedAnchor(anchor: { participation: AnchorParticipationState }): boolean {
-  return anchorAttendanceClaimsConditioning(anchor.participation);
+function attendedAnchor(anchor: {
+  participation: AnchorParticipationState;
+  participationProvenance?: Section18AnchorContract['participationProvenance'];
+}): boolean {
+  return anchorAttendanceClaimsConditioning(effectiveAnchorParticipation(anchor));
 }
 
 function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeekLedger {
@@ -581,7 +587,12 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       id: anchor.id,
       kind: anchor.kind,
       dayOfWeek: anchor.dayOfWeek,
-      participation: anchor.participation,
+      // ⚠ THE EFFECTIVE PARTICIPATION, NOT THE RAW ONE. The credit above was
+      // granted on this value, and the `unjustified_anchor_credit` guard below
+      // reads this row — recording the raw `unknown` here would make the ledger
+      // say the credit was unjustified by the very number that justified it.
+      // The STORED anchor is untouched; only the judge's ledger normalises.
+      participation: effectiveAnchorParticipation(anchor),
       conditioningCredited: attended,
       sprintCredited: fullParticipation,
       hardDayCredited: fullParticipation,

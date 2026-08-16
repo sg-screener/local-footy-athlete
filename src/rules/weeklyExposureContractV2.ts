@@ -99,6 +99,65 @@ export type AnchorParticipationState =
  * the two questions collapsing back into one boolean, which is how a deload
  * came to delete a session from the week's count.
  */
+/**
+ * WHAT AN ANCHOR'S PARTICIPATION IS WORTH WHEN THE WEEK IS BEING PLANNED.
+ *
+ * ## THE DEFECT THIS EXISTS TO END — TWO GATES, ONE QUESTION, TWO ANSWERS
+ *
+ * A club night the athlete has not attended yet carries
+ * `participation: 'unknown'` with `participationProvenance:
+ * 'derived_healthy_unrestricted'` — nobody has reported anything, because the
+ * week is being AUTHORED.
+ *
+ * `validateGeneratedWeek` has treated that as normal participation since
+ * 2026-08-15, quoting Sam: *"conditioning/sprint credit supplied by those
+ * visible anchors"*. **`section18EffectiveWeekEvaluator` never heard of the
+ * provenance and read `participation` raw.** So the same week generation
+ * ACCEPTED, the safety finaliser REFUSED with `unjustified_anchor_credit` —
+ * measured on a real club-night athlete, and the reason no athlete with club
+ * nights could relaunch the app at all:
+ *
+ *     team_training@d2 participation=unknown prov=derived_healthy_unrestricted
+ *                      claim={conditioning:true, sprintHighSpeed:true, hardDay:true}
+ *     -> Section18SafetyContradictionError: unjustified_anchor_credit
+ *
+ * Both callers now ask THIS function. It is the `anchorAttendanceClaimsConditioning`
+ * pattern applied one field over: one exported rule, delegated to, never
+ * restated — which is what the evaluator's own `attendedAnchor` comment already
+ * demands of its neighbour.
+ *
+ * ## ⚠ WHAT IT DOES NOT DO
+ *
+ * **IT NEVER CLAIMS THE ATHLETE ATTENDED.** This is PLANNED-PROGRAM credit, not
+ * completed-training history. It promotes exactly one state — `unknown` whose
+ * provenance says the app DERIVED a healthy, unrestricted athlete — and returns
+ * every other participation unchanged:
+ *
+ *   · `legacy_unknown`, `current_input_missing`, `healthy_legacy_assumption`
+ *     stay UNKNOWN and keep refusing. Genuinely unknown is still unknown.
+ *   · `derived_active_constraint` — an injury or restriction the app derived —
+ *     never promotes, whatever the participation says.
+ *   · `modified`, `rehab`, `restricted`, `non_contact`, `reduced_running` and
+ *     `did_not_participate` are REPORTED states, not absence of a report, so
+ *     they are returned untouched and their intensity claims stay refused.
+ *   · `explicit` is the ATHLETE speaking and is never overwritten.
+ *   · `delivered_history` is settled past work and is never re-decided.
+ *
+ * **NOTHING IS WRITTEN BACK.** The stored anchor keeps `unknown`; this is the
+ * value a JUDGE should use. The moment a real participation fact exists it is
+ * not derived any more, and it wins — promotion cannot reach it, because
+ * promotion only ever applies to `unknown`.
+ */
+export function effectiveAnchorParticipation(anchor: {
+  participation: AnchorParticipationState;
+  participationProvenance?: Section18AnchorContract['participationProvenance'];
+}): AnchorParticipationState {
+  if (anchor.participation !== 'unknown') return anchor.participation;
+  return anchor.participationProvenance === 'derived_healthy_unrestricted'
+    ? 'normal_unrestricted'
+    : anchor.participation;
+}
+
 export function anchorAttendanceClaimsConditioning(
   participation: AnchorParticipationState,
 ): boolean {

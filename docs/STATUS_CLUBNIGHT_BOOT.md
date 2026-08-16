@@ -82,3 +82,42 @@ measurement had already refuted.
    `derived_healthy_unrestricted` promotes.
 3. `test:readiness-ownership` (red 13× at `6117a9fd` with this signature) is the
    existing suite that should go green.
+
+---
+
+# THE FIX — ONE OWNER, AND WHAT IT DID NOT CLOSE
+
+`effectiveAnchorParticipation` in `rules/weeklyExposureContractV2.ts`, beside
+`anchorAttendanceClaimsConditioning` — the same "one exported rule, delegated to,
+never restated" shape the evaluator's own `attendedAnchor` comment already
+demands. Both judges call it; neither carries the condition any more, and a cell
+greps to prove that.
+
+## READINESS-OWNERSHIP: THREE INVARIANTS RECOVERED
+
+| | merged main `f3ec68d1` | with the fix |
+| --- | --- | --- |
+| `unjustified_anchor_credit` occurrences | **13** | **0** |
+| R1 characterization | FAIL (contradiction) | **PASS** |
+| R2 read-alignment | FAIL (contradiction) | **PASS** |
+| R3 unconditional-ack | FAIL (contradiction) | **PASS** |
+| R4, R5, R6, R12 | FAIL (contradiction) | FAIL — on their OWN subject now |
+
+The remaining four stopped reporting the safety contradiction and started
+reporting seeding preconditions, override effect and transaction ownership. They
+were masked, not caused, by this defect. **Not repaired here.**
+
+## ⚠ TWO MUTATIONS SURVIVE — STATED, NOT PAPERED OVER
+
+P1 (`normalParticipation`) and P3 (`attendedAnchor`) reverted to the raw
+participation change NO cell. The `unjustified_anchor_credit` guard reads the
+LEDGER ROW, which P2 does red — but those two functions decide the CREDIT: what a
+club night is WORTH. Nothing observes that number.
+
+A cell was written and **withdrawn rather than shipped green-but-empty**: a
+hand-built contract came back with `currentProductionClaim` all false and no
+provenance, so it measured the builder's defaults. The honest coordinate is a
+REAL generated club week's contract passed to `evaluateSection18EffectiveWeek`.
+
+**That is why this branch is NOT merged.** The mission said merge if everything
+holds; two required guards do not yet hold.
