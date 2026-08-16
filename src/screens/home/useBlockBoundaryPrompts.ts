@@ -32,7 +32,6 @@ import type { DecisionLedgerEntry } from '../../types/decisionLedger';
 import {
   isReductionExplanationRow,
   readBlockHistory,
-  smallerRungsFoundSomewhereToGo,
   type BlockBoundaryReductionExplanationRow,
 } from '../../rules/blockBoundaryProgression';
 import {
@@ -186,10 +185,6 @@ function deriveExtraSession(args: {
       weekOrder,
       availableDays: availableTrainingDays({ profile: onboardingData, weekOrder }),
     })(sessionsPerWeek),
-    // THE BLOCK THAT WAS ACTUALLY AUTHORED IS THE WITNESS, not a fresh
-    // derivation that could disagree with the prescriptions on the screen.
-    smallerRungsAlreadySpent:
-      smallerRungsFoundSomewhereToGo(currentProgram.blockBoundaryExplanation),
     currentSessionsPerWeek,
     patchFor: (sessionsPerWeek) => commitmentPatchFor({
       profile: onboardingData,

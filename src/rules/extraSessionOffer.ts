@@ -25,6 +25,27 @@
  * attendance is BELOW 75%, and this one only when the block QUALIFIES, which
  * requires attendance at or above it. **No block can raise both.**
  *
+ * ## ⚠ "ONLY AFTER LOAD AND SET PROGRESSION" IS STRUCTURAL, NOT A GATE
+ *
+ * The order names TWO ways to reach this rung: the smaller ones are
+ * *unavailable* (nothing left to raise) or *insufficient* (they were raised and
+ * the athlete still found the block easy). **Both must open the offer**, so a
+ * gate testing which of the two happened cannot decide anything — and a gate
+ * demanding that the smaller rungs LANDED is worse than decoration: it locks out
+ * the exact athlete the word *unavailable* was written for.
+ *
+ * ⚠ **THAT GATE WAS BUILT AND REMOVED, AND A MEASUREMENT IS WHY.** A clubless
+ * off-season athlete on two gym days is authored at **16 main/secondary sets in
+ * every session** — the WC-030 ceiling exactly — so the set rung has nowhere to
+ * go, and the block's every load reads `history_held`. That athlete finds the
+ * block easy, has three free days, and generation builds their three-day week:
+ * they are the contract's "unavailable" case in a real generated world, and the
+ * gate refused them.
+ *
+ * What makes the ORDER true is not a gate. This question is derived from a
+ * STORED block in which the boundary has already decided load and sets, so the
+ * two smaller rungs have been answered before the third is ever put.
+ *
  * ## ⚠ THE LEGALITY ANSWER IS GENERATION'S
  *
  * `commitmentLegalityProbe` builds the week at the candidate count and reports
@@ -72,8 +93,6 @@ export type ExtraSessionOfferRefusal =
   | 'block_did_not_qualify'
   /** The athlete found it hard, or said nothing. Only "consistently easy" asks. */
   | 'not_consistently_easy'
-  /** The two smaller rungs were not spent on this block; they come first. */
-  | 'smaller_rungs_not_spent_first'
   /** Asked and answered for this block — including a decline. */
   | 'already_answered_for_this_block'
   /** Every day the athlete has is already committed. */
@@ -124,26 +143,6 @@ export function decideExtraSessionOffer(args: {
   weekOrder: readonly DayOfWeek[];
   ledgerEntries: readonly DecisionLedgerEntry[];
   isCommitmentLegal: CommitmentLegalityProbe;
-  /**
-   * Did the two smaller rungs actually land on the block just authored?
-   *
-   * ⚠ **PASSED IN, NOT RE-DERIVED.** *"Only after load and set progression are
-   * unavailable/insufficient"* is a statement about the block the generator
-   * ACTUALLY produced, and its only honest witness is the block's own stored
-   * explanation rows. Re-deriving here would let the app offer a fourth session
-   * while the stored programme disagrees about what it just did.
-   *
-   * ⚠ **THIS IS THE "INSUFFICIENT" BRANCH, AND THE "UNAVAILABLE" BRANCH IS NOT
-   * BUILT.** The order names two ways to reach the third rung: the smaller ones
-   * are *unavailable* (nothing left to raise) or *insufficient* (they were
-   * raised and the athlete still found the block easy). Measured at `3b5b59d0`:
-   * every qualifying athlete's block raises at least one load, so **no generated
-   * world reaches the "unavailable" branch** — a gate demanding it would make
-   * this whole rung dead code. So the gate is the reachable one: the smaller
-   * rungs were spent FIRST, and the athlete's own answers say they were not
-   * enough. The unbuilt branch is recorded rather than faked.
-   */
-  smallerRungsAlreadySpent: boolean;
   /** The day set the block was built on. */
   currentSessionsPerWeek: number;
   /**
@@ -154,7 +153,7 @@ export function decideExtraSessionOffer(args: {
 }): ExtraSessionOfferOutcome {
   const {
     history, forBlockNumber, profile, weekOrder, ledgerEntries,
-    isCommitmentLegal, smallerRungsAlreadySpent, currentSessionsPerWeek, patchFor,
+    isCommitmentLegal, currentSessionsPerWeek, patchFor,
   } = args;
 
   // ── THE GATES, IN THE CONTRACT'S ORDER ──
@@ -174,14 +173,6 @@ export function decideExtraSessionOffer(args: {
     && (history.byQuality.conditioningAnswerDays === 0 || history.byQuality.conditioningEasy);
   if (!history.byQuality.strengthEasy || !conditioningNotHard) {
     return { offer: false, refusal: 'not_consistently_easy' };
-  }
-
-  // *"Only AFTER load and set progression."* The block on the screen must
-  // already show the two smaller rungs having been taken — an offer of a fourth
-  // training day beside a programme that did not raise a single kilo or set is
-  // the ladder skipping its own order.
-  if (!smallerRungsAlreadySpent) {
-    return { offer: false, refusal: 'smaller_rungs_not_spent_first' };
   }
 
   // ASKED AND ANSWERED IS ASKED AND ANSWERED — including a decline. An app that

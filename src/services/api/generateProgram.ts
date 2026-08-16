@@ -21,7 +21,6 @@ import {
   applyBlockBoundaryVolume,
   buildBlockBoundaryExplanation,
   buildBlockBoundaryReductionExplanation,
-  buildBlockBoundarySetAddedExplanation,
   decideBlockBoundaryConditioning,
   decideBlockBoundaryLoads,
   decideBlockBoundarySetAdditions,
@@ -30,7 +29,6 @@ import {
   snapshotAuthoredSets,
   type BlockBoundaryConditioningDecision,
   type BlockBoundaryLiftDecision,
-  type BlockBoundarySetAdditionDecision,
   type BlockBoundaryVolumeDecision,
 } from '../../rules/blockBoundaryProgression';
 import { deriveProfileReadiness } from '../../utils/readiness';
@@ -1613,7 +1611,6 @@ export function generateProgramLocally(
       blockEndISO: previousBlock.endISO,
       requiredStrengthSessions: plan.coreSessions * WEEKS_PER_BLOCK,
     });
-    const allSetAdditions: BlockBoundarySetAdditionDecision[] = [];
     const allVolumeDecisions: BlockBoundaryVolumeDecision[] = [];
     const allConditioningDecisions: BlockBoundaryConditioningDecision[] = [];
     for (const [weekIndex, microcycle] of program.microcycles.entries()) {
@@ -1654,7 +1651,6 @@ export function generateProgramLocally(
         workouts: microcycle.workouts,
         decisions: setAdditions,
       });
-      for (const decision of setAdditions) allSetAdditions.push(decision);
       // ── THE REDUCTION, ON A BLOCK THE ATHLETE SAID WAS VERY HARD ──
       //
       // ORDER IS THE CONTRACT'S, NOT AN IMPLEMENTATION CONVENIENCE. Its "Low
@@ -1704,10 +1700,6 @@ export function generateProgramLocally(
       // to my programme"; the per-lift load rows are its detail.
       ...(reduction ? [reduction] : []),
       ...buildBlockBoundaryExplanation(allDecisions),
-      // THE SET ROWS TRAVEL WITH THE PRESCRIPTIONS THEY EXPLAIN, and they are
-      // what the extra-session offer reads to decide the ladder has run out of
-      // smaller rungs.
-      ...buildBlockBoundarySetAddedExplanation(allSetAdditions),
     ];
   }
 

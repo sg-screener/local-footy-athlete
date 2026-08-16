@@ -2310,13 +2310,45 @@ question of the form *"how many sessions a week"*, asked in two directions, one
 canonical answer per block — and the two can never collide, because the
 shrinking question needs attendance BELOW 75% and the offer needs the block to
 qualify. **No new persisted key.**
-**⚠ THE "UNAVAILABLE" HALF OF RUNG 3'S TRIGGER IS NOT BUILT, AND SAYING SO IS
-THE ROW.** Every qualifying athlete's block raises at least one load, so no
-generated world reaches "the smaller rungs had nowhere to go". Only the
-*insufficient* branch is implemented: the rungs were spent and the athlete still
-reported the block easy. **AND `n → n+1` IS LEGAL IN ONLY 11 OF 27 WORLDS** —
-every world with no club night refuses, and off-season refuses above two gym
-days. Generation is asked; no table is written.
+**⚠ AMENDED 2026-08-17, ON THREE ORDERS FROM SAM, AND TWO OF THE AMENDMENTS
+RETRACT CLAIMS THIS ROW MADE THE DAY BEFORE.**
+**THE SET RULE IS RULED AND MATCHES WHAT WAS BUILT:** *"One extra set per
+strength day, applied to one eligible main or secondary lift that did not
+receive a load increase. Never more than one extra set per session, and never
+beyond the 16-set ceiling."*
+**CLUB TRAINING IS NOT AN ELIGIBILITY REQUIREMENT AND CANNOT BECOME ONE.** The
+only mention of team training on the offer path is `availableTrainingDays`
+REMOVING club nights from the free days — a club night reduces availability and
+never grants it. **A clubless athlete IS offered the session** (off-season, two
+gym days, guarded). Where a clubless athlete gets no offer it is generation
+refusing: pre-season and in-season clubless athletes have **no legal week at ANY
+count including the one they are on** — `sprint_high_speed_required_minimum:0`,
+the club night was carrying the sprint exposure. **This RETRACTS "every world
+with no club night refuses the larger week"**, which was misleading in
+pre/in-season and false in off-season.
+**⚠ AND THE 16-SET CEILING IS REACHED BY A REAL GENERATED WORLD — RETRACTING
+"UNREACHABLE".** That first sweep measured BLOCK 1 worlds, where the largest
+session total is 12. A clubless off-season athlete on two gym days is authored at
+**exactly 16** at block 2, four main lifts at four sets, the freeze having added
+the fourth.
+**⚠ THAT ATHLETE ALSO KILLED A GATE.** `smallerRungsAlreadySpent` demanded the
+two smaller rungs had LANDED before a session could be offered — and every one of
+her sessions is on the ceiling with every load `history_held`, which is the
+contract's *"load and set progression are UNAVAILABLE"* case in the flesh. The
+gate refused exactly the athlete the word was written for. **Both branches open
+the offer; the gate and the `set_added` explanation row that fed it are
+deleted.** *"Only after load and sets"* holds structurally: the question is
+derived from a STORED block in which the boundary has already decided both.
+**`n → n+1` IS LEGAL IN 11 OF 27 WORLDS.** Generation is asked; no table is
+written.
+**⚠ AND THE HARD-CONDITIONING RESPONSE IS `NOT BUILT`, NOT `REUSED`.** Sam,
+2026-08-17: *"Record the hard-conditioning response honestly as NOT BUILT; do not
+claim the entire low-recovery conditioning clause is enforced."* R-098's code is
+wired into the real path, but every hard-conditioning cell in its suite drives a
+CONSTRUCTED tree and **64 of 64 conditioning days across 16 built worlds are
+`aerobic_base`**. Under low recovery what is enforced end to end is **load held
+and main/secondary sets reduced** — nothing else. The missing producer is a
+scheduler/§18 change emitting `sprint`, `vo2`, `glycolytic` or `cod_decel`.
 **Search words:** progression order, load first, sets second, add one set, set
 ceiling, 16 sets, working sets, accessory outside the count, both rungs, same
 rollover, extra session, add one session, keep my current schedule, another
@@ -2330,7 +2362,7 @@ conditioning difficult, conditioning rpe, quality split, deload not raised.
 `screens/home/useBlockBoundaryPrompts.ts` (derivation, no writer);
 `screens/home/BlockBoundaryCards.ExtraSessionOfferCard`; the three signed
 entries in `rules/projectionCopy.ts`. Guarded by `test:block-two-ladder`
-(47 cells) and `test:block-two-extra-session` (38 cells).** 39 mutations seen
+(52 cells) and `test:block-two-extra-session` (40 cells).** 37 mutations seen
 RED, EIGHT of which SURVIVED a first pass and each named a real hole: three
 separate cases of TWO GATES CATCHING ONE FIXTURE — one of them a gate no world
 could reach (`reduces` strictly implies `!qualifies`) — an ambiguous

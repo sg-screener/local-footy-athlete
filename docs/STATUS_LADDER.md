@@ -46,10 +46,13 @@ conditioning-only**. This is why the session feeling cannot answer "was the
 strength hard" on its own, and why the split reads `conditioning.rpe` for the
 conditioning half.
 
-**4. THE 16-SET CEILING IS UNREACHABLE BY GENERATION.** Largest main/secondary
-session total across 33 built worlds: **12**. Across seven consecutive real
-rollovers driven through the ladder: **13**. The ceiling refusal has no generated
-coordinate and its two cells say `[CONSTRUCTED]` in their own names.
+**4. ~~THE 16-SET CEILING IS UNREACHABLE BY GENERATION.~~ WRONG — CORRECTED
+2026-08-17.** That sweep measured BLOCK 1 worlds, where the largest total is 12.
+A **clubless off-season athlete on two gym days, at BLOCK 2**, is authored at
+**exactly 16** — four main lifts at four sets, the freeze having added the
+fourth. **I generalised from the wrong blocks and marked two cells
+`[CONSTRUCTED]` that did not need to be.** The ceiling is now asked of the rule
+against those real sessions.
 
 **5. THE IN-BLOCK FREEZE ALREADY BREAKS THE CONTRACT'S ORDER.**
 `utils/progressionRules.buildBuildOutput` returns `loadDelta: 'up'` **and**
@@ -159,3 +162,45 @@ at least one load, so no generated world reaches a state where the two smaller
 rungs had nowhere to go. A gate demanding it would make the third rung dead
 code. The **"insufficient"** branch is what is built — the rungs were spent and
 the athlete still reported the block consistently easy.
+
+## THE 2026-08-17 CORRECTION — SAM'S THREE ORDERS, AND WHAT THEY FOUND
+
+`test:block-two-ladder` **52 / 0** · `test:block-two-extra-session` **40 / 0** ·
+**37 mutations red, no survivors.**
+
+**1. THE SET RULE WAS RULED AND MATCHES WHAT WAS BUILT.** *"One extra set per
+strength day, applied to one eligible main or secondary lift that did not receive
+a load increase. Never more than one extra set per session, and never beyond the
+16-set ceiling."* No change needed.
+
+**2. "CONFIRM CLUB TRAINING IS NOT AN ELIGIBILITY REQUIREMENT" — IT IS NOT, AND
+CHECKING COST ME A DEFECT.** The only mention of team training on the offer path
+REMOVES club nights from the free days. But proving it needed a clubless athlete
+who IS offered a session, and finding one uncovered a real fault:
+
+**⚠ THE GATE I ADDED FOR THE "ORDER" CLAUSE LOCKED OUT THE EXACT ATHLETE THE
+CLAUSE WAS WRITTEN FOR.** A clubless off-season athlete on two gym days is
+authored at **16 main/secondary sets in every session** with every load reading
+`history_held` — the contract's *"load and set progression are UNAVAILABLE"* case
+in a real generated world. My `smallerRungsAlreadySpent` gate demanded the rungs
+had LANDED and refused her. **Both branches must open the offer**, so the gate is
+gone, along with the `set_added` explanation row that existed only to feed it.
+*"Only after load and sets"* is structural: the question is derived from a stored
+block in which the boundary has already decided both.
+
+**AND MY EARLIER SUMMARY WAS WRONG TWICE.** *"Every world with no club night
+refuses the larger week"* — misleading in pre/in-season (their CURRENT week
+refuses too, `sprint_high_speed_required_minimum:0`) and false in off-season,
+where a clubless athlete grows legally. *"The 16-set ceiling is unreachable"* —
+measured on block-1 worlds only.
+
+**3. THE HARD-CONDITIONING RESPONSE IS RECORDED AS NOT BUILT.** The clause table
+called L1/L3 **REUSE** on the strength of R-098's code and 88-cell suite. That
+overclaimed: every hard-conditioning cell in that suite drives a CONSTRUCTED
+tree, and 64 of 64 conditioning days in 16 built worlds are `aerobic_base`.
+Under low recovery what is enforced end to end is **load held and main/secondary
+sets reduced** — nothing else.
+
+**THE SHAPE THAT KEEPS COMING BACK — A GATE NO WORLD CAN REACH, OR THE WRONG
+WORLD.** Four times in this mission now. The fourth was the worst, because it did
+not merely fail to bind: it bound on the wrong side.

@@ -1574,37 +1574,7 @@ export interface BlockBoundaryReductionExplanationRow {
  */
 export type BlockBoundaryExplanationRow =
   | BlockBoundaryLoadExplanationRow
-  | BlockBoundaryReductionExplanationRow
-  | BlockBoundarySetAddedExplanationRow;
-
-/**
- * ONE ROW PER SET THIS BOUNDARY ADDED.
- *
- * ⚠ **IT IS STORED BECAUSE IT HAS A READER, AND THE READER IS THE THIRD RUNG.**
- * The contract offers another SESSION *"only after load and set progression are
- * unavailable/insufficient"*, and the only honest witness to what the two
- * smaller rungs found is the block they were run against. Re-deriving that at
- * prompt time would be a second opinion, free to say "nothing moved" while the
- * stored programme shows a lift that just gained a set.
- *
- * It is a DECISION record exactly as the load rows beside it are, not a
- * derivation — `docs/NORTH_STAR.md` permits the first and refuses the second.
- *
- * **NO ATHLETE-FACING SENTENCE RENDERS FROM IT YET, DELIBERATELY.** The added
- * set is already visible to the athlete as the prescription itself (`3 sets`
- * becomes `4 sets`), and a new explanatory sentence beside it would be a ninth
- * kind of `ActiveProgramModifier.effect` phrase — a copy ruling that is Sam's,
- * not this seat's. `docs/STATUS_BLOCKTWO.md` records the same boundary for the
- * load rows.
- */
-export interface BlockBoundarySetAddedExplanationRow {
-  kind: 'set_added';
-  exerciseName: string;
-  role: ExerciseRole;
-  weekIndex: number;
-  fromSets: number;
-  toSets: number;
-}
+  | BlockBoundaryReductionExplanationRow;
 
 /**
  * ONE NARROWING DOOR, SO NO READER WRITES ITS OWN CAST.
@@ -1617,44 +1587,7 @@ export interface BlockBoundarySetAddedExplanationRow {
 export function isLoadExplanationRow(
   row: BlockBoundaryExplanationRow,
 ): row is BlockBoundaryLoadExplanationRow {
-  return row.kind !== 'hard_block_reduced' && row.kind !== 'set_added';
-}
-
-export function isSetAddedExplanationRow(
-  row: BlockBoundaryExplanationRow,
-): row is BlockBoundarySetAddedExplanationRow {
-  return row.kind === 'set_added';
-}
-
-/** The stored rows for the set additions this boundary made. */
-export function buildBlockBoundarySetAddedExplanation(
-  decisions: readonly BlockBoundarySetAdditionDecision[],
-): BlockBoundarySetAddedExplanationRow[] {
-  return decisions.map((decision) => ({
-    kind: 'set_added' as const,
-    exerciseName: decision.exerciseName,
-    role: decision.role,
-    weekIndex: decision.weekIndex,
-    fromSets: decision.fromSets,
-    toSets: decision.toSets,
-  }));
-}
-
-/**
- * DID EITHER OF THE TWO SMALLER RUNGS ACTUALLY LAND ON THIS BLOCK?
- *
- * The third rung's ordering gate, read off the block that was authored rather
- * than re-derived. A load row whose kind is `history_progressed` is a load that
- * rose; a `set_added` row is a set that landed. The contract offers a fourth
- * training day only AFTER those two, so a block showing neither has not earned
- * the question yet.
- */
-export function smallerRungsFoundSomewhereToGo(
-  explanation: readonly BlockBoundaryExplanationRow[] | undefined,
-): boolean {
-  return (explanation ?? []).some((row) =>
-    (isLoadExplanationRow(row) && row.kind === 'history_progressed')
-    || isSetAddedExplanationRow(row));
+  return row.kind !== 'hard_block_reduced';
 }
 
 export function isReductionExplanationRow(

@@ -64,8 +64,8 @@ import {
 import { commitmentPatchFor } from '../rules/weeklyCommitmentQuestion';
 import { commitmentLegalityProbe } from '../rules/weeklyCommitmentLegality';
 import {
+  countMainSecondarySets,
   readBlockHistory,
-  smallerRungsFoundSomewhereToGo,
 } from '../rules/blockBoundaryProgression';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import type { SessionFeedback } from '../store/programStore';
@@ -278,11 +278,6 @@ ok(
   easyHistory.qualifies && easyHistory.byQuality.strengthEasy,
   `qualifies=${easyHistory.qualifies} strengthEasy=${easyHistory.byQuality.strengthEasy}`,
 );
-ok(
-  'and the two smaller rungs really landed on the block that was built',
-  smallerRungsFoundSomewhereToGo(easyProgram.blockBoundaryExplanation),
-  'no load rose and no set landed — the third rung must never be reached first',
-);
 const available = availableTrainingDays({ profile: athlete(), weekOrder: WEEK_ORDER });
 ok(
   'the athlete really has a free day to put a session on',
@@ -422,48 +417,11 @@ ok(
     // The refusal generation would give, stated directly: this is the ONLY
     // authority on whether a commitment builds, and the offer must obey it.
     isCommitmentLegal: () => false,
-    smallerRungsAlreadySpent: true,
     currentSessionsPerWeek: 3,
     patchFor: (sessionsPerWeek) => commitmentPatchFor({
       profile: athlete(), sessionsPerWeek, weekOrder: WEEK_ORDER, availableDays: available,
     }),
   }).offer === false,
-);
-ok(
-  'and the smaller rungs must have been spent FIRST',
-  (() => {
-    const outcome = decideExtraSessionOffer({
-      history: easyHistory,
-      forBlockNumber: 1,
-      profile: athlete(),
-      weekOrder: WEEK_ORDER,
-      ledgerEntries: [],
-      isCommitmentLegal: () => true,
-      smallerRungsAlreadySpent: false,
-      currentSessionsPerWeek: 3,
-      patchFor: (sessionsPerWeek) => commitmentPatchFor({
-        profile: athlete(), sessionsPerWeek, weekOrder: WEEK_ORDER, availableDays: available,
-      }),
-    });
-    return outcome.offer === false
-      && outcome.refusal === 'smaller_rungs_not_spent_first';
-  })(),
-);
-
-/**
- * ⚠ **THE COORDINATE THAT KILLS "THE ORDER GATE IS WIRED TO NOTHING".**
- * Mutation E17 made `smallerRungsFoundSomewhereToGo` return `true`
- * unconditionally and every cell stayed green: cell [0] asserts it IS true for
- * the easy programme, and the refusal cell passes the flag in by hand. A block
- * whose stored explanation shows the boundary raised NOTHING is the only world
- * where the witness must answer no — and block 1's programme is exactly that,
- * because the boundary does not run before block 2.
- */
-ok(
-  'a block whose stored explanation shows nothing raised is NOT offered a session',
-  !smallerRungsFoundSomewhereToGo(block1.blockBoundaryExplanation)
-    && promptsFor({ program: block1, feedback: EASY }).extraSession === null,
-  `witness=${smallerRungsFoundSomewhereToGo(block1.blockBoundaryExplanation)}`,
 );
 
 /**
@@ -535,6 +493,128 @@ ok(
     `the profile was read ${profileReads} time(s) for an athlete the first gate refuses`,
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[2b] A CLUB NIGHT IS NOT AN ELIGIBILITY REQUIREMENT');
+
+/**
+ * ⚠ **RULED BY SAM, 2026-08-17:** *"Confirm club training is not itself an
+ * eligibility requirement for the extra-session offer. The offer must depend on
+ * spare gym availability and scheduler legality."*
+ *
+ * It is not, and it cannot become one: the only mention of team training on this
+ * whole path is `availableTrainingDays` REMOVING club nights from the free days,
+ * which makes a club night reduce availability, never grant it.
+ *
+ * ⚠ **AND MY EARLIER SUMMARY OF THIS WAS WRONG.** `docs/STATUS_LADDER.md` first
+ * recorded *"every world with no club night refuses the larger week"*. Measured
+ * properly, with the athlete's CURRENT week probed alongside the larger one:
+ *
+ * | phase | club | current week | larger week |
+ * | --- | --- | --- | --- |
+ * | Pre-season / In-season, any gym days | none | **ALREADY REFUSED** `sprint_high_speed_required_minimum:0` | refused, same clause |
+ * | **Off-season, 2 gym days** | **none** | **BUILDS** | **BUILDS — the offer is made** |
+ * | Off-season, 3+ gym days | none | builds | refused `main_strength_permitted_maximum:4` |
+ *
+ * A no-club pre-season athlete has no legal week AT ANY COUNT, including the one
+ * they are on — the club night was carrying the sprint exposure §18 requires. So
+ * the missing offer there is not this unit's doing; those athletes have no
+ * programme to add a session to. **A no-club athlete whose week is legal at
+ * `n+1` IS offered the session, and the cell below is that athlete.**
+ */
+const noClubAthlete = athlete({
+  seasonPhase: 'Off-season',
+  trainingDaysPerWeek: 2,
+  preferredTrainingDays: ['Monday', 'Thursday'],
+  teamTrainingDaysPerWeek: 0,
+  teamTrainingDays: [],
+} as Partial<OnboardingData>);
+const noClubBlock1 = generateProgramLocally(noClubAthlete, {
+  todayISO: BLOCK_1_START, blockNumber: 1,
+});
+const NO_CLUB_EASY = logRealBlock(noClubBlock1, { feeling: 'easy', soreness: 'none' });
+const noClubProgram = generateProgramLocally(noClubAthlete, {
+  todayISO: BLOCK_2_START,
+  blockNumber: 2,
+  progressionHistory: {
+    sessionFeedback: NO_CLUB_EASY, weightOverrides: {}, blockState: null,
+  },
+});
+
+ok(
+  'the CLUBLESS athlete\'s week builds and their block reads consistently easy',
+  noClubProgram.microcycles.length > 0
+    && readBlockHistory({
+      feedbackByDate: NO_CLUB_EASY,
+      blockStartISO: BLOCK_1_START,
+      blockEndISO: '2026-08-02',
+      requiredStrengthSessions: 8,
+    }).byQuality.strengthEasy,
+  'without this the cell below would pass because the world is broken, not the rule right',
+);
+/**
+ * ⚠ **AND THIS ATHLETE IS THE CONTRACT'S "UNAVAILABLE" CASE, IN A REAL WORLD.**
+ * Every one of their sessions is authored at **16 main/secondary sets** — the
+ * WC-030 ceiling exactly — so the set rung has nowhere to go, and every load
+ * decision in their block reads `history_held`. An earlier cut of this unit
+ * demanded that the two smaller rungs had LANDED before a session could be
+ * offered, and refused exactly the athlete the word *unavailable* was written
+ * for. That gate is gone.
+ */
+ok(
+  'their sessions really are AT the ceiling — the "unavailable" case has coordinates',
+  noClubProgram.microcycles[0].workouts
+    .filter((workout) => (workout.exercises ?? []).length > 0)
+    .every((workout) => countMainSecondarySets(workout) === 16),
+  noClubProgram.microcycles[0].workouts
+    .map((workout) => `${workout.name}=${countMainSecondarySets(workout)}`).join(' '),
+);
+ok(
+  'A CLUBLESS ATHLETE IS OFFERED THE EXTRA SESSION — club training is NOT a requirement',
+  deriveBlockBoundaryPrompts({
+    currentProgram: noClubProgram,
+    blockNumber: 2,
+    blockStartISO: BLOCK_2_START,
+    sessionFeedback: NO_CLUB_EASY,
+    onboardingData: noClubAthlete,
+    ledgerEntries: [],
+    weekOrder: WEEK_ORDER,
+  }).extraSession !== null,
+  'the offer refused an athlete whose only difference is having no club night',
+);
+ok(
+  'and the clubless athlete\'s free days are MORE, not fewer — a club night takes a day',
+  availableTrainingDays({ profile: noClubAthlete, weekOrder: WEEK_ORDER }).length
+    > availableTrainingDays({
+      profile: athlete({
+        seasonPhase: 'Off-season',
+        trainingDaysPerWeek: 2,
+        preferredTrainingDays: ['Monday', 'Thursday'],
+      } as Partial<OnboardingData>),
+      weekOrder: WEEK_ORDER,
+    }).length,
+);
+
+/**
+ * ⚠ **AND WHERE A CLUBLESS ATHLETE IS NOT OFFERED ONE, IT IS THE SCHEDULER'S
+ * ANSWER AND NOT A CLUB CHECK.** A clubless pre-season athlete is refused at
+ * their CURRENT commitment too, for the same typed reason — so the offer is not
+ * what is withholding anything.
+ */
+ok(
+  'a clubless PRE-SEASON athlete has no legal week at their CURRENT count either',
+  (() => {
+    const clubless = athlete({ teamTrainingDaysPerWeek: 0, teamTrainingDays: [] });
+    try {
+      generateProgramLocally(clubless, { todayISO: BLOCK_2_START, blockNumber: 2 });
+      return false;
+    } catch (error) {
+      return String((error as Error).message)
+        .includes('sprint_high_speed_required_minimum');
+    }
+  })(),
+  'the clubless pre-season refusal is not the sprint-exposure clause after all — re-measure before claiming it',
+);
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[3] ON GLASS — the exact words, the two buttons, the real taps');

@@ -23,15 +23,23 @@ Seat findings: `docs/STATUS_LADDER.md`. Registry row: **R-101**.
 | Q2 | conditioning easy / strength hard → conditioning only | — | **HALF BUILT** — strength is held; conditioning has no rung to climb (§5) |
 | Q3 | everything easy → load, sets, then offer | — | **BUILT** |
 | Q4 | a difficult quality stays achievable | `applyBlockBoundaryConditioning` replaces, never deletes | unchanged |
-| L1 | hard conditioning reduced first | **REUSE** (R-098) | unchanged |
+| L1 | hard conditioning reduced first | code BUILT (R-098), guarded on constructed trees | **NOT BUILT in any reachable world** — see §9 |
 | L2 | main/secondary sets reduced | **REUSE** (R-098) | unchanged |
-| L3 | replaced with easy aerobic | **REUSE** (R-098) | unchanged |
+| L3 | replaced with easy aerobic | same | **NOT BUILT in any reachable world** |
 | L4 | meaningful load retained | **REUSE** (R-096/R-098) | unchanged |
 | L5 | never add load, sets or sessions | load only | **BUILT** — sets and sessions gated |
 | L6 | hard conditioning falls before strength volume | ordered at the call site, not asserted | **NOT COVERED** (§5) |
 | L7 | injury outranks | injury system | unchanged |
 
-**9 of 20 reused. 10 built. 1 not covered.**
+**7 of 20 reused and reachable. 10 built. 3 not covered — L1, L3 and L6, which
+are the whole hard-conditioning response.**
+
+⚠ **CORRECTED 2026-08-17.** The first version of this row called L1 and L3
+*reused*. `rules/blockBoundaryProgression.ts` does own them and R-098 guards
+them, **but only against constructed workout trees** — no world generation can
+build carries hard conditioning, so no athlete reaches the behaviour. Recorded
+as NOT BUILT on Sam's order. Under low recovery what IS enforced end to end is
+that load is held and main/secondary sets are reduced.
 
 ## 2. REPRESENTATIVE HISTORIES AND WHAT BLOCK TWO DID
 
@@ -71,8 +79,57 @@ block 7   LOAD Goblet Squat      37.5 → 40    (no set)
 ```
 
 **No lift ever took both rungs in one rollover. No rep range moved anywhere. The
-deload week never rose. Session main/secondary set totals stayed between 10 and
-13, never near the ceiling of 16.**
+deload week never rose.** For THIS athlete session main/secondary totals stayed
+between 10 and 13 — but see §4a: a different real athlete is authored at 16.
+
+## 4a. THE CEILING, AND A CLUB NIGHT IS NOT A REQUIREMENT
+
+**RULED BY SAM, 2026-08-17.** Both answers below are measured, and both correct
+something this report got wrong on 2026-08-16.
+
+**CLUB TRAINING IS NOT AN ELIGIBILITY REQUIREMENT, AND CANNOT BECOME ONE.** The
+only mention of team training anywhere on the offer path is
+`availableTrainingDays` REMOVING club nights from the free days — a club night
+*reduces* availability, it never grants it. There is no team-training condition
+in the rule, in the derivation, or in the card. **A clubless athlete IS offered
+the extra session**, and `test:block-two-ladder` / `test:block-two-extra-session`
+now hold that with a real one: off-season, two gym days, no club.
+
+**AND WHERE A CLUBLESS ATHLETE IS NOT OFFERED ONE, THE SCHEDULER IS SAYING NO,
+NOT THIS UNIT.** Probing the athlete's CURRENT commitment alongside the larger
+one:
+
+| phase | club | current week | larger week |
+| --- | --- | --- | --- |
+| Pre-season / In-season, any gym days | none | **ALREADY REFUSED** `sprint_high_speed_required_minimum:0` | refused, same clause |
+| **Off-season, 2 gym days** | **none** | **BUILDS** | **BUILDS — the offer is made** |
+| Off-season, 3+ gym days | none | builds | refused `main_strength_permitted_maximum:4` |
+
+A clubless pre-season athlete **has no legal week at any count, including the one
+they are already on** — the club night was carrying the sprint exposure §18
+requires. So the absence of an offer there is not the offer withholding
+anything; those athletes have no programme to add a session to. That is a
+pre-existing generation property and it is left alone, as instructed.
+
+⚠ **THIS CORRECTS "EVERY WORLD WITH NO CLUB NIGHT REFUSES THE LARGER WEEK",
+WHICH THIS REPORT SAID ON 2026-08-16.** True of the larger week in pre/in-season,
+but misleading — those athletes' current week refuses too — and simply false for
+off-season, where a clubless athlete grows legally.
+
+**AND THE 16-SET CEILING IS REACHED BY A REAL GENERATED WORLD.** That same
+clubless off-season athlete is authored at **exactly 16 main/secondary sets** in
+her block-2 sessions: four main lifts at four sets each, the authoring-time
+freeze having already added the fourth. The rule is asked directly about those
+sessions — **it adds nothing to them, while a session with room in the same block
+still gains one.** This retires the `[CONSTRUCTED]`-only framing of proof 3.
+
+**AND IT CHANGED THE CODE.** A gate requiring the two smaller rungs to have
+LANDED before a session could be offered refused exactly this athlete — every
+session on the ceiling, every load `history_held`, which is the contract's
+*unavailable* case in the flesh. The gate is deleted; both *unavailable* and
+*insufficient* now open the offer, and *"only after load and sets"* holds
+structurally, because the question is derived from a stored block in which the
+boundary has already decided both.
 
 ## 4. THE PROGRAM SCREEN — OFFER AND TAPS
 
@@ -107,12 +164,13 @@ node's own `onPress` invoked — the same closure a finger reaches.
 **No new persisted key.** Both answers ride the existing decision ledger, so
 `test:persisted-inputs-schema`'s four-class property is untouched (8/0).
 
-## 6. MUTATION RECEIPTS — 39 MUTATIONS, ALL SEEN RED, NO SURVIVORS
+## 6. MUTATION RECEIPTS — 37 MUTATIONS, ALL SEEN RED, NO SURVIVORS
 
-`test:block-two-ladder` 47 cells · `test:block-two-extra-session` 38 cells.
+`test:block-two-ladder` **52 cells** · `test:block-two-extra-session` **40 cells**.
 
 **EIGHT SURVIVED A FIRST PASS. Each named a real hole; three were the same
-shape.**
+shape.** Two further mutations were RETIRED rather than fixed, because the gates
+they attacked were deleted — see §4a.
 
 | survived | what it proved | closed by |
 | --- | --- | --- |
@@ -159,8 +217,8 @@ removed; the sentence and the accept label reworded.
 | `signed-copy-extraction` | 7 / 1 | 7 / 1 — the athlete-visible ceiling, 585 vs 580, unchanged |
 | `ruling-registry` · `law-registry` · `repo-law-guards` | 6/2 · 12/2 · 55/8 | identical |
 | `program-control-durable` · `decision-ledger-ownership` | 9/11 · 7/1 | identical |
-| **NEW** `block-two-ladder` | — | **47 / 0** |
-| **NEW** `block-two-extra-session` | — | **38 / 0** |
+| **NEW** `block-two-ladder` | — | **52 / 0** |
+| **NEW** `block-two-extra-session` | — | **40 / 0** |
 
 `block-rollover`, `block-state` and `deload-week` crash at import in **both**
 arms — pre-existing, not repaired here.
@@ -187,41 +245,57 @@ a main lift going from three sets to four, and a card asking before a fourth
 training day is added — is guarded through the real generation path, the real
 component and the real door.
 
-**One thing to hear from Sam first, and it is not a blocker:** the rung is **one
-set per SESSION**, on that session's first eligible main lift, so a three-day
-week gains one set on each of its three days. The contract states its cap per
-session (*"the session remains inside its approved cap"*) and a session gaining
-four sets at once is not the smallest next step — but "one set per BLOCK" is a
-legitimate other reading and is a one-line change.
+**RULED, 2026-08-17:** *"One extra set per strength day, applied to one eligible
+main or secondary lift that did not receive a load increase. Never more than one
+extra set per session, and never beyond the 16-set ceiling."* That is what is
+built; no change was needed.
 
 ## 9. NOT COVERED
 
-1. **The 16-set ceiling has no generated coordinate.** Largest main/secondary
-   session total across 33 built worlds: **12**; across seven real rollovers
-   through the ladder: **13**. Its two cells are marked `[CONSTRUCTED]` in their
-   own names. **The missing producer is a layout that authors a 15–16-set
-   session.** Not claimed as a generated proof.
-2. **Q2's "progress conditioning" half.** Every generated conditioning exposure
+1. ~~The 16-set ceiling has no generated coordinate.~~ **WRONG, AND CORRECTED
+   2026-08-17.** That sweep measured BLOCK 1 worlds, where the largest total is
+   12. A **clubless off-season athlete on two gym days, at block 2**, is authored
+   at **exactly 16 main/secondary sets** — four main lifts at four sets, the
+   authoring-time freeze having already added the fourth. `test:block-two-ladder`
+   now asks the rule directly about those real sessions: **nothing is added to
+   them, while a session with room in the same block still gains one.** Two
+   boundary cells either side of the line remain `[CONSTRUCTED]`, because
+   generation produces 16 but not 15.
+2. **THE ENTIRE HARD-CONDITIONING RESPONSE — L1, L3 — IS NOT BUILT IN ANY
+   REACHABLE WORLD.** The code exists, is wired into the real generation path
+   and is guarded by R-098's suite, but every one of that suite's
+   hard-conditioning cells drives a CONSTRUCTED workout tree. Measured on this
+   branch: 64 of 64 conditioning days across 16 built worlds are `aerobic_base`.
+   **Do not read "low readiness reduces conditioning" as enforced.** What is
+   enforced under low recovery: load held, main/secondary sets reduced.
+   **The missing producer is a scheduler/§18 change that emits `sprint`, `vo2`,
+   `glycolytic` or `cod_decel` exposures.**
+3. **Q2's "progress conditioning" half.** Every generated conditioning exposure
    is already `aerobic_base`, the easiest authored category — 64 of 64 across 16
    worlds. There is no rung to climb to. **The missing producer is a
    scheduler/§18 change that emits `tempo`, `vo2`, `sprint` or `glycolytic`.**
    What IS proven for that case: a strength-hard block progresses **no** strength.
-3. **L6 — "hard conditioning falls before strength volume" is not independently
+4. **L6 — "hard conditioning falls before strength volume" is not independently
    asserted.** The call order at the one call site is the contract's, and R-098
    owns both halves, but the ordering itself has no cell — and the
    hard-conditioning coordinate is unreachable for the same reason as (2).
    Not faked against a synthetic world.
-4. **The "unavailable" half of rung 3's trigger.** Every qualifying athlete's
-   block raises at least one load, so no generated world reaches "the smaller
-   rungs had nowhere to go". Only the *insufficient* branch is built.
-5. **No device has rendered the offer card.** The element-level suite proves the
+5. ~~The "unavailable" half of rung 3's trigger is not built.~~ **WRONG, AND
+   CORRECTED 2026-08-17 — IT IS BUILT, BECAUSE THE GATE THAT BLOCKED IT IS
+   GONE.** A gate requiring the two smaller rungs to have LANDED before a session
+   could be offered locked out the clubless off-season athlete above: every
+   session of theirs is on the ceiling and every load reads `history_held`, which
+   is the contract's *unavailable* case exactly. Both halves now open the offer,
+   and "only after load and sets" is structural — the question is derived from a
+   stored block in which the boundary has already decided both.
+6. **No device has rendered the offer card.** The element-level suite proves the
    behaviour, the words and the taps; it does not prove layout, styling, or that
    the card is mounted where a human can see it.
-6. **The full accept transaction is not driven end to end.** What is asserted is
+7. **The full accept transaction is not driven end to end.** What is asserted is
    the PATCH the door is handed (four days, best separated, buildable by
    generation) — driving `commitProfileProgramTransaction` needs the store stack
    the screen-delivery suite stands up.
-7. **Pre-existing debt left alone**, as instructed: `ladder-wide` 13/14,
+8. **Pre-existing debt left alone**, as instructed: `ladder-wide` 13/14,
    `signed-copy-extraction` 7/1, `week-validator` 47/2, `ruling-registry` 6/2,
    `law-registry` 12/2, `repo-law-guards` 55/8, `program-control-durable` 9/11,
    `decision-ledger-ownership` 7/1, and the three suites that crash at import.

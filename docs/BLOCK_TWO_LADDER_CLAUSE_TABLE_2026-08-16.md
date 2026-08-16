@@ -32,16 +32,28 @@ suite that reds if it stops. Every "BUILD" row states what is missing.
 | Q3 | everything easy → load, then sets, then offer a session | P1 exists; P2/P3 do not | — | **BUILD** |
 | Q4 | a difficult required quality is made achievable, never deleted | `applyBlockBoundaryConditioning` REPLACES and never deletes, by construction | `test:block-two-difficult-missed` | **REUSE** |
 | **LOW READINESS / HIGH SORENESS** | | | | |
-| L1 | remove or reduce hard conditioning first | `decideBlockBoundaryConditioning` (R-098) | `test:block-two-difficult-missed` | **REUSE** |
+| L1 | remove or reduce hard conditioning first | `decideBlockBoundaryConditioning` (R-098) is BUILT and wired into the real path, **but no generated world carries hard conditioning** | guarded against CONSTRUCTED trees only | **NOT BUILT in any world the athlete can reach** |
 | L2 | reduce main- and secondary-lift sets | `decideBlockBoundaryVolume` / `applyBlockBoundaryVolume` (R-098) | same | **REUSE** |
-| L3 | replace remaining conditioning with easier aerobic work | `applyBlockBoundaryConditioning` → `EASIER_AEROBIC_CATEGORY` (R-098) | same | **REUSE** |
+| L3 | replace remaining conditioning with easier aerobic work | same owner, same unreachability | same | **NOT BUILT in any reachable world** |
 | L4 | retain meaningful load while doing less | load is held under `history.reduces` (R-096/R-098) | same | **REUSE** |
 | L5 | never add load, sets or sessions in this state | load: held and guarded. **sets and sessions: the owners do not exist, so the gate cannot exist either** | — | **BUILD (gate)** |
 | L6 | hard conditioning falls BEFORE strength volume | the call order at `generateProgram.ts:1642-1665` is already the contract's | **the order itself is not asserted anywhere** | **BUILD (assertion)** |
 | L7 | injury restrictions outrank these adjustments | the injury system | `test:injury-authority`, `test:injury-progression` | **REUSE** |
 
-**Score: 9 of 20 required behaviours already have a production owner AND a guard.
-11 are the build.**
+**Score: 7 of 20 required behaviours have a production owner AND a guard that a
+real generated world can exercise. 11 are the build. 2 — the whole
+hard-conditioning response, L1 and L3 — are NOT BUILT in any reachable world and
+are recorded as such rather than counted as reused.**
+
+⚠ **CORRECTED 2026-08-17 ON SAM'S ORDER:** *"Record the hard-conditioning
+response honestly as NOT BUILT; do not claim the entire low-recovery
+conditioning clause is enforced."* The first version of this table marked L1 and
+L3 **REUSE** on the strength of R-098's code and its 88-cell suite. That
+overclaimed: the code exists and is wired, but its guards drive CONSTRUCTED
+workout trees, and no world generation can build contains hard conditioning —
+so nothing the athlete can reach exercises it. **The low-recovery conditioning
+clause is NOT enforced end to end. What IS enforced under low recovery: load is
+held, and main/secondary sets are reduced (L2, L4).**
 
 ## THE THREE MEASUREMENTS THIS TABLE RESTS ON
 
@@ -55,7 +67,8 @@ training days), 16 built and 8 refused.
 provenance: 'composer_declaration' }`. So the accessory/core exclusion (S3) has a
 real production input and needs no new field and no name list.
 
-**2. NO GENERATED WORLD CONTAINS HARD CONDITIONING — STILL TRUE ON `main`.**
+**2. NO GENERATED WORLD CONTAINS HARD CONDITIONING — STILL TRUE ON `main`, AND
+IT IS WHY L1/L3 READ NOT BUILT ABOVE.**
 `conditioningCategory` was `aerobic_base` in **64 of 64** conditioning days across
 all 16 built worlds. `sprint`, `vo2`, `glycolytic` and `cod_decel` — the four
 `HARD_CONDITIONING_CATEGORIES` — appear **zero** times. This reproduces the
@@ -98,7 +111,8 @@ not say which question it answered.
 
 ## NOT COVERED BY THIS MISSION — STATED UP FRONT
 
-- **Q2's "progress conditioning" half has no reachable coordinate.** Measurement 2
+- **The ENTIRE hard-conditioning response (L1, L3) is NOT BUILT in any reachable
+  world**, and Q2's "progress conditioning" half has no reachable coordinate. Measurement 2
   above: every generated conditioning exposure is already `aerobic_base`, the
   easiest authored category. "Progress conditioning through the existing
   phase-approved template progression" has no rung to climb to in any world the

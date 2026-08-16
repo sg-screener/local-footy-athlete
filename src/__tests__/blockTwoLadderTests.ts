@@ -334,16 +334,17 @@ ok(
 );
 
 /**
- * ⚠ **THIS CELL BUILDS ITS SESSION, AND SAYS SO.**
+ * ⚠ **THE CEILING BINDS IN A REAL GENERATED WORLD, AND MY FIRST MEASUREMENT OF
+ * THIS WAS WRONG.**
  *
- * Measured at `3b5b59d0` over 33 built worlds (3 phases × 4 training-day counts
- * × club/no-club × 3 experience levels): the largest main/secondary set total any
- * generated session reaches is **12**, and the ladder's own chain over seven
- * consecutive real rollovers never took one past **13**. **No production world
- * can put a session on 16**, so the refusal at the ceiling has no generated
- * coordinate and this cell constructs one. It is reported as such rather than
- * dressed up as a generated proof — the missing producer is a layout that
- * authors a 15-16-set session.
+ * An earlier cut of this suite recorded *"no production world can put a session
+ * on 16"* — the largest total across 33 BLOCK-1 worlds is 12 — and marked the
+ * ceiling cells `[CONSTRUCTED]`. That sweep measured the wrong blocks. A
+ * **clubless off-season athlete on two gym days**, at BLOCK 2, is authored at
+ * **exactly 16 main/secondary sets in every session** (four main lifts at four
+ * sets each, the authoring-time freeze having already added the fourth). The
+ * real-world cell is directly below; these two keep the boundary conditions
+ * either side of the line, which generation does not produce.
  */
 function countingRow(id: string, name: string, sets: number): WorkoutExercise {
   return {
@@ -436,6 +437,144 @@ ok(
     loadDecisions: [],
     authoredSetsByRowId: { 'row-c': 3 },
   }).length === 0,
+);
+
+/**
+ * ⚠ **THE CEILING, ON A WORLD GENERATION ACTUALLY BUILDS.**
+ *
+ * Off-season, two gym days, no club night. Every session is authored at the
+ * WC-030 ceiling exactly, the athlete completes the block and reports it easy —
+ * and the ladder must still add nothing, because there is no room.
+ */
+const ceilingAthlete = {
+  ...athlete(),
+  seasonPhase: 'Off-season',
+  trainingDaysPerWeek: 2,
+  preferredTrainingDays: ['Monday', 'Thursday'],
+  teamTrainingDaysPerWeek: 0,
+  teamTrainingDays: [],
+} as unknown as OnboardingData;
+const ceilingBlock1 = generateProgramLocally(ceilingAthlete, {
+  todayISO: BLOCK_1_START, blockNumber: 1,
+});
+const CEILING_HISTORY = (() => {
+  const sessions: SessionFeedback['strength'][] = [];
+  for (const microcycle of ceilingBlock1.microcycles) {
+    for (const workout of microcycle.workouts) {
+      const rows = (workout.exercises ?? [])
+        .filter((row) => row.role !== 'conditioning' && (row.exercise?.name ?? '') !== '')
+        .map((row) => ({
+          exerciseId: row.exerciseId,
+          workoutExerciseId: row.id,
+          exerciseName: row.exercise?.name ?? '',
+          prescribedSets: row.prescribedSets,
+          prescribedRepsMin: row.prescribedRepsMin,
+          prescribedRepsMax: row.prescribedRepsMax,
+          weightKg: row.prescribedWeightKg ?? null,
+          completion: 'full' as const,
+        }));
+      if (rows.length > 0) sessions.push(rows);
+    }
+  }
+  const feedback: Record<string, SessionFeedback> = {};
+  BLOCK_1_DATES.forEach((dateStr, index) => {
+    feedback[dateStr] = {
+      dateStr, completion: 'full', feeling: 'easy', soreness: 'none',
+      strength: sessions[index % Math.max(1, sessions.length)] ?? [],
+    } as SessionFeedback;
+  });
+  return feedback;
+})();
+const ceilingProgram = generateProgramLocally(ceilingAthlete, {
+  todayISO: BLOCK_2_START,
+  blockNumber: 2,
+  progressionHistory: {
+    sessionFeedback: CEILING_HISTORY, weightOverrides: {}, blockState: null,
+  },
+});
+const ceilingSessions = ceilingProgram.microcycles
+  .flatMap((microcycle) => microcycle.workouts)
+  .filter((workout) => (workout.exercises ?? []).length > 0);
+
+const atCeiling = ceilingSessions.filter((workout) =>
+  countMainSecondarySets(workout) === CONTRACT_SESSION_SET_CEILING);
+ok(
+  'a REAL generated session sits EXACTLY on the 16-set ceiling',
+  atCeiling.length > 0,
+  `session totals: ${ceilingSessions.map((workout) =>
+    `${workout.name}=${countMainSecondarySets(workout)}`).join(' ')}`,
+);
+ok(
+  'and no session in that block exceeds it',
+  ceilingSessions.every((workout) =>
+    countMainSecondarySets(workout) <= CONTRACT_SESSION_SET_CEILING),
+  ceilingSessions.map((workout) =>
+    `${workout.name}=${countMainSecondarySets(workout)}`).join(' '),
+);
+ok(
+  'that block reads as completed and consistently easy — it WOULD progress',
+  readBlockHistory({
+    feedbackByDate: CEILING_HISTORY,
+    blockStartISO: BLOCK_1_START,
+    blockEndISO: '2026-08-02',
+    requiredStrengthSessions: 8,
+  }).qualifies,
+  'the cell below would pass because the block does not qualify, not because of the ceiling',
+);
+/**
+ * ⚠ **AND THE RULE IS ASKED DIRECTLY ABOUT THOSE REAL SESSIONS, NOT DIFFED
+ * AGAINST A SILENT CONTROL.**
+ *
+ * A silent control does not isolate this rung here: a silent block does not
+ * qualify, so the AUTHORING-TIME FREEZE behaves differently too, and the diff
+ * would credit the ladder with sets the freeze added. Measured — 12 counting
+ * rows move between those two arms, and they are not all this module's. The
+ * at-ceiling workouts are handed to the decision function itself, with the sets
+ * they were really authored at.
+ */
+const ceilingSnapshot: Record<string, number> = {};
+for (const workout of atCeiling) {
+  for (const row of workout.exercises ?? []) ceilingSnapshot[row.id] = row.prescribedSets;
+}
+const ceilingHistory = readBlockHistory({
+  feedbackByDate: CEILING_HISTORY,
+  blockStartISO: BLOCK_1_START,
+  blockEndISO: '2026-08-02',
+  requiredStrengthSessions: 8,
+});
+ok(
+  'AND THE LADDER ADDS NOTHING TO A REAL SESSION ON THE CEILING',
+  decideBlockBoundarySetAdditions({
+    history: ceilingHistory,
+    nextBlockWorkouts: atCeiling,
+    weekIndex: 0,
+    weekKind: 'build',
+    loadDecisions: [],
+    authoredSetsByRowId: ceilingSnapshot,
+  }).length === 0,
+  'a set was added to a session already at 16',
+);
+ok(
+  'while a real session with ROOM in the same block still gains one',
+  (() => {
+    const withRoom = ceilingSessions.filter((workout) =>
+      countMainSecondarySets(workout) < CONTRACT_SESSION_SET_CEILING
+      && countMainSecondarySets(workout) > 0);
+    if (withRoom.length === 0) return false;
+    const snapshot: Record<string, number> = {};
+    for (const workout of withRoom) {
+      for (const row of workout.exercises ?? []) snapshot[row.id] = row.prescribedSets;
+    }
+    return decideBlockBoundarySetAdditions({
+      history: ceilingHistory,
+      nextBlockWorkouts: withRoom,
+      weekIndex: 0,
+      weekKind: 'build',
+      loadDecisions: [],
+      authoredSetsByRowId: snapshot,
+    }).length > 0;
+  })(),
+  'nothing gained anywhere — the cell above would pass for the wrong reason',
 );
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
