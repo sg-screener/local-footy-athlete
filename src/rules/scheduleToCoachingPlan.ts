@@ -28,6 +28,7 @@
  * anything.
  */
 import { buildWeeklyExposureContract } from './weeklyExposureContractBuilders';
+import { withExposureTarget } from './weeklyExposureContract';
 import { schedulerExposureContract } from './schedulerExposureContract';
 import { section18ModeAndSubphase } from './section18WeekIdentity';
 import { GLOBAL_RULES, PURPOSE_IS_LOWER, type SessionPurpose } from './weeklyProgrammingContract';
@@ -123,7 +124,24 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
       },
     },
   };
-  const identity = section18ModeAndSubphase(coachingInputs, legacy);
+  // ── A REDUCED WEEK DECLARES ITS REDUCTION IN THE CONTRACT'S OWN LEDGER ───
+  //
+  // Sam, 2026-08-16: *"disclose any preferred work omitted."* Putting the
+  // disclosure only on the schedule was not enough — §18 reads the contract's
+  // reduction ledger, and a lowered target with no entry reds
+  // *"the contract records every target it lowers"*. It is the right red: an
+  // undeclared reduction is indistinguishable from a target that was never owed.
+  //
+  // `spacing_safety_conflict` is the honest reason: the sessions were dropped or
+  // offered as upper because game proximity and lower spacing left no legal
+  // placement. `withExposureTarget` only ever reduces, which is exactly correct
+  // here — this path can never raise anything.
+  const reduced = schedule.reductionDisclosure === null ? legacy : withExposureTarget(
+    legacy, 'main_strength', requiredStrengthCount,
+    'spacing_safety_conflict', schedule.reductionDisclosure,
+  );
+
+  const identity = section18ModeAndSubphase(coachingInputs, reduced);
 
   // ── HARD DAYS COME FROM THE AGREED WEEK'S ANCHORS ────────────────────────
   //
@@ -139,8 +157,8 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
   // Read off the contract's anchors, which the scheduler supplied from the agreed
   // week — so a stale onboarding fixture or an unselected club night cannot
   // inflate it. Measured: counted=5 vs contract=1, and counted=3 vs contract=0.
-  const committedAnchorHardDays = legacy.anchors.teamTrainingDays.length
-    + legacy.anchors.gameOrPracticeMatchCredit;
+  const committedAnchorHardDays = reduced.anchors.teamTrainingDays.length
+    + reduced.anchors.gameOrPracticeMatchCredit;
 
   // ── V2 CONTRACT — derived from the COMPLETED schedule ────────────────────
   const contractV2 = schedulerExposureContract({
@@ -268,7 +286,7 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     // These were hardcoded `'full'` and `false` when I wrote this connector, and
     // that quietly deleted two behaviours that lived in `buildAIConstraints`: a
     // low-capacity athlete's conditioning is MODERATED, and their week asks for
-    // a RAMP-UP. Both went out with the legacy planner and neither was noticed,
+    // a RAMP-UP. Both went out with the reduced planner and neither was noticed,
     // because the suite that owns them died at import on the deleted symbol.
     //
     // Found by re-pointing `test:readiness-dose-sweep` at the live producer —
@@ -280,7 +298,7 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     rampUp: capacity === 'low',
     maxExercisesPerSession: GLOBAL_RULES.dailyMovementCeiling,
     notes: [],
-    weeklyExposureContract: legacy,
+    weeklyExposureContract: reduced,
   };
 
   return {
@@ -296,7 +314,7 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     weeklyPlan,
     offseasonSubphase: input.offseasonSubphase,
     preseasonSubphase: input.preseasonSubphase,
-    weeklyExposureContract: legacy,
+    weeklyExposureContract: reduced,
     weeklyExposureContractV2: contractV2,
     constraints,
   };
