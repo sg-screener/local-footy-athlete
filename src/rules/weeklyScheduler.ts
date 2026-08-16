@@ -712,6 +712,21 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     && inputs.gameDay !== day).slice(0, appConditioningBudget);
   const conditioningDaySet = new Set(conditioningDays);
 
+  // ── WC-060: THE SHORTFALL MAY LEAVE THE GYM DAYS ─────────────────────────
+  //
+  // Decision 15, verbatim: *"required equipment-free running OR CONDITIONING
+  // may be placed outside gym-access days when needed to meet the phase
+  // minimum"*. The existing top-up below reads only the RUNNING minimum, and
+  // that is not the same requirement.
+  //
+  // ⚠ **THE WORLD THAT PROVED IT: two gym days that are BOTH club nights, no
+  // fixture.** Refusing app conditioning on a club night (correctly) leaves no
+  // gym day free, the anchors supply two exposures against a minimum of three,
+  // and the week refuses — 8 worlds. The honest answer is not to weaken the
+  // club-night rule or to inflate the count: it is the one the approved source
+  // already gives, a standalone equipment-free exposure on a free day.
+  const residualConditioning = Math.max(0, appConditioningBudget - conditioningDays.length);
+
   // ── WC-136: WHERE THE ONE HARD EXPOSURE MAY LAND ─────────────────────────
   //
   // *"No hard conditioning within 48 hours of a game."* G-2 and G-1 are inside
@@ -858,9 +873,14 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     ...days.filter((d) => d.conditioning === 'running').map((d) => d.dayOfWeek),
   ]);
   const runningTopUps: SessionIntention[] = [];
+  // The RUNNING minimum and the CONDITIONING shortfall are two different
+  // requirements served by the same placement rules, so the loop satisfies
+  // whichever is still outstanding. `residualConditioning` is what the gym days
+  // could not absorb; it is spent here or not at all.
+  let outstandingConditioning = residualConditioning;
   if (inputs.phase !== 'Off-season' || inputs.offseasonBlock !== 'early_optional') {
     for (const day of WEEK_ORDER) {
-      if (runningDays.size >= GLOBAL_RULES.running.min) break;
+      if (runningDays.size >= GLOBAL_RULES.running.min && outstandingConditioning <= 0) break;
       if (runningDays.has(day)) continue;
       if (inputs.unavailableDays.includes(day)) continue;      // WC-061
       if (inputs.gameDay === day) continue;
@@ -876,6 +896,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       }
       if (longest > GLOBAL_RULES.runningStreakMaximum) continue;
       runningDays.add(day);
+      outstandingConditioning = Math.max(0, outstandingConditioning - 1);
       runningTopUps.push({
         dateISO: dateForDayOfWeek(inputs.weekStartISO, day), dayOfWeek: day,
         purpose: null, owner: 'conditioning', movementIntention: [], setBudget: null,

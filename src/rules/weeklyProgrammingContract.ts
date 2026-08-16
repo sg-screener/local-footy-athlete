@@ -737,6 +737,11 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
   { id: 'WC-135', provenance: '§3 Sprint/high-speed / §8 In-season',
     statement: 'In-season, only add sprint work when there is no club training, and '
       + 'place it G-3 or earlier.' },
+  { id: 'WC-136', provenance: '§8 phase overlays / conditioning framework',
+    statement: 'The phase owns how many conditioning exposures the app supplies and '
+      + 'how many of them may be hard, and as which authored quality. Hard work is '
+      + 'never within 48 hours of a game, never on a club night, never added in low '
+      + 'readiness, and in-season only in a week with no game.' },
   // Layout rows, derived from BASE_LAYOUTS so the two cannot drift.
   ...BASE_LAYOUTS.map((row) => ({
     id: row.clauseId,

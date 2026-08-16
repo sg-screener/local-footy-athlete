@@ -445,7 +445,8 @@
     "diag:coach-mutation-truth": "sucrase-node src/__tests__/coachSemanticMutationTruthTests.ts",
     "diag:program-semantic-snapshot": "sucrase-node src/__tests__/programSemanticSnapshotTests.ts",
     "diag:coach-visible-domain-verifier": "sucrase-node src/__tests__/coachVisibleDomainVerifierTests.ts",
-    "diag:coach-committed-program-edit-reply": "sucrase-node src/__tests__/coachCommittedProgramEditReplyTests.ts"
+    "diag:coach-committed-program-edit-reply": "sucrase-node src/__tests__/coachCommittedProgramEditReplyTests.ts",
+    "test:conditioning-phase-authorship": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningPhaseAuthorshipTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
