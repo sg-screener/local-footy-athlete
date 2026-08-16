@@ -740,3 +740,24 @@ export const CLAUSE_MODALITY: Readonly<Record<string, ClauseModality>> = {
 export function modalityFor(clauseId: string): ClauseModality | undefined {
   return CLAUSE_MODALITY[clauseId.replace('-', '_')];
 }
+
+/**
+ * WHICH COMPOSER SLOTS COUNT TOWARD THE MAIN/SECONDARY SET BUDGET (WC-030).
+ *
+ * **Sam, 2026-08-16:** Wednesday is 12 sets, not 14 — *"Ab Wheel is outside that
+ * ceiling"*. Friday is 10, not 12 — *"Band Pull-Apart is accessory work outside
+ * that count"*.
+ *
+ * A slot that trains one of the eight named movement patterns is main or
+ * secondary work and is inside the budget. Core and isolation slots train none of
+ * them and sit outside it. **The distinction is the SLOT, never the row's role** —
+ * `strength_accessory` covers both a secondary compound and a band pull-apart, and
+ * counting those alike is what inflated every session's total.
+ */
+export function slotCountsTowardSetBudget(slot: string | null | undefined): boolean {
+  if (!slot) return false;
+  return slot === 'squat' || slot === 'hinge'
+    || slot === 'single_leg_knee' || slot === 'single_leg_hip'
+    || slot === 'horizontal_push' || slot === 'vertical_push'
+    || slot === 'horizontal_pull' || slot === 'vertical_pull';
+}

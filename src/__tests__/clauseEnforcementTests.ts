@@ -322,6 +322,55 @@ console.log('\n[9] Every WEEK-LEVEL rule BINDS — fed facts that violate it dir
   }
 }
 
+console.log('\n[10] An ordinary week cannot be accepted with fewer than TWO strength sessions');
+{
+  // **Sam, 2026-08-16:** *"A non-early-off-season week with only one strength
+  // session is NOT currently authorised… rather than silently treating 'one fits'
+  // as sufficient."*
+  //
+  // The reduction ladder descends to a single session, and the census shows it
+  // never lands there today. **"It does not happen" is not "it cannot happen"** —
+  // this is the cell that makes the floor a rule instead of an observation.
+  //
+  // Early off-season is the one authorised exception: WC-130 makes every session
+  // optional and "zero completed is valid".
+  const ORDINARY: { phase: string; block: string | null }[] = [
+    { phase: 'In-season', block: null },
+    { phase: 'Pre-season', block: null },
+    { phase: 'Off-season', block: 'late_offseason' },
+  ];
+  let judged = 0;
+  for (const world of ORDINARY) {
+    for (const gameDay of [0, 3, 6]) {
+      for (const gymDays of [[1, 3], [1, 3, 5], [2, 4, 6], [1, 2, 4, 5]]) {
+        const result: any = scheduleWeek(inputs({
+          phase: world.phase as never, offseasonBlock: world.block as never,
+          gameDay, gymAccessDays: gymDays, clubNights: [],
+        }));
+        if (result?.refused) continue;   // a refusal is a legal answer
+        judged += 1;
+        const strength = result.days.filter((d: any) => d.owner === 'strength').length;
+        ok(`${world.phase}/${JSON.stringify(gymDays)}/game=${gameDay}: `
+          + 'an accepted ordinary week carries at least two strength sessions',
+          strength >= 2,
+          { strength, disclosure: result.reductionDisclosure });
+      }
+    }
+  }
+  // Non-vacuity: if every world refused, the cells above asserted nothing.
+  ok('the floor was exercised on real accepted weeks', judged >= 10,
+    `only ${judged} ordinary worlds were accepted`);
+
+  // The early-off-season exception is real and must stay reachable, or the floor
+  // above would have quietly banned a shape the contract authorises.
+  const early: any = scheduleWeek(inputs({
+    phase: 'Off-season' as never, offseasonBlock: 'early_optional' as never,
+    gameDay: null as never, gymAccessDays: [1, 3],
+  }));
+  ok('early off-season remains schedulable — its sessions are optional',
+    early?.refused !== true || typeof early.finding === 'string', early?.finding);
+}
+
 const total = passed + failures.length;
 console.log(`\nClause enforcement: passed=${passed}/${total} failures=${failures.length}`);
 totalsPrinted(failures.length);

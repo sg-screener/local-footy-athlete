@@ -636,6 +636,37 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
 
   const overlayOptional = inputs.phase === 'Off-season'
     && inputs.offseasonBlock === 'early_optional';
+
+  // ── ANCHOR CREDIT IS SPENT BEFORE THE APP ADDS ANYTHING ──────────────────
+  //
+  // **Sam, 2026-08-16:** *"club training Wednesday, club training Friday and the
+  // Sunday game already provide three conditioning exposures. Do not add
+  // conditioning merely to increase the count."*
+  //
+  // WC-045: *"Aim for 3-5 conditioning exposures; **club training and games
+  // count**"*, and Bible §18 C: *"Add only the remaining requirement after genuine
+  // anchor credit."* Conditioning was attached to EVERY strength day
+  // unconditionally, so a two-club-night athlete with a fixture — already at the
+  // floor of three — was given a bike on Wednesday and a rower on Friday purely to
+  // raise a number that was already met. **That is added training load with no
+  // rule asking for it.**
+  //
+  // The app now supplies only the shortfall. Anchors are counted first, and the
+  // budget is spent in day order so the result does not depend on which day the
+  // loop happens to reach first.
+  const anchorConditioningDays = new Set<number>([
+    ...inputs.clubNights,
+    ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
+  ]).size;
+  let appConditioningBudget = Math.max(
+    0, GLOBAL_RULES.conditioning.min - anchorConditioningDays);
+  /** Spends one unit of the shortfall, or reports that none is owed. */
+  let conditioningTaken = false;
+  const takeConditioningSlot = (): boolean => {
+    conditioningTaken = appConditioningBudget > 0;
+    if (conditioningTaken) appConditioningBudget -= 1;
+    return conditioningTaken;
+  };
   const purposeByDay = new Map(best.assignment.map((s) => [s.day, s.purpose]));
 
   const days: SessionIntention[] = [];
@@ -659,11 +690,17 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         movementIntention: PATTERNS_FOR_PURPOSE[purpose],
         setBudget: layout.setBudget,
         // WC-115 — off-leg conditioning pairs with lower, running with upper.
-        conditioning: PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running',
-        conditioningCategory: CATEGORY_FOR_CONDITIONING[
-          PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running'],
-        // Riding on a strength session, never a session of its own.
-        conditioningRole: 'component',
+        // Attached ONLY while the week is still short of the floor: anchors have
+        // already been counted, and a day that needs no top-up carries none.
+        conditioning: takeConditioningSlot()
+          ? (PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running')
+          : null,
+        conditioningCategory: conditioningTaken
+          ? CATEGORY_FOR_CONDITIONING[PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running']
+          : null,
+        // Riding on a strength session, never a session of its own — and null
+        // when no conditioning was owed, so the day carries no empty component.
+        conditioningRole: conditioningTaken ? 'component' : null,
         // ── WC-050: WHICH DAYS MAY BE OFFERED A POWER PRIMER AT ALL ────────
         //
         // Never the game day. Never G-1 (*"no heavy lifting or conditioning"*).
