@@ -102,3 +102,60 @@ approved cap"*), and a session with four eligible lifts gaining four sets is a
 jump of four rather than the smallest next step. It is NOT one set per block: a
 three-day week gains one set on each of its three days. If Sam wants one set per
 BLOCK, it is a one-line change in `decideBlockBoundarySetAdditions`.
+
+## SLICE 2 — THE THIRD RUNG. `test:block-two-extra-session`, 38 cells, 20 mutations red.
+
+The offer, its two buttons, its persistence, and the door it goes through.
+
+### THE MEASUREMENT THAT SET THE FIXTURE — `n → n+1` IS LEGAL IN 11 WORLDS OF 27
+
+Asked of generation, not a table (27 worlds: 3 phases × {2,3,4} gym days ×
+{0,1,2} team nights):
+
+| | tt=0 | tt=1 | tt=2 |
+| --- | --- | --- | --- |
+| **Pre-season** d=2 / 3 / 4 | ✗ / ✗ / ✗ | ✗ / **✓** / **✓** | ✗ / ✗ / **✓** |
+| **In-season** d=2 / 3 / 4 | ✗ / ✗ / ✗ | **✓** / **✓** / **✓** | **✓** / **✓** / **✓** |
+| **Off-season** d=2 / 3 / 4 | **✓** / ✗ / ✗ | **✓** / ✗ / ✗ | **✓** / ✗ / ✗ |
+
+**Every world with NO club night refuses the larger week**, and off-season
+refuses above two gym days. The first fixture written for this slice was
+pre-season d=3 tt=2 — one of the sixteen that refuse — and the liveness cell
+caught it before any behaviour cell could pass vacuously.
+
+### FIVE MUTATIONS SURVIVED THE FIRST PASS
+
+- **E10 / E11 — TWO GATES, ONE FIXTURE, AGAIN.** An explicit
+  `availableTrainingDays(...).length === 0` refusal sat above the check that the
+  grown patch actually reached the asked-for count. Zero free days means the
+  patch cannot grow, so the second refused every world the first did. **Deleted.**
+  Third time this shape has appeared in this mission.
+- **E16 — block 1 had no fixture.** Deleting the `blockNumber < 2` guard moved
+  nothing because every fixture was already at block 2.
+- **E17 — THE ORDER GATE WAS WIRED TO NOTHING TESTABLE.** Making the witness
+  return `true` unconditionally changed no cell: the liveness cell asserts it IS
+  true, and the refusal cell passed the flag in by hand. Closed with block 1's
+  own programme, whose stored explanation is empty because the boundary does not
+  run before block 2.
+- **E21 — the answer was filed by a hand-written number.** The decline cell used
+  a literal `1` rather than the block number the card would hand the door, so
+  shifting the offer's own `forBlockNumber` by one changed nothing.
+
+### AND ONE REGRESSION I CAUSED AND FIXED
+
+`test:block-two-screen-delivery` went 35/0 → **33/2**. Its cost property —
+*"an athlete who was never going to be asked must not pay for the legality
+probe"* — is instrumented by a profile proxy counting reads of
+`preferredTrainingDays`. My derivation computed the athlete's free days EAGERLY,
+before the first gate, so every athlete on every redraw touched that field.
+Both closures now read it themselves and nothing runs until the gates pass;
+35/0 restored, and the same property is now held for the offer in its own suite.
+
+### NOT BUILT, AND NAMED
+
+**The "unavailable" half of *"only after load and set progression are
+unavailable/insufficient"*.** Measured: every qualifying athlete's block raises
+at least one load, so no generated world reaches a state where the two smaller
+rungs had nowhere to go. A gate demanding it would make the third rung dead
+code. The **"insufficient"** branch is what is built — the rungs were spent and
+the athlete still reported the block consistently easy.

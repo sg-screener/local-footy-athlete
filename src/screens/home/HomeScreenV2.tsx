@@ -37,6 +37,7 @@ import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
 import {
   BlockBoundaryNoticeCard,
+  ExtraSessionOfferCard,
   WeeklyCommitmentPromptCard,
 } from './BlockBoundaryCards';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
@@ -127,9 +128,12 @@ export default function HomeScreenV2() {
     missedSessionPrompt,
     blockBoundaryNotice,
     weeklyCommitmentPrompt,
+    extraSessionOffer,
     handleAcknowledgeBlockBoundaryNotice,
     handleConfirmWeeklyCommitment,
     handleDeclineWeeklyCommitment,
+    handleAcceptExtraSession,
+    handleDeclineExtraSession,
     handleLogMissedSession,
     handleSkipMissedSession,
     staleByDate,
@@ -970,6 +974,19 @@ export default function HomeScreenV2() {
             prompt={weeklyCommitmentPrompt}
             onConfirm={handleConfirmWeeklyCommitment}
             onDecline={handleDeclineWeeklyCommitment}
+          />
+        )}
+
+        {/* ── The extra-session offer ──
+            The ladder's third rung. Raised only when the block was completed,
+            recovered from and reported consistently easy, when load and sets
+            had nowhere left to go, and when generation has already built the
+            larger week. NOTHING is added until a button is tapped. */}
+        {isNormal && extraSessionOffer && (
+          <ExtraSessionOfferCard
+            model={extraSessionOffer}
+            onAccept={handleAcceptExtraSession}
+            onDecline={handleDeclineExtraSession}
           />
         )}
 

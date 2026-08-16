@@ -338,6 +338,21 @@ export interface QualityRecoveryVerdicts {
    */
   strengthAnswerDays: number;
   conditioningAnswerDays: number;
+  /**
+   * *"EVERYTHING CONSISTENTLY EASY"* — the contract's third case, and the ONLY
+   * one that reaches the ladder's third rung.
+   *
+   * `good` is not this. The good band runs `very_easy | easy | good | hard`, and
+   * an athlete finding sessions `hard` is training exactly as intended — load
+   * and a set are the right answer for them. The offer of an extra SESSION is
+   * for the athlete whose answers sit at the bottom of the scale, where the
+   * small rungs are demonstrably insufficient rather than merely available.
+   *
+   * True only when there was an answer AND every answer was in the easy band —
+   * silence is not ease, for the same reason silence is not good recovery.
+   */
+  strengthEasy: boolean;
+  conditioningEasy: boolean;
 }
 
 /**
@@ -355,6 +370,29 @@ export interface QualityRecoveryVerdicts {
  */
 export const HARD_EFFORT_RATING = 8;
 
+/**
+ * THE TOP OF THE EASY BAND — 6, AND THE DELOAD LAW PUT IT THERE.
+ *
+ * `rules/effortScale.ts` records Sam's own correction: *"my deload law says RPE
+ * 5-6 is easy"*, aligned against `deloadWeekRules.ts:39` — *"Every set easy —
+ * RPE 5-6"*. So 6 is the highest rating the app already calls easy, and the
+ * ladder does not get to draw its own line.
+ */
+export const EASY_EFFORT_RATING = 6;
+
+/**
+ * The feelings and soreness levels that mean *"consistently easy"*.
+ *
+ * ⚠ **A STRICT SUBSET OF THE GOOD BAND, AND THAT IS THE POINT.** `good` and
+ * `hard` are legal, well-recovered answers that buy load and a set; they do NOT
+ * buy a fourth training day. Typed, so a new level added to the vocabulary is a
+ * compile error here rather than a silent "not easy".
+ */
+const EASY_BLOCK_FEELINGS: ReadonlySet<FeedbackFeeling> =
+  new Set<FeedbackFeeling>(['very_easy', 'easy']);
+const EASY_BLOCK_SORENESS: ReadonlySet<FeedbackSoreness> =
+  new Set<FeedbackSoreness>(['none', 'mild']);
+
 export const EMPTY_BLOCK_HISTORY: BlockHistorySignal = {
   completedStrengthSessions: 0,
   recordedStrengthSessions: 0,
@@ -365,6 +403,8 @@ export const EMPTY_BLOCK_HISTORY: BlockHistorySignal = {
     conditioning: 'unknown',
     strengthAnswerDays: 0,
     conditioningAnswerDays: 0,
+    strengthEasy: false,
+    conditioningEasy: false,
   },
   lastRecordedLoadByExercise: {},
   lastRecordedPrescribedSetsByExercise: {},
@@ -458,6 +498,10 @@ export function readBlockHistory(args: {
   let sawConditioningQualityAnswer = false;
   let sawConditioningQualityHard = false;
   let conditioningAnswerDays = 0;
+  // "EVERYTHING CONSISTENTLY EASY" — tracked separately from "good", because the
+  // good band includes `hard`, which is a session working as intended.
+  let strengthAllEasy = true;
+  let conditioningAllEasy = true;
 
   for (const [, feedback] of inBlock) {
     // CONDITIONING — its own input, on any date that carries one.
@@ -469,6 +513,7 @@ export function readBlockHistory(args: {
         conditioningQualityGood = false;
         sawConditioningQualityHard = true;
       }
+      if (conditioningRpe > EASY_EFFORT_RATING) conditioningAllEasy = false;
     }
 
     // STRENGTH — only where the session answer can mean nothing else.
@@ -480,11 +525,13 @@ export function readBlockHistory(args: {
         answered = true;
         if (!GOOD_RECOVERY_FEELINGS.has(feedback.feeling)) strengthQualityGood = false;
         if (HARD_BLOCK_FEELINGS.has(feedback.feeling)) sawStrengthQualityHard = true;
+        if (!EASY_BLOCK_FEELINGS.has(feedback.feeling)) strengthAllEasy = false;
       }
       if (feedback.soreness !== undefined) {
         answered = true;
         if (!GOOD_RECOVERY_SORENESS.has(feedback.soreness)) strengthQualityGood = false;
         if (HARD_BLOCK_SORENESS.has(feedback.soreness)) sawStrengthQualityHard = true;
+        if (!EASY_BLOCK_SORENESS.has(feedback.soreness)) strengthAllEasy = false;
       }
       if (answered) {
         strengthAnswerDays++;
@@ -582,6 +629,11 @@ export function readBlockHistory(args: {
       ),
       strengthAnswerDays,
       conditioningAnswerDays,
+      // SILENCE IS NOT EASE. An athlete who never answered has not told the app
+      // their training is too small, and an unanswered block must never buy a
+      // fourth training day.
+      strengthEasy: sawStrengthQualityAnswer && strengthAllEasy,
+      conditioningEasy: sawConditioningQualityAnswer && conditioningAllEasy,
     },
     lastRecordedLoadByExercise,
     lastRecordedPrescribedSetsByExercise,
@@ -1522,7 +1574,37 @@ export interface BlockBoundaryReductionExplanationRow {
  */
 export type BlockBoundaryExplanationRow =
   | BlockBoundaryLoadExplanationRow
-  | BlockBoundaryReductionExplanationRow;
+  | BlockBoundaryReductionExplanationRow
+  | BlockBoundarySetAddedExplanationRow;
+
+/**
+ * ONE ROW PER SET THIS BOUNDARY ADDED.
+ *
+ * ⚠ **IT IS STORED BECAUSE IT HAS A READER, AND THE READER IS THE THIRD RUNG.**
+ * The contract offers another SESSION *"only after load and set progression are
+ * unavailable/insufficient"*, and the only honest witness to what the two
+ * smaller rungs found is the block they were run against. Re-deriving that at
+ * prompt time would be a second opinion, free to say "nothing moved" while the
+ * stored programme shows a lift that just gained a set.
+ *
+ * It is a DECISION record exactly as the load rows beside it are, not a
+ * derivation — `docs/NORTH_STAR.md` permits the first and refuses the second.
+ *
+ * **NO ATHLETE-FACING SENTENCE RENDERS FROM IT YET, DELIBERATELY.** The added
+ * set is already visible to the athlete as the prescription itself (`3 sets`
+ * becomes `4 sets`), and a new explanatory sentence beside it would be a ninth
+ * kind of `ActiveProgramModifier.effect` phrase — a copy ruling that is Sam's,
+ * not this seat's. `docs/STATUS_BLOCKTWO.md` records the same boundary for the
+ * load rows.
+ */
+export interface BlockBoundarySetAddedExplanationRow {
+  kind: 'set_added';
+  exerciseName: string;
+  role: ExerciseRole;
+  weekIndex: number;
+  fromSets: number;
+  toSets: number;
+}
 
 /**
  * ONE NARROWING DOOR, SO NO READER WRITES ITS OWN CAST.
@@ -1535,7 +1617,44 @@ export type BlockBoundaryExplanationRow =
 export function isLoadExplanationRow(
   row: BlockBoundaryExplanationRow,
 ): row is BlockBoundaryLoadExplanationRow {
-  return row.kind !== 'hard_block_reduced';
+  return row.kind !== 'hard_block_reduced' && row.kind !== 'set_added';
+}
+
+export function isSetAddedExplanationRow(
+  row: BlockBoundaryExplanationRow,
+): row is BlockBoundarySetAddedExplanationRow {
+  return row.kind === 'set_added';
+}
+
+/** The stored rows for the set additions this boundary made. */
+export function buildBlockBoundarySetAddedExplanation(
+  decisions: readonly BlockBoundarySetAdditionDecision[],
+): BlockBoundarySetAddedExplanationRow[] {
+  return decisions.map((decision) => ({
+    kind: 'set_added' as const,
+    exerciseName: decision.exerciseName,
+    role: decision.role,
+    weekIndex: decision.weekIndex,
+    fromSets: decision.fromSets,
+    toSets: decision.toSets,
+  }));
+}
+
+/**
+ * DID EITHER OF THE TWO SMALLER RUNGS ACTUALLY LAND ON THIS BLOCK?
+ *
+ * The third rung's ordering gate, read off the block that was authored rather
+ * than re-derived. A load row whose kind is `history_progressed` is a load that
+ * rose; a `set_added` row is a set that landed. The contract offers a fourth
+ * training day only AFTER those two, so a block showing neither has not earned
+ * the question yet.
+ */
+export function smallerRungsFoundSomewhereToGo(
+  explanation: readonly BlockBoundaryExplanationRow[] | undefined,
+): boolean {
+  return (explanation ?? []).some((row) =>
+    (isLoadExplanationRow(row) && row.kind === 'history_progressed')
+    || isSetAddedExplanationRow(row));
 }
 
 export function isReductionExplanationRow(

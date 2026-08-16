@@ -42,10 +42,22 @@ export function commitmentLegalityProbe(args: {
   blockStartISO: string;
   blockNumber: number;
   weekOrder?: readonly DayOfWeek[];
+  /**
+   * The days the athlete could train and has not committed. Present only for the
+   * GROWING direction — `commitmentPatchFor` consults it when the asked-for count
+   * is larger than the day set they already have, and ignores it otherwise, so
+   * the shrinking caller is unaffected by passing nothing.
+   */
+  availableDays?: readonly DayOfWeek[];
 }): CommitmentLegalityProbe {
   const { profile, blockStartISO, blockNumber, weekOrder = DAYS_OF_WEEK } = args;
   return (sessionsPerWeek: number): boolean => {
-    const patch = commitmentPatchFor({ profile, sessionsPerWeek, weekOrder });
+    const patch = commitmentPatchFor({
+      profile,
+      sessionsPerWeek,
+      weekOrder,
+      ...(args.availableDays !== undefined ? { availableDays: args.availableDays } : {}),
+    });
     try {
       const program = generateProgramLocally({ ...profile, ...patch }, {
         todayISO: blockStartISO,

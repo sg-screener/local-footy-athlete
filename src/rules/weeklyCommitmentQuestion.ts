@@ -264,14 +264,89 @@ export function commitmentPatchFor(args: {
   sessionsPerWeek: number;
   /** Canonical week order, so separation is measured on a stable ring. */
   weekOrder: readonly DayOfWeek[];
+  /**
+   * ⚠ **THE GROWING DIRECTION, ADDED 2026-08-16 FOR THE EXTRA-SESSION OFFER.**
+   *
+   * Days the athlete COULD train and has not chosen — free of team training, the
+   * game, and any `unavailable_day` availability constraint. Consulted ONLY when
+   * the asked-for count is larger than the day set they already have.
+   *
+   * **The chosen days are never dropped to make room.** Growing keeps every day
+   * the athlete picked and adds the best-separated of the days they left free;
+   * dropping one would be the app rearranging a schedule it was only asked to
+   * extend, which is the shrinking half's *"the days are a subset of the
+   * athlete's own, never a new schedule"* read the other way round.
+   *
+   * Absent, or too short, and the count is simply not reachable — the patch
+   * returns the largest day set it can honestly build, and the legality probe
+   * that called it will see a commitment it did not ask for and refuse it.
+   */
+  availableDays?: readonly DayOfWeek[];
 }): { preferredTrainingDays: DayOfWeek[]; trainingDaysPerWeek: number } {
-  const { profile, sessionsPerWeek, weekOrder } = args;
+  const { profile, sessionsPerWeek, weekOrder, availableDays } = args;
   const ordered = [...(profile.preferredTrainingDays ?? [])].sort(
     (a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b),
   );
+
+  if (sessionsPerWeek > ordered.length && availableDays !== undefined) {
+    const free = availableDays.filter((day) => !ordered.includes(day));
+    const wanted = Math.min(sessionsPerWeek - ordered.length, free.length);
+    const grown = wanted > 0
+      ? bestSeparatedAdditions(ordered, free, wanted, weekOrder)
+      : [...ordered];
+    return { preferredTrainingDays: grown, trainingDaysPerWeek: grown.length };
+  }
+
   const keep = Math.max(1, Math.min(sessionsPerWeek, ordered.length));
   const kept = bestSeparatedSubset(ordered, keep, weekOrder);
   return { preferredTrainingDays: kept, trainingDaysPerWeek: kept.length };
+}
+
+/**
+ * The `size` free days whose ADDITION leaves the athlete's week best separated.
+ *
+ * Scored exactly as `bestSeparatedSubset` scores — the same cyclic gaps, the
+ * same "smallest gap first, then evenness" order — so growing and shrinking
+ * cannot come to disagree about what a well-spaced week is. The kept days are
+ * fixed; only which free days join them is being chosen.
+ */
+function bestSeparatedAdditions(
+  kept: readonly DayOfWeek[],
+  free: readonly DayOfWeek[],
+  size: number,
+  weekOrder: readonly DayOfWeek[],
+): DayOfWeek[] {
+  let best: DayOfWeek[] | null = null;
+  let bestScore: readonly [number, number] = [-1, -1];
+
+  const walk = (start: number, picked: DayOfWeek[]): void => {
+    if (picked.length === size) {
+      const union = [...kept, ...picked];
+      const score = separationScore(union, weekOrder);
+      if (score[0] > bestScore[0] || (score[0] === bestScore[0] && score[1] > bestScore[1])) {
+        bestScore = score;
+        best = union;
+      }
+      return;
+    }
+    for (let i = start; i < free.length; i++) walk(i + 1, [...picked, free[i]]);
+  };
+  walk(0, []);
+
+  return (best ?? [...kept, ...free.slice(0, size)])
+    .sort((a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b));
+}
+
+/** The one cyclic-gap score both directions read. */
+function separationScore(
+  days: readonly DayOfWeek[],
+  weekOrder: readonly DayOfWeek[],
+): readonly [number, number] {
+  const week = weekOrder.length;
+  const idx = days.map((day) => weekOrder.indexOf(day)).sort((a, b) => a - b);
+  const gaps = idx.map((value, i) =>
+    (i === 0 ? value + week - idx[idx.length - 1] : value - idx[i - 1]));
+  return [Math.min(...gaps), -gaps.reduce((total, gap) => total + gap * gap, 0)];
 }
 
 /**
@@ -289,22 +364,15 @@ function bestSeparatedSubset(
   weekOrder: readonly DayOfWeek[],
 ): DayOfWeek[] {
   if (size >= days.length) return [...days];
-  const week = weekOrder.length;
   let best: DayOfWeek[] | null = null;
   let bestScore: readonly [number, number] = [-1, -1];
 
   const walk = (start: number, picked: DayOfWeek[]): void => {
     if (picked.length === size) {
-      const idx = picked.map((day) => weekOrder.indexOf(day)).sort((a, b) => a - b);
-      const gaps = idx.map((value, i) =>
-        i === 0 ? value + week - idx[idx.length - 1] : value - idx[i - 1]);
-      const score: readonly [number, number] = [
-        Math.min(...gaps),
-        // Sum of squares rewards EVEN spacing over one huge gap and one tight
-        // one — 3/4 beats 1/6 on a two-day week even though both have a minimum
-        // the layout would accept.
-        -gaps.reduce((total, gap) => total + gap * gap, 0),
-      ];
+      // ONE SCORER, SHARED WITH THE GROWING DIRECTION. Sum of squares rewards
+      // EVEN spacing over one huge gap and one tight one — 3/4 beats 1/6 on a
+      // two-day week even though both have a minimum the layout would accept.
+      const score = separationScore(picked, weekOrder);
       if (score[0] > bestScore[0] || (score[0] === bestScore[0] && score[1] > bestScore[1])) {
         bestScore = score;
         best = [...picked];

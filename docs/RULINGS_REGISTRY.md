@@ -2263,3 +2263,84 @@ terminated perl's own `s///`, so the file never changed. One red was MEASURED
 before it was believed: "boot wipes the athlete's exclusions" was refuted by a
 standalone probe, `before=1 after=1` over three cycles. **NOT SEEN ON GLASS —
 every cell is headless and the three-option sheet is owed a device pass.**
+
+---
+
+**R-101** · *"1. Increase load by the smallest practical increment. 2. Add one
+set when more volume is appropriate and the session remains inside its approved
+cap. 3. Add another session only when phase, schedule and gym availability
+permit it, and after athlete confirmation."* — with *"everything consistently
+easy: load first, sets second, then consider another session"* and the verbatim
+offer *"You've been completing your training consistently and recovering well.
+Your schedule allows another session. Would you like to add one session each
+week?"* / **Add one session** / **Keep my current schedule** (Sam, 2026-08-16,
+approved contract + the Block Two progression-ladder order) · **THE LADDER IS
+ORDERED, AND ONE LIFT NEVER TAKES TWO RUNGS IN ONE ROLLOVER.**
+**⚠ THE IN-BLOCK FREEZE ALREADY BROKE THE ORDER.**
+`utils/progressionRules.buildBuildOutput` returns `loadDelta: 'up'` **and**
+`setsDelta: 'add_one'` on the SAME lift after three consecutive full
+completions, and `buildOverreach` does the same — both rungs at once, with no
+session set ceiling anywhere on the path. The boundary now has the last word on
+an ADDED set exactly as R-098 gave it the last word on a REDUCED one.
+**THE RUNG IS COUNTED FROM THE ATHLETE'S PREVIOUS PRESCRIPTION, NOT FROM THE
+ROW.** By the time the boundary runs the freeze may already have put its set on
+the row; adding to the row would hand out TWO sets in one rollover while every
+comment said one, and no cell comparing against a silent control could see it
+because the control never got either set.
+**THE CEILING IS WC-030's OWN 16**, `SET_CEILING` exported rather than
+re-declared, counted through `slotCountsTowardSetBudget` so accessories and core
+stay outside it — Sam's *"Ab Wheel is outside that ceiling"*. **WC-030's
+week-time check tests the LAYOUT's declared ceiling, never a real session's
+total**, so the ladder is the first owner in the app that counts one.
+**STRENGTH DIFFICULTY AND CONDITIONING DIFFICULTY ARE DIFFERENT RECORDED
+FIELDS.** Measured over 24 worlds: a generated week has **144 strength-only
+days, 64 combined and ZERO conditioning-only**, so the session feeling cannot
+answer both. Conditioning reads `SessionFeedback.conditioning.rpe` — the
+conditioning input, never written from a strength answer; strength reads
+`feeling`/`soreness` on a date carrying no conditioning. `difficulty` is
+deliberately unread: the panel writes it as
+`executionSummary ? sessionRpe : conditioningRpe` and it does not say which
+question it answered. The RPE band is the SIGNED effort scale's own
+`8 — very hard` and `RPE 5-6 is easy`, joined by the WORD, not by a new number.
+**"CONSISTENTLY EASY" IS A STRICT SUBSET OF "GOOD".** `good` and `hard` are
+legal, well-recovered answers that buy load and a set; they do not buy a
+training day.
+**THE OFFER'S ANSWER RIDES THE EXISTING `weekly_commitment_answer` ENTRY.** One
+question of the form *"how many sessions a week"*, asked in two directions, one
+canonical answer per block — and the two can never collide, because the
+shrinking question needs attendance BELOW 75% and the offer needs the block to
+qualify. **No new persisted key.**
+**⚠ THE "UNAVAILABLE" HALF OF RUNG 3'S TRIGGER IS NOT BUILT, AND SAYING SO IS
+THE ROW.** Every qualifying athlete's block raises at least one load, so no
+generated world reaches "the smaller rungs had nowhere to go". Only the
+*insufficient* branch is implemented: the rungs were spent and the athlete still
+reported the block easy. **AND `n → n+1` IS LEGAL IN ONLY 11 OF 27 WORLDS** —
+every world with no club night refuses, and off-season refuses above two gym
+days. Generation is asked; no table is written.
+**Search words:** progression order, load first, sets second, add one set, set
+ceiling, 16 sets, working sets, accessory outside the count, both rungs, same
+rollover, extra session, add one session, keep my current schedule, another
+session, gym availability, unavailable day, consistently easy, strength easy,
+conditioning difficult, conditioning rpe, quality split, deload not raised.
+· **`WORKING rules/blockBoundaryProgression.ts` —
+`decideBlockBoundarySetAdditions` / `applyBlockBoundarySetAdditions` /
+`countMainSecondarySets` / the `byQuality` read / `smallerRungsFoundSomewhereToGo`;
+`rules/extraSessionOffer.ts` (the derived offer and the availability read);
+`rules/weeklyCommitmentQuestion.commitmentPatchFor` (the growing direction);
+`screens/home/useBlockBoundaryPrompts.ts` (derivation, no writer);
+`screens/home/BlockBoundaryCards.ExtraSessionOfferCard`; the three signed
+entries in `rules/projectionCopy.ts`. Guarded by `test:block-two-ladder`
+(47 cells) and `test:block-two-extra-session` (38 cells).** 39 mutations seen
+RED, EIGHT of which SURVIVED a first pass and each named a real hole: three
+separate cases of TWO GATES CATCHING ONE FIXTURE — one of them a gate no world
+could reach (`reduces` strictly implies `!qualifies`) — an ambiguous
+all-combined block with no fixture, a brutal combined day no cell told from a
+brutal squat day, block 1 with no fixture, an ordering witness wired to nothing
+testable, and an answer filed against a hand-written block number.
+**⚠ IT ALSO REDDENED `test:block-two-screen-delivery` (35/0 → 33/2) AND THAT WAS
+A REAL DEFECT, NOT AN INSTRUMENT FAULT:** the offer's derivation read the
+athlete's free days EAGERLY, so every athlete paid a profile read — and would
+have paid a whole generation — on every redraw of the Program surface. Both
+reads are inside the closures now; 35/0 restored and the cost property is held
+in the new suite too. **NOT SEEN ON GLASS — the card is driven through its real
+`onPress` and its real signed copy, but no device has rendered it.**

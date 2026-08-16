@@ -17,8 +17,10 @@ import {
   acknowledgeBlockBoundaryNotice,
   confirmWeeklyCommitment,
   declineWeeklyCommitment,
+  EXTRA_SESSION_SOURCE_SURFACE,
 } from '../../store/weeklyCommitmentAnswer';
 import { useBlockBoundaryPrompts } from './useBlockBoundaryPrompts';
+import { availableTrainingDays } from '../../rules/extraSessionOffer';
 import { DAYS_OF_WEEK } from '../../rules/gameAnchor';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useReadinessStore } from '../../store/readinessStore';
@@ -707,6 +709,7 @@ export function useHomeScreen() {
   });
   const blockBoundaryNotice = blockBoundaryPrompts.notice;
   const weeklyCommitmentPrompt = blockBoundaryPrompts.commitment;
+  const extraSessionOffer = blockBoundaryPrompts.extraSession;
 
   /** Dismiss the reduced-block notice. Records the read; touches no program. */
   const handleAcknowledgeBlockBoundaryNotice = useCallback(() => {
@@ -733,6 +736,39 @@ export function useHomeScreen() {
       forBlockNumber: weeklyCommitmentPrompt.question.forBlockNumber,
     });
   }, [weeklyCommitmentPrompt]);
+
+  /**
+   * Accept the extra session — THE SAME DOOR, one session larger.
+   *
+   * The offer's own `trainingDays` were produced by `commitmentPatchFor` and
+   * proven buildable by generation before the card ever rendered, so the athlete
+   * cannot accept a week the app will refuse.
+   */
+  const handleAcceptExtraSession = useCallback(async (sessionsPerWeek: number) => {
+    if (!extraSessionOffer || !onboardingData) return;
+    await confirmWeeklyCommitment({
+      forBlockNumber: extraSessionOffer.offer.forBlockNumber,
+      sessionsPerWeek,
+      profile: onboardingData,
+      todayISO: todayISOLocal(),
+      weekOrder: DAYS_OF_WEEK,
+      availableDays: availableTrainingDays({
+        profile: onboardingData,
+        weekOrder: DAYS_OF_WEEK,
+      }),
+      sourceSurface: EXTRA_SESSION_SOURCE_SURFACE,
+    });
+  }, [extraSessionOffer, onboardingData]);
+
+  /**
+   * *"Keep my current schedule."* One ledger entry, no program write — the same
+   * construction the missed-session decline uses, and what stops the offer being
+   * put again during this block.
+   */
+  const handleDeclineExtraSession = useCallback(() => {
+    if (!extraSessionOffer) return;
+    declineWeeklyCommitment({ forBlockNumber: extraSessionOffer.offer.forBlockNumber });
+  }, [extraSessionOffer]);
 
   // ───────── Error helpers ─────────
 
@@ -1641,8 +1677,11 @@ export function useHomeScreen() {
     missedSessionPrompt,
     blockBoundaryNotice,
     weeklyCommitmentPrompt,
+    extraSessionOffer,
     handleAcknowledgeBlockBoundaryNotice,
     handleConfirmWeeklyCommitment,
+    handleAcceptExtraSession,
+    handleDeclineExtraSession,
     handleDeclineWeeklyCommitment,
     handleLogMissedSession,
     handleSkipMissedSession,
