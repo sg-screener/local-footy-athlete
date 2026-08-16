@@ -467,6 +467,36 @@ export async function rebuildDerivedWorld(): Promise<void> {
     throw new MissingGenerationAnchorError();
   }
   const clock = storeState.hydratedSeasonPhaseClock ?? undefined;
+
+  // ⚠ CAPTURED BEFORE THE CLEAN SLATE, AND THAT POSITION IS THE WHOLE FIX.
+  //
+  // **MEASURED (`test:block-two-boot-preservation`).** Boot regenerated with no
+  // `blockNumber` and no `progressionHistory`, so it authored a fresh BLOCK ONE
+  // against an explicitly empty history. An athlete holding 100 kg on their own
+  // recorded Deadlift came back at 75 — a first-block anchor estimate — their
+  // restored accessory row vanished entirely, the very-hard volume reduction was
+  // undone, and the stored explanation went with it. **The whole block-boundary
+  // layer survived only while the app stayed open.**
+  //
+  // ⚠ **READING THEM AFTER THE CLEAN SLATE WOULD NOT HAVE WORKED, AND A FIRST
+  // ATTEMPT DID EXACTLY THAT.** The slate below sets `blockState: null` — so a
+  // read placed with the `generateProgramLocally` call returns the value boot
+  // itself just erased, and the fix silently does nothing. `sessionFeedback` and
+  // `weightOverrides` are not in the slate and survive it; `blockState` is not.
+  //
+  // This is the shape `utils/weekRebuild.ts` already uses at the rollover: the
+  // caller that owns the grid STATES the inputs. Boot still decides nothing — it
+  // hands generation the same recorded facts the rollover handed it, so the same
+  // inputs author the same block on both paths.
+  const bootProgressionInputs = (() => {
+    const inputs = useProgramStore.getState();
+    return {
+      sessionFeedback: inputs.sessionFeedback ?? {},
+      weightOverrides: inputs.weightOverrides ?? {},
+      blockState: inputs.blockState ?? null,
+    };
+  })();
+
   beginLedgerReplay();
   try {
     // A CLEAN SLATE first: after a real process death the derived surfaces
@@ -506,6 +536,12 @@ export async function rebuildDerivedWorld(): Promise<void> {
       todayISO: generationISO,
       previousProgram: null,
       ...(clock ? { seasonPhaseClock: clock } : {}),
+      // ABSENT BLOCK STATE MEANS BLOCK 1 — the pre-existing default, and the
+      // truthful answer for an athlete who has not crossed a boundary yet.
+      ...(bootProgressionInputs.blockState
+        ? { blockNumber: bootProgressionInputs.blockState.blockNumber }
+        : {}),
+      progressionHistory: bootProgressionInputs,
     });
     deriveBootFixtureMarks(profile, program);
     commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
