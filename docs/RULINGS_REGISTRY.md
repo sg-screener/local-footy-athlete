@@ -2214,3 +2214,52 @@ session counts, commitment fact, rebuild after confirm.
 first pass — the attendance fixtures used only `full` and `skipped`, so a rule
 counting `partial` as attendance had no coordinate to fail on, and `partial` is
 the commonest real answer for exactly this athlete.
+
+---
+
+**R-100** · *"How long should we leave this exercise out?"* — with the three
+answers **Today only / This block / Until I change it** (Sam, 2026-08-16,
+approved contract, "Athlete substitutions and exclusions"; merge authorised the
+same day: *"merge it"*) · **ONE CANONICAL EXCLUSION OWNER, AND THE EXPIRY IS
+ARITHMETIC RATHER THAN A JOB.**
+The stored fact is the athlete's DECISION (scope, decision day, last day,
+block, reason); the flat "which names are out" list every reader used is now a
+PROJECTION of it onto a DATE. That is what makes a `today_only` answer stop
+applying tomorrow with no sweep, no scheduled task and no second writer —
+nothing can forget to run.
+**THE BLOCK END IS STORED, NOT RE-DERIVED, AND THAT IS NOT A NORTH-STAR
+VIOLATION.** The anchor MOVES — rollover advances it — so re-deriving "this
+block" a fortnight later answers for a DIFFERENT block than the athlete was
+standing in. "The block I was in when I answered" is a fact about the moment of
+the decision, and a fact is an input.
+**ONE DECISION PER EXERCISE.** Changing the scope UPDATES that decision; it
+never mints a second, so Status can never show two rows disagreeing about when
+an exercise comes back.
+**⚠ AN ORDINARY SUBSTITUTION IS NOT AN EXCLUSION.** The swap door called
+`addExclusion` on the original, so one swap for one sore shoulder permanently
+banned a lift from every future program with nothing to expire it. Sam's
+contract forbids it in as many words; the ban is gone and the swap only pins the
+alternative.
+**⚠ SAM DECLINED THE SWAP-SIDE STATUS ROW — 2026-08-16, verbatim: *"leave
+swaps"*.** Asked whether a swapped-in exercise should also appear on the status
+list, he ruled it should not. **Only removals appear.** This is a RULING, not an
+omission, and it is recorded so it is not re-asked or "fixed" later.
+**A GAP NAMES ITS REAL CAUSE.** A slot an exclusion empties is disclosed as an
+EXCLUSION gap, never as a kit gap — the test is "would the kit ALONE have
+emptied it", so a thing the athlete cannot do outranks a thing they chose. Where
+a legal same-pattern replacement exists it is used and no gap is shown.
+**Search words:** exclusion, exclusion scope, today only, this block, until I
+change it, leave this exercise out, remove exercise, restore exercise, change
+scope, banned exercise, substitution does not ban, typed gap, exclusion gap,
+silently restore, leave swaps, swap status row.
+· **`WORKING rules/exerciseExclusions.ts` (the decision and the one
+`exclusionIsActiveOn` predicate), `utils/exerciseExclusionOwner.ts` (the one
+transaction), `store/athletePreferencesStore.ts` (stored decisions, derived
+projection, legacy fold at hydration). Guarded by `test:exercise-exclusions`
+(51 cells) and `LAW-an-exclusion-is-answered-with-a-scope` /
+`LAW-a-gap-names-its-real-cause`.** 13 of 13 mutants seen RED. One first read as
+SURVIVING and the INSTRUMENT was at fault — `//` in the replacement text
+terminated perl's own `s///`, so the file never changed. One red was MEASURED
+before it was believed: "boot wipes the athlete's exclusions" was refuted by a
+standalone probe, `before=1 after=1` over three cycles. **NOT SEEN ON GLASS —
+every cell is headless and the three-option sheet is owed a device pass.**
