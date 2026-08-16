@@ -36,6 +36,8 @@ import {
   PATTERN_PLANE,
   PURPOSE_IS_LOWER,
   baseLayoutFor,
+  hardConditioningQualityFor,
+  overlayForPhase,
   type ConditioningKind,
   type ContractConditioningCategory,
   type ContractConditioningRole,
@@ -81,6 +83,13 @@ export interface WeeklySchedulerInputs {
   readonly readiness: SchedulerReadiness;
   /** Days the athlete explicitly marked unavailable. Never used (WC-061). */
   readonly unavailableDays: readonly number[];
+  /**
+   * WC-136. The block this week sits in, used ONLY to rotate the authored hard
+   * conditioning quality at the block boundary. Optional because a caller that
+   * cannot say which block it is gets the first quality rather than none —
+   * absence must not silently delete a required exposure.
+   */
+  readonly miniCycleNumber?: number | null;
 }
 
 // ─── OUTPUT ────────────────────────────────────────────────────────────────
@@ -658,16 +667,58 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     ...inputs.clubNights,
     ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
   ]).size;
-  let appConditioningBudget = Math.max(
-    0, GLOBAL_RULES.conditioning.min - anchorConditioningDays);
-  /** Spends one unit of the shortfall, or reports that none is owed. */
-  let conditioningTaken = false;
-  const takeConditioningSlot = (): boolean => {
-    conditioningTaken = appConditioningBudget > 0;
-    if (conditioningTaken) appConditioningBudget -= 1;
-    return conditioningTaken;
-  };
   const purposeByDay = new Map(best.assignment.map((s) => [s.day, s.purpose]));
+
+  // ── WC-136: THE PHASE OWNS THE COUNT AND THE QUALITY ─────────────────────
+  //
+  // **This read is the whole point of the overlays.** The budget came from
+  // `GLOBAL_RULES.conditioning.min` — ONE number, 3, for every phase — while
+  // `PRESEASON_OVERLAY.conditioningTarget` said 4 and `early_optional` said 0,
+  // and neither was read by anything. A healthy no-club pre-season athlete was
+  // authored two app exposures against the approved source's four.
+  const overlay = overlayForPhase(inputs.phase, inputs.offseasonBlock);
+  let appConditioningBudget = Math.max(
+    0, overlay.conditioningTarget.min - anchorConditioningDays);
+
+  // ── WHICH DAYS MAY CARRY APP CONDITIONING AT ALL, DECIDED BEFORE THE LOOP ─
+  //
+  // The budget used to be spent greedily inside the day loop, which meant the
+  // hard exposure could only ever land wherever the loop happened to reach
+  // first. Choosing the receiving days up front lets the hard slot be PLACED
+  // rather than fall out, and it is the same day order either way.
+  //
+  // **NEVER A CLUB NIGHT.** *"Never add app conditioning on club-training
+  // days."* A club night is already a conditioning exposure and already counted
+  // in `anchorConditioningDays`; attaching app conditioning to it both
+  // double-counts the day and stacks the athlete's hardest evening.
+  const conditioningDays = WEEK_ORDER.filter((day) =>
+    purposeByDay.has(day)
+    && !inputs.unavailableDays.includes(day)
+    && !inputs.clubNights.includes(day)
+    && inputs.gameDay !== day).slice(0, appConditioningBudget);
+  const conditioningDaySet = new Set(conditioningDays);
+
+  // ── WC-136: WHERE THE ONE HARD EXPOSURE MAY LAND ─────────────────────────
+  //
+  // *"No hard conditioning within 48 hours of a game."* G-2 and G-1 are inside
+  // 48 hours; G+1 is the contract's own rest/recovery day. All three are
+  // excluded, and the day is never moved to make room — if no legal day exists
+  // the week simply authors no hard session, which is a correct week and not a
+  // shortfall.
+  //
+  // *"Prefer hard running/top-end work with upper-body days"* — so an UPPER day
+  // is chosen first and a lower day only if no upper day is legal. On a lower
+  // day the exposure stays `off_leg`, which keeps *"prefer off-leg bike/row/ski/
+  // air-bike conditioning with lower-body days"* true of the hard session too.
+  const hardQuality = hardConditioningQualityFor(overlay, inputs.miniCycleNumber);
+  const hardEligible = conditioningDays.filter((day) => {
+    if (inputs.gameDay === null) return true;
+    if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
+    return !isGamePlusOne(day, inputs);
+  });
+  const hardDay = hardQuality === null ? null : (
+    hardEligible.find((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!])
+    ?? hardEligible[0] ?? null);
 
   const days: SessionIntention[] = [];
   for (const day of WEEK_ORDER) {
@@ -690,17 +741,25 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         movementIntention: PATTERNS_FOR_PURPOSE[purpose],
         setBudget: layout.setBudget,
         // WC-115 — off-leg conditioning pairs with lower, running with upper.
-        // Attached ONLY while the week is still short of the floor: anchors have
-        // already been counted, and a day that needs no top-up carries none.
-        conditioning: takeConditioningSlot()
+        // Attached ONLY on the days chosen above: anchors have already been
+        // counted, and a day that needs no top-up carries none.
+        conditioning: conditioningDaySet.has(day)
           ? (PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running')
           : null,
-        conditioningCategory: conditioningTaken
-          ? CATEGORY_FOR_CONDITIONING[PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running']
+        // ⚠ WC-136 — THE QUALITY, NOT JUST THE MODALITY. The category used to
+        // be a pure function of upper/lower, so it could only ever be
+        // `aerobic_base` or `tempo` and the 18 authored aerobic-power and
+        // anaerobic templates were unreachable from here. The hard day overrides
+        // the capacity default with the phase's authored quality; the modality
+        // (`off_leg` above) is untouched, so a hard lower day is still off-leg.
+        conditioningCategory: conditioningDaySet.has(day)
+          ? (day === hardDay && hardQuality !== null
+            ? hardQuality
+            : CATEGORY_FOR_CONDITIONING[PURPOSE_IS_LOWER[purpose] ? 'off_leg' : 'running'])
           : null,
         // Riding on a strength session, never a session of its own — and null
         // when no conditioning was owed, so the day carries no empty component.
-        conditioningRole: conditioningTaken ? 'component' : null,
+        conditioningRole: conditioningDaySet.has(day) ? 'component' : null,
         // ── WC-050: WHICH DAYS MAY BE OFFERED A POWER PRIMER AT ALL ────────
         //
         // Never the game day. Never G-1 (*"no heavy lifting or conditioning"*).

@@ -866,6 +866,7 @@ export function buildGeneratedMicrocycles(args: {
         generationConstraints,
         activeConstraints: args.activeConstraints ?? [],
         exposureContract: null,
+        miniCycleNumber: blockState.miniCycleNumber ?? null,
       });
       const sched = scheduleWeek(schedInputs);
       if (scheduleRefused(sched)) throw new WeeklyScheduleRefusedError(sched);
@@ -972,6 +973,7 @@ export function buildGeneratedMicrocycles(args: {
       generationConstraints,
       activeConstraints: args.activeConstraints ?? [],
       exposureContract: weekPlan.weeklyExposureContractV2 ?? null,
+      miniCycleNumber: blockState.miniCycleNumber ?? null,
     });
     const scheduled = scheduleWeek(schedulerInputs);
     if (scheduleRefused(scheduled)) {
