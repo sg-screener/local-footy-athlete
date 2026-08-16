@@ -47,7 +47,21 @@ import {
   readBlockHistory,
   type BlockBoundaryReductionExplanationRow,
 } from '../rules/blockBoundaryProgression';
-import { blockBoundaryExplanationSentences } from '../rules/projectionCopy';
+import { commitmentLegalityProbe } from '../rules/weeklyCommitmentLegality';
+import {
+  answerForBlock,
+  commitmentPatchFor,
+  decideWeeklyCommitmentQuestion,
+  readBlockAttendance,
+  type CommitmentLegalityProbe,
+} from '../rules/weeklyCommitmentQuestion';
+import {
+  blockBoundaryExplanationSentences,
+  missedSessionCommitmentOptionLabel,
+  missedSessionCommitmentQuestionSentence,
+} from '../rules/projectionCopy';
+import type { DecisionLedgerEntry } from '../types/decisionLedger';
+import type { DayOfWeek } from '../types/domain';
 import type { SessionFeedback } from '../store/programStore';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 
@@ -89,6 +103,20 @@ const PROGRESSED_KG = 102.5;
 /** Block 1 programmed the main lift at FOUR sets. The contract's own exhibit. */
 const BLOCK_1_MAIN_LIFT_SETS = 4;
 const CONTRACT_MAIN_LIFT_SETS = 3;
+
+/**
+ * SAM'S APPROVED MISSED-SESSION QUESTION, PINNED AS A LITERAL with the fixture's
+ * own numbers substituted. Not read from the registry entry — see the note on
+ * `APPROVED_REDUCED_SENTENCE`.
+ */
+const APPROVED_QUESTION_SENTENCE =
+  'You have been completing about 2 of your 3 planned sessions. '
+  + 'Would a smaller weekly program fit your life better?';
+
+/** The canonical week, stated here so the commitment cells do not import a screen. */
+const WEEK_ORDER: readonly DayOfWeek[] = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+];
 
 function athlete(): OnboardingData {
   return {
@@ -802,6 +830,360 @@ function strengthWorkout(rows: Record<string, unknown>[]): Workout {
       requiredStrengthSessions: 12,
     }).reduces,
     'the reduction fires on an ordinary hard block — every athlete would be reduced forever',
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[12] THE MISSED-SESSION QUESTION — WHEN IT IS PUT, AND WHEN IT IS NOT');
+
+/** Athlete B's block 1: three sessions a week for four weeks were asked for. */
+const SESSIONS_PER_WEEK = 3;
+const BLOCK_WEEKS = 4;
+const BLOCK_1_WINDOW = { blockStartISO: '2026-07-06', blockEndISO: '2026-08-02' };
+
+/** A block where only the named dates were completed; the rest were skipped. */
+function attendanceBlock(completedDates: readonly string[]): Record<string, SessionFeedback> {
+  const feedback: Record<string, SessionFeedback> = {};
+  for (const dateStr of BLOCK_1_DATES) {
+    feedback[dateStr] = {
+      dateStr,
+      completion: completedDates.includes(dateStr) ? 'full' : 'skipped',
+    } as SessionFeedback;
+  }
+  return feedback;
+}
+
+function attendanceOf(completedDates: readonly string[]) {
+  return readBlockAttendance({
+    feedbackByDate: attendanceBlock(completedDates),
+    ...BLOCK_1_WINDOW,
+    sessionsPerWeek: SESSIONS_PER_WEEK,
+    weeks: BLOCK_WEEKS,
+  });
+}
+
+/** Everything legal — the probe is stubbed so the gate under test is attendance. */
+const allLegal: CommitmentLegalityProbe = () => true;
+
+function ask(
+  completedDates: readonly string[],
+  ledgerEntries: readonly DecisionLedgerEntry[] = [],
+  isCommitmentLegal = allLegal,
+) {
+  return decideWeeklyCommitmentQuestion({
+    attendance: attendanceOf(completedDates),
+    forBlockNumber: 1,
+    ledgerEntries,
+    isCommitmentLegal,
+  });
+}
+
+{
+  // ONE DISRUPTED WEEK. Week 3 (20th, 22nd, 24th) is entirely missed; the other
+  // three weeks are perfect. 9 of 12 = exactly 75%, which is NOT below it.
+  const oneWeekLost = BLOCK_1_DATES.filter((d) => !['2026-07-20', '2026-07-22', '2026-07-24'].includes(d));
+  const oneWeekAttendance = attendanceOf(oneWeekLost);
+  ok(
+    'one lost week is 9 of 12 — the fixture is the contract\'s own case',
+    oneWeekAttendance.completedSessions === 9 && oneWeekAttendance.requiredSessions === 12,
+    `got ${oneWeekAttendance.completedSessions}/${oneWeekAttendance.requiredSessions}`,
+  );
+  ok(
+    'ONE DISRUPTED WEEK DOES NOT ASK',
+    ask(oneWeekLost).ask === false,
+    'the app would redesign a programme over one bad week',
+  );
+  ok(
+    'and the refusal names attendance, not some other gate',
+    (ask(oneWeekLost) as { refusal?: string }).refusal === 'attendance_met',
+  );
+}
+
+{
+  // TWO LOST WEEKS. 6 of 12 = 50%.
+  const twoWeeksLost = BLOCK_1_DATES.slice(0, 6);
+  const outcome = ask(twoWeeksLost);
+  ok(
+    'BLOCK ATTENDANCE BELOW 75% DOES ASK',
+    outcome.ask === true,
+    `got ${JSON.stringify(outcome)}`,
+  );
+  ok(
+    'the denominator is the whole block\'s REQUIRED sessions',
+    attendanceOf(twoWeeksLost).requiredSessions === SESSIONS_PER_WEEK * BLOCK_WEEKS,
+  );
+  if (outcome.ask) {
+    ok(
+      'the numbers it shows are WEEKLY, and they are the real ones',
+      outcome.question.completedPerWeek === 2 && outcome.question.plannedPerWeek === 3,
+      `got about ${outcome.question.completedPerWeek} of ${outcome.question.plannedPerWeek}`,
+    );
+    ok(
+      'it offers only SMALLER commitments, largest first',
+      outcome.question.options.length > 0
+        && outcome.question.options.every((n) => n < SESSIONS_PER_WEEK && n >= 1)
+        && outcome.question.options.every((n, i, all) => i === 0 || all[i - 1] > n),
+      `offered ${JSON.stringify(outcome.question.options)}`,
+    );
+  }
+
+  // THE LEGALITY GATE IS REAL — an athlete for whom nothing smaller builds is
+  // not offered a question whose every answer the app would refuse.
+  ok(
+    'no legal smaller commitment means NO question at all',
+    ask(twoWeeksLost, [], () => false).ask === false,
+  );
+  ok(
+    'and it says so, rather than blaming attendance',
+    (ask(twoWeeksLost, [], () => false) as { refusal?: string }).refusal
+      === 'no_legal_smaller_commitment',
+  );
+  ok(
+    'the legality probe DECIDES the offer — 2 is dropped when only 1 builds',
+    (() => {
+      const only1 = ask(twoWeeksLost, [], (n) => n === 1);
+      return only1.ask === true && JSON.stringify(only1.question.options) === '[1]';
+    })(),
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[13] ASKED AND ANSWERED IS ASKED AND ANSWERED');
+
+function ledgerEntry(answer: { kind: 'confirmed'; sessionsPerWeek: number; trainingDays: never[] } | { kind: 'declined' }, forBlockNumber = 1): DecisionLedgerEntry {
+  return {
+    id: `dl-${forBlockNumber}-${answer.kind}`,
+    occurredAt: '2026-08-03T09:00:00.000Z',
+    provenance: 'athlete_tap',
+    decision: { kind: 'weekly_commitment_answer', forBlockNumber, answer },
+  } as DecisionLedgerEntry;
+}
+
+{
+  const twoWeeksLost = BLOCK_1_DATES.slice(0, 6);
+  ok(
+    'a CONFIRMED answer stops the question being re-asked',
+    ask(twoWeeksLost, [ledgerEntry({ kind: 'confirmed', sessionsPerWeek: 2, trainingDays: [] })]).ask === false,
+  );
+  ok(
+    'a DECLINED answer stops it too — a decline is an answer, not a silence',
+    ask(twoWeeksLost, [ledgerEntry({ kind: 'declined' })]).ask === false,
+    'the app would ask the same question every time the screen redrew',
+  );
+  ok(
+    'an answer to a DIFFERENT block does not silence this one',
+    ask(twoWeeksLost, [ledgerEntry({ kind: 'declined' }, 99)]).ask === true,
+    'one decline would silence the question for the rest of the athlete\'s life',
+  );
+  ok(
+    'the recorded answer is readable back, verbatim',
+    (() => {
+      const read = answerForBlock([ledgerEntry({ kind: 'confirmed', sessionsPerWeek: 2, trainingDays: [] })], 1);
+      return read?.kind === 'confirmed' && read.sessionsPerWeek === 2;
+    })(),
+  );
+  ok(
+    'a LATER answer wins over an earlier one — the ledger is append-only',
+    (() => {
+      const read = answerForBlock([
+        ledgerEntry({ kind: 'declined' }),
+        ledgerEntry({ kind: 'confirmed', sessionsPerWeek: 1, trainingDays: [] }),
+      ], 1);
+      return read?.kind === 'confirmed' && read.sessionsPerWeek === 1;
+    })(),
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[14] THE QUESTION CHANGES NOTHING — NO SILENT REDUCTION, NO CRAMMING');
+
+{
+  const twoWeeksLost = BLOCK_1_DATES.slice(0, 6);
+  const missedProgram = build(attendanceBlock(twoWeeksLost));
+  const missedRows = rowsOf(missedProgram);
+
+  ok(
+    'the block still carries the athlete\'s COMMITTED number of sessions',
+    sessionCount(missedProgram) === sessionCount(goodProgram),
+    `missed-block ${sessionCount(missedProgram)} vs control ${sessionCount(goodProgram)} — the plan was silently reduced`,
+  );
+  ok(
+    'the week SHAPE is untouched — same sessions on the same days',
+    JSON.stringify([...missedRows.keys()].sort()) === JSON.stringify([...goodRows.keys()].sort()),
+    'the missed block was rebuilt differently before the athlete answered anything',
+  );
+  ok(
+    'NO row carries more sets than the control — nothing was crammed in',
+    [...missedRows.entries()].every(([key, row]) => row.sets <= (goodRows.get(key)?.sets ?? row.sets)),
+  );
+  ok(
+    'and the block stores no reduction row — attendance is not the recovery question',
+    !(missedProgram.blockBoundaryExplanation ?? []).some(isReductionExplanationRow),
+    'a missed block was treated as a very-hard block',
+  );
+  ok(
+    'an unattended block does NOT buy a load increase either',
+    [...missedRows.entries()]
+      .filter(([key]) => key.endsWith(`:${TRACKED}`))
+      .every(([, row]) => row.kg !== PROGRESSED_KG),
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[15] CONFIRMING WRITES ONE CANONICAL COMMITMENT FACT');
+
+{
+  const patch = commitmentPatchFor({
+    profile: { preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'] },
+    sessionsPerWeek: 2,
+    weekOrder: WEEK_ORDER,
+  });
+  ok(
+    'the count and the day set are ONE fact, and they agree',
+    patch.trainingDaysPerWeek === patch.preferredTrainingDays.length
+      && patch.trainingDaysPerWeek === 2,
+    `got ${JSON.stringify(patch)}`,
+  );
+  ok(
+    'the days are a SUBSET of the athlete\'s own, in week order',
+    JSON.stringify(patch.preferredTrainingDays) === JSON.stringify(['Monday', 'Wednesday']),
+    `got ${JSON.stringify(patch.preferredTrainingDays)} — the app answered a question about WHICH days that it never asked`,
+  );
+  ok(
+    'an out-of-order stored day set is still answered in week order',
+    JSON.stringify(commitmentPatchFor({
+      profile: { preferredTrainingDays: ['Friday', 'Monday', 'Wednesday'] },
+      sessionsPerWeek: 2,
+      weekOrder: WEEK_ORDER,
+    }).preferredTrainingDays) === JSON.stringify(['Monday', 'Wednesday']),
+  );
+}
+
+/**
+ * ⚠ THE PROBE IS NOT DECORATION, AND THIS IS THE MEASUREMENT THAT PROVES IT.
+ *
+ * Run at `6117a9fd` over nine worlds, the PRODUCTION probe (which asks
+ * generation, not a table) answers:
+ *
+ *     Pre-season  d=3 → []        d=4 → [3]      d=5 → [4,3]
+ *     In-season   d=3 → []        d=4 → [3]      d=5 → [4,3]
+ *     Off-season  d=3 → [2]       d=4 → [3,2]    d=5 → [3,2]
+ *
+ * So an in-season or pre-season athlete ALREADY AT THREE has no legal smaller
+ * programme — `main_strength_permitted_minimum` refuses two — and the honest
+ * answer for them is no question at all. A phase table written in
+ * `weeklyCommitmentQuestion.ts` would have had to reproduce that, from four
+ * different owners, and would have been wrong the day any of them moved.
+ */
+{
+  const preseasonThree = athlete();
+  const probeThree = commitmentLegalityProbe({
+    profile: preseasonThree,
+    blockStartISO: BLOCK_2_START,
+    blockNumber: 2,
+  });
+  ok(
+    'a PRE-SEASON athlete already at three has NO legal smaller commitment',
+    !probeThree(2) && !probeThree(1),
+    'two- and one-session pre-season weeks build — the measurement above is stale',
+  );
+
+  const fourDay = { ...athlete(), trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Friday'] } as unknown as OnboardingData;
+  const probeFour = commitmentLegalityProbe({
+    profile: fourDay,
+    blockStartISO: BLOCK_2_START,
+    blockNumber: 2,
+  });
+  ok(
+    'a FOUR-day pre-season athlete can legally drop to three, and no lower',
+    probeFour(3) && !probeFour(2),
+    `3:${probeFour(3)} 2:${probeFour(2)}`,
+  );
+
+  const fourDayPatch = commitmentPatchFor({
+    profile: fourDay, sessionsPerWeek: 3, weekOrder: WEEK_ORDER,
+  });
+  const before = generateProgramLocally(fourDay, {
+    todayISO: BLOCK_2_START,
+    blockNumber: 2,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  const afterDecline = generateProgramLocally(fourDay, {
+    todayISO: BLOCK_2_START,
+    blockNumber: 2,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  const after = generateProgramLocally(
+    { ...fourDay, ...fourDayPatch } as unknown as OnboardingData,
+    {
+      todayISO: BLOCK_2_START,
+      blockNumber: 2,
+      progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+    },
+  );
+  ok(
+    'CONFIRMING REBUILDS SMALLER through the current scheduler',
+    sessionCount(after) < sessionCount(before),
+    `before ${sessionCount(before)} sessions, after ${sessionCount(after)} — the confirmation did not reach the scheduler`,
+  );
+  ok(
+    'DECLINING leaves the programme SEMANTICALLY unchanged',
+    // EVERY PRESCRIPTION AND EVERY SESSION, not every byte. A raw JSON compare
+    // is NOT the test and was tried first: generation stamps `updatedAt` per
+    // row, so two identical programmes differ by bytes and by nothing an
+    // athlete could see. This compares what the athlete is actually shown.
+    JSON.stringify([...rowsOf(afterDecline).entries()].sort())
+      === JSON.stringify([...rowsOf(before).entries()].sort())
+      && sessionCount(afterDecline) === sessionCount(before),
+    'the unanswered programme is not reproducible — something moved without a decision',
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log("\n[16] THE QUESTION'S OWN WORDS");
+
+{
+  const twoWeeksLost = BLOCK_1_DATES.slice(0, 6);
+  const outcome = ask(twoWeeksLost);
+  if (outcome.ask) {
+    ok(
+      'the question renders EXACTLY the approved wording, with the real numbers',
+      String(missedSessionCommitmentQuestionSentence(outcome.question))
+        === APPROVED_QUESTION_SENTENCE,
+      `got ${JSON.stringify(String(missedSessionCommitmentQuestionSentence(outcome.question)))}`,
+    );
+    ok(
+      'it does not shame — no "only", no "just", no second sentence about consistency',
+      !/\bonly\b|\bjust\b|\bshould have\b/i.test(
+        String(missedSessionCommitmentQuestionSentence(outcome.question)),
+      ),
+    );
+  }
+  ok(
+    'an option label is signed, and the singular is its own entry',
+    String(missedSessionCommitmentOptionLabel(2)) === '2 sessions a week'
+      && String(missedSessionCommitmentOptionLabel(1)) === '1 session a week',
+    `got ${String(missedSessionCommitmentOptionLabel(2))} / ${String(missedSessionCommitmentOptionLabel(1))}`,
+  );
+  ok(
+    'THE SAME QUESTION IS RE-DERIVED FROM THE SAME FACTS AFTER A RELOAD',
+    (() => {
+      const persisted = JSON.parse(JSON.stringify(attendanceBlock(twoWeeksLost))) as Record<string, SessionFeedback>;
+      const again = decideWeeklyCommitmentQuestion({
+        attendance: readBlockAttendance({
+          feedbackByDate: persisted,
+          ...BLOCK_1_WINDOW,
+          sessionsPerWeek: SESSIONS_PER_WEEK,
+          weeks: BLOCK_WEEKS,
+        }),
+        forBlockNumber: 1,
+        ledgerEntries: [],
+        isCommitmentLegal: allLegal,
+      });
+      return JSON.stringify(again) === JSON.stringify(outcome);
+    })(),
+    'the question is not reproducible from the persisted facts',
   );
 }
 

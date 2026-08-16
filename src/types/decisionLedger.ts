@@ -17,7 +17,7 @@
 
 import type { PlanChange } from '../utils/planChangeTypes';
 import type { ProgramControlAction } from './programControlAction';
-import type { Workout } from './domain';
+import type { DayOfWeek, Workout } from './domain';
 
 /** Who put this decision on the ledger. */
 export type DecisionProvenance =
@@ -77,7 +77,37 @@ export type AthleteDecision =
    * `preRebuildEnvelopeMigrationTests` pins that; when the last pre-rebuild
    * install is gone, the kind retires with the migration that made it.
    */
-  | { kind: 'migrated_day_placement'; date: string; workout: Workout };
+  | { kind: 'migrated_day_placement'; date: string; workout: Workout }
+  /**
+   * THE ATHLETE'S ANSWER TO THE MISSED-SESSION QUESTION.
+   *
+   * The approved contract: *"When the athlete completes less than roughly 75
+   * percent of required sessions across the block, ask whether the weekly
+   * commitment is unrealistic. ... Rebuild only after the athlete confirms."*
+   *
+   * ⚠ **THE QUESTION IS NOT HERE, AND THAT IS THE DESIGN.** The ask is DERIVED
+   * from the logged sessions and the commitment the block was built on
+   * (`rules/weeklyCommitmentQuestion.ts`) — storing it would be storing a
+   * derivation, which the north star forbids and which could go stale against
+   * the facts underneath it. Only the ANSWER is a decision, and only decisions
+   * live in this ledger.
+   *
+   * ⚠ **`declined` IS RECORDED, NOT INFERRED FROM ABSENCE.** Absence means "not
+   * asked yet"; a decline means "asked, and they said no". Collapsing them is
+   * how an app re-asks the same question every time the screen redraws, which
+   * the contract's *"do not shame them"* rules out as plainly as anything else
+   * in it.
+   *
+   * `forBlockNumber` scopes the answer: a new block asks a new question, because
+   * the athlete's life may have changed. It is not a permanent silence.
+   */
+  | {
+    kind: 'weekly_commitment_answer';
+    forBlockNumber: number;
+    answer:
+      | { kind: 'confirmed'; sessionsPerWeek: number; trainingDays: DayOfWeek[] }
+      | { kind: 'declined' };
+  };
 
 export interface DecisionLedgerEntry {
   /** Ledger-scoped unique id, assigned by the appender. */

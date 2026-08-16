@@ -86,6 +86,9 @@ export const STRENGTH_HEADLINE_ID_BY_LABEL: ReadonlyMap<string, string> = new Ma
 
 export const BLOCK_BOUNDARY_LOAD_MOVED_COPY_ID = 'blockBoundary.loadMoved';
 export const BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID = 'blockBoundary.hardBlockReduced';
+export const MISSED_SESSION_COMMITMENT_QUESTION_COPY_ID = 'blockBoundary.commitmentQuestion';
+export const MISSED_SESSION_COMMITMENT_OPTION_COPY_ID = 'blockBoundary.commitmentOption';
+export const MISSED_SESSION_COMMITMENT_OPTION_ONE_COPY_ID = 'blockBoundary.commitmentOptionOne';
 
 const EXERCISE_NAME_PREFIX = 'exercise.name.';
 const EXERCISE_CUE_PREFIX = 'exercise.cue.';
@@ -180,6 +183,51 @@ export function registerProjectionCopy(): void {
       text: 'You completed the last block, but it felt very hard and recovery was low, '
         + "so we've kept your training weights and reduced the amount of work in this "
         + 'block. You can change it if needed.',
+    },
+    // ── THE MISSED-SESSION QUESTION — SIGNED, Sam 2026-08-16. ──
+    //
+    // His approved wording for the attendance path, verbatim:
+    //   "You have been completing about [completed] of your [planned] planned
+    //    sessions. Would a smaller weekly program fit your life better?"
+    //
+    // ⚠ BOTH BRACKETS ARE WEEKLY NUMBERS, NOT BLOCK TOTALS. The contract's own
+    // example is "about two of your four planned sessions" — four is a weekly
+    // commitment, not a block's worth. `completedPerWeek` is the block's
+    // completions divided by its weeks and rounded, which is what "about"
+    // licenses; `plannedPerWeek` is the commitment the block was built on.
+    //
+    // ⚠ IT ASKS; IT DOES NOT JUDGE. The contract: *"Do not shame them."* The
+    // sentence states two counts and offers a change — there is no "only", no
+    // "just", and no second sentence about consistency.
+    {
+      id: MISSED_SESSION_COMMITMENT_QUESTION_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-16, the approved wording for the '
+        + 'below-threshold attendance question. Rendered only from a DERIVED '
+        + '`WeeklyCommitmentQuestion` whose numbers are the logged sessions and '
+        + 'the commitment the block was built on. Guard: '
+        + 'test:block-two-difficult-missed.',
+      text: 'You have been completing about {completed} of your {planned} planned '
+        + 'sessions. Would a smaller weekly program fit your life better?',
+    },
+    // The offered answers. A COUNT is a derived number, not a new word — the
+    // shape is authored here so no surface concatenates "sessions" itself.
+    {
+      id: MISSED_SESSION_COMMITMENT_OPTION_COPY_ID,
+      source: 'derived_number',
+      provenance: 'NEW — PROPOSED, 2026-08-16, beside the signed question. The '
+        + 'noun is the question\'s own ("planned sessions"); only the number is '
+        + 'data. A surface that built this string itself would be a surface '
+        + 'authoring words.',
+      text: '{count} sessions a week',
+    },
+    {
+      id: MISSED_SESSION_COMMITMENT_OPTION_ONE_COPY_ID,
+      source: 'derived_number',
+      provenance: 'NEW — PROPOSED, 2026-08-16. The singular half. An option '
+        + 'reading "1 sessions a week" is an option that lies, and one session '
+        + 'a week is a legal answer for an athlete who has been completing none.',
+      text: '{count} session a week',
     },
     // ── The conditioning warm-up sentence — SIGNED, Sam 2026-08-05. ──
     // Imported from the emitter rather than transcribed, the same shape
@@ -941,6 +989,34 @@ export function registerProjectionCopy(): void {
  * Y", and the signed sentence must not be stretched over them — that would be a
  * call site authoring meaning it was not given.
  */
+/**
+ * THE MISSED-SESSION QUESTION AS THE ATHLETE READS IT.
+ *
+ * Rendered from the DERIVED question, never from a stored one — the numbers and
+ * the sentence come out of the same read of the same facts, so they cannot drift
+ * the way a stored sentence and a live count can.
+ */
+export function missedSessionCommitmentQuestionSentence(
+  question: import('./weeklyCommitmentQuestion').WeeklyCommitmentQuestion,
+): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(MISSED_SESSION_COMMITMENT_QUESTION_COPY_ID, {
+    completed: question.completedPerWeek,
+    planned: question.plannedPerWeek,
+  });
+}
+
+/** One offered answer. Singular and plural are two entries, never one with an `s`. */
+export function missedSessionCommitmentOptionLabel(count: number): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(
+    count === 1
+      ? MISSED_SESSION_COMMITMENT_OPTION_ONE_COPY_ID
+      : MISSED_SESSION_COMMITMENT_OPTION_COPY_ID,
+    { count },
+  );
+}
+
 export function blockBoundaryReducedSentence(
   row: import('./blockBoundaryProgression').BlockBoundaryExplanationRow,
 ): SignedCopy | null {

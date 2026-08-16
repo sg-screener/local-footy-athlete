@@ -124,6 +124,13 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
     }
     case 'reversal':
       return [];
+    case 'weekly_commitment_answer':
+      // NO DATE COORDINATE, BECAUSE IT IS NOT A DAY-SCOPED EDIT. The answer's
+      // whole effect is the canonical commitment fact on the PROFILE, which is
+      // persisted in its own store and rebuilt from at boot like every other
+      // profile answer. Replaying it here would re-apply a profile change that
+      // is already applied.
+      return [];
   }
 }
 
@@ -138,6 +145,15 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     // effect is the ENTRY IT REMOVES from the replay set. Deleting this arm
     // would make the switch non-exhaustive; making it throw would turn a
     // filter regression into a bricked boot.
+    return;
+  }
+  if (decision.kind === 'weekly_commitment_answer') {
+    // NOTHING TO REPLAY, AND THAT IS NOT AN OMISSION.
+    // A confirmation's effect is the commitment fact on the profile; the
+    // profile store persists it and boot builds from it. Re-running anything
+    // here would be a SECOND application of a change that is already durable —
+    // and for a `declined` answer there was never an effect at all, only a
+    // record that the question was put and answered.
     return;
   }
   if (decision.kind === 'migrated_day_placement') {
