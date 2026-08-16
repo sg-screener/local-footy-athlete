@@ -125,6 +125,23 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
   };
   const identity = section18ModeAndSubphase(coachingInputs, legacy);
 
+  // ── HARD DAYS COME FROM THE AGREED WEEK'S ANCHORS ────────────────────────
+  //
+  // **Sam, 2026-08-16:** *"Hard-day accounting must derive from the final agreed
+  // scheduled week, not raw onboarding answers."*
+  //
+  // `existingHardExposures` means the hard days ALREADY COMMITTED by anchors
+  // before the app adds anything — club nights plus fixture credit. I had it set
+  // to `demand.hardDays`, which is the week's TOTAL and includes every strength
+  // day the app itself authored, so an in-season athlete with no club and no game
+  // reported 3 committed hard days against 0 real anchors.
+  //
+  // Read off the contract's anchors, which the scheduler supplied from the agreed
+  // week — so a stale onboarding fixture or an unselected club night cannot
+  // inflate it. Measured: counted=5 vs contract=1, and counted=3 vs contract=0.
+  const committedAnchorHardDays = legacy.anchors.teamTrainingDays.length
+    + legacy.anchors.gameOrPracticeMatchCredit;
+
   // ── V2 CONTRACT — derived from the COMPLETED schedule ────────────────────
   const contractV2 = schedulerExposureContract({
     schedule,
@@ -238,7 +255,7 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     phase: coachingInputs.seasonPhase,
     capacity,
     hardExposureCap: GLOBAL_RULES.hardDays.permittedMaximum,
-    existingHardExposures: demand.hardDays,
+    existingHardExposures: committedAnchorHardDays,
     coreSessionsToProgram: demand.mainStrength,
     optionalSessionsAllowed: optionalSessions,
     recoverySessionsAllowed: demand.fullRestDays,
@@ -270,7 +287,7 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     capacity,
     capacityFactors: [...input.capacityFactors],
     hardExposureCap: GLOBAL_RULES.hardDays.permittedMaximum,
-    existingHardExposures: demand.hardDays,
+    existingHardExposures: committedAnchorHardDays,
     remainingHardBudget: Math.max(0,
       GLOBAL_RULES.hardDays.permittedMaximum - demand.hardDays),
     coreSessions,
