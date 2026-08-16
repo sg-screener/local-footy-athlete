@@ -131,3 +131,86 @@ at control.** Every red in the sweep is the parked baseline:
 
 `test:compile` returns 468 errors / 6 worse pairs — the base's own numbers, and
 all six pre-existing files. No new pair.
+
+---
+
+# MISSION 2 — SCREEN DELIVERY + THE TWO-SESSION CONTRADICTION
+
+Continued on `feat/block-two-difficult-missed` from `437d6693`.
+
+## THE TWO-SESSION CONTRADICTION — TWO CAUSES, ONE OF THEM MINE
+
+**CAUSE 1 — §18 IS A SECOND REPRESENTATION OF A NUMBER THE SCHEDULER OWNS.**
+
+| | pre-season athlete, 2 gym days |
+| --- | --- |
+| scheduler | clause **WC-110**, `requiredStrengthSessions = 2` (Full Body ×2) |
+| §18 phase table | `early/mid/late_preseason`, `strength.required = 3` |
+| result | **REFUSED** `main_strength_required_minimum`, actual 2 |
+
+Sam's approved source already resolves it — *"Four is preferred when
+availability permits. Two days gets Full Body ×2"*
+(`docs/WEEKLY_PROGRAMMING_SOURCE_REVIEW_2026-08-14.md:140`) — and so does his
+2026-08-15 ruling in `schedulerExposureContract`'s own header: *"§18 derives its
+acceptance contract from the scheduler's completed weekly schedule. It is not an
+independent planner."* Fixed by passing the scheduler's own count as a typed
+`insufficient_availability` reduction. **`insufficient_availability` already
+existed** — the V1 contract records it for availability today; only V2 never
+heard about it.
+
+**CAUSE 2 — `commitmentPatchFor` KEPT THE FIRST `n` DAYS.** "The first two of
+Mon/Tue/Wed/Fri" is Monday and Tuesday, and WC-110 says *"never back-to-back"*.
+Now keeps the best-separated subset, scored on CYCLIC gaps.
+
+**⚠ MY EARLIER NINE-WORLD TABLE WAS WRONG, AND BOTH HALVES WERE ARTEFACTS.** It
+read pre-season and in-season `d=3 → []`. Corrected:
+
+| phase | d=3 | d=4 | d=5 |
+| --- | --- | --- | --- |
+| Pre-season | **[2]** | [3,2] | [4,3,2] |
+| In-season | **[2]** | [3,2] | [4,3,2] |
+| Off-season | [2] | [2] | [2] |
+
+## WORLD DELTAS — ZERO LOST, ZERO GAINED
+
+`test:ladder-wide` after the §18 change: **140 built, 40 refused, 0 deficient of
+368**, row counts `{"2":36,"3":70,"4":28,"5":116,"6":112,"7":6}` — byte-identical
+to the pre-change run. Every ladder world already carries three or more gym days,
+so the correction recovers none of them. 39-suite sweep identical.
+
+## SCREEN DELIVERY
+
+Two cards on the Program surface, reusing the missed-session card + chip pattern.
+`useBlockBoundaryPrompts` derives both and **has no writer**;
+`store/weeklyCommitmentAnswer.ts` is the only one. Acknowledgement and the
+commitment answer are decision-ledger entries, so **no new persisted key**.
+
+`test:block-two-screen-delivery` (35 cells) CALLS the real components, walks the
+element tree, and invokes the real `onPress`. 13 mutations red.
+
+**⚠ TWO OF MY OWN GATES WERE DECORATION.** The hook short-circuited on attendance
+and on an existing answer; the rule owns both and returns before calling the
+probe, so deleting them changed neither answer nor cost. Two mutations survived
+twice before I believed it. Deleted.
+
+## STILL OWED — THE SIMULATOR PASS
+
+The element-level suite proves behaviour, not pixels. The device receipt is not
+taken yet.
+
+**ENVIRONMENT IS READY, CONFIRMED:** simulator `LFA Explorer 4c8535f`
+(`0B4DEE36-F01D-47B2-B73A-E9BE2A7167A2`) is BOOTED and
+`com.localfootyathlete.app` is INSTALLED. Start with `npm run lfa:dev`.
+
+**THE ROUTE IS THE `christmas-break-ask` PRECEDENT.** That seed exists because a
+date-gated card's cells were source-pinned and *"no device has ever rendered
+them"* — the same position these two cards are in. Two seeds are owed in
+`devE2ESeedIds.ts` / `devE2ESeedRegistry.ts`:
+
+- `hard-block-two-notice` — block 2, block 1 logged `very_hard` / `high`, the
+  stored program carrying its `blockBoundaryExplanation` reduction row;
+- `missed-block-commitment-ask` — block 2, 6 of 12 block-1 sessions completed.
+
+Then drive `home-block-boundary-notice-dismiss`,
+`home-weekly-commitment-option-2` and `home-weekly-commitment-decline` with
+Maestro, and relaunch to prove the acknowledgement and the decline survive.
