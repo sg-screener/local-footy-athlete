@@ -13,6 +13,7 @@ import {
 } from '../../data/defaultProgram';
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
 import { previousBlockBoundsISO, WEEKS_PER_BLOCK } from '../../utils/programBlockState';
+import { effectiveAnchorParticipation } from '../../rules/weeklyExposureContractV2';
 import {
   applyBlockBoundaryConditioning,
   applyBlockBoundaryProgression,
@@ -1188,11 +1189,13 @@ export function buildGeneratedMicrocycles(args: {
         // reported fact would be the worse defect by far. The moment a real
         // participation fact exists it is not derived any more, and it wins.
         anchors: (exposureContractV2.anchors ?? []).map((anchor) => {
-          const derivedHealthy = anchor.participation === 'unknown'
-            && anchor.participationProvenance === 'derived_healthy_unrestricted';
-          const participation = derivedHealthy
-            ? 'normal_unrestricted'
-            : String(anchor.participation ?? '');
+          // ⚠ DELEGATED, NOT RESTATED. This condition used to live here as a
+          // local `derivedHealthy` boolean, and the §18 effective-week evaluator
+          // — the OTHER judge of the same anchor — had never heard of it. The
+          // same week this gate accepted, that one refused with
+          // `unjustified_anchor_credit`, which is why no club-night athlete
+          // could relaunch the app. One owner now answers for both.
+          const participation = String(effectiveAnchorParticipation(anchor));
           return {
             dayOfWeek: anchor.dayOfWeek,
             participation,
