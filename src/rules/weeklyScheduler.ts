@@ -168,6 +168,20 @@ export interface WeeklySchedule {
   readonly weekStartISO: string;
   readonly layoutClauseId: string;
   readonly requiredStrengthSessions: number;
+  /**
+   * WHAT THE APPROVED LAYOUT ASKED FOR, before game freshness and availability
+   * reduced it. Equal to `requiredStrengthSessions` on an unreduced week.
+   */
+  readonly authoredStrengthSessions: number;
+  /**
+   * **Set when the week is a REDUCED one**, naming what was given up and why.
+   * Sam, 2026-08-16: *"disclose any preferred work omitted."*
+   *
+   * Null means nothing was omitted — **not** "we did not check". A reduced week
+   * that reported nothing would be indistinguishable from a full one, which is
+   * the whole reason this is a field and not a log line.
+   */
+  readonly reductionDisclosure: string | null;
   readonly days: readonly SessionIntention[];
   /** Patterns the week intends to cover at least once. */
   readonly intendedPatterns: readonly MovementPattern[];
@@ -499,35 +513,99 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     };
   }
 
-  const needed = layout.purposes.length;
-  if (usableGymDays.length < needed) {
-    return {
-      refused: true, finding: 'not_enough_legal_gym_days', clauseId: layout.clauseId,
-      detail: `${layout.clauseId} requires ${needed} strength session(s) but only `
-        + `${usableGymDays.length} gym-access day(s) survive game proximity and `
-        + `explicit unavailability`,
-    };
-  }
+  const authored = layout.purposes.length;
 
-  // ── THE EXHAUSTIVE SEARCH ────────────────────────────────────────────────
-  let best: { assignment: { day: number; purpose: SessionPurpose }[]; score: number } | null = null;
-  for (const dayCombo of combinations(usableGymDays, needed)) {
-    for (const ordering of permutations(layout.purposes)) {
-      const assignment = dayCombo.map((day, index) => ({ day, purpose: ordering[index] }));
-      if (!assignmentIsLegal(assignment, inputs)) continue;
-      const score = scoreAssignment(assignment, inputs);
-      if (!best || score > best.score) best = { assignment, score };
+  // ── THE REDUCTION LADDER — BUILD THE BEST SMALLER LEGAL WEEK ─────────────
+  //
+  // **Sam, 2026-08-16:** *"The approved contract already resolves the choice: game
+  // freshness may reduce the selected base, availability is not a quota, and
+  // upper-body strength is legal on G-2. Build the best smaller LEGAL week before
+  // refusing."*
+  //
+  // The search used to try the layout's purposes and nothing else, so an athlete
+  // whose only remaining legal day was G-2 was refused outright — even though the
+  // contract expressly permits UPPER work there. **That refusal was a failure to
+  // meet a preferred session count, reported as an impossibility.**
+  //
+  // The ladder is tried in preference order and the FIRST rung that yields a legal
+  // arrangement wins, so a full-count week is always preferred to a substituted
+  // one, and a substituted one to a shorter one:
+  //
+  //   rung 0  the layout exactly as authored
+  //   rung 1  same count, lower-ish purposes swapped to `upper` where that is the
+  //           only thing a constrained day can legally hold
+  //   rung 2+ one fewer session at a time, down to a single session
+  //
+  // **Nothing here weakens a prohibition.** Every rung is filtered by the same
+  // `assignmentIsLegal`, so heavy lower still cannot touch G-2 and G-1/G+1 remain
+  // closed. The ladder only changes WHAT is offered, never WHERE it may go.
+  const lowerish = (purpose: SessionPurpose): boolean => PURPOSE_IS_LOWER[purpose];
+  const rungs: { purposes: SessionPurpose[]; reduction: string | null }[] = [];
+  rungs.push({ purposes: [...layout.purposes], reduction: null });
+  // Rung 1 — substitute lower-ish purposes with upper, fewest swaps first.
+  const lowerIdx = layout.purposes
+    .map((purpose, index) => (lowerish(purpose) ? index : -1))
+    .filter((index) => index >= 0);
+  for (let swaps = 1; swaps <= lowerIdx.length; swaps += 1) {
+    for (const chosen of combinations(lowerIdx, swaps)) {
+      const purposes = [...layout.purposes];
+      for (const index of chosen) purposes[index] = 'upper';
+      rungs.push({
+        purposes,
+        reduction: `${swaps} lower session(s) offered as upper — the remaining legal `
+          + 'day(s) may not hold heavy lower work (G-2)',
+      });
     }
   }
+  // Rung 2+ — fewer sessions, keeping the highest-priority purposes first.
+  for (let count = authored - 1; count >= 1; count -= 1) {
+    rungs.push({
+      purposes: layout.purposes.slice(0, count),
+      reduction: `reduced from ${authored} to ${count} strength session(s) — `
+        + 'game freshness and availability leave no legal placement for the rest',
+    });
+    const reducedLower = layout.purposes.slice(0, count)
+      .map((purpose, index) => (lowerish(purpose) ? index : -1))
+      .filter((index) => index >= 0);
+    for (const index of reducedLower) {
+      const purposes = layout.purposes.slice(0, count);
+      purposes[index] = 'upper';
+      rungs.push({
+        purposes,
+        reduction: `reduced from ${authored} to ${count} strength session(s), one `
+          + 'offered as upper — the legal day(s) may not hold heavy lower work',
+      });
+    }
+  }
+
+  let best: { assignment: { day: number; purpose: SessionPurpose }[]; score: number } | null = null;
+  let reductionDisclosure: string | null = null;
+  for (const rung of rungs) {
+    const needed = rung.purposes.length;
+    if (usableGymDays.length < needed) continue;
+    for (const dayCombo of combinations(usableGymDays, needed)) {
+      for (const ordering of permutations(rung.purposes)) {
+        const assignment = dayCombo.map((day, index) => ({ day, purpose: ordering[index] }));
+        if (!assignmentIsLegal(assignment, inputs)) continue;
+        const score = scoreAssignment(assignment, inputs);
+        if (!best || score > best.score) best = { assignment, score };
+      }
+    }
+    // FIRST rung that produces anything wins: the ladder is ordered by
+    // preference, so a later rung is by construction a worse week.
+    if (best) { reductionDisclosure = rung.reduction; break; }
+  }
   if (!best) {
+    // A TRUE hard minimum failure: not even ONE strength session fits.
     return {
       refused: true, finding: 'no_legal_arrangement_within_spacing_rules',
       clauseId: 'WC-043',
-      detail: `${layout.clauseId} could not place ${needed} session(s) on `
-        + `${usableGymDays.length} legal day(s) without breaking lower spacing or `
-        + 'the consecutive-plane rule',
+      detail: `${layout.clauseId} could not place even one strength session on `
+        + `${usableGymDays.length} legal day(s): every arrangement breaks a `
+        + 'prohibition (game proximity, lower spacing or plane repetition)',
     };
   }
+  const needed = best.assignment.length;
 
   const overlayOptional = inputs.phase === 'Off-season'
     && inputs.offseasonBlock === 'early_optional';
@@ -767,6 +845,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     weekStartISO: inputs.weekStartISO,
     layoutClauseId: layout.clauseId,
     requiredStrengthSessions: needed,
+    authoredStrengthSessions: authored,
+    reductionDisclosure,
     days: withRunning,
     intendedPatterns: [...intended],
     demand,

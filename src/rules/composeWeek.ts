@@ -717,7 +717,21 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // Week 1 takes the authored first choice; later weeks walk the same order.
   const step = Math.max(0, inputs.phaseClock.weekNumber - 1);
   // Sam's full-body shape, decided once for the WEEK — see its own docstring.
-  const fullBody = composedWeekIsFullBodyOnClubNights(inputs.plannedDays);
+  // ⚠ **A DISPLACED PAIR IS NOT A PAIR.** R-093's A/B shapes only make sense as a
+  // PAIR that between them cover the body. When a prohibition forces one of the
+  // week's days to `upper` — G-2 may not hold heavy lower — the other day is no
+  // longer half of a pair, and leaving it on the fixed A shape means the week
+  // trains no hinge at all and refuses `required_safe_patterns_present:hinge`.
+  //
+  // Measured on the recurring-Sunday world: Wednesday `full_body_a`, Friday forced
+  // `upper`, hinge never trained. So the surviving day reverts to R-087's COVERAGE
+  // behaviour and fills what the week is actually missing — which is what R-087
+  // exists for and is exactly Sam's *"place lower/full-body work on the best
+  // earlier legal day"*.
+  const pairDisplacedByProhibition = inputs.plannedDays
+    .some((day) => day.strengthIntent?.archetype === 'upper');
+  const fullBody = composedWeekIsFullBodyOnClubNights(inputs.plannedDays)
+    && !pairDisplacedByProhibition;
   // ── R-093's TWO FIXED SHAPES, AND R-087's GENERAL RULE — THEY ARE DIFFERENT
   //    RULINGS AND THEY ANSWER DIFFERENT ATHLETES ─────────────────────────────
   //
@@ -794,7 +808,26 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // pull got the five-slot lower ladder and its push and pull were never
     // selected. That family was 36 OCCURRENCES across 24 DISTINCT PROFILES, of
     // the 60 baseline refusals in the 180-world sweep.
-    const isR093Shape = fullBody;
+    // ⚠ **R-093 IS A WEEK-LEVEL SHAPE; G-2 IS A DAY-LEVEL PROHIBITION, AND THE
+    // PROHIBITION WINS ON THAT DAY.**
+    //
+    // `fullBody` is true for the athlete whose every gym night is a club night,
+    // so R-093 handed BOTH days the full-body A/B pair. Measured on the
+    // recurring-Sunday world: Friday is G-2 **and** a club night, and it came out
+    // with Deadlift and Bulgarian Split Squats — heavy lower two days before the
+    // game, which §3 G-2 forbids outright.
+    //
+    // The SCHEDULER had already resolved this: it authored that day `upper`
+    // precisely because G-2 may not hold lower work, and Sam's instruction is to
+    // *"allow upper-body strength on G-2"* and *"place lower/full-body work on the
+    // best earlier legal day"* — which the scheduler did.
+    //
+    // So R-093's pair applies to every day EXCEPT one the scheduler explicitly
+    // typed `upper`. **This narrows nothing R-093 decides for its own athlete**:
+    // the scheduler only types `upper` on such a week when a prohibition leaves it
+    // no alternative, and the full-body work it displaced moves to the earlier
+    // legal day rather than disappearing.
+    const isR093Shape = fullBody && planned.strengthIntent.archetype !== 'upper';
     // ── R-087's COVERAGE DAY, AND THE GATE THAT DECIDES IF IT IS ONE ────────
     //
     // The gaps are resolved BEFORE the day's role is fixed, because the answer
