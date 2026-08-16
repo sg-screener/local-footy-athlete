@@ -213,6 +213,19 @@ function rowsOf(program: TrainingProgram): Map<string, RowFacts> {
   return out;
 }
 
+/** Sessions carrying at least one main/secondary strength row — the commitment. */
+function strengthSessionCount(program: TrainingProgram): number {
+  let count = 0;
+  for (const microcycle of program.microcycles) {
+    for (const workout of microcycle.workouts) {
+      if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') continue;
+      if ((workout.exercises ?? []).some((row) => (row.exercise?.name ?? '') !== ''
+        && row.role !== 'conditioning')) count++;
+    }
+  }
+  return count;
+}
+
 function sessionCount(program: TrainingProgram): number {
   let count = 0;
   for (const microcycle of program.microcycles) {
@@ -1100,9 +1113,22 @@ console.log('\n[15] CONFIRMING WRITES ONE CANONICAL COMMITMENT FACT');
     `got ${JSON.stringify(patch)}`,
   );
   ok(
-    'the days are a SUBSET of the athlete\'s own, in week order',
-    JSON.stringify(patch.preferredTrainingDays) === JSON.stringify(['Monday', 'Wednesday']),
+    "the days are a SUBSET of the athlete's own, BEST SEPARATED",
+    JSON.stringify(patch.preferredTrainingDays) === JSON.stringify(['Monday', 'Friday']),
     `got ${JSON.stringify(patch.preferredTrainingDays)} — the app answered a question about WHICH days that it never asked`,
+  );
+  ok(
+    'it never returns BACK-TO-BACK days when a separated pair exists',
+    (() => {
+      const adjacentFirst = commitmentPatchFor({
+        profile: { preferredTrainingDays: ['Monday', 'Tuesday', 'Friday'] },
+        sessionsPerWeek: 2,
+        weekOrder: WEEK_ORDER,
+      }).preferredTrainingDays;
+      const gap = WEEK_ORDER.indexOf(adjacentFirst[1]) - WEEK_ORDER.indexOf(adjacentFirst[0]);
+      return gap > 1;
+    })(),
+    'WC-110 forbids back-to-back gym days for a two-session week; "the first n days" of Mon/Tue/Fri is Mon+Tue',
   );
   ok(
     'an out-of-order stored day set is still answered in week order',
@@ -1110,25 +1136,26 @@ console.log('\n[15] CONFIRMING WRITES ONE CANONICAL COMMITMENT FACT');
       profile: { preferredTrainingDays: ['Friday', 'Monday', 'Wednesday'] },
       sessionsPerWeek: 2,
       weekOrder: WEEK_ORDER,
-    }).preferredTrainingDays) === JSON.stringify(['Monday', 'Wednesday']),
+    }).preferredTrainingDays) === JSON.stringify(['Monday', 'Friday']),
   );
 }
 
 /**
  * ⚠ THE PROBE IS NOT DECORATION, AND THIS IS THE MEASUREMENT THAT PROVES IT.
  *
- * Run at `6117a9fd` over nine worlds, the PRODUCTION probe (which asks
- * generation, not a table) answers:
+ * Re-run after the two-session correction. The PRODUCTION probe (which asks
+ * generation, not a table) over nine worlds, with each athlete's real day set:
  *
- *     Pre-season  d=3 → []        d=4 → [3]      d=5 → [4,3]
- *     In-season   d=3 → []        d=4 → [3]      d=5 → [4,3]
- *     Off-season  d=3 → [2]       d=4 → [3,2]    d=5 → [3,2]
+ *     Pre-season  d=3 -> [2]   d=4 -> [3,2]   d=5 -> [4,3,2]
+ *     In-season   d=3 -> [2]   d=4 -> [3,2]   d=5 -> [4,3,2]
+ *     Off-season  d=3 -> [2]   d=4 -> [2]     d=5 -> [2]
  *
- * So an in-season or pre-season athlete ALREADY AT THREE has no legal smaller
- * programme — `main_strength_permitted_minimum` refuses two — and the honest
- * answer for them is no question at all. A phase table written in
- * `weeklyCommitmentQuestion.ts` would have had to reproduce that, from four
- * different owners, and would have been wrong the day any of them moved.
+ * The earlier reading of this table said pre-season and in-season `d=3 -> []`.
+ * **Both halves of that were wrong and for two different reasons**: §18's phase
+ * table demanded three main-strength sessions against the approved layout
+ * clause WC-110's two, and the fixture handed the probe MONDAY AND TUESDAY,
+ * which WC-110 refuses as back-to-back. Both are fixed; the cells below are the
+ * corrected reading.
  */
 {
   const preseasonThree = athlete();
@@ -1138,56 +1165,69 @@ console.log('\n[15] CONFIRMING WRITES ONE CANONICAL COMMITMENT FACT');
     blockNumber: 2,
   });
   ok(
-    'a PRE-SEASON athlete already at three has NO legal smaller commitment',
-    !probeThree(2) && !probeThree(1),
-    'two- and one-session pre-season weeks build — the measurement above is stale',
+    'A PRE-SEASON ATHLETE AT THREE CAN CHOOSE TWO — Full Body x2, clause WC-110',
+    probeThree(2),
+    'the approved two-gym-day pre-season week still does not build',
   );
 
-  const fourDay = { ...athlete(), trainingDaysPerWeek: 4,
-    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Friday'] } as unknown as OnboardingData;
-  const probeFour = commitmentLegalityProbe({
-    profile: fourDay,
+  const fiveDay = { ...athlete(), trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] } as unknown as OnboardingData;
+  const probeFive = commitmentLegalityProbe({
+    profile: fiveDay,
     blockStartISO: BLOCK_2_START,
     blockNumber: 2,
   });
   ok(
-    'a FOUR-day pre-season athlete can legally drop to three, and no lower',
-    probeFour(3) && !probeFour(2),
-    `3:${probeFour(3)} 2:${probeFour(2)}`,
+    'A HIGHER COMMITMENT OFFERS EVERY SMALLER LEGAL COUNT, not merely the next one',
+    (() => {
+      const outcome = decideWeeklyCommitmentQuestion({
+        attendance: readBlockAttendance({
+          feedbackByDate: attendanceBlock(BLOCK_1_DATES.slice(0, 6)),
+          ...BLOCK_1_WINDOW,
+          sessionsPerWeek: 5,
+          weeks: BLOCK_WEEKS,
+        }),
+        forBlockNumber: 1,
+        ledgerEntries: [],
+        isCommitmentLegal: probeFive,
+      });
+      return outcome.ask && JSON.stringify(outcome.question.options) === '[4,3,2]';
+    })(),
+    'a five-day athlete was not offered every smaller legal commitment',
   );
 
-  const fourDayPatch = commitmentPatchFor({
-    profile: fourDay, sessionsPerWeek: 3, weekOrder: WEEK_ORDER,
+  const threePatch = commitmentPatchFor({
+    profile: preseasonThree, sessionsPerWeek: 2, weekOrder: WEEK_ORDER,
   });
-  const before = generateProgramLocally(fourDay, {
-    todayISO: BLOCK_2_START,
-    blockNumber: 2,
-    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
-  });
-  const afterDecline = generateProgramLocally(fourDay, {
+  const before = generateProgramLocally(preseasonThree, {
     todayISO: BLOCK_2_START,
     blockNumber: 2,
     progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
   });
   const after = generateProgramLocally(
-    { ...fourDay, ...fourDayPatch } as unknown as OnboardingData,
+    { ...preseasonThree, ...threePatch } as unknown as OnboardingData,
     {
       todayISO: BLOCK_2_START,
       blockNumber: 2,
       progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
     },
   );
+  const afterDecline = generateProgramLocally(preseasonThree, {
+    todayISO: BLOCK_2_START,
+    blockNumber: 2,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
   ok(
     'CONFIRMING REBUILDS SMALLER through the current scheduler',
-    sessionCount(after) < sessionCount(before),
-    `before ${sessionCount(before)} sessions, after ${sessionCount(after)} — the confirmation did not reach the scheduler`,
+    strengthSessionCount(after) < strengthSessionCount(before),
+    `before ${strengthSessionCount(before)} strength sessions, after ${strengthSessionCount(after)} — the confirmation did not reach the scheduler`,
   );
   ok(
     'DECLINING leaves the programme SEMANTICALLY unchanged',
     // EVERY PRESCRIPTION AND EVERY SESSION, not every byte. A raw JSON compare
     // is NOT the test and was tried first: generation stamps `updatedAt` per
     // row, so two identical programmes differ by bytes and by nothing an
-    // athlete could see. This compares what the athlete is actually shown.
+    // athlete could see.
     JSON.stringify([...rowsOf(afterDecline).entries()].sort())
       === JSON.stringify([...rowsOf(before).entries()].sort())
       && sessionCount(afterDecline) === sessionCount(before),
@@ -1195,7 +1235,6 @@ console.log('\n[15] CONFIRMING WRITES ONE CANONICAL COMMITMENT FACT');
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
 console.log("\n[16] THE QUESTION'S OWN WORDS");
 
 {

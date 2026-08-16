@@ -238,22 +238,85 @@ export function answerForBlock(
  *
  * ⚠ **THE DAYS ARE A SUBSET OF THE ATHLETE'S OWN, NEVER A NEW SCHEDULE.** The
  * athlete answered a question about HOW MANY, not about WHICH — so the app keeps
- * the first `n` of the days they already chose, in week order. Picking different
- * days would be the app answering a question it never asked, and the contract's
- * *"do not silently reduce the plan"* applies to the shape of the week as much
- * as to its size.
+ * `n` of the days they already chose. Picking days they did not choose would be
+ * the app answering a question it never asked, and the contract's *"do not
+ * silently reduce the plan"* applies to the shape of the week as much as to its
+ * size.
+ *
+ * ⚠ **AND IT KEEPS THE BEST-SEPARATED ONES, NOT THE FIRST `n`. THAT WAS A BUG
+ * IN THIS FUNCTION.** "The first two of Mon/Tue/Wed/Fri" is Monday and Tuesday —
+ * BACK-TO-BACK — and the approved layout clause for a two-gym-day week says
+ * *"Full Body ×2 on the best-separated gym days, **never back-to-back**"*
+ * (WC-110). The scheduler duly refuses such a week
+ * (`no_legal_arrangement_within_spacing_rules`), so the legality probe would
+ * have dropped a commitment that IS legal on this athlete's days and simply
+ * offered them nothing. **It cost a whole nine-world measurement to notice: the
+ * table read "in-season 3 days → no legal smaller option", and the real answer
+ * was that the fixture handed the probe Monday and Tuesday.**
+ *
+ * The rule here is only *"which of the athlete's own days are furthest apart"* —
+ * it is NOT a second copy of the scheduler's purpose-aware placement scoring
+ * (club-night pairing, game proximity, lower-session spacing). The scheduler
+ * still places the sessions and the legality probe still has the last word.
  */
 export function commitmentPatchFor(args: {
   profile: Pick<OnboardingData, 'preferredTrainingDays'>;
   sessionsPerWeek: number;
-  /** Canonical week order, so "the first n days" is a stable answer. */
+  /** Canonical week order, so separation is measured on a stable ring. */
   weekOrder: readonly DayOfWeek[];
 }): { preferredTrainingDays: DayOfWeek[]; trainingDaysPerWeek: number } {
   const { profile, sessionsPerWeek, weekOrder } = args;
-  const current = profile.preferredTrainingDays ?? [];
-  const ordered = [...current].sort(
+  const ordered = [...(profile.preferredTrainingDays ?? [])].sort(
     (a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b),
   );
-  const kept = ordered.slice(0, Math.max(1, sessionsPerWeek));
+  const keep = Math.max(1, Math.min(sessionsPerWeek, ordered.length));
+  const kept = bestSeparatedSubset(ordered, keep, weekOrder);
   return { preferredTrainingDays: kept, trainingDaysPerWeek: kept.length };
+}
+
+/**
+ * The `size` days out of `days` that sit furthest apart around the week.
+ *
+ * Scored on the CYCLIC gaps, because a week is a ring: Friday and the following
+ * Monday are three days apart, not four-and-a-bit backwards. The primary score
+ * is the SMALLEST gap — that is what "never back-to-back" is about — and ties
+ * break on the evenness of the rest, then on the earliest day set so the answer
+ * is deterministic.
+ */
+function bestSeparatedSubset(
+  days: readonly DayOfWeek[],
+  size: number,
+  weekOrder: readonly DayOfWeek[],
+): DayOfWeek[] {
+  if (size >= days.length) return [...days];
+  const week = weekOrder.length;
+  let best: DayOfWeek[] | null = null;
+  let bestScore: readonly [number, number] = [-1, -1];
+
+  const walk = (start: number, picked: DayOfWeek[]): void => {
+    if (picked.length === size) {
+      const idx = picked.map((day) => weekOrder.indexOf(day)).sort((a, b) => a - b);
+      const gaps = idx.map((value, i) =>
+        i === 0 ? value + week - idx[idx.length - 1] : value - idx[i - 1]);
+      const score: readonly [number, number] = [
+        Math.min(...gaps),
+        // Sum of squares rewards EVEN spacing over one huge gap and one tight
+        // one — 3/4 beats 1/6 on a two-day week even though both have a minimum
+        // the layout would accept.
+        -gaps.reduce((total, gap) => total + gap * gap, 0),
+      ];
+      if (score[0] > bestScore[0] || (score[0] === bestScore[0] && score[1] > bestScore[1])) {
+        bestScore = score;
+        best = [...picked];
+      }
+      return;
+    }
+    for (let i = start; i < days.length; i++) walk(i + 1, [...picked, days[i]]);
+  };
+  walk(0, []);
+  // Returned in WEEK ORDER, never in pick order — the stored commitment is a
+  // day set and a caller comparing it against another must not see a reordering
+  // as a change.
+  return (best ?? [...days].slice(0, size))
+    .sort((a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b));
 }
