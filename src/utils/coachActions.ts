@@ -34,6 +34,7 @@
 import { applyProgramOverrideWrite, useProgramStore } from '../store/programStore';
 import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
+import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
 import {
   useCoachUpdatesStore,
   type ActivePreferenceConstraint,
@@ -911,42 +912,63 @@ export function addWeeklyOverride(input: AddWeeklyOverrideInput): ActionResult {
 
 /**
  * Ban an exercise from ALL future programs.
- * Writes to athletePreferencesStore.excluded — feeds the pool rotation
- * pipeline at program-build time. Also mirrors a typed active preference
- * constraint so Coach Notes can explain the future-generation modifier.
  *
- * The user's input is alias-resolved to its canonical name BEFORE
- * persisting. This keeps the exclusion list consistent with the names the
- * pool rotation actually emits — saying "I never want romanian deadlifts"
- * stores "RDLs" (the canonical), not "romanian deadlift", which would
- * silently miss every future generation.
+ * ── IT GOES THROUGH THE CANONICAL EXCLUSION OWNER NOW, AND IT MINTS NO
+ *    SECOND STATUS ROW ────────────────────────────────────────────────────
+ *
+ * It used to do two writes: `addExclusion` (which generation reads) AND an
+ * `avoid_exercise` preference constraint (which Status reads). Two stores
+ * holding the same decision is two answers to "is this excluded", and Sam's
+ * approved Block Two contract forbids exactly that: *"Build ONE canonical
+ * exclusion owner ... Do not create separate screen, coach or store meanings."*
+ *
+ * Status now renders exclusions FROM the canonical list
+ * (`activeProgramModifiers.athleteExclusionModifier`), so the mirrored
+ * constraint is not a second explanation of one decision — it is a second row
+ * for it, and clearing one would leave the other standing.
+ *
+ * The coach door asks no scope question, so it records the answer it has always
+ * meant: `until_changed`. The athlete can narrow it from My Status.
+ *
+ * The input is alias-resolved to canonical before it travels, so "I never want
+ * romanian deadlifts" stores "RDLs" — the name generation actually emits.
  */
 export function banExerciseGlobally(input: BanExerciseGloballyInput): ActionResult {
   const { exercise } = input;
   if (!exercise || !exercise.trim()) {
     return { success: false, reason: 'No exercise name provided.' };
   }
-  const canonical = resolveExerciseName(exercise.trim());
-  useAthletePreferencesStore.getState().addExclusion(canonical);
-  upsertExercisePreferenceConstraint({
-    preferenceKind: 'avoid_exercise',
-    label: `Avoid ${canonical} in future generated sessions.`,
-    exercise: canonical,
+  const result = applyExerciseExclusionDecision({
+    exercise: resolveExerciseName(exercise.trim()),
+    scope: 'until_changed',
   });
-  return { success: true };
+  return result.ok
+    ? { success: true }
+    : { success: false, reason: 'No exercise name provided.' };
 }
 
 /**
- * Set a preferred alternative: ban the original AND pin the substitute.
- * Composed of addExclusion + addPinned — both already feed the rotation
- * pipeline. For same-slot pairs (e.g. BB Bench → DB Bench) the rotation
- * will pick the pinned alternative when the slot comes up.
+ * Set a preferred alternative: PIN the substitute. It does not ban the original.
  *
- * Both inputs are alias-resolved to their canonical names so the stored
- * pair matches what the pool rotation will actually emit. We also
- * compare the canonical pair (not the raw input) for the same-exercise
- * guard — saying "swap RDL for romanian deadlift" should be rejected
- * because both resolve to "RDLs".
+ * ── THE BAN IS GONE, BY SAM'S APPROVED CONTRACT ────────────────────────────
+ *
+ * *"An ordinary substitution changes the programmed row without banning the
+ * original exercise. The substituted movement may rotate normally at the next
+ * block boundary."* This function called `addExclusion(canonicalExercise)` — so
+ * an athlete swapping a barbell bench for a dumbbell bench once, for one bad
+ * shoulder day, permanently banned the barbell bench from every future program
+ * they would ever be given. Nothing expired it and nothing told them.
+ *
+ * A substitution and an exclusion are DIFFERENT ATHLETE DECISIONS and the
+ * contract separates them: an exclusion is answered with a scope
+ * (`utils/exerciseExclusionOwner`), a substitution is a preference for the
+ * alternative. Pinning the alternative already achieves the swap through the
+ * rotation — that half always worked — and the preference constraint still
+ * explains it on Status.
+ *
+ * Both inputs are alias-resolved to canonical so the stored pair matches what
+ * generation emits, and the same-exercise guard compares the canonical pair —
+ * "swap RDL for romanian deadlift" is refused because both resolve to "RDLs".
  */
 export function setPreferredAlternative(
   input: SetPreferredAlternativeInput,
@@ -960,9 +982,7 @@ export function setPreferredAlternative(
   if (canonicalExercise.toLowerCase() === canonicalAlternative.toLowerCase()) {
     return { success: false, reason: 'Original and alternative resolve to the same exercise.' };
   }
-  const prefs = useAthletePreferencesStore.getState();
-  prefs.addExclusion(canonicalExercise);
-  prefs.addPinned(canonicalAlternative);
+  useAthletePreferencesStore.getState().addPinned(canonicalAlternative);
   upsertExercisePreferenceConstraint({
     preferenceKind: 'preferred_alternative',
     label: `Replace ${canonicalExercise} with ${canonicalAlternative} where appropriate.`,

@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AthletePoolPrefs } from '../data/exercisePoolsStrength';
 import type { InjuryKey } from '../data/exerciseTags';
+import {
+  excludedExerciseNamesOn,
+  migrateLegacyExcludedNames,
+  restoreExclusion,
+  upsertExclusion,
+  type ExerciseExclusion,
+} from '../rules/exerciseExclusions';
+import { todayISOLocal } from '../utils/appDate';
+import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import {
   decideQuarantinedWrite,
@@ -43,8 +52,18 @@ interface AthletePreferencesState {
   prefs: AthletePoolPrefs;
 
   // ─── Exclusion (hard exclude) ───
+  /**
+   * ⚠ **NOT THE DOOR ANY MORE.** Kept because the coach path and the reset
+   * suite still call it, and because an exclusion with no scope is still a real
+   * athlete answer — it is recorded as `until_changed`, which is exactly what
+   * this action has always meant. Every ATHLETE-facing removal goes through
+   * `utils/exerciseExclusionOwner.applyExerciseExclusionDecision`, which is the
+   * only writer that can express Sam's three scopes.
+   */
   addExclusion: (exerciseName: string) => void;
   removeExclusion: (exerciseName: string) => void;
+  /** THE SCOPED DOOR. One decision per exercise; a second answer updates it. */
+  setExclusion: (exclusion: ExerciseExclusion) => void;
 
   // ─── Pinning (rotation bias) ───
   addPinned: (exerciseName: string) => void;
@@ -62,6 +81,7 @@ interface AthletePreferencesState {
 const initialPrefs: AthletePoolPrefs = {
   excluded: [],
   pinned: [],
+  exclusions: [],
 };
 
 /** The store's built-in default, exported so writers can be compared against it. */
@@ -73,9 +93,80 @@ export const ATHLETE_PREFS_PERSISTENCE_KEY = 'athlete-preferences-store';
  * Read current prefs with a guaranteed-non-null default. Callers that pass
  * prefs to `buildWorkoutsFromCoach` should use this rather than reading the
  * store directly, so the call site never has to branch on undefined.
+ *
+ * ── `excluded` IS PROJECTED HERE, ON A DATE, AND NOWHERE ELSE ──────────────
+ *
+ * The stored fact is `exclusions` (scope + expiry). Every reader that just wants
+ * "which names are out" asks this function, and gets the answer FOR A DAY —
+ * which is what makes a `today_only` decision stop applying tomorrow with no
+ * expiry sweep, no scheduled job and no second writer. An exclusion that
+ * expires does so by arithmetic, so nothing can forget to run.
+ *
+ * `dateISO` defaults to today because that is what every existing caller meant.
+ * Generation passes the week it is authoring — see
+ * `services/api/generateProgram.ts`.
  */
-export function getAthletePrefs(): AthletePoolPrefs {
+export function getAthletePrefs(dateISO: string = todayISOLocal()): AthletePoolPrefs {
+  const prefs = useAthletePreferencesStore.getState().prefs;
+  return { ...prefs, excluded: excludedExerciseNamesOn(prefs.exclusions, dateISO) };
+}
+
+/**
+ * THE OBJECT A WRITER MUST BUILD ITS `next` FROM.
+ *
+ * Every action used to start from `getAthletePrefs()`, which is now a
+ * PROJECTION — spreading it back into a write would persist the derived
+ * `excluded` array beside the decisions that produced it, and the app would once
+ * again hold two answers to "is this excluded". Writers take the stored object;
+ * readers take the projection.
+ */
+function storedPrefs(): AthletePoolPrefs {
   return useAthletePreferencesStore.getState().prefs;
+}
+
+function canonicalExclusionIdentity(name: string): string {
+  return canonicalExerciseName(String(name ?? '').trim());
+}
+
+/** The stored decisions themselves, unprojected. Status and the owner read this. */
+export function getAthleteExclusions(): readonly ExerciseExclusion[] {
+  return useAthletePreferencesStore.getState().prefs.exclusions ?? [];
+}
+
+/**
+ * WHAT A HYDRATED ENVELOPE MEANS, DECIDED IN ONE PLACE.
+ *
+ * Devices in the wild carry `prefs.excluded: string[]` — bare names, no scope,
+ * written before Block Two. They are folded into `exclusions` as
+ * `until_changed`, which is what the old code did behave like, and the bare
+ * array is cleared so there is exactly ONE stored copy of the decision. Leaving
+ * both would be two answers to "is this excluded", and the derived projection
+ * would race the stale array on the very next write.
+ *
+ * Exported so `athletePreferencesOwnershipTests` can prove the migration
+ * against a real legacy envelope rather than trusting the persist middleware.
+ */
+export function normaliseHydratedPrefs(
+  persisted: Partial<AthletePoolPrefs> | null | undefined,
+  hydratedOnISO: string = todayISOLocal(),
+): AthletePoolPrefs {
+  const base: AthletePoolPrefs = {
+    ...initialPrefs,
+    ...(persisted ?? {}),
+    excluded: [],
+    pinned: [...(persisted?.pinned ?? [])],
+  };
+  const stored = persisted?.exclusions ?? [];
+  const legacy = migrateLegacyExcludedNames(persisted?.excluded, hydratedOnISO);
+  const exclusions = [...stored];
+  for (const migrated of legacy) {
+    // A stored decision always outranks a legacy bare name: the scoped answer is
+    // the newer one, and re-adding it as `until_changed` would widen a scope the
+    // athlete deliberately narrowed.
+    if (exclusions.some((e) => e.exercise === migrated.exercise)) continue;
+    exclusions.push(migrated);
+  }
+  return { ...base, exclusions };
 }
 
 /**
@@ -88,7 +179,11 @@ registerQuarantineBoundary(ATHLETE_PREFS_PERSISTENCE_KEY, {
     try {
       const state = (JSON.parse(envelope) as { state?: { prefs?: AthletePoolPrefs } }).state;
       const prefs = state?.prefs;
-      return !!prefs && (prefs.excluded.length > 0 || prefs.pinned.length > 0
+      // `exclusions` is counted BESIDE the legacy `excluded` array, not instead
+      // of it: a pre-Block-Two envelope still carries answers in the old field
+      // and must not read as bare just because the new field is empty.
+      return !!prefs && ((prefs.excluded ?? []).length > 0 || prefs.pinned.length > 0
+        || (prefs.exclusions ?? []).length > 0
         || (prefs.activeInjuries ?? []).length > 0);
     } catch {
       return false;
@@ -140,24 +235,36 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
       // Every action is a thin builder of `next`; the door owns the write.
 
       addExclusion: (exerciseName) => {
-        const prefs = getAthletePrefs();
-        if (prefs.excluded.includes(exerciseName)) return;
+        // An unscoped add is the `until_changed` answer — the only meaning this
+        // action has ever had. Routed through the same upsert as the scoped door
+        // so it cannot produce a second record for an exercise already excluded.
+        useAthletePreferencesStore.getState().setExclusion({
+          exercise: canonicalExclusionIdentity(exerciseName),
+          scope: 'until_changed',
+          decidedOnISO: todayISOLocal(),
+          activeThroughISO: null,
+          blockNumber: null,
+        });
+      },
+
+      setExclusion: (exclusion) => {
+        const prefs = storedPrefs();
         applyAthletePrefsWrite({
-          next: { ...prefs, excluded: [...prefs.excluded, exerciseName] },
+          next: { ...prefs, exclusions: upsertExclusion(prefs.exclusions, exclusion) },
           writer: 'preference_control',
         });
       },
 
       removeExclusion: (exerciseName) => {
-        const prefs = getAthletePrefs();
+        const prefs = storedPrefs();
         applyRemovalThroughDoor({
-          next: { ...prefs, excluded: prefs.excluded.filter((n) => n !== exerciseName) },
+          next: { ...prefs, exclusions: restoreExclusion(prefs.exclusions, exerciseName) },
           source: 'remove_exclusion',
         });
       },
 
       addPinned: (exerciseName) => {
-        const prefs = getAthletePrefs();
+        const prefs = storedPrefs();
         if (prefs.pinned.includes(exerciseName)) return;
         applyAthletePrefsWrite({
           next: { ...prefs, pinned: [...prefs.pinned, exerciseName] },
@@ -166,7 +273,7 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
       },
 
       removePinned: (exerciseName) => {
-        const prefs = getAthletePrefs();
+        const prefs = storedPrefs();
         applyRemovalThroughDoor({
           next: { ...prefs, pinned: prefs.pinned.filter((n) => n !== exerciseName) },
           source: 'remove_pinned',
@@ -174,7 +281,7 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
       },
 
       setActiveInjuries: (keys) => {
-        const prefs = getAthletePrefs();
+        const prefs = storedPrefs();
         applyRemovalThroughDoor({
           next: { ...prefs, activeInjuries: [...keys] },
           source: 'set_active_injuries',
@@ -182,7 +289,7 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
       },
 
       addActiveInjury: (key) => {
-        const prefs = getAthletePrefs();
+        const prefs = storedPrefs();
         const current = prefs.activeInjuries ?? [];
         if (current.includes(key)) return;
         applyAthletePrefsWrite({
@@ -192,7 +299,7 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
       },
 
       removeActiveInjury: (key) => {
-        const prefs = getAthletePrefs();
+        const prefs = storedPrefs();
         const current = prefs.activeInjuries ?? [];
         applyRemovalThroughDoor({
           next: { ...prefs, activeInjuries: current.filter((k) => k !== key) },
@@ -217,6 +324,21 @@ export const useAthletePreferencesStore = create<AthletePreferencesState>()(
     {
       name: ATHLETE_PREFS_PERSISTENCE_KEY,
       storage: createJSONStorage(() => athletePrefsGuardedStorage),
+      /**
+       * THE LEGACY FOLD HAPPENS AT HYDRATION, SYNCHRONOUSLY, IN THE MERGE.
+       *
+       * Not in `onRehydrateStorage`: that fires AFTER the state is installed, so
+       * for one tick the store would hold both a legacy `excluded` array and an
+       * empty `exclusions` list, and any reader running in that tick — boot
+       * regeneration is exactly such a reader — would see an athlete with no
+       * exclusions and put every banned exercise straight back in the program.
+       */
+      merge: (persisted, current) => ({
+        ...current,
+        prefs: normaliseHydratedPrefs(
+          (persisted as { prefs?: Partial<AthletePoolPrefs> } | undefined)?.prefs,
+        ),
+      }),
     },
   ),
 );
@@ -267,7 +389,11 @@ function materialCounts(prefs: AthletePoolPrefs): {
   excluded: number; pinned: number; activeInjuries: number;
 } {
   return {
-    excluded: prefs.excluded.length,
+    // THE DECISIONS ARE THE MATERIAL, not the projection. `excluded` is derived
+    // and empty in the stored object, so counting it alone would have told the
+    // wipe guard that an athlete with ten scoped exclusions holds no answers —
+    // and the guard would then have let the empty default land over them.
+    excluded: (prefs.exclusions ?? []).length + (prefs.excluded ?? []).length,
     pinned: prefs.pinned.length,
     activeInjuries: (prefs.activeInjuries ?? []).length,
   };

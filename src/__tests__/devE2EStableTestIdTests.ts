@@ -44,7 +44,22 @@ const contracts: Array<[string, string, RegExp]> = [
   ['equipment update and clear IDs use fact identity', sources.equipment, /equipmentClear\(activeFactId\)[\s\S]*equipmentUpdate\(activeFactId, preset\.id\)/],
   ['workout exercise identity', sources.workout, /workout-exercise-row-\$\{exerciseToken\}/],
   ['canonical component identity', sources.workout, /componentIdentity\([\s\S]*workout\.id,[\s\S]*exercise\.targetId \?\? exercise\.key/],
-  ['component delete scope identity', sources.workout, /componentDeleteScope\([\s\S]*sessionId,[\s\S]*step\.exercise\.targetId \?\? step\.exercise\.key,[\s\S]*'today'/],
+  /* THE THIRD ARGUMENT IS A MAPPED SCOPE NOW, NOT THE LITERAL `'today'`.
+   *
+   * Sam's approved Block Two contract gives the removal question THREE answers,
+   * so the day screen renders them from `EXERCISE_EXCLUSION_SCOPES` and passes
+   * `EXCLUSION_SCOPE_TEST_ID[scope]`. The IDENTITY claim this row exists to make
+   * — session + component — is unchanged and still asserted.
+   *
+   * The MAP is pinned by a second row rather than left to the call site, because
+   * the id vocabulary is what the walker and the flows resolve: a scope quietly
+   * renamed from `'today'` would break them exactly as a missing call would, and
+   * the regex above would still match. `EXCLUSION_SCOPE_TEST_ID` is a `Record`
+   * over the closed scope union, so the COMPILER already forbids a fourth scope
+   * arriving with no id; this pins the three spellings. */
+  ['component delete scope identity', sources.workout, /componentDeleteScope\([\s\S]*sessionId,[\s\S]*step\.exercise\.targetId \?\? step\.exercise\.key,[\s\S]*EXCLUSION_SCOPE_TEST_ID\[scope\]/],
+  ['component delete scopes keep their three spellings', sources.workout,
+    /EXCLUSION_SCOPE_TEST_ID[\s\S]*today_only: 'today',[\s\S]*this_block: 'block',[\s\S]*until_changed: 'future',/],
   ['prescription identity', sources.workout, /workout-exercise-prescription-\$\{exerciseToken\}/],
   ['set count identity', sources.workout, /exercise-set-count-\$\{exerciseToken\}-\$\{exercise\.prescribedSets\}/],
   ['finish action', sources.workout, /testID="finish-session-action"/],

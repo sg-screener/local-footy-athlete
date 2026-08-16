@@ -1079,6 +1079,22 @@ export interface Workout {
    */
   recoveryAddons?: RecoveryAddonBlock[];
 
+  /**
+   * WHAT THIS DAY OWED AND COULD NOT FILL — the composer's typed disclosure.
+   *
+   * ⚠ **DECLARED 2026-08-16, AFTER TWO YEARS OF BEING WRITTEN UNTYPED.**
+   * `materialiseComposedWeek` has set this field since the B1 composer landed,
+   * assembly has protected it as composer-owned since 2026-08-14, and boot
+   * carries it — but it was never on `Workout`, so no screen could read it
+   * without an `as any` and none did. A field with a writer, a protector and no
+   * reader is the `canOverride` shape this repo has paid for before.
+   *
+   * WRITER: `rules/materialiseComposedWeek`. READER: `ComposedGapNotice` on
+   * `DayWorkoutScreenV2`. TEST: `test:exercise-exclusions` case [8] for the
+   * exclusion cause; `test:generated-week-assembly` for the carry.
+   */
+  composedGaps?: import('../rules/composeWeek').ComposedGap[];
+
   /** Typed Section 18 component evidence; display copy never overrides it. */
   section18Evidence?: import('../rules/weeklyExposureContractV2').WorkoutSection18Evidence;
 

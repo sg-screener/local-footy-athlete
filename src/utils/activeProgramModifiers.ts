@@ -16,6 +16,7 @@ import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { removeInjuryOverridesFromDate } from './applyAdjustmentEvents';
+import { restoreExcludedExercise } from './exerciseExclusionOwner';
 import { getMondayForDate, getMondayStr } from './sessionResolver';
 import { decideOverrideSweep } from './weekRebuild';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
@@ -29,6 +30,12 @@ import {
 } from './readinessFactAttribution';
 import { buildDeterministicCoachNoteDescriptors } from './deterministicCoachNoteFactory';
 import type { AthletePoolPrefs } from '../data/exercisePoolsStrength';
+import {
+  activeExclusionsOn,
+  exclusionExpiryLabel,
+  EXERCISE_EXCLUSION_SCOPE_LABEL,
+  type ExerciseExclusion,
+} from '../rules/exerciseExclusions';
 import type {
   OnboardingData,
   ProgramAvailabilityConstraint,
@@ -80,6 +87,23 @@ export const ACTIVE_PROGRAM_MODIFIER_ACTION_KINDS = [
   'update_adjustment',
   'restore_adjustment',
   'dismiss_note',
+  /**
+   * ── THE TWO EXCLUSION CONTROLS (Block Two, Sam's approved contract) ───────
+   *
+   * *"Status shows every active exclusion with ... controls to change the scope
+   * or restore the exercise."*
+   *
+   * They are NOT `update_adjustment` / `clear_adjustment` wearing new labels,
+   * and the difference is the whole reason for two more members. Those two are
+   * generic — the sheet routes them to a constraint-clearing path keyed on
+   * `constraintId`, and an exclusion has no constraint: it is a decision in
+   * `prefs.exclusions`, cleared by the canonical transaction owner and by
+   * nothing else. Reusing the generic kinds would have sent the athlete's
+   * "Restore" through a door that would find no constraint and silently do
+   * nothing, which is the half-alive control this repo already paid for once.
+   */
+  'change_exclusion_scope',
+  'restore_exclusion',
 ] as const;
 
 export type ActiveProgramModifierActionKind =
@@ -1258,6 +1282,56 @@ function athletePreferenceModifier(
   };
 }
 
+/**
+ * ONE STATUS ROW PER ACTIVE EXCLUSION — exercise, scope, expiry, the athlete's
+ * reason when they gave one, and the two controls.
+ *
+ * Sam's approved contract lists the five things the row must say, and every one
+ * of them is DERIVED from the stored decision at render time. Nothing here is a
+ * stored sentence: a scope the athlete changes must change the row, and prose
+ * saved beside a fact goes stale silently the moment the fact moves.
+ *
+ * IT REPLACES `athletePreferenceModifier('excluded', name)`. That builder took a
+ * bare name and could only ever say "future generated sessions will avoid it" —
+ * true for one of Sam's three scopes and wrong for the other two, with no expiry
+ * to show and nothing to change the scope with.
+ */
+function athleteExclusionModifier(exclusion: ExerciseExclusion): ActiveProgramModifier {
+  const displayExercise = formatExerciseDisplayName(exclusion.exercise);
+  const scopeLabel = EXERCISE_EXCLUSION_SCOPE_LABEL[exclusion.scope];
+  return {
+    id: modifierId('athlete_preferences', `exclusion:${exclusion.exercise}`),
+    source: 'athlete_preferences',
+    sourceId: `exclusion:${exclusion.exercise}`,
+    type: 'exercise_adjustment',
+    // Sam's signed phrase for an exercise the athlete took out. Unchanged: this
+    // is the same act, now with a span attached.
+    effect: 'exercise_removed',
+    title: `${displayExercise} left out`,
+    body: sentence([
+      `${scopeLabel}.`,
+      `${exclusionExpiryLabel(exclusion)}.`,
+      exclusion.reason ? `You said: ${exclusion.reason}.` : null,
+    ]),
+    // `today_only` changes today's session and nothing beyond it; the other two
+    // change what future generation may choose. The Program card reads this.
+    affects: exclusion.scope === 'today_only' ? ['current_day'] : ['future_generation'],
+    actions: [
+      { kind: 'change_exclusion_scope', label: 'Change scope' },
+      { kind: 'restore_exclusion', label: 'Restore exercise' },
+    ],
+    payload: {
+      kind: 'excluded',
+      exercise: exclusion.exercise,
+      scope: exclusion.scope,
+      decidedOnISO: exclusion.decidedOnISO,
+      activeThroughISO: exclusion.activeThroughISO,
+      blockNumber: exclusion.blockNumber,
+      ...(exclusion.reason ? { athleteReason: exclusion.reason } : {}),
+    },
+  };
+}
+
 function prettyModality(value: string | null | undefined, bikeLabel?: string | null): string {
   if (!value) return 'conditioning';
   if (value === 'bike') return bikeLabel || 'bike';
@@ -1456,9 +1530,19 @@ export function selectActiveProgramModifiers(
     addUnique(out, seen, modalityModifier(key, pref));
   }
 
-  for (const exercise of snapshot.athletePrefs?.excluded ?? []) {
-    if (!activePreferenceExercises.has(exercise)) {
-      addUnique(out, seen, athletePreferenceModifier('excluded', exercise));
+  /* ── THE ATHLETE'S EXCLUSIONS, FROM THE ONE CANONICAL LIST ────────────────
+   *
+   * `athletePrefs.excluded` is now a DERIVED projection and is empty on the
+   * stored object this snapshot carries, so reading it here would silently show
+   * an athlete with ten exclusions no rows at all. The decisions are the truth.
+   *
+   * Filtered to the ones ACTIVE TODAY, which is what makes a `today_only`
+   * exclusion "leave active Status after that day but remain in history"
+   * (Sam's contract) with no sweep to run — the decision stays stored, the
+   * arithmetic stops matching, the row goes. */
+  for (const exclusion of activeExclusionsOn(snapshot.athletePrefs?.exclusions, todayISO)) {
+    if (!activePreferenceExercises.has(exclusion.exercise)) {
+      addUnique(out, seen, athleteExclusionModifier(exclusion));
     }
   }
   for (const exercise of snapshot.athletePrefs?.pinned ?? []) {
@@ -1600,7 +1684,11 @@ export function clearActiveProgramModifier(
     const prefStore = useAthletePreferencesStore.getState();
     const exercise = modifier.payload?.exercise;
     if (typeof exercise === 'string') {
-      if (modifier.payload?.kind === 'excluded') prefStore.removeExclusion(exercise);
+      // THE SAME CANONICAL TRANSACTION OWNER THE DAY SCREEN AND STATUS USE.
+      // Sam's contract: *"Changing or restoring must use the same canonical
+      // transaction owner"* — so restore goes through it here too, rather than
+      // reaching past it into the store's own action.
+      if (modifier.payload?.kind === 'excluded') restoreExcludedExercise(exercise);
       if (modifier.payload?.kind === 'pinned') prefStore.removePinned(exercise);
     }
     rebuildRequired = true;
