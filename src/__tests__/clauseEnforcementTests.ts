@@ -34,8 +34,10 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 import {
   CLAUSE_MODALITY, PURPOSE_IS_LOWER, WEEKLY_CONTRACT_CLAUSES, modalityFor,
 } from '../rules/weeklyProgrammingContract';
-import { LEGALITY_RULES } from '../rules/weeklyLegality';
-import { COMPLETENESS_CHECKS } from '../rules/weeklyCompleteness';
+import {
+  LEGALITY_RULES, WEEK_LEGALITY_RULES, firstWeekLegalityViolation,
+} from '../rules/weeklyLegality';
+import { COMPLETENESS_CHECKS, completenessGaps } from '../rules/weeklyCompleteness';
 import { scheduleWeek, type WeeklySchedulerInputs } from '../rules/weeklyScheduler';
 
 armTotalsOrRed();
@@ -49,7 +51,14 @@ function ok(name: string, condition: unknown, detail?: unknown): void {
 }
 
 const CLAUSE_IDS = WEEKLY_CONTRACT_CLAUSES.map((c) => c.id);
-const legalityIds = new Set(LEGALITY_RULES.map((r) => r.clauseId));
+// ONE owner, TWO moments: candidate-time (before scoring) and week-time (once
+// running top-ups, anchor conditioning and the layout's count exist). Both tables
+// live in `weeklyLegality`, so this is a single authoritative verdict evaluated
+// twice — not two competing owners.
+const legalityIds = new Set([
+  ...LEGALITY_RULES.map((r) => r.clauseId),
+  ...WEEK_LEGALITY_RULES.map((r) => r.clauseId),
+]);
 const completenessIds = new Set(COMPLETENESS_CHECKS.map((c) => c.clauseId));
 
 console.log('\n[1] Every clause declares what KIND of rule it is');
@@ -73,6 +82,12 @@ console.log('\n[2] RED#1 — no prohibition is represented only by scoring');
   for (const rule of LEGALITY_RULES) {
     ok(`${rule.clauseId} legality rule either checks or names its real owner`,
       typeof rule.violated === 'function' || !!rule.enforcedElsewhere);
+  }
+  // Week-time rules have no delegation escape hatch: they exist BECAUSE the
+  // delegation notes turned out to be unexecuted claims.
+  for (const rule of WEEK_LEGALITY_RULES) {
+    ok(`${rule.clauseId} week-level rule performs a real check`,
+      typeof rule.violated === 'function');
   }
 }
 
@@ -222,6 +237,89 @@ console.log('\n[7] PRESSURE — the named rules from the order, one world each')
     anchored?.refused || [2, 4].every((d) =>
       anchored.days.find((x: any) => x.dayOfWeek === d)?.clubTraining === true),
     anchored?.days?.map((d: any) => [d.dayOfWeek, d.clubTraining]));
+}
+
+console.log('\n[8] WC-020 measures the DELIVERED week, not the request');
+{
+  const schedule: any = scheduleWeek(inputs({ phase: 'Pre-season', gameDay: null,
+    gymAccessDays: [1, 3, 5] }));
+  ok('the pressure world schedules', !schedule?.refused, schedule?.finding);
+  if (!schedule?.refused) {
+    const intended: string[] = [...schedule.intendedPatterns];
+    ok('...and it intends at least two patterns to drop one from', intended.length >= 2,
+      intended);
+
+    // DELIVERED IN FULL -> no gap.
+    const full = completenessGaps(schedule, new Set(intended));
+    ok('a week delivering every intended pattern has no WC-020 gap',
+      !full.some((g) => g.clauseId === 'WC-020'), full);
+
+    // ── THE MUTATION SAM ASKED FOR ────────────────────────────────────────
+    // Request the pattern, then DROP its delivered row. The old check read the
+    // request and could not fail; this one must.
+    const dropped = new Set(intended.slice(1));
+    const gaps = completenessGaps(schedule, dropped);
+    const wc020 = gaps.find((g) => g.clauseId === 'WC-020');
+    ok('dropping a DELIVERED row for an intended pattern fails completeness',
+      !!wc020 && wc020.shortfall.includes(intended[0]),
+      { droppedPattern: intended[0], gaps });
+
+    // A check that only reads the schedule cannot see the drop at all — this
+    // arm is what makes the cell about DELIVERY rather than about intention.
+    ok('...and the failure names the pattern that went missing',
+      !!wc020 && /intended but not delivered/.test(wc020.shortfall), wc020);
+  }
+}
+
+console.log('\n[9] Every WEEK-LEVEL rule BINDS — fed facts that violate it directly');
+{
+  // ⚠ **WHY THIS SECTION EXISTS.** Neutering WC-045, WC-046 and WC-063 changed
+  // nothing observable in any generated world: the scheduler simply never
+  // produces a week that approaches those limits. Coverage said "a rule exists";
+  // the corpus could not say "the rule binds". That is the SAME weakness the
+  // delegation notes had, just relocated — so each rule is called directly with
+  // facts engineered to violate it, which proves the verdict rather than the
+  // presence of a function.
+  const legal = {
+    strengthDays: [{ day: 1, purpose: 'lower' as const }, { day: 4, purpose: 'upper' as const }],
+    runningDays: [2, 5],
+    coreConditioning: 3,
+    setsPerSession: 16,
+    phase: 'In-season',
+  };
+  ok('[control] a legal week passes every week-level rule',
+    firstWeekLegalityViolation(legal) === null, firstWeekLegalityViolation(legal));
+
+  const breaches: { clause: string; facts: any }[] = [
+    { clause: 'WC-030', facts: { ...legal, setsPerSession: 17 } },
+    { clause: 'WC-044', facts: { ...legal, runningDays: [1, 2, 3, 4] } },
+    { clause: 'WC-045', facts: { ...legal, coreConditioning: 6 } },
+    { clause: 'WC-046', facts: { ...legal, runningDays: [1, 3, 5, 0, 2] } },
+    { clause: 'WC-063', facts: { ...legal, strengthDays: [
+      { day: 1, purpose: 'lower' }, { day: 3, purpose: 'upper' },
+      { day: 5, purpose: 'upper_push' }, { day: 0, purpose: 'upper_pull' },
+      { day: 2, purpose: 'full_body' }] } },
+    { clause: 'WC-113', facts: { ...legal, phase: 'Pre-season', strengthDays: [
+      { day: 1, purpose: 'lower' }, { day: 3, purpose: 'upper' },
+      { day: 5, purpose: 'upper_push' }, { day: 0, purpose: 'upper_pull' },
+      { day: 2, purpose: 'full_body' }] } },
+    { clause: 'WC-122', facts: { ...legal, phase: 'Off-season', strengthDays: [
+      { day: 1, purpose: 'lower' }, { day: 3, purpose: 'upper' },
+      { day: 5, purpose: 'upper_push' }, { day: 0, purpose: 'upper_pull' },
+      { day: 2, purpose: 'full_body' }] } },
+    { clause: 'WC-133', facts: { ...legal, phase: 'Pre-season', strengthDays: [
+      { day: 1, purpose: 'lower_squat' }, { day: 3, purpose: 'lower_hinge' },
+      { day: 5, purpose: 'lower' }] } },
+  ];
+  for (const b of breaches) {
+    const verdict = firstWeekLegalityViolation(b.facts as never);
+    ok(`[${b.clause}] violating facts are REFUSED by the week-level owner`,
+      verdict !== null, verdict);
+    // The refusal must name the clause that actually owns it, or a later reader
+    // cannot tell which rule fired — and a wrong attribution is worse than none.
+    ok(`[${b.clause}] ...and the verdict names that clause`,
+      verdict?.clauseId === b.clause, verdict);
+  }
 }
 
 const total = passed + failures.length;

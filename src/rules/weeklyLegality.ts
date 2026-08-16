@@ -175,17 +175,9 @@ export const LEGALITY_RULES: readonly LegalityRule[] = [
   },
 
   // ── HELD BY ANOTHER OWNER, AND NAMED SO IT CANNOT READ AS ENFORCED ──────
-  { clauseId: 'WC-030', enforcedElsewhere: 'layout set budget (BASE_LAYOUTS.setBudget)' },
-  { clauseId: 'WC-044', enforcedElsewhere: 'running top-up loop (WC-044 streak check)' },
-  { clauseId: 'WC-045', enforcedElsewhere: 'demand.coreConditioning cap, GLOBAL_RULES.conditioning.max' },
-  { clauseId: 'WC-046', enforcedElsewhere: 'running top-up loop, GLOBAL_RULES.running.max' },
   { clauseId: 'WC-048', enforcedElsewhere: 'composer daily movement ceiling' },
   { clauseId: 'WC-062', enforcedElsewhere: 'coachingInputsToSchedulerInputs — declared club nights only' },
-  { clauseId: 'WC-063', enforcedElsewhere: 'baseLayoutFor — the layout owns the count' },
   { clauseId: 'WC-110', enforcedElsewhere: 'WC-043 spacing above' },
-  { clauseId: 'WC-113', enforcedElsewhere: 'baseLayoutFor — no fifth session' },
-  { clauseId: 'WC-122', enforcedElsewhere: 'baseLayoutFor — no fifth session' },
-  { clauseId: 'WC-133', enforcedElsewhere: 'pre-season overlay + WC-043' },
   { clauseId: 'WC-135', enforcedElsewhere: 'inSeasonSprintDay placement' },
 ];
 
@@ -201,6 +193,150 @@ export function firstLegalityViolation(
   for (const rule of LEGALITY_RULES) {
     if (!rule.violated) continue;
     const reason = rule.violated(c);
+    if (reason !== null) return { clauseId: rule.clauseId, reason };
+  }
+  return null;
+}
+
+// ─── THE SECOND MOMENT: PROHIBITIONS ABOUT THE FINISHED WEEK ───────────────
+
+/**
+ * **ONE OWNER, TWO MOMENTS — NOT TWO OWNERS.**
+ *
+ * Sam, 2026-08-16: *"The finished architecture must have one authoritative
+ * legality verdict; other modules may supply facts, but not separate competing
+ * verdicts."*
+ *
+ * Some prohibitions cannot be answered about a candidate ASSIGNMENT because their
+ * subject does not exist yet: running days are topped up after placement,
+ * conditioning exposures count anchors, and the session count belongs to the
+ * chosen layout. Those were delegated with a note naming another owner — and
+ * **eight of those notes were claims nobody had executed.** The pressure receipts
+ * exposed two shapes of that:
+ *
+ *   - WC-030's receipt was VACUOUS. It called `baseLayoutFor` with the wrong
+ *     argument shape, measured `0` sets, and reported HELD. A green receipt that
+ *     observed nothing is worse than no receipt.
+ *   - WC-044 and WC-046 produced weeks that never approached their limits, so
+ *     they showed the ban was not NEEDED, never that it BINDS.
+ *
+ * So they move here. Same module, same typed reason, evaluated once the week
+ * exists. **The downstream loops may still compute the facts — they no longer
+ * render the verdict.**
+ */
+export interface WeekLegalityFacts {
+  readonly strengthDays: readonly { day: number; purpose: SessionPurpose }[];
+  readonly runningDays: readonly number[];
+  readonly coreConditioning: number;
+  readonly setsPerSession: number;
+  readonly phase: string;
+}
+
+export interface WeekLegalityRule {
+  readonly clauseId: string;
+  readonly violated: (w: WeekLegalityFacts) => string | null;
+}
+
+function longestRunOf(days: readonly number[]): number {
+  const set = new Set(days);
+  let run = 0;
+  let longest = 0;
+  for (const day of WEEK_ORDER) {
+    run = set.has(day) ? run + 1 : 0;
+    longest = Math.max(longest, run);
+  }
+  return longest;
+}
+
+export const WEEK_LEGALITY_RULES: readonly WeekLegalityRule[] = [
+  {
+    clauseId: 'WC-030',
+    // ⚠ The FIRST two attempts at this check were vacuous. Both read fields off
+    // `SetBudget` that do not exist (`main`/`secondary`), measured 0, and passed.
+    // The real shape is `{preferredMin, preferredMax, hardCeiling}`, so the
+    // enforceable statement is that a layout may not declare a ceiling above the
+    // contract's own. **A check that reads a missing field always passes.**
+    violated: (w) => (w.setsPerSession > SET_CEILING
+      ? `layout set ceiling ${w.setsPerSession} exceeds the contract's ${SET_CEILING}`
+      : null),
+  },
+  {
+    clauseId: 'WC-044',
+    violated: (w) => {
+      const run = longestRunOf(w.runningDays);
+      return run > GLOBAL_RULES.runningStreakMaximum
+        ? `${run} consecutive running days; maximum ${GLOBAL_RULES.runningStreakMaximum}`
+        : null;
+    },
+  },
+  {
+    clauseId: 'WC-045',
+    violated: (w) => (w.coreConditioning > GLOBAL_RULES.conditioning.max
+      ? `${w.coreConditioning} conditioning exposures; cap ${GLOBAL_RULES.conditioning.max}`
+      : null),
+  },
+  {
+    clauseId: 'WC-046',
+    violated: (w) => (w.runningDays.length > GLOBAL_RULES.running.max
+      ? `${w.runningDays.length} running days; maximum ${GLOBAL_RULES.running.max}`
+      : null),
+  },
+  {
+    clauseId: 'WC-113',
+    violated: (w) => (w.phase === 'Pre-season' && w.strengthDays.length > REQUIRED_STRENGTH_CEILING
+      ? `${w.strengthDays.length} pre-season strength sessions; extra availability creates no fifth`
+      : null),
+  },
+  {
+    clauseId: 'WC-122',
+    violated: (w) => (w.phase === 'Off-season' && w.strengthDays.length > REQUIRED_STRENGTH_CEILING
+      ? `${w.strengthDays.length} off-season strength sessions; extra availability creates no fifth`
+      : null),
+  },
+  {
+    // WC-063 / WC-113 / WC-122 are one prohibition wearing three clause ids:
+    // availability is permission, not a quota, and never creates a fifth
+    // required strength session. Asserted once per id so each is enforced.
+    //
+    // ⚠ **ORDERED LAST OF THE THREE, DELIBERATELY.** WC-063 is the general
+    // form and matches everything the phase-specific pair matches, so running
+    // it first made every pre-season and off-season breach report as WC-063.
+    // The refusal named a real rule but the WRONG one, and a wrong attribution
+    // is worse than none — the next reader goes looking in the wrong clause.
+    clauseId: 'WC-063',
+    violated: (w) => (w.strengthDays.length > REQUIRED_STRENGTH_CEILING
+      ? `${w.strengthDays.length} required strength sessions; availability is not a quota`
+      : null),
+  },
+  {
+    clauseId: 'WC-133',
+    violated: (w) => {
+      if (w.phase !== 'Pre-season') return null;
+      // ⚠ NOT `PURPOSE_IS_LOWER`, which is true for `full_body`. Reading it that
+      // way made the contract refuse its OWN approved pre-season 3-day layout —
+      // "Full Body x3 on the best-separated days" — as three lower sessions.
+      // WC-133's "no more than two lower sessions" means sessions whose PURPOSE
+      // is lower; a full-body day is not a lower day in that sentence.
+      const lower = w.strengthDays.filter((s) => s.purpose.startsWith('lower')).length;
+      return lower > PRESEASON_LOWER_CEILING
+        ? `${lower} pre-season lower sessions; the overlay permits ${PRESEASON_LOWER_CEILING}`
+        : null;
+    },
+  },
+];
+
+/** §3 Session size: *"16 is a hard ceiling"*. */
+const SET_CEILING = 16;
+/** §2 / the layout rows: no phase requires a fifth strength session. */
+const REQUIRED_STRENGTH_CEILING = 4;
+/** WC-133: pre-season carries *"no more than two lower sessions"*. */
+const PRESEASON_LOWER_CEILING = 2;
+
+export function firstWeekLegalityViolation(
+  w: WeekLegalityFacts,
+): { clauseId: string; reason: string } | null {
+  for (const rule of WEEK_LEGALITY_RULES) {
+    const reason = rule.violated(w);
     if (reason !== null) return { clauseId: rule.clauseId, reason };
   }
   return null;

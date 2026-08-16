@@ -45,7 +45,7 @@ import {
   type SessionPurpose,
   type SetBudget,
 } from './weeklyProgrammingContract';
-import { firstLegalityViolation } from './weeklyLegality';
+import { firstLegalityViolation, firstWeekLegalityViolation } from './weeklyLegality';
 
 // ─── INPUTS ────────────────────────────────────────────────────────────────
 
@@ -718,24 +718,58 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const fullRestDays = withRunning.filter((day) =>
     day.owner === 'rest_or_recovery' && !day.clubTraining && !day.game).length;
 
+  const demand = {
+    mainStrength: needed,
+    // WC-045 caps the total at 5; anchors count toward it. **The clamp is a
+    // FACT, not the verdict** — the week-level legality pass below renders that,
+    // so a future edit removing this `min` refuses the week instead of shipping it.
+    coreConditioning: Math.min(
+      anchorConditioning + appConditioningDays,
+      GLOBAL_RULES.conditioning.max),
+    anchorConditioning,
+    sprintHighSpeed: sprintCount,
+    running: runningDayCount,
+    fullRestDays,
+    hardDays: hardDaySet.size,
+  };
+
+  // ── THE SECOND LEGALITY MOMENT, SAME OWNER ──────────────────────────────
+  //
+  // Prohibitions whose subject only exists once the week is built — running
+  // top-ups, conditioning exposures counting anchors, the session count from the
+  // chosen layout, the set ceiling. They were DELEGATED with a note naming
+  // another owner, and the pressure receipts showed those notes were claims:
+  // WC-030's was vacuous, WC-044 and WC-046 never approached their limits.
+  //
+  // The loops above still COMPUTE these facts. They no longer render the verdict.
+  const weekViolation = firstWeekLegalityViolation({
+    strengthDays: withRunning
+      .filter((day) => day.owner === 'strength' && day.purpose !== null)
+      .map((day) => ({ day: day.dayOfWeek, purpose: day.purpose as SessionPurpose })),
+    runningDays: withRunning
+      .filter((day) => day.conditioning === 'running'
+        || day.conditioning === 'sprint_high_speed')
+      .map((day) => day.dayOfWeek),
+    coreConditioning: demand.coreConditioning,
+    setsPerSession: layout.setBudget?.hardCeiling ?? 0,
+    phase: inputs.phase,
+  });
+  if (weekViolation !== null) {
+    return {
+      refused: true,
+      finding: 'no_legal_arrangement_within_spacing_rules',
+      clauseId: weekViolation.clauseId,
+      detail: weekViolation.reason,
+    };
+  }
+
   return {
     weekStartISO: inputs.weekStartISO,
     layoutClauseId: layout.clauseId,
     requiredStrengthSessions: needed,
     days: withRunning,
     intendedPatterns: [...intended],
-    demand: {
-      mainStrength: needed,
-      // WC-045 caps the total at 5; anchors count toward it.
-      coreConditioning: Math.min(
-        anchorConditioning + appConditioningDays,
-        GLOBAL_RULES.conditioning.max),
-      anchorConditioning,
-      sprintHighSpeed: sprintCount,
-      running: runningDayCount,
-      fullRestDays,
-      hardDays: hardDaySet.size,
-    },
+    demand,
   };
 }
 

@@ -35,7 +35,16 @@ export interface CompletenessGap {
 export interface CompletenessCheck {
   readonly clauseId: string;
   /** Null when the week satisfies the floor; otherwise what is missing. */
-  readonly gap?: (schedule: WeeklySchedule) => string | null;
+  /**
+   * `delivered` is the set of movement patterns the FINAL week actually contains,
+   * read off the built rows. Passing it in keeps this file free of any opinion
+   * about how a workout declares its pattern — that belongs to the reader that
+   * owns the row shape.
+   */
+  readonly gap?: (
+    schedule: WeeklySchedule,
+    delivered?: ReadonlySet<string>,
+  ) => string | null;
   /** Set INSTEAD of `gap` when another owner genuinely validates this clause. */
   readonly validatedElsewhere?: string;
 }
@@ -43,12 +52,25 @@ export interface CompletenessCheck {
 export const COMPLETENESS_CHECKS: readonly CompletenessCheck[] = [
   {
     // WC-020 — at least one meaningful exposure in each of the eight patterns.
+    //
+    // ⚠ **THIS USED TO MEASURE THE REQUEST, NOT THE DELIVERY.** It asked whether
+    // the week INTENDED any patterns, which the scheduler decides and therefore
+    // can never fail — a completeness check that reads its own side of the
+    // handover is green by construction. Sam, 2026-08-16: check *"against the
+    // actual delivered final week"*.
+    //
+    // It now reads the built workouts' declared `main_strength` patterns. A week
+    // that asks for a hinge and ships no hinge row FAILS, which is the whole
+    // point and is proven by mutation in `test:clause-enforcement`.
     clauseId: 'WC-020',
-    gap: (schedule) => {
+    gap: (schedule, delivered) => {
+      if (!delivered) return 'no delivered week was supplied to measure';
       const intended = new Set(schedule.intendedPatterns);
-      // The week's OWN intention is the measure the scheduler can answer for;
-      // whether the composer delivered each one is §18's ledger, not this file's.
-      return intended.size === 0 ? 'the week intends no movement patterns at all' : null;
+      if (intended.size === 0) return 'the week intends no movement patterns at all';
+      const missing = [...intended].filter((pattern) => !delivered.has(pattern));
+      return missing.length > 0
+        ? `intended but not delivered: ${missing.sort().join(', ')}`
+        : null;
     },
   },
   {
@@ -86,11 +108,14 @@ export const COMPLETENESS_CHECKS: readonly CompletenessCheck[] = [
 ];
 
 /** Every requirement, over the FINISHED week. */
-export function completenessGaps(schedule: WeeklySchedule): readonly CompletenessGap[] {
+export function completenessGaps(
+  schedule: WeeklySchedule,
+  delivered?: ReadonlySet<string>,
+): readonly CompletenessGap[] {
   const gaps: CompletenessGap[] = [];
   for (const check of COMPLETENESS_CHECKS) {
     if (!check.gap) continue;
-    const shortfall = check.gap(schedule);
+    const shortfall = check.gap(schedule, delivered);
     if (shortfall !== null) gaps.push({ clauseId: check.clauseId, shortfall });
   }
   return gaps;
