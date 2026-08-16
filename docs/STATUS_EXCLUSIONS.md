@@ -104,7 +104,45 @@ cells. *A half-mutation proves nothing.*
    UNENFORCED laws, unchanged by this unit (126 → 128 rows, both new rows
    `guarded`).
 
+## GATE NUMBERS — branch vs `main`, same day, same machine
+
+| gate | branch | `main` | delta |
+| --- | --- | --- | --- |
+| `test:exercise-exclusions` | **51 / 0** | (new) | — |
+| `test:block-two-progression` | 37 / 0 | — | — |
+| `test:block-two-difficult-missed` | 88 / 0 | — | — |
+| `test:block-two-screen-delivery` | 35 / 0 | — | — |
+| `test:block-two-boot-preservation` | 20 / 0 | — | — |
+| `test:ladder-wide` | 13/14 | 13/14 | **0** (368 laddered days, 140 worlds, 40 refused, 0 deficient — identical) |
+| `test:compile` | 468, 6 pairs | 468, 6 pairs | **0** |
+| `test:law-registry` | 12 / 2 | 12 / 2 | **0** (126 → 128 rows, both new rows `guarded`; 21 UNENFORCED unchanged) |
+| `test:athlete-prefs-ownership` | 7 / 0 | 7 / 0 | 0 |
+| `test:modifier-effect-phrases` | 4 / 0 | 4 / 0 | 0 |
+| `test:my-status-modifiers` | 8 / 0 | 8 / 0 | 0 |
+| `test:composer-b1` | 45 / 1 | 45 / 1 | 0 |
+| `test:generated-week` | 36 / 0 | — | — |
+| `test:generated-week-assembly` | 30 / 0 | — | — |
+| `test:composer-severance` | 96 / 0 | — | — |
+| `test:weekly-scheduler` | 84 / 0 | — | — |
+| `test:week-validator` | 47 / 2 | 47 / 2 | 0 |
+| `test:pools` | 473 / 1 | 473 / 1 | 0 |
+| `test:athlete-door-matrix` | 353 / 12 | 353 / 12 | 0 |
+| `test:accessibility-contracts` | 33 / 5 | 33 / 5 | 0 |
+| `test:worn-world-boot` | 0 / 5 | 0 / 5 | 0 (pre-existing red) |
+| `test:program-hydration-ownership` | 7 / 17 | 7 / 17 | 0 (pre-existing red) |
+
+Reds were compared by **failure TEXT, not totals**, for
+`accessibility-contracts`, `maestro-element-contract`, `explorer-render-bindings`,
+`coach-updates` and `dev-e2e-testids` — identical on all five.
+
+**THREE GUARDS WERE RE-READ, ONE OF THEM AFTER CATCHING A REAL REGRESSION.**
+`dev-e2e-testids` pinned the literal `'today'` as the delete-scope argument; the
+three-answer sheet passes a mapped value, so the walker's coordinate went
+invisible to the scan. Identity claim unchanged, plus a second row pinning the
+three id spellings.
+
 ## OPEN
 
-- wider gates (Block Two suites, boot/persistence, `test:ladder-wide`)
-- device pass: the three-option sheet and the gap notice on glass
+- **device pass: the three-option sheet and the gap notice on glass.** Every
+  case in the suite is headless. Deferred deliberately per the order — *"do not
+  lose a session debugging seeds."*
