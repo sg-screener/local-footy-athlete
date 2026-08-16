@@ -12,6 +12,12 @@ import {
   type CoachGeneratedWorkoutInput,
 } from '../../data/defaultProgram';
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
+import { WEEKS_PER_BLOCK } from '../../utils/programBlockState';
+import {
+  applyBlockBoundaryProgression,
+  decideBlockBoundaryLoads,
+  readBlockHistory,
+} from '../../rules/blockBoundaryProgression';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
   onboardingToCoachingInputs,
@@ -181,6 +187,29 @@ export interface GenerateProgramFromProfileOptions {
   todayISO?: string;
   /** 1-based training block number. Defaults to 1 for a fresh generated block. */
   blockNumber?: number;
+  /**
+   * THE ATHLETE'S RECORDED HISTORY, FED TO THE AUTHORING-TIME FREEZE.
+   *
+   * Sam, 2026-08-16: *"feed the real persisted history, selected loads and block
+   * state into the existing generation-time progression owner."*
+   *
+   * ⚠ **THE FREEZE ALWAYS EXISTED; IT WAS FED NOTHING.** Until this landed the
+   * `bakeMicrocycleStrengthProgression` call below passed `sessionFeedback: {}`,
+   * `weightOverrides: {}`, `workoutHistory: []`, `blockState: null` — four empty
+   * arguments — so it baked a history-free load into storage while the screen,
+   * reading the live store, could derive a different one. That was the whole of
+   * the stored-vs-visible split.
+   *
+   * **Absent means "read the live store"**, matching how `temporarySourceFacts`
+   * already behaves here, so the rollover path inherits this with no threading.
+   * A caller passes them explicitly only to author against a stated history —
+   * which is what makes the boundary testable without a live store.
+   */
+  progressionHistory?: {
+    sessionFeedback?: Readonly<Record<string, import('../../store/programStore').SessionFeedback>>;
+    weightOverrides?: Readonly<Record<string, Record<string, number | null>>>;
+    blockState?: import('../../utils/programBlockState').StoredProgramBlockState | null;
+  };
   /**
    * The Monday this block began on, stated by the caller that owns the grid
    * (the stored block anchor, via `getBlockPositionForGeneration`).
@@ -1457,6 +1486,22 @@ export function generateProgramLocally(
   // Authoring-time freeze (§18 ownership redesign, stage 1): materialise strength
   // progression into the stored microcycles once. Resolution then merely projects
   // these loads — it no longer recomputes progression on read.
+  //
+  // ⚠ THIS USED TO PASS FOUR EMPTY ARGUMENTS. `sessionFeedback: {}`,
+  // `weightOverrides: {}`, `workoutHistory: []`, `blockState: null`. The freeze
+  // was correct and starved: it baked a history-free load into storage, and the
+  // screen — reading the live store — could derive a different one. Feeding it
+  // is what makes stored == visible == reloaded true rather than lucky.
+  const liveStore = require('../../store/programStore').useProgramStore.getState();
+  const progressionSessionFeedback =
+    options.progressionHistory?.sessionFeedback ?? liveStore.sessionFeedback ?? {};
+  const progressionWeightOverrides =
+    options.progressionHistory?.weightOverrides ?? liveStore.weightOverrides ?? {};
+  const progressionBlockState =
+    options.progressionHistory?.blockState !== undefined
+      ? options.progressionHistory.blockState
+      : liveStore.blockState ?? null;
+
   bakeMicrocycleStrengthProgression(program, {
     manualOverrides: {},
     markedDays: {},
@@ -1469,13 +1514,68 @@ export function generateProgramLocally(
     gameDay: baseProfile.gameDay,
     usualGameDay: baseProfile.usualGameDay,
     capacity: deriveProfileReadiness(baseProfile),
-    sessionFeedback: {},
-    weightOverrides: {},
+    sessionFeedback: progressionSessionFeedback,
+    weightOverrides: progressionWeightOverrides,
     workoutHistory: [],
-    blockState: null,
+    blockState: progressionBlockState,
   });
 
+  // ── THE BLOCK BOUNDARY HAS THE LAST WORD ON A STRENGTH ROW'S LOAD ──
+  //
+  // The freeze above is the general progression owner and stays that way. What
+  // it cannot decide is the question only a BOUNDARY poses: this lift ran last
+  // block and earned its 2.5 kg, that one is new and must start blank.
+  //
+  // Sam ruled the rotated half twice (2026-08-16, option B): *"leave its
+  // starting load unset and let the athlete choose... never infer one from the
+  // movement pattern, exercise name or previous weight"*, and for this slice
+  // *"rotated lift → no inherited load and no automatic estimate."* The freeze,
+  // left alone, does the opposite — `extractSlotExposureHistory` deliberately
+  // carries a rotated pool anchor's load across a sibling mapping.
+  //
+  // Applied only from block 2 onward: block 1 has no previous block to retain
+  // from, and running it there would blank every load an onboarding estimate
+  // legitimately produced.
+  const authoringBlockNumber = options.blockNumber ?? 1;
+  if (authoringBlockNumber > 1) {
+    const previousBlock = previousBlockBoundsFor(blockStart);
+    const history = readBlockHistory({
+      feedbackByDate: progressionSessionFeedback,
+      blockStartISO: previousBlock.startISO,
+      blockEndISO: previousBlock.endISO,
+      requiredStrengthSessions: plan.coreSessions * WEEKS_PER_BLOCK,
+    });
+    for (const microcycle of program.microcycles) {
+      const decisions = decideBlockBoundaryLoads({
+        history,
+        nextBlockWorkouts: microcycle.workouts,
+      });
+      microcycle.workouts = applyBlockBoundaryProgression({
+        workouts: microcycle.workouts,
+        decisions,
+      });
+    }
+  }
+
   return program;
+}
+
+/**
+ * The four-week window immediately before `blockStartISO`.
+ *
+ * The block a boundary decision reads is the one that just ENDED, never the
+ * athlete's whole life — otherwise a load recorded three blocks ago would keep
+ * seeding a lift the athlete has not touched since.
+ */
+function previousBlockBoundsFor(blockStartISO: string): { startISO: string; endISO: string } {
+  const start = new Date(`${blockStartISO}T12:00:00`);
+  const previousEnd = new Date(start);
+  previousEnd.setDate(previousEnd.getDate() - 1);
+  const previousStart = new Date(previousEnd);
+  previousStart.setDate(previousStart.getDate() - (WEEKS_PER_BLOCK * 7 - 1));
+  const iso = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { startISO: iso(previousStart), endISO: iso(previousEnd) };
 }
 
 /** Is a response body HTML (Cloudflare/Supabase proxy page etc.)? */

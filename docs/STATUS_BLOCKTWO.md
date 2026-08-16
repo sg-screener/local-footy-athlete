@@ -229,25 +229,119 @@ will be reported explicitly, not done quietly.
 
 ---
 
+# SESSION 3 — THE FREEZE IS FED, AND THE SCREEN NEVER HAD THE AUTHORITY
+
+## Sam's second instruction was already satisfied — and that is now PROVEN, not assumed
+
+*"Remove the screen's authority to recalculate a different prescription;
+projection displays the stored result."*
+
+The read-time progression layer was **already retired** before this mission.
+`applyStrengthProgression` has exactly ONE call site in the whole repo
+(`sessionResolver.ts:1625`), inside `materialiseWeekStrengthProgression`, which
+is reached only from the AUTHORING entry `authorWeekStrengthProgression` →
+`bakeMicrocycleStrengthProgression`. `resolveWeekWithConditioning` carries a
+standing comment saying so. **Nothing was removed because nothing was left.**
+
+**A green reading of that is a claim, so it was controlled.** The projection was
+handed a history that CONTRADICTS the one generation saw — 60 kg instead of
+100 kg, `very_hard`, `high` soreness. A projection with authority re-derives and
+moves. It did not move:
+
+```
+STORED 102.5 | VISIBLE 102.5 | RELOADED stored 102.5 | RELOADED visible 102.5
+CONTROL — projection handed a contradictory history → VISIBLE 102.5
+```
+
+Without that control, "stored == visible" is equally produced by *"projection
+obeys"* and by *"both passes happened to agree"*.
+
+## What actually changed — four arguments
+
+`generateProgram.ts` used to hand the freeze `sessionFeedback: {}`,
+`weightOverrides: {}`, `workoutHistory: []`, `blockState: null`. It now passes
+the real persisted history, selected loads and block state, via a new
+`progressionHistory` option that **defaults to reading the live store** — so the
+rollover path (`rebuildLocalWeek` → `generateProgramLocally`, one door for
+Block 2) inherits it with no threading, while a caller can still author against
+a stated history, which is what makes the boundary testable.
+
+The block-boundary decision then has the last word on a strength row's load,
+**from block 2 onward only** — block 1 has no previous block to retain from, and
+running it there would blank loads block 1 legitimately produced.
+
+## MEASURED, on two otherwise-identical full-gym athletes
+
+| lift | last recorded | athlete A | athlete B |
+| --- | --- | --- | --- |
+| **Deadlift** (barbell, retained) | 100 kg | **102.5 kg** | *unset* |
+| Goblet Squat (retained, not barbell-required) | 40 kg | 40 kg — held | *unset* |
+| 14 rotated rows | — | *unset* | *unset* |
+
+**Athlete B receives no history-driven progression.** Athlete A's retained
+barbell lift receives exactly the smallest authorised increment. No rotated main
+or secondary lift inherits anything.
+
+⚠ **Three rotated rows still carry a number: `Bosch Hold=0`,
+`Copenhagen Plank (Half)=0`, `Bicep Curl (Barbell)=20`.** These are NOT
+progression rows — `classifyProgressionEligibility` excludes isolation and
+trunk work — so the boundary layer never sees them and they keep generation's
+own placeholder. **This is pre-existing and unchanged by this slice**, but it is
+recorded here rather than left for someone to discover: a rotated accessory
+showing `0` is not the same thing as "unset", and if Sam wants accessories
+blanked too that is a NEW coaching decision, not an implementation detail.
+
+## NO NEW FAILING SUITE — before/after against the clean control
+
+Ten suites most likely to be disturbed, each run in BOTH the clean control
+worktree at `67bbc4bd` and on this branch:
+
+| suite | control | branch |
+| --- | --- | --- |
+| `variation` | 7 fail | 7 fail |
+| `session-outcome-parity` | 1 fail | 1 fail |
+| `composer-b1` | 3 fail | 3 fail |
+| `strength-progression-inputs` · `progression-capacity-laundering` · `workout-log-progression-wiring` · `generated-week` · `generated-week-assembly` · `weekly-scheduler` · `block-override` | 0 fail | 0 fail |
+
+`test:compile` — 468 errors, same 6 files worse, **byte-identical to the clean
+control**. This slice adds zero type errors.
+
+## Also tightened
+
+`GOOD_RECOVERY_FEELINGS` / `GOOD_RECOVERY_SORENESS` were untyped string sets
+written from memory. They are now typed to `FeedbackFeeling` / `FeedbackSoreness`
+and verified against the real vocabularies (`FEEDBACK_FEELINGS`,
+`FEEDBACK_SORENESS_LEVELS`). Untyped, adding a new soreness level would silently
+land outside the good set — an athlete quietly stops progressing and the rule
+looks like it is working. A probe fixture using `soreness: 'severe'` — a value
+that does not exist — is what surfaced it.
+
+---
+
 ## NEXT SESSION STARTS HERE
 
-1. **Feed the existing freeze.** Thread the real `sessionFeedback`,
-   `weightOverrides` and `blockState` into `bakeMicrocycleStrengthProgression`
-   at `generateProgram.ts:1460`, with `decideBlockBoundaryLoads` deciding
-   retain/rotate/increment. The athlete fixture is already proven
-   (`scripts/probe-block-two.ts`).
-2. **Stop the second derivation** so the resolver does not re-write what the
-   freeze decided — this is Sam's *"do not preserve the projection-time rewrite
-   as the new authority"*.
-3. Drive the real spine end to end, recording A's history through the real
-   session-outcome door rather than writing `sessionFeedback` directly.
-4. Guards, each seen red under mutation. **Then** the registry rows.
-5. Retire the two `variedProgramPersonaTests` cells that assert the retired
-   sibling-transfer behaviour, and say so in the report.
+**SESSION 4 IS THE LAST ONE. Proof only — no new behaviour.**
 
-**Nothing is claimed WORKING. `blockBoundaryProgression.ts` is BUILT — the code
-exists and compiles clean; no guard checks it yet and nothing calls it.** The
-end-to-end proof, the mutation receipts and the 180-world run are all unrun.
-**This branch is not merge-ready and must not be merged.**
+1. `src/__tests__/blockTwoProgressionTests.ts` + a `test:block-two-progression`
+   script, carrying the five guards Sam named:
+   retained → smallest authorised progression · rotated → no inherited load ·
+   no set/rep completion inferred · stored = visible = reloaded ·
+   athlete B without qualifying history receives no progression.
+2. **Each guard seen RED under mutation**, receipts recorded. The two probes
+   already give the expected values, so a guard that cannot go red is an
+   instrument fault, not a pass.
+3. Retire the `variedProgramPersonaTests` sibling-transfer cells **in the same
+   commit as their replacements**, per Sam's instruction, and name them.
+4. Full 394-suite roster + the 180-world run (140 built / 40 refused).
+5. **Only then** the registry rows — the gate ratchets on the UNENFORCED count,
+   so a ruling registered before its guard reddens it.
+
+**STATE: `blockBoundaryProgression.ts` is WORKING at the behaviour level and
+BUILT at the guard level** — the behaviour is measured end to end by two probes
+with a control, and NO committed guard fails if it breaks. That distinction is
+the whole of what session 4 closes.
+
+**This branch is not merge-ready and must not be merged.** The registry ruling
+must not merge without its enforcement guard.
 
 Agent: blocktwo

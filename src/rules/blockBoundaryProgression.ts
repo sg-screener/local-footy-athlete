@@ -88,6 +88,7 @@
 
 import type { Workout, WorkoutExercise } from '../types/domain';
 import type { SessionFeedback } from '../store/programStore';
+import type { FeedbackFeeling, FeedbackSoreness } from '../types/sessionOutcome';
 import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
 import { participatesInCounting } from './sessionRowCounting';
 import { classifyProgressionEligibility } from '../utils/strengthProgressionIntegration';
@@ -175,8 +176,15 @@ export const EMPTY_BLOCK_HISTORY: BlockHistorySignal = {
  * `hard` is a legal, well-recovered session; `very_hard` is the contract's
  * "completed but very hard", which reduces VOLUME and must never buy load.
  */
-const GOOD_RECOVERY_FEELINGS = new Set(['very_easy', 'easy', 'good', 'hard']);
-const GOOD_RECOVERY_SORENESS = new Set(['none', 'mild', 'moderate']);
+/**
+ * TYPED, so that adding a feeling or a soreness level to the vocabulary is a
+ * COMPILE error here rather than a silent "not in the good set" — which would
+ * quietly stop an athlete progressing and look like a rule working.
+ */
+const GOOD_RECOVERY_FEELINGS: ReadonlySet<FeedbackFeeling> =
+  new Set<FeedbackFeeling>(['very_easy', 'easy', 'good', 'hard']);
+const GOOD_RECOVERY_SORENESS: ReadonlySet<FeedbackSoreness> =
+  new Set<FeedbackSoreness>(['none', 'mild', 'moderate']);
 
 function isBarbellRequired(exerciseName: string): boolean {
   const requirement = equipmentRequiredFor(exerciseName);
