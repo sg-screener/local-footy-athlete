@@ -57,3 +57,35 @@ is a scheduler change this mission's boundaries forbid.
 high`. A fixture written with `severe` type-errors but still RUNS under
 sucrase — it silently becomes "not in the good set", which reads as a working
 guard. High is the top of the scale.
+
+## PATH A — MUTATION RUN, 24 MUTATIONS, ALL SEEN RED
+
+Control 52/52 green. Four mutations SURVIVED the first pass and each one named a
+real hole, none of which reading would have found:
+
+**M1 — the contract's own number was decoration.** Raising
+`HARD_BLOCK_MAIN_LIFT_SETS` from 3 to 4 changed nothing. `resolveComposedDose`
+clamps every main lift to three, so the AUTHORED ceiling was doing all the work
+and the constant could never bind. The "Deadlift runs at 3 sets" cell was passing
+for the wrong reason. Closed by a decision-layer cell that hands the rule an
+authored FOUR-set main lift — the only coordinate where the contract's number is
+the binding one, and one generation does not produce.
+
+**M5 — two doors, one fixture.** The fixture answered `very_hard` AND `high`
+together, so deleting either reader left the other carrying the verdict. Closed
+by an effort-only fixture and a soreness-only fixture, plus a cell that an
+ordinary `hard` block does NOT reduce.
+
+**M7 — the deload clamp had no coordinates.** It only bites for an exercise that
+has recorded history AND appears in the deload week, and the generated fixture
+puts `Deadlift` in no week-4 session. Closed by a decision-layer cell.
+
+**M11 — reps added back are invisible against the control.** The comparison is
+"hard block vs well-recovered block"; adding reps to the freeze's already-lowered
+range lands the row exactly ON the control's number and the comparison stays
+silent. Closed by asserting the volume owner moves `prescribedSets` AND NOTHING
+ELSE — which also kills M10 a second way.
+
+**M9 was weak rather than dead.** An accessory sits at the two-set floor already,
+so reducing it and refusing to reduce it produce the same number. The cell now
+asserts NO DECISION EXISTS, not that the number did not move.

@@ -39,7 +39,9 @@ import { resolveWeekWithConditioning, type ScheduleState } from '../utils/sessio
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import {
   applyBlockBoundaryConditioning,
+  applyBlockBoundaryVolume,
   decideBlockBoundaryConditioning,
+  decideBlockBoundaryVolume,
   isLoadExplanationRow,
   isReductionExplanationRow,
   readBlockHistory,
@@ -646,6 +648,160 @@ console.log('\n[10] STORED = VISIBLE = RELOADED');
       && stored.sets === reloadedStored?.sets
       && stored.kg === reloadedStored?.kg,
     `stored ${JSON.stringify(stored)} · visible ${JSON.stringify(visible)} · reloaded ${JSON.stringify(reloadedStored)}`,
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[11] THE DECISION LAYER, WHERE THE PIPELINE CANNOT REACH');
+
+/**
+ * ⚠ EVERY CELL IN THIS SECTION EXISTS BECAUSE A MUTATION SURVIVED THE ONES
+ * ABOVE. They are decision-layer cells and they say so — the pipeline cells are
+ * still the primary proof, and these close the coordinates the pipeline does
+ * not currently produce.
+ */
+function strengthRow(id: string, name: string, sets: number): Record<string, unknown> {
+  return {
+    id,
+    workoutId: 'w-1',
+    exerciseId: id,
+    exerciseOrder: 1,
+    prescribedSets: sets,
+    prescribedRepsMin: 4,
+    prescribedRepsMax: 6,
+    prescribedWeightKg: 100,
+    restSeconds: 120,
+    exercise: { id, name },
+  };
+}
+function strengthWorkout(rows: Record<string, unknown>[]): Workout {
+  return {
+    id: 'w-1',
+    microcycleId: 'mc-1',
+    dayOfWeek: 1,
+    name: 'lower',
+    description: '',
+    durationMinutes: 60,
+    intensity: 'High',
+    workoutType: 'Strength',
+    exercises: rows,
+  } as unknown as Workout;
+}
+
+{
+  // M1 SURVIVED HERE. `HARD_BLOCK_MAIN_LIFT_SETS` never bound in the pipeline:
+  // `resolveComposedDose` clamps every main lift to three, so the authored
+  // ceiling was doing all the work and raising the cap to 4 changed nothing.
+  // A FOUR-SET AUTHORED MAIN LIFT IS THE ONLY COORDINATE WHERE THE CONTRACT'S
+  // OWN NUMBER IS THE BINDING ONE, and generation does not produce it today.
+  const fourSetMain = strengthWorkout([strengthRow('r-main', TRACKED, 4)]);
+  const decisions = decideBlockBoundaryVolume({
+    history: hardHistory,
+    nextBlockWorkouts: [fourSetMain],
+    authoredSetsByRowId: { 'r-main': 4 },
+  });
+  ok(
+    'an AUTHORED four-set main lift is reduced to exactly three',
+    decisions.length === 1
+      && decisions[0].nextSets === CONTRACT_MAIN_LIFT_SETS
+      && decisions[0].kind === 'main_lift_sets_reduced',
+    `got ${JSON.stringify(decisions)}`,
+  );
+  ok(
+    'a well-recovered block leaves the same four-set lift alone',
+    decideBlockBoundaryVolume({
+      history: goodHistory,
+      nextBlockWorkouts: [fourSetMain],
+      authoredSetsByRowId: { 'r-main': 4 },
+    }).length === 0,
+  );
+
+  // M7 SURVIVED HERE. The deload clamp only bites for an exercise that has
+  // RECORDED history AND appears in the deload week, and the generated fixture
+  // happens to place `Deadlift` in no deload session.
+  const deloadRow = strengthWorkout([strengthRow('r-deload', TRACKED, 2)]);
+  const deloadDecisions = decideBlockBoundaryVolume({
+    history: hardHistory,
+    nextBlockWorkouts: [deloadRow],
+    authoredSetsByRowId: { 'r-deload': 2 },
+  });
+  ok(
+    'a lift recorded at FOUR sets is NOT raised to three in a deload week authored at two',
+    deloadDecisions.every((decision) => decision.nextSets <= 2),
+    `got ${JSON.stringify(deloadDecisions)} — the reduction outranked R-034`,
+  );
+
+  // M9 SURVIVED HERE. An accessory sits at the two-set floor already, so
+  // reducing it and refusing to reduce it produce the same number. The
+  // difference is whether a DECISION exists at all.
+  const accessoryOnly = strengthWorkout([strengthRow('r-acc', 'Bicep Curl (Barbell)', 3)]);
+  ok(
+    'an accessory produces NO volume decision, not a decision that happens to be a no-op',
+    decideBlockBoundaryVolume({
+      history: hardHistory,
+      nextBlockWorkouts: [accessoryOnly],
+      authoredSetsByRowId: { 'r-acc': 3 },
+    }).length === 0,
+  );
+
+  // M11 SURVIVED HERE. Comparing the reduced block against the well-recovered
+  // control cannot see reps ADDED BACK to the freeze's already-lowered range —
+  // the row lands exactly on the control's number and the comparison is silent.
+  // The honest assertion is that the volume owner moves ONE field.
+  const before = strengthWorkout([strengthRow('r-only', TRACKED, 4)]);
+  const after = applyBlockBoundaryVolume({
+    workouts: [before],
+    decisions: decideBlockBoundaryVolume({
+      history: hardHistory,
+      nextBlockWorkouts: [before],
+      authoredSetsByRowId: { 'r-only': 4 },
+    }),
+  });
+  const beforeRow = (before.exercises ?? [])[0] as unknown as Record<string, unknown>;
+  const afterRow = (after[0].exercises ?? [])[0] as unknown as Record<string, unknown>;
+  const movedFields = Object.keys({ ...beforeRow, ...afterRow })
+    .filter((key) => beforeRow[key] !== afterRow[key]);
+  ok(
+    'applying a volume decision moves `prescribedSets` AND NOTHING ELSE',
+    movedFields.length === 1 && movedFields[0] === 'prescribedSets',
+    `moved ${JSON.stringify(movedFields)}`,
+  );
+}
+
+{
+  // M5 SURVIVED HERE. The fixture answers `very_hard` AND `high` together, so
+  // deleting either reader leaves the other one carrying the verdict.
+  const sorenessOnly = readBlockHistory({
+    feedbackByDate: block1({ feeling: 'good', soreness: 'high' }),
+    blockStartISO: '2026-07-06',
+    blockEndISO: '2026-08-02',
+    requiredStrengthSessions: 12,
+  });
+  ok(
+    'HIGH SORENESS ALONE reduces — effort is not the only door',
+    sorenessOnly.recoveryVerdict === 'very_hard' && sorenessOnly.reduces,
+    `verdict ${sorenessOnly.recoveryVerdict}`,
+  );
+  const effortOnly = readBlockHistory({
+    feedbackByDate: block1({ feeling: 'very_hard', soreness: 'mild' }),
+    blockStartISO: '2026-07-06',
+    blockEndISO: '2026-08-02',
+    requiredStrengthSessions: 12,
+  });
+  ok(
+    'VERY-HARD EFFORT ALONE reduces — soreness is not the only door',
+    effortOnly.recoveryVerdict === 'very_hard' && effortOnly.reduces,
+    `verdict ${effortOnly.recoveryVerdict}`,
+  );
+  ok(
+    'a `hard` (not very hard) block with mild soreness does NOT reduce',
+    !readBlockHistory({
+      feedbackByDate: block1({ feeling: 'hard', soreness: 'mild' }),
+      blockStartISO: '2026-07-06',
+      blockEndISO: '2026-08-02',
+      requiredStrengthSessions: 12,
+    }).reduces,
+    'the reduction fires on an ordinary hard block — every athlete would be reduced forever',
   );
 }
 
