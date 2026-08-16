@@ -139,6 +139,11 @@ export type DecisionLedgerWriterId =
   | 'reset'
   /** LR-29's undo door — the only writer of `reversal` entries. */
   | 'undo_door'
+  /**
+   * The missed-session commitment question's door — the only writer of
+   * `weekly_commitment_answer` entries (`store/weeklyCommitmentAnswer.ts`).
+   */
+  | 'weekly_commitment_door'
   | 'harness';
 
 export interface DecisionLedgerWriteOutcome {

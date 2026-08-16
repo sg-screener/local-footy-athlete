@@ -2129,3 +2129,88 @@ relaunch, four empty arguments, single owner.
 and the fed `bakeMicrocycleStrengthProgression` call, guarded by
 `test:block-two-progression` cell [8] plus its contradictory-history control.**
 The mutation that restores projection's authority reddens it.
+
+**R-098** · *"Keep meaningful load/intensity and reduce volume first: reduce a
+four-set main lift to three sets; reduce secondary-lift sets where necessary;
+reduce the number of hard conditioning sessions; replace removed hard
+conditioning with easier aerobic work when the weekly conditioning requirement
+still needs to be met."* (Sam, 2026-08-16, approved contract, "Completed but
+very hard") · **AT A BLOCK BOUNDARY, THE CONTRACT'S NUMBER WINS OVER THE
+FREEZE'S.**
+**⚠ THE APP ALREADY REDUCED A VERY-HARD BLOCK, TO THE WRONG NUMBERS.** Measured
+at `6117a9fd`, one athlete, three histories differing only in the recovery
+answers: good → `Deadlift 3 × 4-6 @ 102.5`; **very_hard → `1 × 4-4 @ 100`**;
+very_easy → `4 × 4-6 @ 102.5`. `drop_two` collapsed EVERY strength row to a
+single set and dragged the rep range down with it (`6-10 → 4-8`, `12-15 →
+10-13`). One set is not the contract's number and reps are not on its reduction
+list. The authoring-time freeze remains the IN-BLOCK progression owner; the
+boundary now has the last word on VOLUME exactly as R-096/R-097 gave it the last
+word on LOAD.
+**REPS ARE DELIBERATELY UNTOUCHED.** The contract's reduction list names sets and
+conditioning; restoring the freeze's lowered rep range would be ADDING
+repetitions, which the same instruction forbids.
+**THE REDUCTION'S CEILING IS THE AUTHORED DOSE, SNAPSHOTTED BEFORE THE FREEZE
+RUNS.** Read afterwards it is the collapsed 1, and the `min()` can only return 1
+— measured: exactly ONE lift in the block moved. The same snapshot carries week
+4's already-halved dose, which is what stops the reduction raising a deload and
+undoing R-034.
+**`recoveryGood: false` WAS DOING TWO JOBS** — "they said it was brutal" and
+"they said nothing" — and the contract treats those oppositely.
+`BlockRecoveryVerdict` is three-way; silence HOLDS, only `very_hard` reduces.
+**Search words:** very hard block, completed but very hard, reduce volume, four
+sets to three, secondary sets, drop_two, one set, deload law, authored dose
+snapshot, recovery verdict, low readiness, high soreness.
+· **`WORKING rules/blockBoundaryProgression.ts` —
+`decideBlockBoundaryVolume` / `applyBlockBoundaryVolume` /
+`snapshotAuthoredSets`, and the signed sentence in `rules/projectionCopy.ts`.
+Guarded by `test:block-two-difficult-missed` (86 cells).** Twenty-four mutations
+seen RED, four of which SURVIVED the first pass and named real holes: the
+contract's own cap was DECORATION because `resolveComposedDose` clamps every main
+lift to three; the fixture answered `very_hard` AND `high` together so either
+reader could be deleted; the deload clamp had no coordinates; and reps added back
+land exactly ON the control's number and are invisible to it.
+**⚠ THE CONDITIONING HALF IS UNREACHED BY GENERATION.** 48 worlds swept at
+`6117a9fd` — every world that built carried ONLY `aerobic_base` and `tempo`. The
+replace-hard-with-easy rule is wired into the real path and guarded against
+constructed trees; emitting hard conditioning is a scheduler change and was out
+of scope.
+
+**R-099** · *"One disrupted week does not redesign the program. When the athlete
+completes less than roughly 75 percent of required sessions across the block, ask
+whether the weekly commitment is unrealistic. ... Rebuild only after the athlete
+confirms. Do not shame them, cram missed work into later days or silently reduce
+the plan."* (Sam, 2026-08-16, approved contract, "Missed sessions") · **THE
+QUESTION IS DERIVED; ONLY THE ANSWER IS STORED.**
+The ask is a function of the logged sessions and the commitment the block was
+built on, so storing it would be storing a derivation — `docs/NORTH_STAR.md`'s
+standing refusal. It survives reload by being RECOMPUTED, which is stronger than
+persistence. The ANSWER is an athlete decision and rides the existing decision
+ledger as one appended `weekly_commitment_answer`; **no new persisted key**, so
+`test:persisted-inputs-schema`'s four-class property is untouched.
+**THERE IS NO SEPARATE "ONE DISRUPTED WEEK" RULE.** With the whole block as the
+denominator, one empty week of four is `9/12` — exactly 75%, which is not BELOW
+it. The contract's first sentence is what choosing the block-length denominator
+BUYS. A `disruptedWeeks >= 2` branch would never bind, and a branch that can be
+deleted with no cell moving is decoration.
+**⚠ THE LEGALITY OF A SMALLER COMMITMENT IS GENERATION'S ANSWER, NOT A TABLE.**
+Measured with the production probe over nine worlds: Pre-season `d=3 → []`,
+`d=4 → [3]`, `d=5 → [4,3]`; In-season the same; Off-season `d=3 → [2]`,
+`d=4 → [3,2]`, `d=5 → [3,2]`. **A pre-season or in-season athlete already at
+three has NOTHING legal to offer**, and the honest answer for them is no question
+at all. A phase/gym table in the rule would have had to reproduce four different
+owners' refusals (`main_strength_permitted_minimum`,
+`sprint_high_speed_required_minimum`, `hard_day_permitted_maximum`,
+`required_safe_patterns_present`) and would be wrong the day any of them moved.
+**A DECLINE IS RECORDED, NOT INFERRED FROM ABSENCE.** Absence means "not asked
+yet"; collapsing them is how an app re-asks the same question every redraw.
+**Search words:** missed sessions, attendance, 75 percent, weekly commitment,
+smaller program, one disrupted week, decline, cram, silently reduce, legal
+session counts, commitment fact, rebuild after confirm.
+· **`WORKING rules/weeklyCommitmentQuestion.ts` (derivation),
+`rules/weeklyCommitmentLegality.ts` (the probe that asks generation),
+`store/weeklyCommitmentAnswer.ts` (the door; confirms through the EXISTING
+`commitProfileProgramTransaction`, never a second rebuild path). Guarded by
+`test:block-two-difficult-missed`.** Twenty mutations seen RED; one SURVIVED the
+first pass — the attendance fixtures used only `full` and `skipped`, so a rule
+counting `partial` as attendance had no coordinate to fail on, and `partial` is
+the commonest real answer for exactly this athlete.

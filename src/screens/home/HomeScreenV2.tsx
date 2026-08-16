@@ -35,6 +35,10 @@ import {
 } from '../../utils/mobilityPrehabFlow';
 import { useAthleteContext } from '../../hooks/useSchedule';
 import { spacing, borderRadius } from '../../theme/spacing';
+import {
+  BlockBoundaryNoticeCard,
+  WeeklyCommitmentPromptCard,
+} from './BlockBoundaryCards';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import {
   MONTH_NAMES,
@@ -121,6 +125,11 @@ export default function HomeScreenV2() {
     handleApplyWeekReadiness,
     handleClearWeekReadiness,
     missedSessionPrompt,
+    blockBoundaryNotice,
+    weeklyCommitmentPrompt,
+    handleAcknowledgeBlockBoundaryNotice,
+    handleConfirmWeeklyCommitment,
+    handleDeclineWeeklyCommitment,
     handleLogMissedSession,
     handleSkipMissedSession,
     staleByDate,
@@ -938,6 +947,30 @@ export default function HomeScreenV2() {
               </Text>
             </Card>
           </Pressable>
+        )}
+
+        {/* ── The block boundary explained itself ──
+            Sam's signed sentence, rendered from the STORED decision that
+            produced the prescriptions beside it. Dismissing records that it was
+            read and touches nothing else; the read is on the decision ledger,
+            so the card does not come back after a relaunch. */}
+        {isNormal && blockBoundaryNotice && (
+          <BlockBoundaryNoticeCard
+            notice={blockBoundaryNotice}
+            onAcknowledge={handleAcknowledgeBlockBoundaryNotice}
+          />
+        )}
+
+        {/* ── The missed-session commitment question ──
+            DERIVED from the logged sessions and the commitment the block was
+            built on. Every option shown has been proven buildable by the
+            scheduler. Nothing changes until one is tapped. */}
+        {isNormal && weeklyCommitmentPrompt && (
+          <WeeklyCommitmentPromptCard
+            prompt={weeklyCommitmentPrompt}
+            onConfirm={handleConfirmWeeklyCommitment}
+            onDecline={handleDeclineWeeklyCommitment}
+          />
         )}
 
         {/* ── Missed-session follow-up ── */}

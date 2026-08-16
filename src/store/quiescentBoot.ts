@@ -124,6 +124,14 @@ function replayDates(entry: DecisionLedgerEntry): string[] {
     }
     case 'reversal':
       return [];
+    case 'block_boundary_notice_acknowledged':
+    case 'weekly_commitment_answer':
+      // NO DATE COORDINATE, BECAUSE IT IS NOT A DAY-SCOPED EDIT. The answer's
+      // whole effect is the canonical commitment fact on the PROFILE, which is
+      // persisted in its own store and rebuilt from at boot like every other
+      // profile answer. Replaying it here would re-apply a profile change that
+      // is already applied.
+      return [];
   }
 }
 
@@ -138,6 +146,21 @@ function replayEntry(entry: DecisionLedgerEntry): void {
     // effect is the ENTRY IT REMOVES from the replay set. Deleting this arm
     // would make the switch non-exhaustive; making it throw would turn a
     // filter regression into a bricked boot.
+    return;
+  }
+  if (decision.kind === 'block_boundary_notice_acknowledged') {
+    // NOTHING TO REPLAY. Dismissing a notice is not an edit — it stops a card
+    // being drawn, and the card's own derivation reads this entry back off the
+    // ledger. Replaying it would have nothing to apply.
+    return;
+  }
+  if (decision.kind === 'weekly_commitment_answer') {
+    // NOTHING TO REPLAY, AND THAT IS NOT AN OMISSION.
+    // A confirmation's effect is the commitment fact on the profile; the
+    // profile store persists it and boot builds from it. Re-running anything
+    // here would be a SECOND application of a change that is already durable —
+    // and for a `declined` answer there was never an effect at all, only a
+    // record that the question was put and answered.
     return;
   }
   if (decision.kind === 'migrated_day_placement') {
@@ -444,6 +467,36 @@ export async function rebuildDerivedWorld(): Promise<void> {
     throw new MissingGenerationAnchorError();
   }
   const clock = storeState.hydratedSeasonPhaseClock ?? undefined;
+
+  // ⚠ CAPTURED BEFORE THE CLEAN SLATE, AND THAT POSITION IS THE WHOLE FIX.
+  //
+  // **MEASURED (`test:block-two-boot-preservation`).** Boot regenerated with no
+  // `blockNumber` and no `progressionHistory`, so it authored a fresh BLOCK ONE
+  // against an explicitly empty history. An athlete holding 100 kg on their own
+  // recorded Deadlift came back at 75 — a first-block anchor estimate — their
+  // restored accessory row vanished entirely, the very-hard volume reduction was
+  // undone, and the stored explanation went with it. **The whole block-boundary
+  // layer survived only while the app stayed open.**
+  //
+  // ⚠ **READING THEM AFTER THE CLEAN SLATE WOULD NOT HAVE WORKED, AND A FIRST
+  // ATTEMPT DID EXACTLY THAT.** The slate below sets `blockState: null` — so a
+  // read placed with the `generateProgramLocally` call returns the value boot
+  // itself just erased, and the fix silently does nothing. `sessionFeedback` and
+  // `weightOverrides` are not in the slate and survive it; `blockState` is not.
+  //
+  // This is the shape `utils/weekRebuild.ts` already uses at the rollover: the
+  // caller that owns the grid STATES the inputs. Boot still decides nothing — it
+  // hands generation the same recorded facts the rollover handed it, so the same
+  // inputs author the same block on both paths.
+  const bootProgressionInputs = (() => {
+    const inputs = useProgramStore.getState();
+    return {
+      sessionFeedback: inputs.sessionFeedback ?? {},
+      weightOverrides: inputs.weightOverrides ?? {},
+      blockState: inputs.blockState ?? null,
+    };
+  })();
+
   beginLedgerReplay();
   try {
     // A CLEAN SLATE first: after a real process death the derived surfaces
@@ -483,6 +536,12 @@ export async function rebuildDerivedWorld(): Promise<void> {
       todayISO: generationISO,
       previousProgram: null,
       ...(clock ? { seasonPhaseClock: clock } : {}),
+      // ABSENT BLOCK STATE MEANS BLOCK 1 — the pre-existing default, and the
+      // truthful answer for an athlete who has not crossed a boundary yet.
+      ...(bootProgressionInputs.blockState
+        ? { blockNumber: bootProgressionInputs.blockState.blockNumber }
+        : {}),
+      progressionHistory: bootProgressionInputs,
     });
     deriveBootFixtureMarks(profile, program);
     commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {

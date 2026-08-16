@@ -179,6 +179,29 @@ function getWeekOffset(blockStartDate: string, dateISO: string): number {
   return Math.max(0, Math.floor(daysBetween(blockMonday, dateMonday) / DAYS_PER_WEEK));
 }
 
+/**
+ * THE FOUR-WEEK WINDOW IMMEDIATELY BEFORE `blockStartISO`.
+ *
+ * ⚠ **ONE OWNER, AND IT USED TO BE TWO.** `generateProgramLocally` carried a
+ * private copy for the block-boundary progression read, and the missed-session
+ * question needs the same window to count attendance. Two copies of a date
+ * calculation are two answers to "which block just ended", and the boundary
+ * decision and the attendance question MUST read the same one — otherwise an
+ * athlete can be progressed off one window and questioned off another.
+ */
+export function previousBlockBoundsISO(
+  blockStartISO: string,
+): { startISO: string; endISO: string } {
+  const start = new Date(`${blockStartISO}T12:00:00`);
+  const previousEnd = new Date(start);
+  previousEnd.setDate(previousEnd.getDate() - 1);
+  const previousStart = new Date(previousEnd);
+  previousStart.setDate(previousStart.getDate() - (WEEKS_PER_BLOCK * 7 - 1));
+  const iso = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { startISO: iso(previousStart), endISO: iso(previousEnd) };
+}
+
 export function getWeekInBlock(blockStartDate: string, dateISO: string): number {
   return resolveBlockGridPosition({ blockStartDate, blockNumber: 1 }, dateISO).weekInBlock;
 }
