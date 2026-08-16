@@ -751,6 +751,22 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // **AND HARD WORK IS NEVER ADDED IN LOW READINESS, IN ANY PHASE.** The Block
   // Two contract: *"Do not add sessions or load in this state."* Reducing the
   // week is the readiness owner's job; this is only the refusal to ADD.
+  //
+  // ⚠ **THIS CLAUSE IS DEFENCE IN DEPTH AND IT SURVIVES ITS OWN MUTATION — SAID
+  // OUT LOUD RATHER THAN CLAIMED AS A RECEIPT.** Deleting
+  // `!inputs.readiness.lowReadiness` and sweeping 47 built low-readiness worlds
+  // (3 phases x 3 gym-day sets x club/no-club x game/bye x severity 4 and 8)
+  // produced **0 worlds carrying hard conditioning**: the readiness owner
+  // upstream already strips it. So no cell can red on this line, and by the
+  // repo's own rule an unreachable gate is decoration.
+  //
+  // It is KEPT for the same reason `materialiseAuthoredSessions` re-refuses
+  // G-2 lower power that the scheduler no longer requests: *"a specialist that
+  // would happily serve an illegal request is one caller away from serving it
+  // again."* The difference from decoration is that this is a deliberate second
+  // refusal at a different owner, measured and documented, not a gate nobody
+  // argued for. **If the readiness owner's behaviour ever changes, this is the
+  // line that stops hard work being ADDED to a cooked athlete.**
   const weekAllowsHard =
     (!overlay.hardConditioning.requiresNoGameWeek || inputs.gameDay === null)
     && !inputs.readiness.lowReadiness;

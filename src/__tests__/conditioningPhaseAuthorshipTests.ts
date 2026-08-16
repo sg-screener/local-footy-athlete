@@ -87,6 +87,8 @@ function build(args: {
   clubNights?: string[];
   gameDay?: string | null;
   equipment?: string[];
+  /** Drives the same typed fatigue constraint the app's own readiness door writes. */
+  lowReadiness?: boolean;
 }): Built {
   const profile = {
     trainingLocation: 'Commercial gym',
@@ -106,6 +108,25 @@ function build(args: {
       blockNumber: 1,
       microcycleLimit: 1,
       seasonPhaseClock: clockAtPhaseWeek(args.phase, args.phaseWeek),
+      // ⚠ **THROUGH THE REAL DOOR — an `activeConstraints` fatigue declaration.**
+      // Passing a ready-made `generationConstraints` object does NOT work:
+      // `buildGeneratedMicrocycles` branches on `args.activeConstraints` being
+      // truthy and `generateProgramLocally` defaults it to `[]`, which IS
+      // truthy — so a hand-built `generationConstraints` is silently discarded
+      // and the athlete looks perfectly fresh. Measured: `lowReadiness=false,
+      // gcReadiness=null`. Recorded in STATUS_CONDITIONING; not fixed here.
+      ...(args.lowReadiness
+        ? {
+          activeConstraints: [{
+            id: 'wc136-readiness',
+            type: 'fatigue',
+            severity: 8,
+            reasonLabel: 'Absolutely cooked',
+            startDate: WEEK_MONDAY,
+            expiresAt: '2026-07-19',
+          }],
+        }
+        : {}),
     } as never);
     const week = program.microcycles?.[0]?.workouts ?? [];
     const exposures: Exposure[] = [];
@@ -222,32 +243,91 @@ const preseasonNoClub = build({
 ok('[non-vacuity] the pre-season no-club week BUILDS and DOES author a hard session',
   preseasonNoClub.built && preseasonNoClub.exposures.some((e) => e.hard),
   preseasonNoClub.refusal ?? JSON.stringify(preseasonNoClub.exposures));
+// ⚠ **ONE WORLD COULD NOT REACH THIS GATE AND THE MUTATION PROVED IT.** With a
+// Saturday fixture the conditioning days are chosen earliest-first, and the
+// earliest days are the FURTHEST from the game — so deleting the 48-hour rule
+// changed nothing and the cell stayed green. A MIDWEEK fixture is what puts a
+// conditioning day inside the window, so the claim is swept over fixture days
+// rather than asserted on one convenient week.
+const FIXTURE_SWEEP: Array<{ gymDays: string[]; gameDay: string }> = [];
+for (const gymDays of [
+  ['Monday', 'Wednesday', 'Friday'],
+  ['Monday', 'Wednesday', 'Thursday', 'Friday'],
+  ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+  ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+]) {
+  for (const gameDay of ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday']) {
+    FIXTURE_SWEEP.push({ gymDays, gameDay });
+  }
+}
+const sweepBreaches: string[] = [];
+let sweepBuilt = 0;
+let sweepHardSeen = 0;
+let sweepInWindow = 0;
+for (const world of FIXTURE_SWEEP) {
+  for (const phase of ['Pre-season', 'Off-season']) {
+    const w = build({
+      phase, phaseWeek: 6, gymDays: world.gymDays, clubNights: [], gameDay: world.gameDay,
+    });
+    if (!w.built) continue;
+    sweepBuilt += 1;
+    for (const e of w.exposures) {
+      const off = gOffset(e.dayOfWeek, w.gameDay);
+      const insideWindow = off !== null && off >= -2 && off <= 1;
+      if (insideWindow) sweepInWindow += 1;
+      if (e.hard) sweepHardSeen += 1;
+      if (e.hard && insideWindow) {
+        sweepBreaches.push(`${phase}/${world.gymDays.length}d/game=${world.gameDay}`
+          + ` day=${e.dayOfWeek} gOffset=${off} ${e.category}`);
+      }
+    }
+  }
+}
+ok('[48h non-vacuity] the sweep built worlds, saw hard sessions AND saw exposures '
+  + 'inside the 48-hour window — so the gate is reachable',
+  sweepBuilt >= 20 && sweepHardSeen >= 10 && sweepInWindow >= 1,
+  `built=${sweepBuilt} hard=${sweepHardSeen} inWindow=${sweepInWindow}`);
 ok('[48h] no hard conditioning within 48 hours of the game (G-2, G-1, G, G+1)',
-  preseasonNoClub.exposures.filter((e) => e.hard).every((e) => {
-    const off = gOffset(e.dayOfWeek, preseasonNoClub.gameDay);
-    return off !== null && off <= -3;
-  }),
-  preseasonNoClub.exposures.filter((e) => e.hard)
-    .map((e) => `day=${e.dayOfWeek} gOffset=${gOffset(e.dayOfWeek, preseasonNoClub.gameDay)}`).join(', '));
+  sweepBreaches.length === 0,
+  `${sweepBreaches.length} breaches: ${sweepBreaches.slice(0, 6).join(' | ')}`);
 
+// ⚠ **THE WORLD HAS TO HAVE BUDGET LEFT OR THE RULE IS UNREACHABLE.** My first
+// version used two club nights AND a fixture, which spends the whole minimum on
+// anchors: the budget is zero, no day gets conditioning, and the cell passes
+// whether or not the club-night rule exists. Deleting the rule reddened NOTHING.
+// ONE club night and no fixture leaves budget to misplace.
 const preseasonTwoClub = build({
   phase: 'Pre-season', phaseWeek: 3,
   gymDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-  clubNights: ['Tuesday', 'Thursday'],
-  gameDay: 'Saturday',
+  clubNights: ['Tuesday'],
+  gameDay: null,
 });
-ok('[non-vacuity] the two-club pre-season week BUILDS and has two club nights',
-  preseasonTwoClub.built && preseasonTwoClub.clubNights.length === 2,
-  preseasonTwoClub.refusal);
+ok('[non-vacuity] the club-night world BUILDS, trains on its club night, and has budget',
+  preseasonTwoClub.built
+  && preseasonTwoClub.clubNights.length === 1
+  && preseasonTwoClub.strengthDays.includes(preseasonTwoClub.clubNights[0])
+  && preseasonTwoClub.exposures.length > 0,
+  preseasonTwoClub.refusal
+  ?? `club=${JSON.stringify(preseasonTwoClub.clubNights)} strength=${JSON.stringify(
+    preseasonTwoClub.strengthDays)} exposures=${preseasonTwoClub.exposures.length}`);
 ok('[club nights] the app never adds conditioning on a club-training day',
   preseasonTwoClub.exposures.every((e) => !preseasonTwoClub.clubNights.includes(e.dayOfWeek)),
   `club=${JSON.stringify(preseasonTwoClub.clubNights)} exposures=${JSON.stringify(
     preseasonTwoClub.exposures.map((e) => e.dayOfWeek))}`);
 
 // ── THE ANCHOR CREDIT IS SPENT FIRST ───────────────────────────────────────
-ok('[anchor credit] more club nights means FEWER app-authored exposures',
-  preseasonTwoClub.exposures.length < preseasonNoClub.exposures.length,
-  `noclub=${preseasonNoClub.exposures.length} twoclub=${preseasonTwoClub.exposures.length}`);
+const preseasonAnchorHeavy = build({
+  phase: 'Pre-season', phaseWeek: 3,
+  gymDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+  clubNights: ['Tuesday', 'Thursday'],
+  gameDay: 'Saturday',
+});
+ok('[non-vacuity] the anchor-heavy week BUILDS with two club nights and a fixture',
+  preseasonAnchorHeavy.built && preseasonAnchorHeavy.clubNights.length === 2,
+  preseasonAnchorHeavy.refusal);
+ok('[anchor credit] more anchors means FEWER app-authored exposures',
+  preseasonAnchorHeavy.exposures.length < preseasonNoClub.exposures.length,
+  `noclub=${preseasonNoClub.exposures.length} anchorheavy=${preseasonAnchorHeavy.exposures.length}`);
 
 // ── LOWER DAYS STAY OFF-LEG ────────────────────────────────────────────────
 // ⚠ ONE CLUB NIGHT, NOT ZERO. An athlete with NO club AND NO fixture has no
@@ -265,6 +345,68 @@ ok('[WC-115] every conditioning exposure that rides a LOWER strength day is off-
   offLegWorld.exposures.filter((e) => e.combined && e.offFeet !== undefined)
     .every((e) => e.category !== 'sprint' || !e.combined),
   JSON.stringify(offLegWorld.exposures));
+
+// ── WC-060: THE SHORTFALL LEAVES THE GYM DAYS WHEN IT MUST ────────────────
+//
+// TWO gym days that are BOTH club nights, no fixture. Every gym day is barred
+// from carrying app conditioning (correctly), the two club nights supply two
+// exposures against a minimum of three, and the only legal answer is a
+// standalone equipment-free exposure on a day the athlete does not lift.
+// **This exact shape refused for 8 worlds before WC-060's own "or conditioning"
+// clause was honoured.**
+const bothGymDaysAreClubNights = build({
+  phase: 'Pre-season', phaseWeek: 6,
+  gymDays: ['Tuesday', 'Thursday'],
+  clubNights: ['Tuesday', 'Thursday'],
+  gameDay: null,
+});
+// ⚠ ASSERTED ON THE GYM DAYS THE ATHLETE ASKED FOR, not on `strengthDays` —
+// that field counts any day carrying rows, and the standalone conditioning this
+// very cell is about carries rows, so it reported Mon and Fri as "strength" and
+// made the non-vacuity claim false about its own success.
+const CLUB_GYM_DAYS = [DAY_NUM.Tuesday, DAY_NUM.Thursday];
+ok('[WC-060 non-vacuity] every gym day IS a club night in this world',
+  bothGymDaysAreClubNights.built
+  && CLUB_GYM_DAYS.every((d) => bothGymDaysAreClubNights.clubNights.includes(d)),
+  bothGymDaysAreClubNights.refusal
+  ?? `gym=${JSON.stringify(CLUB_GYM_DAYS)} `
+  + `club=${JSON.stringify(bothGymDaysAreClubNights.clubNights)}`);
+ok('[WC-060] the week still BUILDS — the shortfall is placed off the gym days',
+  bothGymDaysAreClubNights.built, bothGymDaysAreClubNights.refusal);
+ok('[WC-060] ...and that exposure is OUTSIDE the gym days entirely',
+  bothGymDaysAreClubNights.exposures.length > 0
+  && bothGymDaysAreClubNights.exposures.every((e) => !CLUB_GYM_DAYS.includes(e.dayOfWeek)),
+  JSON.stringify(bothGymDaysAreClubNights.exposures));
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n[the readiness floor — Block Two, defence in depth]');
+// ═══════════════════════════════════════════════════════════════════════════
+
+// The SAME athlete and the SAME week, once healthy and once cooked.
+//
+// ⚠ **THESE CELLS DO NOT RED WHEN THE SCHEDULER'S OWN READINESS CLAUSE IS
+// DELETED** — measured, 47 low-readiness worlds, 0 carrying hard conditioning
+// without it, because the readiness owner upstream already strips it. They are
+// kept as a BEHAVIOURAL statement of the Block Two rule, not as a receipt for
+// that one line. The line's own status is documented where it lives.
+const HARD_WORLD = {
+  phase: 'Pre-season', phaseWeek: 6,
+  gymDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+  clubNights: [] as string[], gameDay: 'Saturday',
+};
+const healthyWeek = build(HARD_WORLD);
+const lowRecoveryWeek = build({ ...HARD_WORLD, lowReadiness: true });
+ok('[readiness non-vacuity] the healthy week BUILDS and DOES author a hard session',
+  healthyWeek.built && healthyWeek.exposures.some((e) => e.hard),
+  healthyWeek.refusal ?? JSON.stringify(healthyWeek.exposures));
+ok('[readiness non-vacuity] the low-recovery week still BUILDS',
+  lowRecoveryWeek.built, lowRecoveryWeek.refusal);
+ok('[readiness] low recovery carries NO hard conditioning — same athlete, one flag',
+  lowRecoveryWeek.exposures.every((e) => !e.hard),
+  JSON.stringify(lowRecoveryWeek.exposures));
+ok('[readiness] ...and the required conditioning is NOT deleted with it — a '
+  + 'difficult quality is made achievable, never abandoned',
+  lowRecoveryWeek.exposures.length > 0, JSON.stringify(lowRecoveryWeek.exposures));
 
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n[the off-season progression]');
