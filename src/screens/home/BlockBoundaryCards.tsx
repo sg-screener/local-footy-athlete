@@ -18,6 +18,7 @@ import { Card } from '../../components/ui';
 import { spacing } from '../../theme/spacing';
 import type {
   BlockBoundaryNoticeModel,
+  ExtraSessionOfferModel,
   WeeklyCommitmentPromptModel,
 } from './useBlockBoundaryPrompts';
 
@@ -126,6 +127,52 @@ export function WeeklyCommitmentPromptCard({ prompt, onConfirm, onDecline }: {
         <ChoiceChip
           testID="home-weekly-commitment-decline"
           label="Keep it as is"
+          onPress={onDecline}
+        />
+      </View>
+    </Card>
+  );
+}
+
+
+/**
+ * THE EXTRA-SESSION OFFER.
+ *
+ * ⚠ **TWO BUTTONS, ALWAYS, AND NEITHER OF THEM CHANGES ANYTHING BY ITSELF.**
+ * The contract's *"Do not silently add a session"* is why this is a card with a
+ * question and not a notice about something already done: `onAccept` goes
+ * through the same commitment door the shrinking answer uses, and `onDecline`
+ * writes one ledger entry and touches no program state at all.
+ *
+ * Every string is signed and arrives already rendered; this component cannot
+ * reword the offer or invent a third choice.
+ */
+export function ExtraSessionOfferCard({ model, onAccept, onDecline }: {
+  model: ExtraSessionOfferModel;
+  onAccept: (sessionsPerWeek: number) => void | Promise<void>;
+  onDecline: () => void;
+}) {
+  return (
+    <Card
+      tone="outline"
+      padding="md"
+      radius="lg"
+      style={styles.card}
+      testID="home-extra-session-offer"
+    >
+      <Text style={styles.body} testID="home-extra-session-offer-sentence">
+        {String(model.sentence)}
+      </Text>
+      <View style={styles.actions}>
+        <ChoiceChip
+          testID="home-extra-session-accept"
+          label={String(model.acceptLabel)}
+          primary
+          onPress={() => { void onAccept(model.offer.offeredSessionsPerWeek); }}
+        />
+        <ChoiceChip
+          testID="home-extra-session-decline"
+          label={String(model.declineLabel)}
           onPress={onDecline}
         />
       </View>

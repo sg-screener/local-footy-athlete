@@ -31,9 +31,16 @@ import type { SessionFeedback } from '../../store/programStore';
 import type { DecisionLedgerEntry } from '../../types/decisionLedger';
 import {
   isReductionExplanationRow,
+  readBlockHistory,
   type BlockBoundaryReductionExplanationRow,
 } from '../../rules/blockBoundaryProgression';
 import {
+  availableTrainingDays,
+  decideExtraSessionOffer,
+  type ExtraSessionOffer,
+} from '../../rules/extraSessionOffer';
+import {
+  commitmentPatchFor,
   decideWeeklyCommitmentQuestion,
   readBlockAttendance,
   type WeeklyCommitmentQuestion,
@@ -42,6 +49,9 @@ import { commitmentLegalityProbe } from '../../rules/weeklyCommitmentLegality';
 import { previousBlockBoundsISO, WEEKS_PER_BLOCK } from '../../utils/programBlockState';
 import {
   blockBoundaryReducedSentence,
+  extraSessionOfferAcceptLabel,
+  extraSessionOfferDeclineLabel,
+  extraSessionOfferSentence,
   missedSessionCommitmentOptionLabel,
   missedSessionCommitmentQuestionSentence,
 } from '../../rules/projectionCopy';
@@ -61,9 +71,23 @@ export interface WeeklyCommitmentPromptModel {
   options: readonly { sessionsPerWeek: number; label: SignedCopy }[];
 }
 
+/**
+ * THE EXTRA-SESSION OFFER, READY TO DRAW.
+ *
+ * Every word is signed and the count has been proven buildable by generation, so
+ * the card cannot offer a week the app would then refuse.
+ */
+export interface ExtraSessionOfferModel {
+  offer: ExtraSessionOffer;
+  sentence: SignedCopy;
+  acceptLabel: SignedCopy;
+  declineLabel: SignedCopy;
+}
+
 export interface BlockBoundaryPrompts {
   notice: BlockBoundaryNoticeModel | null;
   commitment: WeeklyCommitmentPromptModel | null;
+  extraSession: ExtraSessionOfferModel | null;
 }
 
 export interface BlockBoundaryPromptInputs {
@@ -94,6 +118,88 @@ export function deriveBlockBoundaryPrompts(
     commitment: deriveCommitment({
       blockNumber, blockStartISO, sessionFeedback, onboardingData, ledgerEntries,
     }),
+    extraSession: deriveExtraSession({
+      currentProgram, blockNumber, blockStartISO, sessionFeedback,
+      onboardingData, ledgerEntries, weekOrder: input.weekOrder,
+    }),
+  };
+}
+
+/**
+ * THE THIRD RUNG'S CARD.
+ *
+ * ⚠ **THE ATTENDANCE QUESTION AND THIS ONE CANNOT BOTH APPEAR.** That one fires
+ * below 75% completion, this one requires `history.qualifies`, which requires at
+ * or above it. They share the `weekly_commitment_answer` ledger entry precisely
+ * because they are two directions of one question.
+ */
+function deriveExtraSession(args: {
+  currentProgram: TrainingProgram | null | undefined;
+  blockNumber: number | null | undefined;
+  blockStartISO: string | null | undefined;
+  sessionFeedback: Readonly<Record<string, SessionFeedback>>;
+  onboardingData: OnboardingData | null | undefined;
+  ledgerEntries: readonly DecisionLedgerEntry[];
+  weekOrder: readonly DayOfWeek[];
+}): ExtraSessionOfferModel | null {
+  const {
+    currentProgram, blockNumber, blockStartISO, sessionFeedback,
+    onboardingData, ledgerEntries, weekOrder,
+  } = args;
+  if (!onboardingData || !currentProgram) return null;
+  if (typeof blockNumber !== 'number' || !blockStartISO) return null;
+  // BLOCK 1 HAS NO PREVIOUS BLOCK TO HAVE FOUND EASY.
+  if (blockNumber < 2) return null;
+
+  const currentSessionsPerWeek = onboardingData.trainingDaysPerWeek ?? 0;
+  if (!(currentSessionsPerWeek > 0)) return null;
+
+  // ⚠ THE SAME WINDOW THE BOUNDARY DECISION READ — `previousBlockBoundsISO` has
+  // one owner so an athlete progressed off one window and offered off another is
+  // not being told two stories about the same four weeks.
+  const previous = previousBlockBoundsISO(blockStartISO);
+  const history = readBlockHistory({
+    feedbackByDate: sessionFeedback,
+    blockStartISO: previous.startISO,
+    blockEndISO: previous.endISO,
+    requiredStrengthSessions: currentSessionsPerWeek * WEEKS_PER_BLOCK,
+  });
+
+  // ⚠ **AVAILABILITY IS READ INSIDE THE CLOSURES, NOT BEFORE THEM.**
+  // `test:block-two-screen-delivery` holds a real cost property — *"an athlete
+  // who was never going to be asked must not pay for the legality probe"* — and
+  // its instrument counts reads of the profile's `preferredTrainingDays`.
+  // Computing the free days up here read that field for every athlete on every
+  // redraw, including the ones the very first gate refuses, and reddened two of
+  // its cells. Both of these are closures: nothing runs until the gates pass.
+  const outcome = decideExtraSessionOffer({
+    history,
+    forBlockNumber: blockNumber - 1,
+    profile: onboardingData,
+    weekOrder,
+    ledgerEntries,
+    isCommitmentLegal: (sessionsPerWeek) => commitmentLegalityProbe({
+      profile: onboardingData,
+      blockStartISO,
+      blockNumber,
+      weekOrder,
+      availableDays: availableTrainingDays({ profile: onboardingData, weekOrder }),
+    })(sessionsPerWeek),
+    currentSessionsPerWeek,
+    patchFor: (sessionsPerWeek) => commitmentPatchFor({
+      profile: onboardingData,
+      sessionsPerWeek,
+      weekOrder,
+      availableDays: availableTrainingDays({ profile: onboardingData, weekOrder }),
+    }),
+  });
+  if (!outcome.offer) return null;
+
+  return {
+    offer: outcome.question,
+    sentence: extraSessionOfferSentence(outcome.question),
+    acceptLabel: extraSessionOfferAcceptLabel(),
+    declineLabel: extraSessionOfferDeclineLabel(),
   };
 }
 

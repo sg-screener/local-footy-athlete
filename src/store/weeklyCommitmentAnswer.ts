@@ -40,6 +40,12 @@ import { commitmentPatchFor } from '../rules/weeklyCommitmentQuestion';
 import { DAYS_OF_WEEK } from '../rules/gameAnchor';
 
 export const WEEKLY_COMMITMENT_SOURCE_SURFACE = 'missed_session_commitment_question';
+/**
+ * The GROWING direction's surface. Same door, same transaction, same ledger
+ * entry — a different surface name, so the receipt says which card the athlete
+ * actually tapped.
+ */
+export const EXTRA_SESSION_SOURCE_SURFACE = 'extra_session_offer';
 
 export interface ConfirmWeeklyCommitmentResult extends ProfileProgramTransactionResult {
   /** The commitment that was written, absent when nothing was. */
@@ -53,18 +59,27 @@ export async function confirmWeeklyCommitment(args: {
   todayISO: string;
   weekOrder?: readonly DayOfWeek[];
   expectedAcceptedRevision?: number;
+  /**
+   * The days the athlete could train and has not committed. Present only when
+   * the answer GROWS the commitment; `commitmentPatchFor` ignores it otherwise,
+   * so the missed-session caller is unaffected by not passing it.
+   */
+  availableDays?: readonly DayOfWeek[];
+  /** Which card was tapped. Defaults to the missed-session question. */
+  sourceSurface?: string;
 }): Promise<ConfirmWeeklyCommitmentResult> {
   const { forBlockNumber, sessionsPerWeek, profile, todayISO } = args;
   const patch = commitmentPatchFor({
     profile,
     sessionsPerWeek,
     weekOrder: args.weekOrder ?? DAYS_OF_WEEK,
+    ...(args.availableDays !== undefined ? { availableDays: args.availableDays } : {}),
   });
 
   const outcome = await commitProfileProgramTransaction({
     change: { kind: 'profile_setup', patch },
     todayISO,
-    sourceSurface: WEEKLY_COMMITMENT_SOURCE_SURFACE,
+    sourceSurface: args.sourceSurface ?? WEEKLY_COMMITMENT_SOURCE_SURFACE,
     ...(args.expectedAcceptedRevision !== undefined
       ? { expectedAcceptedRevision: args.expectedAcceptedRevision }
       : {}),

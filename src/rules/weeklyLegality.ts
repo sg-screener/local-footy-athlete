@@ -325,8 +325,15 @@ export const WEEK_LEGALITY_RULES: readonly WeekLegalityRule[] = [
   },
 ];
 
-/** §3 Session size: *"16 is a hard ceiling"*. */
-const SET_CEILING = 16;
+/**
+ * §3 Session size: *"16 is a hard ceiling"*.
+ *
+ * EXPORTED 2026-08-16 so the block-boundary set ladder spends THIS number rather
+ * than declaring a second 16. Two constants holding one ceiling is how they come
+ * to disagree, and the boundary is the only other place in the app that adds a
+ * main/secondary set.
+ */
+export const SET_CEILING = 16;
 /** §2 / the layout rows: no phase requires a fifth strength session. */
 const REQUIRED_STRENGTH_CEILING = 4;
 /** WC-133: pre-season carries *"no more than two lower sessions"*. */

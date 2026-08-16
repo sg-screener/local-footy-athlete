@@ -89,6 +89,9 @@ export const BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID = 'blockBoundary.hardBloc
 export const MISSED_SESSION_COMMITMENT_QUESTION_COPY_ID = 'blockBoundary.commitmentQuestion';
 export const MISSED_SESSION_COMMITMENT_OPTION_COPY_ID = 'blockBoundary.commitmentOption';
 export const MISSED_SESSION_COMMITMENT_OPTION_ONE_COPY_ID = 'blockBoundary.commitmentOptionOne';
+export const EXTRA_SESSION_OFFER_COPY_ID = 'blockBoundary.extraSessionOffer';
+export const EXTRA_SESSION_OFFER_ACCEPT_COPY_ID = 'blockBoundary.extraSessionAccept';
+export const EXTRA_SESSION_OFFER_DECLINE_COPY_ID = 'blockBoundary.extraSessionDecline';
 
 const EXERCISE_NAME_PREFIX = 'exercise.name.';
 const EXERCISE_CUE_PREFIX = 'exercise.cue.';
@@ -228,6 +231,39 @@ export function registerProjectionCopy(): void {
         + 'reading "1 sessions a week" is an option that lies, and one session '
         + 'a week is a legal answer for an athlete who has been completing none.',
       text: '{count} session a week',
+    },
+    // ── THE EXTRA-SESSION OFFER — SIGNED, and the words are the ORDER'S. ──
+    //
+    // Sam's instruction for this unit gives the sentence and both buttons
+    // verbatim, so nothing here is proposed. It is registered rather than
+    // inlined for the same reason every other athlete sentence is: a surface
+    // that builds this string itself is a surface authoring words.
+    //
+    // ⚠ IT OFFERS; IT DOES NOT ANNOUNCE. The contract's *"Do not silently add a
+    // session"* is why the sentence ends in a question mark and why the card
+    // cannot render without two buttons beside it.
+    {
+      id: EXTRA_SESSION_OFFER_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-16, given verbatim in the Block Two '
+        + 'progression-ladder order. Rendered only from a DERIVED '
+        + '`ExtraSessionOffer` whose legality was proven by generation. '
+        + 'Guard: test:block-two-ladder.',
+      text: 'You\u2019ve been completing your training consistently and recovering '
+        + 'well. Your schedule allows another session. Would you like to add one '
+        + 'session each week?',
+    },
+    {
+      id: EXTRA_SESSION_OFFER_ACCEPT_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-16, verbatim button label.',
+      text: 'Add one session',
+    },
+    {
+      id: EXTRA_SESSION_OFFER_DECLINE_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-16, verbatim button label.',
+      text: 'Keep my current schedule',
     },
     // ── The conditioning warm-up sentence — SIGNED, Sam 2026-08-05. ──
     // Imported from the emitter rather than transcribed, the same shape
@@ -1015,6 +1051,30 @@ export function missedSessionCommitmentOptionLabel(count: number): SignedCopy {
       : MISSED_SESSION_COMMITMENT_OPTION_COPY_ID,
     { count },
   );
+}
+
+/**
+ * THE EXTRA-SESSION OFFER AS THE ATHLETE READS IT.
+ *
+ * Takes the derived offer rather than no argument at all, so a surface cannot
+ * render Sam's *"your schedule allows another session"* in a world where the
+ * legality probe never said it did.
+ */
+export function extraSessionOfferSentence(
+  _offer: import('./extraSessionOffer').ExtraSessionOffer,
+): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(EXTRA_SESSION_OFFER_COPY_ID);
+}
+
+export function extraSessionOfferAcceptLabel(): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(EXTRA_SESSION_OFFER_ACCEPT_COPY_ID);
+}
+
+export function extraSessionOfferDeclineLabel(): SignedCopy {
+  registerProjectionCopy();
+  return signedCopy(EXTRA_SESSION_OFFER_DECLINE_COPY_ID);
 }
 
 export function blockBoundaryReducedSentence(
