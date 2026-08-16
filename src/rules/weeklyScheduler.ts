@@ -49,6 +49,7 @@ import {
   type SetBudget,
 } from './weeklyProgrammingContract';
 import { firstLegalityViolation, firstWeekLegalityViolation } from './weeklyLegality';
+import type { WeekKind } from '../types/domain';
 
 // ─── INPUTS ────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,14 @@ export interface WeeklySchedulerInputs {
    * absence must not silently delete a required exposure.
    */
   readonly miniCycleNumber?: number | null;
+  /**
+   * WC-136. Is this a SCHEDULED deload week? Distinct from
+   * `readiness.lowReadiness`, which is the athlete DECLARING they are cooked.
+   * Absence means `'build'` — the ordinary state, and the safe read, because
+   * treating an unknown week as a deload would silently delete a required
+   * exposure the phase asked for.
+   */
+  readonly weekKind?: WeekKind | null;
 }
 
 // ─── OUTPUT ────────────────────────────────────────────────────────────────
@@ -752,24 +761,31 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // Two contract: *"Do not add sessions or load in this state."* Reducing the
   // week is the readiness owner's job; this is only the refusal to ADD.
   //
-  // ⚠ **THIS CLAUSE IS DEFENCE IN DEPTH AND IT SURVIVES ITS OWN MUTATION — SAID
-  // OUT LOUD RATHER THAN CLAIMED AS A RECEIPT.** Deleting
-  // `!inputs.readiness.lowReadiness` and sweeping 47 built low-readiness worlds
-  // (3 phases x 3 gym-day sets x club/no-club x game/bye x severity 4 and 8)
-  // produced **0 worlds carrying hard conditioning**: the readiness owner
-  // upstream already strips it. So no cell can red on this line, and by the
-  // repo's own rule an unreachable gate is decoration.
+  // ⚠ **A REDUCED WEEK IS A REDUCED WEEK, WHICHEVER WAY IT GOT THERE — AND THE
+  // SCHEDULED DELOAD IS THE HALF THAT WAS MISSING.**
   //
-  // It is KEPT for the same reason `materialiseAuthoredSessions` re-refuses
-  // G-2 lower power that the scheduler no longer requests: *"a specialist that
-  // would happily serve an illegal request is one caller away from serving it
-  // again."* The difference from decoration is that this is a deliberate second
-  // refusal at a different owner, measured and documented, not a gate nobody
-  // argued for. **If the readiness owner's behaviour ever changes, this is the
-  // line that stops hard work being ADDED to a cooked athlete.**
+  // The first version gated only on `readiness.lowReadiness`, the athlete's own
+  // declaration. That left the SCHEDULED block deload — every fourth week —
+  // authoring a hard session, and the deload machinery downstream then stripped
+  // it. The scheduler's demand still counted it, so §18 saw a week that owed 4
+  // conditioning exposures and delivered 3 and raised
+  // `unresolvedPlannerSelectedShortfall: 1`. Measured on
+  // `Pre-season/6 gym days/club Tue+Thu/no fixture`: weeks 1-3 clean, **week 4
+  // short by exactly one — the hard one.**
+  //
+  // The honest fix is at THIS producer, not at §18: a deload week must never be
+  // AUTHORED a hard exposure in the first place, so nothing downstream has to
+  // remove one. §8's deload is a reduction, and adding the week's hardest
+  // session to it was never the contract's intent.
+  //
+  // **AND THIS IS NOW ONE AUTHORITY, NOT TWO.** The `lowReadiness` half is no
+  // longer a redundant second refusal sitting behind an owner that already did
+  // the job — it is one arm of the single question *"is this a week we may add
+  // hard work to?"*, and the `weekKind` arm is reachable and mutation-visible.
+  const weekIsReduced = inputs.weekKind === 'deload' || inputs.readiness.lowReadiness;
   const weekAllowsHard =
     (!overlay.hardConditioning.requiresNoGameWeek || inputs.gameDay === null)
-    && !inputs.readiness.lowReadiness;
+    && !weekIsReduced;
   const hardQuality = weekAllowsHard
     ? hardConditioningQualityFor(overlay, inputs.miniCycleNumber)
     : null;
