@@ -309,6 +309,100 @@ not the scheduler.
   `test:block-two-extra-session`, `test:section18-planner` produce **no totals
   line on base either** — they die at import. Not run, not mine, not fixed.
 
+---
+
+## SESSION 3 — THE §18 RED IS CLOSED. TWO ITEMS ARE NOT DONE.
+
+### Item 1 — DONE, diagnosed at the producer
+
+Contract for `Pre-season / 6 gym days / club Tue+Thu / no fixture`:
+
+| tree | week | categories | achieved | shortfall |
+| --- | --- | --- | ---: | ---: |
+| base | 1–4 | `d1:aerobic_base` | 3 | 0 |
+| branch (before) | 1–3 | `d1:vo2 d6:aerobic_base` | 4 | 0 |
+| branch (before) | **4** | `d6:aerobic_base` | 3 | **1** |
+| branch (after) | **4** | `d1:aerobic_base d6:aerobic_base` | 4 | **0** |
+
+**Week 4 is the scheduled block deload.** The scheduler authored a hard session
+into it; the deload machinery downstream stripped that session; the scheduler's
+demand still counted it. Fixed by giving the scheduler `weekKind` and refusing
+to AUTHOR hard work in a deload, so nothing downstream has to remove one.
+**§18 untouched, no baseline reset, no fallback.** `test:section18-v2` returns
+to **134 passed / 1 failed — identical to base**.
+
+**This also resolved the M7 objection.** The gate is now ONE question with two
+arms — scheduled deload OR declared low readiness — and the deload arm is
+reachable and is what closed this red. It is no longer a redundant second
+authority.
+
+### Item 4 — DONE
+
+`docs/printed-weeks/7-no-club-pre-season.md`, `8-no-club-in-season.md`,
+`9-later-off-season.md`, produced by the EXISTING printer (three scenarios
+added, no second harness).
+
+⚠ **THEY DO NOT MEET THE MISSION'S OWN BAR.** The sessions carry quality,
+intensity and the authored effort cue, but the DOSE prints as `1 × 1` / `4 × 1`
+— the templates' `workPeriod`, `restPeriod`, `setsRounds`, `workToRest` and
+`totalSessionTime` never reach the page. This is the pre-existing
+projection-owned defect P2 (*144 of 2,688 rows*), not something this unit
+introduced, but it defeats *"Sam must be able to judge the actual conditioning
+sessions, doses and spacing."* **Sam can judge the SPACING and the CHOICE of
+session from these files; he cannot judge the dose.**
+
+### Items 2 and 3 — NOT DONE
+
+**Item 2's machinery already exists and is already wired.**
+`decideBlockBoundaryConditioning` + `applyBlockBoundaryConditioning` fire on
+`history.reduces`, replace every hard category with `EASIER_AEROBIC_CATEGORY`,
+and re-select through `selectConditioningTemplate` — the authored owner.
+**It was unreachable for exactly the reason this mission names: nothing ever
+generated a hard category, so `HARD_CONDITIONING_CATEGORIES.has(...)` was never
+true.** It is reachable now. **What is missing is the PROOF** — a real block-1
+→ feedback → block-2 rollover guard, with its mutation. Not written.
+
+**Item 3 is not built, and it has a blocker that must be ruled on.**
+*"Advance conditioning by exactly ONE authored template step"* has no authored
+step to take: `ConditioningTemplate` carries name, quality, dose and
+properties, and **no ordering**. Nothing in the sheet says one template is a
+step harder than another. The only authored ordering available is the
+framework's governing table, which orders QUALITIES by intensity
+(`aerobic_capacity → aerobic_power → anaerobic`), and the overlay's own ordered
+`hardConditioning.qualities`. **Reading "one template step" as "one quality
+rung along the framework's own table" is a defensible design decision but it is
+a DECISION, and inventing a step order inside the sheet is what the mission
+forbids.** `conditioningProgressionRules` cannot be used — it is marked for
+deletion and invents doses.
+
+### Gates at `ca9e563e`
+
+| gate | base | after |
+| --- | --- | --- |
+| `test:compile` | product 35, 6 pairs worse | **identical** |
+| `test:section18-v2` | 134/1 | **134/1 — identical** |
+| `test:weekly-scheduler` | 84/84 | **89/89** |
+| `test:conditioning-phase-authorship` | — | **42/42** |
+| `test:conditioning-templates` | — | 95/95 |
+| `test:conditioning-dose` | — | 12/0 |
+| `test:block-two-progression` | — | 37/0 |
+| `test:block-two-difficult-missed` | — | 88/0 |
+| `test:block-two-boot-preservation` | — | 20/0 |
+| `test:quiescent-boot` | — | 5/0 |
+| `test:ladder-wide` | 13/14 | 13/14 — unchanged |
+
+### World tables — final, lost and gained SEPARATELY
+
+| corpus | base | after | LOST | GAINED | reason changes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| refusal census, 180 worlds | 140 built | **140** | **0** | 0 | **0** |
+| conditioning census, 198 worlds | 157 built | **157** | **0** | 0 | **0** |
+
+### MERGE RECOMMENDATION — **DO NOT MERGE**
+
+Items 2 and 3 do not hold. The branch is a strict improvement and costs nothing
+measurable, but the mission's bar is all four items.
+
 ## LEDGER — outside this mission, untouched
 
 - **`test:compile` is RED on `main` at `1248be77`**, identically: 6 file/scope
