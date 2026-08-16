@@ -128,16 +128,126 @@ and `programBlockRolloverTests.ts` itself, which already drives the real spine
 
 ---
 
+---
+
+# SESSION 2 — A CORRECTION, THEN THE REAL DEFECT
+
+## ⚠ I WAS WRONG IN SESSION 1. THE AUTHORING-TIME FREEZE ALREADY EXISTS.
+
+Session 1 reported *"progression runs at RESOLVE time, not generation time"*.
+**That is wrong, and the way I got it wrong is worth recording:** I grepped the
+importers of `strengthProgressionIntegration`, found one production importer
+(`sessionResolver`), and concluded generation had no progression pass. The
+generation-time pass does exist — it lives at `generateProgram.ts:1460` and is
+called `bakeMicrocycleStrengthProgression`, and it reaches the progression code
+THROUGH `sessionResolver`, so an importer grep can never see it.
+
+**The importer of a module is not the caller of its behaviour.** Same shape as
+`a-suite-can-test-code-nothing-runs`, one level up.
+
+Its own comment already states Sam's requirement as built intent: *"materialise
+strength progression into the stored microcycles once. Resolution then merely
+projects these loads — it no longer recomputes progression on read."*
+
+## THE ACTUAL DEFECT — four empty arguments
+
+`generateProgram.ts:1470-1474`, verbatim:
+
+```
+    sessionFeedback: {},
+    weightOverrides: {},
+    workoutHistory: [],
+    blockState: null,
+```
+
+The freeze runs against an athlete with **no history and no block identity**. So
+it bakes a history-free load into storage; the resolver then draws the screen
+from the LIVE store, re-derives with the real history, and shows a different
+number. **Stored ≠ visible, and the cause is four empty arguments — not a
+missing layer.** `blockState: null` also means the freeze cannot know which
+block it is authoring, which is why nothing retains or rotates deliberately.
+
+This is a much smaller and much better-located fix than session 1 implied, and
+it means **Sam's "do not preserve the projection-time rewrite as the new
+authority" is mostly a matter of feeding the existing authority and stopping the
+second derivation** — not building a new one.
+
+## WHAT LANDED THIS SESSION
+
+`src/rules/blockBoundaryProgression.ts` — the DECISION layer only, deliberately
+not a second apply-and-stamp pass beside the existing freeze. It owns:
+
+- **retained + qualifying history → `+2.5 kg`** (`SMALLEST_AUTHORISED_INCREMENT_KG`);
+- **rotated → load UNSET, no estimate** (`ROTATED_LOAD_STAYS_UNSET`, Sam's
+  option B of 2026-08-16), with the `loadRatio` sibling table deliberately NOT
+  consulted this slice even though it is exactly the validated mapping his
+  general rule licenses;
+- **"is this barbell work" from Sam's own authored equipment sheet**
+  (`equipmentRequiredFor`), never from the exercise name. An OR-group such as
+  `Romanian Deadlift: [['barbell','dumbbells']]` does NOT earn the barbell
+  increment;
+- **no inference of reps or sets from a completed marker** — `completedSets` and
+  `actualReps` are not read at all, so their absence cannot be misread;
+- **silence is not good recovery** — an athlete who ticked sessions off and never
+  answered how they felt does not qualify.
+
+**A field I wrote and then removed in the same session:**
+`WorkoutExercise.blockBoundaryProgressionResolved`. Once the existing freeze was
+found, the stamp had no reader that the freeze did not already provide, and this
+repo's law is that a field with no reader is dead weight later code will trust.
+Backed out of `types/domain.ts` before any commit.
+
+`scripts/probe-block-two.ts` — diagnostic, not a guard. It is what measured:
+generation succeeds for a 3-day full-gym pre-season athlete; **rotation at the
+block boundary already happens** (11 rotated in, 4 retained of 15); and
+generated loads are `0`, not real estimates — which is what answered the
+open question about rotated-lift estimates without needing Sam.
+
+## RECEIPTS
+
+- `test:compile`: 468 errors, 6 files worse — **byte-identical to the clean
+  control worktree at `67bbc4bd`**. My module and the reverted field added zero.
+- `test:ruling-registry` baseline recorded before any edit: **6 passed, 2 failed,
+  95 rulings, 18 question sites.** One failing cell is a RATCHET —
+  *"the UNENFORCED ruling count only falls"* — so **Sam's three new rulings must
+  NOT be written to the registry until their guards are green and
+  mutation-proven**, or registering them reddens the gate further. That ordering
+  is forced, not chosen.
+
+## ⚠ A SUITE THAT NOW CONTRADICTS AN APPROVED RULING
+
+`variedProgramPersonaTests` (`test:variation`, already red in the 163) asserts
+the OLD authority as correct:
+
+- Front Squat should be `85kg` via *"sibling transfer"* from Back Squat `100kg`;
+- *"rotation must never reset an experienced athlete"* — prescribed weight `> 50`.
+
+**Sam's option B rules both of these wrong.** They describe the behaviour he has
+just retired. They are not coverage to preserve; they are a conclusion that has
+outlived its world. Retiring those specific cells is part of the next slice and
+will be reported explicitly, not done quietly.
+
+---
+
 ## NEXT SESSION STARTS HERE
 
-1. Build athletes A and B on `equipmentAnswerFixture` + a non-refusing day-set;
-   prove generation succeeds for both BEFORE asserting anything.
-2. Drive the real spine end to end; record A's history through the real session
-   outcome door, not by writing `sessionFeedback` directly.
-3. Resolve Block 2 — **resolve, do not just generate** — and diff against Block 1.
-4. Guards last, each seen red under mutation.
+1. **Feed the existing freeze.** Thread the real `sessionFeedback`,
+   `weightOverrides` and `blockState` into `bakeMicrocycleStrengthProgression`
+   at `generateProgram.ts:1460`, with `decideBlockBoundaryLoads` deciding
+   retain/rotate/increment. The athlete fixture is already proven
+   (`scripts/probe-block-two.ts`).
+2. **Stop the second derivation** so the resolver does not re-write what the
+   freeze decided — this is Sam's *"do not preserve the projection-time rewrite
+   as the new authority"*.
+3. Drive the real spine end to end, recording A's history through the real
+   session-outcome door rather than writing `sessionFeedback` directly.
+4. Guards, each seen red under mutation. **Then** the registry rows.
+5. Retire the two `variedProgramPersonaTests` cells that assert the retired
+   sibling-transfer behaviour, and say so in the report.
 
-**Nothing is claimed WORKING yet. Nothing beyond the onboarding commit has been
-written.**
+**Nothing is claimed WORKING. `blockBoundaryProgression.ts` is BUILT — the code
+exists and compiles clean; no guard checks it yet and nothing calls it.** The
+end-to-end proof, the mutation receipts and the 180-world run are all unrun.
+**This branch is not merge-ready and must not be merged.**
 
 Agent: blocktwo
