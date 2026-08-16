@@ -130,3 +130,67 @@ the SCHEDULER'S conditioning authorship.**
 - Pre-season no-club: **2 app conditioning exposures against a target of 4**.
 - Hard conditioning in the corpus so far: **0 sessions** of `aerobic_power`,
   `anaerobic` or `cod_decel` quality reachable by any scheduler route.
+
+---
+
+## SESSION 1 BUILD — WC-136, and the deficit it exposed
+
+`PhaseOverlay` gained `hardConditioning`; the contract gained
+`overlayForPhase` and `hardConditioningQualityFor`; `weeklyScheduler` reads
+both. Pre-season 4 gym days no club went from **2 exposures, both
+`aerobic_capacity`** to **3 app exposures + the game anchor = 4**, with
+`Classic 4×4` (`aerobic_power`, 90–100% MAS) on the **upper** day at G-4.
+
+### WORLD TABLE — 180-world census, lost and gained SEPARATELY
+
+| | before `1248be77` | after |
+| --- | ---: | ---: |
+| built | 140 | 137 |
+| refused | 40 | 43 |
+| refusal families | 3 | 4 |
+
+**LOST — 3 occurrences, 3 distinct worlds. GAINED — 0.**
+
+    Pre-season/2d/noclub/Full Gym/w2         core_conditioning_required_minimum 3 vs 2
+    Pre-season/2d/noclub/Bodyweight Only/w2  core_conditioning_required_minimum 3 vs 2
+    Pre-season/2d/noclub/Dumbbells/w2        core_conditioning_required_minimum 3 vs 2
+
+### ⚠ THE OPEN DEFECT — A HARD DAY IS DROPPED IN EVERY WORLD
+
+Measured, not inferred, on `Pre-season/2d/noclub`:
+
+| stage | what it says about Tuesday |
+| --- | --- |
+| `scheduleWeek` | `off_leg` / `vo2` / `component`, demand `coreConditioning: 3` |
+| `materialiseAuthoredSessions` | `Classic 4×4`, `aerobic_power`, `unmaterialised: -` |
+| `validateGeneratedWeek` input | **nothing** — no `conditioningBlock`, `section18Evidence.conditioningRole: 'none'`, no `conditioningCategory` |
+
+**The specialist does not refuse. The day is stripped between the coaching plan
+and the assembled week**, and it happens in the 4-day world too — that week
+simply has a spare exposure to absorb it, so only the 2-day week falls below
+the minimum. **The 3 lost worlds are the symptom; the drop is universal.**
+
+Three hypotheses were tested and REFUTED, so none of them is the cause:
+
+1. the specialist refusing `vo2` on an `off_leg` day — it returns `Classic 4×4`
+   for `offFeet: true` and `offFeet: false` alike;
+2. the legacy name builder having no entry — `buildConditioningTemplate`
+   returns rows for all 9 authored names probed, hard ones included;
+3. `buildConditioningBlock` rejecting `high-intensity` — it is flavour-agnostic
+   and returns `undefined` only for an empty row list.
+
+**NEXT, AND IT IS ONE INSTRUMENTED RUN:** wrap
+`assembleAuthoredWeek.adapterContributionFrom` and print the `vo2` day. That
+function deletes `conditioningCategory` and `section18Evidence` and forces
+`hasCombinedConditioning: false` whenever the adapter day has no
+`conditioningBlock` (`assembleAuthoredWeek.ts:179`), which matches the measured
+symptom field for field. If it is the site, the question is whether the
+composer or the adapter owns conditioning on a combined day — and that is a
+BURN-THE-BOATS decision, not a shim.
+
+## LEDGER — outside this mission, untouched
+
+- **`test:compile` is RED on `main` at `1248be77`**, identically: 6 file/scope
+  pairs in `src/__tests__/bibleConformance/observations/*`, all rooted in a
+  missing `../support/coachingPlanForTests` module that is absent at HEAD.
+  Product scope is 35 errors before and after this change. Not mine, not fixed.
