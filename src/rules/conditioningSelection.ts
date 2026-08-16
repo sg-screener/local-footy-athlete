@@ -548,6 +548,46 @@ const ROLE_MAX_MINUTES: Readonly<Record<ConditioningRole, number | null>> = {
  * Deterministically select the authored template serving a demand category.
  * Filters are selection policy; the returned template is Sam's, untouched.
  */
+/**
+ * ── WC-115: THE OFF-LEG PREFERENCE, DECLARED ONCE AND READ BY BOTH CHOOSERS ──
+ *
+ * §3: *"Lower + conditioning: Prefer off-leg work: bike, ski, rower or assault
+ * bike."*
+ *
+ * ⚠ **"CAN RENDER OFF-FEET" IS NOT "IS AN OFF-LEG SESSION", AND EVERY AUTHORED
+ * TEMPLATE LISTS `run`.** So a big lower day was paired with `Continuous
+ * Aerobic Run` — which the sheet renders on run or BIKE ONLY — while `Steady
+ * Blocks` and `Steady 5 min Blocks`, which the sheet renders on all four
+ * machines, sat unpicked. Legal, and the wrong session after a squat/deadlift
+ * day.
+ *
+ * The preference is the COUNT OF MACHINES the athlete can actually use, read
+ * from the sheet's own `modalityNotes`. Richest off-leg support wins; the
+ * caller's existing rotation then picks inside that tier, so block-stability is
+ * untouched.
+ *
+ * **IT IS A PREFERENCE, NEVER A REFUSAL.** When no candidate has a machine at
+ * all the list is returned exactly as given rather than emptied — the day still
+ * gets its authored session.
+ *
+ * ⚠ **BOTH CHOOSERS READ IT, AND THAT IS THE WHOLE POINT.** The generator picks
+ * through `selectConditioningTemplate`; the READ PATH picks again through
+ * `offFeetAlternative` (`sessionResolver`'s run-load pass). Fixing only the
+ * first left generation storing `Steady Blocks` and the athlete's screen
+ * showing `Continuous Aerobic Run` — one rule, two implementations, one wrong.
+ */
+function preferRichestOffLeg(
+  candidates: readonly ConditioningTemplate[],
+  machineOwned: (modality: ConditioningModality) => boolean,
+): ConditioningTemplate[] {
+  if (candidates.length <= 1) return [...candidates];
+  const machineCount = (template: ConditioningTemplate): number =>
+    renderableModalities(template).filter((m) => m !== 'run' && machineOwned(m)).length;
+  const best = Math.max(...candidates.map(machineCount));
+  if (best <= 0) return [...candidates];
+  return candidates.filter((template) => machineCount(template) === best);
+}
+
 export function selectConditioningTemplate(
   args: ConditioningSelectionArgs,
 ): ConditioningTemplate {
@@ -593,6 +633,8 @@ export function selectConditioningTemplate(
   };
 
   let candidates = pool.filter((template) => filters.every((filter) => filter(template)));
+  if (args.offFeet) candidates = preferRichestOffLeg(candidates, machineOwned);
+
   // A role cap is a preference, not a wall — when it empties the pool the
   // authored session runs long rather than a dose being invented short.
   const capped = candidates.filter(withinCap);
@@ -623,7 +665,11 @@ export function offFeetAlternative(
     (candidate) => candidate.quality === template.quality && rendersOffFeet(candidate),
   );
   if (pool.length === 0) return null;
-  return pool[conditioningSelectionHash(dateStr) % pool.length];
+  // THE SAME PREFERENCE THE GENERATOR APPLIES. `availableMachines` is not a
+  // parameter of this read-path entry, so every machine counts as owned —
+  // exactly what the generator does when it is handed `undefined`.
+  const preferred = preferRichestOffLeg(pool, () => true);
+  return preferred[conditioningSelectionHash(dateStr) % preferred.length];
 }
 
 /* ── Name resolution for stored/legacy content ── */

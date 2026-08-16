@@ -85,9 +85,11 @@ _(nothing on this day)_
 
 ## Saturday 15 August
 
-### Rest Day
+### Game Day
 
-_(nothing on this day)_
+**Game Day**
+
+_(the club runs this one — the app lists nothing for it)_
 
 ## Sunday 16 August
 

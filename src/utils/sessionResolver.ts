@@ -1236,7 +1236,9 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // ── Priority 3: Virtual Game (In-season + effective game day) ──
   // Render a Game cell on the day where `dow === DOW_TO_NUM[effectiveGameDay]`
   // when:
-  //   - seasonPhase === 'In-season', AND
+  //   - the phase HAS fixtures — In-season games and Pre-season practice
+  //     matches; the app's own `canonicalFixtureKindForResolvedPhase` is what
+  //     distinguishes them, AND
   //   - profile has an effective game day (usualGameDay || gameDay), AND
   //   - this day itself is NOT marked 'noGame' (explicit bye), AND
   //   - no other day in this Mon–Sun week has an explicit 'game' mark
@@ -1245,7 +1247,22 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // This runs BEFORE the freed-game-slot logic so Saturday is never treated
   // as empty when virtual should own it.
   const effectiveGameDay = resolveEffectiveGameDay(state.usualGameDay, state.gameDay);
-  const virtualEnabled = state.seasonPhase === 'In-season' && effectiveGameDay !== undefined;
+  // ⚠ **PRE-SEASON WAS MISSING AND IT MADE AN ANCHOR INVISIBLE.** This read was
+  // `seasonPhase === 'In-season'`, so a PRE-SEASON athlete with a declared
+  // fixture saw a Rest Day on it — while generation had stored a `Game` workout
+  // there and the exposure contract had issued a `practice_match` anchor
+  // claiming conditioning, sprint AND hard-day credit off it. The week was
+  // counted as having four conditioning exposures and the athlete could see
+  // three. **An anchor the athlete cannot see must never satisfy the contract.**
+  //
+  // The app already knows a pre-season fixture is a practice match
+  // (`canonicalFixtureKindForResolvedPhase`) and already has the signed word for
+  // it (`day.headline.practice_match`) — only this gate had not been told.
+  // Off-season stays out: it has no fixtures, so a stale `gameDay` on an
+  // off-season profile must not mint one.
+  const phaseHasFixtures = state.seasonPhase === 'In-season'
+    || state.seasonPhase === 'Pre-season';
+  const virtualEnabled = phaseHasFixtures && effectiveGameDay !== undefined;
   if (
     virtualEnabled &&
     mark !== 'noGame' &&
