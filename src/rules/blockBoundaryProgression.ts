@@ -92,7 +92,7 @@
  * Both are removed from the code, the guards and the registry row.
  */
 
-import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
+import type { OnboardingData, SeasonPhase, Workout, WorkoutExercise } from '../types/domain';
 import type { SessionFeedback } from '../store/programStore';
 import type { FeedbackFeeling, FeedbackSoreness } from '../types/sessionOutcome';
 import {
@@ -109,7 +109,12 @@ import {
   selectConditioningTemplate,
   workoutTypeForTemplate,
 } from './conditioningSelection';
-import type { ConditioningModality } from '../data/conditioningTemplates';
+import { CONDITIONING_TEMPLATES, type ConditioningModality } from '../data/conditioningTemplates';
+import {
+  nextAuthoredDose,
+  type ConditioningNoStepReason,
+  type ConditioningStep,
+} from './conditioningDoseStep';
 import { isEffortRating } from './effortScale';
 import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
 import { SET_CEILING } from './weeklyLegality';
@@ -1508,6 +1513,153 @@ export function applyBlockBoundaryConditioning(args: {
           },
         }
         : {}),
+    };
+  });
+}
+
+/* ── WC-137: THE OTHER DIRECTION — conditioning easy, strength difficult ── */
+
+/**
+ * WHAT THE BOUNDARY DECIDED FOR ONE CONDITIONING SESSION THAT FELT EASY.
+ *
+ * `stepped: false` is a FIRST-CLASS ANSWER, not an absence. Sam's rule 5:
+ * *"If the authoritative templates provide no valid next dose, hold the session
+ * and report that no progression step exists. Never invent one."* A caller that
+ * only looked at the stepped rows could not tell "nothing was easy" from "the
+ * sheet had nothing left", and those are different things to tell an athlete.
+ */
+export type BlockBoundaryConditioningAdvance =
+  | {
+    readonly weekIndex: number;
+    readonly workoutId: string;
+    readonly templateName: string;
+    readonly stepped: true;
+    readonly step: ConditioningStep;
+  }
+  | {
+    readonly weekIndex: number;
+    readonly workoutId: string;
+    readonly templateName: string;
+    readonly stepped: false;
+    readonly reason: ConditioningNoStepReason;
+  };
+
+/**
+ * ── WC-137: ADVANCE CONDITIONING BY EXACTLY ONE AUTHORED STEP ─────────────
+ *
+ * The approved contract's *"conditioning easy, strength difficult"* case:
+ * *"progress conditioning within the phase-approved template progression while
+ * keeping strength volume manageable."*
+ *
+ * **FOUR GATES, AND EACH ONE ANSWERS A DIFFERENT SENTENCE OF THE RULING.**
+ *
+ * 1. `conditioningEasy` — the athlete actually said so, on the conditioning
+ *    question, on days that carried an answer. Silence is not ease.
+ * 2. `!strengthEasy` — this is the *"conditioning easy, STRENGTH DIFFICULT"*
+ *    branch. When everything is easy the contract sends the athlete to the
+ *    load/sets/session ladder instead, and running both would progress two
+ *    qualities off one block of evidence.
+ * 3. `!history.reduces` — an athlete who reported the block very hard or their
+ *    recovery low is the REDUCE case, and reduce outranks advance. Belt and
+ *    braces with gate 1, deliberately: `reduces` reads soreness and recovery,
+ *    `conditioningEasy` reads the conditioning RPE, and a block can carry both.
+ * 4. **`phase !== 'In-season'` — Sam's rule 1, *"check the phase; in-season may
+ *    hold for freshness."*** In-season conditioning exists to keep the athlete
+ *    fresh for Saturday, and the app's only in-season addition is the sprint.
+ *
+ * **THE QUALITY NEVER CHANGES.** Rule 4 — *"Aerobic Power never automatically
+ * becomes Anaerobic merely because it felt easy"* — holds structurally: this
+ * function reads the session's OWN template and asks `nextAuthoredDose` for a
+ * bigger dose OF THAT TEMPLATE. There is no code path here that can name a
+ * different quality, so no check can be forgotten.
+ */
+export function decideBlockBoundaryConditioningAdvance(args: {
+  history: BlockHistorySignal;
+  nextBlockWorkouts: readonly Workout[];
+  weekIndex: number;
+  phase: SeasonPhase | null | undefined;
+}): BlockBoundaryConditioningAdvance[] {
+  const { history, nextBlockWorkouts, weekIndex, phase } = args;
+  if (!history.byQuality.conditioningEasy) return [];
+  if (history.byQuality.strengthEasy) return [];
+  if (history.reduces) return [];
+  if (phase === 'In-season') return [];
+
+  const advances: BlockBoundaryConditioningAdvance[] = [];
+  for (const workout of nextBlockWorkouts) {
+    if (workout.conditioningCategory === undefined) continue;
+    const rows = (workout.exercises ?? []).filter((row) => row.role === 'conditioning');
+    if (rows.length === 0) continue;
+    // The template is named by the row the emitter wrote, never re-selected —
+    // re-selecting would roll the rotation and step a DIFFERENT session.
+    const templateName = conditioningTemplateNameFromRows(rows);
+    if (templateName === null) continue;
+    const template = CONDITIONING_TEMPLATES.find((row) => row.name === templateName);
+    if (template === undefined) continue;
+
+    // ⚠ NARROWED WITH `in`, NOT WITH THE `stepped` FLAG. The flag reads like a
+    // discriminant and the compiler declined to narrow through it here, which
+    // is worth the two extra lines rather than a cast: `in` narrows on the
+    // property that actually differs, so a third member added to the union
+    // would be a compile error rather than a silently dropped branch.
+    const outcome = nextAuthoredDose(template);
+    const step = 'step' in outcome ? outcome.step : null;
+    const reason = 'reason' in outcome ? outcome.reason : null;
+    if (step !== null) {
+      advances.push({ weekIndex, workoutId: workout.id, templateName, stepped: true, step });
+    } else if (reason !== null) {
+      advances.push({ weekIndex, workoutId: workout.id, templateName, stepped: false, reason });
+    }
+  }
+  return advances;
+}
+
+/** The authored template name a composed conditioning row carries, or null. */
+function conditioningTemplateNameFromRows(
+  rows: readonly WorkoutExercise[],
+): string | null {
+  for (const row of rows) {
+    const name = (row as unknown as { exercise?: { name?: string } }).exercise?.name;
+    if (typeof name !== 'string' || name.length === 0) continue;
+    if (CONDITIONING_TEMPLATES.some((template) => template.name === name)) return name;
+  }
+  return null;
+}
+
+/**
+ * Apply the authored step to the session's prescribed dose.
+ *
+ * ⚠ **ONLY `prescribedSets` MOVES, AND ONLY TO THE AUTHORED NUMBER.** The
+ * template, the category, the flavour, the block intent and every athlete-facing
+ * string are untouched — the athlete is doing the SAME authored session, one
+ * authored rung up. Rewriting the name or the cue would make the sheet's own
+ * words describe a dose the sheet did not author.
+ *
+ * A `stepped: false` decision changes nothing, which is rule 5's "hold the
+ * session" in code rather than in a comment.
+ */
+export function applyBlockBoundaryConditioningAdvance(args: {
+  workouts: readonly Workout[];
+  advances: readonly BlockBoundaryConditioningAdvance[];
+}): Workout[] {
+  const stepped = new Map(
+    args.advances.filter((a) => a.stepped).map((a) => [a.workoutId, a as Extract<
+      BlockBoundaryConditioningAdvance, { stepped: true }>]));
+  if (stepped.size === 0) return [...args.workouts];
+
+  return args.workouts.map((workout) => {
+    const advance = stepped.get(workout.id);
+    if (!advance) return workout;
+    const rows = workout.exercises ?? [];
+    const headlineIndex = rows.findIndex((row) => row.role === 'conditioning'
+      && (row as unknown as { exercise?: { name?: string } }).exercise?.name
+        === advance.templateName);
+    if (headlineIndex < 0) return workout;
+    return {
+      ...workout,
+      exercises: rows.map((row, index) => (index === headlineIndex
+        ? { ...row, prescribedSets: advance.step.to }
+        : row)),
     };
   });
 }
