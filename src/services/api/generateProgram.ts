@@ -14,11 +14,19 @@ import {
 import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
 import { WEEKS_PER_BLOCK } from '../../utils/programBlockState';
 import {
+  applyBlockBoundaryConditioning,
   applyBlockBoundaryProgression,
+  applyBlockBoundaryVolume,
   buildBlockBoundaryExplanation,
+  buildBlockBoundaryReductionExplanation,
+  decideBlockBoundaryConditioning,
   decideBlockBoundaryLoads,
+  decideBlockBoundaryVolume,
   readBlockHistory,
+  snapshotAuthoredSets,
+  type BlockBoundaryConditioningDecision,
   type BlockBoundaryLiftDecision,
+  type BlockBoundaryVolumeDecision,
 } from '../../rules/blockBoundaryProgression';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
@@ -1511,6 +1519,15 @@ export function generateProgramLocally(
   const progressionWeightOverrides = options.progressionHistory?.weightOverrides ?? {};
   const progressionBlockState = options.progressionHistory?.blockState ?? null;
 
+  // ⚠ TAKEN HERE, ONE LINE BEFORE THE FREEZE, AND THAT POSITION IS THE POINT.
+  // The block boundary's reduction is bounded by what the COMPOSER authored;
+  // after the freeze has run there is no way to read that number back, because
+  // a very-hard block's rows have already been collapsed to a single set. Taken
+  // afterwards, the reduction's own ceiling would be the value it exists to
+  // correct. It also carries the DELOAD week's already-halved dose, which is
+  // what stops the reduction raising week 4.
+  const authoredSetsByRowId = snapshotAuthoredSets(program.microcycles);
+
   bakeMicrocycleStrengthProgression(program, {
     manualOverrides: {},
     markedDays: {},
@@ -1555,7 +1572,9 @@ export function generateProgramLocally(
       blockEndISO: previousBlock.endISO,
       requiredStrengthSessions: plan.coreSessions * WEEKS_PER_BLOCK,
     });
-    for (const microcycle of program.microcycles) {
+    const allVolumeDecisions: BlockBoundaryVolumeDecision[] = [];
+    const allConditioningDecisions: BlockBoundaryConditioningDecision[] = [];
+    for (const [weekIndex, microcycle] of program.microcycles.entries()) {
       const decisions = decideBlockBoundaryLoads({
         history,
         nextBlockWorkouts: microcycle.workouts,
@@ -1569,12 +1588,81 @@ export function generateProgramLocally(
         decisions,
       });
       for (const decision of decisions) allDecisions.push(decision);
+
+      // ── THE REDUCTION, ON A BLOCK THE ATHLETE SAID WAS VERY HARD ──
+      //
+      // ORDER IS THE CONTRACT'S, NOT AN IMPLEMENTATION CONVENIENCE. Its "Low
+      // readiness or high soreness" list is: hard conditioning first, then main-
+      // and secondary-lift sets, then easier aerobic work in place of what was
+      // removed. Conditioning is decided and applied before volume so that the
+      // one thing the contract cuts FIRST is the one thing that cannot be
+      // starved by a volume pass that ran ahead of it.
+      //
+      // Both are no-ops unless `history.reduces` — the decision functions
+      // return an empty list for every other verdict, so the ordinary
+      // well-recovered block reaches `return program` having changed nothing
+      // here.
+      const conditioningDecisions = decideBlockBoundaryConditioning({
+        history,
+        nextBlockWorkouts: microcycle.workouts,
+        weekIndex,
+      });
+      microcycle.workouts = applyBlockBoundaryConditioning({
+        workouts: microcycle.workouts,
+        decisions: conditioningDecisions,
+        seedISO: microcycleStartISO(microcycle, blockStart, weekIndex),
+        miniCycleNumber: weekIndex + 1,
+      });
+      for (const decision of conditioningDecisions) allConditioningDecisions.push(decision);
+
+      const volumeDecisions = decideBlockBoundaryVolume({
+        history,
+        nextBlockWorkouts: microcycle.workouts,
+        authoredSetsByRowId,
+      });
+      microcycle.workouts = applyBlockBoundaryVolume({
+        workouts: microcycle.workouts,
+        decisions: volumeDecisions,
+      });
+      for (const decision of volumeDecisions) allVolumeDecisions.push(decision);
     }
     // Stored beside the prescriptions it explains, so the two cannot drift.
-    program.blockBoundaryExplanation = buildBlockBoundaryExplanation(allDecisions);
+    const reduction = buildBlockBoundaryReductionExplanation({
+      history,
+      loadDecisions: allDecisions,
+      volumeDecisions: allVolumeDecisions,
+      conditioningDecisions: allConditioningDecisions,
+    });
+    program.blockBoundaryExplanation = [
+      // THE REDUCTION ROW LEADS. It is the block-level answer to "what happened
+      // to my programme"; the per-lift load rows are its detail.
+      ...(reduction ? [reduction] : []),
+      ...buildBlockBoundaryExplanation(allDecisions),
+    ];
   }
 
   return program;
+}
+
+/**
+ * The Monday a microcycle starts on, as `YYYY-MM-DD`.
+ *
+ * `Microcycle.startDate` is stored as a full timestamp and the conditioning
+ * owner wants a plain day string, so it is narrowed here rather than at the call
+ * site. Falls back to counting weeks off the block start when a microcycle
+ * carries no date at all — the same grid the caller already owns, never a fresh
+ * one derived from today.
+ */
+function microcycleStartISO(
+  microcycle: { startDate?: string | Date },
+  blockStartISO: string,
+  weekIndex: number,
+): string {
+  const stored = microcycle.startDate;
+  if (typeof stored === 'string' && stored.length >= 10) return stored.slice(0, 10);
+  const start = new Date(`${blockStartISO}T12:00:00`);
+  start.setDate(start.getDate() + weekIndex * 7);
+  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
 }
 
 /**

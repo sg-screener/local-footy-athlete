@@ -49,7 +49,10 @@ import {
   blockBoundaryExplanationSentences,
   blockBoundaryLoadMovedSentence,
 } from '../rules/projectionCopy';
-import { smallestPracticalIncrementKg } from '../rules/blockBoundaryProgression';
+import {
+  isLoadExplanationRow,
+  smallestPracticalIncrementKg,
+} from '../rules/blockBoundaryProgression';
 import type { SessionFeedback } from '../store/programStore';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 
@@ -470,7 +473,9 @@ ok(
   explanation.length > 0,
   'no explanation was stored — the typed result has no reader',
 );
-const deadliftRow = explanation.find((row) => row.exerciseName === TRACKED);
+const deadliftRow = explanation
+  .filter(isLoadExplanationRow)
+  .find((row) => row.exerciseName === TRACKED);
 ok(
   `the explanation names ${TRACKED}'s ACTUAL change (${TRACKED_RECORDED_KG} → ${EXPECTED_PROGRESSED_KG})`,
   deadliftRow?.kind === 'history_progressed' &&

@@ -85,6 +85,7 @@ export const STRENGTH_HEADLINE_ID_BY_LABEL: ReadonlyMap<string, string> = new Ma
 );
 
 export const BLOCK_BOUNDARY_LOAD_MOVED_COPY_ID = 'blockBoundary.loadMoved';
+export const BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID = 'blockBoundary.hardBlockReduced';
 
 const EXERCISE_NAME_PREFIX = 'exercise.name.';
 const EXERCISE_CUE_PREFIX = 'exercise.cue.';
@@ -146,6 +147,39 @@ export function registerProjectionCopy(): void {
       text: 'You completed enough of the last block and reported good recovery, so '
         + '{exercise} has moved from {oldWeight} kg to {newWeight} kg. '
         + 'You can change it if needed.',
+    },
+    // ── THE VERY-HARD BLOCK SENTENCE — SIGNED, Sam 2026-08-16. ──
+    //
+    // His approved wording for the completed-but-very-hard path, verbatim and
+    // unedited, with no unit and no placeholder to argue about:
+    //   "You completed the last block, but it felt very hard and recovery was
+    //    low, so we've kept your training weights and reduced the amount of
+    //    work in this block. You can change it if needed."
+    //
+    // ⚠ IT MAKES TWO FACTUAL CLAIMS AND BOTH ARE CHECKED BEFORE IT RENDERS.
+    // "kept your training weights" is `BlockBoundaryReductionExplanationRow
+    // .loadsHeld`, read off the load decisions the SAME boundary stored;
+    // "reduced the amount of work" is a non-empty `setsReduced` /
+    // `hardConditioningReplaced`. `blockBoundaryReducedSentence` returns null
+    // when either is untrue, so the app cannot tell an athlete it held their
+    // weights on a block where it raised one.
+    //
+    // ⚠ IT CLAIMS NOTHING ABOUT REPS OR SETS COMPLETED. "You completed the last
+    // block" is the logged session count; "it felt very hard and recovery was
+    // low" is the recorded effort and soreness answers. The approved contract's
+    // standing ban is on claiming which reps were done, and this sentence does
+    // not go near it.
+    {
+      id: BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-16, the approved meaning for the '
+        + 'completed-but-very-hard block. Rendered only from a stored '
+        + '`hard_block_reduced` row of TrainingProgram.blockBoundaryExplanation, '
+        + 'and only when that row says the loads were in fact held and work was '
+        + 'in fact reduced. Guard: test:block-two-difficult-missed.',
+      text: 'You completed the last block, but it felt very hard and recovery was low, '
+        + "so we've kept your training weights and reduced the amount of work in this "
+        + 'block. You can change it if needed.',
     },
     // ── The conditioning warm-up sentence — SIGNED, Sam 2026-08-05. ──
     // Imported from the emitter rather than transcribed, the same shape
@@ -907,6 +941,20 @@ export function registerProjectionCopy(): void {
  * Y", and the signed sentence must not be stretched over them — that would be a
  * call site authoring meaning it was not given.
  */
+export function blockBoundaryReducedSentence(
+  row: import('./blockBoundaryProgression').BlockBoundaryExplanationRow,
+): SignedCopy | null {
+  registerProjectionCopy();
+  if (row.kind !== 'hard_block_reduced') return null;
+  // ⚠ THE SENTENCE'S OWN CLAIMS, CHECKED AGAINST THE STORED ROW.
+  // A signed sentence is not a licence to say it in a world where it is false.
+  // "kept your training weights" and "reduced the amount of work" are both
+  // assertions about what this boundary DID, and the row is the only witness.
+  if (!row.loadsHeld) return null;
+  if (row.setsReduced.length === 0 && row.hardConditioningReplaced.length === 0) return null;
+  return signedCopy(BLOCK_BOUNDARY_HARD_BLOCK_REDUCED_COPY_ID);
+}
+
 export function blockBoundaryLoadMovedSentence(
   row: import('./blockBoundaryProgression').BlockBoundaryExplanationRow,
 ): SignedCopy | null {
@@ -934,7 +982,9 @@ export function blockBoundaryExplanationSentences(
 ): SignedCopy[] {
   const out: SignedCopy[] = [];
   for (const row of program.blockBoundaryExplanation ?? []) {
-    const sentence = blockBoundaryLoadMovedSentence(row);
+    // The reduction row leads the stored explanation, so its sentence leads the
+    // athlete's list for free — the order is the decision's, not this loop's.
+    const sentence = blockBoundaryReducedSentence(row) ?? blockBoundaryLoadMovedSentence(row);
     if (sentence) out.push(sentence);
   }
   return out;
