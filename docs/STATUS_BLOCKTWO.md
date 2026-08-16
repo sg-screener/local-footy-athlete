@@ -345,3 +345,53 @@ the whole of what session 4 closes.
 must not merge without its enforcement guard.
 
 Agent: blocktwo
+
+---
+
+# SESSION 5 — FINAL LOAD AUTHORITY. INTEGRATION, NOT POLICY.
+
+Sam, 2026-08-16 (final): *"DO NOT INVENT OR RE-RULE LOAD BEHAVIOUR... The
+missing work is integration, not policy."* Two things this branch had authored
+itself are now deleted and replaced by reads of his existing sources.
+
+## The two superseded interpretations, and which one was dangerous
+
+| retired | why it was wrong |
+| --- | --- |
+| *"rotated exercises are always blank"* | clause 2 gives an UNSEEN MAPPED exercise the authored anchor estimate. Blank is clause 4 only. |
+| *"bodyweight has no weight field"* | **the damaging one.** It short-circuited authored-unloaded rows BEFORE reading history, so an athlete's recorded weighted Pull-Up would have been thrown away. |
+
+The second is now a permanent guard AND a mutation (M7): restoring the
+short-circuit reddens two cells.
+
+## What replaced this branch's own policy
+
+- **`SMALLEST_AUTHORISED_INCREMENT_KG = 2.5` + a barbell name-check → DELETED.**
+  `smallestPracticalIncrementKg` reads `EQUIPMENT` (`data/equipmentLattice.ts`).
+  The old constant answered 2.5 for every barbell and NOTHING for anything else,
+  so a dumbbell or kettlebell lift would have held its load forever.
+- **`null` from the lattice means HOLD, never a default.** Sam: *"if the
+  equipment required for an optional external load is unknown, preserve the
+  recorded load and leave the next choice editable rather than guessing."*
+- **The athlete's recorded number is the base, unrounded.** M8 (rounding it
+  through the lattice) reds.
+
+## FINAL VERIFICATION
+
+| run | branch | control @ `67bbc4bd` | verdict |
+| --- | --- | --- | --- |
+| `test:block-two-progression` | **21/21** | n/a (new) | 10 mutations RED |
+| `test:ladder-wide` | **140 built / 40 refused**, 13/14 | **140 built / 40 refused**, 13/14 | **zero lost/gained** |
+| `test:compile` | 468, 6 worse | 468, 6 worse | byte-identical |
+| `test:ruling-registry` | 6/2, 97 rulings | 6/2, 95 rulings | ratchet unmoved; R-096/097 land ENFORCED |
+| `test:variation` | 5 fail | 7 fail | 2 superseded cells retired, no new |
+| `test:bible` | **crashes at suite 1** | **crashes at suite 1** | identical — see below |
+
+⚠ **`test:bible` PRODUCED NO SIGNAL.** It dies at its FIRST suite with
+`Cannot find module '../support/coachingPlanForTests'` — in the clean control
+too. The chain stops at the first failure, so **nothing after suite 1 ran in
+either tree.** It is unchanged by this branch and it is a pre-existing member of
+the 163 baseline, but it must not be reported as a passing comparison: it is a
+crash that compares equal, which is not the same as a baseline that held.
+
+Agent: blocktwo

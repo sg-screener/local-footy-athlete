@@ -49,60 +49,97 @@
  * logged per-set detail. This module does not read them at all, so it cannot
  * accidentally treat their ABSENCE as a zero or their presence as a licence.
  *
- * ## THE TWO DECISIONS, AND THE ONE SAM RULED TWICE
+ * ## THE CANONICAL PRIORITY — SAM'S, NOT THIS MODULE'S
  *
- * **RETAINED** — the same lift ran last block and history qualifies: seed its
- * last recorded load and add the smallest authorised increment (2.5 kg).
+ * Sam, 2026-08-16 (FINAL): *"DO NOT INVENT OR RE-RULE LOAD BEHAVIOUR... The
+ * missing work is integration, not policy."* Every number below comes from a
+ * source he authored; this module only decides WHICH source answers.
  *
- * **ROTATED** — the lift did not run last block: **the load is left UNSET and
- * the athlete chooses.** Sam, 2026-08-16, choosing option B: *"When an exercise
- * rotates, leave its starting load unset and let the athlete choose. Suggest a
- * conservative load only where an explicit, validated exercise-to-exercise load
- * mapping already exists—never infer one from the movement pattern, exercise
- * name or previous weight."* and, for this slice specifically, *"rotated lift →
- * no inherited load and no automatic estimate."*
+ * **1. EXACT-EXERCISE HISTORY WINS.** A valid recorded load from a completed
+ * exposure is the base — including after the exercise vanished for one or more
+ * blocks. Then the approved progression rules: good completion and recovery
+ * earn the smallest practical increment; very hard or low readiness HOLDS the
+ * load. **The athlete's number is never rounded or "corrected".**
  *
- * **THE `loadRatio` SIBLING TABLE IS EXACTLY THE MAPPING HE MEANS**
- * (`data/exercisePoolsStrength.ts` — `{ name: 'Deadlift', loadRatio: 1.00 }`),
- * and this slice still does not use it. His sentence licenses it in general and
- * forbids it here; a module that reached for it anyway because it "exists"
- * would be answering the general sentence and ignoring the specific one.
- * **`ROTATED_LOAD_STAYS_UNSET` below is that decision, in one place, so the day
- * the mapping is switched on there is one line to change and one guard to move.**
+ * **2. UNSEEN → SAM'S OWN ESTIMATE.** `startingWeightForAthlete` reads
+ * `EXERCISE_LOAD_MAP`'s squat/bench anchor and rounds through the equipment
+ * lattice. **No second ratio table and no second estimator is defined here.**
  *
- * ## WHY "IS IT A BARBELL" COMES FROM SAM'S SHEET, NOT FROM THE NAME
+ * **3. BODYWEIGHT IS A DEFAULT, NOT A PROHIBITION.** An authored-unloaded row
+ * with no recorded load shows BW and this module writes nothing to it. It does
+ * NOT skip rule 1: *"when the exact exercise returns, its recorded added-load
+ * history wins."* A weighted Pull-Up the athlete logged is history like any
+ * other. **`loadRatio 0` means no automatic estimate — never that the athlete
+ * may not add weight**, and no weight control is removed, hidden or disabled.
  *
- * The 2.5 kg increment is a BARBELL rule. Asking the exercise NAME whether it is
- * barbell work is precisely the name-inference Sam forbade in the same message,
- * and it is wrong in both directions (`Speed Trap Bar Deadlift` is not a
- * barbell; `DB Bench Press` contains "Bench Press"). `equipmentRequiredFor`
- * (`data/exerciseEquipmentRequirement.ts`) is Sam's own transcribed sheet and is
- * the only source consulted.
+ * **4. NOTHING VALID → BLANK.** No history, no authored mapping, or missing
+ * anchor inputs: the suggestion is left empty and the athlete chooses.
  *
- * ⚠ **AN OR-GROUP IS NOT BARBELL WORK.** `Romanian Deadlift` is
- * `[['barbell','dumbbells']]` — it MAY be run with a barbell, and a
- * dumbbell-only athlete legally runs it without one. Only a REQUIRED bare
- * `'barbell'` earns the barbell increment. Everything else HOLDS its load this
- * slice and is listed as a remaining clause rather than guessed at.
+ * **5. NO REPLACEMENT CONTAMINATION.** A rotated exercise is NEVER seeded from
+ * the outgoing exercise's weight because they share a slot, role or movement
+ * pattern. The `loadRatio` sibling table in `data/exercisePoolsStrength.ts` is
+ * consulted nowhere in this module. **This is the one clause that survived all
+ * three revisions of the instruction unchanged.**
+ *
+ * ## ⚠ TWO SUPERSEDED INTERPRETATIONS, NAMED SO THEY STAY DEAD
+ *
+ * Earlier revisions of this file implemented, and its guards asserted:
+ *   · *"rotated exercises are always blank"* — wrong: rule 2 gives an unseen
+ *     mapped exercise Sam's authored estimate, and blank is only rule 4.
+ *   · *"bodyweight has no weight field"* — wrong, and the more damaging of the
+ *     two: it short-circuited authored-unloaded rows BEFORE reading history and
+ *     would have discarded an athlete's recorded weighted Pull-Up.
+ * Both are removed from the code, the guards and the registry row.
  */
 
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import type { SessionFeedback } from '../store/programStore';
 import type { FeedbackFeeling, FeedbackSoreness } from '../types/sessionOutcome';
-import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
-import { resolveLoadAuthority, startingWeightForAthlete } from '../utils/loadEstimation';
+import {
+  equipmentClassFor,
+  resolveLoadAuthority,
+  startingWeightForAthlete,
+} from '../utils/loadEstimation';
+import { EQUIPMENT } from '../data/equipmentLattice';
 import { participatesInCounting } from './sessionRowCounting';
 import { classifyProgressionEligibility } from '../utils/strengthProgressionIntegration';
 
 /**
- * THE SMALLEST AUTHORISED INCREMENT, in kilograms.
+ * THE SMALLEST PRACTICAL INCREMENT FOR THIS EXERCISE, from SAM'S OWN LATTICE.
  *
- * Contract: *"For barbell work, the normal increase is the smallest practical
- * increment, usually 2.5 kg. Ten percent is an exceptional upper bound, not the
- * default."* This slice implements the normal case only; nothing here may ever
- * produce the exceptional one, which is why it is a constant and not a band.
+ * Sam, 2026-08-16 (final): *"Use the existing authored equipment lattice for the
+ * smallest practical suggestion."* and *"DO NOT INVENT OR RE-RULE LOAD
+ * BEHAVIOUR... The missing work is integration, not policy."*
+ *
+ * ⚠ **THIS REPLACED A HARDCODED 2.5 kg PLUS A BARBELL NAME-CHECK.** That was
+ * policy this module had no business authoring: it made 2.5 the answer for
+ * every barbell and NO answer for anything else, so a dumbbell or kettlebell
+ * lift silently held its load forever. `EQUIPMENT` already rules all of it —
+ * barbell/cable/machine 2.5 kg steps, kettlebell 4 kg, dumbbells 1 kg to 10
+ * then 2.5 kg rungs.
+ *
+ * `null` means **the lattice does not say**, which is a real answer and not a
+ * zero: Sam's *"if the equipment required for an optional external load is
+ * unknown, preserve the recorded load and leave the next choice editable rather
+ * than guessing."* The caller HOLDS on null; it never falls back to a default.
  */
-export const SMALLEST_AUTHORISED_INCREMENT_KG = 2.5;
+export function smallestPracticalIncrementKg(
+  exerciseName: string,
+  baseKg: number,
+): number | null {
+  const equipment = equipmentClassFor(exerciseName);
+  if (!equipment) return null;
+  const { lattice } = EQUIPMENT[equipment];
+  if (lattice.kind === 'step') return lattice.stepKg;
+  if (lattice.kind === 'rungs') {
+    const next = lattice.rungsKg.find((rung) => rung > baseKg);
+    return next === undefined ? null : next - baseKg;
+  }
+  // 'none' — bodyweight. Added external load is legal and may be recorded, but
+  // NOTHING AUTHORED says what it is added in, so the next step is the
+  // athlete's to choose. Holding is the honest answer; guessing 2.5 is not.
+  return null;
+}
 
 /**
  * ⚠ SUPERSEDED 2026-08-16 by Sam's FINAL LOAD-AUTHORITY CLARIFICATION, and kept
@@ -140,8 +177,12 @@ export type BlockBoundaryDecisionKind =
   | 'authored_estimate'
   /** PRIORITY 3 — no history and nothing authored: the athlete chooses. */
   | 'unset'
-  /** Authored as unloaded. BW/no-load semantics are left exactly as they are. */
-  | 'bodyweight_untouched';
+  /**
+   * Authored as unloaded AND never logged with added load: BW is the DEFAULT
+   * shown. Not a prohibition — the athlete may add load, and once they record
+   * it, PRIORITY 1 governs this exercise from then on.
+   */
+  | 'bodyweight_default';
 
 export interface BlockBoundaryLiftDecision {
   exerciseId: string;
@@ -203,14 +244,6 @@ const GOOD_RECOVERY_FEELINGS: ReadonlySet<FeedbackFeeling> =
   new Set<FeedbackFeeling>(['very_easy', 'easy', 'good', 'hard']);
 const GOOD_RECOVERY_SORENESS: ReadonlySet<FeedbackSoreness> =
   new Set<FeedbackSoreness>(['none', 'mild', 'moderate']);
-
-function isBarbellRequired(exerciseName: string): boolean {
-  const requirement = equipmentRequiredFor(exerciseName);
-  if (!requirement) return false;
-  // A bare 'barbell' is REQUIRED. A nested array is an OR-group, where the
-  // athlete may legally be using something else — see the header.
-  return requirement.some((entry) => entry === 'barbell');
-}
 
 /**
  * Reduce the persisted per-date `SessionFeedback` for one block to the signal.
@@ -344,21 +377,6 @@ export function decideBlockBoundaryLoads(args: {
 
     const base = { exerciseId: row.exerciseId, exerciseName };
 
-    // ── AUTHORED AS UNLOADED — leave it entirely alone ──
-    // Sam: *"Bodyweight/unloaded movements retain their correct BW/no-load
-    // semantics."* Blanking a Pull-Up's load, or estimating one for it, both
-    // make the row lie. The authored source already answered this question.
-    const authority = resolveLoadAuthority(exerciseName);
-    if (authority.kind === 'bodyweight' || authority.kind === 'athlete_chosen') {
-      decisions.push({
-        ...base,
-        kind: 'bodyweight_untouched',
-        previousLoadKg: null,
-        nextLoadKg: undefined,
-      });
-      continue;
-    }
-
     const recorded = history.lastRecordedLoadByExercise[exerciseName];
     const previousLoadKg = typeof recorded === 'number' ? recorded : null;
 
@@ -368,16 +386,30 @@ export function decideBlockBoundaryLoads(args: {
     // Keyed by canonical NAME, over ALL TIME — which is what lets a lift that
     // sat out a block resume from its own number instead of being re-estimated.
     if (previousLoadKg !== null) {
-      const mayProgress = history.qualifies && isBarbellRequired(exerciseName);
-      if (mayProgress) {
+      // ⚠ THIS RUNS FOR BODYWEIGHT EXERCISES TOO, AND MUST.
+      // Sam, 2026-08-16 (final): *"when the exact exercise returns, its recorded
+      // added-load history wins"* and *"loadRatio 0 ... never means the athlete
+      // is forbidden from adding weight."* An earlier revision of this module
+      // short-circuited every authored-bodyweight row BEFORE reading history,
+      // which threw away exactly the weighted Pull-Up the athlete had recorded.
+      //
+      // THE ATHLETE'S NUMBER IS THE BASE, UNROUNDED. *"Never round, rewrite or
+      // 'correct' the athlete's recorded number; their number remains the
+      // base."* The increment is added to what they lifted, not to a
+      // lattice-tidied version of it.
+      const increment = smallestPracticalIncrementKg(exerciseName, previousLoadKg);
+      if (history.qualifies && increment !== null) {
         decisions.push({
           ...base,
           kind: 'history_progressed',
           previousLoadKg,
-          nextLoadKg: previousLoadKg + SMALLEST_AUTHORISED_INCREMENT_KG,
-          incrementKg: SMALLEST_AUTHORISED_INCREMENT_KG,
+          nextLoadKg: previousLoadKg + increment,
+          incrementKg: increment,
         });
       } else {
+        // HOLD. Either recovery/completion did not earn a rise, or nothing
+        // authored says what this load moves in. Both keep the recorded number
+        // and leave the next choice to the athlete.
         decisions.push({
           ...base,
           kind: 'history_held',
@@ -385,6 +417,22 @@ export function decideBlockBoundaryLoads(args: {
           nextLoadKg: previousLoadKg,
         });
       }
+      continue;
+    }
+
+    // ── NO HISTORY, AND AUTHORED AS UNLOADED — BW IS THE DEFAULT ──
+    // *"Bodyweight is a default, not a prohibition."* The row keeps whatever its
+    // own authored owner renders (BW / no additional external load). This module
+    // writes nothing: the weight control stays, and the moment the athlete
+    // records added load, PRIORITY 1 above picks it up on the next block.
+    const authority = resolveLoadAuthority(exerciseName);
+    if (authority.kind === 'bodyweight' || authority.kind === 'athlete_chosen') {
+      decisions.push({
+        ...base,
+        kind: 'bodyweight_default',
+        previousLoadKg: null,
+        nextLoadKg: undefined,
+      });
       continue;
     }
 
@@ -483,7 +531,7 @@ export function buildBlockBoundaryExplanation(
     history_held: 1,
     authored_estimate: 2,
     unset: 3,
-    bodyweight_untouched: 4,
+    bodyweight_default: 4,
   };
   return [...decisions]
     .sort((a, b) => order[a.kind] - order[b.kind] || a.exerciseName.localeCompare(b.exerciseName))

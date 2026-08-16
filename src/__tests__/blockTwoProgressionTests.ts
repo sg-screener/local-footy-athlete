@@ -45,6 +45,7 @@ import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
  */
 const EXPECTED_PROGRESSED_KG = 102.5;
 import { startingWeightForAthlete } from '../utils/loadEstimation';
+import { smallestPracticalIncrementKg } from '../rules/blockBoundaryProgression';
 import type { SessionFeedback } from '../store/programStore';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
 
@@ -337,6 +338,68 @@ ok(
   'the blank cell found an unmapped exercise to assert on (liveness)',
   blankChecked,
   'no unmapped row present — the cell above asserted nothing',
+);
+
+console.log('\n[8b] THE INCREMENT COMES FROM THE AUTHORED LATTICE, AND HOLDS WHEN IT CANNOT SAY');
+
+// Unit-level, and it says so: these assert the lattice READ, not the pipeline.
+ok(
+  'barbell work steps by the lattice 2.5kg',
+  smallestPracticalIncrementKg('Deadlift', 100) === 2.5,
+  `got ${JSON.stringify(smallestPracticalIncrementKg('Deadlift', 100))}`,
+);
+ok(
+  'an exercise no authored source covers yields NO increment (hold, never guess)',
+  smallestPracticalIncrementKg('Totally Unmapped Movement XYZ', 100) === null,
+  `got ${JSON.stringify(smallestPracticalIncrementKg('Totally Unmapped Movement XYZ', 100))} — a guessed default`,
+);
+ok(
+  'a bodyweight exercise yields NO automatic increment (the next step is the athlete\'s)',
+  smallestPracticalIncrementKg('Pull-Ups', 12.5) === null,
+  `got ${JSON.stringify(smallestPracticalIncrementKg('Pull-Ups', 12.5))}`,
+);
+
+console.log('\n[9] BODYWEIGHT DEFAULTS TO BW BUT ACCEPTS AND RESTORES ADDED LOAD');
+
+/**
+ * Pull-Ups are authored as unloaded. Two worlds, one exercise:
+ *   (a) never logged  → BW default, this module writes nothing;
+ *   (b) logged with added external load → that recorded load is history and
+ *       WINS on return, exactly like any other exercise.
+ *
+ * (b) is the case an earlier revision of this module got wrong: it
+ * short-circuited every authored-bodyweight row BEFORE reading history and
+ * would have thrown the athlete's recorded weighted Pull-Up away.
+ */
+const BW_EXERCISE = 'Pull-Ups';
+const BW_ADDED_KG = 12.5;
+
+const bwNeverLogged = storedLoadOf(build(2, BLOCK_2_START, {}), BW_EXERCISE);
+ok(
+  `${BW_EXERCISE} with no history carries no invented external load`,
+  bwNeverLogged === undefined || bwNeverLogged === 0 || bwNeverLogged === 'ABSENT_ROW',
+  `got ${JSON.stringify(bwNeverLogged)}`,
+);
+
+const bwHistory = historyFor({ [BW_EXERCISE]: BW_ADDED_KG });
+const bwWithHistory = storedLoadOf(build(2, BLOCK_2_START, bwHistory), BW_EXERCISE);
+// LIVENESS. Without this the two cells below pass whenever the row is simply
+// absent from the block — a vacuous green that would hide the exact defect they
+// exist to catch.
+ok(
+  `${BW_EXERCISE} is actually programmed in block 2 (liveness for the cells below)`,
+  bwWithHistory !== 'ABSENT_ROW',
+  'the bodyweight cells would be asserting nothing',
+);
+ok(
+  `${BW_EXERCISE} with a recorded +${BW_ADDED_KG}kg RESUMES from the athlete's own number`,
+  typeof bwWithHistory === 'number' && bwWithHistory >= BW_ADDED_KG,
+  `expected >= ${BW_ADDED_KG} (recorded added load is history and must win), got ${JSON.stringify(bwWithHistory)}`,
+);
+ok(
+  `${BW_EXERCISE}'s recorded number is never rounded away`,
+  bwWithHistory !== 0 && bwWithHistory !== undefined,
+  `the athlete's ${BW_ADDED_KG}kg was discarded — got ${JSON.stringify(bwWithHistory)}`,
 );
 
 console.log('\n[8] STORED = VISIBLE = RELOADED');
