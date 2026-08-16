@@ -83,8 +83,46 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
   const { schedule, materialised, coachingInputs, capacity } = input;
   const { demand } = schedule;
 
-  // ── V1 CONTRACT — the existing separate authority, called directly ────────
-  const legacy = buildWeeklyExposureContract(input.v1Input);
+  // ── V1 CONTRACT — the existing shape, RE-TARGETED FROM THE SCHEDULER ─────
+  //
+  // **Sam, 2026-08-16:** *"Pre-season expected strength count must come from the
+  // approved scheduler contract: four when the approved inputs call for four, not
+  // the deleted planner/checker expectation of three."*
+  //
+  // `buildWeeklyExposureContract` carries the OLD checker's per-mode expectation.
+  // A pre-season week with a fixture resolves to `practice_match_week`, whose row
+  // expects 3 — so the approved pre-season layouts ("Four required strength
+  // sessions: Upper x2 + Lower x2") were judged against a number the approved
+  // source does not contain. Measured on 12 worlds.
+  //
+  // The scheduler's `demand.mainStrength` IS the contract's count: it comes from
+  // `baseLayoutFor`, which is the approved phase x availability table. So the
+  // expectation is taken from there and the old per-mode number is not consulted.
+  //
+  // ⚠ **ONLY THE EXPECTATION MOVES, NEVER THE FLOOR.** `required` is left exactly
+  // as the V1 builder set it. Raising a floor refuses weeks that were legal a
+  // moment ago, and this correction is bookkeeping — it must not be able to lose
+  // an athlete a week. `withExposureTarget` could not be used: it only ever
+  // reduces, by design.
+  // ⚠ **REQUIRED sessions, not scheduled ones.** `demand.mainStrength` is the
+  // layout's count and counts optional sessions too. The early off-season overlay
+  // (WC-130) makes every session optional — "zero completed is valid" — so using
+  // the raw demand there set a target of 3-4 against a core count of 0 and broke
+  // 12 off-season worlds that had been fine. Measured, then narrowed.
+  const requiredStrengthCount = materialised.filter((session) =>
+    session.owner === 'strength' && !session.optional).length;
+  const v1 = buildWeeklyExposureContract(input.v1Input);
+  const legacy: typeof v1 = {
+    ...v1,
+    strength: {
+      ...v1.strength,
+      targetCount: requiredStrengthCount,
+      preferred: {
+        min: Math.min(v1.strength.preferred.min, requiredStrengthCount),
+        max: Math.max(v1.strength.preferred.max, requiredStrengthCount),
+      },
+    },
+  };
   const identity = section18ModeAndSubphase(coachingInputs, legacy);
 
   // ── V2 CONTRACT — derived from the COMPLETED schedule ────────────────────

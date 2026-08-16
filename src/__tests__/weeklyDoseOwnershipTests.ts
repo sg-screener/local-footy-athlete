@@ -325,9 +325,18 @@ console.log('\n[4] The weeks the deleted floors existed to protect are unchanged
       strength: 3,
     },
     {
+      // 3 -> 4 on 2026-08-16. **The approved source, Pre-season 5-6 days: "Four
+      // required strength sessions: Upper x2 + Lower x2."** The 3 came from the
+      // old checker's `practice_match_week` row, which a pre-season week with a
+      // fixture resolves to — a number the approved contract does not contain.
+      // Sam, 2026-08-16: the count comes from the approved scheduler contract,
+      // "not the deleted planner/checker expectation of three".
+      //
+      // The scheduler and the contract now AGREE at 4; this expectation was the
+      // last holder of the old number.
       name: 'B3       pre-season, game, 2 team days, 5 days, high capacity',
       combination: { seasonPhase: 'Pre-season', preseasonSubphase: 'mid_preseason', capacity: 'high', teamDayCount: 2, availableDays: 5, hasGame: true },
-      strength: 3,
+      strength: 4,
     },
     {
       name: 'the safety rail the floors deliberately did not raise: low capacity in-season game week',
