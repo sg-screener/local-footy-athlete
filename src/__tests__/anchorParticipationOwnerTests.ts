@@ -214,32 +214,7 @@ console.log('\n[2] BOTH EVALUATORS RETURN THE SAME VERDICT');
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/**
- * ⚠ **A GAP, NAMED RATHER THAN HIDDEN — THE CREDIT PATH IS UNGUARDED.**
- *
- * Two mutations SURVIVE this suite: reverting `normalParticipation` (P1) and
- * `attendedAnchor` (P3) in `section18EffectiveWeekEvaluator` to read
- * `anchor.participation` raw changes NO cell here.
- *
- * They are not decoration. The `unjustified_anchor_credit` guard reads the
- * LEDGER ROW, which section [3] does cover — mutation P2, which reverts the row
- * to the raw participation, reds three cells. But those two functions decide the
- * CREDIT ITSELF: whether a club night supplies the conditioning, sprint and
- * hard-day exposure Sam ruled it supplies on 2026-08-15. **Nothing here observes
- * that number.**
- *
- * A cell was attempted and WITHDRAWN rather than shipped green-but-empty: a
- * hand-built contract came back with `currentProductionClaim` all false and no
- * provenance on its anchors, so it measured the builder's defaults instead of
- * the case. The honest coordinate is a REAL generated club week's contract
- * evaluated directly, and that is the next piece of work on this branch.
- */
-
-
-console.log('\n[3] A CLUB-NIGHT ATHLETE SURVIVES A RELAUNCH');
-
+/* ── Shared fixture, declared here because section [2b] reads it too. ── */
 const BLOCK_2_START = '2026-08-03';
 const TRACKED = 'Deadlift';
 const RECORDED_KG = 100;
@@ -259,6 +234,95 @@ function clubAthlete(injured: boolean): OnboardingData {
     squatStrength: '1.5x bodyweight', benchStrength: '1.25x bodyweight', weightKg: 85,
   } as unknown as OnboardingData;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[2b] WHAT A CLUB NIGHT IS ACTUALLY WORTH — the real contract');
+
+/**
+ * ⚠ **THE FINAL BEHAVIOURAL BOUNDARY, NOT THE ANCHOR ROW.**
+ *
+ * P1 (`normalParticipation`) and P3 (`attendedAnchor`) survived an earlier cut of
+ * this suite because the only thing being observed was the `unjustified_anchor_
+ * credit` refusal — and that guard reads the ledger ROW, which a different line
+ * normalises. Those two functions decide the EXPOSURE NUMBERS: what the week is
+ * credited with. Nothing was reading them.
+ *
+ * ⚠ **AND A HAND-BUILT CONTRACT CANNOT ASK THIS QUESTION.** One was tried and
+ * withdrawn: its anchors came back with `currentProductionClaim` all false and no
+ * provenance, so it measured the builder's defaults instead of the case. Only
+ * generation stamps `derived_healthy_unrestricted`, so generation supplies the
+ * contract and the week, and the evaluator is handed both exactly as the safety
+ * finaliser hands them.
+ *
+ * Sam, 2026-08-15: *"conditioning/sprint credit supplied by those visible
+ * anchors"*. These are that sentence as numbers.
+ */
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { evaluateSection18EffectiveWeek } = require('../rules/section18EffectiveWeekEvaluator');
+
+  const realWeek = quiet(() => {
+    const program = generateProgramLocally(clubAthlete(false), {
+      todayISO: BLOCK_2_START, blockNumber: 1,
+      progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+    }) as TrainingProgram;
+    return program.microcycles[0] as unknown as {
+      startDate: string;
+      workouts: readonly unknown[];
+      exposureContractV2?: { anchors?: { kind: string; participationProvenance?: string }[] };
+    };
+  });
+
+  const clubAnchors = (realWeek.exposureContractV2?.anchors ?? [])
+    .filter((anchor) => anchor.kind === 'team_training');
+  ok(
+    'the REAL generated week carries club anchors stamped derived_healthy_unrestricted',
+    clubAnchors.length === 2
+      && clubAnchors.every((anchor) =>
+        anchor.participationProvenance === 'derived_healthy_unrestricted'),
+    `got ${JSON.stringify(clubAnchors.map((a) => a.participationProvenance))}`,
+  );
+
+  const ledger = quiet(() => evaluateSection18EffectiveWeek({
+    contract: realWeek.exposureContractV2,
+    workouts: realWeek.workouts,
+    weekStart: realWeek.startDate.slice(0, 10),
+  })) as {
+    ledger: {
+      conditioning: { anchorCoreCount: number; byStress: Record<string, number> };
+      sprintHighSpeed: {
+        achievedCount: number;
+        split: { delivered: number; prescribed: number };
+      };
+    };
+  };
+
+  ok(
+    'BOTH club nights supply CONDITIONING exposure',
+    ledger.ledger.conditioning.anchorCoreCount === 2,
+    `anchorCoreCount ${ledger.ledger.conditioning.anchorCoreCount}, expected 2`,
+  );
+  ok(
+    'BOTH club nights supply SPRINT/HIGH-SPEED exposure',
+    ledger.ledger.sprintHighSpeed.achievedCount === 2,
+    `achievedCount ${ledger.ledger.sprintHighSpeed.achievedCount}, expected 2`,
+  );
+  ok(
+    'BOTH club nights supply HARD-DAY exposure',
+    ledger.ledger.conditioning.byStress.hard === 2,
+    `hard ${ledger.ledger.conditioning.byStress.hard}, expected 2`,
+  );
+  ok(
+    'AND NONE OF IT CLAIMS COMPLETED ATTENDANCE — every credit is PRESCRIBED, not DELIVERED',
+    ledger.ledger.sprintHighSpeed.split.delivered === 0
+      && ledger.ledger.sprintHighSpeed.split.prescribed === 2,
+    `split ${JSON.stringify(ledger.ledger.sprintHighSpeed.split)} — a planned club night was recorded as work the athlete has already done`,
+  );
+}
+
+
+console.log('\n[3] A CLUB-NIGHT ATHLETE SURVIVES A RELAUNCH');
+
 
 const BLOCK_1_DATES = [
   '2026-07-06', '2026-07-08', '2026-07-10', '2026-07-13', '2026-07-15', '2026-07-17',

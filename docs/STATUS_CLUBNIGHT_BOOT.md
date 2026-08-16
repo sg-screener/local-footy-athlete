@@ -107,17 +107,27 @@ The remaining four stopped reporting the safety contradiction and started
 reporting seeding preconditions, override effect and transaction ownership. They
 were masked, not caused, by this defect. **Not repaired here.**
 
-## ⚠ TWO MUTATIONS SURVIVE — STATED, NOT PAPERED OVER
+## THE CREDIT GUARD — CLOSED, AGAINST A REAL CONTRACT
 
-P1 (`normalParticipation`) and P3 (`attendedAnchor`) reverted to the raw
-participation change NO cell. The `unjustified_anchor_credit` guard reads the
-LEDGER ROW, which P2 does red — but those two functions decide the CREDIT: what a
-club night is WORTH. Nothing observes that number.
+P1 and P3 survived until the suite observed the EXPOSURE NUMBERS rather than the
+refusal. The refusal guard reads the ledger ROW; those two functions decide what
+a club night is WORTH. A hand-built contract could not ask the question — its
+anchors carried no provenance and an empty claim — so the cell now generates a
+real healthy club week, takes its actual `exposureContractV2`, and hands both to
+`evaluateSection18EffectiveWeek` exactly as the safety finaliser does:
 
-A cell was written and **withdrawn rather than shipped green-but-empty**: a
-hand-built contract came back with `currentProductionClaim` all false and no
-provenance, so it measured the builder's defaults. The honest coordinate is a
-REAL generated club week's contract passed to `evaluateSection18EffectiveWeek`.
+| | healthy club week |
+| --- | --- |
+| `conditioning.anchorCoreCount` | **2** — both nights supply conditioning |
+| `sprintHighSpeed.achievedCount` | **2** — both supply sprint/high-speed |
+| `conditioning.byStress.hard` | **2** — both supply a hard day |
+| `sprintHighSpeed.split` | `delivered: 0, prescribed: 2` |
 
-**That is why this branch is NOT merged.** The mission said merge if everything
-holds; two required guards do not yet hold.
+**The last row is the "never claims attendance" guard.** Every credit is
+PRESCRIBED. Nothing in this fix records a planned club night as work the athlete
+has already done.
+
+**ALL SEVEN MUTATIONS NOW RED**, and P1/P3 red DIFFERENT numbers — P1 kills
+sprint and hard-day (the intensity claims), P3 kills conditioning and hard-day
+(the attendance claim). That is the two-questions split the evaluator documents,
+visible in the mutation output.
