@@ -478,6 +478,44 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   ok('[WC-135] ...placed G-3 or earlier', ['WC-135'],
     sprintDays.every((d) => order.indexOf(d.dayOfWeek) <= order.indexOf(SAT) - 3),
     JSON.stringify(sprintDays.map((d) => d.dayOfWeek)));
+
+  // ── WC-136: the PHASE owns the count and the hard quality ────────────────
+  //
+  // The behavioural weight of this clause is in
+  // `test:conditioning-phase-authorship`, which reads real generated programs.
+  // These cells hold the SCHEDULER's half — that the overlay is what it reads.
+  const preseasonWeek = built({ phase: 'Pre-season',
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: null });
+  const hardCategories = new Set(['vo2', 'glycolytic']);
+  const preseasonHard = preseasonWeek.days.filter(
+    (d) => d.conditioningCategory !== null && hardCategories.has(d.conditioningCategory));
+  ok('[WC-136] a pre-season week authors a HARD conditioning quality, not just capacity',
+    ['WC-136'], preseasonHard.length === 1,
+    JSON.stringify(preseasonWeek.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
+  ok('[WC-136] the pre-season conditioning demand follows the PHASE target, '
+    + 'not the global minimum', ['WC-136'],
+    preseasonWeek.demand.coreConditioning === PRESEASON_OVERLAY.conditioningTarget.min,
+    `demand=${preseasonWeek.demand.coreConditioning} `
+    + `target=${PRESEASON_OVERLAY.conditioningTarget.min} `
+    + `global=${GLOBAL_RULES.conditioning.min}`);
+  // ⚠ THE DISCRIMINATING PAIR. In-season is the one overlay whose hard quality
+  // is gated on the week having NO game, so the same athlete must differ.
+  const inseasonGame = built({ phase: 'In-season',
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: SAT });
+  const inseasonBye = built({ phase: 'In-season',
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: null });
+  const hardIn = (week: WeeklySchedule) => week.days.filter(
+    (d) => d.conditioningCategory !== null && hardCategories.has(d.conditioningCategory)).length;
+  ok('[WC-136] an in-season GAME week authors no hard conditioning', ['WC-136'],
+    hardIn(inseasonGame) === 0,
+    JSON.stringify(inseasonGame.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
+  ok('[WC-136] ...and the same athlete\'s BYE week does', ['WC-136'],
+    hardIn(inseasonBye) === 1,
+    JSON.stringify(inseasonBye.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
+  ok('[WC-136] no hard exposure ever lands on a club night', ['WC-136'],
+    built({ phase: 'Pre-season', gymAccessDays: [MON, TUE, THU, FRI],
+      clubNights: [TUE], gameDay: null })
+      .days.filter((d) => d.clubTraining).every((d) => d.conditioningCategory === null));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
