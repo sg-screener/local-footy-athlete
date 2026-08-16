@@ -75,14 +75,14 @@ export const TrainingCommitmentScreen: React.FC<
           color={colors.text.primary}
           style={styles.sectionTitle}
         >
-          HOW MANY DAYS PER WEEK CAN YOU TRAIN?
+          How many days each week can you get to a gym or your usual strength equipment?
         </Text>
         <Text
           variant="bodySmall"
           color={colors.text.secondary}
           style={styles.subtitle}
         >
-          Pick how many days you can fit LFA work in. Include club training nights when you're happy to double up.
+          A gym session can be on the same day as club training. Lifting in the morning or on the way to footy training is completely fine.
         </Text>
 
         <View style={styles.grid}>

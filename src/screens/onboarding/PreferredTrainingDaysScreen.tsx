@@ -38,9 +38,9 @@ export const PreferredTrainingDaysScreen: React.FC<
 
   /**
    * Hard cap at `trainingDaysPerWeek` with no auto-rotate — the prior screen's
-   * answer is treated as the ceiling, and the athlete picks any subset up to
-   * that. "Not sure" is also capped at 3 while keeping its own copy and visual
-   * state upstream.
+   * gym-access answer is treated as the ceiling, and the athlete picks any
+   * subset up to that. "Not sure" is also capped at 3 while keeping its own
+   * copy and visual state upstream.
    */
   const toggleDay = (day: DayOfWeek) => {
     setSelectedDays((prev) => {
@@ -68,12 +68,12 @@ export const PreferredTrainingDaysScreen: React.FC<
 
   const subtitle = useMemo(() => {
     if (trainingDaysUnsure) {
-      return "We'll start you with 3 LFA days. Pick the days that usually work best.";
+      return "We'll start with 3 gym days. Pick the days you can usually get there.";
     }
     if (isFlexible) {
-      return 'Tap all the days that work for you';
+      return 'Pick every day you can usually get to a gym or your usual strength equipment.';
     }
-    return `Pick up to ${cap} day${cap === 1 ? '' : 's'} for LFA work.`;
+    return `Pick up to ${cap} day${cap === 1 ? '' : 's'} you can usually get to a gym or your usual strength equipment.`;
   }, [cap, isFlexible, trainingDaysUnsure]);
 
   const handleContinue = () => {
@@ -107,7 +107,7 @@ export const PreferredTrainingDaysScreen: React.FC<
           color={colors.text.primary}
           style={styles.title}
         >
-          Pick your available days
+          Which days can you usually get there?
         </Text>
         {subtitle ? (
           <Text

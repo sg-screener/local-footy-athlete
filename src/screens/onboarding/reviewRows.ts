@@ -273,14 +273,14 @@ const REVIEW_ROWS: readonly ReviewRowSpec[] = [
   },
   {
     section: 'Training',
-    label: 'LFA Days',
+    label: 'Gym Days',
     step: 'TrainingCommitment',
     value: (data) =>
       data.trainingDaysPerWeek ? `${data.trainingDaysPerWeek} days per week` : 'Not selected',
   },
   {
     section: 'Training',
-    label: 'LFA Training Days',
+    label: 'Usual Gym Days',
     step: 'PreferredTrainingDays',
     value: (data) =>
       formatDays(data.preferredTrainingDays as DayOfWeek[] | undefined) ?? 'Not selected',

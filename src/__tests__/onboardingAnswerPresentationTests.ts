@@ -363,6 +363,37 @@ console.log('\n[12] The Review screen renders the owner rather than a second lis
     'the row must route back to the step that owns the answer');
 }
 
+console.log('\n[13] Training availability asks about gym access, not total training days');
+{
+  const commitment = read('src/screens/onboarding/TrainingCommitmentScreen.tsx');
+  const preferredDays = read('src/screens/onboarding/PreferredTrainingDaysScreen.tsx');
+  const steps = read('src/utils/onboardingSteps.ts');
+  const reviewRows = read('src/screens/onboarding/reviewRows.ts');
+
+  ok('the commitment question asks about gym or usual strength-equipment access',
+    commitment.includes(
+      'How many days each week can you get to a gym or your usual strength equipment?',
+    ));
+  ok('the helper explicitly permits lifting on a club-training day',
+    commitment.includes(
+      'A gym session can be on the same day as club training. Lifting in the morning or on the way to footy training is completely fine.',
+    ));
+  ok('the old total-training-days question is gone',
+    !commitment.includes('HOW MANY DAYS PER WEEK CAN YOU TRAIN?'));
+
+  ok('the follow-up asks which gym-access days usually work',
+    preferredDays.includes('Which days can you usually get there?'));
+  ok('the follow-up describes gym or usual strength-equipment days',
+    preferredDays.includes('gym or your usual strength equipment'));
+
+  ok('the step registry describes the answers as gym access',
+    steps.includes('how many days a week you can get to a gym or your usual strength equipment')
+      && steps.includes('which days you can usually get there'));
+  ok('Review names the answers as gym days',
+    reviewRows.includes("label: 'Gym Days'")
+      && reviewRows.includes("label: 'Usual Gym Days'"));
+}
+
 const total = passed + failures.length;
 console.log(`\nOnboarding answer presentation: passed=${passed}/${total} failures=${failures.length}`);
 totalsPrinted(failures.length);

@@ -152,14 +152,14 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   },
   {
     name: 'TrainingCommitment',
-    answerLabel: 'how many days a week you can train',
+    answerLabel: 'how many days a week you can get to a gym or your usual strength equipment',
     collects: ['trainingDaysPerWeek'],
     visible: always,
     satisfied: (data) => filled(data.trainingDaysPerWeek),
   },
   {
     name: 'PreferredTrainingDays',
-    answerLabel: 'which days you want to train',
+    answerLabel: 'which days you can usually get there',
     collects: ['preferredTrainingDays'],
     visible: always,
     satisfied: (data) => filled(data.preferredTrainingDays),
