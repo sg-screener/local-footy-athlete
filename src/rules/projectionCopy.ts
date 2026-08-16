@@ -56,6 +56,8 @@
 
 import {
   registerSignedCopy,
+  signedCopy,
+  type SignedCopy,
   type SignedCopyEntry,
 } from './signedCopy';
 import { STRENGTH_SESSION_VARIANTS } from '../data/strengthSessionVariants';
@@ -81,6 +83,8 @@ export const STRENGTH_HEADLINE_ID_BY_LABEL: ReadonlyMap<string, string> = new Ma
     `part.headline.strength.${variant.id}`,
   ]),
 );
+
+export const BLOCK_BOUNDARY_LOAD_MOVED_COPY_ID = 'blockBoundary.loadMoved';
 
 const EXERCISE_NAME_PREFIX = 'exercise.name.';
 const EXERCISE_CUE_PREFIX = 'exercise.cue.';
@@ -112,6 +116,37 @@ export function registerProjectionCopy(): void {
   didRegister = true;
 
   registerSignedCopy([
+    // ── THE BLOCK-BOUNDARY LOAD SENTENCE — SIGNED, Sam 2026-08-16. ──
+    //
+    // His words, verbatim and unedited:
+    //   "You completed enough of the last block and reported good recovery, so
+    //    [exercise] has moved from [old weight] to [new weight]. You can change
+    //    it if needed."
+    //
+    // ⚠ THE ONLY THING ADDED TO HIS SENTENCE IS THE UNIT `kg`. His brackets say
+    // "[old weight]", and a weight rendered without its unit ("moved from 100 to
+    // 102.5") is not the sentence he approved. `kg` is the app's unit
+    // everywhere and is authored here rather than concatenated at a call site,
+    // because a call site choosing it would be a call site authoring words —
+    // the exact hole `SignedCopy` exists to close. **If he wants the unit
+    // elsewhere or absent, it changes HERE and nowhere else.**
+    //
+    // ⚠ IT CLAIMS COMPLETION AND RECOVERY, AND NOTHING ABOUT REPS OR SETS.
+    // "completed enough of the last block" is the 75% completion gate and
+    // "reported good recovery" is the answered soreness/feeling — both are
+    // recorded facts. The approved contract forbids claiming to know which reps
+    // were done, and this sentence does not.
+    {
+      id: BLOCK_BOUNDARY_LOAD_MOVED_COPY_ID,
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-16, block two product close. Rendered only '
+        + 'from a stored `history_progressed` row of '
+        + 'TrainingProgram.blockBoundaryExplanation, so the sentence and the '
+        + 'prescription it describes cannot drift. Guard: test:block-two-progression.',
+      text: 'You completed enough of the last block and reported good recovery, so '
+        + '{exercise} has moved from {oldWeight} kg to {newWeight} kg. '
+        + 'You can change it if needed.',
+    },
     // ── The conditioning warm-up sentence — SIGNED, Sam 2026-08-05. ──
     // Imported from the emitter rather than transcribed, the same shape
     // `CONDITIONING_SUBSTITUTION_ROW_NAMES` uses below: the words exist once,
@@ -856,4 +891,51 @@ export function registerProjectionCopy(): void {
     }
   }
   registerSignedCopy(exerciseEntries);
+}
+
+
+/**
+ * THE ATHLETE'S SENTENCE FOR ONE BLOCK-BOUNDARY LOAD CHANGE.
+ *
+ * Renders Sam's signed sentence from a STORED explanation row — never from a
+ * fresh derivation. That is the whole point: the row travelled with the
+ * prescription through storage and reload, so the words and the number the
+ * athlete reads came out of the same decision.
+ *
+ * Returns `null` for every row that is not a load INCREASE. A held load, an
+ * authored estimate, a blank and a bodyweight default are not "moved from X to
+ * Y", and the signed sentence must not be stretched over them — that would be a
+ * call site authoring meaning it was not given.
+ */
+export function blockBoundaryLoadMovedSentence(
+  row: import('./blockBoundaryProgression').BlockBoundaryExplanationRow,
+): SignedCopy | null {
+  // The sheet is registered lazily by `registerProjectionCopy`, and the exercise
+  // NAME entries are registered there too — so a caller that reaches this
+  // function before any projection has run would throw `unsigned_athlete_copy`
+  // on a name that is perfectly legal. Registration is idempotent.
+  registerProjectionCopy();
+  if (row.kind !== 'history_progressed') return null;
+  if (typeof row.previousLoadKg !== 'number' || typeof row.nextLoadKg !== 'number') return null;
+  return signedCopy(BLOCK_BOUNDARY_LOAD_MOVED_COPY_ID, {
+    exercise: signedCopy(exerciseNameCopyId(row.exerciseName)),
+    oldWeight: row.previousLoadKg,
+    newWeight: row.nextLoadKg,
+  });
+}
+
+/**
+ * Every block-boundary sentence for a stored program, in the explanation's own
+ * order. Empty when the block changed no loads — which is a real answer and the
+ * correct one for a first block or an athlete without qualifying history.
+ */
+export function blockBoundaryExplanationSentences(
+  program: { blockBoundaryExplanation?: readonly import('./blockBoundaryProgression').BlockBoundaryExplanationRow[] },
+): SignedCopy[] {
+  const out: SignedCopy[] = [];
+  for (const row of program.blockBoundaryExplanation ?? []) {
+    const sentence = blockBoundaryLoadMovedSentence(row);
+    if (sentence) out.push(sentence);
+  }
+  return out;
 }

@@ -45,6 +45,10 @@ import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
  */
 const EXPECTED_PROGRESSED_KG = 102.5;
 import { startingWeightForAthlete } from '../utils/loadEstimation';
+import {
+  blockBoundaryExplanationSentences,
+  blockBoundaryLoadMovedSentence,
+} from '../rules/projectionCopy';
 import { smallestPracticalIncrementKg } from '../rules/blockBoundaryProgression';
 import type { SessionFeedback } from '../store/programStore';
 import type { OnboardingData, TrainingProgram } from '../types/domain';
@@ -484,6 +488,56 @@ ok(
   'the explanation agrees with the stored prescription it explains',
   deadliftRow?.nextLoadKg === storedLoadOf(explained, TRACKED),
   `explanation says ${JSON.stringify(deadliftRow?.nextLoadKg)}, prescription says ${JSON.stringify(storedLoadOf(explained, TRACKED))}`,
+);
+
+console.log('\n[12] THE ATHLETE-VISIBLE SENTENCE MATCHES THE STORED PRESCRIPTION');
+
+const sentences = blockBoundaryExplanationSentences(explained);
+ok(
+  'the stored explanation renders at least one athlete-visible sentence',
+  sentences.length > 0,
+  'the signed sentence has no stored row to render from',
+);
+
+// The sentence is compared to Sam's approved wording as a LITERAL. Deriving the
+// expected string from the same registry entry the renderer reads would make
+// this cell incapable of catching a change to the words.
+const EXPECTED_SENTENCE =
+  'You completed enough of the last block and reported good recovery, so '
+  + `${TRACKED} has moved from ${TRACKED_RECORDED_KG} kg to ${EXPECTED_PROGRESSED_KG} kg. `
+  + 'You can change it if needed.';
+const deadliftSentence = sentences.find((line) => line.includes(TRACKED));
+ok(
+  'the sentence is exactly Sam approved wording, with the real exercise and weights',
+  deadliftSentence === EXPECTED_SENTENCE,
+  `got ${JSON.stringify(deadliftSentence)}`,
+);
+ok(
+  'the weights in the sentence are the STORED prescription, not a re-derivation',
+  typeof deadliftSentence === 'string' &&
+    deadliftSentence.includes(`to ${storedLoadOf(explained, TRACKED)} kg`),
+  `stored prescription is ${JSON.stringify(storedLoadOf(explained, TRACKED))}`,
+);
+ok(
+  'the sentence survives reload unchanged',
+  blockBoundaryExplanationSentences(reloadedExplained)[0] === sentences[0],
+  'the sentence changed across a reload',
+);
+
+// Only a real INCREASE earns the sentence. A held load is not "moved from X to
+// Y", and stretching the signed words over it would be authoring meaning.
+ok(
+  'a held load renders NO moved-sentence',
+  blockBoundaryLoadMovedSentence({
+    exerciseName: TRACKED, kind: 'history_held',
+    previousLoadKg: TRACKED_RECORDED_KG, nextLoadKg: TRACKED_RECORDED_KG,
+  }) === null,
+  'the signed sentence was stretched over a non-increase',
+);
+ok(
+  'athlete B, with no qualifying history, is told nothing',
+  blockBoundaryExplanationSentences(bBlock2).length === 0,
+  'a sentence was shown to an athlete whose load did not move',
 );
 
 console.log('\n[8] STORED = VISIBLE = RELOADED');
