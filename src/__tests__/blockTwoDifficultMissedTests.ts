@@ -596,6 +596,12 @@ ok(
   `row says ${JSON.stringify(reductionRow?.setsReduced.find((r) => r.exerciseName === TRACKED))}`,
 );
 ok(
+  'EVERY row it names is a REAL reduction — no `3 → 3` under a sentence claiming less work',
+  (reductionRow?.setsReduced ?? []).length > 0
+    && (reductionRow?.setsReduced ?? []).every((named) => named.nextSets < named.previousSets),
+  `got ${JSON.stringify(reductionRow?.setsReduced)}`,
+);
+ok(
   'every exercise the row names is really in the stored block',
   (reductionRow?.setsReduced ?? []).every((named) =>
     [...hardRows.keys()].some((key) => key.endsWith(`:${named.exerciseName}`))),

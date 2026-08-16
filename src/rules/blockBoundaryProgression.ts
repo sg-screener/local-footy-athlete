@@ -1163,7 +1163,16 @@ export function buildBlockBoundaryReductionExplanation(args: {
   // wins, which is the earliest week it was reduced in.
   const seenInExplanation = new Set<string>();
   const setsReduced = volumeDecisions
-    .filter((decision) => decision.kind !== 'sets_unchanged')
+    // ⚠ **A REDUCTION IS `nextSets < previousSets`, NOT `kind !== 'sets_unchanged'`.**
+    // Those are two different questions and using the wrong one shipped a
+    // dishonest explanation: `kind` says whether the STORED row moved, and on a
+    // very-hard block the freeze has already collapsed every row to a single
+    // set, so restoring a main lift to its authored three IS a stored change —
+    // while the athlete's own experience of it is 3 sets before and 3 sets
+    // after. The first draft listed `Leg Press 3 → 3` and `Landmine Press 2 → 2`
+    // underneath a sentence claiming the work had been reduced. The EXPLANATION
+    // answers to what the ATHLETE did, so it is filtered on their numbers.
+    .filter((decision) => decision.nextSets < decision.previousSets)
     .filter((decision) => {
       if (seenInExplanation.has(decision.exerciseName)) return false;
       seenInExplanation.add(decision.exerciseName);
