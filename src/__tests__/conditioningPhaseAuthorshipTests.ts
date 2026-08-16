@@ -14,10 +14,9 @@
  * category and a real `conditioningBlock`. `conditioningCategory` alone is
  * exactly the ghost state that hid the bug for a whole session.
  */
-declare global {
-  // eslint-disable-next-line no-var
-  var __DEV__: boolean;
-}
+// NO `declare global` HERE — the tests project already declares `__DEV__`, and
+// re-declaring it is a block-scoped redeclaration error. Every other suite in
+// this directory assigns without declaring; this one now matches them.
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
