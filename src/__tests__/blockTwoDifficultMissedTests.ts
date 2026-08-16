@@ -982,6 +982,55 @@ function ledgerEntry(answer: { kind: 'confirmed'; sessionsPerWeek: number; train
       return read?.kind === 'confirmed' && read.sessionsPerWeek === 2;
     })(),
   );
+  // B5 SURVIVED HERE. The attendance fixtures used only `full` and `skipped`,
+  // so a rule that counted `partial` as attendance had no coordinate to fail on
+  // — and `partial` is the commonest real answer for an athlete whose life is
+  // getting in the way, which is precisely this question's athlete.
+  ok(
+    'a block of PARTIAL sessions does NOT read as attendance',
+    (() => {
+      const partialBlock: Record<string, SessionFeedback> = {};
+      for (const dateStr of BLOCK_1_DATES) {
+        partialBlock[dateStr] = { dateStr, completion: 'partial' } as SessionFeedback;
+      }
+      return readBlockAttendance({
+        feedbackByDate: partialBlock,
+        ...BLOCK_1_WINDOW,
+        sessionsPerWeek: SESSIONS_PER_WEEK,
+        weeks: BLOCK_WEEKS,
+      }).completedSessions === 0;
+    })(),
+    'the app does not know WHICH work a partial session did — counting it as attendance is an inference the contract forbids',
+  );
+  ok(
+    'and a fully PARTIAL block therefore ASKS',
+    decideWeeklyCommitmentQuestion({
+      attendance: readBlockAttendance({
+        feedbackByDate: Object.fromEntries(BLOCK_1_DATES.map((dateStr) =>
+          [dateStr, { dateStr, completion: 'partial' } as SessionFeedback])),
+        ...BLOCK_1_WINDOW,
+        sessionsPerWeek: SESSIONS_PER_WEEK,
+        weeks: BLOCK_WEEKS,
+      }),
+      forBlockNumber: 1,
+      ledgerEntries: [],
+      isCommitmentLegal: allLegal,
+    }).ask === true,
+  );
+  ok(
+    'THE ANSWER SURVIVES THE LEDGER BEING WRITTEN AND READ BACK',
+    (() => {
+      const entries = [ledgerEntry({ kind: 'confirmed', sessionsPerWeek: 2, trainingDays: [] })];
+      // The ledger persists as JSON. A decision kind that does not round-trip is
+      // a decision the app forgets at the next launch.
+      const reloaded = JSON.parse(JSON.stringify(entries)) as DecisionLedgerEntry[];
+      const read = answerForBlock(reloaded, 1);
+      return read?.kind === 'confirmed'
+        && read.sessionsPerWeek === 2
+        && ask(BLOCK_1_DATES.slice(0, 6), reloaded).ask === false;
+    })(),
+    'the recorded answer did not survive a reload — the question would be re-asked forever',
+  );
   ok(
     'a LATER answer wins over an earlier one — the ledger is append-only',
     (() => {

@@ -89,3 +89,45 @@ ELSE — which also kills M10 a second way.
 **M9 was weak rather than dead.** An accessory sits at the two-set floor already,
 so reducing it and refusing to reduce it produce the same number. The cell now
 asserts NO DECISION EXISTS, not that the number did not move.
+
+## PATH B — MUTATION RUN, 20 MUTATIONS, ALL SEEN RED
+
+Control 86/86 green. One mutation SURVIVED the first pass:
+
+**B5 — `partial` counted as attendance, and no fixture had one.** The attendance
+blocks were built from `full` and `skipped` only, so a rule that treated a
+half-done session as a completed one had no coordinate to fail on. **`partial` is
+the commonest real answer for exactly this question's athlete** — the one whose
+life is getting in the way. Closed by a fully-partial block that reads as ZERO
+attendance and therefore ASKS.
+
+## THE MEASUREMENT THAT DECIDED PATH B'S SHAPE
+
+The production legality probe (which asks generation, not a table), over nine
+worlds at `6117a9fd`:
+
+| phase | d=3 | d=4 | d=5 |
+| --- | --- | --- | --- |
+| Pre-season | **[]** | [3] | [4,3] |
+| In-season | **[]** | [3] | [4,3] |
+| Off-season | [2] | [3,2] | [3,2] |
+
+**A pre-season or in-season athlete already at three sessions has NO legal
+smaller programme** — `main_strength_permitted_minimum` refuses two — so the
+honest answer for them is no question at all (`no_legal_smaller_commitment`).
+It cost a crashed test run to find: the first version of the confirm cell tried
+to rebuild a 3-day pre-season athlete at 2 and generation refused outright.
+
+## SUITE SWEEP — BRANCH vs CONTROL, IDENTICAL
+
+39 suites run in this tree and in a clean `6117a9fd` worktree. **The pass/fail
+set is identical except `test:block-two-difficult-missed`, which does not exist
+at control.** Every red in the sweep is the parked baseline:
+`block-rollover`, `block-state`, `week-rebuild`, `deload-week`, `readiness`,
+`readiness-ownership`, `conditioning-identity`, `conditioning-rotation`,
+`quiescent-boot`, `weekly-dose-ownership`, `projection-ownership`,
+`surface-agreement`, `law-registry`, `ruling-registry`, `repo-law-guards`,
+`ladder-wide`.
+
+`test:compile` returns 468 errors / 6 worse pairs — the base's own numbers, and
+all six pre-existing files. No new pair.
