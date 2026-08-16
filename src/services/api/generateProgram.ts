@@ -1549,6 +1549,10 @@ export function generateProgramLocally(
       const decisions = decideBlockBoundaryLoads({
         history,
         nextBlockWorkouts: microcycle.workouts,
+        // PRIORITY 2 needs the athlete's own squat/bench answers — the authored
+        // anchor estimate is a function of them, and of nothing the outgoing
+        // exercise knows.
+        onboardingData: baseProfile,
       });
       microcycle.workouts = applyBlockBoundaryProgression({
         workouts: microcycle.workouts,

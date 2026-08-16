@@ -86,10 +86,11 @@
  * slice and is listed as a remaining clause rather than guessed at.
  */
 
-import type { Workout, WorkoutExercise } from '../types/domain';
+import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import type { SessionFeedback } from '../store/programStore';
 import type { FeedbackFeeling, FeedbackSoreness } from '../types/sessionOutcome';
 import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
+import { resolveLoadAuthority, startingWeightForAthlete } from '../utils/loadEstimation';
 import { participatesInCounting } from './sessionRowCounting';
 import { classifyProgressionEligibility } from '../utils/strengthProgressionIntegration';
 
@@ -104,11 +105,19 @@ import { classifyProgressionEligibility } from '../utils/strengthProgressionInte
 export const SMALLEST_AUTHORISED_INCREMENT_KG = 2.5;
 
 /**
- * Sam's ruling of 2026-08-16, held as a constant so it is greppable and so the
- * guard that proves it names the same symbol the production path reads.
- * `true` = a rotated lift carries NO load and NO estimate.
+ * ⚠ SUPERSEDED 2026-08-16 by Sam's FINAL LOAD-AUTHORITY CLARIFICATION, and kept
+ * only so the retired instruction is greppable rather than silently vanished.
+ *
+ * The earlier ruling was *"rotated lift → no inherited load and no automatic
+ * estimate"* — blanket. The final order refines it: a genuinely UNSEEN exercise
+ * now takes Sam's authored squat/bench-anchor estimate (PRIORITY 2), and blank
+ * is the answer only when nothing authored covers it (PRIORITY 3).
+ *
+ * **What did NOT change, and is the part that mattered all along:** nothing is
+ * ever seeded from the OUTGOING exercise's weight because the two share a slot
+ * or a movement pattern. The `loadRatio` sibling table remains unconsulted.
  */
-export const ROTATED_LOAD_STAYS_UNSET = true;
+export const ROTATED_NEVER_INHERITS_FROM_OUTGOING = true;
 
 /**
  * How much of the block must have been completed before history counts.
@@ -123,24 +132,33 @@ export const ROTATED_LOAD_STAYS_UNSET = true;
 export const QUALIFYING_COMPLETION_RATIO = 0.75;
 
 export type BlockBoundaryDecisionKind =
-  /** Same lift as last block, history qualified: load seeded and incremented. */
-  | 'retained_progressed'
-  /** Same lift as last block, history did not qualify: load seeded, not raised. */
-  | 'retained_held'
-  /** New lift this block: no load, no estimate — the athlete chooses. */
-  | 'rotated_unset'
-  /** Same lift, but the increment rule does not cover its equipment yet. */
-  | 'retained_uncovered_equipment';
+  /** PRIORITY 1 — own history, and the progression rules raised it. */
+  | 'history_progressed'
+  /** PRIORITY 1 — own history seeded it; progression rules did not raise it. */
+  | 'history_held'
+  /** PRIORITY 2 — never logged: Sam's authored squat/bench-anchor estimate. */
+  | 'authored_estimate'
+  /** PRIORITY 3 — no history and nothing authored: the athlete chooses. */
+  | 'unset'
+  /** Authored as unloaded. BW/no-load semantics are left exactly as they are. */
+  | 'bodyweight_untouched';
 
 export interface BlockBoundaryLiftDecision {
   exerciseId: string;
   exerciseName: string;
   kind: BlockBoundaryDecisionKind;
-  /** The load recorded for this lift last block, when there was one. */
+  /** The most recent valid load recorded for THIS exact exercise, ever. */
   previousLoadKg: number | null;
-  /** What the next block stores. `null` means UNSET — the athlete chooses. */
-  nextLoadKg: number | null;
-  /** Present only on `retained_progressed`. */
+  /**
+   * What the next block stores.
+   *
+   * **THREE VALUES, THREE DIFFERENT THINGS.** A number is a decided load.
+   * `null` is UNSET — decided to be blank, the athlete chooses. `undefined` is
+   * DO NOT TOUCH — this module has no business writing here at all, which is
+   * what keeps an authored bodyweight row's BW semantics intact.
+   */
+  nextLoadKg: number | null | undefined;
+  /** Present only on `history_progressed`. */
   incrementKg?: number;
 }
 
@@ -203,6 +221,15 @@ function isBarbellRequired(exerciseName: string): boolean {
  */
 export function readBlockHistory(args: {
   feedbackByDate: Readonly<Record<string, SessionFeedback>>;
+  /**
+   * The block that just ended. It scopes the COMPLETION/RECOVERY gate — "is
+   * this athlete training well *right now*" is a question about recent weeks.
+   *
+   * ⚠ **IT DOES NOT SCOPE THE RECORDED LOADS.** Sam, 2026-08-16: *"A returning
+   * exercise keeps its own history even after being absent for one or more
+   * blocks."* Windowing loads to the previous block is exactly how a lift that
+   * sat out block 2 comes back in block 3 pretending it had never been lifted.
+   */
   blockStartISO: string;
   blockEndISO: string;
   /** Strength sessions the block asked for. Drives the 75% gate. */
@@ -210,9 +237,10 @@ export function readBlockHistory(args: {
 }): BlockHistorySignal {
   const { feedbackByDate, blockStartISO, blockEndISO, requiredStrengthSessions } = args;
 
-  const inBlock = Object.entries(feedbackByDate)
-    .filter(([dateStr]) => dateStr >= blockStartISO && dateStr <= blockEndISO)
+  const allSorted = Object.entries(feedbackByDate)
     .sort(([a], [b]) => a.localeCompare(b));
+  const inBlock = allSorted
+    .filter(([dateStr]) => dateStr >= blockStartISO && dateStr <= blockEndISO);
 
   let completedStrengthSessions = 0;
   let recordedStrengthSessions = 0;
@@ -237,9 +265,14 @@ export function readBlockHistory(args: {
       sawRecoveryAnswer = true;
       if (!GOOD_RECOVERY_SORENESS.has(feedback.soreness)) recoveryGood = false;
     }
+  }
 
-    // Walk in date order so the LAST recorded load for a lift wins.
-    for (const log of strengthLogs) {
+  // ── RECORDED LOADS ARE READ OVER ALL TIME, NOT OVER THE BLOCK ──
+  // Walk every dated entry in order so the LAST valid load for each EXACT
+  // canonical exercise wins, however many blocks ago it was set. A `skipped`
+  // exposure is not a completed one and cannot seed anything.
+  for (const [, feedback] of allSorted) {
+    for (const log of feedback.strength ?? []) {
       if (log.completion === 'skipped') continue;
       const load = log.weightKg;
       if (typeof load === 'number' && Number.isFinite(load) && load > 0) {
@@ -293,8 +326,14 @@ function progressableStrengthRows(workouts: readonly Workout[]): WorkoutExercise
 export function decideBlockBoundaryLoads(args: {
   history: BlockHistorySignal;
   nextBlockWorkouts: readonly Workout[];
+  /**
+   * Needed for PRIORITY 2 only — the authored anchor estimate is a function of
+   * the athlete's own squat/bench answers. Absent means no estimate is
+   * available, which falls to PRIORITY 3 (unset) rather than to a guess.
+   */
+  onboardingData?: OnboardingData;
 }): BlockBoundaryLiftDecision[] {
-  const { history, nextBlockWorkouts } = args;
+  const { history, nextBlockWorkouts, onboardingData } = args;
   const seen = new Set<string>();
   const decisions: BlockBoundaryLiftDecision[] = [];
 
@@ -303,52 +342,77 @@ export function decideBlockBoundaryLoads(args: {
     if (seen.has(exerciseName)) continue;
     seen.add(exerciseName);
 
-    const previous = history.lastRecordedLoadByExercise[exerciseName];
-    const previousLoadKg = typeof previous === 'number' ? previous : null;
+    const base = { exerciseId: row.exerciseId, exerciseName };
 
-    // ROTATED. No prior recorded load for THIS exercise means it did not run
-    // last block (or ran and was never loaded). Either way there is nothing
-    // this module is allowed to carry across, and it does not estimate.
-    if (previousLoadKg === null) {
+    // ── AUTHORED AS UNLOADED — leave it entirely alone ──
+    // Sam: *"Bodyweight/unloaded movements retain their correct BW/no-load
+    // semantics."* Blanking a Pull-Up's load, or estimating one for it, both
+    // make the row lie. The authored source already answered this question.
+    const authority = resolveLoadAuthority(exerciseName);
+    if (authority.kind === 'bodyweight' || authority.kind === 'athlete_chosen') {
       decisions.push({
-        exerciseId: row.exerciseId,
-        exerciseName,
-        kind: 'rotated_unset',
+        ...base,
+        kind: 'bodyweight_untouched',
         previousLoadKg: null,
-        nextLoadKg: ROTATED_LOAD_STAYS_UNSET ? null : null,
+        nextLoadKg: undefined,
       });
       continue;
     }
 
-    if (!history.qualifies) {
+    const recorded = history.lastRecordedLoadByExercise[exerciseName];
+    const previousLoadKg = typeof recorded === 'number' ? recorded : null;
+
+    // ── PRIORITY 1 — THE EXACT EXERCISE'S OWN HISTORY OUTRANKS EVERYTHING ──
+    // Sam, 2026-08-16: *"The athlete's recorded history for the EXACT canonical
+    // exercise always outranks the initial squat/bench percentage estimate."*
+    // Keyed by canonical NAME, over ALL TIME — which is what lets a lift that
+    // sat out a block resume from its own number instead of being re-estimated.
+    if (previousLoadKg !== null) {
+      const mayProgress = history.qualifies && isBarbellRequired(exerciseName);
+      if (mayProgress) {
+        decisions.push({
+          ...base,
+          kind: 'history_progressed',
+          previousLoadKg,
+          nextLoadKg: previousLoadKg + SMALLEST_AUTHORISED_INCREMENT_KG,
+          incrementKg: SMALLEST_AUTHORISED_INCREMENT_KG,
+        });
+      } else {
+        decisions.push({
+          ...base,
+          kind: 'history_held',
+          previousLoadKg,
+          nextLoadKg: previousLoadKg,
+        });
+      }
+      continue;
+    }
+
+    // ── PRIORITY 2 — NEVER LOGGED: SAM'S AUTHORED ANCHOR ESTIMATE ──
+    // `startingWeightForAthlete` reads EXERCISE_LOAD_MAP's squat/bench ratio
+    // and the athlete's own answers. **It cannot see the outgoing exercise**,
+    // which is precisely why it satisfies rule 4: there is no path by which a
+    // replacement can be seeded from what it replaced. The `loadRatio` sibling
+    // table is still not consulted anywhere in this module.
+    const estimate = onboardingData
+      ? startingWeightForAthlete(exerciseName, onboardingData)
+      : null;
+    if (typeof estimate === 'number' && Number.isFinite(estimate) && estimate > 0) {
       decisions.push({
-        exerciseId: row.exerciseId,
-        exerciseName,
-        kind: 'retained_held',
-        previousLoadKg,
-        nextLoadKg: previousLoadKg,
+        ...base,
+        kind: 'authored_estimate',
+        previousLoadKg: null,
+        nextLoadKg: estimate,
       });
       continue;
     }
 
-    if (!isBarbellRequired(exerciseName)) {
-      decisions.push({
-        exerciseId: row.exerciseId,
-        exerciseName,
-        kind: 'retained_uncovered_equipment',
-        previousLoadKg,
-        nextLoadKg: previousLoadKg,
-      });
-      continue;
-    }
-
+    // ── PRIORITY 3 — NOTHING HONEST TO SAY. THE ATHLETE CHOOSES. ──
     decisions.push({
-      exerciseId: row.exerciseId,
-      exerciseName,
-      kind: 'retained_progressed',
-      previousLoadKg,
-      nextLoadKg: previousLoadKg + SMALLEST_AUTHORISED_INCREMENT_KG,
-      incrementKg: SMALLEST_AUTHORISED_INCREMENT_KG,
+      ...base,
+      kind: 'unset',
+      previousLoadKg: null,
+      nextLoadKg: null,
     });
   }
 
@@ -380,11 +444,14 @@ export function applyBlockBoundaryProgression(args: {
     const exercises = (workout.exercises ?? []).map((exercise) => {
       const decision = byName.get(exercise.exercise?.name ?? '');
       if (!decision) return exercise;
+      // DO NOT TOUCH. An authored bodyweight/athlete-chosen row keeps whatever
+      // its own owner decided — writing OR deleting here would both be wrong.
+      if (decision.nextLoadKg === undefined) return exercise;
       touched = true;
       const { prescribedWeightKg: _dropped, ...withoutLoad } = exercise;
       return {
         ...withoutLoad,
-        // Absent when the decision is UNSET; a real number otherwise.
+        // Key absent when UNSET; a real number otherwise.
         ...(decision.nextLoadKg === null ? {} : { prescribedWeightKg: decision.nextLoadKg }),
       };
     });
@@ -404,7 +471,7 @@ export interface BlockBoundaryExplanationRow {
   exerciseName: string;
   kind: BlockBoundaryDecisionKind;
   previousLoadKg: number | null;
-  nextLoadKg: number | null;
+  nextLoadKg: number | null | undefined;
   incrementKg?: number;
 }
 
@@ -412,10 +479,11 @@ export function buildBlockBoundaryExplanation(
   decisions: readonly BlockBoundaryLiftDecision[],
 ): BlockBoundaryExplanationRow[] {
   const order: Record<BlockBoundaryDecisionKind, number> = {
-    retained_progressed: 0,
-    retained_held: 1,
-    retained_uncovered_equipment: 2,
-    rotated_unset: 3,
+    history_progressed: 0,
+    history_held: 1,
+    authored_estimate: 2,
+    unset: 3,
+    bodyweight_untouched: 4,
   };
   return [...decisions]
     .sort((a, b) => order[a.kind] - order[b.kind] || a.exerciseName.localeCompare(b.exerciseName))

@@ -2055,3 +2055,60 @@ composed week does not currently reach storage intact, so there is no
 athlete-visible receipt and this row may not claim one. The legacy mirror at
 `coachingEngine.ts:2226-2251` is **unchanged and still live** on every
 non-composed route.
+
+---
+
+**R-096** · *"The athlete's recorded history for the EXACT canonical exercise
+always outranks the initial squat/bench percentage estimate."* (Sam,
+2026-08-16) · **THE LOAD-AUTHORITY ORDER, AND IT IS AN ORDER, NOT A BLEND.**
+**1.** the exact exercise has a valid recorded load from a COMPLETED exposure →
+seed from that exercise's own most recent valid load, then apply the approved
+progression/readiness rules. **2.** the exact exercise has never been logged →
+Sam's authored `EXERCISE_LOAD_MAP` squat/bench-anchor estimate, as a
+conservative initial suggestion. **3.** neither → **leave the load unset for the
+athlete to choose.** **4.** **NEVER seed a rotated exercise from the OUTGOING
+exercise's weight merely because they share a slot or movement pattern.**
+**A returning exercise keeps its own history after being absent for one or more
+blocks** — history is read over ALL TIME per canonical exercise name, never
+windowed to the previous block. **Bodyweight/unloaded movements keep their
+BW/no-load semantics**; recorded external load is used only where the product
+genuinely records one.
+**⚠ THIS SUPERSEDES TWO EARLIER INSTRUCTIONS IN THE SAME DAY** — an
+option-B ruling that rotated lifts take *"no inherited load and no automatic
+estimate"* (blanket), and before it an option-A leaning toward a conservative
+mapped estimate. **The part that never changed across all three is clause 4.**
+The retired wording is kept, marked superseded, at
+`rules/blockBoundaryProgression.ts` → `ROTATED_NEVER_INHERITS_FROM_OUTGOING`.
+**Search words:** load authority, exact exercise, canonical exercise, recorded
+load, anchor estimate, EXERCISE_LOAD_MAP, squat anchor, bench anchor, rotated
+load, sibling transfer, loadRatio, returning exercise, unset load, blank load,
+bodyweight semantics, outgoing exercise, contamination.
+· **`BUILT rules/blockBoundaryProgression.ts` — `decideBlockBoundaryLoads`,
+guarded by `test:block-two-progression` (14 cells).** Seven mutations seen RED
+before this row was written: increment 2.5→5.0; history windowed to the previous
+block; `partial` counted as completed; authored estimate outranking own history;
+unseen falling to unset instead of the anchor; a rotated row seeded from any
+recorded load; and projection's authority to re-derive restored.
+
+**R-097** · *"Block Two progression must be resolved before storage as part of
+building Block Two—not later when the screen draws it. Stored, visible and
+reloaded prescriptions must be identical."* (Sam, 2026-08-16) · **THE BLOCK'S
+LOADS ARE DECIDED WHILE IT IS BUILT, AND PROJECTION ONLY DISPLAYS THEM.**
+**⚠ THE AUTHORING-TIME FREEZE ALREADY EXISTED** —
+`bakeMicrocycleStrengthProgression`, called at the end of
+`generateProgramLocally` — **and was fed `sessionFeedback: {}`,
+`weightOverrides: {}`, `workoutHistory: []`, `blockState: null`.** It baked a
+history-free load into storage while the screen, reading the live store, could
+derive a different one. **The defect was four empty arguments, not a missing
+layer**, and the fix is that they are now real.
+**A MATCHING PAIR OF NUMBERS IS NOT EVIDENCE HERE.** "Stored == visible" is
+equally produced by *"projection obeys"* and by *"both passes happened to
+agree"*, so the guard hands projection a history that CONTRADICTS the one
+generation saw and requires it not to move.
+**Search words:** stored visible reloaded, projection authority, read-time
+progression, authoring freeze, bake, materialise, prescription identity,
+relaunch, four empty arguments.
+· **`BUILT services/api/generateProgram.ts` — the `progressionHistory` option
+and the fed `bakeMicrocycleStrengthProgression` call, guarded by
+`test:block-two-progression` cell [8] plus its contradictory-history control.**
+Mutation M7 (projection's authority restored) reddens it.

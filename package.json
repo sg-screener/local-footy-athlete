@@ -57,6 +57,7 @@
     "test:block-state": "sucrase-node src/__tests__/programBlockStateTests.ts",
     "test:week-identity": "TZ=Australia/Melbourne sucrase-node src/__tests__/weekIdentityOwnershipTests.ts",
     "test:block-rollover": "sucrase-node src/__tests__/programBlockRolloverTests.ts",
+    "test:block-two-progression": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockTwoProgressionTests.ts",
     "test:deload-week": "sucrase-node src/__tests__/deloadWeekGenerationTests.ts",
     "test:phase-clock": "TZ=Australia/Melbourne sucrase-node src/__tests__/seasonPhaseClockTests.ts",
     "test:strength-progression-inputs": "sucrase-node src/__tests__/strengthProgressionInputsTests.ts",
