@@ -764,7 +764,23 @@ export async function relaunchApp(args: {
   await quietAsync(() => flushPendingStorageWrites());
   const snapshot = new Map(args.storage);
 
+  // ⚠ **THE ORDER OF THESE THREE STEPS IS THE WHOLE FIDELITY OF THE SIMULATION,
+  // AND GETTING IT WRONG MANUFACTURED A PERSISTENCE DEFECT THAT DOES NOT EXIST.**
+  //
+  // Emptying the stores is how a process death is modelled — but every store that
+  // empties PERSISTS ITS EMPTINESS, and those writes are queued and tracked, not
+  // synchronous. The first version of this function restored the disk snapshot
+  // immediately after the reset, so the reset's own empty writes drained
+  // afterwards and overwrote it. The journey then reported that nineteen days of
+  // recorded training never reached disk. **It had: measured 19 on disk
+  // immediately before the relaunch, through the real owner.** The loss was
+  // entirely this ordering.
+  //
+  // So: empty the stores, let their writes SETTLE, and only then restore what the
+  // real process death actually left behind. After this point nothing else may
+  // write before hydration reads.
   resetStoresToFreshInstall('athlete-journey:relaunch');
+  await quietAsync(() => flushPendingStorageWrites());
   args.storage.clear();
   for (const [key, value] of snapshot) args.storage.set(key, value);
 

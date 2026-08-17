@@ -76,6 +76,22 @@ import {
   type VisibleDay,
 } from './support/athleteJourney';
 
+/** Flush through the real door and report what the persistence OWNER holds. */
+async function historyCheckpoint(label: string): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { flushPendingStorageWrites, asyncStorageCompat } = require('../store/asyncStorageCompat');
+  await flushPendingStorageWrites();
+  const raw = await asyncStorageCompat.getItem('program-store');
+  const inputs = raw
+    ? ((JSON.parse(raw) as { state?: { inputs?: Record<string, any> } }).state?.inputs ?? null)
+    : null;
+  const live = useProgramStore.getState() as unknown as {
+    sessionFeedback?: Record<string, unknown>;
+  };
+  console.log(`  [history @ ${label}] live=${Object.keys(live.sessionFeedback ?? {}).length} `
+    + `ON DISK=${Object.keys(inputs?.sessionFeedback ?? {}).length}`);
+}
+
 let pass = 0; let fail = 0; const failures: string[] = [];
 function ok(name: string, condition: boolean, detail?: string): void {
   if (condition) { pass += 1; console.log(`  PASS ${name}`); }
@@ -391,6 +407,7 @@ async function main(): Promise<void> {
     `${notRecorded.length} unrecorded days; a miss must be an absence, not a stored skip`,
   );
 
+  await historyCheckpoint('after the 4-week walk');
   const census = takeCensus(addDaysISO(lastDay, 1));
   printCensus(census);
 
@@ -504,6 +521,7 @@ async function main(): Promise<void> {
   console.log(`  live blockState immediately after the rollover: ${JSON.stringify(
     (useProgramStore.getState() as unknown as { blockState: unknown }).blockState)}`);
 
+  await historyCheckpoint('after the rollover');
   const blockTwoStart = rollover.nextBlockStart ?? boundaryDay;
   followTheWeek(blockTwoStart);
   const blockTwoVisible = visibleProjection(blockTwoStart, blockTwoStart);
@@ -909,6 +927,7 @@ async function main(): Promise<void> {
       + `${JSON.stringify(inputs?.acceptedBlocks ?? null)}`);
   }
 
+  await historyCheckpoint('immediately before the relaunch');
   console.log(`  live blockState immediately before the relaunch: ${JSON.stringify(
     (useProgramStore.getState() as unknown as { blockState: unknown }).blockState)}`);
 

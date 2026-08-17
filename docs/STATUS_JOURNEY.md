@@ -437,7 +437,117 @@ entire defect and through the fix. `test:athlete-journey`'s relaunch — snapsho
 storage, reset stores, restore, rehydrate the registry, boot — is the stronger
 model and is the only thing that saw this.
 
-## ⚠ THE NAMED BLOCKER — THE ATHLETE'S TRAINING HISTORY DOES NOT REACH DISK
+## ✅ THE HISTORY BLOCKER IS CLOSED — AND PRODUCTION WAS NEVER WRONG
+
+Ordered 2026-08-18: *"Isolate training-history persistence through the real
+production route … Measure the saved record before changing code. Do not put
+duplicate history into the general inputs envelope merely to satisfy the journey
+harness."*
+
+**MEASURED FIRST, WITH NOTHING ELSE MOVING** (`scripts/tmp-probe-history.ts`,
+temporary, deleted): cold start through the real onboarding door, five sessions
+completed through `commitSessionOutcomeTransaction` with loads typed, then
+`flushPendingStorageWrites` — the real save door — then every key read back
+**through the persistence owner itself** (`asyncStorageCompat.getItem`), not off the
+raw Map:
+
+```
+sessions the athlete completed: 5
+session-feedback days SAVED by the owner: 5
+weight-override days SAVED by the owner: 2
+durable writes DROPPED by the replay latch: []
+>>> the history IS on disk.
+```
+
+`program-store` holds `inputs=[generationAnchorISO, seasonPhaseClock,
+sessionFeedback, weightOverrides, acceptedBlocks, temporarySourceFacts,
+injuryEpisodes]`, 5556 bytes. **The canonical writer and reader were correct all
+along. NO production code was changed for this, and no duplicate history was added
+anywhere.**
+
+### THE FAULT WAS THE HARNESS'S PROCESS-DEATH ORDERING
+
+Bisected by flushing and reading the owner at three points in the real journey:
+
+```
+[history @ after the 4-week walk]          live=19  ON DISK=19
+[history @ after the rollover]             live=19  ON DISK=19
+[history @ immediately before the relaunch] live=19  ON DISK=19
+```
+
+So the loss was inside `relaunchApp`. **Emptying the stores to model a process
+death makes every store PERSIST ITS EMPTINESS, and those writes are queued and
+tracked, not synchronous.** The old order restored the disk snapshot straight after
+the reset, so the reset's own empty writes drained afterwards and overwrote it.
+Corrected order: empty the stores → **let their writes settle** → restore what the
+death actually left → hydrate → boot. Nothing writes between the restore and the
+read.
+
+**This is the same queued-write mechanism that defeated persisting `blockState`**
+— third sighting in this mission. `a-note-is-output-never-evidence`, and the
+conclusion I nearly shipped was "nineteen days of training never reached disk",
+which was false.
+
+## ✅ THE COMPLETE JOURNEY PASSES — 30 passed, 0 failed
+
+`npm run test:athlete-journey`. After a full process death and rebuild:
+
+```
+[relaunch] ENVELOPE: sessionFeedback days=19  weightOverride days=7
+after restart — blockState={"blockStartDate":"2026-08-10","blockNumber":2}
+after restart — feedback days=19 withStrengthLogs=7 progressionEntries=7
+PASS RESTART: the athlete is STILL IN BLOCK 2 — never inferred or reset to block 1
+PASS RESTART: the VISIBLE program is identical — sessions, exercises, doses and loads
+PASS RESTART: every load the boundary raised is STILL raised after reopening the app
+PASS RESTART: the explanations the athlete reads are unchanged
+PASS RESTART: each accepted block's own strength requirement survived the relaunch
+```
+
+Identical loads, identical progression explanations, block identity held,
+selections identical, and the `until_changed` exclusion still excluded.
+
+### EVERY MUTATION, AND ALL SEVEN RED
+
+| # | mutation | red |
+| --- | --- | --- |
+| M1 | requirement writer removed from the install door | ✅ 3 cells |
+| M2 | requirement writer removed from the rollover door | ✅ |
+| M3 | both refuted denominators restored as fallbacks | ✅ |
+| M5 | block identity's PERSISTENCE removed | ✅ |
+| M6 | block identity's RESTORATION removed | ✅ |
+| M7 | the real history WRITE removed (`sessionFeedback` out of `partialize`) | ✅ 3 cells |
+| M8 | the real history READ removed (`sessionFeedback` out of `merge`) | ✅ 3 cells |
+
+## BLAST RADIUS — FULL SWEEPS, UNTRUNCATED, AND THE FIRST PAIR WAS A LIE
+
+| | failures | of |
+| --- | --- | --- |
+| branch `feat/complete-athlete-journey` | **156** | 403 |
+| control worktree at `a4ef85be` | **156** | 402 |
+
+**GAINED: 0. LOST: 0. The two failing sets are IDENTICAL name for name.** The +1
+suite is `test:athlete-journey` itself joining the chain, and it is NOT in the
+failing set.
+
+**⚠ MY FIRST COMPARISON WAS AN ARTEFACT OF MY OWN PIPE, AND IT MANUFACTURED FIVE
+FINDINGS.** I ran the sweeps through `tail -45` and `tail -50`, so both "failing
+sets" were truncated to the last N lines. That reported `45 vs 45` (falsely
+reassuring) and then `50 vs 45` with five GAINED suites —
+`adjustment-engine`, `apply-events`, `coach-injury-integration`, `coach-updates`,
+`uae-flow`. **All five fail identically at base when run individually**, which is
+how the artefact was caught. Re-run untruncated, the real numbers are above.
+`a-truncated-diff-manufactures-findings`, and this time it was mine.
+
+**ONE REAL GAINED RED WAS FOUND BY THE UNTRUNCATED SWEEP AND IS NOW FIXED:**
+`test:persisted-inputs-schema` refused `program-store.inputs.acceptedBlocks` as
+*"stored and declared NOWHERE"*. That guard exists precisely to force a new
+persisted key to declare its class, and it did its job. Declared **`decision`**,
+beside `generationAnchorISO`: accepting a block IS a decision, it is recorded at
+acceptance, read by boot, and not re-derivable afterwards. It is deliberately NOT
+a `result` — `sessionFeedback` and `weightOverrides` are what the athlete DID,
+this is what the app COMMITTED to give them. Suite now 8/0.
+
+## ⚠ SUPERSEDED — the blocker text below was WRONG and is kept only so the false conclusion is not re-reached
 
 Three restart cells remain red, and the cause is now attributed and is **not** the
 block identity:
