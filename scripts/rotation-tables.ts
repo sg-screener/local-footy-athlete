@@ -124,6 +124,17 @@ function table(label: string, equipment: unknown): void {
     }
   }
 
+  /* Sam, 2026-08-17: main lifts, single-leg rows and accessories shown
+   * SEPARATELY — they answer to different rotation rules and reading them in one
+   * block hid the fact that single-leg was rotating every block as ordered. */
+  const GROUP_OF = (slot: string): string =>
+    slot === 'single_leg_knee' || slot === 'single_leg_hip'
+      ? 'SINGLE-LEG (rotates every block)'
+      : ['squat', 'hinge', 'horizontal_push', 'vertical_push',
+        'horizontal_pull', 'vertical_pull'].includes(slot)
+        ? 'MAIN BILATERAL (may hold two blocks)'
+        : 'ACCESSORY (rotates every block)';
+
   console.log(`\n\n════ ${label} ════`);
   console.log('slot            | block 1        | deload         | block 2        '
     + '| block 3        | block 4        | decision at b2→b4          | load source');
@@ -132,7 +143,14 @@ function table(label: string, equipment: unknown): void {
   const slots = new Set<string>();
   for (const b of blocks) for (const s of b.build.keys()) slots.add(s);
 
-  for (const slot of [...slots].sort()) {
+  const ordered = [...slots].sort((a, c) =>
+    (GROUP_OF(a) + a).localeCompare(GROUP_OF(c) + c));
+  let lastGroup = '';
+  for (const slot of ordered) {
+    if (GROUP_OF(slot) !== lastGroup) {
+      lastGroup = GROUP_OF(slot);
+      console.log(`\n  ── ${lastGroup} ──`);
+    }
     const cells = blocks.map((b) => b.build.get(slot));
     const dl = blocks[0].deload.get(slot) ?? '—';
     const pad = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s.padEnd(n));

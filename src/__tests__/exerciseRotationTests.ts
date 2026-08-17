@@ -460,10 +460,19 @@ console.log('\n[7] A DELOAD DOES NOT ADVANCE EITHER CADENCE');
     b2.identity === b2again.identity, `${b2.identity} vs ${b2again.identity}`);
   ok('and a NEW block moves it — single-leg and accessories rotate every block',
     b3.identity !== b2.identity, `b2=${b2.identity} b3=${b3.identity}`);
-  ok('a non-retention slot is never retained, whatever the history says',
-    decideRotation({ ...base, blockNumber: 3, progressedIdentities: candidates })
-      .kind !== 'retained',
-    'an accessory was retained');
+  /* ⚠ **ASKED AT BLOCK 2, NOT BLOCK 3.** At block 3 the two-block cap fires
+   * first and rotates anyway, so opening retention to accessories changed
+   * nothing and the mutation walked through. Block 2 is the only place the
+   * retention branch is reachable unmasked. */
+  const accessoryB2 = decideRotation({
+    ...base, blockNumber: 2, progressedIdentities: candidates,
+  });
+  ok('a non-retention slot is never retained, even with every lift progressing',
+    accessoryB2.kind !== 'retained',
+    `${accessoryB2.kind}/${accessoryB2.reason} — single-leg and accessories `
+    + 'rotate at EVERY new block');
+  ok('and its reason names the cadence, not the history',
+    accessoryB2.reason === 'accessory_cadence', accessoryB2.reason);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -668,6 +677,27 @@ console.log('\n[13] A PARTIAL-KIT ATHLETE ROTATES INSIDE WHAT THEY OWN');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[13b] SINGLE-LEG SLOTS ROTATE AT EVERY NEW BLOCK — IN THE REAL WORLD');
+
+{
+  /*
+   * The owner-level cell above proves the rule; this proves the COMPOSER routes
+   * single-leg slots to it. Without this, widening retention to every
+   * budget-counting slot reddened nothing in a generated world.
+   */
+  const nameFor = (rows: Row[], slot: string) =>
+    [...new Set(rows.filter((r) => r.mainSlot === slot).map((r) => r.name))].sort().join('+');
+
+  const b1Knee = nameFor(b1Rows, 'single_leg_knee');
+  const b2Knee = nameFor(rowsOf(b2Retained), 'single_leg_knee');
+  ok('both blocks programmed single-leg knee work — liveness',
+    b1Knee.length > 0 && b2Knee.length > 0, `b1=${b1Knee} b2=${b2Knee}`);
+  ok('and the single-leg knee exercise CHANGED at the new block, despite history',
+    b1Knee !== b2Knee,
+    `b1=${b1Knee} b2=${b2Knee} — single-leg rotates every block, never retained`);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[14] THE EXPERIENCE GATE — SAM\'S RULINGS 4, 5 AND 6');
 
 {
@@ -706,10 +736,19 @@ console.log('\n[14] THE EXPERIENCE GATE — SAM\'S RULINGS 4, 5 AND 6');
   const bwRows = rowsOf(bwProgram);
   ok('a BODYWEIGHT-ONLY experienced athlete still gets strength rows — liveness',
     bwRows.length > 0, 'the bodyweight athlete got nothing at all');
-  ok('and they DO receive a regression squat, because it is their only legal one',
-    bwRows.some((r) => REGRESSIONS.includes(r.name)),
-    `the experience filter refused a bodyweight athlete their only squat: `
+  /* ⚠ **THIS CELL USED TO ASK THE WRONG QUESTION AND A MUTATION WALKED THROUGH
+   * IT.** It asked whether ANY regression-gated row reached the athlete — and
+   * `Push-ups` is `everyone_regression` too, so it stayed green while the SQUAT
+   * disappeared completely. Removing ruling 6's fallback reddened nothing. The
+   * claim is about the squat SLOT, so the cell now names it. */
+  const bwSquats = bwRows.filter((r) => r.mainSlot === 'squat');
+  ok('and their SQUAT SLOT is still filled — ruling 6 is a fallback, not a refusal',
+    bwSquats.length > 0,
+    'the experience filter emptied a bodyweight athlete\'s squat slot: rows were '
     + `${[...new Set(bwRows.map((r) => r.name))].join(', ')}`);
+  ok('and it is the regression squat, because it is their only legal one',
+    bwSquats.every((r) => REGRESSIONS.includes(r.name)),
+    [...new Set(bwSquats.map((r) => r.name))].join(', '));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */

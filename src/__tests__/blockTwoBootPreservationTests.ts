@@ -79,7 +79,22 @@ const WEEK_ORDER: readonly DayOfWeek[] = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ];
 const TRACKED = 'Deadlift';
-const ACCESSORY = 'Bicep Curl (Barbell)';
+/**
+ * ⚠ **THIS NAME MOVED WHEN SAM'S 2026-08-17 ROTATION RULING LANDED, AND THE
+ * SUBJECT DID NOT.** This suite asks whether a relaunch RESTORES an accessory's
+ * own recorded load; which accessory is incidental to that question.
+ *
+ * Accessories used to rotate every WEEK, so block 2 contained several and
+ * `Bicep Curl (Barbell)` was one of them. Ruling 2 — *"true accessory exercises
+ * rotate at every new block. They remain stable within the block and its
+ * deload"* — gives the block ONE accessory per slot, and for this off-season
+ * clubless world that is `Banded External Rotation`. The old name is simply not
+ * in block 2 any more, so both cells read `[]`.
+ *
+ * `Bicep Curl (Barbell)` is NOT gated out: it is authored `everyone`. This is a
+ * cadence change, not an experience one.
+ */
+const ACCESSORY = 'Banded External Rotation';
 const RECORDED_KG = 100;
 const ACCESSORY_RECORDED_KG = 17.5;
 

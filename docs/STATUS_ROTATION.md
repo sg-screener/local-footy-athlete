@@ -231,6 +231,110 @@ accessories still rotate weekly, so *"most exercises change"* still holds by row
 count. **The four-block tables show this rhythm plainly and it is the thing to
 look at first.**
 
+## SESSION 3 — THE EXPERIENCE GATE WAS ALREADY THERE, AND NOTHING CONSUMED IT
+
+**The answer to "why is the composer not consuming `experienceGate`": nothing was.**
+`data/muscleExperienceMetadata.ts` authors a gate for every exercise,
+`rules/experienceCrosswalk.ts` maps an athlete to the gates they may be
+auto-programmed from, and `isExerciseAutoProgrammableFor` joins them — with
+**ZERO production callers**. The identical shape to the deleted pool rotation and
+to `prefs.pinned`: a complete authored authority running on nothing. **Three of
+them now, in one mission.**
+
+It is consumed in ONE place: the composer's legality step, ordered
+exclusion → equipment → experience. No second policy, and **no exercise-name list
+anywhere** — Bodyweight Squat and Goblet Squat are authored `everyone_regression`
+and `2-5 years` does not see that gate, so rulings 4 and 5 fall out of data that
+already existed.
+
+### THE ACCEPTANCE CHECK — experienced full-gym athlete, four real blocks
+
+```
+before   squat   Goblet Squat → Goblet Squat → Bodyweight Squat → Goblet Squat
+after    squat   Leg Press ×4
+before   hinge   Deadlift first
+after    hinge   RDLs first
+```
+
+**No Bodyweight Squat. No Goblet Squat. Merge condition met.**
+
+### ⚠ TWO POOL-CONTENT GAPS, REPORTED AS RULING 3 REQUIRES
+
+Measured after each filter, for the experienced full-gym athlete:
+
+| slot | in pool | kit-legal | + experience |
+| --- | --- | --- | --- |
+| squat | 7 | 3 | **1 — Leg Press** |
+| single_leg_hip | **1** | 1 | 1 — Single-Leg RDL |
+
+- **The squat gap is caused by the KIT FIXTURE HAVING NO RACK.** `fullKitEquipmentAnswer`
+  grants barbell, dumbbells, cables, machine, bands, bench, pull-up bar,
+  kettlebell — **no rack**, so Back Squat, Front Squat, Box Squat and High Box
+  Squat are all kit-illegal. The two that survive the kit are both
+  regression-gated. **An athlete with a barbell but no rack has exactly one
+  experience-legal squat, and it is Leg Press.**
+- **`single_leg_hip` authors ONE exercise in total.** No kit and no experience
+  level can rotate it.
+
+Both are retained with `reason: 'single_legal_candidate'` rather than crossing a
+movement group, which is ruling 3's instruction.
+
+### MUTATION RECEIPTS — 11 mutations, all red
+
+New this session: the experience gate not consumed; the experience gate refusing
+instead of falling back (ruling 6); hinge priority dropped; single-leg becoming
+retention-eligible (owner and composer).
+
+⚠ **THE HARNESS ITSELF HAD TWO DEFECTS, AND BOTH ARE FIXED:**
+
+1. **IT DESTROYED A SESSION OF UNCOMMITTED WORK.** It undid each mutation with
+   `git checkout -- <file>`, which on a dirty tree writes HEAD over whatever you
+   had. It wiped every session-3 edit to both rule files the moment it ran. **A
+   REVERT IS A WRITE.** It now backs the files up to a temp dir and restores from
+   that, so it can run on a dirty tree — which is the entire point of a mutation
+   harness. The work was reapplied from context and committed BEFORE mutating.
+2. **IT READ A DEAD SUITE AS A CLEAN ONE.** Removing ruling 6's fallback makes
+   generation REFUSE, so the suite crashed, printed no `FAIL` lines, and the
+   harness reported "nothing went red" — the opposite of the truth. It now
+   requires the totals line and calls its absence `RED (SUITE KILLED)`.
+
+## GATES — BASE `dda2747d` vs THIS BRANCH, FINAL
+
+| suite | base | now | delta |
+| --- | --- | --- | --- |
+| `test:compile` | 6 failing pairs | 6 failing pairs | 0 — red on `main` itself |
+| `test:exercise-rotation` (new) | — | **53 / 0** | new |
+| `test:exercise-exclusions` | 51 / 0 | 51 / 0 | 0 |
+| `test:pools` | 473 / 1 | 473 / 1 | 0 |
+| `test:ladder-wide` | 13 / 1 | 13 / 1 | 0 |
+| `test:equipment-answer` | 41 / 0 | 41 / 0 | 0 |
+| `test:edge-generation-equipment` | 37 / 1 | 37 / 1 | 0 (pre-existing) |
+| `test:block-two-boot-preservation` | 20 / 0 | **20 / 0** | 0 — re-aimed |
+| `test:block-two-screen-delivery` | 35 / 0 | **35 / 0** | 0 |
+| `test:block-two-ladder` | 51 / 1 | **51 / 1** | 0 — same pre-existing red |
+| `test:block-two-difficult-missed` | 88 / 0 | 87 / **1** | +1 |
+| `test:block-two-progression` | 37 / 0 | 28 / **9** | +9 |
+
+**From 12 new reds to 10, and four suites returned to base parity.**
+
+### THE 10 REMAINING REDS ARE ONE SHAPE, AND NOT REWRITTEN
+
+Every one is a hard-coded exercise NAME the corrected rotation no longer places
+in block 2 — `Bicep Curl (Barbell)`, `Copenhagen Plank (Half)`, `Pull-Ups` — and
+each is caught by that suite's own liveness cell reporting `ABSENT_ROW`. Their
+SUBJECTS (accessory load seeding, bodyweight added-load restoration) remain valid
+product rules.
+
+**Why the names moved:** ruling 2 gives a block ONE accessory per slot instead of
+one per week. Block 2 of the progression world now carries three accessories
+(`Banded Dead Bug`, `Banded External Rotation`, `Banded TKE`) where weekly
+rotation gave it nine. **⚠ This is a visible drop in accessory variety per block
+and Sam should confirm it is what he wants** — it follows directly from ruling 2.
+
+They are NOT re-aimed because re-aiming needs a world that contains a loaded
+accessory AND Pull-Ups, and choosing one carelessly is how three fixture defects
+already entered this mission. That is the next honest piece of work.
+
 ## NOT COVERED
 
 - **The 12 new reds are not adjudicated cell by cell.** They are explained and

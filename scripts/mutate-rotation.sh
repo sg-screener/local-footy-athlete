@@ -32,8 +32,20 @@ restore() {
 cleanup() { restore; rm -rf "$BACKUP_DIR"; }
 trap cleanup EXIT
 
+# ⚠ **A SUITE THAT DIES REPORTS ZERO FAILURES.** Removing the experience gate's
+# ruling-6 fallback makes generation REFUSE outright, so the suite crashed, wrote
+# no `FAIL` lines, and this harness read that as "nothing went red" — the exact
+# opposite of the truth. So the totals line is checked first: no totals means the
+# mutation KILLED the suite, which is the loudest red there is.
 run_reds() {
-  npm run test:exercise-rotation 2>/dev/null | grep -E "^  FAIL" | sed 's/^  FAIL /    RED: /'
+  local out
+  out="$(npm run test:exercise-rotation 2>&1)"
+  if ! grep -qE "passed=[0-9]+ failures=[0-9]+" <<<"$out"; then
+    echo "    RED (SUITE KILLED): the mutation made the suite die before it could report"
+    grep -oE "Error: [^\"]{0,110}" <<<"$out" | head -2 | sed 's/^/      /'
+    return
+  fi
+  grep -E "^  FAIL" <<<"$out" | sed 's/^  FAIL /    RED: /'
 }
 
 mutate() { mutate_in "$OWNER" "$@"; }
