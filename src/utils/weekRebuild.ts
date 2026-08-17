@@ -50,7 +50,7 @@ import { addDays, computeGameDatesForBlock, getMondayForDate } from './sessionRe
 import {
   generationAnchorForProgram,
   getCurrentBlockNumberForGeneration,
-  recordAcceptedBlockStrengthRequirement,
+  recordAcceptedBlock,
   useProgramStore,
 } from '../store/programStore';
 import {
@@ -667,10 +667,10 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       sessionFeedback: persistedState.sessionFeedback,
       weightOverrides: persistedState.weightOverrides,
       blockState: persistedState.blockState,
-      // WHAT EACH ACCEPTED BLOCK REQUIRED. The completion denominator, stated by
-      // the caller that owns the grid — the same map `quiescentBoot` states, so
-      // the rollover and a relaunch read the SAME value (Sam, 2026-08-17).
-      acceptedBlockRequirements: persistedState.acceptedBlockRequirements,
+      // EVERY ACCEPTED BLOCK'S RECORD — its identity and what it required. Stated
+      // by the caller that owns the grid, and it is the SAME map `quiescentBoot`
+      // states, so the rollover and a relaunch read identical values.
+      acceptedBlocks: persistedState.acceptedBlocks,
     },
   });
 
@@ -849,7 +849,7 @@ export function commitRebuiltProgram(
   // of the two acceptance doors — the one the block ROLLOVER publishes through.
   // Recorded from the store AFTER the transaction, so it describes the block that
   // was actually accepted rather than the candidate that was offered.
-  recordAcceptedBlockStrengthRequirement({
+  recordAcceptedBlock({
     program: useProgramStore.getState().currentProgram,
     blockState: useProgramStore.getState().blockState,
   });

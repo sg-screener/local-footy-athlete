@@ -774,6 +774,37 @@ export async function relaunchApp(args: {
     await quietAsync(async () => { await entry.rehydrate(); });
   }
 
+  // WHAT SURVIVED THE PROCESS DEATH, read BEFORE boot regenerates anything. This
+  // is the line that separates "persistence dropped it" from "boot ignored it".
+  // WHAT SURVIVED THE PROCESS DEATH, read BEFORE boot regenerates anything. This
+  // is the line that separates "persistence dropped it" from "boot ignored it".
+  for (const [key, value] of args.storage) {
+    if (!/program/i.test(key)) continue;
+    const inputs = (JSON.parse(value) as { state?: { inputs?: Record<string, unknown> } })
+      ?.state?.inputs;
+    console.log('    [relaunch] restored accepted blocks: '
+      + `${JSON.stringify(inputs?.acceptedBlocks ?? null)}`);
+  }
+  for (const [key, value] of args.storage) {
+    if (!/program/i.test(key)) continue;
+    const inputs = (JSON.parse(value) as { state?: { inputs?: Record<string, any> } })
+      ?.state?.inputs;
+    console.log('    [relaunch] ENVELOPE: sessionFeedback days='
+      + `${Object.keys(inputs?.sessionFeedback ?? {}).length} `
+      + `weightOverride days=${Object.keys(inputs?.weightOverrides ?? {}).length}`);
+  }
+  const live = useProgramStore.getState() as unknown as {
+    sessionFeedback?: Record<string, unknown>;
+    weightOverrides?: Record<string, unknown>;
+    acceptedBlocks?: Record<string, unknown>;
+    blockState: unknown;
+  };
+  console.log('    [relaunch] LIVE STORE after rehydrate: sessionFeedback days='
+    + `${Object.keys(live.sessionFeedback ?? {}).length} `
+    + `weightOverride days=${Object.keys(live.weightOverrides ?? {}).length} `
+    + `acceptedBlocks=${Object.keys(live.acceptedBlocks ?? {}).length} `
+    + `blockState=${JSON.stringify(live.blockState)}`);
+
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { runQuiescentBoot } = require('../../store/quiescentBoot');
   try {

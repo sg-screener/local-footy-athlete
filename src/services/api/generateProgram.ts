@@ -254,7 +254,8 @@ export interface GenerateProgramFromProfileOptions {
     weightOverrides?: Readonly<Record<string, Record<string, number | null>>>;
     blockState?: import('../../utils/programBlockState').StoredProgramBlockState | null;
     /**
-     * WHAT EACH ACCEPTED BLOCK REQUIRED OF THE ATHLETE, keyed by block start.
+     * EVERY ACCEPTED BLOCK'S OWN RECORD — its number and what it required of the
+     * athlete — keyed by block start.
      *
      * The block-boundary completion denominator (Sam, 2026-08-17). Stated by the
      * caller that owns the grid — `weekRebuild` at the rollover and
@@ -269,7 +270,8 @@ export interface GenerateProgramFromProfileOptions {
      * `strength.targetCount` here is explicitly forbidden: both were measured
      * wrong on a real athlete (see `deriveAcceptedBlockStrengthRequirement`).
      */
-    acceptedBlockRequirements?: Readonly<Record<string, number>>;
+    acceptedBlocks?: Readonly<Record<string,
+      import('../../store/programStore').AcceptedBlockRecord>>;
   };
   /**
    * The Monday this block began on, stated by the caller that owns the grid
@@ -1677,8 +1679,8 @@ export function generateProgramLocally(
     // THE ACCEPTED PREVIOUS BLOCK'S OWN REQUIREMENT, never the athlete's
     // requested availability and never a recalculated planning target.
     requiredStrengthSessions:
-      options.progressionHistory?.acceptedBlockRequirements?.[
-        rotationPreviousBlock.startISO] ?? 0,
+      options.progressionHistory?.acceptedBlocks?.[
+        rotationPreviousBlock.startISO]?.requiredStrengthSessions ?? 0,
   });
   const progressedIdentities = Object.keys(rotationHistory.lastRecordedLoadByExercise)
     .filter((exerciseName) => progressedFromOwnHistory({ exerciseName, history: rotationHistory }))
@@ -1835,8 +1837,8 @@ export function generateProgramLocally(
       // same window, so one athlete cannot be rotated off one denominator and
       // progressed off another.
       requiredStrengthSessions:
-        options.progressionHistory?.acceptedBlockRequirements?.[
-          previousBlock.startISO] ?? 0,
+        options.progressionHistory?.acceptedBlocks?.[
+          previousBlock.startISO]?.requiredStrengthSessions ?? 0,
     });
     const allVolumeDecisions: BlockBoundaryVolumeDecision[] = [];
     const allConditioningDecisions: BlockBoundaryConditioningDecision[] = [];

@@ -382,7 +382,94 @@ block-two family it guards. A guard outside the chain is a guard nothing runs.
    the door; two suites additionally state their own world's requirement inline
    because they never accept a block 1. **No assertion was edited.**
 
-## ⚠ THE NAMED BLOCKER — A SECOND, INDEPENDENT DEFECT THE RESTART PROOF FOUND
+## ✅ THE RESTART DEFECT IS FIXED AT ITS OWNER — Sam ruled it 2026-08-18
+
+> *"the identity/number of the currently accepted block must be persisted when
+> that block is accepted and restored before boot regenerates the program … A
+> genuinely new athlete may begin at Block 1. Once Block 2 is accepted, restart
+> must never infer or reset them to Block 1."*
+
+**THE OWNER:** `programStore.acceptedBlocks` —
+`Record<blockStartISO, { blockNumber, requiredStrengthSessions }>`. One record per
+accepted block, holding its IDENTITY and what it REQUIRED, written once at
+acceptance by `recordAcceptedBlock`, restored by `merge`, and read at boot by
+`currentAcceptedBlock` before regeneration.
+
+**PROVEN — after a real relaunch:** `blockState={"blockStartDate":"2026-08-10",
+"blockNumber":2}` and `miniCycleNumbers=[2,2,2,2]`. Exercise selection is
+byte-identical and the athlete's `until_changed` exclusion still holds.
+
+**MUTATIONS (Sam required both):** persistence removed from `partialize` ->
+**RED**; restoration removed from boot -> **RED**. Both report
+`blockNumber:1 miniCycleNumbers=[1,1,1,1]` — *"an established athlete was rebuilt
+as a new one"*. Asserted on the NUMBER and the authored microcycles, never on the
+dates: **the dates were right throughout the entire defect**, so a date-only cell
+passed the whole time.
+
+### WHY THE IDENTITY RIDES THE ACCEPTED RECORD AND NOT `blockState`
+
+Persisting `blockState` directly was built, measured and **backed out twice**.
+`blockState` is a DERIVED surface: hydration sweeps it, so a restored value is
+`null` before boot reads it. Adding a `hydratedBlockState` companion (the shape
+`hydratedSeasonPhaseClock` uses) got further and still failed, because the value
+that reached disk was **block 1's**: the write channel queues pre-serialised
+payloads, and a queued write that had captured `blockState` as null landed last
+and overwrote a correct one. **The identity therefore rides the record that is
+written ONCE, at acceptance, in the same `setState` as the requirement** — one
+write, one moment, measurably durable. Nothing consults today's date; an absent
+record means a genuinely new athlete and block 1, which is arrived at by having no
+history rather than by a fallback.
+
+### NO REGRESSION
+
+`block-two-progression` **38/0** · `-explanation-delivery` **14/0** ·
+`-difficult-missed` **88/0** · `-boot-preservation` **20/0** ·
+`-screen-delivery` **35/0** · `exercise-exclusions` **52/0** ·
+`worn-world-boot` **5/0** · `program-hydration-ownership` **7/17** (base) ·
+`-ladder` 51/1 and `-extra-session` 39/1 (base). `block-state`,
+`block-rollover` and `week-rebuild` **throw identically at base**
+(`ProgramGenError: … equipment …`) — verified in the control worktree, not mine.
+
+**⚠ AND `test:block-two-boot-preservation` DOES NOT MODEL A PROCESS DEATH.** It
+sets store state directly and calls `rebuildDerivedWorld()` in-process, so
+`sessionFeedback` and `blockState` are simply still there. It is 20/0 through the
+entire defect and through the fix. `test:athlete-journey`'s relaunch — snapshot
+storage, reset stores, restore, rehydrate the registry, boot — is the stronger
+model and is the only thing that saw this.
+
+## ⚠ THE NAMED BLOCKER — THE ATHLETE'S TRAINING HISTORY DOES NOT REACH DISK
+
+Three restart cells remain red, and the cause is now attributed and is **not** the
+block identity:
+
+```
+[relaunch] ENVELOPE: sessionFeedback days=0  weightOverride days=0
+[relaunch] LIVE STORE after rehydrate: sessionFeedback days=0 acceptedBlocks=2
+after restart — feedback days=0 progressionEntries=0
+after restart — every lift: authored_estimate  (Leg Press null->125, RDLs null->80)
+```
+
+The live store held **19 days of feedback and 28 typed loads** immediately before
+the relaunch; the persisted envelope written from that same state holds **zero**,
+while `acceptedBlocks` from the same `partialize` holds both entries. So block 2 is
+correctly authored as block 2 and then re-estimates every load from scratch,
+because the history it should progress from is gone.
+
+**OPEN-UNKNOWN, deliberately.** Whether this is a real write-ordering hazard in the
+persist channel — the same queued-payload mechanism that defeated `blockState`
+above — or an artefact of where this harness calls
+`flushPendingStorageWrites`, **is not established.** I am not claiming a product
+defect on one measurement. It is its own unit and it wants a tape that writes,
+flushes and reads back `sessionFeedback` alone, with nothing else moving.
+
+## ⚠ STILL NOT DONE — the last three journey actions, and the cap
+
+**Ordinary substitution, tired/sore feedback as its own door, and the
+optional-session offer are NOT built.** I reached the cap on the restart defect
+above. They are named, not half-built, and the exact-exercise load-ownership rule
+was not touched.
+
+## ⚠ THE OLD BLOCKER TEXT, SUPERSEDED — kept only so the diagnosis is not re-bought
 
 **BOOT DOES NOT RESTORE WHICH BLOCK THE ATHLETE IS IN.** Three restart cells are
 red and they are not the denominator:

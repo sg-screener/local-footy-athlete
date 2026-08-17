@@ -21,10 +21,7 @@
 
 import { generateProgramLocally } from '../../services/api/generateProgram';
 import { useBlockSelectionHistoryStore } from '../../store/blockSelectionHistoryStore';
-import {
-  recordAcceptedBlockStrengthRequirement,
-  useProgramStore,
-} from '../../store/programStore';
+import { recordAcceptedBlock, useProgramStore } from '../../store/programStore';
 import { deriveStoredBlockStateFromProgram } from '../../utils/programBlockState';
 import type { OnboardingData, TrainingProgram } from '../../types/domain';
 
@@ -56,8 +53,8 @@ export function acceptBlock(
   // ⚠ **AN EXPLICIT `acceptedBlockRequirements` IN `options` WINS.** A suite
   // that wants to state a world where the previous block required N says so, and
   // this door must not overwrite it with the ambient store.
-  const stated = (options as { progressionHistory?: { acceptedBlockRequirements?: unknown } })
-    ?.progressionHistory?.acceptedBlockRequirements;
+  const stated = (options as { progressionHistory?: { acceptedBlocks?: unknown } })
+    ?.progressionHistory?.acceptedBlocks;
   const program = generateProgramLocally(profile, {
     ...options,
     recordSelections: true,
@@ -65,14 +62,14 @@ export function acceptBlock(
       ? {
         progressionHistory: {
           ...options.progressionHistory,
-          acceptedBlockRequirements: stated
-            ?? useProgramStore.getState().acceptedBlockRequirements ?? {},
+          acceptedBlocks: stated
+            ?? useProgramStore.getState().acceptedBlocks ?? {},
         },
       }
       : {}),
   }) as TrainingProgram;
 
-  recordAcceptedBlockStrengthRequirement({
+  recordAcceptedBlock({
     program,
     // The suites do not commit to the store, so the block identity is derived
     // from the program the same way both production doors derive it.
@@ -114,7 +111,7 @@ export function resetBlockSelectionHistory(): void {
   // record of blocks an athlete accepted. Without this, one athlete's accepted
   // blocks become the next athlete's past and the completion gate answers with
   // another world's denominator.
-  useProgramStore.setState({ acceptedBlockRequirements: {} } as never);
+  useProgramStore.setState({ acceptedBlocks: {} } as never);
 }
 
 /** How many records exist — the liveness controls read this. */

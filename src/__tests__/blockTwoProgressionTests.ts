@@ -198,7 +198,11 @@ function build(
       // of them. Without it the denominator is 0 (there is NO fallback, by
       // ruling), nothing qualifies, and every progression cell below reds while
       // reporting the truth about a world no athlete could be in.
-      acceptedBlockRequirements: { [BLOCK_1_DATES[0]]: BLOCK_1_DATES.length },
+      acceptedBlocks: {
+        [BLOCK_1_DATES[0]]: {
+          blockNumber: 1, requiredStrengthSessions: BLOCK_1_DATES.length,
+        },
+      },
     },
   });
 }

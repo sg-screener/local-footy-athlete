@@ -483,7 +483,8 @@ async function main(): Promise<void> {
     + `${JSON.stringify([...new Set(requiredSeen)])}`);
   console.log('  the requirement each accepted block recorded: '
     + `${JSON.stringify((useProgramStore.getState() as unknown as {
-      acceptedBlockRequirements: Record<string, number> }).acceptedBlockRequirements)}`);
+      acceptedBlocks: Record<string, { blockNumber: number;
+      requiredStrengthSessions: number }> }).acceptedBlocks)}`);
   console.log(`  ${boundaryDay}: fired=${rollover.fired} `
     + `block ${rollover.fromBlock} -> ${rollover.toBlock} `
     + `nextStart=${rollover.nextBlockStart} refusal=${rollover.refusal ?? 'none'}`);
@@ -499,6 +500,9 @@ async function main(): Promise<void> {
     useProgramStore.getState().blockState?.blockNumber === 2,
     `blockState says ${JSON.stringify(useProgramStore.getState().blockState)}`,
   );
+
+  console.log(`  live blockState immediately after the rollover: ${JSON.stringify(
+    (useProgramStore.getState() as unknown as { blockState: unknown }).blockState)}`);
 
   const blockTwoStart = rollover.nextBlockStart ?? boundaryDay;
   followTheWeek(blockTwoStart);
@@ -593,14 +597,15 @@ async function main(): Promise<void> {
    * happens to read it.
    */
   const recordedRequirements = (useProgramStore.getState() as unknown as {
-    acceptedBlockRequirements: Record<string, number> }).acceptedBlockRequirements ?? {};
+    acceptedBlocks: Record<string, { blockNumber: number;
+      requiredStrengthSessions: number }> }).acceptedBlocks ?? {};
 
   ok(
     'EVERY ACCEPTED BLOCK RECORDED ITS OWN REQUIREMENT — block 1 AND the block just rolled into',
-    typeof recordedRequirements[blockOneStart] === 'number'
-      && recordedRequirements[blockOneStart] > 0
-      && typeof recordedRequirements[blockTwoStart] === 'number'
-      && recordedRequirements[blockTwoStart] > 0,
+    typeof recordedRequirements[blockOneStart] === 'object'
+      && recordedRequirements[blockOneStart].requiredStrengthSessions > 0
+      && typeof recordedRequirements[blockTwoStart] === 'object'
+      && recordedRequirements[blockTwoStart].requiredStrengthSessions > 0,
     `recorded ${JSON.stringify(recordedRequirements)} — expected an entry for block 1 `
     + `(${blockOneStart}) and for block 2 (${blockTwoStart}). A missing block-2 entry is a `
     + 'rollover that accepted a block without recording what it required, and the next '
@@ -641,7 +646,7 @@ async function main(): Promise<void> {
         weightOverrides: {},
         blockState: null,
         // THE POINT OF THE PROBE: nothing recorded, so a fallback would fire.
-        acceptedBlockRequirements: {},
+        acceptedBlocks: {},
       },
     } as never));
   } catch {
@@ -891,7 +896,8 @@ async function main(): Promise<void> {
     days: blockTwoVisible.days,
     explanations: blockTwoVisible.explanations,
     requirements: { ...(useProgramStore.getState() as unknown as {
-      acceptedBlockRequirements: Record<string, number> }).acceptedBlockRequirements },
+      acceptedBlocks: Record<string, { blockNumber: number;
+      requiredStrengthSessions: number }> }).acceptedBlocks },
   };
 
   for (const [key, value] of localStorageData) {
@@ -899,9 +905,12 @@ async function main(): Promise<void> {
     const inputs = (JSON.parse(value) as { state?: { inputs?: Record<string, unknown> } })
       ?.state?.inputs;
     console.log(`  persisted "${key}" input keys: ${JSON.stringify(Object.keys(inputs ?? {}))}`);
-    console.log(`    acceptedBlockRequirements in storage: `
-      + `${JSON.stringify(inputs?.acceptedBlockRequirements ?? null)}`);
+    console.log(`    acceptedBlocks in storage: `
+      + `${JSON.stringify(inputs?.acceptedBlocks ?? null)}`);
   }
+
+  console.log(`  live blockState immediately before the relaunch: ${JSON.stringify(
+    (useProgramStore.getState() as unknown as { blockState: unknown }).blockState)}`);
 
   const relaunch = await relaunchApp({ storage: localStorageData, todayISO: blockTwoStart });
   ok(
@@ -911,7 +920,8 @@ async function main(): Promise<void> {
   );
 
   const afterRequirements = (useProgramStore.getState() as unknown as {
-    acceptedBlockRequirements: Record<string, number> }).acceptedBlockRequirements ?? {};
+    acceptedBlocks: Record<string, { blockNumber: number;
+      requiredStrengthSessions: number }> }).acceptedBlocks ?? {};
   console.log(`  requirements before restart: ${JSON.stringify(beforeRestart.requirements)}`);
   console.log(`  requirements after  restart: ${JSON.stringify(afterRequirements)}`);
 
@@ -932,6 +942,44 @@ async function main(): Promise<void> {
     (afterState.currentProgram?.microcycles ?? []).map((m) => m.startDate.slice(0, 10)))} `
     + `miniCycleNumbers=${JSON.stringify(
       (afterState.currentProgram?.microcycles ?? []).map((m) => m.miniCycleNumber))}`);
+
+  const afterCensus = takeCensus(blockTwoStart);
+  console.log(`  after restart — feedback days=${afterCensus.storedFeedbackDays} `
+    + `withStrengthLogs=${afterCensus.feedbackWithStrengthLogs} `
+    + `progressionEntries=${afterCensus.progressionHistoryEntries} `
+    + `overrideEntries=${afterCensus.weightOverrideEntries}`);
+  console.log(`  after restart — rebuilt program's own decisions: ${JSON.stringify(
+    [...new Set(((useProgramStore.getState().currentProgram?.blockBoundaryExplanation ?? []) as
+      { exerciseName?: string; kind?: string; previousLoadKg?: number;
+        nextLoadKg?: number }[])
+      .map((r) => `${r.exerciseName}:${r.kind}:${r.previousLoadKg}->${r.nextLoadKg}`))])}`);
+
+  /**
+   * ⚠ **THE ATHLETE IS STILL IN BLOCK 2 — Sam's ruling, 2026-08-18.**
+   *
+   * *"A genuinely new athlete may begin at Block 1. Once Block 2 is accepted,
+   * restart must never infer or reset them to Block 1."*
+   *
+   * This is the cell that reds if the accepted block's identity stops being
+   * persisted at acceptance, or stops being restored before boot regenerates.
+   * Asserted on the NUMBER and on the authored microcycles, not on the dates: the
+   * dates were already right while the number said block 1, and a date-only check
+   * passed throughout the whole defect.
+   */
+  const restartedBlock = (useProgramStore.getState() as unknown as {
+    blockState: { blockStartDate?: string; blockNumber?: number } | null }).blockState;
+  const restartedMiniCycles = (useProgramStore.getState().currentProgram?.microcycles ?? [])
+    .map((microcycle) => (microcycle as { miniCycleNumber?: number }).miniCycleNumber);
+
+  ok(
+    'RESTART: the athlete is STILL IN BLOCK 2 — never inferred or reset to block 1',
+    restartedBlock?.blockNumber === 2
+      && restartedBlock?.blockStartDate === blockTwoStart
+      && restartedMiniCycles.length > 0
+      && restartedMiniCycles.every((number) => number === 2),
+    `blockState=${JSON.stringify(restartedBlock)} miniCycleNumbers=`
+    + `${JSON.stringify(restartedMiniCycles)} — an established athlete was rebuilt as a new one`,
+  );
 
   followTheWeek(blockTwoStart);
   const afterRestartVisible = visibleProjection(blockTwoStart, blockTwoStart);

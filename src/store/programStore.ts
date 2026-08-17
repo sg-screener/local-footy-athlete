@@ -28,6 +28,20 @@ import {
   type StoredProgramBlockState,
 } from '../utils/programBlockState';
 import type { SessionComponentKind } from '../utils/sessionComponents';
+
+/**
+ * ONE RECORD PER ACCEPTED BLOCK — its identity and what it asked of the athlete.
+ *
+ * Both facts are about the same accepted block and are written in the same breath
+ * at acceptance, so they live in one record rather than two maps that could drift
+ * or persist down different routes.
+ */
+export interface AcceptedBlockRecord {
+  /** 1-based block number, as the accepted program was authored. */
+  blockNumber: number;
+  /** Strength sessions that accepted block actually required. */
+  requiredStrengthSessions: number;
+}
 import type {
   FeedbackCompletion,
   FeedbackFeeling,
@@ -329,7 +343,7 @@ export function reduceProgramEnvelopeToInputs(value: string): string {
           // The program is not persisted — boot REGENERATES — so if this is not
           // here it is gone by the first relaunch, and the boundary silently
           // stops progressing anything.
-          acceptedBlockRequirements: state.acceptedBlockRequirements ?? {},
+          acceptedBlocks: state.acceptedBlocks ?? {},
           temporarySourceFacts: accepted.temporarySourceFacts ?? [],
           injuryEpisodes: accepted.injuryEpisodes ?? [],
         },
@@ -1511,14 +1525,27 @@ export interface ProgramState {
    * boundary raised. Same family as `generationAnchorISO` — a value that rides
    * the program it describes because nothing else can testify to it later.
    *
-   * WRITER: `recordAcceptedBlockStrengthRequirement`, called by the two
-   * acceptance doors (`setCurrentProgram` and `weekRebuild.commitRebuiltProgram`)
-   * beside where each already stamps `blockState`.
+   * ⚠ **ITS `blockNumber` IS WHY THIS RECORD IS NOT JUST A NUMBER.** Sam ruled,
+   * 2026-08-18: *"the identity/number of the currently accepted block must be
+   * persisted when that block is accepted and restored before boot regenerates
+   * the program … Once Block 2 is accepted, restart must never infer or reset them
+   * to Block 1."* Persisting `blockState` itself was tried and MEASURED RACY: it
+   * is a derived surface that hydration sweeps, and the queued write that landed
+   * last had already captured it as null, so a correct value reached disk and was
+   * then overwritten. The identity therefore rides the record that is written ONCE,
+   * at acceptance, in the same `setState` as the requirement — one write, one
+   * moment, one owner, and it is measurably durable.
+   *
+   * WRITER: `recordAcceptedBlock`, called by the two acceptance doors
+   * (`setCurrentProgram` and `weekRebuild.commitRebuiltProgram`) beside where each
+   * already stamps `blockState`.
    * READERS: `weekRebuild` (rollover) and `quiescentBoot` (restart), each stating
    * it into generation's `progressionHistory` — the same map, so the same value.
+   * Boot additionally restores WHICH block is current from
+   * `currentAcceptedBlock`.
    * TEST: `test:athlete-journey`, `test:block-two-boot-preservation`.
    */
-  acceptedBlockRequirements: Record<string, number>;
+  acceptedBlocks: Record<string, AcceptedBlockRecord>;
 
   setCurrentProgram: (
     program: TrainingProgram | null,
@@ -1592,7 +1619,7 @@ export const useProgramStore = create<ProgramState>()(
       exposureContractsByWeek: {},
       sessionFeedback: {},
       weightOverrides: {},
-      acceptedBlockRequirements: {},
+      acceptedBlocks: {},
 
       // Override lifecycle is NOT owned by this setter (2026-07-08).
       // It used to silently wipe dateOverrides/overrideContexts ("new
@@ -1674,7 +1701,7 @@ export const useProgramStore = create<ProgramState>()(
         // THE BLOCK'S OWN REQUIREMENT, RECORDED WHERE ITS BLOCK STATE IS STAMPED.
         // After the transaction, so it records what was actually accepted rather
         // than what was offered to the transaction and possibly refused.
-        recordAcceptedBlockStrengthRequirement({
+        recordAcceptedBlock({
           program: useProgramStore.getState().currentProgram,
           blockState: useProgramStore.getState().blockState,
         });
@@ -2011,7 +2038,7 @@ export const useProgramStore = create<ProgramState>()(
           exposureContractsByWeek: {},
           sessionFeedback: {},
           weightOverrides: {},
-          acceptedBlockRequirements: {},
+          acceptedBlocks: {},
           });
           recordProgramOverrideWrite({
             writer: 'reset',
@@ -2055,7 +2082,7 @@ export const useProgramStore = create<ProgramState>()(
           // reads as "persistence is flaky" — measured: the accepted-block
           // requirement reached disk from the adapter and was absent from here,
           // so block 1's entry survived a relaunch and block 2's did not.
-          acceptedBlockRequirements: state.acceptedBlockRequirements ?? {},
+          acceptedBlocks: state.acceptedBlocks ?? {},
           temporarySourceFacts: state.acceptedMaterialContext?.temporarySourceFacts ?? [],
           injuryEpisodes: state.acceptedMaterialContext?.injuryEpisodes ?? [],
         },
@@ -2067,7 +2094,7 @@ export const useProgramStore = create<ProgramState>()(
             seasonPhaseClock?: unknown;
             sessionFeedback?: Record<string, unknown>;
             weightOverrides?: Record<string, unknown>;
-            acceptedBlockRequirements?: Record<string, number>;
+            acceptedBlocks?: Record<string, AcceptedBlockRecord>;
             temporarySourceFacts?: unknown[];
             injuryEpisodes?: unknown[];
           };
@@ -2077,7 +2104,7 @@ export const useProgramStore = create<ProgramState>()(
           ...current,
           sessionFeedback: (inputs.sessionFeedback ?? {}) as ProgramState['sessionFeedback'],
           weightOverrides: (inputs.weightOverrides ?? {}) as ProgramState['weightOverrides'],
-          acceptedBlockRequirements: inputs.acceptedBlockRequirements ?? {},
+          acceptedBlocks: inputs.acceptedBlocks ?? {},
           generationAnchorISO: inputs.generationAnchorISO ?? null,
           hydratedSeasonPhaseClock: (inputs.seasonPhaseClock ?? null) as ProgramState['hydratedSeasonPhaseClock'],
           acceptedMaterialContext: normalizeAcceptedMaterialContext({
@@ -2109,28 +2136,53 @@ export const useProgramStore = create<ProgramState>()(
  * rebuild republishes that block, and the republished week is what the athlete
  * actually received.
  */
-export function recordAcceptedBlockStrengthRequirement(args: {
+export function recordAcceptedBlock(args: {
   program: TrainingProgram | null;
   blockState: StoredProgramBlockState | null;
 }): void {
   if (!args.program || !args.blockState?.blockStartDate) return;
   const blockStartISO = args.blockState.blockStartDate.slice(0, 10);
+  const blockNumber = Math.max(1, Math.floor(args.blockState.blockNumber ?? 1));
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { deriveAcceptedBlockStrengthRequirement } = require('../rules/blockBoundaryProgression');
-  const required = deriveAcceptedBlockStrengthRequirement({
+  const requiredStrengthSessions = deriveAcceptedBlockStrengthRequirement({
     program: args.program,
     blockStartISO,
-    // The block's own four weeks. `addDaysISO(start, 27)` is the last day; the
-    // window is compared against microcycle START dates, so the last Monday is
-    // what has to fall inside it.
+    // The block's own four weeks. The window is compared against microcycle START
+    // dates, so the last Monday is what has to fall inside it.
     blockEndISO: addDaysISO(blockStartISO, WEEKS_PER_BLOCK * 7 - 1),
   }) as number;
-  if (required <= 0) return;
-  const existing = useProgramStore.getState().acceptedBlockRequirements ?? {};
-  if (existing[blockStartISO] === required) return;
+  if (requiredStrengthSessions <= 0) return;
+  const existing = useProgramStore.getState().acceptedBlocks ?? {};
+  const previous = existing[blockStartISO];
+  if (previous?.blockNumber === blockNumber
+    && previous?.requiredStrengthSessions === requiredStrengthSessions) return;
   useProgramStore.setState({
-    acceptedBlockRequirements: { ...existing, [blockStartISO]: required },
+    acceptedBlocks: {
+      ...existing,
+      [blockStartISO]: { blockNumber, requiredStrengthSessions },
+    },
   } as never);
+}
+
+/**
+ * WHICH BLOCK THE ATHLETE IS CURRENTLY IN, from the accepted record alone.
+ *
+ * The most recently accepted block start — blocks are accepted in order, so the
+ * greatest key is the current one. **This reads the athlete's own accepted
+ * history and nothing else: it does not consult today's date, does not walk a
+ * block grid, and returns null for a genuinely new athlete** (for whom block 1 is
+ * the correct answer, arrived at by having no record rather than by a fallback).
+ */
+export function currentAcceptedBlock(
+  accepted: Readonly<Record<string, AcceptedBlockRecord>> | null | undefined,
+): StoredProgramBlockState | null {
+  const starts = Object.keys(accepted ?? {}).sort();
+  const latest = starts[starts.length - 1];
+  if (!latest) return null;
+  const record = (accepted ?? {})[latest];
+  if (!record || typeof record.blockNumber !== 'number') return null;
+  return { blockStartDate: latest, blockNumber: record.blockNumber };
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
