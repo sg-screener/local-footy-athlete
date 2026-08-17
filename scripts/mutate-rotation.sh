@@ -77,31 +77,49 @@ PY
 
 echo "=================== MUTATION RECEIPTS ==================="
 
-# 1. The cadence is keyed by something that moves inside a block.
-mutate "the cadence advances inside a block (the original weekly defect)" \
-  "  return Math.max(0, blockNumber - 1) % length;" \
-  "  return Math.max(0, blockNumber * 3 - 1) % length;"
+# 1. A RETAINED BLOCK CONSUMES A ROTATION TURN — the cursor advances anyway, so
+#    the candidate list is walked with a hole and Trap Bar becomes unreachable.
+mutate "a retained block consumes a rotation turn" \
+  "    if (mayRetain) {
+      lastWasRetention = true;
+      reason = 'progressed_from_own_history';
+      continue;                         // identity unchanged, cursor unchanged
+    }" \
+  "    if (mayRetain) {
+      lastWasRetention = true;
+      reason = 'progressed_from_own_history';
+      cursor = (cursor + 1) % ordered.length;
+      continue;
+    }"
+
+# 1b. The cursor never advances at all — the control for the mutation above.
+mutate "the cursor never advances" \
+  "    cursor = (cursor + 1) % ordered.length;
+    selected = ordered[cursor];
+    lastWasRetention = false;" \
+  "    selected = ordered[cursor];
+    lastWasRetention = false;"
 
 # 2. Every slot becomes retention-eligible — single-leg and accessories stop
 #    rotating at each new block (Sam's ruling 2).
 mutate "single-leg and accessory slots become retention-eligible" \
-  "  if (!inputs.retentionEligible) return rotated('accessory_cadence');" \
-  "  if (false) return rotated('accessory_cadence');"
+  "    const mayRetain = inputs.retentionEligible" \
+  "    const mayRetain = true"
 
 # 3. The two-block maximum is removed.
 mutate "the two-block maximum is removed" \
-  "  if (retainedLastBlock) return rotated('two_block_maximum_reached');" \
-  "  if (false && retainedLastBlock) return rotated('two_block_maximum_reached');"
+  "      && !lastWasRetention              // the two-block maximum" \
+  "      && true"
 
 # 4. A pin outranks the two-block maximum.
 mutate "a pin outranks the two-block maximum" \
-  "  const retainedLastBlock = inputs.blockNumber >= 3" \
-  "  const retainedLastBlock = !pins.has(previousCadence) && inputs.blockNumber >= 3"
+  "      && !lastWasRetention              // the two-block maximum" \
+  "      && (!lastWasRetention || pins.has(selected))"
 
 # 5. Retention ignores the recorded history and always keeps the lift.
-mutate "retention ignores history and always keeps the previous lift" \
-  "  if (progressed.has(previousCadence)) {" \
-  "  if (true || progressed.has(previousCadence)) {"
+mutate "retention ignores history and always keeps the lift" \
+  "      && progressed.has(selected);      // the EXISTING progression decision" \
+  "      && true;"
 
 # 6. The pin bias is dropped entirely.
 mutate "the pin bias is dropped" \

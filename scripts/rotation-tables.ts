@@ -27,7 +27,7 @@ import { slotCountsTowardSetBudget } from '../src/rules/weeklyProgrammingContrac
 import type { SessionFeedback } from '../src/store/programStore';
 import type { OnboardingData, TrainingProgram } from '../src/types/domain';
 
-const BLOCK_STARTS = ['2026-07-06', '2026-08-03', '2026-08-31', '2026-09-28'];
+const BLOCK_STARTS = ['2026-07-06', '2026-08-03', '2026-08-31', '2026-09-28', '2026-10-26', '2026-11-23'];
 const BLOCK_DATES: string[][] = [
   ['2026-07-06', '2026-07-08', '2026-07-10', '2026-07-13', '2026-07-15', '2026-07-17',
     '2026-07-20', '2026-07-22', '2026-07-24', '2026-07-27', '2026-07-29', '2026-07-31'],
@@ -35,6 +35,10 @@ const BLOCK_DATES: string[][] = [
     '2026-08-17', '2026-08-19', '2026-08-21', '2026-08-24', '2026-08-26', '2026-08-28'],
   ['2026-08-31', '2026-09-02', '2026-09-04', '2026-09-07', '2026-09-09', '2026-09-11',
     '2026-09-14', '2026-09-16', '2026-09-18', '2026-09-21', '2026-09-23', '2026-09-25'],
+  ['2026-09-28', '2026-09-30', '2026-10-02', '2026-10-05', '2026-10-07', '2026-10-09',
+    '2026-10-12', '2026-10-14', '2026-10-16', '2026-10-19', '2026-10-21', '2026-10-23'],
+  ['2026-10-26', '2026-10-28', '2026-10-30', '2026-11-02', '2026-11-04', '2026-11-06',
+    '2026-11-09', '2026-11-11', '2026-11-13', '2026-11-16', '2026-11-18', '2026-11-20'],
 ];
 
 /**
@@ -113,7 +117,7 @@ function table(label: string, equipment: unknown): void {
   const recorded: Set<string>[] = [];
   let history: Record<string, SessionFeedback> = {};
 
-  for (let b = 0; b < 4; b++) {
+  for (let b = 0; b < 6; b++) {
     const program = generateProgramLocally(profile, {
       todayISO: BLOCK_STARTS[b], blockNumber: b + 1,
       progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
@@ -122,7 +126,7 @@ function table(label: string, equipment: unknown): void {
     recorded.push(new Set(Object.keys(history).length
       ? Object.values(history).flatMap((f) => (f.strength ?? []).map((s) => s.exerciseName))
       : []));
-    if (b < 3) {
+    if (b < 5) {
       history = { ...history, ...logBlock(program, BLOCK_DATES[b]) };
     }
   }
@@ -140,7 +144,7 @@ function table(label: string, equipment: unknown): void {
 
   console.log(`\n\n════ ${label} ════`);
   console.log('slot            | block 1        | deload         | block 2        '
-    + '| block 3        | block 4        | decision at b2→b4          | load source');
+    + '| block 3        | block 4        | block 5        | block 6        | load source');
   console.log('-'.repeat(150));
 
   const slots = new Set<string>();
@@ -159,7 +163,7 @@ function table(label: string, equipment: unknown): void {
     const pad = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s.padEnd(n));
 
     const reasons: string[] = [];
-    for (let i = 1; i < 4; i++) {
+    for (let i = 1; i < 6; i++) {
       const prev = cells[i - 1]?.name;
       const now = cells[i]?.name;
       if (!prev || !now) { reasons.push('—'); continue; }
@@ -177,7 +181,8 @@ function table(label: string, equipment: unknown): void {
     console.log(
       `${pad(slot, 15)} | ${pad(cells[0]?.name ?? '—', 14)} | ${pad(dl, 14)} `
       + `| ${pad(cells[1]?.name ?? '—', 14)} | ${pad(cells[2]?.name ?? '—', 14)} `
-      + `| ${pad(cells[3]?.name ?? '—', 14)} | ${pad(reasons.join(' → '), 26)} | ${loadSource}`);
+      + `| ${pad(cells[3]?.name ?? '—', 14)} | ${pad(cells[4]?.name ?? '—', 14)} `
+      + `| ${pad(cells[5]?.name ?? '—', 14)} | ${loadSource}`);
   }
 
   console.log('\n  loads by block (kg):');

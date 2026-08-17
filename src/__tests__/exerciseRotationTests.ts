@@ -838,6 +838,113 @@ console.log('\n[15] HINGE PRIORITY — RULING 7');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[15b] A RETAINED BLOCK DOES NOT CONSUME A ROTATION TURN');
+
+{
+  /*
+   * Sam, 2026-08-17: *"Advance the selection cursor only when the exercise
+   * identity actually changes."*
+   *
+   * The defect this replaces: the cursor was the BLOCK NUMBER, so a retention
+   * burned a step and the list was walked with a hole in it. Measured on the
+   * real commercial-gym hinge — RDLs, Trap Bar Deadlift, Deadlift:
+   *   before  b1 RDLs · b2 RDLs · b3 Deadlift    ← Trap Bar unreachable
+   *   after   b1 RDLs · b2 RDLs · b3 Trap Bar
+   */
+  const hinge = ['RDLs', 'Trap Bar Deadlift', 'Deadlift'].map(composedIdentityFor);
+  const pick = (blockNumber: number) => decideRotation({
+    legalCandidates: hinge,
+    retentionEligible: true,
+    blockNumber,
+    pinnedIdentities: [],
+    progressedIdentities: hinge,   // the athlete keeps progressing whatever they hold
+  });
+
+  const walk = [1, 2, 3, 4, 5, 6].map((b) => pick(b).identity);
+  ok('the cursor holds for the retained block and then advances by ONE',
+    JSON.stringify(walk) === JSON.stringify([
+      hinge[0], hinge[0], hinge[1], hinge[1], hinge[2], hinge[2],
+    ]),
+    walk.join(' → '));
+  ok('and the retained block is REPORTED as retained, not as a rotation',
+    pick(2).kind === 'retained' && pick(3).kind === 'rotated',
+    `b2=${pick(2).kind} b3=${pick(3).kind}`);
+  ok('Trap Bar Deadlift is NOT skipped merely because RDLs were held',
+    walk.includes(hinge[1]),
+    `${walk.join(' → ')} — a preferred option that can never be selected is not a priority order`);
+
+  /* ⚠ CONTROL: with NO progression there is no retention, so the cursor moves
+   * every block and the same list is walked twice as fast. Without this the cell
+   * above could pass on a cursor that simply never moves. */
+  const noHistory = [1, 2, 3].map((b) => decideRotation({
+    legalCandidates: hinge,
+    retentionEligible: true,
+    blockNumber: b,
+    pinnedIdentities: [],
+    progressedIdentities: [],
+  }).identity);
+  ok('CONTROL — with nothing progressing, every block rotates',
+    JSON.stringify(noHistory) === JSON.stringify([hinge[0], hinge[1], hinge[2]]),
+    noHistory.join(' → '));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[15c] THE HINGE WALK IN A REAL GENERATED WORLD, AND ITS LOAD');
+
+{
+  /* Six real blocks, history harvested from the block the generator built. */
+  const starts = ['2026-07-06', '2026-08-03', '2026-08-31', '2026-09-28'];
+  const datesFor = (i: number) => [
+    [0, 2, 4, 7, 9, 11, 14, 16, 18, 21, 23, 25],
+  ][0].map((d) => {
+    const base = new Date(`${starts[i]}T12:00:00`);
+    base.setDate(base.getDate() + d);
+    return base.toISOString().slice(0, 10);
+  });
+
+  let history: Record<string, SessionFeedback> = {};
+  const hingeByBlock: string[] = [];
+  const hingeLoadByBlock: (number | undefined)[] = [];
+  for (let i = 0; i < starts.length; i++) {
+    const program = generateProgramLocally(athlete(), {
+      todayISO: starts[i],
+      blockNumber: i + 1,
+      progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
+    });
+    const row = rowsOf(program).find((r) => r.mainSlot === 'hinge');
+    hingeByBlock.push(row?.name ?? '—');
+    hingeLoadByBlock.push(row?.kg);
+    const logged = logRealBlock(program);
+    const dates = datesFor(i);
+    const remapped: Record<string, SessionFeedback> = {};
+    Object.values(logged).forEach((entry, index) => {
+      const dateStr = dates[index];
+      if (dateStr) remapped[dateStr] = { ...entry, dateStr } as SessionFeedback;
+    });
+    history = { ...history, ...remapped };
+  }
+
+  ok('every block programmed a hinge main lift — liveness',
+    hingeByBlock.every((n) => n !== '—'), hingeByBlock.join(' → '));
+  ok('the real world holds each hinge for two blocks before advancing',
+    hingeByBlock[0] === hingeByBlock[1] && hingeByBlock[2] === hingeByBlock[3]
+      && hingeByBlock[1] !== hingeByBlock[2],
+    hingeByBlock.join(' → '));
+  ok('and the SECOND hinge is Trap Bar Deadlift — the preferred option, not Deadlift',
+    hingeByBlock[2] === 'Trap Bar Deadlift', hingeByBlock.join(' → '));
+
+  /* Ruling: a rotated lift never inherits the outgoing exercise's weight. */
+  const rdlLoad = hingeLoadByBlock[1];
+  const trapLoad = hingeLoadByBlock[2];
+  ok('both hinge loads are real numbers — liveness',
+    typeof rdlLoad === 'number' && typeof trapLoad === 'number',
+    `RDLs=${String(rdlLoad)} TrapBar=${String(trapLoad)}`);
+  ok('the incoming Trap Bar Deadlift does NOT inherit the RDL load',
+    rdlLoad !== trapLoad,
+    `RDLs=${String(rdlLoad)} → Trap Bar=${String(trapLoad)} — identical means inherited`);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[16] NO LEGAL ALTERNATIVE — RULING 3, AND THE GAP IS NAMED');
 
 {

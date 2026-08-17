@@ -135,8 +135,10 @@ export type RotationReason =
   | 'history_does_not_support_retention'
   /** Single-leg and accessory slots rotate at every new block, never retained. */
   | 'accessory_cadence'
-  /** The previously selected exercise is no longer legal or no longer offered. */
-  | 'previous_choice_not_legal_now'
+  /* ⚠ `previous_choice_not_legal_now` LIVED HERE AND IS GONE, NOT DEPRECATED.
+   * The cursor walks `ordered`, which IS the already-legal candidate list, so an
+   * exercise the athlete has since excluded or lost the kit for is simply absent
+   * and unreachable. A reason no branch can return is a claim nobody checks. */
   /** Only one legal candidate exists, so there is nothing to rotate to. */
   | 'single_legal_candidate';
 
@@ -235,71 +237,79 @@ export function decideRotation(inputs: RotationInputs): RotationDecision {
     );
   }
   const pins = new Set<string>(inputs.pinnedIdentities);
+  const progressed = new Set<string>(inputs.progressedIdentities);
 
-  const indexFor = (blockNumber: number): number =>
-    cadenceIndex(blockNumber, ordered.length);
-
-  const cadenceIdentity = ordered[indexFor(inputs.blockNumber)];
-  const pinBiased = pins.has(cadenceIdentity)
-    && inputs.legalCandidates.indexOf(cadenceIdentity) !== ordered.indexOf(cadenceIdentity);
-
-  const rotated = (reason: RotationReason): RotationDecision => ({
-    identity: cadenceIdentity,
-    kind: inputs.blockNumber <= 1 ? 'first_block' : 'rotated',
-    reason: inputs.blockNumber <= 1 ? 'no_previous_block' : reason,
-    cadenceIdentity,
-    pinBiased,
-  });
-
-  // A single legal option cannot rotate anywhere. Answered BEFORE retention so
-  // the reason is the honest one — Sam's ruling 3: "If no different legal
-  // same-pattern exercise exists, retain the only legal exercise and report that
-  // exact pool-content gap."
+  // Sam's ruling 3. Answered first so the reason is the honest one: a slot with
+  // one legal exercise has nowhere to rotate to, and crossing a movement group
+  // to manufacture variety is forbidden.
   if (ordered.length === 1) {
     return {
       identity: ordered[0],
       kind: inputs.blockNumber <= 1 ? 'first_block' : 'rotated',
       reason: 'single_legal_candidate',
-      cadenceIdentity,
-      pinBiased,
+      cadenceIdentity: ordered[0],
+      pinBiased: pins.has(ordered[0]),
     };
   }
 
-  // Only main bilateral lifts may be retained. An accessory's freer cadence
-  // is the contract's own answer for it.
-  if (!inputs.retentionEligible) return rotated('accessory_cadence');
-  if (inputs.blockNumber <= 1) return rotated('no_previous_block');
+  /* ── THE CURSOR WALK ──────────────────────────────────────────────────────
+   *
+   * ⚠ **A RETAINED BLOCK DOES NOT CONSUME A ROTATION TURN.** Sam, 2026-08-17:
+   * *"Advance the selection cursor only when the exercise identity actually
+   * changes."*
+   *
+   * The previous revision indexed the candidate list by the BLOCK NUMBER, so a
+   * retention still burned a step and the list was walked with a hole in it.
+   * Measured on the real commercial-gym hinge — `RDLs, Trap Bar Deadlift,
+   * Deadlift`:
+   *
+   *   before   b1 RDLs · b2 RDLs · b3 Deadlift · b4 Deadlift   ← Trap Bar SKIPPED
+   *   after    b1 RDLs · b2 RDLs · b3 Trap Bar · b4 Trap Bar · b5 Deadlift
+   *
+   * A preferred option that can never be selected is not a priority order, and
+   * ruling 7 asks for rotation BETWEEN the preferred options.
+   *
+   * The walk is a pure function of the block number and the recorded history —
+   * no counter is stored, which matters because this app regenerates the program
+   * on every boot. `lastWasRetention` is what enforces the two-block maximum:
+   * a block that retained may not retain again, so the cursor moves next time.
+   */
+  let cursor = 0;
+  let selected = ordered[0];
+  let lastWasRetention = false;
+  let reason: RotationReason = 'no_previous_block';
 
-  // What the block before this one actually got, and what its own cadence would
-  // have given it. A difference between the two IS last block's retention —
-  // which is how the two-block maximum is enforced without storing a counter.
-  const previousCadence = ordered[indexFor(inputs.blockNumber - 1)];
-  const progressed = new Set<string>(inputs.progressedIdentities);
-
-  // Still legal this block? A previous choice the athlete has since excluded, or
-  // that their kit no longer allows, is simply absent from `legalCandidates`.
-  if (!inputs.legalCandidates.includes(previousCadence)) {
-    return rotated('previous_choice_not_legal_now');
+  for (let block = 2; block <= Math.max(1, inputs.blockNumber); block++) {
+    const mayRetain = inputs.retentionEligible
+      && !lastWasRetention              // the two-block maximum
+      && progressed.has(selected);      // the EXISTING progression decision
+    if (mayRetain) {
+      lastWasRetention = true;
+      reason = 'progressed_from_own_history';
+      continue;                         // identity unchanged, cursor unchanged
+    }
+    reason = !inputs.retentionEligible
+      ? 'accessory_cadence'
+      : lastWasRetention
+        ? 'two_block_maximum_reached'
+        : 'history_does_not_support_retention';
+    cursor = (cursor + 1) % ordered.length;
+    selected = ordered[cursor];
+    lastWasRetention = false;
   }
 
-  // Was block b-1 itself a retention? It was iff what it actually selected
-  // differs from its own cadence — i.e. iff the block before THAT progressed.
-  const twoBackCadence = ordered[indexFor(inputs.blockNumber - 2)];
-  const retainedLastBlock = inputs.blockNumber >= 3
-    && twoBackCadence !== previousCadence
-    && progressed.has(twoBackCadence)
-    && inputs.legalCandidates.includes(twoBackCadence);
-  if (retainedLastBlock) return rotated('two_block_maximum_reached');
+  const kind: RotationDecisionKind = inputs.blockNumber <= 1
+    ? 'first_block'
+    : lastWasRetention ? 'retained' : 'rotated';
 
-  if (progressed.has(previousCadence)) {
-    return {
-      identity: previousCadence,
-      kind: 'retained',
-      reason: 'progressed_from_own_history',
-      cadenceIdentity,
-      pinBiased: false,
-    };
-  }
-
-  return rotated('history_does_not_support_retention');
+  return {
+    identity: selected,
+    kind,
+    reason: inputs.blockNumber <= 1 ? 'no_previous_block' : reason,
+    /* What the cursor would hold with no retention anywhere — kept so a caller
+     * can see the walk was displaced, and it is what `pinBiased` is judged on. */
+    cadenceIdentity: ordered[Math.max(0, inputs.blockNumber - 1) % ordered.length],
+    pinBiased: pins.has(selected)
+      && inputs.legalCandidates.indexOf(selected) !== ordered.indexOf(selected),
+  };
 }
