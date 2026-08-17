@@ -846,18 +846,41 @@ They were covering for each other. After unifying the fixture answer:
 | --- | --- | --- |
 | tier-four boundary | a projection may not delete authored work | [19] [19b] [20] — mutant reds all three |
 | span fixture filter | a fixture inside a trip does not survive | [19b] — mutant reds it alone |
-| `withAthleteKitForDate` | read-side per-day equipment | **UNGUARDED — see below** |
+| ~~`withAthleteKitForDate`~~ | read-side per-day equipment | **DELETED — proven inert, see below** |
 
-## ⚠ WHAT IS STILL UNGUARDED, AND WHY — SPECIFICALLY
+## THE UNGUARDED FIX — DELETED, NOT KEPT
 
-Dropping the per-day kit from the read side reds **nothing**. The reason is not a
-shrug: **once the fixture correctly disappears inside a trip, no read-side
-producer of STRENGTH rows lands there any more.** The only remaining one,
-`freedByTheTrip`, authors CONDITIONING, and conditioning names are absent from
-Sam's equipment sheet, so `exerciseIsAvailableWith` allows them by design.
+`withAthleteKitForDate` (read-side per-day equipment scoping, used by
+`_resolveDateRaw` and `freedByTheTrip`) was the one production change with no
+guard. **It is deleted.**
 
-`withAthleteKitForDate` is retained as the canonical read-side per-day equipment
-owner — `freedByTheTrip` now routes through it — and it is **unguarded**.
+**PROVEN INERT BOTH WAYS, not assumed.** With it disabled:
+
+| instrument | result |
+| --- | --- |
+| ten-world equipment trace | **byte-identical** |
+| the five printed weeks | **byte-identical** |
+| `test:equipment-scopes` | 24 / 0 |
+| `test:away-flow` · `away-span-ownership` · `exercise-exclusions` | 51/0 · 8/0 · 52/0 |
+| `test:scenarios` · `print:week` | 62/3 · same 2 refusals |
+
+**AND THE REASON IS CAUSAL, NOT JUST EMPIRICAL — three routes, all closed:**
+
+1. **Strength is composed at generation** against the per-day kit, and a
+   projection may no longer replace a composer-authored session.
+2. **The G−1 Gunshow cannot land inside a trip.** A fixture inside a live span is
+   gone; a fixture *outside* the span leaves G−1 on a Rest template that
+   proximity does not displace. That was the `Tricep Pushdown` route and it is
+   shut. Measured directly: a Mon–Fri trip with the Saturday game surviving
+   leaves Friday a Rest Day, not a Gunshow.
+3. **`freedByTheTrip` authors CONDITIONING**, whose machine choice belongs to the
+   modality owner, not to `AthleteContext.equipmentTags`.
+
+**⚠ WHAT WOULD BRING IT BACK, named at the deletion site so this is a decision
+and not amnesia:** any read-side producer that authors STRENGTH or ACCESSORY rows
+on a date inside a live equipment span. The athlete-side property is held
+regardless by `[16]`/`[21]`, which walk every visible row against that day's kit
+whatever authored it.
 
 ## ACCEPTANCE
 
@@ -968,11 +991,9 @@ Four laws entered guarded and mutation-proven:
 `LAW-every-authored-requirement-is-askable`,
 `LAW-a-projection-may-not-delete-authored-work`.
 
-## THE TWO THINGS TO KNOW BEFORE MERGING
+## THE ONE THING TO KNOW BEFORE MERGING
 
-1. **`withAthleteKitForDate` is unguarded**, for the specific reason given under
-   slice 6. It is correct and it is retained; a mutation of it reds nothing.
-2. **An athlete away with NO equipment at all still gets no week**
+1. **An athlete away with NO equipment at all still gets no week**
    (`main_strength_planner_selected_target` 4 vs 3). That is R-090's parked
    territory and the fence forbids weakening §18 to reach it.
 

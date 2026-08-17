@@ -38,7 +38,6 @@ import type {
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
-import { composeTemporarySourceFactCompatibility } from '../rules/temporarySourceFact';
 import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
 import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
@@ -51,7 +50,6 @@ import {
   type AthleteContext,
   DEFAULT_ATHLETE_CONTEXT,
 } from './sessionBuilder';
-import { resolveEquipmentAvailability } from './equipmentAvailability';
 import { composeConditioningRows, offFeetAlternative } from '../rules/conditioningSelection';
 import { buildWeekLog, conditioningToWeekLogEntry } from './weekLogBuilder';
 import type { WeekLog } from './conditioningRules';
@@ -1294,61 +1292,47 @@ function applyInjuryFilterPass(
  * correct, so the live path converges onto it and the accepted stack does not
  * move. See `rules/dayPrecedence.ts` for the full reasoning.
  */
-/**
- * ── THE SHARED PER-DAY EQUIPMENT BOUNDARY, ON THE READ SIDE ────────────────
+/* ── WHY THERE IS NO READ-SIDE PER-DAY EQUIPMENT SCOPING HERE ──────────────
  *
- * `AthleteContext.equipmentTags` is resolved ONCE for the whole week by
- * `useScheduleState`, and a dated fact is not a week — so every derived session
- * this resolver builds was filtered against a kit the athlete may not have on
- * the day it lands.
+ * `withAthleteKitForDate` lived here from 2026-08-17 and was DELETED the same
+ * day, after being PROVEN INERT rather than assumed so. It re-resolved
+ * `AthleteContext.equipmentTags` for each date so that every builder inside one
+ * date resolution got that day's kit.
  *
- * ⚠ **MEASURED, AND IT REACHED GLASS.** 2026-08-17,
- * `npm run trace:equipment-scopes` boundary B2 — a mid-week trip with dumbbells
- * and bands: every COMPOSED strength row was legal, and the Gunshow on the
- * Friday shipped **`Tricep Pushdown`, which needs cables**, in a hotel room.
- * Generation was innocent; the row is authored HERE, by
- * `applyGameProximity` → `buildDerivedSession('arms_pump', …)`, at read time.
+ * **THE PROOF IT IS REDUNDANT, MEASURED BOTH WAYS.** With it disabled: the
+ * ten-world equipment trace is BYTE-IDENTICAL, the five printed weeks are
+ * BYTE-IDENTICAL, and `test:equipment-scopes` 24/0, `test:away-flow` 51/0,
+ * `test:away-span-ownership` 8/0, `test:exercise-exclusions` 52/0,
+ * `test:scenarios` 62/3 and `print:week` are all unchanged. Nothing anywhere
+ * observed it.
  *
- * **THE FIX IS THE BOUNDARY, NOT THE CALL SITES.** There are seven
- * `buildDerivedSession` / builder hand-offs inside one date resolution, and
- * patching each is how a class defect becomes seven edge cases and an eighth
- * one ships next month. Scoping the STATE once, here, means every producer
- * inside this date — the Gunshow, the freed-slot accessories, the mobility
- * flush, the post-game session, and anything added later — receives the same
- * effective day kit without knowing this rule exists.
+ * **AND THE REASON IS CAUSAL, NOT JUST EMPIRICAL — three routes, all closed:**
+ *   1. STRENGTH content is composed at GENERATION against the per-day kit
+ *      (`composeWeek`'s `temporaryKitByDayOfWeek`), and a projection may no
+ *      longer replace a composer-authored session, so no read-side producer
+ *      authors strength rows over a composed day.
+ *   2. The G−1 Gunshow — the one read-side producer that ever authored
+ *      kit-sensitive rows inside a trip — cannot land there: a fixture inside a
+ *      live span is gone (`getEffectiveGameDates`), and when the fixture is
+ *      OUTSIDE the span its G−1 falls on a Rest template that proximity leaves
+ *      alone. That was the `Tricep Pushdown`-in-a-hotel route and it is shut.
+ *   3. `freedByTheTrip` authors CONDITIONING, whose machine choice is governed
+ *      by the modality owner and the substitution policy, not by
+ *      `AthleteContext.equipmentTags`.
  *
- * A world with no live equipment constraint returns the state UNTOUCHED, by
- * identity, so nothing outside a dated trip can change shape.
- */
-function withAthleteKitForDate(state: ScheduleState, dateISO: string): ScheduleState {
-  // THE FACTS, not a second constraint list. `temporarySourceFacts` is the
-  // declared field and `composeTemporarySourceFactCompatibility` is the ONE
-  // route a fact takes into a constraint anywhere in this app, so the read side
-  // and generation cannot disagree about what a trip means.
-  const facts = state.temporarySourceFacts ?? [];
-  if (facts.length === 0) return state;
-  const profile = state.athleteContext?.onboardingData;
-  if (!profile) return state;
-  const { activeConstraints } = composeTemporarySourceFactCompatibility({
-    temporarySourceFacts: facts,
-  });
-  if (activeConstraints.length === 0) return state;
-  const tags = resolveEquipmentAvailability(profile, activeConstraints, dateISO);
-  const current = state.athleteContext?.equipmentTags ?? [];
-  // Same answer as the week's? Then this day is not inside anything dated, and
-  // returning the original object keeps the no-trip path byte-identical.
-  if (tags.length === current.length && tags.every((tag) => current.includes(tag))) {
-    return state;
-  }
-  return {
-    ...state,
-    athleteContext: { ...(state.athleteContext ?? DEFAULT_ATHLETE_CONTEXT), equipmentTags: tags },
-  };
-}
-
-function _resolveDateRaw(date: string, rawState: ScheduleState): ResolvedDay {
-  // EVERY producer below reads `state`, so the day's kit reaches all of them.
-  const state = withAthleteKitForDate(rawState, date);
+ * ⚠ **WHAT WOULD REQUIRE IT BACK, so this is a decision and not an amnesia:**
+ * any read-side producer that authors STRENGTH or ACCESSORY rows on a date
+ * inside a live equipment span — a proximity rule that displaces onto a
+ * non-empty day, a freed-slot `prehab_accessories` reachable during a trip, or
+ * an athlete-added session composed at read time. The moment one exists, the
+ * week-level `equipmentTags` is wrong for it again, and the fix is this
+ * function restored at this seam — not a filter at the producer.
+ *
+ * A guard is not left behind for a deleted function: the property that matters
+ * is held athlete-side by `test:equipment-scopes` [16]/[21], which walk every
+ * VISIBLE row against that day's kit and would red on any such producer
+ * whatever authored it. */
+function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const { currentProgram, manualOverrides, markedDays } = state;
   const currentMicrocycle = selectMicrocycleForDate(
     currentProgram,
@@ -2437,15 +2421,9 @@ function withoutTeamTrainingSegment(name: string | undefined): string {
  */
 function freedByTheTrip(
   date: string,
-  rawState: ScheduleState,
+  state: ScheduleState,
   weekDays: readonly ResolvedDay[],
 ): Workout {
-  /* ⚠ **THIS PRODUCER RUNS INSIDE THE SPAN AND IS OUTSIDE `_resolveDateRaw`.**
-   * `applyAwayPass` is a WEEK-level pass, so the per-day scoping applied at the
-   * top of the date resolution never reached it — and this is the one session
-   * the trip itself creates, on a day the athlete is definitionally away. It
-   * asks the same owner for the same answer. */
-  const state = withAthleteKitForDate(rawState, date);
   // ── THE QUALITY IS CONDITIONING, AND SAM'S OWN ARITHMETIC IS WHY ──
   //
   // ***"if I go away for 2 weeks and I was going to miss 4 team trainings 1 game
