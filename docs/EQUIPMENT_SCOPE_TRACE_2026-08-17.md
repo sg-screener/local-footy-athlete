@@ -356,21 +356,21 @@ day 1 accessory_or_core      Ab Wheel                     role=strength_accessor
 day 2 horizontal_pull        Barbell Row                  role=main_strength
 day 2 vertical_pull          Lat Pulldown                 role=strength_accessory
 day 2 arm_or_shoulder        Band Pull-Apart              role=strength_accessory
-day 3 squat                  Goblet Squat                 role=strength_accessory
-day 3 hinge                  RDLs                         role=main_strength
-day 3 single_leg_knee        Cossack Squat                role=strength_accessory
-day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
-day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
-day 4 horizontal_push        Single-Arm DB Floor Press    role=main_strength
-day 4 vertical_push          DB Shoulder Press            role=strength_accessory
-day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 3 horizontal_push        Single-Arm DB Floor Press    role=main_strength
+day 3 vertical_push          DB Shoulder Press            role=strength_accessory
+day 3 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 5 squat                  Goblet Squat                 role=strength_accessory
+day 5 hinge                  RDLs                         role=main_strength
+day 5 single_leg_knee        Cossack Squat                role=strength_accessory
+day 5 single_leg_hip         Single-Leg RDL               role=strength_accessory
+day 5 accessory_or_core      Band Pallof Press            role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
 ```
-day 3 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
-day 3 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
-day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+day 3 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+day 5 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
 ```
 ### 6. STORED block-selection history (input to this run)
 ```
@@ -387,22 +387,45 @@ day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press 
 ```
 ### 7. VISIBLE generated exercises
 ```
-⚠ GENERATION REFUSED
-      generated_week_refused: Generated week refused (main_strength_required_minimum:1|required_safe_patterns_present:squat|required_safe_patterns_present:hinge|required_safe_patterns_present:push)
-      findings: [{"clause":"main_strength_required_minimum","severity":"blocking","detail":"not enough main-strength sessions","expected":2,"actual":1},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no squat","expected":1,"actual":"squat"},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no hinge","expected":1,"actual":"hinge"},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no push","expected":1,"actual":"push"}]
+2026-08-10 [kit: 19]  Training Day
+  Strength
+    - Back Squat
+    - RDLs
+    - Bulgarian Split Squats
+    - Single-Leg RDL
+    - Ab Wheel
+  Conditioning
+    - Steady Blocks (3×8 min or 4×6 min)
+2026-08-11 [kit: 19]  Training Day
+  Team Training
+2026-08-12 [kit: 3]  Training Day
+  Strength
+    - Single-Arm DB Floor Press
+    - DB Shoulder Press
+    - Banded External Rotation
+  Conditioning
+    - Classic 4×4
+2026-08-13 [kit: 3]  Rest Day
+2026-08-14 [kit: 3]  Training Day
+  Gunshow
+    - Concentration Curl
+    - Hammer Curl
+    - Dumbbell Kickback
+    - Banded Tricep Pushdown
+    - Single-Arm Shrug
+    - Lateral Raise
+2026-08-15 [kit: 3]  Training Day
+  Conditioning
+    - Warm-up
+    - 30 m Repeats
+2026-08-16 [kit: 3]  Rest Day
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
-```
-2026-08-16 day0 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-2026-08-10 day1 "lower_squat" rows 5 -> 2 removed: Back Squat, RDLs, Bulgarian Split Squats
-2026-08-11 day2 "Team Training" rows 3 -> 3
-2026-08-12 day3 "lower_hinge" rows 5 -> 4 removed: RDLs
-2026-08-13 day4 "Team Training" rows 3 -> NULL (caller collapses to REST) [collapsedToRest] removed: Single-Arm DB Floor Press, DB Shoulder Press, Banded External Rotation
-2026-08-14 day5 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-2026-08-15 day6 "Game" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-```
+_the pass changed nothing (or never ran)_
 ### 8. Club / game anchors
-_none visible_
+```
+2026-08-11  Team Training
+```
 ### 9. Typed equipment gaps
 ```
 kitUnachievablePatterns: (none)
@@ -665,14 +688,14 @@ day 1 single_leg_hip         Single-Leg RDL               role=strength_accessor
 day 1 accessory_or_core      Band Pallof Press            role=strength_accessory
 day 2 horizontal_pull        Single-Arm DB Row            role=main_strength
 day 2 arm_or_shoulder        Band Pull-Apart              role=strength_accessory
-day 3 squat                  Goblet Squat                 role=strength_accessory
-day 3 hinge                  RDLs                         role=main_strength
-day 3 single_leg_knee        Cossack Squat                role=strength_accessory
-day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
-day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
-day 4 horizontal_push        Single-Arm DB Floor Press    role=main_strength
-day 4 vertical_push          DB Shoulder Press            role=strength_accessory
-day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 3 horizontal_push        Single-Arm DB Floor Press    role=main_strength
+day 3 vertical_push          DB Shoulder Press            role=strength_accessory
+day 3 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 5 squat                  Goblet Squat                 role=strength_accessory
+day 5 hinge                  RDLs                         role=main_strength
+day 5 single_leg_knee        Cossack Squat                role=strength_accessory
+day 5 single_leg_hip         Single-Leg RDL               role=strength_accessory
+day 5 accessory_or_core      Band Pallof Press            role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
@@ -681,10 +704,10 @@ day 1 squat                  shipped=Goblet Squat             base=Back Squat (k
 day 1 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
 day 1 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit_today)
 day 2 horizontal_pull        shipped=Single-Arm DB Row        base=Barbell Row (kit_today)
-day 3 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
-day 3 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
-day 3 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit_today)
-day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+day 3 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+day 5 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+day 5 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit_today)
 ```
 ### 6. STORED block-selection history (input to this run)
 ```
@@ -701,20 +724,46 @@ day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press 
 ```
 ### 7. VISIBLE generated exercises
 ```
-⚠ GENERATION REFUSED
-      generated_week_refused: Generated week refused (main_strength_required_minimum:1|required_safe_patterns_present:hinge|required_safe_patterns_present:push|required_safe_patterns_present:pull)
-      findings: [{"clause":"main_strength_required_minimum","severity":"blocking","detail":"not enough main-strength sessions","expected":2,"actual":1},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no hinge","expected":1,"actual":"hinge"},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no push","expected":1,"actual":"push"},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no pull","expected":1,"actual":"pull"}]
+2026-08-10 [kit: 3]  Training Day
+  Strength
+    - Goblet Squat
+    - RDLs
+    - Cossack Squat
+    - Single-Leg RDL
+    - Band Pallof Press
+  Conditioning
+    - Bodyweight Conditioning Circuit
+2026-08-11 [kit: 3]  Training Day
+  Strength
+    - Single-Arm DB Row
+    - Band Pull-Apart
+  Conditioning
+    - Outdoor Running Intervals
+2026-08-12 [kit: 3]  Training Day
+  Strength
+    - Single-Arm DB Floor Press
+    - DB Shoulder Press
+    - Banded External Rotation
+  Conditioning
+    - 20 s Max Sprint — Small Dose
+2026-08-13 [kit: 3]  Rest Day
+2026-08-14 [kit: 3]  Training Day
+  Gunshow
+    - Concentration Curl
+    - Hammer Curl
+    - Dumbbell Kickback
+    - Banded Tricep Pushdown
+    - Single-Arm Shrug
+    - Lateral Raise
+2026-08-15 [kit: 3]  Training Day
+  Conditioning
+    - Warm-up
+    - 30 m Repeats
+2026-08-16 [kit: 3]  Training Day
+  Mobility
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
-```
-2026-08-16 day0 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-2026-08-10 day1 "lower_squat" rows 5 -> 4 removed: RDLs
-2026-08-11 day2 "Team Training" rows 2 -> NULL (caller collapses to REST) [collapsedToRest] removed: Single-Arm DB Row, Band Pull-Apart
-2026-08-12 day3 "lower_hinge" rows 5 -> 4 removed: RDLs
-2026-08-13 day4 "Team Training" rows 3 -> NULL (caller collapses to REST) [collapsedToRest] removed: Single-Arm DB Floor Press, DB Shoulder Press, Banded External Rotation
-2026-08-14 day5 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-2026-08-15 day6 "Game" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-```
+_the pass changed nothing (or never ran)_
 ### 8. Club / game anchors
 _none visible_
 ### 9. Typed equipment gaps
@@ -800,21 +849,37 @@ day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press 
 ```
 ### 7. VISIBLE generated exercises
 ```
-⚠ GENERATION REFUSED
-      generated_week_refused: Generated week refused (main_strength_planner_selected_target:3|required_safe_patterns_present:hinge)
-      findings: [{"clause":"main_strength_planner_selected_target","severity":"blocking","detail":"the planner's own selected main-strength target is not met","expected":4,"actual":3},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no hinge","expected":1,"actual":"hinge"}]
+2026-08-10 [kit: 3]  Training Day
+  Strength
+    - Goblet Squat
+    - RDLs
+    - Cossack Squat
+    - Single-Leg RDL
+    - Band Pallof Press
+2026-08-11 [kit: 3]  Training Day
+  Team Training
+2026-08-12 [kit: 3]  Training Day
+  Strength
+    - Goblet Squat
+    - RDLs
+    - Cossack Squat
+    - Single-Leg RDL
+    - Band Pallof Press
+2026-08-13 [kit: 3]  Training Day
+  Team Training
+2026-08-14 [kit: 3]  Rest Day
+2026-08-15 [kit: 3]  Game Day
+  Game Day
+2026-08-16 [kit: 3]  Rest Day
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
-```
-2026-08-16 day0 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-2026-08-10 day1 "lower_squat" rows 5 -> 4 removed: RDLs
-2026-08-11 day2 "Team Training" rows 2 -> 2
-2026-08-12 day3 "lower_hinge" rows 5 -> 4 removed: RDLs
-2026-08-13 day4 "Team Training" rows 3 -> 3
-2026-08-14 day5 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-```
+_the pass changed nothing (or never ran)_
 ### 8. Club / game anchors
-_none visible_
+```
+2026-08-11  Team Training
+2026-08-13  Team Training
+2026-08-15  Game Day
+```
 ### 9. Typed equipment gaps
 ```
 kitUnachievablePatterns: (none)
@@ -863,14 +928,14 @@ day 1 accessory_or_core      Ab Wheel                     role=strength_accessor
 day 2 horizontal_pull        Barbell Row                  role=main_strength
 day 2 vertical_pull          Lat Pulldown                 role=strength_accessory
 day 2 arm_or_shoulder        Band Pull-Apart              role=strength_accessory
-day 3 squat                  Back Squat                   role=strength_accessory
-day 3 hinge                  RDLs                         role=main_strength
-day 3 single_leg_knee        Bulgarian Split Squats       role=strength_accessory
-day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
-day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
-day 4 horizontal_push        Bench Press                  role=main_strength
-day 4 vertical_push          DB Shoulder Press            role=strength_accessory
-day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 3 horizontal_push        Bench Press                  role=main_strength
+day 3 vertical_push          DB Shoulder Press            role=strength_accessory
+day 3 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 5 squat                  Back Squat                   role=strength_accessory
+day 5 hinge                  RDLs                         role=main_strength
+day 5 single_leg_knee        Bulgarian Split Squats       role=strength_accessory
+day 5 single_leg_hip         Single-Leg RDL               role=strength_accessory
+day 5 accessory_or_core      Band Pallof Press            role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
@@ -890,20 +955,47 @@ _none — no row carries `substitutedFor`_
 ```
 ### 7. VISIBLE generated exercises
 ```
-⚠ GENERATION REFUSED
-      generated_week_refused: Generated week refused (main_strength_required_minimum:0|required_safe_patterns_present:squat|required_safe_patterns_present:hinge|required_safe_patterns_present:push|required_safe_patterns_present:pull)
-      findings: [{"clause":"main_strength_required_minimum","severity":"blocking","detail":"not enough main-strength sessions","expected":2,"actual":0},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no squat","expected":1,"actual":"squat"},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no hinge","expected":1,"actual":"hinge"},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no push","expected":1,"actual":"push"},{"clause":"required_safe_patterns_present","severity":"blocking","detail":"the week trains no pull","expected":1,"actual":"pull"}]
+2026-08-10 [kit: 19]  Training Day
+  Strength
+    - Back Squat
+    - RDLs
+    - Bulgarian Split Squats
+    - Single-Leg RDL
+    - Ab Wheel
+  Conditioning
+    - Steady Blocks (3×8 min or 4×6 min)
+2026-08-11 [kit: 19]  Training Day
+  Strength
+    - Barbell Row
+    - Lat Pulldown
+    - Band Pull-Apart
+  Conditioning
+    - Classic 4×4
+2026-08-12 [kit: 19]  Training Day
+  Strength
+    - Bench Press
+    - DB Shoulder Press
+    - Banded External Rotation
+  Conditioning
+    - 20 s Max Sprint — Small Dose
+2026-08-13 [kit: 19]  Rest Day
+2026-08-14 [kit: 19]  Training Day
+  Gunshow
+    - Incline Dumbbell Curl
+    - Banded Bicep Curl
+    - Tricep Pushdown
+    - Overhead Tricep Extension
+    - Rear Delt Fly
+    - Shrugs
+2026-08-15 [kit: 19]  Training Day
+  Conditioning
+    - Warm-up
+    - 30 m Repeats
+2026-08-16 [kit: 19]  Training Day
+  Mobility
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
-```
-2026-08-16 day0 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-2026-08-10 day1 "lower_squat" rows 5 -> 2 removed: Back Squat, RDLs, Bulgarian Split Squats
-2026-08-11 day2 "Team Training" rows 3 -> NULL (caller collapses to REST) [collapsedToRest] removed: Barbell Row, Lat Pulldown, Band Pull-Apart
-2026-08-12 day3 "lower_hinge" rows 5 -> 2 removed: Back Squat, RDLs, Bulgarian Split Squats
-2026-08-13 day4 "Team Training" rows 3 -> NULL (caller collapses to REST) [collapsedToRest] removed: Bench Press, DB Shoulder Press, Banded External Rotation
-2026-08-14 day5 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-2026-08-15 day6 "Game" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
-```
+_the pass changed nothing (or never ran)_
 ### 8. Club / game anchors
 _none visible_
 ### 9. Typed equipment gaps

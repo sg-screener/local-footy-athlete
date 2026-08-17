@@ -1279,12 +1279,47 @@ export function buildGeneratedMicrocycles(args: {
         adapterWorkouts,
       });
       const built = authored.workouts as Workout[];
+      /* ── BURN THE BOATS: EQUIPMENT AND TRAVEL NO LONGER REACH THIS PASS ─────
+       *
+       * `validateWorkoutAgainstActiveConstraints` is a filter over a FINISHED
+       * week. It used to run for `equipment` and for `travel`, and by 2026-08-17
+       * both were a SECOND authority over a question the composer and the
+       * scheduler now own outright — the shape the mission calls "an old
+       * travel/equipment filter that rewrites, repairs, rejects or duplicates
+       * the new scheduler/composer result".
+       *
+       * ⚠ **AND IT WAS NOT A HARMLESS DUPLICATE. IT REFUSED THE WEEK.** Measured
+       * (`npm run trace:equipment-scopes`, B8) with a FULL commercial gym and a
+       * travel fact and NO equipment change: the pass collapsed Tuesday and
+       * Thursday to REST while they carried six of the athlete's own lifts, and
+       * stripped `Back Squat`, `RDLs` and `Bulgarian Split Squats` off two more
+       * days. §18 then refused the week for training no squat, hinge, push or
+       * pull. **A trip with a full gym produced no week at all.**
+       *
+       * WHERE EACH BEHAVIOUR WENT, named as the removal law requires:
+       *
+       *   EQUIPMENT → `composeWeek`'s per-day kit (`temporaryKitByDayOfWeek`,
+       *   from `resolveEffectiveEquipmentWindow`). The composer refuses an
+       *   illegal row BEFORE authoring it and discloses a typed gap, instead of
+       *   authoring it and having a later pass delete it. It also asks the right
+       *   oracle: this pass filtered on the materialised row's authored
+       *   `equipmentRequired` STRING, which answers "what kit does this use",
+       *   while `exerciseIsAvailableWith` answers "can this athlete do it" and
+       *   knows Sam's OR-groups. Measured: `RDLs` is legal on dumbbells by the
+       *   sheet and was deleted by the string — and then reported back to §18 as
+       *   "the week trains no hinge".
+       *
+       *   TRAVEL → `weeklySchedulerInputs.clubInputsAfterTravel`, which takes the
+       *   club night and the fixture out of the facts the PLAN is built from.
+       *   That is the fix this pass's own comment named and did not build.
+       *
+       * Every OTHER schedule kind is untouched and still runs here. */
       const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
-        constraint.type === 'equipment' ||
-        (constraint.type === 'schedule' &&
-          constraint.scheduleKind !== undefined &&
-          constraint.scheduleKind !== 'busy_week' &&
-          constraint.scheduleKind !== 'max_sessions'));
+        constraint.type === 'schedule' &&
+        constraint.scheduleKind !== undefined &&
+        constraint.scheduleKind !== 'busy_week' &&
+        constraint.scheduleKind !== 'max_sessions' &&
+        constraint.scheduleKind !== 'travel');
       const constrained = hardPostGenerationConstraints.length > 0
         ? built.map((workout) =>
             validateWorkoutAgainstActiveConstraints({

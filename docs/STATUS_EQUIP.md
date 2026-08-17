@@ -384,6 +384,113 @@ already had the convention written down
 (`src/__tests__/sprintCreditEvidenceTests.ts:22`); both now follow it. **Nothing
 moved but a declaration; the assignment is untouched in both files.**
 
+---
+
+# SLICE 2 — LANDED. THE BOATS ARE BURNED.
+
+**Findings 4 and 5 are closed. Finding 6 (sandbag) is the last one open.**
+
+## THE HEADLINE
+
+**Every one of the nine trace boundaries now publishes a week. Zero refusals.**
+Before slice 2, three of them produced nothing at all — including a trip taken
+with a full commercial gym.
+
+`test:away-flow` **went from THROWING to 47 passed, 2 failed.** It could not
+produce a single cell on the base commit.
+
+## WHAT MOVED
+
+**The removal is in the PLAN now, not in a pass over a finished week.**
+`weeklySchedulerInputs.clubInputsAfterTravel` takes the club night and the
+fixture out of the facts the scheduler is told about, using the shared
+`awaySpans.ts` owner so the plan side and the read side cannot disagree about
+which days are inside a trip. **This is the fix
+`postGenerationConstraintValidation`'s own comment named and did not build** —
+*"the allocator must not mark a day `isTeamDay` inside a live travel span"*.
+
+**`travel` and `equipment` were then removed from
+`hardPostGenerationConstraints`.** Each removal names where the behaviour went:
+
+| removed | went to |
+| --- | --- |
+| equipment filtering | `composeWeek`'s per-day kit (slice 1). It refuses an illegal row **before** authoring it and discloses a typed gap, and it asks the right oracle — the pass filtered on the materialised row's authored `equipmentRequired` STRING, which answers *"what kit does this use"*, while `exerciseIsAvailableWith` answers *"can this athlete do it"* and knows Sam's OR-groups. `RDLs` is legal on dumbbells by the sheet and was being deleted by the string, then reported to §18 as *"the week trains no hinge"*. |
+| travel filtering | `clubInputsAfterTravel`, above. |
+
+**Every other schedule kind still runs through that pass, untouched.**
+
+## THE ATHLETE'S AWAY WEEK, WITH DUMBBELLS AND BANDS ONLY
+
+Produced by the run that wrote this file — B6, previously REFUSED:
+
+```
+Mon  Strength    Goblet Squat · RDLs · Cossack Squat · Single-Leg RDL · Band Pallof Press
+     Conditioning Bodyweight Conditioning Circuit
+Tue  Strength    Single-Arm DB Row · Band Pull-Apart
+     Conditioning Outdoor Running Intervals
+Wed  Strength    Single-Arm DB Floor Press · DB Shoulder Press · Banded External Rotation
+     Conditioning 20 s Max Sprint — Small Dose
+Thu  Rest
+Fri  Gunshow     Concentration Curl · Hammer Curl · Dumbbell Kickback ·
+                 Banded Tricep Pushdown · Single-Arm Shrug · Lateral Raise
+```
+
+Every row is legal on a hotel kit. No club night, no fixture. The recorded block
+selection is still `Back Squat / Barbell Row / Bench Press / Bulgarian Split
+Squats / Ab Wheel`, untouched.
+
+## THE GUARD — 13 cells now, and one of them exists because a mutant survived
+
+**⚠ CELL [10] SURVIVED THE MUTANT THAT DISABLES THIS FIX.** Disabling the
+plan-side removal left *"the club's work inside the span is gone"* green, because
+the READ side hides club work from the projection whatever the plan did. So [10]
+holds a real athlete-visible property and **nothing about this change**. `[10b]`
+was added to hold the owner's contract directly, and it kills that mutant.
+
+| mutant | result |
+| --- | --- |
+| plan-side removal disabled | **[10b] red** |
+| `travel` restored to the in-generation filter | **[8] and [11] red** |
+
+Registered as `LAW-away-removes-the-club-not-the-athlete`. Registry now 130 rows,
+109 guarded, **21 UNENFORCED — the ratchet has not risen.**
+
+## WORLDS LOST AND GAINED
+
+| instrument | base `6b617847` | slice 2 |
+| --- | --- | --- |
+| `test:ladder-wide` | 140 worlds, 40 refused, 0 deficient of 368 | **identical** |
+| `test:scenarios` | 62 / 3 | **62 / 3, same three** |
+| `print:week` | 2 refused, 11 findings | **identical** |
+| `test:compile` | 468; product 35, devtools 51 | **identical, same 6 pre-existing** |
+| `test:weekly-scheduler` | 96/96 | **96/96** |
+| `test:away-flow` | **THREW — no cells** | **47 passed, 2 failed** |
+
+**Worlds gained: 3 of the trace's 9 boundaries now publish that did not.**
+**Worlds lost: none.**
+
+## THE TWO REMAINING `away-flow` REDS — LOCATED, NOT GUESSED
+
+Neither is a regression from green: **the suite threw on the base commit and
+produced no cells at all.**
+
+**[13h]** *"every club night the trip removes comes back as CONDITIONING, one for
+one"* — reads `awayClub: 6` of 8. **There is a SECOND scheduler-input builder:**
+`coachingInputsToSchedulerInputs` (`generateProgram.ts`), which takes
+`CoachingInputs`, hardcodes `unavailableDays: []` and has no constraint awareness
+at all. Two representations of one fact, which is the defect class this repo
+fights. Threading constraints into `buildInitialGeneratedCoachingPlan` needs its
+own unit and its callers updated — **it is named here rather than half-built at
+the tail of a session**, which the handoff says is how the last two nights went
+wrong.
+
+**[13f]** *"the away week is RE-AUTHORED, not the home week minus the club"* —
+reads `dropped: 0, homeRows: 11, awayRows: 17`. The cell asserts `dropped > 0`;
+the away week now GAINS six rows and drops none, which satisfies the cell's
+stated INTENT more strongly than the assertion does. **It is left red and named
+rather than edited to match the new behaviour**, because deciding that an
+approved contract outranks it is a call worth making in daylight.
+
 ## NEXT — THE REMAINING BUILD ORDER
 
 1. ~~ONE EQUIPMENT OWNER, RESOLVED PER DAY.~~ **DONE — slice 1.**
@@ -392,7 +499,14 @@ moved but a declaration; the assignment is untouched in both files.**
    (findings 4 and 5); the composer already owns both questions. **This is the
    `BURN THE BOATS` target and it is the biggest remaining piece:** travel alone
    still refuses the week and still deletes six of the athlete's own lifts.
-4. **SANDBAG** — Sam's sheet joins the vocabulary derivation (finding 6).
+4. ~~DELETE THE LEGACY TRAVEL/EQUIPMENT AUTHORITY.~~ **DONE — slice 2.**
+5. **SANDBAG** — Sam's sheet joins the vocabulary derivation (finding 6). The
+   last finding open.
+6. **THE SECOND SCHEDULER-INPUT BUILDER** — `coachingInputsToSchedulerInputs`
+   must reach the same owner, which closes `away-flow` [13h].
+7. **THE REMAINING MISSION PROOFS** — 15 worlds, the printed weeks for Sam, and
+   the session-scope leg of the trace. All of them were blocked on the refusal
+   that slice 2 removed.
 
 ## NOT COVERED YET
 

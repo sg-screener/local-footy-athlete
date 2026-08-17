@@ -214,6 +214,106 @@ run('[7] on the return date the base selection is back, by expiry alone', () => 
     'the trip is over and rows are still being substituted for a kit reason');
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// THE TRIP TAKES THE CLUB'S WORK AND LEAVES THE ATHLETE'S
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// R-018 *"if yes, follow same program"*, R-020 *"yes clear team training and
+// games while away"*. Both halves are one rule and neither is optional.
+//
+// ⚠ THESE CELLS EXIST BECAUSE THE OPPOSITE SHIPPED. Measured 2026-08-17 on
+// `6b617847`: a travel fact with a FULL commercial gym and no equipment change
+// collapsed Tuesday and Thursday to REST while they carried six of the
+// athlete's own lifts, and §18 then refused the entire week.
+
+/** Travel only — the kit is untouched, so a failure here is the TRIP's doing. */
+const travelOnly = week({ facts: [travelFact(WEEK_MONDAY, TRIP_UNTIL)] });
+/** The same trip as the constraints generation actually receives. */
+const travelConstraints = (() => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { composeTemporarySourceFactCompatibility } = require('../rules/temporarySourceFact');
+  return composeTemporarySourceFactCompatibility({
+    temporarySourceFacts: [travelFact(WEEK_MONDAY, TRIP_UNTIL)],
+    onDate: WEEK_MONDAY,
+  }).activeConstraints;
+})();
+
+run('[8] a trip with a full gym still PUBLISHES A WEEK', () => {
+  assert(travelOnly.error === null,
+    `the athlete marked a trip, kept every piece of his own kit, and got NO WEEK: `
+    + `${travelOnly.error}`);
+  assert(travelOnly.visible.length > 0, 'the week published nothing at all');
+});
+
+run('[9] NON-VACUITY — the control week really does carry club anchors', () => {
+  assert(home.anchors.length > 0,
+    'the HOME week shows no team training or game at all, so cell [10] could not '
+    + 'tell a working trip from an athlete who never had a club');
+});
+
+run('[10] the club\'s work inside the span is gone', () => {
+  assert(travelOnly.anchors.length === 0,
+    `the trip runs ${WEEK_MONDAY}..${TRIP_UNTIL} and the week still shows `
+    + `${travelOnly.anchors.join(' | ')} — the athlete is a thousand kilometres away`);
+});
+
+run('[11] the athlete\'s OWN sessions survive the trip', () => {
+  const strengthDays = (result: BoundaryResult): number =>
+    result.visible.filter((day) => day.lines.some((line) => /Strength|Gunshow/.test(line))).length;
+  const homeDays = strengthDays(home);
+  const awayDays = strengthDays(travelOnly);
+  assert(homeDays > 0, 'the home week has no strength days — the counter is dead');
+  assert(awayDays >= homeDays,
+    `the athlete trained on ${homeDays} day(s) at home and ${awayDays} away. The club `
+    + 'is shut; his own gym work is not, and R-018 says the program keeps running.');
+});
+
+/* ⚠ **CELL [10] SURVIVED THE MUTANT THAT DISABLES THIS FIX, AND THAT IS WHY
+ * [10b] EXISTS.** Disabling the plan-side removal left [10] green, because the
+ * READ side (`sessionResolver`'s away pass) hides club work from the projection
+ * whatever the plan did. So [10] holds a real athlete-visible property and holds
+ * NOTHING about this change. The distinctive property of the plan-side fix is
+ * that the week is BUILT for an athlete with no club night at all — never
+ * allocated around a phantom one and repaired afterwards — and only the
+ * scheduler's own inputs can say that. `[8]` and `[11]` hold the pipeline half
+ * through the real generator; this holds the owner's contract. */
+run('[10b] the SCHEDULER is told about no club night inside the span', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { weeklySchedulerInputsFrom } = require('../rules/weeklySchedulerInputs');
+  const inputsFor = (facts: readonly unknown[]) => weeklySchedulerInputsFrom({
+    profile: base,
+    weekStartISO: WEEK_MONDAY,
+    offseasonSubphase: null,
+    activeConstraints: facts.length === 0 ? [] : travelConstraints,
+  });
+  const atHome = inputsFor([]);
+  const onTrip = inputsFor([1]);
+  assert(atHome.clubNights.length > 0 && atHome.gameDay !== null,
+    'the control athlete has no club night or no fixture, so this cell could not '
+    + 'tell a working trip from an athlete who never had a club');
+  assert(onTrip.clubNights.length === 0,
+    `the plan is still being built around ${onTrip.clubNights.length} club night(s) `
+    + 'the athlete cannot attend. The week gets allocated around a session that is '
+    + 'not happening, and something downstream has to delete it afterwards — which '
+    + 'is exactly what deleted six of his own lifts.');
+  assert(onTrip.gameDay === null,
+    'the plan is still anchored to a fixture inside the trip');
+});
+
+run('[12] a fixture OUTSIDE the span is untouched', () => {
+  // The trip ends on the 16th; the following Saturday is the 22nd. Sam:
+  // *"the game on the 15th should be removed … but the next saturday the 22nd
+  // game is still alive"*.
+  const nextWeek = week({
+    facts: [travelFact(WEEK_MONDAY, TRIP_UNTIL)],
+    todayISO: RETURN_DATE, weekMondayISO: RETURN_DATE,
+  });
+  assert(nextWeek.error === null, `the week after the trip did not generate: ${nextWeek.error}`);
+  assert(nextWeek.anchors.length > 0,
+    'the trip ended before this week began and its club nights and fixture are '
+    + 'still missing — the span is leaking past its own end date');
+});
+
 console.log(`\nEquipment scope ownership: ${passed} passed, ${failed} failed`);
 if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }
 totalsPrinted(failures.length);
