@@ -1546,6 +1546,45 @@ function deloadPlanEntry(
     };
   }
 
+  // ── THE SPRINT IS REDUCED IN VOLUME, NEVER CONVERTED TO AEROBIC ──────────
+  //
+  // **Sam's ruling, 2026-08-17:** a mid/late off-season deload *"may remove or
+  // downgrade the hard conditioning session to authored tempo/easy work"* and
+  // *"reduce sprint VOLUME using an authored legal dose"*, but *"must not erase
+  // the required genuine sprint exposure or convert sprint into aerobic work"*.
+  //
+  // ⚠ **IT WAS DOING EXACTLY THAT.** `deloadConditioningCategory` maps
+  // `sprint -> aerobic_base`, so the deload week's ONLY sprint became an easy
+  // aerobic session — and §3 floors sprint at *"at least 1 except early
+  // off-season"* every week, so the week then refused
+  // `sprint_high_speed_required_minimum:0`. Measured on the no-club, no-fixture
+  // later-off-season athlete: weeks 1 and 2 accepted, week 3 (the deload)
+  // refused, with `d0:sprint` arriving as `d0:aerobic_base`.
+  //
+  // The reduction it gets instead is ALREADY AUTHORED and already built:
+  // `conditioningVariant: 'reduced'` on a sprint-family template composes
+  // `20 m Acceleration Reps` (`SPEED_FALLBACK_TEMPLATE`), a real row from the
+  // sheet. **The quality stays `sprint`; only the volume falls.** Nothing here
+  // invents a dose and no §18 count is patched.
+  //
+  // `vo2` and `glycolytic` still downgrade — they are the fatiguing work the
+  // deload exists to remove, and Sam's rule permits exactly that.
+  //
+  // ⚠ **THAT DOWNGRADE IS UNREACHABLE FOR A SCHEDULER-AUTHORED WEEK, AND ITS
+  // MUTATION SAYS SO.** WC-136 already refuses to AUTHOR a hard conditioning
+  // quality into a deload (`weekIsReduced` in `weeklyScheduler`), so no `vo2`
+  // ever arrives here to be downgraded — removing `vo2`/`glycolytic` from
+  // `isHardDeloadConditioningCategory` reddens nothing. It is left in place for
+  // plan entries that do NOT come from the scheduler, and recorded here rather
+  // than deleted blind or claimed as a receipt it does not have.
+  if (category === 'sprint') {
+    return {
+      ...next,
+      conditioningVariant: 'reduced',
+      conditioningFeel: undefined,
+    };
+  }
+
   const safeCategory = deloadConditioningCategory(category) ?? 'aerobic_base';
   const safeFlavour = deloadConditioningFlavour(category) ?? 'aerobic';
   return {

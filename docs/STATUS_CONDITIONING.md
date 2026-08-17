@@ -596,3 +596,169 @@ conditioning and sane spacing.
 
 The three printed weeks do not yet match the rules: finding 2 is not visible to
 the athlete and finding 3 is untouched.
+
+---
+
+## SESSION 6 — TWO CORRECTIONS TO MY OWN SESSION-5 REPORT
+
+### ⚠ "PROJECTION RESELECTS CONDITIONING" WAS WRONG
+
+Instrumented inside the printer, stored and visible AGREE, field for field:
+
+    [STORED]  d=1 cat=aerobic_base offFeet=true cond=["Continuous Aerobic Run"]
+    [VISIBLE] 2026-08-10 source=template cat=aerobic_base cond=["Continuous Aerobic Run"]
+
+**The projection never re-chose anything.** GENERATION picked the run. The
+read-time `buildConditioningSession` pass exists but only fills days with **no
+stored workout** (`day.workout !== null → continue`), so it cannot overwrite a
+stored row. Nothing was deleted, because the thing to delete was not there.
+
+### THE REAL CAUSE OF FINDING 2 — A ONE-WORD FIXTURE TYPO
+
+`print-week`'s `FULL_GYM` declared `modalities: { rower: 'have' }`.
+`ConditioningEquipmentModality` is `bike_erg | air_bike | row | ski | treadmill`
+— **`rower` is not in it**, and the equipment resolver passes an unrecognised
+word through rather than refusing it. So the athlete owned no rower, every
+off-leg candidate tied at one machine (the bike), the preference had nothing to
+prefer, and a heavy lower day drew `Continuous Aerobic Run`.
+
+    machines=["bike","rower"]  pre=[5 candidates]  post=[the same 5]
+
+Fixed to `row`. Monday now prints **Steady Blocks (3×8 min or 4×6 min)** in both
+the pre-season and in-season weeks.
+
+### THE SPRINT NOBODY COUNTED — and it was worth 28 worlds
+
+`isTrueSpeedDay` read only `speedBlock.kind === 'true_speed'`. WC-135/WC-124
+place the app sprint as a STANDALONE CONDITIONING DAY with
+`conditioningCategory: 'sprint'` and no `speedBlock`. Every world with a club
+night or a fixture was saved by anchor credit; **the athlete with neither — the
+one this whole mission was for — had their own sprint counted as zero and their
+week refused `sprint_high_speed_required_minimum:0`.**
+
+Now counted, and only when the day carries the conditioning to go with it so a
+stray category cannot mint a sprint night. **This is not a relaxed minimum: it
+counts work that genuinely exists.**
+
+| corpus | base | branch | LOST | GAINED | reason changes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| refusal census, 180 | 140 | **140** | **0** | 0 | **0** |
+| conditioning census, 198 | 157 | **185** | **0** | **28** | **0** |
+
+Every gained world is the `0club/nogame` family across all three phases.
+`test:worn-world-boot` also goes **0/5 → 5/5**.
+
+### STILL OPEN — scenario 9 refuses on its DELOAD week
+
+Zero-club later off-season builds weeks 1 and 2 and refuses week 3:
+
+    WK1 accepted sprintNights=1  cats=[d0:sprint, d1:aerobic_base, d2:vo2, d3:tempo]
+    WK3 refused   sprintNights=0 cats=[d0:aerobic_base, d1:aerobic_base, d2:tempo, d3:tempo]
+
+The scheduler authorises `d0:sprint_high_speed` in EVERY week — a downstream
+deload pass rewrites it. `deloadPlanEntry` / `isHardDeloadConditioningCategory`
+was the obvious candidate and removing `sprint` from it **did not change the
+output**, and `vo2 → tempo` on the same week says a SECOND owner is rewriting
+conditioning in a deload. That change was reverted rather than shipped
+unproven. **Finding it is where the next session starts.**
+
+### RECOMMENDATION — **DO NOT MERGE**
+
+Findings 1 and 2 hold and are visible. Finding 3's week still does not build.
+
+---
+
+## SESSION 7 — THE DELOAD SPRINT. **ALL THREE FINDINGS HOLD. MERGE.**
+
+### Every production writer that changes conditioning after authorship
+
+| writer | what it does | verdict |
+| --- | --- | --- |
+| `weeklyScheduler` (WC-136) | authors category + hard quality; refuses hard in a deload | **the owner** |
+| `materialiseAuthoredSessions` | asks the specialist for a template; never moves a day | correct |
+| `defaultProgram.deloadPlanEntry` | **PRE-materialisation**; rewrote conditioning for a deload | **the culprit** |
+| `workoutCanonicalisation:1088` | `earlyOffseason ? 'aerobic_base' : keep` | not our phase; keeps |
+| `sessionResolver` read-time pass | fills days with **no stored workout** only | cannot overwrite |
+| `offFeetAlternative` (run-load cap) | swaps template when the run cap is hit | not reached here |
+
+**There is no post-authoring rewrite left to delete.** The one rewriter,
+`deloadPlanEntry`, is already pre-materialisation and is now the single owner.
+
+### The defect
+
+`deloadConditioningCategory` maps **`sprint → aerobic_base`**. So a deload
+converted the week's ONLY sprint into easy aerobic work, and §3 floors sprint at
+*"at least 1 except early off-season"* — the week refused
+`sprint_high_speed_required_minimum:0`.
+
+    WK1 accepted  d0:sprint        d2:vo2
+    WK3 REFUSED   d0:aerobic_base  d2:tempo     <- the deload
+
+### The fix, on Sam's rule
+
+`sprint` now keeps its category and takes `conditioningVariant: 'reduced'`.
+`'reduced'` used to SWAP the template (`10 m Acceleration Reps` → `20 m
+Acceleration Reps`) — which is a different session, not less volume, and the
+20 m rep is longer. It now composes **the same template at the sheet's authored
+minimum**:
+
+    build week   10 m Acceleration Reps  8 reps   (authored "6–10 reps", midpoint)
+    deload week  10 m Acceleration Reps  6 reps   (authored MINIMUM)
+
+`vo2 → tempo` is untouched — Sam's rule permits exactly that downgrade.
+
+### Mutation receipts — `test:offseason-deload-conditioning`, 10 cells
+
+| mutation | result |
+| --- | --- |
+| P1 restore `sprint → aerobic_base` | 5/10, 5 red |
+| P2 sprint kept but not reduced | 9/10, 1 red |
+| P3 reduced dose back to the midpoint | 9/10, 1 red |
+| P4 authored minimum unbounded (`min − 1`) | 9/10, 1 red |
+| P5 restore the template swap | 8/10, 2 red |
+| **P6 hard no longer downgraded in a deload** | **10/10, 0 red — SURVIVES** |
+
+**P6 is reported, not hidden.** WC-136 already refuses to AUTHOR a hard quality
+into a deload, so no `vo2` ever reaches `deloadPlanEntry` to be downgraded. The
+downgrade is unreachable for a scheduler-authored week and is left in place for
+plan entries from other sources, documented at the code rather than deleted
+blind.
+
+### The printed later-off-season week — zero club nights
+
+    Mon  lower  + Steady Blocks (off-leg)
+    Tue  upper  + Classic 4×4        (hard running WITH the upper day)
+    Wed         + 30:30 Controlled Tempo Blocks
+    Sun         + 10 m Acceleration Reps (sprint)
+
+No phantom team training; hard running paired with an upper day; the lower day
+off-leg; no four-day cluster of leg conditioning.
+
+### Gates
+
+| gate | base `bb4a1c70` | branch |
+| --- | --- | --- |
+| `test:compile` | product 35, 6 pairs | **identical** |
+| `test:offseason-deload-conditioning` | — | **10/10** (new) |
+| `test:conditioning-phase-authorship` | 42/42 | 42/42 |
+| `test:conditioning-rollover` | 21/21 | 21/21 |
+| `test:weekly-scheduler` | 89/89 | 89/89 |
+| `test:deload-law` | — | 64/64 |
+| `test:section18-v2` | 134/1 | 134/1 |
+| `test:section18-safety` | — | 37/0 |
+| `test:conditioning-templates` · `-dose` | — | 95/95 · 12/0 |
+| `test:ladder-wide` | 13/14 | 13/14 |
+| `test:quiescent-boot` · `block-two-boot-preservation` | — | 5/0 · 20/0 |
+| **`test:worn-world-boot`** | **0/5** | **5/5** |
+| `test:deload-week` | dies at import | identical — not mine |
+
+### World tables
+
+| corpus | base `1248be77` | branch | LOST | GAINED | reason changes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| refusal census, 180 | 140 | **140** | **0** | 0 | **0** |
+| conditioning census, 198 | 157 | **185** | **0** | **28** | **0** |
+
+The 28 recovered worlds are unchanged from the previous session.
+
+### RECOMMENDATION — **MERGE**
