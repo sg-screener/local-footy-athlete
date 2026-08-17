@@ -34,6 +34,7 @@
 };
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { resolveWeekWithConditioning, type ScheduleState } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
@@ -457,7 +458,26 @@ console.log('\n[5] THE DELOAD WEEK STAYS DELOADED — R-034 IS NOT UNDONE');
 console.log('\n[6] ACCESSORIES ARE NOT ON THE REDUCTION LIST');
 
 {
-  const accessory = 'Bicep Curl (Barbell)';
+  /* ⚠ **DERIVED FROM THE CONTROL BLOCK, NOT NAMED.** The subject is *"accessories
+   * are not on the reduction list"* — WHICH accessory is incidental, and naming
+   * `Bicep Curl (Barbell)` is why this cell went red when accessories moved to a
+   * per-block cadence and that row left block 2. It now asks the control program
+   * which accessory it actually built. */
+  const accessory = (() => {
+    for (const mc of goodProgram.microcycles) {
+      for (const w of mc.workouts) {
+        for (const ex of w.exercises ?? []) {
+          const name = ex.exercise?.name ?? '';
+          if (!name || ex.role === 'conditioning') continue;
+          if (!slotCountsTowardSetBudget(ex.section18Evidence?.slot)) return name;
+        }
+      }
+    }
+    throw new Error(
+      'blockTwoDifficultMissedTests could not derive an accessory row from the '
+      + 'control block — a block with no accessory at all is a real change, not a test nit.',
+    );
+  })();
   const goodAccessory = [...goodRows.entries()].filter(([key]) => key.endsWith(`:${accessory}`));
   ok(`the control programmes ${accessory}`, goodAccessory.length > 0);
   ok(
