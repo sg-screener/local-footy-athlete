@@ -13,20 +13,37 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 OWNER=src/rules/exerciseRotation.ts
+COMPOSER=src/rules/composeWeek.ts
 
-restore() { git checkout -- "$OWNER"; }
-trap restore EXIT
+# ⚠ **RESTORE FROM OUR OWN BACKUP, NEVER FROM GIT.**
+#
+# This script used to `git checkout -- "$OWNER" "$COMPOSER"`, and on 2026-08-17
+# that DESTROYED a session's worth of uncommitted work in both files the moment
+# it ran: a checkout is a WRITE, and it writes whatever HEAD says over whatever
+# you had. The mutation harness must be able to run on a dirty tree, because the
+# whole point is to mutate code you are still writing.
+BACKUP_DIR="$(mktemp -d)"
+cp "$OWNER" "$BACKUP_DIR/owner.ts"
+cp "$COMPOSER" "$BACKUP_DIR/composer.ts"
+restore() {
+  cp "$BACKUP_DIR/owner.ts" "$OWNER"
+  cp "$BACKUP_DIR/composer.ts" "$COMPOSER"
+}
+cleanup() { restore; rm -rf "$BACKUP_DIR"; }
+trap cleanup EXIT
 
 run_reds() {
   npm run test:exercise-rotation 2>/dev/null | grep -E "^  FAIL" | sed 's/^  FAIL /    RED: /'
 }
 
-mutate() {
-  local label="$1" find="$2" repl="$3"
+mutate() { mutate_in "$OWNER" "$@"; }
+
+mutate_in() {
+  local target="$1" label="$2" find="$3" repl="$4"
   echo ""
   echo "── MUTATION: $label"
   restore
-  python3 - "$OWNER" "$find" "$repl" <<'PY'
+  python3 - "$target" "$find" "$repl" <<'PY'
 import sys
 path, find, repl = sys.argv[1], sys.argv[2], sys.argv[3]
 s = open(path).read()
@@ -48,17 +65,16 @@ PY
 
 echo "=================== MUTATION RECEIPTS ==================="
 
-# 1. Main lifts keyed by the WEEK again — the original defect, restored.
-mutate "main lifts rotate weekly again (the original defect)" \
-  "  if (args.isMainLift) return block % args.length;" \
-  "  if (args.isMainLift) return (block * WEEKS_PER_BLOCK + Math.max(0, args.weekInBlock - 1)) % args.length;"
+# 1. The cadence is keyed by something that moves inside a block.
+mutate "the cadence advances inside a block (the original weekly defect)" \
+  "  return Math.max(0, blockNumber - 1) % length;" \
+  "  return Math.max(0, blockNumber * 3 - 1) % length;"
 
-# 2. The deload advances the accessory cadence instead of holding it.
-mutate "the deload advances the cadence instead of holding the block" \
-  "  const heldWeek = args.isDeloadWeek
-    ? WEEKS_PER_BLOCK - 1        // the last BUILD week of this block
-    : Math.max(1, args.weekInBlock);" \
-  "  const heldWeek = Math.max(1, args.weekInBlock);"
+# 2. Every slot becomes retention-eligible — single-leg and accessories stop
+#    rotating at each new block (Sam's ruling 2).
+mutate "single-leg and accessory slots become retention-eligible" \
+  "  if (!inputs.retentionEligible) return rotated('accessory_cadence');" \
+  "  if (false) return rotated('accessory_cadence');"
 
 # 3. The two-block maximum is removed.
 mutate "the two-block maximum is removed" \
@@ -86,6 +102,27 @@ mutate "an empty legal list silently invents a row instead of throwing" \
     throw new Error(" \
   "  if (false) {
     throw new Error("
+
+# 8. THE EXPERIENCE GATE IS IGNORED — regressions reach an experienced athlete.
+mutate_in "$COMPOSER" "the experience gate is not consumed" \
+  "  return admitted.length > 0 ? admitted : candidates;" \
+  "  return candidates;"
+
+# 9. THE EXPERIENCE GATE BECOMES A REFUSAL — ruling 6's fallback is removed, so a
+#    bodyweight-only athlete loses their only legal squat.
+mutate_in "$COMPOSER" "the experience gate refuses instead of falling back" \
+  "  return admitted.length > 0 ? admitted : candidates;" \
+  "  return admitted;"
+
+# 10. HINGE PRIORITY IS DROPPED — conventional Deadlift returns to the front.
+mutate_in "$COMPOSER" "hinge priority is dropped" \
+  "  if (slot !== 'hinge') return candidates;" \
+  "  return candidates;"
+
+# 11. RETENTION IS OPENED TO EVERY COUNTING SLOT — single-leg stops rotating.
+mutate_in "$COMPOSER" "single-leg slots become retention-eligible" \
+  "      const retentionEligible = MAIN_BILATERAL_SLOTS.has(slot);" \
+  "      const retentionEligible = slotCountsTowardSetBudget(slot);"
 
 restore
 echo ""

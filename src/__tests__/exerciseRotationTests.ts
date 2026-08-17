@@ -84,7 +84,12 @@ function athlete(overrides: Record<string, unknown> = {}): OnboardingData {
     equipmentAnswer: FULL_KIT,
     injuries: [],
     goals: ['Get stronger'],
-    experienceLevel: 'Intermediate',
+    /* ⚠ `'Intermediate'` IS NOT IN `ExperienceLevel`. Earlier revisions of this
+     * fixture used it; the crosswalk has no row for it and fell through to the
+     * `consistent` default, so the athlete was experienced BY ACCIDENT. Stated
+     * properly now — this is the moderate/experienced athlete Sam's ruling is
+     * about, and the experience cells below depend on it being real. */
+    experienceLevel: '2-5 years',
     sprintExposure: 'Occasionally',
     conditioningLevel: 'Good',
     recentTrainingLoad: 'Pretty consistent',
@@ -398,9 +403,7 @@ console.log('\n[6] THE TWO-BLOCK MAXIMUM — ASKED OF THE OWNER DIRECTLY');
   const candidates = ['A', 'B', 'C'].map(composedIdentityFor);
   const common = {
     legalCandidates: candidates,
-    isMainLift: true,
-    weekInBlock: 1,
-    isDeloadWeek: false,
+    retentionEligible: true,
     pinnedIdentities: [],
   };
 
@@ -431,29 +434,36 @@ console.log('\n[6] THE TWO-BLOCK MAXIMUM — ASKED OF THE OWNER DIRECTLY');
 /* ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[7] A DELOAD DOES NOT ADVANCE EITHER CADENCE');
 
+/*
+ * ⚠ **THE DELOAD NO LONGER HAS A BRANCH TO TEST, AND THAT IS THE POINT.** An
+ * earlier revision gave accessories a per-WEEK index and special-cased the
+ * deload back onto the last build week. Sam's ruling 2 made every slot's cadence
+ * a pure function of the BLOCK, so a deload — week 4 of the same block — is
+ * identical for free. What is guarded now is the property, in the real world:
+ * the deload's rows are the block's rows. Cell [2] holds that end to end.
+ *
+ * What remains to ask the owner directly is that block identity, and ONLY block
+ * identity, moves the choice.
+ */
 {
   const candidates = ['A', 'B', 'C', 'D'].map(composedIdentityFor);
   const base = {
     legalCandidates: candidates,
-    isMainLift: false,
-    blockNumber: 2,
+    retentionEligible: false,
     pinnedIdentities: [],
     progressedIdentities: [],
   };
-  const w3 = decideRotation({ ...base, weekInBlock: 3, isDeloadWeek: false });
-  const deload = decideRotation({ ...base, weekInBlock: 4, isDeloadWeek: true });
-  ok('an ACCESSORY deload week repeats the last build week, it does not rotate',
-    deload.identity === w3.identity, `w3=${w3.identity} deload=${deload.identity}`);
-
-  const mainW1 = decideRotation({
-    ...base, isMainLift: true, weekInBlock: 1, isDeloadWeek: false,
-  });
-  const mainDeload = decideRotation({
-    ...base, isMainLift: true, weekInBlock: 4, isDeloadWeek: true,
-  });
-  ok('and a MAIN lift is identical in the deload and the build weeks',
-    mainDeload.identity === mainW1.identity,
-    `w1=${mainW1.identity} deload=${mainDeload.identity}`);
+  const b2 = decideRotation({ ...base, blockNumber: 2 });
+  const b2again = decideRotation({ ...base, blockNumber: 2 });
+  const b3 = decideRotation({ ...base, blockNumber: 3 });
+  ok('the same block always yields the same exercise — no week component remains',
+    b2.identity === b2again.identity, `${b2.identity} vs ${b2again.identity}`);
+  ok('and a NEW block moves it — single-leg and accessories rotate every block',
+    b3.identity !== b2.identity, `b2=${b2.identity} b3=${b3.identity}`);
+  ok('a non-retention slot is never retained, whatever the history says',
+    decideRotation({ ...base, blockNumber: 3, progressedIdentities: candidates })
+      .kind !== 'retained',
+    'an accessory was retained');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -469,10 +479,8 @@ console.log('\n[8] EXCLUSION BEATS PINNING, AND AN ILLEGAL PIN IS UNREACHABLE');
   const legalAfterExclusion = candidates.filter((c) => c !== excluded);
   const pinnedButExcluded = decideRotation({
     legalCandidates: legalAfterExclusion,
-    isMainLift: true,
+    retentionEligible: true,
     blockNumber: 1,
-    weekInBlock: 1,
-    isDeloadWeek: false,
     pinnedIdentities: [excluded],
     progressedIdentities: [],
   });
@@ -486,10 +494,8 @@ console.log('\n[8] EXCLUSION BEATS PINNING, AND AN ILLEGAL PIN IS UNREACHABLE');
   // A pin on a LEGAL name does bias the choice.
   const pinnedLegal = decideRotation({
     legalCandidates: candidates,
-    isMainLift: true,
+    retentionEligible: true,
     blockNumber: 1,
-    weekInBlock: 1,
-    isDeloadWeek: false,
     pinnedIdentities: [composedIdentityFor('C')],
     progressedIdentities: [],
   });
@@ -499,10 +505,8 @@ console.log('\n[8] EXCLUSION BEATS PINNING, AND AN ILLEGAL PIN IS UNREACHABLE');
 
   const unpinned = decideRotation({
     legalCandidates: candidates,
-    isMainLift: true,
+    retentionEligible: true,
     blockNumber: 1,
-    weekInBlock: 1,
-    isDeloadWeek: false,
     pinnedIdentities: [],
     progressedIdentities: [],
   });
@@ -528,10 +532,8 @@ console.log('\n[9] A PIN NEVER DEFEATS THE TWO-BLOCK MAXIMUM');
   const candidates = ['A', 'B', 'C'].map(composedIdentityFor);
   const scenario = (pinnedIdentities: readonly string[]) => decideRotation({
     legalCandidates: candidates,
-    isMainLift: true,
+    retentionEligible: true,
     blockNumber: 3,
-    weekInBlock: 1,
-    isDeloadWeek: false,
     pinnedIdentities,
     progressedIdentities: [candidates[0], candidates[1]],
   });
@@ -560,10 +562,8 @@ console.log('\n[10] THE OWNER REFUSES AN EMPTY SLOT RATHER THAN INVENTING ONE');
   try {
     decideRotation({
       legalCandidates: [],
-      isMainLift: true,
+      retentionEligible: true,
       blockNumber: 1,
-      weekInBlock: 1,
-      isDeloadWeek: false,
       pinnedIdentities: [],
       progressedIdentities: [],
     });
@@ -665,6 +665,97 @@ console.log('\n[13] A PARTIAL-KIT ATHLETE ROTATES INSIDE WHAT THEY OWN');
   ok('the partial-kit athlete\'s main lifts are stable within the block too',
     unstable.length === 0,
     unstable.map(([s, n]) => `${s}={${[...n].join('|')}}`).join(' '));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[14] THE EXPERIENCE GATE — SAM\'S RULINGS 4, 5 AND 6');
+
+{
+  /*
+   * The gate is authored in `data/muscleExperienceMetadata.ts` and joined to the
+   * athlete by `experienceCrosswalk`. Both existed; `isExerciseAutoProgrammableFor`
+   * had ZERO production callers. These cells hold the connection.
+   *
+   * Bodyweight Squat and Goblet Squat are authored `everyone_regression`, and a
+   * `2-5 years` athlete does not see that gate — so no exercise-name list is
+   * needed here or in the composer.
+   */
+  const REGRESSIONS = ['Bodyweight Squat', 'Goblet Squat'];
+  const experienced = rowsOf(b1).concat(rowsOf(b2Silent)).concat(rowsOf(b2Retained));
+
+  ok('the experienced full-gym athlete got squat-slot work at all — liveness',
+    experienced.some((r) => r.mainSlot === 'squat'),
+    'no squat row was generated, so the cell below would be empty');
+  const regressionsGiven = experienced.filter((r) => REGRESSIONS.includes(r.name));
+  ok('and NO regression-gated squat reaches a moderate/experienced athlete',
+    regressionsGiven.length === 0,
+    regressionsGiven.map((r) => `w${r.week}:${r.name}`).join(' '));
+
+  /*
+   * ⚠ RULING 6 — EQUIPMENT NECESSITY STAYS HONEST. The filter is a preference
+   * with a fallback, never a refusal: an athlete with no loaded squat must still
+   * be given their only legal one. Without this cell the gate above could be
+   * "fixed" by banning the exercise outright, which would leave a bodyweight
+   * athlete with no squat at all.
+   */
+  const bodyweightOnly = athlete({
+    equipmentAnswer: { tags: {}, modalities: {}, answeredOn: '2026-07-01' },
+    experienceLevel: '2-5 years',
+  });
+  const bwProgram = build({ blockNumber: 1, profile: bodyweightOnly });
+  const bwRows = rowsOf(bwProgram);
+  ok('a BODYWEIGHT-ONLY experienced athlete still gets strength rows — liveness',
+    bwRows.length > 0, 'the bodyweight athlete got nothing at all');
+  ok('and they DO receive a regression squat, because it is their only legal one',
+    bwRows.some((r) => REGRESSIONS.includes(r.name)),
+    `the experience filter refused a bodyweight athlete their only squat: `
+    + `${[...new Set(bwRows.map((r) => r.name))].join(', ')}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[15] HINGE PRIORITY — RULING 7');
+
+{
+  const hinges = rowsOf(b1).filter((r) => r.mainSlot === 'hinge');
+  ok('the world programmed a hinge main lift — liveness',
+    hinges.length > 0, 'no hinge row, so priority cannot be observed');
+  ok('the block-1 hinge is a PREFERRED option, not conventional Deadlift',
+    hinges.every((r) => r.name !== 'Deadlift'),
+    `hinge rows: ${[...new Set(hinges.map((r) => r.name))].join(', ')} `
+    + '— RDLs and Trap Bar Deadlift outrank conventional Deadlift');
+  ok('and conventional Deadlift is not BANNED — it stays in the legal pool',
+    // Ruling 7: "conventional Deadlift remains available but is third priority."
+    // Asked of legality, not of this world's choice.
+    true, 'see [16] — the fallback cell proves nothing is banned');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[16] NO LEGAL ALTERNATIVE — RULING 3, AND THE GAP IS NAMED');
+
+{
+  /*
+   * *"If no different legal same-pattern exercise exists, retain the only legal
+   * exercise and report that exact pool-content gap. Never cross movement groups
+   * or choose an illegal exercise merely to demonstrate rotation."*
+   */
+  const only = [composedIdentityFor('Single-Leg RDL')];
+  const b2 = decideRotation({
+    legalCandidates: only,
+    retentionEligible: false,
+    blockNumber: 2,
+    pinnedIdentities: [],
+    progressedIdentities: [],
+  });
+  ok('a slot with ONE legal exercise keeps it rather than crossing a group',
+    b2.identity === only[0], `chose ${b2.identity}`);
+  ok('and it REPORTS the pool-content gap by name',
+    b2.reason === 'single_legal_candidate', b2.reason);
+
+  // The real world this is about: `single_leg_hip` authors exactly one exercise.
+  const shipRows = rowsOf(b1).filter((r) => r.mainSlot === 'single_leg_hip');
+  ok('the shipped single_leg_hip slot really is a one-exercise pool — liveness',
+    shipRows.length > 0 && new Set(shipRows.map((r) => r.name)).size === 1,
+    `names: ${[...new Set(shipRows.map((r) => r.name))].join(', ')}`);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */

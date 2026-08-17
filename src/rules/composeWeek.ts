@@ -41,6 +41,12 @@ import {
 } from './composedRowLegality';
 import { decideRotation } from './exerciseRotation';
 import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
+import {
+  ladderLevelForProfile,
+  visibleGatesForLadderLevel,
+  type ExperienceGate,
+} from './experienceCrosswalk';
+import { EXERCISE_MUSCLE_METADATA } from '../data/muscleExperienceMetadata';
 import type { MainStrengthPattern, StrengthIntent } from './strengthPatternContributions';
 import {
   STRENGTH_POOLS,
@@ -112,10 +118,11 @@ export interface ComposerInputs {
    */
   /** 1-based block number. A deload shares its build block's number. */
   readonly blockNumber: number;
-  /** 1-based week inside the block. */
-  readonly weekInBlock: number;
-  /** A deload holds the current block's exercises rather than rotating them. */
-  readonly isDeloadWeek: boolean;
+  /* ⚠ `weekInBlock` and `isDeloadWeek` USED TO LIVE HERE AND ARE GONE, NOT
+   * DEFAULTED. Ruling 2 made the cadence purely block-keyed, so a deload — week
+   * 4 of the same block — is identical for free. Keeping them as ignored inputs
+   * would leave two ways to describe one week and invite a future reader to wire
+   * one back in. */
   /** The athlete's canonical pinned preferences, as composed identities. */
   readonly pinnedIdentities: readonly ComposedExerciseIdentity[];
   /**
@@ -335,6 +342,84 @@ const UNLOADED_POOL_IDENTITIES: ReadonlySet<ComposedExerciseIdentity> = new Set(
     [...STRENGTH_POOLS[poolSlot].anchor.entries, ...STRENGTH_POOLS[poolSlot].accessory.entries]
       .filter((entry) => entry.loadRatio === 0)
       .map((entry) => composedIdentityFor(entry.name))));
+
+/**
+ * ⚠ **THE EXPERIENCE GATE ALREADY EXISTED AND NOTHING CONSUMED IT.**
+ *
+ * `data/muscleExperienceMetadata.ts` authors an `experienceGate` for every
+ * exercise, `rules/experienceCrosswalk.ts` maps an athlete's answer to the gates
+ * they may be AUTO-PROGRAMMED from, and `isExerciseAutoProgrammableFor` joins
+ * them. **It had zero production callers** — the same shape as the deleted pool
+ * rotation: a complete, authored authority running on nothing. This is the one
+ * place it is now consumed. No second policy, no gate re-derived here.
+ *
+ * Sam, 2026-08-17: *"Bodyweight Squat must never appear through ordinary
+ * rotation"* for a moderate/experienced athlete, and *"Goblet Squat is a
+ * regression/beginner/constraint option"*. Both are authored
+ * `everyone_regression`, and `2-5 years` does not see that gate — so the ruling
+ * needs no list of exercise names, here or anywhere.
+ *
+ * ⚠ **AND IT MUST NEVER EMPTY A SLOT.** Ruling 6: *"a genuinely bodyweight-only
+ * athlete may receive Bodyweight Squat when there is no loaded option. Do not
+ * turn this ruling into a refusal of their only legal squat."* So this is a
+ * PREFERENCE with an honest fallback: when the filter would leave nothing, the
+ * kit-legal list stands and the athlete keeps their only legal movement.
+ */
+const GATE_BY_IDENTITY: ReadonlyMap<ComposedExerciseIdentity, ExperienceGate> = new Map(
+  EXERCISE_MUSCLE_METADATA.map((entry) =>
+    [composedIdentityFor(entry.exercise), entry.experienceGate] as const));
+
+function experiencePreferred(
+  candidates: readonly ComposedExerciseIdentity[],
+  profile: OnboardingData,
+): readonly ComposedExerciseIdentity[] {
+  const gates = visibleGatesForLadderLevel(
+    ladderLevelForProfile(profile?.experienceLevel ?? null),
+  );
+  const admitted = candidates.filter((id) => {
+    const gate = GATE_BY_IDENTITY.get(id);
+    // An exercise with no authored gate is not silently demoted: absence is
+    // "unrecorded", and the null hypothesis is that it stays available.
+    if (!gate) return true;
+    return gates.includes(gate);
+  });
+  return admitted.length > 0 ? admitted : candidates;
+}
+
+/**
+ * ⚠ **SAM'S HINGE PRIORITY, 2026-08-17.** *"prioritise RDLs and Trap Bar
+ * Deadlift ahead of conventional Deadlift. Rotate legally between the preferred
+ * options; conventional Deadlift remains available but is third priority."*
+ *
+ * An ORDERING, never a ban: the rotation owner walks the list, so putting the
+ * two preferred lifts first makes them the ones it cycles between while
+ * conventional Deadlift stays reachable behind them.
+ */
+const HINGE_PRIORITY: readonly string[] = ['RDLs', 'Trap Bar Deadlift'];
+
+/**
+ * The slots whose exercise may be RETAINED for a second consecutive block.
+ * Ruling 2 names them by exclusion: single-leg knee, single-leg hip and true
+ * accessories rotate at every new block, so the bilateral compounds are what is
+ * left. Deliberately NOT `slotCountsTowardSetBudget`, which includes the
+ * single-leg slots — right for the set budget, wrong for retention.
+ */
+const MAIN_BILATERAL_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
+  'squat', 'hinge', 'horizontal_push', 'vertical_push',
+  'horizontal_pull', 'vertical_pull',
+]);
+
+function hingePriorityFirst(
+  slot: SessionSlot,
+  candidates: readonly ComposedExerciseIdentity[],
+): readonly ComposedExerciseIdentity[] {
+  if (slot !== 'hinge') return candidates;
+  const rank = (id: ComposedExerciseIdentity): number => {
+    const index = HINGE_PRIORITY.findIndex((name) => composedIdentityFor(name) === id);
+    return index === -1 ? HINGE_PRIORITY.length : index;
+  };
+  return [...candidates].sort((a, b) => rank(a) - rank(b));
+}
 
 function weightedFirst(
   identities: readonly ComposedExerciseIdentity[],
@@ -1056,7 +1141,14 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         && plannedPatterns.has(pattern)
         && !patternHasItsMainLift.has(pattern);
       const pool = isMainLift ? anchorCandidates(slot) : supportCandidates(slot);
-      const legal = pool.filter((id) => !excludedToday.has(id) && composedRowIsLegal(id, inputs.kit));
+      /* ── LEGALITY, IN THE CONTRACT'S OWN ORDER ────────────────────────────
+       * exclusion → equipment → EXPERIENCE. Ruling 8: *"exclusions, injury,
+       * equipment and experience legality outrank pins."* Experience is applied
+       * last and never empties the slot (ruling 6). */
+      const kitLegalHere = pool.filter(
+        (id) => !excludedToday.has(id) && composedRowIsLegal(id, inputs.kit));
+      const legal = hingePriorityFirst(
+        slot, experiencePreferred(kitLegalHere, inputs.profile));
       if (legal.length === 0) {
         // `resolvePlane` has already disclosed a plane it could not fill, so a
         // second gap for the same slot would double-count the same fact.
@@ -1113,13 +1205,16 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * pattern and so fell to the accessory cadence. They count toward the
        * session's main/secondary budget, so the athlete meets them as real work
        * and must meet the SAME one all block. */
-      const stableForBlock = slotCountsTowardSetBudget(slot);
+      /* ⚠ **RETENTION IS FOR MAIN BILATERAL LIFTS ONLY** (ruling 2). Everything
+       * is stable WITHIN a block — the cadence is block-keyed for every slot —
+       * so this decides only who may stay for a SECOND one. Two questions, two
+       * predicates, rather than one doing both jobs. */
+      const retentionEligible = MAIN_BILATERAL_SLOTS.has(slot);
+      const countsTowardBudget = slotCountsTowardSetBudget(slot);
       const rotation = decideRotation({
-        legalCandidates: stableForBlock ? legal : preferred,
-        isMainLift: stableForBlock,
+        legalCandidates: countsTowardBudget ? legal : preferred,
+        retentionEligible,
         blockNumber: inputs.blockNumber,
-        weekInBlock: inputs.weekInBlock,
-        isDeloadWeek: inputs.isDeloadWeek,
         pinnedIdentities: inputs.pinnedIdentities,
         progressedIdentities: inputs.progressedIdentities,
       });

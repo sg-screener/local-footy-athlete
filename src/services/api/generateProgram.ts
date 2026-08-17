@@ -1047,8 +1047,6 @@ export function buildGeneratedMicrocycles(args: {
        * is why the composer fell back to the phase WEEK number and a main lift
        * changed every week. */
       blockNumber: blockState.miniCycleNumber ?? 1,
-      weekInBlock: blockState.weekInBlock ?? 1,
-      isDeloadWeek: effectiveWeekKind === 'deload',
       pinnedIdentities: (args.athletePrefs?.pinned ?? []).map(composedIdentityFor),
       progressedIdentities: args.progressedIdentities ?? [],
     });

@@ -15,8 +15,6 @@
  */
 export const COMPOSER_ROTATION_DEFAULTS = {
   blockNumber: 1,
-  weekInBlock: 1,
-  isDeloadWeek: false,
   pinnedIdentities: [],
   progressedIdentities: [],
 } as const;

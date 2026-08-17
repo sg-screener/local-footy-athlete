@@ -133,7 +133,7 @@ export type RotationReason =
   | 'two_block_maximum_reached'
   /** The athlete's recorded history does not support keeping it. */
   | 'history_does_not_support_retention'
-  /** Accessories rotate on the freer cadence the approved pool allows. */
+  /** Single-leg and accessory slots rotate at every new block, never retained. */
   | 'accessory_cadence'
   /** The previously selected exercise is no longer legal or no longer offered. */
   | 'previous_choice_not_legal_now'
@@ -158,14 +158,18 @@ export interface RotationInputs {
    * resolved before this function is reached.
    */
   readonly legalCandidates: readonly ComposedExerciseIdentity[];
-  /** Main and secondary lifts rotate per block; accessories per week. */
-  readonly isMainLift: boolean;
+  /**
+   * May this slot RETAIN its exercise for a second consecutive block?
+   *
+   * ⚠ **ONLY MAIN BILATERAL LIFTS MAY.** Sam, 2026-08-17: *"Main bilateral lifts
+   * may remain for two consecutive blocks, then rotate. Single-leg knee,
+   * single-leg hip and true accessory exercises rotate at every new block."*
+   * Everything rotates on the same block cadence; this flag decides only whether
+   * a well-progressed lift is allowed to stay for a second one.
+   */
+  readonly retentionEligible: boolean;
   /** 1-based block number. The deload shares its build block's number. */
   readonly blockNumber: number;
-  /** 1-based week inside the block. */
-  readonly weekInBlock: number;
-  /** A deload holds the block's exercises rather than advancing the cadence. */
-  readonly isDeloadWeek: boolean;
   /** Exercises the athlete prefers, as canonical identities. */
   readonly pinnedIdentities: readonly ComposedExerciseIdentity[];
   /**
@@ -181,13 +185,11 @@ export interface RotationInputs {
   readonly progressedIdentities: readonly ComposedExerciseIdentity[];
 }
 
-/** Weeks in a block — the accessory cadence's stride. Mirrors `WEEKS_PER_BLOCK`. */
-const WEEKS_PER_BLOCK = 4;
-
 /**
  * Move pinned candidates to the front, preserving authored order inside each
- * group. Exclusion has already removed anything the athlete banned, so a pin
- * that survives to here is legal by construction.
+ * group. Exclusion, injury, equipment and EXPERIENCE have already removed
+ * anything the athlete may not be given, so a pin that survives to here is legal
+ * by construction.
  */
 function pinnedFirst(
   candidates: readonly ComposedExerciseIdentity[],
@@ -202,27 +204,19 @@ function pinnedFirst(
 }
 
 /**
- * The cadence index for a block/week, before any retention.
+ * The cadence index for a block, before any retention.
  *
- * Main lifts advance once per block. Accessories advance once per week and
- * continue across block boundaries, which is the cadence the approved pool
- * already allows them. A deload holds the last build week so it uses the
- * current block's exercises.
+ * ⚠ **ONE CADENCE, KEYED BY THE BLOCK, FOR EVERY SLOT.** An earlier revision
+ * gave accessories a per-WEEK index and had to special-case the deload back onto
+ * the last build week to stop it rotating. Sam's ruling (2026-08-17) removes the
+ * whole problem: *"Single-leg knee, single-leg hip and true accessory exercises
+ * rotate at every new block. They remain stable within the block and its
+ * deload."* With the index a pure function of the block number, the deload is
+ * week 4 of the same block and therefore identical for free — no deload branch,
+ * no `weekInBlock`, and nothing left to get wrong.
  */
-function cadenceIndex(args: {
-  isMainLift: boolean;
-  blockNumber: number;
-  weekInBlock: number;
-  isDeloadWeek: boolean;
-  length: number;
-}): number {
-  const block = Math.max(0, args.blockNumber - 1);
-  if (args.isMainLift) return block % args.length;
-  const heldWeek = args.isDeloadWeek
-    ? WEEKS_PER_BLOCK - 1        // the last BUILD week of this block
-    : Math.max(1, args.weekInBlock);
-  const step = block * WEEKS_PER_BLOCK + (heldWeek - 1);
-  return step % args.length;
+function cadenceIndex(blockNumber: number, length: number): number {
+  return Math.max(0, blockNumber - 1) % length;
 }
 
 /**
@@ -242,18 +236,10 @@ export function decideRotation(inputs: RotationInputs): RotationDecision {
   }
   const pins = new Set<string>(inputs.pinnedIdentities);
 
-  const indexFor = (blockNumber: number, weekInBlock: number, deload: boolean): number =>
-    cadenceIndex({
-      isMainLift: inputs.isMainLift,
-      blockNumber,
-      weekInBlock,
-      isDeloadWeek: deload,
-      length: ordered.length,
-    });
+  const indexFor = (blockNumber: number): number =>
+    cadenceIndex(blockNumber, ordered.length);
 
-  const cadenceIdentity = ordered[indexFor(
-    inputs.blockNumber, inputs.weekInBlock, inputs.isDeloadWeek,
-  )];
+  const cadenceIdentity = ordered[indexFor(inputs.blockNumber)];
   const pinBiased = pins.has(cadenceIdentity)
     && inputs.legalCandidates.indexOf(cadenceIdentity) !== ordered.indexOf(cadenceIdentity);
 
@@ -265,18 +251,29 @@ export function decideRotation(inputs: RotationInputs): RotationDecision {
     pinBiased,
   });
 
-  // Only main and secondary lifts may be retained. An accessory's freer cadence
-  // is the contract's own answer for it.
-  if (!inputs.isMainLift) return rotated('accessory_cadence');
-  if (inputs.blockNumber <= 1) return rotated('no_previous_block');
+  // A single legal option cannot rotate anywhere. Answered BEFORE retention so
+  // the reason is the honest one — Sam's ruling 3: "If no different legal
+  // same-pattern exercise exists, retain the only legal exercise and report that
+  // exact pool-content gap."
   if (ordered.length === 1) {
-    return { ...rotated('single_legal_candidate'), reason: 'single_legal_candidate' };
+    return {
+      identity: ordered[0],
+      kind: inputs.blockNumber <= 1 ? 'first_block' : 'rotated',
+      reason: 'single_legal_candidate',
+      cadenceIdentity,
+      pinBiased,
+    };
   }
+
+  // Only main bilateral lifts may be retained. An accessory's freer cadence
+  // is the contract's own answer for it.
+  if (!inputs.retentionEligible) return rotated('accessory_cadence');
+  if (inputs.blockNumber <= 1) return rotated('no_previous_block');
 
   // What the block before this one actually got, and what its own cadence would
   // have given it. A difference between the two IS last block's retention —
   // which is how the two-block maximum is enforced without storing a counter.
-  const previousCadence = ordered[indexFor(inputs.blockNumber - 1, 1, false)];
+  const previousCadence = ordered[indexFor(inputs.blockNumber - 1)];
   const progressed = new Set<string>(inputs.progressedIdentities);
 
   // Still legal this block? A previous choice the athlete has since excluded, or
@@ -287,7 +284,7 @@ export function decideRotation(inputs: RotationInputs): RotationDecision {
 
   // Was block b-1 itself a retention? It was iff what it actually selected
   // differs from its own cadence — i.e. iff the block before THAT progressed.
-  const twoBackCadence = ordered[indexFor(inputs.blockNumber - 2, 1, false)];
+  const twoBackCadence = ordered[indexFor(inputs.blockNumber - 2)];
   const retainedLastBlock = inputs.blockNumber >= 3
     && twoBackCadence !== previousCadence
     && progressed.has(twoBackCadence)

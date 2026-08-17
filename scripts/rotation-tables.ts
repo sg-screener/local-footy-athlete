@@ -53,7 +53,7 @@ function athlete(equipmentAnswer: unknown): OnboardingData {
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     teamTrainingDaysPerWeek: 2, teamTrainingDays: ['Tuesday', 'Thursday'],
     equipmentAnswer, injuries: [], goals: ['Get stronger'],
-    experienceLevel: 'Intermediate', sprintExposure: 'Occasionally',
+    experienceLevel: '2-5 years', sprintExposure: 'Occasionally',
     conditioningLevel: 'Good', recentTrainingLoad: 'Pretty consistent',
     squatStrength: '1.5x bodyweight', benchStrength: '1.25x bodyweight', weightKg: 85,
   } as unknown as OnboardingData;
