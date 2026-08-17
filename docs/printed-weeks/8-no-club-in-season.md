@@ -25,8 +25,8 @@
 
 **Conditioning**
 
-- Continuous Aerobic Run — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
-  - Steady the whole way — if you're racing the last 10 minutes, you started too easy. 65–80% MAS; 70–85% HRmax; conversational
+- Steady Blocks (3×8 min or 4×6 min) — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
+  - Steady, not surging — find a pace you could hold for the full block. 65–75% MAS, easy-moderate — steady, not surging
 
 ## Tuesday 11 August
 
@@ -96,5 +96,5 @@ None. Every word on this page came out of the app.
 
 **2 lines that does not say how much work to do:**
 
-- Monday 10 August — Continuous Aerobic Run — the app says "1 × 1"
+- Monday 10 August — Steady Blocks (3×8 min or 4×6 min) — the app says "1 × 1"
 - Wednesday 12 August — Warm-up — the app says "1 × 1"

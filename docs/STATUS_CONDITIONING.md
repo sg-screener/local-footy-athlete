@@ -514,3 +514,85 @@ both Sam's call, not a defect to hide:
   phase**, and four off-season gym days trip `main_strength_permitted_maximum`
   at base. Both cost me three red cells before I control-ran on a second
   worktree at `1248be77`. Pre-existing, unrelated to conditioning.
+
+---
+
+## SESSION 5 — PRINTED-WEEK CORRECTION. **1 of 3 DONE. DO NOT MERGE.**
+
+Branch `fix/printed-week-coaching`, base `bb4a1c70`, UNMERGED.
+
+### Finding 1 — FIXED AND VISIBLE
+
+Traced contract → stored → projection:
+
+| stage | Saturday |
+| --- | --- |
+| stored program | `workoutType=Game`, `tier=core`, `authoredDay.anchor="game"` |
+| exposure contract | anchor `practice_match-6`, claims conditioning + sprint + hardDay |
+| resolved day | **`source=rest`, NO WORKOUT** ← the loss |
+| printed | `Rest Day` |
+
+`sessionResolver.ts:1251` gated the visible fixture stub on
+`seasonPhase === 'In-season'`. A PRE-SEASON athlete with a declared fixture saw
+a Rest Day while the contract counted the anchor toward four exposures — **an
+invisible anchor satisfying the weekly contract.**
+
+**The control that named it:** scenarios 3 and 8 (both in-season) print
+`Game Day` from the same read path. Only pre-season did not.
+
+Fixed by asking whether the PHASE HAS FIXTURES. The app already knew a
+pre-season fixture is a practice match and already had the signed word for it.
+Off-season stays out. **Saturday now prints `Game Day`.**
+
+### Finding 2 — FIXED AT THE GENERATOR, NOT VISIBLE ON THE PAGE
+
+*"Can render off-feet"* is not *"is an off-leg session"*, and **every authored
+template lists `run`** — so the existing filter was satisfied by
+`Continuous Aerobic Run` (run or BIKE ONLY) while `Steady Blocks` and
+`Steady 5 min Blocks` (all four machines) sat unpicked.
+
+`preferRichestOffLeg` ranks by the count of machines the athlete can use,
+declared once and read by BOTH choosers (`selectConditioningTemplate` and
+`offFeetAlternative`). A preference, never a refusal.
+
+    STORED, after: day=1 cat=aerobic_base offFeet=true
+                   rows=["Steady Blocks (3×8 min or 4×6 min)"]
+
+⚠ **THE PRINTED WEEK STILL SAYS `Continuous Aerobic Run`.** A read-path owner
+between the stored program and the page re-chooses, and **I did not find it.**
+`offFeetAlternative` was the candidate; fixing it did not move the page.
+`sessionResolver`'s live calls were traced showing `offFeet=true` reaching the
+selector, and the selector asked directly returns `Steady Blocks` — so the
+override is downstream of selection, not in it. **That is where the next
+session starts.**
+
+### Finding 3 — NOT STARTED
+
+The later off-season printer fixture still declares a Tuesday club night. It
+must be rebuilt with zero club nights and the resulting week checked for the
+four-day strength skeleton, hard running on an upper day, off-leg lower-day
+conditioning and sane spacing.
+
+### Gates — all identical to base `bb4a1c70`
+
+| gate | base | branch |
+| --- | --- | --- |
+| `test:compile` | product 35, 6 pairs | **identical** |
+| `test:conditioning-phase-authorship` | 42/42 | 42/42 |
+| `test:conditioning-rollover` | 21/21 | 21/21 |
+| `test:weekly-scheduler` | 89/89 | 89/89 |
+| `test:conditioning-templates` | 95/95 | 95/95 |
+| `test:section18-v2` | 134/1 | 134/1 |
+| `test:ladder-wide` | 13/14 | 13/14 |
+
+### World tables — lost and gained separately
+
+| corpus | base | branch | LOST | GAINED | reason changes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| refusal census, 180 worlds | 140 | **140** | **0** | 0 | **0** |
+| conditioning census, 198 worlds | 157 | **157** | **0** | 0 | **0** |
+
+### RECOMMENDATION — **DO NOT MERGE**
+
+The three printed weeks do not yet match the rules: finding 2 is not visible to
+the athlete and finding 3 is untouched.
