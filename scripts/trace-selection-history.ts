@@ -109,6 +109,7 @@ function install(equipmentAnswer: unknown): Record<string, string> {
       todayISO: BLOCK_2_START,
       blockNumber: 2,
       progressionHistory: { sessionFeedback: feedback(), weightOverrides: {}, blockState: null },
+      recordSelections: true,
     }) as TrainingProgram;
     useProgramStore.setState({
       currentProgram: program,

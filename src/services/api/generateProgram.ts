@@ -233,7 +233,20 @@ export interface GenerateProgramFromProfileOptions {
    * the domain selector ever reaching for one.
    */
   selectionHistory?: readonly import('../../rules/blockExerciseSelection').BlockExerciseSelection[];
-  /** Set false to author without recording — used to preview, never to ship. */
+  /**
+   * Record this block's selections durably? **DEFAULT FALSE.**
+   *
+   * ⚠ **RECORDING BELONGS TO ACCEPTANCE, NOT TO GENERATION.** Sam: *"add one
+   * typed BlockExerciseSelection history record at BLOCK ACCEPTANCE."* This
+   * function is also called speculatively — `weeklyCommitmentLegality` asks
+   * "would a 2-day week even build?", `postGenerationConstraintValidation`
+   * re-authors to check itself — and a probe that writes history corrupts it.
+   *
+   * MEASURED: with recording on by default, an exclusion suite that probed
+   * blocks 3 and 4 while an exercise was excluded made those probes the
+   * athlete's permanent history, and restoring the exercise brought it back in
+   * NO block. The callers that COMMIT a program opt in; probes stay silent.
+   */
   recordSelections?: boolean;
   progressionHistory?: {
     sessionFeedback?: Readonly<Record<string, import('../../store/programStore').SessionFeedback>>;
@@ -1825,7 +1838,7 @@ export function generateProgramLocally(
    *
    * Re-authoring the same block REPLACES its rows (identity is `blockStartISO`),
    * so a rebuild or a rollover re-run cannot make one block look like several. */
-  if (options.recordSelections !== false && selectionsAuthored.length > 0) {
+  if (options.recordSelections === true && selectionsAuthored.length > 0) {
     require('../../store/blockSelectionHistoryStore')
       .recordBlockSelections(blockStart, selectionsAuthored);
   }

@@ -167,6 +167,18 @@ export interface ComposedRow {
   /** Resolved before authorship; U-2's off-season cut is already inside it. */
   readonly load: number;
   readonly qualityLimit?: 'stop_when_speed_or_technique_drops';
+  /**
+   * Present only when this row is a TEMPORARY SUBSTITUTE for the block's base
+   * selection — a day-scoped exclusion took the canonical exercise out of this
+   * one session. The base selection is unchanged and still recorded, so the
+   * canonical exercise returns by itself when the answer expires.
+   *
+   * Absent means this row IS the block's base selection.
+   */
+  readonly substitutedFor?: {
+    readonly baseIdentity: ComposedExerciseIdentity;
+    readonly cause: 'excluded_today';
+  };
 }
 
 /**
@@ -1201,11 +1213,31 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * exclusion → equipment → EXPERIENCE. Ruling 8: *"exclusions, injury,
        * equipment and experience legality outrank pins."* Experience is applied
        * last and never empties the slot (ruling 6). */
-      const kitLegalHere = pool.filter(
-        (id) => !excludedToday.has(id) && composedRowIsLegal(id, inputs.kit));
-      const legal = hingePriorityFirst(
-        slot, experiencePreferred(kitLegalHere, inputs.profile));
-      if (legal.length === 0) {
+      const legalUnder = (out: ReadonlySet<string>) => hingePriorityFirst(
+        slot,
+        experiencePreferred(
+          pool.filter((id) => !out.has(id) && composedRowIsLegal(id, inputs.kit)),
+          inputs.profile,
+        ),
+      );
+      /* ── THE BASE BLOCK SELECTION vs A TEMPORARY SUBSTITUTE ────────────────
+       *
+       * Sam, 2026-08-17: *"A today-only exclusion changes only the affected
+       * session and must not replace the stored block selection."*
+       *
+       * `excluded` carries the answers that span the WEEK — this-block and
+       * persistent exclusions, and injury prohibitions. `excludedToday` adds the
+       * one day's own answers on top. The BASE selection is decided against the
+       * week-scoped set and is the one RECORDED; a day-scoped answer can only
+       * ever swap the row on that day.
+       *
+       * Equipment is deliberately in BOTH: kit legality is a property of the
+       * week, so an exercise the athlete genuinely cannot perform is replaced in
+       * the base selection rather than retained with a warning — Sam's confirmed
+       * equipment ruling. */
+      const baseLegal = legalUnder(excluded);
+      const legal = legalUnder(excludedToday);
+      if (baseLegal.length === 0 || legal.length === 0) {
         // `resolvePlane` has already disclosed a plane it could not fill, so a
         // second gap for the same slot would double-count the same fact.
         if (!planeChoice) {
@@ -1277,30 +1309,48 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       const recordedForThisBlock = inputs.selectionHistory.find(
         (entry) => entry.slot === slot && entry.blockStartISO === inputs.blockStartISO,
       ) ?? null;
+      /* The base candidate list narrows to the day's variety preferences only
+       * for slots outside the main/secondary budget, exactly as before. */
+      const baseCandidates = countsTowardBudget
+        ? baseLegal
+        : baseLegal.filter((id) => preferred.includes(id) || preferred.length === 0);
       const selection = decideExerciseForBlock({
         phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
         blockNumber: inputs.blockNumber,
         slot,
         group: null,
         role,
-        legalCandidates: countsTowardBudget ? legal : preferred,
+        legalCandidates: baseCandidates.length > 0 ? baseCandidates : baseLegal,
         previousSelection: slotHistory[0] ?? null,
         currentBlockSelection: recordedForThisBlock,
         recentSelections: slotHistory,
         progressedIdentities: inputs.progressedIdentities,
         pinnedIdentities: inputs.pinnedIdentities,
       });
-      const identity = selection.identity;
+      /* ⚠ **THE RECORD IS THE BASE SELECTION, ALWAYS — never the substitute.**
+       * *"A temporary injury/constraint substitution must not become the
+       * athlete's new permanent rotation history merely because boot occurred."*
+       * Written before the day-scoped swap below, so no path can record one. */
       if (!selectionsThisBlock.some((entry) => entry.slot === slot)) {
         selectionsThisBlock.push({
           blockNumber: inputs.blockNumber,
           blockStartISO: inputs.blockStartISO,
           slot,
-          group: POOL_GROUP_OF.get(identity) ?? null,
+          group: POOL_GROUP_OF.get(selection.identity) ?? null,
           role,
-          identity,
+          identity: selection.identity,
         });
       }
+      /* ── THE TEMPORARY SUBSTITUTE ──────────────────────────────────────────
+       * The base selection stands unless THIS DAY excludes it. When it does, the
+       * best legal same-slot option takes the row for this day only, carrying a
+       * typed reason — and the record above is untouched, so the canonical
+       * selection returns by itself when the day-scoped answer expires. */
+      const substitutedToday = !legal.includes(selection.identity);
+      const identity = substitutedToday ? legal[0] : selection.identity;
+      const substitutionReason: ComposedRow['substitutedFor'] = substitutedToday
+        ? { baseIdentity: selection.identity, cause: 'excluded_today' }
+        : undefined;
       usedThisWeek.add(identity);
       const chosenGroup = POOL_GROUP_OF.get(identity);
       if (chosenGroup) {
@@ -1323,6 +1373,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       if (isMainLift && pattern) patternHasItsMainLift.add(pattern);
       rows.push({
         identity,
+        ...(substitutionReason ? { substitutedFor: substitutionReason } : {}),
         slot,
         role: isMainLift ? 'main_strength' : 'strength_accessory',
         mainStrengthPattern: isMainLift ? pattern : null,

@@ -531,6 +531,8 @@ export async function rebuildDerivedWorld(): Promise<void> {
       },
     } as never);
     const program = generateProgramLocally(profile, {
+      // This caller COMMITS the program, so the block's selections are recorded.
+      recordSelections: true,
       // A boot replays; it decides nothing (plan §2, "boot appends nothing").
       weekAcceptance: 'restoration',
       todayISO: generationISO,

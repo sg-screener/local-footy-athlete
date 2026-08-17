@@ -201,6 +201,8 @@ function factFreeBase(args: {
   let surfaces = normalizeAcceptedProgramSurfaces(state);
   if (state.currentProgram) {
     const program = generateProgramLocally(args.profile, {
+      // This caller COMMITS the program, so the block's selections are recorded.
+      recordSelections: true,
       // The athlete just changed their season phase / profile. Generation may
       // not veto that fact: unstated, this inherited `restoration` and THREW,
       // and the transaction reported "The profile change could not build a
