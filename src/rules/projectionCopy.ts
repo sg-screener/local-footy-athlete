@@ -72,6 +72,8 @@ import {
   conditioningVisibleDoseFor,
 } from './conditioningSelection';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
+import { SLOTS_FOR_KIND } from './sessionSlotCoverage';
+import { EQUIPMENT_TAG_LABELS } from './equipmentVocabulary';
 import { COACH_REVISION_TEMPLATE_ROW_NAMES } from '../utils/coachRevisionTemplates';
 
 /**
@@ -138,6 +140,33 @@ export function conditioningDoseValueCopyId(
 }
 
 const DOSE_VALUES_REGISTERED = new Set<string>();
+
+/**
+ * THE SLOT AND THE KIT, IN THE ATHLETE'S WORDS — the value halves of a gap
+ * sentence.
+ *
+ * `ComposedGapNotice` on the day screen already says these words today
+ * (`slotWordFor`: the slot id with its underscores turned into spaces; the
+ * equipment tag verbatim), so this is a TRACE of shipping copy, not a new
+ * batch. They are registered one per value because `SignedCopyParam` forbids a
+ * bare string, and enumerated from the AUTHORED vocabularies rather than from
+ * whatever a gap happens to carry — a slot added to `SessionSlot` gets an entry
+ * by being added to the union.
+ */
+const GAP_SLOT_PREFIX = 'day.gap.slot.';
+const GAP_NEED_PREFIX = 'day.gap.need.';
+
+const GAP_SLOTS_REGISTERED = new Set<string>();
+const GAP_NEEDS_REGISTERED = new Set<string>();
+
+/** `null` when the value is not one of the authored ones — see `gapCopy`. */
+export function gapSlotCopyId(slot: string): string | null {
+  return GAP_SLOTS_REGISTERED.has(slot) ? `${GAP_SLOT_PREFIX}${slot}` : null;
+}
+
+export function gapNeedCopyId(need: string): string | null {
+  return GAP_NEEDS_REGISTERED.has(need) ? `${GAP_NEED_PREFIX}${need}` : null;
+}
 
 let didRegister = false;
 
@@ -930,6 +959,56 @@ export function registerProjectionCopy(): void {
       provenance: 'Mirrors dayWorkoutHelpers.formatStrengthSetsReps\'s range shape.',
       text: '{sets} × {min}-{max}',
     },
+    // ── WHAT THE KIT COULD NOT TRAIN — Sam's surface 4, 2026-08-17. ──
+    //
+    // *"Typed equipment/kit gaps carried by the program must be visible and
+    // understandable to the athlete."* The gap is already TYPED and already
+    // STORED: `Workout.composedGaps` (`ComposedGap[]`), written by
+    // `materialiseComposedWeek` and carried through `assembleAuthoredWeek`'s
+    // enumerated field list. It already had a reader too — `ComposedGapNotice`
+    // on `DayWorkoutScreenV2` — but `project()` did not carry it, so the ONE
+    // CANONICAL PROJECTION was blind to a gap the day screen was showing. Every
+    // other surface, the week view and the printed weeks included, could not
+    // see it at all.
+    //
+    // THE WORDS ARE THE SCREEN'S, TRANSCRIBED, NOT REWRITTEN. Four sentences,
+    // matching `ComposedGapNotice`'s four branches exactly, so wiring the
+    // projection cannot change what an athlete already reads. `authored_sheet`
+    // rather than a new batch for that reason.
+    //
+    // THE TWO CAUSES STAY APART, which is `ComposedGap`'s own law: a KIT gap is
+    // fixed by getting equipment, an EXCLUSION gap only by the athlete
+    // restoring what they took out, and the file's header records the day the
+    // app told an athlete who had banned every row that their equipment was the
+    // problem.
+    {
+      id: 'day.gap.kit_with_need',
+      source: 'authored_sheet',
+      provenance: 'screens/home/DayWorkoutScreenV2.tsx ComposedGapNotice — the kit '
+        + 'branch with a named requirement, already shipping on the day screen.',
+      text: 'No {slot} today — that would need {need}.',
+    },
+    {
+      id: 'day.gap.kit',
+      source: 'authored_sheet',
+      provenance: 'ComposedGapNotice — the kit branch with no named requirement.',
+      text: 'No {slot} today — your kit can\'t train it.',
+    },
+    {
+      id: 'day.gap.exclusion',
+      source: 'authored_sheet',
+      provenance: 'ComposedGapNotice — the exclusion branch with no nameable rows.',
+      text: 'No {slot} today — everything that trains it is currently left out.',
+    },
+    {
+      id: 'day.gap.exclusion_named',
+      source: 'authored_sheet',
+      provenance: 'ComposedGapNotice — the exclusion branch that names what the '
+        + 'athlete left out, including its Restore instruction.',
+      text: 'No {slot} today — you\'ve left {names} out. Restore it in My Status '
+        + 'to get this back.',
+    },
+
     // ── The authored conditioning dose. ──
     //
     // Sam, 2026-08-17: conditioning shows work, rest, rounds and useful
@@ -1113,6 +1192,43 @@ export function registerProjectionCopy(): void {
     }
   }
   registerSignedCopy(doseEntries);
+
+  // ── Gap slot and kit words. ──
+  //
+  // Enumerated from the AUTHORED slot union via `WEEKLY_COVERAGE_SET` plus every
+  // per-kind ladder, so the set is the slot vocabulary itself rather than a
+  // transcription of it. The equipment words come from the askable equipment
+  // vocabulary — the same list the athlete answered.
+  const gapEntries: SignedCopyEntry[] = [];
+  const slots = new Set<string>(Object.values(SLOTS_FOR_KIND).flatMap((list) => [...list]));
+  for (const slot of slots) {
+    GAP_SLOTS_REGISTERED.add(slot);
+    gapEntries.push({
+      id: `${GAP_SLOT_PREFIX}${slot}`,
+      source: 'authored_sheet',
+      provenance: 'rules/sessionSlotCoverage.ts SessionSlot — the slots Sam named, '
+        + 'rendered exactly as DayWorkoutScreenV2\'s slotWordFor already renders them.',
+      text: slot.replace(/_/g, ' '),
+    });
+  }
+  // THE AUTHORED LABEL, NOT THE RAW TAG. `EQUIPMENT_TAG_LABELS` is the
+  // vocabulary the athlete ANSWERED with, so "that would need a cable machine"
+  // rather than "that would need machine". `ComposedGapNotice` prints the raw
+  // tag today; this reads better and is the one Sam asked to be understandable.
+  // The divergence is real and is declared in the mission report rather than
+  // hidden — it ends when the day screen consumes the projection, which is the
+  // deletion this module has always been heading for.
+  for (const [tag, label] of Object.entries(EQUIPMENT_TAG_LABELS)) {
+    GAP_NEEDS_REGISTERED.add(tag);
+    gapEntries.push({
+      id: `${GAP_NEED_PREFIX}${tag}`,
+      source: 'authored_sheet',
+      provenance: 'rules/equipmentVocabulary.ts EQUIPMENT_TAG_LABELS — the authored '
+        + 'label for each askable tag, the words the athlete answered with.',
+      text: String(label),
+    });
+  }
+  registerSignedCopy(gapEntries);
 }
 
 

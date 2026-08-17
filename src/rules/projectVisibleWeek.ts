@@ -43,6 +43,9 @@ import {
   conditioningDoseValueCopyId,
   exerciseCueCopyId,
   exerciseNameCopyId,
+  blockBoundaryExplanationSentences,
+  gapNeedCopyId,
+  gapSlotCopyId,
   registerProjectionCopy,
   STRENGTH_HEADLINE_ID_BY_LABEL,
   type ConditioningDoseField,
@@ -791,9 +794,22 @@ export function projectParts(args: {
 export function project(args: {
   week: readonly ResolvedDay[];
   weekStart: string;
+  /**
+   * THE STORED PROGRAM, FOR ITS BLOCK-BOUNDARY EXPLANATION ONLY (surface 5).
+   *
+   * Optional, and the projection is unchanged without it — every existing caller
+   * keeps working and gets `explanations: []`. It is a separate argument rather
+   * than something dug out of `week` because a `ResolvedDay` carries a workout,
+   * not the program: the explanation is a fact about the BLOCK, and the block is
+   * the program's.
+   */
+  program?: { blockBoundaryExplanation?: readonly unknown[] } | null;
 }): VisibleWeek {
   const structural = projectParts(args);
   return {
+    explanations: blockBoundaryExplanationSentences(
+      (args.program ?? {}) as Parameters<typeof blockBoundaryExplanationSentences>[0],
+    ),
     weekStart: structural.weekStart,
     days: structural.days.map((day, index): VisibleDay => {
       const source = args.week[index];
@@ -806,6 +822,7 @@ export function project(args: {
         kind: day.kind,
         owner: day.owner,
         headline: dayHeadline(day.kind, source),
+        gaps: gapCopy(source.workout),
         parts: day.parts.map((part): VisiblePart => {
           const rows = composed ? rowsForKind(part.kind, composed) : [];
           return {
@@ -831,6 +848,70 @@ export function project(args: {
       };
     }),
   };
+}
+
+/**
+ * WHAT THE KIT (OR THE ATHLETE'S OWN EXCLUSIONS) COULD NOT TRAIN — surface 4.
+ *
+ * Reads `Workout.composedGaps`, the composer's TYPED record, and says it in the
+ * sentences `DayWorkoutScreenV2.ComposedGapNotice` already ships. Nothing here
+ * decides whether a gap exists: the composer decided that when it failed to fill
+ * a slot, and wrote down which slot, what caused it, and what would have been
+ * needed.
+ *
+ * **THE TWO CAUSES ARE DIFFERENT ANSWERS AND STAY APART.** `ComposedGap`'s own
+ * header records the day the app told an athlete who had banned every legal row
+ * that their equipment was the problem — a kit gap is fixed by getting the
+ * equipment, an exclusion gap only by the athlete restoring what they took out.
+ *
+ * **A SLOT THE SHEET HAS NO WORD FOR IS SKIPPED, NOT GUESSED.** `gapSlotCopyId`
+ * returns `null` for a slot outside the authored union, and a sentence with a
+ * hole in it would be worse than no sentence. That is a copy gap and it belongs
+ * to the sheet, exactly like every other one this module declares.
+ */
+function gapCopy(workout: Workout | null | undefined): readonly SignedCopy[] {
+  const gaps = (workout as any)?.composedGaps as readonly any[] | undefined;
+  if (!gaps || gaps.length === 0) return [];
+  const out: SignedCopy[] = [];
+  // Kit before exclusion — the thing the athlete cannot train at all outranks
+  // the thing they chose, which is the precedence `ComposedGap` already states.
+  const ordered = [
+    ...gaps.filter((gap) => gap?.cause === 'kit'),
+    ...gaps.filter((gap) => gap?.cause !== 'kit'),
+  ];
+  for (const gap of ordered) {
+    const slotId = gapSlotCopyId(String(gap?.slot ?? ''));
+    if (!slotId) continue;
+    const slot = signedCopy(slotId);
+    if (gap?.cause === 'kit') {
+      const needId = gap?.wouldNeed ? gapNeedCopyId(String(gap.wouldNeed)) : null;
+      out.push(needId
+        ? signedCopy('day.gap.kit_with_need', { slot, need: signedCopy(needId) })
+        : signedCopy('day.gap.kit', { slot }));
+      continue;
+    }
+    const names = (gap?.excludedHere ?? [])
+      .map((name: string) => canonicalExerciseName(String(name)))
+      .map((name: string) => signedCopy(exerciseNameCopyId(name)));
+    out.push(names.length > 0
+      ? signedCopy('day.gap.exclusion_named', { slot, names: joinSignedNames(names) })
+      : signedCopy('day.gap.exclusion', { slot }));
+  }
+  return out;
+}
+
+/**
+ * "a, b and c" over already-signed names.
+ *
+ * The joining words are the only thing added, and they are the same ones
+ * `ComposedGapNotice.listWords` already uses. Cast back to `SignedCopy` because
+ * every part of the result is signed — this composes SIGNED pieces, which is
+ * what the branded type is for; it never composes a NEW word.
+ */
+function joinSignedNames(names: readonly SignedCopy[]): SignedCopy {
+  if (names.length === 1) return names[0];
+  const head = names.slice(0, -1).join(', ');
+  return `${head} and ${names[names.length - 1]}` as SignedCopy;
 }
 
 /**

@@ -64,9 +64,10 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 
-import { SCENARIOS, runScenario, type PrintedWeek } from '../../scripts/print-week';
+import { SCENARIOS, runScenario, projectWithGapsMarked, type PrintedWeek } from '../../scripts/print-week';
 import { displayReps } from '../rules/prescriptionDisplay';
 import { conditioningVisibleDoseFor } from '../rules/conditioningSelection';
+import { blockBoundaryExplanationSentences } from '../rules/projectionCopy';
 import { getSessionComponentRows } from '../utils/sessionComponents';
 import { isComposedPrescriptionRow } from '../rules/projectVisibleWeek';
 import type { VisibleRow, VisibleWeek } from '../rules/visibleProjection';
@@ -360,6 +361,94 @@ run('the projection never invents a row the accepted program does not hold', () 
         + 'which the accepted program does not contain. Projection may format authored '
         + 'data; it may never author.');
     }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 6. TYPED KIT GAPS ARE VISIBLE (surface 4)
+// ═══════════════════════════════════════════════════════════════════════════
+
+run('every typed gap the composer recorded reaches the athlete, and none is invented', () => {
+  let withGaps = 0;
+  for (const { slug, printed } of WORLDS) {
+    for (let i = 0; i < printed.weekDays.length; i += 1) {
+      const stored = ((printed.weekDays[i].workout as any)?.composedGaps ?? []) as readonly any[];
+      const day = printed.visibleWeek.days.find((d) => d.date === printed.weekDays[i].date);
+      if (!day) continue;
+      // A slot outside the authored union carries no sentence BY DESIGN (a copy
+      // gap, declared). So the visible count may be lower than the stored count,
+      // never higher — an extra sentence would be the projection inventing a gap.
+      assert(day.gaps.length <= stored.length,
+        `${slug} ${day.date}: ${day.gaps.length} gap sentences from ${stored.length} stored `
+        + 'gaps. The projection is announcing a gap the composer never recorded.');
+      if (stored.length > 0) {
+        assert(day.gaps.length === stored.length,
+          `${slug} ${day.date}: the composer recorded ${stored.length} typed gap(s) and the `
+          + `athlete is shown ${day.gaps.length}. A gap the app worked out and then kept to `
+          + 'itself is the defect Sam named.');
+        withGaps += 1;
+        for (const gap of stored) {
+          if (gap?.cause !== 'kit') continue;
+          const slotWords = String(gap.slot).replace(/_/g, ' ');
+          assert(day.gaps.some((line) => String(line).includes(slotWords)),
+            `${slug} ${day.date}: a kit gap on "${gap.slot}" is stored but no visible line `
+            + `names it. Lines: ${day.gaps.map(String).join(' | ')}`);
+        }
+      }
+    }
+  }
+  assert(withGaps > 0,
+    'no world carried a typed gap at all — this cell would pass on an app that had '
+    + 'stopped recording gaps entirely, which is not what it is for. `10-dumbbell-away` '
+    + 'exists precisely so a kit gap is reachable.');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 7. EXPLANATIONS AGREE EXACTLY WITH THE STORED PROGRAM (surface 5)
+// ═══════════════════════════════════════════════════════════════════════════
+
+run('block-boundary explanations agree exactly with the stored program', () => {
+  for (const { slug, printed } of WORLDS) {
+    const want = blockBoundaryExplanationSentences(printed.program as never).map(String);
+    const got = printed.visibleWeek.explanations.map(String);
+    assert(JSON.stringify(got) === JSON.stringify(want),
+      `${slug}: the week shows ${JSON.stringify(got)} but the stored program explains `
+      + `${JSON.stringify(want)}. An explanation that does not match the decision it `
+      + 'describes is worse than none.');
+  }
+});
+
+run('a stored load increase actually reaches the athlete — the wiring is not inert', () => {
+  // NON-VACUITY, DELIBERATELY FIXTURE-DRIVEN. None of Sam's print scenarios
+  // crosses a block boundary (they all generate a FIRST block with no previous
+  // program), so the agreement cell above is satisfied by empty === empty on
+  // every real world. That would let the whole surface be deleted and stay
+  // green. This drives `project()` with a stored explanation row directly, which
+  // is the smallest thing that proves the carrier is wired at all.
+  //
+  // It does NOT replace a real Block Two world. That gap is declared in the
+  // mission report rather than papered over here.
+  const week = projectWithGapsMarked({
+    week: WORLDS[0].printed.weekDays,
+    weekStart: WORLDS[0].printed.visibleWeek.weekStart,
+    program: {
+      blockBoundaryExplanation: [{
+        kind: 'history_progressed',
+        exerciseName: 'Back Squat',
+        previousLoadKg: 80,
+        nextLoadKg: 85,
+      }],
+    } as never,
+  }).visibleWeek;
+  assert(week.explanations.length === 1,
+    `a stored load increase produced ${week.explanations.length} sentences, not 1. The `
+    + 'carrier is not wired — which is exactly the state surface 5 was found in: the '
+    + 'sentences were built and signed and nothing production-side read them.');
+  const line = String(week.explanations[0]);
+  for (const must of ['Back Squat', '80', '85']) {
+    assert(line.includes(must),
+      `the sentence "${line}" does not carry "${must}" from the stored row. An explanation `
+      + 'must agree exactly with the decision it describes.');
   }
 });
 

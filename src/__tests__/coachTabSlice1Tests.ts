@@ -253,7 +253,7 @@ console.log('\n[3] THE OPENER — short, and every claim in it is a day in the w
   const signed = (text: string) => text as unknown as SignedCopy;
 
   function day(date: string, kind: VisibleDayKind, bucket: string | null): VisibleDay {
-    return {
+    return { gaps: [], /* surface 4, 2026-08-17: a day carries its typed kit gaps; empty is the normal answer */
       date,
       kind,
       headline: signed(kind === 'game' ? 'Game Day' : kind === 'rest' ? 'Rest Day' : 'Training Day'),
@@ -277,7 +277,7 @@ console.log('\n[3] THE OPENER — short, and every claim in it is a day in the w
   }
 
   // Monday 2026-08-10 .. Sunday 2026-08-16. Saturday 2026-08-15 is the fixture.
-  const week: VisibleWeek = {
+  const week: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */
     weekStart: '2026-08-10',
     days: [
       day('2026-08-10', 'training', 'Strength'),
@@ -375,7 +375,7 @@ console.log('\n[3] THE OPENER — short, and every claim in it is a day in the w
   );
   ok(
     'and an empty week gets it too',
-    coachOpener({ week: { weekStart: '2026-08-10', days: [] }, todayISO: '2026-08-10' })
+    coachOpener({ week: { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */ weekStart: '2026-08-10', days: [] }, todayISO: '2026-08-10' })
       .text === COACH_OPENER_COPY.noWeek,
   );
 
@@ -682,7 +682,7 @@ console.log('\n[8] THE OPENER DECOMPOSES — every word in it came from somewher
   // to use and every day name the projection gave it, and what remains must be
   // nothing. A fourth word from anywhere reds this.
   function day(date: string, kind: VisibleDayKind, bucket: string | null): VisibleDay {
-    return {
+    return { gaps: [], /* surface 4, 2026-08-17: a day carries its typed kit gaps; empty is the normal answer */
       date,
       kind,
       headline: ('Game Day') as unknown as SignedCopy,
@@ -704,7 +704,7 @@ console.log('\n[8] THE OPENER DECOMPOSES — every word in it came from somewher
       owner: 'generation' as VisibleDay['owner'],
     };
   }
-  const week: VisibleWeek = {
+  const week: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */
     weekStart: '2026-08-10',
     days: [
       day('2026-08-10', 'training', 'Strength'),

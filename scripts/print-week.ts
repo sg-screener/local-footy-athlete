@@ -148,6 +148,8 @@ const MAX_GAP_PASSES = 400;
 export function projectWithGapsMarked(args: {
   week: Parameters<typeof project>[0]['week'];
   weekStart: string;
+  /** Surface 5: the stored program, for its block-boundary explanation. */
+  program?: Parameters<typeof project>[0]['program'];
 }): { visibleWeek: VisibleWeek; gapIds: string[] } {
   const gapIds: string[] = [];
   for (let pass = 0; pass < MAX_GAP_PASSES; pass += 1) {
@@ -205,6 +207,30 @@ const FULL_GYM = {
   // `Continuous Aerobic Run`. A one-word fixture typo, and it read exactly like
   // a selection bug.
   modalities: { bike_erg: 'have', row: 'have', treadmill: 'have' },
+  answeredOn: '2026-08-01',
+} as const;
+
+/**
+ * DUMBBELLS AND A BENCH, NOTHING ELSE — the away athlete's real kit.
+ *
+ * Added 2026-08-17 for Sam's surface 4, and it exists because the week that was
+ * ALREADY called "away" does not test it. `5-away-trip` writes a travel
+ * SCHEDULE fact with a span and no unavailable dates — which is the right shape
+ * for "I am away", and carries NO equipment subtraction at all, so that athlete
+ * keeps a full gym including a rack and a leg press while supposedly living out
+ * of a hotel. Measured, not assumed: `resolveEquipmentAvailability` returns all
+ * fourteen tags for every day of that week.
+ *
+ * R-019 is the rule this encodes, verbatim: *"the athlete just removes the
+ * equipment they don't have while on the trip"* — away is a SUBTRACTION from the
+ * existing answer, so this is `FULL_GYM` minus the things a hotel does not have,
+ * written out rather than computed so the week is reproducible.
+ */
+const DUMBBELLS_AWAY = {
+  tags: {
+    dumbbells: 'have', bench: 'have', bands: 'have', foam_roller: 'have',
+  },
+  modalities: { treadmill: 'have' },
   answeredOn: '2026-08-01',
 } as const;
 
@@ -449,6 +475,28 @@ export const SCENARIOS: PrintScenario[] = [
     }),
     phaseWeek: 8,
   },
+  {
+    slug: '10-dumbbell-away',
+    title: 'Away all week with dumbbells and a bench — the kit gap week',
+    whatToLookFor:
+      'Same athlete as file 3, away from Wednesday, and this time he has told '
+      + 'the app what he actually has with him: dumbbells, a bench and bands. '
+      + 'No barbell, no rack, no machines. Does the week still give him '
+      + 'something worth doing, and does it TELL him what it could not give him '
+      + 'because of the kit — or does it just quietly hand him different '
+      + 'exercises and hope he does not notice?',
+    profile: athlete({
+      seasonPhase: 'In-season',
+      gameDay: 'Saturday',
+      trainingDaysPerWeek: 5,
+      preferredTrainingDays: [...WEEKDAYS],
+      teamTrainingDaysPerWeek: 2,
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+      equipmentAnswer: DUMBBELLS_AWAY as unknown as OnboardingData['equipmentAnswer'],
+    }),
+    phaseWeek: 8,
+    awaySpan: { from: '2026-08-12', until: '2026-08-16' },
+  },
   // ── WC-136: the three weeks the conditioning-completion mission owes Sam ──
   {
     slug: '7-no-club-pre-season',
@@ -609,6 +657,7 @@ export function runScenario(scenario: PrintScenario): PrintedWeek {
   const { visibleWeek, gapIds } = projectWithGapsMarked({
     week: weekDays,
     weekStart: WEEK_MONDAY,
+    program,
   });
   const equipmentTags = resolveEquipmentAvailability(
     scenario.profile, activeConstraints as never, todayISO,
@@ -789,6 +838,17 @@ function renderDay(
   lines.push('');
   lines.push(`### ${day.headline}`);
   lines.push('');
+  // WHAT'S MISSING, AND WHY — Sam's surface 4. Every line is `SignedCopy` off
+  // the day's own typed `composedGaps`; the printer supplies the eyebrow, which
+  // is the same one `ComposedGapNotice` puts above these sentences on the day
+  // screen. Printed BEFORE the work, because a week that could not train
+  // something should say so before the athlete reads what it did give them.
+  if (day.gaps.length > 0) {
+    lines.push("**WHAT'S MISSING**");
+    lines.push('');
+    for (const gap of day.gaps) lines.push(`- ${gap}`);
+    lines.push('');
+  }
   if (day.parts.length === 0) {
     if (day.capabilities.refusal) lines.push(day.capabilities.refusal);
     else lines.push('_(nothing on this day)_');
@@ -842,6 +902,15 @@ export function renderWeekAsPlainEnglish(args: {
   lines.push('');
   if (args.intro) {
     lines.push(`**What to look for:** ${args.intro}`);
+    lines.push('');
+  }
+  // WHAT CHANGED SINCE LAST BLOCK — surface 5. Signed sentences off the stored
+  // `blockBoundaryExplanation`; empty (and silent) when the block moved no load,
+  // which is the correct answer for a first block.
+  if (args.projected.explanations.length > 0) {
+    lines.push('**What changed since your last block:**');
+    lines.push('');
+    for (const sentence of args.projected.explanations) lines.push(`- ${sentence}`);
     lines.push('');
   }
   lines.push('---');
