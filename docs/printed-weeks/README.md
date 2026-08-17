@@ -10,11 +10,11 @@ npm run print:week
 
 ## What the run found
 
-**7 weeks printed.**
+**6 weeks printed.**
 
-**The app had words for everything — 0 blanks across all 7 weeks.** Every name, heading and instruction an athlete would read came out of the app. Nothing was missing and nothing was invented to cover a gap.
+**The app had words for everything — 0 blanks across all 6 weeks.** Every name, heading and instruction an athlete would read came out of the app. Nothing was missing and nothing was invented to cover a gap.
 
-**10 problems in total** that the printer could detect by itself. Each file lists its own at the foot, under "Things wrong with this week".
+**8 problems in total** that the printer could detect by itself. Each file lists its own at the foot, under "Things wrong with this week".
 
 It cannot tell whether the training is any GOOD. That is the reading.
 
@@ -28,7 +28,6 @@ It cannot tell whether the training is any GOOD. That is the reading.
 | 4 | [In-season, away all week](5-away-trip.md) | Wednesday to Sunday | 3 |
 | 5 | [Pre-season, NO club training](7-no-club-pre-season.md) | the app supplies all four exposures | 2 |
 | 6 | [In-season, NO club training](8-no-club-in-season.md) | sprint at G-3, nothing hard near the game | 2 |
-| 7 | [Later off-season](9-later-off-season.md) | the hard running comes back | 2 |
 
 Read 3 first — it is the week most athletes get most weeks. Then read 3
 and 5 side by side, and 3 and 4 side by side; those pairs are the same
