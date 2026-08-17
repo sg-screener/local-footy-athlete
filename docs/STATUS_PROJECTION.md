@@ -155,28 +155,48 @@ every commit; `git commit -- <pathspec>` only.
 | 3. sprint under Speed | **WORKING** — cells 4 and 5 |
 | 4. typed kit gaps visible | **WORKING** — cell 6 |
 | 5a. progression + reduced-week explanations | **WORKING**, wiring proven — cells 7 and 8 |
-| 5b. typed REFUSAL explanations | **NOT BUILT** — see the blocker |
+| 5b. typed REFUSAL explanations | **WORKING** — cells 12, 13, 14 |
 
 Printed weeks: **0 findings, 0 `[NO COPY]`** across seven generated worlds,
 down from 11 findings at base.
 
-## THE SINGLE REMAINING BLOCKER — a refusal has no athlete-facing words
+## THE BLOCKER IS CLOSED — Sam ruled the structure, 2026-08-17
 
-`GeneratedWeekRefusedError` is thrown by `services/api/generateProgram.ts` and
-**no production surface renders it**. Two of Sam's nine print worlds refuse
-outright on `main` itself:
+He gave the three lines and the constraint on the middle one:
 
-- `1-early-off-season` — `main_strength_permitted_maximum:4`
-- `6-bodyweight-only` — `main_strength_planner_selected_target:3`
+> We couldn't build a safe week from your current setup.
+> [Plain-language explanation of the exact typed refusal.]
+> Update the relevant answer and try again.
 
-The reason is TYPED and precise; what does not exist is a signed sentence for it.
-Writing one is authoring athlete-facing copy, which is Sam's and not a display
-task's — so this mission stops here rather than inventing one. `day.refusal.
-nothing_to_change` is the only refusal sentence the sheet holds, and it is about
-a DAY with nothing to change, not a week that could not be built.
+> *"The second line must come from the existing typed refusal reason — do not
+> invent new refusal logic or collapse different causes into one generic
+> message."*
 
-**This is why the mission does not merge**: acceptance says "explanations match
-stored decisions", and the refusal half has no explanation at all.
+**FOURTEEN SENTENCES, ONE PER CLAUSE, KEPT COMPLETE BY THE TYPE SYSTEM.**
+`REFUSAL_CLAUSE_COPY` is a `Record<GeneratedWeekClauseId, string>` over the
+closed union, so a fifteenth clause fails the build until its sentence exists.
+That is what stops the no-collapsing rule decaying into a default later.
+
+The two worlds that refuse on `main` now print exactly what the athlete sees:
+
+| world | the athlete's middle line |
+| --- | --- |
+| `1-early-off-season` | You've asked for more lifting days than is safe to program in one week. |
+| `6-bodyweight-only` | Your week can't fit the number of lifting sessions this phase of your season is built around. |
+
+Two different clauses, two different sentences.
+
+**A REFUSED WEEK IS NEVER AN EMPTY SUCCESSFUL ONE.** The refusal throws and
+carries no program, and it always has words — a wordless refusal renders blank,
+and a blank week reads as *"nothing to do today"* rather than *"we could not
+build this"*. `weekRefusalIsSpeakable` is exported so a surface cannot forget to
+ask. A `disclosed_gap` finding produces NO refusal text, pinned by its own cell:
+a disclosable clause fails without refusing (R-083) and already reaches the
+athlete through the day's gaps.
+
+**The printer now writes a refused week as a PAGE** rather than logging `FAILED`
+and writing nothing — which is precisely how this surface came to have no words
+in the first place.
 
 ## SECOND, SMALLER GAP — surface 5 is unproven on a real Block Two world
 
