@@ -102,7 +102,40 @@ export interface VisibleRow {
   readonly id: string;
   /** The exercise's authored name — traced to the master sheet, never composed. */
   readonly name: SignedCopy;
-  readonly prescription: SignedCopy;
+  /**
+   * The sets×reps / duration line — and `null` WHEN THERE IS NO SUCH LINE.
+   *
+   * Nullable since 2026-08-17. A conditioning row's `prescribedSets` /
+   * `prescribedRepsMin` / `Max` are PLACEHOLDERS, not a dose: a real generated
+   * `Classic 4×4` carries `sets:1, min:1, max:1` while its authored dose (4 min
+   * hard, 3 min easy jog, 4 rounds) sits in `dose` below. Rendering the
+   * placeholders produced `1 × 1` on the athlete's screen over the top of a real
+   * prescription — the defect Sam named first.
+   *
+   * A warm-up row is the other `null`: R-049, *"dose counts main work only —
+   * warm-up and cool-down never count"*. It has no dose and must not be given
+   * one.
+   *
+   * NULL MEANS "THIS ROW HAS NO SETS×REPS LINE", never "we could not work one
+   * out". A row whose numbers ARE its dose still carries them here.
+   */
+  readonly prescription: SignedCopy | null;
+  /**
+   * THE AUTHORED CONDITIONING DOSE — work, rest, sets/rounds, total time.
+   *
+   * Sam, 2026-08-17: conditioning shows *"work time, rest time,
+   * repetitions/rounds and useful duration"*, each on its own line. Every line
+   * is one authored field of `data/conditioningTemplates.ts`, fetched through
+   * `conditioningSelection.conditioningVisibleDoseFor` — the same accessor the
+   * ROW COMPOSER uses, so the day screen and this projection cannot render one
+   * dose two ways.
+   *
+   * Empty for every row that is not authored conditioning. It is a LIST rather
+   * than a shaped record because the surfaces render it as lines and the
+   * projection owns which lines exist — a card that picked fields out of a
+   * record would be deciding presentation the projection already decided.
+   */
+  readonly dose: readonly SignedCopy[];
   readonly cue: SignedCopy | null;
 }
 
@@ -172,6 +205,25 @@ export interface VisibleDay {
   /** The day's one name. Every surface shows THIS — there is no second name. */
   readonly headline: SignedCopy;
   readonly parts: readonly VisiblePart[];
+  /**
+   * WHAT THE DAY COULD NOT TRAIN, AND WHY — one signed sentence per typed gap.
+   *
+   * Sam's surface 4, 2026-08-17: *"typed equipment/kit gaps carried by the
+   * program must be visible and understandable to the athlete."* The gap was
+   * already typed and already stored — `Workout.composedGaps` — and the day
+   * screen already had a notice for it. What was missing is that the ONE
+   * CANONICAL PROJECTION did not carry it, so every other surface was blind to a
+   * gap the app had already worked out and written down.
+   *
+   * EMPTY IS THE NORMAL ANSWER. A day with no gap carries no sentence; this is
+   * never "we could not tell", it is "there was nothing missing".
+   *
+   * THE PROJECTION DOES NOT DECIDE THERE IS A GAP — the composer does, and this
+   * reads its record. Nothing here inspects equipment or re-derives coverage,
+   * which is the boundary the mission was given: *"do not invent replacement
+   * exercises"*, and by the same token do not invent the absence of one.
+   */
+  readonly gaps: readonly SignedCopy[];
   readonly capabilities: DayCapabilities;
   readonly owner: VisibleDayOwner;
 }
@@ -179,6 +231,32 @@ export interface VisibleDay {
 export interface VisibleWeek {
   readonly weekStart: string;
   readonly days: readonly VisibleDay[];
+  /**
+   * WHY THE WEEK CHANGED — the block-boundary explanations, as signed sentences.
+   *
+   * Sam's surface 5, 2026-08-17: *"existing load progression, reduced-week and
+   * typed-refusal explanations must render clearly and agree exactly with the
+   * stored program."*
+   *
+   * The sentences were BUILT AND SIGNED and had **no production reader at all** —
+   * `blockBoundaryExplanationSentences` was called by two test files and nothing
+   * else, so an athlete whose weights went up, or whose block was reduced after a
+   * hard run, was told nothing. That is the field-with-no-reader shape this repo
+   * bans by name.
+   *
+   * WEEK-LEVEL BECAUSE THE DECISION IS. A block boundary is a fact about the
+   * BLOCK, not about a Tuesday; hanging it on a day would make the projection
+   * pick a day to blame.
+   *
+   * THEY AGREE WITH THE STORED PROGRAM BY CONSTRUCTION — `program.
+   * blockBoundaryExplanation` is the only input, and the renderer already refuses
+   * to say a sentence whose claims the stored row does not support ("a signed
+   * sentence is not a licence to say it in a world where it is false").
+   *
+   * EMPTY IS THE COMMON AND CORRECT ANSWER: a first block, or an athlete with no
+   * qualifying history, changed no loads and has nothing to explain.
+   */
+  readonly explanations: readonly SignedCopy[];
 }
 
 /**
@@ -275,13 +353,18 @@ export const coachView: Surface<CoachView> = (day) => ({
  * something this does not return, that surface composed it.
  */
 export function athleteVisibleStrings(day: VisibleDay): readonly string[] {
-  const out: string[] = [day.headline];
+  const out: string[] = [day.headline, ...day.gaps];
   if (day.capabilities.refusal) out.push(day.capabilities.refusal);
   for (const part of day.parts) {
     out.push(part.headline);
     if (part.detail) out.push(part.detail);
     for (const row of part.rows) {
-      out.push(row.name, row.prescription);
+      out.push(row.name);
+      // `prescription` is nullable since 2026-08-17 — a conditioning row shows
+      // its authored `dose` lines instead. Both are athlete-visible and both
+      // are collected, so L-P2 still sees every word on the screen.
+      if (row.prescription) out.push(row.prescription);
+      out.push(...row.dose);
       if (row.cue) out.push(row.cue);
     }
   }

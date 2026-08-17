@@ -102,7 +102,7 @@ function day(
   kind: VisibleDay['kind'],
   parts: readonly VisiblePart[],
 ): VisibleDay {
-  return {
+  return { gaps: [], /* surface 4, 2026-08-17: a day carries its typed kit gaps; empty is the normal answer */
     date,
     kind,
     headline: 'Day' as VisibleDay['headline'],

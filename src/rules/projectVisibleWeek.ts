@@ -40,11 +40,18 @@ import { composeDayDetail, type ComposedDayDetail } from '../utils/dayDetailComp
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 import { resolveSessionDisplayName } from '../utils/sessionNaming';
 import {
+  conditioningDoseValueCopyId,
   exerciseCueCopyId,
   exerciseNameCopyId,
+  blockBoundaryExplanationSentences,
+  gapNeedCopyId,
+  gapSlotCopyId,
   registerProjectionCopy,
   STRENGTH_HEADLINE_ID_BY_LABEL,
+  type ConditioningDoseField,
 } from './projectionCopy';
+import { conditioningVisibleDoseFor } from './conditioningSelection';
+import { displayReps } from './prescriptionDisplay';
 import { signedCopy, type SignedCopy } from './signedCopy';
 import {
   PART_COUNTS_TOWARD_LOAD,
@@ -349,6 +356,33 @@ export function partHoldsTheDayDown(part: {
  * not covered here (distance, tempo, per-side) falls through to
  * `row.prescription.unspecified` rather than inventing a template for it; see
  * `projectionCopy.ts`'s header and the task report for that scope note.
+ *
+ * ## R-016 REACHES THIS SURFACE (2026-08-17, projection cleanup)
+ *
+ * Sam's prescription-display law — *"ranges remain the generation source, the
+ * athlete sees a single middle number"*, Bible `:770`/`:4936`, registry R-016 —
+ * was marked `BUILT`, and it WAS: in `dayWorkoutHelpers.formatStrengthSetsReps`,
+ * which calls `rules/prescriptionDisplay.displayReps`. **This projection never
+ * got it.** So the day-detail screen said `3 × 5` and the one canonical
+ * projection said `3 × 4-6` — one question with two owners, which is the exact
+ * defect class this module exists to end. `docs/printed-weeks/*` counted 15 of
+ * them on a single pre-season week and said so in its own findings.
+ *
+ * The number comes from `displayReps` — the EXISTING owner — and not from
+ * arithmetic here, because the law binds what the athlete READS to what logging
+ * ASSUMES and a second midpoint is how those two drift.
+ *
+ * **THE STORED RANGE IS NOT TOUCHED.** `prescribedRepsMin`/`Max` are read and
+ * left alone; the law's own words are "ranges remain the generation source".
+ * `row.prescription.sets_reps_range` stays registered and stays reachable — see
+ * the DURATION note below — so this narrows which rows use it rather than
+ * deleting a signed shape.
+ *
+ * **DURATION RANGES ARE NOT REP RANGES AND KEEP THEIR RANGE.** R-016 is about
+ * REPS. A `duration_minutes` row prescribing 20-30 min is offering a window the
+ * athlete chooses inside, not an ambiguous count of repetitions, and collapsing
+ * it to `25 min` would invent a precision Sam never authored. The two duration
+ * branches are deliberately untouched.
  */
 function prescriptionCopy(row: any): SignedCopy {
   const sets = Number(row?.prescribedSets);
@@ -367,9 +401,12 @@ function prescriptionCopy(row: any): SignedCopy {
       : signedCopy('row.prescription.duration_seconds_range', { min, max });
   }
   if (Number.isFinite(sets) && hasRange) {
-    return min === max
-      ? signedCopy('row.prescription.sets_reps', { sets, reps: min })
-      : signedCopy('row.prescription.sets_reps_range', { sets, min, max });
+    // R-016. `displayReps` returns null only when BOTH ends are absent, which
+    // `hasRange` has already excluded — the fallback to `min` is the same
+    // defensive one `formatStrengthSetsReps` carries, kept identical so the two
+    // surfaces cannot diverge on an edge either.
+    const reps = displayReps(min, max) ?? min;
+    return signedCopy('row.prescription.sets_reps', { sets, reps });
   }
   return signedCopy('row.prescription.unspecified');
 }
@@ -459,15 +496,101 @@ export function isComposedPrescriptionRow(row: any): boolean {
   return String(row?.exercise?.exerciseType ?? '') === 'Cardio';
 }
 
+/**
+ * THE AUTHORED CONDITIONING DOSE FOR A ROW, OR NO LINES AT ALL.
+ *
+ * Sam's first surface, 2026-08-17: *"conditioning must show its real
+ * prescription — work time, rest time, repetitions/rounds and useful duration —
+ * not `1 × 1`"*.
+ *
+ * `1 × 1` was never a dose. A real generated `Classic 4×4` row carries
+ * `prescribedSets: 4, prescribedRepsMin: 1, prescribedRepsMax: 1`, and a
+ * `Steady Blocks (3×8 min or 4×6 min)` row carries `1, 1, 1` — placeholders the
+ * composer fills because the type demands numbers, while the prescription Sam
+ * authored sits on the template those rows were built from. The projection was
+ * rendering the placeholder over the top of the real thing.
+ *
+ * **THE LOOKUP IS BY AUTHORED NAME, WHICH IS THE ESTABLISHED LINK.** A
+ * conditioning row's `exercise.name` IS its template's `name`, verbatim —
+ * `composeConditioningRows` passes `template.name` — and `SpeedBlock.templateName`
+ * already states the rule in its own words: *"rows derive from the template by
+ * name — never from string-prefix matching on `id`"*. `resolveTemplateByName`
+ * is the existing resolver and it already handles Sam's legacy-format map.
+ *
+ * **NOTHING IS INVENTED AND NOTHING IS PARSED BACK OUT OF WORDS.** The
+ * alternative was reading the four values out of the row's own `notes`, where
+ * the composer already wrote them — that is title-as-a-data-channel, the shape
+ * this module exists to remove. This asks the authored sheet.
+ *
+ * **A ROW WITH NO TEMPLATE GETS NOTHING**, deliberately: stored legacy content,
+ * coach-authored rows and the warm-up row resolve to `null` and carry no dose,
+ * rather than borrowing a prescription that was never written for them. For the
+ * warm-up that is also R-049 — *"dose counts main work only; warm-up and
+ * cool-down never count"* — arriving at the display for free rather than as a
+ * second rule about the same row.
+ */
+const DOSE_LINES: readonly (readonly [ConditioningDoseField, string])[] = [
+  ['work', 'row.dose.work'],
+  ['rest', 'row.dose.rest'],
+  ['sets_rounds', 'row.dose.sets_rounds'],
+  ['total_time', 'row.dose.total_time'],
+];
+
+function doseCopy(row: any): readonly SignedCopy[] {
+  const dose = conditioningVisibleDoseFor(String(row?.exercise?.name ?? row?.name ?? ''));
+  if (!dose) return [];
+  // KEYED OFF `dose.templateName`, NOT off the row's name. A stored row may
+  // carry a legacy name that Sam's legacy-format map resolves to a real
+  // template; the copy sheet registers the AUTHORED name, so a row-name key
+  // would find nothing and quietly drop a dose that had just resolved.
+  return DOSE_LINES.flatMap(([field, labelId]) => {
+    const valueId = conditioningDoseValueCopyId(dose.templateName, field);
+    // No `catch` and no substitution — `signedCopy` raising `UnsignedCopyError`
+    // is this module's declared behaviour for a copy gap (see the header).
+    return valueId ? [signedCopy(labelId, { value: signedCopy(valueId) })] : [];
+  });
+}
+
+/**
+ * A ROW SHOWS ITS SETS×REPS LINE, OR ITS AUTHORED DOSE — NEVER BOTH.
+ *
+ * When the authored dose exists it IS the prescription, and the placeholder
+ * numbers beside it are noise at best and `1 × 1` at worst. So the sets×reps
+ * line is dropped for exactly those rows, and `VisibleRow.prescription` says
+ * `null` out loud rather than a surface deciding which of two lines to believe.
+ *
+ * THE WARM-UP ROW LOSES ITS LINE TOO, and that is the same rule, not an
+ * exception: `Warm-up` resolves to no template, so it has no dose — and its
+ * `1 × 1` was the other half of Sam's complaint. R-049 says a warm-up carries
+ * no dose; a row with no dose and no meaningful reps has no prescription line,
+ * and its authored sentence (`CONDITIONING_WARMUP_COPY`, "5-10 min: start
+ * easy...") is already its cue.
+ */
+function rowHasNoPrescriptionLine(row: any, dose: readonly SignedCopy[]): boolean {
+  if (dose.length > 0) return true;
+  if (String(row?.role ?? '') !== 'conditioning') return false;
+  // A conditioning row with no authored dose keeps its numbers ONLY when they
+  // say something. `1 × 1` says nothing, and it is the exact string Sam named.
+  const sets = Number(row?.prescribedSets);
+  const min = Number(row?.prescribedRepsMin);
+  const max = Number(row?.prescribedRepsMax);
+  const isPlaceholder = min === 1 && max === 1 && !row?.prescriptionType;
+  return isPlaceholder && (!Number.isFinite(sets) || sets <= 1);
+}
+
 function toVisibleRows(rows: readonly any[]): VisibleRow[] {
   return rows
     .filter((row) => !isComposedPrescriptionRow(row))
-    .map((row, index) => ({
-      id: String(row?.id ?? `${index}`),
-      name: rowName(row),
-      prescription: prescriptionCopy(row),
-      cue: rowCue(row),
-    }));
+    .map((row, index) => {
+      const dose = doseCopy(row);
+      return {
+        id: String(row?.id ?? `${index}`),
+        name: rowName(row),
+        prescription: rowHasNoPrescriptionLine(row, dose) ? null : prescriptionCopy(row),
+        dose,
+        cue: rowCue(row),
+      };
+    });
 }
 
 /**
@@ -518,6 +641,14 @@ function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): Visibl
   if (kind === 'strength') return toVisibleRows(composed.strengthExercises);
   if (kind === 'support') return toVisibleRows(composed.supportExercises);
   if (kind === 'conditioning') return toVisibleRows(composed.conditioningExercises);
+  // SPRINT WORK READS UNDER SPEED (Sam, 2026-08-17, surface 3). This returned
+  // `[]`, so the `speed` component `getSessionComponents` had already created
+  // rendered as a named block with nothing in it, while its rows sat under
+  // Strength — the printed pre-season Tuesday showed both halves of that at
+  // once. The rows come from the SAME owner every other kind's do
+  // (`getSessionComponentRows`, via `composeDayDetail`), which is what makes
+  // this a re-file rather than a second decomposition of the day.
+  if (kind === 'speed') return toVisibleRows(composed.speedExercises);
   return [];
 }
 
@@ -663,9 +794,22 @@ export function projectParts(args: {
 export function project(args: {
   week: readonly ResolvedDay[];
   weekStart: string;
+  /**
+   * THE STORED PROGRAM, FOR ITS BLOCK-BOUNDARY EXPLANATION ONLY (surface 5).
+   *
+   * Optional, and the projection is unchanged without it — every existing caller
+   * keeps working and gets `explanations: []`. It is a separate argument rather
+   * than something dug out of `week` because a `ResolvedDay` carries a workout,
+   * not the program: the explanation is a fact about the BLOCK, and the block is
+   * the program's.
+   */
+  program?: { blockBoundaryExplanation?: readonly unknown[] } | null;
 }): VisibleWeek {
   const structural = projectParts(args);
   return {
+    explanations: blockBoundaryExplanationSentences(
+      (args.program ?? {}) as Parameters<typeof blockBoundaryExplanationSentences>[0],
+    ),
     weekStart: structural.weekStart,
     days: structural.days.map((day, index): VisibleDay => {
       const source = args.week[index];
@@ -678,6 +822,7 @@ export function project(args: {
         kind: day.kind,
         owner: day.owner,
         headline: dayHeadline(day.kind, source),
+        gaps: gapCopy(source.workout),
         parts: day.parts.map((part): VisiblePart => {
           const rows = composed ? rowsForKind(part.kind, composed) : [];
           return {
@@ -703,6 +848,70 @@ export function project(args: {
       };
     }),
   };
+}
+
+/**
+ * WHAT THE KIT (OR THE ATHLETE'S OWN EXCLUSIONS) COULD NOT TRAIN — surface 4.
+ *
+ * Reads `Workout.composedGaps`, the composer's TYPED record, and says it in the
+ * sentences `DayWorkoutScreenV2.ComposedGapNotice` already ships. Nothing here
+ * decides whether a gap exists: the composer decided that when it failed to fill
+ * a slot, and wrote down which slot, what caused it, and what would have been
+ * needed.
+ *
+ * **THE TWO CAUSES ARE DIFFERENT ANSWERS AND STAY APART.** `ComposedGap`'s own
+ * header records the day the app told an athlete who had banned every legal row
+ * that their equipment was the problem — a kit gap is fixed by getting the
+ * equipment, an exclusion gap only by the athlete restoring what they took out.
+ *
+ * **A SLOT THE SHEET HAS NO WORD FOR IS SKIPPED, NOT GUESSED.** `gapSlotCopyId`
+ * returns `null` for a slot outside the authored union, and a sentence with a
+ * hole in it would be worse than no sentence. That is a copy gap and it belongs
+ * to the sheet, exactly like every other one this module declares.
+ */
+function gapCopy(workout: Workout | null | undefined): readonly SignedCopy[] {
+  const gaps = (workout as any)?.composedGaps as readonly any[] | undefined;
+  if (!gaps || gaps.length === 0) return [];
+  const out: SignedCopy[] = [];
+  // Kit before exclusion — the thing the athlete cannot train at all outranks
+  // the thing they chose, which is the precedence `ComposedGap` already states.
+  const ordered = [
+    ...gaps.filter((gap) => gap?.cause === 'kit'),
+    ...gaps.filter((gap) => gap?.cause !== 'kit'),
+  ];
+  for (const gap of ordered) {
+    const slotId = gapSlotCopyId(String(gap?.slot ?? ''));
+    if (!slotId) continue;
+    const slot = signedCopy(slotId);
+    if (gap?.cause === 'kit') {
+      const needId = gap?.wouldNeed ? gapNeedCopyId(String(gap.wouldNeed)) : null;
+      out.push(needId
+        ? signedCopy('day.gap.kit_with_need', { slot, need: signedCopy(needId) })
+        : signedCopy('day.gap.kit', { slot }));
+      continue;
+    }
+    const names = (gap?.excludedHere ?? [])
+      .map((name: string) => canonicalExerciseName(String(name)))
+      .map((name: string) => signedCopy(exerciseNameCopyId(name)));
+    out.push(names.length > 0
+      ? signedCopy('day.gap.exclusion_named', { slot, names: joinSignedNames(names) })
+      : signedCopy('day.gap.exclusion', { slot }));
+  }
+  return out;
+}
+
+/**
+ * "a, b and c" over already-signed names.
+ *
+ * The joining words are the only thing added, and they are the same ones
+ * `ComposedGapNotice.listWords` already uses. Cast back to `SignedCopy` because
+ * every part of the result is signed — this composes SIGNED pieces, which is
+ * what the branded type is for; it never composes a NEW word.
+ */
+function joinSignedNames(names: readonly SignedCopy[]): SignedCopy {
+  if (names.length === 1) return names[0];
+  const head = names.slice(0, -1).join(', ');
+  return `${head} and ${names[names.length - 1]}` as SignedCopy;
 }
 
 /**

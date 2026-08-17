@@ -69,7 +69,12 @@ import {
   CONDITIONING_WARMUP_COPY,
   CONDITIONING_WARMUP_COPY_ID,
   CONDITIONING_WARMUP_ROW_NAME,
+  conditioningVisibleDoseFor,
 } from './conditioningSelection';
+import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
+import { SLOTS_FOR_KIND } from './sessionSlotCoverage';
+import type { GeneratedWeekClauseId } from './generatedWeekContract';
+import { EQUIPMENT_TAG_LABELS } from './equipmentVocabulary';
 import { COACH_REVISION_TEMPLATE_ROW_NAMES } from '../utils/coachRevisionTemplates';
 
 /**
@@ -106,6 +111,87 @@ export function exerciseNameCopyId(canonicalName: string): string {
 /** `null` when the name has no authored cue — matches `buildCueText`'s own `null`. */
 export function exerciseCueCopyId(canonicalName: string): string | null {
   return NAMES_WITH_CUE.has(canonicalName) ? `${EXERCISE_CUE_PREFIX}${canonicalName}` : null;
+}
+
+/**
+ * THE AUTHORED DOSE VALUES, AS SIGNED COPY.
+ *
+ * `SignedCopyParam` is `number | SignedCopy` and says why in one line: *"never a
+ * bare string"*. A dose value — `4 min hard`, `3 × 8 min, or 4 × 6 min`,
+ * `≈8–11 min (work ≈20 s)` — is athlete-facing text, so it goes through the
+ * sheet like every other word rather than being smuggled in as a parameter.
+ *
+ * Registered in BULK off `data/conditioningTemplates.ts` for the same reason the
+ * exercise vocabulary is: the authored sheet is the source, and a hand-picked
+ * subset of it would be a second, smaller vocabulary that drifts. Four fields ×
+ * every shippable template.
+ */
+const DOSE_VALUE_PREFIX = 'row.dose.value.';
+
+export type ConditioningDoseField = 'work' | 'rest' | 'sets_rounds' | 'total_time';
+
+/** `null` when the name is not the authored template vocabulary's. */
+export function conditioningDoseValueCopyId(
+  templateName: string,
+  field: ConditioningDoseField,
+): string | null {
+  return DOSE_VALUES_REGISTERED.has(`${templateName} ${field}`)
+    ? `${DOSE_VALUE_PREFIX}${field}.${templateName}`
+    : null;
+}
+
+/**
+ * THE MIDDLE LINE OF A REFUSAL, ONE PER TYPED CLAUSE.
+ *
+ * A `Record` over the CLOSED `GeneratedWeekClauseId` union on purpose: a clause
+ * added to `generatedWeekContract.ts` breaks this file until its sentence is
+ * written, which is the only way "do not collapse different causes into one
+ * generic message" survives contact with a future clause.
+ */
+const REFUSAL_CLAUSE_COPY: Readonly<Record<GeneratedWeekClauseId, string>> = {
+  main_strength_required_minimum: 'There aren\'t enough gym days in your week to fit the lifting this phase needs.',
+  main_strength_planner_selected_target: 'Your week can\'t fit the number of lifting sessions this phase of your season is built around.',
+  main_strength_permitted_maximum: 'You\'ve asked for more lifting days than is safe to program in one week.',
+  required_safe_patterns_present: 'Your kit can\'t cover one of the basic lifting movements a week has to include.',
+  pattern_balance: 'Your week comes out lopsided — one kind of lift would get far more work than its opposite.',
+  prohibited_patterns_absent: 'A lift your week needs is one your injury or your settings currently rule out.',
+  core_conditioning_required_minimum: 'There aren\'t enough days left for the running this phase needs, once your club nights and game are in.',
+  sprint_high_speed_required_minimum: 'There\'s no night left in your week that can carry the sprint work this phase needs.',
+  full_rest_required_minimum: 'Your week has no room for the full rest days you\'re owed.',
+  hard_day_permitted_maximum: 'Your week works out with more hard days than is safe, once your club nights and game are counted.',
+  training_paused_means_no_training: 'Your training is paused, so there\'s nothing to build until you start it again.',
+  prohibited_power_absent: 'The explosive work your week needs is currently ruled out by your injury or your settings.',
+  prohibited_sprint_absent: 'Your week needs sprint work, and sprinting is currently ruled out for you.',
+  row_role_is_declared: 'Something in your setup produced a session the app can\'t read properly, so it won\'t guess at it.',
+};
+
+const DOSE_VALUES_REGISTERED = new Set<string>();
+
+/**
+ * THE SLOT AND THE KIT, IN THE ATHLETE'S WORDS — the value halves of a gap
+ * sentence.
+ *
+ * `ComposedGapNotice` on the day screen already says these words today
+ * (`slotWordFor`: the slot id with its underscores turned into spaces; the
+ * equipment tag verbatim), so this is a TRACE of shipping copy, not a new
+ * batch. They are registered one per value because `SignedCopyParam` forbids a
+ * bare string, and enumerated from the AUTHORED vocabularies rather than from
+ * whatever a gap happens to carry — a slot added to `SessionSlot` gets an entry
+ * by being added to the union.
+ */
+const GAP_SLOT_PREFIX = 'day.gap.slot.';
+const GAP_NEED_PREFIX = 'day.gap.need.';
+
+const GAP_SLOTS_REGISTERED = new Set<string>();
+const GAP_NEEDS_REGISTERED = new Set<string>();
+
+/** `null` when the value is not one of the authored ones — see `gapCopy`. */
+export function gapSlotCopyId(slot: string): string | null {
+  return GAP_SLOTS_REGISTERED.has(slot) ? `${GAP_SLOT_PREFIX}${slot}` : null;
+}
+
+export function gapNeedCopyId(need: string): string | null {
+  return GAP_NEEDS_REGISTERED.has(need) ? `${GAP_NEED_PREFIX}${need}` : null;
 }
 
 let didRegister = false;
@@ -899,6 +985,253 @@ export function registerProjectionCopy(): void {
       provenance: 'Mirrors dayWorkoutHelpers.formatStrengthSetsReps\'s range shape.',
       text: '{sets} × {min}-{max}',
     },
+    // ── WHEN THE APP CANNOT BUILD A WEEK AT ALL — Sam, 2026-08-17. ──
+    //
+    // His structure, verbatim, and it is three lines with a fixed first and
+    // last:
+    //
+    //     "We couldn't build a safe week from your current setup.
+    //      [Plain-language explanation of the exact typed refusal.]
+    //      Update the relevant answer and try again."
+    //
+    // **THE MIDDLE LINE IS ONE SENTENCE PER TYPED CLAUSE, AND THEY ARE NOT
+    // INTERCHANGEABLE.** Sam: *"The second line must come from the existing
+    // typed refusal reason — do not invent new refusal logic or collapse
+    // different causes into one generic message."* `GeneratedWeekClauseId` is a
+    // CLOSED union of fourteen, so there are fourteen entries below and the type
+    // system is what keeps them complete: `REFUSAL_CLAUSE_COPY` is a
+    // `Record<GeneratedWeekClauseId, string>`, so a clause added to the contract
+    // fails the build here until somebody writes its sentence.
+    //
+    // **NO NEW REFUSAL LOGIC WAS WRITTEN.** Nothing here decides whether to
+    // refuse, what to measure, or which clause failed. The contract already
+    // decided all three and carries the finding; this is the sentence for a
+    // decision that has already been made.
+    //
+    // Each sentence is the clause's own authored `requirement` said in the
+    // athlete's words, and it names WHAT THE ATHLETE CAN CHANGE, because the
+    // third line tells them to go and change something and a line that does not
+    // say what would be a dead end.
+    {
+      id: 'week.refusal.lead',
+      source: 'sam_ruling',
+      provenance: "Sam, 2026-08-17, verbatim first line of the refusal structure he "
+        + 'specified.',
+      text: "We couldn't build a safe week from your current setup.",
+    },
+    {
+      id: 'week.refusal.fix',
+      source: 'sam_ruling',
+      provenance: 'Sam, 2026-08-17, verbatim third line of the same structure.',
+      text: 'Update the relevant answer and try again.',
+    },
+
+    // ── The middle line, one per typed clause. ──
+    {
+      id: 'week.refusal.clause.main_strength_required_minimum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'main_strength_required_minimum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.main_strength_required_minimum,
+    },
+    {
+      id: 'week.refusal.clause.main_strength_planner_selected_target',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'main_strength_planner_selected_target' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.main_strength_planner_selected_target,
+    },
+    {
+      id: 'week.refusal.clause.main_strength_permitted_maximum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'main_strength_permitted_maximum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.main_strength_permitted_maximum,
+    },
+    {
+      id: 'week.refusal.clause.required_safe_patterns_present',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'required_safe_patterns_present' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.required_safe_patterns_present,
+    },
+    {
+      id: 'week.refusal.clause.pattern_balance',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'pattern_balance' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.pattern_balance,
+    },
+    {
+      id: 'week.refusal.clause.prohibited_patterns_absent',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'prohibited_patterns_absent' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.prohibited_patterns_absent,
+    },
+    {
+      id: 'week.refusal.clause.core_conditioning_required_minimum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'core_conditioning_required_minimum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.core_conditioning_required_minimum,
+    },
+    {
+      id: 'week.refusal.clause.sprint_high_speed_required_minimum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'sprint_high_speed_required_minimum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.sprint_high_speed_required_minimum,
+    },
+    {
+      id: 'week.refusal.clause.full_rest_required_minimum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'full_rest_required_minimum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.full_rest_required_minimum,
+    },
+    {
+      id: 'week.refusal.clause.hard_day_permitted_maximum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'hard_day_permitted_maximum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.hard_day_permitted_maximum,
+    },
+    {
+      id: 'week.refusal.clause.training_paused_means_no_training',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'training_paused_means_no_training' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.training_paused_means_no_training,
+    },
+    {
+      id: 'week.refusal.clause.prohibited_power_absent',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'prohibited_power_absent' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.prohibited_power_absent,
+    },
+    {
+      id: 'week.refusal.clause.prohibited_sprint_absent',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'prohibited_sprint_absent' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.prohibited_sprint_absent,
+    },
+    {
+      id: 'week.refusal.clause.row_role_is_declared',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'row_role_is_declared' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.row_role_is_declared,
+    },
+
+    // ── WHAT THE KIT COULD NOT TRAIN — Sam's surface 4, 2026-08-17. ──
+    //
+    // *"Typed equipment/kit gaps carried by the program must be visible and
+    // understandable to the athlete."* The gap is already TYPED and already
+    // STORED: `Workout.composedGaps` (`ComposedGap[]`), written by
+    // `materialiseComposedWeek` and carried through `assembleAuthoredWeek`'s
+    // enumerated field list. It already had a reader too — `ComposedGapNotice`
+    // on `DayWorkoutScreenV2` — but `project()` did not carry it, so the ONE
+    // CANONICAL PROJECTION was blind to a gap the day screen was showing. Every
+    // other surface, the week view and the printed weeks included, could not
+    // see it at all.
+    //
+    // THE WORDS ARE THE SCREEN'S, TRANSCRIBED, NOT REWRITTEN. Four sentences,
+    // matching `ComposedGapNotice`'s four branches exactly, so wiring the
+    // projection cannot change what an athlete already reads. `authored_sheet`
+    // rather than a new batch for that reason.
+    //
+    // THE TWO CAUSES STAY APART, which is `ComposedGap`'s own law: a KIT gap is
+    // fixed by getting equipment, an EXCLUSION gap only by the athlete
+    // restoring what they took out, and the file's header records the day the
+    // app told an athlete who had banned every row that their equipment was the
+    // problem.
+    {
+      id: 'day.gap.kit_with_need',
+      source: 'authored_sheet',
+      provenance: 'screens/home/DayWorkoutScreenV2.tsx ComposedGapNotice — the kit '
+        + 'branch with a named requirement, already shipping on the day screen.',
+      text: 'No {slot} today — that would need {need}.',
+    },
+    {
+      id: 'day.gap.kit',
+      source: 'authored_sheet',
+      provenance: 'ComposedGapNotice — the kit branch with no named requirement.',
+      text: 'No {slot} today — your kit can\'t train it.',
+    },
+    {
+      id: 'day.gap.exclusion',
+      source: 'authored_sheet',
+      provenance: 'ComposedGapNotice — the exclusion branch with no nameable rows.',
+      text: 'No {slot} today — everything that trains it is currently left out.',
+    },
+    {
+      id: 'day.gap.exclusion_named',
+      source: 'authored_sheet',
+      provenance: 'ComposedGapNotice — the exclusion branch that names what the '
+        + 'athlete left out, including its Restore instruction.',
+      text: 'No {slot} today — you\'ve left {names} out. Restore it in My Status '
+        + 'to get this back.',
+    },
+
+    // ── The authored conditioning dose. ──
+    //
+    // Sam, 2026-08-17: conditioning shows work, rest, rounds and useful
+    // duration, each on its own line. `derived_number` for the same reason the
+    // prescriptions above are: the LABEL is authored here, the value is Sam's
+    // own string off `data/conditioningTemplates.ts` — `workPeriod`,
+    // `restPeriod`, `setsRounds`, `totalSessionTime`, handed over by
+    // `conditioningSelection.conditioningVisibleDoseFor` without rewriting.
+    //
+    // "Sets:" rather than "Rounds:" deliberately, and it is not a preference:
+    // `composeConditioningRows` already writes `Sets: ${template.setsRounds}`
+    // into the row's notes, and the authored value reads "4 reps" / "3 × 8 min,
+    // or 4 × 6 min". "Rounds: 4 reps" would be the projection re-authoring the
+    // sheet to fit a label. One word, one owner, and the emitter had it first.
+    {
+      id: 'row.dose.work',
+      source: 'derived_number',
+      provenance: 'Mirrors conditioningSelection.composeConditioningRows\'s '
+        + '`Work: ${doseLineForDisplay(template.workPeriod)}` note line, already shipping.',
+      text: 'Work: {value}',
+    },
+    {
+      id: 'row.dose.rest',
+      source: 'derived_number',
+      provenance: 'Mirrors composeConditioningRows\'s `Rest: ...` note line.',
+      text: 'Rest: {value}',
+    },
+    {
+      id: 'row.dose.sets_rounds',
+      source: 'derived_number',
+      provenance: 'Mirrors composeConditioningRows\'s `Sets: ${template.setsRounds}` '
+        + 'note line, label included.',
+      text: 'Sets: {value}',
+    },
+    {
+      id: 'row.dose.total_time',
+      source: 'derived_number',
+      provenance: 'ConditioningTemplate.totalSessionTime, verbatim — the "useful '
+        + 'duration" of Sam\'s 2026-08-17 order. The label is this sheet\'s; the '
+        + 'authored string already carries its own ≈ and its work-time aside.',
+      text: 'Takes about: {value}',
+    },
     {
       id: 'row.prescription.duration_seconds',
       source: 'derived_number',
@@ -1009,6 +1342,74 @@ export function registerProjectionCopy(): void {
     }
   }
   registerSignedCopy(exerciseEntries);
+
+  // ── The authored conditioning dose values. ──
+  //
+  // Sam's 2026-08-17 order, surface 1. Every string here is one authored field
+  // of `data/conditioningTemplates.ts`, fetched through the EMITTER's own
+  // accessor so the sheet cannot disagree with the row notes the composer
+  // writes from the same fields. A trace, not an invention — the same shape as
+  // the exercise vocabulary above.
+  const doseEntries: SignedCopyEntry[] = [];
+  for (const template of CONDITIONING_TEMPLATES) {
+    const dose = conditioningVisibleDoseFor(template.name);
+    if (!dose) continue;
+    const fields: readonly (readonly [ConditioningDoseField, string])[] = [
+      ['work', dose.work],
+      ['rest', dose.rest],
+      ['sets_rounds', dose.setsRounds],
+      ['total_time', dose.totalSessionTime],
+    ];
+    for (const [field, text] of fields) {
+      DOSE_VALUES_REGISTERED.add(`${template.name} ${field}`);
+      doseEntries.push({
+        id: `${DOSE_VALUE_PREFIX}${field}.${template.name}`,
+        source: 'authored_sheet',
+        provenance: 'data/conditioningTemplates.ts — the authored dose sheet, read '
+          + 'through conditioningSelection.conditioningVisibleDoseFor so the value '
+          + 'is normalised exactly as composeConditioningRows normalises it.',
+        text,
+      });
+    }
+  }
+  registerSignedCopy(doseEntries);
+
+  // ── Gap slot and kit words. ──
+  //
+  // Enumerated from the AUTHORED slot union via `WEEKLY_COVERAGE_SET` plus every
+  // per-kind ladder, so the set is the slot vocabulary itself rather than a
+  // transcription of it. The equipment words come from the askable equipment
+  // vocabulary — the same list the athlete answered.
+  const gapEntries: SignedCopyEntry[] = [];
+  const slots = new Set<string>(Object.values(SLOTS_FOR_KIND).flatMap((list) => [...list]));
+  for (const slot of slots) {
+    GAP_SLOTS_REGISTERED.add(slot);
+    gapEntries.push({
+      id: `${GAP_SLOT_PREFIX}${slot}`,
+      source: 'authored_sheet',
+      provenance: 'rules/sessionSlotCoverage.ts SessionSlot — the slots Sam named, '
+        + 'rendered exactly as DayWorkoutScreenV2\'s slotWordFor already renders them.',
+      text: slot.replace(/_/g, ' '),
+    });
+  }
+  // THE AUTHORED LABEL, NOT THE RAW TAG. `EQUIPMENT_TAG_LABELS` is the
+  // vocabulary the athlete ANSWERED with, so "that would need a cable machine"
+  // rather than "that would need machine". `ComposedGapNotice` prints the raw
+  // tag today; this reads better and is the one Sam asked to be understandable.
+  // The divergence is real and is declared in the mission report rather than
+  // hidden — it ends when the day screen consumes the projection, which is the
+  // deletion this module has always been heading for.
+  for (const [tag, label] of Object.entries(EQUIPMENT_TAG_LABELS)) {
+    GAP_NEEDS_REGISTERED.add(tag);
+    gapEntries.push({
+      id: `${GAP_NEED_PREFIX}${tag}`,
+      source: 'authored_sheet',
+      provenance: 'rules/equipmentVocabulary.ts EQUIPMENT_TAG_LABELS — the authored '
+        + 'label for each askable tag, the words the athlete answered with.',
+      text: String(label),
+    });
+  }
+  registerSignedCopy(gapEntries);
 }
 
 
@@ -1113,6 +1514,78 @@ export function blockBoundaryLoadMovedSentence(
  * order. Empty when the block changed no loads — which is a real answer and the
  * correct one for a first block or an athlete without qualifying history.
  */
+/**
+ * A REFUSED WEEK, IN THE ATHLETE'S WORDS — Sam's three lines, 2026-08-17.
+ *
+ *     We couldn't build a safe week from your current setup.
+ *     <the exact typed refusal, in plain words>
+ *     Update the relevant answer and try again.
+ *
+ * ## IT EXPLAINS A DECISION; IT DOES NOT MAKE ONE
+ *
+ * The input is the BLOCKING findings the contract already produced. Nothing here
+ * decides whether to refuse, re-measures a week, or infers a cause. Sam's
+ * boundary was explicit — *"do not invent new refusal logic"* — so a finding
+ * arrives already typed and this hands back its sentence.
+ *
+ * ## EVERY BLOCKING CAUSE GETS ITS OWN LINE
+ *
+ * *"Do not collapse different causes into one generic message."* A week that
+ * broke two clauses says both, in the order the contract found them, deduplicated
+ * by clause so one clause failing on three days is still one sentence — that is
+ * one CAUSE reported once, not two causes merged.
+ *
+ * ## `disclosed_gap` FINDINGS ARE NOT REFUSALS AND ARE NOT SHOWN HERE
+ *
+ * A disclosable clause fails without refusing the week (R-083: a pattern the kit
+ * cannot train is not owed) and is already the athlete's business through
+ * `VisibleDay.gaps`. Only `severity: 'blocking'` reaches this.
+ *
+ * Returns `[]` for no blocking findings — which never happens on a real
+ * `GeneratedWeekRefusedError`, and if it ever did, the caller must treat an empty
+ * list as "still refused, no words" rather than as success. `weekRefusalIsSpeakable`
+ * below is that check, exported so a surface cannot forget it.
+ */
+export function weekRefusalSentences(
+  findings: readonly { clause: string; severity: string }[],
+): SignedCopy[] {
+  registerProjectionCopy();
+  const blocking = findings.filter((finding) => finding.severity === 'blocking');
+  const seen = new Set<string>();
+  const causes: string[] = [];
+  for (const finding of blocking) {
+    const clause = String(finding.clause);
+    if (seen.has(clause)) continue;
+    seen.add(clause);
+    if (clause in REFUSAL_CLAUSE_COPY) causes.push(clause);
+  }
+  if (causes.length === 0) return [];
+  return [
+    signedCopy('week.refusal.lead'),
+    ...causes.map((clause) => signedCopy(`week.refusal.clause.${clause}`)),
+    signedCopy('week.refusal.fix'),
+  ];
+}
+
+/**
+ * CAN THIS REFUSAL BE SPOKEN? — the check that stops a refused week rendering
+ * as an empty successful one.
+ *
+ * Sam, 2026-08-17: *"Guard that a typed refusal produces visible text and that
+ * no refused week is presented as an empty successful program."* The second half
+ * is the dangerous one: a caught refusal with nothing to say and no week to show
+ * looks EXACTLY like a week with no sessions in it, and an athlete would read
+ * "rest day, rest day, rest day" instead of "we could not build this".
+ *
+ * A surface that catches `GeneratedWeekRefusedError` asks this. `false` means the
+ * app has a refusal it has no words for — a copy gap, loud, never a blank week.
+ */
+export function weekRefusalIsSpeakable(
+  findings: readonly { clause: string; severity: string }[],
+): boolean {
+  return weekRefusalSentences(findings).length > 0;
+}
+
 export function blockBoundaryExplanationSentences(
   program: { blockBoundaryExplanation?: readonly import('./blockBoundaryProgression').BlockBoundaryExplanationRow[] },
 ): SignedCopy[] {

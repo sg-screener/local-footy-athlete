@@ -322,7 +322,7 @@ console.log('\n[7] THE JOURNAL — counted, never interpreted');
     capabilities: { canSwap: false, canMove: false, canRemove: false, canEditRows: false },
     countsTowardLoad: true,
   };
-  const day = (date: string, kind: VisibleDay['kind']): VisibleDay => ({
+  const day = (date: string, kind: VisibleDay['kind']): VisibleDay => ({ gaps: [], /* surface 4, 2026-08-17: a day carries its typed kit gaps; empty is the normal answer */
     date, kind,
     headline: 'Day' as VisibleDay['headline'],
     parts: [part],

@@ -585,6 +585,44 @@ function conditioningIdsFromBlock(workout: Partial<Workout>, rows: any[]): Set<s
   return ids;
 }
 
+/**
+ * THE SPEED BLOCK'S OWN ROWS — Sam's third surface, 2026-08-17.
+ *
+ * *"Sprint work must appear under Speed, not Strength, while preserving its
+ * actual position before lifting/conditioning."*
+ *
+ * A pre-season Tuesday printed an empty `Speed` block and then listed
+ * `10 m Acceleration Reps` under `Strength`, because `strengthRows` was defined
+ * as *everything that is not conditioning and not support* — so the sprint rows
+ * fell into it by default while the `speed` component, which
+ * `getSessionComponents` had already created from `hasSpeedBlock`, had nothing
+ * to show. One workout, two components, and the rows in the wrong one.
+ *
+ * **THE LINK IS TYPED AND ALREADY EXISTS.** `SpeedBlock.exerciseIds` names the
+ * block's rows, and this is deliberately the SAME SHAPE as
+ * `conditioningIdsFromBlock` directly above — id membership against the rows
+ * actually present, never a name or keyword test. That matters: the row that
+ * exposed this was a sprint warm-up whose NAME put it in the strength bucket, so
+ * a name-shaped rule would have missed exactly the row Sam was looking at.
+ *
+ * **ROWS ARE RE-HOMED, NEVER DROPPED.** Every id this returns is removed from
+ * `strengthRows` and appears in `speedRows`; the total is unchanged, which
+ * `sessionComponents`' own conservation language above ("the rows are conserved,
+ * re-homed not lost") already demands of the trunk split.
+ *
+ * **POSITION IS NOT TOUCHED.** `getSessionComponents` emits `speed` before
+ * `strength` already, and the printed day already showed Speed above Strength.
+ * This is a re-file, not a re-order.
+ */
+function speedIdsFromBlock(workout: Partial<Workout>, rows: any[]): Set<string> {
+  const ids = new Set<string>();
+  const rowIds = new Set(rows.map((row) => row?.id).filter(Boolean));
+  for (const id of (workout as any).speedBlock?.exerciseIds ?? []) {
+    if (rowIds.has(id)) ids.add(id);
+  }
+  return ids;
+}
+
 function legacyConditioningTailIds(workout: Partial<Workout>, rows: any[]): Set<string> {
   if (!(workout as any).hasCombinedConditioning || rows.length === 0) return new Set();
 
@@ -620,6 +658,7 @@ function legacyConditioningTailIds(workout: Partial<Workout>, rows: any[]): Set<
  */
 export function getSessionComponentRows(workout: Partial<Workout> | null | undefined): {
   powerRows: any[];
+  speedRows: any[];
   strengthRows: any[];
   supportRows: any[];
   conditioningRows: any[];
@@ -627,7 +666,12 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
 } {
   if (!workout) {
     return {
-      powerRows: [], strengthRows: [], supportRows: [], conditioningRows: [], teamTrainingRows: [],
+      powerRows: [],
+      speedRows: [],
+      strengthRows: [],
+      supportRows: [],
+      conditioningRows: [],
+      teamTrainingRows: [],
     };
   }
 
@@ -671,12 +715,24 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
   const conditioningRows = isStandaloneConditioningWorkout(workout)
     ? renderableRows.filter((row) => !supportIds.has(row?.id))
     : renderableRows.filter((row) => conditioningIds.has(row?.id) && !supportIds.has(row?.id));
+  // SPEED IS ITS OWN BUCKET (Sam, 2026-08-17). Scoped to rows the conditioning
+  // block has NOT already claimed, so a block that names the same id twice
+  // cannot duplicate a row across two components — conditioning keeps it,
+  // exactly as `supportIds` is subtracted rather than contested.
+  const speedIds = new Set(
+    [...speedIdsFromBlock(workout, renderableRows)]
+      .filter((id) => !conditioningIds.has(id) && !supportIds.has(id)),
+  );
+  const speedRows = renderableRows.filter((row) => speedIds.has(row?.id));
   const strengthRows = isStandaloneConditioningWorkout(workout) || isRecoveryWorkout(workout)
     ? []
-    : renderableRows.filter((row) => !conditioningIds.has(row?.id) && !supportIds.has(row?.id));
+    : renderableRows.filter((row) => !conditioningIds.has(row?.id)
+      && !supportIds.has(row?.id)
+      && !speedIds.has(row?.id));
 
   return {
     powerRows,
+    speedRows,
     strengthRows,
     supportRows,
     conditioningRows,

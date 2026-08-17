@@ -93,7 +93,7 @@ function day(
   capabilityOverrides: Partial<VisibleDay['capabilities']> = {},
 ): VisibleDay {
   const isFixture = kind === 'game';
-  return {
+  return { gaps: [], /* surface 4, 2026-08-17: a day carries its typed kit gaps; empty is the normal answer */
     date,
     kind,
     headline: signed(
@@ -132,7 +132,7 @@ const SATURDAY = '2026-08-15';
 const SUNDAY = '2026-08-16';
 const TODAY = MONDAY;
 
-const WEEK: VisibleWeek = {
+const WEEK: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */
   weekStart: MONDAY,
   days: [
     day(MONDAY, 'training', ['Strength']),

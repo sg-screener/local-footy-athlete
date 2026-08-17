@@ -1,8 +1,8 @@
-# In-season, away all week — Wednesday to Sunday
+# Away all week with dumbbells and a bench — the kit gap week
 
 **Week of Monday 10 August.**
 
-**What to look for:** Same athlete as file 3, away from Wednesday. The club nights and the game are meant to come off and his OWN sessions are meant to stay. Compare it to file 3 side by side: what actually changed?
+**What to look for:** Same athlete as file 3, away from Wednesday, and this time he has told the app what he actually has with him: dumbbells, a bench and bands. No barbell, no rack, no machines. Does the week still give him something worth doing, and does it TELL him what it could not give him because of the kit — or does it just quietly hand him different exercises and hope he does not notice?
 
 ---
 
@@ -12,8 +12,8 @@
 
 **Strength**
 
-- Back Squat — 3 × 3
-  - Sit into the hips, chest up. Own the bottom position.
+- Goblet Squat — 3 × 4
+  - Elbows inside the knees at the bottom. Smooth tempo, no rushing.
 - RDLs — 2 × 9
   - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
 - Bulgarian Split Squats — 3 × 7
@@ -27,6 +27,10 @@
 
 ### Training Day
 
+**WHAT'S MISSING**
+
+- No vertical pull today — that would need Weight machines.
+
 **Team Training**
 
 _(the club runs this one — the app lists nothing for it)_
@@ -37,8 +41,8 @@ _(the club runs this one — the app lists nothing for it)_
 
 **Strength**
 
-- Leg Press — 3 × 7
-  - Full depth without lower back rounding. Push through the whole foot.
+- Goblet Squat — 3 × 7
+  - Elbows inside the knees at the bottom. Smooth tempo, no rushing.
 - RDLs — 3 × 3
   - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
 - Bulgarian Split Squats — 3 × 7

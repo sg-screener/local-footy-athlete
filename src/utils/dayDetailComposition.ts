@@ -48,6 +48,7 @@ export interface ComposedDayDetail {
   isCombinedDay: boolean;
   hasTeamTraining?: boolean;
   strengthExercises: any[];
+  speedExercises: any[];
   supportExercises: any[];
   conditioningExercises: any[];
   conditioningOptions: ResolvedConditioningOption[];
@@ -68,6 +69,7 @@ export function composeDayDetail(
       isConditioning: false,
       isCombinedDay: false,
       strengthExercises: [] as any[],
+      speedExercises: [] as any[],
       supportExercises: [] as any[],
       conditioningExercises: [] as any[],
       conditioningOptions: [] as ResolvedConditioningOption[],
@@ -113,6 +115,10 @@ export function composeDayDetail(
   const conditioningIdentity = projectConditioningVisibleIdentity(workout);
   const componentRows = getSessionComponentRows(workout);
   const strengthExercises = componentRows.strengthRows;
+  // SPEED ROWS ARE THE SPEED PART'S (Sam, 2026-08-17, surface 3). Carried
+  // through from the ONE row owner rather than re-derived here — the same
+  // reason `strengthExercises` is not recomputed from the exercise list.
+  const speedExercises = componentRows.speedRows;
   const supportExercises = componentRows.supportRows;
   const conditioningExercises = componentRows.conditioningRows;
   let conditioningOptions: ResolvedConditioningOption[] = [];
@@ -157,6 +163,7 @@ export function composeDayDetail(
     isCombinedDay,
     hasTeamTraining,
     strengthExercises,
+    speedExercises,
     supportExercises,
     conditioningExercises,
     conditioningOptions,

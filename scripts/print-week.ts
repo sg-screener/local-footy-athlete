@@ -91,6 +91,7 @@ import {
   exerciseIsAvailableWith,
 } from '../src/data/exerciseEquipmentRequirement';
 import { displayReps } from '../src/rules/prescriptionDisplay';
+import { weekRefusalSentences } from '../src/rules/projectionCopy';
 import {
   UnsignedCopyError,
   registerSignedCopy,
@@ -103,6 +104,7 @@ import {
 } from '../src/rules/temporarySourceFact';
 import type { SeasonPhaseClock } from '../src/rules/seasonPhaseClock';
 import type { VisibleDay, VisiblePart, VisibleWeek } from '../src/rules/visibleProjection';
+import type { ResolvedDay } from '../src/utils/sessionResolver';
 import type { DayOfWeek, OnboardingData, TrainingProgram } from '../src/types/domain';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -147,6 +149,8 @@ const MAX_GAP_PASSES = 400;
 export function projectWithGapsMarked(args: {
   week: Parameters<typeof project>[0]['week'];
   weekStart: string;
+  /** Surface 5: the stored program, for its block-boundary explanation. */
+  program?: Parameters<typeof project>[0]['program'];
 }): { visibleWeek: VisibleWeek; gapIds: string[] } {
   const gapIds: string[] = [];
   for (let pass = 0; pass < MAX_GAP_PASSES; pass += 1) {
@@ -204,6 +208,30 @@ const FULL_GYM = {
   // `Continuous Aerobic Run`. A one-word fixture typo, and it read exactly like
   // a selection bug.
   modalities: { bike_erg: 'have', row: 'have', treadmill: 'have' },
+  answeredOn: '2026-08-01',
+} as const;
+
+/**
+ * DUMBBELLS AND A BENCH, NOTHING ELSE — the away athlete's real kit.
+ *
+ * Added 2026-08-17 for Sam's surface 4, and it exists because the week that was
+ * ALREADY called "away" does not test it. `5-away-trip` writes a travel
+ * SCHEDULE fact with a span and no unavailable dates — which is the right shape
+ * for "I am away", and carries NO equipment subtraction at all, so that athlete
+ * keeps a full gym including a rack and a leg press while supposedly living out
+ * of a hotel. Measured, not assumed: `resolveEquipmentAvailability` returns all
+ * fourteen tags for every day of that week.
+ *
+ * R-019 is the rule this encodes, verbatim: *"the athlete just removes the
+ * equipment they don't have while on the trip"* — away is a SUBTRACTION from the
+ * existing answer, so this is `FULL_GYM` minus the things a hotel does not have,
+ * written out rather than computed so the week is reproducible.
+ */
+const DUMBBELLS_AWAY = {
+  tags: {
+    dumbbells: 'have', bench: 'have', bands: 'have', foam_roller: 'have',
+  },
+  modalities: { treadmill: 'have' },
   answeredOn: '2026-08-01',
 } as const;
 
@@ -319,7 +347,7 @@ export function scheduleStateFor(args: {
   };
 }
 
-interface PrintScenario {
+export interface PrintScenario {
   readonly slug: string;
   readonly title: string;
   /** What Sam is being asked to judge in THIS week, in his words not the code's. */
@@ -341,7 +369,7 @@ interface PrintScenario {
   readonly awaySpan?: { from: string; until: string };
 }
 
-const SCENARIOS: PrintScenario[] = [
+export const SCENARIOS: PrintScenario[] = [
   {
     slug: '1-early-off-season',
     title: 'Early off-season — week 1 back, no club, full gym',
@@ -448,6 +476,28 @@ const SCENARIOS: PrintScenario[] = [
     }),
     phaseWeek: 8,
   },
+  {
+    slug: '10-dumbbell-away',
+    title: 'Away all week with dumbbells and a bench — the kit gap week',
+    whatToLookFor:
+      'Same athlete as file 3, away from Wednesday, and this time he has told '
+      + 'the app what he actually has with him: dumbbells, a bench and bands. '
+      + 'No barbell, no rack, no machines. Does the week still give him '
+      + 'something worth doing, and does it TELL him what it could not give him '
+      + 'because of the kit — or does it just quietly hand him different '
+      + 'exercises and hope he does not notice?',
+    profile: athlete({
+      seasonPhase: 'In-season',
+      gameDay: 'Saturday',
+      trainingDaysPerWeek: 5,
+      preferredTrainingDays: [...WEEKDAYS],
+      teamTrainingDaysPerWeek: 2,
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+      equipmentAnswer: DUMBBELLS_AWAY as unknown as OnboardingData['equipmentAnswer'],
+    }),
+    phaseWeek: 8,
+    awaySpan: { from: '2026-08-12', until: '2026-08-16' },
+  },
   // ── WC-136: the three weeks the conditioning-completion mission owes Sam ──
   {
     slug: '7-no-club-pre-season',
@@ -545,16 +595,32 @@ function awayConstraintsFor(span: { from: string; until: string }, todayISO: str
   return { fact, compatibility };
 }
 
-interface PrintedWeek {
+export interface PrintedWeek {
   readonly scenario: PrintScenario;
   readonly program: TrainingProgram;
+  /**
+   * THE STORED ACCEPTED WEEK — what `project()` was actually handed.
+   *
+   * Exported 2026-08-17 for the athlete-visible projection guards, and the
+   * distinction it carries is the whole reason they needed it: `program` is what
+   * GENERATION produced, `weekDays` is what the RESOLVER accepted, and they are
+   * not the same list. A bye week relocates a session, so a row can sit in the
+   * resolved week under a date the generated microcycle never mentioned. A
+   * conservation guard that compares the projection against `program` reads that
+   * relocation as the projection inventing a row — measured, not imagined; it is
+   * how the first draft of `athleteVisibleProjectionTests` failed.
+   *
+   * Sam's words are "stored accepted program -> visible projection". This is the
+   * left-hand side.
+   */
+  readonly weekDays: readonly ResolvedDay[];
   readonly visibleWeek: VisibleWeek;
   readonly gapIds: readonly string[];
   /** What the athlete actually owns, resolved by the app's own equipment owner. */
   readonly equipmentTags: readonly string[];
 }
 
-function runScenario(scenario: PrintScenario): PrintedWeek {
+export function runScenario(scenario: PrintScenario): PrintedWeek {
   const todayISO = WEEK_MONDAY;
   const away = scenario.awaySpan ? awayConstraintsFor(scenario.awaySpan, todayISO) : null;
   const activeConstraints = away ? [...away.compatibility.activeConstraints] : [];
@@ -592,11 +658,57 @@ function runScenario(scenario: PrintScenario): PrintedWeek {
   const { visibleWeek, gapIds } = projectWithGapsMarked({
     week: weekDays,
     weekStart: WEEK_MONDAY,
+    program,
   });
   const equipmentTags = resolveEquipmentAvailability(
     scenario.profile, activeConstraints as never, todayISO,
   );
-  return { scenario, program, visibleWeek, gapIds, equipmentTags };
+  return { scenario, program, weekDays, visibleWeek, gapIds, equipmentTags };
+}
+
+/**
+ * The signed refusal lines for a thrown error, or `[]` when it is not a typed
+ * week refusal. Reads `findings` off `GeneratedWeekRefusedError`; every other
+ * error is a real crash and is not dressed up as an athlete message.
+ */
+function refusalSentencesFor(err: unknown): readonly string[] {
+  const findings = (err as { findings?: readonly { clause: string; severity: string }[] })?.findings;
+  if (!Array.isArray(findings)) return [];
+  return weekRefusalSentences(findings).map(String);
+}
+
+/** A refused week's page. Layout is the printer's; every sentence is signed. */
+function renderRefusedWeek(args: {
+  heading: string;
+  intro: string;
+  refusal: readonly string[];
+  diagnostic: string;
+}): string {
+  const lines: string[] = [];
+  lines.push(`# ${args.heading}`);
+  lines.push('');
+  lines.push(`**Week of ${dayHeading(WEEK_MONDAY)}.**`);
+  lines.push('');
+  lines.push(`**What to look for:** ${args.intro}`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('## THE APP REFUSED TO BUILD THIS WEEK');
+  lines.push('');
+  lines.push('This is exactly what the athlete is shown. There is no week behind it —');
+  lines.push('not an empty one, not a rest week. Nothing was built.');
+  lines.push('');
+  for (const line of args.refusal) lines.push(`> ${line}`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('**The typed reason underneath, for the seat — not shown to the athlete:**');
+  lines.push('');
+  lines.push('```');
+  lines.push(args.diagnostic);
+  lines.push('```');
+  lines.push('');
+  return lines.join('\n');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -714,7 +826,10 @@ function renderPart(
   }
   lines.push('');
   for (const row of part.rows) {
-    let line = `- ${row.name} — ${row.prescription}`;
+    // `prescription` is nullable since 2026-08-17: a conditioning row shows its
+    // AUTHORED dose lines instead, and a warm-up shows neither (R-049). The
+    // printer renders what the projection carries and still invents nothing.
+    let line = row.prescription ? `- ${row.name} — ${row.prescription}` : `- ${row.name}`;
     const impossible = impossibleWithKit(String(row.name), ctx.equipmentTags);
     if (impossible) {
       line += `  ⚠ **CANNOT BE DONE — ${impossible}.**`;
@@ -728,7 +843,7 @@ function renderPart(
     // suppresses it deliberately (`formatConditioningRowPrescription` returns
     // '' for rep-based conditioning rows: "showing '1 reps' would be confusing
     // filler"); the projection prints it. Flagged, not tidied away.
-    if (/^\s*1\s*×\s*1\s*$/.test(String(row.prescription))) {
+    if (row.prescription && /^\s*1\s*×\s*1\s*$/.test(String(row.prescription))) {
       line += '  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**';
       ctx.findings.push({
         date: ctx.date,
@@ -736,7 +851,9 @@ function renderPart(
         line: `${row.name} — the app says "1 × 1"`,
       });
     }
-    const shouldRead = rangeAgainstTheLaw(String(row.prescription));
+    const shouldRead = row.prescription
+      ? rangeAgainstTheLaw(String(row.prescription))
+      : null;
     if (shouldRead) {
       ctx.ranges.count += 1;
       if (!ctx.ranges.example) {
@@ -744,6 +861,11 @@ function renderPart(
       }
     }
     lines.push(line);
+    // THE AUTHORED DOSE, ONE LINE EACH — Sam's chosen layout, 2026-08-17:
+    // work, rest, sets/rounds and how long it takes, each on its own line. Every
+    // one is `SignedCopy` off `data/conditioningTemplates.ts`; the printer
+    // supplies the indentation and nothing else.
+    for (const doseLine of row.dose) lines.push(`  - ${doseLine}`);
     if (row.cue) lines.push(`  - ${row.cue}`);
   }
   return lines;
@@ -762,6 +884,17 @@ function renderDay(
   lines.push('');
   lines.push(`### ${day.headline}`);
   lines.push('');
+  // WHAT'S MISSING, AND WHY — Sam's surface 4. Every line is `SignedCopy` off
+  // the day's own typed `composedGaps`; the printer supplies the eyebrow, which
+  // is the same one `ComposedGapNotice` puts above these sentences on the day
+  // screen. Printed BEFORE the work, because a week that could not train
+  // something should say so before the athlete reads what it did give them.
+  if (day.gaps.length > 0) {
+    lines.push("**WHAT'S MISSING**");
+    lines.push('');
+    for (const gap of day.gaps) lines.push(`- ${gap}`);
+    lines.push('');
+  }
   if (day.parts.length === 0) {
     if (day.capabilities.refusal) lines.push(day.capabilities.refusal);
     else lines.push('_(nothing on this day)_');
@@ -815,6 +948,15 @@ export function renderWeekAsPlainEnglish(args: {
   lines.push('');
   if (args.intro) {
     lines.push(`**What to look for:** ${args.intro}`);
+    lines.push('');
+  }
+  // WHAT CHANGED SINCE LAST BLOCK — surface 5. Signed sentences off the stored
+  // `blockBoundaryExplanation`; empty (and silent) when the block moved no load,
+  // which is the correct answer for a first block.
+  if (args.projected.explanations.length > 0) {
+    lines.push('**What changed since your last block:**');
+    lines.push('');
+    for (const sentence of args.projected.explanations) lines.push(`- ${sentence}`);
     lines.push('');
   }
   lines.push('---');
@@ -1053,7 +1195,23 @@ function main(): void {
     } catch (err) {
       const error = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
       failures.push({ slug: scenario.slug, error });
-      console.error(`  FAILED ${scenario.slug} — ${error}`);
+      // A REFUSED WEEK IS A PAGE, NOT A MISSING FILE (Sam, 2026-08-17). The
+      // printer used to log `FAILED <signature>` and write nothing, so the
+      // athlete's side of a refusal could not be read at all — which is exactly
+      // how the surface came to have no words. Now it writes what the athlete
+      // would be shown, and the refusal's own diagnostic underneath it for the
+      // seat.
+      const refusal = refusalSentencesFor(err);
+      if (refusal.length > 0) {
+        writeFileSync(
+          resolve(OUT_DIR, `${scenario.slug}.md`),
+          renderRefusedWeek({ heading: scenario.title, intro: scenario.whatToLookFor, refusal, diagnostic: error }),
+          'utf8',
+        );
+        console.error(`  REFUSED ${scenario.slug} — wrote the athlete's page — ${error}`);
+      } else {
+        console.error(`  FAILED ${scenario.slug} — NO WORDS FOR THIS REFUSAL — ${error}`);
+      }
     }
   }
 

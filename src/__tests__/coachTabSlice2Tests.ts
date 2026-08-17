@@ -84,7 +84,7 @@ function day(
   kind: VisibleDayKind,
   buckets: readonly string[],
 ): VisibleDay {
-  return {
+  return { gaps: [], /* surface 4, 2026-08-17: a day carries its typed kit gaps; empty is the normal answer */
     date,
     kind,
     headline: signed(
@@ -110,7 +110,7 @@ function day(
 }
 
 // Monday 2026-08-10 .. Sunday 2026-08-16. Saturday is the fixture.
-const WEEK: VisibleWeek = {
+const WEEK: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */
   weekStart: '2026-08-10',
   days: [
     day('2026-08-10', 'training', ['Strength']),
@@ -271,7 +271,7 @@ console.log('\n[2] THE READER — positive recognition, and the refusals are the
   }
 
   // ── A DAY THE COACH CANNOT SEE IS DISTINCT FROM A DAY IT WAS NOT GIVEN.
-  const shortWeek: VisibleWeek = { weekStart: '2026-08-10', days: WEEK.days.slice(0, 3) };
+  const shortWeek: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */ weekStart: '2026-08-10', days: WEEK.days.slice(0, 3) };
   const outside = lexicalQuestionReader.read({
     message: 'what am I doing saturday?', week: shortWeek, todayISO: MONDAY,
   });
@@ -284,7 +284,7 @@ console.log('\n[2] THE READER — positive recognition, and the refusals are the
   // AND THE LOOKUP GOES THROUGH THE WEEK RATHER THAN THROUGH ARITHMETIC. This
   // is the cell that reds if somebody ever computes "next Friday" from a clock:
   // the same word against two different weeks must give two different answers.
-  const otherWeek: VisibleWeek = {
+  const otherWeek: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */
     weekStart: '2026-08-17',
     days: [day('2026-08-21', 'training', ['Strength'])],
   };
@@ -344,7 +344,7 @@ console.log('\n[3] THE ANSWER — derived, short, and grounded in days that exis
     `${eveOfGame.text} | opener fixture is suppressed as designed`,
   );
 
-  const noFixture: VisibleWeek = {
+  const noFixture: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */
     weekStart: '2026-08-10',
     days: WEEK.days.filter((d) => d.kind !== 'game'),
   };
@@ -403,10 +403,10 @@ console.log('\n[3] THE ANSWER — derived, short, and grounded in days that exis
     coachAnswer({
       question: lexicalQuestionReader.read({
         message: 'what about saturday?',
-        week: { weekStart: '2026-08-10', days: WEEK.days.slice(0, 3) },
+        week: { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */ weekStart: '2026-08-10', days: WEEK.days.slice(0, 3) },
         todayISO: MONDAY,
       }),
-      week: { weekStart: '2026-08-10', days: WEEK.days.slice(0, 3) },
+      week: { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */ weekStart: '2026-08-10', days: WEEK.days.slice(0, 3) },
       todayISO: MONDAY,
     }).text === COACH_ANSWER_COPY.dayNotInWeek,
     '"I can only see this week" and "I don\'t have an answer" are different '
@@ -453,7 +453,7 @@ console.log('\n[4] THE TRUTH GATE — re-pointed salvage, and it can actually fa
   // given a part whose headline is a forbidden claim, the answer is built from
   // that headline exactly as it would build any other, and the reply that comes
   // back must be the honest sentence instead.
-  const lyingWeek: VisibleWeek = {
+  const lyingWeek: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */
     weekStart: '2026-08-10',
     days: [day('2026-08-10', 'training', ['I adjusted your week'])],
   };
@@ -485,7 +485,7 @@ console.log('\n[4] THE TRUTH GATE — re-pointed salvage, and it can actually fa
 
   // THE CONTROL, because a gate that refuses everything is not a gate. The same
   // week with an ordinary headline must answer normally.
-  const honestWeek: VisibleWeek = {
+  const honestWeek: VisibleWeek = { explanations: [], /* surface 5, 2026-08-17: the week carries its block-boundary sentences; empty is a first block */
     weekStart: '2026-08-10',
     days: [day('2026-08-10', 'training', ['Lower Squat'])],
   };
