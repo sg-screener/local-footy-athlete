@@ -56,6 +56,9 @@ export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   'back_extension_bench',
   'dip_bars',
   'rings_trx',
+  // 2026-08-17: askable at last, because Sam's own sheet requires it for
+  // `Bear Carry`. Commercial = all, so it lands here and nowhere else.
+  'sandbag',
 ];
 
 const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
@@ -261,6 +264,8 @@ export function equipmentTagsForRequirement(
   }
   if (/^(dip_bars|dip_station|parallel_bars)$/.test(normalized)) return ['dip_bars'];
   if (/^(rings_trx|rings|trx|suspension_trainer)$/.test(normalized)) return ['rings_trx'];
+  // Sam wrote "sand bag / dead ball" on his sheet; both spellings are one tick.
+  if (/^(sandbag|sand_bag|dead_ball|deadball|sandbag_dead_ball)$/.test(normalized)) return ['sandbag'];
   if (/^(dumbbell|dumbbells|db)$/.test(normalized)) return ['dumbbells'];
   if (/^(cable|cables|cable_machine)$/.test(normalized)) return ['cables'];
   if (/^(machine|machines|leg_press|hamstring_curl|knee_extension)$/.test(normalized)) {

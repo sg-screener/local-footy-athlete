@@ -491,6 +491,79 @@ stated INTENT more strongly than the assertion does. **It is left red and named
 rather than edited to match the new behaviour**, because deciding that an
 approved contract outranks it is a call worth making in daylight.
 
+---
+
+# SLICE 3 — LANDED. THE SANDBAG, FIXED AT THE AUTHORITY.
+
+**Finding 6 is closed. All six findings from the trace are now closed.**
+
+## THE DEFECT WAS AN AUTHORITY, NOT A MISSING ENTRY
+
+`EXERCISE_EQUIPMENT_REQUIREMENT["Bear Carry"] = ['sandbag']` is Sam's own answer
+from his sheet, where he wrote *"sand bag / dead ball"*. `sandbag` existed in no
+tag union, no label map, no icon record and no checklist — so
+`exerciseIsAvailableWith` asked every athlete for a thing none of them could own
+and **Bear Carry was refused on every kit, forever, in silence.**
+
+**The both-directions gate could not see it.** `deriveEquipmentVocabulary`
+derived the checklist from FIVE authored sources and Sam's sheet was not one of
+them. Worse, for this exercise the two authorities actively disagreed: the sheet
+says `sandbag`, `equipmentClassFor` says `dumbbell` because that is what you load
+it with, **so the checklist asked about dumbbells while availability asked for a
+sandbag and the two never met.** That is R-083's load-versus-availability
+conflation still living inside the vocabulary module.
+
+## WHAT MOVED
+
+**Sam's sheet is read FIRST** for any exercise it knows; the load class answers
+only for names it does not. An OR-group demands EVERY member — *"barbell or
+dumbbells"* means either satisfies the row, so the athlete must be asked about
+both.
+
+**`STRENGTH_NAME_TO_TAG` is DELETED and nothing moved.** Its one row
+(`'Back Extension': 'back_extension_bench'`) was already in the sheet. It was a
+per-name patch for exactly this general defect, and its own docstring named the
+general defect.
+
+## MEASURED — BASE vs AFTER
+
+| | base `6b617847` | after |
+| --- | --- | --- |
+| derived checklist | 17 tags | **18 — gains exactly `sandbag`, loses nothing** |
+| `unmappableRequirements` | 0 | 0 |
+| `unclassifiedStrengthNames` | 0 | 0 |
+| bench demand | 10 sites | **22** — `Bulgarian Split Squats` really does need one |
+| rack demand | 1 site | **6** — `Back Squat` really does |
+| bodyweight demand | 59 | **42** — the load class was answering for names the sheet knows |
+
+Through the app's own oracle:
+
+```
+commercial gym   : true
+same minus bag   : false
+dumbbells only   : false
+control Farmer   : true      ← carries generally are not broken
+```
+
+**No name whitelist and no Full-Gym exception exist.** Commercial = all askable,
+so the sandbag is pre-ticked there and on **no other preset**; the signed club
+and home lists are untouched.
+
+## THE GUARD — 3 more cells, each mutation-proven
+
+| mutant | result |
+| --- | --- |
+| a `Bear Carry` name exemption in the oracle | **[13] red** |
+| the sheet stops being a vocabulary source | **[14] red** |
+| the home preset quietly gains a sandbag | **[15] red** |
+
+`test:equipment-scopes` is **16 cells**; `test:equipment-vocabulary` went 84 → 87,
+all green. Registered as `LAW-every-authored-requirement-is-askable`. Registry
+131 rows, 110 guarded, **21 UNENFORCED — the ratchet still has not risen.**
+
+World census, `test:scenarios`, `print:week` and `test:compile` all identical to
+base.
+
 ## NEXT — THE REMAINING BUILD ORDER
 
 1. ~~ONE EQUIPMENT OWNER, RESOLVED PER DAY.~~ **DONE — slice 1.**
@@ -500,8 +573,7 @@ approved contract outranks it is a call worth making in daylight.
    `BURN THE BOATS` target and it is the biggest remaining piece:** travel alone
    still refuses the week and still deletes six of the athlete's own lifts.
 4. ~~DELETE THE LEGACY TRAVEL/EQUIPMENT AUTHORITY.~~ **DONE — slice 2.**
-5. **SANDBAG** — Sam's sheet joins the vocabulary derivation (finding 6). The
-   last finding open.
+5. ~~SANDBAG.~~ **DONE — slice 3.**
 6. **THE SECOND SCHEDULER-INPUT BUILDER** — `coachingInputsToSchedulerInputs`
    must reach the same owner, which closes `away-flow` [13h].
 7. **THE REMAINING MISSION PROOFS** — 15 worlds, the printed weeks for Sam, and

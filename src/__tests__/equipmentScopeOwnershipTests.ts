@@ -314,6 +314,78 @@ run('[12] a fixture OUTSIDE the span is untouched', () => {
     + 'still missing — the span is leaking past its own end date');
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// THE SANDBAG — A REQUIREMENT NO ATHLETE COULD ANSWER
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// `EXERCISE_EQUIPMENT_REQUIREMENT["Bear Carry"] = ['sandbag']` is Sam's own
+// answer, and `sandbag` was in no tag union, no label map and no checklist. So
+// `exerciseIsAvailableWith` asked every athlete for a thing none of them could
+// own: **Bear Carry was refused on every kit, forever, in silence.**
+//
+// ⚠ THE CAUSE IS AN AUTHORITY, NOT A MISSING ENTRY, and these cells are aimed
+// at the authority. `deriveEquipmentVocabulary` read FIVE authored sources and
+// Sam's sheet was not one of them, so the both-directions gate — whose whole
+// job is "nothing authored may require an unaskable tag" — was blind to it. The
+// sheet is now read FIRST for any exercise it knows.
+
+run('[13] Bear Carry is legal ONLY when a sandbag is actually present', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { exerciseIsAvailableWith: availableWith } = require('../data/exerciseEquipmentRequirement');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { FULL_GYM_EQUIPMENT } = require('../utils/equipmentAvailability');
+  const full = [...FULL_GYM_EQUIPMENT] as string[];
+  const withoutBag = full.filter((tag) => tag !== 'sandbag');
+  assert(full.includes('sandbag'),
+    'the commercial-gym preset does not carry a sandbag, so this cell cannot tell '
+    + 'a working answer from the silence it exists to remove');
+  assert(availableWith('Bear Carry', full),
+    'a commercial-gym athlete who ticked every askable item STILL cannot be given '
+    + 'Bear Carry — the requirement is still unanswerable');
+  assert(!availableWith('Bear Carry', withoutBag),
+    'Bear Carry is legal for an athlete who owns everything EXCEPT a sandbag. '
+    + 'That is a Full-Gym exception or a name whitelist, and Sam ruled out both.');
+  assert(!availableWith('Bear Carry', ['bodyweight', 'dumbbells']),
+    'Bear Carry is legal on dumbbells alone — it is a sandbag carry');
+  assert(availableWith('Farmer Carry', withoutBag),
+    'CONTROL: Farmer Carry needs dumbbells and became illegal too, so the change '
+    + 'has broken carries generally rather than answered one requirement');
+});
+
+run('[14] the checklist ASKS about a sandbag, and gained nothing else', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { derivedEquipmentChecklistTags } = require('../rules/equipmentVocabulary');
+  const checklist = derivedEquipmentChecklistTags() as string[];
+  assert(checklist.includes('sandbag'),
+    'the athlete still cannot say they own a sandbag, so the requirement is still '
+    + 'unanswerable and Bear Carry is still dead');
+  // The 17 that were askable before, so a widening shows up here rather than in
+  // a screen nobody reads.
+  const before = ['ab_wheel', 'back_extension_bench', 'bands', 'barbell', 'bench',
+    'cables', 'dip_bars', 'dumbbells', 'foam_roller', 'kettlebell', 'machine',
+    'plyo_box', 'pullup_bar', 'rack', 'rings_trx', 'swiss_ball', 'trap_bar'];
+  const gained = checklist.filter((tag) => !before.includes(tag));
+  const lost = before.filter((tag) => !checklist.includes(tag));
+  assert(lost.length === 0, `the checklist LOST ${lost.join(', ')}`);
+  assert(gained.length === 1 && gained[0] === 'sandbag',
+    `the checklist gained ${gained.join(', ')} — reading Sam's sheet was supposed `
+    + 'to add exactly the one question it had been silent about');
+});
+
+run('[15] the club and home presets did NOT gain a sandbag', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { EQUIPMENT_LOCATION_PRESETS } = require('../rules/equipmentLocationPresets');
+  for (const id of ['club_gym', 'home_gym']) {
+    const preset = EQUIPMENT_LOCATION_PRESETS.find((p: any) => p.id === id);
+    assert(preset && !preset.preTickedTags.includes('sandbag'),
+      `the ${id} preset now pre-ticks a sandbag. Those lists carry Sam's signature `
+      + 'and only the commercial preset is "all askable equipment".');
+  }
+  const commercial = EQUIPMENT_LOCATION_PRESETS.find((p: any) => p.id === 'commercial_gym');
+  assert(commercial?.preTickedTags.includes('sandbag'),
+    'commercial gym means all askable equipment, and it is missing the sandbag');
+});
+
 console.log(`\nEquipment scope ownership: ${passed} passed, ${failed} failed`);
 if (failures.length) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }
 totalsPrinted(failures.length);

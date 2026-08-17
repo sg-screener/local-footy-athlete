@@ -87,6 +87,10 @@ export const EQUIPMENT_TAG_ICON: Record<AskableEquipmentTag, (color: string) => 
   rings_trx: (color) => glyph(color, (
     <><Path d="M4 4h16" /><Path d="M8 4v8" /><Path d="M16 4v8" /><Path d="M8 15a3 3 0 100 6 3 3 0 100-6" /><Path d="M16 15a3 3 0 100 6 3 3 0 100-6" /></>
   )),
+  /** Sandbag — a slumped bag with its two carry handles. */
+  sandbag: (color) => glyph(color, (
+    <><Path d="M4 11c0-2 2-3 8-3s8 1 8 3v4c0 2-2 3-8 3s-8-1-8-3z" /><Path d="M9 8V6" /><Path d="M15 8V6" /></>
+  )),
 };
 export const CONDITIONING_MODALITY_ICON: Record<ConditioningEquipmentModality, (color: string) => React.ReactNode> = {
   /** Bike erg — Sam's approved traced machine. */
