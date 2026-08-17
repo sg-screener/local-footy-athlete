@@ -194,6 +194,7 @@ function build(
   profile: OnboardingData = athlete(),
 ): TrainingProgram {
   return generateProgramLocally(profile, {
+    recordSelections: true,
     todayISO: BLOCK_2_START,
     blockNumber: 2,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },

@@ -117,6 +117,7 @@ function build(
   blockNumber = 2,
 ): TrainingProgram {
   return generateProgramLocally(athlete(), {
+    recordSelections: true,
     todayISO,
     blockNumber,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },

@@ -322,11 +322,14 @@ export function decideExerciseForBlock(
   if (previousIdentity === null) {
     return decide(phaseOrdered[0], 'first_selection', 'no_previous_selection');
   }
+  /* ⚠ NO `!== previousIdentity` FILTER HERE, AND ITS ABSENCE IS DELIBERATE.
+   * An earlier revision filtered the previous identity out before the walk. It
+   * was DEAD: the previous selection is `recentSelections[0]`, so its age is 0 —
+   * the minimum — and "least recently used" can never return it while any other
+   * candidate exists. A mutation removing the filter reddened nothing, which is
+   * how it was found. The one-candidate case is answered far above. */
   return decide(
-    leastRecentlyUsed(
-      phaseOrdered.filter((id) => id !== previousIdentity),
-      inputs.recentSelections,
-    ),
+    leastRecentlyUsed(phaseOrdered, inputs.recentSelections),
     'rotated',
     'structured_variety',
   );

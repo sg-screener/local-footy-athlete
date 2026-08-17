@@ -12,9 +12,10 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-OWNER=src/rules/exerciseRotation.ts
+OWNER=src/rules/blockExerciseSelection.ts
 COMPOSER=src/rules/composeWeek.ts
 COVERAGE=src/rules/sessionSlotCoverage.ts
+HISTORY=src/store/blockSelectionHistoryStore.ts
 
 # ⚠ **RESTORE FROM OUR OWN BACKUP, NEVER FROM GIT.**
 #
@@ -27,10 +28,12 @@ BACKUP_DIR="$(mktemp -d)"
 cp "$OWNER" "$BACKUP_DIR/owner.ts"
 cp "$COMPOSER" "$BACKUP_DIR/composer.ts"
 cp "$COVERAGE" "$BACKUP_DIR/coverage.ts"
+cp "$HISTORY" "$BACKUP_DIR/history.ts"
 restore() {
   cp "$BACKUP_DIR/owner.ts" "$OWNER"
   cp "$BACKUP_DIR/composer.ts" "$COMPOSER"
   cp "$BACKUP_DIR/coverage.ts" "$COVERAGE"
+  cp "$BACKUP_DIR/history.ts" "$HISTORY"
 }
 cleanup() { restore; rm -rf "$BACKUP_DIR"; }
 trap cleanup EXIT
@@ -80,111 +83,104 @@ PY
 
 echo "=================== MUTATION RECEIPTS ==================="
 
-# 1. A RETAINED BLOCK CONSUMES A ROTATION TURN — the cursor advances anyway, so
-#    the candidate list is walked with a hole and Trap Bar becomes unreachable.
-mutate "a retained block consumes a rotation turn" \
-  "    if (mayRetain) {
-      lastWasRetention = true;
-      reason = 'progressed_from_own_history';
-      continue;                         // identity unchanged, cursor unchanged
-    }" \
-  "    if (mayRetain) {
-      lastWasRetention = true;
-      reason = 'progressed_from_own_history';
-      cursor = (cursor + 1) % ordered.length;
-      continue;
-    }"
+# 1. THE BLOCK-NUMBER CURSOR RESTORED — selection by index instead of by record.
+mutate "block-number cursor selection is restored" \
+  "    leastRecentlyUsed(phaseOrdered, inputs.recentSelections)," \
+  "    phaseOrdered[Math.max(0, inputs.blockNumber - 1) % phaseOrdered.length],"
 
-# 1b. The cursor never advances at all — the control for the mutation above.
-mutate "the cursor never advances" \
-  "    cursor = (cursor + 1) % ordered.length;
-    selected = ordered[cursor];
-    lastWasRetention = false;" \
-  "    selected = ordered[cursor];
-    lastWasRetention = false;"
+# 2. PREVIOUS-SELECTION HISTORY DROPPED — the owner stops reading the record.
+mutate "previous-selection history is dropped" \
+  "  const previousIdentity = inputs.previousSelection?.identity ?? null;" \
+  "  const previousIdentity = null;"
 
-# 2. Every slot becomes retention-eligible — single-leg and accessories stop
-#    rotating at each new block (Sam's ruling 2).
-mutate "single-leg and accessory slots become retention-eligible" \
-  "    const mayRetain = inputs.retentionEligible" \
-  "    const mayRetain = true"
+# 3. RECENT-USE AVOIDANCE REMOVED — always take the authored first option.
+mutate "recent-use avoidance is removed" \
+  "  let best = candidates[0];
+  let bestAge = blocksSinceLastUse(best, recent);" \
+  "  return candidates[0];
+  let best = candidates[0];
+  let bestAge = blocksSinceLastUse(best, recent);"
 
-# 3. The two-block maximum is removed.
-mutate "the two-block maximum is removed" \
-  "      && !lastWasRetention              // the two-block maximum" \
-  "      && true"
+# 4. PHASE PREFERENCE IGNORED.
+mutate "phase preference is ignored" \
+  "  const phaseOrdered = inputs.slot === 'hinge'" \
+  "  const phaseOrdered = false"
 
-# 4. A pin outranks the two-block maximum.
-mutate "a pin outranks the two-block maximum" \
-  "      && !lastWasRetention              // the two-block maximum" \
-  "      && (!lastWasRetention || pins.has(selected))"
-
-# 5. Retention ignores the recorded history and always keeps the lift.
-mutate "retention ignores history and always keeps the lift" \
-  "      && progressed.has(selected);      // the EXISTING progression decision" \
-  "      && true;"
-
-# 6. The pin bias is dropped entirely.
-mutate "the pin bias is dropped" \
-  "  if (pinned.length === 0) return [...candidates];" \
-  "  return [...candidates];"
-
-# 7. The empty-slot refusal is replaced by a silent invention.
-mutate "an empty legal list silently invents a row instead of throwing" \
-  "  if (ordered.length === 0) {
-    throw new Error(" \
-  "  if (false) {
-    throw new Error("
-
-# 8. THE EXPERIENCE GATE IS IGNORED — regressions reach an experienced athlete.
-mutate_in "$COMPOSER" "the experience gate is not consumed" \
-  "  return admitted.length > 0 ? admitted : candidates;" \
-  "  return candidates;"
-
-# 9. THE EXPERIENCE GATE BECOMES A REFUSAL — ruling 6's fallback is removed, so a
-#    bodyweight-only athlete loses their only legal squat.
-mutate_in "$COMPOSER" "the experience gate refuses instead of falling back" \
-  "  return admitted.length > 0 ? admitted : candidates;" \
-  "  return admitted;"
-
-# 10. HINGE PRIORITY IS DROPPED — conventional Deadlift returns to the front.
-mutate_in "$COMPOSER" "hinge priority is dropped" \
-  "  if (slot !== 'hinge') return candidates;" \
-  "  return candidates;"
-
-# 11. RETENTION IS OPENED TO EVERY COUNTING SLOT — single-leg stops rotating.
-mutate_in "$COMPOSER" "single-leg slots become retention-eligible" \
-  "      const retentionEligible = MAIN_BILATERAL_SLOTS.has(slot);" \
-  "      const retentionEligible = slotCountsTowardSetBudget(slot);"
-
-# 12. PHASE PRIORITY IS IGNORED — the in-season hinge rejoins the ordinary
-#     rotation and RDLs get dropped at the cap.
-mutate "the phase anchor is ignored" \
-  "  if (inputs.phaseAnchored) {" \
+# 5. IN-SEASON RDL ROTATED MERELY BECAUSE TIME PASSED.
+mutate "the in-season anchor is dropped, so RDLs rotate with age" \
+  "  if (phasePinsSlot(inputs)) {" \
   "  if (false) {"
 
-# 13. THE PHASE ANCHOR OUTRANKS THE ATHLETE'S PIN — ruling order 2 before 3 is
-#     inverted, so an explicit preference stops being honoured in-season.
-mutate "the phase anchor outranks the athlete's pin" \
-  "  const ordered = pinnedFirst(inputs.legalCandidates, inputs.pinnedIdentities);" \
-  "  const ordered = inputs.phaseAnchored ? [...inputs.legalCandidates] : pinnedFirst(inputs.legalCandidates, inputs.pinnedIdentities);"
+# 6. A PIN OVERRIDES ILLEGALITY.
+mutate "a pin can reach an illegal exercise" \
+  "  const legalPin = phaseOrdered.find((id) => inputs.pinnedIdentities.includes(id));" \
+  "  const legalPin = inputs.pinnedIdentities[0];"
 
-# 14. THE PHASE ANCHOR IS APPLIED IN EVERY PHASE — pre/off-season lose the
-#     broader main-lift rotation.
-mutate_in "$COMPOSER" "the phase anchor is applied in every season" \
-  "  return seasonPhase === 'In-season' && slot === 'hinge';" \
-  "  return slot === 'hinge';"
+# 7. ACCESSORY CADENCE FROZEN — the slot keeps whatever it had.
+mutate "the accessory cadence is frozen" \
+  "  return decide(
+    leastRecentlyUsed(phaseOrdered, inputs.recentSelections),
+    'rotated',
+    'structured_variety',
+  );" \
+  "  return decide(previousIdentity, 'retained', 'structured_variety');"
 
-# 15. SINGLE-LEG RDL IS COUNTED AS THE BILATERAL HINGE. The authored law is that
-#     a unilateral lift fills its single-leg slot and NOT the bilateral one; this
-#     removes the separation so a Single-Leg RDL claims the heavy-hinge exposure.
-#     (An earlier version of this mutation added `single_leg_hip` to the
-#     retention set instead and reddened NOTHING — with a one-exercise pool,
-#     retention eligibility there changes no identity. Inert, not uncaught.)
+# 8. THE TWO-BLOCK MAXIMUM REMOVED.
+mutate "the two-block maximum is removed" \
+  "    if (heldTwice) {" \
+  "    if (false) {"
+
+# 9. RESTORE-BEFORE-DECIDE DROPPED — a boot re-derives instead of restoring.
+mutate "boot re-derives instead of restoring the recorded selection" \
+  "  if (recorded !== null && inputs.legalCandidates.includes(recorded)) {" \
+  "  if (false) {"
+
+# 10. THE RESTORE IGNORES LEGALITY — an impossible exercise is handed back.
+mutate "the restore ignores legality" \
+  "  if (recorded !== null && inputs.legalCandidates.includes(recorded)) {" \
+  "  if (recorded !== null) {"
+
+# 11. SINGLE-LEG RDL COUNTS AS THE BILATERAL HINGE.
 mutate_in "$COVERAGE" "Single-Leg RDL counts as the bilateral hinge" \
   "      if (unilateral) out.push('single_leg_hip');
       else out.push('hinge');" \
   "      out.push('hinge');"
+
+# 12. THE HISTORY CARRIER DROPS ITS ROWS ON WRITE.
+mutate_in "$HISTORY" "the history carrier drops the rows it is given" \
+  "    const next = [...selections, ...withoutThisBlock];" \
+  "    const next = [...withoutThisBlock];"
+
+# 13. RE-RECORDING A BLOCK APPENDS INSTEAD OF REPLACING — one block becomes many.
+mutate_in "$HISTORY" "re-recording a block appends instead of replacing" \
+  "    const withoutThisBlock = state.selections.filter(
+      (entry) => entry.blockStartISO !== blockStartISO,
+    );" \
+  "    const withoutThisBlock = state.selections;"
+
+# 14. A TEMPORARY SUBSTITUTE BECOMES THE RECORDED SELECTION.
+mutate_in "$COMPOSER" "a temporary substitute is recorded as the base selection" \
+  "          identity: selection.identity,
+        });
+      }" \
+  "          identity: legal[0],
+        });
+      }"
+
+# 15. THE DAY-SCOPED EXCLUSION REACHES THE BASE SELECTION.
+mutate_in "$COMPOSER" "a today-only exclusion replaces the base block selection" \
+  "      const baseLegal = legalUnder(excluded);" \
+  "      const baseLegal = legalUnder(excludedToday);"
+
+# 16. THE EXPERIENCE GATE IS NOT CONSUMED.
+mutate_in "$COMPOSER" "the experience gate is not consumed" \
+  "  return admitted.length > 0 ? admitted : candidates;" \
+  "  return candidates;"
+
+# 17. THE EXPERIENCE GATE REFUSES INSTEAD OF FALLING BACK.
+mutate_in "$COMPOSER" "the experience gate refuses instead of falling back" \
+  "  return admitted.length > 0 ? admitted : candidates;" \
+  "  return admitted;"
 
 restore
 echo ""

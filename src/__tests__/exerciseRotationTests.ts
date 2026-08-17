@@ -35,11 +35,20 @@ import {
   commercialGymEquipmentAnswer,
   presetEquipmentAnswer,
 } from './support/equipmentAnswerFixture';
-import { decideRotation } from '../rules/exerciseRotation';
+import {
+  decideExerciseForBlock,
+  type BlockExerciseSelection,
+  type ExerciseSelectionInputs,
+} from '../rules/blockExerciseSelection';
 import { composedIdentityFor } from '../rules/composedRowLegality';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
 import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import type { SessionFeedback } from '../store/programStore';
+import {
+  useBlockSelectionHistoryStore,
+  recordBlockSelections,
+  blockSelectionHistory,
+} from '../store/blockSelectionHistoryStore';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 
 let pass = 0;
@@ -130,15 +139,29 @@ const BLOCK_1_DATES = [
   '2026-07-20', '2026-07-22', '2026-07-24', '2026-07-27', '2026-07-29', '2026-07-31',
 ];
 
+/**
+ * ⚠ **A MULTI-BLOCK SCENARIO MUST RECORD, BECAUSE THE OWNER READS THE RECORD.**
+ *
+ * `recordSelections` defaults to FALSE — generation is also called speculatively
+ * and a probe that writes history corrupts it. A cell that walks an athlete
+ * through consecutive blocks is simulating ACCEPTANCE, so it opts in, and
+ * `freshSelectionHistory()` isolates it from every other scenario in the file.
+ */
+function freshSelectionHistory(): void {
+  useBlockSelectionHistoryStore.setState({ selections: [] } as never);
+}
+
 function build(args: {
   blockNumber: number;
   profile?: OnboardingData;
   feedback?: Record<string, SessionFeedback>;
   prefs?: { excluded?: string[]; pinned?: string[] };
+  record?: boolean;
 }): TrainingProgram {
   return generateProgramLocally(args.profile ?? athlete(), {
     todayISO: BLOCK_STARTS[args.blockNumber - 1],
     blockNumber: args.blockNumber,
+    recordSelections: args.record === true,
     progressionHistory: {
       sessionFeedback: args.feedback ?? {},
       weightOverrides: {},
@@ -260,10 +283,66 @@ function isAnchorName(name: string): boolean {
   return ANCHOR_NAMES.has(name);
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⚠ **THE OWNER TAKES RECORDED HISTORY, NOT A BLOCK NUMBER.**
+ *
+ * The deleted cursor owner inferred the past from `blockNumber`; the new one is
+ * handed the rows that were actually recorded. `walk` below is the translation:
+ * it drives real consecutive blocks through the selector, RECORDING each answer
+ * the way acceptance does, so a cell can assert the SEQUENCE an athlete sees
+ * rather than an arithmetic property of an index.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+function selectionRow(
+  blockNumber: number, identity: string, role: ExerciseSelectionInputs['role'],
+): BlockExerciseSelection {
+  return {
+    blockNumber,
+    blockStartISO: `2026-0${blockNumber}-01`,
+    slot: 'hinge' as never,
+    group: null,
+    role,
+    identity,
+  };
+}
+
+/** Drive N consecutive blocks, recording each answer, and return the sequence. */
+function walk(args: {
+  blocks: number;
+  legalCandidates: readonly string[];
+  role: ExerciseSelectionInputs['role'];
+  phase?: ExerciseSelectionInputs['phase'];
+  progressedIdentities?: readonly string[];
+  pinnedIdentities?: readonly string[];
+}): string[] {
+  const recorded: BlockExerciseSelection[] = [];
+  const out: string[] = [];
+  for (let block = 1; block <= args.blocks; block++) {
+    const decision = decideExerciseForBlock({
+      phase: args.phase ?? 'Pre-season',
+      blockNumber: block,
+      slot: 'hinge' as never,
+      group: null,
+      role: args.role,
+      legalCandidates: args.legalCandidates,
+      previousSelection: recorded[0] ?? null,
+      currentBlockSelection: null,
+      recentSelections: recorded,
+      progressedIdentities: args.progressedIdentities ?? args.legalCandidates,
+      pinnedIdentities: args.pinnedIdentities ?? [],
+    });
+    out.push(decision.identity);
+    recorded.unshift(selectionRow(block, decision.identity, args.role));
+  }
+  return out;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[0] THE FIXTURE IS WHAT IT CLAIMS TO BE — non-vacuity');
 
-const b1 = build({ blockNumber: 1 });
+freshSelectionHistory();
+const b1 = build({ blockNumber: 1, record: true });
 const b1Rows = rowsOf(b1);
 const b1Mains = b1Rows.filter((r) => r.isMain);
 
@@ -322,7 +401,7 @@ console.log('\n[2] THE DELOAD KEEPS THE BLOCK\'S EXERCISES AND REDUCES VOLUME');
 console.log('\n[3] A NEW BUILD BLOCK ROTATES, PRESERVING SLOT AND PATTERN');
 
 const b1History = logRealBlock(b1);
-const b2Silent = build({ blockNumber: 2 });
+const b2Silent = build({ blockNumber: 2 });   // probe: block 1's record stands
 const b2SilentRows = rowsOf(b2Silent);
 
 {
@@ -412,200 +491,111 @@ console.log('\n[5] A ROTATED LIFT NEVER INHERITS THE OUTGOING EXERCISE\'S WEIGHT
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-console.log('\n[6] THE TWO-BLOCK MAXIMUM — ASKED OF THE OWNER DIRECTLY');
+console.log('\n[6] THE RULES, ASKED OF THE OWNER OVER REAL RECORDED BLOCKS');
 
 /*
- * ⚠ ASKED DIRECTLY, AND THE REASON IS STATED. Reaching a THIRD consecutive block
- * through `generateProgramLocally` needs three chained real histories whose
- * middle block must both qualify AND re-log the retained lift; the world builds
- * it, but the cell would then be asserting the harness's chaining as much as the
- * rule. The owner is a pure function of (candidates, block, history), so asking
- * it directly tests the rule itself. The WORLD cells above already prove the
- * owner is the thing production calls.
+ * ⚠ **THESE CELLS WERE MIGRATED WHEN THE CURSOR OWNER WAS DELETED.** They used
+ * to assert an arithmetic property of a block-number index. The new owner is
+ * handed the rows that were actually RECORDED, so each cell now drives real
+ * consecutive blocks through `walk` — recording every answer the way acceptance
+ * does — and asserts the SEQUENCE an athlete would see.
  */
+
 {
-  const candidates = ['A', 'B', 'C'].map(composedIdentityFor);
-  const common = {
-    legalCandidates: candidates,
-    retentionEligible: true,
-    phaseAnchored: false,
-    pinnedIdentities: [],
-  };
+  const abc = ['A', 'B', 'C'].map(composedIdentityFor);
 
-  // Block 2, A progressed → A is retained for a second block.
-  const second = decideRotation({
-    ...common, blockNumber: 2, progressedIdentities: [candidates[0]],
+  // ── THE TWO-BLOCK MAXIMUM ────────────────────────────────────────────────
+  const held = walk({ blocks: 4, legalCandidates: abc, role: 'main_bilateral' });
+  ok('a progressed main lift is kept for a SECOND consecutive block',
+    held[0] === held[1], held.join(' → '));
+  ok('and never a THIRD — the default maximum is two',
+    held[2] !== held[1], held.join(' → '));
+  ok('the block after the break is a DIFFERENT legal option, not a repeat',
+    held[2] !== held[0], held.join(' → '));
+
+  // ── CONTROL: nothing progressing means nothing is retained ───────────────
+  const noHistory = walk({
+    blocks: 3, legalCandidates: abc, role: 'main_bilateral', progressedIdentities: [],
   });
-  ok('a progressed lift is RETAINED for a second consecutive block',
-    second.kind === 'retained' && second.identity === candidates[0],
-    `${second.kind}/${second.identity}/${second.reason}`);
+  ok('CONTROL — with no recorded progression every block changes',
+    noHistory[0] !== noHistory[1] && noHistory[1] !== noHistory[2],
+    noHistory.join(' → '));
 
-  // Block 3, A still progressing → the cap must force a rotation.
-  const third = decideRotation({
-    ...common, blockNumber: 3, progressedIdentities: [candidates[0], candidates[1]],
-  });
-  ok('but a THIRD consecutive block is refused — the default maximum is two',
-    third.kind !== 'retained' && third.identity !== candidates[0],
-    `${third.kind}/${third.identity}/${third.reason}`);
-  ok('and the refusal says WHY',
-    third.reason === 'two_block_maximum_reached', third.reason);
+  // ── SINGLE-LEG AND ACCESSORIES: a new option at EVERY block ──────────────
+  const accessory = walk({ blocks: 3, legalCandidates: abc, role: 'accessory' });
+  ok('an accessory changes at every new block, whatever the history says',
+    accessory[0] !== accessory[1] && accessory[1] !== accessory[2],
+    accessory.join(' → '));
+  const singleLeg = walk({ blocks: 3, legalCandidates: abc, role: 'single_leg' });
+  ok('and so does a single-leg slot',
+    singleLeg[0] !== singleLeg[1] && singleLeg[1] !== singleLeg[2],
+    singleLeg.join(' → '));
 
-  // Control: without the progression signal there is no retention at all.
-  const noHistory = decideRotation({ ...common, blockNumber: 2, progressedIdentities: [] });
-  ok('CONTROL — with no recorded progression the slot simply rotates',
-    noHistory.kind === 'rotated', `${noHistory.kind}/${noHistory.reason}`);
+  // ── LEAST RECENTLY USED, NOT THE NEXT INDEX ──────────────────────────────
+  const lru = walk({ blocks: 4, legalCandidates: abc, role: 'accessory' });
+  ok('the rotation cycles the whole group before repeating one',
+    new Set(lru.slice(0, 3)).size === 3,
+    `${lru.join(' → ')} — a repeat inside the first pass means "least recently used" is not being read`);
+  ok('and the repeat, when it comes, is the one used LONGEST ago',
+    lru[3] === lru[0], lru.join(' → '));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-console.log('\n[7] A DELOAD DOES NOT ADVANCE EITHER CADENCE');
+console.log('\n[7] A PIN IS A PREFERENCE, AND LEGALITY STILL OUTRANKS IT');
 
-/*
- * ⚠ **THE DELOAD NO LONGER HAS A BRANCH TO TEST, AND THAT IS THE POINT.** An
- * earlier revision gave accessories a per-WEEK index and special-cased the
- * deload back onto the last build week. Sam's ruling 2 made every slot's cadence
- * a pure function of the BLOCK, so a deload — week 4 of the same block — is
- * identical for free. What is guarded now is the property, in the real world:
- * the deload's rows are the block's rows. Cell [2] holds that end to end.
- *
- * What remains to ask the owner directly is that block identity, and ONLY block
- * identity, moves the choice.
- */
 {
-  const candidates = ['A', 'B', 'C', 'D'].map(composedIdentityFor);
-  const base = {
-    legalCandidates: candidates,
-    retentionEligible: false,
-    phaseAnchored: false,
-    pinnedIdentities: [],
-    progressedIdentities: [],
-  };
-  const b2 = decideRotation({ ...base, blockNumber: 2 });
-  const b2again = decideRotation({ ...base, blockNumber: 2 });
-  const b3 = decideRotation({ ...base, blockNumber: 3 });
-  ok('the same block always yields the same exercise — no week component remains',
-    b2.identity === b2again.identity, `${b2.identity} vs ${b2again.identity}`);
-  ok('and a NEW block moves it — single-leg and accessories rotate every block',
-    b3.identity !== b2.identity, `b2=${b2.identity} b3=${b3.identity}`);
-  /* ⚠ **ASKED AT BLOCK 2, NOT BLOCK 3.** At block 3 the two-block cap fires
-   * first and rotates anyway, so opening retention to accessories changed
-   * nothing and the mutation walked through. Block 2 is the only place the
-   * retention branch is reachable unmasked. */
-  const accessoryB2 = decideRotation({
-    ...base, blockNumber: 2, progressedIdentities: candidates,
+  const abc = ['A', 'B', 'C'].map(composedIdentityFor);
+  const pinned = walk({
+    blocks: 2, legalCandidates: abc, role: 'accessory', pinnedIdentities: [abc[2]],
   });
-  ok('a non-retention slot is never retained, even with every lift progressing',
-    accessoryB2.kind !== 'retained',
-    `${accessoryB2.kind}/${accessoryB2.reason} — single-leg and accessories `
-    + 'rotate at EVERY new block');
-  ok('and its reason names the cadence, not the history',
-    accessoryB2.reason === 'accessory_cadence', accessoryB2.reason);
-}
+  ok('a legal pin is chosen ahead of the authored order',
+    pinned[0] === abc[2], pinned.join(' → '));
 
-/* ═══════════════════════════════════════════════════════════════════════════ */
-console.log('\n[8] EXCLUSION BEATS PINNING, AND AN ILLEGAL PIN IS UNREACHABLE');
-
-{
-  const candidates = ['A', 'B', 'C'].map(composedIdentityFor);
-  const excluded = composedIdentityFor('B');
-
-  // The composer removes the excluded name BEFORE the owner is asked. The owner
-  // can only ever return something from the list it was handed, so the guard is
-  // that a pin on an absent name changes nothing.
-  const legalAfterExclusion = candidates.filter((c) => c !== excluded);
-  const pinnedButExcluded = decideRotation({
-    legalCandidates: legalAfterExclusion,
-    retentionEligible: true,
-    phaseAnchored: false,
+  // Exclusion happens BEFORE the owner is asked, so a pinned-but-excluded name
+  // is simply absent from the candidate list and is unreachable by construction.
+  const legalAfterExclusion = abc.filter((id) => id !== abc[1]);
+  const pinnedButExcluded = decideExerciseForBlock({
+    phase: 'Pre-season',
     blockNumber: 1,
-    pinnedIdentities: [excluded],
+    slot: 'hinge' as never,
+    group: null,
+    role: 'main_bilateral',
+    legalCandidates: legalAfterExclusion,
+    previousSelection: null,
+    currentBlockSelection: null,
+    recentSelections: [],
     progressedIdentities: [],
+    pinnedIdentities: [abc[1]],
   });
   ok('a pin on an EXCLUDED exercise cannot bring it back',
-    pinnedButExcluded.identity !== excluded,
-    `chose ${pinnedButExcluded.identity}`);
+    pinnedButExcluded.identity !== abc[1], pinnedButExcluded.identity);
   ok('and the choice is still a legal one',
     legalAfterExclusion.includes(pinnedButExcluded.identity),
-    `chose ${pinnedButExcluded.identity}`);
+    pinnedButExcluded.identity);
 
-  // A pin on a LEGAL name does bias the choice.
-  const pinnedLegal = decideRotation({
-    legalCandidates: candidates,
-    retentionEligible: true,
-    phaseAnchored: false,
-    blockNumber: 1,
-    pinnedIdentities: [composedIdentityFor('C')],
-    progressedIdentities: [],
-  });
-  ok('CONTROL — a pin on a LEGAL exercise does bias the choice to it',
-    pinnedLegal.identity === composedIdentityFor('C'),
-    `chose ${pinnedLegal.identity}; without the pin block 1 takes A`);
-
-  const unpinned = decideRotation({
-    legalCandidates: candidates,
-    retentionEligible: true,
-    phaseAnchored: false,
-    blockNumber: 1,
-    pinnedIdentities: [],
-    progressedIdentities: [],
-  });
-  ok('and REMOVING the pin restores the ordinary deterministic rotation',
-    unpinned.identity === candidates[0], `chose ${unpinned.identity}`);
+  const unpinned = walk({ blocks: 1, legalCandidates: abc, role: 'accessory' });
+  ok('and REMOVING the pin restores the ordinary deterministic order',
+    unpinned[0] === abc[0], unpinned[0]);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-console.log('\n[9] A PIN NEVER DEFEATS THE TWO-BLOCK MAXIMUM');
-
-/*
- * ⚠ **THIS CELL WAS REWRITTEN AFTER A MUTATION REDDENED NOTHING.** Its first
- * version pinned one exercise and asserted it was not chosen a third time — and
- * it passed for the wrong reason: the pinned name was not the one the cap acts
- * on, so exempting pins from the cap changed no outcome and the mutation walked
- * straight through. `a-cell-that-asserts-a-pipeline-property-against-one-value`.
- *
- * The clause is not "a pinned lift is eventually dropped". It is **"a pin does
- * not change what the cap does"** — so the guard runs the cap's own scenario
- * TWICE, once with every candidate pinned, and demands the same answer.
- */
-{
-  const candidates = ['A', 'B', 'C'].map(composedIdentityFor);
-  const scenario = (pinnedIdentities: readonly string[]) => decideRotation({
-    legalCandidates: candidates,
-    retentionEligible: true,
-    phaseAnchored: false,
-    blockNumber: 3,
-    pinnedIdentities,
-    progressedIdentities: [candidates[0], candidates[1]],
-  });
-
-  const unpinned = scenario([]);
-  const everythingPinned = scenario(candidates);
-
-  ok('LIVENESS — the unpinned scenario really is the cap firing',
-    unpinned.reason === 'two_block_maximum_reached',
-    `reason=${unpinned.reason}; if the cap is not firing this cell proves nothing`);
-  ok('pinning every candidate does not change the cap\'s decision',
-    everythingPinned.identity === unpinned.identity
-      && everythingPinned.reason === unpinned.reason,
-    `unpinned=${unpinned.identity}/${unpinned.reason} `
-    + `pinned=${everythingPinned.identity}/${everythingPinned.reason}`);
-  ok('and the retained lift is still dropped at the third block even when pinned',
-    everythingPinned.kind !== 'retained',
-    `${everythingPinned.kind}/${everythingPinned.identity}`);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
-console.log('\n[10] THE OWNER REFUSES AN EMPTY SLOT RATHER THAN INVENTING ONE');
+console.log('\n[8] THE OWNER REFUSES AN EMPTY SLOT RATHER THAN INVENTING ONE');
 
 {
   let threw = false;
   try {
-    decideRotation({
-      legalCandidates: [],
-      retentionEligible: true,
-      phaseAnchored: false,
+    decideExerciseForBlock({
+      phase: 'Pre-season',
       blockNumber: 1,
-      pinnedIdentities: [],
+      slot: 'hinge' as never,
+      group: null,
+      role: 'main_bilateral',
+      legalCandidates: [],
+      previousSelection: null,
+      currentBlockSelection: null,
+      recentSelections: [],
       progressedIdentities: [],
+      pinnedIdentities: [],
     });
   } catch {
     threw = true;
@@ -849,52 +839,21 @@ console.log('\n[15b] A RETAINED BLOCK DOES NOT CONSUME A ROTATION TURN');
 
 {
   /*
-   * Sam, 2026-08-17: *"Advance the selection cursor only when the exercise
-   * identity actually changes."*
-   *
-   * The defect this replaces: the cursor was the BLOCK NUMBER, so a retention
-   * burned a step and the list was walked with a hole in it. Measured on the
-   * real commercial-gym hinge — RDLs, Trap Bar Deadlift, Deadlift:
-   *   before  b1 RDLs · b2 RDLs · b3 Deadlift    ← Trap Bar unreachable
-   *   after   b1 RDLs · b2 RDLs · b3 Trap Bar
+   * Sam's original defect: a retention burned a turn, so the list was walked
+   * with a hole in it and Trap Bar Deadlift was unreachable. Under the recorded
+   * owner there is no turn to burn — "least recently used" reads what was
+   * actually selected — and the sequence is the proof.
    */
   const hinge = ['RDLs', 'Trap Bar Deadlift', 'Deadlift'].map(composedIdentityFor);
-  const pick = (blockNumber: number) => decideRotation({
-    legalCandidates: hinge,
-    retentionEligible: true,
-    phaseAnchored: false,
-    blockNumber,
-    pinnedIdentities: [],
-    progressedIdentities: hinge,   // the athlete keeps progressing whatever they hold
-  });
-
-  const walk = [1, 2, 3, 4, 5, 6].map((b) => pick(b).identity);
-  ok('the cursor holds for the retained block and then advances by ONE',
-    JSON.stringify(walk) === JSON.stringify([
+  const seq = walk({ blocks: 6, legalCandidates: hinge, role: 'main_bilateral' });
+  ok('each hinge is held for two blocks and then the NEXT one is taken',
+    JSON.stringify(seq) === JSON.stringify([
       hinge[0], hinge[0], hinge[1], hinge[1], hinge[2], hinge[2],
     ]),
-    walk.join(' → '));
-  ok('and the retained block is REPORTED as retained, not as a rotation',
-    pick(2).kind === 'retained' && pick(3).kind === 'rotated',
-    `b2=${pick(2).kind} b3=${pick(3).kind}`);
-  ok('Trap Bar Deadlift is NOT skipped merely because RDLs were held',
-    walk.includes(hinge[1]),
-    `${walk.join(' → ')} — a preferred option that can never be selected is not a priority order`);
-
-  /* ⚠ CONTROL: with NO progression there is no retention, so the cursor moves
-   * every block and the same list is walked twice as fast. Without this the cell
-   * above could pass on a cursor that simply never moves. */
-  const noHistory = [1, 2, 3].map((b) => decideRotation({
-    legalCandidates: hinge,
-    retentionEligible: true,
-    phaseAnchored: false,
-    blockNumber: b,
-    pinnedIdentities: [],
-    progressedIdentities: [],
-  }).identity);
-  ok('CONTROL — with nothing progressing, every block rotates',
-    JSON.stringify(noHistory) === JSON.stringify([hinge[0], hinge[1], hinge[2]]),
-    noHistory.join(' → '));
+    seq.join(' → '));
+  ok('Trap Bar Deadlift is NOT skipped over',
+    seq.includes(hinge[1]),
+    `${seq.join(' → ')} — a preferred option that can never be selected is not a priority order`);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -911,6 +870,7 @@ console.log('\n[15c] THE HINGE WALK IN A REAL GENERATED WORLD, AND ITS LOAD');
     return base.toISOString().slice(0, 10);
   });
 
+  freshSelectionHistory();
   let history: Record<string, SessionFeedback> = {};
   const hingeByBlock: string[] = [];
   const hingeLoadByBlock: (number | undefined)[] = [];
@@ -918,6 +878,7 @@ console.log('\n[15c] THE HINGE WALK IN A REAL GENERATED WORLD, AND ITS LOAD');
     const program = generateProgramLocally(athlete(), {
       todayISO: starts[i],
       blockNumber: i + 1,
+      recordSelections: true,
       progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
     });
     const row = rowsOf(program).find((r) => r.mainSlot === 'hinge');
@@ -966,6 +927,7 @@ console.log('\n[15d] IN-SEASON: RDLs ARE THE HINGE, AND THE CAP DOES NOT MOVE TH
    * block the generator built, so the athlete really is progressing — which is
    * exactly the condition that would otherwise trip the cap at block 3.
    */
+  freshSelectionHistory();
   const inSeason = athlete({ seasonPhase: 'In-season', experienceLevel: '2-5 years' });
   const starts = ['2026-07-06', '2026-08-03', '2026-08-31'];
   let history: Record<string, SessionFeedback> = {};
@@ -974,6 +936,7 @@ console.log('\n[15d] IN-SEASON: RDLs ARE THE HINGE, AND THE CAP DOES NOT MOVE TH
   for (let i = 0; i < starts.length; i++) {
     const program = generateProgramLocally(inSeason, {
       todayISO: starts[i], blockNumber: i + 1,
+      recordSelections: true,
       progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
     });
     const rows = rowsOf(program);
@@ -1006,44 +969,26 @@ console.log('\n[15d] IN-SEASON: RDLs ARE THE HINGE, AND THE CAP DOES NOT MOVE TH
 console.log('\n[15e] THE IN-SEASON FALLBACK CHAIN, EACH STEP SEPARATELY');
 
 {
-  /*
-   * *"If RDLs are unavailable, excluded, contraindicated or the athlete
-   * explicitly prefers another legal hinge: choose Trap Bar Deadlift.
-   * Conventional Deadlift is the third option."*
-   *
-   * Asked of the owner directly and one step at a time, because a world that
-   * removes RDLs also moves everything else and would not isolate the step.
-   */
   const chain = ['RDLs', 'Trap Bar Deadlift', 'Deadlift'].map(composedIdentityFor);
-  const anchored = (legalCandidates: string[], pinnedIdentities: string[] = []) =>
-    decideRotation({
-      legalCandidates,
-      retentionEligible: true,
-      phaseAnchored: true,
-      blockNumber: 3,
-      pinnedIdentities,
-      progressedIdentities: legalCandidates,
+  const inSeason = (legalCandidates: string[], pinnedIdentities: string[] = []) =>
+    walk({
+      blocks: 4, legalCandidates, role: 'main_bilateral',
+      phase: 'In-season', pinnedIdentities,
     });
 
-  ok('STEP 1 — with everything legal, the in-season hinge is RDLs',
-    anchored(chain).identity === chain[0], anchored(chain).identity);
+  ok('STEP 1 — with everything legal, the in-season hinge is RDLs, every block',
+    inSeason(chain).every((n) => n === chain[0]), inSeason(chain).join(' → '));
   ok('STEP 2 — RDLs gone (excluded, injured out or absent kit) → Trap Bar Deadlift',
-    anchored(chain.slice(1)).identity === chain[1], anchored(chain.slice(1)).identity);
+    inSeason(chain.slice(1)).every((n) => n === chain[1]),
+    inSeason(chain.slice(1)).join(' → '));
   ok('STEP 3 — both preferred gone → conventional Deadlift, and only then',
-    anchored(chain.slice(2)).identity === chain[2], anchored(chain.slice(2)).identity);
-  ok('and the anchor reports itself as phase-anchored, not as an ordinary retention',
-    anchored(chain).reason === 'phase_anchored', anchored(chain).reason);
-
-  /*
-   * RULING ORDER: preference (2) outranks phase priority (3). An athlete who
-   * explicitly prefers a legal hinge gets it, in-season anchor or not.
-   */
-  const preferred = anchored(chain, [chain[1]]);
-  ok('AN EXPLICIT PIN OUTRANKS THE PHASE ANCHOR — preference is step 2, phase is step 3',
-    preferred.identity === chain[1],
-    `${preferred.identity} — the athlete asked for Trap Bar Deadlift`);
+    inSeason(chain.slice(2)).every((n) => n === chain[2]),
+    inSeason(chain.slice(2)).join(' → '));
+  ok('AN EXPLICIT PIN OUTRANKS THE PHASE ANCHOR — preference is step 2, phase step 3',
+    inSeason(chain, [chain[1]]).every((n) => n === chain[1]),
+    inSeason(chain, [chain[1]]).join(' → '));
   ok('but a pin still cannot reach an illegal exercise',
-    anchored(chain.slice(0, 2), [chain[2]]).identity !== chain[2],
+    !inSeason(chain.slice(0, 2), [chain[2]]).includes(chain[2]),
     'a pin selected an exercise that was not in the legal list');
 }
 
@@ -1051,22 +996,15 @@ console.log('\n[15e] THE IN-SEASON FALLBACK CHAIN, EACH STEP SEPARATELY');
 console.log('\n[15f] PRE/OFF-SEASON KEEPS THE BROADER ROTATION');
 
 {
-  /* *"The broader main-lift rotation remains available."* The pre-season athlete
-   * built at the top of this file must still walk RDLs → Trap Bar → Deadlift. */
   const chain = ['RDLs', 'Trap Bar Deadlift', 'Deadlift'].map(composedIdentityFor);
-  const walk = [1, 2, 3, 4, 5, 6].map((b) => decideRotation({
-    legalCandidates: chain,
-    retentionEligible: true,
-    phaseAnchored: false,
-    blockNumber: b,
-    pinnedIdentities: [],
-    progressedIdentities: chain,
-  }).identity);
-  ok('pre/off-season still rotates the hinge two blocks at a time',
-    JSON.stringify(walk) === JSON.stringify([
-      chain[0], chain[0], chain[1], chain[1], chain[2], chain[2],
-    ]),
-    walk.join(' → '));
+  for (const phase of ['Pre-season', 'Off-season'] as const) {
+    const seq = walk({ blocks: 6, legalCandidates: chain, role: 'main_bilateral', phase });
+    ok(`${phase} still rotates the hinge two blocks at a time`,
+      JSON.stringify(seq) === JSON.stringify([
+        chain[0], chain[0], chain[1], chain[1], chain[2], chain[2],
+      ]),
+      seq.join(' → '));
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -1079,11 +1017,16 @@ console.log('\n[16] NO LEGAL ALTERNATIVE — RULING 3, AND THE GAP IS NAMED');
    * or choose an illegal exercise merely to demonstrate rotation."*
    */
   const only = [composedIdentityFor('Single-Leg RDL')];
-  const b2 = decideRotation({
-    legalCandidates: only,
-    retentionEligible: false,
-    phaseAnchored: false,
+  const b2 = decideExerciseForBlock({
+    phase: 'Pre-season',
     blockNumber: 2,
+    slot: 'single_leg_hip' as never,
+    group: null,
+    role: 'single_leg',
+    legalCandidates: only,
+    previousSelection: selectionRow(1, only[0], 'single_leg'),
+    currentBlockSelection: null,
+    recentSelections: [selectionRow(1, only[0], 'single_leg')],
     pinnedIdentities: [],
     progressedIdentities: [],
   });
@@ -1097,6 +1040,179 @@ console.log('\n[16] NO LEGAL ALTERNATIVE — RULING 3, AND THE GAP IS NAMED');
   ok('the shipped single_leg_hip slot really is a one-exercise pool — liveness',
     shipRows.length > 0 && new Set(shipRows.map((r) => r.name)).size === 1,
     `names: ${[...new Set(shipRows.map((r) => r.name))].join(', ')}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[17] THE RECORD IS RESTORED, AND LEGALITY STILL BINDS');
+
+{
+  /*
+   * *"A temporary injury/constraint substitution must not become the athlete's
+   * new permanent rotation history merely because boot occurred."* Re-authoring a
+   * block the athlete already has returns its RECORDED choice; it is not
+   * re-decided against today's world.
+   */
+  const abc = ['A', 'B', 'C'].map(composedIdentityFor);
+  const recorded = selectionRow(2, abc[2], 'main_bilateral');
+  const ask = (legalCandidates: string[]) => decideExerciseForBlock({
+    phase: 'Pre-season',
+    blockNumber: 2,
+    slot: 'hinge' as never,
+    group: null,
+    role: 'main_bilateral',
+    legalCandidates,
+    previousSelection: selectionRow(1, abc[0], 'main_bilateral'),
+    currentBlockSelection: recorded,
+    recentSelections: [selectionRow(1, abc[0], 'main_bilateral')],
+    progressedIdentities: abc,
+    pinnedIdentities: [],
+  });
+
+  ok('re-authoring a recorded block RESTORES its choice rather than re-deciding',
+    ask(abc).identity === abc[2],
+    `${ask(abc).identity} — the block changed under the athlete`);
+  ok('and it says so',
+    ask(abc).reason === 'restored_recorded_selection', ask(abc).reason);
+
+  /* Sam's confirmed equipment ruling: never retain an impossible exercise. */
+  const withoutRecorded = abc.filter((id) => id !== abc[2]);
+  ok('but an exercise that is no longer LEGAL is not handed back',
+    ask(withoutRecorded).identity !== abc[2], ask(withoutRecorded).identity);
+  ok('and the replacement is itself legal',
+    withoutRecorded.includes(ask(withoutRecorded).identity),
+    ask(withoutRecorded).identity);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[18] PHASE PREFERENCE ORDERS THE CANDIDATES, WHATEVER ORDER THEY ARRIVE IN');
+
+{
+  /* The candidate list is deliberately handed over WORST-FIRST. Without the
+   * phase preference the owner would take conventional Deadlift. */
+  const worstFirst = ['Deadlift', 'Trap Bar Deadlift', 'RDLs'].map(composedIdentityFor);
+  const pre = walk({ blocks: 1, legalCandidates: worstFirst, role: 'main_bilateral' });
+  ok('pre-season prefers RDLs even when Deadlift is offered first',
+    pre[0] === composedIdentityFor('RDLs'), pre[0]);
+  const inSeason = walk({
+    blocks: 2, legalCandidates: worstFirst, role: 'main_bilateral', phase: 'In-season',
+  });
+  ok('and in-season anchors to RDLs from the same worst-first list',
+    inSeason.every((n) => n === composedIdentityFor('RDLs')), inSeason.join(' → '));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[19] AN ACCESSORY NEVER REPEATS ITSELF BACK TO BACK');
+
+{
+  /* Over enough blocks every option has been used, so "least recently used" is
+   * no longer decided by a never-used candidate — which is exactly where a
+   * missing "not the one I just did" filter shows up. */
+  const two = ['A', 'B'].map(composedIdentityFor);
+  const seq = walk({ blocks: 6, legalCandidates: two, role: 'accessory' });
+  const repeats = seq.filter((name, i) => i > 0 && name === seq[i - 1]);
+  ok('an accessory changes at EVERY new block, even with only two options',
+    repeats.length === 0, seq.join(' → '));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[20] THE HISTORY CARRIER — REPLACE A BLOCK, NEVER APPEND IT');
+
+{
+  freshSelectionHistory();
+  const row = (identity: string): BlockExerciseSelection => ({
+    blockNumber: 2,
+    blockStartISO: '2026-08-03',
+    slot: 'hinge' as never,
+    group: null,
+    role: 'main_bilateral',
+    identity: composedIdentityFor(identity),
+  });
+  recordBlockSelections('2026-08-03', [row('RDLs')]);
+  recordBlockSelections('2026-08-03', [row('Deadlift')]);
+  const stored = blockSelectionHistory().filter((e) => e.blockStartISO === '2026-08-03');
+  ok('re-recording a block REPLACES its rows — one block, one answer',
+    stored.length === 1,
+    `${stored.length} rows for one block — an appended history makes one block look like several `
+    + 'and poisons "least recently used"');
+  ok('and the surviving row is the LATEST answer',
+    stored[0]?.identity === composedIdentityFor('Deadlift'),
+    String(stored[0]?.identity));
+  freshSelectionHistory();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[21] A TODAY-ONLY EXCLUSION SUBSTITUTES THE SESSION, NEVER THE BLOCK');
+
+{
+  /*
+   * Sam, 2026-08-17: *"A today-only exclusion changes only the affected session
+   * and must not replace the stored block selection."*
+   *
+   * Driven through the REAL composer so the two legality scopes are the ones
+   * production uses: `excludedIdentities` spans the week, `excludedIdentitiesByDate`
+   * lands on exactly one date.
+   */
+  freshSelectionHistory();
+  const baseline = build({ blockNumber: 1, record: true });
+  const baseHinge = rowsOf(baseline).find((r) => r.mainSlot === 'hinge')?.name;
+  ok('the world programmed a bilateral hinge — liveness',
+    !!baseHinge, String(baseHinge));
+
+  const recorded = blockSelectionHistory().find((e) => e.slot === 'hinge');
+  ok('and the BLOCK SELECTION was recorded',
+    recorded?.identity === composedIdentityFor(String(baseHinge)),
+    `${String(recorded?.identity)} vs ${String(baseHinge)}`);
+
+  /* Now exclude it for ONE DAY only, and re-author the same block. */
+  freshSelectionHistory();
+  const withDayExclusion = generateProgramLocally(athlete(), {
+    todayISO: BLOCK_STARTS[0],
+    blockNumber: 1,
+    recordSelections: true,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+    athletePrefs: {
+      excluded: [],
+      pinned: [],
+      /* ⚠ THE COMPLETE RECORD. An earlier version omitted `activeThroughISO`
+       * and `blockNumber`, so `resolveWeekExclusions` never matched it, no
+       * substitution happened, and this whole cell passed on a world where
+       * nothing had been excluded at all. A FIXTURE IS A CLAIM TOO. */
+      exclusions: [{
+        exercise: String(baseHinge),
+        scope: 'today_only' as const,
+        decidedOnISO: BLOCK_STARTS[0],
+        activeThroughISO: BLOCK_STARTS[0],
+        blockNumber: 1,
+      }],
+    } as never,
+  });
+  const hingeRows = rowsOf(withDayExclusion).filter((r) => r.mainSlot === 'hinge');
+  const substituted = hingeRows.filter((r) => r.name !== String(baseHinge));
+  ok('LIVENESS — the day-scoped exclusion really did substitute one session',
+    substituted.length > 0,
+    `no row changed, so this cell would prove nothing: ${hingeRows.map((r) => r.name).join(', ')}`);
+  ok('and it changed ONLY that session — every other day keeps the base selection',
+    substituted.length === 1,
+    `${substituted.length} rows changed — a one-day answer reached beyond its day`);
+
+  const recordedAfter = blockSelectionHistory().find((e) => e.slot === 'hinge');
+  ok('the STORED BLOCK SELECTION is unchanged by a today-only answer',
+    recordedAfter?.identity === composedIdentityFor(String(baseHinge)),
+    `recorded ${String(recordedAfter?.identity)} — a one-day answer rewrote the block`);
+
+  /* Unaffected slots must be identical. */
+  const slotsOf = (p: TrainingProgram) => {
+    const out: Record<string, string> = {};
+    for (const r of rowsOf(p)) if (r.mainSlot && !out[r.mainSlot]) out[r.mainSlot] = r.name;
+    return out;
+  };
+  const before = slotsOf(baseline);
+  const after = slotsOf(withDayExclusion);
+  const moved = Object.keys(before).filter((k) => k !== 'hinge' && before[k] !== after[k]);
+  ok('and every UNAFFECTED slot is identical',
+    moved.length === 0,
+    moved.map((k) => `${k}: ${before[k]} → ${after[k]}`).join(' | '));
+  freshSelectionHistory();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */

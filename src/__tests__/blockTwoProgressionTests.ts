@@ -146,6 +146,7 @@ function build(
   sessionFeedback: Record<string, SessionFeedback>,
 ): TrainingProgram {
   return generateProgramLocally(athlete(), {
+    recordSelections: true,
     todayISO,
     blockNumber,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },

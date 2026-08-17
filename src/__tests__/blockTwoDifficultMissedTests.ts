@@ -188,6 +188,7 @@ const WELL_RECOVERED = block1({});
 
 function build(sessionFeedback: Record<string, SessionFeedback>): TrainingProgram {
   return generateProgramLocally(athlete(), {
+    recordSelections: true,
     todayISO: BLOCK_2_START,
     blockNumber: 2,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },
