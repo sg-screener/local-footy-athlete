@@ -56,6 +56,9 @@ export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   'back_extension_bench',
   'dip_bars',
   'rings_trx',
+  // 2026-08-17: askable at last, because Sam's own sheet requires it for
+  // `Bear Carry`. Commercial = all, so it lands here and nowhere else.
+  'sandbag',
 ];
 
 const CURRENT_CHECKLIST_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
@@ -261,6 +264,8 @@ export function equipmentTagsForRequirement(
   }
   if (/^(dip_bars|dip_station|parallel_bars)$/.test(normalized)) return ['dip_bars'];
   if (/^(rings_trx|rings|trx|suspension_trainer)$/.test(normalized)) return ['rings_trx'];
+  // Sam wrote "sand bag / dead ball" on his sheet; both spellings are one tick.
+  if (/^(sandbag|sand_bag|dead_ball|deadball|sandbag_dead_ball)$/.test(normalized)) return ['sandbag'];
   if (/^(dumbbell|dumbbells|db)$/.test(normalized)) return ['dumbbells'];
   if (/^(cable|cables|cable_machine)$/.test(normalized)) return ['cables'];
   if (/^(machine|machines|leg_press|hamstring_curl|knee_extension)$/.test(normalized)) {
@@ -553,6 +558,84 @@ export function resolveEquipmentAvailability(
   dateISO?: string,
 ): EquipmentTag[] {
   return resolveEquipmentCapabilities(profile, constraints, dateISO).tags;
+}
+
+/**
+ * ── THE ONE EQUIPMENT OWNER, AND WHY IT ANSWERS PER DAY ────────────────────
+ *
+ * The mission's derivation, in its own words: *"permanent profile → minus active
+ * dated-away removals → minus current-session removals, for that session only"*.
+ * The first two halves are this function; the third is the session door, which
+ * writes no fact by design (R-072).
+ *
+ * **THE PERMANENT ANSWER AND THE DATED ONE ARE RETURNED SEPARATELY, and that
+ * separation is the whole point.** They used to be one list: every caller asked
+ * `resolveEquipmentCapabilities(profile, constraints, oneDate)` and got a single
+ * flat kit with no way to tell a permanent answer from a five-day holiday. The
+ * composer then recorded a trip's substitute as the athlete's permanent rotation
+ * history, because a flat list cannot say *"this one expires"*.
+ *
+ * ⚠ **A WEEK IS ONE ANSWER AND A TRIP IS A DATE RANGE, so a week resolved at one
+ * date is wrong by construction.** Measured 2026-08-17
+ * (`npm run trace:equipment-scopes`, boundary B3): booting on the Thursday of a
+ * Wednesday-to-Sunday trip, `resolveEquipmentCapabilities` answered 3 tags for
+ * that Thursday while the composer — asking at the WEEK START — received all 19,
+ * inside the same run. The athlete read `Back Squat` from a hotel room. Nothing
+ * was broken in either function; they were asked different questions and only
+ * one of them was the athlete's.
+ *
+ * `permanent` is deliberately resolved with NO constraints at all. That is sound
+ * rather than convenient: every equipment constraint reaching generation is
+ * projected from a `TemporaryEquipmentFact` (`equipmentProjection`), and a
+ * PERMANENT change is written to `profile.equipmentAnswer` by
+ * `commitProfileProgramTransaction` instead. There is no third writer, so
+ * "profile minus nothing" IS the permanent answer.
+ */
+export interface EffectiveEquipmentWindow {
+  /** What the athlete OWNS. Decides the recorded base selection. */
+  readonly permanent: readonly EquipmentTag[];
+  /** What they can actually reach on each date in the window, keyed by ISO date. */
+  readonly byDate: Readonly<Record<string, readonly EquipmentTag[]>>;
+  /** Every tag reachable on at least ONE day of the window. */
+  readonly reachableAcrossWindow: readonly EquipmentTag[];
+  /** True when some date in the window resolves to less than `permanent`. */
+  readonly hasTemporaryLoss: boolean;
+}
+
+export function resolveEffectiveEquipmentWindow(args: {
+  profile: EquipmentAvailabilityProfile;
+  constraints?: readonly unknown[] | null;
+  /** First date of the window, inclusive. */
+  fromISO: string;
+  /** Number of days the window covers. A week is 7. */
+  days: number;
+}): EffectiveEquipmentWindow {
+  const permanent = resolveEquipmentCapabilities(args.profile, [], args.fromISO).tags;
+  const permanentSet = new Set(permanent);
+  const byDate: Record<string, readonly EquipmentTag[]> = {};
+  const reachable = new Set<EquipmentTag>();
+  let hasTemporaryLoss = false;
+
+  const start = new Date(`${args.fromISO.slice(0, 10)}T12:00:00`);
+  for (let offset = 0; offset < args.days; offset += 1) {
+    const day = new Date(start);
+    day.setDate(day.getDate() + offset);
+    const dateISO = `${day.getFullYear()}-${String(day.getMonth() + 1)
+      .padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    const tags = resolveEquipmentCapabilities(args.profile, args.constraints, dateISO).tags;
+    byDate[dateISO] = tags;
+    for (const tag of tags) reachable.add(tag);
+    // A constraint can only SUBTRACT from the profile answer, so a shorter list
+    // is the whole test — no set difference is needed and none is computed.
+    if (tags.length < permanentSet.size) hasTemporaryLoss = true;
+  }
+
+  return {
+    permanent,
+    byDate,
+    reachableAcrossWindow: [...reachable],
+    hasTemporaryLoss,
+  };
 }
 
 // The baseline-equipment save door (saveBaselineEquipmentSelection and its

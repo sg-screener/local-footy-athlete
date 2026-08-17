@@ -52,7 +52,19 @@ export type EquipmentTag =
   | 'ab_wheel'
   | 'back_extension_bench'
   | 'dip_bars'
-  | 'rings_trx';
+  | 'rings_trx'
+  // ── THE KIT SAM'S OWN SHEET REQUIRED AND NOBODY COULD BE ASKED ABOUT ──
+  //
+  // `EXERCISE_EQUIPMENT_REQUIREMENT["Bear Carry"] = ['sandbag']` — his answer,
+  // transcribed from `docs/EXERCISE_EQUIPMENT_FOR_SAM.md`, where he wrote
+  // "sand bag / dead ball". The word had no tag, so `exerciseIsAvailableWith`
+  // asked for a thing no athlete could ever own and **Bear Carry was refused on
+  // every kit forever, silently.**
+  //
+  // It survived the both-directions vocabulary gate because that gate derives
+  // from FIVE authored sources and Sam's sheet was not one of them — see
+  // `rules/equipmentVocabulary.ts`, where the sheet is now read FIRST.
+  | 'sandbag';
 
 export type InjuryTag =
   | 'shoulder'

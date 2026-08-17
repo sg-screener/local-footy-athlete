@@ -49,6 +49,10 @@ const ALL_ASKABLE_TAGS: readonly AskableEquipmentTag[] = [
   // which is Sam's ruling that they are commercial-gym kit.
   'rack', 'trap_bar', 'swiss_ball', 'ab_wheel', 'back_extension_bench',
   'dip_bars', 'rings_trx',
+  // 2026-08-17. `Bear Carry` requires it on Sam's signed sheet and no athlete
+  // could say they owned one. Commercial = all, so it is pre-ticked HERE and on
+  // no other preset — club and home keep their signed lists exactly.
+  'sandbag',
 ];
 
 export const EQUIPMENT_LOCATION_PRESETS: readonly EquipmentLocationPreset[] = [

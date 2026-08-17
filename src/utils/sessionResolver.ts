@@ -38,6 +38,7 @@ import type {
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
 import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import { composeAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
@@ -638,7 +639,7 @@ function getEffectiveGameDates(
   centerDate: string,
   windowDays: number = 10,
 ): Set<string> {
-  return effectiveGameDatesAround({
+  const dates = effectiveGameDatesAround({
     markedDays: state.markedDays || {},
     usualGameDay: state.usualGameDay,
     gameDay: state.gameDay,
@@ -646,6 +647,44 @@ function getEffectiveGameDates(
     centerDate,
     windowDays,
   });
+  /* ── R-020 ON THE READ SIDE: A TRIP TAKES THE FIXTURE WITH IT ─────────────
+   *
+   * The VIRTUAL fixture above is re-derived from `gameDay` + In-season, so it
+   * reappears for every Saturday forever — including Saturdays the athlete is a
+   * thousand kilometres away. The plan side already removes it
+   * (`weeklySchedulerInputs.clubInputsAfterTravel`); without this the two sides
+   * disagree, and the disagreement is not cosmetic.
+   *
+   * ⚠ **MEASURED, AND IT COST THE ATHLETE A WHOLE STRENGTH DAY.** 2026-08-17,
+   * `npm run trace:equipment-scopes` B2: the composer authored a full lower day
+   * on the Friday of a trip — `Goblet Squat`, `RDLs` (a MAIN LIFT), `Cossack
+   * Squat`, `Single-Leg RDL`, `Band Pallof Press` — and the athlete was shown a
+   * **Gunshow**, because `applyGameProximity` saw a phantom Saturday fixture,
+   * called that Friday G−1, and displaced the day. §18 had already counted
+   * those rows, so the week that was JUDGED and the week that SHIPPED disagreed
+   * about a main lift.
+   *
+   * Sam ruled the boundary himself: *"If you're away, you're not playing … the
+   * game on the 15th should be removed … but the next saturday the 22nd game is
+   * still alive"*. Only dates INSIDE a live span are dropped.
+   *
+   * ⚠ **AN EXPLICIT CALENDAR MARK IS NOT AN EXEMPTION, AND TRYING TO MAKE IT
+   * ONE SPLIT THE APP IN TWO.** The first version of this filter kept a marked
+   * fixture — "a mark is the athlete's own word" — and the plan side
+   * (`clubInputsAfterTravel`) drops fixtures inside a span whether marked or
+   * not. So the two sides disagreed about the same Saturday: the PLAN built a
+   * normal week with a Friday lower day, and the READ side then called that
+   * Friday G−1 and replaced it with a Gunshow. Measured — weekday 5 lost
+   * `Goblet Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press`,
+   * caught by `test:equipment-scopes` [19b].
+   *
+   * A mark says a fixture EXISTS; it does not say the athlete is in the country
+   * for it. Being away is the later, narrower fact and it wins on both sides.
+   * The span owner is the shared `awaySpans.ts`, so the plan side and the read
+   * side now give one answer. */
+  const spans = awaySpansFromFacts(state.temporarySourceFacts);
+  if (spans.length === 0) return dates;
+  return new Set([...dates].filter((date) => !dateIsInsideAwaySpan(date, spans)));
 }
 
 /**
@@ -1084,6 +1123,51 @@ function section18TierFour(args: {
     .map((finding) => `${finding.code}:${finding.domain}`);
   const byDay = new Map<number, Workout>();
   for (const workout of result.visibleWorkouts) byDay.set(workout.dayOfWeek, workout);
+  /* ── THE BOUNDARY: A PROJECTION MAY NOT DELETE AUTHORED WORK ───────────────
+   *
+   * Tier 4 at read is a CONFORMING pass. It may reshape a day and it may not
+   * empty one, because the session it would empty was authored by the composer,
+   * stored in the accepted program, and counted by §18 on the way in.
+   *
+   * ⚠ **MEASURED, AND IT COST THE ATHLETE A WHOLE SESSION.** 2026-08-17, a
+   * mid-week trip on dumbbells and bands, Friday `2026-08-14`:
+   *
+   *     composer        day 5 lower_hinge, 5 rows, RDLs classified main_strength
+   *     stored program  lower_hinge | Strength | 5 rows
+   *     before tier 4   lower_hinge | Strength | 5 rows
+   *     AFTER tier 4    Rest | Rest | 0 rows            <- here
+   *     screen          Rest Day
+   *
+   * The gateway handed back a Rest for that weekday and this map installed it
+   * over the athlete's session. **§18 counted those rows on the way in and the
+   * athlete never got them** — the week that was JUDGED and the week that
+   * SHIPPED disagreed about a main lift.
+   *
+   * **THE ONLY THING THAT MAY EMPTY A DAY IS A DECISION, AND A DECISION IS
+   * TYPED.** `userRemovalConstraints` and `removalDecisions` are the athlete's
+   * own emptying decisions and they already reach this function; a day either
+   * carries one or it keeps its work. This is the precedence the comment below
+   * already states for the `!day.workout` case — *"tier 4 runs last; last is not
+   * highest"* — applied to the case it did not cover: the day that still HAS
+   * work.
+   *
+   * Nothing is special-cased. The rule reads the SHAPE of the conformed answer,
+   * never a weekday, a session name or a kit. */
+  const authorisedRemovalDates = new Set<string>([
+    ...(args.state.userRemovalConstraints ?? []),
+    ...(args.state.removalDecisions ?? []),
+  ].flatMap((constraint) => {
+    const raw = constraint as unknown as { date?: unknown; dates?: unknown };
+    const dates = Array.isArray(raw.dates) ? raw.dates : [];
+    return [...dates, raw.date]
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.slice(0, 10));
+  }));
+  const carriesWork = (workout: Workout | null | undefined): boolean => !!workout
+    && ((workout.exercises ?? []).length > 0
+      || !!workout.conditioningBlock
+      || !!workout.speedBlock
+      || hasPowerRow(workout));
   return args.days.map((day) => {
     // TIER 4 RUNS LAST; LAST IS NOT HIGHEST.
     // Tier 1 — the emptying decision — outranks it, so a day already emptied by
@@ -1091,6 +1175,12 @@ function section18TierFour(args: {
     // installed onto it.
     if (!day.workout) return day;
     const conformed = byDay.get(day.dayOfWeek);
+    // A day the conforming pass dropped entirely, or answered with an empty
+    // shell, KEEPS the work it already had — unless a typed decision names it.
+    if (!carriesWork(conformed) && carriesWork(day.workout)
+      && !authorisedRemovalDates.has(day.date)) {
+      return day;
+    }
     if (!conformed) return buildDay(day.date, day.dayOfWeek, args.today, null, 'rest');
     return conformed === day.workout
       ? day
@@ -1202,6 +1292,46 @@ function applyInjuryFilterPass(
  * correct, so the live path converges onto it and the accepted stack does not
  * move. See `rules/dayPrecedence.ts` for the full reasoning.
  */
+/* ── WHY THERE IS NO READ-SIDE PER-DAY EQUIPMENT SCOPING HERE ──────────────
+ *
+ * `withAthleteKitForDate` lived here from 2026-08-17 and was DELETED the same
+ * day, after being PROVEN INERT rather than assumed so. It re-resolved
+ * `AthleteContext.equipmentTags` for each date so that every builder inside one
+ * date resolution got that day's kit.
+ *
+ * **THE PROOF IT IS REDUNDANT, MEASURED BOTH WAYS.** With it disabled: the
+ * ten-world equipment trace is BYTE-IDENTICAL, the five printed weeks are
+ * BYTE-IDENTICAL, and `test:equipment-scopes` 24/0, `test:away-flow` 51/0,
+ * `test:away-span-ownership` 8/0, `test:exercise-exclusions` 52/0,
+ * `test:scenarios` 62/3 and `print:week` are all unchanged. Nothing anywhere
+ * observed it.
+ *
+ * **AND THE REASON IS CAUSAL, NOT JUST EMPIRICAL — three routes, all closed:**
+ *   1. STRENGTH content is composed at GENERATION against the per-day kit
+ *      (`composeWeek`'s `temporaryKitByDayOfWeek`), and a projection may no
+ *      longer replace a composer-authored session, so no read-side producer
+ *      authors strength rows over a composed day.
+ *   2. The G−1 Gunshow — the one read-side producer that ever authored
+ *      kit-sensitive rows inside a trip — cannot land there: a fixture inside a
+ *      live span is gone (`getEffectiveGameDates`), and when the fixture is
+ *      OUTSIDE the span its G−1 falls on a Rest template that proximity leaves
+ *      alone. That was the `Tricep Pushdown`-in-a-hotel route and it is shut.
+ *   3. `freedByTheTrip` authors CONDITIONING, whose machine choice is governed
+ *      by the modality owner and the substitution policy, not by
+ *      `AthleteContext.equipmentTags`.
+ *
+ * ⚠ **WHAT WOULD REQUIRE IT BACK, so this is a decision and not an amnesia:**
+ * any read-side producer that authors STRENGTH or ACCESSORY rows on a date
+ * inside a live equipment span — a proximity rule that displaces onto a
+ * non-empty day, a freed-slot `prehab_accessories` reachable during a trip, or
+ * an athlete-added session composed at read time. The moment one exists, the
+ * week-level `equipmentTags` is wrong for it again, and the fix is this
+ * function restored at this seam — not a filter at the producer.
+ *
+ * A guard is not left behind for a deleted function: the property that matters
+ * is held athlete-side by `test:equipment-scopes` [16]/[21], which walk every
+ * VISIBLE row against that day's kit and would red on any such producer
+ * whatever authored it. */
 function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const { currentProgram, manualOverrides, markedDays } = state;
   const currentMicrocycle = selectMicrocycleForDate(

@@ -36,6 +36,7 @@ import { CONDITIONING_TEMPLATES, MODALITY_RENDERING_RULES } from '../data/condit
 import type { ConditioningModality } from '../data/conditioningTemplates';
 import { equipmentClassFor } from '../utils/loadEstimation';
 import { equipmentTagsForRequirement } from '../utils/equipmentAvailability';
+import { equipmentRequiredFor } from '../data/exerciseEquipmentRequirement';
 import type { ConditioningEquipmentModality } from '../types/domain';
 
 export interface EquipmentRequirementSite {
@@ -93,22 +94,47 @@ const LIBRARY_MODALITY_TO_EQUIPMENT: Readonly<
 };
 
 /**
- * STRENGTH-POOL NAMES WHOSE KIT `EquipmentClass` CANNOT SAY, item 46/47.
+ * ── SAM'S SHEET IS THE AVAILABILITY ANSWER, AND IT IS READ FIRST ───────────
  *
- * The load-authority classifier answers a LOAD question — how to round a
- * weight — so its vocabulary is six wide (`barbell`, `dumbbell`, `cable`,
- * `machine`, `bodyweight`, `kettlebell`). That is the right vocabulary for
- * load and the wrong one for availability: a 45° back extension is not a
- * machine, and calling it `bodyweight` told the checklist nobody needs to own
- * one. **This map is the availability answer, and it is read INSTEAD of the
- * class — not merged with it, so there is exactly one answer per name.**
+ * ⚠ **`STRENGTH_NAME_TO_TAG` LIVED HERE AND IS DELETED. NOTHING MOVED — ITS ONE
+ * ROW WAS ALREADY IN THE SHEET.** It held `'Back Extension': 'back_extension_bench'`
+ * and `EXERCISE_EQUIPMENT_REQUIREMENT` says exactly that. It was a local patch
+ * for a general defect, and its own docstring named the general defect: *"the
+ * load-authority classifier answers a LOAD question … the right vocabulary for
+ * load and the wrong one for availability"*. That is R-083's conflation, and a
+ * per-name override map is the shape this repo calls an edge-case fix.
  *
- * It stays small on purpose. A name belongs here only when the kit it needs
- * has no `EquipmentClass` that means it.
+ * **THE DEFECT THE MAP COULD NOT REACH:** `Bear Carry` is a real strength-pool
+ * entry (`exercisePoolsStrength.ts:553`), Sam's sheet says it needs a
+ * `sandbag`, and `equipmentClassFor` classes it `dumbbell` because that is what
+ * you load it with. So the vocabulary asked the athlete about DUMBBELLS,
+ * `exerciseIsAvailableWith` asked the sheet for a SANDBAG, and the two never
+ * met — **Bear Carry was refused on every kit forever and the both-directions
+ * gate was blind to it**, because the gate derives from five authored sources
+ * and the sheet was not one of them.
+ *
+ * So the precedence the deleted map established for one name now holds for
+ * every name: **the sheet answers if it knows the exercise; the load class
+ * answers only when it does not.** Read INSTEAD of the class, never merged, so
+ * there is exactly one answer per name.
+ *
+ * An OR-group demands EVERY member. *"Barbell or dumbbells"* means either will
+ * satisfy the row, so the athlete must be ASKED about both — a checklist that
+ * omitted one would leave a legal exercise unreachable for an athlete who owns
+ * only the other.
  */
-const STRENGTH_NAME_TO_TAG: Readonly<Record<string, EquipmentTag>> = {
-  'Back Extension': 'back_extension_bench',
-};
+function availabilityTagsFromSheet(name: string): EquipmentTag[] | null {
+  const required = equipmentRequiredFor(name);
+  if (required === null) return null;        // not on his sheet — ask the class
+  const tags: EquipmentTag[] = [];
+  for (const entry of required) {
+    for (const raw of Array.isArray(entry) ? entry : [entry as string]) {
+      const mapped = equipmentTagsForRequirement(String(raw));
+      for (const tag of mapped ?? []) if (!tags.includes(tag)) tags.push(tag);
+    }
+  }
+  return tags;
+}
 
 const EQUIPMENT_CLASS_TO_TAG: Readonly<Record<string, EquipmentTag>> = {
   barbell: 'barbell',
@@ -184,15 +210,21 @@ export function deriveEquipmentVocabulary(): DerivedEquipmentVocabulary {
   for (const [slot, pool] of Object.entries(STRENGTH_POOLS)) {
     for (const definition of [pool.anchor, pool.accessory]) {
       for (const entry of definition.entries) {
-        // The availability override outranks the load class where one exists —
-        // see STRENGTH_NAME_TO_TAG for why the two answer different questions.
-        const override = STRENGTH_NAME_TO_TAG[entry.name];
-        if (override) {
-          demandTag(override, {
-            source: 'strength_pools',
-            exercise: `${slot}/${definition.role}: ${entry.name}`,
-            requirement: override,
-          });
+        // Sam's sheet outranks the load class wherever it knows the exercise —
+        // see `availabilityTagsFromSheet` for why the two answer different
+        // questions and which exercise proved it.
+        const fromSheet = availabilityTagsFromSheet(entry.name);
+        if (fromSheet !== null) {
+          for (const tag of fromSheet) {
+            demandTag(tag, {
+              source: 'strength_pools',
+              exercise: `${slot}/${definition.role}: ${entry.name}`,
+              requirement: tag,
+            });
+          }
+          // A sheet row of `[]` is his own convention for "needs nothing", and
+          // that IS an answer — it must not fall through to the load class,
+          // which would re-introduce the conflation for every bodyweight lift.
           continue;
         }
         const klass = equipmentClassFor(entry.name);
@@ -354,6 +386,9 @@ export const EQUIPMENT_TAG_LABELS: Readonly<Record<AskableEquipmentTag, string>>
   back_extension_bench: '45° back extension',
   dip_bars: 'Dip bars',
   rings_trx: 'Rings or TRX',
+  // Sam's own sheet wording is "sand bag / dead ball"; the label keeps the half
+  // an athlete would recognise on a gym floor.
+  sandbag: 'Sandbag',
 };
 
 export const CONDITIONING_MODALITY_LABELS: Readonly<Record<ConditioningEquipmentModality, string>> = {

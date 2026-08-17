@@ -108,8 +108,41 @@ export interface ComposerInputs {
   readonly offseasonSubphase: OffseasonSubphase | null;
   /** Calendar/fixtures, as the planner resolved them onto days. */
   readonly plannedDays: readonly ComposerPlannedDay[];
-  /** Resolved kit tags — the corrected sheet is the oracle, this is its input. */
+  /**
+   * THE ATHLETE'S **PERMANENT** KIT — what they own, not what they can reach
+   * today. The corrected sheet is the oracle; this is its input.
+   *
+   * ⚠ **THIS DECIDES THE RECORDED BASE SELECTION**, so a temporary answer must
+   * never arrive here. See `temporaryKitByDayOfWeek` for where one goes and why.
+   */
   readonly kit: readonly string[];
+  /**
+   * ── THE DATED REMOVAL, KEPT OUT OF THE RECORD ─────────────────────────────
+   *
+   * The kit actually reachable on a given weekday, present ONLY for days a dated
+   * fact has taken something off. Absent — or a day without an entry — means the
+   * permanent kit, so a world with no trip is byte-identical to before.
+   *
+   * **WHY IT IS A SECOND INPUT RATHER THAN A NARROWER `kit`.** `kit` used to be
+   * one flat list resolved at ONE date for the whole week, and this file said so
+   * in its own words: *"Equipment is deliberately in BOTH … an exercise the
+   * athlete genuinely cannot perform is replaced in the base selection rather
+   * than retained with a warning."* That is right for a PERMANENT change and
+   * wrong for a five-day holiday, and a flat list cannot tell them apart.
+   *
+   * Measured 2026-08-17 (`npm run trace:equipment-scopes`, B6 against B0) with
+   * the old single kit: an away week RECORDED `Back Squat → Goblet Squat`,
+   * `Barbell Row → Single-Arm DB Row`, `Bench Press → Single-Arm DB Floor
+   * Press`, `Bulgarian Split Squats → Cossack Squat`, `Ab Wheel → Band Pallof
+   * Press`, and lost `vertical_pull` outright — nine slots recorded instead of
+   * ten. **A holiday became the athlete's permanent rotation history.**
+   *
+   * Sam's rulings this serves: *"Temporary substitutions never become pins,
+   * exclusions or permanent rotation history"*, and *"on the return date the
+   * base legal selection returns automatically"* — which it now does with no
+   * expiry code anywhere, because the day simply stops carrying an entry.
+   */
+  readonly temporaryKitByDayOfWeek?: Readonly<Record<number, readonly string[]>>;
   readonly injuries: ComposerInjuryInput;
   /** Read to stamp the week the composed days belong to. */
   readonly todayISO: string;
@@ -177,7 +210,14 @@ export interface ComposedRow {
    */
   readonly substitutedFor?: {
     readonly baseIdentity: ComposedExerciseIdentity;
-    readonly cause: 'excluded_today';
+    /**
+     * `'kit_today'` joined `'excluded_today'` on 2026-08-17. Both are day-scoped
+     * answers that leave the record alone, and they are kept apart because they
+     * have different answers for the athlete: a dated kit loss ends by itself on
+     * the return date, an exclusion ends when the athlete restores the exercise.
+     * The same distinction `ComposedGap.cause` already draws.
+     */
+    readonly cause: 'excluded_today' | 'kit_today';
   };
 }
 
@@ -1039,6 +1079,20 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   const weekPairCounts: Record<string, number> = {
     squat: 0, hinge: 0, single_leg_knee: 0, single_leg_hip: 0 };
 
+  /* ── WHAT THIS ATHLETE CAN REACH ON A GIVEN DAY ───────────────────────────
+   * The permanent kit unless a dated fact has taken something off that day. One
+   * accessor so no site can quietly ask the wrong one of the two questions. */
+  const kitOn = (dayOfWeek: number): readonly string[] =>
+    inputs.temporaryKitByDayOfWeek?.[dayOfWeek] ?? inputs.kit;
+  /* THE WEEK'S OWN KIT — every tag reachable on at least ONE day. This is what
+   * §18 must judge required patterns against: a pattern the athlete can train on
+   * Monday is achievable this week even if Thursday is spent in a hotel, so
+   * exempting it would weaken an achievable requirement, which R-090 forbids by
+   * name. Identical to `inputs.kit` in every world with no dated removal. */
+  const weekReachableKit: readonly string[] = inputs.temporaryKitByDayOfWeek
+    ? [...new Set(inputs.plannedDays.flatMap((day) => [...kitOn(day.dayOfWeek)]))]
+    : inputs.kit;
+
   // ── WHAT THE REST OF THE WEEK SUPPLIES — COMPUTED BEFORE ANY DAY IS BUILT ──
   //
   // **R-087's "the rest of the week" INCLUDES THE DAYS AFTER, and reading it as a
@@ -1067,7 +1121,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     const excludedHere = excludedOn(planned.dayOfWeek);
     suppliedByDay.set(planned, new Set(declared.filter((slot) =>
       slotCandidates(slot).some((id) =>
-        !excludedHere.has(id) && composedRowIsLegal(id, inputs.kit)))));
+        !excludedHere.has(id) && composedRowIsLegal(id, kitOn(planned.dayOfWeek))))));
   }
   const suppliedByOtherDays = (self: ComposerPlannedDay): ReadonlySet<SessionSlot> => {
     const out = new Set<SessionSlot>();
@@ -1085,6 +1139,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // Every legality question below asks the DAY's set, never the week's, so a
     // dated exclusion applies to its own day and to no other.
     const excludedToday = excludedOn(planned.dayOfWeek);
+    // …and the same is now true of the KIT. `inputs.kit` stays the PERMANENT
+    // answer and decides what gets RECORDED; this decides what ships today.
+    const kitToday = kitOn(planned.dayOfWeek);
     // ── WHICH LADDER THIS DAY OWES ──────────────────────────────────────────
     //
     // Three cases, in this order: R-093's fixed pair, then R-087's coverage day,
@@ -1180,14 +1237,14 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     for (const declaredSlot of shapeSlots) {
       // The kit outranks the plane preference, and Sam ruled the fallback.
       const planeChoice = isFullBodyDay && OPPOSITE_PLANE[declaredSlot]
-        ? resolvePlane(declaredSlot, inputs.kit, excludedToday)
+        ? resolvePlane(declaredSlot, kitToday, excludedToday)
         : null;
       if (planeChoice) {
         for (const droppedSlot of planeChoice.dropped) {
           gaps.push({
             ...attributeGap({
               candidates: slotCandidates(droppedSlot),
-              kit: inputs.kit,
+              kit: kitToday,
               excluded: excludedToday,
             }),
             dayOfWeek: planned.dayOfWeek,
@@ -1213,13 +1270,14 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * exclusion → equipment → EXPERIENCE. Ruling 8: *"exclusions, injury,
        * equipment and experience legality outrank pins."* Experience is applied
        * last and never empties the slot (ruling 6). */
-      const legalUnder = (out: ReadonlySet<string>) => hingePriorityFirst(
-        slot,
-        experiencePreferred(
-          pool.filter((id) => !out.has(id) && composedRowIsLegal(id, inputs.kit)),
-          inputs.profile,
-        ),
-      );
+      const legalUnder = (out: ReadonlySet<string>, kit: readonly string[]) =>
+        hingePriorityFirst(
+          slot,
+          experiencePreferred(
+            pool.filter((id) => !out.has(id) && composedRowIsLegal(id, kit)),
+            inputs.profile,
+          ),
+        );
       /* ── THE BASE BLOCK SELECTION vs A TEMPORARY SUBSTITUTE ────────────────
        *
        * Sam, 2026-08-17: *"A today-only exclusion changes only the affected
@@ -1231,39 +1289,65 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * week-scoped set and is the one RECORDED; a day-scoped answer can only
        * ever swap the row on that day.
        *
-       * Equipment is deliberately in BOTH: kit legality is a property of the
-       * week, so an exercise the athlete genuinely cannot perform is replaced in
-       * the base selection rather than retained with a warning — Sam's confirmed
-       * equipment ruling. */
-      const baseLegal = legalUnder(excluded);
-      const legal = legalUnder(excludedToday);
-      if (baseLegal.length === 0 || legal.length === 0) {
+       * ⚠ **EQUIPMENT USED TO BE IN BOTH, AND THAT WAS THE DEFECT.** The comment
+       * this replaces said kit legality is *"a property of the week"*, which is
+       * true of a PERMANENT kit and false of a dated one. Both halves now take
+       * their own kit: the base against what the athlete OWNS, the day's row
+       * against what they can reach THAT DAY. A trip therefore swaps rows and
+       * records nothing, and the base returns on the return date by expiry
+       * alone — see `temporaryKitByDayOfWeek`. */
+      const baseLegal = legalUnder(excluded, inputs.kit);
+      const legal = legalUnder(excludedToday, kitToday);
+      /* ── NOTHING THIS ATHLETE COULD EVER DO HERE ───────────────────────────
+       * The PERMANENT list is empty, so the slot is not this athlete's to have
+       * and there is no base selection to record. R-083's removal, disclosed. */
+      if (baseLegal.length === 0) {
         // `resolvePlane` has already disclosed a plane it could not fill, so a
         // second gap for the same slot would double-count the same fact.
         if (!planeChoice) {
           gaps.push({
-            ...attributeGap({ candidates: pool, kit: inputs.kit, excluded: excludedToday }),
+            ...attributeGap({ candidates: pool, kit: kitToday, excluded: excludedToday }),
             dayOfWeek: planned.dayOfWeek,
             slot,
           });
         }
         continue;
       }
-      required.push(slot);
-      const fresh = legal.filter((id) => !usedThisWeek.has(id));
-      const choices = fresh.length > 0 ? fresh : legal;
+      /* ⚠ **`legal.length === 0` IS NOT HANDLED HERE, AND THAT IS THE POINT.**
+       * A slot the athlete OWNS the kit for and cannot reach TODAY still has a
+       * base selection, and skipping it here would drop that selection from the
+       * record — which is a dated answer erasing a permanent one, the exact
+       * defect this whole split exists to remove. Measured 2026-08-17 with the
+       * skip still in place: an away week recorded NINE slots instead of ten and
+       * `vertical_pull` vanished from the athlete's history because a hotel room
+       * has no pull-up bar. The decision is made and recorded below; the gap is
+       * disclosed and the ROW is dropped immediately after it. */
       // ── R-080: A REPEATED SLOT MAY NOT REPEAT ITS MUSCLE GROUP ────────────
       //
       // Only reachable when the day owes the SAME slot twice — R-093's kit
       // fallback. Preference, not a veto: if every remaining candidate shares the
       // group, the row is still authored, because R-083 disclosing a gap is one
       // thing and leaving a declared slot silently empty is another.
+      //
+      // ⚠ **IT NARROWS `baseLegal`, THE PERMANENT LIST, AND THAT MOVED HERE ON
+      // 2026-08-17.** It used to narrow `legal` — TODAY'S kit — and its result
+      // then fed the BASE decision, so a dated answer reached the record by the
+      // back door even after the kit split landed. Measured: an away week still
+      // RECORDED `accessory_or_core: Ab Wheel → Band Pallof Press`, because
+      // `Ab Wheel` survived `baseLegal` and was then filtered out for not
+      // appearing in a preference list a hotel room had built.
+      //
+      // **There is still exactly ONE variety computation.** It answers the
+      // question it was always asked — *"what else could this block pick"* — and
+      // that question is about the athlete's own kit, never about today's.
       const groupsUsedHere = groupsUsedBySlot.get(slot) ?? new Set<string>();
-      const differentGroup = choices.filter((id) => {
+      const baseFresh = baseLegal.filter((id) => !usedThisWeek.has(id));
+      const baseChoices = baseFresh.length > 0 ? baseFresh : baseLegal;
+      const baseDifferentGroup = baseChoices.filter((id) => {
         const group = POOL_GROUP_OF.get(id);
         return !group || !groupsUsedHere.has(group);
       });
-      const preferred = differentGroup.length > 0 ? differentGroup : choices;
+      const basePreferred = baseDifferentGroup.length > 0 ? baseDifferentGroup : baseChoices;
       /* ── THE ROTATION OWNER DECIDES IDENTITY. THIS LINE NO LONGER DOES. ────
        *
        * It used to be `preferred[step % preferred.length]`, where `step` is the
@@ -1313,7 +1397,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * for slots outside the main/secondary budget, exactly as before. */
       const baseCandidates = countsTowardBudget
         ? baseLegal
-        : baseLegal.filter((id) => preferred.includes(id) || preferred.length === 0);
+        : baseLegal.filter((id) => basePreferred.includes(id) || basePreferred.length === 0);
       const selection = decideExerciseForBlock({
         phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
         blockNumber: inputs.blockNumber,
@@ -1341,15 +1425,55 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           identity: selection.identity,
         });
       }
+      /* ── THE SLOT IS RECORDED; TODAY IT CANNOT BE FILLED ───────────────────
+       * The base selection above is safe in the athlete's history. This one day
+       * has no legal row for it, so the gap is disclosed and no row ships — and
+       * the slot is NOT pushed to `required`, because a slot nothing filled must
+       * not be counted as owed-and-met by the judge. */
+      if (legal.length === 0) {
+        if (!planeChoice) {
+          gaps.push({
+            // Attributed against the DAY's kit: a slot only today's kit empties
+            // is a kit gap the athlete can see the cause of, and one the
+            // permanent kit could have filled is still the kit's answer.
+            ...attributeGap({ candidates: pool, kit: kitToday, excluded: excludedToday }),
+            dayOfWeek: planned.dayOfWeek,
+            slot,
+          });
+        }
+        continue;
+      }
+      required.push(slot);
       /* ── THE TEMPORARY SUBSTITUTE ──────────────────────────────────────────
-       * The base selection stands unless THIS DAY excludes it. When it does, the
-       * best legal same-slot option takes the row for this day only, carrying a
-       * typed reason — and the record above is untouched, so the canonical
-       * selection returns by itself when the day-scoped answer expires. */
+       * The base selection stands unless THIS DAY excludes it, or this day's KIT
+       * cannot perform it. When either happens, the best option legal on today's
+       * kit takes the row for this day only, carrying a typed reason — and the
+       * record above is untouched, so the canonical selection returns by itself
+       * when the day-scoped answer expires.
+       *
+       * ⚠ **THE CAUSE IS ASKED IN THIS ORDER FOR A REASON.** An exclusion is the
+       * athlete's own decision and only they can undo it; a dated kit loss ends
+       * on the return date with nothing to remember. When BOTH are true of one
+       * row the exclusion is named, because it is the half that outlives the
+       * trip and the half the athlete can act on. */
+      /* ⚠ **THE SUBSTITUTE IS `legal[0]`, AND A "FRESHEST FIRST" VERSION OF THIS
+       * LINE WAS TRIED AND BACKED OUT THE SAME DAY.** `legal` is already ordered
+       * by `hingePriorityFirst` over `experiencePreferred`, so its head is the
+       * best row this athlete can do today. Preferring an UNUSED candidate
+       * instead shipped an Intermediate athlete `Bodyweight Squat` on a
+       * dumbbells-and-bands kit — caught by cell [4] of
+       * `test:equipment-scopes` — because `Goblet Squat`, the honest loaded
+       * answer, had been used earlier in the week and lost its freshness.
+       * Sam's ruling is the other way round: regressions are for an athlete with
+       * *"no loaded option"*, and this one had one. Week-local variety is the
+       * BASE selection's job, above; the substitute's job is the best legal row. */
       const substitutedToday = !legal.includes(selection.identity);
       const identity = substitutedToday ? legal[0] : selection.identity;
       const substitutionReason: ComposedRow['substitutedFor'] = substitutedToday
-        ? { baseIdentity: selection.identity, cause: 'excluded_today' }
+        ? {
+            baseIdentity: selection.identity,
+            cause: excludedToday.has(selection.identity) ? 'excluded_today' : 'kit_today',
+          }
         : undefined;
       usedThisWeek.add(identity);
       const chosenGroup = POOL_GROUP_OF.get(identity);
@@ -1393,7 +1517,9 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           seasonPhase: inputs.seasonPhase,
           offseasonSubphase: inputs.offseasonSubphase,
           profile: inputs.profile,
-          kit: inputs.kit,
+          // The load must be liftable with what he has THAT DAY — a barbell
+          // lattice is the wrong ladder for a dumbbell substitute.
+          kit: kitToday,
         }),
         ...(dose.qualityLimit ? { qualityLimit: dose.qualityLimit } : {}),
       });
@@ -1444,7 +1570,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       composed: days.length,
       adjustment: adjustment.length > 0 ? adjustment : null,
     },
-    kitUnachievablePatterns: kitUnachievablePatterns(inputs.kit),
+    kitUnachievablePatterns: kitUnachievablePatterns(weekReachableKit),
     selections: selectionsThisBlock,
   };
 }

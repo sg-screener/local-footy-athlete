@@ -91,6 +91,14 @@ const TAG_CLASSIFICATION: Record<EquipmentTag, 'asked' | 'always_available' | 'd
   back_extension_bench: 'asked',
   dip_bars: 'asked',
   rings_trx: 'asked',
+  // 2026-08-17. ASKED, and it is the row this classification exists for: Sam's
+  // sheet required `sandbag` for `Bear Carry` and the checklist had never heard
+  // of it, so `exerciseIsAvailableWith` asked every athlete for a thing none of
+  // them could own and the exercise was refused on every kit, forever, in
+  // silence. The gate could not see it because the derivation read five
+  // authored sources and Sam's own sheet was not one of them; it is now read
+  // FIRST (`rules/equipmentVocabulary.ts`).
+  sandbag: 'asked',
 };
 
 console.log('\n— library -> checklist (nothing authored can require an unaskable tag) —');
