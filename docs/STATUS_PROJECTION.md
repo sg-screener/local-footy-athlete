@@ -198,15 +198,54 @@ athlete through the day's gaps.
 and writing nothing — which is precisely how this surface came to have no words
 in the first place.
 
-## SECOND, SMALLER GAP — surface 5 is unproven on a real Block Two world
+## THE SECOND GAP IS CLOSED TOO — and it was hiding a real defect
 
-No print scenario crosses a block boundary. They all generate a FIRST block with
-no previous program, so `explanations` is empty on every real world and the
-agreement cell is satisfied by `empty === empty` everywhere. The wiring is
-proven by a separate fixture-driven cell, and that cell says in its own comment
-that it does not replace a real Block Two world. **The whole surface could be
-deleted today and the suite would stay green except for that one cell.** Stated
-rather than counted as coverage.
+Ordered 2026-08-17. `test:block-two-explanation-delivery` builds a REAL athlete:
+block 1 generated with its selections recorded, twelve sessions of recorded full
+completion and good recovery, then block 2 generated FROM that history — and
+asks the ATHLETE-FACING READ CHAIN (`buildProgramTabProjectedWeek` ->
+`project()`, `useSchedule.projectWeekFor`'s own two calls) what it shows.
+
+**THE MIDDLE WAS NEVER CROSSED BEFORE.** `athleteVisibleProjectionTests` proved
+the carrier with a hand-built row. `blockTwoProgressionTests` [11]/[12] proved
+the storage and the renderer. **Nothing asked the read path**, so the explanation
+could have been dropped anywhere between them with both suites green.
+
+**AND IT FOUND A DELIVERY DEFECT THAT EVERY OTHER CELL AGREED WAS FINE.** The
+athlete was shown:
+
+```
+...RDLs has moved from 100 kg to 102.5 kg...
+...RDLs has moved from 100 kg to 102.5 kg...
+...RDLs has moved from 100 kg to 102.5 kg...
+...RDLs has moved from 100 kg to 102.5 kg...
+```
+
+`blockBoundaryExplanation` stores one row PER OCCURRENCE of the lift across the
+block — four sessions, four rows — which is CORRECT for storage. It is wrong on
+the glass: one decision, told four times. **The sentence, the stored row and the
+prescribed weight all agreed perfectly and the reading was still wrong**, which
+is exactly the class of defect a storage-side or renderer-side test cannot see.
+
+Fixed at the DELIVERY layer only (`distinctExplanations` in `project()`). No
+stored row changed, no progression policy changed, and
+`blockBoundaryExplanationSentences` is untouched so the two block-two suites keep
+their exact semantics.
+
+The agreement cell was upgraded from a LIST comparison to a SET equality plus a
+no-duplicates claim — the list comparison passed while the athlete read the same
+line four times, so it was the weaker statement wearing a stronger name.
+
+**RESTART, BOTH MEANINGS.** Serialised-and-read-back re-projects identically,
+AND regenerating block 2 from the same stored inputs produces a byte-identical
+explanation and the same sentence — which is the one that matters, because this
+app regenerates on boot rather than reading a stored program back.
+
+**THE CONTROL.** An athlete with no qualifying history is shown NO sentence.
+Without that cell the suite would pass on a projection hardwired to talk.
+
+MUTATIONS: production reader removed from `project()` -> 6 cells red; dedupe
+removed -> 2 cells red.
 
 ## WORLD CENSUS — lost and gained, separately
 

@@ -807,9 +807,9 @@ export function project(args: {
 }): VisibleWeek {
   const structural = projectParts(args);
   return {
-    explanations: blockBoundaryExplanationSentences(
+    explanations: distinctExplanations(blockBoundaryExplanationSentences(
       (args.program ?? {}) as Parameters<typeof blockBoundaryExplanationSentences>[0],
-    ),
+    )),
     weekStart: structural.weekStart,
     days: structural.days.map((day, index): VisibleDay => {
       const source = args.week[index];
@@ -848,6 +848,46 @@ export function project(args: {
       };
     }),
   };
+}
+
+/**
+ * ONE DECISION IS TOLD TO THE ATHLETE ONCE.
+ *
+ * `blockBoundaryExplanation` stores one row PER OCCURRENCE of the lift across
+ * the block, which is right for storage — the boundary really did set that load
+ * on four separate sessions. It is wrong on the glass: a real rollover
+ * (`blockTwoExplanationDeliveryTests`) showed the athlete
+ *
+ *     "...RDLs has moved from 100 kg to 102.5 kg..."
+ *     "...RDLs has moved from 100 kg to 102.5 kg..."
+ *     "...RDLs has moved from 100 kg to 102.5 kg..."
+ *     "...RDLs has moved from 100 kg to 102.5 kg..."
+ *
+ * four identical lines for ONE decision. Found by the receipt Sam ordered, on a
+ * real Block 1 -> Block 2 athlete, and it is the delivery break that receipt
+ * existed to catch — the sentence, the storage and the prescription all agreed
+ * perfectly and the READING was still wrong.
+ *
+ * **THE STORED ROWS ARE NOT TOUCHED.** This is display: same decisions, each
+ * said once, in the order the explanation stored them. Deduplicated by the
+ * rendered SENTENCE rather than by exercise, because the sentence is what the
+ * athlete reads — two rows that differ in a field the sentence does not mention
+ * are one thing being said, and two rows that produce different words are two
+ * things and both survive.
+ *
+ * It is the same rule `weekRefusalSentences` already applies to refusal causes:
+ * one cause found three times is one cause, reported once.
+ */
+function distinctExplanations(sentences: readonly SignedCopy[]): readonly SignedCopy[] {
+  const seen = new Set<string>();
+  const out: SignedCopy[] = [];
+  for (const sentence of sentences) {
+    const text = String(sentence);
+    if (seen.has(text)) continue;
+    seen.add(text);
+    out.push(sentence);
+  }
+  return out;
 }
 
 /**
