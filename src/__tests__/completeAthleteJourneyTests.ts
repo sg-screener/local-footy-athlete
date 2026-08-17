@@ -203,6 +203,8 @@ interface WalkedDay {
   dateISO: string;
   weekday: string;
   sessionName: string | null;
+  /** Did the app put loggable strength work on this day? Name-independent. */
+  hadStrengthRows: boolean;
   result: string;
   detail: string | null;
 }
@@ -317,6 +319,7 @@ async function main(): Promise<void> {
     dayBefore: string[]; dayAfter: string[]; replacementLoadKg: number | null;
     selectionsBefore: number; selectionsAfter: number;
     exclusionsBefore: number; exclusionsAfter: number;
+    sigBefore: string[]; sigAfter: string[];
   } | null = null;
   const walked: WalkedDay[] = [];
   const lastDay = addDaysISO(blockOneStart, BLOCK_ONE_WEEKS * 7 - 1);
@@ -412,6 +415,10 @@ async function main(): Promise<void> {
       const exclusionsBefore = takeCensus(dateISO).activeExclusions;
       const selectionsBefore = takeCensus(dateISO).recordedSelectionCount;
       const dayBefore = (today?.rows ?? []).map((row) => row.name);
+      const sigOf = (rows: { name: string; sets: number | null; repsMin: number | null;
+        repsMax: number | null; weightKg: number | null }[]): string[] => rows
+        .map((row) => `${row.name}|${row.sets}|${row.repsMin}-${row.repsMax}|${row.weightKg}`);
+      const sigBefore = sigOf(today?.rows ?? []);
 
       for (const row of candidateRows) {
         const offered = swapOptionsFor({
@@ -457,6 +464,8 @@ async function main(): Promise<void> {
           selectionsAfter: takeCensus(dateISO).recordedSelectionCount,
           exclusionsBefore,
           exclusionsAfter: takeCensus(dateISO).activeExclusions,
+          sigBefore,
+          sigAfter: sigOf(afterDay?.rows ?? []),
         };
       }
     }
@@ -466,15 +475,26 @@ async function main(): Promise<void> {
       dateISO,
       weekday: weekdayName(dateISO),
       sessionName: outcome.sessionName,
+      hadStrengthRows: (resolvedDays(mondayOf(dateISO))
+        .find((day) => day.dateISO === dateISO)?.rows ?? []).length > 0,
       result: outcome.result,
       detail: 'detail' in outcome ? outcome.detail ?? null : null,
     });
   }
 
-  // COUNTED DURING THE WALK, because after the rollover the store is in block 2
-  // and re-resolving a block-1 week returns nothing — the live-state trap.
-  const offeredStrengthSessions = walked.filter((day) => day.result === 'recorded'
-    || day.result === 'not_recorded').filter((day) => day.sessionName === 'full_body').length;
+  /**
+   * COUNTED DURING THE WALK, because after the rollover the store is in block 2 and
+   * re-resolving a block-1 week returns nothing — the live-state trap.
+   *
+   * ⚠ **COUNTED BY ROWS, NOT BY THE DAY'S NAME.** This filtered on
+   * `sessionName === 'full_body'` and silently fell to 0 the moment the athlete
+   * substituted an exercise: the canonicaliser legitimately renames a day from its
+   * final content (`final_content_owns_name`), so a name-keyed counter measures the
+   * app's naming, not the athlete's training. Club nights and the fixture carry no
+   * strength rows, so counting rows separates them without naming anything.
+   */
+  const offeredStrengthSessions = walked.filter((day) => (day.result === 'recorded'
+    || day.result === 'not_recorded') && day.hadStrengthRows).length;
 
   const recorded = walked.filter((day) => day.result === 'recorded');
   const refused = walked.filter((day) => day.result === 'refused');
@@ -646,6 +666,63 @@ async function main(): Promise<void> {
       && substitution.replacementLoadKg !== substitution.outgoingLoadKg,
     `the replacement came in at ${substitution?.replacementLoadKg}kg, which is exactly what `
     + `${substitution?.from} was loaded at (${substitution?.outgoingLoadKg}kg)`,
+  );
+
+  /**
+   * EVERY UNRELATED ROW IS BYTE-IDENTICAL — name, sets, rep range AND load.
+   *
+   * The earlier version of this compared NAMES only, which would pass while a
+   * swap quietly re-dosed the rest of the session. The whole defect this action
+   * uncovered was unrelated rows being rewritten, so the claim has to be about the
+   * rows' full content, and only the swapped row may differ.
+   */
+  const untouchedBefore = (substitution?.sigBefore ?? [])
+    .filter((sig) => !sig.startsWith(`${substitution?.from}|`));
+  const untouchedAfter = (substitution?.sigAfter ?? [])
+    .filter((sig) => !sig.startsWith(`${substitution?.to}|`));
+  console.log(`    unrelated rows before: ${JSON.stringify(untouchedBefore)}`);
+  console.log(`    unrelated rows after : ${JSON.stringify(untouchedAfter)}`);
+
+  ok(
+    `EVERY UNRELATED ROW IS BYTE-IDENTICAL across the substitution${suffix}`,
+    !substitutionLanded
+    || JSON.stringify(untouchedBefore) === JSON.stringify(untouchedAfter),
+    `before ${JSON.stringify(untouchedBefore)}\n  after  ${JSON.stringify(untouchedAfter)}`,
+  );
+
+  ok(
+    `the substitution replaced EXACTLY ONE row${suffix}`,
+    !substitutionLanded
+    || (substitution!.sigBefore.length === substitution!.sigAfter.length
+      && untouchedBefore.length === substitution!.sigBefore.length - 1),
+    `${substitution?.sigBefore.length} rows before, ${substitution?.sigAfter.length} after`,
+  );
+
+  /**
+   * THE REPLACEMENT TOOK ITS OWN AUTHORED ESTIMATE.
+   *
+   * Sam: *"otherwise its authored starting estimate"*. `startingWeightForAthlete`
+   * is the authored owner and reads only the exercise and the athlete's own
+   * squat/bench answers — **it cannot see the outgoing exercise**, which is what
+   * makes this the opposite of inheritance rather than a coincidence that the two
+   * numbers differ.
+   */
+  const authoredEstimate = quiet(() => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { startingWeightForAthlete } = require('../utils/loadEstimation');
+    return startingWeightForAthlete(String(substitution?.to ?? ''), theAthlete());
+  }) as number | null;
+  console.log(`    ${substitution?.to} authored estimate for this athlete: ${authoredEstimate}kg`
+    + ` · prescribed after the swap: ${substitution?.replacementLoadKg}kg`
+    + ` · the outgoing ${substitution?.from} was ${substitution?.outgoingLoadKg}kg`);
+
+  ok(
+    `AN UNSEEN REPLACEMENT USES ITS OWN AUTHORED ESTIMATE${suffix}`,
+    !substitutionLanded
+    || (typeof authoredEstimate === 'number' && authoredEstimate > 0
+      ? substitution!.replacementLoadKg === authoredEstimate
+      : substitution!.replacementLoadKg === null),
+    `prescribed ${substitution?.replacementLoadKg}kg, authored estimate ${authoredEstimate}kg`,
   );
 
   // Capture block 1's last week WHILE THE STORE IS STILL IN BLOCK 1.
@@ -1105,6 +1182,34 @@ async function main(): Promise<void> {
     'the exclusion survives the block boundary as an active decision',
     liveExclusions > 0,
     `${liveExclusions} active exclusions after the rollover — the decision was dropped`,
+  );
+
+  /**
+   * NEXT BLOCK ROTATES NORMALLY, UNAFFECTED BY THE TEMPORARY SWAP.
+   *
+   * Sam: a substitution *"does not become a pin, exclusion or future-block
+   * selection"*. The pin and exclusion halves are asserted at the moment of the
+   * swap; this is the third — block 2 must not be built around the substituted-in
+   * exercise just because the athlete used it for one day.
+   *
+   * The claim is deliberately NOT "the replacement is absent from block 2": normal
+   * rotation is free to choose it on its own merits, and asserting absence would
+   * make a legitimate rotation look like a defect. What must not exist is a
+   * SELECTION RECORD created by the swap — that is what would carry it forward, and
+   * the count was already proven unmoved at the moment of the substitution.
+   */
+  const blockTwoNamesForRotation = new Set(blockTwoVisible.days
+    .flatMap((day) => day.rows.map((row) => row.name)));
+  console.log(`    block 2 contains the substituted-in ${substitution?.to}? `
+    + `${blockTwoNamesForRotation.has(String(substitution?.to))} `
+    + `(either answer is legal — what matters is that no selection record carried it)`);
+
+  ok(
+    `the temporary swap left NO future-block selection behind${suffix}`,
+    !substitutionLanded
+    || substitution!.selectionsBefore === substitution!.selectionsAfter,
+    `block-selection records moved ${substitution?.selectionsBefore} -> `
+    + `${substitution?.selectionsAfter} across a one-day substitution`,
   );
 
   // ═════════════════════════════════════════════════════════════════════════

@@ -816,6 +816,57 @@ export function progressedFromOwnHistory(args: {
   return smallestPracticalIncrementKg(args.exerciseName, recorded) !== null;
 }
 
+/**
+ * WHAT LOAD A REPLACEMENT EXERCISE STARTS AT — one owner, two readers.
+ *
+ * **Sam's correction, 2026-08-18:** *"Do not make every replacement automatically
+ * blank. The replacement exercise owns its load: 1. its own recorded
+ * history/override; 2. otherwise its authored starting estimate; 3. otherwise
+ * blank/bodyweight default. It must never inherit the outgoing exercise's load."*
+ *
+ * That is the SAME ladder `decideBlockBoundaryLoads` walks for a rotated-in lift,
+ * so it is lifted here and both call it — the mid-block substitution door
+ * (`replaceExerciseAtDate`) and the block boundary. The alternative is the rule
+ * written twice and drifting, which is the defect class this repo fights.
+ *
+ * ⚠ **THE OUTGOING EXERCISE IS NOT AN INPUT AND CANNOT BE.** There is no
+ * parameter by which the row being replaced could reach this function, which is
+ * how *"Bench Press and Close-Grip Bench, RDL and Glute Bridge … remain separate"*
+ * is held — by construction, not by a branch that chooses not to look.
+ *
+ * `undefined` means UNSET: the athlete chooses, and the weight control stays.
+ */
+export function loadForReplacementExercise(args: {
+  exerciseName: string;
+  onboardingData?: OnboardingData | null;
+  /** Every load this athlete has recorded, by exact canonical exercise name. */
+  recordedLoadByExercise?: Readonly<Record<string, number>>;
+}): number | undefined {
+  const name = args.exerciseName;
+  if (!name) return undefined;
+
+  // ── 1. ITS OWN RECORDED HISTORY WINS, ALWAYS ──
+  // The exact-exercise load-ownership rule, untouched: a movement the athlete has
+  // loaded before resumes at their number, however long ago they last did it.
+  const recorded = args.recordedLoadByExercise?.[name];
+  if (typeof recorded === 'number' && Number.isFinite(recorded) && recorded > 0) {
+    return recorded;
+  }
+
+  // ── 2. AUTHORED AS UNLOADED — BW IS THE DEFAULT, NOT A PROHIBITION ──
+  const authority = resolveLoadAuthority(name);
+  if (authority.kind === 'bodyweight' || authority.kind === 'athlete_chosen') return undefined;
+
+  // ── 3. SAM'S AUTHORED ANCHOR ESTIMATE, from the athlete's own answers ──
+  const estimate = args.onboardingData
+    ? startingWeightForAthlete(name, args.onboardingData)
+    : null;
+  if (typeof estimate === 'number' && Number.isFinite(estimate) && estimate > 0) return estimate;
+
+  // ── 4. NOTHING HONEST TO SAY. THE ATHLETE CHOOSES. ──
+  return undefined;
+}
+
 export function decideBlockBoundaryLoads(args: {
   history: BlockHistorySignal;
   nextBlockWorkouts: readonly Workout[];

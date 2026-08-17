@@ -572,7 +572,102 @@ above — or an artefact of where this harness calls
 defect on one measurement. It is its own unit and it wants a tape that writes,
 flushes and reads back `sessionFeedback` alone, with nothing else moving.
 
-## ⚠ ACTION 1 IS THE NAMED BLOCKER — NO ORDINARY SUBSTITUTION CAN LAND
+## ✅ ACTION 1 IS DONE — THE SWAP WALL WAS ONE LINE IN THE OWNERSHIP BOUNDARY
+
+`npm run test:athlete-journey` — **40 passed, 0 failed.**
+
+### THE ROOT CAUSE, TRACED PROPOSAL -> VISIBLE PROGRAM
+
+`resolveStrengthOwnershipBoundary` (`rules/strengthPatternContributions.ts`) asks
+who owns a day's strength. Its second arm read:
+
+```ts
+if (input.strengthIntent || input.hasMatchedPlanEntry || …) return 'typed_no_strength'
+```
+
+The journey's day is `sched:2026-07-20:1:full_body`. **It MATCHES its plan entry,
+carries NO `strengthIntent` and NO `strengthPatternContributions`, and holds five
+classified main-strength rows.** So the matched-plan arm fired, `typed_no_strength`
+was returned, and the `hasCanonicalMainStrengthRows` arm below it was never reached
+— even though the day is visibly five main lifts.
+
+`finaliseWorkoutAfterMutation` then deletes every `strength_main` row with reason
+**`modern_plan_has_no_strength_ownership`**. Measured, before any change:
+
+```
+Leg Press -> Bodyweight Squat
+  proposed        : [Bodyweight Squat, Single-Leg RDL, Bench Press, Pull-Ups, Band Pallof Press]
+  per-workout only: [Bodyweight Squat, Single-Leg RDL, Band Pallof Press]
+  actions: row_removed Bench Press  reason=modern_plan_has_no_strength_ownership
+           row_removed Pull-Ups     reason=modern_plan_has_no_strength_ownership
+```
+
+**IT IS DORMANT UNTIL AN EDIT.** `finaliseWorkoutAfterMutation` only runs on
+mutation, so generation and every gate stayed green while the contradiction
+between *"the plan names no strength"* and *"the day is five main lifts"* sat
+unasked. It was asked for the first time when the athlete tapped swap.
+
+**THE FIX:** the rows are the stronger evidence and now win — `typed_no_strength`
+requires that there be no canonical main-strength rows. A club night or a rest day
+has none, so every legitimate `typed_no_strength` world resolves exactly as before,
+and the conditioning arms are untouched. **Nothing is weakened and no compatibility
+logic was added.**
+
+### THE LOAD AUTHORITY IS ONE OWNER WITH TWO READERS
+
+`loadForReplacementExercise` (`rules/blockBoundaryProgression.ts`): own recorded
+history -> authored starting estimate -> blank/bodyweight. The same ladder
+`decideBlockBoundaryLoads` walks, lifted so the mid-block swap door and the block
+boundary cannot drift. **The outgoing exercise is not a parameter and cannot be**,
+which is how *"Bench Press and Close-Grip Bench, RDL and Glute Bridge remain
+separate"* is held by construction.
+
+Measured: `Pull-Ups (0 kg) -> Single-Arm Lat Pulldown` lands at **30 kg — its own
+authored estimate for this athlete**, not Pull-Ups' 0 kg.
+
+### PROVEN
+
+| claim | result |
+| --- | --- |
+| a legal swap lands | **WORKING** — `Pull-Ups -> Single-Arm Lat Pulldown`, 1 of 9 refusals became 8 of 9 landing |
+| unrelated rows byte-identical | **WORKING** — name, sets, rep range AND load compared |
+| exactly one row replaced | **WORKING** |
+| outgoing load cannot transfer | **WORKING** |
+| unseen replacement uses its authored estimate | **WORKING** — 30 kg |
+| not a pin / not an exclusion | **WORKING** |
+| no future-block selection | **WORKING** |
+
+### MUTATIONS
+
+| # | mutation | red |
+| --- | --- | --- |
+| M9 | ownership boundary reverted — plan-says-no-strength outranks the rows | ✅ |
+| M10 | replacement inherits the outgoing row's load again | ✅ 2 cells |
+| M11 | the collateral-loss refusal removed | **SURVIVED — and the guard was REMOVED because of it** |
+
+**M11 IS THE INTERESTING ONE.** My earlier collateral-loss refusal was right about
+the symptom and became UNREACHABLE once the cause was fixed: deleting it changed
+nothing in any world this journey can produce. **An authority no test can reach is
+an untested second opinion about the same question**, so it is gone rather than
+kept "as a backstop". One owner.
+
+### BLAST RADIUS — AND IT REPAIRED SOMETHING ELSE
+
+Sweep: **155 of 403 vs base 156 of 402. GAINED: 0. And ONE suite red at base is now
+GREEN** — `test:coach-add-session-ownership`, base **3 passing / 1 failing** ->
+branch **4 passing / 0 failing**. A shared-rule fix that repairs an unrelated
+pre-existing failure is corroboration the rule was wrong, not just inconvenient.
+
+### STILL OPEN, ONE LEDGER LINE
+
+**The swap OPTION LIST does not consult the day's pattern validity.**
+`getTapSwapChoices` offers `Bodyweight Squat` for `Leg Press` at tier
+`same_movement_pattern`; taking it costs the day its squat pattern and the
+validator then restores a squat, leaving SIX rows. The other three rows on the day
+swap cleanly. Not chased — the app disagreeing with itself about what it may offer
+is its own unit.
+
+## ⚠ SUPERSEDED — the blocker text below is FIXED; kept so the diagnosis is not re-bought
 
 `npm run test:athlete-journey` — **35 passed, 1 failed.** The 30 pre-existing
 checks and the process-restart proof all still hold; the single red is ACTION 1.
