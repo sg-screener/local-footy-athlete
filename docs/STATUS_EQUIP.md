@@ -791,3 +791,65 @@ central caveat of the merge verdict below.
 - Nothing has been seen on glass.
 - The two `test:composer-b1` reds and the `test:edge-generation-equipment` red on
   base are recorded, not diagnosed. Both are unchanged by slice 1.
+
+
+---
+
+# MERGE VERDICT
+
+**MERGE THE BRANCH, WITH ONE NAMED FOLLOW-UP HELD OPEN.**
+
+Base `6b617847` → `bb952170`, six commits, branch `feat/equipment-scopes`.
+
+## WHY MERGE
+
+The branch takes the away/equipment flow from **broken in three ways that reach
+the athlete** to **a week that builds, ships legal work, and leaves his history
+alone**:
+
+| | base `6b617847` | now |
+| --- | --- | --- |
+| a trip with a full gym | **NO WEEK AT ALL** (§18 refused it) | publishes |
+| the athlete's own lifts on a club night inside a trip | **six deleted** | kept |
+| a five-day holiday | **rewrote his permanent rotation history** | records nothing |
+| `Bear Carry` | **refused on every kit, forever, silently** | legal when a sandbag is ticked |
+| `test:away-flow` | **THREW — no cells at all** | 51 / 0 |
+| illegal rows on an away day | `Tricep Pushdown` in a hotel | **0 of 115 rows, 10 worlds** |
+
+**No world was lost.** `test:ladder-wide` 140 worlds / 40 refused / 0 deficient
+of 368, `test:scenarios` 62/3 with the same three, `print:week` the same two
+refusals, `test:compile` 468 with the same six pre-existing failures and **zero
+added**, `test:law-registry` 21 UNENFORCED — **the ratchet never rose.**
+
+Three laws entered guarded, each mutation-proven:
+`LAW-temporary-equipment-never-permanent`,
+`LAW-away-removes-the-club-not-the-athlete`,
+`LAW-every-authored-requirement-is-askable`.
+
+## WHY NOT A CLEAN MERGE — THE ONE THING TO WEIGH
+
+**Slice 5's two read-side changes are `BUILT`, not `WORKING`.** They are correct
+and the trace proves them under mutation; **`test:equipment-scopes` does not hold
+them**, and three attempts to close that gap failed inside the cap. If the rule
+here is "nothing merges unguarded", **hold slice 5 (`bb952170`) and merge the
+five commits below it** — slices 1–4 are fully guarded and independently
+valuable, and `bb952170` touches only `sessionResolver`, the suite and docs.
+
+## WHAT MERGING DOES NOT FIX — THE ATHLETE STILL LOSES A DAY
+
+On a dumbbells-only trip the program **stores** `day 5 lower_hinge, 5 rows`
+including a main lift, and the athlete **reads Rest Day**. He trains one day
+fewer than the composer authored. Located to the read side; not to a function.
+**This is the first thing the next session should take**, and it is the same
+class as slice 5: a read-side authority overriding composer-owned content.
+
+An athlete away with **no equipment at all** still gets no week
+(`main_strength_planner_selected_target` 4 vs 3). That is R-090's parked
+territory and the fence forbids weakening §18 to reach it.
+
+## NOT COVERED
+
+Nothing has been seen on glass. The session scope (`applySessionEquipment`)
+writes no fact by design (R-072) and is not exercised here. Of the mission's 15
+proof worlds, 10 are covered by the trace; the session-change worlds (2 and 3)
+and the injury+away combination (14) are not.
