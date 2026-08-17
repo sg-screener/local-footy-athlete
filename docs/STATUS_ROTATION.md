@@ -381,7 +381,51 @@ They are NOT re-aimed because re-aiming needs a world that contains a loaded
 accessory AND Pull-Ups, and choosing one carelessly is how three fixture defects
 already entered this mission. That is the next honest piece of work.
 
-## MERGE VERDICT
+## FIRST TRACE (REDESIGN) — THERE IS NO SELECTION-HISTORY OWNER
+
+Ordered before any redesign coding. Driven through the REAL boot
+(`rebuildDerivedWorld`), not argued from the code.
+`scripts/trace-selection-history.ts`.
+
+| question | answer |
+| --- | --- |
+| **A.** boot with UNCHANGED inputs | identities return **identical** |
+| **B.** boot after the athlete's equipment answer changed | **REWRITTEN** |
+| **C.** any identity in durable storage | **NONE** |
+
+**B is the finding.** The athlete builds a block on a commercial-gym answer, then
+loses the rack before relaunching. The block they already accepted comes back
+changed underneath them:
+
+```
+hinge:  Trap Bar Deadlift  →  Deadlift
+squat:  Front Squat        →  Leg Press
+```
+
+**Nothing was reloaded — it was re-derived.** `program-store`'s `partialize`
+persists exactly six keys — `generationAnchorISO`, `seasonPhaseClock`,
+`sessionFeedback`, `weightOverrides`, `temporarySourceFacts`, `injuryEpisodes` —
+and **no selected exercise name appears anywhere in the persisted bytes.**
+Identities survive a boot today only because replay happens to be deterministic
+*when nothing changed*. Change one legality fact and the past is rewritten.
+
+That is precisely the failure the redesign order names: *"Do not infer the
+previous selection by replaying the current candidate list: equipment, injury and
+preferences may have changed, and replay would rewrite history."*
+
+**No canonical owner exists to reuse.** The decision ledger is append-only and
+typed to ATHLETE decisions (`AthleteDecision`); a block's selected exercises are
+the app's decision, not the athlete's. So a typed `BlockExerciseSelection` record
+has to be added, storing the decision — block identity, slot/group, role,
+canonical identity — and never another program snapshot.
+
+## MERGE VERDICT (SUPERSEDED — see the redesign order)
+
+⚠ The verdict below covers the CURSOR implementation, which Sam has ruled must
+not merge. It is kept because its gate numbers are still the baseline the
+redesign is measured against.
+
+
 
 **MERGE THE ROTATION OWNER. DO NOT MERGE THE TEN STALE CELLS AS-IS.**
 
