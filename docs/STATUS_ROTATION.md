@@ -132,12 +132,121 @@ must be judged individually before any merge is proposed:
 
 Nothing is being rewritten to green until each is judged on its own.
 
-## NOT COVERED YET
+## SESSION 2 — THE TWO SUSPECTED REGRESSIONS, AND THREE DEFECTS IN MY OWN WORK
 
-- Guard suite + mutation proofs (proofs 1-15).
-- The four-block tables for the dumbbell/partial-kit athlete.
-- Naming every production function that can still rewrite identity AFTER the
-  decision (materialise → assemble → finalise → canonicalise chain).
-- Whether to delete the dead `selectPoolEntry` family and its suite.
-- `hinge/anchor` is absent entirely in block 3 of the traced world — presence, not
-  identity. Unexamined; may be day composition, not rotation.
+**[1] "the week SHAPE is untouched" — REFUTED.** That assertion keys rows by
+`week:workoutName:EXERCISE NAME`. `scripts/probe-day-shape.ts` strips the names:
+**28 sessions both sides, skeletons identical, rows-per-day identical.** The only
+difference is Deadlift (retained) vs RDLs (rotated). No day moved.
+
+**[2] "a REAL generated session sits EXACTLY on the 16-set ceiling" — REAL, and
+it is rung 1 of that suite firing for the first time.**
+
+```
+base:  Leg Press:4 Single-Leg RDL:4 Incline DB Bench:4 Single-Arm Pulldown:4 = 16
+after: Goblet Squat:4 Single-Leg RDL:4 Bench Press:3   Chin-Ups:3            = 14
+```
+
+Nothing lost a set — two lifts stopped being GIVEN one, because they now progress
+by LOAD, and that suite's own rule is *"never both on one lift in one rollover"*.
+Under the week-keyed selector a main lift could not survive into block 2, so it
+never had its own history and the load rung **could not fire**. Swept 24
+phase × days × experience worlds: off-season peaks at 14/15, every pre-season and
+in-season world still reaches 16. The fixture moved off-season → pre-season.
+
+### THREE DEFECTS THIS SESSION WERE MINE, FOUND BY MY OWN INSTRUMENTS
+
+1. **A mutation reddened NOTHING.** The "pin outranks the two-block maximum"
+   mutation walked straight through: the cell pinned a name the cap does not act
+   on, so it passed for the wrong reason. Rewritten to run the cap's own scenario
+   twice — once with every candidate pinned — and demand the same answer. The
+   mutation now reds.
+2. **THE PARTIAL-KIT FIXTURE WAS MALFORMED.** `EquipmentAnswer.tags` is a RECORD
+   of `tag -> 'have'`; I passed an ARRAY. The answer resolved to no kit, so the
+   "dumbbell athlete" was silently a BODYWEIGHT athlete and every partial-kit
+   cell was testing the wrong world. `a-fixture-is-a-claim-too`.
+3. **MAIN/SECONDARY WAS THE WRONG SIGNAL, AND IT HID A PRODUCT DEFECT.** I keyed
+   "is this a main lift" off the pool's ANCHOR bench. Every anchor is a barbell
+   lift, so a partial-kit athlete has no anchor rows and those cells compared an
+   empty set to itself. The app's own line is `slotCountsTowardSetBudget` — what
+   `countMainSecondarySets` counts. Switching to it immediately red on
+   `single_leg_knee`, `vertical_push` and `vertical_pull` **still changing every
+   week inside one block**, because they are not the day's primary row for a
+   planned pattern and fell to the accessory cadence. Fixed in `composeWeek`.
+
+### AND ONE PRODUCT DEFECT THE PARTIAL-KIT TABLE EXPOSED
+
+The dumbbell athlete's `hinge` slot has TWO legal options. Block 1 took RDLs,
+block 2 retained it, and **block 3's cadence index wrapped straight back to
+RDLs** — the cap "fired" and the athlete got a third consecutive block anyway.
+The cap now REMOVES the exercise it is dropping from the walk instead of stepping
+one index past it.
+
+## MUTATION RECEIPTS — `bash scripts/mutate-rotation.sh`
+
+Seven mutations, all red. The suite is 38/38 and every cell has been seen fail.
+
+| mutation | reddens |
+| --- | --- |
+| main lifts rotate weekly again (the original defect) | 4 cells, both athletes |
+| the deload advances the cadence | accessory deload hold |
+| the two-block maximum is removed | 4 cells |
+| a pin outranks the two-block maximum | 2 cells |
+| retention ignores history, always keeps | 3 cells incl. its control |
+| the pin bias is dropped | the pin control |
+| an empty legal list invents a row | the typed-gap refusal |
+
+## GATES — BASE `dda2747d` vs THIS BRANCH
+
+| suite | base | now | delta |
+| --- | --- | --- | --- |
+| `test:compile` | 6 failing pairs | 6 failing pairs | **0 — red on `main` itself** |
+| `test:exercise-exclusions` | 51 / 0 | 51 / 0 | 0 |
+| `test:pools` | 473 / 1 | 473 / 1 | 0 (pre-existing) |
+| `test:ladder-wide` | 13 / 1 | 13 / 1 | 0 (pre-existing) |
+| `test:block-two-boot-preservation` | — | 20 / 0 | 0 |
+| `test:equipment-answer` | — | 41 / 0 | 0 |
+| `test:block-two-ladder` | 51 / 1 | 49 / **3** | **+2** |
+| `test:block-two-progression` | 37 / 0 | 32 / **5** | **+5** |
+| `test:block-two-difficult-missed` | 88 / 0 | 84 / **4** | **+4** |
+| `test:block-two-screen-delivery` | 35 / 0 | 34 / **1** | **+1** |
+| `test:exercise-rotation` (new) | — | **38 / 0** | new |
+
+**12 NEW REDS, NOT ONE OF THEM REWRITTEN.** They share two signatures:
+
+- **`ABSENT_ROW`** — Deadlift/Pull-Ups are no longer in block 2 for an athlete
+  whose history does not qualify. Contract-correct: *"most exercises normally
+  rotate at a new build block"*; the old expectation was an artefact of the
+  week-keyed cadence landing on Deadlift by coincidence.
+- **the ladder's set rung has nothing to land on** — with every compound lift now
+  block-stable and retained, all six progressed by LOAD, so no lift is eligible
+  for a set. Contract-correct ("load first, set second"), but it leaves that
+  rung's world without a subject.
+
+⚠ **A TENSION WORTH SAM'S EYE, NOT A BUG.** Retention fires whenever the lift
+progressed, which for a consistent athlete is ALWAYS — so every compound lift is
+kept for exactly two blocks and then rotated, in lockstep. The contract permits
+this (*"may remain for a second consecutive block"*, *"maximum is two"*) and
+accessories still rotate weekly, so *"most exercises change"* still holds by row
+count. **The four-block tables show this rhythm plainly and it is the thing to
+look at first.**
+
+## NOT COVERED
+
+- **The 12 new reds are not adjudicated cell by cell.** They are explained and
+  classified above, and NONE has been rewritten. That is session 3's work and it
+  must be per-cell, not a bulk sweep.
+- **The dead `selectPoolEntry` family is still standing.** Burn the Boats is
+  scoped to a legacy selector that EXECUTES and rewrites or rejects the new owner.
+  Measured: it has zero production callers, so it rewrites nothing and there is
+  no boat under way to burn. Deleting it would also take `test:pools` (473 cells)
+  with it. **Recommendation: delete in its own commit, not folded into this one.**
+- **The post-decision rewrite audit is empirical, not exhaustive.** Cell [11]
+  proves no generated program in this suite carries a `ex-canonical-*` repair row
+  and no repair-path placeholder name. `workoutCanonicalisation.fallbackPatternRow`
+  is the one identity-minting function found; it is a repair path and does not
+  execute on generation. The full materialise → assemble → finalise chain has NOT
+  been read line by line.
+- Proof 13 (an ordinary substitution may rotate back later and creates no
+  exclusion) has no cell yet.
+- No simulator/device pass. Everything here is headless.

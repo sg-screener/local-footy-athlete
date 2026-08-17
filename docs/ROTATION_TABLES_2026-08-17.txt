@@ -1,0 +1,44 @@
+
+
+════ FULL-GYM ATHLETE — Pre-season, 3 training days, full kit ════
+slot            | block 1        | deload         | block 2        | block 3        | block 4        | decision at b2→b4          | load source
+------------------------------------------------------------------------------------------------------------------------------------------------------
+hinge           | Deadlift       | Deadlift       | Deadlift       | Hip Thrusts    | Hip Thrusts    | retained → rotated → reta… | own recorded history
+horizontal_pull | Barbell Row    | Barbell Row    | Barbell Row    | Single-Arm DB… | Single-Arm DB… | retained → rotated → reta… | own recorded history
+horizontal_push | Bench Press    | Bench Press    | Bench Press    | Close Grip Be… | Close Grip Be… | retained → rotated → reta… | own recorded history
+single_leg_hip  | Single-Leg RDL | —              | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | retained → retained → ret… | own recorded history
+single_leg_knee | Bulgarian Spl… | Bulgarian Spl… | Bulgarian Spl… | Lateral Lunge  | Reverse Lunges | retained → rotated → rota… | own recorded history
+squat           | Goblet Squat   | Goblet Squat   | Goblet Squat   | Bodyweight Sq… | Goblet Squat   | retained → rotated → rota… | own recorded history
+vertical_pull   | Lat Pulldown   | —              | Lat Pulldown   | Single-Arm La… | Single-Arm La… | retained → rotated → reta… | own recorded history
+vertical_push   | DB Shoulder P… | DB Shoulder P… | DB Shoulder P… | Half-Kneeling… | Half-Kneeling… | retained → rotated → reta… | own recorded history
+
+  loads by block (kg):
+    hinge: Deadlift=97.5  |  Deadlift=100  |  Hip Thrusts=87.5  |  Hip Thrusts=90
+    horizontal_pull: Barbell Row=75  |  Barbell Row=77.5  |  Single-Arm DB Row=30  |  Single-Arm DB Row=32.5
+    horizontal_push: Bench Press=87.5  |  Bench Press=90  |  Close Grip Bench=77.5  |  Close Grip Bench=80
+    single_leg_hip: Single-Leg RDL=17.5  |  Single-Leg RDL=20  |  Single-Leg RDL=22.5  |  Single-Leg RDL=25
+    single_leg_knee: Bulgarian Split Squats=25  |  Bulgarian Split Squats=27.5  |  Lateral Lunge=0  |  Reverse Lunges=25
+    squat: Goblet Squat=27.5  |  Goblet Squat=30  |  Bodyweight Squat=0  |  Goblet Squat=32.5
+    vertical_pull: Lat Pulldown=60  |  Lat Pulldown=62.5  |  Single-Arm Lat Pulldown=30  |  Single-Arm Lat Pulldown=32.5
+    vertical_push: DB Shoulder Press=20  |  DB Shoulder Press=22.5  |  Half-Kneeling Single-Arm Overhead Press=20  |  Half-Kneeling Single-Arm Overhead Press=22.5
+
+
+════ PARTIAL-KIT ATHLETE — Pre-season, 3 training days, dumbbells + bodyweight ════
+slot            | block 1        | deload         | block 2        | block 3        | block 4        | decision at b2→b4          | load source
+------------------------------------------------------------------------------------------------------------------------------------------------------
+hinge           | RDLs           | RDLs           | RDLs           | RDLs           | RDLs           | retained → retained → ret… | own recorded history
+horizontal_pull | Chest Support… | Chest Support… | Chest Support… | Chest-Support… | Chest-Support… | retained → rotated → reta… | own recorded history
+horizontal_push | DB Bench Press | DB Bench Press | DB Bench Press | Single-Arm DB… | Single-Arm DB… | retained → rotated → rota… | own recorded history
+single_leg_hip  | Single-Leg RDL | —              | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | retained → retained → ret… | own recorded history
+single_leg_knee | Bulgarian Spl… | Bulgarian Spl… | Bulgarian Spl… | Lateral Lunge  | Reverse Lunges | retained → rotated → rota… | own recorded history
+squat           | Goblet Squat   | Goblet Squat   | Goblet Squat   | Goblet Squat   | Goblet Squat   | retained → retained → ret… | own recorded history
+vertical_push   | DB Shoulder P… | DB Shoulder P… | DB Shoulder P… | Half-Kneeling… | Half-Kneeling… | retained → rotated → reta… | own recorded history
+
+  loads by block (kg):
+    hinge: RDLs=85  |  RDLs=87.5  |  RDLs=90  |  RDLs=92.5
+    horizontal_pull: Chest Supported Row=30  |  Chest Supported Row=32.5  |  Chest-Supported DB Row=22.5  |  Chest-Supported DB Row=25
+    horizontal_push: DB Bench Press=30  |  DB Bench Press=32.5  |  Single-Arm DB Bench Press=30  |  Single-Arm DB Floor Press=22.5
+    single_leg_hip: Single-Leg RDL=0  |  Single-Leg RDL=17.5  |  Single-Leg RDL=20  |  Single-Leg RDL=22.5
+    single_leg_knee: Bulgarian Split Squats=25  |  Bulgarian Split Squats=27.5  |  Lateral Lunge=0  |  Reverse Lunges=25
+    squat: Goblet Squat=27.5  |  Goblet Squat=30  |  Goblet Squat=32.5  |  Goblet Squat=35
+    vertical_push: DB Shoulder Press=20  |  DB Shoulder Press=22.5  |  Half-Kneeling Single-Arm Overhead Press=22.5  |  Half-Kneeling Single-Arm Overhead Press=25

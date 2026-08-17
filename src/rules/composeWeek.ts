@@ -40,6 +40,7 @@ import {
   type ComposedExerciseIdentity,
 } from './composedRowLegality';
 import { decideRotation } from './exerciseRotation';
+import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
 import type { MainStrengthPattern, StrengthIntent } from './strengthPatternContributions';
 import {
   STRENGTH_POOLS,
@@ -1097,9 +1098,25 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * put the block-stability clause out of reach again. Variety within a week
        * remains the accessory's job, which is the freedom the contract gives it
        * and withholds from main lifts. */
+      /* ⚠ **"MAIN AND SECONDARY" IS THE SET BUDGET'S ANSWER, NOT `isMainLift`.**
+       *
+       * `isMainLift` above means "the day's FIRST row for this pattern" — one
+       * row per pattern per day. The contract's *"main and secondary exercises
+       * are stable throughout their block"* is a wider set than that, and the
+       * app already draws the line: `slotCountsTowardSetBudget` is what
+       * `countMainSecondarySets` counts, and it deliberately excludes
+       * accessories and core.
+       *
+       * Measured with `isMainLift` driving the cadence: `single_leg_knee`,
+       * `vertical_push` and `vertical_pull` still changed every week inside one
+       * block, because their rows are not the day's primary row for a planned
+       * pattern and so fell to the accessory cadence. They count toward the
+       * session's main/secondary budget, so the athlete meets them as real work
+       * and must meet the SAME one all block. */
+      const stableForBlock = slotCountsTowardSetBudget(slot);
       const rotation = decideRotation({
-        legalCandidates: isMainLift ? legal : preferred,
-        isMainLift,
+        legalCandidates: stableForBlock ? legal : preferred,
+        isMainLift: stableForBlock,
         blockNumber: inputs.blockNumber,
         weekInBlock: inputs.weekInBlock,
         isDeloadWeek: inputs.isDeloadWeek,
