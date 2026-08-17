@@ -25,16 +25,26 @@
 
 **Conditioning**
 
-- Classic 4×4 — 4 × 1
-  - Hard means honest pace, not a sprint you can't hold for 4 minutes — round 4 should match round 1. 90–100% MAS; HR 90–95% max late
+- Steady Blocks (3×8 min or 4×6 min) — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
+  - Steady, not surging — find a pace you could hold for the full block. 65–75% MAS, easy-moderate — steady, not surging
 
 ## Tuesday 11 August
 
 ### Training Day
 
-**Team Training**
+**Strength**
 
-_(the club runs this one — the app lists nothing for it)_
+- Barbell Row — 3 × 6-12
+  - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
+- Lat Pulldown — 3 × 8-10
+  - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
+- Band Pull-Apart — 2 × 8-10
+  - Squeeze the shoulder blades together. Elbows straight, controlled return.
+
+**Conditioning**
+
+- Classic 4×4 — 4 × 1
+  - Hard means honest pace, not a sprint you can't hold for 4 minutes — round 4 should match round 1. 90–100% MAS; HR 90–95% max late
 
 ## Wednesday 12 August
 
@@ -63,11 +73,6 @@ _(the club runs this one — the app lists nothing for it)_
 - Banded Dead Bug — 2 × 8-12
   - Band behind head, pull band with straight arms toward knees, ribs down. Lower back stays glued to the floor.
 
-**Conditioning**
-
-- Continuous Aerobic Run — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
-  - Steady the whole way — if you're racing the last 10 minutes, you started too easy. 65–80% MAS; 70–85% HRmax; conversational
-
 ## Friday 14 August
 
 ### Training Day
@@ -89,9 +94,13 @@ _(nothing on this day)_
 
 ## Sunday 16 August
 
-### Rest Day
+### Training Day
 
-_(nothing on this day)_
+**Conditioning**
+
+- Warm-up — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
+- 10 m Acceleration Reps — 8 × 1
+  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
 
 ---
 
@@ -101,9 +110,10 @@ None. Every word on this page came out of the app.
 
 ## Things wrong with this week
 
-**Every set on this page is written as a range — 13 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 6-8" should read "3 × 7"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
+**Every set on this page is written as a range — 16 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 6-8" should read "3 × 7"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
 
-**2 lines that does not say how much work to do:**
+**3 lines that does not say how much work to do:**
 
+- Monday 10 August — Steady Blocks (3×8 min or 4×6 min) — the app says "1 × 1"
 - Wednesday 12 August — Warm-up — the app says "1 × 1"
-- Thursday 13 August — Continuous Aerobic Run — the app says "1 × 1"
+- Sunday 16 August — Warm-up — the app says "1 × 1"
