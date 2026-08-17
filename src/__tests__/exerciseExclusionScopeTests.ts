@@ -48,6 +48,7 @@ const durable = new Map<string, string>();
 };
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+import { COMPOSER_ROTATION_DEFAULTS } from './support/composerRotationDefaults';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { useProgramStore } from '../store/programStore';
@@ -468,6 +469,7 @@ async function main(): Promise<void> {
       })(),
     },
     todayISO: BLOCK_2_START,
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   ok('and the composer may still choose the original — it was not banned',
     (stillSelectable.days[0]?.rows ?? []).length > 0
@@ -491,6 +493,7 @@ async function main(): Promise<void> {
     kit: ['barbell', 'dumbbells', 'bench', 'machine', 'cables', 'bodyweight'],
     injuries: { prohibitedPatterns: [], excludedIdentities: [] },
     todayISO: BLOCK_2_START,
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   const beforeRow = beforeSlots.days[0]?.rows[0];
   const afterSlots = composeWeek({
@@ -509,6 +512,7 @@ async function main(): Promise<void> {
       excludedIdentities: beforeRow ? [beforeRow.identity] : [],
     },
     todayISO: BLOCK_2_START,
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   const afterRow = afterSlots.days[0]?.rows.find((row) => row.slot === beforeRow?.slot);
   ok('the excluded row is replaced by another exercise IN THE SAME SLOT',
@@ -545,6 +549,7 @@ async function main(): Promise<void> {
       excludedIdentities: EVERY_SQUAT_IDENTITY,
     },
     todayISO: BLOCK_2_START,
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   const squatGap = exhaustive.gaps.find((g) => g.slot === slot);
   ok('a gap IS disclosed for the emptied slot',

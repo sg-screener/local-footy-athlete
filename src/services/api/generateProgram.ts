@@ -27,6 +27,7 @@ import {
   decideBlockBoundaryLoads,
   decideBlockBoundarySetAdditions,
   decideBlockBoundaryVolume,
+  progressedFromOwnHistory,
   readBlockHistory,
   snapshotAuthoredSets,
   type BlockBoundaryConditioningAdvance,
@@ -34,6 +35,7 @@ import {
   type BlockBoundaryLiftDecision,
   type BlockBoundaryVolumeDecision,
 } from '../../rules/blockBoundaryProgression';
+import { composedIdentityFor } from '../../rules/composedRowLegality';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
   onboardingToCoachingInputs,
@@ -745,6 +747,15 @@ export function buildGeneratedMicrocycles(args: {
   blockNumber?: number;
   seasonPhaseClock: SeasonPhaseClock;
   athletePrefs: AthletePoolPrefsArg;
+  /**
+   * Identities the athlete trained and earned a rise on, per
+   * `blockBoundaryProgression.progressedFromOwnHistory`. The ONLY history fact
+   * `rules/exerciseRotation.ts` reads, and the contract's *"main and secondary
+   * lifts may remain for a second consecutive block when progression, comfort
+   * and technical continuity justify it"*. Absent = nothing recorded, so every
+   * slot rotates, which is the contract's default.
+   */
+  progressedIdentities?: readonly string[];
   availableEquipmentTags: readonly EquipmentTag[];
   availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
@@ -1030,6 +1041,16 @@ export function buildGeneratedMicrocycles(args: {
             ...composerExclusionInput(args.athletePrefs, blockState.weekStart),
           },
       todayISO: blockState.weekStart,
+      /* ── THE ROTATION OWNER'S INPUTS. See `rules/exerciseRotation.ts`. ──────
+       * Selection is keyed by the BLOCK, so the block identity that was already
+       * resolved here has to reach the composer. It was not passed before, which
+       * is why the composer fell back to the phase WEEK number and a main lift
+       * changed every week. */
+      blockNumber: blockState.miniCycleNumber ?? 1,
+      weekInBlock: blockState.weekInBlock ?? 1,
+      isDeloadWeek: effectiveWeekKind === 'deload',
+      pinnedIdentities: (args.athletePrefs?.pinned ?? []).map(composedIdentityFor),
+      progressedIdentities: args.progressedIdentities ?? [],
     });
     // ⚠ THE HANDOVER. Composer rows are MATERIALISED straight into domain
     // workouts and NEVER enter `buildWorkoutsFromCoach`. The retained adapter
@@ -1482,6 +1503,30 @@ export function generateProgramLocally(
 
   const startDate = new Date(blockStart + 'T12:00:00');
   const endDate = new Date(blockEnd + 'T12:00:00');
+  /* ── WHICH LIFTS THE ATHLETE EARNED A RISE ON, READ FROM RECORDED HISTORY ──
+   *
+   * `rules/exerciseRotation.ts` retains a main lift for a second consecutive
+   * block only when the EXISTING progression decision supports it. That decision
+   * is `blockBoundaryProgression`'s, and its `history_progressed` condition is
+   * exported as `progressedFromOwnHistory` precisely so rotation reads it rather
+   * than owning a second copy.
+   *
+   * `decideBlockBoundaryLoads` itself cannot be asked here: it takes the next
+   * block's WORKOUTS, and rotation is what decides which exercises are in them. */
+  const rotationPreviousBlock = previousBlockBoundsISO(blockStart);
+  const rotationHistory = readBlockHistory({
+    feedbackByDate: options.progressionHistory?.sessionFeedback ?? {},
+    // THE BLOCK THAT JUST ENDED — the same window the load boundary reads. The
+    // recorded LOADS are not windowed by it (a lift that sat out a block keeps
+    // its own number); only the completion/recovery gate is.
+    blockStartISO: rotationPreviousBlock.startISO,
+    blockEndISO: rotationPreviousBlock.endISO,
+    requiredStrengthSessions: Math.max(1, plan.coreSessions * WEEKS_PER_BLOCK),
+  });
+  const progressedIdentities = Object.keys(rotationHistory.lastRecordedLoadByExercise)
+    .filter((exerciseName) => progressedFromOwnHistory({ exerciseName, history: rotationHistory }))
+    .map(composedIdentityFor);
+
   const microcycles = buildGeneratedMicrocycles({
     coachWorkouts: [],
     plan,
@@ -1493,6 +1538,7 @@ export function generateProgramLocally(
     blockNumber: options.blockNumber ?? 1,
     seasonPhaseClock: phaseResolution.clock,
     athletePrefs: options.athletePrefs ?? getAthletePrefs(),
+    progressedIdentities,
     availableEquipmentTags: resolvedEquipmentTags,
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,

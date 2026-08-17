@@ -39,6 +39,7 @@ import {
   composedRowIsLegal,
   type ComposedExerciseIdentity,
 } from './composedRowLegality';
+import { decideRotation } from './exerciseRotation';
 import type { MainStrengthPattern, StrengthIntent } from './strengthPatternContributions';
 import {
   STRENGTH_POOLS,
@@ -101,6 +102,28 @@ export interface ComposerInputs {
   readonly injuries: ComposerInjuryInput;
   /** Read to stamp the week the composed days belong to. */
   readonly todayISO: string;
+  /**
+   * ── WHAT THE ROTATION OWNER NEEDS. See `rules/exerciseRotation.ts`. ────────
+   *
+   * Selection is keyed by the BLOCK, so the composer has to know which block it
+   * is building. `phaseClock.weekNumber` above cannot answer it: it advances
+   * every week, which is exactly the defect the rotation owner replaced.
+   */
+  /** 1-based block number. A deload shares its build block's number. */
+  readonly blockNumber: number;
+  /** 1-based week inside the block. */
+  readonly weekInBlock: number;
+  /** A deload holds the current block's exercises rather than rotating them. */
+  readonly isDeloadWeek: boolean;
+  /** The athlete's canonical pinned preferences, as composed identities. */
+  readonly pinnedIdentities: readonly ComposedExerciseIdentity[];
+  /**
+   * Identities `blockBoundaryProgression.progressedFromOwnHistory` says the
+   * athlete trained and earned a rise on. The rotation owner reads this one fact
+   * as the contract's *"progression, comfort and technical continuity justify
+   * it"*. It rules nothing new; it reads the existing decision.
+   */
+  readonly progressedIdentities: readonly ComposedExerciseIdentity[];
 }
 
 // ─── OUTPUT ────────────────────────────────────────────────────────────────
@@ -812,8 +835,11 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // Variety is a property of the WEEK: a day repeating last night's lift is the
   // shape Bible `:227` names to avoid.
   const usedThisWeek = new Set<ComposedExerciseIdentity>();
-  // Week 1 takes the authored first choice; later weeks walk the same order.
-  const step = Math.max(0, inputs.phaseClock.weekNumber - 1);
+  // ⚠ THE WEEK-KEYED SELECTOR IS GONE, NOT WRAPPED. It read
+  // `const step = phaseClock.weekNumber - 1` and indexed the candidate list with
+  // it, which is why a main lift changed every week. `rules/exerciseRotation.ts`
+  // owns the index now; leaving `step` here as a fallback would be the second
+  // authority the mission forbids.
   // Sam's full-body shape, decided once for the WEEK — see its own docstring.
   // ⚠ **A DISPLACED PAIR IS NOT A PAIR.** R-093's A/B shapes only make sense as a
   // PAIR that between them cover the body. When a prohibition forces one of the
@@ -1057,7 +1083,30 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         return !group || !groupsUsedHere.has(group);
       });
       const preferred = differentGroup.length > 0 ? differentGroup : choices;
-      const identity = preferred[step % preferred.length];
+      /* ── THE ROTATION OWNER DECIDES IDENTITY. THIS LINE NO LONGER DOES. ────
+       *
+       * It used to be `preferred[step % preferred.length]`, where `step` is the
+       * PHASE WEEK NUMBER — so a main lift changed every week and the contract's
+       * *"main and secondary exercises are stable throughout their block"* was
+       * unreachable. See `rules/exerciseRotation.ts` for the measured before.
+       *
+       * ⚠ **A MAIN LIFT IS ASKED AGAINST `legal`, NOT `preferred`.** The
+       * `usedThisWeek` and muscle-group narrowings above are WEEK-LOCAL variety:
+       * they differ from day to day, so feeding them to a per-BLOCK decision
+       * would make the same slot resolve differently on Monday and Friday and
+       * put the block-stability clause out of reach again. Variety within a week
+       * remains the accessory's job, which is the freedom the contract gives it
+       * and withholds from main lifts. */
+      const rotation = decideRotation({
+        legalCandidates: isMainLift ? legal : preferred,
+        isMainLift,
+        blockNumber: inputs.blockNumber,
+        weekInBlock: inputs.weekInBlock,
+        isDeloadWeek: inputs.isDeloadWeek,
+        pinnedIdentities: inputs.pinnedIdentities,
+        progressedIdentities: inputs.progressedIdentities,
+      });
+      const identity = rotation.identity;
       usedThisWeek.add(identity);
       const chosenGroup = POOL_GROUP_OF.get(identity);
       if (chosenGroup) {

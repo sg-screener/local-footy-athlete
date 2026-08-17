@@ -16,6 +16,7 @@
  * not claimed by this file.
  */
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
+import { COMPOSER_ROTATION_DEFAULTS } from './support/composerRotationDefaults';
 import {
   composeWeek,
   coverageGapsMakeAFullBodySession,
@@ -495,6 +496,7 @@ console.log('\n[d] A kit-impossible pattern is disclosed, and does not veto the 
         plannedPatterns: ['pull'], effectivePatterns: ['pull'] },
     }],
     kit, injuries: { prohibitedPatterns: [], excludedIdentities: [] }, todayISO: '2026-07-13',
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   ok('the impossible pattern is DISCLOSED as a typed kit gap',
     composed.gaps.some((gap) => gap.slot.includes('pull') && gap.cause === 'kit'),
@@ -769,6 +771,7 @@ console.log('\n[retire] Behaviour the deleted rotation cells guarded, held again
     plannedDays: [day], kit: fullGymTags,
     injuries: { prohibitedPatterns: [], excludedIdentities: excluded },
     todayISO: '2026-07-13',
+    ...COMPOSER_ROTATION_DEFAULTS,
   }).days[0].rows.map((row) => row.identity);
 
   // REPLACES: "mc=2 anchor rotates" and "accessory rotated across 4 weeks".
