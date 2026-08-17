@@ -38,7 +38,12 @@
 
 **Speed**
 
-_(no exercises listed)_  ⚠ **THIS BLOCK HAS A NAME AND NOTHING IN IT.**
+- 10 m Acceleration Reps
+  - Work: ≈2 s (10 m)
+  - Rest: 45–60 s walk-back (full recovery)
+  - Sets: 6–10 reps
+  - Takes about: ≈8–11 min (work ≈20 s)
+  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
 
 **Strength**
 
@@ -52,12 +57,6 @@ _(no exercises listed)_  ⚠ **THIS BLOCK HAS A NAME AND NOTHING IN IT.**
   - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
 - Band Pull-Apart — 2 × 14
   - Squeeze the shoulder blades together. Elbows straight, controlled return.
-- 10 m Acceleration Reps
-  - Work: ≈2 s (10 m)
-  - Rest: 45–60 s walk-back (full recovery)
-  - Sets: 6–10 reps
-  - Takes about: ≈8–11 min (work ≈20 s)
-  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
 
 **Conditioning**
 
@@ -119,6 +118,4 @@ None. Every word on this page came out of the app.
 
 ## Things wrong with this week
 
-**1 block with a name and no exercises:**
-
-- Tuesday 11 August — "Speed" is on the day with no exercises under it
+Nothing the printer could detect. Judge the training itself.

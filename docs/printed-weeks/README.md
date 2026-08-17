@@ -14,7 +14,7 @@ npm run print:week
 
 **The app had words for everything — 0 blanks across all 7 weeks.** Every name, heading and instruction an athlete would read came out of the app. Nothing was missing and nothing was invented to cover a gap.
 
-**1 problems in total** that the printer could detect by itself. Each file lists its own at the foot, under "Things wrong with this week".
+**0 problems in total** that the printer could detect by itself. Each file lists its own at the foot, under "Things wrong with this week".
 
 It cannot tell whether the training is any GOOD. That is the reading.
 
@@ -26,7 +26,7 @@ It cannot tell whether the training is any GOOD. That is the reading.
 | 2 | [In-season](3-in-season-two-team-nights.md) | Saturday game, Tuesday and Thursday at the club | 0 |
 | 3 | [In-season bye](4-bye-week.md) | no game this Saturday | 0 |
 | 4 | [In-season, away all week](5-away-trip.md) | Wednesday to Sunday | 0 |
-| 5 | [Pre-season, NO club training](7-no-club-pre-season.md) | the app supplies all four exposures | 1 |
+| 5 | [Pre-season, NO club training](7-no-club-pre-season.md) | the app supplies all four exposures | 0 |
 | 6 | [In-season, NO club training](8-no-club-in-season.md) | sprint at G-3, nothing hard near the game | 0 |
 | 7 | [Later off-season](9-later-off-season.md) | the hard running comes back | 0 |
 

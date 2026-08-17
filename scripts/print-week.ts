@@ -103,6 +103,7 @@ import {
 } from '../src/rules/temporarySourceFact';
 import type { SeasonPhaseClock } from '../src/rules/seasonPhaseClock';
 import type { VisibleDay, VisiblePart, VisibleWeek } from '../src/rules/visibleProjection';
+import type { ResolvedDay } from '../src/utils/sessionResolver';
 import type { DayOfWeek, OnboardingData, TrainingProgram } from '../src/types/domain';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -548,6 +549,22 @@ function awayConstraintsFor(span: { from: string; until: string }, todayISO: str
 export interface PrintedWeek {
   readonly scenario: PrintScenario;
   readonly program: TrainingProgram;
+  /**
+   * THE STORED ACCEPTED WEEK — what `project()` was actually handed.
+   *
+   * Exported 2026-08-17 for the athlete-visible projection guards, and the
+   * distinction it carries is the whole reason they needed it: `program` is what
+   * GENERATION produced, `weekDays` is what the RESOLVER accepted, and they are
+   * not the same list. A bye week relocates a session, so a row can sit in the
+   * resolved week under a date the generated microcycle never mentioned. A
+   * conservation guard that compares the projection against `program` reads that
+   * relocation as the projection inventing a row — measured, not imagined; it is
+   * how the first draft of `athleteVisibleProjectionTests` failed.
+   *
+   * Sam's words are "stored accepted program -> visible projection". This is the
+   * left-hand side.
+   */
+  readonly weekDays: readonly ResolvedDay[];
   readonly visibleWeek: VisibleWeek;
   readonly gapIds: readonly string[];
   /** What the athlete actually owns, resolved by the app's own equipment owner. */
@@ -596,7 +613,7 @@ export function runScenario(scenario: PrintScenario): PrintedWeek {
   const equipmentTags = resolveEquipmentAvailability(
     scenario.profile, activeConstraints as never, todayISO,
   );
-  return { scenario, program, visibleWeek, gapIds, equipmentTags };
+  return { scenario, program, weekDays, visibleWeek, gapIds, equipmentTags };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

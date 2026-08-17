@@ -638,6 +638,14 @@ function rowsForKind(kind: VisiblePartKind, composed: ComposedDayDetail): Visibl
   if (kind === 'strength') return toVisibleRows(composed.strengthExercises);
   if (kind === 'support') return toVisibleRows(composed.supportExercises);
   if (kind === 'conditioning') return toVisibleRows(composed.conditioningExercises);
+  // SPRINT WORK READS UNDER SPEED (Sam, 2026-08-17, surface 3). This returned
+  // `[]`, so the `speed` component `getSessionComponents` had already created
+  // rendered as a named block with nothing in it, while its rows sat under
+  // Strength — the printed pre-season Tuesday showed both halves of that at
+  // once. The rows come from the SAME owner every other kind's do
+  // (`getSessionComponentRows`, via `composeDayDetail`), which is what makes
+  // this a re-file rather than a second decomposition of the day.
+  if (kind === 'speed') return toVisibleRows(composed.speedExercises);
   return [];
 }
 
