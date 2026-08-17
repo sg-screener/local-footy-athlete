@@ -611,6 +611,187 @@ export function leaveExerciseOut(args: {
   });
 }
 
+/**
+ * THE SWAP OPTIONS THE APP ITSELF OFFERS FOR A ROW.
+ *
+ * `getTapSwapChoices` is the production producer of the list the athlete taps —
+ * it applies the substitute engine, the injury hierarchy, the kit filter and
+ * `assessTapSwapCandidateSafety`. **Deriving a candidate any other way invents an
+ * exercise the app would refuse**, and the refusal then reads as a product defect
+ * (measured: picking a lift from another day offered a squat as a substitute for a
+ * hinge, and the door correctly declined).
+ */
+export function swapOptionsFor(args: {
+  dateISO: string;
+  originalExercise: string;
+  existingExerciseNames?: readonly string[];
+}): { name: string; tier: string; source: string }[] {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getTapSwapChoices, resolveTapSwapEnvironment } = require('../../utils/tapSwapHierarchy');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useCoachUpdatesStore } = require('../../store/coachUpdatesStore');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useReadinessStore } = require('../../store/readinessStore');
+  return quiet(() => {
+    const environment = resolveTapSwapEnvironment({
+      date: args.dateISO,
+      profile: useProfileStore.getState().onboardingData,
+      activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+      readinessSignal: useReadinessStore.getState().signalsByDate[args.dateISO],
+    });
+    return (getTapSwapChoices({
+      originalExercise: args.originalExercise,
+      reason: 'preference',
+      environment,
+      existingExerciseNames: args.existingExerciseNames ?? [],
+    }) as { kind: string; name: string | null; hierarchyTier: string; source: string }[])
+      .filter((choice) => choice.kind === 'exercise' && typeof choice.name === 'string')
+      .map((choice) => ({
+        name: String(choice.name), tier: choice.hierarchyTier, source: choice.source,
+      }));
+  });
+}
+
+/**
+ * AN ORDINARY SUBSTITUTION — *"changes the programmed row without banning the
+ * original exercise"* (approved contract).
+ *
+ * ⚠ **`futureWeeksToo` IS FALSE AND THAT IS THE WHOLE DISTINCTION.** With it true
+ * the executor additionally calls `setPreferredAlternative`
+ * (`programControlActions.ts`), which PINS the replacement for future weeks. An
+ * ordinary substitution is exactly the same door without that flag: this week's
+ * row changes and nothing is banned, pinned or excluded. A harness that passed
+ * `true` would be walking the pin door and calling it a substitution.
+ */
+export async function substituteExercise(args: {
+  dateISO: string;
+  weekStartISO: string;
+  fromExercise: string;
+  toExercise: { name: string; sets: number; repsMin: number; repsMax: number };
+}): Promise<DoorResult> {
+  return walkProgramControlDoor({
+    type: 'swap_exercise',
+    source: { screen: 'session_detail', surface: 'exercise_row', initiatedBy: 'tap' },
+    scope: 'today_only',
+    payload: {
+      date: args.dateISO,
+      fromExercise: args.fromExercise,
+      toExercise: args.toExercise,
+      futureWeeksToo: false,
+    },
+    requiresRebuild: false,
+    createsActiveModifier: false,
+    oneOffOnly: true,
+  }, { weekStartISO: args.weekStartISO, todayISO: args.dateISO });
+}
+
+/**
+ * THE ATHLETE SAYS THEY ARE SORE OR COOKED — the readiness door, as its own act.
+ *
+ * Distinct from the soreness ANSWER on a completed session: that is a report
+ * about work already done, and this is the athlete telling the app how they are
+ * BEFORE it decides what to give them. Both exist and they are different taps.
+ */
+export async function reportFatigue(args: {
+  dateISO: string;
+  weekStartISO: string;
+  level: 'spark' | 'cooked' | 'low_energy' | 'not_right' | 'sore' | 'worse';
+}): Promise<DoorResult> {
+  return walkProgramControlDoor({
+    type: 'set_fatigue_status',
+    source: { screen: 'program_tab', surface: 'how_are_you_feeling', initiatedBy: 'tap' },
+    scope: 'today_only',
+    payload: { date: args.dateISO, todayISO: args.dateISO, level: args.level },
+    requiresRebuild: false,
+    createsActiveModifier: true,
+    oneOffOnly: false,
+  }, { weekStartISO: args.weekStartISO, todayISO: args.dateISO });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE OPTIONAL EXTRA-SESSION OFFER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * DOES THE APP OFFER THIS ATHLETE ANOTHER SESSION — asked the way the screen asks.
+ *
+ * Every dependency is the production one: the real history signal, the real
+ * ledger, the real legality probe and the real patch builder. `decideExtraSessionOffer`
+ * takes `patchFor` and `isCommitmentLegal` injected precisely so it never becomes a
+ * second author of a schedule, so a harness that hand-rolled either would be
+ * testing its own arithmetic.
+ */
+export function extraSessionOfferFor(args: {
+  profile: OnboardingData;
+  history: unknown;
+  forBlockNumber: number;
+  currentSessionsPerWeek: number;
+}): { offer: boolean; refusal?: string; question?: {
+  currentSessionsPerWeek: number; offeredSessionsPerWeek: number;
+  trainingDays: readonly string[];
+} } {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { decideExtraSessionOffer } = require('../../rules/extraSessionOffer');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { commitmentPatchFor } = require('../../rules/weeklyCommitmentQuestion');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { commitmentLegalityProbe } = require('../../rules/weeklyCommitmentLegality');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useDecisionLedgerStore } = require('../../store/decisionLedgerStore');
+  const WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  return quiet(() => decideExtraSessionOffer({
+    history: args.history,
+    forBlockNumber: args.forBlockNumber,
+    profile: args.profile,
+    weekOrder: WEEK,
+    ledgerEntries: useDecisionLedgerStore.getState().entries ?? [],
+    isCommitmentLegal: commitmentLegalityProbe,
+    currentSessionsPerWeek: args.currentSessionsPerWeek,
+    patchFor: (sessionsPerWeek: number) => commitmentPatchFor({
+      profile: args.profile, sessionsPerWeek, weekOrder: WEEK,
+      availableDays: undefined,
+    }),
+  })) as never;
+}
+
+/** ACCEPT — the growing direction, through the one commitment door. */
+export async function acceptExtraSession(args: {
+  profile: OnboardingData;
+  forBlockNumber: number;
+  sessionsPerWeek: number;
+  todayISO: string;
+  availableDays?: readonly string[];
+}): Promise<DoorResult> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { confirmWeeklyCommitment, EXTRA_SESSION_SOURCE_SURFACE } =
+    require('../../store/weeklyCommitmentAnswer');
+  const result = await quietAsync(() => confirmWeeklyCommitment({
+    forBlockNumber: args.forBlockNumber,
+    sessionsPerWeek: args.sessionsPerWeek,
+    profile: args.profile,
+    todayISO: args.todayISO,
+    ...(args.availableDays ? { availableDays: args.availableDays } : {}),
+    sourceSurface: EXTRA_SESSION_SOURCE_SURFACE,
+  }));
+  return {
+    ok: (result as { ok?: boolean })?.ok === true,
+    message: String((result as { message?: string })?.message ?? ''),
+  };
+}
+
+/**
+ * DECLINE — and it CANNOT touch the program.
+ *
+ * `declineWeeklyCommitment` records the answer and imports nothing that can write
+ * a program, which is how *"declining keeps the existing commitment"* is held —
+ * by construction rather than by a branch that chooses not to.
+ */
+export function declineExtraSession(forBlockNumber: number): void {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { declineWeeklyCommitment } = require('../../store/weeklyCommitmentAnswer');
+  quiet(() => declineWeeklyCommitment({ forBlockNumber }));
+}
+
 /** "Put it back" — the same owner, the other direction. */
 export function putExerciseBack(exercise: string) {
   return restoreExcludedExercise(exercise);

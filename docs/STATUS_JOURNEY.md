@@ -572,7 +572,89 @@ above — or an artefact of where this harness calls
 defect on one measurement. It is its own unit and it wants a tape that writes,
 flushes and reads back `sessionFeedback` alone, with nothing else moving.
 
-## ⚠ STILL NOT DONE — the last three journey actions, and the cap
+## ⚠ ACTION 1 IS THE NAMED BLOCKER — NO ORDINARY SUBSTITUTION CAN LAND
+
+`npm run test:athlete-journey` — **35 passed, 1 failed.** The 30 pre-existing
+checks and the process-restart proof all still hold; the single red is ACTION 1.
+
+**MEASURED: 9 substitution attempts across all 5 rows of a real generated strength
+day, every option the app itself offered for each row, and every one refused.**
+
+| row -> offered substitute | refusal |
+| --- | --- |
+| `Band Pallof Press` | no option offered |
+| `Pull-Ups` -> `Single-Arm Lat Pulldown`, `Barbell Row` | *nothing on your plan changed* |
+| `Bench Press` -> `Single-Arm DB Bench Press`, `Incline Bench` | *nothing on your plan changed* |
+| `Single-Leg RDL` -> `Glute Bridge`, `RDLs` | *nothing on your plan changed* |
+| `Leg Press` -> `Bodyweight Squat`, `Single-Leg Squat (to Box)` | would also drop `Bench Press`, `Pull-Ups` |
+
+**EIGHT OF THE NINE ARE THE PRE-EXISTING REFUSAL**
+(`workoutsAreEquivalent(current, canonicalWorkout)` in `replaceExerciseAtDate`):
+`validateLiveWorkoutWrite` **UNDOES the swap entirely**. Reproduced on two
+different days with entirely different exercises. **This is not caused by anything
+on this branch** — that check and that validator are untouched here.
+
+This is the composition defect already sized as its own unit in the seat inbox
+(item 48): *"removing a row silently re-shapes the day downstream … the kit must be
+known when the day is COMPOSED, not subtracted from afterwards. Size it as a
+composition unit, not a guard."* **I did not start it — "no other work".**
+
+### TWO REAL DEFECTS FOUND AND FIXED AT THE SINGLE CANONICAL WRITER
+
+Both in `replaceExerciseAtDate` (`utils/coachActions.ts`), the one writer for
+"replace this exercise on this date".
+
+1. **THE REPLACEMENT INHERITED THE OUTGOING EXERCISE'S LOAD.** The line read
+   `: (found.prescribedWeightKg ?? 0)` — `found` being the row being replaced.
+   **Measured on the real route, before any change: swapping an 80 kg `RDLs` for the
+   app's own offered substitute produced `Glute Bridge` at 80 kg.** Sam's clause 1
+   forbids exactly this. Absent now means UNSET and the athlete chooses; the
+   exact-exercise load-ownership rule is untouched, so the moment they record a load
+   for that movement the block boundary governs it.
+2. **A ONE-ROW SWAP SILENTLY TOOK THREE OTHER ROWS WITH IT.** The swap returned
+   `success: true` and left the day with **2 rows instead of 5** — `Bulgarian Split
+   Squats`, `Landmine Press` and `Barbell Row` gone, and the athlete told only that
+   their swap worked. The map is strictly one-for-one, so the loss is the validator
+   re-shaping a day the swap made unbuildable. It now REFUSES and names what it
+   would have cost. **A refusal, not compatibility logic** — nothing is patched up
+   to make an illegal swap fit.
+
+### A SECOND-ORDER DEFECT, ONE LEDGER LINE, NOT CHASED
+
+**The app's swap OPTION LIST does not consult the day's own legality.**
+`getTapSwapChoices` offered `Glute Bridge` for `RDLs` at tier
+`same_movement_pattern` from the `pattern_substitute_engine`, and the write then had
+to refuse it. The app disagrees with itself about what it may offer.
+
+### TWO GREEN-AND-EMPTY CELLS OF MY OWN, CAUGHT AND FIXED
+
+- I first asserted the load claim **after a swap that had been REFUSED**. The
+  replacement's load read `null` because the exercise was never in the day, so the
+  cell passed while proving nothing. It is now asserted only on a landed swap.
+- Gating the four downstream claims then made them print `PASS` in a world where no
+  substitution happened — the same reading one layer up. Their names now carry
+  `[NOT EVALUATED — no substitution landed]`.
+
+### BLAST RADIUS OF THE TWO WRITER FIXES — ZERO
+
+Full sweep, branch vs the control worktree at `a4ef85be`:
+**157 of 403 vs 156 of 402. The ONLY gained red is `test:athlete-journey` itself**,
+reporting the blocker above. Every other suite is identical name for name.
+`athlete-door-matrix` 383/14 on both trees.
+
+## ⚠ ACTIONS 2 AND 3 ARE NOT STARTED — the cap, stated plainly
+
+**Tired/sore feedback and the optional extra-session offer are NOT built.** Their
+doors are located and wired into the driver (`reportFatigue`,
+`extraSessionOfferFor`, `acceptExtraSession`, `declineExtraSession`,
+`swapOptionsFor`) and nothing drives them yet. Action 1 consumed the session:
+diagnosing it needed 9 real attempts across two days plus two writer fixes plus two
+corrections to my own cells.
+
+**Named rather than half-built**, and the exact-exercise load-ownership rule was
+not touched. NOT MERGED — the journey does not fully pass.
+
+## ⚠ SUPERSEDED — the last-three-actions note below predates the work above
 
 **Ordinary substitution, tired/sore feedback as its own door, and the
 optional-session offer are NOT built.** I reached the cap on the restart defect

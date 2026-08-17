@@ -602,9 +602,26 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     prescribedSets,
     prescribedRepsMin,
     prescribedRepsMax,
-    prescribedWeightKg: Number.isFinite(Number(toExercise.weight))
-      ? Number(toExercise.weight)
-      : (found.prescribedWeightKg ?? 0),
+    // ⚠ **A REPLACEMENT NEVER INHERITS THE OUTGOING EXERCISE'S LOAD.**
+    //
+    // Sam, 2026-08-18: a substitution's *"replacement never inherits another
+    // exercise's load"*. The approved contract says the same for rotation —
+    // *"the old exercise's load must not be blindly transferred … the athlete
+    // selects a safe starting load for the new movement"*.
+    //
+    // This line used to fall back to `found.prescribedWeightKg` — the row being
+    // REPLACED. MEASURED on the real journey: swapping an 80 kg `RDLs` for the
+    // app's own offered substitute produced **`Glute Bridge` at 80 kg**, which is
+    // not a conservative mapping, it is a different exercise wearing another
+    // lift's number.
+    //
+    // Absent means UNSET and the athlete chooses, which is the honest answer for a
+    // movement they have never loaded. It does NOT strand them: the moment they
+    // record a load for this exact exercise, the block boundary's exact-exercise
+    // ownership rule governs it from then on — that rule is untouched here.
+    ...(Number.isFinite(Number(toExercise.weight))
+      ? { prescribedWeightKg: Number(toExercise.weight) }
+      : { prescribedWeightKg: undefined }),
     prescriptionType: toExercise.prescriptionType ?? found.prescriptionType,
     perSide: toExercise.perSide ?? found.perSide,
     restSeconds: toExercise.restSeconds ?? found.restSeconds,
@@ -635,6 +652,42 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     return {
       success: false,
       reason: `That swap is not valid for the programmed session, so ${fromExercise} was kept.`,
+    };
+  }
+  /**
+   * ⚠ **A ONE-ROW SWAP MAY NOT QUIETLY TAKE OTHER ROWS WITH IT.**
+   *
+   * MEASURED on the real journey: swapping `RDLs` for the app's own offered
+   * substitute returned `success: true` and left the day with **2 rows instead of
+   * 5** — `Bulgarian Split Squats`, `Landmine Press` and `Barbell Row` were gone.
+   * The map above is strictly one-for-one, so the loss is `validateLiveWorkoutWrite`
+   * legally re-shaping a day the swap had made unbuildable, and the athlete was
+   * told only that their swap worked.
+   *
+   * The removal path one function below already refuses when canonicalisation
+   * undoes the write entirely (*"That removal would break the programmed
+   * session"*). It cannot see a PARTIAL reshape, which is this case. So the same
+   * refusal is stated here in the terms that matter: the swap changes the row it
+   * was asked to change, and nothing else leaves the session.
+   *
+   * **This is a refusal, not compatibility logic.** Nothing is patched up to make
+   * an illegal swap fit — the athlete is told it does not fit, and their session
+   * stands. That the app OFFERED this substitute without consulting the day's own
+   * legality is a real second defect and is reported, not papered over here.
+   */
+  const survivingNames = new Set((canonicalWorkout.exercises ?? [])
+    .map((exercise) => exercise.exercise?.name ?? '')
+    .filter(Boolean));
+  const collateral = (current.exercises ?? [])
+    .map((exercise) => exercise.exercise?.name ?? '')
+    .filter(Boolean)
+    .filter((name) => name !== (found!.exercise?.name ?? '')
+      && !survivingNames.has(name));
+  if (collateral.length > 0) {
+    return {
+      success: false,
+      reason: `That swap would also drop ${collateral.join(', ')} from the session, `
+        + `so ${fromExercise} was kept.`,
     };
   }
   const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);

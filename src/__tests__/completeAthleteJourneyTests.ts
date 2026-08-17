@@ -63,6 +63,8 @@ import {
   followTheWeek,
   leaveExerciseOut,
   quiet,
+  substituteExercise,
+  swapOptionsFor,
   recordDay,
   resolvedDays,
   relaunchApp,
@@ -309,6 +311,13 @@ async function main(): Promise<void> {
   let removedForTheDay: {
     dateISO: string; ok: boolean; before: string[]; after: string[];
   } | null = null;
+  let substitution: {
+    dateISO: string; ok: boolean; message: string;
+    from: string; to: string; outgoingLoadKg: number | null;
+    dayBefore: string[]; dayAfter: string[]; replacementLoadKg: number | null;
+    selectionsBefore: number; selectionsAfter: number;
+    exclusionsBefore: number; exclusionsAfter: number;
+  } | null = null;
   const walked: WalkedDay[] = [];
   const lastDay = addDaysISO(blockOneStart, BLOCK_ONE_WEEKS * 7 - 1);
   let missedOnce = false;
@@ -365,6 +374,91 @@ async function main(): Promise<void> {
       const after = resolvedDays(mondayOf(dateISO))
         .flatMap((day) => day.rows.map((row) => row.name));
       removedForTheDay = { dateISO, ok: decision.ok, before, after };
+    }
+
+    /**
+     * ONE ORDINARY SUBSTITUTION — week 2's Wednesday, on a LOADED row.
+     *
+     * The outgoing row is loaded on purpose: *"the replacement never inherits
+     * another exercise's load"* cannot be tested on two bodyweight rows, and no
+     * `weight` is supplied to the door, so whatever load the replacement ends up
+     * with is the app's decision and not this harness's.
+     *
+     * The replacement is DERIVED from the app's own programming — a lift it chose
+     * for this athlete elsewhere in the block, so it is legal for their kit and
+     * phase by construction rather than by my guess. An invented name would be
+     * refused by `assessTapSwapCandidateSafety` and the cell would read as a
+     * product defect.
+     */
+    if (weekIndex === 3 && weekdayName(dateISO) === 'Monday' && substitution === null) {
+      const weekStart = mondayOf(dateISO);
+      const today = resolvedDays(weekStart).find((day) => day.dateISO === dateISO);
+      /**
+       * THE ATHLETE MAY SWAP ANY ROW, so this tries every row on the day against
+       * every option the app offers for it, and keeps the first pairing the door
+       * ACCEPTS. Rows are tried from the bottom up: an accessory swap is the
+       * commonest real substitution and the least likely to re-shape the session.
+       *
+       * ⚠ **EVERY REFUSAL IS KEPT.** An earlier cut asserted the load claim after a
+       * swap that had been REFUSED — the replacement's load read `null` simply
+       * because the exercise was never in the day, so the cell was green and empty.
+       * The load claim below is now asserted only on a swap that actually landed.
+       */
+      const candidateRows = [...(today?.rows ?? [])].reverse();
+      const refusals: string[] = [];
+      let door: { ok: boolean; message: string } = { ok: false, message: 'nothing offered' };
+      let outgoing: typeof candidateRows[number] | null = null;
+      let elsewhere: { name: string } | null = null;
+      const exclusionsBefore = takeCensus(dateISO).activeExclusions;
+      const selectionsBefore = takeCensus(dateISO).recordedSelectionCount;
+      const dayBefore = (today?.rows ?? []).map((row) => row.name);
+
+      for (const row of candidateRows) {
+        const offered = swapOptionsFor({
+          dateISO,
+          originalExercise: row.name,
+          existingExerciseNames: dayBefore,
+        });
+        if (offered.length === 0) { refusals.push(`${row.name}: no option offered`); continue; }
+        for (const candidate of offered) {
+          const attempt = await substituteExercise({
+            dateISO,
+            weekStartISO: weekStart,
+            fromExercise: row.name,
+            toExercise: {
+              name: candidate.name,
+              sets: row.sets ?? 3,
+              repsMin: row.repsMin ?? 5,
+              repsMax: row.repsMax ?? 8,
+            },
+          });
+          if (attempt.ok) {
+            door = attempt; outgoing = row; elsewhere = { name: candidate.name };
+            break;
+          }
+          refusals.push(`${row.name} -> ${candidate.name}: ${attempt.message}`);
+        }
+        if (elsewhere) break;
+      }
+      console.log(`  substitutions the athlete was refused (${refusals.length}):`);
+      for (const line of refusals.slice(0, 8)) console.log(`      ${line}`);
+
+      if (outgoing && elsewhere) {
+        const afterDay = resolvedDays(weekStart).find((day) => day.dateISO === dateISO);
+        substitution = {
+          dateISO, ok: door.ok, message: door.message,
+          from: outgoing.name, to: elsewhere.name,
+          outgoingLoadKg: outgoing.weightKg,
+          dayBefore,
+          dayAfter: (afterDay?.rows ?? []).map((row) => row.name),
+          replacementLoadKg: (afterDay?.rows ?? [])
+            .find((row) => row.name === elsewhere.name)?.weightKg ?? null,
+          selectionsBefore,
+          selectionsAfter: takeCensus(dateISO).recordedSelectionCount,
+          exclusionsBefore,
+          exclusionsAfter: takeCensus(dateISO).activeExclusions,
+        };
+      }
     }
 
     const outcome = await recordDay(dateISO, intent);
@@ -429,6 +523,129 @@ async function main(): Promise<void> {
     census.weightOverrideEntries > 0,
     'no weightOverrides — `lastPerformedWeights` has nothing to read, so progression has '
     + 'nothing to progress FROM',
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // ACTION 1 — AN ORDINARY SUBSTITUTION
+  // ═════════════════════════════════════════════════════════════════════════
+
+  console.log(`\n  substitution on ${substitution?.dateISO}: ${substitution?.from} -> `
+    + `${substitution?.to} · ok=${substitution?.ok} ${
+      substitution?.message ? `(${substitution.message})` : ''}`);
+  console.log(`    that day before: ${JSON.stringify(substitution?.dayBefore)}`);
+  console.log(`    that day after : ${JSON.stringify(substitution?.dayAfter)}`);
+  console.log(`    outgoing load=${substitution?.outgoingLoadKg}kg `
+    + `replacement load=${substitution?.replacementLoadKg}kg`);
+  console.log(`    block-selection records: ${substitution?.selectionsBefore} -> `
+    + `${substitution?.selectionsAfter}`);
+
+  /**
+   * ⚠ **NO ORDINARY SUBSTITUTION CAN LAND ON A GENERATED STRENGTH DAY TODAY.**
+   *
+   * Every row on the day was offered options by the app and every pairing was
+   * refused — measured, 9 attempts across 5 rows. Eight of the nine were refused by
+   * the PRE-EXISTING equivalence check (`workoutsAreEquivalent(current,
+   * canonicalWorkout)`): `validateLiveWorkoutWrite` UNDOES the swap entirely. The
+   * ninth, the main lower lift, is the one that re-shapes the day.
+   *
+   * This is the composition defect already sized as its own unit — *"removing a row
+   * silently re-shapes the day downstream … the kit must be known when the day is
+   * COMPOSED, not subtracted from afterwards. Size it as a composition unit, not a
+   * guard."* It is NOT this mission, and it is NOT caused by anything here: the
+   * eight equivalence refusals come from code this branch never touched.
+   *
+   * The cells below therefore report ONE red — this one — rather than five, because
+   * the four downstream claims cannot be evaluated on a swap that never happened,
+   * and asserting them anyway is how a green-and-empty cell is born (an earlier cut
+   * of this suite "proved" the load claim on a refused swap: the replacement read
+   * `null` because it was never in the day at all).
+   */
+  ok(
+    'ACTION 1 — an ordinary substitution lands through the real door',
+    substitution?.ok === true,
+    `every offered substitution on ${substitution?.dateISO ?? 'the chosen day'} was refused. `
+    + `First reasons: ${String(substitution?.message ?? '(none)').slice(0, 240)}`,
+  );
+
+  const substitutionLanded = substitution?.ok === true;
+  /**
+   * ⚠ **A CONDITIONAL CELL MUST SAY IT WAS NOT EVALUATED.** Without this the four
+   * claims below print `PASS` on a world where no substitution happened, which is
+   * the same green-and-empty reading the gate was added to prevent — just one layer
+   * up. The name carries the condition so no reader can bank an unevaluated claim.
+   */
+  const suffix = substitutionLanded
+    ? ''
+    : ' [NOT EVALUATED — no substitution landed; see ACTION 1]';
+
+  ok(
+    `SUBSTITUTION CHANGES THE VISIBLE EXERCISE${suffix}`,
+    !substitutionLanded ||
+    substitution != null
+      && !substitution.dayAfter.includes(substitution.from)
+      && substitution.dayAfter.includes(substitution.to),
+    `after=${JSON.stringify(substitution?.dayAfter)} still contains `
+    + `${substitution?.from} or is missing ${substitution?.to}`,
+  );
+
+  /**
+   * ⚠ AN ORDINARY SUBSTITUTION IS NOT A PIN AND NOT A BAN.
+   *
+   * The contract: *"An ordinary substitution changes the programmed row without
+   * banning the original exercise. The substituted movement may rotate normally at
+   * the next block boundary."* So no exclusion may appear, and no preferred
+   * alternative may be pinned — `futureWeeksToo` was false, and the executor only
+   * calls `setPreferredAlternative` when it is true.
+   */
+  ok(
+    `the substitution created NO exclusion — the original is not banned${suffix}`,
+    !substitutionLanded ||
+    substitution != null && substitution.exclusionsAfter === substitution.exclusionsBefore,
+    `active exclusions went ${substitution?.exclusionsBefore} -> `
+    + `${substitution?.exclusionsAfter} across an ordinary substitution; a swap must not ban `
+    + 'the exercise it replaced. (Compared BEFORE/AFTER rather than against zero, because '
+    + 'the athlete already holds a today-only exclusion from week 2 by this point — a '
+    + 'zero-check would fail on unrelated state and read as this defect.)',
+  );
+
+  const pinnedAlternatives = quiet(() => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useAthletePreferencesStore } = require('../store/athletePreferencesStore');
+    const prefs = useAthletePreferencesStore.getState().prefs as {
+      preferredAlternatives?: Record<string, unknown>;
+    };
+    return Object.keys(prefs.preferredAlternatives ?? {});
+  });
+  ok(
+    `the substitution pinned NOTHING for future weeks${suffix}`,
+    !substitutionLanded ||
+    pinnedAlternatives.length === 0,
+    `pinned ${JSON.stringify(pinnedAlternatives)} — that is the "future weeks too" door, `
+    + 'not an ordinary substitution',
+  );
+
+  /**
+   * AND IT DID NOT CORRUPT BLOCK-SELECTION HISTORY.
+   *
+   * The history records what each ACCEPTED BLOCK selected. A one-day swap is not a
+   * block acceptance, so it must add no records — otherwise the next boundary
+   * rotates against a block that never happened.
+   */
+  ok(
+    `the substitution wrote NO block-selection records${suffix}`,
+    !substitutionLanded ||
+    substitution?.selectionsBefore === substitution?.selectionsAfter,
+    `records went ${substitution?.selectionsBefore} -> ${substitution?.selectionsAfter}; a `
+    + 'one-day swap is not a block acceptance',
+  );
+
+  ok(
+    `THE REPLACEMENT DID NOT INHERIT THE OUTGOING EXERCISE'S LOAD${suffix}`,
+    !substitutionLanded ||
+    substitution != null
+      && substitution.replacementLoadKg !== substitution.outgoingLoadKg,
+    `the replacement came in at ${substitution?.replacementLoadKg}kg, which is exactly what `
+    + `${substitution?.from} was loaded at (${substitution?.outgoingLoadKg}kg)`,
   );
 
   // Capture block 1's last week WHILE THE STORE IS STILL IN BLOCK 1.
