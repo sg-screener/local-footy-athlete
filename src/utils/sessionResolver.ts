@@ -38,6 +38,8 @@ import type {
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
+import { composeTemporarySourceFactCompatibility } from '../rules/temporarySourceFact';
+import { awaySpansFromFacts, dateIsInsideAwaySpan } from '../rules/awaySpans';
 import { storedGameAnchor, isDayOfWeek } from '../rules/gameAnchor';
 import { composeDaySurfaces, removalConstraintForComposedDay } from '../rules/dayPrecedence';
 import { composeAcceptedEffectiveWeekSurfaces } from './liveEvaluationSurfaces';
@@ -49,6 +51,7 @@ import {
   type AthleteContext,
   DEFAULT_ATHLETE_CONTEXT,
 } from './sessionBuilder';
+import { resolveEquipmentAvailability } from './equipmentAvailability';
 import { composeConditioningRows, offFeetAlternative } from '../rules/conditioningSelection';
 import { buildWeekLog, conditioningToWeekLogEntry } from './weekLogBuilder';
 import type { WeekLog } from './conditioningRules';
@@ -638,7 +641,7 @@ function getEffectiveGameDates(
   centerDate: string,
   windowDays: number = 10,
 ): Set<string> {
-  return effectiveGameDatesAround({
+  const dates = effectiveGameDatesAround({
     markedDays: state.markedDays || {},
     usualGameDay: state.usualGameDay,
     gameDay: state.gameDay,
@@ -646,6 +649,34 @@ function getEffectiveGameDates(
     centerDate,
     windowDays,
   });
+  /* ── R-020 ON THE READ SIDE: A TRIP TAKES THE FIXTURE WITH IT ─────────────
+   *
+   * The VIRTUAL fixture above is re-derived from `gameDay` + In-season, so it
+   * reappears for every Saturday forever — including Saturdays the athlete is a
+   * thousand kilometres away. The plan side already removes it
+   * (`weeklySchedulerInputs.clubInputsAfterTravel`); without this the two sides
+   * disagree, and the disagreement is not cosmetic.
+   *
+   * ⚠ **MEASURED, AND IT COST THE ATHLETE A WHOLE STRENGTH DAY.** 2026-08-17,
+   * `npm run trace:equipment-scopes` B2: the composer authored a full lower day
+   * on the Friday of a trip — `Goblet Squat`, `RDLs` (a MAIN LIFT), `Cossack
+   * Squat`, `Single-Leg RDL`, `Band Pallof Press` — and the athlete was shown a
+   * **Gunshow**, because `applyGameProximity` saw a phantom Saturday fixture,
+   * called that Friday G−1, and displaced the day. §18 had already counted
+   * those rows, so the week that was JUDGED and the week that SHIPPED disagreed
+   * about a main lift.
+   *
+   * Sam ruled the boundary himself: *"the game on the 15th should be removed …
+   * but the next saturday the 22nd game is still alive"*. Only dates INSIDE a
+   * live span are dropped, and an EXPLICITLY marked game is left alone — a mark
+   * is the athlete's own word about a real fixture, and this filter exists to
+   * remove a fixture nobody stated. The span owner is the shared `awaySpans.ts`,
+   * so the plan side and the read side cannot drift apart again. */
+  const spans = awaySpansFromFacts(state.temporarySourceFacts);
+  if (spans.length === 0) return dates;
+  const marked = state.markedDays || {};
+  return new Set([...dates].filter((date) =>
+    marked[date] === 'game' || !dateIsInsideAwaySpan(date, spans)));
 }
 
 /**
@@ -1202,7 +1233,61 @@ function applyInjuryFilterPass(
  * correct, so the live path converges onto it and the accepted stack does not
  * move. See `rules/dayPrecedence.ts` for the full reasoning.
  */
-function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
+/**
+ * ── THE SHARED PER-DAY EQUIPMENT BOUNDARY, ON THE READ SIDE ────────────────
+ *
+ * `AthleteContext.equipmentTags` is resolved ONCE for the whole week by
+ * `useScheduleState`, and a dated fact is not a week — so every derived session
+ * this resolver builds was filtered against a kit the athlete may not have on
+ * the day it lands.
+ *
+ * ⚠ **MEASURED, AND IT REACHED GLASS.** 2026-08-17,
+ * `npm run trace:equipment-scopes` boundary B2 — a mid-week trip with dumbbells
+ * and bands: every COMPOSED strength row was legal, and the Gunshow on the
+ * Friday shipped **`Tricep Pushdown`, which needs cables**, in a hotel room.
+ * Generation was innocent; the row is authored HERE, by
+ * `applyGameProximity` → `buildDerivedSession('arms_pump', …)`, at read time.
+ *
+ * **THE FIX IS THE BOUNDARY, NOT THE CALL SITES.** There are seven
+ * `buildDerivedSession` / builder hand-offs inside one date resolution, and
+ * patching each is how a class defect becomes seven edge cases and an eighth
+ * one ships next month. Scoping the STATE once, here, means every producer
+ * inside this date — the Gunshow, the freed-slot accessories, the mobility
+ * flush, the post-game session, and anything added later — receives the same
+ * effective day kit without knowing this rule exists.
+ *
+ * A world with no live equipment constraint returns the state UNTOUCHED, by
+ * identity, so nothing outside a dated trip can change shape.
+ */
+function withAthleteKitForDate(state: ScheduleState, dateISO: string): ScheduleState {
+  // THE FACTS, not a second constraint list. `temporarySourceFacts` is the
+  // declared field and `composeTemporarySourceFactCompatibility` is the ONE
+  // route a fact takes into a constraint anywhere in this app, so the read side
+  // and generation cannot disagree about what a trip means.
+  const facts = state.temporarySourceFacts ?? [];
+  if (facts.length === 0) return state;
+  const profile = state.athleteContext?.onboardingData;
+  if (!profile) return state;
+  const { activeConstraints } = composeTemporarySourceFactCompatibility({
+    temporarySourceFacts: facts,
+  });
+  if (activeConstraints.length === 0) return state;
+  const tags = resolveEquipmentAvailability(profile, activeConstraints, dateISO);
+  const current = state.athleteContext?.equipmentTags ?? [];
+  // Same answer as the week's? Then this day is not inside anything dated, and
+  // returning the original object keeps the no-trip path byte-identical.
+  if (tags.length === current.length && tags.every((tag) => current.includes(tag))) {
+    return state;
+  }
+  return {
+    ...state,
+    athleteContext: { ...(state.athleteContext ?? DEFAULT_ATHLETE_CONTEXT), equipmentTags: tags },
+  };
+}
+
+function _resolveDateRaw(date: string, rawState: ScheduleState): ResolvedDay {
+  // EVERY producer below reads `state`, so the day's kit reaches all of them.
+  const state = withAthleteKitForDate(rawState, date);
   const { currentProgram, manualOverrides, markedDays } = state;
   const currentMicrocycle = selectMicrocycleForDate(
     currentProgram,

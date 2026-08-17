@@ -691,6 +691,76 @@ one-owner shape is settled — `resolveEffectiveEquipmentWindow` →
 to be located first. **Do not re-patch `composedOptional`: it is proven inert
 for this path.**
 
+---
+
+# SLICE 5 — THE PRODUCER, CLASSIFIED; THE CLASS, FIXED AT THE BOUNDARY
+
+## THE PRODUCER, TRACED TO ITS EXACT OWNER
+
+`Tricep Pushdown` is authored at **READ time**, not by generation:
+
+```
+sessionResolver.ts:925   applyGameProximity → buildDerivedSession('arms_pump', date, …, athlete)
+```
+
+Generation was innocent throughout. `defaultProgram`'s `composedOptional` branch —
+the one I blamed in session 2 — **never fires on this path**, proven by a probe
+that printed nothing across all nine boundaries.
+
+## CLASSIFICATION — SPECIALIST, NOT A SECOND STRENGTH SELECTOR
+
+`buildDerivedSession('arms_pump')` selects from exactly one authored recipe:
+
+```
+arms_pump: [ { biceps, count 2 }, { triceps, count 2 }, { delts, count 2 } ]
+```
+
+**It never selects squat, hinge, push or pull, and it never rewrites a composer
+row's identity.** It is a legitimate Gunshow specialist. Per the ruling: its
+recipe is KEPT and it is fed the canonical effective-day kit. **No second
+strength selector was found and none was created.**
+
+**But its PLACER is a different matter, and it is a real duplicate authority.**
+`applyGameProximity` decides a whole day's identity and will displace a
+composer-authored strength day. Measured on the away week: the composer authored
+`day 5 lower_hinge` — `Goblet Squat`, **`RDLs` (a MAIN LIFT)**, `Cossack Squat`,
+`Single-Leg RDL`, `Band Pallof Press` — and the athlete was shown a Gunshow,
+because the read side re-derived a **phantom Saturday fixture inside the trip**
+and called that Friday G−1. **§18 counted those rows; the athlete never got
+them.**
+
+## WHAT MOVED — ONE BOUNDARY, NOT SEVEN CALL SITES
+
+**`withAthleteKitForDate` at the top of `_resolveDateRaw`.** There are seven
+builder hand-offs inside one date resolution; scoping the STATE once means every
+producer inside that date — Gunshow, freed-slot accessories, mobility flush,
+post-game — receives the same effective day kit, including producers added later.
+A world with no live fact returns the state by identity.
+
+**The fixture derivation now honours the trip.** `getEffectiveGameDates` drops
+virtual fixtures inside a live away span, through the same shared `awaySpans.ts`
+owner the plan side uses. An **explicitly marked** game is left alone — a mark is
+the athlete's own word; this removes only a fixture nobody stated.
+
+## ⚠ THESE TWO CHANGES ARE PROVEN BY THE TRACE AND **NOT HELD BY A CHAIN CELL**
+
+Stated plainly because a green gate is a claim.
+
+**The trace proves both.** Reverting both (`mutant M`) and re-running
+`npm run trace:equipment-scopes` restores the defect exactly:
+`Tricep Pushdown ⚠ ILLEGAL ON THIS DAY'S KIT (needs cables)` on the Friday of a
+mid-week trip. The control run reports **0**.
+
+**The suite does not.** `test:equipment-scopes` [16]/[17] stay GREEN under both
+mutants, separately and together. Three attempts to close that gap — adding a
+mid-week world, adding a fixture cell, threading the recorded home history —
+all still passed under mutation. **The suite's world does not reproduce the
+composed week the trace's does, and I ran out of cap before finding why.**
+
+**By this repo's three words these two changes are `BUILT`, not `WORKING`.**
+They are correct, they are measured, and they are not guarded. That is the
+central caveat of the merge verdict below.
+
 ## NEXT — THE REMAINING BUILD ORDER
 
 1. ~~ONE EQUIPMENT OWNER, RESOLVED PER DAY.~~ **DONE — slice 1.**

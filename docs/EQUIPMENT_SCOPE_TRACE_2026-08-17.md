@@ -83,6 +83,16 @@ _empty_
   Game Day
 2026-08-16 [kit: 19]  Rest Day
 ```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Rest" type=Rest rows=0
+day 1 "lower_squat" type=Strength rows=5
+day 2 "Team Training" type=Team Training rows=3
+day 3 "lower_hinge" type=Strength rows=5
+day 4 "Team Training" type=Team Training rows=3
+day 5 "Rest" type=Rest rows=0
+day 6 "Game" type=Game rows=0
+```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
 ### 8. Club / game anchors
@@ -186,19 +196,22 @@ _none — no row carries `substitutedFor`_
   Conditioning
     - Classic 4×4
 2026-08-13 [kit: 19]  Rest Day
-2026-08-14 [kit: 19]  Training Day
-  Gunshow
-    - Incline Dumbbell Curl
-    - Banded Bicep Curl
-    - Tricep Pushdown
-    - Overhead Tricep Extension
-    - Rear Delt Fly
-    - Shrugs
+2026-08-14 [kit: 19]  Rest Day
 2026-08-15 [kit: 19]  Training Day
   Conditioning
     - Warm-up
-    - 30 m Repeats
+    - Steady Blocks (3×8 min or 4×6 min)
 2026-08-16 [kit: 19]  Rest Day
+```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Rest" type=Rest rows=0
+day 1 "lower_squat" type=Mixed rows=6
+day 2 "Team Training" type=Team Training rows=3
+day 3 "upper_push" type=Mixed rows=4
+day 4 "Rest" type=Rest rows=0
+day 5 "lower_hinge" type=Strength rows=5
+day 6 "Rest" type=Rest rows=0
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
@@ -310,19 +323,22 @@ day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Spl
   Conditioning
     - Classic 4×4
 2026-08-13 [kit: 3]  Rest Day
-2026-08-14 [kit: 3]  Training Day
-  Gunshow
-    - Incline Dumbbell Curl
-    - Banded Bicep Curl
-    - Tricep Pushdown   ⚠ ILLEGAL ON THIS DAY'S KIT (needs cables)
-    - Overhead Tricep Extension
-    - Rear Delt Fly
-    - Shrugs
+2026-08-14 [kit: 3]  Rest Day
 2026-08-15 [kit: 3]  Training Day
   Conditioning
     - Warm-up
-    - 30 m Repeats
+    - Steady Blocks (3×8 min or 4×6 min)
 2026-08-16 [kit: 3]  Rest Day
+```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Rest" type=Rest rows=0
+day 1 "lower_squat" type=Mixed rows=6
+day 2 "Team Training" type=Team Training rows=3
+day 3 "upper_push" type=Mixed rows=4
+day 4 "Rest" type=Rest rows=0
+day 5 "lower_hinge" type=Strength rows=5
+day 6 "Rest" type=Rest rows=0
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
@@ -434,19 +450,22 @@ day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Spl
   Conditioning
     - Classic 4×4
 2026-08-13 [kit: 3]  Rest Day
-2026-08-14 [kit: 3]  Training Day
-  Gunshow
-    - Concentration Curl
-    - Hammer Curl
-    - Dumbbell Kickback
-    - Banded Tricep Pushdown
-    - Single-Arm Shrug
-    - Lateral Raise
+2026-08-14 [kit: 3]  Rest Day
 2026-08-15 [kit: 3]  Training Day
   Conditioning
     - Warm-up
-    - 30 m Repeats
+    - Steady Blocks (3×8 min or 4×6 min)
 2026-08-16 [kit: 3]  Rest Day
+```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Rest" type=Rest rows=0
+day 1 "lower_squat" type=Mixed rows=6
+day 2 "Team Training" type=Team Training rows=3
+day 3 "upper_push" type=Mixed rows=4
+day 4 "Rest" type=Rest rows=0
+day 5 "lower_hinge" type=Strength rows=5
+day 6 "Rest" type=Rest rows=0
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
@@ -562,6 +581,16 @@ day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Spl
   Game Day
 2026-08-23 [kit: 19]  Rest Day
 ```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Rest" type=Rest rows=0
+day 1 "lower_squat" type=Mixed rows=6
+day 2 "Team Training" type=Team Training rows=3
+day 3 "upper_push" type=Mixed rows=4
+day 4 "Rest" type=Rest rows=0
+day 5 "lower_hinge" type=Strength rows=5
+day 6 "Rest" type=Rest rows=0
+```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
 ### 8. Club / game anchors
@@ -669,6 +698,16 @@ _none — no row carries `substitutedFor`_
 2026-09-12 [kit: 19]  Game Day
   Game Day
 2026-09-13 [kit: 19]  Rest Day
+```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Rest" type=Rest rows=0
+day 1 "lower_squat" type=Strength rows=5
+day 2 "Team Training" type=Team Training rows=3
+day 3 "lower_hinge" type=Strength rows=5
+day 4 "Team Training" type=Team Training rows=3
+day 5 "Rest" type=Rest rows=0
+day 6 "Game" type=Game rows=0
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
@@ -789,23 +828,29 @@ day 5 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit
     - Single-Arm DB Floor Press
     - DB Shoulder Press
     - Banded External Rotation
-  Conditioning
-    - 20 s Max Sprint — Small Dose
 2026-08-13 [kit: 3]  Rest Day
 2026-08-14 [kit: 3]  Training Day
-  Gunshow
-    - Concentration Curl
-    - Hammer Curl
-    - Dumbbell Kickback
-    - Banded Tricep Pushdown
-    - Single-Arm Shrug
-    - Lateral Raise
+  Strength
+    - Goblet Squat
+    - RDLs
+    - Cossack Squat
+    - Single-Leg RDL
+    - Band Pallof Press
 2026-08-15 [kit: 3]  Training Day
   Conditioning
     - Warm-up
     - 30 m Repeats
-2026-08-16 [kit: 3]  Training Day
-  Mobility
+2026-08-16 [kit: 3]  Rest Day
+```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Speed Conditioning" type=Conditioning rows=2
+day 1 "lower_squat" type=Mixed rows=6
+day 2 "upper_pull" type=Mixed rows=3
+day 3 "upper_push" type=Strength rows=3
+day 4 "Rest" type=Rest rows=0
+day 5 "lower_hinge" type=Strength rows=5
+day 6 "Tempo Intervals" type=Conditioning rows=2
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
@@ -815,6 +860,110 @@ _none visible_
 ```
 kitUnachievablePatterns: (none)
 gap day 2 slot=vertical_pull cause=kit 
+```
+
+## B9 — AWAY WITH NOTHING — a hotel room and a floor
+
+today: `2026-08-10` · week Monday: `2026-08-10` · block 1 from `2026-08-10`
+
+### 1. PERMANENT equipment profile
+```
+tags (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+machines (5): bike_erg, air_bike, row, ski, treadmill
+```
+### 2. TEMPORARY equipment fact and dates
+```
+schedule:travel  2026-08-10 .. 2026-08-16  removes: (none)
+equipment:without  2026-08-10 .. 2026-08-16  removes: barbell, cables, machine, bench, pullup_bar, kettlebell, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, foam_roller, dumbbells, bands
+```
+### 3. ACTIVE equipment passed to scheduler/composer
+```
+resolver tags (1): bodyweight
+resolver machines: (none)
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit day 0 (1): bodyweight
+composer DATED kit day 1 (1): bodyweight
+composer DATED kit day 2 (1): bodyweight
+composer DATED kit day 3 (1): bodyweight
+composer DATED kit day 4 (1): bodyweight
+composer DATED kit day 5 (1): bodyweight
+composer DATED kit day 6 (1): bodyweight
+```
+### 4. BASE block exercise selection (what gets RECORDED)
+```
+accessory_or_core      Ab Wheel                     role=accessory block=2026-08-10
+arm_or_shoulder        Band Pull-Apart              role=accessory block=2026-08-10
+hinge                  RDLs                         role=main_bilateral block=2026-08-10
+horizontal_pull        Barbell Row                  role=main_bilateral block=2026-08-10
+horizontal_push        Bench Press                  role=main_bilateral block=2026-08-10
+single_leg_hip         Single-Leg RDL               role=single_leg block=2026-08-10
+single_leg_knee        Bulgarian Split Squats       role=single_leg block=2026-08-10
+squat                  Back Squat                   role=main_bilateral block=2026-08-10
+vertical_pull          Lat Pulldown                 role=main_bilateral block=2026-08-10
+vertical_push          DB Shoulder Press            role=main_bilateral block=2026-08-10
+```
+### 4b. COMPOSED ROWS, with the role §18 judges
+```
+day 1 squat                  Bodyweight Squat             role=main_strength
+day 1 hinge                  Glute Bridge                 role=strength_accessory
+day 1 single_leg_knee        Cossack Squat                role=strength_accessory
+day 1 single_leg_hip         Single-Leg RDL               role=strength_accessory
+day 1 accessory_or_core      Bosch Hold                   role=strength_accessory
+day 2 arm_or_shoulder        Explosive Push-up            role=strength_accessory
+day 3 horizontal_push        Explosive Push-up            role=main_strength
+day 3 arm_or_shoulder        Explosive Push-up            role=strength_accessory
+day 5 squat                  Bodyweight Squat             role=strength_accessory
+day 5 hinge                  Glute Bridge                 role=main_strength
+day 5 single_leg_knee        Cossack Squat                role=strength_accessory
+day 5 single_leg_hip         Single-Leg RDL               role=strength_accessory
+day 5 accessory_or_core      Bosch Hold                   role=strength_accessory
+main_strength rows: 3
+```
+### 5. TEMPORARY substitutions
+```
+day 1 squat                  shipped=Bodyweight Squat         base=Back Squat (kit_today)
+day 1 hinge                  shipped=Glute Bridge             base=RDLs (kit_today)
+day 1 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+day 1 accessory_or_core      shipped=Bosch Hold               base=Ab Wheel (kit_today)
+day 2 arm_or_shoulder        shipped=Explosive Push-up        base=Band Pull-Apart (kit_today)
+day 3 horizontal_push        shipped=Explosive Push-up        base=Bench Press (kit_today)
+day 3 arm_or_shoulder        shipped=Explosive Push-up        base=Band Pull-Apart (kit_today)
+day 5 squat                  shipped=Bodyweight Squat         base=Back Squat (kit_today)
+day 5 hinge                  shipped=Glute Bridge             base=RDLs (kit_today)
+day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+day 5 accessory_or_core      shipped=Bosch Hold               base=Ab Wheel (kit_today)
+```
+### 6. STORED block-selection history (input to this run)
+```
+2026-08-10  accessory_or_core      Ab Wheel
+2026-08-10  arm_or_shoulder        Band Pull-Apart
+2026-08-10  hinge                  RDLs
+2026-08-10  horizontal_pull        Barbell Row
+2026-08-10  horizontal_push        Bench Press
+2026-08-10  single_leg_hip         Single-Leg RDL
+2026-08-10  single_leg_knee        Bulgarian Split Squats
+2026-08-10  squat                  Back Squat
+2026-08-10  vertical_pull          Lat Pulldown
+2026-08-10  vertical_push          DB Shoulder Press
+```
+### 7. VISIBLE generated exercises
+```
+⚠ GENERATION REFUSED
+      generated_week_refused: Generated week refused (main_strength_planner_selected_target:3)
+      findings: [{"clause":"main_strength_planner_selected_target","severity":"blocking","detail":"the planner's own selected main-strength target is not met","expected":4,"actual":3}]
+```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+_nothing stored_
+### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
+_the pass changed nothing (or never ran)_
+### 8. Club / game anchors
+_none visible_
+### 9. Typed equipment gaps
+```
+kitUnachievablePatterns: pull
+gap day 2 slot=horizontal_pull cause=kit 
+gap day 2 slot=vertical_pull cause=kit 
+gap day 3 slot=vertical_push cause=kit 
 ```
 
 ## B7 — CONTROL — kit removal ONLY, no travel fact
@@ -924,6 +1073,16 @@ day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press 
   Game Day
 2026-08-16 [kit: 3]  Rest Day
 ```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Rest" type=Rest rows=0
+day 1 "lower_squat" type=Strength rows=5
+day 2 "Team Training" type=Team Training rows=2
+day 3 "lower_hinge" type=Strength rows=5
+day 4 "Team Training" type=Team Training rows=3
+day 5 "Rest" type=Rest rows=0
+day 6 "Game" type=Game rows=0
+```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
 ### 8. Club / game anchors
@@ -1029,23 +1188,29 @@ _none — no row carries `substitutedFor`_
     - Bench Press
     - DB Shoulder Press
     - Banded External Rotation
-  Conditioning
-    - 20 s Max Sprint — Small Dose
 2026-08-13 [kit: 19]  Rest Day
 2026-08-14 [kit: 19]  Training Day
-  Gunshow
-    - Incline Dumbbell Curl
-    - Banded Bicep Curl
-    - Tricep Pushdown
-    - Overhead Tricep Extension
-    - Rear Delt Fly
-    - Shrugs
+  Strength
+    - Back Squat
+    - RDLs
+    - Bulgarian Split Squats
+    - Single-Leg RDL
+    - Band Pallof Press
 2026-08-15 [kit: 19]  Training Day
   Conditioning
     - Warm-up
     - 30 m Repeats
-2026-08-16 [kit: 19]  Training Day
-  Mobility
+2026-08-16 [kit: 19]  Rest Day
+```
+### 7a. WHAT THE PROGRAM STORES (before the projection)
+```
+day 0 "Speed Conditioning" type=Conditioning rows=2
+day 1 "lower_squat" type=Mixed rows=6
+day 2 "upper_pull" type=Mixed rows=4
+day 3 "upper_push" type=Strength rows=3
+day 4 "Rest" type=Rest rows=0
+day 5 "lower_hinge" type=Strength rows=5
+day 6 "Tempo Intervals" type=Conditioning rows=2
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
@@ -1074,6 +1239,28 @@ B5: 8 slot(s) RECORD a different base, 0 slot(s) lost
     horizontal_push        Bench Press -> Incline Bench
     vertical_push          DB Shoulder Press -> Seated DB Press
 B6: 0 slot(s) RECORD a different base, 0 slot(s) lost
+B9: 0 slot(s) RECORD a different base, 0 slot(s) lost
 B7: 0 slot(s) RECORD a different base, 0 slot(s) lost
 B8: 0 slot(s) RECORD a different base, 0 slot(s) lost
 ```
+
+## LEGALITY CENSUS — every visible row against the kit that day
+
+| world | days | rows | ILLEGAL |
+| --- | --- | --- | --- |
+| B0 NORMAL — Commercial Gym athlete, no temporary change | 7 | 10 | 0 |
+| B1 AWAY MARKED — trip span only, normal equipment kept | 7 | 12 | 0 |
+| B2 AWAY + KIT REMOVED — dumbbells and bands only | 7 | 12 | 0 |
+| B3 BOOT DURING THE TRIP — same facts, today is inside the span | 7 | 12 | 0 |
+| B4 RETURN-DATE BOOT — today is the return date, the span is over | 7 | 10 | 0 |
+| B5 NEXT BLOCK AFTER RETURNING — block 2, trip long expired | 7 | 10 | 0 |
+| B6 CONTROL — identical removal, span starts on the week Monday | 7 | 19 | 0 |
+| B9 AWAY WITH NOTHING — a hotel room and a floor | 0 | 0 | 0 |
+| B7 CONTROL — kit removal ONLY, no travel fact | 7 | 10 | 0 |
+| B8 CONTROL — travel fact ONLY, full kit kept | 7 | 20 | 0 |
+
+**115 visible rows across 10 worlds. ILLEGAL: 0.**
+
+Judged by `exerciseIsAvailableWith` — the app's own availability oracle,
+the same one generation filters with — asked for the kit resolved on THAT
+DATE, not the week's.

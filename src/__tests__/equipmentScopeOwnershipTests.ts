@@ -32,6 +32,7 @@ import {
   runBoundary, athlete, travelFact, awayEquipmentFact,
   type BoundaryResult,
 } from '../../scripts/trace-equipment-scopes';
+import type { BlockExerciseSelection } from '../rules/blockExerciseSelection';
 
 armTotalsOrRed();
 
@@ -65,6 +66,14 @@ function week(args: {
   facts?: readonly unknown[];
   todayISO?: string;
   weekMondayISO?: string;
+  /* ⚠ **THE HISTORY IS PART OF THE WORLD, AND LEAVING IT EMPTY HID THE DEFECT.**
+   * The trace feeds each boundary what the HOME week recorded, because that is
+   * what the athlete's store holds on the morning they leave. A cell that passes
+   * `[]` composes a different block, lands different days, and the mid-week
+   * Gunshow that carried the illegal row never appears — measured: the combined
+   * mutant left this suite 19/0 while the trace it mirrors reported the illegal
+   * row correctly. */
+  selectionHistory?: readonly BlockExerciseSelection[];
 }): BoundaryResult {
   return runBoundary({
     id: 'cell', title: 'cell',
@@ -75,7 +84,7 @@ function week(args: {
     blockStartISO: args.weekMondayISO ?? WEEK_MONDAY,
     blockNumber: 1,
     facts: args.facts ?? [],
-    selectionHistory: [],
+    selectionHistory: args.selectionHistory ?? homeHistory,
   });
 }
 
@@ -88,7 +97,14 @@ const AWAY_FACTS = [
   }),
 ];
 
-const home = week({});
+// The block the athlete actually has on the morning they leave, recorded by the
+// home week — the same history the trace threads through every boundary.
+let homeHistory: readonly BlockExerciseSelection[] = [];
+const home = week({ selectionHistory: [] });
+homeHistory = (home.observation?.selections ?? []).map((sel) => ({
+  blockNumber: 1, blockStartISO: sel.blockStartISO, slot: sel.slot,
+  group: null, role: sel.role, identity: sel.identity,
+})) as unknown as readonly BlockExerciseSelection[];
 const away = week({ facts: AWAY_FACTS });
 
 const recordOf = (result: BoundaryResult): Record<string, string> =>
@@ -384,6 +400,95 @@ run('[15] the club and home presets did NOT gain a sandbag', () => {
   const commercial = EQUIPMENT_LOCATION_PRESETS.find((p: any) => p.id === 'commercial_gym');
   assert(commercial?.preTickedTags.includes('sandbag'),
     'commercial gym means all askable equipment, and it is missing the sandbag');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE LEGALITY CENSUS — EVERY VISIBLE ROW, AGAINST THAT DAY'S OWN KIT
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// The mission's flat rule: *"Never program an exercise requiring unavailable
+// equipment."* Not "never compose one" — never PROGRAM one, which means the row
+// the athlete reads on the day they read it.
+//
+// ⚠ **THIS CELL EXISTS BECAUSE THE COMPOSER WAS INNOCENT AND THE WEEK WAS STILL
+// WRONG.** Measured 2026-08-17 on a mid-week trip with dumbbells and bands:
+// every composed STRENGTH row was legal, and the Gunshow on the Friday shipped
+// `Tricep Pushdown` — which needs cables — in a hotel room. It is authored at
+// READ time by `sessionResolver`'s `applyGameProximity`, from an
+// `AthleteContext` whose kit was resolved once for the whole week.
+//
+// So the census walks the PROJECTION, not the composer: it is the only place
+// that sees every producer's output at once, and it cannot be satisfied by
+// fixing one of them.
+
+/* ⚠ **THE CENSUS MUST INCLUDE A MID-WEEK TRIP, AND THE FIRST VERSION DID NOT.**
+ * Every world above departs on the week's own Monday, which means the WEEK-level
+ * kit `useScheduleState` resolves (at `todayISO`) already equals the DAY's kit —
+ * so the read-side day resolution has nothing to correct and reverting it
+ * changes nothing. Measured: the combined mutant that reverts BOTH read-side
+ * fixes left this suite 17/0.
+ *
+ * The defect only exists when the two disagree: leave on WEDNESDAY, and Monday's
+ * week-level answer is a full commercial gym while Friday's is a hotel room.
+ * That is the world the `Tricep Pushdown` was found in, and it is the world the
+ * census has to walk. */
+const MID_WEEK_TRIP = [
+  travelFact('2026-08-12', TRIP_UNTIL),
+  awayEquipmentFact({
+    from: '2026-08-12', until: TRIP_UNTIL,
+    removedTags: REMOVED, removedModalities: REMOVED_MODALITIES,
+  }),
+];
+const midWeekAway = week({ facts: MID_WEEK_TRIP });
+
+const censusOf = (result: BoundaryResult): string[] =>
+  result.visible.flatMap((day) => day.lines.filter((line) => /ILLEGAL ON/.test(line)));
+
+run('[16b] NON-VACUITY — the mid-week trip really does split the week\'s kit', () => {
+  const kits = new Set(midWeekAway.visible.map((day) => day.day.replace(/^.*\[kit: /, '')));
+  assert(kits.size > 1,
+    `every day of the mid-week trip resolved to the same kit (${[...kits].join(', ')}). `
+    + 'The week is not split, so the census below cannot see the defect it exists for.');
+});
+
+run('[17] a trip removes the FIXTURE from the read side too, not just the plan', () => {
+  assert(home.anchors.some((anchor) => /game|match/i.test(anchor)),
+    'the control week shows no fixture at all, so this cell cannot fail');
+  const inside = midWeekAway.visible.filter((day) => {
+    const date = day.day.slice(0, 10);
+    return date >= '2026-08-12' && date <= TRIP_UNTIL;
+  });
+  const fixtureDays = inside.filter((day) => /game|match/i.test(day.title));
+  assert(fixtureDays.length === 0,
+    `the athlete is away and the week still shows ${fixtureDays.map((d) => d.day).join(', ')} `
+    + 'as a fixture. A virtual game re-derived from `gameDay` reappears every '
+    + 'Saturday forever, including Saturdays he is a thousand kilometres away — '
+    + 'and it then anchors a G-1 session that displaces a composed strength day.');
+});
+
+run('[16] NO visible row is illegal on the kit the athlete has that day', () => {
+  const worlds: Array<[string, BoundaryResult]> = [
+    ['home', home],
+    ['away (kit removed)', away],
+    ['away, DEPARTING MID-WEEK', midWeekAway],
+    ['away (travel only)', travelOnly],
+    ['home again, return date', week({
+      facts: AWAY_FACTS, todayISO: RETURN_DATE, weekMondayISO: RETURN_DATE,
+    })],
+  ];
+  let rows = 0;
+  const offences: string[] = [];
+  for (const [name, world] of worlds) {
+    assert(world.error === null, `${name} did not generate: ${world.error}`);
+    rows += world.visible.reduce((sum, day) => sum + day.lines.length, 0);
+    for (const line of censusOf(world)) offences.push(`${name}: ${line.trim()}`);
+  }
+  assert(rows > 40,
+    `the census only saw ${rows} lines across four weeks — that is not a full `
+    + 'program and an empty census proves nothing');
+  assert(offences.length === 0,
+    `${offences.length} row(s) require kit the athlete does not have that day:\n      `
+    + offences.join('\n      '));
 });
 
 console.log(`\nEquipment scope ownership: ${passed} passed, ${failed} failed`);

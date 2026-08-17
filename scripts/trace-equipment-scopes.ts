@@ -325,6 +325,7 @@ export interface BoundaryResult {
   readonly anchors: readonly string[];
   readonly error: string | null;
   readonly removalLog: readonly string[];
+  readonly programDays: readonly string[];
   readonly constraintPass: readonly string[];
 }
 
@@ -356,6 +357,7 @@ export function runBoundary(boundary: Boundary): BoundaryResult {
   // A refusal whose composer emitted the pattern means something between them
   // took it, and this is the only place that says which.
   const removalLog: string[] = [];
+  const programDays: string[] = [];
   const realLog = console.log;
   console.log = ((...parts: unknown[]) => {
     const text = parts.map((p) => (typeof p === 'string' ? p : JSON.stringify(p))).join(' ');
@@ -378,6 +380,16 @@ export function runBoundary(boundary: Boundary): BoundaryResult {
       recordSelections: false,
     } as Parameters<typeof generateProgramLocally>[1]);
 
+    // WHAT THE PROGRAM ACTUALLY STORES, before the projection has an opinion.
+    // A composed row that exists here and not on the screen has been overridden
+    // at READ time, which is a different defect from one never authored.
+    for (const microcycle of (program as any).microcycles ?? []) {
+      for (const workout of microcycle.workouts ?? []) {
+        programDays.push(`day ${workout.dayOfWeek} "${workout.name}" type=${workout.workoutType}`
+          + ` rows=${(workout.exercises ?? []).length}`);
+      }
+      break;
+    }
     const weekDays = buildProgramTabProjectedWeek({
       mondayISO: boundary.weekMondayISO,
       todayISO: boundary.todayISO,
@@ -441,6 +453,7 @@ export function runBoundary(boundary: Boundary): BoundaryResult {
     anchors,
     error,
     removalLog,
+    programDays,
     constraintPass: [...constraintPass],
   };
 }
@@ -533,6 +546,9 @@ function renderBoundary(result: BoundaryResult): string {
     }
     out.push('```');
   }
+  out.push('### 7a. WHAT THE PROGRAM STORES (before the projection)');
+  out.push(result.programDays.length === 0 ? '_nothing stored_'
+    : `\`\`\`\n${result.programDays.join('\n')}\n\`\`\``);
   out.push('### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY');
   if (result.constraintPass.length === 0) out.push('_the pass changed nothing (or never ran)_');
   else out.push(`\`\`\`\n${result.constraintPass.join('\n')}\n\`\`\``);
@@ -631,6 +647,20 @@ function main(): void {
     // four main-strength rows covering exactly those patterns. Two controls,
     // each dropping ONE of B6's two facts.
     {
+      id: 'B9', title: 'AWAY WITH NOTHING — a hotel room and a floor',
+      profile: base, todayISO: WEEK_MONDAY, weekMondayISO: WEEK_MONDAY,
+      phaseWeek: 8, blockStartISO: WEEK_MONDAY, blockNumber: 1,
+      facts: [
+        travelFact(WEEK_MONDAY, '2026-08-16'),
+        awayEquipmentFact({
+          from: WEEK_MONDAY, until: '2026-08-16',
+          removedTags: [...REMOVED_AWAY, 'dumbbells', 'bands'],
+          removedModalities: REMOVED_MODALITIES,
+        }),
+      ],
+      selectionHistory: [],
+    },
+    {
       id: 'B7', title: 'CONTROL — kit removal ONLY, no travel fact',
       profile: base, todayISO: WEEK_MONDAY, weekMondayISO: WEEK_MONDAY,
       phaseWeek: 8, blockStartISO: WEEK_MONDAY, blockNumber: 1,
@@ -697,6 +727,86 @@ function main(): void {
     for (const sel of lost) page.push(`    ${sel.slot.padEnd(22)} ${sel.identity} -> (slot gone)`);
   }
   page.push('```');
+
+  // ── THE LEGALITY CENSUS — EVERY VISIBLE ROW, EVERY WORLD ────────────────
+  page.push('');
+  page.push('## LEGALITY CENSUS — every visible row against the kit that day');
+  page.push('');
+  page.push('| world | days | rows | ILLEGAL |');
+  page.push('| --- | --- | --- | --- |');
+  let censusRows = 0;
+  let censusIllegal = 0;
+  for (const result of results) {
+    const rows = result.visible.reduce((sum, day) =>
+      sum + day.lines.filter((line) => line.trim().startsWith('- ')).length, 0);
+    const illegal = result.visible.reduce((sum, day) =>
+      sum + day.lines.filter((line) => /ILLEGAL ON/.test(line)).length, 0);
+    censusRows += rows;
+    censusIllegal += illegal;
+    page.push(`| ${result.boundary.id} ${result.boundary.title} | ${result.visible.length}`
+      + ` | ${rows} | ${illegal === 0 ? '0' : `**${illegal}**`} |`);
+  }
+  page.push('');
+  page.push(`**${censusRows} visible rows across ${results.length} worlds. ILLEGAL: ${censusIllegal}.**`);
+  page.push('');
+  page.push('Judged by `exerciseIsAvailableWith` — the app\'s own availability oracle,');
+  page.push('the same one generation filters with — asked for the kit resolved on THAT');
+  page.push('DATE, not the week\'s.');
+
+  // ── THE FIVE WEEKS SAM ASKED FOR, SIDE BY SIDE ──────────────────────────
+  const wanted: Array<[string, string]> = [
+    ['B0', 'HOME — his normal week'],
+    ['B8', 'AWAY, normal equipment — he took the trip, kept his gym'],
+    ['B2', 'AWAY, dumbbells and bands — leaving Wednesday'],
+    ['B9', 'AWAY with nothing — a hotel room and a floor'],
+    ['B4', 'HOME AGAIN — the first week back'],
+  ];
+  const sam: string[] = [];
+  sam.push('# THE FIVE WEEKS, SIDE BY SIDE');
+  sam.push('');
+  sam.push('Written by `npm run trace:equipment-scopes`. Every exercise below came');
+  sam.push('out of the real generator and the real screen projection.');
+  sam.push('');
+  for (const [id, title] of wanted) {
+    const result = results.find((entry) => entry.boundary.id === id);
+    sam.push(`## ${title}`);
+    sam.push('');
+    if (!result) { sam.push('_not run_'); sam.push(''); continue; }
+    if (result.error) {
+      sam.push('**NO WEEK AT ALL — the app refused to build one.**');
+      sam.push('');
+      sam.push('```');
+      sam.push(result.error);
+      sam.push('```');
+      sam.push('');
+      continue;
+    }
+    sam.push('```');
+    for (const day of result.visible) {
+      sam.push(`${day.day}  ${day.title}`);
+      for (const line of day.lines) sam.push(line);
+    }
+    sam.push('```');
+    const subs = result.observation?.substitutions ?? [];
+    if (subs.length > 0) {
+      sam.push('');
+      sam.push('Swapped just for these days — his normal exercise is untouched underneath:');
+      sam.push('');
+      for (const sub of subs) {
+        sam.push(`- **${sub.shipped}** instead of ${sub.base} (${sub.cause})`);
+      }
+    }
+    const gaps = result.observation?.gaps ?? [];
+    if (gaps.length > 0) {
+      sam.push('');
+      sam.push('Told he cannot train, and why:');
+      sam.push('');
+      for (const gap of gaps) sam.push(`- ${gap.slot} — ${gap.cause}`);
+    }
+    sam.push('');
+  }
+  writeFileSync(resolve(__dirname, '..', 'docs', 'EQUIPMENT_WEEKS_FOR_SAM_2026-08-17.md'),
+    `${sam.join('\n')}\n`, 'utf8');
 
   const dir = resolve(__dirname, '..', 'docs');
   mkdirSync(dir, { recursive: true });
