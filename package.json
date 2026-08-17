@@ -447,7 +447,8 @@
     "diag:coach-visible-domain-verifier": "sucrase-node src/__tests__/coachVisibleDomainVerifierTests.ts",
     "diag:coach-committed-program-edit-reply": "sucrase-node src/__tests__/coachCommittedProgramEditReplyTests.ts",
     "test:conditioning-phase-authorship": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningPhaseAuthorshipTests.ts",
-    "test:conditioning-rollover": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningRolloverResponseTests.ts"
+    "test:conditioning-rollover": "TZ=Australia/Melbourne sucrase-node src/__tests__/conditioningRolloverResponseTests.ts",
+    "test:offseason-deload-conditioning": "TZ=Australia/Melbourne sucrase-node src/__tests__/offseasonDeloadConditioningTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
