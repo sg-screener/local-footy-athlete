@@ -454,6 +454,92 @@ const HARD_BLOCK_SORENESS: ReadonlySet<FeedbackSoreness> =
   new Set<FeedbackSoreness>(['high']);
 
 /**
+ * THE STRENGTH SESSIONS AN ACCEPTED BLOCK ACTUALLY REQUIRED OF THE ATHLETE.
+ *
+ * **Sam ruled this, 2026-08-17:** *"The completion denominator must be the
+ * required strength sessions in the accepted block the athlete actually
+ * received—not requested gym availability and not a recalculated planning
+ * target. Give that block-specific delivered requirement one durable owner at
+ * block acceptance, and make rollover and restart read the same value. Do not
+ * add a fallback to either of the two refuted numbers."*
+ *
+ * ## THE TWO REFUTED NUMBERS, SO NEITHER COMES BACK
+ *
+ * Both were measured on a real journey athlete (`test:athlete-journey`); neither
+ * is a hypothetical.
+ *
+ * 1. **`plan.coreSessions * WEEKS_PER_BLOCK` = 12.** Requested gym availability.
+ *    The athlete asked for three gym days; Friday is protected as G-1 before
+ *    their Saturday game, so the app gave two. They completed 7 of the 8 offered,
+ *    recovery read `good`, and the gate compared 7 against `ceil(12 * 0.75) = 9`.
+ *    **Every continuing lift held, silently** — the boundary ran, read their real
+ *    125 kg, and wrote 125 kg back.
+ * 2. **`weeklyExposureContract.strength.targetCount * WEEKS_PER_BLOCK` = 12.** A
+ *    recalculated planning target. It reads 3 while the accepted week ships 2, so
+ *    the plan is not the block the athlete received.
+ *
+ * **There is no fallback here and there must never be one.** An absent
+ * requirement returns 0, `readBlockHistory`'s `requiredStrengthSessions > 0`
+ * fails, and nothing progresses — which is the truthful answer for block 1 and
+ * for a speculative probe, both of which have no accepted previous block. A
+ * fallback would restore one of the numbers above on exactly the path that lacks
+ * the fact, which is the path where it is most wrong.
+ *
+ * ## WHY IT IS DERIVED HERE AND STORED, RATHER THAN DERIVED AT READ TIME
+ *
+ * This is the ONE place the count can be taken: at acceptance the accepted
+ * program is in hand. It cannot be re-derived later, and re-deriving it was
+ * measured fatal. `quiescentBoot` regenerates with **`previousProgram: null`**
+ * (`quiescentBoot.ts:538`) and its clean slate nulls `blockState`, so a read-time
+ * count returns 0 on every app launch and **every load the boundary raised would
+ * be un-raised the next time the athlete opened the app** — the defect
+ * `test:block-two-boot-preservation` exists to catch. Caught by a control run at
+ * base, not by reasoning.
+ *
+ * So the requirement is a recorded FACT about a block that happened, in the same
+ * family as `generationAnchorISO`: *"One home, one value, read off the program:
+ * never a caller's idea of today"* (`programStore.setCurrentProgram`). It is not
+ * derived state pretending to be an input — the block it describes is gone by the
+ * time anyone asks.
+ *
+ * ## WHAT IS COUNTED
+ *
+ * Sessions that could have PRODUCED a strength log, because that is what
+ * `readBlockHistory` counts on the other side of the ratio: it increments
+ * `recordedStrengthSessions` only for a feedback day carrying non-empty
+ * `strength` logs. A workout with no counted strength row can never be a
+ * completed strength session, so including it would deflate the athlete's rate
+ * against work that was never loggable.
+ *
+ * ⚠ **A `Workout` HAS `dayOfWeek`, NOT A DATE** — the date lives on the
+ * microcycle. The window is applied to `microcycle.startDate`, and a reader that
+ * looked for `workout.date` would find nothing and return 0, which reads exactly
+ * like "this athlete was programmed no work".
+ */
+export function deriveAcceptedBlockStrengthRequirement(args: {
+  program: { microcycles?: readonly {
+    startDate: string; workouts?: readonly Workout[];
+  }[] } | null | undefined;
+  /** Inclusive, and compared against each microcycle's own start date. */
+  blockStartISO: string;
+  blockEndISO: string;
+}): number {
+  let count = 0;
+  for (const microcycle of args.program?.microcycles ?? []) {
+    const weekStart = String(microcycle.startDate ?? '').slice(0, 10);
+    if (!weekStart) continue;
+    if (weekStart < args.blockStartISO || weekStart > args.blockEndISO) continue;
+    for (const workout of microcycle.workouts ?? []) {
+      if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') continue;
+      const carriesStrengthRow = (workout.exercises ?? []).some((exercise) =>
+        participatesInCounting(exercise) && Boolean(exercise.exercise?.name));
+      if (carriesStrengthRow) count += 1;
+    }
+  }
+  return count;
+}
+
+/**
  * Reduce the persisted per-date `SessionFeedback` for one block to the signal.
  *
  * `blockStartISO`/`blockEndISO` are inclusive. Dates outside them are ignored,
@@ -521,10 +607,38 @@ export function readBlockHistory(args: {
       if (conditioningRpe > EASY_EFFORT_RATING) conditioningAllEasy = false;
     }
 
-    // STRENGTH — only where the session answer can mean nothing else.
+    /**
+     * STRENGTH — assessed INDEPENDENTLY of the conditioning on the same day.
+     *
+     * **Sam ruled it, 2026-08-18:** *"Strength and conditioning on a combined day
+     * must be assessed independently. If the athlete reports both components easy,
+     * that day may contribute to both the strength-easy and conditioning-easy
+     * evidence. Do not require a strength-only day."*
+     *
+     * This read used to require `!carriesConditioning`, and the reason was real:
+     * `feeling` and `soreness` are SESSION-level answers, so on a combined day
+     * there was no telling whether "hard" meant the lifting or the running. The
+     * guard resolved that ambiguity by discarding the day.
+     *
+     * ⚠ **BUT THE AMBIGUITY ONLY EXISTS WHILE THE CONDITIONING IS UNACCOUNTED
+     * FOR.** When the athlete answers the conditioning RPE, that component has its
+     * own explicit evidence, and the session-level answer is then attributable to
+     * the strength — which is exactly what "assessed independently" means. A
+     * combined day with NO conditioning answer stays ambiguous and is still
+     * discarded, so the original protection is intact where it was actually
+     * needed.
+     *
+     * **MEASURED, and it is why the extra-session offer was unreachable.** A
+     * pre-season athlete whose two gym days are combined days could reach
+     * `strengthEasy` only by leaving the conditioning question blank, and
+     * `conditioningEasy` only by answering it — never both, whatever they did. The
+     * offer requires both, so it could not fire for any athlete of that shape no
+     * matter how easy they found their training.
+     */
     const carriesStrength = (feedback.strength ?? []).length > 0;
     const carriesConditioning = feedback.conditioning !== undefined;
-    if (carriesStrength && !carriesConditioning) {
+    const conditioningAccountedFor = isEffortRating(feedback.conditioning?.rpe);
+    if (carriesStrength && (!carriesConditioning || conditioningAccountedFor)) {
       let answered = false;
       if (feedback.feeling !== undefined) {
         answered = true;
@@ -728,6 +842,57 @@ export function progressedFromOwnHistory(args: {
   if (!args.history.qualifies) return false;
   if (!mayAutomaticallyIncrease(args.exerciseName)) return false;
   return smallestPracticalIncrementKg(args.exerciseName, recorded) !== null;
+}
+
+/**
+ * WHAT LOAD A REPLACEMENT EXERCISE STARTS AT — one owner, two readers.
+ *
+ * **Sam's correction, 2026-08-18:** *"Do not make every replacement automatically
+ * blank. The replacement exercise owns its load: 1. its own recorded
+ * history/override; 2. otherwise its authored starting estimate; 3. otherwise
+ * blank/bodyweight default. It must never inherit the outgoing exercise's load."*
+ *
+ * That is the SAME ladder `decideBlockBoundaryLoads` walks for a rotated-in lift,
+ * so it is lifted here and both call it — the mid-block substitution door
+ * (`replaceExerciseAtDate`) and the block boundary. The alternative is the rule
+ * written twice and drifting, which is the defect class this repo fights.
+ *
+ * ⚠ **THE OUTGOING EXERCISE IS NOT AN INPUT AND CANNOT BE.** There is no
+ * parameter by which the row being replaced could reach this function, which is
+ * how *"Bench Press and Close-Grip Bench, RDL and Glute Bridge … remain separate"*
+ * is held — by construction, not by a branch that chooses not to look.
+ *
+ * `undefined` means UNSET: the athlete chooses, and the weight control stays.
+ */
+export function loadForReplacementExercise(args: {
+  exerciseName: string;
+  onboardingData?: OnboardingData | null;
+  /** Every load this athlete has recorded, by exact canonical exercise name. */
+  recordedLoadByExercise?: Readonly<Record<string, number>>;
+}): number | undefined {
+  const name = args.exerciseName;
+  if (!name) return undefined;
+
+  // ── 1. ITS OWN RECORDED HISTORY WINS, ALWAYS ──
+  // The exact-exercise load-ownership rule, untouched: a movement the athlete has
+  // loaded before resumes at their number, however long ago they last did it.
+  const recorded = args.recordedLoadByExercise?.[name];
+  if (typeof recorded === 'number' && Number.isFinite(recorded) && recorded > 0) {
+    return recorded;
+  }
+
+  // ── 2. AUTHORED AS UNLOADED — BW IS THE DEFAULT, NOT A PROHIBITION ──
+  const authority = resolveLoadAuthority(name);
+  if (authority.kind === 'bodyweight' || authority.kind === 'athlete_chosen') return undefined;
+
+  // ── 3. SAM'S AUTHORED ANCHOR ESTIMATE, from the athlete's own answers ──
+  const estimate = args.onboardingData
+    ? startingWeightForAthlete(name, args.onboardingData)
+    : null;
+  if (typeof estimate === 'number' && Number.isFinite(estimate) && estimate > 0) return estimate;
+
+  // ── 4. NOTHING HONEST TO SAY. THE ATHLETE CHOOSES. ──
+  return undefined;
 }
 
 export function decideBlockBoundaryLoads(args: {

@@ -342,7 +342,39 @@ export function resolveStrengthOwnershipBoundary(
       allowLegacyTextInference: false,
     };
   }
-  if (input.strengthIntent || input.hasMatchedPlanEntry || input.standaloneConditioning || input.canonicalConditioningOnly) {
+  /**
+   * ⚠ **A PLAN THAT NAMES NO STRENGTH CANNOT OVERRULE A DAY THAT VISIBLY CONTAINS
+   * FIVE MAIN LIFTS.**
+   *
+   * `typed_no_strength` means *"the typed plan owns this day and says there is no
+   * main strength on it"*, and it makes `finaliseWorkoutAfterMutation` DELETE every
+   * `strength_main` row (`modern_plan_has_no_strength_ownership`). That is correct
+   * for a club night or a rest day — they have no canonical main rows, so they
+   * still land here.
+   *
+   * It was NOT correct for a generated strength day. MEASURED on the real athlete
+   * journey: `sched:2026-07-20:1:full_body` matches its plan entry, carries **no
+   * `strengthIntent` and no `strengthPatternContributions`**, and holds five
+   * classified main-strength rows. The matched-plan-entry arm fired, the
+   * `hasCanonicalMainStrengthRows` arm below was never reached, and the canonicaliser
+   * deleted `Bench Press` and `Pull-Ups` — rows the athlete had not touched — the
+   * moment they swapped an unrelated exercise.
+   *
+   * **This is dormant until an edit**, which is why generation and every gate stayed
+   * green: `finaliseWorkoutAfterMutation` only runs on mutation, so the contradiction
+   * between "the plan names no strength" and "the day is five main lifts" was never
+   * asked until the athlete tapped swap. Nine substitutions across two days, every
+   * one destroyed or rejected.
+   *
+   * The rows are the stronger evidence and now win: a day holding canonical main
+   * strength falls through to `canonical_strength_rows`, whose whole purpose is to
+   * infer the intent from the content that is actually there. **Nothing is
+   * weakened** — every world with no main rows resolves exactly as before, and the
+   * conditioning arms are untouched.
+   */
+  const typedPlanSaysNoStrength = (input.strengthIntent || input.hasMatchedPlanEntry)
+    && !input.hasCanonicalMainStrengthRows;
+  if (typedPlanSaysNoStrength || input.standaloneConditioning || input.canonicalConditioningOnly) {
     return {
       owner: 'typed_no_strength',
       allowCanonicalRowInference: false,

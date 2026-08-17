@@ -542,6 +542,46 @@ export function makeSessionOptional(input: MakeSessionOptionalInput): ActionResu
 }
 
 /** Swap one exercise on a single date for another. */
+
+/**
+ * THE REPLACEMENT'S OWN LOAD — never the outgoing row's.
+ *
+ * Delegates to `loadForReplacementExercise`, the one owner of *"the replacement
+ * exercise owns its load"* (own recorded history -> authored estimate -> blank).
+ * This function's only job is to hand it the athlete's recorded loads and profile
+ * from the live store, because the rule itself must stay pure.
+ *
+ * ⚠ **RECORDED LOADS ARE READ OVER ALL TIME, NOT OVER A BLOCK.** `readBlockHistory`
+ * windows the completion/recovery gate but deliberately not the loads, so a
+ * movement the athlete last loaded three blocks ago still resumes at their number.
+ * The window passed here is therefore deliberately unbounded.
+ */
+function loadForReplacementRow(exerciseName: string): number | undefined {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readBlockHistory, loadForReplacementExercise } =
+      require('../rules/blockBoundaryProgression');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useProgramStore } = require('../store/programStore');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useProfileStore } = require('../store/profileStore');
+    const history = readBlockHistory({
+      feedbackByDate: useProgramStore.getState().sessionFeedback ?? {},
+      blockStartISO: '0000-01-01',
+      blockEndISO: '9999-12-31',
+      requiredStrengthSessions: 0,
+    });
+    return loadForReplacementExercise({
+      exerciseName,
+      onboardingData: useProfileStore.getState().onboardingData,
+      recordedLoadByExercise: history.lastRecordedLoadByExercise,
+    });
+  } catch {
+    // A load we cannot resolve is UNSET, never the outgoing row's number.
+    return undefined;
+  }
+}
+
 export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult {
   const { date, fromExercise, fromExerciseId, toExercise, todayISO } = input;
   if (todayISO && date.slice(0, 10) < todayISO.slice(0, 10)) {
@@ -602,9 +642,26 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     prescribedSets,
     prescribedRepsMin,
     prescribedRepsMax,
-    prescribedWeightKg: Number.isFinite(Number(toExercise.weight))
-      ? Number(toExercise.weight)
-      : (found.prescribedWeightKg ?? 0),
+    // ⚠ **A REPLACEMENT NEVER INHERITS THE OUTGOING EXERCISE'S LOAD.**
+    //
+    // Sam, 2026-08-18: a substitution's *"replacement never inherits another
+    // exercise's load"*. The approved contract says the same for rotation —
+    // *"the old exercise's load must not be blindly transferred … the athlete
+    // selects a safe starting load for the new movement"*.
+    //
+    // This line used to fall back to `found.prescribedWeightKg` — the row being
+    // REPLACED. MEASURED on the real journey: swapping an 80 kg `RDLs` for the
+    // app's own offered substitute produced **`Glute Bridge` at 80 kg**, which is
+    // not a conservative mapping, it is a different exercise wearing another
+    // lift's number.
+    //
+    // Absent means UNSET and the athlete chooses, which is the honest answer for a
+    // movement they have never loaded. It does NOT strand them: the moment they
+    // record a load for this exact exercise, the block boundary's exact-exercise
+    // ownership rule governs it from then on — that rule is untouched here.
+    ...(Number.isFinite(Number(toExercise.weight))
+      ? { prescribedWeightKg: Number(toExercise.weight) }
+      : { prescribedWeightKg: loadForReplacementRow(toExercise.name) }),
     prescriptionType: toExercise.prescriptionType ?? found.prescriptionType,
     perSide: toExercise.perSide ?? found.perSide,
     restSeconds: toExercise.restSeconds ?? found.restSeconds,
@@ -637,6 +694,21 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
       reason: `That swap is not valid for the programmed session, so ${fromExercise} was kept.`,
     };
   }
+  /**
+   * ⚠ **THE COLLATERAL-LOSS REFUSAL THAT USED TO LIVE HERE IS GONE, DELIBERATELY.**
+   *
+   * It refused a swap that would also drop unrelated rows, and it was right about
+   * the symptom: a one-row swap really did leave a 5-row day with 2 rows. But the
+   * CAUSE was `resolveStrengthOwnershipBoundary` concluding `typed_no_strength` for
+   * a day that visibly held five main lifts, so the canonicaliser deleted them all.
+   * That is fixed at its own owner and mutation-proven.
+   *
+   * With the cause fixed the refusal became UNREACHABLE — removing it changed
+   * nothing in any world this journey can produce (mutation M11 survived). An
+   * authority no test can reach is an untested second opinion about the same
+   * question, and two owners of "may this write land" is the defect class this repo
+   * fights. The root fix is the single owner; this is not kept as a backstop.
+   */
   const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
   writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise swap' });

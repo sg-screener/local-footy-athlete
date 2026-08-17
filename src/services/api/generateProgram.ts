@@ -253,6 +253,25 @@ export interface GenerateProgramFromProfileOptions {
     sessionFeedback?: Readonly<Record<string, import('../../store/programStore').SessionFeedback>>;
     weightOverrides?: Readonly<Record<string, Record<string, number | null>>>;
     blockState?: import('../../utils/programBlockState').StoredProgramBlockState | null;
+    /**
+     * EVERY ACCEPTED BLOCK'S OWN RECORD — its number and what it required of the
+     * athlete — keyed by block start.
+     *
+     * The block-boundary completion denominator (Sam, 2026-08-17). Stated by the
+     * caller that owns the grid — `weekRebuild` at the rollover and
+     * `quiescentBoot` at a relaunch both state the same persisted map, so both
+     * paths reach the identical value.
+     *
+     * ⚠ **NO FALLBACK.** An absent entry means this authoring has no accepted
+     * previous block to measure against — block 1, or a speculative probe — and
+     * the honest denominator is then 0, which makes the completion gate
+     * unreachable rather than measuring the athlete against a number nobody
+     * delivered. Substituting `plan.coreSessions` or the contract's
+     * `strength.targetCount` here is explicitly forbidden: both were measured
+     * wrong on a real athlete (see `deriveAcceptedBlockStrengthRequirement`).
+     */
+    acceptedBlocks?: Readonly<Record<string,
+      import('../../store/programStore').AcceptedBlockRecord>>;
   };
   /**
    * The Monday this block began on, stated by the caller that owns the grid
@@ -1657,7 +1676,11 @@ export function generateProgramLocally(
     // its own number); only the completion/recovery gate is.
     blockStartISO: rotationPreviousBlock.startISO,
     blockEndISO: rotationPreviousBlock.endISO,
-    requiredStrengthSessions: Math.max(1, plan.coreSessions * WEEKS_PER_BLOCK),
+    // THE ACCEPTED PREVIOUS BLOCK'S OWN REQUIREMENT, never the athlete's
+    // requested availability and never a recalculated planning target.
+    requiredStrengthSessions:
+      options.progressionHistory?.acceptedBlocks?.[
+        rotationPreviousBlock.startISO]?.requiredStrengthSessions ?? 0,
   });
   const progressedIdentities = Object.keys(rotationHistory.lastRecordedLoadByExercise)
     .filter((exerciseName) => progressedFromOwnHistory({ exerciseName, history: rotationHistory }))
@@ -1810,7 +1833,12 @@ export function generateProgramLocally(
       feedbackByDate: progressionSessionFeedback,
       blockStartISO: previousBlock.startISO,
       blockEndISO: previousBlock.endISO,
-      requiredStrengthSessions: plan.coreSessions * WEEKS_PER_BLOCK,
+      // The same recorded requirement the rotation read above uses, keyed on the
+      // same window, so one athlete cannot be rotated off one denominator and
+      // progressed off another.
+      requiredStrengthSessions:
+        options.progressionHistory?.acceptedBlocks?.[
+          previousBlock.startISO]?.requiredStrengthSessions ?? 0,
     });
     const allVolumeDecisions: BlockBoundaryVolumeDecision[] = [];
     const allConditioningDecisions: BlockBoundaryConditioningDecision[] = [];

@@ -97,6 +97,21 @@ const DECLARED: Readonly<Record<string, InputClass>> = {
   // READS it (Sam, 2026-08-06) — the ruling that replaced the re-anchor bug.
   'decision-ledger-store.entries': 'decision',
   'program-store.inputs.generationAnchorISO': 'decision',
+  /**
+   * ACCEPTING A BLOCK IS A DECISION, and this is what that decision recorded:
+   * the block's identity (its number) and what it required of the athlete.
+   *
+   * Classed with `generationAnchorISO` because it is the same shape of fact and
+   * for the same reason — recorded at the moment a program is ACCEPTED, read by
+   * boot, and **not re-derivable afterwards**, because the program it describes is
+   * gone by the time anyone asks. Sam ruled it 2026-08-18: *"persisted when that
+   * block is accepted and restored before boot regenerates the program … Once
+   * Block 2 is accepted, restart must never infer or reset them to Block 1."*
+   *
+   * It is NOT a `result`: `sessionFeedback` and `weightOverrides` are what the
+   * athlete DID, whereas this is what the app COMMITTED to give them.
+   */
+  'program-store.inputs.acceptedBlocks': 'decision',
 
   // §2.4 training results — what was done
   'program-store.inputs.sessionFeedback': 'result',
