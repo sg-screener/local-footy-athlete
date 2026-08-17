@@ -319,7 +319,7 @@ export function scheduleStateFor(args: {
   };
 }
 
-interface PrintScenario {
+export interface PrintScenario {
   readonly slug: string;
   readonly title: string;
   /** What Sam is being asked to judge in THIS week, in his words not the code's. */
@@ -341,7 +341,7 @@ interface PrintScenario {
   readonly awaySpan?: { from: string; until: string };
 }
 
-const SCENARIOS: PrintScenario[] = [
+export const SCENARIOS: PrintScenario[] = [
   {
     slug: '1-early-off-season',
     title: 'Early off-season — week 1 back, no club, full gym',
@@ -545,7 +545,7 @@ function awayConstraintsFor(span: { from: string; until: string }, todayISO: str
   return { fact, compatibility };
 }
 
-interface PrintedWeek {
+export interface PrintedWeek {
   readonly scenario: PrintScenario;
   readonly program: TrainingProgram;
   readonly visibleWeek: VisibleWeek;
@@ -554,7 +554,7 @@ interface PrintedWeek {
   readonly equipmentTags: readonly string[];
 }
 
-function runScenario(scenario: PrintScenario): PrintedWeek {
+export function runScenario(scenario: PrintScenario): PrintedWeek {
   const todayISO = WEEK_MONDAY;
   const away = scenario.awaySpan ? awayConstraintsFor(scenario.awaySpan, todayISO) : null;
   const activeConstraints = away ? [...away.compatibility.activeConstraints] : [];
@@ -714,7 +714,10 @@ function renderPart(
   }
   lines.push('');
   for (const row of part.rows) {
-    let line = `- ${row.name} — ${row.prescription}`;
+    // `prescription` is nullable since 2026-08-17: a conditioning row shows its
+    // AUTHORED dose lines instead, and a warm-up shows neither (R-049). The
+    // printer renders what the projection carries and still invents nothing.
+    let line = row.prescription ? `- ${row.name} — ${row.prescription}` : `- ${row.name}`;
     const impossible = impossibleWithKit(String(row.name), ctx.equipmentTags);
     if (impossible) {
       line += `  ⚠ **CANNOT BE DONE — ${impossible}.**`;
@@ -728,7 +731,7 @@ function renderPart(
     // suppresses it deliberately (`formatConditioningRowPrescription` returns
     // '' for rep-based conditioning rows: "showing '1 reps' would be confusing
     // filler"); the projection prints it. Flagged, not tidied away.
-    if (/^\s*1\s*×\s*1\s*$/.test(String(row.prescription))) {
+    if (row.prescription && /^\s*1\s*×\s*1\s*$/.test(String(row.prescription))) {
       line += '  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**';
       ctx.findings.push({
         date: ctx.date,
@@ -736,7 +739,9 @@ function renderPart(
         line: `${row.name} — the app says "1 × 1"`,
       });
     }
-    const shouldRead = rangeAgainstTheLaw(String(row.prescription));
+    const shouldRead = row.prescription
+      ? rangeAgainstTheLaw(String(row.prescription))
+      : null;
     if (shouldRead) {
       ctx.ranges.count += 1;
       if (!ctx.ranges.example) {
@@ -744,6 +749,11 @@ function renderPart(
       }
     }
     lines.push(line);
+    // THE AUTHORED DOSE, ONE LINE EACH — Sam's chosen layout, 2026-08-17:
+    // work, rest, sets/rounds and how long it takes, each on its own line. Every
+    // one is `SignedCopy` off `data/conditioningTemplates.ts`; the printer
+    // supplies the indentation and nothing else.
+    for (const doseLine of row.dose) lines.push(`  - ${doseLine}`);
     if (row.cue) lines.push(`  - ${row.cue}`);
   }
   return lines;

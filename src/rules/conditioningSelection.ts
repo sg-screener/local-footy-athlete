@@ -964,3 +964,64 @@ export function templateDurationMinutes(template: ConditioningTemplate): number 
 export function templatePrescriptionLine(template: ConditioningTemplate): string {
   return `${template.setsRounds} · ${template.workPeriod} · ${template.restPeriod}`;
 }
+
+/**
+ * THE AUTHORED DOSE, AS THE ATHLETE READS IT — work, rest, sets/rounds, total.
+ *
+ * Sam, 2026-08-17: conditioning must show *"work time, rest time,
+ * repetitions/rounds and useful duration"*. Every one of those four is already
+ * an authored field on the template (`workPeriod`, `restPeriod`, `setsRounds`,
+ * `totalSessionTime` — four of the six values `ConditioningTemplate` declares
+ * unshippable-if-missing). **Nothing here composes a dose; it hands back the
+ * sheet's own strings.**
+ *
+ * ## WHY IT LIVES AT THE EMITTER AND NOT AT THE PROJECTION
+ *
+ * `composeConditioningRows` already writes these same four values into the
+ * row's `notes`, through `doseLineForDisplay`. A projection that formatted the
+ * template itself would be a SECOND rendering of one authored dose, and the two
+ * would drift the first time `doseLineForDisplay` learned a new shape — the
+ * repeating defect this repo files as "one question, two owners". So the
+ * accessor sits beside the composer, calls the same normaliser, and the
+ * projection consumes it.
+ *
+ * `intensity` and `effortCue` are deliberately NOT here: they already reach the
+ * athlete as the row's CUE (`exerciseCueCopyId`, registered from these same
+ * authored fields), and a second copy on the dose would print the effort twice.
+ *
+ * `null` means the name is not the template vocabulary's — stored legacy and
+ * coach-authored rows keep their own words rather than borrowing a dose that
+ * was never prescribed for them (`resolveTemplateByName`'s own rule).
+ */
+export interface ConditioningVisibleDose {
+  /**
+   * The AUTHORED template's own name, which may differ from the name asked for.
+   *
+   * `resolveTemplateByName` also resolves Sam's legacy-format map, so a stored
+   * row can carry a legacy name and still reach a real authored dose. Callers
+   * that key anything off the template — the copy sheet does — must key it off
+   * THIS name, not the one they passed in, or a legacy row silently finds no
+   * entry and loses the dose it just successfully resolved.
+   */
+  readonly templateName: string;
+  /** `workPeriod`, ratio-normalised exactly as the row's notes normalise it. */
+  readonly work: string;
+  /** `restPeriod`, same normalisation. */
+  readonly rest: string;
+  /** `setsRounds` verbatim — authored as "4 reps", "3 × 8 min, or 4 × 6 min". */
+  readonly setsRounds: string;
+  /** `totalSessionTime` verbatim — the "useful duration" Sam asked for. */
+  readonly totalSessionTime: string;
+}
+
+export function conditioningVisibleDoseFor(name: string): ConditioningVisibleDose | null {
+  const template = resolveTemplateByName(name);
+  if (!template) return null;
+  return {
+    templateName: template.name,
+    work: doseLineForDisplay(template.workPeriod),
+    rest: doseLineForDisplay(template.restPeriod),
+    setsRounds: template.setsRounds,
+    totalSessionTime: template.totalSessionTime,
+  };
+}

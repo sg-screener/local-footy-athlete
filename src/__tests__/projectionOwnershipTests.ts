@@ -162,8 +162,20 @@ run('project() evaluates without throwing and every headline is registered copy'
         for (const row of part.rows) {
           assert(isSignedCopyText(row.name),
             `${day.date}/${part.id}: unregistered row name "${row.name}"`);
-          assert(isSignedCopyText(row.prescription),
-            `${day.date}/${part.id}: unregistered row prescription "${row.prescription}"`);
+          // `prescription` is NULLABLE since 2026-08-17 — a conditioning row
+          // carries its authored `dose` lines instead, and a warm-up carries
+          // neither (R-049). Null is a legal answer; unsigned text never is, and
+          // every dose line is held to exactly the same bar as the prescription
+          // it replaced, so this narrowed the shape without loosening the law.
+          if (row.prescription !== null) {
+            assert(isSignedCopyText(row.prescription),
+              `${day.date}/${part.id}: unregistered row prescription "${row.prescription}"`);
+          }
+          assert(Array.isArray(row.dose), `${day.date}/${part.id}: dose is not an array`);
+          for (const line of row.dose) {
+            assert(isSignedCopyText(line),
+              `${day.date}/${part.id}: unregistered dose line "${line}"`);
+          }
           if (row.cue) {
             assert(isSignedCopyText(row.cue),
               `${day.date}/${part.id}: unregistered row cue "${row.cue}"`);

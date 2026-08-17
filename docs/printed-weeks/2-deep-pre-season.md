@@ -20,20 +20,24 @@ _(the club runs this one — the app lists nothing for it)_
 
 **Strength**
 
-- Back Squat — 3 × 4-6
+- Back Squat — 3 × 5
   - Sit into the hips, chest up. Own the bottom position.
-- Hip Thrusts — 3 × 6-10
-  - Drive through the heels, squeeze at the top. Ribs down, no overextending.
-- Bulgarian Split Squats — 3 × 6-10
+- RDLs — 2 × 9
+  - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
+- Bulgarian Split Squats — 3 × 8
   - Slight lean forward. Control the descent, no bouncing.
-- Single-Leg RDL — 3 × 6-10
+- Single-Leg RDL — 3 × 8
   - Hinge at the hip, soft knee. Balance and control over speed.
-- Band Pallof Press — 2 × 8-12
+- Band Pallof Press — 2 × 10
   - Press out, resist the pull. Hips stay square, slight knee and hip bend.
 
 **Conditioning**
 
-- Classic 4×4 — 4 × 1
+- Classic 4×4
+  - Work: 4 min hard
+  - Rest: 3 min easy jog
+  - Sets: 4 reps
+  - Takes about: 28 min (hard work 16 min)
   - Hard means honest pace, not a sprint you can't hold for 4 minutes — round 4 should match round 1. 90–100% MAS; HR 90–95% max late
 
 ## Wednesday 12 August
@@ -64,15 +68,15 @@ _(the club runs this one — the app lists nothing for it)_
 
 **Strength**
 
-- Goblet Squat — 3 × 6-10
-  - Elbows inside the knees at the bottom. Smooth tempo, no rushing.
-- Deadlift — 3 × 4-6
-  - Keep bar close, get tight through the lats. Flat back from start to lockout.
-- Cossack Squat — 3 × 8-12
-  - Wide stance, sit onto one leg, other leg straight. Heel down, chest up, push back through. Hold rack if needed.
-- Single-Leg RDL — 3 × 6-10
+- Leg Press — 3 × 8
+  - Full depth without lower back rounding. Push through the whole foot.
+- RDLs — 3 × 5
+  - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
+- Bulgarian Split Squats — 3 × 8
+  - Slight lean forward. Control the descent, no bouncing.
+- Single-Leg RDL — 3 × 8
   - Hinge at the hip, soft knee. Balance and control over speed.
-- Banded Dead Bug — 2 × 8-12
+- Banded Dead Bug — 2 × 10
   - Band behind head, pull band with straight arms toward knees, ribs down. Lower back stays glued to the floor.
 
 ## Sunday 16 August
@@ -89,4 +93,4 @@ None. Every word on this page came out of the app.
 
 ## Things wrong with this week
 
-**Every set on this page is written as a range — 10 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 4-6" should read "3 × 5"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
+Nothing the printer could detect. Judge the training itself.

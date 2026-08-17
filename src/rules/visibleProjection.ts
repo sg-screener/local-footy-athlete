@@ -102,7 +102,40 @@ export interface VisibleRow {
   readonly id: string;
   /** The exercise's authored name — traced to the master sheet, never composed. */
   readonly name: SignedCopy;
-  readonly prescription: SignedCopy;
+  /**
+   * The sets×reps / duration line — and `null` WHEN THERE IS NO SUCH LINE.
+   *
+   * Nullable since 2026-08-17. A conditioning row's `prescribedSets` /
+   * `prescribedRepsMin` / `Max` are PLACEHOLDERS, not a dose: a real generated
+   * `Classic 4×4` carries `sets:1, min:1, max:1` while its authored dose (4 min
+   * hard, 3 min easy jog, 4 rounds) sits in `dose` below. Rendering the
+   * placeholders produced `1 × 1` on the athlete's screen over the top of a real
+   * prescription — the defect Sam named first.
+   *
+   * A warm-up row is the other `null`: R-049, *"dose counts main work only —
+   * warm-up and cool-down never count"*. It has no dose and must not be given
+   * one.
+   *
+   * NULL MEANS "THIS ROW HAS NO SETS×REPS LINE", never "we could not work one
+   * out". A row whose numbers ARE its dose still carries them here.
+   */
+  readonly prescription: SignedCopy | null;
+  /**
+   * THE AUTHORED CONDITIONING DOSE — work, rest, sets/rounds, total time.
+   *
+   * Sam, 2026-08-17: conditioning shows *"work time, rest time,
+   * repetitions/rounds and useful duration"*, each on its own line. Every line
+   * is one authored field of `data/conditioningTemplates.ts`, fetched through
+   * `conditioningSelection.conditioningVisibleDoseFor` — the same accessor the
+   * ROW COMPOSER uses, so the day screen and this projection cannot render one
+   * dose two ways.
+   *
+   * Empty for every row that is not authored conditioning. It is a LIST rather
+   * than a shaped record because the surfaces render it as lines and the
+   * projection owns which lines exist — a card that picked fields out of a
+   * record would be deciding presentation the projection already decided.
+   */
+  readonly dose: readonly SignedCopy[];
   readonly cue: SignedCopy | null;
 }
 
@@ -281,7 +314,12 @@ export function athleteVisibleStrings(day: VisibleDay): readonly string[] {
     out.push(part.headline);
     if (part.detail) out.push(part.detail);
     for (const row of part.rows) {
-      out.push(row.name, row.prescription);
+      out.push(row.name);
+      // `prescription` is nullable since 2026-08-17 — a conditioning row shows
+      // its authored `dose` lines instead. Both are athlete-visible and both
+      // are collected, so L-P2 still sees every word on the screen.
+      if (row.prescription) out.push(row.prescription);
+      out.push(...row.dose);
       if (row.cue) out.push(row.cue);
     }
   }

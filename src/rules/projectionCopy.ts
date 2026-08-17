@@ -69,7 +69,9 @@ import {
   CONDITIONING_WARMUP_COPY,
   CONDITIONING_WARMUP_COPY_ID,
   CONDITIONING_WARMUP_ROW_NAME,
+  conditioningVisibleDoseFor,
 } from './conditioningSelection';
+import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { COACH_REVISION_TEMPLATE_ROW_NAMES } from '../utils/coachRevisionTemplates';
 
 /**
@@ -107,6 +109,35 @@ export function exerciseNameCopyId(canonicalName: string): string {
 export function exerciseCueCopyId(canonicalName: string): string | null {
   return NAMES_WITH_CUE.has(canonicalName) ? `${EXERCISE_CUE_PREFIX}${canonicalName}` : null;
 }
+
+/**
+ * THE AUTHORED DOSE VALUES, AS SIGNED COPY.
+ *
+ * `SignedCopyParam` is `number | SignedCopy` and says why in one line: *"never a
+ * bare string"*. A dose value — `4 min hard`, `3 × 8 min, or 4 × 6 min`,
+ * `≈8–11 min (work ≈20 s)` — is athlete-facing text, so it goes through the
+ * sheet like every other word rather than being smuggled in as a parameter.
+ *
+ * Registered in BULK off `data/conditioningTemplates.ts` for the same reason the
+ * exercise vocabulary is: the authored sheet is the source, and a hand-picked
+ * subset of it would be a second, smaller vocabulary that drifts. Four fields ×
+ * every shippable template.
+ */
+const DOSE_VALUE_PREFIX = 'row.dose.value.';
+
+export type ConditioningDoseField = 'work' | 'rest' | 'sets_rounds' | 'total_time';
+
+/** `null` when the name is not the authored template vocabulary's. */
+export function conditioningDoseValueCopyId(
+  templateName: string,
+  field: ConditioningDoseField,
+): string | null {
+  return DOSE_VALUES_REGISTERED.has(`${templateName} ${field}`)
+    ? `${DOSE_VALUE_PREFIX}${field}.${templateName}`
+    : null;
+}
+
+const DOSE_VALUES_REGISTERED = new Set<string>();
 
 let didRegister = false;
 
@@ -899,6 +930,48 @@ export function registerProjectionCopy(): void {
       provenance: 'Mirrors dayWorkoutHelpers.formatStrengthSetsReps\'s range shape.',
       text: '{sets} × {min}-{max}',
     },
+    // ── The authored conditioning dose. ──
+    //
+    // Sam, 2026-08-17: conditioning shows work, rest, rounds and useful
+    // duration, each on its own line. `derived_number` for the same reason the
+    // prescriptions above are: the LABEL is authored here, the value is Sam's
+    // own string off `data/conditioningTemplates.ts` — `workPeriod`,
+    // `restPeriod`, `setsRounds`, `totalSessionTime`, handed over by
+    // `conditioningSelection.conditioningVisibleDoseFor` without rewriting.
+    //
+    // "Sets:" rather than "Rounds:" deliberately, and it is not a preference:
+    // `composeConditioningRows` already writes `Sets: ${template.setsRounds}`
+    // into the row's notes, and the authored value reads "4 reps" / "3 × 8 min,
+    // or 4 × 6 min". "Rounds: 4 reps" would be the projection re-authoring the
+    // sheet to fit a label. One word, one owner, and the emitter had it first.
+    {
+      id: 'row.dose.work',
+      source: 'derived_number',
+      provenance: 'Mirrors conditioningSelection.composeConditioningRows\'s '
+        + '`Work: ${doseLineForDisplay(template.workPeriod)}` note line, already shipping.',
+      text: 'Work: {value}',
+    },
+    {
+      id: 'row.dose.rest',
+      source: 'derived_number',
+      provenance: 'Mirrors composeConditioningRows\'s `Rest: ...` note line.',
+      text: 'Rest: {value}',
+    },
+    {
+      id: 'row.dose.sets_rounds',
+      source: 'derived_number',
+      provenance: 'Mirrors composeConditioningRows\'s `Sets: ${template.setsRounds}` '
+        + 'note line, label included.',
+      text: 'Sets: {value}',
+    },
+    {
+      id: 'row.dose.total_time',
+      source: 'derived_number',
+      provenance: 'ConditioningTemplate.totalSessionTime, verbatim — the "useful '
+        + 'duration" of Sam\'s 2026-08-17 order. The label is this sheet\'s; the '
+        + 'authored string already carries its own ≈ and its work-time aside.',
+      text: 'Takes about: {value}',
+    },
     {
       id: 'row.prescription.duration_seconds',
       source: 'derived_number',
@@ -1009,6 +1082,37 @@ export function registerProjectionCopy(): void {
     }
   }
   registerSignedCopy(exerciseEntries);
+
+  // ── The authored conditioning dose values. ──
+  //
+  // Sam's 2026-08-17 order, surface 1. Every string here is one authored field
+  // of `data/conditioningTemplates.ts`, fetched through the EMITTER's own
+  // accessor so the sheet cannot disagree with the row notes the composer
+  // writes from the same fields. A trace, not an invention — the same shape as
+  // the exercise vocabulary above.
+  const doseEntries: SignedCopyEntry[] = [];
+  for (const template of CONDITIONING_TEMPLATES) {
+    const dose = conditioningVisibleDoseFor(template.name);
+    if (!dose) continue;
+    const fields: readonly (readonly [ConditioningDoseField, string])[] = [
+      ['work', dose.work],
+      ['rest', dose.rest],
+      ['sets_rounds', dose.setsRounds],
+      ['total_time', dose.totalSessionTime],
+    ];
+    for (const [field, text] of fields) {
+      DOSE_VALUES_REGISTERED.add(`${template.name} ${field}`);
+      doseEntries.push({
+        id: `${DOSE_VALUE_PREFIX}${field}.${template.name}`,
+        source: 'authored_sheet',
+        provenance: 'data/conditioningTemplates.ts — the authored dose sheet, read '
+          + 'through conditioningSelection.conditioningVisibleDoseFor so the value '
+          + 'is normalised exactly as composeConditioningRows normalises it.',
+        text,
+      });
+    }
+  }
+  registerSignedCopy(doseEntries);
 }
 
 

@@ -12,20 +12,24 @@
 
 **Strength**
 
-- Back Squat — 3 × 2-4
+- Back Squat — 3 × 3
   - Sit into the hips, chest up. Own the bottom position.
-- Deadlift — 3 × 2-4
-  - Keep bar close, get tight through the lats. Flat back from start to lockout.
-- Bulgarian Split Squats — 3 × 6-8
+- RDLs — 3 × 3
+  - Push hips back, bar slides down leg. Feel the hamstrings load on the way down.
+- Bulgarian Split Squats — 3 × 7
   - Slight lean forward. Control the descent, no bouncing.
-- Single-Leg RDL — 3 × 6-8
+- Single-Leg RDL — 3 × 7
   - Hinge at the hip, soft knee. Balance and control over speed.
-- Band Pallof Press — 2 × 8-12
+- Band Pallof Press — 2 × 10
   - Press out, resist the pull. Hips stay square, slight knee and hip bend.
 
 **Conditioning**
 
-- Steady Blocks (3×8 min or 4×6 min) — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
+- Steady Blocks (3×8 min or 4×6 min)
+  - Work: 6–8 min
+  - Rest: 1–2 min easy
+  - Sets: 3 × 8 min, or 4 × 6 min
+  - Takes about: 26–30 min
   - Steady, not surging — find a pace you could hold for the full block. 65–75% MAS, easy-moderate — steady, not surging
 
 ## Tuesday 11 August
@@ -34,11 +38,11 @@
 
 **Strength**
 
-- Barbell Row — 3 × 4-6
+- Barbell Row — 3 × 5
   - Hinge forward, pull to the belly. Squeeze the shoulder blades at the top.
-- Lat Pulldown — 3 × 8-10
+- Lat Pulldown — 3 × 9
   - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
-- Band Pull-Apart — 2 × 8-10
+- Band Pull-Apart — 2 × 9
   - Squeeze the shoulder blades together. Elbows straight, controlled return.
 
 ## Wednesday 12 August
@@ -47,8 +51,12 @@
 
 **Conditioning**
 
-- Warm-up — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
-- 10 m Acceleration Reps — 8 × 1
+- Warm-up
+- 10 m Acceleration Reps
+  - Work: ≈2 s (10 m)
+  - Rest: 45–60 s walk-back (full recovery)
+  - Sets: 6–10 reps
+  - Takes about: ≈8–11 min (work ≈20 s)
   - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
 
 ## Thursday 13 August
@@ -57,12 +65,12 @@
 
 **Strength**
 
-- Bench Press — 3 × 3-5
+- Bench Press — 3 × 4
   - Shoulder blades pinched, bend bar like snapping a twig, feet planted. Bar to chest, press hard to lockout.
-- DB Shoulder Press — 3 × 8-10
+- DB Shoulder Press — 3 × 9
   - Start at the shoulders, press to lockout. No arching through the lower back.
-- Banded Bicep Curl — 2 × 8-10
-  - Elbows pinned, curl against the band. Slow on the way down.
+- Banded External Rotation — 2 × 9
+  - Elbow at 90 degrees, rotate against the band. Slow and controlled arc.
 
 ## Friday 14 August
 
@@ -92,9 +100,4 @@ None. Every word on this page came out of the app.
 
 ## Things wrong with this week
 
-**Every set on this page is written as a range — 11 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 2-4" should read "3 × 3"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
-
-**2 lines that does not say how much work to do:**
-
-- Monday 10 August — Steady Blocks (3×8 min or 4×6 min) — the app says "1 × 1"
-- Wednesday 12 August — Warm-up — the app says "1 × 1"
+Nothing the printer could detect. Judge the training itself.
