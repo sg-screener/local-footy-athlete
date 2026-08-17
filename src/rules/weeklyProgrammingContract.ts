@@ -486,7 +486,12 @@ export const OFFSEASON_OVERLAYS: Readonly<Record<OffseasonBlock, PhaseOverlay>> 
   normal_build: {
     clauseId: 'WC-132', sessionsRequired: true, loadAdjustment: null,
     runningRequired: true, sprintExposureRequired: true, maxRestDays: 2,
-    conditioningTarget: { min: 3, max: 5 },
+    // ⚠ FIVE, NOT THREE — §7's approved off-season reference week IS five
+    // exposures (Mon off-leg, Tue running, Thu off-leg, Fri running/top-end,
+    // Sat long slow), and §8 says conditioning *builds toward* 3-5 by week 5.
+    // A late off-season athlete with the availability to hold the reference
+    // gets the reference; the cap and the legality passes still bound it.
+    conditioningTarget: { min: 5, max: 5 },
     // §8 week 5 onward, and Sam's framework: *"Capacity earlier in preseason;
     // aerobic power intervals + footy shuttles as the season approaches."* The
     // one block with neither club training nor matches, so the one block that
@@ -737,6 +742,11 @@ export const WEEKLY_CONTRACT_CLAUSES: readonly ContractClause[] = [
   { id: 'WC-135', provenance: '§3 Sprint/high-speed / §8 In-season',
     statement: 'In-season, only add sprint work when there is no club training, and '
       + 'place it G-3 or earlier.' },
+  { id: 'WC-138', provenance: '§3 Upper + running / §7 off-season reference week',
+    statement: 'In off-season the sprint rides the LAST legal upper strength day '
+      + 'rather than taking a day of its own, so the week\'s two high-output '
+      + 'running exposures sit apart. A standalone sprint day is the fallback '
+      + 'when no legal upper day exists.' },
   { id: 'WC-136', provenance: '§8 phase overlays / conditioning framework',
     statement: 'The phase owns how many conditioning exposures the app supplies and '
       + 'how many of them may be hard, and as which authored quality. Hard work is '

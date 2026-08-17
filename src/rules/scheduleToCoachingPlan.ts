@@ -28,6 +28,7 @@
  * anything.
  */
 import { buildWeeklyExposureContract } from './weeklyExposureContractBuilders';
+import { speedBlockForTemplate } from './speedTemplates';
 import { withExposureTarget } from './weeklyExposureContract';
 import { schedulerExposureContract } from './schedulerExposureContract';
 import { section18ModeAndSubphase } from './section18WeekIdentity';
@@ -240,7 +241,7 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
     // reader downstream from rebuilding the day out of hints.
     const components: AuthoredDayIdentity['components'] = [
       ...(isStrength ? ['strength' as const] : []),
-      ...(template ? ['conditioning' as const] : []),
+      ...(template || session.sprintTemplate ? ['conditioning' as const] : []),
       ...(session.owner === 'rest_or_recovery' ? ['recovery' as const] : []),
     ];
     const authoredDay: AuthoredDayIdentity = {
@@ -272,6 +273,35 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
           effectivePatterns: MAIN_PATTERNS[purpose],
         },
         ...(session.powerPrimer ? { powerPrimer: session.powerPrimer } : {}),
+      });
+    }
+
+    // ── WC-139: THE SPRINT COMPONENT, CARRIED ALONGSIDE ─────────────────
+    //
+    // A second conditioning component on the day. It is stamped BEFORE the
+    // conditioning assignment below so that, if a day somehow carried only the
+    // sprint, the conditioning fields below still win the slot — the sprint is
+    // an addition, never a replacement.
+    if (session.sprintTemplate) {
+      // ⚠ **THIS IS THE APP'S EXISTING PRE-LIFT SPEED VOCABULARY, NOT A NEW
+      // ONE.** `defaultProgram` already composes a pre-lift sprint onto a
+      // strength day when an allocation carries `speedWorkKind: 'true_speed'`
+      // and `speedPlacement: 'pre_lift'`, prepends its rows, and builds the
+      // `speedBlock` §18 reads for sprint credit. WC-139's job is to make the
+      // SCHEDULER able to ask for that on a day which already carries
+      // conditioning — not to grow a second composer.
+      //
+      // `templateName` is the specialist's answer, so the component and the
+      // standalone sprint draw from one authority.
+      Object.assign(allocation, {
+        speedWorkKind: 'true_speed',
+        speedPlacement: 'pre_lift',
+        // ⚠ **THE WHOLE BLOCK, FROM THE ONE FACTORY.** A partial
+        // `{ templateName }` is what broke twelve worlds: `buildSpeedBlock`
+        // spreads this verbatim, so the assembled workout carried
+        // `kind: undefined` and §18 — which credits `speedBlock.kind`, not the
+        // visible rows — scored the week at zero sprint nights and refused it.
+        speedBlock: speedBlockForTemplate(session.sprintTemplate, 'pre_lift'),
       });
     }
 

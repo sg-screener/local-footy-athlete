@@ -32,6 +32,10 @@
 
 ### Training Day
 
+**Speed**
+
+_(no exercises listed)_  ⚠ **THIS BLOCK HAS A NAME AND NOTHING IN IT.**
+
 **Strength**
 
 - Bench Press — 3 × 4-6
@@ -44,6 +48,8 @@
   - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
 - Band Pull-Apart — 2 × 12-15
   - Squeeze the shoulder blades together. Elbows straight, controlled return.
+- 10 m Acceleration Reps — 8 × 1
+  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
 
 **Conditioning**
 
@@ -52,13 +58,9 @@
 
 ## Wednesday 12 August
 
-### Training Day
+### Rest Day
 
-**Conditioning**
-
-- Warm-up — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
-- 10 m Acceleration Reps — 8 × 1
-  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
+_(nothing on this day)_
 
 ## Thursday 13 August
 
@@ -107,7 +109,10 @@ None. Every word on this page came out of the app.
 
 **Every set on this page is written as a range — 15 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 4-6" should read "3 × 5"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
 
-**2 lines that does not say how much work to do:**
+**1 line that does not say how much work to do:**
 
 - Monday 10 August — Steady Blocks (3×8 min or 4×6 min) — the app says "1 × 1"
-- Wednesday 12 August — Warm-up — the app says "1 × 1"
+
+**1 block with a name and no exercises:**
+
+- Tuesday 11 August — "Speed" is on the day with no exercises under it

@@ -69,6 +69,17 @@ export interface MaterialisedSession {
   /** Specialist content. Null when the day authorises none. */
   readonly conditioningTemplate: ConditioningTemplate | null;
   readonly conditioningRole: ConditioningRole | null;
+  /**
+   * WC-139. A SECOND conditioning component on this day, and it is a sprint.
+   *
+   * Separate from `conditioningTemplate` because the day genuinely carries two:
+   * Sam's pre-season Tuesday is *"Sprint first → Upper strength → authored hard
+   * conditioning"*. Reusing the one slot displaced the hard session.
+   *
+   * **The specialist still names it.** `speedTemplateByName` is the same
+   * authority the standalone sprint goes through; this module names no session.
+   */
+  readonly sprintTemplate: ConditioningTemplate | null;
   /** Strength-side only, and only where the scheduler marked the day eligible. */
   readonly powerPrimer: PowerPrimerSpec | null;
   /** Set when a specialist refused something the scheduler authorised. */
@@ -153,6 +164,30 @@ export function materialiseAuthoredSessions(args: {
         unmaterialised = 'no_template_for_category_on_this_equipment';
       }
     }
+    // WC-139 — the second component, chosen by the same specialist as the
+    // standalone sprint so there is one sprint authority, not two.
+    // ⚠ THE SPRINT CATEGORY SELECTOR, NOT A HARD-CODED NAME. `speedTemplateByName
+    // ('Flying 30s')` silently resolved to `SPEED_FALLBACK_TEMPLATE` — the sheet
+    // has no row of that name — so every athlete got the same fallback with no
+    // rotation and no kit filter. The `sprint` category is the same pool the
+    // standalone sprint draws from, so the two agree by construction.
+    let sprintTemplate: ConditioningTemplate | null = null;
+    if (intention.sprintComponent) {
+      try {
+        sprintTemplate = selectConditioningTemplate({
+          category: 'sprint',
+          dateStr: intention.dateISO,
+          miniCycleNumber: facts.miniCycleNumber,
+          runOnly: facts.runOnly,
+          availableMachines: facts.availableMachines,
+          noTeamTrainingWeek: schedule.days.every((day) => !day.clubTraining),
+          role: 'component',
+        });
+      } catch {
+        unmaterialised = 'no_template_for_category_on_this_equipment';
+      }
+    }
+
     if (intention.conditioning === 'sprint_high_speed' && !conditioningTemplate) {
       // The scheduler asked for sprint QUALITY; the specialist names the template.
       conditioningTemplate = speedTemplateByName('Flying 30s');
@@ -206,6 +241,7 @@ export function materialiseAuthoredSessions(args: {
       conditioningTemplate,
       conditioningRole: conditioningTemplate
         ? (intention.conditioningRole as ConditioningRole) : null,
+      sprintTemplate,
       powerPrimer,
       unmaterialised,
     };

@@ -512,6 +512,47 @@ console.log('\n[overlays] Off-season blocks, pre-season and in-season');
   ok('[WC-136] ...and the same athlete\'s BYE week does', ['WC-136'],
     hardIn(inseasonBye) === 1,
     JSON.stringify(inseasonBye.days.map((d) => [d.dayOfWeek, d.conditioningCategory])));
+  // ── WC-138: the off-season sprint rides the LAST legal upper day ──────────
+  const offRef = built({ phase: 'Off-season', offseasonBlock: 'normal_build',
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: null });
+  const offSprint = offRef.days.filter((d) => d.conditioning === 'sprint_high_speed');
+  ok('[WC-138] the off-season sprint is a COMPONENT on a strength day, not a day '
+    + 'of its own', ['WC-138'],
+    offSprint.length === 1 && offSprint[0].owner === 'strength'
+    && offSprint[0].conditioningRole === 'component',
+    JSON.stringify(offSprint.map((d) => [d.dayOfWeek, d.owner, d.conditioningRole])));
+  ok('[WC-138] ...on an UPPER day, never a lower one', ['WC-138'],
+    offSprint.every((d) => d.purpose !== null && !PURPOSE_IS_LOWER[d.purpose]),
+    JSON.stringify(offSprint.map((d) => d.purpose)));
+  ok('[WC-138] ...the LAST legal upper day, so the two high-output running '
+    + 'exposures sit apart', ['WC-138'],
+    offSprint[0]?.dayOfWeek === FRI,
+    JSON.stringify(offRef.days.map((d) => [d.dayOfWeek, d.conditioning])));
+  ok('[WC-138] the approved off-season reference: 4 strength, 5 conditioning, '
+    + '3 running days', ['WC-138'],
+    offRef.demand.mainStrength === 4
+    && offRef.demand.coreConditioning === 5
+    && offRef.days.filter((d) => d.conditioning === 'running'
+      || d.conditioning === 'sprint_high_speed').length === 3,
+    JSON.stringify(offRef.demand));
+  ok('[WC-138] ...Wednesday stays a rest day — no standalone breaks the '
+    + 'mid-week rest', ['WC-138'],
+    offRef.days.find((d) => d.dayOfWeek === WED)?.owner === 'rest_or_recovery',
+    JSON.stringify(offRef.days.map((d) => [d.dayOfWeek, d.owner])));
+  ok('[WC-138] ...and Sunday carries nothing before Monday\'s lower day', ['WC-138'],
+    offRef.days.find((d) => d.dayOfWeek === SUN)?.conditioning === null,
+    JSON.stringify(offRef.days.map((d) => [d.dayOfWeek, d.conditioning])));
+  // ⚠ IN-SEASON AND PRE-SEASON ARE DELIBERATELY EXCLUDED — Sam approved the
+  // in-season week as it stands, and pre-season's layout needs TWO conditioning
+  // components on one day, which the intention model cannot carry.
+  const inSeasonRef = built({ phase: 'In-season',
+    gymAccessDays: [MON, TUE, THU, FRI], clubNights: [], gameDay: SAT });
+  ok('[WC-138] in-season keeps its STANDALONE sprint on its own day', ['WC-138'],
+    inSeasonRef.days.filter((d) => d.conditioning === 'sprint_high_speed')
+      .every((d) => d.conditioningRole === 'standalone' && d.owner === 'conditioning'),
+    JSON.stringify(inSeasonRef.days.filter((d) => d.conditioning === 'sprint_high_speed')
+      .map((d) => [d.dayOfWeek, d.owner, d.conditioningRole])));
+
   ok('[WC-136] no hard exposure ever lands on a club night', ['WC-136'],
     built({ phase: 'Pre-season', gymAccessDays: [MON, TUE, THU, FRI],
       clubNights: [TUE], gameDay: null })

@@ -48,13 +48,9 @@
 
 ## Wednesday 12 August
 
-### Training Day
+### Rest Day
 
-**Conditioning**
-
-- Warm-up — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
-- 30:30 Controlled Tempo Blocks — 13 × 1
-  - Controlled, not max — you should be able to hold a conversation in three words by the end, not one. 65–80% MAS — controlled, NOT max
+_(nothing on this day)_
 
 ## Thursday 13 August
 
@@ -73,6 +69,11 @@
 - Banded Dead Bug — 2 × 8-12
   - Band behind head, pull band with straight arms toward knees, ribs down. Lower back stays glued to the floor.
 
+**Conditioning**
+
+- Steady Blocks (3×8 min or 4×6 min) — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
+  - Steady, not surging — find a pace you could hold for the full block. 65–75% MAS, easy-moderate — steady, not surging
+
 ## Friday 14 August
 
 ### Training Day
@@ -86,21 +87,26 @@
 - Banded Bicep Curl — 2 × 8-10
   - Elbows pinned, curl against the band. Slow on the way down.
 
+**Conditioning**
+
+- 10 m Acceleration Reps — 8 × 1
+  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
+
 ## Saturday 15 August
-
-### Rest Day
-
-_(nothing on this day)_
-
-## Sunday 16 August
 
 ### Training Day
 
 **Conditioning**
 
 - Warm-up — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
-- 10 m Acceleration Reps — 8 × 1
-  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
+- 30:30 Controlled Tempo Blocks — 13 × 1
+  - Controlled, not max — you should be able to hold a conversation in three words by the end, not one. 65–80% MAS — controlled, NOT max
+
+## Sunday 16 August
+
+### Rest Day
+
+_(nothing on this day)_
 
 ---
 
@@ -115,5 +121,5 @@ None. Every word on this page came out of the app.
 **3 lines that does not say how much work to do:**
 
 - Monday 10 August — Steady Blocks (3×8 min or 4×6 min) — the app says "1 × 1"
-- Wednesday 12 August — Warm-up — the app says "1 × 1"
-- Sunday 16 August — Warm-up — the app says "1 × 1"
+- Thursday 13 August — Steady Blocks (3×8 min or 4×6 min) — the app says "1 × 1"
+- Saturday 15 August — Warm-up — the app says "1 × 1"
