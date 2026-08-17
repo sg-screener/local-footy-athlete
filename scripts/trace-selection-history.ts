@@ -178,8 +178,24 @@ async function main(): Promise<void> {
     : [];
   console.log('  program-store persists these keys:', persistedKeys.join(', ') || '(nothing)');
   const names = Object.values(afterA);
-  const anyNamePersisted = raw ? names.some((n) => raw.includes(n)) : false;
-  console.log(`  any selected exercise NAME present in the persisted bytes: ${anyNamePersisted}`);
+  const inProgramStore = raw ? names.some((n) => raw.includes(n)) : false;
+  console.log(`  ...and any selected exercise NAME in those bytes: ${inProgramStore}`);
+
+  /* The NEW carrier. Before this unit there was nowhere else to look, which is
+   * why the original trace only asked the program store. */
+  const selectionRaw = await storage.getItem(
+    require('../src/store/blockSelectionHistoryStore').BLOCK_SELECTION_HISTORY_KEY,
+  );
+  const recorded = selectionRaw
+    ? (JSON.parse(selectionRaw) as {
+      state?: { selections?: { slot: string; identity: string; blockStartISO: string }[] };
+    }).state?.selections ?? []
+    : [];
+  console.log(`  block-selection-history rows persisted: ${recorded.length}`);
+  for (const row of recorded.slice(0, 8)) {
+    console.log(`    ${row.blockStartISO}  ${row.slot.padEnd(18)} ${row.identity}`);
+  }
+  const anyNamePersisted = recorded.length > 0;
 
   console.log('\n════════ CONCLUSION ════════');
   console.log(`  A unchanged-input boot: ${dA.length === 0 ? 'identities returned' : 'identities MOVED'}`);

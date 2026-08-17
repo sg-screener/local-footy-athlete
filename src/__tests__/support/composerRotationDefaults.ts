@@ -17,4 +17,8 @@ export const COMPOSER_ROTATION_DEFAULTS = {
   blockNumber: 1,
   pinnedIdentities: [],
   progressedIdentities: [],
+  /* Block 1 with NO recorded selection history — a first block, which is what
+   * "this suite is not about rotation" means in the selector's vocabulary. */
+  blockStartISO: '2026-07-06',
+  selectionHistory: [],
 } as const;

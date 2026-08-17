@@ -706,7 +706,7 @@ function mayAutomaticallyIncrease(exerciseName: string): boolean {
  * ⚠ **THE `history_progressed` CONDITION, EXPORTED SO ROTATION READS IT RATHER
  * THAN COPYING IT.**
  *
- * `rules/exerciseRotation.ts` needs the contract's *"main and secondary lifts
+ * `rules/blockExerciseSelection.ts` needs the contract's *"main and secondary lifts
  * may remain for a second consecutive block when progression, comfort and
  * technical continuity justify it"*. The mission is explicit that this is the
  * EXISTING progression decision, and the existing decision says exactly one
@@ -774,7 +774,7 @@ export function decideBlockBoundaryLoads(args: {
       const increment = mayAutomaticallyIncrease(exerciseName)
         ? smallestPracticalIncrementKg(exerciseName, previousLoadKg)
         : null;
-      // The same predicate `exerciseRotation` reads, so the two can never drift.
+      // The same predicate `blockExerciseSelection` reads, so the two can never drift.
       if (progressedFromOwnHistory({ exerciseName, history }) && increment !== null) {
         decisions.push({
           ...base,

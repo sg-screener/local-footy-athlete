@@ -39,7 +39,11 @@ import {
   composedRowIsLegal,
   type ComposedExerciseIdentity,
 } from './composedRowLegality';
-import { decideRotation } from './exerciseRotation';
+import {
+  decideExerciseForBlock,
+  type BlockExerciseSelection,
+  type SelectionRole,
+} from './blockExerciseSelection';
 import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
 import {
   ladderLevelForProfile,
@@ -110,7 +114,7 @@ export interface ComposerInputs {
   /** Read to stamp the week the composed days belong to. */
   readonly todayISO: string;
   /**
-   * ── WHAT THE ROTATION OWNER NEEDS. See `rules/exerciseRotation.ts`. ────────
+   * ── WHAT THE SELECTION OWNER NEEDS. See `rules/blockExerciseSelection.ts`. ────────
    *
    * Selection is keyed by the BLOCK, so the composer has to know which block it
    * is building. `phaseClock.weekNumber` above cannot answer it: it advances
@@ -132,6 +136,17 @@ export interface ComposerInputs {
    * it"*. It rules nothing new; it reads the existing decision.
    */
   readonly progressedIdentities: readonly ComposedExerciseIdentity[];
+  /** Monday ISO of the block being authored — the selection record's identity. */
+  readonly blockStartISO: string;
+  /**
+   * RECORDED selections for earlier blocks, most recent first.
+   *
+   * ⚠ **PASSED IN, NEVER READ FROM A STORE HERE.** *"No hidden store reads
+   * inside the domain selector."* Generation reads
+   * `blockSelectionHistoryStore` and hands the rows down, so boot and rollover
+   * feed the same history explicitly and the composer stays pure.
+   */
+  readonly selectionHistory: readonly BlockExerciseSelection[];
 }
 
 // ─── OUTPUT ────────────────────────────────────────────────────────────────
@@ -243,6 +258,12 @@ export interface ComposedWeek {
   readonly sessionCount: ComposedSessionCount;
   /** Clause (a)'s input, derived here so ONE deriver serves contract and rows. */
   readonly kitUnachievablePatterns: readonly MainStrengthPattern[];
+  /**
+   * What this block SELECTED, one row per movement slot — handed back so
+   * generation can RECORD it durably. The composer does not write it: a domain
+   * rule that reaches into a store is the hidden-read the order forbids.
+   */
+  readonly selections: readonly BlockExerciseSelection[];
 }
 
 // ─── THE AUTHORISED OPTION SET ─────────────────────────────────────────────
@@ -397,7 +418,7 @@ function experiencePreferred(
  *
  * *"Selection remains deterministic, but it must be context-sensitive rather
  * than a global exercise carousel."* Steps 1 and 3 are applied here, in that
- * order; step 2 is applied inside `decideRotation` (`pinnedFirst`) so that a pin
+ * order; step 2 is applied inside `decideExerciseForBlock` so that a legal pin
  * lands in FRONT of the phase's own preference; steps 4 and 5 are the cursor
  * walk. Reading the composer top to bottom is reading the order.
  *
@@ -422,8 +443,11 @@ const HINGE_PRIORITY: readonly string[] = ['RDLs', 'Trap Bar Deadlift'];
  * Pre- and off-season are deliberately absent: *"The broader main-lift rotation
  * remains available."*
  */
-function phaseAnchorsSlot(slot: SessionSlot, seasonPhase: SeasonPhase): boolean {
-  return seasonPhase === 'In-season' && slot === 'hinge';
+/** Which rotation rules a slot answers to. */
+function selectionRoleFor(slot: SessionSlot): SelectionRole {
+  if (MAIN_BILATERAL_SLOTS.has(slot)) return 'main_bilateral';
+  if (slot === 'single_leg_knee' || slot === 'single_leg_hip') return 'single_leg';
+  return 'accessory';
 }
 
 /**
@@ -950,9 +974,12 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // Variety is a property of the WEEK: a day repeating last night's lift is the
   // shape Bible `:227` names to avoid.
   const usedThisWeek = new Set<ComposedExerciseIdentity>();
+  /* What this block chose, per slot — handed back so generation can RECORD it.
+   * One row per slot: the first day to fill a slot decides the block. */
+  const selectionsThisBlock: BlockExerciseSelection[] = [];
   // ⚠ THE WEEK-KEYED SELECTOR IS GONE, NOT WRAPPED. It read
   // `const step = phaseClock.weekNumber - 1` and indexed the candidate list with
-  // it, which is why a main lift changed every week. `rules/exerciseRotation.ts`
+  // it, which is why a main lift changed every week. `rules/blockExerciseSelection.ts`
   // owns the index now; leaving `step` here as a fallback would be the second
   // authority the mission forbids.
   // Sam's full-body shape, decided once for the WEEK — see its own docstring.
@@ -1210,7 +1237,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * It used to be `preferred[step % preferred.length]`, where `step` is the
        * PHASE WEEK NUMBER — so a main lift changed every week and the contract's
        * *"main and secondary exercises are stable throughout their block"* was
-       * unreachable. See `rules/exerciseRotation.ts` for the measured before.
+       * unreachable. See `rules/blockExerciseSelection.ts` for the measured before.
        *
        * ⚠ **A MAIN LIFT IS ASKED AGAINST `legal`, NOT `preferred`.** The
        * `usedThisWeek` and muscle-group narrowings above are WEEK-LOCAL variety:
@@ -1234,22 +1261,46 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * pattern and so fell to the accessory cadence. They count toward the
        * session's main/secondary budget, so the athlete meets them as real work
        * and must meet the SAME one all block. */
-      /* ⚠ **RETENTION IS FOR MAIN BILATERAL LIFTS ONLY** (ruling 2). Everything
-       * is stable WITHIN a block — the cadence is block-keyed for every slot —
-       * so this decides only who may stay for a SECOND one. Two questions, two
-       * predicates, rather than one doing both jobs. */
-      const retentionEligible = MAIN_BILATERAL_SLOTS.has(slot);
-      const phaseAnchored = phaseAnchorsSlot(slot, inputs.seasonPhase);
+      /* ── THE SELECTION OWNER ───────────────────────────────────────────────
+       * `decideExerciseForBlock` reads the RECORDED past. There is no cursor and
+       * no block-number index: an athlete whose kit or exclusions changed keeps a
+       * truthful history instead of a re-derived one. See the measured trace in
+       * `rules/blockExerciseSelection.ts`. */
+      const role = selectionRoleFor(slot);
       const countsTowardBudget = slotCountsTowardSetBudget(slot);
-      const rotation = decideRotation({
-        legalCandidates: countsTowardBudget ? legal : preferred,
-        retentionEligible,
-        phaseAnchored,
+      const slotHistory = inputs.selectionHistory
+        .filter((entry) => entry.slot === slot
+          && entry.blockStartISO < inputs.blockStartISO)
+        .sort((a, b) => b.blockStartISO.localeCompare(a.blockStartISO));
+      /* This block's OWN recorded choice, when it has been authored before —
+       * a relaunch restores it rather than re-deciding against today's world. */
+      const recordedForThisBlock = inputs.selectionHistory.find(
+        (entry) => entry.slot === slot && entry.blockStartISO === inputs.blockStartISO,
+      ) ?? null;
+      const selection = decideExerciseForBlock({
+        phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
         blockNumber: inputs.blockNumber,
-        pinnedIdentities: inputs.pinnedIdentities,
+        slot,
+        group: null,
+        role,
+        legalCandidates: countsTowardBudget ? legal : preferred,
+        previousSelection: slotHistory[0] ?? null,
+        currentBlockSelection: recordedForThisBlock,
+        recentSelections: slotHistory,
         progressedIdentities: inputs.progressedIdentities,
+        pinnedIdentities: inputs.pinnedIdentities,
       });
-      const identity = rotation.identity;
+      const identity = selection.identity;
+      if (!selectionsThisBlock.some((entry) => entry.slot === slot)) {
+        selectionsThisBlock.push({
+          blockNumber: inputs.blockNumber,
+          blockStartISO: inputs.blockStartISO,
+          slot,
+          group: POOL_GROUP_OF.get(identity) ?? null,
+          role,
+          identity,
+        });
+      }
       usedThisWeek.add(identity);
       const chosenGroup = POOL_GROUP_OF.get(identity);
       if (chosenGroup) {
@@ -1343,5 +1394,6 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       adjustment: adjustment.length > 0 ? adjustment : null,
     },
     kitUnachievablePatterns: kitUnachievablePatterns(inputs.kit),
+    selections: selectionsThisBlock,
   };
 }
