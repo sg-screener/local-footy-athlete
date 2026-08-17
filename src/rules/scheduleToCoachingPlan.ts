@@ -28,6 +28,7 @@
  * anything.
  */
 import { buildWeeklyExposureContract } from './weeklyExposureContractBuilders';
+import { speedBlockForTemplate } from './speedTemplates';
 import { withExposureTarget } from './weeklyExposureContract';
 import { schedulerExposureContract } from './schedulerExposureContract';
 import { section18ModeAndSubphase } from './section18WeekIdentity';
@@ -295,7 +296,12 @@ export function scheduleToCoachingPlan(input: ConnectorInput): CoachingPlan {
       Object.assign(allocation, {
         speedWorkKind: 'true_speed',
         speedPlacement: 'pre_lift',
-        speedBlock: { templateName: session.sprintTemplate.name },
+        // ⚠ **THE WHOLE BLOCK, FROM THE ONE FACTORY.** A partial
+        // `{ templateName }` is what broke twelve worlds: `buildSpeedBlock`
+        // spreads this verbatim, so the assembled workout carried
+        // `kind: undefined` and §18 — which credits `speedBlock.kind`, not the
+        // visible rows — scored the week at zero sprint nights and refused it.
+        speedBlock: speedBlockForTemplate(session.sprintTemplate, 'pre_lift'),
       });
     }
 

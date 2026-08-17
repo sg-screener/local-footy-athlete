@@ -66,15 +66,33 @@ function speedBlockIdSlug(templateName: string): string {
   return templateName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-export function createLateOffseasonSpeedBlock(
+/**
+ * ── THE ONE PLACE A `SpeedBlock` IS BUILT FROM AN AUTHORED TEMPLATE ────────
+ *
+ * **`Workout.speedBlock` IS THE CANONICAL SOURCE OF APP-AUTHORED SPRINT
+ * CREDIT** — `validateGeneratedWeek.isTrueSpeedDay` reads `kind`, and §18
+ * credits the block, not the rows. Visible sprint rows are not credit.
+ *
+ * ⚠ **A HAND-BUILT PARTIAL BLOCK IS WHY TWELVE WORLDS REFUSED.** WC-139's
+ * pre-season component passed `{ templateName }` alone into the coaching plan;
+ * `buildSpeedBlock` spreads the entry's block verbatim, so the assembled
+ * workout carried `kind: undefined` and §18 scored `sprintNights: 0` on a week
+ * whose sprint was authored, materialised and VISIBLE. Traced at the boundary:
+ *
+ *     [5 ASSEMBLED] Mon speedBlock=kind=undefined tmpl=10 m Acceleration Reps
+ *     [6 LEDGER]    sprintNights=0 target=1 verdict=refused
+ *
+ * So the shape is built HERE and nowhere else, and every caller hands in a
+ * template rather than assembling fields. Nothing invents a dose: the title,
+ * duration, prescription and cue are all the authored template's.
+ */
+export function speedBlockForTemplate(
+  template: ConditioningTemplate,
   placement: SpeedBlockPlacement,
-  context: SpeedTemplateSelectionContext,
-): SpeedBlock | null {
-  const template = selectLateOffseasonSpeedTemplate(context);
-  if (!template) return null;
-
+  idPrefix = 'speed',
+): SpeedBlock {
   return {
-    id: `late-offseason-${speedBlockIdSlug(template.name)}-${placement}`,
+    id: `${idPrefix}-${speedBlockIdSlug(template.name)}-${placement}`,
     title: template.name,
     label: template.name,
     kind: 'true_speed',
@@ -91,6 +109,15 @@ export function createLateOffseasonSpeedBlock(
       sprintCodExposure: true,
     },
   };
+}
+
+export function createLateOffseasonSpeedBlock(
+  placement: SpeedBlockPlacement,
+  context: SpeedTemplateSelectionContext,
+): SpeedBlock | null {
+  const template = selectLateOffseasonSpeedTemplate(context);
+  if (!template) return null;
+  return speedBlockForTemplate(template, placement, 'late-offseason');
 }
 
 function resolveLateOffseasonPosition(context: SpeedTemplateSelectionContext): number {

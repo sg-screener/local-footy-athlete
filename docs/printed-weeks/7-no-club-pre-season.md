@@ -32,6 +32,10 @@
 
 ### Training Day
 
+**Speed**
+
+_(no exercises listed)_  ⚠ **THIS BLOCK HAS A NAME AND NOTHING IN IT.**
+
 **Strength**
 
 - Bench Press — 3 × 4-6
@@ -44,11 +48,11 @@
   - Pull to the collarbone, lean slightly back, push chest at bottom. Squeeze at the bottom, slow return.
 - Band Pull-Apart — 2 × 12-15
   - Squeeze the shoulder blades together. Elbows straight, controlled return.
+- 10 m Acceleration Reps — 8 × 1
+  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
 
 **Conditioning**
 
-- 10 m Acceleration Reps — 8 × 1
-  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
 - Classic 4×4 — 4 × 1
   - Hard means honest pace, not a sprint you can't hold for 4 minutes — round 4 should match round 1. 90–100% MAS; HR 90–95% max late
 
@@ -108,3 +112,7 @@ None. Every word on this page came out of the app.
 **1 line that does not say how much work to do:**
 
 - Monday 10 August — Steady Blocks (3×8 min or 4×6 min) — the app says "1 × 1"
+
+**1 block with a name and no exercises:**
+
+- Tuesday 11 August — "Speed" is on the day with no exercises under it
