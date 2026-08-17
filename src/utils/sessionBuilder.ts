@@ -1208,7 +1208,19 @@ export function buildConditioningTemplate(
       || template.quality === 'top_end_speed'
       || template.quality === 'repeat_sprint')
   ) {
-    return composeSpeedRows(SPEED_FALLBACK_TEMPLATE, dateStr);
+    // ⚠ **THIS USED TO SWAP THE TEMPLATE, WHICH IS NOT A VOLUME REDUCTION.**
+    // It returned `SPEED_FALLBACK_TEMPLATE` — `20 m Acceleration Reps`, authored
+    // `8 reps` — in place of, say, `10 m Acceleration Reps` at `6–10 reps`. The
+    // deload week came back with 8 reps of a LONGER sprint than the build week's
+    // 8 reps of a shorter one. Measured: `10 m … 8x1` -> `20 m … 8x1`.
+    //
+    // Sam's ruling asks for the VOLUME to fall on an authored dose. So the
+    // athlete keeps their own session and drops to the sheet's authored low end
+    // — same template, same quality, 8 reps becomes 6.
+    return composeConditioningRows(template, dateStr, {
+      omitWarmup: opts?.combined === true,
+      authoredMinimumDose: true,
+    });
   }
   if (!template) {
     // Stored/legacy content the sheet does not resolve. Rendering the stored

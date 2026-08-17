@@ -755,6 +755,19 @@ function headlineSets(template: ConditioningTemplate): number {
   return Math.max(1, Math.round(doseMidpoint(parsed.quantity)));
 }
 
+/**
+ * The LOW END of the authored quantity — a deload's reduced dose.
+ *
+ * Never below the sheet's own `min`, and never a number the sheet does not
+ * contain. Falls back to `headlineSets` when the dose is a single value, so a
+ * template with no range is simply not reduced.
+ */
+function headlineSetsLow(template: ConditioningTemplate): number {
+  const parsed = parseConditioningDose(template.setsRounds);
+  if (!parsed.ok) return headlineSets(template);
+  return Math.max(1, Math.round(parsed.quantity.min));
+}
+
 /** Rest seconds for the headline row: the authored rest, when it is a time. */
 function headlineRest(template: ConditioningTemplate): number {
   const parsed = parseConditioningDose(template.restPeriod);
@@ -810,6 +823,20 @@ export interface ComposeOptions {
   readonly orderBase?: number;
   /** Skip the structural warm-up row (combined days warm up on the lift). */
   readonly omitWarmup?: boolean;
+  /**
+   * ── THE AUTHORED LOW END, FOR A DELOAD ────────────────────────────────────
+   *
+   * Sam, 2026-08-17: a deload may *"reduce sprint VOLUME using an authored
+   * legal dose"*. `headlineSets` normally prescribes the MIDPOINT of the
+   * sheet's range; this asks for its MINIMUM instead.
+   *
+   * **It is the sheet's own number or nothing.** `10 m Acceleration Reps` is
+   * authored `6–10 reps`, so the ordinary week gets 8 and a deload gets 6 — the
+   * same template, the same quality, one authored rung lower. When the sheet
+   * states a single value there is no lower dose and the row is unchanged,
+   * which is the honest answer rather than an invented one.
+   */
+  readonly authoredMinimumDose?: boolean;
 }
 
 /**
@@ -837,7 +864,7 @@ export function composeConditioningRows(
       `${prefix}-main`,
       template.name,
       base + rows.length,
-      headlineSets(template),
+      opts.authoredMinimumDose ? headlineSetsLow(template) : headlineSets(template),
       headlineRest(template),
       joinNotes(
         `Work: ${doseLineForDisplay(template.workPeriod)}`,

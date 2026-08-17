@@ -120,9 +120,32 @@ function declaredStrengthPattern(row: WorkoutExercise): MainStrengthPattern | nu
   return evidence?.strengthPattern ?? null;
 }
 
+/**
+ * DOES THIS DAY CARRY APP-AUTHORED SPRINT / HIGH-SPEED WORK?
+ *
+ * ⚠ **`speedBlock` WAS THE ONLY ANSWER, AND IT MISSES THE SCHEDULER'S OWN
+ * SPRINT.** WC-135/WC-124 place the app sprint as a STANDALONE CONDITIONING
+ * DAY with `conditioningCategory: 'sprint'` — an authored sprint template, a
+ * real conditioning block, no `speedBlock` anywhere on it. So the athlete with
+ * no club night and no fixture, whose sprint the app had correctly authored and
+ * stored, was counted as having ZERO sprint nights and their week was refused
+ * `sprint_high_speed_required_minimum:0`.
+ *
+ * Every OTHER world hid it: a club night or a game supplies anchor sprint
+ * credit, so the app's own session never had to be counted. **Only the
+ * no-anchor athlete exposed it, which is exactly the athlete the conditioning
+ * work was for.**
+ *
+ * This COUNTS WORK THAT GENUINELY EXISTS — it is not a relaxation of the
+ * minimum. The category alone is not enough: a day is only credited when it
+ * carries the conditioning to go with it, so a stray category on an empty day
+ * cannot mint a sprint night.
+ */
 function isTrueSpeedDay(workout: Workout): boolean {
   const speed = (workout as unknown as { speedBlock?: { kind?: string } }).speedBlock;
-  return speed?.kind === 'true_speed';
+  if (speed?.kind === 'true_speed') return true;
+  const category = (workout as unknown as { conditioningCategory?: string }).conditioningCategory;
+  return category === 'sprint' && carriesConditioning(workout);
 }
 
 /**

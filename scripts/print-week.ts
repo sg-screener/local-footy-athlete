@@ -190,7 +190,15 @@ const FULL_GYM = {
     pullup_bar: 'have', bands: 'have', kettlebell: 'have', plyo_box: 'have',
     foam_roller: 'have', cables: 'have', machine: 'have', trap_bar: 'have',
   },
-  modalities: { bike_erg: 'have', rower: 'have', treadmill: 'have' },
+  // ⚠ `row`, NOT `rower`. `ConditioningEquipmentModality` is
+  // `bike_erg | air_bike | row | ski | treadmill`, and the equipment resolver
+  // passes an unrecognised word straight through rather than refusing it — so
+  // `rower` reached selection as a machine that matches no authored template.
+  // The athlete silently owned no rower, every off-leg candidate tied at one
+  // machine (the bike), and a heavy lower day was paired with
+  // `Continuous Aerobic Run`. A one-word fixture typo, and it read exactly like
+  // a selection bug.
+  modalities: { bike_erg: 'have', row: 'have', treadmill: 'have' },
   answeredOn: '2026-08-01',
 } as const;
 
@@ -486,8 +494,13 @@ const SCENARIOS: PrintScenario[] = [
       gameDay: undefined,
       trainingDaysPerWeek: 4,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-      teamTrainingDaysPerWeek: 1,
-      teamTrainingDays: ['Tuesday'],
+      // ⚠ ZERO CLUB NIGHTS. This fixture carried a Tuesday club night, which is
+      // phantom team training in an off-season week and quietly supplied an
+      // anchor the contract then counted. The approved off-season contract has
+      // no club training in it; the app must supply the whole week itself, and
+      // that is the only honest control for "later off-season".
+      teamTrainingDaysPerWeek: 0,
+      teamTrainingDays: [],
     }),
     phaseWeek: 6,
   },
