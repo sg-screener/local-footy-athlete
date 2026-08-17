@@ -466,18 +466,16 @@ export async function recordDay(dateISO: string, intent: DayIntent): Promise<Day
     partialReason: null,
     skipReason: null,
     ...(strength.length > 0 ? { strength } : {}),
-    // ⚠ **ONLY ON A DAY THAT ACTUALLY HAS CONDITIONING — the athlete answers the
-    // question the app asked them.**
+    // ⚠ **ANSWERED ONLY WHERE THE REAL SCREEN ASKS — the panel's own two gates.**
     //
-    // `readBlockHistory` counts a day toward STRENGTH quality only when it
-    // `carriesStrength && !carriesConditioning`. Attaching a conditioning answer to
-    // every day therefore disqualifies every day from the strength read: measured,
-    // `strengthEasy` flipped true -> false and `conditioningEasy` false -> true the
-    // moment this was unconditional. The two qualities are counted on different
-    // days on purpose, and a harness that answers both everywhere can never have
-    // both true.
+    // Sam, 2026-08-18: *"Do not manufacture both answers only in the test
+    // harness."* `SessionFeedbackPanel.tsx:681` shows the conditioning block when
+    // `conditioningConfig.level === 'trackable' && conditioningWasPerformed`, and
+    // `getVisibleFeedbackSections` is what turns that into a visible section. Both
+    // owners are asked here, with the panel's own arguments, so this athlete can
+    // only answer a question a real athlete would have been shown.
     ...(typeof intent.conditioningRpe === 'number'
-      && components.some((component) => String(component.id).includes('conditioning'))
+      && conditioningSectionIsVisible(target.workout, intent.completion, components)
       ? { conditioning: { rpe: intent.conditioningRpe } }
       : {}),
   } as never));
@@ -520,6 +518,43 @@ export async function recordDay(dateISO: string, intent: DayIntent): Promise<Day
       detail: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+
+/**
+ * IS THE CONDITIONING QUESTION ON THE SCREEN FOR THIS SESSION?
+ *
+ * Reproduces `SessionFeedbackPanel`'s own decision using the panel's own owners —
+ * `getConditioningLoggingConfig` for whether the work is trackable, the
+ * conditioning component's completion for whether it was performed, and
+ * `getVisibleFeedbackSections` for whether that becomes a visible section.
+ *
+ * This exists so the harness cannot answer a question the app never asked. It is
+ * the panel's LOGIC, not its pixels — the taps themselves belong to the Maestro
+ * flows, and that limit is stated in the suite header.
+ */
+export function conditioningSectionIsVisible(
+  workout: Workout,
+  completion: 'full' | 'partial' | 'skipped',
+  components: readonly { id: unknown }[],
+): boolean {
+  return quiet(() => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getConditioningLoggingConfig } = require('../../utils/conditioningLogging');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getVisibleFeedbackSections } = require('../../utils/sessionFeedbackForm');
+    const config = getConditioningLoggingConfig(workout) as { level?: string };
+    const conditioningComponent = components
+      .find((component) => String(component.id).includes('conditioning'));
+    // The athlete completed every component they were shown, which is what this
+    // journey's intents say, so a present conditioning component was performed.
+    const performed = Boolean(conditioningComponent)
+      && (completion === 'full' || completion === 'partial');
+    const sections = getVisibleFeedbackSections(completion, {
+      includeConditioningPerformance: config.level === 'trackable' && performed,
+    }) as { id: string }[];
+    return sections.some((section) => section.id === 'conditioning');
+  });
 }
 
 /**

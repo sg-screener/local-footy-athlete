@@ -99,6 +99,13 @@ export interface BlockBoundaryPromptInputs {
   onboardingData: OnboardingData | null | undefined;
   ledgerEntries: readonly DecisionLedgerEntry[];
   weekOrder: readonly DayOfWeek[];
+  /**
+   * WHAT EACH ACCEPTED BLOCK REQUIRED — the completion denominator (Sam,
+   * 2026-08-17/18). Supplied by the caller, as `progressionHistory` is at every
+   * other reader, so this module never reaches into a store.
+   */
+  acceptedBlocks?: Readonly<Record<string,
+    import('../../store/programStore').AcceptedBlockRecord>>;
 }
 
 /**
@@ -121,6 +128,7 @@ export function deriveBlockBoundaryPrompts(
     extraSession: deriveExtraSession({
       currentProgram, blockNumber, blockStartISO, sessionFeedback,
       onboardingData, ledgerEntries, weekOrder: input.weekOrder,
+      acceptedBlocks: input.acceptedBlocks,
     }),
   };
 }
@@ -141,10 +149,12 @@ function deriveExtraSession(args: {
   onboardingData: OnboardingData | null | undefined;
   ledgerEntries: readonly DecisionLedgerEntry[];
   weekOrder: readonly DayOfWeek[];
+  acceptedBlocks?: Readonly<Record<string,
+    import('../../store/programStore').AcceptedBlockRecord>>;
 }): ExtraSessionOfferModel | null {
   const {
     currentProgram, blockNumber, blockStartISO, sessionFeedback,
-    onboardingData, ledgerEntries, weekOrder,
+    onboardingData, ledgerEntries, weekOrder, acceptedBlocks,
   } = args;
   if (!onboardingData || !currentProgram) return null;
   if (typeof blockNumber !== 'number' || !blockStartISO) return null;
@@ -162,7 +172,22 @@ function deriveExtraSession(args: {
     feedbackByDate: sessionFeedback,
     blockStartISO: previous.startISO,
     blockEndISO: previous.endISO,
-    requiredStrengthSessions: currentSessionsPerWeek * WEEKS_PER_BLOCK,
+    /**
+     * ⚠ **THE ACCEPTED BLOCK'S OWN REQUIREMENT — THIS WAS THE THIRD COPY.**
+     *
+     * It read `currentSessionsPerWeek * WEEKS_PER_BLOCK`, i.e.
+     * `onboardingData.trainingDaysPerWeek * 4` — the athlete's STATED INTENT, the
+     * first of the two numbers Sam ruled out on 2026-08-17. Generation's two
+     * readers were corrected then; this one is on the CARD's path and survived,
+     * so the card could refuse an offer the boundary had already granted — two
+     * stories about the same four weeks, which the comment directly above about
+     * `previousBlockBoundsISO` exists to prevent.
+     *
+     * No fallback, by ruling: an absent record means there is no accepted previous
+     * block to measure against, and the gate is then correctly unreachable.
+     */
+    requiredStrengthSessions:
+      acceptedBlocks?.[previous.startISO]?.requiredStrengthSessions ?? 0,
   });
 
   // ⚠ **AVAILABILITY IS READ INSIDE THE CLOSURES, NOT BEFORE THEM.**
@@ -299,14 +324,14 @@ export function useBlockBoundaryPrompts(
 ): BlockBoundaryPrompts {
   const {
     currentProgram, blockNumber, blockStartISO, sessionFeedback,
-    onboardingData, ledgerEntries, weekOrder,
+    onboardingData, ledgerEntries, weekOrder, acceptedBlocks,
   } = input;
   return useMemo(
     () => deriveBlockBoundaryPrompts({
       currentProgram, blockNumber, blockStartISO, sessionFeedback,
-      onboardingData, ledgerEntries, weekOrder,
+      onboardingData, ledgerEntries, weekOrder, acceptedBlocks,
     }),
     [currentProgram, blockNumber, blockStartISO, sessionFeedback,
-      onboardingData, ledgerEntries, weekOrder],
+      onboardingData, ledgerEntries, weekOrder, acceptedBlocks],
   );
 }

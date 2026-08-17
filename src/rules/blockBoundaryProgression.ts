@@ -607,10 +607,38 @@ export function readBlockHistory(args: {
       if (conditioningRpe > EASY_EFFORT_RATING) conditioningAllEasy = false;
     }
 
-    // STRENGTH — only where the session answer can mean nothing else.
+    /**
+     * STRENGTH — assessed INDEPENDENTLY of the conditioning on the same day.
+     *
+     * **Sam ruled it, 2026-08-18:** *"Strength and conditioning on a combined day
+     * must be assessed independently. If the athlete reports both components easy,
+     * that day may contribute to both the strength-easy and conditioning-easy
+     * evidence. Do not require a strength-only day."*
+     *
+     * This read used to require `!carriesConditioning`, and the reason was real:
+     * `feeling` and `soreness` are SESSION-level answers, so on a combined day
+     * there was no telling whether "hard" meant the lifting or the running. The
+     * guard resolved that ambiguity by discarding the day.
+     *
+     * ⚠ **BUT THE AMBIGUITY ONLY EXISTS WHILE THE CONDITIONING IS UNACCOUNTED
+     * FOR.** When the athlete answers the conditioning RPE, that component has its
+     * own explicit evidence, and the session-level answer is then attributable to
+     * the strength — which is exactly what "assessed independently" means. A
+     * combined day with NO conditioning answer stays ambiguous and is still
+     * discarded, so the original protection is intact where it was actually
+     * needed.
+     *
+     * **MEASURED, and it is why the extra-session offer was unreachable.** A
+     * pre-season athlete whose two gym days are combined days could reach
+     * `strengthEasy` only by leaving the conditioning question blank, and
+     * `conditioningEasy` only by answering it — never both, whatever they did. The
+     * offer requires both, so it could not fire for any athlete of that shape no
+     * matter how easy they found their training.
+     */
     const carriesStrength = (feedback.strength ?? []).length > 0;
     const carriesConditioning = feedback.conditioning !== undefined;
-    if (carriesStrength && !carriesConditioning) {
+    const conditioningAccountedFor = isEffortRating(feedback.conditioning?.rpe);
+    if (carriesStrength && (!carriesConditioning || conditioningAccountedFor)) {
       let answered = false;
       if (feedback.feeling !== undefined) {
         answered = true;
