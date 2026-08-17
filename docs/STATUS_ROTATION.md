@@ -258,26 +258,72 @@ after    hinge   RDLs first
 
 **No Bodyweight Squat. No Goblet Squat. Merge condition met.**
 
-### ⚠ TWO POOL-CONTENT GAPS, REPORTED AS RULING 3 REQUIRES
+### ⚠ THE "SQUAT POOL GAP" WAS MY FIXTURE. RETRACTED.
+
+**I reported that an experienced full-gym athlete had one legal squat and asked
+Sam whether to add a rack or more exercises. The premise was false and the ask
+should never have been made.**
+
+`fullKitEquipmentAnswer` is a hand-authored TEN-tag list whose docstring claims
+it grants *"every tag"*. That stopped being true on **2026-08-13**, when `rack`
+and `trap_bar` stopped collapsing onto `barbell` and seven new askable tags
+appeared. The canonical `commercial_gym` preset pre-ticks **all seventeen**. With
+no rack, Back Squat, Front Squat, Box Squat and High Box Squat are kit-illegal,
+and the only two squats left standing are both regression-gated — so Leg Press
+was the last one out. **The gap was manufactured by the fixture.**
+
+Fixed by DERIVING the answer from the production preset the way `EquipmentScreen`
+does, so it cannot drift again:
+
+```
+presetEquipmentAnswer('commercial_gym')   // 17 tags, rack and trap_bar included
+```
+
+**The corrected experienced full-gym athlete:**
+
+```
+squat   Back Squat → Back Squat → Box Squat → Box Squat
+hinge   RDLs       → RDLs       → Deadlift  → Deadlift
+```
+
+Real barbell squats, held two blocks, then rotated. **No Bodyweight Squat, no
+Goblet Squat.** `fullKitEquipmentAnswer` itself is deliberately NOT changed —
+many suites' worlds would move, and that is its own unit.
+
+**FOURTH FIXTURE DEFECT OF THIS MISSION.** The others: an array where a record
+was wanted; anchor-bench membership as the main-lift signal; `'Intermediate'`
+where `ExperienceLevel` has no such member. Every one of them made a cell pass or
+a finding appear for the wrong reason.
+
+### ⚠ THE GENUINE NO-RACK CASE IS KEPT, AND GUARDED
+
+Ruling 4. An athlete with machines and **no rack** is a real athlete, and for
+them Leg Press really is the only experience-legal bilateral squat — retaining it
+is correct. Cell [14b] states that athlete explicitly and proves both halves: the
+commercial-gym athlete DOES get rack-required squats, and the no-rack athlete
+does NOT and keeps Leg Press. Repairing the fixture did not erase the true case.
+
+### ⚠ ONE REMAINING POOL-CONTENT GAP, REPORTED AS RULING 3 REQUIRES
 
 Measured after each filter, for the experienced full-gym athlete:
 
-| slot | in pool | kit-legal | + experience |
-| --- | --- | --- | --- |
-| squat | 7 | 3 | **1 — Leg Press** |
-| single_leg_hip | **1** | 1 | 1 — Single-Leg RDL |
+**`single_leg_hip` authors ONE exercise in total — `Single-Leg RDL`.** No kit and
+no experience level can rotate it. It is retained with
+`reason: 'single_legal_candidate'` rather than crossing a movement group, which
+is ruling 3's instruction. **This one is real and survives the corrected
+fixture.**
 
-- **The squat gap is caused by the KIT FIXTURE HAVING NO RACK.** `fullKitEquipmentAnswer`
-  grants barbell, dumbbells, cables, machine, bands, bench, pull-up bar,
-  kettlebell — **no rack**, so Back Squat, Front Squat, Box Squat and High Box
-  Squat are all kit-illegal. The two that survive the kit are both
-  regression-gated. **An athlete with a barbell but no rack has exactly one
-  experience-legal squat, and it is Leg Press.**
-- **`single_leg_hip` authors ONE exercise in total.** No kit and no experience
-  level can rotate it.
+### ⚠ TRAP BAR DEADLIFT IS NEVER SELECTED — OBSERVED, NOT FIXED
 
-Both are retained with `reason: 'single_legal_candidate'` rather than crossing a
-movement group, which is ruling 3's instruction.
+With the rack and trap bar present, hinge candidates order as
+`RDLs → Trap Bar Deadlift → Deadlift`. The measured four blocks give
+**RDLs, RDLs, Deadlift, Deadlift** — index 1 is stepped over, because a retention
+does not consume a cadence step and the block-keyed index moves on regardless.
+
+Ruling 7 says *"rotate legally between the preferred options"*, so a preferred
+option never appearing is worth Sam's eye. **Deliberately NOT changed here:** the
+fix is a change to cadence semantics, and this session was scoped to the fixture
+correction with *"no new audit or unrelated work"*.
 
 ### MUTATION RECEIPTS — 11 mutations, all red
 
@@ -334,6 +380,36 @@ and Sam should confirm it is what he wants** — it follows directly from ruling
 They are NOT re-aimed because re-aiming needs a world that contains a loaded
 accessory AND Pull-Ups, and choosing one carelessly is how three fixture defects
 already entered this mission. That is the next honest piece of work.
+
+## MERGE VERDICT
+
+**MERGE THE ROTATION OWNER. DO NOT MERGE THE TEN STALE CELLS AS-IS.**
+
+Met: no regression squat reaches an experienced full-gym athlete; rack-required
+squats are available and selected; the no-rack case still retains Leg Press;
+58/0 on the new suite with 11 mutations all red; four suites at base parity; the
+typecheck gate unchanged (6 pairs, red on `main` itself).
+
+**The ten remaining reds are all one shape** — a hard-coded exercise NAME the
+corrected rotation no longer places in block 2 (`Bicep Curl (Barbell)`,
+`Copenhagen Plank (Half)`, `Pull-Ups`, and one `Deadlift` case), each caught by
+its own liveness cell reporting `ABSENT_ROW`. Their SUBJECTS — accessory load
+seeding, bodyweight added-load restoration — remain valid product rules.
+
+**RE-EVALUATED AGAINST THE CORRECTED FIXTURE, AS ORDERED, AND THE ANSWER IS NO:**
+pointing `blockTwoProgressionTests` and `blockTwoDifficultMissedTests` at the
+canonical commercial-gym answer makes them WORSE, not better:
+
+| suite | malformed fixture | canonical fixture |
+| --- | --- | --- |
+| `test:block-two-progression` | 28 / 9 | **20 / 17** |
+| `test:block-two-difficult-missed` | 87 / 1 | **84 / 4** |
+
+With a rack present the hinge and squat picks move again, so `Deadlift` leaves
+block 2 as well. **The corrected fixture does not rescue them; it moves them
+further.** Re-aiming them is therefore a real unit of work that must be done ON
+the canonical fixture so it is done once — not folded into this correction. The
+probe was reverted from a local backup; both suites are back at 28/9 and 87/1.
 
 ## NOT COVERED
 

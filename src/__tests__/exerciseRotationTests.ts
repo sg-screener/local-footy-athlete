@@ -31,7 +31,10 @@
 };
 
 import { generateProgramLocally } from '../services/api/generateProgram';
-import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
+import {
+  commercialGymEquipmentAnswer,
+  presetEquipmentAnswer,
+} from './support/equipmentAnswerFixture';
 import { decideRotation } from '../rules/exerciseRotation';
 import { composedIdentityFor } from '../rules/composedRowLegality';
 import { STRENGTH_POOLS } from '../data/exercisePoolsStrength';
@@ -58,9 +61,18 @@ function ok(name: string, condition: boolean, detail?: string): void {
 /* THE WORLDS                                                                  */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-const FULL_KIT = fullKitEquipmentAnswer();
 /**
- * A partial kit — dumbbells and a bench. The second required athlete.
+ * ⚠ **THE CANONICAL COMMERCIAL-GYM ANSWER, DERIVED FROM THE PRODUCTION PRESET.**
+ *
+ * This used to be `fullKitEquipmentAnswer()`, a hand-authored ten-tag list whose
+ * docstring claims "every tag" and which has been missing `rack` and `trap_bar`
+ * since the 2026-08-13 split. Without a rack every barbell squat is kit-illegal,
+ * which left Leg Press as the athlete's only experience-legal squat — an
+ * artefact of the fixture that was nearly reported as a real pool gap.
+ */
+const FULL_KIT = commercialGymEquipmentAnswer();
+/**
+ * A partial kit — the canonical HOME GYM preset (dumbbells, bands, foam roller).
  *
  * ⚠ **A FIXTURE IS A CLAIM TOO.** An earlier version spread the full kit and
  * overrode `tags` with an ARRAY; `EquipmentAnswer.tags` is a RECORD of
@@ -68,8 +80,20 @@ const FULL_KIT = fullKitEquipmentAnswer();
  * were silently testing a BODYWEIGHT athlete. Cell [13]'s liveness now pins the
  * kit it actually got.
  */
-const DUMBBELL_KIT = {
-  tags: { dumbbells: 'have', bench: 'have' },
+const DUMBBELL_KIT = presetEquipmentAnswer('home_gym');
+
+/**
+ * ⚠ **THE GENUINE NO-RACK CONTROL, KEPT ON PURPOSE.** Sam, 2026-08-17: *"if an
+ * athlete explicitly has machines but no rack and Leg Press is their only legal
+ * experienced bilateral squat, retaining Leg Press is correct."* This is that
+ * athlete — stated as a real answer, not as a fixture that forgot a tag — and it
+ * is what stops the fixture repair above from also erasing the true case.
+ */
+const MACHINES_NO_RACK = {
+  tags: {
+    barbell: 'have', dumbbells: 'have', machine: 'have',
+    bench: 'have', cables: 'have', pullup_bar: 'have',
+  },
   modalities: {},
   answeredOn: '2026-07-01',
 } as unknown as typeof FULL_KIT;
@@ -749,6 +773,51 @@ console.log('\n[14] THE EXPERIENCE GATE — SAM\'S RULINGS 4, 5 AND 6');
   ok('and it is the regression squat, because it is their only legal one',
     bwSquats.every((r) => REGRESSIONS.includes(r.name)),
     [...new Set(bwSquats.map((r) => r.name))].join(', '));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[14b] THE RACK IS REAL — AND THE NO-RACK CASE IS STILL TRUE');
+
+{
+  /*
+   * ⚠ **THIS CELL EXISTS BECAUSE A FIXTURE MANUFACTURED A FINDING.** A
+   * hand-authored "full kit" omitted `rack`, every barbell squat became
+   * kit-illegal, and Leg Press was left as the only experience-legal squat —
+   * which was nearly reported to Sam as a pool-content gap needing new
+   * exercises. The canonical commercial-gym preset pre-ticks `rack`.
+   */
+  const RACK_SQUATS = ['Back Squat', 'Front Squat', 'Box Squat', 'High Box Squat'];
+  const fullGymSquats = new Set(
+    [b1, b2Silent, b2Retained].flatMap((p) => rowsOf(p))
+      .filter((r) => r.mainSlot === 'squat').map((r) => r.name));
+
+  ok('the commercial-gym athlete HAS rack-required squats available to rotation',
+    RACK_SQUATS.some((name) => fullGymSquats.has(name)),
+    `squat rows across three real blocks: ${[...fullGymSquats].join(', ')} `
+    + '— if none is rack-required the fixture has lost the rack again');
+  ok('and NO regression squat reaches them through ordinary rotation',
+    !fullGymSquats.has('Bodyweight Squat') && !fullGymSquats.has('Goblet Squat'),
+    [...fullGymSquats].join(', '));
+
+  /*
+   * RULING 4 — the genuine no-rack athlete. Machines but no rack: every barbell
+   * squat is legitimately illegal and both survivors are regression-gated, so
+   * Leg Press really is their only experience-legal bilateral squat and
+   * retaining it is CORRECT. Repairing the fixture above must not erase this.
+   */
+  const noRack = athlete({ equipmentAnswer: MACHINES_NO_RACK, experienceLevel: '2-5 years' });
+  const noRackSquats = new Set([1, 2].flatMap((n) =>
+    rowsOf(build({ blockNumber: n, profile: noRack }))
+      .filter((r) => r.mainSlot === 'squat').map((r) => r.name)));
+
+  ok('the no-rack athlete got squat work at all — liveness',
+    noRackSquats.size > 0, 'no squat row, so the control proves nothing');
+  ok('a machines-but-no-rack athlete is given NO rack-required squat',
+    !RACK_SQUATS.some((name) => noRackSquats.has(name)),
+    [...noRackSquats].join(', '));
+  ok('and retaining Leg Press across their blocks is correct, not a cap breach',
+    noRackSquats.size === 1 && noRackSquats.has('Leg Press'),
+    `${[...noRackSquats].join(', ')} — one legal squat means nothing to rotate to`);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */

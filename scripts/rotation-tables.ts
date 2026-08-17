@@ -19,7 +19,10 @@
 };
 
 import { generateProgramLocally } from '../src/services/api/generateProgram';
-import { fullKitEquipmentAnswer } from '../src/__tests__/support/equipmentAnswerFixture';
+import {
+  commercialGymEquipmentAnswer,
+  presetEquipmentAnswer,
+} from '../src/__tests__/support/equipmentAnswerFixture';
 import { slotCountsTowardSetBudget } from '../src/rules/weeklyProgrammingContract';
 import type { SessionFeedback } from '../src/store/programStore';
 import type { OnboardingData, TrainingProgram } from '../src/types/domain';
@@ -195,11 +198,18 @@ function table(label: string, equipment: unknown): void {
  * read Push-ups / Bodyweight Squat / Glute Bridge. This is the real answer a
  * dumbbells-and-bench athlete gives.
  */
-const DUMBBELL = {
-  tags: { dumbbells: 'have', bench: 'have' },
+const DUMBBELL = presetEquipmentAnswer('home_gym');
+const MACHINES_NO_RACK = {
+  tags: {
+    barbell: 'have', dumbbells: 'have', machine: 'have',
+    bench: 'have', cables: 'have', pullup_bar: 'have',
+  },
   modalities: {},
   answeredOn: '2026-07-01',
-} as unknown as ReturnType<typeof fullKitEquipmentAnswer>;
+} as unknown as ReturnType<typeof commercialGymEquipmentAnswer>;
 
-table('FULL-GYM ATHLETE — Pre-season, 3 training days, full kit', fullKitEquipmentAnswer());
-table('PARTIAL-KIT ATHLETE — Pre-season, 3 training days, dumbbells + bodyweight', DUMBBELL);
+table('EXPERIENCED FULL-GYM ATHLETE — Pre-season, 3 days, canonical Commercial gym',
+  commercialGymEquipmentAnswer());
+table('PARTIAL-KIT ATHLETE — Pre-season, 3 days, canonical Home gym preset', DUMBBELL);
+table('CONTROL: MACHINES BUT NO RACK — Leg Press really is the only legal squat',
+  MACHINES_NO_RACK);
