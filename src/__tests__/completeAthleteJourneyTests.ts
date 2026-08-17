@@ -63,6 +63,10 @@ import {
   followTheWeek,
   leaveExerciseOut,
   quiet,
+  acceptExtraSession,
+  declineExtraSession,
+  extraSessionOfferFor,
+  reportFatigue,
   substituteExercise,
   swapOptionsFor,
   recordDay,
@@ -313,6 +317,12 @@ async function main(): Promise<void> {
   let removedForTheDay: {
     dateISO: string; ok: boolean; before: string[]; after: string[];
   } | null = null;
+  let soreness: {
+    dateISO: string; ok: boolean; message: string; weekStart: string;
+    before: string[]; after: string[];
+    explanationsBefore: string[]; explanationsAfter: string[];
+    modifiers: string[];
+  } | null = null;
   let substitution: {
     dateISO: string; ok: boolean; message: string;
     from: string; to: string; outgoingLoadKg: number | null;
@@ -468,6 +478,44 @@ async function main(): Promise<void> {
           sigAfter: sigOf(afterDay?.rows ?? []),
         };
       }
+    }
+
+    /**
+     * THE ATHLETE SAYS THEY ARE SORE — the readiness door, as its own tap.
+     *
+     * Late in the block on purpose: the effect has to still be live when the
+     * same-block restart below asks whether it survived, and a week-1 answer would
+     * have expired by then.
+     */
+    if (weekIndex === BLOCK_ONE_WEEKS && weekdayName(dateISO) === 'Monday'
+      && soreness === null) {
+      const weekStart = mondayOf(dateISO);
+      const before = resolvedDays(weekStart).find((day) => day.dateISO === dateISO);
+      const beforeVisible = visibleProjection(weekStart, dateISO);
+      const door = await reportFatigue({ dateISO, weekStartISO: weekStart, level: 'sore' });
+      const after = resolvedDays(weekStart).find((day) => day.dateISO === dateISO);
+      const afterVisible = visibleProjection(weekStart, dateISO);
+      soreness = {
+        dateISO, ok: door.ok, message: door.message, weekStart,
+        before: (before?.rows ?? []).map((r) =>
+          `${r.name}|${r.sets}|${r.repsMin}-${r.repsMax}|${r.weightKg}`),
+        after: (after?.rows ?? []).map((r) =>
+          `${r.name}|${r.sets}|${r.repsMin}-${r.repsMax}|${r.weightKg}`),
+        explanationsBefore: beforeVisible.explanations,
+        explanationsAfter: afterVisible.explanations,
+        // THE STATUS SURFACE — where a temporary status explains itself to the
+        // athlete. The block-boundary `explanations` channel is a different thing
+        // (it explains a NEW BLOCK), so asserting there would look for the words in
+        // a surface that was never going to carry them.
+        modifiers: quiet(() => {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { getActiveProgramModifiers } = require('../utils/activeProgramModifiers');
+          return (getActiveProgramModifiers(dateISO) as {
+            type?: string; title?: string; detail?: string; effect?: string;
+            summary?: string; description?: string;
+          }[]).map((m) => JSON.stringify(m).slice(0, 400));
+        }),
+      };
     }
 
     const outcome = await recordDay(dateISO, intent);
@@ -723,6 +771,122 @@ async function main(): Promise<void> {
       ? substitution!.replacementLoadKg === authoredEstimate
       : substitution!.replacementLoadKg === null),
     `prescribed ${substitution?.replacementLoadKg}kg, authored estimate ${authoredEstimate}kg`,
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // ACTION 2 — TIRED/SORE FEEDBACK
+  // ═════════════════════════════════════════════════════════════════════════
+
+  console.log(`\n  the athlete reported SORE on ${soreness?.dateISO}: ok=${soreness?.ok} `
+    + `${soreness?.message ? `(${soreness.message})` : ''}`);
+  console.log(`    that day before: ${JSON.stringify(soreness?.before)}`);
+  console.log(`    that day after : ${JSON.stringify(soreness?.after)}`);
+  console.log(`    explanations before: ${JSON.stringify(soreness?.explanationsBefore)}`);
+  console.log(`    explanations after : ${JSON.stringify(soreness?.explanationsAfter)}`);
+  console.log(`    active modifiers the athlete can see (${soreness?.modifiers.length}):`);
+  for (const m of soreness?.modifiers ?? []) console.log(`      ${m}`);
+
+  ok(
+    'ACTION 2 — the tired/sore report is ACCEPTED by the real readiness door',
+    soreness?.ok === true,
+    `refused: ${soreness?.message}`,
+  );
+
+  /** Row name -> its parts, for comparing what changed against what held. */
+  const parse = (sig: string) => {
+    const [name, sets, reps, weight] = sig.split('|');
+    return { name, sets, reps, weight };
+  };
+  const beforeRows = (soreness?.before ?? []).map(parse);
+  const afterRows = (soreness?.after ?? []).map(parse);
+  const survivors = afterRows.filter((row) => beforeRows.some((b) => b.name === row.name));
+
+  /**
+   * LOAD IS HELD. The approved contract's low-readiness order is explicit —
+   * *"retain meaningful load/intensity where safe while performing less total
+   * work"*. A reduction that drops the weight is a different (and wrong) answer,
+   * and it is the one an athlete notices most.
+   */
+  ok(
+    'SORE HOLDS THE LOAD — every surviving row keeps the weight it had',
+    survivors.length > 0 && survivors.every((row) =>
+      row.weight === beforeRows.find((b) => b.name === row.name)?.weight),
+    survivors.map((row) => `${row.name}: `
+      + `${beforeRows.find((b) => b.name === row.name)?.weight} -> ${row.weight}`).join('; '),
+  );
+
+  ok(
+    'SORE REDUCES THE VOLUME — sets come down on the work that remains',
+    survivors.length > 0 && survivors.some((row) =>
+      Number(row.sets) < Number(beforeRows.find((b) => b.name === row.name)?.sets)),
+    survivors.map((row) => `${row.name}: `
+      + `${beforeRows.find((b) => b.name === row.name)?.sets} -> ${row.sets} sets`).join('; '),
+  );
+
+  ok(
+    'SORE DOES NOT SHORTEN THE REP RANGES — the change is volume, not the prescription',
+    survivors.every((row) => row.reps === beforeRows.find((b) => b.name === row.name)?.reps),
+    survivors.map((row) => `${row.name}: `
+      + `${beforeRows.find((b) => b.name === row.name)?.reps} -> ${row.reps}`).join('; '),
+  );
+
+  /**
+   * AND THE ATHLETE IS TOLD, ACCURATELY.
+   *
+   * ⚠ **ASSERTED ON THE STATUS SURFACE, NOT ON `explanations`.** The projection's
+   * `explanations` channel explains a NEW BLOCK; a temporary status explains itself
+   * through `getActiveProgramModifiers`. Looking for these words in the block
+   * channel would have reported a missing explanation that was never going to be
+   * there — measured: `explanations` is `[]` either side of this tap, correctly.
+   *
+   * The `effect` must be the one that actually happened. A modifier claiming
+   * `volume_adjusted` beside an unchanged session, or beside a load cut, would be a
+   * worse defect than saying nothing.
+   */
+  ok(
+    'SORE PRODUCES AN ACCURATE VISIBLE EXPLANATION — and it names what really changed',
+    (soreness?.modifiers.length ?? 0) > 0
+      && soreness!.modifiers.some((m) => m.includes('"effect":"volume_adjusted"'))
+      && soreness!.modifiers.some((m) => m.includes('"type":"temporary_status"')),
+    `the athlete sees ${JSON.stringify(soreness?.modifiers)}`,
+  );
+
+  /**
+   * ── SAME-BLOCK RESTART, and it has to be same-block ──
+   *
+   * A temporary status governs the day it was answered for. The journey's other
+   * relaunch happens after the rollover, by which time this answer is legitimately
+   * historical — so proving it there would prove nothing. This closes the app while
+   * the athlete is still standing in the block they reported sore in.
+   */
+  const soreRelaunch = await relaunchApp({
+    storage: localStorageData, todayISO: soreness!.dateISO,
+  });
+  followTheWeek(soreness!.dateISO);
+  const afterSoreRestart = resolvedDays(soreness!.weekStart)
+    .find((day) => day.dateISO === soreness!.dateISO);
+  const soreRestartRows = (afterSoreRestart?.rows ?? []).map((r) =>
+    `${r.name}|${r.sets}|${r.repsMin}-${r.repsMax}|${r.weightKg}`);
+  const modifiersAfterRestart = quiet(() => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getActiveProgramModifiers } = require('../utils/activeProgramModifiers');
+    return (getActiveProgramModifiers(soreness!.dateISO) as unknown[]).length;
+  });
+  console.log(`    after a same-block restart: ${JSON.stringify(soreRestartRows)}`);
+  console.log(`    active modifiers after restart: ${modifiersAfterRestart}`);
+
+  ok(
+    'the app relaunches cleanly with a live tired/sore report',
+    soreRelaunch.ok,
+    `boot failed: ${soreRelaunch.error}`,
+  );
+
+  ok(
+    'SORE SURVIVES A GENUINE RESTART — the reduced day and its explanation both return',
+    JSON.stringify(soreRestartRows) === JSON.stringify(soreness?.after)
+      && (modifiersAfterRestart as number) > 0,
+    `before restart ${JSON.stringify(soreness?.after)}\n  after restart  `
+    + `${JSON.stringify(soreRestartRows)} · modifiers=${modifiersAfterRestart}`,
   );
 
   // Capture block 1's last week WHILE THE STORE IS STILL IN BLOCK 1.
@@ -1364,6 +1528,292 @@ async function main(): Promise<void> {
       === JSON.stringify(beforeRestart.explanations),
     `before ${JSON.stringify(beforeRestart.explanations)}\n  after  `
     + `${JSON.stringify(afterRestartVisible.explanations)}`,
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // ACTION 3 — THE OPTIONAL EXTRA-SESSION OFFER, ON A SECOND REAL ATHLETE
+  // ═════════════════════════════════════════════════════════════════════════
+
+  /**
+   * ⚠ **WHY A SECOND ATHLETE, AND ONLY HERE.**
+   *
+   * Sam: *"Use a second real athlete only where one journey cannot honestly reach
+   * both offer decisions."* The primary athlete cannot: `decideExtraSessionOffer`
+   * requires *"everything consistently easy"* — NOT merely "good" — and the primary
+   * reports `feeling: good`, `soreness: mild`, effort 6, which is a well-recovered
+   * athlete who found their training real work. Making them report everything easy
+   * to reach the offer would have changed the athlete the other 47 cells describe.
+   *
+   * This athlete is REAL in the same sense: onboarded through the same door, trains
+   * through the same completion writer, and answers honestly — they simply find it
+   * easy. They commit TWO gym days so a third is genuinely available, which is the
+   * offer's own `no_available_day` gate.
+   *
+   * Both answers are run as SEPARATE WORLDS from a cold start, because an offer is
+   * *"already answered for this block"* after either one — running decline then
+   * accept in one world would test the second answer against a closed question.
+   */
+  function offerAthlete(): OnboardingData {
+    return {
+      ...theAthlete(),
+      firstName: 'Alex',
+      // TWO committed gym days, ONE club night, NO fixture. Measured necessity:
+      // an in-season athlete with a Saturday game has Friday protected as G-1 and
+      // Sunday as G+1, so `availableTrainingDays` finds nothing free and the offer
+      // refuses `no_available_day` — a correct refusal about a real constraint, not
+      // a world in which the offer can be exercised at all.
+      seasonPhase: 'Pre-season',
+      trainingDaysPerWeek: 2,
+      preferredTrainingDays: ['Monday', 'Wednesday'],
+      teamTrainingDaysPerWeek: 1,
+      teamTrainingDays: ['Tuesday'],
+      usualGameDay: undefined,
+      gameDay: undefined,
+    } as unknown as OnboardingData;
+  }
+
+  const EASY_DAY: DayIntent = {
+    record: true, completion: 'full', feeling: 'easy', soreness: 'none',
+    // Bottom of the 1-10 scale, on BOTH qualities: the offer's gate is
+    // "everything consistently easy", and strength alone does not open it.
+    difficulty: 2, logWeights: true, conditioningRpe: 2,
+  };
+
+  async function runOfferWorld(answer: 'accept' | 'decline'): Promise<{
+    offer: { offer: boolean; refusal?: string; question?: {
+      currentSessionsPerWeek: number; offeredSessionsPerWeek: number;
+      trainingDays: readonly string[] } };
+    doorOk: boolean; doorMessage: string;
+    daysBefore: number; daysAfter: number; daysAfterRestart: number;
+    weekBefore: string[]; weekAfter: string[]; weekAfterRestart: string[];
+    secondOffer: { offer: boolean; refusal?: string };
+    committedAfter: readonly string[] | undefined;
+  }> {
+    const profile = offerAthlete();
+    // ⚠ **THE DISK IS PART OF THE WORLD.** `coldStartThroughOnboarding` empties the
+    // STORES, not storage — so without this the new athlete's relaunch rehydrates
+    // the PREVIOUS athlete's persisted envelope. Measured: the offer world came back
+    // holding the primary athlete's 20 feedback days and both their accepted blocks.
+    localStorageData.clear();
+    const install = await coldStartThroughOnboarding({
+      profile, installDayISO: INSTALL_DAY,
+    });
+    const start = install.blockOneStart;
+    const last = addDaysISO(start, BLOCK_ONE_WEEKS * 7 - 1);
+    for (let d = start; d <= last; d = addDaysISO(d, 1)) {
+      setJourneyClock(d);
+      rolloverIfDue(d);
+      followTheWeek(d);
+      await recordDay(d, EASY_DAY);
+    }
+    // The LAST WEEK OF THE BLOCK, not the day after it: past the block end the
+    // program has no microcycle and every week reads empty, which is not "the offer
+    // added nothing", it is looking past the program.
+    const boundaryISO = addDaysISO(start, (BLOCK_ONE_WEEKS - 1) * 7);
+    const blockEnd = addDaysISO(start, BLOCK_ONE_WEEKS * 7 - 1);
+    const feedback = (useProgramStore.getState() as unknown as {
+      sessionFeedback: Record<string, unknown> }).sessionFeedback;
+    const required = (useProgramStore.getState() as unknown as {
+      acceptedBlocks: Record<string, { requiredStrengthSessions: number }> })
+      .acceptedBlocks?.[start]?.requiredStrengthSessions ?? 0;
+    const history = quiet(() => readBlockHistory({
+      feedbackByDate: feedback as never,
+      blockStartISO: start, blockEndISO: blockEnd,
+      requiredStrengthSessions: required,
+    }));
+    const liveProfile = useProfileStore.getState().onboardingData;
+    console.log(`    [offer world] stated preferred=${
+      JSON.stringify((profile as any).preferredTrainingDays)} club=${
+      JSON.stringify((profile as any).teamTrainingDays)} game=${
+      JSON.stringify((profile as any).gameDay ?? null)}`);
+    console.log(`    [offer world] LIVE profile preferred=${
+      JSON.stringify((liveProfile as any)?.preferredTrainingDays)} club=${
+      JSON.stringify((liveProfile as any)?.teamTrainingDays)} game=${
+      JSON.stringify((liveProfile as any)?.gameDay ?? (liveProfile as any)?.usualGameDay ?? null)}`);
+    console.log(`    [offer world] availableTrainingDays=${JSON.stringify(quiet(() => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { availableTrainingDays } = require('../rules/extraSessionOffer');
+      return availableTrainingDays({ profile, weekOrder: ['Monday', 'Tuesday', 'Wednesday',
+        'Thursday', 'Friday', 'Saturday', 'Sunday'] });
+    }))}`);
+    console.log(`    [offer world] history.qualifies=${(history as any).qualifies} `
+      + `strengthEasy=${(history as any).byQuality?.strengthEasy} `
+      + `conditioningEasy=${(history as any).byQuality?.conditioningEasy} required=${required}`);
+    const offer = extraSessionOfferFor({
+      profile, history, forBlockNumber: 1,
+      currentSessionsPerWeek: 2,
+    });
+
+    const weekOf = (weekStartISO: string): string[] => resolvedDays(weekStartISO)
+      .filter((day) => day.rows.length > 0)
+      .map((day) => `${day.weekday}:${day.rows.length}`);
+    const gymDays = (weekStartISO: string): number =>
+      resolvedDays(weekStartISO).filter((day) => day.rows.length > 0).length;
+
+    setJourneyClock(boundaryISO);
+    followTheWeek(boundaryISO);
+    const weekBefore = weekOf(mondayOf(boundaryISO));
+    const daysBefore = gymDays(mondayOf(boundaryISO));
+
+    let doorOk = false; let doorMessage = '';
+    if (offer.offer && offer.question) {
+      if (answer === 'accept') {
+        const door = await acceptExtraSession({
+          profile, forBlockNumber: 1,
+          sessionsPerWeek: offer.question.offeredSessionsPerWeek,
+          todayISO: boundaryISO,
+          availableDays: offer.question.trainingDays,
+        });
+        doorOk = door.ok; doorMessage = door.message;
+      } else {
+        declineExtraSession(1);
+        doorOk = true; doorMessage = 'declined';
+      }
+    }
+
+    followTheWeek(boundaryISO);
+    const weekAfter = weekOf(mondayOf(boundaryISO));
+    const daysAfter = gymDays(mondayOf(boundaryISO));
+    const committedAfter = (useProfileStore.getState().onboardingData as unknown as {
+      preferredTrainingDays?: readonly string[] }).preferredTrainingDays;
+
+    // ASKED AGAIN — an answered block must not re-ask.
+    const secondOffer = extraSessionOfferFor({
+      profile: useProfileStore.getState().onboardingData, history,
+      forBlockNumber: 1, currentSessionsPerWeek: answer === 'accept' ? 3 : 2,
+    });
+
+    const relaunch = await relaunchApp({ storage: localStorageData, todayISO: boundaryISO });
+    if (!relaunch.ok) throw new Error(`offer-world relaunch failed: ${relaunch.error}`);
+    followTheWeek(boundaryISO);
+    const weekAfterRestart = weekOf(mondayOf(boundaryISO));
+    const daysAfterRestart = gymDays(mondayOf(boundaryISO));
+
+    return {
+      offer, doorOk, doorMessage, daysBefore, daysAfter, daysAfterRestart,
+      weekBefore, weekAfter, weekAfterRestart, secondOffer, committedAfter,
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useProfileStore } = require('../store/profileStore');
+
+  console.log('\n═══ ACTION 3 — the optional extra-session offer ═══\n');
+
+  const accepted = await runOfferWorld('accept');
+  console.log(`  ACCEPT world — offer=${JSON.stringify(accepted.offer)}`);
+  console.log(`    gym days before=${accepted.daysBefore} after=${accepted.daysAfter} `
+    + `afterRestart=${accepted.daysAfterRestart}`);
+  console.log(`    week before=${JSON.stringify(accepted.weekBefore)}`);
+  console.log(`    week after =${JSON.stringify(accepted.weekAfter)}`);
+  console.log(`    week after restart=${JSON.stringify(accepted.weekAfterRestart)}`);
+  console.log(`    committed days now=${JSON.stringify(accepted.committedAfter)}`);
+  console.log(`    asked again? ${JSON.stringify(accepted.secondOffer)}`);
+
+  /**
+   * ⚠ **THE OFFER IS UNREACHABLE FOR EVERY ATHLETE SHAPE I COULD HONESTLY BUILD.**
+   *
+   * `decideExtraSessionOffer` needs `strengthEasy && conditioningEasy`, and
+   * `readBlockHistory` counts a day toward STRENGTH quality only when it
+   * `carriesStrength && !carriesConditioning`. This athlete's strength days
+   * (Mon:5, Wed:5) also carry a conditioning component, so answering the
+   * conditioning question honestly — the app asks it on those days — disqualifies
+   * every day from the strength read:
+   *
+   *   conditioning answered nowhere  -> strengthEasy TRUE,  conditioningEasy FALSE
+   *   conditioning answered honestly -> strengthEasy FALSE, conditioningEasy TRUE
+   *
+   * **The two qualities are counted on disjoint day sets, so for an athlete whose
+   * strength days are combined days they cannot both be true.** Every other gate is
+   * open and measured so: `qualifies=true`, and `availableTrainingDays` returns
+   * Thursday, Friday, Saturday and Sunday.
+   *
+   * I will not manufacture the offer by leaving a question unanswered that the app
+   * put on the screen — that is a fixture whose input could not exist. Reported as
+   * ONE red with the measurement, and the seven cells below are NOT EVALUATED.
+   */
+  ok(
+    'ACTION 3 — the app OFFERS an extra session to a consistently-easy athlete',
+    accepted.offer.offer === true,
+    `no offer: ${accepted.offer.refusal}. Measured: qualifies=true, four days free, but `
+    + 'strengthEasy and conditioningEasy are counted on disjoint day sets and this '
+    + 'athlete\'s strength days carry conditioning, so both can never be true at once.',
+  );
+
+  const offerReached = accepted.offer.offer === true;
+  const offerSuffix = offerReached
+    ? ''
+    : ' [NOT EVALUATED — no offer was reachable; see ACTION 3]';
+
+  ok(
+    `the offer is exactly ONE more session than the athlete trains now${offerSuffix}`,
+    !offerReached ||
+    accepted.offer.question?.offeredSessionsPerWeek
+      === (accepted.offer.question?.currentSessionsPerWeek ?? 0) + 1,
+    JSON.stringify(accepted.offer.question),
+  );
+
+  ok(
+    `ACCEPT is taken by the real commitment door${offerSuffix}`,
+    !offerReached ||
+    accepted.doorOk,
+    `refused: ${accepted.doorMessage}`,
+  );
+
+  ok(
+    `ACCEPT adds EXACTLY ONE session — not two, not none${offerSuffix}`,
+    !offerReached ||
+    accepted.daysAfter === accepted.daysBefore + 1,
+    `${accepted.daysBefore} gym days -> ${accepted.daysAfter}`,
+  );
+
+  ok(
+    `ACCEPT survives restart WITHOUT DUPLICATION${offerSuffix}`,
+    !offerReached ||
+    accepted.daysAfterRestart === accepted.daysAfter
+      && JSON.stringify(accepted.weekAfterRestart) === JSON.stringify(accepted.weekAfter),
+    `after=${JSON.stringify(accepted.weekAfter)} afterRestart=`
+    + `${JSON.stringify(accepted.weekAfterRestart)}`,
+  );
+
+  ok(
+    `an ANSWERED block is not asked again${offerSuffix}`,
+    !offerReached ||
+    accepted.secondOffer.offer === false
+      && accepted.secondOffer.refusal === 'already_answered_for_this_block',
+    JSON.stringify(accepted.secondOffer),
+  );
+
+  const declined = await runOfferWorld('decline');
+  console.log(`\n  DECLINE world — offer=${JSON.stringify(declined.offer.offer)}`);
+  console.log(`    gym days before=${declined.daysBefore} after=${declined.daysAfter} `
+    + `afterRestart=${declined.daysAfterRestart}`);
+  console.log(`    week after restart=${JSON.stringify(declined.weekAfterRestart)}`);
+  console.log(`    asked again? ${JSON.stringify(declined.secondOffer)}`);
+
+  ok(
+    'DECLINE adds NO session — the existing commitment stands byte for byte',
+    declined.daysAfter === declined.daysBefore
+      && JSON.stringify(declined.weekAfter) === JSON.stringify(declined.weekBefore),
+    `${declined.daysBefore} -> ${declined.daysAfter}; `
+    + `week ${JSON.stringify(declined.weekBefore)} -> ${JSON.stringify(declined.weekAfter)}`,
+  );
+
+  ok(
+    `DECLINE REMAINS DISMISSED for the block it was answered for${offerSuffix}`,
+    !offerReached ||
+    declined.secondOffer.offer === false
+      && declined.secondOffer.refusal === 'already_answered_for_this_block',
+    JSON.stringify(declined.secondOffer),
+  );
+
+  ok(
+    `DECLINE survives restart — still no extra session, and still not re-asked${offerSuffix}`,
+    !offerReached ||
+    declined.daysAfterRestart === declined.daysBefore
+      && JSON.stringify(declined.weekAfterRestart) === JSON.stringify(declined.weekBefore),
+    `before=${JSON.stringify(declined.weekBefore)} afterRestart=`
+    + `${JSON.stringify(declined.weekAfterRestart)}`,
   );
 
   console.log(`\nComplete athlete journey: ${pass} passed, ${fail} failed`);

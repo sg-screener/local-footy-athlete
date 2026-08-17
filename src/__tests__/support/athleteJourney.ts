@@ -354,6 +354,17 @@ export interface DayIntent {
   /** Does the athlete type in what they lifted? Progression reads these. */
   logWeights?: boolean;
   /**
+   * THE CONDITIONING RPE, answered separately from session effort.
+   *
+   * `readBlockHistory` reads `feedback.conditioning.rpe` for the conditioning
+   * quality and nothing else — so an athlete who never fills this in has
+   * `conditioningEasy: false` no matter how easy they found it, and the
+   * extra-session offer's *"everything consistently easy"* gate can never open.
+   * Measured: `strengthEasy=true conditioningEasy=false` on an athlete answering
+   * effort 2 out of 10 on every session.
+   */
+  conditioningRpe?: number;
+  /**
    * THE ATHLETE TYPES A NUMBER THE CARD DID NOT SAY.
    *
    * Confirming the prescription and OVERRIDING it are different athlete acts, and
@@ -455,6 +466,20 @@ export async function recordDay(dateISO: string, intent: DayIntent): Promise<Day
     partialReason: null,
     skipReason: null,
     ...(strength.length > 0 ? { strength } : {}),
+    // ⚠ **ONLY ON A DAY THAT ACTUALLY HAS CONDITIONING — the athlete answers the
+    // question the app asked them.**
+    //
+    // `readBlockHistory` counts a day toward STRENGTH quality only when it
+    // `carriesStrength && !carriesConditioning`. Attaching a conditioning answer to
+    // every day therefore disqualifies every day from the strength read: measured,
+    // `strengthEasy` flipped true -> false and `conditioningEasy` false -> true the
+    // moment this was unconditional. The two qualities are counted on different
+    // days on purpose, and a harness that answers both everywhere can never have
+    // both true.
+    ...(typeof intent.conditioningRpe === 'number'
+      && components.some((component) => String(component.id).includes('conditioning'))
+      ? { conditioning: { rpe: intent.conditioningRpe } }
+      : {}),
   } as never));
   if (!feedback) {
     return {
@@ -731,7 +756,8 @@ export function extraSessionOfferFor(args: {
   trainingDays: readonly string[];
 } } {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { decideExtraSessionOffer } = require('../../rules/extraSessionOffer');
+  const { decideExtraSessionOffer, availableTrainingDays } =
+    require('../../rules/extraSessionOffer');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { commitmentPatchFor } = require('../../rules/weeklyCommitmentQuestion');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -747,9 +773,14 @@ export function extraSessionOfferFor(args: {
     ledgerEntries: useDecisionLedgerStore.getState().entries ?? [],
     isCommitmentLegal: commitmentLegalityProbe,
     currentSessionsPerWeek: args.currentSessionsPerWeek,
+    // ⚠ **`availableDays` IS NOT OPTIONAL FOR THE GROWING DIRECTION.** Left
+    // undefined, `commitmentPatchFor` cannot place the extra day, the patch comes
+    // back no larger, and `decideExtraSessionOffer` reports `no_available_day` —
+    // about an athlete who has FOUR free days. Measured: `availableTrainingDays`
+    // returned Thu/Fri/Sat/Sun while the offer refused for want of one.
     patchFor: (sessionsPerWeek: number) => commitmentPatchFor({
       profile: args.profile, sessionsPerWeek, weekOrder: WEEK,
-      availableDays: undefined,
+      availableDays: availableTrainingDays({ profile: args.profile, weekOrder: WEEK }),
     }),
   })) as never;
 }

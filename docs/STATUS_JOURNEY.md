@@ -572,6 +572,60 @@ above — or an artefact of where this harness calls
 defect on one measurement. It is its own unit and it wants a tape that writes,
 flushes and reads back `sessionFeedback` alone, with nothing else moving.
 
+## ✅ ACTION 2 IS DONE — TIRED/SORE
+
+`reportFatigue({level:'sore'})` through the real readiness door, late in block 1.
+
+```
+before: Leg Press|3|3-4|125  Single-Leg RDL|3|6-8|17.5  Bench Press|3|3-5|82.5  Pull-Ups|3|4-6|0  Band Pallof Press|2|10-15|0
+after : Leg Press|2|3-4|125  Single-Leg RDL|2|6-8|17.5  Bench Press|2|3-5|82.5  Pull-Ups|2|4-6|0
+```
+
+**Loads HELD, sets 3 -> 2, rep ranges untouched, total work down** — the approved
+contract's low-readiness order exactly (*"retain meaningful load/intensity where safe
+while performing less total work"*).
+
+**THE VISIBLE EXPLANATION IS ON THE STATUS SURFACE, NOT THE BLOCK CHANNEL.**
+`getActiveProgramModifiers` returns
+`type: temporary_status`, `effect: volume_adjusted`,
+*"Not 100% today — Your training load is reduced while you recover. Limits:
+max-effort lifts; hard conditioning + sprints."* The `effect` matches what actually
+happened, which is the claim. Asserting on the projection's `explanations` would
+have reported a missing explanation that was never going to be there — that channel
+explains a NEW BLOCK, and it is correctly `[]` either side of this tap.
+
+**SAME-BLOCK RESTART**, not the block-2 one: a temporary status governs the day it
+was answered for, so proving it after the rollover would prove nothing. The reduced
+day returns byte-identical and the modifier is still live.
+
+## ⚠ ACTION 3 IS THE NAMED BLOCKER — THE OFFER IS UNREACHABLE
+
+`decideExtraSessionOffer` needs `strengthEasy && conditioningEasy`.
+`readBlockHistory` counts a day toward STRENGTH quality only when it
+`carriesStrength && !carriesConditioning`. A second real athlete (pre-season, two
+committed gym days, one club night, no fixture) was built specifically to reach the
+offer. Measured, both ways:
+
+| the athlete answers | strengthEasy | conditioningEasy | offer |
+| --- | --- | --- | --- |
+| conditioning nowhere | **true** | false | `not_consistently_easy` |
+| conditioning honestly, where the app asks | false | **true** | `not_consistently_easy` |
+
+**Their strength days are COMBINED days that carry conditioning, so the two
+qualities are counted on disjoint day sets and cannot both be true.** Every other
+gate is open and measured so: `qualifies=true`, and `availableTrainingDays` returns
+Thursday, Friday, Saturday, Sunday.
+
+**I did not manufacture the offer by leaving a question unanswered that the app puts
+on the screen** — that is a fixture whose input could not exist. One honest red; the
+seven downstream cells are labelled `[NOT EVALUATED]`.
+
+**TWO HARNESS FAULTS OF MY OWN, FIXED ON THE WAY.** My offer wrapper left
+`availableDays` undefined in `commitmentPatchFor`, so the offer refused
+`no_available_day` about an athlete with four free days. And a second athlete's
+world reused the first's DISK — `coldStartThroughOnboarding` empties the STORES, not
+storage, so the offer world rehydrated the primary athlete's 20 feedback days.
+
 ## ✅ ACTION 1 IS DONE — THE SWAP WALL WAS ONE LINE IN THE OWNERSHIP BOUNDARY
 
 `npm run test:athlete-journey` — **40 passed, 0 failed.**
