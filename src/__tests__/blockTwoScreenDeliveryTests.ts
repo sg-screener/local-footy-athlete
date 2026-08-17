@@ -72,6 +72,10 @@ require.cache[require.resolve('react-native')] = {
 } as unknown as NodeModule;
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+/* ⚠ Blocks the athlete ACCEPTED go through the canonical door, which records
+ * what they selected. Speculative calls stay on `generateProgramLocally` and
+ * record nothing — the two are different names on purpose. */
+import { acceptBlock, resetBlockSelectionHistory } from './support/acceptBlock';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { deriveBlockBoundaryPrompts } from '../screens/home/useBlockBoundaryPrompts';
 import {
@@ -166,7 +170,39 @@ const BLOCK_2_START = '2026-08-03';
 const WEEK_ORDER: readonly DayOfWeek[] = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ];
-const TRACKED = 'Deadlift';
+/**
+ * ⚠ **THE TRACKED LIFT IS DERIVED FROM THE BLOCK, NOT NAMED.**
+ *
+ * Sam, 2026-08-17: *"Replace brittle exercise-name assumptions with derived
+ * identities where the identity itself is not the test subject."*
+ *
+ * This suite is about LOAD behaviour — seeding, progression, restoration — and
+ * which lift carries it is incidental. `Deadlift` was hardcoded and stopped
+ * being block 2's hinge the moment phase preference put RDLs and Trap Bar
+ * Deadlift ahead of it, so every cell below reported `ABSENT_ROW` about a
+ * perfectly healthy program.
+ */
+const TRACKED: string = (() => {
+  const probe = generateProgramLocally(athlete(), {
+    todayISO: BLOCK_2_START,
+    blockNumber: 2,
+    recordSelections: false,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  for (const mc of probe.microcycles) {
+    for (const w of mc.workouts) {
+      for (const ex of w.exercises ?? []) {
+        if (ex.section18Evidence?.slot !== 'hinge') continue;
+        const name = ex.exercise?.name ?? '';
+        if (name) return name;
+      }
+    }
+  }
+  throw new Error(
+    `src/__tests__/blockTwoScreenDeliveryTests.ts could not derive a bilateral hinge from block 2 — a block with no `
+    + 'hinge at all is a real change in what the app programs, not a test nit.',
+  );
+})();
 const APPROVED_REDUCED_SENTENCE =
   'You completed the last block, but it felt very hard and recovery was low, '
   + "so we've kept your training weights and reduced the amount of work in this "
@@ -222,8 +258,7 @@ function halfAttendedBlock1(): Record<string, SessionFeedback> {
 }
 
 function build(sessionFeedback: Record<string, SessionFeedback>): TrainingProgram {
-  return generateProgramLocally(athlete(), {
-    recordSelections: true,
+  return acceptBlock(athlete(), {
     todayISO: BLOCK_2_START, blockNumber: 2,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },
   });

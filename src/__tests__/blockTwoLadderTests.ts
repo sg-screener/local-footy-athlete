@@ -38,6 +38,10 @@
 };
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+/* ⚠ Blocks the athlete ACCEPTED go through the canonical door, which records
+ * what they selected. Speculative calls stay on `generateProgramLocally` and
+ * record nothing — the two are different names on purpose. */
+import { acceptBlock, resetBlockSelectionHistory } from './support/acceptBlock';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { resolveWeekWithConditioning, type ScheduleState } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
@@ -116,8 +120,7 @@ function build(
   todayISO = BLOCK_2_START,
   blockNumber = 2,
 ): TrainingProgram {
-  return generateProgramLocally(athlete(), {
-    recordSelections: true,
+  return acceptBlock(athlete(), {
     todayISO,
     blockNumber,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },
@@ -479,7 +482,7 @@ const ceilingAthlete = {
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
 } as unknown as OnboardingData;
-const ceilingBlock1 = generateProgramLocally(ceilingAthlete, {
+const ceilingBlock1 = acceptBlock(ceilingAthlete, {
   todayISO: BLOCK_1_START, blockNumber: 1,
 });
 const CEILING_HISTORY = (() => {
@@ -510,7 +513,7 @@ const CEILING_HISTORY = (() => {
   });
   return feedback;
 })();
-const ceilingProgram = generateProgramLocally(ceilingAthlete, {
+const ceilingProgram = acceptBlock(ceilingAthlete, {
   todayISO: BLOCK_2_START,
   blockNumber: 2,
   progressionHistory: {
@@ -987,10 +990,18 @@ ok(
   movedUnderContradiction.join(', '),
 );
 
-/** A relaunch regenerates from the same explicit inputs; same inputs, same block. */
+/** A relaunch regenerates from the same explicit inputs; same inputs, same block.
+ *
+ * ⚠ **THIS PAIR NEEDS ITS OWN UNCONTAMINATED HISTORY.** Selection history is a
+ * real persisted store, and every scenario between the original build and this
+ * one ACCEPTED its own block 2 — overwriting the record this comparison is
+ * about. Reset and re-author the chain so the two sides are the same athlete. */
+resetBlockSelectionHistory();
+const relaunchBaseline = build(GOOD_HISTORY);
+const relaunchBaselineRows = rowsOf(relaunchBaseline);
 const relaunched = build(GOOD_HISTORY);
 const relaunchedRows = rowsOf(relaunched);
-const relaunchDrift = [...goodRows.entries()]
+const relaunchDrift = [...relaunchBaselineRows.entries()]
   .filter(([key, row]) => relaunchedRows.get(key)?.sets !== row.sets)
   .map(([key]) => key);
 ok(

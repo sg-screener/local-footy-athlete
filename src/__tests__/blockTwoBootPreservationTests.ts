@@ -41,6 +41,7 @@ const durable = new Map<string, string>();
 };
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { useProgramStore } from '../store/programStore';
@@ -78,7 +79,39 @@ const BLOCK_2_START = '2026-08-03';
 const WEEK_ORDER: readonly DayOfWeek[] = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ];
-const TRACKED = 'Deadlift';
+/**
+ * ⚠ **THE TRACKED LIFT IS DERIVED FROM THE BLOCK, NOT NAMED.**
+ *
+ * Sam, 2026-08-17: *"Replace brittle exercise-name assumptions with derived
+ * identities where the identity itself is not the test subject."*
+ *
+ * This suite is about LOAD behaviour — seeding, progression, restoration — and
+ * which lift carries it is incidental. `Deadlift` was hardcoded and stopped
+ * being block 2's hinge the moment phase preference put RDLs and Trap Bar
+ * Deadlift ahead of it, so every cell below reported `ABSENT_ROW` about a
+ * perfectly healthy program.
+ */
+const TRACKED: string = (() => {
+  const probe = generateProgramLocally(athlete(), {
+    todayISO: BLOCK_2_START,
+    blockNumber: 2,
+    recordSelections: false,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  for (const mc of probe.microcycles) {
+    for (const w of mc.workouts) {
+      for (const ex of w.exercises ?? []) {
+        if (ex.section18Evidence?.slot !== 'hinge') continue;
+        const name = ex.exercise?.name ?? '';
+        if (name) return name;
+      }
+    }
+  }
+  throw new Error(
+    `src/__tests__/blockTwoBootPreservationTests.ts could not derive a bilateral hinge from block 2 — a block with no `
+    + 'hinge at all is a real change in what the app programs, not a test nit.',
+  );
+})();
 /**
  * ⚠ **THIS NAME MOVED WHEN SAM'S 2026-08-17 ROTATION RULING LANDED, AND THE
  * SUBJECT DID NOT.** This suite asks whether a relaunch RESTORES an accessory's
@@ -94,7 +127,35 @@ const TRACKED = 'Deadlift';
  * `Bicep Curl (Barbell)` is NOT gated out: it is authored `everyone`. This is a
  * cadence change, not an experience one.
  */
-const ACCESSORY = 'Banded External Rotation';
+/**
+ * ⚠ **DERIVED, NOT NAMED — IT HAS NOW BROKEN TWICE.** This suite asks whether a
+ * relaunch RESTORES an accessory's own recorded load; WHICH accessory is
+ * incidental. It was `Bicep Curl (Barbell)`, then `Banded External Rotation`,
+ * and each time a rotation-policy change made the name stale and the cells read
+ * `[]` about a perfectly healthy program. It asks the block now.
+ */
+const ACCESSORY: string = (() => {
+  const probe = generateProgramLocally(athlete(), {
+    todayISO: BLOCK_2_START,
+    blockNumber: 2,
+    recordSelections: false,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  for (const mc of probe.microcycles) {
+    for (const w of mc.workouts) {
+      for (const ex of w.exercises ?? []) {
+        if (ex.role === 'conditioning') continue;
+        if (slotCountsTowardSetBudget(ex.section18Evidence?.slot)) continue;
+        const name = ex.exercise?.name ?? '';
+        if (name) return name;
+      }
+    }
+  }
+  throw new Error(
+    'blockTwoBootPreservationTests could not derive an accessory row from block 2 '
+    + '— a block with no accessory at all is a real change, not a test nit.',
+  );
+})();
 const RECORDED_KG = 100;
 const ACCESSORY_RECORDED_KG = 17.5;
 

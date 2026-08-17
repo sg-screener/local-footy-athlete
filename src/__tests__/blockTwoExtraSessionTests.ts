@@ -51,6 +51,10 @@ require.cache[require.resolve('react-native')] = {
 } as unknown as NodeModule;
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+/* ⚠ Blocks the athlete ACCEPTED go through the canonical door, which records
+ * what they selected. Speculative calls stay on `generateProgramLocally` and
+ * record nothing — the two are different names on purpose. */
+import { acceptBlock, resetBlockSelectionHistory } from './support/acceptBlock';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { deriveBlockBoundaryPrompts } from '../screens/home/useBlockBoundaryPrompts';
 import { ExtraSessionOfferCard } from '../screens/home/BlockBoundaryCards';
@@ -193,8 +197,7 @@ function build(
   sessionFeedback: Record<string, SessionFeedback>,
   profile: OnboardingData = athlete(),
 ): TrainingProgram {
-  return generateProgramLocally(profile, {
-    recordSelections: true,
+  return acceptBlock(profile, {
     todayISO: BLOCK_2_START,
     blockNumber: 2,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },
@@ -253,7 +256,7 @@ function promptsFor(args: {
   });
 }
 
-const block1 = generateProgramLocally(athlete(), { todayISO: BLOCK_1_START, blockNumber: 1 });
+const block1 = acceptBlock(athlete(), { todayISO: BLOCK_1_START, blockNumber: 1 });
 /** Everything consistently easy — the contract's third case. */
 const EASY = logRealBlock(block1, { feeling: 'easy', soreness: 'none' });
 /** Completed and recovered well, but not EASY. Load and a set; no session. */
@@ -530,11 +533,11 @@ const noClubAthlete = athlete({
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
 } as Partial<OnboardingData>);
-const noClubBlock1 = generateProgramLocally(noClubAthlete, {
+const noClubBlock1 = acceptBlock(noClubAthlete, {
   todayISO: BLOCK_1_START, blockNumber: 1,
 });
 const NO_CLUB_EASY = logRealBlock(noClubBlock1, { feeling: 'easy', soreness: 'none' });
-const noClubProgram = generateProgramLocally(noClubAthlete, {
+const noClubProgram = acceptBlock(noClubAthlete, {
   todayISO: BLOCK_2_START,
   blockNumber: 2,
   progressionHistory: {
@@ -696,9 +699,16 @@ function prescriptionsOf(program: TrainingProgram): string {
   }
   return rows.join('|');
 }
+/* ⚠ **BOTH SIDES BUILT INTO THE SAME UNCONTAMINATED HISTORY.** Selection history
+ * is a real persisted store and every scenario between `easyProgram` and this
+ * line ACCEPTED its own block, overwriting the record this comparison is about.
+ * The two sides are re-authored together so they are the same athlete. */
+resetBlockSelectionHistory();
+const declineBaseline = prescriptionsOf(build(EASY));
+const declineAfter = prescriptionsOf(build(EASY));
 ok(
   'a decline changes NO prescription — every set, rep and load is identical',
-  prescriptionsOf(build(EASY)) === prescriptionsOf(easyProgram),
+  declineAfter === declineBaseline,
   'declining moved a prescription',
 );
 

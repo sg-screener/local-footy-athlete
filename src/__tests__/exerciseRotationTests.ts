@@ -49,6 +49,12 @@ import {
   recordBlockSelections,
   blockSelectionHistory,
 } from '../store/blockSelectionHistoryStore';
+import {
+  acceptBlock,
+  probeBlock,
+  resetBlockSelectionHistory,
+  recordedSelectionCount,
+} from './support/acceptBlock';
 import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 
 let pass = 0;
@@ -1213,6 +1219,57 @@ console.log('\n[21] A TODAY-ONLY EXCLUSION SUBSTITUTES THE SESSION, NEVER THE BL
     moved.length === 0,
     moved.map((k) => `${k}: ${before[k]} → ${after[k]}`).join(' | '));
   freshSelectionHistory();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[22] THE TWO LIVENESS CONTROLS ON THE HISTORY DOOR');
+
+{
+  /*
+   * Sam, 2026-08-17 — both directions, kept permanently:
+   *   · speculative generation writes ZERO selection-history records;
+   *   · accepting a block writes EXACTLY ONE canonical record per governed slot.
+   *
+   * Without the first, a probe silently becomes the athlete's past — which it
+   * did, and made a restored exclusion come back in no block at all. Without the
+   * second, "recording" could be writing nothing and every rotation cell above
+   * would be asserting against an empty history.
+   */
+  resetBlockSelectionHistory();
+  probeBlock(athlete(), {
+    todayISO: BLOCK_STARTS[0],
+    blockNumber: 1,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  ok('CONTROL A — a speculative build records NOTHING',
+    recordedSelectionCount() === 0,
+    `${recordedSelectionCount()} rows written by a probe`);
+
+  resetBlockSelectionHistory();
+  const accepted = acceptBlock(athlete(), {
+    todayISO: BLOCK_STARTS[0],
+    blockNumber: 1,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  const rows = blockSelectionHistory();
+  ok('CONTROL B — accepting a block DOES record',
+    rows.length > 0, 'acceptance wrote nothing, so every history cell above is empty');
+
+  /* Exactly one record per governed slot — not one per day, not one per week. */
+  const bySlot = new Map<string, number>();
+  for (const row of rows) bySlot.set(row.slot, (bySlot.get(row.slot) ?? 0) + 1);
+  const duplicated = [...bySlot.entries()].filter(([, n]) => n > 1);
+  ok('and EXACTLY ONE canonical record per governed slot',
+    duplicated.length === 0,
+    duplicated.map(([slot, n]) => `${slot}x${n}`).join(' '));
+
+  /* And every governed slot the block actually programmed is represented. */
+  const programmedSlots = new Set(
+    rowsOf(accepted).filter((r) => r.mainSlot).map((r) => r.mainSlot as string));
+  const missing = [...programmedSlots].filter((slot) => !bySlot.has(slot));
+  ok('and every governed slot the block programmed has a record',
+    missing.length === 0, missing.join(' '));
+  resetBlockSelectionHistory();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
