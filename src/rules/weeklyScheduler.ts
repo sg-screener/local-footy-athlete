@@ -149,6 +149,30 @@ export interface SessionIntention {
    * member, and why `WeeklyDemand.coreConditioning` cannot see it.
    */
   readonly powerEligible: boolean;
+  /**
+   * ── WC-139: A SPRINT RIDING A DAY THAT ALREADY CARRIES CONDITIONING ───────
+   *
+   * **Sam, 2026-08-17, pre-season:** *"Tuesday: Sprint first → Upper strength →
+   * authored hard conditioning."* That is TWO conditioning components on one
+   * day, and `conditioning` is a single slot — putting the sprint in it
+   * DISPLACED the hard session and the pre-season week came back with no hard
+   * conditioning at all (measured: `test:conditioning-phase-authorship` 42/42
+   * → 40/42).
+   *
+   * So the sprint gets its own flag rather than competing for the slot. The day
+   * keeps `conditioning`/`conditioningCategory` for its hard or aerobic
+   * component, and this says a sprint ALSO rides here.
+   *
+   * **ORDER IS PART OF THE RULING** — *"Sprint first"*, and *"do not place
+   * sprinting after Tuesday's hard conditioning"*. The sprint is fresh work; it
+   * goes before the lift and before the conditioning. The materialisation
+   * boundary and the row composer both honour that, and it is guarded.
+   *
+   * ⚠ It is FALSE on a day whose only conditioning IS the sprint — that day
+   * uses the ordinary `conditioning: 'sprint_high_speed'` slot (WC-138). This
+   * flag means specifically *"a second component, and it is a sprint"*.
+   */
+  readonly sprintComponent: boolean;
   /** True when the athlete may skip it — the early off-season block. */
   readonly optional: boolean;
   /** Which contract clause put this here. */
@@ -715,6 +739,21 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   const sprintUpperDay = upperDayForSprint(inputs, overlay, purposeByDay);
   const plannedSprintDay = sprintUpperDay
     ?? appSprintDay(inputs, overlay, new Set(purposeByDay.keys()));
+
+  // ── WC-139: PRE-SEASON PUTS THE SPRINT ON THE HARD DAY, AS A SECOND
+  //           COMPONENT ─────────────────────────────────────────────────────
+  //
+  // **Sam:** *"Tuesday: Sprint first → Upper strength → authored hard
+  // conditioning"*, and *"consolidate the two high-output running exposures
+  // onto Tuesday"*. So pre-season's sprint does not take a slot or a day of its
+  // own — it joins the day the hard conditioning is already on.
+  //
+  // `hardDay` is computed below, so this is resolved after it. Off-season keeps
+  // WC-138's separate Friday (its reference deliberately SPREADS the two), and
+  // in-season keeps its own standalone day.
+  const preseasonSprintRidesHardDay = inputs.phase === 'Pre-season'
+    && overlay.sprintExposureRequired
+    && inputs.clubNights.length === 0;
   let appConditioningBudget = Math.max(
     0,
     overlay.conditioningTarget.min
@@ -817,9 +856,18 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     if (isGameMinusOne(day, inputs) || isGameMinusTwo(day, inputs)) return false;
     return !isGamePlusOne(day, inputs);
   });
-  const hardDay = hardQuality === null ? null : (
+  const hardDayForSprint = hardQuality === null ? null : (
     hardEligible.find((day) => !PURPOSE_IS_LOWER[purposeByDay.get(day)!])
     ?? hardEligible[0] ?? null);
+  const hardDay = hardDayForSprint;
+  // WC-139 — the sprint joins the hard day when the phase asks for that shape,
+  // and only when that day is legal for a sprint (never inside G-3, never a
+  // club night; `hardEligible` has already excluded G-2, G-1 and G+1).
+  const sprintComponentDay = preseasonSprintRidesHardDay
+    && hardDay !== null
+    && sprintDayIsLegal(hardDay, inputs)
+    ? hardDay
+    : null;
 
   const days: SessionIntention[] = [];
   for (const day of WEEK_ORDER) {
@@ -830,7 +878,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       days.push({
         dateISO, dayOfWeek: day, purpose: null, owner: 'game', movementIntention: [],
         setBudget: null, conditioning: null, conditioningCategory: null,
-        conditioningRole: null, powerEligible: false,
+        conditioningRole: null, powerEligible: false, sprintComponent: false,
         optional: false, clauseId: 'WC-050',
         clubTraining: inputs.clubNights.includes(day), game: true,
       });
@@ -861,6 +909,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         // Riding on a strength session, never a session of its own — and null
         // when no conditioning was owed, so the day carries no empty component.
         conditioningRole: conditioningDaySet.has(day) ? 'component' : null,
+        sprintComponent: day === sprintComponentDay,
         // ── WC-050: WHICH DAYS MAY BE OFFERED A POWER PRIMER AT ALL ────────
         //
         // Never the game day. Never G-1 (*"no heavy lifting or conditioning"*).
@@ -896,7 +945,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       days.push({
         dateISO, dayOfWeek: day, purpose: null, owner: 'club', movementIntention: [],
         setBudget: null, conditioning: null, conditioningCategory: null,
-        conditioningRole: null, powerEligible: false,
+        conditioningRole: null, powerEligible: false, sprintComponent: false,
         optional: false, clauseId: 'WC-062', clubTraining: true, game: false,
       });
       continue;
@@ -904,7 +953,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     days.push({
       dateISO, dayOfWeek: day, purpose: null, owner: 'rest_or_recovery',
       movementIntention: [], setBudget: null, conditioning: null,
-      conditioningCategory: null, conditioningRole: null, powerEligible: false,
+      conditioningCategory: null, conditioningRole: null, powerEligible: false, sprintComponent: false,
       optional: true, clauseId: 'WC-042', clubTraining: false, game: false,
     });
   }
@@ -992,7 +1041,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
         purpose: null, owner: 'conditioning', movementIntention: [], setBudget: null,
         conditioning: 'running', conditioningCategory: CATEGORY_FOR_CONDITIONING.running,
         // A day of its own — nothing else is authorised here.
-        conditioningRole: 'standalone', powerEligible: false,
+        conditioningRole: 'standalone', powerEligible: false, sprintComponent: false,
         optional: false, clauseId: 'WC-060',
         clubTraining: inputs.clubNights.includes(day), game: false,
       });
@@ -1011,7 +1060,10 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   // for every phase the overlay marks `sprintExposureRequired`.
   // Decided above, before the conditioning budget was spent, so the sprint sits
   // INSIDE the phase target rather than on top of it.
-  const sprintDay = plannedSprintDay;
+  // WC-139 — when the sprint rides the hard day it is NOT also placed
+  // elsewhere. Leaving both would give the week two sprints and a Wednesday
+  // session Sam explicitly rejected.
+  const sprintDay = sprintComponentDay !== null ? null : plannedSprintDay;
   const withSprint = sprintDay === null ? days : days.map((entry) => {
     if (entry.dayOfWeek !== sprintDay) return entry;
     // WC-138 — the sprint rides the upper session already authorised here.
@@ -1053,7 +1105,12 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
     ...inputs.clubNights,
     ...(inputs.gameDay !== null ? [inputs.gameDay] : []),
   ]).size;
-  const appConditioningDays = withRunning.filter((day) => day.conditioning !== null).length;
+  // ⚠ A WC-139 SPRINT COMPONENT IS ITS OWN EXPOSURE. It shares a DAY with the
+  // hard session but it is a second piece of conditioning, and Sam counts it:
+  // *"Monday aerobic + Tuesday sprint + Tuesday hard conditioning + Saturday
+  // game"* is four. Counting days rather than components lost it.
+  const appConditioningDays = withRunning.filter((day) => day.conditioning !== null).length
+    + withRunning.filter((day) => day.sprintComponent).length;
   const runningDayCount = withRunning.filter((day) => day.conditioning === 'running').length;
   // ── WC-124: ANCHORS SUPPLY SPRINT CREDIT ────────────────────────────────
   //
@@ -1070,7 +1127,7 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
   //
   // The game and every club night carry the credit the contract says they carry.
   const appSprintDays = withRunning.filter(
-    (day) => day.conditioning === 'sprint_high_speed').length;
+    (day) => day.conditioning === 'sprint_high_speed' || day.sprintComponent).length;
   const sprintCount = appSprintDays + anchorConditioning;
   const hardDaySet = new Set<number>([
     ...withRunning.filter((day) => day.owner === 'strength').map((day) => day.dayOfWeek),
@@ -1110,7 +1167,8 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
       .map((day) => ({ day: day.dayOfWeek, purpose: day.purpose as SessionPurpose })),
     runningDays: withRunning
       .filter((day) => day.conditioning === 'running'
-        || day.conditioning === 'sprint_high_speed')
+        || day.conditioning === 'sprint_high_speed'
+        || day.sprintComponent)
       .map((day) => day.dayOfWeek),
     coreConditioning: demand.coreConditioning,
     setsPerSession: layout.setBudget?.hardCeiling ?? 0,
@@ -1153,6 +1211,18 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
  * one: the phase must require a sprint, club training must be absent, and with
  * a fixture the day must be G-3 or earlier.
  */
+/** WC-135's day legality, asked of one day. Never a club night, never inside G-3. */
+function sprintDayIsLegal(day: number, inputs: WeeklySchedulerInputs): boolean {
+  if (inputs.clubNights.includes(day)) return false;
+  if (inputs.gameDay === day) return false;
+  if (inputs.unavailableDays.includes(day)) return false;
+  if (inputs.gameDay === null) return true;
+  if (isGamePlusOne(day, inputs)) return false;
+  const until = gameProximity(day, inputs.gameDay, inputs.fixtureRecurrence)
+    .daysUntilNextGame;
+  return until !== null && until >= -INSEASON_SPRINT_RULE.earliestGameOffset;
+}
+
 function upperDayForSprint(
   inputs: WeeklySchedulerInputs,
   overlay: PhaseOverlay,

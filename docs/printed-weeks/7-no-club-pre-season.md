@@ -47,18 +47,16 @@
 
 **Conditioning**
 
+- 10 m Acceleration Reps — 8 × 1
+  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
 - Classic 4×4 — 4 × 1
   - Hard means honest pace, not a sprint you can't hold for 4 minutes — round 4 should match round 1. 90–100% MAS; HR 90–95% max late
 
 ## Wednesday 12 August
 
-### Training Day
+### Rest Day
 
-**Conditioning**
-
-- Warm-up — 1 × 1  ⚠ **"1 × 1" IS NOT A PRESCRIPTION — how much of this, and how hard?**
-- 10 m Acceleration Reps — 8 × 1
-  - Quick and light off the ground — not a max sprint, a crisp first-step drill. 95–100% maximal — crisp first step
+_(nothing on this day)_
 
 ## Thursday 13 August
 
@@ -107,7 +105,6 @@ None. Every word on this page came out of the app.
 
 **Every set on this page is written as a range — 15 of them.** Your rule is that the athlete sees one middle number, not a range ("3 × 4-6" should read "3 × 5"). The day screen inside the app follows that rule; this list does not, so the same set is written two different ways depending on where you look at it.
 
-**2 lines that does not say how much work to do:**
+**1 line that does not say how much work to do:**
 
 - Monday 10 August — Steady Blocks (3×8 min or 4×6 min) — the app says "1 × 1"
-- Wednesday 12 August — Warm-up — the app says "1 × 1"

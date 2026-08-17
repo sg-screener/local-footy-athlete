@@ -2665,6 +2665,13 @@ export function buildWorkoutsFromCoach(
         condBlock[i].exerciseOrder = maxOrder + i + 1;
       }
 
+      // ⚠ **NO SPRINT COMPOSITION HERE.** WC-139's pre-lift sprint is composed
+      // by the EXISTING pre-lift speed path further down this function
+      // (`planEntry.speedWorkKind === 'true_speed' && speedPlacement ===
+      // 'pre_lift'`), which already prepends the rows and builds the
+      // `speedBlock` §18 reads. Composing it here as well gave the day TWO
+      // sprint rows — `20 m Acceleration Reps` from that path and
+      // `10 m Acceleration Reps` from this one.
       finalExercises = [...strengthBlock, ...condBlock];
 
       // Resolve the conditioning block once, here — single source of truth
