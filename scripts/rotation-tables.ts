@@ -19,6 +19,7 @@
 };
 
 import { generateProgramLocally } from '../src/services/api/generateProgram';
+import { useBlockSelectionHistoryStore } from '../src/store/blockSelectionHistoryStore';
 import {
   commercialGymEquipmentAnswer,
   presetEquipmentAnswer,
@@ -113,6 +114,7 @@ function readBlock(program: TrainingProgram) {
 
 function table(label: string, equipment: unknown): void {
   const profile = athlete(equipment);
+  useBlockSelectionHistoryStore.setState({ selections: [] } as never);
   const blocks: ReturnType<typeof readBlock>[] = [];
   const recorded: Set<string>[] = [];
   let history: Record<string, SessionFeedback> = {};
@@ -120,6 +122,7 @@ function table(label: string, equipment: unknown): void {
   for (let b = 0; b < 6; b++) {
     const program = generateProgramLocally(profile, {
       todayISO: BLOCK_STARTS[b], blockNumber: b + 1,
+      recordSelections: true,
       progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
     });
     blocks.push(readBlock(program));
