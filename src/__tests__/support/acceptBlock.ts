@@ -21,6 +21,11 @@
 
 import { generateProgramLocally } from '../../services/api/generateProgram';
 import { useBlockSelectionHistoryStore } from '../../store/blockSelectionHistoryStore';
+import {
+  recordAcceptedBlockStrengthRequirement,
+  useProgramStore,
+} from '../../store/programStore';
+import { deriveStoredBlockStateFromProgram } from '../../utils/programBlockState';
 import type { OnboardingData, TrainingProgram } from '../../types/domain';
 
 type GenerateOptions = Parameters<typeof generateProgramLocally>[1];
@@ -35,10 +40,48 @@ export function acceptBlock(
   profile: OnboardingData,
   options: GenerateOptions,
 ): TrainingProgram {
-  return generateProgramLocally(profile, {
+  // ── WHAT EACH ACCEPTED BLOCK REQUIRED (Sam, 2026-08-17) ─────────────────
+  //
+  // Production acceptance records this, and this function's whole promise is to
+  // do *"exactly as production acceptance does"*. It did not, and the gap was
+  // invisible until the completion denominator started reading it: four suites
+  // went red reporting that the boundary had stopped progressing anything, which
+  // was TRUE of their worlds and false of the app.
+  //
+  // The map is READ before authoring — the denominator describes the block that
+  // just ENDED — and the block being accepted records its own requirement after.
+  // Same order, same store and same writer as the two production doors, so a
+  // suite cannot drift from them.
+  //
+  // ⚠ **AN EXPLICIT `acceptedBlockRequirements` IN `options` WINS.** A suite
+  // that wants to state a world where the previous block required N says so, and
+  // this door must not overwrite it with the ambient store.
+  const stated = (options as { progressionHistory?: { acceptedBlockRequirements?: unknown } })
+    ?.progressionHistory?.acceptedBlockRequirements;
+  const program = generateProgramLocally(profile, {
     ...options,
     recordSelections: true,
+    ...(options?.progressionHistory
+      ? {
+        progressionHistory: {
+          ...options.progressionHistory,
+          acceptedBlockRequirements: stated
+            ?? useProgramStore.getState().acceptedBlockRequirements ?? {},
+        },
+      }
+      : {}),
   }) as TrainingProgram;
+
+  recordAcceptedBlockStrengthRequirement({
+    program,
+    // The suites do not commit to the store, so the block identity is derived
+    // from the program the same way both production doors derive it.
+    blockState: deriveStoredBlockStateFromProgram(
+      program,
+      (options as { todayISO?: string })?.todayISO,
+    ),
+  });
+  return program;
 }
 
 /**
@@ -66,6 +109,12 @@ export function probeBlock(
  */
 export function resetBlockSelectionHistory(): void {
   useBlockSelectionHistoryStore.setState({ selections: [] } as never);
+  // THE ACCEPTED-BLOCK REQUIREMENTS ARE THE SAME KIND OF CROSS-SCENARIO LEAK the
+  // selection history is, and for the same reason: they are a real persisted
+  // record of blocks an athlete accepted. Without this, one athlete's accepted
+  // blocks become the next athlete's past and the completion gate answers with
+  // another world's denominator.
+  useProgramStore.setState({ acceptedBlockRequirements: {} } as never);
 }
 
 /** How many records exist — the liveness controls read this. */

@@ -454,6 +454,92 @@ const HARD_BLOCK_SORENESS: ReadonlySet<FeedbackSoreness> =
   new Set<FeedbackSoreness>(['high']);
 
 /**
+ * THE STRENGTH SESSIONS AN ACCEPTED BLOCK ACTUALLY REQUIRED OF THE ATHLETE.
+ *
+ * **Sam ruled this, 2026-08-17:** *"The completion denominator must be the
+ * required strength sessions in the accepted block the athlete actually
+ * received—not requested gym availability and not a recalculated planning
+ * target. Give that block-specific delivered requirement one durable owner at
+ * block acceptance, and make rollover and restart read the same value. Do not
+ * add a fallback to either of the two refuted numbers."*
+ *
+ * ## THE TWO REFUTED NUMBERS, SO NEITHER COMES BACK
+ *
+ * Both were measured on a real journey athlete (`test:athlete-journey`); neither
+ * is a hypothetical.
+ *
+ * 1. **`plan.coreSessions * WEEKS_PER_BLOCK` = 12.** Requested gym availability.
+ *    The athlete asked for three gym days; Friday is protected as G-1 before
+ *    their Saturday game, so the app gave two. They completed 7 of the 8 offered,
+ *    recovery read `good`, and the gate compared 7 against `ceil(12 * 0.75) = 9`.
+ *    **Every continuing lift held, silently** — the boundary ran, read their real
+ *    125 kg, and wrote 125 kg back.
+ * 2. **`weeklyExposureContract.strength.targetCount * WEEKS_PER_BLOCK` = 12.** A
+ *    recalculated planning target. It reads 3 while the accepted week ships 2, so
+ *    the plan is not the block the athlete received.
+ *
+ * **There is no fallback here and there must never be one.** An absent
+ * requirement returns 0, `readBlockHistory`'s `requiredStrengthSessions > 0`
+ * fails, and nothing progresses — which is the truthful answer for block 1 and
+ * for a speculative probe, both of which have no accepted previous block. A
+ * fallback would restore one of the numbers above on exactly the path that lacks
+ * the fact, which is the path where it is most wrong.
+ *
+ * ## WHY IT IS DERIVED HERE AND STORED, RATHER THAN DERIVED AT READ TIME
+ *
+ * This is the ONE place the count can be taken: at acceptance the accepted
+ * program is in hand. It cannot be re-derived later, and re-deriving it was
+ * measured fatal. `quiescentBoot` regenerates with **`previousProgram: null`**
+ * (`quiescentBoot.ts:538`) and its clean slate nulls `blockState`, so a read-time
+ * count returns 0 on every app launch and **every load the boundary raised would
+ * be un-raised the next time the athlete opened the app** — the defect
+ * `test:block-two-boot-preservation` exists to catch. Caught by a control run at
+ * base, not by reasoning.
+ *
+ * So the requirement is a recorded FACT about a block that happened, in the same
+ * family as `generationAnchorISO`: *"One home, one value, read off the program:
+ * never a caller's idea of today"* (`programStore.setCurrentProgram`). It is not
+ * derived state pretending to be an input — the block it describes is gone by the
+ * time anyone asks.
+ *
+ * ## WHAT IS COUNTED
+ *
+ * Sessions that could have PRODUCED a strength log, because that is what
+ * `readBlockHistory` counts on the other side of the ratio: it increments
+ * `recordedStrengthSessions` only for a feedback day carrying non-empty
+ * `strength` logs. A workout with no counted strength row can never be a
+ * completed strength session, so including it would deflate the athlete's rate
+ * against work that was never loggable.
+ *
+ * ⚠ **A `Workout` HAS `dayOfWeek`, NOT A DATE** — the date lives on the
+ * microcycle. The window is applied to `microcycle.startDate`, and a reader that
+ * looked for `workout.date` would find nothing and return 0, which reads exactly
+ * like "this athlete was programmed no work".
+ */
+export function deriveAcceptedBlockStrengthRequirement(args: {
+  program: { microcycles?: readonly {
+    startDate: string; workouts?: readonly Workout[];
+  }[] } | null | undefined;
+  /** Inclusive, and compared against each microcycle's own start date. */
+  blockStartISO: string;
+  blockEndISO: string;
+}): number {
+  let count = 0;
+  for (const microcycle of args.program?.microcycles ?? []) {
+    const weekStart = String(microcycle.startDate ?? '').slice(0, 10);
+    if (!weekStart) continue;
+    if (weekStart < args.blockStartISO || weekStart > args.blockEndISO) continue;
+    for (const workout of microcycle.workouts ?? []) {
+      if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') continue;
+      const carriesStrengthRow = (workout.exercises ?? []).some((exercise) =>
+        participatesInCounting(exercise) && Boolean(exercise.exercise?.name));
+      if (carriesStrengthRow) count += 1;
+    }
+  }
+  return count;
+}
+
+/**
  * Reduce the persisted per-date `SessionFeedback` for one block to the signal.
  *
  * `blockStartISO`/`blockEndISO` are inclusive. Dates outside them are ignored,

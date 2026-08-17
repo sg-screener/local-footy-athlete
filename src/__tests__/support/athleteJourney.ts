@@ -721,6 +721,11 @@ export async function relaunchApp(args: {
   todayISO: string;
 }): Promise<{ ok: boolean; error: string | null }> {
   setJourneyClock(args.todayISO);
+  // THE APP GETS TO FINISH SAVING FIRST. A relaunch that snapshots storage with
+  // writes still pending is not modelling a restart, it is modelling a crash —
+  // and it would report unflushed state as lost persistence, which is a different
+  // (and much rarer) defect. Crash-loss is worth its own tape; this is not it.
+  await quietAsync(() => flushPendingStorageWrites());
   const snapshot = new Map(args.storage);
 
   resetStoresToFreshInstall('athlete-journey:relaunch');

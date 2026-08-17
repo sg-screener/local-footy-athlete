@@ -494,6 +494,18 @@ export async function rebuildDerivedWorld(): Promise<void> {
       sessionFeedback: inputs.sessionFeedback ?? {},
       weightOverrides: inputs.weightOverrides ?? {},
       blockState: inputs.blockState ?? null,
+      // WHAT EACH ACCEPTED BLOCK REQUIRED (Sam, 2026-08-17) — the completion
+      // denominator, and the reason it is a stored input rather than a read-time
+      // count. THIS caller regenerates with `previousProgram: null`, so nothing
+      // here can count the block that just ended; it can only READ what
+      // acceptance recorded. Same map the rollover states, so a relaunch and a
+      // rollover reach the identical value, which is what stops a raised load
+      // being un-raised on the next launch.
+      //
+      // ⚠ CAPTURED WITH THE OTHERS, BEFORE THE CLEAN SLATE, for the same reason
+      // `blockState` is: a read placed with the `generateProgramLocally` call
+      // below would answer from state this function has already emptied.
+      acceptedBlockRequirements: inputs.acceptedBlockRequirements ?? {},
     };
   })();
 

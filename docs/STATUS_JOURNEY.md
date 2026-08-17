@@ -282,9 +282,132 @@ So `programmedStrengthSessions` joins `progressionHistory` as a stated input:
 right body and was written and measured correct. It is reverted with its call
 sites, not kept half-wired.
 
+## ✅ SAM RULED IT, AND IT IS BUILT — 2026-08-17
+
+> *"The completion denominator must be the required strength sessions in the
+> accepted block the athlete actually received—not requested gym availability and
+> not a recalculated planning target. Give that block-specific delivered
+> requirement one durable owner at block acceptance, and make rollover and restart
+> read the same value. Do not add a fallback to either of the two refuted
+> numbers."*
+
+**THE OWNER:** `programStore.acceptedBlockRequirements` —
+`Record<blockStartISO, number>`, a persisted INPUT.
+
+| role | site |
+| --- | --- |
+| derivation (one function) | `blockBoundaryProgression.deriveAcceptedBlockStrengthRequirement` |
+| writer (one function, two acceptance doors) | `programStore.recordAcceptedBlockStrengthRequirement`, called from `setCurrentProgram` and `weekRebuild.commitRebuiltProgram` — beside where each already stamps `blockState` |
+| reader: rollover | `weekRebuild.ts:673` states it into `progressionHistory` |
+| reader: restart | `quiescentBoot.ts:508` states the same map, captured BEFORE the clean slate |
+| consumers | `generateProgram.ts:1680` (rotation) and `:1838` (loads/volume), keyed on `previousBlock.startISO` |
+
+**Keyed by block start, and earlier blocks are KEPT.** The boundary asks about the
+block that just ENDED, so a single "current" number would destroy the only copy of
+the answer at the exact moment it is needed.
+
+**NO FALLBACK, and that is guarded behaviourally.** An absent entry gives 0, which
+makes the gate unreachable — the truthful answer for block 1 and for a probe.
+
+### MEASURED
+
+`npm run test:athlete-journey` — **18 passed, 3 failed** (the 3 are a separate
+defect, below). The denominator went `12 -> 8`, and on the real journey:
+
+```
+the gate denominator generation actually used: [8]
+the requirement each accepted block recorded: {"2026-07-13":8,"2026-08-10":8}
+Leg Press  125 -> 127.5 kg   (+2.5, the contract's smallest practical increment)
+RDLs        80 -> 82.5 kg
+```
+
+…and the athlete READS it, in the app's own words:
+
+> *"You completed enough of the last block and reported good recovery, so Leg Press
+> has moved from 125 kg to 127.5 kg. You can change it if needed."*
+
+### MUTATIONS — every corrected boundary seen red
+
+| # | mutation | result |
+| --- | --- | --- |
+| M1 | writer removed from `setCurrentProgram` (install door) | **KILLED** — 3 reds: the denominator, the stored decision, and the athlete-visible load |
+| M2 | writer removed from `commitRebuiltProgram` (rollover door) | **KILLED** — after the cell below was added |
+| M3 | both refuted fallbacks restored at the generation read | **KILLED** — after the cell below was added |
+| M4 | field dropped from the real `partialize` | **KILLED** — observed red during the build, green after |
+
+**⚠ M2 AND M3 BOTH SURVIVED FIRST, AND EACH EXPOSED A REAL HOLE IN MY OWN GUARD.**
+
+- **M2** survived because this journey only ever READS block 1's requirement, and
+  block 1 is recorded by the *other* door. The rollover's write would have shipped
+  unguarded and failed one block later. Closed by *"EVERY ACCEPTED BLOCK RECORDED
+  ITS OWN REQUIREMENT"* — the ruling says acceptance records, not that this
+  journey happens to read it.
+- **M3** survived because a `?? fallback` is **unreachable while the entry
+  exists**. Re-introducing both forbidden fallbacks left the suite fully green.
+  Closed by authoring with an EMPTY map — the state a probe and a block-1 athlete
+  are really in — and asserting the denominator is 0. `[0]` at HEAD, `[12]`
+  mutated. Third sighting of `half-mutation-proves-nothing`, and this time it was
+  my guard's coverage, not the mutation's aim.
+
+### BLAST RADIUS — lost and gained, separately
+
+`scripts/sweep.sh` on this branch vs a **control worktree at `a4ef85be`**, same
+node_modules, both sweeps run to completion:
+
+- **branch: 45 failing suites. control: 45 failing suites.**
+- **GAINED (red only on the branch): 0.**
+- **LOST (red only at base): 0.**
+- **The two failing sets are IDENTICAL name for name.**
+
+The block-two family, re-measured on the restored tree: `block-two-progression`
+**38/0**, `block-two-explanation-delivery` **14/0**, `block-two-difficult-missed`
+**88/0**, `block-two-boot-preservation` **20/0**, `exercise-exclusions` **52/0**.
+`block-two-ladder` 51/1 and `block-two-extra-session` 39/1 are **red at base** and
+unmoved.
+
+`test:athlete-journey` has **joined `test:bible`**, immediately before the
+block-two family it guards. A guard outside the chain is a guard nothing runs.
+
+### TWO THINGS THIS COST, FOR THE NEXT SEAT
+
+1. **`programStore` PROJECTS ITS PERSISTED INPUTS IN TWO PLACES.** The `persist`
+   middleware's `partialize` **and** the storage adapter `programStateStorage`,
+   which re-shapes a full state into the same `{state:{inputs:{…}}}` envelope on
+   its own path. I added the field to one only, and block 1's entry reached disk
+   while block 2's did not — which reads exactly like flaky persistence rather
+   than a missing line.
+2. **`acceptBlock` PROMISES TO ACCEPT *"exactly as production acceptance does"***
+   and did not record this. Four block-two suites went red **correctly**,
+   reporting that the boundary had stopped progressing in THEIR worlds. Fixed at
+   the door; two suites additionally state their own world's requirement inline
+   because they never accept a block 1. **No assertion was edited.**
+
+## ⚠ THE NAMED BLOCKER — A SECOND, INDEPENDENT DEFECT THE RESTART PROOF FOUND
+
+**BOOT DOES NOT RESTORE WHICH BLOCK THE ATHLETE IS IN.** Three restart cells are
+red and they are not the denominator:
+
+```
+after restart — blockState={"blockStartDate":"2026-08-10","blockNumber":1}
+                anchor="2026-08-10"
+after restart — weeks=[2026-08-10, 08-17, 08-24, 08-31]  miniCycleNumbers=[1,1,1,1]
+```
+
+The dates are block 2's; the NUMBER is block 1's. The whole block-boundary layer
+is gated on `authoringBlockNumber > 1`, so it never runs: **Leg Press comes back
+at 125 kg and the explanation is gone.** The requirement itself survives (its cell
+PASSES), so this is a different fact being lost.
+
+`blockState` is not persisted. **Adding it to both projections does NOT fix this**
+— tried and BACKED OUT: the regenerated program's `miniCycleNumber` is 1 anyway,
+so `deriveStoredBlockStateFromProgram` overwrites the restored number. It needs
+its own unit sized as "which block am I in, across a process death", not a
+persistence line. Note `test:block-two-boot-preservation` is **20/0 throughout**,
+so its relaunch does not model a real process death.
+
 ## WHAT I HAVE NOT TOUCHED
 
-**No production file. The tree carries the harness and this document only**, and
+**The tree carries the harness, the ruled fix, and this document**, and
 the three reds are the base's behaviour, not mine — proven by reverting the fix
 and re-running: `block-two-progression` 38/0, `block-two-explanation-delivery`
 14/0, `block-two-difficult-missed` 88/0, all back to their base numbers.

@@ -20,6 +20,7 @@ import {
   releaseQuarantine,
 } from './refusedPayloadQuarantine';
 import {
+  WEEKS_PER_BLOCK,
   addDaysISO,
   deriveStoredBlockStateFromProgram,
   resolveBlockGridPosition,
@@ -324,6 +325,11 @@ export function reduceProgramEnvelopeToInputs(value: string): string {
             ?? state.hydratedSeasonPhaseClock ?? null,
           sessionFeedback: state.sessionFeedback ?? {},
           weightOverrides: state.weightOverrides ?? {},
+          // A BLOCK'S OWN REQUIREMENT IS AN INPUT AND MUST OUTLIVE THE PROCESS.
+          // The program is not persisted — boot REGENERATES — so if this is not
+          // here it is gone by the first relaunch, and the boundary silently
+          // stops progressing anything.
+          acceptedBlockRequirements: state.acceptedBlockRequirements ?? {},
           temporarySourceFacts: accepted.temporarySourceFacts ?? [],
           injuryEpisodes: accepted.injuryEpisodes ?? [],
         },
@@ -1489,6 +1495,31 @@ export interface ProgramState {
    */
   weightOverrides: Record<string, Record<string, number | null>>;
 
+  /**
+   * THE STRENGTH SESSIONS EACH ACCEPTED BLOCK REQUIRED, KEYED BY BLOCK START.
+   *
+   * **Sam's ruling, 2026-08-17:** the block-boundary completion denominator is
+   * *"the required strength sessions in the accepted block the athlete actually
+   * received"*, with *"one durable owner at block acceptance"* that *"rollover
+   * and restart read the same value"*.
+   *
+   * ⚠ **THIS IS A RECORDED FACT, NOT DERIVED STATE.** It cannot be re-derived
+   * when it is needed, which is the whole reason it is stored: by the time the
+   * boundary asks how much block N required, block N is gone. `quiescentBoot`
+   * regenerates with `previousProgram: null` and nulls `blockState`, so a
+   * read-time count answers 0 on every launch and un-raises every load the
+   * boundary raised. Same family as `generationAnchorISO` — a value that rides
+   * the program it describes because nothing else can testify to it later.
+   *
+   * WRITER: `recordAcceptedBlockStrengthRequirement`, called by the two
+   * acceptance doors (`setCurrentProgram` and `weekRebuild.commitRebuiltProgram`)
+   * beside where each already stamps `blockState`.
+   * READERS: `weekRebuild` (rollover) and `quiescentBoot` (restart), each stating
+   * it into generation's `progressionHistory` — the same map, so the same value.
+   * TEST: `test:athlete-journey`, `test:block-two-boot-preservation`.
+   */
+  acceptedBlockRequirements: Record<string, number>;
+
   setCurrentProgram: (
     program: TrainingProgram | null,
     options?: { clearOverrideDates?: readonly string[]; todayISO?: string },
@@ -1561,6 +1592,7 @@ export const useProgramStore = create<ProgramState>()(
       exposureContractsByWeek: {},
       sessionFeedback: {},
       weightOverrides: {},
+      acceptedBlockRequirements: {},
 
       // Override lifecycle is NOT owned by this setter (2026-07-08).
       // It used to silently wipe dateOverrides/overrideContexts ("new
@@ -1638,6 +1670,13 @@ export const useProgramStore = create<ProgramState>()(
           },
           validateWeekStarts: validatedProgram?.microcycles.map((microcycle) =>
             microcycle.startDate.slice(0, 10)) ?? [],
+        });
+        // THE BLOCK'S OWN REQUIREMENT, RECORDED WHERE ITS BLOCK STATE IS STAMPED.
+        // After the transaction, so it records what was actually accepted rather
+        // than what was offered to the transaction and possibly refused.
+        recordAcceptedBlockStrengthRequirement({
+          program: useProgramStore.getState().currentProgram,
+          blockState: useProgramStore.getState().blockState,
         });
       },
 
@@ -1972,6 +2011,7 @@ export const useProgramStore = create<ProgramState>()(
           exposureContractsByWeek: {},
           sessionFeedback: {},
           weightOverrides: {},
+          acceptedBlockRequirements: {},
           });
           recordProgramOverrideWrite({
             writer: 'reset',
@@ -2007,6 +2047,15 @@ export const useProgramStore = create<ProgramState>()(
           seasonPhaseClock: state.currentProgram?.seasonPhaseClock ?? null,
           sessionFeedback: state.sessionFeedback ?? {},
           weightOverrides: state.weightOverrides ?? {},
+          // ⚠ **THE INPUT LIST IS WRITTEN IN TWO PLACES AND BOTH MUST CARRY A NEW
+          // INPUT.** This is the persist middleware's projection; the storage
+          // adapter above (`programStateStorage`) re-shapes a full state into the
+          // SAME envelope on its own path. Adding a field to one and not the
+          // other persists it down one route and drops it down the other, which
+          // reads as "persistence is flaky" — measured: the accepted-block
+          // requirement reached disk from the adapter and was absent from here,
+          // so block 1's entry survived a relaunch and block 2's did not.
+          acceptedBlockRequirements: state.acceptedBlockRequirements ?? {},
           temporarySourceFacts: state.acceptedMaterialContext?.temporarySourceFacts ?? [],
           injuryEpisodes: state.acceptedMaterialContext?.injuryEpisodes ?? [],
         },
@@ -2018,6 +2067,7 @@ export const useProgramStore = create<ProgramState>()(
             seasonPhaseClock?: unknown;
             sessionFeedback?: Record<string, unknown>;
             weightOverrides?: Record<string, unknown>;
+            acceptedBlockRequirements?: Record<string, number>;
             temporarySourceFacts?: unknown[];
             injuryEpisodes?: unknown[];
           };
@@ -2027,6 +2077,7 @@ export const useProgramStore = create<ProgramState>()(
           ...current,
           sessionFeedback: (inputs.sessionFeedback ?? {}) as ProgramState['sessionFeedback'],
           weightOverrides: (inputs.weightOverrides ?? {}) as ProgramState['weightOverrides'],
+          acceptedBlockRequirements: inputs.acceptedBlockRequirements ?? {},
           generationAnchorISO: inputs.generationAnchorISO ?? null,
           hydratedSeasonPhaseClock: (inputs.seasonPhaseClock ?? null) as ProgramState['hydratedSeasonPhaseClock'],
           acceptedMaterialContext: normalizeAcceptedMaterialContext({
@@ -2039,6 +2090,48 @@ export const useProgramStore = create<ProgramState>()(
     },
   ),
 );
+
+/**
+ * RECORD WHAT AN ACCEPTED BLOCK REQUIRED — the one writer, at block acceptance.
+ *
+ * Called by BOTH acceptance doors, beside where each already stamps `blockState`
+ * off the accepted program: `setCurrentProgram` (the door onboarding and the
+ * coach install through) and `weekRebuild.commitRebuiltProgram` (the door every
+ * rebuild and the block rollover publish through). Two doors, one function, one
+ * value — the shape `generationAnchorISO` already uses for the same reason.
+ *
+ * ⚠ **KEYED BY THE BLOCK'S OWN START, AND EARLIER BLOCKS ARE KEPT.** The
+ * boundary asks about the block that just ENDED, so the map must still hold it
+ * after the next block is accepted. Overwriting a single "current" number would
+ * destroy the only copy of the answer at the exact moment it is needed.
+ *
+ * Re-accepting the same block start overwrites its entry, which is correct: a
+ * rebuild republishes that block, and the republished week is what the athlete
+ * actually received.
+ */
+export function recordAcceptedBlockStrengthRequirement(args: {
+  program: TrainingProgram | null;
+  blockState: StoredProgramBlockState | null;
+}): void {
+  if (!args.program || !args.blockState?.blockStartDate) return;
+  const blockStartISO = args.blockState.blockStartDate.slice(0, 10);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { deriveAcceptedBlockStrengthRequirement } = require('../rules/blockBoundaryProgression');
+  const required = deriveAcceptedBlockStrengthRequirement({
+    program: args.program,
+    blockStartISO,
+    // The block's own four weeks. `addDaysISO(start, 27)` is the last day; the
+    // window is compared against microcycle START dates, so the last Monday is
+    // what has to fall inside it.
+    blockEndISO: addDaysISO(blockStartISO, WEEKS_PER_BLOCK * 7 - 1),
+  }) as number;
+  if (required <= 0) return;
+  const existing = useProgramStore.getState().acceptedBlockRequirements ?? {};
+  if (existing[blockStartISO] === required) return;
+  useProgramStore.setState({
+    acceptedBlockRequirements: { ...existing, [blockStartISO]: required },
+  } as never);
+}
 
 /* ────────────────────────────────────────────────────────────────────────────
  * THE OVERRIDE DOOR — LR-1

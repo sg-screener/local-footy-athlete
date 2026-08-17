@@ -57,12 +57,14 @@ import type { OnboardingData } from '../types/domain';
 import { addDaysISO } from '../utils/programBlockState';
 import { useProgramStore } from '../store/programStore';
 import { readBlockHistory, smallestPracticalIncrementKg } from '../rules/blockBoundaryProgression';
+import { probeBlock } from './support/acceptBlock';
 import {
   coldStartThroughOnboarding,
   followTheWeek,
   quiet,
   recordDay,
   resolvedDays,
+  relaunchApp,
   rolloverIfDue,
   setJourneyClock,
   takeCensus,
@@ -388,6 +390,9 @@ async function main(): Promise<void> {
   boundaryModule.readBlockHistory = realReadBlockHistory;
   console.log('  the gate denominator generation actually used: '
     + `${JSON.stringify([...new Set(requiredSeen)])}`);
+  console.log('  the requirement each accepted block recorded: '
+    + `${JSON.stringify((useProgramStore.getState() as unknown as {
+      acceptedBlockRequirements: Record<string, number> }).acceptedBlockRequirements)}`);
   console.log(`  ${boundaryDay}: fired=${rollover.fired} `
     + `block ${rollover.fromBlock} -> ${rollover.toBlock} `
     + `nextStart=${rollover.nextBlockStart} refusal=${rollover.refusal ?? 'none'}`);
@@ -481,6 +486,90 @@ async function main(): Promise<void> {
     + 'offered is judged against work they were never given.',
   );
 
+  /**
+   * EVERY ACCEPTANCE RECORDS ITS OWN BLOCK, INCLUDING THE ONE JUST STARTED.
+   *
+   * ⚠ **THIS CELL EXISTS BECAUSE A MUTATION SURVIVED WITHOUT IT.** Deleting the
+   * writer from `weekRebuild.commitRebuiltProgram` — the door the ROLLOVER
+   * publishes through — changed nothing anywhere else in this journey, because
+   * the journey only ever READS block 1's requirement and block 1 is recorded by
+   * the other door. The rollover's write would have shipped unguarded and the
+   * failure would surface one block later, at the block-2 -> block-3 boundary,
+   * as loads that stop progressing for no visible reason.
+   *
+   * Sam's ruling is *"one durable owner at block acceptance"* — so the claim is
+   * that acceptance records, every time, not that this particular journey
+   * happens to read it.
+   */
+  const recordedRequirements = (useProgramStore.getState() as unknown as {
+    acceptedBlockRequirements: Record<string, number> }).acceptedBlockRequirements ?? {};
+
+  ok(
+    'EVERY ACCEPTED BLOCK RECORDED ITS OWN REQUIREMENT — block 1 AND the block just rolled into',
+    typeof recordedRequirements[blockOneStart] === 'number'
+      && recordedRequirements[blockOneStart] > 0
+      && typeof recordedRequirements[blockTwoStart] === 'number'
+      && recordedRequirements[blockTwoStart] > 0,
+    `recorded ${JSON.stringify(recordedRequirements)} — expected an entry for block 1 `
+    + `(${blockOneStart}) and for block 2 (${blockTwoStart}). A missing block-2 entry is a `
+    + 'rollover that accepted a block without recording what it required, and the next '
+    + 'boundary will silently refuse to progress anyone.',
+  );
+
+  /**
+   * AND THERE IS NO FALLBACK — proved on the branch where a fallback would fire.
+   *
+   * Sam, 2026-08-17: *"Do not add a fallback to either of the two refuted
+   * numbers."* A cell asserting the denominator on the normal path cannot see a
+   * fallback at all: the recorded entry exists there, so `?? something-wrong`
+   * never evaluates. **Re-introducing both refuted fallbacks left this suite
+   * fully green until this cell existed** — a mutation surviving because its
+   * branch is unreachable says nothing about the guard.
+   *
+   * So this authors with an EMPTY requirements map, which is the state a
+   * speculative probe and a block-1 athlete are really in, and asserts the
+   * denominator generation used is 0. Only the ARGUMENT matters, so a refusal
+   * from the authoring itself is fine and is deliberately swallowed — the wrap
+   * has already captured what it needed by then.
+   */
+  const probeRequired: number[] = [];
+  const probeModule = require('../rules/blockBoundaryProgression') as {
+    readBlockHistory: typeof readBlockHistory;
+  };
+  const realProbeReader = probeModule.readBlockHistory;
+  probeModule.readBlockHistory = ((callArgs: Parameters<typeof readBlockHistory>[0]) => {
+    probeRequired.push(callArgs.requiredStrengthSessions);
+    return realProbeReader(callArgs);
+  }) as never;
+  try {
+    quiet(() => probeBlock(theAthlete(), {
+      todayISO: blockTwoStart,
+      blockNumber: 2,
+      progressionHistory: {
+        sessionFeedback: feedbackMap as never,
+        weightOverrides: {},
+        blockState: null,
+        // THE POINT OF THE PROBE: nothing recorded, so a fallback would fire.
+        acceptedBlockRequirements: {},
+      },
+    } as never));
+  } catch {
+    // An authoring refusal is not this cell's subject; the denominator is.
+  } finally {
+    probeModule.readBlockHistory = realProbeReader;
+  }
+
+  console.log(`  denominator with NOTHING recorded: ${JSON.stringify(
+    [...new Set(probeRequired)])}`);
+
+  ok(
+    'WITH NO RECORDED REQUIREMENT THE DENOMINATOR IS 0 — neither refuted number is a fallback',
+    probeRequired.length > 0 && probeRequired.every((seen) => seen === 0),
+    `got ${JSON.stringify([...new Set(probeRequired)])}. A non-zero value here is a fallback `
+    + 'to requested gym availability or to a recalculated planning target, both of which were '
+    + 'measured wrong on this athlete and both of which Sam ruled out.',
+  );
+
   // ═════════════════════════════════════════════════════════════════════════
   // PROOF 2 — A CONTINUING LIFT PROGRESSES FROM ITS OWN HISTORY
   // ═════════════════════════════════════════════════════════════════════════
@@ -552,6 +641,116 @@ async function main(): Promise<void> {
     progressedRows.length > 0 && raisedAndVisible.length === progressedRows.length,
     progressedRows.map((row) => `${row.exerciseName}: decided ${row.previousLoadKg}`
       + `->${row.nextLoadKg}kg, visible ${visibleLoadFor(String(row.exerciseName))}kg`).join('; '),
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // STAGE 4 — RESTART: a real relaunch, not a JSON round-trip
+  // ═════════════════════════════════════════════════════════════════════════
+
+  console.log('\n═══ STAGE 4 — the athlete closes the app and opens it again ═══\n');
+
+  /**
+   * **THE PROGRAM IS NEVER PERSISTED.** `programStore.partialize` writes six
+   * inputs and no workouts, so a relaunch is a full REGENERATION plus a
+   * decision-ledger replay (`quiescentBoot.rebuildDerivedWorld`). That is why
+   * "survives restart" here cannot mean "the stored week reads back": there is no
+   * stored week. It means the week the app REBUILDS says the same thing.
+   *
+   * It is also why this stage is the real test of the completion-denominator fix.
+   * Boot regenerates with `previousProgram: null` and a nulled `blockState`, so
+   * nothing on this path can COUNT what block 1 required — it can only read what
+   * acceptance recorded. If that record is not persisted, the boundary silently
+   * stops progressing and **the athlete's raised loads are un-raised by the act
+   * of reopening the app.**
+   */
+  const beforeRestart = {
+    days: blockTwoVisible.days,
+    explanations: blockTwoVisible.explanations,
+    requirements: { ...(useProgramStore.getState() as unknown as {
+      acceptedBlockRequirements: Record<string, number> }).acceptedBlockRequirements },
+  };
+
+  for (const [key, value] of localStorageData) {
+    if (!/program/i.test(key)) continue;
+    const inputs = (JSON.parse(value) as { state?: { inputs?: Record<string, unknown> } })
+      ?.state?.inputs;
+    console.log(`  persisted "${key}" input keys: ${JSON.stringify(Object.keys(inputs ?? {}))}`);
+    console.log(`    acceptedBlockRequirements in storage: `
+      + `${JSON.stringify(inputs?.acceptedBlockRequirements ?? null)}`);
+  }
+
+  const relaunch = await relaunchApp({ storage: localStorageData, todayISO: blockTwoStart });
+  ok(
+    'the app RELAUNCHES from persisted state without refusing',
+    relaunch.ok,
+    `boot failed: ${relaunch.error}`,
+  );
+
+  const afterRequirements = (useProgramStore.getState() as unknown as {
+    acceptedBlockRequirements: Record<string, number> }).acceptedBlockRequirements ?? {};
+  console.log(`  requirements before restart: ${JSON.stringify(beforeRestart.requirements)}`);
+  console.log(`  requirements after  restart: ${JSON.stringify(afterRequirements)}`);
+
+  ok(
+    'RESTART: each accepted block\'s own strength requirement survived the relaunch',
+    JSON.stringify(afterRequirements) === JSON.stringify(beforeRestart.requirements),
+    'the denominator the boundary reads is gone after a relaunch, so the next '
+    + 'regeneration cannot qualify anyone',
+  );
+
+  const afterState = useProgramStore.getState() as unknown as {
+    blockState: unknown; generationAnchorISO: unknown;
+    currentProgram: { microcycles?: { startDate: string; miniCycleNumber?: number }[] } | null;
+  };
+  console.log(`  after restart — blockState=${JSON.stringify(afterState.blockState)} `
+    + `anchor=${JSON.stringify(afterState.generationAnchorISO)}`);
+  console.log(`  after restart — weeks=${JSON.stringify(
+    (afterState.currentProgram?.microcycles ?? []).map((m) => m.startDate.slice(0, 10)))} `
+    + `miniCycleNumbers=${JSON.stringify(
+      (afterState.currentProgram?.microcycles ?? []).map((m) => m.miniCycleNumber))}`);
+
+  followTheWeek(blockTwoStart);
+  const afterRestartVisible = visibleProjection(blockTwoStart, blockTwoStart);
+  printWeek(`AFTER RESTART — Block 2, week 1 (${blockTwoStart})`, afterRestartVisible.days);
+
+  const signature = (days: VisibleDay[]): string => days
+    .map((day) => `${day.weekday}=${day.sessionName ?? 'rest'}[` + day.rows
+      .map((row) => `${row.name}/${row.sets}/${row.repsMin}-${row.repsMax}/${row.weightKg}`)
+      .join(',') + ']').join(';');
+
+  ok(
+    'RESTART: the VISIBLE program is identical — sessions, exercises, doses and loads',
+    signature(afterRestartVisible.days) === signature(beforeRestart.days),
+    `before ${signature(beforeRestart.days)}\n  after  ${signature(afterRestartVisible.days)}`,
+  );
+
+  /**
+   * AND THE RAISED LOAD IS STILL RAISED. Stated as its own cell rather than left
+   * to the signature above, because this is the exact failure the persistence
+   * exists to prevent and a whole-week comparison would report it as one
+   * difference among many.
+   */
+  const raisedAfterRestart = progressedRows.every((row) => {
+    for (const day of afterRestartVisible.days) {
+      for (const visible of day.rows) {
+        if (visible.name === row.exerciseName) return visible.weightKg === row.nextLoadKg;
+      }
+    }
+    return false;
+  });
+
+  ok(
+    'RESTART: every load the boundary raised is STILL raised after reopening the app',
+    progressedRows.length > 0 && raisedAfterRestart,
+    progressedRows.map((row) => `${row.exerciseName} should read ${row.nextLoadKg}kg`).join('; '),
+  );
+
+  ok(
+    'RESTART: the explanations the athlete reads are unchanged',
+    JSON.stringify(afterRestartVisible.explanations)
+      === JSON.stringify(beforeRestart.explanations),
+    `before ${JSON.stringify(beforeRestart.explanations)}\n  after  `
+    + `${JSON.stringify(afterRestartVisible.explanations)}`,
   );
 
   console.log(`\nComplete athlete journey: ${pass} passed, ${fail} failed`);

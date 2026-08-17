@@ -226,7 +226,22 @@ function build(sessionFeedback: Record<string, SessionFeedback>): TrainingProgra
   return acceptBlock(athlete(), {
     todayISO: BLOCK_2_START,
     blockNumber: 2,
-    progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },
+    progressionHistory: {
+      sessionFeedback,
+      weightOverrides: {},
+      blockState: null,
+      // ⚠ **WHAT THE BLOCK THAT ENDED REQUIRED — THIS SUITE'S WORLD SAYS SO.**
+      //
+      // Sam, 2026-08-17: the completion denominator is *"the required strength
+      // sessions in the accepted block the athlete actually received"*, recorded
+      // at block acceptance. This suite states its world rather than accepting a
+      // whole block 1 to produce it, so it states this fact too — the athlete
+      // recorded `BLOCK_1_DATES.length` sessions, which is what the block asked
+      // of them. Without it the denominator is 0 (there is NO fallback, by
+      // ruling), nothing qualifies, and every progression cell below reds while
+      // reporting the truth about a world no athlete could be in.
+      acceptedBlockRequirements: { [BLOCK_1_DATES[0]]: BLOCK_1_DATES.length },
+    },
   });
 }
 
