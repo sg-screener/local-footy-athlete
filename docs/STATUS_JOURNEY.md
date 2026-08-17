@@ -188,7 +188,118 @@ is right to stay silent, and a suite that asserted "an explanation is always
 shown" would be asserting a defect. This is recorded because it looked like the
 `blockTwoExplanationDelivery` break and is not.
 
+## THE FIX IS DESIGNED AND DELIBERATELY NOT LANDED — TWO CANDIDATE SOURCES, BOTH MEASURED DEAD
+
+The gate needs ONE number: how many strength sessions the app actually gave the
+athlete over the block that ended. Three candidates were tried against the real
+journey. **All three numbers were measured, not reasoned about, and two of them
+are now refuted.** This is written down so the next session does not pay for them
+again.
+
+| candidate | value on this athlete | verdict |
+| --- | --- | --- |
+| `plan.coreSessions * WEEKS_PER_BLOCK` (today's code) | **12** | WRONG — the athlete's stated intent |
+| `previousProgram`'s own strength workouts, counted | **8** ✅ | CORRECT number, FATAL path hole |
+| `plan.constraints.weeklyExposureContract.strength.targetCount * 4` | **12** | WRONG — the plan, not the delivered week |
+| what the app actually programmed | **8** | the truth |
+
+### Candidate 2 — the right number, and it breaks the launch path
+
+Counting the previous block's own strength workouts gives 8, the gate qualifies,
+and the journey goes fully green: `Leg Press` **125 -> 127.5 kg**, `RDLs`
+**80 -> 82.5 kg**, `+2.5` each — the approved contract's *"smallest practical
+increment"* — and the athlete SEES the raised load.
+
+**It is still wrong, and a control run at base is what proved it.**
+`quiescentBoot` regenerates with `previousProgram: null`
+(`quiescentBoot.ts:538`), so the count returns 0 on every app launch,
+`requiredStrengthSessions > 0` fails, and **every load the boundary raised would
+be un-raised the next time the athlete opens the app** — exactly the defect
+`test:block-two-boot-preservation` exists to catch.
+
+Measured blast radius of candidate 2, control worktree at `a4ef85be` vs branch,
+same tree, same node_modules:
+
+| suite | base | with candidate 2 | new reds |
+| --- | --- | --- | --- |
+| `test:block-two-progression` | 38/0 | 33/5 | **5** |
+| `test:block-two-explanation-delivery` | 14/0 | 7/7 | **7** |
+| `test:block-two-difficult-missed` | 88/0 | 87/1 | **1** |
+| `test:block-two-ladder` | 51/1 | 46/6 | **5** |
+| `test:block-two-extra-session` | 39/1 | 39/1 | 0 |
+| `test:block-two-boot-preservation` | 20/0 | 20/0 | 0 |
+
+**Those 18 reds are NOT stale assertions to be replaced.** They are four suites
+correctly reporting that the boundary stopped progressing anything, because they
+call `acceptBlock`, which passes no `previousProgram`. The suites are right and
+the fix was wrong. `test:block-two-ladder` and `test:block-two-extra-session` are
+**red at base** (1 each) — do not bank those as gains or losses.
+
+### Candidate 3 — measured in one run, dead in the same run
+
+`strength.targetCount` looked like the answer: `scheduleToCoachingPlan.ts:114`
+sets it from the approved phase x availability layout and its own comment says
+*"REQUIRED sessions, not scheduled ones"*. **It reads 3 for this athlete while
+the app ships 2**, so the plan and the delivered week disagree and the plan is
+not the delivered week. (`strength.required` and `preferred.max` are separate
+traps — see the docstring drafted for `countProgrammedStrengthSessions`.)
+
+### ⚠ AND CANDIDATE 3 EXPOSED A SECOND, SEPARATE QUESTION — NOT MINE, NOT STARTED
+
+**The plan authorises 3 required strength sessions and the accepted week ships
+2.** `schedulerExposureContract`'s own header says that is supposed to be
+refused: *"A week that ships one main-strength session when WC-110 required two
+is still refused ... collapsing them would make the contract unable to say the
+scheduler got it wrong."* This week shipped short of its own required count and
+was accepted. **One ledger line; deliberately not chased.** It may be the G-1
+protection legitimately reducing the week without recording the reduction — in
+which case the reduction is real and undisclosed, which is its own defect — or it
+may be the acceptance gate not enforcing what its header claims.
+
+### THE SHAPE THE FIX MUST HAVE, for whoever takes it next
+
+**The caller that owns the grid STATES the input.** `quiescentBoot`'s own comment
+already names this pattern for exactly this reason: *"This is the shape
+`utils/weekRebuild.ts` already uses at the rollover: the caller that owns the
+grid STATES the inputs. Boot still decides nothing."* `blockNumber` and
+`progressionHistory` are already threaded that way, and boot captures them
+**before** the clean slate precisely because the slate erases `blockState`.
+
+So `programmedStrengthSessions` joins `progressionHistory` as a stated input:
+
+- `weekRebuild.ts:665` counts it from `persistedProgram` (the rollover path);
+- `quiescentBoot.ts` counts it from the stored program **before the clean slate**,
+  beside where it already captures `blockState` for the same reason;
+- generation reads the stated input and never reaches for a substitute — an
+  absent count means the gate cannot qualify, which is the truthful answer for
+  block 1 and for a probe;
+- the four block-two suites state it too, because the input shape grew. **That is
+  not editing an assertion to match a regression** — the assertions are unchanged
+  and their worlds gain a fact the app already had.
+
+`countProgrammedStrengthSessions` (walking a program's microcycles, windowed on
+`microcycle.startDate` because a `Workout` has `dayOfWeek` and no date) is the
+right body and was written and measured correct. It is reverted with its call
+sites, not kept half-wired.
+
 ## WHAT I HAVE NOT TOUCHED
 
-No production file yet — the three reds above are the base's behaviour, not
-mine. `git status` before every commit; `git commit -- <pathspec>` only.
+**No production file. The tree carries the harness and this document only**, and
+the three reds are the base's behaviour, not mine — proven by reverting the fix
+and re-running: `block-two-progression` 38/0, `block-two-explanation-delivery`
+14/0, `block-two-difficult-missed` 88/0, all back to their base numbers.
+
+`git status` before every commit; `git commit -- <pathspec>` only.
+
+## STILL NOT COVERED — the mission's remaining scope
+
+Named rather than half-built:
+
+- the athlete-action doors: load EDIT (a number different from the prescription),
+  readiness/recovery feedback, one temporary removal, one longer exclusion, one
+  ordinary substitution, the optional-session offer;
+- restart/rebuild through `runQuiescentBoot` (the driver's `relaunchApp` is
+  written and **has never been run**);
+- proofs: unseen lifts use the authored starting estimate; rotated lifts never
+  inherit another exercise's load; exclusion and substitution scope; rotation
+  against phase policy; difficult/missed feedback reducing the right thing.
