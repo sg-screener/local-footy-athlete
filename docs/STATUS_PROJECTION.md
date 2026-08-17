@@ -143,3 +143,81 @@ it was not built on), R-049 (dose counts main work only), R-018/R-019/R-075
 
 No generation file, no scheduling file, no selection file. `git status` before
 every commit; `git commit -- <pathspec>` only.
+
+---
+
+# OUTCOME — 2026-08-17, three commits, cap not reached
+
+| surface | state |
+| --- | --- |
+| 1. conditioning shows its real prescription | **WORKING** — `test:athlete-projection` cell 3 |
+| 2. strength shows the ruled single rep | **WORKING** — cell 2 |
+| 3. sprint under Speed | **WORKING** — cells 4 and 5 |
+| 4. typed kit gaps visible | **WORKING** — cell 6 |
+| 5a. progression + reduced-week explanations | **WORKING**, wiring proven — cells 7 and 8 |
+| 5b. typed REFUSAL explanations | **NOT BUILT** — see the blocker |
+
+Printed weeks: **0 findings, 0 `[NO COPY]`** across seven generated worlds,
+down from 11 findings at base.
+
+## THE SINGLE REMAINING BLOCKER — a refusal has no athlete-facing words
+
+`GeneratedWeekRefusedError` is thrown by `services/api/generateProgram.ts` and
+**no production surface renders it**. Two of Sam's nine print worlds refuse
+outright on `main` itself:
+
+- `1-early-off-season` — `main_strength_permitted_maximum:4`
+- `6-bodyweight-only` — `main_strength_planner_selected_target:3`
+
+The reason is TYPED and precise; what does not exist is a signed sentence for it.
+Writing one is authoring athlete-facing copy, which is Sam's and not a display
+task's — so this mission stops here rather than inventing one. `day.refusal.
+nothing_to_change` is the only refusal sentence the sheet holds, and it is about
+a DAY with nothing to change, not a week that could not be built.
+
+**This is why the mission does not merge**: acceptance says "explanations match
+stored decisions", and the refusal half has no explanation at all.
+
+## SECOND, SMALLER GAP — surface 5 is unproven on a real Block Two world
+
+No print scenario crosses a block boundary. They all generate a FIRST block with
+no previous program, so `explanations` is empty on every real world and the
+agreement cell is satisfied by `empty === empty` everywhere. The wiring is
+proven by a separate fixture-driven cell, and that cell says in its own comment
+that it does not replace a real Block Two world. **The whole surface could be
+deleted today and the suite would stay green except for that one cell.** Stated
+rather than counted as coverage.
+
+## WORLD CENSUS — lost and gained, separately
+
+- **LOST: 0.** The same two scenarios refuse at base and on this branch, with
+  byte-identical reasons. No world that generated before stopped generating.
+- **GAINED: 1**, and it is a HARNESS addition, not a programming change:
+  `10-dumbbell-away`. Sam's proof list named a dumbbell-away week and there was
+  none — `5-away-trip` carries a travel schedule fact with NO equipment
+  subtraction, so that athlete keeps a rack and a leg press in a hotel.
+- **No generation, scheduling, selection or refusal-policy file was touched.**
+
+## WHAT THIS COST, FOR THE NEXT SEAT
+
+**A NUL BYTE IN A TEMPLATE LITERAL, AND `grep` WENT SILENT.** An edit wrote
+`\x00` where a space belonged, inside
+`` `${templateName}\x00${field}` ``. The lookup then never matched its own
+registry. Worse: **`grep`/`ugrep` treated `projectionCopy.ts` as BINARY and
+returned NOTHING for every pattern** — including patterns that were plainly
+there. It reads exactly like "the code I wrote is not in the file". `python3`
+read it fine. **If a grep on a file you just edited returns nothing, check for
+NULs before you believe it.**
+
+**A HALF-MUTATION PROVED NOTHING, AGAIN (sighting N).** Mutation M7 inserted an
+invented row after the `support` branch of `rowsForKind` — which the `strength`
+branch above already returns past. It compiled, it ran, it never executed, and
+the cell "passed". Re-aimed at the reachable branch it killed the cell
+instantly. **A mutation that leaves the suite green is a claim about the
+mutation, not about the guard, until you prove the line ran.**
+
+**A CONSERVATION GUARD MUST COMPARE AGAINST THE *RESOLVED* WEEK.** The first
+draft compared the projection against `program.microcycles[0]` and failed on
+`4-bye-week`, where the resolver legitimately relocates a session onto a date
+generation never named. `runScenario` now returns `weekDays` for exactly this.
+Sam's words are "stored ACCEPTED program"; the generated microcycle is not it.
