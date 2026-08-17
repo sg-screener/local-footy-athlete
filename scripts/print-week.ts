@@ -91,6 +91,7 @@ import {
   exerciseIsAvailableWith,
 } from '../src/data/exerciseEquipmentRequirement';
 import { displayReps } from '../src/rules/prescriptionDisplay';
+import { weekRefusalSentences } from '../src/rules/projectionCopy';
 import {
   UnsignedCopyError,
   registerSignedCopy,
@@ -665,6 +666,51 @@ export function runScenario(scenario: PrintScenario): PrintedWeek {
   return { scenario, program, weekDays, visibleWeek, gapIds, equipmentTags };
 }
 
+/**
+ * The signed refusal lines for a thrown error, or `[]` when it is not a typed
+ * week refusal. Reads `findings` off `GeneratedWeekRefusedError`; every other
+ * error is a real crash and is not dressed up as an athlete message.
+ */
+function refusalSentencesFor(err: unknown): readonly string[] {
+  const findings = (err as { findings?: readonly { clause: string; severity: string }[] })?.findings;
+  if (!Array.isArray(findings)) return [];
+  return weekRefusalSentences(findings).map(String);
+}
+
+/** A refused week's page. Layout is the printer's; every sentence is signed. */
+function renderRefusedWeek(args: {
+  heading: string;
+  intro: string;
+  refusal: readonly string[];
+  diagnostic: string;
+}): string {
+  const lines: string[] = [];
+  lines.push(`# ${args.heading}`);
+  lines.push('');
+  lines.push(`**Week of ${dayHeading(WEEK_MONDAY)}.**`);
+  lines.push('');
+  lines.push(`**What to look for:** ${args.intro}`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('## THE APP REFUSED TO BUILD THIS WEEK');
+  lines.push('');
+  lines.push('This is exactly what the athlete is shown. There is no week behind it —');
+  lines.push('not an empty one, not a rest week. Nothing was built.');
+  lines.push('');
+  for (const line of args.refusal) lines.push(`> ${line}`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('**The typed reason underneath, for the seat — not shown to the athlete:**');
+  lines.push('');
+  lines.push('```');
+  lines.push(args.diagnostic);
+  lines.push('```');
+  lines.push('');
+  return lines.join('\n');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // THE PAGE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1149,7 +1195,23 @@ function main(): void {
     } catch (err) {
       const error = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
       failures.push({ slug: scenario.slug, error });
-      console.error(`  FAILED ${scenario.slug} — ${error}`);
+      // A REFUSED WEEK IS A PAGE, NOT A MISSING FILE (Sam, 2026-08-17). The
+      // printer used to log `FAILED <signature>` and write nothing, so the
+      // athlete's side of a refusal could not be read at all — which is exactly
+      // how the surface came to have no words. Now it writes what the athlete
+      // would be shown, and the refusal's own diagnostic underneath it for the
+      // seat.
+      const refusal = refusalSentencesFor(err);
+      if (refusal.length > 0) {
+        writeFileSync(
+          resolve(OUT_DIR, `${scenario.slug}.md`),
+          renderRefusedWeek({ heading: scenario.title, intro: scenario.whatToLookFor, refusal, diagnostic: error }),
+          'utf8',
+        );
+        console.error(`  REFUSED ${scenario.slug} — wrote the athlete's page — ${error}`);
+      } else {
+        console.error(`  FAILED ${scenario.slug} — NO WORDS FOR THIS REFUSAL — ${error}`);
+      }
     }
   }
 

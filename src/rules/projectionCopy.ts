@@ -73,6 +73,7 @@ import {
 } from './conditioningSelection';
 import { CONDITIONING_TEMPLATES } from '../data/conditioningTemplates';
 import { SLOTS_FOR_KIND } from './sessionSlotCoverage';
+import type { GeneratedWeekClauseId } from './generatedWeekContract';
 import { EQUIPMENT_TAG_LABELS } from './equipmentVocabulary';
 import { COACH_REVISION_TEMPLATE_ROW_NAMES } from '../utils/coachRevisionTemplates';
 
@@ -138,6 +139,31 @@ export function conditioningDoseValueCopyId(
     ? `${DOSE_VALUE_PREFIX}${field}.${templateName}`
     : null;
 }
+
+/**
+ * THE MIDDLE LINE OF A REFUSAL, ONE PER TYPED CLAUSE.
+ *
+ * A `Record` over the CLOSED `GeneratedWeekClauseId` union on purpose: a clause
+ * added to `generatedWeekContract.ts` breaks this file until its sentence is
+ * written, which is the only way "do not collapse different causes into one
+ * generic message" survives contact with a future clause.
+ */
+const REFUSAL_CLAUSE_COPY: Readonly<Record<GeneratedWeekClauseId, string>> = {
+  main_strength_required_minimum: 'There aren\'t enough gym days in your week to fit the lifting this phase needs.',
+  main_strength_planner_selected_target: 'Your week can\'t fit the number of lifting sessions this phase of your season is built around.',
+  main_strength_permitted_maximum: 'You\'ve asked for more lifting days than is safe to program in one week.',
+  required_safe_patterns_present: 'Your kit can\'t cover one of the basic lifting movements a week has to include.',
+  pattern_balance: 'Your week comes out lopsided — one kind of lift would get far more work than its opposite.',
+  prohibited_patterns_absent: 'A lift your week needs is one your injury or your settings currently rule out.',
+  core_conditioning_required_minimum: 'There aren\'t enough days left for the running this phase needs, once your club nights and game are in.',
+  sprint_high_speed_required_minimum: 'There\'s no night left in your week that can carry the sprint work this phase needs.',
+  full_rest_required_minimum: 'Your week has no room for the full rest days you\'re owed.',
+  hard_day_permitted_maximum: 'Your week works out with more hard days than is safe, once your club nights and game are counted.',
+  training_paused_means_no_training: 'Your training is paused, so there\'s nothing to build until you start it again.',
+  prohibited_power_absent: 'The explosive work your week needs is currently ruled out by your injury or your settings.',
+  prohibited_sprint_absent: 'Your week needs sprint work, and sprinting is currently ruled out for you.',
+  row_role_is_declared: 'Something in your setup produced a session the app can\'t read properly, so it won\'t guess at it.',
+};
 
 const DOSE_VALUES_REGISTERED = new Set<string>();
 
@@ -959,6 +985,161 @@ export function registerProjectionCopy(): void {
       provenance: 'Mirrors dayWorkoutHelpers.formatStrengthSetsReps\'s range shape.',
       text: '{sets} × {min}-{max}',
     },
+    // ── WHEN THE APP CANNOT BUILD A WEEK AT ALL — Sam, 2026-08-17. ──
+    //
+    // His structure, verbatim, and it is three lines with a fixed first and
+    // last:
+    //
+    //     "We couldn't build a safe week from your current setup.
+    //      [Plain-language explanation of the exact typed refusal.]
+    //      Update the relevant answer and try again."
+    //
+    // **THE MIDDLE LINE IS ONE SENTENCE PER TYPED CLAUSE, AND THEY ARE NOT
+    // INTERCHANGEABLE.** Sam: *"The second line must come from the existing
+    // typed refusal reason — do not invent new refusal logic or collapse
+    // different causes into one generic message."* `GeneratedWeekClauseId` is a
+    // CLOSED union of fourteen, so there are fourteen entries below and the type
+    // system is what keeps them complete: `REFUSAL_CLAUSE_COPY` is a
+    // `Record<GeneratedWeekClauseId, string>`, so a clause added to the contract
+    // fails the build here until somebody writes its sentence.
+    //
+    // **NO NEW REFUSAL LOGIC WAS WRITTEN.** Nothing here decides whether to
+    // refuse, what to measure, or which clause failed. The contract already
+    // decided all three and carries the finding; this is the sentence for a
+    // decision that has already been made.
+    //
+    // Each sentence is the clause's own authored `requirement` said in the
+    // athlete's words, and it names WHAT THE ATHLETE CAN CHANGE, because the
+    // third line tells them to go and change something and a line that does not
+    // say what would be a dead end.
+    {
+      id: 'week.refusal.lead',
+      source: 'sam_ruling',
+      provenance: "Sam, 2026-08-17, verbatim first line of the refusal structure he "
+        + 'specified.',
+      text: "We couldn't build a safe week from your current setup.",
+    },
+    {
+      id: 'week.refusal.fix',
+      source: 'sam_ruling',
+      provenance: 'Sam, 2026-08-17, verbatim third line of the same structure.',
+      text: 'Update the relevant answer and try again.',
+    },
+
+    // ── The middle line, one per typed clause. ──
+    {
+      id: 'week.refusal.clause.main_strength_required_minimum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'main_strength_required_minimum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.main_strength_required_minimum,
+    },
+    {
+      id: 'week.refusal.clause.main_strength_planner_selected_target',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'main_strength_planner_selected_target' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.main_strength_planner_selected_target,
+    },
+    {
+      id: 'week.refusal.clause.main_strength_permitted_maximum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'main_strength_permitted_maximum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.main_strength_permitted_maximum,
+    },
+    {
+      id: 'week.refusal.clause.required_safe_patterns_present',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'required_safe_patterns_present' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.required_safe_patterns_present,
+    },
+    {
+      id: 'week.refusal.clause.pattern_balance',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'pattern_balance' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.pattern_balance,
+    },
+    {
+      id: 'week.refusal.clause.prohibited_patterns_absent',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'prohibited_patterns_absent' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.prohibited_patterns_absent,
+    },
+    {
+      id: 'week.refusal.clause.core_conditioning_required_minimum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'core_conditioning_required_minimum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.core_conditioning_required_minimum,
+    },
+    {
+      id: 'week.refusal.clause.sprint_high_speed_required_minimum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'sprint_high_speed_required_minimum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.sprint_high_speed_required_minimum,
+    },
+    {
+      id: 'week.refusal.clause.full_rest_required_minimum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'full_rest_required_minimum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.full_rest_required_minimum,
+    },
+    {
+      id: 'week.refusal.clause.hard_day_permitted_maximum',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'hard_day_permitted_maximum' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.hard_day_permitted_maximum,
+    },
+    {
+      id: 'week.refusal.clause.training_paused_means_no_training',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'training_paused_means_no_training' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.training_paused_means_no_training,
+    },
+    {
+      id: 'week.refusal.clause.prohibited_power_absent',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'prohibited_power_absent' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.prohibited_power_absent,
+    },
+    {
+      id: 'week.refusal.clause.prohibited_sprint_absent',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'prohibited_sprint_absent' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.prohibited_sprint_absent,
+    },
+    {
+      id: 'week.refusal.clause.row_role_is_declared',
+      source: 'sam_ruling',
+      provenance: "Sam's 2026-08-17 structure, middle line. The athlete's wording of "
+        + "generatedWeekContract.ts clause 'row_role_is_declared' — its authored requirement "
+        + 'said in plain words, naming what the athlete can change.',
+      text: REFUSAL_CLAUSE_COPY.row_role_is_declared,
+    },
+
     // ── WHAT THE KIT COULD NOT TRAIN — Sam's surface 4, 2026-08-17. ──
     //
     // *"Typed equipment/kit gaps carried by the program must be visible and
@@ -1333,6 +1514,78 @@ export function blockBoundaryLoadMovedSentence(
  * order. Empty when the block changed no loads — which is a real answer and the
  * correct one for a first block or an athlete without qualifying history.
  */
+/**
+ * A REFUSED WEEK, IN THE ATHLETE'S WORDS — Sam's three lines, 2026-08-17.
+ *
+ *     We couldn't build a safe week from your current setup.
+ *     <the exact typed refusal, in plain words>
+ *     Update the relevant answer and try again.
+ *
+ * ## IT EXPLAINS A DECISION; IT DOES NOT MAKE ONE
+ *
+ * The input is the BLOCKING findings the contract already produced. Nothing here
+ * decides whether to refuse, re-measures a week, or infers a cause. Sam's
+ * boundary was explicit — *"do not invent new refusal logic"* — so a finding
+ * arrives already typed and this hands back its sentence.
+ *
+ * ## EVERY BLOCKING CAUSE GETS ITS OWN LINE
+ *
+ * *"Do not collapse different causes into one generic message."* A week that
+ * broke two clauses says both, in the order the contract found them, deduplicated
+ * by clause so one clause failing on three days is still one sentence — that is
+ * one CAUSE reported once, not two causes merged.
+ *
+ * ## `disclosed_gap` FINDINGS ARE NOT REFUSALS AND ARE NOT SHOWN HERE
+ *
+ * A disclosable clause fails without refusing the week (R-083: a pattern the kit
+ * cannot train is not owed) and is already the athlete's business through
+ * `VisibleDay.gaps`. Only `severity: 'blocking'` reaches this.
+ *
+ * Returns `[]` for no blocking findings — which never happens on a real
+ * `GeneratedWeekRefusedError`, and if it ever did, the caller must treat an empty
+ * list as "still refused, no words" rather than as success. `weekRefusalIsSpeakable`
+ * below is that check, exported so a surface cannot forget it.
+ */
+export function weekRefusalSentences(
+  findings: readonly { clause: string; severity: string }[],
+): SignedCopy[] {
+  registerProjectionCopy();
+  const blocking = findings.filter((finding) => finding.severity === 'blocking');
+  const seen = new Set<string>();
+  const causes: string[] = [];
+  for (const finding of blocking) {
+    const clause = String(finding.clause);
+    if (seen.has(clause)) continue;
+    seen.add(clause);
+    if (clause in REFUSAL_CLAUSE_COPY) causes.push(clause);
+  }
+  if (causes.length === 0) return [];
+  return [
+    signedCopy('week.refusal.lead'),
+    ...causes.map((clause) => signedCopy(`week.refusal.clause.${clause}`)),
+    signedCopy('week.refusal.fix'),
+  ];
+}
+
+/**
+ * CAN THIS REFUSAL BE SPOKEN? — the check that stops a refused week rendering
+ * as an empty successful one.
+ *
+ * Sam, 2026-08-17: *"Guard that a typed refusal produces visible text and that
+ * no refused week is presented as an empty successful program."* The second half
+ * is the dangerous one: a caught refusal with nothing to say and no week to show
+ * looks EXACTLY like a week with no sessions in it, and an athlete would read
+ * "rest day, rest day, rest day" instead of "we could not build this".
+ *
+ * A surface that catches `GeneratedWeekRefusedError` asks this. `false` means the
+ * app has a refusal it has no words for — a copy gap, loud, never a blank week.
+ */
+export function weekRefusalIsSpeakable(
+  findings: readonly { clause: string; severity: string }[],
+): boolean {
+  return weekRefusalSentences(findings).length > 0;
+}
+
 export function blockBoundaryExplanationSentences(
   program: { blockBoundaryExplanation?: readonly import('./blockBoundaryProgression').BlockBoundaryExplanationRow[] },
 ): SignedCopy[] {

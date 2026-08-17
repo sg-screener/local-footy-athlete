@@ -67,7 +67,11 @@ armTotalsOrRed();
 import { SCENARIOS, runScenario, projectWithGapsMarked, type PrintedWeek } from '../../scripts/print-week';
 import { displayReps } from '../rules/prescriptionDisplay';
 import { conditioningVisibleDoseFor } from '../rules/conditioningSelection';
-import { blockBoundaryExplanationSentences } from '../rules/projectionCopy';
+import {
+  blockBoundaryExplanationSentences,
+  weekRefusalIsSpeakable,
+  weekRefusalSentences,
+} from '../rules/projectionCopy';
 import { getSessionComponentRows } from '../utils/sessionComponents';
 import { isComposedPrescriptionRow } from '../rules/projectVisibleWeek';
 import type { VisibleRow, VisibleWeek } from '../rules/visibleProjection';
@@ -102,6 +106,8 @@ interface World {
 
 const WORLDS: World[] = [];
 const REFUSED: string[] = [];
+/** The thrown refusals themselves — surface 5b needs their typed findings. */
+const REFUSALS: { slug: string; error: any }[] = [];
 
 quiet(() => {
   for (const scenario of SCENARIOS) {
@@ -109,6 +115,7 @@ quiet(() => {
       WORLDS.push({ slug: scenario.slug, printed: runScenario(scenario) });
     } catch (e) {
       REFUSED.push(`${scenario.slug}: ${e instanceof Error ? e.message : String(e)}`);
+      REFUSALS.push({ slug: scenario.slug, error: e });
     }
   }
 });
@@ -450,6 +457,103 @@ run('a stored load increase actually reaches the athlete — the wiring is not i
       `the sentence "${line}" does not carry "${must}" from the stored row. An explanation `
       + 'must agree exactly with the decision it describes.');
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 8. A TYPED REFUSAL SPEAKS (surface 5b)
+// ═══════════════════════════════════════════════════════════════════════════
+
+run('every typed refusal produces visible athlete text, in Sam\'s three lines', () => {
+  assert(REFUSALS.length > 0,
+    'no world refused at all, so this cell is vacuous — the two that refuse on main '
+    + 'are what make the refusal surface reachable');
+  for (const { slug, error } of REFUSALS) {
+    const findings = error?.findings;
+    assert(Array.isArray(findings) && findings.length > 0,
+      `${slug} refused without typed findings — the refusal is not typed, and nothing `
+      + 'can be said about a reason that does not exist');
+    const lines = weekRefusalSentences(findings).map(String);
+    assert(lines.length >= 3,
+      `${slug}: a typed refusal produced ${lines.length} lines. Sam's structure is a lead, `
+      + 'at least one cause, and the fix line.');
+    assert(lines[0] === "We couldn't build a safe week from your current setup.",
+      `${slug}: first line is "${lines[0]}", not Sam's lead sentence.`);
+    assert(lines[lines.length - 1] === 'Update the relevant answer and try again.',
+      `${slug}: last line is "${lines[lines.length - 1]}", not Sam's fix sentence.`);
+    for (const middle of lines.slice(1, -1)) {
+      assert(middle.length > 0 && middle !== lines[0],
+        `${slug}: a middle line is empty or a repeat of the lead`);
+    }
+    assert(weekRefusalIsSpeakable(findings),
+      `${slug}: the refusal is not speakable, so a surface would have nothing to show`);
+  }
+});
+
+run('different typed causes get different sentences — nothing is collapsed', () => {
+  const blocking = (clause: string) => [{ clause, severity: 'blocking' }];
+  const middleFor = (clause: string) =>
+    weekRefusalSentences(blocking(clause)).map(String).slice(1, -1).join(' ');
+
+  const clauses = [
+    'main_strength_required_minimum',
+    'main_strength_planner_selected_target',
+    'main_strength_permitted_maximum',
+    'required_safe_patterns_present',
+    'pattern_balance',
+    'prohibited_patterns_absent',
+    'core_conditioning_required_minimum',
+    'sprint_high_speed_required_minimum',
+    'full_rest_required_minimum',
+    'hard_day_permitted_maximum',
+    'training_paused_means_no_training',
+    'prohibited_power_absent',
+    'prohibited_sprint_absent',
+    'row_role_is_declared',
+  ];
+  const seen = new Map<string, string>();
+  for (const clause of clauses) {
+    const middle = middleFor(clause);
+    assert(middle.length > 0,
+      `clause "${clause}" has no athlete sentence. Every typed cause carries its own.`);
+    const clash = seen.get(middle);
+    assert(clash === undefined,
+      `"${clause}" and "${clash}" produce the SAME sentence: "${middle}". Sam: do not `
+      + 'collapse different causes into one generic message.');
+    seen.set(middle, clause);
+  }
+
+  // Two blocking causes at once say BOTH; one cause found twice says it ONCE.
+  const two = weekRefusalSentences([
+    { clause: 'hard_day_permitted_maximum', severity: 'blocking' },
+    { clause: 'full_rest_required_minimum', severity: 'blocking' },
+  ]).map(String);
+  assert(two.length === 4, `two causes produced ${two.length} lines, expected 4`);
+  const twice = weekRefusalSentences([
+    { clause: 'full_rest_required_minimum', severity: 'blocking' },
+    { clause: 'full_rest_required_minimum', severity: 'blocking' },
+  ]).map(String);
+  assert(twice.length === 3,
+    `one cause found twice produced ${twice.length} lines — a cause is reported once`);
+});
+
+run('a refused week is never presented as an empty successful program', () => {
+  for (const { slug, error } of REFUSALS) {
+    // 1. THERE IS NO WEEK. The refusal THREW; nothing was returned that a
+    //    surface could mistake for a week with no sessions in it.
+    assert(!(error as any)?.program && !(error as any)?.visibleWeek,
+      `${slug}: the refusal carries a program — a caught refusal that hands back a week `
+      + 'is exactly the "empty successful program" this cell exists to forbid');
+    // 2. AND IT HAS WORDS. A refusal with no sentence is indistinguishable, on
+    //    the glass, from a week with nothing in it.
+    assert(weekRefusalIsSpeakable((error as any).findings),
+      `${slug}: refused with no words. A surface catching this would render blank, and a `
+      + 'blank week reads as "nothing to do today" rather than "we could not build this".');
+  }
+  // A disclosed gap is NOT a refusal and must not produce refusal text — that
+  // would put "we couldn't build a safe week" on a week that WAS built.
+  assert(!weekRefusalIsSpeakable([{ clause: 'required_safe_patterns_present', severity: 'disclosed_gap' }]),
+    'a disclosed gap produced refusal text. A disclosable clause fails WITHOUT refusing '
+    + 'the week (R-083), and the athlete already learns about it through the day gaps.');
 });
 
 console.log(`\nAthlete-visible projection totals: ${passed} passed, ${failed} failed`);
