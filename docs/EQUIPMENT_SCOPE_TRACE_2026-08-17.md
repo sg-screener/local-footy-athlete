@@ -18,7 +18,8 @@ _none_
 ```
 resolver tags (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
 resolver machines: bike_erg, air_bike, row, ski, treadmill
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit: (none — no day differs from permanent)
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
@@ -113,7 +114,8 @@ schedule:travel  2026-08-12 .. 2026-08-16  removes: (none)
 ```
 resolver tags (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
 resolver machines: bike_erg, air_bike, row, ski, treadmill
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit: (none — no day differs from permanent)
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
@@ -138,14 +140,14 @@ day 1 accessory_or_core      Ab Wheel                     role=strength_accessor
 day 2 horizontal_pull        Barbell Row                  role=main_strength
 day 2 vertical_pull          Lat Pulldown                 role=strength_accessory
 day 2 arm_or_shoulder        Band Pull-Apart              role=strength_accessory
-day 3 squat                  Back Squat                   role=strength_accessory
-day 3 hinge                  RDLs                         role=main_strength
-day 3 single_leg_knee        Bulgarian Split Squats       role=strength_accessory
-day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
-day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
-day 4 horizontal_push        Bench Press                  role=main_strength
-day 4 vertical_push          DB Shoulder Press            role=strength_accessory
-day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 3 horizontal_push        Bench Press                  role=main_strength
+day 3 vertical_push          DB Shoulder Press            role=strength_accessory
+day 3 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 5 squat                  Back Squat                   role=strength_accessory
+day 5 hinge                  RDLs                         role=main_strength
+day 5 single_leg_knee        Bulgarian Split Squats       role=strength_accessory
+day 5 single_leg_hip         Single-Leg RDL               role=strength_accessory
+day 5 accessory_or_core      Band Pallof Press            role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
@@ -172,20 +174,26 @@ _none — no row carries `substitutedFor`_
     - Bulgarian Split Squats
     - Single-Leg RDL
     - Ab Wheel
+  Conditioning
+    - Steady Blocks (3×8 min or 4×6 min)
 2026-08-11 [kit: 19]  Training Day
   Team Training
 2026-08-12 [kit: 19]  Training Day
   Strength
-    - Back Squat
-    - RDLs
-    - Bulgarian Split Squats
-    - Single-Leg RDL
-    - Band Pallof Press
-2026-08-13 [kit: 19]  Training Day
+    - Bench Press
+    - DB Shoulder Press
+    - Banded External Rotation
   Conditioning
-    - Warm-up
-    - Continuous Aerobic Run
-2026-08-14 [kit: 19]  Rest Day
+    - Classic 4×4
+2026-08-13 [kit: 19]  Rest Day
+2026-08-14 [kit: 19]  Training Day
+  Gunshow
+    - Incline Dumbbell Curl
+    - Banded Bicep Curl
+    - Tricep Pushdown
+    - Overhead Tricep Extension
+    - Rear Delt Fly
+    - Shrugs
 2026-08-15 [kit: 19]  Training Day
   Conditioning
     - Warm-up
@@ -222,7 +230,12 @@ equipment:without  2026-08-12 .. 2026-08-16  removes: barbell, cables, machine, 
 ```
 resolver tags (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
 resolver machines: bike_erg, air_bike, row, ski, treadmill
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit day 0 (3): bodyweight, dumbbells, bands
+composer DATED kit day 3 (3): bodyweight, dumbbells, bands
+composer DATED kit day 4 (3): bodyweight, dumbbells, bands
+composer DATED kit day 5 (3): bodyweight, dumbbells, bands
+composer DATED kit day 6 (3): bodyweight, dumbbells, bands
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
@@ -247,18 +260,22 @@ day 1 accessory_or_core      Ab Wheel                     role=strength_accessor
 day 2 horizontal_pull        Barbell Row                  role=main_strength
 day 2 vertical_pull          Lat Pulldown                 role=strength_accessory
 day 2 arm_or_shoulder        Band Pull-Apart              role=strength_accessory
-day 3 squat                  Back Squat                   role=strength_accessory
-day 3 hinge                  RDLs                         role=main_strength
-day 3 single_leg_knee        Bulgarian Split Squats       role=strength_accessory
-day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
-day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
-day 4 horizontal_push        Bench Press                  role=main_strength
-day 4 vertical_push          DB Shoulder Press            role=strength_accessory
-day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 3 horizontal_push        Single-Arm DB Floor Press    role=main_strength
+day 3 vertical_push          DB Shoulder Press            role=strength_accessory
+day 3 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 5 squat                  Goblet Squat                 role=strength_accessory
+day 5 hinge                  RDLs                         role=main_strength
+day 5 single_leg_knee        Cossack Squat                role=strength_accessory
+day 5 single_leg_hip         Single-Leg RDL               role=strength_accessory
+day 5 accessory_or_core      Band Pallof Press            role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
-_none — no row carries `substitutedFor`_
+```
+day 3 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+day 5 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+```
 ### 6. STORED block-selection history (input to this run)
 ```
 2026-08-10  accessory_or_core      Ab Wheel
@@ -281,25 +298,31 @@ _none — no row carries `substitutedFor`_
     - Bulgarian Split Squats
     - Single-Leg RDL
     - Ab Wheel
+  Conditioning
+    - Steady Blocks (3×8 min or 4×6 min)
 2026-08-11 [kit: 19]  Training Day
   Team Training
-2026-08-12 [kit: 19]  Training Day
+2026-08-12 [kit: 3]  Training Day
   Strength
-    - Back Squat
-    - RDLs
-    - Bulgarian Split Squats
-    - Single-Leg RDL
-    - Band Pallof Press
-2026-08-13 [kit: 19]  Training Day
+    - Single-Arm DB Floor Press
+    - DB Shoulder Press
+    - Banded External Rotation
   Conditioning
-    - Warm-up
-    - Continuous Aerobic Run
-2026-08-14 [kit: 19]  Rest Day
-2026-08-15 [kit: 19]  Training Day
+    - Classic 4×4
+2026-08-13 [kit: 3]  Rest Day
+2026-08-14 [kit: 3]  Training Day
+  Gunshow
+    - Incline Dumbbell Curl
+    - Banded Bicep Curl
+    - Tricep Pushdown   ⚠ ILLEGAL ON THIS DAY'S KIT (needs cables)
+    - Overhead Tricep Extension
+    - Rear Delt Fly
+    - Shrugs
+2026-08-15 [kit: 3]  Training Day
   Conditioning
     - Warm-up
     - 30 m Repeats
-2026-08-16 [kit: 19]  Rest Day
+2026-08-16 [kit: 3]  Rest Day
 ```
 ### 7b. WHAT THE IN-GENERATION CONSTRAINT PASS DID TO EACH DAY
 _the pass changed nothing (or never ran)_
@@ -331,7 +354,12 @@ equipment:without  2026-08-12 .. 2026-08-16  removes: barbell, cables, machine, 
 ```
 resolver tags (3): bodyweight, dumbbells, bands
 resolver machines: (none)
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit day 0 (3): bodyweight, dumbbells, bands
+composer DATED kit day 3 (3): bodyweight, dumbbells, bands
+composer DATED kit day 4 (3): bodyweight, dumbbells, bands
+composer DATED kit day 5 (3): bodyweight, dumbbells, bands
+composer DATED kit day 6 (3): bodyweight, dumbbells, bands
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
@@ -450,7 +478,12 @@ equipment:without  2026-08-12 .. 2026-08-16  removes: barbell, cables, machine, 
 ```
 resolver tags (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
 resolver machines: bike_erg, air_bike, row, ski, treadmill
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit day 0 (3): bodyweight, dumbbells, bands
+composer DATED kit day 3 (3): bodyweight, dumbbells, bands
+composer DATED kit day 4 (3): bodyweight, dumbbells, bands
+composer DATED kit day 5 (3): bodyweight, dumbbells, bands
+composer DATED kit day 6 (3): bodyweight, dumbbells, bands
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
@@ -475,18 +508,22 @@ day 1 accessory_or_core      Ab Wheel                     role=strength_accessor
 day 2 horizontal_pull        Barbell Row                  role=main_strength
 day 2 vertical_pull          Lat Pulldown                 role=strength_accessory
 day 2 arm_or_shoulder        Band Pull-Apart              role=strength_accessory
-day 3 squat                  Back Squat                   role=strength_accessory
-day 3 hinge                  RDLs                         role=main_strength
-day 3 single_leg_knee        Bulgarian Split Squats       role=strength_accessory
-day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
-day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
-day 4 horizontal_push        Bench Press                  role=main_strength
-day 4 vertical_push          DB Shoulder Press            role=strength_accessory
-day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 3 horizontal_push        Single-Arm DB Floor Press    role=main_strength
+day 3 vertical_push          DB Shoulder Press            role=strength_accessory
+day 3 arm_or_shoulder        Banded External Rotation     role=strength_accessory
+day 5 squat                  Goblet Squat                 role=strength_accessory
+day 5 hinge                  RDLs                         role=main_strength
+day 5 single_leg_knee        Cossack Squat                role=strength_accessory
+day 5 single_leg_hip         Single-Leg RDL               role=strength_accessory
+day 5 accessory_or_core      Band Pallof Press            role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
-_none — no row carries `substitutedFor`_
+```
+day 3 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+day 5 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+```
 ### 6. STORED block-selection history (input to this run)
 ```
 2026-08-10  accessory_or_core      Ab Wheel
@@ -557,7 +594,8 @@ equipment:without  2026-08-12 .. 2026-08-16  removes: barbell, cables, machine, 
 ```
 resolver tags (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
 resolver machines: bike_erg, air_bike, row, ski, treadmill
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit: (none — no day differs from permanent)
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
@@ -664,7 +702,14 @@ equipment:without  2026-08-10 .. 2026-08-16  removes: barbell, cables, machine, 
 ```
 resolver tags (3): bodyweight, dumbbells, bands
 resolver machines: (none)
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit day 0 (3): bodyweight, dumbbells, bands
+composer DATED kit day 1 (3): bodyweight, dumbbells, bands
+composer DATED kit day 2 (3): bodyweight, dumbbells, bands
+composer DATED kit day 3 (3): bodyweight, dumbbells, bands
+composer DATED kit day 4 (3): bodyweight, dumbbells, bands
+composer DATED kit day 5 (3): bodyweight, dumbbells, bands
+composer DATED kit day 6 (3): bodyweight, dumbbells, bands
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
@@ -789,7 +834,14 @@ equipment:without  2026-08-10 .. 2026-08-16  removes: barbell, cables, machine, 
 ```
 resolver tags (3): bodyweight, dumbbells, bands
 resolver machines: (none)
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit day 0 (3): bodyweight, dumbbells, bands
+composer DATED kit day 1 (3): bodyweight, dumbbells, bands
+composer DATED kit day 2 (3): bodyweight, dumbbells, bands
+composer DATED kit day 3 (3): bodyweight, dumbbells, bands
+composer DATED kit day 4 (3): bodyweight, dumbbells, bands
+composer DATED kit day 5 (3): bodyweight, dumbbells, bands
+composer DATED kit day 6 (3): bodyweight, dumbbells, bands
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
@@ -903,7 +955,8 @@ schedule:travel  2026-08-10 .. 2026-08-16  removes: (none)
 ```
 resolver tags (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
 resolver machines: bike_erg, air_bike, row, ski, treadmill
-composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer PERMANENT kit (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
+composer DATED kit: (none — no day differs from permanent)
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```

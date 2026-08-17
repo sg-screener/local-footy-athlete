@@ -72,7 +72,40 @@ The athlete: In-season, Saturday game, Tuesday+Thursday club, **Commercial Gym �
 
 ---
 
-## FINDING 1 — A FUTURE-DATED AWAY ANSWER BECOMES NO CONSTRAINT AT ALL
+## FINDING 1 — ⚠ **WITHDRAWN 2026-08-17. THIS WAS MY HARNESS, NOT THE APP.**
+
+**The claim below is FALSE and is kept, struck through, because a withdrawn
+finding that vanishes teaches nobody.** It said a future-dated away answer
+produces no constraint. It does — *in the trace*, because
+`constraintsFor` passed `onDate: todayISO` to
+`composeTemporarySourceFactCompatibility`, which makes
+`activeTemporarySourceFacts` drop every fact whose horizon does not cover today.
+
+**NOT ONE PRODUCTION CALLER PASSES `onDate`.** `temporarySourceFactTransaction`
+(both sites), `profileProgramTransaction`, `acceptedStateColdStart` and the
+dev-E2E seed coordinator all omit it, so the real app keeps the fact, projects it
+to a constraint carrying its own `startDate`/`expiresAt`, and lets the per-date
+filters decide which days it touches.
+
+**I copied the `onDate` from `scripts/print-week.ts`'s `awayConstraintsFor`,
+which invented it**, and then reported the result as an app defect for a whole
+session — including in a report to Sam. The trace now composes constraints
+exactly as the store does. This is the repo's own documented trap: an under-fed
+harness answers "no" rather than failing.
+
+**What the fix actually turned on was FINDING 2**, which was real: the kit was
+resolved at ONE date for a whole week. With that fixed and the harness corrected,
+a mid-week trip now resolves per day —
+
+```
+composer PERMANENT kit (19): …            ← Mon/Tue, he is home
+composer DATED kit day 3 (3): bodyweight, dumbbells, bands
+composer DATED kit day 4 (3): …  day 5 (3): …  day 6 (3): …  day 0 (3): …
+```
+
+~~THE WITHDRAWN CLAIM FOLLOWS.~~
+
+## ~~FINDING 1 — A FUTURE-DATED AWAY ANSWER BECOMES NO CONSTRAINT AT ALL~~
 
 **Boundary: `activeTemporarySourceFacts` (`rules/temporarySourceFact.ts:620`),
 called by `composeTemporarySourceFactCompatibility` with a single `onDate`.**
@@ -564,6 +597,100 @@ all green. Registered as `LAW-every-authored-requirement-is-askable`. Registry
 World census, `test:scenarios`, `print:week` and `test:compile` all identical to
 base.
 
+---
+
+# SLICE 4 — `test:away-flow` IS GREEN, AND MY OWN DIAGNOSIS WAS WRONG
+
+**`test:away-flow`: 51 passed, 0 failed.** It THREW on the base commit and
+produced no cells at all.
+
+## THE CORRECTION
+
+Slice 2's write-up said [13h]'s `awayClub: 6` of 8 was caused by a second
+scheduler-input builder, `coachingInputsToSchedulerInputs`. **Measured per week,
+that is refuted: it is not on this path, and 6 is the correct answer.**
+
+The trip in that fixture runs `2026-07-13` → `2026-07-19` — **one week** — and the
+generator returns **four**. Three of those weeks belong to an athlete who is at
+home.
+
+```
+home   13th{club 2, game 1, cond 0}  20th{2,1,0}  27th{2,1,0}  3rd{2,1,0}
+away   13th{club 0, game 0, cond 4}  20th{2,1,0}  27th{2,1,0}  3rd{2,1,0}
+```
+
+**The old cell asserted `blockAway.club === 0` across the whole block — it
+required a one-week trip to delete three weeks of club nights.** That contradicts
+R-020's dated scope and Sam's own worked example: *"the game on the 15th should
+be removed … but the next saturday the 22nd game is still alive"*. It passed only
+because the old away pass filtered by constraint PRESENCE rather than by DATE.
+**The cell had pinned the leak.**
+
+## THE REWRITE IS STRICTER IN BOTH DIRECTIONS
+
+Counting is now **per week**, not per block — a trip has dates, so a four-week
+total cannot tell *"the club came off inside the span"* from *"the club came
+off"*.
+
+| cell | asserts |
+| --- | --- |
+| `[13g2]` | non-vacuity — the block really does straddle the trip |
+| `[13h]` | inside the span, club **and** game are 0, and the conditioning gained covers what was removed |
+| `[13h2]` | outside the span the weeks are **byte-identical** to the home block — which the old whole-block total could not check at all |
+
+**`[13f]` lost its `dropped > 0` clause and got stronger.** Its stated fear is
+*"it reds if away ever stops re-authoring and goes back to subtracting"*, and
+that is the second clause — rows the home week never had. `dropped > 0` only
+passed because the old pass DELETED rows: it pinned the symptom of the very
+defect its own suite exists to catch. Measured after: `dropped 0, homeRows 11,
+awayRows 17`. **A superset cannot be a subtraction.**
+
+## MUTATION-PROVEN
+
+| mutant | result |
+| --- | --- |
+| plan-side removal disabled | **4 cells red**, including `[13h]` |
+| removal made span-BLIND (the exact old behaviour) | **`[13h2]` red, and nothing else** |
+
+Census unchanged: `test:ladder-wide` 140 worlds / 40 refused / 0 deficient,
+`test:scenarios` 62/3, `test:compile` 468 with the same 6 pre-existing,
+`equipment-scopes` 16/0, `weekly-scheduler` 96/96, `equipment-vocabulary` 87/0.
+
+---
+
+# OPEN, MEASURED — A SECOND CONTENT PRODUCER IGNORES THE DAY'S KIT
+
+**The trace's own legality audit found it, and it is athlete-facing.** On a
+mid-week trip with dumbbells and bands, every composed STRENGTH row is legal —
+and the **Gunshow** on the Friday ships **`Tricep Pushdown`, which needs
+cables**, in a hotel room.
+
+```
+2026-08-14 [kit: 3]  Training Day
+  Gunshow
+    - Incline Dumbbell Curl
+    - Banded Bicep Curl
+    - Tricep Pushdown   ⚠ ILLEGAL ON THIS DAY'S KIT (needs cables)
+```
+
+**IT IS NOT THE BRANCH I FIRST BLAMED, AND THAT IS MEASURED RATHER THAN
+ASSUMED.** `defaultProgram.ts`'s `composedOptional` branch calls
+`buildDerivedSession('arms_pump', …, { equipmentTags: [...availableEquipment] })`
+with the WEEK's kit, which looked like the obvious cause. I threaded a per-day
+map to it and **the probe on that branch never fired once across all nine
+boundaries** — so that branch does not author this Gunshow at all.
+
+**The change was REVERTED rather than left in.** A field written by generation
+and read by nobody on the live path is dead weight that a later reader will
+trust, which is the defect class this repo fights hardest.
+
+**WHERE THE NEXT SESSION STARTS:** find the producer that actually authors these
+arms rows, then give it the same dated answer `composeWeek` already takes. The
+one-owner shape is settled — `resolveEffectiveEquipmentWindow` →
+`temporaryKitByDayOfWeekFrom` — so this is a wiring job into a producer that has
+to be located first. **Do not re-patch `composedOptional`: it is proven inert
+for this path.**
+
 ## NEXT — THE REMAINING BUILD ORDER
 
 1. ~~ONE EQUIPMENT OWNER, RESOLVED PER DAY.~~ **DONE — slice 1.**
@@ -574,9 +701,12 @@ base.
    still refuses the week and still deletes six of the athlete's own lifts.
 4. ~~DELETE THE LEGACY TRAVEL/EQUIPMENT AUTHORITY.~~ **DONE — slice 2.**
 5. ~~SANDBAG.~~ **DONE — slice 3.**
-6. **THE SECOND SCHEDULER-INPUT BUILDER** — `coachingInputsToSchedulerInputs`
-   must reach the same owner, which closes `away-flow` [13h].
-7. **THE REMAINING MISSION PROOFS** — 15 worlds, the printed weeks for Sam, and
+6. ~~THE SECOND SCHEDULER-INPUT BUILDER.~~ **NOT A DEFECT — refuted by
+   measurement in slice 4.** `coachingInputsToSchedulerInputs` is not on the
+   away path; the two `away-flow` reds were stale cells pinning a leak.
+7. **THE SECOND CONTENT PRODUCER** — locate whoever authors the Gunshow rows and
+   feed it the per-day kit (see the open finding above).
+8. **THE REMAINING MISSION PROOFS** — 15 worlds, the printed weeks for Sam, and
    the session-scope leg of the trace. All of them were blocked on the refusal
    that slice 2 removed.
 

@@ -577,9 +577,21 @@ async function main(): Promise<void> {
       .map((row: any) => String(row?.exercise?.name ?? row?.name ?? '?')));
   const awayNames = new Set(rowNamesIn(awayWeek));
   const droppedFromHome = rowNamesIn(homeWeek).filter((name) => !awayNames.has(name));
+  /* ⚠ **`droppedFromHome.length > 0` WAS DROPPED FROM THIS CELL ON 2026-08-17,
+   * AND THE CELL GOT STRONGER RATHER THAN WEAKER.** Its stated fear, three lines
+   * up, is *"it reds if away ever stops re-authoring and goes back to
+   * subtracting"* — and that fear is answered by the SECOND clause, which
+   * demands rows the home week never had. The first clause only ever passed
+   * because the old away pass DELETED rows, so it pinned the symptom of the
+   * defect the same suite exists to catch.
+   *
+   * Measured after the plan-side rewrite: `dropped: 0, homeRows: 11,
+   * awayRows: 17`. Every exercise the home week had is still there and six more
+   * arrived, because the two club nights became real gym days. **A superset
+   * cannot be a subtraction**, so requiring a deletion here would force the
+   * behaviour back to the thing the cell was written to forbid. */
   run('[13f] the away week is RE-AUTHORED, not the home week minus the club',
-    droppedFromHome.length > 0 && rowNamesIn(awayWeek).some((name) =>
-      !new Set(rowNamesIn(homeWeek)).has(name)),
+    rowNamesIn(awayWeek).some((name) => !new Set(rowNamesIn(homeWeek)).has(name)),
     { dropped: droppedFromHome.length, homeRows: rowNamesIn(homeWeek).length,
       awayRows: rowNamesIn(awayWeek).length });
   // AND THE DAYS DID FALL, ON PURPOSE — stated so the number above cannot be
@@ -675,37 +687,89 @@ async function main(): Promise<void> {
   // UNENFORCED), so the gap is carried in R-075 and item 37 with these numbers
   // rather than as a permanent red. **Do not "fix" this by loosening the cell
   // below to cover strength — build the conservation, then assert it.**
+  interface BlockWeekCount {
+    readonly start: string; readonly club: number;
+    readonly cond: number; readonly game: number;
+  }
   const twoWeek = (facts: any) => {
     const program = generateProgramLocally(genProfile, {
       todayISO: GEN_WEEK, blockNumber: 1, microcycleLimit: 2,
       ...(facts ? { activeConstraints: facts } : {}),
     } as any);
-    let club = 0, conditioning = 0;
+    // PER WEEK, not per block: a trip has DATES, so a total across four weeks
+    // cannot tell "the club came off inside the span" from "the club came off".
+    const weeks: BlockWeekCount[] = [];
     for (const microcycle of (program as any)?.microcycles ?? []) {
+      let club = 0, cond = 0, game = 0;
       for (const workout of microcycle.workouts ?? []) {
         const rows = (workout.exercises ?? []) as any[];
-        if (String(workout.workoutType) === 'Game') continue;
+        if (String(workout.workoutType) === 'Game') { game += 1; continue; }
         if (getTeamTrainingWorkoutState(workout).hasTeamTraining) club += 1;
         if (workout.conditioningBlock || String(workout.workoutType) === 'Conditioning' ||
           rows.some((row: any) => row.role === 'conditioning' || row.linkedConditioning)) {
-          conditioning += 1;
+          cond += 1;
         }
       }
+      weeks.push({ start: String(microcycle.startDate).slice(0, 10), club, cond, game });
     }
-    return { club, conditioning };
+    return {
+      weeks,
+      total: weeks.reduce((sum, week) => ({
+        club: sum.club + week.club, cond: sum.cond + week.cond, game: sum.game + week.game,
+      }), { club: 0, cond: 0, game: 0 }),
+    };
   };
   const blockHome = twoWeek(null);
   const blockAway = twoWeek(genTravel);
   // NON-VACUITY FIRST: the home block must actually HAVE club nights, or
   // "the club was replaced" is a claim about a block that never had any.
   run('[13g] the home block HAS club nights, so the cell below can fail',
-    blockHome.club > 0, blockHome);
-  run('[13h] every club night the trip removes comes back as CONDITIONING, one for one',
-    blockAway.club === 0 &&
-      blockAway.conditioning - blockHome.conditioning === blockHome.club,
-    { homeClub: blockHome.club, awayClub: blockAway.club,
-      homeConditioning: blockHome.conditioning, awayConditioning: blockAway.conditioning,
-      gained: blockAway.conditioning - blockHome.conditioning });
+    blockHome.total.club > 0, blockHome.total);
+
+  /* ── ⚠ THIS CELL DEMANDED THE TRIP REACH OUTSIDE ITS OWN SPAN. REWRITTEN
+   * 2026-08-17, AND THE REWRITE IS STRICTER IN BOTH DIRECTIONS. ───────────────
+   *
+   * It asserted `blockAway.club === 0` **across the whole block**. The trip here
+   * runs `2026-07-13` to `2026-07-19` — ONE WEEK — and the generator returns
+   * FOUR. So the old cell required a one-week trip to delete the club nights of
+   * three weeks the athlete is home for, which contradicts R-020's dated scope
+   * and Sam's own worked example: *"the game on the 15th should be removed …
+   * but the next saturday the 22nd game is still alive"*.
+   *
+   * It passed because the OLD away pass leaked: it filtered by constraint
+   * presence rather than by date. The plan-side rewrite made the removal dated,
+   * and the leak this cell had pinned went with it.
+   *
+   * MEASURED, per week, home vs away:
+   *   home  13th{club 2, game 1, cond 0}  20th{2,1,0}  27th{2,1,0}  3rd{2,1,0}
+   *   away  13th{club 0, game 0, cond 4}  20th{2,1,0}  27th{2,1,0}  3rd{2,1,0}
+   *
+   * So the cell now asserts the two halves separately, which is what R-020
+   * actually says: **inside the span the club's work is gone; outside it nothing
+   * moved at all** — and the second half is a byte-for-byte comparison the old
+   * whole-block total could not make. The conditioning arm keeps R-075's ratio
+   * against what the trip ACTUALLY removed (2 club nights + 1 fixture = 3
+   * club-bound sessions; 4 conditioning sessions arrived). */
+  const insideSpan = (weeks: readonly BlockWeekCount[]): BlockWeekCount[] =>
+    weeks.filter((week) => week.start >= GEN_WEEK && week.start <= '2026-07-19');
+  const outsideSpan = (weeks: readonly BlockWeekCount[]): BlockWeekCount[] =>
+    weeks.filter((week) => !(week.start >= GEN_WEEK && week.start <= '2026-07-19'));
+  const awayInside = insideSpan(blockAway.weeks);
+  const homeInside = insideSpan(blockHome.weeks);
+  run('[13g2] NON-VACUITY — the block really does straddle the trip',
+    awayInside.length > 0 && outsideSpan(blockAway.weeks).length > 0,
+    { inside: awayInside.length, outside: outsideSpan(blockAway.weeks).length });
+
+  run('[13h] inside the span the club\'s work is GONE, and it comes back as CONDITIONING',
+    awayInside.every((week) => week.club === 0 && week.game === 0) &&
+      awayInside.reduce((sum, week) => sum + week.cond, 0) >=
+        homeInside.reduce((sum, week) => sum + week.club + week.game, 0),
+    { awayInside, homeInside });
+
+  run('[13h2] OUTSIDE the span the trip changed nothing — he is home for those weeks',
+    JSON.stringify(outsideSpan(blockAway.weeks)) ===
+      JSON.stringify(outsideSpan(blockHome.weeks)),
+    { away: outsideSpan(blockAway.weeks), home: outsideSpan(blockHome.weeks) });
 
   // ── [15] THE WEEK ON HIS SCREEN — Sam, 2026-08-13 ──────────────────────────
   //

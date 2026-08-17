@@ -55,6 +55,7 @@ const realComposeWeek = composeWeekModule.composeWeek;
 
 export interface ComposeObservation {
   readonly kit: readonly string[];
+  readonly temporaryKitByDayOfWeek: Readonly<Record<number, readonly string[]>> | null;
   readonly blockStartISO: string;
   readonly blockNumber: number;
   readonly selectionHistoryIn: readonly { slot: string; identity: string; blockStartISO: string }[];
@@ -116,6 +117,7 @@ composeWeekModule.composeWeek = function tracedComposeWeek(inputs: any) {
   }
   observations.push({
     kit: [...(inputs.kit ?? [])],
+    temporaryKitByDayOfWeek: inputs.temporaryKitByDayOfWeek ?? null,
     blockStartISO: inputs.blockStartISO,
     blockNumber: inputs.blockNumber,
     selectionHistoryIn: (inputs.selectionHistory ?? []).map((e: any) => ({
@@ -264,11 +266,31 @@ export function awayEquipmentFact(args: {
   });
 }
 
-/** The ONE route a fact takes into generation. */
-function constraintsFor(facts: readonly unknown[], onDate: string) {
+/**
+ * The ONE route a fact takes into generation — composed **exactly as production
+ * composes it**.
+ *
+ * ⚠ **THIS TOOK AN `onDate` AND THAT MANUFACTURED A DEFECT.** Copied from
+ * `print-week.ts`'s `awayConstraintsFor`, it passed `onDate: todayISO`, which
+ * makes `activeTemporarySourceFacts` drop every fact whose horizon does not
+ * cover today. A trip marked on Monday for a Wednesday departure therefore
+ * produced NO CONSTRAINT AT ALL, and this trace reported it as an app defect —
+ * "a future-dated away answer becomes no constraint" — for a whole session.
+ *
+ * **NOT ONE PRODUCTION CALLER PASSES `onDate`.** `temporarySourceFactTransaction`
+ * (both sites), `profileProgramTransaction`, `acceptedStateColdStart` and the
+ * dev-E2E seed coordinator all omit it, so the real app keeps the fact, projects
+ * it to a constraint carrying its own `startDate`/`expiresAt`, and lets the
+ * per-date filters decide which days it touches.
+ *
+ * The harness was the only thing narrowing it. This is the shape the repo
+ * already has a name for — an under-fed harness answers "no" rather than
+ * failing — and it is why the composed constraint list is now built the way the
+ * store builds it and no other way.
+ */
+function constraintsFor(facts: readonly unknown[], _onDate: string) {
   return composeTemporarySourceFactCompatibility({
     temporarySourceFacts: facts as never,
-    onDate,
   });
 }
 
@@ -450,7 +472,17 @@ function renderBoundary(result: BoundaryResult): string {
   out.push('### 3. ACTIVE equipment passed to scheduler/composer');
   out.push(`\`\`\`\nresolver tags (${result.activeTags.length}): ${result.activeTags.join(', ')}`);
   out.push(`resolver machines: ${result.activeModalities.join(', ') || '(none)'}`);
-  out.push(`composer kit  (${o?.kit.length ?? 0}): ${o?.kit.join(', ') ?? '(composer never ran)'}\n\`\`\``);
+  out.push(`composer PERMANENT kit (${o?.kit.length ?? 0}): ${o?.kit.join(', ') ?? '(composer never ran)'}`);
+  // The dated half. Absent means no day lost anything, which is what a world
+  // with no live trip must print.
+  if (!o) out.push('composer DATED kit: (composer never ran)');
+  else if (!o.temporaryKitByDayOfWeek) out.push('composer DATED kit: (none — no day differs from permanent)');
+  else {
+    for (const [day, tags] of Object.entries(o.temporaryKitByDayOfWeek)) {
+      out.push(`composer DATED kit day ${day} (${tags.length}): ${tags.join(', ')}`);
+    }
+  }
+  out.push('```');
   out.push('### 4. BASE block exercise selection (what gets RECORDED)');
   if (!o) out.push('_composer never ran_');
   else {
