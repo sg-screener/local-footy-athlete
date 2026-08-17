@@ -61,6 +61,7 @@ import { probeBlock } from './support/acceptBlock';
 import {
   coldStartThroughOnboarding,
   followTheWeek,
+  leaveExerciseOut,
   quiet,
   recordDay,
   resolvedDays,
@@ -271,6 +272,27 @@ async function main(): Promise<void> {
 
   console.log('\n═══ STAGE 2 — Block 1 lived, one day at a time ═══\n');
 
+  /**
+   * THE LIFT THE ATHLETE EDITS, DERIVED FROM THE PROGRAM, NEVER NAMED.
+   *
+   * Read off block 1's own first strength day: the subject is whose NUMBER wins,
+   * not which exercise carries it, and a hardcoded name stops being block 1's
+   * anything the moment selection moves.
+   */
+  const EDITED_LIFT = (() => {
+    for (const day of blockOneVisible.days) {
+      for (const row of day.rows) if ((row.weightKg ?? 0) > 0) return row.name;
+    }
+    throw new Error('block 1 has no loaded strength row — the journey cannot edit a load');
+  })();
+  /** Deliberately NOT a value progression could reach on its own from 125/80. */
+  const EDITED_KG = 111;
+  console.log(`  the athlete will edit ${EDITED_LIFT} to ${EDITED_KG}kg in the final week\n`);
+
+  let editedLoadOn: string | null = null;
+  let removedForTheDay: {
+    dateISO: string; ok: boolean; before: string[]; after: string[];
+  } | null = null;
   const walked: WalkedDay[] = [];
   const lastDay = addDaysISO(blockOneStart, BLOCK_ONE_WEEKS * 7 - 1);
   let missedOnce = false;
@@ -291,7 +313,45 @@ async function main(): Promise<void> {
     const isTheMiss = weekIndex === 3 && weekdayName(dateISO) === 'Wednesday' && !missedOnce;
     if (isTheMiss) missedOnce = true;
 
-    const outcome = await recordDay(dateISO, isTheMiss ? MISSED : DID_THE_WORK);
+    /**
+     * THE ATHLETE EDITS ONE LOAD, in the last week of block 1.
+     *
+     * Late on purpose: `lastRecordedLoadByExercise` keeps the LAST valid load per
+     * exercise over all time, so an edit early in the block would be overwritten
+     * by later confirm-the-card days and the cell below would pass or fail for
+     * the wrong reason.
+     */
+    const isTheEdit = weekIndex === BLOCK_ONE_WEEKS
+      && weekdayName(dateISO) === 'Monday' && editedLoadOn === null;
+    if (isTheEdit) editedLoadOn = dateISO;
+
+    const intent = isTheMiss
+      ? MISSED
+      : (isTheEdit
+        ? { ...DID_THE_WORK, editLoad: { exerciseName: EDITED_LIFT, toKg: EDITED_KG } }
+        : DID_THE_WORK);
+    /**
+     * A TEMPORARY REMOVAL — *"Today only: removed from this session; future
+     * sessions and blocks are unaffected."*
+     *
+     * Applied to a lift that CONTINUES into block 2, because the interesting
+     * failure is over-application: an exclusion that leaks past the day it was
+     * answered for. A today-only removal of a lift that rotates out anyway could
+     * not tell a working scope from a broken one.
+     */
+    if (weekIndex === 2 && weekdayName(dateISO) === 'Monday' && !removedForTheDay) {
+      const before = resolvedDays(mondayOf(dateISO))
+        .flatMap((day) => day.rows.map((row) => row.name));
+      const decision = leaveExerciseOut({
+        exercise: EDITED_LIFT, scope: 'today_only', decidedOnISO: dateISO,
+        reason: 'shoulder felt off warming up',
+      });
+      const after = resolvedDays(mondayOf(dateISO))
+        .flatMap((day) => day.rows.map((row) => row.name));
+      removedForTheDay = { dateISO, ok: decision.ok, before, after };
+    }
+
+    const outcome = await recordDay(dateISO, intent);
     walked.push({
       dateISO,
       weekday: weekdayName(dateISO),
@@ -364,6 +424,37 @@ async function main(): Promise<void> {
   // ═════════════════════════════════════════════════════════════════════════
   // STAGE 3 — THE BOUNDARY
   // ═════════════════════════════════════════════════════════════════════════
+
+  // ── A LONGER EXCLUSION, answered before the block turns over ────────────
+  //
+  // *"Until I change it: excluded from all future programming until the athlete
+  // restores it."* Aimed at a lift that WOULD otherwise continue — the exclusion
+  // has to beat rotation's own preference for keeping a progressing main lift, so
+  // excluding something that rotates out anyway would prove nothing.
+  const BANNED_LIFT = (() => {
+    for (const day of blockOneFinal) {
+      for (const row of day.rows) {
+        if ((row.weightKg ?? 0) > 0 && row.name !== EDITED_LIFT) return row.name;
+      }
+    }
+    throw new Error('no second loaded lift in block 1 to exclude');
+  })();
+  const banned = leaveExerciseOut({
+    exercise: BANNED_LIFT, scope: 'until_changed', decidedOnISO: blockOneLastWeek,
+    reason: 'it always aggravates my back',
+  });
+  console.log(`  the athlete asks to leave ${BANNED_LIFT} out until they change it: `
+    + `ok=${banned.ok} scope=${banned.exclusion?.scope} `
+    + `activeThrough=${JSON.stringify(banned.exclusion?.activeThroughISO ?? null)} `
+    + `rebuildRequired=${banned.rebuildRequired}`);
+
+  ok(
+    `the longer exclusion is stored as a decision with NO expiry (${BANNED_LIFT})`,
+    banned.ok && banned.exclusion?.scope === 'until_changed'
+      && (banned.exclusion?.activeThroughISO ?? null) === null,
+    `got ${JSON.stringify(banned.exclusion ?? null)} — an "until I change it" answer that `
+    + 'carries an expiry is a this-block exclusion wearing the wrong scope',
+  );
 
   console.log('\n═══ STAGE 3 — the block boundary, through the real rollover door ═══\n');
 
@@ -641,6 +732,139 @@ async function main(): Promise<void> {
     progressedRows.length > 0 && raisedAndVisible.length === progressedRows.length,
     progressedRows.map((row) => `${row.exerciseName}: decided ${row.previousLoadKg}`
       + `->${row.nextLoadKg}kg, visible ${visibleLoadFor(String(row.exerciseName))}kg`).join('; '),
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // PROOF 3 — THE ATHLETE'S OWN EDITED NUMBER IS WHAT BLOCK 2 BUILDS ON
+  // ═════════════════════════════════════════════════════════════════════════
+
+  /**
+   * The approved contract: *"Every suggested load remains editable and the
+   * athlete has the final say"*, and *"never round, rewrite or 'correct' the
+   * athlete's recorded number; their number remains the base."*
+   *
+   * So block 2 must start from `EDITED_KG`, not from the load the app had
+   * suggested. A cell that only checked "the load went up" would pass on an app
+   * that ignored the edit and progressed its own suggestion instead.
+   */
+  const editedDecision = ((useProgramStore.getState().currentProgram
+    ?.blockBoundaryExplanation ?? []) as { exerciseName?: string; kind?: string;
+      previousLoadKg?: number; nextLoadKg?: number }[])
+    .find((row) => row.exerciseName === EDITED_LIFT);
+
+  console.log(`  the athlete edited ${EDITED_LIFT} to ${EDITED_KG}kg on ${editedLoadOn}`);
+  console.log(`  block 2's decision for it: ${JSON.stringify(editedDecision ?? null)}`);
+
+  ok(
+    `block 2 builds ${EDITED_LIFT} from the athlete's OWN edited ${EDITED_KG}kg, not the app's suggestion`,
+    editedDecision?.previousLoadKg === EDITED_KG,
+    `the boundary started from ${JSON.stringify(editedDecision?.previousLoadKg)}kg — the `
+    + `athlete typed ${EDITED_KG}kg and has the final say on load`,
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // PROOF 4 — ROTATION: an unseen lift never inherits another exercise's load
+  // ═════════════════════════════════════════════════════════════════════════
+
+  /**
+   * The contract: *"When an exercise rotates, the old exercise's load must not be
+   * blindly transferred and increased; the athlete selects a safe starting load
+   * for the new movement."* And separately: *"unseen lifts use the authored
+   * starting estimate where available."*
+   *
+   * Both are claims about DECISION KIND, so both are read off the kind rather
+   * than off the number — a load that merely differs from the outgoing lift's
+   * could still have been inherited and then adjusted.
+   */
+  const allDecisions = ((useProgramStore.getState().currentProgram
+    ?.blockBoundaryExplanation ?? []) as { exerciseName?: string; kind?: string;
+      previousLoadKg?: number; nextLoadKg?: number }[]);
+  const kinds = new Map<string, string>();
+  for (const row of allDecisions) kinds.set(String(row.exerciseName), String(row.kind));
+  console.log(`  block 2 decision kinds: ${JSON.stringify([...kinds].sort())}`);
+
+  const everRecorded = new Set(Object.keys(boundaryHistory.lastRecordedLoadByExercise));
+  const inheritedWithoutHistory = [...kinds].filter(([name, kind]) =>
+    !everRecorded.has(name) && (kind === 'history_progressed' || kind === 'history_held'));
+
+  ok(
+    'ROTATION: no lift the athlete never recorded carries a from-history load',
+    inheritedWithoutHistory.length === 0,
+    `${JSON.stringify(inheritedWithoutHistory)} claim a history load with no recorded history `
+    + 'under that exact name — that is another exercise\'s number being inherited',
+  );
+
+  const rotatedIn = [...kinds].filter(([name]) => !everRecorded.has(name));
+  console.log(`  rotated-in lifts and their decision kinds: ${JSON.stringify(rotatedIn)}`);
+
+  ok(
+    'UNSEEN LIFTS: every rotated-in lift is decided by estimate, unset or bodyweight — never by history',
+    rotatedIn.length === 0 || rotatedIn.every(([, kind]) =>
+      kind === 'authored_estimate' || kind === 'unset' || kind === 'bodyweight_default'),
+    `got ${JSON.stringify(rotatedIn)}`,
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // PROOF 5 — THE TWO EXCLUSION SCOPES KEEP THEIR OWN REACH
+  // ═════════════════════════════════════════════════════════════════════════
+
+  const blockTwoNames = new Set(blockTwoVisible.days
+    .flatMap((day) => day.rows.map((row) => row.name)));
+
+  /**
+   * ⚠ **`today_only` RECORDS THE SCOPE ANSWER; IT DOES NOT REMOVE THE ROW.**
+   *
+   * `applyExerciseExclusionDecision`'s own comment says so — *"`today_only`
+   * changes THIS session, which the removal override already did"* — and it
+   * returns `rebuildRequired: false` for exactly that reason. The row leaves the
+   * day through a separate `remove_exercise` program-control action; this door
+   * answers the *"how long should we leave this out?"* question that follows it.
+   *
+   * So the print below shows the lift still present in that week AFTER the
+   * decision, and that is CORRECT, not a defect. It is printed rather than hidden
+   * because the two halves look like one act from the athlete's side, and a
+   * reader who assumed this door removes rows would mis-read every cell here.
+   * **The row-removal half is NOT walked by this journey — see the not-covered
+   * list.**
+   */
+  console.log(`  today-only scope answer on ${removedForTheDay?.dateISO}: ok=${
+    removedForTheDay?.ok} · ${EDITED_LIFT} present in that week before=${
+    removedForTheDay?.before.includes(EDITED_LIFT)} after=${
+    removedForTheDay?.after.includes(EDITED_LIFT)} `
+    + '(after=true is expected: this door records the scope, it does not remove the row)');
+
+  ok(
+    'the temporary removal\'s SCOPE ANSWER was accepted by the one exclusion owner',
+    removedForTheDay?.ok === true,
+    'the day screen\'s Remove button refused',
+  );
+
+  /**
+   * ⚠ THE TODAY-ONLY SCOPE IS PROVED BY WHAT IT DID **NOT** DO.
+   *
+   * *"future sessions and blocks are unaffected"*. So the claim is that block 2
+   * still programs it — and this is the cell that would catch a scope answer being
+   * silently upgraded to a ban, which is the failure that costs an athlete a lift
+   * they only wanted to skip once.
+   */
+  ok(
+    `TODAY-ONLY did not leak: block 2 still programs ${EDITED_LIFT}`,
+    blockTwoNames.has(EDITED_LIFT),
+    `${EDITED_LIFT} is missing from block 2 — a one-day answer became a ban`,
+  );
+
+  ok(
+    `UNTIL-I-CHANGE-IT holds: block 2 does NOT program ${BANNED_LIFT}`,
+    !blockTwoNames.has(BANNED_LIFT),
+    `${BANNED_LIFT} is back in block 2 despite an active exclusion — nothing may quietly `
+    + 'restore an excluded exercise',
+  );
+
+  const liveExclusions = takeCensus(blockTwoStart).activeExclusions;
+  ok(
+    'the exclusion survives the block boundary as an active decision',
+    liveExclusions > 0,
+    `${liveExclusions} active exclusions after the rollover — the decision was dropped`,
   );
 
   // ═════════════════════════════════════════════════════════════════════════

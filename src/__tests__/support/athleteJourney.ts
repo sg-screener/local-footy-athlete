@@ -353,6 +353,20 @@ export interface DayIntent {
   difficulty: number;
   /** Does the athlete type in what they lifted? Progression reads these. */
   logWeights?: boolean;
+  /**
+   * THE ATHLETE TYPES A NUMBER THE CARD DID NOT SAY.
+   *
+   * Confirming the prescription and OVERRIDING it are different athlete acts, and
+   * only the second can prove whose number block 2 progresses from. Applied
+   * BEFORE the performance logs are built, because
+   * `buildStrengthPerformanceLogs` reads that day's `weightOverrides` slice — an
+   * edit made afterwards is real in the store and invisible to progression, which
+   * is a genuinely different (and much subtler) bug than this models.
+   *
+   * Names the exercise so the assertion can be about a derived identity rather
+   * than "whichever row happened to be first".
+   */
+  editLoad?: { exerciseName: string; toKg: number };
   absenceReason?: string;
 }
 
@@ -398,7 +412,16 @@ export async function recordDay(dateISO: string, intent: DayIntent): Promise<Day
 
   let loggedSets: Record<string, unknown[]> | undefined;
   if (intent.logWeights) {
-    typeLoadsForSession(dateISO, target.workout);
+    // ⚠ **THE EDIT GOES INTO THE SET LOG, NOT ON TOP OF IT.** The first version of
+    // this harness logged every set at the prescribed load and THEN called
+    // `setWeightOverride` with the athlete's number, and reported that block 2
+    // ignored the edit. It was right to ignore it: `buildStrengthPerformanceLogs`
+    // prefers the LOGGED sets, and logging 125 then relabelling the prescription
+    // 111 is not "the athlete lifted 111" — it is two different facts, and the
+    // logged one wins because it is what actually happened.
+    typeLoadsForSession(dateISO, target.workout, intent.editLoad
+      ? { [intent.editLoad.exerciseName]: intent.editLoad.toKg }
+      : undefined);
     loggedSets = quiet(() => collectLoggedStrengthSets(
       target!.workout, useWorkoutLogStore.getState().loggedSets as never, undefined,
     )) as Record<string, unknown[]> | undefined;
@@ -481,7 +504,18 @@ export async function recordDay(dateISO: string, intent: DayIntent): Promise<Day
  * case: the athlete confirming the prescription, not a performance this harness
  * invented.
  */
-export function typeLoadsForSession(dateISO: string, workout: Workout): number {
+export function typeLoadsForSession(
+  dateISO: string,
+  workout: Workout,
+  /**
+   * Loads the athlete typed that DIFFER from the card, by exercise name.
+   *
+   * Both the logged set and the weight override are written at this number, which
+   * is what a real athlete's edit produces — the two must agree or the logged one
+   * silently wins and the override reads as ignored.
+   */
+  editedByName?: Record<string, number>,
+): number {
   const logStore = useWorkoutLogStore.getState();
   const programStore = useProgramStore.getState() as unknown as {
     setWeightOverride: (date: string, exerciseId: string, weightKg: number) => void;
@@ -490,8 +524,10 @@ export function typeLoadsForSession(dateISO: string, workout: Workout): number {
   for (const row of (workout.exercises ?? []) as unknown as {
     id: string; exerciseId: string; prescribedSets?: number;
     prescribedRepsMax?: number; prescribedWeightKg?: number;
+    exercise?: { name?: string };
   }[]) {
-    const weight = Number(row.prescribedWeightKg);
+    const edited = editedByName?.[(row as { exercise?: { name?: string } }).exercise?.name ?? ''];
+    const weight = Number.isFinite(edited) ? Number(edited) : Number(row.prescribedWeightKg);
     if (!Number.isFinite(weight) || weight <= 0) continue;
     const sets = Math.max(1, Number(row.prescribedSets) || 1);
     for (let setNumber = 1; setNumber <= sets; setNumber += 1) {

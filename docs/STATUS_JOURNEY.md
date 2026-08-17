@@ -405,6 +405,69 @@ its own unit sized as "which block am I in, across a process death", not a
 persistence line. Note `test:block-two-boot-preservation` is **20/0 throughout**,
 so its relaunch does not model a real process death.
 
+## THE JOURNEY NOW — 26 passed, 3 failed
+
+`npm run test:athlete-journey`. The 3 are the named blocker below, not new.
+
+| step | athlete action | stored truth | visible result | verdict |
+| --- | --- | --- | --- | --- |
+| 1 | answers onboarding: phase, 3 gym days, equipment, 2 club nights, Saturday game | accepted; 36 block selections recorded | Block 1 installed, 4 weeks | **WORKING** |
+| 2 | — | accepted microcycles | displayed week matches storage row for row and dose for dose | **WORKING** |
+| 3 | 19 sessions done, loads typed, 1 missed (no record) | 19 feedback days, 8 with strength logs, 8 progression entries | — | **WORKING** |
+| 4 | types 111 kg for a lift the card said 125 | logged sets + weight override at 111 | Block 2 prescribes **113.5 kg** | **WORKING** |
+| 5 | "leave this out today" | `today_only`, no expiry, `rebuildRequired:false` | Block 2 still programs it | **WORKING** |
+| 6 | "leave this out until I change it" | `until_changed`, `activeThroughISO: null` | Block 2 does NOT program it | **WORKING** |
+| 7 | block ends | real rollover fires, block 1 -> 2, each block records its own requirement | Block 2 week 1 | **WORKING** |
+| 8 | — | `history_progressed` for both continuing lifts | *"…so Leg Press has moved from 111 kg to 113.5 kg. You can change it if needed."* | **WORKING** |
+| 9 | — | rotated-in lifts: `authored_estimate` / `bodyweight_default` | no rotated lift carries another's load | **WORKING** |
+| 10 | closes and reopens the app | requirement map survives | **loads revert, explanations vanish** | **BLOCKED** (below) |
+
+**BLOCK 1, week 1** — Mon `full_body` (Leg Press 3x3-4 @125, Single-Leg RDL 3x6-8 @17.5,
+Bench Press 3x3-5 @82.5, Pull-Ups 3x4-6, Band Pallof Press 2x10-15) · Tue/Thu Team
+Training · Wed `full_body` (RDLs 3x2-4 @80, Bulgarian Split Squats 3x6-8 @25,
+Landmine Press 3x3-5 @35, Barbell Row 3x4-6 @72.5, Banded Dead Bug 2x10-15) ·
+Fri rest (G-1, protected) · Sat Game Day · Sun rest.
+
+**BLOCK 2, week 1** — Mon `full_body` (**Leg Press 3x3-4 @113.5**, Incline DB Bench
+4x3-5 @30, Single-Arm Lat Pulldown 3x4-6 @30, Copenhagen Plank (Half) 2x10-15) ·
+Wed `full_body` (**RDLs 3x2-4 @82.5**, Single-Leg Leg Press 4x6-8 @75, Z-Press
+3x3-5 @35, Chest-Supported DB Row 3x4-6 @20, Crab Walks 2x10-15) · club nights,
+fixture and rest days unchanged. **Single-Leg RDL is absent — the athlete excluded
+it.** 7 of 10 exercises rotated.
+
+**AFTER RESTART** — the same week with **Leg Press back at 125 kg**, RDLs back at
+80 kg, and **no explanations at all**. That is the blocker.
+
+### ⚠ ONE THING A READER COULD MIS-READ, SO IT IS SAID PLAINLY
+
+**`today_only` RECORDS THE SCOPE ANSWER; IT DOES NOT REMOVE THE ROW.** The
+exclusion owner's own comment says the removal override already did that, and it
+returns `rebuildRequired: false` accordingly. The row leaves the day through a
+separate `remove_exercise` program-control action. **This journey walks the scope
+answer, NOT the row removal.**
+
+### ONE HARNESS ERROR I MADE AND CORRECTED, worth the line
+
+My first load-edit modelled the athlete logging every set at the prescribed 125
+and THEN calling `setWeightOverride(111)`, and it reported that block 2 ignored the
+edit. **The app was right to ignore it:** `buildStrengthPerformanceLogs` prefers
+the LOGGED sets, and logging 125 while relabelling the prescription 111 is two
+different facts, not one edit. The edit now goes into the set log, and block 2
+progresses from 111. **A harness that models the wrong act manufactures a defect
+report** — see [[a-fixture-is-a-claim-too]].
+
+## STILL NOT COVERED — named, not half-built
+
+- **the row-removal door** (`remove_exercise`) and **the ordinary substitution**
+  (`swap_exercise`) — the contract's *"an ordinary substitution changes the
+  programmed row without banning the original"*;
+- **readiness/recovery feedback as its own act** (`set_fatigue_status`,
+  `set_recovery_mode`). Soreness and feeling ARE recorded per session and the
+  boundary reads them, but the readiness DOORS are not walked;
+- **the optional-session offer** — the journey never legitimately reached one;
+- **difficult/missed feedback reducing the right thing.** `test:block-two-difficult-missed`
+  (88/0) covers it off its own worlds; this journey does not drive the very-hard arm.
+
 ## WHAT I HAVE NOT TOUCHED
 
 **The tree carries the harness, the ruled fix, and this document**, and
