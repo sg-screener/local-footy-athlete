@@ -428,6 +428,7 @@ console.log('\n[6] THE TWO-BLOCK MAXIMUM — ASKED OF THE OWNER DIRECTLY');
   const common = {
     legalCandidates: candidates,
     retentionEligible: true,
+    phaseAnchored: false,
     pinnedIdentities: [],
   };
 
@@ -474,6 +475,7 @@ console.log('\n[7] A DELOAD DOES NOT ADVANCE EITHER CADENCE');
   const base = {
     legalCandidates: candidates,
     retentionEligible: false,
+    phaseAnchored: false,
     pinnedIdentities: [],
     progressedIdentities: [],
   };
@@ -513,6 +515,7 @@ console.log('\n[8] EXCLUSION BEATS PINNING, AND AN ILLEGAL PIN IS UNREACHABLE');
   const pinnedButExcluded = decideRotation({
     legalCandidates: legalAfterExclusion,
     retentionEligible: true,
+    phaseAnchored: false,
     blockNumber: 1,
     pinnedIdentities: [excluded],
     progressedIdentities: [],
@@ -528,6 +531,7 @@ console.log('\n[8] EXCLUSION BEATS PINNING, AND AN ILLEGAL PIN IS UNREACHABLE');
   const pinnedLegal = decideRotation({
     legalCandidates: candidates,
     retentionEligible: true,
+    phaseAnchored: false,
     blockNumber: 1,
     pinnedIdentities: [composedIdentityFor('C')],
     progressedIdentities: [],
@@ -539,6 +543,7 @@ console.log('\n[8] EXCLUSION BEATS PINNING, AND AN ILLEGAL PIN IS UNREACHABLE');
   const unpinned = decideRotation({
     legalCandidates: candidates,
     retentionEligible: true,
+    phaseAnchored: false,
     blockNumber: 1,
     pinnedIdentities: [],
     progressedIdentities: [],
@@ -566,6 +571,7 @@ console.log('\n[9] A PIN NEVER DEFEATS THE TWO-BLOCK MAXIMUM');
   const scenario = (pinnedIdentities: readonly string[]) => decideRotation({
     legalCandidates: candidates,
     retentionEligible: true,
+    phaseAnchored: false,
     blockNumber: 3,
     pinnedIdentities,
     progressedIdentities: [candidates[0], candidates[1]],
@@ -596,6 +602,7 @@ console.log('\n[10] THE OWNER REFUSES AN EMPTY SLOT RATHER THAN INVENTING ONE');
     decideRotation({
       legalCandidates: [],
       retentionEligible: true,
+      phaseAnchored: false,
       blockNumber: 1,
       pinnedIdentities: [],
       progressedIdentities: [],
@@ -855,6 +862,7 @@ console.log('\n[15b] A RETAINED BLOCK DOES NOT CONSUME A ROTATION TURN');
   const pick = (blockNumber: number) => decideRotation({
     legalCandidates: hinge,
     retentionEligible: true,
+    phaseAnchored: false,
     blockNumber,
     pinnedIdentities: [],
     progressedIdentities: hinge,   // the athlete keeps progressing whatever they hold
@@ -879,6 +887,7 @@ console.log('\n[15b] A RETAINED BLOCK DOES NOT CONSUME A ROTATION TURN');
   const noHistory = [1, 2, 3].map((b) => decideRotation({
     legalCandidates: hinge,
     retentionEligible: true,
+    phaseAnchored: false,
     blockNumber: b,
     pinnedIdentities: [],
     progressedIdentities: [],
@@ -945,6 +954,122 @@ console.log('\n[15c] THE HINGE WALK IN A REAL GENERATED WORLD, AND ITS LOAD');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[15d] IN-SEASON: RDLs ARE THE HINGE, AND THE CAP DOES NOT MOVE THEM');
+
+{
+  /*
+   * Sam, 2026-08-17: *"RDLs are the default bilateral hinge. An in-season RDL
+   * must not rotate out merely because two blocks elapsed. Phase specificity
+   * overrides the ordinary two-block rotation cap here."*
+   *
+   * Driven across THREE real in-season blocks with history harvested from the
+   * block the generator built, so the athlete really is progressing — which is
+   * exactly the condition that would otherwise trip the cap at block 3.
+   */
+  const inSeason = athlete({ seasonPhase: 'In-season', experienceLevel: '2-5 years' });
+  const starts = ['2026-07-06', '2026-08-03', '2026-08-31'];
+  let history: Record<string, SessionFeedback> = {};
+  const hinge: string[] = [];
+  const singleLegHip: string[] = [];
+  for (let i = 0; i < starts.length; i++) {
+    const program = generateProgramLocally(inSeason, {
+      todayISO: starts[i], blockNumber: i + 1,
+      progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
+    });
+    const rows = rowsOf(program);
+    hinge.push(rows.find((r) => r.mainSlot === 'hinge')?.name ?? '—');
+    singleLegHip.push(rows.find((r) => r.mainSlot === 'single_leg_hip')?.name ?? '—');
+    history = { ...history, ...logRealBlock(program) };
+  }
+
+  ok('the in-season athlete has a bilateral hinge in all three blocks — liveness',
+    hinge.every((n) => n !== '—'), hinge.join(' → '));
+  ok('RDLs are the in-season bilateral hinge and STAY, past the two-block cap',
+    hinge.every((n) => n === 'RDLs'),
+    `${hinge.join(' → ')} — phase specificity outranks the ordinary cap`);
+  ok('and conventional Deadlift is never selected to manufacture variety',
+    !hinge.includes('Deadlift'), hinge.join(' → '));
+
+  /*
+   * ⚠ **SINGLE-LEG RDL IS A SEPARATE MOVEMENT EXPOSURE.** *"It fills the separate
+   * single-leg-hip exposure and does not silently replace a required bilateral
+   * hinge exposure."* Both must be present, in different slots, at once.
+   */
+  ok('Single-Leg RDL fills the single-leg-hip slot in every block — liveness',
+    singleLegHip.every((n) => n === 'Single-Leg RDL'), singleLegHip.join(' → '));
+  ok('and it never stands in for the bilateral hinge — two slots, two identities',
+    hinge.every((n, i) => n !== singleLegHip[i]),
+    hinge.map((n, i) => `${n} vs ${singleLegHip[i]}`).join(' | '));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[15e] THE IN-SEASON FALLBACK CHAIN, EACH STEP SEPARATELY');
+
+{
+  /*
+   * *"If RDLs are unavailable, excluded, contraindicated or the athlete
+   * explicitly prefers another legal hinge: choose Trap Bar Deadlift.
+   * Conventional Deadlift is the third option."*
+   *
+   * Asked of the owner directly and one step at a time, because a world that
+   * removes RDLs also moves everything else and would not isolate the step.
+   */
+  const chain = ['RDLs', 'Trap Bar Deadlift', 'Deadlift'].map(composedIdentityFor);
+  const anchored = (legalCandidates: string[], pinnedIdentities: string[] = []) =>
+    decideRotation({
+      legalCandidates,
+      retentionEligible: true,
+      phaseAnchored: true,
+      blockNumber: 3,
+      pinnedIdentities,
+      progressedIdentities: legalCandidates,
+    });
+
+  ok('STEP 1 — with everything legal, the in-season hinge is RDLs',
+    anchored(chain).identity === chain[0], anchored(chain).identity);
+  ok('STEP 2 — RDLs gone (excluded, injured out or absent kit) → Trap Bar Deadlift',
+    anchored(chain.slice(1)).identity === chain[1], anchored(chain.slice(1)).identity);
+  ok('STEP 3 — both preferred gone → conventional Deadlift, and only then',
+    anchored(chain.slice(2)).identity === chain[2], anchored(chain.slice(2)).identity);
+  ok('and the anchor reports itself as phase-anchored, not as an ordinary retention',
+    anchored(chain).reason === 'phase_anchored', anchored(chain).reason);
+
+  /*
+   * RULING ORDER: preference (2) outranks phase priority (3). An athlete who
+   * explicitly prefers a legal hinge gets it, in-season anchor or not.
+   */
+  const preferred = anchored(chain, [chain[1]]);
+  ok('AN EXPLICIT PIN OUTRANKS THE PHASE ANCHOR — preference is step 2, phase is step 3',
+    preferred.identity === chain[1],
+    `${preferred.identity} — the athlete asked for Trap Bar Deadlift`);
+  ok('but a pin still cannot reach an illegal exercise',
+    anchored(chain.slice(0, 2), [chain[2]]).identity !== chain[2],
+    'a pin selected an exercise that was not in the legal list');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[15f] PRE/OFF-SEASON KEEPS THE BROADER ROTATION');
+
+{
+  /* *"The broader main-lift rotation remains available."* The pre-season athlete
+   * built at the top of this file must still walk RDLs → Trap Bar → Deadlift. */
+  const chain = ['RDLs', 'Trap Bar Deadlift', 'Deadlift'].map(composedIdentityFor);
+  const walk = [1, 2, 3, 4, 5, 6].map((b) => decideRotation({
+    legalCandidates: chain,
+    retentionEligible: true,
+    phaseAnchored: false,
+    blockNumber: b,
+    pinnedIdentities: [],
+    progressedIdentities: chain,
+  }).identity);
+  ok('pre/off-season still rotates the hinge two blocks at a time',
+    JSON.stringify(walk) === JSON.stringify([
+      chain[0], chain[0], chain[1], chain[1], chain[2], chain[2],
+    ]),
+    walk.join(' → '));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
 console.log('\n[16] NO LEGAL ALTERNATIVE — RULING 3, AND THE GAP IS NAMED');
 
 {
@@ -957,6 +1082,7 @@ console.log('\n[16] NO LEGAL ALTERNATIVE — RULING 3, AND THE GAP IS NAMED');
   const b2 = decideRotation({
     legalCandidates: only,
     retentionEligible: false,
+    phaseAnchored: false,
     blockNumber: 2,
     pinnedIdentities: [],
     progressedIdentities: [],

@@ -387,15 +387,44 @@ function experiencePreferred(
 }
 
 /**
- * ⚠ **SAM'S HINGE PRIORITY, 2026-08-17.** *"prioritise RDLs and Trap Bar
- * Deadlift ahead of conventional Deadlift. Rotate legally between the preferred
- * options; conventional Deadlift remains available but is third priority."*
+ * ⚠ **THE CANONICAL SELECTION ORDER — SAM, 2026-08-17.**
  *
- * An ORDERING, never a ban: the rotation owner walks the list, so putting the
- * two preferred lifts first makes them the ones it cycles between while
- * conventional Deadlift stays reachable behind them.
+ *   1. equipment, injury, active exclusion and EXPERIENCE legality
+ *   2. explicit athlete preference / pin
+ *   3. PHASE-SPECIFIC exercise priority
+ *   4. role-specific rotation cadence and recent history
+ *   5. a stable deterministic tie-break, only after all of the above
+ *
+ * *"Selection remains deterministic, but it must be context-sensitive rather
+ * than a global exercise carousel."* Steps 1 and 3 are applied here, in that
+ * order; step 2 is applied inside `decideRotation` (`pinnedFirst`) so that a pin
+ * lands in FRONT of the phase's own preference; steps 4 and 5 are the cursor
+ * walk. Reading the composer top to bottom is reading the order.
+ *
+ * **HINGE PRIORITY IS AN ORDERING, NEVER A BAN.** *"prioritise RDLs and Trap Bar
+ * Deadlift ahead of conventional Deadlift... conventional Deadlift remains
+ * available but is third priority"* and *"Do not select conventional Deadlift
+ * merely to manufacture variety."* Putting the preferred two first is what makes
+ * the fallback chain fall out for free — conventional Deadlift is reached only
+ * when neither preferred option is legal, or when the pre/off-season cursor
+ * genuinely walks that far.
  */
 const HINGE_PRIORITY: readonly string[] = ['RDLs', 'Trap Bar Deadlift'];
+
+/**
+ * Slots the SEASON PHASE pins to one movement, overriding the two-block cap.
+ *
+ * *"RDLs are the default bilateral hinge. An in-season RDL must not rotate out
+ * merely because two blocks elapsed."* In-season the athlete is playing; the
+ * bilateral hinge is there for continuity, not variety, and the variety comes
+ * from the single-leg and accessory rows instead.
+ *
+ * Pre- and off-season are deliberately absent: *"The broader main-lift rotation
+ * remains available."*
+ */
+function phaseAnchorsSlot(slot: SessionSlot, seasonPhase: SeasonPhase): boolean {
+  return seasonPhase === 'In-season' && slot === 'hinge';
+}
 
 /**
  * The slots whose exercise may be RETAINED for a second consecutive block.
@@ -1210,10 +1239,12 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
        * so this decides only who may stay for a SECOND one. Two questions, two
        * predicates, rather than one doing both jobs. */
       const retentionEligible = MAIN_BILATERAL_SLOTS.has(slot);
+      const phaseAnchored = phaseAnchorsSlot(slot, inputs.seasonPhase);
       const countsTowardBudget = slotCountsTowardSetBudget(slot);
       const rotation = decideRotation({
         legalCandidates: countsTowardBudget ? legal : preferred,
         retentionEligible,
+        phaseAnchored,
         blockNumber: inputs.blockNumber,
         pinnedIdentities: inputs.pinnedIdentities,
         progressedIdentities: inputs.progressedIdentities,

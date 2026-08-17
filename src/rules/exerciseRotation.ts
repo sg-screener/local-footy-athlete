@@ -135,6 +135,8 @@ export type RotationReason =
   | 'history_does_not_support_retention'
   /** Single-leg and accessory slots rotate at every new block, never retained. */
   | 'accessory_cadence'
+  /** The season phase anchors this slot to one movement; the cap does not apply. */
+  | 'phase_anchored'
   /* ⚠ `previous_choice_not_legal_now` LIVED HERE AND IS GONE, NOT DEPRECATED.
    * The cursor walks `ordered`, which IS the already-legal candidate list, so an
    * exercise the athlete has since excluded or lost the kit for is simply absent
@@ -170,6 +172,24 @@ export interface RotationInputs {
    * a well-progressed lift is allowed to stay for a second one.
    */
   readonly retentionEligible: boolean;
+  /**
+   * Does the SEASON PHASE anchor this slot to one movement?
+   *
+   * ⚠ **PHASE SPECIFICITY OUTRANKS THE TWO-BLOCK CAP.** Sam, 2026-08-17:
+   * *"RDLs are the default bilateral hinge. An in-season RDL must not rotate out
+   * merely because two blocks elapsed. Phase specificity overrides the ordinary
+   * two-block rotation cap here."*
+   *
+   * When true the slot takes the FIRST candidate in the ordered list every block
+   * and never advances. The ordering is what makes the fallback chain fall out
+   * for free: pin first, then the phase's priority order — so an in-season hinge
+   * resolves to RDLs, or to Trap Bar Deadlift when RDLs are excluded, injured
+   * out or absent from the kit, or to conventional Deadlift only when neither of
+   * the preferred two is legal. **Nothing here selects conventional Deadlift to
+   * manufacture variety** — it is reached only by both preferred options being
+   * unavailable.
+   */
+  readonly phaseAnchored: boolean;
   /** 1-based block number. The deload shares its build block's number. */
   readonly blockNumber: number;
   /** Exercises the athlete prefers, as canonical identities. */
@@ -249,6 +269,22 @@ export function decideRotation(inputs: RotationInputs): RotationDecision {
       reason: 'single_legal_candidate',
       cadenceIdentity: ordered[0],
       pinBiased: pins.has(ordered[0]),
+    };
+  }
+
+  /* ── PHASE ANCHOR ─────────────────────────────────────────────────────────
+   * Answered before the walk, because an anchored slot has no cursor at all.
+   * `ordered[0]` is the athlete's pin when they have set one on a legal option
+   * (ruling order: preference outranks phase priority), and otherwise the
+   * phase's own first choice. */
+  if (inputs.phaseAnchored) {
+    return {
+      identity: ordered[0],
+      kind: inputs.blockNumber <= 1 ? 'first_block' : 'retained',
+      reason: inputs.blockNumber <= 1 ? 'no_previous_block' : 'phase_anchored',
+      cadenceIdentity: ordered[0],
+      pinBiased: pins.has(ordered[0])
+        && inputs.legalCandidates.indexOf(ordered[0]) !== ordered.indexOf(ordered[0]),
     };
   }
 

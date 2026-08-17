@@ -14,6 +14,7 @@ cd "$(dirname "$0")/.."
 
 OWNER=src/rules/exerciseRotation.ts
 COMPOSER=src/rules/composeWeek.ts
+COVERAGE=src/rules/sessionSlotCoverage.ts
 
 # ⚠ **RESTORE FROM OUR OWN BACKUP, NEVER FROM GIT.**
 #
@@ -25,9 +26,11 @@ COMPOSER=src/rules/composeWeek.ts
 BACKUP_DIR="$(mktemp -d)"
 cp "$OWNER" "$BACKUP_DIR/owner.ts"
 cp "$COMPOSER" "$BACKUP_DIR/composer.ts"
+cp "$COVERAGE" "$BACKUP_DIR/coverage.ts"
 restore() {
   cp "$BACKUP_DIR/owner.ts" "$OWNER"
   cp "$BACKUP_DIR/composer.ts" "$COMPOSER"
+  cp "$BACKUP_DIR/coverage.ts" "$COVERAGE"
 }
 cleanup() { restore; rm -rf "$BACKUP_DIR"; }
 trap cleanup EXIT
@@ -153,6 +156,35 @@ mutate_in "$COMPOSER" "hinge priority is dropped" \
 mutate_in "$COMPOSER" "single-leg slots become retention-eligible" \
   "      const retentionEligible = MAIN_BILATERAL_SLOTS.has(slot);" \
   "      const retentionEligible = slotCountsTowardSetBudget(slot);"
+
+# 12. PHASE PRIORITY IS IGNORED — the in-season hinge rejoins the ordinary
+#     rotation and RDLs get dropped at the cap.
+mutate "the phase anchor is ignored" \
+  "  if (inputs.phaseAnchored) {" \
+  "  if (false) {"
+
+# 13. THE PHASE ANCHOR OUTRANKS THE ATHLETE'S PIN — ruling order 2 before 3 is
+#     inverted, so an explicit preference stops being honoured in-season.
+mutate "the phase anchor outranks the athlete's pin" \
+  "  const ordered = pinnedFirst(inputs.legalCandidates, inputs.pinnedIdentities);" \
+  "  const ordered = inputs.phaseAnchored ? [...inputs.legalCandidates] : pinnedFirst(inputs.legalCandidates, inputs.pinnedIdentities);"
+
+# 14. THE PHASE ANCHOR IS APPLIED IN EVERY PHASE — pre/off-season lose the
+#     broader main-lift rotation.
+mutate_in "$COMPOSER" "the phase anchor is applied in every season" \
+  "  return seasonPhase === 'In-season' && slot === 'hinge';" \
+  "  return slot === 'hinge';"
+
+# 15. SINGLE-LEG RDL IS COUNTED AS THE BILATERAL HINGE. The authored law is that
+#     a unilateral lift fills its single-leg slot and NOT the bilateral one; this
+#     removes the separation so a Single-Leg RDL claims the heavy-hinge exposure.
+#     (An earlier version of this mutation added `single_leg_hip` to the
+#     retention set instead and reddened NOTHING — with a one-exercise pool,
+#     retention eligibility there changes no identity. Inert, not uncaught.)
+mutate_in "$COVERAGE" "Single-Leg RDL counts as the bilateral hinge" \
+  "      if (unilateral) out.push('single_leg_hip');
+      else out.push('hinge');" \
+  "      out.push('hinge');"
 
 restore
 echo ""
