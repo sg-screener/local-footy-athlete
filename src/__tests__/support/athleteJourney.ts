@@ -1,0 +1,744 @@
+/**
+ * THE COMPLETE ATHLETE JOURNEY — one real athlete, production doors only.
+ *
+ * Sam's mission, 2026-08-17: *"Prove and complete one real athlete journey
+ * through the production app: cold start → onboarding → Block 1 → athlete
+ * actions and feedback → program adjustment → Block 2 → restart/rebuild. Use
+ * production builders and real app doors—not hand-built state."*
+ *
+ * ## WHY THIS EXISTS WHEN THREE INSTRUMENTS ALREADY WALK PART OF IT
+ *
+ * `scripts/simulate-changeover.ts` walks the clock and records sessions through
+ * the one live outcome writer. `scripts/print-week.ts` runs the real read chain.
+ * `blockTwoExplanationDeliveryTests` crosses a real block boundary. **None of
+ * them enters through the door a real athlete enters through.**
+ *
+ * The changeover script installs block 1 with a bare `generateProgramLocally` +
+ * `commitRebuiltProgram` pair of its own — a second copy of a job production
+ * splits between two owners — and the block-two suites roll the block with
+ * `acceptBlock` rather than `rolloverProgramBlock`. Each is right for what it
+ * was built for. But a journey harness that installs block 1 its own way cannot
+ * see a defect in the way the APP installs block 1, and that is exactly the
+ * defect this file found first (see `RECORD_SELECTIONS` below).
+ *
+ * So this module owns ONE rule: **every state change goes through the function
+ * the athlete's tap reaches, and the function is named beside the call.** No
+ * `setState`, no hand-built `ScheduleState`, no feedback record written into
+ * storage. Where a door refuses, the refusal is returned and reported — a
+ * history the app would not have produced is worth nothing.
+ *
+ * ## THE DOORS, AND WHO IN THE APP CALLS THEM
+ *
+ * | journey step | door | the app's own caller |
+ * | --- | --- | --- |
+ * | cold start | `resetStoresToFreshInstall` | a fresh install |
+ * | onboarding answers | `updateOnboardingData` | every onboarding step screen |
+ * | onboarding accepted | `completeOnboarding` | `CompleteScreen.tsx:426` |
+ * | block 1 authored | `generateProgramFromProfile` | `CompleteScreen.tsx:302` |
+ * | block 1 installed | `seedOnboardingProgram` | `CompleteScreen.tsx:408` |
+ * | a day passing | `setDevE2EClock` | `DevE2EClock`, the app's one source of now |
+ * | session recorded | `commitSessionOutcomeTransaction` | `useHomeScreen.ts:1370`, `SessionFeedbackPanel.tsx:308` |
+ * | a load typed in | `programStore.setWeightOverride` | `useDayWorkout.ts:218` |
+ * | exercise left out | `applyExerciseExclusionDecision` | the day screen's Remove, My Status, the coach |
+ * | exercise restored | `restoreExcludedExercise` | My Status' Restore |
+ * | swap / remove / readiness | `executeProgramControlActionDurably` | every program-control surface |
+ * | block rolled over | `rolloverProgramBlock` | `useHomeScreen`, on the day the block ends |
+ * | app relaunched | `runQuiescentBoot` | `appHydrationGate.ts:190` |
+ * | what the athlete reads | `buildProgramTabProjectedWeek` → `project` | `useSchedule.projectWeekFor` |
+ *
+ * ## ⚠ THE HEADLESS BOOTSTRAP IS THE CALLER'S JOB, NOT THIS FILE'S
+ *
+ * `__DEV__` must be TRUE before any app import or `setDevE2EClock` returns null
+ * *silently* and every door reads the wall clock
+ * (`DevE2EClock.isDevE2EClockAvailable`). This module therefore does NOT set
+ * `__DEV__` at module scope — importing a module that does (`print-week.ts` sets
+ * it false) would win over a caller that set it true, which is how a run comes
+ * to report simulated dates while walking the real today. `setJourneyClock`
+ * re-asserts it on every call and then ASSERTS `todayISOLocal()` agrees.
+ */
+
+import type { OnboardingData, TrainingProgram, Workout } from '../../types/domain';
+import type { ResolvedDay } from '../../utils/sessionResolver';
+
+import {
+  DEV_E2E_CAMPAIGN_TIME_ZONE,
+  createDevE2EClockReceipt,
+  devE2EAnchorInstantForDate,
+  setDevE2EClock,
+} from '../../dev/e2e/DevE2EClock';
+import { todayISOLocal } from '../../utils/appDate';
+import { generateProgramFromProfile } from '../../services/api/generateProgram';
+import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
+import { useProgramStore } from '../../store/programStore';
+import { useProfileStore } from '../../store/profileStore';
+import { useWorkoutLogStore } from '../../store/workoutLogStore';
+import { useBlockSelectionHistoryStore } from '../../store/blockSelectionHistoryStore';
+import { addDaysISO, getProgramBlockRolloverStatus } from '../../utils/programBlockState';
+import { rolloverProgramBlock } from '../../utils/programBlockRollover';
+import { buildRolloverAcknowledgment } from '../../utils/readinessAcknowledgment';
+import { buildScheduleStateImperative } from '../../utils/coachWeekDiff';
+import { resolveWeekWithConditioning } from '../../utils/sessionResolver';
+import { buildProgramTabProjectedWeek } from '../../utils/visibleProgramReadModel';
+import { project } from '../../rules/projectVisibleWeek';
+import { executeProgramControlActionDurably } from '../../utils/programControlActions';
+import {
+  applyExerciseExclusionDecision,
+  restoreExcludedExercise,
+} from '../../utils/exerciseExclusionOwner';
+import {
+  commitSessionOutcomeTransaction,
+  createRecordSessionOutcomeIntentFromFeedback,
+  resolveSessionOutcomeTarget,
+} from '../../store/sessionOutcomeTransaction';
+import { flushPendingStorageWrites } from '../../store/asyncStorageCompat';
+import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../../utils/strengthLogging';
+import { buildSessionFeedbackPayload } from '../../utils/sessionFeedbackForm';
+import { getSessionComponents } from '../../utils/sessionComponents';
+import { buildStrengthWorkoutHistoryFromFeedback } from '../../utils/strengthProgressionIntegration';
+import { resetStoresToFreshInstall } from './freshInstallStores';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QUIET
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function quiet<T>(body: () => T): T {
+  const { warn, error, log, info, debug } = console;
+  console.warn = console.error = console.log = console.info = console.debug =
+    (() => undefined) as never;
+  try { return body(); } finally {
+    console.warn = warn; console.error = error; console.log = log;
+    console.info = info; console.debug = debug;
+  }
+}
+
+export async function quietAsync<T>(body: () => Promise<T>): Promise<T> {
+  const { warn, error, log, info, debug } = console;
+  console.warn = console.error = console.log = console.info = console.debug =
+    (() => undefined) as never;
+  try { return await body(); } finally {
+    console.warn = warn; console.error = error; console.log = log;
+    console.info = info; console.debug = debug;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE CLOCK
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Move the app's own today. Load-bearing, both lines of it.
+ *
+ * The `__DEV__` re-assertion is not defensive noise: `scripts/print-week.ts`
+ * and `athleteActionWalkerTests.ts` both set it FALSE at module scope, and that
+ * assignment wins over a caller's, so importing either one silently disarms the
+ * clock. The `todayISOLocal()` check is what turns "we passed a date around"
+ * into "time passed in the app".
+ */
+export function setJourneyClock(dateISO: string): void {
+  (global as unknown as { __DEV__: boolean }).__DEV__ = true;
+  const applied = setDevE2EClock(createDevE2EClockReceipt({
+    seedId: 'standard-in-season-week',
+    anchorInstant: devE2EAnchorInstantForDate(dateISO, DEV_E2E_CAMPAIGN_TIME_ZONE),
+    timezone: DEV_E2E_CAMPAIGN_TIME_ZONE,
+    createdAt: '2026-08-13T00:00:00.000Z',
+  }));
+  if (!applied) {
+    throw new Error('DevE2EClock REFUSED — __DEV__ is not true in this process, so every '
+      + 'door below would read the wall clock and this journey would be a lie.');
+  }
+  const appToday = todayISOLocal();
+  if (appToday !== dateISO) {
+    throw new Error(`the app's clock says ${appToday} but the journey is on ${dateISO} — `
+      + 'DevE2EClock is not driving appDate.');
+  }
+}
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+export function weekdayName(dateISO: string): string {
+  return WEEKDAYS[new Date(`${dateISO}T12:00:00Z`).getUTCDay()];
+}
+
+export function mondayFor(dateISO: string): string {
+  const parsed = new Date(`${dateISO}T12:00:00Z`);
+  return addDaysISO(dateISO, -((parsed.getUTCDay() + 6) % 7));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COLD START → ONBOARDING → BLOCK 1
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⚠ **`recordSelections` IS THE ONBOARDING DOOR'S MISSING ARGUMENT, AND IT IS A
+ * PRODUCTION DEFECT THIS HARNESS EXISTS TO HOLD.**
+ *
+ * Read `CompleteScreen.tsx:302`. It calls `generateProgramFromProfile` with
+ * `weekAcceptance` and `todayISO` and nothing else, and `seedOnboardingProgram`
+ * then INSTALLS that program. Every other committing caller in the app passes
+ * `recordSelections: true` and says so in the same comment —
+ * `quiescentBoot.ts:535`, `acceptedStateTransaction.ts:1953`,
+ * `profileProgramTransaction.ts:205`, `weekRebuild.ts:649`,
+ * `temporarySourceFactTransaction.ts:534`. The first block every athlete is ever
+ * given is the one block whose selections are never recorded.
+ *
+ * This harness calls the door the way the screen calls it. `installBlockOne`
+ * takes no flag and offers no "record it anyway" option, because a harness that
+ * quietly supplies the missing argument cannot see the defect — it becomes the
+ * fixture whose input cannot exhibit the fault.
+ */
+export const RECORD_SELECTIONS_OWNER = 'src/screens/onboarding/CompleteScreen.tsx';
+
+export interface JourneyInstallResult {
+  program: TrainingProgram;
+  /** The Monday the installed program starts on. */
+  blockOneStart: string;
+  /** How many selection records exist after install — 0 is the defect above. */
+  recordedSelectionCount: number;
+  onboardingRefusal: string | null;
+}
+
+/**
+ * Cold start, onboarding, block 1 — through `CompleteScreen`'s own three calls,
+ * in `CompleteScreen`'s own order.
+ *
+ * The screen generates FIRST and completes onboarding SECOND
+ * (`generateProgram()` runs in a mount effect at `:268`; `handleStartTraining`
+ * calls `completeOnboarding()` at `:426`). That order is reproduced rather than
+ * tidied, because `completeOnboarding` is what flips `isOnboardingComplete`, and
+ * `rebuildDerivedWorld` returns early without it — so the order decides whether
+ * a later relaunch regenerates at all.
+ */
+export async function coldStartThroughOnboarding(args: {
+  profile: OnboardingData;
+  installDayISO: string;
+}): Promise<JourneyInstallResult> {
+  resetStoresToFreshInstall('athlete-journey:cold-start');
+  useBlockSelectionHistoryStore.setState({ selections: [] } as never);
+
+  setJourneyClock(args.installDayISO);
+
+  // THE ANSWERS. One call, as the onboarding steps accumulate them.
+  useProfileStore.getState().updateOnboardingData(args.profile);
+
+  // THE PROGRAM, through the screen's own generator call — argument for argument.
+  const program = await quietAsync(() => generateProgramFromProfile(args.profile, {
+    weekAcceptance: 'restoration',
+    todayISO: args.installDayISO,
+  } as never)) as TrainingProgram;
+
+  // THE INSTALL, through the screen's own installer.
+  quiet(() => seedOnboardingProgram({
+    onboardingData: args.profile,
+    program,
+    todayISO: args.installDayISO,
+  }));
+
+  // ACCEPTANCE LAST, as the screen does it.
+  const outcome = quiet(() => useProfileStore.getState().completeOnboarding()) as
+    { ok?: boolean; message?: string } | undefined;
+  const onboardingRefusal = outcome && outcome.ok === false
+    ? String(outcome.message ?? 'completeOnboarding refused without a message')
+    : null;
+
+  await quietAsync(() => flushPendingStorageWrites());
+
+  const installed = useProgramStore.getState().currentProgram ?? program;
+  return {
+    program: installed,
+    blockOneStart: String(installed.microcycles[0]?.startDate ?? args.installDayISO).slice(0, 10),
+    recordedSelectionCount: useBlockSelectionHistoryStore.getState().selections.length,
+    onboardingRefusal,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WHAT THE ATHLETE SEES — the read chain, never a hand-built projection
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * The two calls `useSchedule.projectWeekFor` makes, on LIVE store state.
+ *
+ * ⚠ **CALL THIS WHILE THE STORE IS IN THE WEEK YOU MEAN.** Both
+ * `buildProgramTabProjectedWeek` and `project` read the live stores, so
+ * capturing week 1 after the walk has reached week 5 prints week 5 under a week
+ * 1 heading — a before/after pair that is secretly one thing twice.
+ */
+export function visibleProjection(weekStartISO: string, todayISO: string): {
+  explanations: string[];
+  days: VisibleDay[];
+} {
+  const weekDays = quiet(() => buildProgramTabProjectedWeek({
+    mondayISO: weekStartISO,
+    todayISO,
+    state: buildScheduleStateImperative(),
+    overrideContexts: useProgramStore.getState().overrideContexts ?? {},
+  }));
+  const projected = quiet(() => project({
+    week: weekDays as never,
+    weekStart: weekStartISO,
+    program: useProgramStore.getState().currentProgram as never,
+  })) as unknown as { explanations?: readonly unknown[] };
+  return {
+    explanations: (projected.explanations ?? []).map(String),
+    days: resolvedDays(weekStartISO, todayISO),
+  };
+}
+
+export interface VisibleRow {
+  name: string;
+  sets: number | null;
+  repsMin: number | null;
+  repsMax: number | null;
+  weightKg: number | null;
+}
+
+export interface VisibleDay {
+  dateISO: string;
+  weekday: string;
+  sessionName: string | null;
+  rows: VisibleRow[];
+}
+
+/** The resolved week — the same resolver every app surface reads. */
+export function resolvedDays(weekStartISO: string, _todayISO?: string): VisibleDay[] {
+  const week = quiet(() => resolveWeekWithConditioning(weekStartISO, buildScheduleStateImperative()));
+  return week
+    .filter((day) => day.date >= weekStartISO && day.date <= addDaysISO(weekStartISO, 6))
+    .slice()
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .map((day) => {
+      const workout = (day as ResolvedDay).workout as Workout | null | undefined;
+      return {
+        dateISO: day.date,
+        weekday: weekdayName(day.date),
+        sessionName: workout?.name ?? null,
+        // `row.exercise?.name ?? row.name` is the app's own read
+        // (`projectVisibleWeek.ts:396`, `sessionComponents.ts:566`). Reading
+        // `row.name` alone prints every row as unnamed and reads as a defect.
+        rows: (workout?.exercises ?? []).map((row) => {
+          const nested = (row as { exercise?: { name?: string } }).exercise;
+          const num = (value: unknown): number | null =>
+            (Number.isFinite(value) ? Number(value) : null);
+          return {
+            name: String(nested?.name ?? (row as { name?: string }).name ?? '(NO NAME ON ROW)'),
+            sets: num((row as { prescribedSets?: number }).prescribedSets),
+            repsMin: num((row as { prescribedRepsMin?: number }).prescribedRepsMin),
+            repsMax: num((row as { prescribedRepsMax?: number }).prescribedRepsMax),
+            // WHERE PROGRESSION LANDS, and the athlete-facing surface does not
+            // print it — so a report of sets and reps alone is blind to a load
+            // change, which is the whole subject of a block boundary.
+            weightKg: num((row as { prescribedWeightKg?: number }).prescribedWeightKg),
+          };
+        }),
+      };
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// A DAY PASSING, AND A SESSION RECORDED
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface DayIntent {
+  /** Does the athlete open the app and record at all? A miss leaves NO record. */
+  record: boolean;
+  completion: 'full' | 'partial' | 'skipped';
+  feeling: 'very_easy' | 'easy' | 'good' | 'hard' | 'very_hard';
+  soreness: 'none' | 'mild' | 'moderate' | 'high';
+  /**
+   * SESSION EFFORT IS 1-10, NOT 1-5, and a 1-5 value is silently valid on it.
+   * `isSessionEffortRating` enforces 1..10; `feedbackAdapter` treats `<= 5` as
+   * the EASY arm and ADDS volume, so `difficulty: 3` meaning "middling" tells
+   * the app the session was easy. See `docs/EFFORT_SCALE_INVERSION_2026-08-12.md`.
+   */
+  difficulty: number;
+  /** Does the athlete type in what they lifted? Progression reads these. */
+  logWeights?: boolean;
+  absenceReason?: string;
+}
+
+export type DayOutcome =
+  | { result: 'recorded'; sessionName: string | null }
+  | { result: 'no_session'; sessionName: null; detail: string | null }
+  | { result: 'not_recorded'; sessionName: string | null; detail: string | null }
+  | { result: 'refused'; sessionName: string | null; detail: string }
+  | { result: 'threw'; sessionName: string | null; detail: string };
+
+/**
+ * Record one day through the app's ONE live outcome writer.
+ *
+ * ⚠ **A `full` COMPLETION WITH NO `feedback.strength` IS INVISIBLE TO
+ * PROGRESSION.** `buildStrengthWorkoutHistoryFromFeedback`
+ * (`strengthProgressionIntegration.ts:195`) keeps a session only when
+ * `strength` is non-empty or the session was skipped. Thirty sessions recorded
+ * without it once produced a week 5 identical across four different histories,
+ * which reads exactly like "the app ignores training" and was the harness
+ * forgetting to log what was lifted.
+ *
+ * Both builders below are `SessionFeedbackPanel.tsx:880-886`'s own, in its order.
+ */
+export async function recordDay(dateISO: string, intent: DayIntent): Promise<DayOutcome> {
+  let target: { workout: Workout } | null = null;
+  try {
+    target = resolveSessionOutcomeTarget(dateISO) as unknown as { workout: Workout };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // `session_not_found` is a REST DAY, not a defect. The app says so too.
+    return {
+      result: 'no_session',
+      sessionName: null,
+      detail: /session_not_found|No visible session/.test(message) ? null : message,
+    };
+  }
+  const sessionName = (target.workout as { name?: string }).name ?? null;
+  if (!intent.record) {
+    return { result: 'not_recorded', sessionName, detail: intent.absenceReason ?? null };
+  }
+
+  const components = quiet(() => getSessionComponents(target!.workout as never));
+
+  let loggedSets: Record<string, unknown[]> | undefined;
+  if (intent.logWeights) {
+    typeLoadsForSession(dateISO, target.workout);
+    loggedSets = quiet(() => collectLoggedStrengthSets(
+      target!.workout, useWorkoutLogStore.getState().loggedSets as never, undefined,
+    )) as Record<string, unknown[]> | undefined;
+  }
+
+  // `weightOverrides` is keyed BY DATE FIRST (`programStore.ts:1940`) and the
+  // panel hands over one day's slice (`SessionFeedbackPanel.tsx:474`). Passing
+  // the whole map resolves no override at all, silently.
+  const strength = quiet(() => buildStrengthPerformanceLogs(
+    target!.workout,
+    useProgramStore.getState().weightOverrides?.[dateISO] ?? {},
+    intent.completion,
+    loggedSets as never,
+  ));
+
+  // Every component answered: `canSaveFeedbackDraft` refuses a draft holding a
+  // null component answer, and a half-answered form is not submittable either.
+  const componentCompletions: Record<string, typeof intent.completion> = {};
+  for (const component of components) {
+    componentCompletions[String(component.id)] = intent.completion;
+  }
+
+  const feedback = quiet(() => buildSessionFeedbackPayload({
+    dateStr: dateISO,
+    completion: intent.completion,
+    componentCompletions,
+    components,
+    feeling: intent.feeling,
+    soreness: intent.soreness,
+    difficulty: intent.difficulty,
+    partialReason: null,
+    skipReason: null,
+    ...(strength.length > 0 ? { strength } : {}),
+  } as never));
+  if (!feedback) {
+    return {
+      result: 'refused',
+      sessionName,
+      detail: 'buildSessionFeedbackPayload returned null — the app would not accept this '
+        + `answer set (completion=${intent.completion}, feeling=${intent.feeling}, `
+        + `soreness=${intent.soreness}, difficulty=${intent.difficulty})`,
+    };
+  }
+
+  const recordIntent = createRecordSessionOutcomeIntentFromFeedback({
+    date: dateISO,
+    workout: target.workout,
+    feedback,
+    source: {
+      entryPoint: 'tap',
+      surface: 'athlete_journey',
+      interpretedIntent: 'record_session_outcome',
+      traceId: `athlete-journey:${dateISO}`,
+    } as never,
+  });
+  try {
+    const result = await quietAsync(() => commitSessionOutcomeTransaction(recordIntent));
+    if (!result.ok) {
+      return {
+        result: 'refused',
+        sessionName,
+        detail: `${(result as { code?: string }).code ?? 'refused'}: ${
+          (result as { message?: string }).message ?? '(no message)'}`,
+      };
+    }
+    return { result: 'recorded', sessionName };
+  } catch (error) {
+    return {
+      result: 'threw',
+      sessionName,
+      detail: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * THE ATHLETE TYPES IN WHAT THEY LIFTED — `useDayWorkout.ts:218`'s own writer.
+ *
+ * Logging the PRESCRIBED load is the honest "did exactly what the card said"
+ * case: the athlete confirming the prescription, not a performance this harness
+ * invented.
+ */
+export function typeLoadsForSession(dateISO: string, workout: Workout): number {
+  const logStore = useWorkoutLogStore.getState();
+  const programStore = useProgramStore.getState() as unknown as {
+    setWeightOverride: (date: string, exerciseId: string, weightKg: number) => void;
+  };
+  let typed = 0;
+  for (const row of (workout.exercises ?? []) as unknown as {
+    id: string; exerciseId: string; prescribedSets?: number;
+    prescribedRepsMax?: number; prescribedWeightKg?: number;
+  }[]) {
+    const weight = Number(row.prescribedWeightKg);
+    if (!Number.isFinite(weight) || weight <= 0) continue;
+    const sets = Math.max(1, Number(row.prescribedSets) || 1);
+    for (let setNumber = 1; setNumber <= sets; setNumber += 1) {
+      logStore.logSet(row.id, {
+        id: `journey:${dateISO}:${row.id}:${setNumber}`,
+        loggedWorkoutId: `journey:${dateISO}`,
+        workoutExerciseId: row.id,
+        setNumber,
+        actualReps: Number(row.prescribedRepsMax) || undefined,
+        actualWeightKg: weight,
+        createdAt: `${dateISO}T12:00:00.000Z`,
+        updatedAt: `${dateISO}T12:00:00.000Z`,
+      } as never);
+    }
+    programStore.setWeightOverride(dateISO, row.exerciseId, weight);
+    typed += 1;
+  }
+  return typed;
+}
+
+/**
+ * THE ATHLETE EDITS ONE LOAD — the same door, a DIFFERENT number.
+ *
+ * Distinct from `typeLoadsForSession` on purpose: confirming the prescription
+ * and overriding it are different athlete acts, and only the second can prove
+ * that the athlete's own number is what block 2 progresses from rather than the
+ * number the app suggested.
+ */
+export function editLoad(args: {
+  dateISO: string; exerciseId: string; weightKg: number;
+}): void {
+  (useProgramStore.getState() as unknown as {
+    setWeightOverride: (date: string, exerciseId: string, weightKg: number) => void;
+  }).setWeightOverride(args.dateISO, args.exerciseId, args.weightKg);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE OTHER DOORS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface DoorResult {
+  ok: boolean;
+  message: string;
+}
+
+/** Any program-control tap, through the real awaited executor. */
+export async function walkProgramControlDoor(
+  action: unknown,
+  context: { weekStartISO: string; todayISO: string },
+): Promise<DoorResult> {
+  const week = resolvedDaysRaw(context.weekStartISO);
+  const result = await quietAsync(() => executeProgramControlActionDurably(
+    action as never,
+    { visibleWeek: week as never, todayISO: context.todayISO },
+  ));
+  return {
+    ok: (result as { ok?: boolean })?.ok === true,
+    message: String((result as { message?: string })?.message ?? ''),
+  };
+}
+
+function resolvedDaysRaw(weekStartISO: string): ResolvedDay[] {
+  return quiet(() => resolveWeekWithConditioning(weekStartISO, buildScheduleStateImperative()))
+    .filter((day) => day.date >= weekStartISO && day.date <= addDaysISO(weekStartISO, 6))
+    .slice()
+    .sort((left, right) => left.date.localeCompare(right.date));
+}
+
+/** "Leave this exercise out" — the one transaction owner, with the scope answer. */
+export function leaveExerciseOut(args: {
+  exercise: string;
+  scope: 'today_only' | 'this_block' | 'until_changed';
+  decidedOnISO: string;
+  reason?: string;
+}) {
+  return applyExerciseExclusionDecision({
+    exercise: args.exercise,
+    scope: args.scope as never,
+    decidedOnISO: args.decidedOnISO,
+    ...(args.reason ? { reason: args.reason } : {}),
+  });
+}
+
+/** "Put it back" — the same owner, the other direction. */
+export function putExerciseBack(exercise: string) {
+  return restoreExcludedExercise(exercise);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE BLOCK BOUNDARY
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface RolloverOutcome {
+  fired: boolean;
+  refusal: string | null;
+  fromBlock: number | null;
+  toBlock: number | null;
+  nextBlockStart: string | null;
+}
+
+/**
+ * The app's own answer to a block ending. Asked every simulated day, exactly as
+ * `useHomeScreen` asks it, so the boundary is crossed on the day the app says it
+ * is crossed rather than on a day this harness chose.
+ */
+export function rolloverIfDue(todayISO: string): RolloverOutcome {
+  const store = useProgramStore.getState();
+  const status = getProgramBlockRolloverStatus({
+    program: store.currentProgram, dateISO: todayISO, blockState: store.blockState,
+  });
+  if (!status.needsRollover) {
+    return {
+      fired: false, refusal: null,
+      fromBlock: status.currentBlockNumber ?? null,
+      toBlock: null,
+      nextBlockStart: status.nextBlockStart ?? null,
+    };
+  }
+  try {
+    const rolled = quiet(() => rolloverProgramBlock({
+      baseProfile: useProfileStore.getState().onboardingData,
+      targetDateISO: todayISO,
+    }));
+    if (rolled.refusal) {
+      const ack = quiet(() => buildRolloverAcknowledgment(rolled));
+      return {
+        fired: false,
+        refusal: String((ack as { message?: string })?.message
+          ?? `refused: ${rolled.refusal.code}`),
+        fromBlock: status.currentBlockNumber ?? null,
+        toBlock: null,
+        nextBlockStart: status.nextBlockStart ?? null,
+      };
+    }
+    return {
+      fired: true, refusal: null,
+      fromBlock: status.currentBlockNumber ?? null,
+      toBlock: status.nextBlockNumber ?? null,
+      nextBlockStart: status.nextBlockStart ?? null,
+    };
+  } catch (error) {
+    return {
+      fired: false,
+      refusal: `rollover THREW: ${error instanceof Error ? error.message : String(error)}`,
+      fromBlock: status.currentBlockNumber ?? null,
+      toBlock: null,
+      nextBlockStart: status.nextBlockStart ?? null,
+    };
+  }
+}
+
+/** Point the athlete at the week they are in, as Monday arriving does. */
+export function followTheWeek(todayISO: string): string {
+  const monday = mondayFor(todayISO);
+  const program = useProgramStore.getState().currentProgram;
+  const next = program?.microcycles.find((m) => m.startDate.slice(0, 10) === monday);
+  if (next) useProgramStore.setState({ currentMicrocycle: next } as never);
+  return monday;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE CENSUS — the anti-vacuity check
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * "The transaction returned ok" is a claim about a CALL, not about a world.
+ *
+ * `storedFeedbackDays` high with `progressionHistoryEntries` at zero is the
+ * signature of a history the app cannot see, and every conclusion drawn about
+ * block 2 in that state is worthless.
+ */
+export interface JourneyCensus {
+  storedFeedbackDays: number;
+  feedbackWithStrengthLogs: number;
+  progressionHistoryEntries: number;
+  storedSorenessAnswers: number;
+  weightOverrideDays: number;
+  weightOverrideEntries: number;
+  recordedSelectionCount: number;
+  activeExclusions: number;
+}
+
+export function takeCensus(asOfISO: string): JourneyCensus {
+  const state = useProgramStore.getState() as unknown as {
+    sessionFeedback: Record<string, { strength?: unknown[]; soreness?: string | null }>;
+    weightOverrides: Record<string, Record<string, number | null>>;
+  };
+  const feedbackMap = state.sessionFeedback ?? {};
+  const entries = Object.values(feedbackMap);
+  const overrides = state.weightOverrides ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getAthleteExclusions } = require('../../store/athletePreferencesStore');
+  return {
+    storedFeedbackDays: entries.length,
+    feedbackWithStrengthLogs: entries.filter((e) => (e.strength?.length ?? 0) > 0).length,
+    progressionHistoryEntries: quiet(() => buildStrengthWorkoutHistoryFromFeedback(
+      feedbackMap as never, asOfISO,
+    )).length,
+    storedSorenessAnswers: entries.filter((e) => e.soreness != null && e.soreness !== 'none').length,
+    weightOverrideDays: Object.keys(overrides).length,
+    weightOverrideEntries: Object.values(overrides)
+      .reduce((total, day) => total + Object.keys(day ?? {}).length, 0),
+    recordedSelectionCount: useBlockSelectionHistoryStore.getState().selections.length,
+    activeExclusions: (getAthleteExclusions() as unknown[]).length,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RESTART
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * A REAL RELAUNCH, not a JSON round-trip.
+ *
+ * **The program is never persisted** — `programStore.partialize` writes inputs
+ * only, so a relaunch is a full REGENERATION plus a decision-ledger replay
+ * (`quiescentBoot.rebuildDerivedWorld`). That is why "survives restart" here
+ * means the regenerated week says the same thing, and why a generation defect
+ * re-executes on every single launch rather than being frozen into a stored week.
+ *
+ * The persisted envelope is snapshotted and restored around the store reset so
+ * the relaunch starts from the emptiness a real process death leaves, exactly as
+ * `tracing-the-six-lifecycle-boundaries-headlessly` records.
+ */
+export async function relaunchApp(args: {
+  storage: Map<string, string>;
+  todayISO: string;
+}): Promise<{ ok: boolean; error: string | null }> {
+  setJourneyClock(args.todayISO);
+  const snapshot = new Map(args.storage);
+
+  resetStoresToFreshInstall('athlete-journey:relaunch');
+  args.storage.clear();
+  for (const [key, value] of snapshot) args.storage.set(key, value);
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { PERSISTED_STORE_HYDRATION_REGISTRY } = require('../../store/appHydrationGate');
+  for (const entry of PERSISTED_STORE_HYDRATION_REGISTRY as { rehydrate: () => unknown }[]) {
+    await quietAsync(async () => { await entry.rehydrate(); });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { runQuiescentBoot } = require('../../store/quiescentBoot');
+  try {
+    await quietAsync(() => runQuiescentBoot());
+    return { ok: true, error: null };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}

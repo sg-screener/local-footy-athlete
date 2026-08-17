@@ -103,7 +103,92 @@ separates neither. Recorded here so the next reader does not bank it.
 **⚠ THE STANDING TRAP THIS SITS ON:** `a-conclusion-outlives-the-world-it-was-
 measured-in`. Every number above came from this worktree at this HEAD.
 
+## ⚠ CORRECTION — MY OWN `recordSelections` FINDING IS REFUTED
+
+**The claim in the commit above is FALSE and must not be carried forward.** I
+said the onboarding door installs block 1 without recording its selections.
+Measured through the real door (`generateProgramFromProfile` +
+`seedOnboardingProgram`, argument for argument as `CompleteScreen` calls them):
+
+```
+recorded block selections after install: 36
+```
+
+`seedOnboardingProgram` -> `setCurrentProgram` reaches
+`commitAcceptedStateTransaction`, whose own generation call
+(`acceptedStateTransaction.ts:1953`) passes `recordSelections: true`. **Rotation
+is not starved and block 2 does rotate** — 7 of 10 exercises change across the
+boundary, which is the approved contract's *"most exercises change when a new
+block begins"*.
+
+The reason I got it wrong is the reason this harness exists: I read the call site
+and reasoned forward instead of walking the door. `CompleteScreen.tsx:302` really
+does omit the argument; the install path supplies it one hop later.
+[[a-count-taken-for-a-record]], and this one is mine.
+
+## THE REAL DEFECT — MEASURED, ATTRIBUTED, AND HELD RED
+
+`npm run test:athlete-journey` — **11 passed, 3 failed** at
+`feat/complete-athlete-journey`. All three reds are one defect:
+
+**THE BLOCK-BOUNDARY COMPLETION GATE IS MEASURED AGAINST THE ATHLETE'S STATED
+INTENT, NOT AGAINST THE SESSIONS THE APP ACTUALLY PROGRAMMED.**
+
+The journey athlete asks for three gym days (Mon/Wed/Fri) in-season with a
+Saturday game. Friday is protected as G-1, so **the app programs TWO strength
+sessions a week — eight in the block.** They complete seven of the eight offered
+and miss one. Then:
+
+| | value | instrument |
+| --- | --- | --- |
+| gate denominator generation used | **12** | the export wrapped on the real rollover |
+| strength sessions the app offered | **8** | counted during the walk |
+| sessions completed | 7 | `readBlockHistory` |
+| recovery verdict | `good` | `readBlockHistory` |
+| `qualifies` with required=12 | **false** | `7 >= ceil(12 x 0.75) = 9` is false |
+| `qualifies` with required=8 | **true** | `7 >= ceil(8 x 0.75) = 6` |
+
+`readBlockHistory`'s gate is
+`completed >= ceil(requiredStrengthSessions * QUALIFYING_COMPLETION_RATIO)`, and
+**both** callers state that number as `plan.coreSessions * WEEKS_PER_BLOCK`
+(`generateProgram.ts:1660` and `:1813`). `plan.coreSessions` is the COACHING
+PLAN's strength-day count (`scheduleToCoachingPlan.ts:335`) — the intent. The
+week the app laid out carries its own count, and **the scheduler already owns
+it**: `weeklyScheduler.ts:1189` `requiredStrengthSessions: needed`, read at
+`schedulerExposureContract.ts:91`.
+
+**Two representations of "how many sessions were required", disagreeing** — the
+defect class this repo exists to fight. The consequence is not cosmetic:
+
+- every continuing lift stores `history_held` with `previousLoadKg ===
+  nextLoadKg` (`Leg Press` 125 -> 125, `RDLs` 80 -> 80, both read correctly from
+  the athlete's OWN recorded loads);
+- so the approved contract's first progression rule — *"When training is being
+  completed and recovery is good: increase load by the smallest practical
+  increment"* — **is unreachable for this athlete**, and it fails SILENTLY: the
+  boundary runs, reads their real 125 kg, and holds it;
+- and the same wrong denominator drives the missed-session ask
+  (`useBlockBoundaryPrompts.ts:165` computes it a THIRD way,
+  `currentSessionsPerWeek * WEEKS_PER_BLOCK`), so an athlete with perfect
+  attendance reads as 58% and would be asked whether their commitment is
+  unrealistic.
+
+**WHY NO EXISTING SUITE SEES THIS.** `blockTwoProgressionTests` and
+`blockTwoExplanationDeliveryTests` both hand `readBlockHistory` a history for an
+athlete whose asked-for days and programmed days AGREE (pre-season, three gym
+days, no fixture protection), so intent and delivery are the same number and the
+gate cannot be wrong. **The defect needs a week the app REDUCED, which only an
+in-season fixture-protected athlete produces.**
+
+## SECOND CLAIM, DELIBERATELY NOT BANKED
+
+`explanations shown: []` is **not** a delivery break. 40 rows are stored and all
+40 are `history_held` — nothing moved, so there is nothing to say. The projection
+is right to stay silent, and a suite that asserted "an explanation is always
+shown" would be asserting a defect. This is recorded because it looked like the
+`blockTwoExplanationDelivery` break and is not.
+
 ## WHAT I HAVE NOT TOUCHED
 
-No production file yet. `git status` before every commit; `git commit --
-<pathspec>` only.
+No production file yet — the three reds above are the base's behaviour, not
+mine. `git status` before every commit; `git commit -- <pathspec>` only.

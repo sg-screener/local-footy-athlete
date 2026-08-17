@@ -454,6 +454,7 @@
     "test:sprint-credit-evidence": "TZ=Australia/Melbourne sucrase-node src/__tests__/sprintCreditEvidenceTests.ts",
     "test:exercise-rotation": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseRotationTests.ts",
     "test:athlete-projection": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteVisibleProjectionTests.ts",
+    "test:athlete-journey": "TZ=Australia/Melbourne sucrase-node src/__tests__/completeAthleteJourneyTests.ts",
     "test:block-two-explanation-delivery": "TZ=Australia/Melbourne sucrase-node src/__tests__/blockTwoExplanationDeliveryTests.ts"
   },
   "dependencies": {
