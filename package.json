@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.compile.json",
     "test:compile": "node scripts/typecheck-gate.js",
     "print:week": "TZ=Australia/Melbourne sucrase-node scripts/print-week.ts",
+    "trace:equipment-scopes": "TZ=Australia/Melbourne sucrase-node scripts/trace-equipment-scopes.ts",
     "sim:changeover": "TZ=Australia/Melbourne sucrase-node scripts/simulate-changeover.ts",
     "test:scenarios": "sucrase-node src/__tests__/scenarioHarness.js",
     "test:scenarios:golden": "sucrase-node src/__tests__/scenarioHarness.js --golden",
