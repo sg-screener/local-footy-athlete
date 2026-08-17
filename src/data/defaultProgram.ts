@@ -1530,22 +1530,12 @@ function deloadPlanEntry(
     isHardExposure: false,
   };
 
-  if (entry.hasCombinedConditioning) {
-    const strengthFocus = stripConditioningSuffix(entry.focus);
-    return {
-      ...next,
-      focus: strengthFocus || entry.focus,
-      hasCombinedConditioning: false,
-      attachedConditioningKind: undefined,
-      conditioningFlavour: undefined,
-      conditioningCategory: undefined,
-      conditioningVariant: undefined,
-      conditioningFeel: undefined,
-      conditioningOffFeet: undefined,
-      ergModality: undefined,
-    };
-  }
-
+  // ⚠ **THIS MUST OUTRANK THE COMBINED-DAY BRANCH BELOW.** It used to sit under
+  // it, and once WC-138 put the sprint ON an upper strength day the combined
+  // branch fired first and wiped every conditioning field off the day — the
+  // deload week lost its sprint again and the week refused
+  // `sprint_high_speed_required_minimum:0`. The sprint is answered before any
+  // question about what else the day carries.
   // ── THE SPRINT IS REDUCED IN VOLUME, NEVER CONVERTED TO AEROBIC ──────────
   //
   // **Sam's ruling, 2026-08-17:** a mid/late off-season deload *"may remove or
@@ -1582,6 +1572,22 @@ function deloadPlanEntry(
       ...next,
       conditioningVariant: 'reduced',
       conditioningFeel: undefined,
+    };
+  }
+
+  if (entry.hasCombinedConditioning) {
+    const strengthFocus = stripConditioningSuffix(entry.focus);
+    return {
+      ...next,
+      focus: strengthFocus || entry.focus,
+      hasCombinedConditioning: false,
+      attachedConditioningKind: undefined,
+      conditioningFlavour: undefined,
+      conditioningCategory: undefined,
+      conditioningVariant: undefined,
+      conditioningFeel: undefined,
+      conditioningOffFeet: undefined,
+      ergModality: undefined,
     };
   }
 
