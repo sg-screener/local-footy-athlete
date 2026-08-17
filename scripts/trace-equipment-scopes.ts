@@ -32,10 +32,14 @@
  */
 
 /* eslint-disable import/first */
-declare global {
-  // eslint-disable-next-line no-var
-  var __DEV__: boolean;
-}
+// ⚠ **NO `declare global` HERE, DELIBERATELY.** `scripts/print-week.ts` — which
+// this file imports — already declares `__DEV__`, and a second declaration in
+// the same compilation scope is a `TS2451: Cannot redeclare block-scoped
+// variable` on BOTH files. It only appeared when `test:equipment-scopes` pulled
+// this script into the tests scope for the first time, so the compiler was the
+// only thing that could have found it. The assignment below needs no
+// declaration; it is what print-week's module scope does anyway, restated here
+// so this script's own run does not depend on import order.
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import { writeFileSync, mkdirSync } from 'fs';
@@ -49,7 +53,7 @@ import { resolve } from 'path';
 const composeWeekModule = require('../src/rules/composeWeek');
 const realComposeWeek = composeWeekModule.composeWeek;
 
-interface ComposeObservation {
+export interface ComposeObservation {
   readonly kit: readonly string[];
   readonly blockStartISO: string;
   readonly blockNumber: number;
@@ -165,7 +169,7 @@ const RETURN_DATE = '2026-08-17';           // Monday — HOME
 const NEXT_BLOCK_MONDAY = '2026-09-07';     // block 2
 
 /** The signed commercial-gym answer: every askable tag, every machine. */
-const COMMERCIAL_GYM = {
+export const COMMERCIAL_GYM = {
   tags: {
     barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have',
     bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have',
@@ -179,7 +183,7 @@ const COMMERCIAL_GYM = {
   answeredOn: '2026-08-01',
 } as const;
 
-function athlete(overrides: Partial<OnboardingData> = {}): OnboardingData {
+export function athlete(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
     firstName: 'Sam',
     ageRange: '22-26',
@@ -228,7 +232,7 @@ function clockAtPhaseWeek(phase: string, phaseWeekNumber: number, mondayISO: str
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** The AWAY SPAN door: `HomeScreenV2`'s away sheet → `set_schedule_modifier`. */
-function travelFact(from: string, until: string) {
+export function travelFact(from: string, until: string) {
   return createTemporaryScheduleFact({
     observedDate: from,
     scope: temporaryFactScope({ kind: 'window', from, until }),
@@ -246,7 +250,7 @@ function travelFact(from: string, until: string) {
  * with `decision.kind: 'missing_for_span'`, whose executor builds exactly this
  * fact (`programControlActions.ts`, the `missing_for_span` branch).
  */
-function awayEquipmentFact(args: {
+export function awayEquipmentFact(args: {
   from: string; until: string; removedTags: readonly string[]; removedModalities: readonly string[];
 }) {
   return createTemporaryEquipmentFact({
@@ -272,7 +276,7 @@ function constraintsFor(facts: readonly unknown[], onDate: string) {
 // ONE BOUNDARY
 // ═══════════════════════════════════════════════════════════════════════════
 
-interface Boundary {
+export interface Boundary {
   readonly id: string;
   readonly title: string;
   readonly profile: OnboardingData;
@@ -287,7 +291,7 @@ interface Boundary {
   readonly sessionRemoval?: { dateISO: string; tags: readonly string[]; modalities: readonly string[] };
 }
 
-interface BoundaryResult {
+export interface BoundaryResult {
   readonly boundary: Boundary;
   readonly permanentTags: readonly string[];
   readonly permanentModalities: readonly string[];
@@ -302,7 +306,7 @@ interface BoundaryResult {
   readonly constraintPass: readonly string[];
 }
 
-function runBoundary(boundary: Boundary): BoundaryResult {
+export function runBoundary(boundary: Boundary): BoundaryResult {
   observations = [];
   constraintPass = [];
   const permanent = resolveEquipmentCapabilities(boundary.profile, [], boundary.todayISO);

@@ -64,10 +64,15 @@
  */
 
 /* eslint-disable import/first */
-declare global {
-  // eslint-disable-next-line no-var
-  var __DEV__: boolean;
-}
+// ⚠ **THE `declare global { var __DEV__ }` BLOCK IS GONE, AND NOTHING MOVED —
+// IT WAS A DUPLICATE.** The tests project already declares `__DEV__`
+// (`src/__tests__/sprintCreditEvidenceTests.ts:22` says so in as many words),
+// so a second declaration is `TS2451: Cannot redeclare block-scoped variable`.
+// It could not surface while this script was reachable only from its own run;
+// `test:equipment-scopes` (2026-08-17) pulled it into the tests scope and the
+// compiler found it immediately. The assignment below is the whole behaviour
+// and is untouched.
+//
 // See the header: this WINS over an importer's own assignment. Deliberate for
 // this script's run; re-assert on your side if you need it true.
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;

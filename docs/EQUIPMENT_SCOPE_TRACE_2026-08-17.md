@@ -356,18 +356,22 @@ day 1 accessory_or_core      Ab Wheel                     role=strength_accessor
 day 2 horizontal_pull        Barbell Row                  role=main_strength
 day 2 vertical_pull          Lat Pulldown                 role=strength_accessory
 day 2 arm_or_shoulder        Band Pull-Apart              role=strength_accessory
-day 3 squat                  Back Squat                   role=strength_accessory
+day 3 squat                  Goblet Squat                 role=strength_accessory
 day 3 hinge                  RDLs                         role=main_strength
-day 3 single_leg_knee        Bulgarian Split Squats       role=strength_accessory
+day 3 single_leg_knee        Cossack Squat                role=strength_accessory
 day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
 day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
-day 4 horizontal_push        Bench Press                  role=main_strength
+day 4 horizontal_push        Single-Arm DB Floor Press    role=main_strength
 day 4 vertical_push          DB Shoulder Press            role=strength_accessory
 day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
-_none — no row carries `substitutedFor`_
+```
+day 3 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 3 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+```
 ### 6. STORED block-selection history (input to this run)
 ```
 2026-08-10  accessory_or_core      Ab Wheel
@@ -392,8 +396,8 @@ _none — no row carries `substitutedFor`_
 2026-08-16 day0 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
 2026-08-10 day1 "lower_squat" rows 5 -> 2 removed: Back Squat, RDLs, Bulgarian Split Squats
 2026-08-11 day2 "Team Training" rows 3 -> 3
-2026-08-12 day3 "lower_hinge" rows 5 -> 2 removed: Back Squat, RDLs, Bulgarian Split Squats
-2026-08-13 day4 "Team Training" rows 3 -> NULL (caller collapses to REST) [collapsedToRest] removed: Bench Press, DB Shoulder Press, Banded External Rotation
+2026-08-12 day3 "lower_hinge" rows 5 -> 4 removed: RDLs
+2026-08-13 day4 "Team Training" rows 3 -> NULL (caller collapses to REST) [collapsedToRest] removed: Single-Arm DB Floor Press, DB Shoulder Press, Banded External Rotation
 2026-08-14 day5 "Rest" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
 2026-08-15 day6 "Game" rows 0 -> NULL (caller collapses to REST) [collapsedToRest]
 ```
@@ -637,18 +641,19 @@ equipment:without  2026-08-10 .. 2026-08-16  removes: barbell, cables, machine, 
 ```
 resolver tags (3): bodyweight, dumbbells, bands
 resolver machines: (none)
-composer kit  (3): bodyweight, dumbbells, bands
+composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
-accessory_or_core      Band Pallof Press            role=accessory block=2026-08-10
+accessory_or_core      Ab Wheel                     role=accessory block=2026-08-10
 arm_or_shoulder        Band Pull-Apart              role=accessory block=2026-08-10
 hinge                  RDLs                         role=main_bilateral block=2026-08-10
-horizontal_pull        Single-Arm DB Row            role=main_bilateral block=2026-08-10
-horizontal_push        Single-Arm DB Floor Press    role=main_bilateral block=2026-08-10
+horizontal_pull        Barbell Row                  role=main_bilateral block=2026-08-10
+horizontal_push        Bench Press                  role=main_bilateral block=2026-08-10
 single_leg_hip         Single-Leg RDL               role=single_leg block=2026-08-10
-single_leg_knee        Cossack Squat                role=single_leg block=2026-08-10
-squat                  Goblet Squat                 role=main_bilateral block=2026-08-10
+single_leg_knee        Bulgarian Split Squats       role=single_leg block=2026-08-10
+squat                  Back Squat                   role=main_bilateral block=2026-08-10
+vertical_pull          Lat Pulldown                 role=main_bilateral block=2026-08-10
 vertical_push          DB Shoulder Press            role=main_bilateral block=2026-08-10
 ```
 ### 4b. COMPOSED ROWS, with the role §18 judges
@@ -664,14 +669,23 @@ day 3 squat                  Goblet Squat                 role=strength_accessor
 day 3 hinge                  RDLs                         role=main_strength
 day 3 single_leg_knee        Cossack Squat                role=strength_accessory
 day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
-day 3 accessory_or_core      Banded Dead Bug              role=strength_accessory
+day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
 day 4 horizontal_push        Single-Arm DB Floor Press    role=main_strength
 day 4 vertical_push          DB Shoulder Press            role=strength_accessory
 day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
-_none — no row carries `substitutedFor`_
+```
+day 1 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 1 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+day 1 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit_today)
+day 2 horizontal_pull        shipped=Single-Arm DB Row        base=Barbell Row (kit_today)
+day 3 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 3 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+day 3 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit_today)
+day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+```
 ### 6. STORED block-selection history (input to this run)
 ```
 2026-08-10  accessory_or_core      Ab Wheel
@@ -726,18 +740,19 @@ equipment:without  2026-08-10 .. 2026-08-16  removes: barbell, cables, machine, 
 ```
 resolver tags (3): bodyweight, dumbbells, bands
 resolver machines: (none)
-composer kit  (3): bodyweight, dumbbells, bands
+composer kit  (19): bodyweight, barbell, dumbbells, cables, machine, bands, bench, pullup_bar, kettlebell, foam_roller, plyo_box, rack, trap_bar, swiss_ball, ab_wheel, back_extension_bench, dip_bars, rings_trx, bike_or_treadmill
 ```
 ### 4. BASE block exercise selection (what gets RECORDED)
 ```
-accessory_or_core      Band Pallof Press            role=accessory block=2026-08-10
+accessory_or_core      Ab Wheel                     role=accessory block=2026-08-10
 arm_or_shoulder        Band Pull-Apart              role=accessory block=2026-08-10
 hinge                  RDLs                         role=main_bilateral block=2026-08-10
-horizontal_pull        Single-Arm DB Row            role=main_bilateral block=2026-08-10
-horizontal_push        Single-Arm DB Floor Press    role=main_bilateral block=2026-08-10
+horizontal_pull        Barbell Row                  role=main_bilateral block=2026-08-10
+horizontal_push        Bench Press                  role=main_bilateral block=2026-08-10
 single_leg_hip         Single-Leg RDL               role=single_leg block=2026-08-10
-single_leg_knee        Cossack Squat                role=single_leg block=2026-08-10
-squat                  Goblet Squat                 role=main_bilateral block=2026-08-10
+single_leg_knee        Bulgarian Split Squats       role=single_leg block=2026-08-10
+squat                  Back Squat                   role=main_bilateral block=2026-08-10
+vertical_pull          Lat Pulldown                 role=main_bilateral block=2026-08-10
 vertical_push          DB Shoulder Press            role=main_bilateral block=2026-08-10
 ```
 ### 4b. COMPOSED ROWS, with the role §18 judges
@@ -753,14 +768,23 @@ day 3 squat                  Goblet Squat                 role=strength_accessor
 day 3 hinge                  RDLs                         role=main_strength
 day 3 single_leg_knee        Cossack Squat                role=strength_accessory
 day 3 single_leg_hip         Single-Leg RDL               role=strength_accessory
-day 3 accessory_or_core      Banded Dead Bug              role=strength_accessory
+day 3 accessory_or_core      Band Pallof Press            role=strength_accessory
 day 4 horizontal_push        Single-Arm DB Floor Press    role=main_strength
 day 4 vertical_push          DB Shoulder Press            role=strength_accessory
 day 4 arm_or_shoulder        Banded External Rotation     role=strength_accessory
 main_strength rows: 4
 ```
 ### 5. TEMPORARY substitutions
-_none — no row carries `substitutedFor`_
+```
+day 1 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 1 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+day 1 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit_today)
+day 2 horizontal_pull        shipped=Single-Arm DB Row        base=Barbell Row (kit_today)
+day 3 squat                  shipped=Goblet Squat             base=Back Squat (kit_today)
+day 3 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Split Squats (kit_today)
+day 3 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit_today)
+day 4 horizontal_push        shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+```
 ### 6. STORED block-selection history (input to this run)
 ```
 2026-08-10  accessory_or_core      Ab Wheel
@@ -904,19 +928,7 @@ B5: 8 slot(s) RECORD a different base, 0 slot(s) lost
     arm_or_shoulder        Band Pull-Apart -> Banded External Rotation
     horizontal_push        Bench Press -> Incline Bench
     vertical_push          DB Shoulder Press -> Seated DB Press
-B6: 5 slot(s) RECORD a different base, 1 slot(s) lost
-    squat                  Back Squat -> Goblet Squat
-    single_leg_knee        Bulgarian Split Squats -> Cossack Squat
-    accessory_or_core      Ab Wheel -> Band Pallof Press
-    horizontal_pull        Barbell Row -> Single-Arm DB Row
-    horizontal_push        Bench Press -> Single-Arm DB Floor Press
-    vertical_pull          Lat Pulldown -> (slot gone)
-B7: 5 slot(s) RECORD a different base, 1 slot(s) lost
-    squat                  Back Squat -> Goblet Squat
-    single_leg_knee        Bulgarian Split Squats -> Cossack Squat
-    accessory_or_core      Ab Wheel -> Band Pallof Press
-    horizontal_pull        Barbell Row -> Single-Arm DB Row
-    horizontal_push        Bench Press -> Single-Arm DB Floor Press
-    vertical_pull          Lat Pulldown -> (slot gone)
+B6: 0 slot(s) RECORD a different base, 0 slot(s) lost
+B7: 0 slot(s) RECORD a different base, 0 slot(s) lost
 B8: 0 slot(s) RECORD a different base, 0 slot(s) lost
 ```

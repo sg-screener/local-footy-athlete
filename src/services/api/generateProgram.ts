@@ -72,6 +72,7 @@ import { logger } from '../../utils/logger';
 import {
   resolveEquipmentAvailability,
   resolveEquipmentCapabilities,
+  resolveEffectiveEquipmentWindow,
   type ResolvedEquipmentCapabilities,
 } from '../../utils/equipmentAvailability';
 import { getSessionComponents } from '../../utils/sessionComponents';
@@ -760,6 +761,32 @@ function composerExclusionInput(
   };
 }
 
+/**
+ * THE WINDOW'S DATED HALF, ON THE AXIS THE COMPOSER WORKS IN.
+ *
+ * The equipment owner answers by ISO DATE, because that is what a fact carries;
+ * `composeWeek` addresses days by WEEKDAY NUMBER, because that is what a
+ * `ComposerPlannedDay` carries. This is the one place the two meet, and it is a
+ * projection rather than a second answer — the dates come from the same week
+ * start the window was asked for, so the two cannot drift.
+ *
+ * **Only days that actually LOST something get an entry.** A day at full kit is
+ * absent, and the composer reads an absent day as the permanent answer, so every
+ * world with no dated removal produces `undefined` here and is byte-identical to
+ * the behaviour before this argument existed.
+ */
+function temporaryKitByDayOfWeekFrom(
+  window: { permanent: readonly string[]; byDate: Readonly<Record<string, readonly string[]>> },
+): Record<number, readonly string[]> {
+  const out: Record<number, readonly string[]> = {};
+  for (const [dateISO, tags] of Object.entries(window.byDate)) {
+    if (tags.length === window.permanent.length) continue;
+    const date = new Date(`${dateISO}T12:00:00`);
+    out[date.getDay()] = tags;
+  }
+  return out;
+}
+
 export function buildGeneratedMicrocycles(args: {
   coachWorkouts: CoachGeneratedWorkouts;
   plan: CoachingPlan;
@@ -855,6 +882,25 @@ export function buildGeneratedMicrocycles(args: {
     // the app SCHEDULES and an athlete-declared deload is not a schedule change.
     const effectiveWeekKind: WeekKind = blockState.weekKind;
     const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
+    /* ── THE ONE EQUIPMENT OWNER, ASKED FOR THE WHOLE WEEK ───────────────────
+     *
+     * ⚠ **THE KIT USED TO BE ONE ANSWER RESOLVED AT `blockState.weekStart`, AND
+     * A WEEK IS NOT A DAY.** An away span beginning on the Wednesday does not
+     * cover the Monday, so the resolver returned the FULL gym and the whole week
+     * — the trip days included — was composed against it. Measured 2026-08-17
+     * (`npm run trace:equipment-scopes`, boundary B3): the resolver answered 3
+     * tags for the Thursday of the trip while the composer received all 19,
+     * inside the same run, and the athlete read `Back Squat` from a hotel room.
+     *
+     * The window owner answers both questions at once and keeps them apart:
+     * `permanent` is what he OWNS and decides what gets RECORDED, `byDate` is
+     * what he can REACH each day and decides what ships. */
+    const equipmentWindow = resolveEffectiveEquipmentWindow({
+      profile,
+      constraints: args.activeConstraints,
+      fromISO: blockState.weekStart,
+      days: 7,
+    });
     const profileEquipment = resolveEquipmentCapabilities(
       profile,
       args.activeConstraints,
@@ -956,7 +1002,12 @@ export function buildGeneratedMicrocycles(args: {
           weekKind: effectiveWeekKind,
           participationProvenance: 'derived_healthy_unrestricted',
           currentProductionClaimsAnchorCredit: true,
-          kitUnachievablePatterns: kitUnachievablePatterns(equipment.tags),
+          /* THE WEEK'S OWN ANSWER, not one day's. A pattern the athlete can
+           * train on the Monday is achievable this week even if Thursday is
+           * spent in a hotel, and exempting it would weaken an achievable
+           * requirement — which R-090 forbids by name. */
+          kitUnachievablePatterns: kitUnachievablePatterns(
+            equipmentWindow.reachableAcrossWindow),
         } as never,
         clubNights: schedInputs.clubNights,
         gameDays: schedInputs.gameDay === null ? [] : [schedInputs.gameDay],
@@ -1055,7 +1106,12 @@ export function buildGeneratedMicrocycles(args: {
           seasonPhase: profile.seasonPhase as never,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? null,
           plannedDays: schedulerOwnedPlannedDays,
-          kit: equipment.tags,
+          /* PERMANENT, so a five-day trip cannot enter the athlete's rotation
+           * history. The dated half rides the next argument. */
+          kit: equipmentWindow.permanent,
+          temporaryKitByDayOfWeek: equipmentWindow.hasTemporaryLoss
+            ? temporaryKitByDayOfWeekFrom(equipmentWindow)
+            : undefined,
           injuries: {
             // §18's OWN safety answer, not a second injury reading.
             prohibitedPatterns:
@@ -1265,7 +1321,9 @@ export function buildGeneratedMicrocycles(args: {
       // gateway unchanged**; nothing here is deleted from under an edit.
       const generatedContract = generatedWeekContractFrom(
         exposureContractV2,
-        kitUnachievablePatterns(equipment.tags),
+        // Same week-wide answer the contract was built with, so the validator
+        // and the contract cannot disagree about what the kit can reach.
+        kitUnachievablePatterns(equipmentWindow.reachableAcrossWindow),
       );
       const validation = validateGeneratedWeek({
         workouts,

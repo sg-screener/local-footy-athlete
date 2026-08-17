@@ -266,24 +266,142 @@ composer's result.** They are in scope for removal by the mission's own words.
 
 ---
 
-## NEXT — THE BUILD ORDER
+---
 
-1. **ONE EQUIPMENT OWNER, RESOLVED PER DAY.** `composeWeek` takes a kit *per
-   planned day*, not one per week, so a mid-week span is representable at all.
-   The permanent profile stays the base; dated removals subtract only on the days
-   they cover.
-2. **THE RECORD IS THE PERMANENT ANSWER.** `baseLegal` is decided against the
-   PERMANENT kit minus permanent-only changes; the dated removal moves to the
-   day-scoped set, which makes `substitutedFor` fire for the first time and gives
-   the mission's base/substitute split a live path.
-3. **DELETE THE LEGACY TRAVEL/EQUIPMENT AUTHORITY** in the in-generation pass;
-   the composer already owns both questions.
-4. **SANDBAG** — the sheet joins the vocabulary derivation.
+# SLICE 1 — LANDED. ONE EQUIPMENT OWNER, RESOLVED PER DAY.
+
+**Findings 1, 2 and 3 are closed. Findings 4, 5 and 6 are open and are the next
+slices.**
+
+## WHAT MOVED
+
+**`resolveEffectiveEquipmentWindow`** (`utils/equipmentAvailability.ts`) — the one
+owner, answering both questions and keeping them apart: `permanent` (profile,
+no constraints) and `byDate` (profile minus whatever applies that date).
+`reachableAcrossWindow` is the week's own answer, for §18.
+
+**`composeWeek`** takes `kit` (now documented as PERMANENT) **and** an optional
+`temporaryKitByDayOfWeek`. `baseLegal` is decided against the permanent kit and
+is what gets RECORDED; `legal` is decided against the day's kit and is what
+SHIPS. Three consequences fall out rather than being coded:
+
+- **The base returns on the return date with no expiry code anywhere** — the day
+  simply stops carrying an entry.
+- **`substitutedFor` has a live path for the first time.** It fired ZERO times in
+  all nine measured boundaries before this, because with kit in `baseLegal` there
+  was never a base to substitute away from.
+- **A world with no dated removal passes `undefined` and is byte-identical.**
+
+**One leak was found only after the split landed**, and it is worth writing down:
+the R-080 variety narrowing descended from `legal` — today's kit — and its result
+fed the BASE decision, so an away week still recorded
+`accessory_or_core: Ab Wheel → Band Pallof Press`. It now narrows `baseLegal`.
+**There is still exactly one variety computation**; it was pointed at the right
+list.
+
+**A second leak: `legal.length === 0` used to `continue` before the record was
+written**, so a slot the athlete OWNS the kit for and cannot reach today lost its
+history entirely — nine slots recorded instead of ten, `vertical_pull` gone
+because a hotel room has no bar. The decision is now made and recorded first; the
+gap is disclosed and the ROW dropped immediately after.
+
+## THE MEASURED BEFORE AND AFTER — `npm run trace:equipment-scopes`
+
+Base selection recorded, against the home week, per boundary:
+
+| | before slice 1 | after |
+| --- | --- | --- |
+| B2 away, mid-week | 0 changed | 0 changed |
+| B3 boot during trip | 0 changed | 0 changed |
+| **B6 away, whole week** | **8 changed, 1 slot lost** | **0 changed, 0 lost** |
+| **B7 kit removal only** | **8 changed, 1 slot lost** | **0 changed, 0 lost** |
+| B5 next block | 8 changed (legitimate rotation) | 8 changed (unchanged) |
+
+And the substitutes now exist and name what they replaced:
+
+```
+day 1 squat              shipped=Goblet Squat              base=Back Squat (kit_today)
+day 1 single_leg_knee    shipped=Cossack Squat             base=Bulgarian Split Squats (kit_today)
+day 2 horizontal_pull    shipped=Single-Arm DB Row         base=Barbell Row (kit_today)
+day 4 horizontal_push    shipped=Single-Arm DB Floor Press base=Bench Press (kit_today)
+```
+
+## THE GUARD — `npm run test:equipment-scopes`, 7 cells, IN `test:bible`
+
+Registered as `LAW-temporary-equipment-never-permanent`. Every cell drives
+`generateProgramLocally` and reads the live composer through the trace's single
+observer, so **the guard and the trace cannot drift into two answers about one
+run**.
+
+**MUTATION-PROVEN THREE WAYS**, tree restored byte-identical after each:
+
+| mutant | result |
+| --- | --- |
+| `baseLegal` back on the dated kit (the original defect) | **4 cells red**, non-vacuity included |
+| record the SHIPPED row instead of the base | **cell [2] red** |
+| restore the skip that dropped an unfillable slot | **cells [2] and [3] red** |
+
+**The controls are half the suite and they are not decoration.** Cell [6] changes
+the athlete's PERMANENT answer and REQUIRES the record to move; cell [1] proves
+the removal reached the composer before anything else is asked. Neither passes on
+an app that has stopped reading equipment.
+
+**A "freshest first" substitute was tried and BACKED OUT the same day.** It
+shipped an Intermediate athlete `Bodyweight Squat` on a dumbbells-and-bands kit
+because `Goblet Squat` had already been used that week and lost its freshness.
+Cell [4] caught it on its first run. `legal[0]` is already ordered by
+`hingePriorityFirst` over `experiencePreferred`, so its head is the best row the
+athlete can do today, and Sam's ruling is explicit that regressions are for an
+athlete with *"no loaded option"*.
+
+## WORLDS LOST AND GAINED — SEPARATELY, AND BOTH ARE ZERO
+
+Every number below was produced by running the same suite in **two worktrees at
+once**: `lfa-equip` (this branch) and `lfa-base` (detached at `6b617847`).
+
+| instrument | base `6b617847` | slice 1 |
+| --- | --- | --- |
+| `test:ladder-wide` | 140 worlds, **40 refused**, 0 deficient of 368 laddered days, ceiling 0 | **identical** |
+| R-083 kit-blocked census | 84 days — `vertical_pull` 80, `horizontal_pull` 32, `vertical_push` 32 | **identical** |
+| R-089 pair census | 2 shapes, 0 unmatched, 640 exposures | **identical** |
+| `test:scenarios` | 62 passed, 3 failed | **62 passed, 3 failed — the same three, same assertion text** |
+| `print:week` | 2 refused (`1-early-off-season`, `6-bodyweight-only`), 11 findings | **identical** |
+| `test:compile` | 468 errors; product 35, devtools 51, tests 382; **6 file/scope pairs worse** | **468; product 35, devtools 51, tests 382; the same 6** |
+| `test:law-registry` | 128 rows, 107 guarded, **21 UNENFORCED**; 12/2 | 129 rows, 108 guarded, **21 UNENFORCED**; 12/2 |
+
+**ZERO worlds lost. ZERO gained. Zero type errors added in any scope.** The
+UNENFORCED ratchet did not rise.
+
+**⚠ `test:compile` FAILS ON THE BASE COMMIT ITSELF** — six `bibleConformance`
+observation files exceed their baseline before I touched anything. That is
+recorded here because a future reader will otherwise attribute it to this branch.
+
+**Two of my own type errors were found by the gate and fixed, not baselined.**
+Importing the trace into a suite pulled `scripts/print-week.ts` and
+`scripts/trace-equipment-scopes.ts` into the tests scope for the first time, and
+both declared `__DEV__` — which the tests project already declares. The repo
+already had the convention written down
+(`src/__tests__/sprintCreditEvidenceTests.ts:22`); both now follow it. **Nothing
+moved but a declaration; the assignment is untouched in both files.**
+
+## NEXT — THE REMAINING BUILD ORDER
+
+1. ~~ONE EQUIPMENT OWNER, RESOLVED PER DAY.~~ **DONE — slice 1.**
+2. ~~THE RECORD IS THE PERMANENT ANSWER.~~ **DONE — slice 1.**
+3. **DELETE THE LEGACY TRAVEL/EQUIPMENT AUTHORITY** in the in-generation pass
+   (findings 4 and 5); the composer already owns both questions. **This is the
+   `BURN THE BOATS` target and it is the biggest remaining piece:** travel alone
+   still refuses the week and still deletes six of the athlete's own lifts.
+4. **SANDBAG** — Sam's sheet joins the vocabulary derivation (finding 6).
 
 ## NOT COVERED YET
 
+- **Findings 4, 5 and 6 are open.** An away week that genuinely starts on a
+  Monday still REFUSES, so mission proofs 5, 6 and 14 cannot be produced and the
+  printed weeks Sam asked for cannot be printed. That is the next slice and it is
+  the one that unblocks the rest.
 - Session-scope (`applySessionEquipment`) not yet driven in the trace.
 - Injury + away combination not yet run.
 - Nothing has been seen on glass.
 - The two `test:composer-b1` reds and the `test:edge-generation-equipment` red on
-  base are recorded, not diagnosed.
+  base are recorded, not diagnosed. Both are unchanged by slice 1.
