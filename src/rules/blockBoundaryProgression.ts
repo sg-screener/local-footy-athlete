@@ -702,6 +702,34 @@ function mayAutomaticallyIncrease(exerciseName: string): boolean {
  * `applyBlockBoundaryProgression`, so the DECISION can be asserted without a
  * workout tree and the APPLICATION can be asserted without re-deriving history.
  */
+/**
+ * ⚠ **THE `history_progressed` CONDITION, EXPORTED SO ROTATION READS IT RATHER
+ * THAN COPYING IT.**
+ *
+ * `rules/blockExerciseSelection.ts` needs the contract's *"main and secondary lifts
+ * may remain for a second consecutive block when progression, comfort and
+ * technical continuity justify it"*. The mission is explicit that this is the
+ * EXISTING progression decision, and the existing decision says exactly one
+ * thing means "this athlete trained it and it earned a rise": the branch below
+ * that emits `history_progressed`.
+ *
+ * Rotation cannot call `decideBlockBoundaryLoads` to ask — that function takes
+ * `nextBlockWorkouts`, and rotation runs BEFORE those workouts exist, because it
+ * is what decides which exercises are in them. So the condition is lifted here
+ * and `decideBlockBoundaryLoads` calls it too. **One owner of the predicate, two
+ * readers** — the alternative is the same rule written twice and drifting.
+ */
+export function progressedFromOwnHistory(args: {
+  exerciseName: string;
+  history: BlockHistorySignal;
+}): boolean {
+  const recorded = args.history.lastRecordedLoadByExercise[args.exerciseName];
+  if (typeof recorded !== 'number') return false;
+  if (!args.history.qualifies) return false;
+  if (!mayAutomaticallyIncrease(args.exerciseName)) return false;
+  return smallestPracticalIncrementKg(args.exerciseName, recorded) !== null;
+}
+
 export function decideBlockBoundaryLoads(args: {
   history: BlockHistorySignal;
   nextBlockWorkouts: readonly Workout[];
@@ -746,7 +774,8 @@ export function decideBlockBoundaryLoads(args: {
       const increment = mayAutomaticallyIncrease(exerciseName)
         ? smallestPracticalIncrementKg(exerciseName, previousLoadKg)
         : null;
-      if (history.qualifies && increment !== null) {
+      // The same predicate `blockExerciseSelection` reads, so the two can never drift.
+      if (progressedFromOwnHistory({ exerciseName, history }) && increment !== null) {
         decisions.push({
           ...base,
           kind: 'history_progressed',

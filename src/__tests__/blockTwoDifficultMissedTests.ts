@@ -34,6 +34,11 @@
 };
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+/* ⚠ Blocks the athlete ACCEPTED go through the canonical door, which records
+ * what they selected. Speculative calls stay on `generateProgramLocally` and
+ * record nothing — the two are different names on purpose. */
+import { acceptBlock, resetBlockSelectionHistory } from './support/acceptBlock';
+import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { resolveWeekWithConditioning, type ScheduleState } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
@@ -96,7 +101,39 @@ const APPROVED_REDUCED_SENTENCE =
   + 'block. You can change it if needed.';
 
 /** The lift the guards track: barbell-required, main, and retained across blocks. */
-const TRACKED = 'Deadlift';
+/**
+ * ⚠ **THE TRACKED LIFT IS DERIVED FROM THE BLOCK, NOT NAMED.**
+ *
+ * Sam, 2026-08-17: *"Replace brittle exercise-name assumptions with derived
+ * identities where the identity itself is not the test subject."*
+ *
+ * This suite is about LOAD behaviour — seeding, progression, restoration — and
+ * which lift carries it is incidental. `Deadlift` was hardcoded and stopped
+ * being block 2's hinge the moment phase preference put RDLs and Trap Bar
+ * Deadlift ahead of it, so every cell below reported `ABSENT_ROW` about a
+ * perfectly healthy program.
+ */
+const TRACKED: string = (() => {
+  const probe = generateProgramLocally(athlete(), {
+    todayISO: BLOCK_2_START,
+    blockNumber: 2,
+    recordSelections: false,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  for (const mc of probe.microcycles) {
+    for (const w of mc.workouts) {
+      for (const ex of w.exercises ?? []) {
+        if (ex.section18Evidence?.slot !== 'hinge') continue;
+        const name = ex.exercise?.name ?? '';
+        if (name) return name;
+      }
+    }
+  }
+  throw new Error(
+    `src/__tests__/blockTwoDifficultMissedTests.ts could not derive a bilateral hinge from block 2 — a block with no `
+    + 'hinge at all is a real change in what the app programs, not a test nit.',
+  );
+})();
 const TRACKED_RECORDED_KG = 100;
 /** What a WELL-RECOVERED block would have bought it — the control's number. */
 const PROGRESSED_KG = 102.5;
@@ -186,7 +223,7 @@ const VERY_HARD = block1({ feeling: 'very_hard', soreness: 'high' });
 const WELL_RECOVERED = block1({});
 
 function build(sessionFeedback: Record<string, SessionFeedback>): TrainingProgram {
-  return generateProgramLocally(athlete(), {
+  return acceptBlock(athlete(), {
     todayISO: BLOCK_2_START,
     blockNumber: 2,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },
@@ -457,7 +494,26 @@ console.log('\n[5] THE DELOAD WEEK STAYS DELOADED — R-034 IS NOT UNDONE');
 console.log('\n[6] ACCESSORIES ARE NOT ON THE REDUCTION LIST');
 
 {
-  const accessory = 'Bicep Curl (Barbell)';
+  /* ⚠ **DERIVED FROM THE CONTROL BLOCK, NOT NAMED.** The subject is *"accessories
+   * are not on the reduction list"* — WHICH accessory is incidental, and naming
+   * `Bicep Curl (Barbell)` is why this cell went red when accessories moved to a
+   * per-block cadence and that row left block 2. It now asks the control program
+   * which accessory it actually built. */
+  const accessory = (() => {
+    for (const mc of goodProgram.microcycles) {
+      for (const w of mc.workouts) {
+        for (const ex of w.exercises ?? []) {
+          const name = ex.exercise?.name ?? '';
+          if (!name || ex.role === 'conditioning') continue;
+          if (!slotCountsTowardSetBudget(ex.section18Evidence?.slot)) return name;
+        }
+      }
+    }
+    throw new Error(
+      'blockTwoDifficultMissedTests could not derive an accessory row from the '
+      + 'control block — a block with no accessory at all is a real change, not a test nit.',
+    );
+  })();
   const goodAccessory = [...goodRows.entries()].filter(([key]) => key.endsWith(`:${accessory}`));
   ok(`the control programmes ${accessory}`, goodAccessory.length > 0);
   ok(

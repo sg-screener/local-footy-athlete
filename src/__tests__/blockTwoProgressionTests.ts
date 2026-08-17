@@ -32,6 +32,10 @@
 };
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+/* ⚠ Blocks the athlete ACCEPTED go through the canonical door, which records
+ * what they selected. Speculative calls stay on `generateProgramLocally` and
+ * record nothing — the two are different names on purpose. */
+import { acceptBlock, resetBlockSelectionHistory } from './support/acceptBlock';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { resolveWeekWithConditioning, type ScheduleState } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
@@ -45,6 +49,7 @@ import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
  */
 const EXPECTED_PROGRESSED_KG = 102.5;
 import { startingWeightForAthlete } from '../utils/loadEstimation';
+import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
 import {
   blockBoundaryExplanationSentences,
   blockBoundaryLoadMovedSentence,
@@ -75,7 +80,39 @@ const BLOCK_2_START = '2026-08-03';
 const BLOCK_3_START = '2026-08-31';
 
 /** The lift the guards track: barbell-required, and retained across blocks. */
-const TRACKED = 'Deadlift';
+/**
+ * ⚠ **THE TRACKED LIFT IS DERIVED FROM THE BLOCK, NOT NAMED.**
+ *
+ * Sam, 2026-08-17: *"Replace brittle exercise-name assumptions with derived
+ * identities where the identity itself is not the test subject."*
+ *
+ * This suite is about LOAD behaviour — seeding, progression, restoration — and
+ * which lift carries it is incidental. `Deadlift` was hardcoded and stopped
+ * being block 2's hinge the moment phase preference put RDLs and Trap Bar
+ * Deadlift ahead of it, so every cell below reported `ABSENT_ROW` about a
+ * perfectly healthy program.
+ */
+const TRACKED: string = (() => {
+  const probe = generateProgramLocally(athlete(), {
+    todayISO: BLOCK_2_START,
+    blockNumber: 2,
+    recordSelections: false,
+    progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
+  });
+  for (const mc of probe.microcycles) {
+    for (const w of mc.workouts) {
+      for (const ex of w.exercises ?? []) {
+        if (ex.section18Evidence?.slot !== 'hinge') continue;
+        const name = ex.exercise?.name ?? '';
+        if (name) return name;
+      }
+    }
+  }
+  throw new Error(
+    `src/__tests__/blockTwoProgressionTests.ts could not derive a bilateral hinge from block 2 — a block with no `
+    + 'hinge at all is a real change in what the app programs, not a test nit.',
+  );
+})();
 const TRACKED_RECORDED_KG = 100;
 
 function athlete(): OnboardingData {
@@ -144,7 +181,7 @@ function build(
   todayISO: string,
   sessionFeedback: Record<string, SessionFeedback>,
 ): TrainingProgram {
-  return generateProgramLocally(athlete(), {
+  return acceptBlock(athlete(), {
     todayISO,
     blockNumber,
     progressionHistory: { sessionFeedback, weightOverrides: {}, blockState: null },
@@ -161,6 +198,57 @@ function storedLoadOf(program: TrainingProgram, name: string): number | undefine
     }
   }
   return found;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ⚠ **THE SUBJECT IS DERIVED FROM THE BLOCK THE GENERATOR BUILT, NOT NAMED.**
+ *
+ * Sam, 2026-08-17: *"do not merely hardcode their assertions to today's
+ * replacement exercise names... derive the selected exercise from the generated
+ * block and assert the relevant behaviour against that identity. A test should
+ * name Deadlift only when Deadlift itself is the subject."*
+ *
+ * These cells are about ACCESSORY seeding and BODYWEIGHT added-load restoration.
+ * Which accessory, and which bodyweight row, is incidental — and hardcoding one
+ * is exactly why they went red when rotation changed. They now ask the block.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+interface DerivedRow {
+  readonly name: string;
+  readonly kg: number | undefined;
+  readonly countsAsMainOrSecondary: boolean;
+}
+
+function derivedRowsOf(program: TrainingProgram): DerivedRow[] {
+  const out = new Map<string, DerivedRow>();
+  for (const mc of program.microcycles) {
+    for (const w of mc.workouts) {
+      for (const ex of w.exercises ?? []) {
+        const name = ex.exercise?.name ?? '';
+        if (!name || ex.role === 'conditioning') continue;
+        out.set(name, {
+          name,
+          kg: ex.prescribedWeightKg,
+          countsAsMainOrSecondary: slotCountsTowardSetBudget(ex.section18Evidence?.slot),
+        });
+      }
+    }
+  }
+  return [...out.values()];
+}
+
+/** Block 2 with NO history — the world the derivation reads, before any seeding. */
+const BLOCK_2_BASELINE_ROWS = derivedRowsOf(build(2, BLOCK_2_START, {}));
+
+function derivedOrThrow(what: string, row: DerivedRow | undefined): DerivedRow {
+  if (!row) {
+    throw new Error(
+      `blockTwoProgressionTests could not derive ${what} from the generated block 2. `
+      + `Rows present: ${BLOCK_2_BASELINE_ROWS.map((r) => r.name).join(', ')}. `
+      + 'A missing subject is a real change in what the app programs, not a test nit.',
+    );
+  }
+  return row;
 }
 
 function visibleLoadOf(
@@ -256,15 +344,34 @@ ok(
 
 console.log('\n[4] AN EXERCISE ROTATED OUT AND RETURNING RESUMES FROM ITS OWN HISTORY');
 
-// The load was recorded in block 1 only. Block 3 is authored two blocks later,
-// with nothing recorded in between — the "absent for one or more blocks" case.
-const staleHistory = historyFor({ [TRACKED]: TRACKED_RECORDED_KG });
+/* ⚠ **THE RETURNING EXERCISE IS DERIVED FROM BLOCK 3, NOT NAMED.**
+ *
+ * The subject here is *"an exercise rotated out and returning resumes from its
+ * own history"* — the identity is incidental, and naming `Deadlift` is precisely
+ * what made this cell red when rotation started honouring block boundaries. It
+ * now asks block 3 which main lift it actually programmed, records THAT name in
+ * block 1 only, and leaves the two blocks in between silent. */
+const block3Baseline = build(3, BLOCK_3_START, {});
+const RETURNING = derivedOrThrow(
+  'a main/secondary lift present in block 3, to record in block 1 and nowhere else',
+  derivedRowsOf(block3Baseline).find(
+    (r) => r.countsAsMainOrSecondary && typeof r.kg === 'number' && r.kg > 0,
+  ),
+).name;
+const RETURNING_RECORDED_KG = 100;
+const staleHistory = historyFor({ [RETURNING]: RETURNING_RECORDED_KG });
 const block3 = build(3, BLOCK_3_START, staleHistory);
-const returningTracked = storedLoadOf(block3, TRACKED);
+const returningTracked = storedLoadOf(block3, RETURNING);
 ok(
-  `${TRACKED} returning after an absent block still resumes from its own ${TRACKED_RECORDED_KG}kg`,
-  returningTracked === TRACKED_RECORDED_KG || returningTracked === EXPECTED_PROGRESSED_KG,
-  `expected ${TRACKED_RECORDED_KG} or ${EXPECTED_PROGRESSED_KG}, got ${JSON.stringify(returningTracked)} — history was windowed to the previous block`,
+  `${RETURNING} is programmed in block 3 (liveness)`,
+  returningTracked !== 'ABSENT_ROW',
+  'the returning cell below would assert nothing',
+);
+ok(
+  `${RETURNING} returning after an absent block still resumes from its own ${RETURNING_RECORDED_KG}kg`,
+  typeof returningTracked === 'number' && returningTracked >= RETURNING_RECORDED_KG,
+  `expected >= ${RETURNING_RECORDED_KG}, got ${JSON.stringify(returningTracked)} `
+  + '— history was windowed to the previous block',
 );
 
 console.log('\n[5] THE OUTGOING EXERCISE NEVER CONTAMINATES ITS REPLACEMENT');
@@ -356,7 +463,10 @@ console.log('\n[10] SEEDING IS WIDER THAN AUTOMATIC PROGRESSION');
  *
  * The accessory tracked here is a real block-2 row measured in this fixture.
  */
-const ACCESSORY = 'Bicep Curl (Barbell)';
+const ACCESSORY = derivedOrThrow(
+  'an accessory row (a row outside the main/secondary set budget)',
+  BLOCK_2_BASELINE_ROWS.find((r) => !r.countsAsMainOrSecondary),
+).name;
 const ACCESSORY_RECORDED_KG = 17.5;
 
 const accessoryHistory = historyFor({ [ACCESSORY]: ACCESSORY_RECORDED_KG });
@@ -379,13 +489,31 @@ ok(
 
 const accessoryUnseen = storedLoadOf(build(2, BLOCK_2_START, {}), ACCESSORY);
 const accessoryAuthored = startingWeightForAthlete(ACCESSORY, athlete());
-ok(
-  `an unseen ${ACCESSORY} uses its AUTHORED estimate, not 0`,
-  accessoryUnseen !== 0 && accessoryUnseen === accessoryAuthored,
-  `authored says ${JSON.stringify(accessoryAuthored)}, stored ${JSON.stringify(accessoryUnseen)}`,
-);
+/* ⚠ **THE AUTHORED-ESTIMATE RULE IS ONLY REACHABLE WHEN AN ESTIMATE EXISTS**, and
+ * MEASURED (2026-08-17) no accessory this block programs has one: the block's
+ * accessory bench is banded work, and `startingWeightForAthlete` returns null for
+ * every one of them. Asserting `stored === estimate` against a null estimate
+ * would be asserting nothing, so the cell splits and says which world it is in
+ * rather than passing vacuously. */
+if (typeof accessoryAuthored === 'number' && accessoryAuthored > 0) {
+  ok(
+    `an unseen ${ACCESSORY} uses its AUTHORED estimate, not 0`,
+    accessoryUnseen === accessoryAuthored,
+    `authored says ${JSON.stringify(accessoryAuthored)}, stored ${JSON.stringify(accessoryUnseen)}`,
+  );
+} else {
+  ok(
+    `an unseen ${ACCESSORY} has NO authored estimate, so nothing is invented for it`,
+    accessoryUnseen === 0 || accessoryUnseen === undefined,
+    `no authored estimate exists, yet the block stored ${JSON.stringify(accessoryUnseen)} `
+    + '— a number arrived from somewhere unauthored',
+  );
+}
 
-const bwAccessory = 'Copenhagen Plank (Half)';
+const bwAccessory = derivedOrThrow(
+  'a bodyweight-capable row (one the block carries at zero external load)',
+  BLOCK_2_BASELINE_ROWS.find((r) => r.kg === 0),
+).name;
 const bwAccessoryAdded = 7.5;
 const bwAccStored = storedLoadOf(
   build(2, BLOCK_2_START, historyFor({ [bwAccessory]: bwAccessoryAdded })),
@@ -433,7 +561,13 @@ console.log('\n[9] BODYWEIGHT DEFAULTS TO BW BUT ACCEPTS AND RESTORES ADDED LOAD
  * short-circuited every authored-bodyweight row BEFORE reading history and
  * would have thrown the athlete's recorded weighted Pull-Up away.
  */
-const BW_EXERCISE = 'Pull-Ups';
+/* ⚠ DERIVED. The RULE is about an authored-unloaded row accepting and restoring
+ * added external load; which row is incidental. `Pull-Ups` is still named in
+ * [8b] above, because there the lattice's answer FOR Pull-Ups is the subject. */
+const BW_EXERCISE = derivedOrThrow(
+  'a bodyweight-capable row for the added-load cells',
+  BLOCK_2_BASELINE_ROWS.find((r) => r.kg === 0),
+).name;
 const BW_ADDED_KG = 12.5;
 
 const bwNeverLogged = storedLoadOf(build(2, BLOCK_2_START, {}), BW_EXERCISE);

@@ -9,6 +9,7 @@
  * program-building routes migrate or are deleted.
  */
 import { existsSync, readFileSync } from 'fs';
+import { COMPOSER_ROTATION_DEFAULTS } from './support/composerRotationDefaults';
 import { resolve } from 'path';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
@@ -86,6 +87,7 @@ function inputs(over: Partial<ComposerInputs> = {}): ComposerInputs {
     kit: FULL_GYM,
     injuries: { prohibitedPatterns: [], excludedIdentities: [] },
     todayISO: '2026-07-13',
+    ...COMPOSER_ROTATION_DEFAULTS,
     ...over,
   };
 }

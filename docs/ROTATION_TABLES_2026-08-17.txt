@@ -1,0 +1,79 @@
+
+
+════ EXPERIENCED FULL-GYM ATHLETE — Pre-season, 3 days, canonical Commercial gym ════
+slot            | block 1        | deload         | block 2        | block 3        | block 4        | block 5        | block 6        | load source
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  ── MAIN BILATERAL (may hold two blocks) ──
+hinge           | RDLs           | RDLs           | RDLs           | Trap Bar Dead… | Trap Bar Dead… | Deadlift       | Deadlift       | own recorded history
+horizontal_pull | Barbell Row    | Barbell Row    | Barbell Row    | Chest Support… | Chest Support… | Single-Arm DB… | Single-Arm DB… | own recorded history
+horizontal_push | Bench Press    | Bench Press    | Bench Press    | Incline Bench  | Incline Bench  | Close Grip Be… | Close Grip Be… | own recorded history
+squat           | Back Squat     | Back Squat     | Back Squat     | Front Squat    | Front Squat    | Box Squat      | Box Squat      | own recorded history
+vertical_pull   | Lat Pulldown   | —              | Lat Pulldown   | Neutral-Grip … | Neutral-Grip … | Single-Arm La… | Single-Arm La… | own recorded history
+vertical_push   | DB Shoulder P… | DB Shoulder P… | DB Shoulder P… | Seated DB Pre… | Seated DB Pre… | Half-Kneeling… | Half-Kneeling… | own recorded history
+
+  ── SINGLE-LEG (rotates every block) ──
+single_leg_hip  | Single-Leg RDL | —              | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | own recorded history
+single_leg_knee | Bulgarian Spl… | Bulgarian Spl… | Cossack Squat  | Lateral Lunge  | Reverse Lunges | Single-Leg Le… | Single-Leg Sq… | blank / bodyweight
+
+  loads by block (kg):
+    hinge: RDLs=85  |  RDLs=87.5  |  Trap Bar Deadlift=112.5  |  Trap Bar Deadlift=115  |  Deadlift=95  |  Deadlift=97.5
+    horizontal_pull: Barbell Row=75  |  Barbell Row=77.5  |  Chest Supported Row=30  |  Chest Supported Row=32.5  |  Single-Arm DB Row=30  |  Single-Arm DB Row=32.5
+    horizontal_push: Bench Press=87.5  |  Bench Press=90  |  Incline Bench=72.5  |  Incline Bench=75  |  Close Grip Bench=77.5  |  Close Grip Bench=80
+    single_leg_hip: Single-Leg RDL=17.5  |  Single-Leg RDL=20  |  Single-Leg RDL=22.5  |  Single-Leg RDL=25  |  Single-Leg RDL=27.5  |  Single-Leg RDL=30
+    single_leg_knee: Bulgarian Split Squats=25  |  Cossack Squat=0  |  Lateral Lunge=0  |  Reverse Lunges=25  |  Single-Leg Leg Press=75  |  Single-Leg Squat (to Box)=17.5
+    squat: Back Squat=102.5  |  Back Squat=105  |  Front Squat=62.5  |  Front Squat=65  |  Box Squat=112.5  |  Box Squat=115
+    vertical_pull: Lat Pulldown=60  |  Lat Pulldown=62.5  |  Neutral-Grip Pulldown=52.5  |  Neutral-Grip Pulldown=55  |  Single-Arm Lat Pulldown=30  |  Single-Arm Lat Pulldown=32.5
+    vertical_push: DB Shoulder Press=20  |  DB Shoulder Press=22.5  |  Seated DB Press=20  |  Seated DB Press=22.5  |  Half-Kneeling Single-Arm Overhead Press=20  |  Half-Kneeling Single-Arm Overhead Press=22.5
+
+
+════ PARTIAL-KIT ATHLETE — Pre-season, 3 days, canonical Home gym preset ════
+slot            | block 1        | deload         | block 2        | block 3        | block 4        | block 5        | block 6        | load source
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  ── MAIN BILATERAL (may hold two blocks) ──
+hinge           | RDLs           | RDLs           | RDLs           | RDLs           | RDLs           | RDLs           | RDLs           | own recorded history
+horizontal_pull | Single-Arm DB… | Single-Arm DB… | Single-Arm DB… | Band Pull-Apa… | Rear Delt Fly  | Rear Delt Fly  | Single-Arm DB… | own recorded history
+horizontal_push | Single-Arm DB… | Single-Arm DB… | Single-Arm DB… | Explosive Pus… | Scap Push-Up   | Single-Arm DB… | Single-Arm DB… | own recorded history
+squat           | Goblet Squat   | Goblet Squat   | Goblet Squat   | Bodyweight Sq… | Goblet Squat   | Goblet Squat   | Bodyweight Sq… | own recorded history
+vertical_push   | DB Shoulder P… | DB Shoulder P… | DB Shoulder P… | Seated DB Pre… | Seated DB Pre… | Half-Kneeling… | Half-Kneeling… | own recorded history
+
+  ── SINGLE-LEG (rotates every block) ──
+single_leg_hip  | Single-Leg RDL | —              | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | own recorded history
+single_leg_knee | Cossack Squat  | Cossack Squat  | Lateral Lunge  | Reverse Lunges | Slant Board S… | Walking Lunges | Cossack Squat  | blank / bodyweight
+
+  loads by block (kg):
+    hinge: RDLs=85  |  RDLs=87.5  |  RDLs=90  |  RDLs=92.5  |  RDLs=95  |  RDLs=97.5
+    horizontal_pull: Single-Arm DB Row=30  |  Single-Arm DB Row=32.5  |  Band Pull-Apart=0  |  Rear Delt Fly=10  |  Rear Delt Fly=12.5  |  Single-Arm DB Row=35
+    horizontal_push: Single-Arm DB Floor Press=22.5  |  Single-Arm DB Floor Press=25  |  Explosive Push-up=0  |  Scap Push-Up=0  |  Single-Arm DB Floor Press=27.5  |  Single-Arm DB Floor Press=30
+    single_leg_hip: Single-Leg RDL=0  |  Single-Leg RDL=17.5  |  Single-Leg RDL=20  |  Single-Leg RDL=22.5  |  Single-Leg RDL=25  |  Single-Leg RDL=27.5
+    single_leg_knee: Cossack Squat=0  |  Lateral Lunge=0  |  Reverse Lunges=25  |  Slant Board Step-Down=0  |  Walking Lunges=25  |  Cossack Squat=0
+    squat: Goblet Squat=27.5  |  Goblet Squat=30  |  Bodyweight Squat=0  |  Goblet Squat=32.5  |  Goblet Squat=35  |  Bodyweight Squat=0
+    vertical_push: DB Shoulder Press=20  |  DB Shoulder Press=22.5  |  Seated DB Press=20  |  Seated DB Press=22.5  |  Half-Kneeling Single-Arm Overhead Press=20  |  Half-Kneeling Single-Arm Overhead Press=22.5
+
+
+════ CONTROL: MACHINES BUT NO RACK — Leg Press really is the only legal squat ════
+slot            | block 1        | deload         | block 2        | block 3        | block 4        | block 5        | block 6        | load source
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  ── MAIN BILATERAL (may hold two blocks) ──
+hinge           | RDLs           | RDLs           | RDLs           | Deadlift       | Deadlift       | Hip Thrusts    | Hip Thrusts    | own recorded history
+horizontal_pull | Barbell Row    | Barbell Row    | Barbell Row    | Chest Support… | Chest Support… | Single-Arm DB… | Single-Arm DB… | own recorded history
+horizontal_push | Bench Press    | Bench Press    | Bench Press    | Incline Bench  | Incline Bench  | Close Grip Be… | Close Grip Be… | own recorded history
+squat           | Leg Press      | Leg Press      | Leg Press      | Leg Press      | Leg Press      | Leg Press      | Leg Press      | own recorded history
+vertical_pull   | Lat Pulldown   | —              | Lat Pulldown   | Neutral-Grip … | Neutral-Grip … | Single-Arm La… | Single-Arm La… | own recorded history
+vertical_push   | DB Shoulder P… | DB Shoulder P… | DB Shoulder P… | Seated DB Pre… | Seated DB Pre… | Half-Kneeling… | Half-Kneeling… | own recorded history
+
+  ── SINGLE-LEG (rotates every block) ──
+single_leg_hip  | Single-Leg RDL | —              | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | Single-Leg RDL | own recorded history
+single_leg_knee | Bulgarian Spl… | Bulgarian Spl… | Cossack Squat  | Lateral Lunge  | Reverse Lunges | Single-Leg Le… | Slant Board S… | blank / bodyweight
+
+  loads by block (kg):
+    hinge: RDLs=85  |  RDLs=87.5  |  Deadlift=95  |  Deadlift=97.5  |  Hip Thrusts=87.5  |  Hip Thrusts=90
+    horizontal_pull: Barbell Row=75  |  Barbell Row=77.5  |  Chest Supported Row=30  |  Chest Supported Row=32.5  |  Single-Arm DB Row=30  |  Single-Arm DB Row=32.5
+    horizontal_push: Bench Press=87.5  |  Bench Press=90  |  Incline Bench=72.5  |  Incline Bench=75  |  Close Grip Bench=77.5  |  Close Grip Bench=80
+    single_leg_hip: Single-Leg RDL=17.5  |  Single-Leg RDL=20  |  Single-Leg RDL=22.5  |  Single-Leg RDL=25  |  Single-Leg RDL=27.5  |  Single-Leg RDL=30
+    single_leg_knee: Bulgarian Split Squats=25  |  Cossack Squat=0  |  Lateral Lunge=0  |  Reverse Lunges=25  |  Single-Leg Leg Press=75  |  Slant Board Step-Down=0
+    squat: Leg Press=130  |  Leg Press=132.5  |  Leg Press=135  |  Leg Press=137.5  |  Leg Press=140  |  Leg Press=142.5
+    vertical_pull: Lat Pulldown=60  |  Lat Pulldown=62.5  |  Neutral-Grip Pulldown=52.5  |  Neutral-Grip Pulldown=55  |  Single-Arm Lat Pulldown=30  |  Single-Arm Lat Pulldown=32.5
+    vertical_push: DB Shoulder Press=20  |  DB Shoulder Press=22.5  |  Seated DB Press=20  |  Seated DB Press=22.5  |  Half-Kneeling Single-Arm Overhead Press=20  |  Half-Kneeling Single-Arm Overhead Press=22.5

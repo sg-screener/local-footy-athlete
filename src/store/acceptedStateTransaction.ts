@@ -1949,6 +1949,8 @@ export function buildFixtureProjection(args: {
   } else {
     try {
       target = generateProgramLocally(args.profile, {
+        // This caller COMMITS the program, so the block's selections are recorded.
+        recordSelections: true,
         // DECLARED, and the strictness is the point: the `catch` immediately
         // below CONSUMES `Section18WeekAcceptanceError` as the signal that the
         // repair owner — not target generation — must decide. Left unstated

@@ -48,6 +48,7 @@ const durable = new Map<string, string>();
 };
 
 import { generateProgramLocally } from '../services/api/generateProgram';
+import { COMPOSER_ROTATION_DEFAULTS } from './support/composerRotationDefaults';
 import { fullKitEquipmentAnswer } from './support/equipmentAnswerFixture';
 import { resetStoresToFreshInstall } from './support/freshInstallStores';
 import { useProgramStore } from '../store/programStore';
@@ -374,8 +375,27 @@ async function main(): Promise<void> {
 
   const restored = restoreExcludedExercise(SUBJECT);
   ok('the decision is gone', restored.ok && !getAthleteExclusions().some((e) => e.exercise === SUBJECT));
-  const afterRestore = regenerate(BLOCK_2_START, 2);
-  ok('the exercise is ELIGIBLE again',
+  /* ⚠ **ELIGIBILITY RETURNS AT THE NEXT BLOCK, NOT MID-BLOCK — SAM, 2026-08-17.**
+   *
+   * *"A this-block exclusion may replace it for the remainder of this block but
+   * expires at the next block"*, and *"when a temporary constraint expires, the
+   * canonical selection becomes available again according to its original scope
+   * and rotation history."*
+   *
+   * Block 2's base selection was RECORDED while the exercise was excluded, and
+   * re-authoring block 2 now restores that record rather than re-deciding — which
+   * is what stops a block changing underneath the athlete. So the coordinate for
+   * "eligible again" is the NEXT block. Asserting it at block 2 was asking
+   * whether the current block gets rewritten, which is the opposite of the rule.
+   *
+   * Block 2 is still checked below: it must be UNCHANGED, not merely non-zero. */
+  const afterRestoreSameBlock = regenerate(BLOCK_2_START, 2);
+  ok('the CURRENT block is not rewritten by the restore',
+    countOf(afterRestoreSameBlock, SUBJECT) === 0,
+    `the restore reached back into the block the athlete is already training — `
+    + `appearances=${countOf(afterRestoreSameBlock, SUBJECT)}`);
+  const afterRestore = regenerate(BLOCK_3_START, 3);
+  ok('the exercise is ELIGIBLE again at the NEXT block',
     countOf(afterRestore, SUBJECT) > 0,
     `appearances=${countOf(afterRestore, SUBJECT)}`);
   ok('and restore wrote NO pin — it did not force the exercise in',
@@ -468,6 +488,7 @@ async function main(): Promise<void> {
       })(),
     },
     todayISO: BLOCK_2_START,
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   ok('and the composer may still choose the original — it was not banned',
     (stillSelectable.days[0]?.rows ?? []).length > 0
@@ -491,6 +512,7 @@ async function main(): Promise<void> {
     kit: ['barbell', 'dumbbells', 'bench', 'machine', 'cables', 'bodyweight'],
     injuries: { prohibitedPatterns: [], excludedIdentities: [] },
     todayISO: BLOCK_2_START,
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   const beforeRow = beforeSlots.days[0]?.rows[0];
   const afterSlots = composeWeek({
@@ -509,6 +531,7 @@ async function main(): Promise<void> {
       excludedIdentities: beforeRow ? [beforeRow.identity] : [],
     },
     todayISO: BLOCK_2_START,
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   const afterRow = afterSlots.days[0]?.rows.find((row) => row.slot === beforeRow?.slot);
   ok('the excluded row is replaced by another exercise IN THE SAME SLOT',
@@ -545,6 +568,7 @@ async function main(): Promise<void> {
       excludedIdentities: EVERY_SQUAT_IDENTITY,
     },
     todayISO: BLOCK_2_START,
+    ...COMPOSER_ROTATION_DEFAULTS,
   });
   const squatGap = exhaustive.gaps.find((g) => g.slot === slot);
   ok('a gap IS disclosed for the emptied slot',

@@ -530,6 +530,8 @@ function commitDerivingSourceFactScopedRegen(args: {
     //    stored fact was rolled back. One read of the one owner, position whole.
     const blockPosition = getBlockPositionForGeneration(weekStart);
     const generated = generateProgramLocally(profile, {
+      // This caller COMMITS the program, so the block's selections are recorded.
+      recordSelections: true,
       todayISO: weekStart,
       blockNumber: blockPosition.blockNumber,
       blockStartISO: blockPosition.blockStart,

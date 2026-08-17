@@ -645,6 +645,8 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
   });
   const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const program = generateProgramLocally(profile, {
+    // This caller COMMITS the program, so the block's selections are recorded.
+    recordSelections: true,
     // The rebuild's own publication declares `forward_decision` (R1.3, and the
     // long note at `commitRebuiltProgram`). The GENERATION that produces it is
     // the same decision one layer earlier and must say so, or the strict

@@ -39,6 +39,18 @@ import {
   composedRowIsLegal,
   type ComposedExerciseIdentity,
 } from './composedRowLegality';
+import {
+  decideExerciseForBlock,
+  type BlockExerciseSelection,
+  type SelectionRole,
+} from './blockExerciseSelection';
+import { slotCountsTowardSetBudget } from './weeklyProgrammingContract';
+import {
+  ladderLevelForProfile,
+  visibleGatesForLadderLevel,
+  type ExperienceGate,
+} from './experienceCrosswalk';
+import { EXERCISE_MUSCLE_METADATA } from '../data/muscleExperienceMetadata';
 import type { MainStrengthPattern, StrengthIntent } from './strengthPatternContributions';
 import {
   STRENGTH_POOLS,
@@ -101,6 +113,40 @@ export interface ComposerInputs {
   readonly injuries: ComposerInjuryInput;
   /** Read to stamp the week the composed days belong to. */
   readonly todayISO: string;
+  /**
+   * ── WHAT THE SELECTION OWNER NEEDS. See `rules/blockExerciseSelection.ts`. ────────
+   *
+   * Selection is keyed by the BLOCK, so the composer has to know which block it
+   * is building. `phaseClock.weekNumber` above cannot answer it: it advances
+   * every week, which is exactly the defect the rotation owner replaced.
+   */
+  /** 1-based block number. A deload shares its build block's number. */
+  readonly blockNumber: number;
+  /* ⚠ `weekInBlock` and `isDeloadWeek` USED TO LIVE HERE AND ARE GONE, NOT
+   * DEFAULTED. Ruling 2 made the cadence purely block-keyed, so a deload — week
+   * 4 of the same block — is identical for free. Keeping them as ignored inputs
+   * would leave two ways to describe one week and invite a future reader to wire
+   * one back in. */
+  /** The athlete's canonical pinned preferences, as composed identities. */
+  readonly pinnedIdentities: readonly ComposedExerciseIdentity[];
+  /**
+   * Identities `blockBoundaryProgression.progressedFromOwnHistory` says the
+   * athlete trained and earned a rise on. The rotation owner reads this one fact
+   * as the contract's *"progression, comfort and technical continuity justify
+   * it"*. It rules nothing new; it reads the existing decision.
+   */
+  readonly progressedIdentities: readonly ComposedExerciseIdentity[];
+  /** Monday ISO of the block being authored — the selection record's identity. */
+  readonly blockStartISO: string;
+  /**
+   * RECORDED selections for earlier blocks, most recent first.
+   *
+   * ⚠ **PASSED IN, NEVER READ FROM A STORE HERE.** *"No hidden store reads
+   * inside the domain selector."* Generation reads
+   * `blockSelectionHistoryStore` and hands the rows down, so boot and rollover
+   * feed the same history explicitly and the composer stays pure.
+   */
+  readonly selectionHistory: readonly BlockExerciseSelection[];
 }
 
 // ─── OUTPUT ────────────────────────────────────────────────────────────────
@@ -121,6 +167,18 @@ export interface ComposedRow {
   /** Resolved before authorship; U-2's off-season cut is already inside it. */
   readonly load: number;
   readonly qualityLimit?: 'stop_when_speed_or_technique_drops';
+  /**
+   * Present only when this row is a TEMPORARY SUBSTITUTE for the block's base
+   * selection — a day-scoped exclusion took the canonical exercise out of this
+   * one session. The base selection is unchanged and still recorded, so the
+   * canonical exercise returns by itself when the answer expires.
+   *
+   * Absent means this row IS the block's base selection.
+   */
+  readonly substitutedFor?: {
+    readonly baseIdentity: ComposedExerciseIdentity;
+    readonly cause: 'excluded_today';
+  };
 }
 
 /**
@@ -212,6 +270,12 @@ export interface ComposedWeek {
   readonly sessionCount: ComposedSessionCount;
   /** Clause (a)'s input, derived here so ONE deriver serves contract and rows. */
   readonly kitUnachievablePatterns: readonly MainStrengthPattern[];
+  /**
+   * What this block SELECTED, one row per movement slot — handed back so
+   * generation can RECORD it durably. The composer does not write it: a domain
+   * rule that reaches into a store is the hidden-read the order forbids.
+   */
+  readonly selections: readonly BlockExerciseSelection[];
 }
 
 // ─── THE AUTHORISED OPTION SET ─────────────────────────────────────────────
@@ -311,6 +375,116 @@ const UNLOADED_POOL_IDENTITIES: ReadonlySet<ComposedExerciseIdentity> = new Set(
     [...STRENGTH_POOLS[poolSlot].anchor.entries, ...STRENGTH_POOLS[poolSlot].accessory.entries]
       .filter((entry) => entry.loadRatio === 0)
       .map((entry) => composedIdentityFor(entry.name))));
+
+/**
+ * ⚠ **THE EXPERIENCE GATE ALREADY EXISTED AND NOTHING CONSUMED IT.**
+ *
+ * `data/muscleExperienceMetadata.ts` authors an `experienceGate` for every
+ * exercise, `rules/experienceCrosswalk.ts` maps an athlete's answer to the gates
+ * they may be AUTO-PROGRAMMED from, and `isExerciseAutoProgrammableFor` joins
+ * them. **It had zero production callers** — the same shape as the deleted pool
+ * rotation: a complete, authored authority running on nothing. This is the one
+ * place it is now consumed. No second policy, no gate re-derived here.
+ *
+ * Sam, 2026-08-17: *"Bodyweight Squat must never appear through ordinary
+ * rotation"* for a moderate/experienced athlete, and *"Goblet Squat is a
+ * regression/beginner/constraint option"*. Both are authored
+ * `everyone_regression`, and `2-5 years` does not see that gate — so the ruling
+ * needs no list of exercise names, here or anywhere.
+ *
+ * ⚠ **AND IT MUST NEVER EMPTY A SLOT.** Ruling 6: *"a genuinely bodyweight-only
+ * athlete may receive Bodyweight Squat when there is no loaded option. Do not
+ * turn this ruling into a refusal of their only legal squat."* So this is a
+ * PREFERENCE with an honest fallback: when the filter would leave nothing, the
+ * kit-legal list stands and the athlete keeps their only legal movement.
+ */
+const GATE_BY_IDENTITY: ReadonlyMap<ComposedExerciseIdentity, ExperienceGate> = new Map(
+  EXERCISE_MUSCLE_METADATA.map((entry) =>
+    [composedIdentityFor(entry.exercise), entry.experienceGate] as const));
+
+function experiencePreferred(
+  candidates: readonly ComposedExerciseIdentity[],
+  profile: OnboardingData,
+): readonly ComposedExerciseIdentity[] {
+  const gates = visibleGatesForLadderLevel(
+    ladderLevelForProfile(profile?.experienceLevel ?? null),
+  );
+  const admitted = candidates.filter((id) => {
+    const gate = GATE_BY_IDENTITY.get(id);
+    // An exercise with no authored gate is not silently demoted: absence is
+    // "unrecorded", and the null hypothesis is that it stays available.
+    if (!gate) return true;
+    return gates.includes(gate);
+  });
+  return admitted.length > 0 ? admitted : candidates;
+}
+
+/**
+ * ⚠ **THE CANONICAL SELECTION ORDER — SAM, 2026-08-17.**
+ *
+ *   1. equipment, injury, active exclusion and EXPERIENCE legality
+ *   2. explicit athlete preference / pin
+ *   3. PHASE-SPECIFIC exercise priority
+ *   4. role-specific rotation cadence and recent history
+ *   5. a stable deterministic tie-break, only after all of the above
+ *
+ * *"Selection remains deterministic, but it must be context-sensitive rather
+ * than a global exercise carousel."* Steps 1 and 3 are applied here, in that
+ * order; step 2 is applied inside `decideExerciseForBlock` so that a legal pin
+ * lands in FRONT of the phase's own preference; steps 4 and 5 are the cursor
+ * walk. Reading the composer top to bottom is reading the order.
+ *
+ * **HINGE PRIORITY IS AN ORDERING, NEVER A BAN.** *"prioritise RDLs and Trap Bar
+ * Deadlift ahead of conventional Deadlift... conventional Deadlift remains
+ * available but is third priority"* and *"Do not select conventional Deadlift
+ * merely to manufacture variety."* Putting the preferred two first is what makes
+ * the fallback chain fall out for free — conventional Deadlift is reached only
+ * when neither preferred option is legal, or when the pre/off-season cursor
+ * genuinely walks that far.
+ */
+const HINGE_PRIORITY: readonly string[] = ['RDLs', 'Trap Bar Deadlift'];
+
+/**
+ * Slots the SEASON PHASE pins to one movement, overriding the two-block cap.
+ *
+ * *"RDLs are the default bilateral hinge. An in-season RDL must not rotate out
+ * merely because two blocks elapsed."* In-season the athlete is playing; the
+ * bilateral hinge is there for continuity, not variety, and the variety comes
+ * from the single-leg and accessory rows instead.
+ *
+ * Pre- and off-season are deliberately absent: *"The broader main-lift rotation
+ * remains available."*
+ */
+/** Which rotation rules a slot answers to. */
+function selectionRoleFor(slot: SessionSlot): SelectionRole {
+  if (MAIN_BILATERAL_SLOTS.has(slot)) return 'main_bilateral';
+  if (slot === 'single_leg_knee' || slot === 'single_leg_hip') return 'single_leg';
+  return 'accessory';
+}
+
+/**
+ * The slots whose exercise may be RETAINED for a second consecutive block.
+ * Ruling 2 names them by exclusion: single-leg knee, single-leg hip and true
+ * accessories rotate at every new block, so the bilateral compounds are what is
+ * left. Deliberately NOT `slotCountsTowardSetBudget`, which includes the
+ * single-leg slots — right for the set budget, wrong for retention.
+ */
+const MAIN_BILATERAL_SLOTS: ReadonlySet<SessionSlot> = new Set<SessionSlot>([
+  'squat', 'hinge', 'horizontal_push', 'vertical_push',
+  'horizontal_pull', 'vertical_pull',
+]);
+
+function hingePriorityFirst(
+  slot: SessionSlot,
+  candidates: readonly ComposedExerciseIdentity[],
+): readonly ComposedExerciseIdentity[] {
+  if (slot !== 'hinge') return candidates;
+  const rank = (id: ComposedExerciseIdentity): number => {
+    const index = HINGE_PRIORITY.findIndex((name) => composedIdentityFor(name) === id);
+    return index === -1 ? HINGE_PRIORITY.length : index;
+  };
+  return [...candidates].sort((a, b) => rank(a) - rank(b));
+}
 
 function weightedFirst(
   identities: readonly ComposedExerciseIdentity[],
@@ -812,8 +986,14 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
   // Variety is a property of the WEEK: a day repeating last night's lift is the
   // shape Bible `:227` names to avoid.
   const usedThisWeek = new Set<ComposedExerciseIdentity>();
-  // Week 1 takes the authored first choice; later weeks walk the same order.
-  const step = Math.max(0, inputs.phaseClock.weekNumber - 1);
+  /* What this block chose, per slot — handed back so generation can RECORD it.
+   * One row per slot: the first day to fill a slot decides the block. */
+  const selectionsThisBlock: BlockExerciseSelection[] = [];
+  // ⚠ THE WEEK-KEYED SELECTOR IS GONE, NOT WRAPPED. It read
+  // `const step = phaseClock.weekNumber - 1` and indexed the candidate list with
+  // it, which is why a main lift changed every week. `rules/blockExerciseSelection.ts`
+  // owns the index now; leaving `step` here as a fallback would be the second
+  // authority the mission forbids.
   // Sam's full-body shape, decided once for the WEEK — see its own docstring.
   // ⚠ **A DISPLACED PAIR IS NOT A PAIR.** R-093's A/B shapes only make sense as a
   // PAIR that between them cover the body. When a prohibition forces one of the
@@ -1029,8 +1209,35 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         && plannedPatterns.has(pattern)
         && !patternHasItsMainLift.has(pattern);
       const pool = isMainLift ? anchorCandidates(slot) : supportCandidates(slot);
-      const legal = pool.filter((id) => !excludedToday.has(id) && composedRowIsLegal(id, inputs.kit));
-      if (legal.length === 0) {
+      /* ── LEGALITY, IN THE CONTRACT'S OWN ORDER ────────────────────────────
+       * exclusion → equipment → EXPERIENCE. Ruling 8: *"exclusions, injury,
+       * equipment and experience legality outrank pins."* Experience is applied
+       * last and never empties the slot (ruling 6). */
+      const legalUnder = (out: ReadonlySet<string>) => hingePriorityFirst(
+        slot,
+        experiencePreferred(
+          pool.filter((id) => !out.has(id) && composedRowIsLegal(id, inputs.kit)),
+          inputs.profile,
+        ),
+      );
+      /* ── THE BASE BLOCK SELECTION vs A TEMPORARY SUBSTITUTE ────────────────
+       *
+       * Sam, 2026-08-17: *"A today-only exclusion changes only the affected
+       * session and must not replace the stored block selection."*
+       *
+       * `excluded` carries the answers that span the WEEK — this-block and
+       * persistent exclusions, and injury prohibitions. `excludedToday` adds the
+       * one day's own answers on top. The BASE selection is decided against the
+       * week-scoped set and is the one RECORDED; a day-scoped answer can only
+       * ever swap the row on that day.
+       *
+       * Equipment is deliberately in BOTH: kit legality is a property of the
+       * week, so an exercise the athlete genuinely cannot perform is replaced in
+       * the base selection rather than retained with a warning — Sam's confirmed
+       * equipment ruling. */
+      const baseLegal = legalUnder(excluded);
+      const legal = legalUnder(excludedToday);
+      if (baseLegal.length === 0 || legal.length === 0) {
         // `resolvePlane` has already disclosed a plane it could not fill, so a
         // second gap for the same slot would double-count the same fact.
         if (!planeChoice) {
@@ -1057,7 +1264,93 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         return !group || !groupsUsedHere.has(group);
       });
       const preferred = differentGroup.length > 0 ? differentGroup : choices;
-      const identity = preferred[step % preferred.length];
+      /* ── THE ROTATION OWNER DECIDES IDENTITY. THIS LINE NO LONGER DOES. ────
+       *
+       * It used to be `preferred[step % preferred.length]`, where `step` is the
+       * PHASE WEEK NUMBER — so a main lift changed every week and the contract's
+       * *"main and secondary exercises are stable throughout their block"* was
+       * unreachable. See `rules/blockExerciseSelection.ts` for the measured before.
+       *
+       * ⚠ **A MAIN LIFT IS ASKED AGAINST `legal`, NOT `preferred`.** The
+       * `usedThisWeek` and muscle-group narrowings above are WEEK-LOCAL variety:
+       * they differ from day to day, so feeding them to a per-BLOCK decision
+       * would make the same slot resolve differently on Monday and Friday and
+       * put the block-stability clause out of reach again. Variety within a week
+       * remains the accessory's job, which is the freedom the contract gives it
+       * and withholds from main lifts. */
+      /* ⚠ **"MAIN AND SECONDARY" IS THE SET BUDGET'S ANSWER, NOT `isMainLift`.**
+       *
+       * `isMainLift` above means "the day's FIRST row for this pattern" — one
+       * row per pattern per day. The contract's *"main and secondary exercises
+       * are stable throughout their block"* is a wider set than that, and the
+       * app already draws the line: `slotCountsTowardSetBudget` is what
+       * `countMainSecondarySets` counts, and it deliberately excludes
+       * accessories and core.
+       *
+       * Measured with `isMainLift` driving the cadence: `single_leg_knee`,
+       * `vertical_push` and `vertical_pull` still changed every week inside one
+       * block, because their rows are not the day's primary row for a planned
+       * pattern and so fell to the accessory cadence. They count toward the
+       * session's main/secondary budget, so the athlete meets them as real work
+       * and must meet the SAME one all block. */
+      /* ── THE SELECTION OWNER ───────────────────────────────────────────────
+       * `decideExerciseForBlock` reads the RECORDED past. There is no cursor and
+       * no block-number index: an athlete whose kit or exclusions changed keeps a
+       * truthful history instead of a re-derived one. See the measured trace in
+       * `rules/blockExerciseSelection.ts`. */
+      const role = selectionRoleFor(slot);
+      const countsTowardBudget = slotCountsTowardSetBudget(slot);
+      const slotHistory = inputs.selectionHistory
+        .filter((entry) => entry.slot === slot
+          && entry.blockStartISO < inputs.blockStartISO)
+        .sort((a, b) => b.blockStartISO.localeCompare(a.blockStartISO));
+      /* This block's OWN recorded choice, when it has been authored before —
+       * a relaunch restores it rather than re-deciding against today's world. */
+      const recordedForThisBlock = inputs.selectionHistory.find(
+        (entry) => entry.slot === slot && entry.blockStartISO === inputs.blockStartISO,
+      ) ?? null;
+      /* The base candidate list narrows to the day's variety preferences only
+       * for slots outside the main/secondary budget, exactly as before. */
+      const baseCandidates = countsTowardBudget
+        ? baseLegal
+        : baseLegal.filter((id) => preferred.includes(id) || preferred.length === 0);
+      const selection = decideExerciseForBlock({
+        phase: inputs.seasonPhase as 'Off-season' | 'Pre-season' | 'In-season',
+        blockNumber: inputs.blockNumber,
+        slot,
+        group: null,
+        role,
+        legalCandidates: baseCandidates.length > 0 ? baseCandidates : baseLegal,
+        previousSelection: slotHistory[0] ?? null,
+        currentBlockSelection: recordedForThisBlock,
+        recentSelections: slotHistory,
+        progressedIdentities: inputs.progressedIdentities,
+        pinnedIdentities: inputs.pinnedIdentities,
+      });
+      /* ⚠ **THE RECORD IS THE BASE SELECTION, ALWAYS — never the substitute.**
+       * *"A temporary injury/constraint substitution must not become the
+       * athlete's new permanent rotation history merely because boot occurred."*
+       * Written before the day-scoped swap below, so no path can record one. */
+      if (!selectionsThisBlock.some((entry) => entry.slot === slot)) {
+        selectionsThisBlock.push({
+          blockNumber: inputs.blockNumber,
+          blockStartISO: inputs.blockStartISO,
+          slot,
+          group: POOL_GROUP_OF.get(selection.identity) ?? null,
+          role,
+          identity: selection.identity,
+        });
+      }
+      /* ── THE TEMPORARY SUBSTITUTE ──────────────────────────────────────────
+       * The base selection stands unless THIS DAY excludes it. When it does, the
+       * best legal same-slot option takes the row for this day only, carrying a
+       * typed reason — and the record above is untouched, so the canonical
+       * selection returns by itself when the day-scoped answer expires. */
+      const substitutedToday = !legal.includes(selection.identity);
+      const identity = substitutedToday ? legal[0] : selection.identity;
+      const substitutionReason: ComposedRow['substitutedFor'] = substitutedToday
+        ? { baseIdentity: selection.identity, cause: 'excluded_today' }
+        : undefined;
       usedThisWeek.add(identity);
       const chosenGroup = POOL_GROUP_OF.get(identity);
       if (chosenGroup) {
@@ -1080,6 +1373,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       if (isMainLift && pattern) patternHasItsMainLift.add(pattern);
       rows.push({
         identity,
+        ...(substitutionReason ? { substitutedFor: substitutionReason } : {}),
         slot,
         role: isMainLift ? 'main_strength' : 'strength_accessory',
         mainStrengthPattern: isMainLift ? pattern : null,
@@ -1151,5 +1445,6 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
       adjustment: adjustment.length > 0 ? adjustment : null,
     },
     kitUnachievablePatterns: kitUnachievablePatterns(inputs.kit),
+    selections: selectionsThisBlock,
   };
 }

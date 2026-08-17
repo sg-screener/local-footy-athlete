@@ -27,6 +27,7 @@ import {
   decideBlockBoundaryLoads,
   decideBlockBoundarySetAdditions,
   decideBlockBoundaryVolume,
+  progressedFromOwnHistory,
   readBlockHistory,
   snapshotAuthoredSets,
   type BlockBoundaryConditioningAdvance,
@@ -34,6 +35,7 @@ import {
   type BlockBoundaryLiftDecision,
   type BlockBoundaryVolumeDecision,
 } from '../../rules/blockBoundaryProgression';
+import { composedIdentityFor } from '../../rules/composedRowLegality';
 import { deriveProfileReadiness } from '../../utils/readiness';
 import {
   onboardingToCoachingInputs,
@@ -222,6 +224,30 @@ export interface GenerateProgramFromProfileOptions {
    * A caller passes them explicitly only to author against a stated history —
    * which is what makes the boundary testable without a live store.
    */
+  /**
+   * RECORDED block selections, most recent first.
+   *
+   * **Absent means "read the live store"**, matching how `temporarySourceFacts`
+   * already behaves here. Boot and rollover pass them EXPLICITLY, which is what
+   * makes the selection history testable without a live store — and what stops
+   * the domain selector ever reaching for one.
+   */
+  selectionHistory?: readonly import('../../rules/blockExerciseSelection').BlockExerciseSelection[];
+  /**
+   * Record this block's selections durably? **DEFAULT FALSE.**
+   *
+   * ⚠ **RECORDING BELONGS TO ACCEPTANCE, NOT TO GENERATION.** Sam: *"add one
+   * typed BlockExerciseSelection history record at BLOCK ACCEPTANCE."* This
+   * function is also called speculatively — `weeklyCommitmentLegality` asks
+   * "would a 2-day week even build?", `postGenerationConstraintValidation`
+   * re-authors to check itself — and a probe that writes history corrupts it.
+   *
+   * MEASURED: with recording on by default, an exclusion suite that probed
+   * blocks 3 and 4 while an exercise was excluded made those probes the
+   * athlete's permanent history, and restoring the exercise brought it back in
+   * NO block. The callers that COMMIT a program opt in; probes stay silent.
+   */
+  recordSelections?: boolean;
   progressionHistory?: {
     sessionFeedback?: Readonly<Record<string, import('../../store/programStore').SessionFeedback>>;
     weightOverrides?: Readonly<Record<string, Record<string, number | null>>>;
@@ -745,6 +771,23 @@ export function buildGeneratedMicrocycles(args: {
   blockNumber?: number;
   seasonPhaseClock: SeasonPhaseClock;
   athletePrefs: AthletePoolPrefsArg;
+  /**
+   * Identities the athlete trained and earned a rise on, per
+   * `blockBoundaryProgression.progressedFromOwnHistory`. The ONLY history fact
+   * `rules/blockExerciseSelection.ts` reads, and the contract's *"main and secondary
+   * lifts may remain for a second consecutive block when progression, comfort
+   * and technical continuity justify it"*. Absent = nothing recorded, so every
+   * slot rotates, which is the contract's default.
+   */
+  progressedIdentities?: readonly string[];
+  /**
+   * RECORDED selections for earlier blocks. Read from
+   * `blockSelectionHistoryStore` by the caller and passed down, so the domain
+   * selector performs no hidden store read and boot/rollover feed it explicitly.
+   */
+  selectionHistory?: readonly import('../../rules/blockExerciseSelection').BlockExerciseSelection[];
+  /** Written by `buildGeneratedMicrocycles` — what this block actually selected. */
+  selectionsOut?: import('../../rules/blockExerciseSelection').BlockExerciseSelection[];
   availableEquipmentTags: readonly EquipmentTag[];
   availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
@@ -989,6 +1032,7 @@ export function buildGeneratedMicrocycles(args: {
     }
     // The planner's own names and tiers, by weekday, so a composed day keeps the
     // athlete-facing label it already had where the two agree on the day.
+    const blockSelectionsAuthored = args.selectionsOut ?? [];
     const plannerNameByDay: Record<number, string> = {};
     const plannerTierByDay: Record<number, string> = {};
     for (const entry of weekPlan.weeklyPlan) {
@@ -1030,7 +1074,27 @@ export function buildGeneratedMicrocycles(args: {
             ...composerExclusionInput(args.athletePrefs, blockState.weekStart),
           },
       todayISO: blockState.weekStart,
+      /* ── THE SELECTION OWNER'S INPUTS. See `rules/blockExerciseSelection.ts`. ──────
+       * Selection is keyed by the BLOCK, so the block identity that was already
+       * resolved here has to reach the composer. It was not passed before, which
+       * is why the composer fell back to the phase WEEK number and a main lift
+       * changed every week. */
+      blockNumber: blockState.miniCycleNumber ?? 1,
+      pinnedIdentities: (args.athletePrefs?.pinned ?? []).map(composedIdentityFor),
+      progressedIdentities: args.progressedIdentities ?? [],
+      /* ── THE RECORDED PAST, HANDED DOWN EXPLICITLY ────────────────────────
+       * The composer never reads a store. Boot and rollover reach this same
+       * argument, so every path feeds the selector the same history. */
+      blockStartISO: blockState.blockStart,
+      selectionHistory: args.selectionHistory ?? [],
     });
+    /* What this block chose, carried out so the caller can RECORD it. The
+     * composer decides; persistence is the caller's job. */
+    for (const selection of composedWeek.selections) {
+      if (!blockSelectionsAuthored.some((entry) => entry.slot === selection.slot)) {
+        blockSelectionsAuthored.push(selection);
+      }
+    }
     // ⚠ THE HANDOVER. Composer rows are MATERIALISED straight into domain
     // workouts and NEVER enter `buildWorkoutsFromCoach`. The retained adapter
     // still receives the COMPLETE planner week — this app hangs conditioning,
@@ -1482,6 +1546,39 @@ export function generateProgramLocally(
 
   const startDate = new Date(blockStart + 'T12:00:00');
   const endDate = new Date(blockEnd + 'T12:00:00');
+  /* ── WHICH LIFTS THE ATHLETE EARNED A RISE ON, READ FROM RECORDED HISTORY ──
+   *
+   * `rules/blockExerciseSelection.ts` retains a main lift for a second consecutive
+   * block only when the EXISTING progression decision supports it. That decision
+   * is `blockBoundaryProgression`'s, and its `history_progressed` condition is
+   * exported as `progressedFromOwnHistory` precisely so rotation reads it rather
+   * than owning a second copy.
+   *
+   * `decideBlockBoundaryLoads` itself cannot be asked here: it takes the next
+   * block's WORKOUTS, and rotation is what decides which exercises are in them. */
+  const rotationPreviousBlock = previousBlockBoundsISO(blockStart);
+  const rotationHistory = readBlockHistory({
+    feedbackByDate: options.progressionHistory?.sessionFeedback ?? {},
+    // THE BLOCK THAT JUST ENDED — the same window the load boundary reads. The
+    // recorded LOADS are not windowed by it (a lift that sat out a block keeps
+    // its own number); only the completion/recovery gate is.
+    blockStartISO: rotationPreviousBlock.startISO,
+    blockEndISO: rotationPreviousBlock.endISO,
+    requiredStrengthSessions: Math.max(1, plan.coreSessions * WEEKS_PER_BLOCK),
+  });
+  const progressedIdentities = Object.keys(rotationHistory.lastRecordedLoadByExercise)
+    .filter((exerciseName) => progressedFromOwnHistory({ exerciseName, history: rotationHistory }))
+    .map(composedIdentityFor);
+
+  /* ── THE RECORDED PAST IN, THE NEW DECISION OUT ───────────────────────────
+   * The store is read HERE, in the service, never inside the domain selector.
+   * An explicit `selectionHistory` wins so boot, rollover and tests can state
+   * the world instead of depending on ambient state. */
+  const selectionHistoryForBuild = options.selectionHistory
+    ?? require('../../store/blockSelectionHistoryStore').blockSelectionHistory();
+  const selectionsAuthored:
+    import('../../rules/blockExerciseSelection').BlockExerciseSelection[] = [];
+
   const microcycles = buildGeneratedMicrocycles({
     coachWorkouts: [],
     plan,
@@ -1493,6 +1590,9 @@ export function generateProgramLocally(
     blockNumber: options.blockNumber ?? 1,
     seasonPhaseClock: phaseResolution.clock,
     athletePrefs: options.athletePrefs ?? getAthletePrefs(),
+    progressedIdentities,
+    selectionHistory: selectionHistoryForBuild,
+    selectionsOut: selectionsAuthored,
     availableEquipmentTags: resolvedEquipmentTags,
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
@@ -1730,6 +1830,18 @@ export function generateProgramLocally(
     ];
   }
 
+  /* ── RECORD THE DECISION ──────────────────────────────────────────────────
+   * The block has been authored, so what it selected is now a FACT about the
+   * athlete's history rather than a derivation. Recording it is what stops the
+   * next boot re-deriving a different past when their kit or exclusions change —
+   * the defect `scripts/trace-selection-history.ts` measured.
+   *
+   * Re-authoring the same block REPLACES its rows (identity is `blockStartISO`),
+   * so a rebuild or a rollover re-run cannot make one block look like several. */
+  if (options.recordSelections === true && selectionsAuthored.length > 0) {
+    require('../../store/blockSelectionHistoryStore')
+      .recordBlockSelections(blockStart, selectionsAuthored);
+  }
   return program;
 }
 
