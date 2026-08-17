@@ -91,6 +91,47 @@ maximum, STOP."* Swept `src/screens` and `src/components`: the only "pinned"
 wording on glass belongs to `ExerciseVideoModal`'s demo videos — video pinning,
 which the mission excludes by name. **No copy promises a pin overrides anything.**
 
+## SUITES AFTER THE OWNER LANDED — 9 REDS, ALL ONE SIGNATURE
+
+| suite | result |
+| --- | --- |
+| `test:exercise-exclusions` | **51 / 51 green** — exclusion still beats everything through the new owner |
+| `test:pools` | 473 pass, 1 fail |
+| `test:block-two-progression` | 34 pass, **3 fail** |
+| `test:block-two-difficult-missed` | 84 pass, **4 fail** |
+| `test:block-two-screen-delivery` | 34 pass, **1 fail** |
+| `test:block-two-ladder` | **2 fail** |
+
+**Nearly every red is the same fact: `ABSENT_ROW` — Deadlift is no longer in
+block 2.** Under the old week-keyed cadence, block 2 week 1 landed on Deadlift by
+coincidence. Under the contract it rotates, because *"most exercises normally
+rotate at a new build block"*.
+
+**RETENTION WAS INSTRUMENTED AND IS CORRECT.** Printing the owner's inputs on the
+real progression worlds:
+
+```
+qualifies:true  loads:{"Deadlift":100}  progressedIdentities:["Deadlift"]   ← retains
+qualifies:false loads:{}                progressedIdentities:[]             ← rotates
+```
+
+The reds belong to the **second** athlete — no recorded history, so nothing
+supports retention and the slot rotates. That is the contract's default, not a
+defect. The instrumentation was removed before commit; the tree is clean at
+`969306c1`.
+
+⚠ **NOT ALL NINE ARE ADJUDICATED YET.** Two are NOT obviously the same class and
+must be judged individually before any merge is proposed:
+
+- the ladder's *"a REAL generated session sits EXACTLY on the 16-set ceiling"* and
+  *"NO SET IS ADDED ON AN AMBIGUOUS ANSWER"* — different exercises carry different
+  authored set counts, so this may be a knock-on rather than an outdated number;
+- difficult/missed's *"the week SHAPE is untouched — same sessions on the same
+  days"*. **A shape change is not an identity change.** If rotation moved which
+  DAYS exist, that is a defect in this change, not an outdated assertion.
+
+Nothing is being rewritten to green until each is judged on its own.
+
 ## NOT COVERED YET
 
 - Guard suite + mutation proofs (proofs 1-15).
