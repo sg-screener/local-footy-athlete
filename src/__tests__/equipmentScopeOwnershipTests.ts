@@ -74,8 +74,10 @@ function week(args: {
    * mutant left this suite 19/0 while the trace it mirrors reported the illegal
    * row correctly. */
   selectionHistory?: readonly BlockExerciseSelection[];
+  markedDays?: Readonly<Record<string, string>>;
 }): BoundaryResult {
   return runBoundary({
+    ...(args.markedDays ? { markedDays: args.markedDays } : {}),
     id: 'cell', title: 'cell',
     profile: args.profile ?? base,
     todayISO: args.todayISO ?? WEEK_MONDAY,
@@ -489,6 +491,156 @@ run('[16] NO visible row is illegal on the kit the athlete has that day', () => 
   assert(offences.length === 0,
     `${offences.length} row(s) require kit the athlete does not have that day:\n      `
     + offences.join('\n      '));
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE OWNERSHIP BOUNDARY — A PROJECTION MAY NOT DELETE AUTHORED WORK
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// composer authors Strength -> storage retains Strength -> the screen showed
+// REST. Traced 2026-08-17 through every layer; the loss was `section18TierFour`
+// at READ time, conforming a day to a Rest the gateway invented and installing
+// it over a session §18 had already counted on the way in.
+//
+// The rule this holds is the SHAPE of the answer, not any day or session:
+// **a read layer may empty a non-empty composer-owned day only when a typed
+// authorised removal names that exact date.**
+
+/** Every day the composer authored rows for, and how many. */
+const composerDays = (result: BoundaryResult): Map<number, number> => {
+  const out = new Map<number, number>();
+  for (const row of result.observation?.rows ?? []) {
+    out.set(row.dayOfWeek, (out.get(row.dayOfWeek) ?? 0) + 1);
+  }
+  return out;
+};
+
+/**
+ * What the READ side resolved for each weekday — the app's own answer.
+ *
+ * ⚠ **COUNTING RENDERED LINES WAS WRONG AND THIS CELL FOUND IT.** The first
+ * version counted `- ` lines in the projection and reported a combined club
+ * night as an EMPTY day on the HOME week: the club's part carries the day's
+ * headline and the athlete's three lifts render elsewhere. The resolver was
+ * carrying all three (`visible=Team Training|Team Training|3r`), so the loss was
+ * in the counter, not the app. Ask the resolver.
+ */
+const visibleRowsByDow = (result: BoundaryResult): Map<number, number> =>
+  new Map(Object.entries(result.resolvedRowsByDayOfWeek)
+    .map(([dow, rows]) => [Number(dow), rows]));
+
+run('[18] NON-VACUITY — the composer really authored a day inside the trip', () => {
+  const authored = composerDays(midWeekAway);
+  const inside = [...authored.keys()].filter((dow) => dow === 5 || dow === 3 || dow === 6);
+  assert(authored.size > 0, 'the composer authored nothing at all');
+  assert(inside.length > 0,
+    'the composer authored no day inside the trip span, so cell [19] could not '
+    + 'tell a surviving session from a week that never had one');
+});
+
+run('[19] EVERY composer-authored day survives to the screen, in every world', () => {
+  const worlds: Array<[string, BoundaryResult]> = [
+    ['home', home],
+    ['away, departing mid-week', midWeekAway],
+    ['away, whole week', away],
+    ['away, travel only', travelOnly],
+    ['home again, return date', week({
+      facts: AWAY_FACTS, todayISO: RETURN_DATE, weekMondayISO: RETURN_DATE,
+    })],
+  ];
+  const lost: string[] = [];
+  for (const [name, world] of worlds) {
+    assert(world.error === null, `${name} did not generate: ${world.error}`);
+    const authored = composerDays(world);
+    const visible = visibleRowsByDow(world);
+    for (const [dow, rows] of authored) {
+      if ((visible.get(dow) ?? 0) === 0) {
+        lost.push(`${name}: the composer authored ${rows} row(s) on weekday ${dow} `
+          + 'and the athlete reads an empty day');
+      }
+    }
+  }
+  assert(lost.length === 0,
+    `${lost.length} composer-authored session(s) never reached the athlete:\n      `
+    + lost.join('\n      ')
+    + '\n      §18 counts these rows on the way in. A week that is judged and a '
+    + 'week that ships must be the same week.');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TWO FIXES, TWO ROUTES — AND EACH NEEDS ITS OWN WORLD
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// `withAthleteKitForDate` governs EQUIPMENT: every read-side producer gets the
+// day's kit. `getEffectiveGameDates`' span filter governs the CALENDAR: a
+// fixture nobody stated does not survive inside a trip. Different
+// responsibilities, so both stay — but they were COVERING FOR EACH OTHER in the
+// census, and a guard that only sees the pair proves neither.
+//
+// ⚠ **THE CALENDAR FIX HIDES THE EQUIPMENT FIX.** Removing the phantom fixture
+// removes the G−1 Gunshow, and the Gunshow was the thing carrying the illegal
+// row. Measured: dropping the per-day kit left the census 21/0.
+//
+// THE EQUIPMENT ROUTE NEEDS A DERIVED SESSION THAT LANDS INSIDE THE TRIP ON ITS
+// OWN MERITS. An EXPLICITLY MARKED fixture is exactly that: the span filter
+// honours a mark — the athlete's own word about a real game — so G−1 still
+// falls inside the trip, the Gunshow is still placed, and the only thing left
+// deciding whether its rows are legal is the kit it was handed.
+const MARKED_GAME_AWAY = week({
+  facts: MID_WEEK_TRIP,
+  markedDays: { '2026-08-15': 'game' },
+});
+
+run('[20] NON-VACUITY — a marked fixture still places a session inside the trip', () => {
+  const friday = MARKED_GAME_AWAY.visible.find((day) => day.day.startsWith('2026-08-14'));
+  assert(MARKED_GAME_AWAY.error === null,
+    `the marked-fixture away world did not generate: ${MARKED_GAME_AWAY.error}`);
+  assert(!!friday && friday.lines.length > 0,
+    'the day before the marked game is empty, so cell [21] has no session to judge '
+    + 'and the equipment route is untested');
+});
+
+run('[21] EQUIPMENT ROUTE — a specialist placed inside the trip uses the DAY\'s kit', () => {
+  const illegal = MARKED_GAME_AWAY.visible.flatMap((day) =>
+    day.lines.filter((line) => /ILLEGAL ON/.test(line)).map((line) => `${day.day} ${line.trim()}`));
+  assert(illegal.length === 0,
+    `${illegal.length} row(s) in the marked-fixture away week need kit the athlete `
+    + `does not have that day:\n      ${illegal.join('\n      ')}`);
+});
+
+run('[19b] the composer\'s ROW IDENTITIES survive the read, not just a row count', () => {
+  /* ⚠ **[19] ONLY ASKED "IS THE DAY NON-EMPTY", AND THAT LET A SUBSTITUTION
+   * THROUGH.** Measured: with the span filter disabled a phantom fixture
+   * returns, `applyGameProximity` calls the Friday G−1 and replaces the
+   * composer's `lower_hinge` with a Gunshow — both days non-empty, [19] green,
+   * and the athlete has lost a main lift.
+   *
+   * Sam's acceptance line is identity, not headcount: *"identity, role and rows
+   * must survive unless a typed authorised removal names that exact day."* */
+  const worlds: Array<[string, BoundaryResult]> = [
+    ['home', home],
+    ['away, departing mid-week', midWeekAway],
+    ['away, marked fixture', MARKED_GAME_AWAY],
+    ['away, whole week', away],
+  ];
+  const lost: string[] = [];
+  for (const [name, world] of worlds) {
+    assert(world.error === null, `${name} did not generate: ${world.error}`);
+    const authored = new Map<number, string[]>();
+    for (const row of world.observation?.rows ?? []) {
+      authored.set(row.dayOfWeek, [...(authored.get(row.dayOfWeek) ?? []), row.identity]);
+    }
+    for (const [dow, identities] of authored) {
+      const onScreen = new Set(world.resolvedNamesByDayOfWeek[dow] ?? []);
+      const missing = identities.filter((identity) => !onScreen.has(identity));
+      if (missing.length > 0) {
+        lost.push(`${name}: weekday ${dow} lost ${missing.join(', ')}`);
+      }
+    }
+  }
+  assert(lost.length === 0,
+    `${lost.length} composer-authored row group(s) were replaced at read time:\n      `
+    + lost.join('\n      '));
 });
 
 console.log(`\nEquipment scope ownership: ${passed} passed, ${failed} failed`);

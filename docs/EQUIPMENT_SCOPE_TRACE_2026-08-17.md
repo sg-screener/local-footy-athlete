@@ -196,7 +196,13 @@ _none — no row carries `substitutedFor`_
   Conditioning
     - Classic 4×4
 2026-08-13 [kit: 19]  Rest Day
-2026-08-14 [kit: 19]  Rest Day
+2026-08-14 [kit: 19]  Training Day
+  Strength
+    - Back Squat
+    - RDLs
+    - Bulgarian Split Squats
+    - Single-Leg RDL
+    - Band Pallof Press
 2026-08-15 [kit: 19]  Training Day
   Conditioning
     - Warm-up
@@ -323,7 +329,13 @@ day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Spl
   Conditioning
     - Classic 4×4
 2026-08-13 [kit: 3]  Rest Day
-2026-08-14 [kit: 3]  Rest Day
+2026-08-14 [kit: 3]  Training Day
+  Strength
+    - Goblet Squat
+    - RDLs
+    - Cossack Squat
+    - Single-Leg RDL
+    - Band Pallof Press
 2026-08-15 [kit: 3]  Training Day
   Conditioning
     - Warm-up
@@ -450,7 +462,13 @@ day 5 single_leg_knee        shipped=Cossack Squat            base=Bulgarian Spl
   Conditioning
     - Classic 4×4
 2026-08-13 [kit: 3]  Rest Day
-2026-08-14 [kit: 3]  Rest Day
+2026-08-14 [kit: 3]  Training Day
+  Strength
+    - Goblet Squat
+    - RDLs
+    - Cossack Squat
+    - Single-Leg RDL
+    - Band Pallof Press
 2026-08-15 [kit: 3]  Training Day
   Conditioning
     - Warm-up
@@ -840,7 +858,10 @@ day 5 accessory_or_core      shipped=Band Pallof Press        base=Ab Wheel (kit
   Conditioning
     - Warm-up
     - 30 m Repeats
-2026-08-16 [kit: 3]  Rest Day
+2026-08-16 [kit: 3]  Training Day
+  Conditioning
+    - Outdoor Running Intervals
+    - Outdoor Running Intervals
 ```
 ### 7a. WHAT THE PROGRAM STORES (before the projection)
 ```
@@ -1200,7 +1221,10 @@ _none — no row carries `substitutedFor`_
   Conditioning
     - Warm-up
     - 30 m Repeats
-2026-08-16 [kit: 19]  Rest Day
+2026-08-16 [kit: 19]  Training Day
+  Conditioning
+    - Warm-up
+    - 10 m Acceleration Reps
 ```
 ### 7a. WHAT THE PROGRAM STORES (before the projection)
 ```
@@ -1249,17 +1273,17 @@ B8: 0 slot(s) RECORD a different base, 0 slot(s) lost
 | world | days | rows | ILLEGAL |
 | --- | --- | --- | --- |
 | B0 NORMAL — Commercial Gym athlete, no temporary change | 7 | 10 | 0 |
-| B1 AWAY MARKED — trip span only, normal equipment kept | 7 | 12 | 0 |
-| B2 AWAY + KIT REMOVED — dumbbells and bands only | 7 | 12 | 0 |
-| B3 BOOT DURING THE TRIP — same facts, today is inside the span | 7 | 12 | 0 |
+| B1 AWAY MARKED — trip span only, normal equipment kept | 7 | 17 | 0 |
+| B2 AWAY + KIT REMOVED — dumbbells and bands only | 7 | 17 | 0 |
+| B3 BOOT DURING THE TRIP — same facts, today is inside the span | 7 | 17 | 0 |
 | B4 RETURN-DATE BOOT — today is the return date, the span is over | 7 | 10 | 0 |
 | B5 NEXT BLOCK AFTER RETURNING — block 2, trip long expired | 7 | 10 | 0 |
-| B6 CONTROL — identical removal, span starts on the week Monday | 7 | 19 | 0 |
+| B6 CONTROL — identical removal, span starts on the week Monday | 7 | 21 | 0 |
 | B9 AWAY WITH NOTHING — a hotel room and a floor | 0 | 0 | 0 |
 | B7 CONTROL — kit removal ONLY, no travel fact | 7 | 10 | 0 |
-| B8 CONTROL — travel fact ONLY, full kit kept | 7 | 20 | 0 |
+| B8 CONTROL — travel fact ONLY, full kit kept | 7 | 22 | 0 |
 
-**115 visible rows across 10 worlds. ILLEGAL: 0.**
+**134 visible rows across 10 worlds. ILLEGAL: 0.**
 
 Judged by `exerciseIsAvailableWith` — the app's own availability oracle,
 the same one generation filters with — asked for the kit resolved on THAT

@@ -66,7 +66,10 @@ out of the real generator and the real screen projection.
   Conditioning
     - Warm-up
     - 30 m Repeats
-2026-08-16 [kit: 19]  Rest Day
+2026-08-16 [kit: 19]  Training Day
+  Conditioning
+    - Warm-up
+    - 10 m Acceleration Reps
 ```
 
 ## AWAY, dumbbells and bands — leaving Wednesday
@@ -91,7 +94,13 @@ out of the real generator and the real screen projection.
   Conditioning
     - Classic 4×4
 2026-08-13 [kit: 3]  Rest Day
-2026-08-14 [kit: 3]  Rest Day
+2026-08-14 [kit: 3]  Training Day
+  Strength
+    - Goblet Squat
+    - RDLs
+    - Cossack Squat
+    - Single-Leg RDL
+    - Band Pallof Press
 2026-08-15 [kit: 3]  Training Day
   Conditioning
     - Warm-up

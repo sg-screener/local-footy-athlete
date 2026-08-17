@@ -74,6 +74,28 @@ export interface ComposeObservation {
 // `workout: null`, and the caller then collapses that day to REST. Nothing
 // narrates that, so it is tapped here.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
+// ── THE THIRD TAP: what the READ side resolved, before any rendering ───────
+// The projection renders parts; this is the app's own answer to "what work does
+// this day carry after the read". A cell that counted rendered LINES instead
+// reported a combined club night as an empty day, because the club's part
+// carries the day's headline and the athlete's rows sit elsewhere.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const resolverModule = require('../src/utils/sessionResolver');
+const realResolveWeekWithConditioning = resolverModule.resolveWeekWithConditioning;
+let resolvedRows: Record<number, number> = {};
+let resolvedNames: Record<number, string[]> = {};
+resolverModule.resolveWeekWithConditioning = function tappedResolveWeek(monday: string, state: any) {
+  const days = realResolveWeekWithConditioning(monday, state);
+  for (const day of days) {
+    resolvedRows[day.dayOfWeek] = (day.workout?.exercises ?? []).length;
+    resolvedNames[day.dayOfWeek] = (day.workout?.exercises ?? [])
+      .map((row: any) => String(row?.exercise?.name ?? row?.name ?? ''))
+      .filter(Boolean);
+  }
+  return days;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const constraintModule = require('../src/utils/postGenerationConstraintValidation');
 const realValidateWorkout = constraintModule.validateWorkoutAgainstActiveConstraints;
 let constraintPass: string[] = [];
@@ -309,6 +331,8 @@ export interface Boundary {
   readonly blockNumber: number;
   readonly facts: readonly unknown[];
   readonly selectionHistory: readonly BlockExerciseSelection[];
+  /** The athlete's calendar marks — an EXPLICIT fixture, not a derived one. */
+  readonly markedDays?: Readonly<Record<string, string>>;
   /** Session-scope removal, applied AFTER generation the way the day screen does. */
   readonly sessionRemoval?: { dateISO: string; tags: readonly string[]; modalities: readonly string[] };
 }
@@ -326,6 +350,8 @@ export interface BoundaryResult {
   readonly error: string | null;
   readonly removalLog: readonly string[];
   readonly programDays: readonly string[];
+  readonly resolvedRowsByDayOfWeek: Readonly<Record<number, number>>;
+  readonly resolvedNamesByDayOfWeek: Readonly<Record<number, readonly string[]>>;
   readonly constraintPass: readonly string[];
 }
 
@@ -358,6 +384,8 @@ export function runBoundary(boundary: Boundary): BoundaryResult {
   // took it, and this is the only place that says which.
   const removalLog: string[] = [];
   const programDays: string[] = [];
+  resolvedRows = {};
+  resolvedNames = {};
   const realLog = console.log;
   console.log = ((...parts: unknown[]) => {
     const text = parts.map((p) => (typeof p === 'string' ? p : JSON.stringify(p))).join(' ');
@@ -399,7 +427,7 @@ export function runBoundary(boundary: Boundary): BoundaryResult {
         todayISO: boundary.todayISO,
         activeConstraints,
         temporarySourceFacts: boundary.facts,
-        markedDays: {},
+        markedDays: boundary.markedDays ?? {},
       }) as never,
       overrideContexts: {},
       modalityPreferences: {},
@@ -454,6 +482,8 @@ export function runBoundary(boundary: Boundary): BoundaryResult {
     error,
     removalLog,
     programDays,
+    resolvedRowsByDayOfWeek: { ...resolvedRows },
+    resolvedNamesByDayOfWeek: { ...resolvedNames },
     constraintPass: [...constraintPass],
   };
 }

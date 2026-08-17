@@ -795,7 +795,88 @@ central caveat of the merge verdict below.
 
 ---
 
+# SLICE 6 — THE FRIDAY BLOCKER, TRACED AND CLOSED
+
+## THE TRACE, LAYER BY LAYER
+
+Mid-week trip, dumbbells and bands, Friday `2026-08-14`:
+
+| layer | answer |
+| --- | --- |
+| scheduler intention | strength day allocated |
+| **composer output** | `day 5 lower_hinge`, 5 rows, `RDLs` classified **`main_strength`** |
+| materialised workout | `lower_hinge \| Strength \| 5 rows` |
+| **stored accepted program** | `lower_hinge \| Strength \| 5 rows` |
+| `resolveWeek` (base read) | `lower_hinge \| Strength \| 5 rows` |
+| **`section18TierFour`** | **`Rest \| Rest \| 0 rows`** ← the loss |
+| `applyAwayPass` | passes it through |
+| visible projection | **Rest Day** |
+
+**§18 counted those rows on the way in and the athlete never got them.** The
+week that was judged and the week that shipped disagreed about a main lift.
+
+## THE CLASS FIX
+
+Tier 4 at read is a **conforming** pass. Its conform-back map installed a Rest
+the gateway had invented for that weekday. It now **refuses any conformed
+workout that carries no work over a day that does**, unless
+`userRemovalConstraints` / `removalDecisions` name that exact date. The rule
+reads the **shape of the answer** — never a weekday, a session name or a kit.
+
+**AND IT RESOLVED A SPLIT I HAD CREATED.** `getEffectiveGameDates` exempted an
+*explicitly marked* fixture inside a trip while the plan side dropped it
+regardless — so the two sides disagreed about one Saturday, the plan built a
+Friday lower day, and the read side called it G−1 and replaced it with a Gunshow
+(`weekday 5 lost Goblet Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof
+Press`). **A mark says a fixture exists; it does not say the athlete is in the
+country for it.** The exemption is deleted; both sides give one answer.
+
+## THE PRODUCER, CLASSIFIED — SPECIALIST, KEPT
+
+`buildDerivedSession('arms_pump')` selects only `biceps ×2, triceps ×2, delts
+×2`. It never selects squat, hinge, push or pull and never rewrites a composer
+row's identity. **Its recipe is kept and it is fed the canonical effective-day
+kit. No second strength selector exists, and none was created.**
+
+## THE TWO EARLIER FIXES — ROUTE QUESTION RESOLVED
+
+They were covering for each other. After unifying the fixture answer:
+
+| owner | responsibility | guarded by |
+| --- | --- | --- |
+| tier-four boundary | a projection may not delete authored work | [19] [19b] [20] — mutant reds all three |
+| span fixture filter | a fixture inside a trip does not survive | [19b] — mutant reds it alone |
+| `withAthleteKitForDate` | read-side per-day equipment | **UNGUARDED — see below** |
+
+## ⚠ WHAT IS STILL UNGUARDED, AND WHY — SPECIFICALLY
+
+Dropping the per-day kit from the read side reds **nothing**. The reason is not a
+shrug: **once the fixture correctly disappears inside a trip, no read-side
+producer of STRENGTH rows lands there any more.** The only remaining one,
+`freedByTheTrip`, authors CONDITIONING, and conditioning names are absent from
+Sam's equipment sheet, so `exerciseIsAvailableWith` allows them by design.
+
+`withAthleteKitForDate` is retained as the canonical read-side per-day equipment
+owner — `freedByTheTrip` now routes through it — and it is **unguarded**.
+
+## ACCEPTANCE
+
+| criterion | result |
+| --- | --- |
+| zero composer-authored sessions disappear (home, away, departure, return, post-trip) | **PASS** — [19] + [19b] |
+| every visible exercise legal for that day's kit | **PASS** — 134 rows, 10 worlds, **0 illegal** |
+| printed dumbbell-away Friday shows the authored strength session | **PASS** — `Goblet Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press` |
+| all new guards seen red | **PASS** — [19]/[19b]/[20] under the boundary mutant, [19b] under the span mutant |
+| targeted gates + world census rerun | **PASS** — all at baseline |
+
+`test:equipment-scopes` **24 / 0**. Registry 132 rows, 111 guarded, **21
+UNENFORCED — the ratchet never rose.**
+
+---
+
 # MERGE VERDICT
+
+**⚠ SUPERSEDED BY SLICE 6 — SEE THE FINAL VERDICT AT THE FOOT OF THIS FILE.**
 
 **MERGE THE BRANCH, WITH ONE NAMED FOLLOW-UP HELD OPEN.**
 
@@ -853,3 +934,46 @@ Nothing has been seen on glass. The session scope (`applySessionEquipment`)
 writes no fact by design (R-072) and is not exercised here. Of the mission's 15
 proof worlds, 10 are covered by the trace; the session-change worlds (2 and 3)
 and the injury+away combination (14) are not.
+
+
+---
+
+# FINAL VERDICT — AFTER THE BLOCKER SESSION
+
+**MERGE.** Base `6b617847` → branch `feat/equipment-scopes`.
+
+The blocking defect is closed at the boundary, not patched: **no composer-authored
+session disappears in any of the five weeks**, and the rule that holds it names
+no weekday, no session and no kit.
+
+| | base `6b617847` | now |
+| --- | --- | --- |
+| a trip with a full gym | **no week at all** | publishes |
+| the athlete's own lifts on a club night in a trip | **six deleted** | kept |
+| a holiday | **rewrote permanent rotation history** | records nothing |
+| the composed Friday on a dumbbell trip | **shown as Rest Day** | **shown as its authored strength session** |
+| `Bear Carry` | **refused on every kit, silently** | legal when a sandbag is ticked |
+| `test:away-flow` | **threw — no cells** | 51 / 0 |
+| illegal visible rows | `Tricep Pushdown` in a hotel | **0 of 134, across 10 worlds** |
+
+**No world lost.** `test:ladder-wide` 140 worlds / 40 refused / 0 deficient of
+368, kit-blocked census 84; `test:scenarios` 62/3 with the same three;
+`print:week` the same two refusals; `test:compile` 468 with the same six
+pre-existing failures and **zero added**; `test:law-registry` **21 UNENFORCED,
+unchanged**.
+
+Four laws entered guarded and mutation-proven:
+`LAW-temporary-equipment-never-permanent`,
+`LAW-away-removes-the-club-not-the-athlete`,
+`LAW-every-authored-requirement-is-askable`,
+`LAW-a-projection-may-not-delete-authored-work`.
+
+## THE TWO THINGS TO KNOW BEFORE MERGING
+
+1. **`withAthleteKitForDate` is unguarded**, for the specific reason given under
+   slice 6. It is correct and it is retained; a mutation of it reds nothing.
+2. **An athlete away with NO equipment at all still gets no week**
+   (`main_strength_planner_selected_target` 4 vs 3). That is R-090's parked
+   territory and the fence forbids weakening §18 to reach it.
+
+Nothing has been seen on glass.

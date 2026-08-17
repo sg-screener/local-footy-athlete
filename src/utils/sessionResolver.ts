@@ -666,17 +666,27 @@ function getEffectiveGameDates(
    * those rows, so the week that was JUDGED and the week that SHIPPED disagreed
    * about a main lift.
    *
-   * Sam ruled the boundary himself: *"the game on the 15th should be removed …
-   * but the next saturday the 22nd game is still alive"*. Only dates INSIDE a
-   * live span are dropped, and an EXPLICITLY marked game is left alone — a mark
-   * is the athlete's own word about a real fixture, and this filter exists to
-   * remove a fixture nobody stated. The span owner is the shared `awaySpans.ts`,
-   * so the plan side and the read side cannot drift apart again. */
+   * Sam ruled the boundary himself: *"If you're away, you're not playing … the
+   * game on the 15th should be removed … but the next saturday the 22nd game is
+   * still alive"*. Only dates INSIDE a live span are dropped.
+   *
+   * ⚠ **AN EXPLICIT CALENDAR MARK IS NOT AN EXEMPTION, AND TRYING TO MAKE IT
+   * ONE SPLIT THE APP IN TWO.** The first version of this filter kept a marked
+   * fixture — "a mark is the athlete's own word" — and the plan side
+   * (`clubInputsAfterTravel`) drops fixtures inside a span whether marked or
+   * not. So the two sides disagreed about the same Saturday: the PLAN built a
+   * normal week with a Friday lower day, and the READ side then called that
+   * Friday G−1 and replaced it with a Gunshow. Measured — weekday 5 lost
+   * `Goblet Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press`,
+   * caught by `test:equipment-scopes` [19b].
+   *
+   * A mark says a fixture EXISTS; it does not say the athlete is in the country
+   * for it. Being away is the later, narrower fact and it wins on both sides.
+   * The span owner is the shared `awaySpans.ts`, so the plan side and the read
+   * side now give one answer. */
   const spans = awaySpansFromFacts(state.temporarySourceFacts);
   if (spans.length === 0) return dates;
-  const marked = state.markedDays || {};
-  return new Set([...dates].filter((date) =>
-    marked[date] === 'game' || !dateIsInsideAwaySpan(date, spans)));
+  return new Set([...dates].filter((date) => !dateIsInsideAwaySpan(date, spans)));
 }
 
 /**
@@ -1115,6 +1125,51 @@ function section18TierFour(args: {
     .map((finding) => `${finding.code}:${finding.domain}`);
   const byDay = new Map<number, Workout>();
   for (const workout of result.visibleWorkouts) byDay.set(workout.dayOfWeek, workout);
+  /* ── THE BOUNDARY: A PROJECTION MAY NOT DELETE AUTHORED WORK ───────────────
+   *
+   * Tier 4 at read is a CONFORMING pass. It may reshape a day and it may not
+   * empty one, because the session it would empty was authored by the composer,
+   * stored in the accepted program, and counted by §18 on the way in.
+   *
+   * ⚠ **MEASURED, AND IT COST THE ATHLETE A WHOLE SESSION.** 2026-08-17, a
+   * mid-week trip on dumbbells and bands, Friday `2026-08-14`:
+   *
+   *     composer        day 5 lower_hinge, 5 rows, RDLs classified main_strength
+   *     stored program  lower_hinge | Strength | 5 rows
+   *     before tier 4   lower_hinge | Strength | 5 rows
+   *     AFTER tier 4    Rest | Rest | 0 rows            <- here
+   *     screen          Rest Day
+   *
+   * The gateway handed back a Rest for that weekday and this map installed it
+   * over the athlete's session. **§18 counted those rows on the way in and the
+   * athlete never got them** — the week that was JUDGED and the week that
+   * SHIPPED disagreed about a main lift.
+   *
+   * **THE ONLY THING THAT MAY EMPTY A DAY IS A DECISION, AND A DECISION IS
+   * TYPED.** `userRemovalConstraints` and `removalDecisions` are the athlete's
+   * own emptying decisions and they already reach this function; a day either
+   * carries one or it keeps its work. This is the precedence the comment below
+   * already states for the `!day.workout` case — *"tier 4 runs last; last is not
+   * highest"* — applied to the case it did not cover: the day that still HAS
+   * work.
+   *
+   * Nothing is special-cased. The rule reads the SHAPE of the conformed answer,
+   * never a weekday, a session name or a kit. */
+  const authorisedRemovalDates = new Set<string>([
+    ...(args.state.userRemovalConstraints ?? []),
+    ...(args.state.removalDecisions ?? []),
+  ].flatMap((constraint) => {
+    const raw = constraint as unknown as { date?: unknown; dates?: unknown };
+    const dates = Array.isArray(raw.dates) ? raw.dates : [];
+    return [...dates, raw.date]
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.slice(0, 10));
+  }));
+  const carriesWork = (workout: Workout | null | undefined): boolean => !!workout
+    && ((workout.exercises ?? []).length > 0
+      || !!workout.conditioningBlock
+      || !!workout.speedBlock
+      || hasPowerRow(workout));
   return args.days.map((day) => {
     // TIER 4 RUNS LAST; LAST IS NOT HIGHEST.
     // Tier 1 — the emptying decision — outranks it, so a day already emptied by
@@ -1122,6 +1177,12 @@ function section18TierFour(args: {
     // installed onto it.
     if (!day.workout) return day;
     const conformed = byDay.get(day.dayOfWeek);
+    // A day the conforming pass dropped entirely, or answered with an empty
+    // shell, KEEPS the work it already had — unless a typed decision names it.
+    if (!carriesWork(conformed) && carriesWork(day.workout)
+      && !authorisedRemovalDates.has(day.date)) {
+      return day;
+    }
     if (!conformed) return buildDay(day.date, day.dayOfWeek, args.today, null, 'rest');
     return conformed === day.workout
       ? day
@@ -2376,9 +2437,15 @@ function withoutTeamTrainingSegment(name: string | undefined): string {
  */
 function freedByTheTrip(
   date: string,
-  state: ScheduleState,
+  rawState: ScheduleState,
   weekDays: readonly ResolvedDay[],
 ): Workout {
+  /* ⚠ **THIS PRODUCER RUNS INSIDE THE SPAN AND IS OUTSIDE `_resolveDateRaw`.**
+   * `applyAwayPass` is a WEEK-level pass, so the per-day scoping applied at the
+   * top of the date resolution never reached it — and this is the one session
+   * the trip itself creates, on a day the athlete is definitionally away. It
+   * asks the same owner for the same answer. */
+  const state = withAthleteKitForDate(rawState, date);
   // ── THE QUALITY IS CONDITIONING, AND SAM'S OWN ARITHMETIC IS WHY ──
   //
   // ***"if I go away for 2 weeks and I was going to miss 4 team trainings 1 game
