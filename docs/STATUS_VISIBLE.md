@@ -2484,3 +2484,106 @@ the architecture Sam ordered.
 
 Still owed on what is green: a direct on-screen four-week count, and the
 `Need to make a change?` label asserted rather than merely observed.
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 13 — THE LABELLED REMOVE HUB IS ON GLASS, AND UNDO WAS HALF A
+# REVERSAL
+# ═══════════════════════════════════════════════════════════════════════════
+
+**Sam's correction, and it was right:** *"seeing the words 'Need to make a
+change?' does not prove the labelled Remove hub exists."* §7 of session 12 read
+a heading as a feature. The card was real; the only route to a removal was still
+`component-delete-action-…` — **an unlabelled icon, on a pushed session screen,
+behind an expanded strength block.**
+
+## 1. ITEM 1 — THE LABELLED ENTRY, ON GLASS
+
+A fourth chip in `home-change-card`, beside Tired / Sick / Injured: **`Remove`**,
+`testID="home-remove-entry"`, `accessibilityLabel="Remove"`. It **opens
+component selection** rather than acting — the athlete says WHAT before HOW LONG.
+
+`remove-hub-labelled.yaml`, exit 0. **It never taps
+`component-delete-action-*`** — addressing the old icon would prove the old door
+works and say nothing about the new one:
+
+```
+home-change-card visible ...................... COMPLETED
+home-remove-entry visible ..................... COMPLETED
+"Remove" visible .............................. COMPLETED   <-- the WORD, not the id
+home-remove-select-sheet / -back-squat ........ COMPLETED
+home-remove-scope-{today-only,this-block,until-changed} ... COMPLETED
+home-remove-result-ok, -refused NOT visible ... COMPLETED
+```
+
+Both owners, neither reimplemented: `executeProgramControlActionDurably(
+{type:'remove_exercise'})` then `applyExerciseExclusionDecision`. **If the first
+refuses, the flow reports ITS typed message and never records an exclusion** —
+no success sentence over an unchanged screen.
+
+## 2. ITEM 2 — AND UNDO WAS BROKEN IN TWO SEPARATE PLACES
+
+**(a) THE TOAST COULD NEVER APPEAR FOR A REMOVAL.** The ledger held the entry
+and `replayableEntries` returned it, so it WAS undoable — but `phraseFor` had no
+`program_control` case, and `undoToastFor` returns null on an unmapped kind **by
+design**. Nothing was red. One case added; the other seventeen action types stay
+unmapped on purpose, because a phrase here is a sentence on the athlete's screen.
+
+**(b) UNDO WAS HALF A REVERSAL.** A removal writes TWO facts through TWO owners:
+the program-control action (on the ledger, annulled by the reversal) and the
+canonical exclusion (in athlete preferences, which **replay never touches**).
+Measured on device:
+
+```
+LEDGER:     dl-1 program_control  ->  dl-2 reversal        (correct)
+EXCLUSIONS: [{ exercise: "Back Squat", scope: "today_only" }]   (SURVIVED)
+```
+
+**The toast said the change was undone and Back Squat stayed gone.** Fixed at
+`restoreExcludedExercise` — the SAME owner Restore uses, so this is not a second
+undo authority; it is one reversal finally reaching both of its writes.
+
+After the fix, on device: `undo-toast` and `undo-toast-action` visible **on the
+surface the removal happened on**, Back Squat back by name, Front Squat gone,
+and `EXCLUSIONS AFTER UNDO: []`.
+
+## 3. ⚠ TWO GUARDS I WROTE WERE VACUOUS, AND THE MUTATION CAUGHT BOTH
+
+Recorded because both are laws this repo already carries and I paid them again.
+
+| version of cell 19 | why it was green under the mutation |
+| --- | --- |
+| a **source scan** | deleting the `restoreExcludedExercise(...)` CALL left the import and the `remove_exercise` literal in place, so a regex for either stayed green |
+| an **`async` cell** | `run` takes `() => void` and does **not await**; the body returned a promise, the cell counted as passed IMMEDIATELY, and every assertion after the first `await` ran outside the try/catch as an unhandled rejection |
+
+**Only the third version — synchronous, driving the real owners — reds.** Both
+new cells carry a liveness assertion first, so a removal that starts from zero
+cannot pass.
+
+**MUTATIONS SEEN RED:** drop the phrase → cell 18 reds; drop only the
+`restoreExcludedExercise` call → cell 19 reds with *"the exclusion survived the
+undo"*. Restored from my own backups: 19 passed, 0 failed.
+
+## 4. THE CHIP-ROW RATCHET, RAISED 3 → 4 WITH ITS REASON
+
+`day-first-timeline`'s chip-row cell is a deliberate ratchet. It went red the
+moment the fourth chip landed — **the gate working**, not a regression — and was
+raised with the reason in the list itself. Back to **45 passed, 3 failed**,
+byte-identical to baseline.
+
+## 5. BLAST RADIUS
+
+`undo-reversal` 19/0 (was 17/0, green at baseline) · `journal-changes` 20/0 ·
+`exercise-exclusions` 52/0 · `dead-affordances` 6/0 · `approved-icons` 15/0 ·
+`decision-ledger-ownership` 7/1 **identical to baseline** ·
+`day-first-timeline` 45/3 **identical to baseline** · `test:compile` **469, same
+seven pairs, zero added**.
+
+## 6. WHAT REMAINS ON SAM'S ORDER
+
+Items **3** (restart → Restore), **4** (all three scopes proven, history
+unchanged, replacement's own load), and **5** (typed refusal when no legal
+replacement) are **NOT DONE**. The full 405-suite comparison is owed once, at
+the end of the slice, and has not been run this session. Physical-iPhone
+acceptance remains explicitly owed.

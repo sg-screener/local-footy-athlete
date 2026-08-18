@@ -67,7 +67,10 @@ export function UndoToast(): React.ReactElement | null {
 
   return (
     <Animated.View style={[styles.wrap, { opacity: fade }]} pointerEvents="box-none">
-      <View style={styles.toast}>
+      {/* ADDRESSABLE, because a flow has to be able to prove this appeared on
+          the surface the athlete acted on. The accessibility label stays the
+          athlete's word ("Undo"); these ids are for the walk. */}
+      <View style={styles.toast} testID="undo-toast">
         <Text style={styles.sentence} numberOfLines={2}>
           {UNDO_TOAST_COPY.sentencePrefix} {model.sentence}
         </Text>
@@ -76,6 +79,7 @@ export function UndoToast(): React.ReactElement | null {
           disabled={busy}
           hitSlop={12}
           accessibilityRole="button"
+          testID="undo-toast-action"
           accessibilityLabel={UNDO_TOAST_COPY.undoAction}
           style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
         >

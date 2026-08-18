@@ -545,6 +545,19 @@ const LIFE_FACT_DOORS: readonly { readonly label: string; readonly onPress: stri
   { label: 'Tired', onPress: "setReadinessEntry('flat')", testID: 'testID="home-tired-entry"' },
   { label: 'Sick', onPress: "setReadinessEntry('sick')", testID: 'explorerTestId.readinessUpdate(weekReadiness.id)' },
   { label: 'Injured', onPress: 'setReadinessInjuryVisible(true)', testID: 'testID="home-injured-entry"' },
+  // ── THREE -> FOUR, RAISED DELIBERATELY, IN THE COMMIT THAT EARNS IT ────────
+  // Sam, 2026-08-19: *"the required trigger is not complete until the athlete
+  // can clearly tap a labelled Remove action."* Until this chip existed, the
+  // ONLY route to a removal was `component-delete-action-…` — an unlabelled
+  // icon on a pushed session screen, behind an expanded strength block.
+  //
+  // It belongs on THIS row and not inside the session for the reason the row's
+  // own message gives about Equipment and Away: the row is the "Need to make a
+  // change?" area, and removing an exercise is a change to today. It is also
+  // what makes Undo reachable — `UndoToast` mounts on this screen, so a removal
+  // driven from here finishes where the toast appears, instead of raising it
+  // behind the pushed screen where its life expires unseen.
+  { label: 'Remove', onPress: "setRemoveFlow({ kind: 'select' })", testID: 'testID="home-remove-entry"' },
 ];
 
 run('the screen is in the order Sam ruled: toggle, card, then change controls', () => {
@@ -1261,9 +1274,9 @@ run('the chip row carries its direct status doors and no others', () => {
     + 'span and would pass on anything');
   const chips = row.match(/<LifeFactChip\b/g) ?? [];
   assert(chips.length === LIFE_FACT_DOORS.length,
-    `the row renders ${chips.length} chip(s); the Day surface owns three — tired, `
-    + 'sick and injured. Equipment belongs inside the opened session, and Away '
-    + 'belongs on the week shape (item 28).');
+    `the row renders ${chips.length} chip(s); the Day surface owns four — tired, `
+    + 'sick, injured and remove. Equipment belongs inside the opened session, and '
+    + 'Away belongs on the week shape (item 28).');
   for (const door of LIFE_FACT_DOORS) {
     assert(row.includes(door.onPress),
       `the "${door.label}" chip no longer calls ${door.onPress}, the direct `

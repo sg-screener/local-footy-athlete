@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -59,6 +59,15 @@ import type { MissedSession, MissedSessionResponse } from '../../utils/missedSes
 import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 import { UndoToast } from '../../components/UndoToast';
+import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
+import { executeProgramControlActionDurably } from '../../utils/programControlActions';
+import {
+  EXERCISE_EXCLUSION_SCOPES,
+  EXERCISE_EXCLUSION_SCOPE_LABEL,
+  EXERCISE_EXCLUSION_SCOPE_DETAIL,
+  EXERCISE_EXCLUSION_QUESTION,
+} from '../../rules/exerciseExclusions';
+import type { ExerciseExclusionScope } from '../../rules/exerciseExclusions';
 import { BuildingState, RebuildSheet } from '../../components/RebuildSheet';
 import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedbackRenderWitness';
 import {
@@ -232,6 +241,103 @@ export default function HomeScreenV2() {
   const dayFirst = preferredProgramView === 'today' && isNormal;
   const dayFirstIdx = Math.min(Math.max(preferredDayIdx, 0), Math.max(weekDays.length - 1, 0));
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
+
+  /**
+   * THE LABELLED REMOVE HUB'S OWN STEPS — selection, then scope, then a receipt.
+   *
+   * Three steps and not one, because Sam's contract is two questions: WHAT is
+   * coming out, and FOR HOW LONG. Collapsing them is what produced the
+   * unlabelled icon this replaces.
+   */
+  const [removeFlow, setRemoveFlow] = useState<
+    | { kind: 'closed' }
+    | { kind: 'select' }
+    | { kind: 'scope'; exerciseName: string; exerciseId: string | null }
+    | { kind: 'result'; ok: boolean; title: string; message: string }
+  >({ kind: 'closed' });
+
+  /**
+   * Today's removable rows, read off the SAME projected day the card is about.
+   *
+   * `.exercises` and not a re-derivation: the athlete may only remove what they
+   * can currently see, so the list the sheet offers is the list the screen shows.
+   */
+  const removableExercises = useMemo(() => {
+    const rows = (dayFirstDay?.workout?.exercises ?? []) as Array<{
+      id?: string | null;
+      exerciseId?: string | null;
+      exercise?: { name?: string | null } | null;
+    }>;
+    const seen = new Set<string>();
+    return rows.flatMap((row) => {
+      const name = row.exercise?.name?.trim();
+      if (!name || seen.has(name)) return [];
+      seen.add(name);
+      return [{ name, exerciseId: row.exerciseId ?? row.id ?? null }];
+    });
+  }, [dayFirstDay]);
+
+  /**
+   * THE ANSWER, THROUGH BOTH EXISTING OWNERS AND NEITHER REIMPLEMENTED.
+   *
+   * `executeProgramControlActionDurably({type:'remove_exercise'})` takes the row
+   * off today and writes the REVERSIBLE entry — that entry is what `UndoToast`
+   * reads, which is why Undo needs no new authority here. Then
+   * `applyExerciseExclusionDecision` records the canonical fact with its scope.
+   * The same two owners, in the same order, as the session screen's route.
+   *
+   * **NO SUCCESS SENTENCE WITHOUT A VISIBLE CHANGE (Sam's clause).** If the
+   * first owner refuses, the flow reports ITS message and stops — it never
+   * records an exclusion for a session that did not change, and never says
+   * "Saved" over a screen that still shows the exercise.
+   */
+  const applyRemoveFlowScope = useCallback(
+    async (exerciseName: string, exerciseId: string | null, scope: ExerciseExclusionScope) => {
+      const date = dayFirstDay?.date ?? todayISOLocal();
+      const removal = await executeProgramControlActionDurably({
+        type: 'remove_exercise',
+        // `program_tab` is this screen's own id in the ledger vocabulary; the
+        // SURFACE is what distinguishes this card from the rest of the tab.
+        source: { screen: 'program_tab', surface: 'home_change_card', initiatedBy: 'tap' },
+        scope: 'today_only',
+        payload: { date, exercise: exerciseName, exerciseId: exerciseId ?? undefined },
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: true,
+      });
+      if (!removal.ok) {
+        setRemoveFlow({
+          kind: 'result',
+          ok: false,
+          // The owner's OWN typed reason, never a generic sentence.
+          title: 'Could not remove that',
+          message: removal.message ?? 'Your session is unchanged.',
+        });
+        return;
+      }
+      const decision = applyExerciseExclusionDecision({
+        exercise: exerciseName,
+        scope,
+        decidedOnISO: date,
+      });
+      if (!decision.ok || !decision.exclusion) {
+        setRemoveFlow({
+          kind: 'result',
+          ok: false,
+          title: 'Could not save that',
+          message: 'Today\u2019s session is still updated.',
+        });
+        return;
+      }
+      setRemoveFlow({
+        kind: 'result',
+        ok: true,
+        title: 'Saved',
+        message: `${exerciseName} \u2014 ${EXERCISE_EXCLUSION_SCOPE_LABEL[scope].toLowerCase()}.`,
+      });
+    },
+    [dayFirstDay],
+  );
   const reviewAthlete = useAthleteContext();
   const mobilityFlowByDate = useMemo(() => {
     const isGameWeek = weekDays.some((day) => day.indicator === 'game');
@@ -927,6 +1033,41 @@ export default function HomeScreenV2() {
                 </Svg>
               }
             />
+            {/* ── THE LABELLED REMOVE ENTRY (Sam, 2026-08-19) ─────────────────
+                **THE WORD IS THE REQUIREMENT.** The only route to a removal was
+                a per-row icon on the pushed session screen — `component-delete-
+                action-…`, no label, and reachable only by an athlete who had
+                already opened the session and expanded the strength block. Sam:
+                *"seeing the words 'Need to make a change?' does not prove the
+                labelled Remove hub exists ... the required trigger is not
+                complete until the athlete can clearly tap a labelled Remove
+                action."*
+
+                It sits in THIS card because this card is the "Need to make a
+                change?" area, and it opens COMPONENT SELECTION rather than
+                acting immediately — the athlete says what to remove before they
+                say for how long.
+
+                **AND IT IS WHY UNDO CAN WORK AT ALL.** `UndoToast` mounts once,
+                here on the Home screen. A removal driven from the pushed session
+                screen raised its toast on the screen BEHIND it, where its
+                six-second life expired unseen. A removal driven from this card
+                finishes on the surface the toast is already on. Same reversible
+                owner, no second undo authority — the surface moved, not the
+                mechanism. */}
+            <LifeFactChip
+              onPress={() => setRemoveFlow({ kind: 'select' })}
+              testID="home-remove-entry"
+              accessibilityLabel="Remove"
+              accessibilityHint="Remove an exercise from today's session"
+              label="Remove"
+              tint={styles.removeIconTint}
+              icon={
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFA1C4" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <Path d="M5 12h14" />
+                </Svg>
+              }
+            />
           </View>
           </Card>
         )}
@@ -1470,6 +1611,82 @@ export default function HomeScreenV2() {
         knowing this component exists. That is why there is one mount here and
         no toast call at any of the ten program-control call sites.
       */}
+      {/* ── THE LABELLED REMOVE HUB'S SHEETS ────────────────────────────────
+          Mounted HERE, beside `UndoToast`, and that adjacency is the point:
+          the flow that raises the undoable action finishes on the same surface
+          the toast appears on. */}
+      <Sheet
+        visible={removeFlow.kind === 'select'}
+        onClose={() => setRemoveFlow({ kind: 'closed' })}
+        testID="home-remove-select-sheet"
+      >
+        <Text style={styles.sheetTitle}>Remove an exercise</Text>
+        {removableExercises.length === 0 ? (
+          <Text style={styles.changeCardSubline} testID="home-remove-select-empty">
+            There is nothing to remove in today&apos;s session.
+          </Text>
+        ) : removableExercises.map((row) => (
+          <SheetOption
+            key={row.name}
+            label={row.name}
+            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFA1C4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14"/></Svg>}
+            testID={`home-remove-select-${stableTestIdToken(row.name)}`}
+            onPress={() => setRemoveFlow({
+              kind: 'scope',
+              exerciseName: row.name,
+              exerciseId: row.exerciseId,
+            })}
+          />
+        ))}
+      </Sheet>
+
+      <Sheet
+        visible={removeFlow.kind === 'scope'}
+        onClose={() => setRemoveFlow({ kind: 'closed' })}
+        testID="home-remove-scope-sheet"
+      >
+        <Text style={styles.sheetTitle}>
+          {removeFlow.kind === 'scope' ? removeFlow.exerciseName : ''}
+        </Text>
+        {/* The question is the ONE owned constant, so this sheet and My Status
+            ask the athlete the same thing in the same words. */}
+        <Text style={styles.changeCardSubline}>{EXERCISE_EXCLUSION_QUESTION}</Text>
+        {EXERCISE_EXCLUSION_SCOPES.map((scope) => (
+          <SheetOption
+            key={scope}
+            label={EXERCISE_EXCLUSION_SCOPE_LABEL[scope]}
+            sub={EXERCISE_EXCLUSION_SCOPE_DETAIL[scope]}
+            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Circle cx="12" cy="12" r="9"/><Path d="M12 7v5l3 2"/></Svg>}
+            testID={`home-remove-scope-${stableTestIdToken(scope)}`}
+            onPress={() => {
+              if (removeFlow.kind !== 'scope') return;
+              void applyRemoveFlowScope(removeFlow.exerciseName, removeFlow.exerciseId, scope);
+            }}
+          />
+        ))}
+      </Sheet>
+
+      <Sheet
+        visible={removeFlow.kind === 'result'}
+        onClose={() => setRemoveFlow({ kind: 'closed' })}
+        testID={removeFlow.kind === 'result' && removeFlow.ok
+          ? 'home-remove-result-ok'
+          : 'home-remove-result-refused'}
+      >
+        <Text style={styles.sheetTitle}>
+          {removeFlow.kind === 'result' ? removeFlow.title : ''}
+        </Text>
+        <Text style={styles.changeCardSubline} testID="home-remove-result-message">
+          {removeFlow.kind === 'result' ? removeFlow.message : ''}
+        </Text>
+        <SheetOption
+          label="Done"
+          icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M4 12l6 6L20 6"/></Svg>}
+          testID="home-remove-result-done"
+          onPress={() => setRemoveFlow({ kind: 'closed' })}
+        />
+      </Sheet>
+
       <UndoToast />
     </SafeAreaView>
   );
@@ -3673,6 +3890,7 @@ const styles = StyleSheet.create({
   tiredIconTint: { backgroundColor: 'rgba(103, 215, 255, 0.12)' },
   awayIconTint: { backgroundColor: 'rgba(185, 167, 255, 0.12)' },
   injuredIconTint: { backgroundColor: 'rgba(255, 127, 127, 0.12)' },
+  removeIconTint: { backgroundColor: 'rgba(255, 161, 196, 0.12)' },
   scheduleAckError: { color: '#FF7A85' },
   readinessAck: {
     backgroundColor: 'rgba(198, 255, 0, 0.12)',

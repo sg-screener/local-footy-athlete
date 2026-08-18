@@ -72,6 +72,30 @@ export function phraseFor(entry: DecisionLedgerEntry): string | null {
     case 'fixture_remove': return 'removed a fixture';
     case 'fixture_move': return 'moved a fixture';
     case 'reversal': return 'undid a change';
+    /**
+     * WHY THIS CASE EXISTS, AND WHY IT MAPS EXACTLY ONE TYPE.
+     *
+     * `remove_exercise` is recorded on the ledger as a `program_control`
+     * decision and IS undoable — `replayableEntries` returns it, so
+     * `lastUndoableEntry` finds it. It had no phrase, and this file's rule is
+     * that an unmapped kind shows NOTHING, so the undo toast could never appear
+     * for a removal. Measured on device 2026-08-19: the ledger held the entry,
+     * the exclusion was written, and the toast was absent — the athlete's only
+     * immediate way back from a removal was silently unreachable.
+     *
+     * The other `ProgramControlActionType`s stay unmapped ON PURPOSE. A phrase
+     * here is a sentence on the athlete's screen, and inventing eighteen of them
+     * to look complete would put unruled words in front of them — which is the
+     * thing "an unmapped kind shows nothing" was written to prevent. They become
+     * reachable one at a time, each with its own wording, in the slice that
+     * needs it.
+     */
+    case 'program_control': {
+      switch (decision.action.type) {
+        case 'remove_exercise': return 'removed an exercise';
+        default: return null;
+      }
+    }
     case 'plan_change': {
       switch (decision.change.kind) {
         case 'remove_session': return 'removed a session';

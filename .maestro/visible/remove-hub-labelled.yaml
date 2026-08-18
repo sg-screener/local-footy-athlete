@@ -1,0 +1,113 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - the LABELLED Remove hub, and Undo on the surface it happened on
+tags:
+  - e2e
+  - visible
+---
+# SAM, 2026-08-19: *"seeing the words 'Need to make a change?' does not prove the
+# labelled Remove hub exists ... the required trigger is not complete until the
+# athlete can clearly tap a labelled Remove action."*
+#
+# ⚠ **THIS FLOW NEVER TAPS `component-delete-action-*`.** That icon is the route
+# this walk exists to replace; addressing it here would prove the old door works
+# and say nothing about the new one. Every tap below is on a LABELLED control.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: ${SEED_ID}
+
+# ── 1. THE LABELLED ENTRY, INSIDE THE INTENDED AREA ────────────────────────
+# The card first, then the control INSIDE it — asserting the control alone
+# would pass if it were rendered anywhere on the screen.
+- assertVisible:
+    id: "home-change-card"
+- assertVisible:
+    id: "home-remove-entry"
+# THE WORD ITSELF. `home-remove-entry` is an id and an id is not a label; this
+# is the assertion that actually answers Sam's requirement.
+- assertVisible: "Remove"
+- takeScreenshot: artifacts/visible/hub-1-labelled-entry
+
+# ── 2. IT OPENS COMPONENT SELECTION, IT DOES NOT ACT ───────────────────────
+- tapOn:
+    id: "home-remove-entry"
+- extendedWaitUntil:
+    visible:
+      id: "home-remove-select-sheet"
+    timeout: 10000
+- assertVisible:
+    id: "home-remove-select-back-squat"
+- takeScreenshot: artifacts/visible/hub-2-component-selection
+- tapOn:
+    id: "home-remove-select-back-squat"
+
+# ── 3. THEN THE SCOPE QUESTION, ALL THREE ANSWERS ──────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "home-remove-scope-sheet"
+    timeout: 10000
+- assertVisible:
+    id: "home-remove-scope-today-only"
+- assertVisible:
+    id: "home-remove-scope-this-block"
+- assertVisible:
+    id: "home-remove-scope-until-changed"
+- takeScreenshot: artifacts/visible/hub-3-scope-question
+- tapOn:
+    id: "home-remove-scope-today-only"
+
+# ── 4. THE RECEIPT — and it must be the OK one, not the refusal one ────────
+- extendedWaitUntil:
+    visible:
+      id: "home-remove-result-ok"
+    timeout: 15000
+- assertNotVisible:
+    id: "home-remove-result-refused"
+- takeScreenshot: artifacts/visible/hub-4-receipt
+- tapOn:
+    id: "home-remove-result-done"
+
+# ── 5. UNDO, ON THE SURFACE THE REMOVAL HAPPENED ON ────────────────────────
+# This is the whole point of moving the trigger. The removal was driven from
+# THIS screen, so the toast is on THIS screen — not behind a pushed session
+# screen where its life expires unseen.
+- extendedWaitUntil:
+    visible:
+      id: "undo-toast"
+    timeout: 15000
+- assertVisible:
+    id: "undo-toast-action"
+- assertVisible: "Undo"
+- takeScreenshot: artifacts/visible/hub-5-undo-on-same-surface
+
+# ── 6. UNDO ACTUALLY REVERSES IT ──────────────────────────────────────────
+# A visible toast is not a working Undo. Sam's clause is that Undo must
+# "visibly restore Back Squat and remove the Today exclusion", so the tap is
+# followed by reading the rows — the same standard every other claim here is
+# held to.
+- tapOn:
+    id: "undo-toast-action"
+- extendedWaitUntil:
+    notVisible:
+      id: "undo-toast"
+    timeout: 15000
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+# BACK, BY NAME. And the substitute the removal introduced is gone again —
+# asserting only the first would pass on a session showing both.
+- assertVisible:
+    id: "session-strength-position-.*-back-squat"
+- assertNotVisible:
+    id: "session-strength-position-.*-front-squat"
+- takeScreenshot: artifacts/visible/hub-6-undo-restored-back-squat
