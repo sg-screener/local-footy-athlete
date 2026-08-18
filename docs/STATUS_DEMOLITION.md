@@ -190,3 +190,91 @@ coaching question needing his ruling: his contract already decides it.
 pass. That census comes before the deletion, not after.
 
 Agent: demolition
+
+---
+
+## SLICE 2 — LANDED: §18 IS A PURE BOUNDARY. THE REPAIR SYSTEM IS GONE.
+
+`1,924 deletions / 242 insertions` across 18 files. Two files physically deleted.
+
+### THE MUTATION INVENTORY, AND WHAT HAPPENED TO EACH
+
+| # | mutation §18 could perform | repair kind | class | disposition |
+| --- | --- | --- | --- | --- |
+| 1 | replace an authored session with **Rest** | `optional_work_removed_for_rest` | **C** — not authorised | DELETED |
+| 2 | **move work** onto another day | `core_work_stacked_on_existing_stress_day` | **A** — scheduler owns days + spacing | DELETED |
+| 3 | **relocate** a craft violation | `craft_violation_relocated` | **A** — scheduler | DELETED |
+| 4 | **re-place** displaced strength | `displaced_strength_relocated` | **A** — scheduler sites, composer fills | DELETED |
+| 5 | **add conditioning** after authorship | `core_conditioning_presented` | **A** — conditioning specialist | DELETED |
+| 6 | author a **whole replacement week** | `regenerated_candidate` | **C** — a second weekly authority | DELETED |
+| 7 | author a **fallback week** | `safe_fallback_candidate` | **C** — fallback to a retired planner | DELETED |
+| 8 | **lower the contract** until the week passes | (`withDisplacedCapacityReduction`) | **C** — conform-back rewriting | DELETED |
+| 9 | reduce **power dose** | `weekly_power_budget` | **B** — belongs to the power specialist | **RETAINED, named** |
+| 10 | place/withdraw the **optional offer** | `offer_presented` / `offer_withdrawn` | **B** — optional-session specialist | **RETAINED, named** |
+| 11 | **expire** obsolete derived work | `obsolete_derived_work_expired` | **B** — derived-provenance owner | **RETAINED, named** |
+| 12 | apply a stored **athlete removal** | `athlete_removal_typed_reduction` | disclosure, written by the replan owner | RETAINED |
+| 13 | **disclose** a craft violation | `craft_violation_disclosed` | pure explanation | RETAINED |
+
+**9, 10 and 11 are class B and are NOT yet moved.** Sam's own rule says the
+capability is built and guarded in the correct owner FIRST and only then deleted
+here. They are named in the surviving `Section18WeekRepairKind` union with that
+status written beside them, so they cannot be forgotten. **§18 is not yet
+mutation-free and this report does not claim it is.**
+
+### WHAT WAS PHYSICALLY DELETED
+
+| file | lines | why |
+| --- | --- | --- |
+| `src/rules/wholeWeekRepairEngine.ts` | 144 | the breadth-first candidate search itself |
+| `src/__tests__/wholeWeekRepairEngineTests.ts` | 280 | its subject is the deleted engine |
+
+Deleted **in place** (function bodies removed, file retained):
+
+- `section18AcceptedWeekGateway.ts` **1804 → ~1060 lines.** 14 functions, 611
+  lines: the five repair generators, their shared mutator `replaceDay`, the
+  expander `localRepairCandidates`, and the helpers `mergeCoreWork`,
+  `explicitRestStub`, `relocateStrengthTemplate`, `withDisplacedCapacityReduction`,
+  `authorityForDisplacement`, `hasMainStrength`, `profileAvailableDayNumbers`.
+  Plus the regenerate → fallback cascade in `runSection18AcceptedWeekGateway`.
+- `postGenerationConstraintValidation.ts` — `buildSection18ProductionFallbackCandidate`, **329 lines**.
+- `programStore.ts` — `legacyMigrationFallbackProfile` (49) and the `buildFallback` wiring.
+- Gateway INPUTS deleted, each a licence to author: `strengthTemplates`,
+  `maxRepairAttempts`, `regenerate`, `safeFallback`.
+- `Section18WeekAcceptanceStatus` **5 → 2**: `accepted | impossible`. The three
+  removed (`repaired`, `regenerated`, `fallback`) each named a week the validator
+  had built itself.
+
+### OBSOLETE TESTS DELETED
+
+| file / cell | why |
+| --- | --- |
+| `wholeWeekRepairEngineTests.ts` (whole file) | subject = deleted engine |
+| craft tier C3, C4 | "the search MOVES the badly placed session"; "the repaired week…" |
+| craft tier M6, M10 | mutation witnesses asserting a repair HAPPENS |
+| gateway 31, 48, 49, 50, 51 | the regenerate → fallback cascade |
+| diagnostics cells 4, 9 | drove the deleted search as their vehicle |
+
+Cells REWRITTEN to the current contract rather than deleted: gateway 30 ("repair
+loops terminate" → "a refused week is refused in ONE assessment"), craft G3, G4.
+
+### PROOF
+
+- **zero production executions/imports of the repair system.** Every surviving
+  mention of a deleted symbol is PROSE; measured symbol by symbol. The two
+  remaining type-importers (`fixtureMutationTransaction`,
+  `homeGameMutationController`) had their outcome type collapsed to `'accepted'`.
+- **`test:compile` is IDENTICAL to base** — product 35, devtools 51, tests 383,
+  the same 7 pre-existing file/scope pairs. Not one new error in any scope.
+- **§18 input week equals the week it validates** — `canonicalWorkouts` is now
+  `assembleWithFactDays(offered.workouts)`, the input, rather than a search result.
+- Stale comments naming the deleted engine were CORRECTED, not left: a comment
+  claiming a repair path exists is how the next agent rebuilds one.
+
+### NOT MEASURED YET
+
+**Worlds newly refusing.** Baseline is 155 of 405 suites failing at `6da38cee`
+(`scratchpad/BASELINE-FAILS-6da38cee.txt`). The after-sweep is owed, in a clean
+tree at this commit — my first attempt ran in the tree I was still editing and
+was discarded, for the second time this mission.
+
+Agent: demolition

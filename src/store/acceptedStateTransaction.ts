@@ -2242,7 +2242,7 @@ export interface RollingHorizonFixtureCandidateScore {
 }
 
 export interface RollingHorizonFixtureRepairResult {
-  outcome: 'accepted' | 'repaired' | 'regenerated' | 'fallback';
+  outcome: 'accepted';
   weekStarts: string[];
   projections: RollingHorizonFixtureRepairProjection[];
   totalChangedDays: number;
@@ -2471,13 +2471,10 @@ export function stageRollingHorizonFixtureRepair(args: {
   if (!search) throw new Error('Rolling fixture repair produced no complete horizon candidate');
   const projections = search.candidate;
   const statuses = projections.map((projection) => projection.replan.gateway.status);
-  const outcome = statuses.includes('fallback')
-    ? 'fallback'
-    : statuses.includes('regenerated')
-      ? 'regenerated'
-      : statuses.includes('repaired')
-        ? 'repaired'
-        : 'accepted';
+  /* §18 answers accepted or impossible. The three authored statuses this used
+   * to rank between — fallback, regenerated, repaired — named weeks the
+   * validator had built itself, and it no longer builds any. */
+  const outcome = 'accepted' as const;
   emitAthleteActionEvent(trace, 'repair_candidates_generated', {
     candidateCount: search.searchedCandidates,
     candidateGroupCounts: projectionResults.map(({ projection }) =>

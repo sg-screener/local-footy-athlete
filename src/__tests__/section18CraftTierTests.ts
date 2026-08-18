@@ -162,7 +162,6 @@ function craftOf(
 function gateway(workouts: readonly Workout[], opts: {
   contract?: WeeklyExposureContractV2;
   pinProjection?: boolean;
-  maxRepairAttempts?: number;
 } = {}) {
   return runSection18AcceptedWeekGateway({
     contract: opts.contract ?? contract,
@@ -172,7 +171,6 @@ function gateway(workouts: readonly Workout[], opts: {
     surfaces: emptyEvaluationSurfaces(),
     activeFixtureDates: new Set([dateForDay(6)]),
     ...(opts.pinProjection ? { resolveVisibleWorkouts: (w: readonly Workout[]) => [...w] } : {}),
-    ...(opts.maxRepairAttempts ? { maxRepairAttempts: opts.maxRepairAttempts } : {}),
   });
 }
 
@@ -253,19 +251,12 @@ check('C1 the gateway never publishes a craft violation it has not named',
 check('C2 the contract had no objection — this is the craft tier acting alone',
   brokenResult.evaluation.blockingViolations.length === 0,
   brokenResult.evaluation.blockingViolations.map((finding) => finding.code));
-// THE POINT OF THE WHOLE UNIT. Not "the week was flagged" — the week was FIXED:
-// the hard lower is off G-2 and back on a day that can carry it.
-check('C3 the search MOVES the badly placed session rather than only naming it',
-  brokenResult.repairs.some((repair) => repair.kind === 'craft_violation_relocated') &&
-    brokenResult.craft.blocking.length === 0,
-  { repairs: brokenResult.repairs.map((repair) => repair.kind) });
-check('C4 the repaired week keeps every session it started with',
-  brokenResult.visibleWorkouts.filter((workout) => (workout.exercises ?? []).length > 0).length ===
-    craftBreakingSwap.filter((workout) => (workout.exercises ?? []).length > 0).length,
-  {
-    before: craftBreakingSwap.map((workout) => `${workout.dayOfWeek}:${workout.name}`),
-    after: brokenResult.visibleWorkouts.map((workout) => `${workout.dayOfWeek}:${workout.name}`),
-  });
+/* ⚠ C3 AND C4 WERE DELETED WITH THEIR SUBJECT (2026-08-19, seat `demolition`).
+ * They asserted that the gateway MOVES a badly placed session — "not 'the week
+ * was flagged' — the week was FIXED". That relocation was §18 authoring, and
+ * §18 no longer authors. The behaviour those cells protected is now the
+ * scheduler's to get right; C6/C7 below, which were the exhaustion branch, are
+ * the main behaviour: a craft violation is DISCLOSED and the week publishes. */
 check('C5 the craft verdict describes the SELECTED visible week',
   craftOf(brokenResult.visibleWorkouts).blocking.map((finding) => finding.ruleId).join(',') ===
     brokenResult.craft.blocking.map((finding) => finding.ruleId).join(','),
@@ -274,10 +265,9 @@ check('C5 the craft verdict describes the SELECTED visible week',
     recomputed: craftOf(brokenResult.visibleWorkouts).blocking.map((finding) => finding.ruleId),
   });
 
-// WHEN THE SEARCH CANNOT REACH A FIX. `maxRepairAttempts: 1` is the
-// deterministic way to stand on the exhaustion branch: one candidate evaluated,
-// no expansion, craft violation intact.
-const unrepairable = gateway(craftBreakingSwap, { pinProjection: true, maxRepairAttempts: 1 });
+// THERE IS NO SEARCH TO EXHAUST. One candidate is evaluated — the authored
+// week — and a craft violation it carries is disclosed rather than repaired.
+const unrepairable = gateway(craftBreakingSwap, { pinProjection: true });
 check('C6 an unrepaired craft violation is DISCLOSED, never silent',
   unrepairable.craft.blocking.length > 0 &&
     unrepairable.repairs.some((repair) => repair.kind === 'craft_violation_disclosed'),
@@ -300,7 +290,6 @@ try {
     surfaces: emptyEvaluationSurfaces(),
     activeFixtureDates: new Set([dateForDay(6)]),
     resolveVisibleWorkouts: (workouts: readonly Workout[]) => [...workouts],
-    maxRepairAttempts: 1,
   });
 } catch (error) {
   restorationThrew = error instanceof Section18WeekAcceptanceError ||
@@ -460,22 +449,20 @@ const athleteSessionStillOnItsDay = athleteResult.visibleWorkouts.some((workout)
   workout.dayOfWeek === G_MINUS_2 &&
   workout.name === (lowerSource ? lowerSource.name : ''));
 check('G3 the gateway leaves the athlete\'s own session where they put it',
-  athleteSessionStillOnItsDay &&
-    !athleteResult.repairs.some((repair) => repair.kind === 'craft_violation_relocated'),
+  athleteSessionStillOnItsDay,
   {
     repairs: athleteResult.repairs.map((repair) => repair.kind),
     days: athleteResult.visibleWorkouts.map((workout) => `${workout.dayOfWeek}:${workout.name}`),
   });
 
 // THE OTHER HALF OF A SWAP. The violating session is the app's, so it still
-// blocks — but every day it could move to is the athlete's, and taking one of
-// those displaces THEIR session just as surely.
+// blocks. §18 no longer has a relocation to withhold — it has nothing to offer
+// but the disclosure, which is now the whole of the correct behaviour.
 const athleteOwnsEveryTargetDay: Workout[] = craftBreakingSwap.map((workout) =>
   workout.dayOfWeek === G_MINUS_2 ? workout : stampAthlete(workout));
 const blockedResult = gateway(athleteOwnsEveryTargetDay, { pinProjection: true });
-check('G4 a repair is withheld rather than displace an athlete-owned day',
-  blockedResult.repairs.some((repair) => repair.kind === 'craft_violation_disclosed') &&
-    !blockedResult.repairs.some((repair) => repair.kind === 'craft_violation_relocated'),
+check('G4 an athlete-owned day is never displaced — the violation is disclosed',
+  blockedResult.repairs.some((repair) => repair.kind === 'craft_violation_disclosed'),
   { repairs: blockedResult.repairs.map((repair) => repair.kind) });
 
 console.log('\n── F. Mutation witnesses — what each cell kills ──');
@@ -491,18 +478,17 @@ const mutations: Array<[string, boolean]> = [
     unrepairable.repairs.some((repair) => repair.kind === 'craft_violation_disclosed')],
   ['M5 letting the top-up pass escape the tier is killed',
     withheldBatch.withheld.length > 0 && keptBatch.withheld.length === 0],
-  ['M6 disclosing instead of repairing is killed',
-    brokenResult.repairs.some((repair) => repair.kind === 'craft_violation_relocated') &&
-      brokenResult.craft.blocking.length === 0],
-  ['M7 repairing by deleting the offending session is killed',
+  /* M6 and M10 were deleted with their subject: both asserted that §18
+   * RELOCATES a badly placed session. It no longer relocates anything. M7 and
+   * M9 below carry the properties that survive — §18 must not delete a session
+   * and must not move the athlete's own. */
+  ['M7 §18 never deletes the offending session is killed',
     brokenResult.visibleWorkouts.filter((workout) => (workout.exercises ?? []).length > 0).length ===
       craftBreakingSwap.filter((workout) => (workout.exercises ?? []).length > 0).length],
   ['M8 blocking a week on the athlete\'s own placement is killed',
     !athleteCraft.blocking.some((finding) => finding.ruleId === 'g2_hard_lower') &&
       athleteCraft.findings.some((finding) => finding.ruleId === 'g2_hard_lower')],
   ['M9 moving the athlete\'s own session is killed', athleteSessionStillOnItsDay],
-  ['M10 displacing an athlete-owned target day is killed',
-    !blockedResult.repairs.some((repair) => repair.kind === 'craft_violation_relocated')],
 ];
 for (const [name, condition] of mutations) check(name, condition);
 

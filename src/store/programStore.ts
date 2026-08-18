@@ -668,55 +668,6 @@ const LEGACY_DAY_NAMES: DayOfWeek[] = [
   'Saturday',
 ];
 
-/**
- * ProgramStore and ProfileStore hydrate independently. A v1-contract program
- * therefore cannot assume the profile has already supplied its scheduling
- * geometry when the accepted-week migration runs. The persisted workout days
- * are trustworthy evidence that those days belonged to the old program; they
- * are not anchor-participation evidence and never create reductions or credit.
- *
- * **STILL LIVE AFTER THE 2026-08-14 HYDRATION-PIPELINE DELETION, and this note
- * is why it survived the cut.** The structural migration pipeline that used to
- * sit beside it is gone, but `contract.source === 'legacy_migration'` is NOT
- * produced by that pipeline — it comes from
- * `migrateLegacyWeeklyExposureContractV2`, which lifts a v1 `exposureContract`
- * to v2 and has ~10 live production callers (`weekRebuild`,
- * `postGenerationConstraintValidation`, `section18ProgramObservation`, this
- * store). A first pass deleted this function as part of the pipeline and
- * `test:compile` caught it.
- */
-function legacyMigrationFallbackProfile(args: {
-  profile?: OnboardingData | null;
-  microcycle: Microcycle;
-  contract: WeeklyExposureContractV2;
-}): OnboardingData {
-  const persistedDays = Array.from(new Set(
-    (args.microcycle.workouts ?? [])
-      .map((workout) => workout.dayOfWeek)
-      .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6),
-  )).sort((left, right) => (left === 0 ? 7 : left) - (right === 0 ? 7 : right));
-  const persistedDayNames = persistedDays.map((day) => LEGACY_DAY_NAMES[day]);
-  const profileDays = args.profile?.preferredTrainingDays?.filter(Boolean) ?? [];
-  const profileFrequency = args.profile?.trainingDaysPerWeek;
-  return {
-    ...(args.profile ?? {}),
-    seasonPhase: args.contract.identity.seasonPhase,
-    trainingDaysPerWeek: profileFrequency && profileFrequency > 0
-      ? profileFrequency
-      : persistedDays.length,
-    preferredTrainingDays: profileDays.length > 0
-      ? profileDays
-      : persistedDayNames,
-    // RETIRED (Sam, 2026-07-28). These were `?? 'Pretty consistent'` and
-    // `?? 'Good'` — a missing answer scored 2 + 2 = 4, landing the athlete in
-    // the medium band. Bible Section 9: there is no default and no unknown
-    // tier. Passing the absent value through lets the rubric refuse, which is
-    // the whole ruling.
-    recentTrainingLoad: args.profile?.recentTrainingLoad,
-    conditioningLevel: args.profile?.conditioningLevel,
-    injuries: args.profile?.injuries ?? [],
-  };
-}
 
 function canonicaliseHydratedSafetyWorkout(
   workout: Workout,
@@ -1012,22 +963,8 @@ function canonicaliseAcceptedBoundaryState(
     const effectiveByDate = new Map<string, Workout>(
       rebased.dates.flatMap((entry) => entry.workout ? [[entry.date, entry.workout]] : []),
     );
-    const fallbackProfile = contract.source === 'legacy_migration' && baseMicrocycle
-      ? legacyMigrationFallbackProfile({
-          profile: options.profile,
-          microcycle: baseMicrocycle,
-          contract,
-        })
-      : options.profile;
-    const buildFallback = fallbackProfile
-      ? () => require('../utils/postGenerationConstraintValidation')
-          .buildSection18ProductionFallbackCandidate({
-            contract,
-            weekStart,
-            profile: fallbackProfile,
-            activeConstraints: options.activeConstraints,
-          })
-      : undefined;
+    /* THE FALLBACK-WEEK BUILDER IS GONE. It existed only to hand §18 a second
+     * week to try when it refused the first, and §18 no longer takes one. */
     // THE COLLAPSE, AND ACCEPT-AND-REDUCE (Sam, 2026-07-29, rulings 1 and 2).
     //
     // This was `requireSection18AcceptedWeek`, and its throw escaped the
@@ -1052,8 +989,6 @@ function canonicaliseAcceptedBoundaryState(
         profile: options.profile,
         activeFixtureDates,
         surfaces: hydratingSurfaces,
-        regenerate: buildFallback,
-        safeFallback: buildFallback,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>
           require('../rules/section18AcceptedWeekGateway').resolveFinalVisibleSection18Week({
             contract,

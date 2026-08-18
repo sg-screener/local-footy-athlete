@@ -1,6 +1,5 @@
 import type { DayOfWeek, OnboardingData, SeasonPhase } from '../../types/domain';
 import type { GameChangeVisibleDay } from '../../utils/gameChangeCoachNotes';
-import type { WholeWeekRepairOutcome } from '../../rules/wholeWeekRepairEngine';
 import {
   executeFixtureMutationInMemory,
   executeFixtureMutationTransaction,
@@ -12,7 +11,7 @@ import type { WeekRebuildResult } from '../../utils/weekRebuild';
 
 type HomeGameMutationOutcome =
   | {
-      outcome: Exclude<WholeWeekRepairOutcome, 'impossible'>;
+      outcome: 'accepted';
       result: WeekRebuildResult;
     }
   | {

@@ -1034,7 +1034,6 @@ function section18TierFour(args: {
   days: ResolvedDay[];
   storedContract: WeeklyExposureContractV2 | null;
   /** The week's AUTHORED plan — the repair search's relocation templates. */
-  strengthTemplates: readonly Workout[];
   weekStart: string;
   today: string;
   state: ScheduleState;
@@ -1079,7 +1078,6 @@ function section18TierFour(args: {
         removalDecisions: args.state.removalDecisions ?? [],
         applyOnly: args.state.userRemovalConstraints ?? [],
       }),
-      strengthTemplates: args.strengthTemplates,
       // ── ROOT 1b (sixteenth pass): the exact-date fixture
       // authority, derived from the same facts the host already carries
       // (profile + markedDays), the `governedFromISO` treatment. Without it
@@ -2049,7 +2047,8 @@ export function resolveWeekWithConditioning(
     // DAYS were being told afterwards. Applying away first lets §18 tier four
     // conform a club-less week against a club-less contract — and filling a
     // week that is short against its own contract is precisely what
-    // `repairCoreConditioningShortfallCandidates` is for.
+    // `repairCoreConditioningShortfallCandidates` was for, before §18 stopped
+    // injecting conditioning (2026-08-19).
     //
     // STILL A FILTER, STILL NOTHING STORED. This moves WHEN the read is
     // filtered, never what is written: his calendar mark, his accepted program
@@ -2076,7 +2075,6 @@ export function resolveWeekWithConditioning(
       storedContract: section18StoredContract,
       // The AUTHORED week, which is what the publisher relocated from. A
       // session the fixture displaced is gone from `rested` by definition.
-      strengthTemplates: section18Microcycle?.workouts ?? [],
       weekStart: mondayStr,
       today,
       state,

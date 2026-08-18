@@ -366,10 +366,15 @@ export function presentDeclaredOffer(args: {
  * Measured through the fixture door — remove a Saturday game and the week
  * becomes a bye-build week declaring three core conditioning exposures while
  * delivering two, because the game had been paying one. §18 named the shortfall
- * precisely (`required_minimum_shortfall`) and the whole-week repair engine had
- * no move that answered it: `repairByStackingCandidates` only RELOCATES existing
- * work and `repairOptionalRestCandidates` only rests days, so the search
- * evaluated one candidate and returned `impossible`.
+ * precisely (`required_minimum_shortfall`) and could do nothing about it.
+ *
+ * ⚠ THAT PARAGRAPH USED TO NAME A REPAIR ENGINE. It described how
+ * `repairByStackingCandidates` only relocated existing work and
+ * `repairOptionalRestCandidates` only rested days, so the search returned
+ * `impossible`. Those generators and that search were deleted on 2026-08-19 —
+ * §18 validates and refuses, it does not author — so the sentence is kept in
+ * its corrected form rather than deleted: the SHORTFALL it describes is real
+ * and is still this file's reason to exist.
  *
  * Nothing was inventing content, which is why the week simply came back short.
  *
@@ -427,8 +432,9 @@ export function presentRequiredCoreConditioning(args: {
   // a day emptied, and that day is where the work belongs — which is also what
   // the pre-V3 baseline built (freed Saturday, "Hard Conditioning",
   // required_core, glycolytic) and what `phaseStructureConformanceTests` cell 8
-  // pins. Stacking remains the fallback for a week with no free day, where
-  // `repairByStackingCandidates` is the engine's own next move.
+  // pins. A week with no free day has NO fallback any more: §18 used to stack
+  // the work onto an occupied day and no longer may, so such a week refuses and
+  // the scheduler owns finding it a day.
   const occupied = new Set(workouts.map((workout) => workout.dayOfWeek));
   const emptyDays: number[] = [];
   for (const dayOfWeek of [1, 2, 3, 4, 5, 6, 0]) {

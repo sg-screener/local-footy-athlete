@@ -35,7 +35,6 @@ import {
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
 import {
-  buildSection18ProductionFallbackCandidate,
   validateMicrocycleAgainstActiveConstraints,
   validateProgramAgainstActiveConstraints,
   validateWeekOverlayAgainstActiveConstraints,
@@ -764,7 +763,7 @@ check('17 an in-season bye meets its contract-stated full-rest minimum', (() => 
   const contract = clone(base.exposureContractV2!);
   const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract, workouts: clone(base.workouts), weekStart: WEEK_START, profile: pre3.profile,
-    resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 1,
+    resolveVisibleWorkouts: (workouts) => [...workouts],
   });
   fiveHardAccepted = result.status !== 'impossible' &&
     result.evaluation.ledger.restStress.hardDays.length === 5 &&
@@ -941,29 +940,22 @@ check('21 generation cannot store a blocking final-visible violation',
   const base = firstWeek(mid);
   const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
-    weekStart: WEEK_START, profile: mid.profile, maxRepairAttempts: 3,
+    weekStart: WEEK_START, profile: mid.profile,
     resolveVisibleWorkouts: (workouts) => [...workouts],
   });
   selectedTargetPreserved = result.contract.mainStrength.exposure.plannerSelectedTarget ===
     base.exposureContractV2?.mainStrength.exposure.plannerSelectedTarget;
   check('29 selected phase targets remain authoritative',
     result.status === 'impossible' && selectedTargetPreserved);
-  check('30 repair loops terminate deterministically',
-    result.status === 'impossible' && result.attempts <= 3 && !!result.failureSignature);
-  const fallback = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
-    contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
-    weekStart: WEEK_START, profile: mid.profile,
-    resolveVisibleWorkouts: (workouts) => [...workouts],
-    maxRepairAttempts: 2,
-    safeFallback: () => ({ contract: clone(base.exposureContractV2!), workouts: clone(base.workouts) }),
-  });
-  check('31 safe fallback passes the same gateway',
-    fallback.status !== 'impossible' && fallback.repairs.some((repair) => repair.kind === 'safe_fallback_candidate'));
+  check('30 a refused week is refused in ONE assessment, with a signature',
+    result.status === 'impossible' && result.attempts === 1 && !!result.failureSignature);
+  /* Cell 31 ("safe fallback passes the same gateway") was deleted with its
+   * subject: there is no safe fallback for the gateway to accept. */
   typedRejectionObserved = rejected(() =>
     requireSection18AcceptedWeek({ surfaces: emptyEvaluationSurfaces(),
       contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
       weekStart: WEEK_START, profile: mid.profile,
-      resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 2,
+      resolveVisibleWorkouts: (workouts) => [...workouts],
     }));
   check('32 irreparable week returns the typed failure', typedRejectionObserved);
 }
@@ -1061,7 +1053,7 @@ check('P10 contract authority cannot reconcile downward to broken output', (() =
   const result = runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
     weekStart: WEEK_START, profile: mid.profile,
-    resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 1,
+    resolveVisibleWorkouts: (workouts) => [...workouts],
   });
   return result.contract.mainStrength.exposure.plannerSelectedTarget ===
     base.exposureContractV2?.mainStrength.exposure.plannerSelectedTarget;
@@ -1070,7 +1062,7 @@ check('P11 all repair paths terminate', generated.every((value) => {
   const base = firstWeek(value);
   return runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: clone(base.exposureContractV2!), workouts: clone(base.workouts),
-    weekStart: base.startDate.slice(0, 10), profile: value.profile, maxRepairAttempts: 8,
+    weekStart: base.startDate.slice(0, 10), profile: value.profile,
   }).attempts <= 8;
 }));
 
@@ -1420,61 +1412,15 @@ substitutionBeforeReduction = firstWeek(limitedMid).exposureContractV2?.equipmen
     entry.metric === 'conditioning_core_frequency' && entry.reason === 'equipment_infeasibility');
 check('47 safe substitution is attempted before conditioning reduction', substitutionBeforeReduction);
 
-const fallbackOrder: string[] = [];
-const fallbackBase = firstWeek(mid);
-const runProductionFallback = () => runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
-  contract: clone(fallbackBase.exposureContractV2!),
-  workouts: allRest(fallbackBase.workouts),
-  weekStart: fallbackBase.startDate.slice(0, 10),
-  profile: mid.profile,
-  resolveVisibleWorkouts: (workouts) => [...workouts],
-  maxRepairAttempts: 2,
-  regenerate: () => {
-    fallbackOrder.push('regenerate');
-    return {
-      contract: clone(fallbackBase.exposureContractV2!),
-      workouts: allRest(fallbackBase.workouts),
-    };
-  },
-  safeFallback: () => {
-    fallbackOrder.push('fallback');
-    return buildSection18ProductionFallbackCandidate({
-      contract: clone(fallbackBase.exposureContractV2!),
-      weekStart: fallbackBase.startDate.slice(0, 10),
-      profile: mid.profile,
-      activeConstraints: [],
-    });
-  },
-});
-const productionFallback = runProductionFallback();
-regenerationBeforeFallback = fallbackOrder.join(',') === 'regenerate,fallback';
-check('48 production regeneration is attempted before fallback', regenerationBeforeFallback, fallbackOrder);
-fallbackPassedGateway = productionFallback.status !== 'impossible' &&
-  productionFallback.repairs.some((repair) => repair.kind === 'safe_fallback_candidate') &&
-  productionFallback.evaluation.blockingViolations.length === 0;
-check('49 production fallback passes the same accepted-week gateway', fallbackPassedGateway, productionFallback);
-fallbackPreservedContract = productionFallback.contract.mainStrength.exposure.plannerSelectedTarget ===
-  fallbackBase.exposureContractV2?.mainStrength.exposure.plannerSelectedTarget &&
-  productionFallback.contract.conditioning.core.plannerSelectedTarget ===
-  fallbackBase.exposureContractV2?.conditioning.core.plannerSelectedTarget;
-check('50 fallback cannot lower the approved contract', fallbackPreservedContract);
-fallbackOrder.length = 0;
-const productionFallbackAgain = runProductionFallback();
-const fallbackSignature = (result: typeof productionFallback) => JSON.stringify({
-  status: result.status,
-  attempts: result.attempts,
-  selectedStrength: result.contract.mainStrength.exposure.plannerSelectedTarget,
-  selectedConditioning: result.contract.conditioning.core.plannerSelectedTarget,
-  strength: result.evaluation.ledger.mainStrength.achievedCount,
-  conditioning: result.evaluation.ledger.conditioning.coreCount,
-  sprint: result.evaluation.ledger.sprintHighSpeed.achievedCount,
-  power: result.evaluation.ledger.power.achievedPrimerCount,
-  blocking: result.evaluation.blockingViolations.map((finding) => finding.code),
-});
-fallbackDeterministic = productionFallback.attempts <= 2 && productionFallbackAgain.attempts <= 2 &&
-  fallbackOrder.join(',') === 'regenerate,fallback' &&
-  fallbackSignature(productionFallback) === fallbackSignature(productionFallbackAgain);
-check('51 fallback and repair terminate deterministically', fallbackDeterministic);
+/* ⚠ CELLS 48-51 WERE DELETED WITH THEIR SUBJECT (2026-08-19, seat `demolition`).
+ * They drove the regenerate -> safeFallback cascade: "production regeneration is
+ * attempted before fallback", "production fallback passes the same accepted-week
+ * gateway", "fallback cannot lower the approved contract", "fallback and repair
+ * terminate deterministically". §18 no longer takes a second week to try, so
+ * there is no cascade to order, no fallback to pass the gateway and no repair
+ * loop to terminate. The property cell 50 protected — that a recovery path may
+ * not lower the approved contract — is now structural: nothing can lower it,
+ * because nothing may rewrite it. */
 
 {
   const persisted = clone(mid.program);

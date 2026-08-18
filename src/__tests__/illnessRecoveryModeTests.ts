@@ -323,7 +323,7 @@ run('4b mode validates structurally: the generated illness_recovery week is acce
     `a seeded severe illness fact must derive an illness_recovery week, got ${week.exposureContract?.identity.mode}`);
   const result = quiet(() => runSection18AcceptedWeekGateway({ surfaces: emptyEvaluationSurfaces(),
     contract: week.exposureContractV2!, workouts: week.workouts, weekStart: WEEK,
-    profile: profile(), resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 1,
+    profile: profile(), resolveVisibleWorkouts: (workouts) => [...workouts],
   }));
   assert(result.status !== 'impossible',
     `the mode's own generated week must validate structurally, got status=${result.status} (${result.failureSignature ?? ''})`);

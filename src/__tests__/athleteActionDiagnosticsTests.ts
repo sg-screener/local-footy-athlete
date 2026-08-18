@@ -25,7 +25,6 @@ import {
 } from '../utils/athleteActionDiagnostics';
 import { applyPlanChange } from '../utils/planChangeProducer';
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
-import { searchWholeWeekRepairCandidates } from '../rules/wholeWeekRepairEngine';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { createEmptyAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { useProgramStore } from '../store/programStore';
@@ -255,34 +254,11 @@ async function main(): Promise<void> {
     commonStages.every((stage) => coachStages.includes(stage)) &&
     commonStages.every((stage) => tapDeleteStages.includes(stage)), coachStages);
 
-  // 4. Candidate rejection codes retain the exact boundary and category.
-  enableDiagnostics();
-  const candidateTrace = beginAthleteActionTrace({
-    source: 'tap', actionType: 'move_session', route: 'diagnostic_candidate_search',
-  });
-  runWithAthleteActionTrace(candidateTrace, () => searchWholeWeekRepairCandidates({
-    initial: 0,
-    stateSignature: String,
-    assess: (candidate) => ({
-      accepted: candidate === 1,
-      blockingCount: candidate === 1 ? 0 : 1,
-      evaluation: candidate,
-    }),
-    expand: (candidate) => candidate === 0 ? [1] : [],
-    trace: candidateTrace,
-    diagnosticBoundary: 'diagnosticBibleValidator',
-    diagnosticWeekId: TODAY,
-    diagnosticRejection: () => ({
-      codes: ['required_strength_count'],
-      invariant: 'main_strength_required_minimum',
-    }),
-  }));
-  const rejected = getAthleteActionDiagnosticEvents(candidateTrace.traceId)
-    .find((event) => event.event === 'repair_candidate_rejected');
-  check('4 exact candidate rejection code and rejecting boundary survive',
-    JSON.stringify(rejected?.rejectionCodes) === JSON.stringify(['required_strength_count']) &&
-    rejected?.rejectingBoundary === 'diagnosticBibleValidator' &&
-    rejected?.failureCategory === 'bible_contract', rejected);
+  /* Cell 4 was deleted with its VEHICLE: it drove
+   * `searchWholeWeekRepairCandidates`, the §18 repair search, which no longer
+   * exists. Its subject was diagnostics rather than repair, so the coverage it
+   * gave is owed to a cell driving a surviving boundary — recorded as NOT
+   * COVERED rather than quietly rewritten around a different engine. */
 
   // 5. Staging failure records an atomic rollback and unchanged revision.
   enableDiagnostics();
@@ -387,30 +363,11 @@ async function main(): Promise<void> {
   check('8 production configuration emits no diagnostic events',
     getAthleteActionDiagnosticEvents().length === 0);
 
-  // 9. Enabling diagnostics does not change candidate selection or outcome.
-  configureAthleteActionDiagnosticsForTests({ enabled: false, production: false });
-  const withoutDiagnostics = searchWholeWeekRepairCandidates({
-    initial: 0,
-    stateSignature: String,
-    assess: (candidate) => ({ accepted: candidate === 2, blockingCount: 2 - candidate, evaluation: candidate }),
-    expand: (candidate) => candidate < 2 ? [candidate + 1] : [],
-  });
-  enableDiagnostics();
-  const outcomeTrace = beginAthleteActionTrace({
-    source: 'tap', actionType: 'program_change', route: 'outcome_equivalence',
-  });
-  const withDiagnostics = searchWholeWeekRepairCandidates({
-    initial: 0,
-    stateSignature: String,
-    assess: (candidate) => ({ accepted: candidate === 2, blockingCount: 2 - candidate, evaluation: candidate }),
-    expand: (candidate) => candidate < 2 ? [candidate + 1] : [],
-    trace: outcomeTrace,
-  });
-  check('9 logging does not change accepted outcome or selected candidate',
-    JSON.stringify(withDiagnostics) === JSON.stringify(withoutDiagnostics), {
-      withDiagnostics,
-      withoutDiagnostics,
-    });
+  /* Cell 9 was deleted with its VEHICLE: it drove
+   * `searchWholeWeekRepairCandidates`, the §18 repair search, which no longer
+   * exists. Its subject was diagnostics rather than repair, so the coverage it
+   * gave is owed to a cell driving a surviving boundary — recorded as NOT
+   * COVERED rather than quietly rewritten around a different engine. */
 
   // 10. Default events remove sensitive state and retain compact codes.
   enableDiagnostics();
