@@ -2110,3 +2110,114 @@ newest undoable entry on mount). Sam's corrected wording — *"available directl
 where the athlete performed the action"* — cannot be satisfied by that mount.
 
 **NOTHING MERGED.** Branch `feat/athlete-can-see-it`, tip is this commit.
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 11 — THE SEED DOOR IS NOT THE DEFECT. SESSION 10'S HYPOTHESIS IS
+# REFUTED, AND BOTH FOUR-WEEK CANDIDATES REFUSE FOR A REASON THAT IS NOW EXACT
+# ═══════════════════════════════════════════════════════════════════════════
+
+## 1. ⚠ THE HANDOFF'S FIRST MOVE WAS THE WRONG MOVE, AND ONE COMMAND SHOWED IT
+
+Session 10 handed over *"the plain `reset-seed` door will not install them"* and
+named the campaign/scenario bootstrap as the likely real door
+(`requireActiveExplorerCampaignScenarioReset`, `explorerSmokeScenarioManifests`,
+`explorerSeededChainGenerator`). **That is refuted. The door is fine and the
+bootstrap is not on the path** — `reset()` (`DevE2ESeedCoordinator.ts:166`) never
+calls `requireScenarioBootstrap`; only `resetScenario()` (line 251) does.
+
+**THE SYMPTOM THAT MISLED IT.** Session 10 read *"the app boots to a real clock
+world (`MON 17/8`) instead of the seed's July"* as evidence the seed route never
+ran. It is the opposite: `reset()`'s **catch block calls `clearClock()`**
+(line 240) before re-throwing. **A real-clock world is the signature of a seed
+that ran and THREW**, and the reason was sitting in `e2e-seed-error-reason` the
+whole time.
+
+**THE CHECK THAT SETTLED IT COST ONE COMMAND** — the failure reproduces
+headlessly, no simulator involved:
+
+```
+npm run test:dev-e2e-default-installation
+Error: Seed witness validation failed: multi-reload-fixture-chain:visible_equality:2026-07-19
+```
+
+**BYTE-IDENTICAL to the recorded baseline** (`at-1bfc3603-failure-signatures.txt`
+line 955), and `test:dev-e2e-default-installation` is line 132 of the recorded
+154 reds. **The evidence for "the door is shut" was already inside the baseline
+this branch recorded in session 7.**
+
+## 2. BOTH CANDIDATES REFUSE, AND THE SECOND ONE HAD NEVER BEEN ASKED
+
+`devE2EDefaultSeedInstallationTests` loops the candidates **in one process and
+throws on the first**, so `coach-production-replay` was never reached — which is
+exactly why session 10 recorded it as "untested through any door". One process
+per seed (`scripts/probe-restart-candidate-seeds.ts`, argv-driven) removes both
+that and the singleton-store contamination a shared process carries:
+
+| seed | installs | refusal |
+| --- | --- | --- |
+| `standard-in-season-week` | **yes** — 1 microcycle, `acceptedBlocks {}`, clock 2026-07-13 | — |
+| `multi-reload-fixture-chain` | **no** | `visible_equality:2026-07-19` |
+| `coach-production-replay` | **no** | `visible_equality:2026-07-19`, `:2026-07-20` |
+
+**NEITHER FOUR-WEEK CANDIDATE INSTALLS THROUGH AN EXISTING REAL DOOR.** Sam's
+sanctioned fallback condition is therefore met, on measurement rather than on a
+timebox expiring.
+
+## 3. THE CAUSE, READ RATHER THAN GUESSED — AND IT IS NOT A CARD/DETAIL DISAGREEMENT
+
+`visible_card_detail_equality` has three clauses: card present, detail present,
+**and** `(cardWorkout?.id ?? null) === witness.workoutId`. Printing both sides
+(`scripts/probe-card-detail-disagreement.ts`) shows **the first two pass and no
+projected field disagrees at all**:
+
+```
+CARD   present=true workoutId=null type=- exercises=0
+DETAIL present=true workoutId=null type=- exercises=0
+```
+
+**The card and the detail agree perfectly. It is the seed's own EXPECTATION that
+is wrong.** `devE2ESeedRegistry.ts:993` pushes the Sunday witness as
+
+```ts
+[sundayDate, visibleRecoveryWorkoutId(sundayDate)]
+```
+
+— a **hand-constructed id**, not one derived from the generated program, unlike
+the following-Monday entry beside it (`nextMonday.id`). The current generator
+leaves that Sunday empty (`collapsed_to_rest` /
+`no_meaningful_final_content`), so the seed asserts a recovery card that no
+longer exists. **This is seed rot, and the seed-rot alarm is behaving correctly.**
+
+**THE TRAP THIS SETS FOR THE NEW SEED, STATED BEFORE BUILDING IT:** a fresh
+four-week seed built the same way fails the same way. **`exercise-removal-restart`
+must derive every `visible_card_detail_equality` witness from the projection it
+actually gets, and must never hand-build an expected workout id.**
+
+## 4. A SECOND FINDING, NOT MINE TO FIX, THAT CHANGES WHAT `main` IS WORTH
+
+The control run (`wt-main-control`, detached at `c2aaf313`, same probe file
+copied in) says **`main` cannot install ANY seed** — including
+`standard-in-season-week`:
+
+```
+CONTROL @ main c2aaf313 — standard-in-season-week
+THREW: Persisted semantic state did not converge: program-store
+```
+
+That is the convergence defect `LAW` receipt already describes, and **this
+branch's `devE2EPersistence.ts` unification (`projectProgramPersistedInputs`) is
+what makes seeding work at all.** On `main` the entire seeded Maestro rig is
+dead at the seed step. **Stated as a finding; not this mission's to merge.** It
+also means the two candidates fail for *different* reasons in the two worlds —
+earlier on `main` — so a control that only compared refusal STRINGS would have
+called them "the same failure" and been wrong.
+
+## 5. WHAT THIS SESSION CHANGED
+
+Measurement only — **no product file touched.** Two probes added under
+`scripts/`. `docs/STATUS_VISIBLE.md` is this seat's file.
+
+**NEXT:** build `exercise-removal-restart` per Sam's sanctioned fallback, with
+the derived-witness rule from §3 as its founding constraint.
