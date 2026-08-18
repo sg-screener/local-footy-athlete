@@ -167,7 +167,7 @@ function build(args: {
   return generateProgramLocally(args.profile ?? athlete(), {
     todayISO: BLOCK_STARTS[args.blockNumber - 1],
     blockNumber: args.blockNumber,
-    recordSelections: args.record === true,
+    recordSelections: args.record === true ? 'author' : false,
     progressionHistory: {
       sessionFeedback: args.feedback ?? {},
       weightOverrides: {},
@@ -884,7 +884,7 @@ console.log('\n[15c] THE HINGE WALK IN A REAL GENERATED WORLD, AND ITS LOAD');
     const program = generateProgramLocally(athlete(), {
       todayISO: starts[i],
       blockNumber: i + 1,
-      recordSelections: true,
+      recordSelections: 'author',
       progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
     });
     const row = rowsOf(program).find((r) => r.mainSlot === 'hinge');
@@ -942,7 +942,7 @@ console.log('\n[15d] IN-SEASON: RDLs ARE THE HINGE, AND THE CAP DOES NOT MOVE TH
   for (let i = 0; i < starts.length; i++) {
     const program = generateProgramLocally(inSeason, {
       todayISO: starts[i], blockNumber: i + 1,
-      recordSelections: true,
+      recordSelections: 'author',
       progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
     });
     const rows = rowsOf(program);
@@ -1174,7 +1174,7 @@ console.log('\n[21] A TODAY-ONLY EXCLUSION SUBSTITUTES THE SESSION, NEVER THE BL
   const withDayExclusion = generateProgramLocally(athlete(), {
     todayISO: BLOCK_STARTS[0],
     blockNumber: 1,
-    recordSelections: true,
+    recordSelections: 'author',
     progressionHistory: { sessionFeedback: {}, weightOverrides: {}, blockState: null },
     athletePrefs: {
       excluded: [],

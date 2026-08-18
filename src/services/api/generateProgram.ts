@@ -247,8 +247,32 @@ export interface GenerateProgramFromProfileOptions {
    * blocks 3 and 4 while an exercise was excluded made those probes the
    * athlete's permanent history, and restoring the exercise brought it back in
    * NO block. The callers that COMMIT a program opt in; probes stay silent.
+   *
+   * ⚠ **AND THE CALLER MUST SAY WHICH KIND OF WRITE IT IS.** A boolean could
+   * only say "write"; it could not say whether this caller DECIDES the block or
+   * merely RE-DERIVES it, and that distinction is the whole defect measured on
+   * 2026-08-18:
+   *
+   *   - `'author'` — this door decides the block (onboarding, acceptance,
+   *     rollover). It may replace the block's rows, because it is the layer
+   *     entitled to change what the block chose.
+   *   - `'replay'` — this caller reconstructs a block it did not decide (a boot,
+   *     a temporary-fact regeneration). It may record a block that has NEVER
+   *     been recorded, and it may NEVER re-author one.
+   *
+   * The boot passed the old `true` and so re-recorded the block under whatever
+   * exclusions happened to be live at launch. A reversible, dated `today_only`
+   * removal was thereby laundered into a permanent generation INPUT and the
+   * athlete's original main lift was destroyed — `recordBlockSelections`
+   * replaces a block's rows by design, so the original was not shadowed but
+   * lost. The recorder exists to stop a boot re-deriving a different past when
+   * exclusions change; the boot was defeating it with the recorder's own pen.
+   *
+   *   - `false` / absent — a PROBE. `weeklyCommitmentLegality` asking "would a
+   *     2-day week even build?" must never leave a trace in the athlete's
+   *     history, which is why the default is silence.
    */
-  recordSelections?: boolean;
+  recordSelections?: 'author' | 'replay' | false;
   progressionHistory?: {
     sessionFeedback?: Readonly<Record<string, import('../../store/programStore').SessionFeedback>>;
     weightOverrides?: Readonly<Record<string, Record<string, number | null>>>;
@@ -1958,10 +1982,20 @@ export function generateProgramLocally(
    * the defect `scripts/trace-selection-history.ts` measured.
    *
    * Re-authoring the same block REPLACES its rows (identity is `blockStartISO`),
-   * so a rebuild or a rollover re-run cannot make one block look like several. */
-  if (options.recordSelections === true && selectionsAuthored.length > 0) {
-    require('../../store/blockSelectionHistoryStore')
-      .recordBlockSelections(blockStart, selectionsAuthored);
+   * so a rebuild or a rollover re-run cannot make one block look like several.
+   *
+   * ⚠ **AND A REPLAY MAY NOT RE-AUTHOR.** `'author'` is the door that decides
+   * the block; `'replay'` is a caller re-deriving one it did not decide. A
+   * replay records only a block nobody has recorded yet — otherwise the boot
+   * writes down whatever the composer happened to pick under the exclusions,
+   * kit or facts that were live at launch, and a reversible decision becomes a
+   * permanent input. That is not a hypothetical: it destroyed a main lift. */
+  if (options.recordSelections && selectionsAuthored.length > 0) {
+    const historyStore = require('../../store/blockSelectionHistoryStore');
+    const alreadyRecorded: boolean = historyStore.blockHasRecordedSelections(blockStart);
+    if (options.recordSelections === 'author' || !alreadyRecorded) {
+      historyStore.recordBlockSelections(blockStart, selectionsAuthored);
+    }
   }
   return program;
 }

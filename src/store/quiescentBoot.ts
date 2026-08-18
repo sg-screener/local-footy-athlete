@@ -566,8 +566,12 @@ export async function rebuildDerivedWorld(): Promise<void> {
       },
     } as never);
     const program = generateProgramLocally(profile, {
-      // This caller COMMITS the program, so the block's selections are recorded.
-      recordSelections: true,
+      // A BOOT REPLAYS; IT DECIDES NOTHING. It may record a block nobody has
+      // recorded yet, and it may never re-author one. Passing the old `true`
+      // here re-recorded the block under whatever exclusions were live at
+      // launch, which laundered a reversible `today_only` removal into a
+      // permanent generation input and destroyed the athlete's main lift.
+      recordSelections: 'replay',
       // A boot replays; it decides nothing (plan §2, "boot appends nothing").
       weekAcceptance: 'restoration',
       todayISO: generationISO,
