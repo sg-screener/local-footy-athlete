@@ -2429,3 +2429,58 @@ open. `grep -rn "<a sibling field>" src` across the WHOLE tree before adding one
 
 Recorded rather than amended away: the gate caught it, which is the gate working,
 and a commit message is a claim that the next reader is entitled to see corrected.
+
+## 6. SAM'S SEQUENCE IS PROVEN END TO END THROUGH A REAL RESTART — EXIT 0
+
+`removal-today-slice.yaml` at `SEED_ID=exercise-removal-restart`. The flow was
+already Sam's walk; it was **pinned to a one-microcycle seed whose reload gate
+could never pass**, so its failure read like a lost removal and was not one. The
+seed is now a parameter, exactly as the control arm's already was. **No
+assertion was weakened and none was removed.**
+
+```
+session-strength-position-.*-back-squat ....... COMPLETED   (non-vacuity: it was there)
+component-delete-action / -confirm / -today ... COMPLETED
+"Saved" -> Done -> workout-screen ............. COMPLETED
+back-squat NOT visible ........................ COMPLETED
+front-squat visible ........................... COMPLETED
+rdls / single-leg-rdl / band-pallof-press ..... COMPLETED   (unrelated rows unmoved)
+checkpoint -> stop -> relaunch ................ COMPLETED
+e2e-reload-ready-exercise-removal-restart ..... COMPLETED   <-- the wall, gone
+back-squat NOT visible AFTER RESTART .......... COMPLETED
+front-squat visible AFTER RESTART ............. COMPLETED
+```
+
+**THE STORED TRUTH BEHIND THE SCREEN**, read off the simulator after the
+restart — and it is the canonical fact, not a rendered week:
+
+```json
+"exclusions": [{ "exercise": "Back Squat", "scope": "today_only",
+                 "decidedOnISO": "2026-07-13", "activeThroughISO": "2026-07-13",
+                 "blockNumber": 1 }]
+"acceptedBlocks": { "2026-07-13": { "blockNumber": 1, "requiredStrengthSessions": 4 } }
+```
+
+**An exercise IDENTITY, never a movement pattern** — the ordinary/injury
+distinction holding exactly as recorded. Scope, decision date, expiry and block
+are all present; **the replacement and the rendered week are NOT stored**, so
+Front Squat after the restart was DERIVED again by the fallback owner, which is
+the architecture Sam ordered.
+
+## 7. SAM'S TEN, RESTATED AGAINST EVIDENCE
+
+| # | | state |
+| --- | --- | --- |
+| 1 | labelled `Need to make a change?` entry | **ON SCREEN ALREADY** — read off the live hierarchy this session; needs its own assertion |
+| 2 | Back Squat → Today → Front Squat at its own load | **WORKING** — flow above |
+| 3 | immediate Undo on the same surface | **NOT BUILT** — the `UndoToast` mount finding stands |
+| 4 | remove → close/reopen → Front Squat remains | **WORKING** — flow above, real relaunch |
+| 5 | Restore after reopening returns Back Squat | **NOT BUILT** on this surface |
+| 6 | Today scope expires after the date | **MECHANISM PRESENT, NOT PROVEN** — `activeThroughISO: 2026-07-13` is persisted; expiry needs a clock advance |
+| 7 | This block → remaining block only | **NOT MEASURED** — `blockNumber: 1` is persisted |
+| 8 | Until restored → survives later blocks | **NOT MEASURED** |
+| 9 | unrelated rows + history unchanged | rows **WORKING**; history **NOT MEASURED** |
+| 10 | exact typed refusal when no legal replacement | **NOT MEASURED** |
+
+Still owed on what is green: a direct on-screen four-week count, and the
+`Need to make a change?` label asserted rather than merely observed.

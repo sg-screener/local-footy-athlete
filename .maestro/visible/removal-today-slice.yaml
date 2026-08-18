@@ -17,10 +17,16 @@ tags:
 # and failed — not because the removal failed (it had already succeeded, and the
 # rows behind the sheet were correct) but because the "Saved" sheet was still up.
 # A flow that stops there reports a product defect that does not exist.
+# ⚠ **THE SEED IS A PARAMETER, AND IT HAS TO BE.** This flow was pinned to
+# `standard-in-season-week`, which is a ONE-microcycle world: its accepted block
+# derives `requiredStrengthSessions: 1` where boot derives 4, so the reload gate
+# below could never pass on it and the failure read exactly like a lost removal.
+# `exercise-removal-restart` is the four-microcycle seed built for this walk.
+# Pass it explicitly; the flow itself stays seed-agnostic, like the control arm.
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
-      SEED_ID: standard-in-season-week
+      SEED_ID: ${SEED_ID}
 - assertVisible:
     id: "e2e-explorer-launch-resolved-metro-url-http%3A%2F%2F127.0.0.1%3A8091"
 - tapOn:
@@ -118,7 +124,7 @@ tags:
 - runFlow:
     file: ../common/checkpoint-and-reload.yaml
     env:
-      SEED_ID: standard-in-season-week
+      SEED_ID: ${SEED_ID}
 - extendedWaitUntil:
     visible:
       id: "program-screen"
