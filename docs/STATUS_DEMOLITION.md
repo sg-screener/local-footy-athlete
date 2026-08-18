@@ -524,3 +524,40 @@ contract is not byte-identical, and saying "identical" without this line would
 be false.
 
 Agent: demolition
+
+---
+
+## THE POWER GAP — DIAGNOSED. AUTHORISED POWER DISAPPEARS AT BOUNDARY 3.
+
+**It is never stripped. It is never CREATED.**
+
+| # | boundary | power state (In-season, 4d, full gym, no club) |
+| --- | --- | --- |
+| 1 | scheduler / contract authorisation | **`eligible: true`, budget 2, `removalReason: null`, `prohibitedPower: false`** — AUTHORISED |
+| 2 | power specialist decision | `materialiseAuthoredSessions` → `decidePowerPrimer` runs (generateProgram:588, :1012) and owns `power_refused_lower_body_on_g2` |
+| 3 | **composer / materialisation** | ⚠ **`materialiseComposedWeek` CONTAINS THE WORD "power" ZERO TIMES.** It emits no power row |
+| 4 | pre-§18 authored week | 0 power rows. Row roles present: `conditioning, undefined` — **no strength row carries a role at all** |
+| 5-7 | safety finaliser / accepted / visible | 0, because there was never anything to carry |
+
+**THE CAUSE — A CAPABILITY STRANDED WHEN ITS AUTHORITY MOVED.** Power belongs to
+strength. When strength moved to the composer, power did not go with it:
+`materialiseAuthoredSessions` still DECIDES the primer, but `assembleAuthoredWeek`
+lays the COMPOSER's rows onto every strength day, and the composer's materialiser
+knows nothing about power. **The primer is decided and then overwritten.**
+
+Off-season is a true negative and must stay: `eligible: false`,
+`removalReason: early_offseason`, `prohibitedPower: true` — the Bible prohibits
+power in early off-season weeks 1-2. **In-season and Pre-season are both
+authorised with budget 2 and deliver zero.**
+
+**THIS ALSO EXPLAINS TWO EARLIER RESULTS.** The 180-world census was identical
+across the §18 demolition, and my power guard's mutants both survived — because
+in every generated world there has never been a single power row for any of it
+to act on. The §18 trimmer and the safety finaliser's `power_removed` path have
+been dead-in-effect the whole time; only a hand-stamped fixture ever reached them.
+
+**NOT YET BUILT.** The fix is composer-side delivery of the approved primer, then
+removal of the safety-finaliser power rewrite and the residual §18 paths. The
+existing specialist already carries Sam's G-2 rule, so the rules are not re-derived.
+
+Agent: demolition
