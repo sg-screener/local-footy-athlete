@@ -70,7 +70,11 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
       + 'G-3. Team training at G-2 is the athlete\'s own commitment, not something the app adds.',
     sites: [
       { file: 'utils/coachingEngine.ts', symbol: 'gOffset' },
-      { file: 'utils/postGenerationConstraintValidation.ts', symbol: 'distanceBeforeFixture' },
+      // MOVED 2026-08-19. Was `postGenerationConstraintValidation.distanceBeforeFixture`,
+      // which lived inside the §18 fallback-week builder — a second authority
+      // applying this law while authoring a replacement week. That builder is
+      // deleted; the scheduler decides the days and now carries the citation.
+      { file: 'rules/weeklyScheduler.ts', symbol: 'sprintDayIsLegal' },
       { file: 'utils/sessionExplanation.ts', symbol: 'buildUpperPushSentence' },
     ],
   },

@@ -340,3 +340,55 @@ composer.
 | input week byte-identical before and after validation | ❌ — not yet true, and NOT claimed |
 
 Agent: demolition
+
+---
+
+## THE CLEAN 405-SUITE COMPARISON — ONE SUITE MOVED, AND IT WAS RIGHT TO MOVE
+
+Both arms swept in untouched worktrees: baseline `wt-control` @ `6da38cee`,
+after `wt-after` @ `b4b19d45`. Sets in `scratchpad/BASELINE-FAILS-6da38cee.txt`
+and `scratchpad/AFTER-S18-FAILS-b4b19d45.txt`.
+
+| | suites | failing |
+| --- | --- | --- |
+| baseline `6da38cee` | 405 | **155** |
+| after the §18 demolition `b4b19d45` | 405 | **156** |
+
+**NEWLY FAILING (1):** `test:bible-anchors`
+**NEWLY PASSING (0):**
+
+**1,924 deletions moved exactly one suite.** No world newly refuses — the
+`impossible` count did not move at all, which is itself a finding: the repair
+search was not rescuing weeks in any swept world.
+
+⚠ **A HARNESS LIE ON THE WAY.** `pgrep -f "sweep.sh after-s18"` matched MY OWN
+monitor loop, whose command line contains that string, so the sweep read as
+"STILL RUNNING" for ~11 minutes after it had finished. Match the process
+(`^bash scripts/sweep.sh`), never the pattern you are searching with.
+
+### THE ONE FAILURE, RESOLVED AT ITS OWNER
+
+`last_high_stress_g3` — Sam's Bible law: *"last additional high stress is
+G-3"* — cited three sites. One was
+`postGenerationConstraintValidation.distanceBeforeFixture`, which lived **inside
+`buildSection18ProductionFallbackCandidate`**, the §18 fallback-week builder.
+Deleting that builder took the citation with it.
+
+**The LAW is current and approved. Its IMPLEMENTATION there was legacy** — a
+second authority applying a scheduling law while authoring a replacement week,
+downstream of the scheduler that had already chosen the days.
+
+Measured before deciding: `rules/weeklyScheduler.ts` **already enforces G-3**,
+at `sprintDayIsLegal` and throughout `appSprintDay` (`daysUntilNextGame >= 3`,
+"never inside G-3", WC-135/WC-138). The current owner has the capability.
+
+So the citation MOVED to the live owner rather than being dropped:
+`rules/weeklyScheduler.ts` / `sprintDayIsLegal`, with the `BIBLE_ANCHOR` marker
+at the decision. **`test:bible-anchors` 274/274.** MUTATION-PROVEN: removing the
+marker reds exactly that cell; tree restored byte-identical from my own backup.
+
+This is Sam's rule 5 executed — the current behaviour was extracted to its owner
+before the superseded remainder stayed deleted — and the anchor registry doing
+precisely the job it exists for: it caught a Bible law losing a site.
+
+Agent: demolition
