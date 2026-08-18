@@ -620,3 +620,236 @@ future rotation untouched.
 glass: the receipt says *"for this session only"*, the sheet says *"Permanent
 change? Update your equipment in Profile"*, and nothing writes the profile. That
 half of the clause already holds.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 3 — 2026-08-18. THE CANONICAL EQUIPMENT FACT, AND FINDING 4 WAS
+# ATTRIBUTED TO THE WRONG OWNER
+# ═══════════════════════════════════════════════════════════════════════════
+
+Sam's order: PART 1 a canonical session-equipment fact; PART 2 a constrained
+strength fallback ladder; PART 3 real UI acceptance; PART 4 finish the
+visibility pass. CAP 4. **This is session 1 of that cap.**
+
+## ⚠ THE CORRECTION THAT DECIDED THE WHOLE SESSION
+
+**Session 2 attributed Finding 4 — *"the day still requires the barbell the
+athlete just said they have not got"* — to `finaliseWorkoutAfterMutation`'s
+restore pass putting `RDLs` back from the original day. THAT ATTRIBUTION IS
+WRONG, and the reverted `unavailableEquipmentTags` plumbing it justified is not
+needed.**
+
+Sam's authored sheet is not flat:
+
+```
+RDLs   ->  [["barbell", "dumbbells"]]      <- barbell OR dumbbells
+```
+
+`exerciseAllowedByEquipment('RDLs', kitWithoutBarbell)` answers **`true`**. The
+restore pass was returning a **LEGAL** row. **The reader that called it illegal
+was the sheet's own** — `deriveSessionEquipmentRequirements` flat-maps each
+row's display `equipmentRequired` labels onto tags, turning that OR into an AND.
+So the sheet charged `RDLs` as affected, swapped out a lift the athlete could
+still do, and then re-derived the same requirement afterwards and reported the
+barbell still needed. **The app disagreeing with itself was two readers of one
+row, not a restore authority.**
+
+**I did not take the previous session's diagnosis on trust, and this is why the
+first thing built was an instrument rather than a fix.**
+
+## THE INSTRUMENT — headless, through the real doors
+
+A probe on `support/athleteJourney` (`coldStartThroughOnboarding` ->
+`resolvedDays` -> `walkProgramControlDoor`) driving the session-equipment
+sheet's own inputs: the raw rows, `deriveSessionEquipmentRequirements`,
+`buildSessionEquipmentReplacementPlan`, then the executor loop. **Deleted after
+use** — its findings are cells now (below).
+
+**IT REPRODUCED FINDING 4 ON THE FIRST RUN**, on `2026-07-15`, and found two
+defects session 2 had not seen:
+
+```
+BEFORE   1 RDLs 80  2 Bulgarian Split Squats 25  3 Landmine Press 35
+         4 Barbell Row 72.5  5 Banded Dead Bug
+PLAN     RDLs      -> Glute Bridge                    carried 80    own authority UNSET
+         Landmine  -> Half-Kneeling S-A OH Press      carried 35    own authority 20
+         BarbellRow-> Inverted Row (Bodyweight)       carried 72.5  own authority UNSET
+AFTER    1 Glute Bridge 80 ... 4 Barbell Row 72.5 ... 6 RDLs 80     <- SIX rows
+```
+
+1. **EVERY replacement wore the outgoing lift's load.** A `Glute Bridge` at
+   **80 kg** and a single-arm overhead press at **35 kg** are not cosmetic.
+2. **The third swap FAILED outright** — *"That change didn't go through"* — so a
+   barbell row simply survived.
+3. **No fact was written anywhere.** `temporarySourceFacts` = 0.
+
+## WHAT LANDED — three owners, no compatibility logic
+
+### 1. THE LOAD RULE HAD A FOURTH COPY, AND IT STILL CARRIED THE DEFECT
+
+`sessionEquipment.replacementExercise` was `baseSuggestion` again, byte for
+byte, including `weight: prescription.weight ?? raw?.prescribedWeightKg` — the
+exact line `buildSwapSuggestionPayload` was extracted to delete on 2026-08-18.
+**The extraction fixed the tap door and left the equipment door holding a
+private copy.** It now DELEGATES, and `SessionEquipmentReplacementExercise` is
+an ALIAS of `SwapSuggestionPayload` so a field cannot be added to one and not
+the other. Measured after: `Single-Arm DB Bench Press` arrives at **30** (its
+own estimate), not 82.5; the OHP at **20**, not 35.
+
+### 2. THE SHEET NOW ASKS THE ONE LEGALITY ORACLE
+
+`buildSessionEquipmentReplacementPlan` selects affected rows with
+`exerciseAllowedByEquipment` — the same oracle generation and the composer use —
+instead of the flat requirement map.
+
+**⚠ AND THE PREDICATE IS "NEWLY BLOCKED", NOT "BLOCKED". My first cut was
+wrong and a cell caught it.** `test:session-execution-checklist` went red: an
+athlete whose SAVED kit is barbell-without-rack unticked their ROWER, and a
+plain legality test swept up `Back Squat` too — already illegal, before this
+decision and independently of it. Sam's clause is *"no visible row may require
+REMOVED equipment"*; removed means removed by THIS answer. The predicate is the
+pair — legal on the kit before, illegal on the kit after. **A pre-existing
+illegal row is a real problem and it is not this door's to fix silently while
+the athlete is answering about a rowing machine.**
+
+### 3. THE SESSION ANSWER IS WRITTEN DOWN — R-072's default case, at last
+
+New `missing_for_session` decision on `set_equipment_modifier`, scoped
+`{kind: 'date'}` so `from === until === the session's own day`. It is **NOT a
+fourth scope** — it is scope (2) finally recorded, in the same typed shape as
+the other two, through the same transaction. The sheet writes it **before** it
+applies anything.
+
+**`kind: 'date'` IS NOT NEW MACHINERY** — it has been in
+`TemporarySourceFactScope` all along; the equipment path hard-coded `'week'` and
+never reached for it, exactly as the away answer found with `'window'`.
+
+**MEASURED — THE FACT ALONE PRODUCES A FULLY LEGAL DAY:**
+
+```
+FACT WRITE ok=true — "the visible program was safely recomposed"
+AFTER   1 RDLs 80   2 Bulgarian Split Squats 25
+        3 DB Shoulder Press 20   4 Chest Supported Row 30   5 Banded Dead Bug
+EVERY VISIBLE ROW LEGAL: true          (asked of exerciseAllowedByEquipment)
+EFFECTIVE KIT: profile minus barbell, that date only
+ROTATION HISTORY UNCHANGED: true       <- Sam's constraint, held
+```
+
+**Each recomposed replacement carries its OWN load (20, 30 — not 35, 72.5).**
+The composer was right all along; only the sheet's private path was not.
+
+## MEASURED
+
+| | branch | control `c2aaf313` | instrument |
+| --- | --- | --- | --- |
+| `test:visible-surfaces` | **19/0** (was 9) | 9/0 | +10 cells, 3 mutations |
+| `test:session-execution-checklist` | 71/0 | 71/0 | |
+| `test:equipment-scopes` | 24/0 | — | |
+| `test:equipment-answer` | 41/0 | — | |
+| `test:equipment-vocabulary` | 87/0 | — | |
+| `test:away-flow` | 51/0 | — | |
+| `test:away-span-ownership` | 8/0 | — | |
+| `test:dated-equipment-fact` | 3/0 | — | |
+| `test:compile` | **469, 7 pairs** | **469, 7 pairs** | IDENTICAL |
+| `test:edge-generation-equipment` | 37/1 | 37/1 | red at base |
+| `test:tap-swap-hierarchy` | THROWS | THROWS | red at base |
+| `test:program-control-durable` | 19/1 | 19/1 | red at base |
+
+**GAINED 0, LOST 0 on the three reds — each confirmed in the control worktree,
+not assumed.**
+
+### MUTATIONS — three, all killed
+
+| # | mutation | result |
+| --- | --- | --- |
+| M1 | the sheet reads the flat requirement map again | ✅ 2 cells, **the defect verbatim**: `["RDLs","Barbell Row"]` |
+| M2 | the equipment door pre-fills the outgoing load again | ✅ `weight=80 (the outgoing row was 80)` |
+| M3 | the sheet writes the WEEK fact instead of the session one | ✅ `fact@-1` |
+
+**⚠ AND ONE OF MY OWN CELLS WAS A SOURCE SCAN THAT A COMMENT COULD MOVE.** The
+ordering cell matched `'swap_exercise'`, which appears in this handler's own
+explanatory comment ABOVE the fact write it explains — so it went red on a tree
+that was correct. It matches the code token `type: 'swap_exercise'` now. **A
+grep passes on a comment; this one FAILED on one.** Same shape as the
+`test:dev-e2e-reset-hydration` scan repaired last session, and this one was mine.
+
+## SAM'S NEW ORDER, 2026-08-18 — THE SELECTED IMPLEMENT. AUDIT DELIVERED, UNIT NOT BUILT
+
+*"Each composed/visible row must identify the actual implement selected for that
+session. The athlete must not infer it from availability."* And the load ruling
+that bounds it: *"do not split load history by implement … do not build
+equipment-specific load-history machinery."*
+
+**THE AUDIT, MEASURED — and the answer is bigger than the question.**
+
+| population | count |
+| --- | --- |
+| authored exercises carrying an equipment requirement | 132 |
+| **explicitly DISJUNCTIVE** (`[["barbell","dumbbells"]]`) | **1** — `RDLs`/`Romanian Deadlift`, two spellings of one exercise |
+| strength-pool rows that are LOADABLE and whose NAME states no implement | **46** |
+| of those, where **the authored sheet and the load classifier disagree** | **14** |
+
+**THE DISAGREEMENT IS THE REAL FINDING, and it is not ambiguity — it is two
+stored answers contradicting each other:**
+
+```
+Single-Leg RDL              authored ["barbell"]   load classifier dumbbell
+Lat Pulldown                authored ["machine"]   load classifier cable
+Single-Arm Lat Pulldown     authored ["machine"]   load classifier cable
+Overhead Tricep Extension   authored ["dumbbells"] load classifier cable
+Step Ups                    authored ["plyo_box"]  load classifier dumbbell
+Tricep Circuit (Dirty 30)   authored ["barbell"]   load classifier dumbbell
+  … 8 more
+```
+
+`equipmentClassFor` is what `loadEstimation` uses to pick the increment, so
+`Single-Leg RDL` is authored BARBELL and **loaded as a DUMBBELL** — which is the
+`17.5 kg` the probe printed. **There is no field anywhere that states the
+implement actually selected for a session.** Two classifiers each infer one, for
+different purposes, and the visible row prints neither.
+
+**AND THE CUE SIDE ALREADY HAS THE EXACT FAILURE SAM ASKED ME TO PROVE CANNOT
+HAPPEN.** Cues are keyed by exercise NAME only, with no implement dimension:
+
+```
+'RDLs': { primaryCue: 'Push hips back, BAR slides down leg.' }
+```
+
+On a day where the athlete has unticked the barbell, `RDLs` correctly STAYS on
+the day (it is legal on dumbbells) **and the cue still tells them to slide a bar
+down their leg.** That is a cue naming equipment unavailable that day, reachable
+today, on the one exercise the authored sheet marks disjunctive.
+
+**NOT BUILT, AND NAMED RATHER THAN HALF-BUILT.** The unit is a typed
+`selectedImplement` on the composed row — written by the composer, which is the
+only layer that knows the kit; read by the display and by a cue resolver that
+takes the implement as a second key. Starting it in the tail of this session
+would have produced a field with no reader, which is the trap `CLAUDE.md` names
+by name. **Sized for session 2**, together with PART 2's ladder, which needs the
+same typed implement/plane metadata.
+
+## WHERE THE MISSION STANDS
+
+| clause | verdict |
+| --- | --- |
+| PART 1 — canonical session-equipment fact, one owner, expires | **WORKING** — `test:visible-surfaces` [5], M3 |
+| PART 1 — read by producers that add/restore work | **WORKING via recompose** — measured: every visible row legal, rotation untouched |
+| PART 2 — the fallback ladder | **NOT BUILT** — session 2 |
+| PART 3 — real UI acceptance on glass | **NOT WALKED** — session 2/3 |
+| PART 4 — block two, offer card, status/restore/Undo, refusal screen | **NOT WALKED** |
+| Sam's implement order | **AUDITED, not built** — above |
+
+**NAMED, NOT FIXED — carried to session 2:**
+
+1. **The third swap fails outright** (`Barbell Row -> Inverted Row (Bodyweight)`,
+   *"That change didn't go through"*). Reproducible; **cause not established and
+   I am not claiming one.**
+2. **A recompose renames the session** `Full Body Strength` -> `full_body`.
+   Athlete-visible, measured, unattributed.
+3. **The legacy swap loop is now the weaker of two paths.** The fact alone gives
+   a legal day; the loop is the pre-fact workaround. Sam's boundary says legacy
+   that rewrites the current owner is removed rather than wrapped — **but that
+   deletion must be proven on glass first**, and no simulator ran this session.
+
+**NO GLASS THIS SESSION.** Everything above is headless through production
+doors. `PART 3` is explicit that this is not acceptance, and it is not claimed
+as any.

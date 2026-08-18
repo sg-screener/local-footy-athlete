@@ -1169,13 +1169,21 @@ async function executeProgramControlActionDurablyWithinTrace(
     // equipment path simply hard-coded `{ kind: 'week' }` and never reached
     // for it. That is why "an equipment answer with a start and an end date"
     // is a scope argument here rather than a new fact shape.
+    // THE SESSION SCOPE IS A ONE-DAY WINDOW, and it is written the same way the
+    // other two are. `kind: 'date'` resolves to `from === until === date`, so
+    // `equipmentConstraintAppliesToDate` admits it on exactly the session's own
+    // day and `expireTemporarySourceFacts` retires it the next — which is what
+    // makes "for this session only" true of the STORED fact and not merely of
+    // the receipt sentence the athlete was shown.
     const scope = decision.kind === 'missing_for_span'
       ? temporaryFactScope({
           kind: 'window',
           from: decision.from.slice(0, 10),
           until: decision.until.slice(0, 10),
         })
-      : temporaryFactScope({ kind: 'week', date });
+      : decision.kind === 'missing_for_session'
+        ? temporaryFactScope({ kind: 'date', date })
+        : temporaryFactScope({ kind: 'week', date });
     const fact = createTemporaryEquipmentFact({
       observedDate: date,
       scope,

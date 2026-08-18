@@ -275,6 +275,33 @@ export type ProgramControlAction =
             from: string;
             until: string;
           }
+        /**
+         * **THE SESSION ANSWER — R-072's DEFAULT CASE, and until 2026-08-18 the
+         * only one of the three equipment scopes that wrote no fact at all.**
+         *
+         * Sam ruled the session scope the DEFAULT (*"equipment is usually only
+         * just for that session"*), and the session sheet honoured the SCOPE
+         * while recording nothing: it emitted a loop of `swap_exercise` actions
+         * and kept "I have no barbell today" in React `useState`, gone on
+         * unmount. Measured consequences, through the real door:
+         *
+         *  - the post-mutation finaliser restored `RDLs` — the barbell row the
+         *    athlete had just removed — from the ORIGINAL day, because nothing
+         *    downstream of the swap could know the barbell was gone;
+         *  - the removal could not expire on return, because it never began;
+         *  - a relaunch produced a session the athlete could not perform.
+         *
+         * **THIS IS NOT A FOURTH SCOPE.** It is scope (2) finally written down,
+         * in the same typed shape as the other two, keyed to the session's own
+         * date so it lifts itself the next day with no second decision to
+         * remember — the `kind: 'date'` scope that `TemporarySourceFactScope`
+         * has carried all along and the equipment path never reached for.
+         */
+        | {
+            kind: 'missing_for_session';
+            tags: readonly EquipmentTag[];
+            conditioningModalities: readonly ConditioningEquipmentModality[];
+          }
         | { kind: 'available_again' };
       date: string;
       todayISO?: string;

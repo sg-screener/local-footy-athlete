@@ -60,6 +60,7 @@ import { resolveEquipmentCapabilities } from '../../utils/equipmentAvailability'
 import {
   buildSessionEquipmentReplacementPlan,
   deriveSessionEquipmentRequirements,
+  missingSessionEquipmentValues,
   type SessionEquipmentRequirementKey,
 } from '../../utils/sessionEquipment';
 import type { RecoveryAddonBlock } from '../../types/domain';
@@ -737,10 +738,51 @@ export default function DayWorkoutScreenV2() {
     [dateLabel, editableExercises, showExerciseEditFallback, workoutLabel],
   );
 
-  const applySessionEquipment = React.useCallback((
+  const applySessionEquipment = React.useCallback(async (
     missingKeys: ReadonlySet<SessionEquipmentRequirementKey>,
   ) => {
     if (!date) return;
+    // ── THE DECISION IS RECORDED BEFORE ANYTHING ACTS ON IT ──────────────────
+    //
+    // **This handler used to emit a loop of `swap_exercise` actions and nothing
+    // else**, holding "I have no barbell today" in the sheet's own `useState`.
+    // A decision that exists only as its own consequences cannot be read by the
+    // producers that run afterwards, and the post-mutation finaliser proved it:
+    // measured through this door, replacing `RDLs` removed the day's hinge, so
+    // the finaliser restored one FROM THE ORIGINAL DAY — putting the barbell
+    // row straight back on a session the athlete had just said they could not
+    // load. It consults no equipment because there was no equipment fact to
+    // consult.
+    //
+    // The fact goes first, so every producer downstream of it — the swap's own
+    // finaliser included — is working in a world where the kit is known.
+    const factResult = await executeProgramControlActionDurably({
+      type: 'set_equipment_modifier',
+      source: { screen: 'session_detail', surface: 'session_equipment_sheet', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: {
+        date,
+        todayISO: date,
+        decision: {
+          kind: 'missing_for_session',
+          tags: missingSessionEquipmentValues(missingKeys).tags,
+          conditioningModalities: missingSessionEquipmentValues(missingKeys).modalities,
+        },
+      },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: true,
+    }, { todayISO: date });
+    if (!factResult.ok) {
+      setSessionEquipmentVisible(false);
+      setExerciseEditStep({
+        kind: 'result',
+        ok: false,
+        title: 'Could not change this session’s equipment',
+        message: factResult.message ?? 'Nothing changed.',
+      });
+      return;
+    }
     const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
     const profile = useProfileStore.getState().onboardingData;
     const capabilities = resolveEquipmentCapabilities(profile, activeConstraints, date);

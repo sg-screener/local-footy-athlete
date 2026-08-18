@@ -10,6 +10,10 @@ import {
   type ResolvedEquipmentCapabilities,
 } from './equipmentAvailability';
 import { equipmentClassFor } from './loadEstimation';
+// THE ONE STRENGTH-LEGALITY ORACLE, shared with generation and the composer.
+// Imported so this sheet cannot hold a second opinion about whether a row is
+// performable — see `buildSessionEquipmentReplacementPlan`.
+import { exerciseAllowedByEquipment } from '../data/exercisePoolsStrength';
 import {
   inferModalityFromName,
   pickEquivalentByTier,
@@ -23,6 +27,10 @@ import {
   getTapSwapChoices,
   type TapSwapEnvironment,
 } from './tapSwapHierarchy';
+import {
+  buildSwapSuggestionPayload,
+  type SwapSuggestionPayload,
+} from './swapSuggestionPayload';
 
 export type SessionEquipmentRequirementKey =
   | `tag:${EquipmentTag}`
@@ -44,17 +52,13 @@ type SessionExercise = {
   raw?: any;
 };
 
-export interface SessionEquipmentReplacementExercise {
-  name: string;
-  sets: number;
-  repsMin: number;
-  repsMax: number;
-  weight?: number;
-  notes?: string;
-  prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
-  perSide?: boolean;
-  restSeconds?: number;
-}
+/**
+ * THE SAME PAYLOAD THE TAP-SWAP DOOR SENDS. It was declared separately and
+ * identically, which is how the two doors came to disagree about the one rule
+ * that fills it — see `replacementExercise` below. An alias, so a field cannot
+ * be added to one door's replacement and not the other's.
+ */
+export type SessionEquipmentReplacementExercise = SwapSuggestionPayload;
 
 export type SessionEquipmentReplacementPlan =
   | {
@@ -123,6 +127,21 @@ function conditioningEquipmentForRequirement(
  * that are explicitly Cardio/Conditioning (or carry no structured row at all),
  * so strength movement names such as Barbell Row cannot become a Row erg.
  */
+/**
+ * A conditioning row is blocked when the exact machine it names is one the
+ * athlete has just said they cannot reach. Kept separate from
+ * `exerciseAllowedByEquipment`, which answers for STRENGTH rows off Sam's sheet
+ * and knows nothing about ergs — R-082: conditioning equipment is derived from
+ * the modality, and there are only five.
+ */
+function conditioningRowIsBlocked(
+  exercise: SessionExercise,
+  missingModalities: ReadonlySet<ConditioningEquipmentModality>,
+): boolean {
+  const modality = conditioningEquipmentForExercise(exercise);
+  return !!modality && missingModalities.has(modality);
+}
+
 function conditioningEquipmentForExercise(
   exercise: SessionExercise,
 ): ConditioningEquipmentModality | null {
@@ -265,26 +284,26 @@ export function sessionConditioningReplacementName(args: {
     });
 }
 
+/**
+ * ⚠ **THIS FUNCTION WAS A FOURTH COPY OF THE SWAP PAYLOAD RULE, AND IT CARRIED
+ * THE DEFECT THE OTHER THREE WERE FIXED FOR.** It read
+ * `weight: prescription.weight ?? raw?.prescribedWeightKg` — the outgoing row's
+ * load — which is the exact line `buildSwapSuggestionPayload` was extracted to
+ * delete on 2026-08-18. Measured through the real equipment door the same week:
+ * `RDLs (80 kg) -> Glute Bridge` arrived at **80 kg** while the load owner
+ * answers UNSET for Glute Bridge, and `Landmine Press (35 kg) -> Half-Kneeling
+ * Single-Arm Overhead Press` arrived at **35 kg** against its own estimate of 20.
+ *
+ * A rule with an owner does not get a second implementation because a second
+ * door needed it. This now DELEGATES; the dose still carries over from the slot
+ * and the load belongs to the exercise, exactly as the owner states it.
+ */
 function replacementExercise(
   name: string,
   raw: any,
   prescription: Partial<SessionEquipmentReplacementExercise> = {},
 ): SessionEquipmentReplacementExercise {
-  const sets = Number(raw?.prescribedSets) || 3;
-  const repsMin = Number(raw?.prescribedRepsMin) || 8;
-  const repsMax = Number(raw?.prescribedRepsMax) || Math.max(repsMin, 10);
-  return {
-    name,
-    sets,
-    repsMin,
-    repsMax,
-    weight: prescription.weight ?? raw?.prescribedWeightKg,
-    notes: prescription.notes,
-    prescriptionType: prescription.prescriptionType ?? raw?.prescriptionType,
-    perSide: prescription.perSide ?? raw?.perSide,
-    restSeconds: prescription.restSeconds ?? raw?.restSeconds,
-    ...prescription,
-  };
+  return buildSwapSuggestionPayload(name, raw, prescription);
 }
 
 /**
@@ -315,12 +334,48 @@ export function buildSessionEquipmentReplacementPlan(args: {
     availableEquipment: equipmentTagsToSubstituteEquipmentClasses(remainingTags),
     hasEquipmentConstraint: true,
   };
-  const affectedKeys = new Set(
-    args.requirements
-      .filter((requirement) => args.missingKeys.has(requirement.key))
-      .flatMap((requirement) => requirement.exerciseKeys),
-  );
-  const affected = args.exercises.filter((exercise) => affectedKeys.has(exercise.key));
+  // ── WHICH ROWS ARE ACTUALLY BLOCKED — ASKED OF THE ONE LEGALITY ORACLE ────
+  //
+  // **THIS USED TO CHARGE EVERY ROW THAT MENTIONED THE MISSING TAG, AND THAT IS
+  // A DIFFERENT QUESTION FROM WHETHER THE ROW CAN STILL BE DONE.**
+  // `deriveSessionEquipmentRequirements` answers *"what kit does this session
+  // use"* by flat-mapping each row's display `equipmentRequired` labels onto
+  // tags. Sam's authored sheet is not flat: `RDLs` is
+  // `[['barbell', 'dumbbells']]` — **barbell OR dumbbells** — so an athlete who
+  // unticks the barbell can still do it, and `exerciseAllowedByEquipment` says
+  // so. The flat map turned that OR into an AND and charged `RDLs` as affected.
+  //
+  // Measured through the real door, 2026-08-18: unticking the barbell on a day
+  // of `RDLs / Bulgarian Split Squats / Landmine Press / Barbell Row` swapped
+  // out a perfectly legal `RDLs`, and re-opening the sheet still offered
+  // `Barbell` — the app disagreeing with itself. **That disagreement was two
+  // readers, not a restore authority putting the row back.** The previous
+  // reading of this defect attributed it to
+  // `finaliseWorkoutAfterMutation`'s restore pass; the restore was returning a
+  // row that is LEGAL on the reduced kit, and the reader that called it illegal
+  // was this one.
+  //
+  // `exerciseAllowedByEquipment` is the same oracle generation and the composer
+  // use (it resolves Sam's sheet first and only falls back to the load
+  // classifier for exercises he has not answered), so the sheet and the composer
+  // can no longer come to different conclusions about one row.
+  // ⚠ **THE TEST IS "NEWLY BLOCKED", NOT "BLOCKED", and the difference is a
+  // whole extra swap the athlete never asked for.** Caught by
+  // `test:session-execution-checklist` on the first cut of this change: an
+  // athlete whose SAVED kit is barbell-without-rack unticked their ROWER, and a
+  // plain legality test charged `Back Squat` too — because it was already
+  // illegal, before this decision and independently of it. That is a real
+  // (pre-existing) problem with their profile and it is not this door's to fix
+  // silently while they are answering a question about a rowing machine.
+  //
+  // Sam's clause is *"no visible row may require REMOVED equipment"*. Removed
+  // means removed by THIS answer, so the predicate is the pair: legal on the
+  // kit before, illegal on the kit after.
+  const legalBefore = (exercise: SessionExercise) =>
+    exerciseAllowedByEquipment(exercise.name, args.capabilities.tags);
+  const affected = args.exercises.filter((exercise) =>
+    conditioningRowIsBlocked(exercise, missingModalities)
+    || (legalBefore(exercise) && !exerciseAllowedByEquipment(exercise.name, remainingTags)));
   const occupiedNames = new Set(args.exercises.map((exercise) => exercise.name.toLowerCase()));
   const replacements: Extract<SessionEquipmentReplacementPlan, { ok: true }>['replacements'] = [];
 
