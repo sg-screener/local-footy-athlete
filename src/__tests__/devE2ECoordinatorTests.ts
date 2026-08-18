@@ -168,6 +168,7 @@ async function main() {
     installProgram: () => events.push('program'),
     applyAuxiliaryState: () => events.push('auxiliary'),
     completeOnboarding: () => events.push('complete'),
+    recordAcceptedBlock: () => events.push('accepted-block'),
     readWitnessState: () => ({
       program: program(),
       profile: DEV_E2E_STANDARD_PROFILE,
@@ -240,6 +241,26 @@ async function main() {
     events.indexOf('clock-install') < events.indexOf('build'));
   ok('empty persistence flush precedes build', events.indexOf('persist-1') < events.indexOf('build'));
   ok('onboarding completes after auxiliary state', events.indexOf('auxiliary') < events.indexOf('complete'));
+  // ── ACCEPTANCE'S SECOND STATEMENT, AND BOTH HALVES OF ITS POSITION ────────
+  // AFTER the world stops changing: `applyAuxiliaryState` can rebuild the
+  // program outright (a severity-5 injury does), so a block recorded earlier
+  // would name a program the athlete no longer has.
+  ok(
+    'accepted block is recorded after auxiliary state and onboarding settle',
+    events.indexOf('complete') < events.indexOf('accepted-block') &&
+      events.indexOf('auxiliary') < events.indexOf('accepted-block'),
+  );
+  // BEFORE the final flush, or the block lands after the seed reports ready and
+  // the checkpoint is taken without it — which is the reload mismatch itself.
+  const lastPersistIndex = events.reduce(
+    (last, event, index) => (event.startsWith('persist-') ? index : last),
+    -1,
+  );
+  ok(
+    'accepted block is recorded before the final persistence flush',
+    events.indexOf('accepted-block') >= 0 &&
+      events.indexOf('accepted-block') < lastPersistIndex,
+  );
   ok('checkpoint succeeds after a ready seed', await coordinator.checkpoint('fixture-move'));
   ok('checkpoint preserves seed identity separately from checkpoint identity',
     writtenCheckpoint?.seedId === 'standard-in-season-week' &&

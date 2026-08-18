@@ -2305,3 +2305,109 @@ exits on its own.
 Also recorded so it is not re-paid: piping the runner through `| tail` buffers
 the whole run and the log stays **0 bytes** until it finishes, which reads
 exactly like a hung flow.
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 12 — THE RESTART CONTROL IS GREEN. THE PRECONDITION WAS THE WHOLE
+# REMAINDER, AND IT WAS MET AT THE PRODUCTION OWNER
+# ═══════════════════════════════════════════════════════════════════════════
+
+**Sam's correction was right and §6 above was over-read.** The identical hashes
+were not evidence of a seed-independent defect needing a new investigation; they
+were the already-diagnosed `{}` → accepted-block transition, unchanged because
+**the seed had not yet met its stated precondition.** `acceptedBlocks` was still
+`{}`. Nothing more was wrong.
+
+## 1. THE FIX — ACCEPTANCE'S SECOND STATEMENT, AT THE EXISTING OWNER
+
+A seeded athlete is an athlete with an ACCEPTED program, and acceptance in
+production is **two** statements: publish the program, then record the block.
+The seam only ever made the first. It now makes the second, through
+`recordAcceptedBlock` — **no `acceptedBlocks` object is written or pre-seeded
+anywhere**, and no number is invented: the owner derives
+`requiredStrengthSessions` from the program over the block window exactly as it
+does for a real acceptance.
+
+**PLACEMENT IS THE DESIGN, NOT A DETAIL.** The call is LAST — after
+`applyAuxiliaryState` and `completeOnboarding`, after the post-mutation
+witnesses pass, and *before* `waitForPersistence`. After, because auxiliary
+state can legitimately REBUILD the program (a severity-5 injury does), so a
+block recorded earlier names a program the athlete no longer has — the same
+ordering lesson the install witnesses twenty lines above already carry, applied
+to a write instead of a check. Before the flush, because a block landing after
+the seed reports ready is a block the checkpoint never sees, which is the
+mismatch itself.
+
+It reads LIVE store state, not `seed.program`, for the same reason.
+
+## 2. THE PRECONDITION, PROVEN BEFORE ANY ATHLETE SCREEN
+
+```
+INSTALLED      : true          MICROCYCLES    : 4
+TODAY (clock)  : 2026-07-13    BLOCK STATE    : start=2026-07-13 number=1
+ACCEPTED BLOCKS: 2026-07-13 -> blockNumber=1 requiredStrengthSessions=4
+DERIVED REQ    : 4             EXCLUSIONS     : 0
+```
+
+Derived by the production acceptance owner; four microcycles; correct block
+start; requirement 4; nothing preloaded.
+
+## 3. THE UNTOUCHED RESTART CONTROL — GREEN, EXIT 0
+
+`restart-control-no-change.yaml` at `SEED_ID=exercise-removal-restart`, real
+close/reopen (`clearState: false`), **no athlete change and no assertion
+weakened**:
+
+```
+e2e-seed-ready-exercise-removal-restart ....... COMPLETED
+session-strength-position-.*-back-squat ....... COMPLETED
+e2e-checkpoint-ready-… / stop / relaunch ...... COMPLETED
+e2e-reload-ready-exercise-removal-restart ..... COMPLETED   <-- was FAILED
+e2e-seed-loading / e2e-seed-error not visible . COMPLETED
+program-screen ................................ COMPLETED
+```
+
+**PERSISTED TRUTH AFTER THE RESTART**, read off the simulator's own storage —
+the program store persists an `inputs` envelope (store decisions, derive the
+rest), so this IS the persisted-input set the fingerprint covers:
+
+```json
+"acceptedBlocks": { "2026-07-13": { "blockNumber": 1, "requiredStrengthSessions": 4 } },
+"generationAnchorISO": "2026-07-13",
+"sessionFeedback": {}, "temporarySourceFacts": [], "injuryEpisodes": []
+```
+
+Screen after reopening: `TODAY'S SESSION - MON 13/7` — **the seed's July clock
+survived the restart**, and no error marker is present.
+
+**ON THE FOUR-MICROCYCLE PROGRAM (Sam's item 7):** proven by derivation, and the
+derivation is tight rather than hand-waved — the program is DERIVED from the
+persisted inputs, and `requiredStrengthSessions` is derived from the program
+over the block window. A post-restart program with a different week count would
+make the owner derive a different number, overwrite the entry, change the
+fingerprint and fail the gate. **The green gate is that proof.** A direct
+on-screen week count is still owed and is cheap (`program-view-week` +
+`program-week-next`); recorded as owed rather than claimed.
+
+## 4. BLAST RADIUS
+
+Every dev-E2E suite identical to the recorded baseline — same failing cells,
+same counts: `dev-e2e-seeds`, `-witnesses`, `-default-installation`, `-clock`
+(18/1), `-testids`, `-scenario-session` (35/1), `-metro-isolation` (25/1).
+`test:dev-e2e-reset-hydration` was **green at baseline and is green now: 60
+passed, 0 failed**, including two new guards.
+
+**MUTATIONS SEEN RED, BOTH OF THEM:**
+
+| mutation | result |
+| --- | --- |
+| call moved BEFORE `applyAuxiliaryState` | `✗ recorded after auxiliary state and onboarding settle` — 59/1 |
+| call removed entirely | both guards `✗` — 58/2 |
+| restored from my own backup | 60/0 |
+
+**KNOWN AND ACCEPTED:** one-microcycle seeds now record
+`requiredStrengthSessions: 1`. That is session 9's stated harm — but it is not a
+regression against `{}`: those worlds mismatched boot's 4 before and mismatch it
+now, no worse, while the four-week seed now MATCHES. Measured, not assumed; the
+whole dev-E2E family is baseline-identical.

@@ -82,6 +82,13 @@ export interface DevE2ECoordinatorDeps {
   installProgram: (seed: DevE2ESeed) => void;
   applyAuxiliaryState: (items: readonly DevE2EAuxiliaryState[]) => Promise<void> | void;
   completeOnboarding: () => void;
+  /**
+   * Acceptance's SECOND statement. Publishing the program is the first; without
+   * this one a seeded world carries `acceptedBlocks: {}` and BOOT writes the
+   * entry on first launch, which is exactly the window the reload gate compares
+   * across.
+   */
+  recordAcceptedBlock: () => void;
   readWitnessState: () => DevE2EWitnessState;
   validateWitnesses: (
     seedId: DevE2ESeedId,
@@ -232,6 +239,18 @@ export class DevE2ESeedCoordinator {
         if (failures.length > 0) {
           throw new Error(`Seed witness validation failed: ${failures.join(', ')}`);
         }
+        // ── ACCEPTANCE'S SECOND STATEMENT, AT THE QUIESCENT POINT ───────────
+        //
+        // LAST, AND THE ORDER IS THE WHOLE POINT. `applyAuxiliaryState` can
+        // legitimately REBUILD the program — a severity-5 injury does — so a
+        // block recorded before it would name a program the athlete no longer
+        // has. This is the same ordering lesson the install witnesses already
+        // carry twenty lines up, applied to a write instead of a check: ask the
+        // question after the world has stopped changing.
+        //
+        // Before `waitForPersistence`, so the accepted block is part of what
+        // converges rather than a write that lands after the seed reports ready.
+        this.deps.recordAcceptedBlock();
         await this.deps.waitForPersistence();
         this.activeSeedId = seedId;
         setDevE2ESeedReady(seedId);
