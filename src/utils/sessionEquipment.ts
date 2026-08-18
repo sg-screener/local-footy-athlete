@@ -26,6 +26,7 @@ import {
 import {
   getTapSwapChoices,
   type TapSwapEnvironment,
+  type TapSwapHierarchyTier,
 } from './tapSwapHierarchy';
 import {
   buildSwapSuggestionPayload,
@@ -68,9 +69,26 @@ export type SessionEquipmentReplacementPlan =
         targetId?: string;
         fromExercise: string;
         toExercise: SessionEquipmentReplacementExercise;
+        /**
+         * Which rung of the authored fallback ladder this came from. `null` for
+         * a conditioning modality swap, which is an equivalence rather than a
+         * fallback.
+         */
+        fallbackTier: TapSwapHierarchyTier | null;
+        /**
+         * R-103: FALSE means the original main pattern was NOT fully trained —
+         * an accessory or an adjacent pattern stepped in. The athlete is owed
+         * that sentence; absorbing it would claim work that did not happen.
+         */
+        coversOriginalPattern: boolean;
       }>;
     }
-  | { ok: false; exerciseName: string };
+  | {
+      ok: false;
+      exerciseName: string;
+      /** Typed, never a bare shrug. R-103 rung 6. */
+      reason: 'no_legal_fallback_on_remaining_kit';
+    };
 
 const CLASS_TO_TAG: Readonly<Record<string, EquipmentTag>> = {
   barbell: 'barbell',
@@ -389,22 +407,58 @@ export function buildSessionEquipmentReplacementPlan(args: {
       ? replacementExercise(replacementName, exercise.raw)
       : null;
 
+    // ── SAM'S FALLBACK LADDER, WALKED — R-103 ────────────────────────────
+    //
+    // *"When an intended main lift is unavailable because of equipment or an
+    // active injury restriction, choose the next best SAFE and LEGAL training
+    // option before refusing."*
+    //
+    // `getTapSwapChoices` already returns candidates RANKED by the authored
+    // `SAFE_TRAINING_FALLBACK_TIERS` ladder — `same_movement_pattern` ->
+    // `similar_muscle_group` -> `unaffected_body_area` — which is Sam's ordering
+    // in the app's own words, and it already applies the injury hierarchy, so
+    // **injury legality still outranks everything below.**
+    //
+    // ⚠ **WHAT WAS MISSING WAS THE LEGALITY CHECK, AND IT COST A SILENT
+    // FAILURE.** This took the FIRST non-rest candidate without asking whether
+    // the athlete could actually do it. Measured 2026-08-18 through the real
+    // door: a barbell-less athlete was offered **`Inverted Row (Bodyweight)`**,
+    // which Sam's sheet requires `rings_trx` for. The write door correctly
+    // refused it and the refusal was flattened into *"That change didn't go
+    // through — nothing on your plan changed."* **A ladder that offers an
+    // illegal rung has not fallen back, it has failed quietly.**
+    //
+    // So: walk the rungs and take the first one that is LEGAL on what remains.
+    // No new programming policy — the ORDER is the authored ladder's, and the
+    // filter is the same oracle that decides the affected rows above.
+    let chosenTier: TapSwapHierarchyTier | null = null;
     if (!toExercise) {
-      const choice = getTapSwapChoices({
+      const ladder = getTapSwapChoices({
         originalExercise: exercise.name,
         reason: 'no_equipment',
         environment,
         existingExerciseNames: [...occupiedNames],
         recoveryAllowed: false,
-      }).find((candidate) => candidate.kind !== 'rest' && !!candidate.name);
-      if (choice?.name) {
-        replacementName = choice.name;
-        toExercise = replacementExercise(choice.name, exercise.raw, choice.prescription ?? {});
+      });
+      for (const candidate of ladder) {
+        if (candidate.kind === 'rest' || !candidate.name) continue;
+        if (occupiedNames.has(candidate.name.toLowerCase())) continue;
+        if (!exerciseAllowedByEquipment(candidate.name, remainingTags)) continue;
+        replacementName = candidate.name;
+        chosenTier = candidate.hierarchyTier;
+        toExercise = replacementExercise(candidate.name, exercise.raw, candidate.prescription ?? {});
+        break;
       }
     }
 
     if (!toExercise || !replacementName || occupiedNames.has(replacementName.toLowerCase())) {
-      return { ok: false, exerciseName: exercise.name };
+      // RUNG 6 — the typed refusal, and it names WHY rather than shrugging.
+      // Reached only when every rung above was illegal or unsafe.
+      return {
+        ok: false,
+        exerciseName: exercise.name,
+        reason: 'no_legal_fallback_on_remaining_kit',
+      };
     }
     occupiedNames.add(replacementName.toLowerCase());
     replacements.push({
@@ -412,6 +466,12 @@ export function buildSessionEquipmentReplacementPlan(args: {
       targetId: exercise.targetId,
       fromExercise: exercise.name,
       toExercise,
+      // ⚠ **PARTIAL COVERAGE IS DISCLOSED, NOT ABSORBED.** Sam: *"Accessories and
+      // adjacent-pattern fallbacks are PARTIAL coverage. Do not claim the
+      // original main pattern was fully trained."* Anything below
+      // `same_movement_pattern` trained something else.
+      fallbackTier: chosenTier,
+      coversOriginalPattern: chosenTier === null || chosenTier === 'same_movement_pattern',
     });
   }
 

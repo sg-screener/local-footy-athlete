@@ -58,6 +58,12 @@ import {
 } from '../../utils/tapSwapHierarchy';
 import { resolveEquipmentCapabilities } from '../../utils/equipmentAvailability';
 import {
+  resolveSelectedImplement,
+  selectedImplementLabel,
+  type SelectedImplement,
+} from '../../rules/selectedImplement';
+import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
+import {
   buildSessionEquipmentReplacementPlan,
   deriveSessionEquipmentRequirements,
   missingSessionEquipmentValues,
@@ -85,6 +91,7 @@ import {
 } from './dayWorkoutSmokeContract';
 import {
   buildCueText,
+  cueForImplement,
   cleanNotes,
   formatRest,
   inferRecoveryPrescriptionType,
@@ -519,6 +526,37 @@ export default function DayWorkoutScreenV2() {
   );
 
   /**
+   * ── THE EFFECTIVE KIT FOR *THIS* DAY, AND THE IMPLEMENT IT SELECTS ────────
+   *
+   * R-104. `resolveEquipmentCapabilities(profile, constraints, date)` is the one
+   * owner — profile, minus any away span, minus the session answer this screen
+   * now writes as a dated fact. **Reading `profile.equipmentAnswer` directly here
+   * would answer "barbell" on a day the athlete has just unticked the barbell**,
+   * which is exactly the private profile read R-102 closed.
+   *
+   * The store reads are live-at-render on purpose: applying the equipment sheet
+   * writes a fact and recomposes, so `workout` changes identity and this
+   * recomputes with it.
+   */
+  const effectiveKitTags = React.useMemo(
+    () => (date
+      ? resolveEquipmentCapabilities(
+          useProfileStore.getState().onboardingData,
+          useCoachUpdatesStore.getState().activeConstraints,
+          date,
+        ).tags
+      : []),
+    [date, workout],
+  );
+  const implementFor = React.useCallback(
+    (exerciseName: string) => resolveSelectedImplement({
+      exerciseName: canonicalExerciseName(exerciseName),
+      availableTags: effectiveKitTags,
+    }),
+    [effectiveKitTags],
+  );
+
+  /**
    * The one list. Composed once from the whole workout — see
    * `src/utils/sessionTemplate.ts` for why this is an owner rather than a
    * render helper.
@@ -805,12 +843,32 @@ export default function DayWorkoutScreenV2() {
         kind: 'result',
         ok: false,
         title: 'No suitable replacement',
-        message: `Nothing changed. There isn’t a safe replacement for ${displayExerciseName(plan.exerciseName)} using the equipment still available.`,
+        message: `Your equipment is saved for this session, but there isn’t a safe replacement for ${displayExerciseName(plan.exerciseName)} using what you have left. That exercise is still on the day — skip it, or ask your coach.`,
       });
       return;
     }
+    // ── ⚠ ZERO REPLACEMENTS IS AN OUTCOME, NOT A NON-EVENT ────────────────
+    //
+    // **This branch used to close the sheet and say NOTHING**, and once the fact
+    // write landed it became the COMMON case rather than a corner: the recompose
+    // triggered by the fact already rebuilt the day against the reduced kit, so
+    // by the time this plan is computed there is usually nothing illegal left to
+    // replace. Measured on the simulator 2026-08-18 — the day was correctly
+    // rebuilt (`Barbell Row` -> `Chest Supported Row`, the implement on every
+    // row changed from Barbell to Dumbbells) **and the athlete was shown no
+    // confirmation at all.** A silent success reads exactly like a dead button.
+    //
+    // Sam, this session: *"No swap may silently fail: either the next legal
+    // fallback lands or the athlete sees the typed reason."* The same applies to
+    // silent SUCCESS — the receipt is what tells them the answer was recorded.
     if (plan.replacements.length === 0) {
       setSessionEquipmentVisible(false);
+      setExerciseEditStep({
+        kind: 'result',
+        ok: true,
+        title: 'Session equipment updated',
+        message: 'Saved for this session only. Your session was rebuilt using the equipment you have today — your saved gym setup is unchanged.',
+      });
       return;
     }
 
@@ -1528,6 +1586,7 @@ export default function DayWorkoutScreenV2() {
               completedItemIds={completedExerciseIds}
               onToggleItem={toggleExerciseComplete}
               sessionId={workout.id}
+              implementFor={implementFor}
               expandedCues={expandedCues}
               toggleCue={toggleCue}
               editingWeightId={editingWeightId}
@@ -1842,6 +1901,8 @@ interface SessionListProps {
   completedItemIds: ReadonlySet<string>;
   onToggleItem: (itemId: string) => void;
   sessionId: string;
+  /** R-104. Resolved by the screen against the EFFECTIVE kit for this date. */
+  implementFor: (exerciseName: string) => SelectedImplement;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -1960,6 +2021,7 @@ function SessionList({
   executionPlan,
   completedItemIds,
   onToggleItem,
+  implementFor,
   sessionId,
   expandedCues,
   toggleCue,
@@ -2020,6 +2082,7 @@ function SessionList({
         key={key}
         sessionId={sessionId}
         exercise={item.row}
+        selectedImplement={implementFor(item.row.exercise?.name ?? '')}
         label={labels[index] ?? ''}
         isGrouped={!!item.superset}
         isLastInGroup={
@@ -2315,6 +2378,12 @@ interface StrengthExerciseCardProps {
   isLastInGroup?: boolean;
   prescriptionLabel?: string;
   cueTextOverride?: string | null;
+  /**
+   * R-104. Which implement the athlete actually picks up for THIS row on THIS
+   * day's kit. Optional so the combined-day picker and add-on rows, which have
+   * no kit in hand, keep rendering exactly as they did.
+   */
+  selectedImplement?: SelectedImplement | null;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -2337,6 +2406,7 @@ function StrengthExerciseCard({
   isLastInGroup = true,
   prescriptionLabel,
   cueTextOverride,
+  selectedImplement,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -2355,9 +2425,15 @@ function StrengthExerciseCard({
   const exerciseDisplayName = displayExerciseName(exerciseName);
   const setsReps = prescriptionLabel ?? formatStrengthSetsReps(exercise);
   const restLabel = exercise.restSeconds >= 90 ? formatRest(exercise.restSeconds) : null;
-  const cueText = cueTextOverride !== undefined
-    ? cueTextOverride
-    : buildCueText(exerciseName);
+  // R-104: the cue must fit the implement in the athlete's hands. `RDLs` is
+  // authored for barbell OR dumbbells and its cue says "bar slides down leg" —
+  // on a dumbbell day that names equipment they have not got, so it is
+  // SUPPRESSED and flagged rather than reworded. There is no authored dumbbell
+  // RDL cue and `EXERCISE_CUES` is gated to Sam's sheet, so inventing one here
+  // is the thing his ruling forbids.
+  const resolvedCue = cueForImplement(exerciseName, selectedImplement?.implement ?? null);
+  const cueText = cueTextOverride !== undefined ? cueTextOverride : resolvedCue.text;
+  const implementLabel = selectedImplementLabel(selectedImplement);
   const isEditing = editingWeightId === exercise.exerciseId;
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
@@ -2397,6 +2473,30 @@ function StrengthExerciseCard({
         >
           {setsReps}
         </Text>
+        {/* ── R-104: THE IMPLEMENT, STATED. ──────────────────────────────
+            The athlete used to read `RDLs 3 x 2-4 80kg` with nothing saying
+            whether that was a bar or a pair of dumbbells, and 80 means very
+            different things. It sits beside the prescription because it is part
+            of the prescription, not a note about it. */}
+        {implementLabel ? (
+          <Text
+            style={styles.statsPrimary}
+            testID={`workout-exercise-implement-${exerciseToken}-${implementLabel.toLowerCase()}`}
+          >
+            {` · ${implementLabel}`}
+          </Text>
+        ) : null}
+        {/* The cue was written for a different implement and no authored variant
+            exists. Sam: *"flag missing authored technique guidance rather than
+            invent coaching copy."* An id, not a sentence — there is no signed
+            athlete-facing wording for this yet, and inventing one is the same
+            forbidden act as inventing the cue. */}
+        {resolvedCue.missingCueForImplement ? (
+          <View
+            style={{ width: 1, height: 1 }}
+            testID={`workout-exercise-cue-missing-for-implement-${exerciseToken}`}
+          />
+        ) : null}
         <View
           style={{ width: 1, height: 1 }}
           testID={`exercise-set-count-${exerciseToken}-${exercise.prescribedSets}`}

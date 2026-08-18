@@ -2422,8 +2422,22 @@ was substituted and what remains untrained. Existing weekly balance and set
 ceilings still apply.
 **Search words:** fallback ladder, no barbell, RDL alternative, partial
 coverage, kit-blocked pattern, safe legal option.
-· `WRITTEN` — **not built.** Named here so the ruling is not lost; the unit is
-sized for the next session of the `visible` seat. See `docs/STATUS_VISIBLE.md`.
+· `BUILT` — `buildSessionEquipmentReplacementPlan` (`src/utils/sessionEquipment.ts`)
+WALKS the authored `SAFE_TRAINING_FALLBACK_TIERS` ladder
+(`same_movement_pattern` -> `similar_muscle_group` -> `unaffected_body_area`,
+which is Sam's ordering in the app's own words) and takes the first rung that is
+LEGAL on the remaining kit, per `exerciseAllowedByEquipment`. The plan carries
+`fallbackTier` and `coversOriginalPattern` so partial coverage is disclosed, and
+rung 6 is a typed `no_legal_fallback_on_remaining_kit`.
+**GUARDED:** `test:visible-surfaces` section [7], 6 cells (in `test:bible`) —
+mutation **M4** (drop the legality filter) reds two of them and reproduces the
+defect BY NAME.
+**WHAT IT FIXED, measured through the real door 2026-08-18:** a barbell-less
+athlete was offered **`Inverted Row (Bodyweight)`**, which Sam's sheet requires
+`rings_trx` for. The write door correctly refused it and the refusal was
+flattened into *"That change didn't go through."* **A ladder that offers an
+illegal rung has not fallen back, it has failed quietly.** It now lands
+`Barbell Row -> Single-Arm DB Row`, same pattern, legal, own load.
 **⚠ ITS DISCLOSURE HAS A KNOWN OBSTACLE, recorded so it is not re-bought:**
 `ComposedGap` is keyed on a `SessionSlot`; four of the six `MainStrengthPattern`
 values map to one by name, but **`push` and `pull` do not — a slot carries a
@@ -2442,8 +2456,29 @@ guidance rather than invent coaching copy.** **LOAD HISTORY IS NOT SPLIT** — t
 is explicitly out of scope.
 **Search words:** selected implement, barbell or dumbbell, RDL cues, bar slides
 down leg, implement-specific cue, which implement.
-· `WRITTEN` — **not built. THE AUDIT IS DONE AND IS IN
-`docs/STATUS_VISIBLE.md`:** of 132 authored requirements exactly **1** is
+· `BUILT` — `src/rules/selectedImplement.ts` is the one owner
+(`resolveSelectedImplement`): Sam's authored sheet first, the load classifier
+only where he has not answered, and an OR-GROUP resolved against the EFFECTIVE
+kit for that date. `src/data/cueImplement.ts` records which implement each
+authored cue assumes and `cueForImplement` SUPPRESSES a cue written for a
+different one. **`EXERCISE_CUES` is untouched** — it is equality-gated to Sam's
+master sheet, which is exactly what stops a dumbbell RDL cue being invented.
+**GUARDED:** `test:visible-surfaces` section [6], 10 cells (in `test:bible`),
+including a COVERAGE GATE that re-runs the implement-word scan over the whole cue
+library and reds on any naming cue missing from the table — it caught three the
+audit had missed. Mutations **M5** (cue stops checking the implement) and **M6**
+(the OR-GROUP ignores the kit) both red, printing *"bar slides down leg"*
+verbatim.
+**AND IT IS PROVEN ON GLASS**, which is what this row needs and prose could not
+give it: `.maestro/visible/implement-and-cues.yaml`, 20 steps green on a booted
+simulator serving this branch (metro-url asserted, never assumed). Screenshots
+`artifacts/visible/r104-before-barbell.png` (`RDLs 3 x 3 · Barbell`, Form cues
+present) and `r104-after-dumbbells.png` (`RDLs 3 x 3 · Dumbbells`, **Form cues
+row absent on that row and present on every other**). The flow also asserts the
+SENTENCE is gone, not merely an id.
+**⚠ THE LOAD IS DELIBERATELY UNCHANGED AT 90kg** across that switch — Sam's own
+ruling: *"do not split load history by implement … the athlete can edit it."*
+**THE AUDIT THAT SIZED IT, in `docs/STATUS_VISIBLE.md`:** of 132 authored requirements exactly **1** is
 explicitly disjunctive (`RDLs`/`Romanian Deadlift` = barbell OR dumbbells), but
 **46** loadable pool rows name no implement and on **14** of them the authored
 sheet and `equipmentClassFor` DISAGREE (`Single-Leg RDL` authored barbell,

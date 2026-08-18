@@ -1,0 +1,91 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - the selected implement is stated, and the cues agree with it
+tags:
+  - e2e
+  - visible
+---
+# R-104, Sam 2026-08-18: *"Each composed/visible row must identify the actual
+# implement selected for that session. The athlete must not infer it from
+# availability … Prove that changing today's equipment changes the visible
+# implement and its cues together, and that no cue names equipment unavailable
+# that day."*
+#
+# THE PROOF CASE HE NAMED BY HAND. `RDLs` is the one exercise on his sheet
+# authored as an OR-GROUP (`barbell OR dumbbells`), and its authored cue reads
+# *"Push hips back, BAR slides down leg."* Untick the barbell and the RDL is
+# still legal on dumbbells — so it STAYS, and the bar cue must not.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+# PROVE WHICH TREE THIS IS. A screenshot of main proves nothing about this branch.
+- assertVisible:
+    id: "e2e-explorer-launch-resolved-metro-url-http%3A%2F%2F127.0.0.1%3A8091"
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- tapOn:
+    id: "session-execution-toggle-strength"
+
+# ── BEFORE: the implement is STATED, and it is the barbell ────────────────
+- assertVisible:
+    id: "workout-exercise-implement-.*-barbell"
+- assertVisible: " · Barbell"
+- takeScreenshot: artifacts/visible/r104-before-barbell
+
+# ── THE ATHLETE UNTICKS THE BARBELL FOR THIS SESSION ONLY ─────────────────
+- tapOn:
+    id: "day-workout-equipment-concern-action"
+- extendedWaitUntil:
+    visible:
+      id: "session-equipment-option-tag-barbell"
+    timeout: 10000
+- takeScreenshot: artifacts/visible/r104-equipment-sheet
+- tapOn:
+    id: "session-equipment-option-tag-barbell"
+- tapOn:
+    id: "session-equipment-apply"
+# ⚠ WAIT FOR THE RECEIPT, NOT FOR THE SCREEN BEHIND THE SHEET. The apply is now
+# AWAITED — it writes the dated equipment fact through the durable transaction
+# and the program recomposes — so `workout-screen` is "visible" in the tree the
+# whole time and asserting it raced the write. The receipt is the only thing
+# that means the work finished.
+- extendedWaitUntil:
+    visible: "Session equipment updated"
+    timeout: 25000
+- takeScreenshot: artifacts/visible/r104-receipt
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+# ⚠ A CONDITIONAL, NOT AN `optional: true` TAP. Whether the strength accordion
+# is open after the sheet closes depends on what the athlete last left it as, so
+# an unconditional toggle passed and failed on identical trees in consecutive
+# runs — the exact flake `docs/STATUS_VISIBLE.md` recorded on the sibling flow.
+# `when: notVisible` opens it only if it is shut, which is state-independent.
+- runFlow:
+    when:
+      notVisible:
+        id: "workout-exercise-implement-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+
+# ── AFTER: the same day now states DUMBBELLS ──────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "workout-exercise-implement-.*-dumbbells"
+    timeout: 15000
+# THE WHOLE CLAIM IN ONE LINE: not one barbell row left on the day.
+- assertNotVisible: " · Barbell"
+- takeScreenshot: artifacts/visible/r104-after-dumbbells
+
+# ⚠ ASSERT BY THE WORDS, NOT BY AN ID. An id can be absent because a row moved;
+# the claim here is that this SENTENCE is not on the athlete's screen.
+- assertNotVisible: "Push hips back, bar slides down leg."
+- assertNotVisible: "bar slides down leg"
+- takeScreenshot: artifacts/visible/r104-no-bar-cue

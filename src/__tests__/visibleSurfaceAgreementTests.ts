@@ -65,6 +65,13 @@ import {
   temporaryFactScope,
 } from '../rules/temporarySourceFact';
 import type { EquipmentTag } from '../data/exercisePools';
+import {
+  resolveSelectedImplement,
+  selectedImplementLabel,
+} from '../rules/selectedImplement';
+import { cueForImplement } from '../screens/home/dayWorkoutHelpers';
+import { CUE_ASSUMED_IMPLEMENT } from '../data/cueImplement';
+import { EXERCISE_CUES } from '../data/exerciseCues';
 
 let passed = 0;
 let failed = 0;
@@ -306,6 +313,158 @@ function run(): void {
     sessionFact.factKind === 'equipment' && sessionFact.mode === 'without'
       && sessionFact.equipmentTags.includes('barbell')
       && sessionFact.effectiveUntil === '2026-07-15');
+
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // [6] THE SELECTED IMPLEMENT, AND CUES THAT AGREE WITH IT  (R-104)
+  //
+  // Sam: *"Each composed/visible row must identify the actual implement selected
+  // for that session. The athlete must not infer it from availability … Prove
+  // that changing today's equipment changes the visible implement and its cues
+  // together, and that no cue names equipment unavailable that day."*
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n[6] The selected implement, and cues that agree with it');
+  const FULL_KIT: EquipmentTag[] = ['bodyweight', 'dumbbells', 'barbell', 'cables',
+    'machine', 'bands', 'bench', 'pullup_bar', 'kettlebell', 'plyo_box', 'rack'];
+  const NO_BARBELL: EquipmentTag[] = FULL_KIT.filter((tag) => tag !== 'barbell');
+
+  const rdlFull = resolveSelectedImplement({ exerciseName: 'RDLs', availableTags: FULL_KIT });
+  const rdlNoBar = resolveSelectedImplement({ exerciseName: 'RDLs', availableTags: NO_BARBELL });
+  check('the world this is about: RDLs is the one authored OR-GROUP',
+    rdlFull.source === 'authored_choice', rdlFull.source);
+  check('THE IMPLEMENT IS STATED, NOT INFERRED — barbell on a full kit',
+    rdlFull.implement === 'barbell' && selectedImplementLabel(rdlFull) === 'Barbell',
+    String(rdlFull.implement));
+  check('AND CHANGING TODAY\'S KIT CHANGES IT — dumbbells once the bar is gone',
+    rdlNoBar.implement === 'dumbbells' && selectedImplementLabel(rdlNoBar) === 'Dumbbells',
+    String(rdlNoBar.implement));
+
+  // THE PROOF CASE Sam named by hand.
+  const rdlCueFull = cueForImplement('RDLs', rdlFull.implement);
+  const rdlCueNoBar = cueForImplement('RDLs', rdlNoBar.implement);
+  check('non-vacuity: the authored RDL cue really does name a bar',
+    /\bbar\b/i.test(String(rdlCueFull.text)), String(rdlCueFull.text));
+  check('NO "BAR SLIDES DOWN LEG" WHEN DUMBBELLS ARE SELECTED',
+    rdlCueNoBar.text === null && rdlCueNoBar.missingCueForImplement === true,
+    String(rdlCueNoBar.text));
+  check('and it is FLAGGED as missing authored guidance, never invented',
+    rdlCueNoBar.missingCueForImplement === true
+      && !/dumbbell/i.test(String(rdlCueNoBar.text ?? '')),
+    'a fabricated dumbbell cue would fail this cell');
+
+  // A fixed-implement row must be untouched by all of this.
+  const kbFull = resolveSelectedImplement({ exerciseName: 'Kettlebell Swings', availableTags: FULL_KIT });
+  const kbNoBar = resolveSelectedImplement({ exerciseName: 'Kettlebell Swings', availableTags: NO_BARBELL });
+  check('a fixed-implement row is unmoved by an unrelated kit change',
+    kbFull.implement === 'kettlebell' && kbNoBar.implement === 'kettlebell'
+      && cueForImplement('Kettlebell Swings', kbNoBar.implement).text !== null);
+
+  // ⚠ THE COVERAGE GATE. `CUE_ASSUMED_IMPLEMENT` is a hand-kept reading of the
+  // authored library, so it can fall behind it silently — this re-runs the scan
+  // that built it and reds on any cue that names an implement and has no row.
+  const IMPLEMENT_WORDS: Record<string, RegExp> = {
+    barbell: /\b(bar|barbell)\b/i,
+    dumbbells: /\b(dumbbell|dumbbells|db)\b/i,
+    kettlebell: /\b(kettlebell|kb|bell)\b/i,
+    cables: /\b(cable|rope|handle)\b/i,
+    machine: /\b(machine|pad|sled|seat)\b/i,
+    bands: /\b(band)\b/i,
+  };
+  const unfiled: string[] = [];
+  let namingCues = 0;
+  for (const [name, cue] of Object.entries(EXERCISE_CUES)) {
+    const text = `${cue.primaryCue} ${cue.secondaryCue}`;
+    if (!Object.values(IMPLEMENT_WORDS).some((re) => re.test(text))) continue;
+    namingCues += 1;
+    if (!CUE_ASSUMED_IMPLEMENT[name]) unfiled.push(name);
+  }
+  check('non-vacuity: the scan still finds implement-naming cues',
+    namingCues >= 30, `${namingCues} cues name an implement`);
+  check('EVERY CUE THAT NAMES AN IMPLEMENT IS FILED — the table cannot fall behind',
+    unfiled.length === 0, `unfiled: ${unfiled.join(', ')}`);
+
+  // THE LOAD RULING, HELD NEGATIVELY. Sam: *"do not split load history by
+  // implement."* The implement owner must not take load as an input or return
+  // one, or a later reader will start keying history off it.
+  const implementKeys = Object.keys(rdlNoBar).sort().join(',');
+  check('the implement owner names NO load — Sam\'s ruling, held in the type',
+    implementKeys === 'alternatives,implement,source', implementKeys);
+
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // [7] THE FALLBACK LADDER — NO SWAP MAY SILENTLY FAIL  (R-103)
+  //
+  // Measured through the real door 2026-08-18: a barbell-less athlete was
+  // offered **`Inverted Row (Bodyweight)`**, which Sam's sheet requires
+  // `rings_trx` for. The write door correctly refused it and the reason was
+  // flattened into "That change didn't go through — nothing on your plan
+  // changed." The ladder offered an ILLEGAL RUNG, which is not a fallback.
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n[7] The fallback ladder — no swap may silently fail');
+  const ladderRow = [{
+    key: 'row', name: 'Barbell Row', targetId: 'row',
+    raw: {
+      prescribedSets: 3, prescribedRepsMin: 4, prescribedRepsMax: 6,
+      prescribedWeightKg: 72.5, exercise: { equipmentRequired: ['Barbell'] },
+    },
+  }];
+  const ladderEnv = {
+    activeInjuries: {}, primaryInjury: null,
+    availableEquipment: ['bodyweight', 'dumbbell', 'cable', 'machine', 'kettlebell'],
+    availableEquipmentTags: NO_BARBELL,
+    capacity: 'high', hasEquipmentConstraint: true, medicalStop: false,
+  };
+  const ladderPlan = buildSessionEquipmentReplacementPlan({
+    exercises: ladderRow as never,
+    requirements: deriveSessionEquipmentRequirements(ladderRow as never),
+    missingKeys: new Set(['tag:barbell'] as never),
+    capabilities: {
+      tags: FULL_KIT, conditioningModalities: [],
+      selectionCompleteness: 'complete', source: 'athlete_answer',
+    },
+    environment: ladderEnv as never,
+  });
+
+  check('non-vacuity: the rung that used to be offered really is illegal here',
+    exerciseAllowedByEquipment('Inverted Row (Bodyweight)', NO_BARBELL) === false,
+    `authored requirement ${JSON.stringify(equipmentRequiredFor('Inverted Row (Bodyweight)'))}`);
+  check('THE LADDER LANDS — a legal rung, not a refusal',
+    ladderPlan.ok === true && ladderPlan.replacements.length === 1,
+    ladderPlan.ok ? 'ok' : `REFUSED ${(ladderPlan as { exerciseName: string }).exerciseName}`);
+  const landed = ladderPlan.ok ? ladderPlan.replacements[0] : null;
+  check('AND THE RUNG IT LANDS ON IS LEGAL ON THE REMAINING KIT',
+    !!landed && exerciseAllowedByEquipment(String(landed.toExercise.name), NO_BARBELL),
+    String(landed?.toExercise.name));
+  check('it took the TOP rung — same movement pattern, so coverage is full',
+    !!landed && landed.fallbackTier === 'same_movement_pattern'
+      && landed.coversOriginalPattern === true,
+    `${landed?.fallbackTier} coversOriginalPattern=${landed?.coversOriginalPattern}`);
+  check('and the replacement still prescribes no load of its own',
+    !!landed && landed.toExercise.weight === undefined,
+    String(landed?.toExercise.weight));
+
+  // RUNG 6. When nothing legal remains the answer is a TYPED reason, never
+  // silence and never an illegal row the write door will bounce.
+  const barePlan = buildSessionEquipmentReplacementPlan({
+    exercises: ladderRow as never,
+    requirements: deriveSessionEquipmentRequirements(ladderRow as never),
+    missingKeys: new Set(['tag:barbell'] as never),
+    capabilities: {
+      tags: ['bodyweight', 'barbell'] as EquipmentTag[], conditioningModalities: [],
+      selectionCompleteness: 'complete', source: 'athlete_answer',
+    },
+    environment: {
+      ...ladderEnv,
+      availableEquipment: ['bodyweight'],
+      availableEquipmentTags: ['bodyweight'] as EquipmentTag[],
+    } as never,
+  });
+  check('RUNG 6 — nothing legal left gives a TYPED refusal, not a shrug',
+    barePlan.ok === false
+      && (barePlan as { reason: string }).reason === 'no_legal_fallback_on_remaining_kit',
+    barePlan.ok
+      ? `unexpectedly replaced with ${barePlan.replacements[0]?.toExercise.name}`
+      : (barePlan as { reason: string }).reason);
 
   console.log(`\nVisible surface totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

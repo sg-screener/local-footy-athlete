@@ -853,3 +853,145 @@ same typed implement/plane metadata.
 **NO GLASS THIS SESSION.** Everything above is headless through production
 doors. `PART 3` is explicit that this is not acceptance, and it is not claimed
 as any.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 4 — 2026-08-18. THE IMPLEMENT OWNER, THE LADDER, AND GLASS
+# ═══════════════════════════════════════════════════════════════════════════
+
+Sam's order: implement-and-cue owner FIRST, ladder on top of it, close the
+failed swap, then drive it on the simulator and capture screenshots — and
+*"ensure the two new ruling-registry rows cite their real guards — WRITTEN alone
+is not acceptance."* All four delivered; both rows are now `BUILT`.
+
+## 1. THE SELECTED IMPLEMENT — `src/rules/selectedImplement.ts`
+
+**The audit's finding was that NOTHING stated the implement.** Two classifiers
+each inferred one for different purposes and disagreed on 14 of 46 loadable
+rows; the visible row printed neither. The owner reads **Sam's authored sheet
+first** and the load classifier only where he has not answered — the same
+precedence `exerciseAllowedByEquipment` uses, so legality and implement cannot
+come apart. An OR-GROUP is resolved **against the effective kit for that date**.
+
+**IT TAKES NO LOAD AND RETURNS NONE, and a cell asserts that** — Sam's ruling
+*"do not split load history by implement"* is held in the type, not in a comment.
+
+## 2. THE CUES — SUPPRESSED, NEVER INVENTED
+
+`src/data/cueImplement.ts` records which implement each authored cue assumes; a
+cue written for another one is SUPPRESSED and flagged. **`EXERCISE_CUES` is
+untouched.** It is equality-gated to Sam's master sheet in both directions,
+which is precisely the protection that stops a dumbbell RDL cue being written —
+his ruling: *"flag missing authored technique guidance rather than invent
+coaching copy."* There is no authored dumbbell RDL cue, so the honest answer is
+no cue.
+
+**⚠ THE COVERAGE GATE CAUGHT MY OWN AUDIT.** The table is a hand-kept reading of
+the library, so a cell re-runs the implement-word scan over all 176 cues and reds
+on any that is unfiled. It immediately found **three I had missed** — my earlier
+audit's output was truncated and I had read the tail. Fixed, and the gate is why.
+
+## 3. THE LADDER — AND THE SILENT SWAP IS ATTRIBUTED AND CLOSED
+
+**THE CAUSE OF THE FAILED SWAP, measured:** the door offered
+**`Inverted Row (Bodyweight)`**, which Sam's sheet requires `rings_trx` for and
+which this athlete has not got. The write door **correctly** refused it, and the
+refusal was flattened into the generic *"That change didn't go through."*
+**The bug was never the write door — the ladder offered an illegal rung.**
+
+`buildSessionEquipmentReplacementPlan` now WALKS the authored
+`SAFE_TRAINING_FALLBACK_TIERS` ladder and takes the first rung LEGAL on the
+remaining kit. **No new programming policy: the ORDER is the app's own authored
+ladder** (which is Sam's ordering in the app's words, and already applies the
+injury hierarchy, so injury legality still outranks it), and the filter is the
+same oracle that picks the affected rows. It lands
+`Barbell Row -> Single-Arm DB Row` — same pattern, legal, its own load. Rung 6 is
+a typed `no_legal_fallback_on_remaining_kit`.
+
+Partial coverage is carried, not absorbed: `fallbackTier` and
+`coversOriginalPattern` on every replacement.
+
+## 4. ⚠ AND A SILENT **SUCCESS** THE SIMULATOR FOUND, WHICH NO SUITE COULD
+
+Driving the real sheet exposed a defect my own change had created and every
+headless cell was blind to. **Once the fact write landed, the zero-replacement
+branch became the COMMON case** — the recompose triggered by the fact has already
+rebuilt the day, so the plan computed afterwards has nothing left to replace.
+That branch closed the sheet and **said nothing at all.**
+
+Measured on glass: the day WAS correctly rebuilt and the athlete was shown no
+confirmation. **A silent success reads exactly like a dead button.** Sam's clause
+is about silent failure; the same argument covers this, and it now shows a
+receipt naming the scope. **This is the case the mission's own rule exists for —
+a suite cannot see a screen that says nothing.**
+
+## 5. ON GLASS — `.maestro/visible/implement-and-cues.yaml`, 20 steps green
+
+Simulator `LFA Explorer 4c8535f`, iOS 26.3, Metro 8091 serving THIS worktree —
+**asserted in the flow via `e2e-explorer-launch-resolved-metro-url-…`, never
+assumed.**
+
+| screenshot | what it shows |
+| --- | --- |
+| `r104-before-barbell.png` | `Back Squat 3 × 3 · Barbell 110kg`, `RDLs 3 × 3 · Barbell 90kg` — **the implement is on the row**, and every row has a `Form cues` control |
+| `r104-equipment-sheet.png` | the real sheet, barbell about to be unticked |
+| `r104-receipt.png` | *"Session equipment updated — saved for this session only … your saved gym setup is unchanged"* |
+| `r104-after-dumbbells.png` | `RDLs 3 × 3 · **Dumbbells** 90kg`, `Leg Press · Machine`, `Single-Leg RDL · Bodyweight`. **No `· Barbell` anywhere. And the `Form cues` row is ABSENT on RDLs and present on every other row** |
+| `r104-no-bar-cue.png` | the same tree with the sentence asserted gone |
+
+The flow asserts **the sentence** *"Push hips back, bar slides down leg."* is not
+visible — not merely an id. **An id can vanish because a row moved.**
+
+**AND THE LOAD IS DELIBERATELY UNCHANGED AT 90kg** across barbell → dumbbells,
+which is Sam's ruling, visible in the two screenshots side by side.
+
+**⚠ TWO FLOW-AUTHORING TRAPS PAID, so they are not re-bought:**
+1. Maestro does not read shell env — `E2E_METRO_URL` must be `-e`, or the
+   argument arrives as the literal string `${E2E_METRO_URL}` and the seed fails
+   with a message about the seed rather than about the argument.
+2. **Do not wait on `workout-screen` after an awaited apply.** It is "visible" in
+   the tree the whole time, behind the sheet, so the assertion races the write.
+   Wait on the RECEIPT. And open the accordion with `runFlow: when: notVisible`,
+   never `optional: true` — that is the flake this file already recorded once.
+
+## MEASURED
+
+| | branch | control `c2aaf313` |
+| --- | --- | --- |
+| `test:visible-surfaces` | **35/0** (was 19, was 9 at session 2) | 9/0 |
+| `test:compile` | **469, 7 pairs** | **469, 7 pairs** — IDENTICAL |
+| `test:ruling-registry` UNENFORCED | 9, same names | 9, same names — UNMOVED |
+| `test:authored-cues` · `cue-join` · `session-template` | green · 6/0 · 75/0 | same |
+| `test:session-execution-checklist` | 71/0 | 71/0 |
+| `test:equipment-scopes` · `equipment-answer` · `away-flow` | 24/0 · 41/0 · 51/0 | same |
+| `tap-swap-hierarchy` · `exercise-name-lock` · `day-first-timeline` | red | **red at base — exit codes compared, not assumed** |
+
+**GAINED 0, LOST 0.**
+
+### MUTATIONS — six this session, all killed
+
+| # | mutation | result |
+| --- | --- | --- |
+| M1 | the sheet reads the flat requirement map again | ✅ the defect verbatim: `["RDLs","Barbell Row"]` |
+| M2 | the equipment door pre-fills the outgoing load | ✅ `weight=80` |
+| M3 | the sheet writes the WEEK fact, not the session one | ✅ `fact@-1` |
+| M4 | the ladder stops filtering by legality | ✅ 2 cells, **`Inverted Row (Bodyweight)` by name** |
+| M5 | the cue stops checking the implement | ✅ prints *"bar slides down leg"* |
+| M6 | the OR-GROUP ignores the day's kit | ✅ 3 cells, same sentence |
+
+## NAMED, NOT FIXED
+
+1. **`Single-Leg RDL` renders `· Bodyweight` while carrying `20kg`.** Correct by
+   both owners separately — Sam ruled it performable unloaded, and the load
+   ruling says a load survives an implement change — but the two words sit oddly
+   together on one row. **A copy question for Sam, not a wiring one.**
+2. **Four authored cues disagree with Sam's own requirement sheet**
+   (`Skull Crushers` sheet-dumbbells / cue-"Z bar"; `Z-Press` sheet-barbell /
+   cue-"or with dumbbells"; `Inverted Row (Bodyweight)` sheet-`rings_trx` /
+   cue-"chest to bar"; `Tib Raises` sheet-none / cue-"Tib bar"). Recorded in
+   `cueImplement.ts` as what the CUE says. **Reconciling them would be editing
+   his answers; they need his ruling.**
+3. **A recompose renames the session** `Full Body Strength` -> `full_body`
+   (seen headlessly last session). Athlete-visible, unattributed.
+4. **PART 4 is still unwalked** — Block Two screens, the extra-session offer
+   card, Today/This block/Until restored + Undo, and a genuine typed refusal
+   screen. Untouched this session.
