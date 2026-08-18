@@ -84,7 +84,6 @@ import {
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
-import { weeklyPowerBudget } from '../../rules/weeklyPowerBudget';
 import { resolveWeekExclusions } from '../../rules/exerciseExclusions';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
@@ -1334,6 +1333,9 @@ export function buildGeneratedMicrocycles(args: {
                 ])
                 .filter(([day, primer]) => day !== undefined && primer !== null),
             ),
+            allowance: exposureContractV2?.power?.eligible === true
+              ? exposureContractV2.power.plannerSelectedWeeklyBudget ?? 0
+              : 0,
             phase: profile.seasonPhase,
             experienceLevel: profile.experienceLevel,
             availableEquipment: profile.equipment ?? [],
@@ -1425,15 +1427,23 @@ export function buildGeneratedMicrocycles(args: {
      * `power.plannerSelectedWeeklyBudget`, `achievedPrimerCount`, `eligible`
      * and `removalReason`. The evaluator reads those, so the numbers and the
      * rows must move together or the verdict disagrees with the content. */
-    if (exposureContractV2) {
-      const budgeted = weeklyPowerBudget({
-        contract: exposureContractV2,
-        workouts,
-        profile,
-      });
-      exposureContractV2 = budgeted.contract;
-      workouts = budgeted.workouts;
-    }
+    /* ⚠ **THE ALLOWANCE IS A PLACEMENT LIMIT, NOT A STRIP** (2026-08-19).
+     *
+     * `weeklyPowerBudget` ran here and REMOVED power rows the week exceeded its
+     * allowance by. Measured the day power first reached athletes: on a 4-day
+     * pre-season bodyweight week it did not merely take the third primer off
+     * Thursday — `finaliseWorkoutAfterMutation` re-finalised the stripped day
+     * and **DESTROYED IT ENTIRELY**, main lift included. The day went from
+     * `power, main_strength:push, strength_accessory` to EMPTY, main-strength
+     * exposures fell 3 -> 2, and four worlds were refused.
+     *
+     * It had been dormant only because no generated week had ever contained a
+     * power row for it to act on. Its first live action was to delete an
+     * authored strength session.
+     *
+     * So it is GONE, and the allowance is honoured where it belongs: the
+     * composer places at most the allowance, so there is never anything to
+     * strip. Nothing re-finalises an authored day to enforce a count. */
     if (exposureContractV2) {
       // ── THE GENERATED WEEK IS JUDGED, NOT REPAIRED ───────────────────────
       //

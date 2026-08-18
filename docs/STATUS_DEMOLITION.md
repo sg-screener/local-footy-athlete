@@ -635,3 +635,61 @@ delivery started, naming the count — so it is now the positive assertion.
 byte-identical.
 
 Agent: demolition
+
+---
+
+## ⚠ DEMOLITION PHASE — SAM'S RULING 2026-08-19: DELETE ALL LEGACY FIRST
+
+> *"STOP FIXING INTERMEDIATE PRODUCT BUGS. Intermediate failures, refusals,
+> missing power, broken classifications and worse test counts are allowed during
+> demolition. Record them, but do not stop demolition to repair them."*
+
+**From here the process changes.** No fix-as-you-delete, no world-count recovery,
+no full 405-suite gate between deletions. Structural checks only, commit in
+recoverable chunks, and everything broken goes on the REBUILD LIST below.
+
+### THE POWER TRIMMER IS DELETED, AND ITS FIRST LIVE ACT WAS DESTRUCTIVE
+
+Proven by probes on the production path, not inferred:
+
+```
+[CANDIDATE ] day=4  power:-  main_strength:push  strength_accessory:-
+[POSTBUDGET] day=4  (EMPTY)
+```
+
+`weeklyPowerBudget` did not merely take the third primer off Thursday. Its strip
+path re-finalises the day (`finaliseWorkoutAfterMutation(withoutPowerRows(...))`,
+`restoreMissingPlanPatterns: false`) and **DESTROYED THE WHOLE DAY, main lift
+included.** Main-strength exposures fell 3 → 2 and four worlds were refused.
+
+**It had been dormant only because no generated week had ever contained a power
+row.** Its first live action was to delete an authored strength session.
+
+**DELETED.** The allowance is now a PLACEMENT limit in the composer — place at
+most N — so nothing is ever stripped and nothing re-finalises an authored day.
+
+### ⚠ THE FIRST-ROW CLASSIFIER HYPOTHESIS IS REFUTED, AND I AM NOT DELETING IT
+
+Sam's mid-turn order was to delete the order-dependent classifier **if the trace
+confirms it**. **The trace refutes it.** `validateGeneratedWeek` counts main
+strength by scanning EVERY row for `role === 'main_strength'` with a declared
+pattern — no first-row read, no row-zero inference, no ordering dependence.
+Probes confirmed the composer, the merge and the candidate all carried three
+declared main-strength days; the loss happened later, in the trimmer.
+
+**So there is no first-row heuristic here to delete.** Deleting a
+correctly-ordered-independent classifier because a hypothesis predicted one would
+have removed working code and hidden the real cause.
+
+### REBUILD LIST — capabilities temporarily missing, to be rebuilt from contract
+
+| capability | approved contract / ruling | state |
+| --- | --- | --- |
+| **Power delivery to eligible athletes** | Power is part of strength work; only on a scheduler-authorised strength day; lower prohibited on G-2, upper legal; allowance must be delivered unless a typed safety reason prevents it | **BROKEN — 0 of 96 authorised worlds receive power.** The composer places it correctly (proven: 96/96, 192 rows), but the allowance now reads `contract.power.plannerSelectedWeeklyBudget`, which the DELETED trimmer used to stamp. The stamp must be rebuilt at the specialist. |
+| **Power allowance stamping on the contract** | Section 18 A phase-owned selected target | **BROKEN** — was written by the trimmer inside §18 |
+| §18 power disclosure `weekly_power_budget` | — | deleted with the trimmer, not to be rebuilt |
+
+Census at this commit: 180 worlds, 90 setups, **140 built / 40 refused**
+(back to the pre-power baseline), 434 delivered sessions, **0 power rows**.
+
+Agent: demolition

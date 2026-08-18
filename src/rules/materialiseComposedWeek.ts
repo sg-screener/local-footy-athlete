@@ -23,6 +23,14 @@ import type { Workout, WorkoutExercise } from '../types/domain';
 
 /** The specialist's decision for one day, plus what the row builder needs. */
 export interface ComposedPowerPlacement {
+  /**
+   * THE WEEK'S POWER ALLOWANCE, HONOURED BY NOT PLACING MORE THAN IT.
+   *
+   * The old trimmer enforced this by REMOVING rows after the fact, and its
+   * first live act was to destroy an authored strength day. A limit obeyed at
+   * placement needs no strip at all.
+   */
+  readonly allowance?: number;
   readonly primerByDay: Readonly<Record<number, import('./powerPrimerPolicy').PowerPrimerSpec | null>>;
   readonly phase?: import('../types/domain').SeasonPhase;
   readonly experienceLevel?: string;
@@ -153,6 +161,11 @@ export function materialiseComposedWeek(
   week: ComposedWeek,
   context: MaterialisationContext,
 ): Workout[] {
+  /* The allowance is spent in weekday order — deterministic, and the same order
+   * the athlete's week runs in. Absent allowance means "no limit stated", which
+   * only happens for callers that pass no power at all. */
+  const allowance = context.power?.allowance;
+  let primersPlaced = 0;
   return week.days.map((day) => {
     const workoutId = `w-composed-${context.microcycleId}-${day.dayOfWeek}`;
     const gaps = gapsForDay(week, day.dayOfWeek);
@@ -190,7 +203,8 @@ export function materialiseComposedWeek(
      * was refused — `main_strength_planner_selected_target expected 3, actual 2`,
      * measured on four worlds before this line existed. Power is part of a
      * strength session; a day with no strength is not one. */
-    const primer = strengthRows.length > 0
+    const withinAllowance = allowance === undefined || primersPlaced < allowance;
+    const primer = strengthRows.length > 0 && withinAllowance
       ? context.power?.primerByDay?.[day.dayOfWeek] ?? null
       : null;
     let powerRow: WorkoutExercise | null = null;
@@ -212,6 +226,7 @@ export function materialiseComposedWeek(
         }) as WorkoutExercise;
       }
     }
+    if (powerRow) primersPlaced += 1;
     const exercises = powerRow ? [powerRow, ...strengthRows] : strengthRows;
     return {
       id: workoutId,
