@@ -1632,3 +1632,69 @@ same distinction session 5 drew, now with the door defect actually closed.
 
 **Not started, and named rather than implied:** the action hub, the five action
 flows, the injury ladder's rungs 3-5, and the three remaining screens.
+
+## ✅ THE SLICE IS ON GLASS — removal, Today, substitute, visible success
+
+Simulator `LFA Explorer 4c8535f`, iOS 26.3. Metro on 8091 serving THIS worktree,
+and **proved at the bundle, not assumed**: the served iOS bundle was fetched and
+grepped — `mainStrengthPatternsOfWorkout` appears in it, so the screenshots below
+are of the fixed tree and cannot be of `main` or of a stale bundle. The launch
+also echoes `e2e-explorer-launch-resolved-metro-url-…8091`.
+
+`.maestro/visible/removal-today-slice.yaml`, every tap on the real controls:
+session → the row's delete → *"Remove this exercise?"* → **Today** → the receipt
+→ `Done`.
+
+| | before | after |
+| --- | --- | --- |
+| 1 | **Back Squat 3×3 110kg** | RDLs 3×3 90kg |
+| 2 | RDLs 3×3 90kg | **Front Squat 3×8 67.5kg** |
+| 3 | Cossack Squat | Single-Leg RDL 3×7 20kg |
+| 4 | Single-Leg RDL 3×7 20kg | Band Pallof Press 2×10 BW |
+| 5 | Band Pallof Press 2×10 BW | — |
+
+`artifacts/visible/slice-1-before.png`, `slice-2-scope-question.png`,
+`slice-3-receipt.png`, `slice-4-after-removal.png`. **The identity is gone, the
+pattern is kept by a legal LOADED variation wearing its OWN load (67.5kg, not
+Back Squat's 110kg), and every unrelated row is identical in name, dose and
+load.** All three scope answers are visible before the choice is made.
+
+Session 5's blocker — *"Could not remove exercise — That change didn't go
+through"* — **is gone from the device.**
+
+### ⚠ THE RESTART HALF IS NOT PROVEN ON GLASS, AND IT IS AN INSTRUMENT FAILURE
+
+The relaunch step is written and the flow reaches it, but **the XCUITest driver
+dies mid-run**, twice, with `XCTestDriver request failed. Status code: 500, path:
+viewHierarchy` → `CommandFailed: null`. The maestro process then exits silently
+with no verdict. Nothing about the product is implicated: the same run's removal
+assertions all passed immediately before.
+
+**Restart IS proven headlessly** through `relaunchApp` — a real process-death
+relaunch, not a JSON round-trip — in the session-6 measurement above. So restart
+is **WORKING at the door and NOT WALKED on glass.**
+
+### TWO FLOW-AUTHORING TRAPS PAID, BOTH MINE
+
+1. **THE RECEIPT SHEET COVERS THE SCREEN.** Asserting `workout-screen` straight
+   after the scope answer failed while the removal had already SUCCEEDED — the
+   correct rows were sitting behind the "Saved" sheet. A flow that stops there
+   reports a product defect that does not exist. Tap `Done` first.
+2. **`e2eLaunchPurpose` MUST BE ONE OF THE SIX** in `explorerAppLaunchContract.ts`.
+   I invented `"relaunch-after-decision"`; the app `fatalError`s on launch and the
+   flow then polls a `program-screen` that is never coming — which reads exactly
+   like a lost decision rather than a bad launch argument.
+
+Also re-confirmed: **bare-text assertions are a trap here** (`assertVisible:
+"Back Squat"` fails where the name-token id passes). Address rows by
+`session-strength-position-.*-<name-token>`.
+
+## WHAT SAM'S ACTION HUB SHOULD REUSE — seen on the device this session
+
+The Day page already carries a **"Need to make a change?"** card with three
+labelled, iconed circular actions (Tired / Sick / Injured). **That is the design
+language Sam's "NEED TO MAKE A CHANGE?" hub asks for, already shipped** — the
+hub is that card's pattern with five actions, not a new component. The session
+screen's three unlabelled header icons (`+`, dumbbell, red cross) and the
+per-row swap/remove/play icons are visible in `slice-4-after-removal.png` and are
+what the hub replaces.

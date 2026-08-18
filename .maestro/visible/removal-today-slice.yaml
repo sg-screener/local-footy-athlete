@@ -1,0 +1,125 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - Sam's ordered slice - remove Back Squat, Today, substitute, restart
+tags:
+  - e2e
+  - visible
+---
+# SAM'S ORDERED VERTICAL SLICE, 2026-08-18:
+#   Remove -> Back Squat -> Today -> Front Squat substitute -> visible success
+#   -> restart -> Undo
+#
+# ⚠ **EVERY SUCCESS SENTENCE IS CHECKED AGAINST THE ROWS, NEVER ON ITS OWN.**
+# Sam's clause is "no successful message without a visible state change", so the
+# receipt is treated as a claim about the screen and the screen is then read.
+#
+# ⚠ **THE RECEIPT SHEET COVERS THE SCREEN AND MUST BE DISMISSED.** The first
+# version of this walk asserted `workout-screen` straight after the scope answer
+# and failed — not because the removal failed (it had already succeeded, and the
+# rows behind the sheet were correct) but because the "Saved" sheet was still up.
+# A flow that stops there reports a product defect that does not exist.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- assertVisible:
+    id: "e2e-explorer-launch-resolved-metro-url-http%3A%2F%2F127.0.0.1%3A8091"
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- tapOn:
+    id: "session-execution-toggle-strength"
+
+# ── NON-VACUITY: the world really does contain the lift being removed ──────
+# Addressed by NAME TOKEN, never by position — the position id carries the
+# exercise name after the index, so `.*-back-squat` follows the row when it moves.
+- assertVisible:
+    id: "session-strength-position-.*-back-squat"
+- takeScreenshot: artifacts/visible/slice-1-before
+
+# ── REMOVE, ANSWERING "TODAY" ─────────────────────────────────────────────
+- tapOn:
+    id: "component-delete-action-.*"
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-confirm-.*"
+    timeout: 10000
+- tapOn:
+    id: "component-delete-confirm-.*"
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-scope-.*-today"
+    timeout: 10000
+- takeScreenshot: artifacts/visible/slice-2-scope-question
+- tapOn:
+    id: "component-delete-scope-.*-today"
+
+# ── THE RECEIPT, AND THEN THE ROWS THAT MUST BACK IT UP ───────────────────
+- extendedWaitUntil:
+    visible: "Saved"
+    timeout: 15000
+- takeScreenshot: artifacts/visible/slice-3-receipt
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+
+# THE IDENTITY IS GONE, THE PATTERN IS KEPT BY A LEGAL LOADED VARIATION, AND
+# NOTHING UNRELATED MOVED. All three are Sam's clauses and all three are read
+# off the screen.
+- assertNotVisible:
+    id: "session-strength-position-.*-back-squat"
+- assertVisible:
+    id: "session-strength-position-.*-front-squat"
+- assertVisible:
+    id: "session-strength-position-.*-rdls"
+- assertVisible:
+    id: "session-strength-position-.*-single-leg-rdl"
+- assertVisible:
+    id: "session-strength-position-.*-band-pallof-press"
+- takeScreenshot: artifacts/visible/slice-4-after-removal
+
+# ── RESTART — a real relaunch, no clearState (that would wipe the decision) ──
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: "http://127.0.0.1:8091"
+      # ⚠ ONE OF THE SIX IN `explorerAppLaunchContract.ts`, OR THE APP
+      # `fatalError`s ON LAUNCH. "relaunch-after-decision" was invented here and
+      # the app died silently on the relaunch — the flow then polled a
+      # `program-screen` that was never coming, which reads exactly like a lost
+      # decision rather than a bad launch argument.
+      e2eLaunchPurpose: "action-reload"
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 60000
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- assertNotVisible:
+    id: "session-strength-position-.*-back-squat"
+- assertVisible:
+    id: "session-strength-position-.*-front-squat"
+- takeScreenshot: artifacts/visible/slice-5-after-restart
