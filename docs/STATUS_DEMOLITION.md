@@ -728,3 +728,44 @@ scope.
 | Power allowance stamping + delivery | Section 18 A phase-owned target; power is strength work | power specialist + composer |
 
 Agent: demolition
+
+---
+
+## AREAS E/G/H — ELEVEN SUPERSEDED MODULES DELETED, WITH THEIR OBSOLETE TESTS
+
+Each proven at **zero production importers** (`scratchpad/tools/imports.js`,
+which resolves real specifiers rather than grepping the word) AND given a named
+current owner before deletion — the Finding 0 rule, so the mobility-pairing class
+of built-but-unwired work is never swept up.
+
+| deleted module | area | current owner |
+| --- | --- | --- |
+| `utils/trainAroundEngine.ts` | E | injury prohibitions on the contract + `injurySessionClassifier` |
+| `utils/blockAdjuster.ts` | F | `applyAdjustmentEvents` / decision ledger own `dateOverrides` |
+| `utils/weeklyCoachUpdate.ts` | D | `programControlActions` + `CoachStatusScreen` |
+| `store/preRebuildEnvelopeMigration.ts` | **G** | none — a one-time migration for athletes installing over the pre-rebuild world. **No production users exist.** |
+| `utils/recoveryAddonBuilder.ts` | E | placement retired by ruling; generation places no add-ons |
+| `store/injuryEpisodeCommand.ts` | F | `injuryEpisodeTransaction` (5 prod importers) |
+| `screens/home/homeGameMutationController.ts` | E | `fixtureMutationTransaction` |
+| `utils/section18ProgramObservation.ts` | H | the §18 evaluator, called directly |
+| `utils/coachInjuryTargetResolver.ts` | F | `pendingInjuryResolver` (live, CoachScreen) |
+| `utils/capacityAnswerGap.ts` | H | `profileStore` + `postGenerationConstraintValidation` via `canScoreCapacity` |
+| `components/TrunkSupportSection.tsx` | H | none — zero importers anywhere |
+
+**OBSOLETE TESTS DELETED (7, 3,175 lines)** — subject is the deleted module:
+`trainAroundEngineTests`, `weeklyCoachUpdateTests`,
+`preRebuildEnvelopeMigrationTests`, `recoveryAddonAttachmentTests`,
+`injuryEpisodeCommandTests`, `capacityRenderSafetyTests`,
+`coachInjuryContractTests`. Six `package.json` scripts deregistered; the bible
+chain is intact at 402 suites.
+
+⚠ **AND A BULK DELETION I CAUGHT AND REVERSED.** Matching tests by IMPORT rather
+than by SUBJECT first removed 16 further suites whose subject is a LIVE owner —
+`fixtureMutationTransactionTests`, `programBlockRolloverTests`,
+`section18ContractV2Tests`, `weekRebuildIntegrationTests`, `readinessSignalTests`
+and others. They merely imported a dead module. **All 16 were restored.** They
+now carry dangling imports and are RECORDED as broken rather than deleted:
+losing a live owner's guard is not "deleting an obsolete test", and the rebuild
+phase needs them.
+
+Agent: demolition
