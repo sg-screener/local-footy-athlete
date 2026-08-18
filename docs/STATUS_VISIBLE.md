@@ -519,3 +519,104 @@ The measurements are written above instead.
 
 **THE ONE NAMED BLOCKER, if this stops here: FINDING 4.** Everything else
 measured is either working with a guard, or honestly unwalked.
+
+## ⚠ THE EQUIPMENT DEFECT IS FULLY DIAGNOSED AND DELIBERATELY NOT HALF-BUILT
+
+Sam ordered: *"Fix the today-only equipment defect at the effective-kit/
+substitution owner—no exercise-name patch. No visible row may require removed
+equipment; use a typed gap if no legal replacement exists."*
+
+**THE ANSWER IS THAT THERE IS NO EFFECTIVE-KIT OWNER TO FIX IT AT. That is the
+defect.** Traced to the line, measured, and stopped there rather than guessed at.
+
+### THE MECHANISM, END TO END
+
+**1. Both barbell rows ARE correctly identified and replaced.** Measured through
+the app's own reader (`deriveSessionEquipmentRequirements`) on this exact day:
+
+```
+PER-ROW equipmentRequired (the DATA source, not a name probe):
+  Back Squat         ["Barbell","Rack"]
+  RDLs               ["Barbell"]
+  Cossack Squat      []
+  Single-Leg RDL     []
+  Band Pallof Press  []
+
+REQUIREMENTS, and which rows each is charged to:
+  tag:barbell   <- Back Squat, RDLs      <- BOTH. RDLs is not missed.
+  tag:dumbbells <- Single-Leg RDL
+  tag:rack      <- Back Squat
+```
+
+So `buildSessionEquipmentReplacementPlan` replaces **Back Squat AND RDLs** —
+`affectedKeys` is built from `requirement.exerciseKeys` and RDLs is in it. **My
+earlier reading that the plan "left a row it should have taken" was WRONG and is
+corrected here.**
+
+**2. THE ROW IS PUT BACK AFTERWARDS, BY THE POST-MUTATION FINALISER.**
+`workoutCanonicalisation.finaliseWorkoutAfterMutation:895` — when an intended
+main pattern is no longer represented, it restores one:
+
+```ts
+const restored = matchingReferenceRow(context.referenceWorkout, pattern) ??
+  fallbackPatternRow(workout, pattern, …);
+```
+
+`referenceWorkout` is *"the ORIGINAL allocated workout"*. Replacing RDLs removed
+the day's **hinge**, so the finaliser restored the hinge **from the original
+day — which is RDLs, the barbell one.** It consults no equipment whatsoever.
+That is why `Cossack Squat` also vanished (budget) and `RDLs` reappeared.
+
+**This file's own `composed` clause already names the shape:** *"a restore pass
+adding a row it deliberately left out would put back exactly the kit-illegal work
+R-083 removes."* True of composed days; equally true here, and nothing said so.
+
+**3. AND THE REASON IT CANNOT SIMPLY BE TOLD: THE UNTICK IS NEVER RECORDED.**
+`DayWorkoutScreenV2`'s apply handler emits a **loop of `swap_exercise` actions
+and nothing else**. `missingKeys` is `useState` — screen-local, gone on unmount.
+**"I have no barbell today" is not a fact anywhere in this app.** So:
+
+- nothing downstream of the swap can know the barbell is gone — not the
+  finaliser, not generation, not a later re-derivation;
+- the removal cannot expire on return, because it never began;
+- and the mission's own clause *"temporary equipment expires on return"* has
+  nothing to expire.
+
+### WHAT I BUILT, MEASURED, AND THEN REVERTED — ON PURPOSE
+
+The reader half is straightforward and I wrote it: a typed
+`unavailableEquipmentTags?: readonly EquipmentTag[]` on
+`WorkoutCanonicalisationContext`, with the restore pass asking BOTH candidates
+(reference row, then fallback) and taking the first LEGAL one, refusing entirely
+when neither is legal — using `equipmentTagsForRequirement`, **the same
+translator the sheet itself uses, so no exercise-name patch anywhere.**
+
+**IT IS REVERTED BECAUSE IT HAS A READER AND NO WRITER**, which is the exact
+trap `CLAUDE.md` names: *"EVERY NEW DOMAIN FIELD NAMES ITS WRITER, ITS READER AND
+ITS BEHAVIOURAL TEST, IN THE SAME TASK. A field with no reader is not half-built,
+it is dead weight that later code will trust. `canOverride` was written nine
+times and read zero."* Mine would have been the mirror image, and inert.
+
+**AND THE TYPED GAP HAS A SECOND, REAL OBSTACLE, STATED SO IT IS NOT RE-BOUGHT.**
+`ComposedGap` is keyed on a `SessionSlot`; four of the six `MainStrengthPattern`
+values map to one by name, but **`push` and `pull` do not — a slot carries a
+PLANE (`horizontal_push` / `vertical_push`) that a pattern does not.** Choosing a
+plane there would be inventing programming policy to satisfy a disclosure, and
+guessing wrong tells the athlete their vertical press is missing when their
+horizontal press is. The disclosure needs that mapping ruled, not invented.
+
+### THE UNIT THIS ACTUALLY IS
+
+**A day-scoped, typed, dated equipment fact with one owner** — written when the
+athlete unticks kit, read by the substitution owner AND the post-mutation
+finaliser AND generation, expiring on its own date. The app already has the
+shape for it (`temporarySourceFacts` is exactly this kind of input and is already
+persisted and already expires). **That is the fix; it is a unit, not a patch**,
+and it is the only version that satisfies all three of Sam's clauses — no illegal
+visible row, a typed gap when nothing legal exists, and permanent equipment and
+future rotation untouched.
+
+**PERMANENT EQUIPMENT AND FUTURE ROTATION ARE UNTOUCHED TODAY** — verified on
+glass: the receipt says *"for this session only"*, the sheet says *"Permanent
+change? Update your equipment in Profile"*, and nothing writes the profile. That
+half of the clause already holds.
