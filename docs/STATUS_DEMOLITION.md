@@ -278,3 +278,65 @@ tree at this commit — my first attempt ran in the tree I was still editing and
 was discarded, for the second time this mission.
 
 Agent: demolition
+
+---
+
+## ⚠ CORRECTION — §18 IS **NOT** VALIDATION-ONLY, AND MY OWN TABLE UNDER-COUNTED
+
+**Sam, 2026-08-19:** *"§18 is NOT yet validation-only while power trimming,
+optional-session placement and stale-session clearing remain."* He is right, and
+the accounting was worse than he had reason to think.
+
+**The slice-2 table said 8 deleted + 3 class-B retained + 2 retained-disclosure
+= 13. Re-measured against the code, the true count is 14 and the retained
+MUTATING set is FIVE, not three.** Two errors of mine:
+
+1. **`finaliseSection18SafetyWeek` was missing from the table entirely.** It runs
+   at `section18AcceptedWeekGateway.ts:803` and rewrites the week.
+2. **`athlete_removal_typed_reduction` was filed as "written by the replan
+   owner", i.e. not §18's.** That is half true and the half that matters is
+   false: §18 calls `applyUserRemovalConstraintsToWeek` ITSELF, at lines 345 and
+   786, and that call mutates the week.
+
+**So §18 still performs FIVE mutations.** The claim "§18 validates and refuses"
+is true of the repair SEARCH and false of the boundary as a whole. It stays
+false until the five below are moved.
+
+### THE COMPLETE TABLE — ALL 14 MUTATIONS
+
+| # | mutation | exact old function / path | status | approved current owner | prod callers of that path | replacement status |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | replace an authored session with Rest | `repairOptionalRestCandidates` — gateway:715 | **DELETED** | scheduler (owns day purpose) | 0 | n/a — class C, never authorised |
+| 2 | move work onto another day | `repairByStackingCandidates` — gateway:784 | **DELETED** | weekly scheduler | 0 | owner already has it |
+| 3 | relocate a craft violation | `repairCraftViolationCandidates` — gateway:857 | **DELETED** | weekly scheduler | 0 | owner already has it |
+| 4 | re-place displaced strength | `repairDisplacedStrengthCandidates` — gateway:955 (+`relocateStrengthTemplate`, `authorityForDisplacement`) | **DELETED** | scheduler sites, composer fills | 0 | owner already has it |
+| 5 | add conditioning after authorship | `repairCoreConditioningShortfallCandidates` — gateway:1284 | **DELETED** | conditioning specialist | 0 | owner already has it |
+| 6 | author a whole replacement week | `input.regenerate()` cascade — gateway:1650 | **DELETED** | scheduler + composer | 0 | class C — a second weekly authority |
+| 7 | author a fallback week | `input.safeFallback()` + `buildSection18ProductionFallbackCandidate` (329 lines) | **DELETED** | scheduler + composer | 0 | class C — retired-planner fallback |
+| 8 | lower the contract until the week passes | `withDisplacedCapacityReduction` — gateway:1177 | **DELETED** | none — conform-back rewriting | 0 | class C, never authorised |
+| 9 | **trim power dose** | `weeklyPowerBudget` — gateway:493, called :817 | **RETAINED** | **power/strength specialist** (`powerExercisePool`, `powerPrimerPolicy`) | **2** (both inside the gateway) | **NOT STARTED** |
+| 10 | **place / withdraw the optional session** | `presentDeclaredOffer` — `section18OfferPlacement.ts`, called :847 | **RETAINED** | **scheduler / accepted-action owner** | **2** (both inside the gateway) | **NOT STARTED** |
+| 11 | **clear stale derived sessions** | `buildDerivedSessionExpiryCandidates` — `derivedSessionProvenance.ts`, called :791 | **RETAINED** | **accepted-state / lifecycle owner** | **7** (also `fixtureMinimalReplan:1075`) | **NOT STARTED** |
+| 12 | **apply stored athlete removals** | `applyUserRemovalConstraintsToWeek` — `userRemovalConstraints.ts`, called :345 and :786 | **RETAINED** | **accepted-state transaction** (the only mutation boundary) | **9** | **NOT STARTED** — was mis-filed in the slice-2 table |
+| 13 | **rewrite the week for safety** | `finaliseSection18SafetyWeek` — `section18SafetyFinaliser.ts`, called :803 | **RETAINED** | **composer + specialists** (safety belongs in authoring) | **4** (also `postGenerationConstraintValidation:1006`) | **NOT STARTED** — **omitted from the slice-2 table entirely** |
+| 14 | disclose a craft violation | inline, gateway | **RETAINED** | §18 itself | 1 | **CORRECT AS IS** — an explanation, not a change |
+
+**Only row 14 is legitimate under the target contract.** Rows 9-13 are the
+remaining work, in Sam's stated order: power trimming → power specialist;
+optional-session placement → scheduler/accepted-action owner; stale-session
+clearing → accepted-state lifecycle owner; and the two I under-reported,
+removal application → accepted-state transaction, and safety rewriting →
+composer.
+
+### §18 COMPLETION CONDITION — MEASURED, NOT CLAIMED
+
+| condition | state |
+| --- | --- |
+| accepts a finished week as input | ✅ |
+| returns acceptance or typed refusal only | ✅ `accepted \| impossible` |
+| cannot return or mutate a workout/week | ❌ — `canonicalWorkouts` is the week AFTER rows 9-13 |
+| cannot move / replace / add / remove / trim / clear | ❌ — trims (9), adds+removes (10), clears (11), removes (12), rewrites (13) |
+| zero production imports/executions of repair helpers | ✅ proven symbol by symbol |
+| input week byte-identical before and after validation | ❌ — not yet true, and NOT claimed |
+
+Agent: demolition
