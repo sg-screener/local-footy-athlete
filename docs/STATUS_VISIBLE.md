@@ -1915,3 +1915,99 @@ That also repairs the asymmetry above for free. NOT YET BUILT.
 | immediate Undo where the action happened | **NOT BUILT** — toast mounts only on the Program screen; `DayWorkout` is a pushed stack screen, so it fires and expires behind it |
 | Restore after reopening | **NOT BUILT** as an athlete control on this screen |
 | next-day expiry | **NOT MEASURED** (the fact carries `activeThroughISO`, so the shape supports it) |
+
+---
+
+# SESSION 9 — the cause axis answered, and the restart gate's residual is the SEED'S OWN WORLD
+
+## 1. SAM'S CORRECTION IS RIGHT, AND THE DISTINCTION IS ALREADY CANONICAL
+
+I described the stored fact as carrying an "ordinary-removal cause". **It does
+not.** `ExerciseExclusion` is `{exercise, scope, decidedOnISO, activeThroughISO,
+blockNumber, reason?}` and `reason` is *"the athlete's own words, when they gave
+any. Never invented"* — free text, not a typed cause. The persisted record
+carried none.
+
+**But ordinary removal and injury restriction cannot be confused at the
+selection boundary, and no schema change is needed.** They arrive on different
+AXES of `ComposerInjuryInput`:
+
+| | axis | owner | store |
+| --- | --- | --- | --- |
+| injury | `prohibitedPatterns` — movement PATTERNS | §18 weekly exposure contract | `injuryEpisodes` |
+| ordinary removal | `excludedIdentities` / `…ByDate` — exercise IDENTITIES | `applyExerciseExclusionDecision` | `athletePrefs.exclusions` |
+
+That is exactly the required semantics — *ordinary removal excludes the identity
+and preserves the pattern; injury prohibits the pattern itself* — and it is
+structural rather than a label that could be mislabelled. **Checked the way that
+could refute it:** every caller of the exclusion transaction owner was
+enumerated — the day screen's remove, `coachActions`, `useCoachNoteActions` —
+and **the guided injury flow is not among them.** Injury never writes an
+identity exclusion, so no reader can mistake one for the other. NO SCHEMA
+CHANGE.
+
+## 2. THE ORDERED INSTRUMENT FIX WAS BUILT, MEASURED, AND BACKED OUT
+
+Built as ordered: the seed's install seam now called the real owner
+(`recordAcceptedBlock`), reading live state, inventing nothing — the production
+door's own second statement, which this seam had always been missing.
+
+**It moved the number and did not fix the gate.** `expected` went
+`6ae15ce4…` → `1b826fb2…`, `actual` stayed `f211a5ca…`. Probing the new target
+by candidate hash:
+
+```
+*** MATCH ***  requiredStrengthSessions = 1      (seeded)
+               vs 4 on disk after boot           (booted)
+```
+
+Moving the call to the quiescent point — beside `markSeedOnboardingComplete`,
+after every publish — changed nothing, so it is **not** a half-published world.
+The seed's own shape is the cause:
+
+```
+seed microcycles   : 1        (2026-07-13)
+block window       : 2026-07-13 -> 2026-08-09   (four weeks)
+derived requirement: 1        (boot's regenerated block derives 4)
+```
+
+**THE SEED INSTALLS A ONE-WEEK PROGRAM INTO A FOUR-WEEK BLOCK WINDOW.** Boot
+fills the block. So the seeded athlete and the booted athlete are genuinely
+different worlds, and no call-site placement can reconcile them.
+
+**BACKED OUT, DELIBERATELY.** Keeping it would stamp
+`requiredStrengthSessions: 1` into every seeded world — and that number is the
+completion denominator the block boundary divides by. A wrong denominator in
+every seeded world is worse than `{}`, which at least reads as *"no record"* and
+makes `currentAcceptedBlock` return null by having no answer rather than a false
+one. Restored with `git checkout --`; seam verified back to zero references.
+
+## 3. WHAT THE NEXT SESSION SHOULD TRY FIRST, AND WHY
+
+**The scenario-session route, not the checkpoint route.** `DevE2ESeedCoordinator`
+line 328 stores `persistedStoreFingerprints: persisted` — that arm captures the
+PERSISTED fingerprints, where `checkpoint()` captures MEMORY ones. A
+persisted-to-persisted comparison cannot exhibit this defect at all, and
+`test:dev-e2e-scenario-session` already exercises it. **If that is right, the
+restart proof needs no product change and no seed rebuild** — it needs the
+instrument that was already built for it.
+
+The fallback, if that route cannot carry an athlete action mid-flow, is to make
+the seed install the four-week block boot produces. That is a seed-fixture change
+touching every flow and every witness in the repo, and it is a unit of work in
+its own right — not a step inside the Remove slice.
+
+## 4. WHERE THE REMOVE SLICE STANDS AGAINST SAM'S TEN
+
+| # | | state |
+| --- | --- | --- |
+| 1 | trigger through the labelled hub | **NOT BUILT** (three unlabelled icons still) |
+| 2 | Back Squat → Today → Front Squat at its own load | **WORKING ON GLASS** |
+| 3 | immediate Undo on the same surface | **NOT BUILT** — toast mounts only on the Program screen |
+| 4 | remove → close/reopen → Front Squat remains | **BLOCKED ON THE INSTRUMENT**, cause now exact |
+| 5 | Restore after reopening | **NOT BUILT** on this surface |
+| 6 | Today scope expires next day | **NOT MEASURED** (fact carries `activeThroughISO`) |
+| 7 | This block → remaining block only | **NOT MEASURED** |
+| 8 | Until restored → survives later blocks | **NOT MEASURED** |
+| 9 | history + unrelated rows unchanged | unrelated rows **WORKING**; history **NOT MEASURED** |
+| 10 | exact refusal when no legal replacement | **NOT MEASURED** |
