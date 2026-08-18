@@ -1136,3 +1136,133 @@ the control and the screen changing.
 **⚠ AND ONE OF THEM CARRIES A KNOWN BASELINE RED:** `test:block-two-extra-session`
 THROWS at base (recorded in the merge notes for `c2aaf313`). A glass walk of the
 offer card should expect to meet that, and it is not this branch's doing.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 5 — 2026-08-18. THE RULINGS LAND, AND SURFACE 3 IS BLOCKED BY A
+# REAL DEFECT THAT IS NOT MINE
+# ═══════════════════════════════════════════════════════════════════════════
+
+CAP 3, session 1. Sam: land the equipment rulings first, preserve all completed
+branch work, then finish the four unopened screens.
+
+## ✅ THE THREE EQUIPMENT RULINGS — LANDED, GUARDED, MUTATION-PROVEN
+
+In the canonical typed sheet, never a name check.
+
+| ruling | landed as |
+| --- | --- |
+| Skull Crushers: dumbbells OR barbell | `[['dumbbells','barbell']]` — dumbbells first, so no athlete's current selection moves |
+| Z-Press: barbell OR dumbbells | `[['barbell','dumbbells']]` — barbell first, unchanged |
+| Inverted Row: a pull-up bar does NOT qualify | **deliberately unchanged** at `['rings_trx']` |
+| Tib Raises | untouched |
+
+**Z-PRESS NEEDED SAM'S THIRD CATEGORY AND THE TABLE COULD NOT EXPRESS IT.** Its
+cue OFFERS an alternative (*"or with dumbbells"*) rather than assuming an
+implement, so it is correct for both. New `CUE_IMPLEMENT_NEUTRAL` holds it, and
+that is **not** the same as being absent: absent means *"no implement word, never
+looked at"*, a row there means *"names one, was READ, ruled neutral"*. The
+coverage gate accepts either so nothing sits in the gap. **My first attempt tried
+to auto-classify by counting implement words and would have forced a wrong row
+into the table** — no regex can tell *"or with dumbbells"* from *"the dumbbells
+should…"*, which is why this is hand-ruled.
+
+**Skull Crushers' cue is the BARBELL variant**, so on a dumbbell selection it is
+suppressed and flagged. That is the ruling's outcome and it surfaces that a
+dumbbell cue is owed; splitting his sentence would be inventing the copy he
+forbade.
+
+`test:visible-surfaces` **49 → 59**. Mutations **M9** (revert Skull Crushers),
+**M10** (widen Inverted Row to a pull-up bar — the thing Sam ruled AGAINST) and
+**M11** (un-rule Z-Press neutral) each red two cells.
+
+## ✅ RECON: THE EXTRA-SESSION OFFER IS REACHABLE AT THE BOUNDARY
+
+`test:athlete-journey` **58/0** on this branch. The offer producer returns the
+real card at the block boundary:
+
+```
+{"forBlockNumber":1,"currentSessionsPerWeek":2,"offeredSessionsPerWeek":3,
+ "trainingDays":["Monday","Wednesday","Friday"]}
+"You've been completing your training consistently and recovering well…"
+```
+
+**So the RULE half is proven and the GLASS half is what is owed** — and the world
+it needs is now known exactly: a 2-session athlete, a full block of easy
+completions, `history.qualifies=true`, `required=8`. **There is no block-boundary
+production seed**, so the UI walk needs one built through the seed door. That is
+the next unit and it is sized.
+
+## ⚠ SURFACE 3 IS BLOCKED — AND THE BLOCKER IS TWO DOORS DISAGREEING, AT BASE
+
+The flow (`.maestro/visible/exclusion-restore-undo.yaml`) is written and drives
+the real controls. It reaches the scope question and stops, because **the app
+refuses the removal**:
+
+> **Could not remove exercise** — *"That change didn't go through — nothing on
+> your plan changed. Try again, or ask your coach."*
+
+That is the same reason-less `SAFE_REFUSAL_FALLBACK` sentence as the silent swap
+failure, on the door Sam's surface 3 is about. Screenshot at
+`/Users/samgeurts/.maestro/tests/2026-08-18_151420/`.
+
+**AND THE OTHER DOOR ANSWERS THE OPPOSITE, WHICH IS THE REAL FINDING.** Measured
+headlessly through `applyExerciseExclusionDecision` — the exclusion transaction
+owner — on this seed's Monday:
+
+```
+MONDAY BEFORE: Back Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press
+  scope=today_only     ok=true   reason=null
+  scope=this_block     ok=true   reason=null
+  scope=until_changed  ok=true   reason=null
+MONDAY AFTER : Back Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press
+```
+
+**Three successes, and `Back Squat` never leaves the day.** That is Sam's own
+clause — *"no successful message without a visible state change"* — failing on
+the transaction owner, while the SCREEN's path fails the opposite way by refusing
+with no reason.
+
+**⚠ NEITHER IS MINE. THE SAME PROBE ON A CONTROL WORKTREE AT `c2aaf313` PRINTS
+THE IDENTICAL FIVE ROWS AND THE IDENTICAL THREE `ok=true` LINES.** Checked before
+writing a word of this, because a blocker attributed to my own branch would have
+been the wrong thing to hand Sam.
+
+**NOT FIXED, AND DELIBERATELY NOT GUESSED AT.** Whether an exclusion is *supposed*
+to leave an already-accepted week alone (and only bind future composition) is a
+ruling question, not something to infer from an `ok`. If it is, then the success
+message is wrong. If it is not, the transaction is. **Either way surface 3 cannot
+be honestly walked until that is settled**, and half-driving it would produce the
+flaky cells this file has recorded twice.
+
+## THREE FLOW-AUTHORING TRAPS PAID THIS SESSION
+
+1. **Maestro matches a text node WHOLE.** `assertVisible: "was removed from
+   today's session."` never matches, because the node is
+   *"Back Squat was removed from today's session."* Wait on the CONTROL instead.
+2. **The removal has a CONFIRM step before the scope question.** The first
+   version looked for the scope options straight after the delete icon and found
+   *"Remove this exercise?"*.
+3. **Address a row by its NAME TOKEN, not its position or bare text** —
+   `session-strength-position-.*-back-squat` follows the row when it moves.
+
+## MEASURED
+
+| | branch | control `c2aaf313` |
+| --- | --- | --- |
+| `test:visible-surfaces` | **59/0** | 9/0 |
+| `test:athlete-journey` | **58/0** | — |
+| `test:compile` | 469, 7 pairs | 469, 7 pairs — IDENTICAL |
+| `edge-generation-equipment` · `pools` | 37/1 · 473/1 | same — red at base |
+| `ladder-wide` · `slot-coverage` | red | red at base — exit codes compared |
+| `authored-cues` · `equipment-answer` · `equipment-vocabulary` · `exercise-exclusions` | green · 41/0 · 87/0 · 52/0 | — |
+
+**GAINED 0, LOST 0.**
+
+## WHAT REMAINS, HONESTLY
+
+| surface | state |
+| --- | --- |
+| 1. Block Two / new-block | not walked — needs the boundary seed |
+| 2. Extra-session offer | rule proven 58/0; **glass needs the boundary seed** |
+| 3. Exclusion / restore / Undo | **flow written, BLOCKED by the base defect above** |
+| 4. Typed refusal | not walked — and the defect above is an instance of it |

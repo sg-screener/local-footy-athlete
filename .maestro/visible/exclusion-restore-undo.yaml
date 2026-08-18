@@ -1,0 +1,104 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - leave it out, see the scope, restore it, undo it
+tags:
+  - e2e
+  - visible
+---
+# SURFACE 3 of Sam's final list: *"Today / This block / Until restored show
+# correct visible status; Restore removes the modifier and legally restores
+# programming; Undo restores the exact previous visible state; no successful
+# message without a visible state change."*
+#
+# ⚠ **THE LAST CLAUSE IS THE ONE THAT BITES**, and this flow is built around it:
+# every success sentence below is checked against the ROWS, never on its own. A
+# receipt is a claim about the screen, not a substitute for reading it.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- assertVisible:
+    id: "e2e-explorer-launch-resolved-metro-url-http%3A%2F%2F127.0.0.1%3A8091"
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- tapOn:
+    id: "session-execution-toggle-strength"
+
+# ── NON-VACUITY: the row is there before we remove it ─────────────────────
+# ⚠ ADDRESSED BY ITS NAME TOKEN, NOT ITS POSITION and not by bare text. The
+# position id carries the exercise NAME after the index, so `.*-back-squat`
+# follows the row wherever it moves — the exact trap this file recorded when an
+# `assertNotVisible` on `position-2-rdls` passed because the row had shifted to 1.
+- assertVisible:
+    id: "session-strength-position-.*-back-squat"
+- takeScreenshot: artifacts/visible/s3-before
+
+# ── LEAVE IT OUT, AND ANSWER THE SCOPE QUESTION ───────────────────────────
+- tapOn:
+    id: "component-delete-action-.*"
+# THE CONFIRM STEP COMES FIRST — "Remove this exercise?" — and the scope
+# question only appears after it. Measured on the device; the first version of
+# this flow looked for the scope options straight after the delete icon and
+# found the confirm sheet instead.
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-confirm-.*"
+    timeout: 10000
+- takeScreenshot: artifacts/visible/s3-remove-confirm
+- tapOn:
+    id: "component-delete-confirm-.*"
+# ⚠ WAIT ON THE CONTROL, NOT THE SENTENCE. Maestro matches a text node WHOLE,
+# and this one is "<Exercise> was removed from today's session." — so the
+# fragment never matches. The scope question is the thing being proven anyway.
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-scope-.*-today"
+    timeout: 10000
+# THE THREE ANSWERS SAM RULED — all three reachable, not just the two the
+# pre-Block-Two sheet offered.
+- assertVisible:
+    id: "component-delete-scope-.*-today"
+- assertVisible:
+    id: "component-delete-scope-.*-block"
+- assertVisible:
+    id: "component-delete-scope-.*-future"
+- takeScreenshot: artifacts/visible/s3-scope-question
+- tapOn:
+    id: "component-delete-scope-.*-block"
+
+# ── THE ROW IS ACTUALLY GONE — the receipt is not enough ──────────────────
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- assertNotVisible:
+    id: "session-strength-position-.*-back-squat"
+- takeScreenshot: artifacts/visible/s3-after-exclusion
+
+# ── UNDO RESTORES THE EXACT PREVIOUS VISIBLE STATE ────────────────────────
+# Sam ruled undo ONE STEP. The toast is the app's only screen-level undo.
+- tapOn: "Undo"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- assertVisible:
+    id: "session-strength-position-.*-back-squat"
+- takeScreenshot: artifacts/visible/s3-after-undo
