@@ -561,3 +561,77 @@ removal of the safety-finaliser power rewrite and the residual §18 paths. The
 existing specialist already carries Sam's G-2 rule, so the rules are not re-derived.
 
 Agent: demolition
+
+---
+
+## POWER IS DELIVERED — 0 → 96 WORLDS. AND IT COSTS FOUR WORLDS A REFUSAL.
+
+### THE TRACE THAT FOUND IT (real in-season world, probes on the production path)
+
+The specialist was never broken. Traced live, it chose: **Monday lower 2×3**,
+**Tuesday upper 2×3**, and on the **G-2 Thursday an UPPER primer 1×3 reasoned
+"G-2 tiny neural prime"** — Sam's rule obeyed exactly, lower refused, upper kept.
+`scheduleToCoachingPlan` carried all three onto the plan.
+
+**Then nothing placed them.** The only power-row builder lived in
+`defaultProgram.buildPowerRow`, private to the adapter — and the adapter authors
+no strength on composer-owned days. The decision was made correctly, carried
+correctly, and thrown away.
+
+### THE CONNECTION
+
+`buildPowerRow` is now **exported and CONSUMED** by `materialiseComposedWeek` —
+not re-implemented. The deload dose uses the existing `deloadPowerDose`. The
+composer chooses no exercise, no dose and no day; it places what the specialist
+decided, pre-lift, on the composer's own strength day.
+
+### CENSUS — EXPLICIT UNITS
+
+| unit | before | after |
+| --- | --- | --- |
+| distinct generated worlds | 180 | 180 |
+| distinct athlete setups | 90 | 90 |
+| worlds AUTHORISED for power | 96 | 96 |
+| **worlds RECEIVING power** | **0** | **96** |
+| **power rows delivered** | **0** | **192** |
+| authorised-but-undelivered | 96 | **0** |
+| built / refused | 140 / 40 | **136 / 44** |
+| delivered sessions | — | 422 |
+
+Budget never exceeded in any world. Early off-season remains power-free
+(`eligible: false`, `early_offseason`) — a true negative, preserved.
+
+### ⚠ THE COST — FOUR WORLDS NOW REFUSE, AND IT IS MY BUG, NOT AN HONEST REFUSAL
+
+```
+Pre-season/4d/club/Bodyweight Only/w1     Pre-season/4d/noclub/Bodyweight Only/w1
+Pre-season/4d/club/Bodyweight Only/w2     Pre-season/4d/noclub/Bodyweight Only/w2
+```
+
+Typed refusal: `main_strength_planner_selected_target — expected 3, actual 2`.
+
+**SINGLE-VARIABLE EXPERIMENT, and it is unambiguous:** disabling only the primer
+placement makes the world BUILD; restoring it REFUSES. Placing the primer costs
+that week one main-strength exposure.
+
+**This is NOT the "honest new refusal" Sam sanctioned** — that sanction covers
+weeks exposed by deleting repair. This is a regression introduced by my
+placement, and it must be fixed at the composer before merge. **My first
+hypothesis was wrong and is recorded as refuted:** restricting placement to days
+that already carry strength rows did NOT clear it, so the cause is not a
+power-only day.
+
+**NEXT, and not yet done:** find why a leading `role: 'power'` row costs a
+main-strength exposure — the suspect is session identity/evidence being
+re-derived from rows, where `exerciseOrder: 0` puts power first. **NOT MERGEABLE
+until those four worlds build.**
+
+### GUARD
+
+`test:weekly-power-budget`, 6 cells, green. Cell [3] **inverted itself**: it
+existed to record that no world programmed power, and it reddened the instant
+delivery started, naming the count — so it is now the positive assertion.
+**MUTATION-PROVEN:** disconnecting materialisation reds cell [3]; tree restored
+byte-identical.
+
+Agent: demolition

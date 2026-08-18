@@ -1319,6 +1319,26 @@ export function buildGeneratedMicrocycles(args: {
           microcycleId,
           weekStartISO: blockState.weekStart,
           deloadPolicyForDay,
+          /* ── THE SPECIALIST'S PRIMER, HANDED TO THE DAY THAT CARRIES IT ────
+           * The plan already holds `powerPrimer` per day — `powerPrimerPolicy`
+           * decided it and `scheduleToCoachingPlan` carried it. Nothing placed
+           * it, because the only row builder lived in the adapter and the
+           * adapter authors no strength on composer-owned days. Power is part
+           * of a strength session, so the composer places it. */
+          power: {
+            primerByDay: Object.fromEntries(
+              weekPlan.weeklyPlan
+                .map((entry) => [
+                  DAY_MAP[String(entry.dayOfWeek ?? '')],
+                  (entry as { powerPrimer?: unknown }).powerPrimer ?? null,
+                ])
+                .filter(([day, primer]) => day !== undefined && primer !== null),
+            ),
+            phase: profile.seasonPhase,
+            experienceLevel: profile.experienceLevel,
+            availableEquipment: profile.equipment ?? [],
+            blockId: `mini-${blockState.miniCycleNumber ?? 1}`,
+          },
         }),
         adapterWorkouts,
       });

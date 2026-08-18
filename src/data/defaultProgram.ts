@@ -1433,7 +1433,17 @@ function buildSpeedBlock(
  * a hard exposure, not main strength, no conditioning credit, not a finisher —
  * and the differential golden is what proves it.
  */
-function buildPowerRow(
+/**
+ * ⚠ EXPORTED 2026-08-19 SO THE COMPOSER CAN CONSUME IT (seat `demolition`).
+ *
+ * The power primer is decided by `powerPrimerPolicy` and carried on the plan
+ * entry; this turns that typed decision into the row. It was private to the
+ * adapter, and the adapter authors no strength on composer-owned days — which
+ * is exactly why no generated athlete has ever received a power row. The
+ * composer now calls THIS function rather than growing a second one, so there
+ * is one power-row builder in the app and the dose stays the specialist's.
+ */
+export function buildPowerRow(
   spec: NonNullable<SessionAllocation['powerPrimer']>,
   workoutId: string,
   selection: PowerBlockSelectionInput = {},

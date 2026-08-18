@@ -119,24 +119,16 @@ ok('SETUP — the grid produced buildable worlds',
   worldsChecked > 0, 'no world built, so every cell below is vacuous');
 ok('[1] every AUTHORED week already respects its own power budget',
   overBudget.length === 0, overBudget.join(' | '));
-/* ⚠ [3] IS A RECORDED MEASUREMENT, NOT A PASSING PROPERTY, AND THAT IS THE
- * FINDING. Measured 2026-08-19 across the full 70-world census on BOTH the
- * pre-demolition tip and this one: **not one world programmes a single power
- * row.** 50 of 70 carry `plannerSelectedWeeklyBudget: 2` and deliver zero
- * primers against it.
- *
- * So cell [1] above is currently VACUOUS — a week with no power trivially
- * respects any budget — and saying so is the whole point of this cell. It is
- * pre-existing and NOT caused by the ownership move (the control tree measures
- * identically), and it belongs to the composer/power specialist, not here.
- *
- * The cell asserts the measurement so that the day generation starts producing
- * power, THIS CELL REDS and cell [1] stops being vacuous — which is the moment
- * someone must come back and make [1] a real assertion. */
-ok('[3] RECORDED: generation programmes NO power in any world (pre-existing, composer-owned)',
-  bindingWorlds === 0,
-  `power appeared in ${bindingWorlds} world(s) — cell [1] is no longer vacuous and must be`
-  + ' strengthened; see docs/STATUS_DEMOLITION.md "THE POWER FINDING"');
+/* ⚠ **THIS CELL WAS INVERTED ON 2026-08-19, BY ITSELF.** It used to RECORD that
+ * generation programmed no power at all — 0 worlds — and it reddened the moment
+ * the composer started delivering, saying "power appeared in 12 worlds, cell [1]
+ * is no longer vacuous and must be strengthened". That is exactly what it was
+ * built to do, so it is now the positive assertion Sam's contract asks for: an
+ * eligible athlete RECEIVES the power the scheduler authorised. */
+ok('[3] NON-VACUITY — eligible worlds actually receive power',
+  bindingWorlds > 0,
+  'no eligible world delivered a power row, so cell [1] is vacuous — a week with no'
+  + ' power trivially respects any budget');
 
 /* ── CELL 2 — §18 CANNOT ALTER POWER ROWS ───────────────────────────────────
  *
