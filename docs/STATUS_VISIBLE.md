@@ -2587,3 +2587,113 @@ unchanged, replacement's own load), and **5** (typed refusal when no legal
 replacement) are **NOT DONE**. The full 405-suite comparison is owed once, at
 the end of the slice, and has not been run this session. Physical-iPhone
 acceptance remains explicitly owed.
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 14 — RESTORE IS THE MIRROR OF THE UNDO DEFECT, AND ONE HALF OF IT
+# IS STILL OPEN
+# ═══════════════════════════════════════════════════════════════════════════
+
+## 1. WHAT IS GREEN, THROUGH THE LABELLED ROUTE ONLY
+
+`remove-restore-after-restart.yaml`, `SEED_ID=exercise-removal-restart`. It
+never touches `component-delete-action-*`:
+
+```
+liveness: back-squat present, front-squat absent ...... COMPLETED
+remove via home-remove-entry -> back-squat -> today-only  COMPLETED
+front-squat present, back-squat absent ............... COMPLETED
+rdls / single-leg-rdl / band-pallof-press unmoved .... COMPLETED
+checkpoint -> stop -> relaunch ....................... COMPLETED
+front-squat SURVIVES THE RESTART ..................... COMPLETED
+Coach tab -> modifiers-strip-coach -> coach-status-screen  COMPLETED
+"Restore exercise" visible (the WORD) ................ COMPLETED
+tap Restore -> "Clear this adjustment?" -> confirm .... COMPLETED
+back-squat returns ................................... **FAILED**
+```
+
+## 2. AN ACCESSIBILITY DEFECT, FOUND BY ASSERTING THE WORD
+
+`ActiveModifiersSection` set `accessibilityLabel={actionTestID}`. The control
+that READS "Restore exercise" **announced itself as
+`program-active-coach-note-action-…-restore_exclusion`** — a sighted athlete got
+the right word, a screen-reader athlete got an internal id, and the label was
+absent from the accessibility tree entirely. Fixed to `action.label`; `testID`
+unchanged, so every `id:` coordinate still resolves. `accessibility-contracts`
+stays **33 passed, 5 failed**, baseline-identical.
+
+**A walk that asserts only ids cannot find this class of defect.** Asserting the
+WORD is what surfaced it, on both the Remove entry and here.
+
+## 3. ⚠ RESTORE IS HALF A REVERSAL — THE EXACT MIRROR OF SESSION 13
+
+Session 13: undo annulled the ledger entry and left the exclusion. **Restore
+does the opposite.** Measured on device after tapping the labelled control:
+
+```
+EXCLUSIONS AFTER RESTORE: []                      <- cleared, correctly
+LEDGER: ['dl-1:program_control/remove_exercise']  <- STILL UN-ANNULLED
+```
+
+The day override kept replaying, so Back Squat did not come back and **Restore
+reported success over an unchanged session.**
+
+**PARTIALLY FIXED.** `annulOutstandingRemovalFor(exercise)` was added beside
+`undoLastDecision` — the SAME `{kind:'reversal', reversedEntryId}` decision,
+aimed at a named entry instead of the newest, appended through the same ledger
+owner. No second restore mechanism. `clearActiveProgramModifier`'s `excluded`
+branch calls it after `restoreExcludedExercise`.
+
+**AND THE LEDGER IS NOW CORRECTLY ANNULLED:**
+
+```
+dl-1: program_control remove_exercise
+dl-1: reversal -> dl-1
+```
+
+**BUT BACK SQUAT STILL DOES NOT RETURN.** Both stored facts are now right and
+the screen is still wrong, so the residual is in **re-derivation after the
+clear**, not in either write. **NOT DIAGNOSED — do not guess it.** Two things
+the next session should check first, in this order:
+
+1. **Does the clear path re-derive from the LEDGER at all?**
+   `clearActiveProgramModifier` sets `rebuildRequired = true`, but a rebuild
+   that re-derives from `acceptedMaterialContext` rather than replaying the
+   ledger would never see the reversal.
+2. **The two rows share the id `dl-1`.** The reversal's own id equals the id it
+   annuls. `replayableEntries` filters on `!annulled.has(entry.id)`, so a
+   colliding id is at best confusing and at worst drops the wrong row. This may
+   be incidental to the defect or may be it; **it is unproven either way.**
+
+## 4. BLAST RADIUS — ALL BASELINE-IDENTICAL
+
+`undo-reversal` 19/0 · `my-status-modifiers` 8/0 · `journal-changes` 20/0 ·
+`exercise-exclusions` 52/0 · `coach-tab-slice3` 151/151 ·
+`decision-ledger-ownership` 7/1 · `day-first-timeline` 45/3 ·
+`accessibility-contracts` 33/5 · `program-control-decisions` 10/1 ·
+`test:compile` **469, same seven pairs**.
+
+## 5. WHAT REMAINS OF SAM'S FINAL ORDER
+
+| # | | state |
+| --- | --- | --- |
+| 1 | Restore after restart | **BLOCKED** on §3's residual; everything up to the last assertion is green |
+| 2 | Today expiry | **NOT STARTED** |
+| 3 | This block | **NOT STARTED** |
+| 4 | Until restored | **NOT STARTED** |
+| 5 | Exact refusal | **NOT STARTED** |
+
+The one exact 405-suite comparison is **NOT RUN** — it is owed at the end of the
+slice, and the slice is not finished. Physical-iPhone acceptance remains owed.
+**NOT MERGEABLE.**
+
+## 6. RIG NOTE — THE SIMULATOR'S ACCESSIBILITY SERVER DEGRADES
+
+Four runs this session died mid-step with no assertion message, on
+`Request for viewHierarchy failed … kAXErrorInvalidUIElement`. Each one passed
+on a plain retry. **It is not a product signal and it is not a flow defect** —
+but a run that stops with no `FAILED` line reads exactly like one, so check for
+that string before believing a mid-flow stop. Two tab labels also cost a run
+each: `"Program"` and `"Coach"` do not resolve; the accessibility labels are
+`"Program tab"` and `"Coach tab"`, and the whole string is the coordinate.

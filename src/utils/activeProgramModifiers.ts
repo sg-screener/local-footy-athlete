@@ -1688,7 +1688,23 @@ export function clearActiveProgramModifier(
       // Sam's contract: *"Changing or restoring must use the same canonical
       // transaction owner"* — so restore goes through it here too, rather than
       // reaching past it into the store's own action.
-      if (modifier.payload?.kind === 'excluded') restoreExcludedExercise(exercise);
+      if (modifier.payload?.kind === 'excluded') {
+        restoreExcludedExercise(exercise);
+        // ── RESTORE'S OTHER HALF ────────────────────────────────────────────
+        // A removal writes TWO facts. `restoreExcludedExercise` clears the
+        // canonical exclusion; the program-control action stays on the ledger
+        // and keeps replaying, so without this the exercise never comes back
+        // and Restore reports success over an unchanged session. Measured on
+        // device 2026-08-19 — exclusions were `[]` and the ledger still held
+        // `remove_exercise`.
+        //
+        // The SAME reversal mechanism undo uses, aimed at the named entry; a
+        // world with no outstanding removal (a coach-written exclusion) is the
+        // ordinary case and appends nothing.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { annulOutstandingRemovalFor } = require('../store/undoLastDecision');
+        annulOutstandingRemovalFor(exercise);
+      }
       if (modifier.payload?.kind === 'pinned') prefStore.removePinned(exercise);
     }
     rebuildRequired = true;
