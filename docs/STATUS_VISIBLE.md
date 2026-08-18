@@ -2221,3 +2221,87 @@ Measurement only — **no product file touched.** Two probes added under
 
 **NEXT:** build `exercise-removal-restart` per Sam's sanctioned fallback, with
 the derived-witness rule from §3 as its founding constraint.
+
+## 6. THE SEED IS ON THE DEVICE, AND THE GATE'S REFUSAL IS NOW SEED-INDEPENDENT — PROVEN
+
+`restart-control-no-change.yaml` at `SEED_ID=exercise-removal-restart`, real
+simulator, real close/reopen (`clearState: false`). **Everything up to the reload
+passed on glass:**
+
+```
+Assert e2e-seed-ready-exercise-removal-restart ......... COMPLETED
+Assert program-screen ................................. COMPLETED
+Tap view-workout-button / workout-screen .............. COMPLETED
+Assert session-strength-position-.*-back-squat ........ COMPLETED
+Open e2e/checkpoint / e2e-checkpoint-ready-… .......... COMPLETED
+Stop app; relaunch (action-reload) .................... COMPLETED
+Assert e2e-reload-ready-exercise-removal-restart ...... FAILED
+```
+
+**THE NEW SEED INSTALLS ON THE DEVICE AND ITS BACK SQUAT SESSION IS VISIBLE.**
+That is the first four-microcycle world ever to reach the Program screen here.
+
+**THE REFUSAL, READ OFF THE LIVE HIERARCHY** (`e2e-seed-error-reason`, the 1×1
+point — dumped to `artifacts/visible/restart-control-…-hierarchy.json`):
+
+```
+Reload persisted fingerprint mismatch for exercise-removal-restart:
+program-store expected=athlete-semantic-sha256-v2:6ae15ce420dc99ed…5fc2ed19
+              actual  =athlete-semantic-sha256-v2:f211a5ca40a6caa1…fff28cf8
+```
+
+**⚠ THOSE ARE THE SAME TWO HASHES, ALL 64 HEX CHARACTERS OF EACH, THAT THIS FILE
+RECORDED FOR `standard-in-season-week` AT LINES 1782-1783.** A one-microcycle
+world and a four-microcycle world — different programs, different week counts,
+different derived block requirements — produce **byte-identical** expected and
+actual fingerprints.
+
+**SO THE GATE'S REFUSAL DOES NOT DEPEND ON THE SEED'S WORLD, AND NO SEED COULD
+EVER HAVE FIXED IT.** Session 9's residual — *"the seed installs a ONE-week
+program into a FOUR-week block window"* — is real, and it is **not** what the
+reload gate is measuring. This is worth stating plainly because the whole
+four-week seed hunt was aimed at this gate: **the seed was necessary for Sam's
+other requirements (four microcycles, block requirement 4, a Back Squat in every
+week) and was never sufficient for this one.**
+
+**AND THE CAUSE IS ALREADY INVERTED IN THIS FILE, AT LINE 1866:**
+
+```
+*** MATCH ***  acceptedBlocks = {}  -> …9b0a5fc2ed19   (== expected 6ae15ce4…)
+```
+
+`expected` **is** the world with `acceptedBlocks = {}` — the checkpoint. `actual`
+is the world after boot has written the block. Both seeds check point with
+`acceptedBlocks {}` (measured: `ACCEPTED BLOCKS: {} (none)` on both), and boot
+derives **4** in both worlds, so both sides are identical in both worlds. **The
+mechanism is confirmed, not merely consistent.**
+
+**THE FIX, AND WHY IT IS NOW SAFE WHERE IT WAS NOT IN SESSION 9.** The seed must
+record its accepted block at install, through `recordAcceptedBlock` — the real
+acceptance owner, deriving from the program, inventing no number. Session 9 built
+exactly this and **correctly backed it out**, because on a one-microcycle seed
+the owner derives `1` where boot derives `4`, and that number is the completion
+denominator the block boundary divides by. **On a four-microcycle seed the owner
+derives 4 — boot's own number — measured this session.** The seed that makes the
+call safe is the seed that now exists.
+
+**SCOPE CARE FOR WHOEVER BUILDS IT:** the call must not stamp
+`requiredStrengthSessions: 1` into the one-week seeded worlds. That is the
+failure session 9 measured and is the whole reason the seam is still empty.
+
+## 7. A DEVICE MEASUREMENT TAKEN AGAINST A CONTENDED SIMULATOR IS NOT A MEASUREMENT
+
+Before this run, `ps` showed **two orphaned Maestro flows from the previous
+session still driving the same simulator** — both `removal-today-slice.yaml`,
+started 16:16 and 16:37, still alive at 06:45 the next morning, ~14 hours later.
+Three flows were about to share one device and one Metro.
+
+They were killed before the run above. **Any device reading taken while they were
+alive is suspect**, and that includes some of session 10's. **Check
+`pgrep -fl "maestro.cli.AppKt test"` before trusting a device result** — the rig
+gives no sign of contention, and a flow that hangs in `extendedWaitUntil` never
+exits on its own.
+
+Also recorded so it is not re-paid: piping the runner through `| tail` buffers
+the whole run and the log stays **0 bytes** until it finishes, which reads
+exactly like a hung flow.
