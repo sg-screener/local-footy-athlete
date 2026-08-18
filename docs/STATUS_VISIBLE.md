@@ -995,3 +995,87 @@ which is Sam's ruling, visible in the two screenshots side by side.
 4. **PART 4 is still unwalked** — Block Two screens, the extra-session offer
    card, Today/This block/Until restored + Undo, and a genuine typed refusal
    screen. Untouched this session.
+
+## SAM'S TWO UI CORRECTIONS, 2026-08-18 — BOTH LANDED AND RE-PROVEN ON GLASS
+
+### CORRECTION 1 — the always-on implement label was clutter
+
+*"Remove '· Dumbbells / · Machine / · Bodyweight / · Band' from ordinary
+unchanged exercise rows … The selected implement must remain typed internally …
+but do not display it by default."*
+
+**The implement is still resolved for EVERY row** — legality, load handling and
+the form cues all read it — and it is carried in a 1x1 testID so a flow or a
+guard can still ask *"which implement is this row?"* without the athlete reading
+a word. Same idiom as the set count and the position beside it.
+
+**The screen only speaks when today differs from the athlete's normal kit.**
+`implementFor` resolves the implement TWICE — once on the PERMANENT kit
+(`resolveEquipmentCapabilities` with no constraints, which is the permanent
+answer by its own docstring) and once on the EFFECTIVE kit — and the notice
+renders only where they disagree. **On an ordinary day that is false on every
+row and the session renders exactly as it did before any of this landed.**
+
+Copy: `Dumbbells today — no barbell`, one quiet line under the affected row.
+
+**⚠ THE "SWAPPED FROM BACK SQUAT" HALF IS NOT BUILT, and the reason is
+provenance, not display.** `ComposedRow.substitutedFor` exists in `composeWeek`
+and **does not reach the generated program** (`docs/STATUS_EQUIP.md` records the
+same gap). Sam's wording was *"such as"*, so the implement notice is delivered
+and this one is named. It is a composer→program plumbing unit.
+
+### CORRECTION 2 — Single-Leg RDL, and it was a DATA defect
+
+*"Single-Leg RDL is legal with dumbbells or a kettlebell … Bodyweight is only the
+unloaded regression. If prescribedWeightKg > 0, selectedImplement must never be
+bodyweight … Do not patch the visible name."*
+
+Fixed in the canonical metadata, not at the screen:
+`"Single-Leg RDL": [['dumbbells', 'kettlebell', 'barbell']]`. **Dumbbells lead,
+and the ORDER is the ruling** — an OR-GROUP resolves first-available, so a
+dumbbell athlete gets a dumbbell single-leg RDL and **nothing about that row
+changes when the barbell goes, so it is owed no notice at all**, which is exactly
+what Sam said should happen. It also settles this row's long-standing
+sheet-vs-classifier disagreement in the classifier's favour.
+
+`resolveSelectedImplement` now takes an optional `prescribedWeightKg` and will
+not answer `bodyweight` for a loaded row on ANY branch. **This is not load
+history and keys nothing** — Sam's earlier ruling stands.
+
+## ⚠ TWO DEFECTS OF MY OWN THAT ONLY THE SIMULATOR FOUND
+
+Both were green in the suite and wrong on the device. Recorded because the
+pattern is the mission's whole point.
+
+1. **THE GUARD READ A DIFFERENT FIELD FROM THE DISPLAY IT GUARDED.** My
+   loaded-never-bodyweight check read `exercise.prescribedWeightKg`; the number
+   the athlete sees comes from `formatWeight`, which resolves the athlete's own
+   weight OVERRIDE first. So the row shipped **"Bodyweight today" beside 20kg**
+   with the guard passing. It asks `formatWeight` now.
+2. **A MAESTRO `assertNotVisible` WITH A BARE STRING IS AN EXACT MATCH.**
+   `assertNotVisible: "Bodyweight today"` PASSED on a tree showing
+   **"Bodyweight today — no barbell"** — the exact string genuinely was absent
+   while the defect was on screen. **A cell that can pass because the copy is
+   longer than the claim is not asserting the claim.** It is a regex now.
+
+**And one over-broad assertion of mine went red honestly and was corrected, not
+weakened:** `assertNotVisible: implement-.*-bodyweight` failed because
+`Cossack Squat` carries no load and typing it bodyweight is CORRECT. The claim is
+about LOADED rows.
+
+## MEASURED AFTER BOTH CORRECTIONS
+
+| | branch | control `c2aaf313` |
+| --- | --- | --- |
+| `test:visible-surfaces` | **43/0** | 9/0 |
+| `test:compile` | 469, 7 pairs | 469, 7 pairs — IDENTICAL |
+| `test:pools` | 473/1 | **473/1 — red at base** |
+| `test:edge-generation-equipment` | 37/1 | 37/1 — red at base |
+| `equipment-answer` · `equipment-vocabulary` · `exercise-exclusions` · `away-flow` | 41/0 · 87/0 · 52/0 · 51/0 | — |
+| `.maestro/visible/implement-and-cues.yaml` | **green on device** | — |
+
+**The final screenshot** (`artifacts/visible/r104-after-dumbbells.png`): a clean
+session, **one** notice — `Dumbbells today — no barbell` under `RDLs` — and
+**`Single-Leg RDL 3 × 7 · 20kg` carrying no notice and no "Bodyweight" anywhere.**
+Form cues collapsed on every row, and absent on `RDLs` because the bar cue does
+not fit dumbbells.

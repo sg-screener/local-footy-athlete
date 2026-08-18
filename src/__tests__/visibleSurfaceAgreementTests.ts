@@ -466,6 +466,54 @@ function run(): void {
       ? `unexpectedly replaced with ${barePlan.replacements[0]?.toExercise.name}`
       : (barePlan as { reason: string }).reason);
 
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // [8] A LOADED ROW IS NEVER "BODYWEIGHT"  (Sam, 2026-08-18)
+  //
+  // *"Single-Leg RDL is legal with dumbbells or a kettlebell … Bodyweight is
+  // only the unloaded regression. If prescribedWeightKg > 0, selectedImplement
+  // must never be bodyweight."* Shipped on the simulator as
+  // `Single-Leg RDL · 3 × 7 · 20kg` under the notice "Bodyweight today".
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n[8] A loaded row is never "Bodyweight"');
+  check('the authored sheet now offers the alternatives Sam ruled',
+    JSON.stringify(equipmentRequiredFor('Single-Leg RDL'))
+      === '[["dumbbells","kettlebell","barbell"]]',
+    JSON.stringify(equipmentRequiredFor('Single-Leg RDL')));
+  check('and it is STILL legal unloaded — bodyweight remains the regression',
+    exerciseAllowedByEquipment('Single-Leg RDL', ['bodyweight'] as EquipmentTag[]) === true);
+
+  const slrdlLoadedFull = resolveSelectedImplement({
+    exerciseName: 'Single-Leg RDL', availableTags: FULL_KIT, prescribedWeightKg: 20,
+  });
+  const slrdlLoadedNoBar = resolveSelectedImplement({
+    exerciseName: 'Single-Leg RDL', availableTags: NO_BARBELL, prescribedWeightKg: 20,
+  });
+  check('20 kg SELECTS A DUMBBELL, never bodyweight',
+    slrdlLoadedFull.implement === 'dumbbells', String(slrdlLoadedFull.implement));
+  check('AND LOSING THE BARBELL CHANGES NOTHING — so no notice is owed',
+    slrdlLoadedNoBar.implement === slrdlLoadedFull.implement,
+    `${slrdlLoadedFull.implement} -> ${slrdlLoadedNoBar.implement}`);
+  check('its authored alternatives include the kettlebell Sam named',
+    slrdlLoadedFull.alternatives.includes('kettlebell'),
+    JSON.stringify(slrdlLoadedFull.alternatives));
+  check('unloaded, it may still regress to bodyweight on a bare kit',
+    resolveSelectedImplement({
+      exerciseName: 'Single-Leg RDL',
+      availableTags: ['bodyweight'] as EquipmentTag[],
+      prescribedWeightKg: 0,
+    }).implement === 'bodyweight');
+  check('but a LOADED row on that same bare kit never says bodyweight',
+    resolveSelectedImplement({
+      exerciseName: 'Single-Leg RDL',
+      availableTags: ['bodyweight'] as EquipmentTag[],
+      prescribedWeightKg: 20,
+    }).implement !== 'bodyweight');
+  check('and its cue is implement-neutral, so it fits whichever is selected',
+    cueForImplement('Single-Leg RDL', slrdlLoadedNoBar.implement).text !== null
+      && cueForImplement('Single-Leg RDL', slrdlLoadedNoBar.implement)
+        .missingCueForImplement === false);
+
   console.log(`\nVisible surface totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);
   if (failed > 0) process.exitCode = 1;

@@ -31,9 +31,14 @@ tags:
     id: "session-execution-toggle-strength"
 
 # ── BEFORE: the implement is STATED, and it is the barbell ────────────────
+# THE IMPLEMENT IS TYPED ON EVERY ROW (a 1x1 id, invisible to the athlete)…
 - assertVisible:
     id: "workout-exercise-implement-.*-barbell"
-- assertVisible: " · Barbell"
+# …AND SAM'S CORRECTION: NOT PRINTED on an ordinary, unchanged session.
+- assertNotVisible: " · Barbell"
+- assertNotVisible: " · Dumbbells"
+- assertNotVisible:
+    id: "workout-exercise-implement-badge-.*"
 - takeScreenshot: artifacts/visible/r104-before-barbell
 
 # ── THE ATHLETE UNTICKS THE BARBELL FOR THIS SESSION ONLY ─────────────────
@@ -82,6 +87,29 @@ tags:
     timeout: 15000
 # THE WHOLE CLAIM IN ONE LINE: not one barbell row left on the day.
 - assertNotVisible: " · Barbell"
+# ── THE AFFECTED-ROW NOTICE — and ONLY on the row it explains ────────────
+- assertVisible: "Dumbbells today — no barbell"
+- assertVisible:
+    id: "workout-exercise-implement-badge-.*"
+# ⚠ A LOADED ROW IS NEVER LABELLED BODYWEIGHT. `Single-Leg RDL` carries 20kg and
+# resolves to Sam's performable-unloaded set; the screen must not print the pair.
+# ⚠ REGEX, NOT A BARE STRING. `assertNotVisible: "Bodyweight today"` PASSED on a
+# tree that showed **"Bodyweight today — no barbell"** beside 20kg — Maestro
+# matches the whole text, so the exact string was genuinely absent while the
+# defect was on screen. A cell that can pass because the copy is longer than the
+# claim is not asserting the claim.
+- assertNotVisible: "Bodyweight today.*"
+# ── SAM'S SINGLE-LEG RDL CORRECTION, ON THE REAL SCREEN ──────────────────
+# It is authored dumbbells-or-kettlebell-or-barbell now, so a 20kg row selects a
+# DUMBBELL on both kits — which means losing the barbell changes nothing about
+# it and **it is owed no notice at all**. The typed implement is still asserted.
+# ⚠ NOT `assertNotVisible: implement-.*-bodyweight` — that was too broad and
+# went red honestly: `Cossack Squat` carries NO load and typing it bodyweight is
+# correct. The claim is about LOADED rows, and the screen-level way to say it is
+# that no row shows a bodyweight NOTICE (checked above) while the dumbbell
+# implement is present.
+- assertVisible:
+    id: "workout-exercise-implement-.*-dumbbells"
 - takeScreenshot: artifacts/visible/r104-after-dumbbells
 
 # ⚠ ASSERT BY THE WORDS, NOT BY AN ID. An id can be absent because a row moved;

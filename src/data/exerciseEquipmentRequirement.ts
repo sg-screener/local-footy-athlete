@@ -166,7 +166,20 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Single-Leg Calf Raise": [],
   "Single-Leg Hip Thrust": [],
   "Single-Leg Leg Press": ['machine'],
-  "Single-Leg RDL": ['barbell'],
+  // Sam, 2026-08-18: *"Single-Leg RDL is legal with dumbbells or a kettlebell,
+  // as well as any already authored barbell option. Bodyweight is only the
+  // unloaded regression."* **DUMBBELLS LEAD, and the order is the ruling, not a
+  // formatting choice** — the OR-GROUP is resolved first-available, so a
+  // dumbbell athlete gets a dumbbell single-leg RDL and nothing about their
+  // session changes when a barbell comes or goes. It also settles this row's
+  // long-standing disagreement between the sheet (`barbell`) and the load
+  // classifier (`dumbbell`) in the classifier's favour, which is what the
+  // exercise actually is.
+  //
+  // It stays in `BODYWEIGHT_CAPABLE` below: unloaded is the REGRESSION, not the
+  // default, and `resolveSelectedImplement` will not answer bodyweight for a row
+  // carrying load.
+  "Single-Leg RDL": [['dumbbells', 'kettlebell', 'barbell']],
   "Single-Leg Squat (to Box)": ['plyo_box'],
   "Skull Crushers": ['dumbbells'],
   "Slant Board Step-Down": [],

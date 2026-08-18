@@ -62,6 +62,17 @@ import {
   selectedImplementLabel,
   type SelectedImplement,
 } from '../../rules/selectedImplement';
+import type { EquipmentTag } from '../../data/exercisePools';
+
+/**
+ * The typed implement for a row PLUS whether today's kit changed it. Sam's UI
+ * correction: the implement is always typed, and only ever SHOWN when it is
+ * today's answer rather than the athlete's usual one.
+ */
+type SelectedImplementToday = SelectedImplement & {
+  changedToday: boolean;
+  normalImplement: EquipmentTag | null;
+};
 import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
 import {
   buildSessionEquipmentReplacementPlan,
@@ -548,12 +559,43 @@ export default function DayWorkoutScreenV2() {
       : []),
     [date, workout],
   );
+  /**
+   * The PERMANENT kit — the athlete's own gym, with no dated fact subtracted.
+   * `resolveEquipmentCapabilities` with no constraints IS the permanent answer
+   * (see its docstring); it is resolved separately so the screen can tell "this
+   * is what you always use" from "this is what you're using TODAY".
+   */
+  const permanentKitTags = React.useMemo(
+    () => (date
+      ? resolveEquipmentCapabilities(useProfileStore.getState().onboardingData, [], date).tags
+      : []),
+    [date],
+  );
   const implementFor = React.useCallback(
-    (exerciseName: string) => resolveSelectedImplement({
-      exerciseName: canonicalExerciseName(exerciseName),
-      availableTags: effectiveKitTags,
-    }),
-    [effectiveKitTags],
+    (exerciseName: string, prescribedWeightKg?: number | null) => {
+      const canonical = canonicalExerciseName(exerciseName);
+      const effective = resolveSelectedImplement({
+        exerciseName: canonical, availableTags: effectiveKitTags, prescribedWeightKg,
+      });
+      const permanent = resolveSelectedImplement({
+        exerciseName: canonical, availableTags: permanentKitTags, prescribedWeightKg,
+      });
+      return {
+        ...effective,
+        // ── SAM'S UI CORRECTION, 2026-08-18 ────────────────────────────────
+        // *"The always-visible implement labels make the session too cluttered
+        // … Only show equipment context when it explains a TEMPORARY session
+        // change."* So the implement stays typed on every row — legality, load
+        // and cues all read it — and the SCREEN only speaks when today differs
+        // from the athlete's normal kit. On an ordinary day this is false on
+        // every row and the session renders exactly as it did before any of
+        // this landed.
+        changedToday: !!effective.implement && !!permanent.implement
+          && effective.implement !== permanent.implement,
+        normalImplement: permanent.implement,
+      };
+    },
+    [effectiveKitTags, permanentKitTags],
   );
 
   /**
@@ -1902,7 +1944,7 @@ interface SessionListProps {
   onToggleItem: (itemId: string) => void;
   sessionId: string;
   /** R-104. Resolved by the screen against the EFFECTIVE kit for this date. */
-  implementFor: (exerciseName: string) => SelectedImplement;
+  implementFor: (exerciseName: string, prescribedWeightKg?: number | null) => SelectedImplementToday;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -2082,7 +2124,7 @@ function SessionList({
         key={key}
         sessionId={sessionId}
         exercise={item.row}
-        selectedImplement={implementFor(item.row.exercise?.name ?? '')}
+        selectedImplement={implementFor(item.row.exercise?.name ?? '', item.row.prescribedWeightKg)}
         label={labels[index] ?? ''}
         isGrouped={!!item.superset}
         isLastInGroup={
@@ -2383,7 +2425,7 @@ interface StrengthExerciseCardProps {
    * day's kit. Optional so the combined-day picker and add-on rows, which have
    * no kit in hand, keep rendering exactly as they did.
    */
-  selectedImplement?: SelectedImplement | null;
+  selectedImplement?: SelectedImplementToday | null;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -2433,7 +2475,31 @@ function StrengthExerciseCard({
   // is the thing his ruling forbids.
   const resolvedCue = cueForImplement(exerciseName, selectedImplement?.implement ?? null);
   const cueText = cueTextOverride !== undefined ? cueTextOverride : resolvedCue.text;
+  // ── SAM'S UI CORRECTION: TYPED ALWAYS, SHOWN ONLY WHEN IT EXPLAINS A CHANGE.
+  //
+  // ⚠ **AND A LOADED ROW IS NEVER LABELLED "BODYWEIGHT".** Sam named the
+  // contradiction: `Single-Leg RDL` resolved to bodyweight (his own ruled set of
+  // movements performable unloaded) while carrying 20 kg, and the row read
+  // "· Bodyweight … 20kg". The two owners are each right on their own terms —
+  // which is exactly why the SCREEN has to refuse to print the pair.
+  // ⚠ **ASK THE SAME SOURCE THE ROW PRINTS, NOT THE STORED FIELD.** The first
+  // version of this guard read `exercise.prescribedWeightKg` and the row still
+  // shipped "Bodyweight today" beside **20kg** — because the number the athlete
+  // sees comes from `formatWeight`, which resolves the athlete's own weight
+  // OVERRIDE first. A guard that reads a different field from the display it is
+  // guarding is not guarding it. Caught on the simulator, not by a cell.
+  const displayedWeight = String(formatWeight(exercise) ?? '').trim();
+  const carriesExternalLoad = displayedWeight !== '' && !/^bw$/i.test(displayedWeight);
+  const implementIsHonest = !(selectedImplement?.implement === 'bodyweight' && carriesExternalLoad);
+  const showImplementBadge = !!selectedImplement?.changedToday && implementIsHonest;
   const implementLabel = selectedImplementLabel(selectedImplement);
+  const normalLabel = selectedImplementLabel(
+    selectedImplement ? { ...selectedImplement, implement: selectedImplement.normalImplement } : null,
+  );
+  // "Dumbbells today — no barbell". One line, only on the rows it explains.
+  const implementBadgeText = showImplementBadge && implementLabel
+    ? (normalLabel ? `${implementLabel} today — no ${normalLabel.toLowerCase()}` : `${implementLabel} today`)
+    : null;
   const isEditing = editingWeightId === exercise.exerciseId;
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
@@ -2473,18 +2539,19 @@ function StrengthExerciseCard({
         >
           {setsReps}
         </Text>
-        {/* ── R-104: THE IMPLEMENT, STATED. ──────────────────────────────
-            The athlete used to read `RDLs 3 x 2-4 80kg` with nothing saying
-            whether that was a bar or a pair of dumbbells, and 80 means very
-            different things. It sits beside the prescription because it is part
-            of the prescription, not a note about it. */}
-        {implementLabel ? (
-          <Text
-            style={styles.statsPrimary}
+        {/* ── THE TYPED IMPLEMENT, ASSERTABLE BUT NOT SHOWN ────────────────
+            Sam ruled the always-on label too cluttered, and he is right — it
+            repeated "· Dumbbells" down every row of an ordinary session. The
+            implement is still resolved for EVERY row (legality, load handling
+            and the form cues all read it); this 1x1 carries it so a flow or a
+            guard can still ask "which implement is this row?" without the
+            athlete reading a word. Same idiom as the set count and the position
+            directly below. */}
+        {implementLabel && implementIsHonest ? (
+          <View
+            style={{ width: 1, height: 1 }}
             testID={`workout-exercise-implement-${exerciseToken}-${implementLabel.toLowerCase()}`}
-          >
-            {` · ${implementLabel}`}
-          </Text>
+          />
         ) : null}
         {/* The cue was written for a different implement and no authored variant
             exists. Sam: *"flag missing authored technique guidance rather than
@@ -2584,6 +2651,19 @@ function StrengthExerciseCard({
           Generator per-exercise notes are still deliberately NOT rendered: the
           curated layer owns every athlete-visible word; generation provides
           structure only (sets/reps/weight/type). Stage 3 ownership ruling. */}
+      {/* ── THE ONE AFFECTED-ROW NOTICE ──────────────────────────────────
+          Sam, 2026-08-18: *"Only show equipment context when it explains a
+          temporary session change … one concise affected-row badge/notice."*
+          It renders on the rows today actually changed and nowhere else, so an
+          ordinary session carries none of these at all. */}
+      {implementBadgeText ? (
+        <Text
+          style={styles.implementBadge}
+          testID={`workout-exercise-implement-badge-${exerciseToken}`}
+        >
+          {implementBadgeText}
+        </Text>
+      ) : null}
       <CueDisclosure
         exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
         cueText={cueText}
@@ -4505,6 +4585,14 @@ const styles = StyleSheet.create({
     fontSize: 21,
     fontWeight: '800',
     letterSpacing: -0.2,
+  },
+  // The affected-row equipment notice. Quiet by design — it is context for a
+  // change, not a second prescription line.
+  implementBadge: {
+    fontSize: 12,
+    color: colors.text.tertiary,
+    marginTop: 2,
+    marginLeft: 44,
   },
   exerciseEditSubtitle: {
     color: '#8A8A8A',

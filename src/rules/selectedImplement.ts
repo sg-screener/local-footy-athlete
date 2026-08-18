@@ -119,10 +119,21 @@ function loadBearing(tag: string): tag is EquipmentTag {
 export function resolveSelectedImplement(args: {
   exerciseName: string;
   availableTags: readonly EquipmentTag[];
+  /**
+   * The load the row actually prescribes, if any.
+   *
+   * ⚠ **THIS IS NOT LOAD HISTORY AND IT KEYS NOTHING.** Sam's ruling stands —
+   * the same exercise keeps one load authority across implements. This is a
+   * single negative constraint he added 2026-08-18: *"If prescribedWeightKg > 0,
+   * selectedImplement must never be bodyweight."* A row printing 20 kg beside
+   * the word "Bodyweight" is the app contradicting itself, and it shipped.
+   */
+  prescribedWeightKg?: number | null;
 }): SelectedImplement {
   const name = String(args.exerciseName ?? '').trim();
   if (!name) return UNKNOWN;
   const available = new Set(args.availableTags ?? []);
+  const loaded = Number(args.prescribedWeightKg) > 0;
 
   const requirement = equipmentRequiredFor(name);
   if (requirement !== null) {
@@ -141,7 +152,9 @@ export function resolveSelectedImplement(args: {
         if (available.has(options[0])) {
           return { implement: options[0], source: 'authored_only', alternatives: [] };
         }
-        return exerciseIsAvailableWith(name, args.availableTags)
+        // Unloaded is the REGRESSION. A row carrying weight is not being done
+        // unloaded, whatever the kit says, so it keeps its authored implement.
+        return !loaded && exerciseIsAvailableWith(name, args.availableTags)
           ? { implement: 'bodyweight', source: 'bodyweight', alternatives: [] }
           : { implement: options[0], source: 'authored_only', alternatives: [] };
       }
@@ -157,12 +170,20 @@ export function resolveSelectedImplement(args: {
           alternatives: reachable.slice(1),
         };
       }
-      // None reachable: state the authored first option rather than inventing a
-      // substitute. Legality is not this owner's question — the ladder's.
-      return { implement: options[0], source: 'authored_choice', alternatives: [] };
+      // NONE REACHABLE. If the row is UNLOADED and Sam has ruled the movement
+      // performable without kit, that is the regression and it is the honest
+      // answer. Otherwise state the authored first option rather than inventing
+      // a substitute — legality is not this owner's question, it is the ladder's.
+      return !loaded && exerciseIsAvailableWith(name, args.availableTags)
+        ? { implement: 'bodyweight', source: 'bodyweight', alternatives: [] }
+        : { implement: options[0], source: 'authored_choice', alternatives: [] };
     }
-    // On the sheet, but naming no implement at all: a genuine bodyweight row.
-    return { implement: 'bodyweight', source: 'bodyweight', alternatives: [] };
+    // On the sheet, but naming no implement at all: a genuine bodyweight row —
+    // unless it is carrying load, in which case the app cannot say what the
+    // implement is and says nothing rather than saying "Bodyweight … 20kg".
+    return loaded
+      ? UNKNOWN
+      : { implement: 'bodyweight', source: 'bodyweight', alternatives: [] };
   }
 
   // Not on Sam's sheet. The load classifier is the only signal left, and it is
@@ -171,6 +192,7 @@ export function resolveSelectedImplement(args: {
   const klass = equipmentClassFor(name);
   const tag = klass ? CLASS_TO_TAG[klass] : undefined;
   if (!tag) return UNKNOWN;
+  if (tag === 'bodyweight' && loaded) return UNKNOWN;
   return { implement: tag, source: 'load_classifier', alternatives: [] };
 }
 
