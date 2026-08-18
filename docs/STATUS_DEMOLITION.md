@@ -392,3 +392,37 @@ before the superseded remainder stayed deleted — and the anchor registry doing
 precisely the job it exists for: it caught a Bible law losing a site.
 
 Agent: demolition
+
+---
+
+## MOVE 1, STEP 1 — THE POWER BUDGET IS OUT OF §18's FILE (ownership cut NOT yet done)
+
+`rules/weeklyPowerBudget.ts` — 208 lines — now owns `weeklyPowerBudget`,
+`withPowerReduction` and `powerReductionReason`, lifted verbatim from
+`section18AcceptedWeekGateway.ts:457-616`.
+
+**§18 STILL CALLS IT.** This step moves the CODE, not the AUTHORITY, and the two
+are deliberately separate commits: a behaviour change hiding inside a relocation
+is the defect class this repo fights, so the relocation is proven inert first
+and the ownership cut is measured on its own.
+
+**PROVEN INERT:**
+
+| instrument | pre-move (`b4b19d45`) | after the move |
+| --- | --- | --- |
+| `test:compile` | product 35 / devtools 51 / tests 383 | **identical** |
+| `test:craft-tier` | 18 passed, 14 failed | **identical** |
+| `test:section18-v2` | 134 passed, 1 failed | **identical** |
+| `test:section18-gateway` | throws at import (red at base) | **identical throw** |
+
+⚠ **AND ONE ASSUMPTION WAS WRONG BEFORE IT COMPILED.** I wrote the new module's
+import as `./powerExercisePool` for `budgetedPowerSession`, `powerRows` and
+`withoutPowerRows`. They live in `./sessionRowCounting`. Checked rather than
+assumed, before the first compile.
+
+**STILL OWED FOR MOVE 1:** apply the budget on the AUTHORING side so the
+specialist never authors beyond it; guard it there and mutation-prove the guard;
+cut the §18 call; delete the now-dead import. Until that lands, mutation row 9
+of the 14-row table is still RETAINED and §18 still trims power.
+
+Agent: demolition
