@@ -426,3 +426,50 @@ cut the §18 call; delete the now-dead import. Until that lands, mutation row 9
 of the 14-row table is still RETAINED and §18 still trims power.
 
 Agent: demolition
+
+---
+
+## ⚠ CORRECTION — "ZERO NEWLY REFUSED WEEKS" WAS AN UNSUPPORTED CLAIM
+
+**Sam, 2026-08-19:** *"Do not claim 'zero newly refused weeks' from the
+405-suite failure comparison alone. State the instrument and unit."* He is right.
+**A suite comparison's unit is the SUITE, not the world.** A suite can stay green
+while the worlds beneath it swap built for refused, and 155→156 says nothing
+about weeks. The claim was true, but I had not measured it.
+
+### THE INSTRUMENT — `scripts/world-census.ts`
+
+Walks the same world grid as `ladderCoverageWideCensusTests.ts` — same profile
+base, same 3 phases × 5 day-counts × club/no-club × 3 kits × 2 weeks, the same
+`generateProgramLocally` call — and emits **one line per world**:
+
+```
+<world id>	<built|refused>	<typed refusal family>	<delivered sessions>
+```
+
+The refusal family is the typed one (`error.name` + `code`/`failureSignature`),
+never the free-text message, which carries ids and would diff on noise.
+
+### THE RESULT — 180 DISTINCT WORLDS, IDENTICAL
+
+| | pre-demolition `6da38cee` | current tip `c1d3d466` |
+| --- | --- | --- |
+| distinct world ids | 180 | 180 |
+| built | **140** | **140** |
+| refused | **40** | **40** |
+| per-world diff | — | **byte-identical** |
+
+`diff` of the two files is EMPTY: every world id, every built/refused status,
+every typed refusal family and every delivered session count matches.
+
+**So the claim now stands, on the right instrument and unit:** removing §18's
+repair system — 1,924 deletions — changed the outcome of **no world**. Not one
+week newly refuses, not one loses a session. The repair search was not rescuing
+anything in any of the 180 worlds.
+
+That is also the strongest evidence yet that the search was pure overhead: it
+existed to fix weeks, and across the whole grid it fixed none.
+
+Files: `scratchpad/census-PRE-6da38cee.tsv`, `scratchpad/census-POST-c1d3d466.tsv`.
+
+Agent: demolition
