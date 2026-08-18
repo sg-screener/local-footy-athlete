@@ -2697,3 +2697,144 @@ but a run that stops with no `FAILED` line reads exactly like one, so check for
 that string before believing a mid-flow stop. Two tab labels also cost a run
 each: `"Program"` and `"Coach"` do not resolve; the accessibility labels are
 `"Program tab"` and `"Coach tab"`, and the whole string is the coordinate.
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 15 — BACK SQUAT IS NOT "STILL EXCLUDED". IT HAS BEEN DELETED FROM
+# THE PROGRAM, AND THE BOOT IS WHAT DELETED IT.
+# ═══════════════════════════════════════════════════════════════════════════
+
+## 1. THE ANSWER TO SAM'S QUESTION, IN ONE LINE
+
+*"Answer precisely where Back Squat remains excluded after both stored
+constraints are inactive."*
+
+**It does not remain excluded ANYWHERE. Both stored constraints are inactive and
+both are CORRECT.** The exercise is gone from `currentProgram` itself — and from
+`blockSelectionHistoryStore`, which is the input every future generation reads.
+**There is nothing left to re-derive FROM.** That is why no rebuild, no settle,
+and no further restart can bring it back, and why every "force a refresh"
+approach was doomed before it was tried.
+
+## 2. THE TRACE, BOUNDARY BY BOUNDARY
+
+`src/__tests__/restoreBoundaryTrace.ts`, seed profile
+`exercise-removal-restart`, real doors only:
+`executeProgramControlActionDurably({remove_exercise})` +
+`applyExerciseExclusionDecision` -> `relaunchApp` -> `clearActiveCoachNote`
+-> the screen's own `runRebuild()` body.
+
+```
+                       exclusions      replayable   currentProgram@2026-07-13   VISIBLE
+A before removal       []              []           Back Squat ...              Back Squat
+B after removal        [Back Squat]    [dl-1]       Back Squat ...              Front Squat
+C after RESTART        [Back Squat]    [dl-1]       FRONT SQUAT ...             Front Squat
+D after RESTORE        []              []           Front Squat ...             Front Squat
+E1 after runRebuild()  []              []           Front Squat ...             Front Squat
+E2 after settle door   []              []           Front Squat ...             Front Squat
+F after 2nd RESTART    []              []           Front Squat ...             Front Squat
+```
+
+**Read row B against row C.** At B the removal is held where a removal belongs —
+`dateOverrides['2026-07-13']` — and `currentProgram` is UNTOUCHED. That is the
+north star working. **At C the override is gone and the SOURCE has changed.**
+
+## 3. THE SECOND AUTHORITY, NAMED, WITH THE EXACT ROW
+
+`blockSelectionHistoryStore`, slot `squat`, block start `2026-07-13`:
+
+```
+A/B   {"blockNumber":1,"blockStartISO":"2026-07-13","slot":"squat",
+       "role":"main_bilateral","identity":"Back Squat"}
+C+    {"blockNumber":1,"blockStartISO":"2026-07-13","slot":"squat",
+       "role":"main_bilateral","identity":"FRONT SQUAT"}     <- REWRITTEN BY BOOT
+```
+
+`quiescentBoot.ts:570` regenerates on every launch and passes
+**`recordSelections: true`**. At boot the `today_only` exclusion was still
+active, so the composer picked Front Squat for the squat slot — and the boot then
+**recorded that choice as the block's history**, replacing Back Squat.
+`recordBlockSelections` REPLACES a block's rows by design, so the original is not
+shadowed, it is destroyed.
+
+**A reversible, dated, `today_only` decision was laundered into a permanent
+generation INPUT.** `applyExerciseExclusionDecision` states the opposite contract
+in its own return value — `rebuildRequired: exclusion.scope !== 'today_only'`,
+because *"it does not change what future generation may choose"*. **The boot
+makes it change exactly that, and then writes the change down.**
+
+**AND THE RECORDER'S OWN COMMENT SAYS SO** (`generateProgram.ts:1955`):
+*"Recording it is what stops the next boot re-deriving a different past when
+their kit or **exclusions** change"*. The record exists to protect the past from a
+changed exclusion — **and the boot overwrites that record with a past derived
+under the changed exclusion.** The protection is defeated by its own writer.
+Two lines below the defect, the same file says *"A boot replays; it decides
+nothing"*. It decides, and it commits.
+
+## 4. THE TWO NAMED RISKS — ONE REFUTED BY MEASUREMENT, ONE NOT THE CAUSE
+
+**Risk 2, the `dl-1` id collision: REFUTED AS THE CAUSE.** Row D shows
+`REPLAYABLE: []` — the reversal annulled its target correctly despite sharing the
+id. The collision is a real identity defect and still worth fixing, but it
+**does not** produce the residual. Proven, not assumed.
+
+**Risk 1, "does the clear path rebuild?": IT DOES, AND IT DOESN'T MATTER.** Rows
+E1, E2 and F are three different re-derivations — the screen's own `runRebuild()`,
+the settle door `undoLastDecision` uses, and a whole second boot. All three
+re-derive faithfully. **They all reproduce Front Squat because that is what the
+stored input now says.** A fourth rebuild would not have helped.
+
+## 5. THE SINGLE-VARIABLE EXPERIMENT THAT ISOLATES IT
+
+`quiescentBoot.ts:570`, `recordSelections: true` -> `false`, nothing else
+changed, file restored from backup afterwards (`git diff` clean):
+
+```
+                       selection row     currentProgram@2026-07-13   VISIBLE
+C after RESTART        Back Squat        Front Squat                 Front Squat  <- removal STILL SURVIVES
+E2 after settle door   Back Squat        BACK SQUAT                  BACK SQUAT   <- THE FAILING ASSERTION PASSES
+F after 2nd RESTART    Back Squat        Back Squat                  Back Squat   <- and it STAYS restored
+```
+
+**One variable, and it moves the athlete-visible outcome from wrong to right
+without touching Restore, the ledger, or any screen.** Sam's step 4 (removal
+survives the restart) is preserved at C, which is the property a blunt fix would
+have broken.
+
+## 6. THE CONTROL ARM, BECAUSE THE FINDING DEPENDED ON IT
+
+Cold start -> restart with **NO removal at all**: `currentProgram` and the
+visible day both still read Back Squat, selection row unchanged. **Boot
+regeneration is deterministic and correct.** Without this arm the finding could
+have been ordinary generator rotation, and the whole diagnosis would have been
+wrong.
+
+## 7. WHAT THE FIX IS, AND WHAT IT IS NOT
+
+**NOT `recordSelections: false`.** That was the experiment, not the fix. A block
+that boot legitimately authors for the FIRST time must still be recorded, or
+every launch rotates it freely — the defect the recording was introduced to stop.
+
+**THE OWNERSHIP CORRECTION:** a block's selections are authored ONCE, by the door
+that decides them (onboarding, acceptance, rollover). **A boot may record a block
+that has never been recorded; it may never RE-author one.** The caller is the
+only layer that knows which it is, so the distinction belongs in the option, not
+in the store.
+
+Five production callers pass `recordSelections: true` and each must state which
+it is: `quiescentBoot:570` (replay), `weekRebuild:650`,
+`profileProgramTransaction:205`, `temporarySourceFactTransaction:534`,
+`acceptedStateTransaction:2071`. **`temporarySourceFactTransaction` is the same
+defect class pointed at a different fact** — a TEMPORARY fact authoring a
+PERMANENT selection — and is named here, not fixed here.
+
+## 8. STATE — NOTHING IS FIXED YET
+
+The diagnosis is complete and reproduced headlessly; **no product file is
+changed.** `git diff` against `8dfba789` is the trace script only. Sam's items 2-5
+(Today expiry, This block, Until restored, exact refusal) remain NOT STARTED. The
+405-suite comparison is NOT RUN. Physical-iPhone acceptance remains owed.
+**NOT MERGEABLE.**
+
+Agent: visible
