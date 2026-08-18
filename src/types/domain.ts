@@ -1348,6 +1348,37 @@ export interface WorkoutExercise {
   /** Semantic type of the pairing — informs renderer badges and validation rules. */
   pairType?: 'contrast' | 'superset' | 'circuit';
 
+  /**
+   * ── WHY THIS ROW IS NOT THE ONE THE BLOCK CHOSE ──────────────────────────
+   *
+   * Sam, 2026-08-18: *"When the exercise identity changes because of equipment
+   * or injury, carry typed swap provenance to the screen and show one concise
+   * line: 'Swapped from [exercise] — [reason]'."*
+   *
+   * **THE COMPOSER HAS RECORDED THIS SINCE 2026-08-17 AND IT STOPPED AT THE
+   * COMPOSER.** `ComposedRow.substitutedFor` names the base identity and the
+   * cause, `materialiseComposedWeek` threw it away building the row, and every
+   * screen was left to infer a substitution from the fact that a lift it had
+   * never seen was on the day. It could not, so it said nothing.
+   *
+   * This is the same carry `composedGaps` already makes, one level down: a GAP
+   * names a day, a SUBSTITUTION names a ROW.
+   *
+   * WRITER: `rules/materialiseComposedWeek`. READER: the affected-row notice on
+   * `DayWorkoutScreenV2`. TEST: `test:visible-surfaces` section [9], and
+   * `.maestro/visible/implement-and-cues.yaml` on glass.
+   */
+  substitutedFrom?: {
+    /** The exercise the block actually selected, in its own authored name. */
+    readonly baseExerciseName: string;
+    /**
+     * Why it is not on the day. Kept apart because they end differently for the
+     * athlete: a dated kit loss lifts itself, an exclusion ends when they
+     * restore it, an injury ends when it clears.
+     */
+    readonly cause: 'excluded_today' | 'kit_today' | 'injury';
+  };
+
   // Timestamps
   createdAt: string;
   updatedAt: string;

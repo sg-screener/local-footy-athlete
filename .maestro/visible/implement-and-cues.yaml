@@ -110,6 +110,13 @@ tags:
 # implement is present.
 - assertVisible:
     id: "workout-exercise-implement-.*-dumbbells"
+# ── SWAP PROVENANCE ON THE ROW WHOSE IDENTITY CHANGED ────────────────────
+# `Back Squat` needs a barbell AND a rack, so it leaves the day entirely and
+# something else stands in. That row is owed the identity line, not an implement
+# one — and the two must never appear together.
+- assertVisible: "Swapped from Back Squat — equipment today"
+- assertVisible:
+    id: "workout-exercise-swapped-badge-.*"
 - takeScreenshot: artifacts/visible/r104-after-dumbbells
 
 # ⚠ ASSERT BY THE WORDS, NOT BY AN ID. An id can be absent because a row moved;

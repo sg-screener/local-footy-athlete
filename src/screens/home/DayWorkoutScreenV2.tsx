@@ -2496,10 +2496,33 @@ function StrengthExerciseCard({
   const normalLabel = selectedImplementLabel(
     selectedImplement ? { ...selectedImplement, implement: selectedImplement.normalImplement } : null,
   );
+  // ── ONE LINE, AND IDENTITY OUTRANKS IMPLEMENT ─────────────────────────────
+  //
+  // Sam, 2026-08-18: *"If only the implement changes, keep the current implement
+  // notice instead. Never show both, and do not add notices to unchanged rows."*
+  //
+  // The order is not arbitrary. **A DIFFERENT EXERCISE IS A BIGGER FACT THAN A
+  // DIFFERENT IMPLEMENT** — if the athlete is looking at a lift the block did not
+  // choose, that is what they need explained, and the implement is a detail of
+  // the row that replaced it.
+  const substitution = (exercise as { substitutedFrom?: {
+    baseExerciseName: string; cause: 'excluded_today' | 'kit_today' | 'injury';
+  } })?.substitutedFrom;
+  const substitutionReason = substitution?.cause === 'kit_today'
+    ? 'equipment today'
+    : substitution?.cause === 'injury'
+      ? 'injury'
+      : substitution?.cause === 'excluded_today'
+        ? 'you left it out'
+        : null;
+  const substitutionBadgeText = substitution && substitutionReason
+    ? `Swapped from ${displayExerciseName(substitution.baseExerciseName)} — ${substitutionReason}`
+    : null;
   // "Dumbbells today — no barbell". One line, only on the rows it explains.
-  const implementBadgeText = showImplementBadge && implementLabel
+  const implementBadgeText = !substitutionBadgeText && showImplementBadge && implementLabel
     ? (normalLabel ? `${implementLabel} today — no ${normalLabel.toLowerCase()}` : `${implementLabel} today`)
     : null;
+  const affectedRowNotice = substitutionBadgeText ?? implementBadgeText;
   const isEditing = editingWeightId === exercise.exerciseId;
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
@@ -2656,12 +2679,14 @@ function StrengthExerciseCard({
           temporary session change … one concise affected-row badge/notice."*
           It renders on the rows today actually changed and nowhere else, so an
           ordinary session carries none of these at all. */}
-      {implementBadgeText ? (
+      {affectedRowNotice ? (
         <Text
           style={styles.implementBadge}
-          testID={`workout-exercise-implement-badge-${exerciseToken}`}
+          testID={substitutionBadgeText
+            ? `workout-exercise-swapped-badge-${exerciseToken}`
+            : `workout-exercise-implement-badge-${exerciseToken}`}
         >
-          {implementBadgeText}
+          {affectedRowNotice}
         </Text>
       ) : null}
       <CueDisclosure

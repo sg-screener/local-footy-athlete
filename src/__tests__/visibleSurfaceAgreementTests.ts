@@ -71,6 +71,7 @@ import {
 } from '../rules/selectedImplement';
 import { cueForImplement } from '../screens/home/dayWorkoutHelpers';
 import { CUE_ASSUMED_IMPLEMENT } from '../data/cueImplement';
+import { materialiseComposedWeek } from '../rules/materialiseComposedWeek';
 import { EXERCISE_CUES } from '../data/exerciseCues';
 
 let passed = 0;
@@ -513,6 +514,60 @@ function run(): void {
     cueForImplement('Single-Leg RDL', slrdlLoadedNoBar.implement).text !== null
       && cueForImplement('Single-Leg RDL', slrdlLoadedNoBar.implement)
         .missingCueForImplement === false);
+
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // [9] SWAP PROVENANCE REACHES THE ROW  (Sam, 2026-08-18)
+  //
+  // *"When the exercise identity changes because of equipment or injury, carry
+  // typed swap provenance to the screen."* The composer has recorded
+  // `ComposedRow.substitutedFor` since 2026-08-17 and `materialiseComposedWeek`
+  // threw it away, so no screen could tell a substitution from an unfamiliar
+  // lift. This is the carry, and the screen's precedence rule.
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n[9] Swap provenance reaches the row');
+  // ⚠ **THIS WAS A SOURCE SCAN AND IT WAS GREEN-AND-EMPTY.** The first version
+  // grepped `materialiseComposedWeek.ts` for `row.substitutedFor`; mutation M7
+  // wrapped the carry in `false && row.substitutedFor` and the cell stayed
+  // GREEN, because the string was still in the file. **A grep passes on dead
+  // code.** It CALLS the materialiser now and reads what comes out.
+  const composedRow: any = {
+    identity: 'Goblet Squat',
+    substitutedFor: { baseIdentity: 'Back Squat', cause: 'kit_today' },
+    slot: 'squat', role: 'main_strength', mainStrengthPattern: 'squat',
+    doseCategory: 'main', sets: 3, repsMin: 5, repsMax: 5, load: 60,
+  };
+  const materialisedDay: any = {
+    dayOfWeek: 1, planEntryId: 'p1', name: 'Strength', workoutType: 'Strength',
+    sessionTier: 'core', kind: 'lower', requiredSlots: ['squat'],
+    declaredSlots: ['squat'], rows: [composedRow, { ...composedRow, identity: 'RDLs', substitutedFor: undefined }],
+  };
+  const materialised = materialiseComposedWeek(
+    { days: [materialisedDay], gaps: [] } as any,
+    { microcycleId: 'mc-test', weekStartISO: '2026-07-13' } as any,
+  );
+  const materialisedRows: any[] = materialised[0]?.exercises ?? [];
+  check('non-vacuity: the materialiser produced both rows',
+    materialisedRows.length === 2, `${materialisedRows.length} rows`);
+  check('THE SUBSTITUTION RECORD SURVIVES THE COMPOSER -> WORKOUT BOUNDARY',
+    materialisedRows[0]?.substitutedFrom?.baseExerciseName === 'Back Squat'
+      && materialisedRows[0]?.substitutedFrom?.cause === 'kit_today',
+    JSON.stringify(materialisedRows[0]?.substitutedFrom ?? null));
+  check('and an UNSUBSTITUTED row carries none — no notice on unchanged rows',
+    materialisedRows[1]?.substitutedFrom === undefined,
+    JSON.stringify(materialisedRows[1]?.substitutedFrom ?? null));
+
+  const screenBody = screenSource.slice(screenSource.indexOf('const substitution ='));
+  check('IDENTITY OUTRANKS IMPLEMENT — never both notices on one row',
+    /!substitutionBadgeText\s*&&\s*showImplementBadge/.test(screenBody),
+    'the implement notice must stand down when the exercise itself changed');
+  check('and the row renders ONE notice, not two',
+    /affectedRowNotice\s*=\s*substitutionBadgeText\s*\?\?\s*implementBadgeText/
+      .test(screenBody));
+  check('each typed cause has athlete wording, and none is left unexplained',
+    /kit_today/.test(screenBody) && /injury/.test(screenBody)
+      && /excluded_today/.test(screenBody)
+      && /Swapped from \$\{displayExerciseName/.test(screenBody));
 
   console.log(`\nVisible surface totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

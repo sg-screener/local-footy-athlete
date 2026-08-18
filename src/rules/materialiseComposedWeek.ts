@@ -66,6 +66,17 @@ function materialiseRow(
     prescribedWeightKg: row.load,
     restSeconds: 0,
     exercise,
+    // THE COMPOSER'S SUBSTITUTION RECORD, CARRIED. It has existed on
+    // `ComposedRow` since 2026-08-17 and died here — the screen could see that
+    // an unfamiliar lift was on the day and had no way to say WHY.
+    ...(row.substitutedFor
+      ? {
+          substitutedFrom: {
+            baseExerciseName: row.substitutedFor.baseIdentity,
+            cause: row.substitutedFor.cause,
+          },
+        }
+      : {}),
     createdAt: stamp,
     updatedAt: stamp,
     // The composer DECIDES the role (R-092); §18 reads this rather than
