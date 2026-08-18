@@ -319,6 +319,55 @@ export function programEnvelopeIsOldShape(raw: string): boolean {
 }
 
 /**
+ * **THE ONE PROJECTION OF "WHAT THE PROGRAM STORE PERSISTS".**
+ *
+ * There were THREE copies of this field list and they had already drifted. The
+ * two in this file carried `acceptedBlocks`; the third — the dev-E2E harness's
+ * convergence check (`src/dev/e2e/devE2EPersistence.ts`), whose own docstring
+ * says *"Mirrors `programStore`'s `partialize` field for field. If that list
+ * ever grows a key, this one grows with it"* — did not, because it is in
+ * another file and nothing made it grow.
+ *
+ * **MEASURED COST, on glass, 2026-08-18 at `main @ c2aaf313`:** the harness read
+ * `acceptedBlocks` on disk and not in memory, refused the world as
+ * *"Persisted semantic state did not converge: program-store"*, and **every
+ * seeded Maestro flow in the repo — the entire simulator rig — died at the seed
+ * step.** The projection is now a function, so a fourth copy cannot be written
+ * by adding a key in one place; there is one place.
+ *
+ * Accepts BOTH shapes on purpose: a live store (fields at the top level) and an
+ * already-reduced envelope's `state` (which carries `inputs`). One projection,
+ * so the two sides of a convergence check cannot ask different questions.
+ */
+export function projectProgramPersistedInputs(
+  state: Record<string, any>,
+): Record<string, unknown> {
+  const alreadyReduced = (state.inputs ?? null) as Record<string, unknown> | null;
+  if (alreadyReduced) return alreadyReduced;
+  const accepted = (state.acceptedMaterialContext ?? {}) as Record<string, unknown>;
+  return {
+    generationAnchorISO: state.generationAnchorISO ?? null,
+    // ⚠ THE HYDRATED CLOCK IS THE THIRD ARM AND IT IS NOT DECORATION. `merge`
+    // restores the persisted clock into `hydratedSeasonPhaseClock` while
+    // `currentProgram` is still null — boot has not regenerated yet. Without
+    // this arm a write in that window persists `null` over a clock that was
+    // correctly restored one tick earlier. The storage adapter's copy always
+    // had it; `partialize`'s copy did not, which is drift #2 in the same list.
+    seasonPhaseClock: state.currentProgram?.seasonPhaseClock
+      ?? state.hydratedSeasonPhaseClock ?? null,
+    sessionFeedback: state.sessionFeedback ?? {},
+    weightOverrides: state.weightOverrides ?? {},
+    // A BLOCK'S OWN REQUIREMENT IS AN INPUT AND MUST OUTLIVE THE PROCESS.
+    // The program is not persisted — boot REGENERATES — so if this is not
+    // here it is gone by the first relaunch, and the boundary silently
+    // stops progressing anything.
+    acceptedBlocks: state.acceptedBlocks ?? {},
+    temporarySourceFacts: accepted.temporarySourceFacts ?? [],
+    injuryEpisodes: accepted.injuryEpisodes ?? [],
+  };
+}
+
+/**
  * R1.3: reduce ANY outgoing program envelope to the inputs shape. Writers
  * that still serialise the fat output envelope (the transaction layer's
  * out-of-band persistence, zustand's post-migration write-back) converge to
@@ -330,24 +379,8 @@ export function reduceProgramEnvelopeToInputs(value: string): string {
     const parsed = JSON.parse(value) as { state?: Record<string, any>; version?: unknown };
     const state = parsed.state;
     if (!state || 'inputs' in state) return value;
-    const accepted = (state.acceptedMaterialContext ?? {}) as Record<string, unknown>;
     return JSON.stringify({
-      state: {
-        inputs: {
-          generationAnchorISO: state.generationAnchorISO ?? null,
-          seasonPhaseClock: state.currentProgram?.seasonPhaseClock
-            ?? state.hydratedSeasonPhaseClock ?? null,
-          sessionFeedback: state.sessionFeedback ?? {},
-          weightOverrides: state.weightOverrides ?? {},
-          // A BLOCK'S OWN REQUIREMENT IS AN INPUT AND MUST OUTLIVE THE PROCESS.
-          // The program is not persisted — boot REGENERATES — so if this is not
-          // here it is gone by the first relaunch, and the boundary silently
-          // stops progressing anything.
-          acceptedBlocks: state.acceptedBlocks ?? {},
-          temporarySourceFacts: accepted.temporarySourceFacts ?? [],
-          injuryEpisodes: accepted.injuryEpisodes ?? [],
-        },
-      },
+      state: { inputs: projectProgramPersistedInputs(state) },
       version: parsed.version,
     });
   } catch {
@@ -2068,24 +2101,19 @@ export const useProgramStore = create<ProgramState>()(
       // migration by parkPreRebuildEnvelopeIfPresent, and restores nothing
       // here. quiescentBootTests holds the laws.
       migrate: (persistedState) => persistedState,
+      // ⚠ **THE INPUT LIST HAD THREE COPIES AND NOW HAS ONE.** This is the
+      // persist middleware's route; the storage adapter above
+      // (`programStateStorage`) re-shapes a full state into the SAME envelope on
+      // its own path, and the dev-E2E convergence check reads the same list a
+      // third time. Adding a field to one and not the others persists it down
+      // one route and drops it down another, which reads as "persistence is
+      // flaky" — measured twice: the accepted-block requirement reached disk
+      // from the adapter and was absent from here (block 1's entry survived a
+      // relaunch and block 2's did not), and then reached disk from BOTH and was
+      // absent from the harness (every seeded simulator flow refused to start).
+      // `projectProgramPersistedInputs` is the one list.
       partialize: (state) => ({
-        inputs: {
-          generationAnchorISO: state.generationAnchorISO ?? null,
-          seasonPhaseClock: state.currentProgram?.seasonPhaseClock ?? null,
-          sessionFeedback: state.sessionFeedback ?? {},
-          weightOverrides: state.weightOverrides ?? {},
-          // ⚠ **THE INPUT LIST IS WRITTEN IN TWO PLACES AND BOTH MUST CARRY A NEW
-          // INPUT.** This is the persist middleware's projection; the storage
-          // adapter above (`programStateStorage`) re-shapes a full state into the
-          // SAME envelope on its own path. Adding a field to one and not the
-          // other persists it down one route and drops it down the other, which
-          // reads as "persistence is flaky" — measured: the accepted-block
-          // requirement reached disk from the adapter and was absent from here,
-          // so block 1's entry survived a relaunch and block 2's did not.
-          acceptedBlocks: state.acceptedBlocks ?? {},
-          temporarySourceFacts: state.acceptedMaterialContext?.temporarySourceFacts ?? [],
-          injuryEpisodes: state.acceptedMaterialContext?.injuryEpisodes ?? [],
-        },
+        inputs: projectProgramPersistedInputs(state as unknown as Record<string, any>),
       }) as unknown as ProgramState,
       merge: (persisted, current) => {
         const inputs = (persisted as {

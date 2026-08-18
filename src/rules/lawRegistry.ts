@@ -1491,6 +1491,17 @@ export const LAW_REGISTRY: readonly LawRow[] = [
     },
   },
   {
+    id: 'LAW-persisted-input-list-has-one-projection',
+    law: 'What the program store persists is described in exactly ONE place. Every route that writes it, reads it back, or checks it converged asks that same projection; no reader keeps a hand-written mirror of the list.',
+    ruledAt: 'docs/NORTH_STAR.md ("two representations of one fact"); AGENTS.md do-not-fix-edge-cases; founding case measured on glass 2026-08-18',
+    guard: {
+      state: 'guarded',
+      by: 'test:persisted-input-projection',
+      chainStatus: 'in_chain',
+      receipt: 'BORN GUARDED 2026-08-18, AND THE FOUNDING CASE COST THE WHOLE SIMULATOR RIG. There were THREE copies of the program store\'s persisted-input list: `partialize`, `reduceProgramEnvelopeToInputs`, and `devE2EPersistence`\'s convergence selector. `acceptedBlocks` was added to the first two on 2026-08-17 and to neither of anything else, so from that day the seed installer read it on disk and not in memory, `waitForDevE2EPersistence` ran to its deadline, and EVERY seeded Maestro flow in the repo died at the seed step — 19 golden flows plus every scenario and explorer flow. The only visible symptom on glass was `assertion is false: id: e2e-seed-ready-...`; the reason had to be dug out of `maestro hierarchy` because `e2e-seed-error-reason` is a 1x1 point. THE THIRD COPY\'S OWN DOCSTRING CARRIED THE RULE — "mirrors partialize field for field; if that list ever grows a key, this one grows with it" — a rule in prose, in another file, with nothing holding it; and the `journey` seat had already paid for the same defect one layer in and left a warning that correctly named two of the three. FIXED BY CONSTRUCTION: `projectProgramPersistedInputs` is the one list and all three call it, so a fourth copy cannot be written by adding a key. THE CELLS DRIVE THE ROUTE, NOT THE SOURCE — a source scan ("all three call one function") would pass the moment someone inlined a fourth list, which is exactly how this arrived; they run `captureDevE2EMemoryFingerprints` against `readDevE2EPersistedFingerprints` through `waitForDevE2EPersistence`, the three functions the seed installer itself calls, on a world where every input is answered with a DISTINCT value (an all-empty world hides a wrong VALUE behind a right key). MUTATIONS: restoring the hand-written harness copy reds 4 cells with the simulator\'s own message; dropping the shared projection\'s `hydratedSeasonPhaseClock` arm reds exactly the 1 cell aimed at it. THE UNIFICATION ALSO CLOSED A SECOND, SILENT DRIFT IN THE SAME LIST, stated because it is a behaviour change and not a refactor: copies 2 and 3 fell back to `hydratedSeasonPhaseClock`, copy 1 did not, so a middleware write in the window where `merge` has restored the clock and boot has not yet regenerated persisted `null` over it. WHAT IT DOES NOT HOLD: whether the list is CORRECT — that every key on it is an input and none is an output. That is `test:persisted-inputs-schema`, which reads the disk and classifies. One says the right things are stored; this one says everybody agrees what they are.',
+    },
+  },
+  {
     id: 'LAW-fixture-projection-is-not-calendar-input',
     law: 'Recurring and one-off game fixtures persist once as Profile or decision-ledger inputs; Calendar persists calendar facts and never a derived game/noGame projection.',
     ruledAt: 'docs/CODEX_UI_SESSION_PERSISTENCE_BOUNDARY_2026-08-11.md §Options compared before implementation; docs/NORTH_STAR.md',
