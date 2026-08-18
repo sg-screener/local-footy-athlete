@@ -1,0 +1,17 @@
+appId: com.localfootyathlete.app
+name: VISIBLE explore - the live session screen
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- takeScreenshot: artifacts/visible/c1-session-top
+- scroll
+- scroll
+- takeScreenshot: artifacts/visible/c1-session-mid
