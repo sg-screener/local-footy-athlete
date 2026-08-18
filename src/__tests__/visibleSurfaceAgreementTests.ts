@@ -45,7 +45,7 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 // TOTALS-OR-RED (Sam, 2026-08-03): born failing; only the report clears it.
 armTotalsOrRed();
 
-import { profileForDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
+import { profileForDevE2ESeed, buildDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
 import { devE2EWeekStartForSeed } from '../dev/e2e/devE2ESeedIds';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { composeDayDetail } from '../utils/dayDetailComposition';
@@ -649,19 +649,104 @@ function run(): void {
   // didn't go through". One cause behind BOTH disagreeing doors.
   // ═══════════════════════════════════════════════════════════════════════
   console.log('\n[11] A removal excludes the identity, not the pattern');
-  // ⚠ **THE "IT DOES NOT COME BACK" PROPERTY IS NOT HELD HERE, AND THAT IS
-  // STATED RATHER THAN FAKED.** A hand-built workout carries no strength intent,
-  // so `intendedPatterns` is empty and the restore pass never runs on it — the
-  // fixture cannot exhibit the fault, which makes any cell built on it green and
-  // empty. Three such cells were written and DELETED rather than shipped.
+  // ⚠ **THE DEBT THIS BLOCK RECORDED IS NOW PAID, AND THE REASON IT COULD NOT
+  // BE PAID BEFORE WAS ITSELF THE DEFECT.**
   //
-  // The property is proven where it actually lives:
-  //   - the real door, measured 2026-08-18: removing `Back Squat` through
-  //     `remove_exercise` leaves `RDLs, Cossack Squat, Single-Leg RDL, Band
-  //     Pallof Press, Front Squat` — the identity gone, the PATTERN kept, and a
-  //     legal LOADED variation rather than a bodyweight regression;
-  //   - `.maestro/visible/exclusion-restore-undo.yaml` on glass.
-  // A generated-world cell belongs here and is owed.
+  // What stood here said: *"a hand-built workout carries no strength intent, so
+  // `intendedPatterns` is empty and the restore pass never runs on it — the
+  // fixture cannot exhibit the fault."* That observation was correct and its
+  // conclusion was wrong. **A workout with no typed intent is not an artefact of
+  // hand-building — it is what the PHONE STORES.** The device installs its seed
+  // with `preserveExactAcceptedWorkouts: true`, which deliberately bypasses the
+  // canonicalisation that stamps `strengthIntent`, so every workout on the
+  // device reached exactly that "restore pass never runs" state.
+  //
+  // That is why the door proof and the device disagreed for two sessions: the
+  // door was measured on a REGENERATED world (typed intent, restore pass runs,
+  // `Front Squat` lands) and the device ran the UNTYPED one (no restore pass, the
+  // squat silently lost, §18 then refusing the whole week with
+  // `pattern_restore_failure:strength_patterns:0` and the athlete told *"That
+  // change didn't go through"*).
+  //
+  // The fix is in `finaliseWorkoutAfterMutation`: when a workout carries no
+  // typed intent but DOES have a valid plan reference, intent is read from the
+  // plan's own copy instead of from the candidate the mutation just changed.
+  // Inferring intent from the candidate is circular — remove the day's only
+  // squat and the day is judged never to have intended one.
+  //
+  // **THE WORLD BELOW IS THE PRODUCTION SEED FIXTURE, NOT A HAND-BUILT WORKOUT** —
+  // `buildDevE2ESeed(SEED).program` is the exact object the device installs, and
+  // its untyped shape is asserted before anything is concluded from it.
+  const fixtureMonday: any = (() => {
+    const weekStart = devE2EWeekStartForSeed(SEED);
+    const micro = buildDevE2ESeed(SEED).program.microcycles.find(
+      (m: any) => String(m.startDate).slice(0, 10) === weekStart);
+    return micro?.workouts.find((w: any) => w.dayOfWeek === 1) ?? null;
+  })();
+
+  // NON-VACUITY, BOTH HALVES: the world must be the untyped one, and it must
+  // actually contain the lift being removed. Either failing makes every cell
+  // below green and empty.
+  check('non-vacuity: the PHONE\'s stored Monday carries NO typed strength intent',
+    !!fixtureMonday && !fixtureMonday.strengthIntent,
+    `strengthIntent=${JSON.stringify(fixtureMonday?.strengthIntent ?? null)}`);
+  check('non-vacuity: and it contains the Back Squat the athlete removes',
+    rowNames(fixtureMonday?.exercises ?? []).includes('Back Squat'));
+
+  const seedPhase = (profileForDevE2ESeed(SEED) as any).seasonPhase;
+  const withoutSquat = {
+    ...fixtureMonday,
+    exercises: (fixtureMonday?.exercises ?? []).filter(
+      (e: any) => String(e?.exercise?.name ?? '') !== 'Back Squat'),
+  };
+
+  const askedFor: string[] = [];
+  const repaired = finaliseWorkoutAfterMutation(withoutSquat, {
+    date: devE2EWeekStartForSeed(SEED),
+    phase: seedPhase,
+    planIntentValid: true,
+    referenceWorkout: fixtureMonday,
+    excludedIdentities: ['Back Squat'],
+    legalIdentityForPattern: (pattern: any) => {
+      askedFor.push(String(pattern));
+      return 'Front Squat';
+    },
+  } as any);
+  const repairedNames = rowNames(repaired.workout?.exercises ?? []);
+
+  // ⚠ THIS IS THE CELL THAT REDS IF THE FIX IS REVERTED. Before it, the selector
+  // was NEVER CALLED on this world — measured, `askedFor` was empty.
+  check('the fallback selector IS asked to fill the removed pattern',
+    askedFor.includes('squat'), `askedFor=${JSON.stringify(askedFor)}`);
+  check('the excluded IDENTITY does not come back',
+    !repairedNames.includes('Back Squat'), repairedNames.join(', '));
+  check('and the PATTERN is kept by a legal loaded variation',
+    repairedNames.includes('Front Squat'), repairedNames.join(', '));
+  check('no unrelated row disappears',
+    ['RDLs', 'Cossack Squat', 'Single-Leg RDL', 'Band Pallof Press']
+      .every((name) => repairedNames.includes(name)), repairedNames.join(', '));
+
+  // THE OTHER SIDE OF THE BOUNDARY — the fix must not over-reach. With no valid
+  // plan reference there is nothing to read intent FROM, so the candidate's own
+  // rows still own it exactly as before and the selector is not consulted.
+  const askedWithoutReference: string[] = [];
+  finaliseWorkoutAfterMutation(
+    { ...withoutSquat, planEntryId: undefined },
+    {
+      date: devE2EWeekStartForSeed(SEED),
+      phase: seedPhase,
+      planIntentValid: false,
+      referenceWorkout: null,
+      excludedIdentities: ['Back Squat'],
+      legalIdentityForPattern: (pattern: any) => {
+        askedWithoutReference.push(String(pattern));
+        return 'Front Squat';
+      },
+    } as any,
+  );
+  check('with no valid plan reference the candidate still owns its own intent',
+    !askedWithoutReference.includes('squat'),
+    `askedFor=${JSON.stringify(askedWithoutReference)}`);
 
   // The three causes are typed and distinct on the input contract.
   const coachSource = fs.readFileSync(

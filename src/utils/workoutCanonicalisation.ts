@@ -551,6 +551,33 @@ function domainPatterns(rows: readonly ClassifiedRow[]): MainStrengthPattern[] {
   ));
 }
 
+/**
+ * The main-strength patterns a workout's own rows carry, classified exactly as
+ * `finaliseWorkoutAfterMutation` classifies its candidate — same counting
+ * indices, same speed-block veto, same linked-conditioning exclusion. Split out
+ * so the plan's reference copy can be read with the identical rule rather than
+ * a second, drifting one.
+ */
+function mainStrengthPatternsOfWorkout(workout: Workout): MainStrengthPattern[] {
+  const rows = workout.exercises ?? [];
+  const linkedIds = linkedConditioningIds(workout);
+  const speedIds = new Set(workout.speedBlock?.exerciseIds ?? []);
+  const indices = countingIndices(rows);
+  const classified: ClassifiedRow[] = rows.map((row, index) => {
+    let classification = classifyRow(row, indices[index]);
+    if (classification.kind === 'conditioning' && speedIds.has(row.id)) {
+      classification = {
+        ...classification,
+        kind: 'strength_accessory',
+        conditioningModality: null,
+        hardConditioning: false,
+      };
+    }
+    return { row, index, classification, linkedConditioning: linkedIds.has(row.id) };
+  });
+  return domainPatterns(classified.filter((row) => !row.linkedConditioning));
+}
+
 function updatePowerForPhase(args: {
   workout: Workout;
   context: WorkoutCanonicalisationContext;
@@ -754,10 +781,48 @@ export function finaliseWorkoutAfterMutation(
     ownership.owner !== 'typed_strength' &&
     ownership.owner !== 'canonical_strength_rows'
   );
+  /**
+   * ── THE PLAN'S COPY OWNS THE INTENT; THE CANDIDATE OWNS THE CONTENT ────────
+   *
+   * `canonical_strength_rows` exists to infer a session's intent from *"the
+   * content that is actually there"*. On a MUTATION the content that is
+   * actually there is the content the mutation just changed, so that inference
+   * is **circular**: take the day's only squat out and the day is judged never
+   * to have intended a squat.
+   *
+   * **MEASURED 2026-08-18 ON THE STORED PHONE PROGRAM.** The device installs
+   * the seed with `preserveExactAcceptedWorkouts: true`, which deliberately
+   * bypasses the canonicalisation that would have stamped `strengthIntent` — so
+   * every workout the phone stores carries NO typed intent, and this branch is
+   * the one that runs. Removing `Back Squat` on the Monday produced
+   * `intendedPatterns` **without `squat`**, the restore pass never ran,
+   * `legalIdentityForPattern` was **never called**, the day silently lost its
+   * squat, and §18 then refused the whole week
+   * (`pattern_restore_failure:strength_patterns:0`). The athlete's own removal
+   * came back to them as *"That change didn't go through."*
+   *
+   * The same removal on a REGENERATED world succeeded, which is why the door
+   * proof and the device disagreed: a regenerated workout carries typed intent
+   * and never reaches this branch.
+   *
+   * `context.referenceWorkout` is the plan's matched entry and is the
+   * PRE-mutation copy — it is already resolved here for the restore pass. Read
+   * intent from it and the untyped case behaves exactly like the typed one.
+   * **This is not a new policy; it is the existing policy applied to a workout
+   * whose intent was never stamped.** Where there is no valid plan reference
+   * (a legacy or unmatched day) the candidate's own rows remain the source,
+   * exactly as before.
+   */
+  const referenceIntentPatterns = planIntentValid && context.referenceWorkout
+    ? mainStrengthPatternsOfWorkout(context.referenceWorkout)
+    : null;
+  const intentSourcePatterns = referenceIntentPatterns?.length
+    ? referenceIntentPatterns
+    : initialMainPatterns;
   const ingress = resolveLegacyStrengthIntent({
     strengthIntent: trustExistingTypedIntent ? workout.strengthIntent : undefined,
     strengthPatternContributions: trustedContributions,
-    contentPatterns: ownership.allowCanonicalRowInference ? initialMainPatterns : undefined,
+    contentPatterns: ownership.allowCanonicalRowInference ? intentSourcePatterns : undefined,
     name: workout.name,
     allowTextInference: ownership.allowLegacyTextInference,
     allowScalarInference: ownership.allowLegacyTextInference,

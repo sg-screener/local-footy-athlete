@@ -1434,3 +1434,201 @@ pattern) and the vertical push/pull + single-leg coverage are **NOT built** — 
 pool walk currently maps those patterns onto the four MVP slots. **Named, not
 half-built.** Sam's clause about printing unresolved movement/injury combinations
 rather than guessing is the right shape for that unit and has not been run.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION 6 — 2026-08-18. THE PHONE ROUTE IS FIXED, AND THE CAUSE WAS
+# CIRCULAR INTENT — NOT THE §18 COLLISION THIS FILE PREDICTED
+# ═══════════════════════════════════════════════════════════════════════════
+
+CAP 4, session 1. Sam's order: **fix and prove ONE complete route on glass
+before building the five action flows** — *"Remove → Back Squat → Today → Front
+Squat substitute → visible success → restart → Undo. The current engine proof
+succeeds but the saved-program phone route still refuses. Trace the actual
+stored phone program through the canonical removal transaction and fix the
+shared owner. Do not create a UI-only workaround."*
+
+## ⚠ THE PREDICTION IN THIS FILE WAS WRONG, AND CHECKING IT WAS THE WHOLE JOB
+
+Session 5 closed with an open question it framed as a RULING question for Sam:
+
+> *"When an athlete removes their only squat, may the week be accepted without a
+> squat main lift — or must the fallback count as one? Both are safety-acceptance
+> changes. Neither is mine to pick."*
+
+**It is neither, and Sam never needed to answer it.** The §18 collision was real
+in the world it was measured in and is not what the device was hitting. Session 5
+also named the right suspicion — *"the headless world and the device world are
+not the same world"* — and then guessed at the difference (*"a fixture workout
+can lack the strength intent that makes the restore pass run"*). **The guess was
+half right in a way that pointed at the wrong owner**: the intent is indeed
+missing, but the fix is not to stamp it on the fixture.
+
+## THE REPRODUCTION — the device's refusal, headlessly, in one probe
+
+The prior probes cold-started through onboarding and **REGENERATED** the program.
+The device does not: it installs the seed FIXTURE through the coordinator. Driving
+`createDefaultDevE2ESeedCoordinator(true).reset('standard-in-season-week')` and
+then the screen's own door reproduced the device exactly:
+
+```
+LIVE BEFORE   : Back Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press
+[coach-mutation-transaction] candidate rejected and rolled back
+  error: 'Section 18 final-week rejection (pattern_restore_failure:strength_patterns:0)'
+DURABLE DOOR  ok=false  "That change didn't go through — nothing on your plan changed."
+LIVE AFTER    : Back Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press
+```
+
+**READ THE LIVE CHAIN, NEVER `currentProgram`.** The removal writes a DAY
+OVERRIDE (`writeCoachOverride`), so the first version of this probe read
+`currentProgram`, saw no change, and would have reported a second, non-existent
+defect. `buildScheduleStateImperative()` → `resolveDateWithConditioning` is the
+surface the screen actually shows.
+
+## THE CAUSE — INTENT INFERRED FROM THE THING THE MUTATION JUST CHANGED
+
+Two hypotheses were raised and **both were refuted by measurement before the
+fix was written**:
+
+| hypothesis | verdict |
+| --- | --- |
+| the fixture lacks `strengthIntent`, so `planIntentValid` is false | **REFUTED** — `planIntentValid = true`; all 7 workouts carry a `planEntryId` and match |
+| the §18 ruling question from session 5 is the blocker | **REFUTED** — the week gate is downstream of a repair that never ran |
+
+Running the canonicaliser directly with the door's own arguments printed the
+answer:
+
+```
+CANONICALISER actions: ["name_changed:Lower Hinge:final_content_owns_name"]
+```
+
+**No `row_restored`. No `restore_blocked_by_exclusion`. `legalIdentityForPattern`
+was NEVER CALLED.** The restore pass did not run at all.
+
+`intendedPatterns` is non-empty only when there is a `canonicalIntent`. The phone's
+stored workouts carry **no typed `strengthIntent`** — the seed installs with
+`preserveExactAcceptedWorkouts: true`, which deliberately bypasses the
+canonicalisation that stamps it — so ownership resolves to
+`canonical_strength_rows`, whose job is to infer intent *"from the content that is
+actually there"*. **On a mutation, the content that is actually there is the
+content the mutation just changed.** Take the day's only squat out and the day is
+judged never to have intended a squat, so there is nothing to restore, no fallback
+selector runs, the day silently loses the pattern, and §18 then refuses the whole
+week — and the athlete's own removal comes back to them as a failure.
+
+**THE COUNTERFACTUAL, MEASURED, IS WHAT MADE THIS CERTAIN.** Same day, same
+removal, `strengthIntent` supplied by hand:
+
+```
+[counterfactual] legalIdentityForPattern("squat") called
+COUNTERFACTUAL actions: ["row_restored:Front Squat:restore_missing_plan_pattern:squat"]
+```
+
+That is why the door proof and the device disagreed for two sessions: **the door
+was measured on a regenerated (typed) world and the device ran the untyped one.**
+
+## THE FIX — one owner, and it is not a new policy
+
+`finaliseWorkoutAfterMutation`: when a workout carries no trusted typed intent but
+DOES have a valid plan reference, intent is read from **the plan's own copy**
+(`context.referenceWorkout`, already resolved there for the restore pass and
+already the PRE-mutation copy) instead of from the candidate. Where there is no
+valid plan reference the candidate's own rows remain the source, exactly as before.
+
+**This is the existing policy applied to a workout whose intent was never
+stamped** — a typed day already behaves this way. `mainStrengthPatternsOfWorkout`
+classifies the reference with the identical rule (same counting indices, same
+speed-block veto, same linked-conditioning exclusion) rather than a second,
+drifting one.
+
+**Stamping `strengthIntent` on the seed was rejected as the fix.** It would have
+made the test world green and left every real stored/accepted week with the same
+circularity — a UI-adjacent workaround at the fixture, which is what Sam forbade.
+
+## MEASURED — THE ORDERED SLICE, END TO END, ON THE STORED PHONE PROGRAM
+
+```
+1 BEFORE          : Back Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press
+2 REMOVE ok=true  : RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press, Front Squat
+   Back Squat gone            : true
+   unrelated rows all survive : true   (missing: [])
+   substitute                 : ["Front Squat"]
+   SUCCESS ⇔ VISIBLE CHANGE   : true
+3 RESTART ok=true : RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press, Front Squat
+   Back Squat still gone      : true
+4 UNDO undone     : Back Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press
+   exact previous state       : true
+```
+
+Every clause of Sam's slice, through `executeProgramControlActionDurably`,
+`relaunchApp` (a real process-death relaunch, not a JSON round-trip) and
+`undoLastDecision`. **A legal LOADED variation, not a bodyweight regression.**
+
+### THE CONTROL — the same probe, the same tree lineage
+
+`scratchpad/wt-base` at **f3cfa992** (the branch tip, i.e. this change reverted),
+node_modules hardlinked, world identity printed:
+
+| | control `f3cfa992` | with the fix |
+| --- | --- | --- |
+| `legalIdentityForPattern` called | **never** | `"squat"` |
+| durable door | `ok=false` "That change didn't go through" | `ok=true` |
+| Back Squat gone | **false** | **true** |
+
+## BLAST RADIUS — TWO FULL 405-SUITE SWEEPS, BOTH RUN TO COMPLETION
+
+| | branch + fix | control `f3cfa992` |
+| --- | --- | --- |
+| suites | 405 | 405 |
+| failures | **154** | **154** |
+| failure SET | — | **byte-identical `diff`** |
+
+**GAINED 0, LOST 0** — compared as SETS, not totals. Six of the failures were
+additionally re-run by hand at the control tip and are red at base
+(`program-control-durable`, `accepted-state-transactions`,
+`deletion-calendar-ownership`, `move-scoping`, `section18-planner`,
+`rules-kernel`).
+
+⚠ **154 OF 405 SUITES ARE RED AT BASE.** That is the honest denominator for every
+"nothing broke" claim on this branch: a large part of the chain cannot detect a
+regression because it is already failing.
+
+| suite | branch | control |
+| --- | --- | --- |
+| `test:visible-surfaces` | **72/0** (was 65) | 65/0 |
+| `test:athlete-journey` | 58/0 | 58/0 |
+| `test:workout-canonicalisation` | 41/0 | 41/0 |
+| `test:exercise-exclusions` | 52/0 | 52/0 |
+
+## THE GUARD — and the debt this file recorded is now paid
+
+Session 5 wrote *"a generated-world cell belongs here and is owed"*, having
+**deleted three cells** because *"a hand-built workout carries no strength intent
+… the fixture cannot exhibit the fault."* **That observation was correct and its
+conclusion was wrong: a workout with no typed intent is not an artefact of
+hand-building, it is what the PHONE STORES.** The cells were unbuildable because
+the defect made them unbuildable.
+
+Seven cells in `visibleSurfaceAgreementTests` now drive `buildDevE2ESeed(SEED)` —
+**the exact object the device installs**, not a hand-built workout — including two
+non-vacuity cells (the world really is untyped; it really does contain the lift)
+and a boundary cell (with no valid plan reference the candidate still owns its own
+intent, so the fix cannot over-reach).
+
+### MUTATIONS — two, both killed
+
+| | mutation | reds |
+| --- | --- | --- |
+| **M1** | intent source reverted to the candidate's own content | *the fallback selector IS asked* (`askedFor=[]`), *the PATTERN is kept* |
+| **M2** | the restore pass no longer skips excluded identities | *the excluded IDENTITY does not come back* (`… Back Squat`), *the PATTERN is kept* |
+
+Restored from a scratchpad backup and re-verified byte-identical after each.
+
+## WHAT IS STILL OWED ON THIS SLICE
+
+**The glass half.** `.maestro/visible/exclusion-restore-undo.yaml` has not been
+re-run since the fix. Sam's bar is the screen, so until that flow is green with
+screenshots this slice is **WORKING at the door and NOT WALKED on glass** — the
+same distinction session 5 drew, now with the door defect actually closed.
+
+**Not started, and named rather than implied:** the action hub, the five action
+flows, the injury ladder's rungs 3-5, and the three remaining screens.
