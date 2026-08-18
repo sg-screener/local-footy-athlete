@@ -80,18 +80,56 @@ export const CUE_ASSUMED_IMPLEMENT: Readonly<Record<string, EquipmentTag>> = {
   'Single-Leg Leg Press': 'machine',
   'Single-Arm Lat Pulldown': 'machine',
 
-  // ── ⚠ FOUR CUES WHOSE WORDS DISAGREE WITH SAM'S OWN REQUIREMENT SHEET.
-  // Recorded as what the CUE says, which is this table's only job. **They are
-  // authoring inconsistencies in his source documents, not selection defects,
-  // and they are named in `docs/STATUS_VISIBLE.md` for his ruling rather than
-  // silently reconciled here** — picking a side would be editing his answers.
-  'Skull Crushers': 'barbell',                // sheet says dumbbells; cue says "straight or Z bar"
-  'Z-Press': 'dumbbells',                     // sheet says barbell; cue says "or with dumbbells"
-  'Inverted Row (Bodyweight)': 'bodyweight',  // sheet says rings_trx; cue says "chest to bar"
-  'Tib Raises': 'bodyweight',                 // sheet says nothing; cue says "can use a Tib bar"
+  // ── ⚠ THE FOUR CONFLICTS — RULED BY SAM 2026-08-18, AND RECONCILED HERE.
+  // They were listed for his decision rather than silently picked; these rows
+  // are now the ruling's consequences, not my readings.
+
+  // RULED: *"legal with dumbbells OR barbell. Straight/EZ bar belongs to the
+  // barbell option."* So the cue IS the barbell variant, and on a dumbbell
+  // selection it is suppressed and flagged — which is the honest outcome and
+  // surfaces that a dumbbell Skull Crushers cue is owed. **Not reworded here:
+  // splitting his sentence would be inventing the coaching copy he forbade.**
+  'Skull Crushers': 'barbell',
+
+  // RULED: *"legal with barbell OR dumbbells."* Its cue OFFERS the alternative
+  // rather than assuming one (*"Can be done seated on a bench, or with
+  // dumbbells"*), so it is correct for both — Sam's third category. It is filed
+  // in `CUE_IMPLEMENT_NEUTRAL` below rather than here.
+
+  // RULED AGAINST WIDENING: *"a pull-up bar does NOT qualify. Retain its genuine
+  // ring/suspension equipment requirement."* The sheet keeps `rings_trx`, so the
+  // implement is the rings and the cue's "bar" is loose wording for the handle.
+  'Inverted Row (Bodyweight)': 'rings_trx',
+
+  // RULED: *"Do not change Tib Raises without another established conflict."*
+  // Unchanged — the bar its cue mentions is genuinely optional on a bodyweight
+  // movement, and the sheet's empty requirement is correct.
+  'Tib Raises': 'bodyweight',
+
   'Pull-Ups': 'bodyweight',                   // sheet says pullup_bar; the bar is SUPPORT, not the implement
   'Scap Pull Ups': 'bodyweight',              // same
 };
+
+/**
+ * ── CUES THAT MENTION AN IMPLEMENT AND ARE STILL CORRECT FOR ALL OF THEM ────
+ *
+ * Sam's third category, 2026-08-18: *"use a generic cue only where it is correct
+ * for every supported implement."*
+ *
+ * **THIS IS NOT THE SAME AS BEING ABSENT FROM THE TABLE ABOVE.** Absent means
+ * "no implement word, never looked at"; a row here means "names one, and was
+ * READ and ruled neutral". The coverage gate accepts either, so a cue cannot sit
+ * in the gap between them.
+ *
+ * `Z-Press` is the worked example: it says *"Can be done seated on a bench, or
+ * with dumbbells"* — that OFFERS an alternative to the default rather than
+ * assuming an implement, so it is right whichever the athlete picks. **No regex
+ * can be trusted to tell "or with dumbbells" from "the dumbbells should…", which
+ * is exactly why this is a hand-ruled list and not an inference.**
+ */
+export const CUE_IMPLEMENT_NEUTRAL: ReadonlySet<string> = new Set([
+  'Z-Press',
+]);
 
 /**
  * Does this authored cue fit the implement in the athlete's hands?
@@ -105,6 +143,7 @@ export function cueFitsImplement(
   exerciseName: string,
   selectedImplement: EquipmentTag | null | undefined,
 ): boolean {
+  if (CUE_IMPLEMENT_NEUTRAL.has(exerciseName)) return true;
   const assumed = CUE_ASSUMED_IMPLEMENT[exerciseName];
   if (!assumed) return true;
   if (!selectedImplement) return true;

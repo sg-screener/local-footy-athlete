@@ -115,6 +115,15 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Incline DB Bench": ['bench', 'dumbbells'],
   "Incline Dumbbell Curl": ['dumbbells'],
   "Incline Y Raise": ['bench', 'dumbbells'],
+  // ⚠ Sam, 2026-08-18, ruling AGAINST the widening this branch asked about:
+  // *"Inverted Row: a pull-up bar does NOT qualify. Retain its genuine
+  // ring/suspension equipment requirement."*
+  //
+  // **THIS ROW IS DELIBERATELY UNCHANGED, and that is the ruling rather than an
+  // oversight.** Its cue says *"pull chest to bar"*, which reads like a pull-up
+  // bar would do — it will not. This is the exercise the session-equipment door
+  // used to offer to athletes who could not perform it, and R-103's legality
+  // filter is what stops that; widening the sheet here would have re-opened it.
   "Inverted Row (Bodyweight)": ['rings_trx'],
   "Jump Squats": [],
   "Kettlebell Swings": ['kettlebell'],
@@ -181,7 +190,12 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   // carrying load.
   "Single-Leg RDL": [['dumbbells', 'kettlebell', 'barbell']],
   "Single-Leg Squat (to Box)": ['plyo_box'],
-  "Skull Crushers": ['dumbbells'],
+  // Sam, 2026-08-18, ruling on the cue/sheet conflict this branch surfaced:
+  // *"Skull Crushers: legal with dumbbells OR barbell. Straight/EZ bar belongs
+  // to the barbell option."* The CUE was already right and the SHEET was behind.
+  // Dumbbells stay first: that is what the sheet has always said, so no athlete's
+  // current selection moves — this only widens what is legal.
+  "Skull Crushers": [['dumbbells', 'barbell']],
   "Slant Board Step-Down": [],
   "Spanish Squat Hold": ['bands'],
   "Speed Bench": ['barbell', 'bench'],
@@ -201,7 +215,10 @@ export const EXERCISE_EQUIPMENT_REQUIREMENT: Readonly<Record<string, readonly Eq
   "Weighted Dead Bug": ['dumbbells'],
   "Woodchop (Half Kneeling)": ['cables'],
   "Woodchop (Standing)": ['cables'],
-  "Z-Press": ['barbell'],
+  // Sam, 2026-08-18: *"Z-Press: legal with barbell OR dumbbells."* Its authored
+  // cue already said so (*"Can be done seated on a bench, or with dumbbells"*);
+  // the sheet is the half that was behind. Barbell stays first, unchanged.
+  "Z-Press": [['barbell', 'dumbbells']],
 };
 
 /** Sam's sheet convention: absent from the table is UNKNOWN, not bodyweight. */

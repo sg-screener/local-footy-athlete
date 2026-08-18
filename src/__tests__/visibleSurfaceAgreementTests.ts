@@ -70,7 +70,7 @@ import {
   selectedImplementLabel,
 } from '../rules/selectedImplement';
 import { cueForImplement } from '../screens/home/dayWorkoutHelpers';
-import { CUE_ASSUMED_IMPLEMENT } from '../data/cueImplement';
+import { CUE_ASSUMED_IMPLEMENT, CUE_IMPLEMENT_NEUTRAL } from '../data/cueImplement';
 import { materialiseComposedWeek } from '../rules/materialiseComposedWeek';
 import { EXERCISE_CUES } from '../data/exerciseCues';
 
@@ -371,13 +371,24 @@ function run(): void {
     machine: /\b(machine|pad|sled|seat)\b/i,
     bands: /\b(band)\b/i,
   };
+  // ⚠ **A CUE NAMING SEVERAL IMPLEMENTS IS NEUTRAL, NOT UNFILED.** Sam's third
+  // category: *"use a generic cue only where it is correct for every supported
+  // implement."* `Z-Press` says *"Can be done seated on a bench, or with
+  // dumbbells"* — it covers barbell AND dumbbells, so it fits either and needs
+  // no row. The first version of this gate counted any implement WORD and went
+  // red on exactly that cue, which would have forced a wrong row into the table.
+  // Only a cue that names ONE implement can be written for one implement.
   const unfiled: string[] = [];
   let namingCues = 0;
   for (const [name, cue] of Object.entries(EXERCISE_CUES)) {
     const text = `${cue.primaryCue} ${cue.secondaryCue}`;
-    if (!Object.values(IMPLEMENT_WORDS).some((re) => re.test(text))) continue;
+    const named = Object.entries(IMPLEMENT_WORDS)
+      .filter(([, re]) => re.test(text)).map(([key]) => key);
+    if (named.length === 0) continue;
     namingCues += 1;
-    if (!CUE_ASSUMED_IMPLEMENT[name]) unfiled.push(name);
+    if (named.length > 1) continue;
+    // Filed EITHER as assuming one implement, or as explicitly ruled neutral.
+    if (!CUE_ASSUMED_IMPLEMENT[name] && !CUE_IMPLEMENT_NEUTRAL.has(name)) unfiled.push(name);
   }
   check('non-vacuity: the scan still finds implement-naming cues',
     namingCues >= 30, `${namingCues} cues name an implement`);
@@ -568,6 +579,60 @@ function run(): void {
     /kit_today/.test(screenBody) && /injury/.test(screenBody)
       && /excluded_today/.test(screenBody)
       && /Swapped from \$\{displayExerciseName/.test(screenBody));
+
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // [10] SAM'S THREE EQUIPMENT RULINGS  (2026-08-18)
+  //
+  // Ruled after this branch surfaced the cue/sheet conflicts as a table. Held
+  // BEHAVIOURALLY — through the legality oracle and the implement owner, not by
+  // reading the data file back to itself.
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n[10] Sam\'s three equipment rulings');
+  const DB_ONLY: EquipmentTag[] = ['bodyweight', 'dumbbells', 'bench'];
+  const BB_ONLY: EquipmentTag[] = ['bodyweight', 'barbell', 'bench', 'rack'];
+  const RINGS: EquipmentTag[] = ['bodyweight', 'rings_trx' as EquipmentTag];
+
+  // RULING 1 — Skull Crushers: dumbbells OR barbell.
+  check('SKULL CRUSHERS is legal on dumbbells alone',
+    exerciseAllowedByEquipment('Skull Crushers', DB_ONLY) === true);
+  check('AND NOW ALSO ON A BARBELL ALONE — the widening Sam ruled',
+    exerciseAllowedByEquipment('Skull Crushers', BB_ONLY) === true);
+  check('a barbell athlete SELECTS the barbell, and its bar cue then fits',
+    resolveSelectedImplement({ exerciseName: 'Skull Crushers', availableTags: BB_ONLY })
+      .implement === 'barbell'
+      && cueForImplement('Skull Crushers', 'barbell').text !== null);
+  check('a dumbbell athlete selects dumbbells, and the BAR cue stands down',
+    resolveSelectedImplement({ exerciseName: 'Skull Crushers', availableTags: DB_ONLY })
+      .implement === 'dumbbells'
+      && cueForImplement('Skull Crushers', 'dumbbells').missingCueForImplement === true,
+    'the cue is the barbell variant; suppressing it is the ruling, not a defect');
+
+  // RULING 2 — Z-Press: barbell OR dumbbells, and its cue covers both.
+  check('Z-PRESS is legal on either implement alone',
+    exerciseAllowedByEquipment('Z-Press', BB_ONLY) === true
+      && exerciseAllowedByEquipment('Z-Press', DB_ONLY) === true);
+  check('and its cue is RULED NEUTRAL, so it renders on both',
+    cueForImplement('Z-Press', 'barbell').text !== null
+      && cueForImplement('Z-Press', 'dumbbells').text !== null
+      && CUE_IMPLEMENT_NEUTRAL.has('Z-Press'));
+
+  // RULING 3 — Inverted Row: a pull-up bar does NOT qualify.
+  check('INVERTED ROW is NOT unlocked by a pull-up bar',
+    exerciseAllowedByEquipment(
+      'Inverted Row (Bodyweight)',
+      ['bodyweight', 'pullup_bar'] as EquipmentTag[],
+    ) === false,
+    'Sam ruled against this widening — it is the row that caused the silent swap failure');
+  check('and it IS legal on genuine rings/suspension',
+    exerciseAllowedByEquipment('Inverted Row (Bodyweight)', RINGS) === true);
+  check('so the ladder still refuses to offer it to a ringless athlete',
+    exerciseAllowedByEquipment('Inverted Row (Bodyweight)', DB_ONLY) === false);
+
+  // RULING 4 — Tib Raises unchanged.
+  check('TIB RAISES is untouched, per the ruling',
+    JSON.stringify(equipmentRequiredFor('Tib Raises')) === '[]',
+    JSON.stringify(equipmentRequiredFor('Tib Raises')));
 
   console.log(`\nVisible surface totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);
