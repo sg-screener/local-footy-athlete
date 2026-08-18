@@ -51,6 +51,10 @@ import { addDaysISO } from '../utils/programBlockState';
 import { appDateNow, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../rules/gameAnchor';
+// The pair `programStore.setCurrentProgram` already applied before publishing:
+// stamp the phase clock, then run the final program-write boundary. It lives at
+// this owner now so no acceptance door can publish a program without it.
+import { ensureProgramSeasonPhaseClock } from '../rules/seasonPhaseClock';
 import {
   rebaseAcceptedEffectiveWeek,
   type AcceptedEffectiveWeekSurfaces,
@@ -586,6 +590,117 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
  * Pure staging boundary. No Zustand store is changed until every affected
  * effective week has passed Contract v2 safety and the accepted-week gateway.
  */
+/**
+ * THE FINAL PROGRAM-WRITE BOUNDARY, RUN WHERE NO DOOR CAN SKIP IT.
+ *
+ * `utils/postGenerationConstraintValidation` calls itself the *"final
+ * canonicalisation and active-constraint boundary for program writes"* — it
+ * converts a producer's output to the canonical workout shape and applies the
+ * injury/exposure/equipment rules immediately before storage. **Only one of the
+ * two acceptance doors was running it.** `programStore.setCurrentProgram` (the
+ * onboarding install) validated its candidate before calling the transaction;
+ * `weekRebuild.commitRebuiltProgram` — the door the block ROLLOVER, every rebuild
+ * and `quiescentBoot` publish through — handed its generated program straight in.
+ *
+ * So a block was ACCEPTED in one shape and REPUBLISHED in another, and the first
+ * restart inside that block re-authored it. Measured on one athlete
+ * (`npm run test:mid-block-restart`): the accepted Monday read `Full Body
+ * Strength` with `Romanian Deadlift`, and after a genuine process death the same
+ * day came back named `full_body` with `Single-Leg RDL` in its place, no dated
+ * fact having changed across the restart.
+ *
+ * ⚠ **IT CANONICALISES. IT DOES NOT RE-ANSWER WEEK ACCEPTANCE, AND THAT
+ * SEPARATION IS THE WHOLE DESIGN — measured, not assumed.**
+ *
+ * The microcycle boundary can also REFUSE, by throwing
+ * `Section18WeekAcceptanceError`. Letting that escape from here would mean a boot
+ * that throws instead of a boot that launches: measured across the full sweep, it
+ * reddened `test:block-two-boot-preservation`, `test:exercise-exclusions` and
+ * `test:illness-clear-game-week` — three worlds whose generated week breaches a
+ * §18 conditioning maximum and which `quiescent_boot` has always published
+ * anyway. **Whether the accepted week is lawful already has an owner a few lines
+ * below — `assertAcceptedVisibleLedgerEquivalence`, over the same
+ * `validateWeekStarts`.** Asking the question twice, in two shapes, is the
+ * second-representation defect this repo exists to fight, and the copy that
+ * throws is the one with no repair path from here.
+ *
+ * So a refusal leaves THAT microcycle exactly as the producer wrote it and says
+ * so out loud. It is not a silent fallback and it is not a widening: it is this
+ * owner declining to hold a verdict that is not its own. **The divergence those
+ * three worlds reveal — that the rebuild door publishes weeks the install door's
+ * boundary would refuse — is real, is reported in `docs/STATUS_RESTART.md`, and
+ * needs its own unit.**
+ *
+ * It is safe to run where a door already ran it: the boundary is IDEMPOTENT,
+ * measured on a whole program and held by a cell in the unit above, so the
+ * install door's own call — which it needs in order to derive the block state and
+ * anchor off the program it is actually storing — becomes a no-op repeat rather
+ * than a second author.
+ */
+function canonicaliseAcceptedProgramWrite(
+  candidate: AcceptedProgramSurfaces,
+  program: TrainingProgram,
+  proposal: AcceptedStateTransactionProposal,
+): AcceptedProgramSurfaces {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { validateLiveMicrocycleWrite } = require('../utils/postGenerationConstraintValidation') as {
+    validateLiveMicrocycleWrite: (microcycle: Microcycle, todayISO?: string) => Microcycle;
+  };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { logger } = require('../utils/logger') as {
+    logger: { error: (message: string, detail?: unknown) => void };
+  };
+  const source = ensureProgramSeasonPhaseClock(program);
+  let changed = source !== program;
+  const microcycles = source.microcycles.map((microcycle) => {
+    try {
+      const validated = validateLiveMicrocycleWrite(microcycle, proposal.todayISO);
+      if (validated !== microcycle) changed = true;
+      return validated;
+    } catch (error) {
+      /* ── THIS OWNER CANONICALISES. IT NEVER REFUSES. ──────────────────────
+       *
+       * The boundary can raise two kinds of refusal — `Section18WeekAcceptanceError`
+       * for an unlawful week, and a bare invariant (`temporary_schedule_…_not_preserved`)
+       * when the §18 step would breach a live constraint. **Neither verdict is
+       * this function's to hold**, and both already have owners at this very
+       * transaction: `assertAcceptedVisibleLedgerEquivalence` gates the accepted
+       * week over `validateWeekStarts` a few lines below, and the constraint
+       * context is staged above. Holding them here as well is a second
+       * representation of one decision, and this copy has no repair path — it
+       * throws out of `quiescent_boot`, which means an app that does not launch.
+       *
+       * MEASURED, on the full 403-suite sweep: letting them escape reddened
+       * `test:block-two-boot-preservation`, `test:exercise-exclusions` and
+       * `test:illness-clear-game-week` — three worlds whose generated week the
+       * rebuild door has ALWAYS published and whose refusal is therefore not new
+       * information, only newly fatal.
+       *
+       * ⚠ **THE CATCH WRAPS ONE CALL AND NOTHING ELSE**, so it cannot swallow a
+       * fault from anywhere but the boundary it is deferring, and every refusal is
+       * reported. **The divergence these worlds reveal is real and is NOT fixed
+       * here**: the rebuild door publishes weeks the install door's boundary would
+       * refuse. Named, with its receipt, in `docs/STATUS_RESTART.md`; it needs its
+       * own unit and a ruling about which week the athlete should get. */
+      logger.error(
+        '[acceptedStateTransaction] the program-write boundary REFUSED a week and it '
+        + 'is being published as the producer wrote it — the accepted-week gate owns '
+        + 'this verdict, not this boundary',
+        {
+          reason: proposal.reason,
+          weekStart: microcycle.startDate,
+          refusal: error instanceof Section18WeekAcceptanceError
+            ? 'section18_week_acceptance'
+            : (error as { message?: string })?.message ?? String(error),
+        },
+      );
+      return microcycle;
+    }
+  });
+  if (!changed) return candidate;
+  return { ...candidate, currentProgram: { ...source, microcycles } };
+}
+
 export function stageAcceptedStateTransaction(
   proposal: AcceptedStateTransactionProposal,
   sourceState?: ProgramState,
@@ -736,11 +851,14 @@ export function stageAcceptedStateTransaction(
     });
     return { program: candidate, context };
   }
+  const validatedCandidate = candidate.currentProgram
+    ? canonicaliseAcceptedProgramWrite(candidate, candidate.currentProgram, proposal)
+    : candidate;
   const constraints = validationConstraints(
     context.activeConstraints,
     context.readinessSignalsByDate,
   );
-  const accepted = canonicaliseAcceptedStateCandidate(candidate, {
+  const accepted = canonicaliseAcceptedStateCandidate(validatedCandidate, {
     // An empty set means "retain the already-accepted reduced program". Do
     // not turn a context-only clear into a whole-program regeneration or a
     // second structural pass. Explicit affected weeks are still re-gated via
@@ -754,7 +872,7 @@ export function stageAcceptedStateTransaction(
     todayISO: proposal.todayISO,
   });
   const program = materialisedProgramPatch(
-    candidate,
+    validatedCandidate,
     accepted as Partial<AcceptedProgramSurfaces>,
   );
   if (context.acceptedCompositionBase) {
