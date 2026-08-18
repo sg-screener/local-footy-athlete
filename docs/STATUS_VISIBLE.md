@@ -1698,3 +1698,122 @@ hub is that card's pattern with five actions, not a new component. The session
 screen's three unlabelled header icons (`+`, dumbbell, red cross) and the
 per-row swap/remove/play icons are visible in `slice-4-after-removal.png` and are
 what the hub replaces.
+
+---
+
+# SESSION 7 — the fixed baseline, and the restart is refused by the HARNESS, twice, for two different reasons
+
+Sam's rulings this session: (1) the 154 old reds are background debt, not this
+mission's work, but the baseline must be RECORDED exactly and compared after
+every slice; (2) a legacy path PROVEN to execute on this flow and reject the new
+owner is removed within the mission, without asking, unless it exposes a real
+product decision or owns unrelated production behaviour; (3) three complete
+vertical slices — Remove, Equipment, Injury — and no dead Add/Swap buttons.
+
+## THE FIXED BASELINE — recorded, not remembered
+
+`docs/baseline/at-1bfc3603-*.{tsv,txt}`, measured in a CLEAN DETACHED tree at
+`1bfc3603` (`wt-control`, `dirty=0`, printed world line), never in the branch
+tree.
+
+| | |
+| --- | --- |
+| suites | **405** |
+| red | **154** |
+| exit 0 | 251 |
+| exit 1 | 152 |
+| exit 2 | 2 |
+
+**This independently reproduces session 6's count of 154/405** — a different
+instrument, a different tree, the same number. What session 6 did NOT have, and
+this does, is the per-suite EXIT STATUS and the FAILING CELL TEXT of every red
+(`at-1bfc3603-failure-signatures.txt`, 93K), which is what makes "this failure
+is old" checkable rather than assertable. The stock `scripts/sweep.sh` overwrites
+`last.log` per suite, so the message is lost; the recorder keeps one log per
+suite and extracts a signature for every red.
+
+## ⚠ I NEARLY RECORDED A FALSE GREEN IN MY FIRST HOUR, AND THE LAW FOR IT WAS ALREADY WRITTEN
+
+The first run of `removal-today-slice.yaml` reported **`[exited with code 0]`**
+while its output plainly said `Assert that id: program-screen is visible...
+FAILED`. Cause: I piped the runner through `tail -60`, so the shell reported
+**`tail`'s** status, not maestro's, and no `pipefail` was set.
+
+This repo already holds this law twice — `gate.sh` ("trust only printed exit
+lines") and `sweep.sh`'s sighting 5, where four suites "printed a green-looking
+totals line and EXITED 1". **It had not been paid on the MAESTRO runner, because
+nothing ran maestro through a pipe until I did.** Every maestro run in this file
+from here redirects to a log and echoes `MAESTRO EXIT: $?` on its own line.
+
+## THE RESTART: TWO HARNESS WALLS, AND THE SECOND ONE IS THE FINDING
+
+Session 6 recorded the restart failing with `XCTestDriver ... 500 viewHierarchy`
+and called it an instrument death. **That is not what happens now.** Neither
+failure this session was the driver, and both were photographed.
+
+### WALL 1 — the cold-start gate (`artifacts/visible/instrument-cold-start-refusal.png`)
+
+The flow hand-rolled `launchApp`. The harness launch leaves a CLOCK RECEIPT; a
+relaunch with no CHECKPOINT record beside it makes
+`restoreDevE2EClockBeforeHydration` throw **"DevE2EClock reload mismatch: clock
+receipt has no active checkpoint"**, and App.tsx renders its "The app did not
+start" refusal instead of the program. The flow then polls `program-screen`
+until timeout — **and reports a PERSISTENCE failure that never happened.**
+
+`src/rules/lawRegistry.ts` already records "THREE HAND-DRIVEN ATTEMPTS DIED AT
+THE SAME DEV-HARNESS COLD-START GATE", the §8 SECOND-WALL count. **I am the
+fourth.** So the flow no longer hand-rolls a relaunch: `../common/
+checkpoint-and-reload.yaml` is the owner and the only way it restarts.
+
+**AND THE CHECKPOINT DOES NOT RE-SEED**, which is what would have made this
+proof vacuous — the trap this file has paid for before ("a green away run may be
+green because nothing was applied"). `DevE2ESeedCoordinator.checkpoint()`
+requires an already-ready seed, captures the CURRENT fingerprints, waits for
+persistence and THROWS if accepted state moved while writing. Taking it after
+the removal photographs the post-removal truth and makes the reload assert
+against it.
+
+### WALL 2 — THE PROGRAM DOES NOT COME BACK THE SAME, AND THIS IS A REAL FINDING
+
+With wall 1 gone the flow reaches the relaunch and the app refuses again, with a
+different reason and an exact measurement:
+
+> **Reload persisted fingerprint mismatch for standard-in-season-week:
+> program-store expected=athlete-semantic-sha256-v2:6ae15ce420dc99ed05116203fafe20a253138dfdfaad9a261f289b0a5fc2ed19
+> actual=athlete-semantic-sha256-v2:f211a5ca40a6caa1fab9047c4471ede19b017ba8547c7a9f4af95c06fff28cf8**
+
+Read precisely, that says: the checkpoint captured the post-removal program and
+confirmed memory had settled; on reload the **program store hydrates to a
+different program than the one the athlete was looking at.**
+
+**WHAT IS NOT YET KNOWN, AND MUST NOT BE ASSERTED EITHER WAY.** Whether that
+difference is the athlete's removal being LOST, or benign regeneration noise
+(different ids/order for an equivalent week) that the fingerprint counts as a
+change. `docs/memory` already holds "the program is NEVER persisted; boot
+REGENERATES" and "A GENERATION INPUT MUST SURVIVE BOOT" — if boot regenerates,
+a byte-equal fingerprint across restart may be unobtainable BY DESIGN, and then
+the gate is measuring the wrong thing. Both readings are live.
+
+**THE ATHLETE-VISIBLE QUESTION IS STILL UNANSWERED** — is Back Squat still gone
+after a restart? — because the harness refuses to start the app before any row
+can be read. That is the next measurement, and it is the whole of Sam's
+"close/reopen persistence" clause.
+
+## STATUS OF SAM'S ORDERED SLICE
+
+| step | state |
+| --- | --- |
+| Remove → Back Squat → Today → Front Squat → visible success | **WORKING ON GLASS**, re-proven this session, every assertion COMPLETED |
+| close/reopen → same result | **BLOCKED AT THE HARNESS**, wall 2, unmeasured |
+| Undo → Back Squat restored | **NOT REACHED**, and see below |
+
+**A READ THAT IS NOT YET PROVEN BUT IS SPECIFIC.** `UndoToast` mounts once, in
+`HomeScreenV2`. `DayWorkout` is a PUSHED stack screen
+(`AppNavigator.tsx:89`), so a removal made inside the session screen raises the
+toast on the screen BEHIND it and its 6-second life expires unseen; and the
+toast is deliberately suppressed after a relaunch (`undoToastSeenMarker` seeds
+from the newest undoable entry on mount, and the module says so in as many
+words). **So "restart → Undo" cannot route through the toast by design** — the
+durable path is a RESTORE control, which is one of the four surfaces Sam already
+listed as owed. `exclusion-restore-undo.yaml` taps `"Undo"` on the workout
+screen and has not run since the fix; that is the cell that decides this.

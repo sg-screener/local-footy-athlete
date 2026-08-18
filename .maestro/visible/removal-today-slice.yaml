@@ -89,18 +89,36 @@ tags:
     id: "session-strength-position-.*-band-pallof-press"
 - takeScreenshot: artifacts/visible/slice-4-after-removal
 
-# ── RESTART — a real relaunch, no clearState (that would wipe the decision) ──
-- launchApp:
-    clearState: false
-    stopApp: true
-    arguments:
-      e2eMetroUrl: "http://127.0.0.1:8091"
-      # ⚠ ONE OF THE SIX IN `explorerAppLaunchContract.ts`, OR THE APP
-      # `fatalError`s ON LAUNCH. "relaunch-after-decision" was invented here and
-      # the app died silently on the relaunch — the flow then polled a
-      # `program-screen` that was never coming, which reads exactly like a lost
-      # decision rather than a bad launch argument.
-      e2eLaunchPurpose: "action-reload"
+# ── RESTART — a real relaunch the dev harness will actually honour ──────────
+#
+# ⚠ **A HAND-ROLLED `launchApp` IS REFUSED AT THE COLD-START GATE, AND THE
+# REFUSAL READS EXACTLY LIKE A LOST DECISION.** This flow used to relaunch
+# directly and it never survived. The harness launch leaves a CLOCK RECEIPT
+# behind; relaunching with no CHECKPOINT record beside it makes
+# `restoreDevE2EClockBeforeHydration` throw
+#   DevE2EClock reload mismatch: clock receipt has no active checkpoint
+# and App.tsx renders its "The app did not start" refusal surface instead of the
+# program. The flow then polls `program-screen` until it times out and reports a
+# PERSISTENCE failure that never happened. Photographed 2026-08-18 —
+# `artifacts/visible/instrument-cold-start-refusal.png`.
+#
+# This is the FOURTH seat to hit this gate. `src/rules/lawRegistry.ts` already
+# records "THREE HAND-DRIVEN ATTEMPTS DIED AT THE SAME DEV-HARNESS COLD-START
+# GATE", which is the §8 SECOND-WALL count — so the restart is not hand-rolled
+# here ever again. `../common/checkpoint-and-reload.yaml` is the owner of a
+# legal relaunch and is the only way this flow restarts.
+#
+# **AND THE CHECKPOINT DOES NOT RE-SEED**, which is the thing that would have
+# made this proof vacuous. `DevE2ESeedCoordinator.checkpoint()` requires an
+# already-ready seed, captures the CURRENT memory fingerprints, waits for
+# persistence, and THROWS if accepted state moved while it was being written.
+# Taking it AFTER the removal therefore photographs the post-removal truth and
+# makes the reload assert against it — a stronger proof than the bare relaunch,
+# never a weaker one.
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: standard-in-season-week
 - extendedWaitUntil:
     visible:
       id: "program-screen"
