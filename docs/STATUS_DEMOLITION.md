@@ -473,3 +473,54 @@ existed to fix weeks, and across the whole grid it fixed none.
 Files: `scratchpad/census-PRE-6da38cee.tsv`, `scratchpad/census-POST-c1d3d466.tsv`.
 
 Agent: demolition
+
+---
+
+## MOVE 1 — POWER TRIMMING. DONE, WORLD-IDENTICAL, AND **NOT** MUTATION-PROVEN
+
+### WHAT LANDED
+
+- `rules/weeklyPowerBudget.ts` owns the decision; `generateProgramLocally`
+  applies it **after the candidate is authored and before §18 sees it**.
+- The §18 call is **CUT** — `grep weeklyPowerBudget( src/rules/section18AcceptedWeekGateway.ts`
+  returns nothing but prose.
+- Guard `test:weekly-power-budget`, 6 cells, in the bible chain.
+- `test:compile` identical to base (35 / 51 / 383).
+- **Per-world census identical**: 180 worlds, 140 built / 40 refused, same typed
+  refusal families, same delivered session counts as `6da38cee`.
+
+### ⚠ THREE FINDINGS, AND TWO OF THEM ARE AGAINST MY OWN WORK
+
+**1. THE GUARD IS NOT MUTATION-PROVEN, SO IT IS NOT YET A GUARD.** Restoring the
+§18 trimmer — twice, including with its disclosure re-armed — leaves all six
+cells GREEN. The reason is the finding: **`finaliseSection18SafetyWeek` runs
+BEFORE the trimmer and has already stripped the excess power**, so the trimmer
+saw `removed = 0` and did nothing. **The code I cut from §18 was already inert in
+that position.** The cut is correct and the census proves it harmless, but no
+cell distinguishes the two trees, and a green cell that survives its mutant is a
+claim, not a proof. **Stated rather than dressed up.**
+
+**2. §18 STILL REMOVES POWER ROWS — via row 13, not row 9.** Measured: given 3
+budgeted power sessions against a budget of 2, §18 returns 2.
+`section18SafetyFinaliser` filters `row.role !== 'power'` and carries a
+`power_removed` action. **So Sam's step 6, "prove §18 cannot alter power rows",
+is NOT ACHIEVABLE UNTIL MOVE 5 LANDS.** Moves 1 and 5 are coupled; neither of us
+had spotted that. Cell `[2c]` records it and reds the day it stops being true.
+
+**3. GENERATION PROGRAMMES NO POWER AT ALL.** Across the full 70-world census, on
+**both** the pre-demolition tip and this one: **zero worlds carry a single power
+row**, while 50 of 70 declare `plannerSelectedWeeklyBudget: 2`. Pre-existing,
+identical in the control tree, **not caused by this move** — and it makes cell
+`[1]` vacuous, which cell `[3]` records rather than hides. This belongs to the
+composer/power specialist and is the largest open athlete-visible gap this
+mission has surfaced.
+
+**ONE MEASURED DIFFERENCE THE CENSUS DID NOT COVER:** at `6da38cee` the stored
+microcycle contract carried NO `power.plannerSelectedWeeklyBudget`
+(`{"n/a": 70}`); it now carries `{"0": 20, "2": 50}`. The field is stamped at
+authoring instead of inside the validator. Nothing athlete-visible changed — the
+census pins id, status, refusal family and delivered sessions — but the stored
+contract is not byte-identical, and saying "identical" without this line would
+be false.
+
+Agent: demolition

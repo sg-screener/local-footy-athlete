@@ -64,7 +64,6 @@ import {
 import type { CalendarDayType } from '../store/calendarStore';
 import type { AcceptedStateOperationKind } from '../store/acceptedStateTransaction';
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
-import { weeklyPowerBudget } from './weeklyPowerBudget';
 import type { AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
 import { liveAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { strengthPatternLedger } from './strengthPatternContributions';
@@ -662,20 +661,22 @@ function resolveCandidate(args: {
       profile: args.input.profile ?? undefined,
     },
   });
-  const power = weeklyPowerBudget({
-    contract: safety.contract,
-    workouts: safety.workouts,
-    profile: args.input.profile,
-  });
-  if (power.removed > 0 || power.budget < 2) {
-    initialRepairs.push({
-      kind: 'weekly_power_budget',
-      // Counted the same way the budget is decided. Reading `hasPowerRow` here
-      // made the sentence contradict itself on the G-2 world — "kept 1 primers
-      // within budget 0" — by counting a session that is outside the budget.
-      detail: `Weekly selector kept ${power.workouts.filter(budgetedPowerSession).length} primers within budget ${power.budget}.`,
-    });
-  }
+  /* ── §18 NO LONGER TRIMS POWER (MOVE 1, 2026-08-19) ──────────────────────
+   *
+   * `weeklyPowerBudget` ran HERE and stripped power rows the week exceeded its
+   * budget by. That made the validator the owner of a coaching dose, which
+   * Sam's contract gives to the power specialist: *"Power belongs to authorised
+   * strength work."*
+   *
+   * `generateProgramLocally` now applies the budget on the AUTHORING side,
+   * immediately after the candidate is assembled and before this gateway is
+   * called, so the week that arrives here already respects it. There is nothing
+   * left to trim — and, more importantly, §18 no longer HAS the ability to trim,
+   * which is the property `test:weekly-power-budget` holds.
+   *
+   * The `weekly_power_budget` disclosure went with it: §18 does not report a
+   * reduction it did not make. */
+  const power = { contract: safety.contract, workouts: safety.workouts };
   // THE WEEK PRESENTS THE OFFER ITS CONTRACT DECLARES (Sam's ruling, 2026-08-06
   // — `docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md`).
   //

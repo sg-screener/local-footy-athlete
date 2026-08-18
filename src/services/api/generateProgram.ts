@@ -84,6 +84,7 @@ import {
 import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { storedGameAnchor } from '../../rules/gameAnchor';
 import { composeWeek, kitUnachievablePatterns } from '../../rules/composeWeek';
+import { weeklyPowerBudget } from '../../rules/weeklyPowerBudget';
 import { resolveWeekExclusions } from '../../rules/exerciseExclusions';
 import { composedPlannedDaysFrom } from '../../rules/composerPlannedDays';
 import { schedulerPlannedDays } from '../../rules/schedulerPlannedDays';
@@ -1382,6 +1383,37 @@ export function buildGeneratedMicrocycles(args: {
         : constrained);
     };
     let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
+    /* ── THE WEEKLY POWER BUDGET, APPLIED BY THE AUTHORING SIDE ──────────────
+     *
+     * MOVE 1 of the §18 demolition (Sam, 2026-08-19): *"Power trimming → power
+     * specialist."*
+     *
+     * This decision used to live inside `section18AcceptedWeekGateway`, which
+     * meant the VALIDATOR decided how much power the week could carry and
+     * stripped the excess on its way through. A week therefore left the
+     * composer with more power than it was allowed to have, and only a
+     * downstream boundary knew it. That is the same shape as every other defect
+     * this mission is deleting: the authoring owner could not tell whether its
+     * own output was what shipped.
+     *
+     * Applied HERE — after the candidate is authored, before §18 sees it — the
+     * budget is part of what the specialist AUTHORS, and §18 receives a week
+     * that already respects it. §18 then has nothing to trim, which is what
+     * lets its call be cut.
+     *
+     * The contract is carried too, because the budget writes the week's
+     * `power.plannerSelectedWeeklyBudget`, `achievedPrimerCount`, `eligible`
+     * and `removalReason`. The evaluator reads those, so the numbers and the
+     * rows must move together or the verdict disagrees with the content. */
+    if (exposureContractV2) {
+      const budgeted = weeklyPowerBudget({
+        contract: exposureContractV2,
+        workouts,
+        profile,
+      });
+      exposureContractV2 = budgeted.contract;
+      workouts = budgeted.workouts;
+    }
     if (exposureContractV2) {
       // ── THE GENERATED WEEK IS JUDGED, NOT REPAIRED ───────────────────────
       //
