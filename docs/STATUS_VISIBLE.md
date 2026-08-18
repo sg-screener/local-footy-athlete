@@ -1817,3 +1817,101 @@ words). **So "restart → Undo" cannot route through the toast by design** — t
 durable path is a RESTORE control, which is one of the four surfaces Sam already
 listed as owed. `exclusion-restore-undo.yaml` taps `"Undo"` on the workout
 screen and has not run since the fix; that is the cell that decides this.
+
+---
+
+# SESSION 8 — MY OWN SESSION-7 CONCLUSION IS REFUTED, AND THE RESTART BLOCKER HAS AN EXACT CAUSE
+
+## ⚠ THE CORRECTION FIRST
+
+Session 7 reported to Sam: *"the removal is written in a history log but is not
+in the list of facts the rebuild reads, so reopening brings Back Squat back."*
+**Both halves of that are wrong, and the second was never measured.**
+
+1. **The canonical fact EXISTS, IS TYPED, AND IS PERSISTED.** Read off the
+   device's own storage after the removal:
+
+   ```json
+   "exclusions": [{ "exercise": "Back Squat", "scope": "today_only",
+     "decidedOnISO": "2026-07-13", "activeThroughISO": "2026-07-13",
+     "blockNumber": 1 }]
+   ```
+
+   It carries exactly what Sam's semantics ask for — identity, scope, session
+   date, and its own expiry — and `rules/exerciseExclusions.ts` is a single
+   pure owner with a named writer (`utils/exerciseExclusionOwner`), named
+   readers (generation, Status, `composeWeek`) and a named test. **What Sam
+   ordered built on 2026-08-18 was already built.** I mistook "absent from
+   `program-store.inputs`" for "absent everywhere" — it lives in
+   `athlete-preferences-store`, which I had dumped and not read carefully.
+
+2. **The restart failure has nothing to do with the removal.** Refuted by a
+   CONTROL ARM (`.maestro/visible/restart-control-no-change.yaml`): same seed,
+   same checkpoint, same reload, **no athlete change of any kind**. It fails
+   with the **byte-identical pair of hashes**:
+
+   ```
+   expected=athlete-semantic-sha256-v2:6ae15ce4…  actual=…f211a5ca…
+   ```
+
+   Identical in both arms ⇒ the mismatch is independent of what the athlete did.
+   **A one-armed run would have "confirmed" the removal was lost. It was not.**
+
+## THE EXACT CAUSE, INVERTED FROM THE HASH RATHER THAN GUESSED
+
+A hash cannot be reversed, so candidate states were hashed with the repo's OWN
+`semanticFingerprint` until one matched the checkpoint's stored value:
+
+```
+*** MATCH ***  acceptedBlocks = {}   -> …9b0a5fc2ed19   (== expected 6ae15ce4…)
+               seasonPhaseClock=null, temporarySourceFacts/injuryEpisodes/
+               sessionFeedback/weightOverrides undefined, anchor null, … all differ
+```
+
+Then WHO writes it, measured with a seed-only probe (no checkpoint, no reload):
+
+| moment | `inputs.acceptedBlocks` |
+| --- | --- |
+| straight after seeding | **`{}`** |
+| after one relaunch | `{"2026-07-13":{"blockNumber":1,"requiredStrengthSessions":4}}` |
+
+**BOOT AUTHORS `acceptedBlocks`.** The reload gate compares a checkpoint taken
+BEFORE that boot against disk AFTER it, for a field boot is *supposed* to write
+(`programStore.ts`: *"A BLOCK'S OWN REQUIREMENT IS AN INPUT AND MUST OUTLIVE THE
+PROCESS"*). So **the gate cannot pass for any seed that boots into an acceptable
+block** — no athlete action is involved, and no restart proof on this rig can
+ever be green until it is fixed.
+
+This is the THIRD instance of one class in this file: an instrument asserting a
+belief the architecture had moved past. `devE2EPersistence.ts` records the other
+two in its own comment — fingerprinting derived program state (fixed 2026-08-10)
+and the hand-copied field list missing `acceptedBlocks` (killed the rig
+2026-08-18). **Same field, one layer up, eight days later: that fix made memory
+and disk agree at a MOMENT, and left the gate's TEMPORAL assumption untouched.**
+
+## THE PRODUCT ASYMMETRY THIS EXPOSES, WHICH IS NOT MINE TO SPEND THE MISSION ON
+
+A seeded athlete is standing in an **unaccepted** block; one relaunch later they
+are in an **accepted** one. The seed installs a world that boot then changes.
+Every proof taken on a freshly seeded world is therefore taken on a world the
+athlete never actually inhabits after their first relaunch. **Named, not fixed**
+— it is Block-Two territory, not the change hub's.
+
+## THE BOUNDED FIX, AND WHY IT IS NOT "EXCLUDE THE FIELD"
+
+Dropping `acceptedBlocks` from the reload comparison would silence the gate for
+exactly the field whose loss the store's comment says "silently stops
+progressing anything" — trading a real guard for a green. The honest fix is to
+make **the seed install the world boot produces**, so checkpoint and reload are
+in the same lifecycle phase and the gate passes because the two genuinely agree.
+That also repairs the asymmetry above for free. NOT YET BUILT.
+
+## WHAT IS PROVEN ON GLASS RIGHT NOW
+
+| step | state |
+| --- | --- |
+| Remove → Today → Front Squat at its own load, unrelated rows unchanged | **WORKING ON GLASS** (re-proven session 7) |
+| close/reopen → same result | **BLOCKED BY THE HARNESS**, cause now exact, product not implicated |
+| immediate Undo where the action happened | **NOT BUILT** — toast mounts only on the Program screen; `DayWorkout` is a pushed stack screen, so it fires and expires behind it |
+| Restore after reopening | **NOT BUILT** as an athlete control on this screen |
+| next-day expiry | **NOT MEASURED** (the fact carries `activeThroughISO`, so the shape supports it) |
