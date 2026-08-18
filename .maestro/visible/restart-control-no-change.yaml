@@ -22,7 +22,7 @@ tags:
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
-      SEED_ID: standard-in-season-week
+      SEED_ID: ${SEED_ID}
 - assertVisible:
     id: "e2e-explorer-launch-resolved-metro-url-http%3A%2F%2F127.0.0.1%3A8091"
 # The session is OPENED but nothing in it is touched — the removal flow had the
@@ -40,9 +40,9 @@ tags:
 - runFlow:
     file: ../common/checkpoint-and-reload.yaml
     env:
-      SEED_ID: standard-in-season-week
+      SEED_ID: ${SEED_ID}
 - extendedWaitUntil:
     visible:
       id: "program-screen"
     timeout: 60000
-- takeScreenshot: artifacts/visible/control-restart-no-change
+- takeScreenshot: artifacts/visible/control-restart-${SEED_ID}

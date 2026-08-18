@@ -2488,3 +2488,37 @@ field anywhere states the implement selected.**
 slides down leg"* and cues are keyed by NAME only — so an athlete who unticks the
 barbell keeps `RDLs` (legally, on dumbbells) and is still told to slide a bar
 down their leg.
+
+---
+
+## R-105 — THE WEEKLY-REDUCTION PROMPT BELONGS TO THE COACH, NOT THE DAY PAGE
+
+**Sam, 2026-08-19, seeing it on the Program screen in a simulator screenshot:**
+*"This should not be popping up on the main page - it should show up in the
+coaches chat with a notification"*.
+
+The card in question is the completion-shortfall offer — *"You have been
+completing about 0 of your 5 planned sessions. Would a smaller weekly program fit
+your life better?"* with `4 / 3 / 2 sessions a week` and `Keep it as is` — which
+today renders inline on the Day/Program screen beneath the change card.
+
+**THE RULING.** It moves to the **coach chat**, and its arrival is announced by a
+**notification**. It does not render on the Program screen.
+
+**WHY THIS IS THE SAME RULING AS THE UNDO SURFACE ONE (2026-08-09), NOT A NEW
+PREFERENCE.** `docs/UNDO_SURFACE_RULING_2026-08-09.md` already records Sam's
+architecture in his own words — *"the coach should be its own tab and the athlete
+just talks to it when it wants to change something"* — and
+`docs/LFA_PRODUCT_ARCHITECTURE.md` names the coach conversation as the athlete's
+change interface. A multiple-choice program negotiation sitting on the Day page
+is a **second change-interface beside the recorded one**, which is exactly what
+that ruling killed the standing bar and the confirm sheet for. **A surface that
+asks the athlete to renegotiate their week is change-talk by definition.**
+
+**OWNER: unassigned — NEXT MISSION.** Raised during the Remove slice's final
+session under a standing order not to open another surface, so it is recorded
+here rather than built. **NOT BUILT, NOT STARTED.**
+
+**WHAT THE BUILDER MUST NOT ASSUME:** whether the notification is the existing
+coach-update mechanism or a new one, and whether the offer expires, are NOT
+ruled here and must not be invented.

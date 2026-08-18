@@ -2011,3 +2011,102 @@ its own right — not a step inside the Remove slice.
 | 8 | Until restored → survives later blocks | **NOT MEASURED** |
 | 9 | history + unrelated rows unchanged | unrelated rows **WORKING**; history **NOT MEASURED** |
 | 10 | exact refusal when no legal replacement | **NOT MEASURED** |
+
+---
+
+# SESSION 10 — FINAL SESSION UNDER THE CAP. HANDOFF.
+
+**THE RESTART PROOF WAS NOT ACHIEVED.** Stopping cleanly here, as ordered,
+rather than opening another surface. What follows is everything the next chat
+needs and nothing it has to rediscover.
+
+## 1. THE CAUSE DISTINCTION, RECORDED AS ORDERED
+
+| | axis at the selection boundary | owner | store |
+| --- | --- | --- | --- |
+| **injury** | `prohibitedPatterns` — movement PATTERNS | §18 weekly exposure contract | `injuryEpisodes` |
+| **ordinary removal** | `excludedIdentities` / `excludedIdentitiesByDate` — exercise IDENTITIES | `applyExerciseExclusionDecision` | `athletePrefs.exclusions` |
+
+Both arrive inside `ComposerInjuryInput`, which is why the name misleads — but
+they occupy different fields, are written by different owners into different
+stores, and mean different things. **NO NEW SCHEMA FIELD IS REQUIRED.**
+
+**THE CHECK THAT COULD HAVE REFUTED IT:** every caller of the exclusion
+transaction owner was enumerated — the day screen's remove, `coachActions`,
+`useCoachNoteActions` — and **the guided injury flow is not among them.** Injury
+never writes an identity exclusion, so no reader can mistake one for the other.
+**The condition under which a field becomes necessary is therefore exact: a
+writer that crosses the channels.** If any future door makes an injury write an
+`ExerciseExclusion`, this distinction collapses and a typed cause becomes
+mandatory that same task.
+
+Also corrected: `ExerciseExclusion.reason` exists but is **free text — "the
+athlete's own words, when they gave any. Never invented"** — not a typed cause,
+and absent from the persisted record.
+
+## 2. THE FOUR-MICROCYCLE SEEDS — MEASURED, AND ONE DOOR IS SHUT
+
+`seedMicrocycleLimit()` returns 4 for exactly five seeds. All five were built and
+measured (my probe was wrong twice first: a `Workout` carries `dayOfWeek` NOT a
+date, and the identity is at `exercise.exercise.name`, not `exercise.name` — a
+silent `NONE` on every seed until both were fixed):
+
+| seed | microcycles | req | aux state | Back Squat |
+| --- | --- | --- | --- | --- |
+| `multi-reload-fixture-chain` | 4 | **4** | **none** | yes, strength day of all 4 weeks |
+| `coach-production-replay` | 4 | **4** | **none** | yes, all 4 weeks |
+| `feedback-progression-case` | 4 | 4 | `session_feedback` | yes |
+| `spent-week-friday` | 4 | 4 | 3× `session_feedback` | yes |
+| `christmas-break-ask` | 4 | 8 | none | yes |
+| `standard-in-season-week` | **1** | **1** | none | yes |
+
+**`req=4` on the four-week seeds is the number boot derives** — which is the
+whole reason session 9's gate could never pass on the one-week seed. So two
+seeds, `multi-reload-fixture-chain` and `coach-production-replay`, look exactly
+right: four real production-generated microcycles, no pre-seeded result or
+exclusion, and a Back Squat to remove.
+
+**⚠ BUT `multi-reload-fixture-chain` DOES NOT INSTALL THROUGH THE PLAIN
+`reset-seed` DOOR.** `e2e-seed-ready-…` never appears; the app boots to a real
+clock world (`MON 17/8`) instead of the seed's July. **Ruled out: my own variable
+indirection** — the run was repeated with the seed id HARDCODED and failed
+identically. So the door is the problem, not the flow. The most likely reason,
+unverified: these seeds are reached through the campaign/scenario bootstrap
+(`requireActiveExplorerCampaignScenarioReset`,
+`explorerSmokeScenarioManifests.ts:314`, `explorerSeededChainGenerator.ts:641`)
+rather than the plain seed route.
+
+**THE NEXT SESSION'S FIRST MOVE, AND IT IS SMALL:** find the door those seeds
+DO install through and point the control flow at it. `coach-production-replay`
+is the second candidate and is untested through any door. Only if BOTH are
+unreachable does Sam's sanctioned fallback apply — a narrowly named
+`exercise-removal-restart` seed, production-generated, four microcycles, normal
+install/acceptance owner, no pre-seeded exclusion, leaving every existing seed
+untouched.
+
+## 3. WHAT IS PROVEN, AND WHAT IS OWED
+
+**PROVEN ON GLASS:** Remove → Back Squat → Today → Front Squat at its OWN load
+(67.5kg, not Back Squat's 110kg), unrelated rows identical in name, dose and
+load. Re-proven this mission, screenshots in `artifacts/visible/slice-*.png`.
+
+**PROVEN BY MEASUREMENT, NOT ON GLASS:** the canonical exclusion fact persists
+with identity, scope, decision date, expiry date and block number; the reload
+gate's failure is independent of the athlete (control arm, byte-identical
+hashes); its cause is `acceptedBlocks` written by BOOT and absent from the
+one-week seed.
+
+**OWED, IN SAM'S ORDER:** immediate visible Undo on the surface where the action
+happened; Restore after restart; Today-scope expiry; This block; Until restored;
+the labelled Remove hub. **Plus R-105** (the weekly-reduction prompt moves to the
+coach chat with a notification) — ruled 2026-08-19, NOT BUILT.
+
+**THE UNDO FINDING THE NEXT SESSION SHOULD NOT RE-DERIVE:** `UndoToast` mounts
+once, in `HomeScreenV2`. `DayWorkout` is a PUSHED stack screen
+(`AppNavigator.tsx:89`), so a removal made inside the session raises the toast on
+the screen behind it, where its 6-second life expires unseen; and it is
+deliberately suppressed after a relaunch (`undoToastSeenMarker` seeds from the
+newest undoable entry on mount). Sam's corrected wording — *"available directly
+where the athlete performed the action"* — cannot be satisfied by that mount.
+
+**NOTHING MERGED.** Branch `feat/athlete-can-see-it`, tip is this commit.
