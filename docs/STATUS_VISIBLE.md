@@ -428,3 +428,94 @@ Suite is **58 passed, 0 failed**. Re-swept: **154 of 405, GAINED 0, LOST 0.**
 
 **I did not report the first sweep's numbers as the answer.** A gained red is a
 finding to attribute, and this one was mine.
+
+## CAPABILITY 6 — EQUIPMENT: THE DOOR WORKS, AND THE DAY DOES NOT FULLY OBEY IT
+
+`.maestro/visible/equipment-today.yaml`, 22 steps green, run twice.
+
+### ✅ WHAT WORKS, ON GLASS
+
+Session screen → the dumbbell button (`day-workout-equipment-concern-action`) →
+*"Equipment for this session — Untick anything you don't have today. We'll
+replace affected exercises using equipment you still have."* → untick **Barbell**
+→ Apply.
+
+The app answers with a receipt that **states its own scope**:
+
+> **Session equipment updated** — *"2 exercises were replaced for this session
+> only."*
+
+and the sheet already carries *"Permanent change? Update your equipment in
+Profile."* — so the athlete is told, in the moment, that unticking a barbell
+today has not edited their gym. **`Back Squat` leaves the day.** Temporary
+equipment IS enterable through the UI and it IS scoped, which is most of the
+capability.
+
+### ⚠ FINDING 4 — THE DAY STILL REQUIRES THE BARBELL THE ATHLETE JUST SAID THEY HAVE NOT GOT
+
+**Measured by the app's OWN reader, not by my inference.** Re-opening the sheet
+after applying — the same `deriveSessionEquipmentRequirements` that built it the
+first time — still offers:
+
+| before unticking | after unticking barbell |
+| --- | --- |
+| `session-equipment-option-tag-barbell` | **`session-equipment-option-tag-barbell`** |
+| `session-equipment-option-tag-dumbbells` | `session-equipment-option-tag-dumbbells` |
+| `session-equipment-option-tag-rack` | *(gone — Back Squat left)* |
+
+The rack requirement disappeared, so the recalculation is live and correct for
+Back Squat. **The barbell requirement did not, and the rows say why:**
+
+```
+1 RDLs                       <- STAYED
+2 Single-Leg Squat (to Box)  <- replaced Back Squat
+3 Single-Leg RDL
+4 Glute Bridge               <- arrived
+5 Band Pallof Press
+```
+
+**`RDLs` is still on the day.** The app reported *"2 exercises were replaced"* and
+its own requirement calculator still names the equipment the athlete removed.
+**The app is disagreeing with itself** — the mission's clause here is *"every
+visible exercise is legal for that day's kit"*, and it is not.
+
+**NOT FIXED, AND NAMED RATHER THAN HALF-BUILT.** This is not UI wiring — the
+door, the scope, the receipt and the recalculation all work. It is
+`buildSessionEquipmentReplacementPlan` leaving a row it should have taken, which
+is a composition/replacement question of the same family as seat-inbox item 48
+(*"the kit must be known when the day is COMPOSED, not subtracted from
+afterwards"*). Sizing it as a guard would be patching the symptom.
+
+### ⚠ AND A GREEN-AND-EMPTY CELL OF MY OWN, CAUGHT AND CORRECTED
+
+My first version of this flow asserted the barbell work was gone with
+`assertNotVisible: session-strength-position-2-rdls`. **It PASSED while RDLs was
+still on the day** — the replacements had shifted RDLs to position 1, so the
+positional id was absent for a reason with nothing to do with the claim. **A cell
+that can pass because a row MOVED is not asserting that the row is GONE.** It
+asserts by NAME now, and finding 4 above is the thing that false green was
+hiding. [[a-bind-can-be-green-and-empty]], and this one was mine.
+
+**The row-level checks are deliberately NOT in the flow.** Whether the strength
+accordion is open after the sheet closes depends on what the athlete last left
+it as, so an `optional: true` toggle made the next assertion depend on prior
+state — it passed and failed on identical trees in consecutive runs. **A flaky
+cell is worse than no cell: it teaches the next reader to re-run until green.**
+The measurements are written above instead.
+
+## WHERE THE MISSION STANDS AT THE CAP
+
+| # | capability | verdict | instrument |
+| --- | --- | --- | --- |
+| 1 | program display — one rep value, loads, one order | **WORKING** | `one-order.yaml` · `test:visible-surfaces` |
+| 2 | blocks and exercise selection | **NOT WALKED** | — |
+| 3 | athlete exercise actions — ordinary substitution, own load | **WORKING** | `swap-load.yaml` · `test:visible-surfaces` |
+| 3 | exclusion scopes, restore, pinning, Undo | **NOT WALKED** | — |
+| 4 | readiness — less work, load held, told why | **WORKING** | `readiness-holds-load.yaml` |
+| 5 | extra-session offer | **NOT WALKED** | — |
+| 6 | temporary equipment entered and scoped | **WORKING** | `equipment-today.yaml` |
+| 6 | every visible exercise legal for the day's kit | **BROKEN — finding 4** | the app's own requirement reader |
+| 7 | refusal names its athlete-facing reason | **NOT WALKED** | — |
+
+**THE ONE NAMED BLOCKER, if this stops here: FINDING 4.** Everything else
+measured is either working with a guard, or honestly unwalked.

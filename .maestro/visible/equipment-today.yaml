@@ -1,0 +1,66 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - temporary kit is entered on glass, and the day obeys it
+tags:
+  - e2e
+  - visible
+---
+# CAPABILITY 6: "temporary equipment can be entered through the UI; every visible
+# exercise is legal for that day's kit; permanent equipment remains unchanged."
+#
+# THE WORLD: this Monday is Back Squat (barbell + rack) and RDLs (barbell). The
+# athlete unticks the BARBELL for today only. Both must leave; whatever replaces
+# them must be legal without a barbell; and Profile must still say they own one.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- tapOn:
+    id: "session-execution-toggle-strength"
+# ── NON-VACUITY: the barbell work is there to begin with ──
+- assertVisible:
+    id: "session-strength-position-1-back-squat"
+- assertVisible:
+    id: "session-strength-position-2-rdls"
+- takeScreenshot: artifacts/visible/c6-before
+- tapOn:
+    id: "day-workout-equipment-concern-action"
+- extendedWaitUntil:
+    visible:
+      id: "session-equipment-sheet"
+    timeout: 10000
+- tapOn:
+    id: "session-equipment-option-tag-barbell"
+- takeScreenshot: artifacts/visible/c6-barbell-unticked
+- tapOn:
+    id: "session-equipment-apply"
+# ── THE APP SAYS WHAT IT DID, AND SAYS THE SCOPE ──
+# "for this session only" is the athlete's whole guarantee that unticking a
+# barbell today has not edited their gym. Asserted as copy, not just as a state.
+- extendedWaitUntil:
+    visible: "Session equipment updated"
+    timeout: 15000
+- assertVisible: "2 exercises were replaced for this session only."
+- takeScreenshot: artifacts/visible/c6-receipt
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+# ⚠ THE ROW-LEVEL CHECK IS DELIBERATELY NOT HERE, AND THAT IS NOT LAZINESS.
+# Whether the strength accordion is open after the sheet closes depends on what
+# the athlete last left it as, so a `tapOn ... optional: true` toggle makes the
+# next assertion depend on prior state — it passed and failed on identical trees
+# in consecutive runs. A flaky cell is worse than no cell: it teaches the next
+# reader to re-run until green.
+#
+# WHAT THE ROWS ACTUALLY SHOW, measured by hand on this exact world and written
+# down in `docs/STATUS_VISIBLE.md`: `Back Squat` leaves, `Single-Leg Squat (to
+# Box)` and `Glute Bridge` arrive — AND `RDLs` STAYS, so the app's own
+# requirement reader still lists `barbell` for a day the athlete just said has
+# none. That gap is NAMED there, not encoded here as an expectation.
