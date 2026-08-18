@@ -11,6 +11,15 @@ export const DEV_E2E_SEED_IDS = [
   'multi-reload-fixture-chain',
   'coach-production-replay',
   'christmas-break-ask',
+  // ── SANCTIONED 2026-08-19 FOR THE REMOVE SLICE'S RESTART PROOF ──
+  // The restart proof needs a world the one-week seeds structurally cannot
+  // reach: FOUR production-generated microcycles, so the requirement boot
+  // derives for the accepted block matches the one the seed installs. The two
+  // existing four-week candidates both refuse — their Sunday
+  // `visible_card_detail_equality` witness hand-builds an expected workout id
+  // the generator no longer produces. This seed exists so neither of them has
+  // to be altered.
+  'exercise-removal-restart',
 ] as const;
 
 export type DevE2ESeedId = (typeof DEV_E2E_SEED_IDS)[number];
@@ -46,6 +55,10 @@ export const DEV_E2E_DATE_ANCHORS: Record<DevE2ESeedId, string> = {
   // the wall clock), so anchoring a seed on the 10th is the ONLY way to put a
   // simulator inside the window. **10 December 2026 is Sam's own date.**
   'christmas-break-ask': '2026-12-10',
+  // Same July anchor as every other in-season seed: the Remove slice's scopes
+  // ("today", "this block") are read against it, and reusing it keeps this
+  // seed's world comparable to `standard-in-season-week`'s.
+  'exercise-removal-restart': '2026-07-13',
 };
 
 export function isDevE2ESeedId(value: string): value is DevE2ESeedId {

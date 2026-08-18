@@ -172,6 +172,7 @@ Named seeds and their extra witnesses:
 | `feedback-progression-case` | Exact feedback source, baseline prescription, and future progression target |
 | `multi-reload-fixture-chain` | Four accepted weeks, exact fixture/rest/following-Monday identities, empty source facts, empty reversible ledger, and exact accepted revision |
 | `coach-production-replay` | Empty Coach transcript/memory/history/clarifier/proposal with stable move, injury-exposure, and feedback-progression targets |
+| `exercise-removal-restart` | **The only installable FOUR-microcycle seed.** Quiescent accepted block whose derived `requiredStrengthSessions` is 4 — the number boot derives — with a Back Squat on the Monday of all four weeks and no pre-seeded exclusion, result or removal. Every witness is DERIVED from the generated program; the two seeds above are unreachable precisely because theirs are not |
 
 The witness vocabulary also covers accepted-week count, Section 18
 contract/phase signature, eligible target dates, fixture and component

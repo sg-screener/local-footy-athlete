@@ -101,6 +101,29 @@ async function main(): Promise<void> {
 
   const prefs = (state as unknown as { athletePrefs?: { exclusions?: unknown[] } }).athletePrefs;
   console.log(`EXCLUSIONS     : ${prefs?.exclusions?.length ?? 0}`);
+
+  // What the ACCEPTANCE OWNER would derive for this world. Session 9 built this
+  // into the install seam and backed it out: on a one-week seed it derives 1
+  // where boot derives 4, and that number is the completion denominator the
+  // block boundary divides by. The question this line answers is whether a
+  // four-microcycle seed closes that gap.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { deriveStoredBlockStateFromProgram, addDaysISO } =
+    require('../src/utils/programBlockState');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { deriveAcceptedBlockStrengthRequirement } =
+    require('../src/rules/blockBoundaryProgression');
+  const blockState = deriveStoredBlockStateFromProgram(program);
+  const blockStartISO = blockState?.blockStartDate?.slice(0, 10) ?? null;
+  console.log(`BLOCK STATE    : start=${blockStartISO} number=${blockState?.blockNumber ?? '-'}`);
+  if (blockStartISO) {
+    const req = deriveAcceptedBlockStrengthRequirement({
+      program,
+      blockStartISO,
+      blockEndISO: addDaysISO(blockStartISO, 4 * 7 - 1),
+    });
+    console.log(`DERIVED REQ    : ${req}`);
+  }
 }
 
 void main().catch((error) => { console.error(error); process.exit(1); });
