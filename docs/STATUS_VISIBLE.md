@@ -2411,3 +2411,21 @@ passed, 0 failed**, including two new guards.
 regression against `{}`: those worlds mismatched boot's 4 before and mismatch it
 now, no worse, while the four-week seed now MATCHES. Measured, not assumed; the
 whole dev-E2E family is baseline-identical.
+
+## 5. ⚠ CORRECTION TO §4 — MY OWN COMPILE CLAIM WAS WRONG WHEN I MADE IT
+
+The commit that landed §1-§4 asserted *"`test:compile` unchanged: 469, same
+seven pairs."* **It was 470, and eight pairs, at that commit.** Adding
+`recordAcceptedBlock` to `DevE2ECoordinatorDeps` made it required, and a
+**second** deps literal exists that I had not found —
+`devE2EScenarioSessionTests.ts:214` — because I grepped only the file I was
+already editing. Adding the dep there restores **469 and the same seven pairs**,
+byte-identical to `at-1bfc3603-compile.txt`.
+
+**THE LESSON IS THE GREP, NOT THE ERROR.** A required field added to a shared
+interface has as many call sites as the repo has, not as many as the file I had
+open. `grep -rn "<a sibling field>" src` across the WHOLE tree before adding one
+— `completeOnboarding` would have found both literals in one command.
+
+Recorded rather than amended away: the gate caught it, which is the gate working,
+and a commit message is a claim that the next reader is entitled to see corrected.
