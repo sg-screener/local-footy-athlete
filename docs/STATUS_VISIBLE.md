@@ -1266,3 +1266,75 @@ flaky cells this file has recorded twice.
 | 2. Extra-session offer | rule proven 58/0; **glass needs the boundary seed** |
 | 3. Exclusion / restore / Undo | **flow written, BLOCKED by the base defect above** |
 | 4. Typed refusal | not walked — and the defect above is an instance of it |
+
+## ⚠ THE REMOVAL DEFECT IS FULLY DIAGNOSED, AND THE FIX COLLIDES WITH §18
+
+Sam ruled the scopes (2026-08-18): all three remove IMMEDIATELY and visibly, the
+excluded identity must not be restored inside its scope, the fallback selector
+MAY fill the slot, success only after the visible program changes, and a refusal
+shows its typed reason.
+
+### THE MECHANISM, TRACED TO THE LINE
+
+```
+CORE removeExerciseAtDate      success=true          <- the writer works
+AFTER CORE  RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press, Back Squat
+                                                     ^^^^^^^^^^^^ RESTORED, at the END
+door remove_exercise  ok=false  "That change didn't go through"
+```
+
+**The removal succeeds and `finaliseWorkoutAfterMutation`'s restore pass puts the
+SAME lift back**, because taking `Back Squat` out leaves the day without its
+squat pattern and the pass restores one from the reference workout — which is
+`Back Squat`. The accepted-week transaction then compares before and after, finds
+the week unchanged, and reports the athlete's own removal as a failure.
+
+**So both doors have ONE cause.** `applyExerciseExclusionDecision` returning
+`ok=true` with nothing moving, and the screen's `remove_exercise` refusing with no
+reason, are the same restore undoing the same decision.
+
+### WHAT WAS BUILT, MEASURED, AND THEN REVERTED — ON PURPOSE
+
+A typed `excludedIdentities` on the canonicalisation context, the restore pass
+walking candidates and skipping excluded ones, and an INJECTED
+`legalIdentityForPattern` resolver supplied by the removal door — the same
+`getTapSwapChoices` ladder R-103 walks, so there is one fallback selector with
+two callers rather than two implementations. **The selector works**: asked for a
+legal alternative to `Back Squat` on this athlete's kit it returns
+`Bodyweight Squat`, correctly rejecting `Single-Leg Squat (to Box)` for want of a
+plyo box.
+
+**IT IS REVERTED BECAUSE THE WEEK GATE THEN REFUSES:**
+
+```
+section18_week_rejected — pattern_restore_failure:strength_patterns:0
+"We couldn't safely build your week from your current settings."
+```
+
+**§18 requires the squat pattern and does not accept the ladder's regression as
+meaningful main content**, so stopping the illegal restore turns a wrong success
+into a whole-week refusal. Measured: with the writer removed the tree is
+byte-identical to base, so the canonicaliser half alone is behaviour-neutral —
+**and a typed field with no writer is exactly the `canOverride` trap `CLAUDE.md`
+names, so it is not being committed in that state.**
+
+**THIS IS THE COLLISION R-083's RECEIPT ALREADY RECORDED** — *"R-083 and §18 are
+in direct contradiction … and §18 wins by refusing the week"* — reaching a new
+victim: the athlete's own removal rather than a kit-blocked pattern. That receipt
+says the same thing this one does: **teaching §18 the difference is a change to
+safety acceptance behaviour and needs Sam's ruling.**
+
+### THE ONE NAMED BLOCKER
+
+**When an athlete removes their only squat, may the week be accepted without a
+squat main lift — or must the fallback (`Bodyweight Squat` here) count as one?**
+
+- If the week may go without it: §18's `required_minimum` learns an
+  athlete-removal exemption, and the day honestly shows the pattern gone.
+- If the fallback counts: §18's "meaningful main content" test learns to accept a
+  ladder regression, which changes what every kit-limited athlete's week accepts.
+
+**Both are safety-acceptance changes. Neither is mine to pick**, and the removal
+cannot be made truthful without one of them. Everything else in Sam's removal
+ruling — the scopes, the no-restore rule, the selector, the typed refusal — is
+built and measured behind this one answer.
