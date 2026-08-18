@@ -151,3 +151,42 @@ original trace is not repeated; the 405-suite comparison is owed once the
 baseline sweep completes.
 
 Agent: demolition
+
+---
+
+## ⚠ FINDING 1 — §18 IS A SECOND PROGRAMMING AUTHORITY, AND IT IS ~800 LINES
+
+Sam's contract: *"§18 — Validation/refusal only. It may accept or refuse the
+finished result. It may not author, repair, replace or rearrange the program."*
+
+`section18AcceptedWeekGateway.ts` (1804 lines) imports
+`searchWholeWeekRepairCandidates` from `wholeWeekRepairEngine.ts` (144 lines) and
+runs a **candidate search**: it generates repaired versions of the week, scores
+them, and picks one. Five repair GENERATORS live inside the validator:
+
+| line | generator | what it authors |
+| --- | --- | --- |
+| 715 | `repairOptionalRestCandidates` | replaces authored sessions with Rest |
+| 784 | `repairByStackingCandidates` | rearranges work onto other days |
+| 857 | `repairCraftViolationCandidates` | rewrites content to satisfy craft rules |
+| 955 | `repairDisplacedStrengthCandidates` | re-places strength the scheduler sited |
+| 1284 | `repairCoreConditioningShortfallCandidates` | adds conditioning after authorship |
+
+`replaceDay` (710) is their shared mutator. 79 `repair`-shaped references in the
+gateway. This is live production — the baseline sweep log shows it acting:
+`[WorkoutCanonicalisation] Generated workout finalised … collapsed_to_rest`.
+
+**Four of the mission's named deletion areas are this one mechanism:** "replaces
+authored sessions with Rest", "adds conditioning automatically after authorship",
+"repairs missing patterns by restoring original rows", "treats §18 as an author".
+
+**THIS IS THE NEXT SLICE AND IT IS NOT SMALL.** Removing repair means the
+gateway REFUSES what it used to silently fix, so the weeks it was covering for
+become visible as scheduler/composer defects. That is the point — Sam: *"A large
+blast radius proves the legacy path was still an authority."* It is not a
+coaching question needing his ruling: his contract already decides it.
+
+**NOT MEASURED YET:** how many currently-accepted weeks depend on a repair to
+pass. That census comes before the deletion, not after.
+
+Agent: demolition
