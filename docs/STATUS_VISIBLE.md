@@ -1338,3 +1338,99 @@ squat main lift — or must the fallback (`Bodyweight Squat` here) count as one?
 cannot be made truthful without one of them. Everything else in Sam's removal
 ruling — the scopes, the no-restore rule, the selector, the typed refusal — is
 built and measured behind this one answer.
+
+## THE REMOVAL FIX IS BUILT AND PROVEN AT THE DOOR — AND NOT YET ON GLASS
+
+Sam ruled (2026-08-18): the substitute counts; removing an exercise excludes the
+IDENTITY, not the pattern; do not default a full-gym athlete to Bodyweight Squat;
+and **do not collapse removal causes**.
+
+### WHAT LANDED
+
+**One typed cause on the removal input** — `'equipment' | 'exclusion' | 'injury'`,
+defaulting to `'exclusion'`, which is the removal screen's case.
+
+**AND THE CAUSES USE DIFFERENT SOURCES, WHICH IS THE WHOLE POINT.** The first
+version used ONE source for all three — the substitute engine — and **the
+substitute engine's `Back Squat` list is an INJURY ladder**: its only entries are
+`Single-Leg Squat (to Box)` and `Bodyweight Squat`, both annotated *"lower spinal
+load"*. Correct for a sore back; absurd for an athlete with a rack who simply does
+not want back squats. **That is precisely the "do not default to Bodyweight
+Squat" Sam ruled against, and it was caused by collapsing the causes.**
+
+- `injury` → the injury ladder decides; only a `same_movement_pattern` answer
+  keeps full credit; a prohibited pattern is neither forced nor credited.
+- `exclusion` / `equipment` → the pattern survives, so the SLOT'S OWN POOL is
+  walked: anchors (legal loaded variations) → accessories (partial coverage) →
+  nothing. `fullPatternCredit` is true only for an anchor.
+
+**MEASURED THROUGH THE PRODUCTION DOOR** (`remove_exercise`, the durable
+executor, on the regenerated seed world):
+
+```
+BEFORE       Back Squat, RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press
+DURABLE DOOR ok=true   message=""
+AFTER        RDLs, Cossack Squat, Single-Leg RDL, Band Pallof Press, Front Squat
+>>> Back Squat GONE: true
+```
+
+**`Front Squat` — a legal LOADED variation, not a bodyweight regression — and
+§18 accepts the week.** Before this, the same call answered *"That change didn't
+go through"* while leaving `Back Squat` on the day.
+
+### ⚠ AND IT DOES NOT YET DO THIS ON THE DEVICE
+
+`.maestro/visible/exclusion-restore-undo.yaml` still stops at the same place:
+**"Could not remove exercise — That change didn't go through."** Re-run against a
+Metro restarted with `--clear` and a freshly built bundle, so **this is not a
+stale-bundle artefact.**
+
+**THE HEADLESS WORLD AND THE DEVICE WORLD ARE NOT THE SAME WORLD, and that is the
+open question.** The probe cold-starts through onboarding and REGENERATES the
+program; the device installs the STABILISED seed fixture. A fixture workout can
+lack the strength intent that makes the restore pass run at all — which would
+mean the device is failing for a different reason from the one just fixed.
+**Unverified. I am not claiming a cause.**
+
+**SO THE REMOVAL FIX IS `WORKING` AT THE DOOR AND `NOT WALKED` ON GLASS**, and
+Sam's requirement was glass. Today / This block / Until restored, Restore and
+Undo are therefore **still unproven on the real UI** — the flow reaches the
+confirm step and stops.
+
+### BLAST RADIUS
+
+| | branch | control `c2aaf313` |
+| --- | --- | --- |
+| `test:compile` | 469, 7 pairs | 469, 7 pairs — IDENTICAL |
+| `test:visible-surfaces` | **65/0** | 9/0 |
+| `test:workout-canonicalisation` | 41/0 | — |
+| `test:exercise-exclusions` | 52/0 | — |
+| `deletion-calendar-ownership` · `move-scoping` · `plan-change-producer` | 2/2 · 12/4 · 232/70 | **identical at base** |
+
+**GAINED 0, LOST 0.**
+
+### ⚠ THREE CELLS WRITTEN AND DELETED RATHER THAN SHIPPED
+
+A hand-built workout carries no strength intent, so `intendedPatterns` is empty
+and the restore pass never runs on it — **the fixture cannot exhibit the fault**,
+which makes any cell built on it green and empty. The non-vacuity cell caught
+this immediately (it asserted the repair DOES restore without an exclusion, and
+it did not). They are gone and the gap is named in the suite. **A generated-world
+cell is owed.**
+
+## SAM'S GENERALISED INJURY LADDER — RECEIVED, NOT BUILT
+
+Ruled 2026-08-18, across all eight patterns: same exercise with a permitted
+implement → same pattern safer variation → same muscular action via a secondary
+compound → related accessory/isometric → adjacent pattern only when explicitly
+safe → typed omission. Full credit for same-pattern, partial for
+accessory/adjacent, **no credit for a prohibited pattern**, and *"never force an
+unsafe pattern to satisfy §18"*. Visible line: *"Adjusted from [exercise] —
+injury restriction"*, with the active modifier and restore route.
+
+**The `injury` branch of the selector honours the top of that ladder and the
+credit rule today.** Rungs 3-5 (secondary compound, accessory/isometric, adjacent
+pattern) and the vertical push/pull + single-leg coverage are **NOT built** — the
+pool walk currently maps those patterns onto the four MVP slots. **Named, not
+half-built.** Sam's clause about printing unresolved movement/injury combinations
+rather than guessing is the right shape for that unit and has not been run.

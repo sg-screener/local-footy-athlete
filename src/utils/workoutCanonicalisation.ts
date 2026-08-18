@@ -159,6 +159,48 @@ export interface WorkoutCanonicalisationContext {
   section18EvidenceMode?: Section18EvidenceMode;
   /** Safety-owned patterns can never be restored from plan/default identity. */
   prohibitedStrengthPatterns?: readonly MainStrengthPattern[];
+  /**
+   * ── EXERCISES THE ATHLETE HAS TAKEN OUT, WITHIN THEIR ACTIVE SCOPE ────────
+   *
+   * Sam, 2026-08-18: *"The removed exercise identity must disappear visibly at
+   * once. The app may use the legal fallback selector to fill the training slot
+   * with a different exercise, but **it must not restore the excluded identity
+   * inside its active scope**."*
+   *
+   * **THIS IS THE DEFECT THAT MADE "REMOVE THIS EXERCISE" UNUSABLE.** Measured
+   * through the real door 2026-08-18: `removeExerciseAtDate` reported
+   * `success: true` and `Back Squat` was **back on the day at position 5** —
+   * the restore pass below saw the squat pattern go missing and put the SAME
+   * lift back from the reference workout. The accepted-week transaction then
+   * compared before and after, found the week unchanged, and answered *"That
+   * change didn't go through — nothing on your plan changed."* So the athlete's
+   * own removal was undone by a repair pass and reported as a failure.
+   *
+   * A pattern that cannot be filled without the excluded identity is left
+   * UNFILLED — the day loses that pattern, honestly, rather than silently
+   * refusing the athlete's decision.
+   */
+  excludedIdentities?: readonly string[];
+  /**
+   * ── THE LEGAL FALLBACK SELECTOR, SUPPLIED BY THE DOOR ─────────────────────
+   *
+   * Sam: *"The app **may use the legal fallback selector** to fill the training
+   * slot with a different exercise."* Here that is not a nicety — removing a
+   * main lift leaves the week without its pattern, and §18 then refuses the
+   * whole week (`pattern_restore_failure:strength_patterns:0`, measured). So the
+   * slot has to be filled with something the athlete can actually do.
+   *
+   * **IT IS AN INJECTED RESOLVER, NOT AN IMPORT, AND THAT IS DELIBERATE.** The
+   * selector needs the live kit, injuries and capacity; this module is a pure
+   * shape canonicaliser and reaching into stores from here would make it one
+   * more thing that cannot be reasoned about offline. The DOOR has that context
+   * and passes the same selector the equipment ladder uses, so there is one
+   * fallback selector with two callers rather than two implementations.
+   */
+  legalIdentityForPattern?: (
+    pattern: MainStrengthPattern,
+    excluded: readonly string[],
+  ) => string | null;
   /** Safety eligibility outranks ordinary phase power placement. */
   prohibitPower?: boolean;
   /** Safety eligibility outranks ordinary sprint/high-speed placement. */
@@ -439,8 +481,10 @@ function fallbackPatternRow(
   pattern: MainStrengthPattern,
   index: number,
   earlyOffseason: boolean,
+  /** Overrides the deterministic fill — see `legalIdentityForPattern`. */
+  identity?: string | null,
 ): WorkoutExercise {
-  const name = FALLBACK_PATTERN_EXERCISE[pattern];
+  const name = identity ?? FALLBACK_PATTERN_EXERCISE[pattern];
   const now = new Date().toISOString();
   const id = `canonical-${workout.id}-${pattern}`;
   return {
@@ -897,8 +941,36 @@ export function finaliseWorkoutAfterMutation(
     const represented = new Set(domainPatterns(strengthAndSupportRows));
     for (const pattern of intendedPatterns) {
       if (represented.has(pattern)) continue;
-      const restored = matchingReferenceRow(context.referenceWorkout, pattern) ??
-        fallbackPatternRow(workout, pattern, strengthAndSupportRows.length, earlyOffseason);
+      // ⚠ THE ATHLETE'S REMOVAL OUTRANKS THE REPAIR. Walk the candidates and
+      // take the first that is NOT an identity they have excluded; if none
+      // qualifies, restore NOTHING. See `excludedIdentities` on the context.
+      const excluded = new Set((context.excludedIdentities ?? [])
+        .map((name) => String(name ?? '').trim().toLowerCase())
+        .filter(Boolean));
+      const legalAlternative = excluded.size > 0 && context.legalIdentityForPattern
+        ? context.legalIdentityForPattern(pattern, [...excluded])
+        : null;
+      const candidates = [
+        matchingReferenceRow(context.referenceWorkout, pattern),
+        fallbackPatternRow(workout, pattern, strengthAndSupportRows.length, earlyOffseason),
+        // The ladder's answer comes LAST so it only runs when the two authored
+        // candidates are both excluded — an ordinary repair is unaffected.
+        legalAlternative
+          ? fallbackPatternRow(
+              workout, pattern, strengthAndSupportRows.length, earlyOffseason, legalAlternative,
+            )
+          : null,
+      ];
+      const restored = candidates.find((candidate) =>
+        !!candidate && !excluded.has(rowName(candidate).trim().toLowerCase()));
+      if (!restored) {
+        actions.push({
+          kind: 'row_removed',
+          item: pattern,
+          reason: `restore_blocked_by_exclusion:${pattern}`,
+        });
+        continue;
+      }
       strengthAndSupportRows.push({
         row: restored,
         index: strengthAndSupportRows.length,

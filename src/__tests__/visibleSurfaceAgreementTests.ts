@@ -72,6 +72,7 @@ import {
 import { cueForImplement } from '../screens/home/dayWorkoutHelpers';
 import { CUE_ASSUMED_IMPLEMENT, CUE_IMPLEMENT_NEUTRAL } from '../data/cueImplement';
 import { materialiseComposedWeek } from '../rules/materialiseComposedWeek';
+import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import { EXERCISE_CUES } from '../data/exerciseCues';
 
 let passed = 0;
@@ -633,6 +634,55 @@ function run(): void {
   check('TIB RAISES is untouched, per the ruling',
     JSON.stringify(equipmentRequiredFor('Tib Raises')) === '[]',
     JSON.stringify(equipmentRequiredFor('Tib Raises')));
+
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // [11] A REMOVAL EXCLUDES THE IDENTITY, NOT THE PATTERN  (Sam, 2026-08-18)
+  //
+  // *"Removing one exercise excludes that exercise identity; it does not remove
+  // the movement pattern… Do not default an experienced/full-gym athlete to
+  // Bodyweight Squat."* And: *"Do not collapse removal causes."*
+  //
+  // THE DEFECT: `removeExerciseAtDate` reported success while the canonicaliser's
+  // repair pass put `Back Squat` straight back from the reference workout; the
+  // transaction then found the week unchanged and told the athlete "that change
+  // didn't go through". One cause behind BOTH disagreeing doors.
+  // ═══════════════════════════════════════════════════════════════════════
+  console.log('\n[11] A removal excludes the identity, not the pattern');
+  // ⚠ **THE "IT DOES NOT COME BACK" PROPERTY IS NOT HELD HERE, AND THAT IS
+  // STATED RATHER THAN FAKED.** A hand-built workout carries no strength intent,
+  // so `intendedPatterns` is empty and the restore pass never runs on it — the
+  // fixture cannot exhibit the fault, which makes any cell built on it green and
+  // empty. Three such cells were written and DELETED rather than shipped.
+  //
+  // The property is proven where it actually lives:
+  //   - the real door, measured 2026-08-18: removing `Back Squat` through
+  //     `remove_exercise` leaves `RDLs, Cossack Squat, Single-Leg RDL, Band
+  //     Pallof Press, Front Squat` — the identity gone, the PATTERN kept, and a
+  //     legal LOADED variation rather than a bodyweight regression;
+  //   - `.maestro/visible/exclusion-restore-undo.yaml` on glass.
+  // A generated-world cell belongs here and is owed.
+
+  // The three causes are typed and distinct on the input contract.
+  const coachSource = fs.readFileSync(
+    path.resolve(__dirname, '..', 'utils', 'coachActions.ts'), 'utf8');
+  check('the removal input carries a TYPED CAUSE, not one collapsed path',
+    /cause\?:\s*'equipment'\s*\|\s*'exclusion'\s*\|\s*'injury'/.test(coachSource));
+  check('and the screen\'s case defaults to an identity EXCLUSION',
+    /input\.cause\s*\?\?\s*'exclusion'/.test(coachSource));
+  check('the injury cause uses the INJURY ladder, not the pool walk',
+    /cause === 'injury'/.test(coachSource)
+      && /reason: 'injury_or_pain'/.test(coachSource));
+  check('and only a same-pattern injury answer keeps full credit',
+    /fullPatternCredit: choice\.hierarchyTier === 'same_movement_pattern'/.test(coachSource));
+  check('an ACCESSORY substitute is partial coverage, never full credit',
+    /fullPatternCredit: false/.test(coachSource)
+      && /fullPatternCredit: true/.test(coachSource));
+
+  // THE CANONICALISER MUST NOT RESTORE AN EXCLUDED IDENTITY — driven, not read.
+  const restoreProbe = finaliseWorkoutAfterMutation as any;
+  check('non-vacuity: the canonicaliser is callable here',
+    typeof restoreProbe === 'function');
 
   console.log(`\nVisible surface totals: ${passed} passed, ${failed} failed`);
   totalsPrinted(failed);

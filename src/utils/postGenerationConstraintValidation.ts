@@ -53,6 +53,7 @@ import {
 import { todayISOLocal } from './appDate';
 import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 import { composeDaySurfaces } from '../rules/dayPrecedence';
+import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
 import {
   finaliseWorkoutAfterMutation,
   type WorkoutCanonicalisationContext,
@@ -1712,6 +1713,18 @@ export function validateLiveWorkoutWrite(
      * incomplete intermediate week.
      */
     deferWeekAcceptance?: boolean;
+    /**
+     * Identities the athlete has removed within an active scope. Passed straight
+     * to the canonicaliser so its repair pass cannot restore them — Sam's
+     * removal ruling, 2026-08-18. Without this the athlete's own removal was
+     * undone by the repair and then reported to them as a failure.
+     */
+    excludedIdentities?: readonly string[];
+    /** The legal fallback selector — see the canonicalisation context. */
+    legalIdentityForPattern?: (
+      pattern: MainStrengthPattern,
+      excluded: readonly string[],
+    ) => string | null;
   } = {},
 ): Workout {
   const context = liveValidationContext(undefined, date);
@@ -1722,6 +1735,12 @@ export function validateLiveWorkoutWrite(
     canonicalContext: {
       ...liveWorkoutCanonicalisationContext(date, workout, context.profile),
       restoreMissingPlanPatterns: options.restoreMissingPlanPatterns,
+      ...(options.excludedIdentities?.length
+        ? { excludedIdentities: options.excludedIdentities }
+        : {}),
+      ...(options.legalIdentityForPattern
+        ? { legalIdentityForPattern: options.legalIdentityForPattern }
+        : {}),
     },
   });
   const validated = result.workout ?? collapseWorkoutToRest(workout);

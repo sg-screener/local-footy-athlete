@@ -1,3 +1,4 @@
+import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
 /**
  * coachActions — Scoped, classification-driven program edits.
  *
@@ -170,6 +171,14 @@ export interface RemoveExerciseInput {
   exercise: string;
   /** Optional exact row identity from a tapped UI exercise. */
   exerciseId?: string;
+  /**
+   * WHY the row is going, typed. Sam, 2026-08-18: *"Do not collapse removal
+   * causes."* The three have different fallback behaviour and different §18
+   * credit, and the caller is the only layer that knows which this is.
+   * Defaults to `'exclusion'` — the removal SCREEN's case, which is an
+   * exercise-identity exclusion unless an active injury fact says otherwise.
+   */
+  cause?: 'equipment' | 'exclusion' | 'injury';
 }
 
 export interface AddExerciseAtDateInput {
@@ -716,8 +725,124 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
 }
 
 /** Remove a single exercise from a single date. */
+/**
+ * ── THE LEGAL PATTERN REPLACEMENT FOR A REMOVED MAIN LIFT ──────────────────
+ *
+ * Sam, 2026-08-18: *"Removing one exercise excludes that exercise identity; it
+ * does not remove the movement pattern. Replace Back Squat with the next best
+ * legal, meaningful squat-pattern exercise… Do not default an experienced/full-
+ * gym athlete to Bodyweight Squat."*
+ *
+ * ## ⚠ THE CAUSES ARE NOT INTERCHANGEABLE, AND COLLAPSING THEM IS THE DEFECT
+ *
+ * Sam, same day: *"Do not collapse removal causes."* This function exists
+ * because the first version used ONE source for all of them — the substitute
+ * engine — and the substitute engine's `Back Squat` list is an **injury**
+ * ladder: its two entries are `Single-Leg Squat (to Box)` and `Bodyweight
+ * Squat`, both annotated *"lower spinal load"*. Correct for a sore back;
+ * **absurd for an athlete with a rack who simply does not want back squats**,
+ * which is exactly the "do not default to Bodyweight Squat" he ruled against.
+ *
+ *   - `'injury'`     — the injury ladder DECIDES, and injury legality outranks
+ *                      everything below. If the pattern itself is prohibited the
+ *                      caller must not force it and must not credit it.
+ *   - `'exclusion'`  — the athlete rejected an IDENTITY. The pattern is intact,
+ *                      so the pool's own anchors are the right source.
+ *   - `'equipment'`  — same pool walk; the kit filter is what does the work.
+ *
+ * ## THE LADDER, IN SAM'S ORDER
+ *
+ * anchors (legal loaded variations) -> accessories (secondary/unilateral) ->
+ * bodyweight regression. `fullPatternCredit` is TRUE only for an anchor: an
+ * accessory is **partial coverage and must not falsely satisfy the requirement**.
+ */
+function legalPatternReplacement(args: {
+  date: string;
+  removedExercise: string;
+  cause: 'equipment' | 'exclusion' | 'injury';
+  pattern: MainStrengthPattern;
+}): { name: string; fullPatternCredit: boolean } | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getTapSwapChoices, resolveTapSwapEnvironment } = require('./tapSwapHierarchy');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useProfileStore } = require('../store/profileStore');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useReadinessStore } = require('../store/readinessStore');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { exerciseAllowedByEquipment, STRENGTH_POOLS } = require('../data/exercisePoolsStrength');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { resolveEquipmentCapabilities } = require('./equipmentAvailability');
+
+    const profile = useProfileStore.getState().onboardingData;
+    const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
+    const kit = resolveEquipmentCapabilities(profile, activeConstraints, args.date).tags;
+    const environment = resolveTapSwapEnvironment({
+      date: args.date, profile, activeConstraints,
+      readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
+    });
+    const removed = args.removedExercise.trim().toLowerCase();
+    const usable = (name: string): boolean =>
+      !!name && name.trim().toLowerCase() !== removed
+      && exerciseAllowedByEquipment(name, kit);
+
+    // ── INJURY: the injury ladder decides, and it may legitimately answer
+    // nothing — a prohibited pattern is not forced and not credited.
+    if (args.cause === 'injury') {
+      for (const choice of getTapSwapChoices({
+        originalExercise: args.removedExercise,
+        reason: 'injury_or_pain',
+        environment,
+        existingExerciseNames: [args.removedExercise],
+        recoveryAllowed: false,
+      })) {
+        if (choice.kind === 'rest' || !choice.name || !usable(choice.name)) continue;
+        return {
+          name: choice.name,
+          // Only a same-pattern answer keeps the credit; the injury ladder's
+          // adjacent rungs are partial by construction.
+          fullPatternCredit: choice.hierarchyTier === 'same_movement_pattern',
+        };
+      }
+      return null;
+    }
+
+    // ── EXCLUSION / EQUIPMENT: the pattern survives, so walk its own pool.
+    const pool = (STRENGTH_POOLS as Record<string, {
+      anchor?: { entries: { name: string }[] };
+      accessory?: { entries: { name: string }[] };
+    }>)[POOL_SLOT_FOR_PATTERN[args.pattern]];
+    for (const anchor of pool?.anchor?.entries ?? []) {
+      // A legal LOADED variation is the top rung and keeps full credit.
+      if (usable(anchor.name)) return { name: anchor.name, fullPatternCredit: true };
+    }
+    for (const accessory of pool?.accessory?.entries ?? []) {
+      // Secondary/unilateral: real work, but PARTIAL coverage.
+      if (usable(accessory.name)) return { name: accessory.name, fullPatternCredit: false };
+    }
+    return null;
+  } catch {
+    // No selector is better than a wrong one: the restore pass then declines to
+    // fill the slot rather than restoring the excluded lift.
+    return null;
+  }
+}
+
+/** The pool slot each main pattern selects from. */
+const POOL_SLOT_FOR_PATTERN: Record<MainStrengthPattern, string> = {
+  squat: 'squat',
+  hinge: 'hinge',
+  push: 'horizontal_push',
+  pull: 'horizontal_pull',
+  single_leg_knee: 'squat',
+  single_leg_hip: 'hinge',
+};
+
 export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
   const { date, exercise, exerciseId } = input;
+  const removalCause = input.cause ?? 'exclusion';
   const current = resolveDateWorkout(date);
   if (!current) {
     return { success: false, reason: `No session on ${date} to remove exercise from.` };
@@ -736,7 +861,17 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
       if (workoutsAreEquivalent(current, newWorkout)) {
         return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
       }
-      const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+      // THE REMOVED IDENTITY TRAVELS WITH THE WRITE. Without it the
+      // canonicaliser's repair pass restores exactly the lift the athlete just
+      // took out, the week compares equal, and the transaction reports a
+      // failure for a removal that actually worked.
+      const removedName = foundById.exercise?.name ?? exercise;
+      const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout, {
+        excludedIdentities: [removedName],
+        legalIdentityForPattern: (pattern) => legalPatternReplacement({
+          date, removedExercise: removedName, cause: removalCause, pattern,
+        })?.name ?? null,
+      });
       if (workoutsAreEquivalent(current, canonicalWorkout)) {
         return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
       }
@@ -768,7 +903,16 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
   }
-  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+  // THE BY-NAME BRANCH CARRIES THE EXCLUSION TOO. Both branches of this
+  // function write, and fixing only the id branch would leave the coach's path
+  // and any name-addressed removal still restoring the excluded lift.
+  const removedName = found.exercise?.name ?? exercise;
+  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout, {
+    excludedIdentities: [removedName],
+    legalIdentityForPattern: (pattern) => legalPatternReplacement({
+      date, removedExercise: removedName, cause: removalCause, pattern,
+    })?.name ?? null,
+  });
   if (workoutsAreEquivalent(current, canonicalWorkout)) {
     return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
   }
