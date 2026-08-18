@@ -56,7 +56,7 @@ import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type Readine
 import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
 import { applyLighterDayForToday } from '../../utils/lighterDayTransaction';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
-import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
+import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 import { UndoToast } from '../../components/UndoToast';
 import { BuildingState, RebuildSheet } from '../../components/RebuildSheet';
@@ -2793,8 +2793,18 @@ function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelin
                 style={styles.timelineRows}
                 testID={`day-timeline-rows-${entry.componentId}`}
               >
-                {entry.rows.map((row) => (
-                  <View key={row.id} style={styles.timelineExerciseRow}>
+                {/* ⚠ THE ROW CARRIES ITS POSITION, AND THE POSITION IS A CLAIM.
+                    The card and the opened session showed the same five
+                    exercises in two different orders until 2026-08-18, and
+                    NOTHING could see it: neither surface's rows were
+                    addressable, so no flow could ask "which is fourth?".
+                    An order nothing can assert is an order that drifts. */}
+                {entry.rows.map((row, rowIndex) => (
+                  <View
+                    key={row.id}
+                    style={styles.timelineExerciseRow}
+                    testID={`day-card-row-${entry.componentId}-${rowIndex + 1}-${stableTestIdToken(row.name)}`}
+                  >
                     <Text
                       style={styles.timelineExerciseName}
                       numberOfLines={1}

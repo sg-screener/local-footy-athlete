@@ -108,6 +108,10 @@ import {
   type SessionExecutionPlan,
   type SessionExecutionSection as SessionExecutionSectionModel,
 } from '../../utils/sessionExecutionChecklist';
+import {
+  buildSwapSuggestionPayload,
+  type SwapSuggestionPayload,
+} from '../../utils/swapSuggestionPayload';
 
 type EditableExercise = {
   key: string;
@@ -116,17 +120,10 @@ type EditableExercise = {
   raw?: any;
 };
 
-type SuggestedExercise = {
-  name: string;
-  sets: number;
-  repsMin: number;
-  repsMax: number;
-  weight?: number;
-  notes?: string;
-  prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
-  perSide?: boolean;
-  restSeconds?: number;
-};
+// THE SWAP PAYLOAD'S SHAPE AND ITS RULE BOTH LIVE IN `utils/swapSuggestionPayload`
+// — a rule about which LOAD an athlete sees cannot be asserted by anything that
+// has to mount React Native first. See that file's header for the defect.
+type SuggestedExercise = SwapSuggestionPayload;
 
 type SuggestedSwap =
   | {
@@ -305,28 +302,6 @@ function buildEditableExercises(workout: any, isTeamOnly: boolean): EditableExer
       exercise !== null && !!exercise.name);
 }
 
-function baseSuggestion(
-  name: string,
-  raw?: any,
-  overrides: Partial<SuggestedExercise> = {},
-): SuggestedExercise {
-  const sets = Number(raw?.prescribedSets) || 3;
-  const repsMin = Number(raw?.prescribedRepsMin) || 8;
-  const repsMax = Number(raw?.prescribedRepsMax) || Math.max(repsMin, 10);
-  return {
-    name,
-    sets,
-    repsMin,
-    repsMax,
-    weight: overrides.weight ?? raw?.prescribedWeightKg,
-    notes: overrides.notes,
-    prescriptionType: overrides.prescriptionType ?? raw?.prescriptionType,
-    perSide: overrides.perSide ?? raw?.perSide,
-    restSeconds: overrides.restSeconds ?? raw?.restSeconds,
-    ...overrides,
-  };
-}
-
 function tapSwapReason(reason: SwapReason): TapSwapReason {
   if (reason === 'No equipment') return 'no_equipment';
   if (reason === 'Injury / pain') return 'injury_or_pain';
@@ -349,7 +324,7 @@ function suggestedSwapFromChoice(
   }
   return {
     kind: 'exercise',
-    suggestion: baseSuggestion(
+    suggestion: buildSwapSuggestionPayload(
       choice.name,
       exercise.raw,
       choice.prescription ?? {},
@@ -2384,6 +2359,16 @@ function StrengthExerciseCard({
           style={{ width: 1, height: 1 }}
           testID={`exercise-set-count-${exerciseToken}-${exercise.prescribedSets}`}
         />
+        {/* ⚠ THE POSITION THE ATHLETE IS TOLD TO DO THIS IN, MADE ASSERTABLE.
+            Same 1x1 idiom as the set count directly above — a VALUE encoded in
+            an id, because the numeral is drawn inside an `accessible` header
+            and no flow could otherwise ask "which exercise is fourth?". The
+            card and this screen disagreed about exactly that until 2026-08-18
+            and nothing on either surface could see it. */}
+        <View
+          style={{ width: 1, height: 1 }}
+          testID={`session-strength-position-${label}-${stableTestIdToken(exerciseName)}`}
+        />
         <View style={styles.weightControl}>
           <Pressable
             onPress={() => decrementWeight(exercise)}
@@ -2408,10 +2393,29 @@ function StrengthExerciseCard({
               returnKeyType="done"
             />
           ) : (
+            /**
+             * ⚠ **THE LOAD IS SPOKEN AND ADDRESSABLE, NOT JUST DRAWN.**
+             *
+             * This control is `accessible` (a bare `accessibilityLabel` makes it
+             * so), which REPLACES its subtree in the accessibility tree — so the
+             * number the athlete reads on the glass was reachable by nobody
+             * else. Two consequences, and the second is why this changed here:
+             * a VoiceOver athlete heard *"Edit weight"* and was never told the
+             * weight; and **no real-route guard could assert a prescribed load
+             * at all**, which is exactly how a replacement wearing the outgoing
+             * lift's 20 kg shipped and stayed shipped. A value with no reader is
+             * a value nothing can hold.
+             *
+             * The label now CARRIES the value and the row keeps its own id. The
+             * `Edit weight` wording is retained as the prefix rather than
+             * replaced — it is what the control DOES, and no flow that finds
+             * this control by that text stops finding it.
+             */
             <Pressable
               onPress={() => startEditingWeight(exercise)}
               style={styles.weightValueWrap}
-              accessibilityLabel="Edit weight"
+              testID={`workout-exercise-load-${exerciseToken}`}
+              accessibilityLabel={`Edit weight, ${formatWeight(exercise)}`}
             >
               <Text style={styles.weightValueText}>{formatWeight(exercise)}</Text>
             </Pressable>

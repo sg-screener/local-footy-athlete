@@ -429,3 +429,62 @@ function legacyFlavourTitle(workout: Partial<Workout>): string {
   const flavour = (workout as any).conditioningFlavour;
   return (flavour && LEGACY_FLAVOUR_TITLE[flavour]) || 'Conditioning';
 }
+
+/**
+ * **THE ORDER THE ATHLETE WILL ACTUALLY PERFORM THIS SESSION IN — one owner.**
+ *
+ * ## The defect this exists to end, measured on glass 2026-08-18
+ *
+ * The day card and the opened session showed the SAME five exercises in two
+ * different orders, and the session then NUMBERED its own:
+ *
+ * | stored (`workout.exercises`) | what the session numbered 1..5 |
+ * | --- | --- |
+ * | Back Squat, RDLs, **Cossack Squat**, Single-Leg RDL, Band Pallof Press | 1 Back Squat, 2 RDLs, 3 Single-Leg RDL, 4 Band Pallof Press, **5 Cossack Squat** |
+ *
+ * So the athlete read *"Cossack Squat, third of five"* on the card and
+ * *"5 Cossack Squat"* when they opened it. Nothing was missing; the ORDER
+ * disagreed. `rules/dayTimeline.ts` asserts the opposite in its own docstring —
+ * *"not a re-order … the card's drop-down and the session screen cannot come to
+ * disagree … they are one list asked twice"* — and they were not one list: the
+ * card read the raw component buckets, the session read this template.
+ *
+ * ## Why the answer is THIS function and not a second sort
+ *
+ * **No new programming policy is invented here, and none may be.** D2's order
+ * (`SESSION_ROLE_ORDER`: power → main → accessory → midline/prehab → …) is
+ * already authored, already shipped, and already what the athlete performs.
+ * Re-implementing a comparator beside it would be the third representation of
+ * one fact — the defect class this repo exists to fight. So this reads the
+ * template that is ALREADY BUILT and simply reports the position it gave each
+ * row. Supersets stay clustered for free, because `orderItems` clustered them.
+ *
+ * Rows the template does not place keep their incoming order, AFTER the placed
+ * ones. That is deliberate and it is the safe direction: an unrecognised row is
+ * never dropped and never silently promoted above authored work.
+ *
+ * STABLE. Two rows the template ranks equally stay in the order they arrived,
+ * so this can never reshuffle a day it has nothing to say about.
+ */
+export function orderRowsAsSessionPresents<T>(
+  workout: Partial<Workout> | null | undefined,
+  rows: readonly T[],
+): T[] {
+  if (!workout || rows.length < 2) return [...rows];
+  const position = new Map<string, number>();
+  buildSessionTemplate(workout).items.forEach((item, index) => {
+    if (item.kind !== 'exercise') return;
+    const id = String((item.row as any)?.id ?? '').trim();
+    if (id && !position.has(id)) position.set(id, index);
+  });
+  if (position.size === 0) return [...rows];
+  const unplaced = position.size + rows.length;
+  return rows
+    .map((row, arrivalIndex) => {
+      const id = String((row as any)?.id ?? '').trim();
+      const placed = id ? position.get(id) : undefined;
+      return { row, arrivalIndex, rank: placed ?? unplaced };
+    })
+    .sort((a, b) => (a.rank - b.rank) || (a.arrivalIndex - b.arrivalIndex))
+    .map((entry) => entry.row);
+}

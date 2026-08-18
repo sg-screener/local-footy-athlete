@@ -246,3 +246,185 @@ naming its own reason). Their doors are located — `home-tired-entry`,
 `home-rollover-refusal`, `ExtraSessionOfferCard` in `HomeScreenV2:986` — and
 NONE of them has been driven. **Session 1 went entirely on standing the
 instrument back up and on capabilities 1 and 3.**
+
+## ✅ BOTH LIVE UI DEFECTS ARE CLOSED — 2026-08-18
+
+Sam, this session: *"Close both live UI defects, not only the swapped weight. The
+day summary and opened session must read one canonical exercise order. For the
+swapped load, trace stored replacement authority versus screen/local state."*
+
+### ✅ DEFECT A — THE SWAPPED LOAD. **THE WRITER WAS RIGHT AND WAS BEING TALKED OVER.**
+
+The trace Sam asked for, stored authority vs screen state:
+
+| layer | what it says about `Glute Bridge` replacing a 20 kg `Single-Leg RDL` |
+| --- | --- |
+| **stored authority** — `loadForReplacementExercise` | **UNSET** (bodyweight / athlete-chosen). Its ladder: own recorded history → authored estimate → bodyweight/blank. |
+| **the writer** — `replaceExerciseAtDate` | correct already. `Number.isFinite(Number(toExercise.weight)) ? …caller's… : …owner's…` |
+| **screen/local state** — the session screen's `baseSuggestion` | `weight: overrides.weight ?? raw?.prescribedWeightKg`, where **`raw` is the row being replaced**. |
+| **what the athlete saw** | **`BW + 20kg`** |
+
+**So the payload arrived pre-filled with 20, the writer's caller-arm always won,
+and the fix the `journey` seat landed on 2026-08-18 could never run on the door
+the athlete actually uses.** That is why the defect survived its own fix: the
+coach's path and the athlete's path reach the same writer, and only one of them
+was talking over it.
+
+**THE AUTHORITY IS REMOVED, NOT BALANCED.** The fallback is gone. Nothing was
+taught to compensate for it and no compatibility logic was added.
+
+- `overrides.weight` still wins — a choice that **prescribes** a load is stating
+  one, not inheriting one. The recovery fallbacks (`Easy Bike`,
+  `Breathing Reset`) send `weight: 0` to mean unloaded and that is theirs to say.
+  Every ordinary `same_movement_pattern` choice sends **no** prescription, which
+  is exactly the population that was inheriting.
+- **The DOSE still carries over** — sets, rep range, rest, per-side. A dose
+  belongs to the SLOT the new movement steps into; a load belongs to the
+  EXERCISE. Asserted, so "fix" by blanking everything cannot pass.
+
+**AND THE RULE MOVED OUT OF THE SCREEN.** `utils/swapSuggestionPayload.ts` now
+owns it. *Which load does the athlete see* is a rule, and a rule inside a
+4,400-line screen cannot be held by anything that does not mount React Native.
+
+**A SECOND, SMALLER THING WAS IN THE WAY AND IS FIXED:** the weight control is
+`accessible`, which **replaces its subtree** in the accessibility tree — so the
+kilogram number was reachable by no screen reader and by no flow. **That is how
+this shipped and stayed shipped: no guard could assert a prescribed load at all.**
+Its label now carries the value (`Edit weight, 110kg`) and the row carries an id.
+
+### ✅ DEFECT B — ONE CANONICAL ORDER
+
+**The card and the session were never "one list asked twice".** They were two
+independent reads:
+
+- card: `composeDayDetail` → the raw component buckets → **stored array order**
+- session: `buildSessionTemplate` → `orderItems(items, d2Rank)` → **D2's authored
+  role order** (power → main → accessory → midline → prehab)
+
+**The template is now the one owner.** `orderRowsAsSessionPresents` **reports the
+placement the template already computed** — it does not re-rank, so no second
+comparator exists to drift, and supersets stay clustered for free because
+`orderItems` clustered them.
+
+**NO NEW PROGRAMMING POLICY, AND THIS WAS THE FORK.** D2's order is authored,
+shipped, and already what the athlete performs. **The card was corrected to the
+session, not the session to the card** — the other direction would have invented a
+new performance order, which this mission is explicitly barred from doing.
+
+Rows the template does not place keep their incoming order **after** the placed
+ones: an unrecognised row is never dropped and never promoted above authored work.
+
+**BOTH SURFACES' ROWS ARE NOW ADDRESSABLE**, and that is part of the fix rather
+than decoration: neither carried a testID, so nothing could ask *"which exercise
+is fourth?"*. **An order nothing can assert is an order that drifts.**
+
+### MEASURED — and each property is held in BOTH halves
+
+| | branch | base | instrument |
+| --- | --- | --- | --- |
+| swap: replacement shows its own load | **WORKING** | broken | `.maestro/visible/swap-load.yaml`, 22 steps green on glass |
+| one order, card vs session | **WORKING** | broken | `.maestro/visible/one-order.yaml`, 17 steps green on glass |
+| both, headless | **9/0** | — | `npm run test:visible-surfaces`, new, **in the bible chain** |
+| `test:compile` | **red, IDENTICAL to base** | red | 7 file/scope pairs, same names, same counts, `TOTAL 469` both |
+| `test:law-registry` | 135 rows / 114 guarded / **21 UNENFORCED** | 132 / 111 / **21** | same 12 passed, 2 failed, same two names. **THE UNENFORCED COUNT DID NOT RISE.** |
+| `test:maestro-element-contract` | red, **identical missing set** | red | 3 entries, byte-identical both trees |
+
+**WHY BOTH A FLOW AND A SUITE, STATED SO NEITHER IS MISTAKEN FOR ENOUGH.** The
+flows are the acceptance — they tap the real controls and read the real glass —
+but they need a booted simulator, so nothing runs them on an ordinary change, and
+**a guard outside the chain is a guard nothing runs.** The suite is the chain's
+half. **The suite CANNOT see a screen that stops calling these owners — which is
+exactly what the swap defect WAS** — and the flow cannot run in the chain. Both,
+or the property is half held.
+
+### MUTATIONS — six, all killed
+
+| # | mutation | result |
+| --- | --- | --- |
+| M1 | the hand-written harness copy of the persisted-input list | ✅ 4 cells, the simulator's own message |
+| M2 | the shared projection's `hydratedSeasonPhaseClock` arm dropped | ✅ exactly its 1 cell |
+| M3 | the screen pre-fills the outgoing load again (**on glass**) | ✅ *"`Edit weight, BW + 20kg` is not visible"* — the defect verbatim |
+| M4 | the card reads the raw buckets again (**on glass**) | ✅ `day-card-row-strength-4-band-pallof-press` |
+| M5 | the card reads the raw buckets again (headless) | ✅ prints BOTH orders side by side |
+| M6 | the payload pre-fills the outgoing load (headless) | ✅ prints `20` |
+
+### ✅ CAPABILITY 4 — READINESS: LESS WORK, LOAD HELD, AND THE ATHLETE IS TOLD
+
+`.maestro/visible/readiness-holds-load.yaml`, 32 steps green. Real route:
+Program → `Tired` → *"Feeling flat — what's closest?"* → **Totally cooked**.
+
+| | before | after |
+| --- | --- | --- |
+| Back Squat | 3 sets · 110kg | **2 sets · 110kg** |
+| RDLs | 3 sets · 90kg | **2 sets · 90kg** |
+| the day says why | — | `modifiers-strip-day` visible |
+
+**Less total work, load retained** — the approved contract's low-readiness order
+exactly. **The load half is asserted deliberately: a reduction that also dropped
+the kilograms would pass every set-count cell and is a different, wrong answer.**
+
+**⚠ TWO THINGS FOUND HERE, NAMED AND NOT CHASED:**
+
+1. **"Bit tired today" changes nothing and says nothing.** Measured: the fatigue
+   fact IS recorded and active (`readiness-active-…fatigue-date-2026-07-13` in the
+   live tree), and the session is byte-identical — sets `3,3,3,2,3` before and
+   after — with no notice on the day. The mildest of the three answers may well be
+   log-only by design; **the gap is that the athlete is not told that.** The
+   `illness_mild` option one sheet over carries a sub-label saying exactly what it
+   will do (*"Log it — I'll offer to soften today if you want"*); this one carries
+   none. A copy question, not a wiring one.
+2. **A readiness answer at this strength RE-MINTS the row identities** —
+   `dev-e2e-…-exercise-ex-squat-1` becomes `we-w-composed-mc-ai-1-1-0`, and the
+   day drops from 5 exercises to 3. The drop is a legitimate reduction. **The
+   identity change is not chased and is flagged**: any decision keyed to a row id
+   (an exclusion, a pin, a weight override) is pointing at an id that no longer
+   exists after a rebuild. That is its own unit.
+
+### STILL NOT WALKED
+
+Capabilities **2** (block 2 progression/rotation visible, restart identity),
+**5** (the extra-session offer card), **6** (temporary equipment, kit legality,
+expiry on return), **7** (a refused world naming its reason). Doors located,
+none driven.
+
+## BLAST RADIUS — FULL SWEEPS, UNTRUNCATED, BOTH RUN TO COMPLETION
+
+| | failures | of | world |
+| --- | --- | --- | --- |
+| branch `feat/athlete-can-see-it` | **154** | 405 | `scratchpad/wt-visible` |
+| control worktree at `c2aaf313` | **154** | 403 | `scratchpad/wt-control`, same node_modules |
+
+**GAINED: 0. LOST: 0. The two failing sets are IDENTICAL name for name**
+(`comm -13` / `comm -23` over the full sorted sets, never a `tail` —
+[[a-truncated-diff-manufactures-findings]]). The +2 suites are
+`test:visible-surfaces` and `test:persisted-input-projection` joining the chain;
+neither is in the failing set.
+
+### ⚠ ONE GAINED RED WAS REAL, AND IT WAS AN INSTRUMENT AIMED AT A MOVED SHAPE
+
+The first sweep of the final tree reported **155 of 405 — one GAINED**:
+`test:dev-e2e-reset-hydration`, on the cell *"reload fingerprints compare
+persisted inputs and exclude derived adjustment output"*.
+
+**It was a SOURCE SCAN** — it grepped `devE2EPersistence.ts` for six literal
+field names. Deleting the harness's hand-written copy of the input list (the
+whole point of the first fix) took those strings out of that file, so the cell
+went red **while the property it guards became more true, not less**.
+`LAW-instrumentation-alive`, and the file's own docstring already describes this
+exact shape happening to it once before.
+
+**REPAIRED AT THE PROPERTY, NOT AT THE EXPECTATION.** The claim is unchanged; the
+cell now CALLS `projectProgramPersistedInputs` on a state that carries a derived
+`reversibleAdjustmentLedger` and reads what comes out, instead of grepping for
+prose. **A grep passes on a comment; this does not.** Mutation-checked both
+directions, which the scan never was:
+
+| # | mutation | result |
+| --- | --- | --- |
+| M7 | a DERIVED ledger added to the projection | ✅ RED |
+| M8 | a real input (`generationAnchorISO`) dropped | ✅ RED |
+
+Suite is **58 passed, 0 failed**. Re-swept: **154 of 405, GAINED 0, LOST 0.**
+
+**I did not report the first sweep's numbers as the answer.** A gained red is a
+finding to attribute, and this one was mine.

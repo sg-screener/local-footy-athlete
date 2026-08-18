@@ -1,0 +1,47 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - the day card and the opened session read ONE exercise order
+tags:
+  - e2e
+  - visible
+---
+# THE PROPERTY: `rules/dayTimeline.ts` states it as its founding claim — "the
+# card's drop-down and the session screen cannot come to disagree ... one list
+# asked twice". Until 2026-08-18 they DID disagree, about ORDER, and nothing
+# watched it: `surfaceAgreementTests`' conservation cell is over PARTS
+# (mobility / strength / conditioning), never over the rows inside a part.
+#
+# THE WORLD: this seed's Monday stores Back Squat, RDLs, Cossack Squat,
+# Single-Leg RDL, Band Pallof Press. D2's authored role order — power -> main ->
+# accessory -> midline -> prehab — performs Cossack Squat (prehab) LAST.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "day-timeline-part-strength"
+- extendedWaitUntil:
+    visible: "Cossack Squat"
+    timeout: 10000
+- takeScreenshot: artifacts/visible/c1-card-order
+# ── THE CARD'S LAST ROW IS THE SESSION'S LAST ROW ──
+# `Band Pallof Press` is the row Cossack Squat used to sit ABOVE on the card and
+# BELOW in the session. Proving Cossack is now below it on the CARD is the whole
+# disagreement, in one assertion, on the surface that was wrong.
+- assertVisible:
+    id: "day-card-row-strength-4-band-pallof-press"
+- assertVisible:
+    id: "day-card-row-strength-5-cossack-squat"
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- tapOn:
+    id: "session-execution-toggle-strength"
+# ── AND THE SESSION AGREES, POSITION FOR POSITION ──
+- assertVisible:
+    id: "session-strength-position-4-band-pallof-press"
+- assertVisible:
+    id: "session-strength-position-5-cossack-squat"
+- takeScreenshot: artifacts/visible/c1-session-order

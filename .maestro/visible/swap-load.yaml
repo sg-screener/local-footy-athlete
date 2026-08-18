@@ -1,0 +1,50 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - a swapped-in exercise never wears the outgoing lift's load
+tags:
+  - e2e
+  - visible
+---
+# THE PROPERTY: Sam, 2026-08-18 — a substitution's "replacement never inherits
+# another exercise's load". Driven on the ATHLETE'S OWN DOOR, which is a
+# different path from the coach's and was still producing the banned outcome
+# after the writer was fixed.
+#
+# THE WORLD: `Single-Leg RDL` is prescribed 20kg on this day. `Glute Bridge` —
+# the app's OWN first offered substitute for it — has no authored load of its
+# own (`loadForReplacementExercise` answers UNSET), so the honest screen is BW.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- tapOn:
+    id: "session-execution-toggle-strength"
+# ── NON-VACUITY FIRST. If the outgoing 20kg is not on screen, everything below
+# is asserting about a world that does not exist.
+- assertVisible: "Edit weight, 20kg"
+- takeScreenshot: artifacts/visible/c3-load-before
+- tapOn:
+    id: "component-swap-action-dev-e2e-standard-in-season-week-2026-07-13-dow-1-dev-e2e-standard-in-season-week-2026-07-13-dow-1-exercise-ex-custom-single-leg-rdl-4"
+- tapOn: "Don't like it"
+- tapOn: "Apply change"
+- tapOn: "Today only"
+- extendedWaitUntil:
+    visible: "Play Glute Bridge demo"
+    timeout: 10000
+# ── THE CLAIM, BOTH DIRECTIONS ──
+# The outgoing lift's number is GONE from the day...
+- assertNotVisible: "Edit weight, BW + 20kg"
+- assertNotVisible: "Edit weight, 20kg"
+# ...and the replacement is showing its OWN answer, which for a movement it has
+# never loaded is bodyweight.
+- assertVisible: "Edit weight, BW"
+# ── AND NOTHING ELSE ON THE DAY MOVED. The four untouched rows keep their own
+# loads; a "fix" that blanked every load would pass the two cells above.
+- assertVisible: "Edit weight, 110kg"
+- assertVisible: "Edit weight, 90kg"
+- takeScreenshot: artifacts/visible/c3-load-after

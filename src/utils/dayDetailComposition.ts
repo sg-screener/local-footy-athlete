@@ -30,6 +30,7 @@
 import type { Workout } from '../types/domain';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { getSessionComponentRows } from './sessionComponents';
+import { orderRowsAsSessionPresents } from './sessionTemplate';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
 import { DESCRIPTIVE_CONDITIONING_TYPES, LEGACY_FLAVOUR_TITLE, DAY_NAMES } from '../screens/home/dayWorkoutHelpers';
 
@@ -114,12 +115,24 @@ export function composeDayDetail(
   const condBlock = workout.conditioningBlock;
   const conditioningIdentity = projectConditioningVisibleIdentity(workout);
   const componentRows = getSessionComponentRows(workout);
-  const strengthExercises = componentRows.strengthRows;
+  // ⚠ **IN THE ORDER THE ATHLETE WILL PERFORM THEM, NOT THE ORDER THE BUCKETS
+  // HAPPENED TO FILL.** These three lines used to hand the raw component
+  // buckets straight out, and the buckets are in the workout's stored array
+  // order. The SESSION screen presents the same rows through
+  // `buildSessionTemplate`, which applies D2's authored role order — so the
+  // card said "Cossack Squat, third of five" and the session numbered the same
+  // exercise 5. MEASURED on glass 2026-08-18, both surfaces, one seed.
+  //
+  // `orderRowsAsSessionPresents` REPORTS the template's own placement; it does
+  // not re-rank anything. No new programming policy: D2's order is authored,
+  // shipped, and already what the athlete does. One owner, two readers.
+  const order = <T,>(rows: readonly T[]): T[] => orderRowsAsSessionPresents(workout, rows);
+  const strengthExercises = order(componentRows.strengthRows);
   // SPEED ROWS ARE THE SPEED PART'S (Sam, 2026-08-17, surface 3). Carried
   // through from the ONE row owner rather than re-derived here — the same
   // reason `strengthExercises` is not recomputed from the exercise list.
-  const speedExercises = componentRows.speedRows;
-  const supportExercises = componentRows.supportRows;
+  const speedExercises = order(componentRows.speedRows);
+  const supportExercises = order(componentRows.supportRows);
   const conditioningExercises = componentRows.conditioningRows;
   let conditioningOptions: ResolvedConditioningOption[] = [];
 
