@@ -48,6 +48,7 @@ import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useDecisionLedgerStore } from '../store/decisionLedgerStore';
 import { rebuildDerivedWorld } from '../store/quiescentBoot';
+import { commitRebuiltProgram } from '../utils/weekRebuild';
 import { deriveBlockBoundaryPrompts } from '../screens/home/useBlockBoundaryPrompts';
 import { isReductionExplanationRow } from '../rules/blockBoundaryProgression';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
@@ -315,11 +316,30 @@ function installWorld(args: {
       progressionHistory: { sessionFeedback: feedback, weightOverrides: {}, blockState: null },
     }) as TrainingProgram;
 
+    /* ⚠ **PUBLISHED THROUGH THE ROLLOVER'S OWN DOOR, WHICH IS WHAT THIS
+     * FUNCTION HAS ALWAYS CLAIMED TO DO** — *"exactly as the rollover does"*,
+     * two lines up. It did not: it wrote `currentProgram` with a raw
+     * `setState`, so the before-boot world was a generated program that had
+     * never passed an acceptance door, while the after-boot world had. Every
+     * comparison below then measured acceptance itself rather than boot.
+     *
+     * That was invisible while NEITHER door canonicalised the program. It
+     * stopped being invisible when the final program-write boundary moved to
+     * the one owner both doors reach (`stageAcceptedStateTransaction`), and this
+     * fixture reported the canonicalisation as a boot regression. The
+     * ASSERTIONS are untouched and are still exact; only the door is.
+     *
+     * The INPUTS go in first, because the publication reads them. */
     useProgramStore.setState({
-      currentProgram: program,
-      currentMicrocycle: program.microcycles[0],
       sessionFeedback: feedback,
       weightOverrides: {},
+    } as never);
+    commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
+      profile,
+      selectedDate: BLOCK_2_START,
+      reason: 'block-two-boot-preservation:install',
+    });
+    useProgramStore.setState({
       blockState: { blockStartDate: BLOCK_2_START, blockNumber: 2 },
       generationAnchorISO: BLOCK_2_START,
     } as never);
