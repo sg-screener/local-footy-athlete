@@ -1079,3 +1079,60 @@ session, **one** notice — `Dumbbells today — no barbell` under `RDLs` — an
 **`Single-Leg RDL 3 × 7 · 20kg` carrying no notice and no "Bodyweight" anywhere.**
 Form cues collapsed on every row, and absent on `RDLs` because the bar cue does
 not fit dumbbells.
+
+## THE FOUR FORM-CUE / EQUIPMENT CONFLICTS — FOR SAM'S RULING
+
+Ordered 2026-08-18: *"print the four form-cue/equipment conflicts as a table …
+Do not choose a side or invent coaching wording yet."* **No side is taken and no
+wording is proposed as final** — the "recommended correction" column names WHICH
+DOCUMENT would move, not what it should say.
+
+| exercise | typed legal equipment (his sheet) | existing cue (his words, verbatim) | recommended correction |
+| --- | --- | --- | --- |
+| **Skull Crushers** | `['dumbbells']` | *"Lower to the sides of the head, press up, **use straight or Z bar**. Full range, elbows stay in place."* | Either the SHEET gains `barbell` as an alternative (making it `[['dumbbells','barbell']]`, the RDL shape), or the CUE drops the bar clause. **The cue reads like the sheet is incomplete**, not like the cue is wrong. |
+| **Z-Press** | `['barbell']` | *"Sit up tall, slight lean back when pressing. Stay tight through midline. **Can be done seated on a bench, or with dumbbells**."* | Same shape, other direction: the SHEET gains `dumbbells` (`[['barbell','dumbbells']]`). The cue already states the alternative, so the sheet is the half that is behind. |
+| **Inverted Row (Bodyweight)** | `['rings_trx']` | *"Straight body, **pull chest to bar**. Scale with foot position."* | Two readings and they are not equivalent. Either the sheet gains `pullup_bar` (a bar IS the common setup and the cue says so), or the cue's "bar" is loose wording for the ring handle. **This one materially changes who can be offered the exercise** — it is the row that caused the silent swap failure. |
+| **Tib Raises** | `[]` (nothing required) | *"Lean back against wall, lift toes to sky, **can use a Tib bar if you have one**. Controlled reps, full range."* | Lowest stakes: the cue offers optional kit for a bodyweight movement. Either leave it (the requirement of `[]` is correct — the bar is optional), or add an optional-equipment concept the sheet does not currently have. **Probably nothing to do.** |
+
+**HOW THEY BEHAVE TODAY, so the cost of leaving them is known:** all four are
+recorded in `src/data/cueImplement.ts` as what the CUE says, so the renderer
+suppresses each on any session where the selected implement differs. **None of
+them can put wrong setup words in front of an athlete.** The open question is
+only whether the sheet is under-stating the legal equipment — which affects what
+generation is allowed to OFFER, not what it says.
+
+**⚠ AND THE SWEEP FOUND TWO MORE OF A DIFFERENT KIND, named because they are not
+what was asked for and should not be counted as conflicts:** `Dumbbell
+Pullovers` and `Side Plank Row` have **no row on the sheet at all**
+(`equipmentRequiredFor` returns `null`), so they fall through to the load
+classifier. That is MISSING data rather than contradictory data, and it is its
+own question.
+
+## THE THREE REMAINING SURFACES — DOORS INVENTORIED, NOT WALKED
+
+**STOPPED HERE DELIBERATELY, AND THIS IS NOT "ran out of time on the last item".**
+Reaching any of these on glass needs an athlete driven to a BLOCK BOUNDARY —
+several weeks of recorded sessions through the real completion path — which is a
+different rig from the one this mission stood up. Half-driving them would produce
+exactly the flaky, state-dependent cells this file has already recorded twice.
+
+**THE DOORS, LOCATED AND ADDRESSABLE** (so the next session starts here, not at a
+grep):
+
+| surface | id |
+| --- | --- |
+| Block Two / new-block notice | `home-block-boundary-notice`, `-sentence`, `-dismiss` |
+| per-exercise block changes | `home-block-boundary-change-<exerciseName>` |
+| weekly commitment choice | `home-weekly-commitment-option-<n>` |
+| **extra-session offer** | `home-extra-session-offer`, `-sentence`, `home-extra-session-accept`, `home-extra-session-decline` |
+| typed refusal | `home-rollover-refusal` |
+| exclusion scope + restore | `explorerTestId.componentDeleteScope(...)` on `DayWorkoutScreenV2` |
+
+All of them live in `src/screens/home/BlockBoundaryCards.tsx` except the last.
+`test:athlete-journey` already proves the offer card's RULE headlessly (the
+`journey` seat, 40 cells); what is owed is the GLASS half — the athlete reaching
+the control and the screen changing.
+
+**⚠ AND ONE OF THEM CARRIES A KNOWN BASELINE RED:** `test:block-two-extra-session`
+THROWS at base (recorded in the merge notes for `c2aaf313`). A glass walk of the
+offer card should expect to meet that, and it is not this branch's doing.
