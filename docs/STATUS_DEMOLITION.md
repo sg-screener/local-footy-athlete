@@ -693,3 +693,38 @@ Census at this commit: 180 worlds, 90 setups, **140 built / 40 refused**
 (back to the pre-power baseline), 434 delivered sessions, **0 power rows**.
 
 Agent: demolition
+
+---
+
+## AREA A COMPLETE — §18 IS VALIDATION-ONLY. ALL FIVE MUTATION STAGES DELETED.
+
+`section18AcceptedWeekGateway.ts`: **1804 → 875 lines** (929 deleted).
+
+| stage | what it did | now |
+| --- | --- | --- |
+| repair search + 5 generators | Rest substitution, stacking, relocation, conditioning injection, candidate authoring | deleted (slice 2) |
+| regenerate / safeFallback cascade | tried three more weeks | deleted (slice 2) |
+| `withDisplacedCapacityReduction` | lowered the contract until the week passed | deleted (slice 2) |
+| `weeklyPowerBudget` | trimmed power — **destroyed an authored day** | **deleted, file gone** |
+| `applyUserRemovalConstraintsToWeek` | applied stored athlete deletions | **deleted** → accepted-state transaction |
+| `buildDerivedSessionExpiryCandidates` | cleared stale derived sessions | **deleted** → lifecycle owner |
+| `finaliseSection18SafetyWeek` | rewrote the week for safety; still stripped power | **deleted** → composer + specialists |
+| `presentDeclaredOffer` | placed/withdrew the optional session | **deleted** → scheduler |
+| read-time removal in `resolveFinalVisibleSection18Week` | applied deletions while PROJECTING | **deleted** (area D) |
+
+**FILES DELETED:** `rules/weeklyPowerBudget.ts`, `__tests__/weeklyPowerBudgetTests.ts`.
+
+`test:compile` shows only the 7 pre-existing baseline pairs — no new error in any
+scope.
+
+### REBUILD LIST — added by area A
+
+| capability | contract | owner to rebuild at |
+| --- | --- | --- |
+| Applying stored athlete deletions | a deletion is an accepted-state input, not a render filter | accepted-state transaction |
+| Clearing stale derived sessions | derived work expires when its source fact does | accepted-state / lifecycle |
+| Safety rewriting of a week | §18 safety policy | composer + specialists (at authoring) |
+| Optional-session placement/withdrawal | 1B offer survival rulings, Sam 2026-08-06 | scheduler |
+| Power allowance stamping + delivery | Section 18 A phase-owned target; power is strength work | power specialist + composer |
+
+Agent: demolition

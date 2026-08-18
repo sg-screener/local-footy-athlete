@@ -20,7 +20,6 @@ import {
   type Section18EffectiveWeekEvaluation,
   type Section18Finding,
 } from './section18EffectiveWeekEvaluator';
-import { finaliseSection18SafetyWeek } from './section18SafetyFinaliser';
 import { resolverMayDisplace } from './athletePlacement';
 import {
   assessWeekCraft,
@@ -28,7 +27,6 @@ import {
   type WeekCraftAssessment,
 } from './section18CraftTier';
 import {
-  presentDeclaredOffer,
   presentRequiredCoreConditioning,
 } from './section18OfferPlacement';
 import { applyGenerationSafetyToSection18Contract } from './section18SafetyPolicy';
@@ -63,7 +61,6 @@ import {
 } from './derivedSessionProvenance';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { AcceptedStateOperationKind } from '../store/acceptedStateTransaction';
-import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 import type { AcceptedEffectiveWeekSurfaces } from './acceptedEffectiveWeek';
 import { liveAcceptedEffectiveWeekSurfaces } from '../utils/liveEvaluationSurfaces';
 import { strengthPatternLedger } from './strengthPatternContributions';
@@ -342,11 +339,12 @@ export function resolveFinalVisibleSection18Week(args: {
   probeConstraintEntry('visible_resolver', args.surfaces.userRemovalConstraints);
   const weekStart = args.weekStart.slice(0, 10);
   const weekEnd = dateForDay(weekStart, 0);
-  const constrainedWorkouts = applyUserRemovalConstraintsToWeek({
-    workouts: args.workouts,
-    weekStart,
-    constraints: args.surfaces.userRemovalConstraints,
-  });
+  /* READ-TIME REMOVAL APPLICATION DELETED (2026-08-19, demolition). The visible
+   * resolver applied the athlete's stored deletions while PROJECTING, which is
+   * a read path mutating program content. Applying a stored decision belongs to
+   * the accepted-state transaction; projection displays what it is given.
+   * Recorded on the rebuild list. */
+  const constrainedWorkouts: Workout[] = [...args.workouts];
   const microcycle: Microcycle = {
     id: `section18-visible:${weekStart}`,
     programId: `section18-visible-program:${weekStart}`,
@@ -630,93 +628,33 @@ function resolveCandidate(args: {
   // filter. Apply it before lifecycle, safety and repair so those owners can
   // never restore content onto the prohibited target and then lose it again
   // only at the final visible projection.
-  const constrainedCandidateWorkouts = applyUserRemovalConstraintsToWeek({
+  /* ══ FOUR MUTATION STAGES DELETED HERE (2026-08-19, demolition) ═══════════
+   *
+   * §18 receives a FINISHED authored week and judges it. It ran four rewrites
+   * on the way in, and each belonged to somebody else:
+   *
+   *   applyUserRemovalConstraintsToWeek  — applying the athlete's stored
+   *       deletions. That is the ACCEPTED-STATE TRANSACTION's job; it is the
+   *       only production mutation boundary.
+   *   buildDerivedSessionExpiryCandidates — clearing stale derived sessions.
+   *       Lifecycle cleanup belongs to the accepted-state/lifecycle owner.
+   *   finaliseSection18SafetyWeek        — rewriting the week for safety, and
+   *       the path that still stripped power rows. Safety belongs in AUTHORING,
+   *       with the composer and the specialists.
+   *   presentDeclaredOffer               — placing and withdrawing the optional
+   *       session. Placing a session is the SCHEDULER's.
+   *
+   * All four are now deleted from this boundary. Each capability is recorded on
+   * the rebuild list in docs/STATUS_DEMOLITION.md against the ruling that
+   * defines it, to be rebuilt at its owner FROM THE CONTRACT — never by copying
+   * what stood here.
+   *
+   * The week is judged exactly as it arrived. */
+  const power = {
+    contract: args.candidate.contract,
     workouts: governableCandidateWorkouts,
-    weekStart: args.input.weekStart,
-    constraints: args.input.surfaces.userRemovalConstraints,
-  });
-  const preScoreExpiry = buildDerivedSessionExpiryCandidates({
-    workouts: constrainedCandidateWorkouts,
-    contract: args.candidate.contract,
-    weekStart: args.input.weekStart,
-    activeFixtureDates: args.input.activeFixtureDates,
-  })[0];
-  if (preScoreExpiry) {
-    initialRepairs.push({
-      kind: 'obsolete_derived_work_expired',
-      detail: `Expired ${preScoreExpiry.expiries.length} obsolete system-derived session/component${preScoreExpiry.expiries.length === 1 ? '' : 's'} before preservation scoring: ${preScoreExpiry.expiries.map((expiry) => `${expiry.origin}/${expiry.scope}/${expiry.reason}/${expiry.planEntryId ?? expiry.workoutId}`).join(', ')}.`,
-    });
-  }
-  const safety = finaliseSection18SafetyWeek({
-    contract: args.candidate.contract,
-    workouts: preScoreExpiry?.workouts ?? constrainedCandidateWorkouts,
-    weekStart: args.input.weekStart,
-    canonicalContext: {
-      phase: args.candidate.contract.identity.seasonPhase,
-      offseasonSubphase: canonicalContextSubphase(
-        args.candidate.contract.identity.seasonPhase,
-        contractOffseasonSubphase(args.candidate.contract),
-      ),
-      weekKind: args.candidate.contract.identity.weekKind,
-      profile: args.input.profile ?? undefined,
-    },
-  });
-  /* ── §18 NO LONGER TRIMS POWER (MOVE 1, 2026-08-19) ──────────────────────
-   *
-   * `weeklyPowerBudget` ran HERE and stripped power rows the week exceeded its
-   * budget by. That made the validator the owner of a coaching dose, which
-   * Sam's contract gives to the power specialist: *"Power belongs to authorised
-   * strength work."*
-   *
-   * `generateProgramLocally` now applies the budget on the AUTHORING side,
-   * immediately after the candidate is assembled and before this gateway is
-   * called, so the week that arrives here already respects it. There is nothing
-   * left to trim — and, more importantly, §18 no longer HAS the ability to trim,
-   * which is the property `test:weekly-power-budget` holds.
-   *
-   * The `weekly_power_budget` disclosure went with it: §18 does not report a
-   * reduction it did not make. */
-  const power = { contract: safety.contract, workouts: safety.workouts };
-  // THE WEEK PRESENTS THE OFFER ITS CONTRACT DECLARES (Sam's ruling, 2026-08-06
-  // — `docs/1B_OFFER_SURVIVAL_RULINGS_2026-08-06.md`).
-  //
-  // Here rather than in the repair search below, and that placement is the whole
-  // point. A missing offer is ADVISORY by the ruling — "doing it is the
-  // athlete's choice" — so it never produces a blocking violation, and the
-  // search only ever expands a candidate that has one. Restoring the offer is a
-  // normalisation of the accepted week, exactly like the safety finaliser and
-  // the power budget it stands beside, not a repair the week has to fail into.
-  //
-  // MEASURED: this gateway never destroys an offer (376 visible resolutions of
-  // a week carrying one, none lost) — the candidates simply ARRIVE without it,
-  // because the paths that build them do not run the placer. Every one of them
-  // converges here, which is why one call fixes deletion, relocation, coach
-  // edits and fixture moves at once without any of those paths learning what a
-  // flush is.
-  const offered = presentDeclaredOffer({
-    workouts: power.workouts,
-    contract: power.contract,
-    weekStart: args.input.weekStart,
-    profile: args.input.profile,
-    microcycleId: `section18-offer:${args.input.weekStart}`,
-    weekKind: power.contract.identity.weekKind,
-  });
-  if (offered.placedDays.length > 0) {
-    initialRepairs.push({
-      kind: 'offer_presented',
-      detail: `Presented the week's ${offered.placedDays.length} declared optional flush offer${offered.placedDays.length === 1 ? '' : 's'} on ${offered.placedDays.map((day) => DAY_NAMES[day]).join(', ')}.`,
-    });
-  }
-  // A WITHDRAWAL IS DISCLOSED LIKE A PLACEMENT, or ruling 2 removes the
-  // athlete's visible session silently. Same repair channel, opposite
-  // direction: the week carried more offers than its contract declares —
-  // which is what a fixture change makes true — so the surplus came off.
-  if (offered.withdrawnDays.length > 0) {
-    initialRepairs.push({
-      kind: 'offer_withdrawn',
-      detail: `Withdrew ${offered.withdrawnDays.length} optional flush offer${offered.withdrawnDays.length === 1 ? '' : 's'} the week's contract no longer declares, on ${offered.withdrawnDays.map((day) => DAY_NAMES[day]).join(', ')}.`,
-    });
-  }
+  };
+  const offered = { workouts: power.workouts };
   const baseContract = power.contract;
   /* ══ ONE ASSESSMENT, ON THE WEEK AS AUTHORED ═══════════════════════════════
    *
