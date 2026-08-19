@@ -637,6 +637,30 @@ export function buildInjuryFallbackLadder(
  * what to make up, which is the same finding `injuryRecompositionMessage`
  * already carries for its own omissions list.
  */
+/**
+ * THE FINER PATTERN IDENTITY OF ONE ROW, EXPORTED SO A MEASUREMENT CAN NAME WHAT
+ * IT ACTUALLY COVERED.
+ *
+ * `classifyGeneratedWorkoutRow(...).mainPattern` cannot separate a split squat
+ * from a squat or a single-leg RDL from a deadlift — it maps the MOVEMENT tag,
+ * and R-087's `single_leg_knee` / `single_leg_hip` live in the pools' `group`.
+ * That is fine for the §18 ledger, which counts them where it counts them, and
+ * useless for a coverage claim: a suite reporting *"squat, hinge"* over a day
+ * holding four distinct main patterns is claiming half of what it walked.
+ *
+ * ⚠ **IT RETURNS THE SLOT FOR ANY ROW THE POOLS DO NOT CARRY.**
+ * `Slant Board Step-Down`, `Cossack Squat` and `Lateral Lunge` are real
+ * single-leg knee work that `STRENGTH_POOLS` has no entry for, so they answer
+ * `squat`. A caller must not read that as "this is bilateral" — the honest
+ * question is whether a candidate is in a DIFFERENT named group, which is what
+ * `sameFinerIdentity` asks.
+ */
+export function finerPatternIdentityOf(exerciseName: string): string {
+  const candidate = candidateFor(exerciseName);
+  if (!candidate) return 'unknown';
+  return candidate.pool?.group ?? patternToSlot(candidate.tags.movement) ?? candidate.tags.movement;
+}
+
 export function injuryOmissionExplanation(exercise: string): string {
   return `${exercise} is left out this session — nothing safe was available for it with this injury.`;
 }

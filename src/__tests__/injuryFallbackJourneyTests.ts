@@ -1,0 +1,579 @@
+/**
+ * ── THE INJURY FALLBACK, WALKED BY A REAL ATHLETE ──────────────────────────
+ *
+ * Every claim this unit makes is made HERE, through the real doors, on a real
+ * generated week — never against hand-built state. `npm run census:injury-fallback`
+ * measures the LADDER; this measures what the athlete ends up looking at.
+ *
+ * ## WHAT IT HOLDS
+ *
+ *  [1] LIVENESS. The chosen day genuinely carries work the injury makes unsafe,
+ *      and the chosen unaffected day genuinely carries none. Both are DERIVED
+ *      from the generated week, never named here — a suite that declares a knee
+ *      injury against an upper day proves nothing, and that is not hypothetical:
+ *      `injuryRecompositionTests` has been doing exactly that on `main`, with
+ *      its own CONTROL cells red, so every "no unsafe rows left" cell in it has
+ *      been green and empty.
+ *  [2] EVERY AFFECTED PATTERN IS ANSWERED — squat, hinge, single-leg and trunk
+ *      on the lower day; the four upper planes on the upper day — and each
+ *      answer is legal, or the row is omitted and NAMED.
+ *  [3] EVERY REPLACEMENT CARRIES ITS OWN LOAD. R-096: a replacement must never
+ *      inherit the outgoing lift's weight.
+ *  [4] UNAFFECTED DAYS AND ROWS DO NOT MOVE, byte for byte.
+ *  [5] IT SURVIVES CLOSE AND REOPEN. The fact persists and the week re-derives
+ *      to the same rows.
+ *  [6] IT IS IDEMPOTENT. `quiescentBoot` re-applies active injuries after every
+ *      ledger replay, so a rule that is still true of its own answer rewrites
+ *      the session on every launch. Two relaunches, byte-identical rows.
+ *  [7] RESTORE RETURNS THE ACCEPTED PROGRAM. Clearing the injury puts the
+ *      original rows back, at their original loads.
+ *  [8] THE SENTENCE AND THE ROWS AGREE, in both directions.
+ *  [9] BLOCK ROTATION IS NOT CORRUPTED. A temporary injury leaves the stored
+ *      rotation history exactly as it found it.
+ *
+ * ## WHAT IT DOES NOT COVER
+ *
+ * The simulator — another lane owns it today. Everything here is headless and
+ * deterministic, and `scripts/seed-injury-fallback.ts` writes the seed a later
+ * glass pass needs.
+ *
+ * Run: npm run test:injury-fallback-journey
+ */
+(global as unknown as { __DEV__: boolean }).__DEV__ = true;
+const localStorageData = new Map<string, string>();
+(globalThis as unknown as { window: unknown }).window = {
+  localStorage: {
+    getItem: (k: string) => localStorageData.get(k) ?? null,
+    setItem: (k: string, v: string) => { localStorageData.set(k, v); },
+    removeItem: (k: string) => { localStorageData.delete(k); },
+    clear: () => { localStorageData.clear(); },
+  },
+};
+(global as unknown as { fetch: () => never }).fetch = () => { throw new Error('NETWORK DISABLED'); };
+process.env.TZ = 'Australia/Melbourne';
+
+/* eslint-disable import/first */
+import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
+import { addDaysISO } from '../utils/programBlockState';
+import { useProgramStore } from '../store/programStore';
+import { useProfileStore } from '../store/profileStore';
+import { useCalendarStore } from '../store/calendarStore';
+import { generateProgramLocally } from '../services/api/generateProgram';
+import { commitRebuiltProgram } from '../utils/weekRebuild';
+import { resolveWeekWithConditioning } from '../utils/sessionResolver';
+import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import { resetStoresToFreshInstall } from './support/freshInstallStores';
+import { quiet, quietAsync, relaunchApp, setJourneyClock } from './support/athleteJourney';
+
+const INSTALL_DAY = '2026-07-13';
+const TARGET = '2026-07-22';
+
+function mondayFor(d: string): string {
+  const p = new Date(`${d}T12:00:00Z`);
+  return addDaysISO(d, -((p.getUTCDay() + 6) % 7));
+}
+function theAthlete(): OnboardingData {
+  return {
+    firstName: 'Sim', heightCm: 184, weightKg: 90, seasonPhase: 'Off-season',
+    position: 'inside_mid', motivation: 'Dominate your level', trainingDaysPerWeek: 3,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
+    teamTrainingDuration: '90 minutes', teamTrainingIntensity: 'Moderate',
+    trainingLocation: 'Commercial gym',
+    equipment: ['barbell', 'dumbbells', 'squat_rack', 'pullup_bar', 'cable_machine', 'hamstring_curl', 'knee_extension', 'bands'],
+    experienceLevel: '5+ years', squatStrength: '1.5x bodyweight', benchStrength: '1.5x bodyweight+',
+    conditioningLevel: 'Good', sprintExposure: '2+ times per week', recentTrainingLoad: 'Very consistent',
+    injuries: [], twoKmTimeTrial: { seconds: 420, recordedOn: INSTALL_DAY, source: 'onboarding' },
+    equipmentAnswer: {
+      tags: { barbell: 'have', dumbbells: 'have', cables: 'have', machine: 'have', bands: 'have', bench: 'have', pullup_bar: 'have', kettlebell: 'have', foam_roller: 'have', plyo_box: 'have' },
+      modalities: { bike_erg: 'have', air_bike: 'have', row: 'have', ski: 'have', treadmill: 'have' },
+      answeredOn: INSTALL_DAY,
+    },
+    usualGameDay: 'Saturday', gameDay: 'Saturday',
+  } as unknown as OnboardingData;
+}
+function install(): string {
+  localStorageData.clear();
+  resetStoresToFreshInstall('removal-transaction:install');
+  const profile = theAthlete();
+  useProfileStore.getState().updateOnboardingData(profile);
+  quiet(() => useProfileStore.getState().completeOnboarding());
+  setJourneyClock(INSTALL_DAY);
+  const program = quiet(() => generateProgramLocally(profile, {
+    todayISO: INSTALL_DAY, previousProgram: null,
+    seasonPhaseClock: {
+      protocolVersion: 1, selectedPhase: 'Off-season' as never,
+      phaseEntryWeekStartISO: mondayFor(INSTALL_DAY),
+      originProvenance: 'explicit_user_phase_change',
+      persistenceProvenance: 'preserved_persisted_state',
+    },
+  })) as TrainingProgram;
+  const settled = program.microcycles[1] ?? program.microcycles[0]!;
+  const weekStart = String(settled.startDate).slice(0, 10);
+  quiet(() => commitRebuiltProgram(program, { preserve: [], clear: [], conflictsRemoved: [] }, {
+    markedDays: useCalendarStore.getState().markedDays ?? {}, selectedDate: weekStart,
+    reason: 'removal-transaction:generate',
+  }));
+  useProgramStore.setState({ currentMicrocycle: settled } as never);
+  return weekStart;
+}
+
+
+function rowsOf(dateISO: string, weekStartISO: string): string[] {
+  const week = quiet(() => resolveWeekWithConditioning(weekStartISO, buildScheduleStateImperative()));
+  const day = week.find((d) => d.date === dateISO);
+  const w = (day as { workout?: Workout } | undefined)?.workout;
+  return (w?.exercises ?? []).map((r) => {
+    const n = (r as { exercise?: { name?: string } }).exercise?.name ?? (r as { name?: string }).name;
+    const kg = (r as { prescribedWeightKg?: number }).prescribedWeightKg;
+    return `${n}@${kg ?? '-'}`;
+  });
+}
+function workoutOn(dateISO: string, weekStartISO: string): Workout | null {
+  const week = quiet(() => resolveWeekWithConditioning(weekStartISO, buildScheduleStateImperative()));
+  const day = week.find((d) => d.date === dateISO);
+  return ((day as { workout?: Workout } | undefined)?.workout) ?? null;
+}
+
+
+
+
+
+/**
+ * ⚠ **THE BANDS AND THE PLANES ARE BOTH COVERED ON PURPOSE.**
+ *
+ * `hamstring 4` is the case the whole unit turns on: `RDLs` is rated
+ * `hamstring: 'avoid'` so it must be swapped even in Sam's mild band, while
+ * `Leg Press` and `Bulgarian Split Squats` are `caution` and must be **kept**
+ * — *"Swap obvious aggravators. Keep safe work in."* On `main` that world
+ * replaced the whole lower day with a bench press and a bike.
+ *
+ * `shoulder 6` is the only case that reaches the four UPPER planes, because the
+ * generated week puts them on their own day. Without it, `horizontal_push`,
+ * `vertical_push`, `horizontal_pull` and `vertical_pull` are never walked here.
+ */
+const CASES = [
+  { label: 'hamstring, moderate', area: 'hamstring', region: 'lower_body', severity: 4 },
+  { label: 'hamstring, limiting', area: 'hamstring', region: 'lower_body', severity: 6 },
+  { label: 'knee, limiting', area: 'knee', region: 'lower_body', severity: 6 },
+  { label: 'hamstring, paused', area: 'hamstring', region: 'lower_body', severity: 8 },
+  { label: 'lower back, limiting', area: 'lower back', region: 'lower_body', severity: 6 },
+  { label: 'shoulder, limiting', area: 'shoulder', region: 'upper_body', severity: 6 },
+] as const;
+
+/** Every main-strength plane the mission names, and what has been walked. */
+const PATTERNS_SEEN = new Set<string>();
+
+let pass = 0;
+let fail = 0;
+const failures: string[] = [];
+function ok(name: string, condition: boolean, detail?: unknown): void {
+  if (condition) { pass += 1; console.log(`  ok   ${name}`); return; }
+  fail += 1; failures.push(name);
+  console.log(`  FAIL ${name}${detail === undefined ? '' : `\n         ${JSON.stringify(detail)}`}`);
+}
+
+function namesOf(rows: string[]): string[] {
+  return rows.map((row) => row.slice(0, row.lastIndexOf('@')));
+}
+function loadOf(rows: string[], name: string): string | null {
+  const hit = rows.find((row) => row.slice(0, row.lastIndexOf('@')) === name);
+  return hit ? hit.slice(hit.lastIndexOf('@') + 1) : null;
+}
+
+/** Every day in the generated fortnight that carries any rows. */
+function trainingDays(weekStart: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < 14; i += 1) {
+    const date = addDaysISO(weekStart, i);
+    if (rowsOf(date, weekStart).length > 0) out.push(date);
+  }
+  return out;
+}
+
+async function declareInjury(
+  area: string, region: string, severity: number, todayISO: string,
+): Promise<{
+  ok: boolean; changedProgram: boolean; message?: string; createdModifierIds?: string[];
+}> {
+  /* eslint-disable @typescript-eslint/no-var-requires */
+  const { executeProgramControlActionDurably } = require('../utils/programControlActions');
+  const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
+  const constraint = buildGuidedInjuryConstraint({
+    region, area, severity,
+    severityBand: 'caution', adjustmentLevel: 'reduce_load',
+    triggers: ['during'], seriousSymptoms: false,
+  } as never, { todayISO });
+  return await quietAsync(() => executeProgramControlActionDurably({
+    type: 'set_injury_modifier',
+    source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
+    scope: 'current_and_future',
+    payload: { constraint },
+    requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+  }, { todayISO })) as {
+    ok: boolean; changedProgram: boolean; message?: string; createdModifierIds?: string[];
+  };
+}
+
+function environmentFor(
+  area: string, region: string, severity: number, dateISO: string,
+): unknown {
+  const { resolveTapSwapEnvironment } = require('../utils/tapSwapHierarchy');
+  const { buildGuidedInjuryConstraint } = require('../utils/guidedInjuryControl');
+  const constraint = buildGuidedInjuryConstraint({
+    region, area, severity,
+    severityBand: 'caution', adjustmentLevel: 'reduce_load',
+    triggers: ['during'], seriousSymptoms: false,
+  } as never, { todayISO: dateISO }) as { bucket?: string; severity: number };
+  return quiet(() => resolveTapSwapEnvironment({
+    date: dateISO, profile: useProfileStore.getState().onboardingData,
+    activeConstraints: [], readinessSignal: null,
+    primaryInjury: { bucket: constraint.bucket, severity: constraint.severity },
+  }));
+}
+
+/**
+ * ── [0] SAM'S OWN GOOD SWAPS AND BAD SWAPS, ASKED OF THE LADDER DIRECTLY ────
+ *
+ * The journey below proves the DOOR behaves; this proves the LADDER answers what
+ * Sam wrote. Each line is a verbatim example from `LFA_PROGRAMMING_BIBLE.md`
+ * Section 8, and the bad-swap half matters as much as the good-swap half — a
+ * ladder that offers `Deadlift` for a sore hamstring's `RDLs` has found the
+ * worse version of his own *"Hamstring pain from RDL -> lighter RDL"*.
+ *
+ * These are asked of `buildInjuryFallbackLadder` with the band rule and nothing
+ * else, so they hold the ORDER and the CANDIDATE SET rather than one door's
+ * output on one generated week.
+ */
+function ladderFor(exercise: string, region: string, severity: number): Array<{
+  name: string; rung: string; coversOriginalPattern: boolean;
+}> {
+  const { buildInjuryFallbackLadder } = require('../rules/injuryFallbackLadder');
+  const { injuryPermitsExerciseAtSeverity } = require('../rules/injuryExerciseRisk');
+  return buildInjuryFallbackLadder({
+    exercise, region, avoidNames: [],
+    isLegal: (name: string) => injuryPermitsExerciseAtSeverity(name, region, severity),
+  });
+}
+
+function authoredSwapSection(): void {
+  console.log('\n[0] Sam\'s authored swap hierarchy, asked of the ladder]');
+  const { finerPatternIdentityOf } = require('../rules/injuryFallbackLadder');
+
+  // "RDL -> hip thrust, glute bridge" — and NOT the heavier hinge.
+  const rdl = ladderFor('RDLs', 'hamstring', 4);
+  ok('RDL/hamstring offers Sam\'s hip thrust or glute bridge in the same pattern',
+    rdl.slice(0, 4).some((o) => o.name === 'Hip Thrusts' || o.name === 'Glute Bridge'),
+    rdl.slice(0, 4).map((o) => o.name));
+  ok('RDL/hamstring never offers a HEAVIER hinge — his own bad swap',
+    !rdl.some((o) => o.name === 'Deadlift' || o.name === 'Trap Bar Deadlift'),
+    rdl.map((o) => o.name).slice(0, 8));
+
+  // "Barbell bench -> DB floor press" / "Bench -> neutral-grip DB press".
+  const bench = ladderFor('Bench Press', 'shoulder', 4);
+  ok('bench/shoulder answers with a PRESS, not a squat — Bible :2198',
+    bench[0]?.coversOriginalPattern === true
+      && finerPatternIdentityOf(bench[0]!.name) === 'horizontal_push',
+    bench.slice(0, 3).map((o) => o.name));
+  ok('bench/shoulder reaches Sam\'s DB floor press or push-up',
+    bench.slice(0, 6).some((o) =>
+      o.name === 'Single-Arm DB Floor Press' || o.name === 'Push-ups'),
+    bench.slice(0, 6).map((o) => o.name));
+
+  // "Overhead press -> landmine press".
+  const ohp = ladderFor('Overhead Press', 'shoulder', 4);
+  ok('overhead press/shoulder offers the landmine press first — his verbatim swap',
+    ohp[0]?.name === 'Landmine Press', ohp.slice(0, 3).map((o) => o.name));
+
+  // "Bent-over row -> chest-supported row or cable row".
+  const row = ladderFor('Barbell Row', 'lowerBack', 4);
+  ok('bent-over row/lower back offers the chest-supported or cable row',
+    row.slice(0, 4).some((o) =>
+      o.name === 'Chest Supported Row' || o.name === 'Seated Cable Row'),
+    row.slice(0, 4).map((o) => o.name));
+
+  // "Knee pain from jumping -> more jump contacts" is the BAD swap.
+  const jump = ladderFor('Box Jumps', 'knee', 6);
+  ok('box jumps/knee never answers with more jumping — his own bad swap',
+    !jump.some((o) => finerPatternIdentityOf(o.name) === 'plyo'),
+    jump.slice(0, 5).map((o) => o.name));
+
+  // R-087: a split squat is `single_leg_knee`, and a bilateral squat is not it.
+  const split = ladderFor('Bulgarian Split Squats', 'knee', 4);
+  const kept = split.filter((o) => o.coversOriginalPattern);
+  ok('CONTROL: the split squat has same-pattern answers at all',
+    kept.length > 0, split.slice(0, 4).map((o) => o.name));
+  /* ⚠ **THE CHECK IS AGAINST THE OTHER GROUP, NOT AGAINST "HAS A GROUP".**
+   * `Slant Board Step-Down`, `Cossack Squat` and `Lateral Lunge` are genuine
+   * single-leg knee work that `STRENGTH_POOLS` does not carry, so they report
+   * their SLOT (`squat`) and not a group — an assertion that every covering
+   * answer is literally `single_leg_knee` fails on the ladder being RIGHT about
+   * them. What must never happen is a BILATERAL squat counting as coverage for
+   * a split squat, which is the R-087 distinction. */
+  const bilateralSquats = ['Goblet Squat', 'Leg Press', 'Bodyweight Squat', 'Back Squat',
+    'Front Squat', 'Box Squat', 'High Box Squat'];
+  ok('a bilateral squat does not count as covering the single-leg pattern (R-087)',
+    kept.every((o) => !bilateralSquats.includes(o.name)),
+    kept.map((o) => `${o.name}:${finerPatternIdentityOf(o.name)}`));
+
+  // "Heavy carry -> Pallof press or dead bug".
+  const carry = ladderFor('Farmer Carry', 'lowerBack', 4);
+  ok('heavy carry/lower back reaches Sam\'s Pallof press or dead bug',
+    carry.some((o) => /Pallof|Dead Bug/i.test(o.name)),
+    carry.slice(0, 6).map((o) => o.name));
+}
+
+async function main(): Promise<void> {
+  const { unsafeRowsForInjury } = require('../utils/injurySessionRecomposition');
+  authoredSwapSection();
+  const { classifyGeneratedWorkoutRow } = require('../rules/generatedWorkoutRowClassification');
+  const { finerPatternIdentityOf } = require('../rules/injuryFallbackLadder');
+
+  for (const testCase of CASES) {
+    console.log(`\n[${testCase.label}]`);
+    const weekStart = install();
+    const days = trainingDays(weekStart);
+
+    /* ── [1] LIVENESS, DERIVED ─────────────────────────────────────────────
+     * The day the injury is declared against is the one the generated week
+     * actually gives it work to do — chosen by asking, never by naming a date
+     * that a generation change can quietly make wrong. */
+    let target: string | null = null;
+    let targetCount = 0;
+    let untouched: string | null = null;
+    for (const date of days) {
+      setJourneyClock(date);
+      const workout = workoutOn(date, weekStart);
+      const unsafe = quiet(() => unsafeRowsForInjury({
+        workout, environment: environmentFor(testCase.area, testCase.region, testCase.severity, date),
+      })) as string[];
+      /* ⚠ **THE MOST-AFFECTED DAY, NOT THE FIRST ONE.** Taking the first put the
+       * SHOULDER case on the lower day, whose only shoulder-rated row is
+       * `Band Pallof Press` — so the four upper planes were never walked and the
+       * coverage line read "trunk_support" for a shoulder injury. */
+      if (unsafe.length > targetCount) { target = date; targetCount = unsafe.length; }
+      if (unsafe.length === 0 && untouched === null) untouched = date;
+    }
+    ok(`${testCase.label} — CONTROL: a day in the real week carries work this injury makes unsafe`,
+      target !== null, { days });
+    if (target === null) continue;
+
+    setJourneyClock(target);
+    const beforeTarget = rowsOf(target, weekStart);
+    const beforeUntouched = untouched ? rowsOf(untouched, weekStart) : null;
+    const beforeRotation = JSON.stringify(
+      (useProgramStore.getState() as unknown as { blockState?: unknown }).blockState ?? null);
+    const environment = environmentFor(testCase.area, testCase.region, testCase.severity, target);
+    const unsafeBefore = quiet(() => unsafeRowsForInjury({
+      workout: workoutOn(target!, weekStart), environment,
+    })) as string[];
+    /* The FINER identity — see `finerPatternIdentityOf`. `mainPattern` alone
+     * cannot separate a split squat from a squat, so a coverage claim built on
+     * it would under-report every single-leg world this suite walks. */
+    const patternsBefore = new Set(unsafeBefore.map((name) => {
+      const identity = finerPatternIdentityOf(name);
+      return identity === 'unknown'
+        ? String(classifyGeneratedWorkoutRow({ name }).kind)
+        : identity;
+    }));
+
+    const result = await declareInjury(testCase.area, testCase.region, testCase.severity, target);
+    const episodeId = result.createdModifierIds?.[0];
+    const afterTarget = rowsOf(target, weekStart);
+
+    /* ── [8] THE SENTENCE AND THE ROWS AGREE ────────────────────────────── */
+    const rowsMoved = JSON.stringify(namesOf(beforeTarget)) !== JSON.stringify(namesOf(afterTarget));
+    ok(`${testCase.label} — the door does not claim a swap it did not make`,
+      !/swapped for a safe option/.test(result.message ?? '') || rowsMoved,
+      { message: result.message, before: beforeTarget, after: afterTarget });
+    ok(`${testCase.label} — the door does not say "nothing needed changing" over a session that changed`,
+      !/[Nn]othing on this session needed changing/.test(result.message ?? '') || !rowsMoved,
+      { message: result.message, before: beforeTarget, after: afterTarget });
+
+    /* ── [2] EVERY AFFECTED PATTERN IS ANSWERED ─────────────────────────── */
+    const unsafeAfter = quiet(() => unsafeRowsForInjury({
+      workout: workoutOn(target!, weekStart), environment,
+    })) as string[];
+    ok(`${testCase.label} — nothing the injury forbids is left standing on the day`,
+      unsafeAfter.length === 0, { unsafeAfter, after: afterTarget });
+    const gone = namesOf(beforeTarget).filter((n) => !namesOf(afterTarget).includes(n));
+    const arrived = namesOf(afterTarget).filter((n) => !namesOf(beforeTarget).includes(n));
+    ok(`${testCase.label} — CONTROL: the injury really did take rows off this day`,
+      gone.length > 0, { gone, arrived });
+
+    /* ── R-103's PARTIAL-COVERAGE DISCLOSURE ────────────────────────────────
+     * *"a typed, athlete-visible explanation naming what was substituted and
+     * what remains untrained."* Both halves, and BOTH DIRECTIONS: a session
+     * that lost a pattern must say so, and one that kept everything must not
+     * invent a loss. */
+    if (rowsMoved) {
+      const { untrainedPatternsInWords } = require('../utils/injurySessionRecomposition');
+      const untrained = untrainedPatternsInWords({
+        before: namesOf(beforeTarget), after: namesOf(afterTarget),
+      }) as string[];
+      ok(`${testCase.label} — every row that changed is NAMED, not counted`,
+        gone.every((name) => (result.message ?? '').includes(name)),
+        { message: result.message, gone });
+      ok(`${testCase.label} — a pattern that is no longer trained is disclosed in the athlete's words`,
+        untrained.every((words) => (result.message ?? '').includes(words)),
+        { message: result.message, untrained });
+      ok(`${testCase.label} — and no loss is claimed that did not happen`,
+        untrained.length > 0 || !/That means no /.test(result.message ?? ''),
+        { message: result.message, untrained });
+    }
+
+    for (const pattern of patternsBefore) PATTERNS_SEEN.add(String(pattern));
+    console.log(`         patterns hit: ${JSON.stringify([...patternsBefore])}`);
+    console.log(`         ${JSON.stringify(gone)} -> ${JSON.stringify(arrived)}`);
+
+    /* ── SAM'S 4-5 BAND KEEPS SAFE WORK IN ──────────────────────────────────
+     * The band the whole unit turns on. Only the `avoid`-rated row is an
+     * "obvious aggravator"; the `caution` rows stay, and they stay in their own
+     * movement pattern rather than becoming upper-body work. */
+    if (testCase.severity === 4) {
+      const { classifyExerciseRiskForBucket } = require('../rules/injuryExerciseRisk');
+      // The mild band is only reached by lower-limb worlds today; the region
+      // vocabulary conversion stays general so a 'lower back' case can join.
+      const bucket = String(testCase.area) === 'lower back' ? 'lowerBack' : testCase.area;
+      const cautionKept = namesOf(beforeTarget).filter((name) =>
+        classifyExerciseRiskForBucket(name, bucket, testCase.severity) === 'caution');
+      ok(`${testCase.label} — CONTROL: the day really does carry caution-rated work at this band`,
+        cautionKept.length > 0, { cautionKept });
+      ok(`${testCase.label} — the mild band keeps safe work in and swaps only the aggravator`,
+        cautionKept.every((name) => namesOf(afterTarget).includes(name)),
+        { cautionKept, after: namesOf(afterTarget) });
+      const { classifyGeneratedWorkoutRow: classify } = require('../rules/generatedWorkoutRowClassification');
+      ok(`${testCase.label} — the swapped aggravator keeps its own movement pattern`,
+        gone.every((from) => arrived.some((to) =>
+          classify({ name: to }).mainPattern === classify({ name: from }).mainPattern)),
+        { gone, arrived });
+    }
+
+    /* ── [3] OWN LOAD — PROVENANCE, NOT COINCIDENCE ─────────────────────────
+     *
+     * ⚠ **THE FIRST CUT OF THIS CELL WAS A COINCIDENCE DETECTOR AND IT FIRED.**
+     * It flagged a replacement whose weight happened to EQUAL an outgoing lift's
+     * — and `Chest-Supported DB Row@25`, `Tricep Pushdown@25` and
+     * `Bulgarian Split Squats@25` are simply three things this athlete does with
+     * a 25kg dumbbell. Equality is not provenance.
+     *
+     * The real question is whether the number came from the replacement's OWN
+     * authority, so it is asked of that authority directly:
+     * `loadForReplacementExercise` structurally cannot see the outgoing row (it
+     * has no parameter for it), so agreeing with it IS the proof. */
+    const { loadForReplacementExercise } = require('../rules/blockBoundaryProgression');
+    const recordedLoadByExercise = quiet(() => {
+      const store = useProgramStore.getState() as unknown as {
+        inputs?: { weightOverridesByDate?: Record<string, Record<string, number>> };
+      };
+      const out: Record<string, number> = {};
+      for (const byExercise of Object.values(store.inputs?.weightOverridesByDate ?? {})) {
+        for (const [name, weight] of Object.entries(byExercise ?? {})) out[name] = weight;
+      }
+      return out;
+    });
+    const wrongLoad = arrived.filter((name) => {
+      const shown = loadOf(afterTarget, name);
+      const owned = quiet(() => loadForReplacementExercise({
+        exerciseName: name,
+        onboardingData: useProfileStore.getState().onboardingData,
+        recordedLoadByExercise,
+      })) as number | undefined;
+      if (owned === undefined) return false;  // UNSET — the athlete chooses; nothing to check.
+      return shown !== String(owned);
+    });
+    ok(`${testCase.label} — every replacement wears the load its OWN authority gives it`,
+      wrongLoad.length === 0, { wrongLoad, after: afterTarget });
+
+    /* ── [4] UNAFFECTED DAYS DO NOT MOVE ────────────────────────────────── */
+    if (untouched && beforeUntouched) {
+      ok(`${testCase.label} — the day this injury does not touch is byte-identical`,
+        JSON.stringify(rowsOf(untouched, weekStart)) === JSON.stringify(beforeUntouched),
+        { day: untouched, before: beforeUntouched, after: rowsOf(untouched, weekStart) });
+    }
+    const keptRows = namesOf(beforeTarget).filter((n) => namesOf(afterTarget).includes(n));
+    ok(`${testCase.label} — rows the injury does not touch keep their own load`,
+      keptRows.every((name) => loadOf(beforeTarget, name) === loadOf(afterTarget, name)),
+      { keptRows, before: beforeTarget, after: afterTarget });
+
+    /* ── [5] CLOSE AND REOPEN ───────────────────────────────────────────── */
+    await relaunchApp({ storage: localStorageData, todayISO: target });
+    const afterRelaunch = rowsOf(target, weekStart);
+    ok(`${testCase.label} — the injury survives close and reopen`,
+      JSON.stringify(afterRelaunch) === JSON.stringify(afterTarget),
+      { afterTarget, afterRelaunch });
+
+    /* ── [6] IDEMPOTENT ACROSS A SECOND LAUNCH ──────────────────────────── */
+    await relaunchApp({ storage: localStorageData, todayISO: target });
+    const afterSecondRelaunch = rowsOf(target, weekStart);
+    ok(`${testCase.label} — a second launch does not rewrite the session again`,
+      JSON.stringify(afterSecondRelaunch) === JSON.stringify(afterRelaunch),
+      { afterRelaunch, afterSecondRelaunch });
+
+    /* ── [9] BLOCK ROTATION UNTOUCHED ───────────────────────────────────── */
+    ok(`${testCase.label} — a temporary injury leaves block rotation exactly as it found it`,
+      JSON.stringify(
+        (useProgramStore.getState() as unknown as { blockState?: unknown }).blockState ?? null,
+      ) === beforeRotation,
+      { beforeRotation });
+
+    /* ── [7] RESTORE ────────────────────────────────────────────────────── */
+    const { executeProgramControlActionDurably } = require('../utils/programControlActions');
+    const cleared = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_injury_modifier',
+      source: { screen: 'my_status', surface: 'status_card', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { episodeId },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    }, { todayISO: target })) as { ok: boolean; message?: string };
+    /* ⚠ **THE CLEAR NEEDS THE EPISODE ID AND SAYS SO.** Without it the door
+     * refuses with "No exact active injury episode matched this action" — so a
+     * Restore cell that omits it is testing a refusal, not a restore. */
+    ok(`${testCase.label} — CONTROL: the Restore door actually ran`,
+      cleared.ok === true, cleared);
+    const afterRestore = rowsOf(target, weekStart);
+    ok(`${testCase.label} — Restore puts the accepted program back, rows and loads`,
+      JSON.stringify(afterRestore) === JSON.stringify(beforeTarget),
+      { beforeTarget, afterRestore });
+  }
+
+  /* ── EVERY PATTERN THE MISSION NAMES WAS ACTUALLY WALKED ──────────────────
+   * Printed AND asserted: a suite that covers four of eight planes and says
+   * "all patterns" is the claim this repo keeps finding. */
+  console.log(`\nMAIN PATTERNS WALKED: ${JSON.stringify([...PATTERNS_SEEN].sort())}`);
+  /* THE MISSION'S LIST, IN THE POOLS' OWN VOCABULARY.
+   *
+   * ⚠ **A SLOT AND ITS BILATERAL GROUP ARE THE SAME PATTERN AT TWO
+   * GRANULARITIES**, because the pools author `group` only on the entries that
+   * SPLIT a slot: `RDLs` is a hinge anchor with no group and reports `hinge`,
+   * while `Hip Thrusts` is a hinge accessory and reports `bilateral_hinge`.
+   * Requiring the group name alone would have failed on a world that walked the
+   * hinge through its main lift — which is the commonest world there is. */
+  const REQUIRED_PATTERNS: ReadonlyArray<readonly [string, readonly string[]]> = [
+    ['squat', ['squat', 'bilateral_squat']],
+    ['hinge', ['hinge', 'bilateral_hinge']],
+    ['single-leg knee', ['single_leg_knee']],
+    ['single-leg hip', ['single_leg_hip']],
+    ['horizontal push', ['horizontal_push']],
+    ['vertical push', ['vertical_push']],
+    ['horizontal pull', ['horizontal_pull']],
+    ['vertical pull', ['vertical_pull']],
+    ['trunk', ['core']],
+  ];
+  for (const [label, accepted] of REQUIRED_PATTERNS) {
+    ok(`coverage — a real athlete world exercised the ${label} pattern`,
+      accepted.some((name) => PATTERNS_SEEN.has(name)), [...PATTERNS_SEEN].sort());
+  }
+
+  console.log(`\n──────────────────────────────────────────────`);
+  console.log(`Pass: ${pass}   Fail: ${fail}`);
+  if (fail > 0) {
+    console.log('\nFailures:');
+    for (const name of failures) console.log(`  - ${name}`);
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
+  main().catch((error) => { console.log(`SUITE THREW ${(error as Error).message}`); process.exit(1); });
+}

@@ -32,10 +32,7 @@ import {
   type SafeTrainingFallbackTier,
 } from '../rules/conflictResolutionHierarchy';
 import { severityHasModerateEffect, severityIsLimiting } from '../rules/injurySeverityBands';
-import {
-  classifyExerciseRiskForBucket,
-  injuryPermitsExerciseAtSeverity,
-} from '../rules/injuryExerciseRisk';
+import { injuryPermitsExerciseAtSeverity } from '../rules/injuryExerciseRisk';
 
 export type TapSwapReason =
   | 'no_equipment'
@@ -422,24 +419,37 @@ export function assessTapSwapCandidateSafety(
 /**
  * ── MUST THIS ROW COME OUT BECAUSE OF THE INJURY? ───────────────────────────
  *
- * The OTHER injury question, and the one `assessTapSwapCandidateSafety` was
- * quietly being asked as well. Sam's Bible, band by band:
+ * The row-level question, asked of the SESSION rather than of a candidate: it is
+ * `injuryPermitsExerciseAtSeverity` — the one band owner — over every region the
+ * athlete has declared, and nothing else.
  *
- *   1-3  *"Avoid only the exact movement or trigger that flares it up."*
- *        -> only an `avoid`-rated row goes.
- *   4-5  *"Swap obvious aggravators. Keep safe work in."*
- *   6-7  *"Remove risky work through the area."*
- *   8-10 *"Pause affected training."*
- *        -> a `caution` row through the area goes, from 4 upward.
+ * **IT IS DELIBERATELY THE SAME PREDICATE AS THE LEGALITY ONE, AND THE FIRST CUT
+ * SPLIT THEM AT DIFFERENT EDGES.** That version asked *"is this row rated
+ * `caution` at 4/10 or worse"*, which is Sam's *"swap obvious aggravators"* read
+ * as broadly as it can be read, and it produced two defects at once, both
+ * measured through the real door (`npm run probe:injury-recompose`):
  *
- * So the edge here is `severityHasModerateEffect` (4+) — which is where the
- * legality function used to have it, and where it was correct for THIS question
- * and only this one.
+ *   1. **A SENTENCE THAT CONTRADICTED THE SESSION.** Every upper row is rated
+ *      `shoulder: 'caution'`, so the question stayed TRUE of the replacements —
+ *      the door swapped `Bench Press` for `Incline Bench` and then told the
+ *      athlete *"Incline Bench ... could not be made safe. Skip those."*
+ *   2. **IT WAS NOT IDEMPOTENT.** `quiescentBoot` re-applies active injuries
+ *      after every ledger replay, and a predicate that is still true of its own
+ *      answer re-swaps the session on every launch. A week that churns is not
+ *      "the visible session genuinely changed" — it is the injury quietly
+ *      rewriting the athlete's program forever.
  *
- * ⚠ **EQUIPMENT IS NOT AN ANSWER TO THIS QUESTION.** A row the athlete's kit
+ * **SO `avoid` IS "THE OBVIOUS AGGRAVATOR", AND THE MATRIX IS WHERE SAM SAID
+ * WHICH.** At 1-5 an `avoid` rating comes out and `caution` work stays (*"keep
+ * safe work in"*); at 6-7 and 8-10 `caution` comes out too. After one pass every
+ * remaining row is permitted, so the second pass is a no-op — which is what makes
+ * the honest claim honest.
+ *
+ * ⚠ **EQUIPMENT AND READINESS ARE NOT ASKED HERE.** A row the athlete's kit
  * cannot support is a different problem with a different owner (R-102/R-103's
- * equipment ladder). Asking it here would make an injury flow report kit
- * failures as injury changes.
+ * equipment ladder); asking it here would make an injury flow report kit
+ * failures as injury changes, and would put a kit-blocked row into the
+ * *"could not be made safe, check with a physio"* sentence.
  */
 export function injuryRequiresChange(
   name: string,
@@ -449,9 +459,9 @@ export function injuryRequiresChange(
   for (const [region, severity] of Object.entries(environment.injurySeverities) as Array<
     [InjuryKey, number]
   >) {
-    const risk = classifyExerciseRiskForBucket(name, region, severity);
-    if (risk === 'avoid') return true;
-    if (risk === 'caution' && severityHasModerateEffect(severity)) return true;
+    if (!injuryPermitsExerciseAtSeverity(resolveExerciseName(name), region, severity)) {
+      return true;
+    }
   }
   return false;
 }

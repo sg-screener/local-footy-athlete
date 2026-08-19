@@ -191,10 +191,60 @@ export function planInjuryRecomposition(args: {
  * the caller, from the real week — never predicted from the plan, because a
  * prediction is what the deleted claim was.
  */
+/** "A", "A and B", "A, B and C" — plain English, no counts, no Oxford comma. */
+function listInWords(names: readonly string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0]!;
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]!}`;
+}
+
+/**
+ * ── WHAT THE ATHLETE IS NO LONGER TRAINING, IN WORDS THEY USE ──────────────
+ *
+ * R-103: *"Accessory and adjacent-pattern fallbacks are PARTIAL coverage and
+ * must be disclosed as such — a typed, athlete-visible explanation naming what
+ * was substituted and **what remains untrained**."*
+ *
+ * The patterns are compared BEFORE and AFTER from the rows themselves, so this
+ * cannot claim coverage a substitution did not deliver, and it cannot invent a
+ * gap the session does not have. The words are Sam's register — an athlete says
+ * *"pressing"*, not `horizontal_push`.
+ */
+const PATTERN_IN_WORDS: Readonly<Record<string, string>> = {
+  squat: 'squatting', bilateral_squat: 'squatting',
+  hinge: 'deadlift-type work', bilateral_hinge: 'deadlift-type work',
+  single_leg_knee: 'single-leg work', single_leg_hip: 'single-leg hip work',
+  horizontal_push: 'pressing', vertical_push: 'overhead pressing',
+  horizontal_pull: 'rowing', vertical_pull: 'pull-ups',
+  carry: 'carries', core: 'core work', plyo: 'jumping',
+  isolation_upper: 'arm and shoulder work', isolation_lower: 'lower-body accessory work',
+};
+
+export function untrainedPatternsInWords(args: {
+  before: readonly string[];
+  after: readonly string[];
+}): string[] {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { finerPatternIdentityOf } = require('../rules/injuryFallbackLadder');
+  const identities = (names: readonly string[]): Set<string> =>
+    new Set(names.map((name) => String(finerPatternIdentityOf(name))));
+  const kept = identities(args.after);
+  const lost: string[] = [];
+  for (const identity of identities(args.before)) {
+    if (kept.has(identity)) continue;
+    const words = PATTERN_IN_WORDS[identity];
+    // A pattern with no athlete-facing word is not described in invented ones.
+    if (words && !lost.includes(words)) lost.push(words);
+  }
+  return lost;
+}
+
 export function injuryRecompositionMessage(args: {
   plan: InjuryRecompositionPlan;
   remainingUnsafe: readonly string[];
   trainingPaused: boolean;
+  /** R-103's partial-coverage disclosure, in the athlete's words. */
+  untrainedInWords?: readonly string[];
 }): string {
   const { plan } = args;
   if (args.remainingUnsafe.length > 0) {
@@ -211,14 +261,37 @@ export function injuryRecompositionMessage(args: {
   }
   const parts: string[] = [];
   if (plan.substitutions.length > 0) {
-    parts.push(`${plan.substitutions.length} exercise${plan.substitutions.length === 1 ? '' : 's'} swapped for a safe option`);
+    /* ⚠ **NAMED, NOT COUNTED — THE SAME RULE THE OMISSIONS ALREADY FOLLOWED.**
+     * *"4 exercises swapped for a safe option"* tells the athlete nothing about
+     * what they are now doing, and the mission is explicit that every changed
+     * row gets an honest athlete-visible explanation. The names come from the
+     * rows themselves, so the sentence cannot describe a swap that did not
+     * land. A one-to-one *"X for Y"* is deliberately NOT claimed: the ladder
+     * makes no such promise, and inventing the pairing would name the wrong
+     * exercise. */
+    const from = plan.substitutions.map((substitution) => substitution.from);
+    const to = plan.substitutions
+      .map((substitution) => substitution.to?.name)
+      .filter((name): name is string => Boolean(name));
+    parts.push(to.length > 0
+      ? `${listInWords(from)} swapped for ${listInWords(to)}`
+      : `${listInWords(from)} swapped for a safe option`);
   }
   if (plan.omissions.length > 0) {
     // NAMED, not counted. An omission is work the athlete is not doing, and
     // "1 exercise removed" tells them nothing about what to make up.
     parts.push(`${plan.omissions.join(', ')} left out — nothing safe was available`);
   }
-  return `Injury restrictions are active. ${parts.join('; ')}.`;
+  const message = `Injury restrictions are active. ${parts.join('; ')}.`;
+  /* ⚠ **THE UNTRAINED SET IS PASSED IN, NOT DERIVED FROM THE PLAN.**
+   * `describeVisibleInjuryChange` builds a SYNTHETIC plan out of the rows that
+   * moved — it has no `untouched` list, and reading one here threw the first
+   * time this ran. The caller that knows the real before and after is the one
+   * that can answer this, so it is the one that does. */
+  const untrained = args.untrainedInWords ?? [];
+  return untrained.length > 0
+    ? `${message} That means no ${listInWords(untrained)} this session.`
+    : message;
 }
 
 /**
@@ -271,6 +344,8 @@ export function describeVisibleInjuryChange(args: {
       } as InjuryRecompositionPlan,
       remainingUnsafe: args.remainingUnsafe,
       trainingPaused: args.trainingPaused,
+      // R-103's disclosure, from the REAL rows this function was handed.
+      untrainedInWords: untrainedPatternsInWords({ before, after }),
     }),
   };
 }
