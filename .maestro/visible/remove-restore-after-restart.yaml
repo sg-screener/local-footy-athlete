@@ -24,7 +24,7 @@ tags:
 - runFlow:
     file: ../common/remove-via-hub.yaml
     env:
-      EXERCISE: Back Squat
+      EXERCISE: ex-squat
       SCOPE: today
 - takeScreenshot: artifacts/visible/restore-1-removed
 

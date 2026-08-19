@@ -72,11 +72,28 @@ tags:
     visible:
       id: "component-delete-action-.*"
     timeout: 10000
-# ⚠ **BY THE WORD, NOT BY AN ID** — the row id carries a generated component
-# key and no name token; see `../common/remove-via-hub.yaml` for the measurement.
-- assertVisible: "Back Squat"
+# ⚠ **BY THE EXERCISE'S IDENTITY TOKEN, AND NOT BY ITS WORD — MEASURED, TWICE.**
+#
+# The obvious selector is the athlete's own word, "Back Squat". It does not
+# resolve, and the reason is a real defect rather than a Maestro quirk:
+# `ExerciseSheetOption` sets `accessibilityLabel={testID ?? label}` and
+# `accessibilityRole="button"`, so the row is one accessibility LEAF whose
+# spoken name is `component-delete-action-<sessionId>-…-ex-squat-1`. **The
+# athlete's word is not in the accessibility tree at all** — a screen-reader
+# user hears the test id. Finding O-5 in `docs/STATUS_ORCHESTRATOR.md`; six
+# call sites share the pattern, so it is its own unit, not a line in this flow.
+#
+# The full row id is also useless as a literal: it carries a generated component
+# key and NO name token, so `component-delete-action-.*-back-squat` matches
+# nothing and reads exactly like a lost row. What IS stable and IS about
+# identity is the exercise id inside that key — `ex-squat` for Back Squat.
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-action-.*-ex-squat-.*"
+    timeout: 10000
 - takeScreenshot: artifacts/visible/hub-2-component-selection
-- tapOn: "Back Squat"
+- tapOn:
+    id: "component-delete-action-.*-ex-squat-.*"
 
 # ── 3. THEN THE SCOPE QUESTION, ALL THREE ANSWERS ──────────────────────────
 - extendedWaitUntil:

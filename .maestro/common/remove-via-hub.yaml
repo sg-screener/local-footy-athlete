@@ -40,14 +40,22 @@ name: Remove an exercise through the LABELLED hub, at a chosen scope
     visible:
       id: "component-delete-action-.*"
     timeout: 10000
-# ⚠ **ADDRESSED BY THE WORD, NOT BY AN ID.** The picker row's id is
-# `component-delete-action-<sessionId>-<componentId>` and the component id is a
-# generated key (`...-exercise-ex-squat-1`), so it carries NO name token — a
-# selector like `component-delete-action-.*-back-squat` matches nothing and reads
-# exactly like a lost row. Measured against the live hierarchy on 2026-08-19.
-# The label is the athlete's own word and it is what this walk is about.
-- assertVisible: "${EXERCISE}"
-- tapOn: "${EXERCISE}"
+# ⚠ **`${EXERCISE}` IS THE EXERCISE'S IDENTITY TOKEN, NOT ITS WORD** — e.g.
+# `ex-squat`, not `Back Squat`. Two things were measured on 2026-08-19:
+#
+# 1. the row's full id carries a generated component key and NO name token, so
+#    `component-delete-action-.*-back-squat` matches nothing;
+# 2. the athlete's word does not resolve either, because
+#    `ExerciseSheetOption` sets `accessibilityLabel={testID ?? label}` on an
+#    `accessibilityRole="button"` leaf — the spoken name of the row IS the test
+#    id. That is finding O-5, an accessibility defect with six call sites, and
+#    it is why this walk cannot address the row the way an athlete reads it.
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-action-.*-${EXERCISE}-.*"
+    timeout: 10000
+- tapOn:
+    id: "component-delete-action-.*-${EXERCISE}-.*"
 
 # ── THE CONFIRMATION, THEN THE SCOPE QUESTION ─────────────────────────────
 - extendedWaitUntil:
