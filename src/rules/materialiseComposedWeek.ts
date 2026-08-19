@@ -19,6 +19,7 @@ import {
   type DeloadWeekPolicy,
 } from './deloadWeekRules';
 import type { ComposedDay, ComposedGap, ComposedWeek } from './composeWeek';
+import { composedIdentityFor } from './composedRowLegality';
 import type { Workout, WorkoutExercise } from '../types/domain';
 
 /** The specialist's decision for one day, plus what the row builder needs. */
@@ -218,12 +219,53 @@ export function materialiseComposedWeek(
         })()
         : primer;
       if (dosed) {
-        powerRow = buildPowerRow(dosed, workoutId, {
+        const built = buildPowerRow(dosed, workoutId, {
           phase: context.power?.phase,
           experienceLevel: context.power?.experienceLevel as never,
           availableEquipment: (context.power?.availableEquipment ?? []) as never,
           blockId: context.power?.blockId,
         }) as WorkoutExercise;
+        /* ── ONE EXERCISE, ONCE PER SESSION ──────────────────────────────────
+         *
+         * ⚠ **THE PRIMER YIELDS TO THE LIFT. IT NEVER APPEARS BESIDE ITS OWN
+         * TWIN.** Measured 2026-08-19 across the 180-world corpus: making the
+         * specialist's power budget reach the composer delivered **32 sessions
+         * that prescribed one exercise twice** — `Explosive Push-up 2x3` as
+         * Power and the same movement `3x7` as Strength, on the same day. An
+         * athlete reading that cannot tell whether they are meant to do it once
+         * or twice, and no amount of role typing makes two identical rows read
+         * as one intention.
+         *
+         * **EVERY ONE OF THE 32 WAS A ZERO-EQUIPMENT WORLD, AND THAT IS THE
+         * WHOLE MECHANISM.** `Explosive Push-up` is the ONLY `upper` entry in
+         * `POWER_EXERCISE_POOL`, and in a Bodyweight-Only world it is also a
+         * legal main/accessory push, so the two pools have exactly one member
+         * in common and both reach for it. Full Gym and Dumbbells worlds
+         * produced zero collisions.
+         *
+         * **SO POWER IS THE ONE THAT GIVES WAY, AND IT MAY GIVE WAY TO
+         * NOTHING.** Power is the fence-exempt extra — not a hard exposure, not
+         * main strength, no conditioning credit — so dropping it costs the week
+         * no exposure it is owed. The strength row is the session's actual
+         * work and cannot be dropped. There is no third option: with one upper
+         * entry in the pool there is no alternative movement to swap to, and
+         * inventing one here would be a second power pool.
+         *
+         * The athlete still does the movement explosively — it is simply
+         * prescribed once, as their lift, instead of twice under two names.
+         *
+         * ⚠ **THIS IS NOT A DEDUPLICATOR AND MUST NOT BECOME ONE.** It answers
+         * one question — "did the primer land on a movement this session
+         * already has?" — using the composer's own identity function, so it
+         * cannot disagree with the corpus census that found the defect. A
+         * general row-deduplication pass belongs to the composer, where the
+         * remaining 48 `strength_accessory + conditioning` collisions live;
+         * those are `main`'s and older than this line. */
+        const primerIdentity = composedIdentityFor(built.exercise?.name ?? '');
+        const alreadyInSession = day.rows.some(
+          (row) => composedIdentityFor(row.identity) === primerIdentity,
+        );
+        powerRow = alreadyInSession ? null : built;
       }
     }
     if (powerRow) primersPlaced += 1;
