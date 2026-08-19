@@ -1,5 +1,6 @@
 import type { LoggedSet, Workout, WorkoutExercise } from '../types/domain';
 import { getExerciseTags, type MovementPattern } from '../data/exerciseTags';
+import { carriesStrengthComponent } from './sessionComponents';
 
 export type StrengthLogCompletion = 'full' | 'partial' | 'skipped';
 
@@ -129,7 +130,24 @@ export function buildStrengthPerformanceLogs(
    */
   loggedSetsByWorkoutExerciseId?: Record<string, LoggedSet[]>,
 ): StrengthExercisePerformanceLog[] {
-  if (!workout || (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed')) {
+  // ── THE GYM WORK IS CREDITED WHEREVER IT FALLS (Sam, 2026-08-20) ──────────
+  //
+  // *"A gym session completed on the same date as club training counts as a
+  // completed gym session ... each completed component keeps its own credit."*
+  //
+  // THIS LINE USED TO READ `workoutType !== 'Strength' && !== 'Mixed'`, and it
+  // is where the athlete's lifts on a club night were LOST. A day whose gym
+  // session shares a date with club training is stored as
+  // `workoutType: 'Team Training'`, so this returned `[]` — no load, no set
+  // count, nothing recorded — while `getSessionComponents` on the same workout
+  // reported `["power","strength","team_training"]`. Everything downstream
+  // inherited the silence: the completion numerator counts days with strength
+  // logs, and there were none, so the athlete read as training half as often as
+  // they did, and the block boundary had no loads to progress those lifts from.
+  //
+  // `carriesStrengthComponent` is the ONE component-aware answer, shared with
+  // the denominator so both sides of the ratio count the same sessions.
+  if (!carriesStrengthComponent(workout)) {
     return [];
   }
 

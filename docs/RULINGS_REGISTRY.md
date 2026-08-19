@@ -2794,3 +2794,59 @@ play button opened the Back Squat demo.
 · `BUILT` — `test:session-execution` section `[7]`, mutation-proven: returning
 the checkbox to the left reds 1, returning play to the far right reds 2,
 re-centring the row reds the inverted cell — and nothing else in either case.
+
+---
+
+**R-112** · *"A gym session completed on the same date as club training counts
+as a completed gym session. It remains one calendar training day with two
+components, but each completed component keeps its own credit. Club training
+must not erase the completed gym component from the commitment/completion
+denominator. Guard both sides of that ratio so generation and later
+block-history evaluation use the same component-aware count."* (Sam,
+2026-08-20) · **A COMBINED DAY IS ONE DAY WITH TWO COMPONENTS, AND EACH
+COMPONENT IS CREDITED SEPARATELY.**
+
+**⚠ THE APP ERASED THE GYM COMPONENT IN THREE PLACES, ALL THE SAME LINE.** A
+gym session sharing a date with club training is stored as
+`workoutType: 'Team Training'`, while `getSessionComponents` on that very
+workout returns `["power","strength","team_training"]` — the app knew the
+lifting was there. Three readers asked `workoutType === 'Strength' || 'Mixed'`
+and could not see it:
+- `strengthLogging.buildStrengthPerformanceLogs:132` returned `[]`, so **the
+  athlete's lifts on a club night were never recorded at all** — no load, no set
+  count, and nothing for the block boundary to progress those lifts from;
+- `readBlockHistory`'s NUMERATOR counts days carrying strength logs, so it missed
+  the day as a consequence;
+- `deriveAcceptedBlockStrengthRequirement`, the DENOMINATOR, skipped it directly.
+
+**MEASURED BEFORE THE FIX, two worn athletes identical but for where the club
+night falls** (cold start through real onboarding, four weeks lived through the
+live outcome writer, one real miss): separated club nights **8 required / 7
+recorded**; a club night on a gym day **4 required / 4 recorded**, and **0 of 3
+club-night dates recorded any lifting**. The ratio was self-consistent, which is
+precisely why it survived — nothing looked wrong from either side alone.
+
+**AFTER: both athletes read 8 required / 7 recorded, and 3 of 3 club-night dates
+record the lifting.** The separated athlete is unchanged, and their pure club
+nights still record nothing, which is correct — those days carry no gym rows.
+
+**THE FIX IS ONE SHARED OWNER, NOT THREE EDITS.**
+`sessionComponents.carriesStrengthComponent` asks the component question — does
+this day carry gym rows, with `getSessionComponentRows` already separating the
+club session from them — and both sides of the ratio call it. A fourth reader
+cannot re-invent the `workoutType` answer without deleting the shared one.
+
+**Search words:** club night, team training, combined day, gym on a club night,
+completed component, completion denominator, commitment denominator, 75 percent,
+attendance, component-aware count, strength logs missing, workoutType gate.
+
+· `BUILT src/utils/sessionComponents.ts carriesStrengthComponent`, read by
+`strengthLogging.buildStrengthPerformanceLogs` and
+`blockBoundaryProgression.deriveAcceptedBlockStrengthRequirement`. **Guarded by
+`test:settings-persistence` stage 5**, which compares the TWO athlete shapes
+rather than asserting agreement — an earlier cut asserted only that the two
+sides agreed, and they agreed at 4 and 4 on exactly the app this ruling
+forbids. Three cells: the club-night lifting is recorded, the same training
+earns the same credit, and both sides of the ratio count the same sessions,
+each preceded by an anti-vacuity cell. **⚠ NOT SEEN ON GLASS** — another lane
+owns the simulator; this is headless.

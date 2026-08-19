@@ -102,6 +102,7 @@ import {
 } from '../utils/loadEstimation';
 import { EQUIPMENT } from '../data/equipmentLattice';
 import { participatesInCounting } from './sessionRowCounting';
+import { carriesStrengthComponent } from '../utils/sessionComponents';
 import { classifyProgressionEligibility } from '../utils/strengthProgressionIntegration';
 import type { ExerciseRole } from '../utils/progressionHelpers';
 import {
@@ -530,10 +531,22 @@ export function deriveAcceptedBlockStrengthRequirement(args: {
     if (!weekStart) continue;
     if (weekStart < args.blockStartISO || weekStart > args.blockEndISO) continue;
     for (const workout of microcycle.workouts ?? []) {
-      if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') continue;
-      const carriesStrengthRow = (workout.exercises ?? []).some((exercise) =>
-        participatesInCounting(exercise) && Boolean(exercise.exercise?.name));
-      if (carriesStrengthRow) count += 1;
+      // ── THE DENOMINATOR IS COMPONENT-AWARE, NOT TYPE-AWARE (Sam, 2026-08-20) ──
+      //
+      // *"Club training must not erase the completed gym component from the
+      // commitment/completion denominator. Guard both sides of that ratio so
+      // generation and later block-history evaluation use the same
+      // component-aware count."*
+      //
+      // This used to gate on `workoutType`, which files a gym session that
+      // shares a date with club training as `Team Training` and skipped it. The
+      // NUMERATOR is `readBlockHistory`'s count of days carrying strength logs,
+      // and `buildStrengthPerformanceLogs` carried the identical `workoutType`
+      // gate — so both sides were wrong together, agreed with each other, and
+      // credited a twice-a-week athlete once. `carriesStrengthComponent` is the
+      // shared answer both now ask.
+      if (!carriesStrengthComponent(workout)) continue;
+      count += 1;
     }
   }
   return count;

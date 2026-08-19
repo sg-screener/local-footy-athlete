@@ -979,40 +979,40 @@ async function main(): Promise<void> {
 
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STAGE 5 — WHEN THE CLUB NIGHT IS A GYM DAY, BOTH SIDES OF THE COMPLETION
-  //           RATIO MUST COUNT THE SAME SESSIONS
+  // STAGE 5 — A GYM SESSION ON A CLUB NIGHT KEEPS ITS OWN CREDIT
   // ═══════════════════════════════════════════════════════════════════════
 
   console.log('\n═══ STAGE 5 — the club night IS a gym day ═══\n');
   {
     /**
-     * ⚠ **THIS STAGE EXISTS BECAUSE I BUILT A DEFECT REPORT AND THEN REFUTED IT.**
+     * **SAM'S RULING, 2026-08-20, verbatim:** *"A gym session completed on the
+     * same date as club training counts as a completed gym session. It remains
+     * one calendar training day with two components, but each completed
+     * component keeps its own credit. Club training must not erase the completed
+     * gym component from the commitment/completion denominator. Guard both sides
+     * of that ratio so generation and later block-history evaluation use the
+     * same component-aware count."*
      *
-     * When the club night lands on a gym day the accepted block records a
-     * requirement of **4** where the separated athlete records **8**, while the
-     * athlete still visibly receives gym work on two days a week: the combined
-     * day is stored as `workoutType: 'Team Training'` and yet
-     * `getSessionComponents` reports `["power","strength","team_training"]` on
-     * it. That reads exactly like the two-representations defect this repo
-     * fights, and I was one edit away from "fixing" the denominator.
+     * ⚠ **AGREEMENT ALONE DOES NOT HOLD THIS RULING, AND AN EARLIER CUT OF THIS
+     * STAGE ONLY ASSERTED AGREEMENT.** Before the fix the two sides agreed at
+     * **4 and 4** — self-consistently crediting a twice-a-week athlete once —
+     * so an agreement cell was green on exactly the app Sam ruled against. The
+     * subject is CREDIT, so the comparison is between two athletes who train
+     * IDENTICALLY and differ only in where the club night falls.
      *
-     * **MEASURED FIRST, AND THE PREMISE WAS FALSE.** `readBlockHistory` — the
-     * NUMERATOR — excludes the same combined day, so the ratio is consistent on
-     * both sides and the 75% gate is not wrong.
-     *
-     * So the stage holds the AGREEMENT, not a number, and it holds it on BOTH
-     * athletes so the comparison cannot be satisfied by one shape alone.
-     * `deriveAcceptedBlockStrengthRequirement` says in its own docstring that it
-     * must count *"sessions that could have PRODUCED a strength log, because
-     * that is what `readBlockHistory` counts on the other side of the ratio"* —
-     * and nothing was checking that the two actually agreed. A change to one
-     * side alone silently halves or doubles every athlete's completion rate.
-     *
-     * **WHAT THIS DOES NOT DECIDE:** whether a combined club/gym day OUGHT to
-     * count as a strength session for attendance. That is a coaching question,
-     * R-099 does not answer it, and it goes to Sam rather than being settled by
-     * whichever side of the ratio somebody edits first.
+     * **THE THREE PLACES THE CREDIT WAS ERASED**, each reading `workoutType` and
+     * accepting only `Strength`/`Mixed` while `getSessionComponents` on the same
+     * workout reported `["power","strength","team_training"]`:
+     * `buildStrengthPerformanceLogs` (so the lifts were never recorded at all),
+     * the numerator that counts days carrying those logs, and
+     * `deriveAcceptedBlockStrengthRequirement`. One shared owner now,
+     * `carriesStrengthComponent`.
      */
+    const shapes: {
+      label: string; required: number; recorded: number;
+      clubNightStrengthLogDays: number; clubNightDates: string[];
+    }[] = [];
+
     for (const [shapeLabel, clubDays] of [
       ['club nights on their OWN days', ['Tuesday', 'Thursday']],
       ['the club night IS a gym day', ['Wednesday']],
@@ -1026,42 +1026,79 @@ async function main(): Promise<void> {
       });
       const census = takeSettingsCensus();
       const blockOne = world.blockOneStart;
+      const blockEnd = addDaysISO(blockOne, 27);
       const required = census.acceptedBlockRequirements[
         census.acceptedBlockKeys.indexOf(blockOne)] ?? 0;
+      const feedback = (useProgramStore.getState() as unknown as {
+        sessionFeedback?: Record<string, { strength?: unknown[] }>;
+      }).sessionFeedback ?? {};
       const history = readBlockHistory({
-        feedbackByDate: (useProgramStore.getState() as unknown as {
-          sessionFeedback?: Record<string, never>;
-        }).sessionFeedback ?? {},
+        feedbackByDate: feedback as never,
         blockStartISO: blockOne,
-        blockEndISO: addDaysISO(blockOne, 27),
+        blockEndISO: blockEnd,
         requiredStrengthSessions: required,
       }) as unknown as { recordedStrengthSessions?: number; qualifies?: boolean };
       const recorded = history.recordedStrengthSessions ?? -1;
 
+      // THE CLUB NIGHTS THEMSELVES — did the athlete's lifting on those dates
+      // reach the record at all? This is the half that was silently zero.
+      const clubNightDates = Object.keys(feedback)
+        .filter((date) => date >= blockOne && date <= blockEnd)
+        .filter((date) => clubDays.includes(weekdayOf(date) as DayOfWeek))
+        .sort();
+      const clubNightStrengthLogDays = clubNightDates
+        .filter((date) => (feedback[date]?.strength?.length ?? 0) > 0).length;
+
       console.log(`  ── ${shapeLabel} ──`);
       console.log(`     block 1 ${blockOne}: DENOMINATOR ${required} · NUMERATOR `
         + `${recorded} · qualifies ${history.qualifies}`);
-      console.log(`     the athlete's week:\n       `
-        + weekPrint(blockOne, blockOne).join('\n       '));
+      console.log(`     club-night dates in the block: ${clubNightDates.length}, `
+        + `of which ${clubNightStrengthLogDays} recorded the athlete's lifting`);
 
-      // ANTI-VACUITY: a world where nothing was required, or nothing recorded,
-      // makes the agreement below true for free.
       ok(`5 [${shapeLabel}]: the block required strength sessions and the athlete did them`,
         required > 0 && recorded > 0,
-        `required=${required} recorded=${recorded} — the agreement below would be `
+        `required=${required} recorded=${recorded} — every claim below would be `
         + 'vacuous on this world');
-      // THE ATHLETE MISSED EXACTLY ONE SESSION in `buildWornWorld`, so the
-      // numerator is the denominator minus at most that one miss. A numerator of
-      // HALF the denominator (or double it) is the two-sided disagreement.
-      ok(`5 [${shapeLabel}]: BOTH SIDES OF THE COMPLETION RATIO COUNT THE SAME SESSIONS`,
+      ok(`5 [${shapeLabel}]: both sides of the completion ratio count the same sessions`,
         recorded === required || recorded === required - 1,
-        `the block recorded that ${required} strength sessions were required and `
-        + `readBlockHistory counts ${recorded} recorded, on an athlete who missed `
-        + 'exactly one. A denominator that counts a combined club/gym day while '
-        + 'the numerator does not (or the reverse) silently halves or doubles the '
-        + "athlete's completion rate, which drives both the 75% missed-session "
-        + 'ask and the block boundary.');
+        `denominator ${required}, numerator ${recorded}, on an athlete who missed `
+        + 'exactly one session');
+
+      shapes.push({
+        label: shapeLabel, required, recorded, clubNightStrengthLogDays, clubNightDates,
+      });
     }
+
+    const [separated, combined] = shapes;
+
+    /**
+     * ⚠ **THE ANTI-VACUITY CHECK FOR THE COMPARISON ITSELF.** If the second
+     * athlete's club night never actually landed on a gym day — because the
+     * scheduler moved their gym session elsewhere — then the two worlds are the
+     * same world and the cells below are green about nothing.
+     */
+    ok('5: the second athlete really does train in the gym ON their club night',
+      combined.clubNightDates.length > 0
+        && combined.clubNightDates.length >= 3,
+      `only ${combined.clubNightDates.length} club-night dates carry a record — `
+      + 'the two worlds may not differ in the way this stage assumes');
+
+    ok('5: THE GYM SESSION ON A CLUB NIGHT IS RECORDED — the lifts are not lost',
+      combined.clubNightStrengthLogDays === combined.clubNightDates.length,
+      `${combined.clubNightStrengthLogDays} of ${combined.clubNightDates.length} `
+      + "club-night dates recorded the athlete's lifting. Sam, 2026-08-20: a gym "
+      + 'session completed on the same date as club training counts as a completed '
+      + 'gym session. Zero here means the loads were never stored, so the block '
+      + 'boundary has nothing to progress those lifts from either.');
+
+    ok('5: THE SAME TRAINING EARNS THE SAME CREDIT wherever the club night falls',
+      combined.required === separated.required
+        && combined.recorded === separated.recorded,
+      `the athlete whose club night is a gym day is credited `
+      + `${combined.recorded}/${combined.required} while the athlete who trains `
+      + `exactly as much on separate days is credited `
+      + `${separated.recorded}/${separated.required}. Club training must not erase `
+      + 'the completed gym component from the commitment/completion denominator.');
   }
 
   // ═══════════════════════════════════════════════════════════════════════
