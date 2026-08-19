@@ -191,7 +191,6 @@ export interface DevE2EWitnessState {
   reversibleAdjustmentLedger?: ReversibleAdjustmentLedger;
   profile: OnboardingData;
   calendarMarks: Record<string, 'game' | 'rest' | 'noGame'>;
-  activeInjury: { bodyPart: string; severity: number } | null;
   activeConstraints: Array<{
     id: string;
     type: string;
@@ -288,10 +287,17 @@ function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
   // **The golden flow's "team training is gone" assertion then fails against
   // the week BEFORE the break, which legitimately still has it, and reads
   // exactly like a product defect.** It is not one; it is a seed with one week.
+  // AND `exercise-removal-restart` NEEDS FOUR BECAUSE THE BLOCK REQUIREMENT IS
+  // A DENOMINATOR. Boot regenerates the block and derives
+  // `requiredStrengthSessions` from the FOUR-week block window; a one-week seed
+  // therefore installs a world whose accepted block disagrees with the one boot
+  // writes over it, and the reload gate compares exactly that. Four microcycles
+  // is what makes the seeded world and the booted world the same world.
   return seedId === 'spent-week-friday' ||
     seedId === 'feedback-progression-case' ||
     seedId === 'multi-reload-fixture-chain' ||
     seedId === 'coach-production-replay' ||
+    seedId === 'exercise-removal-restart' ||
     seedId === 'christmas-break-ask'
     ? 4
     : 1;
@@ -792,6 +798,45 @@ export function witnessesForDevE2ESeed(
     case 'standard-in-season-week':
       witnesses.push({ kind: 'calendar_mark', date: fixtureDate, mark: 'game' });
       break;
+    case 'exercise-removal-restart': {
+      // ── EVERY WITNESS HERE IS DERIVED. NONE IS HAND-BUILT. ──────────────────
+      //
+      // THIS IS THE WHOLE REASON THIS SEED EXISTS. `multi-reload-fixture-chain`
+      // and `coach-production-replay` are both structurally correct four-week
+      // worlds, and both refuse to install, because each asserts its Sunday card
+      // as `visibleRecoveryWorkoutId(sundayDate)` — an id CONSTRUCTED from a
+      // naming rule rather than READ from the program beside it. The generator
+      // now collapses that Sunday to rest, so the seed asserts a card that does
+      // not exist and the seed-rot alarm fires, correctly, forever.
+      //
+      // So this seed asserts only what it can read back out of the program it
+      // was actually given. A witness that outlives the generator is not a
+      // stricter witness, it is a broken one.
+      const strengthDay = program.microcycles[0]?.workouts.find((workout) =>
+        workout.exercises.some((row) => /back squat/i.test(row.exercise?.name ?? '')));
+      if (!strengthDay) {
+        throw new Error(
+          'exercise-removal-restart requires a Back Squat session in week 1.',
+        );
+      }
+      witnesses.push({
+        kind: 'workout',
+        dayOfWeek: strengthDay.dayOfWeek,
+        date: addDaysISO(weekStart, (strengthDay.dayOfWeek + 6) % 7),
+        surface: 'underlying',
+        workoutId: strengthDay.id,
+        workoutType: strengthDay.workoutType,
+      });
+      // Four REAL microcycles, consecutive — the property the one-week seeds
+      // cannot express and the reason this seed was sanctioned.
+      witnesses.push({ kind: 'accepted_week_count', minimum: 4, consecutive: true });
+      // "No pre-seeded exclusion, result or removal", as an executable claim
+      // rather than a sentence in a doc: no source fact of any kind, and an
+      // empty reversible ledger — which is where a removal would land.
+      witnesses.push(...cleanSourceFactWitnesses());
+      witnesses.push({ kind: 'reversible_ledger_state', activeCount: 0, totalCount: 0 });
+      break;
+    }
     case 'spent-week-friday': {
       // The "week is spent" state every other seed structurally cannot reach:
       // today is FRIDAY, not the Monday anchor, and MON/TUE/THU are already
@@ -1064,6 +1109,10 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
     case 'fixture-move':
     case 'multi-reload-fixture-chain':
     case 'coach-production-replay':
+    // A quiescent accepted block and nothing else: no feedback, no injury, no
+    // equipment fact. The Remove slice must start from a world where the only
+    // decision on record is the one the athlete is about to make.
+    case 'exercise-removal-restart':
       break;
     case 'lower-body-deletion':
       break;
@@ -1196,8 +1245,7 @@ function hasSourceFact(
   kind: Extract<DevE2EWitness, { kind: 'absent_source_fact' }>['factKind'],
 ): boolean {
   if (kind === 'injury') {
-    return !!state.activeInjury ||
-      (state.injuryEpisodes?.length ?? 0) > 0 ||
+    return (state.injuryEpisodes?.length ?? 0) > 0 ||
       (state.temporarySourceFacts ?? []).some((fact) => 'episodeId' in fact) ||
       state.activeConstraints.some((constraint) => constraint.type === 'injury');
   }
@@ -1308,8 +1356,8 @@ export function validateDevE2EWitnesses(
           candidate.id === witness.constraintId &&
           candidate.type === 'injury' &&
           candidate.injuryEpisodeId === witness.episodeId);
-        if (state.activeInjury?.bodyPart !== witness.bodyPart ||
-          state.activeInjury?.severity !== witness.severity ||
+        if (episode?.bodyPart !== witness.bodyPart ||
+          episode?.severity !== witness.severity ||
           episode?.legacyMigrationStatus !== 'native_v1' ||
           !sourceFact ||
           !constraint) {

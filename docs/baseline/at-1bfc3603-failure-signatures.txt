@@ -1,0 +1,1169 @@
+=== test:section18-planner (exit 1) ===
+6:  if (!condition) throw new Error(`${message}${detail === undefined ? '' : `: ${JSON.stringify(detail)}`}`);
+9:Error: final allocation rejected its phase-owned target: [{"code":"required_exposure_shortfall","domain":"sprint_cod","expected":1,"actual":0}]
+
+=== test:section18-v2 (exit 1) ===
+10:  FAIL healthy generated TT resolves to normal unrestricted participation 
+155:section18ContractV2Tests: 134 passed, 1 failed
+
+=== test:section18-gateway (exit 1) ===
+145:        throw new GeneratedWeekRefusedError(
+148:GeneratedWeekRefusedError: Generated week refused (sprint_high_speed_required_minimum:0)
+165:      expected: 1,
+
+=== test:craft-tier (exit 1) ===
+545:  FAIL A3 the gateway still accepts the week the generator built { status: 'impossible', craft: [] }
+549:  FAIL B1 the craft tier names the G-2 hard lower []
+551:  FAIL B3 the swap fixture exists and violates the craft on G-2 []
+555:  FAIL C2 the contract had no objection — this is the craft tier acting alone [ 'phase_subphase_policy_mismatch' ]
+556:  FAIL C3 the search MOVES the badly placed session rather than only naming it { repairs: [] }
+559:  FAIL C6 an unrepaired craft violation is DISCLOSED, never silent { status: 'impossible', repairs: [] }
+560:  FAIL C7 an unrepaired craft violation is not reported as impossible {
+562:  failureSignature: 'phase_subphase_policy_mismatch:identity:"bye_build"'
+564:  FAIL C8 a craft-only shortfall never throws a restoration 
+567:  FAIL D1 a violation on a fact day is still FOUND []
+578:  FAIL G1 an athlete-placed violation is still FOUND []
+581:  FAIL G4 a repair is withheld rather than displace an athlete-owned day { repairs: [] }
+
+=== test:accepted-state-transactions (exit 1) ===
+7:  FAIL [regression] 1 adding a game mark regenerates and gates the target game week Section18WeekAcceptanceError: Section 18 final-week rejection (planner_selected_target_miss:sprint_high_speed:1)
+55:    failureSignature: 'planner_selected_target_miss:sprint_high_speed:1'
+60:  FAIL [regression] 2 removing a game mark removes credit and resolves bye policy Section18WeekAcceptanceError: Section 18 final-week rejection (planner_selected_target_miss:sprint_high_speed:1)
+108:    failureSignature: 'planner_selected_target_miss:sprint_high_speed:1'
+113:  FAIL [regression] 3 adding a rest mark cannot silently remove required core work Section18WeekAcceptanceError: Section 18 final-week rejection (required_minimum_shortfall:sprint_high_speed:0)
+161:    failureSignature: 'required_minimum_shortfall:sprint_high_speed:0'
+166:  FAIL [regression] 4 removing a rest mark cannot create a hard-day or rest breach GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+183:      expected: 3,
+188:  FAIL [regression] 5 practice-match calendar changes use the approved PM table Section18WeekAcceptanceError: Section 18 final-week rejection (required_minimum_shortfall:sprint_high_speed:0)
+236:    failureSignature: 'required_minimum_shortfall:sprint_high_speed:0'
+241:  FAIL [regression] 6 a future calendar mark is gated when it becomes material Section18WeekAcceptanceError: Section 18 final-week rejection (required_minimum_shortfall:sprint_high_speed:0)
+289:    failureSignature: 'required_minimum_shortfall:sprint_high_speed:0'
+
+=== test:athlete-session-deletion (exit 1) ===
+7:  FAIL [regression] 1 exact Sunday CORE conditioning deletion relocates to Saturday Error: bye-build hard conditioning template missing from both the derived week and the rebuilt week; derived reads ["1:lower","2:Team Training","4:Team Training","6:Game"], rebuilt reads ["2026-07-13:lower","2026-07-14:Team Training","2026-07-15:Rest","2026-07-16:Team Training","2026-07-17:Rest","2026-07-18:Game","2026-07-19:Rest"]
+119:  FAIL [regression] 3 optional session deletes without replacement Error: bye-build hard conditioning template missing from both the derived week and the rebuilt week; derived reads ["1:lower","2:Team Training","4:Team Training","6:Game"], rebuilt reads ["2026-07-13:lower","2026-07-14:Team Training","2026-07-15:Rest","2026-07-16:Team Training","2026-07-17:Rest","2026-07-18:Game","2026-07-19:Rest"]
+130:  FAIL [regression] 4 component deletion preserves the rest of a stacked day Error: stacked strength+conditioning precondition missing
+141:  FAIL [regression] 5 whole-session deletion on a stacked day leaves Rest Error: stacked precondition missing
+152:  FAIL [regression] 6 phase matrix keeps deletion authoritative and Bible-valid GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+169:      expected: 3,
+189:  FAIL [regression] 7 fixture, practice-match, readiness, injury and equipment rules survive Error: equipment: Generated week refused (main_strength_planner_selected_target:2)
+200:  [cause]: GeneratedWeekRefusedError: Generated week refused (main_strength_planner_selected_target:2)
+215:  FAIL [regression] 8 Sunday deletion closes persisted following-week dependencies Error: bye-build hard conditioning template missing from both the derived week and the rebuilt week; derived reads ["1:lower","2:Team Training","4:Team Training","6:Game"], rebuilt reads ["2026-07-13:lower","2026-07-14:Team Training","2026-07-15:Rest","2026-07-16:Team Training","2026-07-17:Rest","2026-07-18:Game","2026-07-19:Rest"]
+226:  FAIL [regression] 9 tap and Coach whole-session deletion converge Error: bye-build hard conditioning template missing from both the derived week and the rebuilt week; derived reads ["1:lower","2:Team Training","4:Team Training","6:Game"], rebuilt reads ["2026-07-13:lower","2026-07-14:Team Training","2026-07-15:Rest","2026-07-16:Team Training","2026-07-17:Rest","2026-07-18:Game","2026-07-19:Rest"]
+237:  FAIL [regression] 10 reload, rebuild and rollover do not resurrect target Error: bye-build hard conditioning template missing from both the derived week and the rebuilt week; derived reads ["1:lower","2:Team Training","4:Team Training","6:Game"], rebuilt reads ["2026-07-13:lower","2026-07-14:Team Training","2026-07-15:Rest","2026-07-16:Team Training","2026-07-17:Rest","2026-07-18:Game","2026-07-19:Rest"]
+348:  FAIL [regression] 11 impossible relocation records typed reduction and keeps deletion Error: message=Session removed. This week’s strength target has been reduced at your request.
+
+=== test:athlete-session-move (exit 1) ===
+9:  FAIL 3 occupied compatible destination swaps atomically GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+26:      expected: 3,
+33:  PASS 6 induced publication failure cannot create a half-move
+35:  PASS 8 failed preview and failed commit share the identity rejection family
+23453:  FAIL 12 direct/reload moves converge across the production-door phase matrix GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+23470:      expected: 3,
+23475:  FAIL 13 Monday → Wednesday restoration returns both exact prescriptions Error: {"outcome":"safely-rejected","adjustmentId":"reversible-adjustment:session_move:20260818T070544939Z:test:athlete_move:user-move:2026-07-20:2026-07-22:sched:2026-07-20:1:lower:j5xg00","acceptedRevisionBefore":2,"acceptedRevisionAfter":2,"affectedDates":["2026-07-20","2026-07-21","2026-07-22","2026-07-23"],"affectedWeeks":["2026-07-20"],"reason":"restored_semantic_fingerprint_mismatch:2026-07-20:{\"expected\":{\"id\":\"w-composed-mc-ai-2-1\",\"name\":\"lower\",\"type\":\"Strength\"},\"current\":{\"id\":\"w-composed-mc-ai-2-1\",\"name\":\"Lower Body Strength\",\"type\":\"Strength\"},\"changes\":[{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.patterns.0\",\"after\":\"squat\",\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.patterns.1\",\"after\":\"hinge\",\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.strengthIntent\",\"before\":null,\"after\":{\"archetype\":\"lower\",\"effectivePatterns\":[\"squat\",\"hinge\"],\"plannedPatterns\":[\"squat\",\"hinge\"],\"primaryPattern\":\"squat\"},\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.presentation.title\",\"before\":\"lower\",\"after\":\"Lower Body Strength\",\"category\":\"presentation\",\"direction\":\"changed\"}]}","supersededById":null}
+23486:  FAIL 14 repeated restoration is idempotent Error: {"outcome":"safely-rejected","adjustmentId":"reversible-adjustment:session_move:20260818T070544994Z:test:athlete_move:user-move:2026-07-20:2026-07-22:sched:2026-07-20:1:lower:ni5vxy","acceptedRevisionBefore":2,"acceptedRevisionAfter":2,"affectedDates":["2026-07-20","2026-07-21","2026-07-22","2026-07-23"],"affectedWeeks":["2026-07-20"],"reason":"restored_semantic_fingerprint_mismatch:2026-07-20:{\"expected\":{\"id\":\"w-composed-mc-ai-2-1\",\"name\":\"lower\",\"type\":\"Strength\"},\"current\":{\"id\":\"w-composed-mc-ai-2-1\",\"name\":\"Lower Body Strength\",\"type\":\"Strength\"},\"changes\":[{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.patterns.0\",\"after\":\"squat\",\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.patterns.1\",\"after\":\"hinge\",\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.strengthIntent\",\"before\":null,\"after\":{\"archetype\":\"lower\",\"effectivePatterns\":[\"squat\",\"hinge\"],\"plannedPatterns\":[\"squat\",\"hinge\"],\"primaryPattern\":\"squat\"},\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.presentation.title\",\"before\":\"lower\",\"after\":\"Lower Body Strength\",\"category\":\"presentation\",\"direction\":\"changed\"}]}","supersededById":null}
+23498:  FAIL 16 Coach undo bypasses RevertPlan and uses the shared restoration executor Error: {"kind":"verified_no_op","reply":"restored_semantic_fingerprint_mismatch:2026-07-20:{\"expected\":{\"id\":\"w-composed-mc-ai-2-1\",\"name\":\"lower\",\"type\":\"Strength\"},\"current\":{\"id\":\"w-composed-mc-ai-2-1\",\"name\":\"Lower Body Strength\",\"type\":\"Strength\"},\"changes\":[{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.patterns.0\",\"after\":\"squat\",\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.patterns.1\",\"after\":\"hinge\",\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.components.sched:2026-07-20:1:lower:strength.metadata.strengthIntent\",\"before\":null,\"after\":{\"archetype\":\"lower\",\"effectivePatterns\":[\"squat\",\"hinge\"],\"plannedPatterns\":[\"squat\",\"hinge\"],\"primaryPattern\":\"squat\"},\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-07-20.workout.presentation.title\",\"before\":\"lower\",\"after\":\"Lower Body Strength\",\"category\":\"presentation\",\"direction\":\"changed\"}]}","applied":false,"route":"reversible_adjustment:safely-rejected:undo_last_change","progress":["checking_program","applying_change","verifying_update","composing_reply"]}
+23511:  FAIL 19 clearing one of two same-week adjustments preserves the unrelated active move GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+23528:      expected: 3,
+23533:  FAIL 20 an occupied restoration target conflicts without publishing a program overwrite Error: occupied-target witness session missing
+
+=== test:athlete-move-occupied-content-loss (exit 1) ===
+212:  FAIL [invariant] M2 chained double-move conserves content and reports honestly (a: survives, b: no dup, c: honest success): (a) moved session silently destroyed (swap ok=false, msg="Big session the day before your game. The plan is untouched."); week = 2026-07-14:Team Training, 2026-07-15:lower, 2026-07-16:Team Training, 2026-07-18:Game Day
+214:Athlete move occupied content-loss invariants: 1 passed, 1 failed
+215:Failing (expected RED until the conservation invariant is owned): M2 chained double-move conserves content and reports honestly (a: survives, b: no dup, c: honest success)
+
+=== test:g1-landing-ask-flow (exit 1) ===
+22810:  FAIL 3 the derived Gunshow still owns G-1 when the athlete placed nothing Error: in-season G-1 is empty — the seed no longer exercises this rule
+22821:  FAIL 4 a virtual-fixture G-1 keeps honouring athlete placement too Error: in-season G-1 Gunshow missing from the seeded week
+22832:  FAIL 5 the displaced G-1 filler is discarded, never materialised on the source day Error: this seed no longer puts a derived filler on G-1
+22843:  FAIL 6 the menu is uniform — three routes, whatever the athlete moved Error: no session in ANY week of the practice-match program carries conditioning WITHOUT accessory rows, so route (b) has no subject. That is attach-first swallowing an authored session shape, not a fixture to loosen. Weeks: 2026-07-13[1:lower_squat(c=1,a=4) 2:Team Training(c=1,a=2) 3:lower_hinge(c=0,a=4) 4:Team Training(c=0,a=2) 6:Game Day(c=0,a=0)] 2026-07-20[1:Lower Squat(c=1,a=1) 2:Team Training(c=1,a=1) 3:Lower Body Strength(c=0,a=2) 4:Team Training(c=0,a=1) 6:Game Day(c=0,a=0)] 2026-07-27[1:lower_squat(c=1,a=4) 2:Team Training(c=1,a=2) 3:lower_hinge(c=0,a=4) 4:Team Training(c=0,a=2) 6:Game Day(c=0,a=0)] 2026-08-03[1:lower_squat(c=1,a=4) 2:Team Training(c=1,a=2) 3:lower_hinge(c=0,a=4) 4:Team Training(c=0,a=2) 6:Game Day(c=0,a=0)]
+22856:  FAIL 9 route (b) on a session with no accessories is the pump session, named honestly Error: no session in ANY week of the practice-match program carries conditioning WITHOUT accessory rows, so route (b) has no subject. That is attach-first swallowing an authored session shape, not a fixture to loosen. Weeks: 2026-07-13[1:lower_squat(c=1,a=4) 2:Team Training(c=1,a=2) 3:lower_hinge(c=0,a=4) 4:Team Training(c=0,a=2) 6:Game Day(c=0,a=0)] 2026-07-20[1:Lower Squat(c=1,a=1) 2:Team Training(c=1,a=1) 3:Lower Body Strength(c=0,a=2) 4:Team Training(c=0,a=1) 6:Game Day(c=0,a=0)] 2026-07-27[1:lower_squat(c=1,a=4) 2:Team Training(c=1,a=2) 3:lower_hinge(c=0,a=4) 4:Team Training(c=0,a=2) 6:Game Day(c=0,a=0)] 2026-08-03[1:lower_squat(c=1,a=4) 2:Team Training(c=1,a=2) 3:lower_hinge(c=0,a=4) 4:Team Training(c=0,a=2) 6:Game Day(c=0,a=0)]
+22875:  FAIL 19 a routeless SWAP onto G-1 answers with the ask and applies nothing Error: route (a) would keep "null", not the day's Gunshow
+22888:  FAIL 22 recovery and rest still land on G-1 without a word, whatever the door Error: the wordless recovery swap was refused: That change didn't go through — nothing on your plan changed. Try again, or ask your coach.
+22905:  FAIL 28 a routed landing on an EMPTY G-1 lands, instead of being refused Error: the bin failed: That change didn't go through — nothing on your plan changed. Try again, or ask your coach.
+22918:G-1 landing ask-flow totals: 21 passed, 8 failed
+22919:Failing: 3 the derived Gunshow still owns G-1 when the athlete placed nothing, 4 a virtual-fixture G-1 keeps honouring athlete placement too, 5 the displaced G-1 filler is discarded, never materialised on the source day, 6 the menu is uniform — three routes, whatever the athlete moved, 9 route (b) on a session with no accessories is the pump session, named honestly, 19 a routeless SWAP onto G-1 answers with the ask and applies nothing, 22 recovery and rest still land on G-1 without a word, whatever the door, 28 a routed landing on an EMPTY G-1 lands, instead of being refused
+
+=== test:phase-clock (exit 1) ===
+18:        throw new GeneratedWeekRefusedError(
+21:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+38:      expected: 3,
+
+=== test:phase-ownership (exit 1) ===
+60:  ✗ programStore folds into the intensity owner
+69:  Fail: 1
+71:— Failures —
+
+=== test:phase-shift-atomicity (exit 1) ===
+22:Section18WeekAcceptanceError: Section 18 final-week rejection (required_minimum_shortfall:sprint_high_speed:0)
+70:    failureSignature: 'required_minimum_shortfall:sprint_high_speed:0'
+
+=== test:phase-skew-repair (exit 1) ===
+50:        throw new GeneratedWeekRefusedError(
+53:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+70:      expected: 3,
+
+=== test:section18-ownership (exit 1) ===
+6:-- §18 ownership invariants (expected RED pre-migration) --
+7:  FAIL [invariant] 1 bounded-diff: exercise swap touches only the swapped row: precondition: MON has a deadlift row
+8:  FAIL [invariant] 2 untouched-load: Deadlift load is byte-identical after an unrelated swap: precondition: MON has a deadlift row
+10:  FAIL [invariant] 4 disclosed-repair: binning TUE strength names every day it changes: bin refused: "That change didn't go through — nothing on your plan changed. Try again, or ask your coach."
+13:  FAIL [invariant] 7 persistence: the bounded swap result survives reload without drift: precondition: MON deadlift has a load
+14:  FAIL [invariant] 8a relocated-disclosure: strength-displacing Swap relocates the displaced strength and names the day: displaced strength did not relocate to Wednesday: sessionDays=[2,4]
+117:  FAIL [invariant] 8c anchor-relocated-disclosure: an anchor-day strength-displacing Swap relocates the displaced strength and names the day: displaced anchor-day strength did not relocate to Wednesday: sessionDays=[1,4]
+120:§18 ownership invariants: 6 passing, 6 failing
+121:Currently RED (expected pre-migration):
+
+=== test:illness-recovery-mode (exit 1) ===
+10:  FAIL [invariant] 5 illness_recovery GAME week: every surviving session is optional (team days included): illness_recovery game (mode=optional_week): surviving sessions NOT stamped optional: dow1:Strength/core, dow2:Team Training/core, dow4:Team Training/core
+11:  FAIL [invariant] 5b illness_recovery NON-game week: every surviving session is optional: illness_recovery non-game (mode=optional_week): surviving sessions NOT stamped optional: dow1:Strength/core, dow2:Team Training/core, dow4:Team Training/core
+12:  FAIL [invariant] 6 mode-level stamp is type-agnostic: strength AND team sessions both render optional: a surviving STRENGTH session was not optional: Strength/core
+13:  FAIL [invariant] 7 optional-only week: no engine-validate coverage violation AND no emergency promotion: emergency promotion forced a session back to core in an optional-only week: dow1:Strength, dow2:Team Training, dow4:Team Training
+20:  FAIL [invariant] 10 an in-season severe-illness week GENERATES as a deload: the illness week must arrive at a DELOADED dose, got 3 main-lift sets vs 3 healthy
+23:illness_recovery week-mode invariants: 12 passing, 5 failing
+24:Currently RED (expected pre-implementation):
+
+=== test:deriving-device-commit (exit 1) ===
+4098:  FAIL [invariant] D6 visibly optional + disclosed: the bed-ridden week marks sessions optional and discloses: the illness_recovery week marks no sessions optional/recovery on the accepted surface
+5411:  FAIL [invariant] D8 edit-during-illness: clearing the fact restores pre-illness state and supersedes edits, no orphans: clearing the fact did not restore the pre-illness week (supersede illness-week edits)
+5908:Deriving source-fact device-commit invariants: 7 passing, 2 failing
+
+=== test:fact-horizon (exit 1) ===
+14:  FAIL [invariant] A3a a severe illness reported Friday makes NEXT week visibly optional on the program screen: next week still shows required sessions on the program screen: 2026-07-27 Lower Body Strength/core; 2026-07-28 Team Training/core; 2026-07-30 Team Training/core
+22:13 passed, 1 failed
+
+=== test:injury-authority (exit 1) ===
+8:  FAIL [invariant] G2 a Saturday game + severe upper injury FILLS the G-2 day with the authored quality-lower: the G-2 day (Thursday) did not receive the quality-lower; placed on [nothing]. The day is stranded again: upper is paused by the injury and heavy lower is barred by the game.
+9:  FAIL [invariant] G3 the G-2 session the placer ships satisfies the authored neural-primer definition: the G-2 session is NOT a neural primer by the authored definition (rules/weekStructureValidator.looksLikeNeuralPrimer): Bench Press[3x3-5], DB Shoulder Press[3x8-10], Banded External Rotation[2x8-10]
+10:  FAIL [invariant] G4 the authored G-2 content is High Box Squat 2x3 + Vertical Jump 2x3, and rotation does not rewrite it: the G-2 session does not name High Box Squat — "low range of motion" is the ruling, and a rotated full-range squat is not it: Bench Press[3x3-5], DB Shoulder Press[3x8-10], Banded External Rotation[2x8-10]
+12:  FAIL [invariant] G6 a genuinely exhausted week authorises the typed main-strength frequency reduction: every main-strength pattern is paused and no typed main_strength_frequency reduction was authorised: 
+14:  FAIL [invariant] G7 the seeded severe-upper world re-derives to a full, admissible week with no husk: the G-2 quality-lower session does not ship "High Box Squat" to the athlete. d4 rows: [Single-Arm DB Floor Press, DB Shoulder Press, Banded External Rotation]
+16:  FAIL [invariant] I2 an upper-body injury does not withdraw team-training or game conditioning/sprint credit: the seed did not start with every anchor at normal participation
+17:  FAIL [invariant] I6 [QUARANTINED] the committed week for an upper-body 8-10/10 stops prescribing push/pull: the committed week carries no push/pull prohibition (got []) — the injury was recorded but the week was never re-authored
+33:18 passed, 7 failed
+
+=== test:onboarding-reliability (exit 1) ===
+17:[Onboarding][commit] durable write failed {
+21:  PASS B2 commit rejects — and never reports success — when the write fails
+30:  FAIL D1 the gate registry covers every persisted store Error: could not read the persist name for blockSelectionHistoryStore.ts
+52:Onboarding reliability totals: passed=23/24 failures=1
+53:Failing: D1 the gate registry covers every persisted store
+
+=== test:rules-kernel (exit 1) ===
+165:  ✗ no unclassified (other) units in live week
+178:rulesKernelTests: 121 passed, 1 failed
+179:Failures:
+
+=== test:power-counting (exit 1) ===
+9:        throw new GeneratedWeekRefusedError(
+12:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+29:      expected: 3,
+
+=== test:slot-coverage (exit 1) ===
+63:TypeError: applyPoolRotation is not a function
+
+=== test:exercise-cap (exit 1) ===
+4203:        throw new GeneratedWeekRefusedError(
+4206:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4|hard_day_permitted_maximum:5)
+4223:      expected: 3,
+4230:      expected: 4,
+
+=== test:ladder-wide (exit 1) ===
+88814:  FAIL most worlds actually built
+88843:Wide ladder census: passed=13/14 failures=1
+88845:FAILURES:
+
+=== test:vocabulary-census (exit 1) ===
+11:  FAIL [4] no more unchecked crosswalks than when this was measured
+23:Vocabulary crosswalk census: 5 passed, 1 failed
+26:FAILURES:
+
+=== test:main-lift-pattern (exit 1) ===
+1044:  FAIL [non-vacuity] the generated census actually reached heavy lifts
+1050:Main lift pattern law: passed=22/23 failures=1
+1052:FAILURES:
+
+=== test:generation-vocabulary (exit 1) ===
+43:  FAIL the acceptance catch maps ExerciseVocabularyViolation to its own refusal
+46:generation vocabulary contract: 17 passed, 1 failed
+47:Failing: the acceptance catch maps ExerciseVocabularyViolation to its own refusal
+
+=== test:pools (exit 1) ===
+29:  FAIL: buildWorkoutsFromCoach with pinned=['Box Squat'] picks Box Squat first (got "Back Squat")
+34:Results: 473 passed, 1 failed
+36:Failures:
+
+=== test:exercise-name-lock (exit 1) ===
+12:  FAIL no hardcoded exercise name is unaccounted for
+26:Hardcoded exercise-name lock: passed=9/10 failures=1
+27:Failing: no hardcoded exercise name is unaccounted for
+
+=== test:profile-mirror-narrowing (exit 1) ===
+192:  FAIL the hydration mint site asks the rule the hydration acceptance no longer consults the mint rule — a snapshot can be fabricated from an unscoreable profile again
+202:  FAIL the one-door law reaches TEST sources, and the census is exact 5 test source(s) assign onboardingData around the write owner without being declared: anchorParticipationOwnerTests.ts, awayFlowTests.ts, blockTwoBootPreservationTests.ts, exerciseExclusionScopeTests.ts, fixtureSettleAfterSetupTests.ts. Fixtures reach state by ACTING (AGENTS.md) — route the write through the owned door, or declare it as debt with a reason.
+264:Profile mirror narrowing totals: 23 passed, 2 failed
+265:FAILURES:
+
+=== test:exposure-contract-equality (exit 1) ===
+30:  PASS the base tab has the expected columns
+36:  PASS exactly the expected rows parse inline
+38:  FAIL every prefilled literal equals the shipped value
+43:  FAIL the authored game-week row equals GAME_WEEK_TARGETS
+74:Exposure contract sheet: passed=50/52 failures=2
+75:Failing: every prefilled literal equals the shipped value, the authored game-week row equals GAME_WEEK_TARGETS
+
+=== test:weekly-dose-ownership (exit 1) ===
+36:  FAIL the built, contracted and judged hard-day maxima are one number
+42:FAIL — 22 passed, 1 failed
+
+=== test:placement-ownership (exit 1) ===
+7:  FAIL SWAP onto G-1 is refused until the athlete answers (virtual game day) this seed no longer puts a derived filler on G-1: REST (source=rest)
+8:  FAIL SWAP onto G-1 survives the resolver once routed (virtual game day) swap refused: That change didn't go through — nothing on your plan changed. Try again, or ask your coach.
+13:  FAIL SWAP onto G-1 is refused until the athlete answers (explicit practice match) this seed no longer puts a derived filler on G-1: REST (source=rest)
+14:  FAIL SWAP onto G-1 survives the resolver once routed (explicit practice match) swap refused: That change didn't go through — nothing on your plan changed. Try again, or ask your coach.
+20:  FAIL an untouched G-1 still belongs to the derived filler, unstamped G-1 is owned by REST (source=rest), not the derived game-proximity filler
+22:  FAIL a double-tapped swap reports no-change, not a second success first tap did not apply: refused / That change didn't go through — nothing on your plan changed. Try again, or ask your coach.
+30:Athlete placement ownership totals: 16 passed, 6 failed
+31:FAILURES:
+
+=== test:week-budget-placement (exit 1) ===
+6:        throw new GeneratedWeekRefusedError(
+9:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+26:      expected: 3,
+
+=== test:move-scoping (exit 1) ===
+8:  FAIL the gym session on a combined day IS movable — and so is the anchor, through the ask no strength scope offered on a combined day; got ["team"]
+14:  FAIL moving the gym session off a combined day leaves team training behind no strength scope to move
+19:  FAIL one predicate decides whether removing this day empties it a combined team + gym day is reported as sole-content, so the Remove row would promise the day becomes rest while the anchor stays put; binScopes=["team"]
+22:  FAIL the row sub-line and the whole-day scope can still disagree on an unanchored multi-kind day (PINNED, copy sheet §6-VI, unruled) the seed produces no unanchored multi-kind day at all, so this cell cannot reach the state it pins — re-point it or retire it
+24:Move scoping totals: 12 passed, 4 failed
+25:FAILURES:
+
+=== test:displacement-sweep (exit 1) ===
+11:  FAIL g_minus_2_downgrade: displaces content the athlete did not place g_minus_2_downgrade never fires — the surviving arm would pass vacuously. Day holds "Gunshow" (source=gameProximity, placed=false)
+23:Resolver displacement sweep totals: 14 passed, 1 failed
+24:FAILURES:
+
+=== test:deletion-calendar-ownership (exit 1) ===
+7:  FAIL binning a session writes no calendar mark the seed no longer has a session on G-1
+8:  FAIL the day is still empty afterwards — the bin still bins the bin no longer owns the emptiness through a constraint
+12:Deletion calendar ownership totals: 2 passed, 2 failed
+13:FAILURES:
+
+=== test:legacy-census (exit 1) ===
+292:  FAIL LR-2: declared count matches the detector (1)
+294:  FAIL LR-2: retired — the surface stays gone (1)
+301:  FAIL LR-4: declared count matches the detector (81)
+327:  FAIL detector 'unownedPersistedStores': every hit in src/ is declared (1)
+330:  FAIL detector 'mirrorDecisionReads': every hit in src/ is declared (81)
+402:Legacy reckoning census: passed=370/375 failures=5
+403:Failing: LR-2: declared count matches the detector (1), LR-2: retired — the surface stays gone (1), LR-4: declared count matches the detector (81), detector 'unownedPersistedStores': every hit in src/ is declared (1), detector 'mirrorDecisionReads': every hit in src/ is declared (81)
+
+=== test:program-control-durable (exit 1) ===
+15:  FAIL a deriving short-on-time commit compresses today and touches no other day
+29:Program-control durable totals: 19 passed, 1 failed
+30:FAILURES:
+
+=== test:totals-or-red-law (exit 1) ===
+8:  FAIL every suite in the bible chain is ARMED
+10:  FAIL every suite in the bible chain CLEARS through the owner
+12:  FAIL no suite in the chain can un-arm itself with process.exit(0)
+16:TOTALS-OR-RED law totals: 1 passed, 3 failed
+17:Failing: every suite in the bible chain is ARMED, every suite in the bible chain CLEARS through the owner, no suite in the chain can un-arm itself with process.exit(0)
+
+=== test:decision-ledger-ownership (exit 1) ===
+13:  FAIL no writer can reach the entries around the owner
+21:Decision ledger ownership totals: 7 passed, 1 failed
+22:FAILURES:
+
+=== test:program-control-decisions (exit 1) ===
+13:  FAIL [7] the appender set is closed — the door is the only new writer Error: the set of ledger appenders changed:
+15:  expected: store/decisionLedgerStore.ts, store/fixtureMutationTransaction.ts, store/preRebuildEnvelopeMigration.ts, store/undoLastDecision.ts, utils/planChangeProducer.ts, utils/programControlActions.ts
+32:Program control decision totals: 10 passed, 1 failed
+33:FAILURES:
+
+=== test:derived-week-lawfulness (exit 1) ===
+5:  FAIL W2 lawful-1 the derived week's main-strength patterns are legal and balanced
+7:  FAIL W2 lawful-2 §18 is green on the derived week with zero unresolved shortfall
+9:  FAIL W2 lawful-3 the derived week is byte-identical across two derivations and a relaunch
+11:  FAIL W2 lawful-5 the DERIVED week is byte-identical to the MATERIALISED week (parity gate)
+13:  FAIL W2 lawful-4 report the derived week's literal values
+19:  FAIL W2r lawful-1 the derived week's main-strength patterns are legal and balanced
+21:  FAIL W2r lawful-2 §18 is green on the derived week with zero unresolved shortfall
+23:  FAIL W2r lawful-3 the derived week is byte-identical across two derivations and a relaunch
+25:  FAIL W2r lawful-5 the DERIVED week is byte-identical to the MATERIALISED week (parity gate)
+27:  FAIL W2r lawful-4 report the derived week's literal values
+30:  FAIL W3-fixture-only lawful-1 the derived week's main-strength patterns are legal and balanced
+31:      W3-fixture-only: the derived week breaks the pattern/balance law — [{"code":"pattern_restore_failure","severity":"blocking","domain":"strength_patterns","expected":"at least one meaningful hinge main lift","actual":0,"detail":"Safe weekly hinge coverage was not restored by a later session.","evidence":[]}]
+
+=== test:game-anchor (exit 1) ===
+10:  FAIL a midweek anchor changes the week the app builds
+22:Game anchor ownership totals: 14 passed, 1 failed
+23:FAILURES:
+
+=== test:program-override-ownership (exit 1) ===
+11:  FAIL every override write is on the tape, refused or not — counts, never answers
+12:      Section 18 final-week rejection (pattern_restore_failure:strength_patterns:0|planner_selected_target_miss:main_strength:3)
+16:Program override ownership totals: 6 passed, 1 failed
+17:FAILURES:
+
+=== test:signed-copy-extraction (exit 1) ===
+16:  FAIL the athlete-visible gap count only goes down
+19:Signed copy extraction totals: 7 passed, 1 failed
+22:FAILURES:
+
+=== test:day-first-timeline (exit 1) ===
+48:  FAIL POWER never titles a day — and the word did not vanish, it moved
+51:  FAIL one bucket twice is ONE word — the exhibit day does not read "Strength + Strength"
+57:  FAIL no clock times, and the timeline entry shape is pinned
+60:  day-first timeline totals: 45 passed, 3 failed
+61:  failed: POWER never titles a day — and the word did not vanish, it moved, one bucket twice is ONE word — the exhibit day does not read "Strength + Strength", no clock times, and the timeline entry shape is pinned
+
+=== test:prototype-typography (exit 1) ===
+12:  FAIL every athlete-facing screen stays behind the shared Text owner
+15:  prototype typography totals: 4 passed, 1 failed
+16:  failed: every athlete-facing screen stays behind the shared Text owner
+
+=== test:section18-recovery-neutrality (exit 1) ===
+13:  FAIL THE UPSTREAM HALF — no optional work is placed authorless
+18:Section 18 recovery neutrality totals: 8 passed, 1 failed
+22:FAILURES:
+
+=== test:session-type-charter (exit 1) ===
+47:  FAIL E1. the generator places nothing the charter says it may not
+49:  FAIL E2. every "the generator places it" claim is earned
+56:  FAIL F2. every observed deviation is declared
+65:Session type charter totals: 38 passed, 3 failed
+72:FAILURES:
+
+=== test:optional-topup (exit 1) ===
+52:  FAIL COHERENCE. a day PROMOTED to required strength never composes prehab over it
+79:Optional top-up totals: 26 passed, 1 failed
+83:FAILURES:
+
+=== test:onboarding-field-influence (exit 1) ===
+21:  FAIL ageRange has no programming consumer
+25:  FAIL trainingLocation has no programming consumer
+41:Onboarding field influence: 21 passed, 2 failed
+45:FAILURES:
+
+=== test:away-span-ownership (exit 1) ===
+16:Away span ownership: 8 passed, 0 failed
+
+=== test:existing-week-proof (exit 1) ===
+232:  PASS the pre-existing week HAS team days, so the cells below can fail
+233:  FAIL and the read door returns a real week, not an empty one
+751:  FAIL route B — the week the athlete ALREADY HAD loses its club nights too
+753:  FAIL route B loses the fixture too — he is not going to be there
+755:  FAIL the two routes AGREE — which is the ruling, stated as one cell
+1229:  FAIL [liveness] and the healthy route differs from the crippled one
+1237:Existing-week proof: passed=8/13 failures=5
+1239:FAILURES:
+
+=== test:christmas-break (exit 1) ===
+244:  PASS [7] the normal week HAS team days, so the cells below can fail
+245:  FAIL [7b] a week inside the break has NO team day at all
+350:  FAIL [9] a break with no end yet still takes the club off this week
+461:  FAIL [9c] and a week built from THOSE constraints has no team day
+563:  FAIL [10f] and a break week rebuilt from it carries no team night forward
+565:  FAIL [10g] and no reused session claims a team day the plan did not mark
+569:  FAIL [11c] and the PLAN reader agrees — no team day for the gate to see
+577:christmas break: 38 passed, 6 failed
+579:FAILURES:
+
+=== test:ruling-registry (exit 1) ===
+10:  FAIL [2] the UNENFORCED ruling count only falls
+12:  FAIL [3] no question to Sam re-asks a ruling without citing its row
+18:ask gate: 6 passed, 2 failed
+21:FAILURES:
+
+=== test:athlete-door-matrix (exit 1) ===
+9:  FAIL [placement] in-season/game/4d/0tt w1 × sprint_high_speed is satisfied
+10:      sprint_high_speed is short: [{"code":"planner_selected_target_miss","severity":"blocking","domain":"sprint_high_speed","expected":2,"actual":1,"detail":"Sprint/high-speed frequency meets the floor but misses the phase planner's selected core target.","evidence":["2026-07-18:game"]}]. If this appeared when a day-based optional placement was deleted, the repair for this domain was reaching its day by overwriting that placement — see docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md.
+11:  FAIL [placement] in-season/game/4d/0tt w2 × sprint_high_speed is satisfied
+12:      sprint_high_speed is short: [{"code":"planner_selected_target_miss","severity":"blocking","domain":"sprint_high_speed","expected":2,"actual":1,"detail":"Sprint/high-speed frequency meets the floor but misses the phase planner's selected core target.","evidence":["2026-07-25:game"]}]. If this appeared when a day-based optional placement was deleted, the repair for this domain was reaching its day by overwriting that placement — see docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md.
+13:  FAIL [placement] in-season/game/4d/0tt w3 × sprint_high_speed is satisfied
+14:      sprint_high_speed is short: [{"code":"planner_selected_target_miss","severity":"blocking","domain":"sprint_high_speed","expected":2,"actual":1,"detail":"Sprint/high-speed frequency meets the floor but misses the phase planner's selected core target.","evidence":["2026-08-01:game"]}]. If this appeared when a day-based optional placement was deleted, the repair for this domain was reaching its day by overwriting that placement — see docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md.
+15:  FAIL [placement] in-season/game/4d/0tt w4 × sprint_high_speed is satisfied
+16:      sprint_high_speed is short: [{"code":"planner_selected_target_miss","severity":"blocking","domain":"sprint_high_speed","expected":2,"actual":1,"detail":"Sprint/high-speed frequency meets the floor but misses the phase planner's selected core target.","evidence":["2026-08-08:game"]}]. If this appeared when a day-based optional placement was deleted, the repair for this domain was reaching its day by overwriting that placement — see docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md.
+17:  FAIL [placement] in-season/bye/6d/0tt w1 × sprint_high_speed is satisfied
+18:      sprint_high_speed is short: [{"code":"required_minimum_shortfall","severity":"blocking","domain":"sprint_high_speed","expected":1,"actual":0,"detail":"Sprint/high-speed frequency is below the Section 18 required minimum.","evidence":[]}]. If this appeared when a day-based optional placement was deleted, the repair for this domain was reaching its day by overwriting that placement — see docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md.
+19:  FAIL [placement] in-season/bye/6d/0tt w2 × sprint_high_speed is satisfied
+20:      sprint_high_speed is short: [{"code":"required_minimum_shortfall","severity":"blocking","domain":"sprint_high_speed","expected":1,"actual":0,"detail":"Sprint/high-speed frequency is below the Section 18 required minimum.","evidence":[]}]. If this appeared when a day-based optional placement was deleted, the repair for this domain was reaching its day by overwriting that placement — see docs/REPAIR_CAPACITY_REASSESSMENT_2026-07-30.md.
+
+=== test:session-list-combinations (exit 1) ===
+7:        throw new GeneratedWeekRefusedError(
+10:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+27:      expected: 3,
+
+=== test:action-walker (exit 1) ===
+748:  FAIL 10 walks of 14 actions hold every law
+754:    minimal failing history (2 actions):
+761:    minimal failing history (2 actions):
+768:    minimal failing history (2 actions):
+775:    minimal failing history (2 actions):
+782:    minimal failing history (2 actions):
+785:  FAIL every declared red still reds — stale debt fails, it does not expire quietly
+8690:  PASS a walked pre-season fixture reads "Practice Match" (device-pass fail 1)
+8691:  PASS a door-added charter session names itself (device-pass fail 2)
+11890:  FAIL the two schedule doors are walkable through the REAL door, and the laws hold
+17239:Action walker totals: 20 passed, 3 failed
+17240:FAILURES:
+
+=== test:device-pass-2026-08-05 (exit 1) ===
+7:  FAIL finding-1a: season change Pre-season -> Off-season lands through the setup sheet
+23:  FAIL finding-1-worn: season change still lands after the legacy envelope is parked (R1.3)
+29:  FAIL finding-4-worn: a screen-door move still lands after the legacy envelope is parked (R1.3)
+37:  FAIL finding-worn-removals: after five removals, every recomposing door still works
+50:Device pass 2026-08-05 totals: 13 passed, 4 failed
+51:FAILURES:
+
+=== test:work-bill (exit 1) ===
+17:  FAIL fixture add: a game mark bills its decision (calendar included) + declared mirrors
+20:  FAIL fixture remove: unmarking bills its decision (calendar included) + declared mirrors
+24:Work bill totals: 4 passed, 2 failed
+25:FAILURES:
+
+=== test:fixture-identity (exit 1) ===
+7:  FAIL fixture-identity-3 a published week equals the week derived from the same inputs
+12:  FAIL fixture-identity-5 removal THEN fixture: one composer, and it is the deriver
+14:  FAIL fixture-identity-6 fixture THEN removal: the same two decisions in the other order, and the same one composer
+17:Fixture identity totals: 3 passed, 3 failed
+18:FAILURES:
+
+=== test:operation-ownership (exit 1) ===
+11:  FAIL 3 removing your own override lands on a week you made short
+12:      Section 18 final-week rejection (pattern_restore_failure:strength_patterns:0|planner_selected_target_miss:main_strength:3)
+13:  FAIL 4 the named erasure lands on a week the athlete made short
+14:      Section 18 final-week rejection (pattern_restore_failure:strength_patterns:0|planner_selected_target_miss:main_strength:3)
+18:  FAIL 8 every product generation call states its week acceptance
+19:      3 product generation call site(s) do not state `weekAcceptance`, so generation's own `?? 'restoration'` decides for them and an unmeetable week THROWS before the transaction is ever reached: rules/lawRegistry.ts:392, rules/weeklyCommitmentLegality.ts:62, services/api/generateProgram.ts:2395
+23:  publication-operation ownership totals: 9 passed, 3 failed
+25:  FAILURES
+26:   - 3 removing your own override lands on a week you made short: Section 18 final-week rejection (pattern_restore_failure:strength_patterns:0|planner_selected_target_miss:main_strength:3)
+27:   - 4 the named erasure lands on a week the athlete made short: Section 18 final-week rejection (pattern_restore_failure:strength_patterns:0|planner_selected_target_miss:main_strength:3)
+28:   - 8 every product generation call states its week acceptance: 3 product generation call site(s) do not state `weekAcceptance`, so generation's own `?? 'restoration'` decides for them and an unmeetable week THROWS before the transaction is ever reached: rules/lawRegistry.ts:392, rules/weeklyCommitmentLegality.ts:62, services/api/generateProgram.ts:2395
+
+=== test:fact-door-inputs (exit 1) ===
+8:  FAIL 2 the week still responds to the illness with the mirror deleted
+10:  FAIL 3 a declared injury lands, the week responds, and both survive a relaunch
+19:  fact-door input ownership totals: 6 passed, 2 failed
+21:  FAILURES
+
+=== test:game-feedback (exit 1) ===
+29:Game feedback outcome: 21 passed, 0 failed
+
+=== test:phase-structure (exit 1) ===
+7:  FAIL 1 off-season derives no team training (Bible :107, :108, :1289)
+9:  FAIL 2 the stored club fact is untouched by the shift
+11:  FAIL 3 returning to pre-season restores team training by itself
+13:  FAIL 4 early off-season stays all-optional (Bible :110)
+15:  FAIL 5 the in-season week carries its optional conditioning (Bible :81)
+18:  FAIL 7 the offer never counts toward the in-season target (Bible :127, Sam 2026-08-05)
+20:  FAIL 8 the offer never re-roles, and never survives a fixture change (ruling 2)
+22:  FAIL 9 moving the fixture leaves the week still offering (Sam 2026-08-06)
+24:  FAIL 10 an injury keeps unaffected work rather than reducing frequency (Bible :4755, :72, :93)
+30:  FAIL 11 a whole-body restriction still reduces the frequency (Bible :1913, ruled 2026-08-06)
+33:  phase structure conformance totals: 1 passed, 10 failed
+35:  FAILURES
+
+=== test:action-walker:deep (exit 1) ===
+5213:  FAIL 3 walks of 90 actions hold every law
+5219:    minimal failing history (2 actions):
+5226:    minimal failing history (2 actions):
+5229:  PASS every declared red still reds — stale debt fails, it does not expire quietly
+7655:  PASS a walked pre-season fixture reads "Practice Match" (device-pass fail 1)
+7656:  PASS a door-added charter session names itself (device-pass fail 2)
+10855:  FAIL the two schedule doors are walkable through the REAL door, and the laws hold
+11566:  FAIL THE L16 SLICE: load, display, change, repair, approve, persist, relaunch-identical
+11569:Action walker totals: 20 passed, 3 failed
+11570:FAILURES:
+
+=== test:coach-entry-surface (exit 1) ===
+48:  FAIL Program has no status door and no bare/prefill CoachTab door returned
+56:Coach entry-surface totals: passed=38/39 failures=1
+57:Failing: Program has no status door and no bare/prefill CoachTab door returned
+
+=== test:conditioning-identity (exit 1) ===
+159:        throw new GeneratedWeekRefusedError(
+162:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+179:      expected: 3,
+
+=== test:standalone-conditioning-ownership (exit 1) ===
+153:        throw new GeneratedWeekRefusedError(
+156:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+173:      expected: 3,
+
+=== test:deload-week (exit 1) ===
+116:        throw new GeneratedWeekRefusedError(
+119:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+136:      expected: 3,
+
+=== test:coach-revision-proposal-behavior (exit 1) ===
+10:  FAIL [2] conditioning removed
+53:  FAIL [3] whole session removed
+54:    expected null, got [object Object]
+90:  Fail: 2
+92:- Failures -
+135:    expected null, got [object Object]
+
+=== test:stage-b-generation-differential (exit 1) ===
+110:        throw new GeneratedWeekRefusedError(
+113:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+130:      expected: 3,
+
+=== test:power-primer-policy (exit 1) ===
+140:        throw new GeneratedWeekRefusedError(
+143:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+160:      expected: 3,
+
+=== test:edge-generation-equipment (exit 1) ===
+40:  FAIL live full-generation request uses the shared payload builder
+56:edgeGenerationEquipmentTests: 37 passed, 1 failed
+
+=== test:repo-law-guards (exit 1) ===
+8:  FAIL every boundary report carries a NOT-COVERED section
+10:  FAIL every boundary report says what the athlete can see, or says NOT-VISIBLE
+18:  FAIL an inbox item that re-scopes an instruction quotes the instruction
+20:  FAIL every boundary report written under the FORMAT LAW opens with a LOOP CHECK
+26:  FAIL LAW-elegant-two-options: a report from the cutoff forward says which two options it weighed
+45:  PASS the seed channel is first-class — own name, own validation, fails closed
+54:  FAIL an agent marks the inbox, it does not rewrite it
+58:  FAIL the files re-read at every stop stay inside their budget
+81:  FAIL no source-reading cell gains an unproven anchor
+86:repo law guards totals: 55 passed, 8 failed
+87:Failing: every boundary report carries a NOT-COVERED section, every boundary report says what the athlete can see, or says NOT-VISIBLE, an inbox item that re-scopes an instruction quotes the instruction, every boundary report written under the FORMAT LAW opens with a LOOP CHECK, LAW-elegant-two-options: a report from the cutoff forward says which two options it weighed, an agent marks the inbox, it does not rewrite it, the files re-read at every stop stay inside their budget, no source-reading cell gains an unproven anchor
+
+=== test:maestro-element-contract (exit 1) ===
+7:  ✗ flow ids no product source can produce:
+
+=== test:dev-e2e-seeds (exit 1) ===
+1365:    throw new Error('stacked-team-training-upper-pull requires the deterministic combined session.');
+1368:Error: stacked-team-training-upper-pull requires the deterministic combined session.
+
+=== test:dev-e2e-witnesses (exit 1) ===
+682:    throw new Error('stacked-team-training-upper-pull requires the deterministic combined session.');
+685:Error: stacked-team-training-upper-pull requires the deterministic combined session.
+
+=== test:dev-e2e-scenario-session (exit 1) ===
+5:  ✗ default and nine Explorer manifests add no seed families
+30:  ✓ out-of-order checkpoint fails closed with its exact marker
+31:  ✓ stale persisted fingerprints fail closed
+37:  ✓ corrupt cold-launch session publishes its exact fail-closed marker
+42:Dev E2E scenario session V2: 35 passed, 1 failed
+
+=== test:generated-week-assembly (exit 1) ===
+41:TypeError: Cannot read properties of undefined (reading 'filter')
+
+=== test:law-registry (exit 1) ===
+11:  FAIL no chain suite names a rule the registry has never heard of
+16:  FAIL NO LAW IS UNENFORCED
+20:      that counts as failing. A rule with nothing watching it is a rule
+32:law registry gate totals: 12 passed, 2 failed
+33:Failing: no chain suite names a rule the registry has never heard of, NO LAW IS UNENFORCED
+
+=== test:qa (exit 1) ===
+65:  EXPECTED VS ACTUAL:
+67:  Mon: expected full body strength + easy conditioning | actual other ❌
+68:  Tue: expected team training + upper strength | actual team training + upper strength ✅
+69:  Wed: expected easy conditioning | actual other ❌
+70:  Thu: expected team training + upper strength | actual team training + upper strength ✅
+71:  Fri: expected gunshow | actual gunshow ✅
+72:  Sat: expected game | actual game ✅
+73:  Sun: expected recovery | actual recovery ✅
+76:  Hard days: expected 3 | actual 3 ✅
+77:  Main strength: expected 3 | actual 2 ❌
+78:  Conditioning: expected 5 | actual 3 ❌
+79:  Running: expected 3 | actual 3 ✅
+
+=== test:bible:parallel (exit 2) ===
+5:RUNNER ABORT: bible-runner: test:weekly-scheduler (src/__tests__/weeklySchedulerTests.ts) asserts on its own wall-clock runtime but is not declared EXCLUSIVE. Under concurrency it would measure machine load, not the app, and fail intermittently. Add it to EXCLUSIVE with its measured reason.
+
+=== test:bible:serial-set (exit 2) ===
+5:RUNNER ABORT: bible-runner: test:weekly-scheduler (src/__tests__/weeklySchedulerTests.ts) asserts on its own wall-clock runtime but is not declared EXCLUSIVE. Under concurrency it would measure machine load, not the app, and fail intermittently. Add it to EXCLUSIVE with its measured reason.
+
+=== test:session-classification (exit 1) ===
+13:  FAIL light team training downshifts to medium
+15:  "expected": "medium",
+18:  FAIL light team training does not create a hard exposure/day
+20:  "expected": [
+38:  PASS Upper Body Strength contributes one main strength and expected hard day
+42:  PASS Lower Body Strength contributes one main strength and expected hard day
+46:  PASS Full Body Strength contributes one main strength and expected hard day
+69:38 passed, 2 failed
+71:Failures:
+
+=== test:generation-classification (exit 1) ===
+39:  FAIL off-season generated stressLevel matches adapter for every session
+44:    "expected": "high"
+49:    "expected": "medium"
+54:    "expected": "medium"
+59:    "expected": "medium"
+64:    "expected": "medium"
+69:    "expected": "high"
+74:    "expected": "medium"
+77:  FAIL pre-season light team generated stressLevel matches adapter for every session
+82:    "expected": "high"
+87:    "expected": "high"
+92:    "expected": "medium"
+
+=== test:week-validator (exit 1) ===
+35:  ✗ normal light week → info-level nags only
+48:  ✗ overloaded bye accessory day is gunshow, so main strength count is 5 not 6
+81:weekStructureValidatorTests: 47 passed, 2 failed
+82:Failures:
+
+=== test:stress-placement (exit 1) ===
+10:  ✗ team days carry one push and one pull emphasis
+14:  ✗ 3 proper strength exposures (1 lower + 2 upper)
+17:  ✗ validator counts 3 main strength exposures
+19:  ✗ no g1_not_light / g2 / sprint-proximity findings
+21:  ✗ sprint/COD exposures within cap (≤3: 2×TT + game, no app-added sprint)
+33:  ✗ sandwiched slot never holds hinge-heavy lower or hard conditioning
+37:  ✗ low-readiness game week stays at reduced dose (≤2 gym strength incl. TT doubles)
+41:  ✗ severe injury: capacity degraded below high
+43:  ✗ severe injury: dose does not exceed baseline (≤3 strength)
+45:  ✗ blocked day (busy/away): floor backs off, dose reduces (≤2 strength)
+54:stressAwarePlacementTests: 15 passed, 10 failed
+55:Failures:
+
+=== test:game-local-rebuild (exit 1) ===
+8:    throw new ProgramGenError(
+11:ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+12:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+
+=== test:fixture-conditioned-replan (exit 1) ===
+5:  FAIL 1 exact 2TT Saturday-game removal preserves core and adds Saturday hard conditioning ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+6:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+34:  FAIL 2 0TT game removal uses released Saturday for the third app conditioning exposure ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+35:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+63:  FAIL 3 1TT game removal uses released Saturday and reaches C3 ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+64:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+90:  FAIL 4 2TT game removal preserves S3 and adds exactly one app conditioning exposure ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+91:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+117:  FAIL 5 3TT game removal does not invent a fourth conditioning exposure ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+118:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+144:  FAIL 6 explicit Saturday unavailability blocks the released day ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+145:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+
+=== test:fixture-mutation-transaction (exit 1) ===
+12805:  FAIL 4 Practice Match add remains distinct from Game add Error: {"outcome":"no_change","reason":"The requested fixture is already present.","error":{"name":"FixtureMutationValidationError","code":"fixture_already_present"},"noteId":null,"acceptedRevision":1,"traceId":"aa-v2-148d4a03e26e84ba8724501c"}
+13965:  FAIL 5 Practice Match move remains distinct from Game move Error: {"outcome":"impossible","reason":"Required core work could not be relocated to a safe available day.","error":{"reason":"no_safe_placement","rejectedCandidateSignatures":["pattern_restore_failure:strength_patterns:0|planner_selected_target_miss:conditioning:3|planner_selected_target_miss:main_strength:3","maximum_breach:conditioning:4|pattern_restore_failure:strength_patterns:0|planner_selected_target_miss:main_strength:3"],"code":"required_core_relocation_failed","name":"RequiredCoreRelocationError"},"noteId":null,"acceptedRevision":1,"traceId":"aa-v2-7b1295e01e4d6228f86024e5"}
+46963:[ProgramStore][persistence] Persistence failed {
+46967:  message: 'injected_fixture_persistence_failure',
+46968:  stack: 'Error: injected_fixture_persistence_failure\n' +
+46981:  error: 'injected_fixture_persistence_failure',
+46984:  PASS 8 persistence failure restores fixture, program, ledger, mirrors and notes
+55887:  FAIL 9 fixture restoration repairs the complete recorded horizon Error: {"outcome":"safely-rejected","adjustmentId":"reversible-adjustment:game_fixture_move:20260818T071133148Z:test:game:move:2026-03-28:2026-03-29:tmtnzl","acceptedRevisionBefore":3,"acceptedRevisionAfter":3,"affectedDates":["2026-03-24","2026-03-25","2026-03-26","2026-03-28","2026-03-29","2026-03-30","2026-03-31","2026-04-02"],"affectedWeeks":["2026-03-23","2026-03-30"],"reason":"restored_semantic_fingerprint_mismatch:2026-03-24:{\"expected\":{\"id\":\"w-composed-mc-ai-1-2\",\"name\":\"Team Training\",\"type\":\"Team Training\"},\"current\":{\"id\":\"w-composed-mc-ai-1-2\",\"name\":\"Team Training\",\"type\":\"Team Training\"},\"changes\":[{\"path\":\"days.2026-03-24.workout.components.sched:2026-03-23:2:upper_pull:strength.metadata.patterns.0\",\"after\":\"pull\",\"category\":\"structure\",\"direction\":\"changed\"},{\"path\":\"days.2026-03-24.workout.components.sched:2026-03-23:2:upper_pull:strength.metadata.strengthIntent.effectivePatterns.0\",\"after\":\"pull\",\"category\":\"structure\",\"direction\":\"changed\"}]}","supersededById":null}
+72536:  FAIL 11 TraceV2 has one root for fixture action plus note projection Error: TraceV2 roots=16
+89044:fixtureMutationTransactionTests: 10 passed, 4 failed
+89045:Failures:
+
+=== test:chained-mutation-continuity (exit 1) ===
+5:  FAIL 1 exact chained Saturday-to-Sunday move preserves the accepted S3 week ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+6:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+30:  FAIL 2 Sunday game publishes following-Monday G+1 recovery atomically ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+31:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+55:  FAIL 3 removing the moved Sunday game repairs the complete rolling horizon ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+56:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+80:  FAIL 4 direct and chained final no-game states converge across both weeks ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+81:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+105:  FAIL 5 reloads between fixture mutations preserve dependency and restoration ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+106:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+130:  FAIL 6 moving Sunday back to Saturday moves the G+1 dependency ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+131:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+
+=== test:week-rebuild (exit 1) ===
+8:      throw error;
+11:ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+12:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+
+=== test:block-state (exit 1) ===
+21:    throw new ProgramGenError(
+24:ProgramGenError: I still need to know what equipment you can train with before I can build your program.
+25:    at generationEquipmentInputOrThrow (/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/services/api/generateProgram.ts:498:11)
+
+=== test:block-rollover (exit 1) ===
+111:        throw new GeneratedWeekRefusedError(
+114:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+131:      expected: 3,
+
+=== test:block-two-ladder (exit 1) ===
+33898:  FAIL but the STRENGTH quality reads UNKNOWN — no answer was only about lifting — {"strength":"good","conditioning":"good","strengthAnswerDays":12,"conditioningAnswerDays":12,"strengthEasy":false,"conditioningEasy":true}
+34371:  FAIL AND NO SET IS ADDED ON AN AMBIGUOUS ANSWER, even though the block qualifies — 7 rows gained a set with zero strength-attributable answers
+34372:  FAIL a brutal COMBINED day does not make the STRENGTH quality hard — got very_hard — the answer was about the conditioning
+39114:Block two ladder: passed=49 failures=3
+39116:FAILURES:
+
+=== test:block-two-extra-session (exit 1) ===
+2552:  FAIL a consistently easy block RAISES the offer
+2553:  FAIL and it offers exactly ONE more session
+2554:  FAIL the offered day set keeps every day the athlete already chose — offered undefined
+2555:  FAIL and adds exactly one day the athlete had free — offered undefined
+3649:  FAIL the offer is filed against the block that just ENDED — got undefined
+3650:  FAIL the probe DOES run when the offer is live (control for the cell below) — the counter never moves — the cost cell below would pass vacuously
+7576:  FAIL A CLUBLESS ATHLETE IS OFFERED THE EXTRA SESSION — club training is NOT a requirement — the offer refused an athlete whose only difference is having no club night
+8197:  FAIL a clubless PRE-SEASON athlete has no legal week at their CURRENT count either — the clubless pre-season refusal is not the sprint-exposure clause after all — re-measure before claiming it
+8204:TypeError: Cannot read properties of null (reading 'sentence')
+
+=== test:anchor-participation-owner (exit 1) ===
+24:  FAIL BOTH club nights supply HARD-DAY exposure — hard 3, expected 2
+30:  FAIL and the week is unchanged — every prescription and every explanation row — the relaunch rebuilt a different week
+34:Anchor participation owner: 18 passed, 2 failed
+36:FAILURES:
+37:  - BOTH club nights supply HARD-DAY exposure — hard 3, expected 2
+
+=== test:finisher-eligibility (exit 1) ===
+26:  ✗ S6 keeps the single early-block conditioning exposure without filler
+44:  ✗ eligible clean off-season upper path produces at least one VO2/glyco component
+46:  ✗ hard attached conditioning is typed as component
+52:  ✗ S6: VO2/glyco is reachable in a clean off-season week
+98:finisherEligibilityTests: 64 passed, 4 failed
+99:Failures:
+
+=== test:variation (exit 1) ===
+81:  FAIL: mc=2 prescription is Front Squat (got Back Squat)
+84:  FAIL: mc=2 anchor rotates to Front Squat
+87:Results: 266 passed, 2 failed
+89:Failures:
+
+=== test:conditioning-rotation (exit 1) ===
+11:  FAIL: [sprint] walks full pool of 16 in 16 mini-cycles (saw 15: 10 m Acceleration Reps, 20 m Acceleration Reps, 30 m Acceleration Reps, Hill Acceleration, Air Bike Accelerations, Return-to-Speed Ladder, Fly 20 (20+20), Fly 30 (30+30), Progressive Sprint Exposure, Off-Season Speed Reintroduction, 20 m Shuttle Repeats, 30 m Repeats, Sprint Sets (3×5×6 s), 10 s Max Sprint Repeats, 10 s Repeat Efforts)
+14:  FAIL: [sprint] mc=6 → Return-to-Speed Ladder (expected Team-Training Warm-Up Dose)
+15:  FAIL: [sprint] mc=7 → Fly 20 (20+20) (expected Return-to-Speed Ladder)
+16:  FAIL: [sprint] mc=8 → Fly 30 (30+30) (expected Fly 20 (20+20))
+17:  FAIL: [sprint] mc=9 → Progressive Sprint Exposure (expected Fly 30 (30+30))
+18:  FAIL: [sprint] mc=10 → Off-Season Speed Reintroduction (expected Progressive Sprint Exposure)
+19:  FAIL: [sprint] mc=11 → 20 m Shuttle Repeats (expected Off-Season Speed Reintroduction)
+20:  FAIL: [sprint] mc=12 → 30 m Repeats (expected 20 m Shuttle Repeats)
+21:  FAIL: [sprint] mc=13 → Sprint Sets (3×5×6 s) (expected 30 m Repeats)
+22:  FAIL: [sprint] mc=14 → 10 s Max Sprint Repeats (expected Sprint Sets (3×5×6 s))
+23:  FAIL: [sprint] mc=15 → 10 s Repeat Efforts (expected 10 s Max Sprint Repeats)
+24:  FAIL: [sprint] mc=16 → 10 m Acceleration Reps (expected 10 s Repeat Efforts)
+
+=== test:conditioning-equipment-consistency (exit 1) ===
+112:        throw new GeneratedWeekRefusedError(
+115:GeneratedWeekRefusedError: Generated week refused (main_strength_permitted_maximum:4)
+132:      expected: 3,
+
+=== test:injury-engine (exit 1) ===
+76:  ✗ RDLs removed as exact trigger
+77:  ✗ Back Squat remains
+86:  ✗ diff produced
+87:  ✗ Monday changed (RDLs removed)
+89:  ✗ Monday after-exercises STILL include Back Squat
+90:  ✗ reply contains program-changes header
+91:  ✗ reply mentions Avoid this week
+92:  ✗ reply ends with "Program updated"
+96:  ✗ Back Squat removed
+100:  ✗ diff has changes (fallback applied)
+102:  ✗ Back Squat removed at 6/10
+106:  ✗ RDLs removed (avoid)
+
+=== test:adjustment-engine (exit 1) ===
+114:  ✓ unknown sentinel: NO unknown_body_part rejection (sentinel is expected)
+161:  ✗ lower back 6: leaves Goblet Squat alone
+177:  ✗ fallback: kind is lighten_session at severity 6
+180:  ✗ fallback (8): kind is lighten_session
+187:  ✗ hamstring 8: keeps unaffected Goblet Squat untouched
+430:  ✗ shoulder: core preserved
+451:  ✗ hamstring 6: same-pattern safe choice
+452:      expected {"name":"Hip Thrusts","hierarchyTier":"same_movement_pattern"}, got {"name":"Bench Press","hierarchyTier":"unaffected_body_area"}
+455:  ✗ shoulder 6: skips still-risky DB press and chooses safe similar push
+456:      expected {"name":"Landmine Press","hierarchyTier":"similar_muscle_group"}, got {"name":"Goblet Squat","hierarchyTier":"unaffected_body_area"}
+459:Pass: 311   Fail: 7
+461:Failures:
+
+=== test:apply-events (exit 1) ===
+74:  ✗ power: strength row removed
+75:      expected 0, got 1
+76:  ✗ power: typed content preserved
+152:  Fail: 2
+154:— Failures —
+156:      expected 0, got 1
+
+=== test:uae-flow (exit 1) ===
+15:  ✗ at least one override write
+18:  ✗ reply does not name a non-removed strength exercise
+24:  ✗ override written for exact-trigger protection
+36:  ✗ at least one override
+37:  ✗ at least one protective change written
+41:  ✗ at least one override
+44:  ✗ at least one override
+54:  ✗ at least one override write
+66:  ✗ at least one override
+90:  ✗ at least one override
+95:  Fail: 10
+97:— Failures —
+
+=== test:coach-injury-integration (exit 1) ===
+41:  ✗ store: Goblet Squat preserved
+51:  Fail: 1
+53:— Failures —
+
+=== test:coach-updates (exit 1) ===
+31:  ✗ second card replaces first (different id)
+32:  ✗ second card severity = 7
+33:      expected "Hamstring pain — 7/10", got "Hammy pain — 6/10"
+45:  Fail: 2
+47:— Failures —
+
+=== test:explorer-runtime (exit 1) ===
+7:  ✗ compiles exactly nine non-Coach smoke manifests and fifteen actions Error: smoke manifest count changed
+18:  ✓ maps applied, rejected, no-change, conflict and failure without reply text
+20:  ✓ eligibility fails closed for missing, stale and missing-render witnesses
+35:Explorer runtime: 16 passed, 1 failed
+
+=== test:explorer-render-bindings (exit 1) ===
+7:  ✗ all nine manifests have accepted-state semantic render gates Error: expected 15 render gates, got 13
+22:Explorer render receipt bindings: 3 passed, 1 failed
+
+=== test:explorer-scenario-runner (exit 1) ===
+7:  ✗ all nine manifests are executable with explicit live-artifact incompleteness Error: expected nine manifests, got 8
+24:Explorer production scenario runner: 5 passed, 1 failed
+
+=== test:explorer-live-wiring (exit 1) ===
+11:  ✗ all fifteen live actions remain on canonical production bindings Error: expected 15 live actions, received 13
+21:  ✓ campaign retries one whole scenario only for infrastructure failure
+28:Explorer live wiring: 14 passed, 1 failed
+
+=== test:explorer-scenario-artifacts (exit 1) ===
+13:    throw new ExplorerScenarioContractValidationError(issues);
+16:ExplorerScenarioContractValidationError: $.steps[0].action.capability: week.repeat cannot be enabled without a production owner declaration
+
+=== test:explorer-live-runner (exit 1) ===
+11:  ✓ Metro preflight fails closed on status body, bundle status and reserved port
+16:  ✓ installed Debug identity fails stale SHA and unsupported bridge preflight
+18:  ✗ all nine capture plans compile in canonical order Error: capture plan count changed
+34:Explorer live runner: 20 passed, 1 failed
+
+=== test:coach-orchestration (exit 1) ===
+184:  ✗ pre-resolve: override exists
+317:  Fail: 1
+319:— Failures —
+
+=== test:coach-live-wiring (exit 1) ===
+12:[coach-intent] error { kind: 'schema_validation_failed' }
+17:  ✗ reply mentions hammy
+49:  ✗ logs [coach-flow] intent
+50:  ✗ logs [coach-flow] route
+51:  ✗ logs [coach-reply] source
+52:  ✗ logs [coach-flow] activeInjury
+56:  Fail: 5
+58:— Failures —
+
+=== test:injury-canonicalisation (exit 1) ===
+83:  ✗ severity 6 may retain a safe affected-area alternative instead of pausing
+90:  Fail: 1
+92:— Failures —
+
+=== test:train-around-engine (exit 1) ===
+151:  ✗ Goblet Squat preserved (squat kept at hammy severe)
+155:  Fail: 1
+157:— Failures —
+
+=== test:exposure-engine (exit 1) ===
+112:  ✗ 10m Sprint → remove (fatigue blocks hard work)
+114:  ✗ Box Jump → remove (fatigue blocks hard work)
+116:  ✗ Bike Intervals → remove (fatigue blocks hard work)
+118:  ✗ Explosive Push-Ups → remove (fatigue blocks hard work)
+134:  ✗ shoulder+fatigue + Box Jump → remove (fatigue wins)
+136:  ✗ injury attribution outranks readiness attribution
+137:      expected ["injury-priority","readiness-priority"], got ["injury-priority"]
+178:  ✗ Box Jump gone
+179:  ✗ 10m Sprint gone
+180:  ✗ Bike Intervals gone
+223:  Fail: 9
+225:— Failures —
+
+=== test:coach-constraint-producers (exit 1) ===
+22:  ✗ cooked fatigue has load-reduced title
+23:      expected "Load reduced this week", got "Cooked this week"
+40:  ✗ bucket knee (quads → knee)
+41:      expected "knee", got "quad"
+44:  ✗ id is soreness-knee
+45:      expected "soreness-knee", got "soreness-quad"
+66:  ✗ hip → adductor bucket
+67:      expected "groin", got "hip"
+75:  ✗ free-text quads → knee bucket
+109:62 passed, 5 failed
+110:Failures:
+
+=== test:coach-live-path-v2 (exit 1) ===
+96:  ✗ Fri Sprint+Plyo collapses to Rest after all training content is removed
+97:  ✗ Fri collapsed source = rest
+98:      expected "rest", got "template"
+434:  Fail: 2
+436:— Failures —
+
+=== test:coach-note-display (exit 1) ===
+9:Error: ENOENT: no such file or directory, open '/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control/src/screens/home/TodayWorkoutCard.tsx'
+
+=== test:session-components (exit 1) ===
+15:  FAIL: power + upper detects both components
+16:  FAIL: power gets a separate completion question
+17:  FAIL: power skip reason copy is component-specific
+24:  FAIL: conditioning phases contain only the actual aerobic rows
+25:  FAIL: Pallof Press and Side Plank are separated into trunk/support rows
+26:  FAIL: standalone conditioning exposes a separate support component
+28:Summary: 30 passed, 6 failed
+30:Failures:
+
+=== test:session-feedback-form (exit 1) ===
+31:  FAIL: partial power is represented independently from completed strength
+32:  FAIL: skipped power makes the combined session partial, not skipped
+33:  FAIL: power skip does not mark the whole strength session skipped
+34:  FAIL: power skip is stored honestly on its own component
+36:Summary: 95 passed, 4 failed
+38:Failures:
+
+=== test:session-outcome-parity (exit 1) ===
+112:  fail legacy feedback survives hydration unchanged
+113:      {"expected":{"dateStr":"2026-07-13","completion":"full","feeling":"good"}}
+116:Session outcome parity: 100 passed, 1 failed
+
+=== test:session-naming (exit 1) ===
+40:  FAIL S6 early off-season 4-day no-team-training display labels
+41:      expected ["Full Body Strength","Upper Push","Lower Squat"], got ["Lower Squat","Upper Pull","Lower Hinge","Upper Push"]
+46:  throw new Error(
+49:Error: B1-PIVOT: the legacy strength-content builder is severed. A strength plan entry (sched:2026-07-13:1:lower_squat) reached fallbackExercisesForPlanEntry, which means composeWeek did not cover a day the planner asked for. Fix the composer or the skeleton — never reconnect this builder.
+
+=== test:strength-intent (exit 1) ===
+34:  FAIL two-core structure carries a typed balanced upper contract [{"tier":"core","focus":"lower","dayOfWeek":"Monday","authoredDay":{"anchor":null,"components":["strength"]},"isHardExposure":true,"planEntryId":"sched:2026-07-13:1:lower","isTeamDay":false,"strengthPattern":"lower","strengthIntent":{"archetype":"lower","primaryPattern":"squat","plannedPatterns":["squat","hinge"],"effectivePatterns":["squat","hinge"]},"powerPrimer":{"kind":"primer","family":"lower","sets":1,"repsMin":3,"repsMax":3,"reduced":false,"reason":"In-season small familiar power primer — reduced dose for low capacity"}},{"tier":"core","focus":"upper_pull","dayOfWeek":"Tuesday","authoredDay":{"anchor":"club_training","components":["strength"]},"isHardExposure":true,"planEntryId":"sched:2026-07-13:2:upper_pull","isTeamDay":true,"strengthPattern":"upper","strengthIntent":{"archetype":"upper","primaryPattern":"pull","plannedPatterns":["pull"],"effectivePatterns":["pull"]},"powerPrimer":{"kind":"primer","family":"upper","sets":1,"repsMin":3,"repsMax":3,"reduced":false,"reason":"In-season small familiar power primer — reduced dose for low capacity"}},{"tier":"optional","focus":"rest_or_recovery","dayOfWeek":"Wednesday","authoredDay":{"anchor":null,"components":["recovery"]},"isHardExposure":false,"planEntryId":"sched:2026-07-13:3:rest_or_recovery","isTeamDay":false},{"tier":"core","focus":"upper_push","dayOfWeek":"Thursday","authoredDay":{"anchor":"club_training","components":["strength"]},"isHardExposure":true,"planEntryId":"sched:2026-07-13:4:upper_push","isTeamDay":true,"strengthPattern":"upper","strengthIntent":{"archetype":"upper","primaryPattern":"push","plannedPatterns":["push"],"effectivePatterns":["push"]},"powerPrimer":{"kind":"primer","family":"upper","sets":1,"repsMin":3,"repsMax":3,"reduced":false,"reason":"G-2 tiny neural primer (experienced) — reduced dose for low capacity"}},{"tier":"optional","focus":"rest_or_recovery","dayOfWeek":"Friday","authoredDay":{"anchor":null,"components":["recovery"]},"isHardExposure":false,"planEntryId":"sched:2026-07-13:5:rest_or_recovery","isTeamDay":false},{"tier":"core","focus":"game","dayOfWeek":"Saturday","authoredDay":{"anchor":"game","components":[]},"isHardExposure":true,"planEntryId":"sched:2026-07-13:6:game","isTeamDay":false},{"tier":"optional","focus":"rest_or_recovery","dayOfWeek":"Sunday","authoredDay":{"anchor":null,"components":["recovery"]},"isHardExposure":false,"planEntryId":"sched:2026-07-13:0:rest_or_recovery","isTeamDay":false}]
+36:  PASS weekly H-IS QA fails a healthy week whose lower intent lost squat
+59:strengthIntentContractTests: 43 passed, 1 failed
+60:Failures:
+
+=== test:generated-program-normalizer (exit 1) ===
+7:  ✗ edge prompt structure equals the first normalised block week
+8:      {"expected":[{"dayOfWeek":"Monday","tier":"core","strengthPattern":"upper","strengthPatternContributions":[],"planEntryId":"sched:2026-07-13:1:upper_pull","isTeamDay":true,"hasCombinedConditioning":false,"conditioningCategory":null},{"dayOfWeek":"Tuesday","tier":"core","strengthPattern":"lower","strengthPatternContributions":[],"planEntryId":"sched:2026-07-13:2:lower_squat","isTeamDay":false,"hasCombinedConditioning":true,"conditioningCategory":"vo2"},{"dayOfWeek":"Wednesday","tier":"core","strengthPattern":"upper","strengthPatternContributions":[],"planEntryId":"sched:2026-07-13:3:upper_push","isTeamDay":true,"hasCombinedConditioning":false,"conditioningCategory":null},{"dayOfWeek":"Thursday","tier":"optional","strengthPattern":null,"strengthPatternContributions":[],"planEntryId":"sched:2026-07-13:4:rest_or_recovery","isTeamDay":false,"hasCombinedConditioning":false,"conditioningCategory":null},{"dayOfWeek":"Friday","tier":"optional","strengthPattern":null,"strengthPatternContributions":[],"planEntryId":"sched:2026-07-13:5:rest_or_recovery","isTeamDay":false,"hasCombinedConditioning":false,"conditioningCategory":null},{"dayOfWeek":"Saturday","tier":"core","strengthPattern":"lower","strengthPatternContributions":[],"planEntryId":"sched:2026-07-13:6:lower_hinge","isTeamDay":false,"hasCombinedConditioning":true,"conditioningCategory":"aerobic_base"},{"dayOfWeek":"Sunday","tier":"optional","strengthPattern":null,"strengthPatternContributions":[],"planEntryId":"sched:2026-07-13:0:rest_or_recovery","isTeamDay":false,"hasCombinedConditioning":false,"conditioningCategory":null}],"actual":[{"dayOfWeek":"Monday","tier":"core","strengthPattern":"upper","strengthPatternContributions":[],"planEntryId":"sched:2026-07-06:1:upper_pull","isTeamDay":true,"hasCombinedConditioning":false,"conditioningCategory":null},{"dayOfWeek":"Tuesday","tier":"core","strengthPattern":"lower","strengthPatternContributions":[],"planEntryId":"sched:2026-07-06:2:lower_squat","isTeamDay":false,"hasCombinedConditioning":true,"conditioningCategory":"vo2"},{"dayOfWeek":"Wednesday","tier":"core","strengthPattern":"upper","strengthPatternContributions":[],"planEntryId":"sched:2026-07-06:3:upper_push","isTeamDay":true,"hasCombinedConditioning":false,"conditioningCategory":null},{"dayOfWeek":"Thursday","tier":"optional","strengthPattern":null,"strengthPatternContributions":[],"planEntryId":"sched:2026-07-06:4:rest_or_recovery","isTeamDay":false,"hasCombinedConditioning":false,"conditioningCategory":null},{"dayOfWeek":"Friday","tier":"optional","strengthPattern":null,"strengthPatternContributions":[],"planEntryId":"sched:2026-07-06:5:rest_or_recovery","isTeamDay":false,"hasCombinedConditioning":false,"conditioningCategory":null},{"dayOfWeek":"Saturday","tier":"core","strengthPattern":"lower","strengthPatternContributions":[],"planEntryId":"sched:2026-07-06:6:lower_hinge","isTeamDay":false,"hasCombinedConditioning":true,"conditioningCategory":"aerobic_base"},{"dayOfWeek":"Sunday","tier":"optional","strengthPattern":null,"strengthPatternContributions":[],"planEntryId":"sched:2026-07-06:0:rest_or_recovery","isTeamDay":false,"hasCombinedConditioning":false,"conditioningCategory":null}]}
+13:  throw new Error(
+16:Error: B1-PIVOT: the legacy strength-content builder is severed. A strength plan entry (sched:2026-07-13:3:upper_push) reached fallbackExercisesForPlanEntry, which means composeWeek did not cover a day the planner asked for. Fix the composer or the skeleton — never reconnect this builder.
+
+=== test:dev-e2e-clock (exit 1) ===
+13:  ✗ Sunday fixture produces next-Monday G+1 recovery
+20:  ✓ corrupt receipt fails closed
+21:  ✓ unknown receipt fails closed
+25:DevE2EClock scenarios: 18 passed, 1 failed
+
+=== test:dev-e2e-metro-isolation (exit 1) ===
+8:  ✗ invalid explicit URL fails instead of falling back
+32:Dev E2E Metro isolation: 25 passed, 1 failed
+33:  • invalid explicit URL fails instead of falling back
+
+=== test:dev-e2e-default-installation (exit 1) ===
+905:Error: Seed witness validation failed: multi-reload-fixture-chain:visible_equality:2026-07-19
+
+=== test:dev-e2e-testids (exit 1) ===
+20:  ✗ equipment preset IDs
+21:  ✗ equipment update and clear IDs use fact identity
+
+=== test:accessibility-contracts (exit 1) ===
+32:  ✗ expanded day rows use container mode only while nested controls render
+33:  ✗ expanded day row disables parent accessibility grouping
+34:  ✗ day row identifier remains canonical in normal mode
+35:  ✗ day row press behavior remains attached
+51:  ✗ equipment options expose their stable identity to accessibility
+54:Accessibility wrapper contracts: 33 passed, 5 failed
+56:Failures:
+
+=== test:onboarding-cold-start (exit 1) ===
+5:  FAIL 1 async Sunday-to-Monday rollover keeps one generation and acceptance date OnboardingPipelineError: Cannot convert undefined or null to object
+17:  cause: TypeError: Cannot convert undefined or null to object
+28:  originalStack: 'TypeError: Cannot convert undefined or null to object\n' +
+40:  FAIL 2 dev onboarding skip installs the deterministic accepted seed Error: dev Monday compatibility row changed: lower
+45:  FAIL 3 normal onboarding completion stores generated program OnboardingPipelineError: Cannot convert undefined or null to object
+57:  cause: TypeError: Cannot convert undefined or null to object
+68:  originalStack: 'TypeError: Cannot convert undefined or null to object\n' +
+80:  FAIL 4 empty calendar store means no invented non-fixture marks OnboardingPipelineError: Cannot convert undefined or null to object
+91:  cause: TypeError: Cannot convert undefined or null to object
+102:  originalStack: 'TypeError: Cannot convert undefined or null to object\n' +
+114:  FAIL 5 pre-season practice-match geometry survives a sparse cold start OnboardingPipelineError: Cannot convert undefined or null to object
+126:  cause: TypeError: Cannot convert undefined or null to object
+
+=== test:program-hydration-ownership (exit 1) ===
+7:  FAIL 3 real persistence hydration remains 5/5/5 and repairs scalar authority Error: counts=5/0/0
+13:  FAIL 5 accepted deletion ownership remains deleted Error: deletion ownership changed
+18:  FAIL 6 move, fixture, override and week-overlay ownership remains unchanged Error: fixture changed
+23:  FAIL 7 current source facts, readiness, equipment and accepted profile truth remain unchanged Error: source facts changed
+28:  FAIL 8 reversible ledger identities and ownership remain byte-for-byte unchanged Error: reversible ledger changed
+33:  FAIL 9 accepted composition base is preserved except derived projections Error: base provenance changed
+38:  FAIL 10 persisted readback equals the accepted normalized state Error: accepted/persisted normalization drift
+44:  FAIL 12 compatibility-store import/hydration order cannot override accepted truth Error: profile mirror overrode accepted profile
+50:  FAIL 15 legacy compatibility constraint migrates to a current source fact Error: real ProgramStore hydration did not publish the canonical source fact: []
+55:  FAIL 16 legacy reversible ownership migrates to normalized protocol Error: real ProgramStore hydration did not migrate legacy reversible ownership: {"protocolVersion":1,"adjustments":[]}
+61:  PASS 18 unsupported schema fails closed with an exact hydration reason
+63:Program hydration ownership totals: passed=7/17 failures=10
+
+=== test:in-season-midweek-row (exit 1) ===
+10:  throw new Error(
+13:Error: B1-PIVOT: the legacy strength-content builder is severed. A strength plan entry (Tuesday) reached fallbackExercisesForPlanEntry, which means composeWeek did not cover a day the planner asked for. Fix the composer or the skeleton — never reconnect this builder.
+
+=== test:modality-preference (exit 1) ===
+38:  ✗ future-day display name reflects the new modality
+61:  ✗ projection display name reflects the new modality
+125:  ✓ label-only verification: outcome.kind = applied_preference (NOT verification_failed)
+131:  Fail: 2
+133:— Failures —
+
+=== test:plan-change-producer (exit 1) ===
+16:  FAIL [2] all 15 templates offered (bye week)
+17:       {"expected":15,"actual":19}
+25:  FAIL [3] all 15 templates offered on a game week
+26:       {"expected":15,"actual":19}
+68:  FAIL [5] swap accessories_pump on 2026-07-02 validates
+69:       {"expected":"valid","actual":"invalid"}
+91:  FAIL [5] add mobility_flow on 2026-07-08 validates
+92:       {"expected":"valid","actual":"invalid"}
+101:  FAIL [5] add accessories_pump on 2026-07-08 validates
+102:       {"expected":"valid","actual":"invalid"}
+110:  FAIL [7] applied ok
+111:       {"ok":false,"outcome":"refused","message":"I couldn't safely make that change, so the plan is untouched.","appliedDates":[],"rejected":[{"date":"2026-07-04","code":"athlete_addition_publication_failed","reason":"Athlete addition requires an accepted program and profile"}]}
+
+=== test:coach-program-setup-edit (exit 1) ===
+7:[coach-program-setup] verification_failed {
+21:  ✗ Saturday added
+22:      {"actual":["Monday","Tuesday","Wednesday","Thursday","Friday"],"expected":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]}
+23:  ✗ frequency follows availability count
+24:      {"actual":5,"expected":6}
+25:  ✗ rebuild applied
+26:      {"kind":"rejected","reply":"I rebuilt the setup draft, but the generated week was missing Sunday. I did not apply it because that would not match the updated training plan.","applied":false,"route":"program_setup_verification_failed:rebuilt_program_missing_planned_days","progress":["checking_program","applying_change","verifying_update","composing_reply"]}
+27:  ✗ rebuilt microcycle can use Saturday
+30:[coach-program-setup] verification_failed {
+43:  ✗ trainingDaysPerWeek becomes 6
+44:      {"actual":5,"expected":6}
+45:  ✗ frequency-only rebuild applied when available days support it
+
+=== test:coach-command-router (exit 1) ===
+308:  ✓ "pilates" day-view success does not claim invisible failure
+310:  ✓ expected activity matcher sees Pilates in recovery session
+385:  ✓ ghost-add reply names the visible-surface failure
+409:  ✗ swap1 wrote exactly one override on the target date
+541:  ✓ move 16.9 reply names visible-surface failure
+602:  ✓ 17.9 verification failed → verified_no_op
+605:  ✓ 17.9 markReverted NOT called on failure
+608:  ✓ 17.11 failed add → kind=verified_no_op
+609:  ✓ 17.11 recorded array is empty (no record on failure)
+610:  ✓ 17.12 failed attempt did not record
+646:  Fail: 1
+648:— Failures —
+
+=== test:readiness (exit 1) ===
+10:  if (missing.length > 0) throw new MissingCapacityAnswerError(missing);
+13:MissingCapacityAnswerError: Capacity cannot be scored: missing or unrecognised recentTrainingLoad and conditioningLevel. Both answers are required (Bible Section 9); there is no default and no unknown tier.
+
+=== test:strength-sequencing (exit 1) ===
+7:  ✗ early off-season default sequence
+8:      expected ["full_body","neutral","push","neutral","squat"], got ["neutral","lower_combined","neutral","neutral","neutral","lower_combined","neutral"]
+13:  ✗ off-season includes optional conditioning without requiring a strength pairing
+36:  ✗ fully available pre-season week keeps Thursday as the 3-on/1-off break
+38:  ✗ fully available pre-season week keeps Sunday as the final off day
+63:  Fail: 4
+65:-- Failures --
+
+=== test:weekly-spacing (exit 1) ===
+7:  FAIL main strength uses Monday/Wednesday/Friday rhythm
+8:       expected [1,3,5], got [1,2,4,0]
+9:  FAIL main strength is never back-to-back
+11:  FAIL useful training reaches the second half of the week
+13:  FAIL useful training is not exhausted inside Monday-Wednesday
+15:  FAIL support/recovery separates Monday-Wednesday strength
+17:  FAIL support/recovery separates Wednesday-Friday strength
+21:  FAIL low-readiness full-body sessions are spread Monday/Friday
+22:       expected [1,5], got [1,2,4,0]
+23:  FAIL repeated standalone aerobic sessions are spread Wednesday/Saturday
+24:       expected [3,6], got []
+25:  FAIL repeated strength has a large recovery gap
+
+=== test:preseason-subphase (exit 1) ===
+32:  fail early pre-season keeps hard conditioning controlled
+37:  fail early pre-season hard conditioning is always the reduced dose
+42:  fail late pre-season controls strength volume around practice match load
+44:  fail late pre-season practice-match week adds no hard conditioning
+45:      expected 0, got 1
+47:  fail late pre-season avoids large combined S+C days
+48:      expected 0, got 1
+54:  fail early_preseason low readiness caps strength at two
+56:  fail early_preseason low readiness removes hard conditioning
+57:      expected 0, got 1
+58:  fail early_preseason low readiness removes sprint top-ups
+59:      expected 0, got 1
+
+=== test:preseason-exposure (exit 1) ===
+28:  fail week 1 Wednesday remains team training without false main-strength credit
+30:  fail week 1 Thursday is recovery/rest after required work is allocated
+36:  fail week 1 ledger accepts five training/hard days
+37:      {"expected":[5,5],"actual":[4,4]}
+38:  fail week 1 ledger preserves two full rest days
+39:      {"expected":2,"actual":3}
+45:  fail week 2 Wednesday remains team training without false main-strength credit
+47:  fail week 2 Thursday is recovery/rest after required work is allocated
+53:  fail week 2 ledger accepts five training/hard days
+54:      {"expected":[5,5],"actual":[4,4]}
+55:  fail week 2 ledger preserves two full rest days
+56:      {"expected":2,"actual":3}
+
+=== test:tap-swap-hierarchy (exit 1) ===
+10:  fail same muscle group is used when safe same-pattern knee work is unavailable
+11:      {"expected":"similar_muscle_group","actual":"unaffected_body_area"}
+12:  fail knee-blocked squat selects the curated posterior-chain option
+13:      {"expected":"Hip Thrusts","actual":"Bench Press"}
+15:  fail shoulder issue selects supported pulling before recovery
+16:      {"expected":"Chest Supported Row","actual":"Goblet Squat"}
+34:  if (missing.length > 0) throw new MissingCapacityAnswerError(missing);
+37:MissingCapacityAnswerError: Capacity cannot be scored: missing or unrecognised recentTrainingLoad and conditioningLevel. Both answers are required (Bible Section 9); there is no default and no unknown tier.
+
+=== test:poor-sleep (exit 1) ===
+28:  ✗ single night deloads
+31:  ✗ readiness carries no magnitude of any kind
+38:  ✗ one bad sleep generation adds no sprint/VO2/glycolytic category
+41:  ✗ repeated poor sleep generation adds no sprint/VO2/glycolytic category
+52:poorSleepReadinessTests: 29 passed, 4 failed
+53:Failures:
+
+=== test:testing-bias (exit 1) ===
+28:  ✗ poor aerobic nudge does not add sessions beyond availability
+49:  ✗ strength/size goal changes safe support ordering without adding a session
+51:  ✗ durability goal changes safe prehab ordering without adding a hard day
+59:  ✗ [PRE-EXISTING RED at HEAD] knee constraint blocks squat bias while safe work remains
+63:  ✗ bodyweight equipment gate overrides weak-lower exercise preference
+70:testingBiasTests: 34 passed, 5 failed
+71:Failures:
+
+=== test:fixture-settle-after-setup (exit 1) ===
+8:  FAIL leaving In-season still retires the fixtures
+12:Fixture settle-after-setup totals: 4 passed, 1 failed
+
+=== test:action-walker:extended (exit 1) ===
+67675:  FAIL 200 walks of 60 actions hold every law
+67681:    minimal failing history (2 actions):
+67688:    minimal failing history (2 actions):
+67695:    minimal failing history (2 actions):
+67702:    minimal failing history (2 actions):
+67748:  FAIL every declared red still reds — stale debt fails, it does not expire quietly
+75653:  PASS a walked pre-season fixture reads "Practice Match" (device-pass fail 1)
+75654:  PASS a door-added charter session names itself (device-pass fail 2)
+78853:  FAIL the two schedule doors are walkable through the REAL door, and the laws hold
+84290:Action walker totals: 20 passed, 3 failed
+84291:FAILURES:
+84293:  every declared red still reds — stale debt fails, it does not expire quietly
+
+=== test:composer-b1 (exit 1) ===
+54:  FAIL [anti-overfit] the composer names no world, kit label, phase or day count
+64:  FAIL [input: phaseClock] the week number changes what is selected
+73:Composer B1 CP1: passed=44 failures=2
+75:FAILURES:
+
+=== test:composer-severance (exit 1) ===
+45:[b] Full gym — an achievable-but-missing pattern still fails
+48:  PASS [full-gym] removing the achievable hinge STILL FAILS
+50:[c] Dumbbells + bands — an achievable-but-missing pattern still fails
+53:  PASS [db+bands] removing the achievable hinge STILL FAILS
+79:  FAIL [replaces pool rotation cells 1-3] the main lift varies across blocks
+85:  FAIL [REGRESSION, declared] the composer has no pinning reader — the pool cell may not retire
+128:TypeError: Cannot read properties of undefined (reading 'filter')
+
+=== test:clause-enforcement (exit 1) ===
+7:  FAIL all 42 clauses carry a modality
+15:TypeError: Cannot read properties of undefined (reading 'prohibits')
+

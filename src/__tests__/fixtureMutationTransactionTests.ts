@@ -367,8 +367,7 @@ async function main(): Promise<void> {
     });
     assert(result.outcome !== 'conflicted',
       `the retired revision handshake refused the move again: ${JSON.stringify(result)}`);
-    assert(result.outcome === 'accepted' || result.outcome === 'repaired'
-      || result.outcome === 'regenerated' || result.outcome === 'fallback',
+    assert(result.outcome === 'accepted',
       `the stale-revision move did not land: ${JSON.stringify(result)}`);
   });
 

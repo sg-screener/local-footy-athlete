@@ -12,7 +12,6 @@ import type {
 import type { CalendarDayType } from './calendarStore';
 import type { ReadinessSignal } from '../utils/readiness';
 import type { ActiveConstraint } from './coachUpdatesStore';
-import type { InjuryState } from '../utils/injuryProgression';
 import type { InjuryEpisodeV1 } from '../rules/injuryEpisode';
 import {
   isTemporarySourceFactConstraint,
@@ -96,7 +95,6 @@ import {
 } from '../utils/fixtureMinimalReplan';
 import {
   effectiveFixtureDatesForWeeks,
-  materialiseVisibleSystemWork,
   rollingHorizonDependencyClosure,
   rollingHorizonWeekStartsForMutation,
   searchRollingHorizonCandidateCombinations,
@@ -217,7 +215,6 @@ export interface AcceptedStateTransactionProposal {
   markedDays?: Record<string, CalendarDayType>;
   readinessSignalsByDate?: Record<string, ReadinessSignal>;
   activeConstraints?: ActiveConstraint[];
-  activeInjury?: InjuryState | null;
   injuryEpisodes?: InjuryEpisodeV1[];
   temporarySourceFacts?: TemporarySourceFact[];
   acceptedCompositionBase?: AcceptedCompositionBaseV1 | null;
@@ -298,7 +295,6 @@ function materialContext(state: ProgramState): AcceptedMaterialContext {
       useReadinessStore.getState().signalsByDate,
     ),
     activeConstraints: normalizeAcceptedArray(useCoachUpdatesStore.getState().activeConstraints),
-    activeInjury: useCoachUpdatesStore.getState().activeInjury ?? null,
     // R3: THE LIFE-FACTS ARE INPUTS AND THIS BRANCH USED TO DROP THEM.
     //
     // Cold start composes the accepted context from the armoured input stores.
@@ -643,20 +639,22 @@ function canonicaliseAcceptedProgramWrite(
   proposal: AcceptedStateTransactionProposal,
 ): AcceptedProgramSurfaces {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { validateLiveMicrocycleWrite } = require('../utils/postGenerationConstraintValidation') as {
-    validateLiveMicrocycleWrite: (microcycle: Microcycle, todayISO?: string) => Microcycle;
+  const { assertLiveMicrocycleWrite } = require('../utils/postGenerationConstraintValidation') as {
+    assertLiveMicrocycleWrite: (microcycle: Microcycle, todayISO?: string) => void;
   };
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { logger } = require('../utils/logger') as {
     logger: { error: (message: string, detail?: unknown) => void };
   };
   const source = ensureProgramSeasonPhaseClock(program);
-  let changed = source !== program;
-  const microcycles = source.microcycles.map((microcycle) => {
+  const changed = source !== program;
+  // ⚠ THE BOUNDARY NO LONGER RETURNS A WEEK (demolition area 1, 2026-08-19).
+  // It used to hand back a rewritten microcycle and this function stored it,
+  // so the week that reached accepted state was not the week the producer
+  // wrote. It now only ASKS, and the producer's week is published either way.
+  for (const microcycle of source.microcycles) {
     try {
-      const validated = validateLiveMicrocycleWrite(microcycle, proposal.todayISO);
-      if (validated !== microcycle) changed = true;
-      return validated;
+      assertLiveMicrocycleWrite(microcycle, proposal.todayISO);
     } catch (error) {
       /* ── THIS OWNER CANONICALISES. IT NEVER REFUSES. ──────────────────────
        *
@@ -694,11 +692,10 @@ function canonicaliseAcceptedProgramWrite(
             : (error as { message?: string })?.message ?? String(error),
         },
       );
-      return microcycle;
     }
-  });
+  }
   if (!changed) return candidate;
-  return { ...candidate, currentProgram: { ...source, microcycles } };
+  return { ...candidate, currentProgram: source };
 }
 
 export function stageAcceptedStateTransaction(
@@ -721,9 +718,6 @@ export function stageAcceptedStateTransaction(
     activeConstraints: proposal.activeConstraints === undefined
       ? priorContext.activeConstraints
       : proposal.activeConstraints,
-    activeInjury: proposal.activeInjury === undefined
-      ? priorContext.activeInjury
-      : proposal.activeInjury,
     injuryEpisodes: proposal.injuryEpisodes === undefined
       ? priorContext.injuryEpisodes
       : proposal.injuryEpisodes,
@@ -946,7 +940,7 @@ export function commitAcceptedStateTransaction(
     throw error;
   }
   const equivalenceWeeks = new Set(proposal.validateWeekStarts ?? []);
-  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
+  if (proposal.activeConstraints !== undefined ||
     proposal.injuryEpisodes !== undefined || proposal.temporarySourceFacts !== undefined) {
     for (const microcycle of staged.program.currentProgram?.microcycles ?? []) {
       equivalenceWeeks.add(microcycle.startDate.slice(0, 10));
@@ -1091,11 +1085,10 @@ export function commitAcceptedStateTransaction(
       endReadinessResetAction(readinessResetActionId);
     }
   }
-  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
+  if (proposal.activeConstraints !== undefined ||
     proposal.injuryEpisodes !== undefined || proposal.temporarySourceFacts !== undefined) {
     publishAcceptedCoachUpdatesCompatibilityMirror({
       activeConstraints: staged.context.activeConstraints,
-      activeInjury: staged.context.activeInjury,
     });
   }
   if (staged.context.acceptedProfileSnapshot) {
@@ -1131,9 +1124,9 @@ export function commitAcceptedStateTransaction(
   });
   if (trace && diagnosticsEnabled && beforeContext) {
     const activeNotes = (require('../utils/activeCoachNotes') as typeof import('../utils/activeCoachNotes'))
-      .buildActiveCoachNotes(staged.context.activeConstraints, staged.context.activeInjury);
+      .buildActiveCoachNotes(staged.context.activeConstraints);
     const beforeNotes = (require('../utils/activeCoachNotes') as typeof import('../utils/activeCoachNotes'))
-      .buildActiveCoachNotes(beforeContext.activeConstraints, beforeContext.activeInjury);
+      .buildActiveCoachNotes(beforeContext.activeConstraints);
     const beforeIds = new Set(beforeNotes.map((note) => note.id));
     const afterIds = new Set(activeNotes.map((note) => note.id));
     const afterConstraintIds = new Set(staged.context.activeConstraints.map((constraint) => constraint.id));
@@ -1166,10 +1159,7 @@ export function commitAcceptedStateTransaction(
           ? 'owned_override_removed_for_visible_reprojection'
           : 'owned_override_still_present',
       noteStateMatchesAcceptedProvenance: activeNotes.every((note) =>
-        afterConstraintIds.has(note.constraintId) || (
-          staged.context.activeInjury &&
-          note.constraintId === 'legacy_active_injury'
-        )),
+        afterConstraintIds.has(note.constraintId)),
       acceptedConstraintIdsPreserved: staged.context.activeConstraints
         .filter((constraint) => beforeConstraintIds.has(constraint.id))
         .map((constraint) => constraint.id),
@@ -2067,8 +2057,10 @@ export function buildFixtureProjection(args: {
   } else {
     try {
       target = generateProgramLocally(args.profile, {
-        // This caller COMMITS the program, so the block's selections are recorded.
-        recordSelections: true,
+        // ACCEPTANCE AUTHORS THE BLOCK. Sam: "add one typed
+        // BlockExerciseSelection history record at BLOCK ACCEPTANCE." This is
+        // that door, and it is the only mutation boundary in production.
+        recordSelections: 'author',
         // DECLARED, and the strictness is the point: the `catch` immediately
         // below CONSUMES `Section18WeekAcceptanceError` as the signal that the
         // repair owner — not target generation — must decide. Left unstated
@@ -2117,6 +2109,8 @@ export function buildFixtureProjection(args: {
             identity: {
               ...targetMicrocycle.exposureContractV2.identity,
               globalWeek: coveringWeek.weekNumber,
+              // BIBLE_ANCHOR: deload_block_length_weeks — the Bible states a
+              // RANGE (3-4 weeks); this modulo pins the top of that range.
               weekInBlock: ((Math.max(1, coveringWeek.weekNumber) - 1) % 4) + 1,
               blockNumber: coveringWeek.miniCycleNumber,
             },
@@ -2190,10 +2184,19 @@ export function buildFixtureProjection(args: {
       ...target,
       microcycles: target.microcycles.map((microcycle, index) => index === 0 ? {
         ...microcycle,
-        workouts: materialiseVisibleSystemWork({
-          canonical: alternative.workouts,
-          visible: alternative.gateway.visibleWorkouts,
-        }),
+        // THE VISIBLE-INTO-CANONICAL MERGE IS GONE (demolition area B/E,
+        // 2026-08-19). `materialiseVisibleSystemWork` took the resolver's
+        // READ-TIME derived sessions and wrote them into the accepted week,
+        // so a filler the resolver synthesised for display became accepted
+        // programming. `sessionResolver` documents what that cost: the stored
+        // filler arrived back as a `templateWorkout` on the next resolve and
+        // snapshotted itself into its own successor — provenance depth +1 and
+        // payload x2, every launch, on disk.
+        //
+        // The canonical week is what gets accepted. Derived sessions are
+        // derived on every read, from the accepted choices and the active
+        // facts, and are never promoted.
+        workouts: alternative.workouts,
         exposureContractV2: alternative.gateway.contract,
       } : microcycle),
     };
@@ -2240,7 +2243,7 @@ export interface RollingHorizonFixtureCandidateScore {
 }
 
 export interface RollingHorizonFixtureRepairResult {
-  outcome: 'accepted' | 'repaired' | 'regenerated' | 'fallback';
+  outcome: 'accepted';
   weekStarts: string[];
   projections: RollingHorizonFixtureRepairProjection[];
   totalChangedDays: number;
@@ -2469,13 +2472,10 @@ export function stageRollingHorizonFixtureRepair(args: {
   if (!search) throw new Error('Rolling fixture repair produced no complete horizon candidate');
   const projections = search.candidate;
   const statuses = projections.map((projection) => projection.replan.gateway.status);
-  const outcome = statuses.includes('fallback')
-    ? 'fallback'
-    : statuses.includes('regenerated')
-      ? 'regenerated'
-      : statuses.includes('repaired')
-        ? 'repaired'
-        : 'accepted';
+  /* §18 answers accepted or impossible. The three authored statuses this used
+   * to rank between — fallback, regenerated, repaired — named weeks the
+   * validator had built itself, and it no longer builds any. */
+  const outcome = 'accepted' as const;
   emitAthleteActionEvent(trace, 'repair_candidates_generated', {
     candidateCount: search.searchedCandidates,
     candidateGroupCounts: projectionResults.map(({ projection }) =>

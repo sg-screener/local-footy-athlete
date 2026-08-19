@@ -1,0 +1,30 @@
+appId: com.localfootyathlete.app
+name: Remove an exercise through the LABELLED hub, at a chosen scope
+---
+# THE LABELLED ROUTE ONLY. `component-delete-action-*` is the icon this hub
+# replaced; no flow that shares this file may reach for it.
+- tapOn:
+    id: "home-remove-entry"
+- extendedWaitUntil:
+    visible:
+      id: "home-remove-select-sheet"
+    timeout: 10000
+- tapOn:
+    id: "home-remove-select-${EXERCISE}"
+- extendedWaitUntil:
+    visible:
+      id: "home-remove-scope-sheet"
+    timeout: 10000
+# THE SCOPE THE ATHLETE PICKED IS VISIBLE BEFORE IT IS TAPPED.
+- assertVisible:
+    id: "home-remove-scope-${SCOPE}"
+- tapOn:
+    id: "home-remove-scope-${SCOPE}"
+- extendedWaitUntil:
+    visible:
+      id: "home-remove-result-ok"
+    timeout: 15000
+- assertNotVisible:
+    id: "home-remove-result-refused"
+- tapOn:
+    id: "home-remove-result-done"

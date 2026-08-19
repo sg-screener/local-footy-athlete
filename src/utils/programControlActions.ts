@@ -9,6 +9,8 @@ import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
 import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
+import { resolveDateWithConditioning } from './sessionResolver';
+import { buildScheduleStateImperative } from './coachWeekDiff';
 import {
   applyPlanChange,
   planChangeResultIsLandingAsk,
@@ -23,11 +25,24 @@ import type { TeamNightMoveRouteId } from './planChangeTypes';
 import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import { buildCoachNotesFromModifiers, clearActiveCoachNote } from './activeCoachNotes';
 import { getActiveProgramModifiers } from './activeProgramModifiers';
+import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
+// The latch carries NO imports of its own, so it cannot join the module cycle
+// this file's ledger-append site documents at length.
+import { ledgerReplayActive } from '../store/ledgerReplayLatch';
+import { applyExclusionsToAuthoredDay } from '../rules/exerciseExclusions';
+import { liveAthleteExclusions } from './liveEvaluationSurfaces';
+import {
+  describeVisibleInjuryChange,
+  injuryRecompositionMessage,
+  planInjuryRecomposition,
+  unsafeRowsForInjury,
+  type InjuryRecompositionPlan,
+  type InjurySubstitution,
+} from './injurySessionRecomposition';
 import {
   banExerciseGlobally,
   setPreferredAlternative,
   replaceExerciseAtDate,
-  removeExerciseAtDate,
   addExerciseAtDate,
   pinExerciseGlobally,
 } from './coachActions';
@@ -42,6 +57,7 @@ import type { ConditioningEquipmentModality } from '../types/domain';
 import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
+  type TapSwapPrimaryInjury,
 } from './tapSwapHierarchy';
 import type { PoorSleepPattern } from './readinessConstraints';
 import type { IllnessSeverityTier } from '../rules/readinessIllnessLaw';
@@ -178,6 +194,68 @@ const SETUP_ACTIONS = new Set<ProgramControlActionType>([
   'update_season_phase',
   'update_program_setup',
 ]);
+
+/**
+ * WHICH ROW THE ATHLETE MEANT — id first, then name, and AMBIGUITY IS AN ANSWER.
+ *
+ * Kept here rather than reusing `coachActions.findExerciseMatch` because that
+ * module's removal path is the coach-override one this door just stopped using,
+ * and a shared helper would be the seam that quietly pulls it back in.
+ */
+/**
+ * The exercise NAMES the athlete can see on a day, in order. The unit the
+ * injury door's honesty is measured in — see the note at its `set_injury_modifier`
+ * arm, and `injurySessionRecomposition.describeVisibleInjuryChange`.
+ */
+function visibleExerciseNamesOn(dateISO: string): string[] {
+  if (!dateISO) return [];
+  const workout = applyExclusionsToAuthoredDay({
+    workout: resolveWorkoutOnDate(dateISO),
+    dateISO,
+    exclusions: liveAthleteExclusions(),
+  });
+  return ((workout?.exercises ?? []) as { exercise?: { name?: string } }[])
+    .map((row) => row.exercise?.name ?? '')
+    .filter((name): name is string => name.length > 0);
+}
+
+/** The day as the athlete is seeing it, through the one resolver. */
+function resolveWorkoutOnDate(dateISO: string): Workout | null {
+  const state = buildScheduleStateImperative();
+  const resolved = resolveDateWithConditioning(dateISO, state);
+  return (resolved?.workout as Workout | undefined) ?? null;
+}
+
+function findRemovableExerciseIndex(
+  workout: Workout,
+  exerciseName: string,
+  exerciseId: string | undefined,
+): { kind: 'found'; index: number } | { kind: 'not_found' } | { kind: 'ambiguous' } {
+  const rows = workout.exercises ?? [];
+  if (exerciseId) {
+    const wanted = String(exerciseId);
+    const byId = rows.findIndex((row) => [
+      (row as { id?: string }).id,
+      (row as { exerciseId?: string }).exerciseId,
+      (row as { exercise?: { id?: string } }).exercise?.id,
+    ].filter(Boolean).some((candidate) => String(candidate) === wanted));
+    if (byId >= 0) return { kind: 'found', index: byId };
+  }
+  const wantedName = String(exerciseName ?? '').trim().toLowerCase();
+  if (!wantedName) return { kind: 'not_found' };
+  const matches: number[] = [];
+  rows.forEach((row, index) => {
+    const name = String(
+      (row as { exercise?: { name?: string } }).exercise?.name
+      ?? (row as { name?: string }).name
+      ?? '',
+    ).trim().toLowerCase();
+    if (name === wantedName) matches.push(index);
+  });
+  if (matches.length === 1) return { kind: 'found', index: matches[0]! };
+  if (matches.length > 1) return { kind: 'ambiguous' };
+  return { kind: 'not_found' };
+}
 
 export function routeProgramControlAction(
   action: ProgramControlAction,
@@ -486,10 +564,36 @@ function executeProgramControlActionWithinTrace(
         activeConstraints,
         readinessSignal: useReadinessStore.getState().signalsByDate[action.payload.date],
       });
-      const safety = assessTapSwapCandidateSafety(
-        action.payload.toExercise!.name,
-        environment,
-      );
+      /**
+       * ⚠ **THE DOOR REFUSES AN UNSAFE PICK. A REPLAY DOES NOT RE-JUDGE ONE.**
+       *
+       * Sam, 2026-08-19: *"Startup may replay the accepted decisions and facts,
+       * but it must not make a new choice or silently discard anything."*
+       *
+       * This gate is right when the athlete is CHOOSING: it stops them picking
+       * a replacement that their live injury or kit forbids. It was also
+       * running during ledger replay, where the same decision is being
+       * RECONSTRUCTED — and there it silently threw the athlete's swap away.
+       *
+       * MEASURED ON GLASS 2026-08-19, after the staleness refusal one layer up
+       * was already removed: the athlete swapped `RDLs -> Hip Thrusts`, then
+       * declared a knee injury and a missing barbell, and the next launch
+       * printed
+       *   `swap_exercise dl-1 "The replacement still loads the active knee issue."`
+       *   `swap_exercise dl-1 "barbell equipment is not available."`
+       * and their session came back with `RDLs` on it. Two facts declared AFTER
+       * the decision were vetoing the decision itself.
+       *
+       * **THE DECISION LANDS; ITS LEGALITY IS THE FACTS' BUSINESS.** The swap is
+       * replayed, and the injury/equipment pass that runs after it displaces the
+       * row through the approved ladder and says why (`substitutedFrom`). That
+       * is the same order the athlete lived, so the restart reproduces the same
+       * session — and their preference is still underneath, ready to come back
+       * when the constraint lifts.
+       */
+      const safety = ledgerReplayActive()
+        ? { safe: true as const, reason: undefined }
+        : assessTapSwapCandidateSafety(action.payload.toExercise!.name, environment);
       if (!safety.safe) {
         return {
           ok: false,
@@ -506,6 +610,7 @@ function executeProgramControlActionWithinTrace(
         fromExercise: action.payload.fromExercise,
         fromExerciseId: action.payload.fromExerciseId,
         toExercise: action.payload.toExercise!,
+        substitutedFrom: action.payload.substitutedFrom,
       });
       let futureResult: { success: boolean; reason?: string } | null = null;
       if (result.success && action.payload.futureWeeksToo) {
@@ -542,20 +647,107 @@ function executeProgramControlActionWithinTrace(
       };
     }
     case 'remove_exercise': {
-      const result = removeExerciseAtDate({
-        date: action.payload.date,
-        exercise: action.payload.exercise,
-        exerciseId: action.payload.exerciseId,
+      // ── REMOVE MEANS REMOVE, AND IT IS ONE DECISION ──────────────────────
+      //
+      // Sam, 2026-08-19: *"Remove means simply remove the selected
+      // exercise/component. Nothing replaces it. The session may have fewer
+      // exercises and may lose that movement pattern. **Do not ask the composer
+      // to fill the empty slot.**"* And: *"No second removal authority
+      // survives."*
+      //
+      // THE DECISION IS THE ONLY THING WRITTEN. `applyExerciseExclusionDecision`
+      // stores one record — the exercise, the scope and the stamped expiry — and
+      // two projections read it and nothing else:
+      //
+      //   READ  `rules/exerciseExclusions.applyExclusionsToAuthoredDay`, applied
+      //         at `utils/sessionResolver`, takes the row off every remaining
+      //         already-authored session inside the decision's span. That is
+      //         *"this block removes it from every remaining already-authored
+      //         session in this block"*.
+      //   AUTHOR `services/api/generateProgram.composerExclusionInput` keeps it
+      //         out of blocks the app has not authored yet. That is *"until
+      //         restored removes it from current and future sessions/blocks"*.
+      //
+      // **NOTHING IS DESTROYED, SO NOTHING HAS TO BE REBUILT TO UNDO IT.** The
+      // authored row stays in the stored program; the decision hides it. Undo
+      // and Restore delete the decision and the EXACT item is back — which is
+      // Sam's requirement stated as a mechanism rather than as a repair.
+      //
+      // ⚠ **TWO EARLIER AUTHORITIES ARE GONE FROM THIS DOOR.**
+      // `coachActions.removeExerciseAtDate` cloned the day and wrote the result
+      // as a COACH OVERRIDE (`writeCoachOverride`), patching the visible week
+      // with the transaction bypassed. Its replacement,
+      // `commitAthleteSessionDeletionTransaction`, was correct for TODAY and
+      // could not speak for a block: a dated constraint answers one date, and
+      // an athlete who says "this block" means every session in it. Both are
+      // off this path, and `removeExerciseAtDate` is deleted outright.
+      const removalDate = action.payload.date.slice(0, 10);
+      const removalOriginal = resolveWorkoutOnDate(removalDate);
+      if (!removalOriginal) {
+        return {
+          ok: false,
+          changedProgram: false,
+          requiresRebuild: false,
+          message: `There is no session on ${removalDate} to remove anything from.`,
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
+      const removalTarget = findRemovableExerciseIndex(
+        removalOriginal,
+        action.payload.exercise,
+        action.payload.exerciseId,
+      );
+      if (removalTarget.kind !== 'found') {
+        // TYPED, never a shrug. The athlete asked for something the session does
+        // not carry, or carries twice under one name. Asked BEFORE the decision
+        // is written, so a removal that cannot name its target writes nothing.
+        return {
+          ok: false,
+          changedProgram: false,
+          requiresRebuild: false,
+          message: removalTarget.kind === 'ambiguous'
+            ? `"${action.payload.exercise}" matches more than one exercise on ${removalDate}.`
+            : `Could not find "${action.payload.exercise}" on ${removalDate}.`,
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
+      // THE ROW'S OWN NAME, not the caller's spelling. A removal matched by id
+      // may have been asked for under a display name the exclusion's canonical
+      // identity would never match, and a decision keyed on the wrong name is a
+      // decision that hides nothing.
+      const removalRow = removalOriginal.exercises![removalTarget.index] as
+        { exercise?: { name?: string }; name?: string };
+      const removalIdentity = String(
+        removalRow.exercise?.name ?? removalRow.name ?? action.payload.exercise,
+      );
+      const removalDecision = applyExerciseExclusionDecision({
+        exercise: removalIdentity,
+        // "Future weeks too" is the athlete saying *until I change it*. It is
+        // the same question the day screen asks after the tap, so it resolves to
+        // the same three-answer vocabulary rather than to a second one.
+        scope: action.payload.futureWeeksToo || action.scope === 'future_weeks'
+          ? 'until_changed'
+          : 'today_only',
+        decidedOnISO: removalDate,
       });
-      let futureResult: { success: boolean; reason?: string } | null = null;
-      if (result.success && action.payload.futureWeeksToo) {
-        futureResult = banExerciseGlobally({ exercise: action.payload.exercise });
+      if (!removalDecision.ok || !removalDecision.exclusion) {
+        return {
+          ok: false,
+          changedProgram: false,
+          requiresRebuild: false,
+          message: `That removal could not be saved (${removalDecision.reason ?? 'unknown'}).`,
+          fallbackToCoach: false,
+          route: route.route,
+        };
       }
       return {
-        ok: result.success && futureResult?.success !== false,
-        changedProgram: result.success,
+        ok: true,
+        changedProgram: true,
+        // NO REBUILD. Nothing regenerates for a removal — a rebuild is exactly
+        // the thing that would let the composer choose a replacement.
         requiresRebuild: false,
-        message: futureResult?.reason ?? result.reason,
         fallbackToCoach: false,
         route: route.route,
       };
@@ -1032,11 +1224,212 @@ export async function executeProgramControlActionDurably(
   });
 }
 
+
+/**
+ * APPLY THE INJURY PLAN TO THE ATHLETE'S OWN SESSION, AND REPORT WHAT HAPPENED.
+ *
+ * ⚠ **THE `remainingUnsafe` COUNT IS MEASURED AFTER THE WRITES, FROM THE REAL
+ * SESSION — NEVER PREDICTED FROM THE PLAN.** A prediction is exactly what the
+ * deleted claim was: `visibleProgramChanged` was a true statement about a
+ * transaction, read as a statement about rows. So the session is re-read through
+ * the same door the screen uses, and the sentence is derived from that.
+ *
+ * SCOPE, STATED: the athlete's own dated session. The injury constraint already
+ * governs every week the composer authors from here on
+ * (`generateProgramLocally` reads active constraints); this is the half nothing
+ * regenerates — the day in front of them.
+ */
+function recomposeSessionForInjury(args: {
+  date: string;
+  constraint: ActiveInjuryConstraint;
+  source: ProgramControlAction['source'];
+}): { changed: boolean; message: string } {
+  /**
+   * ⚠ **THE SESSION THE ATHLETE CAN SEE, NOT THE ONE UNDERNEATH IT.**
+   *
+   * `resolveWorkoutOnDate` returns the AUTHORED day, which still carries every
+   * row an exclusion is currently hiding — the filter is a READ-time projection
+   * and this is not a read door. Measured 2026-08-19 by
+   * `npm run test:session-change-sequence`: an athlete removed `RDLs`, then
+   * declared a knee injury, and the injury pass "made safe" the very row they
+   * had already taken out — swapping the hidden `RDLs` for `Bench Press`. The
+   * damage only surfaced at Restore, which then had nothing named `RDLs` to give
+   * back: **an injury pass had quietly consumed the athlete's own decision.**
+   *
+   * So the exclusions are applied here, through the same owner the screen uses,
+   * before anything is planned. An exercise the athlete has removed is not
+   * unsafe — it is not there.
+   */
+  const workout = applyExclusionsToAuthoredDay({
+    workout: resolveWorkoutOnDate(args.date),
+    dateISO: args.date,
+    exclusions: liveAthleteExclusions(),
+  });
+  const trainingPaused = args.constraint.adjustmentLevel === 'training_paused';
+  const primaryInjury = args.constraint.bucket
+    ? {
+      bucket: args.constraint.bucket as TapSwapPrimaryInjury['bucket'],
+      severity: args.constraint.severity,
+      seriousSymptoms: false,
+    }
+    : null;
+  const environment = resolveTapSwapEnvironment({
+    date: args.date,
+    profile: useProfileStore.getState().onboardingData,
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    readinessSignal: useReadinessStore.getState().signalsByDate[args.date],
+    primaryInjury,
+  });
+  if (!workout) {
+    return {
+      changed: false,
+      message: trainingPaused
+        ? 'Affected training is paused until you get medical or physio advice.'
+        : 'Injury restrictions are active. There is no session on this day to change.',
+    };
+  }
+  const plan = planInjuryRecomposition({ workout, environment, primaryInjury });
+
+  // WHAT ACTUALLY LANDED. A plan is not an outcome: each write goes through the
+  // ordinary action owner and can be refused by it, and counting the PLAN would
+  // be the same class of claim this whole unit exists to delete.
+  const appliedSubstitutions: InjurySubstitution[] = [];
+  const appliedOmissions: string[] = [];
+  const refused: string[] = [];
+  for (const substitution of plan.substitutions) {
+    const outcome = executeProgramControlAction({
+      type: 'swap_exercise',
+      source: args.source,
+      scope: 'today_only',
+      payload: {
+        date: args.date,
+        fromExercise: substitution.from,
+        toExercise: {
+          name: substitution.to.name!,
+          sets: substitution.to.prescription?.sets ?? 3,
+          repsMin: substitution.to.prescription?.repsMin ?? 8,
+          repsMax: substitution.to.prescription?.repsMax ?? 12,
+        },
+        // THE ROW SAYS WHOSE PLACE IT IS TAKING. Sam, 2026-08-19: *"Tell the
+        // athlete exactly why their chosen exercise is temporarily not being
+        // used."* The outgoing name is carried even when it was the athlete's
+        // OWN swap — especially then, because that is the case where a row they
+        // deliberately chose has quietly become something else.
+        substitutedFrom: { baseExerciseName: substitution.from, cause: 'injury' },
+      },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: true,
+    } as ProgramControlAction);
+    if (outcome.ok) appliedSubstitutions.push(substitution);
+    else refused.push(`${substitution.from} (${outcome.message ?? 'refused'})`);
+  }
+  for (const omitted of plan.omissions) {
+    // AN OMISSION IS A REMOVAL, THROUGH THE REMOVAL OWNER. Nothing replaces it —
+    // which is the whole point: the ladder had nothing safe to offer.
+    const outcome = executeProgramControlAction({
+      type: 'remove_exercise',
+      source: args.source,
+      scope: 'today_only',
+      payload: { date: args.date, exercise: omitted },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: true,
+    } as ProgramControlAction);
+    if (outcome.ok) appliedOmissions.push(omitted);
+    else refused.push(`${omitted} (${outcome.message ?? 'refused'})`);
+  }
+  if (refused.length > 0) {
+    logger.debug('[injury-recomposition] writes refused', { date: args.date, refused });
+  }
+
+  const after = applyExclusionsToAuthoredDay({
+    workout: resolveWorkoutOnDate(args.date),
+    dateISO: args.date,
+    exclusions: liveAthleteExclusions(),
+  });
+  const remainingUnsafe = unsafeRowsForInjury({ workout: after, environment });
+  const applied: InjuryRecompositionPlan = {
+    ...plan,
+    substitutions: appliedSubstitutions,
+    omissions: appliedOmissions,
+  };
+  return {
+    changed: appliedSubstitutions.length > 0 || appliedOmissions.length > 0,
+    message: injuryRecompositionMessage({ plan: applied, remainingUnsafe, trainingPaused }),
+  };
+}
+
+/**
+ * ── THE ATHLETE'S ACTIVE INJURIES, RE-APPLIED AT BOOT AFTER THE LEDGER REPLAY ──
+ *
+ * Sam, 2026-08-19: *"Apply this when the injury/equipment action occurs — not
+ * for the first time during startup. … Startup may replay the accepted
+ * decisions and facts, but it must not make a new choice or silently discard
+ * anything."*
+ *
+ * **THE INJURY EPISODE IS DURABLE; ITS RECOMPOSITION WAS NOT.** The episode
+ * survives a process death — `activeConstraints` still reads `["injury-knee"]`
+ * after hydration — but the rows it changed are written to `dateOverrides`,
+ * which boot blanks by design and rebuilds from the decision ledger. The injury
+ * is not a ledger decision (`LEDGER_RECORDED_ACTION_TYPES` is deliberately the
+ * three exercise-level types, so that one act never becomes two undoable
+ * decisions), so nothing put the recomposition back and the athlete's session
+ * came back the pre-injury one.
+ *
+ * **THIS IS A REPLAY OF A FACT, NOT A NEW DECISION.** It mints no ledger entry,
+ * takes no transaction, and runs the SAME owner the live action ran
+ * (`recomposeSessionForInjury`) over the SAME day the live action changed — the
+ * constraint's own `startDate`, which is the day it was declared on. Same
+ * inputs, same approved ladder, same answer.
+ *
+ * **ORDER IS THE WHOLE POINT.** It runs AFTER the ledger replay, because that is
+ * the order the athlete lived: they swapped, and then they got hurt. Running it
+ * before would judge an injury against a session the athlete had not edited yet,
+ * and their swap would land on top of the safe row and undo the safety.
+ *
+ * WRITER: `store/quiescentBoot` (boot) and the `set_injury_modifier` arm (live).
+ * READER: the athlete's session. TEST: `test:session-change-durability` [6].
+ */
+export function reapplyActiveInjuryRecompositions(): { days: number } {
+  const constraints = useCoachUpdatesStore.getState().activeConstraints ?? [];
+  let days = 0;
+  for (const constraint of constraints) {
+    if (constraint.type !== 'injury' || constraint.status !== 'active') continue;
+    const date = String((constraint as { startDate?: string }).startDate ?? '').slice(0, 10);
+    if (!date) continue;
+    const outcome = recomposeSessionForInjury({
+      date,
+      constraint: constraint as ActiveInjuryConstraint,
+      // SYSTEM, because nobody tapped anything: this is the world being rebuilt.
+      source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'system' },
+    });
+    if (outcome.changed) days += 1;
+  }
+  return { days };
+}
+
 async function executeProgramControlActionDurablyWithinTrace(
   action: ProgramControlAction,
   context: ProgramControlActionContext,
 ): Promise<ProgramControlActionResult> {
   if (action.type === 'set_injury_modifier') {
+    /**
+     * ⚠ **THE ROWS ARE READ BEFORE THE FACT LANDS, AND THE CLAIM COMES FROM THE
+     * DIFFERENCE.**
+     *
+     * `createOrUpdateInjuryEpisode` settles the derived world on its way out,
+     * and that settle now re-applies active injuries (Sam's ruling: the fact is
+     * applied when the action occurs, and startup only replays it). So by the
+     * time `recomposeSessionForInjury` runs below, the work is usually already
+     * done and its own pass reports nothing — which said *"Nothing on this
+     * session needed changing"* over a session that had just lost two rows.
+     *
+     * The honest measure is the athlete's own rows, before and after.
+     */
+    const injuryRowsBefore = visibleExerciseNamesOn(
+      (action.payload.constraint?.startDate ?? context.todayISO ?? '').slice(0, 10),
+    );
     const result = await createOrUpdateInjuryEpisode({
       constraint: action.payload.constraint!,
       sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
@@ -1044,12 +1437,78 @@ async function executeProgramControlActionDurablyWithinTrace(
       todayISO: context.todayISO,
     });
     const ok = result.outcome !== 'conflicted' && result.outcome !== 'safely_rejected';
+    if (!ok) {
+      return {
+        ok,
+        changedProgram: result.changedProgram,
+        requiresRebuild: false,
+        message: result.message,
+        fallbackToCoach: false,
+        route: routeProgramControlAction(action).route,
+      };
+    }
+    // ── THE SESSION IS ACTUALLY RECOMPOSED, AND THE CLAIM IS DERIVED ────────
+    //
+    // Sam, 2026-08-19: *"Delete the false-success path ... Never say 'safely
+    // recomposed' unless visible content actually changed appropriately."*
+    //
+    // ⚠ **THE OLD SENTENCE CAME FROM `visibleProgramChanged`, WHICH IS ABOUT
+    // STORED STATE, NOT ABOUT ROWS.** Measured
+    // (`npm run probe:injury-recompose`): declaring a knee injury returned
+    // `ok=true changedProgram=true` with the message *"affected sessions were
+    // safely recomposed"*, while the visible session was BYTE-IDENTICAL and
+    // `RDLs` and `Bulgarian Split Squats` were still on it. A hamstring at
+    // severity 8 — `training_paused` — behaved the same way.
+    //
+    // So the recomposition is performed here, over the athlete's own session,
+    // through the SAME action owners their taps use: an injury substitution is a
+    // `swap_exercise` and an injury omission is a `remove_exercise`. There is no
+    // private injury writer, and `planInjuryRecomposition` reads the approved
+    // fallback ladder rather than a second opinion about safety.
+    const injuryDate = (context.todayISO ?? action.payload.constraint!.startDate
+      ?? '').slice(0, 10);
+    // Still called, and still the owner: it catches anything the settle did not
+    // reach, and it is the ONLY writer here. Normally it is a no-op now.
+    const recomposition = recomposeSessionForInjury({
+      date: injuryDate,
+      constraint: action.payload.constraint!,
+      source: action.source,
+    });
+    // WHAT THE ATHLETE CAN SEE, not what the store did and not which pass did
+    // it. `unsafeRowsForInjury` over the final day supplies the honest refusal
+    // arm, exactly as before.
+    const injuryRowsAfter = visibleExerciseNamesOn(injuryDate);
+    const visible = describeVisibleInjuryChange({
+      before: injuryRowsBefore,
+      after: injuryRowsAfter,
+      remainingUnsafe: unsafeRowsForInjury({
+        workout: applyExclusionsToAuthoredDay({
+          workout: resolveWorkoutOnDate(injuryDate),
+          dateISO: injuryDate,
+          exclusions: liveAthleteExclusions(),
+        }),
+        environment: resolveTapSwapEnvironment({
+          date: injuryDate,
+          profile: useProfileStore.getState().onboardingData,
+          activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+          readinessSignal: useReadinessStore.getState().signalsByDate[injuryDate],
+          primaryInjury: action.payload.constraint!.bucket
+            ? {
+              bucket: action.payload.constraint!.bucket as never,
+              severity: action.payload.constraint!.severity,
+              seriousSymptoms: false,
+            }
+            : null,
+        }),
+      }) as string[],
+      trainingPaused: action.payload.constraint!.adjustmentLevel === 'training_paused',
+    });
     return {
       ok,
-      changedProgram: result.changedProgram,
+      changedProgram: visible.changed || recomposition.changed,
       requiresRebuild: false,
-      createdModifierIds: ok && result.episodeId ? [result.episodeId] : undefined,
-      message: result.message,
+      createdModifierIds: result.episodeId ? [result.episodeId] : undefined,
+      message: visible.changed ? visible.message : recomposition.message,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };
@@ -1169,13 +1628,21 @@ async function executeProgramControlActionDurablyWithinTrace(
     // equipment path simply hard-coded `{ kind: 'week' }` and never reached
     // for it. That is why "an equipment answer with a start and an end date"
     // is a scope argument here rather than a new fact shape.
+    // THE SESSION SCOPE IS A ONE-DAY WINDOW, and it is written the same way the
+    // other two are. `kind: 'date'` resolves to `from === until === date`, so
+    // `equipmentConstraintAppliesToDate` admits it on exactly the session's own
+    // day and `expireTemporarySourceFacts` retires it the next — which is what
+    // makes "for this session only" true of the STORED fact and not merely of
+    // the receipt sentence the athlete was shown.
     const scope = decision.kind === 'missing_for_span'
       ? temporaryFactScope({
           kind: 'window',
           from: decision.from.slice(0, 10),
           until: decision.until.slice(0, 10),
         })
-      : temporaryFactScope({ kind: 'week', date });
+      : decision.kind === 'missing_for_session'
+        ? temporaryFactScope({ kind: 'date', date })
+        : temporaryFactScope({ kind: 'week', date });
     const fact = createTemporaryEquipmentFact({
       observedDate: date,
       scope,

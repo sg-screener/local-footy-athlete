@@ -1,0 +1,107 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - remove, restart, then RESTORE through the labelled control
+tags:
+  - e2e
+  - visible
+---
+# SAM'S ITEM 1, 2026-08-19. The labelled Remove route only; the row icon is
+# never touched. Restore must be a LABELLED control on the athlete-visible
+# active-change surface and must go through `restoreExcludedExercise` — the
+# owner `clearActiveProgramModifier` already routes an `athlete_preferences`
+# clear through. No second restore mechanism is introduced by this walk.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: ${SEED_ID}
+
+# ── LIVENESS: Back Squat is really there before anything is removed ────────
+- runFlow:
+    file: ../common/assert-strength-rows.yaml
+    env:
+      PRESENT: back-squat
+      ABSENT: front-squat
+
+- runFlow:
+    file: ../common/remove-via-hub.yaml
+    env:
+      EXERCISE: back-squat
+      SCOPE: today-only
+- takeScreenshot: artifacts/visible/restore-1-removed
+
+# ── FRONT SQUAT AT ITS OWN LOAD, BACK SQUAT GONE ──────────────────────────
+- runFlow:
+    file: ../common/assert-strength-rows.yaml
+    env:
+      PRESENT: front-squat
+      ABSENT: back-squat
+
+# ── A REAL CLOSE AND REOPEN ───────────────────────────────────────────────
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: ${SEED_ID}
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 60000
+- runFlow:
+    file: ../common/assert-strength-rows.yaml
+    env:
+      PRESENT: front-squat
+      ABSENT: back-squat
+- takeScreenshot: artifacts/visible/restore-2-survived-restart
+
+# ── THE LABELLED RESTORE CONTROL, ON THE ACTIVE-CHANGE SURFACE ────────────
+# By its FULL accessibility label, for the reason recorded in
+# `assert-strength-rows.yaml`: the bare word does not resolve.
+- tapOn:
+    text: "Coach tab"
+- extendedWaitUntil:
+    visible:
+      id: "modifiers-strip-coach"
+    timeout: 20000
+- tapOn:
+    id: "modifiers-strip-coach"
+- extendedWaitUntil:
+    visible:
+      id: "coach-status-screen"
+    timeout: 20000
+# The exclusion's own row, then its actions.
+- tapOn:
+    id: "coach-status-modifier-.*"
+- extendedWaitUntil:
+    visible:
+      id: "program-active-coach-note-action-.*-restore_exclusion"
+    timeout: 15000
+# THE WORD, not just the id — the same standard the Remove entry was held to.
+- assertVisible: "Restore exercise"
+- takeScreenshot: artifacts/visible/restore-3-labelled-control
+- tapOn:
+    id: "program-active-coach-note-action-.*-restore_exclusion"
+# ── THE CONFIRMATION, WHICH IS THE EXISTING CLEAR ROUTE ───────────────────
+# `restore_exclusion` deliberately shares `clear_sheet` — "Restore IS a clear",
+# per `useCoachNoteActions`. That is why the confirmation reads "Clear this
+# adjustment?" rather than naming the exercise; the LABELLED control above is
+# the athlete's Restore, and this sheet is the existing owner's own guard. No
+# second restore mechanism is introduced.
+- extendedWaitUntil:
+    visible: "Clear this adjustment?"
+    timeout: 15000
+- tapOn: "Clear and update program"
+
+# ── BACK SQUAT RETURNS, FRONT SQUAT GOES ──────────────────────────────────
+# Restore "deletes the decision and does nothing else" — the exercise becomes
+# ELIGIBLE again and ordinary generation chooses it. So this is read off the
+# rows, not inferred from the control having been tapped.
+- tapOn:
+    text: "Program tab"
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 20000
+- runFlow:
+    file: ../common/assert-strength-rows.yaml
+    env:
+      PRESENT: back-squat
+      ABSENT: front-squat
+- takeScreenshot: artifacts/visible/restore-4-back-squat-returned

@@ -1211,7 +1211,24 @@ export function scheduleWeek(inputs: WeeklySchedulerInputs): WeeklySchedulerResu
  * one: the phase must require a sprint, club training must be absent, and with
  * a fixture the day must be G-3 or earlier.
  */
-/** WC-135's day legality, asked of one day. Never a club night, never inside G-3. */
+/**
+ * WC-135's day legality, asked of one day. Never a club night, never inside G-3.
+ *
+ * BIBLE_ANCHOR: last_high_stress_g3
+ *
+ * ⚠ THIS IS NOW THE ANCHOR'S GENERATION-SIDE SITE, AND IT ALWAYS SHOULD HAVE
+ * BEEN. The citation used to name `distanceBeforeFixture` inside
+ * `postGenerationConstraintValidation.buildSection18ProductionFallbackCandidate`
+ * — the §18 FALLBACK WEEK BUILDER, deleted 2026-08-19. So the Bible's "last
+ * additional high stress is G-3" was being enforced by a second authority while
+ * it authored a replacement week, downstream of the scheduler that had already
+ * decided the days. Deleting that builder took the citation with it and reddened
+ * `test:bible-anchors`, which is the anchor registry doing exactly its job.
+ *
+ * The LAW is current and approved; only its duplicate implementation was legacy.
+ * The scheduler owns session days and spacing, so the citation moves here, to
+ * the site that actually decides whether a hard day may sit inside G-3.
+ */
 function sprintDayIsLegal(day: number, inputs: WeeklySchedulerInputs): boolean {
   if (inputs.clubNights.includes(day)) return false;
   if (inputs.gameDay === day) return false;

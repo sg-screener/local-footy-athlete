@@ -1,0 +1,39 @@
+appId: com.localfootyathlete.app
+name: Open today's strength block and read the rows
+---
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible:
+        id: "session-strength-position-.*"
+    commands:
+      - tapOn:
+          id: "session-execution-toggle-strength"
+- assertVisible:
+    id: "session-strength-position-.*-${PRESENT}"
+- assertNotVisible:
+    id: "session-strength-position-.*-${ABSENT}"
+# UNRELATED ROWS NEVER MOVE. Asserting only the pair under test would pass on a
+# session that had lost everything else.
+- assertVisible:
+    id: "session-strength-position-.*-rdls"
+- assertVisible:
+    id: "session-strength-position-.*-single-leg-rdl"
+- assertVisible:
+    id: "session-strength-position-.*-band-pallof-press"
+# THE PROGRAM TAB BY ITS FULL LABEL, NOT `back` AND NOT `"Program"`.
+# Measured 2026-08-19, twice: a hardware `back` from the pushed session screen
+# does not reliably land on `program-screen`, and the bare text `"Program"` does
+# not resolve either. The tab's accessibility label is `"Program tab"` — the
+# whole string is the coordinate.
+- tapOn:
+    text: "Program tab"
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 20000

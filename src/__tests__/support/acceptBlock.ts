@@ -57,7 +57,7 @@ export function acceptBlock(
     ?.progressionHistory?.acceptedBlocks;
   const program = generateProgramLocally(profile, {
     ...options,
-    recordSelections: true,
+    recordSelections: 'author',
     ...(options?.progressionHistory
       ? {
         progressionHistory: {

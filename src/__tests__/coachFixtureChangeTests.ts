@@ -105,7 +105,7 @@ function snapshot(args: {
 
 function applied(
   command: FixtureChangeCommand & { trace: AthleteActionTraceContext },
-  outcome: 'accepted' | 'repaired' | 'regenerated' | 'fallback' = 'accepted',
+  outcome: 'accepted' = 'accepted',
 ): FixtureMutationTransactionResult {
   return {
     outcome,
@@ -319,7 +319,7 @@ async function main(): Promise<void> {
   });
 
   await run('8 only durable acknowledged outcomes permit success copy', async () => {
-    for (const durable of ['accepted', 'repaired', 'regenerated', 'fallback'] as const) {
+    for (const durable of ['accepted'] as const) {
       const h = harness({
         accepted: snapshot(),
         transaction: async (command) => applied(command, durable),

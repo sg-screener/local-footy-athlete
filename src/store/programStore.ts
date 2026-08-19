@@ -54,16 +54,11 @@ import { appDateNow, dayOfWeekForISODate, todayISOLocal } from '../utils/appDate
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
   contractOffseasonSubphase,
-  migrateLegacyWeeklyExposureContractV2,
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
-import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { canonicalContextSubphase } from '../utils/workoutCanonicalisation';
 import { readStoredWorldOrResetClean } from './unreadableWorldResetDoor';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
-import {
-  finaliseSection18SafetyWorkout,
-} from '../rules/section18SafetyFinaliser';
 import {
   ensureProgramSeasonPhaseClock,
   resolveSeasonPhaseClock,
@@ -90,7 +85,6 @@ import {
   type AcceptedMaterialContext,
 } from './acceptedStateColdStart';
 import {
-  migrateLegacyTemporarySourceFacts,
   normalizeTemporarySourceFacts,
 } from '../rules/temporarySourceFact';
 import {
@@ -101,10 +95,16 @@ import {
   createEmptyReversibleAdjustmentLedger,
   type ReversibleAdjustmentLedger,
 } from '../rules/reversibleAdjustmentLedger';
-import {
-  PROGRAM_STORE_PERSISTENCE_VERSION,
-  type ProgramHydrationIngressClassification,
-} from './programHydrationIngress';
+/**
+ * Durable Zustand envelope version written by ProgramStore.
+ *
+ * Owned HERE, by the store that writes it. It previously lived in
+ * `programHydrationIngress`, the pre-release legacy/canonical classifier
+ * deleted 2026-08-19: a stored world the current code cannot read is RESET
+ * CLEAN by `readStoredWorldOrResetClean` (Sam, 2026-08-10), so there is no
+ * second reader to agree with about a version number.
+ */
+export const PROGRAM_STORE_PERSISTENCE_VERSION = 0 as const;
 import {
   projectHydratedStateDerivedFields,
 } from './programHydrationProjection';
@@ -319,6 +319,55 @@ export function programEnvelopeIsOldShape(raw: string): boolean {
 }
 
 /**
+ * **THE ONE PROJECTION OF "WHAT THE PROGRAM STORE PERSISTS".**
+ *
+ * There were THREE copies of this field list and they had already drifted. The
+ * two in this file carried `acceptedBlocks`; the third — the dev-E2E harness's
+ * convergence check (`src/dev/e2e/devE2EPersistence.ts`), whose own docstring
+ * says *"Mirrors `programStore`'s `partialize` field for field. If that list
+ * ever grows a key, this one grows with it"* — did not, because it is in
+ * another file and nothing made it grow.
+ *
+ * **MEASURED COST, on glass, 2026-08-18 at `main @ c2aaf313`:** the harness read
+ * `acceptedBlocks` on disk and not in memory, refused the world as
+ * *"Persisted semantic state did not converge: program-store"*, and **every
+ * seeded Maestro flow in the repo — the entire simulator rig — died at the seed
+ * step.** The projection is now a function, so a fourth copy cannot be written
+ * by adding a key in one place; there is one place.
+ *
+ * Accepts BOTH shapes on purpose: a live store (fields at the top level) and an
+ * already-reduced envelope's `state` (which carries `inputs`). One projection,
+ * so the two sides of a convergence check cannot ask different questions.
+ */
+export function projectProgramPersistedInputs(
+  state: Record<string, any>,
+): Record<string, unknown> {
+  const alreadyReduced = (state.inputs ?? null) as Record<string, unknown> | null;
+  if (alreadyReduced) return alreadyReduced;
+  const accepted = (state.acceptedMaterialContext ?? {}) as Record<string, unknown>;
+  return {
+    generationAnchorISO: state.generationAnchorISO ?? null,
+    // ⚠ THE HYDRATED CLOCK IS THE THIRD ARM AND IT IS NOT DECORATION. `merge`
+    // restores the persisted clock into `hydratedSeasonPhaseClock` while
+    // `currentProgram` is still null — boot has not regenerated yet. Without
+    // this arm a write in that window persists `null` over a clock that was
+    // correctly restored one tick earlier. The storage adapter's copy always
+    // had it; `partialize`'s copy did not, which is drift #2 in the same list.
+    seasonPhaseClock: state.currentProgram?.seasonPhaseClock
+      ?? state.hydratedSeasonPhaseClock ?? null,
+    sessionFeedback: state.sessionFeedback ?? {},
+    weightOverrides: state.weightOverrides ?? {},
+    // A BLOCK'S OWN REQUIREMENT IS AN INPUT AND MUST OUTLIVE THE PROCESS.
+    // The program is not persisted — boot REGENERATES — so if this is not
+    // here it is gone by the first relaunch, and the boundary silently
+    // stops progressing anything.
+    acceptedBlocks: state.acceptedBlocks ?? {},
+    temporarySourceFacts: accepted.temporarySourceFacts ?? [],
+    injuryEpisodes: accepted.injuryEpisodes ?? [],
+  };
+}
+
+/**
  * R1.3: reduce ANY outgoing program envelope to the inputs shape. Writers
  * that still serialise the fat output envelope (the transaction layer's
  * out-of-band persistence, zustand's post-migration write-back) converge to
@@ -330,24 +379,8 @@ export function reduceProgramEnvelopeToInputs(value: string): string {
     const parsed = JSON.parse(value) as { state?: Record<string, any>; version?: unknown };
     const state = parsed.state;
     if (!state || 'inputs' in state) return value;
-    const accepted = (state.acceptedMaterialContext ?? {}) as Record<string, unknown>;
     return JSON.stringify({
-      state: {
-        inputs: {
-          generationAnchorISO: state.generationAnchorISO ?? null,
-          seasonPhaseClock: state.currentProgram?.seasonPhaseClock
-            ?? state.hydratedSeasonPhaseClock ?? null,
-          sessionFeedback: state.sessionFeedback ?? {},
-          weightOverrides: state.weightOverrides ?? {},
-          // A BLOCK'S OWN REQUIREMENT IS AN INPUT AND MUST OUTLIVE THE PROCESS.
-          // The program is not persisted — boot REGENERATES — so if this is not
-          // here it is gone by the first relaunch, and the boundary silently
-          // stops progressing anything.
-          acceptedBlocks: state.acceptedBlocks ?? {},
-          temporarySourceFacts: accepted.temporarySourceFacts ?? [],
-          injuryEpisodes: accepted.injuryEpisodes ?? [],
-        },
-      },
+      state: { inputs: projectProgramPersistedInputs(state) },
       version: parsed.version,
     });
   } catch {
@@ -507,50 +540,42 @@ async function programStateStorageSetItemBody(name: string, value: string): Prom
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
- * path. Dynamic loading avoids a store-initialisation cycle while ensuring the
- * same validator runs for program, overlay, and manual-override writes.
+ * path. It ASKS the active-constraint boundary whether a write is acceptable
+ * and writes what it was given; it never receives a different object back.
+ *
+ * ⚠ THESE USED TO REWRITE (demolition area 1, 2026-08-19). Each was
+ * `postValidate*` and returned a rewritten program/microcycle/workout/overlay,
+ * so the store persisted content no author had chosen. Dynamic loading still
+ * avoids a store-initialisation cycle.
  */
-function postValidateProgram(program: TrainingProgram, todayISO?: string): TrainingProgram {
+function assertProgramWriteAccepted(program: TrainingProgram, todayISO?: string): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveProgramWrite(program, todayISO);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveProgramWrite(program, todayISO);
 }
 
-function postValidateMicrocycle(microcycle: Microcycle, todayISO?: string): Microcycle {
+function assertMicrocycleWriteAccepted(microcycle: Microcycle, todayISO?: string): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveMicrocycleWrite(microcycle, todayISO);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveMicrocycleWrite(microcycle, todayISO);
 }
 
-function postValidateWorkout(
-  date: string,
-  workout: Workout,
-  options: { restoreMissingPlanPatterns?: boolean } = {},
-): Workout {
+function assertWorkoutWriteAccepted(date: string, workout: Workout): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveWorkoutWrite(date, workout, options);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveWorkoutWrite(date, workout);
 }
 
-function postValidateNullableWorkout(date: string, workout: Workout | null): Workout | null {
+function assertNullableWorkoutWriteAccepted(date: string, workout: Workout | null): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveNullableWorkoutWrite(date, workout);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveNullableWorkoutWrite(date, workout);
 }
 
-function postValidateWeekOverlay(overlay: WeekScopedWorkoutOverlay): WeekScopedWorkoutOverlay {
+function assertWeekOverlayWriteAccepted(overlay: WeekScopedWorkoutOverlay): void {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .validateLiveWeekOverlayWrite(overlay);
-}
-
-function resolveDateMutationExposureContract(
-  date: string,
-  workout: Workout,
-): { weekStart: string; contract: WeeklyExposureContract } | null {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../utils/postGenerationConstraintValidation')
-    .resolveLiveDateMutationExposureContract(date, workout);
+  require('../utils/postGenerationConstraintValidation')
+    .assertLiveWeekOverlayWrite(overlay);
 }
 
 
@@ -583,48 +608,6 @@ export function liveOffseasonSubphaseForDate(
   }).offseasonSubphase;
 }
 
-/**
- * Persistence is a legacy ingress boundary, not a second programming owner.
- * Old store envelopes may pre-date typed strength intent and canonical
- * component sections, so rehydrate them once through the same finaliser used
- * by generation and edits. Existing modern typed intent wins inside that
- * finaliser; display/scalar fields are compatibility inputs only.
- */
-function canonicaliseHydratedWorkout(
-  workout: Workout,
-  phase?: string,
-  weekKind?: Microcycle['weekKind'],
-  // The resolved off-season position. Required by the canonical context and
-  // therefore required here: this helper reaches the canonicaliser through
-  // `require()`, so the compiler cannot see the context it builds and would not
-  // have caught a missing subphase. Passing it explicitly keeps hydration
-  // honest by hand where the type system is blind.
-  offseasonSubphase?: OffseasonSubphase | null,
-): Workout {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const {
-    finaliseWorkoutAfterMutation,
-    canonicalContextSubphase,
-  } = require('../utils/workoutCanonicalisation');
-  const canonicalPhase = /pre/i.test(phase ?? '')
-    ? 'Pre-season'
-    : /off/i.test(phase ?? '')
-      ? 'Off-season'
-      : /in/i.test(phase ?? '')
-        ? 'In-season'
-        : undefined;
-  return finaliseWorkoutAfterMutation(workout, {
-    phase: canonicalPhase,
-    offseasonSubphase: canonicalContextSubphase(canonicalPhase, offseasonSubphase),
-    weekKind,
-    // Persisted allocation ownership is legitimate ingress. This preserves
-    // explicit legacy contribution arrays even before plan-entry IDs existed.
-    planIntentValid: true,
-    referenceWorkout: workout,
-    section18EvidenceMode: 'preserve_legacy_unknown',
-  }).workout;
-}
-
 const LEGACY_DAY_NAMES: DayOfWeek[] = [
   'Sunday',
   'Monday',
@@ -635,78 +618,6 @@ const LEGACY_DAY_NAMES: DayOfWeek[] = [
   'Saturday',
 ];
 
-/**
- * ProgramStore and ProfileStore hydrate independently. A v1-contract program
- * therefore cannot assume the profile has already supplied its scheduling
- * geometry when the accepted-week migration runs. The persisted workout days
- * are trustworthy evidence that those days belonged to the old program; they
- * are not anchor-participation evidence and never create reductions or credit.
- *
- * **STILL LIVE AFTER THE 2026-08-14 HYDRATION-PIPELINE DELETION, and this note
- * is why it survived the cut.** The structural migration pipeline that used to
- * sit beside it is gone, but `contract.source === 'legacy_migration'` is NOT
- * produced by that pipeline — it comes from
- * `migrateLegacyWeeklyExposureContractV2`, which lifts a v1 `exposureContract`
- * to v2 and has ~10 live production callers (`weekRebuild`,
- * `postGenerationConstraintValidation`, `section18ProgramObservation`, this
- * store). A first pass deleted this function as part of the pipeline and
- * `test:compile` caught it.
- */
-function legacyMigrationFallbackProfile(args: {
-  profile?: OnboardingData | null;
-  microcycle: Microcycle;
-  contract: WeeklyExposureContractV2;
-}): OnboardingData {
-  const persistedDays = Array.from(new Set(
-    (args.microcycle.workouts ?? [])
-      .map((workout) => workout.dayOfWeek)
-      .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6),
-  )).sort((left, right) => (left === 0 ? 7 : left) - (right === 0 ? 7 : right));
-  const persistedDayNames = persistedDays.map((day) => LEGACY_DAY_NAMES[day]);
-  const profileDays = args.profile?.preferredTrainingDays?.filter(Boolean) ?? [];
-  const profileFrequency = args.profile?.trainingDaysPerWeek;
-  return {
-    ...(args.profile ?? {}),
-    seasonPhase: args.contract.identity.seasonPhase,
-    trainingDaysPerWeek: profileFrequency && profileFrequency > 0
-      ? profileFrequency
-      : persistedDays.length,
-    preferredTrainingDays: profileDays.length > 0
-      ? profileDays
-      : persistedDayNames,
-    // RETIRED (Sam, 2026-07-28). These were `?? 'Pretty consistent'` and
-    // `?? 'Good'` — a missing answer scored 2 + 2 = 4, landing the athlete in
-    // the medium band. Bible Section 9: there is no default and no unknown
-    // tier. Passing the absent value through lets the rubric refuse, which is
-    // the whole ruling.
-    recentTrainingLoad: args.profile?.recentTrainingLoad,
-    conditioningLevel: args.profile?.conditioningLevel,
-    injuries: args.profile?.injuries ?? [],
-  };
-}
-
-function canonicaliseHydratedSafetyWorkout(
-  workout: Workout,
-  contract: WeeklyExposureContractV2 | undefined,
-  phase?: string,
-  /** Clock-resolved fallback for a contract that does not name one. */
-  offseasonSubphase?: OffseasonSubphase | null,
-): Workout {
-  return contract
-    ? finaliseSection18SafetyWorkout({
-        contract,
-        workout,
-        canonicalContext: {
-          phase: contract.identity.seasonPhase,
-          offseasonSubphase: canonicalContextSubphase(
-            contract.identity.seasonPhase,
-            contractOffseasonSubphase(contract) ?? offseasonSubphase,
-          ),
-          section18EvidenceMode: 'preserve_legacy_unknown',
-        },
-      }).workout
-    : canonicaliseHydratedWorkout(workout, phase, undefined, offseasonSubphase);
-}
 
 /**
  * Thrown when a program reaches the accept boundary carrying a week the app
@@ -785,22 +696,21 @@ function canonicaliseAcceptedBoundaryState(
   if (currentProgram && options.activeConstraints) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const validator = require('../utils/postGenerationConstraintValidation');
-    let changed = false;
-    const microcycles = currentProgram.microcycles.map((microcycle) => {
-      // An explicit accepted overlay owns this effective week. Validating the
+    for (const microcycle of currentProgram.microcycles) {
+      // An explicit accepted overlay owns this effective week. Checking the
       // hidden base independently would reintroduce a second week authority;
       // the precedence-composed gateway below validates the overlay-owned week.
-      if (overlayOwnedWeekStarts.has(microcycle.startDate.slice(0, 10))) return microcycle;
-      const validated = validator.validateMicrocycleAgainstActiveConstraints({
+      if (overlayOwnedWeekStarts.has(microcycle.startDate.slice(0, 10))) continue;
+      // ASKS ONLY (demolition area 1). This used to take a rewritten microcycle
+      // back and store it, so the accepted candidate was not the week the
+      // producer wrote.
+      validator.assertMicrocycleAgainstActiveConstraints({
         microcycle,
         todayISO: effectiveTodayISO,
         activeConstraints: options.activeConstraints!,
         profile: options.profile,
       });
-      if (validated !== microcycle) changed = true;
-      return validated;
-    });
-    if (changed) currentProgram = { ...currentProgram, microcycles };
+    }
   }
   const phase = currentProgram?.seasonPhaseClock?.selectedPhase ?? currentProgram?.programPhase;
   // Where in the off-season hydrated content sits, resolved from the persisted
@@ -810,19 +720,12 @@ function canonicaliseAcceptedBoundaryState(
   // the power". Null when there is no clock, which for a pre-clock program can
   // never canonicalise to Off-season anyway (`programPhase` has no off-season
   // spelling the phase regex matches).
-  const hydratedOffseasonSubphase = currentProgram?.seasonPhaseClock
-    ? resolveSeasonPhaseClock({
-        selectedPhase: currentProgram.seasonPhaseClock.selectedPhase,
-        persistedClock: currentProgram.seasonPhaseClock,
-        targetWeekStartISO: mondayForDate(effectiveTodayISO),
-      }).offseasonSubphase
-    : null;
   let currentMicrocycle = persistedState.currentMicrocycle;
   if (currentMicrocycle && options.activeConstraints &&
     !overlayOwnedWeekStarts.has(currentMicrocycle.startDate.slice(0, 10))) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    currentMicrocycle = require('../utils/postGenerationConstraintValidation')
-      .validateMicrocycleAgainstActiveConstraints({
+    require('../utils/postGenerationConstraintValidation')
+      .assertMicrocycleAgainstActiveConstraints({
         microcycle: currentMicrocycle,
         todayISO: effectiveTodayISO,
         activeConstraints: options.activeConstraints,
@@ -843,69 +746,32 @@ function canonicaliseAcceptedBoundaryState(
             // a base contract during rebuild/rollover materialisation.
             return overlay;
           }
-          let exposureContractV2 = overlay.exposureContractV2 ?? (
-            overlay.exposureContract
-              ? migrateLegacyWeeklyExposureContractV2(overlay.exposureContract)
-              : undefined
-          );
-          if (exposureContractV2) {
-            const generationConstraints = options.activeConstraints
-              ? require('../utils/generationConstraints').buildGenerationConstraintContext({
-                  activeConstraints: options.activeConstraints,
-                  todayISO: weekStart,
-                  periodEndISO: addDaysISO(weekStart, 6),
-                })
-              : undefined;
-            exposureContractV2 = applyGenerationSafetyToSection18Contract({
-              contract: exposureContractV2,
-              generationConstraints,
-              forceFullPause: options.activeConstraints?.some((constraint) =>
-                constraint.type === 'injury' && constraint.status !== 'resolved' &&
-                constraint.seriousSymptoms === true),
-            });
-          }
-          return {
-            ...overlay,
-            exposureContractV2,
-            workoutsByDate: Object.fromEntries(
-              Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
-                date,
-                  workout
-                  ? !exposureContractV2
-                    ? workout
-                    : canonicaliseHydratedSafetyWorkout(
-                        workout, exposureContractV2, phase, hydratedOffseasonSubphase)
-                  : null,
-              ]),
-            ),
-          };
+          // THE PERSISTED v1 -> v2 UPGRADE IS DELETED (demolition area 4).
+          // It existed for a stored world written before the v2 declaration.
+          // No production users exist and a clean reinstall is allowed, so
+          // there is no such world to serve.
+          /* ⚠ THE ACCEPTANCE BOUNDARY NO LONGER REWRITES THE OVERLAY.
+           *
+           * Two rewrites ran here and both are deleted (demolition completion
+           * sweep, 2026-08-19). `applyGenerationSafetyToSection18Contract`
+           * re-authored the week's stored CONTRACT from the live constraints —
+           * a second contract authority downstream of the one that wrote it —
+           * and `canonicaliseHydratedSafetyWorkout` re-canonicalised every
+           * stored workout on its way IN.
+           *
+           * Sam's own ruling on the sibling case, area C: *"acceptance stores a
+           * decision, it does not author one."* The same sentence decides these.
+           * An overlay is returned exactly as it was stored. */
+          return overlay;
         })(),
       ]))
     : persistedState.weekScopedOverlays;
-  const safetyContractForDate = (date: string): WeeklyExposureContractV2 | undefined => {
-    // THE FLIP, MOVE (ii) — one read door. NOTE the asymmetry, preserved
-    // exactly: the overlay is found by the week's MONDAY, the two microcycles
-    // by the DATE itself. Collapsing the two onto one coordinate would be a
-    // behaviour change wearing a refactor.
-    return selectStoredWeekDeclaration({
-      overlay: weekScopedOverlays?.[mondayForDate(date)],
-      coveringMicrocycle: currentProgram?.microcycles.find((microcycle) =>
-        microcycleCoversWeek(microcycle, date)),
-      currentMicrocycle: microcycleCoversWeek(currentMicrocycle, date)
-        ? currentMicrocycle
-        : null,
-      weekStart: mondayForDate(date),
-      reader: 'programStore.safetyContractForDate',
-    }) ?? undefined;
-  };
   let dateOverrides = persistedState.dateOverrides
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
         date,
         {
-          ...(!safetyContractForDate(date)
-            ? workout
-            : canonicaliseHydratedSafetyWorkout(
-                workout, safetyContractForDate(date), phase, hydratedOffseasonSubphase)),
+          // Stored as decided; the acceptance boundary does not re-canonicalise.
+          ...workout,
           // Date-keyed overrides own a concrete calendar day. Older edit
           // writers used the 1..7 coaching convention (Sunday=7), whereas
           // Workout uses JavaScript 0..6. Normalise at ingress so the weekly
@@ -979,22 +845,8 @@ function canonicaliseAcceptedBoundaryState(
     const effectiveByDate = new Map<string, Workout>(
       rebased.dates.flatMap((entry) => entry.workout ? [[entry.date, entry.workout]] : []),
     );
-    const fallbackProfile = contract.source === 'legacy_migration' && baseMicrocycle
-      ? legacyMigrationFallbackProfile({
-          profile: options.profile,
-          microcycle: baseMicrocycle,
-          contract,
-        })
-      : options.profile;
-    const buildFallback = fallbackProfile
-      ? () => require('../utils/postGenerationConstraintValidation')
-          .buildSection18ProductionFallbackCandidate({
-            contract,
-            weekStart,
-            profile: fallbackProfile,
-            activeConstraints: options.activeConstraints,
-          })
-      : undefined;
+    /* THE FALLBACK-WEEK BUILDER IS GONE. It existed only to hand §18 a second
+     * week to try when it refused the first, and §18 no longer takes one. */
     // THE COLLAPSE, AND ACCEPT-AND-REDUCE (Sam, 2026-07-29, rulings 1 and 2).
     //
     // This was `requireSection18AcceptedWeek`, and its throw escaped the
@@ -1019,8 +871,6 @@ function canonicaliseAcceptedBoundaryState(
         profile: options.profile,
         activeFixtureDates,
         surfaces: hydratingSurfaces,
-        regenerate: buildFallback,
-        safeFallback: buildFallback,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>
           require('../rules/section18AcceptedWeekGateway').resolveFinalVisibleSection18Week({
             contract,
@@ -1212,16 +1062,7 @@ function canonicaliseAcceptedBoundaryState(
     ...persistedState,
     currentProgram,
     currentMicrocycle,
-    todayWorkout: hydratedTodayWorkout
-      ? !safetyContractForDate(effectiveTodayISO)
-        ? hydratedTodayWorkout
-        : canonicaliseHydratedSafetyWorkout(
-            hydratedTodayWorkout,
-            safetyContractForDate(effectiveTodayISO),
-            phase,
-            hydratedOffseasonSubphase,
-          )
-      : hydratedTodayWorkout,
+    todayWorkout: hydratedTodayWorkout,
     dateOverrides,
     weekScopedOverlays,
   };
@@ -1640,8 +1481,9 @@ export const useProgramStore = create<ProgramState>()(
         // legacy-shaped program never reaches a writer to be refused.
         const effectiveTodayISO = options?.todayISO ?? todayISOLocal();
         const candidateProgram = program
-          ? postValidateProgram(ensureProgramSeasonPhaseClock(program), effectiveTodayISO)
+          ? ensureProgramSeasonPhaseClock(program)
           : null;
+        if (candidateProgram) assertProgramWriteAccepted(candidateProgram, effectiveTodayISO);
         const priorState = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const clearedDates = new Set(options?.clearOverrideDates ?? []);
         const candidateOverrides = clearedDates.size > 0
@@ -1719,6 +1561,7 @@ export const useProgramStore = create<ProgramState>()(
 
       setCurrentMicrocycle: (microcycle, todayISO) => {
         const effectiveTodayISO = todayISO ?? todayISOLocal();
+        if (microcycle) assertMicrocycleWriteAccepted(microcycle, effectiveTodayISO);
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           // A SELECTION publishes no new week content: the week it re-gates is
@@ -1730,9 +1573,7 @@ export const useProgramStore = create<ProgramState>()(
           reason: 'program:select_microcycle',
           todayISO: effectiveTodayISO,
           program: {
-            currentMicrocycle: microcycle
-              ? postValidateMicrocycle(microcycle, effectiveTodayISO)
-              : null,
+            currentMicrocycle: microcycle ?? null,
           },
           validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
         });
@@ -1740,6 +1581,7 @@ export const useProgramStore = create<ProgramState>()(
 
       setTodayWorkout: (workout, todayISO) => {
         const effectiveTodayISO = todayISO ?? todayISOLocal();
+        assertNullableWorkoutWriteAccepted(effectiveTodayISO, workout ?? null);
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           // Same family as the selection above.
@@ -1747,9 +1589,7 @@ export const useProgramStore = create<ProgramState>()(
           reason: 'program:set_today_workout',
           todayISO: effectiveTodayISO,
           program: {
-            todayWorkout: workout
-              ? postValidateNullableWorkout(effectiveTodayISO, workout)
-              : null,
+            todayWorkout: workout ?? null,
           },
         });
       },
@@ -1872,7 +1712,8 @@ export const useProgramStore = create<ProgramState>()(
         })),
 
       setWeekScopedOverlay: (overlay) => {
-        const validatedOverlay = postValidateWeekOverlay(overlay);
+        assertWeekOverlayWriteAccepted(overlay);
+        const validatedOverlay = overlay;
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
@@ -1931,19 +1772,18 @@ export const useProgramStore = create<ProgramState>()(
             };
           });
 
-          const updatedMicrocycle = postValidateMicrocycle({
+          const updatedMicrocycle = {
             ...state.currentMicrocycle,
             workouts: updatedWorkouts,
-          });
+          };
+          assertMicrocycleWriteAccepted(updatedMicrocycle);
 
           // Also update todayWorkout if it's the same workout
           const updatedToday =
             state.todayWorkout?.id === workoutId
-              ? postValidateNullableWorkout(
-                  todayISOLocal(),
-                  { ...state.todayWorkout, exercises: [...state.todayWorkout.exercises, exercise] },
-                )
+              ? { ...state.todayWorkout, exercises: [...state.todayWorkout.exercises, exercise] }
               : state.todayWorkout;
+          assertNullableWorkoutWriteAccepted(todayISOLocal(), updatedToday);
 
           return {
             currentMicrocycle: updatedMicrocycle,
@@ -1987,20 +1827,19 @@ export const useProgramStore = create<ProgramState>()(
           return false;
         }
 
-        const updatedMicrocycle = postValidateMicrocycle({
+        const updatedMicrocycle = {
           ...state.currentMicrocycle,
           workouts: updatedWorkouts,
           updatedAt: new Date().toISOString(),
-        });
+        };
+        assertMicrocycleWriteAccepted(updatedMicrocycle);
 
         // Also update todayWorkout if it falls on the same dayOfWeek
         const todayDay = dayOfWeekForISODate(todayISOLocal());
         const updatedToday = todayDay === dayOfWeek
-          ? postValidateNullableWorkout(
-              todayISOLocal(),
-              updatedMicrocycle.workouts.find((w) => w.dayOfWeek === dayOfWeek) || state.todayWorkout,
-            )
+          ? updatedMicrocycle.workouts.find((w) => w.dayOfWeek === dayOfWeek) || state.todayWorkout
           : state.todayWorkout;
+        assertNullableWorkoutWriteAccepted(todayISOLocal(), updatedToday);
 
         useProgramStore.setState({
           currentMicrocycle: updatedMicrocycle,
@@ -2068,24 +1907,19 @@ export const useProgramStore = create<ProgramState>()(
       // migration by parkPreRebuildEnvelopeIfPresent, and restores nothing
       // here. quiescentBootTests holds the laws.
       migrate: (persistedState) => persistedState,
+      // ⚠ **THE INPUT LIST HAD THREE COPIES AND NOW HAS ONE.** This is the
+      // persist middleware's route; the storage adapter above
+      // (`programStateStorage`) re-shapes a full state into the SAME envelope on
+      // its own path, and the dev-E2E convergence check reads the same list a
+      // third time. Adding a field to one and not the others persists it down
+      // one route and drops it down another, which reads as "persistence is
+      // flaky" — measured twice: the accepted-block requirement reached disk
+      // from the adapter and was absent from here (block 1's entry survived a
+      // relaunch and block 2's did not), and then reached disk from BOTH and was
+      // absent from the harness (every seeded simulator flow refused to start).
+      // `projectProgramPersistedInputs` is the one list.
       partialize: (state) => ({
-        inputs: {
-          generationAnchorISO: state.generationAnchorISO ?? null,
-          seasonPhaseClock: state.currentProgram?.seasonPhaseClock ?? null,
-          sessionFeedback: state.sessionFeedback ?? {},
-          weightOverrides: state.weightOverrides ?? {},
-          // ⚠ **THE INPUT LIST IS WRITTEN IN TWO PLACES AND BOTH MUST CARRY A NEW
-          // INPUT.** This is the persist middleware's projection; the storage
-          // adapter above (`programStateStorage`) re-shapes a full state into the
-          // SAME envelope on its own path. Adding a field to one and not the
-          // other persists it down one route and drops it down the other, which
-          // reads as "persistence is flaky" — measured: the accepted-block
-          // requirement reached disk from the adapter and was absent from here,
-          // so block 1's entry survived a relaunch and block 2's did not.
-          acceptedBlocks: state.acceptedBlocks ?? {},
-          temporarySourceFacts: state.acceptedMaterialContext?.temporarySourceFacts ?? [],
-          injuryEpisodes: state.acceptedMaterialContext?.injuryEpisodes ?? [],
-        },
+        inputs: projectProgramPersistedInputs(state as unknown as Record<string, any>),
       }) as unknown as ProgramState,
       merge: (persisted, current) => {
         const inputs = (persisted as {
@@ -2453,16 +2287,13 @@ export function applyProgramOverrideWrite(args: {
   writer: ProgramOverrideWriterId;
 }): ProgramOverrideWriteOutcome {
   const { date, workout, context } = args;
+  // A manual override is the explicit edited result and is written AS GIVEN.
+  // The boundary may refuse it; it may not hand back a different session.
   const validatedWorkout = {
-    ...postValidateWorkout(date, workout, {
-      // A manual override is the explicit edited result. Preserve planned
-      // intent for diagnostics, but never resurrect content the edit
-      // deliberately removed.
-      restoreMissingPlanPatterns: false,
-    }),
+    ...workout,
     dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
   };
-  const exposureResolution = resolveDateMutationExposureContract(date, validatedWorkout);
+  assertWorkoutWriteAccepted(date, validatedWorkout);
   const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
   const activeRemovals = state.userRemovalConstraints.filter((constraint) =>
     constraint.status === 'active' && constraint.targetDate === date);
@@ -2494,12 +2325,11 @@ export function applyProgramOverrideWrite(args: {
       overrideContexts: context
         ? { ...state.overrideContexts, [date]: context }
         : state.overrideContexts,
-      exposureContractsByWeek: exposureResolution
-        ? {
-            ...state.exposureContractsByWeek,
-            [exposureResolution.weekStart]: exposureResolution.contract,
-          }
-        : state.exposureContractsByWeek,
+      // THE LEGACY v1 PER-WEEK CONTRACT LEDGER IS NO LONGER WRITTEN HERE
+      // (demolition area 1). Its writer re-AUTHORED the week's exposure
+      // contract from the edited week — a second contract authority downstream
+      // of the one that authored it. The stored v2 declaration is the contract.
+      exposureContractsByWeek: state.exposureContractsByWeek,
       userRemovalConstraints,
     },
     markedDays,

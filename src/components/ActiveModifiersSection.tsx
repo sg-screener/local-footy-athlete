@@ -110,7 +110,19 @@ export function ActiveModifiersSection({
                       ]}
                       testID={actionTestID}
                       accessibilityRole="button"
-                      accessibilityLabel={actionTestID}
+                      // ── THE ATHLETE'S WORD, NOT THE COORDINATE ──────────────
+                      // This was `accessibilityLabel={actionTestID}`, so the
+                      // control that says "Restore exercise" on screen ANNOUNCED
+                      // ITSELF as `program-active-coach-note-action-…-restore_
+                      // exclusion`. A sighted athlete read the right word; a
+                      // screen-reader athlete heard an internal id, and the
+                      // accessibility tree had no copy of the label at all —
+                      // which is also why a walk asserting the WORDS could not
+                      // see it, measured 2026-08-19.
+                      //
+                      // `testID` is unchanged, so every `id:` coordinate the
+                      // explorer and the flows already resolve still resolves.
+                      accessibilityLabel={action.label}
                     >
                       <Text
                         style={[

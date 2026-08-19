@@ -16,7 +16,7 @@ import {
   templateIdFromSection,
 } from './coachRevisionTemplates';
 import { logWeekValidation } from '../rules/weekStructureValidator';
-import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
 import { g1RouteTemplateTransform } from './g1RouteMaterialisation';
 import type { TemplatePlanChange } from './planChangeTypes';
@@ -130,9 +130,14 @@ export function applyCoachRevisionDateOverrides(
           // proposal would show the deloaded session and the write would land
           // the full one.
           transformTemplate: g1RouteTemplateTransform(input.planChange),
-          canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout, {
-            deferWeekAcceptance: deferWeekAcceptanceToTransaction,
-          }),
+          // The boundary refuses; it does not canonicalise. The template's
+          // own workout is what gets written (demolition area 1).
+          canonicalizeWorkout: (date, workout) => {
+            assertLiveWorkoutWrite(date, workout, {
+              deferWeekAcceptance: deferWeekAcceptanceToTransaction,
+            });
+            return workout;
+          },
         })
       : buildWorkoutOverrideFromRevision({
           beforeDay,
@@ -314,7 +319,7 @@ export function buildWorkoutOverrideFromRevision(args: {
   // round-trip check so a transformed/rejected request cannot be reported as
   // though its malformed representation was written unchanged.
   try {
-    workout = validateLiveWorkoutWrite(args.revisedDay.date, workout, {
+    assertLiveWorkoutWrite(args.revisedDay.date, workout, {
       deferWeekAcceptance: args.deferWeekAcceptanceToTransaction,
     });
   } catch (error) {
@@ -336,7 +341,6 @@ export function buildWorkoutOverrideFromRevision(args: {
       workout,
       source: 'manual' as any,
     },
-    activeInjury: null,
     todayISO: args.todayISO,
   }).day;
   const projectedDay = snapshotProjectedDay(projected);

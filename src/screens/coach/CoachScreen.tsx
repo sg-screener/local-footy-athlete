@@ -50,8 +50,6 @@ import {
 import { explainSession } from '../../utils/sessionExplanation';
 import {
   resolveInjuryFromMessage,
-  shouldBindSeverityToPending,
-  isDifferentBodyPartInjuryReport,
   type PendingInjury,
 } from '../../utils/pendingInjuryResolver';
 import {
@@ -60,14 +58,7 @@ import {
 } from '../../utils/visibleWorkoutDiff';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import {
-  classifyInjuryUpdate,
-  shouldSuggestPhysio,
-  type InjuryState,
-} from '../../utils/injuryProgression';
-import {
   createOrUpdateInjuryEpisode,
-  resolveInjuryEpisode,
-  updateInjuryEpisode,
 } from '../../store/injuryEpisodeTransaction';
 import type { CoachIntentClassifier, PendingCoachProposal } from '../../utils/coachIntent';
 import { LLMCoachIntentClassifier } from '../../utils/llmCoachIntentClassifier';
@@ -401,94 +392,6 @@ function safeLogError(error: unknown): string {
       .replace(/[A-Za-z0-9_-]{24,}/g, '[redacted]')}`;
   }
   return String(error).slice(0, 160).replace(/[A-Za-z0-9_-]{24,}/g, '[redacted]');
-}
-
-/**
- * Run the progression flow for a follow-up message classified as
- * resolved / improving / worsening / unchanged.
- *
- * Mutation rules:
- *   resolved   → wipe all injury overrides for the week, deactivate
- *                the Coach Update card, clear activeInjury.
- *   improving  → wipe overrides, re-run the engine at the lower
- *                severity (gentler restrictions). If new severity
- *                drops below 5 the engine declines and the program
- *                naturally returns to template.
- *   worsening  → wipe overrides, re-run the engine at the higher
- *                severity (stricter restrictions, recovery escalations).
- *   unchanged  → no mutation; optionally append a "see a physio" note
- *                if the injury has been active 3+ days.
- *
- * Returns the assistant reply string. Side effects: programStore
- * mutations + coachUpdatesStore writes.
- */
-async function handleInjuryProgression(
-  outcome: ReturnType<typeof classifyInjuryUpdate>,
-  current: InjuryState,
-  userMessageContent: string,
-): Promise<string> {
-  if (outcome.kind === 'no_match') return ''; // caller guarded
-  const todayISO = todayISOLocal();
-  const nowISO = new Date().toISOString();
-  const accepted = useProgramStore.getState().acceptedMaterialContext;
-  const episode = accepted.injuryEpisodes
-    .filter((candidate) => candidate.status === 'active' || candidate.status === 'improving')
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-    .find((candidate) =>
-      candidate.bucket === current.bucket ||
-      candidate.bodyPart.toLowerCase() === current.bodyPart.toLowerCase());
-  if (!episode) {
-    return `I couldn't match that to one exact active injury, so I left every restriction unchanged.`;
-  }
-
-  if (outcome.kind === 'resolved') {
-    const result = await resolveInjuryEpisode(episode.episodeId, {
-      sourceActor: 'athlete',
-      sourceSurface: 'coach_injury_followup',
-      note: userMessageContent,
-      todayISO,
-    });
-    return result.message;
-  }
-
-  const severity = outcome.kind === 'unchanged' ? current.severity : outcome.newSeverity;
-  const status = outcome.kind === 'improving' ? 'improving' : 'active';
-  const updated = await updateInjuryEpisode({
-    episodeId: episode.episodeId,
-    severity,
-    status,
-    sourceActor: 'athlete',
-    sourceSurface: 'coach_injury_followup',
-    note: userMessageContent,
-    todayISO,
-  });
-  if (updated.outcome === 'conflicted' || updated.outcome === 'safely_rejected') {
-    return updated.message;
-  }
-
-  if (outcome.kind === 'unchanged') {
-    const nudgePhysio = shouldSuggestPhysio(current, nowISO, 3);
-    const physioLine = nudgePhysio
-      ? `\n\nIt's been a few days now - worth getting a physio to look at it.`
-      : '';
-    return `Got it - keeping the ${current.bodyPart} restrictions in place for now.${physioLine}`;
-  }
-  if (outcome.kind === 'improving') {
-    if (severity < 5) {
-      return (
-        `Good - ${current.bodyPart} ${severity}/10. The restriction policy was safely refreshed; ` +
-        `keep it honest if it flares back up.`
-      );
-    }
-    return `Good - ${current.bodyPart} easing to ${severity}/10. ${updated.message}`;
-  }
-  if (severity >= 8) {
-    return (
-      `Sorry to hear - ${current.bodyPart} ${severity}/10 is serious. ` +
-      `${updated.message} Get a physio to look at it.`
-    );
-  }
-  return `Sorry to hear - ${current.bodyPart} worse at ${severity}/10. ${updated.message}`;
 }
 
 // Edge function returns actions in this exact shape (see
@@ -1075,97 +978,17 @@ export default function CoachScreen() {
       return;
     }
 
-    // ───────────── INJURY PROGRESSION FOLLOW-UP ─────────────
-    // If we have an active injury on file, see whether THIS message is
-    // a follow-up update ("better", "pain gone", "4/10", "worse"...).
-    // When yes, branch into the progression handler, which updates or resolves
-    // the exact episode and recomposes the visible accepted prescription from
-    // the current composition base.
-    //
-    // CRITICAL GATES (preventing the live "shoulder severity reply
-    // applied to hammy" bug):
-    //   (a) If pendingInjuryRef has a fresh entry AND the message is
-    //       a severity-only reply, the severity MUST bind to pending
-    //       (a NEW injury whose clarifier we just asked) — NOT to
-    //       the active injury. We skip this block entirely.
-    //   (b) If the message names a DIFFERENT body part than the
-    //       active injury, it's a new injury report — skip and let
-    //       the client guard ask severity for the new region.
-    //
-    // The new-injury flow below is unchanged; it still owns first
-    // reports + the pending-injury two-turn handshake.
-    {
-      const activeInjury =
-        useCoachUpdatesStore.getState().activeInjury;
-      const pending = pendingInjuryRef.current;
-      const bindToPending = shouldBindSeverityToPending(
-        userMessage.content,
-        pending,
-      );
-      const isDifferentBodyPart = isDifferentBodyPartInjuryReport(
-        userMessage.content,
-        activeInjury,
-      );
-      if (bindToPending) {
-        logger.debug('[injury-context] severity_bound_to_pending', {
-          pendingBodyPart: pending?.bodyPart ?? null,
-          activeInjuryBodyPart: activeInjury?.bodyPart ?? null,
-          reason: 'fresh pending + severity-only reply',
-        });
-      }
-      if (isDifferentBodyPart) {
-        logger.debug('[injury-context] new_body_part_detected', {
-          activeInjuryBodyPart: activeInjury?.bodyPart ?? null,
-          messageBodyPart: extractBodyPart(userMessage.content),
-        });
-      }
-      if (
-        activeInjury &&
-        activeInjury.status !== 'resolved' &&
-        !bindToPending &&
-        !isDifferentBodyPart
-      ) {
-        const outcome = classifyInjuryUpdate(userMessage.content, activeInjury);
-        logger.debug('[pipeline] injury_followup_classification', {
-          kind: outcome.kind,
-          reason: 'reason' in outcome ? outcome.reason : undefined,
-          newSeverity: 'newSeverity' in outcome ? outcome.newSeverity : undefined,
-          currentSeverity: activeInjury.severity,
-        });
-        if (outcome.kind !== 'no_match') {
-          const activeEpisodes = useProgramStore.getState().acceptedMaterialContext.injuryEpisodes
-            .filter((episode) => episode.status === 'active' || episode.status === 'improving');
-          if (outcome.kind === 'resolved' && activeEpisodes.length > 1 &&
-            !extractBodyPart(userMessage.content)) {
-            const assistantMessage: Message = {
-              id: `${Date.now()}-injury-resolution-clarifier`,
-              role: 'assistant',
-              content: 'Which exact injury has resolved? I’ll leave the other injury restrictions unchanged.',
-            };
-            setMessages((prev) => [...prev, userMessage, assistantMessage]);
-            setInputValue('');
-            return;
-          }
-          logger.debug('[injury-context] active_injury_followup', {
-            bodyPart: activeInjury.bodyPart,
-            outcomeKind: outcome.kind,
-          });
-          const reply = await handleInjuryProgression(
-            outcome,
-            activeInjury,
-            userMessage.content,
-          );
-          const assistantMessage: Message = {
-            id: `${Date.now()}-progression`,
-            role: 'assistant',
-            content: reply,
-          };
-          setMessages((prev) => [...prev, userMessage, assistantMessage]);
-          setInputValue('');
-          return;
-        }
-      }
-    }
+    // ───────────── INJURY PROGRESSION FOLLOW-UP — DELETED ─────────────
+    // ⚠ BROKEN BY DEMOLITION (2026-08-19). This block asked the deleted
+    // single-slot `activeInjury` alias whether an injury was on file, then
+    // classified the message against it and ran the progression handler.
+    // Every input it read was the legacy representation. It must be rebuilt
+    // against `acceptedMaterialContext.injuryEpisodes` — the canonical facts,
+    // which are still stored and still current — including both of its gates:
+    //   (a) a severity-only reply binds to a fresh pendingInjuryRef, not to
+    //       the injury already on file;
+    //   (b) a message naming a DIFFERENT body part is a new report.
+    // Until then no message is treated as a follow-up to an existing injury.
 
     // ───────────── CLIENT-SIDE INJURY CLARIFICATION GUARD ─────────────
     // Primary runtime protection. Runs BEFORE the network call so we can
@@ -1187,35 +1010,11 @@ export default function CoachScreen() {
       .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     const guardResult = checkInjuryClarificationGuard(guardHistory);
 
-    // ── Skip the clarifier when activeInjury already exists for this
-    // body part (or no body part is named). The user has already told
-    // us the severity — re-asking would be the robotic behaviour we're
-    // trying to eliminate. A DIFFERENT body part still falls through
-    // to the clarifier so genuinely new injuries get the right flow.
-    {
-      const activeInjury =
-        useCoachUpdatesStore.getState().activeInjury;
-      if (
-        guardResult.fired &&
-        activeInjury &&
-        activeInjury.status !== 'resolved'
-      ) {
-        const messageBodyPart = extractBodyPart(userMessage.content);
-        const sameBodyPart =
-          !messageBodyPart ||
-          messageBodyPart.toLowerCase() === activeInjury.bodyPart.toLowerCase();
-        if (sameBodyPart) {
-          logger.debug('[injury-client-guard] suppressed', {
-            reason: 'active_injury_same_body_part',
-            activeBodyPart: activeInjury.bodyPart,
-            messageBodyPart: messageBodyPart ?? null,
-          });
-          // Fall through — let the existing progression / UAE flow
-          // handle this turn instead of asking severity again.
-          guardResult.fired = false;
-        }
-      }
-    }
+    // ⚠ BROKEN BY DEMOLITION (2026-08-19). The clarifier-suppression block
+    // that stopped the coach re-asking severity for a body part already on
+    // file read the deleted `activeInjury` alias. Rebuild it against
+    // `acceptedMaterialContext.injuryEpisodes`. Until then the clarifier fires
+    // even when the athlete has already answered for that body part.
 
     if (
       guardResult.fired &&
@@ -1438,11 +1237,9 @@ export default function CoachScreen() {
       // ── BUCKET CANONICALISATION (single source of truth) ──────────
       // Always derive cardBucket from bodyPart — even when the
       // resolution carries a bucket (it may be null for the pending
-      // severity-only follow-up). This is the line that fixes the
-      // live "future weeks not filtered" bug: if bodyPart is a known
-      // alias ('hammy', 'lower back', etc.) the activeInjury MUST get
-      // a real bucket, else the resolver-level filter has nothing to
-      // act on for next week.
+      // severity-only follow-up). If bodyPart is a known alias
+      // ('hammy', 'lower back', etc.) the episode MUST get a real
+      // bucket, else the visible gate has nothing to act on.
       const cardBucket = episodeBucket;
       if (!cardBucket && bodyPart && bodyPart !== 'unknown') {
         logger.warn('[injury-context] canonicalization_failed', {
@@ -1463,9 +1260,9 @@ export default function CoachScreen() {
       logger.debug('[injury-episode] transaction', injuryTransaction);
 
       // ── CONSTRAINT-PROJECTION DIFF (current + next week) ────────────
-      // The UAE only emits events for the current week. activeInjury +
-      // the exposure engine reshape future weeks silently via the
-      // visible-program projection. Without this block the coach reply
+      // The UAE only emits events for the current week. The exposure
+      // engine reshapes future weeks silently via the visible-program
+      // projection. Without this block the coach reply
       // would say "I left the program unchanged" even when next Monday
       // was just rebuilt by the constraint. We compute the next-week
       // diff explicitly so reply + card can describe both weeks.
@@ -1484,7 +1281,6 @@ export default function CoachScreen() {
       // so the constraint diff is computed against the unfiltered template.
       const stateNoInjury = {
         ...buildScheduleStateImperative(),
-        activeInjury: null,
         activeConstraints: [],
       };
       const stateWithInjury = buildScheduleStateImperative();
@@ -1496,27 +1292,8 @@ export default function CoachScreen() {
         nextMonday,
         stateWithInjury,
       );
-      const nextWeekProjected = nextWeekResolved.map((d) => {
-        const ai = stateWithInjury.activeInjury;
-        return projectionMod.projectVisibleDay({
-          day: d,
-          activeInjury: ai
-            ? {
-                bodyPart: ai.bodyPart,
-                bucket: ai.bucket as any,
-                severity: ai.severity,
-                status: ai.status,
-                rules: ai.rules ?? [],
-                seriousSymptoms: ai.seriousSymptoms,
-                seriousSymptom: ai.seriousSymptom,
-                adjustmentLevel: ai.adjustmentLevel,
-                safeFocus: ai.safeFocus,
-                advice: ai.advice,
-              }
-            : null,
-          todayISO,
-        }).day;
-      });
+      const nextWeekProjected = nextWeekResolved.map((d) =>
+        projectionMod.projectVisibleDay({ day: d, todayISO }).day);
 
       // Region resolution mirrors visibleProgramProjection's bucket map
       // — only used to label the constraint in logs.

@@ -1522,14 +1522,6 @@ export function buildFixtureMinimalReplan(
     activeFixtureDates: args.activeFixtureDates,
     surfaces: args.surfaces,
     resolveVisibleWorkouts: visibleResolver(args),
-    regenerate: () => ({
-      contract,
-      workouts: args.targetMicrocycle.workouts,
-    }),
-    safeFallback: () => ({
-      contract,
-      workouts: args.targetMicrocycle.workouts,
-    }),
   });
   const changes = changedDaySets(args.sourceWorkouts, fallbackGateway.canonicalWorkouts);
   const cost = scoreCandidate({

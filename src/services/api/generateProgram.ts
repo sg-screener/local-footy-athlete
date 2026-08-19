@@ -132,10 +132,9 @@ import {
   type SeasonPhaseClockResolution,
 } from '../../rules/seasonPhaseClock';
 import type { FixtureConditionedAvailability } from '../../rules/fixtureConditionedAvailability';
-import { validateWorkoutAgainstActiveConstraints } from '../../utils/postGenerationConstraintValidation';
-import { collapseWorkoutToRest } from '../../utils/workoutContent';
 import {
   ExerciseVocabularyViolation,
+  canonicalExerciseName,
 } from '../../utils/exerciseCanonicalisation';
 import { selectableVocabularyGroups } from '../../data/selectableExerciseVocabulary';
 
@@ -247,8 +246,32 @@ export interface GenerateProgramFromProfileOptions {
    * blocks 3 and 4 while an exercise was excluded made those probes the
    * athlete's permanent history, and restoring the exercise brought it back in
    * NO block. The callers that COMMIT a program opt in; probes stay silent.
+   *
+   * ⚠ **AND THE CALLER MUST SAY WHICH KIND OF WRITE IT IS.** A boolean could
+   * only say "write"; it could not say whether this caller DECIDES the block or
+   * merely RE-DERIVES it, and that distinction is the whole defect measured on
+   * 2026-08-18:
+   *
+   *   - `'author'` — this door decides the block (onboarding, acceptance,
+   *     rollover). It may replace the block's rows, because it is the layer
+   *     entitled to change what the block chose.
+   *   - `'replay'` — this caller reconstructs a block it did not decide (a boot,
+   *     a temporary-fact regeneration). It may record a block that has NEVER
+   *     been recorded, and it may NEVER re-author one.
+   *
+   * The boot passed the old `true` and so re-recorded the block under whatever
+   * exclusions happened to be live at launch. A reversible, dated `today_only`
+   * removal was thereby laundered into a permanent generation INPUT and the
+   * athlete's original main lift was destroyed — `recordBlockSelections`
+   * replaces a block's rows by design, so the original was not shadowed but
+   * lost. The recorder exists to stop a boot re-deriving a different past when
+   * exclusions change; the boot was defeating it with the recorder's own pen.
+   *
+   *   - `false` / absent — a PROBE. `weeklyCommitmentLegality` asking "would a
+   *     2-day week even build?" must never leave a trace in the athlete's
+   *     history, which is why the default is silence.
    */
-  recordSelections?: boolean;
+  recordSelections?: 'author' | 'replay' | false;
   progressionHistory?: {
     sessionFeedback?: Readonly<Record<string, import('../../store/programStore').SessionFeedback>>;
     weightOverrides?: Readonly<Record<string, Record<string, number | null>>>;
@@ -767,6 +790,75 @@ export class GeneratedWeekRefusedError extends Error {
  * the coach path all do — and a hand-built list has always meant "out, full
  * stop". Dropping it here would silently un-ban those athletes' exercises.
  */
+/**
+ * ⚠ **A REPLAY MAY NOT RE-DECIDE A BLOCK BECAUSE AN EXCLUSION APPEARED.**
+ *
+ * Sam, 2026-08-19: *"Remove means simply remove the selected exercise/component.
+ * Nothing replaces it ... Do not ask the composer to fill the empty slot."*
+ *
+ * MEASURED, and it is the reason this function exists. An athlete removed
+ * `RDLs` for the block, closed the app and reopened it. The boot regenerates
+ * (`quiescentBoot`), the exclusion narrowed the hinge slot's legal candidates,
+ * `decideExerciseForBlock`'s *restore-before-decide* rule could no longer
+ * restore the recorded `RDLs`, and it made an honest new decision:
+ * **`Deadlift@77.5` walked into the hinge slot.** The athlete removed a lift and
+ * got a different lift back for closing the app. The read filter could not save
+ * them — it removes `RDLs`, and the row was no longer `RDLs`.
+ *
+ * This is the SAME defect class the `'author' | 'replay'` distinction was
+ * introduced for on 2026-08-18 (LAW `hidden-authority-never-authors`): a
+ * reversible, dated athlete decision reaching a layer entitled to author
+ * permanent structure. That fix stopped a replay RECORDING the re-derived
+ * selection; it did not stop a replay MAKING one. This is the other half.
+ *
+ *   - `'author'` — this door decides the block (onboarding, acceptance,
+ *     rollover). A block being authored for the first time simply never chooses
+ *     an excluded exercise. That is *"until restored removes it from ... future
+ *     sessions/blocks"*, and it is authoring, not refilling.
+ *   - `'replay'` / a probe — this caller reconstructs a block it did not decide.
+ *     The athlete's removal is owned end-to-end by the read-time filter
+ *     (`rules/exerciseExclusions.applyExclusionsToAuthoredDay`), which takes the
+ *     row out and puts nothing back. So the replay must rebuild the block the
+ *     athlete actually has, `RDLs` and all, and let the filter do the removing.
+ *
+ * **ONLY THE DATED DECISIONS ARE WITHHELD.** `prefs.excluded` — the flat,
+ * undated "avoid this forever" list a caller may hand-build — is untouched, for
+ * the reason `composerExclusionInput` already states: a hand-built list has
+ * always meant "out, full stop", and silently un-banning those athletes'
+ * exercises on every boot would be a second defect wearing this one's clothes.
+ */
+function exclusionsForSelectionAuthority(
+  prefs: AthletePoolPrefsArg,
+  recordSelections: 'author' | 'replay' | false | undefined,
+): AthletePoolPrefsArg {
+  // ONLY AN EXPLICIT REPLAY IS WITHHELD FROM. `'author'`, `false` and absent all
+  // author: a probe that asks "would a 2-day week even build?" must see the
+  // athlete's world as it is, and a caller that has not declared itself has not
+  // declared itself a replay. Narrowing this to `!== 'author'` also withheld
+  // from every probe and reddened nine cells that are right about the contract.
+  if (recordSelections !== 'replay') return prefs;
+  const dated = prefs?.exclusions ?? [];
+  if (dated.length === 0) return prefs;
+  // ⚠ **CLEARING `exclusions` ALONE IS NOT ENOUGH, AND THE FIRST CUT DID
+  // EXACTLY THAT AND CHANGED NOTHING.** `getAthletePrefs` is a PROJECTION: it
+  // derives `excluded` from `exclusions` for the day being read
+  // (`store/athletePreferencesStore.ts`), and `composerExclusionInput` unions
+  // that derived list in as a week-wide ban. Withholding the decisions while
+  // leaving their own projection behind withholds nothing.
+  //
+  // So the derived names are withdrawn BY NAME, which leaves a genuinely
+  // hand-built `excluded` list — the tests', the dev seeds' and the coach
+  // path's — exactly as it arrived.
+  const derived = new Set(dated.map((exclusion) => exclusion.exercise));
+  return {
+    ...prefs,
+    exclusions: [],
+    excluded: (prefs?.excluded ?? []).filter(
+      (name) => !derived.has(canonicalExerciseName(String(name ?? '').trim())),
+    ),
+  };
+}
+
 function composerExclusionInput(
   prefs: AthletePoolPrefsArg,
   weekStartISO: string,
@@ -1294,61 +1386,56 @@ export function buildGeneratedMicrocycles(args: {
           microcycleId,
           weekStartISO: blockState.weekStart,
           deloadPolicyForDay,
+          /* ── THE SPECIALIST'S PRIMER, HANDED TO THE DAY THAT CARRIES IT ────
+           * The plan already holds `powerPrimer` per day — `powerPrimerPolicy`
+           * decided it and `scheduleToCoachingPlan` carried it. Nothing placed
+           * it, because the only row builder lived in the adapter and the
+           * adapter authors no strength on composer-owned days. Power is part
+           * of a strength session, so the composer places it. */
+          power: {
+            primerByDay: Object.fromEntries(
+              weekPlan.weeklyPlan
+                .map((entry) => [
+                  DAY_MAP[String(entry.dayOfWeek ?? '')],
+                  (entry as { powerPrimer?: unknown }).powerPrimer ?? null,
+                ])
+                .filter(([day, primer]) => day !== undefined && primer !== null),
+            ),
+            allowance: exposureContractV2?.power?.eligible === true
+              ? exposureContractV2.power.plannerSelectedWeeklyBudget ?? 0
+              : 0,
+            phase: profile.seasonPhase,
+            experienceLevel: profile.experienceLevel,
+            availableEquipment: profile.equipment ?? [],
+            blockId: `mini-${blockState.miniCycleNumber ?? 1}`,
+          },
         }),
         adapterWorkouts,
       });
       const built = authored.workouts as Workout[];
-      /* ── BURN THE BOATS: EQUIPMENT AND TRAVEL NO LONGER REACH THIS PASS ─────
+      /* ── THE POST-GENERATION CONSTRAINT FILTER IS DELETED ───────────────
        *
-       * `validateWorkoutAgainstActiveConstraints` is a filter over a FINISHED
-       * week. It used to run for `equipment` and for `travel`, and by 2026-08-17
-       * both were a SECOND authority over a question the composer and the
-       * scheduler now own outright — the shape the mission calls "an old
-       * travel/equipment filter that rewrites, repairs, rejects or duplicates
-       * the new scheduler/composer result".
+       * Demolition area 1, Sam's burn-the-boats ruling 2026-08-19.
        *
-       * ⚠ **AND IT WAS NOT A HARMLESS DUPLICATE. IT REFUSED THE WEEK.** Measured
-       * (`npm run trace:equipment-scopes`, B8) with a FULL commercial gym and a
-       * travel fact and NO equipment change: the pass collapsed Tuesday and
+       * `validateWorkoutAgainstActiveConstraints` was a REWRITE over a FINISHED
+       * week: it collapsed days to Rest, deleted rows for injury and equipment,
+       * and trimmed sessions to a time cap — after the composer had authored
+       * and after the scheduler had chosen the days. Equipment and travel had
+       * already been taken off it on 2026-08-17 (they moved to `composeWeek`'s
+       * per-day kit and to `weeklySchedulerInputs.clubInputsAfterTravel`); the
+       * remaining schedule kinds are the same defect wearing a narrower filter.
+       *
+       * ⚠ IT WAS NOT A HARMLESS DUPLICATE — measured, with a FULL commercial
+       * gym and a travel fact and NO equipment change, it collapsed Tuesday and
        * Thursday to REST while they carried six of the athlete's own lifts, and
-       * stripped `Back Squat`, `RDLs` and `Bulgarian Split Squats` off two more
-       * days. §18 then refused the week for training no squat, hinge, push or
-       * pull. **A trip with a full gym produced no week at all.**
+       * §18 then refused the week for training no squat, hinge, push or pull.
        *
-       * WHERE EACH BEHAVIOUR WENT, named as the removal law requires:
-       *
-       *   EQUIPMENT → `composeWeek`'s per-day kit (`temporaryKitByDayOfWeek`,
-       *   from `resolveEffectiveEquipmentWindow`). The composer refuses an
-       *   illegal row BEFORE authoring it and discloses a typed gap, instead of
-       *   authoring it and having a later pass delete it. It also asks the right
-       *   oracle: this pass filtered on the materialised row's authored
-       *   `equipmentRequired` STRING, which answers "what kit does this use",
-       *   while `exerciseIsAvailableWith` answers "can this athlete do it" and
-       *   knows Sam's OR-groups. Measured: `RDLs` is legal on dumbbells by the
-       *   sheet and was deleted by the string — and then reported back to §18 as
-       *   "the week trains no hinge".
-       *
-       *   TRAVEL → `weeklySchedulerInputs.clubInputsAfterTravel`, which takes the
-       *   club night and the fixture out of the facts the PLAN is built from.
-       *   That is the fix this pass's own comment named and did not build.
-       *
-       * Every OTHER schedule kind is untouched and still runs here. */
-      const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
-        constraint.type === 'schedule' &&
-        constraint.scheduleKind !== undefined &&
-        constraint.scheduleKind !== 'busy_week' &&
-        constraint.scheduleKind !== 'max_sessions' &&
-        constraint.scheduleKind !== 'travel');
-      const constrained = hardPostGenerationConstraints.length > 0
-        ? built.map((workout) =>
-            validateWorkoutAgainstActiveConstraints({
-              workout,
-              date: dateForWeekday(blockState.weekStart, workout.dayOfWeek),
-              todayISO: blockState.weekStart,
-              activeConstraints: hardPostGenerationConstraints,
-              profile,
-            }).workout ?? collapseWorkoutToRest(workout))
-        : built;
+       * THE SURVIVING OWNERS: unavailable dates and session caps belong to the
+       * weekly scheduler, which chooses days; a time cap belongs to the
+       * composer, which chooses content. Neither is rebuilt here — both are on
+       * the rebuild list in `docs/STATUS_DEMOLITION.md`. What remains at this
+       * boundary is refusal, not repair. */
+      const constrained = built;
       return pinHistoryDays(exposureContractV2
         ? stampPlannerDerivedSessionProvenance({
             workouts: constrained,
@@ -1358,6 +1445,45 @@ export function buildGeneratedMicrocycles(args: {
         : constrained);
     };
     let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
+    /* ── THE WEEKLY POWER BUDGET, APPLIED BY THE AUTHORING SIDE ──────────────
+     *
+     * MOVE 1 of the §18 demolition (Sam, 2026-08-19): *"Power trimming → power
+     * specialist."*
+     *
+     * This decision used to live inside `section18AcceptedWeekGateway`, which
+     * meant the VALIDATOR decided how much power the week could carry and
+     * stripped the excess on its way through. A week therefore left the
+     * composer with more power than it was allowed to have, and only a
+     * downstream boundary knew it. That is the same shape as every other defect
+     * this mission is deleting: the authoring owner could not tell whether its
+     * own output was what shipped.
+     *
+     * Applied HERE — after the candidate is authored, before §18 sees it — the
+     * budget is part of what the specialist AUTHORS, and §18 receives a week
+     * that already respects it. §18 then has nothing to trim, which is what
+     * lets its call be cut.
+     *
+     * The contract is carried too, because the budget writes the week's
+     * `power.plannerSelectedWeeklyBudget`, `achievedPrimerCount`, `eligible`
+     * and `removalReason`. The evaluator reads those, so the numbers and the
+     * rows must move together or the verdict disagrees with the content. */
+    /* ⚠ **THE ALLOWANCE IS A PLACEMENT LIMIT, NOT A STRIP** (2026-08-19).
+     *
+     * `weeklyPowerBudget` ran here and REMOVED power rows the week exceeded its
+     * allowance by. Measured the day power first reached athletes: on a 4-day
+     * pre-season bodyweight week it did not merely take the third primer off
+     * Thursday — `finaliseWorkoutAfterMutation` re-finalised the stripped day
+     * and **DESTROYED IT ENTIRELY**, main lift included. The day went from
+     * `power, main_strength:push, strength_accessory` to EMPTY, main-strength
+     * exposures fell 3 -> 2, and four worlds were refused.
+     *
+     * It had been dormant only because no generated week had ever contained a
+     * power row for it to act on. Its first live action was to delete an
+     * authored strength session.
+     *
+     * So it is GONE, and the allowance is honoured where it belongs: the
+     * composer places at most the allowance, so there is never anything to
+     * strip. Nothing re-finalises an authored day to enforce a count. */
     if (exposureContractV2) {
       // ── THE GENERATED WEEK IS JUDGED, NOT REPAIRED ───────────────────────
       //
@@ -1705,7 +1831,10 @@ export function generateProgramLocally(
     blockStartISO: blockStart,
     blockNumber: options.blockNumber ?? 1,
     seasonPhaseClock: phaseResolution.clock,
-    athletePrefs: options.athletePrefs ?? getAthletePrefs(),
+    athletePrefs: exclusionsForSelectionAuthority(
+      options.athletePrefs ?? getAthletePrefs(),
+      options.recordSelections,
+    ),
     progressedIdentities,
     selectionHistory: selectionHistoryForBuild,
     selectionsOut: selectionsAuthored,
@@ -1958,10 +2087,20 @@ export function generateProgramLocally(
    * the defect `scripts/trace-selection-history.ts` measured.
    *
    * Re-authoring the same block REPLACES its rows (identity is `blockStartISO`),
-   * so a rebuild or a rollover re-run cannot make one block look like several. */
-  if (options.recordSelections === true && selectionsAuthored.length > 0) {
-    require('../../store/blockSelectionHistoryStore')
-      .recordBlockSelections(blockStart, selectionsAuthored);
+   * so a rebuild or a rollover re-run cannot make one block look like several.
+   *
+   * ⚠ **AND A REPLAY MAY NOT RE-AUTHOR.** `'author'` is the door that decides
+   * the block; `'replay'` is a caller re-deriving one it did not decide. A
+   * replay records only a block nobody has recorded yet — otherwise the boot
+   * writes down whatever the composer happened to pick under the exclusions,
+   * kit or facts that were live at launch, and a reversible decision becomes a
+   * permanent input. That is not a hypothetical: it destroyed a main lift. */
+  if (options.recordSelections && selectionsAuthored.length > 0) {
+    const historyStore = require('../../store/blockSelectionHistoryStore');
+    const alreadyRecorded: boolean = historyStore.blockHasRecordedSelections(blockStart);
+    if (options.recordSelections === 'author' || !alreadyRecorded) {
+      historyStore.recordBlockSelections(blockStart, selectionsAuthored);
+    }
   }
   return program;
 }

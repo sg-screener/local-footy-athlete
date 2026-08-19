@@ -2,6 +2,7 @@ import { useProfileStore } from '../../store/profileStore';
 import {
   applyProgramOverrideWrite,
   generationAnchorForProgram,
+  recordAcceptedBlock,
   useProgramStore,
 } from '../../store/programStore';
 import { useCalendarStore } from '../../store/calendarStore';
@@ -322,7 +323,6 @@ async function applyAuxiliaryState(
         reason: `dev_e2e_seed:temporary_equipment:${factId}`,
         temporarySourceFacts,
         activeConstraints: compatibility.activeConstraints,
-        activeInjury: compatibility.activeInjury,
         injuryEpisodes: compatibility.injuryEpisodes,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         profile,
@@ -427,6 +427,39 @@ async function applyAuxiliaryState(
   }
 }
 
+/**
+ * THE SEED'S LAST INSTALL STATEMENT, AND IT IS PRODUCTION'S OWN.
+ *
+ * A seeded athlete is an athlete with an ACCEPTED program, and acceptance in
+ * production is two statements, not one: publish the program, then record the
+ * block that was accepted. The seam only ever made the first, so every seeded
+ * world carried `acceptedBlocks: {}` — and BOOT then wrote the entry on first
+ * launch. That write is the entire reload-gate mismatch: the checkpoint is
+ * taken before it and the reload reads disk after it.
+ *
+ * **NOTHING HERE INVENTS A NUMBER.** `recordAcceptedBlock` derives
+ * `requiredStrengthSessions` from the program over the block window, exactly as
+ * it does for a real acceptance, and it is a no-op when there is no program or
+ * no block start. Reading LIVE store state rather than the seed's own
+ * `seed.program` is deliberate: auxiliary state can legitimately rebuild the
+ * program (a severity-5 injury does), and the block that was accepted is the
+ * one the athlete ends up with.
+ *
+ * SESSION 9 BUILT THIS AND CORRECTLY BACKED IT OUT, on the evidence then
+ * available: on a ONE-microcycle seed the owner derives 1 where boot derives 4,
+ * and that number is the completion denominator the block boundary divides by —
+ * a wrong denominator in every seeded world is worse than no record at all. The
+ * seed that makes the call safe is `exercise-removal-restart`, whose four
+ * microcycles make the owner derive 4, boot's own number. Measured both ways.
+ */
+export function recordInstalledSeedAcceptedBlock(): void {
+  const program = useProgramStore.getState().currentProgram;
+  recordAcceptedBlock({
+    program,
+    blockState: deriveStoredBlockStateFromProgram(program),
+  });
+}
+
 export function readDevE2EWitnessState(): DevE2EWitnessState {
   const program = useProgramStore.getState();
   const updates = useCoachUpdatesStore.getState();
@@ -463,7 +496,6 @@ export function readDevE2EWitnessState(): DevE2EWitnessState {
     reversibleAdjustmentLedger: program.reversibleAdjustmentLedger,
     profile: useProfileStore.getState().onboardingData,
     calendarMarks: useCalendarStore.getState().markedDays,
-    activeInjury: updates.activeInjury,
     activeConstraints: updates.activeConstraints,
     injuryEpisodes: accepted.injuryEpisodes,
     temporarySourceFacts: accepted.temporarySourceFacts,
@@ -515,7 +547,7 @@ function captureReloadEvidence(
     state: schedule,
     overrideContext: program.overrideContexts[day.date],
   }));
-  const notes = buildActiveCoachNotes(context.activeConstraints, context.activeInjury);
+  const notes = buildActiveCoachNotes(context.activeConstraints);
   return {
     accepted: { fingerprints: memory, fingerprint: semanticFingerprintV2(memory) },
     persisted: { fingerprints: persisted, fingerprint: semanticFingerprintV2(persisted) },
@@ -552,6 +584,7 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   installProgram: installAcceptedSeedProgram,
   applyAuxiliaryState,
   completeOnboarding: () => useProfileStore.getState().completeOnboarding(),
+  recordAcceptedBlock: recordInstalledSeedAcceptedBlock,
   readWitnessState: readDevE2EWitnessState,
   validateWitnesses: validateDevE2EWitnesses,
   captureMemoryFingerprints: captureDevE2EMemoryFingerprints,

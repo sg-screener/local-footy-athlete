@@ -201,8 +201,9 @@ function factFreeBase(args: {
   let surfaces = normalizeAcceptedProgramSurfaces(state);
   if (state.currentProgram) {
     const program = generateProgramLocally(args.profile, {
-      // This caller COMMITS the program, so the block's selections are recorded.
-      recordSelections: true,
+      // ONBOARDING / A PROFILE CHANGE AUTHORS THE BLOCK — the athlete just
+      // restated who they are, and this door decides what that block selects.
+      recordSelections: 'author',
       // The athlete just changed their season phase / profile. Generation may
       // not veto that fact: unstated, this inherited `restoration` and THREW,
       // and the transaction reported "The profile change could not build a
@@ -396,7 +397,6 @@ export async function commitProfileProgramTransaction(
         profile: nextProfile,
         markedDays: nextMarkedDays,
         activeConstraints: compatibility.activeConstraints,
-        activeInjury: compatibility.activeInjury,
         injuryEpisodes: compatibility.injuryEpisodes,
         temporarySourceFacts: before.temporarySourceFacts,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,

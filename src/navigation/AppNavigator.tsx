@@ -17,7 +17,11 @@ import { TermsScreen } from '../screens/profile/TermsScreen';
 
 type ProgramStackParamList = {
   Home: { initialDate?: string } | undefined;
-  DayWorkout: { workoutId: string; date?: string; startFinished?: boolean };
+  DayWorkout: {
+    workoutId: string; date?: string; startFinished?: boolean;
+    /** See `types/navigation` — the Day hub opens today's session on a door. */
+    openChange?: 'equipment' | 'add' | 'swap';
+  };
 };
 
 type CoachStackParamList = {

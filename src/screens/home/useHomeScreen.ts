@@ -304,7 +304,7 @@ export function useHomeScreen() {
   const temporarySourceFacts = useProgramStore((s) =>
     s.acceptedMaterialContext.temporarySourceFacts);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
-  // `activeInjury`, `dismissedCoachNoteIds`, `athletePrefs` and
+  // `dismissedCoachNoteIds`, `athletePrefs` and
   // `modalityPreferences` were read here ONLY to feed the inline
   // `selectActiveCoachNotes` memo above. That memo is now `useActiveModifiers`,
   // which subscribes to the same four itself, so these four reads lost their
@@ -1134,6 +1134,28 @@ export function useHomeScreen() {
     }
   };
 
+  /**
+   * ── THE DAY SCREEN'S HUB, REACHING THE SESSION'S OWN DOORS ────────────────
+   *
+   * Sam, 2026-08-19: *"Both must render one shared hub and enter the same
+   * canonical action doors."* Equipment, Add and Swap have exactly one owner
+   * each and it lives on the session screen, so this opens that screen ON the
+   * door rather than giving the Day screen a second copy of any of them.
+   * Injury and Remove are NOT routed here — the Day screen already owns those
+   * two, and Remove deliberately stays because `UndoToast` mounts on Home.
+   */
+  const handleOpenSessionChange = (
+    day: typeof weekDays[0],
+    openChange: 'equipment' | 'add' | 'swap',
+  ) => {
+    if (!day?.workout) return;
+    navigation.navigate('DayWorkout', {
+      workoutId: day.workout.id,
+      date: day.date,
+      openChange,
+    });
+  };
+
   /** Team-training-only days still open the detail screen; the shared
    * session CTA owns logging from there. */
   const handleFinishTeamSession = (day: typeof weekDays[0]) => {
@@ -1659,6 +1681,7 @@ export function useHomeScreen() {
 
     // Per-day actions
     handleViewWorkout,
+    handleOpenSessionChange,
     handleFinishTeamSession,
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,

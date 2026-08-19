@@ -1,46 +1,39 @@
 /**
- * RESOLVER DISPLACEMENT SWEEP — every deriver answers the placement stamp.
+ * THE RESOLVER AUTHORS NOTHING — the guard of demolition area 3.
  *
- * Sam's law (2026-07-28, extended 2026-07-30): athlete-placed content outranks
- * derived filler. That law was enforced at ONE site — `applyGameProximity`'s
- * G-1 branch — because that is where the device found it. The resolver has six
- * places that build a derived session, and the other five were never asked the
- * question at all.
+ *   npm run test:displacement-sweep
  *
- * THIS TABLE IS THE TEST. Each row is one deriver, and each row proves BOTH
- * directions against the live resolver:
+ * ## WHAT THIS SUITE USED TO BE, AND WHY IT IS NOW THIS
  *
- *   - unstamped content on that day IS displaced (the deriver really fires
- *     there, so the surviving arm cannot pass vacuously), and
- *   - the SAME content, stamped, survives.
+ * It was the RESOLVER DISPLACEMENT SWEEP: a table with one row per deriver in
+ * `sessionResolver.ts`, proving for each that athlete-placed content outranked
+ * the derived filler that deriver produced (Sam's law, 2026-07-28, extended
+ * 2026-07-30). Six rows, six derivers.
  *
- * A row may answer `unreachable` instead of `consults` when placed content can
- * never arrive at the deriver's input. That answer still carries both arms: the
- * deriver must be shown firing, and the athlete's content must be shown
- * surviving. What no row may do is go unanswered.
+ * **ALL SIX DERIVERS ARE DELETED** (demolition area 3, 2026-08-19, Sam's
+ * burn-the-boats ruling: *"reading/drawing a program must not author, persist,
+ * restore, repair or rewrite it"*). `applyGameProximity`, `freedByTheTrip`, the
+ * freed-slot prehab, the recovery rebuild, the G-2 downgrade and the read-time
+ * §18 conforming pass are gone. A table proving derived filler yields to the
+ * athlete has nothing left to prove: there is no derived filler.
  *
- * THE SIXTH DERIVER. `derivedSiteCount` counts `buildDerivedSession(` call
- * sites in the resolver and requires one row each. Adding a seventh deriver
- * fails this suite until its row exists, which is the whole point: the next
- * person to build derived content on top of an athlete's day has to say what
- * happens to the athlete's day.
+ * SO THE SUITE IS RECLASSIFIED, NOT DELETED. Its subject was the derivers; its
+ * VALUE was the ratchet underneath them — *"the next person to build derived
+ * content on top of an athlete's day has to say what happens to the athlete's
+ * day."* That ratchet now says the stronger thing: **there is no such person,
+ * because the resolver may not build derived content at all.** It reds the
+ * moment read-time synthesis is reintroduced, which is exactly the completion
+ * condition the demolition is measured against.
  *
- * Run: npm run test:displacement-sweep
+ * A structural suite is a weaker instrument than a behavioural one and this
+ * file says so rather than dressing up: it proves the SITES are absent, not
+ * that the athlete's week is right. The behavioural cover for the rules those
+ * derivers implemented (G+1 / G-1 / G-2 proximity, the away substitution) is
+ * owed at their new owner — the weekly scheduler and the composer — and is on
+ * the rebuild list in `docs/STATUS_DEMOLITION.md`.
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
-const localStorageData = new Map<string, string>();
-(globalThis as unknown as { window: unknown }).window = {
-  localStorage: {
-    getItem: (key: string) => localStorageData.get(key) ?? null,
-    setItem: (key: string, value: string) => { localStorageData.set(key, value); },
-    removeItem: (key: string) => { localStorageData.delete(key); },
-    clear: () => { localStorageData.clear(); },
-  },
-};
-(global as unknown as { fetch: () => never }).fetch = () => {
-  throw new Error('NETWORK DISABLED — the displacement sweep must be local');
-};
 process.env.TZ = 'Australia/Melbourne';
 
 import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
@@ -48,21 +41,6 @@ import { armTotalsOrRed, totalsPrinted } from './support/totalsOrRed';
 armTotalsOrRed();
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
-import type { ResolvedDay } from '../utils/sessionResolver';
-import { generateProgramLocally } from '../services/api/generateProgram';
-import { useProgramStore } from '../store/programStore';
-import { useProfileStore } from '../store/profileStore';
-import { useCalendarStore } from '../store/calendarStore';
-import { useReadinessStore } from '../store/readinessStore';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
-import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
-import { athletePlacementFor, isAthletePlacedSession } from '../rules/athletePlacement';
-import { resolveWeekWithConditioning } from '../utils/sessionResolver';
-import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
-
-const CURRENT_WEEK = '2026-07-13';
 
 let passed = 0;
 let failed = 0;
@@ -84,412 +62,6 @@ function run(name: string, body: () => void): void {
   }
 }
 
-function quiet<T>(body: () => T): T {
-  const warn = console.warn;
-  const error = console.error;
-  const debug = console.debug;
-  console.warn = () => undefined;
-  console.error = () => undefined;
-  console.debug = () => undefined;
-  try {
-    return body();
-  } finally {
-    console.warn = warn;
-    console.error = error;
-    console.debug = debug;
-  }
-}
-
-function profile(): OnboardingData {
-  return {
-    seasonPhase: 'In-season',
-    position: 'inside_mid',
-    motivation: 'Build strength and football fitness',
-    trainingDaysPerWeek: 5,
-    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    teamTrainingDaysPerWeek: 2,
-    teamTrainingDays: ['Tuesday', 'Thursday'],
-    teamTrainingDuration: '60-90 minutes',
-    trainingLocation: 'Commercial gym',
-    equipment: ['Full Gym'],
-    equipmentSelectionCompleteness: 'complete',
-    experienceLevel: 'Advanced',
-    squatStrength: '1.5x bodyweight',
-    benchStrength: '1.25x bodyweight',
-    conditioningLevel: 'Good',
-    sprintExposure: '2+ times per week',
-    recentTrainingLoad: 'Very consistent',
-    injuries: [],
-    usualGameDay: 'Saturday',
-    gameDay: 'Saturday',
-  } as unknown as OnboardingData;
-}
-
-function addDaysISO(dateISO: string, days: number): string {
-  const date = new Date(`${dateISO}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-/** The settled in-season week: Mon strength, Tue/Thu team, Fri G-1, Sat game. */
-function seed(): string {
-  const athlete = profile();
-  const program: TrainingProgram = quiet(() => generateProgramLocally(athlete, {
-    todayISO: CURRENT_WEEK,
-    previousProgram: null,
-    seasonPhaseClock: {
-      protocolVersion: 1,
-      selectedPhase: athlete.seasonPhase!,
-      phaseEntryWeekStartISO: CURRENT_WEEK,
-      originProvenance: 'explicit_user_phase_change',
-      persistenceProvenance: 'preserved_persisted_state',
-    },
-  }));
-  useProfileStore.setState({ onboardingData: athlete, isOnboardingComplete: true });
-  useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
-  useReadinessStore.setState({ signalsByDate: {} } as never);
-  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
-  useCoachMutationHistoryStore.setState({ entries: [] } as never);
-  useProgramStore.setState({
-    currentProgram: program,
-    currentMicrocycle: program.microcycles[0] ?? null,
-    todayWorkout: null,
-    isGenerating: false,
-    isLoading: false,
-    error: null,
-    blockState: null,
-    acceptedMaterialContext: {
-      markedDays: {},
-      readinessSignalsByDate: {},
-      activeConstraints: [],
-      activeInjury: null,
-      revision: 1,
-      lastTransaction: 'displacement-sweep:seed',
-      injuryEpisodes: [],
-      temporarySourceFacts: [],
-      acceptedCompositionBase: null,
-      acceptedProfileSnapshot: null,
-    },
-    dateOverrides: {},
-    overrideContexts: {},
-    weekScopedOverlays: {},
-    userRemovalConstraints: [],
-    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
-    exposureContractsByWeek: {},
-    sessionFeedback: {},
-    weightOverrides: {},
-  } as never);
-  return program.microcycles[1]!.startDate.slice(0, 10);
-}
-
-/**
- * Put a workout on a day of the composed week, exactly as
- * `applyUserRemovalConstraintsToWeek` does: the day's own content is removed
- * and the new session takes its place, stamped or not.
- *
- * The stamp's ingress is pinned elsewhere (`g1LandingAskFlowTests` 2,
- * `athletePlacementOwnershipTests`). What THIS suite is about is what every
- * deriver does with a stamp once it is there, so the plant is direct.
- */
-function plant(weekStart: string, dayOfWeek: number, workout: Workout, stamped: boolean): void {
-  const state = useProgramStore.getState() as unknown as {
-    currentProgram: TrainingProgram;
-    currentMicrocycle: TrainingProgram['microcycles'][number] | null;
-  };
-  const date = addDaysISO(weekStart, dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-  const planted: Workout = {
-    ...workout,
-    dayOfWeek,
-    ...(stamped
-      ? { athletePlacement: athletePlacementFor({ constraintId: 'sweep', placedDate: date }) }
-      : { athletePlacement: undefined }),
-  };
-  const patch = <T extends { startDate: string; workouts: Workout[] }>(
-    microcycle: T | null,
-  ): T | null =>
-    microcycle && microcycle.startDate.slice(0, 10) === weekStart
-      ? {
-          ...microcycle,
-          workouts: microcycle.workouts
-            .filter((existing) => existing.dayOfWeek !== dayOfWeek)
-            .concat([planted]),
-        }
-      : microcycle;
-  useProgramStore.setState({
-    currentProgram: {
-      ...state.currentProgram,
-      microcycles: state.currentProgram.microcycles.map(
-        (microcycle) => patch(microcycle as never) as never,
-      ),
-    },
-    currentMicrocycle: patch(state.currentMicrocycle as never) as never,
-  } as never);
-}
-
-function clone(workout: Workout): Workout {
-  return JSON.parse(JSON.stringify(workout)) as Workout;
-}
-
-function mondaySession(weekStart: string): Workout {
-  const monday = (useProgramStore.getState() as unknown as { currentProgram: TrainingProgram })
-    .currentProgram.microcycles
-    .find((microcycle) => microcycle.startDate.slice(0, 10) === weekStart)
-    ?.workouts.find((workout) => workout.dayOfWeek === 1);
-  assert(monday, 'seed no longer has a Monday session to clone');
-  return clone(monday);
-}
-
-function visibleDay(weekStart: string, dayOfWeek: number): ResolvedDay | undefined {
-  const date = addDaysISO(weekStart, dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-  return quiet(() => resolveWeekWithConditioning(weekStart, buildScheduleStateImperative()))
-    .find((day) => day.date === date);
-}
-
-function describe(day: ResolvedDay | undefined): string {
-  const workout = day?.workout;
-  if (!workout) return `REST (source=${day?.source ?? 'none'})`;
-  return `"${workout.name}" (source=${day.source}, placed=${isAthletePlacedSession(workout)})`;
-}
-
-/**
- * One deriver. `build` returns the content to put on `dayOfWeek`; the row runs
- * it twice, unstamped and stamped, and the two arms must disagree.
- */
-interface DisplacementSite {
-  /** Stable id, and the row's name in the failure output. */
-  id: string;
-  /**
-   * A literal from the deriver's own call in `utils/sessionResolver.ts`. The
-   * completeness pin below reads the source, so a row that no longer matches a
-   * real site is a failure rather than a comment that quietly went stale.
-   */
-  anchor: string;
-  /**
-   * `consults` — the deriver asks the placement predicate.
-   * `unreachable` — placed content cannot reach this deriver's input, and the
-   *   surviving arm proves it rather than asserting it.
-   */
-  answer: 'consults' | 'unreachable';
-  dayOfWeek: number;
-  build: (weekStart: string) => Workout;
-}
-
-const SITES: DisplacementSite[] = [
-  {
-    // Was `g_plus_1_recovery` / anchor 'Post-game recovery' until 2026-08-01:
-    // the deleted-type retirement (device-pass fail 3) re-materialised the G+1
-    // protection as a MOBILITY session. Same site, same stamp question, new
-    // word — the row follows the literal so the completeness pin stays honest.
-    id: 'g_plus_1_mobility',
-    anchor: "'Post-game'",
-    answer: 'consults',
-    // Sunday, the day after Saturday's game.
-    dayOfWeek: 0,
-    // Deliberately NOT a protected core exposure name: `isProtectedCoreExposure`
-    // would keep it for the wrong reason and the stamp would prove nothing.
-    build: (weekStart) => ({
-      ...mondaySession(weekStart),
-      id: 'sweep-g-plus-1',
-      planEntryId: undefined,
-      name: 'Assault Bike Intervals',
-    }),
-  },
-  {
-    id: 'g_minus_1_gunshow',
-    anchor: 'Pre-game day',
-    answer: 'consults',
-    dayOfWeek: 5,
-    build: (weekStart) => ({
-      ...mondaySession(weekStart),
-      id: 'sweep-g-minus-1',
-      planEntryId: undefined,
-      name: 'Assault Bike Intervals',
-    }),
-  },
-  {
-    id: 'g_minus_2_downgrade',
-    anchor: 'Pre-game window - avoiding upper-body stacking with G-1',
-    answer: 'consults',
-    // Thursday: G-2 to Saturday's game, with Friday's derived Gunshow above it.
-    dayOfWeek: 4,
-    // Named 'Gunshow' so the fatigue-stacking guard sees a derived-looking
-    // upper duplicate and downgrades it — the arm that must stop for a stamp.
-    build: (weekStart) => ({
-      ...mondaySession(weekStart),
-      id: 'sweep-g-minus-2',
-      planEntryId: undefined,
-      name: 'Gunshow',
-    }),
-  },
-  {
-    id: 'recovery_template_rebuild',
-    // Anchor follows the 2026-08-01 deleted-type retirement: the rebuild now
-    // materialises a MOBILITY session (the contents recovery always was).
-    anchor: 'Scheduled mobility',
-    answer: 'consults',
-    // Wednesday: an ordinary mid-week day, no fixture proximity.
-    dayOfWeek: 3,
-    // The athlete's own recovery session. The rebuild replaces ANY recovery
-    // template with the deterministic pool session, which silently discards
-    // whatever the athlete put there.
-    build: (weekStart) => ({
-      ...mondaySession(weekStart),
-      id: 'sweep-recovery',
-      planEntryId: undefined,
-      name: 'My Own Flush',
-      workoutType: 'Recovery',
-      sessionTier: 'recovery',
-    }),
-  },
-  {
-    id: 'freed_game_slot',
-    anchor: 'Freed game slot',
-    answer: 'unreachable',
-    // Wednesday again, this time carrying a template Game with no calendar
-    // mark — a game that moved, leaving the slot behind.
-    dayOfWeek: 3,
-    build: (weekStart) => ({
-      ...mondaySession(weekStart),
-      id: 'sweep-freed-game',
-      planEntryId: undefined,
-      name: 'Assault Bike Intervals',
-    }),
-  },
-  {
-    id: 'freed_by_the_trip',
-    anchor: 'Freed by the trip',
-    // ── R-075, Sam 2026-08-13: *"Away has to replace the work it removes."* ──
-    //
-    // `applyAwayPass` -> `freedByTheTrip` builds a session on a day a live trip
-    // emptied — the vacated fixture, or a club-only night. **It cannot reach an
-    // athlete-placed day, and that is a property of its two guards rather than a
-    // courtesy it extends:**
-    //   - the fixture guard needs `source === 'game'`, `indicator === 'game'` or
-    //     `workoutType === 'Game'`. An athlete placement composes as
-    //     `date_override` -> `source: 'manual'`, so none of the three hold.
-    //   - the club guard needs `isTeamTrainingOnly`. A session the athlete put
-    //     there is not team-training-only by construction.
-    //
-    // **SO IT DISPLACES NOTHING, AND THE ROW SAYS `unreachable` FOR THE SAME
-    // REASON `freed_game_slot` DOES** — the day has to be the club's before this
-    // deriver looks at it, and a day the athlete owns never is.
-    //
-    // ⚠ IF EITHER GUARD IS EVER WIDENED — a trip clearing *any* day inside its
-    // span, say — **this row becomes `consults` and the deriver owes an
-    // athlete-placement check.** That is the whole reason this table refuses a
-    // deriver without a row.
-    answer: 'unreachable',
-    // Wednesday, carrying a Game the athlete did not place.
-    dayOfWeek: 3,
-    build: (weekStart) => ({
-      ...mondaySession(weekStart),
-      id: 'sweep-freed-by-trip',
-      planEntryId: undefined,
-      name: 'Assault Bike Intervals',
-    }),
-  },
-  // THE PASS-3 ROW IS GONE WITH ITS DERIVER (2026-07-30).
-  //
-  // `resolveWeekWithConditioning`'s recovery fill pass put a derived recovery
-  // session on every remaining empty day, and this row answered `unreachable`
-  // because the fill only ran on days that resolved to nothing — which, while the
-  // generator filled every spare day, never happened. Landing Sam's placement
-  // rulings (R2-R5) made empty days real and the pass claimed one immediately, on a
-  // G+1, where the athlete could not delete it. It fails condition 1 of the Optional
-  // Placement Law (Bible 20.1) and is deleted, so its row goes with it rather than
-  // sitting here answering for a deriver that no longer exists.
-  //
-  // `derivedSiteCount` below is what keeps this honest in the other direction: the
-  // table must have exactly one row per `buildDerivedSession(` site, so a deletion
-  // that forgot its row fails just as loudly as a new deriver that never wrote one.
-];
-
-/** The freed-game and fill rows need the day set up before the plant lands. */
-function prepare(site: DisplacementSite, weekStart: string): void {
-  if (site.id === 'freed_game_slot') {
-    // A template Game with no calendar mark is the freed slot's precondition.
-    plant(weekStart, site.dayOfWeek, {
-      ...mondaySession(weekStart),
-      id: 'sweep-freed-game-stub',
-      planEntryId: undefined,
-      name: 'Game Day',
-      workoutType: 'Game',
-    } as Workout, false);
-  }
-  if (site.id === 'pass_3_recovery_fill') {
-    // The fill pass claims days that resolve to nothing at all.
-    const state = useProgramStore.getState() as unknown as {
-      currentProgram: TrainingProgram;
-      currentMicrocycle: TrainingProgram['microcycles'][number] | null;
-    };
-    const strip = <T extends { startDate: string; workouts: Workout[] }>(
-      microcycle: T | null,
-    ): T | null =>
-      microcycle && microcycle.startDate.slice(0, 10) === weekStart
-        ? {
-            ...microcycle,
-            workouts: microcycle.workouts.filter(
-              (workout) => workout.dayOfWeek !== site.dayOfWeek),
-          }
-        : microcycle;
-    useProgramStore.setState({
-      currentProgram: {
-        ...state.currentProgram,
-        microcycles: state.currentProgram.microcycles.map(
-          (microcycle) => strip(microcycle as never) as never),
-      },
-      currentMicrocycle: strip(state.currentMicrocycle as never) as never,
-    } as never);
-  }
-}
-
-console.log('\n-- Resolver displacement sweep --');
-
-for (const site of SITES) {
-  run(`${site.id}: displaces content the athlete did not place`, () => {
-    const weekStart = seed();
-    prepare(site, weekStart);
-    const content = site.build(weekStart);
-    if (site.answer === 'consults') plant(weekStart, site.dayOfWeek, content, false);
-    const day = visibleDay(weekStart, site.dayOfWeek);
-    assert(day?.workout?.name !== content.name,
-      `${site.id} never fires — the surviving arm would pass vacuously. Day holds ${describe(day)}`);
-  });
-
-  run(`${site.id}: leaves content the athlete DID place alone`, () => {
-    const weekStart = seed();
-    prepare(site, weekStart);
-    const content = site.build(weekStart);
-    plant(weekStart, site.dayOfWeek, content, true);
-    const day = visibleDay(weekStart, site.dayOfWeek);
-    assert(day?.workout, `${site.id} emptied the athlete's day: ${describe(day)}`);
-    assert(day.workout.name === content.name,
-      `${site.id} displaced athlete-placed content — day holds ${describe(day)}, not "${content.name}"`);
-    assert(isAthletePlacedSession(day.workout),
-      `${site.id} kept the day but dropped the stamp: ${describe(day)}`);
-  });
-}
-
-// ── The sixth deriver has nowhere to hide ─────────────────────────────────
-
-/**
- * CODE ONLY — A COMMENT IS NOT A DERIVER.
- *
- * `derivedSiteCount` counted `buildDerivedSession(` over the RAW file, so PROSE
- * mentioning the call counted as a call site. On 2026-08-13 that is exactly what
- * happened: the away/R-075 doc block in `sessionResolver.ts` quotes
- * `buildDerivedSession('prehab_accessories', …, 'Freed game slot', …)` while
- * explaining which owner it reuses, and the gate read 7 sites where the file has
- * SIX. The table has 5 rows, so the suite was red either way — but it was red by
- * the WRONG NUMBER, and the fix it demanded was two rows, one of which would have
- * documented a deriver that does not exist.
- *
- * **A row answering for a comment is worse than the missing row it hides**: the
- * next deletion-check would then fail for the opposite reason and nobody could
- * tell which count was the lie. This is `a-comment-is-not-a-shipped-string`, and
- * the law's own remedy is to STRIP AT THE READER rather than to teach every
- * writer to avoid the token.
- */
 function codeOnly(source: string): string {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, ' ')     // block and JSDoc comments
@@ -502,48 +74,68 @@ function codeOnly(source: string): string {
 run('codeOnly strips commented call sites and keeps real ones', () => {
   const fixture = [
     "const a = buildDerivedSession('real', 1);",
-    '/** doc: buildDerivedSession(\'prose\', 2) is what this reuses */',
-    "// line: buildDerivedSession('prose', 3)",
-    "const b = 'https://example.com'; // buildDerivedSession('prose', 4)",
+    "/** doc: buildDerivedSession('prose', 2) is what this reuses */",
+    "// note: buildDerivedSession('comment', 3)",
   ].join('\n');
   const stripped = codeOnly(fixture);
-  const found = stripped.split('buildDerivedSession(').length - 1;
-  assert(found === 1, `codeOnly kept ${found} call sites, expected exactly 1`);
-  assert(stripped.includes("'https://example.com'"),
-    'codeOnly ate a URL — the `[^:]` guard for `//` is not holding');
+  assert(stripped.split('buildDerivedSession(').length - 1 === 1,
+    'codeOnly no longer distinguishes a real call site from prose about one');
 });
 
-run('every derived-session site in the resolver has a row in this table', () => {
-  const raw = readFileSync(
-    join(__dirname, '..', 'utils', 'sessionResolver.ts'), 'utf8');
-  const source = codeOnly(raw);
-  const derivedSiteCount = source.split('buildDerivedSession(').length - 1;
-  assert(derivedSiteCount === SITES.length,
-    `the resolver builds derived sessions at ${derivedSiteCount} sites but this table `
-    + `has ${SITES.length} rows. A new deriver must say what it does with an `
-    + `athlete-placed day before it ships.`);
-  for (const site of SITES) {
-    assert(source.includes(site.anchor),
-      `row "${site.id}" is anchored on "${site.anchor}", which is no longer in the resolver`);
-  }
-  const ids = new Set(SITES.map((site) => site.id));
-  assert(ids.size === SITES.length, 'two rows share an id');
+const RESOLVER = codeOnly(
+  readFileSync(join(__dirname, '..', 'utils', 'sessionResolver.ts'), 'utf8'),
+);
+
+run('[1] the resolver builds ZERO derived sessions', () => {
+  const sites = RESOLVER.split('buildDerivedSession(').length - 1;
+  assert(sites === 0,
+    `the resolver builds a derived session at ${sites} site(s). Reading a program `
+    + 'may not author one — the session would be invisible to §18, uneditable by '
+    + 'the athlete (nothing stored to edit), and recomposed on every render. '
+    + 'Its owner is the composer.');
 });
 
-run('the displacement question has exactly one owner', () => {
-  const source = readFileSync(
-    join(__dirname, '..', 'utils', 'sessionResolver.ts'), 'utf8');
-  // Ruling #4: the resolver CONSULTS the stamp, it never re-decides ownership.
-  // One import, one predicate, and no site rolling its own answer.
-  assert(source.includes('resolverMayDisplace'),
-    'the resolver no longer consults the shared displacement predicate');
-  const inlineChecks = source.split('isAthletePlacedSession(').length - 1;
-  assert(inlineChecks === 0,
-    `${inlineChecks} site(s) ask the placement question directly instead of through `
-    + 'resolverMayDisplace — that is a second owner of the same decision');
+run('[2] the resolver builds ZERO conditioning sessions', () => {
+  const sites = RESOLVER.split('buildConditioningSession(').length - 1;
+  assert(sites === 0,
+    `the resolver builds a conditioning session at ${sites} site(s). This was `
+    + '`freedByTheTrip`, which filled a trip-vacated day with work nobody authored.');
 });
 
-console.log(`\nResolver displacement sweep totals: ${passed} passed, ${failed} failed`);
+run('[3] no read-time authoring pass has been reintroduced', () => {
+  const banned = [
+    'applyGameProximity',
+    'section18TierFour',
+    'applyInjuryFilterPass',
+    'freedByTheTrip',
+  ];
+  const present = banned.filter((name) => RESOLVER.includes(name));
+  assert(present.length === 0,
+    `the resolver has regained ${present.join(', ')} — each of these authored or `
+    + 'rewrote the week while drawing it.');
+});
+
+run('[4] the resolver never runs the §18 gateway', () => {
+  // §18 is a WRITE boundary and it REFUSES. Running it at read made it a
+  // conforming pass: measured 2026-08-17, it replaced an authored
+  // `lower_hinge | 5 rows` Friday with `Rest | 0 rows` on the athlete's screen.
+  const present = ['runSection18AcceptedWeekGateway', 'requireSection18AcceptedWeek']
+    .filter((name) => RESOLVER.includes(name));
+  assert(present.length === 0,
+    `the resolver calls ${present.join(', ')} — §18 belongs at the write boundaries.`);
+});
+
+run('[5] the away pass still HIDES the club, and still builds nothing', () => {
+  // The distinction the demolition drew: a projection may hide, it may not
+  // create. Away is still applied at read — the club's night and the club's
+  // fixture come off a day inside a live trip — and it must stay a filter.
+  assert(RESOLVER.includes('applyAwayPass'),
+    'the away filter is gone entirely; a live trip must still take the club off the day');
+  assert(RESOLVER.includes('dateIsInsideAwaySpan') || RESOLVER.includes('awaySpansFromFacts'),
+    'the away pass no longer reads the away span owner');
+});
+
+console.log(`\nResolver authoring guard totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);
 if (failed > 0) {
   console.error(`FAILURES:\n  ${failures.join('\n  ')}`);

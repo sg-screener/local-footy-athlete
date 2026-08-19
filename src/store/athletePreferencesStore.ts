@@ -4,7 +4,6 @@ import type { AthletePoolPrefs } from '../data/exercisePoolsStrength';
 import type { InjuryKey } from '../data/exerciseTags';
 import {
   excludedExerciseNamesOn,
-  migrateLegacyExcludedNames,
   restoreExclusion,
   upsertExclusion,
   type ExerciseExclusion,
@@ -156,17 +155,10 @@ export function normaliseHydratedPrefs(
     excluded: [],
     pinned: [...(persisted?.pinned ?? [])],
   };
-  const stored = persisted?.exclusions ?? [];
-  const legacy = migrateLegacyExcludedNames(persisted?.excluded, hydratedOnISO);
-  const exclusions = [...stored];
-  for (const migrated of legacy) {
-    // A stored decision always outranks a legacy bare name: the scoped answer is
-    // the newer one, and re-adding it as `until_changed` would widen a scope the
-    // athlete deliberately narrowed.
-    if (exclusions.some((e) => e.exercise === migrated.exercise)) continue;
-    exclusions.push(migrated);
-  }
-  return { ...base, exclusions };
+  // THE BARE-NAME UPGRADE IS DELETED (demolition area 4). `excluded: string[]`
+  // was the pre-scope shape; anything stored in it belongs to a build no
+  // athlete is running. Scoped `exclusions` is the only stored form.
+  return { ...base, exclusions: [...(persisted?.exclusions ?? [])] };
 }
 
 /**

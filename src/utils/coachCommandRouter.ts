@@ -233,7 +233,7 @@ export type CoachMutatePayload =
  *
  *   conversation       → answer naturally using actual program context
  *                        (legacy /coach-chat, but with the visible week
- *                        + activeInjury packet, never freeform)
+ *                        + accepted injury context packet, never freeform)
  *   clarify            → option-bearing question, executor short-circuits
  *   mutate             → deterministic engine + verification
  *   inspect_state      → read-only state report (no LLM round-trip)

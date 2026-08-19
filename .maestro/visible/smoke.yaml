@@ -1,0 +1,10 @@
+appId: com.localfootyathlete.app
+name: VISIBLE smoke - the rig reaches this worktree
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- assertVisible:
+    id: "program-screen"
+- takeScreenshot: artifacts/visible/smoke-program-screen

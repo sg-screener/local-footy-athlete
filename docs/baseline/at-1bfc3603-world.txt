@@ -1,0 +1,1 @@
+BASELINE WORLD: cwd=/private/tmp/claude-501/-Users-samgeurts-Documents-local-footy-athlete/7d865a3f-81a1-42c3-b46b-39a425cc0601/scratchpad/wt-control head=1bfc3603 dirty=0 suites=405

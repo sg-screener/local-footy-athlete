@@ -17,7 +17,6 @@ import type {
 } from './weeklyExposureContractV2';
 import { countingIndices } from './sessionRowCounting';
 
-export type Section18EvidenceMode = 'infer' | 'preserve_legacy_unknown';
 
 function rowName(row: WorkoutExercise): string {
   return String(row.exercise?.name ?? row.exerciseId ?? '').trim();
@@ -143,40 +142,11 @@ function conditioningStress(
   return CONDITIONING_STRESS_BY_CATEGORY[category](workout);
 }
 
-function legacyUnknownWorkoutEvidence(workout: Workout): WorkoutSection18Evidence {
-  return {
-    protocolVersion: 1,
-    conditioningRole: hasConditioning(workout) ? 'legacy_unknown' : 'none',
-    conditioningStress: hasConditioning(workout) ? 'unknown' : 'unknown',
-    provenance: 'legacy_unknown',
-  };
-}
-
 /** Attach or preserve typed evidence without changing prescriptions or layout. */
 export function withSection18WorkoutEvidence(
   workout: Workout,
-  mode: Section18EvidenceMode,
   provenance: WorkoutSection18Evidence['provenance'] = 'planner_and_canonical_content',
 ): Workout {
-  if (mode === 'preserve_legacy_unknown') {
-    return {
-      ...workout,
-      exercises: (workout.exercises ?? []).map((row) => row.section18Evidence
-        ? row
-        : {
-            ...row,
-            section18Evidence: {
-              protocolVersion: 1,
-              role: 'legacy_unknown',
-              strengthPattern: null,
-              mainStrengthPattern: null,
-              provenance: 'legacy_unknown',
-            },
-          }),
-      section18Evidence: workout.section18Evidence ?? legacyUnknownWorkoutEvidence(workout),
-    };
-  }
-
   const role = conditioningRole(workout);
   const plannedPatterns = workout.strengthIntent
     ? new Set(normalizeStrengthIntent(workout.strengthIntent).effectivePatterns)

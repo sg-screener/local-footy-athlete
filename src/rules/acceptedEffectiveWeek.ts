@@ -16,6 +16,7 @@ import {
   type Section18EffectiveWeekEvaluation,
 } from './section18EffectiveWeekEvaluator';
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
+import type { ExerciseExclusion } from './exerciseExclusions';
 import { athletePlacementForDateOverride } from './athletePlacement';
 import { composeDaySurfaces } from './dayPrecedence';
 import { deriveWeekContract } from './derivedWeekContract';
@@ -96,6 +97,25 @@ export interface AcceptedEffectiveWeekSurfaces {
    * that is a decision rather than drift.
    */
   removalDecisions: readonly UserRemovalConstraint[];
+  /**
+   * THE ATHLETE'S "LEAVE THIS EXERCISE OUT" DECISIONS, in this world.
+   *
+   * REQUIRED, and deliberately so — the field above records what it cost to
+   * make the removal list optional, and this is the same class of fact. A world
+   * with no exclusions says so with `[]`.
+   *
+   * It is APPLIED here and NEVER blanked, because unlike a removal constraint
+   * an exclusion is not consumed by being applied: it is a standing decision
+   * with an end date, and every read of every day inside its span asks it the
+   * same question and must get the same answer. Applying it twice is a no-op —
+   * a row already filtered out cannot be filtered out again — which is exactly
+   * why it needs no consumption protocol.
+   *
+   * POPULATED BY ONE OWNER, `liveEvaluationSurfaces.composeAcceptedEffectiveWeekSurfaces`,
+   * from the live athlete preferences store rather than by each caller, so a
+   * door cannot forget it. See `rules/exerciseExclusions.applyExclusionsToAuthoredWeek`.
+   */
+  athleteExclusions: readonly ExerciseExclusion[];
   /**
    * THE ATHLETE'S SOURCE FACTS in this world — leg (v)'s read side. Optional
    * because the same bundle also arrives as the store cast whole, where the
@@ -213,6 +233,22 @@ export function rebaseAcceptedEffectiveWeek(args: {
   // `base_microcycle` is the derived plan itself. An existing stamp always
   // wins: a session that arrived here carrying its constraint provenance keeps
   // it rather than being relabelled by the surface it happens to sit on.
+  // ⚠ **THE ATHLETE'S EXCLUSION FILTER DOES NOT BELONG HERE, AND IT WAS HERE.**
+  //
+  // Installing it on this line is the obvious move — this is the compose owner
+  // every accepted-week read goes through — and it is wrong, MEASURED: this
+  // function is also what the WRITE paths compose with. `commitRebuiltProgram`
+  // publishes what comes out of here, so within one boot the filter's answer
+  // was persisted into `currentProgram.microcycles`. Three stored microcycles
+  // lost the row for good, while the block BEFORE the decision day kept it.
+  //
+  // A filter that gets written down is not a filter. It cannot expire, and
+  // Restore has nothing to give back — the exact-item Undo Sam requires depends
+  // entirely on the authored row still existing underneath the decision.
+  //
+  // So the exclusion is applied at READ, once, at `utils/sessionResolver`, which
+  // is the door the athlete's screen actually takes. See
+  // `rules/exerciseExclusions.applyExclusionsToAuthoredDay`.
   const composedWorkouts = applyUserRemovalConstraintsToWeek({
     workouts: dates.flatMap((entry) => {
       if (!entry.workout) return [];

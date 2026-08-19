@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -20,6 +20,7 @@ import { ModifiersStrip } from '../../components/ModifiersStrip';
 import { ModifiersSheet } from '../../components/ModifiersSheet';
 import { Button, Card, Sheet, Badge } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
+import { SessionChangeHub } from '../../components/SessionChangeHub';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { weeklyConditioningIconKind } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
@@ -56,9 +57,18 @@ import { buildReadinessAcknowledgment, buildScheduleAcknowledgment, type Readine
 import { recordScheduleAckPresented } from '../../utils/athleteActionDiagnostics';
 import { applyLighterDayForToday } from '../../utils/lighterDayTransaction';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
-import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
+import { dayOfWeekTestIdToken, explorerTestId, stableTestIdToken } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 import { UndoToast } from '../../components/UndoToast';
+import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
+import { executeProgramControlActionDurably } from '../../utils/programControlActions';
+import {
+  EXERCISE_EXCLUSION_SCOPES,
+  EXERCISE_EXCLUSION_SCOPE_LABEL,
+  EXERCISE_EXCLUSION_SCOPE_DETAIL,
+  EXERCISE_EXCLUSION_QUESTION,
+} from '../../rules/exerciseExclusions';
+import type { ExerciseExclusionScope } from '../../rules/exerciseExclusions';
 import { BuildingState, RebuildSheet } from '../../components/RebuildSheet';
 import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedbackRenderWitness';
 import {
@@ -116,6 +126,7 @@ export default function HomeScreenV2() {
     handleCancelMove,
     handleAddGameMode,
     handleViewWorkout,
+    handleOpenSessionChange,
     handleFinishTeamSession,
     handleApplyGuidedInjury,
     handleApplyAwaySpan,
@@ -232,6 +243,103 @@ export default function HomeScreenV2() {
   const dayFirst = preferredProgramView === 'today' && isNormal;
   const dayFirstIdx = Math.min(Math.max(preferredDayIdx, 0), Math.max(weekDays.length - 1, 0));
   const dayFirstDay = dayFirstIdx >= 0 ? weekDays[dayFirstIdx] : null;
+
+  /**
+   * THE LABELLED REMOVE HUB'S OWN STEPS — selection, then scope, then a receipt.
+   *
+   * Three steps and not one, because Sam's contract is two questions: WHAT is
+   * coming out, and FOR HOW LONG. Collapsing them is what produced the
+   * unlabelled icon this replaces.
+   */
+  const [removeFlow, setRemoveFlow] = useState<
+    | { kind: 'closed' }
+    | { kind: 'select' }
+    | { kind: 'scope'; exerciseName: string; exerciseId: string | null }
+    | { kind: 'result'; ok: boolean; title: string; message: string }
+  >({ kind: 'closed' });
+
+  /**
+   * Today's removable rows, read off the SAME projected day the card is about.
+   *
+   * `.exercises` and not a re-derivation: the athlete may only remove what they
+   * can currently see, so the list the sheet offers is the list the screen shows.
+   */
+  const removableExercises = useMemo(() => {
+    const rows = (dayFirstDay?.workout?.exercises ?? []) as Array<{
+      id?: string | null;
+      exerciseId?: string | null;
+      exercise?: { name?: string | null } | null;
+    }>;
+    const seen = new Set<string>();
+    return rows.flatMap((row) => {
+      const name = row.exercise?.name?.trim();
+      if (!name || seen.has(name)) return [];
+      seen.add(name);
+      return [{ name, exerciseId: row.exerciseId ?? row.id ?? null }];
+    });
+  }, [dayFirstDay]);
+
+  /**
+   * THE ANSWER, THROUGH BOTH EXISTING OWNERS AND NEITHER REIMPLEMENTED.
+   *
+   * `executeProgramControlActionDurably({type:'remove_exercise'})` takes the row
+   * off today and writes the REVERSIBLE entry — that entry is what `UndoToast`
+   * reads, which is why Undo needs no new authority here. Then
+   * `applyExerciseExclusionDecision` records the canonical fact with its scope.
+   * The same two owners, in the same order, as the session screen's route.
+   *
+   * **NO SUCCESS SENTENCE WITHOUT A VISIBLE CHANGE (Sam's clause).** If the
+   * first owner refuses, the flow reports ITS message and stops — it never
+   * records an exclusion for a session that did not change, and never says
+   * "Saved" over a screen that still shows the exercise.
+   */
+  const applyRemoveFlowScope = useCallback(
+    async (exerciseName: string, exerciseId: string | null, scope: ExerciseExclusionScope) => {
+      const date = dayFirstDay?.date ?? todayISOLocal();
+      const removal = await executeProgramControlActionDurably({
+        type: 'remove_exercise',
+        // `program_tab` is this screen's own id in the ledger vocabulary; the
+        // SURFACE is what distinguishes this card from the rest of the tab.
+        source: { screen: 'program_tab', surface: 'home_change_card', initiatedBy: 'tap' },
+        scope: 'today_only',
+        payload: { date, exercise: exerciseName, exerciseId: exerciseId ?? undefined },
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: true,
+      });
+      if (!removal.ok) {
+        setRemoveFlow({
+          kind: 'result',
+          ok: false,
+          // The owner's OWN typed reason, never a generic sentence.
+          title: 'Could not remove that',
+          message: removal.message ?? 'Your session is unchanged.',
+        });
+        return;
+      }
+      const decision = applyExerciseExclusionDecision({
+        exercise: exerciseName,
+        scope,
+        decidedOnISO: date,
+      });
+      if (!decision.ok || !decision.exclusion) {
+        setRemoveFlow({
+          kind: 'result',
+          ok: false,
+          title: 'Could not save that',
+          message: 'Today\u2019s session is still updated.',
+        });
+        return;
+      }
+      setRemoveFlow({
+        kind: 'result',
+        ok: true,
+        title: 'Saved',
+        message: `${exerciseName} \u2014 ${EXERCISE_EXCLUSION_SCOPE_LABEL[scope].toLowerCase()}.`,
+      });
+    },
+    [dayFirstDay],
+  );
   const reviewAthlete = useAthleteContext();
   const mobilityFlowByDate = useMemo(() => {
     const isGameWeek = weekDays.some((day) => day.indicator === 'game');
@@ -855,14 +963,63 @@ export default function HomeScreenV2() {
 
             The card heading and sub-line remain owned by signedCopy; this row
             changes only the direct status controls beneath them. */}
+        {/* ── ONE HUB, BOTH SURFACES (Sam, 2026-08-19) ────────────────────
+            *
+            * *"The Need to make a change? section inside an active session must
+            * use the same shared UI component and visual design as the Day
+            * screen ... Both surfaces must show the same five actions:
+            * Equipment · Injury · Add · Remove · Swap ... Do not keep separate
+            * Day and Session implementations."*
+            *
+            * This card WAS the signed original — heading, sub-line and a row of
+            * tinted icon chips — and the session screen had grown its own row of
+            * plain text pills beside it. The card's markup moved into
+            * `components/SessionChangeHub` unchanged, and both screens now
+            * render it.
+            *
+            * **THE DOORS ARE THE SAME FIVE OWNERS, REACHED WITH THE RIGHT DATE.**
+            * Injury and Remove are this screen's own (Remove deliberately so:
+            * `UndoToast` mounts here, and a removal driven from the pushed
+            * session screen raised its toast on the screen behind it).
+            * Equipment, Add and Swap have exactly one owner each on the session
+            * screen, so they open today's session ON that door — a second copy
+            * here is the duplication this ruling deletes. */}
         {isNormal && dayFirst && (
-          <Card tone="default" padding="lg" radius="lg" style={styles.changeCard} testID="home-change-card">
-            <Text style={styles.changeCardHeading}>
-              {signedCopy('day.change_card.heading')}
-            </Text>
-            <Text style={styles.changeCardSubline}>
-              {signedCopy('day.change_card.subline')}
-            </Text>
+          <SessionChangeHub
+            testID="home-change-card"
+            actions={[
+              ...(dayFirstDay?.workout
+                ? [{ id: 'equipment' as const,
+                    onPress: () => handleOpenSessionChange(dayFirstDay, 'equipment') }]
+                : []),
+              { id: 'injury' as const,
+                onPress: () => setReadinessInjuryVisible(true),
+                accessibilityHint: "Tell us about an injury affecting today's session" },
+              ...(dayFirstDay?.workout
+                ? [{ id: 'add' as const,
+                    onPress: () => handleOpenSessionChange(dayFirstDay, 'add') }]
+                : []),
+              { id: 'remove' as const,
+                onPress: () => setRemoveFlow({ kind: 'select' }),
+                accessibilityHint: "Remove an exercise from today's session" },
+              ...(dayFirstDay?.workout
+                ? [{ id: 'swap' as const,
+                    onPress: () => handleOpenSessionChange(dayFirstDay, 'swap') }]
+                : []),
+            ]}
+          />
+        )}
+
+        {/* ── THE READINESS ENTRIES KEEP THEIR OWN ROW ────────────────────
+            *
+            * ⚠ **"Tired" AND "Sick" ARE NOT SESSION CHANGES AND WERE NOT DELETED.**
+            * They shared the old card only because it was the nearest panel.
+            * They are readiness FACTS about the athlete, they open the readiness
+            * sheet rather than any of the five doors, and folding them into a
+            * hub whose contract is "the five actions" would have made the hub
+            * disagree with itself on the two surfaces. They keep their doors,
+            * their testIDs and their tints. */}
+        {isNormal && dayFirst && (
           <View style={styles.lifeFactChips} testID="home-life-fact-chips">
             <LifeFactChip
               onPress={() => { setReadinessAck(null); setReadinessEntry('flat'); }}
@@ -878,14 +1035,6 @@ export default function HomeScreenV2() {
                 </Svg>
               }
             />
-            {/* ── ITEM 28: THE AWAY CHIP LEFT THIS ROW FOR THE WEEK SCREEN ──
-                Sam, 2026-08-13: *"I think the away button should live on the
-                weekly screen, it should say 'when do you leave?' then 'when do
-                you return'"*. The same reasoning that moved add-a-game (item
-                19): "when do you leave" is a question about a SPAN, and this
-                row sits on the screen about ONE day. Its door, its icon and
-                its purple tint all moved together — see the away entry under
-                `!dayFirst` above. */}
             <LifeFactChip
               onPress={() => { setReadinessAck(null); setReadinessEntry('sick'); }}
               testID={weekReadiness
@@ -894,14 +1043,6 @@ export default function HomeScreenV2() {
               accessibilityLabel={weekReadiness
                 ? explorerTestId.readinessUpdate(weekReadiness.id)
                 : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
-              /* A4 SURVIVES THE SHRINK: the label is still the owner's, not the
-                 card's. A chip cannot show a sentence, so the owner's title is
-                 what this chip SAYS (accessibility) while the row shows one
-                 word — and the athlete still reads that title in full, because
-                 an active readiness fact is a Coach Note and Coach Notes now sit
-                 directly below this row. The word "I'm sick/flat today" (signed,
-                 ruling 4) is still this file's, which is what its two pins
-                 assert. */
               accessibilityHint={weekReadiness ? weekReadiness.title : "I'm sick/flat today"}
               label="Sick"
               tint={styles.readinessIconTint}
@@ -912,23 +1053,7 @@ export default function HomeScreenV2() {
                 </Svg>
               }
             />
-            <LifeFactChip
-              /* ONE OWNER, TWO DOORS. This opens the SAME `GuidedInjuryFlowSheet`
-                 the readiness sheet's "Something hurts" row opens, and both
-                 complete through `handleApplyGuidedInjury`. */
-              onPress={() => setReadinessInjuryVisible(true)}
-              testID="home-injured-entry"
-              accessibilityLabel="I'm injured"
-              label="Injured"
-              tint={styles.injuredIconTint}
-              icon={
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF7F7F" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-                  <Path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z" />
-                </Svg>
-              }
-            />
           </View>
-          </Card>
         )}
 
         {/* The answer to a chip tap, in the athlete's own words, directly under
@@ -1470,6 +1595,82 @@ export default function HomeScreenV2() {
         knowing this component exists. That is why there is one mount here and
         no toast call at any of the ten program-control call sites.
       */}
+      {/* ── THE LABELLED REMOVE HUB'S SHEETS ────────────────────────────────
+          Mounted HERE, beside `UndoToast`, and that adjacency is the point:
+          the flow that raises the undoable action finishes on the same surface
+          the toast appears on. */}
+      <Sheet
+        visible={removeFlow.kind === 'select'}
+        onClose={() => setRemoveFlow({ kind: 'closed' })}
+        testID="home-remove-select-sheet"
+      >
+        <Text style={styles.sheetTitle}>Remove an exercise</Text>
+        {removableExercises.length === 0 ? (
+          <Text style={styles.changeCardSubline} testID="home-remove-select-empty">
+            There is nothing to remove in today&apos;s session.
+          </Text>
+        ) : removableExercises.map((row) => (
+          <SheetOption
+            key={row.name}
+            label={row.name}
+            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFA1C4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14"/></Svg>}
+            testID={`home-remove-select-${stableTestIdToken(row.name)}`}
+            onPress={() => setRemoveFlow({
+              kind: 'scope',
+              exerciseName: row.name,
+              exerciseId: row.exerciseId,
+            })}
+          />
+        ))}
+      </Sheet>
+
+      <Sheet
+        visible={removeFlow.kind === 'scope'}
+        onClose={() => setRemoveFlow({ kind: 'closed' })}
+        testID="home-remove-scope-sheet"
+      >
+        <Text style={styles.sheetTitle}>
+          {removeFlow.kind === 'scope' ? removeFlow.exerciseName : ''}
+        </Text>
+        {/* The question is the ONE owned constant, so this sheet and My Status
+            ask the athlete the same thing in the same words. */}
+        <Text style={styles.changeCardSubline}>{EXERCISE_EXCLUSION_QUESTION}</Text>
+        {EXERCISE_EXCLUSION_SCOPES.map((scope) => (
+          <SheetOption
+            key={scope}
+            label={EXERCISE_EXCLUSION_SCOPE_LABEL[scope]}
+            sub={EXERCISE_EXCLUSION_SCOPE_DETAIL[scope]}
+            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Circle cx="12" cy="12" r="9"/><Path d="M12 7v5l3 2"/></Svg>}
+            testID={`home-remove-scope-${stableTestIdToken(scope)}`}
+            onPress={() => {
+              if (removeFlow.kind !== 'scope') return;
+              void applyRemoveFlowScope(removeFlow.exerciseName, removeFlow.exerciseId, scope);
+            }}
+          />
+        ))}
+      </Sheet>
+
+      <Sheet
+        visible={removeFlow.kind === 'result'}
+        onClose={() => setRemoveFlow({ kind: 'closed' })}
+        testID={removeFlow.kind === 'result' && removeFlow.ok
+          ? 'home-remove-result-ok'
+          : 'home-remove-result-refused'}
+      >
+        <Text style={styles.sheetTitle}>
+          {removeFlow.kind === 'result' ? removeFlow.title : ''}
+        </Text>
+        <Text style={styles.changeCardSubline} testID="home-remove-result-message">
+          {removeFlow.kind === 'result' ? removeFlow.message : ''}
+        </Text>
+        <SheetOption
+          label="Done"
+          icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M4 12l6 6L20 6"/></Svg>}
+          testID="home-remove-result-done"
+          onPress={() => setRemoveFlow({ kind: 'closed' })}
+        />
+      </Sheet>
+
       <UndoToast />
     </SafeAreaView>
   );
@@ -2793,8 +2994,18 @@ function DayTimeline({ entries, mobilityFlow, onOpen, presentation }: DayTimelin
                 style={styles.timelineRows}
                 testID={`day-timeline-rows-${entry.componentId}`}
               >
-                {entry.rows.map((row) => (
-                  <View key={row.id} style={styles.timelineExerciseRow}>
+                {/* ⚠ THE ROW CARRIES ITS POSITION, AND THE POSITION IS A CLAIM.
+                    The card and the opened session showed the same five
+                    exercises in two different orders until 2026-08-18, and
+                    NOTHING could see it: neither surface's rows were
+                    addressable, so no flow could ask "which is fourth?".
+                    An order nothing can assert is an order that drifts. */}
+                {entry.rows.map((row, rowIndex) => (
+                  <View
+                    key={row.id}
+                    style={styles.timelineExerciseRow}
+                    testID={`day-card-row-${entry.componentId}-${rowIndex + 1}-${stableTestIdToken(row.name)}`}
+                  >
                     <Text
                       style={styles.timelineExerciseName}
                       numberOfLines={1}
@@ -3663,6 +3874,7 @@ const styles = StyleSheet.create({
   tiredIconTint: { backgroundColor: 'rgba(103, 215, 255, 0.12)' },
   awayIconTint: { backgroundColor: 'rgba(185, 167, 255, 0.12)' },
   injuredIconTint: { backgroundColor: 'rgba(255, 127, 127, 0.12)' },
+  removeIconTint: { backgroundColor: 'rgba(255, 161, 196, 0.12)' },
   scheduleAckError: { color: '#FF7A85' },
   readinessAck: {
     backgroundColor: 'rgba(198, 255, 0, 0.12)',

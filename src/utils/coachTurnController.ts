@@ -5151,7 +5151,6 @@ export async function handleCoachTurn(
         : null,
     });
     logger.debug('[coach-live-send] injury_guard_state', {
-      activeInjury: !!useCoachUpdatesStore.getState().activeInjury,
       pendingInjuryPresent: input.pendingInjury != null,
       pendingInjuryBodyPart: input.pendingInjury?.bodyPart ?? null,
     });

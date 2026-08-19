@@ -557,7 +557,6 @@ export async function rebuildDerivedWorld(): Promise<void> {
         }).acceptedMaterialContext,
         markedDays: {},
         activeConstraints: [],
-        activeInjury: null,
         readinessSignalsByDate: {},
         revision: 0,
         lastTransaction: null,
@@ -566,8 +565,12 @@ export async function rebuildDerivedWorld(): Promise<void> {
       },
     } as never);
     const program = generateProgramLocally(profile, {
-      // This caller COMMITS the program, so the block's selections are recorded.
-      recordSelections: true,
+      // A BOOT REPLAYS; IT DECIDES NOTHING. It may record a block nobody has
+      // recorded yet, and it may never re-author one. Passing the old `true`
+      // here re-recorded the block under whatever exclusions were live at
+      // launch, which laundered a reversible `today_only` removal into a
+      // permanent generation input and destroyed the athlete's main lift.
+      recordSelections: 'replay',
       // A boot replays; it decides nothing (plan §2, "boot appends nothing").
       weekAcceptance: 'restoration',
       todayISO: generationISO,
@@ -634,6 +637,33 @@ export async function rebuildDerivedWorld(): Promise<void> {
             entryId: entry.id, error,
           });
         }
+      }
+      // ── AND THEN THE FACTS, IN THE ORDER THE ATHLETE LIVED THEM ───────────
+      //
+      // Sam, 2026-08-19: *"Startup may replay the accepted decisions and facts,
+      // but it must not make a new choice or silently discard anything."*
+      //
+      // The decisions above put the athlete's own edits back. An injury they
+      // declared AFTERWARDS displaced some of those edits, and that
+      // recomposition lives in `dateOverrides` — which this boot blanked. So it
+      // is re-applied here, through the same owner the live door used, AFTER
+      // the decisions, which is the order it happened in.
+      //
+      // ⚠ **BEFORE, AND THE SESSION IS SAFE BUT WRONG.** Running this ahead of
+      // the replay judges the injury against a day the athlete has not edited
+      // yet; their swap then lands on top of the safe row and puts the unsafe
+      // one back. The order is the correctness.
+      //
+      // It appends nothing to the ledger and takes no transaction — a fact
+      // being re-applied is not a new decision.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { reapplyActiveInjuryRecompositions } = require('../utils/programControlActions');
+        reapplyActiveInjuryRecompositions();
+      } catch (error) {
+        logger.warn('[quiescentBoot] active injury re-application failed; decisions stand', {
+          error,
+        });
       }
     } catch (error) {
       logger.error('[quiescentBoot] the replay phase failed; the base world stands', {

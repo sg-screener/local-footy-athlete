@@ -38,6 +38,7 @@ import { ownSeasonPhase } from '../rules/seasonPhaseOwner';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { decisionLedgerEntries } from '../store/decisionLedgerStore';
+import { liveAthleteExclusions } from './liveEvaluationSurfaces';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
 import type { OnboardingData } from '../types/domain';
 
@@ -65,7 +66,6 @@ export interface DeriveWeekInputs {
   readonly markedDays: Record<string, string>;
   readonly readinessSignalsByDate: Record<string, unknown>;
   readonly coachActiveConstraints: unknown[];
-  readonly coachActiveInjury: unknown;
   /** The decision ledger (consumed from R1.4). */
   readonly decisions: readonly DecisionLedgerEntry[];
   /** Stored program surfaces — outputs today, replay products from R1.4. */
@@ -97,7 +97,6 @@ export function gatherDeriveInputs(todayISO?: string): DeriveWeekInputs {
     markedDays: { ...(calendarState.markedDays ?? {}) },
     readinessSignalsByDate: { ...(useReadinessStore.getState().signalsByDate ?? {}) },
     coachActiveConstraints: [...(coachUpdatesState.activeConstraints ?? [])],
-    coachActiveInjury: coachUpdatesState.activeInjury ?? null,
     decisions: decisionLedgerEntries(),
     currentProgram: programState.currentProgram,
     currentMicrocycle: programState.currentMicrocycle,
@@ -153,9 +152,6 @@ export function assembleScheduleState(
           .filter((n: number | undefined): n is number => n !== undefined)
       : undefined;
 
-  const activeInjury = acceptedOwnsMaterialState
-    ? acceptedContext.activeInjury
-    : (inputs.coachActiveInjury as never) ?? null;
   const activeConstraints = acceptedOwnsMaterialState
     ? acceptedContext.activeConstraints
     : (inputs.coachActiveConstraints as never[]) ?? [];
@@ -169,6 +165,18 @@ export function assembleScheduleState(
     manualOverrides: (inputs.dateOverrides as never) || {},
     weekScopedOverlays: (inputs.weekScopedOverlays as never) || {},
     userRemovalConstraints: (inputs.userRemovalConstraints as never) || [],
+    // THE ATHLETE'S EXCLUSIONS, ON THE VIEW STATE ONLY.
+    //
+    // This assembler and `hooks/useSchedule.useScheduleState` are the two doors
+    // that mean "what the athlete sees"; every other `ScheduleState` in the app
+    // is built by a canonicaliser composing the week to be STORED, and those
+    // must not carry exclusions or a reversible decision gets written into the
+    // program. See `utils/sessionResolver.resolveDate`.
+    //
+    // Read live rather than threaded through `DeriveWeekInputs`: the exclusions
+    // live in a different store from every other input here, and a standing
+    // athlete decision is the same in every world this assembler is asked about.
+    athleteExclusions: liveAthleteExclusions(),
     // The RECORD, same source, same breath — see the declared rival
     // (`hooks/useSchedule.ts`) and
     // `docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`.
@@ -204,10 +212,6 @@ export function assembleScheduleState(
     sessionFeedback: (inputs.sessionFeedback as never) || {},
     weightOverrides: (inputs.weightOverrides as never) || {},
     availableDayNumbers,
-    activeInjury,
-    injuryProjectionOwner: acceptedContext.injuryEpisodes.length > 0
-      ? 'accepted_episode'
-      : undefined,
     activeConstraints: [
       ...activeConstraints,
       ...readinessActiveConstraints,

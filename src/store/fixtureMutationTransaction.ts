@@ -4,7 +4,6 @@ import type {
   FixtureMutationKind,
   FixtureMutationSourceMetadata,
 } from '../types/fixtureMutation';
-import type { WholeWeekRepairOutcome } from '../rules/wholeWeekRepairEngine';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { storedWorldSurfaces } from '../utils/liveEvaluationSurfaces';
 import {
@@ -35,7 +34,18 @@ import { useProgramStore } from './programStore';
 import { appendDecisionEntry } from './decisionLedgerStore';
 import { runCoachMutationTransaction } from './coachMutationTransaction';
 
-type AppliedFixtureMutationOutcome = Exclude<WholeWeekRepairOutcome, 'impossible'>;
+/**
+ * WHAT AN APPLIED FIXTURE MUTATION CAN REPORT — and it is now one word.
+ *
+ * This was `Exclude<WholeWeekRepairOutcome, 'impossible'>`, i.e. accepted |
+ * repaired | regenerated | fallback. Three of those four named a week §18 had
+ * AUTHORED to make the mutation land — the repair search, a regenerated
+ * candidate, a safe fallback. §18 no longer authors anything, so a mutation
+ * that is applied is applied to the week the scheduler and composer built, and
+ * `accepted` is the only truthful answer. A mutation §18 refuses does not
+ * become an outcome here; it refuses.
+ */
+type AppliedFixtureMutationOutcome = 'accepted';
 
 export interface FixtureMutationTransactionInput {
   action: FixtureMutationAction;
@@ -399,7 +409,8 @@ function executeCandidate(args: {
     const status = result.fixtureReplan?.gateway.status;
     return {
       kind: 'applied',
-      outcome: status === 'impossible' || !status ? 'accepted' : status,
+      // §18 returns accepted or impossible; an applied mutation is accepted.
+      outcome: 'accepted',
       result,
     };
   } catch (error) {

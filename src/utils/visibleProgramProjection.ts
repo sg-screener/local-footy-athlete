@@ -9,10 +9,15 @@
  *
  *   raw resolver output
  *   → projectVisibleDay(day, state)
- *   → Pass 1: legacy tag-based filter (applyInjuryFilterToWorkout)
- *   → Pass 2: UNIVERSAL EXPOSURE ENGINE — applyConstraintsToSession
- *   → Pass 3: validator sweep — validateWorkoutAgainstConstraints
+ *   → Pass 1: UNIVERSAL EXPOSURE ENGINE — applyConstraintsToSession
+ *   → Pass 2: validator sweep — validateWorkoutAgainstConstraints
  *   → returns the visible workout the UI should render
+ *
+ * IT HIDES. IT NEVER AUTHORS. Both surviving passes only REMOVE rows and
+ * attach coachNotes; neither substitutes an exercise, and neither writes.
+ * The legacy tag-based filter that sat in front of them DID substitute
+ * ("Replaced X with Y", "Rebuilt for …") off the single-slot `activeInjury`
+ * alias — that was authoring at read time and it is deleted (2026-08-19).
  *
  * THE EXPOSURE ENGINE IS THE PRIMARY DECISION LAYER
  *   We no longer have hamstring-specific or shoulder-specific bans
@@ -25,9 +30,8 @@
  * INVARIANTS
  *   I1. UI MUST render the projected workout, not the raw resolver
  *       output. Pass through this helper before rendering.
- *   I2. `injuryFilterApplied: true` ⇒ at least one of:
- *         (a) tag-based filter rebuilt the workout, or
- *         (b) exposure engine removed exercises / attached coachNotes.
+ *   I2. `injuryFilterApplied: true` ⇒ the exposure engine removed
+ *       exercises / attached coachNotes.
  *   I3. Recovery sessions are NEVER modified by this layer.
  *   I4. Game-day stubs are NEVER modified.
  *   I5. When `overrideContext.intent === 'injury'` AND coachNotes
@@ -39,10 +43,7 @@
 
 import type { Workout, OverrideContext } from '../types/domain';
 import type { ResolvedDay } from './sessionResolver';
-import { applyInjuryFilterToWorkout } from './injuryWorkoutFilter';
-import type { InjuryBucket } from './programAdjustmentEngine';
 import {
-  buildInjuryConstraint,
   applyConstraintsToSession,
   applyConstraintsToTypedComponents,
   validateWorkoutAgainstConstraints,
@@ -59,38 +60,8 @@ import { applyModalityPreferenceToWorkout } from './coachModalitySwap';
 import { shouldCollapseWorkoutToRest } from './workoutContent';
 import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
 
-/** Map InjuryBucket → ConstraintRegion. Conservative defaults. */
-const BUCKET_TO_REGION: Record<InjuryBucket, ConstraintRegion> = {
-  shoulder: 'shoulder',
-  elbow: 'elbow',
-  'wrist/hand': 'wrist',
-  knee: 'knee',
-  'ankle/foot': 'ankle',
-  calf: 'calf',
-  hamstring: 'hamstring',
-  'groin': 'groin',
-  lowerBack: 'back',
-  hip: 'hip',
-  quad: 'quad',
-  neck: 'neck',
-  ribs: 'ribs',
-};
-
 export interface ProjectInput {
   day: ResolvedDay;
-  /** Active injury from the live store. Null/resolved = no-op. */
-  activeInjury: {
-    bodyPart: string;
-    bucket: string | null;
-    severity: number;
-    status: 'active' | 'improving' | 'resolved';
-    rules: string[];
-    seriousSymptoms?: boolean;
-    seriousSymptom?: string;
-    adjustmentLevel?: 'minimal' | 'slight' | 'moderate' | 'avoid_affected' | 'training_paused';
-    safeFocus?: string[];
-    advice?: string[];
-  } | null;
   /** Override context for this date — may flag injury-authored edits. */
   overrideContext?: OverrideContext;
   /** Today's ISO date — used to skip past-date filtering. */
@@ -151,43 +122,12 @@ function alreadyHasInjuryNote(workout: Workout): boolean {
 }
 
 /**
- * Build the active constraint set for a given day. Legacy callers supply the
- * single-slot `activeInjury` alias. Canonical episode callers supply every
- * episode-derived injury constraint through `extraConstraints`, so multiple
- * injuries compose once without making the compatibility alias authoritative.
+ * Build the active constraint set for a given day. Every injury constraint
+ * arrives episode-derived through `extraConstraints` — there is no second,
+ * single-slot injury input to disagree with it.
  */
 function buildActiveConstraints(input: ProjectInput): Constraint[] {
   const constraints: Constraint[] = [];
-  const injury = input.activeInjury;
-  if (injury && injury.status !== 'resolved' && (
-    injury.seriousSymptoms === true || injury.adjustmentLevel === 'training_paused'
-  )) {
-    constraints.push(buildInjuryConstraint({
-      id: 'injury-training-paused',
-      region: 'global',
-      severity: injury.severity,
-      status: injury.status,
-      startDate: new Date().toISOString(),
-      trainingPaused: true,
-      safeFocus: injury.safeFocus,
-      advice: injury.advice,
-    }));
-  } else if (
-    injury &&
-    injury.status !== 'resolved' &&
-    injury.bucket &&
-    BUCKET_TO_REGION[injury.bucket as InjuryBucket]
-  ) {
-    constraints.push(
-      buildInjuryConstraint({
-        id: `injury-${injury.bucket}`,
-        region: BUCKET_TO_REGION[injury.bucket as InjuryBucket],
-        severity: injury.severity,
-        status: injury.status,
-        startDate: new Date().toISOString(),
-      }),
-    );
-  }
   for (const c of input.extraConstraints ?? []) {
     if (c.status !== 'resolved') constraints.push(c);
   }
@@ -200,7 +140,7 @@ function buildActiveConstraints(input: ProjectInput): Constraint[] {
  * `workout` and a structured outcome for logging.
  */
 export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
-  const { day, activeInjury, overrideContext, todayISO } = input;
+  const { day, overrideContext, todayISO } = input;
 
   // ── Pass 0: recurring modality preference ──
   // Apply BEFORE normalization + the past-date short-circuit so:
@@ -271,23 +211,8 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
     return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
 
-  // ── Pass 1: tag-based filter (legacy, only for injury constraint) ──
+  // ── Pass 1: universal exposure engine ──
   let workoutNow: Workout = visibleDay.workout;
-  let tagChanged = false;
-  if (activeInjury && activeInjury.bucket && activeInjury.status !== 'resolved') {
-    const tagFiltered = applyInjuryFilterToWorkout(visibleDay.workout, {
-      bodyPart: activeInjury.bodyPart,
-      bucket: activeInjury.bucket,
-      severity: activeInjury.severity,
-      status: activeInjury.status,
-    });
-    if (tagFiltered !== day.workout) {
-      tagChanged = true;
-      workoutNow = tagFiltered;
-    }
-  }
-
-  // ── Pass 2: universal exposure engine ──
   const applyResult = applyConstraintsToSession(workoutNow, constraints);
   workoutNow = applyResult.workout;
   const componentResult = applyConstraintsToTypedComponents(workoutNow, constraints);
@@ -295,12 +220,12 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
   const exposureRemoved = applyResult.classification.removedNames;
   const exposureApplied = applyResult.applied || componentResult.changed;
 
-  const filterApplied = tagChanged || exposureApplied;
+  const filterApplied = exposureApplied;
   if (!filterApplied) {
     return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
 
-  // ── Pass 3: validator sweep ──
+  // ── Pass 2: validator sweep ──
   const validation = validateWorkoutAgainstConstraints(workoutNow, constraints, {
     date: day.date,
   });
@@ -356,8 +281,6 @@ export function projectAndLog(
     source: input.day.source,
     workoutName: input.day.workout?.name ?? null,
     beforeExercises,
-    activeInjuryBucket: input.activeInjury?.bucket ?? null,
-    activeInjurySeverity: input.activeInjury?.severity ?? null,
     extraConstraintIds: (input.extraConstraints ?? []).map((c) => c.id),
     overrideContextIntent: input.overrideContext?.intent ?? null,
   });

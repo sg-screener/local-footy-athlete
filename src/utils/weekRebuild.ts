@@ -65,7 +65,6 @@ import {
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
-import { migrateLegacyWeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { todayISOLocal } from './appDate';
 import { storedWorldSurfaces } from './liveEvaluationSurfaces';
 import {
@@ -240,16 +239,10 @@ export function buildWeekScopedWorkoutOverlay(args: {
     // retire together or the world is half-stored. The readers already derive
     // (leg (v)'s read half, landed at 8ca5ae24) and the reduction-ownership
     // consumers already derive (08212473). Inert without the flag.
+    // The persisted v1 -> v2 upgrade is deleted (demolition area 4): a stored
+    // world predating the v2 declaration has no one to serve.
     exposureContractV2: LEGV_SCAFFOLD.writer ? undefined : (
-      sourceMicrocycle.exposureContractV2 ?? (
-        sourceMicrocycle.exposureContract
-          ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
-              blockNumber: sourceMicrocycle.miniCycleNumber,
-              weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
-              globalWeek: sourceMicrocycle.weekNumber,
-            })
-          : undefined
-      )
+      sourceMicrocycle.exposureContractV2
     ),
     workoutsByDate,
     createdAt: now,
@@ -646,8 +639,9 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
   });
   const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const program = generateProgramLocally(profile, {
-    // This caller COMMITS the program, so the block's selections are recorded.
-    recordSelections: true,
+    // THE ROLLOVER AUTHORS THE NEW BLOCK — it is the door that decides what
+    // the next block selects, so it may replace the block's rows.
+    recordSelections: 'author',
     // The rebuild's own publication declares `forward_decision` (R1.3, and the
     // long note at `commitRebuiltProgram`). The GENERATION that produces it is
     // the same decision one layer earlier and must say so, or the strict

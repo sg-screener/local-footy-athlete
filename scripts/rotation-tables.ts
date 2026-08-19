@@ -122,7 +122,7 @@ function table(label: string, equipment: unknown): void {
   for (let b = 0; b < 6; b++) {
     const program = generateProgramLocally(profile, {
       todayISO: BLOCK_STARTS[b], blockNumber: b + 1,
-      recordSelections: true,
+      recordSelections: 'author',
       progressionHistory: { sessionFeedback: history, weightOverrides: {}, blockState: null },
     });
     blocks.push(readBlock(program));

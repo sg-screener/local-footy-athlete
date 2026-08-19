@@ -58,6 +58,15 @@ const EXPECTED_WITNESS_KINDS: Record<DevE2ESeedId, string> = {
   // A witness asserting the Christmas card is on screen would belong to a
   // Maestro flow, not to the seed: the seed's job is the world, not the render.
   'christmas-break-ask': 'program,profile_exact',
+  // DERIVED, EVERY ONE OF THEM — and that is this seed's founding constraint,
+  // not a stylistic note. The two existing four-week seeds above both carry
+  // `visible_card_detail_equality` entries built from a NAMING RULE
+  // (`visibleRecoveryWorkoutId(sunday)`) rather than read from the program, and
+  // both are unreachable through the real seed door because the generator no
+  // longer puts a card on that Sunday. This seed asserts only what it can read
+  // back out of the program it was handed, which is why it installs.
+  'exercise-removal-restart':
+    'program,profile_exact,workout,accepted_week_count,absent_source_fact,absent_source_fact,absent_source_fact,absent_source_fact,reversible_ledger_state',
 };
 
 const originalFetch = globalThis.fetch;
@@ -73,8 +82,18 @@ try {
     // RAISED DELIBERATELY, IN THE COMMIT THAT EARNS IT** — this cell exists so a
     // seed cannot appear without someone saying why, and the why is that the
     // Christmas ask is date-gated to December and no seed could reach it.
+    //
+    // 12 -> 13: `exercise-removal-restart`, sanctioned by Sam 2026-08-19 for the
+    // Remove slice's restart proof. THE WHY, STATED HERE BECAUSE THIS CELL ASKS
+    // FOR IT: that proof needs a world where the accepted block's
+    // `requiredStrengthSessions` matches the number BOOT derives, and boot
+    // derives it from a FOUR-week block window. Every existing installable seed
+    // is one microcycle, so it derives 1 where boot derives 4 — measured, both
+    // numbers — and the reload gate compares exactly that. The two existing
+    // four-week seeds cannot be used: both refuse to install at all. This seed
+    // is the smallest thing that closes the gap without altering either of them.
     'Explorer campaign adds exactly the two requested seed IDs',
-    DEV_E2E_SEED_IDS.length === 12 &&
+    DEV_E2E_SEED_IDS.length === 13 &&
       DEV_E2E_SEED_IDS.filter((seedId) =>
       (EXPLORER_SEEDS as readonly string[]).includes(seedId)).join(',') ===
       EXPLORER_SEEDS.join(','),

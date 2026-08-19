@@ -327,7 +327,6 @@ export function materializeCanonicalPlanChangeCandidate(
       workout,
       source: 'manual' as any,
     },
-    activeInjury: null,
     todayISO: input.todayISO,
   }).day;
 

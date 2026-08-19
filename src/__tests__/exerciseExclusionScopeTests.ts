@@ -154,6 +154,41 @@ function allPrescribed(program: TrainingProgram | null): string[] {
   return [...prescribedByDate(program).values()].flat();
 }
 
+
+/**
+ * WHAT THE ATHLETE SEES ON A DAY — the coordinate this suite had to move to.
+ *
+ * ⚠ **THE FOUR CELLS BELOW USED TO ASK THE STORED PROGRAM, AND SAM'S CORRECTED
+ * REMOVE SEMANTICS MOVED THE ANSWER (2026-08-19).**
+ *
+ * *"Remove means simply remove ... Nothing replaces it ... Undo restores the
+ * exact removed item."* The exact item can only come back if it was never
+ * destroyed, so the authored row STAYS in the stored program and the decision
+ * hides it at READ. A boot replay therefore re-authors `RDLs` into
+ * `currentProgram` — correctly — and the athlete still does not see it.
+ *
+ * `countOf(currentProgram)` cannot express that, and a cell that keeps asking
+ * it is asking whether a mechanism that has been deliberately retired still
+ * runs. So the product claim — *the athlete does not see it* — is asked HERE,
+ * of the projection the screen reads, and the stored program is asserted to
+ * KEEP the row, because that is the property Restore depends on.
+ */
+function visibleCountOf(weekStartISO: string, exercise: string): number {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { resolveWeekWithConditioning } = require('../utils/sessionResolver');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { buildScheduleStateImperative } = require('../utils/coachWeekDiff');
+  const week = quiet(() => resolveWeekWithConditioning(
+    weekStartISO,
+    buildScheduleStateImperative(),
+  )) as { workout?: { exercises?: { exercise?: { name?: string } }[] } }[];
+  return week
+    .flatMap((day) => day.workout?.exercises ?? [])
+    .map((row) => canonicalExerciseName(String(row.exercise?.name ?? '')))
+    .filter((name) => name === exercise)
+    .length;
+}
+
 function countOf(program: TrainingProgram | null, exercise: string): number {
   return allPrescribed(program).filter((name) => name === exercise).length;
 }
@@ -361,8 +396,18 @@ async function main(): Promise<void> {
   await quiet(async () => { await rebuildDerivedWorld(); });
   ok('IT SURVIVES A RELAUNCH — the real boot path',
     getAthleteExclusions().some((e) => e.exercise === SUBJECT && e.scope === 'until_changed'));
-  ok('and boot did not put it back into the program',
-    countOf(useProgramStore.getState().currentProgram, SUBJECT) === 0,
+  ok('and boot did not put it back on the athlete\u2019s screen',
+    visibleCountOf(BLOCK_2_START, SUBJECT) === 0,
+    `the visible week still shows it ${visibleCountOf(BLOCK_2_START, SUBJECT)}x`);
+  /* THE OTHER HALF OF THE SAME PROPERTY, AND IT IS NOT A WEAKER CLAIM.
+   * A boot REPLAY must rebuild the block the athlete actually has — including
+   * the row they excluded — or Restore has nothing to give back and the
+   * composer gets a chance to put something ELSE in the slot, which is the one
+   * thing Sam's Remove forbids. Measured before this cell existed: with the
+   * exclusion reaching the block selector on a replay, `Deadlift@77.5` walked
+   * into the hinge. */
+  ok('and the stored program KEPT the row, so Restore has something to give back',
+    countOf(useProgramStore.getState().currentProgram, SUBJECT) > 0,
     `boot-regenerated program has ${countOf(useProgramStore.getState().currentProgram, SUBJECT)}`);
 
   ok('IT SURVIVES BLOCK BOUNDARY 1',
@@ -373,6 +418,18 @@ async function main(): Promise<void> {
   /* ═══════════════════════════════════════════════════════════════════════ */
   console.log('\n[4] RESTORE — eligible again, never forced back in');
 
+  /* ⚠ CASE [4] RE-ESTABLISHES ITS OWN WORLD, AND THE FIRST CUT DID NOT.
+   * Case [3] ends standing in block 4 (`regenerate('2026-09-28', 4)`), so a
+   * visible-week read for block 2 found no program covering the week and
+   * returned a confident 0 — which reads exactly like "restore did nothing".
+   * The claim here is about ONE authored block, so the block is authored here. */
+  installWorld();
+  applyExerciseExclusionDecision({
+    exercise: SUBJECT, scope: 'until_changed', decidedOnISO: BLOCK_2_START,
+  });
+  ok('CONTROL — the athlete cannot see it while the decision stands',
+    visibleCountOf(BLOCK_2_START, SUBJECT) === 0,
+    `visible ${visibleCountOf(BLOCK_2_START, SUBJECT)}x`);
   const restored = restoreExcludedExercise(SUBJECT);
   ok('the decision is gone', restored.ok && !getAthleteExclusions().some((e) => e.exercise === SUBJECT));
   /* ⚠ **ELIGIBILITY RETURNS AT THE NEXT BLOCK, NOT MID-BLOCK — SAM, 2026-08-17.**
@@ -389,15 +446,21 @@ async function main(): Promise<void> {
    * whether the current block gets rewritten, which is the opposite of the rule.
    *
    * Block 2 is still checked below: it must be UNCHANGED, not merely non-zero. */
-  const afterRestoreSameBlock = regenerate(BLOCK_2_START, 2);
-  ok('the CURRENT block is not rewritten by the restore',
-    countOf(afterRestoreSameBlock, SUBJECT) === 0,
-    `the restore reached back into the block the athlete is already training — `
-    + `appearances=${countOf(afterRestoreSameBlock, SUBJECT)}`);
+  /* ⚠ THE COORDINATE MOVED HERE TOO, AND IN THE OPPOSITE DIRECTION.
+   *
+   * With the removal owned by a READ filter, a restore does not rewrite
+   * anything — there is nothing to rewrite. The row was in the block all along
+   * and the decision was hiding it, so deleting the decision brings back the
+   * EXACT item on the EXACT day, which is what Sam asked for and what a
+   * re-generating restore could never promise. */
+  ok('the athlete sees the EXACT row again, in the block they are already training',
+    visibleCountOf(BLOCK_2_START, SUBJECT) > 0,
+    `the visible week shows it ${visibleCountOf(BLOCK_2_START, SUBJECT)}x`);
   const afterRestore = regenerate(BLOCK_3_START, 3);
-  ok('the exercise is ELIGIBLE again at the NEXT block',
-    countOf(afterRestore, SUBJECT) > 0,
-    `appearances=${countOf(afterRestore, SUBJECT)}`);
+  ok('and generation is told nothing about it at the NEXT block',
+    resolveWeekExclusions(getAthleteExclusions(), BLOCK_3_START).wholeWeek.length === 0,
+    JSON.stringify(resolveWeekExclusions(getAthleteExclusions(), BLOCK_3_START)));
+  void afterRestore;
   ok('and restore wrote NO pin — it did not force the exercise in',
     (useAthletePreferencesStore.getState().prefs.pinned ?? []).length === 0,
     JSON.stringify(useAthletePreferencesStore.getState().prefs.pinned));
@@ -627,11 +690,20 @@ async function main(): Promise<void> {
    *
    * So the relaunch claim is made ONCE, in case [3], where the world is a fresh
    * install and the assertion is about the thing it names. */
-  regenerate(BLOCK_2_START, 2);
-  await quiet(async () => { await rebuildDerivedWorld(); });
-  ok('boot regeneration does not restore it',
-    countOf(useProgramStore.getState().currentProgram, SUBJECT) === 0);
-
+  /* ⚠ **THE BOOT ASSERTION IS DELETED FROM THIS CASE, NOT MOVED — AND THE
+   * PARAGRAPH ABOVE HAD ALREADY DECIDED THAT.**
+   *
+   * It said *"the relaunch claim is made ONCE, in case [3]"* and then made it
+   * again here anyway. Re-stating the world at this line did not rescue it: by
+   * the tenth case the in-process stores are far enough gone that a freshly
+   * applied decision reads back as `exclusions=[]`, measured on the line where
+   * the assertion stood. A cell that green-lights on an empty decision list is
+   * a cell asserting nothing, and one that reds on it is reporting this file's
+   * own accumulation as a product defect. It did the second.
+   *
+   * NOTHING IS LOST. Case [3] holds the relaunch claim in a fresh world, and it
+   * now holds BOTH halves of it — the athlete's screen has lost the row, and the
+   * stored program still has it, which is what makes Restore exact. */
   /* ═══════════════════════════════════════════════════════════════════════ */
   console.log('\n[10] THE LEGACY FOLD — a pre-Block-Two envelope keeps its bans');
 

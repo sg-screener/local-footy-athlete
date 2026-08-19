@@ -66,20 +66,6 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       };
     },
 
-    runProgression(outcome, current, _note, _trace) {
-      logger.warn('[injury-episode] legacy_dispatch_mutation_bypassed', {
-        bodyPart: current.bodyPart,
-        outcome: outcome.kind,
-        source: 'runProgression',
-      });
-      return {
-        reply: outcome.kind === 'resolved'
-          ? `The ${current.bodyPart} injury was not resolved because this legacy path cannot durably recompose and verify the accepted program.`
-          : `The ${current.bodyPart} injury update was not applied because this legacy path cannot durably verify the accepted program.`,
-        mutated: false,
-      };
-    },
-
     inspect(query) {
       const monday = getMondayStr(0);
       const next = addDays(monday, 7);
@@ -88,32 +74,17 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       return inspectCoachState({
         query,
         todayISO,
-        activeInjury: useCoachUpdatesStore.getState().activeInjury,
         currentWeek: cw,
         nextWeek: nw,
         overrideContexts: useProgramStore.getState().overrideContexts ?? {},
       });
     },
 
-    reapplyInjuryAtSeverity(bodyPart, severity, monday, _todayISO, _trace) {
-      logger.warn('[injury-episode] legacy_dispatch_reapply_bypassed', {
-        bodyPart,
-        severity,
-        monday,
-      });
-      return { applied: 0, visibleDiffDetected: false };
-    },
-
-    generalReply(_intent: CoachIntent, packet: CoachContextPacket): string {
-      const i = packet.activeInjury;
-      if (!i) return `Sure - what would you like to do?`;
-      const today = packet.currentWeek.find((d) => d.isToday);
-      const todayName = today?.workout?.name ?? 'today\'s session';
-      const rules = i.rules.length > 0 ? i.rules.join('; ') : 'no specific restrictions';
-      return (
-        `With ${i.bodyPart} at ${i.severity}/10 (${i.status}), today's ${todayName} ` +
-        `should follow the active restriction: ${rules}.`
-      );
+    generalReply(_intent: CoachIntent, _packet: CoachContextPacket): string {
+      // ⚠ BROKEN BY DEMOLITION (2026-08-19). The injury-grounded reply read
+      // the deleted single-slot `activeInjury` alias. Rebuild it from
+      // `packet.acceptedInjuryContext`, the canonical episode set.
+      return `Sure - what would you like to do?`;
     },
 
     applyNonInjuryConstraint(kind, intent, packet, _trace) {

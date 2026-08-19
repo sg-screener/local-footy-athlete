@@ -216,18 +216,15 @@ export function insertProgramSummaryBeforeFinalClose(
  * Compose the final reply. One paragraph + short sections, no
  * stitching, ≤ 4 sections.
  *
- * Accepts EITHER the new plan-driven shape (`{ plans, ... }`) or the
- * legacy `{ constraints, currentWeekChanges, nextWeekChanges, ... }`
- * shape — the legacy form is converted to plans on the fly.
+ * Plan-driven only. The legacy `{ constraints, did* }` shape is deleted.
  */
 export function composeCoachAdjustmentReply(
-  input: ComposeReplyInput | LegacyComposeReplyInput,
+  input: ComposeReplyInput,
 ): string {
-  // Legacy detection — older callers passed `constraints` + `did*` flags.
-  if ((input as LegacyComposeReplyInput).constraints !== undefined) {
-    return composeCoachAdjustmentReplyLegacy(input as LegacyComposeReplyInput);
-  }
-  return composeCoachAdjustmentReplyFromPlans(input as ComposeReplyInput);
+  // THE LEGACY INPUT SHAPE IS DELETED (demolition area 4). No production caller
+  // passed `{ constraints, did* }` — measured across src and scripts — so the
+  // branch and its 100-line composer were an unreachable second reply author.
+  return composeCoachAdjustmentReplyFromPlans(input);
 }
 
 function composeCoachAdjustmentReplyFromPlans(input: ComposeReplyInput): string {
@@ -350,49 +347,3 @@ function composeCoachAdjustmentReplyFromPlans(input: ComposeReplyInput): string 
 // ({ constraints, currentWeekChanges, nextWeekChanges, ... }). The
 // shim accepts that input, derives plans on the fly, and forwards
 // to the plan-driven composer so existing tests/callers don't break.
-
-export interface LegacyComposeReplyInput {
-  constraints: ActiveConstraint[];
-  currentWeekChanges: string[];
-  nextWeekChanges: string[];
-  didCurrentWeekChange: boolean;
-  didFutureWeekChange: boolean;
-  headline?: string;
-}
-
-/**
- * Legacy entrypoint — derives plans from `constraints` and dispatches
- * to the plan-driven composer. New code should use
- * `composeCoachAdjustmentReply` directly.
- */
-export function composeCoachAdjustmentReplyLegacy(
-  input: LegacyComposeReplyInput,
-): string {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { buildConstraintPlans } = require('./constraintPlan') as typeof import('./constraintPlan');
-  const plans = buildConstraintPlans(input.constraints);
-  // Build a concise major-changes summary from the supplied bullets.
-  const allChanges = [
-    ...(input.currentWeekChanges ?? []),
-    ...(input.nextWeekChanges ?? []),
-  ];
-  let majorChangesSummary: string | undefined;
-  if (allChanges.length > 0) {
-    // Pull the headline of the first change as the summary — the rest
-    // surfaces in the card's "Show details" panel.
-    const first = allChanges[0];
-    // Strip any "Mon Lower Body Strength adjusted —" prefix.
-    const m = first.match(/—\s*(.*)$/);
-    majorChangesSummary = m ? m[1] : first;
-    if (majorChangesSummary.length > 80) {
-      majorChangesSummary = majorChangesSummary.slice(0, 77) + '...';
-    }
-  }
-  return composeCoachAdjustmentReplyFromPlans({
-    plans,
-    currentWeekAffected: input.didCurrentWeekChange,
-    futureWeekAffected: input.didFutureWeekChange,
-    majorChangesSummary,
-    headline: input.headline,
-  });
-}

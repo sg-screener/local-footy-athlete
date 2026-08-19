@@ -53,6 +53,8 @@
  */
 
 import { appendDecisionEntry, decisionLedgerEntries } from './decisionLedgerStore';
+import { restoreExcludedExercise } from '../utils/exerciseExclusionOwner';
+import { replayableEntries } from '../rules/decisionLedgerReplay';
 import { lastUndoableEntry, undoableEntries } from '../rules/decisionLedgerReplay';
 import { settleDerivedWorldAfterDecision } from './quiescentBoot';
 import type { DecisionLedgerEntry } from '../types/decisionLedger';
@@ -94,6 +96,49 @@ export function undoableDecisionCount(): number {
  * a forward decision. An undo that returned before its world settled would put
  * the athlete on a screen showing the change they just removed.
  */
+/**
+ * ANNUL AN OUTSTANDING REMOVAL FOR ONE EXERCISE — RESTORE'S OTHER HALF.
+ *
+ * THE MIRROR OF THE UNDO DEFECT, FOUND THE SAME WAY. A removal writes two facts:
+ * the program-control action on the ledger and the canonical exclusion in
+ * athlete preferences. `restoreExcludedExercise` clears the second. Measured on
+ * device 2026-08-19, after tapping the labelled "Restore exercise" control:
+ *
+ *   EXCLUSIONS AFTER RESTORE: []                        <- cleared, correctly
+ *   LEDGER: ['dl-1:program_control/remove_exercise']    <- STILL UN-ANNULLED
+ *
+ * so the day override kept replaying and Back Squat did not come back. Restore
+ * reported success over a session that had not changed.
+ *
+ * IT IS THE SAME REVERSAL MECHANISM, NOT A SECOND ONE: the identical
+ * `{ kind: 'reversal', reversedEntryId }` decision `undoLastDecision` appends,
+ * aimed at a named entry instead of the newest. Nothing else can annul a ledger
+ * entry, and nothing here writes to a store directly.
+ *
+ * A world with no outstanding removal for that exercise is the ordinary case —
+ * an exclusion written by the coach has no ledger entry — and returns false
+ * without appending anything.
+ */
+export function annulOutstandingRemovalFor(exercise: string): boolean {
+  const identity = String(exercise ?? '').trim().toLowerCase();
+  if (!identity) return false;
+  // Newest first: only the outstanding one matters, and `replayableEntries`
+  // has already dropped anything a previous reversal annulled.
+  const target = [...replayableEntries(decisionLedgerEntries())].reverse().find((entry) => {
+    const decision = entry.decision;
+    if (decision.kind !== 'program_control') return false;
+    if (decision.action.type !== 'remove_exercise') return false;
+    const named = (decision.action.payload as { exercise?: unknown } | undefined)?.exercise;
+    return typeof named === 'string' && named.trim().toLowerCase() === identity;
+  });
+  if (!target) return false;
+  return appendDecisionEntry({
+    decision: { kind: 'reversal', reversedEntryId: target.id },
+    provenance: 'athlete_tap',
+    writer: 'undo_door',
+  }).ok;
+}
+
 export async function undoLastDecision(): Promise<UndoOutcome> {
   const target = pendingUndoTarget();
   if (!target) return { outcome: 'nothing_to_undo' };
@@ -109,6 +154,33 @@ export async function undoLastDecision(): Promise<UndoOutcome> {
   if (!appended.ok) {
     return { outcome: 'refused', reason: appended.reason ?? 'ledger_refused_append' };
   }
+  // ── THE OTHER HALF OF A REMOVAL, THROUGH THE SAME OWNER THAT WROTE IT ────
+  //
+  // A removal writes TWO facts through TWO owners: the program-control action
+  // (which lands on this ledger and is what the reversal above annuls) and the
+  // canonical exclusion in athlete preferences (which does not). Replay rebuilds
+  // the world from the ledger, so annulling the action alone leaves the
+  // exclusion standing — and the exclusion is what keeps the exercise out.
+  //
+  // MEASURED ON DEVICE 2026-08-19: after Undo, the ledger correctly held
+  // `dl-1 remove_exercise` annulled by `dl-2 reversal`, and the athlete's
+  // preferences still held
+  //   { exercise: "Back Squat", scope: "today_only", ... }
+  // so the toast said the change was undone and Back Squat did not come back.
+  // A half-reversal that reports success is exactly the honest-outcome failure
+  // this app's laws exist to prevent.
+  //
+  // `restoreExcludedExercise` is the EXISTING owner — the same one Restore
+  // uses — so this is not a second undo authority; it is the one reversal
+  // finally reaching both of the writes it is reversing.
+  const reversed = target.decision;
+  if (reversed.kind === 'program_control' && reversed.action.type === 'remove_exercise') {
+    const exercise = (reversed.action.payload as { exercise?: unknown } | undefined)?.exercise;
+    if (typeof exercise === 'string' && exercise.trim()) {
+      restoreExcludedExercise(exercise);
+    }
+  }
+
   // A REPLAY MUST NOT RE-ENTER ITSELF. The settle door already refuses while a
   // ledger replay is in flight, which is also why undo is not reachable from
   // inside a replay: a reversal appended during one would be a decision made by

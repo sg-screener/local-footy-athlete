@@ -18,7 +18,6 @@ import type {
 } from '../types/domain';
 import {
   composeInjuryCompatibility,
-  migrateLegacyInjuryEpisodes,
   normalizeInjuryEpisodes,
   type InjuryEpisodeV1,
 } from './injuryEpisode';
@@ -217,7 +216,6 @@ export type TemporarySourceFact =
 export interface TemporarySourceFactCompatibility {
   injuryEpisodes: InjuryEpisodeV1[];
   activeConstraints: ActiveConstraint[];
-  activeInjury: InjuryState | null;
   readinessSignalsByDate: Record<string, ReadinessSignal>;
 }
 
@@ -1151,7 +1149,6 @@ export function composeTemporarySourceFactCompatibility(args: {
       ...scheduleProjection(activeSchedule),
       ...timeCapProjection(activeTimeCaps),
     ],
-    activeInjury: injury.activeInjury,
     readinessSignalsByDate: {
       ...retainedSignals,
       ...readinessProjection(activeHealth),
@@ -1573,230 +1570,6 @@ export function createTemporaryTimeCapFact(args: {
       reason: 'created',
     }],
   };
-}
-
-/** One-way hydration migration. It never reads SessionFeedback and never invents restoration. */
-export function migrateLegacyTemporarySourceFacts(args: {
-  activeConstraints: readonly ActiveConstraint[];
-  activeInjury: InjuryState | null;
-  readinessSignalsByDate: Readonly<Record<string, ReadinessSignal>>;
-  availabilityConstraints?: readonly ProgramAvailabilityConstraint[];
-  sourceSurface?: string;
-}): TemporarySourceFact[] {
-  const sourceSurface = args.sourceSurface ?? 'hydration_migration';
-  const injuries = migrateLegacyInjuryEpisodes({
-    activeConstraints: args.activeConstraints,
-    activeInjury: args.activeInjury,
-    sourceSurface,
-  });
-  const migrated: TemporarySourceFact[] = [...injuries];
-  const seen = new Set<string>();
-  for (const constraint of args.activeConstraints) {
-    if (constraint.status !== 'active' || isTemporarySourceFactConstraint(constraint)) continue;
-    if (constraint.type === 'equipment') {
-      const scope = constraint.weekStartISO
-        ? temporaryFactScope({ kind: 'week', date: constraint.weekStartISO })
-        : temporaryFactScope({
-            kind: 'window',
-            from: constraint.startDate,
-            until: constraint.expiresAt ?? constraint.startDate,
-          });
-      const fact = createTemporaryEquipmentFact({
-        observedDate: constraint.startDate,
-        scope,
-        mode: constraint.mode,
-        equipmentTags: constraint.tags,
-        conditioningModalities: constraint.conditioningModalities,
-        sourceActor: 'system',
-        sourceSurface,
-        now: constraint.lastUpdatedAt,
-      });
-      fact.legacyMigrationStatus = 'legacy_after_state_only';
-      if (!seen.has(fact.factId)) {
-        migrated.push(fact);
-        seen.add(fact.factId);
-      }
-      continue;
-    }
-    if (constraint.type === 'schedule') {
-      if (constraint.scheduleKind === 'time_cap' &&
-        (!constraint.maxSessionMinutes || constraint.maxSessionMinutes < 10)) {
-        continue;
-      }
-      const scope = constraint.weekStartISO
-        ? temporaryFactScope({ kind: 'week', date: constraint.weekStartISO })
-        : temporaryFactScope({
-            kind: 'window',
-            from: constraint.startDate,
-            until: constraint.expiresAt ?? constraint.startDate,
-          });
-      const fact = constraint.scheduleKind === 'time_cap' && constraint.maxSessionMinutes
-        ? createTemporaryTimeCapFact({
-            observedDate: constraint.startDate,
-            scope,
-            targetKind: constraint.timeCapAllSessions
-              ? 'all_sessions'
-              : (constraint.timeCapDates?.length ?? 0) > 0 ? 'dates' : 'weekdays',
-            dates: constraint.timeCapDates,
-            weekdays: constraint.timeCapWeekdays,
-            maxSessionMinutes: constraint.maxSessionMinutes,
-            sourceActor: 'system',
-            sourceSurface,
-            now: constraint.lastUpdatedAt,
-          })
-        : createTemporaryScheduleFact({
-            observedDate: constraint.startDate,
-            scope,
-            scheduleKind: constraint.scheduleKind === 'travel'
-              ? 'travel'
-              // THE BREAK SURVIVES ITS OWN ROUND TRIP. Without this arm a
-              // hydrated no-team-training constraint came back as `busy_week`
-              // — the club would return mid-break and nothing would say why.
-              : constraint.scheduleKind === 'no_team_training'
-                ? 'no_team_training'
-                : constraint.maxSessionsThisWeek !== undefined
-                ? 'max_sessions'
-                : (constraint.unavailableDates?.length ?? 0) > 0
-                  ? 'unavailable_dates'
-                  : (constraint.unavailableWeekdays?.length ?? 0) > 0
-                    ? 'unavailable_weekdays'
-                    : 'busy_week',
-            unavailableDates: constraint.unavailableDates ?? constraint.linkedOverrideDates,
-            unavailableWeekdays: constraint.unavailableWeekdays,
-            maxSessions: constraint.maxSessionsThisWeek,
-            sourceActor: 'system',
-            sourceSurface,
-            now: constraint.lastUpdatedAt,
-          });
-      fact.legacyMigrationStatus = 'legacy_after_state_only';
-      if (!seen.has(fact.factId)) {
-        migrated.push(fact);
-        seen.add(fact.factId);
-      }
-      continue;
-    }
-    if (constraint.type !== 'fatigue' && constraint.type !== 'soreness') continue;
-    const date = (constraint.appliesToDate ?? constraint.startDate).slice(0, 10);
-    const scope = constraint.weekStartISO
-      ? temporaryFactScope({ kind: 'week', date: constraint.weekStartISO })
-      : constraint.appliesToDate
-        ? temporaryFactScope({ kind: 'date', date })
-        : temporaryFactScope({ kind: 'window', from: date, until: constraint.expiresAt ?? date });
-    const fact = constraint.type === 'soreness'
-      ? createTemporarySorenessFact({
-          observedDate: date,
-          scope,
-          athleteReportedLevel: constraint.severity,
-          distribution: 'localized',
-          reportedBodyPartLanguage: constraint.bodyPart,
-          canonicalBodyPartBucket: constraint.bucket,
-          sourceActor: 'system',
-          sourceSurface,
-          now: constraint.lastUpdatedAt,
-        })
-      : constraint.readinessKind === 'poor_sleep'
-        ? createTemporaryPoorSleepFact({
-            observedDate: date,
-            scope,
-            pattern: constraint.readinessPattern ?? 'single_night',
-            athleteReportedLevel: constraint.severity,
-            sourceActor: 'system',
-            sourceSurface,
-            now: constraint.lastUpdatedAt,
-          })
-        : createTemporaryFatigueFact({
-            observedDate: date,
-            scope,
-            athleteReportedLevel: constraint.severity,
-            reportKind: severityIsLimiting(constraint.severity) ? 'cooked' : 'fatigue',
-            sourceActor: 'system',
-            sourceSurface,
-            now: constraint.lastUpdatedAt,
-          });
-    fact.legacyMigrationStatus = 'legacy_after_state_only';
-    if (!seen.has(fact.factId)) {
-      migrated.push(fact);
-      seen.add(fact.factId);
-    }
-  }
-  for (const signal of Object.values(args.readinessSignalsByDate)) {
-    if (signal.source === 'session_feedback' || (signal.temporarySourceFactIds?.length ?? 0) > 0) continue;
-    const scope = temporaryFactScope({ kind: 'date', date: signal.date });
-    const candidates: Array<TemporaryFatigueFact | TemporarySorenessFact> = [];
-    if (signal.energy === 'low' || signal.flatToday) {
-      candidates.push(createTemporaryFatigueFact({
-        observedDate: signal.date,
-        scope,
-        athleteReportedLevel: signal.flatToday ? 'high' : 'slight',
-        sourceActor: 'system',
-        sourceSurface,
-        now: signal.updatedAt,
-      }));
-    }
-    if (signal.soreness === 'moderate' || signal.soreness === 'high') {
-      const matchingConstraint = args.activeConstraints.find((constraint) =>
-        constraint.type === 'soreness' && constraint.appliesToDate === signal.date);
-      candidates.push(createTemporarySorenessFact({
-        observedDate: signal.date,
-        scope,
-        athleteReportedLevel: signal.soreness === 'high' ? 'high' : 'moderate',
-        distribution: matchingConstraint?.type === 'soreness' ? 'localized' : 'general',
-        reportedBodyPartLanguage: signal.bodyPart ?? null,
-        canonicalBodyPartBucket: matchingConstraint?.type === 'soreness' ? matchingConstraint.bucket : null,
-        sourceActor: 'system',
-        sourceSurface,
-        now: signal.updatedAt,
-      }));
-    }
-    for (const fact of candidates) {
-      fact.legacyMigrationStatus = 'legacy_after_state_only';
-      if (!seen.has(fact.factId)) {
-        migrated.push(fact);
-        seen.add(fact.factId);
-      }
-    }
-  }
-  for (const constraint of args.availabilityConstraints ?? []) {
-    if (constraint.scope !== 'temporary' || constraint.active === false) continue;
-    if (constraint.kind === 'time_limit' &&
-      (!constraint.maxSessionMinutes || constraint.maxSessionMinutes < 10)) continue;
-    const from = (constraint.startDate ?? new Date().toISOString()).slice(0, 10);
-    const until = (constraint.endDate ?? from).slice(0, 10);
-    const scope = temporaryFactScope({ kind: 'window', from, until });
-    const fact = constraint.kind === 'time_limit' && constraint.maxSessionMinutes
-      ? createTemporaryTimeCapFact({
-          observedDate: from,
-          scope,
-          targetKind: constraint.dayOfWeek ? 'weekdays' : 'all_sessions',
-          weekdays: constraint.dayOfWeek ? [constraint.dayOfWeek] : [],
-          maxSessionMinutes: constraint.maxSessionMinutes,
-          sourceActor: 'system',
-          sourceSurface,
-          now: constraint.updatedAt ?? constraint.createdAt,
-          factId: `temporary-source-fact:v1:legacy-profile:${constraint.id}`,
-        })
-      : createTemporaryScheduleFact({
-          observedDate: from,
-          scope,
-          scheduleKind: constraint.kind === 'travel'
-            ? 'travel'
-            : constraint.dayOfWeek ? 'unavailable_weekdays' : 'unavailable_dates',
-          unavailableDates: constraint.kind === 'travel'
-            ? datesBetween(from, until)
-            : [],
-          unavailableWeekdays: constraint.dayOfWeek ? [constraint.dayOfWeek] : [],
-          sourceActor: 'system',
-          sourceSurface,
-          now: constraint.updatedAt ?? constraint.createdAt,
-          factId: `temporary-source-fact:v1:legacy-profile:${constraint.id}`,
-        });
-    fact.legacyMigrationStatus = 'legacy_after_state_only';
-    if (!seen.has(fact.factId)) {
-      migrated.push(fact);
-      seen.add(fact.factId);
-    }
-  }
-  return normalizeTemporarySourceFacts({ value: migrated });
 }
 
 function datesBetween(from: string, until: string): string[] {

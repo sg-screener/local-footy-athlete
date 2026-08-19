@@ -3,9 +3,9 @@
  * by inspecting the actual program state instead of fabricating a
  * generic explanation.
  *
- * Pure function. Reads ResolvedDay[] (current + next week), the
- * activeInjury, and any explicit overrideContexts to construct a
- * structured explanation the dispatcher can convert into a reply.
+ * Pure function. Reads ResolvedDay[] (current + next week) and any
+ * explicit overrideContexts to construct a structured explanation the
+ * dispatcher can convert into a reply.
  *
  * The athlete asks something like:
  *   "why didn't Monday change?"
@@ -17,7 +17,6 @@
  */
 
 import type { ResolvedDay } from './sessionResolver';
-import type { InjuryState } from './injuryProgression';
 import { formatExerciseDisplayName } from './exerciseDisplay';
 
 export interface InspectQuery {
@@ -32,7 +31,6 @@ export interface InspectQuery {
 export interface InspectInput {
   query: InspectQuery;
   todayISO: string;
-  activeInjury: InjuryState | null;
   currentWeek: ResolvedDay[];
   nextWeek: ResolvedDay[];
   /** Per-date override contexts so we can tell template vs manual. */
@@ -58,8 +56,6 @@ export interface InspectAnswer {
   date?: string;
   /** Source of the resolved workout (template / manual / etc). */
   source?: ResolvedDay['source'];
-  /** Whether the dispatcher should attempt a re-apply / reconcile. */
-  suggestReapply?: boolean;
 }
 
 function findDayByDateOrName(
@@ -110,16 +106,17 @@ function conditioningSummary(workout: NonNullable<ResolvedDay['workout']>): stri
  *   1. If the date is in the past → past_date
  *   2. No session on that date → no_session_on_date
  *   3. Date has a manual override (source==='manual') → session_already_modified
- *   4. Active injury exists but the resolved workout has no coachNotes
- *      AND the requested exercise is still present → exercise_present_should_remove
- *      (suggestReapply=true; dispatcher should re-run the engine)
- *   5. The session is not relevant for the active injury → session_unaffected_by_injury
+ *   4. The resolved workout has no coachNotes AND the requested exercise
+ *      is still present → exercise_present_should_remove
+ *   5. The session carries no restriction notes → session_unaffected_by_injury
  *   6. The requested exercise has already been swapped/removed → exercise_already_removed
- *   7. No active injury at all → no_active_injury
- *   8. Fall-through general state explanation.
+ *   7. Fall-through general state explanation.
+ *
+ * ⚠ `no_active_injury` is now unreachable: the alias that told this function
+ * whether an injury was on file is deleted (2026-08-19).
  */
 export function inspectCoachState(input: InspectInput): InspectAnswer {
-  const { query, todayISO, activeInjury, currentWeek, nextWeek, overrideContexts } = input;
+  const { query, todayISO, currentWeek, nextWeek, overrideContexts } = input;
 
   // Resolve the date for past-date detection.
   if (query.date && query.date < todayISO) {
@@ -182,16 +179,6 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
     };
   }
 
-  // No active injury — there's nothing to apply.
-  if (!activeInjury || activeInjury.status === 'resolved') {
-    return {
-      kind: 'no_active_injury',
-      date: day.date,
-      source: day.source,
-      message: `No active injury on file, so the program isn't being filtered. Sessions are running on the original template.`,
-    };
-  }
-
   // Exercise-specific question — is the named exercise still in the
   // workout despite the active injury?
   if (query.exerciseName) {
@@ -208,12 +195,15 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
           message: `${displayExercise} is still listed because the resolver kept it (likely a tier mismatch - the injury severity doesn't warrant removal at this level). The session has notes: ${(day.workout.coachNotes ?? []).join('; ')}.`,
         };
       }
+      // ⚠ BROKEN BY DEMOLITION (2026-08-19). This arm named the injured body
+      // part from the deleted `activeInjury` alias and asked the dispatcher to
+      // re-apply — a route that is also deleted. Rebuild both against the
+      // canonical accepted injury context.
       return {
         kind: 'exercise_present_should_remove',
         date: day.date,
         source: day.source,
-        suggestReapply: true,
-        message: `${displayExercise} is still in ${day.workout.name} - the injury filter didn't catch it. I'll re-apply the ${activeInjury.bodyPart} restrictions now.`,
+        message: `${displayExercise} is still in ${day.workout.name} and the visible filter did not remove it.`,
       };
     }
     return {
@@ -231,7 +221,7 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
       kind: 'session_unaffected_by_injury',
       date: day.date,
       source: day.source,
-      message: `${day.short} ${day.workout.name} doesn't load the ${activeInjury.bodyPart}, so the injury filter left it alone. Going ahead with that session is fine.`,
+      message: `${day.short} ${day.workout.name} carries no restriction notes, so the visible filter left it alone. Going ahead with that session is fine.`,
     };
   }
 
@@ -239,6 +229,6 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
     kind: 'general_state',
     date: day.date,
     source: day.source,
-    message: `${day.short} ${day.workout.name} carries the ${activeInjury.bodyPart} restrictions: ${(day.workout.coachNotes ?? []).join('; ')}.`,
+    message: `${day.short} ${day.workout.name} carries these restrictions: ${(day.workout.coachNotes ?? []).join('; ')}.`,
   };
 }

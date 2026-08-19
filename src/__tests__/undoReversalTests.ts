@@ -379,6 +379,114 @@ run('17 the boot tolerates a failed replay PHASE, not just a failed entry', () =
     + 'app instead of the boot error screen, which is not an improvement');
 });
 
+// ── [18-19] A REMOVAL IS TWO WRITES, AND UNDO MUST REACH BOTH ────────────────
+
+run('18 a removal has an undo phrase at all, or the toast can never appear', () => {
+  // MEASURED ON DEVICE 2026-08-19: the ledger held the `remove_exercise` entry
+  // and `replayableEntries` returned it, so it WAS undoable — but `phraseFor`
+  // had no case for `program_control`, `undoToastFor` returns null on an
+  // unmapped kind by design, and the toast therefore never rendered. The
+  // athlete's only immediate way back from a removal was unreachable, and
+  // nothing was red.
+  //
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { phraseFor } = require('../rules/journalChanges');
+  const removal = entry('dl-1', {
+    kind: 'program_control',
+    action: {
+      type: 'remove_exercise',
+      source: { screen: 'program_tab', surface: 'home_change_card', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: { date: '2026-07-13', exercise: 'Back Squat' },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: true,
+    },
+  } as unknown as AthleteDecision);
+  const phrase = phraseFor(removal);
+  assert(typeof phrase === 'string' && phrase.length > 0,
+    'a removal has no undo phrase, so the undo toast cannot render for it');
+
+  // AND THE TOAST ACTUALLY RESOLVES, which is the property the athlete has.
+  // Asserting the phrase alone would pass while `undoToastFor` still returned
+  // null for some other reason.
+  const model = undoToastFor([removal], null);
+  assert(model !== null && model.entryId === 'dl-1',
+    'the undo toast does not resolve for a removal even though it has a phrase');
+});
+
+run('19 undoing a removal reaches the EXCLUSION, not just the ledger entry', () => {
+  // ⚠ TWO WEAK VERSIONS OF THIS CELL WERE CAUGHT BY THE SAME MUTATION.
+  //
+  // (1) A SOURCE SCAN: deleting the `restoreExcludedExercise(exercise)` CALL
+  //     left the import and the `remove_exercise` literal in place, so a regex
+  //     for either stayed green while the behaviour was gone.
+  // (2) AN `async` CELL: `run` above takes `() => void` and does NOT await, so
+  //     the body returned a promise, the cell counted as passed IMMEDIATELY,
+  //     and every assertion after the first `await` ran outside the try/catch
+  //     as an unhandled rejection. It was green and empty.
+  //
+  // It is SYNCHRONOUS on purpose. `undoLastDecision` is async, but its only
+  // `await` is the world settle at the very end — the ledger append and the
+  // exclusion clearing both run before it. Asserting synchronously after an
+  // un-awaited call therefore observes exactly the writes this cell is about.
+  // Deleting the `restoreExcludedExercise(exercise)` CALL left the import and
+  // the `remove_exercise` literal in place, so a regex for either stayed green
+  // while the behaviour was gone — the exact "a set asserted in its own file is
+  // not a gate" shape. It drives the real owners now.
+  //
+  // The two writes: the program-control action lands on the ledger (annulled by
+  // the reversal) and the canonical exclusion lands in athlete preferences,
+  // which replay never touches. Annulling only the first leaves the exclusion
+  // standing, and the exclusion is what keeps the exercise out — so the toast
+  // reported success while Back Squat stayed gone. Measured on device
+  // 2026-08-19 before this cell existed.
+  /* eslint-disable @typescript-eslint/no-var-requires */
+  const { applyExerciseExclusionDecision } = require('../utils/exerciseExclusionOwner');
+  const { useAthletePreferencesStore } = require('../store/athletePreferencesStore');
+  const { appendDecisionEntry } = require('../store/decisionLedgerStore');
+  const { undoLastDecision } = require('../store/undoLastDecision');
+  /* eslint-enable @typescript-eslint/no-var-requires */
+
+  const written = applyExerciseExclusionDecision({
+    exercise: 'Back Squat',
+    scope: 'today_only',
+    decidedOnISO: '2026-07-13',
+  });
+  // LIVENESS: an assertion about a removal that starts from zero proves nothing.
+  assert(written.ok, 'the exclusion never got written, so this cell proves nothing');
+  const before = useAthletePreferencesStore.getState().prefs.exclusions ?? [];
+  assert(before.some((row: { exercise: string }) => row.exercise === 'Back Squat'),
+    'Back Squat is not excluded before the undo — nothing to reverse');
+
+  const appended = appendDecisionEntry({
+    decision: {
+      kind: 'program_control',
+      action: {
+        type: 'remove_exercise',
+        source: { screen: 'program_tab', surface: 'home_change_card', initiatedBy: 'tap' },
+        scope: 'today_only',
+        payload: { date: '2026-07-13', exercise: 'Back Squat' },
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: true,
+      },
+    },
+    provenance: 'athlete_tap',
+    writer: 'test',
+  });
+  assert(appended.ok, 'the ledger refused the removal entry, so there is no undo to run');
+
+  // NOT awaited, deliberately — see the note above. `void` because the settle
+  // it returns is not what is being asserted.
+  void undoLastDecision();
+
+  const after = useAthletePreferencesStore.getState().prefs.exclusions ?? [];
+  assert(!after.some((row: { exercise: string }) => row.exercise === 'Back Squat'),
+    'the exclusion survived the undo — the reversal reached the ledger and not '
+    + 'the fact that actually keeps the exercise out');
+});
+
 console.log(`\nUndo reversal totals: ${passed} passed, ${failed} failed`);
 totalsPrinted(failed);
 if (failed > 0) {

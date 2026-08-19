@@ -70,7 +70,11 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
       + 'G-3. Team training at G-2 is the athlete\'s own commitment, not something the app adds.',
     sites: [
       { file: 'utils/coachingEngine.ts', symbol: 'gOffset' },
-      { file: 'utils/postGenerationConstraintValidation.ts', symbol: 'distanceBeforeFixture' },
+      // MOVED 2026-08-19. Was `postGenerationConstraintValidation.distanceBeforeFixture`,
+      // which lived inside the §18 fallback-week builder — a second authority
+      // applying this law while authoring a replacement week. That builder is
+      // deleted; the scheduler decides the days and now carries the citation.
+      { file: 'rules/weeklyScheduler.ts', symbol: 'sprintDayIsLegal' },
       { file: 'utils/sessionExplanation.ts', symbol: 'buildUpperPushSentence' },
     ],
   },
@@ -208,7 +212,14 @@ export const BIBLE_THRESHOLD_ANCHORS: readonly BibleThresholdAnchor[] = [
       + 'citation but is not itself stated by it — if the choice of 4 over 3 ever matters to '
       + 'an athlete, it is a ruling, not a citation.',
     sites: [
-      { file: 'utils/postGenerationConstraintValidation.ts', symbol: 'weekInBlock' },
+      // MOVED 2026-08-19 (burn-the-boats demolition). The citation used to point
+      // at `postGenerationConstraintValidation.ts`, where the 4-week modulo sat
+      // INSIDE the persisted v1 -> v2 contract migration — a legacy compatibility
+      // path, deleted in area 4, which took the citation with it. The LAW is
+      // current and approved; only that implementation of it was legacy. The
+      // live owner of the block position a week declares is the accepted-state
+      // transaction, which stamps `weekInBlock` on the contract identity.
+      { file: 'store/acceptedStateTransaction.ts', symbol: 'weekInBlock' },
     ],
   },
   // ── THE SIGNED LAWS OF 2026-07-30 (Bible Section 20) ──

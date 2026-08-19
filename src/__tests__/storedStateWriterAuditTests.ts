@@ -207,7 +207,10 @@ run('quarantine holds nothing when there is nothing to hold', () => {
 run('repeat-week has no writer and no surface (HOME_SCREEN_REDESIGN ruling 1)', () => {
   // This suite's own name and assertion text are exempt — they are the law
   // statement, not a surviving surface. The hydration exemption is matched
-  // case-insensitively (`programHydrationIngress.ts` names the ingress lift).
+  // case-insensitively (`programHydrationProjection.ts` names the read lift).
+  // The retired-overlay DROPPER went with `programHydrationIngress.ts` on
+  // 2026-08-19; it had zero production callers, so this law is now held by
+  // there being no writer at all rather than by a filter at hydration.
   const offenders = walkSrc().filter((f) =>
     !f.toLowerCase().includes('hydration') &&
     !f.endsWith('storedStateWriterAuditTests.ts') &&

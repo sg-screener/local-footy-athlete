@@ -1,28 +1,43 @@
+/**
+ * THE EQUIPMENT CHECKLIST FOR AN OPENED SESSION — A READER, AND ONLY A READER.
+ *
+ * It answers *"what kit does this session use, and which rows use it"* so the
+ * sheet can draw the list, and it turns the athlete's ticks back into tags for
+ * the `set_equipment_modifier` decision. **It chooses no exercise and writes
+ * nothing.**
+ *
+ * ⚠ **IT USED TO CHOOSE.** `buildSessionEquipmentReplacementPlan` walked Sam's
+ * fallback ladder here and handed the screen a list of `swap_exercise` actions
+ * to commit — a second selection authority living outside the composer. Deleted
+ * 2026-08-19 after it was measured INERT: across **2,038 real (athlete, session
+ * date, implement subset) door walks** it produced replacements in **0**. The
+ * dated equipment fact is written first, the composer recomposes the day against
+ * the reduced kit, and by the time the screen asked there was never anything
+ * illegal left. Confirmed on the simulator: the `"N exercises were replaced"`
+ * receipt it existed to produce is unreachable.
+ *
+ * **The properties it used to be asked about are not lost** — they are held
+ * against the real door by `npm run test:session-equipment-owner`: no visible
+ * row is illegal on today's kit, an OR-group row survives, a replacement wears
+ * its own load, and a world with no legal option shows a typed gap.
+ *
+ * The live Swap and Remove transactions were NOT touched. They are a different
+ * door (`applySwapToday` in `DayWorkoutScreenV2`) and they still own
+ * `swap_exercise` / `remove_exercise`.
+ */
 import type { EquipmentTag } from '../data/exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
 import {
   CONDITIONING_MODALITY_LABELS,
   EQUIPMENT_TAG_LABELS,
 } from '../rules/equipmentVocabulary';
-import {
-  equipmentTagsForRequirement,
-  equipmentTagsToSubstituteEquipmentClasses,
-  type ResolvedEquipmentCapabilities,
-} from './equipmentAvailability';
+import { equipmentTagsForRequirement } from './equipmentAvailability';
 import { equipmentClassFor } from './loadEstimation';
-import {
-  inferModalityFromName,
-  pickEquivalentByTier,
-  rewriteModalityInName,
-} from './coachModalitySwap';
+import { inferModalityFromName } from './coachModalitySwap';
 import {
   CONDITIONING_META,
   type ConditioningModality,
 } from '../data/exerciseTags';
-import {
-  getTapSwapChoices,
-  type TapSwapEnvironment,
-} from './tapSwapHierarchy';
 
 export type SessionEquipmentRequirementKey =
   | `tag:${EquipmentTag}`
@@ -44,30 +59,6 @@ type SessionExercise = {
   raw?: any;
 };
 
-export interface SessionEquipmentReplacementExercise {
-  name: string;
-  sets: number;
-  repsMin: number;
-  repsMax: number;
-  weight?: number;
-  notes?: string;
-  prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
-  perSide?: boolean;
-  restSeconds?: number;
-}
-
-export type SessionEquipmentReplacementPlan =
-  | {
-      ok: true;
-      replacements: Array<{
-        exerciseKey: string;
-        targetId?: string;
-        fromExercise: string;
-        toExercise: SessionEquipmentReplacementExercise;
-      }>;
-    }
-  | { ok: false; exerciseName: string };
-
 const CLASS_TO_TAG: Readonly<Record<string, EquipmentTag>> = {
   barbell: 'barbell',
   dumbbell: 'dumbbells',
@@ -75,14 +66,6 @@ const CLASS_TO_TAG: Readonly<Record<string, EquipmentTag>> = {
   machine: 'machine',
   kettlebell: 'kettlebell',
 };
-
-const MACHINE_MODALITY_ORDER: readonly ConditioningEquipmentModality[] = [
-  'bike_erg',
-  'air_bike',
-  'row',
-  'ski',
-  'treadmill',
-];
 
 function conditioningEquipmentForModality(
   modality: ConditioningModality | null,
@@ -230,135 +213,4 @@ export function missingSessionEquipmentValues(
     else modalities.push(value as ConditioningEquipmentModality);
   }
   return { tags, modalities };
-}
-
-function trainingModality(
-  equipment: ConditioningEquipmentModality,
-): ConditioningModality {
-  if (equipment === 'row') return 'row';
-  if (equipment === 'ski') return 'ski';
-  if (equipment === 'treadmill') return 'run';
-  return 'bike';
-}
-
-/**
- * Pick the first still-available machine and preserve the conditioning tier.
- * The athlete's saved kit controls the candidates; unticking a rower can yield
- * a bike only when a bike is actually in that kit.
- */
-export function sessionConditioningReplacementName(args: {
-  exerciseName: string;
-  availableModalities: readonly ConditioningEquipmentModality[];
-  missingModalities: ReadonlySet<ConditioningEquipmentModality>;
-}): string | null {
-  const original = conditioningEquipmentForName(args.exerciseName);
-  if (!original || !args.missingModalities.has(original)) return null;
-  const target = MACHINE_MODALITY_ORDER.find((candidate) =>
-    candidate !== original &&
-    args.availableModalities.includes(candidate) &&
-    !args.missingModalities.has(candidate));
-  if (!target) return null;
-  const modality = trainingModality(target);
-  return pickEquivalentByTier(args.exerciseName, modality) ??
-    rewriteModalityInName(args.exerciseName, modality, {
-      bikeLabel: target === 'air_bike' ? 'assault' : 'standard',
-    });
-}
-
-function replacementExercise(
-  name: string,
-  raw: any,
-  prescription: Partial<SessionEquipmentReplacementExercise> = {},
-): SessionEquipmentReplacementExercise {
-  const sets = Number(raw?.prescribedSets) || 3;
-  const repsMin = Number(raw?.prescribedRepsMin) || 8;
-  const repsMax = Number(raw?.prescribedRepsMax) || Math.max(repsMin, 10);
-  return {
-    name,
-    sets,
-    repsMin,
-    repsMax,
-    weight: prescription.weight ?? raw?.prescribedWeightKg,
-    notes: prescription.notes,
-    prescriptionType: prescription.prescriptionType ?? raw?.prescriptionType,
-    perSide: prescription.perSide ?? raw?.perSide,
-    restSeconds: prescription.restSeconds ?? raw?.restSeconds,
-    ...prescription,
-  };
-}
-
-/**
- * Pure owner for the whole-session replacement decision. Screens provide the
- * live profile/safety environment and commit the returned actions; they do not
- * decide which equipment remains or which exercise replaces which row.
- */
-export function buildSessionEquipmentReplacementPlan(args: {
-  exercises: readonly SessionExercise[];
-  requirements: readonly SessionEquipmentRequirement[];
-  missingKeys: ReadonlySet<SessionEquipmentRequirementKey>;
-  capabilities: ResolvedEquipmentCapabilities;
-  environment: TapSwapEnvironment;
-}): SessionEquipmentReplacementPlan {
-  const missing = missingSessionEquipmentValues(args.missingKeys);
-  const missingTags = new Set(missing.tags);
-  const missingModalities = new Set(missing.modalities);
-  const remainingModalities = args.capabilities.conditioningModalities.filter(
-    (modality) => !missingModalities.has(modality),
-  );
-  const remainingTags = args.capabilities.tags.filter((tag) =>
-    !missingTags.has(tag)
-      && (tag !== 'bike_or_treadmill' || remainingModalities.length > 0),
-  );
-  const environment: TapSwapEnvironment = {
-    ...args.environment,
-    availableEquipmentTags: remainingTags,
-    availableEquipment: equipmentTagsToSubstituteEquipmentClasses(remainingTags),
-    hasEquipmentConstraint: true,
-  };
-  const affectedKeys = new Set(
-    args.requirements
-      .filter((requirement) => args.missingKeys.has(requirement.key))
-      .flatMap((requirement) => requirement.exerciseKeys),
-  );
-  const affected = args.exercises.filter((exercise) => affectedKeys.has(exercise.key));
-  const occupiedNames = new Set(args.exercises.map((exercise) => exercise.name.toLowerCase()));
-  const replacements: Extract<SessionEquipmentReplacementPlan, { ok: true }>['replacements'] = [];
-
-  for (const exercise of affected) {
-    let replacementName = sessionConditioningReplacementName({
-      exerciseName: exercise.name,
-      availableModalities: remainingModalities,
-      missingModalities,
-    });
-    let toExercise = replacementName
-      ? replacementExercise(replacementName, exercise.raw)
-      : null;
-
-    if (!toExercise) {
-      const choice = getTapSwapChoices({
-        originalExercise: exercise.name,
-        reason: 'no_equipment',
-        environment,
-        existingExerciseNames: [...occupiedNames],
-        recoveryAllowed: false,
-      }).find((candidate) => candidate.kind !== 'rest' && !!candidate.name);
-      if (choice?.name) {
-        replacementName = choice.name;
-        toExercise = replacementExercise(choice.name, exercise.raw, choice.prescription ?? {});
-      }
-    }
-
-    if (!toExercise || !replacementName || occupiedNames.has(replacementName.toLowerCase())) {
-      return { ok: false, exerciseName: exercise.name };
-    }
-    occupiedNames.add(replacementName.toLowerCase());
-    replacements.push({
-      exerciseKey: exercise.key,
-      targetId: exercise.targetId,
-      fromExercise: exercise.name,
-      toExercise,
-    });
-  }
-
-  return { ok: true, replacements };
 }

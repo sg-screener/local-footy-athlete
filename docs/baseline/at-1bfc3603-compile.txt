@@ -1,0 +1,22 @@
+TEST:COMPILE AT THE FIXED BASELINE — recorded because the 405-suite list EXCLUDES it
+(scripts/sweep.sh and the baseline recorder both filter `test:compile` out of the
+bible chain, so it is invisible in fails.txt and would otherwise look like a new red
+the first time a completion gate ran it).
+
+WORLD: wt-control, head=1bfc3603, dirty=0.
+EXIT: 1
+TOTAL: 469 errors against baseline (product 35, devtools 51, tests 383)
+
+THE SEVEN FILE/SCOPE PAIRS THAT FAIL THE RATCHET AT 1bfc3603:
+  [tests] src/__tests__/bibleConformance/observations/buildConditioningEquipmentTrace.ts: 3, allows 1
+  [tests] src/__tests__/bibleConformance/observations/buildPreseasonExposureWitness.ts: 1, allows 0
+  [tests] src/__tests__/bibleConformance/observations/buildSlice5MutationWitness.ts: 3, allows 1
+  [tests] src/__tests__/bibleConformance/observations/buildStrengthTrace.ts: 4, allows 2
+  [tests] src/__tests__/bibleConformance/observations/evaluateMetamorphicRelations.ts: 4, allows 3
+  [tests] src/__tests__/bibleConformance/observations/evaluatePairwiseScenarios.ts: 2, allows 1
+  [tests] src/__tests__/support/acceptBlock.ts: 1, allows 0
+
+BYTE-IDENTICAL in this branch worktree at ed0b9b33, whose commit contains ZERO .ts/.tsx
+files. This is background debt under Sam's ruling of 2026-08-18 and is NOT this
+mission's work. It is recorded here so the next completion gate that fires can be
+answered by comparison instead of by argument.

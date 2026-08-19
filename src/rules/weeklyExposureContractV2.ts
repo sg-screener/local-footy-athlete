@@ -1634,41 +1634,6 @@ function reductionMetric(entry: WeeklyExposureReduction): Section18ReductionMetr
   return 'full_rest_frequency';
 }
 
-export function migrateLegacyReductionV2(
-  entry: WeeklyExposureReduction,
-  provenance: Section18AuthorisedReduction['provenance'] = 'persisted_typed_reduction',
-): Section18AuthorisedReduction {
-  const metric = reductionMetric(entry);
-  const doseOnly = entry.metric === 'session_intensity_percent';
-  return {
-    metric,
-    originalApprovedTarget: entry.from,
-    reducedTarget: entry.to,
-    reason: entry.reason,
-    scope: metric === 'strength_pattern_count' ? 'pattern' : 'week',
-    change: doseOnly ? 'dose_intensity' : 'frequency',
-    detail: entry.detail,
-    provenance,
-  };
-}
-
-function v2ModeFromLegacy(contract: WeeklyExposureContract): Section18WeekMode {
-  if (contract.identity.phase === 'Pre-season' && contract.anchors.gameOrPracticeMatchCredit > 0) {
-    return 'practice_match_week';
-  }
-  return contract.identity.mode;
-}
-
-function anchorStateFromLegacy(contract: WeeklyExposureContract): Section18AnchorState {
-  if (contract.identity.phase === 'Pre-season' && contract.anchors.gameOrPracticeMatchCredit > 0) {
-    return 'practice_match';
-  }
-  if (contract.identity.phase === 'In-season') {
-    return contract.anchors.gameOrPracticeMatchCredit > 0 ? 'game' : 'bye';
-  }
-  return contract.anchors.gameOrPracticeMatchCredit > 0 ? 'game' : 'none';
-}
-
 const OFF_SEASON_SUBPHASES: ReadonlySet<string> = new Set([
   'early_offseason',
   'mid_offseason',
@@ -1692,59 +1657,4 @@ export function contractOffseasonSubphase(
   if (contract.identity.seasonPhase !== 'Off-season') return null;
   const declared = contract.identity.declaredSubphase;
   return OFF_SEASON_SUBPHASES.has(declared) ? (declared as OffseasonSubphase) : null;
-}
-
-/** Deterministic persisted-v1 migration. Missing evidence remains unknown. */
-export function migrateLegacyWeeklyExposureContractV2(
-  legacy: WeeklyExposureContract,
-  identity: {
-    blockNumber?: number | null;
-    weekInBlock?: number | null;
-    globalWeek?: number | null;
-  } = {},
-): WeeklyExposureContractV2 {
-  const contract = buildSection18WeeklyExposureContractV2({
-    seasonPhase: legacy.identity.phase,
-    declaredSubphase: legacy.identity.subphase,
-    mode: v2ModeFromLegacy(legacy),
-    blockNumber: identity.blockNumber,
-    weekInBlock: identity.weekInBlock,
-    globalWeek: identity.globalWeek,
-    phaseWeek: null,
-    phaseEntryWeekStartISO: null,
-    phaseClockSelectedPhase: null,
-    phaseWeekProvenance: 'legacy_unknown',
-    weekKind: legacy.identity.weekKind,
-    anchorState: anchorStateFromLegacy(legacy),
-    teamTrainingDays: legacy.anchors.teamTrainingDays,
-    // The legacy shape carries ONE game day and cannot express more; a list of
-    // one is the honest translation, not a widening.
-    fixtureDays: legacy.anchors.gameDay === null ? [] : [legacy.anchors.gameDay],
-    capacity: 'medium',
-    plannerSelected: {
-      mainStrength: legacy.strength.targetCount,
-      coreConditioning: legacy.conditioning.targetCount,
-      optionalFlush: null,
-      sprintHighSpeed: legacy.sprintCod.targetCount,
-      powerPrimers: null,
-    },
-    prohibitedPatterns: [],
-    prohibitedPatternProvenance: 'legacy_missing',
-    reductions: legacy.reductions.map((entry) => migrateLegacyReductionV2(entry)),
-    equipment: {
-      appConditioningFeasible: null,
-      substitutionStatus: 'legacy_unknown',
-      consideredSubstitutions: [],
-    },
-    participationProvenance: 'legacy_unknown',
-    currentProductionClaimsAnchorCredit: true,
-    source: 'legacy_migration',
-  });
-  contract.migration = {
-    legacyContractPresent: true,
-    missingParticipationRemainsUnknown: true,
-    missingConditioningRoleRemainsUnknown: true,
-    missingProhibitedPatternsTraceable: true,
-  };
-  return contract;
 }

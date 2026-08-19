@@ -1,0 +1,1640 @@
+# STATUS — seat `demolition`
+
+**Mission:** FULL BURN-THE-BOATS DEMOLITION (Sam, 2026-08-19). Delete every
+superseded production authority and leave one current system implementing Sam's
+approved logic.
+
+**Branch:** `demolition/burn-the-boats`, cut from the clean tip of
+`feat/athlete-can-see-it` (`6da38cee`).
+**Rollback tag:** `pre-full-burn-boats-2026-08-19` → `6da38cee`.
+**Worktrees:** `scratchpad/wt-demo` (work), `scratchpad/wt-control` (untouched
+control at `6da38cee`, used for every baseline comparison).
+
+---
+
+## THE RULE I AM WORKING TO (Sam, mid-mission, 2026-08-19)
+
+> Deletion is based on AUTHORITY, not file age, filename or line count.
+
+Before a file is deleted, one of these is PROVEN:
+
+1. zero production execution/imports; or
+2. its authority has been fully replaced by a named current owner; or
+3. it actively competes with and rewrites a named current owner.
+
+No bulk deletion by filename, folder, regex or age. A file holding BOTH current
+and legacy behaviour has its current half extracted first.
+
+---
+
+## ⚠ FINDING 0 — "UNREACHABLE" IS NOT "LEGACY" IN THIS REPO
+
+Measured with a transitive import walk from `App.tsx`
+(`scratchpad/tools/reach.js`) plus a precise importer census
+(`scratchpad/tools/imports.js`, which resolves real `from`/`require` specifiers
+rather than grepping for the word):
+
+```
+TOTAL src files            1121
+REACHABLE from App.tsx      547
+UNREACHABLE (all)           574
+UNREACHABLE non-test         34
+```
+
+**Every one of those 34 has ZERO production importers.** But reading their
+headers splits them in two, and the split is the finding:
+
+**(a) BUILT BUT NEVER WIRED — Sam's own current work. DO NOT DELETE.**
+`rules/mobilityPairing.ts` (his seven signed rules, and his 2026-08-13 *"WE
+SPENT FUCKING DAYS ON THIS — WHY IS IT NOT IN THE APP YET"*),
+`rules/weeklyCompleteness.ts` ("THE ONE COMPLETENESS OWNER", his 2026-08-16
+ruling), `rules/weekPreferenceShape.ts`, `rules/sessionTypeCharter.ts`,
+`data/timeTrialSession.ts`, `utils/masCopy.ts`, `rules/lawRegistry.ts` (LAW
+ZERO's own register — deliberately not production).
+
+**A deletion pass keyed on reachability would have deleted the mobility pairing
+work Sam is angry is missing.** That is why rule 4 above is answered per file,
+by hand, from the header and the importer census — never by the graph alone.
+
+**(b) GENUINELY SUPERSEDED — candidates for deletion, each still to be proven
+individually against rule 4:** `utils/trainAroundEngine.ts`,
+`utils/blockAdjuster.ts` (the old `dateOverrides` layer),
+`utils/weeklyCoachUpdate.ts`, `store/preRebuildEnvelopeMigration.ts` (a one-time
+migration for athletes who install over the old world — explicitly in scope for
+"no migration for nonexistent production users"), `utils/recoveryAddonBuilder.ts`
+(the retired placement pass), `store/injuryEpisodeCommand.ts`,
+`screens/home/homeGameMutationController.ts`, `utils/section18ProgramObservation.ts`,
+`utils/coachInjuryTargetResolver.ts`, `utils/capacityAnswerGap.ts`,
+`components/TrunkSupportSection.tsx`.
+
+---
+
+## BASELINE — MEASURED IN AN UNTOUCHED CONTROL TREE
+
+⚠ **My first baseline sweep was CONTAMINATED and was thrown away.** It ran in
+the same worktree I was editing, so suites after my first edit measured a
+modified tree. A control run must see the same tree. The kept baseline runs in
+`wt-control`, detached at `6da38cee`, never edited.
+
+| instrument | at `6da38cee` | note |
+| --- | --- | --- |
+| `test:compile` | **FAILS**, 7 file/scope pairs worse than baseline; product scope 35 errors | red on the branch tip ITSELF, before I touched anything |
+| `test:law-registry` | 12 passed, 2 failed; 135 rows, 114 guarded, **21 UNENFORCED** | the two reds are `LR-18 has no registry row` and the deliberate `NO LAW IS UNENFORCED` |
+| `test:exercise-rotation` | 91 passed, 2 failures (hinge advance / second hinge) | pre-existing |
+| `scripts/sweep.sh` 405 suites | **RUNNING — not yet complete** | full failure set owed |
+
+---
+
+## SLICE 1 — LANDED: A REPLAY MAY NEVER RE-AUTHOR A BLOCK
+
+Completion condition **"zero boot/restart writes to accepted exercise choices"**.
+
+Seat `visible` diagnosed this on 2026-08-18 and deliberately did not fix it
+(`docs/STATUS_VISIBLE.md` §7). The device trace: `blockSelectionHistoryStore`
+slot `squat`, block `2026-07-13`, went `Back Squat` → `FRONT SQUAT` across a
+restart. `quiescentBoot.ts:570` regenerated on every launch with
+`recordSelections: true`; a live `today_only` exclusion made the composer pick
+Front Squat and the boot **recorded that pick as the block's history**.
+`recordBlockSelections` replaces a block's rows by design, so the original was
+destroyed — gone from `currentProgram` AND from the selection history, which is
+the input every future generation reads. Three separate rebuilds all faithfully
+reproduced the wrong answer because that is what the stored input now said.
+
+**A reversible, dated decision was laundered into a permanent generation INPUT.**
+
+**THE FIX IS AN OWNERSHIP CORRECTION, NOT A SWITCH.** `recordSelections` became
+`'author' | 'replay' | false` and all five production callers state which they
+are:
+
+| caller | door | value |
+| --- | --- | --- |
+| `weekRebuild:650` | rollover | `'author'` |
+| `profileProgramTransaction:205` | onboarding / profile change | `'author'` |
+| `acceptedStateTransaction:2071` | acceptance | `'author'` |
+| `quiescentBoot:570` | boot | `'replay'` |
+| `temporarySourceFactTransaction:534` | a dated fact re-deriving | `'replay'` |
+
+A `'replay'` records a block **nobody has recorded yet** and may never replace
+one. `temporarySourceFactTransaction` was the same defect class pointed at a
+different fact — a TEMPORARY fact authoring a PERMANENT selection — and is fixed
+by the same distinction rather than by a second special case, which is the
+systemic-fix rule.
+
+**GUARD:** `test:block-selection-authority`, 5 cells, in the bible chain, row
+`LAW-a-replay-never-reauthors` in the registry.
+
+**MUTATION-PROVEN TWO WAYS**, tree restored byte-identical from my own backup
+after each (never `git show HEAD:… >`):
+
+- letting a replay re-author again → reds cell 1, **and reproduces the exact
+  device pair**: `recorded Front Squat, expected Back Squat`;
+- the blunt fix (`replay` never records) → reds cell 3 and nothing else.
+
+⚠ **THE FIXTURE CAUGHT ITSELF, TWICE.** The first cut wrote `exerciseName` where
+`ExerciseExclusion` declares `exercise`, so the exclusion was inert — the CONTROL
+cell failed and exposed it. And a `today_only` scope was rejected as a control
+because `composeWeek` correctly keeps dated answers out of the recorded base
+(`LAW-temporary-equipment-never-permanent`); the control uses the harder
+`until_changed` case, which is genuinely entitled to move the record.
+
+**BLAST RADIUS, against `wt-control`:**
+
+| instrument | base | after slice 1 |
+| --- | --- | --- |
+| `test:compile` | 7 pairs worse, product 35 | **identical** — 7 pairs, product 35 |
+| `test:law-registry` | 12/2, 135 rows, 114 guarded, 21 UNENFORCED | 12/2, 136 rows, 115 guarded, **21 UNENFORCED (unchanged, did not rise)** |
+| `test:exercise-rotation` | 91 pass / 2 fail | **identical** — same two failures |
+| `test:block-selection-authority` | did not exist | 5 pass / 0 fail |
+
+**NOT COVERED:** nothing seen on glass; the physical-device re-run of the
+original trace is not repeated; the 405-suite comparison is owed once the
+baseline sweep completes.
+
+Agent: demolition
+
+---
+
+## ⚠ FINDING 1 — §18 IS A SECOND PROGRAMMING AUTHORITY, AND IT IS ~800 LINES
+
+Sam's contract: *"§18 — Validation/refusal only. It may accept or refuse the
+finished result. It may not author, repair, replace or rearrange the program."*
+
+`section18AcceptedWeekGateway.ts` (1804 lines) imports
+`searchWholeWeekRepairCandidates` from `wholeWeekRepairEngine.ts` (144 lines) and
+runs a **candidate search**: it generates repaired versions of the week, scores
+them, and picks one. Five repair GENERATORS live inside the validator:
+
+| line | generator | what it authors |
+| --- | --- | --- |
+| 715 | `repairOptionalRestCandidates` | replaces authored sessions with Rest |
+| 784 | `repairByStackingCandidates` | rearranges work onto other days |
+| 857 | `repairCraftViolationCandidates` | rewrites content to satisfy craft rules |
+| 955 | `repairDisplacedStrengthCandidates` | re-places strength the scheduler sited |
+| 1284 | `repairCoreConditioningShortfallCandidates` | adds conditioning after authorship |
+
+`replaceDay` (710) is their shared mutator. 79 `repair`-shaped references in the
+gateway. This is live production — the baseline sweep log shows it acting:
+`[WorkoutCanonicalisation] Generated workout finalised … collapsed_to_rest`.
+
+**Four of the mission's named deletion areas are this one mechanism:** "replaces
+authored sessions with Rest", "adds conditioning automatically after authorship",
+"repairs missing patterns by restoring original rows", "treats §18 as an author".
+
+**THIS IS THE NEXT SLICE AND IT IS NOT SMALL.** Removing repair means the
+gateway REFUSES what it used to silently fix, so the weeks it was covering for
+become visible as scheduler/composer defects. That is the point — Sam: *"A large
+blast radius proves the legacy path was still an authority."* It is not a
+coaching question needing his ruling: his contract already decides it.
+
+**NOT MEASURED YET:** how many currently-accepted weeks depend on a repair to
+pass. That census comes before the deletion, not after.
+
+Agent: demolition
+
+---
+
+## SLICE 2 — LANDED: §18 IS A PURE BOUNDARY. THE REPAIR SYSTEM IS GONE.
+
+`1,924 deletions / 242 insertions` across 18 files. Two files physically deleted.
+
+### THE MUTATION INVENTORY, AND WHAT HAPPENED TO EACH
+
+| # | mutation §18 could perform | repair kind | class | disposition |
+| --- | --- | --- | --- | --- |
+| 1 | replace an authored session with **Rest** | `optional_work_removed_for_rest` | **C** — not authorised | DELETED |
+| 2 | **move work** onto another day | `core_work_stacked_on_existing_stress_day` | **A** — scheduler owns days + spacing | DELETED |
+| 3 | **relocate** a craft violation | `craft_violation_relocated` | **A** — scheduler | DELETED |
+| 4 | **re-place** displaced strength | `displaced_strength_relocated` | **A** — scheduler sites, composer fills | DELETED |
+| 5 | **add conditioning** after authorship | `core_conditioning_presented` | **A** — conditioning specialist | DELETED |
+| 6 | author a **whole replacement week** | `regenerated_candidate` | **C** — a second weekly authority | DELETED |
+| 7 | author a **fallback week** | `safe_fallback_candidate` | **C** — fallback to a retired planner | DELETED |
+| 8 | **lower the contract** until the week passes | (`withDisplacedCapacityReduction`) | **C** — conform-back rewriting | DELETED |
+| 9 | reduce **power dose** | `weekly_power_budget` | **B** — belongs to the power specialist | **RETAINED, named** |
+| 10 | place/withdraw the **optional offer** | `offer_presented` / `offer_withdrawn` | **B** — optional-session specialist | **RETAINED, named** |
+| 11 | **expire** obsolete derived work | `obsolete_derived_work_expired` | **B** — derived-provenance owner | **RETAINED, named** |
+| 12 | apply a stored **athlete removal** | `athlete_removal_typed_reduction` | disclosure, written by the replan owner | RETAINED |
+| 13 | **disclose** a craft violation | `craft_violation_disclosed` | pure explanation | RETAINED |
+
+**9, 10 and 11 are class B and are NOT yet moved.** Sam's own rule says the
+capability is built and guarded in the correct owner FIRST and only then deleted
+here. They are named in the surviving `Section18WeekRepairKind` union with that
+status written beside them, so they cannot be forgotten. **§18 is not yet
+mutation-free and this report does not claim it is.**
+
+### WHAT WAS PHYSICALLY DELETED
+
+| file | lines | why |
+| --- | --- | --- |
+| `src/rules/wholeWeekRepairEngine.ts` | 144 | the breadth-first candidate search itself |
+| `src/__tests__/wholeWeekRepairEngineTests.ts` | 280 | its subject is the deleted engine |
+
+Deleted **in place** (function bodies removed, file retained):
+
+- `section18AcceptedWeekGateway.ts` **1804 → ~1060 lines.** 14 functions, 611
+  lines: the five repair generators, their shared mutator `replaceDay`, the
+  expander `localRepairCandidates`, and the helpers `mergeCoreWork`,
+  `explicitRestStub`, `relocateStrengthTemplate`, `withDisplacedCapacityReduction`,
+  `authorityForDisplacement`, `hasMainStrength`, `profileAvailableDayNumbers`.
+  Plus the regenerate → fallback cascade in `runSection18AcceptedWeekGateway`.
+- `postGenerationConstraintValidation.ts` — `buildSection18ProductionFallbackCandidate`, **329 lines**.
+- `programStore.ts` — `legacyMigrationFallbackProfile` (49) and the `buildFallback` wiring.
+- Gateway INPUTS deleted, each a licence to author: `strengthTemplates`,
+  `maxRepairAttempts`, `regenerate`, `safeFallback`.
+- `Section18WeekAcceptanceStatus` **5 → 2**: `accepted | impossible`. The three
+  removed (`repaired`, `regenerated`, `fallback`) each named a week the validator
+  had built itself.
+
+### OBSOLETE TESTS DELETED
+
+| file / cell | why |
+| --- | --- |
+| `wholeWeekRepairEngineTests.ts` (whole file) | subject = deleted engine |
+| craft tier C3, C4 | "the search MOVES the badly placed session"; "the repaired week…" |
+| craft tier M6, M10 | mutation witnesses asserting a repair HAPPENS |
+| gateway 31, 48, 49, 50, 51 | the regenerate → fallback cascade |
+| diagnostics cells 4, 9 | drove the deleted search as their vehicle |
+
+Cells REWRITTEN to the current contract rather than deleted: gateway 30 ("repair
+loops terminate" → "a refused week is refused in ONE assessment"), craft G3, G4.
+
+### PROOF
+
+- **zero production executions/imports of the repair system.** Every surviving
+  mention of a deleted symbol is PROSE; measured symbol by symbol. The two
+  remaining type-importers (`fixtureMutationTransaction`,
+  `homeGameMutationController`) had their outcome type collapsed to `'accepted'`.
+- **`test:compile` is IDENTICAL to base** — product 35, devtools 51, tests 383,
+  the same 7 pre-existing file/scope pairs. Not one new error in any scope.
+- **§18 input week equals the week it validates** — `canonicalWorkouts` is now
+  `assembleWithFactDays(offered.workouts)`, the input, rather than a search result.
+- Stale comments naming the deleted engine were CORRECTED, not left: a comment
+  claiming a repair path exists is how the next agent rebuilds one.
+
+### NOT MEASURED YET
+
+**Worlds newly refusing.** Baseline is 155 of 405 suites failing at `6da38cee`
+(`scratchpad/BASELINE-FAILS-6da38cee.txt`). The after-sweep is owed, in a clean
+tree at this commit — my first attempt ran in the tree I was still editing and
+was discarded, for the second time this mission.
+
+Agent: demolition
+
+---
+
+## ⚠ CORRECTION — §18 IS **NOT** VALIDATION-ONLY, AND MY OWN TABLE UNDER-COUNTED
+
+**Sam, 2026-08-19:** *"§18 is NOT yet validation-only while power trimming,
+optional-session placement and stale-session clearing remain."* He is right, and
+the accounting was worse than he had reason to think.
+
+**The slice-2 table said 8 deleted + 3 class-B retained + 2 retained-disclosure
+= 13. Re-measured against the code, the true count is 14 and the retained
+MUTATING set is FIVE, not three.** Two errors of mine:
+
+1. **`finaliseSection18SafetyWeek` was missing from the table entirely.** It runs
+   at `section18AcceptedWeekGateway.ts:803` and rewrites the week.
+2. **`athlete_removal_typed_reduction` was filed as "written by the replan
+   owner", i.e. not §18's.** That is half true and the half that matters is
+   false: §18 calls `applyUserRemovalConstraintsToWeek` ITSELF, at lines 345 and
+   786, and that call mutates the week.
+
+**So §18 still performs FIVE mutations.** The claim "§18 validates and refuses"
+is true of the repair SEARCH and false of the boundary as a whole. It stays
+false until the five below are moved.
+
+### THE COMPLETE TABLE — ALL 14 MUTATIONS
+
+| # | mutation | exact old function / path | status | approved current owner | prod callers of that path | replacement status |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | replace an authored session with Rest | `repairOptionalRestCandidates` — gateway:715 | **DELETED** | scheduler (owns day purpose) | 0 | n/a — class C, never authorised |
+| 2 | move work onto another day | `repairByStackingCandidates` — gateway:784 | **DELETED** | weekly scheduler | 0 | owner already has it |
+| 3 | relocate a craft violation | `repairCraftViolationCandidates` — gateway:857 | **DELETED** | weekly scheduler | 0 | owner already has it |
+| 4 | re-place displaced strength | `repairDisplacedStrengthCandidates` — gateway:955 (+`relocateStrengthTemplate`, `authorityForDisplacement`) | **DELETED** | scheduler sites, composer fills | 0 | owner already has it |
+| 5 | add conditioning after authorship | `repairCoreConditioningShortfallCandidates` — gateway:1284 | **DELETED** | conditioning specialist | 0 | owner already has it |
+| 6 | author a whole replacement week | `input.regenerate()` cascade — gateway:1650 | **DELETED** | scheduler + composer | 0 | class C — a second weekly authority |
+| 7 | author a fallback week | `input.safeFallback()` + `buildSection18ProductionFallbackCandidate` (329 lines) | **DELETED** | scheduler + composer | 0 | class C — retired-planner fallback |
+| 8 | lower the contract until the week passes | `withDisplacedCapacityReduction` — gateway:1177 | **DELETED** | none — conform-back rewriting | 0 | class C, never authorised |
+| 9 | **trim power dose** | `weeklyPowerBudget` — gateway:493, called :817 | **RETAINED** | **power/strength specialist** (`powerExercisePool`, `powerPrimerPolicy`) | **2** (both inside the gateway) | **NOT STARTED** |
+| 10 | **place / withdraw the optional session** | `presentDeclaredOffer` — `section18OfferPlacement.ts`, called :847 | **RETAINED** | **scheduler / accepted-action owner** | **2** (both inside the gateway) | **NOT STARTED** |
+| 11 | **clear stale derived sessions** | `buildDerivedSessionExpiryCandidates` — `derivedSessionProvenance.ts`, called :791 | **RETAINED** | **accepted-state / lifecycle owner** | **7** (also `fixtureMinimalReplan:1075`) | **NOT STARTED** |
+| 12 | **apply stored athlete removals** | `applyUserRemovalConstraintsToWeek` — `userRemovalConstraints.ts`, called :345 and :786 | **RETAINED** | **accepted-state transaction** (the only mutation boundary) | **9** | **NOT STARTED** — was mis-filed in the slice-2 table |
+| 13 | **rewrite the week for safety** | `finaliseSection18SafetyWeek` — `section18SafetyFinaliser.ts`, called :803 | **RETAINED** | **composer + specialists** (safety belongs in authoring) | **4** (also `postGenerationConstraintValidation:1006`) | **NOT STARTED** — **omitted from the slice-2 table entirely** |
+| 14 | disclose a craft violation | inline, gateway | **RETAINED** | §18 itself | 1 | **CORRECT AS IS** — an explanation, not a change |
+
+**Only row 14 is legitimate under the target contract.** Rows 9-13 are the
+remaining work, in Sam's stated order: power trimming → power specialist;
+optional-session placement → scheduler/accepted-action owner; stale-session
+clearing → accepted-state lifecycle owner; and the two I under-reported,
+removal application → accepted-state transaction, and safety rewriting →
+composer.
+
+### §18 COMPLETION CONDITION — MEASURED, NOT CLAIMED
+
+| condition | state |
+| --- | --- |
+| accepts a finished week as input | ✅ |
+| returns acceptance or typed refusal only | ✅ `accepted \| impossible` |
+| cannot return or mutate a workout/week | ❌ — `canonicalWorkouts` is the week AFTER rows 9-13 |
+| cannot move / replace / add / remove / trim / clear | ❌ — trims (9), adds+removes (10), clears (11), removes (12), rewrites (13) |
+| zero production imports/executions of repair helpers | ✅ proven symbol by symbol |
+| input week byte-identical before and after validation | ❌ — not yet true, and NOT claimed |
+
+Agent: demolition
+
+---
+
+## THE CLEAN 405-SUITE COMPARISON — ONE SUITE MOVED, AND IT WAS RIGHT TO MOVE
+
+Both arms swept in untouched worktrees: baseline `wt-control` @ `6da38cee`,
+after `wt-after` @ `b4b19d45`. Sets in `scratchpad/BASELINE-FAILS-6da38cee.txt`
+and `scratchpad/AFTER-S18-FAILS-b4b19d45.txt`.
+
+| | suites | failing |
+| --- | --- | --- |
+| baseline `6da38cee` | 405 | **155** |
+| after the §18 demolition `b4b19d45` | 405 | **156** |
+
+**NEWLY FAILING (1):** `test:bible-anchors`
+**NEWLY PASSING (0):**
+
+**1,924 deletions moved exactly one suite.** No world newly refuses — the
+`impossible` count did not move at all, which is itself a finding: the repair
+search was not rescuing weeks in any swept world.
+
+⚠ **A HARNESS LIE ON THE WAY.** `pgrep -f "sweep.sh after-s18"` matched MY OWN
+monitor loop, whose command line contains that string, so the sweep read as
+"STILL RUNNING" for ~11 minutes after it had finished. Match the process
+(`^bash scripts/sweep.sh`), never the pattern you are searching with.
+
+### THE ONE FAILURE, RESOLVED AT ITS OWNER
+
+`last_high_stress_g3` — Sam's Bible law: *"last additional high stress is
+G-3"* — cited three sites. One was
+`postGenerationConstraintValidation.distanceBeforeFixture`, which lived **inside
+`buildSection18ProductionFallbackCandidate`**, the §18 fallback-week builder.
+Deleting that builder took the citation with it.
+
+**The LAW is current and approved. Its IMPLEMENTATION there was legacy** — a
+second authority applying a scheduling law while authoring a replacement week,
+downstream of the scheduler that had already chosen the days.
+
+Measured before deciding: `rules/weeklyScheduler.ts` **already enforces G-3**,
+at `sprintDayIsLegal` and throughout `appSprintDay` (`daysUntilNextGame >= 3`,
+"never inside G-3", WC-135/WC-138). The current owner has the capability.
+
+So the citation MOVED to the live owner rather than being dropped:
+`rules/weeklyScheduler.ts` / `sprintDayIsLegal`, with the `BIBLE_ANCHOR` marker
+at the decision. **`test:bible-anchors` 274/274.** MUTATION-PROVEN: removing the
+marker reds exactly that cell; tree restored byte-identical from my own backup.
+
+This is Sam's rule 5 executed — the current behaviour was extracted to its owner
+before the superseded remainder stayed deleted — and the anchor registry doing
+precisely the job it exists for: it caught a Bible law losing a site.
+
+Agent: demolition
+
+---
+
+## MOVE 1, STEP 1 — THE POWER BUDGET IS OUT OF §18's FILE (ownership cut NOT yet done)
+
+`rules/weeklyPowerBudget.ts` — 208 lines — now owns `weeklyPowerBudget`,
+`withPowerReduction` and `powerReductionReason`, lifted verbatim from
+`section18AcceptedWeekGateway.ts:457-616`.
+
+**§18 STILL CALLS IT.** This step moves the CODE, not the AUTHORITY, and the two
+are deliberately separate commits: a behaviour change hiding inside a relocation
+is the defect class this repo fights, so the relocation is proven inert first
+and the ownership cut is measured on its own.
+
+**PROVEN INERT:**
+
+| instrument | pre-move (`b4b19d45`) | after the move |
+| --- | --- | --- |
+| `test:compile` | product 35 / devtools 51 / tests 383 | **identical** |
+| `test:craft-tier` | 18 passed, 14 failed | **identical** |
+| `test:section18-v2` | 134 passed, 1 failed | **identical** |
+| `test:section18-gateway` | throws at import (red at base) | **identical throw** |
+
+⚠ **AND ONE ASSUMPTION WAS WRONG BEFORE IT COMPILED.** I wrote the new module's
+import as `./powerExercisePool` for `budgetedPowerSession`, `powerRows` and
+`withoutPowerRows`. They live in `./sessionRowCounting`. Checked rather than
+assumed, before the first compile.
+
+**STILL OWED FOR MOVE 1:** apply the budget on the AUTHORING side so the
+specialist never authors beyond it; guard it there and mutation-prove the guard;
+cut the §18 call; delete the now-dead import. Until that lands, mutation row 9
+of the 14-row table is still RETAINED and §18 still trims power.
+
+Agent: demolition
+
+---
+
+## ⚠ CORRECTION — "ZERO NEWLY REFUSED WEEKS" WAS AN UNSUPPORTED CLAIM
+
+**Sam, 2026-08-19:** *"Do not claim 'zero newly refused weeks' from the
+405-suite failure comparison alone. State the instrument and unit."* He is right.
+**A suite comparison's unit is the SUITE, not the world.** A suite can stay green
+while the worlds beneath it swap built for refused, and 155→156 says nothing
+about weeks. The claim was true, but I had not measured it.
+
+### THE INSTRUMENT — `scripts/world-census.ts`
+
+Walks the same world grid as `ladderCoverageWideCensusTests.ts` — same profile
+base, same 3 phases × 5 day-counts × club/no-club × 3 kits × 2 weeks, the same
+`generateProgramLocally` call — and emits **one line per world**:
+
+```
+<world id>	<built|refused>	<typed refusal family>	<delivered sessions>
+```
+
+The refusal family is the typed one (`error.name` + `code`/`failureSignature`),
+never the free-text message, which carries ids and would diff on noise.
+
+### THE RESULT — 180 DISTINCT WORLDS, IDENTICAL
+
+| | pre-demolition `6da38cee` | current tip `c1d3d466` |
+| --- | --- | --- |
+| distinct world ids | 180 | 180 |
+| built | **140** | **140** |
+| refused | **40** | **40** |
+| per-world diff | — | **byte-identical** |
+
+`diff` of the two files is EMPTY: every world id, every built/refused status,
+every typed refusal family and every delivered session count matches.
+
+**So the claim now stands, on the right instrument and unit:** removing §18's
+repair system — 1,924 deletions — changed the outcome of **no world**. Not one
+week newly refuses, not one loses a session. The repair search was not rescuing
+anything in any of the 180 worlds.
+
+That is also the strongest evidence yet that the search was pure overhead: it
+existed to fix weeks, and across the whole grid it fixed none.
+
+Files: `scratchpad/census-PRE-6da38cee.tsv`, `scratchpad/census-POST-c1d3d466.tsv`.
+
+Agent: demolition
+
+---
+
+## MOVE 1 — POWER TRIMMING. DONE, WORLD-IDENTICAL, AND **NOT** MUTATION-PROVEN
+
+### WHAT LANDED
+
+- `rules/weeklyPowerBudget.ts` owns the decision; `generateProgramLocally`
+  applies it **after the candidate is authored and before §18 sees it**.
+- The §18 call is **CUT** — `grep weeklyPowerBudget( src/rules/section18AcceptedWeekGateway.ts`
+  returns nothing but prose.
+- Guard `test:weekly-power-budget`, 6 cells, in the bible chain.
+- `test:compile` identical to base (35 / 51 / 383).
+- **Per-world census identical**: 180 worlds, 140 built / 40 refused, same typed
+  refusal families, same delivered session counts as `6da38cee`.
+
+### ⚠ THREE FINDINGS, AND TWO OF THEM ARE AGAINST MY OWN WORK
+
+**1. THE GUARD IS NOT MUTATION-PROVEN, SO IT IS NOT YET A GUARD.** Restoring the
+§18 trimmer — twice, including with its disclosure re-armed — leaves all six
+cells GREEN. The reason is the finding: **`finaliseSection18SafetyWeek` runs
+BEFORE the trimmer and has already stripped the excess power**, so the trimmer
+saw `removed = 0` and did nothing. **The code I cut from §18 was already inert in
+that position.** The cut is correct and the census proves it harmless, but no
+cell distinguishes the two trees, and a green cell that survives its mutant is a
+claim, not a proof. **Stated rather than dressed up.**
+
+**2. §18 STILL REMOVES POWER ROWS — via row 13, not row 9.** Measured: given 3
+budgeted power sessions against a budget of 2, §18 returns 2.
+`section18SafetyFinaliser` filters `row.role !== 'power'` and carries a
+`power_removed` action. **So Sam's step 6, "prove §18 cannot alter power rows",
+is NOT ACHIEVABLE UNTIL MOVE 5 LANDS.** Moves 1 and 5 are coupled; neither of us
+had spotted that. Cell `[2c]` records it and reds the day it stops being true.
+
+**3. GENERATION PROGRAMMES NO POWER AT ALL.** Across the full 70-world census, on
+**both** the pre-demolition tip and this one: **zero worlds carry a single power
+row**, while 50 of 70 declare `plannerSelectedWeeklyBudget: 2`. Pre-existing,
+identical in the control tree, **not caused by this move** — and it makes cell
+`[1]` vacuous, which cell `[3]` records rather than hides. This belongs to the
+composer/power specialist and is the largest open athlete-visible gap this
+mission has surfaced.
+
+**ONE MEASURED DIFFERENCE THE CENSUS DID NOT COVER:** at `6da38cee` the stored
+microcycle contract carried NO `power.plannerSelectedWeeklyBudget`
+(`{"n/a": 70}`); it now carries `{"0": 20, "2": 50}`. The field is stamped at
+authoring instead of inside the validator. Nothing athlete-visible changed — the
+census pins id, status, refusal family and delivered sessions — but the stored
+contract is not byte-identical, and saying "identical" without this line would
+be false.
+
+Agent: demolition
+
+---
+
+## THE POWER GAP — DIAGNOSED. AUTHORISED POWER DISAPPEARS AT BOUNDARY 3.
+
+**It is never stripped. It is never CREATED.**
+
+| # | boundary | power state (In-season, 4d, full gym, no club) |
+| --- | --- | --- |
+| 1 | scheduler / contract authorisation | **`eligible: true`, budget 2, `removalReason: null`, `prohibitedPower: false`** — AUTHORISED |
+| 2 | power specialist decision | `materialiseAuthoredSessions` → `decidePowerPrimer` runs (generateProgram:588, :1012) and owns `power_refused_lower_body_on_g2` |
+| 3 | **composer / materialisation** | ⚠ **`materialiseComposedWeek` CONTAINS THE WORD "power" ZERO TIMES.** It emits no power row |
+| 4 | pre-§18 authored week | 0 power rows. Row roles present: `conditioning, undefined` — **no strength row carries a role at all** |
+| 5-7 | safety finaliser / accepted / visible | 0, because there was never anything to carry |
+
+**THE CAUSE — A CAPABILITY STRANDED WHEN ITS AUTHORITY MOVED.** Power belongs to
+strength. When strength moved to the composer, power did not go with it:
+`materialiseAuthoredSessions` still DECIDES the primer, but `assembleAuthoredWeek`
+lays the COMPOSER's rows onto every strength day, and the composer's materialiser
+knows nothing about power. **The primer is decided and then overwritten.**
+
+Off-season is a true negative and must stay: `eligible: false`,
+`removalReason: early_offseason`, `prohibitedPower: true` — the Bible prohibits
+power in early off-season weeks 1-2. **In-season and Pre-season are both
+authorised with budget 2 and deliver zero.**
+
+**THIS ALSO EXPLAINS TWO EARLIER RESULTS.** The 180-world census was identical
+across the §18 demolition, and my power guard's mutants both survived — because
+in every generated world there has never been a single power row for any of it
+to act on. The §18 trimmer and the safety finaliser's `power_removed` path have
+been dead-in-effect the whole time; only a hand-stamped fixture ever reached them.
+
+**NOT YET BUILT.** The fix is composer-side delivery of the approved primer, then
+removal of the safety-finaliser power rewrite and the residual §18 paths. The
+existing specialist already carries Sam's G-2 rule, so the rules are not re-derived.
+
+Agent: demolition
+
+---
+
+## POWER IS DELIVERED — 0 → 96 WORLDS. AND IT COSTS FOUR WORLDS A REFUSAL.
+
+### THE TRACE THAT FOUND IT (real in-season world, probes on the production path)
+
+The specialist was never broken. Traced live, it chose: **Monday lower 2×3**,
+**Tuesday upper 2×3**, and on the **G-2 Thursday an UPPER primer 1×3 reasoned
+"G-2 tiny neural prime"** — Sam's rule obeyed exactly, lower refused, upper kept.
+`scheduleToCoachingPlan` carried all three onto the plan.
+
+**Then nothing placed them.** The only power-row builder lived in
+`defaultProgram.buildPowerRow`, private to the adapter — and the adapter authors
+no strength on composer-owned days. The decision was made correctly, carried
+correctly, and thrown away.
+
+### THE CONNECTION
+
+`buildPowerRow` is now **exported and CONSUMED** by `materialiseComposedWeek` —
+not re-implemented. The deload dose uses the existing `deloadPowerDose`. The
+composer chooses no exercise, no dose and no day; it places what the specialist
+decided, pre-lift, on the composer's own strength day.
+
+### CENSUS — EXPLICIT UNITS
+
+| unit | before | after |
+| --- | --- | --- |
+| distinct generated worlds | 180 | 180 |
+| distinct athlete setups | 90 | 90 |
+| worlds AUTHORISED for power | 96 | 96 |
+| **worlds RECEIVING power** | **0** | **96** |
+| **power rows delivered** | **0** | **192** |
+| authorised-but-undelivered | 96 | **0** |
+| built / refused | 140 / 40 | **136 / 44** |
+| delivered sessions | — | 422 |
+
+Budget never exceeded in any world. Early off-season remains power-free
+(`eligible: false`, `early_offseason`) — a true negative, preserved.
+
+### ⚠ THE COST — FOUR WORLDS NOW REFUSE, AND IT IS MY BUG, NOT AN HONEST REFUSAL
+
+```
+Pre-season/4d/club/Bodyweight Only/w1     Pre-season/4d/noclub/Bodyweight Only/w1
+Pre-season/4d/club/Bodyweight Only/w2     Pre-season/4d/noclub/Bodyweight Only/w2
+```
+
+Typed refusal: `main_strength_planner_selected_target — expected 3, actual 2`.
+
+**SINGLE-VARIABLE EXPERIMENT, and it is unambiguous:** disabling only the primer
+placement makes the world BUILD; restoring it REFUSES. Placing the primer costs
+that week one main-strength exposure.
+
+**This is NOT the "honest new refusal" Sam sanctioned** — that sanction covers
+weeks exposed by deleting repair. This is a regression introduced by my
+placement, and it must be fixed at the composer before merge. **My first
+hypothesis was wrong and is recorded as refuted:** restricting placement to days
+that already carry strength rows did NOT clear it, so the cause is not a
+power-only day.
+
+**NEXT, and not yet done:** find why a leading `role: 'power'` row costs a
+main-strength exposure — the suspect is session identity/evidence being
+re-derived from rows, where `exerciseOrder: 0` puts power first. **NOT MERGEABLE
+until those four worlds build.**
+
+### GUARD
+
+`test:weekly-power-budget`, 6 cells, green. Cell [3] **inverted itself**: it
+existed to record that no world programmed power, and it reddened the instant
+delivery started, naming the count — so it is now the positive assertion.
+**MUTATION-PROVEN:** disconnecting materialisation reds cell [3]; tree restored
+byte-identical.
+
+Agent: demolition
+
+---
+
+## ⚠ DEMOLITION PHASE — SAM'S RULING 2026-08-19: DELETE ALL LEGACY FIRST
+
+> *"STOP FIXING INTERMEDIATE PRODUCT BUGS. Intermediate failures, refusals,
+> missing power, broken classifications and worse test counts are allowed during
+> demolition. Record them, but do not stop demolition to repair them."*
+
+**From here the process changes.** No fix-as-you-delete, no world-count recovery,
+no full 405-suite gate between deletions. Structural checks only, commit in
+recoverable chunks, and everything broken goes on the REBUILD LIST below.
+
+### THE POWER TRIMMER IS DELETED, AND ITS FIRST LIVE ACT WAS DESTRUCTIVE
+
+Proven by probes on the production path, not inferred:
+
+```
+[CANDIDATE ] day=4  power:-  main_strength:push  strength_accessory:-
+[POSTBUDGET] day=4  (EMPTY)
+```
+
+`weeklyPowerBudget` did not merely take the third primer off Thursday. Its strip
+path re-finalises the day (`finaliseWorkoutAfterMutation(withoutPowerRows(...))`,
+`restoreMissingPlanPatterns: false`) and **DESTROYED THE WHOLE DAY, main lift
+included.** Main-strength exposures fell 3 → 2 and four worlds were refused.
+
+**It had been dormant only because no generated week had ever contained a power
+row.** Its first live action was to delete an authored strength session.
+
+**DELETED.** The allowance is now a PLACEMENT limit in the composer — place at
+most N — so nothing is ever stripped and nothing re-finalises an authored day.
+
+### ⚠ THE FIRST-ROW CLASSIFIER HYPOTHESIS IS REFUTED, AND I AM NOT DELETING IT
+
+Sam's mid-turn order was to delete the order-dependent classifier **if the trace
+confirms it**. **The trace refutes it.** `validateGeneratedWeek` counts main
+strength by scanning EVERY row for `role === 'main_strength'` with a declared
+pattern — no first-row read, no row-zero inference, no ordering dependence.
+Probes confirmed the composer, the merge and the candidate all carried three
+declared main-strength days; the loss happened later, in the trimmer.
+
+**So there is no first-row heuristic here to delete.** Deleting a
+correctly-ordered-independent classifier because a hypothesis predicted one would
+have removed working code and hidden the real cause.
+
+### REBUILD LIST — capabilities temporarily missing, to be rebuilt from contract
+
+| capability | approved contract / ruling | state |
+| --- | --- | --- |
+| **Power delivery to eligible athletes** | Power is part of strength work; only on a scheduler-authorised strength day; lower prohibited on G-2, upper legal; allowance must be delivered unless a typed safety reason prevents it | **BROKEN — 0 of 96 authorised worlds receive power.** The composer places it correctly (proven: 96/96, 192 rows), but the allowance now reads `contract.power.plannerSelectedWeeklyBudget`, which the DELETED trimmer used to stamp. The stamp must be rebuilt at the specialist. |
+| **Power allowance stamping on the contract** | Section 18 A phase-owned selected target | **BROKEN** — was written by the trimmer inside §18 |
+| §18 power disclosure `weekly_power_budget` | — | deleted with the trimmer, not to be rebuilt |
+
+Census at this commit: 180 worlds, 90 setups, **140 built / 40 refused**
+(back to the pre-power baseline), 434 delivered sessions, **0 power rows**.
+
+Agent: demolition
+
+---
+
+## AREA A COMPLETE — §18 IS VALIDATION-ONLY. ALL FIVE MUTATION STAGES DELETED.
+
+`section18AcceptedWeekGateway.ts`: **1804 → 875 lines** (929 deleted).
+
+| stage | what it did | now |
+| --- | --- | --- |
+| repair search + 5 generators | Rest substitution, stacking, relocation, conditioning injection, candidate authoring | deleted (slice 2) |
+| regenerate / safeFallback cascade | tried three more weeks | deleted (slice 2) |
+| `withDisplacedCapacityReduction` | lowered the contract until the week passed | deleted (slice 2) |
+| `weeklyPowerBudget` | trimmed power — **destroyed an authored day** | **deleted, file gone** |
+| `applyUserRemovalConstraintsToWeek` | applied stored athlete deletions | **deleted** → accepted-state transaction |
+| `buildDerivedSessionExpiryCandidates` | cleared stale derived sessions | **deleted** → lifecycle owner |
+| `finaliseSection18SafetyWeek` | rewrote the week for safety; still stripped power | **deleted** → composer + specialists |
+| `presentDeclaredOffer` | placed/withdrew the optional session | **deleted** → scheduler |
+| read-time removal in `resolveFinalVisibleSection18Week` | applied deletions while PROJECTING | **deleted** (area D) |
+
+**FILES DELETED:** `rules/weeklyPowerBudget.ts`, `__tests__/weeklyPowerBudgetTests.ts`.
+
+`test:compile` shows only the 7 pre-existing baseline pairs — no new error in any
+scope.
+
+### REBUILD LIST — added by area A
+
+| capability | contract | owner to rebuild at |
+| --- | --- | --- |
+| Applying stored athlete deletions | a deletion is an accepted-state input, not a render filter | accepted-state transaction |
+| Clearing stale derived sessions | derived work expires when its source fact does | accepted-state / lifecycle |
+| Safety rewriting of a week | §18 safety policy | composer + specialists (at authoring) |
+| Optional-session placement/withdrawal | 1B offer survival rulings, Sam 2026-08-06 | scheduler |
+| Power allowance stamping + delivery | Section 18 A phase-owned target; power is strength work | power specialist + composer |
+
+Agent: demolition
+
+---
+
+## AREAS E/G/H — ELEVEN SUPERSEDED MODULES DELETED, WITH THEIR OBSOLETE TESTS
+
+Each proven at **zero production importers** (`scratchpad/tools/imports.js`,
+which resolves real specifiers rather than grepping the word) AND given a named
+current owner before deletion — the Finding 0 rule, so the mobility-pairing class
+of built-but-unwired work is never swept up.
+
+| deleted module | area | current owner |
+| --- | --- | --- |
+| `utils/trainAroundEngine.ts` | E | injury prohibitions on the contract + `injurySessionClassifier` |
+| `utils/blockAdjuster.ts` | F | `applyAdjustmentEvents` / decision ledger own `dateOverrides` |
+| `utils/weeklyCoachUpdate.ts` | D | `programControlActions` + `CoachStatusScreen` |
+| `store/preRebuildEnvelopeMigration.ts` | **G** | none — a one-time migration for athletes installing over the pre-rebuild world. **No production users exist.** |
+| `utils/recoveryAddonBuilder.ts` | E | placement retired by ruling; generation places no add-ons |
+| `store/injuryEpisodeCommand.ts` | F | `injuryEpisodeTransaction` (5 prod importers) |
+| `screens/home/homeGameMutationController.ts` | E | `fixtureMutationTransaction` |
+| `utils/section18ProgramObservation.ts` | H | the §18 evaluator, called directly |
+| `utils/coachInjuryTargetResolver.ts` | F | `pendingInjuryResolver` (live, CoachScreen) |
+| `utils/capacityAnswerGap.ts` | H | `profileStore` + `postGenerationConstraintValidation` via `canScoreCapacity` |
+| `components/TrunkSupportSection.tsx` | H | none — zero importers anywhere |
+
+**OBSOLETE TESTS DELETED (7, 3,175 lines)** — subject is the deleted module:
+`trainAroundEngineTests`, `weeklyCoachUpdateTests`,
+`preRebuildEnvelopeMigrationTests`, `recoveryAddonAttachmentTests`,
+`injuryEpisodeCommandTests`, `capacityRenderSafetyTests`,
+`coachInjuryContractTests`. Six `package.json` scripts deregistered; the bible
+chain is intact at 402 suites.
+
+⚠ **AND A BULK DELETION I CAUGHT AND REVERSED.** Matching tests by IMPORT rather
+than by SUBJECT first removed 16 further suites whose subject is a LIVE owner —
+`fixtureMutationTransactionTests`, `programBlockRolloverTests`,
+`section18ContractV2Tests`, `weekRebuildIntegrationTests`, `readinessSignalTests`
+and others. They merely imported a dead module. **All 16 were restored.** They
+now carry dangling imports and are RECORDED as broken rather than deleted:
+losing a live owner's guard is not "deleting an obsolete test", and the rebuild
+phase needs them.
+
+Agent: demolition
+
+---
+
+## ⚠ INSTRUMENT TRAP — `imports.js` WITH A RELATIVE ROOT REPORTS **ZERO FOR EVERYTHING**
+
+Caught on the first census of this session, before any deletion.
+
+```
+node tools/imports.js .    store/quiescentBoot  ->  importers=0 (prod/script=0)
+node tools/imports.js $WT  store/quiescentBoot  ->  importers=26 (prod/script=5)
+```
+
+`ROOT` is used with `path.join`/`path.relative`, so a relative `.` silently
+resolves nothing and **every file looks dead**. It does not warn and it does not
+exit non-zero — it prints a clean, confident zero.
+
+**The census that triggered it returned `importers=0` for ten modules including
+`quiescentBoot` (the live boot owner) and `appHydrationGate` (mounted by
+`RootNavigator`).** Acting on that output would have deleted the app's boot path
+under a "zero production imports" proof. The tell was that the answer was zero
+for *everything*, including files I already knew were live — a census where
+nothing is reachable is measuring nothing.
+
+**ALWAYS pass an ABSOLUTE root, and always keep one known-live module in the
+argument list as a positive control.** A deletion instrument that cannot show a
+non-zero is not evidence. Same class as [[a-green-gate-is-a-claim]].
+
+---
+
+## AREA B/G — THE HYDRATION INGRESS CLASSIFIER IS DELETED (zero production execution)
+
+**Surviving owner:** `readStoredWorldOrResetClean` (`store/unreadableWorldResetDoor.ts`
+→ `rules/unreadableWorldReset.ts`), live at boot ingress in
+`programStore.ts:419`. Sam, 2026-08-10: a stored world the current code cannot
+read is **RESET CLEAN** and the athlete is told. That is the whole of "can this
+envelope be read", and it is the canonical accepted-state loading Sam's order
+says to PRESERVE — it is preserved untouched.
+
+**Proof the target was superseded, on two independent grounds:**
+
+1. **Zero production callers.** `classifyProgramHydrationIngress`,
+   `requireProgramHydrationIngress` and `dropRetiredWeekOverlaysAtHydration` were
+   referenced by NOTHING outside tests and one stale comment. `programStore`
+   imported the module for exactly one live symbol — the version constant — plus
+   a type it never used.
+2. **The suites that drove it say so themselves.** `slice4PersistenceProbe`:
+   *"nothing reads a stored program back at all (`partialize` persists inputs
+   only)"*. Both remaining callers hand-rebuilt a function deleted on 2026-08-14
+   out of two pieces in order to keep asserting on it.
+
+| deleted | lines | why |
+| --- | --- | --- |
+| `store/programHydrationIngress.ts` | 379 | pre-release legacy/canonical envelope classifier; zero production execution |
+| `__tests__/hydrationUpgradePathTests.ts` | 325 | SUBJECT is the deleted upgrade path — hydrating a previous-build store |
+| `__tests__/fixtures/previousBuildStore-49c8579.json` | 45 | obsolete seed, zero code readers (named only in the deleted test's prose) |
+
+**PRESERVED, and deliberately:** `previousBuildStore-1e9c822.json` is still read
+by the LIVE `hydrationRefusalQuarantineTests` — matching fixtures by name would
+have taken a live suite's payload with it. `programHydrationProjection.ts` stays:
+its name says hydration but its live caller is
+`canonicaliseAcceptedStateCandidate`, on the ACCEPTANCE boundary.
+
+`PROGRAM_STORE_PERSISTENCE_VERSION` moved to `programStore.ts`, the store that
+writes it. With no second reader there is no one left to agree with about it.
+
+**Two live suites detached, not deleted** — the ⚠ lesson from areas E/G/H holds:
+`programHydrationOwnershipTests` and `slice4PersistenceProbe` are about LIVE
+owners and merely imported the dead one. Their classifier cells (1, 13, 18) were
+its implementation tests and went with it; cell 15's incidental classification
+assert was dropped.
+
+### PROOF
+
+```
+test:compile   control 3f97cc67 = 32 file(s) over baseline
+               after   B-1      = 32 file(s) over baseline     DIFF: IDENTICAL
+test:program-hydration-ownership
+               control 3f97cc67 = passed 7/17  failures 10
+               after   B-1      = passed 4/14  failures 10
+```
+
+Cells run 17 → 14, passes 7 → 4 — **exactly the three deleted classifier cells,
+and not one failure moved.** The suite's hardcoded `/17` denominator was updated
+to `/14` in the file's own stated-number convention; leaving it would have made
+the suite misreport its own size.
+
+**REBUILD LIST — nothing added.** A path with zero production execution loses no
+athlete capability when deleted. The retired-overlay filter
+(`dropRetiredWeekOverlaysAtHydration`) is the only behaviour that went, and the
+law it served — repeat-week has no writer — is now held by there being no writer
+at all, which `storedStateWriterAuditTests` still asserts across the tree.
+
+Agent: demolition
+
+---
+
+## AREA C — THE POST-COMPOSER SAFETY REWRITE IS DELETED
+
+`rules/section18SafetyFinaliser.ts` (654 lines) rewrote a week that the
+composer had already finished. Not a validator with a repair branch — an
+authoring engine sitting behind a validator's name:
+
+- `conformWorkout` over every workout — **conforms a composed week to policy**
+- `collapseWorkoutToRest` — **substitutes Rest**
+- cloned main-strength rows onto OTHER days to satisfy `requiredSafePatterns`,
+  with `exerciseOrder: 1` — **moves sessions and rewrites rows**
+- stripped `planEntryId`, `strengthIntent`, `strengthIntentDiagnostics` and
+  `strengthPatternContributions` from what it rewrote — **re-authored accepted
+  content and erased the provenance that says who authored it**
+
+Every one of those is a named bullet in Sam's area C order.
+
+**Surviving owner:** the composer and its specialists, at authoring time —
+already recorded on the rebuild list by area A ("Safety rewriting of a week →
+composer + specialists (at authoring)"). Area A deleted §18's own copy of this
+call; the FILE survived because two other callers still ran it.
+
+### THE TWO LIVE CALLERS, AND WHY EACH WAS A DIFFERENT OFFENCE
+
+| caller | when it ran | offence |
+| --- | --- | --- |
+| `postGenerationConstraintValidation.ts:1006` | after generation | area C — repaired a week after the composer finished |
+| `programStore.canonicaliseAcceptedBoundaryState` (3 sites: overlays, date-keyed overrides, today's workout) | as a week entered ACCEPTED STATE | area B — **wrote accepted exercise choices at the acceptance boundary** |
+
+The second is the one worth naming. It was not read-time and it was not
+generation: it conformed each workout at the moment it became accepted, so the
+athlete's accepted week and the week the composer authored were never required
+to be the same object.
+
+**WHAT STAYS, AND THE DISTINCTION THAT DECIDED IT.** `requireSection18AcceptedWeek`
+is untouched and still runs at post-generation. **A refusal is not a repair.**
+Sam's order deletes paths that rewrite; it does not delete boundaries that
+refuse. The `throw` sites in `postGenerationConstraintValidation` — schedule
+cap, unavailable date, time cap — are all still there.
+
+### PROOF
+
+```
+test:compile   control 3f97cc67 = 32   after C-1 = 32     DIFF: IDENTICAL
+test:week-validator    control 47 passed / 2 failed  = after
+test:generated-week    control 36 passed / 0 failed  = after
+test:section18-gateway prints no totals line in BOTH (pre-existing)
+```
+
+A stale `typecheck-baseline.json` entry for the deleted test was removed — the
+ratchet had flagged it `2 → 0 (clean)`.
+
+**DELETED:** `rules/section18SafetyFinaliser.ts` (654),
+`__tests__/section18SafetyBoundaryTests.ts` (994) — its subject was the deleted
+module. Script `test:section18-safety` deregistered from its key and from **all
+three** chains that ran it (`test:bible`, `test:bible:extended`,
+`test:bible:report`); a substring replace would have silently missed two, and an
+exact-count assert is what caught it.
+
+**LEFT DELIBERATELY INTACT:** the denylist regex in `generatedWeekContractTests`
+still names `section18SafetyFinaliser` and `wholeWeekRepairEngine`. Both are
+deleted, so neither can ever match — removing them from a denylist would weaken
+a live law to tidy a name.
+
+### REBUILD LIST — added by area C
+
+| capability | approved contract / ruling | state |
+| --- | --- | --- |
+| Safety conforming of a finished week | typed injury/readiness/participation safety policy | **BROKEN** — no owner conforms after authoring. Must be rebuilt IN the composer/specialists, not after them. |
+| `mainStrengthFrequencyCeiling` consolidation | §18 safety ceiling | **BROKEN** — the ceiling is still declared on the contract and nothing enforces it post-authoring |
+| Required-safe-pattern representation | §18 `requiredSafePatterns` | **BROKEN** — was satisfied by cloning a row onto another day, which is authoring; the composer must place it |
+| Safety conforming at the acceptance boundary | — | **DELETED, not to be rebuilt** — acceptance stores a decision, it does not author one |
+
+Agent: demolition
+
+---
+
+## AREA B/E — THE VISIBLE-INTO-CANONICAL MERGE IS DELETED
+
+`materialiseVisibleSystemWork` (in `rules/rollingHorizonRepair.ts`) took the
+resolver's **read-time derived** sessions and merged them into the **canonical**
+week that then got accepted and persisted. A filler synthesised to draw a screen
+became accepted programming. That is area B ("writes derived replacements
+permanently") and area E ("old adapter materialisation") in one function.
+
+**The cost is not hypothetical — `sessionResolver.ts:782` documents it, measured
+2026-08-05 under `LR27_PROBE=1`:** the resolver derives a G-1/G+1 filler, this
+function persists it into the week overlay, and on the NEXT resolve the stored
+filler arrives back as a `templateWorkout` and is snapshotted into its own
+successor. **Provenance depth +1 and payload x2, every launch, on disk.** A
+read-time derivation that gets written becomes an input to itself.
+
+**Surviving owner:** the canonical week is what acceptance stores; derived
+sessions are derived on every read from accepted choices plus active facts, and
+are never promoted. That is Sam's preserved "read-only reconstruction", and it
+is exactly what the merge was defeating.
+
+One call site (`acceptedStateTransaction.ts:2195`, the fixture-replan
+alternatives branch), zero test references. `rollingHorizonRepair.ts` 211 → 185
+lines; its five other exports are live shared search/closure utilities and were
+NOT touched — deleting the file for one bad function would have taken
+`rollingHorizonDependencyClosure` and the Cartesian search with it.
+
+### PROOF, AND AN HONEST GAP
+
+```
+test:compile   control 3f97cc67 = 32   after D-1 = 32     DIFF: IDENTICAL
+```
+
+**I could not get behavioural signal on the path I changed, and the reason
+matters.** The three suites that guard it —
+`test:fixture-mutation-transaction`, `test:fixture-conditioned-replan`,
+`test:chained-mutation-continuity` — **all die at import with
+`MODULE_NOT_FOUND` on `homeGameMutationController`, and they do so IDENTICALLY
+AT CONTROL.** That module was deleted in the earlier areas E/G/H chunk and the
+breakage was recorded there. So this fixture path is already dark, and D-1 lands
+in the dark: it added nothing, but nothing checked it either. Read the pass
+count, not the exit code — all three print no totals line at all.
+
+**On the rebuild list below this is the entry that matters most**, because the
+three suites that would catch a mistake here are the same three the rebuild
+phase must restore first.
+
+### REBUILD LIST — added by area B/E
+
+| capability | contract | state |
+| --- | --- | --- |
+| Fixture-replan alternatives keeping dependency-owned derived work | a derived session may deliberately displace a canonical one while its trigger is active | **BROKEN** — alternatives now carry the canonical week only. If this capability is real it must be rebuilt as a DERIVATION at read, never as a write into the accepted week. |
+| Guards for the whole fixture-mutation path | — | **BROKEN AT CONTROL, not by this chunk** — 3 suites dead at import on `homeGameMutationController` since the areas E/G/H chunk |
+
+Agent: demolition
+
+---
+
+# CHECKPOINT 2026-08-19 — CLEAN, AT `7f67f5eb`. NEXT DELETION AREA BELOW.
+
+## RUNNING TOTALS
+
+| span | files deleted | lines removed |
+| --- | --- | --- |
+| whole mission (`6da38cee`..`7f67f5eb`) | **25** | **11,964** |
+| this session (`3f97cc67`..`7f67f5eb`) | 5 | 2,530 |
+
+Three chunks landed this session, each with a control-compared `test:compile`
+that was **IDENTICAL to control (32 = 32) every time**:
+
+| commit | what went |
+| --- | --- |
+| `a35ca63e` | legacy hydration ingress classifier (area B/G) |
+| `3b5301e0` | post-composer safety rewrite (area C) + its acceptance-boundary caller (area B) |
+| `7f67f5eb` | visible-into-canonical merge (area B/E) |
+
+## ⚠ A NEAR-MISS THE NEXT SEAT WILL HIT TOO
+
+Censusing "which legacy functions are dead" with
+`grep -rl <fn> ... | grep -v <defining file>` reported **zero production
+callers** for `migrateLegacyUserRemovalConstraint`,
+`deriveLegacyInjuryFromEpisodes` and `composeCoachAdjustmentReplyLegacy`.
+
+**All three are live.** Each is called from INSIDE its own defining file — the
+exact file the filter removed. Excluding the definition also excludes the
+caller. **Deleting on that reading would have cut three live paths under a
+"zero callers" proof.**
+
+Census a function by reading ALL of its references including the ones in its own
+file, and separate "defines" from "calls" by hand. This is the function-level
+twin of the `imports.js` relative-root trap recorded above: both produce a
+confident, clean-looking ZERO.
+
+## NEXT EXACT DELETION AREA — IN THIS ORDER
+
+**1. AREA C, remainder — `utils/postGenerationConstraintValidation.ts` (1,708 lines).**
+The safety rewrite is out; the file still REPAIRS. `collapseWorkoutToRest` at
+~line 990 deletes sessions to satisfy `temporary_schedule_max_sessions`.
+Decide it the same way C-1 was decided: **a throw is a refusal and stays, a
+rewrite is a repair and goes.** The `throw` sites (schedule cap, unavailable
+date, time cap) are already correct and must survive.
+
+**2. AREA C — the `restoreMissingPlanPatterns` restore branch**
+(`utils/workoutCanonicalisation.ts:1004`). This is Sam's "restores missing
+patterns" bullet. **MEASURED: every one of the four production call sites passes
+`false`** (`postGenerationConstraintValidation:553`, `section18SafetyFinaliser:187`
+— now deleted, `programStore:2430`, and a pass-through at `:1383`). But the
+DEFAULT is ON (`!== false`), so any caller that omits it restores. Delete the
+branch and the option; prove first that no caller omits it.
+
+**3. AREA D — `utils/sessionResolver.ts` (2,709 lines), the read-time synthesiser.**
+The largest remaining read-time authority. It calls `buildDerivedSession` while
+resolving for display (~lines 898, 964) and pulls in `rollingHorizonRepair` at
+`:1089`. D-1 removed the WRITE that made its output permanent; this is the
+synthesis itself. Sam: projection becomes formatting/explanation only.
+
+**4. AREA G — the remaining legacy migrations.** Live, and each needs the
+by-hand census above: `migrateLegacyTemporarySourceFacts`,
+`migrateLegacyWeeklyExposureContractV2`, `migrateLegacyExcludedNames`,
+`migrateLegacyInjuryEpisodes`, `migrateLegacyReductionV2`,
+`migrateLegacyUserRemovalConstraint`, `deriveLegacyInjuryFromEpisodes`,
+`composeCoachAdjustmentReplyLegacy`. **No production users exist and a clean
+reinstall is allowed**, so stored-shape migration has no one to serve.
+
+**5. AREA H — the 16 suites dead at import.** Still dark since the E/G/H chunk
+(`homeGameMutationController` and friends). They are guards for LIVE owners, so
+they are RESTORED, not deleted — but until then the fixture-mutation path has no
+cover, which is why D-1 could not be behaviourally checked.
+
+## THE INSTRUMENTS
+
+`scratchpad/tools/imports.js` — **ABSOLUTE root only**, and always pass one
+known-live module as a positive control. Control worktree for this session:
+`scratchpad/wt-ctl` at `3f97cc67`, `node_modules` symlinked.
+
+Baseline for every comparison: `test:compile` = **32 files over baseline** at
+`3f97cc67`.
+
+Agent: demolition
+
+---
+
+# SESSION 3 — THE FIVE ORDERED AREAS, AND THE COMPLETION SWEEP
+
+**Started at `13fad4ec`. Control worktree `wt-ctl`, detached at `13fad4ec`,
+never edited.** Every chunk was compared against it before it was committed.
+
+**BASELINE, measured in the control tree:** `test:compile` = 34-line
+fingerprint, TOTAL **470** errors against baseline, **23** file/scope pairs
+worse. Product/devtools/scripts scope = three "improved" lines and nothing else.
+
+**THE ONE MEASUREMENT THAT MATTERS, AND IT HELD SEVEN TIMES:** after every
+chunk, `[product]`, `[devtools]` and `[scripts]` compile scope was **IDENTICAL
+to the control**. Not one new error in any production scope across 5,559 deleted
+lines. Test scope moved 470 → 501 and 23 → 41 worse pairs, all in `[tests]` —
+the suites whose implementation subject was deleted.
+
+## THE SEVEN CHUNKS
+
+| commit | what went |
+| --- | --- |
+| `e7639a98` | area 1 — the post-generation constraint layer's write-time rewriting |
+| `84695756` | area 2 — the pattern-restore authority |
+| `89163523` | area 3 — the resolver's read-time synthesis |
+| `91c836ad` | area 4 — six obsolete persistence migrations |
+| `d6883de5` | area 5 — test disposition by SUBJECT |
+| `c461977b` | completion — the acceptance boundary's own rewriting |
+| `17c45279` | completion — the legacy-unknown evidence mode |
+
+**Session total: 26 files, 613 insertions, 5,559 deletions, 2 files physically
+deleted. Whole mission (`6da38cee`..`17c45279`): 83 files, 17,490 deletions, 27
+files physically deleted.**
+
+## AREA 1 — `postGenerationConstraintValidation.ts`, 1705 → 473 lines
+
+It was a **second programming authority sitting on the store's write
+primitives**. Every export returned a REWRITTEN object. Deleted: the workout
+rewriter, the week/microcycle/program/overlay rewriters, the contract
+re-authoring (`reResolveContractForActiveConstraints`), the legacy v1 per-week
+ledger, the five `validateLive*Write` wrappers, and
+`stage/commit/revalidateLiveStoredProgramSafety` — which restaged and committed
+**every persisted program surface** through the accepted-state transaction after
+any constraint change, as if it were an athlete decision.
+
+**PRESERVED, VERDICTS UNCHANGED:** `temporary_schedule_max_sessions_not_preserved`,
+`temporary_schedule_unavailable_date_not_preserved`,
+`temporary_time_cap_not_preserved`, `Final effective-week exposure contract
+unresolved`, and `requireSection18AcceptedWeek` at all three live write
+surfaces. **A throw is a refusal and stays. A rewrite is a repair and is gone.**
+
+## AREA 2 — the restore authority
+
+The canonicaliser PUT WORK BACK when a day stopped representing a pattern the
+plan intended — the pre-mutation row, or a lift invented in the canonicaliser
+itself. **An athlete's removal, an injury restriction and an equipment answer
+all arrive as the same thing: a missing pattern.** Its two hold-back inputs
+(`excludedIdentities`, `legalIdentityForPattern`) went with it; a pass that has
+to be told when not to fire is a pass that should not fire.
+
+⚠ **INSTRUMENT LESSON.** A brace-depth scan to delete a function cut its HEAD
+and left its BODY, and the file still parsed as a fragment. Recovered from my
+own committed state, ONE path, and redone line-based — a top-level function ends
+at a line that is exactly `}` — then parse-checked with sucrase. **Every
+function deletion after this point was line-based and parse-checked.**
+
+## AREA 3 — `sessionResolver.ts`, 2709 → 1808 lines
+
+Five layers were inventing and rewriting sessions on every render.
+`applyGameProximity` (251 lines) built a mobility flush on G+1, replaced the day
+with a Gunshow on G-1, and rewrote a G-2 session's every row — **none of it
+stored, so the week the athlete SAW and the week §18 COUNTED were different
+objects, and the day could not be edited at all.** `section18TierFour` (166
+lines) ran the §18 gateway over the week being DRAWN and installed its answer.
+`applyInjuryFilterPass` was **the second injury owner, and the file's own
+docblock said so.**
+
+**THE DISTINCTION THAT DECIDED EVERY CALL: a projection may HIDE, it may not
+CREATE.** `applyAwayPass` still takes the club's night and fixture off a day
+inside a live trip. What went is the half that BUILT a replacement.
+
+## AREA 5 — and the reclassified guard that caught me
+
+**34 of the 36 affected suites are PRESERVED.** Their subject is a surviving
+owner; they merely imported something that went. Matching by IMPORT is not
+matching by SUBJECT — the mistake this mission already made once, on 2026-08-16,
+when 16 suites were deleted and all 16 had to be restored.
+
+`resolverDisplacementSweepTests` was RECLASSIFIED rather than deleted. Its table
+proved athlete content outranked each of six derivers; all six are gone. Its
+ratchet now says the stronger thing — **the resolver may not build derived
+content at all** — and **on its first run it went red and found Pass 2, the
+read-time conditioning placement engine, which I had missed while deleting Pass
+3 beside it.** MUTATION-PROVEN: re-adding one `buildDerivedSession(` call reds
+cell [1] and nothing else; tree restored byte-identical.
+
+## THE COMPLETION CENSUS
+
+Positive control present in every scan; absolute roots only.
+
+| condition | state |
+| --- | --- |
+| zero legacy production execution | **MET** for every path measured; two named compatibility bridges survive with reasons (below) |
+| zero competing program writers | **MET** — 0 repair generators, 0 whole-week search, 0 safety finaliser, 0 visible-into-canonical merge; the two remaining name-hits are PROSE |
+| zero post-acceptance repair | **MET** — 0 acceptance-boundary canonicalisers, 0 stored-surface restage, 0 restore pass |
+| zero read-time program mutation | **MET in the resolver** (all seven authoring calls = 0, comment-stripped) and 0 across the whole projection layer |
+| zero obsolete persistence compatibility | **MET but for one**, named below |
+| obsolete modules + implementation-specific tests deleted | **MET** — 27 files across the mission |
+
+### THE THREE THINGS I DID NOT DELETE, AND WHY
+
+**These are stated, not hidden. "Legacy" in a name is not authority to delete.**
+
+1. **`migrateLegacyUserRemovalConstraint`** — bridges a live removal constraint
+   that has no linked ledger adjustment. Live doors still write removal
+   constraints, so it is **not provably a stored-version upgrade.** Needs its
+   own unit.
+2. **`deriveLegacyInjuryFromEpisodes`** and the `InjuryEpisodeV1 → InjuryState`
+   bridge — read by the LIVE coach path in ~25 production places. Deleting the
+   bridge without the readers breaks live coach behaviour. **This is the largest
+   remaining compatibility surface in the app.**
+3. **`visibleProgramProjection`'s injury filter** — the resolver's own docblock
+   names it THE single visible-program gate and the one injury owner. It filters
+   what is shown and writes nothing. Deleting it leaves **no** injury owner
+   anywhere, which is a different act from removing a duplicate. **Sam's call.**
+
+## REBUILD LIST — behaviour now missing or broken
+
+**Nothing here is fixed. Every row names the owner it must be rebuilt at.**
+
+| capability | owner to rebuild at |
+| --- | --- |
+| session-cap compliance — which session an athlete loses | weekly scheduler |
+| time-cap compression of a session | composer |
+| unavailable-date day clearing | weekly scheduler |
+| injury / equipment row removal after authoring | composer + specialists |
+| re-shaping already-accepted weeks when a constraint arrives | rebuild |
+| filling a main-strength slot a removal/injury/equipment answer emptied, reading the typed `cause` | composer, against Sam's ladder |
+| G+1 / G-1 / G-2 fixture-proximity day rules | weekly scheduler, beside the G-3 anchor |
+| no upper-body stacking in the 48h pre-game window | weekly scheduler |
+| filling a freed fixture slot | scheduler + composer |
+| the away SUBSTITUTION (Sam's ruling stands) | composer, via `clubInputsAfterTravel` |
+| conditioning placement on an empty day, its running cap, the off-feet swap | conditioning specialist at authoring |
+| shape canonicalisation of a stored workout | composer, at authoring |
+| a constraint written without a typed source fact is no longer back-filled | the constraint's writer |
+| **carried from earlier sessions:** power allowance stamping + delivery; applying stored athlete deletions; clearing stale derived sessions; safety rewriting of a week; optional-session placement/withdrawal; required-safe-pattern representation; `mainStrengthFrequencyCeiling` enforcement; fixture-replan alternatives keeping dependency-owned derived work | as recorded above |
+
+### TEST DEBT, RECORDED
+
+- **34 preserved suites** now carry dangling references to deleted symbols. They
+  guard live owners and the rebuild phase needs them.
+- **37 of 436 test files are registered by no npm script** and run in no sweep.
+  `postGenerationConstraintValidationTests` was one of them — it had been
+  guarding nothing, which is why deleting it cost no cover.
+
+Agent: demolition
+
+---
+
+## THE COMPREHENSIVE INVENTORY — BOTH ARMS, SAME INSTRUMENT, 398 SUITES
+
+Run once, at the end, as ordered. Control arm in `wt-ctl` detached at
+`13fad4ec`, never edited; after arm in `wt-demo` at `6502ecd5`.
+
+| | suites | failing |
+| --- | --- | --- |
+| control `13fad4ec` | 398 | **162** |
+| after the demolition `6502ecd5` | 398 | **174** |
+
+**NEWLY FAILING (13):** `test:away-flow`, `test:coach-pending-clarifier`,
+`test:coach-revision-override-writer`, `test:constraint-plan`,
+`test:equipment-scopes`, `test:exercise-exclusions`, `test:persistent-injury`,
+`test:readiness-ownership`, `test:request-program-adjustment`,
+`test:resolver-injury`, `test:strength-progression-integration`,
+`test:visible-surfaces`, `test:workout-canonicalisation`.
+
+**NEWLY PASSING (1):** `test:displacement-sweep` — the reclassified read-time
+authoring guard.
+
+**⚠ THE UNIT IS THE SUITE, NOT THE WORLD.** Sam's own correction of 2026-08-19
+applies here unchanged: a suite comparison says nothing about weeks. **No
+per-world census was run this session** — the world grid measures what
+GENERATION produces, and this session deleted post-generation, write-time and
+read-time layers rather than generation itself. That measurement is owed and is
+not claimed.
+
+Every one of the 13 is the behavioural cover for a capability on the rebuild
+list — the away substitution, the exclusion fill, the resolver's injury
+projection, the canonicaliser's restore. **They are the point, not a surprise:
+Sam's ruling sanctions worse counts during demolition, recorded and not fixed.**
+
+Sampled by hand rather than assumed: `test:workout-canonicalisation` fails on
+`missing hinge is restored from allocated reference` — a cell whose subject is
+the deleted restore pass, inside a suite whose subject (the canonicaliser) is
+alive. That is cell-level obsolescence in a PRESERVED suite, which is exactly
+the shape rule 5 says to leave for the rebuild phase.
+
+### TWO SUITES THAT REDDENED AND WERE NOT LEFT RED
+
+`test:bible-anchors` and `test:bible-coverage` both fell to one missing
+citation: `deload_block_length_weeks` cited
+`postGenerationConstraintValidation.ts` / `weekInBlock`, deleted in area 4.
+**The LAW is current and approved; only that implementation of it was legacy.**
+The citation MOVED to the live owner — `store/acceptedStateTransaction.ts`,
+which stamps `weekInBlock` when a week is accepted. 274/274, mutation-proven,
+tree restored byte-identical. **Second time this mission the anchor registry has
+caught a Bible law losing a site** (`last_high_stress_g3` was the first). Those
+two are excluded from the 13 above because they were repaired, not recorded.
+
+## THE SURVIVING OWNER MAP
+
+| question | the one owner |
+| --- | --- |
+| which days carry what, spacing, fixture proximity | `rules/weeklyScheduler.ts` |
+| what content fills an authored day | `rules/composeWeek.ts` + its specialists |
+| is a finished week lawful | `rules/section18AcceptedWeekGateway.ts` — **accepts or refuses; authors nothing** |
+| may this write land | `utils/postGenerationConstraintValidation.ts` — **473 lines, every export returns `void` and speaks by throwing** |
+| what is stored | `store/acceptedStateTransaction.ts` — the single write boundary |
+| can a stored world be read at all | `store/unreadableWorldResetDoor.ts` → `rules/unreadableWorldReset.ts` |
+| what does the athlete see | `utils/sessionResolver.ts` (reads and hides; **builds nothing**) → `utils/visibleProgramProjection.ts` |
+| where does the canonical shape come from | `utils/workoutCanonicalisation.ts` — **shapes, never restores** |
+
+Agent: demolition
+
+---
+
+# SESSION 4 — THE THREE THINGS THE LAST REPORT DID NOT DELETE
+
+**Sam's ruling, 2026-08-19:** the previous report called demolition complete
+while RETAINING two genuine legacy compatibility bridges because deleting them
+would break live behaviour. **That is not the ruling.** Temporary coach, injury,
+removal, generation, UI and test breakage is allowed. Record it; do not preserve
+legacy compatibility to avoid it.
+
+**Base `e23f1846`. Control worktree `scratchpad/wt-ctl`, detached at `e23f1846`,
+never edited.** Three commits: `4080481c`, `29136176`, `b65dc7e3`.
+**47 files, 164 insertions, 2,702 deletions, 3 files physically deleted.**
+
+## 1. `migrateLegacyUserRemovalConstraint` — DELETED
+
+**And the measurement is the finding: it never ran in production.** Its one
+production caller is `normalizeReversibleAdjustmentLedger`, called from
+`acceptedStateColdStart.ts:230` — which passes only `value`. The migration loop
+iterates `args.userRemovalConstraints ?? []`, so in production it iterated an
+empty array. Same for the typed-reduction back-fill, which reads
+`args.exposureContractsByWeek ?? {}`.
+
+Deleted with it, each a branch that existed only to read or manufacture that
+shape: `legacyOwnedDays`, `adjustmentKindForLegacyConstraint`,
+`legacyLinkedTypedReductions`, the three `normalize()` args, the exactLinks
+back-fill loop, and `liftOwnedDayAfterSide` — the read-ingress lift for the
+superseded after-side shape, which **no current writer produces**
+(`acceptedStateTransaction` writes only `afterFingerprint` /
+`afterStableIdentity`). `validity.source` narrowed from three members to
+`'runtime_exact_delta'`; the other two had no producer left.
+`mondayForDate` and `workoutOnDate` went with their only caller.
+
+`reversibleAdjustmentLedger.ts` **22,551 → 12,597 bytes.**
+
+**No replacement built.** Removal behaviour that breaks: on the rebuild list.
+
+## 2. The `InjuryEpisodeV1 → InjuryState` bridge — DELETED
+
+`deriveLegacyInjuryFromEpisodes` is gone, and with it **every production
+dependency on the single-slot `activeInjury` alias** — 37 files:
+
+- `coachUpdatesStore.activeInjury`, `setActiveInjury`, `transitionInjuryStatus`,
+  `legacyInjuryForConstraints`, the alias mirror in all three constraint
+  writers, the hydration merge's stored-alias read, the quarantine boundary's
+  alias arm, and the injury term in the wipe-refusal arithmetic;
+- `legacyActiveInjuryConstraint` and the `legacy_active_injury` modifier source;
+- `ScheduleState.activeInjury` **and its `injuryProjectionOwner` switch** — the
+  flag that decided which of two injury owners got to rewrite the day;
+- the accepted-context field, the compatibility payload, the coach packet field
+  and its LLM serialisation;
+- `isDifferentBodyPartInjuryReport`, `handleInjuryProgression`, the dispatcher's
+  `runProgression` / `reapplyInjuryAtSeverity` deps and their providers.
+
+`utils/injuryProgression.ts` is now **TYPES ONLY, 294 → 70 lines**: every
+function measured at 0 production callers.
+
+**PRESERVED, deliberately:** `injuryEpisodes`, `deriveInjuryConstraintsFromEpisodes`,
+`activeInjuryEpisodes`, the accepted injury context, and the `InjuryState['bucket']`
+union that `injuryEpisode` and `temporarySourceFact` index into. Deleting that
+union would delete a canonical injury fact.
+
+**BROKEN AND NOT REPAIRED — each recorded at its own site in the source:**
+the coach's active-injury follow-up, the same-body-part clarifier suppression
+(both dispatcher and CoachScreen), the injury-grounded general reply, the
+why-didn't-it-change re-apply, the state inspector's injury explanation and its
+`no_active_injury` answer, and the surgical reset's injury clear.
+
+## 3. `visibleProgramProjection`'s injury filter — MEASURED, THEN SPLIT
+
+Sam's four conditions, answered arm by arm.
+
+| arm | authors? | writes? | repairs? | reads canonical? | verdict |
+| --- | --- | --- | --- | --- | --- |
+| Pass 1 — `applyInjuryFilterToWorkout` | **YES** — `getReplacementForBucket` SUBSTITUTES exercise names ("Replaced X with Y", "Rebuilt for …") | no | **YES** | **no** — the legacy `InjuryState` | **DELETED** |
+| `buildActiveConstraints`' `activeInjury` arm | no | no | no | **no** — the alias; the file's own docblock called it "the compatibility alias" | **DELETED** |
+| Pass 2 — exposure engine | no | no | no | **yes** — `extraConstraints`, episode-derived | **RETAINED** |
+| Pass 3 — validator sweep | no | no | no | **yes** | **RETAINED** |
+
+`utils/injuryWorkoutFilter.ts` had **exactly one production importer** — that
+pass — and is physically deleted.
+
+**DIRECT PROBE of what survives** (`scratchpad/projection-probe.ts`), driven with
+a canonical episode-derived hamstring constraint:
+
+```
+BEFORE           : Deadlift, Nordic Lower, Bench Press
+AFTER            : Bench Press
+removedNames     : Deadlift, Nordic Lower
+replacementNames : (none)
+INVENTED ROWS    : 0
+input mutated in place? NO
+CONTROL (no constraints): filterApplied=false, 3 rows  ← pure pass-through
+```
+
+It hides. It invents nothing, substitutes nothing, and does not touch its input.
+
+## 4-5. THE CENSUS, AND WHAT CLASSIFICATION FOUND
+
+`scratchpad/census.js` — **absolute root, and it separates EXECUTING code from
+prose** by stripping comments and string literals before counting. Positive
+control (`composeWeek`) non-zero in every run.
+
+| term | executing hits | prose-only files |
+| --- | --- | --- |
+| `legacy\|Legacy\|LEGACY` | 304 in 43 files | 82 |
+| `migrate\|Migrate\|MIGRAT` | **3 in 2 files** | 28 |
+| `compat\|Compat\|COMPAT` | 183 in 31 files | 45 |
+
+**Acted on:** §18 imported **13 bindings it no longer calls** — every one a
+mutator left behind when its caller was deleted. A dead import of a mutator
+inside a validation-only boundary is the door left unlocked. All 13 gone; the
+gateway now has zero import-only bindings.
+
+**RETAINED, each with proof it is CURRENT — the test is "does a LIVE writer still
+produce this shape?", not "does the name say legacy":**
+
+| retained hit | proof it is current and necessary |
+| --- | --- |
+| `legacy_unknown` (18 sites) | **Live production WRITERS**: `section18WorkoutEvidence.ts:88` returns it, `weeklyExposureContractV2.ts:1445,1577` and `generateProgram.ts:617,1042` default to it. It is a CURRENT sentinel meaning "never typed", not a stored legacy shape. |
+| `buildWeeklyExposureContract` (v1) | Called on the live generation path at `scheduleToCoachingPlan.ts:116`; V2 consumes its answer. |
+| `LEGACY_CONDITIONING_FORMAT_MAP` | Live sources still emit those names — `conditioningTemplates.ts:1186` defines a template named `Short Flush`; `coachClarifierResume.ts:2282` constructs `Easy Aerobic Flush (…)`. A current name→format resolver. |
+| `resolveLegacyStrengthIntent` / `shouldUseLegacyStrengthInference` | 3 live callers on the AUTHORING path (`sessionNaming`, `workoutCanonicalisation`, `sessionBuilder`). The controlled ingress boundary for untyped strength text — the phone stores untyped workouts. |
+| `seasonPhaseClock` `deterministic_legacy_migration` | Its input is `previousProgram`, the CURRENT `TrainingProgram` shape — not a stored envelope. Without it a clock loses its entry week and every phase reads Week 1. |
+| `legacyCoachActionFilter` | Its authority is a live **REFUSAL**: it blocks the legacy /coach-chat endpoint from emitting program mutations. A refusal is not a repair. |
+| `applyUserRemovalConstraintsToWeek` (3 callers) | Applies the athlete's own stored DECISION and only REMOVES. Consumes current `userRemovalConstraints`. |
+| `programStore.ts:1909` `migrate: (s) => s` | zustand's required hook, an identity function. Not a migration. |
+| `data/legacyReckoningCensus.ts` | Zero production importers; a records document, not execution. |
+
+**COMPLETION CONDITIONS — measured, not claimed** (0 = zero EXECUTING references;
+every surviving mention verified as prose by hand):
+
+```
+migrateLegacyUserRemovalConstraint  0     setActiveInjury               0
+deriveLegacyInjuryFromEpisodes      0     transitionInjuryStatus        0
+legacyInjuryForConstraints          0     liftOwnedDayAfterSide         0 (1 census-doc string)
+legacyActiveInjuryConstraint        0     legacyEpisodeId               0
+applyInjuryFilterToWorkout          0 (1 comment)  legacyConstraintFromAlias 0
+isDifferentBodyPartInjuryReport     0
+migrate*-named functions in production: 0
+read-path authoring calls (resolver, projection, read model, deriveVisibleWeek): 0
+  — positive control: optionalTopUpPlacement returns 5
+```
+
+## 6. THE WORLD CENSUS — RUN AFTER THE FINAL DELETION
+
+Both arms, same instrument, control at `e23f1846` never edited.
+
+| unit | control `e23f1846` | final tip |
+| --- | --- | --- |
+| distinct generated worlds | 180 | **180** |
+| distinct athlete setups | 90 | **90** |
+| built | 140 | **140** |
+| refused | 40 | **40** |
+| typed refusal families | 40 × `GeneratedWeekRefusedError:generated_week_refused` | **identical** |
+| delivered sessions | 434 | **434** |
+
+**`diff` is EMPTY — byte-identical per world.**
+
+⚠ **AND THE UNIT MATTERS, SO SAY WHAT IT MISSES.** This instrument's unit is the
+GENERATED week. **It cannot reach the visible projection**, and the grid carries
+no injury facts at all — so **no world in it exercises the arm I deleted.** The
+census proves generation is untouched; it proves nothing about the visible
+injury filter. That is what the direct probe above is for, and the two together
+are the whole of what was measured. A visible-row census would need a live
+`ScheduleState` assembled field-for-field like `useScheduleState`; an under-fed
+one answers "no" instead of failing.
+
+## COMPILE — PRODUCTION SCOPE IDENTICAL
+
+```
+control e23f1846  TOTAL 501, 41 pairs worse   [product] 3   [tests] 48
+final tip         TOTAL 665, 73 pairs worse   [product] 4   [devtools] 1  [tests] 81
+```
+
+**The production-scope diff is two lines, both IMPROVEMENTS**
+(`reversibleAdjustmentLedger.ts: 1 → 0 (clean)`). **Not one new error in
+`[product]`, `[devtools]` or `[scripts]` across 2,702 deleted lines.** Every
+regression is `[tests]` — 35 files, the suites whose subject or vehicle was
+deleted. Sam's ruling sanctions that.
+
+## 7. TESTS — DISPOSED OF BY SUBJECT
+
+| deleted | its stated subject |
+| --- | --- |
+| `resolverInjuryFilterTests.ts` (311) | "the resolver-level injury filter" — the module deleted here |
+| `injuryProgressionTests.ts` (474) | the follow-up classifier AND the CoachScreen progression handler — both deleted |
+
+Deregistered by exact count: 1 definition and 1 chain reference each,
+`test:bible` **399 → 397** steps, and their stale `typecheck-baseline.json`
+entries removed.
+
+**PRESERVED though red — subject is a LIVE owner, they merely imported something
+that went:** `injurySeverityBand`, `injuryReintroduction`, `injuryCanonicalisation`,
+`guidedInjuryMenuTotality`, `coachOrchestration`, `coachLiveWiring`,
+`pendingInjuryPriority`, `visibleProgramProjection`, `injuryAuthorityOwnership`,
+`resetCoach`, `coachIntentDispatch`, `coachBehaviourScenario` and the rest of the
+35. **Matching by IMPORT is not matching by SUBJECT** — the mistake this mission
+already made once, on 2026-08-16, when 16 suites were deleted and all 16 restored.
+
+Cell-level obsolescence inside preserved suites is RECORDED, not fixed — e.g.
+`athleteSessionMoveTests:993` still asserts `validity.source ===
+'legacy_exact_user_removal'` and `sourceSurface === 'hydration_migration'`, a
+cell whose subject is deleted inside a suite whose subject is alive.
+
+## THE SURVIVING OWNER MAP
+
+| question | the one owner |
+| --- | --- |
+| which days carry what, spacing, fixture proximity | `rules/weeklyScheduler.ts` |
+| what content fills an authored day | `rules/composeWeek.ts` + its specialists |
+| is a finished week lawful | `rules/section18AcceptedWeekGateway.ts` — accepts or refuses; **zero import-only mutator bindings** |
+| may this write land | `utils/postGenerationConstraintValidation.ts` — speaks by throwing |
+| what is stored | `store/acceptedStateTransaction.ts` — the single write boundary |
+| can a stored world be read at all | `store/unreadableWorldResetDoor.ts` → `rules/unreadableWorldReset.ts` |
+| what does the athlete see | `utils/sessionResolver.ts` (reads and hides) → `utils/visibleProgramProjection.ts` (**hides only; two passes, both remove-or-annotate**) |
+| where does the canonical shape come from | `utils/workoutCanonicalisation.ts` — shapes, never restores |
+| **what is true about an injury** | **`rules/injuryEpisode.ts` — `InjuryEpisodeV1` episodes and the constraints derived from them. There is no second, collapsed representation.** |
+| an athlete's stored removal | `rules/userRemovalConstraints.ts` — removes only, from a stored decision |
+| the ledger of reversible adjustments | `rules/reversibleAdjustmentLedger.ts` — **normalises persisted records only; manufactures none** |
+
+## REBUILD LIST — ADDED BY THIS SESSION
+
+**Nothing here is fixed.**
+
+| capability | owner to rebuild at |
+| --- | --- |
+| Coach active-injury follow-up (classify a message against the injury on file, run the progression) | dispatcher + CoachScreen, against `acceptedInjuryContext` / `injuryEpisodes` |
+| Same-body-part clarifier suppression (don't re-ask severity for an injury already answered) | dispatcher + CoachScreen, against the accepted episode set |
+| Injury-grounded general reply (stops the legacy LLM fabricating injury claims) | `coachDispatchDeps.generalReply`, from `acceptedInjuryContext` |
+| Severity-only reply binding to the injury on file (tier 3 of the body-part ladder) | dispatcher; tiers 1–2 (payload, pending) still stand |
+| "Why didn't the program change" → re-apply the restriction | dispatcher, against the canonical episodes |
+| State inspector's injury explanation and its `no_active_injury` answer | `coachStateInspector`, from the accepted episodes |
+| Surgical reset's injury clear | the injury-episode transaction — clearing an injury is an episode operation |
+| Read-time injury SUBSTITUTION (curated replacement for a removed exercise) | **the composer, at authoring — never at read.** The projection may hide; it may not build |
+| Applying a stored removal that has no linked ledger adjustment | accepted-state transaction |
+
+**Carried unchanged from earlier sessions:** power allowance stamping + delivery;
+applying stored athlete deletions; clearing stale derived sessions; safety
+rewriting of a week; optional-session placement/withdrawal; required-safe-pattern
+representation; `mainStrengthFrequencyCeiling` enforcement; fixture-replan
+alternatives; and the whole area-1..5 list above.
+
+Agent: demolition
+
+---
+
+# SESSION 5 — APPENDED BY SEAT `rebuild`, 2026-08-19
+
+**⚠ THE "ZERO LEGACY REMAINS" CLAIM ABOVE WAS INCOMPLETE, AND THIS IS THE
+CORRECTION.** Nothing written above is altered — the counts, the completion
+conditions and the surviving-owner map all stand. What they did not cover is
+this, and Sam ordered it recorded here rather than only in the rebuild seat's
+file.
+
+## WHAT THE COMPLETION CENSUS COULD NOT SEE
+
+Session 4's completion conditions counted **executing references to named
+symbols** — `migrateLegacyUserRemovalConstraint`, `deriveLegacyInjuryFromEpisodes`,
+`applyInjuryFilterToWorkout` and the rest — and every one really is 0. The
+instrument was sound. **Its unit was the wrong one for this class.**
+
+`buildSessionEquipmentReplacementPlan` in `utils/sessionEquipment.ts` was a
+**second exercise-selection authority living in a screen.** It walked Sam's
+fallback ladder, chose replacement exercises, and handed
+`DayWorkoutScreenV2.applySessionEquipment` a list of `swap_exercise` actions to
+commit. It carried:
+
+- a live production caller (the screen), so a **caller census reports it ALIVE**;
+- no legacy name — nothing in it says `legacy`, `migrate` or `compat`, so the
+  **term census cannot see it**;
+- typed, current inputs, so the *"does a LIVE writer still produce this shape?"*
+  test — the right test for the retained rows above — **answers YES**.
+
+**It was dead anyway, and only a behavioural measurement could show it.** Driven
+through the real door across **2,038 real (athlete, session date, implement
+subset) walks** on five generated worlds, it produced replacements in **0**. The
+reason is causal, not statistical: the dated equipment fact is written FIRST, the
+composer recomposes the day against the reduced kit, and by the time the screen
+computes a leftover plan there is nothing illegal left to swap. Confirmed on the
+simulator — the `"N exercises were replaced for this session only."` receipt it
+existed to produce is unreachable, and the Maestro flow asserting it had been
+failing on glass.
+
+**THE LESSON FOR THE NEXT CENSUS.** *"Has a caller"* is not *"does something"*.
+A demolition that asks only **who calls this** will keep every dead authority
+that some live screen politely calls and always gets an empty answer from. The
+question that found this one is **"what does it change?"**, asked by driving the
+real door and comparing the athlete-visible session with and without it.
+
+## WHAT WAS DELETED, AND WHAT WAS DELIBERATELY NOT
+
+**DELETED** (`613b8f9`-class change, this branch, commit below): the planner, its
+conditioning-modality helper `sessionConditioningReplacementName` (0 production
+callers), the two result types, four private helpers, ten now-dead imports, the
+screen's call site and swap loop, and the cells in three suites whose SUBJECT was
+the planner.
+
+**NOT TOUCHED — and this is the boundary the order named:** the live Swap and
+Remove transactions. `applySwapToday` in the same file still owns
+`type: 'swap_exercise'` and `type: 'remove_exercise'`, and `getTapSwapChoices`,
+`buildSwapSuggestionPayload` and the tap-swap ladder are untouched. **Sharing a
+file with dead code is not a reason to keep it, and it is not a reason to delete
+its neighbour either.**
+
+**PRESERVED inside the same module because their subject is alive:**
+`deriveSessionEquipmentRequirements` and `missingSessionEquipmentValues` — the
+sheet's checklist reader and its tag translator. The module is now a reader and
+only a reader.
+
+## PROOF — ZERO PRODUCTION EFFECT
+
+**The positive control ran FIRST**, because a comparison that cannot see a change
+proves nothing: a known-live mutation (restoring the illegal original inside
+`composeWeek`) moved **54 lines** of the same capture, and the tree was restored
+byte-identical before the real work began.
+
+Then, across four worlds including a bodyweight-only one, the real
+athlete-visible session before and after deletion:
+
+```
+before sha256  0305350 66a194692281e9b347cdfbff6f29904a744c505df378fa9101e702be8
+after  sha256  0305350 66a194692281e9b347cdfbff6f29904a744c505df378fa9101e702be8
+IDENTICAL
+```
+
+`test:compile` **665**, exactly session 4's recorded final tip; product scope
+carries four pre-existing improvements and **no new error in any scope**.
+`test:session-equipment-owner` 27/0. `test:session-execution` 69/0.
+`test:visible-surfaces` 58 passed / **6 failed — the SAME six, with identical
+text, at the pre-deletion commit in a control worktree**; the pass count moves
+66 -> 58 because ten planner cells went and two absence cells arrived. The
+simulator flow is green and the resulting session is pixel-identical.
+
+Agent: rebuild

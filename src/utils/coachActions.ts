@@ -1,3 +1,4 @@
+import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
 /**
  * coachActions — Scoped, classification-driven program edits.
  *
@@ -35,6 +36,7 @@ import { applyProgramOverrideWrite, useProgramStore } from '../store/programStor
 import { composedOptionalClearingPatch } from './composedOptionalMarker';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { applyExerciseExclusionDecision } from './exerciseExclusionOwner';
+import { ledgerReplayActive } from '../store/ledgerReplayLatch';
 import {
   useCoachUpdatesStore,
   type ActivePreferenceConstraint,
@@ -47,7 +49,7 @@ import {
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { resolveExerciseName } from './loadEstimation';
 import { formatExerciseDisplayName } from './exerciseDisplay';
-import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { assertLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
 import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
 
@@ -152,6 +154,13 @@ export interface ReplaceExerciseInput {
   todayISO?: string;
   /** Optional exact row identity from a tapped UI exercise. */
   fromExerciseId?: string;
+  /**
+   * WHY THIS ROW IS NOT THE ONE THE ATHLETE ASKED FOR. Set only when a FACT
+   * (an injury, a kit loss) is displacing an earlier choice, so the screen can
+   * say whose place this row is taking. An athlete's own swap leaves it absent.
+   * See the note on the `swap_exercise` payload.
+   */
+  substitutedFrom?: { baseExerciseName: string; cause: 'injury' | 'kit_today' };
   toExercise: {
     name: string;
     sets: number;
@@ -170,6 +179,22 @@ export interface RemoveExerciseInput {
   exercise: string;
   /** Optional exact row identity from a tapped UI exercise. */
   exerciseId?: string;
+  /**
+   * WHY the row is going, typed. Sam, 2026-08-18: *"Do not collapse removal
+   * causes."* The three have different fallback behaviour and different §18
+   * credit, and the caller is the only layer that knows which this is.
+   * Defaults to `'exclusion'` — the removal SCREEN's case, which is an
+   * exercise-identity exclusion unless an active injury fact says otherwise.
+   *
+   * ⚠ THIS FIELD CURRENTLY HAS NO READER (demolition area 2, 2026-08-19). Its
+   * only consumer was `legalPatternReplacement`, which chose a legal lift to
+   * fill the slot the removal emptied — and it fed the pattern-restore pass,
+   * which is deleted. The field is KEPT because the typed cause is Sam's own
+   * approved contract and its callers still state it; the FILLING is on the
+   * rebuild list, owner = the composer. It is named here rather than left to
+   * look wired.
+   */
+  cause?: 'equipment' | 'exclusion' | 'injury';
 }
 
 export interface AddExerciseAtDateInput {
@@ -275,8 +300,37 @@ function workoutsAreEquivalent(a: Workout, b: Workout): boolean {
 }
 
 /** Resolve a date to its currently-effective Workout (or null if rest). */
+/**
+ * The day as the app AUTHORED it — every row, including ones an exclusion is
+ * currently hiding.
+ *
+ * ⚠ **THIS IS A WRITER'S READ, AND IT MUST NOT CARRY THE ATHLETE'S EXCLUSIONS.**
+ *
+ * Every caller below clones this day and stores the result as an override
+ * (`lightenSession`, `moveSession`, `makeSessionOptional`, `replaceExerciseAtDate`,
+ * `addExerciseAtDate`, `addWeeklyOverride` — all six are writers, none is a view).
+ * `buildScheduleStateImperative` delegates to `assembleScheduleState`, which
+ * attaches `athleteExclusions` because it is one of the two doors that mean
+ * *"what the athlete SEES"*. Reading a WRITE base through it meant the filter
+ * was applied and then written down.
+ *
+ * MEASURED 2026-08-19 by `npm run test:session-change-sequence`: an athlete
+ * removed `RDLs`, swapped a different row, and Restore had nothing to give back
+ * — the swap's stored override had been built from a day `RDLs` was already
+ * filtered out of, so the removal stopped being reversible the moment any other
+ * row on that day was touched. The row was not hidden; it was destroyed.
+ *
+ * **A FILTER THAT GETS WRITTEN DOWN IS NOT A FILTER.** The exclusion stays a
+ * read-time projection: the authored row remains in the stored program and the
+ * VIEW doors hide it, which is what makes Restore able to return the exact item
+ * rather than re-derive a replacement for it.
+ *
+ * `athleteExclusions: []` is STATED rather than defaulted, the same way
+ * `liveEvaluationSurfaces.freshGenerationSurfaces` states it — this is a world
+ * that deliberately has none, not one that forgot to look.
+ */
 function resolveDateWorkout(date: string): Workout | null {
-  const state = buildScheduleStateImperative();
+  const state = { ...buildScheduleStateImperative(), athleteExclusions: [] };
   const resolved = resolveDateWithConditioning(date, state);
   return resolved?.workout || null;
 }
@@ -584,7 +638,34 @@ function loadForReplacementRow(exerciseName: string): number | undefined {
 
 export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult {
   const { date, fromExercise, fromExerciseId, toExercise, todayISO } = input;
-  if (todayISO && date.slice(0, 10) < todayISO.slice(0, 10)) {
+  /**
+   * ⚠ **A REPLAY IS NOT THE ATHLETE ACTING, SO IT IS NOT REFUSED FOR STALENESS.**
+   *
+   * This guard is a DOOR guard: it stops an athlete editing a session that has
+   * already happened. It was already asked and already answered at the moment
+   * the decision landed. A boot replay is not a new intent — it reconstructs a
+   * decision the ledger says was accepted — so running the guard again makes
+   * startup a SECOND authority over whether an accepted decision may take
+   * effect, and a refusal there silently drops the athlete's change.
+   *
+   * MEASURED 2026-08-19 by `npm run test:session-change-sequence`: the swap's
+   * replay was refused with `"2026-07-22 is in the past - I can't change it."`
+   * and the athlete's chosen exercise was gone after every restart, while the
+   * removal (a durable decision in athlete preferences) and the add (no such
+   * guard) both survived — which is why it read as "the swap specifically".
+   *
+   * The comparison is against `entry.occurredAt`, and replay passes that as
+   * `todayISO`. It is a UTC instant string-sliced to a date, so in any timezone
+   * BEHIND UTC an ordinary evening swap stamps TOMORROW's date and the guard
+   * refuses the athlete's own edit on the next launch. Fixing only the clock
+   * would leave the refusal standing for DST, travel and a manual clock change.
+   * The authority is removed from the replay path, not compensated for.
+   *
+   * The latch is the app's existing statement of exactly this — *"a replayed
+   * interpreter is not the athlete acting"* — and it carries no imports, so
+   * consulting it here cannot form a cycle.
+   */
+  if (todayISO && !ledgerReplayActive() && date.slice(0, 10) < todayISO.slice(0, 10)) {
     return { success: false, reason: `${date} is in the past - I can't change it.` };
   }
   const current = resolveDateWorkout(date);
@@ -666,6 +747,12 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
     perSide: toExercise.perSide ?? found.perSide,
     restSeconds: toExercise.restSeconds ?? found.restSeconds,
     notes: toExercise.notes || found.notes,
+    // WHOSE PLACE THIS ROW IS TAKING — STATED, NEVER INHERITED. The `...found`
+    // spread above would otherwise carry the OUTGOING row's provenance onto a
+    // row that has nothing to do with it, so an ordinary athlete swap would
+    // claim to be standing in for whatever the last fact displaced. Absent
+    // means "nobody's place", which is the truth for a tap.
+    substitutedFrom: input.substitutedFrom,
     exercise: {
       id: replacementId,
       name: toExercise.name,
@@ -687,7 +774,11 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `"${fromExercise}" already matches the requested swap on ${date}.` };
   }
-  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+  // THE BOUNDARY REFUSES OR ALLOWS; IT NO LONGER RETURNS A DIFFERENT SESSION
+  // (demolition area 1). The equivalence check below therefore compares the
+  // coach's own edit, not a canonicalised rewrite of it.
+  assertLiveWorkoutWrite(date, newWorkout);
+  const canonicalWorkout = newWorkout;
   if (workoutsAreEquivalent(current, canonicalWorkout)) {
     return {
       success: false,
@@ -715,68 +806,30 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
   return { success: true };
 }
 
-/** Remove a single exercise from a single date. */
-export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
-  const { date, exercise, exerciseId } = input;
-  const current = resolveDateWorkout(date);
-  if (!current) {
-    return { success: false, reason: `No session on ${date} to remove exercise from.` };
-  }
-  if (exerciseId) {
-    const id = String(exerciseId);
-    const foundById = current.exercises.find((ex: any) =>
-      [ex.id, ex.exerciseId, ex.exercise?.id]
-        .filter(Boolean)
-        .some((candidate) => String(candidate) === id),
-    );
-    if (foundById) {
-      const newWorkout = cloneWorkout(current, {
-        exercises: current.exercises.filter((ex) => ex !== foundById),
-      });
-      if (workoutsAreEquivalent(current, newWorkout)) {
-        return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
-      }
-      const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
-      if (workoutsAreEquivalent(current, canonicalWorkout)) {
-        return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
-      }
-      const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
-      if (blocked) return blocked;
-      writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
-      return { success: true };
-    }
-  }
-  const matchResult = findExerciseMatch(current, exercise);
-  if (matchResult.kind === 'not_found') {
-    return { success: false, reason: `Could not find "${exercise}" on ${date}.` };
-  }
-  if (matchResult.kind === 'ambiguous') {
-    return {
-      success: false,
-      reason: `"${exercise}" matches multiple exercises on ${date}: ${matchResult.candidates.join(', ')}. Ask the athlete which one they mean.`,
-      ambiguous: { candidates: matchResult.candidates },
-    };
-  }
-  const found = matchResult.match;
-
-  const newWorkout = cloneWorkout(current, {
-    exercises: current.exercises.filter((ex) => ex !== found),
-  });
-  // Removing an exercise always changes exercise count → comparator catches
-  // any pathological case (e.g. workout with 0 matching) but in practice
-  // this branch always writes.
-  if (workoutsAreEquivalent(current, newWorkout)) {
-    return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
-  }
-  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
-  if (workoutsAreEquivalent(current, canonicalWorkout)) {
-    return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
-  }
-  const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
-  if (blocked) return blocked;
-  writeCoachOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
-  return { success: true };
-}
+/**
+ * ⚠ **`removeExerciseAtDate` IS DELETED — 2026-08-19, Sam: *"Delete
+ * `removeExerciseAtDate` and its coach-override implementation ... No second
+ * removal authority survives."***
+ *
+ * It cloned the day, filtered the row out and wrote the result through
+ * `writeCoachOverride`. Three defects followed and all three were structural:
+ * the accepted-state transaction was bypassed, so nothing validated the week it
+ * published; the removal left no canonical decision, so "this block" and "until
+ * restored" had nothing to act on; and Undo deleted the athlete's answer while
+ * the patched week stood, so the exercise never came back.
+ *
+ * THE ONE REMOVAL AUTHORITY IS NOW `utils/exerciseExclusionOwner
+ * .applyExerciseExclusionDecision`, reached from `remove_exercise` in
+ * `utils/programControlActions`. It writes ONE decision; the read projection
+ * hides the row and the composer input keeps it out of unauthored blocks.
+ *
+ * **THE COACH'S `remove_exercise` COMMAND IS TEMPORARILY BROKEN** and Sam ruled
+ * that acceptable in the same breath: *"If Coach still calls it, record Coach
+ * Remove as temporarily broken; later it must call the same canonical Remove
+ * action."* The dispatcher below returns a typed refusal that says so rather
+ * than a silent no-op. NO COMPATIBILITY SHIM — a wrapper that forwarded to the
+ * canonical owner would be a second door wearing the deleted one's name.
+ */
 
 /** Add one exercise to a single date. */
 export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
@@ -845,7 +898,8 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `Adding ${displayName} on ${date} produced no change.` };
   }
-  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+  assertLiveWorkoutWrite(date, newWorkout);
+  const canonicalWorkout = newWorkout;
   if (workoutsAreEquivalent(current, canonicalWorkout)) {
     return {
       success: false,
@@ -1105,7 +1159,15 @@ export function applyCoachAction(action: CoachAction): ActionResult {
     case 'replace_exercise':
       return replaceExerciseAtDate(action.payload as ReplaceExerciseInput);
     case 'remove_exercise':
-      return removeExerciseAtDate(action.payload as RemoveExerciseInput);
+      // TEMPORARILY BROKEN BY RULING, AND IT SAYS SO. See the note where
+      // `removeExerciseAtDate` used to be. The coach must come to the canonical
+      // Remove action; it may not keep a private removal authority in the
+      // meantime.
+      return {
+        success: false,
+        reason: 'Removing an exercise from the coach is temporarily unavailable. '
+          + 'Use Remove on the session itself — that is the one door that records the decision.',
+      };
     case 'add_exercise':
       return addExerciseAtDate(action.payload as AddExerciseAtDateInput);
     case 'add_weekly_override':

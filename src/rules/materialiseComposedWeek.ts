@@ -12,7 +12,8 @@
  * and are copied. The only things minted here are ids and timestamps, which are
  * not composition.
  */
-import { findOrCreateExercise } from '../data/defaultProgram';
+import { buildPowerRow, findOrCreateExercise } from '../data/defaultProgram';
+import { deloadPowerDose } from './deloadWeekRules';
 import {
   applyStrengthDeloadToExercises,
   type DeloadWeekPolicy,
@@ -20,8 +21,42 @@ import {
 import type { ComposedDay, ComposedGap, ComposedWeek } from './composeWeek';
 import type { Workout, WorkoutExercise } from '../types/domain';
 
+/** The specialist's decision for one day, plus what the row builder needs. */
+export interface ComposedPowerPlacement {
+  /**
+   * THE WEEK'S POWER ALLOWANCE, HONOURED BY NOT PLACING MORE THAN IT.
+   *
+   * The old trimmer enforced this by REMOVING rows after the fact, and its
+   * first live act was to destroy an authored strength day. A limit obeyed at
+   * placement needs no strip at all.
+   */
+  readonly allowance?: number;
+  readonly primerByDay: Readonly<Record<number, import('./powerPrimerPolicy').PowerPrimerSpec | null>>;
+  readonly phase?: import('../types/domain').SeasonPhase;
+  readonly experienceLevel?: string;
+  readonly availableEquipment?: readonly string[];
+  readonly blockId?: string;
+}
+
 export interface MaterialisationContext {
   readonly microcycleId: string;
+  /**
+   * THE POWER PRIMER THE SPECIALIST ALREADY CHOSE, PLACED AT LAST.
+   *
+   * ⚠ **MEASURED 2026-08-19: no generated athlete had ever received a single
+   * power row.** The specialist works — traced on a real in-season world it
+   * chose a lower primer for Monday, an upper primer for Tuesday, and on the
+   * G-2 Thursday an UPPER primer described "G-2 tiny neural prime", refusing
+   * lower exactly as Sam's rule requires. `scheduleToCoachingPlan` carried all
+   * three onto the plan. Then nothing placed them: the only row builder lived
+   * in the adapter, and the adapter authors no strength on composer-owned days.
+   * The decision was made correctly and thrown away.
+   *
+   * Power is part of an authorised STRENGTH session, so it is placed here, on
+   * the composer's own day, from the specialist's typed result. This module
+   * chooses no exercise, no dose and no day — it consumes what was decided.
+   */
+  readonly power?: ComposedPowerPlacement;
   /** Plan tiers/names arrive on the composed day; nothing is renamed here. */
   readonly weekStartISO: string;
   /**
@@ -66,6 +101,17 @@ function materialiseRow(
     prescribedWeightKg: row.load,
     restSeconds: 0,
     exercise,
+    // THE COMPOSER'S SUBSTITUTION RECORD, CARRIED. It has existed on
+    // `ComposedRow` since 2026-08-17 and died here — the screen could see that
+    // an unfamiliar lift was on the day and had no way to say WHY.
+    ...(row.substitutedFor
+      ? {
+          substitutedFrom: {
+            baseExerciseName: row.substitutedFor.baseIdentity,
+            cause: row.substitutedFor.cause,
+          },
+        }
+      : {}),
     createdAt: stamp,
     updatedAt: stamp,
     // The composer DECIDES the role (R-092); §18 reads this rather than
@@ -115,6 +161,11 @@ export function materialiseComposedWeek(
   week: ComposedWeek,
   context: MaterialisationContext,
 ): Workout[] {
+  /* The allowance is spent in weekday order — deterministic, and the same order
+   * the athlete's week runs in. Absent allowance means "no limit stated", which
+   * only happens for callers that pass no power at all. */
+  const allowance = context.power?.allowance;
+  let primersPlaced = 0;
   return week.days.map((day) => {
     const workoutId = `w-composed-${context.microcycleId}-${day.dayOfWeek}`;
     const gaps = gapsForDay(week, day.dayOfWeek);
@@ -134,9 +185,49 @@ export function materialiseComposedWeek(
     // A day the instruction does not govern gets `null` and is untouched —
     // which is what keeps an ordinary week byte-identical.
     const policy = context.deloadPolicyForDay?.(day.dayOfWeek) ?? null;
-    const exercises = policy
+    const strengthRows = policy
       ? applyStrengthDeloadToExercises(composedRows, policy)
       : composedRows;
+    /* ── THE PRIMER, PRE-LIFT, ON THE DAY THE SCHEDULER AUTHORISED ──────────
+     * `exerciseOrder: 0` is the builder's own; the composed rows start at 1, so
+     * the primer sorts ahead of the main lifts where a primer belongs.
+     *
+     * The DELOAD DOSE is the existing owner's (`deloadPowerDose`), for the same
+     * reason the strength deload above is: power SURVIVES a deload — Sam,
+     * 2026-07-27, "keep a small sharp dose ... a deload is not a reason to lose
+     * sharpness" — the numbers shrink and the movement does not change. */
+    /* ⚠ **ONLY ON A DAY THAT ACTUALLY CARRIES STRENGTH** (Sam: "It may only
+     * appear on a scheduler-authorised strength day"). Placing it on a day the
+     * composer authored no lifts for made the session read as power rather than
+     * main strength, and a 4-day PRE-SEASON BODYWEIGHT week lost an exposure and
+     * was refused — `main_strength_planner_selected_target expected 3, actual 2`,
+     * measured on four worlds before this line existed. Power is part of a
+     * strength session; a day with no strength is not one. */
+    const withinAllowance = allowance === undefined || primersPlaced < allowance;
+    const primer = strengthRows.length > 0 && withinAllowance
+      ? context.power?.primerByDay?.[day.dayOfWeek] ?? null
+      : null;
+    let powerRow: WorkoutExercise | null = null;
+    if (primer) {
+      const dosed = policy
+        ? (() => {
+          const shrunk = deloadPowerDose({
+            sets: primer.sets, repsMin: primer.repsMin, repsMax: primer.repsMax,
+          });
+          return shrunk ? { ...primer, ...shrunk } : null;
+        })()
+        : primer;
+      if (dosed) {
+        powerRow = buildPowerRow(dosed, workoutId, {
+          phase: context.power?.phase,
+          experienceLevel: context.power?.experienceLevel as never,
+          availableEquipment: (context.power?.availableEquipment ?? []) as never,
+          blockId: context.power?.blockId,
+        }) as WorkoutExercise;
+      }
+    }
+    if (powerRow) primersPlaced += 1;
+    const exercises = powerRow ? [powerRow, ...strengthRows] : strengthRows;
     return {
       id: workoutId,
       microcycleId: context.microcycleId,

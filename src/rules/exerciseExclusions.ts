@@ -46,6 +46,7 @@
  * TEST: `src/__tests__/exerciseExclusionScopeTests.ts`.
  */
 
+import type { Workout } from '../types/domain';
 import { canonicalExerciseName } from '../utils/exerciseCanonicalisation';
 
 /**
@@ -278,41 +279,6 @@ export function exclusionExpiryLabel(exclusion: ExerciseExclusion): string {
   return `Until ${exclusion.activeThroughISO}`;
 }
 
-/**
- * LEGACY EXCLUSIONS ARRIVE AS BARE NAMES, AND THEY MEANT FOREVER.
- *
- * `prefs.excluded: string[]` is on real devices today and carries no scope, no
- * expiry and no decision date. The only honest reading is the one the old code
- * actually implemented: excluded from every future program until removed —
- * `until_changed`. Reading them as `this_block` would quietly restore an
- * exercise an athlete banned months ago, which is the one thing the contract
- * forbids outright.
- *
- * `decidedOnISO` is stamped as the hydration day rather than invented backwards:
- * we do not know when they answered, and a made-up past date would make
- * `exclusionIsActiveOn`'s lower bound a fiction.
- */
-export function migrateLegacyExcludedNames(
-  names: readonly string[] | null | undefined,
-  hydratedOnISO: string,
-): ExerciseExclusion[] {
-  const seen = new Set<string>();
-  const out: ExerciseExclusion[] = [];
-  for (const raw of names ?? []) {
-    const exercise = canonicalExerciseName(String(raw ?? '').trim());
-    if (!exercise || seen.has(exercise)) continue;
-    seen.add(exercise);
-    out.push({
-      exercise,
-      scope: 'until_changed',
-      decidedOnISO: hydratedOnISO,
-      activeThroughISO: null,
-      blockNumber: null,
-    });
-  }
-  return out;
-}
-
 /** Local, dependency-free date step. Mirrors `programBlockState.addDaysISO`. */
 function addDaysISO(dateISO: string, days: number): string {
   const d = new Date(`${dateISO.slice(0, 10)}T12:00:00`);
@@ -321,4 +287,92 @@ function addDaysISO(dateISO: string, days: number): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+/**
+ * ── THE ALREADY-AUTHORED HALF OF A REMOVAL ─────────────────────────────────
+ *
+ * Sam, 2026-08-19: *"This block removes the exercise from every remaining
+ * already-authored session in this block. Until restored removes it from
+ * current and future sessions/blocks."*
+ *
+ * Everything above this line answers a question asked at GENERATION time —
+ * `getAthletePrefs` hands the exclusions to the composer, so a week the app has
+ * not authored yet is authored without the exercise. That covers "future
+ * sessions/blocks" completely and covers the athlete's own block NOT AT ALL:
+ * the current block is already authored and accepted, and nothing regenerates
+ * it. Measured 2026-08-19 — a `this_block` answer reached exactly one day.
+ *
+ * **THE DECISION IS ALREADY STORED. THIS IS THE OTHER PROJECTION OF IT.**
+ * `exclusionIsActiveOn` is the one predicate; `resolveWeekExclusions` applies it
+ * to a week the composer is about to author, and this applies it to a week the
+ * composer already authored. There is no second stored shape, no per-session
+ * record, and nothing to keep in step — which is why Undo restores the EXACT
+ * item: the row was never destroyed, only filtered out of the read while the
+ * decision stands.
+ *
+ * **AND NOTHING CAN REFILL THE SLOT**, because this is a filter and the composer
+ * never runs. That is Sam's Remove contract stated as a mechanism rather than as
+ * a hope: *"Nothing replaces it. The session may have fewer exercises and may
+ * lose that movement pattern."*
+ *
+ * The lower bound of `exclusionIsActiveOn` is what makes "REMAINING" true — a
+ * decision taken on Wednesday cannot reach into Monday's completed session.
+ *
+ * WRITER: none, this stores nothing. READER: `rules/acceptedEffectiveWeek`
+ * (the one compose owner every visible-week read goes through).
+ * TEST: `src/__tests__/exerciseRemovalOwnerTests.ts`.
+ */
+export function applyExclusionsToAuthoredDay<T extends Workout | null | undefined>(args: {
+  workout: T;
+  dateISO: string;
+  exclusions?: readonly ExerciseExclusion[] | null;
+}): T {
+  const workout = args.workout;
+  if (!workout) return workout;
+  const rows = workout.exercises ?? [];
+  if (rows.length === 0) return workout;
+  const excluded = new Set(excludedExerciseNamesOn(args.exclusions, args.dateISO.slice(0, 10)));
+  if (excluded.size === 0) return workout;
+  const kept = rows.filter((row) => !excluded.has(canonicalExerciseName(rowExerciseName(row))));
+  // Same rows, same object. A day nothing was removed from must come out of
+  // here IDENTICAL, or every identity comparison downstream starts reporting a
+  // change this filter did not make.
+  if (kept.length === rows.length) return workout;
+  return { ...workout, exercises: kept } as T;
+}
+
+/** The week-shaped projection of the day-shaped one above. One definition. */
+export function applyExclusionsToAuthoredWeek(args: {
+  workouts: readonly Workout[];
+  weekStart: string;
+  exclusions?: readonly ExerciseExclusion[] | null;
+}): Workout[] {
+  const exclusions = args.exclusions ?? [];
+  if (exclusions.length === 0) return args.workouts as Workout[];
+  const weekStart = args.weekStart.slice(0, 10);
+  return args.workouts.map((workout) => applyExclusionsToAuthoredDay({
+    workout,
+    // The week's Monday plus the row's own day. A `Workout` carries
+    // `dayOfWeek`, never a date — reading `workout.date` finds nothing and
+    // reports a silent no-op that looks exactly like "nothing was excluded".
+    dateISO: dateForDayOfWeekInWeek(weekStart, workout.dayOfWeek),
+    exclusions,
+  }));
+}
+
+/** A row names its exercise in one of two places. One reader, so no site guesses. */
+function rowExerciseName(row: unknown): string {
+  const candidate = row as { exercise?: { name?: string }; name?: string };
+  return String(candidate?.exercise?.name ?? candidate?.name ?? '').trim();
+}
+
+/**
+ * The date a workout sits on, from the week it is being read in.
+ * `weekStart` is a Monday, and `dayOfWeek` is JS's Sunday-first 0-6 — so Sunday
+ * is the week's LAST day, not its first.
+ */
+function dateForDayOfWeekInWeek(weekStartISO: string, dayOfWeek: number): string {
+  const offset = ((dayOfWeek + 6) % 7);
+  return addDaysISO(weekStartISO, offset);
 }

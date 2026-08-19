@@ -39,7 +39,6 @@
  */
 
 import type { ResolvedDay } from './sessionResolver';
-import type { InjuryState } from './injuryProgression';
 import type { CoachUpdate, ActiveConstraint } from '../store/coachUpdatesStore';
 import type { CoachContextEntry } from '../store/coachContextStateStore';
 import type { MutationHistoryEntry } from '../store/coachMutationHistoryStore';
@@ -324,13 +323,7 @@ export interface CoachContextPacket {
   userMessage: string;
   /** Recent chat — last N messages, oldest first. */
   recentMessages: Array<{ role: 'user' | 'assistant'; content: string }>;
-  /** Compatibility-only collapsed injury projection; never authoritative. */
-  activeInjury: InjuryState | null;
-  /**
-   * Canonical accepted injury truth. This preserves every active episode;
-   * activeInjury above is a compatibility projection only and must not be
-   * used as the authoritative injury target.
-   */
+  /** Canonical accepted injury truth — every active episode. */
   acceptedInjuryContext: AcceptedInjuryContext;
   /**
    * All active constraints — injuries, fatigue, soreness, schedule, etc.
@@ -343,8 +336,8 @@ export interface CoachContextPacket {
   /**
    * Pending injury context from a prior clarifier turn. When present,
    * a severity-only reply ("9") MUST bind to pending.bodyPart even
-   * if activeInjury exists for a different body part. This is the
-   * fix for the live "shoulder severity applied to hammy" bug.
+   * if an injury is already on file for a different body part. This is
+   * the fix for the live "shoulder severity applied to hammy" bug.
    */
   pendingInjury?: {
     bodyPart: string;
@@ -520,7 +513,7 @@ ${INJURY_EPISODE_PROMPT_CONTRACT}
 
 CRITICAL RULES
 
-1. \`acceptedInjuryContext.activeEpisodes\` is the authoritative injury context. \`activeInjury\` is compatibility-only and must not be used as the source of truth. If the message references the same body part as an accepted active episode, DO NOT classify it as new_injury_report. Use active_injury_followup or why_didnt_program_change.
+1. \`acceptedInjuryContext.activeEpisodes\` is the authoritative injury context. If the message references the same body part as an accepted active episode, DO NOT classify it as new_injury_report. Use active_injury_followup or why_didnt_program_change.
 
 2. If exactly one accepted active episode is the available target and the user just gives a number ("4/10"), this is injury_severity_reply with payload.severity (interpret it as the new severity for that EXISTING episode). If more than one episode could be the target, preserve the injury intent and let the app clarify the target.
 

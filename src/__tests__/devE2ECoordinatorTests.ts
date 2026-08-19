@@ -15,6 +15,7 @@ import {
   getDevE2EStateSnapshot,
 } from '../dev/e2e/devE2EState';
 import { semanticFingerprint } from '../dev/e2e/semanticFingerprint';
+import { projectProgramPersistedInputs } from '../store/programStore';
 import {
   createDevE2EClockReceiptForSeed,
   type DevE2EClockReceipt,
@@ -167,6 +168,7 @@ async function main() {
     installProgram: () => events.push('program'),
     applyAuxiliaryState: () => events.push('auxiliary'),
     completeOnboarding: () => events.push('complete'),
+    recordAcceptedBlock: () => events.push('accepted-block'),
     readWitnessState: () => ({
       program: program(),
       profile: DEV_E2E_STANDARD_PROFILE,
@@ -239,6 +241,26 @@ async function main() {
     events.indexOf('clock-install') < events.indexOf('build'));
   ok('empty persistence flush precedes build', events.indexOf('persist-1') < events.indexOf('build'));
   ok('onboarding completes after auxiliary state', events.indexOf('auxiliary') < events.indexOf('complete'));
+  // ── ACCEPTANCE'S SECOND STATEMENT, AND BOTH HALVES OF ITS POSITION ────────
+  // AFTER the world stops changing: `applyAuxiliaryState` can rebuild the
+  // program outright (a severity-5 injury does), so a block recorded earlier
+  // would name a program the athlete no longer has.
+  ok(
+    'accepted block is recorded after auxiliary state and onboarding settle',
+    events.indexOf('complete') < events.indexOf('accepted-block') &&
+      events.indexOf('auxiliary') < events.indexOf('accepted-block'),
+  );
+  // BEFORE the final flush, or the block lands after the seed reports ready and
+  // the checkpoint is taken without it — which is the reload mismatch itself.
+  const lastPersistIndex = events.reduce(
+    (last, event, index) => (event.startsWith('persist-') ? index : last),
+    -1,
+  );
+  ok(
+    'accepted block is recorded before the final persistence flush',
+    events.indexOf('accepted-block') >= 0 &&
+      events.indexOf('accepted-block') < lastPersistIndex,
+  );
   ok('checkpoint succeeds after a ready seed', await coordinator.checkpoint('fixture-move'));
   ok('checkpoint preserves seed identity separately from checkpoint identity',
     writtenCheckpoint?.seedId === 'standard-in-season-week' &&
@@ -433,18 +455,45 @@ async function main() {
       /Dev E2E store did not hydrate/.test(persistenceSource));
   ok('persistence readiness is semantic equality gated',
     /while \(!fingerprintMapsMatch\(expected, persisted\)\)/.test(persistenceSource));
+  /**
+   * ⚠ **THIS CELL USED TO GREP `devE2EPersistence.ts` FOR SIX FIELD NAMES, AND
+   * ON 2026-08-18 THE FIELDS MOVED OUT FROM UNDER IT.**
+   *
+   * The harness had a hand-written copy of the program store's persisted-input
+   * list. It was the THIRD copy, it missed `acceptedBlocks`, and the whole
+   * simulator rig died at the seed step for a day
+   * (`LAW-persisted-input-list-has-one-projection`). The copy is gone and the
+   * store's own `projectProgramPersistedInputs` is the one list — so a text scan
+   * of the harness file now finds nothing and reds, while the property it cares
+   * about is MORE true than before. `LAW-instrumentation-alive`: an instrument
+   * aimed at a shape that changed underneath it.
+   *
+   * **THE PROPERTY IS UNCHANGED AND IS NOW ASSERTED ON BEHAVIOUR, NOT ON TEXT.**
+   * A grep can pass on a comment; this calls the projection and reads what comes
+   * out. It also still watches the exclusion the original cell was written for —
+   * a derived adjustment ledger must NOT enter the fingerprint — by putting one
+   * in the state and checking it does not survive the projection.
+   */
+  const projected = projectProgramPersistedInputs({
+    generationAnchorISO: '2026-07-13',
+    currentProgram: { seasonPhaseClock: { phase: 'in_season' } },
+    sessionFeedback: { '2026-07-14': { difficulty: 'just_right' } },
+    weightOverrides: { '2026-07-14': { 'leg-press': 125 } },
+    acceptedBlocks: { '2026-07-13': { blockNumber: 1, requiredStrengthSessions: 8 } },
+    acceptedMaterialContext: { temporarySourceFacts: [], injuryEpisodes: [] },
+    // DERIVED OUTPUT, and the whole point of the exclusion half.
+    reversibleAdjustmentLedger: { entries: [{ id: 'derived-not-an-input' }] },
+  });
   ok('reload fingerprints compare persisted inputs and exclude derived adjustment output',
     [
-      'generationAnchorISO:',
-      'seasonPhaseClock:',
-      'sessionFeedback:',
-      'weightOverrides:',
-      'temporarySourceFacts:',
-      'injuryEpisodes:',
-    ].every((field) => persistenceSource.includes(field)) &&
-      !persistenceSource.includes(
-        'reversibleAdjustmentLedger: state.reversibleAdjustmentLedger',
-      ));
+      'generationAnchorISO',
+      'seasonPhaseClock',
+      'sessionFeedback',
+      'weightOverrides',
+      'temporarySourceFacts',
+      'injuryEpisodes',
+    ].every((field) => Object.prototype.hasOwnProperty.call(projected, field))
+      && !Object.prototype.hasOwnProperty.call(projected, 'reversibleAdjustmentLedger'));
 
   console.log(`\nDev E2E coordinator: ${passed} passed, ${failures.length} failed`);
   totalsPrinted(failures.length);

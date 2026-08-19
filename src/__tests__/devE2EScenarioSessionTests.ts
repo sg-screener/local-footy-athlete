@@ -212,6 +212,7 @@ function createHarness(): Harness {
     installProgram: () => { memory = { state: 'seeded' }; },
     applyAuxiliaryState: () => {},
     completeOnboarding: () => {},
+    recordAcceptedBlock: () => {},
     readWitnessState: () => ({
       program: null,
       profile: {},

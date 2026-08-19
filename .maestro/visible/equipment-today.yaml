@@ -1,0 +1,87 @@
+appId: com.localfootyathlete.app
+name: VISIBLE - temporary kit is entered on glass, and the day obeys it
+tags:
+  - e2e
+  - visible
+---
+# CAPABILITY 6: "temporary equipment can be entered through the UI; every visible
+# exercise is legal for that day's kit; permanent equipment remains unchanged."
+#
+# THE WORLD: this Monday is Back Squat (barbell + rack) and RDLs (barbell). The
+# athlete unticks the BARBELL for today only. Both must leave; whatever replaces
+# them must be legal without a barbell; and Profile must still say they own one.
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+- tapOn:
+    id: "session-execution-toggle-strength"
+# ── NON-VACUITY: the barbell work is there to begin with ──
+- assertVisible:
+    id: "session-strength-position-1-back-squat"
+- assertVisible:
+    id: "session-strength-position-2-rdls"
+- takeScreenshot: artifacts/visible/c6-before
+- tapOn:
+    id: "day-workout-equipment-concern-action"
+- extendedWaitUntil:
+    visible:
+      id: "session-equipment-sheet"
+    timeout: 10000
+- tapOn:
+    id: "session-equipment-option-tag-barbell"
+- takeScreenshot: artifacts/visible/c6-barbell-unticked
+- tapOn:
+    id: "session-equipment-apply"
+# ── THE APP SAYS WHAT IT DID, AND SAYS THE SCOPE ──
+# "for this session only" is the athlete's whole guarantee that unticking a
+# barbell today has not edited their gym. Asserted as copy, not just as a state.
+- extendedWaitUntil:
+    visible: "Session equipment updated"
+    timeout: 15000
+# ⚠ THIS USED TO ASSERT "2 exercises were replaced for this session only." AND
+# THAT RECEIPT IS NOW UNREACHABLE. Measured 2026-08-19 by
+# `npm run census:equipment-recompose` over 2,038 real (athlete, session date,
+# implement subset) door walks: the screen's residual
+# `buildSessionEquipmentReplacementPlan` had work to do in **0 of 2,038**. The
+# dated fact is written FIRST and the composer recomposes the day against the
+# reduced kit, so by the time the screen computes a leftover plan there is
+# nothing illegal left to swap — and the zero-replacement branch is the receipt
+# the athlete actually gets. Asserting the count sentence was asserting a screen
+# authority the composer had already taken over.
+- assertVisible: "Saved for this session only. Your session was rebuilt using the equipment you have today — your saved gym setup is unchanged."
+- takeScreenshot: artifacts/visible/c6-receipt
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 15000
+# ⚠ THE ROW-LEVEL CHECK IS DELIBERATELY NOT HERE, AND THAT IS NOT LAZINESS.
+# Whether the strength accordion is open after the sheet closes depends on what
+# the athlete last left it as, so a `tapOn ... optional: true` toggle makes the
+# next assertion depend on prior state — it passed and failed on identical trees
+# in consecutive runs. A flaky cell is worse than no cell: it teaches the next
+# reader to re-run until green.
+#
+# WHAT THE ROWS ACTUALLY SHOW, photographed 2026-08-19 on this exact world:
+# `Back Squat` leaves and `Leg Press` takes its slot carrying the badge
+# **"Swapped from Back Squat — equipment today"**; `RDLs` STAYS carrying
+# **"Dumbbells today — no barbell"**; `Single-Leg RDL` stays untouched.
+#
+# ⚠ **"RDLs STAYS" WAS RECORDED HERE AS A GAP AND IT IS NOT ONE.** Sam's sheet
+# authors `RDLs` as `[['barbell','dumbbells']]` — barbell OR dumbbells — so an
+# athlete without a barbell can still do it, and keeping it is the rule
+# (*"Keep the same exercise with another legal implement where its authored data
+# allows it"*). Reading that OR as an AND is the defect, and
+# `test:session-equipment-owner` cell [5] now holds the other direction.
+#
+# WHAT IS STILL A REAL GAP is narrower and lives one layer up: the sheet's own
+# requirement list (`deriveSessionEquipmentRequirements`) flat-maps display
+# labels, so re-opening it still OFFERS `Barbell` on a day whose only barbell
+# row is an OR-group one. The row is right; the checklist over-reports.

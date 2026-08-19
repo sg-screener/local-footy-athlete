@@ -3,6 +3,8 @@ import { EXERCISE_TAGS } from '../../data/exerciseTags';
 import { getExerciseCue } from '../../data/exerciseCues';
 import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
 import { logger } from '../../utils/logger';
+import { cueFitsImplement } from '../../data/cueImplement';
+import type { EquipmentTag } from '../../data/exercisePools';
 
 /**
  * Pure helpers extracted from DayWorkoutScreen so Classic and V2 render
@@ -26,6 +28,36 @@ export function joinCueClauses(primary: string, secondary: string): string {
   const trimmed = first.replace(/[\s,;:]+$/, '');
   const terminated = /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
   return `${terminated} ${second}`;
+}
+
+/**
+ * ── THE CUE MUST FIT THE IMPLEMENT IN THE ATHLETE'S HANDS ──────────────────
+ *
+ * Sam, 2026-08-18 (R-104). `RDLs` is authored for **barbell OR dumbbells** and
+ * its cue is *"Push hips back, bar slides down leg."* An athlete who unticks the
+ * barbell correctly KEEPS the RDL — it is legal on dumbbells — and was still
+ * told to slide a bar down their leg.
+ *
+ * **THE ANSWER IS SUPPRESSION, NOT SUBSTITUTION.** There is no authored dumbbell
+ * RDL cue, and `EXERCISE_CUES` is equality-gated to Sam's master sheet in both
+ * directions, so one cannot be written here. His ruling covers exactly this:
+ * *"flag missing authored technique guidance rather than invent coaching copy."*
+ * So the row renders NO cue and `missingCueForImplement` says why — which is the
+ * same loud failure the generic-fallback branch below already chose over filler.
+ *
+ * `selectedImplement` is optional so every existing caller keeps its behaviour
+ * unchanged: an undefined implement is "not asked", and a cue is never
+ * suppressed for a question nobody put.
+ */
+export function cueForImplement(
+  exerciseName: string,
+  selectedImplement?: EquipmentTag | null,
+): { text: string | null; missingCueForImplement: boolean } {
+  const name = canonicalExerciseName(exerciseName);
+  if (selectedImplement && !cueFitsImplement(name, selectedImplement)) {
+    return { text: null, missingCueForImplement: true };
+  }
+  return { text: buildCueText(exerciseName), missingCueForImplement: false };
 }
 
 /** Build a display string from exercise cues. Returns null if no cue available. */

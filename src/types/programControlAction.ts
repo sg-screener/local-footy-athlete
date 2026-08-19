@@ -200,6 +200,22 @@ export type ProgramControlAction =
       fromExerciseId?: string;
       toExercise?: ExercisePrescriptionPayload;
       futureWeeksToo?: boolean;
+      /**
+       * ── WHY THIS ROW IS NOT THE ONE THE ATHLETE ASKED FOR ─────────────────
+       *
+       * Sam, 2026-08-19, on a swap a later injury or kit loss makes illegal:
+       * *"Tell the athlete exactly why their chosen exercise is temporarily not
+       * being used."*
+       *
+       * Set ONLY by a fact's recomposition displacing an earlier choice — the
+       * injury pass naming the exercise it is standing in for. An athlete's own
+       * tap leaves it absent, because nothing is standing in for anything.
+       *
+       * It rides to `WorkoutExercise.substitutedFrom`, which the session screen
+       * already renders as one line, so this adds a producer to an existing
+       * reader rather than a second notice mechanism.
+       */
+      substitutedFrom?: { baseExerciseName: string; cause: 'injury' | 'kit_today' };
     }>
   | ProgramControlActionBase<'add_exercise', {
       date: string;
@@ -274,6 +290,33 @@ export type ProgramControlAction =
             conditioningModalities: readonly ConditioningEquipmentModality[];
             from: string;
             until: string;
+          }
+        /**
+         * **THE SESSION ANSWER — R-072's DEFAULT CASE, and until 2026-08-18 the
+         * only one of the three equipment scopes that wrote no fact at all.**
+         *
+         * Sam ruled the session scope the DEFAULT (*"equipment is usually only
+         * just for that session"*), and the session sheet honoured the SCOPE
+         * while recording nothing: it emitted a loop of `swap_exercise` actions
+         * and kept "I have no barbell today" in React `useState`, gone on
+         * unmount. Measured consequences, through the real door:
+         *
+         *  - the post-mutation finaliser restored `RDLs` — the barbell row the
+         *    athlete had just removed — from the ORIGINAL day, because nothing
+         *    downstream of the swap could know the barbell was gone;
+         *  - the removal could not expire on return, because it never began;
+         *  - a relaunch produced a session the athlete could not perform.
+         *
+         * **THIS IS NOT A FOURTH SCOPE.** It is scope (2) finally written down,
+         * in the same typed shape as the other two, keyed to the session's own
+         * date so it lifts itself the next day with no second decision to
+         * remember — the `kind: 'date'` scope that `TemporarySourceFactScope`
+         * has carried all along and the equipment path never reached for.
+         */
+        | {
+            kind: 'missing_for_session';
+            tags: readonly EquipmentTag[];
+            conditioningModalities: readonly ConditioningEquipmentModality[];
           }
         | { kind: 'available_again' };
       date: string;

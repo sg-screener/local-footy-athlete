@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
-import { useProgramStore } from '../../store/programStore';
+import { useProgramStore, projectProgramPersistedInputs } from '../../store/programStore';
 import {
   calendarPersistedInputs,
   useCalendarStore,
@@ -98,27 +98,21 @@ const semanticStores: SemanticStoreDescriptor[] = [
      * decisions, facts and results reach the disk?* Everything else is supposed
      * to be absent, and its absence is correctness rather than loss.
      *
-     * Mirrors `programStore`'s `partialize` field for field. If that list ever
-     * grows a key, this one grows with it — and a `partialize` that grew an
-     * OUTPUT would be the north-star violation, caught here as a mismatch.
+     * ⚠ **THIS SENTENCE USED TO SAY "mirrors `partialize` field for field. If
+     * that list ever grows a key, this one grows with it" — AND NOTHING MADE IT
+     * GROW.** `acceptedBlocks` was added to both of the store's own projections
+     * on 2026-08-17 and not to this hand-written copy, so from that day every
+     * seeded world reported `acceptedBlocks` on disk and absent in memory, the
+     * convergence loop ran to its deadline, and **the whole simulator rig died
+     * at the seed step** (measured on glass 2026-08-18 at `main @ c2aaf313`).
+     *
+     * It no longer mirrors anything: it CALLS the store's own projection, so the
+     * list cannot drift again. A `partialize` that grew an OUTPUT is still the
+     * north-star violation this check exists to catch — and it is caught the
+     * same way, because both sides now ask the identical question of the two
+     * different sources.
      */
-    select: (state) => {
-      // Reads BOTH shapes: a live store (fields at the top level) and a
-      // persisted envelope's `state` (already reduced to `inputs`). One
-      // projection, so the two sides cannot drift into different questions.
-      const inputs = (state.inputs ?? null) as Record<string, unknown> | null;
-      if (inputs) return inputs;
-      const accepted = (state.acceptedMaterialContext ?? {}) as Record<string, unknown>;
-      return {
-        generationAnchorISO: state.generationAnchorISO ?? null,
-        seasonPhaseClock: (state.currentProgram as { seasonPhaseClock?: unknown } | null)
-          ?.seasonPhaseClock ?? state.hydratedSeasonPhaseClock ?? null,
-        sessionFeedback: state.sessionFeedback ?? {},
-        weightOverrides: state.weightOverrides ?? {},
-        temporarySourceFacts: accepted.temporarySourceFacts ?? [],
-        injuryEpisodes: accepted.injuryEpisodes ?? [],
-      };
-    },
+    select: (state) => projectProgramPersistedInputs(state as Record<string, any>),
   },
   {
     key: 'calendar-storage',
@@ -166,7 +160,6 @@ const semanticStores: SemanticStoreDescriptor[] = [
     select: (state) => ({
       updatesByWeek: state.updatesByWeek ?? {},
       activeConstraints: state.activeConstraints ?? [],
-      activeInjury: state.activeInjury ?? null,
     }),
   },
   {

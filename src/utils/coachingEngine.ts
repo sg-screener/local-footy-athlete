@@ -121,7 +121,6 @@ import {
 } from '../rules/weeklyExposureContractBuilders';
 import {
   buildSection18WeeklyExposureContractV2,
-  migrateLegacyReductionV2,
   resolveSection18PhasePlannerSelection,
   isOptionalOnlyWeekMode,
   type Section18ConditioningRole,

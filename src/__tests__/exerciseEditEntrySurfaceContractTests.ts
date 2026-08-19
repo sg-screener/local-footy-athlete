@@ -184,8 +184,24 @@ console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\
   // The later session-equipment ruling replaces prepareConcern's one-row flow
   // with one whole-session owner. Every OTHER owner stays pinned, and that is
   // the point of editing the list rather than the loop.
+  // ── `prepareAdd` LEAVES THIS LIST — SAM, 2026-08-19 ────────────────────
+  //
+  // *"Add any legal exercise, mobility or conditioning component. Respect
+  // equipment, injury and genuine session limits. Own load authority."*
+  //
+  // `prepareAdd` read a HAND-WRITTEN table of twelve names, two per "kind", and
+  // offered whichever one the session did not already contain. It asked nothing
+  // about the athlete's kit and nothing about their injuries, so it cannot
+  // satisfy the ruling by being kept — it is a flow that was CUT, exactly as
+  // `prepareConcern` was, not an entry surface that moved.
+  //
+  // WHICH SIDE MOVED: the RULING, with a date. The replacement owners are
+  // `openExerciseAdd` and `openAddGroup` over
+  // `utils/addExerciseCandidates.legalAddCandidateGroups`, and they are pinned
+  // below in its place — a deletion that leaves nothing pinned is how a flow
+  // quietly stops existing.
   const flowOwners = [
-    'prepareSwap', 'prepareAdd', 'openExerciseInjuryFlow',
+    'prepareSwap', 'openExerciseAdd', 'openAddGroup', 'openExerciseInjuryFlow',
     'applyExerciseGuidedInjury', 'applySwapToday',
     'applyAddToday', 'saveFutureExerciseAdjustment', 'removeExerciseToday',
     'suggestTapSwap',
@@ -203,8 +219,16 @@ console.log('\n[3] The guided flows behind the buttons are UNCHANGED (ruling 12\
 
 console.log('\n[4] Every step the guided flows land on still exists');
 {
+  // `add_kind` is DELETED with `prepareAdd` (Sam, 2026-08-19 — see [3]); the two
+  // steps that replace it are named here so the deletion cannot take the whole
+  // Add flow's coverage with it.
+  // `swap_reason` is DELETED (Sam, 2026-08-19): *"Delete the entire 'Why do you
+  // want to swap it?' step. Swap means only: I want a different exercise."* Its
+  // replacement is no step at all — the pick lands straight on `choose_swap`,
+  // which is asserted below and guarded as a ROUTE in [4b].
   const survivingSteps = [
-    'pick_exercise', 'swap_reason', 'add_kind', 'confirm_remove', 'confirm_swap',
+    'pick_exercise', 'confirm_remove', 'confirm_swap',
+    'choose_swap', 'add_group', 'add_pick',
     'confirm_add', 'future_scope', 'coach_fallback', 'result',
   ];
   for (const step of survivingSteps) {
@@ -215,6 +239,53 @@ console.log('\n[4] Every step the guided flows land on still exists');
         + 'as a guided flow behind the new direct entries',
     );
   }
+}
+
+console.log('\n[4b] Swap is ONE question: which exercise?');
+{
+  /* ⚠ **THE REASON STEP IS GONE AND MUST NOT COME BACK.**
+   *
+   * Sam, 2026-08-19: *"Delete the entire 'Why do you want to swap it?' step.
+   * Swap means only: I want a different exercise. Equipment and Injury already
+   * have separate actions, so do not ask about either inside Swap. Too
+   * hard/easy also does not belong here."*
+   *
+   * Deleting a screen is easy to half-do: the step can go while its vocabulary,
+   * its icon table and its router case linger, and the next reader wires them
+   * back. Each of these names one of those leftovers. */
+  ok(
+    "the 'swap_reason' step kind is gone entirely",
+    !/'swap_reason'/.test(source),
+    'the step, its title, its subtitle and its render case must all go — a '
+      + 'surviving case is a screen one setter away from returning',
+  );
+  ok(
+    'the six swap reasons are gone',
+    !/const SWAP_REASONS/.test(source) && !/'Too hard'/.test(source)
+      && !/'Too easy'/.test(source) && !/"Don't like it"/.test(source),
+    'the reason vocabulary has no reader left once the step is deleted. The '
+      + 'DECLARATION is what must go — the tombstone comment naming it is the '
+      + 'record of the deletion and tripped the first version of this cell',
+  );
+  ok(
+    'the swap-reason icon table is gone',
+    !/const SWAP_REASON_ICON/.test(source),
+    'six icons for six labels that no longer exist',
+  );
+  ok(
+    'picking a row for SWAP goes straight to the ranked menu',
+    /action === 'swap'\) onSwapPick\(exercise\)/.test(source),
+    'the picker must call the swap preparer directly — anything else is a '
+      + 'second question in front of the answer',
+  );
+  ok(
+    'Equipment and Injury still have their own doors',
+    /action === 'injury'\) onInjuryStart\(exercise\)/.test(source)
+      && /openSessionEquipment/.test(source),
+    'Sam: *"do not disturb the separate Equipment or Injury flows"* — removing '
+      + 'the reason list must not remove the two actions that replaced two of '
+      + 'its rows',
+  );
 }
 
 console.log('\n[5] The orphaned callback is deleted, not left as dead code');

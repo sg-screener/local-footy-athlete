@@ -79,6 +79,25 @@ export function blockSelectionHistory(): readonly BlockExerciseSelection[] {
 }
 
 /**
+ * HAS THIS BLOCK EVER BEEN RECORDED? — the question that separates a door
+ * which AUTHORS a block from one which merely REPLAYS it.
+ *
+ * A boot regenerates the whole program on every launch. That regeneration is a
+ * re-derivation, not a decision, so it may record a block nobody has recorded
+ * yet (otherwise every launch would rotate a never-authored block freely) but it
+ * may never REPLACE an existing row. Without this question the two cases are
+ * indistinguishable at the call site and the boot silently re-authors the past —
+ * measured 2026-08-18, when a reversible `today_only` exclusion was laundered
+ * into a permanent generation input and the athlete's Back Squat was destroyed.
+ */
+export function blockHasRecordedSelections(blockStartISO: string): boolean {
+  if (!blockStartISO) return false;
+  return useBlockSelectionHistoryStore
+    .getState()
+    .selections.some((entry) => entry.blockStartISO === blockStartISO);
+}
+
+/**
  * Record what a block selected.
  *
  * ⚠ **RE-RECORDING A BLOCK REPLACES THAT BLOCK'S ROWS, IT DOES NOT APPEND.**

@@ -10,6 +10,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/ui';
 import { LfaIcon } from '../../components/icons/LfaIcon';
+import { SessionChangeHub } from '../../components/SessionChangeHub';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { signedCopy } from '../../rules/signedCopy';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SessionEquipmentSheet } from './SessionEquipmentSheet';
@@ -31,6 +33,7 @@ import {
   type ExerciseExclusionScope,
 } from '../../rules/exerciseExclusions';
 import { applyExerciseExclusionDecision } from '../../utils/exerciseExclusionOwner';
+import { legalAddCandidateGroups } from '../../utils/addExerciseCandidates';
 import {
   executeProgramControlAction,
   executeProgramControlActionDurably,
@@ -50,6 +53,7 @@ import { useProfileStore } from '../../store/profileStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import {
   getTapSwapChoices,
+  groupTapSwapChoices,
   resolveTapSwapEnvironment,
   type TapSwapChoice,
   type TapSwapHierarchyTier,
@@ -58,8 +62,25 @@ import {
 } from '../../utils/tapSwapHierarchy';
 import { resolveEquipmentCapabilities } from '../../utils/equipmentAvailability';
 import {
-  buildSessionEquipmentReplacementPlan,
+  resolveSelectedImplement,
+  selectedImplementLabel,
+  type SelectedImplement,
+} from '../../rules/selectedImplement';
+import type { EquipmentTag } from '../../data/exercisePools';
+
+/**
+ * The typed implement for a row PLUS whether today's kit changed it. Sam's UI
+ * correction: the implement is always typed, and only ever SHOWN when it is
+ * today's answer rather than the athlete's usual one.
+ */
+type SelectedImplementToday = SelectedImplement & {
+  changedToday: boolean;
+  normalImplement: EquipmentTag | null;
+};
+import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
+import {
   deriveSessionEquipmentRequirements,
+  missingSessionEquipmentValues,
   type SessionEquipmentRequirementKey,
 } from '../../utils/sessionEquipment';
 import type { RecoveryAddonBlock } from '../../types/domain';
@@ -84,6 +105,7 @@ import {
 } from './dayWorkoutSmokeContract';
 import {
   buildCueText,
+  cueForImplement,
   cleanNotes,
   formatRest,
   inferRecoveryPrescriptionType,
@@ -108,6 +130,10 @@ import {
   type SessionExecutionPlan,
   type SessionExecutionSection as SessionExecutionSectionModel,
 } from '../../utils/sessionExecutionChecklist';
+import {
+  buildSwapSuggestionPayload,
+  type SwapSuggestionPayload,
+} from '../../utils/swapSuggestionPayload';
 
 type EditableExercise = {
   key: string;
@@ -116,17 +142,10 @@ type EditableExercise = {
   raw?: any;
 };
 
-type SuggestedExercise = {
-  name: string;
-  sets: number;
-  repsMin: number;
-  repsMax: number;
-  weight?: number;
-  notes?: string;
-  prescriptionType?: 'reps' | 'duration' | 'duration_minutes' | 'distance';
-  perSide?: boolean;
-  restSeconds?: number;
-};
+// THE SWAP PAYLOAD'S SHAPE AND ITS RULE BOTH LIVE IN `utils/swapSuggestionPayload`
+// — a rule about which LOAD an athlete sees cannot be asserted by anything that
+// has to mount React Native first. See that file's header for the defect.
+type SuggestedExercise = SwapSuggestionPayload;
 
 type SuggestedSwap =
   | {
@@ -153,14 +172,28 @@ type SuggestedSwap =
  * design would have routed through — are deleted outright rather than kept
  * as dead-but-present.
  */
-type ExercisePickAction = 'injury';
-type SwapReason =
-  | 'No equipment'
-  | 'Injury / pain'
-  | 'Too hard'
-  | 'Too easy'
-  | "Don't like it"
-  | 'Other';
+/**
+ * WHICH EXERCISE, AND FOR WHAT.
+ *
+ * Sam, 2026-08-19: the hub is *"Equipment · Injury · Add · Remove · Swap"*, and
+ * three of those five need a row before they can act. They all ask the same
+ * question, so they all use the same step rather than three pickers that could
+ * drift apart.
+ */
+type ExercisePickAction = 'injury' | 'swap' | 'remove';
+/**
+ * ⚠ **FOUR OF THESE SIX WERE DELETED WITH THE REASON SCREEN (2026-08-19).**
+ *
+ * Sam: *"Delete the entire 'Why do you want to swap it?' step. Swap means only:
+ * I want a different exercise. … Equipment and Injury already have separate
+ * actions, so do not ask about either inside Swap. Too hard/easy also does not
+ * belong here."*
+ *
+ * `'Preference'` is what every athlete-initiated swap now is. `'Injury / pain'`
+ * survives because the INJURY action still routes through the same suggestion
+ * owner and needs the injury ladder — it is set by that flow, never chosen.
+ */
+type SwapReason = 'Preference' | 'Injury / pain';
 type AddExerciseKind =
   | 'Upper body'
   | 'Lower body'
@@ -217,8 +250,6 @@ type FutureScopeStep =
 type ExerciseEditStep =
   | { kind: 'closed' }
   | { kind: 'pick_exercise'; action: ExercisePickAction }
-  | { kind: 'swap_reason'; exercise: EditableExercise }
-  | { kind: 'add_kind' }
   | { kind: 'confirm_remove'; exercise: EditableExercise }
   /**
    * SAM'S SCOPE QUESTION, ASKED AFTER THE EXERCISE IS ALREADY OUT OF TODAY.
@@ -230,6 +261,28 @@ type ExerciseEditStep =
    * about.
    */
   | { kind: 'exclusion_scope'; exercise: EditableExercise }
+  /**
+   * SAM'S SWAP MENU — up to six legal options in three labelled groups.
+   *
+   * Sam, 2026-08-19: *"Up to six legal choices: two Closest matches; two
+   * Similar options; two Other useful options. Label the groups. Show fewer
+   * when good legal options do not exist."*
+   *
+   * It sits BEFORE `confirm_swap` and does not replace it: the athlete picks
+   * from the menu and still sees what they are about to get, with its own
+   * prescription, before anything is written. The screen used to take
+   * `getTapSwapChoices(...)[0]` and show that one option as a fait accompli.
+   */
+  | {
+      kind: 'choose_swap';
+      exercise: EditableExercise;
+      reason: SwapReason;
+      groups: readonly {
+        id: string;
+        label: string;
+        options: readonly { name: string; meta: string; suggestion: SuggestedSwap }[];
+      }[];
+    }
   | {
       kind: 'confirm_swap';
       exercise: EditableExercise;
@@ -237,11 +290,41 @@ type ExerciseEditStep =
       reason: SwapReason | 'Injury / pain';
       injuryArea?: InjuryArea;
       injurySeverity?: InjurySeverity;
+      /**
+       * THE MENU THIS CHOICE CAME FROM, so Back returns to it rather than
+       * closing the sheet. Absent when the swap was reached from the injury
+       * flow, which has its own shallower step and no menu of its own.
+       */
+      fromMenu?: Extract<ExerciseEditStep, { kind: 'choose_swap' }>;
+    }
+  /**
+   * **THE ADD MENU — THE APP'S OWN VOCABULARY, FILTERED FOR THIS ATHLETE.**
+   *
+   * Sam, 2026-08-19: *"Add any legal exercise, mobility or conditioning
+   * component ... Respect equipment, injury and genuine session limits."*
+   *
+   * `add_kind` used to be seven hand-written labels over a table of TWELVE
+   * suggestions that asked nothing about the athlete's kit or their injuries.
+   * These two steps replace it with `legalAddCandidateGroups` — every group the
+   * vocabulary offers, minus everything unsafe today and everything already on
+   * the day. A group with nothing legal left in it is ABSENT, so a category the
+   * athlete taps always has something behind it.
+   */
+  | {
+      kind: 'add_group';
+      groups: readonly { label: string; count: number }[];
+    }
+  | {
+      kind: 'add_pick';
+      label: string;
+      options: readonly { name: string; meta: string; suggestion: SuggestedExercise }[];
     }
   | {
       kind: 'confirm_add';
       addKind: AddExerciseKind;
       suggestion: SuggestedExercise;
+      /** The list this came from, so Back returns to it. */
+      fromPick?: Extract<ExerciseEditStep, { kind: 'add_pick' }>;
     }
   | FutureScopeStep
   | { kind: 'coach_fallback'; title: string; message: string; prefill: string }
@@ -260,24 +343,11 @@ const EXCLUSION_SCOPE_TEST_ID: Record<ExerciseExclusionScope, 'today' | 'block' 
   until_changed: 'future',
 };
 
-const SWAP_REASONS: SwapReason[] = [
-  'No equipment',
-  'Injury / pain',
-  'Too hard',
-  'Too easy',
-  "Don't like it",
-  'Other',
-];
+/* `SWAP_REASONS` DELETED with the `swap_reason` step it fed (2026-08-19). */
 
-const ADD_EXERCISE_KINDS: AddExerciseKind[] = [
-  'Upper body',
-  'Lower body',
-  'Midline',
-  'Prehab',
-  'Mobility',
-  'Conditioning finisher',
-  'Other',
-];
+/* `ADD_EXERCISE_KINDS` DELETED with the `add_kind` step it fed (2026-08-19).
+ * `AddExerciseKind` itself survives: `confirm_add` still carries one, and the
+ * future-scope step reads it. */
 
 function getExerciseName(exercise: any, fallback = 'Exercise'): string {
   return String(exercise?.exercise?.name || exercise?.name || fallback).trim();
@@ -305,35 +375,8 @@ function buildEditableExercises(workout: any, isTeamOnly: boolean): EditableExer
       exercise !== null && !!exercise.name);
 }
 
-function baseSuggestion(
-  name: string,
-  raw?: any,
-  overrides: Partial<SuggestedExercise> = {},
-): SuggestedExercise {
-  const sets = Number(raw?.prescribedSets) || 3;
-  const repsMin = Number(raw?.prescribedRepsMin) || 8;
-  const repsMax = Number(raw?.prescribedRepsMax) || Math.max(repsMin, 10);
-  return {
-    name,
-    sets,
-    repsMin,
-    repsMax,
-    weight: overrides.weight ?? raw?.prescribedWeightKg,
-    notes: overrides.notes,
-    prescriptionType: overrides.prescriptionType ?? raw?.prescriptionType,
-    perSide: overrides.perSide ?? raw?.perSide,
-    restSeconds: overrides.restSeconds ?? raw?.restSeconds,
-    ...overrides,
-  };
-}
-
 function tapSwapReason(reason: SwapReason): TapSwapReason {
-  if (reason === 'No equipment') return 'no_equipment';
-  if (reason === 'Injury / pain') return 'injury_or_pain';
-  if (reason === 'Too hard') return 'too_hard';
-  if (reason === 'Too easy') return 'too_easy';
-  if (reason === "Don't like it") return 'preference';
-  return 'other';
+  return reason === 'Injury / pain' ? 'injury_or_pain' : 'preference';
 }
 
 function suggestedSwapFromChoice(
@@ -349,7 +392,7 @@ function suggestedSwapFromChoice(
   }
   return {
     kind: 'exercise',
-    suggestion: baseSuggestion(
+    suggestion: buildSwapSuggestionPayload(
       choice.name,
       exercise.raw,
       choice.prescription ?? {},
@@ -390,61 +433,22 @@ function guidedSeverityToExerciseSeverity(result: GuidedInjuryFlowResult): Injur
   }
 }
 
-function suggestAddExercise(
-  kind: AddExerciseKind,
-  existingExercises: EditableExercise[],
-): SuggestedExercise | null {
-  if (kind === 'Other') return null;
-  const existing = new Set(existingExercises.map((exercise) => exercise.name.toLowerCase()));
-  const candidates: Record<Exclude<AddExerciseKind, 'Other'>, SuggestedExercise[]> = {
-    'Upper body': [
-      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15, notes: 'Keep it controlled.' },
-      { name: 'Push-Ups', sets: 2, repsMin: 8, repsMax: 12 },
-    ],
-    'Lower body': [
-      // Sam ruled 2026-07-25: "Split Squat" named a progression the curated
-      // vocabulary does not have, so the suggestion points at Reverse Lunges
-      // rather than at Bulgarian Split Squats — mapping it to Bulgarian would
-      // have handed a beginner the HARDER variant, which is the opposite of what
-      // the split-squat suggestion was for.
-      { name: 'Reverse Lunges', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
-      { name: 'Hip Thrust', sets: 2, repsMin: 10, repsMax: 12 },
-    ],
-    Midline: [
-      { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12, perSide: true },
-      { name: 'Dead Bug', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
-    ],
-    Prehab: [
-      { name: 'Copenhagen Plank (Half)', sets: 2, repsMin: 20, repsMax: 30, prescriptionType: 'duration', perSide: true },
-      // Sam ruled 2026-07-25: Single-Leg Calf Raise. The PRESCRIPTION had to move
-      // with the name — the old entry was a 30-45s isometric hold, and the
-      // curated raise is 12-15 reps per side. Keeping the duration would have
-      // prescribed "30-45 seconds" of a rep-counted movement. Dose matches the
-      // curated pool entry (CALVES_POOL), including its 3-second lowering.
-      { name: 'Single-Leg Calf Raise', sets: 2, repsMin: 12, repsMax: 15, prescriptionType: 'reps', perSide: true, notes: '3-second lowering.' },
-    ],
-    Mobility: [
-      // Sam ruled 2026-07-25: Hip 90/90 Stretch. Flow-capable suggestions are a
-      // POSSIBLE FUTURE BUILD, not now — this table emits single exercises, so a
-      // suggestion naming a whole composed flow has nowhere to land.
-      // The prescription moved with the name: 5-8 MINUTES of a flow becomes
-      // 30-45 SECONDS per side of a stretch, matching MOBILITY_POOL.
-      { name: 'Hip 90/90 Stretch', sets: 2, repsMin: 30, repsMax: 45, prescriptionType: 'duration', perSide: true, notes: 'Breathe into the stretch.' },
-      // Sam approved 2026-07-25: "T-Spine Openers" was the same drill under a
-      // name the app could not cue, so it now names the curated entry.
-      { name: 'Open Book Thoracic Rotation', sets: 2, repsMin: 6, repsMax: 8, perSide: true },
-    ],
-    'Conditioning finisher': [
-      // Sam approved 2026-07-25: both finishers named formats that did not exist
-      // in the vocabulary, so both rendered blank. They now name the curated
-      // conditioning entries; the notes carry the "easy, not a test" intent that
-      // the invented "Finisher" suffix used to.
-      { name: 'Easy Bike', sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes', notes: 'Easy-moderate pace.' },
-      { name: 'Tempo Run', sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes', notes: 'Smooth, not a test.' },
-    ],
-  };
-  return candidates[kind].find((candidate) => !existing.has(candidate.name.toLowerCase())) ?? null;
-}
+/**
+ * ⚠ **`suggestAddExercise` IS DELETED — 2026-08-19.**
+ *
+ * A hand-written table of TWELVE names, two per 'kind', offering whichever
+ * one the session did not already contain. It asked nothing about the
+ * athlete's equipment and nothing about their injuries, so a shoulder-injured
+ * athlete with no barbell was offered the same two upper-body options as
+ * everyone else, and every band in it was typed by hand.
+ *
+ * Sam, 2026-08-19: *"Add any legal exercise, mobility or conditioning
+ * component. Respect equipment, injury and genuine session limits. Own load
+ * authority."* The owner is `utils/addExerciseCandidates.legalAddCandidateGroups`,
+ * over the app's own `selectableVocabularyGroups()`, filtered by the SAME
+ * safety function the swap ladder uses, with the load from
+ * `startingWeightForAthlete`.
+ */
 
 function suggestionPrescription(suggestion: SuggestedExercise): string {
   const reps =
@@ -514,6 +518,10 @@ export default function DayWorkoutScreenV2() {
     isTeamOnly,
   } = useDayWorkout();
 
+  // The Day screen's hub arrives here with `openChange`; see the effect below.
+  const route = useRoute<{ key: string; name: string; params?: { openChange?: string } }>();
+  const navigation = useNavigation();
+
   const smokeCoachBikeFlow =
     __DEV__ && getSmokeRuntimeSignal().flow === 'coach-bike-flow';
   const [exerciseEditStep, setExerciseEditStep] =
@@ -540,6 +548,68 @@ export default function DayWorkoutScreenV2() {
   const sessionEquipmentRequirements = React.useMemo(
     () => deriveSessionEquipmentRequirements(editableExercises),
     [editableExercises],
+  );
+
+  /**
+   * ── THE EFFECTIVE KIT FOR *THIS* DAY, AND THE IMPLEMENT IT SELECTS ────────
+   *
+   * R-104. `resolveEquipmentCapabilities(profile, constraints, date)` is the one
+   * owner — profile, minus any away span, minus the session answer this screen
+   * now writes as a dated fact. **Reading `profile.equipmentAnswer` directly here
+   * would answer "barbell" on a day the athlete has just unticked the barbell**,
+   * which is exactly the private profile read R-102 closed.
+   *
+   * The store reads are live-at-render on purpose: applying the equipment sheet
+   * writes a fact and recomposes, so `workout` changes identity and this
+   * recomputes with it.
+   */
+  const effectiveKitTags = React.useMemo(
+    () => (date
+      ? resolveEquipmentCapabilities(
+          useProfileStore.getState().onboardingData,
+          useCoachUpdatesStore.getState().activeConstraints,
+          date,
+        ).tags
+      : []),
+    [date, workout],
+  );
+  /**
+   * The PERMANENT kit — the athlete's own gym, with no dated fact subtracted.
+   * `resolveEquipmentCapabilities` with no constraints IS the permanent answer
+   * (see its docstring); it is resolved separately so the screen can tell "this
+   * is what you always use" from "this is what you're using TODAY".
+   */
+  const permanentKitTags = React.useMemo(
+    () => (date
+      ? resolveEquipmentCapabilities(useProfileStore.getState().onboardingData, [], date).tags
+      : []),
+    [date],
+  );
+  const implementFor = React.useCallback(
+    (exerciseName: string, prescribedWeightKg?: number | null) => {
+      const canonical = canonicalExerciseName(exerciseName);
+      const effective = resolveSelectedImplement({
+        exerciseName: canonical, availableTags: effectiveKitTags, prescribedWeightKg,
+      });
+      const permanent = resolveSelectedImplement({
+        exerciseName: canonical, availableTags: permanentKitTags, prescribedWeightKg,
+      });
+      return {
+        ...effective,
+        // ── SAM'S UI CORRECTION, 2026-08-18 ────────────────────────────────
+        // *"The always-visible implement labels make the session too cluttered
+        // … Only show equipment context when it explains a TEMPORARY session
+        // change."* So the implement stays typed on every row — legality, load
+        // and cues all read it — and the SCREEN only speaks when today differs
+        // from the athlete's normal kit. On an ordinary day this is false on
+        // every row and the session renders exactly as it did before any of
+        // this landed.
+        changedToday: !!effective.implement && !!permanent.implement
+          && effective.implement !== permanent.implement,
+        normalImplement: permanent.implement,
+      };
+    },
+    [effectiveKitTags, permanentKitTags],
   );
 
   /**
@@ -651,10 +721,6 @@ export default function DayWorkoutScreenV2() {
   // editableExercises.length > 0`), now guarded at both the render site
   // (hides the row) and here (defensive, matches the retired handler's
   // own belt-and-braces check).
-  const openExerciseAdd = React.useCallback(() => {
-    if (isTeamOnly || editableExercises.length === 0) return;
-    setExerciseEditStep({ kind: 'add_kind' });
-  }, [editableExercises.length, isTeamOnly]);
 
   const openSessionEquipment = React.useCallback(() => {
     if (isTeamOnly || sessionEquipmentRequirements.length === 0) return;
@@ -666,17 +732,21 @@ export default function DayWorkoutScreenV2() {
     setExerciseEditStep({ kind: 'pick_exercise', action: 'injury' });
   }, [editableExercises.length, isTeamOnly]);
 
+  const openExerciseSwapPicker = React.useCallback(() => {
+    if (isTeamOnly || editableExercises.length === 0) return;
+    setExerciseEditStep({ kind: 'pick_exercise', action: 'swap' });
+  }, [editableExercises.length, isTeamOnly]);
+
+  const openExerciseRemovePicker = React.useCallback(() => {
+    if (isTeamOnly || editableExercises.length === 0) return;
+    setExerciseEditStep({ kind: 'pick_exercise', action: 'remove' });
+  }, [editableExercises.length, isTeamOnly]);
+
   // Per-row swap/remove buttons. Replace `openSpecificExerciseEditor`,
   // which routed every row tap through the now-deleted `exercise_menu`
   // step. The row already tells us which exercise AND which action, so
   // each opener lands straight on the guided step that action starts —
   // no intermediate menu to choose from.
-  const openExerciseSwap = React.useCallback((exercise: any) => {
-    const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
-    if (!editable) return;
-    setExerciseEditStep({ kind: 'swap_reason', exercise: editable });
-  }, []);
-
   const openExerciseRemove = React.useCallback((exercise: any) => {
     const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
     if (!editable) return;
@@ -725,117 +795,229 @@ export default function DayWorkoutScreenV2() {
   );
 
   const prepareSwap = React.useCallback(
-    (exercise: EditableExercise, reason: SwapReason) => {
-      if (reason === 'Injury / pain') {
-        openExerciseInjuryFlow(exercise);
-        return;
-      }
-      setExerciseEditStep({
-        kind: 'confirm_swap',
-        exercise,
-        suggestion: suggestTapSwap(exercise, reason),
-        reason,
+    (exercise: EditableExercise) => {
+      const reason: SwapReason = 'Preference';
+      const dateISO = date ?? todayISOLocal();
+      const environment = resolveTapSwapEnvironment({
+        date: dateISO,
+        profile: useProfileStore.getState().onboardingData,
+        activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+        readinessSignal: useReadinessStore.getState().signalsByDate[dateISO],
       });
-    },
-    [openExerciseInjuryFlow, suggestTapSwap],
-  );
-
-  const prepareAdd = React.useCallback(
-    (kind: AddExerciseKind) => {
-      const suggestion = suggestAddExercise(kind, editableExercises);
-      if (!suggestion) {
-        // R5.7 LEFTOVER, CAUGHT AT THE SIGNING PASS. This sheet was TITLED
-        // "Ask Coach" and, after the beta cut, offers no coach — a sheet named
-        // for a door that no longer exists is the half-alive surface C(a)
-        // forbids, and section [4]'s gate could not see it because it watches
-        // NAVIGATION, not titles. The replacement is not new copy: it is the
-        // signed title the other two fallback sheets already carry.
+      // THE SAME LADDER, ASKED FOR ITS WHOLE ANSWER. `groupTapSwapChoices` caps
+      // each group at two and OMITS a group with no legal member — Sam's *"show
+      // fewer when good legal options do not exist"* honoured by omission
+      // rather than by padding the list with something illegal.
+      const groups = groupTapSwapChoices(getTapSwapChoices({
+        originalExercise: exercise.name,
+        reason: tapSwapReason(reason),
+        environment,
+        existingExerciseNames: editableExercises.map((item) => item.name),
+      })).map((group) => ({
+        id: group.id,
+        label: group.label,
+        options: group.choices.map((choice) => {
+          const suggestion = suggestedSwapFromChoice(exercise, choice);
+          return {
+            name: displayExerciseName(choice.name ?? ''),
+            meta: suggestion.kind === 'exercise'
+              ? suggestionPrescription(suggestion.suggestion)
+              : choice.reason,
+            suggestion,
+          };
+        }),
+      })).filter((group) => group.options.length > 0);
+      if (groups.length === 0) {
+        // HONEST, NOT AN EMPTY SHEET. A row with no legal substitute says so in
+        // the athlete's words; it does not open a chooser with nothing in it.
         showExerciseEditFallback(
-          'I need a bit more detail',
-          'I need a bit more detail before changing this safely.',
-          `Add one ${kind.toLowerCase()} exercise or small block to ${workoutLabel} on ${dateLabel}.`,
+          'No safe swap for this one',
+          `There is no safe replacement for ${displayExerciseName(exercise.name)} with today’s kit and how you are pulling up. You can remove it instead.`,
+          `Find a safe replacement for ${displayExerciseName(exercise.name)} on ${dateLabel}.`,
         );
         return;
       }
-      setExerciseEditStep({ kind: 'confirm_add', addKind: kind, suggestion });
+      setExerciseEditStep({ kind: 'choose_swap', exercise, reason, groups });
     },
-    [dateLabel, editableExercises, showExerciseEditFallback, workoutLabel],
+    [date, dateLabel, editableExercises, openExerciseInjuryFlow, showExerciseEditFallback],
   );
 
-  const applySessionEquipment = React.useCallback((
+  // Declared AFTER `prepareSwap`, which it calls: this is a const arrow, not a
+  // hoisted function, so the earlier position was a use-before-declaration.
+  const openExerciseSwap = React.useCallback((exercise: any) => {
+    const editable = buildEditableExercises({ exercises: [exercise] }, false)[0];
+    if (!editable) return;
+    prepareSwap(editable);
+  }, [prepareSwap]);
+
+
+  /**
+   * THE LEGAL ADD MENU FOR THIS ATHLETE, ON THIS DAY.
+   *
+   * Derived at open time and never stored: kit, injuries and what is already on
+   * the session all move, and a cached menu would offer a movement the athlete
+   * can no longer do.
+   */
+  const addCandidateGroups = React.useCallback(() => {
+    const dateISO = date ?? todayISOLocal();
+    return legalAddCandidateGroups({
+      environment: resolveTapSwapEnvironment({
+        date: dateISO,
+        profile: useProfileStore.getState().onboardingData,
+        activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+        readinessSignal: useReadinessStore.getState().signalsByDate[dateISO],
+      }),
+      existingExerciseNames: editableExercises.map((item) => item.name),
+      profile: useProfileStore.getState().onboardingData,
+    });
+  }, [date, editableExercises]);
+
+  const openExerciseAdd = React.useCallback(() => {
+    if (isTeamOnly || editableExercises.length === 0) return;
+    const groups = addCandidateGroups();
+    if (groups.length === 0) {
+      // HONEST. Every group empty means this athlete's kit and injuries leave
+      // nothing safe to add today, which is a sentence, not an empty list.
+      showExerciseEditFallback(
+        'Nothing safe to add today',
+        'With today’s kit and how you are pulling up, there is nothing safe to add on top of this session.',
+        `Find something safe to add to ${workoutLabel} on ${dateLabel}.`,
+      );
+      return;
+    }
+    setExerciseEditStep({
+      kind: 'add_group',
+      groups: groups.map((group) => ({ label: group.label, count: group.candidates.length })),
+    });
+  }, [
+    addCandidateGroups, dateLabel, editableExercises.length, isTeamOnly,
+    showExerciseEditFallback, workoutLabel,
+  ]);
+
+  /**
+   * ── THE DAY SCREEN'S HUB, ARRIVING ON THE DOOR IT ASKED FOR ───────────────
+   *
+   * Sam, 2026-08-19: *"Both must render one shared hub and enter the same
+   * canonical action doors."* Equipment, Add and Swap have exactly one owner
+   * each and it is on THIS screen, so the Day hub navigates here with
+   * `openChange` instead of growing a second copy of any of them.
+   *
+   * ⚠ **ONCE, AND ONLY WHEN THE SESSION IS READY.** The effect waits for
+   * `editableExercises` because two of the three doors open a picker over the
+   * session's own rows, and it clears the param afterwards so that going back
+   * and returning does not re-open the sheet the athlete just closed.
+   */
+  const openChangeIntent = (route.params as { openChange?: string } | undefined)?.openChange;
+  React.useEffect(() => {
+    if (!openChangeIntent || !date || isTeamOnly || editableExercises.length === 0) return;
+    if (openChangeIntent === 'equipment') openSessionEquipment();
+    else if (openChangeIntent === 'add') openExerciseAdd();
+    else if (openChangeIntent === 'swap') openExerciseSwapPicker();
+    navigation.setParams({ openChange: undefined } as never);
+  }, [
+    openChangeIntent, date, isTeamOnly, editableExercises.length,
+    openSessionEquipment, openExerciseAdd, openExerciseSwapPicker, navigation,
+  ]);
+
+  const openAddGroup = React.useCallback((label: string) => {
+    const group = addCandidateGroups().find((entry) => entry.label === label);
+    if (!group) return;
+    setExerciseEditStep({
+      kind: 'add_pick',
+      label,
+      options: group.candidates.map((candidate) => {
+        const suggestion: SuggestedExercise = {
+          name: candidate.name,
+          sets: candidate.sets,
+          repsMin: candidate.repsMin,
+          repsMax: candidate.repsMax,
+          ...(candidate.prescriptionType ? { prescriptionType: candidate.prescriptionType } : {}),
+          ...(candidate.perSide ? { perSide: true } : {}),
+          ...(candidate.weightKg !== null ? { weight: candidate.weightKg } : {}),
+        } as SuggestedExercise;
+        return {
+          name: displayExerciseName(candidate.name),
+          meta: suggestionPrescription(suggestion),
+          suggestion,
+        };
+      }),
+    });
+  }, [addCandidateGroups]);
+
+  /* `prepareAdd` DELETED with `suggestAddExercise` and the `add_kind` step
+   * (2026-08-19). `openExerciseAdd` -> `openAddGroup` is the whole route now,
+   * and its fallback is a real sentence about kit and injuries rather than
+   * "I need a bit more detail" for a table that had simply run out of names. */
+
+  const applySessionEquipment = React.useCallback(async (
     missingKeys: ReadonlySet<SessionEquipmentRequirementKey>,
   ) => {
     if (!date) return;
-    const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
-    const profile = useProfileStore.getState().onboardingData;
-    const capabilities = resolveEquipmentCapabilities(profile, activeConstraints, date);
-    const environment = resolveTapSwapEnvironment({
-      date,
-      profile,
-      activeConstraints,
-      readinessSignal: useReadinessStore.getState().signalsByDate[date],
-    });
-    const plan = buildSessionEquipmentReplacementPlan({
-      exercises: editableExercises,
-      requirements: sessionEquipmentRequirements,
-      missingKeys,
-      capabilities,
-      environment,
-    });
-    if ('exerciseName' in plan) {
+    // ── THE DECISION IS RECORDED BEFORE ANYTHING ACTS ON IT ──────────────────
+    //
+    // **This handler used to emit a loop of `swap_exercise` actions and nothing
+    // else**, holding "I have no barbell today" in the sheet's own `useState`.
+    // A decision that exists only as its own consequences cannot be read by the
+    // producers that run afterwards, and the post-mutation finaliser proved it:
+    // measured through this door, replacing `RDLs` removed the day's hinge, so
+    // the finaliser restored one FROM THE ORIGINAL DAY — putting the barbell
+    // row straight back on a session the athlete had just said they could not
+    // load. It consults no equipment because there was no equipment fact to
+    // consult.
+    //
+    // The fact goes first, so every producer downstream of it — the swap's own
+    // finaliser included — is working in a world where the kit is known.
+    const factResult = await executeProgramControlActionDurably({
+      type: 'set_equipment_modifier',
+      source: { screen: 'session_detail', surface: 'session_equipment_sheet', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: {
+        date,
+        todayISO: date,
+        decision: {
+          kind: 'missing_for_session',
+          tags: missingSessionEquipmentValues(missingKeys).tags,
+          conditioningModalities: missingSessionEquipmentValues(missingKeys).modalities,
+        },
+      },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: true,
+    }, { todayISO: date });
+    if (!factResult.ok) {
       setSessionEquipmentVisible(false);
       setExerciseEditStep({
         kind: 'result',
         ok: false,
-        title: 'No suitable replacement',
-        message: `Nothing changed. There isn’t a safe replacement for ${displayExerciseName(plan.exerciseName)} using the equipment still available.`,
+        title: 'Could not change this session’s equipment',
+        message: factResult.message ?? 'Nothing changed.',
       });
       return;
     }
-    if (plan.replacements.length === 0) {
-      setSessionEquipmentVisible(false);
-      return;
-    }
-
-    let applied = 0;
-    for (const replacement of plan.replacements) {
-      const result = executeProgramControlAction({
-        type: 'swap_exercise',
-        source: { screen: 'session_detail', surface: 'session_equipment_sheet', initiatedBy: 'tap' },
-        scope: 'today_only',
-        payload: {
-          date,
-          fromExercise: replacement.fromExercise,
-          fromExerciseId: replacement.targetId,
-          toExercise: replacement.toExercise,
-        },
-        requiresRebuild: false,
-        createsActiveModifier: false,
-        oneOffOnly: true,
-      });
-      if (!result.ok) {
-        setSessionEquipmentVisible(false);
-        setExerciseEditStep({
-          kind: 'result',
-          ok: false,
-          title: 'Could not finish equipment changes',
-          message: applied > 0
-            ? `${applied} ${applied === 1 ? 'exercise was' : 'exercises were'} replaced, but the remaining change could not be applied.`
-            : result.message ?? 'Nothing changed.',
-        });
-        return;
-      }
-      applied += 1;
-    }
-
+    // ── THE FACT IS THE WHOLE ACTION ─────────────────────────────────────
+    //
+    // ⚠ **A SECOND SELECTION AUTHORITY USED TO LIVE HERE AND IT WAS INERT.**
+    // This handler went on to call `buildSessionEquipmentReplacementPlan` and
+    // commit a loop of `swap_exercise` actions from its answer — the screen
+    // choosing exercises, which is the composer's job. Deleted 2026-08-19 after
+    // it was measured across **2,038 real (athlete, session date, implement
+    // subset) door walks**: it produced replacements in **0 of them**, because
+    // the dated fact above is written FIRST and the composer has already
+    // recomposed the day against the reduced kit. Its `"N exercises were
+    // replaced"` receipt was unreachable, and the Maestro flow that asserted it
+    // had been failing on glass.
+    //
+    // **THE LIVE SWAP AND REMOVE DOOR IS UNTOUCHED** — `applySwapToday` below
+    // still owns `swap_exercise` and `remove_exercise`. Nothing about ordinary
+    // swapping or removal changed here; only this dead copy of it went.
     setSessionEquipmentVisible(false);
     setExerciseEditStep({
       kind: 'result',
       ok: true,
       title: 'Session equipment updated',
-      message: `${applied} ${applied === 1 ? 'exercise was' : 'exercises were'} replaced for this session only.`,
+      message: 'Saved for this session only. Your session was rebuilt using the equipment you have today — your saved gym setup is unchanged.',
     });
-  }, [date, editableExercises, sessionEquipmentRequirements]);
+  }, [date]);
 
   const applyExerciseGuidedInjury = React.useCallback(
     async (result: GuidedInjuryFlowResult) => {
@@ -866,6 +1048,49 @@ export default function DayWorkoutScreenV2() {
         return;
       }
 
+      /**
+       * ⚠ **THE INJURY PASS HAS ALREADY RECOMPOSED THE DAY. DO NOT OFFER IT AGAIN.**
+       *
+       * Sam, 2026-08-19: *"Fix the stale injury picker as part of this: it must
+       * not offer an exercise that the injury pass has already removed or
+       * replaced."*
+       *
+       * MEASURED ON GLASS the same day: the athlete flagged `Back Squat`, the
+       * injury pass substituted it for `Bench Press` on the way through, and
+       * this handler then offered *"Replace Back Squat with Bench Press"* for a
+       * row that was no longer on the session. Applying it answered
+       * **"Could not find 'Back Squat' on 2026-07-13."** The refusal was honest
+       * — nothing was corrupted — but the OFFER was already false when it was
+       * drawn, and an offer the app knows it cannot keep is a dead button.
+       *
+       * **READ LIVE, BECAUSE THIS CLOSURE IS STALE BY CONSTRUCTION.** `workout`
+       * and `editableExercises` were captured at the render that started the
+       * flow, which is BEFORE the door recomposed anything; testing against them
+       * would always say the row is still there. The lazy require is this file's
+       * existing dodge for reaching store-backed owners from a callback.
+       */
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { resolveDateWithConditioning } = require('../../utils/sessionResolver');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { buildScheduleStateImperative } = require('../../utils/coachWeekDiff');
+      const liveDay = resolveDateWithConditioning(date, buildScheduleStateImperative());
+      const liveNames: string[] = ((liveDay?.workout?.exercises ?? []) as {
+        exercise?: { name?: string };
+      }[]).map((row) => row.exercise?.name ?? '').filter(Boolean);
+      const stillOnTheDay = liveNames.some(
+        (name) => name.toLowerCase() === exercise.name.toLowerCase(),
+      );
+      if (!stillOnTheDay) {
+        setExerciseEditStep({
+          kind: 'result',
+          ok: true,
+          title: 'Injury adjustment active',
+          message: actionResult.message
+            ?? `${displayExerciseName(exercise.name)} has already been changed for this injury.`,
+        });
+        return;
+      }
+
       const area = guidedAreaToExerciseArea(result.area);
       const severity = guidedSeverityToExerciseSeverity(result);
       const primaryInjury = constraint.bucket
@@ -883,11 +1108,33 @@ export default function DayWorkoutScreenV2() {
     [date, injuryFlowExercise, suggestTapSwap],
   );
 
+  /**
+   * ⚠ **SWAP AND ADD USED THE SYNCHRONOUS DOOR, AND THEY DID NOT SURVIVE A
+   * RESTART.**
+   *
+   * Measured 2026-08-19 by `npm run test:session-change-sequence`, the first
+   * thing in this repo to take four actions and then kill the process: the
+   * athlete swapped a lift and added an exercise, relaunched, and both were
+   * gone. `dateOverrides` reached disk and came back EMPTY — because
+   * `quiescentBoot`'s clean slate deliberately blanks `dateOverrides` and
+   * rebuilds the athlete's edits by REPLAYING THE DECISION LEDGER
+   * (`migrated_day_placement` / `program_control`).
+   *
+   * Only `executeProgramControlActionDurably` appends to that ledger. Remove
+   * already used it; swap and add did not, so nothing recorded them and the
+   * clean slate simply erased them. **The durability was never in the store —
+   * it is in the ledger, and these two doors were not writing to it.**
+   *
+   * (The first cut of this fix added `dateOverrides` to the persisted inputs.
+   * It reached disk correctly and changed nothing, because boot blanks it after
+   * hydration on purpose — and keeping it would have been a SECOND
+   * representation of the athlete's edits racing the ledger's replay. Reverted.)
+   */
   const applySwapToday = React.useCallback(
-    (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => {
+    async (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => {
       if (!date) return;
       const result = step.suggestion.kind === 'rest'
-        ? executeProgramControlAction({
+        ? await executeProgramControlActionDurably({
             type: 'remove_exercise',
             source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
             scope: 'today_only',
@@ -899,8 +1146,8 @@ export default function DayWorkoutScreenV2() {
             requiresRebuild: false,
             createsActiveModifier: false,
             oneOffOnly: true,
-          })
-        : executeProgramControlAction({
+          }, { todayISO: date })
+        : await executeProgramControlActionDurably({
             type: 'swap_exercise',
             source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
             scope: 'today_only',
@@ -913,7 +1160,7 @@ export default function DayWorkoutScreenV2() {
             requiresRebuild: false,
             createsActiveModifier: false,
             oneOffOnly: true,
-          });
+          }, { todayISO: date });
       if (result.ok) {
         if (step.suggestion.kind === 'rest') {
           // A swap with no safe replacement IS a removal — the row came out and
@@ -942,10 +1189,11 @@ export default function DayWorkoutScreenV2() {
     [date],
   );
 
+  /** Durable for the same reason as the swap above — see its note. */
   const applyAddToday = React.useCallback(
-    (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => {
+    async (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => {
       if (!date) return;
-      const result = executeProgramControlAction({
+      const result = await executeProgramControlActionDurably({
         type: 'add_exercise',
         source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
         scope: 'today_only',
@@ -956,7 +1204,7 @@ export default function DayWorkoutScreenV2() {
         requiresRebuild: false,
         createsActiveModifier: false,
         oneOffOnly: true,
-      });
+      }, { todayISO: date });
       if (result.ok) {
         setExerciseEditStep({
           kind: 'future_scope',
@@ -1322,48 +1570,18 @@ export default function DayWorkoutScreenV2() {
               {combinedSubtitle}
             </Text>
           ) : null}
-          {/*
-            Session-level change doors (ruling 12). The weekly Program card
-            owns day/session edits; inside an opened workout these icons edit
-            exercises only. The single "Edit exercises" link and its modal
-            MENU are retired — three doors, three icons, no menu in between.
-            Same gate the link used to apply, and the same hidden-when-not-
-            applicable pattern every other gated affordance on this screen
-            uses (staleWarning, the finish moment, the description line):
-            nothing renders rather than a disabled control sitting there.
-            Lives in the sticky header so it stays reachable at any scroll
-            depth.
-          */}
-          {date && !isTeamOnly && editableExercises.length > 0 ? (
-            <View style={styles.exerciseActionsRow}>
-              <IconButton
-                onPress={openExerciseAdd}
-                accessibilityLabel="Add an exercise"
-                tone="accent"
-                size="sm"
-                icon={<PlusIcon />}
-                testID="day-workout-add-exercise-action"
-              />
-              {sessionEquipmentRequirements.length > 0 ? (
-                <IconButton
-                  onPress={openSessionEquipment}
-                  accessibilityLabel="Equipment for this session"
-                  tone="default"
-                  size="sm"
-                  icon={<MaterialCommunityIcons name="dumbbell" size={16} color="#C6FF6B" />}
-                  testID="day-workout-equipment-concern-action"
-                />
-              ) : null}
-              <IconButton
-                onPress={openExerciseInjuryPicker}
-                accessibilityLabel="Something hurts"
-                tone="default"
-                size="sm"
-                icon={<InjuryIcon />}
-                testID="day-workout-injury-concern-action"
-              />
-            </View>
-          ) : null}
+          {/* ⚠ **THE THREE UNLABELLED HEADER ICONS ARE DELETED — SAM, 2026-08-19.**
+            *
+            * *"Remove unlabelled header icons. Remove always-visible row
+            * Swap/Remove icons. Build one 'Need to make a change?' section:
+            * Equipment · Injury · Add · Remove · Swap."*
+            *
+            * A plus, a dumbbell and a plaster in the sticky header, each opening
+            * a different change flow, and nothing on the screen said which was
+            * which. The equipment one also came and went with
+            * `sessionEquipmentRequirements`, so the row silently changed shape
+            * between sessions. All five doors now live in ONE labelled section
+            * below the session — see `SessionChangeHub`. */}
         </View>
       </View>
 
@@ -1511,6 +1729,7 @@ export default function DayWorkoutScreenV2() {
               completedItemIds={completedExerciseIds}
               onToggleItem={toggleExerciseComplete}
               sessionId={workout.id}
+              implementFor={implementFor}
               expandedCues={expandedCues}
               toggleCue={toggleCue}
               editingWeightId={editingWeightId}
@@ -1553,6 +1772,37 @@ export default function DayWorkoutScreenV2() {
           </View>
         ) : null}
 
+        {/* ── ONE PLACE TO CHANGE THE SESSION ────────────────────────────
+          *
+          * Sam, 2026-08-19: *"Build one 'Need to make a change?' section:
+          * Equipment · Injury · Add · Remove · Swap. No dead buttons."*
+          *
+          * It replaces three unlabelled icons in the sticky header and two more
+          * on every single row. Five doors, five words, one place — and below
+          * the session, because a change is what the athlete reaches for AFTER
+          * reading what they have been given, not instead of reading it.
+          *
+          * **NO DEAD BUTTONS** is enforced by construction: `SessionChangeHub`
+          * takes the actions as a list and renders exactly the ones handed to
+          * it, so a door that cannot act today is ABSENT rather than present
+          * and inert. Equipment is the only one that comes and goes, and it
+          * goes when the session needs no equipment at all. */}
+        {date && !isTeamOnly && editableExercises.length > 0 && !isFinished && !isAlreadyComplete ? (
+          <SessionChangeHub
+            testID="day-workout-change-hub"
+            subline="Change today's session."
+            actions={[
+              ...(sessionEquipmentRequirements.length > 0
+                ? [{ id: 'equipment' as const, onPress: openSessionEquipment }]
+                : []),
+              { id: 'injury' as const, onPress: openExerciseInjuryPicker },
+              { id: 'add' as const, onPress: openExerciseAdd },
+              { id: 'remove' as const, onPress: openExerciseRemovePicker },
+              { id: 'swap' as const, onPress: openExerciseSwapPicker },
+            ]}
+          />
+        ) : null}
+
         {/* ── Finish moment (hidden once the session is complete) ── */}
         {!isFinished && !isAlreadyComplete ? (
           <FinishMoment onPress={handleFinishWorkout} />
@@ -1572,12 +1822,12 @@ export default function DayWorkoutScreenV2() {
         editableExercises={editableExercises}
         onClose={closeExerciseEditor}
         onStep={setExerciseEditStep}
-        onSwapReason={prepareSwap}
-        onAddKind={prepareAdd}
+        onSwapPick={prepareSwap}
         onInjuryStart={openExerciseInjuryFlow}
         onApplySwapToday={applySwapToday}
         onApplyAddToday={applyAddToday}
         onRemoveToday={removeExerciseToday}
+        onAddGroup={openAddGroup}
         onFutureScope={saveFutureExerciseAdjustment}
         onTodayOnly={closeFutureScopeTodayOnly}
         onExclusionScope={applyExclusionScope}
@@ -1825,6 +2075,8 @@ interface SessionListProps {
   completedItemIds: ReadonlySet<string>;
   onToggleItem: (itemId: string) => void;
   sessionId: string;
+  /** R-104. Resolved by the screen against the EFFECTIVE kit for this date. */
+  implementFor: (exerciseName: string, prescribedWeightKg?: number | null) => SelectedImplementToday;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -1943,6 +2195,7 @@ function SessionList({
   executionPlan,
   completedItemIds,
   onToggleItem,
+  implementFor,
   sessionId,
   expandedCues,
   toggleCue,
@@ -2003,6 +2256,7 @@ function SessionList({
         key={key}
         sessionId={sessionId}
         exercise={item.row}
+        selectedImplement={implementFor(item.row.exercise?.name ?? '', item.row.prescribedWeightKg)}
         label={labels[index] ?? ''}
         isGrouped={!!item.superset}
         isLastInGroup={
@@ -2298,6 +2552,12 @@ interface StrengthExerciseCardProps {
   isLastInGroup?: boolean;
   prescriptionLabel?: string;
   cueTextOverride?: string | null;
+  /**
+   * R-104. Which implement the athlete actually picks up for THIS row on THIS
+   * day's kit. Optional so the combined-day picker and add-on rows, which have
+   * no kit in hand, keep rendering exactly as they did.
+   */
+  selectedImplement?: SelectedImplementToday | null;
   expandedCues: Record<string, boolean>;
   toggleCue: (exerciseId: string) => void;
   editingWeightId: string | null;
@@ -2320,6 +2580,7 @@ function StrengthExerciseCard({
   isLastInGroup = true,
   prescriptionLabel,
   cueTextOverride,
+  selectedImplement,
   expandedCues,
   toggleCue,
   editingWeightId,
@@ -2338,9 +2599,62 @@ function StrengthExerciseCard({
   const exerciseDisplayName = displayExerciseName(exerciseName);
   const setsReps = prescriptionLabel ?? formatStrengthSetsReps(exercise);
   const restLabel = exercise.restSeconds >= 90 ? formatRest(exercise.restSeconds) : null;
-  const cueText = cueTextOverride !== undefined
-    ? cueTextOverride
-    : buildCueText(exerciseName);
+  // R-104: the cue must fit the implement in the athlete's hands. `RDLs` is
+  // authored for barbell OR dumbbells and its cue says "bar slides down leg" —
+  // on a dumbbell day that names equipment they have not got, so it is
+  // SUPPRESSED and flagged rather than reworded. There is no authored dumbbell
+  // RDL cue and `EXERCISE_CUES` is gated to Sam's sheet, so inventing one here
+  // is the thing his ruling forbids.
+  const resolvedCue = cueForImplement(exerciseName, selectedImplement?.implement ?? null);
+  const cueText = cueTextOverride !== undefined ? cueTextOverride : resolvedCue.text;
+  // ── SAM'S UI CORRECTION: TYPED ALWAYS, SHOWN ONLY WHEN IT EXPLAINS A CHANGE.
+  //
+  // ⚠ **AND A LOADED ROW IS NEVER LABELLED "BODYWEIGHT".** Sam named the
+  // contradiction: `Single-Leg RDL` resolved to bodyweight (his own ruled set of
+  // movements performable unloaded) while carrying 20 kg, and the row read
+  // "· Bodyweight … 20kg". The two owners are each right on their own terms —
+  // which is exactly why the SCREEN has to refuse to print the pair.
+  // ⚠ **ASK THE SAME SOURCE THE ROW PRINTS, NOT THE STORED FIELD.** The first
+  // version of this guard read `exercise.prescribedWeightKg` and the row still
+  // shipped "Bodyweight today" beside **20kg** — because the number the athlete
+  // sees comes from `formatWeight`, which resolves the athlete's own weight
+  // OVERRIDE first. A guard that reads a different field from the display it is
+  // guarding is not guarding it. Caught on the simulator, not by a cell.
+  const displayedWeight = String(formatWeight(exercise) ?? '').trim();
+  const carriesExternalLoad = displayedWeight !== '' && !/^bw$/i.test(displayedWeight);
+  const implementIsHonest = !(selectedImplement?.implement === 'bodyweight' && carriesExternalLoad);
+  const showImplementBadge = !!selectedImplement?.changedToday && implementIsHonest;
+  const implementLabel = selectedImplementLabel(selectedImplement);
+  const normalLabel = selectedImplementLabel(
+    selectedImplement ? { ...selectedImplement, implement: selectedImplement.normalImplement } : null,
+  );
+  // ── ONE LINE, AND IDENTITY OUTRANKS IMPLEMENT ─────────────────────────────
+  //
+  // Sam, 2026-08-18: *"If only the implement changes, keep the current implement
+  // notice instead. Never show both, and do not add notices to unchanged rows."*
+  //
+  // The order is not arbitrary. **A DIFFERENT EXERCISE IS A BIGGER FACT THAN A
+  // DIFFERENT IMPLEMENT** — if the athlete is looking at a lift the block did not
+  // choose, that is what they need explained, and the implement is a detail of
+  // the row that replaced it.
+  const substitution = (exercise as { substitutedFrom?: {
+    baseExerciseName: string; cause: 'excluded_today' | 'kit_today' | 'injury';
+  } })?.substitutedFrom;
+  const substitutionReason = substitution?.cause === 'kit_today'
+    ? 'equipment today'
+    : substitution?.cause === 'injury'
+      ? 'injury'
+      : substitution?.cause === 'excluded_today'
+        ? 'you left it out'
+        : null;
+  const substitutionBadgeText = substitution && substitutionReason
+    ? `Swapped from ${displayExerciseName(substitution.baseExerciseName)} — ${substitutionReason}`
+    : null;
+  // "Dumbbells today — no barbell". One line, only on the rows it explains.
+  const implementBadgeText = !substitutionBadgeText && showImplementBadge && implementLabel
+    ? (normalLabel ? `${implementLabel} today — no ${normalLabel.toLowerCase()}` : `${implementLabel} today`)
+    : null;
+  const affectedRowNotice = substitutionBadgeText ?? implementBadgeText;
   const isEditing = editingWeightId === exercise.exerciseId;
   const componentId = exercise.id || exercise.exerciseId;
   const exerciseToken = stableTestIdToken(componentId);
@@ -2362,10 +2676,6 @@ function StrengthExerciseCard({
         label={label}
         name={exerciseDisplayName}
         onPlay={() => onSelectExercise(exerciseName)}
-        onSwap={isEditableRow && onSwapExercise ? () => onSwapExercise(exercise) : undefined}
-        onRemove={isEditableRow && onRemoveExercise ? () => onRemoveExercise(exercise) : undefined}
-        swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
-        removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
       />
 
       {/*
@@ -2380,9 +2690,44 @@ function StrengthExerciseCard({
         >
           {setsReps}
         </Text>
+        {/* ── THE TYPED IMPLEMENT, ASSERTABLE BUT NOT SHOWN ────────────────
+            Sam ruled the always-on label too cluttered, and he is right — it
+            repeated "· Dumbbells" down every row of an ordinary session. The
+            implement is still resolved for EVERY row (legality, load handling
+            and the form cues all read it); this 1x1 carries it so a flow or a
+            guard can still ask "which implement is this row?" without the
+            athlete reading a word. Same idiom as the set count and the position
+            directly below. */}
+        {implementLabel && implementIsHonest ? (
+          <View
+            style={{ width: 1, height: 1 }}
+            testID={`workout-exercise-implement-${exerciseToken}-${implementLabel.toLowerCase()}`}
+          />
+        ) : null}
+        {/* The cue was written for a different implement and no authored variant
+            exists. Sam: *"flag missing authored technique guidance rather than
+            invent coaching copy."* An id, not a sentence — there is no signed
+            athlete-facing wording for this yet, and inventing one is the same
+            forbidden act as inventing the cue. */}
+        {resolvedCue.missingCueForImplement ? (
+          <View
+            style={{ width: 1, height: 1 }}
+            testID={`workout-exercise-cue-missing-for-implement-${exerciseToken}`}
+          />
+        ) : null}
         <View
           style={{ width: 1, height: 1 }}
           testID={`exercise-set-count-${exerciseToken}-${exercise.prescribedSets}`}
+        />
+        {/* ⚠ THE POSITION THE ATHLETE IS TOLD TO DO THIS IN, MADE ASSERTABLE.
+            Same 1x1 idiom as the set count directly above — a VALUE encoded in
+            an id, because the numeral is drawn inside an `accessible` header
+            and no flow could otherwise ask "which exercise is fourth?". The
+            card and this screen disagreed about exactly that until 2026-08-18
+            and nothing on either surface could see it. */}
+        <View
+          style={{ width: 1, height: 1 }}
+          testID={`session-strength-position-${label}-${stableTestIdToken(exerciseName)}`}
         />
         <View style={styles.weightControl}>
           <Pressable
@@ -2408,10 +2753,29 @@ function StrengthExerciseCard({
               returnKeyType="done"
             />
           ) : (
+            /**
+             * ⚠ **THE LOAD IS SPOKEN AND ADDRESSABLE, NOT JUST DRAWN.**
+             *
+             * This control is `accessible` (a bare `accessibilityLabel` makes it
+             * so), which REPLACES its subtree in the accessibility tree — so the
+             * number the athlete reads on the glass was reachable by nobody
+             * else. Two consequences, and the second is why this changed here:
+             * a VoiceOver athlete heard *"Edit weight"* and was never told the
+             * weight; and **no real-route guard could assert a prescribed load
+             * at all**, which is exactly how a replacement wearing the outgoing
+             * lift's 20 kg shipped and stayed shipped. A value with no reader is
+             * a value nothing can hold.
+             *
+             * The label now CARRIES the value and the row keeps its own id. The
+             * `Edit weight` wording is retained as the prefix rather than
+             * replaced — it is what the control DOES, and no flow that finds
+             * this control by that text stops finding it.
+             */
             <Pressable
               onPress={() => startEditingWeight(exercise)}
               style={styles.weightValueWrap}
-              accessibilityLabel="Edit weight"
+              testID={`workout-exercise-load-${exerciseToken}`}
+              accessibilityLabel={`Edit weight, ${formatWeight(exercise)}`}
             >
               <Text style={styles.weightValueText}>{formatWeight(exercise)}</Text>
             </Pressable>
@@ -2438,6 +2802,21 @@ function StrengthExerciseCard({
           Generator per-exercise notes are still deliberately NOT rendered: the
           curated layer owns every athlete-visible word; generation provides
           structure only (sets/reps/weight/type). Stage 3 ownership ruling. */}
+      {/* ── THE ONE AFFECTED-ROW NOTICE ──────────────────────────────────
+          Sam, 2026-08-18: *"Only show equipment context when it explains a
+          temporary session change … one concise affected-row badge/notice."*
+          It renders on the rows today actually changed and nowhere else, so an
+          ordinary session carries none of these at all. */}
+      {affectedRowNotice ? (
+        <Text
+          style={styles.implementBadge}
+          testID={substitutionBadgeText
+            ? `workout-exercise-swapped-badge-${exerciseToken}`
+            : `workout-exercise-implement-badge-${exerciseToken}`}
+        >
+          {affectedRowNotice}
+        </Text>
+      ) : null}
       <CueDisclosure
         exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
         cueText={cueText}
@@ -2508,10 +2887,6 @@ function RecoveryBlock({
               label={`${index + 1}`}
               name={exerciseDisplayName}
               onPlay={() => onSelectExercise(exerciseName)}
-              onSwap={isEditableRow ? () => onSwapExercise(exercise) : undefined}
-              onRemove={isEditableRow ? () => onRemoveExercise(exercise) : undefined}
-              swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
-              removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
             />
 
             <View style={styles.recoveryPrescriptionRow}>
@@ -2684,14 +3059,6 @@ function ConditioningPhaseRow({
             {phaseDisplayName}
           </Text>
         </View>
-        {!isTeamTrainingItem(exercise) ? (
-          <ExerciseRowActions
-            onSwap={() => onSwapExercise(exercise)}
-            onRemove={() => onRemoveExercise(exercise)}
-            swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
-            removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
-          />
-        ) : null}
       </View>
       {description ? (
         <Text
@@ -2752,14 +3119,6 @@ function ConditioningRow({
       <View style={{ flex: 1 }}>
         <View style={styles.conditioningRowHeader}>
           <Text style={styles.conditioningRowName}>{displayName}</Text>
-          {!isTeamTrainingItem(exercise) ? (
-            <ExerciseRowActions
-              onSwap={() => onSwapExercise(exercise)}
-              onRemove={() => onRemoveExercise(exercise)}
-              swapTestID={explorerTestId.componentSwapIngress(sessionId, componentId)}
-              removeTestID={explorerTestId.componentDeleteIngress(sessionId, componentId)}
-            />
-          ) : null}
         </View>
         {prescription ? (
           <Text
@@ -2850,70 +3209,33 @@ function ExerciseHeaderRow({
             {name}
           </Text>
         </Pressable>
-        {onSwap && onRemove ? (
-          <ExerciseRowActions
-            onSwap={onSwap}
-            onRemove={onRemove}
-            swapTestID={swapTestID}
-            removeTestID={removeTestID}
-          />
-        ) : null}
         <PlayButton onPress={onPlay} accessibilityLabel={`Play ${name} demo`} />
       </View>
     </>
   );
 }
 
-/**
- * Two per-row icon buttons, shared by every row shape that used to mount the
- * single `ExerciseChangeAction` pill (strength, recovery, and both
- * conditioning row shapes) — one definition, so "what a row's edit
- * affordance looks like" cannot drift between them the way three separate
- * copies of a "Change" pill could have.
+
+/* ⚠ **THE SESSION-ONLY PILL HUB IS DELETED — SAM, 2026-08-19.**
+ *
+ * *"Do not keep separate Day and Session implementations. Both must render
+ * one shared hub."* This file grew its own row of bordered text pills when
+ * the five labelled actions landed, while the Day screen already had the
+ * signed card of tinted icon chips. Same heading, same five doors, two
+ * visual languages. The shared owner is `components/SessionChangeHub`. */
+
+/* ⚠ **`ExerciseRowActions` IS DELETED — SAM, 2026-08-19.**
+ *
+ * *"Remove always-visible row Swap/Remove icons."* Two unlabelled icons on
+ * EVERY row of every session, competing with the exercise name and the load
+ * controls for the athlete's attention, for two actions they take rarely. Both
+ * doors are in the one labelled section now (`SessionChangeHub`), which asks
+ * which exercise rather than putting the question on all of them at once.
+ *
+ * The `componentSwapIngress` / `componentDeleteIngress` test ids MOVED with the
+ * ingress, onto the picker's rows — a deleted surface whose gate keeps watching
+ * is the shape `gate-must-watch-the-deleted-surface` names.
  */
-function ExerciseRowActions({
-  onSwap,
-  onRemove,
-  swapTestID,
-  removeTestID,
-}: {
-  onSwap: () => void;
-  onRemove: () => void;
-  swapTestID?: string;
-  removeTestID?: string;
-}) {
-  return (
-    <View style={styles.exerciseRowActions}>
-      <Pressable
-        onPress={onSwap}
-        testID={swapTestID}
-        accessibilityRole="button"
-        accessibilityLabel="Swap exercise"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={({ pressed }) => [
-          styles.exerciseRowActionBtn,
-          pressed && { opacity: 0.65 },
-        ]}
-      >
-        <SwapIcon />
-      </Pressable>
-      <Pressable
-        onPress={onRemove}
-        testID={removeTestID}
-        accessibilityRole="button"
-        accessibilityLabel="Remove exercise"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={({ pressed }) => [
-          styles.exerciseRowActionBtn,
-          styles.exerciseRowActionBtnDanger,
-          pressed && { opacity: 0.65 },
-        ]}
-      >
-        <RemoveIcon />
-      </Pressable>
-    </View>
-  );
-}
 
 /**
  * Pro-mode play button — smaller, muted at rest, brightens only on press.
@@ -3035,8 +3357,9 @@ interface ExerciseEditSheetProps {
   editableExercises: EditableExercise[];
   onClose: () => void;
   onStep: (step: ExerciseEditStep) => void;
-  onSwapReason: (exercise: EditableExercise, reason: SwapReason) => void;
-  onAddKind: (kind: AddExerciseKind) => void;
+  /** The athlete picked a row to swap. Goes straight to the ranked menu. */
+  onSwapPick: (exercise: EditableExercise) => void;
+  onAddGroup: (label: string) => void;
   onInjuryStart: (exercise: EditableExercise) => void;
   onApplySwapToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => void;
   onApplyAddToday: (step: Extract<ExerciseEditStep, { kind: 'confirm_add' }>) => void;
@@ -3054,8 +3377,7 @@ function ExerciseEditSheet({
   editableExercises,
   onClose,
   onStep,
-  onSwapReason,
-  onAddKind,
+  onSwapPick,
   onInjuryStart,
   onApplySwapToday,
   onApplyAddToday,
@@ -3063,6 +3385,7 @@ function ExerciseEditSheet({
   onFutureScope,
   onTodayOnly,
   onExclusionScope,
+  onAddGroup,
 }: ExerciseEditSheetProps) {
   if (!visible || step.kind === 'closed') return null;
 
@@ -3076,8 +3399,22 @@ function ExerciseEditSheet({
   // `add_kind` (that pairing survives untouched, since add was never routed
   // through exercise_menu or concern_reason).
   const goBack = () => {
+    // A swap chosen from the menu has somewhere shallower to go now, and it is
+    // the menu. An injury-flow swap does not carry one and still closes.
+    if (step.kind === 'confirm_swap' && step.fromMenu) {
+      onStep(step.fromMenu);
+      return;
+    }
     if (step.kind === 'confirm_add') {
-      onStep({ kind: 'add_kind' });
+      // The list it came from, when it came from one. `add_kind` — the seven
+      // hand-written labels this replaced — is gone, so there is no shallower
+      // step for an add that arrived any other way.
+      if (step.fromPick) onStep(step.fromPick);
+      else onClose();
+      return;
+    }
+    if (step.kind === 'add_pick') {
+      onClose();
       return;
     }
     if (step.kind === 'future_scope') {
@@ -3121,9 +3458,26 @@ function ExerciseEditSheet({
       <ExerciseSheetOption
         key={exercise.key}
         label={displayExerciseName(exercise.name)}
-        testID={explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)}
+        /* ⚠ **THE INGRESS TEST IDS MOVED HERE WITH THE INGRESS ITSELF.**
+         * They named the per-row swap/remove icons, which Sam deleted on
+         * 2026-08-19; this picker IS the swap/remove ingress now, one row per
+         * exercise. Deleting the ids with the icons would have left the explorer
+         * and the lifecycle witness pointing at a door that exists under a new
+         * name — the "gate must watch the deleted surface" shape. */
+        testID={
+          action === 'swap'
+            ? explorerTestId.componentSwapIngress(sessionId, exercise.targetId ?? exercise.key)
+            : action === 'remove'
+              ? explorerTestId.componentDeleteIngress(sessionId, exercise.targetId ?? exercise.key)
+              : explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)
+        }
         onPress={() => {
           if (action === 'injury') onInjuryStart(exercise);
+          // SWAP MEANS ONLY "I WANT A DIFFERENT EXERCISE" (Sam, 2026-08-19), so
+          // the pick goes STRAIGHT to the ranked alternatives. Equipment and
+          // Injury are their own actions on the hub and ask their own questions.
+          else if (action === 'swap') onSwapPick(exercise);
+          else onStep({ kind: 'confirm_remove', exercise });
         }}
       />
     ));
@@ -3133,30 +3487,67 @@ function ExerciseEditSheet({
     switch (step.kind) {
       case 'pick_exercise':
         return <>{renderExercisePicker(step.action)}</>;
-      case 'swap_reason':
+      /* ⚠ **`add_kind` IS DELETED — 2026-08-19.**
+       *
+       * Seven hand-written labels over a table of TWELVE suggestions that asked
+       * nothing about the athlete's kit or their injuries, and offered whichever
+       * of two names the session did not already contain. Sam: *"Add any legal
+       * exercise, mobility or conditioning component. Respect equipment, injury
+       * and genuine session limits."* `add_group` / `add_pick` replace it with
+       * `legalAddCandidateGroups` over the app's own vocabulary. */
+      case 'add_group':
         return (
           <>
-            {SWAP_REASONS.map((reason) => (
-              <ExerciseSheetOption
-                key={reason}
-                label={reason}
-                icon={SWAP_REASON_ICON[reason](OPTION_ICON_ACCENT)}
-                onPress={() => onSwapReason(step.exercise, reason)}
+            <Text style={styles.exerciseEditBody}>
+              Everything here is safe with today’s kit and how you are pulling up.
+            </Text>
+            {step.groups.map((group) => (
+              <Button
+                key={group.label}
+                label={`${group.label} (${group.count})`}
+                variant="secondary"
+                size="md"
+                onPress={() => onAddGroup(group.label)}
+                style={styles.exerciseEditSecondaryButton}
               />
             ))}
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
           </>
         );
-      case 'add_kind':
+      case 'add_pick':
         return (
           <>
-            {ADD_EXERCISE_KINDS.map((kind) => (
-              <ExerciseSheetOption
-                key={kind}
-                label={kind}
-                icon={ADD_EXERCISE_KIND_ICON[kind](OPTION_ICON_ACCENT)}
-                onPress={() => onAddKind(kind)}
-              />
-            ))}
+            <View style={styles.exerciseEditGroup}>
+              <Text style={styles.exerciseEditGroupLabel}>{step.label}</Text>
+              {step.options.map((option) => (
+                <Button
+                  key={option.name}
+                  label={`${option.name} — ${option.meta}`}
+                  variant="secondary"
+                  size="md"
+                  onPress={() => onStep({
+                    kind: 'confirm_add',
+                    addKind: 'Other',
+                    suggestion: option.suggestion,
+                    fromPick: step,
+                  })}
+                  style={styles.exerciseEditSecondaryButton}
+                />
+              ))}
+            </View>
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
           </>
         );
       case 'confirm_remove':
@@ -3175,6 +3566,46 @@ function ExerciseEditSheet({
                 step.exercise.targetId ?? step.exercise.key,
               )}
             />
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="md"
+              onPress={onClose}
+              style={styles.exerciseEditSecondaryButton}
+            />
+          </>
+        );
+      case 'choose_swap':
+        return (
+          <>
+            <Text style={styles.exerciseEditBody}>
+              Pick what you would rather do instead of{' '}
+              {displayExerciseName(step.exercise.name)}.
+            </Text>
+            {step.groups.map((group) => (
+              <View key={group.id} style={styles.exerciseEditGroup}>
+                {/* THE LABEL IS THE POINT. Six unlabelled options are a list;
+                    three labelled groups tell the athlete HOW FAR each option
+                    is from what they were given. */}
+                <Text style={styles.exerciseEditGroupLabel}>{group.label}</Text>
+                {group.options.map((option) => (
+                  <Button
+                    key={`${group.id}:${option.name}`}
+                    label={`${option.name} — ${option.meta}`}
+                    variant="secondary"
+                    size="md"
+                    onPress={() => onStep({
+                      kind: 'confirm_swap',
+                      exercise: step.exercise,
+                      suggestion: option.suggestion,
+                      reason: step.reason,
+                      fromMenu: step,
+                    })}
+                    style={styles.exerciseEditSecondaryButton}
+                  />
+                ))}
+              </View>
+            ))}
             <Button
               label="Cancel"
               variant="secondary"
@@ -3383,13 +3814,17 @@ function ExerciseEditSheet({
 function exerciseEditTitle(step: ExerciseEditStep): string {
   switch (step.kind) {
     case 'pick_exercise':
-      return 'Which exercise?';
-    case 'swap_reason':
-      return 'Why do you want to swap it?';
-    case 'add_kind':
+      return step.action === 'swap' ? 'Swap which exercise?'
+        : step.action === 'remove' ? 'Remove which exercise?'
+          : 'Which exercise?';
+    case 'add_group':
       return 'What do you want to add?';
+    case 'add_pick':
+      return step.label;
     case 'confirm_remove':
       return 'Remove this exercise?';
+    case 'choose_swap':
+      return 'What would you rather do?';
     case 'confirm_swap':
       return 'Swap exercise?';
     case 'confirm_add':
@@ -3415,14 +3850,15 @@ function exerciseEditSubtitle(step: ExerciseEditStep): string | null {
   switch (step.kind) {
     case 'pick_exercise':
       return 'Team training entries are left alone.';
-    case 'swap_reason':
     case 'confirm_remove':
     case 'confirm_swap':
       return displayExerciseName(step.exercise.name);
     case 'confirm_add':
-      return step.addKind;
-    case 'add_kind':
       return 'Add one exercise or small block, not another full session.';
+    case 'add_group':
+      return 'Add one exercise or small block, not another full session.';
+    case 'add_pick':
+      return 'Everything here is legal with today’s kit and injuries.';
     case 'exclusion_scope':
       return displayExerciseName(step.exercise.name);
     case 'future_scope':
@@ -3568,45 +4004,10 @@ const OPTION_ICON_ACCENT = '#C8FF00';
 const otherOptionIcon = (color: string) => optionGlyph(color, (
   <><Path d="M9.3 9a2.7 2.7 0 1 1 3.7 2.5c-.6.3-1 .9-1 1.7v.3" /><Path d="M12 16.7h.01" /></>
 ));
-const ADD_EXERCISE_KIND_ICON: Record<AddExerciseKind, (color: string) => React.ReactNode> = {
-  /** Upper body — the literal flexed bicep selected in the audit. */
-  'Upper body': (color) => <LfaIcon name="upper-body" color={color} />,
-  /** Lower body — a dedicated legs mark. */
-  'Lower body': (color) => <LfaIcon name="lower-body" color={color} />,
-  /** Midline — Sam's approved traced torso / abs figure. */
-  Midline: (color) => <LfaIcon name="torso-abs" color={color} />,
-  /** Prehab — the same medical shield as plan editing. */
-  Prehab: (color) => <LfaIcon name="medical-shield" color={color} />,
-  /** Mobility — the same stretching person as plan editing. */
-  Mobility: (color) => <LfaIcon name="mobility" color={color} />,
-  /** Conditioning finisher — a heartbeat trace, same glyph as PlanChangeSheet's. */
-  'Conditioning finisher': (color) => optionGlyph(color, (
-    <Path d="M2 12h4l2-6 4 12 2-6h8" />
-  )),
-  Other: otherOptionIcon,
-};
-const SWAP_REASON_ICON: Record<SwapReason, (color: string) => React.ReactNode> = {
-  /** No equipment — the plain prohibited sign selected in the audit. */
-  'No equipment': (color) => <LfaIcon name="no-equipment" color={color} />,
-  /** Injury / pain — the same warning triangle `WeekReadinessSheet`'s
-   * "Something hurts" row draws, redrawn here. */
-  'Injury / pain': (color) => optionGlyph(color, (
-    <><Path d="M12 9v4" /><Path d="M12 17h.01" />
-      <Path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>
-  )),
-  /** Too hard — a line trending up and off the top. */
-  'Too hard': (color) => optionGlyph(color, (
-    <><Path d="M3 17l6-6 4 4 8-8" /><Path d="M15 7h6v6" /></>
-  )),
-  /** Too easy — the mirrored line, trending down. Distinct DIRECTION from
-   * "Too hard", not just a different colour on the same arrow. */
-  'Too easy': (color) => optionGlyph(color, (
-    <><Path d="M3 7l6 6 4-4 8 8" /><Path d="M15 17h6v-6" /></>
-  )),
-  /** Don't like it — a recognisable hand giving thumbs down. */
-  "Don't like it": (color) => <LfaIcon name="thumbs-down" color={color} />,
-  Other: otherOptionIcon,
-};
+/* `ADD_EXERCISE_KIND_ICON` DELETED with the `add_kind` step it decorated
+ * (2026-08-19). Seven icons for seven labels that no longer exist. */
+/* `SWAP_REASON_ICON` DELETED with the `swap_reason` step it decorated
+ * (2026-08-19). Six icons for six labels that no longer exist. */
 /** future_scope — "Today only" vs. "Future weeks too": a blank calendar day
  * (same family as `PlanChangeSheet`'s move-destination day glyph) vs. that
  * same day with a repeat loop, because the row is asking whether the change
@@ -4360,6 +4761,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.2,
   },
+  // The affected-row equipment notice. Quiet by design — it is context for a
+  // change, not a second prescription line.
+  implementBadge: {
+    fontSize: 12,
+    color: colors.text.tertiary,
+    marginTop: 2,
+    marginLeft: 44,
+  },
   exerciseEditSubtitle: {
     color: '#8A8A8A',
     fontSize: 13,
@@ -4451,6 +4860,19 @@ const styles = StyleSheet.create({
     color: colors.accent.lime,
     fontSize: 12,
     fontWeight: '700',
+  },
+  /* The pill-hub styles are DELETED with the local component they styled
+   * (2026-08-19). The shared owner carries the Day card's own values. */
+  exerciseEditGroup: {
+    marginTop: 10,
+    gap: 6,
+  },
+  exerciseEditGroupLabel: {
+    color: colors.text.secondary,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   exerciseEditSecondaryButton: {
     marginTop: 2,

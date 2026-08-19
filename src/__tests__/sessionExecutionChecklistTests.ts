@@ -13,10 +13,8 @@ import { buildSessionFeedbackPayload } from '../utils/sessionFeedbackForm';
 import { parseTeamTrainingSessionOutcome } from '../types/sessionOutcome';
 import { TEAM_TRAINING_FEEDBACK_COPY } from '../rules/teamNightSize';
 import {
-  buildSessionEquipmentReplacementPlan,
   deriveSessionEquipmentRequirements,
   missingSessionEquipmentValues,
-  sessionConditioningReplacementName,
 } from '../utils/sessionEquipment';
 
 armTotalsOrRed();
@@ -351,43 +349,16 @@ ok('strength rows named Row never invent a row erg requirement',
 const missingValues = missingSessionEquipmentValues(new Set(['modality:row', 'tag:barbell']));
 ok('unticked requirements split into typed machine and strength constraints',
   missingValues.modalities[0] === 'row' && missingValues.tags[0] === 'barbell');
-ok('a missing rower becomes same-tier bike work when the saved kit still has a bike',
-  sessionConditioningReplacementName({
-    exerciseName: 'Easy Row',
-    availableModalities: ['bike_erg', 'row'],
-    missingModalities: new Set(['row']),
-  }) === 'Easy Bike');
-ok('a missing rower is not invented into a bike when no machine remains',
-  sessionConditioningReplacementName({
-    exerciseName: 'Easy Row',
-    availableModalities: ['row'],
-    missingModalities: new Set(['row']),
-  }) === null);
-const replacementPlan = buildSessionEquipmentReplacementPlan({
-  exercises: equipmentRows,
-  requirements,
-  missingKeys: new Set(['modality:row']),
-  capabilities: {
-    tags: ['bodyweight', 'barbell', 'bike_or_treadmill'],
-    conditioningModalities: ['bike_erg', 'row'],
-    selectionCompleteness: 'complete',
-    source: 'athlete_answer',
-  },
-  environment: {
-    activeInjuries: {},
-    primaryInjury: null,
-    availableEquipment: ['bodyweight', 'barbell'],
-    availableEquipmentTags: ['bodyweight', 'barbell', 'bike_or_treadmill'],
-    capacity: 'high',
-    hasEquipmentConstraint: false,
-    medicalStop: false,
-  },
-});
-ok('the pure whole-session planner turns the affected row into Easy Bike',
-  replacementPlan.ok
-    && replacementPlan.replacements.length === 1
-    && replacementPlan.replacements[0].fromExercise === 'Easy Row'
-    && replacementPlan.replacements[0].toExercise.name === 'Easy Bike');
+// ⚠ **FOUR CELLS HERE DROVE A SELECTION AUTHORITY THAT NO LONGER EXISTS.**
+// `sessionConditioningReplacementName` and `buildSessionEquipmentReplacementPlan`
+// were the screen's own replacement chooser. Deleted 2026-08-19 after being
+// measured inert across 2,038 real door walks — the dated equipment fact is
+// written first and the composer recomposes the day, so the screen never had
+// anything left to choose. The cells above, which read the REQUIREMENTS the
+// sheet draws, are untouched: that reader is still live and still the sheet's.
+//
+// Conditioning-modality replacement itself is NOT re-proven anywhere yet and is
+// named as NOT COVERED in `docs/STATUS_REBUILD.md`.
 const sessionEquipmentSheet = fs.readFileSync(
   path.resolve(__dirname, '..', 'screens', 'home', 'SessionEquipmentSheet.tsx'),
   'utf8',
@@ -396,10 +367,19 @@ ok('the opened-session icon mounts the one session equipment sheet',
   /testID="day-workout-equipment-concern-action"/.test(screen)
     && /<SessionEquipmentSheet/.test(screen)
     && /requirements=\{sessionEquipmentRequirements\}/.test(screen));
-ok('temporary swaps are today-only and create no active modifier',
-  /surface: 'session_equipment_sheet'/.test(screen)
-    && /scope: 'today_only'/.test(screen)
-    && /createsActiveModifier: false/.test(screen));
+// ⚠ **THIS CELL USED TO MATCH `createsActiveModifier: false` ANYWHERE IN THE
+// FILE, and after the planner's swap loop was deleted it would have gone on
+// passing on a string belonging to the live Swap door — green on a property it
+// had stopped watching.** It reads the equipment handler's own body now.
+const equipmentHandlerBody = screen.slice(
+  screen.indexOf('const applySessionEquipment'),
+  screen.indexOf('const applyExerciseGuidedInjury'));
+ok('the session equipment answer is today-only and written as a dated fact',
+  /surface: 'session_equipment_sheet'/.test(equipmentHandlerBody)
+    && /scope: 'today_only'/.test(equipmentHandlerBody)
+    && /kind: 'missing_for_session'/.test(equipmentHandlerBody));
+ok('and the equipment handler commits no swap of its own',
+  !/type: 'swap_exercise'/.test(equipmentHandlerBody));
 ok('the Day screen has no Equipment shortcut',
   !/setEquipmentVisible\(true\)/.test(home)
     && !/home-equipment-limitation-sheet/.test(home));

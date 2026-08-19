@@ -86,7 +86,7 @@ export interface BuildPacketInput {
   /**
    * Pending injury context from the prior clarifier turn (if any).
    * The dispatcher uses this to bind severity-only replies to the
-   * correct body part, even when activeInjury exists for a different
+   * correct body part, even when an injury is already on file for a different
    * body part. See pendingInjuryPriorityTests for the live bug repro.
    */
   pendingInjury?: {
@@ -109,7 +109,6 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
   const nextMonday = addDays(monday, 7);
 
   const cuStore = useCoachUpdatesStore.getState();
-  const activeInjury = cuStore.activeInjury ?? null;
   const activeConstraints = (cuStore.activeConstraints ?? []).filter(
     (c) => c.status !== 'resolved' && constraintAppliesToDate(c as any, input.todayISO),
   );
@@ -186,7 +185,6 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     ...(input.turnId ? { turnId: input.turnId } : {}),
     userMessage: input.userMessage,
     recentMessages: recent,
-    activeInjury,
     acceptedInjuryContext,
     activeConstraints,
     pendingInjury: input.pendingInjury ?? null,
@@ -269,14 +267,6 @@ export function serialisePacketForLLM(packet: CoachContextPacket): string {
     userMessage: packet.userMessage,
     todayISO: packet.todayISO,
     acceptedInjuryContext: packet.acceptedInjuryContext,
-    activeInjury: packet.activeInjury
-      ? {
-          bodyPart: packet.activeInjury.bodyPart,
-          severity: packet.activeInjury.severity,
-          status: packet.activeInjury.status,
-          createdAt: packet.activeInjury.createdAt,
-        }
-      : null,
     activeConstraints: (packet.activeConstraints ?? []).map((c) => ({
       id: c.id,
       type: c.type,

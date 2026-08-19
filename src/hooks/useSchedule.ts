@@ -106,6 +106,15 @@ function useScheduleState(): ScheduleState & {
   // this adapter omitted the surface entirely, so the screen could not honour a
   // removal the accepted week honours.
   const userRemovalConstraints = useProgramStore((s) => s.userRemovalConstraints);
+  // The athlete's "leave this exercise out" decisions. SUBSCRIBED, not read
+  // once: the day screen applies one and returns to a week that must already
+  // have lost the row. This adapter is a VIEW door, which is the whole reason
+  // it may carry them at all — see `deriveVisibleWeek.assembleScheduleState`.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useAthletePreferencesStore } = require('../store/athletePreferencesStore');
+  const athleteExclusions = useAthletePreferencesStore(
+    (s: { prefs?: { exclusions?: unknown[] } }) => s.prefs?.exclusions,
+  ) ?? [];
   const blockState = useProgramStore((s) => s.blockState);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
@@ -127,22 +136,13 @@ function useScheduleState(): ScheduleState & {
   const modalityPreferences = useCoachPreferencesStore(
     (s: any) => s.modalityPreferences,
   );
-  // Subscribe to activeInjury so the resolver-level filter runs in the
-  // LIVE React app. Without this, useScheduleState used to return
-  // ScheduleState without activeInjury — applyInjuryFilterPass would
-  // early-return and future weeks would render unfiltered (the live
-  // bug where Deadlift / Nordic Lower kept showing after hammy 6/10).
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
-  const mirroredActiveInjury = useCoachUpdatesStore((s: any) => s.activeInjury);
   // Subscribe to the FULL activeConstraints[] too. Non-injury entries
   // (fatigue / soreness / schedule / missed_session) flow through the
   // visible-program projection's `extraConstraints` seam — see
   // useResolvedDay / useResolvedWeek below.
   const mirroredCoachActiveConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
-  const activeInjury = acceptedContext.revision > 0
-    ? acceptedContext.activeInjury
-    : mirroredActiveInjury;
   const coachActiveConstraints = acceptedContext.revision > 0
     ? acceptedContext.activeConstraints
     : mirroredCoachActiveConstraints;
@@ -201,6 +201,7 @@ function useScheduleState(): ScheduleState & {
     manualOverrides: manualOverrides || {},
     weekScopedOverlays: weekScopedOverlays || {},
     userRemovalConstraints: userRemovalConstraints || [],
+    athleteExclusions,
     // The RECORD, from the same source in the same breath
     // (`docs/REMOVAL_RECORD_SPLIT_RULING_2026-08-06.md`). On the live path
     // nothing has consumed the list, so the two are the same — they diverge
@@ -223,7 +224,6 @@ function useScheduleState(): ScheduleState & {
     sessionFeedback: sessionFeedback || {},
     weightOverrides: weightOverrides || {},
     availableDayNumbers,
-    activeInjury: activeInjury ?? null,
     activeConstraints: [...coachActiveConstraints, ...readinessActiveConstraints],
     modalityPreferences: modalityPreferences ?? {},
   };
@@ -234,7 +234,7 @@ function useScheduleState(): ScheduleState & {
  * / missed_session) into engine `Constraint[]` so the visible-program
  * projection can layer them on top of the injury constraint. Injury
  * entries are skipped here — the projection already builds the injury
- * Constraint from `activeInjury`.
+ * Constraint from the active constraint set.
  */
 const buildExtraConstraints = buildExtraConstraintsForVisibleProgram;
 

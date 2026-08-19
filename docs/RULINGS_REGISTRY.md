@@ -2376,3 +2376,149 @@ have paid a whole generation — on every redraw of the Program surface. Both
 reads are inside the closures now; 35/0 restored and the cost property is held
 in the new suite too. **NOT SEEN ON GLASS — the card is driven through its real
 `onPress` and its real signed copy, but no device has rendered it.**
+
+**R-102** · *"When the athlete changes equipment for this session, persist one
+typed, canonical fact keyed to the actual session occurrence/date … It must be
+read by every producer that may add or restore work; expire after that session;
+never alter profile equipment, away equipment, base block selection, rotation
+history or future sessions."* (2026-08-18) · **THE SESSION EQUIPMENT ANSWER IS A
+STORED FACT, NOT SCREEN STATE.** This **AMENDS R-072's `BUILT` note**, which
+recorded *"It writes NO equipment fact"* as the shipped behaviour. **The SCOPE
+ruling of R-072 is untouched — there are still exactly three scopes and this
+invents no fourth**; scope (2), the DEFAULT case, is simply written down now in
+the same typed shape as the other two.
+**Search words:** session equipment, today only, untick barbell, missing for
+session, temporary equipment, no barbell today.
+**WHY IT WAS ORDERED:** the sheet emitted a loop of `swap_exercise` actions and
+held *"I have no barbell today"* in React `useState`, gone on unmount. So no
+producer downstream could know the kit had changed, and the removal could not
+expire on return because it never began.
+· `BUILT` — `missing_for_session` on `set_equipment_modifier`
+(`types/programControlAction.ts`), scoped `temporaryFactScope({kind:'date'})` so
+`from === until === the session's own day`, written by
+`DayWorkoutScreenV2.applySessionEquipment` **before** it applies anything, through
+the same `transactTemporarySourceFact` the week and span answers use.
+**GUARDED:** `test:visible-surfaces` section [5] (in `test:bible`), mutation M3.
+**MEASURED 2026-08-18, headless through the real doors:** the fact alone
+recomposes the day, every visible row is legal by `exerciseAllowedByEquipment`,
+each replacement carries its own load, and **rotation history is unchanged**.
+**⚠ SOURCE-AND-HEADLESS, NOT GLASS — the device check is owed.**
+
+**R-103** · *"When an intended main lift is unavailable because of equipment or
+an active injury restriction, choose the next best SAFE and LEGAL training
+option before refusing."* (2026-08-18) · **THE CONSTRAINED STRENGTH FALLBACK
+LADDER.** Order: (1) legal alternative main lift, same pattern and plane; (2)
+legal secondary compound, same pattern and plane; (3) legal simpler, unilateral
+or lower-load version; (4) legal accessory targeting the same muscles/action;
+(5) legal related pattern/plane as a final useful fallback; (6) typed refusal
+only when no safe, meaningful work exists.
+**INJURY LEGALITY OUTRANKS THE LADDER** — do not assume another hinge or press
+is safe because it is related. **Typed pattern/plane/role/equipment metadata,
+never name regexes.** An accessory keeps its OWN ruled role and dose and never
+inherits the outgoing prescription. Every replacement uses its own load
+authority. **Accessory and adjacent-pattern fallbacks are PARTIAL coverage and
+must be disclosed as such** — a typed, athlete-visible explanation naming what
+was substituted and what remains untrained. Existing weekly balance and set
+ceilings still apply.
+**Search words:** fallback ladder, no barbell, RDL alternative, partial
+coverage, kit-blocked pattern, safe legal option.
+· `BUILT` — `buildSessionEquipmentReplacementPlan` (`src/utils/sessionEquipment.ts`)
+WALKS the authored `SAFE_TRAINING_FALLBACK_TIERS` ladder
+(`same_movement_pattern` -> `similar_muscle_group` -> `unaffected_body_area`,
+which is Sam's ordering in the app's own words) and takes the first rung that is
+LEGAL on the remaining kit, per `exerciseAllowedByEquipment`. The plan carries
+`fallbackTier` and `coversOriginalPattern` so partial coverage is disclosed, and
+rung 6 is a typed `no_legal_fallback_on_remaining_kit`.
+**GUARDED:** `test:visible-surfaces` section [7], 6 cells (in `test:bible`) —
+mutation **M4** (drop the legality filter) reds two of them and reproduces the
+defect BY NAME.
+**WHAT IT FIXED, measured through the real door 2026-08-18:** a barbell-less
+athlete was offered **`Inverted Row (Bodyweight)`**, which Sam's sheet requires
+`rings_trx` for. The write door correctly refused it and the refusal was
+flattened into *"That change didn't go through."* **A ladder that offers an
+illegal rung has not fallen back, it has failed quietly.** It now lands
+`Barbell Row -> Single-Arm DB Row`, same pattern, legal, own load.
+**⚠ ITS DISCLOSURE HAS A KNOWN OBSTACLE, recorded so it is not re-bought:**
+`ComposedGap` is keyed on a `SessionSlot`; four of the six `MainStrengthPattern`
+values map to one by name, but **`push` and `pull` do not — a slot carries a
+PLANE (`horizontal_push`/`vertical_push`) that a pattern does not.** That
+mapping needs ruling, not inventing.
+
+**R-104** · *"Each composed/visible row must identify the actual implement
+selected for that session. The athlete must not infer it from availability."*
+plus *"do not split load history by implement. The same exercise may retain its
+suggested load when moving between barbell, dumbbells or kettlebells; the
+athlete can edit it."* (2026-08-18) · **THE SELECTED IMPLEMENT IS STATED, AND
+THE CUES AGREE WITH IT.** Reuse existing authored equipment-specific cues; add a
+typed cue variant where setup genuinely differs; use a generic cue only where it
+is correct for EVERY supported implement; **flag missing authored technique
+guidance rather than invent coaching copy.** **LOAD HISTORY IS NOT SPLIT** — that
+is explicitly out of scope.
+**Search words:** selected implement, barbell or dumbbell, RDL cues, bar slides
+down leg, implement-specific cue, which implement.
+· `BUILT` — `src/rules/selectedImplement.ts` is the one owner
+(`resolveSelectedImplement`): Sam's authored sheet first, the load classifier
+only where he has not answered, and an OR-GROUP resolved against the EFFECTIVE
+kit for that date. `src/data/cueImplement.ts` records which implement each
+authored cue assumes and `cueForImplement` SUPPRESSES a cue written for a
+different one. **`EXERCISE_CUES` is untouched** — it is equality-gated to Sam's
+master sheet, which is exactly what stops a dumbbell RDL cue being invented.
+**GUARDED:** `test:visible-surfaces` section [6], 10 cells (in `test:bible`),
+including a COVERAGE GATE that re-runs the implement-word scan over the whole cue
+library and reds on any naming cue missing from the table — it caught three the
+audit had missed. Mutations **M5** (cue stops checking the implement) and **M6**
+(the OR-GROUP ignores the kit) both red, printing *"bar slides down leg"*
+verbatim.
+**AND IT IS PROVEN ON GLASS**, which is what this row needs and prose could not
+give it: `.maestro/visible/implement-and-cues.yaml`, 20 steps green on a booted
+simulator serving this branch (metro-url asserted, never assumed). Screenshots
+`artifacts/visible/r104-before-barbell.png` (`RDLs 3 x 3 · Barbell`, Form cues
+present) and `r104-after-dumbbells.png` (`RDLs 3 x 3 · Dumbbells`, **Form cues
+row absent on that row and present on every other**). The flow also asserts the
+SENTENCE is gone, not merely an id.
+**⚠ THE LOAD IS DELIBERATELY UNCHANGED AT 90kg** across that switch — Sam's own
+ruling: *"do not split load history by implement … the athlete can edit it."*
+**THE AUDIT THAT SIZED IT, in `docs/STATUS_VISIBLE.md`:** of 132 authored requirements exactly **1** is
+explicitly disjunctive (`RDLs`/`Romanian Deadlift` = barbell OR dumbbells), but
+**46** loadable pool rows name no implement and on **14** of them the authored
+sheet and `equipmentClassFor` DISAGREE (`Single-Leg RDL` authored barbell,
+loaded as a dumbbell; four pulldowns authored machine, classed cable). **No
+field anywhere states the implement selected.**
+**THE CUE FAILURE IS REACHABLE TODAY:** `'RDLs'` carries *"Push hips back, BAR
+slides down leg"* and cues are keyed by NAME only — so an athlete who unticks the
+barbell keeps `RDLs` (legally, on dumbbells) and is still told to slide a bar
+down their leg.
+
+---
+
+## R-105 — THE WEEKLY-REDUCTION PROMPT BELONGS TO THE COACH, NOT THE DAY PAGE
+
+**Sam, 2026-08-19, seeing it on the Program screen in a simulator screenshot:**
+*"This should not be popping up on the main page - it should show up in the
+coaches chat with a notification"*.
+
+The card in question is the completion-shortfall offer — *"You have been
+completing about 0 of your 5 planned sessions. Would a smaller weekly program fit
+your life better?"* with `4 / 3 / 2 sessions a week` and `Keep it as is` — which
+today renders inline on the Day/Program screen beneath the change card.
+
+**THE RULING.** It moves to the **coach chat**, and its arrival is announced by a
+**notification**. It does not render on the Program screen.
+
+**WHY THIS IS THE SAME RULING AS THE UNDO SURFACE ONE (2026-08-09), NOT A NEW
+PREFERENCE.** `docs/UNDO_SURFACE_RULING_2026-08-09.md` already records Sam's
+architecture in his own words — *"the coach should be its own tab and the athlete
+just talks to it when it wants to change something"* — and
+`docs/LFA_PRODUCT_ARCHITECTURE.md` names the coach conversation as the athlete's
+change interface. A multiple-choice program negotiation sitting on the Day page
+is a **second change-interface beside the recorded one**, which is exactly what
+that ruling killed the standing bar and the confirm sheet for. **A surface that
+asks the athlete to renegotiate their week is change-talk by definition.**
+
+**OWNER: unassigned — NEXT MISSION.** Raised during the Remove slice's final
+session under a standing order not to open another surface, so it is recorded
+here rather than built. **NOT BUILT, NOT STARTED.**
+
+**WHAT THE BUILDER MUST NOT ASSUME:** whether the notification is the existing
+coach-update mechanism or a new one, and whether the offer expires, are NOT
+ruled here and must not be invented.

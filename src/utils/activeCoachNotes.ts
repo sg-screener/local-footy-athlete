@@ -11,7 +11,6 @@ import {
   type ActiveProgramModifierEffect,
 } from './activeProgramModifiers';
 import { useCoachUpdatesStore, type ActiveConstraint } from '../store/coachUpdatesStore';
-import type { InjuryState } from './injuryProgression';
 
 export type ActiveCoachNoteType = ActiveProgramModifierType;
 export type ActiveCoachNoteActionKind = ActiveProgramModifierActionKind;
@@ -134,13 +133,11 @@ export function selectActiveCoachNotes(
  */
 export function buildActiveCoachNotes(
   activeConstraints: readonly ActiveConstraint[] | null | undefined,
-  activeInjury?: InjuryState | null,
-  snapshot: Omit<ActiveProgramModifierSnapshot, 'activeConstraints' | 'activeInjury'> = {},
+  snapshot: Omit<ActiveProgramModifierSnapshot, 'activeConstraints'> = {},
 ): ActiveCoachNote[] {
   return selectActiveCoachNotes({
     ...snapshot,
     activeConstraints,
-    activeInjury,
   });
 }
 
