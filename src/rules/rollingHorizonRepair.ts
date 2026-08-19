@@ -183,29 +183,3 @@ export function rollingHorizonWeekStartsForMutation(args: {
   });
 }
 
-/** Persist reversible fixture projections with the accepted session they displaced. */
-export function materialiseVisibleSystemWork(args: {
-  canonical: readonly Workout[];
-  visible: readonly Workout[];
-}): Workout[] {
-  const visibleByIdentity = new Map(args.visible.flatMap((workout) => {
-    const identity = workout.planEntryId ?? workout.id;
-    return identity ? [[identity, workout] as const] : [];
-  }));
-  const derivedByDay = new Map(args.visible.flatMap((workout) =>
-    workout.derivedSessionProvenance?.some((record) => !!record.dependency)
-      ? [[workout.dayOfWeek, workout] as const]
-      : []));
-  return args.canonical.map((workout) => {
-    const identity = workout.planEntryId ?? workout.id;
-    // Preserve the already accepted prescription for an unchanged session,
-    // without materialising unrelated visible-only gap fill. Dependency-owned
-    // work remains authoritative by day because it may deliberately displace
-    // a canonical session while its trigger is active.
-    return derivedByDay.get(workout.dayOfWeek) ?? visibleByIdentity.get(identity) ?? workout;
-  })
-    .concat(Array.from(derivedByDay.entries())
-      .filter(([day]) => !args.canonical.some((workout) => workout.dayOfWeek === day))
-      .map(([, workout]) => workout))
-    .sort((left, right) => left.dayOfWeek - right.dayOfWeek);
-}

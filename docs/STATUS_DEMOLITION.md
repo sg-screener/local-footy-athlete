@@ -938,3 +938,60 @@ a live law to tidy a name.
 | Safety conforming at the acceptance boundary | — | **DELETED, not to be rebuilt** — acceptance stores a decision, it does not author one |
 
 Agent: demolition
+
+---
+
+## AREA B/E — THE VISIBLE-INTO-CANONICAL MERGE IS DELETED
+
+`materialiseVisibleSystemWork` (in `rules/rollingHorizonRepair.ts`) took the
+resolver's **read-time derived** sessions and merged them into the **canonical**
+week that then got accepted and persisted. A filler synthesised to draw a screen
+became accepted programming. That is area B ("writes derived replacements
+permanently") and area E ("old adapter materialisation") in one function.
+
+**The cost is not hypothetical — `sessionResolver.ts:782` documents it, measured
+2026-08-05 under `LR27_PROBE=1`:** the resolver derives a G-1/G+1 filler, this
+function persists it into the week overlay, and on the NEXT resolve the stored
+filler arrives back as a `templateWorkout` and is snapshotted into its own
+successor. **Provenance depth +1 and payload x2, every launch, on disk.** A
+read-time derivation that gets written becomes an input to itself.
+
+**Surviving owner:** the canonical week is what acceptance stores; derived
+sessions are derived on every read from accepted choices plus active facts, and
+are never promoted. That is Sam's preserved "read-only reconstruction", and it
+is exactly what the merge was defeating.
+
+One call site (`acceptedStateTransaction.ts:2195`, the fixture-replan
+alternatives branch), zero test references. `rollingHorizonRepair.ts` 211 → 185
+lines; its five other exports are live shared search/closure utilities and were
+NOT touched — deleting the file for one bad function would have taken
+`rollingHorizonDependencyClosure` and the Cartesian search with it.
+
+### PROOF, AND AN HONEST GAP
+
+```
+test:compile   control 3f97cc67 = 32   after D-1 = 32     DIFF: IDENTICAL
+```
+
+**I could not get behavioural signal on the path I changed, and the reason
+matters.** The three suites that guard it —
+`test:fixture-mutation-transaction`, `test:fixture-conditioned-replan`,
+`test:chained-mutation-continuity` — **all die at import with
+`MODULE_NOT_FOUND` on `homeGameMutationController`, and they do so IDENTICALLY
+AT CONTROL.** That module was deleted in the earlier areas E/G/H chunk and the
+breakage was recorded there. So this fixture path is already dark, and D-1 lands
+in the dark: it added nothing, but nothing checked it either. Read the pass
+count, not the exit code — all three print no totals line at all.
+
+**On the rebuild list below this is the entry that matters most**, because the
+three suites that would catch a mistake here are the same three the rebuild
+phase must restore first.
+
+### REBUILD LIST — added by area B/E
+
+| capability | contract | state |
+| --- | --- | --- |
+| Fixture-replan alternatives keeping dependency-owned derived work | a derived session may deliberately displace a canonical one while its trigger is active | **BROKEN** — alternatives now carry the canonical week only. If this capability is real it must be rebuilt as a DERIVATION at read, never as a write into the accepted week. |
+| Guards for the whole fixture-mutation path | — | **BROKEN AT CONTROL, not by this chunk** — 3 suites dead at import on `homeGameMutationController` since the areas E/G/H chunk |
+
+Agent: demolition

@@ -96,7 +96,6 @@ import {
 } from '../utils/fixtureMinimalReplan';
 import {
   effectiveFixtureDatesForWeeks,
-  materialiseVisibleSystemWork,
   rollingHorizonDependencyClosure,
   rollingHorizonWeekStartsForMutation,
   searchRollingHorizonCandidateCombinations,
@@ -2192,10 +2191,19 @@ export function buildFixtureProjection(args: {
       ...target,
       microcycles: target.microcycles.map((microcycle, index) => index === 0 ? {
         ...microcycle,
-        workouts: materialiseVisibleSystemWork({
-          canonical: alternative.workouts,
-          visible: alternative.gateway.visibleWorkouts,
-        }),
+        // THE VISIBLE-INTO-CANONICAL MERGE IS GONE (demolition area B/E,
+        // 2026-08-19). `materialiseVisibleSystemWork` took the resolver's
+        // READ-TIME derived sessions and wrote them into the accepted week,
+        // so a filler the resolver synthesised for display became accepted
+        // programming. `sessionResolver` documents what that cost: the stored
+        // filler arrived back as a `templateWorkout` on the next resolve and
+        // snapshotted itself into its own successor — provenance depth +1 and
+        // payload x2, every launch, on disk.
+        //
+        // The canonical week is what gets accepted. Derived sessions are
+        // derived on every read, from the accepted choices and the active
+        // facts, and are never promoted.
+        workouts: alternative.workouts,
         exposureContractV2: alternative.gateway.contract,
       } : microcycle),
     };
