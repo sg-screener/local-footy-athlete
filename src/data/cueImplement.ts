@@ -108,6 +108,48 @@ export const CUE_ASSUMED_IMPLEMENT: Readonly<Record<string, EquipmentTag>> = {
 
   'Pull-Ups': 'bodyweight',                   // sheet says pullup_bar; the bar is SUPPORT, not the implement
   'Scap Pull Ups': 'bodyweight',              // same
+
+  /* ── THE APPARATUS ROWS — Sam's order, 2026-08-20 ────────────────────────
+   *
+   * *"measure and fix the two current athlete-facing programming defects …
+   * the 36 no-equipment bench contradictions."*
+   *
+   * **MEASURED:** 36 occurrences / 18 distinct athletes / 36 weeks / 36
+   * sessions, every one a `Bodyweight Only` world, every one the same exercise:
+   * a zero-equipment athlete opened their session and read *"Top leg on the
+   * bench"*.
+   *
+   * ⚠ **THE CUE IS NOT THE THING THAT WAS WRONG, AND IT IS NOT EDITED.**
+   * *"Top leg on the bench, drive through the inner thigh"* is Sam's authored
+   * text — `docs/CUE_CHANGESET_2026-07-23.md:157` — and `test:authored-cues`
+   * equality-gates it in both directions. Rewriting it here would be inventing
+   * coaching copy, which R-104 forbids in this very file.
+   *
+   * ⚠ **AND THE EQUIPMENT SHEET IS NOT EDITED EITHER.** Declaring
+   * `Copenhagen Plank (Half)` as needing a bench would remove it from every
+   * bodyweight athlete, and `exercisePools.ts:195` records that groin coverage
+   * is only four exercises — two of them Copenhagens. **Fixing a cue by
+   * deleting the exercise is not fixing it.**
+   *
+   * **SO THE FIX IS A READING, WHICH IS EXACTLY WHAT THIS TABLE IS FOR.** Each
+   * row below records the apparatus its already-authored cue names. An athlete
+   * whose resolved implement is `bodyweight` no longer receives a cue written
+   * for a bench; an athlete who has one still does. The exercise keeps its
+   * place in the programme and nobody is told to use kit they do not have.
+   *
+   * The other two are the same defect in exercises the corpus did not happen to
+   * deliver to a zero-kit athlete — RFE means REAR FOOT ELEVATED, and a
+   * single-leg hip thrust is cued off a bench. Filing only the one that showed
+   * up in the census would leave the class open. */
+  'Copenhagen Plank (Half)': 'bench',         // "Top leg on the bench"
+  'RFE Split Squat Jump': 'bench',            // "Back foot on bench" — the R in RFE
+  'Single-Leg Hip Thrust': 'bench',           // "Upper back on bench"
+  /* ⚠ **FOUND BY THE GATE, NOT BY ME.** My own scan classified this one as
+   * "already declares its kit" because `EXERCISE_EQUIPMENT_REQUIREMENT` has no
+   * entry for it at all — and absent is not the same as declared. The gate asks
+   * `!requirement || requirement.length === 0`, which is the honest test, and it
+   * reddened on exactly the case my eye had filed away. */
+  'Pigeon Stretch': 'bench',                  // "Front shin across bench"
 };
 
 /**
@@ -129,6 +171,23 @@ export const CUE_ASSUMED_IMPLEMENT: Readonly<Record<string, EquipmentTag>> = {
  */
 export const CUE_IMPLEMENT_NEUTRAL: ReadonlySet<string> = new Set([
   'Z-Press',
+
+  /* ── READ AND RULED NEUTRAL, 2026-08-20, alongside the apparatus rows ────
+   *
+   * Both name an apparatus and NEITHER is a contradiction, so both are filed
+   * here rather than above — `a row here means "names one, and was READ and
+   * ruled neutral"`, which is the distinction this set exists to hold.
+   *
+   * `Explosive Push-up` — *"Sore wrists? Elevate hands on box."* The box is
+   * offered as a REMEDY for a symptom the athlete may not have. The exercise is
+   * done on the floor; the cue's own question mark is the tell.
+   *
+   * `Calf Raises` — *"Elevate balls of feet on step."* A step is not equipment
+   * in this app's vocabulary and not on the checklist: it is a stair, a kerb or
+   * a doorstep, which every athlete has. Filing it as an implement would
+   * withhold the cue from the athletes most likely to need it. */
+  'Explosive Push-up',
+  'Calf Raises',
 ]);
 
 /**

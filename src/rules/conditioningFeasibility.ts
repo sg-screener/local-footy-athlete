@@ -15,6 +15,7 @@ import type { PreseasonSubphase } from './preseasonSubphase';
 import type { Section18ConditioningStress, Section18EquipmentPolicyState } from './weeklyExposureContractV2';
 import { selectDefaultAerobicErgModalityFromHash } from '../utils/sessionBuilder';
 
+import { CONDITIONING_WARMUP_ROW_NAME } from './conditioningSelection';
 type ErgModality = NonNullable<SessionAllocation['ergModality']>;
 type AllowedErgModality = Exclude<ErgModality, 'bike_erg'>;
 
@@ -481,7 +482,41 @@ export function applyResolvedConditioningSubstitution(workout: Workout): Workout
     workout.conditioningBlock?.options.flatMap((option) => option.exerciseIds) ??
       workout.exercises.filter((row) => row.section18Evidence?.role === 'conditioning').map((row) => row.id),
   );
-  const exercises = workout.exercises.map((row) => conditioningIds.has(row.id)
+  /* ⚠ **THE WARM-UP KEEPS ITS OWN NAME, AND THAT IS THE WHOLE OF THE
+   * DUPLICATE-EXERCISE DEFECT SAM ORDERED FIXED (2026-08-20).**
+   *
+   * `conditioningIds` is every row in the block, and the block includes the
+   * structural warm-up row. So a substituted session renamed BOTH rows to the
+   * modality label and the athlete's screen read:
+   *
+   *     Conditioning
+   *       - Outdoor Running Intervals
+   *       - Outdoor Running Intervals
+   *
+   * **MEASURED across the 180-world corpus: 48 occurrences / 20 athletes / 40
+   * weeks / 48 sessions**, every one a low-kit world where running is the
+   * substituted modality. Verified on the athlete-visible projection, not just
+   * in the workout object — the two lines really are what they read.
+   *
+   * ⚠ **IT IS NOT THE SAME WORK TWICE. IT IS ONE ROW WEARING THE OTHER'S
+   * NAME.** The warm-up carries 1 set and Sam's signed warm-up sentence; the
+   * main carries the authored dose. Only the NAME was overwritten, which is why
+   * no count of sessions or exposures could see it.
+   *
+   * **IDENTIFIED BY NAME, NEVER BY ID SUFFIX.** `-warmup` is right there in the
+   * id and matching it would be the string-prefix-on-id shape this module's
+   * neighbours explicitly refuse (*"rows derive from the template by name —
+   * never from string-prefix matching on `id`"*). The warm-up's authored name
+   * IS its identity, and it is the one thing the substitution must not touch:
+   * a warm-up jog is a warm-up jog whichever modality replaced the main block.
+   *
+   * R-049 already says the warm-up is not the work — *"dose counts main work
+   * only; warm-up and cool-down never count"* — and the projection already
+   * gives it no dose. This makes the NAME agree with what the app already
+   * believes about that row. */
+  const isStructuralWarmup = (row: { exercise?: { name?: string } | null }): boolean =>
+    row.exercise?.name === CONDITIONING_WARMUP_ROW_NAME;
+  const exercises = workout.exercises.map((row) => conditioningIds.has(row.id) && !isStructuralWarmup(row)
     ? {
         ...row,
         exercise: row.exercise ? {
@@ -492,7 +527,12 @@ export function applyResolvedConditioningSubstitution(workout: Workout): Workout
         } : row.exercise,
       }
     : row);
-  const allIds = Array.from(conditioningIds);
+  /* The block's option lists the rows the substitution actually renamed. Leaving
+   * the warm-up id in it would hand the same contradiction to every reader that
+   * trusts `exerciseIds` instead of the rows. */
+  const allIds = workout.exercises
+    .filter((row) => conditioningIds.has(row.id) && !isStructuralWarmup(row))
+    .map((row) => row.id);
   return {
     ...workout,
     exercises,

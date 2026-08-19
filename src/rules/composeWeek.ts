@@ -1213,6 +1213,26 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
     // (d): the day's FIRST row of a planned pattern takes the role, and a
     // supplementary row of the same pattern stays an accessory.
     const patternHasItsMainLift = new Set<MainStrengthPattern>();
+    /* ⚠ **ONE IDENTITY, ONCE PER DAY — the last 4 of Sam's 52 (2026-08-20).**
+     *
+     * After the conditioning warm-up rename was fixed, four occurrences
+     * remained: `Explosive Push-up [main_strength+strength_accessory]`, two
+     * athletes, four sessions, all `Bodyweight Only`. The same movement filled
+     * the day's main push slot AND an accessory slot, so the athlete was
+     * prescribed it twice in one session with two different doses.
+     *
+     * `usedThisWeek` above is WEEK-local variety and cannot see this: both rows
+     * are the same day, and the first one adds the identity only after the
+     * second has already been chosen from the same list.
+     *
+     * ⚠ **THE ACCESSORY YIELDS, NEVER THE MAIN LIFT.** This set narrows only the
+     * ACCESSORY candidate list. A main lift is deliberately asked against
+     * `legal` rather than the narrowed preference list — the contract's *"main
+     * and secondary exercises are stable throughout their block"* is
+     * unreachable if a week-local or day-local narrowing reaches a per-BLOCK
+     * decision, which is stated at that line and is why this is applied where
+     * it is and nowhere else. */
+    const identitiesThisDay = new Set<ComposedExerciseIdentity>();
     // ⚠ THE FULL-BODY SHAPE DECLARES ITS OWN PATTERNS. The plan's answer for
     // this case was upper-only and Sam has overruled it, so asking the plan
     // which patterns the day carries would re-impose the ruling he replaced —
@@ -1347,7 +1367,15 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
         const group = POOL_GROUP_OF.get(id);
         return !group || !groupsUsedHere.has(group);
       });
-      const basePreferred = baseDifferentGroup.length > 0 ? baseDifferentGroup : baseChoices;
+      const baseDifferentGroupFresh = baseDifferentGroup.length > 0 ? baseDifferentGroup : baseChoices;
+      /* The day-local narrowing, applied like every other one here: prefer rows
+       * this day does not already hold, and fall back rather than empty the
+       * list — an accessory slot with no fresh option is still owed a row. */
+      const baseNotOnThisDay = baseDifferentGroupFresh.filter(
+        (id) => !identitiesThisDay.has(id));
+      const basePreferred = baseNotOnThisDay.length > 0
+        ? baseNotOnThisDay
+        : baseDifferentGroupFresh;
       /* ── THE ROTATION OWNER DECIDES IDENTITY. THIS LINE NO LONGER DOES. ────
        *
        * It used to be `preferred[step % preferred.length]`, where `step` is the
@@ -1476,6 +1504,7 @@ export function composeWeek(inputs: ComposerInputs): ComposedWeek {
           }
         : undefined;
       usedThisWeek.add(identity);
+      identitiesThisDay.add(identity);
       const chosenGroup = POOL_GROUP_OF.get(identity);
       if (chosenGroup) {
         groupsUsedHere.add(chosenGroup);

@@ -73,6 +73,7 @@ import { CUE_ASSUMED_IMPLEMENT, CUE_IMPLEMENT_NEUTRAL } from '../data/cueImpleme
 import { materialiseComposedWeek } from '../rules/materialiseComposedWeek';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import { EXERCISE_CUES } from '../data/exerciseCues';
+import { EXERCISE_EQUIPMENT_REQUIREMENT } from '../data/exerciseEquipmentRequirement';
 
 let passed = 0;
 let failed = 0;
@@ -327,6 +328,53 @@ function run(): void {
     namingCues >= 30, `${namingCues} cues name an implement`);
   check('EVERY CUE THAT NAMES AN IMPLEMENT IS FILED — the table cannot fall behind',
     unfiled.length === 0, `unfiled: ${unfiled.join(', ')}`);
+
+  /* ⚠ **THE APPARATUS GATE — a class the scan above could not see (2026-08-20).**
+   *
+   * Sam ordered the *"36 no-equipment bench contradictions"* fixed. The cause was
+   * not a wrong cue and not a wrong requirement: **`IMPLEMENT_WORDS` above has no
+   * `bench`, `box` or `rack`**, so a cue reading *"Top leg on the bench"* named an
+   * apparatus the coverage gate was blind to, was never forced into
+   * `CUE_ASSUMED_IMPLEMENT`, and was therefore rendered to an athlete with no
+   * equipment at all. 36 occurrences / 18 athletes / 36 weeks / 36 sessions.
+   *
+   * ⚠ **THIS IS A SECOND GATE, NOT A WIDER FIRST ONE.** Adding `bench` to
+   * `IMPLEMENT_WORDS` would demand a row for `Dumbbell Kickback` too — whose
+   * implement is dumbbells and whose cue merely mentions a bench — and filing
+   * THAT as `'bench'` would withhold a correct cue from every athlete. The two
+   * questions are different: the gate above asks *"which implement is this cue
+   * written for"*; this one asks *"does this cue MANDATE apparatus the sheet says
+   * is not needed"*.
+   *
+   * **PRIMARY CUE ONLY.** The primary is the setup; the secondary carries tips
+   * and remedies. `Explosive Push-up`'s *"Sore wrists? Elevate hands on box"* is
+   * a conditional remedy, and counting it inflated the measured defect from 36 to
+   * 140 across 46 athletes. An athlete who cannot perform the SETUP cannot do the
+   * exercise; one who is offered an optional box can simply ignore it. */
+  const APPARATUS = /\b(?:on|to|onto|across)\s+(?:the\s+|a\s+|an\s+)?(bench|box|rack|machine)\b/i;
+  const unfiledApparatus: string[] = [];
+  let mandatingCues = 0;
+  for (const [name, cue] of Object.entries(EXERCISE_CUES)) {
+    if (!APPARATUS.test(String(cue.primaryCue ?? ''))) continue;
+    mandatingCues += 1;
+    const requirement = (EXERCISE_EQUIPMENT_REQUIREMENT as Record<string, readonly string[]>)[name];
+    // Only a contradiction when the sheet says the exercise needs NOTHING. An
+    // exercise that already declares the apparatus cannot reach an athlete
+    // without it, so its cue can name it freely.
+    const declaresNothing = !requirement || requirement.length === 0;
+    if (!declaresNothing) continue;
+    if (!CUE_ASSUMED_IMPLEMENT[name] && !CUE_IMPLEMENT_NEUTRAL.has(name)) {
+      unfiledApparatus.push(name);
+    }
+  }
+  // ⚠ CONTROL. The cell below is a negation and would pass on a scan that had
+  // stopped matching anything at all.
+  check('non-vacuity: the apparatus scan still finds cues that mandate one',
+    mandatingCues >= 8, `${mandatingCues} primary cues mandate an apparatus`);
+  check('NO ZERO-EQUIPMENT EXERCISE MANDATES APPARATUS IN ITS PRIMARY CUE UNFILED',
+    unfiledApparatus.length === 0,
+    `unfiled: ${unfiledApparatus.join(', ')} — each must be filed in `
+    + 'CUE_ASSUMED_IMPLEMENT (so the renderer withholds it) or ruled neutral');
 
   // THE LOAD RULING, HELD NEGATIVELY. Sam: *"do not split load history by
   // implement."* The implement owner must not take load as an input or return

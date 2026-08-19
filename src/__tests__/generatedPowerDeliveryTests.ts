@@ -99,34 +99,36 @@ ok('R-105 — no session carries a power row beside its own twin',
     names: (workout.exercises ?? []).map((row) =>
       `${row.exercise?.name}${row.role === 'power' ? ' [power]' : ''}`) })));
 
-/* ⚠ **AND HERE IS WHAT THIS CELL DELIBERATELY DOES NOT COVER, MEASURED RATHER
- * THAN ASSUMED AWAY.**
+/* ⚠ **THE WIDER CLASS THIS CELL USED TO DISCLOSE IS NOW CLOSED (2026-08-20).**
  *
- * The first cut of the cell above asked "does any session name one exercise
- * twice?" and went red on a day reading `["Explosive Push-up", "Explosive
- * Push-up"]` with **no power row on it at all** — two STRENGTH rows, one
- * identity. That is the composer placing one movement in two slots, and it is a
- * different defect with a different owner.
+ * It read: *"composer-internal duplicates still exist and are NOT power's"* —
+ * true when written, and the first cut of the cell above found one by going red
+ * on a day reading `["Explosive Push-up", "Explosive Push-up"]` with no power
+ * row on it at all.
  *
- * **IT IS OLDER THAN R-105 AND BIGGER THAN IT.** Measured across the 180-world
- * corpus on 2026-08-19: 52 occurrences survive after the power fix — 48
- * `strength_accessory + conditioning` running-row collisions and 4
- * `main_strength + strength_accessory` — against 50 at the `20cb1422` baseline
- * over 40 fewer built worlds. **Narrowing this cell to power is scoping, not
- * hiding**: the wider class is recorded in `docs/STATUS_ORCHESTRATOR.md` and is
- * the composer's to own.
+ * Sam then ordered that class fixed. **52 occurrences / 20 athletes / 40 weeks /
+ * 52 sessions -> 0**, in two parts:
  *
- * This cell exists so a reader cannot mistake the green above for "no
- * duplicates anywhere". */
+ *   48  a substituted conditioning session renamed its structural WARM-UP row
+ *       to the modality label, so the athlete's screen printed the same line
+ *       twice (`conditioningFeasibility.applyResolvedConditioningSubstitution`);
+ *    4  the composer filled a main-strength slot and an accessory slot with one
+ *       identity on the same day (`composeWeek`, day-local narrowing).
+ *
+ * **SO THE DISCLOSURE BECOMES AN ASSERTION.** A cell that says "this defect
+ * still exists elsewhere" must not outlive the defect — it would read as a
+ * standing exemption for exactly the thing that was fixed.
+ */
 const anyDuplicateDays = workouts.filter((workout) => {
   const names = (workout.exercises ?? [])
     .map((row) => row.exercise?.name).filter(Boolean) as string[];
   return new Set(names).size !== names.length;
 });
-ok('DISCLOSURE — composer-internal duplicates still exist and are NOT power\u2019s',
-  anyDuplicateDays.every((workout) => powerCollisions([workout]).length === 0),
+ok('NO SESSION PRESCRIBES ONE EXERCISE TWICE — power or otherwise',
+  anyDuplicateDays.length === 0,
   anyDuplicateDays.map((workout) => ({ day: workout.dayOfWeek,
     names: (workout.exercises ?? []).map((row) => row.exercise?.name) })));
+
 ok('R-105 — power never exceeds the selected allowance',
   rows.length <= budget && delivered.length <= budget,
   { budget, sessions: delivered.length, rows: rows.length });

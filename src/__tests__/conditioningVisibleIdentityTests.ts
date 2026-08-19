@@ -16,6 +16,8 @@ import { extractVisibleProgramItemsFromWorkout } from '../utils/visibleProgramRe
 import { deriveVisibleWorkoutIdentity } from '../utils/visibleWorkoutIdentity';
 import { weeklyPlanContextLabel, weeklyPlanTitle } from '../utils/weeklyPlanDisplay';
 
+import { applyResolvedConditioningSubstitution } from '../rules/conditioningFeasibility';
+import { CONDITIONING_WARMUP_ROW_NAME } from '../rules/conditioningSelection';
 let pass = 0;
 let fail = 0;
 const failures: string[] = [];
@@ -296,6 +298,54 @@ for (const weekIndex of [2, 3]) {
   ok(`W${weekIndex + 1} has at most one hard/tempo development exposure`,
     identities.filter((value) => value?.structureFamily === 'tempo_intervals').length <= 1,
     identities);
+}
+
+/* ═══ THE SUBSTITUTION MUST NOT RENAME THE WARM-UP (2026-08-20) ════════════
+ *
+ * Sam ordered the duplicate-exercise defect fixed. **48 of its 52 occurrences
+ * were this one line**, and it was athlete-visible: a substituted conditioning
+ * session renamed EVERY row in its block to the modality label, warm-up
+ * included, so the projected day read
+ *
+ *     Conditioning
+ *       - Outdoor Running Intervals
+ *       - Outdoor Running Intervals
+ *
+ * ⚠ **IT WAS NEVER THE SAME WORK TWICE — one row was wearing the other's
+ * name.** The warm-up still carried 1 set and Sam's signed warm-up sentence.
+ * That is why no count of sessions, exposures or doses could see it, and why
+ * the cell below asserts the NAME rather than the row count.
+ */
+{
+  const substituted: any = applyResolvedConditioningSubstitution({
+    id: 'w-test', dayOfWeek: 3, name: 'Conditioning', workoutType: 'Conditioning',
+    intensity: 'Moderate',
+    conditioningFeasibility: { resolvedSubstitutionFamily: 'outdoor_running' },
+    conditioningBlock: {
+      intent: 'tempo',
+      options: [{ title: 'x', description: 'x', exerciseIds: ['cond-w-test-warmup', 'cond-w-test-main'] }],
+    },
+    exercises: [
+      { id: 'cond-w-test-warmup', role: 'conditioning', prescribedSets: 1,
+        exercise: { id: 'a', name: CONDITIONING_WARMUP_ROW_NAME } },
+      { id: 'cond-w-test-main', role: 'conditioning', prescribedSets: 13,
+        exercise: { id: 'b', name: '30:30 Controlled Tempo Blocks' } },
+    ],
+  } as never) as any;
+  const names = substituted.exercises.map((row: any) => row.exercise?.name);
+
+  // ⚠ CONTROL FIRST. Both cells below are satisfied by a substitution that did
+  // nothing at all, which is the failure mode this fix could easily become.
+  ok('CONTROL — the substitution really did rename the main row',
+    names[1] !== '30:30 Controlled Tempo Blocks', names);
+  ok('the structural warm-up keeps its own name',
+    names[0] === CONDITIONING_WARMUP_ROW_NAME, names);
+  ok('so no session names one exercise twice',
+    new Set(names).size === names.length, names);
+  ok('and the block no longer claims the warm-up as substituted work',
+    !(substituted.conditioningBlock?.options?.[0]?.exerciseIds ?? [])
+      .includes('cond-w-test-warmup'),
+    substituted.conditioningBlock?.options?.[0]?.exerciseIds);
 }
 
 console.log(`\nconditioningVisibleIdentityTests: ${pass} passed, ${fail} failed`);
