@@ -1652,6 +1652,7 @@ run('a charter door\'s own word IS the bucket — Gunshow does not become Streng
 run('POWER is not a part — a day\'s power work sits inside Strength, first', () => {
   world();
   let powerDays = 0;
+  let pairedOnlyDays = 0;
   for (const week of WEEKS) {
     // The SAME resolved week the projection was built from, so the workout a
     // day's power rows come from is the workout that day projects — not a
@@ -1696,10 +1697,20 @@ run('POWER is not a part — a day\'s power work sits inside Strength, first', (
           + 'Merging the row must not drop the work.');
       }
 
-      // 3. IF STRENGTH IS EXPANDED, POWER APPEARS FIRST.
-      assert(names[0] === String(power[0].exercise?.name ?? ''),
-        `${day.date}'s Strength row opens with "${names[0]}", not with the power `
-        + `exercise "${power[0].exercise?.name}".`);
+      // 3. IF STRENGTH IS EXPANDED, A STANDALONE PRIMER APPEARS FIRST.
+      //
+      // ⚠ NARROWED 2026-08-20 (Sam): *"'Power appears first' applies only to a
+      // standalone power primer. For valid contrast training, preserve the
+      // authored pair at the main slot: heavy lift → paired explosive movement."*
+      // A paired row is SKIPPED here rather than asserted the wrong way round —
+      // and the skip is counted, so a world that is all-contrast cannot make this
+      // cell pass by having nothing left to check.
+      const standalone = power.filter((row: any) =>
+        !row.supersetGroup && row.pairType !== 'contrast');
+      if (standalone.length === 0) { pairedOnlyDays += 1; continue; }
+      assert(names[0] === String(standalone[0].exercise?.name ?? ''),
+        `${day.date}'s Strength row opens with "${names[0]}", not with the standalone `
+        + `power primer "${standalone[0].exercise?.name}".`);
 
       // 4. AND THE DAY IS STILL A STRENGTH DAY BY NAME. Contains, not equals:
       //    the exhibit carries team training too and reads "Strength + Team
@@ -1712,6 +1723,10 @@ run('POWER is not a part — a day\'s power work sits inside Strength, first', (
   assert(powerDays >= 1,
     'no day in three generated weeks carries power work — this cell proved '
     + 'nothing about the exhibit it was written for');
+  assert(powerDays > pairedOnlyDays,
+    `all ${powerDays} power days are CONTRAST PAIRS, so the standalone-primer `
+    + 'assertion was skipped on every one of them and this cell proved nothing. '
+    + 'The pair-order rule is held by test:power-primer-policy section [9].');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

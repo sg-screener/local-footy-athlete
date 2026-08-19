@@ -449,7 +449,23 @@ ok('[7] the power row is a member of Strength',
 ok('[7] SAM’S CRITERION — one power row + four strength rows reads Strength 0/5',
   strengthOf(withPower)!.items.length === 5,
   strengthOf(withPower)!.items.map((i) => i.label));
-ok('[7] power is the FIRST row of Strength',
+/* ⚠ **NARROWED TO STANDALONE PRIMERS — SAM, 2026-08-20.**
+ *
+ * *"'Power appears first' applies only to a standalone power primer. For valid
+ * contrast training, preserve the authored pair at the main slot: heavy lift →
+ * paired explosive movement → rest."*
+ *
+ * These fixtures carry NO `supersetGroup`, so every one of them is a standalone
+ * primer and the claim below is exactly the narrowed one. The contrast case —
+ * where the explosive row follows its heavy partner instead of leading — is held
+ * in `test:power-primer-policy` section [9], over a pairing formed by the real
+ * `powerRowAlignment` owner. The cell titles say "standalone" so nobody reads
+ * them as the general rule again. */
+ok('[7] CONTROL — these fixtures are standalone primers, not contrast pairs',
+  withPower.items.every((item) => !(item as any).supersetGroup)
+    && !powerPlusFour.exercises.some((r: any) => r.supersetGroup || r.pairType),
+  powerPlusFour.exercises.map((r: any) => r.pairType ?? null));
+ok('[7] a STANDALONE primer is the FIRST row of Strength',
   strengthOf(withPower)!.items[0]?.label === 'Broad Jump',
   strengthOf(withPower)!.items.map((i) => i.label));
 ok('[7] and the main lift follows it',
@@ -504,7 +520,7 @@ const powerLast: any = {
 const authoredLast = buildSessionExecutionPlan({
   workout: powerLast, template: buildSessionTemplate(powerLast), mobilityFlow: null,
 });
-ok('[7] a power row authored LAST is still projected first in Strength',
+ok('[7] a STANDALONE primer authored LAST is still projected first in Strength',
   strengthOf(authoredLast)!.items[0]?.label === 'Broad Jump',
   strengthOf(authoredLast)!.items.map((i) => i.label));
 ok('[7] and moving it re-orders nothing else',

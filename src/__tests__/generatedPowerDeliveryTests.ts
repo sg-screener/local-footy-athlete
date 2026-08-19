@@ -17,6 +17,9 @@ import {
   LADDER_SESSION_SET_CEILING,
 } from '../rules/blockBoundaryProgression';
 import { slotCountsTowardSetBudget } from '../rules/weeklyProgrammingContract';
+// [9] — the pairing owner, and the day card's composition, for the contrast rule.
+import { alignPowerToFinalWorkoutContent } from '../rules/powerRowAlignment';
+import { composeDayDetail } from '../utils/dayDetailComposition';
 import {
   applyStrengthProgression,
   buildStrengthWorkoutHistoryFromFeedback,
@@ -220,7 +223,21 @@ const placementHolds = visible.days.every((day) => {
 ok('CONTROL — the projected week really does contain a day with power work',
   placementDaysChecked > 0,
   { placementDaysChecked, deliveredRows: rows.length });
-ok('and each day\'s Strength part opens with that day\'s power exercise',
+/* ⚠ NARROWED TO STANDALONE PRIMERS — SAM, 2026-08-20. "Power appears first"
+ * applies only to a standalone primer; a CONTRAST pair keeps its authored order
+ * at the main slot (heavy → explosive), which section [9] holds. Every power row
+ * this world generates is a primer, and the control below says so — if contrast
+ * ever starts pairing here, that control reds rather than this cell silently
+ * asserting the wrong rule. */
+ok('CONTROL — every power row in this world is a standalone primer',
+  visible.days.every((day) => {
+    const dayOfWeek = dayOfWeekByDate.get(day.date);
+    const workout = workouts.find((w) => w.dayOfWeek === dayOfWeek) ?? null;
+    return powerRows(workout).every((r: any) => !r.supersetGroup && r.pairType !== 'contrast');
+  }),
+  workouts.flatMap((w) => powerRows(w).map((r: any) =>
+    ({ name: r.exercise?.name, pairType: r.pairType ?? null, group: r.supersetGroup ?? null }))));
+ok('and each day\'s Strength part opens with that day\'s STANDALONE power primer',
   placementHolds,
   visible.days.map((day) => ({ date: day.date,
     strength: day.parts.filter((part) => part.kind === 'strength')
@@ -538,6 +555,168 @@ ok('[8] strength-set progression never moves a power row',
   progressionOutcome !== null && progressionOutcome.powerMoved.length === 0,
   { moved: progressionOutcome?.moved.map((r: any) => `${r.role ?? 'strength'}:${r.exercise?.name}`),
     powerMoved: progressionOutcome?.powerMoved.map((r: any) => r.exercise?.name) });
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * [9] CONTRAST KEEPS ITS AUTHORED PAIR AT THE MAIN SLOT
+ *
+ * **Sam, 2026-08-20, correcting his own acceptance:** *"'Power appears first'
+ * applies only to a standalone power primer. For valid contrast training,
+ * preserve the authored pair at the main slot: heavy lift → paired explosive
+ * movement → rest. The explosive row must appear immediately after its heavy
+ * partner, not at the top of the session. Both remain inside the single Strength
+ * section; there is still no separate Power section."*
+ *
+ * ⚠ **NO SECOND SORTING RULE WAS ADDED, AND THAT WAS HIS INSTRUCTION.**
+ * `powerRowAlignment` already stamps `supersetOrder` (heavy = 1, explosive = 2)
+ * when it forms the pair; `sessionTemplate`'s `inPairOrder` now READS it. The day
+ * card reaches the same answer through `orderRowsAsSessionPresents`, which
+ * reports the template's placement — so one owner, two readers, and cell [9c]
+ * below is what proves the two surfaces cannot drift.
+ *
+ * ⚠⚠ **AND THE WORLD THIS SECTION RUNS IN IS NOT ONE GENERATION CAN REACH
+ * TODAY. THAT IS STATED HERE RATHER THAN HIDDEN, AND IT IS A FINDING:**
+ *
+ *   Measured over 48 generated Off-season worlds: **384 contrast power rows
+ *   produced, 0 paired, 384 downgraded to primer** — every one with
+ *   `no_heavy_same_family_main_lift`. The cause is an arithmetic mismatch
+ *   between two rules that never meet. `powerPrimerPolicy` only returns
+ *   `kind: 'contrast'` in LATE OFF-SEASON (the pre-season route needs
+ *   `powerGoalNudge`, which both production call sites hardcode to `false`), and
+ *   `powerRowAlignment`'s heavy test needs `prescribedRepsMax <= 6` — but the
+ *   lowest rep range off-season strength work carries is `6-8`. So Section 4's
+ *   contrast rule is prescribed and then always cancelled.
+ *
+ *   **NOT FIXED HERE. Sam's instruction was "do not start another change in
+ *   this lane."** It is recorded in `docs/STATUS_SESSIONUI.md` for his ruling.
+ *
+ * So the pairing below is formed by the REAL owner
+ * (`alignPowerToFinalWorkoutContent`) on a REAL generated contrast day, with
+ * exactly ONE value overridden — the main lift's rep range — and the override is
+ * named in the control cell rather than buried. Everything else is generated.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[9] Contrast keeps its authored pair at the main slot');
+
+const contrastProfile = {
+  ageRange: '26-30', experienceLevel: 'Advanced', trainingLocation: 'Commercial gym',
+  equipmentSelectionCompleteness: 'complete', equipment: ['Full gym'],
+  // Capacity must score HIGH (6/6) or the policy returns a primer, not contrast.
+  recentTrainingLoad: 'Very consistent', conditioningLevel: 'Elite',
+  seasonPhase: 'Off-season', trainingDaysPerWeek: 4,
+  preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+  teamTrainingDaysPerWeek: 0, teamTrainingDays: [], gameDay: 'Saturday',
+};
+const contrastProgram: any = generateProgramLocally(contrastProfile as never, {
+  todayISO: '2026-07-13', blockNumber: 1, microcycleLimit: 2,
+  // Phase week 5+ is `late_offseason`, the only live route to contrast intent.
+  seasonPhaseClock: { protocolVersion: 1, selectedPhase: 'Off-season',
+    phaseEntryWeekStartISO: '2026-05-18', originProvenance: 'explicit_user_phase_change',
+    persistenceProvenance: 'preserved_persisted_state' },
+} as never);
+const contrastDay = contrastProgram.microcycles
+  .flatMap((m: any) => m.workouts ?? [])
+  .find((w: any) => powerRows(w).some((r: any) => r.power?.kind === 'contrast')) ?? null;
+
+ok('[9] CONTROL — generation really does prescribe contrast intent in late off-season',
+  !!contrastDay,
+  { day: contrastDay?.workoutType,
+    kinds: contrastProgram.microcycles.flatMap((m: any) => m.workouts ?? [])
+      .flatMap((w: any) => powerRows(w).map((r: any) => r.power?.kind)) });
+
+/** The heavy partner: the one value generation does not currently pair with contrast. */
+const heavyName = 'Back Squat';
+const heavied = contrastDay ? { ...contrastDay, exercises: (contrastDay.exercises ?? [])
+  .map((r: any) => (r.exercise?.name === heavyName
+    ? { ...r, prescribedRepsMin: 3, prescribedRepsMax: 5 } : r)) } : null;
+const alignment = heavied ? alignPowerToFinalWorkoutContent(heavied) : null;
+const pairedDay: any = alignment?.workout ?? null;
+
+ok('[9] CONTROL — the REAL pairing owner forms the pair once the partner is heavy',
+  alignment?.action === 'paired' && String(alignment?.reason ?? '').startsWith('contrast_paired_to_main'),
+  { action: alignment?.action, reason: alignment?.reason });
+ok('[9] CONTROL — and it is unpaired WITHOUT that one override, which is the finding',
+  contrastDay ? alignPowerToFinalWorkoutContent(contrastDay).action === 'downgraded' : false,
+  contrastDay ? alignPowerToFinalWorkoutContent(contrastDay).reason : null);
+
+const sessionStrengthOrder = (workout: any): string[] => {
+  const plan = buildSessionExecutionPlan({
+    workout, template: buildSessionTemplate(workout), mobilityFlow: null });
+  return (plan.sections.find((s) => s.id === 'strength')?.items ?? []).map((i: any) => String(i.label));
+};
+const dayCardStrengthOrder = (workout: any): string[] =>
+  (composeDayDetail(workout, workout) as any).strengthExercises
+    .map((r: any) => String(r.exercise?.name ?? ''));
+
+const pairedSession = pairedDay ? sessionStrengthOrder(pairedDay) : [];
+const pairedCard = pairedDay ? dayCardStrengthOrder(pairedDay) : [];
+const explosiveName = pairedDay
+  ? String(powerRows(pairedDay)[0]?.exercise?.name ?? '') : '';
+
+// ── [9a] STANDALONE PRIMER STILL LEADS. Held on the same day BEFORE pairing:
+//    contrast downgraded to a primer is exactly a standalone primer.
+ok('[9a] a standalone primer still leads the Strength section',
+  !!contrastDay && sessionStrengthOrder(contrastDay)[0] === explosiveName,
+  { order: contrastDay ? sessionStrengthOrder(contrastDay) : null, explosive: explosiveName });
+
+// ── [9b] THE PAIR: heavy immediately before its explosive partner.
+ok('[9b] the heavy lift appears IMMEDIATELY before its paired explosive movement',
+  pairedSession.indexOf(heavyName) >= 0
+    && pairedSession.indexOf(explosiveName) === pairedSession.indexOf(heavyName) + 1,
+  { order: pairedSession, heavy: heavyName, explosive: explosiveName });
+ok('[9b] and the explosive row is NOT at the top of the session',
+  pairedSession[0] === heavyName && pairedSession[0] !== explosiveName,
+  pairedSession);
+ok('[9b] the pair sits at the MAIN slot, not appended to the end',
+  pairedSession.indexOf(explosiveName) < pairedSession.length - 1,
+  pairedSession);
+ok('[9b] both halves stay inside the ONE Strength section, and no Power section exists',
+  (() => {
+    if (!pairedDay) return false;
+    const plan = buildSessionExecutionPlan({ workout: pairedDay,
+      template: buildSessionTemplate(pairedDay), mobilityFlow: null });
+    return !plan.sections.some((s) => String(s.id) === 'power')
+      && pairedSession.includes(heavyName) && pairedSession.includes(explosiveName);
+  })(),
+  pairedDay ? buildSessionExecutionPlan({ workout: pairedDay,
+    template: buildSessionTemplate(pairedDay), mobilityFlow: null }).sections.map((s) => s.id) : null);
+
+// ── [9c] ONE ORDER, BOTH SURFACES.
+ok('[9c] the Day summary card and the Session screen show the SAME order',
+  pairedSession.length > 0 && JSON.stringify(pairedSession) === JSON.stringify(pairedCard),
+  { session: pairedSession, dayCard: pairedCard });
+ok('[9c] and the same single Strength count',
+  pairedSession.length === pairedCard.length && pairedSession.length > 0,
+  { session: pairedSession.length, dayCard: pairedCard.length });
+
+// ── [9d] BREAKING THE PAIRING REDS THE ORDER. The mutation lives INSIDE the
+//    cell, because the thing under test is data the pairing owner writes — a
+//    source mutation cannot express "the pair lost its order".
+const unstamped = pairedDay ? { ...pairedDay, exercises: (pairedDay.exercises ?? [])
+  .map((r: any) => { const { supersetOrder, ...rest } = r; return rest; }) } : null;
+const regrouped = pairedDay ? { ...pairedDay, exercises: (pairedDay.exercises ?? [])
+  .map((r: any) => { const { supersetGroup, supersetOrder, pairType, ...rest } = r; return rest; }) } : null;
+const swapped = pairedDay ? { ...pairedDay, exercises: (pairedDay.exercises ?? [])
+  .map((r: any) => (typeof r.supersetOrder === 'number'
+    ? { ...r, supersetOrder: r.supersetOrder === 1 ? 2 : 1 } : r)) } : null;
+
+ok('[9d] MUTATION — strip supersetOrder and the explosive row leaves its partner\'s side',
+  !!unstamped && sessionStrengthOrder(unstamped).indexOf(explosiveName)
+    !== sessionStrengthOrder(unstamped).indexOf(heavyName) + 1,
+  unstamped ? sessionStrengthOrder(unstamped) : null);
+ok('[9d] MUTATION — break the pairing entirely and the explosive row returns to the top',
+  !!regrouped && sessionStrengthOrder(regrouped)[0] === explosiveName,
+  regrouped ? sessionStrengthOrder(regrouped) : null);
+ok('[9d] MUTATION — reverse the authored pair order and the two swap places',
+  !!swapped && sessionStrengthOrder(swapped).indexOf(heavyName)
+    === sessionStrengthOrder(swapped).indexOf(explosiveName) + 1,
+  swapped ? sessionStrengthOrder(swapped) : null);
+ok('[9d] and every one of those mutations moves the DAY CARD identically too',
+  !!unstamped && !!regrouped && !!swapped
+    && JSON.stringify(sessionStrengthOrder(unstamped)) === JSON.stringify(dayCardStrengthOrder(unstamped))
+    && JSON.stringify(sessionStrengthOrder(regrouped)) === JSON.stringify(dayCardStrengthOrder(regrouped))
+    && JSON.stringify(sessionStrengthOrder(swapped)) === JSON.stringify(dayCardStrengthOrder(swapped)),
+  { unstamped: dayCardStrengthOrder(unstamped ?? {}),
+    regrouped: dayCardStrengthOrder(regrouped ?? {}),
+    swapped: dayCardStrengthOrder(swapped ?? {}) });
 
 console.log(`\nGenerated power delivery: passed=${passed}/${passed + failures.length} failures=${failures.length}`);
 totalsPrinted();

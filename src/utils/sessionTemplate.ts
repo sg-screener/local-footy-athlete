@@ -190,6 +190,69 @@ function phaseRank(item: SessionTemplateItem): number {
   return item.role === 'conditioning' ? 0 : 1;
 }
 
+/**
+ * WITHIN A PAIRING, THE AUTHORED PAIR ORDER WINS — SAM, 2026-08-20.
+ *
+ * *"For valid contrast training, preserve the authored pair at the main slot:
+ * heavy lift → paired explosive movement → rest. The explosive row must appear
+ * immediately after its heavy partner, not at the top of the session."*
+ *
+ * ⚠ **THIS IS NOT A SECOND SORTING RULE, AND IT MUST NOT BECOME ONE.** It adds
+ * no policy and ranks nothing: it reads `supersetOrder`, which
+ * `powerRowAlignment` ALREADY stamps when it forms a contrast pair (heavy = 1,
+ * explosive = 2) and `mobilityPairing` already stamps on an R-015 pair. The
+ * field was written by the pairing owner and read by nobody but the `1a`/`1b`
+ * letter in `dayWorkoutHelpers` — so the pair's own statement of its order was
+ * being ignored by the one module that decides what order the athlete sees.
+ *
+ * **WHY IT BELONGS HERE AND NOWHERE ELSE.** This is the canonical session
+ * template. The day card reaches the same answer through
+ * `orderRowsAsSessionPresents`, which REPORTS this placement rather than
+ * computing its own — so fixing it here fixes both surfaces at once, and adding
+ * anything to the projection instead would create the rival authority Sam's
+ * instruction forbids.
+ *
+ * **THE GROUP KEEPS ITS PLACE; ONLY ITS MEMBERS ARE ORDERED.** The cluster still
+ * sorts at its highest-ranked member in `orderItems` — a contrast pair still
+ * sits at the main slot, because power outranks the main lift — and everything
+ * outside a pairing is untouched. Rows with no `supersetOrder` keep the authored
+ * order they arrived in, so this can only ever act on a pairing that stated one.
+ *
+ * **MEASURED BEFORE IT WAS WRITTEN:** across generated Off/Pre/In-season worlds
+ * at three experience levels, ZERO superset groups of two or more reach a
+ * generated program today, so this changes nothing an athlete can currently see.
+ * It is the correction for the moment a contrast pair does form — which, on the
+ * evidence in `docs/STATUS_SESSIONUI.md`, it cannot yet.
+ */
+function inPairOrder(rows: any[]): any[] {
+  const positions = new Map<string, number[]>();
+  rows.forEach((row, index) => {
+    const groupId = row?.supersetGroup ? String(row.supersetGroup) : null;
+    if (!groupId) return;
+    const slots = positions.get(groupId) ?? [];
+    slots.push(index);
+    positions.set(groupId, slots);
+  });
+  if (positions.size === 0) return rows;
+
+  const out = rows.slice();
+  for (const [groupId, slots] of positions) {
+    if (slots.length < 2) continue;
+    const members = slots.map((index) => rows[index]);
+    // STABLE, and inert when the pairing did not state an order: equal keys keep
+    // the order they arrived in. `Number.MAX_SAFE_INTEGER` puts an unstamped row
+    // after the stamped ones rather than silently ahead of the heavy lift.
+    const ordered = members
+      .map((row, seq) => ({ row, seq, key: typeof row?.supersetOrder === 'number'
+        ? row.supersetOrder : Number.MAX_SAFE_INTEGER }))
+      .sort((a, b) => (a.key !== b.key ? a.key - b.key : a.seq - b.seq))
+      .map((entry) => entry.row);
+    slots.forEach((index, position) => { out[index] = ordered[position]; });
+    void groupId;
+  }
+  return out;
+}
+
 function supersetTagsFor(rows: any[]): Map<any, SessionSupersetTag> {
   const sizes = new Map<string, number>();
   for (const row of rows) {
@@ -267,11 +330,11 @@ export function buildSessionTemplate(
   // Sam's one-list ruling is that every exercise renders in the single session
   // list, and D2's order (which `d2Rank` applies from the authored role) puts
   // power first without the renderer knowing anything special about it.
-  const sessionRows = inAuthoredOrder(workout, [
+  const sessionRows = inPairOrder(inAuthoredOrder(workout, [
     ...componentRows.powerRows,
     ...componentRows.strengthRows,
     ...componentRows.supportRows,
-  ]);
+  ]));
   const supersetTags = supersetTagsFor(sessionRows);
   for (const row of sessionRows) {
     items.push(exerciseItem(row, 'strength', { superset: supersetTags.get(row) ?? null }));

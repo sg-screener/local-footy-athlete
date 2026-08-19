@@ -343,3 +343,97 @@ is no decision to test. The SET half of that sentence is fully covered by the
 three ladder cells above.
 
 `test:compile` unchanged: 671 errors / 77 worse pairs, product scope 30.
+
+---
+
+# PART 4 — THE CONTRAST CORRECTION (R-113) AND THE DEAD `7` (R-112)
+
+## R-112 — the seven-exercise gate is NOT built, and the number is dead
+
+Sam: *"exercise count itself is not the authority; balanced movement coverage and
+the 16-set ceiling are."* Census run with a positive control:
+
+| symbol | production readers |
+| --- | --- |
+| `maxExercisesPerStrengthSession: 7` | **0** (two test files) |
+| `exerciseBudgetRows` | **0** (tests) |
+| `AIConstraints.maxExercisesPerSession` | **0**, and NOT fed by the 7 — it takes `GLOBAL_RULES.dailyMovementCeiling` |
+
+⚠ `sessionRowCounting.ts:330` claims the 7 *"flows into
+`AIConstraints.maxExercisesPerSession`"*. **That sentence is false** and is the
+kind a later reader builds enforcement on. Recorded in R-112 for deletion during
+the hinge-taxonomy cleanup; **not deleted here** (Sam scoped it, and *"do not
+start another change in this lane"*).
+
+## R-113 — contrast keeps its authored pair at the main slot
+
+**THE DEFECT WAS REAL AND BOTH SURFACES HAD IT.** `powerRowAlignment` stamps
+`supersetGroup`, `pairType: 'contrast'` and `supersetOrder` (heavy = 1,
+explosive = 2). The session template clustered the group but ordered its MEMBERS
+by the workout's **stored array order**, where the power row sits first — so a
+formed pair rendered **explosive → heavy**, the reverse of the prescription.
+`supersetOrder` had exactly one reader in the app: the `1a`/`1b` letter.
+
+**FIXED AT THE ONE OWNER, NO SECOND SORTING RULE** (Sam's instruction).
+`sessionTemplate.inPairOrder` reads the field the pairing owner already writes.
+The day card delegates through `orderRowsAsSessionPresents`, so **both surfaces
+were fixed by one change** — measured, not assumed:
+
+```
+before   Lateral Bounds -> Back Squat -> RDLs -> ...
+after    Back Squat -> Lateral Bounds -> RDLs -> ...     (both surfaces, identical)
+```
+
+**ZERO BLAST RADIUS, MEASURED BEFORE WRITING:** across generated
+Off/Pre/In-season worlds at three experience levels, **zero superset groups of
+two or more reach a generated program at all.**
+
+## ⚠ THE FINDING SAM SHOULD RULE ON — CONTRAST NEVER PAIRS IN PRODUCTION
+
+**384 contrast power rows over 48 generated Off-season worlds. 0 paired. 384
+downgraded**, every one `no_heavy_same_family_main_lift`.
+
+Two rules never meet:
+- `powerPrimerPolicy` returns `kind: 'contrast'` only in **late off-season**
+  (the pre-season route needs `powerGoalNudge`, hardcoded `false` at BOTH
+  production call sites in `generateProgram.ts`).
+- `powerRowAlignment`'s heavy test needs `prescribedRepsMax <= 6` — and the
+  lowest rep range off-season strength work carries is **`6-8`**.
+
+**So Section 4's contrast rule is prescribed and then always cancelled.** NOT
+FIXED — Sam said not to start another change in this lane.
+
+## WHAT THIS MEANS FOR THE SIMULATOR PROOF — SAID PLAINLY
+
+Sam asked for the contrast order verified on the simulator on both surfaces.
+**No valid contrast day can be generated, so no device can display one.** What
+was verified on glass is the REACHABLE case: the standalone-primer day, both
+surfaces, unchanged by this work — Day card `STRENGTH — 6 exercises` opening
+Vertical Jump → Back Squat → RDLs → Single-Leg RDL → Band Pallof Press → Cossack
+Squat, Session screen `STRENGTH 0/6` with the same six in the same order.
+
+**The contrast order is proven HEADLESSLY**, over a pairing formed by the real
+`powerRowAlignment` owner on a real generated contrast day, with exactly ONE
+declared override (the partner's rep range) and a control cell proving the
+unpaired result without it.
+
+## GUARDS — `test:power-primer-policy` section `[9]`, 14 cells
+
+Sam's four, each named: `[9a]` standalone primer first · `[9b]` heavy
+immediately before its explosive partner (+ not at the top, + at the main slot,
++ one Strength section) · `[9c]` Day card and Session identical order and count ·
+`[9d]` three mutations that break the pairing, each moving both surfaces alike.
+
+**NARROWED, NOT DELETED** — three prior "power first" cells now say STANDALONE,
+each with a control that reds if its world stops being all-primer:
+`test:session-execution` `[7]`, `test:day-first-timeline`,
+`test:power-primer-policy` `[7]`.
+
+**MUTATION-PROVEN AT SOURCE:** neutralising `inPairOrder` reds exactly the two
+`[9b]` placement cells.
+
+## MEASUREMENT
+
+**66 suites re-run against the accepted tip `e3f7ba12`: ZERO lines of diff.**
+`test:compile` unchanged at 671 errors / 77 worse pairs, product scope 30.
+`test:power-primer-policy` 34 → **48 passed, 0 failed**.

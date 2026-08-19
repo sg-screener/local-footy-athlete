@@ -2858,3 +2858,103 @@ play button opened the Back Squat demo.
 · `BUILT` — `test:session-execution` section `[7]`, mutation-proven: returning
 the checkbox to the left reds 1, returning play to the far right reds 2,
 re-centring the row reds the inverted cell — and nothing else in either case.
+
+---
+
+**R-112** · *"Do NOT build a seven-exercise enforcement gate. My programming rule
+is that exercise count itself is not the authority; balanced movement coverage
+and the 16-set ceiling are. Record the unused `7` as dead authority for deletion
+during the upcoming hinge-taxonomy cleanup, after confirming it has zero live
+readers."* (Sam, 2026-08-20) · **EXERCISE COUNT IS NOT AN AUTHORITY, AND THE
+NUMBER THAT PRETENDED TO BE ONE IS DEAD.**
+
+Raised as a NOT-COVERED finding while closing R-110's counting ambiguity: the
+"strength exercise cap" is proven to exclude power **at the counter**, and there
+is no live decision that counter feeds. Sam's answer is that the gate should
+never be built — **the authority is movement coverage plus the 16-set ceiling,
+not a count of rows.**
+
+⚠ **THE DEAD AUTHORITY IS THREE LAYERS DEEP, AND THE COMMENT DESCRIBING IT IS
+FALSE.** Confirmed by census, with a positive control (the same greps return
+real hits elsewhere):
+
+| symbol | production readers |
+| --- | --- |
+| `trainingAgePolicy.maxExercisesPerStrengthSession: 7` (R-088) | **0** — two test files only |
+| `exerciseBudgetRows` — the counter it would spend | **0** — tests only |
+| `AIConstraints.maxExercisesPerSession` | **0**, and it is not even fed by the 7 — `scheduleToCoachingPlan` sets it from `GLOBAL_RULES.dailyMovementCeiling` |
+
+`sessionRowCounting.ts:330` states that the 7 *"flows into
+`AIConstraints.maxExercisesPerSession`"*. **It does not.** That sentence is the
+kind of claim a later reader would have built enforcement on.
+
+⚠ **NOT DELETED HERE — SAM SCOPED IT TO THE HINGE-TAXONOMY CLEANUP**, and
+*"do not start another change in this lane"*. `ROLES_EXEMPT_FROM_THE_CAP` and
+`exerciseBudgetRows` are the fence power is exempted BY, so whoever deletes the
+number must keep the exemption's meaning or move it — the census above is the
+list to work from.
+
+⚠ **R-088 IS NARROWED, NOT OVERTURNED.** Sam ruled the number 7 there; he has
+now ruled that **nothing should enforce it**. The number stops being a cap and
+becomes an authored description of session size.
+
+· `WRITTEN` — no code changes. The zero-reader census is the receipt;
+`test:exercise-cap`'s own non-vacuity cell is red at HEAD for the matching reason
+(*"the corpus contains sessions at or near the cap"*).
+
+---
+
+**R-113** · *"'Power appears first' applies only to a standalone power primer.
+For valid contrast training, preserve the authored pair at the main slot: heavy
+lift → paired explosive movement → rest. The explosive row must appear
+immediately after its heavy partner, not at the top of the session. Both remain
+inside the single Strength section; there is still no separate Power section …
+Do not add another sorting rule. The existing canonical session-template/superset
+owner already carries contrast order; the projection must delegate to it."*
+(Sam, 2026-08-20) · **A CONTRAST PAIR IS ONE PRESCRIPTION AND KEEPS ITS OWN
+ORDER.**
+
+R-110 moved power inside Strength and put it first. That is right for a
+STANDALONE primer and wrong for contrast, where the explosive movement is the
+second half of a pairing performed at the main slot — *"finish the heavy set,
+walk to the power movement, then do it sharply"*.
+
+**THE PAIR WAS ALREADY IN THE DATA AND NOBODY READ IT.**
+`powerRowAlignment` stamps `supersetGroup`, `pairType: 'contrast'` and
+`supersetOrder` (heavy = 1, explosive = 2) when it forms the pair. The session
+template clustered the group but ordered its MEMBERS by the workout's stored
+array order — where the power row sits first — so both surfaces rendered
+**explosive → heavy**, the exact reverse of the prescription. `supersetOrder` had
+one reader in the whole app: the `1a`/`1b` letter.
+
+⚠ **NO SECOND SORTING RULE WAS ADDED, WHICH WAS THE INSTRUCTION.**
+`sessionTemplate.inPairOrder` READS the field the pairing owner already writes,
+inside the canonical owner. The day card delegates through
+`orderRowsAsSessionPresents`, so **one owner fixed both surfaces at once** — and
+a cell proves the two cannot drift.
+
+**ZERO BLAST RADIUS, MEASURED BEFORE IT WAS WRITTEN:** across generated
+Off/Pre/In-season worlds at three experience levels, **zero superset groups of
+two or more reach a generated program at all**, so nothing an athlete can see
+today moves.
+
+⚠⚠ **AND THE REASON FOR THAT ZERO IS A FINDING SAM SHOULD RULE ON.**
+**384 contrast power rows over 48 generated Off-season worlds; 0 paired; 384
+downgraded**, every one `no_heavy_same_family_main_lift`. Two rules never meet:
+`powerPrimerPolicy` returns `kind: 'contrast'` only in LATE OFF-SEASON (the
+pre-season route needs `powerGoalNudge`, hardcoded `false` at both production
+call sites), while `powerRowAlignment`'s heavy test requires
+`prescribedRepsMax <= 6` — and the lowest rep range off-season strength work
+carries is `6-8`. **Section 4's contrast rule is prescribed and then always
+cancelled.** NOT FIXED — *"do not start another change in this lane"*.
+
+· `BUILT` — `test:power-primer-policy` section `[9]`, 14 cells over a pairing
+formed by the REAL `powerRowAlignment` owner on a REAL generated contrast day,
+with exactly one declared override (the partner's rep range) and a control cell
+proving the unpaired result without it. Mutation-proven four ways: neutralising
+`inPairOrder` reds the two placement cells; stripping `supersetOrder`, breaking
+the group, and reversing the pair each move the order, and the day card moves
+identically every time. The prior "power first" cells in
+`test:session-execution`, `test:day-first-timeline` and
+`test:power-primer-policy` are **NARROWED to standalone primers**, each with a
+control that reds if its world stops being all-primer.
