@@ -428,11 +428,13 @@ export function registerProjectionCopy(): void {
     // table, and it does not claim anything about the program.
     {
       id: COMMITMENT_CONVERSATION_NOTICE_COPY_ID,
-      source: 'derived_number',
-      provenance: 'PROPOSED 2026-08-20 (seat finish-coach-product) under R-105, '
-        + 'which rules THAT there is a notification and deliberately does not '
-        + 'rule what it says. Deliberately claim-free: it announces a question, '
-        + 'never an outcome.',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. R-105 rules THAT there is a '
+        + 'notification and deliberately does not rule what it says; this is the '
+        + 'wording he then approved. Claim-free by construction: it announces a '
+        + 'question and never an outcome.',
       text: 'Your coach has something to ask about your week.',
     },
     // ── R-105 + R-106 — THE PREVIEW LINES ──
@@ -443,28 +445,34 @@ export function registerProjectionCopy(): void {
     // sentence calling it a new training day would be counting it twice.
     {
       id: COMMITMENT_PREVIEW_NEW_DAY_COPY_ID,
-      source: 'derived_number',
-      provenance: 'PROPOSED 2026-08-20 (seat finish-coach-product). Only the day '
-        + 'name, the date and the component list are data; all three are copied '
-        + 'from the regenerated program, never predicted. R-106: this is the '
-        + 'arm for a day the athlete does not currently train on.',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. Only the day name, the date and '
+        + 'the component list are data; all three are copied from the regenerated '
+        + 'program, never predicted. R-106: this is the arm for a day the athlete '
+        + 'does not currently train on.',
       text: '{day} {date} becomes a new training day: {components}.',
     },
     {
       id: COMMITMENT_PREVIEW_COMBINED_DAY_COPY_ID,
-      source: 'derived_number',
-      provenance: 'PROPOSED 2026-08-20 (seat finish-coach-product). R-106, '
-        + "verbatim: \"do not call it two training days\". This arm fires when "
-        + 'the athlete already trains that day and the work joins it.',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. R-106, verbatim: '
+        + '"do not call it two training days". This arm fires when the athlete '
+        + 'already trains that day and the work joins it.',
       text: '{day} {date} keeps one training day and adds {added} to it: {components}.',
     },
     {
       id: COMMITMENT_PREVIEW_UNAVAILABLE_COPY_ID,
-      source: 'derived_number',
-      provenance: 'PROPOSED 2026-08-20 (seat finish-coach-product). The honest '
-        + 'floor. A preview that could not be taken says so; it never falls back '
-        + 'to describing the CURRENT week, which is the exact defect that got '
-        + '`codex/finish-product` rejected (11 of 20 previews wrong).',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. The honest floor. A preview that '
+        + 'could not be taken says so; it never falls back to describing the '
+        + 'CURRENT week, which is the exact defect that got `codex/finish-product` '
+        + 'rejected (11 of 20 previews wrong).',
       text: 'I could not build the changed week to show you, so I will not guess at it.',
     },
     // ── R-105 — AFTER THE ANSWER ──
@@ -477,29 +485,35 @@ export function registerProjectionCopy(): void {
     // built for.
     {
       id: COMMITMENT_CONFIRMED_COPY_ID,
-      source: 'derived_number',
-      provenance: 'PROPOSED 2026-08-20 (seat finish-coach-product). Only the '
-        + 'count is data, and it is the count the door REPORTS it committed, '
-        + 'never the count that was tapped. Spoken only when the transaction '
-        + 'returned ok AND changedProgram.',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. Only the count is data, and it is '
+        + 'the count the door REPORTS it committed, never the count that was '
+        + 'tapped. Spoken only when the transaction returned ok AND '
+        + 'changedProgram.',
       text: 'Done. Your program is rebuilt around {count} sessions a week.',
     },
     {
       id: COMMITMENT_DECLINED_COPY_ID,
-      source: 'derived_number',
-      provenance: 'PROPOSED 2026-08-20 (seat finish-coach-product). It claims '
-        + 'nothing happened, and nothing did: `declineWeeklyCommitment` imports '
-        + 'nothing that can write a program. It also states that the question '
-        + 'is finished, which is what the ledger entry makes true.',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. It claims nothing happened, and '
+        + 'nothing did: `declineWeeklyCommitment` imports nothing that can write '
+        + 'a program. It also states that the question is finished, which is what '
+        + 'the ledger entry makes true.',
       text: 'No problem — I have left your week as it is, and I will not ask again this block.',
     },
     {
       id: COMMITMENT_FAILED_COPY_ID,
-      source: 'derived_number',
-      provenance: 'PROPOSED 2026-08-20 (seat finish-coach-product). The honest '
-        + 'floor when the transaction refuses. It says the plan is untouched, '
-        + 'which the transaction guarantees by rolling back — never "try again", '
-        + 'which would be advice this module has no basis for.',
+      source: 'sam_ruling',
+      provenance: 'SIGNED — Sam, 2026-08-20, approving all seven of the coach sentences '
+        + 'this unit proposed, AS WRITTEN. The words are unchanged from the '
+        + 'draft he read. The honest floor when the '
+        + 'transaction refuses. It says the plan is untouched, which the '
+        + 'transaction guarantees by rolling back — never "try again", which '
+        + 'would be advice this module has no basis for.',
       text: 'I could not rebuild your program just now, so nothing has changed.',
     },
     // ── THE EXTRA-SESSION OFFER — SIGNED, and the words are the ORDER'S. ──

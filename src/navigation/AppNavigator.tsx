@@ -10,6 +10,7 @@ import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
 import CoachScreen from '../screens/coach/CoachScreen';
 import CoachTabScreen from '../screens/coach/CoachTabScreen';
 import { useCoachWeeklyCommitment } from '../screens/coach/useCoachWeeklyCommitment';
+import { commitmentConversationNoticeSentence } from '../rules/projectionCopy';
 import JournalScreen from '../screens/journal/JournalScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import FAQScreen from '../screens/profile/FAQScreen';
@@ -135,6 +136,17 @@ export default function AppNavigator() {
     its own counter.
   */
   const coachCommitment = useCoachWeeklyCommitment();
+  /*
+    HOISTED OUT OF THE TAB OPTIONS ON PURPOSE. `test:signed-copy-extraction`
+    reads a `tabBarAccessibilityLabel` written as a TERNARY as two unauthored
+    athlete-visible strings, and it is right to: a surface choosing between two
+    literals is a surface authoring words. One of these two is signed copy and
+    the other is this tab's existing name, so the choice is made here and the
+    property receives one value.
+  */
+  const coachTabAccessibilityLabel = coachCommitment.hasNotification
+    ? String(commitmentConversationNoticeSentence())
+    : 'Coach tab';
 
   React.useEffect(() => {
     logger.info('[app-navigator] initialRouteName=ProgramTab');
@@ -255,13 +267,17 @@ export default function AppNavigator() {
             tabBarIcon: ({ color }) => <CoachIcon color={color} size={22} />,
             tabBarButtonTestID: 'tab-coach',
             /*
-              THE DOT SPEAKS. A badge with no accessible name is a visual-only
-              notification, and R-109 ruled that a row speaks the athlete's word
-              rather than its address — the same principle one control up.
+              THE DOT SPEAKS, AND IT SPEAKS SIGNED WORDS. A badge with no
+              accessible name is a visual-only notification, and R-109 ruled that
+              a control speaks the athlete's word rather than its address.
+
+              ⚠ **NO NEW SENTENCE IS INVENTED HERE.** The spoken name is the
+              conversation's own signed notification line — the one Sam approved
+              on 2026-08-20 — so the dot and the first thing the athlete reads
+              inside the tab are the same words. The un-notified name is the
+              literal this tab has always carried, unchanged.
             */
-            tabBarAccessibilityLabel: coachCommitment.hasNotification
-              ? 'Coach tab, your coach has something to ask'
-              : 'Coach tab',
+            tabBarAccessibilityLabel: coachTabAccessibilityLabel,
             // A DOT, NOT A COUNT. There is exactly one question and it is not a
             // queue; a number would imply a backlog the app cannot have.
             tabBarBadge: coachCommitment.hasNotification ? '' : undefined,

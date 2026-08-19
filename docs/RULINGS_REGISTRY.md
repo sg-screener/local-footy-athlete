@@ -2515,9 +2515,12 @@ is a **second change-interface beside the recorded one**, which is exactly what
 that ruling killed the standing bar and the confirm sheet for. **A surface that
 asks the athlete to renegotiate their week is change-talk by definition.**
 
-**⚠ THIS ID IS USED TWICE.** The row immediately below also reads `R-105` (the
-power-pool ruling, Sam 2026-08-20). Recorded rather than renumbered — a seat does
-not silently renumber another seat's row — and raised for Sam. Grep for the
+**⚠ THIS ID IS USED TWICE, AND SAM HAS RULED WHICH ROW KEEPS IT — 2026-08-20:**
+*"The weekly-reduction ruling keeps R-105. The duplicate power-pool ruling must
+receive the next unused ruling id during integration, after all concurrent
+branches are present."* **THIS ROW KEEPS `R-105`.** The power-pool row below is
+renumbered by the INTEGRATOR, not by this seat and not now — the next unused id
+cannot be known until every concurrent branch is in one tree. Grep for the
 SEARCH WORDS, not the number.
 
 · **`BUILT` 2026-08-20 by seat `finish-coach-product`** —
@@ -2552,11 +2555,35 @@ a module it no longer imports.
   answers (the ledger entry) or when the facts stop supporting it. A dated expiry
   would be new stored state for a question that is not stored.
 
-**AND ONE THING THE RULING DID NOT ANTICIPATE, FOUND BY BUILDING IT:** an offer
-gated on legality alone would have promised a session generation will not place.
-Measured on a real walked in-season athlete with a Saturday game — legal at four
-days, and the same two gym days either way. **The rebuild is the last gate.**
-Registry row `LAW-an-offer-the-rebuild-will-not-keep-is-not-put`.
+**AND ONE THING THE RULING DID NOT ANTICIPATE, FOUND BY BUILDING IT, THEN RULED
+BY SAM ON 2026-08-20:** *"If the scheduler cannot actually place the additional
+session safely, do not offer it. The in-season Saturday-game athlete should
+receive no fourth-session offer unless the regenerated program genuinely contains
+it."*
+
+An offer gated on legality alone would have promised a session generation will
+not place. Measured on a real walked in-season athlete with a Saturday game —
+legal at four days, and the same two gym days either way (`[1,3]` and `[1,3]`).
+**The rebuild is the last gate**, which is exactly what he ruled, and it was
+already built when he ruled it. Registry row
+`LAW-an-offer-the-rebuild-will-not-keep-is-not-put`, guarded by
+`test:coach-weekly-reduction` section [10] — a second real athlete, cold-started
+and walked, whose every CHEAP gate opens and whose refusal names the REBUILD.
+
+**⚠ SAM ALSO RULED WHAT THE APP MUST NOT DO ABOUT THE LOADS — 2026-08-20:** *"Do
+not add a warning saying 60 of 90 loads may move. That is a transaction defect,
+not intended product behaviour. Existing exercises must retain progression from
+their own history; new exercises use their own history or authored starting
+estimate."* **The preview therefore claims STRUCTURE and never loads**, and no
+warning was added. The defect itself belongs to the settings/persistence lane:
+`docs/PROFILE_CHANGE_DOUBLE_REGENERATION_HANDOFF_2026-08-20.md`. **A warning
+would have been the app apologising for a defect instead of fixing it**, and
+recording it as intended behaviour is how a defect becomes a feature.
+
+**THE SEVEN COACH SENTENCES ARE SIGNED — Sam, 2026-08-20:** *"I approve all seven
+proposed Coach sentences exactly as written."* Every one carries
+`source: 'sam_ruling'` and that provenance in `rules/projectionCopy.ts`; the
+words are unchanged from the draft he approved.
 
 **Search words:** weekly reduction, smaller weekly program, completing 0 of 5,
 coach notification, coach chat, extra session offer, optional session preview,
