@@ -2958,3 +2958,60 @@ identically every time. The prior "power first" cells in
 `test:session-execution`, `test:day-first-timeline` and
 `test:power-primer-policy` are **NARROWED to standalone primers**, each with a
 control that reds if its world stops being all-primer.
+
+---
+
+**R-116** · *"Use Sam's attached mock only as a layout reference. Do not add the
+athlete photo, change the app's typeface, or introduce separate cards around
+every exercise … Add the approved calendar icon immediately before the date …
+a distinct approved icon beside each section heading … Tighten each exercise
+row: exercise name with Play immediately beside it, sets × reps directly below,
+Form cues directly below that. Remove the excessive vertical gaps … Move the
+checkbox onto the SAME horizontal control line as the weight stepper, positioned
+immediately to its right. **This supersedes the earlier ruling that placed the
+checkbox level with the exercise name.** Rows without a weight stepper still
+reserve the same right-side control position … Power is visually an ordinary
+Strength row. Remove its unique visible rest line (`2:00 rest`)."* (Sam,
+2026-08-20) · **LOAD AND DONE ARE ONE MOVEMENT OF THE HAND.**
+
+⚠ **R-111's CHECKBOX CLAUSE IS SUPERSEDED, EXPLICITLY AND BY NAME.** R-111 moved
+the tick from the row's left edge to the far right of the NAME line. Sam has now
+moved it again, onto the control row beside the stepper. **Only that clause
+falls** — R-111's other half, *"the play/demo button immediately beside the
+exercise name"*, is untouched and still guarded. The cell that asserted the tick
+was the row's last child is INVERTED, not deleted, and its replacement is
+stricter: it pins the checkbox's position RELATIVE TO THE STEPPER, which is what
+this ruling actually says, rather than relative to the row.
+
+**THE CHECKBOX CHANGED OWNER, NOT IDENTITY.** `ExecutionChecklistItem` still
+mints exactly one checkbox — same handler, role, checked state, spoken label and
+`session-execution-check-…` id — and now HANDS IT DOWN to the card, because only
+the card knows where its stepper is. One checkbox in the app, placed by the only
+component that can place it.
+
+⚠ **A ROW WITHOUT A STEPPER RESERVES THE SLOT ANYWAY.** Fixed-width, so the tick
+column cannot wander between a loaded row and a bodyweight one in the same
+session — his words, and the thing a simple `flex-end` would have got wrong.
+
+⚠ **POWER'S REST LINE IS HIDDEN, AND NO PRESCRIPTION IS DELETED.** *"hiding
+Power's rest line must not delete its domain prescription."* Power was the only
+role whose rest cleared the 90-second display threshold, so that line WAS its
+special format. `restSeconds` is untouched on the row, still stored, still
+generated, still read — `restLabel` is computed exactly as before and a cell
+asserts it. Only the `Text` is role-gated.
+
+**WHAT WAS DELIBERATELY NOT TAKEN FROM THE MOCK:** the athlete photo, the
+typeface, and per-exercise cards. Header, black background and visual identity
+unchanged.
+
+**ICONS COME FROM THE SET ALREADY ON THIS SCREEN** — no new graphic asset — and
+the section map is keyed on the TYPED section id, never the label string. The
+Day card already paid for that mistake: `displayLabelIconKind` matches a
+rendered NAME against a table of equalities, so a renamed title falls through to
+a grey default. The map is PARTIAL on purpose: a section Sam did not name draws
+nothing rather than inviting a fourth answer.
+
+· `BUILT` — `test:session-execution` section `[10]`, 24 cells, two non-vacuity
+controls. Mutation-proven five ways, each killing exactly one cell: the checkbox
+back before the stepper; Power's rest line restored; the calendar icon removed;
+Conditioning dropped from the icon table; the row gaps returned to loose.

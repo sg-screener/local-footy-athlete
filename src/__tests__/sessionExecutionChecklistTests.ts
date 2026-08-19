@@ -567,14 +567,17 @@ const headerRow = screen.slice(
 const checklistItemWhole = screen.slice(
   screen.indexOf('function ExecutionChecklistItem'),
   screen.indexOf('function OptionalWorkHeader'));
+const strengthCard = screen.slice(
+  screen.indexOf('function StrengthExerciseCard'),
+  screen.indexOf('function RecoveryBlock'));
 // The JSX only. The explanatory comment above the `return` quotes the very
 // props these cells assert on, and a cell that matches its own documentation
 // is a cell that cannot fail.
 const checklistItem = checklistItemWhole.slice(checklistItemWhole.indexOf('return ('));
 
 ok('[7] CONTROL — the header owner and the checklist owner were both found',
-  headerRow.length > 100 && checklistItem.includes('accessibilityRole="checkbox"'),
-  { headerRow: headerRow.length, checklistItem: checklistItem.length });
+  headerRow.length > 100 && checklistItemWhole.includes('accessibilityRole="checkbox"'),
+  { headerRow: headerRow.length, checklistItem: checklistItemWhole.length });
 
 ok('[7] play sits immediately beside the exercise name, inside one group',
   /exerciseNameGroup[\s\S]*?styles\.exerciseName[\s\S]*?<PlayButton/.test(headerRow),
@@ -587,20 +590,31 @@ ok('[7] the name group takes the width so the pair stays hard left',
   /exerciseNameGroup:\s*\{[^}]*flex:\s*1[^}]*flexDirection:\s*'row'/.test(screen)
     && /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen));
 
-ok('[7] the completion checkbox is the LAST child of the row',
-  checklistItem.indexOf('executionItemContent')
-    < checklistItem.indexOf('accessibilityRole="checkbox"'),
-  { content: checklistItem.indexOf('executionItemContent'),
-    checkbox: checklistItem.indexOf('accessibilityRole="checkbox"') });
+/* ⚠ **SUPERSEDED BY R-116 — SAM, 2026-08-20, IN HIS OWN WORDS.**
+ *
+ * *"Move the checkbox onto the SAME horizontal control line as the weight
+ * stepper, positioned immediately to its right. This supersedes the earlier
+ * ruling that placed the checkbox level with the exercise name."*
+ *
+ * R-111 put the tick at the far right of the NAME line and this cell asserted
+ * it was the row's last child. The tick now lives on the CONTROL row, so the
+ * claim moves with it — inverted, not deleted, and the replacement is stricter:
+ * it pins the checkbox's position RELATIVE TO THE STEPPER rather than to the
+ * row, which is what the ruling actually says. Section [10] holds the rest. */
+ok('[7] the checkbox is handed to the card, not parked on the name line',
+  /children: \(checkbox: React\.ReactNode\) => React\.ReactNode/.test(checklistItemWhole)
+    && /\{children\(checkbox\)\}/.test(checklistItemWhole)
+    && !/executionItemContent[\s\S]{0,200}accessibilityRole="checkbox"/.test(checklistItemWhole),
+  checklistItemWhole.slice(-700));
 
 // ── NOTHING ABOUT COMPLETION OR VIDEO CHANGED, AND THESE SAY SO.
 ok('[7] the checkbox keeps its toggle, its state and its identity',
-  /onPress=\{\(\) => onToggle\(itemId\)\}/.test(checklistItem)
-    && /accessibilityState=\{\{ checked: completed \}\}/.test(checklistItem)
-    && /testID=\{`session-execution-check-\$\{stableTestIdToken\(itemId\)\}`\}/.test(checklistItem));
+  /onPress=\{\(\) => onToggle\(itemId\)\}/.test(checklistItemWhole)
+    && /accessibilityState=\{\{ checked: completed \}\}/.test(checklistItemWhole)
+    && /testID=\{`session-execution-check-\$\{stableTestIdToken\(itemId\)\}`\}/.test(checklistItemWhole));
 ok('[7] the checkbox keeps its spoken label',
   /accessibilityLabel=\{`\$\{completed \? 'Completed' : 'Mark complete'\}: \$\{label\}`\}/
-    .test(checklistItem));
+    .test(checklistItemWhole));
 ok('[7] both the name and the play button still speak the exercise, and still play it',
   (headerRow.match(/accessibilityLabel=\{`Play \$\{name\} demo`\}/g) ?? []).length === 2
     && (headerRow.match(/onPress=\{onPlay\}|onPress=\{onPlay\}/g) ?? []).length >= 1
@@ -630,6 +644,127 @@ ok('[7] and StrengthExerciseCard has exactly one header, so no row can differ',
     === (screen.match(/<ExerciseHeaderRow/g) ?? []).length
     && (screen.match(/function ExerciseHeaderRow/g) ?? []).length === 1
     && (screen.match(/function ExecutionChecklistItem/g) ?? []).length === 1);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * [10] THE TIGHTENED SESSION ROW — SAM'S MOCK, 2026-08-20 (R-116)
+ *
+ * *"Keep the existing header, black background and current visual identity …
+ * Add the approved calendar icon immediately before the date … a distinct
+ * approved icon beside each section heading … Tighten each exercise row …
+ * Move the checkbox onto the SAME horizontal control line as the weight
+ * stepper, positioned immediately to its right … Power is visually an ordinary
+ * Strength row."*
+ *
+ * Source-level, because this repo ships no native renderer — so each cell names
+ * the exact prop or style that carries the layout, and the ordering cells assert
+ * POSITION (index within the rendered block), not mere presence.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+console.log('\n[10] the tightened session row — Sam\'s mock, R-116');
+
+// ── PLAY STAYS BESIDE THE NAME (R-111's surviving half).
+ok('[10] Play is still immediately beside the exercise name',
+  /exerciseNameGroup[\s\S]*?styles\.exerciseName[\s\S]*?<PlayButton/.test(headerRow)
+    && /exerciseNameGroup:\s*\{[^}]*flexDirection:\s*'row'/.test(screen),
+  headerRow);
+
+// ── THE COMPACT LEFT COLUMN: name/Play, then sets x reps, then Form cues.
+const cardOrder = ['<ExerciseHeaderRow', 'styles.statsRow', '<CueDisclosure']
+  .map((needle) => strengthCard.indexOf(needle));
+ok('[10] CONTROL — all three blocks were found in the card',
+  cardOrder.every((index) => index >= 0), cardOrder);
+ok('[10] the row reads name+Play, then sets x reps, then Form cues — in that order',
+  cardOrder[0] < cardOrder[1] && cardOrder[1] < cardOrder[2], cardOrder);
+ok('[10] and the gaps between those three are tightened, not merely present',
+  /exerciseHeaderRow:\s*\{[^}]*marginBottom:\s*2\b/.test(screen)
+    && /statsRow:\s*\{[^}]*marginTop:\s*2\b/.test(screen)
+    && /cueContainer:\s*\{\s*marginTop:\s*1\s*\}/.test(screen),
+  'the three intra-row gaps must be small and explicit');
+ok('[10] sets/reps is still the LEFT of the control row',
+  /<View style=\{styles\.statsRow\}>\s*<Text\s*style=\{styles\.statsPrimary\}/.test(screen));
+
+// ── WEIGHT AND CHECKBOX SHARE ONE CONTROL ROW, TICK IMMEDIATELY RIGHT.
+const statsRowBlock = strengthCard.slice(
+  strengthCard.indexOf('<View style={styles.statsRow}>'),
+  strengthCard.indexOf('{/* ⚠ **POWER SHOWS NO REST LINE'));
+ok('[10] CONTROL — the control row block was found',
+  statsRowBlock.length > 200, statsRowBlock.length);
+ok('[10] the weight stepper and the checkbox are in the SAME control row',
+  statsRowBlock.includes('styles.weightControl')
+    && statsRowBlock.includes('controlRowCheckboxSlot'),
+  statsRowBlock.slice(-400));
+ok('[10] and the checkbox comes IMMEDIATELY AFTER the stepper, not before it',
+  statsRowBlock.indexOf('styles.weightControl')
+    < statsRowBlock.indexOf('controlRowCheckboxSlot'),
+  { stepper: statsRowBlock.indexOf('styles.weightControl'),
+    checkbox: statsRowBlock.indexOf('controlRowCheckboxSlot') });
+ok('[10] a row with NO stepper still reserves the same right-side slot',
+  /controlRowCheckboxSlot:\s*\{[^}]*width:\s*32/.test(screen)
+    && /recoveryControlRow:/.test(screen) && /addonCheckboxSlot:/.test(screen),
+  'the slot is a fixed width so the tick column cannot wander between rows');
+
+// ── THE ICONS.
+ok('[10] the calendar icon renders immediately before the date',
+  /session-header-calendar-icon[\s\S]{0,400}<Text style=\{styles\.headerSubtitle\}>/.test(screen)
+    && /name="calendar-blank-outline"/.test(screen),
+  'calendar then date, in that order');
+ok('[10] the date row stays ONE accessibility element speaking the date, not the glyph',
+  /styles\.headerSubtitleRow[\s\S]{0,200}accessibilityLabel=\{combinedSubtitle\}/.test(screen));
+ok('[10] all three ruled section headings carry a distinct icon',
+  /SECTION_HEADING_ICON[\s\S]{0,300}mobility:\s*'run'[\s\S]{0,80}strength:\s*'dumbbell'[\s\S]{0,80}conditioning:\s*'fire'/
+    .test(screen),
+  'Mobility / Strength / Conditioning, three different glyphs');
+ok('[10] the icons are keyed on the TYPED section id, never on the label string',
+  /SECTION_HEADING_ICON\[section\.id\]/.test(screen)
+    && !/SECTION_HEADING_ICON\[section\.label\]/.test(screen));
+ok('[10] and they come from the existing icon set — no new graphic asset',
+  /SECTION_HEADING_ICON: Partial<Record<SessionExecutionSectionId,\s*\n?\s*React\.ComponentProps<typeof MaterialCommunityIcons>\['name'\]>>/
+    .test(screen));
+
+// ── POWER IS AN ORDINARY ROW.
+ok('[10] Power shows no rest line — the one format that made it look special',
+  /restLabel && exercise\?\.role !== 'power' \?/.test(screen), 'the rest Text is role-gated');
+ok('[10] and hiding it DELETES NO DATA — restSeconds is still read, unchanged',
+  /const restLabel = exercise\.restSeconds[\s\S]{0,80}formatRest\(exercise\.restSeconds\)/
+    .test(strengthCard)
+    && !/restSeconds:\s*(null|undefined|0)\b/.test(strengthCard),
+  strengthCard.split('\n').filter((l: string) => /restSeconds/.test(l)));
+ok('[10] Power has no separate row component and no section of its own',
+  (screen.match(/function StrengthExerciseCard/g) ?? []).length === 1
+    && !/function PowerRow|function PowerExerciseCard/.test(screen)
+    && !withPower.sections.some((section) => String(section.id) === 'power'));
+
+// ── EVERY ROW KIND STILL FUNCTIONS, THROUGH THE ONE OWNER.
+ok('[10] Mobility, Strength, Power and contrast rows all reach the one card',
+  /<StrengthExerciseCard/.test(mobilityRenderer)
+    && (screen.match(/<StrengthExerciseCard/g) ?? []).length >= 2,
+  'one card component, every strength-family row');
+ok('[10] Conditioning still renders its own choice row, untouched by this slice',
+  /function ConditioningChoiceRow/.test(screen) && /conditioning-choice-row/.test(screen));
+ok('[10] every checklist call site hands the checkbox down — none dropped it',
+  (screen.match(/<ExecutionChecklistItem/g) ?? []).length
+    === (screen.match(/\{\(checkbox\) => \(/g) ?? []).length
+    && (screen.match(/<ExecutionChecklistItem/g) ?? []).length >= 4,
+  { sites: (screen.match(/<ExecutionChecklistItem/g) ?? []).length,
+    handlers: (screen.match(/\{\(checkbox\) => \(/g) ?? []).length });
+
+// ── INDEPENDENTLY TAPPABLE, AND NOT OVERLAPPING.
+ok('[10] the checkbox and Play are separate Pressables with their own handlers',
+  /onPress=\{\(\) => onToggle\(itemId\)\}/.test(checklistItemWhole)
+    && /<PlayButton onPress=\{onPlay\}/.test(headerRow)
+    && !/onPlay[\s\S]{0,60}onToggle/.test(headerRow));
+ok('[10] both keep a practical tap target — neither shrank to fit the tighter row',
+  /hitSlop=\{\{ top: 10, bottom: 10, left: 8, right: 10 \}\}/.test(checklistItemWhole)
+    && /hitSlop=\{\{ top: 8, bottom: 8, left: 8, right: 8 \}\}/.test(screen),
+  'checkbox and PlayButton both carry hitSlop');
+ok('[10] a long name wraps instead of pushing the controls off the row',
+  /exerciseNamePress:\s*\{[^}]*flexShrink:\s*1/.test(screen)
+    && /numberOfLines=\{2\}/.test(headerRow)
+    && /exerciseNameGroup:\s*\{[^}]*flex:\s*1/.test(screen),
+  'the name shrinks and wraps; the control slot is fixed-width and cannot be squeezed');
+ok('[10] and the control row cannot be overrun by larger text',
+  /controlRowCheckboxSlot:\s*\{[^}]*width:\s*32[^}]*alignItems:\s*'flex-end'/.test(screen)
+    && /statsRow:\s*\{[^}]*justifyContent:\s*'space-between'/.test(screen),
+  'a fixed slot plus space-between keeps the tick in its column at any text size');
 
 console.log(`\nsessionExecutionChecklistTests: ${pass} passed, ${fail} failed`);
 totalsPrinted(fail);

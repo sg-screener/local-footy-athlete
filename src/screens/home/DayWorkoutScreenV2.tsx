@@ -130,6 +130,7 @@ import {
   buildSessionExecutionSummary,
   type SessionExecutionPlan,
   type SessionExecutionSection as SessionExecutionSectionModel,
+  type SessionExecutionSectionId,
 } from '../../utils/sessionExecutionChecklist';
 import {
   buildSwapSuggestionPayload,
@@ -1526,10 +1527,30 @@ export default function DayWorkoutScreenV2() {
           {smokeCoachBikeFlow
             ? renderDayWorkoutSmokeContractMarkers(smokeContract)
             : null}
+          {/* ⚠ **THE CALENDAR ICON LEADS THE DATE — SAM, 2026-08-20 (R-116).**
+            *
+            * From the existing icon set this screen already uses for its section
+            * chevrons; no new graphic asset. The row is `accessible` as ONE
+            * element carrying the subtitle's own words, so a screen reader hears
+            * "Mon 13/7 · 6 exercises" and never the glyph — an icon beside text
+            * it merely decorates must not become a second thing to read. */}
           {combinedSubtitle ? (
-            <Text style={styles.headerSubtitle}>
-              {combinedSubtitle}
-            </Text>
+            <View
+              style={styles.headerSubtitleRow}
+              accessible
+              accessibilityLabel={combinedSubtitle}
+              testID="session-header-date-row"
+            >
+              <MaterialCommunityIcons
+                name="calendar-blank-outline"
+                size={15}
+                color={colors.text.tertiary}
+                testID="session-header-calendar-icon"
+              />
+              <Text style={styles.headerSubtitle}>
+                {combinedSubtitle}
+              </Text>
+            </View>
           ) : null}
           {/* ⚠ **THE THREE UNLABELLED HEADER ICONS ARE DELETED — SAM, 2026-08-19.**
             *
@@ -2137,8 +2158,10 @@ function MobilityExerciseList({
             completed={completedItemIds.has(itemId)}
             onToggle={onToggleItem}
           >
+            {(checkbox) => (
             <StrengthExerciseCard
               exercise={row}
+              checkbox={checkbox}
               label={`${index + 1}`}
               isGrouped={false}
               prescriptionLabel={mobilityFlowMovementDose(exercise)}
@@ -2155,6 +2178,7 @@ function MobilityExerciseList({
               commitWeightEdit={commitWeightEdit}
               onSelectExercise={onSelectExercise}
             />
+            )}
           </ExecutionChecklistItem>
         );
       })}
@@ -2186,7 +2210,9 @@ function SessionList({
   // slot however its members are ordered — so they are computed once, up here.
   const labels = sessionListLabels(items);
 
-  const renderItem = (item: SessionTemplateItem, key: string, index: number) => {
+  const renderItem = (
+    item: SessionTemplateItem, key: string, index: number, checkbox?: React.ReactNode,
+  ) => {
     if (item.kind === 'team_training') return <TeamTrainingRow key={key} />;
     if (item.kind === 'conditioning_choice') {
       return (
@@ -2218,6 +2244,7 @@ function SessionList({
       <StrengthExerciseCard
         key={key}
         exercise={item.row}
+        checkbox={checkbox}
         selectedImplement={implementFor(item.row.exercise?.name ?? '', item.row.prescribedWeightKg)}
         label={labels[index] ?? ''}
         isGrouped={!!item.superset}
@@ -2257,13 +2284,14 @@ function SessionList({
               completed={completedItemIds.has(executionItem.id)}
               onToggle={onToggleItem}
             >
-              {executionItem.templateIndex === null
+              {(checkbox) => (executionItem.templateIndex === null
                 ? <Text style={styles.executionFallbackLabel}>{executionItem.label}</Text>
                 : renderItem(
                     items[executionItem.templateIndex],
                     `session-item-${executionItem.templateIndex}`,
                     executionItem.templateIndex,
-                  )}
+                    checkbox,
+                  ))}
             </ExecutionChecklistItem>
           ))}
         </SessionExecutionSection>
@@ -2271,6 +2299,20 @@ function SessionList({
     </View>
   );
 }
+
+/**
+ * THE SECTION HEADING GLYPHS (R-116), from the icon set already on this screen.
+ *
+ * Sam named three: Mobility / Warm-up, Strength and Conditioning. The map is
+ * PARTIAL on purpose — a section not on his list draws nothing, so the table can
+ * never quietly answer a question he has not been asked.
+ */
+const SECTION_HEADING_ICON: Partial<Record<SessionExecutionSectionId,
+  React.ComponentProps<typeof MaterialCommunityIcons>['name']>> = {
+  mobility: 'run',
+  strength: 'dumbbell',
+  conditioning: 'fire',
+};
 
 function SessionExecutionSection({ section, completedItemIds, children }: {
   section: SessionExecutionSectionModel;
@@ -2289,6 +2331,24 @@ function SessionExecutionSection({ section, completedItemIds, children }: {
         testID={`session-execution-toggle-${section.id}`}
         style={({ pressed }) => [styles.executionSectionHeader, pressed && { opacity: 0.7 }]}
       >
+        {/* ⚠ **ONE ICON PER SECTION HEADING — SAM, 2026-08-20 (R-116).**
+          *
+          * Keyed on the TYPED section id, never on the label string. The Day
+          * card learned that lesson the hard way: `displayLabelIconKind` matches
+          * a rendered NAME against a table of equalities, so the moment a title
+          * changed the glyph fell through to a grey default. A section that has
+          * no icon renders none rather than a placeholder — three are ruled
+          * (Mobility, Strength, Conditioning) and inventing a fourth is how a
+          * table starts drifting from the ruling. */}
+        {SECTION_HEADING_ICON[section.id] ? (
+          <MaterialCommunityIcons
+            name={SECTION_HEADING_ICON[section.id]!}
+            size={17}
+            color={colors.accent.lime}
+            style={styles.executionSectionIcon}
+            testID={`session-execution-icon-${section.id}`}
+          />
+        ) : null}
         <View style={styles.executionSectionHeading}>
           <Text style={styles.executionSectionTitle}>{section.label}</Text>
           <Text style={styles.executionSectionCount}>{completedCount}/{section.items.length}</Text>
@@ -2311,12 +2371,26 @@ function SessionExecutionSection({ section, completedItemIds, children }: {
   );
 }
 
+/**
+ * ⚠ **THE CHECKBOX LEFT THIS COMPONENT — SAM, 2026-08-20 (R-116).**
+ *
+ * *"Move the checkbox onto the SAME horizontal control line as the weight
+ * stepper, positioned immediately to its right. This supersedes the earlier
+ * ruling that placed the checkbox level with the exercise name."*
+ *
+ * R-111 put the tick on the name line. It is now the last control on the
+ * control row, so the athlete's hand finds load and done in one place. The
+ * wrapper keeps ownership of the ITEM — its id, its completed state and its
+ * dull treatment — and hands the tick down to the card, because only the card
+ * knows where its stepper is. `renderCheckbox` is that handover: one function,
+ * defined here, so there is still exactly ONE checkbox in the app.
+ */
 function ExecutionChecklistItem({ itemId, label, completed, onToggle, children }: {
   itemId: string;
   label: string;
   completed: boolean;
   onToggle: (itemId: string) => void;
-  children: React.ReactNode;
+  children: (checkbox: React.ReactNode) => React.ReactNode;
 }) {
   /*
    * ⚠ **THE CHECKBOX OWNS THE RIGHT EDGE — SAM, 2026-08-20 (R-111).**
@@ -2335,23 +2409,29 @@ function ExecutionChecklistItem({ itemId, label, completed, onToggle, children }
    * `styles.executionItem` no longer centres, and the guard that used to
    * REQUIRE centring is inverted in `test:session-execution`, not deleted.
    */
+  /* SAME Pressable, same handler, same role, state, label and identity as when
+     it sat on the name line — only its PLACE moved. `hitSlop` keeps the tap
+     target at the practical minimum now that it sits beside the stepper. */
+  const checkbox = (
+    <Pressable
+      onPress={() => onToggle(itemId)}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: completed }}
+      accessibilityLabel={`${completed ? 'Completed' : 'Mark complete'}: ${label}`}
+      testID={`session-execution-check-${stableTestIdToken(itemId)}`}
+      hitSlop={{ top: 10, bottom: 10, left: 8, right: 10 }}
+      style={({ pressed }) => [
+        styles.executionCheckbox,
+        completed && styles.executionCheckboxComplete,
+        pressed && { opacity: 0.65 },
+      ]}
+    >
+      {completed ? <Text style={styles.executionCheckmark}>✓</Text> : null}
+    </Pressable>
+  );
   return (
     <View style={[styles.executionItem, completed && styles.executionItemComplete]}>
-      <View style={styles.executionItemContent}>{children}</View>
-      <Pressable
-        onPress={() => onToggle(itemId)}
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: completed }}
-        accessibilityLabel={`${completed ? 'Completed' : 'Mark complete'}: ${label}`}
-        testID={`session-execution-check-${stableTestIdToken(itemId)}`}
-        style={({ pressed }) => [
-          styles.executionCheckbox,
-          completed && styles.executionCheckboxComplete,
-          pressed && { opacity: 0.65 },
-        ]}
-      >
-        {completed ? <Text style={styles.executionCheckmark}>✓</Text> : null}
-      </Pressable>
+      <View style={styles.executionItemContent}>{children(checkbox)}</View>
     </View>
   );
 }
@@ -2514,6 +2594,12 @@ function ConditioningChoiceRow({
  */
 interface StrengthExerciseCardProps {
   exercise: any;
+  /**
+   * R-116 — the completion checkbox, built by `ExecutionChecklistItem` and
+   * PLACED here, because only this card knows where its weight stepper is.
+   * Absent for the surfaces that render a card outside the checklist.
+   */
+  checkbox?: React.ReactNode;
   label: string;
   isGrouped: boolean;
   isLastInGroup?: boolean;
@@ -2539,6 +2625,7 @@ interface StrengthExerciseCardProps {
 }
 function StrengthExerciseCard({
   exercise,
+  checkbox,
   label,
   isGrouped,
   isLastInGroup = true,
@@ -2750,10 +2837,29 @@ function StrengthExerciseCard({
             <Text style={styles.weightBtnText}>+</Text>
           </Pressable>
         </View>
+        {/* ⚠ **IMMEDIATELY RIGHT OF THE STEPPER — SAM, 2026-08-20 (R-116),
+            SUPERSEDING R-111's NAME-LINE CLAUSE.** Load and done are one
+            movement of the hand. The slot is reserved with a fixed width so a
+            row WITHOUT a stepper (bodyweight, a mobility hold) still puts its
+            tick in the same column — the right edge must not wander between
+            rows of one session. */}
+        <View style={styles.controlRowCheckboxSlot}>{checkbox}</View>
       </View>
 
-      {/* Rest hint */}
-      {restLabel ? (
+      {/* ⚠ **POWER SHOWS NO REST LINE — SAM, 2026-08-20 (R-116).** *"Power is
+          visually an ordinary Strength row. Remove its unique visible rest line
+          (`2:00 rest`). Do not give Power a separate row format or section."*
+          Power was the only role whose rest cleared the 90s threshold, so the
+          line WAS the special format — one row in the list wearing an extra
+          line nothing else had.
+
+          ⚠ **THIS HIDES A LINE; IT DELETES NO DATA.** *"hiding Power's rest line
+          must not delete its domain prescription."* `restSeconds` is untouched
+          on the row, still stored, still generated, still read by everything
+          that reads it — `restLabel` above is computed exactly as before and a
+          guard asserts the row still carries its rest. Only this Text is
+          gated. */}
+      {restLabel && exercise?.role !== 'power' ? (
         <View style={styles.detailsRow}>
           <Text style={styles.restHint}>{restLabel}</Text>
         </View>
@@ -2830,6 +2936,7 @@ function RecoveryBlock({
             completed={completedItemIds.has(executionItemId)}
             onToggle={onToggleItem}
           >
+          {(checkbox) => (
           <Card
             tone="default"
             radius="xl"
@@ -2859,13 +2966,20 @@ function RecoveryBlock({
             {/* Curated cue only, collapsed by default (run-7 ruling 2);
                 generator notes are not rendered (Stage 3 ownership: the
                 curated layer owns the words). */}
-            <CueDisclosure
-              exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
-              cueText={cueText}
-              expandedCues={expandedCues}
-              toggleCue={toggleCue}
-            />
+            {/* R-116 — a recovery row has no stepper, so the reserved control
+                position is the row's own right edge. */}
+            <View style={styles.recoveryControlRow}>
+              <CueDisclosure
+                exerciseId={String(exercise.id ?? exercise.exerciseId ?? '')}
+                cueText={cueText}
+                expandedCues={expandedCues}
+                toggleCue={toggleCue}
+              />
+              <View style={styles.controlRowSpacer} />
+              {checkbox}
+            </View>
           </Card>
+          )}
           </ExecutionChecklistItem>
         );
       })}
@@ -2927,10 +3041,12 @@ function RecoveryAddonSection({
                   completed={completedItemIds.has(itemId)}
                   onToggle={onToggleItem}
                 >
+                  {(checkbox) => (
                   <View
                     style={styles.recoveryAddonExercise}
                     testID={`workout-exercise-row-${stableTestIdToken(exercise.id)}`}
                   >
+                    <View style={styles.addonCheckboxSlot}>{checkbox}</View>
                     <Text style={styles.recoveryAddonExerciseName}>{exercise.name}</Text>
                     <Text
                       style={styles.recoveryAddonPrescription}
@@ -2945,6 +3061,7 @@ function RecoveryAddonSection({
                       toggleCue={toggleCue}
                     />
                   </View>
+                  )}
                 </ExecutionChecklistItem>
               );
             })}
@@ -4157,6 +4274,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
   },
+  // R-116 — the calendar sits with the date, and the section glyph with its
+  // heading. Both are decoration beside text that already says the words.
+  headerSubtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  executionSectionIcon: { marginRight: 10 },
+  // R-116 — rows with no stepper still reserve the right-side control slot.
+  recoveryControlRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  controlRowSpacer: { flex: 1 },
+  addonCheckboxSlot: { position: 'absolute', right: 0, top: 0 },
   executionSectionHeading: { flex: 1, gap: 2 },
   executionSectionTitle: {
     color: colors.text.primary,
@@ -4254,11 +4379,15 @@ const styles = StyleSheet.create({
   // Label (index) is now plain text, not a chip — the index is information,
   // not decoration. Tighter bottom gap pulls the stats row closer so the
   // exercise reads as one coherent block rather than a stack of rows.
+  // R-116 — *"Remove the excessive vertical gaps between those three."* The
+  // name/Play line, the sets x reps line and Form cues are one compact block:
+  // this margin was 8, `statsRow` gained a tight top gap, and `CueDisclosure`'s
+  // own top padding came down. Nothing was resized — only the air between.
   exerciseHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 2,
   },
   exerciseLabelBadge: {
     minWidth: 18,
@@ -4347,11 +4476,24 @@ const styles = StyleSheet.create({
   // One horizontal line: sets × reps on the left, weight control on the
   // right. No column labels. Space-between gives the left text natural
   // breathing room without forced flex column widths.
+  // R-116 — ONE control line: sets x reps on the left, then the weight stepper,
+  // then the checkbox immediately right of it. `space-between` still pins the
+  // left column left and the controls right.
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
+    marginTop: 2,
+  },
+  // The reserved right-side control position. FIXED WIDTH, so a row with no
+  // stepper puts its tick in the same column as one that has a stepper — the
+  // ruling's "rows without a weight stepper still reserve the same right-side
+  // control position". 22 for the box + 10 of separation from the stepper.
+  controlRowCheckboxSlot: {
+    width: 32,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   statsPrimary: {
     color: '#F2F2F2',
@@ -4446,7 +4588,9 @@ const styles = StyleSheet.create({
   },
 
   // ── Cue toggle ──
-  cueContainer: { marginTop: 6 },
+  // R-116 — Form cues sit DIRECTLY below sets x reps. 6 -> 1: the disclosure
+  // keeps its own `paddingVertical` tap area, so the target does not shrink.
+  cueContainer: { marginTop: 1 },
   cueToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
