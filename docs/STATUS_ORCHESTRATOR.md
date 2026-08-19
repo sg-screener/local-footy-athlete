@@ -164,3 +164,73 @@ The travel partial-trip finding is byte-identical at base and candidate.
 **VERDICT: HOLD, WITH ONE NAMED BLOCKER** — the 32 power/strength collisions.
 The rest of the candidate is a large net improvement and the other two findings
 are `main`'s, not its.
+
+## THE PROGRAMMING BLOCKER, DIAGNOSED TO ITS ROOT AND PARTLY FIXED
+
+Branch `orchestrator/power-primer-yields` @ `a1f91e27`, off `12fac3f1`.
+**NOT PROPOSED FOR MERGE** — see the open question below.
+
+`materialiseComposedWeek` drops the power primer when its identity is already
+in the day's strength rows, compared with the composer's own
+`composedIdentityFor` so it cannot disagree with the census that found the
+defect. Re-measured with QA's matrix: **84 -> 52 duplicate occurrences, still
+180/180 built, 0 refused, findings unchanged at 3.**
+
+The 52 that remain are 48 running `[strength_accessory+conditioning]` and 4
+push-up `[main_strength+strength_accessory]`. **All 52 are `main`'s class**; base
+carries 50 of them over 140 built worlds (0.357 per world) against 52 over 180
+(0.289). A general row-deduplication pass belongs to the composer and is not
+this line's job.
+
+### THE ROOT IS A ONE-MEMBER POOL, NOT THE CANDIDATE
+
+`Explosive Push-up` is the **only** `upper` entry in `POWER_EXERCISE_POOL`. In a
+`Bodyweight Only` world it is also a legal main/accessory push, so the power
+pool and the strength pool intersect in exactly one exercise and both reach for
+it. Full Gym and Dumbbells worlds produced **zero** collisions. The candidate's
+`01fa17eb` did not create the overlap; it made the overlap visible by letting a
+power row reach an athlete for the first time.
+
+### THE COST, STATED
+
+`generatedPowerDeliveryTests` **7/7 -> 5/7**, both failures in one Bodyweight
+world whose strength block is `Explosive Push-up, Scap Push-Up`:
+"the composer delivers the complete selected allowance" `{budget:2,rows:1}`, and
+the club-night visibility cell.
+
+⚠ **I DID NOT EDIT THOSE CELLS.** In that world the allowance is deliverable
+only by printing one exercise twice. The guard and the fix are two answers to a
+product question; editing the guard to match my change is the
+expectation-edited-to-match-the-regression shape.
+
+### THE OPEN QUESTION — SAM'S
+
+REGISTRY-GREP: **R-076, R-081, R-015.** None rules on power/strength identity
+collision or on the size of the upper power pool. R-081 settles how a contrast
+partner is chosen (by family, *"similar is right"*); it does not say what happens
+when the partner and the lift are the same movement.
+
+Zero-equipment world, the only explosive upper movement is already the athlete's
+strength lift that day:
+
+- **(a)** no power primer that day — `a1f91e27`;
+- **(b)** the movement appears twice — the candidate today;
+- **(c)** the pool gains more upper entries so a non-colliding option exists.
+
+**(c) is almost certainly right and is a content ruling on Sam's own
+`docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md`.** A pool with one member for a
+whole family is the actual defect. (a) is the floor that stops the athlete
+seeing a contradiction while (c) is decided.
+
+## PROGRAMMING VERDICT — HOLD, ONE BLOCKER, DOWN FROM THREE
+
+| finding | candidate's own? | status |
+|---|---|---|
+| 32 power/strength duplicate sessions | **YES** | fixed on `orchestrator/power-primer-yields`, blocked on the ruling above |
+| 48 running-row duplicates | no — 42 at base | `main`'s, composer-owned |
+| 36 `Copenhagen Plank (Half)` bench-cue contradictions | no — 16 at base | `main`'s, content ruling |
+| travel partial trip leaves in-span anchors | no — identical at base | `main`'s |
+
+**Against that it clears 41 findings**, all Off-season anchor worlds publishing
+`Team Training` and `Game` in a phase that has neither. That is a worse
+athlete-visible defect than anything it leaves behind.
