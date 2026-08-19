@@ -1,30 +1,85 @@
 appId: com.localfootyathlete.app
 name: Remove an exercise through the LABELLED hub, at a chosen scope
 ---
-# THE LABELLED ROUTE ONLY. `component-delete-action-*` is the icon this hub
-# replaced; no flow that shares this file may reach for it.
+# ⚠ **RE-AIMED AT THE SESSION SCREEN, 2026-08-19.**
+#
+# Sam: *"DAY PAGE: exactly Tired, Sick and Injured … NO Remove, Equipment, Add
+# or Swap. ACTIVE SESSION SCREEN: Equipment, Injury, Add, Remove and Swap."*
+#
+# This file used to drive `home-remove-entry` — a labelled Remove chip that sat
+# on the Day screen for one day. **The requirement it was written for is
+# unchanged**: a labelled Remove the athlete can clearly tap, never the bare
+# `component-delete-action-*` icon. That control lives in the session screen's
+# hub now, so this walks the same contract at its new address.
+#
+# ⚠ **IT ENTERS AND LEAVES ON THE PROGRAM SCREEN**, like every other shared step
+# in this folder, so callers can chain it with `assert-strength-rows`.
+#
+# THE LABELLED ROUTE ONLY. The picker rows still carry the
+# `component-delete-action-*` ids — they moved WITH the ingress rather than
+# being deleted — but the way IN is the labelled chip, and no flow sharing this
+# file may skip it.
 - tapOn:
-    id: "home-remove-entry"
+    id: "view-workout-button"
 - extendedWaitUntil:
     visible:
-      id: "home-remove-select-sheet"
-    timeout: 10000
-- tapOn:
-    id: "home-remove-select-${EXERCISE}"
-- extendedWaitUntil:
-    visible:
-      id: "home-remove-scope-sheet"
-    timeout: 10000
-# THE SCOPE THE ATHLETE PICKED IS VISIBLE BEFORE IT IS TAPPED.
+      id: "workout-screen"
+    timeout: 20000
+
+# ── THE LABELLED ENTRY, AND THE WORD ITSELF ───────────────────────────────
+# `session-change-remove` is an id and an id is not a label; the text assertion
+# is what actually answers Sam's requirement.
 - assertVisible:
-    id: "home-remove-scope-${SCOPE}"
+    id: "session-change-remove"
+- assertVisible: "Remove"
 - tapOn:
-    id: "home-remove-scope-${SCOPE}"
+    id: "session-change-remove"
+
+# ── THE PICKER: WHICH EXERCISE IS COMING OUT ──────────────────────────────
 - extendedWaitUntil:
     visible:
-      id: "home-remove-result-ok"
-    timeout: 15000
-- assertNotVisible:
-    id: "home-remove-result-refused"
+      id: "component-delete-action-.*"
+    timeout: 10000
+# ⚠ **ADDRESSED BY THE WORD, NOT BY AN ID.** The picker row's id is
+# `component-delete-action-<sessionId>-<componentId>` and the component id is a
+# generated key (`...-exercise-ex-squat-1`), so it carries NO name token — a
+# selector like `component-delete-action-.*-back-squat` matches nothing and reads
+# exactly like a lost row. Measured against the live hierarchy on 2026-08-19.
+# The label is the athlete's own word and it is what this walk is about.
+- assertVisible: "${EXERCISE}"
+- tapOn: "${EXERCISE}"
+
+# ── THE CONFIRMATION, THEN THE SCOPE QUESTION ─────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-confirm-.*"
+    timeout: 10000
 - tapOn:
-    id: "home-remove-result-done"
+    id: "component-delete-confirm-.*"
+# THE SCOPE THE ATHLETE PICKED IS VISIBLE BEFORE IT IS TAPPED.
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-scope-.*-${SCOPE}"
+    timeout: 10000
+- assertVisible:
+    id: "component-delete-scope-.*-${SCOPE}"
+- tapOn:
+    id: "component-delete-scope-.*-${SCOPE}"
+
+# ── THE RECEIPT, THEN BACK TO THE PROGRAM SCREEN ──────────────────────────
+- extendedWaitUntil:
+    visible: "Saved"
+    timeout: 15000
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+# THE TAB BY ITS FULL LABEL — see `assert-strength-rows` for why `back` and the
+# bare word "Program" both fail here.
+- tapOn:
+    text: "Program tab"
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 20000

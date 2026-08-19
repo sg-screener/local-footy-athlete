@@ -858,14 +858,18 @@ run('the status circles sit in a card with words above them', () => {
     && /injured: '#FF7F7F'/.test(hub)
     && /injured: 'rgba\(255, 127, 127, 0\.12\)'/.test(hub),
     'Injured is not using Renee\'s red cross icon and tint');
-  // ⚠ THE CROSS AND THE TRIANGLE ARE DIFFERENT DOORS AND MUST STAY DIFFERENT
-  // PICTURES. The regression swapped one for the other and every other cell
-  // stayed green, because both are "an injury icon".
-  const injuredCase = glyphs.slice(glyphs.indexOf("case 'injured':"));
-  assert(!/M10\.3 3\.9 1\.8 18/.test(injuredCase.slice(0, 400)),
-    'the Day screen\'s Injured chip is drawing the SESSION\'s warning triangle. '
-    + 'The triangle asks "does this exercise hurt?" inside an open session; the '
-    + 'cross says "I am injured".');
+  // ⚠ **THE TWO INJURY DOORS DRAW ONE PICTURE, BY SAM'S RULING** (2026-08-19:
+  // *"injured still has the wrong icon - it should match the injured icon on
+  // the day screen"*). The first cut of this correction gave the session's
+  // Injury door a warning triangle; he rejected it on sight. So the claim this
+  // cell holds is now SAMENESS, and the triangle must not come back to either.
+  assert(!/M10\.3 3\.9 1\.8 18/.test(glyphs),
+    'the warning triangle is back on an injury door. Sam ruled that the session '
+    + 'Injury chip shows the same red cross as the Day screen\'s Injured chip.');
+  assert(/case 'injured':\s*case 'injury':/.test(glyphs),
+    'the two injury doors no longer share one `case`. They were split once and '
+    + 'immediately drifted into different pictures; one branch is what stops a '
+    + 'future edit changing one and leaving the other behind.');
 
   // ITEM 28: THE MAP PIN IS NOT IN THIS CARD, and its own cell below proves it
   // landed on the week shape rather than simply disappearing.

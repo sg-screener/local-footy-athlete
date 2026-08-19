@@ -174,9 +174,22 @@ function glyph(id: ChangeActionId): React.ReactNode {
           <Path d="M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z" /><Path d="M12 10v6" />
         </Svg>
       );
-    // A medical cross — injury. NOT the warning triangle: the triangle is the
-    // SESSION's per-exercise injury door, and the two must not look alike.
+    /**
+     * A medical cross — injury, on EITHER surface.
+     *
+     * ⚠ **`injured` AND `injury` DRAW THE SAME PICTURE, BY SAM'S RULING.** The
+     * first cut of this correction gave the session's Injury door a warning
+     * triangle, reasoning that "I am injured" and "this exercise hurts" are
+     * different questions and should not look alike. Sam, 2026-08-19, on seeing
+     * it: *"injured still has the wrong icon - it should match the injured icon
+     * on the day screen."*
+     *
+     * They fall through to one `case` rather than being two identical blocks,
+     * so a future edit cannot change one and leave the other behind — which is
+     * exactly the drift that made them differ in the first place.
+     */
     case 'injured':
+    case 'injury':
       return (
         <Svg {...common} strokeWidth={1.7}>
           <Path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z" />
@@ -187,14 +200,6 @@ function glyph(id: ChangeActionId): React.ReactNode {
       return (
         <Svg {...common}>
           <Path d="M6.5 7v10M4 9v6M17.5 7v10M20 9v6M6.5 12h11" />
-        </Svg>
-      );
-    // The warning triangle: "this exercise hurts", asked inside a session.
-    case 'injury':
-      return (
-        <Svg {...common}>
-          <Path d="M12 9v4" /><Path d="M12 17h.01" />
-          <Path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
         </Svg>
       );
     case 'add':

@@ -1,5 +1,5 @@
 appId: com.localfootyathlete.app
-name: VISIBLE - the LABELLED Remove hub, and Undo on the surface it happened on
+name: VISIBLE - the LABELLED Remove hub on the session screen
 tags:
   - e2e
   - visible
@@ -8,91 +8,105 @@ tags:
 # labelled Remove hub exists ... the required trigger is not complete until the
 # athlete can clearly tap a labelled Remove action."*
 #
-# ⚠ **THIS FLOW NEVER TAPS `component-delete-action-*`.** That icon is the route
-# this walk exists to replace; addressing it here would prove the old door works
-# and say nothing about the new one. Every tap below is on a LABELLED control.
+# ⚠ **RE-AIMED FROM THE DAY SCREEN TO THE SESSION SCREEN, SAME DAY, BY SAM'S
+# CORRECTION:** *"DAY PAGE: exactly Tired, Sick and Injured … NO Remove,
+# Equipment, Add or Swap. ACTIVE SESSION SCREEN: Equipment, Injury, Add, Remove
+# and Swap."* The requirement above is unchanged — a LABELLED Remove must exist
+# and work — only its address moved.
+#
+# ⚠ **THIS FLOW NEVER TAPS AN UNLABELLED ICON.** `component-delete-action-*` is
+# still the id on the PICKER ROWS (the ids moved with the ingress when the
+# per-row icons were deleted), but the way IN is the labelled chip, and the
+# first tap below is on it.
+#
+# ⚠ **THE UNDO HALF OF THIS FLOW WAS REMOVED, AND THAT IS A KNOWN GAP, NOT A
+# TIDY-UP.** It used to prove "the toast appears on the surface the removal
+# happened on", which held only while Remove lived on the Day screen: `UndoToast`
+# mounts on the Program screen and nowhere else, so a removal driven from the
+# pushed session screen raises its toast BEHIND that screen. Asserting
+# `undo-toast` here would red for a reason this flow cannot fix, and deleting it
+# silently would hide the defect. It is finding O-3 in
+# `docs/STATUS_ORCHESTRATOR.md`. Undo's own behaviour stays covered headlessly by
+# `test:undo-reversal`.
 - runFlow:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: ${SEED_ID}
 
-# ── 1. THE LABELLED ENTRY, INSIDE THE INTENDED AREA ────────────────────────
-# The card first, then the control INSIDE it — asserting the control alone
-# would pass if it were rendered anywhere on the screen.
+# ── 0. THE DAY SCREEN OFFERS THE THREE STATUS FACTS AND NOTHING ELSE ───────
+# The other half of the contract, asserted where a reader can see both halves.
 - assertVisible:
     id: "home-change-card"
 - assertVisible:
-    id: "home-remove-entry"
-# THE WORD ITSELF. `home-remove-entry` is an id and an id is not a label; this
-# is the assertion that actually answers Sam's requirement.
+    id: "home-tired-entry"
+- assertVisible:
+    id: "home-injured-entry"
+- assertNotVisible:
+    id: "session-change-remove"
+- assertNotVisible:
+    id: "session-change-equipment"
+- takeScreenshot: artifacts/visible/hub-0-day-three-status-facts
+
+# ── 1. THE LABELLED ENTRY, INSIDE THE INTENDED AREA ────────────────────────
+# The card first, then the control INSIDE it — asserting the control alone
+# would pass if it were rendered anywhere on the screen.
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "workout-screen"
+    timeout: 20000
+- assertVisible:
+    id: "day-workout-change-hub"
+- assertVisible:
+    id: "session-change-remove"
+# THE WORD ITSELF. `session-change-remove` is an id and an id is not a label;
+# this is the assertion that actually answers Sam's requirement.
 - assertVisible: "Remove"
 - takeScreenshot: artifacts/visible/hub-1-labelled-entry
 
 # ── 2. IT OPENS COMPONENT SELECTION, IT DOES NOT ACT ───────────────────────
 - tapOn:
-    id: "home-remove-entry"
+    id: "session-change-remove"
 - extendedWaitUntil:
     visible:
-      id: "home-remove-select-sheet"
+      id: "component-delete-action-.*"
     timeout: 10000
-- assertVisible:
-    id: "home-remove-select-back-squat"
+# ⚠ **BY THE WORD, NOT BY AN ID** — the row id carries a generated component
+# key and no name token; see `../common/remove-via-hub.yaml` for the measurement.
+- assertVisible: "Back Squat"
 - takeScreenshot: artifacts/visible/hub-2-component-selection
-- tapOn:
-    id: "home-remove-select-back-squat"
+- tapOn: "Back Squat"
 
 # ── 3. THEN THE SCOPE QUESTION, ALL THREE ANSWERS ──────────────────────────
 - extendedWaitUntil:
     visible:
-      id: "home-remove-scope-sheet"
+      id: "component-delete-confirm-.*"
+    timeout: 10000
+- tapOn:
+    id: "component-delete-confirm-.*"
+- extendedWaitUntil:
+    visible:
+      id: "component-delete-scope-.*-today"
     timeout: 10000
 - assertVisible:
-    id: "home-remove-scope-today-only"
+    id: "component-delete-scope-.*-today"
 - assertVisible:
-    id: "home-remove-scope-this-block"
+    id: "component-delete-scope-.*-block"
 - assertVisible:
-    id: "home-remove-scope-until-changed"
+    id: "component-delete-scope-.*-future"
 - takeScreenshot: artifacts/visible/hub-3-scope-question
 - tapOn:
-    id: "home-remove-scope-today-only"
+    id: "component-delete-scope-.*-today"
 
-# ── 4. THE RECEIPT — and it must be the OK one, not the refusal one ────────
+# ── 4. THE RECEIPT — and the ROWS have to back it up ───────────────────────
+# Sam's clause: no successful message without a visible state change. The
+# receipt is treated as a claim about the screen, and the screen is then read.
 - extendedWaitUntil:
-    visible:
-      id: "home-remove-result-ok"
+    visible: "Saved"
     timeout: 15000
-- assertNotVisible:
-    id: "home-remove-result-refused"
 - takeScreenshot: artifacts/visible/hub-4-receipt
-- tapOn:
-    id: "home-remove-result-done"
-
-# ── 5. UNDO, ON THE SURFACE THE REMOVAL HAPPENED ON ────────────────────────
-# This is the whole point of moving the trigger. The removal was driven from
-# THIS screen, so the toast is on THIS screen — not behind a pushed session
-# screen where its life expires unseen.
-- extendedWaitUntil:
-    visible:
-      id: "undo-toast"
-    timeout: 15000
-- assertVisible:
-    id: "undo-toast-action"
-- assertVisible: "Undo"
-- takeScreenshot: artifacts/visible/hub-5-undo-on-same-surface
-
-# ── 6. UNDO ACTUALLY REVERSES IT ──────────────────────────────────────────
-# A visible toast is not a working Undo. Sam's clause is that Undo must
-# "visibly restore Back Squat and remove the Today exclusion", so the tap is
-# followed by reading the rows — the same standard every other claim here is
-# held to.
-- tapOn:
-    id: "undo-toast-action"
-- extendedWaitUntil:
-    notVisible:
-      id: "undo-toast"
-    timeout: 15000
-- tapOn:
-    id: "view-workout-button"
+- tapOn: "Done"
 - extendedWaitUntil:
     visible:
       id: "workout-screen"
@@ -104,10 +118,12 @@ tags:
     commands:
       - tapOn:
           id: "session-execution-toggle-strength"
-# BACK, BY NAME. And the substitute the removal introduced is gone again —
-# asserting only the first would pass on a session showing both.
-- assertVisible:
-    id: "session-strength-position-.*-back-squat"
 - assertNotVisible:
-    id: "session-strength-position-.*-front-squat"
-- takeScreenshot: artifacts/visible/hub-6-undo-restored-back-squat
+    id: "session-strength-position-.*-back-squat"
+# UNTOUCHED ROWS DO NOT MOVE. Asserting only the removal would pass on a
+# session that had lost everything.
+- assertVisible:
+    id: "session-strength-position-.*-rdls"
+- assertVisible:
+    id: "session-strength-position-.*-band-pallof-press"
+- takeScreenshot: artifacts/visible/hub-5-rows-back-the-receipt

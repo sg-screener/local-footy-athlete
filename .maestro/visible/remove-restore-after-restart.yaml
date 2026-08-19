@@ -24,8 +24,8 @@ tags:
 - runFlow:
     file: ../common/remove-via-hub.yaml
     env:
-      EXERCISE: back-squat
-      SCOPE: today-only
+      EXERCISE: Back Squat
+      SCOPE: today
 - takeScreenshot: artifacts/visible/restore-1-removed
 
 # ── FRONT SQUAT AT ITS OWN LOAD, BACK SQUAT GONE ──────────────────────────
